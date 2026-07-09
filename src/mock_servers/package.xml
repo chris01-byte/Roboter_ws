@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  mock_servers                                                          -->
+<!--  Dummy-Gegenstellen (Actions/Services/Topics) fuer den Trockentest     -->
+<!--  des bt_orchestrator (WP-2) - ohne Hardware, Nav2 oder MoveIt.         -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>mock_servers</name>
+  <version>0.1.0</version>
+  <description>Mock-Server zum Trockentest des Behavior-Trees (Pick and Place).</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav2_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>robot_interfaces</depend>
+
+  <!-- Zum gemeinsamen Start im dry_run.launch.py -->
+  <exec_depend>bt_orchestrator</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

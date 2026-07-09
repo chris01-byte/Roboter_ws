@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =========================================================================
+     pick_and_place.xml  -  Behavior-Tree (WP-2), BehaviorTree.CPP v4
+     ====================================================
+     SCHNELL ANPASSBARE WERTE  (im Editor nach dem Tag in [ ] suchen):
+         [TUNE:find_attempts]   Such-Versuche fuer das Objekt
+         [TUNE:standoff]        Anfahrabstand Basis<->Objekt [m]
+         [TUNE:grasp_attempts]  Greif-Versuche
+         [TUNE:gripper_open]    Greifer-Oeffnung [m]
+         [TUNE:grip_effort]     Greifkraft (max_effort)
+     ====================================================
+     Blackboard-Eingaben (vom mission_manager / WP-4 zu setzen):
+         {target_object}    z.B. "cup"
+         {place_base_goal}  Basis-Zielpose am Ablageort
+         {place_pose}       Arm-Ablagepose
+     ========================================================================= -->
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+  <!-- ===================== HAUPTBAUM ===================== -->
+  <BehaviorTree ID="MainTree">
+    <!-- ReactiveSequence: prueft den Not-Aus-Waechter bei JEDEM Tick neu.
+         Wird IsEstopClear zu FAILURE, stoppt die laufende Aktion sofort. -->
+    <ReactiveSequence name="GuardedMission">
+      <IsEstopClear/>
+      <Sequence name="Mission">
+        <SubTree ID="FindTarget"  target_object="{target_object}" object_pose="{object_pose}"/>
+        <SubTree ID="GoToObject"  object_pose="{object_pose}"/>
+        <SubTree ID="PickObject"  object_pose="{object_pose}"/>
+        <SubTree ID="GoToPlace"   place_base_goal="{place_base_goal}"/>
+        <SubTree ID="PlaceObject" place_pose="{place_pose}"/>
+        <MoveArmToNamed target_name="stowed"/>
+      </Sequence>
+    </ReactiveSequence>
+  </BehaviorTree>
+
+  <!-- ===================== 1) OBJEKT FINDEN ===================== -->
+  <BehaviorTree ID="FindTarget">
+    <Fallback>
+      <!-- [TUNE:find_attempts] Erst am aktuellen Ort suchen -->
+      <RetryUntilSuccessful num_attempts="5">
+        <GetObjectPose target="{target_object}" pose="{object_pose}"/>
+      </RetryUntilSuccessful>
+      <!-- Nicht gefunden -> Wohnung (weiter) erkunden und danach erneut suchen.
+           K5-Guard: NUR erkunden, wenn die KI-Wahrnehmung (Offboard) erreichbar
+           ist. Sonst war "nicht gefunden" evtl. nur ein Serverausfall und eine
+           autonome Komplett-Erkundung waere ungewollt. -->
+      <Sequence name="ExploreThenSearch">
+        <IsOffboardAvailable/>
+        <!-- [TUNE:explore_timeout] 0 = bis Wohnung vollstaendig erkundet -->
+        <Explore timeout_s="0.0" min_frontier_size_m="0.0" return_to_start="false"/>
+        <RetryUntilSuccessful num_attempts="5">
+          <GetObjectPose target="{target_object}" pose="{object_pose}"/>
+        </RetryUntilSuccessful>
+      </Sequence>
+    </Fallback>
+  </BehaviorTree>
+
+  <!-- ===================== 2) ZUM OBJEKT FAHREN ===================== -->
+  <BehaviorTree ID="GoToObject">
+    <Sequence>
+      <!-- Interlock: Arm einklappen, BEVOR die Basis faehrt -->
+      <MoveArmToNamed target_name="stowed"/>
+      <!-- [TUNE:standoff] -->
+      <ComputeApproachPose object_pose="{object_pose}" standoff="0.50" base_goal="{base_goal}"/>
+      <Fallback>
+        <NavigateToPose goal="{base_goal}"/>
+        <!-- Recovery: Costmap leeren und noch einmal versuchen -->
+        <Sequence>
+          <ClearCostmaps/>
+          <NavigateToPose goal="{base_goal}"/>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- ===================== 3) GREIFEN ===================== -->
+  <BehaviorTree ID="PickObject">
+    <Sequence>
+      <MoveArmToNamed target_name="ready"/>
+      <DetectObjectFine pose_in="{object_pose}" pose_out="{object_pose}"/>
+      <ComputeGrasp object_pose="{object_pose}"
+                    grasp_pose="{grasp_pose}"
+                    pregrasp_pose="{pregrasp_pose}"
+                    gripper_width="{gripper_width}"/>
+      <!-- [TUNE:grasp_attempts] -->
+      <RetryUntilSuccessful num_attempts="2">
+        <Sequence name="GraspAndVerify">
+          <!-- [TUNE:gripper_open] [TUNE:grip_effort] -->
+          <GripperCommand position="0.080" max_effort="20.0"/>
+          <MoveArmToPose pose="{pregrasp_pose}"/>
+          <MoveArmToPose pose="{grasp_pose}"/>
+          <GripperCommand position="{gripper_width}" max_effort="20.0"/>
+          <IsObjectGrasped/>
+        </Sequence>
+      </RetryUntilSuccessful>
+      <!-- Anheben / Rueckzug -->
+      <MoveArmToPose pose="{pregrasp_pose}"/>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- ===================== 4) ZUM ABLAGEORT FAHREN ===================== -->
+  <BehaviorTree ID="GoToPlace">
+    <Sequence>
+      <!-- Mit Objekt im Greifer: erst einklappen, dann fahren -->
+      <MoveArmToNamed target_name="stowed"/>
+      <Fallback>
+        <NavigateToPose goal="{place_base_goal}"/>
+        <Sequence>
+          <ClearCostmaps/>
+          <NavigateToPose goal="{place_base_goal}"/>
+        </Sequence>
+      </Fallback>
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- ===================== 5) ABLEGEN ===================== -->
+  <BehaviorTree ID="PlaceObject">
+    <Sequence>
+      <MoveArmToNamed target_name="ready"/>
+      <MoveArmToPose pose="{place_pose}"/>
+      <!-- [TUNE:gripper_open] [TUNE:grip_effort] -->
+      <GripperCommand position="0.080" max_effort="20.0"/>
+      <MoveArmToNamed target_name="ready"/>
+      <MoveArmToNamed target_name="stowed"/>
+    </Sequence>
+  </BehaviorTree>
+
+</root>

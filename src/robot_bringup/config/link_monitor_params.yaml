@@ -1,0 +1,15 @@
+# =====================================================================
+#  link_monitor_params.yaml  -  Server-Erreichbarkeits-Monitor (Baustein D)
+# ---------------------------------------------------------------------
+#  PARAMETER-INDEX:
+#    watched_nodes ..... Zeile 11  (Offboard-Node-Namen, die erwartet werden)
+#    check_period_s .... Zeile 15  (Pruefintervall [s])
+# =====================================================================
+link_monitor:
+  ros__parameters:
+    # Diese Node-Namen laufen auf dem OFFBOARD-Server (server.launch.py).
+    watched_nodes:
+      - llm_planner
+      - semantic_perception
+    # Wie oft die Erreichbarkeit geprueft wird.
+    check_period_s: 2.0

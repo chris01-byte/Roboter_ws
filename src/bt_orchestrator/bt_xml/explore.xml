@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- =========================================================================
+     explore.xml  -  Standalone-Erkundungsbaum (WP-5, Ebene 1)
+     ====================================================
+     Reine autonome Wohnungs-Erkundung, ohne Pick&Place. Wird z.B. vom
+     mission_manager fuer den Befehl "explore" genutzt.
+
+     Auswahl im bt_params.yaml:
+         bt_xml_file: "bt_xml/explore.xml"
+
+     SCHNELL ANPASSBARE WERTE:
+         [TUNE:explore_timeout]  0 = bis Wohnung vollstaendig erkundet [s]
+     ========================================================================= -->
+<root BTCPP_format="4">
+
+  <BehaviorTree ID="MainTree">
+    <!-- ReactiveSequence: prueft den Not-Aus-Waechter bei JEDEM Tick neu.
+         Loest E-Stop aus, wird die Erkundung sofort gestoppt. -->
+    <ReactiveSequence name="GuardedExplore">
+      <IsEstopClear/>
+      <!-- [TUNE:explore_timeout] -->
+      <Explore timeout_s="0.0" min_frontier_size_m="0.0" return_to_start="false"/>
+    </ReactiveSequence>
+  </BehaviorTree>
+
+</root>

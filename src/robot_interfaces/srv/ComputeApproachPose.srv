@@ -1,0 +1,13 @@
+# =====================================================================
+#  ComputeApproachPose.srv
+#  Rechnet aus der Objektpose eine erreichbare Basis-Zielpose, sodass
+#  das Objekt im Arbeitsraum des Arms liegt.
+#  Server: approach_pose_server   |   Client: Behavior-Tree
+# =====================================================================
+# --- Request ---
+geometry_msgs/PoseStamped object_pose    # Objektpose (map)
+float32 standoff                         # gewuenschter Abstand Basis<->Objekt [m]
+---
+# --- Response ---
+bool success
+geometry_msgs/PoseStamped base_goal      # Ziel-Pose der Basis (map)

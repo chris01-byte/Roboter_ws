@@ -1,0 +1,12 @@
+# =====================================================================
+#  GetObjectPose.srv
+#  Frage an das Welt-Modell: "Wo ist Objekt der Klasse X?"
+#  Server: object_world_model   |   Client: Behavior-Tree (GetObjectPose)
+# =====================================================================
+# --- Request ---
+string class_name              # z.B. "cup", "bottle"
+---
+# --- Response ---
+bool found                     # false = Objekt unbekannt/nicht gefunden
+geometry_msgs/PoseStamped pose # Pose im map-Frame
+float32 confidence             # 0.0 .. 1.0

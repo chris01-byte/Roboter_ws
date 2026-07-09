@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  robot_navigation                                                      -->
+<!--  ==================================================================== -->
+<!--  Echter Nav2-Stack fuer den Roboter - zunaechst OHNE Hardware nutzbar: -->
+<!--  statische Testkarte + base_hardware im Dry-Run (integriert cmd_vel    -->
+<!--  zu /odom + TF) ergeben einen geschlossenen Navigationskreis. SLAM     -->
+<!--  (RTAB-Map) folgt, sobald Kamera/Lidar montiert sind - die Nav2-       -->
+<!--  Konfiguration hier bleibt dieselbe (nur Karte kommt dann vom SLAM).   -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>robot_navigation</name>
+  <version>0.1.0</version>
+  <description>Nav2-Konfiguration + Testkarte: echte Navigation ohne Hardware (virtuelle Basis).</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>base_hardware</exec_depend>
+
+  <!-- Nav2 (auf dem Jetson: sudo apt install ros-humble-navigation2) -->
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>nav2_navfn_planner</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

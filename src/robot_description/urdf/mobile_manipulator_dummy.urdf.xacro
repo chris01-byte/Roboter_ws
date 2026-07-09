@@ -1,0 +1,332 @@
+<?xml version="1.0"?>
+<!-- =====================================================================
+     mobile_manipulator_dummy.urdf.xacro  -  WP-0 Dummy-Robotermodell
+     ====================================================
+     Zweck:
+       - erster TF-Baum fuer Basis, OAK, VL53, 6-Achs-Arm und Greifer
+       - RViz-Test ohne echte Hardware
+       - Grundlage fuer spaetere MoveIt-/Nav2-/Kalibrierarbeiten
+
+     PARAMETER-INDEX  (Sprung per Zeilennummer)  [wird gepflegt]
+       BASIS-MASSE .................................... Zeile  31
+       RAD-MASSE / DIFFERENTIALANTRIEB ................ Zeile  38
+       SENSOR-MONTAGE: OAK ............................ Zeile  47
+       SENSOR-MONTAGE: VL53 ........................... Zeile  55
+       ARM-MONTAGE / DUMMY-LINKLAENGEN ................ Zeile  66
+       GREIFER-DUMMY .................................. Zeile  78
+       BASIS / RAEder / SENSOR-FRAMES ................. Zeile 111
+       6-ACHS-ARM ..................................... Zeile 221
+       GREIFER / TCP .................................. Zeile 356
+
+     Alle mit [ANPASSEN] markierten Werte sind Platzhalter.
+     ===================================================================== -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_pick_place_dummy">
+
+  <!-- ================================================================
+       BASIS-MASSE [ANPASSEN]
+       Koordinaten: x vorne, y links, z oben. base_footprint liegt am Boden.
+       base_link liegt im geometrischen Zentrum der Chassis-Box.
+       ================================================================ -->
+  <xacro:property name="base_length" value="0.70"/>    <!-- [m] Plattformlaenge -->
+  <xacro:property name="base_width"  value="0.50"/>    <!-- [m] Plattformbreite -->
+  <xacro:property name="base_height" value="0.18"/>    <!-- [m] Plattformhoehe -->
+
+  <!-- ================================================================
+       RAD-MASSE / DIFFERENTIALANTRIEB [ANPASSEN]
+       wheel_separation = Abstand linker/rechter Radmittelpunkt.
+       ================================================================ -->
+  <xacro:property name="wheel_radius"     value="0.075"/>
+  <xacro:property name="wheel_width"      value="0.040"/>
+  <xacro:property name="wheel_separation" value="0.420"/>
+  <xacro:property name="wheel_x"          value="0.000"/>
+
+  <!-- ================================================================
+       SENSOR-MONTAGE: OAK 4 D PRO WIDE FF [ANPASSEN]
+       camera_link ist mechanisch. camera_rgb_optical_frame ist optisch.
+       ================================================================ -->
+  <xacro:property name="oak_x"   value="0.120"/>
+  <xacro:property name="oak_y"   value="0.000"/>
+  <xacro:property name="oak_z"   value="0.360"/>
+  <xacro:property name="oak_yaw" value="0.000"/>
+
+  <!-- ================================================================
+       SENSOR-MONTAGE: 2x VL53L7CX [ANPASSEN]
+       Werte muessen spaeter zur real kalibrierten Montage passen.
+       left_y > 0 ist links. inward_yaw dreht beide Sensoren zur Mitte.
+       ================================================================ -->
+  <xacro:property name="vl53_x"          value="0.300"/>
+  <xacro:property name="vl53_y_abs"      value="0.110"/>
+  <xacro:property name="vl53_z"          value="0.050"/>
+  <xacro:property name="vl53_inward_yaw" value="0.350"/>  <!-- ca. 20 Grad -->
+
+  <!-- ================================================================
+       ARM-MONTAGE / DUMMY-LINKLAENGEN [ANPASSEN]
+       Nur fuer TF/RViz. Keine echte Dynamik-/Kollisionsauslegung.
+       ================================================================ -->
+  <xacro:property name="arm_base_x" value="-0.080"/>
+  <xacro:property name="arm_base_y" value="0.000"/>
+  <xacro:property name="arm_base_z" value="0.120"/>
+  <xacro:property name="link1_h" value="0.160"/>
+  <xacro:property name="link2_l" value="0.280"/>
+  <xacro:property name="link3_l" value="0.240"/>
+  <xacro:property name="wrist1_l" value="0.090"/>
+  <xacro:property name="wrist2_l" value="0.080"/>
+  <xacro:property name="tool_l"   value="0.070"/>
+
+  <!-- ================================================================
+       GREIFER-DUMMY [ANPASSEN]
+       Nur visuell, spaeter durch echten Greifer ersetzen.
+       ================================================================ -->
+  <xacro:property name="gripper_len" value="0.100"/>
+  <xacro:property name="finger_gap"  value="0.060"/>
+  <xacro:property name="finger_len"  value="0.080"/>
+
+  <!-- ================================================================
+       Kleine Hilfs-Makros fuer visuelle Dummy-Geometrien
+       ================================================================ -->
+  <xacro:macro name="box_link" params="name size color">
+    <link name="${name}">
+      <visual>
+        <geometry><box size="${size}"/></geometry>
+        <material name="${color}"/>
+      </visual>
+      <collision>
+        <geometry><box size="${size}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_link" params="name radius length color rpy:='0 0 0'">
+    <link name="${name}">
+      <visual>
+        <origin rpy="${rpy}" xyz="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${length}"/></geometry>
+        <material name="${color}"/>
+      </visual>
+      <collision>
+        <origin rpy="${rpy}" xyz="0 0 0"/>
+        <geometry><cylinder radius="${radius}" length="${length}"/></geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- Farben -->
+  <material name="mat_base"><color rgba="0.22 0.25 0.28 1.0"/></material>
+  <material name="mat_wheel"><color rgba="0.03 0.03 0.03 1.0"/></material>
+  <material name="mat_sensor"><color rgba="0.00 0.35 0.80 1.0"/></material>
+  <material name="mat_vl53"><color rgba="0.10 0.70 0.30 1.0"/></material>
+  <material name="mat_arm"><color rgba="0.82 0.82 0.78 1.0"/></material>
+  <material name="mat_tool"><color rgba="0.90 0.55 0.10 1.0"/></material>
+
+  <!-- ================================================================
+       BASIS / RAEder / SENSOR-FRAMES
+       ================================================================ -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_to_base_link" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${base_height/2.0}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <geometry><box size="${base_length} ${base_width} ${base_height}"/></geometry>
+      <material name="mat_base"/>
+    </visual>
+    <collision>
+      <geometry><box size="${base_length} ${base_width} ${base_height}"/></geometry>
+    </collision>
+  </link>
+
+  <!-- Linkes/rechtes Rad: Cylinder-Achse per rpy um X gedreht -> Achse entlang Y. -->
+  <xacro:cylinder_link name="left_wheel_link" radius="${wheel_radius}" length="${wheel_width}" color="mat_wheel" rpy="1.57079632679 0 0"/>
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel_link"/>
+    <origin xyz="${wheel_x} ${wheel_separation/2.0} ${-base_height/2.0 + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <xacro:cylinder_link name="right_wheel_link" radius="${wheel_radius}" length="${wheel_width}" color="mat_wheel" rpy="1.57079632679 0 0"/>
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel_link"/>
+    <origin xyz="${wheel_x} ${(-wheel_separation)/2.0} ${(-base_height)/2.0 + wheel_radius}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+
+  <!-- OAK-Kamera: mechanical frame + optical frame. -->
+  <xacro:box_link name="camera_link" size="0.080 0.030 0.035" color="mat_sensor"/>
+  <joint name="base_to_camera" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="${oak_x} ${oak_y} ${oak_z}" rpy="0 0 ${oak_yaw}"/>
+  </joint>
+
+  <link name="camera_rgb_optical_frame"/>
+  <joint name="camera_to_rgb_optical" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_rgb_optical_frame"/>
+    <!-- ROS-Standard: optical frame z nach vorne, x nach rechts, y nach unten. -->
+    <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+  </joint>
+
+  <!-- VL53 links/rechts, zur Mitte eingedreht. -->
+  <xacro:box_link name="vl53_left_link" size="0.030 0.020 0.010" color="mat_vl53"/>
+  <joint name="base_to_vl53_left" type="fixed">
+    <parent link="base_link"/>
+    <child link="vl53_left_link"/>
+    <origin xyz="${vl53_x} ${vl53_y_abs} ${vl53_z}" rpy="0 0 ${(-vl53_inward_yaw)}"/>
+  </joint>
+
+  <xacro:box_link name="vl53_right_link" size="0.030 0.020 0.010" color="mat_vl53"/>
+  <joint name="base_to_vl53_right" type="fixed">
+    <parent link="base_link"/>
+    <child link="vl53_right_link"/>
+    <origin xyz="${vl53_x} ${(-vl53_y_abs)} ${vl53_z}" rpy="0 0 ${vl53_inward_yaw}"/>
+  </joint>
+
+  <!-- ================================================================
+       6-ACHS-ARM (Dummy-Kinematik)
+       Achsen: J1 yaw, J2 shoulder pitch, J3 elbow pitch, J4 roll,
+              J5 wrist pitch, J6 tool roll.
+       ================================================================ -->
+  <xacro:cylinder_link name="arm_base_link" radius="0.055" length="0.040" color="mat_arm"/>
+  <joint name="base_to_arm_base" type="fixed">
+    <parent link="base_link"/>
+    <child link="arm_base_link"/>
+    <origin xyz="${arm_base_x} ${arm_base_y} ${arm_base_z}" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:cylinder_link name="link1" radius="0.040" length="${link1_h}" color="mat_arm"/>
+  <joint name="joint1" type="revolute">
+    <parent link="arm_base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 ${link1_h/2.0}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-2.61799" upper="2.61799" effort="20" velocity="1.0"/>
+  </joint>
+
+  <link name="link2">
+    <visual>
+      <origin xyz="${link2_l/2.0} 0 0" rpy="0 0 0"/>
+      <geometry><box size="${link2_l} 0.050 0.050"/></geometry>
+      <material name="mat_arm"/>
+    </visual>
+    <collision>
+      <origin xyz="${link2_l/2.0} 0 0" rpy="0 0 0"/>
+      <geometry><box size="${link2_l} 0.050 0.050"/></geometry>
+    </collision>
+  </link>
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 ${link1_h/2.0}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.61799" upper="2.61799" effort="25" velocity="0.8"/>
+  </joint>
+
+  <link name="link3">
+    <visual>
+      <origin xyz="${link3_l/2.0} 0 0" rpy="0 0 0"/>
+      <geometry><box size="${link3_l} 0.045 0.045"/></geometry>
+      <material name="mat_arm"/>
+    </visual>
+    <collision>
+      <origin xyz="${link3_l/2.0} 0 0" rpy="0 0 0"/>
+      <geometry><box size="${link3_l} 0.045 0.045"/></geometry>
+    </collision>
+  </link>
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="${link2_l} 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.61799" upper="2.61799" effort="20" velocity="0.8"/>
+  </joint>
+
+  <xacro:cylinder_link name="link4" radius="0.030" length="${wrist1_l}" color="mat_arm" rpy="0 1.57079632679 0"/>
+  <joint name="joint4" type="revolute">
+    <parent link="link3"/>
+    <child link="link4"/>
+    <origin xyz="${link3_l} 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-2.61799" upper="2.61799" effort="10" velocity="1.2"/>
+  </joint>
+
+  <xacro:cylinder_link name="link5" radius="0.026" length="${wrist2_l}" color="mat_arm" rpy="0 1.57079632679 0"/>
+  <joint name="joint5" type="revolute">
+    <parent link="link4"/>
+    <child link="link5"/>
+    <origin xyz="${wrist1_l} 0 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2.61799" upper="2.61799" effort="10" velocity="1.2"/>
+  </joint>
+
+  <xacro:cylinder_link name="link6" radius="0.024" length="${tool_l}" color="mat_tool" rpy="0 1.57079632679 0"/>
+  <joint name="joint6" type="revolute">
+    <parent link="link5"/>
+    <child link="link6"/>
+    <origin xyz="${wrist2_l} 0 0" rpy="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-2.61799" upper="2.61799" effort="8" velocity="1.5"/>
+  </joint>
+
+  <!-- ================================================================
+       GREIFER / TCP
+       ================================================================ -->
+  <link name="tool0"/>
+  <joint name="joint6_to_tool0" type="fixed">
+    <parent link="link6"/>
+    <child link="tool0"/>
+    <origin xyz="${tool_l/2.0} 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gripper_base_link">
+    <visual>
+      <origin xyz="${gripper_len/2.0} 0 0"/>
+      <geometry><box size="${gripper_len} 0.045 0.035"/></geometry>
+      <material name="mat_tool"/>
+    </visual>
+  </link>
+  <joint name="tool0_to_gripper_base" type="fixed">
+    <parent link="tool0"/>
+    <child link="gripper_base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="left_finger_link">
+    <visual>
+      <origin xyz="${finger_len/2.0} 0 0"/>
+      <geometry><box size="${finger_len} 0.012 0.020"/></geometry>
+      <material name="mat_tool"/>
+    </visual>
+  </link>
+  <joint name="left_finger_fixed" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="left_finger_link"/>
+    <origin xyz="${gripper_len} ${finger_gap/2.0} 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="right_finger_link">
+    <visual>
+      <origin xyz="${finger_len/2.0} 0 0"/>
+      <geometry><box size="${finger_len} 0.012 0.020"/></geometry>
+      <material name="mat_tool"/>
+    </visual>
+  </link>
+  <joint name="right_finger_fixed" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="right_finger_link"/>
+    <origin xyz="${gripper_len} ${(-finger_gap)/2.0} 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="gripper_tcp"/>
+  <joint name="gripper_base_to_tcp" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="gripper_tcp"/>
+    <origin xyz="${gripper_len + finger_len} 0 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>

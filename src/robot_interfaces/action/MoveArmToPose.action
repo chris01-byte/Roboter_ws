@@ -1,0 +1,16 @@
+# =====================================================================
+#  MoveArmToPose.action
+#  Faehrt den Werkzeugmittelpunkt (TCP) zu einer kartesischen Zielpose.
+#  Der Action-Server kapselt MoveIt 2 (Planung) + ros2_control (Ausfuehrung).
+#  Server: arm_action_server (noch zu implementieren)
+#  Client: Behavior-Tree (MoveArmToPose)
+# =====================================================================
+# --- Goal ---
+geometry_msgs/PoseStamped target_pose    # Ziel-Pose des TCP (map oder base_link)
+---
+# --- Result ---
+bool success
+string message
+---
+# --- Feedback ---
+float32 progress                          # 0.0 .. 1.0

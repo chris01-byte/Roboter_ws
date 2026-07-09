@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  bt_orchestrator (WP-2)                                                -->
+<!--  Behavior-Tree-Client: orchestriert Pick-and-Place ueber die           -->
+<!--  Actions/Services aus dem Schnittstellen-Kontrakt (WP-1).              -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>bt_orchestrator</name>
+  <version>0.1.0</version>
+  <description>Behavior-Tree-Orchestrator (Pick and Place) fuer den mobilen Roboter.</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Kern -->
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>behaviortree_cpp</depend>
+  <depend>behaviortree_ros2</depend>
+
+  <!-- Schnittstellen -->
+  <depend>robot_interfaces</depend>
+  <depend>nav2_msgs</depend>
+  <depend>control_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <!-- Zum Starten via Launch-Datei -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

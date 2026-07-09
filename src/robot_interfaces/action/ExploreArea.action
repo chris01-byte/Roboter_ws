@@ -1,0 +1,25 @@
+# =====================================================================
+#  ExploreArea.action  -  Autonome Wohnungs-Erkundung (WP-5, Ebene 1)
+#  ------------------------------------------------------------------
+#  Startet die FRONTIER-basierte Exploration: Der Roboter faehrt
+#  selbststaendig die Grenzen zwischen bekanntem (frei) und unbekanntem
+#  Raum ab, bis die Karte vollstaendig ist ODER ein Zeitlimit greift.
+#  Deterministisch und zielgerichtet - KEIN Zufallsgenerator. CPU-only.
+#
+#  Server: explore_node   |   Client: Behavior-Tree (Explore) / mission_manager
+# =====================================================================
+# --- Goal ---
+float32 timeout_s               # max. Erkundungsdauer [s] (0 = unbegrenzt)
+float32 min_frontier_size_m     # kleinste zu beachtende Frontier [m] (0 = Default aus YAML)
+bool return_to_start            # nach Fertigstellung zur Startpose zurueckkehren?
+---
+# --- Result ---
+bool success                    # true = vollstaendig erkundet oder sauber beendet
+string message                  # Klartext-Ergebnis
+int32 frontiers_visited         # Anzahl angefahrener Frontier-Ziele
+float32 explored_area_m2        # grob geschaetzte erkundete Freiflaeche [m^2]
+---
+# --- Feedback ---
+float32 explored_percent        # 0.0 .. 100.0 (grobe Schaetzung des Fortschritts)
+int32 frontiers_remaining       # aktuell erkannte, noch offene Frontiers
+geometry_msgs/PoseStamped current_goal   # aktuell angefahrene Frontier-Zielpose

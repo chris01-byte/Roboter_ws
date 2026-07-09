@@ -1,0 +1,71 @@
+# =====================================================================
+#  collision_monitor_params.yaml  -  WP-1b reaktive Hindernisvermeidung
+#  nav2_collision_monitor bremst/stoppt die Basis anhand der VL53-Wolken,
+#  unabhaengig vom Hauptregelkreis -> schnelle Reaktion, "nicht festfahren".
+# ---------------------------------------------------------------------
+#  SCHNELL ANPASSBAR (im Editor nach [TUNE] suchen):
+#    [TUNE:stop]      Stop-Zone (Box direkt vor dem Roboter) -> Z.37
+#    [TUNE:stoppts]   Punkt-Schwelle Stop (max_points)       -> Z.42
+#    [TUNE:slow]      Slow-Zone (groesserer Bereich)         -> Z.47
+#    [TUNE:slowpts]   Punkt-Schwelle Slow (max_points)       -> Z.51
+#    [TUNE:slowratio] Drossel-Faktor                         -> Z.52
+#
+#  ROS-/Nav2-VERSION:
+#    Diese Datei ist fuer die aeltere Humble/nav2_collision_monitor-
+#    Schreibweise angepasst: 'max_points' statt 'min_points'.
+#    Bedeutung: Aktion wird ausgeloest, sobald MEHR als max_points Punkte
+#    in der Zone liegen. Fuer "ab 2 Punkte" also max_points: 1.
+#
+#  cmd_vel-VERKETTUNG (WICHTIG):
+#    Controller/Smoother -> cmd_vel_in_topic -> [collision_monitor]
+#                        -> cmd_vel_out_topic -> base_hardware (/cmd_vel)
+#    cmd_vel_out_topic MUSS das Topic sein, auf das base_hardware hoert.
+# =====================================================================
+collision_monitor:
+  ros__parameters:
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"     # vom velocity_smoother (sonst "cmd_vel_nav")
+    cmd_vel_out_topic: "cmd_vel"             # -> base_hardware hoert hier
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0                       # [s] keine Daten -> Quelle gilt als leer
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+
+    polygons: ["StopZone", "SlowZone"]
+
+    # [TUNE:stop] Sofort STOPPEN, wenn Punkte in dieser Box liegen.
+    StopZone:
+      type: "polygon"
+      # Punkte als [x1,y1, x2,y2, ...] im base_link-Frame [m] (Box vorne):
+      points: [0.25, 0.18, 0.25, -0.18, 0.00, -0.18, 0.00, 0.18]
+      action_type: "stop"
+      max_points: 1          # aeltere Nav2-Form: Aktion ab >1 Punkt, also ab 2 Punkten
+      visualize: True
+      polygon_pub_topic: "collision_stop_zone"
+
+    # [TUNE:slow] LANGSAMER fahren, wenn Punkte in dieser groesseren Box liegen.
+    SlowZone:
+      type: "polygon"
+      points: [0.50, 0.30, 0.50, -0.30, 0.00, -0.30, 0.00, 0.30]
+      action_type: "slowdown"
+      max_points: 1          # aeltere Nav2-Form: Aktion ab >1 Punkt, also ab 2 Punkten
+      slowdown_ratio: 0.3    # [TUNE:slowratio] auf 30% der Geschwindigkeit drosseln
+      visualize: True
+      polygon_pub_topic: "collision_slow_zone"
+
+    # Beobachtungsquellen = die beiden VL53-Punktwolken aus vl53_near_field
+    observation_sources: ["vl53_left", "vl53_right"]
+    vl53_left:
+      type: "pointcloud"
+      topic: "/near_field/left/points"
+      min_height: 0.05       # Boden ausblenden [m]
+      max_height: 0.50
+      enabled: True
+    vl53_right:
+      type: "pointcloud"
+      topic: "/near_field/right/points"
+      min_height: 0.05
+      max_height: 0.50
+      enabled: True

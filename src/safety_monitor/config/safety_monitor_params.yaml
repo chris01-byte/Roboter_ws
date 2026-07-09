@@ -1,0 +1,33 @@
+# =====================================================================
+#  safety_monitor_params.yaml  -  Onboard-Not-Aus-Waechter (K4)
+# =====================================================================
+#  Publiziert /safety/estop (true = Not-Aus aktiv). Nur hier aendern.
+#
+#  SCHNELL FINDEN (nach Abschnittsnamen suchen):
+#    "Topics"        estop_topic, estop_request_topic
+#    "Verhalten"     initial_estop, publish_period_s
+#    "Nahbereich"    use_near_field_estop + Distanz (Default AUS)
+#    "Hardware"      GPIO-Taster (Platzhalter, noch nicht implementiert)
+# =====================================================================
+safety_monitor:
+  ros__parameters:
+    # --- Topics ---
+    estop_topic: "/safety/estop"
+    estop_request_topic: "/safety/estop_request"
+
+    # --- Verhalten ---
+    initial_estop: false        # Start frei (damit Missionen laufen koennen)
+    publish_period_s: 0.2       # /safety/estop wird so oft nachpubliziert [s]
+
+    # --- Nahbereich als HARTE Notbremse (Default AUS) ---
+    # Normale reaktive Verlangsamung macht der collision_monitor; dies waere
+    # nur eine zusaetzliche Not-Bremse bei EXTREM naher Distanz.
+    use_near_field_estop: false
+    near_field_status_topic: "/near_field/status"
+    near_field_estop_dist_m: 0.08
+
+    # --- Hardware-Taster (GPIO) - PLATZHALTER, noch nicht implementiert ---
+    # Erst aktivieren, wenn Jetson.GPIO angebunden ist. Bis dahin Not-Aus
+    # ueber estop_request_topic bruecken.
+    use_gpio_estop: false
+    gpio_estop_pin: 0

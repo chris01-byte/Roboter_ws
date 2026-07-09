@@ -1,0 +1,52 @@
+# =====================================================================
+#  handeye_params.yaml  -  Messpaar-Aufnahme Hand-Auge-Kalibrierung
+# ---------------------------------------------------------------------
+#  Stufe D aus KONZEPT_KALIBRIERUNG_OAK_ARM.md. NUR hier aendern.
+#
+#  WICHTIGE WERTE (im Editor nach dem Anker [KAL:...] suchen):
+#    [KAL:topics]   Bild-/CameraInfo-Topics der OAK
+#    [KAL:frames]   TF-Frames Basis und Flansch
+#    [KAL:board]    Board-Geometrie — Feldmass NACHMESSEN und eintragen!
+#    [KAL:capture]  Frames je Aufnahme + Stillstands-Toleranzen
+#    [KAL:output]   Ablageort der Messpaar-Datei
+# =====================================================================
+handeye_recorder:
+  ros__parameters:
+    # --- [KAL:topics] Kamera (gleiche Aufloesung wie im Betrieb!) ---
+    image_topic: "/oak/rgb/image_raw"
+    camera_info_topic: "/oak/rgb/camera_info"
+
+    # --- [KAL:frames] TF: Basis -> Flansch (NICHT gripper_tcp: das Board
+    #     sitzt am Flansch; die Halterung faellt aus der Loesung heraus) ---
+    base_frame: "base_link"
+    tool_frame: "tool0"
+
+    # --- [KAL:board] ChArUco-Board (A4, 7x5, gedruckt + vermessen) ---
+    board.squares_x: 7
+    board.squares_y: 5
+    board.square_len_m: 0.030      # [ANPASSEN: mit Messschieber nachmessen!]
+    board.marker_len_m: 0.022      # [ANPASSEN: mitskalieren, ca. 0.75 * Feld]
+    board.aruco_dict: "DICT_5X5_250"
+    board.min_corners: 12          # Mindestecken, sonst gilt "nicht erkannt"
+
+    # --- [KAL:capture] Aufnahme (ENTER druecken -> N Frames mitteln) ---
+    capture.frames_per_capture: 8
+    capture.timeout_s: 6.0
+    capture.max_board_spread_m: 0.002    # Board wackelt? -> Paar verwerfen
+    capture.max_board_spread_deg: 0.4
+    capture.max_tool_spread_m: 0.001     # Arm-TF wackelt? -> Paar verwerfen
+    capture.max_tool_spread_deg: 0.2
+
+    # --- Qualitaets-Warnungen ---
+    quality.similarity_warn_rot_deg: 5.0   # neue Pose ~gleich alter Pose?
+    quality.similarity_warn_trans_m: 0.05
+    quality.target_rotation_spread_deg: 30.0
+
+    # --- Sonstiges ---
+    process_every_n_frames: 2      # CPU schonen: nur jedes n-te Bild auswerten
+    show_window: false             # true nur mit Desktop/Display am Rechner
+    debug_image_topic: "/handeye/debug_image"
+
+    # --- [KAL:output] Ablage der Messpaare ---
+    output_dir: "~/handeye_data"
+    session_name: ""               # leer = Zeitstempel automatisch

@@ -1,0 +1,71 @@
+# =====================================================================
+#  base_hardware_params.yaml - Basisantrieb / Differential Drive
+# ---------------------------------------------------------------------
+#  Standard ist bewusst Dry-run. Fuer echten RS485-Test auf Staendern:
+#    dry_run: false
+#    allow_rs485: true
+#  Vorher Motorregister mit dem NEMA23-RS485-Manual abgleichen!
+#
+#  PARAMETER-INDEX:
+#    cmd_vel_topic / odom_topic .............. Zeile 27 / 28
+#    wheel_radius_m .......................... Zeile 32
+#    wheel_separation_m ...................... Zeile 33
+#    max_linear_speed_mps .................... Zeile 36
+#    max_angular_speed_radps ................. Zeile 37
+#    cmd_timeout_s ........................... Zeile 40
+#    update_rate_hz .......................... Zeile 41
+#    dry_run / allow_rs485 ................... Zeile 44 / 45
+#    rs485_port / baudrate ................... Zeile 48 / 49
+#    left_motor_id / right_motor_id .......... Zeile 50 / 51
+#    invert_left / invert_right .............. Zeile 52 / 53
+#    Modbus-Register ........................ Zeile 56-64
+#    publish_tf .............................. Zeile 71
+# =====================================================================
+base_hardware:
+  ros__parameters:
+    # --- ROS Topics ---
+    cmd_vel_topic: "/cmd_vel"
+    odom_topic: "/odom"
+    state_topic: "/base_hardware/state_json"
+
+    # --- Geometrie [ANPASSEN] ---
+    wheel_radius_m: 0.075
+    wheel_separation_m: 0.420
+
+    # --- Limits fuer erste Tests [ANPASSEN, konservativ lassen] ---
+    max_linear_speed_mps: 0.30
+    max_angular_speed_radps: 0.80
+
+    # --- Watchdog / Update ---
+    cmd_timeout_s: 0.25
+    update_rate_hz: 50.0
+
+    # --- Sicherheitsmodus ---
+    dry_run: true
+    allow_rs485: false
+
+    # --- RS485 Bus B ---
+    rs485_port: "/dev/ttyUSB_BASE"
+    baudrate: 115200
+    left_motor_id: 1
+    right_motor_id: 2
+    invert_left: false
+    invert_right: true
+
+    # --- Modbus-Register [ANPASSEN: NEMA23-RS485 Manual pruefen] ---
+    rpm_register: 0x001D
+    direction_register: 0x001C
+    command_register: 0x0027
+    velocity_start_value: 0x0002
+    stop_value: 0x0100
+    rpm_scale: 1.0
+    max_motor_rpm: 120.0
+    modbus_timeout_s: 0.05
+    modbus_write_period_s: 0.05
+
+    # --- Frames ---
+    odom_frame_id: "odom"
+    base_frame_id: "base_link"
+    # Projektentscheidung: spaeter soll ekf_node odom->base_link publizieren.
+    # Fuer Standalone-RViz-Test darf man publish_tf testweise auf true setzen.
+    publish_tf: false

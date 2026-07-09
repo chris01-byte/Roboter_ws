@@ -1,0 +1,17 @@
+# =====================================================================
+#  MoveArmToNamed.action
+#  Faehrt den Arm in eine vordefinierte, benannte Pose.
+#  Bekannte Namen (im arm_action_server / MoveIt SRDF hinterlegt):
+#    "stowed" = eingeklappt zum Fahren (Sicherheits-Interlock)
+#    "ready"  = aufgerichtet, bereit zum Manipulieren
+#  Server: arm_action_server   |   Client: Behavior-Tree (MoveArmToNamed)
+# =====================================================================
+# --- Goal ---
+string target_name                        # z.B. "stowed", "ready"
+---
+# --- Result ---
+bool success
+string message
+---
+# --- Feedback ---
+float32 progress                          # 0.0 .. 1.0

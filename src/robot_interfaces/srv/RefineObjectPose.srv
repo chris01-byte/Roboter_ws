@@ -1,0 +1,12 @@
+# =====================================================================
+#  RefineObjectPose.srv
+#  Fein-Detektion am Zielort: verfeinert eine grobe Objektpose mit
+#  aktuellen Kameradaten (naeher dran = genauer).
+#  Server: Wahrnehmung   |   Client: Behavior-Tree (DetectObjectFine)
+# =====================================================================
+# --- Request ---
+geometry_msgs/PoseStamped coarse_pose    # grobe Pose (map)
+---
+# --- Response ---
+bool success
+geometry_msgs/PoseStamped refined_pose   # verfeinerte Pose (map)

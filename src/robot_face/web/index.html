@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1219">
+  <title>Roboter Gesicht</title>
+  <!-- =====================================================================
+       ALLES IN EINER DATEI (CSS + JS inline) - mit Absicht: das Gesicht
+       rendert damit auch bei Datei-Doppelklick, in Vorschau-Panels und
+       unvollstaendigen Kopien korrekt (keine Nachladefehler moeglich).
+       ===================================================================== -->
+  <style>
+    /* ------------------- Farbstimmung / Grundlayout ------------------- */
+    :root {
+      --face:    #ffd9a3;   /* warmer Cartoon-Grundton */
+      --outline: #2b2320;
+      --brow:    #6b4a2f;
+      --nose:    #f0b467;
+      --mouth:   #5a2a2a;
+      --cheek:   #ff9d7e;
+      --bg1:     #16202c;
+      --bg2:     #0d1219;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: radial-gradient(ellipse at 50% 42%, var(--bg1) 0%, var(--bg2) 72%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;                 /* Kiosk: kein Mauszeiger */
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      transition: background 0.6s ease;
+    }
+
+    #faceSvg { width: 100vw; height: 100vh; display: block; }
+
+    /* Sanftes "Atmen", damit das Gesicht nie eingefroren wirkt */
+    #face {
+      transform-origin: 500px 310px;
+      transform-box: view-box;
+      animation: breathe 4.2s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.012); }
+    }
+
+    /* ------------------- Ausdrucksabhaengige Stimmung ------------------- */
+    body[data-expression="alarm"] { --bg1: #3a1512; --bg2: #170908; }
+    body[data-expression="alarm"] #alarmRing {
+      animation: alarmPulse 0.9s ease-in-out infinite;
+    }
+    @keyframes alarmPulse {
+      0%, 100% { opacity: 0.15; }
+      50%      { opacity: 0.85; }
+    }
+    body[data-expression="alarm"] #face { animation-duration: 1.6s; }
+
+    body[data-expression="happy"]     { --bg1: #1c2a22; }
+    body[data-expression="sad"]       { --bg1: #1a2231; }
+    body[data-expression="confused"]  { --bg1: #241f2e; }
+    body[data-expression="sleeping"]  { --bg1: #101722; --bg2: #090d13; }
+    body[data-expression="sleeping"] #face {
+      animation-duration: 7s;
+      filter: brightness(0.78);
+    }
+
+    /* ------------------- Zzz beim Schlafen ------------------------------ */
+    .zzz {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-weight: bold;
+      fill: #9db8d8;
+    }
+    .z1 { font-size: 58px; }
+    .z2 { font-size: 44px; animation-delay: 0.6s !important; }
+    .z3 { font-size: 32px; animation-delay: 1.2s !important; }
+    body[data-expression="sleeping"] .zzz {
+      animation: zzzFloat 2.6s ease-in-out infinite;
+    }
+    @keyframes zzzFloat {
+      0%   { opacity: 0;   transform: translateY(8px); }
+      35%  { opacity: 0.9; }
+      100% { opacity: 0;   transform: translateY(-16px); }
+    }
+
+    /* ------------------- rosbridge-Statuspunkt --------------------------- */
+    #rosDot {
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #b04a3c;
+      opacity: 0.55;
+      transition: background 0.4s ease;
+    }
+    #rosDot.connected { background: #4eb06a; }
+  </style>
+</head>
+<body data-expression="neutral">
+  <!-- Rundliches Cartoon-Gesicht. Alle beweglichen Teile sind eigene
+       SVG-Gruppen; das Skript unten animiert sie per Parameter-Tweening.
+       Bedienung ohne ROS (Demo): Tasten 1-9 oder Tippen wechselt Ausdruck. -->
+  <svg id="faceSvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"
+       xmlns="http://www.w3.org/2000/svg" aria-label="Robotergesicht">
+
+    <!-- Alarm-Ring (nur im Zustand "alarm" sichtbar, pulsiert per CSS) -->
+    <circle id="alarmRing" cx="500" cy="310" r="292" fill="none"
+            stroke="#e05a47" stroke-width="10" opacity="0"/>
+
+    <g id="face">
+      <!-- Kopf (Farben doppelt abgesichert: Attribut-Fallback + CSS-Var) -->
+      <circle cx="500" cy="310" r="270" fill="var(--face, #ffd9a3)"
+              stroke="var(--outline, #2b2320)" stroke-width="10"/>
+
+      <!-- Wangen (Opacity wird animiert) -->
+      <ellipse id="cheekL" cx="352" cy="402" rx="50" ry="30" fill="var(--cheek, #ff9d7e)" opacity="0.25"/>
+      <ellipse id="cheekR" cx="648" cy="402" rx="50" ry="30" fill="var(--cheek, #ff9d7e)" opacity="0.25"/>
+
+      <!-- Augenbrauen (Rotation + Heben werden animiert) -->
+      <g id="browL" transform="translate(395,196)">
+        <line x1="-46" y1="0" x2="46" y2="0" stroke="var(--brow, #6b4a2f)"
+              stroke-width="15" stroke-linecap="round"/>
+      </g>
+      <g id="browR" transform="translate(605,196)">
+        <line x1="-46" y1="0" x2="46" y2="0" stroke="var(--brow, #6b4a2f)"
+              stroke-width="15" stroke-linecap="round"/>
+      </g>
+
+      <!-- Augen: aeussere Gruppe = Position, innere = Lidschluss (scaleY),
+           Pupillengruppe = Blickrichtung -->
+      <g transform="translate(395,278)">
+        <g id="eyeScaleL">
+          <ellipse rx="47" ry="52" fill="#ffffff" stroke="var(--outline, #2b2320)" stroke-width="6"/>
+          <g id="pupilL">
+            <circle r="19" fill="#241d1a"/>
+            <circle cx="-6" cy="-7" r="6" fill="#ffffff" opacity="0.9"/>
+          </g>
+        </g>
+      </g>
+      <g transform="translate(605,278)">
+        <g id="eyeScaleR">
+          <ellipse rx="47" ry="52" fill="#ffffff" stroke="var(--outline, #2b2320)" stroke-width="6"/>
+          <g id="pupilR">
+            <circle r="19" fill="#241d1a"/>
+            <circle cx="-6" cy="-7" r="6" fill="#ffffff" opacity="0.9"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- Nase (klein, cartoonig, im Wesentlichen statisch) -->
+      <ellipse id="nose" cx="500" cy="342" rx="17" ry="13" fill="var(--nose, #f0b467)"/>
+
+      <!-- Mund (Pfad wird je Frame neu gebaut) -->
+      <g transform="translate(500,436)">
+        <path id="mouth" d="M -90,0 Q 0,20 90,0 Q 0,34 -90,0 Z"
+              fill="var(--mouth, #5a2a2a)" stroke="var(--outline, #2b2320)" stroke-width="5"
+              stroke-linejoin="round"/>
+      </g>
+
+      <!-- Schlaf-Zzz (nur im Zustand "sleeping") -->
+      <g id="zzz" opacity="0">
+        <text x="740" y="150" class="zzz z1">Z</text>
+        <text x="790" y="110" class="zzz z2">Z</text>
+        <text x="835" y="78"  class="zzz z3">z</text>
+      </g>
+    </g>
+  </svg>
+
+  <!-- unauffaellige Verbindungsanzeige (gruen = rosbridge verbunden) -->
+  <div id="rosDot" title="rosbridge"></div>
+
+  <script>
+  // =====================================================================
+  //  Animations-Engine des Roboter-Gesichts (inline, siehe Kopfkommentar)
+  // ---------------------------------------------------------------------
+  //  Prinzip: Jeder Ausdruck ist ein Satz Zielparameter (PRESETS). Eine
+  //  requestAnimationFrame-Schleife blendet die aktuellen Werte weich zum
+  //  Ziel (exponentielles Tweening) und schreibt sie in die SVG-Gruppen.
+  //  Dazu laufen unabhaengig: Blinzeln, Blickwandern ("Idle-Leben").
+  //
+  //  Datenquelle: rosbridge-WebSocket, Topic /face/state_json
+  //    {"expression": "happy", ...}   -> setExpression("happy")
+  //  Ohne ROS (Demo/Test): Tasten 1-9 oder Tippen/Klicken wechselt.
+  // =====================================================================
+  'use strict';
+
+  const stateTopic = '/face/state_json';
+
+  // ---------------- Parameter-Presets je Ausdruck ----------------------
+  // eyeOpen: 0..1.3 | pupilX/Y: -1..1 | browRaise*: 0..1 | browAngle*: Grad
+  // mouthCurve: -1 (Trauer) .. +1 (Laecheln) | mouthOpen: 0..1
+  // mouthWidth: 0.3..1.1 | cheeks: 0..1 | wander: Staerke des Blickwanderns
+  const PRESETS = {
+    neutral:   { eyeOpen: 0.90, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.15, browRaiseR: 0.15,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.18, mouthOpen: 0.06,
+                 mouthWidth: 1.00, cheeks: 0.25, wander: 0.5 },
+    listening: { eyeOpen: 1.05, pupilX: 0.00, pupilY: -0.25, browRaiseL: 0.75, browRaiseR: 0.75,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.30, mouthOpen: 0.12,
+                 mouthWidth: 0.90, cheeks: 0.35, wander: 0.15 },
+    thinking:  { eyeOpen: 0.72, pupilX: 0.55, pupilY: -0.50, browRaiseL: 0.65, browRaiseR: 0.05,
+                 browAngleL: -8,  browAngleR: 4,   mouthCurve: 0.02, mouthOpen: 0.04,
+                 mouthWidth: 0.75, cheeks: 0.10, wander: 0.2 },
+    happy:     { eyeOpen: 0.38, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.35, browRaiseR: 0.35,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 1.00, mouthOpen: 0.30,
+                 mouthWidth: 1.05, cheeks: 1.00, wander: 0.3 },
+    sad:       { eyeOpen: 0.55, pupilX: 0.00, pupilY: 0.35, browRaiseL: 0.30, browRaiseR: 0.30,
+                 browAngleL: -16, browAngleR: 16,  mouthCurve: -0.85, mouthOpen: 0.05,
+                 mouthWidth: 0.80, cheeks: 0.00, wander: 0.1 },
+    surprised: { eyeOpen: 1.25, pupilX: 0.00, pupilY: 0.00, browRaiseL: 1.00, browRaiseR: 1.00,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.05, mouthOpen: 0.85,
+                 mouthWidth: 0.45, cheeks: 0.30, wander: 0.0 },
+    alarm:     { eyeOpen: 1.15, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.15, browRaiseR: 0.15,
+                 browAngleL: 18,  browAngleR: -18, mouthCurve: -0.40, mouthOpen: 0.18,
+                 mouthWidth: 0.85, cheeks: 0.00, wander: 0.0 },
+    confused:  { eyeOpen: 0.85, pupilX: -0.35, pupilY: -0.10, browRaiseL: 0.85, browRaiseR: 0.00,
+                 browAngleL: -6,  browAngleR: 8,   mouthCurve: -0.20, mouthOpen: 0.07,
+                 mouthWidth: 0.70, cheeks: 0.00, wander: 0.8 },
+    sleeping:  { eyeOpen: 0.04, pupilX: 0.00, pupilY: 0.15, browRaiseL: 0.05, browRaiseR: 0.05,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.12, mouthOpen: 0.05,
+                 mouthWidth: 0.90, cheeks: 0.15, wander: 0.0 },
+  };
+  const ORDER = Object.keys(PRESETS);
+
+  // ---------------- Laufender Zustand ----------------------------------
+  let expression = 'neutral';
+  const cur = Object.assign({}, PRESETS.neutral);   // aktuelle Werte
+  const tgt = Object.assign({}, PRESETS.neutral);   // Zielwerte
+
+  // Blinzeln / Blickwandern
+  let blink = 0;                    // 0 = offen, 1 = zu (kurzer Impuls)
+  let nextBlinkAt = performance.now() + 2500;
+  let wanderX = 0, wanderY = 0, wanderTX = 0, wanderTY = 0;
+  let nextWanderAt = 0;
+
+  const el = (id) => document.getElementById(id);
+
+  // ---------------- Ausdruck setzen ------------------------------------
+  function setExpression(name) {
+    if (!PRESETS[name] || name === expression) { return; }
+    expression = name;
+    Object.assign(tgt, PRESETS[name]);
+    document.body.dataset.expression = name;
+  }
+  window.setExpression = setExpression;   // fuer Tests/Debug erreichbar
+
+  // ---------------- Tween-Schleife --------------------------------------
+  let lastT = performance.now();
+
+  function frame(now) {
+    const dt = Math.min(0.1, (now - lastT) / 1000);
+    lastT = now;
+    const k = 1 - Math.exp(-dt * 7);            // weiches Nachziehen
+
+    for (const key of Object.keys(cur)) {
+      cur[key] += (tgt[key] - cur[key]) * k;
+    }
+
+    // --- Blinzeln (nicht im Schlaf; dort sind die Augen ohnehin zu) ----
+    if (expression !== 'sleeping' && now >= nextBlinkAt) {
+      blink = 1;
+      nextBlinkAt = now + 2500 + Math.random() * 4000;
+    }
+    blink = Math.max(0, blink - dt * 9);        // ~110 ms pro Blinzler
+
+    // --- Blickwandern (Staerke je Ausdruck) ----------------------------
+    if (now >= nextWanderAt) {
+      wanderTX = (Math.random() * 2 - 1) * cur.wander;
+      wanderTY = (Math.random() * 2 - 1) * cur.wander * 0.6;
+      nextWanderAt = now + 1800 + Math.random() * 2600;
+    }
+    wanderX += (wanderTX - wanderX) * k;
+    wanderY += (wanderTY - wanderY) * k;
+
+    apply();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------- Werte in die SVG schreiben ---------------------------
+  function apply() {
+    const open = Math.max(0.04, cur.eyeOpen * (1 - blink));
+    el('eyeScaleL').setAttribute('transform', `scale(1 ${open.toFixed(3)})`);
+    el('eyeScaleR').setAttribute('transform', `scale(1 ${open.toFixed(3)})`);
+
+    const px = (cur.pupilX + wanderX) * 14;
+    const py = (cur.pupilY + wanderY) * 12;
+    el('pupilL').setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)})`);
+    el('pupilR').setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)})`);
+
+    el('browL').setAttribute('transform',
+      `translate(395 ${(196 - cur.browRaiseL * 36).toFixed(1)}) rotate(${cur.browAngleL.toFixed(1)})`);
+    el('browR').setAttribute('transform',
+      `translate(605 ${(196 - cur.browRaiseR * 36).toFixed(1)}) rotate(${cur.browAngleR.toFixed(1)})`);
+
+    el('mouth').setAttribute('d', mouthPath(cur.mouthCurve, cur.mouthOpen, cur.mouthWidth));
+
+    el('cheekL').setAttribute('opacity', cur.cheeks.toFixed(2));
+    el('cheekR').setAttribute('opacity', cur.cheeks.toFixed(2));
+    el('zzz').setAttribute('opacity', expression === 'sleeping' ? '1' : '0');
+  }
+
+  // Mund als geschlossene Flaeche: obere + untere Bezierkurve.
+  // curve: +1 Laecheln (Mitte nach unten, Ecken hoch) / -1 Trauer.
+  function mouthPath(curve, openAmt, width) {
+    const half = 95 * width;
+    const cornerY = -curve * 22;
+    const topCtrlY = cornerY + curve * 75;
+    const botCtrlY = topCtrlY + 12 + openAmt * 100;
+    return `M ${-half},${cornerY.toFixed(1)} ` +
+           `Q 0,${topCtrlY.toFixed(1)} ${half},${cornerY.toFixed(1)} ` +
+           `Q 0,${botCtrlY.toFixed(1)} ${-half},${cornerY.toFixed(1)} Z`;
+  }
+
+  // ---------------- rosbridge-Anbindung ---------------------------------
+  // URL wie bei der Smartphone-GUI: gleicher Host, Port 9090.
+  // Override fuer Tests: index.html?bridge=ws://192.168.1.50:9090
+  function bridgeUrl() {
+    const q = new URLSearchParams(window.location.search).get('bridge');
+    if (q) { return q; }
+    const host = window.location.hostname || 'localhost';
+    return `ws://${host}:9090`;
+  }
+
+  let ws = null;
+
+  function connect() {
+    try {
+      ws = new WebSocket(bridgeUrl());
+    } catch (e) {
+      scheduleReconnect();
+      return;
+    }
+    ws.onopen = () => {
+      el('rosDot').classList.add('connected');
+      ws.send(JSON.stringify({ op: 'subscribe', topic: stateTopic, type: 'std_msgs/String' }));
+    };
+    ws.onmessage = (ev) => {
+      let frame_;
+      try { frame_ = JSON.parse(ev.data); } catch { return; }
+      if (frame_.op !== 'publish' || frame_.topic !== stateTopic || !frame_.msg) { return; }
+      try {
+        const state = JSON.parse(frame_.msg.data);
+        if (state.expression) { setExpression(state.expression); }
+      } catch { /* fehlerhafte Nutzlast ignorieren */ }
+    };
+    ws.onclose = () => {
+      el('rosDot').classList.remove('connected');
+      scheduleReconnect();
+    };
+    ws.onerror = () => { try { ws.close(); } catch { /* egal */ } };
+  }
+
+  function scheduleReconnect() {
+    setTimeout(connect, 3000);
+  }
+
+  // ---------------- Demo-Bedienung (ohne ROS) ---------------------------
+  // Tasten 1-9 = Ausdruck direkt, Tippen/Klicken = naechster Ausdruck.
+  window.addEventListener('keydown', (ev) => {
+    const idx = parseInt(ev.key, 10) - 1;
+    if (idx >= 0 && idx < ORDER.length) { setExpression(ORDER[idx]); }
+  });
+  window.addEventListener('pointerdown', () => {
+    const next = (ORDER.indexOf(expression) + 1) % ORDER.length;
+    setExpression(ORDER[next]);
+  });
+
+  // ---------------- Start ------------------------------------------------
+  requestAnimationFrame(frame);
+  connect();
+  </script>
+</body>
+</html>

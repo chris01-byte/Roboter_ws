@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  semantic_perception  -  Open-Vocabulary-Wahrnehmung (WP-5 Baustein B) -->
+<!--  ====================================================   -->
+<!--  Erkennt Objekte per Text-Query ("finde die Tasse") und liefert deren  -->
+<!--  3D-Pose ueber den bestehenden Service GetObjectPose. Optional fuellt  -->
+<!--  es den Missionskatalog (Objekte/Raeume) dynamisch. Standard-Backend   -->
+<!--  ist ein STUB (Trockentest); echte Modelle (YOLO-World / OWL-ViT)      -->
+<!--  werden an klar markierten Stellen eingehaengt. Laeuft offboard oder   -->
+<!--  perspektivisch auf der OAK-NPU.                                        -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>semantic_perception</name>
+  <version>0.1.0</version>
+  <description>Open-Vocabulary-Objekterkennung (GetObjectPose) + dynamischer Katalog (WP-5 Baustein B).</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>robot_interfaces</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- Fuer echte Modelle spaeter: python3-opencv, cv_bridge, ONNX/TensorRT/PyTorch -->
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

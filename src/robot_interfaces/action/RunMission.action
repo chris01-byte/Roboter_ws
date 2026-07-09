@@ -1,0 +1,29 @@
+# =====================================================================
+#  RunMission.action  -  Zentrale Missions-Schnittstelle (WP-4, K1)
+#  ====================================================================
+#  Schliesst die Luecke zwischen Bedien-Layer (mission_manager) und
+#  Ausfuehrung (bt_orchestrator): der mission_manager ist CLIENT, der
+#  bt_orchestrator ist SERVER dieser Action. Damit fuehrt ein Auftrag
+#  aus GUI/LLM eine ECHTE Mission aus (statt sie nur zu simulieren).
+#
+#  Server: bt_orchestrator (mission_server)
+#  Client: mission_manager  (Auftrag aus command_json -> Goal)
+# =====================================================================
+# --- Goal ---
+string mission_type              # "pick_and_place" | "explore"
+                                 # (weitere Typen folgen mit eigenem Baum)
+string object                    # Zielobjekt, z.B. "Tasse" (leer = Default)
+string room                      # Zielraum (nur Info/Logging bis Posen-Katalog existiert)
+string target                    # Ablageort (nur Info/Logging, s.o.)
+geometry_msgs/PoseStamped place_base_goal  # Basis-Zielpose am Ablageort (optional;
+                                           #   w==0 -> Server nutzt Default)
+geometry_msgs/PoseStamped place_pose       # Arm-Ablagepose (optional; s.o.)
+---
+# --- Result ---
+bool success                     # true = Mission sauber mit SUCCESS beendet
+string message                   # Klartext (auch Fehlergrund)
+string final_phase               # zuletzt aktive BT-Phase (Diagnose)
+---
+# --- Feedback ---
+string phase                     # aktuell laufender BT-Knoten (echte Phase)
+float32 progress                 # 0.0 .. 1.0 (grobe Schaetzung)

@@ -1,0 +1,69 @@
+# =====================================================================
+#  semantic_perception_params.yaml  -  Open-Vocabulary (WP-5 Baustein B)
+# ---------------------------------------------------------------------
+#  Backend 'stub' = simulierte Erkennung (Trockentest, Standard).
+#  Backend 'yoloworld' = echte Open-Vocabulary-Erkennung (ultralytics).
+#    Voraussetzung:  pip install ultralytics  + RGB/Depth/CameraInfo-Topics.
+#
+#  PARAMETER-INDEX:
+#    model_backend ......... Zeile 30
+#    service_name .......... Zeile 31
+#    rgb_topic ............. Zeile 34
+#    depth_topic ........... Zeile 35
+#    camera_info_topic ..... Zeile 36
+#    global_frame .......... Zeile 37
+#    camera_frame .......... Zeile 38
+#    confidence_threshold .. Zeile 39
+#    model_path ............ Zeile 40
+#    depth_scale ........... Zeile 41
+#    class_queries ......... Zeile 44
+#    publish_catalog ....... Zeile 52
+#    catalog_topic ......... Zeile 53
+#    catalog_period_s ...... Zeile 54
+#    known_rooms ........... Zeile 55
+#    stub_position ......... Zeile 63
+#    stub_confidence ....... Zeile 64
+# =====================================================================
+semantic_perception:
+  ros__parameters:
+    # --- Backend / Service ---
+    model_backend: "stub"                  # "stub" (Test) | "yoloworld" (echt) | "owlvit" (Platzhalter)
+    service_name: "/world_model/get_object_pose"
+
+    # --- Kamera / Frames ---
+    rgb_topic: "/oak/rgb"
+    depth_topic: "/oak/stereo/depth"
+    camera_info_topic: "/oak/rgb/camera_info"
+    global_frame: "map"
+    camera_frame: "camera_rgb_optical_frame"
+    confidence_threshold: 0.35
+    model_path: "yolov8s-worldv2.pt"       # YOLO-World-Gewichte (nur Backend 'yoloworld')
+    depth_scale: 0.001                     # Tiefen-Rohwert -> Meter (OAK: mm -> 0.001)
+
+    # --- Erkennbare Objekte (open-vocabulary Queries) ---
+    class_queries:
+      - Tasse
+      - Flasche
+      - Fernbedienung
+      - Werkzeug
+      - Schluessel
+
+    # --- Dynamischer Katalog (fuer mission_manager) ---
+    publish_catalog: true
+    catalog_topic: "/semantic/catalog_json"
+    catalog_period_s: 5.0
+    known_rooms:
+      - Wohnzimmer
+      - Kueche
+      - Flur
+      - Schlafzimmer
+      - Werkstatt
+
+    # --- Objekt-Gedaechtnis / semantische Karte (K2) ---
+    scan_period_s: 2.0        # wie oft im Hintergrund erkannt + gemerkt wird [s]
+    memory_ttl_s: 0.0         # Gedaechtnis-Verfall [s]; 0 = nie verfallen
+    live_fallback: true       # bei Cache-Miss zusaetzlich das aktuelle Bild pruefen
+
+    # --- Stub-Verhalten (nur Backend 'stub') ---
+    stub_position: [1.0, 0.0, 0.5]
+    stub_confidence: 0.8

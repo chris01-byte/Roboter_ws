@@ -1,0 +1,55 @@
+# =====================================================================
+#  bt_params.yaml  -  Zentrale Parameter fuer den BT-Orchestrator (WP-2)
+# =====================================================================
+#  Diese YAML ist die zentrale Stelle fuer ROS-Namen, Timeouts und den
+#  Testlauf. Aenderungen wirken ohne Neukompilieren (nur neu starten).
+#  Hinweis: Launch-Dateien ueberschreiben die XML-Pfade mit absoluten
+#  installierten Pfaden (bt_orchestrator.launch.py, dry_run*.launch.py).
+#
+#  SCHNELL FINDEN (im Editor nach dem Abschnittsnamen suchen,
+#  keine Zeilennummern - die veralten):
+#    "Allgemein"                  tick_rate_hz, target_object
+#    "Missions-Action-Server"     run_mission, XML-Pfade, autostart (K1)
+#    "Navigation"                 navigate, clear_costmaps
+#    "Wahrnehmung"                get_object_pose, refine, approach, grasp
+#    "Manipulation"               move_arm_*, gripper
+#    "Sicherheits-"               is_estop_clear, is_object_grasped
+#    "Exploration"                explore.action_name
+# =====================================================================
+bt_orchestrator:
+  ros__parameters:
+    # --- Allgemein ---
+    tick_rate_hz: 10.0
+    target_object: "Tasse"                    # Default-Objekt (K6: deutsch, wie Katalog)
+
+    # --- Missions-Action-Server (K1) ---
+    run_mission.action_name: "/run_mission"   # mission_manager ist der Client
+    pick_and_place_xml: "bt_xml/pick_and_place.xml"
+    explore_xml: "bt_xml/explore.xml"
+    autostart_mission: ""                     # leer = wartet auf Goal;
+                                              # "pick_and_place" -> Selbstlauf (Trockentest)
+    # bt_xml_file bleibt als Alias fuer pick_and_place_xml erhalten (Rueckwaertskompatibilitaet).
+    bt_xml_file: "bt_xml/pick_and_place.xml"
+
+    # --- Navigation (Nav2) ---
+    navigate.action_name: "navigate_to_pose"
+    clear_costmaps.service_name: "/local_costmap/clear_entirely_local_costmap"
+
+    # --- Wahrnehmung / Planung (Services) ---
+    get_object_pose.service_name: "/world_model/get_object_pose"
+    refine_object_pose.service_name: "/world_model/refine_object_pose"
+    compute_approach_pose.service_name: "/planner/compute_approach_pose"
+    compute_grasp.service_name: "/grasp/compute"
+
+    # --- Manipulation (Actions) ---
+    move_arm_to_pose.action_name: "/move_arm_to_pose"
+    move_arm_to_named.action_name: "/move_arm_to_named"
+    gripper.action_name: "/gripper_controller/gripper_cmd"
+
+    # --- Sicherheits-/Status-Topics (Conditions) ---
+    is_estop_clear.topic: "/safety/estop"
+    is_object_grasped.topic: "/gripper/grasp_detected"
+    is_offboard_available.topic: "/offboard/available"   # K5: Guard vor der Erkundung
+
+    # --- Exploration (WP-5 Ebene 1) ---
+    explore.action_name: "/explore_area"

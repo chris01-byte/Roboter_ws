@@ -1,0 +1,48 @@
+# =====================================================================
+#  explore_params.yaml  -  Autonome Frontier-Exploration (WP-5 Ebene 1)
+# ---------------------------------------------------------------------
+#  Steuert, WIE der Roboter unbekannte Bereiche anfaehrt. Alle Werte
+#  ohne Neukompilieren aenderbar (nur Node neu starten).
+#
+#  PARAMETER-INDEX:
+#    map_topic ............................... Zeile 24
+#    global_frame / robot_base_frame ......... Zeile 25 / 26
+#    nav_action_name ......................... Zeile 27
+#    replan_period_s ......................... Zeile 30
+#    min_frontier_size_m ..................... Zeile 31
+#    goal_timeout_s .......................... Zeile 32
+#    overall_timeout_s ....................... Zeile 33
+#    potential_scale / gain_scale ............ Zeile 36 / 37
+#    min_goal_distance_m ..................... Zeile 40
+#    blacklist_radius_m ...................... Zeile 41
+#    return_to_start ......................... Zeile 44
+#    visualize / marker_topic ................ Zeile 47 / 48
+# =====================================================================
+explore_node:
+  ros__parameters:
+    # --- ROS Schnittstellen ---
+    map_topic: "/map"
+    global_frame: "map"
+    robot_base_frame: "base_link"
+    nav_action_name: "navigate_to_pose"
+
+    # --- Explorationsrhythmus / Grenzen ---
+    replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]
+    min_frontier_size_m: 0.30       # kleinste beachtete Frontier-Ausdehnung [m]
+    goal_timeout_s: 45.0            # max. Fahrzeit zu EINER Frontier [s]
+    overall_timeout_s: 0.0          # Gesamtlimit [s] (0 = unbegrenzt; Goal kann ueberschreiben)
+
+    # --- Frontier-Bewertung (Kosten/Nutzen, Idee wie explore_lite) ---
+    potential_scale: 3.0            # Gewicht der Distanz (hoeher = naeher bevorzugt)
+    gain_scale: 1.0                 # Gewicht der Frontier-Groesse (hoeher = groessere bevorzugt)
+
+    # --- Zielauswahl / Selbstbefreiung ---
+    min_goal_distance_m: 0.30       # Ziel muss mind. so weit von der Basis weg sein [m]
+    blacklist_radius_m: 0.35        # Radius, in dem ein gescheitertes Ziel gesperrt wird [m]
+
+    # --- Verhalten nach Fertigstellung ---
+    return_to_start: false          # nach vollstaendiger Karte zur Startpose zurueck?
+
+    # --- Visualisierung (RViz-Marker der erkannten Frontiers) ---
+    visualize: true
+    marker_topic: "/explore/frontiers"

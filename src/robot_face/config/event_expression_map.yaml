@@ -1,0 +1,39 @@
+# =====================================================================
+#  event_expression_map.yaml  -  Ereignis -> Gesichtsausdruck
+# ---------------------------------------------------------------------
+#  HIER (und nur hier) wird festgelegt, wie das Gesicht auf Ereignisse
+#  reagiert. Neue Ausloeser = neuer Eintrag, KEIN Code-Umbau.
+#
+#  Felder je Ereignis:
+#    expression : neutral | listening | thinking | happy | sad |
+#                 surprised | alarm | confused | sleeping
+#    prio       : hoehere Zahl gewinnt (Not-Aus = 100, immer Vorrang)
+#    ttl_s      : Anzeigedauer in Sekunden; 0 = ZUSTAND (bleibt aktiv,
+#                 bis der Ausloeser ihn wieder loescht, z. B. E-Stop frei)
+#
+#  Kuenftige Ausloeser (Personenerkennung, Beruehrung, Mikrofon, ...):
+#  einfach auf /face/event publizieren: {"event": "person_detected"}
+#  und hier den Eintrag ergaenzen - fertig.
+# =====================================================================
+events:
+  # --- Sicherheit (Zustand, ueberstimmt alles) ---
+  estop_active:      {expression: alarm,     prio: 100, ttl_s: 0}
+
+  # --- Sprachauftraege (WP-5 C) ---
+  llm_thinking:      {expression: thinking,  prio: 46,  ttl_s: 40}
+  llm_dispatched:    {expression: happy,     prio: 47,  ttl_s: 3}
+  llm_rejected:      {expression: confused,  prio: 47,  ttl_s: 5}
+
+  # --- Missionen (WP-4) ---
+  mission_success:   {expression: happy,     prio: 40,  ttl_s: 6}
+  mission_failed:    {expression: sad,       prio: 40,  ttl_s: 6}
+  mission_canceled:  {expression: sad,       prio: 35,  ttl_s: 3}
+  mission_running:   {expression: thinking,  prio: 30,  ttl_s: 0}
+
+  # --- Verbindung zum KI-Server (WP-5 D, Zustand) ---
+  offboard_lost:     {expression: confused,  prio: 20,  ttl_s: 0}
+
+  # --- Beispiele fuer KUENFTIGE Ausloeser (Sensorik noch offen) ---
+  person_detected:   {expression: listening, prio: 25,  ttl_s: 8}
+  touch_detected:    {expression: surprised, prio: 45,  ttl_s: 2}
+  object_spotted:    {expression: surprised, prio: 28,  ttl_s: 3}

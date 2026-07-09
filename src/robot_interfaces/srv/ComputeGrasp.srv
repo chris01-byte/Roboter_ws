@@ -1,0 +1,15 @@
+# =====================================================================
+#  ComputeGrasp.srv
+#  Erzeugt aus der Objektpose (und optional dessen Punktwolke) eine
+#  Greif- und Vorgreifpose sowie die noetige Greiferweite.
+#  Server: grasp_pose_node   |   Client: Behavior-Tree (ComputeGrasp)
+# =====================================================================
+# --- Request ---
+geometry_msgs/PoseStamped object_pose    # Objektpose (map)
+sensor_msgs/PointCloud2 object_cloud     # optional; leer lassen, Server holt sie ggf. selbst
+---
+# --- Response ---
+bool success
+geometry_msgs/PoseStamped grasp_pose     # TCP-Zielpose zum Greifen (map)
+geometry_msgs/PoseStamped pregrasp_pose  # sichere Vorpose davor (map)
+float32 gripper_width                     # Schliessweite/-position des Greifers [m]

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  robot_face                                                            -->
+<!--  Cartoon-Gesicht fuer das 7-Zoll-Display am Roboter (Jetson/HDMI).     -->
+<!--  face_controller uebersetzt System-Ereignisse (Mission, Not-Aus,       -->
+<!--  Offboard, LLM) in Gesichtsausdruecke; die Web-App zeichnet das        -->
+<!--  Gesicht als animiertes SVG (rosbridge-WebSocket, wie smartphone_gui). -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>robot_face</name>
+  <version>0.1.0</version>
+  <description>Reaktives Cartoon-Gesicht (SVG-Web-App + Ereignis-Controller) fuer den mobilen Roboter.</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <!-- Fuer die Anzeige noetig; laeuft normalerweise schon (smartphone_gui) -->
+  <exec_depend>rosbridge_server</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

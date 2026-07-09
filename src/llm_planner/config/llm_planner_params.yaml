@@ -1,0 +1,50 @@
+# =====================================================================
+#  llm_planner_params.yaml  -  Sprach-/Aufgabenplaner (WP-5 Baustein C)
+# ---------------------------------------------------------------------
+#  Laeuft OFFBOARD auf dem KI-Server. Standard-Backend: Ollama (lokales LLM).
+#  Ist Ollama nicht erreichbar oder use_ollama=false -> Regel-Fallback.
+#
+#  PARAMETER-INDEX:
+#    use_ollama .............. Zeile 20
+#    ollama_url .............. Zeile 21
+#    model ................... Zeile 22
+#    temperature ............. Zeile 23
+#    request_timeout_s ....... Zeile 24
+#    instruction_topic ....... Zeile 27
+#    command_topic ........... Zeile 28
+#    rooms / targets / objects Zeile 31 / 38 / 45
+# =====================================================================
+llm_planner:
+  ros__parameters:
+    # --- LLM-Backend (Ollama) ---
+    use_ollama: true
+    ollama_url: "http://localhost:11434"
+    model: "qwen2.5"                # empfohlen (JSON+Deutsch); Alt: llama3.1/mistral. Vorher: ollama pull qwen2.5
+    temperature: 0.1
+    request_timeout_s: 30.0
+
+    # --- Topics ---
+    instruction_topic: "/llm_planner/instruction"
+    command_topic: "/mission_manager/command_json"
+
+    # --- Katalog (KONSISTENT mit mission_manager/mission_catalog.yaml halten!) ---
+    rooms:
+      - Wohnzimmer
+      - Kueche
+      - Flur
+      - Schlafzimmer
+      - Werkstatt
+
+    targets:
+      - Tisch
+      - Arbeitsplatte
+      - Regal
+      - Ladestation_Naehe
+      - Benutzer
+
+    objects:
+      - Tasse
+      - Flasche
+      - Fernbedienung
+      - Werkzeug
+      - Schluessel

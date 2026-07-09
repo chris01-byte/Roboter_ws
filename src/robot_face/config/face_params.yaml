@@ -1,0 +1,27 @@
+# =====================================================================
+#  face_params.yaml  -  face_controller (Ereignisse -> Ausdruck)
+# ---------------------------------------------------------------------
+#  Topics/Timing des Controllers. Das WAS-passiert-WANN steht bewusst
+#  getrennt in event_expression_map.yaml.
+# =====================================================================
+face_controller:
+  ros__parameters:
+    # --- Eingaenge (bestehende Topics des Workspace) ---
+    mission_status_topic: "/mission_manager/status_json"
+    estop_topic: "/safety/estop"
+    offboard_topic: "/offboard/available"
+    llm_status_topic: "/llm_planner/status_json"
+    llm_instruction_topic: "/llm_planner/instruction"
+
+    # --- Generischer Ereignis-Bus (kuenftige Ausloeser) ---
+    event_topic: "/face/event"
+
+    # --- Ausgang fuer die Web-Anzeige ---
+    state_topic: "/face/state_json"
+
+    # --- Timing ---
+    tick_hz: 10.0
+    sleep_timeout_s: 120.0     # ohne Aktivitaet -> Ausdruck "sleeping"
+
+    # Leer = mitinstallierte config/event_expression_map.yaml verwenden
+    expression_map_file: ""

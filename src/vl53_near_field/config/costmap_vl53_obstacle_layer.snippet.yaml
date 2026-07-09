@@ -1,0 +1,39 @@
+# =====================================================================
+#  costmap_vl53_obstacle_layer.snippet.yaml   (WP-1b - DOKU-SCHNIPSEL)
+#  ------------------------------------------------------------------
+#  Diese Datei wird NICHT direkt gestartet. Sie zeigt, wie die VL53-
+#  Punktwolken zusaetzlich in die LOCAL COSTMAP deiner Nav2-Konfiguration
+#  einfliessen, damit der lokale Planer die Hindernisse aktiv umfaehrt
+#  (Ergaenzung zum reaktiven collision_monitor).
+#
+#  -> Diesen obstacle_layer-Block in deine nav2_params.yaml unter
+#     local_costmap einfuegen / die plugins-Liste entsprechend erweitern.
+# =====================================================================
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # Falls schon eine plugins-Liste existiert: "obstacle_layer" ergaenzen.
+      plugins: ["obstacle_layer", "inflation_layer"]
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: vl53_left vl53_right
+        vl53_left:
+          topic: /near_field/left/points
+          data_type: "PointCloud2"
+          marking: True
+          clearing: True
+          min_obstacle_height: 0.05
+          max_obstacle_height: 0.50
+          obstacle_max_range: 0.6
+          raytrace_max_range: 0.8
+        vl53_right:
+          topic: /near_field/right/points
+          data_type: "PointCloud2"
+          marking: True
+          clearing: True
+          min_obstacle_height: 0.05
+          max_obstacle_height: 0.50
+          obstacle_max_range: 0.6
+          raytrace_max_range: 0.8

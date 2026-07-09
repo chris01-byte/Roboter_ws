@@ -1,0 +1,15 @@
+# ROS 2 workspace outputs
+build/
+install/
+log/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editor and OS metadata
+.DS_Store
+._*
+.vscode/
+.idea/

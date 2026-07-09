@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- =====================================================================
+     cyclonedds_profile.xml  -  DDS-Profil fuer WLAN (WP-5 Baustein D)
+     ====================================================
+     WARUM: Ueber WLAN ist UDP-Multicast (die DDS-Standard-Discovery) oft
+     unzuverlaessig oder blockiert. Dieses Profil laesst die Discovery
+     weiterhin per Multicast laufen, erlaubt aber zusaetzlich FESTE PEERS
+     (Unicast) - so finden sich Roboter und Server auch dann, wenn das
+     WLAN kein Multicast durchlaesst.
+
+     NUTZUNG (auf Roboter UND Server, VOR dem ros2 launch):
+       export CYCLONEDDS_URI=file:///pfad/zu/cyclonedds_profile.xml
+       export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+     Die festen IPs unten auf die realen Adressen von Roboter/Server setzen.
+     ===================================================================== -->
+<CycloneDDS xmlns="https://cdds.io/config"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain id="any">
+    <General>
+      <!-- Netzwerk-Interface automatisch waehlen (WLAN-Adapter). -->
+      <Interfaces>
+        <NetworkInterface autodetermine="true" priority="default" multicast="default"/>
+      </Interfaces>
+      <!-- Discovery per Multicast erlauben, Nutzdaten laufen unicast. -->
+      <AllowMulticast>spdp</AllowMulticast>
+    </General>
+
+    <Discovery>
+      <!-- Feste Gegenstellen fuer den Fall, dass WLAN kein Multicast durchlaesst.
+           Beide Zeilen mit den ECHTEN IPs von Roboter und Server ausfuellen. -->
+      <Peers>
+        <!-- <Peer address="192.168.1.50"/> -->  <!-- Roboter/Jetson -->
+        <!-- <Peer address="192.168.1.60"/> -->  <!-- KI-Server (RTX 3090) -->
+      </Peers>
+      <!-- Etwas laengere Lease-Zeit gegen WLAN-Latenzspitzen. -->
+      <ParticipantIndex>auto</ParticipantIndex>
+    </Discovery>
+
+    <Internal>
+      <!-- Robustere Zustellung bei WLAN-Paketverlust. -->
+      <Watermarks>
+        <WhcHigh>500kB</WhcHigh>
+      </Watermarks>
+    </Internal>
+  </Domain>
+</CycloneDDS>

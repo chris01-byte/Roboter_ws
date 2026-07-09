@@ -1,0 +1,69 @@
+# =====================================================================
+#  mission_catalog.yaml - WP-4 Katalog fuer Smartphone-GUI
+# ---------------------------------------------------------------------
+#  Hier pflegst du vorerst die auswählbaren Raeume, Orte und Objekte.
+#  Spaeter kann dieser Katalog aus einer semantischen Karte kommen.
+#
+#  SCHNELL FINDEN (nach Abschnittsnamen suchen, keine Zeilennummern):
+#    rooms / targets / objects   Katalog fuer GUI und Validierung
+#    "K1"                        real_mission_types, run_mission_action
+#    "WP-5"                      dynamischer Katalog, offboard_topic
+# =====================================================================
+mission_manager:
+  ros__parameters:
+    rooms:
+      - Wohnzimmer
+      - Kueche
+      - Flur
+      - Schlafzimmer
+      - Werkstatt
+
+    targets:
+      - Tisch
+      - Arbeitsplatte
+      - Regal
+      - Ladestation_Naehe
+      - Benutzer
+
+    objects:
+      - Tasse
+      - Flasche
+      - Fernbedienung
+      - Werkzeug
+      - Schluessel
+
+    # --- K1: echte Ausfuehrung ueber den Behavior-Tree ---
+    # Diese Auftragstypen laufen ECHT ueber den bt_orchestrator (RunMission-Action).
+    # go_to_room/pick_object werden weiter simuliert, bis sie einen eigenen Baum haben.
+    real_mission_types: ["pick_and_place", "explore"]
+    run_mission_action: "/run_mission"
+
+    # --- Pose-Katalog fuer Ablageorte (fuellt place_base_goal/place_pose im Goal) ---
+    # Frames der Ablageposen:
+    place_base_frame: "map"          # Basis-Zielpose faehrt Nav2 an
+    place_arm_frame: "base_link"     # Arm-Ablagepose (Manipulation, nicht ueber map)
+    # Basis-Zielpose je Ablageort [x_m, y_m, yaw_grad] im map-Frame.
+    # Koordinaten passen zur TESTWOHNUNG (robot_navigation/maps/testwohnung):
+    # Wohnzimmer links (x<3), Flur rechts unten, Kueche rechts oben (y>4).
+    # [ANPASSEN: mit echter SLAM-Karte neu einmessen]
+    place_base.Tisch:             [1.50,  2.00,   0.0]   # Wohnzimmer
+    place_base.Arbeitsplatte:     [5.00,  6.00,  90.0]   # Kueche
+    place_base.Regal:             [0.00,  6.50, 180.0]   # Wohnzimmer oben
+    place_base.Ladestation_Naehe: [0.00,  0.00,   0.0]   # Startpunkt
+    place_base.Benutzer:          [4.50,  0.50,   0.0]   # Flur
+    # Arm-Ablagepose je Ablageort [x_m, y_m, z_m] im base_link  [ANPASSEN: nach Kalibrierung]
+    place_arm.Tisch:              [0.45,  0.00,  0.20]
+    place_arm.Arbeitsplatte:      [0.45,  0.00,  0.25]
+    place_arm.Regal:              [0.40,  0.00,  0.35]
+    place_arm.Ladestation_Naehe:  [0.40,  0.00,  0.10]
+    place_arm.Benutzer:           [0.50,  0.00,  0.20]
+
+    # Simulationsdauer je Phase [s] fuer die noch simulierten Typen.
+    phase_duration_s: 1.2
+
+    # --- WP-5 Anbindung (optional, Default aus) ---
+    # Katalog dynamisch aus der semantischen Karte (semantic_perception) beziehen:
+    use_dynamic_catalog: false
+    catalog_topic: "/semantic/catalog_json"
+    # Offboard-Erreichbarkeit (link_monitor) im Status mitfuehren:
+    offboard_topic: "/offboard/available"

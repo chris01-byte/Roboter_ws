@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  safety_monitor  -  Onboard-Not-Aus-Waechter (Befund K4)              -->
+<!--  ==================================================================   -->
+<!--  Publiziert /safety/estop (latched), das der Behavior-Tree bei jedem  -->
+<!--  Tick prueft. Quellen: Software-Anforderung (GUI/Taster-Bruecke),     -->
+<!--  optional Nahbereich, spaeter Hardware-GPIO. Laeuft rein ONBOARD.     -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>safety_monitor</name>
+  <version>0.1.0</version>
+  <description>Onboard-Not-Aus-Waechter: publiziert /safety/estop fuer den Behavior-Tree (K4).</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>robot_interfaces</depend>
+
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

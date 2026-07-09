@@ -1,0 +1,33 @@
+# =====================================================================
+#  mock_params.yaml  -  Testschalter fuer die Mock-Server
+# =====================================================================
+#  Mit diesen Werten steuerst du den Trockenlauf des Behavior-Trees:
+#  Dauer der Fake-Aktionen und gezieltes Ausloesen von Fehlern.
+#
+#  SCHNELL FINDEN (nach Abschnittsnamen suchen, keine Zeilennummern):
+#    "Dauer"       nav/arm/gripper/explore_duration, service_delay
+#    "Verhalten"   object_found, grasp_succeeds, fail_*, estop_active
+#    "Rollen"      publish_estop (Not-Aus an safety_monitor abgeben),
+#                  provide_navigation (Navigation an echtes Nav2 abgeben)
+# =====================================================================
+
+mock_servers:
+  ros__parameters:
+    # --- Dauer der simulierten Aktionen [s] ---
+    nav_duration: 1.5
+    arm_duration: 1.0
+    gripper_duration: 0.5
+    explore_duration: 2.0
+    service_delay: 0.2
+
+    # --- Verhalten / Testschalter ---
+    object_found: true          # false -> testet Explore-Zweig/K5-Guard
+    grasp_succeeds: true
+    fail_navigation: false
+    fail_arm: false
+    estop_active: false
+    close_position_threshold: 0.05
+
+    # --- Rollen abgeben (fuer Kombi-Tests mit echten Komponenten) ---
+    publish_estop: true         # false -> /safety/estop kommt vom safety_monitor
+    provide_navigation: true    # false -> /navigate_to_pose kommt vom echten Nav2

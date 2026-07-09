@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<!-- ===================================================================== -->
+<!--  handeye_calibration                                                   -->
+<!--  Hand-Auge-Kalibrierung Arm <-> zentrale OAK-Kamera (Eye-to-Hand).     -->
+<!--  Umsetzung der Stufen D/E/F aus KONZEPT_KALIBRIERUNG_OAK_ARM.md:       -->
+<!--    handeye_recorder  = Messpaare sammeln (ROS-Node, Stufe D)           -->
+<!--    handeye_solve     = Loesung rechnen + URDF-Werte ausgeben (E/F)     -->
+<!-- ===================================================================== -->
+<package format="3">
+  <name>handeye_calibration</name>
+  <version>0.1.0</version>
+  <description>Hand-Auge-Kalibrierung (Eye-to-Hand) fuer den mobilen Pick-and-Place-Roboter.</description>
+  <maintainer email="qtg0900@example.com">QTG0900</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>cv_bridge</depend>
+
+  <!-- OpenCV/Numpy/YAML aus den Systempaketen (Ubuntu 22.04: OpenCV 4.5.4) -->
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

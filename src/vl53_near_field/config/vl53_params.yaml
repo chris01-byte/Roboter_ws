@@ -1,0 +1,59 @@
+# =====================================================================
+#  vl53_params.yaml  -  Parameter fuer vl53_near_field (WP-1b)
+# ---------------------------------------------------------------------
+#  Defaults = GETESTETE, kalibrierte Werte aus vl53_dual_heatmap.py.
+#  NUR hier aendern (nicht im Code). Aenderungen wirken nach Neustart.
+#
+#  WICHTIGE WERTE  (Name -> Zeile):
+#    mux_addr                  -> Z.29
+#    rate_hz                   -> Z.35
+#    z_min / z_max             -> Z.41 / Z.42
+#    thresh_m (Hindernis)      -> Z.43
+#    inner_cols (Mittelzone)   -> Z.44
+#    max_bad_frames            -> Z.47
+#    require_nb_target         -> Z.48
+#    valid_statuses            -> Z.49
+#    max_sigma_mm              -> Z.51
+#    flipx_left  (KALIBRIERT)  -> Z.54
+#    flipx_right (KALIBRIERT)  -> Z.55
+#    frame_left / frame_right  -> Z.58 / Z.59
+#
+#  ACHTUNG: flipx_* und die Validitaetsfilter wurden muehsam kalibriert
+#  (FOV trifft mittig, KEIN blinder Bereich). Nur mit Bedacht aendern und
+#  vorher mit der Heatmap-Diagnose neu justieren.
+# =====================================================================
+vl53_near_field:
+  ros__parameters:
+    # --- I2C / Hardware ---
+    i2c_bus_num: 1
+    mux_addr: 0x70
+    sensor_addr: 0x29
+    left_channel: 0
+    right_channel: 1
+
+    # --- Raster / Rate ---
+    rate_hz: 10.0
+    grid_r: 8
+    grid_c: 8
+    fov_deg: 60.0
+
+    # --- Reichweite / Schwellen (KALIBRIERT) ---
+    z_min: 0.01
+    z_max: 0.50
+    thresh_m: 0.25
+    inner_cols: 4
+
+    # --- Validitaetsfilter (KALIBRIERT) ---
+    max_bad_frames: 3
+    require_nb_target: true
+    valid_statuses: [5]
+    min_signal_per_spad: 0.0
+    max_sigma_mm: 50.0
+
+    # --- Orientierung (KALIBRIERT - NICHT aendern!) ---
+    flipx_left: true
+    flipx_right: false
+
+    # --- Frames (an die reale URDF/TF-Montage anpassen) ---
+    frame_left: "vl53_left_link"
+    frame_right: "vl53_right_link"
