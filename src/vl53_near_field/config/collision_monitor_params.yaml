@@ -28,9 +28,16 @@ collision_monitor:
     cmd_vel_in_topic: "cmd_vel_smoothed"     # vom velocity_smoother (sonst "cmd_vel_nav")
     cmd_vel_out_topic: "cmd_vel"             # -> base_hardware hoert hier
     state_topic: "collision_monitor_state"
-    transform_tolerance: 0.2
-    source_timeout: 1.0                       # [s] keine Daten -> Quelle gilt als leer
-    base_shift_correction: True
+    transform_tolerance: 0.3
+    # VL53 ueber CH341-I2C ist langsam (~4 Hz) + Pipeline-Latenz -> Wolken sind
+    # >1 s alt. Bei 1.0 verwarf der Monitor die Quelle ("Ignoring the source").
+    source_timeout: 3.0                       # [s] keine Daten -> Quelle gilt als leer
+    # base_shift_correction braucht den odom-Frame als Fixed-Frame. Den publiziert
+    # hier NIEMAND (base_hardware publish_tf=false, kein EKF) -> lookupTransform
+    # schlug fehl, alle Punkte wurden verworfen, StopZone blieb leer.
+    # Fuer reine Nahbereichs-Reaktion nicht noetig: direkt vl53_*_link -> base_link
+    # ueber die statische TF transformieren.
+    base_shift_correction: False
     stop_pub_timeout: 2.0
 
     polygons: ["StopZone", "SlowZone"]
@@ -38,8 +45,10 @@ collision_monitor:
     # [TUNE:stop] Sofort STOPPEN, wenn Punkte in dieser Box liegen.
     StopZone:
       type: "polygon"
-      # Punkte als [x1,y1, x2,y2, ...] im base_link-Frame [m] (Box vorne):
-      points: [0.25, 0.18, 0.25, -0.18, 0.00, -0.18, 0.00, 0.18]
+      # Punkte als [x1,y1, x2,y2, ...] im base_link-Frame [m] (Box vorne).
+      # VL53 sitzt bei x=0.29 -> Zone MUSS davor liegen. Stop bei Hindernis
+      # 1..26 cm vor dem Sensor (x 0.30..0.55, y +/-0.20):
+      points: [0.55, 0.20, 0.55, -0.20, 0.30, -0.20, 0.30, 0.20]
       action_type: "stop"
       max_points: 1          # aeltere Nav2-Form: Aktion ab >1 Punkt, also ab 2 Punkten
       visualize: True
@@ -48,7 +57,8 @@ collision_monitor:
     # [TUNE:slow] LANGSAMER fahren, wenn Punkte in dieser groesseren Box liegen.
     SlowZone:
       type: "polygon"
-      points: [0.50, 0.30, 0.50, -0.30, 0.00, -0.30, 0.00, 0.30]
+      # Slow bei Hindernis bis ~51 cm vor dem Sensor (x 0.30..0.80, y +/-0.25):
+      points: [0.80, 0.25, 0.80, -0.25, 0.30, -0.25, 0.30, 0.25]
       action_type: "slowdown"
       max_points: 1          # aeltere Nav2-Form: Aktion ab >1 Punkt, also ab 2 Punkten
       slowdown_ratio: 0.3    # [TUNE:slowratio] auf 30% der Geschwindigkeit drosseln

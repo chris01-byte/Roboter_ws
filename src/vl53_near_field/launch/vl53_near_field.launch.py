@@ -35,19 +35,20 @@ def generate_launch_description():
 
     # 2) Statische Transforms base_link -> vl53_*_link
     #    Arg-Reihenfolge: x y z yaw pitch roll parent child   (Winkel in rad)
-    #    !!! PLATZHALTER-WERTE !!! Bitte an die reale Montage anpassen:
-    #    - Sensoren leicht NACH INNEN gedreht, damit sich die FOV mittig trifft.
-    #    - linker Sensor (+y) dreht nach rechts/innen  -> yaw negativ
-    #    - rechter Sensor (-y) dreht nach links/innen   -> yaw positiv
+    #    GEMESSEN 24.07.2026 am aufgebauten Roboter:
+    #    - x=0.29 m vor der Antriebsrad-Achse (base_link x=0)
+    #    - y=+/-0.095 m von der Mittellinie (links +, rechts -)
+    #    - z=0.215 m ueber base_link (= 0.305 m ueber Boden minus 0.09 m base_link-Hoehe)
+    #    - yaw=pitch=roll=0: beide schauen gerade nach vorn (kein Winkelversatz)
     tf_left = Node(
         package='tf2_ros', executable='static_transform_publisher',
         name='tf_vl53_left', output='screen',
-        arguments=['0.20', '0.10', '0.10', '-0.35', '0', '0', 'base_link', 'vl53_left_link'],
+        arguments=['0.29', '0.095', '0.215', '0', '0', '0', 'base_link', 'vl53_left_link'],
     )
     tf_right = Node(
         package='tf2_ros', executable='static_transform_publisher',
         name='tf_vl53_right', output='screen',
-        arguments=['0.20', '-0.10', '0.10', '0.35', '0', '0', 'base_link', 'vl53_right_link'],
+        arguments=['0.29', '-0.095', '0.215', '0', '0', '0', 'base_link', 'vl53_right_link'],
     )
 
     # 3) Reaktive Hindernisvermeidung (Lifecycle-Node)
