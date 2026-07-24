@@ -53,11 +53,13 @@ base_hardware:
     left_motor_id: 1
     right_motor_id: 2
     invert_left: false
-    invert_right: false         # 23.07.2026 korrigiert: rechter Motor drehte sonst verkehrt herum
+    invert_right: true          # 24.07.2026: ESS23-RS steuert Richtung via Vorzeichen
+                                # in 0x001D (signed int16). Rechter Motor spiegelbildlich
+                                # -> motor_direction_sign=-1 (Roboter-vorwaerts = negativ). herum
 
-    # --- Modbus-Register [PRUEFEN: NEMA23-RS485 Manual] ---
-    rpm_register: 0x001D
-    direction_register: 0x001C
+    # --- Modbus-Register (offizielle ESS-RS-Registertabelle, 24.07.2026 bestaetigt) ---
+    rpm_register: 0x001D        # signed int16 Jog/Speed-Drehzahl (U/min); Vorzeichen = Richtung
+    direction_register: 0x001C  # UNGENUTZT: ESS-RS hat kein Richtungsregister (Richtung via Vorzeichen 0x001D)
     command_register: 0x0027
     velocity_start_value: 0x0002
     stop_value: 0x0100

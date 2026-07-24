@@ -386,13 +386,17 @@ class BaseHardware(Node):
         self.last_sent_right_rpm = 0.0
 
     def _write_motor_velocity(self, motor_id: int, rpm: float):
-        direction = 0 if rpm >= 0.0 else 1
-        rpm_value = int(round(abs(rpm) * self.rpm_scale))
-        rpm_value = int(self._clamp(rpm_value, 0, 65535))
+        # ESS23-RS: Die Drehrichtung steckt im VORZEICHEN des signed-int16-Werts
+        # im rpm_register (0x001D). Es gibt KEIN separates Richtungsregister -
+        # das frueher benutzte 0x001C ist laut offizieller StepperOnline-
+        # Registertabelle nicht dafuer vorgesehen und zeigte keine Wirkung.
+        # Negative Drehzahl daher als Zweierkomplement uebertragen (KEIN abs()!).
+        signed_rpm = int(round(rpm * self.rpm_scale))
+        signed_rpm = int(self._clamp(signed_rpm, -32768, 32767))
+        raw = signed_rpm & 0xFFFF          # int16 -> uint16 (Zweierkomplement)
 
         ok = True
-        ok &= self._write_register(motor_id, self.direction_register, direction)
-        ok &= self._write_register(motor_id, self.rpm_register, rpm_value)
+        ok &= self._write_register(motor_id, self.rpm_register, raw)
         ok &= self._write_register(motor_id, self.command_register, self.velocity_start_value)
         if not ok:
             self.get_logger().error(f'Modbus-Schreiben Motor {motor_id} fehlgeschlagen')
