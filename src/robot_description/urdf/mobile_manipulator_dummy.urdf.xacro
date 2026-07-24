@@ -35,9 +35,12 @@
        RAD-MASSE / DIFFERENTIALANTRIEB [ANPASSEN]
        wheel_separation = Abstand linker/rechter Radmittelpunkt.
        ================================================================ -->
-  <xacro:property name="wheel_radius"     value="0.075"/>
-  <xacro:property name="wheel_width"      value="0.040"/>
-  <xacro:property name="wheel_separation" value="0.420"/>
+  <!-- [GEMESSEN 13.07.2026] MUSS mit base_hardware_params.yaml uebereinstimmen! -->
+  <xacro:property name="wheel_radius"     value="0.0625"/>  <!-- Ø 125 mm -->
+  <xacro:property name="wheel_width"      value="0.040"/>   <!-- [ANPASSEN] -->
+  <xacro:property name="wheel_separation" value="0.378"/>   <!-- Radmitte-Radmitte -->
+  <!-- Getriebe 10:1 steht in base_hardware_params.yaml (gear_ratio) -->
+
   <xacro:property name="wheel_x"          value="0.000"/>
 
   <!-- ================================================================

@@ -71,8 +71,10 @@ class BaseHardware(Node):
         # -------------------------------------------------------------------
         # Geometrie / Limits [ANPASSEN]
         # -------------------------------------------------------------------
-        self.declare_parameter('wheel_radius_m', 0.075)
-        self.declare_parameter('wheel_separation_m', 0.420)
+        self.declare_parameter('wheel_radius_m', 0.0625)
+        self.declare_parameter('wheel_separation_m', 0.378)
+        # Getriebe: Motorumdrehungen je RAD-Umdrehung (z.B. 10:1 -> 10.0).
+        self.declare_parameter('gear_ratio', 10.0)
         self.declare_parameter('max_linear_speed_mps', 0.30)
         self.declare_parameter('max_angular_speed_radps', 0.80)
 
@@ -130,6 +132,7 @@ class BaseHardware(Node):
         self.state_topic = str(gp('state_topic').value)
         self.wheel_radius = float(gp('wheel_radius_m').value)
         self.wheel_separation = float(gp('wheel_separation_m').value)
+        self.gear_ratio = float(gp('gear_ratio').value)
         self.max_linear = float(gp('max_linear_speed_mps').value)
         self.max_angular = float(gp('max_angular_speed_radps').value)
         self.cmd_timeout = float(gp('cmd_timeout_s').value)
@@ -202,6 +205,8 @@ class BaseHardware(Node):
             raise ValueError('wheel_radius_m muss > 0 sein')
         if self.wheel_separation <= 0.0:
             raise ValueError('wheel_separation_m muss > 0 sein')
+        if self.gear_ratio <= 0.0:
+            raise ValueError('gear_ratio muss > 0 sein (Motorumdrehungen je Radumdrehung)')
         if self.update_rate <= 0.0:
             raise ValueError('update_rate_hz muss > 0 sein')
         if self.cmd_timeout <= 0.0:
@@ -305,8 +310,11 @@ class BaseHardware(Node):
             'cmd_w_radps': self.cmd_w,
             'v_left_mps': self.active_wheel_cmd.v_left_mps,
             'v_right_mps': self.active_wheel_cmd.v_right_mps,
-            'rpm_left': self.active_wheel_cmd.rpm_left,
+            'rpm_left': self.active_wheel_cmd.rpm_left,        # Rad-Drehzahl
             'rpm_right': self.active_wheel_cmd.rpm_right,
+            'motor_rpm_left': self.active_wheel_cmd.rpm_left * self.gear_ratio,
+            'motor_rpm_right': self.active_wheel_cmd.rpm_right * self.gear_ratio,
+            'gear_ratio': self.gear_ratio,
             'x': self.x,
             'y': self.y,
             'yaw': self.yaw,
@@ -355,11 +363,16 @@ class BaseHardware(Node):
             return
         self.last_modbus_write = now
 
-        left_rpm = self._clamp(wheel_cmd.rpm_left, -self.max_motor_rpm, self.max_motor_rpm)
-        right_rpm = self._clamp(wheel_cmd.rpm_right, -self.max_motor_rpm, self.max_motor_rpm)
+        # WICHTIG: rpm_left/right sind RAD-Drehzahlen. Der Motor sitzt hinter
+        # dem Getriebe -> Motor-rpm = Rad-rpm * gear_ratio. Ohne diese
+        # Umrechnung fuehre der Roboter um den Faktor gear_ratio zu langsam.
+        left_rpm = self._clamp(wheel_cmd.rpm_left * self.gear_ratio,
+                               -self.max_motor_rpm, self.max_motor_rpm)
+        right_rpm = self._clamp(wheel_cmd.rpm_right * self.gear_ratio,
+                                -self.max_motor_rpm, self.max_motor_rpm)
         self._write_motor_velocity(self.left_motor_id, left_rpm)
         self._write_motor_velocity(self.right_motor_id, right_rpm)
-        self.last_sent_left_rpm = left_rpm
+        self.last_sent_left_rpm = left_rpm      # Motor-rpm (nach Getriebe)
         self.last_sent_right_rpm = right_rpm
 
     def _send_stop_if_needed(self):
@@ -391,11 +404,15 @@ class BaseHardware(Node):
         if self.modbus_client is None:
             return False
         try:
-            # pymodbus 3.x nutzt slave=, aeltere Versionen unit=.
+            # Slave-Adressierung je nach pymodbus-Version: 3.7+/3.14 device_id=,
+            # 3.0-3.6 slave=, 2.x unit=. Reihenfolge = neueste zuerst.
             try:
-                result = self.modbus_client.write_register(address=address, value=value, slave=motor_id)
+                result = self.modbus_client.write_register(address, value, device_id=motor_id)
             except TypeError:
-                result = self.modbus_client.write_register(address=address, value=value, unit=motor_id)
+                try:
+                    result = self.modbus_client.write_register(address, value, slave=motor_id)
+                except TypeError:
+                    result = self.modbus_client.write_register(address, value, unit=motor_id)
             return result is not None and not result.isError()
         except Exception as exc:
             self.rs485_ready = False
@@ -412,7 +429,9 @@ class BaseHardware(Node):
         mode = 'TIMEOUT-STOP' if timed_out else 'CMD'
         self.get_logger().info(
             f'{mode}: v={self.cmd_v:+.3f} m/s w={self.cmd_w:+.3f} rad/s | '
-            f'L={cmd.rpm_left:+.1f} rpm R={cmd.rpm_right:+.1f} rpm')
+            f'Rad L={cmd.rpm_left:+.1f} R={cmd.rpm_right:+.1f} rpm | '
+            f'Motor L={cmd.rpm_left * self.gear_ratio:+.0f} '
+            f'R={cmd.rpm_right * self.gear_ratio:+.0f} rpm')
 
     @staticmethod
     def _clamp(value: float, low: float, high: float) -> float:

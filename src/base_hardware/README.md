@@ -5,6 +5,23 @@ Erster echter Unterbau fuer den Hauptantrieb der mobilen Plattform.
 ## Warum zuerst trocken?
 Der Node startet im **Dry-run**. Er sendet keine RS485-Kommandos. Das ist Absicht: Wir pruefen erst Mathematik, Vorzeichen, Watchdog, `/cmd_vel`-Kette und Odometrie, ohne echte NEMA23-Motoren zu bewegen.
 
+## Geometrie & Getriebe (gemessen 13.07.2026)
+| Wert | Größe | Wirkung |
+|---|---|---|
+| Radradius | 0,0625 m (Ø 125 mm) | Umfang 0,3927 m — skaliert Tempo **und** Odometrie |
+| Spurweite | 0,378 m | skaliert jede Drehung/Kursstabilität |
+| `gear_ratio` | **10:1** | Rad-rpm × 10 = Motor-rpm (sonst 10× zu langsam!) |
+
+Richtwerte: 0,03 m/s ≈ 46 rpm Motor · 0,05 m/s ≈ 76 rpm · 0,30 m/s ≈ 458 rpm ·
+Vollgas + Drehung ≈ 689 rpm (Grenze `max_motor_rpm: 700`, **gegen Motor-Datenblatt prüfen**).
+
+> Radradius/Spurweite stehen **an zwei Stellen** und müssen gleich bleiben:
+> `config/base_hardware_params.yaml` und `robot_description/urdf/…xacro`.
+
+**Fein nachkalibrieren nach der ersten Fahrt:** 2 m geradeaus fahren, echte Strecke messen →
+`wheel_radius_m × (gemessen ÷ 2,00)`. Dann 360° drehen lassen → dreht er zu weit, war
+`wheel_separation_m` zu klein.
+
 ## Funktionen v1
 - Subscribed `/cmd_vel` (`geometry_msgs/Twist`)
 - Berechnet linke/rechte Radgeschwindigkeit und RPM

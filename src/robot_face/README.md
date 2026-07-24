@@ -20,6 +20,9 @@ llm_planner/status+instruction┤        ^
   `/face/state_json`. Kurz-Ereignisse haben eine Anzeigedauer (`ttl_s`),
   Zustaende (E-Stop, Mission laeuft, Offboard weg) bleiben bis zur Aufloesung.
   Ohne Aktivitaet schlaeft das Gesicht ein (`sleep_timeout_s`).
+- **Design:** humanoides Android-Gesicht (weisse Hochglanz-Schale, Panel-Fugen, technische blaue
+  Iris, mechanischer Hals mit blauer Leuchte) nach Referenzbildern. Die Ausdrucks-Engine ist davon
+  unabhaengig - ein Redesign tauscht nur die SVG-Artwork, IDs/Parameter bleiben gleich.
 - **`web/index.html`**: SVG-Gesicht, weiches Morphing zwischen 9 Ausdruecken
   (`neutral, listening, thinking, happy, sad, surprised, alarm, confused,
   sleeping`) plus Idle-Leben (Blinzeln, Blickwandern, Atmen). Verbindung wie

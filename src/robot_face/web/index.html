@@ -6,21 +6,20 @@
   <meta name="theme-color" content="#0d1219">
   <title>Roboter Gesicht</title>
   <!-- =====================================================================
-       ALLES IN EINER DATEI (CSS + JS inline) - mit Absicht: das Gesicht
-       rendert damit auch bei Datei-Doppelklick, in Vorschau-Panels und
-       unvollstaendigen Kopien korrekt (keine Nachladefehler moeglich).
+       ALLES IN EINER DATEI (CSS + JS inline) - mit Absicht: rendert auch bei
+       Datei-Doppelklick / unvollstaendigen Kopien korrekt.
+       DESIGN: humanoides Android-Gesicht (weisse Hochglanz-Schale, Panel-
+       Fugen, technische blaue Iris) nach Nutzer-Referenzbildern 09.07.2026.
+       Die Ausdrucks-Engine (IDs/Parameter/rosbridge) ist UNVERAENDERT -
+       nur die SVG-Artwork wurde getauscht.
        ===================================================================== -->
   <style>
-    /* ------------------- Farbstimmung / Grundlayout ------------------- */
     :root {
-      --face:    #ffd9a3;   /* warmer Cartoon-Grundton */
-      --outline: #2b2320;
-      --brow:    #6b4a2f;
-      --nose:    #f0b467;
-      --mouth:   #5a2a2a;
-      --cheek:   #ff9d7e;
-      --bg1:     #16202c;
-      --bg2:     #0d1219;
+      --bg1: #16202c;
+      --bg2: #0d1219;
+      --seam: #8a949e;          /* Panel-Fugen */
+      --iris: #7fb2d4;          /* Technik-Blau der Augen */
+      --lip:  #b98f97;          /* zurueckhaltende Lippenfarbe */
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +30,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: none;                 /* Kiosk: kein Mauszeiger */
+      cursor: none;                 /* Kiosk */
       user-select: none;
       -webkit-user-select: none;
       touch-action: manipulation;
@@ -40,237 +39,304 @@
 
     #faceSvg { width: 100vw; height: 100vh; display: block; }
 
-    /* Sanftes "Atmen", damit das Gesicht nie eingefroren wirkt */
+    /* Sanftes "Atmen" */
     #face {
-      transform-origin: 500px 310px;
+      transform-origin: 500px 300px;
       transform-box: view-box;
-      animation: breathe 4.2s ease-in-out infinite;
+      animation: breathe 4.6s ease-in-out infinite;
     }
     @keyframes breathe {
       0%, 100% { transform: scale(1); }
-      50%      { transform: scale(1.012); }
+      50%      { transform: scale(1.008); }
     }
 
     /* ------------------- Ausdrucksabhaengige Stimmung ------------------- */
     body[data-expression="alarm"] { --bg1: #3a1512; --bg2: #170908; }
-    body[data-expression="alarm"] #alarmRing {
-      animation: alarmPulse 0.9s ease-in-out infinite;
-    }
-    @keyframes alarmPulse {
-      0%, 100% { opacity: 0.15; }
-      50%      { opacity: 0.85; }
-    }
-    body[data-expression="alarm"] #face { animation-duration: 1.6s; }
+    body[data-expression="alarm"] #alarmRing { animation: alarmPulse 0.9s ease-in-out infinite; }
+    @keyframes alarmPulse { 0%, 100% { opacity: 0.15; } 50% { opacity: 0.85; } }
+    body[data-expression="alarm"] #face { animation-duration: 1.8s; }
+    body[data-expression="alarm"] #neckGlow { fill: #ff5a47; }
 
     body[data-expression="happy"]     { --bg1: #1c2a22; }
     body[data-expression="sad"]       { --bg1: #1a2231; }
     body[data-expression="confused"]  { --bg1: #241f2e; }
     body[data-expression="sleeping"]  { --bg1: #101722; --bg2: #090d13; }
-    body[data-expression="sleeping"] #face {
-      animation-duration: 7s;
-      filter: brightness(0.78);
-    }
+    body[data-expression="sleeping"] #face { animation-duration: 7s; filter: brightness(0.7); }
 
     /* ------------------- Zzz beim Schlafen ------------------------------ */
-    .zzz {
-      font-family: "Trebuchet MS", Verdana, sans-serif;
-      font-weight: bold;
-      fill: #9db8d8;
-    }
-    .z1 { font-size: 58px; }
-    .z2 { font-size: 44px; animation-delay: 0.6s !important; }
-    .z3 { font-size: 32px; animation-delay: 1.2s !important; }
-    body[data-expression="sleeping"] .zzz {
-      animation: zzzFloat 2.6s ease-in-out infinite;
-    }
+    .zzz { font-family: "Trebuchet MS", Verdana, sans-serif; font-weight: bold; fill: #9db8d8; }
+    .z1 { font-size: 50px; }
+    .z2 { font-size: 38px; animation-delay: 0.6s !important; }
+    .z3 { font-size: 28px; animation-delay: 1.2s !important; }
+    body[data-expression="sleeping"] .zzz { animation: zzzFloat 2.6s ease-in-out infinite; }
     @keyframes zzzFloat {
       0%   { opacity: 0;   transform: translateY(8px); }
       35%  { opacity: 0.9; }
       100% { opacity: 0;   transform: translateY(-16px); }
     }
 
-    /* ------------------- rosbridge-Statuspunkt --------------------------- */
+    /* Hals-Leuchte pulsiert leicht */
+    #neckGlow { animation: glowPulse 3.2s ease-in-out infinite; }
+    @keyframes glowPulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+
     #rosDot {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
-      background: #b04a3c;
-      opacity: 0.55;
-      transition: background 0.4s ease;
+      position: fixed; right: 10px; bottom: 10px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: #b04a3c; opacity: 0.55; transition: background 0.4s ease;
     }
     #rosDot.connected { background: #4eb06a; }
   </style>
 </head>
 <body data-expression="neutral">
-  <!-- Rundliches Cartoon-Gesicht. Alle beweglichen Teile sind eigene
-       SVG-Gruppen; das Skript unten animiert sie per Parameter-Tweening.
-       Bedienung ohne ROS (Demo): Tasten 1-9 oder Tippen wechselt Ausdruck. -->
   <svg id="faceSvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"
        xmlns="http://www.w3.org/2000/svg" aria-label="Robotergesicht">
 
-    <!-- Alarm-Ring (nur im Zustand "alarm" sichtbar, pulsiert per CSS) -->
-    <circle id="alarmRing" cx="500" cy="310" r="292" fill="none"
-            stroke="#e05a47" stroke-width="10" opacity="0"/>
+    <defs>
+      <!-- Hochglanz-Schale -->
+      <linearGradient id="shellGrad" x1="0" y1="0" x2="0.35" y2="1">
+        <stop offset="0"    stop-color="#ffffff"/>
+        <stop offset="0.55" stop-color="#e8ecef"/>
+        <stop offset="1"    stop-color="#c3ccd3"/>
+      </linearGradient>
+      <linearGradient id="crownGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#dfe5e9"/>
+        <stop offset="1" stop-color="#aeb8c0"/>
+      </linearGradient>
+      <linearGradient id="sideGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#9aa4ad"/>
+        <stop offset="1" stop-color="#5f6972"/>
+      </linearGradient>
+      <radialGradient id="irisGrad" cx="0.5" cy="0.45" r="0.65">
+        <stop offset="0"    stop-color="#dceef8"/>
+        <stop offset="0.55" stop-color="#8fb9d6"/>
+        <stop offset="1"    stop-color="#4f7995"/>
+      </radialGradient>
+      <linearGradient id="neckGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#242b33"/>
+        <stop offset="1" stop-color="#12171d"/>
+      </linearGradient>
+      <radialGradient id="glowGrad" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0"   stop-color="#8fe0ff"/>
+        <stop offset="0.6" stop-color="#3aa8de"/>
+        <stop offset="1"   stop-color="#3aa8de" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <!-- Alarm-Ring -->
+    <ellipse id="alarmRing" cx="500" cy="300" rx="310" ry="292" fill="none"
+             stroke="#e05a47" stroke-width="10" opacity="0"/>
 
     <g id="face">
-      <!-- Kopf (Farben doppelt abgesichert: Attribut-Fallback + CSS-Var) -->
-      <circle cx="500" cy="310" r="270" fill="var(--face, #ffd9a3)"
-              stroke="var(--outline, #2b2320)" stroke-width="10"/>
-
-      <!-- Wangen (Opacity wird animiert) -->
-      <ellipse id="cheekL" cx="352" cy="402" rx="50" ry="30" fill="var(--cheek, #ff9d7e)" opacity="0.25"/>
-      <ellipse id="cheekR" cx="648" cy="402" rx="50" ry="30" fill="var(--cheek, #ff9d7e)" opacity="0.25"/>
-
-      <!-- Augenbrauen (Rotation + Heben werden animiert) -->
-      <g id="browL" transform="translate(395,196)">
-        <line x1="-46" y1="0" x2="46" y2="0" stroke="var(--brow, #6b4a2f)"
-              stroke-width="15" stroke-linecap="round"/>
+      <!-- ===== Schultern / Kragen ===== -->
+      <path d="M 285,620 C 300,555 375,528 500,528 C 625,528 700,555 715,620 Z"
+            fill="url(#shellGrad)" stroke="#9aa4ad" stroke-width="2.5"/>
+      <!-- ===== Hals (Technik-Mesh + Leuchte) ===== -->
+      <path d="M 452,440 L 548,440 L 556,545 L 444,545 Z" fill="url(#neckGrad)"/>
+      <g stroke="#39434d" stroke-width="1.6">
+        <line x1="449" y1="463" x2="551" y2="463"/>
+        <line x1="447" y1="483" x2="553" y2="483"/>
+        <line x1="446" y1="503" x2="554" y2="503"/>
+        <line x1="445" y1="523" x2="555" y2="523"/>
       </g>
-      <g id="browR" transform="translate(605,196)">
-        <line x1="-46" y1="0" x2="46" y2="0" stroke="var(--brow, #6b4a2f)"
-              stroke-width="15" stroke-linecap="round"/>
+      <circle id="neckGlow" cx="500" cy="492" r="17" fill="url(#glowGrad)"/>
+
+      <!-- ===== Seitliche Kopf-Panels ("Ohren") ===== -->
+      <path d="M 344,236 C 326,258 322,318 340,352 L 368,340 L 362,246 Z" fill="url(#sideGrad)"/>
+      <path d="M 656,236 C 674,258 678,318 660,352 L 632,340 L 638,246 Z" fill="url(#sideGrad)"/>
+      <g stroke="#4a545e" stroke-width="2">
+        <line x1="337" y1="272" x2="352" y2="268"/><line x1="335" y1="294" x2="351" y2="292"/>
+        <line x1="336" y1="316" x2="352" y2="316"/>
+        <line x1="663" y1="272" x2="648" y2="268"/><line x1="665" y1="294" x2="649" y2="292"/>
+        <line x1="664" y1="316" x2="648" y2="316"/>
       </g>
 
-      <!-- Augen: aeussere Gruppe = Position, innere = Lidschluss (scaleY),
-           Pupillengruppe = Blickrichtung -->
-      <g transform="translate(395,278)">
+      <!-- ===== Kopf (humanoide Schale) ===== -->
+      <path d="M 500,52
+               C 412,52 352,116 348,214
+               C 345,282 354,332 376,376
+               C 400,424 448,468 500,468
+               C 552,468 600,424 624,376
+               C 646,332 655,282 652,214
+               C 648,116 588,52 500,52 Z"
+            fill="url(#shellGrad)" stroke="#98a2ab" stroke-width="3"/>
+
+      <!-- Kalotte (dunkleres Kopfteil) mit Fuge -->
+      <path d="M 500,52 C 412,52 352,116 348,214 C 348,196 366,148 402,118
+               C 434,92 466,80 500,80 C 534,80 566,92 598,118
+               C 634,148 652,196 652,214 C 648,116 588,52 500,52 Z"
+            fill="url(#crownGrad)"/>
+      <path d="M 352,206 C 396,150 442,124 500,124 C 558,124 604,150 648,206"
+            fill="none" stroke="var(--seam)" stroke-width="2"/>
+      <!-- Stirn-Mittelfuge (wie Referenz 2) -->
+      <path d="M 500,80 L 500,150 M 500,150 C 492,168 492,182 500,196
+               M 500,150 C 508,168 508,182 500,196"
+            fill="none" stroke="var(--seam)" stroke-width="2"/>
+      <!-- Wangen-/Kieferfugen -->
+      <path d="M 372,330 C 402,388 442,420 470,432" fill="none" stroke="var(--seam)" stroke-width="1.8" opacity="0.7"/>
+      <path d="M 628,330 C 598,388 558,420 530,432" fill="none" stroke="var(--seam)" stroke-width="1.8" opacity="0.7"/>
+      <!-- Kinnfuge + Schraubpunkte (Referenz 2) -->
+      <path d="M 462,442 C 486,452 514,452 538,442" fill="none" stroke="var(--seam)" stroke-width="1.8" opacity="0.8"/>
+      <circle cx="452" cy="418" r="2.6" fill="#8a949e"/>
+      <circle cx="548" cy="418" r="2.6" fill="#8a949e"/>
+
+      <!-- Schlaefen-Einsaetze (dunkel, wie Referenz 1) -->
+      <path d="M 362,238 C 356,272 358,306 368,330 L 386,318 L 380,246 Z" fill="#39434d" opacity="0.55"/>
+      <path d="M 638,238 C 644,272 642,306 632,330 L 614,318 L 620,246 Z" fill="#39434d" opacity="0.55"/>
+
+      <!-- Wangen-Schimmer (Opacity wird animiert; kuehler Glanz statt Roete) -->
+      <ellipse id="cheekL" cx="410" cy="352" rx="42" ry="24" fill="#cfe4f4" opacity="0.06"/>
+      <ellipse id="cheekR" cx="590" cy="352" rx="42" ry="24" fill="#cfe4f4" opacity="0.06"/>
+
+      <!-- ===== Brauen: skulptierte Kanten (Rotation + Heben animiert) ===== -->
+      <g id="browL" transform="translate(418,242)">
+        <path d="M -48,6 C -30,-5 18,-8 46,2" fill="none"
+              stroke="#7d8791" stroke-width="6" stroke-linecap="round"/>
+        <path d="M -46,11 C -28,1 16,-2 44,7" fill="none"
+              stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+      </g>
+      <g id="browR" transform="translate(582,242)">
+        <path d="M 48,6 C 30,-5 -18,-8 -46,2" fill="none"
+              stroke="#7d8791" stroke-width="6" stroke-linecap="round"/>
+        <path d="M 46,11 C 28,1 -16,-2 -44,7" fill="none"
+              stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+      </g>
+
+      <!-- ===== Augen: menschliche Form, Technik-Iris (enger gesetzt) ===== -->
+      <g transform="translate(418,278)">
+        <ellipse rx="47" ry="27" fill="#b9c2c9" opacity="0.35"/>   <!-- Augenhoehle -->
         <g id="eyeScaleL">
-          <ellipse rx="47" ry="52" fill="#ffffff" stroke="var(--outline, #2b2320)" stroke-width="6"/>
+          <ellipse rx="42" ry="22" fill="#f4f7f9" stroke="#7a8894" stroke-width="2.5"/>
           <g id="pupilL">
-            <circle r="19" fill="#241d1a"/>
-            <circle cx="-6" cy="-7" r="6" fill="#ffffff" opacity="0.9"/>
+            <circle r="16.5" fill="url(#irisGrad)" stroke="#3d607f" stroke-width="1"/>
+            <circle r="7" fill="#10151c"/>
+            <circle cx="-4" cy="-4.5" r="2.6" fill="#ffffff" opacity="0.95"/>
           </g>
+          <path d="M -40,-9 C -20,-21 20,-21 40,-9" fill="none"
+                stroke="#5f6972" stroke-width="2.5" opacity="0.85"/>   <!-- Oberlid -->
         </g>
       </g>
-      <g transform="translate(605,278)">
+      <g transform="translate(582,278)">
+        <ellipse rx="47" ry="27" fill="#b9c2c9" opacity="0.35"/>
         <g id="eyeScaleR">
-          <ellipse rx="47" ry="52" fill="#ffffff" stroke="var(--outline, #2b2320)" stroke-width="6"/>
+          <ellipse rx="42" ry="22" fill="#f4f7f9" stroke="#7a8894" stroke-width="2.5"/>
           <g id="pupilR">
-            <circle r="19" fill="#241d1a"/>
-            <circle cx="-6" cy="-7" r="6" fill="#ffffff" opacity="0.9"/>
+            <circle r="16.5" fill="url(#irisGrad)" stroke="#3d607f" stroke-width="1"/>
+            <circle r="7" fill="#10151c"/>
+            <circle cx="-4" cy="-4.5" r="2.6" fill="#ffffff" opacity="0.95"/>
           </g>
+          <path d="M -40,-9 C -20,-21 20,-21 40,-9" fill="none"
+                stroke="#5f6972" stroke-width="2.5" opacity="0.85"/>
         </g>
       </g>
 
-      <!-- Nase (klein, cartoonig, im Wesentlichen statisch) -->
-      <ellipse id="nose" cx="500" cy="342" rx="17" ry="13" fill="var(--nose, #f0b467)"/>
+      <!-- ===== Nase: skulptiert, dezent ===== -->
+      <path d="M 495,268 C 492,300 488,326 482,344 C 490,354 510,354 518,344
+               C 512,326 508,300 505,268" fill="#dde3e8" opacity="0.55"/>
+      <path d="M 482,344 C 488,352 495,355 500,355 C 505,355 512,352 518,344"
+            fill="none" stroke="#8a949e" stroke-width="2.2"/>
+      <path d="M 479,347 C 476,344 475,340 477,337 M 521,347 C 524,344 525,340 523,337"
+            fill="none" stroke="#8a949e" stroke-width="2"/>
 
-      <!-- Mund (Pfad wird je Frame neu gebaut) -->
-      <g transform="translate(500,436)">
-        <path id="mouth" d="M -90,0 Q 0,20 90,0 Q 0,34 -90,0 Z"
-              fill="var(--mouth, #5a2a2a)" stroke="var(--outline, #2b2320)" stroke-width="5"
+      <!-- ===== Mund: mechanische Mundfuge (dunkler Schlitz, Pfad je Frame) =====
+           Kein Lippen-Look: dunkler recesster Schlitz mit feiner Panel-Fugen-
+           Kontur - im Ruhezustand eine duenne Linie, oeffnet sich zur Kavitaet. -->
+      <g transform="translate(500,422)">
+        <path id="mouth" d="M -60,0 Q 0,4 60,0 Q 0,7 -60,0 Z"
+              fill="#232a30" stroke="#8a949e" stroke-width="1.6"
               stroke-linejoin="round"/>
+        <!-- feine Glanzkante oberhalb der Mundfuge -->
+        <path d="M -52,-3 Q 0,-8 52,-3" fill="none" stroke="#ffffff"
+              stroke-width="1.2" opacity="0.35"/>
       </g>
 
-      <!-- Schlaf-Zzz (nur im Zustand "sleeping") -->
+      <!-- Schlaf-Zzz -->
       <g id="zzz" opacity="0">
-        <text x="740" y="150" class="zzz z1">Z</text>
-        <text x="790" y="110" class="zzz z2">Z</text>
-        <text x="835" y="78"  class="zzz z3">z</text>
+        <text x="700" y="140" class="zzz z1">Z</text>
+        <text x="748" y="104" class="zzz z2">Z</text>
+        <text x="790" y="76"  class="zzz z3">z</text>
       </g>
     </g>
   </svg>
 
-  <!-- unauffaellige Verbindungsanzeige (gruen = rosbridge verbunden) -->
   <div id="rosDot" title="rosbridge"></div>
 
   <script>
   // =====================================================================
-  //  Animations-Engine des Roboter-Gesichts (inline, siehe Kopfkommentar)
-  // ---------------------------------------------------------------------
-  //  Prinzip: Jeder Ausdruck ist ein Satz Zielparameter (PRESETS). Eine
-  //  requestAnimationFrame-Schleife blendet die aktuellen Werte weich zum
-  //  Ziel (exponentielles Tweening) und schreibt sie in die SVG-Gruppen.
-  //  Dazu laufen unabhaengig: Blinzeln, Blickwandern ("Idle-Leben").
-  //
-  //  Datenquelle: rosbridge-WebSocket, Topic /face/state_json
-  //    {"expression": "happy", ...}   -> setExpression("happy")
-  //  Ohne ROS (Demo/Test): Tasten 1-9 oder Tippen/Klicken wechselt.
+  //  Ausdrucks-Engine - UNVERAENDERT zur Cartoon-Fassung (gleiche IDs,
+  //  gleiche Parameter, gleiche rosbridge-Anbindung). Nur Presets leicht
+  //  ans Android-Design angepasst (dezentere Wangen/schmalere Lippen).
   // =====================================================================
   'use strict';
 
   const stateTopic = '/face/state_json';
 
-  // ---------------- Parameter-Presets je Ausdruck ----------------------
-  // eyeOpen: 0..1.3 | pupilX/Y: -1..1 | browRaise*: 0..1 | browAngle*: Grad
-  // mouthCurve: -1 (Trauer) .. +1 (Laecheln) | mouthOpen: 0..1
-  // mouthWidth: 0.3..1.1 | cheeks: 0..1 | wander: Staerke des Blickwanderns
   const PRESETS = {
-    neutral:   { eyeOpen: 0.90, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.15, browRaiseR: 0.15,
-                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.18, mouthOpen: 0.06,
-                 mouthWidth: 1.00, cheeks: 0.25, wander: 0.5 },
-    listening: { eyeOpen: 1.05, pupilX: 0.00, pupilY: -0.25, browRaiseL: 0.75, browRaiseR: 0.75,
-                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.30, mouthOpen: 0.12,
-                 mouthWidth: 0.90, cheeks: 0.35, wander: 0.15 },
-    thinking:  { eyeOpen: 0.72, pupilX: 0.55, pupilY: -0.50, browRaiseL: 0.65, browRaiseR: 0.05,
-                 browAngleL: -8,  browAngleR: 4,   mouthCurve: 0.02, mouthOpen: 0.04,
-                 mouthWidth: 0.75, cheeks: 0.10, wander: 0.2 },
-    happy:     { eyeOpen: 0.38, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.35, browRaiseR: 0.35,
-                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 1.00, mouthOpen: 0.30,
-                 mouthWidth: 1.05, cheeks: 1.00, wander: 0.3 },
+    neutral:   { eyeOpen: 0.92, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.15, browRaiseR: 0.15,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.10, mouthOpen: 0.05,
+                 mouthWidth: 0.62, cheeks: 0.06, wander: 0.5 },
+    listening: { eyeOpen: 1.06, pupilX: 0.00, pupilY: -0.25, browRaiseL: 0.70, browRaiseR: 0.70,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.22, mouthOpen: 0.10,
+                 mouthWidth: 0.58, cheeks: 0.12, wander: 0.15 },
+    thinking:  { eyeOpen: 0.72, pupilX: 0.55, pupilY: -0.50, browRaiseL: 0.62, browRaiseR: 0.05,
+                 browAngleL: -8,  browAngleR: 4,   mouthCurve: 0.00, mouthOpen: 0.03,
+                 mouthWidth: 0.50, cheeks: 0.05, wander: 0.2 },
+    happy:     { eyeOpen: 0.46, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.32, browRaiseR: 0.32,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.85, mouthOpen: 0.24,
+                 mouthWidth: 0.78, cheeks: 0.38, wander: 0.3 },
     sad:       { eyeOpen: 0.55, pupilX: 0.00, pupilY: 0.35, browRaiseL: 0.30, browRaiseR: 0.30,
-                 browAngleL: -16, browAngleR: 16,  mouthCurve: -0.85, mouthOpen: 0.05,
-                 mouthWidth: 0.80, cheeks: 0.00, wander: 0.1 },
-    surprised: { eyeOpen: 1.25, pupilX: 0.00, pupilY: 0.00, browRaiseL: 1.00, browRaiseR: 1.00,
-                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.05, mouthOpen: 0.85,
-                 mouthWidth: 0.45, cheeks: 0.30, wander: 0.0 },
-    alarm:     { eyeOpen: 1.15, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.15, browRaiseR: 0.15,
-                 browAngleL: 18,  browAngleR: -18, mouthCurve: -0.40, mouthOpen: 0.18,
-                 mouthWidth: 0.85, cheeks: 0.00, wander: 0.0 },
-    confused:  { eyeOpen: 0.85, pupilX: -0.35, pupilY: -0.10, browRaiseL: 0.85, browRaiseR: 0.00,
-                 browAngleL: -6,  browAngleR: 8,   mouthCurve: -0.20, mouthOpen: 0.07,
-                 mouthWidth: 0.70, cheeks: 0.00, wander: 0.8 },
-    sleeping:  { eyeOpen: 0.04, pupilX: 0.00, pupilY: 0.15, browRaiseL: 0.05, browRaiseR: 0.05,
-                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.12, mouthOpen: 0.05,
-                 mouthWidth: 0.90, cheeks: 0.15, wander: 0.0 },
+                 browAngleL: -15, browAngleR: 15,  mouthCurve: -0.70, mouthOpen: 0.04,
+                 mouthWidth: 0.55, cheeks: 0.00, wander: 0.1 },
+    surprised: { eyeOpen: 1.28, pupilX: 0.00, pupilY: 0.00, browRaiseL: 1.00, browRaiseR: 1.00,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.05, mouthOpen: 0.80,
+                 mouthWidth: 0.34, cheeks: 0.12, wander: 0.0 },
+    alarm:     { eyeOpen: 1.18, pupilX: 0.00, pupilY: 0.00, browRaiseL: 0.12, browRaiseR: 0.12,
+                 browAngleL: 16,  browAngleR: -16, mouthCurve: -0.35, mouthOpen: 0.14,
+                 mouthWidth: 0.58, cheeks: 0.00, wander: 0.0 },
+    confused:  { eyeOpen: 0.85, pupilX: -0.35, pupilY: -0.10, browRaiseL: 0.80, browRaiseR: 0.00,
+                 browAngleL: -6,  browAngleR: 8,   mouthCurve: -0.18, mouthOpen: 0.05,
+                 mouthWidth: 0.48, cheeks: 0.00, wander: 0.8 },
+    sleeping:  { eyeOpen: 0.05, pupilX: 0.00, pupilY: 0.15, browRaiseL: 0.05, browRaiseR: 0.05,
+                 browAngleL: 0,   browAngleR: 0,   mouthCurve: 0.08, mouthOpen: 0.04,
+                 mouthWidth: 0.55, cheeks: 0.04, wander: 0.0 },
   };
   const ORDER = Object.keys(PRESETS);
 
-  // ---------------- Laufender Zustand ----------------------------------
   let expression = 'neutral';
-  const cur = Object.assign({}, PRESETS.neutral);   // aktuelle Werte
-  const tgt = Object.assign({}, PRESETS.neutral);   // Zielwerte
+  const cur = Object.assign({}, PRESETS.neutral);
+  const tgt = Object.assign({}, PRESETS.neutral);
 
-  // Blinzeln / Blickwandern
-  let blink = 0;                    // 0 = offen, 1 = zu (kurzer Impuls)
+  let blink = 0;
   let nextBlinkAt = performance.now() + 2500;
   let wanderX = 0, wanderY = 0, wanderTX = 0, wanderTY = 0;
   let nextWanderAt = 0;
 
   const el = (id) => document.getElementById(id);
 
-  // ---------------- Ausdruck setzen ------------------------------------
   function setExpression(name) {
     if (!PRESETS[name] || name === expression) { return; }
     expression = name;
     Object.assign(tgt, PRESETS[name]);
     document.body.dataset.expression = name;
   }
-  window.setExpression = setExpression;   // fuer Tests/Debug erreichbar
+  window.setExpression = setExpression;
 
-  // ---------------- Tween-Schleife --------------------------------------
   let lastT = performance.now();
 
   function frame(now) {
     const dt = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
-    const k = 1 - Math.exp(-dt * 7);            // weiches Nachziehen
+    const k = 1 - Math.exp(-dt * 7);
 
     for (const key of Object.keys(cur)) {
       cur[key] += (tgt[key] - cur[key]) * k;
     }
 
-    // --- Blinzeln (nicht im Schlaf; dort sind die Augen ohnehin zu) ----
     if (expression !== 'sleeping' && now >= nextBlinkAt) {
       blink = 1;
       nextBlinkAt = now + 2500 + Math.random() * 4000;
     }
-    blink = Math.max(0, blink - dt * 9);        // ~110 ms pro Blinzler
+    blink = Math.max(0, blink - dt * 9);
 
-    // --- Blickwandern (Staerke je Ausdruck) ----------------------------
     if (now >= nextWanderAt) {
       wanderTX = (Math.random() * 2 - 1) * cur.wander;
       wanderTY = (Math.random() * 2 - 1) * cur.wander * 0.6;
@@ -283,21 +349,20 @@
     requestAnimationFrame(frame);
   }
 
-  // ---------------- Werte in die SVG schreiben ---------------------------
   function apply() {
     const open = Math.max(0.04, cur.eyeOpen * (1 - blink));
     el('eyeScaleL').setAttribute('transform', `scale(1 ${open.toFixed(3)})`);
     el('eyeScaleR').setAttribute('transform', `scale(1 ${open.toFixed(3)})`);
 
-    const px = (cur.pupilX + wanderX) * 14;
-    const py = (cur.pupilY + wanderY) * 12;
+    const px = (cur.pupilX + wanderX) * 12;
+    const py = (cur.pupilY + wanderY) * 7;
     el('pupilL').setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)})`);
     el('pupilR').setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)})`);
 
     el('browL').setAttribute('transform',
-      `translate(395 ${(196 - cur.browRaiseL * 36).toFixed(1)}) rotate(${cur.browAngleL.toFixed(1)})`);
+      `translate(418 ${(242 - cur.browRaiseL * 26).toFixed(1)}) rotate(${cur.browAngleL.toFixed(1)})`);
     el('browR').setAttribute('transform',
-      `translate(605 ${(196 - cur.browRaiseR * 36).toFixed(1)}) rotate(${cur.browAngleR.toFixed(1)})`);
+      `translate(582 ${(242 - cur.browRaiseR * 26).toFixed(1)}) rotate(${cur.browAngleR.toFixed(1)})`);
 
     el('mouth').setAttribute('d', mouthPath(cur.mouthCurve, cur.mouthOpen, cur.mouthWidth));
 
@@ -306,21 +371,18 @@
     el('zzz').setAttribute('opacity', expression === 'sleeping' ? '1' : '0');
   }
 
-  // Mund als geschlossene Flaeche: obere + untere Bezierkurve.
-  // curve: +1 Laecheln (Mitte nach unten, Ecken hoch) / -1 Trauer.
+  // Mund als geschlossene Lippenflaeche (curve +1 Laecheln / -1 Trauer).
   function mouthPath(curve, openAmt, width) {
     const half = 95 * width;
-    const cornerY = -curve * 22;
-    const topCtrlY = cornerY + curve * 75;
-    const botCtrlY = topCtrlY + 12 + openAmt * 100;
+    const cornerY = -curve * 16;
+    const topCtrlY = cornerY + curve * 52;
+    const botCtrlY = topCtrlY + 3 + openAmt * 78;   // duenn im Ruhezustand
     return `M ${-half},${cornerY.toFixed(1)} ` +
            `Q 0,${topCtrlY.toFixed(1)} ${half},${cornerY.toFixed(1)} ` +
            `Q 0,${botCtrlY.toFixed(1)} ${-half},${cornerY.toFixed(1)} Z`;
   }
 
-  // ---------------- rosbridge-Anbindung ---------------------------------
-  // URL wie bei der Smartphone-GUI: gleicher Host, Port 9090.
-  // Override fuer Tests: index.html?bridge=ws://192.168.1.50:9090
+  // ---------------- rosbridge (unveraendert) -----------------------------
   function bridgeUrl() {
     const q = new URLSearchParams(window.location.search).get('bridge');
     if (q) { return q; }
@@ -348,7 +410,7 @@
       try {
         const state = JSON.parse(frame_.msg.data);
         if (state.expression) { setExpression(state.expression); }
-      } catch { /* fehlerhafte Nutzlast ignorieren */ }
+      } catch { /* ignorieren */ }
     };
     ws.onclose = () => {
       el('rosDot').classList.remove('connected');
@@ -357,12 +419,8 @@
     ws.onerror = () => { try { ws.close(); } catch { /* egal */ } };
   }
 
-  function scheduleReconnect() {
-    setTimeout(connect, 3000);
-  }
+  function scheduleReconnect() { setTimeout(connect, 3000); }
 
-  // ---------------- Demo-Bedienung (ohne ROS) ---------------------------
-  // Tasten 1-9 = Ausdruck direkt, Tippen/Klicken = naechster Ausdruck.
   window.addEventListener('keydown', (ev) => {
     const idx = parseInt(ev.key, 10) - 1;
     if (idx >= 0 && idx < ORDER.length) { setExpression(ORDER[idx]); }
@@ -372,7 +430,6 @@
     setExpression(ORDER[next]);
   });
 
-  // ---------------- Start ------------------------------------------------
   requestAnimationFrame(frame);
   connect();
   </script>

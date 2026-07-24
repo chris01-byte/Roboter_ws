@@ -58,6 +58,27 @@ def generate_launch_description():
         # --- Bedien-Layer / Missionskoordination ---
         _include('mission_manager', 'mission_manager.launch.py'),
 
+        # --- rosbridge: Bruecke fuer Gesicht UND iPhone-GUI (beide sprechen
+        #     ueber ws://<jetson>:9090). Gehoert in den Roboter-Start, sonst
+        #     bleibt das Display stumm. NICHT zusaetzlich smartphone_gui.launch.py
+        #     starten - das brachte frueher einen zweiten mission_manager. ---
+        Node(
+            package='rosbridge_server',
+            executable='rosbridge_websocket',
+            name='rosbridge_websocket',
+            output='screen',
+            parameters=[{'port': 9090, 'address': '0.0.0.0'}],
+        ),
+
+        # --- Webserver der iPhone-GUI (http://<jetson>:8080) ---
+        Node(
+            package='smartphone_gui',
+            executable='serve_gui',
+            name='smartphone_gui_server',
+            output='screen',
+            arguments=['--host', '0.0.0.0', '--port', '8080'],
+        ),
+
         # --- Server-Erreichbarkeit ueberwachen (WLAN-Fallback) ---
         Node(
             package='robot_bringup',
@@ -67,9 +88,8 @@ def generate_launch_description():
             parameters=[link_params],
         ),
 
-        # --- Gesicht fuer das 7-Zoll-Roboter-Display (WP-4 Erweiterung) ---
-        #     rosbridge kommt weiterhin aus smartphone_gui.launch.py;
-        #     Standalone: ros2 launch robot_face robot_face.launch.py with_rosbridge:=true
+        # --- Gesicht fuer das 7-Zoll-Roboter-Display (Port 8081) ---
+        #     rosbridge kommt oben aus diesem Launch.
         _include('robot_face', 'robot_face.launch.py'),
 
         # --- Behavior-Tree (optional; startet sonst on demand) ---

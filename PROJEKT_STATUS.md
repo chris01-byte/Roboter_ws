@@ -11,6 +11,13 @@ fährt virtuell -> Ablage am Katalog-Ziel -> success), D2. Details: `pruefplan_e
 **Alle Software-Befunde des Prüfberichts sind damit geschlossen** (K1,K2,K4,K5,K6,K7,S1,S2,
 Pose-Katalog, GUI-Ausbau, Nav2 virtuell). Rest ist hardwaregebunden.
 
+## Zuletzt (13.07): robot_face Redesign
+Cartoon-Gesicht ersetzt durch **humanoides Android-Design** (weisse Hochglanz-Schale, Panel-Fugen,
+technische blaue Iris, Hals-Leuchte) nach Nutzer-Referenzbildern. Nur `robot_face/web/index.html`
+(Single-File, kein sw.js) getauscht - Ausdrucks-Engine/rosbridge unveraendert, im Browser ueber
+neutral/happy/alarm/sleeping/surprised verifiziert. Zum Jetson: normaler Stick-Sync, dann
+Kiosk-Browser neu laden (kein Cache).
+
 ## Betriebs-Fakten (nicht neu herleiten)
 - **Eine Kopie:** dieser USB-Stick `/Volumes/64GB/roboter_ws` ist der gesamte Stand.
   Gebaut/getestet wird direkt hier auf dem Jetson (oder in `~/roboter_ws`-Kopie).

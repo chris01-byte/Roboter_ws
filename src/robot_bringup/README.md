@@ -8,11 +8,46 @@ Server-Erreichbarkeit überwacht (WLAN-Ausfall-Fallback).
 
 | Läuft auf | Nodes | Start |
 |---|---|---|
-| **Roboter (onboard)** | base_hardware, vl53_near_field, explore, mission_manager, link_monitor, (Nav2/SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
-| **Server (offboard)** | llm_planner, semantic_perception | `server.launch.py` |
+| **Roboter (onboard)** | base_hardware, vl53_near_field, explore, mission_manager, bt_orchestrator (Missions-Server), safety_monitor, robot_face, link_monitor — (SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
+| **Server (offboard)** | llm_planner (qwen2.5/Ollama), semantic_perception (YOLO-World + Objektgedächtnis) | `server.launch.py` |
 
 **Grundregel:** Sicherheit, Navigation und Exploration laufen **immer onboard**. Fällt der
-Server/das WLAN aus, entfallen nur die KI-Funktionen — der Roboter bleibt sicher.
+Server/das WLAN aus, entfallen nur die KI-Funktionen — der Roboter bleibt sicher
+(der BT erkundet dann auch nicht ungewollt: `IsOffboardAvailable`-Guard).
+
+## Server einmalig einrichten (Ersteinrichtung)
+
+Zielsystem: Ubuntu 22.04 x86 (GPU empfohlen für YOLO-World, z. B. RTX 3090).
+
+```bash
+# 1) ROS 2 Humble (Desktop) + Build-Werkzeuge — Installation nach docs.ros.org, dann:
+sudo apt install ros-humble-desktop python3-colcon-common-extensions \
+                 ros-humble-behaviortree-cpp
+echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc && source ~/.bashrc
+# Hinweis: behaviortree_ros2 liegt als SOURCE in src/ — nichts extra klonen.
+
+# 2) Workspace vom Stick kopieren und bauen (ext4 -> Symlinks ok):
+cp -r /media/$USER/64GB/roboter_ws ~/roboter_ws
+cd ~/roboter_ws && ./pruefplan_jetson.sh --stage B0     # baut + prüft
+source install/setup.bash
+
+# 3) KI-Modelle:
+curl -fsSL https://ollama.com/install.sh | sh           # Ollama
+ollama pull qwen2.5                                      # LLM des Planers
+pip install ultralytics                                  # YOLO-World
+# dann in src/semantic_perception/config/semantic_perception_params.yaml:
+#   model_backend: "yoloworld"   (ohne Kamerabild: automatischer Stub-Rückfall)
+
+# 4) Netzwerk einrichten (Abschnitt unten), Server starten:
+ros2 launch robot_bringup server.launch.py
+
+# 5) Funktionsprobe ohne Roboter (zweites Terminal):
+ros2 topic pub --once /llm_planner/instruction std_msgs/msg/String "{data: 'Erkunde die Wohnung'}"
+ros2 topic echo /mission_manager/command_json            # -> {"type": "explore"}
+ros2 service call /world_model/get_object_pose robot_interfaces/srv/GetObjectPose "{class_name: 'Tasse'}"
+```
+
+Nicht nötig auf dem Server: `navigation2`, `rosbridge` (laufen auf dem Jetson).
 
 ## Netzwerk-Setup (einmalig)
 
@@ -70,6 +105,7 @@ im DDS-Profil eintragen.
 
 ## Offen / später
 
-- Platzhalter in `robot.launch.py` für SLAM (RTAB-Map), Nav2, OAK-Kamera und MoveIt2
-  aktivieren, sobald diese Stacks integriert sind (bis dahin via `mock_servers`).
+- Platzhalter in `robot.launch.py` für SLAM (RTAB-Map), OAK-Kamera und MoveIt2 aktivieren,
+  sobald die Hardware montiert ist (bis dahin via `mock_servers`). Nav2 ist bereits ohne
+  Hardware nutzbar: `robot_navigation/nav_test.launch.py` (Testkarte + virtuelle Basis).
 - Optional: `ros2 launch`-Argument, um einzelne Onboard-Gruppen selektiv zu starten.

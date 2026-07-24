@@ -23,6 +23,7 @@
 # ============================================================================
 
 import math
+import os
 import time
 
 import numpy as np
@@ -40,6 +41,10 @@ from smbus2 import SMBus
 # Treiber-Import exakt wie im getesteten Skript (vl53l5cx ODER vl53l7cx).
 try:
     from vl53l5cx.vl53l5cx import VL53L5CX as DRV
+    # CH341A-USB-I2C uebertraegt nur ~32 Byte pro I2C-Transaktion. Sonst wird die
+    # VL53-Firmware in einem 4096-Byte-Block geschrieben -> OSError(5)/EIO im init().
+    import vl53l5cx.vl53l5cx as _vl53mod
+    _vl53mod.VL53L5CX_COMMS_CHUNK_SIZE = 32
 except Exception:  # pragma: no cover
     from vl53l7cx import VL53L7CX as DRV
 
@@ -77,6 +82,9 @@ class Vl53NearField(Node):
 
         gp = self.get_parameter
         self.bus_num = int(gp('i2c_bus_num').value)
+        if self.bus_num < 0:                     # -1 = CH341-USB-I2C-Bus automatisch suchen
+            self.bus_num = self._find_ch341_bus()
+            self.get_logger().info(f'CH341-I2C-Bus automatisch erkannt: i2c-{self.bus_num}')
         self.mux_addr = int(gp('mux_addr').value)
         self.sensor_addr = int(gp('sensor_addr').value)
         self.ch_left = int(gp('left_channel').value)
@@ -137,6 +145,19 @@ class Vl53NearField(Node):
         self.timer = self.create_timer(1.0 / self.rate_hz, self._tick)
         self.get_logger().info('vl53_near_field laeuft.')
 
+    # ======================= CH341-USB-I2C-Bus automatisch finden =======
+    @staticmethod
+    def _find_ch341_bus():
+        import glob
+        for d in sorted(glob.glob('/sys/class/i2c-adapter/i2c-*')):
+            try:
+                with open(os.path.join(d, 'name')) as f:
+                    if any(x in f.read().lower() for x in ('ch34', 'mphsi')):
+                        return int(os.path.basename(d).split('-')[1])
+            except Exception:
+                pass
+        raise RuntimeError('Kein CH341/CH34x-I2C-Bus gefunden (WCH-Treiber geladen? lsmod | grep ch34x)')
+
     # ======================= MUX (TCA9548A) =============================
     def _mux_select(self, ch):
         # Genau EINEN Kanal durchschalten (beide Sensoren haben 0x29!).
@@ -149,10 +170,19 @@ class Vl53NearField(Node):
     # ======================= Sensor-Start (faithful) ====================
     def _sensor_start(self, ch):
         self._mux_select(ch)
-        try:
-            s = DRV(i2c_bus=self.bus_num, i2c_address=self.sensor_addr)
-        except TypeError:
-            s = DRV()
+        # Konstruktor-Signatur je nach Treiber: Abstract-Horizon-VL53L5CX nimmt
+        # bus_id=<Nummer>; andere Varianten i2c_bus/i2c_address. Reihenfolge = Praeferenz.
+        s = None
+        for kwargs in (dict(bus_id=self.bus_num),
+                       dict(i2c_bus=self.bus_num, i2c_address=self.sensor_addr),
+                       dict()):
+            try:
+                s = DRV(**kwargs)
+                break
+            except TypeError:
+                continue
+        if s is None:
+            raise RuntimeError('VL53-Treiber liess sich nicht instanziieren')
         if hasattr(s, 'init'):
             s.init()
         elif hasattr(s, 'begin') and not s.begin():

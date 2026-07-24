@@ -45,6 +45,7 @@ Einmalige Voraussetzungen: `sudo apt install ros-humble-behaviortree-cpp ros-hum
 # Roboter (onboard): Basis, Sicherheit, Gesicht, mission_manager, BT-Server
 ros2 launch robot_bringup robot.launch.py
 # KI-Server (offboard): LLM-Planer + Semantik   (beide: gleiche ROS_DOMAIN_ID!)
+# Ersteinrichtung des Servers: src/robot_bringup/README.md
 ros2 launch robot_bringup server.launch.py
 # Bedienung: GUI + rosbridge
 ros2 launch smartphone_gui smartphone_gui.launch.py    # iPhone: http://JETSON-IP:8080

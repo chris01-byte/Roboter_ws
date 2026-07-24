@@ -2,6 +2,11 @@
 # =====================================================================
 #  smartphone_gui.launch.py - WP-4 Komplettstart
 # ---------------------------------------------------------------------
+#  ACHTUNG: Auf dem ROBOTER NICHT noetig - robot_bringup/robot.launch.py
+#  startet mission_manager, rosbridge und diesen Webserver bereits mit.
+#  Diese Datei ist fuer den STANDALONE-Betrieb (Entwicklungs-PC/Server ohne
+#  Roboter-Stack). Beides gleichzeitig starten -> mission_manager laeuft doppelt!
+#
 #  Startet:
 #    - mission_manager
 #    - rosbridge_websocket (Port 9090)

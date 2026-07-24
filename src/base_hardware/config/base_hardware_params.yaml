@@ -1,65 +1,70 @@
 # =====================================================================
 #  base_hardware_params.yaml - Basisantrieb / Differential Drive
-# ---------------------------------------------------------------------
+# =====================================================================
 #  Standard ist bewusst Dry-run. Fuer echten RS485-Test auf Staendern:
 #    dry_run: false
 #    allow_rs485: true
 #  Vorher Motorregister mit dem NEMA23-RS485-Manual abgleichen!
 #
-#  PARAMETER-INDEX:
-#    cmd_vel_topic / odom_topic .............. Zeile 27 / 28
-#    wheel_radius_m .......................... Zeile 32
-#    wheel_separation_m ...................... Zeile 33
-#    max_linear_speed_mps .................... Zeile 36
-#    max_angular_speed_radps ................. Zeile 37
-#    cmd_timeout_s ........................... Zeile 40
-#    update_rate_hz .......................... Zeile 41
-#    dry_run / allow_rs485 ................... Zeile 44 / 45
-#    rs485_port / baudrate ................... Zeile 48 / 49
-#    left_motor_id / right_motor_id .......... Zeile 50 / 51
-#    invert_left / invert_right .............. Zeile 52 / 53
-#    Modbus-Register ........................ Zeile 56-64
-#    publish_tf .............................. Zeile 71
+#  SCHNELL FINDEN (nach Abschnittsnamen suchen, keine Zeilennummern):
+#    "Topics"        cmd_vel/odom/state
+#    "Geometrie"     Radradius, Spurweite  [GEMESSEN 13.07.2026]
+#    "Getriebe"      gear_ratio (Motor -> Rad)
+#    "Limits"        max_linear/max_angular
+#    "Watchdog"      cmd_timeout_s, update_rate_hz
+#    "Sicherheit"    dry_run, allow_rs485
+#    "RS485"         Port, Motor-IDs, Invertierung
+#    "Modbus"        Register + Drehzahlgrenzen
+#    "Frames"        odom/base_link, publish_tf
 # =====================================================================
 base_hardware:
   ros__parameters:
-    # --- ROS Topics ---
+    # --- Topics ---
     cmd_vel_topic: "/cmd_vel"
     odom_topic: "/odom"
     state_topic: "/base_hardware/state_json"
 
-    # --- Geometrie [ANPASSEN] ---
-    wheel_radius_m: 0.075
-    wheel_separation_m: 0.420
+    # --- Geometrie [GEMESSEN 13.07.2026 am aufgebauten Roboter] ---
+    wheel_radius_m: 0.0625      # Raddurchmesser 125 mm -> Radius 62,5 mm
+    wheel_separation_m: 0.378   # Abstand Radmitte <-> Radmitte 378 mm
+    # Radumfang = 2*pi*0.0625 = 0.3927 m  (eine Radumdrehung = 39,27 cm Weg)
 
-    # --- Limits fuer erste Tests [ANPASSEN, konservativ lassen] ---
-    max_linear_speed_mps: 0.30
-    max_angular_speed_radps: 0.80
+    # --- Getriebe [GEMESSEN: Schrittmotor-Getriebe 10:1] ---
+    # Motorumdrehungen pro RAD-Umdrehung. Der Node rechnet Rad-Drehzahl in
+    # MOTOR-Drehzahl um, bevor er sie per RS485 schickt. Ohne diesen Faktor
+    # fuehre der Roboter 10x zu langsam.
+    gear_ratio: 10.0
+
+    # --- Limits fuer erste Tests [konservativ lassen] ---
+    max_linear_speed_mps: 0.30      # -> Rad 45,8 rpm -> Motor 458 rpm
+    max_angular_speed_radps: 0.80   # -> zusaetzlich +/- 231 rpm Motor je Rad
 
     # --- Watchdog / Update ---
-    cmd_timeout_s: 0.25
+    cmd_timeout_s: 0.25         # ohne neues /cmd_vel -> Stopp (Testpublish mit -r 10!)
     update_rate_hz: 50.0
 
     # --- Sicherheitsmodus ---
-    dry_run: true
-    allow_rs485: false
+    dry_run: true               # true = rechnet nur, sendet KEINE Motorbefehle
+    allow_rs485: false          # beide zusammen freischalten = echter Motorlauf
 
-    # --- RS485 Bus B ---
+    # --- RS485 Bus B [PRUEFEN: echter Port via 'ls -l /dev/ttyUSB*'] ---
     rs485_port: "/dev/ttyUSB_BASE"
     baudrate: 115200
     left_motor_id: 1
     right_motor_id: 2
     invert_left: false
-    invert_right: true
+    invert_right: false         # 23.07.2026 korrigiert: rechter Motor drehte sonst verkehrt herum
 
-    # --- Modbus-Register [ANPASSEN: NEMA23-RS485 Manual pruefen] ---
+    # --- Modbus-Register [PRUEFEN: NEMA23-RS485 Manual] ---
     rpm_register: 0x001D
     direction_register: 0x001C
     command_register: 0x0027
     velocity_start_value: 0x0002
     stop_value: 0x0100
-    rpm_scale: 1.0
-    max_motor_rpm: 120.0
+    rpm_scale: 1.0              # Registerwert je Motor-rpm (1.0 = direkt in rpm)
+    # Obergrenze in MOTOR-rpm (nach Getriebe). 700 deckt die Limits oben ab
+    # (Vollgas + Drehung = ca. 690). [PRUEFEN: Motor-Datenblatt!]
+    max_motor_rpm: 700.0
     modbus_timeout_s: 0.05
     modbus_write_period_s: 0.05
 
