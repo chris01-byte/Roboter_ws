@@ -86,5 +86,10 @@ base_hardware:
     odom_frame_id: "odom"
     base_frame_id: "base_link"
     # Projektentscheidung: spaeter soll ekf_node odom->base_link publizieren.
-    # Fuer Standalone-RViz-Test darf man publish_tf testweise auf true setzen.
-    publish_tf: false
+    # UEBERGANG (25.07.2026): Es gibt noch KEINEN EKF, aber seit die Odometrie
+    # aus der GEMESSENEN Ist-Drehzahl (0x000C) kommt, ist der odom->base_link-TF
+    # aussagekraeftig. base_hardware publiziert ihn daher selbst, damit die Nav2-
+    # local_costmap (rolling window im odom-Frame) arbeiten kann.
+    # ZURUECK AUF false setzen, sobald ekf_node/SLAM diesen TF uebernimmt,
+    # sonst publizieren zwei Quellen denselben Transform (Konflikt).
+    publish_tf: true

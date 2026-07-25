@@ -1,0 +1,4 @@
+# FTDI-Serial-Wandler: latency_timer von 16 ms (Default) auf 1 ms senken.
+# Ohne das kostet jede Modbus-RTU-Transaktion (RS485-Basisantrieb) ~16 ms
+# Pufferlatenz statt ~1 ms Uebertragung -> Schreib-/Lesetakt bremst aus.
+ACTION=="add", SUBSYSTEM=="usb-serial", DRIVER=="ftdi_sio", ATTR{latency_timer}="1"
