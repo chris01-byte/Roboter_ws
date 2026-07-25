@@ -79,6 +79,10 @@ class Vl53NearField(Node):
         self.declare_parameter('flipx_right', False)
         self.declare_parameter('frame_left', 'vl53_left_link')
         self.declare_parameter('frame_right', 'vl53_right_link')
+        # Zusaetzliche costmap-freundliche Wolke (eigenes Topic, damit der
+        # collision_monitor auf der sparsamen Original-Wolke bleibt):
+        self.declare_parameter('publish_costmap_cloud', True)
+        self.declare_parameter('costmap_clear_range_m', 0.60)
 
         gp = self.get_parameter
         self.bus_num = int(gp('i2c_bus_num').value)
@@ -106,6 +110,8 @@ class Vl53NearField(Node):
         self.flipx_right = bool(gp('flipx_right').value)
         self.frame_left = str(gp('frame_left').value)
         self.frame_right = str(gp('frame_right').value)
+        self.publish_costmap_cloud = bool(gp('publish_costmap_cloud').value)
+        self.costmap_clear_range = float(gp('costmap_clear_range_m').value)
 
         # -------------------------------------------------------------------
         #  I2C-Bus oeffnen + beide Sensoren starten
@@ -123,6 +129,12 @@ class Vl53NearField(Node):
             PointCloud2, 'near_field/left/points', qos_profile_sensor_data)
         self.pub_right = self.create_publisher(
             PointCloud2, 'near_field/right/points', qos_profile_sensor_data)
+        # Costmap-freundliche "Laserscan"-Wolke (pro Spalte 1 horizontaler Punkt;
+        # freie Richtungen auf Max-Reichweite -> ObstacleLayer raeumt sauber).
+        self.pub_left_cm = self.create_publisher(
+            PointCloud2, 'near_field/left/points_costmap', qos_profile_sensor_data)
+        self.pub_right_cm = self.create_publisher(
+            PointCloud2, 'near_field/right/points_costmap', qos_profile_sensor_data)
         self.pub_status = self.create_publisher(
             NearFieldStatus, 'near_field/status', 10)
 
@@ -308,6 +320,26 @@ class Vl53NearField(Node):
         header.frame_id = frame_id
         return point_cloud2.create_cloud_xyz32(header, pts)
 
+    def _matrix_to_costmap_cloud(self, M, frame_id, stamp):
+        # Fuer den Nav2-ObstacleLayer: pro SPALTE (Azimut) genau EIN horizontaler
+        # Punkt (z=0, Sensorhoehe) - wie ein 8-Strahl-Laserscan. Naechstes
+        # gueltiges Ziel der Spalte = Hindernis (wird markiert); keine gueltige
+        # Zelle = "frei" -> Punkt auf costmap_clear_range (> obstacle_max_range,
+        # < raytrace_max_range) -> raeumt den Strahl, wird NICHT markiert.
+        # So loescht der Layer jeden Frame korrekt (Gegenstueck zur sparsamen
+        # Original-Wolke, die keine Raeum-Strahlen liefert).
+        pts = []
+        for c in range(self.GC):
+            col = M[:, c]
+            finite = col[np.isfinite(col)]
+            dist = float(np.min(finite)) if finite.size > 0 else self.costmap_clear_range
+            az = self.col_az[c]
+            pts.append((float(dist * math.cos(az)), float(dist * math.sin(az)), 0.0))
+        header = Header()
+        header.stamp = stamp
+        header.frame_id = frame_id
+        return point_cloud2.create_cloud_xyz32(header, pts)
+
     @staticmethod
     def _nanmin(A):
         # inf zurueckgeben, wenn die Zone leer/komplett ungueltig ist
@@ -362,6 +394,9 @@ class Vl53NearField(Node):
         # --- Punktwolken publizieren (geflippte Matrizen -> Orientierung wie Status) ---
         self.pub_left.publish(self._matrix_to_cloud(ML, self.frame_left, stamp))
         self.pub_right.publish(self._matrix_to_cloud(MR, self.frame_right, stamp))
+        if self.publish_costmap_cloud:
+            self.pub_left_cm.publish(self._matrix_to_costmap_cloud(ML, self.frame_left, stamp))
+            self.pub_right_cm.publish(self._matrix_to_costmap_cloud(MR, self.frame_right, stamp))
 
     # ======================= Aufraeumen =================================
     def destroy_node(self):
