@@ -119,6 +119,17 @@ class BaseHardware(Node):
         self.declare_parameter('modbus_write_period_s', 0.05)
 
         # -------------------------------------------------------------------
+        # Drehzahl-Rueckmeldung (GEMESSENE Odometrie statt Sollwert-Integration)
+        #   speed_register  = 0x000C, Ist-Drehzahl (read-only, signed int16)
+        #   Gelesen wird per FC03 (read_holding_registers); FC04 antwortet NICHT.
+        #   Eigene, langsamere Periode: ein Read kostet je nach FTDI-
+        #   latency_timer 1-16 ms, das soll den 50-Hz-Schreibtakt nicht bremsen.
+        # -------------------------------------------------------------------
+        self.declare_parameter('use_speed_feedback', True)
+        self.declare_parameter('speed_register', 0x000C)
+        self.declare_parameter('feedback_period_s', 0.1)
+
+        # -------------------------------------------------------------------
         # Frames: Standardentscheidung im Projekt: EKF publiziert spaeter TF.
         # Deshalb publish_tf standardmaessig false.
         # -------------------------------------------------------------------
@@ -154,6 +165,9 @@ class BaseHardware(Node):
         self.max_motor_rpm = float(gp('max_motor_rpm').value)
         self.modbus_timeout_s = float(gp('modbus_timeout_s').value)
         self.modbus_write_period_s = float(gp('modbus_write_period_s').value)
+        self.use_speed_feedback = bool(gp('use_speed_feedback').value)
+        self.speed_register = int(gp('speed_register').value)
+        self.feedback_period_s = float(gp('feedback_period_s').value)
         self.odom_frame_id = str(gp('odom_frame_id').value)
         self.base_frame_id = str(gp('base_frame_id').value)
         self.publish_tf = bool(gp('publish_tf').value)
@@ -177,6 +191,13 @@ class BaseHardware(Node):
         self.last_sent_left_rpm = None
         self.last_sent_right_rpm = None
         self.rs485_ready = False
+        # Gemessene Rueckmeldung (None = noch keine gueltige Messung)
+        self.last_feedback_read = 0.0
+        self.meas_motor_rpm_left = None
+        self.meas_motor_rpm_right = None
+        self.meas_v = None
+        self.meas_w = None
+        self.feedback_ok = False
 
         # -------------------------------------------------------------------
         # Publisher / Subscriber
@@ -267,10 +288,18 @@ class BaseHardware(Node):
                 self._send_stop_if_needed()
             else:
                 self._send_rs485_velocity(self.active_wheel_cmd)
+            self._poll_speed_feedback()
 
-        # Dry-run-Odometrie: wir integrieren die Sollgeschwindigkeit.
-        self._integrate_odom(v, w, dt)
-        self._publish_odom(now, v, w)
+        # Odometrie: wenn die Motoren ihre IST-Drehzahl melden, wird DIESE
+        # integriert (echte Rueckmeldung). Sonst Rueckfall auf den Sollwert -
+        # im Dry-run gibt es nichts anderes, und ohne Rueckmeldung ist die
+        # Sollwert-Integration immer noch besser als gar keine Odometrie.
+        if self.feedback_ok and self.meas_v is not None:
+            odom_v, odom_w = self.meas_v, self.meas_w
+        else:
+            odom_v, odom_w = v, w
+        self._integrate_odom(odom_v, odom_w, dt)
+        self._publish_odom(now, odom_v, odom_w)
         self._publish_state(now, timed_out)
         self._throttled_log(timed_out)
 
@@ -318,6 +347,12 @@ class BaseHardware(Node):
             'x': self.x,
             'y': self.y,
             'yaw': self.yaw,
+            # GEMESSENE Rueckmeldung (None = keine gueltige Messung)
+            'feedback_ok': self.feedback_ok,
+            'meas_motor_rpm_left': self.meas_motor_rpm_left,
+            'meas_motor_rpm_right': self.meas_motor_rpm_right,
+            'meas_v_mps': self.meas_v,
+            'meas_w_radps': self.meas_w,
             'rs485_port': self.rs485_port,
             'rs485_ready': self.rs485_ready,
             'left_motor_id': self.left_motor_id,
@@ -403,6 +438,78 @@ class BaseHardware(Node):
 
     def _write_motor_stop(self, motor_id: int):
         self._write_register(motor_id, self.command_register, self.stop_value)
+
+    # ------------------- Drehzahl-Rueckmeldung (lesend) -----------------
+    def _poll_speed_feedback(self):
+        """Liest beide Ist-Drehzahlen und rechnet sie in v/omega um.
+
+        Laeuft in eigener, langsamerer Periode als der Schreibtakt, damit die
+        Lesezugriffe die Motorregelung nicht ausbremsen.
+        """
+        if not (self.use_speed_feedback and self.rs485_ready):
+            return
+        now = time.monotonic()
+        if now - self.last_feedback_read < self.feedback_period_s:
+            return
+        self.last_feedback_read = now
+
+        rpm_l = self._read_motor_speed(self.left_motor_id)
+        rpm_r = self._read_motor_speed(self.right_motor_id)
+        if rpm_l is None or rpm_r is None:
+            self.feedback_ok = False
+            return
+
+        self.meas_motor_rpm_left = rpm_l
+        self.meas_motor_rpm_right = rpm_r
+
+        # Motor-rpm -> Rad-rpm -> Radgeschwindigkeit [m/s]
+        circumference = 2.0 * math.pi * self.wheel_radius
+        v_left = (rpm_l / self.gear_ratio) / 60.0 * circumference
+        v_right = (rpm_r / self.gear_ratio) / 60.0 * circumference
+
+        # Montage-Invertierung zuruecknehmen (Gegenstueck zu _twist_to_wheels),
+        # damit wieder Roboter-Koordinaten herauskommen.
+        if self.invert_left:
+            v_left *= -1.0
+        if self.invert_right:
+            v_right *= -1.0
+
+        self.meas_v = (v_left + v_right) / 2.0
+        self.meas_w = (v_right - v_left) / self.wheel_separation
+        self.feedback_ok = True
+
+    def _read_motor_speed(self, motor_id: int):
+        """Ist-Drehzahl in MOTOR-rpm (vorzeichenbehaftet) oder None."""
+        raw = self._read_register(motor_id, self.speed_register)
+        if raw is None:
+            return None
+        if raw >= 0x8000:          # uint16 -> int16 (Zweierkomplement)
+            raw -= 0x10000
+        return float(raw) / self.rpm_scale
+
+    def _read_register(self, motor_id: int, address: int):
+        """Ein Halteregister lesen (FC03). Gibt den Rohwert oder None zurueck.
+
+        FC04 (read_input_registers) beantwortet der ESS23-RS NICHT - nur FC03.
+        """
+        if self.modbus_client is None:
+            return None
+        try:
+            for kw in ('device_id', 'slave', 'unit'):
+                try:
+                    result = self.modbus_client.read_holding_registers(
+                        address, count=1, **{kw: motor_id})
+                except TypeError:
+                    continue
+                if result is None or result.isError():
+                    return None
+                return int(result.registers[0])
+            return None
+        except Exception as exc:
+            self.get_logger().warn(
+                f'Modbus-Lesefehler Motor {motor_id}, Reg 0x{address:04X}: {exc}',
+                throttle_duration_sec=5.0)
+            return None
 
     def _write_register(self, motor_id: int, address: int, value: int) -> bool:
         if self.modbus_client is None:

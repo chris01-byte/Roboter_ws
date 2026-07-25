@@ -70,6 +70,18 @@ base_hardware:
     modbus_timeout_s: 0.05
     modbus_write_period_s: 0.05
 
+    # --- Drehzahl-Rueckmeldung -> GEMESSENE Odometrie (24.07.2026) ---
+    # Die Motoren melden ihre Ist-Drehzahl in 0x000C (signed int16, read-only).
+    # Damit integriert der Node die tatsaechlich gefahrene statt der befohlenen
+    # Bewegung. Faellt bei Lesefehlern automatisch auf den Sollwert zurueck.
+    # WICHTIG: Lesen geht nur per FC03 (read_holding_registers) - auf FC04
+    # antwortet der ESS23-RS NICHT.
+    # Timing: ein Read kostet ~16 ms bei FTDI-Default latency_timer=16, aber nur
+    # ~1-2 ms mit latency_timer=1 (udev-Regel 82-ftdi-latency.rules).
+    use_speed_feedback: true
+    speed_register: 0x000C
+    feedback_period_s: 0.1      # 10 Hz - bremst den 50-Hz-Schreibtakt nicht
+
     # --- Frames ---
     odom_frame_id: "odom"
     base_frame_id: "base_link"
