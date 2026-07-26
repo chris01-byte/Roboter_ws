@@ -1,0 +1,59 @@
+# =====================================================================
+#  oak_params.yaml  -  Treibereinstellungen fuer die OAK-Tiefenkamera
+# =====================================================================
+#  Wird von launch/oak.launch.py an den depthai_ros_driver gegeben.
+#  Die MONTAGEPOSE steht NICHT hier, sondern als Launch-Argumente in
+#  oak.launch.py (dort eine einzige, klar markierte Stelle).
+#
+#  ------------------------------------------------------------------
+#  WICHTIG - diese Datei ERSETZT die Default-Datei des Treibers!
+#  pointcloud.launch.py laedt normalerweise
+#  depthai_ros_driver/config/pcl.yaml. Wer hier Zeilen weglaesst,
+#  verliert sie ersatzlos. Konkret getestet (26.07.2026):
+#    - ohne stereo.i_right_rect_publish_topic bleibt /oak/right/image_rect
+#      stumm -> PointCloudXyziNode bekommt kein Intensitaetsbild
+#      -> es kommt GAR KEINE /oak/points-Wolke.
+#    - ein fuer den Sensor ungueltiges rgb.i_resolution (z.B. "720P" auf
+#      dem IMX378 der OAK-D-S2) legt den RGB-Stream lahm - mit derselben
+#      Folge fuer die Wolke.
+#  Der Block "aus pcl.yaml uebernommen" ist deshalb PFLICHT.
+#  ------------------------------------------------------------------
+#
+#  KAMERAWECHSEL (OAK-D-S2 -> OAK 4 D Pro Wide FF):
+#    Das Modell wird AUTOMATISCH vom Geraet erkannt (Frames + Kalibrierung
+#    kommen aus dem angesteckten Geraet). Im Normalfall genuegt Anstecken.
+#    Fuer die Pro Wide liefert der Treiber eine Vorlage mit:
+#      /opt/ros/humble/share/depthai_ros_driver/config/oak_d_pro_w.yaml
+#    Dort steht rgb.i_resolution: '720'  (ACHTUNG: ohne "P"!) - falls die
+#    neue Kamera andere Aufloesungsnamen erwartet, hier entsprechend setzen.
+# =====================================================================
+/oak:
+  ros__parameters:
+    # ---- aus pcl.yaml uebernommen: NICHT entfernen (s. Kopf) ----
+    camera:
+      i_nn_type: none              # kein neuronales Netz -> spart CPU/Strom.
+                                   # semantic_perception braucht spaeter 'spatial'.
+      i_enable_imu: true           # /oak/imu/data (spaeter fuer EKF/Odometrie)
+    stereo:
+      i_align_depth: true          # Tiefe auf RGB ausgerichtet
+      i_board_socket_id: 2
+      i_subpixel: true
+      # i_right_rect_publish_topic wird NICHT mehr gebraucht: wir bauen die
+      # Wolke mit PointCloudXyz aus Tiefe + camera_info (s. oak.launch.py),
+      # nicht mit PointCloudXyzi aus Tiefe + Intensitaetsbild. Spart Bandbreite.
+
+      # ---- eigene Ergaenzungen fuer die Hindernisvermeidung ----
+      i_depth_preset: HIGH_ACCURACY    # weniger Falschpunkte als HIGH_DENSITY
+      i_enable_speckle_filter: true    # Ausreisser raus -> weniger Geister-Hindernisse
+      # Punktzahl senken: bei 1280x720 sind es ~760.000 gueltige Punkte pro
+      # Wolke (gemessen) - das erstickt den Nav2-ObstacleLayer auf dem Jetson.
+      # 320x180 -> ~58.000 Punkte, fuer eine Costmap voellig ausreichend.
+      i_width: 320
+      i_height: 180
+
+    # RGB-Groesse MUSS mitskaliert werden: mit i_align_depth folgt die Tiefe
+    # der RGB-Aufloesung. i_resolution (Sensor) bleibt unangetastet - nur die
+    # ISP-Ausgabe wird skaliert (1920x1080 / 6 = 320x180).
+    rgb:
+      i_width: 320
+      i_height: 180

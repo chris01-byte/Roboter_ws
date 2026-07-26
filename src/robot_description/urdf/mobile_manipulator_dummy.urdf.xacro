@@ -44,13 +44,22 @@
   <xacro:property name="wheel_x"          value="0.000"/>
 
   <!-- ================================================================
-       SENSOR-MONTAGE: OAK 4 D PRO WIDE FF [ANPASSEN]
+       SENSOR-MONTAGE: OAK-Tiefenkamera
        camera_link ist mechanisch. camera_rgb_optical_frame ist optisch.
+       [GEMESSEN 26.07.2026] Aktuell verbaut: Luxonis OAK-D-S2 (Autofokus).
+       Geplant war OAK 4 D Pro Wide FF (derzeit nicht lieferbar) - beim
+       Wechsel diese Werte pruefen. MUSS mit der Montagepose in
+       robot_bringup/launch/oak.launch.py uebereinstimmen (dort haengt der
+       reale TF-Baum des Treibers dran)!
+       Gemessen: x=150 mm, mittig, 1340 mm ueber BODEN, 20 Grad nach unten.
+       z hier = 1.340 - 0.090 (base_link liegt 9 cm ueber dem Boden) = 1.250
        ================================================================ -->
-  <xacro:property name="oak_x"   value="0.120"/>
-  <xacro:property name="oak_y"   value="0.000"/>
-  <xacro:property name="oak_z"   value="0.360"/>
-  <xacro:property name="oak_yaw" value="0.000"/>
+  <xacro:property name="oak_x"     value="0.150"/>
+  <xacro:property name="oak_y"     value="0.000"/>
+  <xacro:property name="oak_z"     value="1.250"/>
+  <xacro:property name="oak_yaw"   value="0.000"/>
+  <xacro:property name="oak_pitch" value="0.349"/>  <!-- 20 Grad nach unten -->
+  <xacro:property name="oak_roll"  value="0.000"/>
 
   <!-- ================================================================
        SENSOR-MONTAGE: 2x VL53L7CX [ANPASSEN]
@@ -164,7 +173,7 @@
   <joint name="base_to_camera" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="${oak_x} ${oak_y} ${oak_z}" rpy="0 0 ${oak_yaw}"/>
+    <origin xyz="${oak_x} ${oak_y} ${oak_z}" rpy="${oak_roll} ${oak_pitch} ${oak_yaw}"/>
   </joint>
 
   <link name="camera_rgb_optical_frame"/>
