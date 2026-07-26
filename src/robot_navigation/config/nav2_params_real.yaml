@@ -82,7 +82,7 @@ local_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: vl53_left vl53_right
+        observation_sources: vl53_left vl53_right oak
         vl53_left:
           topic: /near_field/left/points_costmap
           data_type: "PointCloud2"
@@ -101,6 +101,20 @@ local_costmap:
           max_obstacle_height: 0.50
           obstacle_max_range: 0.55
           raytrace_max_range: 0.7
+        # OAK-Tiefenkamera: die FERNSICHT (mehrere Meter), die den VL53 fehlt.
+        # Hoehen sind im Costmap-Frame (z=0 = base_link = 9 cm ueber Boden):
+        #   min -0.04 = 5 cm ueber Boden -> Boden bleibt draussen (er liegt bei
+        #   -0.09; gemessen sind nur ~5 % der Punkte Bodenpunkte).
+        #   max 1.50 = bis Roboterhoehe.
+        oak:
+          topic: /oak/points
+          data_type: "PointCloud2"
+          marking: True
+          clearing: True
+          min_obstacle_height: -0.04
+          max_obstacle_height: 1.50
+          obstacle_max_range: 4.0     # so weit voraus wird markiert
+          raytrace_max_range: 5.0     # etwas weiter -> raeumt sauber frei
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
@@ -124,7 +138,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        observation_sources: vl53_left vl53_right
+        observation_sources: vl53_left vl53_right oak
         vl53_left:
           topic: /near_field/left/points_costmap
           data_type: "PointCloud2"
@@ -143,6 +157,20 @@ global_costmap:
           max_obstacle_height: 0.50
           obstacle_max_range: 0.55
           raytrace_max_range: 0.7
+        # OAK-Tiefenkamera: die FERNSICHT (mehrere Meter), die den VL53 fehlt.
+        # Hoehen sind im Costmap-Frame (z=0 = base_link = 9 cm ueber Boden):
+        #   min -0.04 = 5 cm ueber Boden -> Boden bleibt draussen (er liegt bei
+        #   -0.09; gemessen sind nur ~5 % der Punkte Bodenpunkte).
+        #   max 1.50 = bis Roboterhoehe.
+        oak:
+          topic: /oak/points
+          data_type: "PointCloud2"
+          marking: True
+          clearing: True
+          min_obstacle_height: -0.04
+          max_obstacle_height: 1.50
+          obstacle_max_range: 4.0     # so weit voraus wird markiert
+          raytrace_max_range: 5.0     # etwas weiter -> raeumt sauber frei
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0

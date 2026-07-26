@@ -28,6 +28,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
@@ -45,6 +46,9 @@ def generate_launch_description():
     vl53_launch = os.path.join(
         get_package_share_directory('vl53_near_field'), 'launch',
         'vl53_near_field.launch.py')
+
+    oak_launch = os.path.join(
+        get_package_share_directory('robot_bringup'), 'launch', 'oak.launch.py')
 
     map_yaml = LaunchConfiguration('map')
     active_drive = LaunchConfiguration('active_drive')
@@ -66,6 +70,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('map', default_value=default_map,
                               description='Karten-YAML (Default: leere Karte)'),
+        DeclareLaunchArgument('oak', default_value='true',
+                              description='OAK-Tiefenkamera mitstarten (Fernsicht '
+                                          'fuer den obstacle_layer).'),
         DeclareLaunchArgument('active_drive', default_value='false',
                               description='true = base_hardware SCHARF (Motoren '
                                           'fahren!). false = dry_run (Stufe-1-Test).'),
@@ -89,6 +96,11 @@ def generate_launch_description():
 
         # --- VL53-Kette: Punktwolken (obstacle_layer) + collision_monitor (Backstop) ---
         IncludeLaunchDescription(PythonLaunchDescriptionSource(vl53_launch)),
+
+        # --- OAK-Tiefenkamera: Fernsicht fuer den obstacle_layer ---
+        #     Optional abschaltbar (oak:=false), z.B. wenn die Kamera fehlt.
+        IncludeLaunchDescription(PythonLaunchDescriptionSource(oak_launch),
+                                 condition=IfCondition(LaunchConfiguration('oak'))),
 
         # --- Nav2-Kern (Regler + Behavior -> cmd_vel_smoothed) ---
         Node(package='nav2_controller', executable='controller_server',
