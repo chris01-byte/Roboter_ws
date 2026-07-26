@@ -35,7 +35,14 @@
                                    # semantic_perception braucht spaeter 'spatial'.
       i_enable_imu: true           # /oak/imu/data (spaeter fuer EKF/Odometrie)
     stereo:
-      i_align_depth: true          # Tiefe auf RGB ausgerichtet
+      # MUSS true bleiben. Versuch am 26.07.2026, per false das groessere
+      # vertikale Blickfeld der Mono-Kameras zu bekommen, ist GESCHEITERT:
+      # ohne Ausrichtung bleibt das Tiefenbild bei 1280x720, waehrend
+      # stereo.i_width/i_height nur die camera_info aendern -> Kalibrierung
+      # passt nicht zum Bild -> falsche 3D-Punkte (tote Zone scheinbar 2.21 m
+      # statt 1.51 m, Bodenpunkte 316 statt 8879). Die ISP-Skalierung wirkt
+      # NUR ueber den RGB-Pfad, also nur mit i_align_depth: true.
+      i_align_depth: true
       i_board_socket_id: 2
       i_subpixel: true
       # i_right_rect_publish_topic wird NICHT mehr gebraucht: wir bauen die
@@ -54,6 +61,10 @@
     # RGB-Groesse MUSS mitskaliert werden: mit i_align_depth folgt die Tiefe
     # der RGB-Aufloesung. i_resolution (Sensor) bleibt unangetastet - nur die
     # ISP-Ausgabe wird skaliert (1920x1080 / 6 = 320x180).
+    # Nebenwirkung: die Tiefe erbt damit das Blickfeld der Farbkamera
+    # (~42 Grad vertikal im 1080P-Modus). Daraus folgt die gemessene tote Zone
+    # von ~1.5 m fuer FLACH liegende Dinge - fuer den Zweck der OAK (Raum
+    # ueberblicken, groessere Hindernisse frueh sehen) unkritisch.
     rgb:
       i_width: 320
       i_height: 180
