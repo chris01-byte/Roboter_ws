@@ -62,14 +62,20 @@
   <xacro:property name="oak_roll"  value="0.000"/>
 
   <!-- ================================================================
-       SENSOR-MONTAGE: 2x VL53L7CX [ANPASSEN]
-       Werte muessen spaeter zur real kalibrierten Montage passen.
-       left_y > 0 ist links. inward_yaw dreht beide Sensoren zur Mitte.
+       SENSOR-MONTAGE: 2x VL53L7CX
+       [GEMESSEN 24.07.2026 am aufgebauten Roboter] left_y > 0 ist links.
+       MUSS mit den statischen TFs in vl53_near_field/launch/vl53_near_field.launch.py
+       uebereinstimmen - dort haengt die reale TF-Kette dran. Wenn hier und dort
+       verschiedene Posen stehen und beide Quellen laufen, streiten zwei Publisher
+       um denselben Transform.
+       Gemessen: 290 mm vor der Antriebsrad-Achse, +/-95 mm von der Mittellinie,
+       305 mm ueber BODEN -> z = 0.305 - 0.090 = 0.215 ueber base_link.
+       KEINE Eindrehung: beide Sensoren schauen gerade nach vorn.
        ================================================================ -->
-  <xacro:property name="vl53_x"          value="0.300"/>
-  <xacro:property name="vl53_y_abs"      value="0.110"/>
-  <xacro:property name="vl53_z"          value="0.050"/>
-  <xacro:property name="vl53_inward_yaw" value="0.350"/>  <!-- ca. 20 Grad -->
+  <xacro:property name="vl53_x"          value="0.290"/>
+  <xacro:property name="vl53_y_abs"      value="0.095"/>
+  <xacro:property name="vl53_z"          value="0.215"/>
+  <xacro:property name="vl53_inward_yaw" value="0.000"/>  <!-- geradeaus, nicht eingedreht -->
 
   <!-- ================================================================
        ARM-MONTAGE / DUMMY-LINKLAENGEN [ANPASSEN]

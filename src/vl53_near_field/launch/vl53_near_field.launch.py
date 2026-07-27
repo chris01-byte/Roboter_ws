@@ -16,6 +16,9 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -40,14 +43,24 @@ def generate_launch_description():
     #    - y=+/-0.095 m von der Mittellinie (links +, rechts -)
     #    - z=0.215 m ueber base_link (= 0.305 m ueber Boden minus 0.09 m base_link-Hoehe)
     #    - yaw=pitch=roll=0: beide schauen gerade nach vorn (kein Winkelversatz)
+    #
+    #    ABSCHALTBAR (publish_sensor_tf:=false): Dieselben Frames stehen auch in
+    #    der URDF (robot_description). Sobald ein robot_state_publisher mit der
+    #    URDF laeuft, wuerden ZWEI Quellen denselben Transform publizieren - das
+    #    ist unzulaessig. Dann diese hier abschalten. Solange kein
+    #    robot_state_publisher laeuft (aktueller Stand von robot.launch.py und
+    #    nav_real.launch.py), sind sie die einzige Quelle und muessen an bleiben.
+    publish_sensor_tf = LaunchConfiguration('publish_sensor_tf')
     tf_left = Node(
         package='tf2_ros', executable='static_transform_publisher',
         name='tf_vl53_left', output='screen',
+        condition=IfCondition(publish_sensor_tf),
         arguments=['0.29', '0.095', '0.215', '0', '0', '0', 'base_link', 'vl53_left_link'],
     )
     tf_right = Node(
         package='tf2_ros', executable='static_transform_publisher',
         name='tf_vl53_right', output='screen',
+        condition=IfCondition(publish_sensor_tf),
         arguments=['0.29', '-0.095', '0.215', '0', '0', '0', 'base_link', 'vl53_right_link'],
     )
 
@@ -65,4 +78,10 @@ def generate_launch_description():
         parameters=[{'autostart': True, 'node_names': ['collision_monitor']}],
     )
 
-    return LaunchDescription([vl53_node, tf_left, tf_right, collision_monitor, lifecycle_mgr])
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'publish_sensor_tf', default_value='true',
+            description='Statische TFs base_link->vl53_*_link publizieren. Auf false '
+                        'setzen, sobald ein robot_state_publisher dieselben Frames aus '
+                        'der URDF liefert - sonst zwei Publisher fuer denselben TF.'),
+        vl53_node, tf_left, tf_right, collision_monitor, lifecycle_mgr])

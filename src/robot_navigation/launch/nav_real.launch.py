@@ -70,6 +70,11 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('map', default_value=default_map,
                               description='Karten-YAML (Default: leere Karte)'),
+        DeclareLaunchArgument(
+            'static_map_odom', default_value='true',
+            description='Statisches map->odom als Platzhalter-Lokalisierung. ZWINGEND '
+                        'false, sobald SLAM (RTAB-Map) oder AMCL laeuft - die sind dann '
+                        'die einzige Quelle fuer diesen Transform.'),
         DeclareLaunchArgument('oak', default_value='true',
                               description='OAK-Tiefenkamera mitstarten (Fernsicht '
                                           'fuer den obstacle_layer).'),
@@ -77,12 +82,19 @@ def generate_launch_description():
                               description='true = base_hardware SCHARF (Motoren '
                                           'fahren!). false = dry_run (Stufe-1-Test).'),
 
-        # --- Karte + "Lokalisierung" (statische Identitaet) ---
+        # --- Karte + "Lokalisierung" ---
         Node(package='nav2_map_server', executable='map_server',
              name='map_server', output='screen',
              parameters=[params, {'yaml_filename': map_yaml}]),
+        # map->odom als statische Identitaet: nur ein PLATZHALTER, solange weder
+        # SLAM noch AMCL laufen. Er behauptet, der Roboter driftet nie - fuer
+        # kurze Relativfahrten in leerer Karte vertretbar.
+        # ZWINGEND static_map_odom:=false setzen, sobald RTAB-Map oder AMCL
+        # laeuft: die publizieren map->odom selbst, und zwei Publisher fuer
+        # denselben Transform sind unzulaessig (Lokalisierung springt).
         Node(package='tf2_ros', executable='static_transform_publisher',
              name='tf_map_odom', output='screen',
+             condition=IfCondition(LaunchConfiguration('static_map_odom')),
              arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']),
 
         # --- Echte Basis: base_hardware (dry_run/scharf via active_drive) ---
