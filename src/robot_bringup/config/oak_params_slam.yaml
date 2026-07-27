@@ -1,0 +1,42 @@
+# =====================================================================
+#  oak_params_slam.yaml  -  OAK-Profil fuer SLAM (RTAB-Map)
+# =====================================================================
+#  Zweites Profil neben oak_params.yaml. Verwendung:
+#    ros2 launch robot_bringup oak.launch.py \
+#      params_file:=<share>/robot_bringup/config/oak_params_slam.yaml
+#  (die SLAM-Launch macht das automatisch)
+#
+#  WARUM EIN EIGENES PROFIL?
+#  Zielkonflikt: Fuer die Nav2-Costmap ist die Aufloesung bewusst klein
+#  (320x180), damit die Punktwolke den ObstacleLayer nicht erschlaegt.
+#  RTAB-Map braucht dagegen BILDMERKMALE zur Wiedererkennung - bei 320x180
+#  findet es zu wenige, und Schleifenschluss/Relokalisierung scheitern.
+#  Deshalb hier 640x360: viermal so viele Pixel fuer die Merkmalssuche,
+#  immer noch weit unter den 1280x720 der Rohaufloesung.
+#
+#  ACHTUNG - dieselben Fallstricke wie im Hauptprofil (real getestet):
+#    * Diese Datei ERSETZT depthai's pcl.yaml. Der uebernommene Block
+#      darunter ist Pflicht, sonst bleibt die Punktwolke leer.
+#    * rgb.i_resolution NICHT auf einen fuer den IMX378 unbekannten Wert
+#      setzen ("720P" kennt er nicht) - sonst schweigt der RGB-Stream.
+#    * i_align_depth MUSS true bleiben: nur ueber den RGB-Pfad wirkt die
+#      ISP-Skalierung, und RTAB-Map braucht Tiefe deckungsgleich zu RGB.
+# =====================================================================
+/oak:
+  ros__parameters:
+    camera:
+      i_nn_type: none
+      i_enable_imu: true           # /oak/imu/data - spaeter fuer EKF/VIO nutzbar
+
+    stereo:
+      i_align_depth: true          # Tiefe deckungsgleich zu RGB (Pflicht fuer RGB-D-SLAM)
+      i_board_socket_id: 2
+      i_subpixel: true
+      i_depth_preset: HIGH_ACCURACY
+      i_enable_speckle_filter: true
+      i_width: 640
+      i_height: 360
+
+    rgb:
+      i_width: 640
+      i_height: 360
