@@ -13,15 +13,31 @@
 #  WICHTIG: nav_real.launch.py hat ein statisches map->odom als Platzhalter.
 #  Es darf NICHT parallel laufen - dort static_map_odom:=false setzen.
 #
-#  Start (Stufe 1, ohne Motorstrom - Roboter steht):
-#    ros2 launch robot_bringup slam.launch.py
-#  Fortsetzen statt neu kartieren:
-#    ros2 launch robot_bringup slam.launch.py delete_db:=false
-#  Mit Motorfreigabe (Stufe 2, Roboter kann fahren - Not-Aus bereithalten!):
-#    ros2 launch robot_bringup slam.launch.py active_drive:=true
+#  ---------------------------------------------------------------------
+#  A) Stufe 1 - ohne Motorstrom, Roboter steht (Pipelinetest):
+#       ros2 launch robot_bringup slam.launch.py
+#
+#  B) KARTIERFAHRT - scharf, Roboter faehrt (Not-Aus in der Hand!):
+#       Terminal 1:  ros2 launch robot_bringup slam.launch.py active_drive:=true
+#       Terminal 2:  ros2 run teleop_twist_keyboard teleop_twist_keyboard \
+#                      --ros-args -r /cmd_vel:=/cmd_vel_smoothed
+#     WICHTIG: auf cmd_vel_smoothed fahren, NICHT auf /cmd_vel. Nur so laeuft
+#     die Fahrt durch den collision_monitor, der vor Hindernissen bremst.
+#     Langsam fahren (im teleop mit 'x'/'c' die Grenzen senken), Ecken langsam
+#     umrunden - schnelle Drehungen brechen die visuelle Wiedererkennung.
+#
+#  C) Karte sichern (waehrend SLAM laeuft):
+#       ros2 service call /robot_map_manager/save_map std_srvs/srv/Trigger
+#     -> versionierter Ordner unter ~/.local/share/amadeus/maps/
+#     Die RTAB-Datenbank (~/.local/share/amadeus/rtabmap.db) ist davon
+#     unabhaengig und traegt die Wiedererkennung - sie ersetzt der Snapshot NICHT.
+#
+#  D) Karte spaeter weiterverwenden statt neu aufnehmen:
+#       ros2 launch robot_bringup slam.launch.py delete_db:=false
+#       ros2 launch robot_bringup slam.launch.py delete_db:=false localization:=true
 #
 #  Karte pruefen:  ros2 topic echo /map --once --qos-durability transient_local
-#  Karte sichern:  ros2 service call /robot_map_manager/save_map std_srvs/srv/Trigger
+#  ---------------------------------------------------------------------
 #
 #  HINWEIS zur Odometrie: base_hardware liest die Ist-Drehzahl nur, wenn es
 #  scharf ist (dry_run=false UND allow_rs485=true). Im Stufe-1-Betrieb steht
@@ -51,6 +67,10 @@ def generate_launch_description():
     map_manager_launch = os.path.join(
         get_package_share_directory('robot_map_manager'), 'launch',
         'map_manager.launch.py')
+
+    vl53_launch = os.path.join(
+        get_package_share_directory('vl53_near_field'), 'launch',
+        'vl53_near_field.launch.py')
 
     active_drive = LaunchConfiguration('active_drive')
     dry_run = ParameterValue(
@@ -117,6 +137,17 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map_manager', default_value='true',
             description='Kartenmanager mitstarten (speichert Karten fuer die App).'),
+        DeclareLaunchArgument(
+            'safety', default_value='true',
+            description='VL53 + collision_monitor mitstarten. Bei active_drive:=true '
+                        'ZWINGEND true - sonst faehrt der Roboter ohne Notbremse.'),
+
+        # --- Nahbereichs-Sicherheit: VL53 + collision_monitor ---
+        #     Der Monitor ist der einzige Publisher von /cmd_vel: gefahren wird
+        #     auf cmd_vel_smoothed, er reicht durch oder bremst.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(vl53_launch),
+            condition=IfCondition(LaunchConfiguration('safety'))),
 
         # --- Kamera mit dem SLAM-Profil (640x360 fuer Bildmerkmale) ---
         IncludeLaunchDescription(
