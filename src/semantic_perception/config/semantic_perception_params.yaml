@@ -31,11 +31,18 @@ semantic_perception:
     service_name: "/world_model/get_object_pose"
 
     # --- Kamera / Frames ---
-    rgb_topic: "/oak/rgb"
-    depth_topic: "/oak/stereo/depth"
+    # [KORRIGIERT 27.07.2026] Die Namen waren geraten und existierten nicht.
+    # Real vom depthai_ros_driver (siehe robot_bringup/launch/oak.launch.py):
+    #   /oak/rgb/image_rect   (rektifiziert - fuer Erkennung besser als image_raw)
+    #   /oak/stereo/image_raw (Tiefe; mit i_align_depth deckungsgleich zum RGB)
+    # Frueher stand hier "/oak/rgb" und "/oak/stereo/depth" - beide gibt es nicht.
+    rgb_topic: "/oak/rgb/image_rect"
+    depth_topic: "/oak/stereo/image_raw"
     camera_info_topic: "/oak/rgb/camera_info"
     global_frame: "map"
-    camera_frame: "camera_rgb_optical_frame"
+    # Frame des OAK-Treibers. Die URDF nennt ihn camera_rgb_optical_frame, der
+    # Treiber oak_rgb_camera_optical_frame - im Betrieb gilt der Treiber-Frame.
+    camera_frame: "oak_rgb_camera_optical_frame"
     confidence_threshold: 0.35
     model_path: "yolov8s-worldv2.pt"       # YOLO-World-Gewichte (nur Backend 'yoloworld')
     depth_scale: 0.001                     # Tiefen-Rohwert -> Meter (OAK: mm -> 0.001)

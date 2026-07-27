@@ -53,9 +53,12 @@ class SemanticPerception(Node):
         # -------------------------------------------------------------------
         self._backend        = self.declare_parameter('model_backend', 'stub').value
         self._service_name   = self.declare_parameter('service_name', '/world_model/get_object_pose').value
-        self._rgb_topic      = self.declare_parameter('rgb_topic', '/oak/rgb').value
+        # [KORRIGIERT 27.07.2026] Defaults auf die real vom depthai_ros_driver
+        # gelieferten Namen. Frueher '/oak/rgb' bzw. camera_rgb_optical_frame -
+        # beides existiert im Betrieb nicht.
+        self._rgb_topic      = self.declare_parameter('rgb_topic', '/oak/rgb/image_rect').value
         self._global_frame   = self.declare_parameter('global_frame', 'map').value
-        self._camera_frame   = self.declare_parameter('camera_frame', 'camera_rgb_optical_frame').value
+        self._camera_frame   = self.declare_parameter('camera_frame', 'oak_rgb_camera_optical_frame').value
         self._conf_threshold = float(self.declare_parameter('confidence_threshold', 0.35).value)
         self._class_queries  = list(self.declare_parameter(
             'class_queries', ['Tasse', 'Flasche', 'Fernbedienung', 'Werkzeug', 'Schluessel']).value)
@@ -67,7 +70,7 @@ class SemanticPerception(Node):
         self._stub_position   = list(self.declare_parameter('stub_position', [1.0, 0.0, 0.5]).value)
         self._stub_confidence = float(self.declare_parameter('stub_confidence', 0.8).value)
         # --- Echtes Modell (YOLO-World) + 3D-Projektion ---
-        self._depth_topic     = self.declare_parameter('depth_topic', '/oak/stereo/depth').value
+        self._depth_topic     = self.declare_parameter('depth_topic', '/oak/stereo/image_raw').value
         self._caminfo_topic   = self.declare_parameter('camera_info_topic', '/oak/rgb/camera_info').value
         self._model_path      = self.declare_parameter('model_path', 'yolov8s-worldv2.pt').value
         self._depth_scale     = float(self.declare_parameter('depth_scale', 0.001).value)  # mm -> m
