@@ -98,10 +98,25 @@ def generate_launch_description():
         # die Datenbank mit identischen Bildern flutet.
         'RGBD/LinearUpdate': '0.05',
         'RGBD/AngularUpdate': '0.05',
-        'Grid/FromDepth': 'true',        # Belegungsraster aus der Tiefe
-        'Grid/RangeMax': '4.0',          # so weit wie die OAK zuverlaessig sieht
-        'Grid/MaxGroundHeight': '0.05',  # Boden ausblenden (base_link-Bezug)
+        # ---- Belegungsraster ----
+        # Erste Fassung erzeugte eine schlechte Karte: 26 % belegt gegen nur
+        # 7 % frei, Waende als dicke Baender, Strahlenartefakte. Zwei Ursachen:
+        #  1) OHNE Strahlverfolgung wird freier Raum ueberhaupt nicht
+        #     eingetragen - nur Treffer. Deshalb kaum Freiflaeche.
+        #  2) Boden per fester Hoehenschwelle auszublenden scheitert bei einer
+        #     Kamera auf 1.34 m mit 20 Grad Neigung: auf 3-4 m ist das
+        #     Tiefenrauschen groesser als die Schwelle, der Boden wurde als
+        #     Hindernis markiert.
+        'Grid/FromDepth': 'true',
+        'Grid/3D': 'false',                  # flaches 2D-Raster (guenstiger, reicht fuer Nav2)
+        'Grid/RayTracing': 'true',           # traegt den Raum bis zum Treffer als FREI ein
+        'Grid/RangeMax': '2.5',              # nur so weit, wie die Tiefe verlaesslich ist
+        'Grid/NormalsSegmentation': 'true',  # Boden ueber Flaechenneigung statt fester Hoehe
+        'Grid/MaxGroundAngle': '45',         # bis 45 Grad Neigung gilt als Boden
+        'Grid/MaxGroundHeight': '0.15',      # grosszuegig, Normalen entscheiden
         'Grid/MaxObstacleHeight': '1.5',
+        'Grid/NoiseFilteringRadius': '0.05',      # vereinzelte Ausreisser verwerfen
+        'Grid/NoiseFilteringMinNeighbors': '2',
     }]
 
     # Nur lokalisieren = Speicher nicht mehr erweitern.
