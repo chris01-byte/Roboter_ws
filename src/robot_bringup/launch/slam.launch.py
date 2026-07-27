@@ -26,6 +26,19 @@
 #     Langsam fahren (im teleop mit 'x'/'c' die Grenzen senken), Ecken langsam
 #     umrunden - schnelle Drehungen brechen die visuelle Wiedererkennung.
 #
+#  !!! RTAB-MAP IMMER SAUBER BEENDEN !!!
+#     Ctrl-C im Launch-Terminal, oder SIGINT an den rtabmap-Prozess, und ihm
+#     dann Zeit lassen (gemessen: ~5 s). Er schreibt beim Beenden das visuelle
+#     WOERTERBUCH in die Datenbank.
+#     Wird er mit SIGKILL (kill -9) abgeschossen, bleibt die Datenbank ohne
+#     Woerterbuch zurueck: die Karte ist geometrisch noch da, aber
+#     WIEDERERKENNUNG UND LOKALISIERUNG SIND UNMOEGLICH. Symptome beim
+#     naechsten Start (real passiert 27.07.2026):
+#       "Not found word 1 (dict size=0)"
+#       "The dictionary is empty or missing some words from nodes in WM"
+#       danach hunderte "Rejected loop closure ... Not enough inliers 0/20"
+#     Das laesst sich NICHT reparieren - die Karte muss neu aufgenommen werden.
+#
 #  C) Karte sichern (waehrend SLAM laeuft):
 #       ros2 service call /robot_map_manager/save_map std_srvs/srv/Trigger
 #     -> versionierter Ordner unter ~/.local/share/amadeus/maps/
