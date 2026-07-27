@@ -67,7 +67,12 @@ base_hardware:
     # Obergrenze in MOTOR-rpm (nach Getriebe). 700 deckt die Limits oben ab
     # (Vollgas + Drehung = ca. 690). [PRUEFEN: Motor-Datenblatt!]
     max_motor_rpm: 700.0
-    modbus_timeout_s: 0.05
+    # 0.05 war zu knapp: eine Transaktion braucht real ~5 ms, aber waehrend des
+    # Startgewitters (OAK + VL53 + RTAB-Map belegen gleichzeitig den USB-Bus)
+    # lief sie in den Timeout und riss die Verbindung. 0.1 gibt Luft; teuer wird
+    # es nur im Fehlerfall (pymodbus wiederholt 3x), und der Node baut die
+    # Verbindung jetzt selbsttaetig wieder auf (_ensure_rs485).
+    modbus_timeout_s: 0.1
     modbus_write_period_s: 0.05
 
     # --- Drehzahl-Rueckmeldung -> GEMESSENE Odometrie (24.07.2026) ---

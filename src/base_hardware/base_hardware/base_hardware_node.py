@@ -193,6 +193,8 @@ class BaseHardware(Node):
         self.rs485_ready = False
         # Gemessene Rueckmeldung (None = noch keine gueltige Messung)
         self.last_feedback_read = 0.0
+        self.last_reconnect_try = 0.0
+        self.reconnect_period_s = 2.0
         self.meas_motor_rpm_left = None
         self.meas_motor_rpm_right = None
         self.meas_v = None
@@ -284,6 +286,7 @@ class BaseHardware(Node):
             w = self.cmd_w
 
         if not self.dry_run and self.allow_rs485:
+            self._ensure_rs485()
             if timed_out:
                 self._send_stop_if_needed()
             else:
@@ -386,6 +389,28 @@ class BaseHardware(Node):
             self._write_motor_stop(self.right_motor_id)
         else:
             self.get_logger().error(f'RS485-Verbindung fehlgeschlagen: {self.rs485_port}')
+
+    def _ensure_rs485(self):
+        """Verbindung selbstheilend halten.
+
+        Eine einzelne Modbus-Ausnahme setzt rs485_ready auf False. Ohne diese
+        Wiederherstellung bliebe der Bus danach dauerhaft tot: die
+        Drehzahl-Rueckmeldung versucht von sich aus KEINEN Neuaufbau, und ein
+        Neuaufbau ueber _send_rs485_velocity passiert nur, wenn gerade ein
+        Fahrbefehl anliegt. Real aufgetreten (27.07.2026): waehrend des
+        Startgewitters von OAK, VL53 und RTAB-Map lief eine Transaktion in den
+        Timeout; danach meldete der Node dauerhaft rs485_ready=False, obwohl
+        die Motoren einwandfrei antworteten.
+        """
+        if self.rs485_ready:
+            return
+        now = time.monotonic()
+        if now - self.last_reconnect_try < self.reconnect_period_s:
+            return
+        self.last_reconnect_try = now
+        self.get_logger().warn('RS485 nicht bereit - versuche Neuaufbau ...',
+                               throttle_duration_sec=10.0)
+        self._connect_modbus()
 
     def _send_rs485_velocity(self, wheel_cmd: WheelCommand):
         if not self.rs485_ready:
