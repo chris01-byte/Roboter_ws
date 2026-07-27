@@ -33,10 +33,14 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 from rcl_interfaces.msg import ParameterDescriptor
+from action_msgs.msg import GoalStatus
+from action_msgs.srv import CancelGoal
 from std_msgs.msg import String, Bool
 from geometry_msgs.msg import PoseStamped
 
 from robot_interfaces.action import RunMission
+from mission_manager.action_outcome import cancel_was_accepted, terminal_state
+from mission_manager.command_payload import decode_command_payload
 
 
 class MissionManager(Node):
@@ -115,6 +119,15 @@ class MissionManager(Node):
 
         # Echte Mission (Action)
         self._goal_handle = None
+        # Massgebliche Sperre fuer den gesamten Action-Lebenszyklus: von
+        # send_goal_async() bis Goal-Ablehnung oder bestaetigtem terminalem
+        # WrappedResult. Zwischen Send und Goal-Antwort existiert noch kein
+        # Handle; ein Abbruch in diesem Fenster wird deshalb vorgemerkt.
+        self._real_goal_pending = False
+        self._cancel_requested = False
+        self._cancel_future = None
+        self._action_epoch = 0
+        self._active_action_epoch = None
 
         self.timer = self.create_timer(0.2, self._timer_tick)
         self._publish_status()
@@ -124,10 +137,9 @@ class MissionManager(Node):
 
     # ======================= Eingang / Validierung =======================
     def _on_command(self, msg: String):
-        try:
-            cmd = json.loads(msg.data)
-        except json.JSONDecodeError as exc:
-            self._reject(f'Ungueltiges JSON: {exc}')
+        cmd, error = decode_command_payload(msg.data)
+        if error is not None:
+            self._reject(error)
             return
 
         command_type = str(cmd.get('type', '')).strip()
@@ -137,9 +149,12 @@ class MissionManager(Node):
             self._cancel_current('Mission durch GUI abgebrochen')
             return
 
-        if self.state == 'running':
+        if self.state == 'running' or self._real_goal_pending:
             # S1-Fix: NICHT die laufende Mission abbrechen - nur ablehnen.
-            self._reject('Es laeuft bereits eine Mission')
+            self._reject(
+                'Vorherige Mission wird noch abgebrochen'
+                if self._cancel_requested
+                else 'Es laeuft bereits eine Mission')
             return
 
         ok, reason = self._validate_command(command_type, cmd)
@@ -234,28 +249,77 @@ class MissionManager(Node):
         self.message = f'Mission gestartet: {command_type}'
         self.progress = 0.0
         self._goal_handle = None
+        self._real_goal_pending = True
+        self._cancel_requested = False
+        self._cancel_future = None
+        self._action_epoch += 1
+        action_epoch = self._action_epoch
+        self._active_action_epoch = action_epoch
         self.history.append({'event': 'start', 'command': cmd, 't': time.time()})
         self._publish_status()
 
         send_future = self.mission_client.send_goal_async(
-            goal, feedback_callback=self._on_mission_feedback)
-        send_future.add_done_callback(self._on_goal_response)
+            goal,
+            feedback_callback=lambda feedback, epoch=action_epoch:
+                self._on_mission_feedback(feedback, epoch))
+        send_future.add_done_callback(
+            lambda response_future, epoch=action_epoch:
+                self._on_goal_response(response_future, epoch))
 
-    def _on_goal_response(self, future):
-        goal_handle = future.result()
+    def _on_goal_response(self, future, action_epoch):
+        if self._active_action_epoch != action_epoch:
+            return
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self._real_goal_pending = False
+            self._cancel_requested = False
+            self._cancel_future = None
+            self._active_action_epoch = None
+            self._finish('failed', 'fehler',
+                         f'Mission konnte nicht an bt_orchestrator gesendet werden: {exc}',
+                         self.active_command)
+            return
+
         if not goal_handle.accepted:
+            self._real_goal_pending = False
+            self._goal_handle = None
+            self._cancel_future = None
+            self._active_action_epoch = None
+            if self._cancel_requested:
+                self._cancel_requested = False
+                self._finish(
+                    'canceled',
+                    'abgebrochen',
+                    'Mission vor dem Start abgebrochen; Action-Goal wurde nicht angenommen.',
+                    self.active_command)
+                return
             self._finish('failed', 'fehler',
                          'Mission vom bt_orchestrator abgelehnt (laeuft dort schon eine?).',
                          self.active_command)
             return
+
         self._goal_handle = goal_handle
+        goal_handle.get_result_async().add_done_callback(
+            lambda result_future, handle=goal_handle, epoch=action_epoch:
+                self._on_mission_result(result_future, handle, epoch))
+
+        if self._cancel_requested:
+            # Abbruch kam an, waehrend send_goal_async noch auf die Annahme
+            # wartete. Jetzt existiert das Handle: sofort serverseitig stoppen.
+            self._request_real_cancel(goal_handle, action_epoch)
+            self.get_logger().warn(
+                'Vorgemerkten Missionsabbruch nach Goal-Annahme weitergegeben.')
+            return
+
         self.message = 'Mission angenommen, laeuft ...'
         self._publish_status()
-        goal_handle.get_result_async().add_done_callback(self._on_mission_result)
 
-    def _on_mission_feedback(self, feedback_msg):
+    def _on_mission_feedback(self, feedback_msg, action_epoch):
+        if self._active_action_epoch != action_epoch:
+            return
         fb = feedback_msg.feedback
-        if self.state != 'running' or self.mode != 'real':
+        if self.state != 'running' or self.mode != 'real' or self._cancel_requested:
             return
         if fb.phase:
             self.phase = fb.phase
@@ -263,20 +327,127 @@ class MissionManager(Node):
         self.message = f'Phase: {self.phase}'
         self._publish_status()
 
-    def _on_mission_result(self, future):
-        result = future.result().result
+    def _request_real_cancel(self, goal_handle, action_epoch):
+        if (
+                self._active_action_epoch != action_epoch
+                or self._goal_handle is not goal_handle
+                or self._cancel_future is not None):
+            return
+        try:
+            cancel_future = goal_handle.cancel_goal_async()
+        except Exception as exc:
+            self._cancel_requested = False
+            self.phase = 'laeuft'
+            self.message = f'Abbruch konnte nicht angefordert werden: {exc}'
+            self._reject(self.message)
+            return
+
+        self._cancel_future = cancel_future
+        cancel_future.add_done_callback(
+            lambda response_future, handle=goal_handle, epoch=action_epoch:
+                self._on_cancel_response(response_future, handle, epoch))
+
+    def _on_cancel_response(self, future, goal_handle, action_epoch):
+        if (
+                self._active_action_epoch != action_epoch
+                or self._goal_handle is not goal_handle):
+            # Das terminale Result kann vor der Cancel-Antwort eintreffen.
+            return
+        self._cancel_future = None
+        try:
+            response = future.result()
+            canceling_goal_ids = (
+                tuple(goal_info.goal_id.uuid)
+                for goal_info in response.goals_canceling
+            )
+            accepted = cancel_was_accepted(
+                response.return_code,
+                canceling_goal_ids,
+                tuple(goal_handle.goal_id.uuid),
+                success_code=CancelGoal.Response.ERROR_NONE)
+        except Exception as exc:
+            self._cancel_requested = False
+            self.phase = 'laeuft'
+            self.message = f'Abbruch konnte nicht bestaetigt werden: {exc}'
+            self._reject(self.message)
+            return
+
+        if accepted:
+            self.phase = 'abbruch_angefordert'
+            self.message = 'Abbruch angenommen; warte auf Action-Ergebnis ...'
+            self._publish_status()
+            return
+
+        # Ein leerer goals_canceling-Vektor bedeutet: Der Server hat den
+        # Abbruch nicht angenommen (oft weil das Goal bereits terminal war).
+        # Das nachfolgende WrappedResult entscheidet wahrheitsgemaess zwischen
+        # success/failed/canceled.
+        self._cancel_requested = False
+        self.phase = 'abschluss_ausstehend'
+        self.message = (
+            f'Abbruch nicht angenommen (Code {response.return_code}); '
+            'warte auf Missionsergebnis.')
+        self._reject(self.message)
+
+    def _on_mission_result(self, future, goal_handle, action_epoch):
+        if (
+                self._active_action_epoch != action_epoch
+                or self._goal_handle is not goal_handle):
+            return
+        try:
+            wrapped_result = future.result()
+            result = wrapped_result.result
+            action_status = wrapped_result.status
+        except Exception as exc:
+            # Ohne WrappedResult ist nicht bewiesen, dass das Action-Goal
+            # terminal ist. Aus Sicherheitsgruenden bleibt der Manager
+            # gesperrt, damit kein zweites Goal parallel gestartet wird.
+            self._cancel_requested = False
+            self._cancel_future = None
+            self.phase = 'status_unbekannt'
+            self.message = (
+                f'Missionsergebnis nicht lesbar: {exc}. '
+                'Keine neue Mission starten; mission_manager pruefen.')
+            self._reject(self.message)
+            return
+
+        outcome = terminal_state(
+            action_status,
+            bool(result.success),
+            succeeded_status=GoalStatus.STATUS_SUCCEEDED,
+            canceled_status=GoalStatus.STATUS_CANCELED,
+            aborted_status=GoalStatus.STATUS_ABORTED)
+        if outcome is None:
+            # get_result_async() sollte nur terminal aufloesen. Bei einem
+            # unerwarteten nichtterminalen Status bleibt die Sperre bestehen.
+            self._cancel_requested = False
+            self._cancel_future = None
+            self.phase = 'status_unbekannt'
+            self.message = (
+                f'Unerwarteter nichtterminaler Action-Status {action_status}; '
+                'mission_manager pruefen.')
+            self._reject(self.message)
+            return
+
+        self._real_goal_pending = False
         self._goal_handle = None
-        if result.success:
+        self._cancel_requested = False
+        self._cancel_future = None
+        self._active_action_epoch = None
+
+        if outcome == 'canceled':
+            self._finish('canceled', 'abgebrochen',
+                         result.message or 'Mission vom Action-Server abgebrochen',
+                         self.active_command)
+        elif outcome == 'success':
             self._finish('success', 'fertig',
                          result.message or 'Mission erfolgreich abgeschlossen',
                          self.active_command, progress=1.0)
         else:
-            # Abbruch wurde bereits in _cancel_current als 'canceled' gemeldet;
-            # sonst echter Fehlschlag.
-            if self.state != 'canceled':
-                self._finish('failed', 'fehler',
-                             result.message or 'Mission fehlgeschlagen',
-                             self.active_command)
+            self._finish('failed', 'fehler',
+                         result.message or
+                         f'Mission fehlgeschlagen (Action-Status {action_status})',
+                         self.active_command)
 
     # ======================= Simulierte Mission =========================
     def _start_sim_mission(self, command_type: str, cmd: Dict):
@@ -331,8 +502,27 @@ class MissionManager(Node):
 
     # ======================= Abbruch / Ablehnung ========================
     def _cancel_current(self, reason: str):
-        if self.state == 'running' and self.mode == 'real' and self._goal_handle is not None:
-            self._goal_handle.cancel_goal_async()
+        if self.state != 'running' and not self._real_goal_pending:
+            self._reject('Keine laufende Mission')
+            return
+        if self.state == 'running' and self.mode == 'real':
+            if self._cancel_requested:
+                self._reject('Abbruch wurde bereits angefordert')
+                return
+            self._cancel_requested = True
+            self.phase = 'abbruch_angefordert'
+            self.message = f'{reason}; warte auf Action-Bestaetigung ...'
+            self.history.append({
+                'event': 'cancel_requested',
+                'command': self.active_command,
+                't': time.time(),
+            })
+            if self._goal_handle is not None:
+                self._request_real_cancel(
+                    self._goal_handle,
+                    self._active_action_epoch)
+            self._publish_status()
+            return
         self._finish('canceled', 'abgebrochen', reason, self.active_command)
 
     def _reject(self, reason: str):
@@ -365,6 +555,9 @@ class MissionManager(Node):
             cat = json.loads(msg.data)
         except json.JSONDecodeError:
             return
+        if not isinstance(cat, dict):
+            self.get_logger().warn('Semantik-Katalog muss ein JSON-Objekt sein.')
+            return
         objs = cat.get('objects')
         rooms = cat.get('rooms')
         changed = False
@@ -392,6 +585,7 @@ class MissionManager(Node):
             'targets': self.targets,
             'objects': self.objects,
             'offboard_available': self.offboard_available,
+            'cancel_pending': self._cancel_requested,
             'last_rejection': self.last_rejection,
             'time': time.time(),
         }

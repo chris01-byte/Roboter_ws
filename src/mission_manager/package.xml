@@ -15,6 +15,7 @@
   <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>rclpy</depend>
+  <depend>action_msgs</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>rcl_interfaces</depend>
