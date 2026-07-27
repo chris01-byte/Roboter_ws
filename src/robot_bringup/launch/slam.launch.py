@@ -27,17 +27,35 @@
 #     umrunden - schnelle Drehungen brechen die visuelle Wiedererkennung.
 #
 #  !!! RTAB-MAP IMMER SAUBER BEENDEN !!!
-#     Ctrl-C im Launch-Terminal, oder SIGINT an den rtabmap-Prozess, und ihm
-#     dann Zeit lassen (gemessen: ~5 s). Er schreibt beim Beenden das visuelle
-#     WOERTERBUCH in die Datenbank.
-#     Wird er mit SIGKILL (kill -9) abgeschossen, bleibt die Datenbank ohne
-#     Woerterbuch zurueck: die Karte ist geometrisch noch da, aber
-#     WIEDERERKENNUNG UND LOKALISIERUNG SIND UNMOEGLICH. Symptome beim
-#     naechsten Start (real passiert 27.07.2026):
+#     RTAB-Map schreibt das visuelle WOERTERBUCH erst beim Herunterfahren in die
+#     Datenbank. Fehlt es, ist die Karte geometrisch noch da, aber
+#     WIEDERERKENNUNG UND LOKALISIERUNG SIND UNMOEGLICH:
 #       "Not found word 1 (dict size=0)"
 #       "The dictionary is empty or missing some words from nodes in WM"
 #       danach hunderte "Rejected loop closure ... Not enough inliers 0/20"
 #     Das laesst sich NICHT reparieren - die Karte muss neu aufgenommen werden.
+#
+#     SO BEENDEN:  Ctrl-C im Launch-Terminal, oder von aussen
+#         kill -INT <PID des ros2-launch-Prozesses>
+#     und dann warten, bis der rtabmap-Prozess von selbst verschwunden ist
+#     (dauert mit der Kartengroesse an, gemessen 5 s und mehr).
+#
+#     ZWEI FALLEN, beide am 27.07.2026 real aufgetreten:
+#     1) NICHT die Prozessgruppe signalisieren ("kill -INT -<PGID>"). rtabmap
+#        bekaeme SIGINT dann doppelt: einmal direkt vom Kernel, einmal
+#        weitergereicht von launch. Das erste startet das Speichern, das zweite
+#        bricht es ab. Ergebnis: "process has died ... exit code -2", Datenbank
+#        mit 831 Knoten und 0 Woertern. SIGKILL ist also nicht die einzige
+#        Ursache - ein gut gemeintes SIGINT an die Gruppe reicht schon.
+#     2) launch eskaliert nach SIGINT selbsttaetig auf SIGTERM und SIGKILL,
+#        nach je 5 s Vorgabe. Das ist knapper als der Speichervorgang. Deshalb
+#        beim Start grosszuegige Fristen mitgeben:
+#            ros2 launch robot_bringup slam.launch.py \
+#                sigterm_timeout:=120 sigkill_timeout:=180 ...
+#        (In Humble sind das Launch-Konfigurationen, KEINE ros2-launch-Optionen.)
+#
+#     KONTROLLE, ob es geklappt hat - muss > 0 sein:
+#       sqlite3 ~/.local/share/amadeus/rtabmap.db "SELECT COUNT(*) FROM Word;"
 #
 #  C) Karte sichern (waehrend SLAM laeuft):
 #       ros2 service call /robot_map_manager/save_map std_srvs/srv/Trigger

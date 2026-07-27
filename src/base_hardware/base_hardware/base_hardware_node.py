@@ -372,6 +372,19 @@ class BaseHardware(Node):
             self.rs485_ready = False
             return
 
+        # Alten Client ZUERST schliessen. Sonst haelt er das exklusive Lock auf
+        # dem Port und jeder Neuaufbau scheitert an
+        #   "[Errno 11] Could not exclusively lock port ...".
+        # Real aufgetreten (27.07.2026): ein Timeout im Startgewitter setzte
+        # rs485_ready=False, danach kam der Neuaufbau nie mehr durch - die
+        # Selbstheilung blockierte sich selbst.
+        if self.modbus_client is not None:
+            try:
+                self.modbus_client.close()
+            except Exception as exc:
+                self.get_logger().warn(f'Alten RS485-Client schliessen fehlgeschlagen: {exc}')
+            self.modbus_client = None
+
         self.modbus_client = ModbusSerialClient(
             port=self.rs485_port,
             baudrate=self.baudrate,
