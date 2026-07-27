@@ -27,6 +27,7 @@
   <!-- ONBOARD-Pakete, die robot.launch.py startet -->
   <exec_depend>safety_monitor</exec_depend>
   <exec_depend>base_hardware</exec_depend>
+  <exec_depend>robot_map_manager</exec_depend>
   <exec_depend>vl53_near_field</exec_depend>
   <exec_depend>explore</exec_depend>
   <exec_depend>mission_manager</exec_depend>

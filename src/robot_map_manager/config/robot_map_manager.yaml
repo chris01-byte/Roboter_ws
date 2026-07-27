@@ -1,0 +1,43 @@
+# Kartenmanager für Amadeus. Der Standardspeicherpfad liegt außerhalb des
+# Workspaces.
+robot_map_manager:
+  ros__parameters:
+    map_topic: "/map"
+    command_topic: "/robot_map_manager/command_json"
+    status_topic: "/robot_map_manager/status_json"
+    save_service: "/robot_map_manager/save_map"
+    pose_topic: "/robot_map_manager/robot_pose"
+
+    # Für isolierte Tests darf ein anderer absoluter Pfad gesetzt werden.
+    storage_directory: "~/.local/share/amadeus/maps"
+    default_map_name: "amadeus"
+    base_frame: "base_link"
+
+    pose_publish_rate_hz: 5.0
+    # Stamp 0 wird nach Static-TF-Konvention alterslos akzeptiert. Der Stamp
+    # allein beweist nicht, dass die Quelle tatsächlich /tf_static war.
+    maximum_dynamic_tf_age_s: 1.0
+    status_publish_period_s: 2.0
+    # Node-Hardlimit: 100. Jede echte List-Ausführung reserviert höchstens
+    # 128 MiB Artefakt-Hash-I/O und beginnt global höchstens alle 10 Sekunden.
+    maximum_list_entries: 20
+    minimum_list_interval_s: 10.0
+    maximum_list_verify_bytes: 134217728
+
+    # Schutzregeln verwerfen nur neue Saves. Das Intervall gilt global über
+    # alle Namen; sichtbare Versionen werden nie automatisch gelöscht.
+    minimum_save_interval_s: 5.0
+    minimum_free_space_bytes: 536870912
+    maximum_versions_per_map: 100
+    maximum_total_storage_bytes: 2147483648
+    maximum_map_names: 16
+
+    # Beim Start werden ausschließlich eindeutig eigene, alte .tmp-UUID-
+    # Verzeichnisse in begrenzter Zahl entfernt.
+    staging_cleanup_min_age_s: 3600.0
+    staging_cleanup_max_entries: 32
+
+    # request_id-Antworten sind innerhalb dieses begrenzten Laufzeitcaches
+    # idempotent. Die frühe Deduplizierung gilt nur Cross-QoS.
+    request_cache_size: 128
+    raw_duplicate_window_s: 1.0

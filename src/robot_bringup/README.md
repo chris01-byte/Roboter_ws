@@ -8,7 +8,7 @@ Server-Erreichbarkeit überwacht (WLAN-Ausfall-Fallback).
 
 | Läuft auf | Nodes | Start |
 |---|---|---|
-| **Roboter (onboard)** | base_hardware, vl53_near_field, explore, mission_manager, bt_orchestrator (Missions-Server), safety_monitor, robot_face, link_monitor — (SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
+| **Roboter (onboard)** | base_hardware, robot_map_manager, vl53_near_field, explore, mission_manager, bt_orchestrator (Missions-Server), safety_monitor, robot_face, link_monitor — (SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
 | **Server (offboard)** | llm_planner (qwen2.5/Ollama), semantic_perception (YOLO-World + Objektgedächtnis) | `server.launch.py` |
 
 **Grundregel:** Sicherheit, Navigation und Exploration laufen **immer onboard**. Fällt der
@@ -74,7 +74,35 @@ Nicht nötig auf dem Server: `navigation2`, `rosbridge` (laufen auf dem Jetson).
 ros2 launch robot_bringup robot.launch.py
 # optional den Behavior-Tree gleich mitstarten:
 ros2 launch robot_bringup robot.launch.py start_bt:=true
+# Kartenmanager nur zur Fehlersuche auslassen:
+ros2 launch robot_bringup robot.launch.py start_map_manager:=false
 ```
+
+## Kartenintegration für die Amadeus-App
+
+`robot.launch.py` startet standardmäßig den fahrbewegungsfreien
+`robot_map_manager`. Der Node beobachtet `/map`, veröffentlicht den aus TF
+ermittelten Stand von `base_link` im Kartenframe und speichert die letzte
+gültige Karte ausschließlich auf expliziten Befehl. Er publiziert selbst
+keine Karte und startet weder SLAM noch Nav2.
+
+```text
+/map                                  nav_msgs/OccupancyGrid (Eingang)
+/robot_map_manager/robot_pose         geometry_msgs/PoseStamped
+/robot_map_manager/status_json        std_msgs/String, transient-local
+/robot_map_manager/command_json       std_msgs/String
+/robot_map_manager/save_map           std_srvs/Trigger
+```
+
+Die native iPhone-App liest weiterhin das Standardtopic `/map` direkt über
+rosbridge. Gespeicherte Karten liegen versioniert außerhalb des Workspace
+unter `~/.local/share/amadeus/maps`; ein Software-Update darf diesen
+Laufzeitdatenpfad niemals überschreiben oder löschen. Bedienung, Dateiformat
+und Prüfkommandos stehen im README des Pakets `robot_map_manager`.
+
+Wichtig: Der Kartenmanager ersetzt keinen SLAM-Publisher und keine
+Lokalisierung. Solange RTAB-Map beziehungsweise ein `map_server` nicht läuft,
+wartet die App korrekt auf `/map`.
 
 **Auf dem Server:**
 ```bash
@@ -105,7 +133,8 @@ im DDS-Profil eintragen.
 
 ## Offen / später
 
-- Platzhalter in `robot.launch.py` für SLAM (RTAB-Map), OAK-Kamera und MoveIt2 aktivieren,
-  sobald die Hardware montiert ist (bis dahin via `mock_servers`). Nav2 ist bereits ohne
-  Hardware nutzbar: `robot_navigation/nav_test.launch.py` (Testkarte + virtuelle Basis).
+- Platzhalter in `robot.launch.py` für SLAM (RTAB-Map), OAK-Kamera und MoveIt2 erst
+  nach Prüfung der echten Sensor-, Odometrie-, TF- und Sicherheitsschnittstellen
+  aktivieren (bis dahin via `mock_servers`). Nav2 ist bereits ohne Hardware nutzbar:
+  `robot_navigation/nav_test.launch.py` (Testkarte + virtuelle Basis).
 - Optional: `ros2 launch`-Argument, um einzelne Onboard-Gruppen selektiv zu starten.

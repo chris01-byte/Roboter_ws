@@ -34,6 +34,7 @@ def generate_launch_description():
     link_params = os.path.join(bringup, 'config', 'link_monitor_params.yaml')
 
     start_bt = LaunchConfiguration('start_bt')
+    start_map_manager = LaunchConfiguration('start_map_manager')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -41,6 +42,11 @@ def generate_launch_description():
             description='Behavior-Tree-Missions-Server mitstarten. Default true, '
                         'seit K1: der BT ist ein wartender Action-Server (kein '
                         'Einmal-Laeufer) - der mission_manager braucht ihn erreichbar.'),
+        DeclareLaunchArgument(
+            'start_map_manager', default_value='true',
+            description='Fahrbewegungsfreien Kartenmanager mitstarten. Er beobachtet '
+                        '/map, publiziert die Roboterpose und speichert Karten nur '
+                        'nach explizitem Befehl. Er startet selbst kein SLAM/Nav2.'),
 
         # --- Onboard-Not-Aus-Waechter (K4): publiziert /safety/estop ---
         #     MUSS laufen, sonst haelt der BT jede echte Mission sofort an.
@@ -48,6 +54,15 @@ def generate_launch_description():
 
         # --- Basisantrieb (Bus B) ---
         _include('base_hardware', 'base_hardware.launch.py'),
+
+        # --- Kartenaufnahme/Persistenz fuer iPhone und Diagnose ---
+        #     Der Manager ist nur Beobachter: kein eigener /map-Publisher,
+        #     kein SLAM-/Nav2-Start und keinerlei Bewegungsbefehl.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                get_package_share_directory('robot_map_manager'), 'launch',
+                'map_manager.launch.py')),
+            condition=IfCondition(start_map_manager)),
 
         # --- Reaktive Nahbereichs-Sicherheit (VL53) ---
         _include('vl53_near_field', 'vl53_near_field.launch.py'),
@@ -101,7 +116,8 @@ def generate_launch_description():
 
         # =================================================================
         #  PLATZHALTER - folgen, sobald die jeweiligen Stacks integriert sind:
-        #    * SLAM (RTAB-Map)        -> liefert /map fuer Nav2 + explore
+        #    * SLAM (RTAB-Map)        -> liefert /map fuer Nav2, explore,
+        #                                 iPhone und robot_map_manager
         #    * Navigation (Nav2)      -> navigate_to_pose, Costmaps
         #      (schon HEUTE virtuell testbar: robot_navigation/nav_test.launch.py)
         #    * Kamera (OAK/depthai)   -> /oak/rgb, /oak/points, Perception
