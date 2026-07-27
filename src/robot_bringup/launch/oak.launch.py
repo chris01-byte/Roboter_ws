@@ -47,7 +47,14 @@ CAM_POS_X = '0.15'      # [m] vor der Antriebsrad-Achse
 CAM_POS_Y = '0.0'       # [m] mittig
 CAM_POS_Z = '1.25'      # [m] ueber base_link (= 1.34 m ueber Boden)
 CAM_ROLL = '0.0'        # [rad]
-CAM_PITCH = '0.349'     # [rad] = 20 Grad nach unten geneigt
+# [NACHGEMESSEN 27.07.2026] Aus der Bodenebene der Punktwolke bestimmt:
+# mit 20.0 Grad stieg der gemessene Boden ueber die Entfernung an
+# (-0.083 m bei 1.5 m, -0.064 m bei 2.5 m statt konstant -0.090), Steigung
+# +1.06 Grad. Daher 18.94 statt 20.0 Grad. Der Effekt ist klein (26 mm auf
+# 2.5 m) und war NICHT die Ursache der dicken Hindernisbaender - der Boden
+# wird ohnehin korrekt ausgefiltert (66.5 % der Punkte als Boden erkannt).
+# Vorbehalt: ein Teil davon kann auch echte Bodenneigung im Raum sein.
+CAM_PITCH = '0.3306'    # [rad] = 18.94 Grad nach unten geneigt
 CAM_YAW = '0.0'         # [rad] geradeaus nach vorn
 PARENT_FRAME = 'base_link'
 

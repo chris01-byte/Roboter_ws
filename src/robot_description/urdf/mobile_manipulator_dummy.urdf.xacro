@@ -51,14 +51,16 @@
        Wechsel diese Werte pruefen. MUSS mit der Montagepose in
        robot_bringup/launch/oak.launch.py uebereinstimmen (dort haengt der
        reale TF-Baum des Treibers dran)!
-       Gemessen: x=150 mm, mittig, 1340 mm ueber BODEN, 20 Grad nach unten.
+       Gemessen: x=150 mm, mittig, 1340 mm ueber BODEN, ca. 20 Grad nach unten.
        z hier = 1.340 - 0.090 (base_link liegt 9 cm ueber dem Boden) = 1.250
+       Neigung am 27.07.2026 aus der Bodenebene nachgemessen: 18.94 statt
+       20.0 Grad (siehe oak_pitch unten und oak.launch.py).
        ================================================================ -->
   <xacro:property name="oak_x"     value="0.150"/>
   <xacro:property name="oak_y"     value="0.000"/>
   <xacro:property name="oak_z"     value="1.250"/>
   <xacro:property name="oak_yaw"   value="0.000"/>
-  <xacro:property name="oak_pitch" value="0.349"/>  <!-- 20 Grad nach unten -->
+  <xacro:property name="oak_pitch" value="0.3306"/> <!-- 18.94 Grad, nachgemessen 27.07.2026 -->
   <xacro:property name="oak_roll"  value="0.000"/>
 
   <!-- ================================================================
