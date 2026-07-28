@@ -140,11 +140,37 @@ def generate_launch_description():
         #     Hindernis markiert.
         'Grid/FromDepth': 'true',
         'Grid/3D': 'false',                  # flaches 2D-Raster (guenstiger, reicht fuer Nav2)
+        # ACHTUNG bei der Fehlersuche: Mit Grid/3D=false publiziert RTAB-Map KEINE
+        # /cloud_ground - die Wolke ist dann leer, obwohl die Bodenerkennung
+        # einwandfrei arbeitet. Am 28.07.2026 habe ich das als "erkennt keinen
+        # Boden mehr" fehlgedeutet. Zum Pruefen kurzzeitig Grid/3D=true setzen,
+        # dann trennen /cloud_ground (bis +0.10 m) und /cloud_obstacles (ab
+        # +0.11 m) sauber an der Schwelle.
         'Grid/RayTracing': 'true',           # traegt den Raum bis zum Treffer als FREI ein
-        'Grid/RangeMax': '2.5',              # nur so weit, wie die Tiefe verlaesslich ist
-        'Grid/NormalsSegmentation': 'true',  # Boden ueber Flaechenneigung statt fester Hoehe
-        'Grid/MaxGroundAngle': '45',         # bis 45 Grad Neigung gilt als Boden
-        'Grid/MaxGroundHeight': '0.15',      # grosszuegig, Normalen entscheiden
+        # Reichweite der Kartierung. Stand 2.5, war der Hauptgrund dafuer, dass die
+        # Karte vom 27.07. nur 17.7 % Freiflaeche zeigte: Um den Fahrweg entstand
+        # ein runder "Sichthorizont" bei 2.5 m statt der eckigen Raumwaende.
+        # 4.0 ist gedeckt - die Nav2-Costmap arbeitet laengst mit obstacle_max_range
+        # 4.0, und die Messung vom 26.07. ergab im Ring 3-4 m nur 0.1 % der Punkte
+        # unter der Filtergrenze (Median +0.82 m) = echte Objekte, kein Bodenrauschen.
+        # Der Bodenfehler waechst mit der Entfernung (1.06 Grad Neigung = 26 mm auf
+        # 2.5 m, rund 42 mm auf 4 m) und bleibt damit klar unter MaxGroundHeight 0.15.
+        'Grid/RangeMax': '4.0',
+        # ---- Bodenerkennung: feste Hoehenschwelle, am 28.07.2026 nachgemessen ----
+        # Die Rohwolke der OAK liefert sauberen Boden: auf 1-2 m liegen 73.8 % der
+        # Punkte auf Bodenhoehe (Median -0.05 m, erwartet -0.09 m), auf 3-4 m nur
+        # 8.5 % - dort stehen echte Waende, kein Rauschen. Die Schwelle trennt das
+        # nachweislich sauber: /cloud_ground reicht bis +0.10 m, /cloud_obstacles
+        # beginnt bei +0.11 m (gemessen mit Grid/3D=true).
+        # Vorher stand hier NormalsSegmentation=true mit der Begruendung, eine feste
+        # Schwelle scheitere auf 3-4 m am Tiefenrauschen - die Messung stuetzt das
+        # nicht. Beide Varianten liefern ein aehnlich volles Raster; die kleine
+        # Freiflaeche kommt NICHT von der Bodenerkennung, sondern daher, dass der
+        # Roboter zu wenig Strecke macht (RayTracing traegt nur frei ein, wo die
+        # Kamera hinsieht - und sie sieht Boden erst ab 1.6 m).
+        'Grid/NormalsSegmentation': 'false',
+        'Grid/MaxGroundHeight': '0.10',      # Boden liegt bei -0.09 -> 0.19 m Abstand
+        'Grid/MaxGroundAngle': '45',         # ohne Wirkung bei NormalsSegmentation=false
         'Grid/MaxObstacleHeight': '1.5',
         'Grid/NoiseFilteringRadius': '0.05',      # vereinzelte Ausreisser verwerfen
         'Grid/NoiseFilteringMinNeighbors': '2',
