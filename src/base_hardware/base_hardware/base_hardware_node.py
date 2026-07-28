@@ -119,6 +119,25 @@ class BaseHardware(Node):
         self.declare_parameter('modbus_write_period_s', 0.05)
 
         # -------------------------------------------------------------------
+        # Anfahr- und Bremsrampe (0x001E / 0x001F, Angabe in Millisekunden).
+        # Wurden bis 28.07.2026 nie gesetzt -> Werksrampe -> der Roboter nickte
+        # beim Anfahren. Das verfaelscht die Karte, weil die Kamera auf 1.34 m
+        # sitzt: 2 Grad Nicken = rund 10 cm Bodenversatz auf 3 m Entfernung.
+        # Groesser = sanfter.
+        # -------------------------------------------------------------------
+        self.declare_parameter('accel_register', 0x001E)
+        self.declare_parameter('decel_register', 0x001F)
+        self.declare_parameter('accel_ms', 800)
+        self.declare_parameter('decel_ms', 800)
+        # Startgeschwindigkeit: die Drehzahl, mit der der Antrieb SOFORT einsetzt,
+        # bevor die Rampe ueberhaupt greift. Stand auf 30 rpm (aus dem
+        # Richtungstest vom 24.07.2026 uebriggeblieben) - bei Fahrdrehzahlen um
+        # 46 rpm sprang der Motor damit auf 65 % der Zielgeschwindigkeit. Das war
+        # der eigentliche Ruck beim Anfahren und Anhalten, nicht die Rampe.
+        self.declare_parameter('start_speed_register', 0x0020)
+        self.declare_parameter('start_speed_rpm', 5)
+
+        # -------------------------------------------------------------------
         # Drehzahl-Rueckmeldung (GEMESSENE Odometrie statt Sollwert-Integration)
         #   speed_register  = 0x000C, Ist-Drehzahl (read-only, signed int16)
         #   Gelesen wird per FC03 (read_holding_registers); FC04 antwortet NICHT.
@@ -165,6 +184,12 @@ class BaseHardware(Node):
         self.max_motor_rpm = float(gp('max_motor_rpm').value)
         self.modbus_timeout_s = float(gp('modbus_timeout_s').value)
         self.modbus_write_period_s = float(gp('modbus_write_period_s').value)
+        self.accel_register = int(gp('accel_register').value)
+        self.decel_register = int(gp('decel_register').value)
+        self.accel_ms = int(gp('accel_ms').value)
+        self.decel_ms = int(gp('decel_ms').value)
+        self.start_speed_register = int(gp('start_speed_register').value)
+        self.start_speed_rpm = int(gp('start_speed_rpm').value)
         self.use_speed_feedback = bool(gp('use_speed_feedback').value)
         self.speed_register = int(gp('speed_register').value)
         self.feedback_period_s = float(gp('feedback_period_s').value)
@@ -398,10 +423,38 @@ class BaseHardware(Node):
             self.get_logger().warn(
                 f'RS485 AKTIV auf {self.rs485_port} @ {self.baudrate}. '
                 'Raeder muessen frei drehen, Not-Aus bereithalten.')
+            self._write_ramps()
             self._write_motor_stop(self.left_motor_id)
             self._write_motor_stop(self.right_motor_id)
         else:
             self.get_logger().error(f'RS485-Verbindung fehlgeschlagen: {self.rs485_port}')
+
+    def _write_ramps(self):
+        """Beschleunigungs- und Bremsrampe in die Motoren schreiben.
+
+        WARUM DAS NOETIG IST (28.07.2026):
+        Diese Register wurden bisher NIE gesetzt - die Antriebe liefen mit ihrer
+        Werksrampe an, und die ist fuer diesen Aufbau zu hart. Der Roboter NICKT
+        beim Anfahren sichtbar. Das ist nicht nur unschoen: Die Kamera sitzt auf
+        1.34 m, das ist ein langer Hebel. Schon 2 Grad Nicken verschieben den
+        gemessenen Boden auf 3 m Entfernung um rund 10 cm - damit rutscht Boden
+        ueber die Hindernisschwelle und wird als Wand in die Karte eingetragen.
+        Die Handfahrt vom 28.07. lieferte so eine Karte mit einem 8x8 m grossen
+        "belegten" Klumpen in einem 3.8x4.9 m Raum.
+
+        Groessere Werte = sanfter. Die Einheit ist Millisekunden (Zeit fuer die
+        volle Drehzahlaenderung) laut "Modbus Series Bus Driver Function Manual".
+        """
+        if not self.rs485_ready:
+            return
+        for motor_id in (self.left_motor_id, self.right_motor_id):
+            self._write_register(motor_id, self.accel_register, self.accel_ms)
+            self._write_register(motor_id, self.decel_register, self.decel_ms)
+            self._write_register(motor_id, self.start_speed_register,
+                                 self.start_speed_rpm)
+        self.get_logger().info(
+            f'Anfahrverhalten gesetzt: Beschleunigen {self.accel_ms} ms, '
+            f'Bremsen {self.decel_ms} ms, Startdrehzahl {self.start_speed_rpm} rpm.')
 
     def _ensure_rs485(self):
         """Verbindung selbstheilend halten.

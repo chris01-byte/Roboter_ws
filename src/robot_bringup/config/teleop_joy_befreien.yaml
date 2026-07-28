@@ -1,0 +1,32 @@
+# Zweiter Teleop-Zweig: FREIFAHREN aus der Sperrzone.
+#
+# Wozu das noetig ist:
+# Der nav2_collision_monitor setzt bei einem Hindernis in der StopZone (1..26 cm
+# vor dem Sensor) JEDE Bewegung auf null - auch Drehen, auch Rueckwaerts. Ein
+# Roboter, der einmal drinsteht, kommt aus eigener Kraft nicht mehr heraus. Am
+# 28.07.2026 stand er so fest, obwohl Controller und Antrieb einwandfrei waren.
+#
+# Dieser Zweig sendet DIREKT auf /cmd_vel und umgeht damit die Notbremse.
+# Deshalb bewusst eng gehalten:
+#   * eigene Taste (Kreis) als Totmann - nicht dieselbe wie beim normalen Fahren,
+#     damit man nicht versehentlich ohne Notbremse faehrt
+#   * halbe Geschwindigkeit
+#   * KEIN Turbo
+# Gedacht ist er zum Zurueckstossen aus einer Enge, nicht zum Fahren.
+teleop_twist_joy_node:
+  ros__parameters:
+    axis_linear:
+      x: 1
+    axis_angular:
+      yaw: 0
+    scale_linear:
+      x: 0.06          # m/s - Schrittgeschwindigkeit
+    scale_angular:
+      yaw: 0.30
+    scale_linear_turbo:
+      x: 0.06          # kein Schnellgang in diesem Zweig
+    scale_angular_turbo:
+      yaw: 0.30
+    enable_button: 1         # Kreis-Taste = Freifahren (OHNE Notbremse!)
+    require_enable_button: true
+    publish_stamped_twist: false

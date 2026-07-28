@@ -1,0 +1,45 @@
+# Handsteuerung per DualShock-Controller.
+#
+# TOTMANNSCHALTER IST AUS (require_enable_button: false, so gewuenscht).
+# Der Roboter faehrt also, sobald der Stick sich bewegt - auch versehentlich.
+# Was als Schutz bleibt:
+#   * deadzone 0.10 im joy_node, damit ein loser Stick nicht kriechen laesst
+#   * der nav2_collision_monitor als Notbremse (Fahrt geht ueber cmd_vel_smoothed)
+#   * der Motor-Halt am Roboter
+# Zum Wiedereinschalten: require_enable_button auf true, dann muss L1 gehalten
+# werden.
+#
+# Geschwindigkeiten bewusst niedrig: Beim Kartieren brechen schnelle Drehungen
+# die visuelle Wiedererkennung, und RTAB-Map verarbeitet nur ~1 Bild/s.
+teleop_twist_joy_node:
+  ros__parameters:
+    # STEUERKREUZ statt Analogstick (28.07.2026 umgestellt, am Geraet gemessen):
+    #   Achse 7 = hoch/runter -> fahren
+    #   Achse 6 = links/rechts -> drehen
+    # Warum das Steuerkreuz: Es ist digital und hat keine Ruhelagen-Drift. Der
+    # Analogstick lieferte in Neutralstellung keine exakte Null, der Roboter kroch
+    # gelegentlich von selbst los. Mit dem Steuerkreuz ist das konstruktiv
+    # ausgeschlossen. Preis: keine Zwischenstufen, es wird immer mit der unten
+    # eingestellten Geschwindigkeit gefahren - fuers Kartieren eher von Vorteil.
+    axis_linear:
+      x: 7
+    axis_angular:
+      yaw: 6
+
+    # Normalstufe (L1 gedrueckt)
+    scale_linear:
+      x: 0.12          # m/s
+    scale_angular:
+      yaw: 0.40        # rad/s
+
+    # Schnellgang (L1 UND R1 gedrueckt) - fuers Umsetzen, nicht zum Kartieren
+    scale_linear_turbo:
+      x: 0.20
+    scale_angular_turbo:
+      yaw: 0.70
+
+    enable_button: 4         # ohne Wirkung, solange require_enable_button false ist
+    enable_turbo_button: 5   # R1 = Schnellgang
+
+    require_enable_button: false   # kein Halten noetig - Stick genuegt
+    publish_stamped_twist: false
