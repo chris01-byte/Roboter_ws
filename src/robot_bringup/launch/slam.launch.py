@@ -158,6 +158,13 @@ def generate_launch_description():
             PythonExpression(["'false' if '", LaunchConfiguration('localization'),
                               "' == 'true' else 'true'"]),
             value_type=str),
+        # Ohne Vorwissen anfangen. Normalerweise laedt RTAB-Map beim Start die
+        # zuletzt gespeicherte Pose - dann steht der Roboter sofort "richtig" in
+        # der Karte, ganz ohne etwas wiedererkannt zu haben. Fuer einen ehrlichen
+        # Lokalisierungstest muss dieses Vorwissen weg: Der Roboter beginnt am
+        # Kartenursprung und muss sich seine Position selbst erarbeiten.
+        'RGBD/StartAtOrigin': ParameterValue(
+            LaunchConfiguration('start_at_origin'), value_type=str),
     }
 
     rtabmap_remaps = [
@@ -180,6 +187,12 @@ def generate_launch_description():
             'localization', default_value='false',
             description='true = nur lokalisieren statt kartieren (setzt delete_db:=false '
                         'voraus).'),
+        DeclareLaunchArgument(
+            'start_at_origin', default_value='false',
+            description='true = RTAB-Map startet am Kartenursprung statt an der zuletzt '
+                        'gespeicherten Pose. Fuer den ehrlichen Lokalisierungstest '
+                        '("kidnapped robot"): nur so muss sich der Roboter seine Position '
+                        'wirklich selbst erarbeiten.'),
         DeclareLaunchArgument(
             'map_manager', default_value='true',
             description='Kartenmanager mitstarten (speichert Karten fuer die App).'),
