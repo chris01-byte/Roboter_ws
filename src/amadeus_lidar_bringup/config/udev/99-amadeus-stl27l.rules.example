@@ -1,0 +1,33 @@
+# =====================================================================
+#  Stabiler Geraetename fuer den STL-27L an Amadeus
+#  Zielpfad: /etc/udev/rules.d/99-amadeus-stl27l.rules
+# =====================================================================
+#  WARUM DAS NOETIG IST:
+#  Am Jetson haengt bereits ein FTDI-Adapter (Motor-RS485) auf /dev/ttyUSB0.
+#  Die Nummerierung ttyUSB0/ttyUSB1 haengt an der Einsteckreihenfolge und am
+#  Bootzeitpunkt. Ohne feste Zuordnung koennte der LiDAR-Treiber auf den
+#  Motorbus sprechen - das ist nicht nur nutzlos, sondern gefaehrlich.
+#
+#  NICHT die breite Herstellerregel mit MODE="0777" und nur 10c4:ea60
+#  uebernehmen: Amadeus kann weitere CP2102-Adapter bekommen, dann wuerde die
+#  Regel das falsche Geraet erfassen.
+#
+#  SERIENNUMMER EINTRAGEN (ZU_ERMITTELN):
+#     udevadm info --query=property --name=/dev/ttyUSBx | \
+#       egrep 'ID_VENDOR_ID|ID_MODEL_ID|ID_SERIAL_SHORT|ID_PATH'
+#
+#  Danach:
+#     sudo cp 99-amadeus-stl27l.rules.example /etc/udev/rules.d/99-amadeus-stl27l.rules
+#     sudo nano /etc/udev/rules.d/99-amadeus-stl27l.rules   # Seriennummer eintragen
+#     sudo udevadm control --reload-rules && sudo udevadm trigger
+#     # Kabel einmal ab- und wieder anstecken
+#     ls -l /dev/amadeus_lidar
+# =====================================================================
+
+# Bevorzugt: Bindung an die echte Seriennummer des CP2102.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="ZU_ERMITTELN", GROUP="dialout", MODE="0660", SYMLINK+="amadeus_lidar"
+
+# Nur falls der Adapter KEINE eindeutige Seriennummer hat: Bindung an den
+# geprueften USB-Pfad. Nachteil - steckt man das Kabel in einen anderen Port,
+# greift die Regel nicht mehr.
+# SUBSYSTEM=="tty", ENV{ID_PATH}=="ZU_ERMITTELN", GROUP="dialout", MODE="0660", SYMLINK+="amadeus_lidar"

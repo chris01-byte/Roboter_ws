@@ -1,0 +1,59 @@
+# =====================================================================
+#  STL-27L an Amadeus - Sensorparameter
+#  ====================================================================
+#  Der Herstellertreiber ldlidar_stl_ros2 bleibt unveraendert; alle
+#  roboterspezifischen Werte stehen hier.
+# =====================================================================
+amadeus_stl27l:
+  ros__parameters:
+    product_name: LDLiDAR_STL27L
+    topic_name: scan
+    frame_id: laser_frame
+
+    # Stabiler udev-Alias, siehe config/udev/99-amadeus-stl27l.rules.example.
+    # NICHT /dev/ttyUSB0 - dort haengt der FTDI-Adapter des Motor-RS485-Busses.
+    # Die Nummerierung ttyUSB0/1 haengt an der Einsteckreihenfolge; ein
+    # vertauschter Port wuerde den Treiber auf die Motoren sprechen lassen.
+    port_name: /dev/amadeus_lidar
+    port_baudrate: 921600
+
+    # Offizielle Vorgabe fuer den STL-27L. Der Sensor definiert seine native
+    # Drehrichtung anders als die ROS-Rechtshandkonvention; der Treiber
+    # rechnet um. Erst am realen Objekt pruefen (links/rechts nicht
+    # vertauscht), bevor hier etwas geaendert wird - und dann immer nur EINE
+    # Groesse auf einmal (nicht gleichzeitig laser_scan_dir, Yaw und
+    # Spiegelung).
+    laser_scan_dir: false
+
+    # ---- Winkelmaskierung des vom Mast verdeckten Sektors ----
+    # ZU_ERMITTELN: Beide Werte stammen aus der Messung nach Abschnitt 5.5
+    # des Integrationsplans (Rohscan in RViz, Rumpfreflexionen bestimmen,
+    # 3-5 Grad Sicherheitszugabe je Rand). Sie werden NICHT aus der
+    # Gehaeusezeichnung geschaetzt.
+    # Solange sie auf 0.0 stehen, ist die Maskierung wirkungslos - der
+    # Ersttest laeuft ohnehin mit crop:=false.
+    #
+    # ACHTUNG zur Semantik: Der Treiber setzt Distanz und Intensitaet im
+    # Crop-Bereich auf 0. Da 0 unter range_min liegt, MUESSEN Verbraucher
+    # das als ungueltig verwerfen. Am tatsaechlich eingesetzten SLAM- und
+    # Nav2-Stack pruefen: Der maskierte Sektor darf NIEMALS als freie
+    # Flaeche interpretiert werden - er ist unbekannter Raum.
+    angle_crop_min: 0.0    # ZU_ERMITTELN [Grad]
+    angle_crop_max: 0.0    # ZU_ERMITTELN [Grad]
+
+# =====================================================================
+#  Montagepose base_link -> laser_frame  (ZU_ERMITTELN)
+#  --------------------------------------------------------------------
+#  Nach ROS REP-103: x vorwaerts, y links, z oben; Winkel in Radiant.
+#  Diese Werte sind NICHT konfiguriert und duerfen nicht geschaetzt werden.
+#  Vorgehen nach Abschnitt 5.6 des Integrationsplans:
+#    x     ZU_ERMITTELN m
+#    y     ZU_ERMITTELN m
+#    z     ZU_ERMITTELN m   (optische Mitte ueber base_link; base_link liegt
+#                            bei Amadeus 0,09 m ueber dem Boden)
+#    roll  ZU_ERMITTELN rad
+#    pitch ZU_ERMITTELN rad
+#    yaw   ZU_ERMITTELN rad (0 = Sensor-0-Grad zeigt nach vorn)
+#  Eintragen als Argumente von stl27l.launch.py (tf_x ... tf_yaw) und dann
+#  publish_static_tf:=true - oder besser als fester Link in der URDF.
+# =====================================================================
