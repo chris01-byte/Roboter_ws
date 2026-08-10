@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "release_id": "amadeus-map-v1-20260726T194942Z",
+  "base_id": "git:39398fcbe283b4486f5c061b13e9b62418a7f550",
+  "target_root_hint": "~/roboter_ws",
+  "allowed_prefixes": [
+    "src/robot_bringup",
+    "src/robot_map_manager"
+  ],
+  "protected_prefixes": [
+    "src/robot_navigation/maps"
+  ],
+  "markers": [
+    {
+      "path": "src/robot_navigation/package.xml",
+      "mode": "0700"
+    }
+  ],
+  "changes": [
+    {
+      "path": "src/robot_bringup/README.md",
+      "action": "modify",
+      "before_mode": "0700",
+      "after_mode": "0644",
+      "package": "robot_bringup",
+      "note": "Dokumentiert den standardmäßig gestarteten, fahrbewegungsfreien Kartenmanager."
+    },
+    {
+      "path": "src/robot_bringup/launch/robot.launch.py",
+      "action": "modify",
+      "before_mode": "0700",
+      "after_mode": "0644",
+      "package": "robot_bringup",
+      "note": "Bindet robot_map_manager standardmäßig und abschaltbar ein; startet kein SLAM/Nav2."
+    },
+    {
+      "path": "src/robot_bringup/package.xml",
+      "action": "modify",
+      "before_mode": "0700",
+      "after_mode": "0644",
+      "package": "robot_bringup",
+      "note": "Deklariert robot_map_manager als Onboard-Laufzeitabhängigkeit."
+    },
+    {
+      "path": "src/robot_map_manager/README.md",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/config/robot_map_manager.yaml",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/launch/map_manager.launch.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/launch/map_manager_smoke.launch.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/package.xml",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/resource/robot_map_manager",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/robot_map_manager/__init__.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/robot_map_manager/map_core.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/robot_map_manager/robot_map_manager_node.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/setup.cfg",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/setup.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    },
+    {
+      "path": "src/robot_map_manager/test/test_map_core.py",
+      "action": "add",
+      "after_mode": "0644",
+      "package": "robot_map_manager"
+    }
+  ],
+  "dependencies": {
+    "ros_distro": "humble",
+    "apt": [
+      "ros-humble-navigation2",
+      "ros-humble-rosbridge-server"
+    ],
+    "pip": [],
+    "runtime_data": "~/.local/share/amadeus/maps bleibt außerhalb des Workspace und ist geschützt"
+  },
+  "tests": [
+    "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/robot_map_manager python3 -m unittest discover -s src/robot_map_manager/test -v",
+    "python3 -m py_compile $(find src/robot_map_manager -type f -name '*.py' ! -name '._*' | sort)",
+    "colcon build --packages-select robot_map_manager robot_bringup",
+    "colcon test --packages-select robot_map_manager",
+    "ros2 launch robot_map_manager map_manager_smoke.launch.py"
+  ]
+}

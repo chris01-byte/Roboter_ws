@@ -1,15 +1,60 @@
-# ROS 2 workspace outputs
+# =====================================================================
+#  Was NICHT ins Repository gehoert.
+#  Aufgestellt nach Abschnitt 5.1 des Amadeus-Integrationsplans.
+#  Grundsatz: Eine Datei wird nicht freigegeben, nur weil sie harmlos
+#  aussieht. Im Zweifel ausschliessen und in docs/LOCAL_ONLY_ASSETS.md
+#  vermerken.
+# =====================================================================
+
+# --- Zugangsdaten und lokale Geheimnisse ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+credentials*
+secrets*
+*.mobileprovision
+*.p12
+*.cer
+
+# --- ROS 2 Build-Ergebnisse ---
 build/
 install/
 log/
 
-# Python cache
+# --- Python ---
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Editor and OS metadata
+# --- Editor- und Systemdateien ---
 .DS_Store
 ._*
 .vscode/
 .idea/
+DerivedData/
+Pods/
+*.xcuserstate
+xcuserdata/
+
+# --- Grosse oder sensible Laufzeitdaten ---
+# ROS-Bags, Datenbanken und Aufzeichnungen koennen Wohnungsgeometrie und
+# Kamerabilder enthalten. Sie bleiben lokal.
+*.bag
+*.db3
+*.mcap
+*.pcap
+*.log
+recordings/
+private_maps/
+camera_captures/
+
+# --- Karten aus echten Raeumen ---
+# Der Code zur Kartenerzeugung gehoert ins Repo, die erzeugten Karten der
+# realen Wohnung NICHT. Sie liegen unter ~/.local/share/amadeus/.
+# Synthetische Testkarten (src/robot_navigation/maps/) sind ausgenommen und
+# bewusst versioniert.
+*.rtabmap.db
+rtabmap*.db

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "integration_id": "amadeus-slam-localization-20260727",
+  "recorded_at_utc": "2026-07-27T18:18:38Z",
+  "status": "reported_on_jetson_not_yet_mirrored",
+  "source_report": {
+    "original_path": "/Users/chria9b/Downloads/Kartierung_und_Lokalisierung_Bericht_20260727.md",
+    "archived_copy": "integration/amadeus_slam_localization_20260727/QUELLBERICHT_20260727.md",
+    "sha256": "ab00c2311e9be407ff90a33ea50e5b40ae6d8b8e0326c1181a0da848f702d919",
+    "copy_byte_identical": true,
+    "verification_scope": "Original und Archivkopie sind byteidentisch; Inhalt gegen den lokalen USB-Arbeitsstand verglichen, Jetson-Code und Laufzeitartefakte aber noch nicht lokal verifiziert."
+  },
+  "usb_workspace": {
+    "path": "/Volumes/64GB/roboter_ws",
+    "commit": "8d43cb07ef3ed4a19b61f39e462c6c286a8faaa3",
+    "jetson_commit_present": false,
+    "tools_kartierung_present": false
+  },
+  "jetson_reported_state": {
+    "host": "p-desktop",
+    "workspace": "~/roboter_ws",
+    "commit": "390fcec",
+    "commit_subject": "Lokalisierung in Betrieb nehmen: RS485-Selbstheilung und Woerterbuch-Rettung",
+    "map_database": "~/.local/share/amadeus/rtabmap.db",
+    "map_database_reported_size": "approximately 270 MB",
+    "previous_database_backup": "~/.local/share/amadeus/rtabmap_20260727_backup.db",
+    "map_snapshot": "~/.local/share/amadeus/maps/amadeus/20260727T165329866919Z-dbdb0d131f39/",
+    "mapping_nodes": 902,
+    "visual_words": 271805,
+    "global_loop_closures": 100,
+    "local_loop_closures": 67,
+    "localization_pose_confirmations": 76,
+    "localization_rotation_degrees": 357,
+    "occupancy_free_percent": 17.7,
+    "occupancy_occupied_percent": 31.3,
+    "occupancy_unknown_percent": 51.0,
+    "grid_range_max_m": 2.5
+  },
+  "not_yet_independently_verified": [
+    "Commit 390fcec and its ancestry",
+    "exact Jetson worktree status and uncommitted files",
+    "reported source changes and file hashes",
+    "RTAB database integrity and visual-word count",
+    "runtime map artifact hashes",
+    "metric accuracy of the reported map pose during translation",
+    "iPhone and rosbridge end-to-end map display",
+    "safe final cmd_vel ownership during escape maneuvers"
+  ],
+  "release": null,
+  "next_gate": "Create a hash-verified Jetson source and runtime-data export before merging, rebuilding, remapping, or enabling Nav2."
+}

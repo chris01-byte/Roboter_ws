@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "integration_id": "amadeus-map-v1",
+  "release_id": "amadeus-map-v1-20260726T194942Z",
+  "created_at_utc": "2026-07-26T19:50:14Z",
+  "base_commit": "39398fcbe283b4486f5c061b13e9b62418a7f550",
+  "archive": {
+    "path": "/Volumes/64GB/robot_transfers/amadeus-map-v1-20260726T194942Z.tar.gz",
+    "bytes": 105453,
+    "sha256": "26db555ed8db674f69a6bb052083a197221e2b821b592079ddb2c26be8ab62ee",
+    "sidecar": "/Volumes/64GB/robot_transfers/amadeus-map-v1-20260726T194942Z.tar.gz.sha256"
+  },
+  "runtime_scope": {
+    "change_count": 15,
+    "affected_packages": [
+      "robot_bringup",
+      "robot_map_manager"
+    ],
+    "support_only_not_deployed": [
+      "integration/",
+      "tools/robot_transfer/"
+    ],
+    "explicitly_excluded_existing_work": [
+      "ios/",
+      "src/mission_manager/"
+    ]
+  },
+  "validation": {
+    "robot_map_manager_unit_tests": "46/46 passed",
+    "robot_transfer_unit_tests": "24/24 passed",
+    "python_syntax": "passed",
+    "python_3_8_transfer_grammar": "passed",
+    "python_3_10_map_grammar": "passed",
+    "xml_and_json": "passed",
+    "archive_pack_verify_extract": "passed",
+    "simulated_target_dry_run": "passed",
+    "simulated_target_apply_and_after_hashes": "passed",
+    "tests_from_installed_payload": "46/46 passed",
+    "simulated_target_rollback_and_before_hashes": "passed",
+    "independent_security_reviews": "no remaining P0/P1/P2 blockers in the reviewed source and archive workflow"
+  },
+  "not_run_locally": [
+    "ROS 2 Humble colcon build",
+    "rclpy/QoS/TF callback integration",
+    "robot_map_manager smoke launch",
+    "real Jetson and iPhone end-to-end test"
+  ],
+  "safety_boundary": {
+    "starts_slam": false,
+    "starts_nav2": false,
+    "publishes_cmd_vel": false,
+    "moves_robot": false,
+    "deletes_saved_maps": false
+  },
+  "known_release_blocker": "Der produktive Roboter-Launch besitzt weiterhin keinen verifizierten /map-Publisher. RTAB-Map, reale Odometrie, TF-Autoritaeten und die sichere cmd_vel-Kette muessen zuerst auf dem Jetson inventarisiert werden."
+}

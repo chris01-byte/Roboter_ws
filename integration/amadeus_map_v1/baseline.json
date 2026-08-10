@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "integration_id": "amadeus-map-v1",
+  "captured_at": "2026-07-26T20:24:56+02:00",
+  "source_root": "/Volumes/64GB/roboter_ws",
+  "base_commit": "39398fcbe283b4486f5c061b13e9b62418a7f550",
+  "preexisting_dirty_paths": [
+    ".gitignore",
+    "PROJEKT_STATUS.md",
+    "README.md",
+    "ios/",
+    "src/mission_manager/README.md",
+    "src/mission_manager/mission_manager/action_outcome.py",
+    "src/mission_manager/mission_manager/command_payload.py",
+    "src/mission_manager/mission_manager/mission_manager_node.py",
+    "src/mission_manager/package.xml",
+    "src/mission_manager/test/"
+  ],
+  "planned_tracked_preimages": {
+    "src/robot_bringup/README.md": {
+      "sha256": "194d294d81c23679fa58cec8616291ede7cdbac42ef7fd39e07d6b6ae6b5c3f3",
+      "linux_mode": "0644"
+    },
+    "src/robot_bringup/launch/robot.launch.py": {
+      "sha256": "19dba9c7dae4f016b03394720d0f1de268ac2a76ebb9821179886a83fc653394",
+      "linux_mode": "0644"
+    },
+    "src/robot_bringup/package.xml": {
+      "sha256": "85934e124298fd0e8eb483dc469b52493f439a8070cd07024bf3d0dc2b097973",
+      "linux_mode": "0644"
+    }
+  },
+  "protected_runtime_paths": [
+    "~/.local/share/amadeus/maps",
+    "~/.local/state/amadeus/backups"
+  ],
+  "never_include_patterns": [
+    ".git/**",
+    "ios/**",
+    "build/**",
+    "install/**",
+    "log/**",
+    "**/__pycache__/**",
+    "**/._*",
+    "**/.DS_Store"
+  ]
+}
