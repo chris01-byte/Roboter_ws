@@ -1,0 +1,14 @@
+# Herstellertreiber fuer den STL-27L, bewusst auf einen Commit gepinnt.
+# Er wird NICHT in dieses Repository kopiert und NICHT veraendert - so bleibt
+# ein spaeteres Update nachvollziehbar und der Vendor-Code sauber trennbar.
+#
+# Aufbau (ausserhalb des Roboter-Workspace, damit der Normalbetrieb
+# unberuehrt bleibt):
+#   mkdir -p ~/amadeus_lidar_ws/src && cd ~/amadeus_lidar_ws
+#   vcs import src < /home/p/roboter_ws/vendor_ldlidar_stl_ros2.repos
+#   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+repositories:
+  ldlidar_stl_ros2:
+    type: git
+    url: https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2.git
+    version: bf668a89baf722a787dadc442860dcbf33a82f5a
