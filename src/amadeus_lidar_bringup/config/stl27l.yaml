@@ -46,18 +46,36 @@ amadeus_stl27l:
     # dort keinerlei Wahrnehmung.
 
 # =====================================================================
-#  Montagepose base_link -> laser_frame  (ZU_ERMITTELN)
+#  Montagepose base_link -> laser_frame   GEMESSEN 11.08.2026
 #  --------------------------------------------------------------------
 #  Nach ROS REP-103: x vorwaerts, y links, z oben; Winkel in Radiant.
-#  Diese Werte sind NICHT konfiguriert und duerfen nicht geschaetzt werden.
-#  Vorgehen nach Abschnitt 5.6 des Integrationsplans:
-#    x     ZU_ERMITTELN m
-#    y     ZU_ERMITTELN m
-#    z     ZU_ERMITTELN m   (optische Mitte ueber base_link; base_link liegt
-#                            bei Amadeus 0,09 m ueber dem Boden)
-#    roll  ZU_ERMITTELN rad
-#    pitch ZU_ERMITTELN rad
-#    yaw   ZU_ERMITTELN rad (0 = Sensor-0-Grad zeigt nach vorn)
-#  Eintragen als Argumente von stl27l.launch.py (tf_x ... tf_yaw) und dann
-#  publish_static_tf:=true - oder besser als fester Link in der URDF.
+#  base_link liegt bei Amadeus auf der Antriebsrad-Achse, mittig, 0,09 m
+#  ueber dem Boden.
+#
+#    x      0.245 m   Radmitte->Vorderkante 275 mm (gemessen) minus 30 mm
+#                     Vorderkante->LiDAR-Mitte
+#    y      0.000 m   sitzt mittig, kein Versatz
+#    z      0.660 m   750 mm Sichtscheibenmitte ueber Boden minus 90 mm
+#    roll   0.0 rad   waagerecht montiert
+#    pitch  0.0 rad
+#    yaw   -1.5708 rad (-90 Grad)
+#
+#  ZUM YAW - der wichtigste Wert, und der einzige nicht direkt gemessene:
+#  Er wurde aus einem Referenzobjekt bestimmt. Ein Rohr genau vor dem Roboter
+#  erschien im Scan bei +89 Grad, nicht bei 0. Der Sensornullpunkt zeigt also
+#  nach RECHTS, nicht nach vorn -> yaw = -90 Grad dreht laser_frame passend zu
+#  base_link. Gegenprobe stimmig: Der Mast liegt im Scan bei 270 Grad, mit
+#  dieser Drehung also bei 180 Grad in base_link = hinter dem Roboter. Genau
+#  dort ist er montiert.
+#  Waere stattdessen yaw=0 uebernommen worden, laege jede Messung um 90 Grad
+#  verdreht in der Karte.
+#
+#  ACHTUNG - Plattformlaenge: Die URDF fuehrt base_length 0.70 m (dort als
+#  [ANPASSEN] markiert). Gemessen wurden 275 mm von der Radmitte zur
+#  Vorderkante, also rund 0.55 m Gesamtlaenge. Die URDF und der davon
+#  abgeleitete Nav2-Footprint sind entsprechend zu pruefen.
+#
+#  Eintragen als Argumente von stl27l.launch.py (tf_x ... tf_yaw) mit
+#  publish_static_tf:=true - besser noch als fester Link in der URDF, dann
+#  bleibt publish_static_tf aus (nie zwei Publisher fuer denselben Transform).
 # =====================================================================

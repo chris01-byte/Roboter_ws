@@ -66,14 +66,20 @@ def generate_launch_description():
             description='base_link -> laser_frame senden. NUR true, wenn die Werte in '
                         'config/stl27l.yaml gemessen sind UND der Link nicht schon aus '
                         'der URDF kommt.'),
-        # Diese sechs Werte sind ZU_ERMITTELN. Sie stehen bewusst auf 0 und
-        # werden nur benutzt, wenn publish_static_tf ausdruecklich true ist.
-        DeclareLaunchArgument('tf_x', default_value='0.0'),
-        DeclareLaunchArgument('tf_y', default_value='0.0'),
-        DeclareLaunchArgument('tf_z', default_value='0.0'),
+        # Montagepose, GEMESSEN am 11.08.2026 (Herleitung siehe config/stl27l.yaml).
+        # Der yaw ist der kritische Wert: Der Sensornullpunkt zeigt nach RECHTS,
+        # nicht nach vorn - ermittelt an einem Rohr genau vor dem Roboter, das im
+        # Scan bei +89 Grad erschien.
+        DeclareLaunchArgument('tf_x', default_value='0.245',
+                              description='[m] Radmitte 275 mm zur Vorderkante minus 30 mm'),
+        DeclareLaunchArgument('tf_y', default_value='0.0',
+                              description='[m] sitzt mittig'),
+        DeclareLaunchArgument('tf_z', default_value='0.660',
+                              description='[m] 750 mm ueber Boden minus 90 mm base_link-Hoehe'),
         DeclareLaunchArgument('tf_roll', default_value='0.0'),
         DeclareLaunchArgument('tf_pitch', default_value='0.0'),
-        DeclareLaunchArgument('tf_yaw', default_value='0.0'),
+        DeclareLaunchArgument('tf_yaw', default_value='-1.5708',
+                              description='[rad] -90 Grad, Sensornullpunkt zeigt nach rechts'),
 
         LogInfo(condition=UnlessCondition(tf_on),
                 msg='STL-27L: KEIN base_link->laser_frame (Montagepose noch nicht '
