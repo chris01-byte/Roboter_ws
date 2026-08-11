@@ -25,8 +25,33 @@ base_hardware:
     state_topic: "/base_hardware/state_json"
 
     # --- Geometrie [GEMESSEN 13.07.2026 am aufgebauten Roboter] ---
-    wheel_radius_m: 0.0625      # Raddurchmesser 125 mm -> Radius 62,5 mm
-    wheel_separation_m: 0.378   # Abstand Radmitte <-> Radmitte 378 mm
+    # WIRKSAMER Rollradius unter Last, nicht der Katalogwert.
+    # 0.0625 (= 125 mm Durchmesser, Katalog) war zu gross: Bei einer 1-m-Fahrt
+    # meldete die Odometrie 1.007 m, tatsaechlich zurueckgelegt wurden 0.986 m
+    # (Lasermessgeraet) bzw. 0.980 m (LiDAR gegen eine Wand) - zwei unabhaengige
+    # Messungen, 12.08.2026. Der Roboter faehrt also kuerzer als er glaubt.
+    # Ursache ist die Abplattung des Reifens unter Last; der wirksame Radius ist
+    # immer kleiner als der Nennradius.
+    # 0.0625 * (0.986/1.007) = 0.0612  -> entspricht 122.4 mm Durchmesser
+    wheel_radius_m: 0.0612      # [KALIBRIERT 12.08.2026, vorher 0.0625]
+    # ACHTUNG - haengt am Radradius: Der Drehwinkel wird als
+    #   theta = Radradius * (Raddifferenz) / Spurweite
+    # berechnet. Wird der Radius geaendert, MUSS die Spurweite im selben
+    # Verhaeltnis mitgehen, sonst stimmt die Drehung nicht mehr.
+    #
+    # Kalibrierweg am 12.08.2026:
+    #   1. Drehtest mit altem Radius 0.0625: Roboter drehte 5.62 Grad je
+    #      Umdrehung zu weit (LiDAR-Scanvergleich; Nutzer mass 5.2 Grad).
+    #      Ausgleich ueber die Spurweite: 0.378 -> 0.3835, Restfehler dann
+    #      0.17 Grad bei 6 mm Scan-Uebereinstimmung.
+    #   2. Streckentest zeigte den Radius als eigentliche Ursache (s.o.).
+    #      Mit Radius 0.0612 muss die Spurweite mitskaliert werden:
+    #      0.3835 * (0.986/1.007) = 0.3755.
+    # Bemerkenswert: 375.5 mm liegen nur 2.5 mm neben den abgemessenen 378 mm
+    # Radmitte-zu-Radmitte. Mit dem korrigierten Radius wird das Modell also in
+    # sich stimmig - der urspruengliche Drehfehler kam groesstenteils vom zu
+    # gross angesetzten Radradius, nicht von der Spurweite.
+    wheel_separation_m: 0.3755  # [KALIBRIERT 12.08.2026, vorher 0.378 / 0.3835]
     # Radumfang = 2*pi*0.0625 = 0.3927 m  (eine Radumdrehung = 39,27 cm Weg)
 
     # --- Getriebe [GEMESSEN: Schrittmotor-Getriebe 10:1] ---
@@ -78,12 +103,29 @@ base_hardware:
     # Zielgeschwindigkeit - DAS war der Ruck beim Anfahren, nicht die Rampe.
     start_speed_register: 0x0020
     start_speed_rpm: 5          # [TUNE] kleiner = weicher los, zu klein = evtl. zaeh
-    accel_ms: 800               # [TUNE] hoeher = sanfter anfahren (800 = Nicken weg)
+    # ACHTUNG ZUR EINHEIT: Die Rampenzeit gilt fuer die MAXIMALDREHZAHL
+    # (+/-3000 rpm), nicht fuer die angeforderte. Bei den kleinen Drehzahlen im
+    # Fahrbetrieb bleibt davon nur ein Bruchteil uebrig:
+    #   geradeaus 0.12 m/s -> ~187 rpm -> 2500 * 187/3000  = 156 ms
+    #   drehen 0.40 rad/s  -> ~117 rpm -> 2500 * 117/3000  =  97 ms
+    # Mit den vorherigen 800 ms waren es nur 50 bzw. 31 ms - praktisch ein
+    # Sprung. Beim Drehen war das als Ruckeln spuerbar (12.08.2026), weil der
+    # hohe Aufbau um die Hochachse weniger steif ist als in Fahrtrichtung.
+    # Verstaerkt wird das dadurch, dass das Steuerkreuz digital ist: Druecken
+    # heisst sofort voller Ausschlag, es gibt kein sanftes Andosieren.
+    accel_ms: 2500              # [TUNE] hoeher = sanfter anfahren
     # Bremsen MUSS deutlich haerter sein als Beschleunigen. Mit 800 ms lief der
     # Roboter nach dem Loslassen des Sticks sichtbar nach - das ist gefaehrlich,
     # weil der Bremsweg dann laenger ist als der Sensorhorizont der VL53.
-    decel_ms: 400               # [TUNE] kleiner = schneller stehen (250 war zu ruppig,
-                                # 800 lief nach - 400 ist der abgestimmte Kompromiss)
+    # Bremsen MUSS deutlich haerter sein als Beschleunigen. Beim Loslassen soll
+    # der Roboter stehen, nicht ausrollen - ein langer Bremsweg ist gefaehrlich,
+    # weil er den Sensorhorizont uebersteigt, und beim Kartieren stoert er die
+    # Positionsschaetzung.
+    # Abgestimmte Werte aus der Praxis (Nutzerurteil am Geraet):
+    #   250 ms zu ruppig, 800 und 1200 ms liefen sichtbar nach, 400 ms passt.
+    # Beschleunigen darf davon unabhaengig lang sein - das ist kein Widerspruch,
+    # sondern Absicht: sanft los, zuegig stehen.
+    decel_ms: 400               # [TUNE] kleiner = schneller stehen
 
     rpm_scale: 1.0              # Registerwert je Motor-rpm (1.0 = direkt in rpm)
     # Obergrenze in MOTOR-rpm (nach Getriebe). 700 deckt die Limits oben ab
