@@ -13,6 +13,8 @@
 
   <exec_depend>ldlidar_stl_ros2</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>base_hardware</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 
