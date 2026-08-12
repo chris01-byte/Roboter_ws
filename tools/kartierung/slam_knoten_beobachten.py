@@ -7,10 +7,11 @@ waehrend der Drehung ueber alle Richtungen wandert. Verdacht: slam_toolbox legt
 bei reiner Drehung keine neuen Knoten an, weil minimum_travel_distance nie
 erreicht wird.
 
-slam_toolbox veroeffentlicht seinen Knotengraphen als Marker-Array. Die Zahl
-der Marker entspricht den Kartenknoten. Dieses Skript zaehlt sie mit und meldet
-jede Aenderung zusammen mit der aktuellen Roboterpose - so ist direkt sichtbar,
-ob Drehung allein einen Knoten ausloest.
+slam_toolbox veroeffentlicht seinen Knotengraphen als Marker-Array. Das Array
+enthaelt aber ausser den Knoten auch DELETEALL- und Kanten-Marker. Deshalb darf
+``len(msg.markers)`` NICHT als Knotenzahl verwendet werden. Dieses Skript
+zaehlt nur die von slam_toolbox als Kugeln veroeffentlichten Knoten-Marker und
+meldet jede Aenderung zusammen mit der aktuellen Roboterpose.
 
 Aufruf:  python3 slam_knoten_beobachten.py [Sekunden]
 Parallel dazu den Roboter drehen (z.B. mit odometrie_drehtest.py).
@@ -24,6 +25,8 @@ from rclpy.node import Node
 from tf2_ros import Buffer, TransformListener
 from visualization_msgs.msg import MarkerArray
 
+from slam_graph_marker import zaehle_knoten_marker
+
 
 def main():
     dauer = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
@@ -32,7 +35,11 @@ def main():
     stand = {'n': 0}
 
     def on_graph(msg):
-        stand['n'] = len(msg.markers)
+        # Upstream slam_toolbox erzeugt jeden Posegraph-Knoten als SPHERE im
+        # Namespace "slam_toolbox". Zusaetzlich befinden sich ein DELETEALL-
+        # Marker und zwei LINE_LIST-Marker fuer Kanten im selben MarkerArray.
+        # Diese drei Verwaltungsmarker duerfen nicht mitgezaehlt werden.
+        stand['n'] = zaehle_knoten_marker(msg.markers)
 
     n.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization',
                           on_graph, 10)
@@ -86,8 +93,9 @@ def main():
     if gedreht > math.radians(90) and neu == 0:
         print('\nBEFUND: Trotz deutlicher Drehung kam KEIN neuer Knoten dazu.')
         print('  Damit traegt slam_toolbox die neu sichtbaren Bereiche nicht ein.')
-        print('  Abhilfe: minimum_travel_distance klein setzen (z.B. 0.01), dann')
-        print('  entscheidet minimum_travel_heading ueber neue Knoten.')
+        print('  Ursache unter ROS 2 Humble: Der Vorfilter prueft nur Translation.')
+        print('  Abhilfe: gepinnten Upstream-Backport installieren und')
+        print('  check_min_dist_and_heading_precisely=true setzen.')
     elif neu > 0:
         print(f'\nBEFUND: Die Drehung erzeugt Knoten '
               f'({math.degrees(gedreht)/neu:.1f} Grad je neuem Knoten).')

@@ -50,17 +50,16 @@ slam_toolbox:
     stack_size_to_use: 40000000
 
     # ---- Wann ein neuer Kartenknoten entsteht ----
-    # GEMESSEN 13.08.2026: Mit minimum_travel_distance 0.2 erzeugte eine volle
-    # 360-Grad-Drehung auf der Stelle KEINEN einzigen neuen Knoten (4 Knoten vor
-    # der Drehung, 4 danach, bei 361.7 Grad gemessener Rotation). Entsprechend
-    # blieb die Karte unveraendert: Der vom Mast verdeckte Sektor - immerhin
-    # 68 Grad - wurde nicht aufgefuellt, obwohl er waehrend der Drehung ueber
-    # alle Richtungen wandert. Nur 238 von 13147 unbekannten Zellen kamen dazu.
-    # Beim Drehen auf der Stelle bleibt die zurueckgelegte Strecke null, deshalb
-    # muss die Distanzschwelle praktisch abgeschaltet sein, damit die
-    # Winkelschwelle ueberhaupt zum Zug kommt.
-    minimum_travel_distance: 0.01       # m  - praktisch aus, s.o.
-    minimum_travel_heading: 0.15        # rad (8.6 Grad) - je Drehung ~42 Knoten
+    # GEMESSEN 12.08.2026: Eine reine 360-Grad-Drehung aenderte 0 von 29640
+    # Kartenzellen; 40 cm Translation im selben Lauf aenderten 2410 Zellen.
+    # Ursache ist der bekannte Humble-Vorfilterfehler aus slam_toolbox #807:
+    # Vor Karto wurde nur die Translation, nicht die Winkelaenderung geprueft.
+    # Der gepinnte Backport des offiziellen Fixes #808 stellt die beabsichtigte
+    # ODER-Logik wieder her. Ohne dieses Overlay ist der folgende Schalter
+    # wirkungslos beziehungsweise in der Humble-Version noch nicht vorhanden.
+    check_min_dist_and_heading_precisely: true
+    minimum_travel_distance: 0.01       # m; fuer ersten A/B-Test beibehalten
+    minimum_travel_heading: 0.15        # rad (8.6 Grad); danach fein abstimmen
 
     # ---- Scan-Abgleich ----
     use_scan_matching: true

@@ -17,6 +17,55 @@ Rückfallweg:
 
 ---
 
+## 2026-08-12 — Root Cause für fehlende LiDAR-Kartenupdates bei reiner Drehung
+
+**Entscheidung:** Der offizielle `slam_toolbox`-Fix aus PR #808 wird als
+minimaler Patch auf einen fest gepinnten Humble-Commit zurückportiert und in
+einem separaten Overlay unter `~/amadeus_slam_toolbox_ws` gebaut. Aktiviert wird
+er projektspezifisch mit `check_min_dist_and_heading_precisely: true`. Die
+apt-Installation unter `/opt/ros/humble` bleibt unverändert.
+
+**Grund / beobachtete Evidenz:** Im selben Lauf veränderte eine 360°-Drehung
+**0 von 29.640** Kartenzellen, eine anschließende 40-cm-Translation dagegen
+**2.410**. Odometrie/TF drehten korrekt, Mapping-Parameter waren aktiv und
+LiDAR, USB sowie Totzonenfilter blieben stabil. Die Humble-Implementierung von
+`SlamToolbox::shouldProcessScan()` prüft vor Karto nur
+`Pose2::SquaredDistance`, also x/y-Translation. Dadurch erreicht eine reine
+Drehung Kartos korrekte Distanz-oder-Winkel-Prüfung nicht. Das entspricht
+[Issue #807](https://github.com/SteveMacenski/slam_toolbox/issues/807); der
+offizielle Fix wurde in [PR #808](https://github.com/SteveMacenski/slam_toolbox/pull/808)
+als Commit `649a50eae698396c40352619c95cd20e2ea1790a` gemergt, fehlt aber im
+Humble-Zweig.
+
+**Betroffene Dateien und Hardware:**
+`vendor_slam_toolbox_humble.repos`,
+`patches/slam_toolbox_humble_pure_rotation.patch`,
+`tools/kartierung/build_slam_toolbox_humble_overlay.sh`,
+`tools/kartierung/slam_knoten_beobachten.py`,
+`tools/kartierung/slam_graph_marker.py`,
+`tools/kartierung/test_slam_knoten_beobachten.py`,
+`src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml`; Jetson und
+STL-27L. Die bestehende Fahrwerkskalibrierung wird nicht verändert.
+
+**Teststatus:** Root Cause durch Quellcode und Messung bestätigt. Backport und
+Build-/Stillstandsverfahren sind in `docs/SLAM_TOOLBOX_ROTATION_FIX.md`
+dokumentiert. Test am echten Jetson, reine Drehung, Translation und geschlossene
+Runde stehen noch aus; keine Aktoren ohne ausdrückliche Freigabe.
+
+**Offene Risiken:** Der LiDAR-Zeitstempel liegt am Ende eines ungefähr 100-ms-
+Scans und für diesen Pfad ist kein beamweises Deskew nachgewiesen; schnelle
+Drehung kann daher Wände verschmieren, erklärt aber nicht das Null-Update. Im
+Odometrie-Drehtest sind Korrekturformel und Korrelationsvorzeichen vor einer
+weiteren Kalibrierung für CW und CCW zu verifizieren. Ein synthetischer
+Yaw-only-Regressionstest fehlt noch.
+
+**Rückfallweg:** Launch beenden und in einer frischen Shell nur
+`/opt/ros/humble/setup.bash` sowie `~/roboter_ws/install/local_setup.bash`
+sourcen.
+Das separate Overlay wird dadurch ohne Löschung deaktiviert.
+
+---
+
 ## 2026-08-10 — Import in ein privates GitHub-Repository
 
 **Entscheidung:** Der getestete Jetson-Stand wird nach

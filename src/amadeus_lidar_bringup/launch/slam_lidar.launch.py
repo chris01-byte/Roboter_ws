@@ -15,13 +15,19 @@
 #
 #  ---------------------------------------------------------------------
 #  A) Aufbau pruefen, ohne Motorstrom:
+#       source /opt/ros/humble/setup.bash
+#       source ~/amadeus_slam_toolbox_ws/install/setup.bash
+#       source ~/roboter_ws/install/local_setup.bash
 #       ros2 launch amadeus_lidar_bringup slam_lidar.launch.py
 #     -> /scan, /map und der TF-Baum lassen sich pruefen, der Roboter steht.
 #        Die Odometrie steht dabei still: base_hardware liest die Ist-Drehzahl
 #        nur im scharfen Betrieb.
 #
 #  B) KARTIERFAHRT - Motoren bestromt, Not-Aus in der Hand:
-#       Terminal 1: ros2 launch amadeus_lidar_bringup slam_lidar.launch.py \
+#       Terminal 1: source /opt/ros/humble/setup.bash
+#                   source ~/amadeus_slam_toolbox_ws/install/setup.bash
+#                   source ~/roboter_ws/install/local_setup.bash
+#                   ros2 launch amadeus_lidar_bringup slam_lidar.launch.py \
 #                     active_drive:=true
 #       Terminal 2: ros2 launch robot_bringup teleop_joy.launch.py \
 #                     cmd_topic:=/cmd_vel
@@ -95,6 +101,9 @@ def generate_launch_description():
              }]),
 
         # --- slam_toolbox: einziger Besitzer von /map und map->odom ---
+        # ROS 2 Humble braucht den gepinnten Backport aus
+        # docs/SLAM_TOOLBOX_ROTATION_FIX.md. Vor dem Launch dessen Overlay
+        # sourcen; sonst werden reine Drehungen weiterhin vor Karto verworfen.
         Node(package='slam_toolbox', executable='async_slam_toolbox_node',
              name='slam_toolbox', output='screen',
              parameters=[slam_params]),

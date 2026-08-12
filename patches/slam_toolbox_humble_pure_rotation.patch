@@ -1,0 +1,56 @@
+diff --git a/include/slam_toolbox/slam_toolbox_common.hpp b/include/slam_toolbox/slam_toolbox_common.hpp
+index e5a88e0..a416bea 100644
+--- a/include/slam_toolbox/slam_toolbox_common.hpp
++++ b/include/slam_toolbox/slam_toolbox_common.hpp
+@@ -154,0 +155 @@ protected:
++  bool check_min_dist_and_heading_precisely_;
+diff --git a/lib/karto_sdk/include/karto_sdk/Mapper.h b/lib/karto_sdk/include/karto_sdk/Mapper.h
+index 1372377..9f09d63 100644
+--- a/lib/karto_sdk/include/karto_sdk/Mapper.h
++++ b/lib/karto_sdk/include/karto_sdk/Mapper.h
+@@ -2426,0 +2427 @@ public:
++  double getParamMinimumTravelHeadingInRadians();
+diff --git a/lib/karto_sdk/src/Mapper.cpp b/lib/karto_sdk/src/Mapper.cpp
+index e969404..6ef0688 100644
+--- a/lib/karto_sdk/src/Mapper.cpp
++++ b/lib/karto_sdk/src/Mapper.cpp
+@@ -2335,0 +2336,5 @@ double Mapper::getParamMinimumTravelHeading()
++double Mapper::getParamMinimumTravelHeadingInRadians()
++{
++  return static_cast<double>(m_pMinimumTravelHeading->GetValue());
++}
++
+diff --git a/src/slam_toolbox_common.cpp b/src/slam_toolbox_common.cpp
+index 71f8c38..80be7a5 100644
+--- a/src/slam_toolbox_common.cpp
++++ b/src/slam_toolbox_common.cpp
+@@ -187,0 +188,8 @@ void SlamToolbox::setParams()
++  check_min_dist_and_heading_precisely_ = false;
++  if (!this->has_parameter("check_min_dist_and_heading_precisely")) {
++    this->declare_parameter("check_min_dist_and_heading_precisely",
++      check_min_dist_and_heading_precisely_);
++  }
++  check_min_dist_and_heading_precisely_ =
++    this->get_parameter("check_min_dist_and_heading_precisely").as_bool();
++
+@@ -521,0 +530,2 @@ bool SlamToolbox::shouldProcessScan(
++  static double min_rotation =
++    smapper_->getMapper()->getParamMinimumTravelHeadingInRadians();
+@@ -548 +558,6 @@ bool SlamToolbox::shouldProcessScan(
+-  // check moved enough, within 10% for correction error
++  // for initial stabilization
++  if (scan_ctr < 5) {
++    return false;
++  }
++
++  // check if the movement is enough
+@@ -550 +565,8 @@ bool SlamToolbox::shouldProcessScan(
+-  if (dist2 < 0.8 * min_dist2 || scan_ctr < 5) {
++  if (check_min_dist_and_heading_precisely_) {
++    const double heading_diff =
++      fabs(math::NormalizeAngle(pose.GetHeading() - last_pose.GetHeading()));
++    if (dist2 < min_dist2 && heading_diff < min_rotation) {
++      return false;
++    }
++  } else if (dist2 < 0.8 * min_dist2) {
++    // within 10% for correction error, min heading is occasionally checked in the mapper
