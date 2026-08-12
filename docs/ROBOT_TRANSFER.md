@@ -82,8 +82,13 @@ Stand 12.08.2026, abgenommen auf Commit `4fe5ee3`:
       über 19 Werte (2145–2176). Abhilfe ist der neue Knoten
       `scan_vereinheitlichen`. A/B bei identischem Ablauf: 31 → 0 verworfene
       Scans, 10 → 41 Knoten, Nebenachse 5,39 → 3,83 m bei real 3,80 m
-- [ ] 40 cm Translation: weiterhin Kartenupdate, keine Doppelwände
-- [ ] langsame geschlossene Runde: keine Odometrie-/TF-/USB-Regression
+- [x] 40 cm Translation: weiterhin Kartenupdate (20 neue Knoten), keine
+      Doppelwände, Kursabweichung +0,18°
+- [ ] langsame geschlossene Runde: **noch offen.** Es ist kein Joystick
+      angeschlossen (`/dev/input/js*` fehlt) und weder `collision_monitor` noch
+      Nav2 laufen in `slam_lidar.launch.py`. Eine Runde durch die Wohnung darf
+      deshalb nicht ferngesteuert-blind gefahren werden — der LiDAR sieht
+      Schwellen, Kabel und Tischplatten grundsätzlich nicht
 - [x] Testergebnis mit Datum und Commit in `docs/PROJECT_MEMORY.md` ergänzt
 
 **Phase 4 kann jetzt gefahren werden**, mit `normalize_scan:=true` (Standard).
@@ -103,10 +108,18 @@ ps -eo pid=,cmd= | grep -E '[l]dlidar|[a]sync_slam_toolbox|[b]ase_hardware|[s]ca
   | awk -v my="$MY" '$1 != my'
 ```
 
-**Der Odometrie-Winkelfehler ist weiterhin offen.** Gemessen −6,3° bis −6,5° je
-Umdrehung über mehrere Läufe, reproduzierbar und unabhängig vom Normalisierer.
-Das widerspricht den in `9e8c06f` dokumentierten 0,50°. Getrennt untersuchen,
-CW und CCW einzeln, und die Korrekturformel des Drehtests vorher reparieren.
+**Der Odometrie-Winkelfehler ist geklärt: −1,45° je Umdrehung.** Die früher
+gemeldeten −6,3° bis −6,5° waren ein Artefakt von `odometrie_drehtest.py`.
+Sauber gemessen mit `tools/kartierung/odometrie_winkel_messen.py` (283
+Messpunkte je Richtung, R² = 0,997): Skalenfaktor 0,99628 gegen den und 0,99564
+im Uhrzeigersinn — beide Richtungen stimmen überein, also ein echter
+Skalenfehler. Kein Handlungsbedarf vor Phase 4.
+
+**Offen bleibt der Radradius.** Über 0,40 m meldete die Odometrie 0,411 m, der
+LiDAR 0,427 m (+3,9 %). Radradius und Spurweite sind gekoppelt; die
+Winkelmessung bestimmt nur ihr Verhältnis. Vor jeder Änderung die Strecke mit
+dem Lasermessgerät gegenmessen, dann beide Werte gemeinsam setzen und gemeinsam
+prüfen. Nicht mit anderen Änderungen vermischen.
 
 **Keine Aktoren aktivieren, bevor alle Stillstandsprüfungen oberhalb bestanden
 sind.** Ein KI-Agent darf die Fahrfreigabe nicht selbst annehmen.

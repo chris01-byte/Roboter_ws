@@ -66,6 +66,63 @@ Das separate Overlay wird dadurch ohne Löschung deaktiviert.
 
 ---
 
+## 2026-08-12 — Winkelfehler war ein Messartefakt; Phase 4a bestanden
+
+**Entscheidung:** Der Winkelfehler der Odometrie wird künftig mit
+`tools/kartierung/odometrie_winkel_messen.py` bestimmt, nicht mehr mit
+`odometrie_drehtest.py`. Die Kalibrierwerte bleiben unverändert.
+
+**Grund / Evidenz:** Die zuvor über vier Läufe reproduzierten −4,98° bis −6,50°
+je Umdrehung waren ein Artefakt des Messverfahrens. `odometrie_drehtest.py`
+vergleicht nur Anfangs- und Endscan, liest `/scan` mit schwankender
+Strahlenzahl und summiert die Odometrie nicht über die Bremsphase. Der zweite
+Punkt wiegt am schwersten: da nur gleich lange Scans vergleichbar sind, blieben
+im Versuch **22 von rund 250 Messpunkten** übrig, bei einer Vergleichsgüte von
+0,70 m statt 0,03 m — die Verfolgung verlor zwischen den Scans die Spur und
+lieferte einen Skalenfaktor von 0,80, also 20 % Fehler. Offensichtlich Unsinn.
+
+Kontinuierlich gemessen auf `/scan_normiert`, je eine volle Umdrehung bei
+0,25 rad/s:
+
+| Richtung | Messpunkte | Skalenfaktor | R² |
+|---|---|---|---|
+| gegen den Uhrzeigersinn | 283 | 0,99628 | 0,9973 |
+| im Uhrzeigersinn | 283 | 0,99564 | 0,9974 |
+
+Beide Richtungen stimmen auf 0,00064 überein — das Verhalten eines echten
+Skalenfehlers, kein richtungsabhängiger Effekt. **−1,45° je Umdrehung**, also
+0,4 %. Der Widerspruch zu den 0,50° aus `9e8c06f` ist damit aufgelöst.
+
+Wichtig für spätere Kalibrierungen: Die Winkelmessung bestimmt nur das
+**Verhältnis** von Radradius zu Spurweite, nicht die Spurweite selbst. Der
+Streckentest über 0,40 m ergab 0,411 m gemeldet gegen 0,427 m per LiDAR
+(+3,9 %). Zusammen mit dem Winkelfaktor folgt daraus eine um 4,3 % größere
+Spurweite — nicht die 0,4 %, die der Winkel allein nahelegt. Beide Werte
+gehören gemeinsam gesetzt und gemeinsam geprüft.
+
+**Phase 4a bestanden:** 0,40 m Translation erzeugte 20 neue Knoten, die Karte
+blieb einwandig, Kursabweichung +0,18°, Nebenachse 3,85 m gegen real 3,80 m.
+
+**Betroffen:** `tools/kartierung/odometrie_winkel_messen.py` (neu),
+Dokumentation. Beim Messen beide Motoren, drei volle Umdrehungen und 0,40 m
+Fahrt.
+
+**Teststatus:** Zwei Messläufe je Richtung, seitlicher Versatz 0,0–0,1 cm.
+
+**Offene Risiken:** Der Radradius ist ungeprüft; die +3,9 % beruhen auf einer
+einzigen LiDAR-Wandmessung und brauchen eine Gegenmessung mit dem
+Lasermessgerät. Ein Deskew fehlt weiterhin.
+
+**Nicht gefahren:** die geschlossene Runde aus Phase 4. Es ist kein Joystick
+angeschlossen, und weder `collision_monitor` noch Nav2 laufen in dieser
+Startdatei. Ohne Hindernisabsicherung und mit einem Sensor, der Schwellen und
+Kabel grundsätzlich nicht sieht, wird nicht blind durch die Wohnung gefahren.
+
+**Rückfallweg:** Es wurde nichts an der Kalibrierung geändert; der Stand ist
+unverändert fahrbereit.
+
+---
+
 ## 2026-08-12 — Duplizierte Wände: Karto verwarf drei Viertel aller Scans
 
 **Entscheidung:** Zwischen Treiber und `slam_toolbox` läuft ab sofort der Knoten

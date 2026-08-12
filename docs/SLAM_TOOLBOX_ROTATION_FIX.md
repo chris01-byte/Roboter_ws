@@ -511,8 +511,13 @@ Raum und mehrfach versetzte Konturen, mit Normalisierer eine geschlossene
 Wandlinie. 41 von theoretisch 42 möglichen Knoten.
 
 Der Odometrie-Restversatz blieb dabei unverändert (−6,50° gegen −6,30°) und ist
-damit als Ursache der Verschmierung ausgeschlossen. Er bleibt ein eigener,
-offener Punkt.
+damit als Ursache der Verschmierung ausgeschlossen.
+
+> **Nachtrag vom 12.08.2026:** Diese −6,3° bis −6,5° waren selbst ein
+> Messartefakt. Sauber nachgemessen sind es **−1,45° je Umdrehung**. Siehe
+> Abschnitt „Winkelfehler der Odometrie" weiter unten. Für die Aussage oben
+> ändert das nichts — der Wert blieb mit und ohne Normalisierer gleich und
+> scheidet als Ursache der Verschmierung so oder so aus.
 
 **Achtung, Kennzahlenfalle:** „dicke Wände" stieg von 3,2 % auf 24,0 % — und
 zwar bei der *besseren* Karte. Die Kennzahl misst, wie viel Wandmasse eine
@@ -633,3 +638,62 @@ Protokoll. Nicht in Git gehören:
 Erst nach bestandener Phase 1 bis 4 darf der Implementierungsbranch in den
 LiDAR-Integrationsbranch übernommen werden. Ein Merge nach `main` muss die
 gesamte STL-27L-Integrationshistorie einschließen, nicht nur diesen Patch.
+
+## 10. Winkelfehler der Odometrie — nachgemessen am 12.08.2026
+
+Der zuvor gemeldete Winkelfehler von −4,98° bis −6,50° je Umdrehung war ein
+**Artefakt des Messverfahrens**, nicht des Roboters. `odometrie_drehtest.py`
+hat drei Schwächen, die alle in dieselbe Richtung wirken:
+
+1. Er vergleicht nur Anfangs- und Endscan. Das ist ein einziger Messpunkt,
+   modulo 360° mehrdeutig, und er zeigt nicht, ob der Fehler gleichmäßig
+   entsteht.
+2. Er liest `/scan`. Dort schwankt die Strahlenzahl zwischen 2145 und 2176, und
+   da nur gleich lange Scans verglichen werden können, bleibt ein Bruchteil
+   übrig — im Versuch **22 statt rund 250 Messpunkte**, mit einer
+   Vergleichsgüte von 0,70 m statt 0,03 m.
+3. Er summiert die Odometrie nur bis zum Erreichen der Sollzahl. Während der
+   Bremsphase dreht der Roboter weiter; dieser Anteil landet im LiDAR-Wert,
+   nicht in der Odometrie.
+
+Das neue `tools/kartierung/odometrie_winkel_messen.py` behebt alle drei: es
+verfolgt den Winkel **kontinuierlich** über die ganze Drehung, liest
+`/scan_normiert` mit fester Strahlenzahl und lässt Odometrie und LiDAR über
+dasselbe Zeitfenster laufen. Die Suche startet bei der letzten Schätzung plus
+dem Odometrie-**Zuwachs** — nie dem Absolutwert —, damit sich kein
+Odometriefehler aufsummieren und das Ergebnis zur Odometrie hinziehen kann.
+
+Gemessen bei 0,25 rad/s, je eine volle Umdrehung:
+
+| Richtung | Messpunkte | Skalenfaktor | R² | seitlicher Versatz |
+|---|---|---|---|---|
+| gegen den Uhrzeigersinn | 283 | 0,99628 | 0,9973 | 0,0 cm |
+| im Uhrzeigersinn | 283 | 0,99564 | 0,9974 | 0,1 cm |
+
+Beide Richtungen stimmen auf 0,00064 überein. Das ist das Verhalten eines
+echten Skalenfehlers; ein richtungsabhängiger Effekt wie Laufzeit oder
+Zeitstempel würde sich mit der Drehrichtung ändern. **Der Fehler beträgt
+−1,45° je Umdrehung**, also 0,4 %. Damit ist auch der Widerspruch zu den in
+`9e8c06f` dokumentierten 0,50° aufgelöst: gleiche Größenordnung statt Faktor
+zehn.
+
+### Warum die Spurweite trotzdem nicht allein aus dieser Messung folgt
+
+Beim Streckentest über 0,40 m meldete die Odometrie 0,411 m, der LiDAR 0,427 m
+— eine Abweichung von **+16 mm oder 3,9 %**, bei nur 0,18° Kursabweichung.
+Radradius und Spurweite sind aber gekoppelt:
+
+```text
+strecke_echt / strecke_odom  = r_echt / r_angenommen
+winkel_echt  / winkel_odom   = (r_echt / r_angenommen) * (W_angenommen / W_echt)
+```
+
+Aus 1,039 und 0,996 folgt `W_echt / W_angenommen = 1,043`, also rund
+0,392 m statt der 0,3770 m, die der Winkel allein nahelegt. Die Winkelmessung
+bestimmt nur das **Verhältnis** r/W, nicht W selbst.
+
+**Deshalb wird hier nichts übernommen.** Der Streckenwert beruht auf einer
+einzigen LiDAR-Wandmessung. Vor jeder Änderung muss die Strecke mit dem
+Lasermessgerät gegengemessen werden; danach werden Radradius und Spurweite
+gemeinsam gesetzt und gemeinsam geprüft — Kalibrierung ist laut `AGENTS.md`
+ein eigener, getrennt getesteter Vorgang.
