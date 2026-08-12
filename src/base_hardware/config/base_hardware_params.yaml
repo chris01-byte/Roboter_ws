@@ -24,35 +24,102 @@ base_hardware:
     odom_topic: "/odom"
     state_topic: "/base_hardware/state_json"
 
-    # --- Geometrie [GEMESSEN 13.07.2026 am aufgebauten Roboter] ---
+    # --- Geometrie [NEU KALIBRIERT 12.08.2026 abends, siehe unten] ---
     # WIRKSAMER Rollradius unter Last, nicht der Katalogwert.
-    # 0.0625 (= 125 mm Durchmesser, Katalog) war zu gross: Bei einer 1-m-Fahrt
-    # meldete die Odometrie 1.007 m, tatsaechlich zurueckgelegt wurden 0.986 m
-    # (Lasermessgeraet) bzw. 0.980 m (LiDAR gegen eine Wand) - zwei unabhaengige
-    # Messungen, 12.08.2026. Der Roboter faehrt also kuerzer als er glaubt.
-    # Ursache ist die Abplattung des Reifens unter Last; der wirksame Radius ist
-    # immer kleiner als der Nennradius.
-    # 0.0625 * (0.986/1.007) = 0.0612  -> entspricht 122.4 mm Durchmesser
-    wheel_radius_m: 0.0612      # [KALIBRIERT 12.08.2026, vorher 0.0625]
+    #
+    # ACHTUNG - der Odometriefehler besteht aus ZWEI Anteilen, und nur einer
+    # davon gehoert in diese Datei:
+    #
+    #   echte Strecke = 16.6 mm  +  1.0150 * gemeldete Strecke
+    #                   ^^^^^^^     ^^^^^^
+    #                   je FAHRT    Skalenfehler -> hier korrigierbar
+    #                   konstant
+    #
+    # Der feste Anteil von rund 17 mm faellt bei JEDER Fahrt einmal an,
+    # unabhaengig von ihrer Laenge. Er ist KEIN Radiusfehler und laesst sich
+    # durch keinen Wert in dieser Datei beheben. Wer es doch versucht, bekommt
+    # eine Odometrie, die bei genau einer Streckenlaenge stimmt und bei allen
+    # anderen daneben liegt - bei kurzen Fahrten stark, bei langen kaum.
+    #
+    # NACHWEIS (12.08.2026, Lasermessgeraet; Radius zum Messzeitpunkt in
+    # Klammern, deshalb sind die Rohwerte nur ueber die Radumdrehung
+    # vergleichbar):
+    #   gemeldet 0.410 m -> gemessen 0.434 m   (0.0612)
+    #   gemeldet 1.012 m -> gemessen 1.044 m   (0.0612)
+    #   gemeldet 0.511 m -> gemessen 0.540 m   (0.0612)
+    #   gemeldet 0.510 m -> gemessen 0.528 m   (0.0612)
+    #   gemeldet 1.001 m -> gemessen 1.029 m   (0.0621)
+    #   gemeldet 0.314 m -> gemessen 0.334 m   (0.0621)
+    #   gemeldet 2.511 m -> gemessen 2.539 m   (0.0621)
+    # Waere es ein reiner Radiusfehler, muesste die Abweichung proportional zur
+    # Strecke wachsen. Tut sie nicht. Entscheidender Versuch: zweimal 0.50 m
+    # getrennt gefahren ergab zusammen 1.068 m bei 1.021 m gemeldet, waehrend
+    # dieselbe Strecke am Stueck nur 1.044 m bei 1.012 m ergab. Die zweite
+    # Fahrt brachte einen zweiten Versatz mit. Vorhergesagt waren 1.072 m fuer
+    # "Versatz je Fahrt" gegen 1.053 m fuer "Versatz nur einmal".
+    #
+    # Vermutete Ursache des festen Anteils: Beim Anfahren drehen sich die
+    # Raeder schon, bevor die Ist-Drehzahl-Rueckmeldung greift. 17 mm
+    # entsprechen bei 0.10 m/s rund 170 ms; die Anfahrrampe steht auf 800 ms.
+    # NICHT gemessen - Abhilfe gehoert in base_hardware_node.py, nicht hierher.
+    #
+    # WARUM DIE MESSREIHE SO LANG WURDE: Fester Versatz und Skalenfaktor sind
+    # stark korreliert, solange alle Fahrten aehnlich lang sind. Aus den ersten
+    # vier Fahrten (0.41 bis 1.01 m) kamen je nach Auswertung Radien zwischen
+    # 0.0621 und 0.0631 heraus - eine Vorhersage aus dieser Anpassung wurde
+    # anschliessend widerlegt. Erst der Hebel aus einer KURZEN und einer LANGEN
+    # Fahrt trennt beide Groessen: bei 0.30 m macht ein 16-mm-Versatz 5 % aus,
+    # bei 2.50 m nur 0.6 %.
+    #
+    # Ausgleichsgerade ueber alle sieben Fahrten, in Radumdrehung gerechnet
+    # (Hebel 5.1 bis 40.4 rad), groesste Restabweichung 8.0 mm:
+    #   wirksamer Radius 0.06241 m, fester Versatz 16.0 mm je Fahrt
+    # Gegenprobe allein aus dem 0.30/2.50-Hebel: 0.06233 m und 18.9 mm -
+    # zwei unabhaengige Auswertungen, 0.13 % auseinander.
+    #
+    # Plausibel: 62.4 mm liegen unter dem Katalogwert 62.5 mm, wie es die
+    # Abplattung des Reifens unter Last erwarten laesst. Die frueheren
+    # Einpunktrechnungen ergaben bis zu 64.8 mm - groesser als der Katalogwert
+    # und damit physikalisch unsinnig.
+    wheel_radius_m: 0.0624      # [KALIBRIERT 12.08.2026 abends, vorher 0.0612]
     # ACHTUNG - haengt am Radradius: Der Drehwinkel wird als
     #   theta = Radradius * (Raddifferenz) / Spurweite
     # berechnet. Wird der Radius geaendert, MUSS die Spurweite im selben
     # Verhaeltnis mitgehen, sonst stimmt die Drehung nicht mehr.
     #
-    # Kalibrierweg am 12.08.2026:
-    #   1. Drehtest mit altem Radius 0.0625: Roboter drehte 5.62 Grad je
-    #      Umdrehung zu weit (LiDAR-Scanvergleich; Nutzer mass 5.2 Grad).
-    #      Ausgleich ueber die Spurweite: 0.378 -> 0.3835, Restfehler dann
-    #      0.17 Grad bei 6 mm Scan-Uebereinstimmung.
-    #   2. Streckentest zeigte den Radius als eigentliche Ursache (s.o.).
-    #      Mit Radius 0.0612 muss die Spurweite mitskaliert werden:
-    #      0.3835 * (0.986/1.007) = 0.3755.
-    # Bemerkenswert: 375.5 mm liegen nur 2.5 mm neben den abgemessenen 378 mm
-    # Radmitte-zu-Radmitte. Mit dem korrigierten Radius wird das Modell also in
-    # sich stimmig - der urspruengliche Drehfehler kam groesstenteils vom zu
-    # gross angesetzten Radradius, nicht von der Spurweite.
-    wheel_separation_m: 0.3755  # [KALIBRIERT 12.08.2026, vorher 0.378 / 0.3835]
-    # Radumfang = 2*pi*0.0625 = 0.3927 m  (eine Radumdrehung = 39,27 cm Weg)
+    # Kalibrierweg am 12.08.2026 (abends), zwei getrennte Messungen:
+    #
+    #   1. WINKEL, mit tools/kartierung/odometrie_winkel_messen.py: je eine
+    #      volle Umdrehung in beide Richtungen bei 0.25 rad/s, der Winkel
+    #      durchgehend gegen den LiDAR verfolgt statt nur Anfang gegen Ende.
+    #      283 Messpunkte je Richtung, R2 = 0.997.
+    #        gegen den Uhrzeigersinn 0.99628, im Uhrzeigersinn 0.99564
+    #      Beide Richtungen stimmen auf 0.00064 ueberein - ein echter
+    #      Skalenfehler, kein richtungsabhaengiger Effekt. -1.45 Grad je
+    #      Umdrehung.
+    #      WICHTIG: Eine Winkelmessung bestimmt nur das VERHAELTNIS r/W, nie
+    #      die Spurweite allein. Genau deshalb blieb der Streckenfehler
+    #      frueher unentdeckt: r und W waren beide zu klein, aber im fast
+    #      gleichen Verhaeltnis - die Drehung stimmte, die Strecke nicht.
+    #
+    #   2. STRECKE, sieben Fahrten mit dem Lasermessgeraet (s.o.): wirksamer
+    #      Radius 0.06241 m nach Abzug des festen Anfahrversatzes.
+    #
+    #   Daraus: W_neu = (0.06241 / 0.0612) * 0.3755 / 0.99596 = 0.3845
+    #   (Der Winkelfaktor 0.99596 wurde mit Radius 0.0612 und Spurweite 0.3755
+    #   gemessen; beide gehen deshalb in die Umrechnung ein.)
+    #
+    # Plausibilitaet: 384.5 mm liegen 6.5 mm ueber den abgemessenen 378 mm
+    # Radmitte-zu-Radmitte. Der Aufstandspunkt eines breiten Reifens liegt
+    # nicht exakt unter der Radmitte, und beim Drehen auf der Stelle radiert
+    # der Reifen - beides vergroessert die WIRKSAME Spurweite gegenueber der
+    # geometrischen. 1.7 Prozent Aufschlag sind dafuer erwartbar.
+    #
+    # Gegenprobe: r/W aendert sich von 0.16298 auf 0.16232, also um
+    # -1.47 Grad je Umdrehung - der unabhaengig gemessene Winkelfehler betrug
+    # -1.45 Grad. Die beiden Messwege sind damit in sich stimmig.
+    wheel_separation_m: 0.3845  # [KALIBRIERT 12.08.2026 abends, vorher 0.3755]
+    # Radumfang = 2*pi*0.0624 = 0.3921 m  (eine Radumdrehung = 39,21 cm Weg)
 
     # --- Getriebe [GEMESSEN: Schrittmotor-Getriebe 10:1] ---
     # Motorumdrehungen pro RAD-Umdrehung. Der Node rechnet Rad-Drehzahl in

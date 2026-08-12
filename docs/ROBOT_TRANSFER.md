@@ -115,11 +115,27 @@ Messpunkte je Richtung, R² = 0,997): Skalenfaktor 0,99628 gegen den und 0,99564
 im Uhrzeigersinn — beide Richtungen stimmen überein, also ein echter
 Skalenfehler. Kein Handlungsbedarf vor Phase 4.
 
-**Offen bleibt der Radradius.** Über 0,40 m meldete die Odometrie 0,411 m, der
-LiDAR 0,427 m (+3,9 %). Radradius und Spurweite sind gekoppelt; die
-Winkelmessung bestimmt nur ihr Verhältnis. Vor jeder Änderung die Strecke mit
-dem Lasermessgerät gegenmessen, dann beide Werte gemeinsam setzen und gemeinsam
-prüfen. Nicht mit anderen Änderungen vermischen.
+**Der Radradius ist neu kalibriert:** `wheel_radius_m: 0.0624`,
+`wheel_separation_m: 0.3845` (vorher 0.0612 / 0.3755), aus acht Fahrten mit dem
+Lasermessgerät. Verifikationsfahrt über 2,00 m innerhalb der Ablesegenauigkeit
+getroffen.
+
+**Was dabei zu beachten ist, wenn jemand die Odometrie erneut vermisst:**
+
+1. **Kurze und lange Fahrt kombinieren.** Fester Anfahrversatz und Skalenfehler
+   sind nicht trennbar, solange alle Fahrten ähnlich lang sind. 0,30 m gegen
+   2,50 m funktioniert; 0,4 bis 1,0 m reicht nicht und liefert je nach
+   Auswertung Radien zwischen 0,0621 und 0,0631.
+2. **Lasermessgerät, nicht den LiDAR-Wandvergleich.** Der LiDAR lag bei der
+   Verifikationsfahrt 24 mm daneben, bei sonst ±5 mm Streuung.
+3. **Eine Winkelmessung bestimmt nur r/W**, nie die Spurweite allein. Ein
+   Streckenfehler bleibt darin unsichtbar.
+
+**Weiterhin offen: rund 15 mm fester Versatz je Fahrt.** Er ist kein
+Radiusfehler und durch keinen Wert in `base_hardware_params.yaml` behebbar.
+Vermutlich drehen sich die Räder beim Anfahren, bevor die
+Ist-Drehzahl-Rückmeldung greift. Abhilfe gehört in `base_hardware_node.py` —
+eigener Vorgang, eigener Test.
 
 **Keine Aktoren aktivieren, bevor alle Stillstandsprüfungen oberhalb bestanden
 sind.** Ein KI-Agent darf die Fahrfreigabe nicht selbst annehmen.

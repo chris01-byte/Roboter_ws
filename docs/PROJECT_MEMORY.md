@@ -66,6 +66,72 @@ Das separate Overlay wird dadurch ohne Löschung deaktiviert.
 
 ---
 
+## 2026-08-12 — Odometrie neu kalibriert; ein Teil des Fehlers ist kein Radiusfehler
+
+**Entscheidung:** `wheel_radius_m: 0.0624` und `wheel_separation_m: 0.3845`
+(vorher 0.0612 / 0.3755). Der verbleibende Fehler von rund 15 mm je Fahrt ist
+**kein Kalibrierproblem** und wird nicht über die Radgeometrie ausgeglichen.
+
+**Grund / Evidenz:** Acht Fahrten mit dem Lasermessgerät, jede in Radumdrehung
+umgerechnet, weil zwischendurch der Radius verstellt wurde:
+
+```text
+echte Strecke = 15 mm + 0.0625 m * Radumdrehung [rad]
+                ^^^^^   ^^^^^^^^
+                je FAHRT konstant, unabhaengig von der Laenge
+```
+
+Ausgleich über alle acht Fahrten (Hebel 5,1 bis 40,4 rad): wirksamer Radius
+0,06252 m, fester Versatz 15,1 mm, größte Restabweichung 8,2 mm. Der gesetzte
+Wert 0,0624 liegt 0,2 % darunter — unter dem Messrauschen, deshalb belassen.
+
+**Der Weg dorthin ist die eigentliche Lehre.** Aus den ersten vier Fahrten
+(alle zwischen 0,41 und 1,01 m) kamen je nach Auswertung Radien zwischen 0,0621
+und 0,0631 heraus; eine daraus abgeleitete Vorhersage wurde anschließend
+widerlegt. Fester Versatz und Skalenfaktor sind stark korreliert, solange alle
+Fahrten ähnlich lang sind. Erst der Hebel aus einer **kurzen und einer langen**
+Fahrt (0,30 m gegen 2,50 m) trennt beide: bei 0,30 m macht ein 15-mm-Versatz
+5 % aus, bei 2,50 m nur 0,6 %. Zwei unabhängige Auswertungen — der Gesamtausgleich
+und der Hebel allein — lagen danach 0,13 % auseinander.
+
+Dass der Versatz **je Fahrt** anfällt, wurde getrennt belegt: zweimal 0,50 m
+einzeln gefahren ergab zusammen 1,068 m bei 1,021 m gemeldet, dieselbe Strecke
+am Stück nur 1,044 m bei 1,012 m. Vorhergesagt waren 1,072 m für „Versatz je
+Fahrt" gegen 1,053 m für „nur einmal". Die abschließende Verifikationsfahrt über
+2,00 m sagte 2,021 m voraus, gemessen wurden 2,030 m.
+
+**Vermutete Ursache des Versatzes, nicht gemessen:** Beim Anfahren drehen sich
+die Räder, bevor die Ist-Drehzahl-Rückmeldung greift. 15 mm entsprechen bei
+0,10 m/s rund 150 ms; die Anfahrrampe steht auf 800 ms. Abhilfe gehört in
+`base_hardware_node.py` und ist ein eigener Vorgang.
+
+**Warum das früher niemand fand:** Eine Winkelmessung bestimmt nur das
+Verhältnis r/W, nie die Spurweite allein. Radius und Spurweite waren beide rund
+2 % zu klein, aber im fast gleichen Verhältnis — die Drehung stimmte auf 0,4 %,
+die Strecke lag 2,5 % daneben. Nur eine Streckenmessung kann das aufdecken.
+
+**Der LiDAR-Wandvergleich taugt nicht als alleinige Referenz.** Bei der
+Verifikationsfahrt meldete er 2,006 m gegen 2,030 m per Laser — 24 mm daneben,
+bei einer sonstigen Streuung von ±5 mm. Der Roboter endete dort 0,94 m vor der
+Wand, deutlich näher als sonst. Für Kalibrierentscheidungen immer das
+Lasermessgerät heranziehen.
+
+**Betroffen:** `src/base_hardware/config/base_hardware_params.yaml`. Beim Messen
+beide Motoren, acht Fahrten zwischen 0,30 und 2,50 m.
+
+**Teststatus:** Verifikationsfahrt über 2,00 m innerhalb der Ablesegenauigkeit
+getroffen. Kursabweichung über alle Fahrten zwischen −0,51° und +0,28°.
+
+**Offene Risiken:** Der feste Versatz von 15 mm je Fahrt bleibt bestehen und
+wirkt sich bei vielen kurzen Fahrten stärker aus als bei wenigen langen. Die
+wirksame Spurweite liegt 6,5 mm über der abgemessenen — plausibel durch
+Aufstandspunkt und Reifenradieren, aber nicht unabhängig bestätigt.
+
+**Rückfallweg:** `wheel_radius_m: 0.0612` und `wheel_separation_m: 0.3755` in
+`base_hardware_params.yaml`, dann `colcon build --packages-select base_hardware`.
+
+---
+
 ## 2026-08-12 — Winkelfehler war ein Messartefakt; Phase 4a bestanden
 
 **Entscheidung:** Der Winkelfehler der Odometrie wird künftig mit
