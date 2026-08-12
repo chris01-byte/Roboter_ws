@@ -48,6 +48,7 @@ löschen.
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/amadeus_lidar_ws/install/local_setup.bash
 source ~/roboter_ws/install/local_setup.bash
 ```
 
@@ -61,18 +62,33 @@ Muss auf `~/amadeus_slam_toolbox_ws/install/slam_toolbox` zeigen.
 
 ### Abnahmestatus
 
-- [ ] Patch-Preflight (`git apply --unidiff-zero --check`) bestanden
-- [ ] Overlay gebaut und `colcon test-result` ohne unerklärte Fehler
-- [ ] Paketpräfix und gepinnter Humble-Commit kontrolliert
-- [ ] Stillstand: `dry_run=true`, `allow_rs485=false`
-- [ ] Stillstand: neuer Parameter `true`, keine Knotenflut, `/scan` stabil
-- [ ] Synthetischer Yaw-only-Regressionstest ergänzt (**derzeit offen**)
-- [ ] ausdrückliche Fahrfreigabe der anwesenden Person erteilt
-- [ ] Not-Aus in Reichweite, Fläche frei, Beobachter anwesend
-- [ ] 360°: mehr als null neue Posegraph-Knoten, Karte sichtbar ergänzt
+Stand 12.08.2026, abgenommen auf Commit `4fe5ee3`:
+
+- [x] Patch-Preflight (`git apply --unidiff-zero --check`) bestanden
+- [x] Overlay gebaut; `colcon test` liefert allerdings **0 Tests** und ist als
+      Evidenz wertlos (Testblock im Upstream auskommentiert). Ersatz: Blob-Hashes,
+      Release-Build und `strings`-Gegenprobe am Binärpaket
+- [x] Paketpräfix und gepinnter Humble-Commit kontrolliert
+- [x] Stillstand: `dry_run=true`, `allow_rs485=false`
+- [x] Stillstand: neuer Parameter `true`, keine Knotenflut, `/scan` 9,99 Hz
+- [x] Synthetischer Yaw-only-Regressionstest ergänzt:
+      `tools/kartierung/test_reine_drehung_synthetisch.py`, A/B 37 gegen 0
+- [x] ausdrückliche Fahrfreigabe der anwesenden Person erteilt
+- [x] Not-Aus in Reichweite, Fläche frei, Beobachter anwesend
+- [x] 360°: mehr als null neue Posegraph-Knoten (1 → 11), Karte sichtbar ergänzt
+      (freie Fläche 10,8 → 23,2 m²)
+- [ ] **offen und vorrangig:** Wände der Nachher-Karte sind versetzt mehrfach
+      eingetragen (Wand/frei 0,041 → 0,115). Nächster Schritt ist eine Messung,
+      keine Parameteränderung: dieselbe Drehung bei 0,20 statt 0,30 rad/s
+      wiederholen und vergleichen
 - [ ] 40 cm Translation: weiterhin Kartenupdate, keine Doppelwände
 - [ ] langsame geschlossene Runde: keine Odometrie-/TF-/USB-Regression
-- [ ] Testergebnis mit Datum und Commit in `docs/PROJECT_MEMORY.md` ergänzt
+- [x] Testergebnis mit Datum und Commit in `docs/PROJECT_MEMORY.md` ergänzt
+
+**Phase 4 ist nicht freigegeben**, solange die Wandverschmierung nicht
+eingegrenzt ist. Der Backport selbst funktioniert nachweislich; die
+Verschmierung ist ein zweiter, davon unabhängiger Befund, den der Backport erst
+sichtbar gemacht hat.
 
 **Keine Aktoren aktivieren, bevor alle Stillstandsprüfungen oberhalb bestanden
 sind.** Ein KI-Agent darf die Fahrfreigabe nicht selbst annehmen.

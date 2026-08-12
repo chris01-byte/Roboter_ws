@@ -32,9 +32,10 @@ def main():
     dauer = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
     rclpy.init()
     n = Node('slam_knoten_beobachten')
-    stand = {'n': 0}
+    stand = {'n': 0, 'meldungen': 0}
 
     def on_graph(msg):
+        stand['meldungen'] += 1
         # Upstream slam_toolbox erzeugt jeden Posegraph-Knoten als SPHERE im
         # Namespace "slam_toolbox". Zusaetzlich befinden sich ein DELETEALL-
         # Marker und zwei LINE_LIST-Marker fuer Kanten im selben MarkerArray.
@@ -55,10 +56,34 @@ def main():
     letzte_yaw = None
     # Knotenstand einlesen, BEVOR bewegt wird - die ersten Knoten entstehen
     # schon beim Start und duerfen der Bewegung nicht zugerechnet werden.
-    for _ in range(30):
+    #
+    # ACHTUNG, hier lag ein Messfehler: Frueher wurde 30 mal spin_once mit 0.1 s
+    # Frist aufgerufen. spin_once kehrt aber zurueck, sobald IRGENDEIN Callback
+    # lief - und der TransformListener liefert rund 50 TF-Nachrichten je
+    # Sekunde. Die Schleife war deshalb nach Bruchteilen einer Sekunde durch,
+    # waehrend der Graph nur alle map_update_interval (1 s) publiziert wird. Die
+    # Grundlinie wurde so als 0 gelesen und der Initialknoten spaeter der
+    # Bewegung zugerechnet. Deshalb jetzt: auf echte Wanduhrzeit warten UND auf
+    # mindestens eine Graphmeldung bestehen.
+    STABILISIERUNG = 3.0
+    FRIST = 15.0
+    t_warte = time.monotonic()
+    while rclpy.ok():
         rclpy.spin_once(n, timeout_sec=0.1)
+        vergangen = time.monotonic() - t_warte
+        if stand['meldungen'] > 0 and vergangen >= STABILISIERUNG:
+            break
+        if vergangen >= FRIST:
+            break
     knoten_am_anfang = stand['n']
-    print(f'(Knotenstand vor der Bewegung: {knoten_am_anfang})\n', flush=True)
+    if stand['meldungen'] == 0:
+        print(f'WARNUNG: In {FRIST:.0f} s kam keine einzige Meldung auf '
+              f'/slam_toolbox/graph_visualization an.')
+        print('  Laeuft slam_toolbox? Ohne Graphmeldungen ist jede Aussage '
+              'unten wertlos.\n', flush=True)
+    else:
+        print(f'(Knotenstand vor der Bewegung: {knoten_am_anfang}, '
+              f'aus {stand["meldungen"]} Graphmeldungen)\n', flush=True)
     while rclpy.ok() and time.monotonic() - t0 < dauer:
         rclpy.spin_once(n, timeout_sec=0.1)
         try:
@@ -89,18 +114,27 @@ def main():
     print(f'insgesamt gedreht   : {math.degrees(gedreht):.1f} Grad')
     # Entscheidend ist, wie viele Knoten WAEHREND der Bewegung dazukamen -
     # nicht die Gesamtzahl. Die ersten Knoten entstehen schon beim Start.
+    # Reihenfolge der Pruefung ist wichtig: Ohne ausreichende Drehung darf hier
+    # NIE "die Drehung erzeugt Knoten" stehen. Sonst meldet ein reiner
+    # Stillstandslauf einen Erfolg, nur weil der Initialknoten aufgetaucht ist.
     neu = stand['n'] - knoten_am_anfang
-    if gedreht > math.radians(90) and neu == 0:
+    if stand['meldungen'] == 0:
+        print('\nKEINE AUSSAGE MOEGLICH: keine Graphmeldungen empfangen.')
+    elif gedreht < math.radians(90):
+        print(f'\nZU WENIG DREHUNG fuer eine Aussage: '
+              f'{math.degrees(gedreht):.1f} Grad, noetig sind mindestens 90.')
+        if neu > 0:
+            print(f'  Die {neu} neuen Knoten stammen also nicht aus einer '
+                  f'Drehung.')
+    elif neu == 0:
         print('\nBEFUND: Trotz deutlicher Drehung kam KEIN neuer Knoten dazu.')
         print('  Damit traegt slam_toolbox die neu sichtbaren Bereiche nicht ein.')
         print('  Ursache unter ROS 2 Humble: Der Vorfilter prueft nur Translation.')
         print('  Abhilfe: gepinnten Upstream-Backport installieren und')
         print('  check_min_dist_and_heading_precisely=true setzen.')
-    elif neu > 0:
+    else:
         print(f'\nBEFUND: Die Drehung erzeugt Knoten '
               f'({math.degrees(gedreht)/neu:.1f} Grad je neuem Knoten).')
-    else:
-        print('\nZu wenig Bewegung fuer eine Aussage.')
     n.destroy_node()
     rclpy.shutdown()
 

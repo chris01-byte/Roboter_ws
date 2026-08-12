@@ -66,6 +66,71 @@ Das separate Overlay wird dadurch ohne Löschung deaktiviert.
 
 ---
 
+## 2026-08-12 — Backport abgenommen; er legt einen zweiten Fehler frei
+
+**Entscheidung:** Der gepinnte `slam_toolbox`-Backport (Upstream `649a50e`,
+PR #808) wird auf dem Jetson als Overlay `~/amadeus_slam_toolbox_ws`
+betrieben. Phase 1 bis 3 der Abnahme sind bestanden, **Phase 4 bleibt
+gesperrt**, bis die neu sichtbare Wandverschmierung eingegrenzt ist.
+
+**Grund / Evidenz:** Der Kern ist doppelt belegt. Synthetisch, ganz ohne
+Hardware (`tools/kartierung/test_reine_drehung_synthetisch.py`): dieselben
+Eingangsdaten, nur der Schalter umgelegt, ergaben **37 gegen 0** neue Knoten bei
+einer 360°-Drehung — die `false`-Variante reproduziert das Fehlerbild aus #807
+exakt, nicht ungefähr. Am realen Roboter: 1 → 11 Knoten, freie Fläche 10,8 →
+23,2 m². Vorher waren es null.
+
+Dass wirklich der gepatchte Code läuft, ist über das Binärpaket belegt, nicht
+über einen Pfad: `check_min_dist_and_heading_precisely` kommt im Overlay-`.so`
+genau einmal vor, im apt-Paket gar nicht — und der Parameter ist am laufenden
+Knoten abfragbar.
+
+**Der wichtigere Befund ist der zweite:** Die Nachher-Karte zeigt versetzt
+mehrfach eingetragene Wände. Wand/frei stieg von 0,041 auf 0,115 (Richtwerte
+0,091 vor und 0,052 nach der Odometrie-Kalibrierung), dicke Wandzellen von
+0,0 % auf 3,1 %. Solange reine Drehungen verworfen wurden, konnte eine Drehung
+die Karte auch nicht verschmieren — der Backport hat das Problem nicht erzeugt,
+sondern sichtbar gemacht. Zwei Kandidaten, **keiner gemessen bestätigt**:
+fehlendes Deskew (bei 0,30 rad/s dreht der Roboter je 100-ms-Scan um 1,72°) und
+ein Winkelfehler der Odometrie (gemessen −4,98° je Umdrehung gegen die in
+`9e8c06f` dokumentierten 0,50°, bei nur 0,1 cm seitlichem Versatz).
+
+Zwei Prüfungen des Übergabeprotokolls erwiesen sich als untauglich:
+`colcon test` meldet Rückgabewert 0 bei **0 Tests**, weil der Testblock im
+gepinnten Upstream auskommentiert ist. Und `slam_knoten_beobachten.py` las seine
+Grundlinie über 30 `spin_once`-Aufrufe ein — die kehren aber zurück, sobald
+irgendein Callback lief, und der TransformListener liefert ~50 TF/s. Die
+Schleife war nach Sekundenbruchteilen durch, während der Graph nur alle 1 s
+publiziert; der Initialknoten wurde dadurch der Bewegung zugerechnet und ein
+reiner Stillstandslauf meldete „Die Drehung erzeugt Knoten".
+
+**Betroffen:** `docs/SLAM_TOOLBOX_ROTATION_FIX.md`, `docs/ROBOT_TRANSFER.md`,
+`tools/kartierung/slam_knoten_beobachten.py`,
+`tools/kartierung/test_reine_drehung_synthetisch.py`; Overlay
+`~/amadeus_slam_toolbox_ws`; beim Fahrtest beide Motoren.
+
+**Teststatus:** Phase 0–3 bestanden bis auf das Kriterium „keine versetzt
+duplizierten Wände". `/scan` stabil 9,99 Hz, genau ein Publisher für
+`map -> odom`, `slam_toolbox` beendet sauber.
+
+**Offene Risiken:** Wandverschmierung ungeklärt. Die Drehung erzeugte nur 10
+statt der theoretisch möglichen ~42 Knoten, synthetisch waren es 37 — Ursache
+nicht gemessen. Karto verwarf 31 von rund 2100 Scans wegen schwankender
+Strahlenzahl (2146–2174 statt fest 2172); klein, aber unerklärt. Der
+LiDAR-Treiber stirbt beim Herunterfahren mit Exit −6, `base_hardware` mit
+Exit 1 (`rcl_shutdown already called`) — beides auf dem Weg nach unten und
+unabhängig vom Backport.
+
+**Nächster Schritt, bewusst eine Messung und keine Parameteränderung:** dieselbe
+Drehung bei 0,20 rad/s wiederholen und die Kartenkennzahlen vergleichen. Das
+trennt Deskew von Odometrie, ohne eine Hypothese vorwegzunehmen.
+
+**Rückfallweg:** Neue Shell öffnen und das Overlay nicht sourcen; dann gilt
+wieder das unveränderte apt-Paket unter `/opt/ros/humble`. Gegengeprüft. Es
+werden keine Dateien verändert und nichts gelöscht.
+
+---
+
 ## 2026-08-10 — Import in ein privates GitHub-Repository
 
 **Entscheidung:** Der getestete Jetson-Stand wird nach

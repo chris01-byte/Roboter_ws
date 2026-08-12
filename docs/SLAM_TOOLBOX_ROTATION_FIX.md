@@ -108,6 +108,7 @@ beliebiger neuer Branch eingebaut.
 | `src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml` | aktiviert den neuen Schalter ausdrücklich |
 | `tools/kartierung/slam_knoten_beobachten.py` | zählt echte Posegraph-Knoten statt alle Marker |
 | `tools/kartierung/slam_graph_marker.py` und `test_slam_knoten_beobachten.py` | ROS-unabhängiger Regressionstest für die Markerzählung |
+| `tools/kartierung/test_reine_drehung_synthetisch.py` | A/B-Verhaltensbeweis ohne Hardware (Abschnitt 6, Phase 1b) |
 
 Das Ziel des Buildskripts ist standardmäßig
 `~/amadeus_slam_toolbox_ws`. Es verändert **nicht** die apt-Installation unter
@@ -168,12 +169,20 @@ In jedem Terminal gilt anschließend genau diese Source-Reihenfolge:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/amadeus_lidar_ws/install/local_setup.bash
 source ~/roboter_ws/install/local_setup.bash
 ```
 
 Das gepatchte Drittanbieter-Overlay liegt damit über der apt-Version; das
 Amadeus-Workspace wird anschließend mit `local_setup.bash` darübergelegt,
 ohne seine beim Bau gespeicherte Underlay-Kette erneut zu laden.
+
+**Vier Zeilen, nicht drei.** Der gepinnte LDROBOT-Treiber liegt in einem
+eigenen Workspace `~/amadeus_lidar_ws` (siehe `vendor_ldlidar_stl_ros2.repos`)
+und wird bewusst nicht nach `~/roboter_ws` kopiert. Fehlt seine Source-Zeile,
+bricht der Launch mit `package 'ldlidar_stl_ros2' not found` ab, bevor
+irgendetwas geprüft werden kann. Die erste Fassung dieses Dokuments nannte nur
+drei Zeilen; bei der Abnahme am 12.08.2026 kostete das zwei Fehlversuche.
 
 ### 5.3 Herkunft nachweisen
 
@@ -227,11 +236,51 @@ gepinnten Upstream vorhandener, umgebungsabhängiger Testfehler ist noch kein
 Beweis gegen den Patch, darf aber auch nicht stillschweigend ignoriert werden.
 Nicht in einen anderen Quellstand wechseln, um einen Test grün zu bekommen.
 
-Ein vollständig synthetischer LaserScan/TF-Regressionstest ist noch **offen**.
-Ein späterer Agent soll ihn ergänzen: festes `base_link`, danach nur Yaw ändern,
-gültige synthetische Scans liefern und nachweisen, dass nach 0,15 rad ein neuer
-Knoten akzeptiert wird, während Stillstand keine Knotenflut erzeugt. Dieser
-offene Test ist kein Grund, vorzeitig Motoren zu aktivieren.
+**`colcon test` beweist hier nichts** (gemessen 12.08.2026). Es meldet
+Rückgabewert 0 und dabei `0 tests, 0 errors, 0 failures`. Im gepinnten Upstream
+ist der komplette Testblock der `CMakeLists.txt` auskommentiert (Zeilen
+183–188), der einzige vorhandene `test/lifelong_metrics_test.cpp` wird nie
+gebaut. Der Schritt kann strukturell nie etwas prüfen — ein grünes Ergebnis
+darf nicht als Evidenz gewertet werden.
+
+Belastbare Herkunftsevidenz sind stattdessen: der Patch-Vorabtest, die
+Blob-Hash-Prüfung des gepatchten Baums im Buildskript, der erfolgreiche
+Release-Build und die Gegenprobe am Binärpaket:
+
+```bash
+strings ~/amadeus_slam_toolbox_ws/install/slam_toolbox/lib/*.so \
+  | grep -c check_min_dist_and_heading_precisely     # erwartet: 1
+strings /opt/ros/humble/lib/*slam_toolbox* \
+  | grep -c check_min_dist_and_heading_precisely     # erwartet: 0
+```
+
+### Phase 1b: Synthetischer Verhaltensbeweis — ohne jede Hardware
+
+Der früher hier als offen vermerkte LaserScan/TF-Regressionstest ist seit dem
+12.08.2026 vorhanden:
+
+```bash
+python3 tools/kartierung/test_reine_drehung_synthetisch.py
+```
+
+Er fährt denselben synthetischen Datensatz zweimal durch einen echten
+`async_slam_toolbox_node` und legt nur `check_min_dist_and_heading_precisely`
+um. `base_link` bleibt dabei exakt auf (0, 0), es gibt also kein
+Odometrierauschen, das gelegentlich doch einen Knoten durchrutschen lässt —
+deshalb ist die Aussage schärfer als jeder Fahrversuch.
+
+Gemessenes Ergebnis (Laufzeit rund 75 s, kein LiDAR, keine Motoren, kein RS485):
+
+| Schalter | Grundlinie | nach 360° | neu | im Stillstand |
+|---|---|---|---|---|
+| `true` | 1 | 38 | **37** | 0 |
+| `false` | 1 | 1 | **0** | 0 |
+
+Der Test läuft in `ROS_DOMAIN_ID=91`, damit seine synthetische Odometrie nie im
+Graphen eines laufenden Roboters landet, und bricht ab, wenn `slam_toolbox` aus
+`/opt/ros` kommt. Er startet die ausführbare Datei direkt statt über `ros2 run`:
+dieser Wrapper reicht SIGINT nicht an das Kindprogramm weiter, der Knoten bliebe
+beim Aufräumen hängen.
 
 ### Phase 2: Stillstandstest am Roboter – Motoren bleiben unscharf
 
@@ -240,6 +289,7 @@ Terminal 1:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/amadeus_lidar_ws/install/local_setup.bash
 source ~/roboter_ws/install/local_setup.bash
 ros2 launch amadeus_lidar_bringup slam_lidar.launch.py active_drive:=false
 ```
@@ -249,6 +299,7 @@ Terminal 2:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/amadeus_lidar_ws/install/local_setup.bash
 source ~/roboter_ws/install/local_setup.bash
 ros2 pkg prefix slam_toolbox
 ros2 param get /base_hardware dry_run
@@ -292,6 +343,7 @@ Terminal 1 neu starten:
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/amadeus_lidar_ws/install/local_setup.bash
 source ~/roboter_ws/install/local_setup.bash
 ros2 launch amadeus_lidar_bringup slam_lidar.launch.py active_drive:=true
 ```
@@ -345,6 +397,72 @@ Akzeptanzkriterien:
 Richtwert, nicht starre Forderung: Bei `minimum_travel_heading: 0.15` sind über
 360° theoretisch ungefähr 42 winkelgetriggerte Annahmen möglich. Zeitfilter,
 Scanmatching und Initialisierung können die sichtbare Knotenzahl reduzieren.
+
+#### Ergebnis der Abnahmefahrt vom 12.08.2026
+
+Gefahren mit ausdrücklicher Freigabe der anwesenden Person, eine Umdrehung mit
+`odometrie_drehtest.py 1` bei 0,30 rad/s.
+
+| Kriterium | Ergebnis |
+|---|---|
+| mehr als null neue Knoten | **bestanden** — 1 → 11, also 10 neue |
+| PGM-Dateien nicht identisch | **bestanden** — 30,7 KB → 92,6 KB, 317×292 Zellen |
+| verdeckter Mastsektor ergänzt | **bestanden** — freie Fläche 10,8 → 23,2 m² |
+| keine versetzt duplizierten Wände | **NICHT bestanden**, siehe unten |
+| kein TF-, USB- oder Treiberabbruch | bestanden, `slam_toolbox` beendete sauber |
+
+Der Kern des Backports ist damit belegt: Eine reine Drehung erzeugt jetzt
+Kartenknoten, vorher waren es null. **Die Kartenqualität ist es nicht.** Das
+Rendern der Nachher-Karte zeigt mehrfach versetzt eingetragene Wände; die
+Kennzahlen bestätigen das Bild: Wand/frei stieg von 0,041 auf 0,115 (Richtwerte
+aus der Odometrie-Kalibrierung: 0,091 vorher, 0,052 nachher), der Anteil
+„dicker" Wandzellen von 0,0 % auf 3,1 %.
+
+Das ist **kein Argument gegen den Backport**, sondern eine Nebenwirkung seines
+Erfolgs: Solange reine Drehungen verworfen wurden, konnte eine Drehung die Karte
+auch nicht verschmieren. Jetzt trägt sie ein — und legt damit einen zweiten,
+davon unabhängigen Fehler offen.
+
+Zwei Kandidaten, beide bereits in Abschnitt 8 als offen vermerkt, keiner davon
+gemessen bestätigt:
+
+1. **Fehlendes Deskew.** Bei 0,30 rad/s dreht der Roboter während eines
+   100-ms-Scans um 1,72°. `odometrie_drehtest.py` fährt fest mit 0,30 rad/s,
+   obwohl Abschnitt 8 für die Kartierung höchstens 0,20–0,25 rad/s empfiehlt.
+2. **Winkelfehler der Odometrie.** Im selben Lauf meldete die Odometrie
+   360,05°, der LiDAR-Vergleich 355,07° — Restversatz −4,98° je Umdrehung, bei
+   nur 0,1 cm seitlichem Versatz und 0,024 m Vergleichsgüte. Das widerspricht
+   den in Commit `9e8c06f` dokumentierten „etwa 0,50° je voller Umdrehung" um
+   den Faktor zehn.
+
+**Nächste Messung, bevor irgendein Parameter geändert wird:** dieselbe Drehung
+bei 0,20 rad/s wiederholen und die Kartenkennzahlen vergleichen. Trennt das
+Deskew-Problem vom Odometrieproblem, ohne eine Hypothese vorwegzunehmen. Erst
+danach über Phase 4 entscheiden.
+
+Nicht übernommen wurde die automatische Empfehlung des Drehtests
+(`wheel_separation_m: 0.3780 -> 0.3728`) — die Formel ist laut Abschnitt 8
+invers, das Vorzeichen für beide Drehrichtungen ungeprüft, und der im Skript
+fest verdrahtete Ausgangswert `0.378` weicht ohnehin vom tatsächlich gesetzten
+`0.3755` ab.
+
+#### Nebenbefund: schwankende Strahlenzahl je Scan
+
+Karto registriert den Sensor mit einer festen Strahlenzahl und verwirft jeden
+Scan, der davon abweicht:
+
+```text
+LaserRangeScan contains 2171 range readings, expected 2172
+```
+
+Über den gesamten Lauf traf das **31 Scans** bei rund 2100 gelieferten; beobachtet
+wurden 2146 bis 2174 Strahlen. Der Verlust ist also klein und erklärt den
+Knotenrückstand **nicht** — er ist der Vollständigkeit halber notiert, nicht als
+Ursache.
+
+Offen bleibt, warum die Drehung nur 10 statt der theoretisch möglichen rund 42
+Knoten erzeugte, während derselbe Vorgang synthetisch 37 ergab. Das ist noch
+nicht gemessen und wird hier bewusst nicht erklärt.
 
 ### Phase 4: Translation und längere Runde – gesonderte Freigabe
 
