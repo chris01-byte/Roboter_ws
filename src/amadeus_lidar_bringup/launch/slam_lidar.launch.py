@@ -69,6 +69,12 @@ def generate_launch_description():
             'active_drive', default_value='false',
             description='true = base_hardware SCHARF. Nur dann liefert es die '
                         'gemessene Odometrie, die slam_toolbox braucht.'),
+        DeclareLaunchArgument(
+            'crop', default_value='true',
+            description='Winkelmaskierung des Mastsektors. Zur Fehlersuche auf false: '
+                        'Der Treiber setzt maskierte Strahlen auf 0, und wenn ein '
+                        'Verbraucher range_min als 0 ansieht, gelten sie als gueltige '
+                        'Messung "Hindernis in 0 m" statt als ungueltig.'),
 
         LogInfo(condition=IfCondition(active_drive),
                 msg='ACHTUNG: Motoren werden bestromt. Not-Aus bereithalten.'),
@@ -76,7 +82,8 @@ def generate_launch_description():
         # --- LiDAR mit vermessener Montagepose ---
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(lidar_launch),
-            launch_arguments={'publish_static_tf': 'true', 'crop': 'true'}.items()),
+            launch_arguments={'publish_static_tf': 'true',
+                              'crop': LaunchConfiguration('crop')}.items()),
 
         # --- Basis: /odom + TF odom->base_link ---
         Node(package='base_hardware', executable='base_hardware',
