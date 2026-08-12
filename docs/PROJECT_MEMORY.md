@@ -66,6 +66,75 @@ Das separate Overlay wird dadurch ohne Löschung deaktiviert.
 
 ---
 
+## 2026-08-12 — Duplizierte Wände: Karto verwarf drei Viertel aller Scans
+
+**Entscheidung:** Zwischen Treiber und `slam_toolbox` läuft ab sofort der Knoten
+`amadeus_lidar_bringup/scan_vereinheitlichen`. Er setzt jeden Scan auf ein
+festes Winkelgitter (2160 Strahlen) um und veröffentlicht ihn als
+`/scan_normiert`. Der Launch-Schalter `normalize_scan` steht auf `true`.
+
+**Grund / Evidenz:** Die versetzt duplizierten Wände kamen weder vom fehlenden
+Deskew noch vom Odometrie-Winkelfehler — beide Vermutungen waren falsch. Karto
+merkt sich die Strahlenzahl des **ersten** verarbeiteten Scans und bricht bei
+jedem abweichenden Scan sofort ab: `LaserRangeFinder::Validate` gibt false
+zurück, `Mapper::Process` kehrt daraufhin ohne Knoten und ohne Kartenbeitrag
+zurück (`lib/karto_sdk/src/Karto.cpp` Zeile 213 ff., `Mapper.cpp` Zeile 2722).
+Die Meldung geht auf **stdout**, nicht ins ROS-Log — deshalb war sie so lange
+unsichtbar.
+
+Der STL-27L liefert keine feste Strahlenzahl: über 424 Scans am stehenden
+Roboter **19 verschiedene Werte zwischen 2145 und 2176**, der häufigste deckt
+nur 25,7 % ab. Die Winkel sind dabei korrekt, der Treiber zieht
+`angle_increment` mit, sodass `(N-1)·increment` immer 360° ergibt.
+
+Die Rechnung geht auf: etwa 42 winkelgetriggerte Annahmen je Umdrehung mal
+25,7 % sind knapp 11 — gemessen wurden 10.
+
+A/B am realen Roboter, identischer Ablauf, nur der Schalter umgelegt:
+
+| | verworfene Scans | neue Knoten | Wand/frei | Nebenachse (real 3,80 m) |
+|---|---|---|---|---|
+| ohne | 31 | 10 | 0,125 | 5,39 m |
+| mit | 0 | 41 | 0,098 | 3,83 m |
+
+**Kennzahlenfalle, die fast zur falschen Entscheidung geführt hätte:** „dicke
+Wände" stieg von 3,2 % auf 24,0 % — bei der *besseren* Karte. Die Kennzahl misst
+Erosionsüberleben und belohnt dünne Linien. Konsistent aus 41 Richtungen
+eingetragene Wände sind bei 3-cm-Zellen zwei bis drei Zellen dick; verschmierte
+Karten bestehen aus dünnen Fragmenten an vielen Versätzen und schneiden
+scheinbar besser ab. Erst das Rendern entschied.
+
+Zwei weitere Korrekturen: Die Mastmaske funktioniert — der Treiber maskiert mit
+**NaN**, nicht mit 0 wie in `stl27l.yaml` behauptet. Eine Prüfung auf `== 0.0`
+findet sie nicht; genau das führte kurzzeitig zu der falschen Vermutung, der
+Mast sei unmaskiert. Und `amadeus_lidar_bringup` brauchte eine `setup.cfg`, die
+console_scripts nach `lib/<paket>` umleitet, sonst findet launch sie nicht.
+
+**Betroffen:** `src/amadeus_lidar_bringup/` (neuer Knoten, `scan_gitter.py`,
+Test, `setup.cfg`, `setup.py`, Launch, `stl27l.yaml`), Dokumentation. Beim
+Fahrtest beide Motoren.
+
+**Teststatus:** Zwei saubere Durchläufe mit Vorbedingungsprüfung und
+verifiziertem Abschalten. Ohne Normalisierer exakt reproduziert (31 Verwürfe,
+10 Knoten), mit Normalisierer 0 und 41. Sechs Unittests der Winkelabbildung.
+
+**Offene Risiken:** Der Odometrie-Winkelfehler von −6,3° bis −6,5° je Umdrehung
+bleibt ungeklärt und widerspricht den 0,50° aus `9e8c06f`. Ein Deskew fehlt
+weiterhin. Beide sind vom Normalisierer unabhängig.
+
+**Betriebsfalle, die real Schaden anrichten kann:** `kill -INT` auf die
+`ros2 launch`-PID beendet nur den Elternprozess; die Knoten können weiterlaufen.
+Dadurch liefen zeitweise **zwei vollständige Stapel gleichzeitig**, mit zwei
+`map->odom`-Publishern und zwei scharfen `base_hardware`-Knoten auf demselben
+RS485-Bus. Die betroffene Messung war unbrauchbar und wurde verworfen. Nach dem
+Beenden immer die Knotenprozesse nachzählen, die eigene PID ausnehmen.
+
+**Rückfallweg:** `normalize_scan:=false` startet wieder ohne den Knoten; der
+Treiberpfad bleibt unverändert. Die Karte ist dann wieder verschmiert, der
+Roboter aber fahrbereit.
+
+---
+
 ## 2026-08-12 — Backport abgenommen; er legt einen zweiten Fehler frei
 
 **Entscheidung:** Der gepinnte `slam_toolbox`-Backport (Upstream `649a50e`,

@@ -77,18 +77,36 @@ Stand 12.08.2026, abgenommen auf Commit `4fe5ee3`:
 - [x] Not-Aus in Reichweite, Fläche frei, Beobachter anwesend
 - [x] 360°: mehr als null neue Posegraph-Knoten (1 → 11), Karte sichtbar ergänzt
       (freie Fläche 10,8 → 23,2 m²)
-- [ ] **offen und vorrangig:** Wände der Nachher-Karte sind versetzt mehrfach
-      eingetragen (Wand/frei 0,041 → 0,115). Nächster Schritt ist eine Messung,
-      keine Parameteränderung: dieselbe Drehung bei 0,20 statt 0,30 rad/s
-      wiederholen und vergleichen
+- [x] **versetzt duplizierte Wände: Ursache gefunden und behoben.** Karto
+      verwarf jeden Scan mit abweichender Strahlenzahl; der STL-27L schwankt
+      über 19 Werte (2145–2176). Abhilfe ist der neue Knoten
+      `scan_vereinheitlichen`. A/B bei identischem Ablauf: 31 → 0 verworfene
+      Scans, 10 → 41 Knoten, Nebenachse 5,39 → 3,83 m bei real 3,80 m
 - [ ] 40 cm Translation: weiterhin Kartenupdate, keine Doppelwände
 - [ ] langsame geschlossene Runde: keine Odometrie-/TF-/USB-Regression
 - [x] Testergebnis mit Datum und Commit in `docs/PROJECT_MEMORY.md` ergänzt
 
-**Phase 4 ist nicht freigegeben**, solange die Wandverschmierung nicht
-eingegrenzt ist. Der Backport selbst funktioniert nachweislich; die
-Verschmierung ist ein zweiter, davon unabhängiger Befund, den der Backport erst
-sichtbar gemacht hat.
+**Phase 4 kann jetzt gefahren werden**, mit `normalize_scan:=true` (Standard).
+
+### Zwei Dinge, die beim Fahren beachtet werden müssen
+
+**Vor jedem Versuch prüfen, dass nichts mehr läuft.** `kill -INT` auf die
+`ros2 launch`-PID beendet den Elternprozess, die Knoten können weiterlaufen. Am
+12.08.2026 liefen dadurch zeitweise **zwei vollständige Stapel gleichzeitig** —
+zwei `map->odom`-Publisher und zwei scharfe `base_hardware`-Knoten auf demselben
+RS485-Bus. Die betroffene Messung war Unsinn und wurde verworfen. Nach dem
+Beenden immer nachsehen, die eigene PID dabei ausnehmen:
+
+```bash
+MY=$$
+ps -eo pid=,cmd= | grep -E '[l]dlidar|[a]sync_slam_toolbox|[b]ase_hardware|[s]can_vereinheitlichen' \
+  | awk -v my="$MY" '$1 != my'
+```
+
+**Der Odometrie-Winkelfehler ist weiterhin offen.** Gemessen −6,3° bis −6,5° je
+Umdrehung über mehrere Läufe, reproduzierbar und unabhängig vom Normalisierer.
+Das widerspricht den in `9e8c06f` dokumentierten 0,50°. Getrennt untersuchen,
+CW und CCW einzeln, und die Korrekturformel des Drehtests vorher reparieren.
 
 **Keine Aktoren aktivieren, bevor alle Stillstandsprüfungen oberhalb bestanden
 sind.** Ein KI-Agent darf die Fahrfreigabe nicht selbst annehmen.

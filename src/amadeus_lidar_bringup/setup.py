@@ -23,5 +23,8 @@ setup(
     description='Amadeus-Start des 2D-LiDARs STL-27L (Herstellertreiber bleibt unveraendert)',
     license='MIT',
     tests_require=['pytest'],
-    entry_points={'console_scripts': []},
+    entry_points={'console_scripts': [
+        'scan_vereinheitlichen ='
+        ' amadeus_lidar_bringup.scan_vereinheitlichen:main',
+    ]},
 )

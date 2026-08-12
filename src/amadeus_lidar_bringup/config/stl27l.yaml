@@ -38,12 +38,20 @@ amadeus_stl27l:
     angle_crop_max: 304.0
     # -> 68 Grad verdeckt, 292 Grad nutzbares Sichtfeld.
     #
-    # ACHTUNG zur Semantik: Der Treiber setzt Distanz und Intensitaet im
-    # Crop-Bereich auf 0. Da 0 unter range_min liegt, MUESSEN Verbraucher
-    # das als ungueltig verwerfen. Am tatsaechlich eingesetzten SLAM- und
-    # Nav2-Stack pruefen: Der maskierte Sektor darf NIEMALS als freie
-    # Flaeche interpretiert werden - er ist UNBEKANNTER Raum. Der Roboter hat
-    # dort keinerlei Wahrnehmung.
+    # ACHTUNG zur Semantik: NACHGEMESSEN 12.08.2026 - dieser Treiberstand setzt
+    # den Crop-Bereich auf NaN, nicht auf 0 wie hier frueher behauptet. Von 410
+    # Strahlen im Sektor waren 409 NaN. Das ist die sicherere Variante: NaN ist
+    # eindeutig ungueltig, waehrend eine 0 von einem nachlaessigen Verbraucher
+    # als Messung gelesen werden koennte. Wer auf "== 0.0" prueft, findet die
+    # Maskierung allerdings NICHT - genau das ist hier einmal passiert.
+    # Unveraendert gilt: Der maskierte Sektor darf NIEMALS als freie Flaeche
+    # interpretiert werden - er ist UNBEKANNTER Raum. Der Roboter hat dort
+    # keinerlei Wahrnehmung.
+    #
+    # ZUR STRAHLENZAHL: Der Treiber liefert je Umdrehung unterschiedlich viele
+    # Strahlen (gemessen 2145..2176, 19 verschiedene Werte). Karto verwirft
+    # jeden Scan, dessen Zahl von der des ersten abweicht. Deshalb laeuft
+    # scan_vereinheitlichen dazwischen; siehe docs/SLAM_TOOLBOX_ROTATION_FIX.md.
 
 # =====================================================================
 #  Montagepose base_link -> laser_frame   GEMESSEN 11.08.2026

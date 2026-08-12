@@ -408,8 +408,12 @@ Gefahren mit ausdrücklicher Freigabe der anwesenden Person, eine Umdrehung mit
 | mehr als null neue Knoten | **bestanden** — 1 → 11, also 10 neue |
 | PGM-Dateien nicht identisch | **bestanden** — 30,7 KB → 92,6 KB, 317×292 Zellen |
 | verdeckter Mastsektor ergänzt | **bestanden** — freie Fläche 10,8 → 23,2 m² |
-| keine versetzt duplizierten Wände | **NICHT bestanden**, siehe unten |
+| keine versetzt duplizierten Wände | zunächst **nicht bestanden**; Ursache gefunden und behoben, siehe unten |
 | kein TF-, USB- oder Treiberabbruch | bestanden, `slam_toolbox` beendete sauber |
+
+Der erste Durchgang lief noch ohne `scan_vereinheitlichen`. Mit dem
+Normalisierer wurde die Abnahme wiederholt und ergab 41 statt 10 Knoten sowie
+eine sauber geschlossene Wandkontur.
 
 Der Kern des Backports ist damit belegt: Eine reine Drehung erzeugt jetzt
 Kartenknoten, vorher waren es null. **Die Kartenqualität ist es nicht.** Das
@@ -446,23 +450,78 @@ invers, das Vorzeichen für beide Drehrichtungen ungeprüft, und der im Skript
 fest verdrahtete Ausgangswert `0.378` weicht ohnehin vom tatsächlich gesetzten
 `0.3755` ab.
 
-#### Nebenbefund: schwankende Strahlenzahl je Scan
+#### Ursache der Wandverschmierung: Kartos Strahlenzahl-Prüfung
 
-Karto registriert den Sensor mit einer festen Strahlenzahl und verwirft jeden
-Scan, der davon abweicht:
+**Gefunden und behoben am 12.08.2026.** Die oben vermuteten Kandidaten Deskew
+und Odometrie waren es beide nicht.
 
-```text
-LaserRangeScan contains 2171 range readings, expected 2172
+Karto merkt sich die Strahlenzahl des **ersten** verarbeiteten Scans und lehnt
+danach jeden abweichenden Scan ab. Das ist keine Warnung, sondern ein Abbruch —
+nachgelesen im gepinnten Quellstand:
+
+```cpp
+// lib/karto_sdk/src/Karto.cpp, LaserRangeFinder::Validate
+if (pLaserRangeScan->GetNumberOfRangeReadings() != GetNumberOfRangeReadings()) {
+  std::cout << "LaserRangeScan contains " << ... << std::endl;
+  return false;
+}
+
+// lib/karto_sdk/src/Mapper.cpp:2722, Mapper::Process
+if (pLaserRangeFinder == NULL || pScan == NULL ||
+    pLaserRangeFinder->Validate(pScan) == false) {
+  return false;      // kein Knoten, kein Kartenbeitrag
+}
 ```
 
-Über den gesamten Lauf traf das **31 Scans** bei rund 2100 gelieferten; beobachtet
-wurden 2146 bis 2174 Strahlen. Der Verlust ist also klein und erklärt den
-Knotenrückstand **nicht** — er ist der Vollständigkeit halber notiert, nicht als
-Ursache.
+Die Meldung geht auf **stdout**, nicht ins ROS-Log. Sie taucht in keinem
+`ros2 topic`-Werkzeug auf und ist im Launch-Getöse leicht zu übersehen.
 
-Offen bleibt, warum die Drehung nur 10 statt der theoretisch möglichen rund 42
-Knoten erzeugte, während derselbe Vorgang synthetisch 37 ergab. Das ist noch
-nicht gemessen und wird hier bewusst nicht erklärt.
+Der STL-27L liefert keine feste Strahlenzahl. Gemessen über 424 Scans am
+stehenden Roboter: **19 verschiedene Werte zwischen 2145 und 2176**, die
+häufigste (2172) deckt nur **25,7 %** ab. Der Treiber ist dabei in sich
+stimmig — er zieht `angle_increment` mit, sodass `(N-1)·increment` immer genau
+360° ergibt. Die Winkel stimmen also; nur die Anzahl schwankt.
+
+Damit erreichte rund ein Viertel der Scans die Karte. Die Rechnung geht auf:
+theoretisch etwa 42 winkelgetriggerte Annahmen je Umdrehung, davon 25,7 % sind
+knapp 11 — gemessen wurden 10.
+
+**Abhilfe:** `amadeus_lidar_bringup/scan_vereinheitlichen` setzt jeden Scan auf
+ein festes Winkelgitter um (Standard 2160 Strahlen) und veröffentlicht ihn als
+`/scan_normiert`; `slam_toolbox` hört darauf. Bewusst **nächster Nachbar statt
+Interpolation**: zwischen zwei Strahlen kann eine Tiefenkante liegen, ein
+interpolierter Wert erfände dort eine Fläche. Der Winkelfehler bleibt unter
+einem halben Eingabeinkrement, also unter rund 0,083° — feiner als die
+Sensorauflösung von 0,167°. Der Herstellertreiber bleibt unberührt; er bietet
+für die Punktzahl ohnehin keinen Parameter.
+
+Der Launch-Schalter `normalize_scan` (Standard `true`) erlaubt die Gegenprobe.
+
+#### A/B-Messung vom 12.08.2026 — identischer Ablauf, nur der Schalter
+
+| | verworfene Scans | neue Knoten | Wand/frei | Nebenachse |
+|---|---|---|---|---|
+| `normalize_scan:=false` | 31 | 10 | 0,125 | 5,39 m |
+| `normalize_scan:=true` | **0** | **41** | **0,098** | **3,83 m** |
+
+Der reale Raum misst 3,80 × 4,90 m. Die Nebenachse trifft mit Normalisierer auf
+3 cm genau; ohne ihn liegt sie 1,6 m daneben. Die gerenderten Karten zeigen den
+Unterschied unmissverständlich: ohne Normalisierer Wandfragmente quer durch den
+Raum und mehrfach versetzte Konturen, mit Normalisierer eine geschlossene
+Wandlinie. 41 von theoretisch 42 möglichen Knoten.
+
+Der Odometrie-Restversatz blieb dabei unverändert (−6,50° gegen −6,30°) und ist
+damit als Ursache der Verschmierung ausgeschlossen. Er bleibt ein eigener,
+offener Punkt.
+
+**Achtung, Kennzahlenfalle:** „dicke Wände" stieg von 3,2 % auf 24,0 % — und
+zwar bei der *besseren* Karte. Die Kennzahl misst, wie viel Wandmasse eine
+Erosion überlebt, und belohnt damit dünne Linien. Eine Wand, die aus 41
+Blickrichtungen konsistent an derselben Stelle landet, ist bei 3-cm-Zellen
+zwei bis drei Zellen dick und überlebt; verschmierte Karten bestehen dagegen aus
+dünnen Fragmenten an vielen Versätzen und schneiden scheinbar besser ab. Wer
+hier nur auf die Zahl sieht, verwirft die richtige Lösung. Rendern und
+hinsehen.
 
 ### Phase 4: Translation und längere Runde – gesonderte Freigabe
 

@@ -70,11 +70,27 @@ def generate_launch_description():
     allow_rs485 = ParameterValue(
         PythonExpression(["'", active_drive, "' == 'true'"]), value_type=bool)
 
+    # Karto verwirft jeden Scan, dessen Strahlenzahl von der des ersten
+    # verarbeiteten Scans abweicht. Der STL-27L schwankt zwischen 2146 und
+    # 2176 Strahlen, deshalb laeuft normalerweise der Vereinheitlicher davor.
+    normalize_scan = LaunchConfiguration('normalize_scan')
+    scan_topic = ParameterValue(
+        PythonExpression(
+            ["'/scan_normiert' if '", normalize_scan, "' == 'true' "
+             "else '/scan'"]),
+        value_type=str)
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true = base_hardware SCHARF. Nur dann liefert es die '
                         'gemessene Odometrie, die slam_toolbox braucht.'),
+        DeclareLaunchArgument(
+            'normalize_scan', default_value='true',
+            description='true = /scan wird auf eine feste Strahlenzahl '
+                        'umgesetzt und slam_toolbox hoert auf /scan_normiert. '
+                        'Auf false nur zum Gegenmessen: dann verwirft Karto '
+                        'rund drei Viertel aller Scans.'),
         DeclareLaunchArgument(
             'crop', default_value='true',
             description='Winkelmaskierung des Mastsektors. Zur Fehlersuche auf false: '
@@ -100,11 +116,25 @@ def generate_launch_description():
                  'allow_rs485': allow_rs485,
              }]),
 
+        # --- Scans auf feste Strahlenzahl bringen ---
+        # GEMESSEN 12.08.2026: Der STL-27L liefert 19 verschiedene
+        # Strahlenzahlen (2146..2176); die haeufigste deckt nur 25.7 % ab.
+        # Karto merkt sich die Zahl des ersten Scans und verwirft alle
+        # abweichenden lautlos auf stdout. Ohne diesen Knoten kommt nur rund
+        # ein Viertel der Scans in der Karte an.
+        Node(package='amadeus_lidar_bringup',
+             executable='scan_vereinheitlichen',
+             name='scan_vereinheitlichen', output='screen',
+             condition=IfCondition(normalize_scan),
+             parameters=[{'eingang': '/scan',
+                          'ausgang': '/scan_normiert',
+                          'strahlen': 2160}]),
+
         # --- slam_toolbox: einziger Besitzer von /map und map->odom ---
         # ROS 2 Humble braucht den gepinnten Backport aus
         # docs/SLAM_TOOLBOX_ROTATION_FIX.md. Vor dem Launch dessen Overlay
         # sourcen; sonst werden reine Drehungen weiterhin vor Karto verworfen.
         Node(package='slam_toolbox', executable='async_slam_toolbox_node',
              name='slam_toolbox', output='screen',
-             parameters=[slam_params]),
+             parameters=[slam_params, {'scan_topic': scan_topic}]),
     ])
