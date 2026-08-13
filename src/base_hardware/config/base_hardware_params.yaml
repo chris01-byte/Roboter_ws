@@ -181,7 +181,34 @@ base_hardware:
     # hohe Aufbau um die Hochachse weniger steif ist als in Fahrtrichtung.
     # Verstaerkt wird das dadurch, dass das Steuerkreuz digital ist: Druecken
     # heisst sofort voller Ausschlag, es gibt kein sanftes Andosieren.
-    accel_ms: 2500              # [TUNE] hoeher = sanfter anfahren
+    # ================== GEMESSEN 13.08.2026 - BITTE LESEN ==================
+    # Der Antrieb LEHNT 2500 AB. Ein Schreibversuch beantwortet er mit
+    # ExceptionResponse(function_code=134, exception_code=7), also negative
+    # acknowledge. Abgetastet wurde die Grenze am realen Motorpaar:
+    #   0x001E akzeptiert bis 2000, lehnt 2500 und 5000 ab
+    #   0x001F akzeptiert bis 2000, lehnt 2500 und 5000 ab
+    #
+    # Die Anfahrrampe war damit NIE wirksam konfiguriert. Ausgelesen standen in
+    # 0x001E auf beiden Motoren 100 - weder die frueher eingetragenen 800 noch
+    # die 2500. 0x001F (400) und 0x0020 (5) dagegen stimmten mit dieser Datei
+    # ueberein, Schreibzugriffe funktionieren also grundsaetzlich.
+    #
+    # Aufgefallen ist das erst, weil der Encoder-Branch die Rueckgabewerte der
+    # Schreibvorgaenge PRUEFT. Der vorherige Code rief _write_register dreimal
+    # ohne jede Auswertung auf und verschluckte den Fehlschlag. Das erklaert
+    # rueckwirkend den Eintrag vom 28.07.2026, die Solldrehzahl sei "nach ~110 ms
+    # zu 90 % erreicht, trotz 800-ms-Rampe" - die Rampe stand nie auf 800.
+    #
+    # WARUM HIER JETZT 100 STEHT: Das ist exakt der Wert, den die Hardware
+    # ohnehin faehrt. Damit gelingt der Schreibvorgang, der Knoten startet, und
+    # das Fahrverhalten aendert sich um kein Jota. Eine wirklich weichere Rampe
+    # waere mit bis zu 2000 moeglich und entspraeche der urspruenglichen Absicht
+    # von 2500 - das ist aber eine echte Verhaltensaenderung am Antrieb und
+    # gehoert nach AGENTS.md 7 in einen eigenen, getrennt getesteten Schritt.
+    # Zur Groessenordnung: Die Rampenzeit gilt fuer 3000 rpm. Bei den 153 rpm
+    # einer 0.10-m/s-Fahrt sind 100 rund 5 ms, 2000 waeren rund 102 ms.
+    # =======================================================================
+    accel_ms: 100               # [GEMESSEN] Hardwaregrenze 2000; 2500 wird abgelehnt
     # Bremsen MUSS deutlich haerter sein als Beschleunigen. Mit 800 ms lief der
     # Roboter nach dem Loslassen des Sticks sichtbar nach - das ist gefaehrlich,
     # weil der Bremsweg dann laenger ist als der Sensorhorizont der VL53.
@@ -218,11 +245,32 @@ base_hardware:
     encoder_segment_register: 0x0011
     encoder_word_order_register: 0x0019
     encoder_resolution_register: 0x0101
-    encoder_counts_per_motor_revolution: 0.0  # [HARDWARE-ABNAHME] nicht raten
-    # Nach H2 mit den beiden read-only ausgelesenen Werten verriegeln.
-    # 0 ist nur Inbetriebnahme; Produktionsfahrt erst mit Werten > 0.
-    encoder_expected_segment: 0
-    encoder_expected_resolution: 0
+    # H2 GEMESSEN 13.08.2026 am realen Motorpaar, aufgebockt, Raeder frei.
+    # Verfahren: Encoderstand strikt lesend vor und nach einem befristeten
+    # Motorlauf erfasst (das Lesewerkzeug und base_hardware liefen NIE
+    # gleichzeitig - zwei Modbus-Master sind verboten). Bodenreferenz war eine
+    # Markierung am Rad, vom Nutzer in BEIDEN Richtungen mit genau 5
+    # Radumdrehungen bestaetigt.
+    #
+    #   Lauf                 M1 Delta   M2 Delta   Counts/Motorumdrehung
+    #   vorwaerts  65.3 s     +50040     -50045    1000.8 / 1000.9
+    #   rueckwaerts 65.3 s    -50009     +50017    1000.2 / 1000.3
+    #
+    # Richtungsunterschied 0.062 % (M1) und 0.056 % (M2); Vorzeichen kehren sich
+    # sauber um. Ein dritter Lauf ueber 65.0 s ergab konsistent +49804/-49810.
+    # Gegenrechnung ueber die kommandierte Motordrehzahl (46 rpm) ergab 999.4
+    # bis 999.5 - ein voellig anderer Weg, dasselbe Ergebnis.
+    #
+    # Alle vier Messwerte liegen innerhalb 0.1 % um 1000. Das deckt sich mit
+    # 0x0011=1000, war aber NICHT von dort uebernommen - die Uebergabe verbietet
+    # das ausdruecklich, und der Wert ist unabhaengig gemessen.
+    encoder_counts_per_motor_revolution: 1000.0   # [H2 GEMESSEN 13.08.2026]
+    # Beidseitig read-only bestaetigt und ueber alle Messlaeufe unveraendert
+    # (Vorher-/Nachher-Vergleich): 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
+    # auf Motor 1 UND Motor 2. Damit ist die Verriegelung scharf: Weicht ein
+    # Antrieb spaeter davon ab, sperrt der Knoten den Encoderpfad.
+    encoder_expected_segment: 1000
+    encoder_expected_resolution: 4000
     encoder_feedback_period_s: 0.05           # 20 Hz; 50 Hz Buslast wurde bewiesen
     encoder_stale_timeout_s: 0.30
     encoder_max_recovery_gap_s: 2.0

@@ -17,6 +17,81 @@ Rückfallweg:
 
 ---
 
+## 2026-08-13 — H2 und H3 bestanden; Encoderpfad ist scharf
+
+**Entscheidung:** `encoder_counts_per_motor_revolution: 1000.0`,
+`encoder_expected_segment: 1000`, `encoder_expected_resolution: 4000`. Der
+Encoderpfad ist damit entriegelt und läuft. Zusätzlich `accel_ms: 2500 -> 100`,
+weil der Antrieb 2500 zurückweist (siehe unten).
+
+**H2, gemessen am aufgebockten Roboter mit freien Rädern.** Verfahren ohne
+Abweichung von der Übergabe: Encoderstand strikt lesend vor und nach einem
+befristeten Motorlauf; Lesewerkzeug und `base_hardware` liefen **nie**
+gleichzeitig. Bodenreferenz war eine Radmarkierung, vom Nutzer in **beiden**
+Richtungen mit genau 5 Radumdrehungen bestätigt.
+
+| Lauf | M1 | M2 | Counts/Motorumdrehung |
+|---|---|---|---|
+| vorwärts 65,3 s | +50040 | −50045 | 1000,8 / 1000,9 |
+| rückwärts 65,3 s | −50009 | +50017 | 1000,2 / 1000,3 |
+
+Richtungsunterschied 0,062 % (M1) und 0,056 % (M2). Ein dritter Lauf über
+65,0 s ergab konsistent +49804/−49810. Die Gegenrechnung über die kommandierte
+Motordrehzahl (46 rpm) ergab 999,4 bis 999,5 — ein völlig anderer Weg, dasselbe
+Ergebnis. Der Wert deckt sich mit `0x0011`, wurde aber **nicht** von dort
+übernommen.
+
+**H3, aufgebockt:** `/odom` +0,2442 m bei 8 s × 0,03 m/s (erwartet 0,240) und
+dabei nur 0,01° Gierwinkel; rückwärts symmetrisch 0,2443 m; Drehung auf der
+Stelle 93,33° bei **0,0001 m** Translation (erwartet 91,7°). Null Fehler, null
+verworfene Updates, `/odom` mit 16,7 Hz, Watchdog greift. Vorzeichen und
+Montageinvertierung stimmen.
+
+**BEFUND MIT EIGENSTÄNDIGEM GEWICHT — die Anfahrrampe war nie wirksam.** Der
+neue Branch verweigerte zunächst jede Fahrt: `Anfahrparameter Motor 1, Reg
+0x001E nicht bestaetigt`, danach Dauerreconnect ohne einen einzigen Fahrbefehl.
+Ursache: Der Antrieb weist `2500` mit
+`ExceptionResponse(function_code=134, exception_code=7)` zurück. Abgetastet
+liegt die Obergrenze beider Rampenregister bei **2000**.
+
+Ausgelesen standen in `0x001E` auf beiden Motoren **100** — weder die früher
+eingetragenen 800 noch die 2500. `0x001F` (400) und `0x0020` (5) stimmten
+dagegen. Schreibzugriffe funktionieren also, nur dieser Wert wurde nie
+angenommen.
+
+Sichtbar wurde das erst, weil der Encoder-Branch die **Rückgabewerte** der
+Schreibvorgänge prüft. Der vorherige Code rief `_write_register` dreimal ohne
+jede Auswertung auf. Das erklärt rückwirkend den Eintrag vom 28.07.2026, die
+Solldrehzahl sei „nach ~110 ms zu 90 % erreicht, trotz 800-ms-Rampe" — die
+Rampe stand nie auf 800.
+
+Eingetragen sind jetzt 100, also exakt der Wert, den die Hardware ohnehin fährt:
+Der Schreibvorgang gelingt, der Knoten startet, das Fahrverhalten ändert sich
+nicht. Eine wirklich weichere Rampe wäre mit bis zu 2000 möglich und entspräche
+der ursprünglichen Absicht — das ist aber eine echte Verhaltensänderung am
+Antrieb und gehört nach AGENTS.md 7 in einen eigenen Schritt.
+
+**Betroffene Dateien und Hardware:** `base_hardware_params.yaml`,
+`test_base_hardware_node_contract.py`; ESS23-RS IDs 1/2. Beim Messen drei
+Motorläufe zu je 65 s und drei zu je 8 s, Roboter aufgebockt, Räder frei.
+
+**Teststatus:** 59 base_hardware-Tests und 12 Werkzeugtests grün. Der Test
+`test_unknown_counts_fail_closed` prüfte wörtlich die Inbetriebnahme-Nullen;
+er nagelt jetzt das H2-Ergebnis fest. Die fail-closed-Logik im Node blieb
+unverändert — wer wieder 0 einträgt, verriegelt den Pfad erneut.
+
+**Offene Risiken:** Einzelne Räder ließen sich nicht getrennt ansteuern, weil
+`cmd_vel` immer beide bedient; H3 deckt diesen Punkt daher nur gemeinsam ab.
+Fehler- und Wiederanlaufpfade (H5) wurden nicht provoziert. H4, also die
+Bodenfahrt mit A/B gegen die alten 51,9 mm, steht aus. Ob der Encoder
+Handschieben erfasst, ist weiterhin unbeantwortet — die Antriebe halten die
+Welle auch ohne jeden Master am Bus, ein Handversuch ist damit ausgeschlossen.
+
+**Rückfallweg:** `odometry_source: speed`, oder die drei Encoderwerte wieder
+auf 0. `accel_ms` zurück auf 2500 würde den Startfehler erneut auslösen.
+
+---
+
 ## 2026-08-13 — Encoder-Fix auf dem Jetson geprüft: Offline-Tests und H1 bestanden
 
 **Entscheidung:** Der Branch `fix/encoder-position-odometry` (`9f7d339`) ist auf

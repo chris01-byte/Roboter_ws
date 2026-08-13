@@ -606,9 +606,17 @@ class NodeSafetyContractTests(unittest.TestCase):
         self.assertIn('Zuerst encoder_position_pruefen.py read-only ausfuehren', source)
         config = CONFIG_PATH.read_text(encoding='utf-8')
         self.assertIn('odometry_source: "encoder_position"', config)
-        self.assertIn('encoder_counts_per_motor_revolution: 0.0', config)
-        self.assertIn('encoder_expected_segment: 0', config)
-        self.assertIn('encoder_expected_resolution: 0', config)
+        # Bis zum 13.08.2026 standen hier die Inbetriebnahme-Nullen, die den
+        # Encoderpfad absichtlich verriegelten. H2 ist seitdem am realen
+        # Motorpaar bestanden (aufgebockt, beide Richtungen, vom Nutzer mit
+        # genau 5 Radumdrehungen bestaetigt), deshalb stehen jetzt die
+        # gemessenen Werte hier. Die fail-closed-Logik im Node oben bleibt
+        # unveraendert scharf: Traegt jemand wieder 0 ein, sperrt der Knoten.
+        # Diese Zusicherungen nageln das Messergebnis fest - wer die Werte
+        # aendert, muss H2 erneut fahren.
+        self.assertIn('encoder_counts_per_motor_revolution: 1000.0', config)
+        self.assertIn('encoder_expected_segment: 1000', config)
+        self.assertIn('encoder_expected_resolution: 4000', config)
 
     def test_diagnostic_contract_is_visible(self):
         source = method_source('_publish_state')
