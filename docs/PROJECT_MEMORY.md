@@ -66,6 +66,62 @@ Das separate Overlay wird dadurch ohne Löschung deaktiviert.
 
 ---
 
+## 2026-08-13 — Fester Versatz je Fahrt bestätigt, Ursache eingegrenzt
+
+**Entscheidung:** Noch keine. Der Befund wird festgehalten, die Ursache ist
+eingegrenzt, aber nicht bewiesen. Es wurde nichts an `base_hardware` geändert.
+
+**Grund / Evidenz:** Der feste Versatz je Fahrt lässt sich **ohne äußeres
+Messmittel** nachweisen, indem dieselbe Gesamtstrecke einmal am Stück und
+einmal in Etappen gefahren wird — der Skalenanteil ist dann in beiden Fällen
+gleich, der feste Anteil fällt einmal beziehungsweise N-mal an:
+
+| | Odometrie | LiDAR | Abweichung |
+|---|---|---|---|
+| 1× 0,80 m | 0,8019 m | 0,8305 m | +28,6 mm |
+| 4× 0,20 m | 0,8215 m | 0,9020 m | +80,5 mm |
+
+Drei zusätzliche Fahrten kosten 51,9 mm, also **17,3 mm je Fahrt**. Die
+Wandabstände wurden über 15 Scans gemittelt; ihre Streuung lag bei 1,0 bis
+3,4 mm, der Effekt ist also weit außerhalb des Messrauschens.
+
+**Was die Ursache NICHT ist:** Die Odometrie integriert sehr wohl die gemessene
+Ist-Drehzahl, nicht den Sollwert — 153 Motor-rpm ergeben rechnerisch
+0,09999 m/s, was in der Anzeige als 0,1000 erscheint und einen zunächst in die
+Irre führt. Quantisierung (0,65 %) wäre ein Skalenfehler und steckt bereits im
+Radradius. Ein reiner Zeitverzug hebt sich über eine Fahrt aus dem Stillstand
+mathematisch exakt auf.
+
+**Was auffällt:** Während der Bremsphase ist die Rückmeldung unbrauchbar. Nach
+einem Stoppbefehl bei t=3,04 s meldete das Register bei t=3,12 s **null**, bei
+t=3,47 s dann wieder **16 rpm** — die Räder drehten also noch. Dazu passt, dass
+`feedback_period_s: 0.1` nur 10 Stützstellen je Sekunde liefert, während mit
+50 Hz integriert wird; über eine Bremsung bleiben vier Werte.
+
+**Zusätzlicher Codebefund, unabhängig davon:** Schlägt eine Modbus-Leseanfrage
+fehl, setzt `_poll_speed_feedback` `feedback_ok = False`, und `_update` fällt
+**stillschweigend auf den KOMMANDIERTEN Wert zurück**. Während eines Stopps ist
+das Kommando null — ein Lesefehler genau dort lässt die Odometrie also exakt den
+Weg verlieren, den der Roboter noch ausrollt, ohne jede Warnung. Das ist
+unabhängig vom Hauptbefund ein Mangel.
+
+**Betroffen:** noch nichts geändert. Neue Werkzeuge:
+`tools/kartierung/odometrie_versatz_messen.py` und
+`tools/kartierung/start_lidar_slam.sh`.
+
+**Teststatus:** Der Versatz ist reproduziert und quantifiziert, die Ursache
+nicht bewiesen.
+
+**Nächster Schritt:** `feedback_period_s` von 0.1 auf 0.02 setzen und dieselbe
+A/B-Messung wiederholen. Schrumpft der Versatz deutlich, war die Unterabtastung
+die Ursache. Dafür muss der Roboter zuvor umgesetzt werden — vor ihm sind nur
+noch rund 0,9 m frei, und rückwärts ist er blind.
+
+**Offene Risiken:** Der Versatz wirkt sich bei vielen kurzen Fahrten stärker aus
+als bei wenigen langen. Für Nav2 mit häufigen Stopps ist das relevant.
+
+---
+
 ## 2026-08-12 — Odometrie neu kalibriert; ein Teil des Fehlers ist kein Radiusfehler
 
 **Entscheidung:** `wheel_radius_m: 0.0624` und `wheel_separation_m: 0.3845`
