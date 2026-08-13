@@ -216,6 +216,16 @@ base_hardware:
     # ~1-2 ms mit latency_timer=1 (udev-Regel 82-ftdi-latency.rules).
     use_speed_feedback: true
     speed_register: 0x000C
+    # GEPRUEFT 13.08.2026: 0.02 (50 Hz) ist machbar - der Bus traegt es, /odom
+    # lief mit 50.7 Hz, feedback_ok in 505 von 505 Meldungen, keine
+    # Modbus-Fehler (moeglich durch latency_timer=1, udev-Regel
+    # 82-ftdi-latency.rules: ein Read kostet 1-2 ms statt 16 ms).
+    # Es bringt aber NICHTS fuer den festen Versatz je Fahrt: der blieb bei
+    # 17.9 mm gegen 17.3 mm mit 10 Hz. Ursache ist nicht die Abtastung, sondern
+    # dass der Antrieb beim Stoppbefehl die Welle freigibt und der Roboter
+    # ungezaehlt ausrollt (docs/PROJECT_MEMORY.md, 13.08.2026).
+    # Deshalb zurueck auf den erprobten Wert - eine hoehere Leserate ohne
+    # nachgewiesenen Nutzen ist unnoetige Buslast.
     feedback_period_s: 0.1      # 10 Hz - bremst den 50-Hz-Schreibtakt nicht
 
     # --- Frames ---
