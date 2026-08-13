@@ -1,12 +1,116 @@
 # Übertragung auf den realen Roboter
 
-Verbindlicher Kurzstatus für Änderungen mit Jetson- oder Hardwarewirkung. Die
-vollständige Diagnose und alle Befehle stehen in
-`docs/SLAM_TOOLBOX_ROTATION_FIX.md`.
+## Auftrag: Encoderpositions-Odometrie
 
-## Auftrag: Humble-Fix für reine Drehungen
+**Branch:** `fix/encoder-position-odometry`
+**Vollständige Anleitung:** `docs/ENCODER_ODOMETRIE_FIX.md`
 
-**Branch:** `agent/slam-toolbox-pure-rotation-fix`
+Dieser Branch baut auf `agent/slam-toolbox-pure-rotation-fix` auf und enthält
+damit den bereits geprüften Humble-Backport und den Scan-Vereinheitlicher. Für
+diesen Auftrag später **nicht** auf den Basisbranch zurückschalten.
+
+### Branch auf dem Jetson übernehmen
+
+```bash
+cd ~/roboter_ws
+git status --short --branch
+git fetch origin
+git switch fix/encoder-position-odometry 2>/dev/null || \
+  git switch --track -c fix/encoder-position-odometry \
+  origin/fix/encoder-position-odometry
+git pull --ff-only
+```
+
+Bei lokalen Änderungen, einem unerwarteten Commit oder einem nicht schnellen
+Vorwärtsschritt stoppen und den Zustand klären. Keine unbekannten Jetson-Dateien
+überschreiben.
+
+Der Softwarefix ist offline geprüft, aber absichtlich noch nicht fahrbereit:
+`encoder_counts_per_motor_revolution: 0.0` blockiert den echten Start. Auf dem
+Jetson zuerst alle Roboterknoten beenden und ausschließlich read-only messen:
+
+```bash
+cd ~/roboter_ws
+source /opt/ros/humble/setup.bash
+python3 tools/kartierung/encoder_position_pruefen.py --confirm-stack-stopped
+```
+
+Danach die markierte Motor- oder Radumdrehung gemäß Hilfe des Werkzeugs messen,
+Wortfolge, Vorzeichen, `0x0011` und `0x0101` protokollieren und erst den
+bestätigten Counts-Wert eintragen. Nach H2 müssen alle drei Schutzwerte gesetzt
+sein:
+
+```yaml
+encoder_counts_per_motor_revolution: <bestätigter Wert>
+encoder_expected_segment: <beidseitig bestätigter Wert aus 0x0011, > 0>
+encoder_expected_resolution: <beidseitig bestätigter Wert aus 0x0101, > 0>
+```
+
+`0` bei einem dieser Werte ist ausschließlich der read-only
+Inbetriebnahmezustand und verriegelt den realen `encoder_position`-Modus. Ein
+neuer Modbus-Client liest `0x0011`/`0x0101` erneut und startet bewusst mit einer
+neuen Baseline. Anschließend gelten H0 bis H5 aus der vollständigen Anleitung.
+Keine Hardwarefreigabe aus diesem Dokument ableiten.
+
+Im laufenden Encoderpositionsmodus behält eine einzelne normale FC03-Fehlprobe
+Client und Baseline. An der Transportfehlerschwelle folgen bestmöglicher
+Stopp, Busfehlerstatus, Reconnect und eine neue Baseline. Stale Rückmeldung
+sperrt und stoppt immer, reconnectet aber nur bei zugrunde liegendem
+Transportfehler;
+Python-Ausnahmen beziehungsweise unbekannte Pymodbus-API-Fehler gehen sofort in
+diesen Pfad. Ein Reconnect darf daher **nicht** als kurze Lücke mit nachzuholenden
+Counts bewertet werden.
+
+Ein semantisch ungültiges Encoderpaar oder eine abweichende Treiberkonfiguration
+sperrt und stoppt dagegen sofort, ohne den bestehenden Client nutzlos neu zu
+verbinden. Ein unplausibles Delta wird verworfen und im Tracker kontrolliert
+rebased.
+
+`/odom` wird nur zu einem neuen gültigen Encoderpaar publiziert, mit der
+Zielperiode von 0,05 s ungefähr 20 Hz. `state_json` läuft unabhängig davon im
+50-Hz-Node-Takt weiter.
+
+Der Befehlsvertrag ist ebenfalls sicherheitsrelevant: `/cmd_vel` hat Queue-Tiefe
+1, NaN/Inf werden verworfen und fordern Stopp an, und der Watchdog nutzt
+monotone Echtzeit. `use_sim_time: true` ist bei scharfem RS485 verboten. Ein
+Motorstart erfolgt nur, wenn nach Quantisierung mindestens ein tatsächlich
+schreibbarer RPM-Wert ungleich null ist.
+
+Die vier `odom_*_variance`-Werte sind konservative Startwerte und werden erst
+in H4 aus wiederholten extern referenzierten Fahrten kalibriert.
+
+Vor Build und Tests die gepinnten seriellen Abhängigkeiten installieren.
+`requirements-modbus.txt` fixiert Pymodbus 3.14.0 und Pyserial 3.5:
+
+```bash
+python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+```
+
+Lokal auf dem Entwicklungs-Mac bestanden 59 Base-Hardware- und 12
+Werkzeugtests. Auf dem Jetson nach dem Checkout erneut ausführen und das dortige
+Ergebnis getrennt protokollieren:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/base_hardware \
+  python3 -m unittest discover -s src/base_hardware/test -v
+python3 -m unittest discover -s tools/kartierung \
+  -p "test_encoder_position_pruefen.py" -v
+```
+
+Der CI-Workflow `.github/workflows/encoder-odometry-offline.yml` kompiliert und
+prüft dieselben Python-Komponenten zusätzlich unter Ubuntu 22.04/Python 3.10.
+Mac- und CI-Ergebnisse ersetzen weder den Jetson-Lauf noch die gestufte
+Hardwareabnahme.
+
+---
+
+Der folgende Abschnitt ist nur historischer Kontext des bereits integrierten
+Vorläufers. Er ist **keine zweite aktive Übergabe**. Die vollständige alte
+Diagnose steht in `docs/SLAM_TOOLBOX_ROTATION_FIX.md`.
+
+## Integrierter Vorläufer: Humble-Fix für reine Drehungen
+
+**Historischer Basisbranch:** `agent/slam-toolbox-pure-rotation-fix`
 
 **Basis:** `feature/stl27l-integration`, Commit `7010058`
 
@@ -22,26 +126,12 @@ vollständige Diagnose und alle Befehle stehen in
 - [ ] keine Geheimnisse, echten Karten oder ROS-Bags für einen Commit vorgemerkt
 - [ ] Motorstrom aus; keine Fahrfreigabe vorausgesetzt
 
-### Verbindliche Reihenfolge
+### Einordnung im aktuellen Branch
 
-```bash
-cd ~/roboter_ws
-git status --short --branch
-git fetch origin
-git switch agent/slam-toolbox-pure-rotation-fix 2>/dev/null || \
-  git switch --track -c agent/slam-toolbox-pure-rotation-fix \
-  origin/agent/slam-toolbox-pure-rotation-fix
-git pull --ff-only
-
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select amadeus_lidar_bringup
-source ~/roboter_ws/install/setup.bash
-bash tools/kartierung/build_slam_toolbox_humble_overlay.sh
-```
-
-Bei Patch-, Commit- oder Buildabweichung stoppen. Nicht ungepinnt aktualisieren,
-nicht `/opt/ros/humble` bearbeiten und einen bestehenden Overlay-Ordner nicht
-löschen.
+Der aktuelle Encoderbranch enthält diesen Stand bereits. Nicht auf
+`agent/slam-toolbox-pure-rotation-fix` zurückschalten. Das gepinnte Overlay darf
+weiterhin nicht ungepinnt aktualisiert und `/opt/ros/humble` nicht verändert
+werden.
 
 ### Source-Reihenfolge in jedem Testterminal
 
@@ -91,7 +181,10 @@ Stand 12.08.2026, abgenommen auf Commit `4fe5ee3`:
       Schwellen, Kabel und Tischplatten grundsätzlich nicht
 - [x] Testergebnis mit Datum und Commit in `docs/PROJECT_MEMORY.md` ergänzt
 
-**Phase 4 kann jetzt gefahren werden**, mit `normalize_scan:=true` (Standard).
+Diese damalige Phase-4-Freigabe gilt nicht automatisch für die neue
+Encoderänderung. Im aktuellen Branch sind zuerst H0 bis H3 aus
+`docs/ENCODER_ODOMETRIE_FIX.md` abzuarbeiten; jede Bewegungsphase braucht eine
+neue ausdrückliche Freigabe.
 
 ### Zwei Dinge, die beim Fahren beachtet werden müssen
 
@@ -131,11 +224,11 @@ getroffen.
 3. **Eine Winkelmessung bestimmt nur r/W**, nie die Spurweite allein. Ein
    Streckenfehler bleibt darin unsichtbar.
 
-**Weiterhin offen: rund 15 mm fester Versatz je Fahrt.** Er ist kein
-Radiusfehler und durch keinen Wert in `base_hardware_params.yaml` behebbar.
-Vermutlich drehen sich die Räder beim Anfahren, bevor die
-Ist-Drehzahl-Rückmeldung greift. Abhilfe gehört in `base_hardware_node.py` —
-eigener Vorgang, eigener Test.
+**Historischer Befund:** Der feste Versatz war kein Radiusfehler. Die frühere
+Vermutung eines verspätet einsetzenden Ist-Drehzahlwerts ist nicht belegt;
+50-Hz-Polling widerlegte eine reine Unterabtastung. Der aktuelle Encoderbranch
+adressiert den Softwarepfad mit absoluten Positionsdeltas. Ob der Versatz real
+verschwindet, entscheidet erst die H4-A/B-Messung.
 
 **Keine Aktoren aktivieren, bevor alle Stillstandsprüfungen oberhalb bestanden
 sind.** Ein KI-Agent darf die Fahrfreigabe nicht selbst annehmen.

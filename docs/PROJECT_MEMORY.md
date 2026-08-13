@@ -17,6 +17,60 @@ Rückfallweg:
 
 ---
 
+## 2026-08-13 — Absolute Encoderposition statt Drehzahlintegration
+
+**Entscheidung:** Die reale Odometrie wird auf die kumulierten ESS-RS-Positionen
+`0x000A/0x000B` umgestellt. `0x000C` bleibt Diagnose; bei Lesefehlern wird im
+realen Betrieb niemals mehr der Sollwert integriert.
+
+**Grund / Evidenz:** Der reproduzierte feste Fehler betrug 17,3 mm pro
+zusätzlichem Stop/Start. 50-Hz-Speed-Polling änderte ihn nicht. Beim Bremsen
+meldete `0x000C` zeitweise 0 rpm und später wieder 16 rpm. Die neue Software
+erhält jede in `0x000A/0x000B` tatsächlich registrierte Bewegung. Ob diese
+Register Handschieben im vorgesehenen Betriebszustand erfassen, ist H2-offen.
+Ein einzelner normaler FC03-Fehler behält Client und Baseline; die
+Transportfehlerschwelle führt zu Stopp und Reconnect, Ausnahmen/API-Fehler
+sofort. Stale Rückmeldung sperrt und stoppt immer, reconnectet aber nur bei
+einem zugrunde liegenden Transportfehler.
+Ein semantisch ungültiges Paar oder eine Konfigurationsabweichung sperrt und
+stoppt dagegen sofort ohne Reconnect. Ein unplausibles Delta wird verworfen und
+im Tracker kontrolliert rebased.
+Jeder tatsächlich neue Client verwirft die alte Baseline bewusst. Im
+Encoderpositionsmodus entsteht `/odom` nur zu einem neuen gültigen Paar
+(Ziel etwa 20 Hz), während `state_json` im 50-Hz-Node-Takt weiterläuft.
+Der Watchdog nutzt monotone Echtzeit; scharfes RS485 mit `use_sim_time` ist
+verboten. `/cmd_vel` hat Queue-Tiefe 1, nicht-endliche Werte fordern Stopp an,
+und nur ein nach RPM-Quantisierung darstellbarer Befehl darf starten.
+
+Pymodbus 3.14.0 und Pyserial 3.5 sind in
+`src/base_hardware/requirements-modbus.txt` fest gepinnt; interne Modbus-Retries
+sind null. Die vier Odometrie-Kovarianzen sind konservative Startwerte und erst
+in H4 durch wiederholte externe Referenzmessungen zu kalibrieren.
+
+**Betroffene Dateien/Hardware:** `base_hardware_node.py`,
+`encoder_odometry.py`, Parameter, ESS23-RS IDs 1/2 auf `/dev/ttyUSB_BASE`.
+
+**Teststatus:** Auf dem Entwicklungs-Mac bestanden 59
+Base-Hardware-Regressionstests und 12 Tests des strikt read-only
+Inbetriebnahmewerkzeugs; Syntax geprüft. Keine Motoren aktiviert. Der erneute
+Build-/Testlauf auf dem Jetson sowie reale Counts pro Motorumdrehung,
+Wortfolge/Vorzeichen und A/B-Fahrt sind offen.
+Der Workflow `.github/workflows/encoder-odometry-offline.yml` kompiliert und
+testet dieselben Python-Komponenten zusätzlich auf Ubuntu 22.04/Python 3.10;
+CI und Mac-Lauf ersetzen die Jetson- und Hardwareabnahme nicht.
+
+**Offene Risiken:** `0x0011` meldet standardmäßig 1000 Unterteilungen,
+`0x0101` standardmäßig 4000 Encoder-Counts. Die Einheit der Positionsregister
+darf nicht geraten werden. Deshalb blockieren `counts=0` sowie
+`encoder_expected_segment=0` oder `encoder_expected_resolution=0` den realen
+Positionsmodus. Nach H2 müssen die erwarteten Werte mit den beidseitig
+bestätigten read-only Werten aus `0x0011`/`0x0101` verriegelt werden.
+
+**Rückfallweg:** `odometry_source: speed`; auch dort kein Sollwertfallback.
+Für vollständigen Code-Rollback diesen Commit revertieren.
+
+---
+
 ## 2026-08-12 — Root Cause für fehlende LiDAR-Kartenupdates bei reiner Drehung
 
 **Entscheidung:** Der offizielle `slam_toolbox`-Fix aus PR #808 wird als
@@ -156,10 +210,11 @@ am Stück nur 1,044 m bei 1,012 m. Vorhergesagt waren 1,072 m für „Versatz je
 Fahrt" gegen 1,053 m für „nur einmal". Die abschließende Verifikationsfahrt über
 2,00 m sagte 2,021 m voraus, gemessen wurden 2,030 m.
 
-**Vermutete Ursache des Versatzes, nicht gemessen:** Beim Anfahren drehen sich
-die Räder, bevor die Ist-Drehzahl-Rückmeldung greift. 15 mm entsprechen bei
-0,10 m/s rund 150 ms; die Anfahrrampe steht auf 800 ms. Abhilfe gehört in
-`base_hardware_node.py` und ist ein eigener Vorgang.
+**Historischer Verdacht zum damaligen Messzeitpunkt, nicht bestätigt:** Beim
+Anfahren könnten sich die Räder vor einer brauchbaren Ist-Drehzahl-Rückmeldung
+drehen. Der spätere 50-Hz-Test widerlegte reine Unterabtastung; der interne
+Mechanismus von `0x000C` blieb offen. Der aktuelle, getrennte Encoderpfad steht
+im Eintrag vom 13.08.2026 am Dokumentanfang.
 
 **Warum das früher niemand fand:** Eine Winkelmessung bestimmt nur das
 Verhältnis r/W, nie die Spurweite allein. Radius und Spurweite waren beide rund

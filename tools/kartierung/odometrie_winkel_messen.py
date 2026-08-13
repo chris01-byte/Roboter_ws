@@ -67,7 +67,7 @@ MINDEST_UEBERLAPP = 0.2  # Anteil gemeinsam gueltiger Strahlen
 
 # Aktuell gesetzter Wert, siehe base_hardware_params.yaml. Wird nur fuer den
 # Rechenvorschlag benutzt und NICHT veraendert.
-SPURWEITE_ANGENOMMEN = 0.3755
+SPURWEITE_ANGENOMMEN = 0.3845
 
 
 def scan_vektor(msg, laenge):

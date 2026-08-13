@@ -394,7 +394,7 @@ stage_B2_rs485() {
   [ ] config/base_hardware_params.yaml: dry_run:false, allow_rs485:true
       NUR jetzt gesetzt, sonst bleibt dry_run:true.
   [ ] rs485_port, Motor-IDs und Register wurden mit dem NEMA23-Manual abgeglichen.
-  [ ] pymodbus ist installiert (python3 -m pip install pymodbus).
+  [ ] pymodbus ist installiert (python3 -m pip install -r src/base_hardware/requirements-modbus.txt).
   [ ] Sehr kleine Geschwindigkeit vorgesehen (x: 0.03, NICHT 0.10).
 EOF
   echo

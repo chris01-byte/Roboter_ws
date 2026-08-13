@@ -3,6 +3,40 @@
 Am 27.07.2026 auf dem echten Roboter benutzt und dort verifiziert. Die Skripte
 setzen voraus, dass `~/roboter_ws/install/setup.bash` existiert.
 
+## Encoderposition strikt read-only prüfen
+
+`encoder_position_pruefen.py` liest ausschließlich Holding-Register mit FC03.
+Es sendet keine FC06/FC16-Schreibzugriffe, keine Motorbefehle und keine
+ROS-Kommandos. Die Probe ist H1/H2-Diagnose und **keine Fahrfreigabe**.
+
+Vor dem Aufruf den vollständigen Amadeus-Stack über dessen regulären
+Stoppmechanismus beenden. Danach prüfen, dass keine Roboterknoten mehr laufen
+und `/dev/ttyUSB_BASE` exklusiv frei ist; niemals parallel zu
+`base_hardware` oder einem anderen seriellen Client öffnen:
+
+```bash
+cd ~/roboter_ws
+python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+python3 tools/kartierung/roboterknoten.py --still
+python3 tools/kartierung/encoder_position_pruefen.py \
+  --confirm-stack-stopped --samples 20
+```
+
+`--confirm-stack-stopped` beendet selbst keinen Prozess. Das Werkzeug bricht
+zusätzlich ab, wenn es bereits einen Besitzer des seriellen Ports findet.
+
+Für eine markierte Radumdrehung eines einzelnen Motors, nur unter den
+mechanischen und elektrischen Sicherheitsbedingungen aus H2:
+
+```bash
+python3 tools/kartierung/encoder_position_pruefen.py \
+  --confirm-stack-stopped --measure-wheel 1 --turns 1 --gear-ratio 10
+```
+
+Die Messung in beiden Richtungen und für Motor 1 und 2 wiederholen. Der genaue
+Akzeptanzvertrag, insbesondere Counts, `0x0011` und `0x0101`, steht in
+`docs/ENCODER_ODOMETRIE_FIX.md`.
+
 ## Reihenfolge einer kompletten Kartenaufnahme
 
 ```bash

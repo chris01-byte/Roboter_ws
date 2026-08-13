@@ -1,6 +1,6 @@
 # Ziel: Der Roboter kartiert selbst und findet sich zurecht
 
-**Stand:** 13.08.2026 · Branch `agent/slam-toolbox-pure-rotation-fix`
+**Stand:** 13.08.2026 · Branch `fix/encoder-position-odometry`
 
 Dieses Dokument ordnet ein, was für das eigentliche Ziel erreicht ist, was noch
 fehlt, und welche Nebenschauplätze bewusst liegen bleiben.
@@ -187,7 +187,9 @@ also vom Kommandoregister unabhängig. Ein Software-Stopp ersetzt ihn nicht.
 4. Lokalisierung ohne Vorwissen von mehreren Standorten nachweisen.
 5. Erst danach `explore` in Betrieb nehmen.
 
-Der Odometrieversatz bleibt als eigener, abgegrenzter Punkt liegen.
+Der Odometrieversatz ist softwareseitig durch absolute Encoderpositionen adressiert.
+Die Hardware-Abnahme (Counts/Umdrehung und A/B-Fahrt) ist noch offen; bis dahin
+blockiert die Konfiguration den echten Encoderbetrieb absichtlich.
 
 ---
 
@@ -200,10 +202,14 @@ python3 tools/kartierung/roboterknoten.py
 # Kartierung, Motoren stromlos (Vorgabe)
 bash tools/kartierung/start_lidar_slam.sh /tmp/slam.log
 
-# Kartierung mit bestromten Motoren
-bash tools/kartierung/start_lidar_slam.sh /tmp/slam.log active_drive:=true
+# Noch keine pauschale Fahrfreigabe: Counts und beide erwarteten Treiberwerte
+# sind 0 und blockieren den Encoderbetrieb. Erst nach H2-Bestätigung aller drei
+# Werte, bestandenem H3 und neuer ausdrücklicher Freigabe darf die folgende
+# Zeile ohne Kommentar ausgeführt werden:
+# bash tools/kartierung/start_lidar_slam.sh /tmp/slam.log active_drive:=true
 ```
 
 Die vollständige Source-Reihenfolge über **vier** Workspaces steckt im
-Startskript. Details und der Rückfallweg stehen in
-`docs/SLAM_TOOLBOX_ROTATION_FIX.md`.
+Startskript. Die aktuelle Encoder-Abnahme und ihr Rückfallweg stehen in
+`docs/ENCODER_ODOMETRIE_FIX.md`; der integrierte SLAM-Vorläufer ist in
+`docs/SLAM_TOOLBOX_ROTATION_FIX.md` dokumentiert.

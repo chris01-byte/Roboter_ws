@@ -1,6 +1,8 @@
 # Inventar
 
-**Stand:** 10.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`, Commit `f1b2f23`)
+**Hardwarestand:** 10.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`, Commit `f1b2f23`)
+**Softwaredelta:** 13.08.2026 · Branch `fix/encoder-position-odometry`, reale
+Encoder-Abnahme noch offen
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -24,7 +26,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
 | Paket | Zweck | Reifegrad |
 |---|---|---|
-| `base_hardware` | Antrieb über RS485/Modbus, Odometrie aus gemessener Ist-Drehzahl, Anfahrrampen | **produktiv** |
+| `base_hardware` | Antrieb über RS485/Modbus; Speed-Odometrie produktiv, Encoderposition softwareseitig umgesetzt und fail-closed bis H2/H3 | **produktiv (Speed)** / **Entwurf (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A, Nahbereichsschutz, `collision_monitor` | **produktiv** |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung | **produktiv** |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
@@ -56,6 +58,13 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 
+Die Befehle mit `active_drive:=true` beschreiben die vorhandenen Launchpfade,
+sind aber keine Fahrfreigabe. Im aktuellen Encoderbranch verhindern
+`counts=0`, `encoder_expected_segment=0` oder
+`encoder_expected_resolution=0` den echten Positionsmodus, bis H2/H3 aus
+`docs/ENCODER_ODOMETRIE_FIX.md` bestanden, alle drei Werte bestätigt und die
+konkrete Bewegungsphase ausdrücklich freigegeben ist.
+
 Bequemer über die Skripte in `tools/kartierung/` — sie beenden RTAB-Map korrekt
 und kontrollieren, ob das Wörterbuch geschrieben wurde.
 
@@ -73,6 +82,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/karte_bereinigen.py` | entfernt Strahlartefakte |
 | `tools/kartierung/karte_ansehen.py` | rendert Karte mit Maßstabsraster |
 | `tools/kartierung/merkmale_messen.py` | Bildmerkmale und Tiefenabdeckung |
+| `tools/kartierung/encoder_position_pruefen.py` | strikt read-only: Position, Wortfolge und Counts/Umdrehung bestimmen |
 | `docs/82-ftdi-latency.rules` | udev-Regel, senkt FTDI-Latenz 16 ms → 1 ms |
 
 ---
@@ -91,9 +101,13 @@ antwortet der Antrieb **nicht**):
 
 | Register | Bedeutung | Wert |
 |---|---|---|
-| `0x000C` | Ist-Drehzahl (nur lesen, signed) | — |
+| `0x000A` / `0x000B` | absolute Position high/low (nur lesen, signed 32 Bit) | Wortfolge über `0x0019` |
+| `0x000C` | Ist-Drehzahl (nur lesen, signed) | Diagnose |
+| `0x0011` | Segment/Subdivision | typ. 1000; nur als Kandidat lesen |
+| `0x0019` | 32-Bit-Wortfolge | 0 high-low, 1 low-high |
+| `0x0101` | Encoderauflösung, 4 x Linienzahl | typ. 4000; nur als Kandidat lesen |
 | `0x001D` | Solldrehzahl, **Vorzeichen = Richtung** | ±3000 |
-| `0x001E` / `0x001F` | Beschleunigen / Bremsen [ms] | 800 / 400 |
+| `0x001E` / `0x001F` | Beschleunigen / Bremsen [ms] | 2500 / 400 |
 | `0x0020` | **Startdrehzahl** | 5 rpm |
 | `0x0027` | Kommando | `0x0002` Start, `0x0100` Stop |
 

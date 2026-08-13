@@ -1,0 +1,54 @@
+name: Encoder odometry offline
+
+on:
+  pull_request:
+    paths:
+      - "src/base_hardware/**"
+      - "tools/kartierung/encoder_position_pruefen.py"
+      - "tools/kartierung/test_encoder_position_pruefen.py"
+      - ".github/workflows/encoder-odometry-offline.yml"
+  push:
+    paths:
+      - "src/base_hardware/**"
+      - "tools/kartierung/encoder_position_pruefen.py"
+      - "tools/kartierung/test_encoder_position_pruefen.py"
+      - ".github/workflows/encoder-odometry-offline.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install pinned Modbus runtime
+        run: python -m pip install -r src/base_hardware/requirements-modbus.txt
+      - name: Smoke-test pinned pymodbus API
+        run: |
+          python - <<'PY'
+          import inspect
+          import pymodbus
+          from pymodbus.client import ModbusSerialClient
+          assert pymodbus.__version__ == "3.14.0"
+          signature = inspect.signature(ModbusSerialClient)
+          assert "retries" in signature.parameters
+          assert "device_id" in inspect.signature(
+              ModbusSerialClient.read_holding_registers).parameters
+          print("pymodbus API smoke OK")
+          PY
+      - name: Compile Python sources
+        run: |
+          python -m py_compile \
+            src/base_hardware/base_hardware/encoder_odometry.py \
+            src/base_hardware/base_hardware/base_hardware_node.py \
+            tools/kartierung/encoder_position_pruefen.py
+      - name: Test encoder odometry and node safety contracts
+        env:
+          PYTHONPATH: src/base_hardware
+        run: python -m unittest discover -s src/base_hardware/test -v
+      - name: Test read-only commissioning tool
+        run: python tools/kartierung/test_encoder_position_pruefen.py

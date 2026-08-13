@@ -58,10 +58,11 @@ base_hardware:
     # Fahrt brachte einen zweiten Versatz mit. Vorhergesagt waren 1.072 m fuer
     # "Versatz je Fahrt" gegen 1.053 m fuer "Versatz nur einmal".
     #
-    # Vermutete Ursache des festen Anteils: Beim Anfahren drehen sich die
-    # Raeder schon, bevor die Ist-Drehzahl-Rueckmeldung greift. 17 mm
-    # entsprechen bei 0.10 m/s rund 170 ms; die Anfahrrampe steht auf 800 ms.
-    # NICHT gemessen - Abhilfe gehoert in base_hardware_node.py, nicht hierher.
+    # Der interne Mechanismus des alten 0x000C-Drehzahlwerts bleibt offen.
+    # 50-Hz-Polling widerlegte reine Unterabtastung; Freigabe der Welle und
+    # rein kinetisches Rutschen wurden ebenfalls durch Messungen widerlegt.
+    # Der neue Encoderpfad adressiert den Softwarefehler, ist aber erst nach der
+    # H2-Countsbestimmung und der H4-A/B-Fahrt am realen Roboter bestaetigt.
     #
     # WARUM DIE MESSREIHE SO LANG WURDE: Fester Versatz und Skalenfaktor sind
     # stark korreliert, solange alle Fahrten aehnlich lang sind. Aus den ersten
@@ -200,33 +201,39 @@ base_hardware:
     max_motor_rpm: 700.0
     # 0.05 war zu knapp: eine Transaktion braucht real ~5 ms, aber waehrend des
     # Startgewitters (OAK + VL53 + RTAB-Map belegen gleichzeitig den USB-Bus)
-    # lief sie in den Timeout und riss die Verbindung. 0.1 gibt Luft; teuer wird
-    # es nur im Fehlerfall (pymodbus wiederholt 3x), und der Node baut die
-    # Verbindung jetzt selbsttaetig wieder auf (_ensure_rs485).
+    # lief sie in den Timeout und riss die Verbindung. 0.1 gibt Luft. Verdeckte
+    # pymodbus-Wiederholungen sind deaktiviert; der Node zaehlt Fehler sichtbar
+    # und baut die Verbindung kontrolliert wieder auf (_ensure_rs485).
     modbus_timeout_s: 0.1
+    modbus_retries: 0       # kein verstecktes 3x-Blocking im Stop-/Fehlerpfad
     modbus_write_period_s: 0.05
 
-    # --- Drehzahl-Rueckmeldung -> GEMESSENE Odometrie (24.07.2026) ---
-    # Die Motoren melden ihre Ist-Drehzahl in 0x000C (signed int16, read-only).
-    # Damit integriert der Node die tatsaechlich gefahrene statt der befohlenen
-    # Bewegung. Faellt bei Lesefehlern automatisch auf den Sollwert zurueck.
-    # WICHTIG: Lesen geht nur per FC03 (read_holding_registers) - auf FC04
-    # antwortet der ESS23-RS NICHT.
-    # Timing: ein Read kostet ~16 ms bei FTDI-Default latency_timer=16, aber nur
-    # ~1-2 ms mit latency_timer=1 (udev-Regel 82-ftdi-latency.rules).
+    # --- Encoderpositions-Odometrie (13.08.2026 Softwarestand) ---
+    # 0x000A/0x000B zaehlen absolute Motorposition; 0x000C bleibt reine
+    # Diagnosetelemetrie. Im realen Betrieb gibt es niemals Sollwertfallback.
+    # WICHTIG: Die Positionseinheit ist am echten Motor noch zu bestimmen.
+    # Deshalb blockiert counts=0 den echten Encoderbetrieb fail-closed.
+    odometry_source: "encoder_position"
+    encoder_position_register: 0x000A
+    encoder_segment_register: 0x0011
+    encoder_word_order_register: 0x0019
+    encoder_resolution_register: 0x0101
+    encoder_counts_per_motor_revolution: 0.0  # [HARDWARE-ABNAHME] nicht raten
+    # Nach H2 mit den beiden read-only ausgelesenen Werten verriegeln.
+    # 0 ist nur Inbetriebnahme; Produktionsfahrt erst mit Werten > 0.
+    encoder_expected_segment: 0
+    encoder_expected_resolution: 0
+    encoder_feedback_period_s: 0.05           # 20 Hz; 50 Hz Buslast wurde bewiesen
+    encoder_stale_timeout_s: 0.30
+    encoder_max_recovery_gap_s: 2.0
+    encoder_max_delta_factor: 1.5
+    encoder_failure_stop_count: 5
+
+    # Legacy-Drehzahlquelle bleibt fuer dokumentierten Rollback verfuegbar.
+    # Sie integriert im realen Betrieb ebenfalls nie mehr den Sollwert.
     use_speed_feedback: true
     speed_register: 0x000C
-    # GEPRUEFT 13.08.2026: 0.02 (50 Hz) ist machbar - der Bus traegt es, /odom
-    # lief mit 50.7 Hz, feedback_ok in 505 von 505 Meldungen, keine
-    # Modbus-Fehler (moeglich durch latency_timer=1, udev-Regel
-    # 82-ftdi-latency.rules: ein Read kostet 1-2 ms statt 16 ms).
-    # Es bringt aber NICHTS fuer den festen Versatz je Fahrt: der blieb bei
-    # 17.9 mm gegen 17.3 mm mit 10 Hz. Ursache ist nicht die Abtastung, sondern
-    # dass der Antrieb beim Stoppbefehl die Welle freigibt und der Roboter
-    # ungezaehlt ausrollt (docs/PROJECT_MEMORY.md, 13.08.2026).
-    # Deshalb zurueck auf den erprobten Wert - eine hoehere Leserate ohne
-    # nachgewiesenen Nutzen ist unnoetige Buslast.
-    feedback_period_s: 0.1      # 10 Hz - bremst den 50-Hz-Schreibtakt nicht
+    feedback_period_s: 0.1
 
     # --- Frames ---
     odom_frame_id: "odom"
@@ -239,3 +246,9 @@ base_hardware:
     # ZURUECK AUF false setzen, sobald ekf_node/SLAM diesen TF uebernimmt,
     # sonst publizieren zwei Quellen denselben Transform (Konflikt).
     publish_tf: true
+    # Konservative Startvarianzen, noch nicht hardwarekalibriert. In H4/H5
+    # gegen wiederholte externe Messungen bestimmen; null waere "perfekt".
+    odom_pose_xy_variance: 0.0025
+    odom_yaw_variance: 0.0076
+    odom_twist_linear_variance: 0.01
+    odom_twist_angular_variance: 0.03
