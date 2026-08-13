@@ -1,5 +1,54 @@
 # Übertragung auf den realen Roboter
 
+## Abnahmestand Encoder-Odometrie (13.08.2026)
+
+**Branch:** `fix/encoder-position-odometry` · **H0 bis H4 bestanden**
+
+- [x] **H0** keine Knoten aktiv, `/dev/ttyUSB_BASE` frei, Worktree sauber
+- [x] **H1** beide Motoren stabil per FC03 (~5 ms); `0x0011=1000`, `0x0019=0`,
+      `0x0101=4000` beidseitig identisch; Position im Stillstand bitgenau
+      konstant über 40 Proben
+- [x] **H2** `encoder_counts_per_motor_revolution = 1000`, unabhängig gemessen:
+      vorwärts 1000,8/1000,9 und rückwärts 1000,2/1000,3; Richtungsunterschied
+      unter 0,07 %; vom Nutzer in beiden Richtungen mit genau 5 Radumdrehungen
+      bestätigt. Gegenrechnung über die Motordrehzahl: 999,4–999,5
+- [x] **H3** aufgebockt: geradeaus 0,2442 m bei 0,01° Gierwinkel, Drehung auf
+      der Stelle 93,33° bei 0,0001 m Translation; null Fehler, `/odom` 16,7 Hz,
+      Watchdog greift
+- [x] **H4** Bodenfahrt gegen das **Lasermessgerät**: je Fahrt **+0,5 mm**
+      statt +17,3 bis +20,1 mm. Zusatzfehler dreier weiterer Start-Stopp-
+      Vorgänge von **+51,9 auf +3,9 mm** gesunken (−92 %). Skalenfehler
+      +0,23 %, Kursabweichung +0,04° bis +0,27°
+- [ ] **H5** Fehler- und Wiederanlaufpfade — offen
+- [ ] `odom_*_variance` aus wiederholten Fahrten kalibrieren — offen
+
+### Was dabei zusätzlich gefunden wurde
+
+**Die Anfahrrampe war nie wirksam.** Der Antrieb weist `accel_ms: 2500` mit
+`ExceptionResponse(function_code=134, exception_code=7)` zurück; die Obergrenze
+beider Rampenregister liegt bei **2000**. Ausgelesen stand in `0x001E` auf
+beiden Motoren **100**. Sichtbar wurde das erst, weil dieser Branch die
+Rückgabewerte der Schreibvorgänge prüft — der alte Code verschluckte den
+Fehlschlag. Eingetragen sind jetzt 100, also der Wert, den die Hardware ohnehin
+fährt. Eine weichere Rampe wäre bis 2000 möglich, ist aber eine eigene,
+getrennt zu testende Änderung.
+
+**Der Nahbereichsschutz ist funktionslos.** `vl53_near_field` stirbt mit
+„Kein CH341/CH34x-I2C-Bus gefunden"; der Adapter `1a86:5512` steckt, das
+Kernelmodul `ch34x` fehlt. Der `collision_monitor` aktiviert sich trotzdem und
+reicht ohne Sensordaten alles durch. **Vor autonomem Fahren zwingend beheben.**
+
+**Der LiDAR-Wandvergleich taugt nicht als Kalibrierreferenz.** Bei einer Fahrt
+lag er 21,5 mm neben dem Laser, bei eigener Streuung von 1,7 mm.
+
+### Fahren mit Nahbereichsschutz
+
+`collision_monitor` hängt als `cmd_vel_smoothed` → `cmd_vel` dazwischen. Wer
+direkt auf `/cmd_vel` publiziert, umgeht ihn. Messwerkzeuge nehmen dafür
+`--cmd-topic /cmd_vel_smoothed`.
+
+---
+
 ## Auftrag: Encoderpositions-Odometrie
 
 **Branch:** `fix/encoder-position-odometry`

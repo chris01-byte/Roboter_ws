@@ -17,6 +17,67 @@ Rückfallweg:
 
 ---
 
+## 2026-08-13 — H4 bestanden: der feste Versatz je Fahrt ist weg
+
+**Entscheidung:** Der Encoderpfad (`odometry_source: encoder_position`) bleibt
+scharf. Der über Wochen reproduzierte feste Odometrieversatz je Fahrt ist
+beseitigt.
+
+**Grund / Evidenz:** Fahrtest mit dem **Lasermessgerät** als externer Referenz,
+Positionen auf dem Maßband abgelesen (0,395 → 1,219 → 1,443 → 1,674 → 1,907 m):
+
+| Fahrt | Laser | Odometrie | Abweichung |
+|---|---|---|---|
+| 1× 0,80 m | 824,0 mm | 825,9 mm | **−1,9 mm** |
+| Etappe 1 | 224,0 mm | 223,6 mm | +0,4 mm |
+| Etappe 2 | 231,0 mm | 231,7 mm | −0,7 mm |
+| Etappe 3 | 233,0 mm | 231,1 mm | +1,9 mm |
+| Etappe 4 | 227,0 mm | 226,6 mm | +0,4 mm |
+| **4× 0,20 m gesamt** | **915,0 mm** | **913,0 mm** | **+2,0 mm** |
+
+**Das Abnahmekriterium der Übergabe ist damit erfüllt.** Der Zusatzfehler der
+drei weiteren Start-Stopp-Vorgänge sank von **+51,9 mm auf +3,9 mm**, also um
+92 %. Der Skalenfehler beträgt +0,23 % und die Kursabweichung +0,04° bis
++0,27° — beides unverschlechtert.
+
+**Je Fahrt +0,5 mm statt der bisherigen +17,3 bis +20,1 mm.** Jede einzelne
+Fahrt stimmt auf unter 2 mm. Der Skalenfehler beträgt −0,23 % auf 0,824 m, die
+Kursabweichung lag bei +0,04° und +0,27° — beides unverschlechtert.
+
+Der Mechanismus ist im Detail sichtbar: Eine kommandierte 0,20-m-Etappe meldet
+über den Encoder 0,224 bis 0,233 m, und der Laser bestätigt genau diese Werte.
+Der Roboter fährt also tatsächlich weiter als kommandiert, weil er ausrollt —
+der Drehzahlpfad verschluckte exakt diesen Weg.
+
+**WICHTIG für künftige Kalibrierungen: Der LiDAR-Wandvergleich taugt dafür
+nicht.** Bei Lauf 1 meldete er 0,8025 m gegen 0,8240 m laut Laser, also
+**21,5 mm daneben** — bei einer eigenen Streuung von nur 1,7 mm. Über alle
+Encoder-Läufe streute er zwischen −23,4 und +5,6 mm, während der Laser
+durchweg unter 2 mm blieb. Seine geringe Streuung täuscht eine Genauigkeit vor,
+die er nicht hat.
+
+**Betroffene Dateien und Hardware:** keine Codeänderung in diesem Schritt; beide
+Motoren, fünf Fahrten von zusammen rund 1,7 m auf dem Boden.
+
+**Teststatus:** H0 bis H4 bestanden. Vier unabhängige Fahrt-für-Fahrt-Vergleiche
+gegen das Lasermessgerät.
+
+**Offene Risiken:** Die vier `odom_*_variance`-Werte sind weiterhin konservative
+Startwerte; ihre Kalibrierung verlangt laut Übergabe mehr Wiederholungen als
+hier gefahren. H5 (Fehler- und Wiederanlaufpfade) steht aus.
+
+**Der Nahbereichsschutz ist derzeit funktionslos.** Der `collision_monitor`
+startet und aktiviert sich sauber, aber `vl53_near_field` stirbt beim Start mit
+„Kein CH341/CH34x-I2C-Bus gefunden (WCH-Treiber geladen?)". Der USB-Adapter
+`1a86:5512` steckt, das Kernelmodul `ch34x` ist nicht geladen. Ein Monitor ohne
+Sensordaten reicht alles durch. Für autonomes Fahren muss das zuerst in Ordnung
+sein; bei diesem Fahrtest ersetzte die Aufsicht der anwesenden Person ihn.
+
+**Rückfallweg:** `odometry_source: speed` stellt den alten Pfad her — mitsamt
+seinem Versatz von rund 18 mm je Fahrt.
+
+---
+
 ## 2026-08-13 — H2 und H3 bestanden; Encoderpfad ist scharf
 
 **Entscheidung:** `encoder_counts_per_motor_revolution: 1000.0`,

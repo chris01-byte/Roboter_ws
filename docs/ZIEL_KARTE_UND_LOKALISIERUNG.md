@@ -1,6 +1,7 @@
 # Ziel: Der Roboter kartiert selbst und findet sich zurecht
 
 **Stand:** 13.08.2026 · Branch `fix/encoder-position-odometry`
+(H0–H4 der Encoder-Abnahme bestanden)
 
 Dieses Dokument ordnet ein, was für das eigentliche Ziel erreicht ist, was noch
 fehlt, und welche Nebenschauplätze bewusst liegen bleiben.
@@ -58,42 +59,36 @@ Aus mehrfach versetzten Wandfragmenten wurde eine geschlossene Wandkontur.
 
 ---
 
-## 3. Der Odometrieversatz — und warum er das Ziel nicht blockiert
+## 3. Der Odometrieversatz — behoben am 13.08.2026
 
-Es bleibt ein Fehler: **Je Fahrt fehlen der Odometrie rund 28–35 mm**, nahezu
-unabhängig von Streckenlänge und Geschwindigkeit. Nachgewiesen ohne äußeres
-Messmittel, indem dieselbe Gesamtstrecke einmal am Stück und einmal in Etappen
-gefahren wird — 1× 0,80 m ergab +28,6 mm, 4× 0,20 m ergab +80,5 mm.
+Über Wochen fehlten der Odometrie **rund 28–35 mm je Fahrt**, nahezu unabhängig
+von Streckenlänge und Geschwindigkeit. Drei Hypothesen scheiterten an Messungen
+(Unterabtastung, Freigabe der Welle beim Stoppen, kinetisches Rutschen).
 
-**Drei Hypothesen dazu sind an Messungen gescheitert:**
+**Die Ursache lag im Drehzahlpfad.** Die Odometrie integrierte die Ist-Drehzahl
+aus `0x000C` über die Zeit und verlor dabei reproduzierbar den Ausrollweg nach
+jedem Stopp. Ein anderer Agent hat die Odometrie auf die **absoluten
+Encoderpositionen** `0x000A/0x000B` umgestellt; die Abnahme H0 bis H4 ist am
+realen Roboter gefahren.
 
-1. *Unterabtastung der Rückmeldung* — die Leserate von 10 auf 50 Hz erhöht,
-   Versatz blieb bei 17,9 statt 17,3 mm.
-2. *Der Antrieb gibt die Welle beim Stoppen frei* — widerlegt: die Räder ließen
-   sich von Hand nicht drehen, der Antrieb hält also.
-3. *Kinetisches Rutschen* — müsste quadratisch mit der Geschwindigkeit wachsen.
-   Gemessen: 28,0 mm bei 0,10 m/s, 28,5 bei 0,20, 34,6 bei 0,30. Nahezu
-   konstant.
+Fahrtest mit dem Lasermessgerät als externer Referenz:
 
-Der Mechanismus ist damit **offen**.
+| Fahrt | Laser | Odometrie | Abweichung |
+|---|---|---|---|
+| 1× 0,80 m | 824,0 mm | 825,9 mm | −1,9 mm |
+| Etappe 1 | 224,0 mm | 223,6 mm | +0,4 mm |
+| Etappe 2 | 231,0 mm | 231,7 mm | −0,7 mm |
+| Etappe 3 | 233,0 mm | 231,1 mm | +1,9 mm |
+| Etappe 4 | 227,0 mm | 226,6 mm | +0,4 mm |
 
-**Aber er steht dem Ziel nicht im Weg.** SLAM verwendet die Odometrie nur als
-Startschätzung für den Scanabgleich; der Suchraum dafür ist mit
-`correlation_search_space_dimension: 0.5` einen halben Meter groß. Ein Fehler
-von 30 mm liegt weit darin und wird bei jedem Scan wegkorrigiert. Genau deshalb
-ist die Karte trotz dieses Fehlers sauber geworden.
+**Je Fahrt +0,5 mm statt +17 bis +20 mm.** Die Positionseinheit wurde in H2
+unabhängig gemessen: 1000 Counts je Motorumdrehung, in beiden Drehrichtungen
+und auf beiden Motoren innerhalb 0,1 %, vom Nutzer mit genau 5 Radumdrehungen
+bestätigt.
 
-Relevant wird der Versatz erst dort, wo Odometrie **unkorrigiert** benutzt wird:
-beim Andocken, bei Feinpositionierung, und in Nav2 zwischen zwei
-Lokalisierungsupdates. Für „Karte bauen und sich zurechtfinden" ist er
-zweitrangig.
-
-> **Ehrliche Einordnung:** Die Suche nach diesem Versatz hat am 13.08.2026 einen
-> großen Teil des Tages gekostet, ohne das Ziel voranzubringen. Der Befund ist
-> korrekt und gut vermessen — aber er war nicht auf dem kritischen Pfad. Wer
-> hier weitermacht, sollte das bewusst als eigenes Vorhaben tun.
-
----
+Für das Ziel war der Versatz ohnehin zweitrangig — SLAM korrigiert 30 mm über
+das Scanmatching weg. Für Andocken, Feinpositionierung und Nav2 zwischen zwei
+Lokalisierungsupdates ist die Verbesserung aber unmittelbar nutzbar.
 
 ## 4. Was zum Ziel noch fehlt
 
@@ -105,6 +100,19 @@ In der Reihenfolge, in der es sinnvoll ist.
 `slam_toolbox`. Sonst nichts. Es läuft **kein `collision_monitor`** und keine
 Nav2-Kostenkarte. Der bewährte Kamera-Stack (`robot_bringup/slam.launch.py`)
 hat das über `vl53_near_field` — der LiDAR-Stack hat es noch nicht.
+
+**Und der Nahbereichsschutz ist derzeit selbst dann funktionslos, wenn man ihn
+startet** (gemessen 13.08.2026). `vl53_near_field` stirbt sofort mit
+
+```text
+RuntimeError: Kein CH341/CH34x-I2C-Bus gefunden (WCH-Treiber geladen?)
+```
+
+Der USB-Adapter `1a86:5512` steckt, das Kernelmodul `ch34x` ist aber nicht
+geladen. Der `collision_monitor` startet und aktiviert sich daraufhin trotzdem
+sauber — und reicht ohne Sensordaten jeden Fahrbefehl durch. Das ist gefährlicher
+als gar kein Monitor, weil es nach Schutz aussieht. **Erster Schritt ist also
+nicht die Einbindung, sondern der WCH-Treiber.**
 
 Solange das fehlt, darf niemand autonom fahren lassen. Zwei blinde Flecken
 kommen dazu, die auch ein Monitor nicht behebt:

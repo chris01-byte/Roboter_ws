@@ -48,9 +48,13 @@ SEKTOR_GRAD = 10.0
 
 class Versatzmessung(Node):
 
-    def __init__(self, topic):
+    def __init__(self, topic, cmd_topic='/cmd_vel'):
         super().__init__('odometrie_versatz_messen')
-        self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        # ACHTUNG: /cmd_vel geht DIREKT an base_hardware und umgeht den
+        # collision_monitor. Der haengt als cmd_vel_smoothed -> cmd_vel
+        # dazwischen. Fuer jede Fahrt mit Nahbereichsschutz muss hier
+        # /cmd_vel_smoothed stehen.
+        self.pub = self.create_publisher(Twist, cmd_topic, 10)
         self.create_subscription(Odometry, '/odom', self._auf_odom, 20)
         self.create_subscription(
             LaserScan, topic, self._auf_scan,
@@ -129,6 +133,8 @@ def main():
                    help='Strecke JE Fahrt in Metern')
     p.add_argument('--v', type=float, default=0.10, help='m/s')
     p.add_argument('--topic', default='/scan_normiert')
+    p.add_argument('--cmd-topic', default='/cmd_vel',
+                   help='/cmd_vel_smoothed faehrt durch den collision_monitor; /cmd_vel umgeht ihn')
     args = p.parse_args()
 
     if args.v <= 0 or args.strecke <= 0 or args.fahrten < 1:
@@ -136,7 +142,7 @@ def main():
         return 2
 
     rclpy.init()
-    n = Versatzmessung(args.topic)
+    n = Versatzmessung(args.topic, args.cmd_topic)
     t0 = time.monotonic()
     while (n.pos is None or n.scan is None) and time.monotonic() - t0 < 25 \
             and rclpy.ok():
@@ -151,6 +157,9 @@ def main():
     gesamt_soll = args.fahrten * args.strecke
     print(f'{args.fahrten} Fahrt(en) zu je {args.strecke:.2f} m '
           f'= {gesamt_soll:.2f} m gesamt, mit {args.v:.2f} m/s')
+    print(f'Fahrbefehle auf {args.cmd_topic}'
+          + ('' if args.cmd_topic != '/cmd_vel' else
+             '  -- ACHTUNG: umgeht den collision_monitor!'))
 
     vor, vor_s = n.wandabstand()
     if vor is None:
