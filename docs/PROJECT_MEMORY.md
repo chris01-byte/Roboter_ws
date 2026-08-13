@@ -17,6 +17,63 @@ Rückfallweg:
 
 ---
 
+## 2026-08-13 — Encoder-Fix auf dem Jetson geprüft: Offline-Tests und H1 bestanden
+
+**Entscheidung:** Der Branch `fix/encoder-position-odometry` (`9f7d339`) ist auf
+dem Jetson gebaut, offline geprüft und die read-only Registerprobe H1 ist
+bestanden. `encoder_counts_per_motor_revolution` bleibt bei `0` — der reale
+Positionsmodus ist damit weiterhin verriegelt.
+
+**Grund / Evidenz:** Der geforderte eigene Jetson-Lauf (Mac- und CI-Ergebnisse
+zählen dafür ausdrücklich nicht):
+
+- `colcon build --packages-select base_hardware` fehlerfrei;
+- 59 base_hardware-Tests bestanden;
+- 12 Tests des read-only Inbetriebnahmewerkzeugs bestanden;
+- `colcon test-result --verbose`: 59 Tests, 0 Fehler, 0 Fehlschläge.
+
+Die gepinnten Abhängigkeiten waren bereits erfüllt: Pymodbus **3.14.0** und
+Pyserial **3.5** sind installiert, exakt wie in `requirements-modbus.txt`
+gefordert. Es musste nichts nachinstalliert werden, der laufende Antrieb blieb
+also unberührt.
+
+**H0:** keine Amadeus-Knoten aktiv, `/dev/ttyUSB_BASE` von keinem Prozess
+gehalten, Arbeitskopie sauber auf `9f7d339`.
+
+**H1, ausschließlich lesend:** Beide Motoren antworten stabil per FC03 mit rund
+5 ms je Zugriff. Beidseitig identisch gelesen:
+
+```text
+Motor 1: 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
+Motor 2: 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
+```
+
+Ausgangspositionen M1 `+48955`, M2 `−49028`; die gegenläufigen Vorzeichen passen
+zur spiegelbildlichen Montage. Über 40 Proben je Motor blieb das Delta **exakt
+null** — die Position ist im Stillstand nicht nur „innerhalb erklärbarer
+Grenzen" stabil, sondern bitgenau konstant.
+
+**Betroffene Dateien und Hardware:** keine Codeänderung; ESS23-RS IDs 1/2 auf
+`/dev/ttyUSB_BASE`, ausschließlich lesend.
+
+**Teststatus:** H0 und H1 bestanden. H2 bis H5 offen.
+
+**Offene Risiken:** `0x0011=1000` und `0x0101=4000` sind exakt die
+Handbuchvorgaben. Sie dürfen laut Übergabe **nicht** als Positionseinheit je
+Motorumdrehung übernommen werden — das ist genau die Messung, die H2 leistet.
+
+**Praktisches Hindernis für H2:** Die Antriebe halten die Welle mit Moment. Am
+13.08.2026 konnte der Nutzer die Räder von Hand nicht drehen, weder nach dem
+Stoppbefehl noch bei Solldrehzahl 0. Für eine Handmessung muss der Motor
+elektrisch freigegeben werden; ohne Versorgung antwortet er aber nicht mehr auf
+Modbus. Wie freigegeben wird, entscheidet laut Übergabe ausdrücklich die
+anwesende Person — ein Agent sendet kein Freigabekommando.
+
+**Rückfallweg:** `odometry_source: speed`; für vollständigen Rollback den
+Commit `9f7d339` revertieren.
+
+---
+
 ## 2026-08-13 — Absolute Encoderposition statt Drehzahlintegration
 
 **Entscheidung:** Die reale Odometrie wird auf die kumulierten ESS-RS-Positionen
