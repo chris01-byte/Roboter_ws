@@ -44,6 +44,12 @@ wurde Revision 1 aus `~/.local/share/amadeus/semantic_maps/` wiederhergestellt.
 Nach Neustart der App verband sie sich ohne erneute URL-Übergabe, womit die
 gespeicherte rosbridge-Adresse ebenfalls bestätigt ist.
 
+Der erste Geräte-Start zeigte außerdem, dass der bisherige App-Standard
+`roboter.local` im realen WLAN nicht auflösbar war. Der vorhandene Jetson-
+Hostname `p-desktop.local` löste dagegen stabil auf und wurde für den Test
+einmalig übergeben. Die App verwendet ihn nun als Standard für frische
+Installationen; eine bereits vom Nutzer gespeicherte Adresse behält Vorrang.
+
 Beim Neustarttest wurde ein doppelter `rclpy.shutdown()` nach SIGINT sichtbar:
 Der Node war bereits beendet, meldete aber fälschlich Exitcode 1. Der Einstieg
 fängt `KeyboardInterrupt` nun ab und ruft Shutdown nur bei `rclpy.ok()` auf;
@@ -51,8 +57,9 @@ ein Quellvertragstest schützt diesen Pfad.
 
 **Betroffene Dateien und Hardware:**
 `semantic_map_manager_node.py`, sein Vertragstest und diese Übergabedokumente;
-Jetson `p-desktop` und physisches iPhone. Die Testkarte und der Raum liegen nur
-im lokalen Amadeus-Datenspeicher und nicht im Repository.
+`RobotController.swift` und das iOS-Gedächtnisprotokoll; Jetson `p-desktop` und
+physisches iPhone. Die Testkarte und der Raum liegen nur im lokalen Amadeus-
+Datenspeicher und nicht im Repository.
 
 **Teststatus:** Jetson: sechs Pakete gebaut, **162/162 Python-Tests** grün,
 ROS-Topics und Persistenz live geprüft. iPhone: Gerätebuild, Installation,

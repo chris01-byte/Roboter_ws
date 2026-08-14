@@ -42,8 +42,9 @@ Enthalten sind:
 
 ## Verbindungsvertrag
 
-Standardadresse der App: `ws://roboter.local:9090/`. Falls der Jetson unter
-diesem mDNS-Namen nicht erreichbar ist, in der App seine WLAN-IP eintragen:
+Standardadresse der App: `ws://p-desktop.local:9090/`. Das ist der auf dem
+realen Jetson bestätigte mDNS-Hostname. Falls mDNS im lokalen WLAN nicht
+funktioniert, in der App seine WLAN-IP eintragen:
 `ws://<JETSON-IP>:9090/`.
 
 Nach dem Öffnen des WebSockets werden diese Frames gesendet:

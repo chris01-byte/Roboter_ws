@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class RobotController: NSObject, ObservableObject {
-    static let defaultBridgeURL = "ws://roboter.local:9090/"
+    static let defaultBridgeURL = "ws://p-desktop.local:9090/"
 
     private static let bridgeURLDefaultsKey = "robot_bridge_url"
     private static let fallbackRooms = ["Wohnzimmer", "Kueche", "Flur"]
