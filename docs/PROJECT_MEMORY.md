@@ -17,6 +17,57 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — Startpruefung: der Nahbereichsschutz kann nicht mehr lautlos fehlen
+
+**Entscheidung:** `tools/kartierung/nahbereich_pruefen.py` prueft den
+Nahbereichsschutz, und `start_lidar_slam.sh` verweigert den Start mit
+`active_drive:=true`, wenn die Pruefung durchfaellt. Bewusst **nicht** in
+`base_hardware` eingebaut — dessen Motorcode hat gerade die H0-bis-H4-Abnahme
+bestanden, dort kommt jetzt keine neue Abhaengigkeit hinein.
+
+**Grund / Evidenz:** Der Ausfall vom 14.08.2026 war lautlos. `vl53_near_field`
+starb beim Start, der `collision_monitor` aktivierte sich trotzdem sauber und
+reichte **jeden** Fahrbefehl durch. Kein Fehler beim Booten, keine Warnung —
+nur ein Sicherheitssystem, das zur Attrappe geworden war. Aufgefallen ist es
+allein, weil zufaellig jemand hinsah.
+
+Die Pruefung prueft vier Dinge, und Punkt 3 ist der entscheidende:
+
+1. Kernelmodul `ch34x_mphsi_master` geladen;
+2. CH341-I2C-Bus vorhanden;
+3. **beide Punktwolken-Topics veroeffentlichen tatsaechlich** — ein laufender
+   Knoten beweist nichts, ein laufender Monitor erst recht nicht;
+4. `collision_monitor` laeuft.
+
+**Teststatus:** Alle vier Faelle am Geraet geprueft. Fehlerfall meldet
+namentlich, was fehlt, und gibt 1 zurueck. Gutfall gibt 0 zurueck. Der
+Startversuch mit `active_drive:=true` bei abgeschaltetem Schutz brach ab, ohne
+einen einzigen Knoten zu starten. Ohne `active_drive` greift das Tor nicht —
+`dry_run=True, allow_rs485=False` wie zuvor.
+
+**Bewusster Ausweg:** `AMADEUS_OHNE_NAHBEREICH=1` schaltet den Start ohne Schutz
+frei — fuer beaufsichtigte Fahrten mit Not-Aus in der Hand, wie sie den ganzen
+13. und 14.08. gefahren wurden. Der Weg ist absichtlich umstaendlich und muss
+je Aufruf gesetzt werden.
+
+**Was die Pruefung NICHT leistet:** Sie sagt nicht, ob der Monitor auch bremst —
+dafuer braucht es ein Hindernis in der Zone. Und leere Wolken sind kein Fehler:
+Der Schutz wirkt nur innerhalb von 50 cm.
+
+**Betroffen:** `tools/kartierung/nahbereich_pruefen.py` (neu),
+`tools/kartierung/start_lidar_slam.sh`,
+`src/vl53_near_field/config/ch34x_dkms.conf.example` (neu). Keine Motoren
+bestromt.
+
+**Offene Risiken:** Die Pruefung laeuft beim Start, nicht dauerhaft. Faellt der
+Sensor waehrend der Fahrt aus, faengt sie das nicht. Ein laufender Waechter
+waere der naechste Schritt.
+
+**Rueckfallweg:** Das Tor greift nur bei `active_drive:=true`; entfernen liesse
+es sich durch Loeschen des Blocks in `start_lidar_slam.sh`.
+
+---
+
 ## 2026-08-14 — Nahbereichsschutz wieder in Betrieb: Kernel-Update hatte den Treiber verwaist
 
 **Entscheidung:** Das Out-of-Tree-Modul `ch34x_mphsi_master` wurde gegen den
