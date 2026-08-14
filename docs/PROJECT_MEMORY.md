@@ -17,6 +17,53 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — DKMS-Aufraeumen: ein "rm" ohne --force haette den Treiber beim naechsten Boot gekillt
+
+**Entscheidung:** Festgehalten als Warnung. Beim Bereinigen der
+DKMS-Dopplung entstand kurzzeitig ein Zustand, in dem der Treiber nach dem
+naechsten Neustart nicht mehr geladen haette.
+
+**Grund / Evidenz:** `dkms status` meldete
+`installed (WARNING! Diff between built and installed module!)` — in
+`/lib/modules` lag noch ein handgebautes Modul, DKMS hatte ein eigenes gebaut.
+Der Versuch, das mit `rm` der alten Datei plus `dkms install` zu loesen, ging
+schief: **DKMS haelt sich laut eigenem Status fuer installiert und ueberspringt
+den Einbau.** Ergebnis:
+
+```text
+Modul im Speicher : laeuft weiter  -> alles schien in Ordnung
+Datei in /lib/modules : FEHLT
+modules.dep       : 0 Eintraege
+modules.alias     : kein Alias
+```
+
+Im laufenden Betrieb war nichts zu merken. Erst ein Neustart haette den
+Nahbereichsschutz stillschweigend getoetet — dieselbe Klasse von Fehler, die
+den ganzen Tag gekostet hat.
+
+**Behebung:** `dkms uninstall --all` bringt die Buchfuehrung mit der Realitaet
+in Einklang, danach installiert `dkms install` wirklich. Ein reines
+`dkms install` nach einem `rm` reicht **nicht**.
+
+**Endzustand geprueft:** `installed` ohne Warnung; Modul unter
+`/lib/modules/5.15.199-tegra/updates/dkms/` (DKMS-eigenes Verzeichnis, hat
+Vorrang); `modules.dep` 1 Eintrag; Alias `usb:v1A86p5512… → ch34x_mphsi_master`
+wieder da; installierte Datei identisch mit dem DKMS-Build; Startpruefung
+vollstaendig gruen.
+
+**Lehre:** Beim Hantieren an Kernelmodulen sagt der laufende Betrieb **nichts**
+ueber die Bootfaehigkeit. Nach jedem Eingriff sind drei Dinge zu pruefen, nicht
+nur `lsmod`: die **Datei** in `/lib/modules`, der Eintrag in **`modules.dep`**
+und der **Alias** in `modules.alias`. Genau das prueft
+`tools/kartierung/nahbereich_pruefen.py` inzwischen mit ab.
+
+**Betroffen:** kein Projektcode.
+
+**Rueckfallweg:** Modul neu bauen ueber
+`tools/kartierung/setup_ch34x_treiber.sh`, dann DKMS wie oben.
+
+---
+
 ## 2026-08-14 — CH341-Treiberquelle gepinnt und DKMS eingerichtet
 
 **Entscheidung:** Der WCH-Treiber wird wie der STL-27L-Treiber und
