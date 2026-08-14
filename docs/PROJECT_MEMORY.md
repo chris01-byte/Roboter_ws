@@ -44,6 +44,17 @@ wurde Revision 1 aus `~/.local/share/amadeus/semantic_maps/` wiederhergestellt.
 Nach Neustart der App verband sie sich ohne erneute URL-Übergabe, womit die
 gespeicherte rosbridge-Adresse ebenfalls bestätigt ist.
 
+Die passiven Negativtests wurden anschließend ebenfalls auf dem echten Jetson
+ausgeführt. Nach Abschalten von `robot_map_manager` und rosbridge sperrte der
+Semantikmanager den unverändert gespeicherten Raum nach mehr als sechs
+Sekunden mit `ok:false` und `editable:false`. Nach Wiederanlauf derselben Karte
+wurde Revision 1 ohne Datenverlust wieder editierbar. Ein absichtlich mit
+`base_revision:0` gesendetes Update gegen Revision 1 wurde als veraltet
+abgelehnt; `current.json` blieb auf Revision 1. Ein temporär allein ergänzter
+`mission_manager` löste `go_to_room` für `Test` ausschließlich als
+`simulation_only_no_navigation` auf. Vor und nach diesem Versuch existierte
+kein `/cmd_vel`-Topic.
+
 Der erste Geräte-Start zeigte außerdem, dass der bisherige App-Standard
 `roboter.local` im realen WLAN nicht auflösbar war. Der vorhandene Jetson-
 Hostname `p-desktop.local` löste dagegen stabil auf und wurde für den Test
@@ -65,14 +76,15 @@ Datenspeicher und nicht im Repository.
 ROS-Topics und Persistenz live geprüft. iPhone: Gerätebuild, Installation,
 App-/Karten-WebSocket, manuelles Save, Raum-Upsert und App-Neustart bestanden.
 Der SIGINT-Fix wurde zusätzlich durch erneuten Build, Test und kontrolliertes
-Beenden auf dem Jetson geprüft.
+Beenden auf dem Jetson geprüft. Stale-Sperre, Wiederanlauf, veraltete Revision
+und simulierte Raumzielauflösung bestanden als reale, fahrbewegungsfreie
+Negativtests.
 
 **Offene Risiken:** Getestet wurde bewusst die statische Testkarte, nicht eine
-neue reale Wohnungskarte. Kartenwechsel-, Stale- und Revisionskonflikte sind
-offline abgedeckt, müssen vor realer Navigation aber erneut im vollständigen
-System beobachtet werden. Rosbridge bleibt im lokalen WLAN unverschlüsselt und
-unauthentifiziert. Reale Navigation sowie VL53-/Collision-Schutz sind weiterhin
-gesperrt.
+neue reale Wohnungskarte. Ein tatsächlicher Kartenwechsel auf eine andere
+Geometrie und der vollständige Editorlauf auf dieser Wohnungskarte bleiben
+offen. Rosbridge bleibt im lokalen WLAN unverschlüsselt und unauthentifiziert.
+Reale Navigation sowie VL53-/Collision-Schutz sind weiterhin gesperrt.
 
 **Rückfallweg:** Die passiven Testprozesse beenden;
 `start_semantic_map_manager:=false` oder `use_dynamic_catalog:=false` setzen.

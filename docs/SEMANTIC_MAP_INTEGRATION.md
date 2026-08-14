@@ -331,19 +331,26 @@ Auf dem Entwicklungs-Mac bestanden am 14.08.2026:
 Zusätzlich bestanden Python-Kompilierung, Mypy, Flake8 `F/E9`, YAML/XML,
 fünf isolierte Python-Wheels und ein vollständiger unsigned iOS-Simulator-Build
 für arm64/x86_64 mit Warnungen als Fehler. App und Mock starteten im
-iPhone-17-Pro-Simulator; das Dashboard verband sich stabil mit dem Mock. Die
-visuelle Bedienabnahme des neuen Editors ist davon bewusst getrennt und bleibt
-unten als realer End-to-End-Schritt offen.
+iPhone-17-Pro-Simulator; das Dashboard verband sich stabil mit dem Mock.
+
+Auf dem realen Jetson bestanden anschließend der Colcon-Build der sechs
+betroffenen Pakete und **162/162 Python-Tests**. Die signierte App lief auf dem
+physischen iPhone im Roboter-WLAN. Mit der statischen `testwohnung` wurden das
+bewusste Kartenspeichern, ein Raum `Test` mit vier Polygonpunkten, Revision
+0→1, App- und Backend-Neustart sowie persistente Wiederherstellung geprüft.
+Fahrbewegungsfreie Live-Negativtests bestätigten außerdem die Stale-Sperre nach
+sechs Sekunden, Wiederfreigabe nur für dieselbe Karte, Ablehnung einer
+veralteten `base_revision` und `go_to_room` ausschließlich als
+`simulation_only_no_navigation`. Zu keinem Zeitpunkt existierte `/cmd_vel`.
 
 Noch verbindlich offen:
 
-1. Colcon-Build und Paket-/Launch-Test unter ROS 2 Humble auf dem Jetson;
-2. visueller End-to-End-Editorlauf mit echter gespeicherter Wohnungskarte;
-3. Persistenz- und Konflikttest nach Neustart von App und Backend;
-4. Test auf dem echten iPhone im Roboter-WLAN;
-5. erst in einem späteren Auftrag: Occupancy-/Costmap-/Erreichbarkeitsprüfung
+1. visueller End-to-End-Editorlauf mit einer neu erzeugten, gespeicherten
+   Wohnungskarte statt der statischen `testwohnung`;
+2. echter Kartenwechsel auf einen anderen Fingerabdruck und Rückkehr;
+3. erst in einem späteren Auftrag: Occupancy-/Costmap-/Erreichbarkeitsprüfung
    und kontrollierte Nav2-Integration.
 
-Der lokale Branch enthält keinen Commit und ist noch nicht in das Remote
-veröffentlicht. Die Jetson-Übernahme beginnt deshalb erst nach einer bewussten
-Commit-/Push-Freigabe.
+Der Branch `feature/semantic-map-editor` ist veröffentlicht. Die
+fahrbewegungsfreie Übernahme auf den Jetson ist abgeschlossen; eine spätere
+Fahrfreigabe ist davon ausdrücklich nicht umfasst.

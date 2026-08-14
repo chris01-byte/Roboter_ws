@@ -26,6 +26,14 @@ Diese Übertragung ist daher **keine Fahrfreigabe**.
   bestanden;
 - Semantikmanager-Neustart stellte Revision 1 identisch wieder her;
   kontrolliertes SIGINT endet nach der gefundenen Shutdown-Korrektur sauber;
+- mehr als sechs Sekunden ohne Kartenmanager sperrten den Status mit
+  `ok:false`/`editable:false`; der Wiederanlauf derselben Karte stellte
+  Revision 1 und den Raum `Test` ohne Datenverlust wieder her;
+- ein Update mit `base_revision:0` gegen Revision 1 wurde live abgelehnt und
+  ließ `current.json` unverändert;
+- `go_to_room` für `Test` ergab live ausschließlich
+  `simulation_only_no_navigation`; `/cmd_vel` existierte davor und danach
+  nicht;
 - während der gesamten Abnahme existierten weder Motor-/Nav2-Knoten noch das
   Topic `/cmd_vel`.
 
