@@ -17,6 +17,61 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — Semantische Räume auf Jetson und echtem iPhone abgenommen
+
+**Entscheidung:** Der passive semantische Kartenpfad ist auf dem realen Jetson
+und einem physischen iPhone für die nächste Stufe freigegeben. Diese Freigabe
+umfasst Kartenanzeige, manuelles Speichern, Raum-Overlay, Revisionen und
+Persistenz, aber ausdrücklich keine Raumfahrt.
+
+**Grund / beobachtete Evidenz:** Vor dem Start waren auf dem Jetson keine ROS-,
+Motor- oder Navigationsknoten aktiv und der Workspace war sauber. Der Branch
+`feature/semantic-map-editor` wurde ohne Überschreiben lokaler Änderungen
+übernommen. Der ROS-2-Humble-Build der sechs Pakete `robot_map_manager`,
+`semantic_map_manager`, `mission_manager`, `llm_planner`,
+`semantic_perception` und `robot_bringup` bestand. Anschließend bestanden alle
+**162/162 Python-Vertragstests** auf dem Jetson.
+
+Für den fahrbewegungsfreien End-to-End-Test liefen ausschließlich die statische
+`testwohnung`, eine statische TF, `robot_map_manager`, `semantic_map_manager`
+und rosbridge. `/cmd_vel` existierte nicht. Die nativ signierte Amadeus-App
+wurde auf dem echten iPhone installiert und verband sich über WLAN. Der Nutzer
+speicherte die Karte bewusst in der App und zeichnete den Raum `Test` mit vier
+Eckpunkten und einem inneren Zielpunkt. Kartenmanager, App und Semantikmanager
+verwendeten denselben Fingerabdruck; das Overlay wechselte von Revision 0 auf
+1 und erschien im Katalog. Nach einem echten Neustart des Semantikmanagers
+wurde Revision 1 aus `~/.local/share/amadeus/semantic_maps/` wiederhergestellt.
+Nach Neustart der App verband sie sich ohne erneute URL-Übergabe, womit die
+gespeicherte rosbridge-Adresse ebenfalls bestätigt ist.
+
+Beim Neustarttest wurde ein doppelter `rclpy.shutdown()` nach SIGINT sichtbar:
+Der Node war bereits beendet, meldete aber fälschlich Exitcode 1. Der Einstieg
+fängt `KeyboardInterrupt` nun ab und ruft Shutdown nur bei `rclpy.ok()` auf;
+ein Quellvertragstest schützt diesen Pfad.
+
+**Betroffene Dateien und Hardware:**
+`semantic_map_manager_node.py`, sein Vertragstest und diese Übergabedokumente;
+Jetson `p-desktop` und physisches iPhone. Die Testkarte und der Raum liegen nur
+im lokalen Amadeus-Datenspeicher und nicht im Repository.
+
+**Teststatus:** Jetson: sechs Pakete gebaut, **162/162 Python-Tests** grün,
+ROS-Topics und Persistenz live geprüft. iPhone: Gerätebuild, Installation,
+App-/Karten-WebSocket, manuelles Save, Raum-Upsert und App-Neustart bestanden.
+Der SIGINT-Fix wurde zusätzlich durch erneuten Build, Test und kontrolliertes
+Beenden auf dem Jetson geprüft.
+
+**Offene Risiken:** Getestet wurde bewusst die statische Testkarte, nicht eine
+neue reale Wohnungskarte. Kartenwechsel-, Stale- und Revisionskonflikte sind
+offline abgedeckt, müssen vor realer Navigation aber erneut im vollständigen
+System beobachtet werden. Rosbridge bleibt im lokalen WLAN unverschlüsselt und
+unauthentifiziert. Reale Navigation sowie VL53-/Collision-Schutz sind weiterhin
+gesperrt.
+
+**Rückfallweg:** Die passiven Testprozesse beenden;
+`start_semantic_map_manager:=false` oder `use_dynamic_catalog:=false` setzen.
+Die versionierten lokalen Overlay-Dateien nicht löschen; sie sind unabhängig
+vom Git-Workspace.
+
 ## 2026-08-14 — Manuelle semantische Räume vollständig implementiert
 
 **Entscheidung:** Die erste semantische Ausbaustufe besteht ausschließlich aus
@@ -67,14 +122,14 @@ Wahrnehmungskatalog; Replay-Härtung im `robot_map_manager`; vollständiger
 Vertrag in `docs/SEMANTIC_MAP_INTEGRATION.md`. Keine Hardware wurde bewegt und
 keine echten Wohnungsdaten liegen im Repository.
 
-**Teststatus:** Auf dem Entwicklungs-Mac bestanden **161 Python-Vertragstests**
-(50 Semantik-Backend, 38 Mission, 15 LLM-Planer, 51 Kartenmanager, 2 Bring-up,
+**Teststatus:** Auf dem Entwicklungs-Mac bestanden **162 Python-Vertragstests**
+(51 Semantik-Backend, 38 Mission, 15 LLM-Planer, 51 Kartenmanager, 2 Bring-up,
 5 zustandsbehafteter rosbridge-Mock) und **39 Swift-Tests**. Mypy, Flake8
 `F/E9`, Python-Kompilierung, YAML/XML, fünf isolierte Python-Wheels und
 `git diff --check` waren grün. Der vollständige unsigned iOS-Simulator-Build
 für arm64/x86_64 bestand mit Swift-/Clang-Warnungen als Fehler; App und Mock
-starteten im iPhone-17-Pro-Simulator. Die visuelle Raumeditor-Endabnahme auf
-echter Karte sowie ROS-2-Humble-/Colcon-Tests auf dem Jetson stehen noch aus.
+starteten im iPhone-17-Pro-Simulator. Der nachfolgende Jetson-/iPhone-Test ist
+im unmittelbar darüberstehenden Eintrag protokolliert.
 
 **Offene Risiken:** Reale Raumfahrt bleibt gesperrt, bis Kartenladen,
 Lokalisierung, Costmap-Freiraum, Planbarkeit, Abbruchpfade und insbesondere der

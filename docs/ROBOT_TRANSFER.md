@@ -12,16 +12,25 @@ publiziert Metadaten. Er besitzt weder Nav2-Action noch `cmd_vel`-Publisher.
 Auch `mission_manager` bereitet `go_to_room` ausschließlich als Simulation vor.
 Diese Übertragung ist daher **keine Fahrfreigabe**.
 
-### Bereits auf dem Entwicklungs-Mac geprüft
+### Auf Entwicklungs-Mac und Jetson geprüft
 
-- 50 Semantik-Backend-, 38 Mission-, 15 LLM-Planer-, 51 Kartenmanager-,
-  2 Bring-up- und 5 rosbridge-Mocktests: **161/161 Python-Tests bestanden**;
+- 51 Semantik-Backend-, 38 Mission-, 15 LLM-Planer-, 51 Kartenmanager-,
+  2 Bring-up- und 5 rosbridge-Mocktests: **162/162 Python-Tests bestanden**;
 - 39/39 Swift-Tests und vollständiger iOS-Simulator-Build bestanden;
 - Python-Kompilierung, Mypy, Flake8 `F/E9`, YAML/XML, Packaging und
   Whitespaceprüfung bestanden;
-- keine echten Kartendaten, keine Fahrbefehle und kein Hardwarezugriff.
+- der identische Python-Testbestand sowie der Colcon-Build der sechs Pakete
+  bestanden am 14.08.2026 auf dem realen Jetson;
+- physisches iPhone: signierter Build, Installation, zwei rosbridge-Sockets,
+  bewusstes Kartenspeichern, Raum-Upsert auf Revision 1 und App-Neustart
+  bestanden;
+- Semantikmanager-Neustart stellte Revision 1 identisch wieder her;
+  kontrolliertes SIGINT endet nach der gefundenen Shutdown-Korrektur sauber;
+- während der gesamten Abnahme existierten weder Motor-/Nav2-Knoten noch das
+  Topic `/cmd_vel`.
 
-Diese Mac-Ergebnisse ersetzen den folgenden Jetson-/ROS-2-Lauf nicht.
+Die Abnahme verwendete ausschließlich die statische `testwohnung`. Eine neue
+reale Wohnungskarte und jede Fahrwirkung bleiben eigene spätere Prüfungen.
 
 ### Sichere Übernahmereihenfolge
 

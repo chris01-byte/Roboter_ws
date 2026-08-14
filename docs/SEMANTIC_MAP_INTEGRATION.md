@@ -320,7 +320,7 @@ Auf dem Entwicklungs-Mac bestanden am 14.08.2026:
 
 | Bereich | Ergebnis |
 |---|---:|
-| `semantic_map_manager` | 50/50 |
+| `semantic_map_manager` | 51/51 |
 | `mission_manager` | 38/38 |
 | `llm_planner` | 15/15 |
 | `robot_map_manager` | 51/51 |

@@ -1047,6 +1047,14 @@ class NodeSourceContractTests(unittest.TestCase):
             2,
         )
 
+    def test_main_handles_sigint_without_double_shutdown(self):
+        source = self.node_source()
+        function_start = source.index("def main(")
+        function_end = source.index('\n\nif __name__ == "__main__":', function_start)
+        function_source = source[function_start:function_end]
+        self.assertIn("except KeyboardInterrupt:", function_source)
+        self.assertIn("if rclpy.ok():", function_source)
+
 
 if __name__ == "__main__":
     unittest.main()
