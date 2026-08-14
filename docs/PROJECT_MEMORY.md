@@ -17,6 +17,40 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — CH341-Treiberquelle gepinnt und DKMS eingerichtet
+
+**Entscheidung:** Der WCH-Treiber wird wie der STL-27L-Treiber und
+`slam_toolbox` als **gepinntes Vendor-Manifest** gefuehrt:
+`vendor_ch34x_mphsi.repos`, Commit `f33863f` von
+`WCHSoftGroup/ch34x_mphsi_master_linux`. Aufbau ueber
+`tools/kartierung/setup_ch34x_treiber.sh`.
+
+**Grund / Evidenz:** Die Quellen lagen unversioniert in `~/`. Waeren sie
+verschwunden, haette niemand mehr gewusst, welcher Stand gebaut war — und nach
+dem naechsten Kernel-Update waere der Nahbereichsschutz erneut lautlos
+ausgefallen. Geprueft: Quellcode gegenueber `f33863f` **unveraendert**, einzige
+Ergaenzung ist die `dkms.conf`.
+
+DKMS ist eingerichtet und greift ueber `/etc/kernel/postinst.d/dkms` bei jeder
+Kernel-Installation; `AUTOINSTALL="yes"` meldet unser Modul dafuer an. Damit
+baut es sich kuenftig selbst neu.
+
+**Betroffen:** `vendor_ch34x_mphsi.repos` (neu),
+`tools/kartierung/setup_ch34x_treiber.sh` (neu).
+
+**Teststatus:** Skript erkennt den vorhandenen gepinnten Stand, baut fehlerfrei
+gegen 5.15.199-tegra und prueft das `vermagic` gegen den laufenden Kernel. Die
+root-Schritte werden bewusst nur ausgegeben, nicht ausgefuehrt.
+
+**Offene Risiken:** `/usr/src/ch34x-mphsi-1.0` ist ein Symlink ins
+Home-Verzeichnis. Wird es verschoben, kann DKMS nach einem Kernel-Update nicht
+mehr bauen. Das Manifest erlaubt dann aber, den Stand wiederherzustellen.
+
+**Rueckfallweg:** `sudo dkms remove -m ch34x-mphsi -v 1.0 --all`; das Modul fuer
+5.15.185 liegt weiterhin unter `/lib/modules/5.15.185-tegra/`.
+
+---
+
 ## 2026-08-14 — Startpruefung: der Nahbereichsschutz kann nicht mehr lautlos fehlen
 
 **Entscheidung:** `tools/kartierung/nahbereich_pruefen.py` prueft den

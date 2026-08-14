@@ -27,7 +27,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Paket | Zweck | Reifegrad |
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
-| `vl53_near_field` | 2× VL53L7CX über CH341A, Nahbereichsschutz, `collision_monitor` | **produktiv** (14.08.2026 nachgewiesen; Treiber ist ein Out-of-Tree-Modul OHNE DKMS — nach jedem Kernel-Update neu bauen) |
+| `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (14.08.2026 nachgewiesen; Treiber ist ein Out-of-Tree-Modul OHNE DKMS — nach jedem Kernel-Update neu bauen) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung | **produktiv** |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **Implementiert und offline geprüft; Jetson-/ROS-Abnahme offen** |

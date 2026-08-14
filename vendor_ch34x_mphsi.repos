@@ -1,0 +1,26 @@
+# WCH-Treiber fuer den CH341A-USB-I2C-Adapter, bewusst auf einen Commit
+# gepinnt. Er wird NICHT in dieses Repository kopiert und NICHT veraendert -
+# so bleibt ein spaeteres Update nachvollziehbar und der Vendor-Code sauber
+# trennbar. Gleiche Handhabung wie beim STL-27L-Treiber und bei slam_toolbox.
+#
+# WOZU DER TREIBER GEBRAUCHT WIRD: Ueber diesen Adapter haengen die beiden
+# VL53L7CX des Nahbereichsschutzes am I2C-Bus. Ohne das Kernelmodul gibt es
+# keinen CH341-I2C-Bus, vl53_near_field stirbt beim Start, und der
+# collision_monitor reicht ohne Sensordaten JEDEN Fahrbefehl durch.
+#
+# WARUM DAS HIER STEHT: Am 14.08.2026 war der Nahbereichsschutz wirkungslos.
+# Ein Kernel-Update von 5.15.185 auf 5.15.199 hatte das Out-of-Tree-Modul
+# verwaist; ohne DKMS wurde es nicht neu gebaut. Der Ausfall war lautlos.
+# Die Quellen lagen bis dahin nur unversioniert im Home-Verzeichnis - waeren
+# sie verschwunden, haette niemand mehr gewusst, welcher Stand gebaut war.
+#
+# Aufbau und DKMS-Einrichtung:
+#   bash tools/kartierung/setup_ch34x_treiber.sh
+#
+# Pruefen, ob der Nahbereichsschutz wirklich arbeitet:
+#   python3 tools/kartierung/nahbereich_pruefen.py
+repositories:
+  ch34x_mphsi_master_linux:
+    type: git
+    url: https://github.com/WCHSoftGroup/ch34x_mphsi_master_linux.git
+    version: f33863fbbf322a85f960b1701e7148db0b7b2d85
