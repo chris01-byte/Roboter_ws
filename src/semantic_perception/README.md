@@ -2,7 +2,8 @@
 
 Erkennt Objekte per **Text-Anfrage** ("finde die Tasse") **ohne Neutraining** und liefert
 ihre 3D-Pose über den **bestehenden** Service `GetObjectPose`. Dadurch bleibt der
-Behavior-Tree **unverändert**. Optional füllt der Node den Missionskatalog dynamisch.
+Behavior-Tree **unverändert**. Optional publiziert der Node ausschließlich einen
+getrennten Wahrnehmungs-Diagnosekatalog; er füllt den Missionskatalog nicht.
 
 > Läuft **offboard** (RTX-3090-Server) oder perspektivisch auf der **OAK-NPU**.
 > Ersetzt/ergänzt das `object_world_model` aus der Gesamtdoku.
@@ -13,7 +14,7 @@ Behavior-Tree **unverändert**. Optional füllt der Node den Missionskatalog dyn
 |---|---|---|
 | Service | `<service_name>` (`/world_model/get_object_pose`) | `robot_interfaces/GetObjectPose` |
 | Subscribe | `<rgb_topic>` (`/oak/rgb`) | `sensor_msgs/Image` *(für echte Modelle)* |
-| Publish (opt) | `<catalog_topic>` (`/semantic/catalog_json`) | `std_msgs/String` |
+| Publish (opt) | `<catalog_topic>` (`/semantic/perception_catalog_json`) | `std_msgs/String` |
 | TF | `<camera_frame>` → `<global_frame>` | für 3D-Projektion |
 
 ## Modell-Backend
@@ -48,16 +49,22 @@ Objekt abfragen (Stub liefert eine Pose für bekannte Objekte):
 ros2 service call /world_model/get_object_pose robot_interfaces/srv/GetObjectPose \
   "{class_name: 'Tasse'}"
 ```
-Dynamischen Katalog beobachten:
+Dynamischen Wahrnehmungskatalog beobachten:
 ```bash
-ros2 topic echo /semantic/catalog_json
+ros2 topic echo /semantic/perception_catalog_json
 ```
+
+Der kanonische Raumkatalog `/semantic/catalog_json` wird vom
+`semantic_map_manager` publiziert. `semantic_perception` verwendet bewusst ein
+eigenes Diagnose-Topic, damit fluechtige beziehungsweise simulierte
+Objekterkennung keine manuell bestaetigten Raeume ueberschreibt.
 
 ## Parameter
 
 Alle in [config/semantic_perception_params.yaml](config/semantic_perception_params.yaml)
-(mit Index). Wichtig: `class_queries`/`known_rooms` konsistent zum Missionskatalog halten;
-`service_name` entspricht dem, was der Behavior-Tree aufruft (`bt_params.yaml`).
+(mit Index). `class_queries`/`known_rooms` betreffen nur Wahrnehmung und das getrennte
+Diagnose-Topic; `service_name` entspricht dem, was der Behavior-Tree aufruft
+(`bt_params.yaml`).
 
 ## Grenzen / offen
 

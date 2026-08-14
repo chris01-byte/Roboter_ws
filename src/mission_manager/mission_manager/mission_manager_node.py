@@ -9,15 +9,18 @@
 #      RunMission-Action an den bt_orchestrator schicken -> ECHTE Ausfuehrung.
 #      Phase/Fortschritt kommen als Action-Feedback zurueck (Befund K1).
 #    - Fuer Typen OHNE eigenen Baum (go_to_room, pick_object): weiterhin
-#      Phasen-Simulation, klar als "(Simulation)" markiert (bis Baum/Posen-
-#      Katalog existieren).
-#    - Status JSON fuer die GUI publizieren (Format UNVERAENDERT).
+#      Phasen-Simulation, klar als "(Simulation)" markiert. go_to_room loest
+#      vorher ein Karten-/Revisions-gebundenes Ziel aus der semantischen Karte
+#      auf, gibt es aber ausdruecklich NICHT an Nav2 oder eine Action weiter.
+#    - Status JSON fuer die GUI publizieren (bestehende Felder unveraendert,
+#      Semantikfelder ausschliesslich additiv).
 #
 #  WICHTIGE TOPICS/ACTIONS:
 #    Eingang : /mission_manager/command_json   (std_msgs/String)
 #    Action  : <run_mission_action> (Client)   robot_interfaces/RunMission
 #    Eingang : /offboard/available             (std_msgs/Bool, optional)
 #    Eingang : /semantic/catalog_json          (std_msgs/String, optional)
+#    Eingang : /semantic_map/status_json       (std_msgs/String, read-only)
 #    Ausgang : /mission_manager/status_json    (std_msgs/String)
 #
 #  ALLE PARAMETER -> config/mission_catalog.yaml.
@@ -41,6 +44,18 @@ from geometry_msgs.msg import PoseStamped
 from robot_interfaces.action import RunMission
 from mission_manager.action_outcome import cancel_was_accepted, terminal_state
 from mission_manager.command_payload import decode_command_payload
+from mission_manager.execution_policy import (
+    GO_TO_ROOM_EXECUTION_STATUS,
+    effective_real_types,
+    execution_mode,
+    pick_and_place_room_allowed,
+)
+from mission_manager.semantic_catalog import decode_catalog_payload
+from mission_manager.semantic_room_goal import (
+    decode_semantic_map_status,
+    resolve_room_goal,
+    semantic_snapshot_is_fresh,
+)
 
 
 class MissionManager(Node):
@@ -56,19 +71,48 @@ class MissionManager(Node):
         self.declare_parameter('phase_duration_s', 1.2)
         self.declare_parameter('use_dynamic_catalog', False)
         self.declare_parameter('catalog_topic', '/semantic/catalog_json')
+        self.declare_parameter('semantic_map_status_topic', '/semantic_map/status_json')
+        self.declare_parameter('semantic_map_expected_frame', 'map')
+        self.declare_parameter('semantic_map_expected_fingerprint', '')
+        self.declare_parameter('semantic_map_status_stale_timeout_s', 6.0)
         self.declare_parameter('offboard_topic', '/offboard/available')
         # K1: welche Auftragstypen ECHT ueber den Behavior-Tree laufen.
         self.declare_parameter('real_mission_types', ['pick_and_place', 'explore'])
         self.declare_parameter('run_mission_action', '/run_mission')
 
         self.rooms = list(self.get_parameter('rooms').value)
+        # Diese ursprüngliche Allowlist bleibt getrennt vom dynamischen
+        # Raumkatalog. Der bestehende echte pick_and_place-Baum ignoriert das
+        # Feld room und darf durch einen neu gezeichneten Raum nicht zusätzlich
+        # freigeschaltet werden.
+        self.pick_and_place_rooms = tuple(self.rooms)
+        self.static_rooms = tuple(self.rooms)
         self.targets = list(self.get_parameter('targets').value)
         self.objects = list(self.get_parameter('objects').value)
         self.phase_duration_s = float(self.get_parameter('phase_duration_s').value)
         self.use_dynamic_catalog = bool(self.get_parameter('use_dynamic_catalog').value)
         self.catalog_topic = self.get_parameter('catalog_topic').value
+        self.semantic_map_status_topic = str(
+            self.get_parameter('semantic_map_status_topic').value)
+        self.semantic_map_expected_frame = str(
+            self.get_parameter('semantic_map_expected_frame').value)
+        self.semantic_map_expected_fingerprint = str(
+            self.get_parameter('semantic_map_expected_fingerprint').value)
+        self.semantic_map_status_stale_timeout_s = float(
+            self.get_parameter('semantic_map_status_stale_timeout_s').value)
+        if (
+                not math.isfinite(self.semantic_map_status_stale_timeout_s)
+                or self.semantic_map_status_stale_timeout_s <= 0.0):
+            raise ValueError(
+                'semantic_map_status_stale_timeout_s muss endlich und > 0 sein')
         self.offboard_topic = self.get_parameter('offboard_topic').value
-        self.real_types = set(self.get_parameter('real_mission_types').value)
+        configured_real_types = set(self.get_parameter('real_mission_types').value)
+        self.real_types = effective_real_types(configured_real_types)
+        # Sicherheitsbarriere: Ein Konfigurationsfehler darf die vorbereitende
+        # go_to_room-Simulation niemals in den Action-/Nav2-Pfad heben.
+        if 'go_to_room' in configured_real_types:
+            self.get_logger().error(
+                "'go_to_room' aus real_mission_types entfernt: reale Fahrt ist nicht freigegeben.")
         self.run_mission_action = self.get_parameter('run_mission_action').value
 
         # Pose-Katalog: Ablageort -> Pose. Dynamisch getypt, damit ein fehlender
@@ -93,8 +137,18 @@ class MissionManager(Node):
         self.offboard_sub = self.create_subscription(
             Bool, self.offboard_topic, self._on_offboard, 10)
         if self.use_dynamic_catalog:
+            catalog_qos = QoSProfile(depth=1)
+            catalog_qos.reliability = QoSReliabilityPolicy.RELIABLE
+            catalog_qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
             self.catalog_sub = self.create_subscription(
-                String, self.catalog_topic, self._on_catalog, 10)
+                String, self.catalog_topic, self._on_catalog, catalog_qos)
+
+        # Read-only Cache der passiven semantischen Karte. Die Subscription
+        # ist transient-local, damit auch ein spaeter gestarteter Manager den
+        # letzten bestaetigten Snapshot bekommt.
+        self.semantic_map_sub = self.create_subscription(
+            String, self.semantic_map_status_topic,
+            self._on_semantic_map_status, status_qos)
 
         # K1: Action-Client zum bt_orchestrator.
         self.mission_client = ActionClient(self, RunMission, self.run_mission_action)
@@ -111,6 +165,10 @@ class MissionManager(Node):
         self.history: List[Dict] = []
         self.offboard_available = None
         self.last_rejection = ''          # S1-Fix: Ablehnung getrennt vom Zustand
+        self._semantic_snapshot = None
+        self._semantic_snapshot_received_monotonic = None
+        self.semantic_map_error = 'Noch kein gueltiger Semantik-Status empfangen'
+        self.resolved_room_goal = None
 
         # Simulation (nur fuer Typen ohne Baum)
         self.phase_index = 0
@@ -157,21 +215,33 @@ class MissionManager(Node):
                 else 'Es laeuft bereits eine Mission')
             return
 
+        self.resolved_room_goal = None
         ok, reason = self._validate_command(command_type, cmd)
         if not ok:
             self._reject(reason)
             return
 
         self.last_rejection = ''
-        if command_type in self.real_types:
+        mode = execution_mode(command_type, self.real_types)
+        if mode == 'real':
             self._start_real_mission(command_type, cmd)
         else:
             self._start_sim_mission(command_type, cmd)
 
     def _validate_command(self, command_type: str, cmd: Dict):
         if command_type == 'go_to_room':
-            if cmd.get('room') not in self.rooms:
-                return False, f"Unbekannter Raum: {cmd.get('room')}"
+            self._expire_semantic_snapshot_if_stale()
+            if self._semantic_snapshot is None:
+                return False, (
+                    'Kein gueltiges semantisches Raumziel verfuegbar: '
+                    f'{self.semantic_map_error}')
+            goal, error = resolve_room_goal(
+                self._semantic_snapshot,
+                room_name=cmd.get('room'),
+                room_id=cmd.get('room_id'))
+            if error is not None:
+                return False, error
+            self.resolved_room_goal = goal
             return True, 'ok'
         if command_type == 'pick_object':
             if cmd.get('object') not in self.objects:
@@ -180,7 +250,8 @@ class MissionManager(Node):
         if command_type == 'pick_and_place':
             if cmd.get('object') not in self.objects:
                 return False, f"Unbekanntes Objekt: {cmd.get('object')}"
-            if cmd.get('room') not in self.rooms:
+            if not pick_and_place_room_allowed(
+                    cmd.get('room'), self.pick_and_place_rooms):
                 return False, f"Unbekannter Zielraum: {cmd.get('room')}"
             if cmd.get('target') not in self.targets:
                 return False, f"Unbekannter Ablageort: {cmd.get('target')}"
@@ -459,18 +530,28 @@ class MissionManager(Node):
         self.progress = 0.0
 
         if command_type == 'go_to_room':
-            self.current_phases = ['Ort aufloesen', 'Navigation starten', 'Ziel erreicht']
+            self.current_phases = [
+                'Semantisches Ziel validiert',
+                'Navigationsziel vorbereitet',
+                'Vorbereitung abgeschlossen',
+            ]
         elif command_type == 'pick_object':
             self.current_phases = ['Objekt suchen', 'Greifpose berechnen', 'Greifen', 'Griff pruefen']
         else:
             self.current_phases = ['Schritt 1', 'Schritt 2', 'Schritt 3']
 
         self.phase = self.current_phases[0]
-        self.message = f'Mission gestartet: {command_type} (Simulation - noch kein Baum)'
+        if command_type == 'go_to_room':
+            self.message = (
+                'Raumziel sicher aufgeloest (Simulation - keine Fahrt, kein Nav2-Auftrag)')
+        else:
+            self.message = f'Mission gestartet: {command_type} (Simulation - noch kein Baum)'
         self.history.append({'event': 'start_sim', 'command': cmd, 't': time.time()})
         self._publish_status()
 
     def _timer_tick(self):
+        if self._expire_semantic_snapshot_if_stale():
+            return
         if self.state == 'running' and self.mode == 'sim':
             self._tick_sim_mission()
         else:
@@ -485,6 +566,12 @@ class MissionManager(Node):
             return
         self.phase_index += 1
         if self.phase_index >= len(self.current_phases):
+            if self.active_command.get('type') == 'go_to_room':
+                self._finish(
+                    'success', 'vorbereitet',
+                    'Semantisches Raumziel vorbereitet (Simulation - keine Fahrt)',
+                    self.active_command, progress=1.0)
+                return
             self._finish('success', 'fertig',
                          'Mission erfolgreich abgeschlossen (Simulation)',
                          self.active_command, progress=1.0)
@@ -551,30 +638,111 @@ class MissionManager(Node):
             self._publish_status()
 
     def _on_catalog(self, msg: String):
-        try:
-            cat = json.loads(msg.data)
-        except json.JSONDecodeError:
+        update, error = decode_catalog_payload(msg.data)
+        if error is not None:
+            self.get_logger().warn(f'Semantik-Katalog ignoriert: {error}')
             return
-        if not isinstance(cat, dict):
-            self.get_logger().warn('Semantik-Katalog muss ein JSON-Objekt sein.')
-            return
-        objs = cat.get('objects')
-        rooms = cat.get('rooms')
         changed = False
-        if isinstance(objs, list) and objs and objs != self.objects:
-            self.objects = list(objs)
-            changed = True
-        if isinstance(rooms, list) and rooms and rooms != self.rooms:
-            self.rooms = list(rooms)
+        desired_rooms = list(update.get('rooms') or self.static_rooms)
+        if desired_rooms != self.rooms:
+            self.rooms = desired_rooms
             changed = True
         if changed:
             self.get_logger().info(
-                f"Katalog aus Semantik aktualisiert: {len(self.objects)} Objekte, "
-                f"{len(self.rooms)} Raeume.")
+                f"Raumkatalog aus Semantik aktualisiert: {len(self.rooms)} Raeume; "
+                'Objekte/Ablageziele bleiben statisch freigegeben.')
             self._publish_status()
+
+    def _fail_active_room_preparation(self, reason: str) -> bool:
+        if (
+                self.state == 'running'
+                and self.mode == 'sim'
+                and self.active_command.get('type') == 'go_to_room'):
+            self._finish(
+                'failed', 'ziel_ungueltig',
+                f'Semantisches Raumziel wurde ungueltig: {reason} (keine Fahrt)',
+                self.active_command)
+            return True
+        return False
+
+    def _invalidate_semantic_snapshot(self, reason: str) -> None:
+        self._semantic_snapshot = None
+        self._semantic_snapshot_received_monotonic = None
+        self.semantic_map_error = reason
+        self.resolved_room_goal = None
+
+    def _semantic_snapshot_is_fresh(self) -> bool:
+        return semantic_snapshot_is_fresh(
+            self._semantic_snapshot_received_monotonic,
+            time.monotonic(),
+            self.semantic_map_status_stale_timeout_s)
+
+    def _expire_semantic_snapshot_if_stale(self) -> bool:
+        if self._semantic_snapshot is None or self._semantic_snapshot_is_fresh():
+            return False
+        reason = (
+            'Semantik-Status ist aelter als '
+            f'{self.semantic_map_status_stale_timeout_s:.1f} s')
+        self._invalidate_semantic_snapshot(reason)
+        self.get_logger().warn(f'Semantische Raumkarte abgelaufen: {reason}')
+        return self._fail_active_room_preparation(reason)
+
+    def _on_semantic_map_status(self, msg: String):
+        snapshot, error = decode_semantic_map_status(
+            msg.data,
+            expected_frame_id=self.semantic_map_expected_frame,
+            expected_fingerprint=self.semantic_map_expected_fingerprint)
+        if error is not None:
+            # Ein neuer ungueltiger Status invalidiert den alten Cache. So kann
+            # nach Kartenwechsel/Fehler nie ein zuvor aufgeloestes Ziel weiter
+            # als aktuell erscheinen.
+            self._invalidate_semantic_snapshot(error)
+            self.get_logger().warn(f'Semantische Raumkarte nicht verwendbar: {error}')
+            if not self._fail_active_room_preparation(error):
+                self._publish_status()
+            return
+
+        previous_binding = None
+        if self._semantic_snapshot is not None:
+            previous_binding = (
+                self._semantic_snapshot.fingerprint,
+                self._semantic_snapshot.revision)
+        new_binding = (snapshot.fingerprint, snapshot.revision)
+        self._semantic_snapshot = snapshot
+        self._semantic_snapshot_received_monotonic = time.monotonic()
+        self.semantic_map_error = ''
+        if previous_binding is not None and previous_binding != new_binding:
+            self.resolved_room_goal = None
+            if self._fail_active_room_preparation(
+                    'Kartenfingerprint oder Revision hat sich geaendert'):
+                return
+        self.get_logger().info(
+            f'Semantische Raumkarte bereit: Revision {snapshot.revision}, '
+            f'{len(snapshot.rooms)} Raeume, Fingerprint {snapshot.fingerprint[:12]}...')
+        self._publish_status()
 
     # ======================= Statusausgabe =============================
     def _publish_status(self):
+        semantic_status_age = (
+            None
+            if self._semantic_snapshot_received_monotonic is None
+            else max(
+                0.0,
+                time.monotonic() - self._semantic_snapshot_received_monotonic)
+        )
+        semantic_map = {
+            'available': self._semantic_snapshot is not None,
+            'error': self.semantic_map_error,
+            'status_age_seconds': semantic_status_age,
+            'stale_timeout_seconds': self.semantic_map_status_stale_timeout_s,
+        }
+        if self._semantic_snapshot is not None:
+            semantic_map.update({
+                'map_fingerprint': self._semantic_snapshot.fingerprint,
+                'map_revision': self._semantic_snapshot.revision,
+                'frame_id': self._semantic_snapshot.frame_id,
+                'room_count': len(self._semantic_snapshot.rooms),
+            })
         payload = {
             'state': self.state,
             'phase': self.phase,
@@ -582,11 +750,17 @@ class MissionManager(Node):
             'progress': self.progress,
             'active_command': self.active_command,
             'rooms': self.rooms,
+            'pick_and_place_rooms': list(self.pick_and_place_rooms),
             'targets': self.targets,
             'objects': self.objects,
             'offboard_available': self.offboard_available,
             'cancel_pending': self._cancel_requested,
             'last_rejection': self.last_rejection,
+            'semantic_map': semantic_map,
+            'resolved_room_goal': (
+                self.resolved_room_goal.as_dict()
+                if self.resolved_room_goal is not None else None),
+            'go_to_room_execution': GO_TO_ROOM_EXECUTION_STATUS,
             'time': time.time(),
         }
         self.status_pub.publish(String(data=json.dumps(payload, ensure_ascii=False)))

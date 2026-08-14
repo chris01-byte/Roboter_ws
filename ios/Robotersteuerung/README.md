@@ -63,6 +63,18 @@ ihre lokalen Einstellungen erhalten bleiben.
 - Der Tab **Karte** liest `/map` über eine eigene WebSocket-Verbindung. Große
   OccupancyGrid-Nachrichten können dadurch die Steuer- und
   Sicherheitsverbindung nicht blockieren.
+- Im Karten-Tab lassen sich Räume manuell als Polygon deklarieren: Eckpunkte
+  antippen, Fläche abschließen, einen Navigationspunkt innerhalb der Fläche
+  wählen, Blickrichtung festlegen und speichern. Gespeicherte Räume werden
+  farbig überlagert, können ausgewählt und bewusst gelöscht werden.
+- Vor der ersten Raumdeklaration bietet die App nur bei eindeutig passender
+  Live-Karte **Karte für Räume speichern** an. Danach müssen Live-Karte,
+  Kartenmanager und semantischer Snapshot denselben Fingerabdruck und dieselbe
+  Geometrie melden. Eine vorhandene persistierte Semantik bleibt nach einem
+  Backend-Neustart auch ohne aktuelles `storage.last_saved` bearbeitbar.
+- Raumänderungen verwenden `request_id` und `base_revision`. Nach Konflikt,
+  unklarer Bestätigung oder zwölf Sekunden ohne Antwort sperrt die App den
+  Editor, wiederholt nichts automatisch und verlangt ein Neuladen.
 - Die Karte kann per Geste oder über die drei eingeblendeten Tasten vergrößert,
   verschoben und zurückgesetzt werden. Bei einem Verbindungsabbruch bleibt die
   letzte gültige Karte sichtbar und trägt deutlich den Hinweis **NICHT LIVE**.
@@ -79,6 +91,7 @@ iOS-Simulator:
 ```bash
 cd /Volumes/64GB/roboter_ws/ios/Robotersteuerung
 swift test --scratch-path /tmp/robotersteuerung-swift-tests
+python3 -m unittest discover -s Tools -p 'test_mock_rosbridge.py' -v
 ```
 
 Ein unsigned App-Build funktioniert, sobald in Xcode die iOS-Plattform
@@ -108,8 +121,8 @@ xcodebuild \
 
 ## Simulator-Integrationstest ohne Jetson
 
-Der mitgelieferte, abhängigkeitfreie Mock bildet die vier Steuerungs- und
-Sicherheitstopics sowie `/map` als `nav_msgs/OccupancyGrid` ab. In einem
+Der mitgelieferte, abhängigkeitfreie Mock bildet die Steuerungs- und
+Sicherheitstopics, `/map`, Kartenmanager und semantische Karte ab. In einem
 Terminal starten:
 
 ```bash
@@ -136,7 +149,18 @@ Steuerendpunkte zur Verfügung:
 /map-reset
 /map-disable
 /map-enable
+/semantic-reset
+/semantic-bump
+/semantic-bump-silent
 ```
+
+Der gewünschte erste Flow ist: App öffnen, Karten-Tab wählen, **Karte für
+Räume speichern** antippen und anschließend den Raumeditor verwenden.
+`/semantic-reset` entfernt den Mock-Snapshot. `/semantic-bump` erzeugt eine
+sichtbare konkurrierende Revision; `/semantic-bump-silent` ist für den
+Revisionskonflikt ohne vorherigen Status-Push gedacht. Den 12-Sekunden-Timeout
+prüfen die Swift-Policytests; der Mock verwirft derzeit keine ACKs. Alle empfangenen rosbridge-
+Frames bleiben unter `/events` nachvollziehbar.
 
 Am 26.07.2026 wurden auf einem simulierten iPhone 17 Pro mit iOS 26.5 alle vier
 Missionstypen, Picker, Doppel-Taps, Missionsabbruch, NOT-AUS samt
@@ -146,9 +170,22 @@ Zusätzlich wurden die Kartenanzeige, Live-Updates, Zoom, Zurücksetzen,
 Subscribe/Unsubscribe, der nicht-live-Zustand und der Wiederanlauf geprüft.
 Auch ein erst nach dem Öffnen der App gestarteter `/map`-Publisher wird durch
 die automatische Neuregistrierung erkannt.
-Die 21 Swift-Tests bestanden sowohl per `swift test` als auch im
-iOS-Test-Target. Der Test ersetzt nicht den abschließenden Lauf mit echtem
-iPhone und Jetson.
+Am 14.08.2026 bestanden 39 Swift-Tests sowohl per `swift test` als auch im
+iOS-Test-Target. Fünf Python-Tests prüfen zusätzlich den zustandsbehafteten
+Mock-Flow Save→Bindung, Idempotenz, Upsert/Delete und Revisionskonflikt. Der
+Test ersetzt nicht die manuelle Raumeditor-Abnahme und den abschließenden Lauf
+mit echtem iPhone und Jetson.
+
+Die Missionsansicht behandelt `rooms` und `pick_and_place_rooms` getrennt:
+Selbst gezeichnete Räume erscheinen in der vorbereitenden Raumfahrt, erweitern
+aber niemals die bestehende reale Pick-and-Place-Auswahl. Fehlt das additive
+Feld bei einem älteren Backend, bleibt die bekannte statische Fallbackliste
+aktiv.
+
+Im Karten-Tab genügt eine passende alte Summary nicht: Save, Overlay,
+Bearbeitung und Mutationsbestätigung verlangen zusätzlich den aktuellsten
+`robot_map_manager`-Status mit `ok:true`. Ein Fehlerstatus sperrt die Bedienung
+fail-closed, bis wieder ein gültiger Status eintrifft.
 
 ## Netzwerkgrenze
 
@@ -157,7 +194,7 @@ im Repository keine Authentifizierung oder Topic-ACL. Die App erlaubt deshalb
 gezielt lokale Verbindungen, aber keine pauschalen Internet-Ausnahmen. Den
 Roboter nur in einem vertrauenswürdigen, isolierten WLAN betreiben. Für eine
 Verteilung außerhalb des eigenen Netzes ist ein authentifizierter
-`wss://`-Gateway mit einer Allowlist der fünf benötigten Topics erforderlich.
+`wss://`-Gateway mit einer Allowlist der neun benötigten Topics erforderlich.
 
 Die dauerhaft wichtigen Details stehen in
 [`GEDAECHTNISPROTOKOLL.md`](GEDAECHTNISPROTOKOLL.md).

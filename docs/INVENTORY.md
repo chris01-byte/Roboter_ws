@@ -1,8 +1,8 @@
 # Inventar
 
 **Hardwarestand:** 10.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`, Commit `f1b2f23`)
-**Softwaredelta:** 13.08.2026 · Branch `fix/encoder-position-odometry`, reale
-Encoder-Abnahme noch offen
+**Softwaredelta:** 14.08.2026 · Branch `feature/semantic-map-editor`; Encoder-
+Abnahme H0–H4 bestanden, manuelle semantische Räume lokal implementiert
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -26,16 +26,17 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
 | Paket | Zweck | Reifegrad |
 |---|---|---|
-| `base_hardware` | Antrieb über RS485/Modbus; Speed-Odometrie produktiv, Encoderposition softwareseitig umgesetzt und fail-closed bis H2/H3 | **produktiv (Speed)** / **Entwurf (Encoder)** |
-| `vl53_near_field` | 2× VL53L7CX über CH341A, Nahbereichsschutz, `collision_monitor` | **produktiv** |
+| `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
+| `vl53_near_field` | 2× VL53L7CX über CH341A, Nahbereichsschutz, `collision_monitor` | **blockiert: CH341/CH34x-Treiber fehlt auf Jetson** |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung | **produktiv** |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
+| `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **Implementiert und offline geprüft; Jetson-/ROS-Abnahme offen** |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
 | `robot_navigation` | Nav2-Konfiguration, synthetische Testkarten | erprobt |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
 | `semantic_perception` | Objekterkennung auf OAK-Bildern | Entwurf |
-| `mission_manager` | Auftragsverwaltung, Action-Lebenszyklus | erprobt |
+| `mission_manager` | Auftragsverwaltung; sichere read-only Raumzielauflösung, Raumfahrt weiterhin simuliert | erprobt |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung | Entwurf |
 | `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
 | `smartphone_gui` | Weboberfläche | erprobt |
@@ -122,6 +123,7 @@ Diese Daten liegen **bewusst nur lokal** — sie enthalten Wohnungsgeometrie:
 | RTAB-Map-Datenbank | `~/.local/share/amadeus/rtabmap.db` (~258 MB) |
 | Geprüfte Sicherung | `~/.local/share/amadeus/rtabmap_20260728_lokalisierung_ok.db` |
 | Karten-Schnappschüsse | `~/.local/share/amadeus/maps/amadeus/<version>/` |
+| Manuelle Raumkarten | `~/.local/share/amadeus/semantic_maps/<fingerprint>/` |
 | Protokoll der Lokalisierungsläufe | `~/.local/share/amadeus/lokalisierungstests.log` |
 
 Im Repository liegen nur **synthetische** Testkarten
@@ -134,6 +136,6 @@ Bereiche enthalten.
 
 | Komponente | Pfad | Reifegrad |
 |---|---|---|
-| iOS-App „Robotersteuerung" | `ios/Robotersteuerung/` | Entwurf, 14 Swift-Dateien |
+| iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor im Simulator gebaut; reale ROS-Verbindung offen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

@@ -61,9 +61,18 @@ ros2 topic echo /llm_planner/status_json
 ## Parameter
 
 Alle in [config/llm_planner_params.yaml](config/llm_planner_params.yaml) (mit Index).
-Wichtig: **Katalog** (`rooms`/`targets`/`objects`) **konsistent mit
-`mission_manager/config/mission_catalog.yaml`** halten – oder später dynamisch aus der
-semantischen Karte speisen (Baustein B).
+Der statische **Fallback-Katalog** (`rooms`/`targets`/`objects`) muss konsistent
+mit `mission_manager/config/mission_catalog.yaml` bleiben. Standardmaessig
+abonniert der Planer zusaetzlich `/semantic/catalog_json`: manuell bestaetigte
+Raeume aus dem `semantic_map_manager` ersetzen dann nur die Raumliste.
+Fehlende, leere, uebergrosse oder ungueltige Meldungen lassen den Fallback
+unveraendert. Akzeptiert werden ausschließlich `schema_version:1`,
+`source:"semantic_map_manager"`, höchstens 256 Räume mit Namen bis 80 Zeichen
+und insgesamt höchstens 512 KiB. `objects` und `targets` bleiben statisch und
+können über den offenen Katalog-Topic nicht erweitert werden. Auch
+`pick_and_place` wird weiterhin nur gegen die beim Start konfigurierte
+statische Raumliste validiert; manuell gezeichnete Räume gelten ausschließlich
+für das später separat freizugebende `go_to_room`.
 
 ## Grenzen / offen
 

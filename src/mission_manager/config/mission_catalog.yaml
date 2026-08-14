@@ -61,9 +61,20 @@ mission_manager:
     # Simulationsdauer je Phase [s] fuer die noch simulierten Typen.
     phase_duration_s: 1.2
 
-    # --- WP-5 Anbindung (optional, Default aus) ---
-    # Katalog dynamisch aus der semantischen Karte (semantic_perception) beziehen:
-    use_dynamic_catalog: false
+    # --- Semantische Karte (read-only in diesem Paket) ---
+    # Auswahlkatalog automatisch aus semantic_map_manager beziehen. Bei
+    # fehlender/ungueltiger/leerer Meldung bleiben die statischen Listen oben
+    # erhalten. Ein go_to_room-Auftrag verlangt zusaetzlich einen gueltigen,
+    # Karten- und Revisions-gebundenen Raumstatus und bleibt reine Simulation.
+    use_dynamic_catalog: true
     catalog_topic: "/semantic/catalog_json"
+    semantic_map_status_topic: "/semantic_map/status_json"
+    semantic_map_expected_frame: "map"
+    # Wenn der semantische Manager ausfaellt, wird ein zuvor gueltiges
+    # Raumziel spaetestens nach dieser monotonic gemessenen Zeit verworfen.
+    semantic_map_status_stale_timeout_s: 6.0
+    # Optional auf einen konkreten Kartenfingerprint verriegeln. Leer bedeutet:
+    # den vom semantic_map_manager bestaetigten aktiven Fingerprint verwenden.
+    semantic_map_expected_fingerprint: ""
     # Offboard-Erreichbarkeit (link_monitor) im Status mitfuehren:
     offboard_topic: "/offboard/available"

@@ -53,6 +53,28 @@ ros2 service call /robot_map_manager/save_map std_srvs/srv/Trigger
 ./stop_slam.sh
 ```
 
+## Manuelle Räume nach der Kartenaufnahme
+
+Die Raumebene verändert weder RTAB-Map noch das OccupancyGrid. Sie darf erst
+nach einem bestätigten Save derselben Karte bearbeitet werden und wird unter
+deren SHA-256-Fingerabdruck separat gespeichert:
+
+```text
+~/.local/share/amadeus/semantic_maps/<fingerprint>/
+```
+
+Die sichere Reihenfolge ohne Fahrbefehl lautet:
+
+1. `/robot_map_manager/status_json` zeigt die erwartete Live-Karte.
+2. In der Amadeus-App **Karte für Räume speichern** bewusst auslösen.
+3. Warten, bis `/semantic_map/status_json` denselben Fingerabdruck und
+   `editable:true` meldet.
+4. Raum als Polygon zeichnen, Zielpunkt strikt innerhalb setzen und speichern.
+
+Ein Kartenwechsel sperrt das alte Overlay. Es wird nicht automatisch auf eine
+neue Wohnungskarte übertragen. Details und Negativtests stehen in
+`docs/SEMANTIC_MAP_INTEGRATION.md` und `docs/ROBOT_TRANSFER.md`.
+
 ## Lokalisierung prüfen
 
 ```bash

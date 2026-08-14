@@ -1,0 +1,1 @@
+"""Semantischer Kartenmanager für Amadeus."""

@@ -6,7 +6,8 @@
 #    Erkennt Objekte per TEXT-Anfrage ("finde die Tasse") ohne Neutraining und
 #    liefert ihre 3D-Pose ueber den BESTEHENDEN Service GetObjectPose. Damit
 #    bleibt der Behavior-Tree UNVERAENDERT - er ruft weiter get_object_pose auf.
-#    Optional fuellt der Node den Missionskatalog (Objekte/Raeume) dynamisch.
+#    Optional publiziert der Node einen getrennten Wahrnehmungs-Diagnosekatalog;
+#    er darf den manuellen Raumkatalog nicht ueberschreiben.
 #
 #  ARCHITEKTUR:
 #    - Kann OFFBOARD (RTX-3090-Server) oder perspektivisch auf der OAK-NPU laufen.
@@ -28,7 +29,7 @@
 # ============================================================================
 
 import json
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
@@ -63,7 +64,8 @@ class SemanticPerception(Node):
         self._class_queries  = list(self.declare_parameter(
             'class_queries', ['Tasse', 'Flasche', 'Fernbedienung', 'Werkzeug', 'Schluessel']).value)
         self._publish_catalog = bool(self.declare_parameter('publish_catalog', True).value)
-        self._catalog_topic   = self.declare_parameter('catalog_topic', '/semantic/catalog_json').value
+        self._catalog_topic = self.declare_parameter(
+            'catalog_topic', '/semantic/perception_catalog_json').value
         self._catalog_period  = float(self.declare_parameter('catalog_period_s', 5.0).value)
         self._known_rooms     = list(self.declare_parameter(
             'known_rooms', ['Wohnzimmer', 'Kueche', 'Flur']).value)

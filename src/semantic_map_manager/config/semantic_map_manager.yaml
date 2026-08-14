@@ -1,0 +1,24 @@
+semantic_map_manager:
+  ros__parameters:
+    command_topic: "/semantic_map/command_json"
+    status_topic: "/semantic_map/status_json"
+    catalog_topic: "/semantic/catalog_json"
+    map_manager_status_topic: "/robot_map_manager/status_json"
+
+    # Wohnungsgeometrie bleibt bewusst außerhalb des Git-Repositories.
+    storage_directory: "~/.local/share/amadeus/semantic_maps"
+    status_publish_period_s: 2.0
+    # Bearbeitung wird gesperrt, wenn der robot_map_manager keine aktuellen
+    # Statusnachrichten mehr liefert (dessen Standardperiode ist 2 s).
+    map_status_stale_timeout_s: 6.0
+
+    # Harte Verfügbarkeitsgrenzen: keine unbegrenzte Revisionshistorie, kein
+    # Auffüllen der Jetson-Platte und stets 512 MiB Notreserve.
+    max_revisions_per_map: 2048
+    max_storage_bytes: 1073741824
+    min_free_space_bytes: 536870912
+
+    # Hält ausschließlich request_id + SHA-256-Signatur, niemals komplette
+    # Status-/Raumantworten. Beide Grenzen gelten gleichzeitig.
+    request_cache_size: 128
+    request_cache_max_bytes: 65536

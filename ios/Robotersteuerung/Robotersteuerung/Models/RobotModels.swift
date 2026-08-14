@@ -92,6 +92,7 @@ struct MissionStatus: Decodable, Equatable {
     let progress: Double?
     let activeCommand: RobotCommand?
     let rooms: [String]?
+    let pickAndPlaceRooms: [String]?
     let targets: [String]?
     let objects: [String]?
     let offboardAvailable: Bool?
@@ -106,6 +107,7 @@ struct MissionStatus: Decodable, Equatable {
         case progress
         case activeCommand = "active_command"
         case rooms
+        case pickAndPlaceRooms = "pick_and_place_rooms"
         case targets
         case objects
         case offboardAvailable = "offboard_available"
