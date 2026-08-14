@@ -19,7 +19,7 @@ Daraus folgen vier Fähigkeiten, die zusammenspielen müssen:
 |---|---|---|
 | A | Aus Scans eine brauchbare Karte bauen | **erreicht** |
 | B | Sich selbst durch den Raum bewegen | teilweise — nur ferngesteuert |
-| C | Nicht anecken | **Lücke im LiDAR-Stack** |
+| C | Nicht anecken | Sensorik geprüft, Einbindung in den LiDAR-Stack offen |
 | D | Sich in einer fertigen Karte lokalisieren | ungeprüft mit dem LiDAR |
 
 ---
@@ -94,25 +94,34 @@ Lokalisierungsupdates ist die Verbesserung aber unmittelbar nutzbar.
 
 In der Reihenfolge, in der es sinnvoll ist.
 
-### 4.1 Nahbereichsschutz im LiDAR-Stack — **zuerst**
+### 4.1 Nahbereichsschutz in den LiDAR-Stack einbinden
 
 `slam_lidar.launch.py` startet LiDAR, Antrieb, Scan-Vereinheitlicher und
 `slam_toolbox`. Sonst nichts. Es läuft **kein `collision_monitor`** und keine
 Nav2-Kostenkarte. Der bewährte Kamera-Stack (`robot_bringup/slam.launch.py`)
 hat das über `vl53_near_field` — der LiDAR-Stack hat es noch nicht.
 
-**Und der Nahbereichsschutz ist derzeit selbst dann funktionslos, wenn man ihn
-startet** (gemessen 13.08.2026). `vl53_near_field` stirbt sofort mit
+**Der Nahbereichsschutz läuft wieder** (14.08.2026). Er war am 13.08. als
+„funktionslos" notiert — das war eine Fehldiagnose. Die VL53 waren längst
+abgenommen (`1f48b2c`, `6ee8c62`, `6a6b397`); ein **Kernel-Update von
+5.15.185 auf 5.15.199** hatte das Out-of-Tree-Modul `ch34x_mphsi_master`
+verwaist, und ohne DKMS wurde es nicht neu gebaut. Nach dem Neubau gegen den
+laufenden Kernel:
 
-```text
-RuntimeError: Kein CH341/CH34x-I2C-Bus gefunden (WCH-Treiber geladen?)
-```
+| Prüfung | Ergebnis |
+|---|---|
+| I²C-Bus | `i2c-10 — ch34x-mphsi-i2c` erscheint |
+| beide Sensoren, Objekt in 20 cm | **64 von 64 Zonen**, Status 5 |
+| Monitor mit Hindernis | **2914 von 2914** auf null gebremst |
+| Monitor bei freier Bahn | **133 von 165** durchgereicht |
 
-Der USB-Adapter `1a86:5512` steckt, das Kernelmodul `ch34x` ist aber nicht
-geladen. Der `collision_monitor` startet und aktiviert sich daraufhin trotzdem
-sauber — und reicht ohne Sensordaten jeden Fahrbefehl durch. Das ist gefährlicher
-als gar kein Monitor, weil es nach Schutz aussieht. **Erster Schritt ist also
-nicht die Einbindung, sondern der WCH-Treiber.**
+**Ohne DKMS bricht das beim nächsten Kernel-Update erneut.**
+
+Zwei Eigenheiten, die leicht als Defekt missverstanden werden: `z_min`/`z_max`
+sind trotz ihres Namens **Distanz**grenzen — der Schutz wirkt nur innerhalb von
+50 cm, und „0 Punkte" im freien Raum ist korrekt. Und `stop_pub_timeout: 2.0`
+lässt den Monitor zwei Sekunden nach einem Stopp verstummen; ausbleibende
+Nachrichten heißen „Stopp hält an", nicht „Monitor tot".
 
 Solange das fehlt, darf niemand autonom fahren lassen. Zwei blinde Flecken
 kommen dazu, die auch ein Monitor nicht behebt:

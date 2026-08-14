@@ -17,6 +17,71 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — Nahbereichsschutz wieder in Betrieb: Kernel-Update hatte den Treiber verwaist
+
+**Entscheidung:** Das Out-of-Tree-Modul `ch34x_mphsi_master` wurde gegen den
+laufenden Kernel neu gebaut und bootfest installiert. Der Nahbereichsschutz ist
+wieder nachweislich funktionsfähig.
+
+**Grund / Evidenz:** Am 13.08.2026 war hier notiert, der Schutz sei
+„funktionslos" und der WCH-Treiber müsse erst gebaut werden. **Das war eine
+Fehldiagnose.** Der Hinweis des Nutzers auf die früheren VL53-Abnahmen
+(`1f48b2c`, `6ee8c62`, `6a6b397`) führte zur wahren Ursache:
+
+```text
+Modul gebaut fuer : 5.15.185-tegra
+laeuft gerade     : 5.15.199-tegra
+DKMS              : nicht installiert
+```
+
+Ein **Kernel-Update** hat das Modul verwaist. Ohne DKMS wird es nicht neu
+gebaut, deshalb lud es seit dem Update nicht mehr. Der Projektcode war nie
+kaputt.
+
+Nach `make` gegen die Header von 5.15.199 und `sudo make install`: `i2c-10 —
+ch34x-mphsi-i2c` erscheint, der Multiplexer `0x70` antwortet, der Knoten findet
+den Bus selbst. Mit einem Objekt in ~20 cm melden **beide Sensoren 64 von 64
+Zonen** bei 0,18–0,26 m, `target_status` 5 durchgehend, alle vier Filter
+passiert.
+
+**Bremsnachweis ohne Motorstrom** — `collision_monitor` ohne `base_hardware`
+betrieben, Fahrbefehl hinein, Ausgang beobachtet:
+
+| Zustand | Ergebnis |
+|---|---|
+| Objekt in der Zone | **2914 von 2914** auf null gebremst |
+| freie Bahn | **133 von 165** unverändert mit 0,100 m/s durchgereicht |
+
+**Drei Fallen, damit sie niemanden erneut kosten:**
+
+1. `z_min`/`z_max` heißen so, sind aber **Distanzgrenzen**. Der Schutz wirkt nur
+   innerhalb von 50 cm; „0 Punkte" im freien Raum ist korrekt. Der Boden
+   erscheint bei 0,60–0,72 m und wird bewusst weggefiltert.
+2. `stop_pub_timeout: 2.0` — nach einem Stopp publiziert der Monitor noch zwei
+   Sekunden Nullen und schweigt dann. Ausbleibende Nachrichten heißen „Stopp
+   hält an", nicht „Monitor tot".
+3. Eigene Diagnosewerkzeuge brauchen zwei Dinge, die der ROS-Knoten schon tut:
+   `VL53L5CX_COMMS_CHUNK_SIZE = 32` (sonst `OSError(5)` beim Firmware-Upload,
+   der CH341A schafft nur ~32 Byte je Transaktion) und `set_resolution(64)`
+   (sonst bleibt der Sensor im 4×4-Modus und nur 16 der 64 Zellen tragen Daten —
+   das sah kurz wie ein Projektfehler aus, war aber einer im Prüfwerkzeug).
+
+**Betroffen:** kein Projektcode; `~/ch34x_mphsi_master_linux/driver` neu gebaut
+und installiert. Keine Motoren bestromt, keine Bewegung.
+
+**Teststatus:** Treiber geladen, Bus erkannt, beide Sensoren geprüft, Bremsen
+und Durchreichen je einzeln nachgewiesen.
+
+**Offene Risiken:** **Ohne DKMS bricht das beim nächsten Kernel-Update erneut.**
+Unverändert bestehen die beiden physischen blinden Flecken: maskierter
+Mastsektor nach hinten, LiDAR-Scanebene auf 75 cm.
+
+**Rückfallweg:** `sudo make uninstall` im Treiberverzeichnis; das für 5.15.185
+gebaute Modul liegt als Sicherung unter
+`/tmp/ch34x_mphsi_master_5.15.185.ko.bak`.
+
+---
+
 ## 2026-08-14 — Semantische Räume auf Jetson und echtem iPhone abgenommen
 
 **Entscheidung:** Der passive semantische Kartenpfad ist auf dem realen Jetson
