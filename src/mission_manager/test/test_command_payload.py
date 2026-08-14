@@ -23,6 +23,19 @@ class CommandPayloadTests(unittest.TestCase):
         self.assertIsNone(command)
         self.assertTrue(error.startswith('Ungueltiges JSON:'))
 
+    def test_rejects_deep_oversized_and_invalid_unicode_payloads(self):
+        payloads = (
+            '{"type":"go_to_room","junk":' + '[' * 2_000 +
+            '0' + ']' * 2_000 + '}',
+            '{"type":"go_to_room","junk":"' + ('x' * (65 * 1024)) + '"}',
+            '\ud800',
+        )
+        for payload in payloads:
+            with self.subTest(size=len(payload)):
+                command, error = decode_command_payload(payload)
+                self.assertIsNone(command)
+                self.assertTrue(error)
+
 
 if __name__ == '__main__':
     unittest.main()

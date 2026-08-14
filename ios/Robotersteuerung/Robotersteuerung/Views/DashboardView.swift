@@ -303,7 +303,7 @@ struct DashboardView: View {
                     HStack(alignment: .top, spacing: 10) {
                         CatalogPicker(
                             title: "Zielraum",
-                            values: controller.rooms,
+                            values: controller.pickAndPlaceRooms,
                             selection: $controller.selectedCarryRoom
                         )
                         CatalogPicker(
@@ -317,7 +317,7 @@ struct DashboardView: View {
                         systemImage: "shippingbox.fill",
                         enabled: controller.canSendMission &&
                             !controller.objects.isEmpty &&
-                            !controller.rooms.isEmpty &&
+                            !controller.pickAndPlaceRooms.isEmpty &&
                             !controller.targets.isEmpty
                     ) {
                         commandHaptic()

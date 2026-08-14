@@ -13,6 +13,7 @@ from unittest import mock
 
 from robot_map_manager.map_core import (
     BoundedRequestCache,
+    CachedCommandResponse,
     CommandValidationError,
     MapOrigin,
     MapRepository,
@@ -26,6 +27,7 @@ from robot_map_manager.map_core import (
     StoragePolicy,
     default_storage_root,
     json_message,
+    parse_cached_command_response,
     parse_command_json,
     raw_cell_digest,
     validate_grid_shape_and_length,
@@ -249,6 +251,17 @@ class CommandValidationTests(unittest.TestCase):
                 with self.assertRaises(CommandValidationError):
                     parse_command_json(payload)
 
+    def test_deep_and_invalid_unicode_commands_fail_closed(self):
+        payloads = (
+            '{"command":"status","x":' + '[' * 1_500 +
+            '0' + ']' * 1_500 + '}',
+            '{"command":"status","request_id":"bad\ud800"}',
+        )
+        for payload in payloads:
+            with self.subTest(size=len(payload)):
+                with self.assertRaises(CommandValidationError):
+                    parse_command_json(payload)
+
     def test_path_names_are_strict(self):
         self.assertEqual(validate_map_name("wohnung_2-alt"), "wohnung_2-alt")
         for value in (
@@ -298,6 +311,129 @@ class RuntimeGuardTests(unittest.TestCase):
         cache.store("three", ("list", None), '{"ok":true}')
         self.assertIsNone(cache.lookup("two", ("status",)))
         self.assertEqual(len(cache), 2)
+
+    def test_old_full_status_replay_keeps_result_but_drops_runtime_state(self):
+        old_fingerprint = "a" * 64
+        cached = json_message({
+            "schema_version": 1,
+            "event": "save_result",
+            "ok": True,
+            "command": "save",
+            "request_id": "ios-map-old",
+            "message": "Karte A gespeichert.",
+            "time": 10.0,
+            "last_operation": "save",
+            "last_error": None,
+            "map": {"summary": {"fingerprint": old_fingerprint}},
+            "pose": {"available": True},
+            "storage": {"last_saved": {"fingerprint": old_fingerprint}},
+            "counters": {"idempotent_replays": 0},
+            "saved": {"fingerprint": old_fingerprint, "name": "wohnung"},
+            "origin": "command",
+        })
+
+        result = parse_cached_command_response(
+            cached,
+            expected_request_id="ios-map-old",
+            expected_command="save",
+        )
+
+        self.assertIsInstance(result, CachedCommandResponse)
+        compact = json.loads(result.as_cache_json())
+        self.assertNotIn("map", compact)
+        self.assertNotIn("pose", compact)
+        self.assertNotIn("storage", compact)
+        self.assertNotIn("time", compact)
+        self.assertNotIn("counters", compact)
+        self.assertEqual(compact["saved"]["fingerprint"], old_fingerprint)
+
+    def test_late_replay_after_map_change_uses_fresh_status_factory(self):
+        old_fingerprint = "a" * 64
+        current_fingerprint = "b" * 64
+        old_status = json_message({
+            "schema_version": 1,
+            "event": "save_result",
+            "ok": True,
+            "command": "save",
+            "request_id": "ios-map-late",
+            "message": "Alte Karte gespeichert.",
+            "time": 10.0,
+            "map": {"summary": {"fingerprint": old_fingerprint}},
+            "storage": {"last_saved": {"fingerprint": old_fingerprint}},
+            "saved": {"fingerprint": old_fingerprint, "name": "wohnung"},
+        })
+        result = parse_cached_command_response(
+            old_status,
+            expected_request_id="ios-map-late",
+            expected_command="save",
+        )
+
+        # Entspricht dem Produktionspfad: publish_kwargs liefert ausschliesslich
+        # das alte Kommandoergebnis; der Status-Builder setzt aktuelle Felder.
+        fresh_runtime_state = {
+            "time": 20.0,
+            "map": {"summary": {"fingerprint": current_fingerprint}},
+            "storage": {"last_saved": {"fingerprint": current_fingerprint}},
+        }
+        replayed = {**result.publish_kwargs(), **fresh_runtime_state}
+
+        self.assertEqual(
+            replayed["map"]["summary"]["fingerprint"],
+            current_fingerprint,
+        )
+        self.assertEqual(
+            replayed["storage"]["last_saved"]["fingerprint"],
+            current_fingerprint,
+        )
+        self.assertEqual(replayed["time"], 20.0)
+        self.assertTrue(replayed["extra"]["idempotent_replay"])
+        self.assertEqual(
+            replayed["extra"]["saved"]["fingerprint"],
+            old_fingerprint,
+        )
+        self.assertFalse(result.publish_kwargs(current_status_ok=False)["ok"])
+        with self.assertRaises(MapStorageError):
+            result.publish_kwargs(current_status_ok=1)
+
+    def test_cached_response_identity_and_schema_mismatch_fail_closed(self):
+        valid = json_message({
+            "schema_version": 1,
+            "event": "status",
+            "ok": True,
+            "command": "status",
+            "request_id": "ios-status-1",
+            "message": "Bereit.",
+        })
+        with self.assertRaises(MapStorageError):
+            parse_cached_command_response(
+                valid,
+                expected_request_id="ios-status-2",
+                expected_command="status",
+            )
+        with self.assertRaises(MapStorageError):
+            parse_cached_command_response(
+                valid,
+                expected_request_id="ios-status-1",
+                expected_command="save",
+            )
+        with self.assertRaises(MapStorageError):
+            parse_cached_command_response('{"schema_version":2}')
+
+    def test_node_replay_path_rebuilds_instead_of_raw_publishing(self):
+        node_source = (
+            Path(__file__).parents[1]
+            / "robot_map_manager"
+            / "robot_map_manager_node.py"
+        ).read_text(encoding="utf-8")
+        replay_start = node_source.index("            if cached_response is not None:")
+        replay_end = node_source.index(
+            '        if command.command == "save":',
+            replay_start,
+        )
+        replay_block = node_source[replay_start:replay_end]
+        self.assertIn("parse_cached_command_response(", replay_block)
+        self.assertIn("self._publish_status(**replay)", replay_block)
+        self.assertNotIn("self.status_publisher.publish", replay_block)
 
     def test_raw_duplicate_guard_skips_only_valid_cross_qos_delivery(self):
         guard = RawDuplicateGuard(1.0)

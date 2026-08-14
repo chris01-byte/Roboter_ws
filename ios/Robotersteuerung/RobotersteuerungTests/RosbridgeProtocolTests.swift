@@ -76,6 +76,7 @@ struct RosbridgeProtocolTests {
           "progress":0.42,
           "active_command":{"type":"go_to_room","room":"Kueche"},
           "rooms":["Wohnzimmer","Kueche"],
+          "pick_and_place_rooms":["Kueche"],
           "targets":["Tisch"],
           "objects":["Tasse"],
           "offboard_available":true,
@@ -95,6 +96,7 @@ struct RosbridgeProtocolTests {
         #expect(decoded.phase == "Navigation")
         #expect(abs(decoded.normalizedProgress - 0.42) < 0.0001)
         #expect(decoded.activeCommand?.description == "Fahre: Kueche")
+        #expect(decoded.pickAndPlaceRooms == ["Kueche"])
         #expect(decoded.offboardAvailable == true)
         #expect(decoded.cancelPending == true)
     }

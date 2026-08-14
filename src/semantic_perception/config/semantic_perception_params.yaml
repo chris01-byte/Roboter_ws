@@ -55,9 +55,12 @@ semantic_perception:
       - Werkzeug
       - Schluessel
 
-    # --- Dynamischer Katalog (fuer mission_manager) ---
+    # --- Wahrnehmungs-Katalog (Diagnose / spaetere Objektfusion) ---
+    # /semantic/catalog_json gehoert dem semantic_map_manager als einziger
+    # kanonischer Quelle fuer manuell bestaetigte Raeume. Zwei Publisher auf
+    # demselben Topic wuerden die Raumliste gegenseitig ueberschreiben.
     publish_catalog: true
-    catalog_topic: "/semantic/catalog_json"
+    catalog_topic: "/semantic/perception_catalog_json"
     catalog_period_s: 5.0
     known_rooms:
       - Wohnzimmer

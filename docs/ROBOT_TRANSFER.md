@@ -1,5 +1,106 @@
 # Übertragung auf den realen Roboter
 
+## Auftrag: manuelle semantische Räume in der Amadeus-App (14.08.2026)
+
+**Branch:** `feature/semantic-map-editor`
+
+**Vollständiger Vertrag:** `docs/SEMANTIC_MAP_INTEGRATION.md`
+
+Der neue `semantic_map_manager` ist passiv: Er liest den Status des
+`robot_map_manager`, speichert Raum-Polygone außerhalb des Repositories und
+publiziert Metadaten. Er besitzt weder Nav2-Action noch `cmd_vel`-Publisher.
+Auch `mission_manager` bereitet `go_to_room` ausschließlich als Simulation vor.
+Diese Übertragung ist daher **keine Fahrfreigabe**.
+
+### Bereits auf dem Entwicklungs-Mac geprüft
+
+- 50 Semantik-Backend-, 38 Mission-, 15 LLM-Planer-, 51 Kartenmanager-,
+  2 Bring-up- und 5 rosbridge-Mocktests: **161/161 Python-Tests bestanden**;
+- 39/39 Swift-Tests und vollständiger iOS-Simulator-Build bestanden;
+- Python-Kompilierung, Mypy, Flake8 `F/E9`, YAML/XML, Packaging und
+  Whitespaceprüfung bestanden;
+- keine echten Kartendaten, keine Fahrbefehle und kein Hardwarezugriff.
+
+Diese Mac-Ergebnisse ersetzen den folgenden Jetson-/ROS-2-Lauf nicht.
+
+### Sichere Übernahmereihenfolge
+
+1. Arbeitskopie und Branch prüfen; unbekannte lokale Änderungen nicht
+   überschreiben. Den Branch erst übernehmen, nachdem er in das Remote
+   veröffentlicht wurde.
+2. `AGENTS.md`, dieses Dokument und `docs/SEMANTIC_MAP_INTEGRATION.md` lesen.
+3. Ohne aktive Motor-/Navigationsknoten bauen und die Offline-Verträge prüfen:
+
+```bash
+cd ~/roboter_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select \
+  robot_map_manager semantic_map_manager mission_manager llm_planner \
+  semantic_perception robot_bringup
+source install/setup.bash
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/semantic_map_manager \
+  python3 -m unittest discover -s src/semantic_map_manager/test -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/mission_manager \
+  python3 -m unittest discover -s src/mission_manager/test -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/llm_planner \
+  python3 -m unittest discover -s src/llm_planner/test -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src/robot_map_manager \
+  python3 -m unittest discover -s src/robot_map_manager/test -v
+python3 -m unittest discover -s src/robot_bringup/test -v
+python3 -m unittest discover -s ios/Robotersteuerung/Tools \
+  -p 'test_mock_rosbridge.py' -v
+```
+
+4. Für den ersten ROS-Vertragstest nur die beiden passiven Manager starten;
+   dafür sind keine Motoren und keine Fahrt nötig:
+
+```bash
+ros2 launch robot_map_manager map_manager.launch.py
+ros2 launch semantic_map_manager semantic_map_manager.launch.py
+ros2 topic echo /robot_map_manager/status_json
+ros2 topic echo /semantic_map/status_json
+ros2 topic echo /semantic/catalog_json
+```
+
+5. Erst wenn eine echte `/map` sichtbar ist, in der App bewusst **Karte für
+   Räume speichern** wählen. Die Erstbindung ist nur nach einem bestätigten
+   `save_result` mit identischem SHA-256-Fingerabdruck möglich. Danach einen
+   kleinen Test-Raum zeichnen, Zielpunkt strikt innerhalb setzen, speichern,
+   App neu verbinden und Persistenz/Revision prüfen.
+6. Prüfen, dass die Daten ausschließlich hier liegen und nicht für Git
+   vorgemerkt sind:
+
+```text
+~/.local/share/amadeus/semantic_maps/<fingerprint>/current.json
+~/.local/share/amadeus/semantic_maps/<fingerprint>/revisions/
+```
+
+7. Negativtests ohne Fahrt: falsche `base_revision`, Kartenwechsel und mehr als
+   sechs Sekunden ausbleibender Kartenmanagerstatus müssen `editable:false`
+   ergeben. `go_to_room` darf nur `simulation_only_no_navigation` melden und
+   weder Nav2 noch `cmd_vel` auslösen. Ein Replay derselben `request_id` muss
+   dabei Karte, Speicher, Pose, Zeit und Zähler aus dem **aktuellen** Zustand
+   zeigen und darf keinen historischen Vollstatus zurückspielen.
+   Zusätzlich muss der Mission-Cache nach sechs Sekunden ohne neuen
+   Semantikstatus verfallen. Ein manuell angelegter Raum, ein Objekt oder ein
+   Ablageziel aus einer Topic-Nachricht darf die statischen realen
+   `pick_and_place`-Allowlists nicht erweitern.
+8. Persistenzgrenzen sichtbar prüfen: 2.048 Revisionen/Karte, 1 GiB
+   Repository und 512 MiB Freispeicherreserve sind die defensiven Defaults.
+   Eine erreichte Grenze muss die neue Revision ablehnen und die letzte
+   gültige Revision unverändert lesbar lassen; nichts automatisch löschen.
+
+### Rückfallweg
+
+- `start_semantic_map_manager:=false` lässt das Paket im Gesamt-Bring-up aus.
+- `use_dynamic_catalog:=false` in Missions- und LLM-Konfiguration nutzt wieder
+  ausschließlich die statischen Listen.
+- Das Verzeichnis `~/.local/share/amadeus/semantic_maps/` vor einer manuellen
+  Änderung sichern; der Code löscht keine Revision automatisch.
+- Reale Raumfahrt bleibt gesperrt, bis VL53-/Collision-Monitor, Lokalisierung,
+  Costmap-Freiraum, Planbarkeit und Abbruchpfade separat abgenommen sind.
+
 ## Abnahmestand Encoder-Odometrie (13.08.2026)
 
 **Branch:** `fix/encoder-position-odometry` · **H0 bis H4 bestanden**

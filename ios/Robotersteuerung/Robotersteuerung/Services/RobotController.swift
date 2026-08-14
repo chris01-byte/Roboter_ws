@@ -23,6 +23,7 @@ final class RobotController: NSObject, ObservableObject {
     @Published private(set) var logEntries: [RobotLogEntry] = []
 
     @Published private(set) var rooms = RobotController.fallbackRooms
+    @Published private(set) var pickAndPlaceRooms = RobotController.fallbackRooms
     @Published private(set) var targets = RobotController.fallbackTargets
     @Published private(set) var objects = RobotController.fallbackObjects
     @Published var selectedRoom = RobotController.fallbackRooms[0]
@@ -470,11 +471,14 @@ final class RobotController: NSObject, ObservableObject {
         statusIsFresh = true
 
         rooms = cleanCatalog(status.rooms ?? RobotController.fallbackRooms)
+        pickAndPlaceRooms = cleanCatalog(
+            status.pickAndPlaceRooms ?? RobotController.fallbackRooms
+        )
         targets = cleanCatalog(status.targets ?? RobotController.fallbackTargets)
         objects = cleanCatalog(status.objects ?? RobotController.fallbackObjects)
 
         preserveSelection(&selectedRoom, in: rooms)
-        preserveSelection(&selectedCarryRoom, in: rooms)
+        preserveSelection(&selectedCarryRoom, in: pickAndPlaceRooms)
         preserveSelection(&selectedPickObject, in: objects)
         preserveSelection(&selectedCarryObject, in: objects)
         preserveSelection(&selectedTarget, in: targets)

@@ -17,6 +17,79 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — Manuelle semantische Räume vollständig implementiert
+
+**Entscheidung:** Die erste semantische Ausbaustufe besteht ausschließlich aus
+vom Nutzer in der nativen Amadeus-App gezeichneten Räumen. Jeder Raum wird als
+Polygon mit ID, Name, Farbe und einem inneren Navigationspunkt gespeichert und
+unveränderlich an den SHA-256-Fingerabdruck einer gespeicherten metrischen
+Karte gebunden. Gegenstände und automatische Raumsegmentierung bleiben eine
+spätere, getrennte Ausbaustufe. `go_to_room` löst den Punkt nur auf und bleibt
+hart im Simulationsmodus; es existiert in diesem Stand kein Nav2-/`cmd_vel`-
+Pfad für Raumziele.
+
+**Grund / beobachtete Evidenz:** Die vorhandene OccupancyGrid-Karte besitzt
+Geometrie, aber keine stabilen Raumnamen. Ein separates Overlay lässt die SLAM-
+Karte unverändert und verhindert über Fingerabdruck, Geometrie und Revision,
+dass Räume nach einem Kartenwechsel still auf die falsche Wohnung angewendet
+werden. App, Backend und Kartenmanager berechnen denselben Fingerabdruck. Ein
+Erst-Overlay ist erst nach einem bestätigten manuellen Kartenspeichern erlaubt;
+ein vorhandenes Overlay darf bei identischem Fingerabdruck nach Neustart wieder
+aktiv werden. Stale Statusdaten, verlorene ACKs, Revisionskonflikte und fremde
+Karten sperren Bearbeitung fail-closed.
+
+Während des Cross-Contract-Reviews wurde zusätzlich ein alter Replaypfad im
+`robot_map_manager` gefunden: Eine idempotente Wiederholung konnte einen
+historischen Vollstatus erneut auf dem globalen Statustopic publizieren. Der
+Cache enthält nun nur noch unveränderliche Kommandoergebnisfelder; Karte,
+Speicher, Pose, Zeit und Zähler werden bei jedem Replay aus dem aktuellen
+Zustand aufgebaut. Dasselbe Prinzip gilt im `semantic_map_manager`.
+
+Das Cross-Contract-Review trennte außerdem manuelle Räume von den bereits
+realen Missions-Allowlists: Der dynamische Katalog darf ausschließlich Räume
+liefern. Objekte, Ablageziele und `pick_and_place`-Räume bleiben statisch;
+ein gezeichnetes Polygon kann deshalb keine reale Behavior-Tree-Mission
+freischalten. Semantikstatus müssen `editable:true` sein und verfallen im
+Missionsmanager nach sechs monotonic gemessenen Sekunden. Alle JSON-Eingänge
+sind gegen Größe, Rekursion und ungültiges Unicode begrenzt.
+Da die Prüfung einfacher Polygone Kantenpaare vergleicht, begrenzen Backend,
+Mission, App und Mock zusätzlich jeden Raum auf 64 und das Gesamtdokument auf
+4.096 Polygonpunkte. So kann ein formal gültiger Extremstatus keine ROS-
+Callbackverarbeitung über viele Sekunden blockieren.
+Die App verlangt für Save, Overlay, Mutation und ACK zusätzlich einen aktuellen
+Kartenmanagerstatus mit `ok:true`; ein Fehlerstatus mit noch passender Summary
+kann die Bearbeitung nicht kurzzeitig offenhalten.
+
+**Betroffene Dateien und Hardware:** neues Paket `src/semantic_map_manager/`;
+iOS-Raumeditor in `ios/Robotersteuerung/`; read-only Semantikkonsumenten in
+`mission_manager` und `llm_planner`; passiver Bring-up-Include; getrennter
+Wahrnehmungskatalog; Replay-Härtung im `robot_map_manager`; vollständiger
+Vertrag in `docs/SEMANTIC_MAP_INTEGRATION.md`. Keine Hardware wurde bewegt und
+keine echten Wohnungsdaten liegen im Repository.
+
+**Teststatus:** Auf dem Entwicklungs-Mac bestanden **161 Python-Vertragstests**
+(50 Semantik-Backend, 38 Mission, 15 LLM-Planer, 51 Kartenmanager, 2 Bring-up,
+5 zustandsbehafteter rosbridge-Mock) und **39 Swift-Tests**. Mypy, Flake8
+`F/E9`, Python-Kompilierung, YAML/XML, fünf isolierte Python-Wheels und
+`git diff --check` waren grün. Der vollständige unsigned iOS-Simulator-Build
+für arm64/x86_64 bestand mit Swift-/Clang-Warnungen als Fehler; App und Mock
+starteten im iPhone-17-Pro-Simulator. Die visuelle Raumeditor-Endabnahme auf
+echter Karte sowie ROS-2-Humble-/Colcon-Tests auf dem Jetson stehen noch aus.
+
+**Offene Risiken:** Reale Raumfahrt bleibt gesperrt, bis Kartenladen,
+Lokalisierung, Costmap-Freiraum, Planbarkeit, Abbruchpfade und insbesondere der
+derzeit fehlende VL53-/CH341-Nahbereichsschutz separat bestanden sind. Die
+erste Stufe prüft den Zielpunkt geometrisch im Polygon, aber noch nicht gegen
+belegte/unbekannte Zellen oder Erreichbarkeit. Polygonüberlappungen sind
+erlaubt; Objekte und automatische Segmentierung fehlen bewusst. Rosbridge ist
+im aktuellen lokalen Netz weder authentifiziert noch verschlüsselt.
+
+**Rückfallweg:** `start_semantic_map_manager:=false` lässt den passiven Node
+beim Bring-up aus. `use_dynamic_catalog:=false` stellt die statischen
+Kataloglisten wieder her. Ohne passenden Semantikstatus bleibt der bestehende
+Karten-Tab reine Anzeige und sendet keine Raumänderung. Diese Rückfälle
+aktivieren keine Fahrt.
+
 ## 2026-08-13 — H4 bestanden: der feste Versatz je Fahrt ist weg
 
 **Entscheidung:** Der Encoderpfad (`odometry_source: encoder_position`) bleibt

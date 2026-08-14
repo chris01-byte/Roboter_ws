@@ -4,20 +4,22 @@ Code zum Projekt **Mobiler Pick-and-Place-Roboter** (Jetson onboard + KI-Server 
 Software-Stand am 08.07.2026 auf dem Jetson **komplett abgenommen** (alle Prüfstufen grün,
 inkl. echter Missionskette und echtem Nav2 ohne Hardware).
 
-## Dokumente (nur diese vier)
+## Zentrale Einstiegsdokumente
 | Datei | Zweck |
 |---|---|
 | `README.md` | Überblick + Schnellstart (diese Datei) |
 | `PROJEKT_STATUS.md` | **Aktueller Stand** — zuerst hier lesen |
 | `Roboter_Pruefplan.md` | Der EINE finale Prüfplan (+ `pruefplan_jetson.sh`) |
 | `KONZEPT_KALIBRIERUNG_OAK_ARM.md` | Hand-Auge-Kalibrierung (nächste Hardware-Phase) |
+| `docs/SEMANTIC_MAP_INTEGRATION.md` | Manuelle Räume, Kartenbindung, App-Vertrag und sichere Ausbaufolge |
+| `docs/PROJECT_MEMORY.md` | Fortlaufende, evidenzbasierte Entscheidungen und reale Abnahmen |
 
 ## Pakete
 | Paket | Inhalt |
 |---|---|
 | `robot_interfaces` | Eigene `msg`/`srv`/`action` (GetObjectPose, RunMission, ExploreArea, …) |
 | `bt_orchestrator` | Behavior-Tree als **Missions-Action-Server** (`run_mission`) |
-| `mission_manager` | Bedien-Layer: GUI/LLM-Auftrag -> echte Mission (Action-Client) + Pose-Katalog |
+| `mission_manager` | Bedien-Layer; löst manuelle Raumziele read-only auf, fährt sie aber noch nicht an |
 | `mock_servers` | Gegenstellen für Trockentests (Arm/Greifer/Wahrnehmung; Nav/Not-Aus abschaltbar) |
 | `robot_navigation` | Echter Nav2-Stack + Testkarte: Navigation ohne Hardware (virtuelle Basis) |
 | `safety_monitor` | Onboard-Not-Aus-Wächter: publiziert `/safety/estop` (latched) |
@@ -27,6 +29,7 @@ inkl. echter Missionskette und echtem Nav2 ohne Hardware).
 | `explore` | Autonome Frontier-Erkundung: `/explore_area` -> Nav2 |
 | `vl53_near_field` | 2x VL53L7CX Nahbereich + collision_monitor-Konfiguration |
 | `semantic_perception` | Open-Vocabulary-Erkennung (YOLO-World) **mit Objektgedächtnis** (offboard) |
+| `semantic_map_manager` | Fingerprint-gebundene, revisionssichere manuelle Räume für App und Missionen |
 | `llm_planner` | Sprache (qwen2.5/Ollama) -> mission_manager command_json (offboard) |
 | `robot_bringup` | Onboard-/Offboard-Start, Netzwerk/DDS, link_monitor |
 | `robot_description` | Dummy-URDF/TF-Baum für RViz (Arm-Maße folgen mit echtem Arm) |

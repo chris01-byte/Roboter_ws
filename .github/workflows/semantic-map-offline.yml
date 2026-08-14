@@ -1,0 +1,93 @@
+name: Semantic map offline
+
+on:
+  push:
+    paths:
+      - ".github/workflows/semantic-map-offline.yml"
+      - "src/semantic_map_manager/**"
+      - "src/robot_map_manager/**"
+      - "src/mission_manager/**"
+      - "src/llm_planner/**"
+      - "src/robot_bringup/**"
+      - "src/semantic_perception/**"
+      - "ios/Robotersteuerung/**"
+  pull_request:
+    paths:
+      - ".github/workflows/semantic-map-offline.yml"
+      - "src/semantic_map_manager/**"
+      - "src/robot_map_manager/**"
+      - "src/mission_manager/**"
+      - "src/llm_planner/**"
+      - "src/robot_bringup/**"
+      - "src/semantic_perception/**"
+      - "ios/Robotersteuerung/**"
+
+permissions:
+  contents: read
+
+jobs:
+  python-contracts:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Compile changed Python modules
+        run: |
+          python -m compileall -q \
+            src/semantic_map_manager \
+            src/mission_manager \
+            src/llm_planner \
+            src/robot_bringup \
+            src/semantic_perception \
+            ios/Robotersteuerung/Tools/mock_rosbridge.py
+      - name: Semantic map manager
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src/semantic_map_manager
+        run: python -m unittest discover -s src/semantic_map_manager/test -v
+      - name: Mission manager
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src/mission_manager
+        run: python -m unittest discover -s src/mission_manager/test -v
+      - name: LLM catalog
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src/llm_planner
+        run: python -m unittest discover -s src/llm_planner/test -v
+      - name: Bring-up contract
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s src/robot_bringup/test -v
+      - name: Metric map regression
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: src/robot_map_manager
+        run: python -m unittest discover -s src/robot_map_manager/test -v
+      - name: Rosbridge semantic mock contract
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: >-
+          python -m unittest discover
+          -s ios/Robotersteuerung/Tools
+          -p 'test_mock_rosbridge.py' -v
+
+  swift-contracts:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: iOS protocol and map geometry tests
+        run: swift test --package-path ios/Robotersteuerung
+      - name: Full iOS simulator build
+        run: >-
+          xcodebuild
+          -project ios/Robotersteuerung/Robotersteuerung.xcodeproj
+          -scheme Robotersteuerung
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+          build
