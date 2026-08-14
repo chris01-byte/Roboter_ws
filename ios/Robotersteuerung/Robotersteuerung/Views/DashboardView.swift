@@ -475,11 +475,11 @@ struct DashboardView: View {
 
     private var aiStatus: (text: String, tone: StatusPill.Tone) {
         switch controller.offboardAvailable {
-        case true:
+        case .some(true):
             return ("KI verbunden", .success)
-        case false:
+        case .some(false):
             return ("KI getrennt", .error)
-        case nil:
+        case .none:
             return ("KI unbekannt", .neutral)
         }
     }
