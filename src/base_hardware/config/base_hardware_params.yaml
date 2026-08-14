@@ -171,14 +171,14 @@ base_hardware:
     # Zielgeschwindigkeit - DAS war der Ruck beim Anfahren, nicht die Rampe.
     start_speed_register: 0x0020
     start_speed_rpm: 5          # [TUNE] kleiner = weicher los, zu klein = evtl. zaeh
-    # ACHTUNG ZUR EINHEIT: Die Rampenzeit gilt fuer die MAXIMALDREHZAHL
-    # (+/-3000 rpm), nicht fuer die angeforderte. Bei den kleinen Drehzahlen im
-    # Fahrbetrieb bleibt davon nur ein Bruchteil uebrig:
-    #   geradeaus 0.12 m/s -> ~187 rpm -> 2500 * 187/3000  = 156 ms
-    #   drehen 0.40 rad/s  -> ~117 rpm -> 2500 * 117/3000  =  97 ms
-    # Mit den vorherigen 800 ms waren es nur 50 bzw. 31 ms - praktisch ein
-    # Sprung. Beim Drehen war das als Ruckeln spuerbar (12.08.2026), weil der
-    # hohe Aufbau um die Hochachse weniger steif ist als in Fahrtrichtung.
+    # ACHTUNG ZUR EINHEIT: Die fruehere Annahme, die Rampenzeit werde mit der
+    # angeforderten Drehzahl gegen 3000 rpm skaliert, ist durch den Bodentest
+    # vom 14.08.2026 widerlegt. Ein 1,0-s-Fahrimpuls mit 0,12 m/s ergab bei
+    # accel_ms=2000 nur 0,0439 m Encoderweg statt rund 0,12 m bei sofortigem
+    # Sollwert. Die Rampe wirkt damit weit staerker und offenbar weitgehend
+    # direkt auf die Sollwertaenderung. Der Nutzer bestaetigte das Anfahren als
+    # gut und sanft. Mit den zuvor aktiven 100 ms war es praktisch ein Sprung;
+    # bei der manuellen LiDAR-Runde wackelte der hohe Aufbau entsprechend stark.
     # Verstaerkt wird das dadurch, dass das Steuerkreuz digital ist: Druecken
     # heisst sofort voller Ausschlag, es gibt kein sanftes Andosieren.
     # ================== GEMESSEN 13.08.2026 - BITTE LESEN ==================
@@ -199,16 +199,14 @@ base_hardware:
     # rueckwirkend den Eintrag vom 28.07.2026, die Solldrehzahl sei "nach ~110 ms
     # zu 90 % erreicht, trotz 800-ms-Rampe" - die Rampe stand nie auf 800.
     #
-    # WARUM HIER JETZT 100 STEHT: Das ist exakt der Wert, den die Hardware
-    # ohnehin faehrt. Damit gelingt der Schreibvorgang, der Knoten startet, und
-    # das Fahrverhalten aendert sich um kein Jota. Eine wirklich weichere Rampe
-    # waere mit bis zu 2000 moeglich und entspraeche der urspruenglichen Absicht
-    # von 2500 - das ist aber eine echte Verhaltensaenderung am Antrieb und
-    # gehoert nach AGENTS.md 7 in einen eigenen, getrennt getesteten Schritt.
-    # Zur Groessenordnung: Die Rampenzeit gilt fuer 3000 rpm. Bei den 153 rpm
-    # einer 0.10-m/s-Fahrt sind 100 rund 5 ms, 2000 waeren rund 102 ms.
+    # AENDERUNG 14.08.2026: Nach erfolgreichem H4-Encoder-Nachweis wird die
+    # weichere Rampe jetzt als eigener Sicherheits-/Fahrverhaltensschritt auf
+    # den real bestaetigten Hoechstwert 2000 gesetzt. Die Odometrie liest die
+    # absoluten Positionsregister 0x000A/0x000B und erfasst damit auch den Weg
+    # waehrend der Rampe; der alte feste Stop/Start-Versatz aus 0x000C kann
+    # dadurch nicht wiederkehren. Bremsen bleibt getrennt bei 400 ms.
     # =======================================================================
-    accel_ms: 100               # [GEMESSEN] Hardwaregrenze 2000; 2500 wird abgelehnt
+    accel_ms: 2000              # [TUNE] real bestaetigte Obergrenze; 2500 wird abgelehnt
     # Bremsen MUSS deutlich haerter sein als Beschleunigen. Mit 800 ms lief der
     # Roboter nach dem Loslassen des Sticks sichtbar nach - das ist gefaehrlich,
     # weil der Bremsweg dann laenger ist als der Sensorhorizont der VL53.

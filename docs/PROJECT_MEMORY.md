@@ -17,6 +17,58 @@ Rückfallweg:
 
 ---
 
+## 2026-08-14 — Beschleunigungsrampe 2000 ms real abgenommen
+
+**Entscheidung:** `accel_ms` wird von 100 auf **2000** erhöht. Bremsen bleibt
+bewusst bei 400 ms, die Startdrehzahl bei 5 rpm. Damit wird normales Anfahren
+sanfter, ohne den Bremsweg des Nahbereichs- und Notstopps zu verlängern.
+
+**Grund / Evidenz:** Bei der ersten vollständigen manuellen LiDAR-Runde
+wackelte der hohe Aufbau beim Anfahren stark. Die 100-ms-Einstellung war der
+Wert, den die Hardware zuvor ohnehin fuhr; sie war ausdrücklich nur der
+unveränderte H2/H3-Ausgangspunkt. Beide realen Antriebe akzeptieren und
+bestätigen 2000, während 2500 weiterhin mit Modbus Exception 7 abgelehnt wird.
+Der Knoten prüft jeden Schreibzugriff und verweigert bei Ablehnung die
+Fahrfreigabe.
+
+Ein begrenzter Bodenversuch mit 1,0 s bei 0,12 m/s ergab **0,0439 m** absoluten
+Encoderweg und **0,000°** Kursänderung. Der Nutzer bewertete das Anfahren als
+„gut sanft“. Das widerlegt die bisherige Dokumentationsannahme, die
+Rampenzeit werde gegen 3000 rpm skaliert und wirke bei Kartiergeschwindigkeit
+nur rund 0,12 s: Sie wirkt real wesentlich stärker und offenbar weitgehend
+direkt auf die Sollwertänderung.
+
+Die anschließende geschlossene manuelle LiDAR-Runde hatte eine offene
+Zimmertür und ist deshalb in Fläche und Ausdehnung nicht A/B-vergleichbar. Der
+geometrieunabhängigere Wanddickenanteil blieb praktisch gleich (**37,0 % →
+36,7 %**); die weichere Rampe verschlechterte die Karte also nicht, ein
+messbarer Kartenqualitätsgewinn ist mit diesem einen Lauf aber nicht belegt.
+Der Scan-Normalisierer setzte 4467/4467 Scans auf 2160 Strahlen um; keine
+Verwerfung wegen wechselnder Strahlenzahl und kein RS485-/Encoderfehler während
+der Fahrt. Karte, Posegraph und Laufprotokoll bleiben ausschließlich lokal.
+
+**Betroffene Dateien und Hardware:** `base_hardware_params.yaml`, Defaultwert
+im Basis-Node, Vertragsprüfung und Dokumentation; beide ESS23-RS-Antriebe.
+
+**Teststatus:** 60/60 Base-Hardware-Tests, Build, Python-Kompilierung, Flake8
+F/E9 und Diff-Check bestanden. Registerprüfung ohne Bewegung, begrenzter
+Bodentest und vollständige manuelle Kartenrunde real bestanden. Nach dem
+Joystick-Stopp bestätigte der Watchdog fortlaufend 0 rpm. Eine einzelne
+Modbus-Fehlermeldung trat erst beim gemeinsamen SIGINT-Herunterfahren auf,
+nachdem der Roboter bereits rund eine Minute stillstand.
+
+**Offene Risiken:** Die exakte Rampenfunktion des ESS23-RS ist noch nicht aus
+mehreren Impulsdauern identifiziert. Bremsen bleibt absichtlich ruppiger; ein
+Komfort-Smoother muss später vor dem `collision_monitor` liegen, damit dessen
+Sicherheitsstopp nicht verzögert wird. Ein erneuter externer H4-Laservergleich
+war für diese reine Beschleunigungsänderung nicht Teil des Laufs.
+
+**Rückfallweg:** `accel_ms: 100` wiederherstellen und `base_hardware` neu
+bauen. Encoderwerte, Geometrie und Bremsrampe sind von diesem Rückfall
+unberührt.
+
+---
+
 ## 2026-08-14 — DKMS-Aufraeumen: ein "rm" ohne --force haette den Treiber beim naechsten Boot gekillt
 
 **Entscheidung:** Festgehalten als Warnung. Beim Bereinigen der

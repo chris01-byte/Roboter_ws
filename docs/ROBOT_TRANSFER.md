@@ -142,14 +142,23 @@ ros2 topic echo /semantic/catalog_json
 
 ### Was dabei zusätzlich gefunden wurde
 
-**Die Anfahrrampe war nie wirksam.** Der Antrieb weist `accel_ms: 2500` mit
+**Die Anfahrrampe war bis 14.08.2026 nie wirksam.** Der Antrieb weist
+`accel_ms: 2500` mit
 `ExceptionResponse(function_code=134, exception_code=7)` zurück; die Obergrenze
 beider Rampenregister liegt bei **2000**. Ausgelesen stand in `0x001E` auf
 beiden Motoren **100**. Sichtbar wurde das erst, weil dieser Branch die
 Rückgabewerte der Schreibvorgänge prüft — der alte Code verschluckte den
-Fehlschlag. Eingetragen sind jetzt 100, also der Wert, den die Hardware ohnehin
-fährt. Eine weichere Rampe wäre bis 2000 möglich, ist aber eine eigene,
-getrennt zu testende Änderung.
+Fehlschlag.
+
+Die getrennte Änderung ist inzwischen real bestanden: Eingetragen sind jetzt
+**2000 ms Beschleunigen**, unverändert 400 ms Bremsen und 5 rpm
+Startgeschwindigkeit. Beide Antriebe bestätigten alle drei Werte. Ein
+1,0-s-Bodenimpuls mit 0,12 m/s ergab 0,0439 m Encoderweg und 0,000°
+Kursänderung; der Nutzer bewertete das Anfahren als „gut sanft“. Die frühere
+Annahme, die Rampenzeit werde proportional zu 3000 rpm verkürzt, ist damit
+widerlegt. Die anschließende manuelle LiDAR-Runde zeigte keine Verschlechterung
+der Wanddicke (37,0 % vorher, 36,7 % nachher). Die offene Zimmertür macht
+Fläche und Kartenausdehnung zwischen den beiden Läufen nicht vergleichbar.
 
 **Der Nahbereichsschutz ist funktionslos.** `vl53_near_field` stirbt mit
 „Kein CH341/CH34x-I2C-Bus gefunden"; der Adapter `1a86:5512` steckt, das

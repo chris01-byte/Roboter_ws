@@ -108,7 +108,7 @@ antwortet der Antrieb **nicht**):
 | `0x0019` | 32-Bit-Wortfolge | 0 high-low, 1 low-high |
 | `0x0101` | Encoderauflösung, 4 x Linienzahl | typ. 4000; nur als Kandidat lesen |
 | `0x001D` | Solldrehzahl, **Vorzeichen = Richtung** | ±3000 |
-| `0x001E` / `0x001F` | Beschleunigen / Bremsen [ms] | 2500 / 400 |
+| `0x001E` / `0x001F` | Beschleunigen / Bremsen [ms] | 2000 / 400 |
 | `0x0020` | **Startdrehzahl** | 5 rpm |
 | `0x0027` | Kommando | `0x0002` Start, `0x0100` Stop |
 

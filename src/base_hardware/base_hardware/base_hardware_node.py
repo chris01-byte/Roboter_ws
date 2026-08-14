@@ -142,7 +142,7 @@ class BaseHardware(Node):
         # -------------------------------------------------------------------
         self.declare_parameter('accel_register', 0x001E)
         self.declare_parameter('decel_register', 0x001F)
-        self.declare_parameter('accel_ms', 800)
+        self.declare_parameter('accel_ms', 2000)
         self.declare_parameter('decel_ms', 800)
         # Startgeschwindigkeit: die Drehzahl, mit der der Antrieb SOFORT einsetzt,
         # bevor die Rampe ueberhaupt greift. Stand auf 30 rpm (aus dem

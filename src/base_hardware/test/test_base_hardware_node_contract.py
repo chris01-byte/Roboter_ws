@@ -442,6 +442,21 @@ class NodeSafetyContractTests(unittest.TestCase):
         manifest = (PACKAGE_ROOT / 'package.xml').read_text(encoding='utf-8')
         self.assertIn('<depend>rcl_interfaces</depend>', manifest)
 
+    def test_verified_ramp_configuration_is_fail_closed(self):
+        config = CONFIG_PATH.read_text(encoding='utf-8')
+        self.assertIn('accel_ms: 2000', config)
+        self.assertIn('decel_ms: 400', config)
+        self.assertIn('start_speed_rpm: 5', config)
+
+        ramp_source = method_source('_write_ramps')
+        self.assertIn(
+            'self._write_register(motor_id, register, value)', ramp_source)
+        self.assertIn('return False', ramp_source)
+        connect_source = method_source('_connect_modbus')
+        self.assertIn('if not self._write_ramps():', connect_source)
+        self.assertIn(
+            "self._mark_bus_fault('rampen_nicht_bestaetigt')", connect_source)
+
     def test_new_client_epoch_resets_encoder_baseline(self):
         adapter = method_class('_prepare_encoder_reconnect')
         node = adapter()
