@@ -120,9 +120,11 @@ metrischen Karte und in diesem Integrationsstand vollstaendig passiv:
 
 Der `mission_manager` liest dessen transient-local Status und Katalog. Er kann
 ein manuell deklariertes Raumziel validieren und im eigenen Status anzeigen;
-`go_to_room` bleibt jedoch `simulation_only_no_navigation`. Das Launch-Argument
-`start_semantic_map_manager` ist standardmaessig `true`, weil dieser Node keine
-Bewegungswirkung besitzt.
+`go_to_room` bleibt standardmaessig `simulation_only_no_navigation`. Nur der
+separate Opt-in `enable_real_go_to_room:=true` im `mission_manager` aktiviert
+den fail-closed Nav2-Pfad aus `robot_navigation`; der Semantikmanager selbst
+bleibt ohne Bewegungswirkung. Das Launch-Argument
+`start_semantic_map_manager` ist deshalb weiterhin standardmaessig `true`.
 
 **Auf dem Server:**
 ```bash

@@ -7,11 +7,14 @@ Der Node nimmt JSON-Auftraege auf `/mission_manager/command_json` entgegen und p
 
 `pick_and_place` und `explore` werden als echte `RunMission`-Action an den
 `bt_orchestrator` weitergegeben. `pick_object` simuliert seine Phasen weiterhin.
-`go_to_room` loest bereits ein konkretes Ziel aus der manuellen semantischen
-Raumkarte auf, bleibt aber absichtlich eine reine Vorbereitungssimulation:
-Es wird weder eine Action noch ein Nav2-Ziel oder ein Fahrbefehl gesendet.
-Selbst ein versehentlicher Eintrag von `go_to_room` in `real_mission_types`
-wird ignoriert. Ein Abbruch waehrend der
+`go_to_room` loest ein konkretes Ziel aus der manuellen semantischen Raumkarte
+auf und bleibt standardmaessig eine reine Vorbereitungssimulation. Nur der
+separate Launch-Opt-in `enable_real_go_to_room:=true` gibt das Ziel an Nav2
+weiter. Dabei ist ein expliziter Behavior Tree Pflicht; das Launchfile setzt
+den mitgelieferten Baum `navigate_to_pose_no_recovery.xml`, der bei einem
+Planungs- oder Regelfehler abbricht und weder selbststaendig dreht noch
+rueckwaerts faehrt. Ein versehentlicher Eintrag von `go_to_room` in
+`real_mission_types` wird weiterhin ignoriert. Ein Abbruch waehrend der
 asynchronen Goal-Annahme wird vorgemerkt und nach Annahme sofort
 serverseitig weitergegeben. Die Cancel-Antwort wird fuer genau diese Goal-ID
 geprueft; erst der terminale Action-Status `SUCCEEDED`, `CANCELED` oder
@@ -43,7 +46,8 @@ hinzu:
   zuletzt vollstaendig validierten Snapshots;
 - `resolved_room_goal`: kanonische Raum-ID/-Name, Kartenbindung und endliche
   Pose `{x,y,yaw}` oder `null`;
-- `go_to_room_execution`: immer `simulation_only_no_navigation`.
+- `go_to_room_execution`: `simulation_only_no_navigation` oder nach dem
+  ausdruecklichen Opt-in `nav2_explicit_opt_in`.
 - `pick_and_place_rooms`: die unveränderte statische Raum-Allowlist der
   bestehenden realen Pick-and-Place-Mission;
 - `semantic_map.status_age_seconds` und `stale_timeout_seconds`: Frische des

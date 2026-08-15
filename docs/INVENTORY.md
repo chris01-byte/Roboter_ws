@@ -1,8 +1,8 @@
 # Inventar
 
-**Hardwarestand:** 10.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`, Commit `f1b2f23`)
-**Softwaredelta:** 14.08.2026 · Branch `feature/semantic-map-editor`; Encoder-
-Abnahme H0–H4 bestanden, manuelle semantische Räume lokal implementiert
+**Hardwarestand:** 15.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
+**Softwaredelta:** 15.08.2026 · Branch `feature/reale-raumfahrt`; Encoder-
+Abnahme H0–H4 und beaufsichtigte semantische Nav2-Raumfahrt bestanden
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -13,7 +13,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
 | | |
 |---|---|
-| Rechner | Jetson (`p-desktop`), Kernel 5.15.185-tegra |
+| Rechner | Jetson (`p-desktop`), Kernel 5.15.199-tegra |
 | Betriebssystem | Ubuntu 22.04.5 LTS |
 | ROS | 2 Humble |
 | Arbeitskopie | `~/roboter_ws` — **maßgeblich** |
@@ -27,16 +27,16 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Paket | Zweck | Reifegrad |
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
-| `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (14.08.2026 nachgewiesen; Treiber ist ein Out-of-Tree-Modul OHNE DKMS — nach jedem Kernel-Update neu bauen) |
+| `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung | **produktiv** |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
-| `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **Implementiert und offline geprüft; Jetson-/ROS-Abnahme offen** |
+| `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
-| `robot_navigation` | Nav2-Konfiguration, synthetische Testkarten | erprobt |
+| `robot_navigation` | Nav2-Realprofil mit fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (ein beaufsichtigtes semantisches Raumziel real erreicht) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
 | `semantic_perception` | Objekterkennung auf OAK-Bildern | Entwurf |
-| `mission_manager` | Auftragsverwaltung; sichere read-only Raumzielauflösung, Raumfahrt weiterhin simuliert | erprobt |
+| `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung | Entwurf |
 | `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
 | `smartphone_gui` | Weboberfläche | erprobt |
@@ -136,6 +136,6 @@ Bereiche enthalten.
 
 | Komponente | Pfad | Reifegrad |
 |---|---|---|
-| iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor im Simulator gebaut; reale ROS-Verbindung offen |
+| iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

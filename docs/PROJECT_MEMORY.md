@@ -17,6 +17,82 @@ Rückfallweg:
 
 ---
 
+## 2026-08-15 — Reale semantische Raumfahrt fail-closed abgenommen
+
+**Entscheidung:** `go_to_room` darf ein echtes Nav2-Ziel nur nach dem separaten
+Opt-in `enable_real_go_to_room:=true` senden. Der Standard bleibt Simulation.
+Der reale Pfad verwendet einen Recovery-freien Behavior Tree und diese Kette:
+
+```text
+Nav2 -> cmd_vel_mission_gate -> velocity_smoother -> collision_monitor
+     -> base_hardware
+```
+
+Das Gate gibt nur einen frischen `running`-Status derselben `go_to_room`-
+Mission frei. Terminaler, fehlender, veralteter oder ungueltiger Status
+erzwingt null. Der Glätter arbeitet `OPEN_LOOP`; die Encoder-Odometrie bleibt
+unveraendert die Nav2-Rueckmeldung. Der Fortschrittspruefer verlangt 0,10 m in
+20 s.
+
+**Grund / beobachtete Evidenz:** Die Antriebsvorzeichen wurden mit einer
+begrenzten Rechtsdrehung isoliert bestaetigt. Der erste Reglerlauf bog trotzdem
+ab, weil `CLOSED_LOOP` die bereits vorhandene 2000-ms-Motorrampe ein zweites
+Mal nachregelte: Nach drei Sekunden lagen nur 3,5 mm Encoderweg und etwa
+0,007 m/s Sollgeschwindigkeit an. `OPEN_LOOP` beseitigte diese Doppelkopplung.
+
+Ein zweiter, sicherheitsrelevanter Befund war Nav2s bisheriger
+`default_server_timeout` von 20 ms. Die Unterzielannahme kam real erst nach
+rund 590 ms; der Behavior Tree meldete vorher Fehler, waehrend der Controller
+das verspaetet angenommene Unterziel weiterfuhr. Der Timeout steht nun auf
+2000 ms, und das zusaetzliche Missions-Gate blockiert einen solchen verwaisten
+Befehl unabhaengig vom Nav2-Actionzustand. Eine nach erfolgreichem Trockenlauf
+absichtlich injizierte Rohgeschwindigkeit bewirkte hinter dem Gate exakt
+0,000 m virtuelle Bewegung.
+
+Der erste reale Lauf mit der neuen Kette wurde nach 15 s als festgefahren
+abgebrochen: Die sanfte Hardware-Rampe hatte zu diesem Zeitpunkt rund 0,19 m
+statt der damals geforderten 0,30 m erreicht. Das war kein Schlupf und kein
+Encoderfehler. Mit der daraus gemessenen Schwelle 0,10 m/20 s erreichte der
+abschliessende beaufsichtigte Lauf sein semantisches Ziel. Gemessen wurden
+1,084 m Encoderweg, maximal 0,14 Grad Abweichung im langen Geradeausabschnitt
+und 3,28 Grad beim finalen Einlenken. Roh-, Gate-, Glätter- und Sicherheits-
+Ausgang blieben bei hoechstens 0,100 m/s und 0,149 rad/s. Nach dem
+Terminalstatus war der maximale verwaiste Rohbefehl 0,000; Gate und beide
+Motoren wurden bei null bestaetigt. Beide VL53-Datenstroeme blieben frisch,
+Encoder und Modbus meldeten keinen Fehler.
+
+**Betroffene Dateien und Hardware:** `mission_manager` (expliziter Nav2-Pfad,
+Recovery-freier Baum, Action-Abbruch), `robot_navigation` (Realprofil,
+Missions-Gate, Open-Loop-Glättung, Fortschrittspruefer), beide ESS23-RS-
+Antriebe und beide VL53L7CX. Keine Karte, Raumgeometrie oder Zielkoordinate
+wurde ins Repository aufgenommen.
+
+**Teststatus:** Colcon-Build von `mission_manager` und `robot_navigation`, 44
+gemeinsame Python-Tests, Python-Kompilierung, XML-/YAML-Pruefung und
+`git diff --check` bestanden. Gate-Fehlerinjektion bestand fehlenden,
+laufenden, terminalen und veralteten Status. Der vollstaendige Trockenlauf und
+die verwaiste-Rohbefehl-Injektion bestanden. Der abschliessende reale Lauf
+bestand Zielerreichung, Geschwindigkeitsgrenzen, Sensorfrische und gemessenen
+Stillstand.
+
+**Offene Risiken:** Dies ist noch keine allgemeine Selbstlokalisierung. Der
+abgenommene Lauf verwendete einen bewusst gesetzten statischen `map -> odom`-
+Startbezug; nach freiem Versetzen oder Neustart muss die Pose weiterhin
+zuverlaessig lokalisiert werden. Der Recovery-freie Baum bricht bei Planungs-
+oder Regelfehlern absichtlich ab und umfährt nichts selbstständig. H5 der
+Encoder-Odometrie und ein realer VL53-Hindernis-Abbruch waehrend dieser
+Raumfahrt bleiben offen. `base_hardware` und `vl53_near_field` melden beim
+gemeinsamen SIGINT weiterhin eine bereits bekannte doppelte
+`rclpy.shutdown()`-Exception, nachdem der Stillstand erreicht ist; das neue
+Gate endet dagegen sauber.
+
+**Rückfallweg:** `enable_real_go_to_room:=false` verwenden oder weglassen;
+dann bleibt `go_to_room` ohne Fahrwirkung in der bisherigen Simulation. Den
+Real-Launch nicht starten. Motorparameter, Encodergeometrie und semantische
+Kartendaten werden durch diesen Rückfall nicht verändert.
+
+---
+
 ## 2026-08-14 — Beschleunigungsrampe 2000 ms real abgenommen
 
 **Entscheidung:** `accel_ms` wird von 100 auf **2000** erhöht. Bremsen bleibt

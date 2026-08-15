@@ -47,3 +47,46 @@ ros2 launch mock_servers dry_run_nav_mission.launch.py
 3. **cmd_vel-Kette scharf**: Nav2 -> collision_monitor -> base_hardware
    (Prüfplan C4), `dry_run: false` erst nach aufgebocktem Test.
 4. Pose-Katalog (`mission_manager`) mit der echten SLAM-Karte neu einmessen.
+
+## Reale Nav2-Fahrt
+
+Die reale Startdatei verwendet eine bewusst gestufte Befehlskette:
+
+```text
+Nav2 -> /cmd_vel_nav_raw -> mission_cmd_vel_gate -> /cmd_vel_nav
+     -> velocity_smoother -> /cmd_vel_smoothed -> collision_monitor
+     -> /cmd_vel -> base_hardware
+```
+
+Der Geschwindigkeitsglätter begrenzt die Regleränderungen passend zur real
+gemessenen 2000-ms-Anfahrtsrampe. Er liegt vor dem `collision_monitor`, damit
+ein VL53-Sicherheitsstopp nicht weichgezeichnet oder verzögert wird. Encoder-
+Odometrie, Motorvorzeichen und Motorregister bleiben dabei unverändert.
+Der Glätter arbeitet bewusst `OPEN_LOOP`: Im Realtest koppelte `CLOSED_LOOP`
+die Encoder-Rückmeldung mit der bereits vorhandenen Motorrampe doppelt und
+reduzierte den Sollwert nach drei Sekunden noch auf etwa 0,007 m/s. Die
+Encoder-Odometrie bleibt davon unberührt und wird weiterhin von Nav2 genutzt.
+
+Der Fortschrittspruefer akzeptiert 0,10 m innerhalb von 20 s. Das ist auf die
+gemessene 2000-ms-Hardware-Rampe abgestimmt: Mit der frueheren Schwelle von
+0,30 m in 15 s wurde eine freie, gerade Fahrt nach rund 0,19 m faelschlich als
+festgefahren abgebrochen. Ein echter Stillstand wird weiterhin zeitlich
+begrenzt erkannt.
+
+Das `mission_cmd_vel_gate` arbeitet fail-closed. Es gibt Nav2-Befehle nur bei
+einem frischen Missionsstatus `running` für `go_to_room` frei. Ein fehlender,
+veralteter oder terminaler Status erzwingt null. Damit kann auch ein von Nav2
+verspätet angenommenes Unterziel nach einem Missionsfehler nicht weiterfahren.
+
+Ohne Motorstrom prüfen:
+
+```bash
+ros2 launch robot_navigation nav_real.launch.py oak:=false \
+  static_map_odom_x:=0.045 static_map_odom_y:=0.005
+```
+
+`active_drive:=true` aktiviert RS485 und darf nur nach der Hardware-
+Startprüfung, mit freier Fahrfläche und erreichbarem Not-Aus verwendet werden.
+Die drei `static_map_odom_*`-Werte sind ausschließlich eine vermessene
+Startpose für kurze Tests ohne Lokalisierung. Sobald RTAB-Map oder AMCL läuft,
+muss `static_map_odom:=false` gesetzt werden.

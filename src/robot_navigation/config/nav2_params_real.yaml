@@ -6,7 +6,8 @@
 #    - obstacle_layer in local + global costmap, gespeist aus den beiden
 #      VL53-Punktwolken -> Nav2 sieht reale Hindernisse und plant drumherum.
 #    - use_collision_detection: true (Regler bremst vor Costmap-Hindernissen).
-#    - desired_linear_vel: 0.12 (bewusst langsam fuer die erste autonome Fahrt).
+#    - konservativ abgestimmter Regler + echter velocity_smoother fuer die
+#      traege 2000-ms-Anfahrtsrampe der Motoren.
 #    - robot_radius: 0.40 (Sicherheitswert; Plattform 0.70x0.50 -> ~0.43
 #      umschrieben). In nav2_params.yaml ist er bewusst 0.30 (Testwohnungs-
 #      Tueren) - deshalb eine EIGENE Datei, damit der virtuelle Test unberuehrt
@@ -20,8 +21,11 @@
 #                              liegen darueber -> werden NICHT markiert)
 #    raytrace_max_range 0.7   (>0.60 -> Clear-Punkte raeumen ihren Strahl)
 #  Der collision_monitor bleibt auf der Original-Wolke (unveraendert verifiziert).
-#  cmd_vel-Verkettung: Regler+Behavior publizieren (per Launch-Remap) auf
-#  cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> base_hardware.
+#  cmd_vel-Verkettung: Regler+Behavior -> cmd_vel_nav_raw -> fail-closed
+#  mission_cmd_vel_gate -> cmd_vel_nav -> velocity_smoother
+#  -> cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> base_hardware.
+#  Der Sicherheitsstopp bleibt hinter dem Komfort-Smoother und wird daher
+#  nicht verzoegert.
 # =====================================================================
 
 bt_navigator:
@@ -30,7 +34,10 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10
-    default_server_timeout: 20
+    # Humble verwirft bei Ablauf den noch ausstehenden Unterziel-Handle. Unter
+    # Jetson-Last kam die FollowPath-Annahme real erst nach ~590 ms; 20 ms
+    # erzeugten dadurch ein verwaistes, weiterfahrendes Controller-Ziel.
+    default_server_timeout: 2000
 
 controller_server:
   ros__parameters:
@@ -43,8 +50,11 @@ controller_server:
     controller_plugins: ["FollowPath"]
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.3
-      movement_time_allowance: 15.0
+      # Die bestaetigte 2000-ms-Hardware-Rampe bewegt Amadeus beim sanften
+      # Start in 15 s nur etwa 0,19 m. Die fruehere 0,30-m-Schwelle brach
+      # deshalb eine freie, gerade Fahrt faelschlich als festgefahren ab.
+      required_movement_radius: 0.10
+      movement_time_allowance: 20.0
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: True
@@ -52,17 +62,17 @@ controller_server:
       yaw_goal_tolerance: 0.40
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.12        # REAL: langsam fuer erste autonome Fahrt
-      lookahead_dist: 0.5
-      min_lookahead_dist: 0.3
-      max_lookahead_dist: 0.8
+      desired_linear_vel: 0.10        # REAL: konservativ fuer 2000-ms-Motorrampe
+      lookahead_dist: 0.8
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 1.0
       use_velocity_scaled_lookahead_dist: false
       transform_tolerance: 0.2
       use_rotate_to_heading: true
-      rotate_to_heading_angular_vel: 0.6
-      max_angular_accel: 2.0
-      regulated_linear_scaling_min_radius: 0.6
-      regulated_linear_scaling_min_speed: 0.1
+      rotate_to_heading_angular_vel: 0.2
+      max_angular_accel: 0.3
+      regulated_linear_scaling_min_radius: 0.8
+      regulated_linear_scaling_min_speed: 0.04
       use_collision_detection: true    # REAL: Sensorik vorhanden -> Regler-Kollisionscheck an
       allow_reversing: false
 
@@ -212,6 +222,24 @@ behavior_server:
     max_rotational_vel: 0.6
     min_rotational_vel: 0.2
     rotational_acc_lim: 2.0
+
+velocity_smoother:
+  ros__parameters:
+    smoothing_frequency: 20.0
+    scale_velocities: true
+    # OPEN_LOOP ist hier absichtlich: CLOSED_LOOP plus der zusaetzlichen
+    # 2000-ms-Motorrampe bildete im Realtest eine doppelte Rueckkopplung und
+    # liess nach 3 s nur etwa 0.007 m/s durch. Die Encoder bleiben unveraendert
+    # die Odometriequelle fuer Nav2 und alle Sicherheitspruefungen.
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.12, 0.0, 0.25]
+    min_velocity: [0.0, 0.0, -0.25]
+    max_accel: [0.12, 0.0, 0.30]
+    max_decel: [-0.30, 0.0, -0.60]
+    odom_topic: "/odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 0.5
 
 map_server:
   ros__parameters:

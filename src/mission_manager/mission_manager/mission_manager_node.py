@@ -8,10 +8,10 @@
 #    - Fuer Typen MIT Behavior-Tree (pick_and_place, explore): den Auftrag als
 #      RunMission-Action an den bt_orchestrator schicken -> ECHTE Ausfuehrung.
 #      Phase/Fortschritt kommen als Action-Feedback zurueck (Befund K1).
-#    - Fuer Typen OHNE eigenen Baum (go_to_room, pick_object): weiterhin
-#      Phasen-Simulation, klar als "(Simulation)" markiert. go_to_room loest
-#      vorher ein Karten-/Revisions-gebundenes Ziel aus der semantischen Karte
-#      auf, gibt es aber ausdruecklich NICHT an Nav2 oder eine Action weiter.
+#    - pick_object bleibt eine klar markierte Phasen-Simulation.
+#    - go_to_room loest ein Karten-/Revisions-gebundenes Ziel aus der
+#      semantischen Karte auf. Standardmaessig bleibt es Simulation; nur ein
+#      separater Opt-in sendet das Ziel mit einem Recovery-freien Baum an Nav2.
 #    - Status JSON fuer die GUI publizieren (bestehende Felder unveraendert,
 #      Semantikfelder ausschliesslich additiv).
 #
@@ -40,14 +40,15 @@ from action_msgs.msg import GoalStatus
 from action_msgs.srv import CancelGoal
 from std_msgs.msg import String, Bool
 from geometry_msgs.msg import PoseStamped
+from nav2_msgs.action import NavigateToPose
 
 from robot_interfaces.action import RunMission
 from mission_manager.action_outcome import cancel_was_accepted, terminal_state
 from mission_manager.command_payload import decode_command_payload
 from mission_manager.execution_policy import (
-    GO_TO_ROOM_EXECUTION_STATUS,
     effective_real_types,
     execution_mode,
+    go_to_room_execution_status,
     pick_and_place_room_allowed,
 )
 from mission_manager.semantic_catalog import decode_catalog_payload
@@ -79,6 +80,12 @@ class MissionManager(Node):
         # K1: welche Auftragstypen ECHT ueber den Behavior-Tree laufen.
         self.declare_parameter('real_mission_types', ['pick_and_place', 'explore'])
         self.declare_parameter('run_mission_action', '/run_mission')
+        # Reale Raumfahrt ist ein separater, standardmaessig AUSgeschalteter
+        # Nav2-Pfad. Sie kann nicht versehentlich ueber real_mission_types
+        # aktiviert werden.
+        self.declare_parameter('enable_real_go_to_room', False)
+        self.declare_parameter('navigate_to_pose_action', '/navigate_to_pose')
+        self.declare_parameter('go_to_room_behavior_tree', '')
 
         self.rooms = list(self.get_parameter('rooms').value)
         # Diese ursprüngliche Allowlist bleibt getrennt vom dynamischen
@@ -114,6 +121,18 @@ class MissionManager(Node):
             self.get_logger().error(
                 "'go_to_room' aus real_mission_types entfernt: reale Fahrt ist nicht freigegeben.")
         self.run_mission_action = self.get_parameter('run_mission_action').value
+        self.enable_real_go_to_room = bool(
+            self.get_parameter('enable_real_go_to_room').value)
+        self.navigate_to_pose_action = str(
+            self.get_parameter('navigate_to_pose_action').value).strip()
+        if not self.navigate_to_pose_action:
+            raise ValueError('navigate_to_pose_action darf nicht leer sein')
+        self.go_to_room_behavior_tree = str(
+            self.get_parameter('go_to_room_behavior_tree').value).strip()
+        if self.enable_real_go_to_room and not self.go_to_room_behavior_tree:
+            raise ValueError(
+                'Reale Raumfahrt verlangt einen expliziten Recovery-freien '
+                'go_to_room_behavior_tree')
 
         # Pose-Katalog: Ablageort -> Pose. Dynamisch getypt, damit ein fehlender
         # Eintrag als None erkennbar ist (dann nutzt der BT seine Default-Pose).
@@ -152,6 +171,8 @@ class MissionManager(Node):
 
         # K1: Action-Client zum bt_orchestrator.
         self.mission_client = ActionClient(self, RunMission, self.run_mission_action)
+        self.navigation_client = ActionClient(
+            self, NavigateToPose, self.navigate_to_pose_action)
 
         # -------------------------------------------------------------------
         # Interner Zustand
@@ -161,7 +182,7 @@ class MissionManager(Node):
         self.message = 'Bereit'
         self.progress = 0.0
         self.active_command: Dict = {}
-        self.mode: Optional[str] = None   # 'real' | 'sim' | None
+        self.mode: Optional[str] = None   # 'real' | 'nav2' | 'sim' | None
         self.history: List[Dict] = []
         self.offboard_available = None
         self.last_rejection = ''          # S1-Fix: Ablehnung getrennt vom Zustand
@@ -186,12 +207,18 @@ class MissionManager(Node):
         self._cancel_future = None
         self._action_epoch = 0
         self._active_action_epoch = None
+        self._room_initial_distance = None
 
         self.timer = self.create_timer(0.2, self._timer_tick)
         self._publish_status()
         self.get_logger().info(
             f"mission_manager bereit (echte Typen: {sorted(self.real_types)}, "
             f"Action '{self.run_mission_action}').")
+        if self.enable_real_go_to_room:
+            self.get_logger().warn(
+                'REALE RAUMFAHRT AKTIV: go_to_room sendet ein Nav2-Ziel an '
+                f"'{self.navigate_to_pose_action}' mit Behavior Tree "
+                f"'{self.go_to_room_behavior_tree}'.")
 
     # ======================= Eingang / Validierung =======================
     def _on_command(self, msg: String):
@@ -222,6 +249,9 @@ class MissionManager(Node):
             return
 
         self.last_rejection = ''
+        if command_type == 'go_to_room' and self.enable_real_go_to_room:
+            self._start_room_navigation(cmd)
+            return
         mode = execution_mode(command_type, self.real_types)
         if mode == 'real':
             self._start_real_mission(command_type, cmd)
@@ -282,6 +312,172 @@ class MissionManager(Node):
         return p
 
     # ======================= Echte Mission (Action) =====================
+    def _start_room_navigation(self, cmd: Dict):
+        if self.resolved_room_goal is None:
+            self._finish(
+                'failed', 'fehler',
+                'Internes Raumziel fehlt; keine Navigation gestartet.', cmd)
+            return
+        if not self.navigation_client.server_is_ready():
+            self._finish(
+                'failed', 'fehler',
+                f"Nav2 nicht erreichbar (Action '{self.navigate_to_pose_action}').",
+                cmd)
+            return
+
+        resolved = self.resolved_room_goal
+        goal = NavigateToPose.Goal()
+        goal.pose.header.frame_id = resolved.frame_id
+        goal.pose.header.stamp = self.get_clock().now().to_msg()
+        goal.pose.pose.position.x = resolved.x
+        goal.pose.pose.position.y = resolved.y
+        goal.pose.pose.orientation.z = math.sin(resolved.yaw / 2.0)
+        goal.pose.pose.orientation.w = math.cos(resolved.yaw / 2.0)
+        goal.behavior_tree = self.go_to_room_behavior_tree
+
+        self.state = 'running'
+        self.mode = 'nav2'
+        self.active_command = dict(cmd)
+        self.phase = 'nav2_ziel_senden'
+        self.message = f"Fahrt zu '{resolved.room_name}' wird gestartet."
+        self.progress = 0.0
+        self._room_initial_distance = None
+        self._goal_handle = None
+        self._real_goal_pending = True
+        self._cancel_requested = False
+        self._cancel_future = None
+        self._action_epoch += 1
+        action_epoch = self._action_epoch
+        self._active_action_epoch = action_epoch
+        self.history.append({
+            'event': 'start_room_navigation',
+            'command': cmd,
+            'map_fingerprint': resolved.map_fingerprint,
+            'map_revision': resolved.map_revision,
+            't': time.time(),
+        })
+        self._publish_status()
+
+        send_future = self.navigation_client.send_goal_async(
+            goal,
+            feedback_callback=lambda feedback, epoch=action_epoch:
+                self._on_room_navigation_feedback(feedback, epoch))
+        send_future.add_done_callback(
+            lambda response_future, epoch=action_epoch:
+                self._on_room_navigation_goal_response(response_future, epoch))
+
+    def _on_room_navigation_goal_response(self, future, action_epoch):
+        if self._active_action_epoch != action_epoch:
+            return
+        try:
+            goal_handle = future.result()
+        except Exception as exc:
+            self._clear_action_state()
+            self._finish(
+                'failed', 'fehler',
+                f'Nav2-Ziel konnte nicht gesendet werden: {exc}',
+                self.active_command)
+            return
+
+        if not goal_handle.accepted:
+            was_canceled = self._cancel_requested
+            self._clear_action_state()
+            self._finish(
+                'canceled' if was_canceled else 'failed',
+                'abgebrochen' if was_canceled else 'fehler',
+                'Raumfahrt vor der Zielannahme abgebrochen.'
+                if was_canceled else 'Nav2 hat das Raumziel abgelehnt.',
+                self.active_command)
+            return
+
+        self._goal_handle = goal_handle
+        goal_handle.get_result_async().add_done_callback(
+            lambda result_future, handle=goal_handle, epoch=action_epoch:
+                self._on_room_navigation_result(result_future, handle, epoch))
+
+        if self._cancel_requested:
+            self._request_real_cancel(goal_handle, action_epoch)
+            return
+
+        self.phase = 'fahre_zum_raum'
+        self.message = 'Nav2-Ziel angenommen; Raumfahrt laeuft.'
+        self._publish_status()
+
+    def _on_room_navigation_feedback(self, feedback_msg, action_epoch):
+        if (
+                self._active_action_epoch != action_epoch
+                or self.state != 'running'
+                or self.mode != 'nav2'
+                or self._cancel_requested):
+            return
+        remaining = max(0.0, float(feedback_msg.feedback.distance_remaining))
+        if remaining > 0.01 and self._room_initial_distance is None:
+            self._room_initial_distance = remaining
+        if self._room_initial_distance:
+            self.progress = max(
+                0.0,
+                min(0.99, 1.0 - remaining / self._room_initial_distance))
+        self.phase = 'fahre_zum_raum'
+        self.message = f'Noch {remaining:.2f} m bis zum Raumziel.'
+        self._publish_status()
+
+    def _on_room_navigation_result(self, future, goal_handle, action_epoch):
+        if (
+                self._active_action_epoch != action_epoch
+                or self._goal_handle is not goal_handle):
+            return
+        try:
+            wrapped_result = future.result()
+            action_status = wrapped_result.status
+        except Exception as exc:
+            self._cancel_requested = False
+            self._cancel_future = None
+            self.phase = 'status_unbekannt'
+            self.message = (
+                f'Nav2-Ergebnis nicht lesbar: {exc}. '
+                'Keine neue Mission starten; mission_manager pruefen.')
+            self._reject(self.message)
+            return
+
+        outcome = terminal_state(
+            action_status,
+            True,
+            succeeded_status=GoalStatus.STATUS_SUCCEEDED,
+            canceled_status=GoalStatus.STATUS_CANCELED,
+            aborted_status=GoalStatus.STATUS_ABORTED)
+        if outcome is None:
+            self._cancel_requested = False
+            self._cancel_future = None
+            self.phase = 'status_unbekannt'
+            self.message = (
+                f'Unerwarteter nichtterminaler Nav2-Status {action_status}; '
+                'mission_manager pruefen.')
+            self._reject(self.message)
+            return
+
+        self._clear_action_state()
+        if outcome == 'success':
+            self._finish(
+                'success', 'angekommen', 'Raumziel erreicht.',
+                self.active_command, progress=1.0)
+        elif outcome == 'canceled':
+            self._finish(
+                'canceled', 'abgebrochen', 'Raumfahrt abgebrochen.',
+                self.active_command)
+        else:
+            self._finish(
+                'failed', 'fehler',
+                f'Nav2-Raumfahrt fehlgeschlagen (Action-Status {action_status}).',
+                self.active_command)
+
+    def _clear_action_state(self):
+        self._real_goal_pending = False
+        self._goal_handle = None
+        self._cancel_requested = False
+        self._cancel_future = None
+        self._active_action_epoch = None
+        self._room_initial_distance = None
+
     def _start_real_mission(self, command_type: str, cmd: Dict):
         if not self.mission_client.server_is_ready():
             # bt_orchestrator laeuft (noch) nicht -> ehrliche Fehlermeldung.
@@ -592,7 +788,7 @@ class MissionManager(Node):
         if self.state != 'running' and not self._real_goal_pending:
             self._reject('Keine laufende Mission')
             return
-        if self.state == 'running' and self.mode == 'real':
+        if self.state == 'running' and self.mode in {'real', 'nav2'}:
             if self._cancel_requested:
                 self._reject('Abbruch wurde bereits angefordert')
                 return
@@ -662,6 +858,21 @@ class MissionManager(Node):
                 'failed', 'ziel_ungueltig',
                 f'Semantisches Raumziel wurde ungueltig: {reason} (keine Fahrt)',
                 self.active_command)
+            return True
+        if (
+                self.state == 'running'
+                and self.mode == 'nav2'
+                and self.active_command.get('type') == 'go_to_room'):
+            if not self._cancel_requested:
+                self._cancel_requested = True
+                self.phase = 'ziel_ungueltig'
+                self.message = (
+                    f'Semantisches Raumziel wurde ungueltig: {reason}; '
+                    'Nav2-Abbruch angefordert.')
+                if self._goal_handle is not None:
+                    self._request_real_cancel(
+                        self._goal_handle, self._active_action_epoch)
+                self._publish_status()
             return True
         return False
 
@@ -760,7 +971,8 @@ class MissionManager(Node):
             'resolved_room_goal': (
                 self.resolved_room_goal.as_dict()
                 if self.resolved_room_goal is not None else None),
-            'go_to_room_execution': GO_TO_ROOM_EXECUTION_STATUS,
+            'go_to_room_execution': go_to_room_execution_status(
+                self.enable_real_go_to_room),
             'time': time.time(),
         }
         self.status_pub.publish(String(data=json.dumps(payload, ensure_ascii=False)))

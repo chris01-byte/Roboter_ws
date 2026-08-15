@@ -1,5 +1,69 @@
 # Übertragung auf den realen Roboter
 
+## Abnahmestand reale semantische Raumfahrt (15.08.2026)
+
+**Branch:** `feature/reale-raumfahrt`
+
+Dieser Abschnitt ersetzt fuer neuere Stände die Aussage vom 14.08.,
+`go_to_room` sei immer simuliert. Der sichere Standard ist weiterhin
+Simulation; nur `enable_real_go_to_room:=true` aktiviert den getrennten
+Nav2-Pfad.
+
+### Real bestandener Vertrag
+
+- Ein Karten- und Revisions-gebundenes semantisches Raumziel wird als
+  `NavigateToPose` gesendet.
+- Der verpflichtende Behavior Tree enthält keine Recovery-Manöver: kein
+  automatisches Rueckwaertsfahren und kein selbststaendiges Drehen nach einem
+  Fehler.
+- Nav2 publiziert auf `/cmd_vel_nav_raw`. Das fail-closed
+  `cmd_vel_mission_gate` gibt nur eine frische, laufende `go_to_room`-Mission
+  auf `/cmd_vel_nav` frei.
+- Der `velocity_smoother` arbeitet `OPEN_LOOP`; danach folgt der
+  `collision_monitor`, erst dann `/cmd_vel` und `base_hardware`.
+- Der Nav2-Unterzieltimeout ist 2000 ms. Die reale Unterzielannahme benoetigte
+  in einem Messlauf rund 590 ms; der alte 20-ms-Wert konnte einen Fehler
+  melden, bevor das Unterziel angenommen war.
+- Der Fortschrittspruefer ist auf 0,10 m in 20 s gesetzt. Die alte Schwelle
+  0,30 m/15 s war mit der bestaetigten 2000-ms-Hardware-Rampe unvereinbar und
+  brach freie Fahrt nach rund 0,19 m ab.
+
+Der abschliessende beaufsichtigte Bodenlauf erreichte sein Ziel nach 1,084 m
+Encoderweg. Der lange Geradeausabschnitt blieb innerhalb 0,14 Grad, das finale
+Einlenken innerhalb 3,28 Grad. Alle vier Stufen der Befehlskette blieben bei
+maximal 0,100 m/s und 0,149 rad/s. Nach Erfolg wurden Gate, reale
+Istgeschwindigkeit und beide Motoren bei null bestaetigt; es blieb kein
+verwaister Nav2-Rohbefehl. Beide VL53-Datenstroeme waren frisch, Encoder und
+Modbus fehlerfrei.
+
+### Pruefung vor jeder weiteren Realfahrt
+
+1. Roboterpose nicht aus Kartenkoordinaten raten. Der bislang abgenommene Lauf
+   verwendete einen bewusst gesetzten statischen `map -> odom`-Startbezug.
+2. Freie Raeder/Fahrbahn und Not-Aus bestaetigen; keine Freigabe aus diesem
+   Dokument ableiten.
+3. Beide VL53-Punktwolken, aktiven `collision_monitor`, frische Odometrie,
+   initialisierte Encoder, RS485-Bereitschaft und 0 rpm pruefen.
+4. Laufzeitparameter pruefen: `OPEN_LOOP`, 2000-ms-Nav2-Timeout und
+   Fortschrittspruefer 0,10 m/20 s.
+5. Während des Laufs Mission, Gate-Ausgang, Encoder-/Modbusstatus und echten
+   Motorstillstand auch nach einem Terminalstatus weiter beobachten.
+
+### Offene Grenzen und Rückfall
+
+Die allgemeine Selbstlokalisierung nach freiem Versetzen oder Neustart ist
+noch nicht abgenommen. Bis dahin ist reale Raumfahrt nur vom kontrollierten
+Startbezug aus zulaessig. Der Recovery-freie Baum bricht absichtlich ab, statt
+ein Hindernis autonom zu umfahren. H5 der Encoder-Odometrie und ein echter
+VL53-Hindernis-Abbruch in dieser Kette bleiben offen.
+
+Rückfall: `enable_real_go_to_room:=false` verwenden oder weglassen und den
+Real-Launch nicht starten. Dann bleibt die semantische Zielaufloesung
+read-only/simuliert. Karten- und Raumdaten bleiben lokal ausserhalb des
+Repositories.
+
+---
+
 ## Auftrag: manuelle semantische Räume in der Amadeus-App (14.08.2026)
 
 **Branch:** `feature/semantic-map-editor`

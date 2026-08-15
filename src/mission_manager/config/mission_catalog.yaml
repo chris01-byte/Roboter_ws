@@ -38,6 +38,15 @@ mission_manager:
     real_mission_types: ["pick_and_place", "explore"]
     run_mission_action: "/run_mission"
 
+    # Reale Raumfahrt bleibt standardmaessig AUS und kann nicht ueber
+    # real_mission_types aktiviert werden. Nur fuer einen beaufsichtigten,
+    # zuvor motorlos bestandenen Nav2-Lauf per Launch-Argument einschalten.
+    enable_real_go_to_room: false
+    navigate_to_pose_action: "/navigate_to_pose"
+    # Wird vom Launchfile auf den mitgelieferten Recovery-freien Baum gesetzt.
+    # Bei direktem Node-Start muss dieser Pfad explizit angegeben werden.
+    go_to_room_behavior_tree: ""
+
     # --- Pose-Katalog fuer Ablageorte (fuellt place_base_goal/place_pose im Goal) ---
     # Frames der Ablageposen:
     place_base_frame: "map"          # Basis-Zielpose faehrt Nav2 an
@@ -65,7 +74,8 @@ mission_manager:
     # Auswahlkatalog automatisch aus semantic_map_manager beziehen. Bei
     # fehlender/ungueltiger/leerer Meldung bleiben die statischen Listen oben
     # erhalten. Ein go_to_room-Auftrag verlangt zusaetzlich einen gueltigen,
-    # Karten- und Revisions-gebundenen Raumstatus und bleibt reine Simulation.
+    # Karten- und Revisions-gebundenen Raumstatus. Ohne den expliziten
+    # enable_real_go_to_room-Schalter bleibt der Auftrag reine Simulation.
     use_dynamic_catalog: true
     catalog_topic: "/semantic/catalog_json"
     semantic_map_status_topic: "/semantic_map/status_json"

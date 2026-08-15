@@ -1,0 +1,27 @@
+<!--
+  Bewusst minimaler Baum fuer die erste beaufsichtigte Raumfahrt.
+
+  Bei Planungs- oder Regelfehlern wird das Goal abgebrochen. Insbesondere gibt
+  es hier keine Spin-, BackUp-, Wait- oder Costmap-Clear-Recovery, die ohne
+  erneute Bedienerentscheidung eine zusaetzliche Bewegung ausloesen koennte.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithoutRecovery">
+      <RateController hz="1.0">
+        <Fallback>
+          <ReactiveSequence>
+            <Inverter>
+              <GlobalUpdatedGoal/>
+            </Inverter>
+            <IsPathValid path="{path}"/>
+          </ReactiveSequence>
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"
+                             server_timeout="2000"/>
+        </Fallback>
+      </RateController>
+      <FollowPath path="{path}" controller_id="FollowPath"
+                  server_timeout="2000"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

@@ -3,7 +3,17 @@
 from typing import Any, Iterable, Set
 
 
-GO_TO_ROOM_EXECUTION_STATUS = 'simulation_only_no_navigation'
+GO_TO_ROOM_SIMULATION_STATUS = 'simulation_only_no_navigation'
+GO_TO_ROOM_NAV2_STATUS = 'nav2_explicit_opt_in'
+
+
+def go_to_room_execution_status(real_navigation_enabled: bool) -> str:
+    """Expose whether the separately guarded Nav2 path is enabled."""
+    return (
+        GO_TO_ROOM_NAV2_STATUS
+        if real_navigation_enabled
+        else GO_TO_ROOM_SIMULATION_STATUS
+    )
 
 
 def effective_real_types(configured_types: Iterable[str]) -> Set[str]:
