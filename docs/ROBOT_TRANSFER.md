@@ -1,5 +1,75 @@
 # Übertragung auf den realen Roboter
 
+## Übergabestand globale Lokalisierung (15.08.2026)
+
+**Branch:** `feature/globale-lokalisierung`
+
+Der Roboter wurde nach dem letzten Test manuell verschoben. Das war bei
+beendeten Motor-/Navigations-Stacks sicher, macht aber jede vorherige globale
+Pose ungueltig. Vor der naechsten autonomen Fahrt ist deshalb eine neue
+Lokalisierung erforderlich; aus diesem Dokument folgt keine Fahrfreigabe.
+
+### Implementierter Vertrag
+
+- `nav_localized.launch.py` startet die lokale gespeicherte Karte, den
+  normalisierten STL-27L-Scan, AMCL, den `localization_guard` und den realen
+  Nav2-Pfad mit genau einem dynamischen `map -> odom`-Eigentuemer.
+- Der Kartenpfad ist Pflicht. Metrische und semantische Karte muessen denselben
+  SHA-256-Fingerabdruck besitzen; echte Karten und Raumdaten bleiben lokal.
+- `/localization/ready` wird erstmalig nur bei hoechstens 0,20 m
+  Standardabweichung in x/y, 10 Grad in yaw und hoechstens 0,08 m/5 Grad
+  Bewegung von `map -> odom` im Drei-Sekunden-Fenster wahr.
+- Nach Freigabe halten getrennte Hysteresen bis 0,30 m/15 Grad Kovarianz und
+  0,20 m/12 Grad TF-Bewegung. Die TF-Haltegrenzen stammen aus 640 realen
+  Proben mit gemessenen Maxima 0,1601 m/8,32 Grad.
+- Das `cmd_vel`-Gate stoppt bei jedem Verlust der Freigabe sofort. Der
+  Mission Manager verwirft eine bereits laufende Raumfahrt erst nach 0,8 s
+  ununterbrochenem Verlust. Die erste Zielannahme bleibt strikt fail-closed.
+- Der Lokalisierungsstatus zeigt die aktuelle TF-Fensterbewegung, die aktive
+  Acquire-/Maintain-Grenze und die Gruende eines Sperruebergangs. Der
+  Missionsstatus zeigt Verlustalter und Abbruchnachfrist.
+
+### Reale Evidenz und Grenze
+
+Nach freiem Versetzen konvergierte AMCL nach einer vollstaendigen Drehung
+einmal auf 0,118/0,135 m und 8,65 Grad Standardabweichung. Die folgende
+`go_to_room`-Fahrt erreichte einen Punkt rund 0,03 m vor dem semantischen Ziel.
+Eine 0,59-s-TF-Korrektur blieb ohne Missionsverlust; eine spaetere
+2,20-s-Instabilitaet brach die Mission korrekt ab und der Motorstillstand
+wurde bestaetigt.
+
+Die Wiederholbarkeit ist noch nicht bestanden. Nach einem spaeteren Neustart
+und erneutem Versetzen lieferten volle Drehung und Suchboegen weiterhin
+mehrdeutige Hypothesen; der beste Winkelwert blieb beispielsweise bei
+11,33 Grad und damit ueber der 10-Grad-Freigabe. Eine nur zur Laufzeit
+getestete Erhoehung auf 2.000 bis 10.000 AMCL-Partikel verbesserte das nicht
+ausreichend und wurde nicht in die Konfiguration uebernommen. Ebenso werden
+Einzelscan-Matches nicht verwendet: Die offene/unvollstaendige Raumkarte ist
+symmetrisch, und Kandidaten muessen mit dem realen Nav2-Roboterradius von
+0,40 m statt einer zu kleinen LiDAR-Freiraumannahme bewertet werden.
+
+Damit sind Sicherheitskette, lokale Navigation und Abbruchpfad real belegt;
+die vollstaendig autonome Selbstlokalisierung nach beliebigem Versetzen plus
+anschliessende Zielerreichung ist der offene Meilenstein. Die naechste
+Loesungsrichtung ist eine Mehrbeobachtungs-Initialisierung oder eine
+messgestuetzte AMCL-Suchstrategie, nicht das Lockern der 10-Grad-Schwelle.
+
+### Zustand und naechster Start
+
+- Die Motor-/Nav2-/AMCL-/Missions-Stacks wurden nach dem Test beendet; der
+  Roboter darf aus einer alten Pose nicht autonom gestartet werden.
+- VL53-Zonen und Costmap-Obstacle-Layer waren nur waehrend der beaufsichtigten
+  Testlaeufe zur Laufzeit deaktiviert. Keine dauerhafte Abschaltung wurde
+  eingecheckt.
+- Echte Karte, semantische Daten, Bags und Diagnoserenderings bleiben lokal.
+- Vor einem neuen Realtest: freie Fahrbahn und Not-Aus neu bestaetigen,
+  motorlosen Preflight ausfuehren, Kartenfingerabdruck pruefen, global neu
+  lokalisieren und erst bei `/localization/ready:true` ein Ziel zulassen.
+- Rueckfall: `enable_real_go_to_room:=false` verwenden und den
+  Lokalisierungs-/Real-Launch nicht starten.
+
+---
+
 ## Abnahmestand reale semantische Raumfahrt (15.08.2026)
 
 **Branch:** `feature/reale-raumfahrt`

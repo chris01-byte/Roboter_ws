@@ -57,6 +57,7 @@ def generate_launch_description():
     static_map_odom_x = LaunchConfiguration('static_map_odom_x')
     static_map_odom_y = LaunchConfiguration('static_map_odom_y')
     static_map_odom_yaw = LaunchConfiguration('static_map_odom_yaw')
+    require_localization = LaunchConfiguration('require_localization')
 
     # active_drive steuert den Basis-Modus:
     #   false -> dry_run=true,  allow_rs485=false  (Stufe 1, kein Motorstrom)
@@ -98,6 +99,11 @@ def generate_launch_description():
         DeclareLaunchArgument('active_drive', default_value='false',
                               description='true = base_hardware SCHARF (Motoren '
                                           'fahren!). false = dry_run (Stufe-1-Test).'),
+        DeclareLaunchArgument(
+            'require_localization', default_value='false',
+            description='true = Fahrtor verlangt zusaetzlich eine frische '
+                        '/localization/ready-Freigabe. Der globale '
+                        'Lokalisierungs-Launch setzt dies zwingend auf true.'),
 
         # --- Karte + "Lokalisierung" ---
         Node(package='nav2_map_server', executable='map_server',
@@ -135,7 +141,11 @@ def generate_launch_description():
         # Fail-closed: Ein verspaetet angenommenes/verwaistes Nav2-Unterziel
         # darf nach terminalem Missionsstatus keine Bewegung mehr ausloesen.
         Node(package='robot_navigation', executable='cmd_vel_mission_gate',
-             name='cmd_vel_mission_gate', output='screen'),
+             name='cmd_vel_mission_gate', output='screen',
+             parameters=[{
+                 'require_localization': ParameterValue(
+                     require_localization, value_type=bool),
+             }]),
 
         # --- Nav2-Kern (Regler + Behavior -> cmd_vel_nav_raw) ---
         Node(package='nav2_controller', executable='controller_server',

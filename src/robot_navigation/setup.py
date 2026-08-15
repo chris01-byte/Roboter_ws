@@ -25,6 +25,8 @@ setup(
         'console_scripts': [
             'cmd_vel_mission_gate = '
             'robot_navigation.cmd_vel_mission_gate:main',
+            'localization_guard = '
+            'robot_navigation.localization_guard:main',
         ],
     },
 )

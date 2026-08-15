@@ -7,7 +7,10 @@ import yaml
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
-from robot_navigation.cmd_vel_mission_gate import room_motion_authorized  # noqa: E402
+from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    localization_motion_authorized,
+    room_motion_authorized,
+)
 
 
 def test_real_command_chain_contains_smoother_before_collision_monitor():
@@ -35,12 +38,18 @@ def test_real_smoother_and_controller_limits_are_conservative():
 
     assert controller['desired_linear_vel'] <= 0.10
     assert controller['rotate_to_heading_angular_vel'] <= 0.20
-    assert controller['max_angular_accel'] <= 0.30
+    # Die Komfortgrenze gehoert in den nachgeschalteten Smoother. Eine zweite
+    # gleich niedrige Reglergrenze koppelt die Encoder-Rueckmeldung erneut ein
+    # und machte die reale Drehung um eine Groessenordnung zu langsam.
+    assert controller['max_angular_accel'] == 2.0
+    assert progress['plugin'] == 'nav2_controller::PoseProgressChecker'
     assert progress['required_movement_radius'] == 0.10
+    assert progress['required_movement_angle'] == 0.05
     assert progress['movement_time_allowance'] >= 20.0
     assert smoother['feedback'] == 'OPEN_LOOP'
     assert smoother['max_velocity'] == [0.12, 0.0, 0.25]
     assert smoother['max_accel'] == [0.12, 0.0, 0.30]
+    assert smoother['max_accel'][2] < controller['max_angular_accel']
     assert smoother['velocity_timeout'] <= 0.5
     assert parameters['bt_navigator']['ros__parameters'][
         'default_server_timeout'] >= 2000
@@ -60,6 +69,49 @@ def test_mission_gate_is_fail_closed():
     assert not room_motion_authorized({
         **running, 'active_command': {'type': 'explore'}})
     assert not room_motion_authorized(None)
+
+
+def test_required_localization_gate_is_fail_closed_and_monotonic():
+    assert localization_motion_authorized(True, True, 10.0, 10.9, 1.0)
+    assert not localization_motion_authorized(True, True, 10.0, 11.01, 1.0)
+    assert not localization_motion_authorized(True, False, 10.0, 10.1, 1.0)
+    assert not localization_motion_authorized(True, True, None, 10.1, 1.0)
+    assert not localization_motion_authorized(True, True, 11.0, 10.1, 1.0)
+    assert localization_motion_authorized(False, False, None, 99.0, 1.0)
+
+
+def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
+    source = (
+        PACKAGE_ROOT / 'launch' / 'nav_localized.launch.py'
+    ).read_text(encoding='utf-8')
+    assert "DeclareLaunchArgument(\n            'map'," in source
+    assert "'static_map_odom': 'false'" in source
+    assert "'require_localization': 'true'" in source
+    assert "package='nav2_amcl'" in source
+    assert "executable='localization_guard'" in source
+    assert "executable='static_transform_publisher'" not in source
+    assert "'/scan_normiert'" in source
+
+    guard_source = (
+        PACKAGE_ROOT / 'robot_navigation' / 'localization_guard.py'
+    ).read_text(encoding='utf-8')
+    assert "declare_parameter('pose_timeout_s', 1.0)" in guard_source
+    assert 'AMCL-Pose fehlt oder ist veraltet' in guard_source
+    assert 'global_initialization_fingerprint' in guard_source
+
+
+def test_amcl_never_assumes_or_restores_an_initial_pose():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
+    )
+    amcl = parameters['amcl']['ros__parameters']
+    assert amcl['base_frame_id'] == 'base_link'
+    assert amcl['global_frame_id'] == 'map'
+    assert amcl['odom_frame_id'] == 'odom'
+    assert amcl['scan_topic'] == '/scan_normiert'
+    assert amcl['set_initial_pose'] is False
+    assert amcl['always_reset_initial_pose'] is True
+    assert amcl['tf_broadcast'] is True
 
 
 def test_mission_gate_tolerates_shutdown_context_race():

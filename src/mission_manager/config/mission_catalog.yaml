@@ -46,6 +46,15 @@ mission_manager:
     # Wird vom Launchfile auf den mitgelieferten Recovery-freien Baum gesetzt.
     # Bei direktem Node-Start muss dieser Pfad explizit angegeben werden.
     go_to_room_behavior_tree: ""
+    # Zweite, unabhaengige Schranke neben dem cmd_vel-Gate: Ohne frische
+    # globale Kartenlokalisierung wird kein reales Raumziel gesendet. Das
+    # separate cmd_vel-Fahrtor stoppt bei Verlust sofort; nur die endgueltige
+    # Nav2-Stornierung wartet mehrere Guard-Zyklen ab, damit ein einzelner
+    # 0,2-s-Ausreisser die Mission nicht irreversibel beendet.
+    require_localization_for_real_go_to_room: true
+    localization_ready_topic: "/localization/ready"
+    localization_ready_timeout_s: 1.0
+    localization_loss_grace_s: 0.8
 
     # --- Pose-Katalog fuer Ablageorte (fuellt place_base_goal/place_pose im Goal) ---
     # Frames der Ablageposen:

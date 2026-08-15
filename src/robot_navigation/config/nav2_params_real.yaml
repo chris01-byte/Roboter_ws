@@ -28,6 +28,55 @@
 #  nicht verzoegert.
 # =====================================================================
 
+amcl:
+  ros__parameters:
+    # Startpose wird absichtlich weder geraten noch aus einem frueheren Lauf
+    # uebernommen. localization_guard ruft nach Karten-/LiDAR-Pruefung den
+    # globalen AMCL-Reset auf und verteilt die Partikel ueber die ganze Karte.
+    use_sim_time: false
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 10.0
+    laser_min_range: -1.0
+    laser_model_type: "likelihood_field"
+    max_beams: 60
+    max_particles: 2000
+    min_particles: 500
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    # Eine volle Suchdrehung soll nicht nur alle 11,5 Grad ein Update liefern.
+    # 0,05 rad ergibt rund 125 voneinander getrennte Winkelbeobachtungen.
+    update_min_a: 0.05
+    update_min_d: 0.02
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: /scan_normiert
+    set_initial_pose: false
+    always_reset_initial_pose: true
+    first_map_only: false
+
 bt_navigator:
   ros__parameters:
     global_frame: map
@@ -49,11 +98,15 @@ controller_server:
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
     progress_checker:
-      plugin: "nav2_controller::SimpleProgressChecker"
+      plugin: "nav2_controller::PoseProgressChecker"
       # Die bestaetigte 2000-ms-Hardware-Rampe bewegt Amadeus beim sanften
       # Start in 15 s nur etwa 0,19 m. Die fruehere 0,30-m-Schwelle brach
       # deshalb eine freie, gerade Fahrt faelschlich als festgefahren ab.
+      # SimpleProgressChecker zaehlt nur Translation und brach am 15.08.2026
+      # eine nachweislich laufende Drehung nach 20 s als "Failed to make
+      # progress" ab. PoseProgressChecker akzeptiert auch Encoder-Winkelfortschritt.
       required_movement_radius: 0.10
+      required_movement_angle: 0.05
       movement_time_allowance: 20.0
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
@@ -70,7 +123,12 @@ controller_server:
       transform_tolerance: 0.2
       use_rotate_to_heading: true
       rotate_to_heading_angular_vel: 0.2
-      max_angular_accel: 0.3
+      # Nicht als zweite geschlossene Rampe gegen die gemessene Odometrie
+      # wirken lassen: 0,3 begrenzte den Regler im motorlosen Pipeline-Test
+      # auf 0,015 rad/s. Der nachgeschaltete velocity_smoother bleibt die
+      # verbindliche Komfortgrenze bei 0,30 rad/s^2; danach folgt weiterhin
+      # die verifizierte 2000-ms-Hardwarerampe der Motoren.
+      max_angular_accel: 2.0
       regulated_linear_scaling_min_radius: 0.8
       regulated_linear_scaling_min_speed: 0.04
       use_collision_detection: true    # REAL: Sensorik vorhanden -> Regler-Kollisionscheck an

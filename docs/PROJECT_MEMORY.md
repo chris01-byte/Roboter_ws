@@ -17,6 +17,87 @@ Rückfallweg:
 
 ---
 
+## 2026-08-15 — Globale AMCL-Lokalisierung: Sicherheitskette real bewiesen, Wiederholbarkeit noch offen
+
+**Entscheidung:** Reale semantische Raumfahrt wird an eine explizite globale
+AMCL-Freigabe gebunden. Der `localization_guard` prueft Kartenfingerabdruck,
+Publisher-Eindeutigkeit, Scan-/Pose-/TF-Frische, AMCL-Kovarianz und die
+Stabilitaet von `map -> odom`. Die erstmalige Freigabe bleibt streng bei
+0,20 m Standardabweichung in x/y, 10 Grad in yaw sowie 0,08 m/5 Grad
+TF-Bewegung im Drei-Sekunden-Fenster. Nach einer bestaetigten Freigabe gelten
+Hysteresen von 0,30 m/15 Grad fuer die Kovarianz und 0,20 m/12 Grad fuer die
+TF-Bewegung.
+
+Ein Verlust von `/localization/ready` sperrt das `cmd_vel`-Gate weiterhin
+sofort. Nur der irreversible Missionsabbruch hat eine Nachfrist von 0,8 s:
+Kurze AMCL-Korrekturen stoppen den Roboter, lassen die laufende Nav2-Action
+aber bestehen; anhaltender Verlust bricht sie ab. Die erste Zielannahme hat
+keine Nachfrist.
+
+**Grund / beobachtete Evidenz:** Nach freiem Versetzen gelang eine globale
+AMCL-Lokalisierung nach einer vollstaendigen Drehung einmal mit
+0,118/0,135 m und 8,65 Grad Standardabweichung. Die anschliessende reale
+`go_to_room`-Fahrt kam bis auf rund 0,03 m an das semantische Ziel. Eine
+0,59 s lange `map -> odom`-Korrektur wurde durch die neue Missionsnachfrist
+korrekt ueberstanden. Eine zweite Instabilitaet dauerte 2,20 s; der
+Mission Manager brach deshalb wie vorgesehen ab und beide Motoren wurden bei
+null bestaetigt. Nav2 selbst meldete dabei keinen Planer- oder Reglerfehler.
+
+Die alte TF-Haltegrenze 0,08 m/5 Grad war fuer normale AMCL-Korrekturen zu
+eng. Eine begrenzte langsame Kurvenfahrt mit 0,04 m/s und 0,15 rad/s lieferte
+640 TF-Proben; im Drei-Sekunden-Fenster traten maximal 0,1601 m und 8,32 Grad
+auf. Daraus wurden die Haltegrenzen 0,20 m/12 Grad mit Messreserve abgeleitet,
+waehrend die strengeren Erstfreigabegrenzen unveraendert bleiben.
+
+Nach einem weiteren Neustart und erneutem Versetzen war die globale Pose trotz
+vollstaendiger Drehung und begrenzter Suchboegen nicht wieder eindeutig. Der
+beste spaetere AMCL-Stand lag unter anderem bei 0,146/0,117 m, aber 11,33 Grad
+und bestand den Vertrag absichtlich nicht. Ein Laufzeitversuch mit
+2.000 bis 10.000 Partikeln endete bei 0,141/0,113 m und 13,39 Grad; diese
+Parameter wurden deshalb nicht uebernommen. Einzelscan-Hypothesen waren wegen
+der unvollstaendigen/offenen Karte und Raumsymmetrien mehrdeutig. Eine
+zunaechst scheinbar gute Hypothese lag bei korrekter Nav2-Geometrie
+(0,40 m Roboterradius) sogar in einer unzulaessigen Zelle. Deshalb wird weder
+die 10-Grad-Grenze gelockert noch eine einzelne Scan-Uebereinstimmung als
+globale Pose akzeptiert.
+
+**Betroffene Dateien und Hardware:** `robot_navigation` (AMCL-Launch,
+Lokalisierungsvertrag und -Guard, Missions-Gate, Realprofil und Starthelfer),
+`mission_manager` (Freigabepruefung und 0,8-s-Abbruchnachfrist),
+`robot_bringup` (Joystick-Konfliktvermeidung), STL-27L und beide ESS23-RS-
+Antriebe. Die echte Karte, semantische Raumdaten, Diagnoserenderings und
+Messprotokolle bleiben lokal ausserhalb des Repositories. Die VL53-Zonen und
+beide Costmap-Obstacle-Layer wurden auf ausdruecklichen Wunsch nur fuer die
+beaufsichtigten Testlaeufe zur Laufzeit deaktiviert; daraus folgt keine
+persistente Konfigurationsaenderung.
+
+**Teststatus:** Colcon-Build von `robot_navigation` und `mission_manager`, 60
+gemeinsame Tests ohne Fehler, Python-Kompilierung und Whitespacepruefung
+bestanden. Der motorlose Preflight bestaetigte `dry_run:true`, gesperrtes
+RS485, 0 rpm und die aktiven Acquire-/Maintain-Grenzen. Real bestanden sind
+der unmittelbare Gate-Stopp, das Ueberstehen des 0,59-s-Aussetzers, der sichere
+Abbruch nach 2,20 s und die lokale Nav2-Annaeherung bis 0,03 m. Nicht bestanden
+und damit offen ist eine nach beliebigem Versetzen wiederholbar eindeutige
+globale Selbstlokalisierung mit anschliessender vollstaendiger Zielerreichung.
+
+**Offene Risiken:** Die aktuelle Zimmerkarte ist bei offener Tuer und in
+symmetrischen Bereichen fuer eine einzelne LiDAR-Beobachtung mehrdeutig.
+AMCLs globaler Reset plus einfache Dreh-/Bogensuche garantiert noch keine
+Konvergenz zur richtigen Hypothese. Als naechster Schritt ist ein
+Mehrbeobachtungs-Initialisierer mit zeitlich getrennter Scanbewertung oder eine
+messgestuetzte AMCL-Suchstrategie erforderlich. Vor jeder weiteren Fahrt nach
+manuellem Verschieben muss die Pose neu ermittelt werden; eine alte Pose darf
+nicht fortgeschrieben werden.
+
+**Rückfallweg:** `nav_localized.launch.py` beziehungsweise den
+Lokalisierungshelfer nicht starten und `enable_real_go_to_room:=false`
+verwenden. Dann bleibt semantische Raumfahrt ohne reale Fahrwirkung. Fuer den
+vorherigen kontrollierten statischen Testbezug kann `nav_real.launch.py` nur
+unter den dort dokumentierten engen Testbedingungen verwendet werden; er ist
+kein Ersatz fuer globale Lokalisierung.
+
+---
+
 ## 2026-08-15 — Reale semantische Raumfahrt fail-closed abgenommen
 
 **Entscheidung:** `go_to_room` darf ein echtes Nav2-Ziel nur nach dem separaten

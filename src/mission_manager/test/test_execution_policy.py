@@ -6,6 +6,7 @@ from mission_manager.execution_policy import (
     effective_real_types,
     execution_mode,
     go_to_room_execution_status,
+    localization_loss_state,
     pick_and_place_room_allowed,
 )
 
@@ -33,6 +34,30 @@ class ExecutionPolicyTests(unittest.TestCase):
     def test_existing_action_types_remain_real(self):
         self.assertEqual(execution_mode('explore', {'explore'}), 'real')
         self.assertEqual(execution_mode('pick_object', {'explore'}), 'sim')
+
+    def test_short_localization_loss_stops_but_does_not_cancel_mission(self):
+        started, expired = localization_loss_state(
+            False, now=10.0, loss_started=None, grace_s=0.8)
+        self.assertEqual(started, 10.0)
+        self.assertFalse(expired)
+
+        started, expired = localization_loss_state(
+            False, now=10.2, loss_started=started, grace_s=0.8)
+        self.assertEqual(started, 10.0)
+        self.assertFalse(expired)
+
+        started, expired = localization_loss_state(
+            True, now=10.4, loss_started=started, grace_s=0.8)
+        self.assertIsNone(started)
+        self.assertFalse(expired)
+
+    def test_sustained_localization_loss_cancels_after_grace(self):
+        started, expired = localization_loss_state(
+            False, now=20.0, loss_started=None, grace_s=0.8)
+        self.assertFalse(expired)
+        started, expired = localization_loss_state(
+            False, now=20.8, loss_started=started, grace_s=0.8)
+        self.assertTrue(expired)
 
     def test_simulation_path_contains_no_navigation_or_velocity_command(self):
         node_path = (
@@ -96,6 +121,33 @@ class ExecutionPolicyTests(unittest.TestCase):
         self.assertIn('_expire_semantic_snapshot_if_stale()', timer_source)
         self.assertIn('_expire_semantic_snapshot_if_stale()', validation_source)
         self.assertIn('_semantic_snapshot_received_monotonic', source)
+
+    def test_real_room_navigation_requires_fresh_localization_by_default(self):
+        node_path = (
+            Path(__file__).resolve().parents[1]
+            / 'mission_manager' / 'mission_manager_node.py')
+        source = node_path.read_text(encoding='utf-8')
+        tree = ast.parse(source)
+        functions = {
+            node.name: node for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        init_source = ast.get_source_segment(source, functions['__init__'])
+        validation_source = ast.get_source_segment(
+            source, functions['_validate_command'])
+        timer_source = ast.get_source_segment(source, functions['_timer_tick'])
+        localization_source = ast.get_source_segment(
+            source, functions['_on_localization_ready'])
+        self.assertIn(
+            "declare_parameter(\n            "
+            "'require_localization_for_real_go_to_room', True)",
+            init_source)
+        self.assertIn('not self._localization_is_ready()', validation_source)
+        self.assertIn('_fail_active_room_localization', timer_source)
+        self.assertIn('_localization_loss_requires_cancel', timer_source)
+        self.assertNotIn('_fail_active_room_localization', localization_source)
+        self.assertIn("declare_parameter('localization_loss_grace_s', 0.8)", init_source)
+        self.assertIn("self.phase = 'lokalisierung_verloren'", source)
 
 
 if __name__ == '__main__':

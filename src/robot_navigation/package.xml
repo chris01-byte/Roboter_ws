@@ -23,12 +23,16 @@
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>base_hardware</exec_depend>
+  <exec_depend>amadeus_lidar_bringup</exec_depend>
 
   <!-- Nav2 (auf dem Jetson: sudo apt install ros-humble-navigation2) -->
   <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_amcl</exec_depend>
   <exec_depend>nav2_planner</exec_depend>
   <exec_depend>nav2_controller</exec_depend>
   <exec_depend>nav2_behaviors</exec_depend>

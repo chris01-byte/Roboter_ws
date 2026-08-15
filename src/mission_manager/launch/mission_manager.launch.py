@@ -30,6 +30,11 @@ def generate_launch_description():
             'go_to_room_behavior_tree',
             default_value=safe_room_bt,
             description='Recovery-freier Nav2-Baum fuer die erste Raumfahrt.'),
+        DeclareLaunchArgument(
+            'require_localization_for_real_go_to_room',
+            default_value='true',
+            description='Fail-closed: reales Raumziel nur mit frischer '
+                        '/localization/ready-Freigabe.'),
         Node(
             package='mission_manager',
             executable='mission_manager',
@@ -43,6 +48,10 @@ def generate_launch_description():
                     'navigate_to_pose_action'),
                 'go_to_room_behavior_tree': LaunchConfiguration(
                     'go_to_room_behavior_tree'),
+                'require_localization_for_real_go_to_room': ParameterValue(
+                    LaunchConfiguration(
+                        'require_localization_for_real_go_to_room'),
+                    value_type=bool),
             }],
         )
     ])

@@ -49,6 +49,7 @@ from mission_manager.execution_policy import (
     effective_real_types,
     execution_mode,
     go_to_room_execution_status,
+    localization_loss_state,
     pick_and_place_room_allowed,
 )
 from mission_manager.semantic_catalog import decode_catalog_payload
@@ -86,6 +87,12 @@ class MissionManager(Node):
         self.declare_parameter('enable_real_go_to_room', False)
         self.declare_parameter('navigate_to_pose_action', '/navigate_to_pose')
         self.declare_parameter('go_to_room_behavior_tree', '')
+        self.declare_parameter(
+            'require_localization_for_real_go_to_room', True)
+        self.declare_parameter(
+            'localization_ready_topic', '/localization/ready')
+        self.declare_parameter('localization_ready_timeout_s', 1.0)
+        self.declare_parameter('localization_loss_grace_s', 0.8)
 
         self.rooms = list(self.get_parameter('rooms').value)
         # Diese ursprüngliche Allowlist bleibt getrennt vom dynamischen
@@ -133,6 +140,27 @@ class MissionManager(Node):
             raise ValueError(
                 'Reale Raumfahrt verlangt einen expliziten Recovery-freien '
                 'go_to_room_behavior_tree')
+        self.require_localization_for_real_go_to_room = bool(
+            self.get_parameter(
+                'require_localization_for_real_go_to_room').value)
+        self.localization_ready_topic = str(
+            self.get_parameter('localization_ready_topic').value).strip()
+        if not self.localization_ready_topic:
+            raise ValueError('localization_ready_topic darf nicht leer sein')
+        self.localization_ready_timeout_s = float(
+            self.get_parameter('localization_ready_timeout_s').value)
+        if (
+                not math.isfinite(self.localization_ready_timeout_s)
+                or self.localization_ready_timeout_s <= 0.0):
+            raise ValueError(
+                'localization_ready_timeout_s muss endlich und > 0 sein')
+        self.localization_loss_grace_s = float(
+            self.get_parameter('localization_loss_grace_s').value)
+        if (
+                not math.isfinite(self.localization_loss_grace_s)
+                or self.localization_loss_grace_s <= 0.0):
+            raise ValueError(
+                'localization_loss_grace_s muss endlich und > 0 sein')
 
         # Pose-Katalog: Ablageort -> Pose. Dynamisch getypt, damit ein fehlender
         # Eintrag als None erkennbar ist (dann nutzt der BT seine Default-Pose).
@@ -168,6 +196,9 @@ class MissionManager(Node):
         self.semantic_map_sub = self.create_subscription(
             String, self.semantic_map_status_topic,
             self._on_semantic_map_status, status_qos)
+        self.localization_ready_sub = self.create_subscription(
+            Bool, self.localization_ready_topic,
+            self._on_localization_ready, 10)
 
         # K1: Action-Client zum bt_orchestrator.
         self.mission_client = ActionClient(self, RunMission, self.run_mission_action)
@@ -190,6 +221,9 @@ class MissionManager(Node):
         self._semantic_snapshot_received_monotonic = None
         self.semantic_map_error = 'Noch kein gueltiger Semantik-Status empfangen'
         self.resolved_room_goal = None
+        self._localization_ready = False
+        self._localization_ready_received_monotonic = None
+        self._localization_loss_started_monotonic = None
 
         # Simulation (nur fuer Typen ohne Baum)
         self.phase_index = 0
@@ -218,7 +252,10 @@ class MissionManager(Node):
             self.get_logger().warn(
                 'REALE RAUMFAHRT AKTIV: go_to_room sendet ein Nav2-Ziel an '
                 f"'{self.navigate_to_pose_action}' mit Behavior Tree "
-                f"'{self.go_to_room_behavior_tree}'.")
+                f"'{self.go_to_room_behavior_tree}'. "
+                + ('Eine frische Lokalisierungsfreigabe ist Pflicht.'
+                   if self.require_localization_for_real_go_to_room
+                   else 'Lokalisierungsfreigabe ist AUSGESCHALTET.'))
 
     # ======================= Eingang / Validierung =======================
     def _on_command(self, msg: String):
@@ -272,6 +309,13 @@ class MissionManager(Node):
             if error is not None:
                 return False, error
             self.resolved_room_goal = goal
+            if (
+                    self.enable_real_go_to_room
+                    and self.require_localization_for_real_go_to_room
+                    and not self._localization_is_ready()):
+                return False, (
+                    'Reale Raumfahrt gesperrt: globale Lokalisierung fehlt '
+                    'oder ist veraltet')
             return True, 'ok'
         if command_type == 'pick_object':
             if cmd.get('object') not in self.objects:
@@ -342,6 +386,7 @@ class MissionManager(Node):
         self.message = f"Fahrt zu '{resolved.room_name}' wird gestartet."
         self.progress = 0.0
         self._room_initial_distance = None
+        self._localization_loss_started_monotonic = None
         self._goal_handle = None
         self._real_goal_pending = True
         self._cancel_requested = False
@@ -748,6 +793,13 @@ class MissionManager(Node):
     def _timer_tick(self):
         if self._expire_semantic_snapshot_if_stale():
             return
+        if (
+                self.require_localization_for_real_go_to_room
+                and self._active_room_navigation()
+                and self._localization_loss_requires_cancel()
+                and self._fail_active_room_localization(
+                    'Lokalisierungsfreigabe fehlt oder ist anhaltend veraltet')):
+            return
         if self.state == 'running' and self.mode == 'sim':
             self._tick_sim_mission()
         else:
@@ -818,6 +870,7 @@ class MissionManager(Node):
     def _finish(self, state: str, phase: str, message: str, cmd: Dict, progress=None):
         self.state = state
         self.mode = None
+        self._localization_loss_started_monotonic = None
         self.phase = phase
         self.message = message
         if progress is not None:
@@ -832,6 +885,52 @@ class MissionManager(Node):
             self.get_logger().info(
                 f"Offboard-Server {'erreichbar' if msg.data else 'NICHT erreichbar'}.")
             self._publish_status()
+
+    def _localization_is_ready(self):
+        received = self._localization_ready_received_monotonic
+        if received is None or self._localization_ready is not True:
+            return False
+        age = time.monotonic() - received
+        return 0.0 <= age <= self.localization_ready_timeout_s
+
+    def _on_localization_ready(self, msg: Bool):
+        self._localization_ready = msg.data is True
+        self._localization_ready_received_monotonic = time.monotonic()
+        if self._localization_ready:
+            self._localization_loss_started_monotonic = None
+        self._publish_status()
+
+    def _localization_loss_requires_cancel(self) -> bool:
+        now = time.monotonic()
+        (
+            self._localization_loss_started_monotonic,
+            grace_expired,
+        ) = localization_loss_state(
+            self._localization_is_ready(),
+            now=now,
+            loss_started=self._localization_loss_started_monotonic,
+            grace_s=self.localization_loss_grace_s)
+        return grace_expired
+
+    def _fail_active_room_localization(self, reason: str) -> bool:
+        if not self._active_room_navigation():
+            return False
+        if not self._cancel_requested:
+            self._cancel_requested = True
+            self.phase = 'lokalisierung_verloren'
+            self.message = f'{reason}; Nav2-Abbruch angefordert.'
+            if self._goal_handle is not None:
+                self._request_real_cancel(
+                    self._goal_handle, self._active_action_epoch)
+            self._publish_status()
+        return True
+
+    def _active_room_navigation(self) -> bool:
+        return (
+            self.state == 'running'
+            and self.mode == 'nav2'
+            and self.active_command.get('type') == 'go_to_room'
+        )
 
     def _on_catalog(self, msg: String):
         update, error = decode_catalog_payload(msg.data)
@@ -954,6 +1053,22 @@ class MissionManager(Node):
                 'frame_id': self._semantic_snapshot.frame_id,
                 'room_count': len(self._semantic_snapshot.rooms),
             })
+        localization_age = (
+            None
+            if self._localization_ready_received_monotonic is None
+            else max(
+                0.0,
+                time.monotonic()
+                - self._localization_ready_received_monotonic)
+        )
+        localization_loss_age = (
+            None
+            if self._localization_loss_started_monotonic is None
+            else max(
+                0.0,
+                time.monotonic()
+                - self._localization_loss_started_monotonic)
+        )
         payload = {
             'state': self.state,
             'phase': self.phase,
@@ -968,6 +1083,16 @@ class MissionManager(Node):
             'cancel_pending': self._cancel_requested,
             'last_rejection': self.last_rejection,
             'semantic_map': semantic_map,
+            'localization': {
+                'required_for_real_go_to_room': (
+                    self.require_localization_for_real_go_to_room),
+                'ready': self._localization_is_ready(),
+                'last_signal': self._localization_ready,
+                'status_age_seconds': localization_age,
+                'stale_timeout_seconds': self.localization_ready_timeout_s,
+                'loss_age_seconds': localization_loss_age,
+                'mission_cancel_grace_seconds': self.localization_loss_grace_s,
+            },
             'resolved_room_goal': (
                 self.resolved_room_goal.as_dict()
                 if self.resolved_room_goal is not None else None),
