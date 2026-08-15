@@ -127,11 +127,21 @@ unter `map_to_odom_window` die aktuelle Messung und unter
 `transform_stability_limits` die gerade aktive Acquire- oder Maintain-Grenze.
 
 Diese Hysteresen gelten nicht fuer andere Fehler. Falsche Kartenbindung,
-fehlende oder veraltete Scans/TF/Pose oder eine falsche Publisherzahl sperren
-weiterhin sofort; danach gelten zur erneuten Freigabe wieder die strengeren
-Acquire-Grenzen. Die Kovarianz-Erstfreigabe von 10 Grad wird nicht gelockert:
+fehlende oder veraltete Scans/TF, eine fehlende AMCL-Pose nach dem Global-Reset
+oder eine falsche Publisherzahl sperren weiterhin sofort; danach gelten zur
+erneuten Freigabe wieder die strengeren Acquire-Grenzen. `/amcl_pose` ist
+ereignisgesteuert und wird im Stillstand nicht periodisch erneuert; ihre
+Gueltigkeit wird deshalb ueber den frischen dynamischen TF statt ueber einen
+pauschalen Nachrichten-Timeout abgesichert. Die Kovarianz-Erstfreigabe von
+10 Grad wird nicht gelockert:
 Mehrdeutige globale Hypothesen in der realen, teilweise offenen Raumkarte
 duerfen nicht durch eine groessere Schwelle als lokalisiert gelten.
+
+Der beaufsichtigte Suchhelfer kann nach seiner begrenzten Bewegung im
+garantierten Stillstand bis zu 20 AMCL-No-motion-Updates anfordern. Das sind
+reine LiDAR-Nachmessungen ueber den Standarddienst
+`/request_nomotion_update`; sie umgehen weder Fahrtor noch Grenzwerte. Real
+reduzierten sie die verbliebene Winkelstreuung von 64,49 auf 7,83 Grad.
 
 Mission Manager und `cmd_vel_mission_gate` prüfen diese Freigabe unabhängig.
 Ein fehlendes, falsches oder älter als eine Sekunde gewordenes Signal sperrt
@@ -144,7 +154,10 @@ eine gueltige Freigabe. `loss_age_seconds` und
 sichtbar.
 
 Der Kartenpfad ist Pflicht und bleibt lokal; eine Test-/Leerkarte wird nie als
-Default angenommen. Der Starthelfer sourct auch den getrennten gepinnten
+Default angenommen. Vor dem ROS-Start prueft der Helfer ausserdem die
+PGM/YAML-Interpretation und bricht ab, falls ein zu hoher `free_thresh` die
+von `map_saver` als 205 gespeicherten unbekannten Zellen in freien Raum
+umwandeln wuerde. Der Starthelfer sourct auch den getrennten gepinnten
 STL-27L-Treiber:
 
 ```bash

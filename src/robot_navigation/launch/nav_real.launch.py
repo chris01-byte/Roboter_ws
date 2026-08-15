@@ -58,6 +58,8 @@ def generate_launch_description():
     static_map_odom_y = LaunchConfiguration('static_map_odom_y')
     static_map_odom_yaw = LaunchConfiguration('static_map_odom_yaw')
     require_localization = LaunchConfiguration('require_localization')
+    allow_localization_search = LaunchConfiguration(
+        'allow_localization_search')
 
     # active_drive steuert den Basis-Modus:
     #   false -> dry_run=true,  allow_rs485=false  (Stufe 1, kein Motorstrom)
@@ -104,6 +106,11 @@ def generate_launch_description():
             description='true = Fahrtor verlangt zusaetzlich eine frische '
                         '/localization/ready-Freigabe. Der globale '
                         'Lokalisierungs-Launch setzt dies zwingend auf true.'),
+        DeclareLaunchArgument(
+            'allow_localization_search', default_value='false',
+            description='Nur im globalen Lokalisierungs-Launch: begrenzte '
+                        'Suchdrehung und Vorwaertsfahrt vor der ersten '
+                        'AMCL-Freigabe.'),
 
         # --- Karte + "Lokalisierung" ---
         Node(package='nav2_map_server', executable='map_server',
@@ -145,6 +152,8 @@ def generate_launch_description():
              parameters=[{
                  'require_localization': ParameterValue(
                      require_localization, value_type=bool),
+                 'allow_localization_search': ParameterValue(
+                     allow_localization_search, value_type=bool),
              }]),
 
         # --- Nav2-Kern (Regler + Behavior -> cmd_vel_nav_raw) ---

@@ -7,6 +7,7 @@ import time
 
 import rclpy
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from rclpy._rclpy_pybind11 import RCLError
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -45,6 +46,57 @@ def localization_motion_authorized(
     )
 
 
+def localization_search_authorized(
+        enabled, ready, ever_ready, localization_received_at,
+        command_received_at, search_started_at, odom_received_at,
+        distance_m, now, localization_timeout_s, command_timeout_s,
+        odom_timeout_s, max_duration_s, max_distance_m):
+    """Allow only a fresh, explicitly enabled, pre-fix search window."""
+    times = (localization_received_at, command_received_at,
+             search_started_at, odom_received_at, distance_m, now)
+    return (
+        enabled is True
+        and ready is False
+        and ever_ready is False
+        and all(value is not None and math.isfinite(value) for value in times)
+        and math.isfinite(localization_timeout_s)
+        and math.isfinite(command_timeout_s)
+        and math.isfinite(odom_timeout_s)
+        and math.isfinite(max_duration_s)
+        and math.isfinite(max_distance_m)
+        and localization_timeout_s > 0.0
+        and command_timeout_s > 0.0
+        and odom_timeout_s > 0.0
+        and max_duration_s > 0.0
+        and max_distance_m > 0.0
+        and 0.0 <= now - localization_received_at <= localization_timeout_s
+        and 0.0 <= now - command_received_at <= command_timeout_s
+        and 0.0 <= now - odom_received_at <= odom_timeout_s
+        and 0.0 <= now - search_started_at <= max_duration_s
+        and 0.0 <= distance_m <= max_distance_m
+    )
+
+
+def localization_search_values_valid(
+        values, max_linear_speed, max_angular_speed):
+    """Search commands are finite, forward-only and conservatively bounded."""
+    if len(values) != 6 or not all(math.isfinite(value) for value in values):
+        return False
+    if (not math.isfinite(max_linear_speed) or max_linear_speed <= 0.0
+            or not math.isfinite(max_angular_speed)
+            or max_angular_speed <= 0.0):
+        return False
+    linear_x, linear_y, linear_z, angular_x, angular_y, angular_z = values
+    return (
+        -1e-9 <= linear_x <= max_linear_speed
+        and abs(linear_y) <= 1e-9
+        and abs(linear_z) <= 1e-9
+        and abs(angular_x) <= 1e-9
+        and abs(angular_y) <= 1e-9
+        and abs(angular_z) <= max_angular_speed
+    )
+
+
 class CmdVelMissionGate(Node):
     def __init__(self):
         super().__init__('cmd_vel_mission_gate')
@@ -58,6 +110,15 @@ class CmdVelMissionGate(Node):
         self.declare_parameter(
             'localization_ready_topic', '/localization/ready')
         self.declare_parameter('localization_timeout_s', 1.0)
+        self.declare_parameter('allow_localization_search', False)
+        self.declare_parameter(
+            'localization_search_input_topic', '/cmd_vel_localization_raw')
+        self.declare_parameter('localization_search_max_angular', 0.15)
+        self.declare_parameter('localization_search_max_linear', 0.04)
+        self.declare_parameter('localization_search_max_duration_s', 110.0)
+        self.declare_parameter('localization_search_max_distance_m', 0.35)
+        self.declare_parameter('localization_search_odom_topic', '/odom')
+        self.declare_parameter('localization_search_odom_timeout_s', 0.5)
         self.declare_parameter('publish_rate_hz', 20.0)
 
         input_topic = self.get_parameter('input_topic').value
@@ -65,8 +126,14 @@ class CmdVelMissionGate(Node):
         status_topic = self.get_parameter('mission_status_topic').value
         localization_topic = self.get_parameter(
             'localization_ready_topic').value
+        search_topic = self.get_parameter(
+            'localization_search_input_topic').value
+        search_odom_topic = self.get_parameter(
+            'localization_search_odom_topic').value
         self._require_localization = bool(
             self.get_parameter('require_localization').value)
+        self._allow_localization_search = bool(
+            self.get_parameter('allow_localization_search').value)
         rate_hz = float(self.get_parameter('publish_rate_hz').value)
         if not math.isfinite(rate_hz) or rate_hz <= 0.0:
             raise ValueError('publish_rate_hz muss endlich und > 0 sein')
@@ -77,10 +144,25 @@ class CmdVelMissionGate(Node):
             self.get_parameter('command_timeout_s').value)
         self._localization_timeout = float(
             self.get_parameter('localization_timeout_s').value)
+        self._search_max_angular = float(
+            self.get_parameter('localization_search_max_angular').value)
+        self._search_max_linear = float(
+            self.get_parameter('localization_search_max_linear').value)
+        self._search_max_duration = float(
+            self.get_parameter('localization_search_max_duration_s').value)
+        self._search_max_distance = float(
+            self.get_parameter('localization_search_max_distance_m').value)
+        self._search_odom_timeout = float(
+            self.get_parameter('localization_search_odom_timeout_s').value)
         if (
                 self._status_timeout <= 0.0
                 or self._command_timeout <= 0.0
-                or self._localization_timeout <= 0.0):
+                or self._localization_timeout <= 0.0
+                or self._search_max_angular <= 0.0
+                or self._search_max_linear <= 0.0
+                or self._search_max_duration <= 0.0
+                or self._search_max_distance <= 0.0
+                or self._search_odom_timeout <= 0.0):
             raise ValueError('Gate-Timeouts muessen > 0 sein')
 
         self._status = None
@@ -89,18 +171,37 @@ class CmdVelMissionGate(Node):
         self._command_time = 0.0
         self._localization_ready = False
         self._localization_time = None
-        self._was_authorized = False
+        self._ever_localized = False
+        self._search_command = Twist()
+        self._search_command_time = None
+        self._search_started_at = None
+        self._odom_xy = None
+        self._odom_time = None
+        self._search_last_odom_xy = None
+        self._search_distance = 0.0
+        self._mode = 'blocked'
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
         self.create_subscription(Twist, input_topic, self._on_command, 10)
         self.create_subscription(String, status_topic, self._on_status, 10)
         self.create_subscription(
             Bool, localization_topic, self._on_localization, 10)
+        self.create_subscription(
+            Twist, search_topic, self._on_search_command, 10)
+        self.create_subscription(
+            Odometry, search_odom_topic, self._on_odom, 20)
         self.create_timer(1.0 / rate_hz, self._publish)
         self.get_logger().warn(
             'Nav2-Fahrtor aktiv: Befehle nur bei laufender go_to_room-Mission'
             + (' und belastbarer Lokalisierung.'
                if self._require_localization else '.'))
+        if self._allow_localization_search:
+            self.get_logger().warn(
+                'Lokalisierungssuche freigegeben: vorwaerts bis '
+                f'{self._search_max_linear:.2f} m/s, Drehung bis '
+                f'{self._search_max_angular:.2f} rad/s, maximal '
+                f'{self._search_max_distance:.2f} m / '
+                f'{self._search_max_duration:.0f} s und nur vor AMCL-Freigabe.')
 
     def _on_command(self, message):
         values = (message.linear.x, message.linear.y, message.linear.z,
@@ -119,24 +220,87 @@ class CmdVelMissionGate(Node):
         except (json.JSONDecodeError, TypeError):
             self._status = None
             self._status_time = 0.0
-            self._publisher.publish(Twist())
+            if not self._search_authorized(time.monotonic()):
+                self._publisher.publish(Twist())
             return
         self._status = status
         self._status_time = time.monotonic()
         if not room_motion_authorized(status):
             # Nicht erst auf den naechsten Timer-Tick warten.
+            if not self._search_authorized(time.monotonic()):
+                self._publisher.publish(Twist())
+
+    def _on_search_command(self, message):
+        values = (message.linear.x, message.linear.y, message.linear.z,
+                  message.angular.x, message.angular.y, message.angular.z)
+        if not localization_search_values_valid(
+                values, self._search_max_linear, self._search_max_angular):
+            self._search_command = Twist()
+            self._search_command_time = None
             self._publisher.publish(Twist())
+            self.get_logger().error(
+                'Lokalisierungsbefehl verworfen: Suchgrenzen verletzt.')
+            return
+        now = time.monotonic()
+        self._search_command = message
+        self._search_command_time = now
+        if abs(message.angular.z) > 1e-9 and self._search_started_at is None:
+            self._search_started_at = now
+            self._search_last_odom_xy = self._odom_xy
+        elif message.linear.x > 1e-9 and self._search_started_at is None:
+            self._search_started_at = now
+            self._search_last_odom_xy = self._odom_xy
+
+    def _on_odom(self, message):
+        now = time.monotonic()
+        xy = (message.pose.pose.position.x, message.pose.pose.position.y)
+        if not all(math.isfinite(value) for value in xy):
+            self._odom_xy = None
+            self._odom_time = None
+            self._publisher.publish(Twist())
+            return
+        self._odom_xy = xy
+        self._odom_time = now
+        if self._search_started_at is not None:
+            if self._search_last_odom_xy is not None:
+                self._search_distance += math.dist(
+                    self._search_last_odom_xy, xy)
+            self._search_last_odom_xy = xy
+            if self._search_distance > self._search_max_distance:
+                self._publisher.publish(Twist())
 
     def _on_localization(self, message):
+        was_ready = self._localization_ready
         self._localization_ready = message.data is True
         self._localization_time = time.monotonic()
-        if self._require_localization and not self._localization_ready:
+        if self._localization_ready:
+            self._ever_localized = True
+            self._publisher.publish(Twist())
+        elif self._require_localization and (
+                was_ready or not self._allow_localization_search):
             # Lokalisierungsverlust ist ein unmittelbarer, harter Gate-Stopp.
             self._publisher.publish(Twist())
 
+    def _search_authorized(self, now):
+        return localization_search_authorized(
+            self._allow_localization_search,
+            self._localization_ready,
+            self._ever_localized,
+            self._localization_time,
+            self._search_command_time,
+            self._search_started_at,
+            self._odom_time,
+            self._search_distance,
+            now,
+            self._localization_timeout,
+            self._command_timeout,
+            self._search_odom_timeout,
+            self._search_max_duration,
+            self._search_max_distance)
+
     def _publish(self):
         now = time.monotonic()
-        authorized = (
+        mission_authorized = (
             room_motion_authorized(self._status)
             and now - self._status_time <= self._status_timeout
             and localization_motion_authorized(
@@ -147,12 +311,20 @@ class CmdVelMissionGate(Node):
                 self._localization_timeout)
         )
         command_fresh = now - self._command_time <= self._command_timeout
-        self._publisher.publish(
-            self._command if authorized and command_fresh else Twist())
-        if authorized != self._was_authorized:
-            message = 'Fahrtor FREI' if authorized else 'Fahrtor GESPERRT'
-            self.get_logger().warn(message)
-            self._was_authorized = authorized
+        search_authorized = self._search_authorized(now)
+        if search_authorized:
+            command = self._search_command
+            mode = 'localization_search'
+        elif mission_authorized and command_fresh:
+            command = self._command
+            mode = 'mission'
+        else:
+            command = Twist()
+            mode = 'blocked'
+        self._publisher.publish(command)
+        if mode != self._mode:
+            self.get_logger().warn(f'Fahrtor-Modus: {mode}')
+            self._mode = mode
 
 
 def main(args=None):

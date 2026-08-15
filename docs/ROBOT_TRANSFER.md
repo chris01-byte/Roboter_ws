@@ -16,6 +16,9 @@ Lokalisierung erforderlich; aus diesem Dokument folgt keine Fahrfreigabe.
   Nav2-Pfad mit genau einem dynamischen `map -> odom`-Eigentuemer.
 - Der Kartenpfad ist Pflicht. Metrische und semantische Karte muessen denselben
   SHA-256-Fingerabdruck besitzen; echte Karten und Raumdaten bleiben lokal.
+- Der Starthelfer prueft PGM und YAML vor ROS. Er bricht ab, wenn
+  `free_thresh` die von `map_saver` als 205 geschriebenen unbekannten Zellen
+  verschlucken wuerde.
 - `/localization/ready` wird erstmalig nur bei hoechstens 0,20 m
   Standardabweichung in x/y, 10 Grad in yaw und hoechstens 0,08 m/5 Grad
   Bewegung von `map -> odom` im Drei-Sekunden-Fenster wahr.
@@ -31,6 +34,16 @@ Lokalisierung erforderlich; aus diesem Dokument folgt keine Fahrfreigabe.
 
 ### Reale Evidenz und Grenze
 
+Die Ursache der zuvor nicht wiederholbaren Suche wurde nachtraeglich in der
+Kartendatei gefunden: Das PGM enthielt 20.543 freie, 3.561 belegte und 29.320
+unbekannte Zellen, doch `free_thresh: 0.25` lud alle unbekannten Zellen als
+frei. Der so gespeicherte Live-Grid hatte 44,88 m² freie Flaeche statt 18,49
+m² und keine unbekannte Region; AMCL suchte damit ausserhalb des realen
+Zimmers. Eine lokale, geometrisch identische Version mit
+`free_thresh: 0.196` erhaelt die unbekannten Zellen und ist unter dem
+Fingerabdruck `528a0b020fe89624da1c55925421aecba948a13f6f27f84087725d0ad79c701f`
+gespeichert. Das Overlay `Arbeitszimmer` ist lokal explizit daran gebunden.
+
 Nach freiem Versetzen konvergierte AMCL nach einer vollstaendigen Drehung
 einmal auf 0,118/0,135 m und 8,65 Grad Standardabweichung. Die folgende
 `go_to_room`-Fahrt erreichte einen Punkt rund 0,03 m vor dem semantischen Ziel.
@@ -38,25 +51,30 @@ Eine 0,59-s-TF-Korrektur blieb ohne Missionsverlust; eine spaetere
 2,20-s-Instabilitaet brach die Mission korrekt ab und der Motorstillstand
 wurde bestaetigt.
 
-Die Wiederholbarkeit ist noch nicht bestanden. Nach einem spaeteren Neustart
-und erneutem Versetzen lieferten volle Drehung und Suchboegen weiterhin
-mehrdeutige Hypothesen; der beste Winkelwert blieb beispielsweise bei
-11,33 Grad und damit ueber der 10-Grad-Freigabe. Eine nur zur Laufzeit
-getestete Erhoehung auf 2.000 bis 10.000 AMCL-Partikel verbesserte das nicht
-ausreichend und wurde nicht in die Konfiguration uebernommen. Ebenso werden
-Einzelscan-Matches nicht verwendet: Die offene/unvollstaendige Raumkarte ist
-symmetrisch, und Kandidaten muessen mit dem realen Nav2-Roboterradius von
-0,40 m statt einer zu kleinen LiDAR-Freiraumannahme bewertet werden.
+Die reine Suchbewegung hinterliess weiterhin mehrere Winkelhypothesen. Der
+entscheidende, motorlose Schritt waren standardisierte stationaere
+`/request_nomotion_update`-Messungen nach dem Stop: 20 Updates reduzierten die
+Streuung auf 0,095/0,118 m und 7,83 Grad und setzten `/localization/ready=true`.
+Der Helfer `amcl_lokalisierungsdrehung.py` fuehrt diese Nachmessung nun selbst
+aus; die 10-Grad-Grenze bleibt unveraendert. Der reale Nachweis erfolgte nach
+einem Stack-Neustart am zuvor um 0,243 m veraenderten Standort mit 180,2 Grad
+Drehung. Die nun zusammengefuehrte Ein-Aufruf-Variante muss beim naechsten
+versetzten Start noch wiederholt werden.
 
-Damit sind Sicherheitskette, lokale Navigation und Abbruchpfad real belegt;
-die vollstaendig autonome Selbstlokalisierung nach beliebigem Versetzen plus
-anschliessende Zielerreichung ist der offene Meilenstein. Die naechste
-Loesungsrichtung ist eine Mehrbeobachtungs-Initialisierung oder eine
-messgestuetzte AMCL-Suchstrategie, nicht das Lockern der 10-Grad-Schwelle.
+Der anschliessende reale End-to-End-Test ist bestanden. Die erste Raumfahrt
+wurde bei 15,69 Grad Winkelunsicherheit fail-closed abgebrochen und alle
+Motorwerte gingen auf null. Nach 20 weiteren stationaeren Messungen
+(0,019/0,077 m, 4,50 Grad) erreichte der erneut gesendete Auftrag das
+Arbeitszimmer. Missionstatus: `success`, Phase `angekommen`; Abschluss:
+0,051/0,078 m, 6,08 Grad und 0 rpm. Der TF-Endpunkt lag rund 0,148 m und
+21,7 Grad vom semantischen Ziel entfernt, innerhalb der Nav2-Toleranzen
+0,15 m/0,40 rad. Mehrere unabhaengige versetzte Starts fehlen noch fuer eine
+statistische Wiederholbarkeitsaussage; ein kompletter versetzter Lauf ist
+jedoch real belegt.
 
 ### Zustand und naechster Start
 
-- Die Motor-/Nav2-/AMCL-/Missions-Stacks wurden nach dem Test beendet; der
+- Die Motor-/Nav2-/AMCL-/Missions-Stacks wurden nach dem bestandenen Test beendet; der
   Roboter darf aus einer alten Pose nicht autonom gestartet werden.
 - VL53-Zonen und Costmap-Obstacle-Layer waren nur waehrend der beaufsichtigten
   Testlaeufe zur Laufzeit deaktiviert. Keine dauerhafte Abschaltung wurde

@@ -39,6 +39,11 @@ case "$MAP_INPUT" in
 esac
 MAP_YAML="$(realpath -e -- "$MAP_INPUT")"
 
+if ! python3 "$SCRIPT_DIR/karte_fuer_nav2_pruefen.py" "$MAP_YAML"; then
+    echo "ABBRUCH: Karteninhalt ist fuer Nav2 nicht sicher interpretierbar." >&2
+    exit 1
+fi
+
 if [ ! -f "$LIDAR_WORKSPACE/install/local_setup.bash" ]; then
     echo "Fehler: gepinnter STL-27L-Treiber fehlt unter $LIDAR_WORKSPACE." >&2
     exit 2

@@ -8,6 +8,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    localization_search_authorized,
+    localization_search_values_valid,
     localization_motion_authorized,
     room_motion_authorized,
 )
@@ -80,6 +82,31 @@ def test_required_localization_gate_is_fail_closed_and_monotonic():
     assert localization_motion_authorized(False, False, None, 99.0, 1.0)
 
 
+def test_localization_search_is_bounded_fresh_and_one_shot():
+    valid = (0.0, 0.0, 0.0, 0.0, 0.0, 0.15)
+    assert localization_search_values_valid(valid, 0.04, 0.15)
+    assert localization_search_values_valid(
+        (0.04, 0.0, 0.0, 0.0, 0.0, 0.0), 0.04, 0.15)
+    assert not localization_search_values_valid(
+        (-0.01, 0.0, 0.0, 0.0, 0.0, 0.15), 0.04, 0.15)
+    assert not localization_search_values_valid(
+        (0.041, 0.0, 0.0, 0.0, 0.0, 0.0), 0.04, 0.15)
+    assert not localization_search_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.151), 0.04, 0.15)
+    assert localization_search_authorized(
+        True, False, False, 10.0, 10.1, 10.1, 10.15, 0.2, 10.2,
+        1.0, 0.25, 0.5, 110.0, 0.35)
+    assert not localization_search_authorized(
+        True, True, True, 10.0, 10.1, 10.1, 10.15, 0.2, 10.2,
+        1.0, 0.25, 0.5, 110.0, 0.35)
+    assert not localization_search_authorized(
+        True, False, True, 10.0, 10.1, 10.1, 10.15, 0.2, 10.2,
+        1.0, 0.25, 0.5, 110.0, 0.35)
+    assert not localization_search_authorized(
+        True, False, False, 10.0, 10.1, 10.1, 10.15, 0.36, 10.2,
+        1.0, 0.25, 0.5, 110.0, 0.35)
+
+
 def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
     source = (
         PACKAGE_ROOT / 'launch' / 'nav_localized.launch.py'
@@ -91,13 +118,26 @@ def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
     assert "executable='localization_guard'" in source
     assert "executable='static_transform_publisher'" not in source
     assert "'/scan_normiert'" in source
+    assert "'allow_localization_search': 'true'" in source
 
     guard_source = (
         PACKAGE_ROOT / 'robot_navigation' / 'localization_guard.py'
     ).read_text(encoding='utf-8')
-    assert "declare_parameter('pose_timeout_s', 1.0)" in guard_source
-    assert 'AMCL-Pose fehlt oder ist veraltet' in guard_source
     assert 'global_initialization_fingerprint' in guard_source
+
+    start_helper = (
+        PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+        'start_lidar_lokalisierung.sh'
+    ).read_text(encoding='utf-8')
+    assert 'karte_fuer_nav2_pruefen.py' in start_helper
+
+    search_helper = (
+        PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+        'amcl_lokalisierungsdrehung.py'
+    ).read_text(encoding='utf-8')
+    assert "'/request_nomotion_update'" in search_helper
+    assert 'node.publish_for(stop, 2.0)' in search_helper
+    assert 'request_nomotion_updates(node, args.nomotion_updates)' in search_helper
 
 
 def test_amcl_never_assumes_or_restores_an_initial_pose():

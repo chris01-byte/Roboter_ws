@@ -77,6 +77,42 @@ neue Wohnungskarte übertragen. Details und Negativtests stehen in
 
 ## Lokalisierung prüfen
 
+Fuer die LiDAR-/AMCL-Lokalisierung immer den Starthelfer verwenden. Er prueft
+vor jedem Start, ob die PGM-Schwellwerte unbekannte Kartenzellen erhalten:
+
+```bash
+bash tools/kartierung/start_lidar_lokalisierung.sh \
+  /absoluter/pfad/zur/map.yaml oak:=false
+```
+
+Der Aufruf ist ohne `active_drive:=true` motorlos. Ein scharfer Start verlangt
+weiterhin die separate persoenliche Fahrfreigabe und
+`AMADEUS_FAHRFREIGABE=JA`. Die Pruefung kann auch einzeln laufen:
+
+```bash
+python3 tools/kartierung/karte_fuer_nav2_pruefen.py /absoluter/pfad/map.yaml
+```
+
+Nach scharfem Start und persoenlicher Freigabe fuehrt der begrenzte
+Suchhelfer eine volle Drehung, hoechstens 0,25 m Vorwaertsfahrt und danach im
+garantierten Stillstand bis zu 20 AMCL-No-motion-Updates aus:
+
+```bash
+AMADEUS_FAHRFREIGABE=JA python3 \
+  tools/kartierung/amcl_lokalisierungsdrehung.py \
+  --degrees 360 --forward-meters 0.25
+```
+
+Die stationaeren Updates senden keine Fahrbefehle. Sie veranlassen AMCL nur,
+weitere aktuelle LiDAR-Scans auszuwerten, bis die unveraenderte
+Lokalisierungsgrenze erreicht ist. Der separate Fahrtor-Vertrag begrenzt die
+Suche weiterhin auf 0,04 m/s, 0,15 rad/s, 0,35 m Odometrieweg und 110 s.
+
+Sie lehnt insbesondere eine von ROS `map_saver` erzeugte Karte ab, wenn deren
+Grauwert 205 durch einen zu hohen `free_thresh` beim Laden zu freiem Raum
+wuerde. Reine binaere Testkarten ohne unbekannte Region sind weiterhin
+zulaessig. Fuer die alte RTAB-Map-Lokalisierung gilt separat:
+
 ```bash
 ./start_lokalisierung.sh /pfad/zum/lok.log     # delete_db:=false, localization:=true
 python3 lokalisierung_test2.py                 # dreht 360° und zählt Lokalisierungen
@@ -92,7 +128,7 @@ python3 merkmale_messen.py                     # Bildmerkmale + Tiefenabdeckung
 
 ---
 
-## Drei Fallen, die hier real zugeschlagen haben
+## Vier Fallen, die hier real zugeschlagen haben
 
 **1. Das visuelle Wörterbuch geht beim Beenden verloren.** Dann ist die Karte
 geometrisch intakt, aber Lokalisierung unmöglich. Ursache ist *nicht* nur
@@ -123,6 +159,14 @@ setzt map→odom danach — ganz ohne Wiedererkennung. Belastbar ist allein
 `/localization_pose`: darauf wird nur nach bestätigter Lokalisierung
 publiziert. Und der Roboter muss sich bewegen, sonst verarbeitet RTAB-Map wegen
 `RGBD/AngularUpdate` überhaupt keine Bilder.
+
+**4. Ein YAML-Schwellwert kann die Karte beim Laden zerstoeren.** Die
+LiDAR-Karte vom 14.08. enthielt in der PGM-Datei 29.320 unbekannte Zellen mit
+Grauwert 205. Mit `free_thresh: 0.25` interpretierte Nav2 alle davon als frei:
+aus 18,49 m² bekannter Freiflaeche wurden 44,88 m² und AMCL suchte auch
+ausserhalb des realen Raums. Fuer genau diese Datei erhaelt
+`free_thresh: 0.196` die 26,39 m² unbekannte Region. Schwellenwerte nie blind
+uebernehmen; vor AMCL immer `karte_fuer_nav2_pruefen.py` ausfuehren.
 
 ## Was das Log nicht verrät
 

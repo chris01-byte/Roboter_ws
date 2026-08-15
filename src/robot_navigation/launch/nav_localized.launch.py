@@ -64,6 +64,7 @@ def generate_launch_description():
                 'oak': oak,
                 'static_map_odom': 'false',
                 'require_localization': 'true',
+                'allow_localization_search': 'true',
             }.items()),
 
         # AMCL lokalisiert mit demselben vermessenen STL-27L-Pfad wie die

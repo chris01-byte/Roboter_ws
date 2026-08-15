@@ -17,12 +17,90 @@ Rückfallweg:
 
 ---
 
+## 2026-08-15 — Ursache der nicht wiederholbaren AMCL-Lokalisierung gefunden
+
+**Entscheidung:** Vor jedem LiDAR-/AMCL-Start prueft
+`karte_fuer_nav2_pruefen.py` die tatsaechliche Nav2-Trinary-Interpretation von
+PGM und YAML. Der Start bricht ab, wenn die von ROS `map_saver` als Grauwert
+205 gespeicherten unbekannten Zellen durch den Schwellwert vollstaendig zu
+freiem oder belegtem Raum werden. Die echte Karte wurde lokal, verlustfrei
+mit `free_thresh: 0.196` neu versioniert; Original und alte Version bleiben
+unveraendert. Das semantische Overlay wurde nur wegen identischer
+PGM-Geometrie explizit an den neuen Fingerabdruck gebunden.
+
+**Grund / beobachtete Evidenz:** Die bislang verwendete PGM-Datei besitzt
+20.543 freie, 3.561 belegte und 29.320 unbekannte Zellen. Ihr altes YAML mit
+`free_thresh: 0.25` klassifizierte den Unbekannt-Wert 205 jedoch als frei.
+Der live geladene und anschliessend korrekt gespeicherte OccupancyGrid besass
+deshalb 49.863 freie Zellen, keine unbekannte Zelle und 44,88 m² scheinbare
+Freiflaeche statt 18,49 m². AMCL musste damit in physisch unmoeglichen
+Aussenbereichen suchen. Die korrigierte Live-Karte enthaelt wieder exakt
+20.543/3.561/29.320 Zellen und den Fingerabdruck
+`528a0b020fe89624da1c55925421aecba948a13f6f27f84087725d0ad79c701f`.
+Schon im Stillstand sank die globale AMCL-Streuung gegenueber der
+verfaelschten Karte von etwa 1,73/2,06 m auf 1,36/1,43 m; eine physische
+Beobachtungsfahrt ist fuer die Konvergenz weiterhin erforderlich.
+
+Dabei wurde ein zweiter Vertragsfehler korrigiert: `/amcl_pose` wird im
+Stillstand nicht periodisch publiziert. Ein pauschaler Nachrichten-Timeout
+haette eine einmal korrekt lokalisierte, stehende Pose wieder gesperrt. Der
+Guard verlangt stattdessen eine Pose nach dem kartenbezogenen Global-Reset
+und sichert deren Fortbestand ueber den frischen dynamischen `map -> odom`-TF.
+
+**Betroffene Dateien und Hardware:** `tools/kartierung`,
+`robot_navigation/localization_guard.py`, STL-27L und lokale Kartenablage.
+Keine echte Karte oder semantische Raumgeometrie liegt im Repository.
+
+**Teststatus:** Die Pruefung lehnt die alte reale YAML/PGM-Kombination mit
+29.320 verlorenen Zellen ab und akzeptiert die korrigierte Version mit
+18,49 m² frei und 26,39 m² unbekannt. Vier synthetische Positiv-/Negativtests
+bestehen. Der korrigierte ROS-OccupancyGrid und die neue semantische Bindung
+wurden motorlos live bestaetigt.
+
+Der reale End-to-End-Lauf nach freiem Versetzen bestand am selben Tag. Ein
+erster Global-Reset mit 360,3 Grad Suchdrehung und 0,243 m begrenzter
+Vorwaertsfahrt verbesserte die Streuung auf 0,111/0,152 m und 20,88 Grad. Das
+0,35-m-Fahrtorlimit schloss 7 mm vor dem angeforderten Weg. Nach dem deshalb
+erforderlichen Stack-Neustart wurde AMCL am veraenderten Standort erneut
+global verteilt. Auf 180,2 Grad Beobachtungsdrehung folgten 20 standardisierte
+stationaere `/request_nomotion_update`-Messungen; sie trennten die
+verbliebenen Winkelhypothesen. Die Freigabe erfolgte bei 0,095/0,118 m und
+7,83 Grad Standardabweichung. Die erste
+Raumfahrt wurde bei erneut auf 15,69 Grad gestiegener Winkelunsicherheit
+korrekt abgebrochen; Fahrtor und Motoren gingen auf null. Nach 20 weiteren
+stationaeren Messungen lag AMCL bei 0,019/0,077 m und 4,50 Grad. Der erneute
+`go_to_room`-Auftrag meldete `success/angekommen`; Abschlusswerte waren
+0,051/0,078 m und 6,08 Grad, korrekter Kartenfingerabdruck und 0 rpm. Die
+TF-Zielabweichung betrug rund 0,148 m und 21,7 Grad und lag damit innerhalb
+der konfigurierten Nav2-Toleranzen 0,15 m/0,40 rad.
+
+Der Lokalisierungshelfer fordert die stationaeren AMCL-Nachmessungen nun nach
+garantiertem Stop selbst an. Dadurch wird nicht die 10-Grad-Grenze gelockert,
+sondern es werden im Stillstand weitere LiDAR-Beobachtungen ausgewertet. Die
+Einzelschritte sind real belegt; die nun zusammengefuehrte Ein-Aufruf-Variante
+bedarf beim naechsten versetzten Start noch eines Wiederholungslaufs.
+
+**Offene Risiken:** Ein realer, frei versetzter End-to-End-Lauf ist bestanden;
+mehrere unabhaengige Startpositionen fehlen noch fuer eine statistische
+Wiederholbarkeitsaussage. Eine Raumfahrt kann bei voruebergehend steigender
+Winkelunsicherheit weiterhin sicher abbrechen und muss erst nach erneuter
+Lokalisierungsfreigabe neu beauftragt werden. Die konkrete Schwelle 0.196 gilt
+fuer diese map_saver-PGM; andere Karten muessen durch die Pruefung bewertet
+und duerfen nicht automatisch umgeschrieben werden.
+
+**Rückfallweg:** Den korrigierten lokalen Kartenstand nicht verwenden und den
+Lokalisierungs-Launch motorlos lassen. Das Original ist unveraendert vorhanden;
+die Startpruefung kann separat rueckgaengig gemacht werden, ohne Kartendaten
+oder Motorparameter anzufassen.
+
+---
+
 ## 2026-08-15 — Globale AMCL-Lokalisierung: Sicherheitskette real bewiesen, Wiederholbarkeit noch offen
 
 **Entscheidung:** Reale semantische Raumfahrt wird an eine explizite globale
 AMCL-Freigabe gebunden. Der `localization_guard` prueft Kartenfingerabdruck,
-Publisher-Eindeutigkeit, Scan-/Pose-/TF-Frische, AMCL-Kovarianz und die
-Stabilitaet von `map -> odom`. Die erstmalige Freigabe bleibt streng bei
+Publisher-Eindeutigkeit, eine Pose nach dem Global-Reset, Scan-/TF-Frische,
+AMCL-Kovarianz und die Stabilitaet von `map -> odom`. Die erstmalige Freigabe bleibt streng bei
 0,20 m Standardabweichung in x/y, 10 Grad in yaw sowie 0,08 m/5 Grad
 TF-Bewegung im Drei-Sekunden-Fenster. Nach einer bestaetigten Freigabe gelten
 Hysteresen von 0,30 m/15 Grad fuer die Kovarianz und 0,20 m/12 Grad fuer die

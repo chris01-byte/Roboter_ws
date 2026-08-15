@@ -52,7 +52,6 @@ class LocalizationGuard(Node):
         self.declare_parameter('auto_global_localization', True)
         self.declare_parameter('status_timeout_s', 5.0)
         self.declare_parameter('scan_timeout_s', 0.75)
-        self.declare_parameter('pose_timeout_s', 1.0)
         self.declare_parameter('tf_timeout_s', 1.5)
         self.declare_parameter('maximum_position_stddev_m', 0.20)
         self.declare_parameter('maximum_yaw_stddev_deg', 10.0)
@@ -80,7 +79,6 @@ class LocalizationGuard(Node):
 
         self._status_timeout = self._positive_parameter('status_timeout_s')
         self._scan_timeout = self._positive_parameter('scan_timeout_s')
-        self._pose_timeout = self._positive_parameter('pose_timeout_s')
         self._tf_timeout = self._positive_parameter('tf_timeout_s')
         self._maximum_position_stddev = self._positive_parameter(
             'maximum_position_stddev_m')
@@ -405,8 +403,6 @@ class LocalizationGuard(Node):
                 or self._global_request_time is None
                 or self._pose_received < self._global_request_time):
             reasons.append('AMCL-Pose nach Global-Reset fehlt')
-        elif not self._fresh(self._pose_received, self._pose_timeout, now):
-            reasons.append('AMCL-Pose fehlt oder ist veraltet')
         elif self._pose_error:
             reasons.append(self._pose_error)
         maintaining = self._last_ready is True
@@ -466,7 +462,6 @@ class LocalizationGuard(Node):
             'amcl_pose_age_seconds': (
                 None if self._pose_received is None
                 else max(0.0, now - self._pose_received)),
-            'amcl_pose_timeout_seconds': self._pose_timeout,
             'covariance_limits': {
                 'mode': self._pose_limit_mode,
                 'position_stddev_m': self._pose_position_limit,
