@@ -86,6 +86,45 @@ jedoch real belegt.
 - Rueckfall: `enable_real_go_to_room:=false` verwenden und den
   Lokalisierungs-/Real-Launch nicht starten.
 
+### Abnahmeplan naechste Sitzung: mehrere Startpositionen
+
+Ziel ist nicht ein weiterer Einzel-Erfolg, sondern eine vergleichbare
+Wiederholbarkeitsmessung ohne manuell gesetzte Startpose. Drei deutlich
+getrennte Startpositionen mit unterschiedlichen Anfangsrichtungen verwenden.
+Vor jedem Lauf den vorherigen Launch vollstaendig beenden, den Roboter nur im
+Stillstand manuell versetzen und danach denselben korrigierten
+Kartenfingerabdruck pruefen.
+
+Je Startposition wird protokolliert:
+
+1. Startbezeichnung und ungefaehre Anfangsrichtung, aber keine Wohnungsgeometrie
+   oder Kartendaten im Repository;
+2. Ergebnis des motorlosen Preflights und 0-rpm-Nachweis;
+3. Ergebnis des zusammengefuehrten Suchlaufs mit `--degrees 360` und
+   `--forward-meters 0.25`, Anzahl stationaerer AMCL-Updates und Zeit bis
+   `/localization/ready=true`;
+4. x-/y-/yaw-Standardabweichung bei Freigabe und Kartenfingerabdruck;
+5. terminaler Status von `go_to_room Arbeitszimmer`, eventuelle
+   fail-closed-Abbrueche und Zahl notwendiger Neuauftraege;
+6. TF-Abstand und Winkelfehler zum Ziel sowie Motor-/Istgeschwindigkeit nach
+   dem terminalen Status.
+
+Die Wiederholbarkeitsabnahme besteht, wenn alle drei Starts ohne manuelle
+Posevorgabe lokalisieren, alle drei Raumziele innerhalb 0,15 m/0,40 rad
+erreichen und nach jedem terminalen Status 0 rpm anliegt. Fuer eine
+vorfuehrfertige Ein-Klick-Kette darf kein manueller Stack-Neustart oder
+Neuauftrag erforderlich sein. Ein Sicherheitsabbruch ist als korrektes
+Fail-closed-Verhalten zu dokumentieren, zaehlt aber nicht als bestandener
+Vorführlauf.
+
+Der Vorwaertsteil darf nur an einer Startposition mit mindestens 0,40 m
+freier Bahn ausgefuehrt werden. Hardware-/Encoderfehler, falscher
+Kartenfingerabdruck, fehlender LiDAR oder eine nicht schliessende Fahrtor-Kette
+beenden den jeweiligen Versuch. Eine beaufsichtigte VL53-Deaktivierung bleibt
+rein laufzeitbezogen und darf nicht in die persistente Konfiguration gelangen.
+ROS-Bags, Karten und Raumgeometrie bleiben lokal; ins Repository kommen nur
+aggregierte Messwerte und die Entscheidung bestanden/nicht bestanden.
+
 ---
 
 ## Abnahmestand reale semantische Raumfahrt (15.08.2026)
