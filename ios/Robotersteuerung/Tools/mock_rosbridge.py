@@ -254,6 +254,24 @@ class RobotState:
                 'offboard_available': True,
                 'cancel_pending': False,
                 'last_rejection': '',
+                'explore_execution': 'bt_explicit_opt_in',
+            }
+            self.explore_status = {
+                'schema_version': 1,
+                'backend_ready': True,
+                'state': 'idle',
+                'phase': 'idle',
+                'message': 'Explorer bereit (Simulator-Mock)',
+                'strategy': 'frontier_then_adaptive_coverage',
+                'coverage_ratio': 0.0,
+                'coverage_percent': 0.0,
+                'target_coverage_percent': 85.0,
+                'reachable_area_m2': 12.0,
+                'covered_area_m2': 0.0,
+                'frontiers_visited': 0,
+                'coverage_goals_visited': 0,
+                'frontiers_remaining': 3,
+                'map_ready_to_save': False,
             }
             self.estop = False
 
@@ -628,6 +646,12 @@ class RobotState:
             payload['time'] = time.time()
             return payload
 
+    def explore_snapshot(self):
+        with self.lock:
+            payload = dict(self.explore_status)
+            payload['time'] = time.time()
+            return payload
+
     def record(self, kind, payload):
         entry = {'kind': kind, 'payload': payload, 'time': time.time()}
         with self.lock:
@@ -651,6 +675,19 @@ class RobotState:
                 'cancel_pending': False,
                 'last_rejection': '',
             })
+            if command.get('type') == 'explore':
+                self.explore_status.update({
+                    'state': 'running',
+                    'phase': 'initial_scan',
+                    'message': '360-Grad-Rundblick (Simulator-Mock)',
+                    'coverage_ratio': 0.08,
+                    'coverage_percent': 8.0,
+                    'covered_area_m2': 0.96,
+                    'frontiers_visited': 0,
+                    'coverage_goals_visited': 0,
+                    'frontiers_remaining': 3,
+                    'map_ready_to_save': False,
+                })
         self.record('command', command)
 
         # Exploration deliberately stays active long enough for interactive
@@ -677,6 +714,19 @@ class RobotState:
                 self.status['phase'] = phase
                 self.status['message'] = f'Phase: {phase}'
                 self.status['progress'] = progress
+                if self.status['active_command'].get('type') == 'explore':
+                    ratio = min(0.82, progress)
+                    self.explore_status.update({
+                        'state': 'running',
+                        'phase': 'frontier' if progress < 0.55 else 'coverage',
+                        'message': f'Explorer-Fortschritt: {round(ratio * 100)} %',
+                        'coverage_ratio': ratio,
+                        'coverage_percent': ratio * 100.0,
+                        'covered_area_m2': ratio * 12.0,
+                        'frontiers_visited': 1 if progress < 0.55 else 3,
+                        'coverage_goals_visited': 0 if progress < 0.55 else 2,
+                        'frontiers_remaining': 2 if progress < 0.55 else 0,
+                    })
         time.sleep(interval)
         with self.lock:
             if generation != self.generation or self.status['state'] != 'running':
@@ -688,6 +738,19 @@ class RobotState:
                 'progress': 1.0,
                 'cancel_pending': False,
             })
+            if self.status['active_command'].get('type') == 'explore':
+                self.explore_status.update({
+                    'state': 'success',
+                    'phase': 'complete',
+                    'message': 'Zielabdeckung erreicht (Simulator-Mock)',
+                    'coverage_ratio': 0.85,
+                    'coverage_percent': 85.0,
+                    'covered_area_m2': 10.2,
+                    'frontiers_visited': 3,
+                    'coverage_goals_visited': 3,
+                    'frontiers_remaining': 0,
+                    'map_ready_to_save': True,
+                })
 
     def cancel_mission(self):
         with self.lock:
@@ -719,6 +782,13 @@ class RobotState:
                 'message': 'Mission vom Simulator-Mock abgebrochen',
                 'cancel_pending': False,
             })
+            if self.status['active_command'].get('type') == 'explore':
+                self.explore_status.update({
+                    'state': 'canceled',
+                    'phase': 'canceled',
+                    'message': 'Erkundung vom Simulator-Mock abgebrochen',
+                    'map_ready_to_save': False,
+                })
 
     def request_estop(self, active):
         self.record('estop', active)
@@ -761,6 +831,7 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
         self.send_lock = threading.Lock()
         self.closed = False
         self.status_subscribed = False
+        self.explore_status_subscribed = False
         self.estop_subscribed = False
         self.map_subscription_ids = set()
         self.map_manager_status_subscribed = False
@@ -875,6 +946,7 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
         if frame.get('op') == 'subscribe':
             topic = frame.get('topic')
             self.status_subscribed |= topic == '/mission_manager/status_json'
+            self.explore_status_subscribed |= topic == '/explore/status_json'
             self.estop_subscribed |= topic == '/safety/estop'
             if topic == MAP_MANAGER_STATUS_TOPIC:
                 self.map_manager_status_subscribed = True
@@ -912,6 +984,8 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
             subscription_id = frame.get('id')
             if topic == '/mission_manager/status_json':
                 self.status_subscribed = False
+            if topic == '/explore/status_json':
+                self.explore_status_subscribed = False
             if topic == '/safety/estop':
                 self.estop_subscribed = False
             if topic == MAP_MANAGER_STATUS_TOPIC:
@@ -1147,6 +1221,14 @@ def telemetry_loop():
             '/mission_manager/status_json',
             json.dumps(STATE.snapshot(), ensure_ascii=False, separators=(',', ':')),
         )
+        explore_status_text = ros_publish(
+            '/explore/status_json',
+            json.dumps(
+                STATE.explore_snapshot(),
+                ensure_ascii=False,
+                separators=(',', ':'),
+            ),
+        )
         with STATE.lock:
             clients = list(STATE.clients)
             estop = STATE.estop
@@ -1156,6 +1238,8 @@ def telemetry_loop():
         for client in clients:
             if client.status_subscribed and not status_paused:
                 client.send_text(status_text)
+            if client.explore_status_subscribed and not status_paused:
+                client.send_text(explore_status_text)
             if client.estop_subscribed and not estop_paused:
                 client.send_text(estop_text)
         time.sleep(0.35)

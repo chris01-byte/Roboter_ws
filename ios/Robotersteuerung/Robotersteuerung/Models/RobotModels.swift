@@ -98,6 +98,7 @@ struct MissionStatus: Decodable, Equatable {
     let offboardAvailable: Bool?
     let cancelPending: Bool?
     let lastRejection: String?
+    let exploreExecution: String?
     let time: Double?
 
     enum CodingKeys: String, CodingKey {
@@ -113,6 +114,7 @@ struct MissionStatus: Decodable, Equatable {
         case offboardAvailable = "offboard_available"
         case cancelPending = "cancel_pending"
         case lastRejection = "last_rejection"
+        case exploreExecution = "explore_execution"
         case time
     }
 
@@ -139,6 +141,91 @@ struct MissionStatus: Decodable, Equatable {
             return false
         }
         return true
+    }
+}
+
+struct ExploreStatus: Decodable, Equatable {
+    private static let knownStates = Set([
+        "idle",
+        "running",
+        "success",
+        "partial",
+        "failed",
+        "canceled"
+    ])
+
+    let schemaVersion: Int?
+    let backendReady: Bool?
+    let state: String?
+    let phase: String?
+    let message: String?
+    let strategy: String?
+    let coverageRatio: Double?
+    let coveragePercent: Double?
+    let targetCoveragePercent: Double?
+    let reachableAreaM2: Double?
+    let coveredAreaM2: Double?
+    let frontiersVisited: Int?
+    let coverageGoalsVisited: Int?
+    let frontiersRemaining: Int?
+    let mapReadyToSave: Bool?
+    let time: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case backendReady = "backend_ready"
+        case state
+        case phase
+        case message
+        case strategy
+        case coverageRatio = "coverage_ratio"
+        case coveragePercent = "coverage_percent"
+        case targetCoveragePercent = "target_coverage_percent"
+        case reachableAreaM2 = "reachable_area_m2"
+        case coveredAreaM2 = "covered_area_m2"
+        case frontiersVisited = "frontiers_visited"
+        case coverageGoalsVisited = "coverage_goals_visited"
+        case frontiersRemaining = "frontiers_remaining"
+        case mapReadyToSave = "map_ready_to_save"
+        case time
+    }
+
+    var normalizedCoverage: Double {
+        min(1, max(0, coverageRatio ?? 0))
+    }
+
+    var isCompleteSnapshot: Bool {
+        guard
+            schemaVersion == 1,
+            backendReady != nil,
+            let state,
+            ExploreStatus.knownStates.contains(state),
+            phase != nil,
+            message != nil,
+            strategy != nil,
+            let coverageRatio,
+            coverageRatio.isFinite,
+            let coveragePercent,
+            coveragePercent.isFinite,
+            let targetCoveragePercent,
+            targetCoveragePercent.isFinite,
+            let reachableAreaM2,
+            reachableAreaM2.isFinite,
+            let coveredAreaM2,
+            coveredAreaM2.isFinite,
+            frontiersVisited != nil,
+            coverageGoalsVisited != nil,
+            frontiersRemaining != nil,
+            mapReadyToSave != nil,
+            let time,
+            time.isFinite
+        else {
+            return false
+        }
+        return coverageRatio >= 0 && coverageRatio <= 1 &&
+            coveragePercent >= 0 && coveragePercent <= 100 &&
+            targetCoveragePercent > 0 && targetCoveragePercent <= 100 &&
+            reachableAreaM2 >= 0 && coveredAreaM2 >= 0
     }
 }
 

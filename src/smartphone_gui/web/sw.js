@@ -1,7 +1,7 @@
 // Minimaler Service Worker fuer PWA-Startbildschirm.
 // WICHTIG: Bei JEDER Aenderung an den Web-Dateien CACHE_NAME hochzaehlen,
 // sonst liefert der Cache-first-Fetch unten ewig die alte Version aus!
-const CACHE_NAME = 'robot-gui-v2';   // v2: Erkunden-Tab, Not-Aus, KI-Status, iOS-Icon
+const CACHE_NAME = 'robot-gui-v3';   // v3: echter Explorer-Preflight + Abdeckung
 const ASSETS = ['/', '/index.html', '/styles.css', '/app.js',
                 '/manifest.webmanifest', '/icon.svg', '/icon-180.png'];
 

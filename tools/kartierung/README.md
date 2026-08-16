@@ -39,7 +39,7 @@ Akzeptanzvertrag, insbesondere Counts, `0x0011` und `0x0101`, steht in
 
 ## Automatische LiDAR-Raumkartierung
 
-Die automatische Kartierung arbeitet bewusst in zwei Phasen:
+Die automatische Kartierung arbeitet bewusst in drei Phasen:
 
 1. kontrollierter 360-Grad-Rundblick mit 0,12 rad/s; der tatsaechliche Winkel,
    Fortschritt, Drehrichtung und anschliessende Stillstand kommen aus der
@@ -50,6 +50,11 @@ Die automatische Kartierung arbeitet bewusst in zwei Phasen:
    bewertet. Vor einem groesseren Richtungswechsel richtet sich der Roboter
    mit einem konstanten, encodergeprueften Drehkommando aus und bestaetigt den
    Stillstand; erst danach erhaelt Nav2 das eigentliche Fahrziel.
+3. adaptive Flaechenabdeckung. Sobald keine sichere Frontier mehr uebrig ist,
+   wird die tatsaechlich gemessene Fahrspur mit der zusammenhaengenden, um
+   0,40 m erodierten Freiflaeche verglichen. Der geodaetisch am weitesten
+   entfernte noch nicht abgedeckte sichere Punkt wird zum Folgeziel. Dadurch
+   erzeugen groessere oder verwinkelte Raeume automatisch mehr Ziele.
 
 Die Kartenaufloesung bleibt bei 3 cm. Das ist fuer den rund 18-m2-Raum ein
 guter Kompromiss aus Wanddetail, stabiler Frontier-Erkennung und Rechenlast
@@ -70,13 +75,28 @@ bash tools/kartierung/start_automatische_kartierung.sh \
   active_drive:=false enable_auto_explore:=true
 ```
 
+Fuer iOS-/Web-App, Live-Karte, Raumeditor und Erkundung stattdessen den
+einzigen gemeinsamen App-Launch verwenden:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_app_erkundung.sh \
+  active_drive:=false enable_auto_explore:=true
+```
+
+Dieser Starter nimmt Kartenmanager, Semantikmanager und rosbridge mit. Er
+bricht ab, falls einer davon oder ein alter Missions-/Explorer-Stack bereits
+laeuft. Den alten Einzelstart zuerst in seinem Terminal sauber mit Strg-C
+beenden; nie `robot.launch.py`, `smartphone_gui.launch.py` oder
+`nav_mapping.launch.py` parallel starten.
+
 Scharfer Start nur nach persoenlicher Freigabe, freiem Raum und erreichbarem
 Hard-Not-Aus:
 
 ```bash
 cd ~/roboter_ws
 AMADEUS_FAHRFREIGABE=JA \
-  bash tools/kartierung/start_automatische_kartierung.sh \
+  bash tools/kartierung/start_app_erkundung.sh \
   active_drive:=true enable_auto_explore:=true
 ```
 
@@ -101,15 +121,17 @@ weniger als 0,01 rad/s erreicht werden, die Odometrie ausfaellt, der Roboter in
 die falsche Richtung dreht, acht Sekunden keinen Fortschritt macht oder das
 210-Sekunden-Limit erreicht. Das Zeitbudget beruecksichtigt, dass der aktive
 Kollisionsmonitor die Drehung in seiner SlowZone auf 30 % reduziert. Die
-gesamte Mission endet spaetestens nach zehn Minuten; ein einzelnes Nav2-Ziel
+gesamte Mission endet spaetestens nach 15 Minuten; ein einzelnes Nav2-Ziel
 nach 90 Sekunden. Recovery-Drehungen und -Rueckwaertsfahrten von Nav2 sind
 nicht mit der Hardware verbunden.
 
-Nach mindestens einem erfolgreich erreichten Frontier-Ziel ist eine Karte
-auch dann sicher fertig, wenn zwar noch eine unbekannte Grenze existiert, aber
-kein Anfahrpunkt mit dem vorgeschriebenen Abstand im bekannten Freiraum. Der
-Explorer meldet dann `safe_complete`. Findet er schon am Start keinen einzigen
-sicheren Punkt, bleibt das Ergebnis ein Fehler.
+Ein beendeter Frontier-Abschnitt ist noch keine vollstaendige Raumabdeckung.
+Standardmaessig meldet der Explorer erst Erfolg, wenn mindestens 85 % der
+sicher befahrbaren Flaeche innerhalb von 0,65 m zur real gemessenen Fahrspur
+liegen. Hoechstens 14 Abdeckungsziele begrenzen die dritte Phase. Zeitlimit
+oder fehlendes sicheres Ziel unterhalb 85 % bleiben Fehler. Der 1-Hz-Status
+auf `/explore/status_json` liefert `coverage_percent` und setzt
+`map_ready_to_save:true` nur nach bestaetigtem Abschluss.
 
 Die Karte zwischendurch rendern und ansehen. Erst eine plausible Karte ueber
 den Kartenmanager speichern. Danach Auftrag abbrechen, Nullkommando und 0 rpm

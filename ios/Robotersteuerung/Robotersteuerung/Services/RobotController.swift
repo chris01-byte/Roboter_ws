@@ -14,6 +14,8 @@ final class RobotController: NSObject, ObservableObject {
     @Published private(set) var connectionState: RobotConnectionState = .disconnected
     @Published private(set) var missionStatus: MissionStatus?
     @Published private(set) var statusIsFresh = false
+    @Published private(set) var exploreStatus: ExploreStatus?
+    @Published private(set) var exploreStatusIsFresh = false
     @Published private(set) var estopActive: Bool?
     @Published private(set) var estopIsFresh = false
     @Published private(set) var estopRequestPending = false
@@ -40,6 +42,7 @@ final class RobotController: NSObject, ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var staleMonitorTask: Task<Void, Never>?
     private var lastStatusReceivedAt: Date?
+    private var lastExploreStatusReceivedAt: Date?
     private var lastEstopReceivedAt: Date?
     private var estopRequestSentAt: Date?
     private var requestedEstopValue: Bool?
@@ -83,6 +86,26 @@ final class RobotController: NSObject, ObservableObject {
         missionStatus?.normalizedProgress ?? 0
     }
 
+    var explorationProgress: Double {
+        exploreStatus?.normalizedCoverage ?? 0
+    }
+
+    var explorationPhase: String {
+        exploreStatus?.phase ?? "-"
+    }
+
+    var explorationMessage: String {
+        exploreStatus?.message ?? "Warte auf den Explorer."
+    }
+
+    var explorationBackendReady: Bool {
+        connectionState.isConnected &&
+            statusIsFresh &&
+            exploreStatusIsFresh &&
+            missionStatus?.exploreExecution == "bt_explicit_opt_in" &&
+            exploreStatus?.backendReady == true
+    }
+
     var offboardAvailable: Bool? {
         guard connectionState.isConnected, statusIsFresh else { return nil }
         return missionStatus?.offboardAvailable
@@ -100,6 +123,12 @@ final class RobotController: NSObject, ObservableObject {
             !missionRequestPending &&
             ["idle", "success", "failed", "canceled"].contains(missionState) &&
             !cancelIsPending
+    }
+
+    var canStartExploration: Bool {
+        canSendMission &&
+            explorationBackendReady &&
+            exploreStatus?.state != "running"
     }
 
     var canSendEmergencyRequest: Bool {
@@ -180,6 +209,13 @@ final class RobotController: NSObject, ObservableObject {
     }
 
     func startExploration() {
+        guard canStartExploration else {
+            addLog(
+                "Erkundung gesperrt: echtes Explorer-Backend ist nicht vollständig bereit.",
+                kind: .warning
+            )
+            return
+        }
         publishCommand(RobotCommand(type: "explore"))
     }
 
@@ -457,6 +493,8 @@ final class RobotController: NSObject, ObservableObject {
             switch event {
             case let .status(status):
                 apply(status)
+            case let .exploreStatus(status):
+                applyExploreStatus(status)
             case let .estop(active):
                 applyEstop(active)
             }
@@ -505,6 +543,12 @@ final class RobotController: NSObject, ObservableObject {
             addLog("Abgelehnt: \(rejection)", kind: .warning)
         }
         lastRejection = rejection
+    }
+
+    private func applyExploreStatus(_ status: ExploreStatus) {
+        exploreStatus = status
+        lastExploreStatusReceivedAt = Date()
+        exploreStatusIsFresh = true
     }
 
     private func applyEstop(_ active: Bool) {
@@ -586,6 +630,13 @@ final class RobotController: NSObject, ObservableObject {
             addLog("Missionsstatus ist veraltet", kind: .warning)
         }
 
+        if exploreStatusIsFresh,
+           now.timeIntervalSince(lastExploreStatusReceivedAt ?? .distantPast) >
+            RobotController.staleAfter {
+            exploreStatusIsFresh = false
+            addLog("Erkundungsstatus ist veraltet", kind: .warning)
+        }
+
         if estopIsFresh,
            now.timeIntervalSince(lastEstopReceivedAt ?? .distantPast) > RobotController.staleAfter {
             estopIsFresh = false
@@ -597,6 +648,7 @@ final class RobotController: NSObject, ObservableObject {
 
     private func markTelemetryUnknown() {
         statusIsFresh = false
+        exploreStatusIsFresh = false
         estopIsFresh = false
         estopActive = nil
         estopRequestPending = false
@@ -605,6 +657,7 @@ final class RobotController: NSObject, ObservableObject {
         clearMissionRequestPending()
         clearMissionCancelRequestPending()
         lastStatusReceivedAt = nil
+        lastExploreStatusReceivedAt = nil
         lastEstopReceivedAt = nil
     }
 

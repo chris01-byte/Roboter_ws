@@ -1,5 +1,69 @@
 # Übertragung auf den realen Roboter
 
+## Adaptive App-Raumkartierung — motorlos integriert (16.08.2026)
+
+**Branch:** `feature/hybrid-erkundung-app`
+
+Die Erkundung hat jetzt drei Phasen:
+
+1. odometrisch kontrollierter 360-Grad-LiDAR-Rundblick;
+2. Frontier-Ziele fuer noch unbekannte Kartengrenzen;
+3. adaptive Abdeckungsziele in der sicher befahrbaren bekannten Flaeche.
+
+Phase 3 verwendet die gemessene Fahrspur. Standardabschluss sind 85 % der
+zusammenhaengenden, um 0,40 m von Wand und unbekanntem Raum freigehaltenen
+Flaeche innerhalb eines 0,65-m-Korridors um diese Spur. Maximal 14
+Abdeckungsziele und 900 s begrenzen den Lauf. Eine SLAM-Korrektur ueber 0,35 m
+wird nicht als gefahrene Verbindung gezaehlt. Unterhalb des Zielwerts melden
+Zeitlimit oder fehlendes sicheres Ziel einen Fehler; die App zeigt dann nicht
+„Karte kann gespeichert werden".
+
+Fuer App, Kartierung und Raumeditor gibt es jetzt genau einen gemeinsamen
+Startpfad. Motorlos:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_app_erkundung.sh \
+  active_drive:=false enable_auto_explore:=true
+```
+
+Spaeterer beaufsichtigter Realtest, erst nach freiem Raum, erreichtem
+Hard-Not-Aus und neuer ausdruecklicher Fahrfreigabe:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_app_erkundung.sh \
+  active_drive:=true enable_auto_explore:=true
+```
+
+Der Launch sendet keinen Auftrag. Sobald die iOS- oder Web-App mit Port 9090
+verbunden ist, wird **Erkundung starten** nur bei frischem Missions-,
+Not-Aus- und Explorerstatus aktiv. `/explore/status_json` aktualisiert Phase
+und reale Abdeckung mit 1 Hz. Erst `map_ready_to_save:true` bestaetigt den
+Abschluss der Abdeckungsstrategie; die Karte danach weiterhin visuell
+pruefen und bewusst speichern.
+
+Der Starter bricht ab, wenn Einzelstarts von `robot_map_manager`,
+`semantic_map_manager`, rosbridge, Missionsmanager oder Explorer noch laufen.
+Diese Terminals zuerst sauber mit Strg-C beenden; niemals den neuen
+Gesamtlaunch parallel zu `robot.launch.py`, `smartphone_gui.launch.py` oder
+`nav_mapping.launch.py` starten. Der Check ist erforderlich, weil passive
+Kartenmanager vom allgemeinen Stillstandshelfer absichtlich erlaubt werden.
+
+Motorlos auf dem Jetson bestaetigt: je ein Besitzer aller zentralen Knoten,
+`dry_run=True`, 0 rpm, Explorer-Heartbeat, echter rosbridge-Empfang und der
+vollstaendige App-Pfad `explore -> running -> cancel -> canceled`.
+`map_ready_to_save` blieb beim Abbruch korrekt falsch. Die adaptive Phase ist
+noch nicht real gefahren; ihr erster scharfer Lauf ist eine neue
+Hardwareabnahme und keine Fortsetzung der alten Fahrfreigabe.
+
+Rueckfall: `enable_auto_explore:=false`, `active_drive:=false` oder den neuen
+App-Launch nicht verwenden. `coverage_enabled:false` in
+`explore_params.yaml` stellt das alte Frontier-Ende wieder her.
+
+---
+
 ## Automatische LiDAR-Raumkartierung — real abgenommen (16.08.2026)
 
 **Branch:** `feature/automatische-lidar-kartierung`

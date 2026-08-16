@@ -4,19 +4,9 @@
 #  Steuert, WIE der Roboter unbekannte Bereiche anfaehrt. Alle Werte
 #  ohne Neukompilieren aenderbar (nur Node neu starten).
 #
-#  PARAMETER-INDEX:
-#    map_topic ............................... Zeile 24
-#    global_frame / robot_base_frame ......... Zeile 25 / 26
-#    nav_action_name ......................... Zeile 27
-#    replan_period_s ......................... Zeile 30
-#    min_frontier_size_m ..................... Zeile 31
-#    goal_timeout_s .......................... Zeile 32
-#    overall_timeout_s ....................... Zeile 33
-#    potential_scale / gain_scale ............ Zeile 36 / 37
-#    min_goal_distance_m ..................... Zeile 40
-#    blacklist_radius_m ...................... Zeile 41
-#    return_to_start ......................... Zeile 44
-#    visualize / marker_topic ................ Zeile 47 / 48
+#  PARAMETERGRUPPEN: ROS-Schnittstellen, harte Zeit-/Fehlergrenzen,
+#  Rundblick, Kartenframe-Vorausrichtung, Frontier-Ziele, adaptive
+#  Fahrspur-Abdeckung, Abschluss und Visualisierung.
 # =====================================================================
 explore_node:
   ros__parameters:
@@ -33,7 +23,9 @@ explore_node:
     replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]
     min_frontier_size_m: 0.30       # kleinste beachtete Frontier-Ausdehnung [m]
     goal_timeout_s: 90.0            # max. Fahrzeit zu EINER Frontier [s]
-    overall_timeout_s: 600.0        # erster Raumscan: hartes Gesamtlimit [s]
+    # 360-Grad-Rundblick plus Frontier- und Abdeckungsphase. Der Realtest
+    # zeigte, dass 600 s fuer einen groesseren Raum nur eine Teilfahrt zulassen.
+    overall_timeout_s: 900.0        # hartes Gesamtlimit fuer alle 3 Phasen [s]
     nav_cancel_timeout_s: 3.0       # Kindziel muss so schnell terminal werden
     map_timeout_s: 5.0              # veraltete SLAM-Karte stoppt die Mission
     max_failed_goals: 6             # keine endlose Folge unerreichbarer Ziele
@@ -97,6 +89,25 @@ explore_node:
     frontier_approach_distance_m: 0.45  # Ziel bleibt im bekannten Freiraum
     goal_clearance_m: 0.35          # frei von Wand und unbekanntem Raum
     goal_search_radius_m: 0.30      # sicheren Nachbarpunkt suchen
+
+    # --- Phase 3: adaptive Abdeckung der sicher befahrbaren Raumflaeche ---
+    # Frontier-Ziele kartieren unbekannte Grenzen, beweisen aber nicht, dass
+    # der Roboter den Raum wirklich abgefahren hat. Danach wird deshalb die
+    # gemessene Fahrspur auf die zusammenhaengende, mit 40 cm Abstand sicher
+    # befahrbare Freiflaeche projiziert. Der geodaetisch am weitesten noch
+    # nicht abgedeckte Punkt wird zum naechsten Ziel. Dadurch waechst die Zahl
+    # der Ziele automatisch mit Raumgroesse und Grundriss.
+    coverage_enabled: true
+    coverage_target_ratio: 0.85
+    coverage_visit_radius_m: 0.65
+    coverage_clearance_m: 0.40
+    coverage_min_goal_distance_m: 0.70
+    coverage_path_sample_m: 0.12
+    # Kartenkorrekturen ueber diesem Sprung werden als neuer Messpunkt, aber
+    # nicht als vermeintlich gerade gefahrene Verbindung gewertet.
+    coverage_max_interpolation_gap_m: 0.35
+    coverage_max_goals: 14
+    status_topic: "/explore/status_json"
 
     # --- Verhalten nach Fertigstellung ---
     return_to_start: false          # nach vollstaendiger Karte zur Startpose zurueck?

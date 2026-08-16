@@ -15,6 +15,23 @@ class SemanticMockTests(unittest.TestCase):
     def setUp(self):
         self.state = mock.RobotState()
 
+    def test_explorer_mock_exposes_real_backend_and_complete_status_contract(self):
+        mission = self.state.snapshot()
+        explore = self.state.explore_snapshot()
+
+        self.assertEqual(mission['explore_execution'], 'bt_explicit_opt_in')
+        self.assertTrue(explore['backend_ready'])
+        self.assertEqual(
+            explore['strategy'], 'frontier_then_adaptive_coverage')
+        self.assertEqual(explore['target_coverage_percent'], 85.0)
+        self.assertFalse(explore['map_ready_to_save'])
+        self.assertIn('time', explore)
+
+        self.state.start_mission({'type': 'explore'})
+        running = self.state.explore_snapshot()
+        self.assertEqual(running['state'], 'running')
+        self.assertEqual(running['phase'], 'initial_scan')
+
     def test_mock_map_fingerprint_is_stable_and_content_sensitive(self):
         initial = self.state.map_summary()['fingerprint']
         self.assertEqual(

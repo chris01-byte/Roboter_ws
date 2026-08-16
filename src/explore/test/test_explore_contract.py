@@ -13,6 +13,10 @@ from explore.explore_node import (  # noqa: E402
     ExploreNode,
     Frontier,
     RotationProgress,
+    connected_mask,
+    farthest_uncovered_cell,
+    square_clearance_mask,
+    stamp_coverage,
 )
 
 
@@ -94,6 +98,66 @@ def test_frontier_ranking_prefers_forward_candidate_when_distance_matches():
         [sideways, forward], (0.0, 0.0), grid, robot_yaw=0.0)
 
     assert ranked[0] is forward
+
+
+def test_clearance_mask_and_component_keep_goals_on_robot_side_of_wall():
+    data = np.zeros((30, 50), dtype=np.int16)
+    data[:, 25] = 100
+    safe = square_clearance_mask(data, clearance_cells=2)
+    reachable = connected_mask(safe, (15, 10))
+
+    assert reachable[15, 10]
+    assert not reachable[15, 40]
+    assert not np.any(safe[:, 23:28])
+
+
+def test_farthest_coverage_goal_expands_away_from_measured_path():
+    reachable = np.ones((21, 41), dtype=bool)
+    covered = stamp_coverage(
+        reachable.shape, [(row, 5) for row in range(21)], radius_cells=3)
+    excluded = np.zeros_like(reachable)
+
+    goal = farthest_uncovered_cell(reachable, covered, excluded)
+
+    assert goal is not None
+    assert goal[1] == 40
+
+
+def test_coverage_plan_scales_with_reachable_room_area():
+    def configured_node():
+        node = ExploreNode.__new__(ExploreNode)
+        node._coverage_clearance_m = 0.20
+        node._coverage_visit_radius_m = 0.45
+        node._coverage_min_goal_distance_m = 0.60
+        node._blacklist_radius = 0.35
+        node._blacklist = []
+        node._coverage_path = [(1.5, 1.5)]
+        return node
+
+    small = _grid(width=60, height=60, resolution=0.05)
+    small.data = [0] * (small.info.width * small.info.height)
+    large = _grid(width=120, height=60, resolution=0.05)
+    large.data = [0] * (large.info.width * large.info.height)
+    node = configured_node()
+
+    small_plan = node._coverage_plan(small, (1.5, 1.5))
+    large_plan = node._coverage_plan(large, (1.5, 1.5))
+
+    assert small_plan.goal_cell is not None
+    assert large_plan.goal_cell is not None
+    assert large_plan.reachable_area_m2 > small_plan.reachable_area_m2
+    assert large_plan.ratio < small_plan.ratio
+
+
+def test_map_frame_jump_is_not_interpolated_as_driven_path():
+    node = ExploreNode.__new__(ExploreNode)
+    node._coverage_path = [(0.0, 0.0)]
+    node._coverage_path_sample_m = 0.10
+    node._coverage_max_interpolation_gap_m = 0.35
+
+    node._record_coverage_pose((1.0, 0.0))
+
+    assert node._coverage_path == [(0.0, 0.0), (1.0, 0.0)]
 
 
 def test_prealignment_uses_shortest_signed_turn_and_keeps_tolerance():
@@ -222,7 +286,7 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
         'navigate_to_pose_no_recovery.xml').read_text()
     source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
 
-    assert 'overall_timeout_s: 600.0' in config
+    assert 'overall_timeout_s: 900.0' in config
     assert 'max_failed_goals: 6' in config
     assert 'initial_scan_enabled: true' in config
     assert 'initial_scan_angular_speed_radps: 0.12' in config
@@ -237,6 +301,12 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'prealign_timeout_s: 180.0' in config
     assert 'prealign_rate_check_after_s: 15.0' in config
     assert 'prealign_min_average_rate_radps: 0.01' in config
+    assert 'coverage_enabled: true' in config
+    assert 'coverage_target_ratio: 0.85' in config
+    assert 'coverage_clearance_m: 0.40' in config
+    assert 'coverage_max_interpolation_gap_m: 0.35' in config
+    assert 'coverage_max_goals: 14' in config
+    assert "'/explore/status_json'" in source
     assert '<ComputePathToPose' in tree
     assert '<FollowPath' in tree
     assert '<BackUp' not in tree

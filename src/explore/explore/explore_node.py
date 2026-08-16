@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ============================================================================
-#  explore_node.py  -  Autonome Frontier-Exploration (WP-5, Ebene 1)
+#  explore_node.py  -  Frontier- und adaptive Flaechenexploration
 #  ---------------------------------------------------------------------------
 #  ZWECK:
 #    Der Roboter erkundet die Wohnung SELBSTSTAENDIG und ZIELGERICHTET -
@@ -9,8 +9,9 @@
 #        unbekanntem Raum in der SLAM-Karte.
 #      * Der Node sucht alle Frontiers, bewertet sie (Kosten/Nutzen) und
 #        schickt die beste als Fahrziel an Nav2.
-#      * Ist die naechste Frontier erreicht, wiederholt sich das - bis keine
-#        Frontiers mehr uebrig sind: dann ist die Wohnung vollstaendig kartiert.
+#      * Nach Ende der Frontiers misst er die reale Fahrspur gegen den sicher
+#        befahrbaren Freiraum und faehrt adaptive Abdeckungsziele an.
+#      * Erst die konfigurierte Fahrspur-Abdeckung bestaetigt den Abschluss.
 #    Das ist deterministisch, effizient und vollstaendig. CPU-only, kein CUDA.
 #
 #  ROLLE IN DER ARCHITEKTUR (Schichten):
@@ -24,17 +25,20 @@
 #    Subscribe     : <map_topic>          (nav_msgs/OccupancyGrid, SLAM)
 #    TF            : <global_frame> -> <robot_base_frame>  (Roboterpose)
 #    Publish (opt) : <marker_topic>       (visualization_msgs/MarkerArray)
+#    Publish       : /explore/status_json (std_msgs/String, 1 Hz)
 #
 #  ALLE PARAMETER -> config/explore_params.yaml (nur dort aendern!).
 #
-#  ABNAHME: Unter ROS 2 Humble motorlos getestet und am 16.08.2026 real mit
-#  einem 360-Grad-Rundblick sowie vier Frontier-Zielen gefahren.
+#  ABNAHME: Rundblick und vier Frontier-Ziele am 16.08.2026 real gefahren;
+#  adaptive Abdeckung und App-Start/Abbruch motorlos integriert.
 # ============================================================================
 
+import json
 import math
 import threading
 import time
 from collections import deque
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -44,15 +48,142 @@ from rclpy.node import Node
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 
 from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import PoseStamped, Point, Twist
+from std_msgs.msg import String
 from visualization_msgs.msg import Marker, MarkerArray
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action import NavigateToPose
 from robot_interfaces.action import ExploreArea
 
 import tf2_ros
+
+
+@dataclass
+class CoveragePlan:
+    """Momentaufnahme der sicher befahrbaren, real abgefahrenen Flaeche."""
+
+    ratio: float
+    reachable_area_m2: float
+    covered_area_m2: float
+    goal_cell: Optional[Tuple[int, int]]
+
+
+def square_clearance_mask(data: np.ndarray, clearance_cells: int) -> np.ndarray:
+    """Erode known-free space by a conservative square clearance window."""
+    free = data == 0
+    if clearance_cells <= 0:
+        return free
+    radius = int(clearance_cells)
+    window = 2 * radius + 1
+    blocked = np.pad(
+        (~free).astype(np.int32), radius, mode='constant',
+        constant_values=1)
+    integral = np.pad(blocked, ((1, 0), (1, 0)), mode='constant')
+    integral = integral.cumsum(axis=0).cumsum(axis=1)
+    blocked_count = (
+        integral[window:, window:]
+        - integral[:-window, window:]
+        - integral[window:, :-window]
+        + integral[:-window, :-window])
+    return free & (blocked_count == 0)
+
+
+def connected_mask(mask: np.ndarray, seed: Tuple[int, int]) -> np.ndarray:
+    """Return the conservative 4-connected component containing ``seed``."""
+    height, width = mask.shape
+    row, col = seed
+    result = np.zeros_like(mask, dtype=bool)
+    if not (0 <= row < height and 0 <= col < width and mask[row, col]):
+        return result
+    queue = deque([(row, col)])
+    result[row, col] = True
+    while queue:
+        current_row, current_col = queue.popleft()
+        for drow, dcol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            next_row = current_row + drow
+            next_col = current_col + dcol
+            if (
+                    0 <= next_row < height
+                    and 0 <= next_col < width
+                    and mask[next_row, next_col]
+                    and not result[next_row, next_col]):
+                result[next_row, next_col] = True
+                queue.append((next_row, next_col))
+    return result
+
+
+def nearest_mask_cell(
+        mask: np.ndarray, row: int, col: int,
+        maximum_distance_cells: int) -> Optional[Tuple[int, int]]:
+    """Find the nearest true cell without crossing a topology boundary."""
+    rows, cols = np.nonzero(mask)
+    if rows.size == 0:
+        return None
+    distances = (rows - row) ** 2 + (cols - col) ** 2
+    index = int(np.argmin(distances))
+    if distances[index] > maximum_distance_cells ** 2:
+        return None
+    return int(rows[index]), int(cols[index])
+
+
+def stamp_coverage(
+        shape: Tuple[int, int], path_cells: List[Tuple[int, int]],
+        radius_cells: int) -> np.ndarray:
+    """Rasterize the robot's measured path with a circular visit radius."""
+    covered = np.zeros(shape, dtype=bool)
+    height, width = shape
+    radius = max(0, int(radius_cells))
+    radius_squared = radius ** 2
+    for row, col in path_cells:
+        row0 = max(0, row - radius)
+        row1 = min(height, row + radius + 1)
+        col0 = max(0, col - radius)
+        col1 = min(width, col + radius + 1)
+        yy, xx = np.ogrid[row0:row1, col0:col1]
+        disk = (yy - row) ** 2 + (xx - col) ** 2 <= radius_squared
+        covered[row0:row1, col0:col1] |= disk
+    return covered
+
+
+def farthest_uncovered_cell(
+        reachable: np.ndarray, covered: np.ndarray,
+        excluded: np.ndarray) -> Optional[Tuple[int, int]]:
+    """Choose the geodesically farthest safe cell from covered space."""
+    candidates = reachable & ~covered & ~excluded
+    if not np.any(candidates):
+        return None
+    distance = np.full(reachable.shape, -1, dtype=np.int32)
+    queue = deque()
+    for row, col in zip(*np.nonzero(reachable & covered)):
+        distance[row, col] = 0
+        queue.append((int(row), int(col)))
+    if not queue:
+        return None
+    while queue:
+        row, col = queue.popleft()
+        next_distance = distance[row, col] + 1
+        for drow, dcol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            next_row, next_col = row + drow, col + dcol
+            if (
+                    0 <= next_row < reachable.shape[0]
+                    and 0 <= next_col < reachable.shape[1]
+                    and reachable[next_row, next_col]
+                    and distance[next_row, next_col] < 0):
+                distance[next_row, next_col] = next_distance
+                queue.append((next_row, next_col))
+    candidate_rows, candidate_cols = np.nonzero(candidates)
+    values = distance[candidate_rows, candidate_cols]
+    valid = values >= 0
+    if not np.any(valid):
+        return None
+    candidate_rows = candidate_rows[valid]
+    candidate_cols = candidate_cols[valid]
+    values = values[valid]
+    index = int(np.argmax(values))
+    return int(candidate_rows[index]), int(candidate_cols[index])
 
 
 def normalize_angle(angle: float) -> float:
@@ -179,6 +310,24 @@ class ExploreNode(Node):
             'prealign_max_passes', 3).value)
         self._prealign_min_improvement = float(self.declare_parameter(
             'prealign_min_improvement_rad', 0.04).value)
+        self._coverage_enabled = bool(self.declare_parameter(
+            'coverage_enabled', True).value)
+        self._coverage_target_ratio = float(self.declare_parameter(
+            'coverage_target_ratio', 0.85).value)
+        self._coverage_visit_radius_m = float(self.declare_parameter(
+            'coverage_visit_radius_m', 0.65).value)
+        self._coverage_clearance_m = float(self.declare_parameter(
+            'coverage_clearance_m', 0.40).value)
+        self._coverage_min_goal_distance_m = float(self.declare_parameter(
+            'coverage_min_goal_distance_m', 0.70).value)
+        self._coverage_path_sample_m = float(self.declare_parameter(
+            'coverage_path_sample_m', 0.12).value)
+        self._coverage_max_interpolation_gap_m = float(self.declare_parameter(
+            'coverage_max_interpolation_gap_m', 0.35).value)
+        self._coverage_max_goals = int(self.declare_parameter(
+            'coverage_max_goals', 14).value)
+        self._status_topic = str(self.declare_parameter(
+            'status_topic', '/explore/status_json').value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -193,6 +342,17 @@ class ExploreNode(Node):
         self._odom_yaw: Optional[float] = None
         self._odom_angular_speed: Optional[float] = None
         self._odom_received_at: Optional[float] = None
+        self._coverage_path: List[Tuple[float, float]] = []
+        self._coverage_ratio = 0.0
+        self._reachable_area_m2 = 0.0
+        self._covered_area_m2 = 0.0
+        self._coverage_goals_visited = 0
+        self._frontiers_visited_status = 0
+        self._frontiers_remaining = 0
+        self._coverage_complete = False
+        self._status_state = 'idle'
+        self._status_phase = 'idle'
+        self._status_message = 'Explorer bereit; warte auf Erkundungsauftrag.'
 
         if (
                 self._approach_dist_m <= 0.0
@@ -226,7 +386,17 @@ class ExploreNode(Node):
                 or self._prealign_max_passes <= 0
                 or self._prealign_min_improvement <= 0.0
                 or self._prealign_min_improvement
-                >= self._prealign_handoff_tolerance):
+                >= self._prealign_handoff_tolerance
+                or not 0.0 < self._coverage_target_ratio <= 1.0
+                or self._coverage_visit_radius_m <= 0.0
+                or self._coverage_clearance_m <= 0.0
+                or self._coverage_min_goal_distance_m <= 0.0
+                or self._coverage_path_sample_m <= 0.0
+                or self._coverage_path_sample_m
+                > self._coverage_visit_radius_m
+                or self._coverage_max_interpolation_gap_m
+                <= self._coverage_path_sample_m
+                or self._coverage_max_goals <= 0):
             raise ValueError('Explorer-Sicherheitsgrenzen muessen positiv sein')
         if not self._behavior_tree:
             raise ValueError(
@@ -251,6 +421,13 @@ class ExploreNode(Node):
             callback_group=self._cb)
         self._scan_cmd_pub = self.create_publisher(
             Twist, self._scan_cmd_topic, 10)
+        status_qos = QoSProfile(depth=1)
+        status_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
+        status_qos.reliability = ReliabilityPolicy.RELIABLE
+        self._status_pub = self.create_publisher(
+            String, self._status_topic, status_qos)
+        self._status_timer = self.create_timer(
+            1.0, self._publish_current_status, callback_group=self._cb)
 
         self._nav_client = ActionClient(
             self, NavigateToPose, self._nav_action_name, callback_group=self._cb)
@@ -268,6 +445,7 @@ class ExploreNode(Node):
         self.get_logger().info(
             f"explore_node bereit. Map='{self._map_topic}', Nav='{self._nav_action_name}'. "
             f"Erkundung starten via Action /explore_area.")
+        self._publish_status('idle')
 
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
@@ -319,6 +497,161 @@ class ExploreNode(Node):
     def _robot_xy(self) -> Optional[Tuple[float, float]]:
         pose = self._robot_pose()
         return None if pose is None else pose[:2]
+
+    # ======================= Reale Flaechenabdeckung ===================
+    def _record_coverage_pose(self, robot_xy: Optional[Tuple[float, float]]):
+        """Store the measured map-frame path at a bounded spatial interval."""
+        if robot_xy is None or not all(math.isfinite(value) for value in robot_xy):
+            return
+        if not self._coverage_path:
+            self._coverage_path.append(robot_xy)
+            return
+        start_x, start_y = self._coverage_path[-1]
+        distance = math.hypot(robot_xy[0] - start_x, robot_xy[1] - start_y)
+        if distance < self._coverage_path_sample_m:
+            return
+        # A SLAM loop closure may move map->odom abruptly although the robot
+        # did not drive the straight segment between both map poses. Keep the
+        # new sample, but never paint such a transform jump as physical path.
+        if distance > self._coverage_max_interpolation_gap_m:
+            self._coverage_path.append(robot_xy)
+            return
+        steps = max(1, int(math.ceil(distance / self._coverage_path_sample_m)))
+        for step in range(1, steps + 1):
+            fraction = step / steps
+            self._coverage_path.append((
+                start_x + fraction * (robot_xy[0] - start_x),
+                start_y + fraction * (robot_xy[1] - start_y),
+            ))
+
+    @staticmethod
+    def _exclude_disk(
+            mask: np.ndarray, row: int, col: int, radius_cells: int):
+        row0 = max(0, row - radius_cells)
+        row1 = min(mask.shape[0], row + radius_cells + 1)
+        col0 = max(0, col - radius_cells)
+        col1 = min(mask.shape[1], col + radius_cells + 1)
+        yy, xx = np.ogrid[row0:row1, col0:col1]
+        mask[row0:row1, col0:col1] |= (
+            (yy - row) ** 2 + (xx - col) ** 2 <= radius_cells ** 2)
+
+    def _coverage_plan(
+            self, grid: OccupancyGrid, robot_xy: Tuple[float, float],
+            required_goal: Optional[Tuple[float, float]] = None
+            ) -> CoveragePlan:
+        """Measure driven coverage and select a room-size-adaptive next goal."""
+        info = grid.info
+        if info.width <= 0 or info.height <= 0 or info.resolution <= 0.0:
+            return CoveragePlan(0.0, 0.0, 0.0, None)
+        data = np.asarray(grid.data, dtype=np.int16).reshape(
+            (info.height, info.width))
+        robot_col, robot_row = self._world_to_grid(
+            robot_xy[0], robot_xy[1], info)
+
+        free = data == 0
+        free_seed = nearest_mask_cell(
+            free, robot_row, robot_col,
+            max(1, int(math.ceil(0.25 / info.resolution))))
+        if free_seed is None:
+            return CoveragePlan(0.0, 0.0, 0.0, None)
+        same_free_space = connected_mask(free, free_seed)
+
+        clearance_cells = int(math.ceil(
+            self._coverage_clearance_m / info.resolution))
+        safe = square_clearance_mask(data, clearance_cells) & same_free_space
+        safe_seed = nearest_mask_cell(
+            safe, robot_row, robot_col,
+            max(1, int(math.ceil(
+                (self._coverage_clearance_m + 0.25) / info.resolution))))
+        if safe_seed is None:
+            return CoveragePlan(0.0, 0.0, 0.0, None)
+        reachable = connected_mask(safe, safe_seed)
+        reachable_cells = int(np.count_nonzero(reachable))
+        if reachable_cells == 0:
+            return CoveragePlan(0.0, 0.0, 0.0, None)
+
+        path_cells = []
+        for path_x, path_y in self._coverage_path:
+            path_col, path_row = self._world_to_grid(path_x, path_y, info)
+            if 0 <= path_row < info.height and 0 <= path_col < info.width:
+                path_cells.append((path_row, path_col))
+        if not path_cells:
+            path_cells.append((robot_row, robot_col))
+        covered = stamp_coverage(
+            data.shape, path_cells,
+            int(math.ceil(self._coverage_visit_radius_m / info.resolution)))
+        covered_reachable = covered & reachable
+        covered_cells = int(np.count_nonzero(covered_reachable))
+        cell_area = info.resolution ** 2
+        ratio = covered_cells / reachable_cells
+
+        if required_goal is not None:
+            goal_col, goal_row = self._world_to_grid(
+                required_goal[0], required_goal[1], info)
+            goal_cell = None
+            if (
+                    0 <= goal_row < info.height
+                    and 0 <= goal_col < info.width
+                    and reachable[goal_row, goal_col]
+                    and not self._is_blacklisted(
+                        required_goal[0], required_goal[1])):
+                goal_cell = (goal_row, goal_col)
+            return CoveragePlan(
+                ratio, reachable_cells * cell_area,
+                covered_cells * cell_area, goal_cell)
+
+        excluded = np.zeros_like(reachable, dtype=bool)
+        self._exclude_disk(
+            excluded, robot_row, robot_col,
+            int(math.ceil(
+                self._coverage_min_goal_distance_m / info.resolution)))
+        for blacklist_x, blacklist_y in self._blacklist:
+            blacklist_col, blacklist_row = self._world_to_grid(
+                blacklist_x, blacklist_y, info)
+            if (
+                    0 <= blacklist_row < info.height
+                    and 0 <= blacklist_col < info.width):
+                self._exclude_disk(
+                    excluded, blacklist_row, blacklist_col,
+                    int(math.ceil(
+                        self._blacklist_radius / info.resolution)))
+        goal_cell = farthest_uncovered_cell(
+            reachable, covered_reachable, excluded)
+        return CoveragePlan(
+            ratio, reachable_cells * cell_area,
+            covered_cells * cell_area, goal_cell)
+
+    def _apply_coverage_plan(self, plan: CoveragePlan):
+        self._coverage_ratio = min(1.0, max(0.0, plan.ratio))
+        self._reachable_area_m2 = max(0.0, plan.reachable_area_m2)
+        self._covered_area_m2 = max(0.0, plan.covered_area_m2)
+
+    def _publish_status(self, state: str):
+        self._status_state = state
+        payload = {
+            'schema_version': 1,
+            'backend_ready': True,
+            'state': state,
+            'phase': self._status_phase,
+            'message': self._status_message,
+            'strategy': 'frontier_then_adaptive_coverage',
+            'coverage_ratio': self._coverage_ratio,
+            'coverage_percent': 100.0 * self._coverage_ratio,
+            'target_coverage_percent': 100.0 * self._coverage_target_ratio,
+            'reachable_area_m2': self._reachable_area_m2,
+            'covered_area_m2': self._covered_area_m2,
+            'frontiers_visited': self._frontiers_visited_status,
+            'coverage_goals_visited': self._coverage_goals_visited,
+            'frontiers_remaining': self._frontiers_remaining,
+            'map_ready_to_save': (
+                state == 'success' and self._coverage_complete),
+            'time': time.time(),
+        }
+        self._status_pub.publish(String(data=json.dumps(
+            payload, ensure_ascii=False, separators=(',', ':'))))
+
+    def _publish_current_status(self):
+        self._publish_status(self._status_state)
 
     # ======================= Frontier-Erkennung =========================
     def _detect_frontiers(self, grid: OccupancyGrid, min_frontier_m: float) -> List[Frontier]:
@@ -540,11 +873,15 @@ class ExploreNode(Node):
         self._nav_client.send_goal_async(goal).add_done_callback(_on_goal)
 
         started = time.monotonic()
+        last_path_sample_at = started
         stop_reason = None
         stop_reason_started = None
         cancel_started = None
         while rclpy.ok() and not done.wait(timeout=0.05):
             now = time.monotonic()
+            if now - last_path_sample_at >= 0.25:
+                self._record_coverage_pose(self._robot_xy())
+                last_path_sample_at = now
             if stop_reason is None and stop_requested():
                 stop_reason = 'canceled'
                 stop_reason_started = now
@@ -566,6 +903,7 @@ class ExploreNode(Node):
 
         if not done.is_set():
             return 'cancel_failed' if stop_reason is not None else 'aborted'
+        self._record_coverage_pose(self._robot_xy())
         if stop_reason is not None:
             return stop_reason
         if holder['status'] == GoalStatus.STATUS_SUCCEEDED:
@@ -791,7 +1129,27 @@ class ExploreNode(Node):
     def _execute(self, goal_handle):
         """Run one bounded exploration and own every child Nav2 goal."""
         try:
-            return self._execute_reserved(goal_handle)
+            result = self._execute_reserved(goal_handle)
+            if goal_handle.is_cancel_requested or 'abgebrochen' in result.message:
+                state = 'canceled'
+                self._status_phase = 'canceled'
+            elif result.success and self._coverage_complete:
+                state = 'success'
+                self._status_phase = 'complete'
+            elif result.success:
+                state = 'partial'
+                self._status_phase = 'partial'
+            else:
+                state = 'failed'
+                self._status_phase = 'failed'
+            self._status_message = result.message
+            self._publish_status(state)
+            return result
+        except Exception as exc:
+            self._status_phase = 'failed'
+            self._status_message = f'Interner Explorer-Fehler: {exc}'
+            self._publish_status('failed')
+            raise
         finally:
             with self._active_goal_lock:
                 self._active_goal = False
@@ -843,6 +1201,17 @@ class ExploreNode(Node):
 
         self._blacklist.clear()
         self._start_xy = None
+        self._coverage_path.clear()
+        self._coverage_ratio = 0.0
+        self._reachable_area_m2 = 0.0
+        self._covered_area_m2 = 0.0
+        self._coverage_goals_visited = 0
+        self._frontiers_visited_status = 0
+        self._frontiers_remaining = 0
+        self._coverage_complete = False
+        self._status_phase = 'waiting_for_map'
+        self._status_message = 'Erkundung gestartet; warte auf SLAM-Karte und Pose.'
+        self._publish_status('running')
         frontiers_visited = 0
         failed_goals = 0
         initial_scan_done = not self._initial_scan_enabled
@@ -867,10 +1236,12 @@ class ExploreNode(Node):
                 return self._finish_result(result, frontiers_visited)
 
             if overall_expired():
-                result.success = True
-                result.message = 'Zeitlimit erreicht - Erkundung sauber beendet'
-                completion_reason = 'timeout'
-                break
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Zeitlimit erreicht; Zielabdeckung nicht bestaetigt '
+                    f'({100.0 * self._coverage_ratio:.0f} %)')
+                return self._finish_result(result, frontiers_visited)
 
             # slam_toolbox publiziert eine unveraenderte Karte im Stillstand
             # nicht periodisch. Der initiale Rundblick darf daher mit einer
@@ -908,10 +1279,15 @@ class ExploreNode(Node):
             robot_xy = robot_pose[:2]
             if self._start_xy is None:
                 self._start_xy = robot_xy
+            self._record_coverage_pose(robot_xy)
 
             if not initial_scan_done:
+                self._status_phase = 'initial_scan'
+                self._status_message = (
+                    'Kontrollierter 360-Grad-LiDAR-Rundblick läuft.')
+                self._publish_status('running')
                 self.get_logger().info(
-                    'Phase 1/2: kontrollierter 360-Grad-LiDAR-Rundblick.')
+                    'Phase 1/3: kontrollierter 360-Grad-LiDAR-Rundblick.')
                 scan_status, achieved = self._scan_in_place(
                     stop_requested=lambda: (
                         goal_handle.is_cancel_requested
@@ -922,11 +1298,11 @@ class ExploreNode(Node):
                         goal_handle.canceled()
                         result.message = '360-Grad-Rundblick abgebrochen'
                     elif overall_expired():
-                        goal_handle.succeed()
-                        result.success = True
+                        goal_handle.abort()
+                        result.success = False
                         result.message = (
                             'Zeitlimit waehrend des Rundblicks erreicht; '
-                            'Roboter bestaetigt gestoppt')
+                            'Roboter bestaetigt gestoppt, Karte unvollstaendig')
                     else:
                         goal_handle.abort()
                         result.message = (
@@ -936,7 +1312,7 @@ class ExploreNode(Node):
                 initial_scan_done = True
                 self.get_logger().info(
                     f'Rundblick vollstaendig: {math.degrees(achieved):.1f} Grad; '
-                    'Phase 2/2 startet mit frischer Frontier-Neuplanung.')
+                    'Phase 2/3 startet mit frischer Frontier-Neuplanung.')
                 time.sleep(self._replan_period_s)
                 continue
 
@@ -945,8 +1321,19 @@ class ExploreNode(Node):
                 self._publish_markers(frontiers, grid.header.frame_id)
             candidates = self._rank_frontiers(
                 frontiers, robot_xy, grid, robot_yaw=robot_pose[2])
+            coverage_plan = self._coverage_plan(grid, robot_xy)
+            self._apply_coverage_plan(coverage_plan)
+            self._frontiers_remaining = len(candidates)
+            self._frontiers_visited_status = frontiers_visited
 
-            if not candidates:
+            coverage_goal = False
+            if candidates:
+                best = candidates[0]
+                self._status_phase = 'frontier'
+                self._status_message = (
+                    f'Kartengrenze {frontiers_visited + 1} wird angefahren; '
+                    f'{len(candidates)} sichere Kandidaten offen.')
+            elif not self._coverage_enabled:
                 success, message, reason = self._classify_frontier_completion(
                     bool(frontiers), frontiers_visited)
                 result.success = success
@@ -955,11 +1342,52 @@ class ExploreNode(Node):
                     goal_handle.abort()
                     return self._finish_result(result, frontiers_visited)
                 completion_reason = reason
+                self._coverage_complete = success
                 break
+            elif self._coverage_ratio >= self._coverage_target_ratio:
+                self._coverage_complete = True
+                result.success = True
+                result.message = (
+                    'Adaptive Raumerkundung abgeschlossen: '
+                    f'{100.0 * self._coverage_ratio:.0f} % der sicher '
+                    'befahrbaren Flaeche wurden durch die reale Fahrspur '
+                    'abgedeckt')
+                completion_reason = 'coverage_complete'
+                break
+            elif self._coverage_goals_visited >= self._coverage_max_goals:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    f'Abdeckungsziel nach {self._coverage_max_goals} '
+                    f'Flaechenzielen nicht erreicht '
+                    f'({100.0 * self._coverage_ratio:.0f} %)')
+                return self._finish_result(result, frontiers_visited)
+            elif coverage_plan.goal_cell is None:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Keine weitere sichere Abdeckungsfahrt moeglich; '
+                    f'Ziel {100.0 * self._coverage_target_ratio:.0f} %, '
+                    f'erreicht {100.0 * self._coverage_ratio:.0f} %')
+                return self._finish_result(result, frontiers_visited)
+            else:
+                goal_row, goal_col = coverage_plan.goal_cell
+                goal_x, goal_y = self._grid_to_world(
+                    goal_col, goal_row, grid.info)
+                best = Frontier((goal_x, goal_y), 0)
+                best.goal_x, best.goal_y = goal_x, goal_y
+                coverage_goal = True
+                self._status_phase = 'coverage'
+                self._status_message = (
+                    f'Phase 3/3: Abdeckungsziel '
+                    f'{self._coverage_goals_visited + 1} wird angefahren; '
+                    f'{100.0 * self._coverage_ratio:.0f} % von '
+                    f'{100.0 * self._coverage_target_ratio:.0f} % erreicht.')
 
-            best = candidates[0]
+            goal_label = 'Abdeckungsziel' if coverage_goal else 'Frontier'
+            self._publish_status('running')
             fb = ExploreArea.Feedback()
-            fb.explored_percent = self._progress_percent(grid)
+            fb.explored_percent = 100.0 * self._coverage_ratio
             fb.frontiers_remaining = len(candidates)
             goal_pose = PoseStamped()
             goal_pose.header.frame_id = self._global_frame
@@ -978,7 +1406,7 @@ class ExploreNode(Node):
                     or overall_expired()
                     or self._map is None)))
             self.get_logger().info(
-                f'Frontier-Vorausrichtung: Soll '
+                f'{goal_label}-Vorausrichtung: Soll '
                 f'{math.degrees(heading_error):+.1f} Grad, erreicht '
                 f'{math.degrees(turned):.1f} Grad, Karten-Restfehler '
                 f'{math.degrees(residual_error):+.1f} Grad, '
@@ -990,11 +1418,11 @@ class ExploreNode(Node):
                     result.message = 'Erkundung waehrend Vorausrichtung abgebrochen'
                     return self._finish_result(result, frontiers_visited)
                 if overall_expired():
-                    goal_handle.succeed()
-                    result.success = True
+                    goal_handle.abort()
+                    result.success = False
                     result.message = (
                         'Zeitlimit waehrend Vorausrichtung erreicht; '
-                        'Roboter bestaetigt gestoppt')
+                        'Roboter bestaetigt gestoppt, Karte unvollstaendig')
                     return self._finish_result(result, frontiers_visited)
                 if turn_status in (
                         'odom_stale', 'wrong_direction', 'stop_unconfirmed',
@@ -1003,18 +1431,18 @@ class ExploreNode(Node):
                     goal_handle.abort()
                     result.success = False
                     result.message = (
-                        f'Sichere Frontier-Vorausrichtung fehlgeschlagen: '
+                        f'Sichere {goal_label}-Vorausrichtung fehlgeschlagen: '
                         f'{turn_status}')
                     return self._finish_result(result, frontiers_visited)
                 self._blacklist.append((best.cx, best.cy))
                 failed_goals += 1
                 self.get_logger().warn(
-                    f'Frontier wegen Vorausrichtung {turn_status} gesperrt; '
+                    f'{goal_label} wegen Vorausrichtung {turn_status} gesperrt; '
                     f'Fehlversuch {failed_goals}/{self._max_failed_goals}')
                 if failed_goals >= self._max_failed_goals:
                     goal_handle.abort()
                     result.success = False
-                    result.message = 'Zu viele nicht ausrichtbare Frontier-Ziele'
+                    result.message = 'Zu viele nicht ausrichtbare Erkundungsziele'
                     return self._finish_result(result, frontiers_visited)
                 continue
 
@@ -1027,18 +1455,26 @@ class ExploreNode(Node):
             refreshed_goal = None
             if (refreshed_pose is not None and refreshed_grid is not None
                     and self._map_is_fresh()):
-                refreshed_goal = self._frontier_approach_goal(
-                    best, refreshed_pose[:2], refreshed_grid)
+                if coverage_goal:
+                    refreshed_plan = self._coverage_plan(
+                        refreshed_grid, refreshed_pose[:2],
+                        required_goal=(best.goal_x, best.goal_y))
+                    self._apply_coverage_plan(refreshed_plan)
+                    if refreshed_plan.goal_cell is not None:
+                        refreshed_goal = (best.goal_x, best.goal_y)
+                else:
+                    refreshed_goal = self._frontier_approach_goal(
+                        best, refreshed_pose[:2], refreshed_grid)
             if refreshed_goal is None:
                 self._blacklist.append((best.cx, best.cy))
                 failed_goals += 1
                 self.get_logger().warn(
-                    'Frontier nach Vorausrichtung nicht mehr sicher; '
+                    f'{goal_label} nach Vorausrichtung nicht mehr sicher; '
                     f'Fehlversuch {failed_goals}/{self._max_failed_goals}')
                 if failed_goals >= self._max_failed_goals:
                     goal_handle.abort()
                     result.success = False
-                    result.message = 'Zu viele nach Messung unsichere Frontiers'
+                    result.message = 'Zu viele nach Messung unsichere Erkundungsziele'
                     return self._finish_result(result, frontiers_visited)
                 continue
             best.goal_x, best.goal_y = refreshed_goal
@@ -1064,11 +1500,11 @@ class ExploreNode(Node):
                         'Erkundung waehrend Karten-Uebergabe abgebrochen')
                     return self._finish_result(result, frontiers_visited)
                 if overall_expired():
-                    goal_handle.succeed()
-                    result.success = True
+                    goal_handle.abort()
+                    result.success = False
                     result.message = (
                         'Zeitlimit waehrend Karten-Uebergabe erreicht; '
-                        'Roboter bestaetigt gestoppt')
+                        'Roboter bestaetigt gestoppt, Karte unvollstaendig')
                     return self._finish_result(result, frontiers_visited)
                 if verify_status in (
                         'odom_stale', 'wrong_direction', 'stop_unconfirmed',
@@ -1089,13 +1525,14 @@ class ExploreNode(Node):
                 if failed_goals >= self._max_failed_goals:
                     goal_handle.abort()
                     result.success = False
-                    result.message = 'Zu viele nicht ausrichtbare Frontier-Ziele'
+                    result.message = 'Zu viele nicht ausrichtbare Erkundungsziele'
                     return self._finish_result(result, frontiers_visited)
                 continue
 
             self.get_logger().info(
-                f'Fahre zu sicherem Frontier-Anfahrpunkt; '
-                f'Groesse={best.size}, offen={len(candidates)}')
+                f'Fahre zu sicherem {goal_label}; '
+                f'Frontier-Groesse={best.size}, offen={len(candidates)}, '
+                f'Abdeckung={100.0 * self._coverage_ratio:.1f} %')
             status = self._navigate_to(
                 best.goal_x, best.goal_y, self._goal_timeout_s,
                 stop_requested=lambda: (
@@ -1104,7 +1541,11 @@ class ExploreNode(Node):
                     or not self._map_is_fresh()))
 
             if status == 'success':
-                frontiers_visited += 1
+                if coverage_goal:
+                    self._coverage_goals_visited += 1
+                else:
+                    frontiers_visited += 1
+                    self._frontiers_visited_status = frontiers_visited
                 time.sleep(self._replan_period_s)
                 continue
 
@@ -1114,9 +1555,11 @@ class ExploreNode(Node):
                     result.success = False
                     result.message = 'Erkundung und Nav2-Kindziel abgebrochen'
                 elif overall_expired():
-                    result.success = True
-                    result.message = 'Zeitlimit erreicht - Erkundung sauber beendet'
-                    goal_handle.succeed()
+                    result.success = False
+                    result.message = (
+                        'Zeitlimit erreicht; Zielabdeckung nicht bestaetigt '
+                        f'({100.0 * self._coverage_ratio:.0f} %)')
+                    goal_handle.abort()
                 else:
                     goal_handle.abort()
                     result.success = False
@@ -1134,12 +1577,12 @@ class ExploreNode(Node):
             self._blacklist.append((best.cx, best.cy))
             failed_goals += 1
             self.get_logger().warn(
-                f'Frontier-Ziel {status}; Fehlversuch '
+                f'{goal_label} {status}; Fehlversuch '
                 f'{failed_goals}/{self._max_failed_goals}')
             if failed_goals >= self._max_failed_goals:
                 goal_handle.abort()
                 result.success = False
-                result.message = 'Zu viele nicht erreichbare Frontier-Ziele'
+                result.message = 'Zu viele nicht erreichbare Erkundungsziele'
                 return self._finish_result(result, frontiers_visited)
 
         if return_to_start and self._start_xy is not None:
@@ -1153,7 +1596,8 @@ class ExploreNode(Node):
                 result.message = f'Rueckkehr zur Startpose fehlgeschlagen: {status}'
                 return self._finish_result(result, frontiers_visited)
 
-        if completion_reason in {'timeout', 'complete', 'safe_complete'}:
+        if completion_reason in {
+                'coverage_complete', 'complete', 'safe_complete'}:
             goal_handle.succeed()
         self.get_logger().info(f'Exploration beendet: {result.message}')
         return self._finish_result(result, frontiers_visited)

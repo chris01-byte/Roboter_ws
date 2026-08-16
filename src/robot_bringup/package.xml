@@ -36,6 +36,7 @@
   <exec_depend>robot_face</exec_depend>
   <exec_depend>smartphone_gui</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>robot_navigation</exec_depend>
 
   <!-- OFFBOARD-Pakete, die server.launch.py startet -->
   <exec_depend>llm_planner</exec_depend>

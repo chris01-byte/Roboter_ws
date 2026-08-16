@@ -2,10 +2,9 @@
 
 **Hardwarestand:** 16.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
 **Softwaredelta:** 16.08.2026 · Branch
-`feature/automatische-lidar-kartierung`; zweistufige automatische
-LiDAR-Kartierung mit 360-Grad-Rundblick und anschliessender
-Frontier-Exploration real abgenommen: vier sichere Ziele erreicht und danach
-ohne weitere sicher erreichbare Frontier beendet
+`feature/hybrid-erkundung-app`; die real abgenommene Frontier-Kette wurde
+motorlos um adaptive, raumgroessenabhaengige Fahrspur-Abdeckung,
+Explorer-Heartbeat und einen gemeinsamen App-/Kartierungsstart erweitert
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -31,7 +30,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
-| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung | **produktiv** |
+| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack | **erprobt** (neuer App-Stack motorlos) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
@@ -44,7 +43,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Zweistufige Erkundung: odometriegepruefter 360-Grad-Rundblick, Kartenframe-Vorausrichtung und sichere Frontier-Ziele | **produktiv** (16.08.2026: Rundblick und vier Ziele real bestanden) |
+| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **erprobt** (Rundblick/Frontiers real; Abdeckungsphase motorlos) |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |
@@ -63,6 +62,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Globale LiDAR-Lokalisierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_lidar_lokalisierung.sh /absolut/map.yaml active_drive:=true oak:=false` | **ja, Motoren bestromt** |
 | Automatische LiDAR-Kartierung, Preflight | `bash tools/kartierung/start_automatische_kartierung.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`) |
 | Automatische LiDAR-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_automatische_kartierung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
+| App-Kartierung, Preflight | `bash tools/kartierung/start_app_erkundung.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`) |
+| App-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 
@@ -83,7 +84,8 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Datei | Zweck |
 |---|---|
 | `tools/kartierung/start_slam.sh` / `stop_slam.sh` | SLAM starten; **sauber** beenden mit Wörterbuch-Kontrolle |
-| `tools/kartierung/start_automatische_kartierung.sh` | zweistufige SLAM-/Nav2-/Explore-Gesamtkette; scharf nur mit zwei Opt-ins |
+| `tools/kartierung/start_automatische_kartierung.sh` | dreistufige SLAM-/Nav2-/Explore-Kette ohne App-Dienste; scharf nur mit zwei Opt-ins |
+| `tools/kartierung/start_app_erkundung.sh` | einzelner dreistufiger Kartierungs-, App-, rosbridge- und Kartenmanager-Stack; Doppelstartschutz |
 | `tools/kartierung/start_lokalisierung.sh` | Lokalisierungsmodus, wahlweise ohne Vorwissen |
 | `tools/kartierung/kartierfahrt.py` | autonome Fahrt, hält selbst vor Hindernissen |
 | `tools/kartierung/erkundungsfahrt.py` | Ziele an der Grenze bekannt/unbekannt |

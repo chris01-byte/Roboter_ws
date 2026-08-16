@@ -1,7 +1,8 @@
 # Gedächtnisprotokoll – native iOS-Robotersteuerung
 
-**Stand:** 14.08.2026
-**Arbeitsbereich:** `/Volumes/64GB/roboter_ws`
+**Stand:** 16.08.2026
+**Arbeitsbereiche:** Jetson `/home/p/roboter_ws`, Mac/USB
+`/Volumes/64GB/roboter_ws`
 **App:** `ios/Robotersteuerung`
 
 Dieses Dokument ist der Einstiegspunkt für spätere Arbeit an der nativen
@@ -21,6 +22,8 @@ Enthalten sind:
 - Verbindungseingabe mit lokal gespeicherter, zuletzt erfolgreicher URL
 - automatischer Start, Ping und Wiederverbindung mit Backoff
 - Erkennung veralteter Missions- und Sicherheitsdaten
+- fail-closed Explorer-Preflight und 1-Hz-Fortschritt der real abgefahrenen
+  Flaechenabdeckung
 - Raumfahrt, Greifen, Bringen und autonome Erkundung
 - manuell deklarierte Räume aus dem Semantikstatus; Objekte, Ablageziele und
   die reale `pick_and_place`-Raumliste bleiben statisch freigegeben
@@ -38,7 +41,8 @@ Enthalten sind:
   ihre Verbindung abbricht
 - lokale Netzwerkfreigabe, enge ATS-Ausnahme und Privacy Manifest
 - lokaler, abhängigkeitfreier rosbridge-Mock einschließlich Testwohnung
-- 39 Swift-Tests für Steuerungs-, Sicherheits-, Karten- und Semantikprotokoll
+- 41 Swift-Tests für Steuerungs-, Sicherheits-, Explorer-, Karten- und
+  Semantikprotokoll
 
 ## Verbindungsvertrag
 
@@ -53,6 +57,7 @@ Nach dem Öffnen des WebSockets werden diese Frames gesendet:
 {"op":"advertise","topic":"/mission_manager/command_json","type":"std_msgs/String"}
 {"op":"advertise","topic":"/safety/estop_request","type":"std_msgs/Bool"}
 {"op":"subscribe","topic":"/mission_manager/status_json","type":"std_msgs/String"}
+{"op":"subscribe","topic":"/explore/status_json","type":"std_msgs/String"}
 {"op":"subscribe","topic":"/safety/estop","type":"std_msgs/Bool"}
 ```
 
@@ -81,8 +86,30 @@ Statusfelder in dem JSON-String auf `/mission_manager/status_json`:
 ```text
 state, phase, message, progress, active_command,
 rooms, targets, objects, offboard_available, cancel_pending,
-pick_and_place_rooms, last_rejection, time
+pick_and_place_rooms, last_rejection, explore_execution, time
 ```
+
+`/explore/status_json` ist ebenfalls ein JSON-String in `std_msgs/String` und
+muss als vollstaendiger Snapshot dekodiert werden:
+
+```text
+schema_version, backend_ready, state, phase, message, strategy,
+coverage_ratio, coverage_percent, target_coverage_percent,
+reachable_area_m2, covered_area_m2, frontiers_visited,
+coverage_goals_visited, frontiers_remaining, map_ready_to_save, time
+```
+
+Der Erkunden-Button ist nur aktiv, wenn alle bisherigen Missions- und
+NOT-AUS-Regeln gelten, beide Statusstroeme hoechstens 2,5 s alt sind,
+`explore_execution == "bt_explicit_opt_in"` und
+`backend_ready == true` melden und der Explorer nicht bereits laeuft. Ein
+gesendeter WebSocket-Frame ist weiterhin keine Auftragsbestaetigung. Nur der
+folgende Missionsstatus darf `missionRequestPending` aufheben.
+
+`coverage_ratio` beschreibt die gemessene Fahrspur relativ zur sicher
+befahrbaren Kartenflaeche, nicht den bekannten Anteil des OccupancyGrid.
+`map_ready_to_save:true` erscheint ausschliesslich nach bestaetigtem
+Abdeckungsabschluss; die Karte muss trotzdem visuell geprueft werden.
 
 Der Karten-Tab öffnet unabhängig davon eine zweite Verbindung zu derselben
 Adresse. Nur solange er sichtbar ist, registriert er:
@@ -314,13 +341,14 @@ Während dieser Abnahme wurden drei Sicherheitslücken geschlossen:
 3. Ein alter, offen gebliebener NOT-AUS-Freigabedialog konnte die
    Freshness-Prüfung umgehen.
 
-Im Stand vom 14.08.2026 bestehen 39 Swift-Tests im macOS-Test-Harness und im
-iPhone-17-Pro-Simulator,
-darunter Fingerprint-, Status-, Kommando-, Polygon- und Transformtests. Fünf
-Python-Tests prüfen zusätzlich den semantischen Mock-Flow. Der
-Strict-Concurrency-Build mit Warnungen als Fehler ist erfolgreich. Eine
-synthetische End-to-End-Bedienung des neuen Raumeditors und der Lauf gegen den
-echten Jetson bleiben separate Abnahmeschritte.
+Im Stand vom 14.08.2026 bestanden 39 Swift-Tests im macOS-Test-Harness und im
+iPhone-17-Pro-Simulator, darunter Fingerprint-, Status-, Kommando-, Polygon-
+und Transformtests. Am 16.08.2026 kamen zwei Explorer-Protokolltests hinzu;
+sie muessen auf dem Mac/Xcode noch ausgefuehrt werden, weil der Jetson kein
+Swift/Xcode besitzt. Sechs Python-Tests pruefen den erweiterten semantischen
+Mock- und Explorerstatus auf dem Jetson erfolgreich. Der vorherige
+Strict-Concurrency-Build mit Warnungen als Fehler war erfolgreich. Eine reale
+adaptive Erkundungsfahrt bleibt ein separater Abnahmeschritt.
 
 ## Installation auf echtem iPhone vom 26.07.2026
 
@@ -380,8 +408,9 @@ abgewiesen; nach dem Entsperren genügt ein normales Antippen der App.
   bereits erfolgreichen Lauf nicht in „abgebrochen“ umdeuten. Lokale
   Zustands-, Payload- und Outcome-Tests bestehen; der unmittelbare
   Start-und-Abbruch bleibt als Jetson-Integrationstest erforderlich.
-- `go_to_room` und `pick_object` sind laut Backend derzeit Simulation;
-  `pick_and_place` und `explore` laufen über den echten Behavior Tree.
+- `go_to_room` und `pick_object` sind im normalen Backend weiterhin
+  Simulation. `explore` laeuft nur im expliziten App-Kartierungsstack ueber
+  den echten Behavior Tree; die App prueft diesen Opt-in vor dem Senden.
 - Es gibt im Repository noch keine Akkutelemetrie.
 
 ## Prüfbefehle

@@ -17,6 +17,86 @@ Rückfallweg:
 
 ---
 
+## 2026-08-16 — Frontier-Erkundung um adaptive Flaechenabdeckung und App-Preflight erweitert
+
+**Entscheidung:** Die reale Raumkartierung besitzt nun drei Phasen: den
+odometriegeprueften 360-Grad-Rundblick, die vorhandene Frontier-Erkundung und
+anschliessend eine adaptive Abdeckungsfahrt. Die dritte Phase misst nicht den
+bekannten Kartenanteil, sondern projiziert die tatsaechlich im Kartenframe
+gemessene Fahrspur auf die zusammenhaengende sicher befahrbare Freiflaeche.
+Nach Ende der Frontiers wird jeweils der geodaetisch am weitesten entfernte,
+noch nicht abgedeckte sichere Punkt angefahren. Damit waechst die Zahl der
+Ziele mit Raumgroesse und Grundriss statt mit einer festen Vierer-Liste.
+
+Der Startwert fuer einen erfolgreichen Abschluss ist 85 % Abdeckung bei
+0,65 m Besuchsradius, 0,40 m Kartenabstand, mindestens 0,70 m Zielentfernung,
+hoechstens 14 Abdeckungszielen und 900 s Gesamtzeit. Abrupte
+`map->odom`-Korrekturen ueber 0,35 m werden als neue Messpunkte gespeichert,
+aber nicht als vermeintlich gerade gefahrene Strecke interpoliert. Ein
+Zeitlimit oder fehlender sicherer Folgekandidat unterhalb 85 % meldet Fehler
+und niemals „Karte fertig".
+
+`explore_node` sendet einen 1-Hz-Heartbeat auf `/explore/status_json` mit
+Phase, realer Abdeckung, Zielwert, befahrbarer/abgedeckter Flaeche,
+Frontier-/Abdeckungszielen und `map_ready_to_save`. iOS- und Web-App schalten
+„Erkundung starten" nur frei, wenn Missionsstatus, Not-Aus und Explorerstatus
+frisch sind, `explore_execution=bt_explicit_opt_in` gilt und der Explorer
+bereit ist. Der neue `robot_bringup/app_mapping.launch.py` startet SLAM,
+Nav2, Missionskette, beide Kartenmanager, rosbridge und den optionalen
+Web-Fallback genau einmal. `start_app_erkundung.sh` prueft zusaetzlich auf
+bereits laufende passive App-Knoten und bricht vor einem Doppelstart ab.
+
+**Grund / beobachtete Evidenz:** Im beaufsichtigten Frontier-Lauf erreichte
+der Roboter vier sichere Ziele, befuhr nach Beobachtung aber nur etwa 40 % des
+Raums. Das ist kein Fehler der festen Zielzahl — der Explorer hatte keine
+Vierer-Liste. Ein LiDAR-Rundblick macht sichtbaren Boden bereits kartografisch
+bekannt; die Frontier-Methode sucht danach nur noch Grenzen zwischen bekannt
+und unbekannt. „Keine Frontier" beweist deshalb keine physische
+Raumabdeckung. Der neue Pfadvertrag trennt beide Groessen.
+
+Der erste Gesamt-Dry-run zeigte ausserdem zwei bereits laufende passive
+Kartenmanager aus der vorherigen App-Sitzung. `roboterknoten.py --still`
+erlaubt diese absichtlich; der neue Starter erkennt sie nun separat und
+verhindert doppelte Knotennamen. In einer isolierten ROS-Domaene liefen
+anschliessend genau je ein `/map`-, Explorer-, Missionsmanager-, Kartenmanager-
+und rosbridge-Besitzer. `base_hardware` meldete durchgehend `dry_run=True` und
+0 rpm. Ein echter WebSocket-Client erhielt den vollstaendigen Explorerstatus,
+`explore_execution=bt_explicit_opt_in` und `/safety/estop=false`. Ein ueber
+denselben rosbridge-Pfad gesendetes `explore` wurde auf Mission und Explorer
+als `running` bestaetigt; `cancel` endete auf beiden Ebenen mit `canceled` und
+`map_ready_to_save=false`.
+
+**Betroffene Dateien und Hardware:** `explore`,
+`robot_bringup/app_mapping.launch.py`, `tools/kartierung`, native iOS-App,
+Web-Fallback und Simulator-Mock. Der Test startete STL-27L und beide VL53;
+die Antriebe blieben im Dry-run unbestromt. Keine Wohnungsdaten wurden
+eingecheckt.
+
+**Teststatus:** 15 Explorer- und 3 Bringup-Vertragstests, 13 Navigationstests, 45
+Missionsmanager-Tests und 6 Simulator-Mock-Tests bestanden. Vier geaenderte
+ROS-Pakete bauten erfolgreich. JavaScript-Syntax, Python-Kompilierung,
+Launch-Aufloesung, Einzelbesitzer, 1-Hz-Heartbeat und der komplette
+rosbridge-Start-/Abbruchpfad wurden auf dem Jetson motorlos geprueft. Swift
+und Xcode sind auf dem Jetson nicht installiert; die zwei neuen Swift-
+Protokolltests muessen auf dem Mac/Xcode-Lauf noch ausgefuehrt werden.
+
+**Offene Risiken:** Die adaptive Zielwahl ist noch nicht real gefahren. Der
+85-%-Wert bezieht sich auf den um 0,40 m erodierten, zusammenhaengenden
+Freiraum und einen 0,65-m-Korridor um die gemessene Spur, nicht auf jeden
+Quadratzentimeter Boden. Dynamische Kartenexpansion kann den Prozentsatz
+voruebergehend senken. Kabel unterhalb der Sensorsicht bleiben ein reales
+Risiko. Die bekannten Shutdown-Ausnahmen von LiDAR, `base_hardware` und VL53
+traten erneut erst nach Nullkommando beim Beenden auf und gehoeren nicht zu
+dieser Aenderung.
+
+**Rueckfallweg:** `coverage_enabled:false` stellt das alte Frontier-Ende
+wieder her. Ohne `app_mapping.launch.py` bleibt der bisherige
+`start_automatische_kartierung.sh` nutzbar. `enable_auto_explore:=false`
+sperrt App-Auftrag und Fahrtor, `active_drive:=false` haelt die Basis im
+Dry-run. Ein laufender Auftrag wird mit `{"type":"cancel"}` beendet.
+
+---
+
 ## 2026-08-16 — Automatische LiDAR-Kartierung real abgenommen und LiDAR-Handedness korrigiert
 
 **Entscheidung:** Die automatische Kartierung beginnt nicht mehr sofort mit

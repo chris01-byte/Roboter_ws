@@ -30,6 +30,29 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         }
         self.assertIn('semantic_map_manager', dependencies)
 
+    def test_app_mapping_launch_has_one_owner_and_app_services(self):
+        source = (
+            PACKAGE_ROOT / 'launch' / 'app_mapping.launch.py'
+        ).read_text(encoding='utf-8')
+        helper = (
+            PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+            'start_app_erkundung.sh'
+        ).read_text(encoding='utf-8')
+
+        self.assertEqual(source.count("'nav_mapping.launch.py'"), 1)
+        self.assertEqual(source.count("'map_manager.launch.py'"), 1)
+        self.assertEqual(
+            source.count("'semantic_map_manager.launch.py'"), 1)
+        self.assertEqual(
+            source.count("executable='rosbridge_websocket'"), 1)
+        self.assertIn("'enable_auto_explore': enable_auto_explore", source)
+        self.assertIn("'active_drive': active_drive", source)
+        self.assertIn('roboterknoten.py\" --still', helper)
+        self.assertIn('AMADEUS_FAHRFREIGABE', helper)
+        self.assertIn('/robot_map_manager', helper)
+        self.assertIn('/semantic_map_manager', helper)
+        self.assertIn('robot_bringup app_mapping.launch.py', helper)
+
 
 if __name__ == '__main__':
     unittest.main()

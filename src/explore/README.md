@@ -1,10 +1,12 @@
-# explore – Autonome Frontier-Exploration (WP-5, Ebene 1)
+# explore – Frontier- und adaptive Flaechenexploration
 
 Lässt den Roboter die Wohnung **selbstständig und zielgerichtet** erkunden –
-**kein Zufallsgenerator**. Grundlage ist die bewährte *Frontier*-Methode:
-Der Node sucht in der SLAM-Karte die Grenzen zwischen bekannt-freiem und
-unbekanntem Raum, bewertet sie nach Kosten/Nutzen und schickt die beste als
-Fahrziel an Nav2 – bis keine Frontier mehr übrig ist (Wohnung vollständig).
+**kein Zufallsgenerator**. Nach einem kontrollierten 360-Grad-Rundblick sucht
+der Node zuerst Grenzen zwischen bekannt-freiem und unbekanntem Raum. Sind
+keine sicheren Frontiers mehr vorhanden, misst er die Abdeckung aus der realen
+Fahrspur und waehlt den geodaetisch am weitesten entfernten, noch nicht
+abgedeckten sicheren Punkt. Ein grosser Raum erzeugt dadurch automatisch mehr
+Ziele als ein kleiner.
 
 **CPU-only, kein CUDA/LLM nötig.**
 
@@ -25,6 +27,7 @@ Reaktive Sicherheit (collision_monitor, VL53) bleibt autonom aktiv.
 | Subscribe | `<map_topic>` (`/map`) | `nav_msgs/OccupancyGrid` |
 | TF | `<global_frame>` → `<robot_base_frame>` | Roboterpose |
 | Publish (optional) | `<marker_topic>` (`/explore/frontiers`) | `visualization_msgs/MarkerArray` |
+| Publish | `/explore/status_json` | `std_msgs/String`, 1-Hz-Heartbeat |
 
 ## Start
 
@@ -51,10 +54,17 @@ Alle Werte in [config/explore_params.yaml](config/explore_params.yaml)
 - `potential_scale` / `gain_scale` – Kosten/Nutzen-Gewichtung (nah vs. groß)
 - `goal_timeout_s` – max. Fahrzeit pro Frontier
 - `blacklist_radius_m` – sperrt gescheiterte Ziele (Selbstbefreiung)
+- `coverage_target_ratio` – erforderlicher Anteil der sicher befahrbaren Flaeche
+- `coverage_visit_radius_m` – Korridor um die gemessene Fahrspur
+- `coverage_clearance_m` – Kartenabstand der Abdeckungsziele
+- `coverage_max_goals` – harte Grenze der dritten Phase
 - `return_to_start` – nach Fertigstellung zur Startpose zurück
 
-## Grenzen / offen
+## Abnahmestand und Grenzen
 
-- In ROS noch nicht kompiliert/getestet (wie die übrigen Pakete).
-- Karten-Origin wird ohne Rotation angenommen (bei 2D-SLAM üblich).
-- Später optional: Ersatz durch `explore_lite`/`nav2 wavefront`, falls gewünscht.
+Rundblick und Frontier-Phase wurden am echten Roboter gefahren. Die adaptive
+Abdeckungsphase, ihr App-Heartbeat sowie Start/Abbruch ueber rosbridge sind auf
+dem Jetson motorlos getestet; der erste scharfe Abdeckungslauf ist noch offen.
+Der Standardwert 85 % bezieht sich auf den erodierten, zusammenhaengenden
+Freiraum innerhalb von 0,65 m zur Fahrspur und ersetzt keine visuelle
+Kartenpruefung. Gedrehte Karten-Origin wird beruecksichtigt.
