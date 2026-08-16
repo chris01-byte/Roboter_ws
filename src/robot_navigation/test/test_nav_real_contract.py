@@ -127,6 +127,16 @@ def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
     ).read_text(encoding='utf-8')
     assert 'global_initialization_fingerprint' in guard_source
     assert 'global_scan_match' in guard_source
+    assert "self._global_state = 'scan_matching'" in guard_source
+    assert '/reinitialize_global_localization' not in guard_source
+    assert 'call_async(Empty.Request())' not in guard_source
+    assert 'TimerAction(period=4.0' in source
+    assert 'TimerAction(period=7.0' in source
+
+    matcher_source = (
+        PACKAGE_ROOT / 'robot_navigation' / 'global_scan_localizer.py'
+    ).read_text(encoding='utf-8')
+    assert "self.declare_parameter('required_consistent_matches', 2)" in matcher_source
 
     start_helper = (
         PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /

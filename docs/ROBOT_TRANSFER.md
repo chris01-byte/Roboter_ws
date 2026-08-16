@@ -1,6 +1,58 @@
 # Übertragung auf den realen Roboter
 
-## Übergabestand globaler Vollscan-Gate (16.08.2026)
+## Aktueller Abnahmestand: selbst lokalisieren und Raumziel erreichen (16.08.2026)
+
+**Branch:** `feature/globale-lokalisierung`
+
+Der aktuelle Stand erreicht das eigentliche Meilensteinziel: Amadeus startet
+ohne gespeicherte oder manuell gesetzte Pose, bestimmt seine Position und
+Blickrichtung stationaer aus der gespeicherten LiDAR-Karte und erreicht danach
+ein karten- und revisionsgebundenes semantisches Raumziel.
+
+Der Kaltstart verwendet nicht mehr AMCLs nativen Globaldienst. Dieser Dienst
+war auf Humble bereits erreichbar, bevor AMCL zwingend eine interne Karte
+hatte, und verursachte real einen Segmentation Fault (`exit code -11`). Der
+Guard startet stattdessen einen kartenfesten Vollscan-Zyklus. Erst zwei
+unabhaengige Treffer innerhalb 0,20 m/8 Grad duerfen `/initialpose` setzen;
+AMCL muss die Pose danach bestaetigen. Karte/Basis/LiDAR, AMCL und Guard werden
+in 0-/4-/7-Sekunden-Stufen gestartet, weil ein gleichzeitiger Vollstart auf
+dem Jetson ausserdem einen Fast-DDS-Lifecycle-Timeout erzeugt hatte.
+
+Reale Abnahme am 16.08.2026:
+
+- drei motorlose Kaltstarts an derselben extern bestaetigten Pose bestanden;
+- maximale Streuung 3 cm/1 Grad, zwei konsistente Scans je Start;
+- Score `0,9787..0,9789`, Wandtreffer `97,36..97,50 %`, Bestenabstand
+  `1,155..1,168`;
+- aktiver Start erneut eindeutig: Score `0,980`, 97,22 % Wandtreffer,
+  Bestenabstand 1,180; AMCL-Standardabweichung bei Freigabe
+  0,140/0,138 m und 4,70 Grad;
+- Nav2-Pfad vorab read-only planbar, anschliessende reale Mission
+  `go_to_room Arbeitszimmer` erfolgreich;
+- Karten-Endfehler 0,133 m/6,28 Grad, damit innerhalb 0,15 m/0,40 rad;
+- Encoderweg 1,024 m, Fahrbefehl hoechstens 0,100 m/s;
+- terminal `success/angekommen`, danach wiederholt 0 rpm und keine
+  Encoder-/Modbusfehler.
+
+Vor dem aktiven Lauf waren RS485, beide Encoder, Motorstillstand, AMCL,
+Lokalisierungs-Gate, beide VL53-Datenstroeme und `collision_monitor` korrekt.
+VL53 und beide Costmap-Obstacle-Layer wurden auf ausdruecklichen Wunsch nur
+fuer diese beaufsichtigte Fahrt zur Laufzeit deaktiviert; OAK war aus. Im
+Repository bleibt die Hinderniskette aktiv. Nach der Abnahme wurden
+Missions-, Nav2-, AMCL-, LiDAR- und Motorstack beendet. Karten, Raumgeometrie
+und Diagnosen liegen weiterhin nur unter `~/.local/share/amadeus/`.
+
+Fuer den naechsten Vorfuehrstart gilt weiterhin: zuerst freie Flaeche und
+Not-Aus bestaetigen, motorlos lokalisieren, `/localization/ready=true` und
+0 rpm pruefen, erst danach `active_drive:=true` und genau einen frischen
+Missionsmanager mit `enable_real_go_to_room:=true` starten. Mehrdeutiger Scan,
+falsche Kartenbindung oder fehlendes AMCL sperren fail-closed. Rueckfall:
+`enable_real_go_to_room:=false` und den Lokalisierungs-/Real-Launch nicht
+starten.
+
+---
+
+## Zwischenstand globaler Vollscan-Gate (16.08.2026)
 
 **Branch:** `feature/globale-lokalisierung`
 

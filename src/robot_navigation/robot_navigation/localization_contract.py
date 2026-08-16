@@ -38,6 +38,13 @@ class GlobalScanMatch:
     score_ratio: float
 
 
+@dataclass(frozen=True)
+class GlobalInitializationTarget:
+    fingerprint: str
+    generation: int
+    initialization_id: str
+
+
 def _decode_json_status(data: Any, label: str) -> Tuple[Optional[dict], Optional[str]]:
     if not isinstance(data, str):
         return None, f"{label} muss Text sein"
@@ -138,6 +145,54 @@ def initialization_matches_bindings(
         and isinstance(initialized_fingerprint, str)
         and map_binding.fingerprint == initialized_fingerprint
     )
+
+
+def decode_global_initialization_target(data: Any):
+    """Liest einen kartenfesten Vollscan-Auftrag aus dem Guard-Status.
+
+    ``scan_matching`` ist der sichere Ersatz fuer den nativen globalen
+    AMCL-Reset: Erst der eindeutige Vollscan publiziert ``/initialpose``.
+    ``completed`` bleibt fuer spaet beitretende Subscriber gueltig, solange
+    Karte, Generation und einmalige ID identisch sind.
+    """
+    if not isinstance(data, str):
+        return None, "Lokalisierungsstatus muss Text sein"
+    try:
+        size = len(data.encode("utf-8"))
+    except UnicodeError:
+        return None, "Lokalisierungsstatus enthaelt ungueltiges Unicode"
+    if size > MAXIMUM_STATUS_BYTES:
+        return None, (
+            f"Lokalisierungsstatus ist groesser als {MAXIMUM_STATUS_BYTES} Bytes")
+    try:
+        payload = json.loads(data)
+    except (json.JSONDecodeError, TypeError, RecursionError, UnicodeError):
+        return None, "Lokalisierungsstatus enthaelt kein gueltiges JSON"
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        return None, "Lokalisierungsstatus hat kein unterstuetztes Schema"
+    if payload.get("global_initialization") not in (
+            "scan_matching", "completed"):
+        return None, "Noch kein Vollscan-Auftrag"
+    fingerprint = payload.get("map_fingerprint")
+    if (
+            not isinstance(fingerprint, str)
+            or _FINGERPRINT_RE.fullmatch(fingerprint) is None):
+        return None, "Vollscan-Auftrag hat keinen gueltigen Karten-Fingerprint"
+    generation = payload.get("global_initialization_generation")
+    if (
+            isinstance(generation, bool)
+            or not isinstance(generation, int)
+            or generation <= 0):
+        return None, "Vollscan-Auftrag hat keine gueltige Generation"
+    initialization_id = payload.get("global_initialization_id")
+    if (
+            not isinstance(initialization_id, str)
+            or _INITIALIZATION_ID_RE.fullmatch(initialization_id) is None):
+        return None, "Vollscan-Auftrag hat keine gueltige Initialisierungs-ID"
+    return GlobalInitializationTarget(
+        fingerprint=fingerprint,
+        generation=generation,
+        initialization_id=initialization_id), None
 
 
 def _finite_number(value: Any, label: str):

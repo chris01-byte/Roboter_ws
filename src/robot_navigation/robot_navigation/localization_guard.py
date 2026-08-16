@@ -21,7 +21,6 @@ from rclpy.qos import (
 from rclpy.time import Time
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool, String
-from std_srvs.srv import Empty
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from robot_navigation.localization_contract import (
@@ -53,8 +52,6 @@ class LocalizationGuard(Node):
             '/localization/global_scan_match_json')
         self.declare_parameter('ready_topic', '/localization/ready')
         self.declare_parameter('status_topic', '/localization/status_json')
-        self.declare_parameter(
-            'global_localization_service', '/reinitialize_global_localization')
         self.declare_parameter('auto_global_localization', True)
         self.declare_parameter('require_global_scan_match', True)
         self.declare_parameter('global_scan_match_timeout_s', 2.0)
@@ -88,7 +85,6 @@ class LocalizationGuard(Node):
             'global_scan_match_status_topic')
         ready_topic = self._string_parameter('ready_topic')
         status_topic = self._string_parameter('status_topic')
-        global_service = self._string_parameter('global_localization_service')
         self._auto_global = bool(
             self.get_parameter('auto_global_localization').value)
         self._require_global_scan_match = bool(
@@ -175,7 +171,6 @@ class LocalizationGuard(Node):
             String, global_scan_status_topic, self._on_global_scan_status,
             transient_qos)
 
-        self._global_client = self.create_client(Empty, global_service)
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
 
@@ -330,9 +325,9 @@ class LocalizationGuard(Node):
         self._pose_received = None
         self._pose_quality = None
         self._pose_xy_yaw = None
-        self._pose_error = 'Kartenwechsel verlangt einen neuen Global-Reset'
+        self._pose_error = 'Kartenwechsel verlangt eine neue Vollscan-Startpose'
         self._tf_samples.clear()
-        self._tf_error = 'Kartenwechsel verlangt einen neuen Global-Reset'
+        self._tf_error = 'Kartenwechsel verlangt eine neue Vollscan-Startpose'
         self._tf_stamp_age = None
         self._ready_publisher.publish(Bool(data=False))
         self._last_ready = False
@@ -340,7 +335,7 @@ class LocalizationGuard(Node):
             'Kartenfingerabdruck geaendert: globale AMCL-Initialisierung '
             'wird fail-closed wiederholt.')
 
-    def _maybe_request_global_localization(self, now):
+    def _maybe_start_global_localization(self, now):
         if not self._auto_global or self._global_state != 'waiting':
             return
         prerequisites = (
@@ -349,49 +344,30 @@ class LocalizationGuard(Node):
             and matching_bindings(self._map_binding, self._semantic_binding)
             and self._fresh(self._scan_received, self._scan_timeout, now)
             and self.count_publishers(self._pose_topic) == 1
-            and self._global_client.service_is_ready()
         )
         if not prerequisites:
             return
-        self._global_state = 'requested'
+        # Nav2 Humble bietet den Dienst schon an, bevor AMCL seine Karte
+        # zwingend empfangen hat. Sein globaler Callback dereferenziert die
+        # interne Karte ohne Nullpruefung. Deshalb wird hier kein nativer
+        # Partikelreset mehr aufgerufen: Der kartenfeste Vollscan erzeugt die
+        # einzige Startpose und AMCL muss sie anschliessend rueckbestaetigen.
+        self._global_state = 'scan_matching'
         self._global_generation += 1
-        request_generation = self._global_generation
         self._global_fingerprint = self._map_binding.fingerprint
-        request_fingerprint = self._global_fingerprint
         self._global_initialization_id = uuid.uuid4().hex
         self._global_request_time = now
         self._global_scan_match = None
-        self._global_scan_error = 'Warte auf Vollscan-Abgleich nach Global-Reset'
+        self._global_scan_error = 'Warte auf kartenfesten Vollscan-Abgleich'
         self._global_scan_verified_id = None
         self._pose_received = None
         self._pose_quality = None
         self._pose_xy_yaw = None
-        self._pose_error = 'Warte auf eine neue AMCL-Pose nach Global-Reset'
+        self._pose_error = 'Warte auf die von AMCL bestaetigte Vollscan-Startpose'
         self._tf_samples.clear()
-        future = self._global_client.call_async(Empty.Request())
-        future.add_done_callback(
-            lambda completed: self._on_global_response(
-                completed, request_generation, request_fingerprint))
         self.get_logger().warn(
-            'AMCL-Partikel wurden global ueber die bestaetigte Karte verteilt.')
-
-    def _on_global_response(self, future, request_generation, fingerprint):
-        try:
-            future.result()
-        except Exception as error:  # pragma: no cover - ROS-Transportfehler
-            if (
-                    request_generation != self._global_generation
-                    or fingerprint != self._global_fingerprint):
-                return
-            self._global_state = 'failed'
-            self._tf_error = f'Global-Lokalisierungsdienst fehlgeschlagen: {error}'
-            self.get_logger().error(self._tf_error)
-            return
-        if (
-                request_generation != self._global_generation
-                or fingerprint != self._global_fingerprint):
-            return
-        self._global_state = 'completed'
+            'Kartenfeste Vollscan-Initialisierung gestartet; AMCL erhaelt '
+            'erst nach eindeutigem Treffer eine Startpose.')
 
     def _sample_map_to_odom(self, now):
         if (
@@ -465,6 +441,7 @@ class LocalizationGuard(Node):
         if error:
             return error
         if self._global_scan_verified_id == self._global_initialization_id:
+            self._global_state = 'completed'
             return None
         if self._pose_xy_yaw is None:
             self._global_scan_error = (
@@ -478,6 +455,7 @@ class LocalizationGuard(Node):
             self._global_scan_error = reason
             return reason
         self._global_scan_verified_id = self._global_initialization_id
+        self._global_state = 'completed'
         self._global_scan_error = ''
         self.get_logger().warn(
             'AMCL hat den eindeutigen globalen Vollscan-Treffer bestaetigt.')
@@ -501,6 +479,9 @@ class LocalizationGuard(Node):
         if pose_publishers != 1:
             reasons.append(
                 f'AMCL braucht genau einen Pose-Publisher; gefunden: {pose_publishers}')
+        global_scan_reason = self._evaluate_global_scan(now)
+        if global_scan_reason:
+            reasons.append(global_scan_reason)
         if self._global_state != 'completed':
             reasons.append(
                 f'Globale AMCL-Initialisierung ist nicht abgeschlossen '
@@ -511,14 +492,11 @@ class LocalizationGuard(Node):
                 self._global_fingerprint):
             reasons.append(
                 'Globale AMCL-Initialisierung gehoert nicht zur aktuellen Karte')
-        global_scan_reason = self._evaluate_global_scan(now)
-        if global_scan_reason:
-            reasons.append(global_scan_reason)
         if (
                 self._pose_received is None
                 or self._global_request_time is None
                 or self._pose_received < self._global_request_time):
-            reasons.append('AMCL-Pose nach Global-Reset fehlt')
+            reasons.append('AMCL-Pose nach Vollscan-Initialisierung fehlt')
         elif self._pose_error:
             reasons.append(self._pose_error)
         maintaining = self._last_ready is True
@@ -549,7 +527,7 @@ class LocalizationGuard(Node):
 
     def _tick(self):
         now = time.monotonic()
-        self._maybe_request_global_localization(now)
+        self._maybe_start_global_localization(now)
         self._sample_map_to_odom(now)
         ready, reasons, pose_publishers = self._evaluate(now)
         self._ready_publisher.publish(Bool(data=ready))

@@ -5,6 +5,7 @@ from array import array
 from robot_navigation.localization_contract import (
     covariance_hysteresis_limits,
     covariance_quality,
+    decode_global_initialization_target,
     decode_global_scan_match,
     decode_map_manager_binding,
     decode_semantic_binding,
@@ -62,6 +63,18 @@ def global_scan_status(**overrides):
     return json.dumps(payload)
 
 
+def guard_status(**overrides):
+    payload = {
+        'schema_version': 1,
+        'global_initialization': 'scan_matching',
+        'map_fingerprint': FINGERPRINT,
+        'global_initialization_generation': 3,
+        'global_initialization_id': INITIALIZATION_ID,
+    }
+    payload.update(overrides)
+    return json.dumps(payload)
+
+
 def decode_scan(data):
     return decode_global_scan_match(
         data,
@@ -109,6 +122,30 @@ def test_global_initialization_is_bound_to_the_current_map_fingerprint():
         semantic_status(fingerprint='b' * 64, observed='b' * 64))
     assert not initialization_matches_bindings(
         metric, changed_semantic, FINGERPRINT)
+
+
+def test_global_scan_target_accepts_only_a_bound_seed_cycle():
+    target, error = decode_global_initialization_target(guard_status())
+    assert error is None
+    assert target.fingerprint == FINGERPRINT
+    assert target.generation == 3
+    assert target.initialization_id == INITIALIZATION_ID
+
+    target, error = decode_global_initialization_target(
+        guard_status(global_initialization='completed'))
+    assert error is None
+    assert target.generation == 3
+
+    for changed in (
+            {'global_initialization': 'waiting'},
+            {'global_initialization': 'requested'},
+            {'map_fingerprint': 'ungueltig'},
+            {'global_initialization_generation': True},
+            {'global_initialization_id': 'zu-kurz'}):
+        target, error = decode_global_initialization_target(
+            guard_status(**changed))
+        assert target is None
+        assert error
 
 
 def test_global_scan_match_is_bound_to_map_generation_and_unique_reset():

@@ -101,7 +101,8 @@ LiDAR-Scan mit allen freien Kartenpositionen und Blickrichtungen. Nur wenn
 - mindestens 85 % der Endpunkte hoechstens 15 cm von einer Kartenwand liegen,
 - der beste Treffer mindestens Faktor 1,15 vor der zweitbesten raeumlich oder
   winklig getrennten Hypothese liegt und
-- AMCL genau diesen Treffer fuer die aktuelle Karte und einmalige Reset-ID
+- AMCL genau diesen Treffer fuer die aktuelle Karte und einmalige
+  Initialisierungs-ID
   uebernimmt,
 
 wird `/localization/ready=true`. AMCL-Kovarianz allein ist kein

@@ -5,7 +5,12 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    LogInfo,
+    TimerAction,
+)
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -43,8 +48,8 @@ def generate_launch_description():
             description='OAK-Punktwolke fuer die Nav2-Costmaps mitstarten.'),
         DeclareLaunchArgument(
             'auto_global_localization', default_value='true',
-            description='Partikel nach bestaetigter Karte und frischem LiDAR '
-                        'automatisch global verteilen.'),
+            description='Kartenfesten Vollscan nach bestaetigter Karte und '
+                        'frischem LiDAR automatisch starten.'),
         DeclareLaunchArgument(
             'require_global_scan_match', default_value='true',
             description='Fail-closed Vollscan/Karten-Abgleich vor der ersten '
@@ -93,29 +98,40 @@ def generate_launch_description():
 
         # Einziger Besitzer von map->odom. Kein slam_toolbox, kein RTAB-Map
         # und kein statischer Platzhalter duerfen parallel laufen.
-        Node(
-            package='nav2_amcl', executable='amcl', name='amcl',
-            output='screen', parameters=[navigation_params]),
-        Node(
-            package='nav2_lifecycle_manager', executable='lifecycle_manager',
-            name='lifecycle_manager_amcl', output='screen',
-            parameters=[{'autostart': True, 'node_names': ['amcl']}]),
+        # Die 22 Prozesse gleichzeitig zu konfigurieren erzeugte auf dem
+        # Jetson sporadische Fast-DDS-Service-Timeouts. Karte, Basis und LiDAR
+        # bekommen zuerst ein festes Startfenster; AMCL startet danach allein.
+        TimerAction(period=4.0, actions=[
+            Node(
+                package='nav2_amcl', executable='amcl', name='amcl',
+                output='screen', parameters=[navigation_params]),
+            Node(
+                package='nav2_lifecycle_manager', executable='lifecycle_manager',
+                name='lifecycle_manager_amcl', output='screen',
+                parameters=[{'autostart': True, 'node_names': ['amcl']}]),
+        ]),
 
-        Node(
-            package='robot_navigation', executable='localization_guard',
-            name='localization_guard', output='screen',
-            parameters=[{
-                'auto_global_localization': ParameterValue(
-                    LaunchConfiguration('auto_global_localization'),
-                    value_type=bool),
-                'require_global_scan_match': ParameterValue(
-                    LaunchConfiguration('require_global_scan_match'),
-                    value_type=bool),
-            }]),
+        # Der Guard startet erst nach dem AMCL-Aktivierungsfenster. Sollte
+        # AMCL trotzdem fehlen/inaktiv bleiben, bleibt die Fahrt fail-closed.
+        TimerAction(period=7.0, actions=[
+            Node(
+                package='robot_navigation', executable='localization_guard',
+                name='localization_guard', output='screen',
+                parameters=[{
+                    'auto_global_localization': ParameterValue(
+                        LaunchConfiguration('auto_global_localization'),
+                        value_type=bool),
+                    'require_global_scan_match': ParameterValue(
+                        LaunchConfiguration('require_global_scan_match'),
+                        value_type=bool),
+                }]),
         # Unabhaengige Wahrheitspruefung: Ein selbstsicheres AMCL-Ergebnis
         # reicht nicht. Der Vollscan muss die aktuelle Karte eindeutig treffen
-        # und setzt erst dann /initialpose fuer genau diesen Global-Reset.
-        Node(
-            package='robot_navigation', executable='global_scan_localizer',
-            name='global_scan_localizer', output='screen'),
+        # und setzt erst dann /initialpose fuer genau diesen Startzyklus. Der
+        # native AMCL-Global-Reset wird bewusst nicht aufgerufen: In Humble
+        # ist sein Dienst bereits vor dem internen Kartenempfang erreichbar.
+            Node(
+                package='robot_navigation', executable='global_scan_localizer',
+                name='global_scan_localizer', output='screen'),
+        ]),
     ])

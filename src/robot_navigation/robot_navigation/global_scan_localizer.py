@@ -26,7 +26,11 @@ from tf2_ros import Buffer, TransformException, TransformListener
 from robot_navigation.global_scan_matcher import (
     MapScorer,
     result_is_accepted,
+    scan_candidates_consistent,
     search_global_pose,
+)
+from robot_navigation.localization_contract import (
+    decode_global_initialization_target,
 )
 
 
@@ -74,7 +78,10 @@ class GlobalScanLocalizer(Node):
         self.declare_parameter('minimum_score_ratio', 1.15)
         self.declare_parameter('initial_position_stddev_m', 0.15)
         self.declare_parameter('initial_yaw_stddev_deg', 5.0)
-        self.declare_parameter('maximum_attempts_per_reset', 3)
+        self.declare_parameter('required_consistent_matches', 2)
+        self.declare_parameter('consensus_maximum_position_error_m', 0.20)
+        self.declare_parameter('consensus_maximum_yaw_error_deg', 8.0)
+        self.declare_parameter('maximum_attempts_per_reset', 5)
         self.declare_parameter('retry_interval_s', 2.0)
         self.declare_parameter('publish_rate_hz', 5.0)
 
@@ -99,10 +106,22 @@ class GlobalScanLocalizer(Node):
             'initial_position_stddev_m')
         self._yaw_stddev = math.radians(
             self._positive_parameter('initial_yaw_stddev_deg'))
+        self._required_consistent_matches = int(
+            self.get_parameter('required_consistent_matches').value)
+        if self._required_consistent_matches < 2:
+            raise ValueError('required_consistent_matches muss mindestens 2 sein')
+        self._consensus_maximum_position_error = self._positive_parameter(
+            'consensus_maximum_position_error_m')
+        self._consensus_maximum_yaw_error = math.radians(
+            self._positive_parameter('consensus_maximum_yaw_error_deg'))
         self._maximum_attempts = int(
             self.get_parameter('maximum_attempts_per_reset').value)
-        if self._maximum_attempts < 1 or self._maximum_attempts > 10:
-            raise ValueError('maximum_attempts_per_reset muss 1..10 sein')
+        if (
+                self._maximum_attempts < self._required_consistent_matches
+                or self._maximum_attempts > 10):
+            raise ValueError(
+                'maximum_attempts_per_reset muss mindestens so gross wie '
+                'required_consistent_matches und hoechstens 10 sein')
         self._retry_interval = self._positive_parameter('retry_interval_s')
         publish_rate = self._positive_parameter('publish_rate_hz')
 
@@ -130,9 +149,11 @@ class GlobalScanLocalizer(Node):
         self._attempts = 0
         self._last_attempt = None
         self._state = 'waiting'
-        self._reason = 'Warte auf abgeschlossenen AMCL-Global-Reset'
+        self._reason = 'Warte auf kartenfesten Vollscan-Auftrag'
         self._accepted_payload = None
         self._latest_result = None
+        self._consensus_candidate = None
+        self._consistent_matches = 0
         self.create_timer(1.0 / publish_rate, self._tick)
         self.get_logger().warn(
             'Globaler Vollscan-Abgleich aktiv: keine Fahrbefehle, '
@@ -167,24 +188,11 @@ class GlobalScanLocalizer(Node):
         self._scan_received = time.monotonic()
 
     def _on_guard_status(self, message):
-        try:
-            payload = json.loads(message.data)
-        except (json.JSONDecodeError, TypeError, RecursionError, UnicodeError):
-            return
-        if not isinstance(payload, dict) or payload.get('schema_version') != 1:
-            return
-        fingerprint = payload.get('map_fingerprint')
-        generation = payload.get('global_initialization_generation')
-        request_id = payload.get('global_initialization_id')
-        complete = payload.get('global_initialization') == 'completed'
-        target_valid = (
-            complete
-            and isinstance(fingerprint, str) and len(fingerprint) == 64
-            and isinstance(generation, int) and not isinstance(generation, bool)
-            and generation > 0
-            and isinstance(request_id, str) and len(request_id) == 32)
-        target = (
-            (fingerprint, generation, request_id) if target_valid else None)
+        decoded, _ = decode_global_initialization_target(message.data)
+        target = None if decoded is None else (
+            decoded.fingerprint,
+            decoded.generation,
+            decoded.initialization_id)
         if target == self._target:
             return
         self._target = target
@@ -193,9 +201,11 @@ class GlobalScanLocalizer(Node):
         self._last_attempt = None
         self._accepted_payload = None
         self._latest_result = None
+        self._consensus_candidate = None
+        self._consistent_matches = 0
         self._state = 'waiting'
         self._reason = (
-            'Warte auf abgeschlossenen AMCL-Global-Reset'
+            'Warte auf kartenfesten Vollscan-Auftrag'
             if target is None else 'Warte auf frischen Vollscan')
 
     def _scan_stamp(self):
@@ -292,6 +302,47 @@ class GlobalScanLocalizer(Node):
             return
 
         best = result.best
+        if self._consensus_candidate is None:
+            self._consensus_candidate = best
+            self._consistent_matches = 1
+            self._state = 'waiting'
+            self._reason = (
+                'Erster gueltiger Treffer; warte auf unabhaengige '
+                'Vollscan-Bestaetigung')
+            self.get_logger().warn(
+                'Erster Vollscan-Treffer noch nicht freigegeben: '
+                f'x={best.x_m:.3f} m, y={best.y_m:.3f} m, '
+                f'yaw={math.degrees(best.yaw_rad):.1f} Grad. Warte auf '
+                'zweiten konsistenten Scan.')
+            return
+        if not scan_candidates_consistent(
+                self._consensus_candidate, best,
+                maximum_position_error_m=(
+                    self._consensus_maximum_position_error),
+                maximum_yaw_error_rad=self._consensus_maximum_yaw_error):
+            previous = self._consensus_candidate
+            self._consensus_candidate = best
+            self._consistent_matches = 1
+            self._state = 'waiting'
+            self._reason = (
+                'Vollscan-Hypothesen widersprechen sich; neuer '
+                'Konsensversuch erforderlich')
+            self.get_logger().warn(
+                'Vollscan-Konsens verworfen: vorher '
+                f'({previous.x_m:.3f}, {previous.y_m:.3f}, '
+                f'{math.degrees(previous.yaw_rad):.1f} Grad), jetzt '
+                f'({best.x_m:.3f}, {best.y_m:.3f}, '
+                f'{math.degrees(best.yaw_rad):.1f} Grad).')
+            return
+        self._consistent_matches += 1
+        self._consensus_candidate = best
+        if self._consistent_matches < self._required_consistent_matches:
+            self._state = 'waiting'
+            self._reason = (
+                f'{self._consistent_matches}/'
+                f'{self._required_consistent_matches} konsistente Treffer')
+            return
+
         pose = PoseWithCovarianceStamped()
         pose.header.stamp = self.get_clock().now().to_msg()
         pose.header.frame_id = 'map'
@@ -324,6 +375,7 @@ class GlobalScanLocalizer(Node):
             'valid_scan_points': result.valid_scan_points,
             'search_seconds': elapsed,
             'attempt': self._attempts,
+            'consistent_matches': self._consistent_matches,
         }
         self._state = 'accepted'
         self._reason = 'Eindeutiger globaler Vollscan-Treffer'
@@ -343,6 +395,7 @@ class GlobalScanLocalizer(Node):
                 'state': self._state,
                 'reason': self._reason,
                 'attempt': self._attempts,
+                'consistent_matches': self._consistent_matches,
             }
             if self._target is not None:
                 payload.update({

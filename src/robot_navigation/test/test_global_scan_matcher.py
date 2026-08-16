@@ -14,6 +14,7 @@ from robot_navigation.global_scan_matcher import (  # noqa: E402
     SearchResult,
     build_ray_samples,
     result_is_accepted,
+    scan_candidates_consistent,
 )
 
 
@@ -76,3 +77,18 @@ def test_result_requires_absolute_quality_and_a_distinct_winner():
         minimum_score_ratio=1.15)
     assert not accepted
     assert any('Bestenabstand' in reason for reason in reasons)
+
+
+def test_two_independent_scans_must_agree_before_seeding_amcl():
+    first = ScanCandidate(2.90, -0.78, math.radians(146.0), 0.98, 0.97)
+    close = ScanCandidate(2.84, -0.72, math.radians(150.0), 0.97, 0.96)
+    wrong = ScanCandidate(0.10, -0.09, math.radians(6.0), 0.98, 0.97)
+
+    assert scan_candidates_consistent(
+        first, close,
+        maximum_position_error_m=0.20,
+        maximum_yaw_error_rad=math.radians(8.0))
+    assert not scan_candidates_consistent(
+        first, wrong,
+        maximum_position_error_m=0.20,
+        maximum_yaw_error_rad=math.radians(8.0))

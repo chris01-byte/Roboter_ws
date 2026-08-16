@@ -17,6 +17,76 @@ Rückfallweg:
 
 ---
 
+## 2026-08-16 — Globaler Kaltstart und autonome Raumfahrt reproduzierbar abgenommen
+
+**Entscheidung:** Der native Humble-Dienst
+`/reinitialize_global_localization` wird im Normalstart nicht mehr aufgerufen.
+Stattdessen eroeffnet der `localization_guard` einen eindeutig an Karte,
+Generation und 128-Bit-ID gebundenen Vollscan-Zyklus. Zwei separat berechnete
+Scans muessen innerhalb 0,20 m und 8 Grad dieselbe Pose liefern; erst dann
+setzt `global_scan_localizer` `/initialpose`. AMCL muss diesen Treffer
+rueckbestaetigen, bevor das Fahrtor oeffnet. AMCL startet vier Sekunden nach
+Karte/Basis/LiDAR, Guard und Matcher nach sieben Sekunden, um den Jetson beim
+Lifecycle-Start zu entlasten.
+
+**Grund / beobachtete Evidenz:** Bei einem realen Kaltstart war der AMCL-Dienst
+bereits erreichbar, obwohl AMCL intern noch keine Karte verarbeitet hatte.
+Der Humble-Callback reicht in diesem Zustand einen Null-Kartenzeiger an
+`pf_init_model` weiter; direkt nach dem Dienstaufruf starb AMCL mit
+`exit code -11`. Ein weiterer gleichzeitiger Vollstart verlor zudem eine
+Fast-DDS-Antwort auf `/amcl/change_state` und liess AMCL inaktiv. Der
+kartenfeste Initialpose-Pfad und die zeitliche Staffelung beseitigen beide
+beobachteten Startfehler, ohne einen Grenzwert zu lockern.
+
+Drei anschliessende motorlose Kaltstarts an der unveraenderten, vom
+Beobachter bestaetigten Pose bestanden. Die Treffer streuten hoechstens
+3 cm und 1 Grad; Score `0,9787..0,9789`, Wandtrefferquote
+`97,36..97,50 %` und Bestenabstand `1,155..1,168`. Jeder Start benoetigte
+genau zwei konsistente Scans, AMCL wurde `active`, `/localization/ready` wurde
+`true`, und `base_hardware` blieb `dry_run=true` bei 0 rpm.
+
+Der danach ausdruecklich freigegebene End-to-End-Lauf lokalisierte erneut
+motorlos im Stand und fuhr anschliessend das karten- und revisionsgebundene
+Ziel `Arbeitszimmer` an. Nav2 meldete `success`, der Missionsmanager
+`angekommen`. Der Karten-Endfehler betrug 0,133 m und 6,28 Grad und lag damit
+innerhalb der Abnahmegrenzen 0,15 m/0,40 rad. Der Encoderweg betrug 1,024 m;
+der Fahrbefehl blieb bei hoechstens 0,100 m/s. Nach dem terminalen Status
+wurden wiederholt Soll- und Istgeschwindigkeit sowie beide Motoren mit 0 rpm
+bestaetigt. Lokalisierung, Encoder und Modbus blieben fehlerfrei.
+
+**Betroffene Dateien und Hardware:** `robot_navigation` (Startstaffelung,
+Guard, Initialisierungsvertrag, Zwei-Scan-Konsens, Tests), STL-27L, Nav2/AMCL
+und beide ESS23-RS-Antriebe. Die beiden VL53-Datenstroeme und der aktive
+`collision_monitor` wurden vor der Fahrt geprueft, danach auf ausdruecklichen
+Wunsch nur fuer diesen beaufsichtigten Lauf zur Laufzeit deaktiviert. Diese
+Deaktivierung ist nicht persistent. Echte Karten, Raumgeometrie und
+Diagnosebilder bleiben lokal.
+
+**Teststatus:** 30 gezielte Python-Tests, Python-Kompilierung,
+`git diff --check`, Colcon-Build und Colcon-Test des Pakets bestanden. Dazu
+bestanden drei vollstaendige motorlose Kaltstarts, eine read-only
+Nav2-Pfadplanung und die reale semantische Zielfahrt. Vor und nach der Fahrt
+gab es genau einen Karten-, Semantik-, Missions-, AMCL- und `cmd_vel`-Pfad;
+alle scharfen Knoten wurden anschliessend beendet.
+
+**Offene Risiken:** Die heutige Wiederholung belegt drei Neustarts an einer
+extern bestaetigten Position und einen vollstaendigen Ziellauf. Fuer eine
+breitere statistische Aussage bleiben weitere deutlich getrennte
+Startpositionen und Raumkonfigurationen sinnvoll. VL53 und OAK waren waehrend
+des eigentlichen Ziellaufs deaktiviert; Hinderniserkennung ist damit fuer
+diesen Lauf nicht abgenommen. Die bekannten Shutdown-Meldungen des
+STL-27L-Treibers sowie die doppelte `rclpy.shutdown()`-Exception von
+`base_hardware` und `vl53_near_field` bleiben getrennte Aufraeumfehler nach
+bestaetigtem Stillstand.
+
+**Rückfallweg:** `nav_localized.launch.py` nicht starten und
+`enable_real_go_to_room:=false` verwenden. Dadurch bleiben globale
+Lokalisierung und reale semantische Raumfahrt ohne Fahrwirkung. Der alte
+AMCL-Globaldienst darf wegen des belegten Null-Kartenfensters nicht wieder in
+den automatischen Kaltstart aufgenommen werden.
+
+---
+
 ## 2026-08-16 — Selbstsichere AMCL-Fehlpose durch globalen Vollscan-Gate behoben
 
 **Entscheidung:** Eine kleine AMCL-Kovarianz reicht nicht mehr zur ersten

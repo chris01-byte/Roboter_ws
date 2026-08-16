@@ -1,8 +1,9 @@
 # Inventar
 
-**Hardwarestand:** 15.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 15.08.2026 · Branch `feature/reale-raumfahrt`; Encoder-
-Abnahme H0–H4 und beaufsichtigte semantische Nav2-Raumfahrt bestanden
+**Hardwarestand:** 16.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
+**Softwaredelta:** 16.08.2026 · Branch `feature/globale-lokalisierung`;
+stationaere globale LiDAR-Lokalisierung bei drei Kaltstarts und anschliessende
+beaufsichtigte semantische Nav2-Raumfahrt bestanden
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -32,7 +33,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
-| `robot_navigation` | Nav2-Realprofil mit fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (ein beaufsichtigtes semantisches Raumziel real erreicht) |
+| `robot_navigation` | Nav2-Realprofil mit globalem Zwei-Scan-Lokalisierer, fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (drei Kaltstarts an bestaetigter Pose und anschliessendes Raumziel real bestanden) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
 | `semantic_perception` | Objekterkennung auf OAK-Bildern | Entwurf |
@@ -56,6 +57,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
+| Globale LiDAR-Lokalisierung, Preflight | `bash tools/kartierung/start_lidar_lokalisierung.sh /absolut/map.yaml oak:=false` | nein (`dry_run`) |
+| Globale LiDAR-Lokalisierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_lidar_lokalisierung.sh /absolut/map.yaml active_drive:=true oak:=false` | **ja, Motoren bestromt** |
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 

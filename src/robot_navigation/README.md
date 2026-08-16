@@ -101,8 +101,16 @@ muss `static_map_odom:=false` gesetzt werden.
 `nav_localized.launch.py` verbindet die aktuelle gespeicherte OccupancyGrid-
 Karte mit dem normalisierten STL-27L-Scan und AMCL. Es übernimmt absichtlich
 weder die letzte Pose noch einen geratenen Ursprung. Nach identischer
-Fingerprint-Bindung von metrischer und semantischer Karte ruft der
-`localization_guard` den globalen AMCL-Reset auf.
+Fingerprint-Bindung von metrischer und semantischer Karte startet der
+`localization_guard` einen kartenfesten Vollscan-Zyklus. Der eindeutige
+Vollscan-Treffer setzt `/initialpose`; AMCL muss genau diese Pose danach
+rueckbestaetigen. Der native AMCL-Global-Reset wird nicht verwendet, weil sein
+Humble-Dienst bereits erreichbar sein kann, bevor AMCL intern eine Karte hat.
+Zwei frische, separat berechnete Vollscans muessen dabei innerhalb 0,20 m und
+8 Grad dieselbe Pose liefern. Ein einzelner knapp eindeutiger Fehlkandidat
+erhaelt dadurch keine Wirkung. AMCL und Guard starten auf dem Jetson zeitlich
+gestaffelt nach Karte/Basis/LiDAR, um die real beobachteten
+Fast-DDS-Lifecycle-Timeouts beim gleichzeitigen Prozessstart zu vermeiden.
 
 Die Freigabe `/localization/ready` bleibt `false`, bis alle Bedingungen
 gleichzeitig gelten:
@@ -127,7 +135,8 @@ unter `map_to_odom_window` die aktuelle Messung und unter
 `transform_stability_limits` die gerade aktive Acquire- oder Maintain-Grenze.
 
 Diese Hysteresen gelten nicht fuer andere Fehler. Falsche Kartenbindung,
-fehlende oder veraltete Scans/TF, eine fehlende AMCL-Pose nach dem Global-Reset
+fehlende oder veraltete Scans/TF, eine fehlende AMCL-Pose nach der
+Vollscan-Initialisierung
 oder eine falsche Publisherzahl sperren weiterhin sofort; danach gelten zur
 erneuten Freigabe wieder die strengeren Acquire-Grenzen. `/amcl_pose` ist
 ereignisgesteuert und wird im Stillstand nicht periodisch erneuert; ihre

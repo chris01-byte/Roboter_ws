@@ -204,6 +204,26 @@ def angular_difference(first: float, second: float) -> float:
     return abs(math.atan2(math.sin(first - second), math.cos(first - second)))
 
 
+def scan_candidates_consistent(
+        first: ScanCandidate, second: ScanCandidate, *,
+        maximum_position_error_m: float,
+        maximum_yaw_error_rad: float) -> bool:
+    """Prueft, ob zwei unabhaengige Vollscans dieselbe Pose liefern."""
+    limits = (maximum_position_error_m, maximum_yaw_error_rad)
+    if not all(math.isfinite(value) and value > 0.0 for value in limits):
+        raise ValueError('Konsensgrenzen muessen endlich und positiv sein')
+    values = (
+        first.x_m, first.y_m, first.yaw_rad,
+        second.x_m, second.y_m, second.yaw_rad)
+    if not all(math.isfinite(value) for value in values):
+        return False
+    return (
+        math.hypot(first.x_m - second.x_m, first.y_m - second.y_m)
+        <= maximum_position_error_m
+        and angular_difference(first.yaw_rad, second.yaw_rad)
+        <= maximum_yaw_error_rad)
+
+
 def _distinct_best(pose_x, pose_y, pose_yaw, scores, count):
     selected = []
     for index in np.argsort(scores)[::-1]:
