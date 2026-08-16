@@ -83,6 +83,10 @@ ihre lokalen Einstellungen erhalten bleiben.
   eigentlichen Sicherheitskette.
 - Der Software-NOT-AUS ersetzt nicht den verdrahteten Hardware-NOT-AUS.
 
+Die ausführliche, noch umzusetzende Integrationsanweisung für eine live
+aktualisierte Roboterposition und Blickrichtung im Karten-Tab steht in
+[`docs/APP_LIVE_ROBOTERPOSE_INTEGRATION.md`](../../docs/APP_LIVE_ROBOTERPOSE_INTEGRATION.md).
+
 ## Lokal bauen und prüfen
 
 Die Swift-Tests für Protokoll und Sicherheitslogik laufen auch ohne
