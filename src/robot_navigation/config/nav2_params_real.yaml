@@ -256,7 +256,10 @@ planner_server:
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.3
-      use_astar: false
+      # A/B-Messung auf der realen 3-cm-Karte: Dijkstra brach trotz
+      # zusammenhaengender freier Zellen ab; A* lieferte bei unveraendert
+      # aktiven VL53-Obstacle-Layern sofort einen gueltigen Pfad.
+      use_astar: true
       allow_unknown: false
 
 behavior_server:

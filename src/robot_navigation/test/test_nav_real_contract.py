@@ -57,6 +57,17 @@ def test_real_smoother_and_controller_limits_are_conservative():
         'default_server_timeout'] >= 2000
 
 
+def test_real_planner_uses_measured_astar_configuration():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
+    )
+    planner = parameters['planner_server']['ros__parameters']['GridBased']
+
+    assert planner['plugin'] == 'nav2_navfn_planner/NavfnPlanner'
+    assert planner['use_astar'] is True
+    assert planner['allow_unknown'] is False
+
+
 def test_mission_gate_is_fail_closed():
     running = {
         'state': 'running',

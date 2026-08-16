@@ -1,5 +1,36 @@
 # Übertragung auf den realen Roboter
 
+## A* und Zielfahrt mit aktivem VL53-Schutz (16.08.2026)
+
+**Branch:** `fix/nav2-astar-vl53-zieltest`
+
+Der reale Navfn-Planer verwendet jetzt `use_astar: true`. Die Entscheidung ist
+gemessen: Dijkstra brach auf der realen 3-cm-Karte trotz zusammenhaengender
+begehbarer Zellen ab; A* plante denselben Weg bei unveraendert aktiven linken
+und rechten VL53-Obstacle-Layern sofort. Ein Vertragstest verriegelt A*,
+`allow_unknown:false` und den erwarteten Navfn-Plugin-Typ.
+
+Der anschliessende beaufsichtigte Realtest bestand. Beide VL53-Datenstroeme,
+`collision_monitor`, Lokalisierungs-Gate, Encoder und RS485 waren bereit. Der
+Kollisionsmonitor war der einzige `/cmd_vel`-Publisher zur Hardware. Die
+Mission `go_to_room Arbeitszimmer` endete mit `success/angekommen`, maximal
+0,100 m/s; danach Soll/Ist und beide Motoren 0 rpm, Encoder frisch, keine
+Modbus-Lesefehler. Der scharfe Stack ist anschliessend beendet worden.
+
+OAK war bewusst aus: Ihre Live-Punktwolke markierte im A/B-Test den freien
+Zielbereich als praktisch unpassierbar und trennte die Costmap. Bis der
+Hoehen-/Bodenfilter korrigiert und motorlos abgenommen ist, gilt als
+Hinderniskette: zwei VL53 in beiden Costmaps plus zwei VL53 im
+`collision_monitor`. Ein absichtlicher Hindernis-Bremstest steht noch aus.
+
+Naechster Meilenstein ist automatische LiDAR-Kartierung. Den vorhandenen
+`explore`-Knoten nicht ungeprueft real starten: Er war bislang nicht unter ROS
+abgenommen; das alte Python-Erkundungsskript publiziert teilweise direkt und
+ist fuer die reale Kollisionskette nicht freigegeben. Erst SLAM, Nav2,
+Fahrtor, VL53 und Explorer motorlos als eine fail-closed Kette testen.
+
+---
+
 ## Aktueller Abnahmestand: selbst lokalisieren und Raumziel erreichen (16.08.2026)
 
 **Branch:** `feature/globale-lokalisierung`

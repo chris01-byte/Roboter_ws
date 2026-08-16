@@ -17,6 +17,53 @@ Rückfallweg:
 
 ---
 
+## 2026-08-16 — A* und aktiver VL53-Schutz fuer reale Raumfahrt abgenommen
+
+**Entscheidung:** Der reale Navfn-Planer verwendet `use_astar: true`. Bei
+Zielfahrten bleiben beide VL53-Quellen in lokaler/globaler Costmap und im
+`collision_monitor` aktiv. Die OAK-Punktwolke bleibt vorlaeufig aus der
+Laufzeit heraus, bis ihre Fehlmarkierungen getrennt korrigiert sind.
+
+**Grund / beobachtete Evidenz:** Auf derselben unveraenderten 3-cm-Karte brach
+Dijkstra mit `Failed to create a plan from potential` ab. Der rein lesende
+A/B-Test zeigte dennoch eine zusammenhaengende begehbare Zellenmenge. A* fand
+bei weiterhin aktiven VL53-Obstacle-Layern sofort einen Pfad. Mit zusaetzlich
+aktiver OAK-Punktwolke wurde dagegen selbst das freie Raumziel als Kostenwert
+253 markiert und die begehbare Verbindung getrennt; das ist ein Sensorfilter-
+und kein Kartenaufloesungsproblem.
+
+Nach einem frischen Build und Neustart lud der Planer A* aus der persistenten
+Konfiguration und plante denselben Pfad erneut erfolgreich. Der anschliessende
+beaufsichtigte Realtest erreichte das semantische Raumziel mit maximal
+0,100 m/s. Missionsstatus war `success/angekommen`; Lokalisierung blieb
+freigegeben. Danach meldeten Soll- und Istgeschwindigkeit sowie beide Motoren
+0, Encoderfeedback war frisch und fehlerfrei, Modbus-Lesefehler blieben 0.
+Beide VL53 lieferten vor der Fahrt fortlaufend Punktwolken; im freien
+Nahbereich waren 0 Punkte das erwartete Ergebnis. Der `collision_monitor` war
+aktiv und alleiniger Publisher auf den Hardware-Eingang `/cmd_vel`.
+
+**Betroffene Dateien und Hardware:** `robot_navigation`-Planerkonfiguration
+und Vertragstest, beide VL53L7CX, STL-27L, Nav2 sowie beide ESS23-RS-Antriebe.
+Echte Karte und Raumgeometrie bleiben lokal.
+
+**Teststatus:** 9 gezielte Navigationstests, YAML-Vertragspruefung,
+Colcon-Build, motorloser Neustart mit persistentem A*, read-only Pfadplanung
+und eine reale Zielfahrt bestanden. Vor dem Realtest waren Vollscan-Score
+0,978, Lokalisierung, RS485, Encoder, VL53 und Kollisionskette bereit. Nach
+dem Test wurden alle scharfen Prozesse beendet.
+
+**Offene Risiken:** Der Schutz wurde aktiv mitgefuehrt, aber noch nicht durch
+ein absichtlich eingebrachtes Hindernis zum Bremsen ausgeloest. Die
+OAK-Punktwolke darf bis zur Korrektur des Boden-/Hoehenfilters nicht als
+Obstacle-Quelle aktiviert werden. Die bekannten Shutdown-Ausnahmen bleiben
+reine Aufraeumfehler nach bestaetigtem 0-rpm-Stillstand.
+
+**Rückfallweg:** `use_astar` auf `false` zuruecksetzen oder den realen
+Lokalisierungs-/Navigationslaunch nicht starten. A* veraendert weder
+Geschwindigkeitsgrenzen noch die fail-closed Fahrtor- und Kollisionskette.
+
+---
+
 ## 2026-08-16 — Globaler Kaltstart und autonome Raumfahrt reproduzierbar abgenommen
 
 **Entscheidung:** Der native Humble-Dienst
