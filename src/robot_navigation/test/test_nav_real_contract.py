@@ -116,6 +116,8 @@ def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
     assert "'require_localization': 'true'" in source
     assert "package='nav2_amcl'" in source
     assert "executable='localization_guard'" in source
+    assert "executable='global_scan_localizer'" in source
+    assert "'require_global_scan_match'" in source
     assert "executable='static_transform_publisher'" not in source
     assert "'/scan_normiert'" in source
     assert "'allow_localization_search': 'true'" in source
@@ -124,6 +126,7 @@ def test_global_localization_launch_has_one_explicit_map_to_odom_owner():
         PACKAGE_ROOT / 'robot_navigation' / 'localization_guard.py'
     ).read_text(encoding='utf-8')
     assert 'global_initialization_fingerprint' in guard_source
+    assert 'global_scan_match' in guard_source
 
     start_helper = (
         PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /

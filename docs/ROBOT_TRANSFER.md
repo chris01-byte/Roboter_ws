@@ -1,5 +1,55 @@
 # Übertragung auf den realen Roboter
 
+## Übergabestand globaler Vollscan-Gate (16.08.2026)
+
+**Branch:** `feature/globale-lokalisierung`
+
+AMCL hatte eine rund 1,95 m falsche Pose trotz kleiner Kovarianz als
+konvergiert gemeldet. Deshalb ist der alte Vertrag ersetzt: Vor der ersten
+Freigabe muss jetzt `global_scan_localizer` einen stationaeren Vollscan
+eindeutig gegen die Karte abgleichen. Der Treffer ist kryptographisch an den
+Kartenfingerabdruck und ueber eine neue zufaellige 128-Bit-ID an genau einen
+AMCL-Global-Reset gebunden. Veraltete Statusmeldungen koennen keinen spaeteren
+Start freigeben. Danach muss AMCL den Treffer innerhalb 0,30 m/12 Grad
+bestaetigen; erst dann prueft der Guard wie bisher Kovarianz und stabiles
+`map -> odom`.
+
+Live-A/B am unveraenderten Standort:
+
+- falsches AMCL: `(0,704; 0,379; -123,6 Grad)`, nur 39,6 % Scanpunkte binnen
+  15 cm zur Kartenwand, Median 0,190 m;
+- globaler Vollscan: bei drei Kaltstarts `x=1,245..1,305 m`, `y=-1,135 m`,
+  `yaw=38..39 Grad`, Score `0,970..0,973`, Wandtreffer `97,2..98,75 %`,
+  Bestenabstand `1,245..1,267`;
+- finale AMCL-Pose `(1,237; -1,147; 39,4 Grad)`, unabhaengig 98,27 % binnen
+  15 cm, Median 0,030 m, 90-%-Quantil 0,060 m;
+- alle Laeufe motorlos mit `dry_run=true` und 0 rpm.
+
+Normale globale Lokalisierung benoetigt damit keine Drehung und keine
+Vorwaertsfahrt mehr. Start weiterhin nur ueber
+`tools/kartierung/start_lidar_lokalisierung.sh`; der Matcher setzt
+`/initialpose` selbst. Seine Mindestgrenzen sind Score 0,85,
+Wandtrefferquote 0,85 und Bestenabstand 1,15. Ein schlechter oder
+mehrdeutiger Treffer sperrt fail-closed. Diagnose:
+
+```bash
+source /opt/ros/humble/setup.bash
+source ~/roboter_ws/install/setup.bash
+python3 tools/kartierung/globale_scan_pose.py
+python3 tools/kartierung/scan_karten_abgleich.py
+ros2 topic echo --full-length /localization/status_json --once
+```
+
+22 Pakettests und der Colcon-Build bestehen. Echte Karten und alle Bilder
+liegen nur unter `~/.local/share/amadeus/`. Noch offen sind die persoenliche
+Bestaetigung der Blickrichtung, zwei weitere deutlich getrennte motorlose
+Startpositionen und danach eine beaufsichtigte reale Zielfahrt. Aus diesem
+motorlosen Ergebnis folgt noch keine Fahrfreigabe. Der alte
+`amcl_lokalisierungsdrehung.py` bleibt nur als Diagnosewerkzeug und ist nicht
+mehr der Normalstart.
+
+---
+
 ## Übergabestand globale Lokalisierung (15.08.2026)
 
 **Branch:** `feature/globale-lokalisierung`

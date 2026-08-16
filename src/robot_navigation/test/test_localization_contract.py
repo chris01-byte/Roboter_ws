@@ -5,10 +5,12 @@ from array import array
 from robot_navigation.localization_contract import (
     covariance_hysteresis_limits,
     covariance_quality,
+    decode_global_scan_match,
     decode_map_manager_binding,
     decode_semantic_binding,
     initialization_matches_bindings,
     matching_bindings,
+    pose_matches_global_scan,
     transform_stability_hysteresis_limits,
     transform_window_motion,
     transform_window_stable,
@@ -16,6 +18,7 @@ from robot_navigation.localization_contract import (
 
 
 FINGERPRINT = 'a' * 64
+INITIALIZATION_ID = '1' * 32
 
 
 def map_status(*, publisher_count=1, fingerprint=FINGERPRINT, ok=True):
@@ -40,6 +43,34 @@ def semantic_status(*, fingerprint=FINGERPRINT, observed=FINGERPRINT):
         },
         'map_manager': {'observed_fingerprint': observed},
     })
+
+
+def global_scan_status(**overrides):
+    payload = {
+        'schema_version': 1,
+        'ok': True,
+        'state': 'accepted',
+        'map_fingerprint': FINGERPRINT,
+        'global_initialization_generation': 3,
+        'global_initialization_id': INITIALIZATION_ID,
+        'pose': {'x_m': 1.25, 'y_m': -1.15, 'yaw_rad': 0.7},
+        'score': 0.98,
+        'endpoint_within_0_15_m_ratio': 0.99,
+        'score_ratio': 1.28,
+    }
+    payload.update(overrides)
+    return json.dumps(payload)
+
+
+def decode_scan(data):
+    return decode_global_scan_match(
+        data,
+        expected_fingerprint=FINGERPRINT,
+        expected_generation=3,
+        expected_initialization_id=INITIALIZATION_ID,
+        minimum_score=0.85,
+        minimum_endpoint_ratio=0.85,
+        minimum_score_ratio=1.15)
 
 
 def test_matching_live_map_and_semantics_are_bound_by_fingerprint():
@@ -78,6 +109,46 @@ def test_global_initialization_is_bound_to_the_current_map_fingerprint():
         semantic_status(fingerprint='b' * 64, observed='b' * 64))
     assert not initialization_matches_bindings(
         metric, changed_semantic, FINGERPRINT)
+
+
+def test_global_scan_match_is_bound_to_map_generation_and_unique_reset():
+    match, error = decode_scan(global_scan_status())
+    assert error is None
+    assert match.fingerprint == FINGERPRINT
+    assert match.generation == 3
+
+    for changed, expected_reason in (
+            ({'map_fingerprint': 'b' * 64}, 'aktuellen Karte'),
+            ({'global_initialization_generation': 4}, 'Reset-Generation'),
+            ({'global_initialization_id': '2' * 32}, 'Global-Reset')):
+        match, error = decode_scan(global_scan_status(**changed))
+        assert match is None
+        assert expected_reason in error
+
+
+def test_global_scan_quality_and_amcl_seed_confirmation_are_fail_closed():
+    for changed, expected_reason in (
+            ({'score': 0.84}, 'Gesamtscore'),
+            ({'endpoint_within_0_15_m_ratio': 0.84}, 'Wandtrefferquote'),
+            ({'score_ratio': 1.14}, 'nicht eindeutig')):
+        match, error = decode_scan(global_scan_status(**changed))
+        assert match is None
+        assert expected_reason in error
+
+    match, error = decode_scan(global_scan_status())
+    assert error is None
+    confirmed, reason = pose_matches_global_scan(
+        1.27, -1.16, 0.72, match,
+        maximum_position_error_m=0.30,
+        maximum_yaw_error_rad=math.radians(12.0))
+    assert confirmed, reason
+
+    confirmed, reason = pose_matches_global_scan(
+        0.70, 0.38, math.radians(-123.0), match,
+        maximum_position_error_m=0.30,
+        maximum_yaw_error_rad=math.radians(12.0))
+    assert not confirmed
+    assert 'entfernt' in reason
 
 
 def test_covariance_uses_planar_standard_deviations():

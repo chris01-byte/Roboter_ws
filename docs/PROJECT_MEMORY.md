@@ -17,6 +17,69 @@ Rückfallweg:
 
 ---
 
+## 2026-08-16 — Selbstsichere AMCL-Fehlpose durch globalen Vollscan-Gate behoben
+
+**Entscheidung:** Eine kleine AMCL-Kovarianz reicht nicht mehr zur ersten
+Fahrfreigabe. Der neue `global_scan_localizer` sucht motorlos mit einem
+stationaeren Vollscan ueber alle freien Kartenpositionen und Blickrichtungen.
+Er bewertet Wandendpunkte und freie Strahlwege und akzeptiert nur einen
+absolut guten sowie gegen die zweitbeste getrennte Hypothese eindeutigen
+Treffer. Jeder AMCL-Global-Reset erhaelt eine zufaellige 128-Bit-ID. Der
+`localization_guard` verlangt einen frischen Treffer fuer exakt
+Kartenfingerabdruck, Generation und Reset-ID und prueft anschliessend, dass
+AMCL hoechstens 0,30 m/12 Grad von diesem Startwert abweicht. Erst danach
+gelten die bisherigen Kovarianz- und TF-Stabilitaetsgrenzen.
+
+**Grund / beobachtete Evidenz:** AMCL meldete nach einer beaufsichtigten
+Suchdrehung die Pose `(0,704; 0,379; -123,6 Grad)` mit nur
+`0,122/0,123 m` und `9,54 Grad` Standardabweichung. Die vom Beobachter in der
+Karte markierte reale Position lag jedoch rund 1,95 m entfernt. Ein
+unabhaengiger Scan/Karten-Abgleich widerlegte die scheinbar sichere Pose: nur
+39,6 % der Endpunkte lagen innerhalb 15 cm einer Kartenwand, Medianabstand
+0,190 m.
+
+Die globale Vollscansuche fand ohne Bewegung konsistent den Bereich
+`x=1,245..1,305 m`, `y=-1,135 m`, `yaw=38..39 Grad`. Im ersten Diagnoselauf
+erreichte der beste Treffer Score 0,980, 99,17 % Wandtreffer und Faktor 1,283
+zur zweitbesten getrennten Hypothese. Drei vollstaendige motorlose Starts
+lieferten erneut denselben Bereich. Der finale Kaltstart erreichte Score
+0,973, 98,75 % Wandtreffer, Faktor 1,245 und wurde von AMCL bei
+`(1,237; -1,147; 39,4 Grad)` bestaetigt. Die unabhaengige Nachpruefung legte
+98,27 % der aktuellen Scanpunkte innerhalb 15 cm an Kartenwaende; Median
+0,030 m, 90-%-Quantil 0,060 m. Das ist die gemessene A/B-Trennung gegen die
+falsche AMCL-Pose, nicht nur eine kleinere Kovarianz.
+
+**Betroffene Dateien und Hardware:** `robot_navigation` (Matcher-Kern,
+ROS-Knoten, Launch, Guard und Vertrag), `tools/kartierung` (rein lesende
+Diagnose) und STL-27L. Beide ESS23-RS-Antriebe blieben durchgehend im
+`dry_run`; keine reale Karte und kein Diagnosebild wird eingecheckt.
+
+**Teststatus:** 22 gezielte `robot_navigation`-Tests, Python-Kompilierung,
+`git diff --check` und Colcon-Build bestanden. Der synthetische Test trennt
+eine korrekte von einer falschen Pose ueber Wand- und Freistrahlscore. Live
+wurden bei drei Neustarts jeweils eine neue Reset-ID, ein Treffer im selben
+Positionsbereich, Guard-Verifikation, `ready=true`, `dry_run=true` und
+Motorwerte 0 rpm bestaetigt. Ein erwartbarer AMCL-Loghinweis zur wenige
+Millisekunden juengeren Initialpose erscheint unmittelbar vor dem dennoch
+erfolgreichen `Setting pose`; Rueckdatieren und Nullstempel veraenderten ihn
+nicht und wurden deshalb nicht als Scheinloesung uebernommen.
+
+**Offene Risiken:** Die reale Blickrichtung muss noch vom anwesenden
+Beobachter bestaetigt werden; die eingezeichnete gruene Pfeilrichtung koennte
+auch nur ein Positionszeiger sein. Vorfuehrreife verlangt danach mindestens
+zwei weitere motorlose, deutlich getrennte Startpositionen und erst dann eine
+beaufsichtigte reale Zielfahrt. Die festen Qualitaetsgrenzen sind mit der
+aktuellen Zimmerkarte klar bestanden, aber noch nicht statistisch ueber viele
+Raumkonfigurationen validiert. Bei offener Tuer oder starker dynamischer
+Verdeckung darf der Matcher korrekt ablehnen; das Fahrtor bleibt dann zu.
+
+**Rückfallweg:** `nav_localized.launch.py` nur motorlos mit
+`require_global_scan_match:=false` starten oder auf den vorherigen Commit
+zurueckgehen. Eine reale Fahrt ohne den Vollscan-Gate ist nach dem belegten
+1,95-m-Fehler nicht freigegeben.
+
+---
+
 ## 2026-08-15 — Ursache der nicht wiederholbaren AMCL-Lokalisierung gefunden
 
 **Entscheidung:** Vor jedem LiDAR-/AMCL-Start prueft

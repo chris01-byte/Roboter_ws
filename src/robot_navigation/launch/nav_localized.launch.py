@@ -45,6 +45,10 @@ def generate_launch_description():
             'auto_global_localization', default_value='true',
             description='Partikel nach bestaetigter Karte und frischem LiDAR '
                         'automatisch global verteilen.'),
+        DeclareLaunchArgument(
+            'require_global_scan_match', default_value='true',
+            description='Fail-closed Vollscan/Karten-Abgleich vor der ersten '
+                        'Lokalisierungsfreigabe.'),
 
         LogInfo(
             msg='AMCL-Start ohne bekannte Pose: Fahrtor bleibt bis zur '
@@ -104,5 +108,14 @@ def generate_launch_description():
                 'auto_global_localization': ParameterValue(
                     LaunchConfiguration('auto_global_localization'),
                     value_type=bool),
+                'require_global_scan_match': ParameterValue(
+                    LaunchConfiguration('require_global_scan_match'),
+                    value_type=bool),
             }]),
+        # Unabhaengige Wahrheitspruefung: Ein selbstsicheres AMCL-Ergebnis
+        # reicht nicht. Der Vollscan muss die aktuelle Karte eindeutig treffen
+        # und setzt erst dann /initialpose fuer genau diesen Global-Reset.
+        Node(
+            package='robot_navigation', executable='global_scan_localizer',
+            name='global_scan_localizer', output='screen'),
     ])

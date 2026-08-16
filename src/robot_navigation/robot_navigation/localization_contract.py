@@ -9,6 +9,7 @@ from typing import Any, Optional, Sequence, Tuple
 
 MAXIMUM_STATUS_BYTES = 1024 * 1024
 _FINGERPRINT_RE = re.compile(r"[0-9a-f]{64}")
+_INITIALIZATION_ID_RE = re.compile(r"[0-9a-f]{32}")
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,19 @@ class CovarianceQuality:
     x_stddev_m: float
     y_stddev_m: float
     yaw_stddev_rad: float
+
+
+@dataclass(frozen=True)
+class GlobalScanMatch:
+    fingerprint: str
+    generation: int
+    initialization_id: str
+    x_m: float
+    y_m: float
+    yaw_rad: float
+    score: float
+    endpoint_ratio: float
+    score_ratio: float
 
 
 def _decode_json_status(data: Any, label: str) -> Tuple[Optional[dict], Optional[str]]:
@@ -124,6 +138,118 @@ def initialization_matches_bindings(
         and isinstance(initialized_fingerprint, str)
         and map_binding.fingerprint == initialized_fingerprint
     )
+
+
+def _finite_number(value: Any, label: str):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None, f"{label} muss eine Zahl sein"
+    number = float(value)
+    if not math.isfinite(number):
+        return None, f"{label} muss endlich sein"
+    return number, None
+
+
+def decode_global_scan_match(
+        data: Any, *, expected_fingerprint: Optional[str],
+        expected_generation: int, expected_initialization_id: Optional[str],
+        minimum_score: float, minimum_endpoint_ratio: float,
+        minimum_score_ratio: float):
+    """Prueft einen Vollscan-Treffer gegen Karte und konkreten Global-Reset."""
+    payload, error = _decode_json_status(data, "Vollscan-Status")
+    if error:
+        return None, error
+    if payload.get("state") != "accepted":
+        return None, "Vollscan-Status ist nicht akzeptiert"
+    fingerprint = payload.get("map_fingerprint")
+    if (
+            not isinstance(fingerprint, str)
+            or _FINGERPRINT_RE.fullmatch(fingerprint) is None):
+        return None, "Vollscan-Status enthaelt keinen gueltigen Karten-Fingerprint"
+    generation = payload.get("global_initialization_generation")
+    if (
+            isinstance(generation, bool)
+            or not isinstance(generation, int)
+            or generation <= 0):
+        return None, "Vollscan-Status enthaelt keine gueltige Reset-Generation"
+    initialization_id = payload.get("global_initialization_id")
+    if (
+            not isinstance(initialization_id, str)
+            or _INITIALIZATION_ID_RE.fullmatch(initialization_id) is None):
+        return None, "Vollscan-Status enthaelt keine gueltige Reset-ID"
+    if fingerprint != expected_fingerprint:
+        return None, "Vollscan-Treffer gehoert nicht zur aktuellen Karte"
+    if generation != expected_generation:
+        return None, "Vollscan-Treffer gehoert nicht zur aktuellen Reset-Generation"
+    if initialization_id != expected_initialization_id:
+        return None, "Vollscan-Treffer gehoert nicht zum aktuellen Global-Reset"
+
+    pose = payload.get("pose")
+    if not isinstance(pose, dict):
+        return None, "Vollscan-Status enthaelt keine Pose"
+    numbers = {}
+    for key, label in (
+            ("x_m", "Vollscan-x"),
+            ("y_m", "Vollscan-y"),
+            ("yaw_rad", "Vollscan-Winkel")):
+        numbers[key], error = _finite_number(pose.get(key), label)
+        if error:
+            return None, error
+    for key, label in (
+            ("score", "Vollscan-Score"),
+            ("endpoint_within_0_15_m_ratio", "Vollscan-Wandtrefferquote"),
+            ("score_ratio", "Vollscan-Bestenabstand")):
+        numbers[key], error = _finite_number(payload.get(key), label)
+        if error:
+            return None, error
+    if not (0.0 <= numbers["score"] <= 1.0):
+        return None, "Vollscan-Score liegt nicht zwischen 0 und 1"
+    if not (0.0 <= numbers["endpoint_within_0_15_m_ratio"] <= 1.0):
+        return None, "Vollscan-Wandtrefferquote liegt nicht zwischen 0 und 1"
+    if numbers["score_ratio"] < 1.0:
+        return None, "Vollscan-Bestenabstand ist ungueltig"
+    limits = (minimum_score, minimum_endpoint_ratio, minimum_score_ratio)
+    if not all(math.isfinite(limit) and limit > 0.0 for limit in limits):
+        raise ValueError("Vollscan-Grenzen muessen endlich und positiv sein")
+    if numbers["score"] < minimum_score:
+        return None, "Vollscan-Gesamtscore ist zu klein"
+    if numbers["endpoint_within_0_15_m_ratio"] < minimum_endpoint_ratio:
+        return None, "Vollscan-Wandtrefferquote ist zu klein"
+    if numbers["score_ratio"] < minimum_score_ratio:
+        return None, "Vollscan-Treffer ist nicht eindeutig genug"
+    return GlobalScanMatch(
+        fingerprint=fingerprint,
+        generation=generation,
+        initialization_id=initialization_id,
+        x_m=numbers["x_m"],
+        y_m=numbers["y_m"],
+        yaw_rad=numbers["yaw_rad"],
+        score=numbers["score"],
+        endpoint_ratio=numbers["endpoint_within_0_15_m_ratio"],
+        score_ratio=numbers["score_ratio"]), None
+
+
+def pose_matches_global_scan(
+        x_m: float, y_m: float, yaw_rad: float,
+        match: GlobalScanMatch, *, maximum_position_error_m: float,
+        maximum_yaw_error_rad: float):
+    """Bestaetigt, dass AMCL den akzeptierten LiDAR-Startwert annahm."""
+    values = (
+        x_m, y_m, yaw_rad, maximum_position_error_m,
+        maximum_yaw_error_rad)
+    if not all(math.isfinite(value) for value in values):
+        return False, "AMCL/Vollscan-Vergleich enthaelt ungueltige Werte"
+    if maximum_position_error_m <= 0.0 or maximum_yaw_error_rad <= 0.0:
+        raise ValueError("AMCL/Vollscan-Grenzen muessen positiv sein")
+    position_error = math.hypot(x_m - match.x_m, y_m - match.y_m)
+    yaw_error = angular_distance(yaw_rad, match.yaw_rad)
+    if position_error > maximum_position_error_m:
+        return False, (
+            f'AMCL ist {position_error:.3f} m vom Vollscan-Treffer entfernt')
+    if yaw_error > maximum_yaw_error_rad:
+        return False, (
+            'AMCL-Winkel ist '
+            f'{math.degrees(yaw_error):.1f} Grad vom Vollscan-Treffer entfernt')
+    return True, "bestaetigt"
 
 
 def covariance_quality(

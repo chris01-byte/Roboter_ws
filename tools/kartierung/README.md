@@ -93,8 +93,36 @@ weiterhin die separate persoenliche Fahrfreigabe und
 python3 tools/kartierung/karte_fuer_nav2_pruefen.py /absoluter/pfad/map.yaml
 ```
 
-Nach scharfem Start und persoenlicher Freigabe fuehrt der begrenzte
-Suchhelfer eine volle Drehung, hoechstens 0,25 m Vorwaertsfahrt und danach im
+Seit dem Vollscan-Fix vom 16.08.2026 ist keine Suchfahrt fuer den Normalstart
+erforderlich: `global_scan_localizer` vergleicht den stationaeren kompletten
+LiDAR-Scan mit allen freien Kartenpositionen und Blickrichtungen. Nur wenn
+
+- Gesamtscore mindestens 0,85,
+- mindestens 85 % der Endpunkte hoechstens 15 cm von einer Kartenwand liegen,
+- der beste Treffer mindestens Faktor 1,15 vor der zweitbesten raeumlich oder
+  winklig getrennten Hypothese liegt und
+- AMCL genau diesen Treffer fuer die aktuelle Karte und einmalige Reset-ID
+  uebernimmt,
+
+wird `/localization/ready=true`. AMCL-Kovarianz allein ist kein
+Wahrheitsnachweis. Der Matcher publiziert keine Fahrbefehle; bei einem
+mehrdeutigen Scan bleibt das Fahrtor geschlossen.
+
+Zwei rein lesende Diagnosewerkzeuge erzeugen Bilder ausschliesslich unter
+`~/.local/share/amadeus/diagnostics/`:
+
+```bash
+python3 tools/kartierung/globale_scan_pose.py
+python3 tools/kartierung/scan_karten_abgleich.py
+```
+
+Das erste zeigt die getrennten globalen Hypothesen, das zweite legt den Scan
+ueber die aktuell von AMCL gemeldete Pose. Beide besitzen weder einen
+`/initialpose`- noch einen `cmd_vel`-Publisher.
+
+Der alte begrenzte Suchhelfer bleibt nur fuer beaufsichtigte Diagnose und
+Vergleichsmessungen erhalten. Er fuehrt nach scharfem Start und persoenlicher
+Freigabe eine volle Drehung, hoechstens 0,25 m Vorwaertsfahrt und danach im
 garantierten Stillstand bis zu 20 AMCL-No-motion-Updates aus:
 
 ```bash
