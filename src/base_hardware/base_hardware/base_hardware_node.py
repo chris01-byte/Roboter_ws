@@ -823,6 +823,31 @@ class BaseHardware(Node):
                                -self.max_motor_rpm, self.max_motor_rpm)
         right_rpm = self._clamp(wheel_cmd.rpm_right * self.gear_ratio,
                                 -self.max_motor_rpm, self.max_motor_rpm)
+        left_setpoint = self._quantize_motor_rpm(left_rpm)
+        right_setpoint = self._quantize_motor_rpm(right_rpm)
+        last_left_setpoint = (
+            None if self.last_sent_left_rpm is None
+            else self._quantize_motor_rpm(self.last_sent_left_rpm))
+        last_right_setpoint = (
+            None if self.last_sent_right_rpm is None
+            else self._quantize_motor_rpm(self.last_sent_right_rpm))
+
+        # Das ESS-RS-Handbuch beschreibt 0x0027 Bit1 als StartIMPULS nach dem
+        # Setzen der Geschwindigkeitsparameter. Der fruehere Code wiederholte
+        # diesen Impuls alle 50 ms und startete damit die 2000-ms-Anfahrrampe
+        # fortlaufend neu. Real gemessen am 16.08.2026: nur 0,360 rad in etwa
+        # 10 s bei konstant angeforderten 0,12 rad/s.
+        #
+        # Identische, bereits laufende Registerwerte brauchen keinen weiteren
+        # Buszugriff. Geaenderte Sollwerte werden beidseitig aktualisiert; ein
+        # neuer Startimpuls ist nur fuer Stillstand -> Fahrt erforderlich.
+        if (left_setpoint == last_left_setpoint and
+                right_setpoint == last_right_setpoint):
+            return True
+        was_moving = (
+            last_left_setpoint not in (None, 0) or
+            last_right_setpoint not in (None, 0))
+
         if not self._write_motor_setpoint(self.left_motor_id, left_rpm):
             self._handle_drive_write_failure('sollwert_links')
             return False
@@ -834,6 +859,10 @@ class BaseHardware(Node):
         if self._command_timed_out():
             self._stop_both_motors(force=True)
             return False
+        if was_moving:
+            self.last_sent_left_rpm = left_rpm
+            self.last_sent_right_rpm = right_rpm
+            return True
         if not self._write_motor_start(self.left_motor_id):
             self._handle_drive_write_failure('start_links')
             return False

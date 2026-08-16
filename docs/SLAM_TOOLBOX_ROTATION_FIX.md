@@ -641,6 +641,16 @@ gesamte STL-27L-Integrationshistorie einschließen, nicht nur diesen Patch.
 
 ## 10. Winkelfehler der Odometrie — nachgemessen am 12.08.2026
 
+**Korrektur vom 16.08.2026:** Die folgende Regression bestimmte den Betrag
+des Odometrie-Skalenfehlers brauchbar, spiegelte aber das LiDAR-Vorzeichen vor
+der Auswertung. Dadurch blieb verborgen, dass der STL-27L native
+Uhrzeigersinn-Bins mit positivem ROS-`angle_increment` publizierte. Im realen
+Kartenframe liefen Odometrie (-96,9 Grad) und Scan deshalb gegeneinander.
+Seit `laser_scan_dir: true` und dem dazu gekoppelten `tf_yaw: +1.5708`
+stimmen beide real in Vorzeichen und Betrag ueberein: +99,10 Grad Odometrie
+gegen +98,10 Grad Kartenwinkel. Die historischen Skalenfaktoren unten bleiben
+als Betragsmessung nuetzlich, sind aber kein Nachweis korrekter Handedness.
+
 Der zuvor gemeldete Winkelfehler von −4,98° bis −6,50° je Umdrehung war ein
 **Artefakt des Messverfahrens**, nicht des Roboters. `odometrie_drehtest.py`
 hat drei Schwächen, die alle in dieselbe Richtung wirken:
@@ -672,7 +682,7 @@ Gemessen bei 0,25 rad/s, je eine volle Umdrehung:
 
 Beide Richtungen stimmen auf 0,00064 überein. Das ist das Verhalten eines
 echten Skalenfehlers; ein richtungsabhängiger Effekt wie Laufzeit oder
-Zeitstempel würde sich mit der Drehrichtung ändern. **Der Fehler beträgt
+Zeitstempel würde sich mit der Drehrichtung ändern. **Die Betragsabweichung beträgt
 −1,45° je Umdrehung**, also 0,4 %. Damit ist auch der Widerspruch zu den in
 `9e8c06f` dokumentierten 0,50° aufgelöst: gleiche Größenordnung statt Faktor
 zehn.

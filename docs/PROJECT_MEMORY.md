@@ -17,6 +17,124 @@ Rückfallweg:
 
 ---
 
+## 2026-08-16 — Automatische LiDAR-Kartierung real abgenommen und LiDAR-Handedness korrigiert
+
+**Entscheidung:** Die automatische Kartierung beginnt nicht mehr sofort mit
+einem Fahrziel. Der Explorer fuehrt zuerst einen kontrollierten 360-Grad-
+Rundblick mit 0,12 rad/s aus und misst den tatsaechlich erreichten Winkel aus
+der Encoder-Odometrie. Erst nach bestaetigtem Stillstand werden Frontiers auf
+der frisch erweiterten 3-cm-SLAM-Karte gesucht. Sichere Anfahrpunkte bleiben
+im bekannten Freiraum, besitzen 0,35 m Abstand zu Wand und unbekanntem Raum
+und werden nach Distanz, Groesse und aktueller Blickrichtung bewertet. Vor
+jedem groesseren Richtungswechsel richtet ein begrenzter, encodergepruefter
+Drehpfad den Roboter aus; das Nav2-Ziel wird erst nach erneuter Messung im
+Kartenframe freigegeben.
+
+Der STL-27L wird ROS-konform gegen den Uhrzeigersinn ausgegeben. Der dazu
+gehoerende, gemeinsam verifizierte Montagevertrag ist
+`laser_scan_dir: true` plus `tf_yaw: +1.5708`. Diese beiden Werte duerfen
+nicht unabhaengig voneinander geaendert werden. Wenn nach mindestens einem
+erreichten Ziel nur noch Frontiers ohne sicheren Anfahrpunkt im bekannten
+Freiraum verbleiben, endet die Mission als `safe_complete` statt als Fehler.
+
+Die reale Erkundung verlangt weiterhin zwei getrennte Opt-ins:
+`active_drive:=true` fuer die Basis und `enable_auto_explore:=true` fuer
+Missionsmanager und Fahrtor. Der Launch sendet selbst keinen Auftrag. OAK ist
+aus dieser Kette entfernt; STL-27L, beide VL53, Odometrie, SLAM-Karte,
+`collision_monitor`, Missionsstatus und das dedizierte Fahrtor muessen
+fortlaufend vorhanden sein. Nav2-Recovery-Bewegungen sind nicht mit der
+Hardware verbunden.
+
+**Grund / beobachtete Evidenz:** Der erste reale Explore-Versuch erzeugte nur
+eine kurze, langsame Bewegung und keine systematische Raumabdeckung. Die alte
+Logik fuhr unmittelbar eine Frontier an und lieferte damit weder einen
+definierten ersten Raumueberblick noch eine getrennte Messung, ob Basis oder
+Nav2 die beobachtete Langsamkeit verursachten.
+
+Beim ersten realen Vorausrichtungstest drehte die Encoder-Odometrie um
+-96,9 Grad, waehrend der Kartenwinkel mit entgegengesetztem Vorzeichen lief:
+Aus einem erwarteten kleinen Restfehler wurden +161,4 Grad; `map->odom` lag
+bei etwa -172,7 Grad. Die SLAM-Daten enthielten keine Loop-Closure-Kanten, der
+Sprung war daher keine falsche Wiedererkennung. Der Treiberquelltext zeigte
+die Ursache: `laser_scan_dir: false` liess die nativen Uhrzeigersinn-Bins
+stehen, publizierte aber weiterhin einen positiven `angle_increment`, den
+ROS-Verbraucher als Gegen-Uhrzeigersinn interpretieren. Das alte
+Winkelmesswerkzeug spiegelte dieses Vorzeichen vor der Betragsregression und
+hatte den Fehler dadurch verborgen.
+
+Nach der gekoppelten Korrektur meldete der isolierte Sensortest 2172 Strahlen,
+Treibrichtung `Counterclockwise` und einen maskierten Mastbogen von
+56,0 bis 123,9 Grad mit Zentrum bei 90 Grad im Sensorframe; durch den
++90-Grad-TF liegt der Mast korrekt hinten. Vorne, links und rechts waren
+gueltig. Im echten Drehtest stimmten dann Odometrie (+99,10 Grad) und
+Kartenwinkel (+98,10 Grad) in Vorzeichen und Betrag ueberein. Ein motorloser
+Fehlertest liess den Kartenrestfehler absichtlich von +21,8 auf +22,5 Grad
+steigen; das Fahrtor brach vor jeder Nav2-Translation ab. Damit ist der
+Kartenframe-Abgleich nachweislich fail-closed.
+
+Im anschliessenden motorlosen Gesamttest starteten LiDAR, `slam_toolbox`,
+Basis im `dry_run`, beide VL53, Kollisionsmonitor, Explorer, Mission, Fahrtor
+und Nav2 als eine Kette. Der Explorer kommandierte ausschliesslich eine
+Drehung, akkumulierte ueber den +-Pi-Uebergang 360,4 Grad Odometriewinkel,
+bestaetigte den Stopp und plante danach frisch. Er fand drei sichere
+Frontier-Kandidaten und uebergab genau ein Nav2-Ziel. Ein expliziter Abbruch
+stornierte das Kindziel, sperrte das Fahrtor und fuehrte Soll- und
+Istkommando auf 0,000 m/s und 0,000 rad/s.
+
+Der Test deckte zwei Startfallen auf. `slam_toolbox` publiziert eine
+unveraenderte Karte im Stillstand nicht laufend neu; deshalb darf nur der
+dedizierte, streng auf reine Drehung begrenzte Rundblick eine bereits
+empfangene, aber nicht mehr frische Karte verwenden. Jede Nav2-Fahrt verlangt
+weiterhin eine frische Karte. Ausserdem wurde die
+`IsEstopClear`-Subscription erst mit dem Missionsbaum angelegt und konnte beim
+allerersten Tick noch leer sein. Eine einsekundige Vorlaufzeit vor dem ersten
+BT-Tick behebt dieses Rennen, ohne eine Action vor der Sicherheitspruefung zu
+starten; ein fehlendes oder aktives Not-Aus-Signal bleibt danach fail-closed.
+
+Der beaufsichtigte Realtest bestand anschliessend den 360,2-Grad-Rundblick und
+erreichte vier nacheinander neu geplante Frontier-Ziele. Die erste
+Vorausrichtung endete bei nur -2,5 Grad Kartenrestfehler und -3,5 Grad bei der
+Uebergabe. Ein unter Jetson-Last kurz veralteter `map->odom`-Transform brach
+ein Ziel sicher ab; der begrenzte Neuversuch richtete erneut aus und setzte
+ohne Recovery-Bewegung fort. Am Ende blieb nur eine Frontier ohne sicheren
+Anfahrpunkt im bekannten Freiraum. Die daraus gerenderte Karte war ein
+zusammenhaengender Grundriss ohne doppelte Waende oder getrennte Teilkarten:
+195 x 221 Zellen bei 3 cm, 5,85 x 6,63 m Ausdehnung und 16,1 m2 freie Flaeche.
+Karte und Diagnosebild bleiben lokal und werden nicht eingecheckt.
+
+**Betroffene Dateien und Hardware:** `explore`, `robot_navigation`,
+`mission_manager`, `bt_orchestrator`, `amadeus_lidar_bringup`, die
+Odometrie-Messwerkzeuge sowie
+`tools/kartierung/start_automatische_kartierung.sh`; real betroffen waren
+STL-27L, beide VL53L7CX und beide ESS23-RS-Antriebe. Wohnungsgeometrie,
+ROS-Bags und Diagnosebilder werden nicht eingecheckt.
+
+**Teststatus:** Python-Kompilierung und `git diff --check` bestanden. 156
+direkt ausgefuehrte Python-Vertrags-, Algorithmus- und Hardwaretests sowie 72
+Colcon-Tests liefen ohne Fehler; der gemeinsame Build aller sieben geaenderten
+ROS-Pakete bestand. Motorlos bestanden Rundblick, Neuplanung,
+Kartenframe-Gate und Abbruch. Real bestanden Rundblick, Vorausrichtungen, vier
+Frontier-Fahrten, ein fail-closed TF-Neuversuch und der abschliessende
+Stillstand bei 0 rpm.
+
+**Offene Risiken:** Ein flaches Kabel unterhalb der VL53- und LiDAR-Sicht kann
+weiterhin unentdeckt bleiben; die beaufsichtigte freie Fahrflaeche und der
+hardwired Not-Aus bleiben notwendig. Unter hoher Jetson-Last kann ein
+Karten-Transform kurz veralten; die Kette stoppt dann und versucht nur
+begrenzt neu. Die bekannten Shutdown-Ausnahmen des LiDAR-Treibers sowie von
+`base_hardware` und `vl53_near_field` treten erst nach bestaetigtem
+Nullkommando auf und sind separat zu bereinigen.
+
+**Rückfallweg:** Den neuen Kartierungslaunch nicht starten oder
+`enable_auto_explore:=false` belassen; dann nimmt das Fahrtor keine
+Explore-Bewegung an. `active_drive:=false` haelt die Basis im Dry-run. Ein
+laufender Auftrag wird mit `{"type":"cancel"}` beendet; danach blockiert das
+Fahrtor sofort und Nav2 muss sein Kindziel terminal stornieren.
+LiDAR-Richtung und Montage-Yaw nur als gekoppeltes Paar zurueckrollen; ein
+einseitiger Rueckbau spiegelt den Scan erneut.
+
+---
+
 ## 2026-08-16 — A* und aktiver VL53-Schutz fuer reale Raumfahrt abgenommen
 
 **Entscheidung:** Der reale Navfn-Planer verwendet `use_astar: true`. Bei

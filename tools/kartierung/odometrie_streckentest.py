@@ -98,8 +98,9 @@ def main():
     if n.pos is None:
         print('KEINE Odometrie - laeuft base_hardware scharf?'); rclpy.shutdown(); return 1
 
-    # Der LiDAR-Nullpunkt zeigt nach rechts, vorwaerts liegt bei 90 Grad.
-    mess_richtung = 90.0 if not rueck else 270.0
+    # Der ROS-konforme CCW-Scan ist gegenueber den nativen CW-Bins gedreht:
+    # physisch vorwaerts liegt in laser_frame bei 270 Grad, rueckwaerts bei 90.
+    mess_richtung = 270.0 if not rueck else 90.0
     vor_wand = wandabstand(n.scan, mess_richtung) if n.scan else None
     start = n.pos
     start_yaw = n.yaw

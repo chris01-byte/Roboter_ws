@@ -5,10 +5,12 @@ Aufruf:  python3 src/amadeus_lidar_bringup/test/test_scan_gitter.py
 """
 import math
 import os
+from pathlib import Path
 import sys
 import unittest
 
 import numpy as np
+import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
@@ -84,6 +86,24 @@ class WinkeltreueTest(unittest.TestCase):
             gitter_indizes(0, 0.0, 0.001, 2160, 0.0, 0.001)
         with self.assertRaises(ValueError):
             gitter_indizes(2160, 0.0, 0.0, 2160, 0.0, 0.001)
+
+
+class SensorframeVertragTest(unittest.TestCase):
+
+    def test_ros_ccw_scan_und_gekoppelter_yaw_bleiben_zusammen(self):
+        paket = Path(__file__).resolve().parents[1]
+        config = yaml.safe_load(
+            (paket / 'config' / 'stl27l.yaml').read_text())
+        lidar = config['amadeus_stl27l']['ros__parameters']
+        launch = (paket / 'launch' / 'stl27l.launch.py').read_text()
+
+        self.assertIs(lidar['laser_scan_dir'], True)
+        self.assertIn(
+            "DeclareLaunchArgument('tf_yaw', default_value='1.5708'",
+            launch)
+        self.assertNotIn(
+            "DeclareLaunchArgument('tf_yaw', default_value='-1.5708'",
+            launch)
 
 
 if __name__ == '__main__':

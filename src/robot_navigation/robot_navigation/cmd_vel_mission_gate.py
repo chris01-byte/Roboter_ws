@@ -7,14 +7,17 @@ import time
 
 import rclpy
 from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy._rclpy_pybind11 import RCLError
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
+from sensor_msgs.msg import LaserScan, PointCloud2
+from rclpy.qos import qos_profile_sensor_data
 
 
 AUTHORIZED_PHASES = {'nav2_ziel_senden', 'fahre_zum_raum'}
+AUTHORIZED_EXPLORE_PHASES = {'Explore'}
 
 
 def room_motion_authorized(status):
@@ -27,6 +30,59 @@ def room_motion_authorized(status):
         and status.get('phase') in AUTHORIZED_PHASES
         and isinstance(command, dict)
         and command.get('type') == 'go_to_room'
+    )
+
+
+def explore_motion_authorized(status, enabled):
+    """Allow exploration only behind the explicit mapping opt-in."""
+    if enabled is not True or not isinstance(status, dict):
+        return False
+    command = status.get('active_command')
+    return (
+        status.get('state') == 'running'
+        and status.get('phase') in AUTHORIZED_EXPLORE_PHASES
+        and isinstance(command, dict)
+        and command.get('type') == 'explore'
+    )
+
+
+def explore_health_authorized(
+        enabled, map_at, scan_at, left_at, right_at, odom_at, now,
+        map_timeout_s, sensor_timeout_s, odom_timeout_s,
+        allow_stale_map_for_scan=False):
+    """Require fresh mapping, LiDAR, both VL53 streams and odometry."""
+    values = (
+        map_at, scan_at, left_at, right_at, odom_at, now,
+        map_timeout_s, sensor_timeout_s, odom_timeout_s)
+    if enabled is not True or not all(
+            value is not None and math.isfinite(value) for value in values):
+        return False
+    if map_timeout_s <= 0.0 or sensor_timeout_s <= 0.0 or odom_timeout_s <= 0.0:
+        return False
+    return (
+        (allow_stale_map_for_scan or 0.0 <= now - map_at <= map_timeout_s)
+        and now >= map_at
+        and 0.0 <= now - scan_at <= sensor_timeout_s
+        and 0.0 <= now - left_at <= sensor_timeout_s
+        and 0.0 <= now - right_at <= sensor_timeout_s
+        and 0.0 <= now - odom_at <= odom_timeout_s
+    )
+
+
+def explore_scan_values_valid(values, max_angular_speed):
+    """Allow only a bounded in-place scan on the dedicated input."""
+    if len(values) != 6 or not all(math.isfinite(value) for value in values):
+        return False
+    if not math.isfinite(max_angular_speed) or max_angular_speed <= 0.0:
+        return False
+    linear_x, linear_y, linear_z, angular_x, angular_y, angular_z = values
+    return (
+        abs(linear_x) <= 1e-9
+        and abs(linear_y) <= 1e-9
+        and abs(linear_z) <= 1e-9
+        and abs(angular_x) <= 1e-9
+        and abs(angular_y) <= 1e-9
+        and abs(angular_z) <= max_angular_speed
     )
 
 
@@ -107,6 +163,19 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('status_timeout_s', 1.0)
         self.declare_parameter('command_timeout_s', 0.25)
         self.declare_parameter('require_localization', True)
+        self.declare_parameter('allow_explore_mission', False)
+        self.declare_parameter(
+            'explore_scan_command_topic', '/cmd_vel_explore_scan_raw')
+        self.declare_parameter('explore_scan_max_angular', 0.15)
+        self.declare_parameter('explore_map_topic', '/map')
+        self.declare_parameter('explore_scan_topic', '/scan_normiert')
+        self.declare_parameter(
+            'explore_vl53_left_topic', '/near_field/left/points')
+        self.declare_parameter(
+            'explore_vl53_right_topic', '/near_field/right/points')
+        self.declare_parameter('explore_map_timeout_s', 5.0)
+        self.declare_parameter('explore_sensor_timeout_s', 0.8)
+        self.declare_parameter('explore_odom_timeout_s', 0.8)
         self.declare_parameter(
             'localization_ready_topic', '/localization/ready')
         self.declare_parameter('localization_timeout_s', 1.0)
@@ -132,6 +201,10 @@ class CmdVelMissionGate(Node):
             'localization_search_odom_topic').value
         self._require_localization = bool(
             self.get_parameter('require_localization').value)
+        self._allow_explore = bool(
+            self.get_parameter('allow_explore_mission').value)
+        self._explore_scan_max_angular = float(
+            self.get_parameter('explore_scan_max_angular').value)
         self._allow_localization_search = bool(
             self.get_parameter('allow_localization_search').value)
         rate_hz = float(self.get_parameter('publish_rate_hz').value)
@@ -144,6 +217,12 @@ class CmdVelMissionGate(Node):
             self.get_parameter('command_timeout_s').value)
         self._localization_timeout = float(
             self.get_parameter('localization_timeout_s').value)
+        self._explore_map_timeout = float(
+            self.get_parameter('explore_map_timeout_s').value)
+        self._explore_sensor_timeout = float(
+            self.get_parameter('explore_sensor_timeout_s').value)
+        self._explore_odom_timeout = float(
+            self.get_parameter('explore_odom_timeout_s').value)
         self._search_max_angular = float(
             self.get_parameter('localization_search_max_angular').value)
         self._search_max_linear = float(
@@ -162,13 +241,18 @@ class CmdVelMissionGate(Node):
                 or self._search_max_linear <= 0.0
                 or self._search_max_duration <= 0.0
                 or self._search_max_distance <= 0.0
-                or self._search_odom_timeout <= 0.0):
+                or self._search_odom_timeout <= 0.0
+                or self._explore_map_timeout <= 0.0
+                or self._explore_sensor_timeout <= 0.0
+                or self._explore_odom_timeout <= 0.0
+                or self._explore_scan_max_angular <= 0.0):
             raise ValueError('Gate-Timeouts muessen > 0 sein')
 
         self._status = None
         self._status_time = 0.0
         self._command = Twist()
         self._command_time = 0.0
+        self._command_source = 'none'
         self._localization_ready = False
         self._localization_time = None
         self._ever_localized = False
@@ -179,10 +263,19 @@ class CmdVelMissionGate(Node):
         self._odom_time = None
         self._search_last_odom_xy = None
         self._search_distance = 0.0
+        self._explore_map_time = None
+        self._explore_scan_time = None
+        self._explore_left_time = None
+        self._explore_right_time = None
         self._mode = 'blocked'
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
         self.create_subscription(Twist, input_topic, self._on_command, 10)
+        self.create_subscription(
+            Twist,
+            self.get_parameter('explore_scan_command_topic').value,
+            self._on_explore_scan_command,
+            10)
         self.create_subscription(String, status_topic, self._on_status, 10)
         self.create_subscription(
             Bool, localization_topic, self._on_localization, 10)
@@ -190,11 +283,27 @@ class CmdVelMissionGate(Node):
             Twist, search_topic, self._on_search_command, 10)
         self.create_subscription(
             Odometry, search_odom_topic, self._on_odom, 20)
+        self.create_subscription(
+            OccupancyGrid, self.get_parameter('explore_map_topic').value,
+            self._on_explore_map, 1)
+        self.create_subscription(
+            LaserScan, self.get_parameter('explore_scan_topic').value,
+            self._on_explore_scan, qos_profile_sensor_data)
+        self.create_subscription(
+            PointCloud2, self.get_parameter('explore_vl53_left_topic').value,
+            self._on_explore_left, qos_profile_sensor_data)
+        self.create_subscription(
+            PointCloud2, self.get_parameter('explore_vl53_right_topic').value,
+            self._on_explore_right, qos_profile_sensor_data)
         self.create_timer(1.0 / rate_hz, self._publish)
         self.get_logger().warn(
-            'Nav2-Fahrtor aktiv: Befehle nur bei laufender go_to_room-Mission'
+            'Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission'
             + (' und belastbarer Lokalisierung.'
                if self._require_localization else '.'))
+        if self._allow_explore:
+            self.get_logger().warn(
+                'AUTOMATISCHE ERKUNDUNG im Fahrtor freigegeben; Karte, LiDAR, '
+                'Odometrie und beide VL53 muessen fortlaufend frisch bleiben.')
         if self._allow_localization_search:
             self.get_logger().warn(
                 'Lokalisierungssuche freigegeben: vorwaerts bis '
@@ -213,6 +322,24 @@ class CmdVelMissionGate(Node):
             return
         self._command = message
         self._command_time = time.monotonic()
+        self._command_source = 'nav'
+
+    def _on_explore_scan_command(self, message):
+        values = (message.linear.x, message.linear.y, message.linear.z,
+                  message.angular.x, message.angular.y, message.angular.z)
+        if not explore_scan_values_valid(
+                values, self._explore_scan_max_angular):
+            self._command = Twist()
+            self._command_time = time.monotonic()
+            self._command_source = 'explore_scan'
+            self._publisher.publish(Twist())
+            self.get_logger().error(
+                'Explore-Rundblickbefehl verworfen: nur begrenzte Drehung '
+                'auf der Stelle ist erlaubt.')
+            return
+        self._command = message
+        self._command_time = time.monotonic()
+        self._command_source = 'explore_scan'
 
     def _on_status(self, message):
         try:
@@ -225,7 +352,7 @@ class CmdVelMissionGate(Node):
             return
         self._status = status
         self._status_time = time.monotonic()
-        if not room_motion_authorized(status):
+        if not self._mission_authorized(status, time.monotonic()):
             # Nicht erst auf den naechsten Timer-Tick warten.
             if not self._search_authorized(time.monotonic()):
                 self._publisher.publish(Twist())
@@ -269,6 +396,42 @@ class CmdVelMissionGate(Node):
             if self._search_distance > self._search_max_distance:
                 self._publisher.publish(Twist())
 
+    def _on_explore_map(self, _message):
+        self._explore_map_time = time.monotonic()
+
+    def _on_explore_scan(self, _message):
+        self._explore_scan_time = time.monotonic()
+
+    def _on_explore_left(self, _message):
+        self._explore_left_time = time.monotonic()
+
+    def _on_explore_right(self, _message):
+        self._explore_right_time = time.monotonic()
+
+    def _explore_health_authorized(self, now):
+        return explore_health_authorized(
+            self._allow_explore,
+            self._explore_map_time,
+            self._explore_scan_time,
+            self._explore_left_time,
+            self._explore_right_time,
+            self._odom_time,
+            now,
+            self._explore_map_timeout,
+            self._explore_sensor_timeout,
+            self._explore_odom_timeout,
+            allow_stale_map_for_scan=(
+                self._command_source == 'explore_scan'))
+
+    def _mission_authorized(self, status, now):
+        return (
+            room_motion_authorized(status)
+            or (
+                explore_motion_authorized(status, self._allow_explore)
+                and self._explore_health_authorized(now)
+            )
+        )
+
     def _on_localization(self, message):
         was_ready = self._localization_ready
         self._localization_ready = message.data is True
@@ -301,7 +464,7 @@ class CmdVelMissionGate(Node):
     def _publish(self):
         now = time.monotonic()
         mission_authorized = (
-            room_motion_authorized(self._status)
+            self._mission_authorized(self._status, now)
             and now - self._status_time <= self._status_timeout
             and localization_motion_authorized(
                 self._require_localization,

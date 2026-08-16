@@ -80,6 +80,7 @@ class MissionManager(Node):
         self.declare_parameter('offboard_topic', '/offboard/available')
         # K1: welche Auftragstypen ECHT ueber den Behavior-Tree laufen.
         self.declare_parameter('real_mission_types', ['pick_and_place', 'explore'])
+        self.declare_parameter('enable_real_explore', False)
         self.declare_parameter('run_mission_action', '/run_mission')
         # Reale Raumfahrt ist ein separater, standardmaessig AUSgeschalteter
         # Nav2-Pfad. Sie kann nicht versehentlich ueber real_mission_types
@@ -121,12 +122,20 @@ class MissionManager(Node):
                 'semantic_map_status_stale_timeout_s muss endlich und > 0 sein')
         self.offboard_topic = self.get_parameter('offboard_topic').value
         configured_real_types = set(self.get_parameter('real_mission_types').value)
-        self.real_types = effective_real_types(configured_real_types)
+        self.enable_real_explore = bool(
+            self.get_parameter('enable_real_explore').value)
+        self.real_types = effective_real_types(
+            configured_real_types,
+            enable_real_explore=self.enable_real_explore)
         # Sicherheitsbarriere: Ein Konfigurationsfehler darf die vorbereitende
         # go_to_room-Simulation niemals in den Action-/Nav2-Pfad heben.
         if 'go_to_room' in configured_real_types:
             self.get_logger().error(
                 "'go_to_room' aus real_mission_types entfernt: reale Fahrt ist nicht freigegeben.")
+        if 'explore' in configured_real_types and not self.enable_real_explore:
+            self.get_logger().warn(
+                "'explore' bleibt Simulation: automatische Fahrt braucht "
+                "enable_real_explore=true und das getrennte Fahrtor-Opt-in.")
         self.run_mission_action = self.get_parameter('run_mission_action').value
         self.enable_real_go_to_room = bool(
             self.get_parameter('enable_real_go_to_room').value)
@@ -256,6 +265,10 @@ class MissionManager(Node):
                 + ('Eine frische Lokalisierungsfreigabe ist Pflicht.'
                    if self.require_localization_for_real_go_to_room
                    else 'Lokalisierungsfreigabe ist AUSGESCHALTET.'))
+        if self.enable_real_explore:
+            self.get_logger().warn(
+                'REALE AUTOMATISCHE ERKUNDUNG AKTIV: Explore-Auftraege '
+                'werden an den Behavior-Tree weitergegeben.')
 
     # ======================= Eingang / Validierung =======================
     def _on_command(self, msg: String):
@@ -1098,6 +1111,10 @@ class MissionManager(Node):
                 if self.resolved_room_goal is not None else None),
             'go_to_room_execution': go_to_room_execution_status(
                 self.enable_real_go_to_room),
+            'explore_execution': (
+                'bt_explicit_opt_in'
+                if self.enable_real_explore
+                else 'simulation_only_no_navigation'),
             'time': time.time(),
         }
         self.status_pub.publish(String(data=json.dumps(payload, ensure_ascii=False)))

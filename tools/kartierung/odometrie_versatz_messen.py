@@ -41,8 +41,9 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 from sensor_msgs.msg import LaserScan
 
-# Der LiDAR-Nullpunkt zeigt nach rechts, vorwaerts liegt bei 90 Grad.
-VORWAERTS_GRAD = 90.0
+# Im ROS-konformen CCW-Scan liegt physisch vorwaerts in laser_frame bei
+# 270 Grad. Der statische +90-Grad-TF bildet diesen Strahl auf base_link +X ab.
+VORWAERTS_GRAD = 270.0
 SEKTOR_GRAD = 10.0
 
 

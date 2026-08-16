@@ -38,6 +38,11 @@ mission_manager:
     real_mission_types: ["pick_and_place", "explore"]
     run_mission_action: "/run_mission"
 
+    # Automatische Erkundung ist trotz Eintrag oben standardmaessig nur
+    # Simulation. Der echte BT-/Nav2-Pfad braucht einen separaten Launch-
+    # Opt-in und ein unabhaengig freigegebenes cmd_vel-Fahrtor.
+    enable_real_explore: false
+
     # Reale Raumfahrt bleibt standardmaessig AUS und kann nicht ueber
     # real_mission_types aktiviert werden. Nur fuer einen beaufsichtigten,
     # zuvor motorlos bestandenen Nav2-Lauf per Launch-Argument einschalten.

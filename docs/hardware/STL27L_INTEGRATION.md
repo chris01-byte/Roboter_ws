@@ -20,7 +20,7 @@ zuständig.
 
 ## 2. Sicherheitsgrenzen — vor dem ersten Betrieb lesen
 
-**Der STL-27L auf ~80 cm Höhe ist kein Kollisionssensor.** Alles unterhalb
+**Der STL-27L auf ~75 cm Höhe ist kein Kollisionssensor.** Alles unterhalb
 seiner Scanebene ist für ihn unsichtbar: Tischplatten auf 72–76 cm, Kisten,
 Hocker, Betten, Schwellen. Bodennaher Schutz muss weiterhin über OAK-Tiefe und
 die VL53-Sensoren kommen.
@@ -45,18 +45,15 @@ von Navigation. Der rotierende Sensorkopf wird nicht berührt oder blockiert.
 |---|---|
 | Herstellertreiber | gebaut in `~/amadeus_lidar_ws`, Commit gepinnt, **unverändert** |
 | Bringup-Paket | `src/amadeus_lidar_bringup/` — baut, Launch löst auf |
-| Sensorparameter | `config/stl27l.yaml` |
+| Sensorparameter | `config/stl27l.yaml`; ROS-CCW-Ausgabe (`laser_scan_dir: true`) |
 | udev-Beispielregel | `config/udev/99-amadeus-stl27l.rules.example` |
 | `slam_toolbox`, `rviz2` | bereits auf dem Jetson installiert |
 
-**Namensraum ist frei:** Weder `/scan` noch `laser_frame` werden bisher von
-etwas anderem belegt. TF-Besitzer bleiben unverändert: `base_hardware` sendet
-`odom→base_link`, RTAB-Map `map→odom`.
-
-**Bewusst noch nicht gesetzt:** Die Montagepose. Ohne gemessene Werte
-publiziert die Launch-Datei **keinen** `base_link→laser_frame`. Ein falscher
-TF ist schlimmer als gar keiner — er verschiebt jede Messung im Raum, und der
-Fehler fällt erst in der fertigen Karte auf.
+**Aktueller, real verifizierter Montagevertrag:** Die Launch-Datei publiziert
+`base_link→laser_frame` mit x = 0,245 m, y = 0,000 m, z = 0,660 m und
+yaw = +1,5708 rad. Zusammen mit `laser_scan_dir: true` stimmen Karten- und
+Odometrie-Drehrichtung ueberein. `base_hardware` sendet `odom→base_link`,
+`slam_toolbox` waehrend der LiDAR-Kartierung `map→odom`.
 
 ---
 
@@ -111,9 +108,12 @@ ros2 topic hz /scan          # 9–11 Hz
 ros2 topic echo /scan --once # frame_id = laser_frame, Werte 0,03–25 m
 ```
 
-In RViz: Fixed Frame **`laser_frame`** (nicht `base_link` — es gibt noch keinen
-TF). Wand auf 1 m muss auf +X erscheinen, Karton links darf nicht rechts
-auftauchen.
+In RViz bei Fixed Frame **`laser_frame`** liegt die physische Roboterfront der
+aktuellen Montage bei 270 Grad. Mit Fixed Frame **`base_link`** muss dieselbe
+Wand auf +X erscheinen; ein Karton links darf nicht rechts auftauchen. Der
+isolierte Test vom 16.08.2026 bestaetigte vorne/links/rechts sowie den
+Mastbogen bei 56,0 bis 123,9 Grad im Sensorframe (Zentrum 90 Grad, im
+Basisframe hinten).
 
 ### Phase 2 — Vermessen
 
@@ -125,7 +125,8 @@ eigenen Rumpfs identifizieren, Grenzen des offenen Sichtfelds bestimmen, je
 **Montagepose** (Abschnitt 5.6): von `base_link` bis zur optischen Mitte, nach
 REP-103. Zur Orientierung: `base_link` liegt bei Amadeus **0,09 m über dem
 Boden**, ein optisches Zentrum auf 80 cm Bodenhöhe ergäbe also z ≈ 0,71 m —
-**dieser Wert ist zu messen, nicht zu übernehmen.**
+**dieser Wert ist zu messen, nicht zu übernehmen.** Am aktuellen Roboter sind
+die oben genannten Werte gemessen und real gegen die Drehrichtung verifiziert.
 
 Danach:
 
@@ -222,7 +223,7 @@ Er beeinflusst den bestehenden Betrieb nicht, solange er nicht gesourct wird.
 | Dreht, aber keine Daten | falscher Port; Baudrate ≠ 921600; anderer Prozess hält den Port (`lsof`) |
 | `Permission denied` | nicht in `dialout`; nach `usermod` neu anmelden |
 | USB-Resets mit OAK zusammen | `lsusb -t` prüfen, LiDAR und OAK auf getrennte Root-Hubs, aktiv versorgter Hub |
-| Scan gespiegelt | **nur eine** Größe ändern: entweder `laser_scan_dir` oder Montage-Yaw, nie beides |
+| Scan gespiegelt | Treiberrichtung und Montage-Yaw als gekoppelten Vertrag pruefen; aktuelles verifiziertes Paar: `laser_scan_dir: true` und `tf_yaw: +1.5708`. Nie nur einen Wert aendern |
 | Karte verzogen | erst Montage, TF, Raddaten, Zeitstempel prüfen — nicht den Sensor tauschen |
 
 **Projektspezifisch:** Am Jetson hängt bereits ein FTDI auf `/dev/ttyUSB0`

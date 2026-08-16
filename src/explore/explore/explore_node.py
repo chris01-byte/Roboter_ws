@@ -27,8 +27,8 @@
 #
 #  ALLE PARAMETER -> config/explore_params.yaml (nur dort aendern!).
 #
-#  HINWEIS: Wie die uebrigen Pakete ist dieser Node noch NICHT in einer
-#  ROS-Umgebung kompiliert/getestet worden. API-Stand: ROS 2 Humble.
+#  ABNAHME: Unter ROS 2 Humble motorlos getestet und am 16.08.2026 real mit
+#  einem 360-Grad-Rundblick sowie vier Frontier-Zielen gefahren.
 # ============================================================================
 
 import math
@@ -45,14 +45,48 @@ from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalRespons
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
-from nav_msgs.msg import OccupancyGrid
-from geometry_msgs.msg import PoseStamped, Point
+from nav_msgs.msg import OccupancyGrid, Odometry
+from geometry_msgs.msg import PoseStamped, Point, Twist
 from visualization_msgs.msg import Marker, MarkerArray
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action import NavigateToPose
 from robot_interfaces.action import ExploreArea
 
 import tf2_ros
+
+
+def normalize_angle(angle: float) -> float:
+    """Normalize an angle to [-pi, pi)."""
+    return (angle + math.pi) % (2.0 * math.pi) - math.pi
+
+
+def quaternion_yaw(q) -> float:
+    """Return planar yaw for a geometry_msgs compatible quaternion."""
+    return math.atan2(
+        2.0 * (q.w * q.z + q.x * q.y),
+        1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+
+class RotationProgress:
+    """Accumulate a full rotation across the +/-pi wraparound."""
+
+    def __init__(self, initial_yaw: float, direction: float = 1.0):
+        if direction not in (-1.0, 1.0):
+            raise ValueError('Drehrichtung muss -1 oder +1 sein')
+        self.previous_yaw = initial_yaw
+        self.direction = direction
+        self.progress = 0.0
+        self.reverse_progress = 0.0
+
+    def update(self, yaw: float) -> float:
+        directed_step = self.direction * normalize_angle(
+            yaw - self.previous_yaw)
+        self.previous_yaw = yaw
+        if directed_step >= 0.0:
+            self.progress += directed_step
+        else:
+            self.reverse_progress -= directed_step
+        return directed_step
 
 
 class Frontier:
@@ -62,6 +96,8 @@ class Frontier:
         self.cy = centroid_world[1]      # Schwerpunkt Y in Weltkoordinaten [m]
         self.size = size_cells           # Anzahl Frontier-Zellen (Nutzen-Mass)
         self.cost = 0.0                  # berechnete Gesamtkosten (kleiner = besser)
+        self.goal_x: Optional[float] = None
+        self.goal_y: Optional[float] = None
 
 
 class ExploreNode(Node):
@@ -81,18 +117,121 @@ class ExploreNode(Node):
         self._overall_timeout_s = float(self.declare_parameter('overall_timeout_s', 0.0).value)
         self._potential_scale   = float(self.declare_parameter('potential_scale', 3.0).value)
         self._gain_scale        = float(self.declare_parameter('gain_scale', 1.0).value)
+        self._heading_scale     = float(self.declare_parameter('heading_scale', 0.75).value)
         self._min_goal_dist_m   = float(self.declare_parameter('min_goal_distance_m', 0.30).value)
         self._blacklist_radius  = float(self.declare_parameter('blacklist_radius_m', 0.35).value)
+        self._approach_dist_m   = float(self.declare_parameter('frontier_approach_distance_m', 0.45).value)
+        self._goal_clearance_m  = float(self.declare_parameter('goal_clearance_m', 0.35).value)
+        self._goal_search_m     = float(self.declare_parameter('goal_search_radius_m', 0.30).value)
+        self._map_timeout_s     = float(self.declare_parameter('map_timeout_s', 5.0).value)
+        self._cancel_timeout_s  = float(self.declare_parameter('nav_cancel_timeout_s', 3.0).value)
+        self._max_failed_goals  = int(self.declare_parameter('max_failed_goals', 6).value)
+        self._behavior_tree     = str(self.declare_parameter('behavior_tree', '').value).strip()
         self._return_to_start_p = bool(self.declare_parameter('return_to_start', False).value)
         self._visualize         = bool(self.declare_parameter('visualize', True).value)
         self._marker_topic      = self.declare_parameter('marker_topic', '/explore/frontiers').value
+        self._odom_topic        = self.declare_parameter('odom_topic', '/odom').value
+        self._scan_cmd_topic    = self.declare_parameter(
+            'scan_command_topic', '/cmd_vel_explore_scan_raw').value
+        self._initial_scan_enabled = bool(self.declare_parameter(
+            'initial_scan_enabled', True).value)
+        self._initial_scan_angle = float(self.declare_parameter(
+            'initial_scan_angle_rad', 2.0 * math.pi).value)
+        self._initial_scan_speed = float(self.declare_parameter(
+            'initial_scan_angular_speed_radps', 0.12).value)
+        self._initial_scan_timeout = float(self.declare_parameter(
+            'initial_scan_timeout_s', 210.0).value)
+        self._scan_odom_timeout = float(self.declare_parameter(
+            'scan_odom_timeout_s', 0.8).value)
+        self._scan_no_progress_timeout = float(self.declare_parameter(
+            'scan_no_progress_timeout_s', 8.0).value)
+        self._scan_progress_window = float(self.declare_parameter(
+            'scan_progress_window_rad', 0.03).value)
+        self._scan_rate_check_after = float(self.declare_parameter(
+            'scan_rate_check_after_s', 15.0).value)
+        self._scan_min_average_rate = float(self.declare_parameter(
+            'scan_min_average_rate_radps', 0.01).value)
+        self._scan_reverse_limit = float(self.declare_parameter(
+            'scan_reverse_limit_rad', 0.08).value)
+        self._scan_stop_timeout = float(self.declare_parameter(
+            'scan_stop_timeout_s', 4.0).value)
+        self._scan_stop_tolerance = float(self.declare_parameter(
+            'scan_stop_angular_tolerance_radps', 0.02).value)
+        self._scan_command_rate = float(self.declare_parameter(
+            'scan_command_rate_hz', 20.0).value)
+        self._prealign_enabled = bool(self.declare_parameter(
+            'prealign_enabled', True).value)
+        self._prealign_handoff_tolerance = float(self.declare_parameter(
+            'prealign_handoff_tolerance_rad', 0.17).value)
+        self._prealign_stop_margin = float(self.declare_parameter(
+            'prealign_stop_margin_rad', 0.10).value)
+        self._prealign_speed = float(self.declare_parameter(
+            'prealign_angular_speed_radps', 0.12).value)
+        self._prealign_timeout = float(self.declare_parameter(
+            'prealign_timeout_s', 180.0).value)
+        self._prealign_rate_check_after = float(self.declare_parameter(
+            'prealign_rate_check_after_s', 15.0).value)
+        self._prealign_min_average_rate = float(self.declare_parameter(
+            'prealign_min_average_rate_radps', 0.01).value)
+        self._prealign_settle_s = float(self.declare_parameter(
+            'prealign_map_settle_s', 1.0).value)
+        self._prealign_max_passes = int(self.declare_parameter(
+            'prealign_max_passes', 3).value)
+        self._prealign_min_improvement = float(self.declare_parameter(
+            'prealign_min_improvement_rad', 0.04).value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
         # -------------------------------------------------------------------
         self._map: Optional[OccupancyGrid] = None
+        self._map_received_at: Optional[float] = None
         self._blacklist: List[Tuple[float, float]] = []   # gescheiterte Ziele (Weltkoord.)
         self._start_xy: Optional[Tuple[float, float]] = None
+        self._active_goal = False
+        self._active_goal_lock = threading.Lock()
+        self._odom_lock = threading.Lock()
+        self._odom_yaw: Optional[float] = None
+        self._odom_angular_speed: Optional[float] = None
+        self._odom_received_at: Optional[float] = None
+
+        if (
+                self._approach_dist_m <= 0.0
+                or self._goal_clearance_m <= 0.0
+                or self._goal_search_m < 0.0
+                or self._map_timeout_s <= 0.0
+                or self._cancel_timeout_s <= 0.0
+                or self._max_failed_goals <= 0
+                or self._heading_scale < 0.0
+                or self._initial_scan_angle <= 0.0
+                or not 0.0 < self._initial_scan_speed <= 0.15
+                or self._initial_scan_timeout <= 0.0
+                or self._scan_odom_timeout <= 0.0
+                or self._scan_no_progress_timeout <= 0.0
+                or self._scan_progress_window <= 0.0
+                or self._scan_rate_check_after <= 0.0
+                or self._scan_min_average_rate <= 0.0
+                or self._scan_reverse_limit <= 0.0
+                or self._scan_stop_timeout <= 0.0
+                or self._scan_stop_tolerance <= 0.0
+                or self._scan_command_rate <= 0.0
+                or self._prealign_handoff_tolerance <= 0.0
+                or self._prealign_stop_margin <= 0.0
+                or self._prealign_stop_margin
+                >= self._prealign_handoff_tolerance
+                or not 0.0 < self._prealign_speed <= 0.15
+                or self._prealign_timeout <= 0.0
+                or self._prealign_rate_check_after <= 0.0
+                or self._prealign_min_average_rate <= 0.0
+                or self._prealign_settle_s < 0.0
+                or self._prealign_max_passes <= 0
+                or self._prealign_min_improvement <= 0.0
+                or self._prealign_min_improvement
+                >= self._prealign_handoff_tolerance):
+            raise ValueError('Explorer-Sicherheitsgrenzen muessen positiv sein')
+        if not self._behavior_tree:
+            raise ValueError(
+                'behavior_tree ist Pflicht; autonome Navigation ohne '
+                'expliziten Recovery-freien Baum ist gesperrt')
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -107,6 +246,11 @@ class ExploreNode(Node):
 
         self.create_subscription(
             OccupancyGrid, self._map_topic, self._on_map, 1, callback_group=self._cb)
+        self.create_subscription(
+            Odometry, self._odom_topic, self._on_odom, 20,
+            callback_group=self._cb)
+        self._scan_cmd_pub = self.create_publisher(
+            Twist, self._scan_cmd_topic, 10)
 
         self._nav_client = ActionClient(
             self, NavigateToPose, self._nav_action_name, callback_group=self._cb)
@@ -128,18 +272,53 @@ class ExploreNode(Node):
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
         self._map = msg
+        self._map_received_at = time.monotonic()
+
+    def _on_odom(self, msg: Odometry):
+        q = msg.pose.pose.orientation
+        values = (
+            q.x, q.y, q.z, q.w,
+            msg.twist.twist.angular.z,
+        )
+        if not all(math.isfinite(value) for value in values):
+            with self._odom_lock:
+                self._odom_yaw = None
+                self._odom_angular_speed = None
+                self._odom_received_at = None
+            self._scan_cmd_pub.publish(Twist())
+            return
+        with self._odom_lock:
+            self._odom_yaw = quaternion_yaw(q)
+            self._odom_angular_speed = msg.twist.twist.angular.z
+            self._odom_received_at = time.monotonic()
+
+    def _odom_snapshot(self):
+        with self._odom_lock:
+            return (
+                self._odom_yaw,
+                self._odom_angular_speed,
+                self._odom_received_at,
+            )
 
     # ======================= Roboterpose via TF =========================
-    def _robot_xy(self) -> Optional[Tuple[float, float]]:
+    def _robot_pose(self) -> Optional[Tuple[float, float, float]]:
         try:
             t = self._tf_buffer.lookup_transform(
                 self._global_frame, self._robot_base_frame, rclpy.time.Time())
-            return (t.transform.translation.x, t.transform.translation.y)
+            return (
+                t.transform.translation.x,
+                t.transform.translation.y,
+                quaternion_yaw(t.transform.rotation),
+            )
         except Exception as exc:  # TransformException u.a.
             self.get_logger().warn(
                 f"TF {self._global_frame}->{self._robot_base_frame} fehlt: {exc}",
                 throttle_duration_sec=5.0)
             return None
+
+    def _robot_xy(self) -> Optional[Tuple[float, float]]:
+        pose = self._robot_pose()
+        return None if pose is None else pose[:2]
 
     # ======================= Frontier-Erkennung =========================
     def _detect_frontiers(self, grid: OccupancyGrid, min_frontier_m: float) -> List[Frontier]:
@@ -199,18 +378,87 @@ class ExploreNode(Node):
 
     @staticmethod
     def _grid_to_world(col: float, row: float, info) -> Tuple[float, float]:
-        # Annahme: Karten-Origin ohne Rotation (bei 2D-SLAM-Karten ueblich yaw=0).
-        wx = info.origin.position.x + (col + 0.5) * info.resolution
-        wy = info.origin.position.y + (row + 0.5) * info.resolution
+        q = info.origin.orientation
+        yaw = math.atan2(
+            2.0 * (q.w * q.z + q.x * q.y),
+            1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        lx = (col + 0.5) * info.resolution
+        ly = (row + 0.5) * info.resolution
+        c, s = math.cos(yaw), math.sin(yaw)
+        wx = info.origin.position.x + c * lx - s * ly
+        wy = info.origin.position.y + s * lx + c * ly
         return wx, wy
 
+    @staticmethod
+    def _world_to_grid(x: float, y: float, info) -> Tuple[int, int]:
+        q = info.origin.orientation
+        yaw = math.atan2(
+            2.0 * (q.w * q.z + q.x * q.y),
+            1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+        dx = x - info.origin.position.x
+        dy = y - info.origin.position.y
+        c, s = math.cos(yaw), math.sin(yaw)
+        lx = c * dx + s * dy
+        ly = -s * dx + c * dy
+        return int(math.floor(lx / info.resolution)), int(math.floor(ly / info.resolution))
+
+    def _frontier_approach_goal(
+            self, frontier: Frontier, robot_xy: Tuple[float, float],
+            grid: OccupancyGrid) -> Optional[Tuple[float, float]]:
+        """Pick a known-free goal safely inside the frontier boundary."""
+        dx = robot_xy[0] - frontier.cx
+        dy = robot_xy[1] - frontier.cy
+        norm = math.hypot(dx, dy)
+        if norm <= 1e-9:
+            return None
+        desired_x = frontier.cx + self._approach_dist_m * dx / norm
+        desired_y = frontier.cy + self._approach_dist_m * dy / norm
+        info = grid.info
+        data = np.asarray(grid.data, dtype=np.int16).reshape(
+            (info.height, info.width))
+        center_col, center_row = self._world_to_grid(desired_x, desired_y, info)
+        search_cells = int(math.ceil(self._goal_search_m / info.resolution))
+        clearance_cells = int(math.ceil(
+            self._goal_clearance_m / info.resolution))
+        choices = []
+        for row in range(center_row - search_cells, center_row + search_cells + 1):
+            for col in range(center_col - search_cells, center_col + search_cells + 1):
+                if not (0 <= row < info.height and 0 <= col < info.width):
+                    continue
+                if data[row, col] != 0:
+                    continue
+                r0 = max(0, row - clearance_cells)
+                r1 = min(info.height, row + clearance_cells + 1)
+                c0 = max(0, col - clearance_cells)
+                c1 = min(info.width, col + clearance_cells + 1)
+                patch = data[r0:r1, c0:c1]
+                if patch.shape != (
+                        2 * clearance_cells + 1,
+                        2 * clearance_cells + 1):
+                    continue
+                if np.any(patch < 0) or np.any(patch >= 50):
+                    continue
+                wx, wy = self._grid_to_world(col, row, info)
+                choices.append((math.hypot(wx - desired_x, wy - desired_y), wx, wy))
+        if not choices:
+            return None
+        _, goal_x, goal_y = min(choices)
+        return goal_x, goal_y
+
     # ======================= Bewertung / Auswahl ========================
-    def _rank_frontiers(self, frontiers: List[Frontier], robot_xy: Tuple[float, float],
-                        res: float) -> List[Frontier]:
+    def _rank_frontiers(
+            self, frontiers: List[Frontier], robot_xy: Tuple[float, float],
+            grid: OccupancyGrid, robot_yaw: Optional[float] = None
+            ) -> List[Frontier]:
         rx, ry = robot_xy
+        res = grid.info.resolution
         candidates: List[Frontier] = []
         for f in frontiers:
-            dist = math.hypot(f.cx - rx, f.cy - ry)
+            approach = self._frontier_approach_goal(f, robot_xy, grid)
+            if approach is None:
+                continue
+            f.goal_x, f.goal_y = approach
+            dist = math.hypot(f.goal_x - rx, f.goal_y - ry)
             if dist < self._min_goal_dist_m:
                 continue   # zu nah (quasi schon erreicht)
             if self._is_blacklisted(f.cx, f.cy):
@@ -219,6 +467,10 @@ class ExploreNode(Node):
             #   naeher  -> guenstiger (potential_scale * Distanz)
             #   groesser-> attraktiver (gain_scale * Frontier-Ausdehnung)
             f.cost = self._potential_scale * dist - self._gain_scale * (f.size * res)
+            if robot_yaw is not None:
+                goal_heading = math.atan2(f.goal_y - ry, f.goal_x - rx)
+                f.cost += self._heading_scale * abs(normalize_angle(
+                    goal_heading - robot_yaw))
             candidates.append(f)
         candidates.sort(key=lambda fr: fr.cost)   # kleinste Kosten zuerst
         return candidates
@@ -236,7 +488,9 @@ class ExploreNode(Node):
         return 100.0 * known / max(1, data.size)
 
     # ======================= Nav2 anfahren ==============================
-    def _navigate_to(self, x: float, y: float, timeout_s: float) -> str:
+    def _navigate_to(
+            self, x: float, y: float, timeout_s: float,
+            stop_requested=lambda: False) -> str:
         """Sendet EIN Fahrziel an Nav2 und wartet (blockierend) auf das Ergebnis.
 
         Rueckgabe: 'success' | 'aborted' | 'rejected' | 'timeout'
@@ -257,6 +511,7 @@ class ExploreNode(Node):
 
         goal = NavigateToPose.Goal()
         goal.pose = ps
+        goal.behavior_tree = self._behavior_tree
 
         done = threading.Event()
         holder = {'status': None, 'handle': None}
@@ -269,7 +524,12 @@ class ExploreNode(Node):
             done.set()
 
         def _on_goal(fut):
-            gh = fut.result()
+            try:
+                gh = fut.result()
+            except Exception:
+                holder['status'] = 'error'
+                done.set()
+                return
             if not gh.accepted:
                 holder['status'] = 'rejected'
                 done.set()
@@ -279,125 +539,624 @@ class ExploreNode(Node):
 
         self._nav_client.send_goal_async(goal).add_done_callback(_on_goal)
 
-        waited = done.wait(timeout=timeout_s if timeout_s > 0 else None)
-        if not waited:
-            if holder['handle'] is not None:
-                holder['handle'].cancel_goal_async()   # Nav-Ziel abbrechen
-            return 'timeout'
+        started = time.monotonic()
+        stop_reason = None
+        stop_reason_started = None
+        cancel_started = None
+        while rclpy.ok() and not done.wait(timeout=0.05):
+            now = time.monotonic()
+            if stop_reason is None and stop_requested():
+                stop_reason = 'canceled'
+                stop_reason_started = now
+            if (
+                    stop_reason is None and timeout_s > 0.0
+                and now - started >= timeout_s):
+                stop_reason = 'timeout'
+                stop_reason_started = now
+            if (
+                    stop_reason is not None and holder['handle'] is None
+                    and now - stop_reason_started >= self._cancel_timeout_s):
+                return 'cancel_failed'
+            if stop_reason is not None and holder['handle'] is not None:
+                if cancel_started is None:
+                    holder['handle'].cancel_goal_async()
+                    cancel_started = now
+                elif now - cancel_started >= self._cancel_timeout_s:
+                    return 'cancel_failed'
+
+        if not done.is_set():
+            return 'cancel_failed' if stop_reason is not None else 'aborted'
+        if stop_reason is not None:
+            return stop_reason
         if holder['status'] == GoalStatus.STATUS_SUCCEEDED:
             return 'success'
+        if holder['status'] == GoalStatus.STATUS_CANCELED:
+            return 'canceled'
         if holder['status'] == 'rejected':
             return 'rejected'
         return 'aborted'
 
+    # ======================= Initialer LiDAR-Rundblick =================
+    def _publish_scan_stop(self):
+        self._scan_cmd_pub.publish(Twist())
+
+    def _stop_scan_and_confirm(self) -> str:
+        """Command zero until encoder odometry confirms a stable stop."""
+        deadline = time.monotonic() + self._scan_stop_timeout
+        stable_since = None
+        period = 1.0 / self._scan_command_rate
+        while rclpy.ok() and time.monotonic() < deadline:
+            self._publish_scan_stop()
+            yaw, angular_speed, received_at = self._odom_snapshot()
+            now = time.monotonic()
+            if (
+                    yaw is None or angular_speed is None or received_at is None
+                    or not 0.0 <= now - received_at <= self._scan_odom_timeout):
+                stable_since = None
+            elif abs(angular_speed) <= self._scan_stop_tolerance:
+                if stable_since is None:
+                    stable_since = now
+                elif now - stable_since >= 0.5:
+                    return 'success'
+            else:
+                stable_since = None
+            time.sleep(period)
+        self._publish_scan_stop()
+        return 'stop_unconfirmed'
+
+    def _rotate_in_place(
+            self, angle_rad: float, speed_radps: float, timeout_s: float,
+            stop_requested=lambda: False, *,
+            rate_check_after_s: Optional[float] = None,
+            min_average_rate_radps: Optional[float] = None,
+            ) -> Tuple[str, float]:
+        """Rotate by a signed odometry angle with one constant setpoint."""
+        target_angle = abs(angle_rad)
+        if target_angle <= 1e-9:
+            return 'success', 0.0
+        rate_check_after = (
+            self._scan_rate_check_after
+            if rate_check_after_s is None else rate_check_after_s)
+        min_average_rate = (
+            self._scan_min_average_rate
+            if min_average_rate_radps is None else min_average_rate_radps)
+        direction = 1.0 if angle_rad > 0.0 else -1.0
+        started = time.monotonic()
+        period = 1.0 / self._scan_command_rate
+        accumulator = None
+        progress_checkpoint = 0.0
+        progress_checkpoint_at = started
+        status = 'aborted'
+
+        try:
+            while rclpy.ok():
+                now = time.monotonic()
+                if stop_requested():
+                    status = 'interrupted'
+                    break
+                if now - started >= timeout_s:
+                    status = 'timeout'
+                    break
+
+                yaw, _angular_speed, received_at = self._odom_snapshot()
+                if (
+                        yaw is None or received_at is None
+                        or not 0.0 <= now - received_at <= self._scan_odom_timeout):
+                    if now - started >= self._scan_odom_timeout:
+                        status = 'odom_stale'
+                        break
+                    self._publish_scan_stop()
+                    time.sleep(period)
+                    continue
+
+                if accumulator is None:
+                    accumulator = RotationProgress(yaw, direction=direction)
+                    progress_checkpoint_at = now
+                else:
+                    accumulator.update(yaw)
+
+                if accumulator.reverse_progress > self._scan_reverse_limit:
+                    status = 'wrong_direction'
+                    break
+                if (
+                        accumulator.progress - progress_checkpoint
+                        >= self._scan_progress_window):
+                    progress_checkpoint = accumulator.progress
+                    progress_checkpoint_at = now
+                elif now - progress_checkpoint_at >= self._scan_no_progress_timeout:
+                    status = 'no_progress'
+                    break
+                if (
+                        now - started >= rate_check_after
+                        and accumulator.progress / (now - started)
+                        < min_average_rate):
+                    status = 'too_slow'
+                    break
+                if accumulator.progress >= target_angle:
+                    status = 'success'
+                    break
+
+                command = Twist()
+                command.angular.z = direction * speed_radps
+                self._scan_cmd_pub.publish(command)
+                time.sleep(period)
+        finally:
+            self._publish_scan_stop()
+
+        achieved = 0.0 if accumulator is None else accumulator.progress
+        stop_status = self._stop_scan_and_confirm()
+        if stop_status != 'success':
+            return stop_status, achieved
+        return status, achieved
+
+    def _scan_in_place(self, stop_requested=lambda: False) -> Tuple[str, float]:
+        """Perform one odometry-measured, bounded, counter-clockwise scan."""
+        return self._rotate_in_place(
+            self._initial_scan_angle,
+            self._initial_scan_speed,
+            self._initial_scan_timeout,
+            stop_requested=stop_requested)
+
+    def _prealign_to_goal(
+            self, goal_x: float, goal_y: float,
+            robot_pose: Tuple[float, float, float],
+            stop_requested=lambda: False
+            ) -> Tuple[str, float, float, float]:
+        """Align in map, measuring each physical turn in odom.
+
+        A large LiDAR turn may update ``map->odom``. Therefore an odometry-only
+        success is not sufficient for handing the goal to Nav2: after every
+        stopped turn the residual is measured again in the map frame. A
+        non-improving correction fails closed instead of letting Nav2 hunt in
+        yaw with the slow hardware ramp.
+        """
+        desired_heading = math.atan2(
+            goal_y - robot_pose[1], goal_x - robot_pose[0])
+        initial_error = normalize_angle(desired_heading - robot_pose[2])
+        if not self._prealign_enabled:
+            return 'skipped', 0.0, initial_error, initial_error
+
+        current_error = initial_error
+        total_achieved = 0.0
+        for pass_number in range(1, self._prealign_max_passes + 1):
+            if abs(current_error) <= self._prealign_handoff_tolerance:
+                status = 'skipped' if pass_number == 1 else 'success'
+                return status, total_achieved, initial_error, current_error
+
+            commanded_angle = math.copysign(
+                abs(current_error) - self._prealign_stop_margin,
+                current_error)
+            status, achieved = self._rotate_in_place(
+                commanded_angle,
+                self._prealign_speed,
+                self._prealign_timeout,
+                stop_requested=stop_requested,
+                rate_check_after_s=self._prealign_rate_check_after,
+                min_average_rate_radps=self._prealign_min_average_rate)
+            total_achieved += achieved
+            if status != 'success':
+                return status, total_achieved, initial_error, current_error
+
+            settle_deadline = time.monotonic() + self._prealign_settle_s
+            while time.monotonic() < settle_deadline:
+                if stop_requested():
+                    return (
+                        'interrupted', total_achieved,
+                        initial_error, current_error)
+                time.sleep(min(0.05, settle_deadline - time.monotonic()))
+
+            measured_pose = self._robot_pose()
+            if measured_pose is None:
+                return (
+                    'map_pose_missing', total_achieved,
+                    initial_error, current_error)
+            desired_heading = math.atan2(
+                goal_y - measured_pose[1], goal_x - measured_pose[0])
+            measured_error = normalize_angle(
+                desired_heading - measured_pose[2])
+            improvement = abs(current_error) - abs(measured_error)
+            self.get_logger().info(
+                f'Karten-Ausrichtung Durchgang {pass_number}/'
+                f'{self._prealign_max_passes}: Restfehler '
+                f'{math.degrees(measured_error):+.1f} Grad, Verbesserung '
+                f'{math.degrees(improvement):.1f} Grad.')
+
+            if abs(measured_error) <= self._prealign_handoff_tolerance:
+                return (
+                    'success', total_achieved,
+                    initial_error, measured_error)
+            if improvement < self._prealign_min_improvement:
+                return (
+                    'map_no_improvement', total_achieved,
+                    initial_error, measured_error)
+            current_error = measured_error
+
+        return (
+            'map_alignment_failed', total_achieved,
+            initial_error, current_error)
+
     # ======================= Action-Server ==============================
     def _goal_cb(self, goal_request) -> GoalResponse:
+        with self._active_goal_lock:
+            if self._active_goal:
+                self.get_logger().warn(
+                    'Explorationsziel abgelehnt: bereits eine Erkundung aktiv.')
+                return GoalResponse.REJECT
+            self._active_goal = True
         return GoalResponse.ACCEPT
 
     def _cancel_cb(self, goal_handle) -> CancelResponse:
         return CancelResponse.ACCEPT
 
     def _execute(self, goal_handle):
-        """Der eigentliche Explorations-Loop (laeuft bis fertig/abgebrochen)."""
+        """Run one bounded exploration and own every child Nav2 goal."""
+        try:
+            return self._execute_reserved(goal_handle)
+        finally:
+            with self._active_goal_lock:
+                self._active_goal = False
+
+    def _map_is_fresh(self) -> bool:
+        return (
+            self._map is not None
+            and self._map_received_at is not None
+            and 0.0 <= time.monotonic() - self._map_received_at <= self._map_timeout_s
+        )
+
+    def _finish_result(self, result, frontiers_visited):
+        result.frontiers_visited = frontiers_visited
+        if self._map is not None:
+            data = np.asarray(self._map.data, dtype=np.int16)
+            free_cells = int(np.count_nonzero(data == 0))
+            result.explored_area_m2 = float(free_cells) * (
+                self._map.info.resolution ** 2)
+        return result
+
+    @staticmethod
+    def _classify_frontier_completion(frontiers_present, frontiers_visited):
+        """Classify exhaustion without disguising a failed first departure."""
+        if not frontiers_present:
+            return (
+                True,
+                'Keine offenen Frontiers mehr - Raum vollstaendig erkundet',
+                'complete')
+        if frontiers_visited > 0:
+            return (
+                True,
+                'Keine weiteren sicher erreichbaren Frontiers - Erkundung '
+                'innerhalb des bekannten Freiraums sauber beendet',
+                'safe_complete')
+        return (
+            False,
+            'Frontiers vorhanden, aber kein Ziel mit sicherem Abstand im '
+            'bekannten Freiraum erreichbar',
+            None)
+
+    def _execute_reserved(self, goal_handle):
         req = goal_handle.request
-        overall_timeout = req.timeout_s if req.timeout_s > 0 else self._overall_timeout_s
-        min_frontier_m = req.min_frontier_size_m if req.min_frontier_size_m > 0 else self._min_frontier_m
+        overall_timeout = (
+            req.timeout_s if req.timeout_s > 0 else self._overall_timeout_s)
+        min_frontier_m = (
+            req.min_frontier_size_m
+            if req.min_frontier_size_m > 0 else self._min_frontier_m)
         return_to_start = req.return_to_start or self._return_to_start_p
 
         self._blacklist.clear()
         self._start_xy = None
         frontiers_visited = 0
+        failed_goals = 0
+        initial_scan_done = not self._initial_scan_enabled
         t_start = time.monotonic()
         result = ExploreArea.Result()
+        completion_reason = None
 
-        self.get_logger().info("Exploration gestartet.")
+        self.get_logger().info(
+            f'Exploration gestartet; Gesamtlimit {overall_timeout:.0f} s.')
+
+        def overall_expired():
+            return (
+                overall_timeout > 0.0
+                and time.monotonic() - t_start >= overall_timeout)
 
         while rclpy.ok():
-            # 1) Abbruch durch Aufrufer?
             if goal_handle.is_cancel_requested:
                 goal_handle.canceled()
                 result.success = False
-                result.message = 'Erkundung abgebrochen'
-                result.frontiers_visited = frontiers_visited
-                self.get_logger().info("Exploration abgebrochen.")
-                return result
+                result.message = 'Erkundung abgebrochen; Nav2-Kindziel beendet'
+                self.get_logger().info(result.message)
+                return self._finish_result(result, frontiers_visited)
 
-            # 2) Gesamt-Zeitlimit?
-            if overall_timeout > 0 and (time.monotonic() - t_start) > overall_timeout:
+            if overall_expired():
                 result.success = True
                 result.message = 'Zeitlimit erreicht - Erkundung sauber beendet'
+                completion_reason = 'timeout'
                 break
 
-            # 3) Voraussetzungen: Karte + Roboterpose vorhanden?
-            grid = self._map
-            if grid is None:
-                self.get_logger().warn("Warte auf Karte ...", throttle_duration_sec=5.0)
-                time.sleep(0.5)
+            # slam_toolbox publiziert eine unveraenderte Karte im Stillstand
+            # nicht periodisch. Der initiale Rundblick darf daher mit einer
+            # bereits empfangenen, aber alten Karte bootstrappen. Vor jeder
+            # Translation bleibt Kartenfrische zwingend.
+            map_ready = self._map is not None and (
+                not initial_scan_done or self._map_is_fresh())
+            if not map_ready:
+                if time.monotonic() - t_start > self._map_timeout_s:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'SLAM-Karte fehlt oder ist veraltet'
+                    return self._finish_result(result, frontiers_visited)
+                time.sleep(0.1)
                 continue
-            robot_xy = self._robot_xy()
-            if robot_xy is None:
-                time.sleep(0.5)
-                continue
-            if self._start_xy is None:
-                self._start_xy = robot_xy   # Startpose fuer return_to_start merken
 
-            # 4) Frontiers finden + bewerten
+            grid = self._map
+            if grid.header.frame_id not in ('', self._global_frame):
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    f'Kartenframe {grid.header.frame_id!r} passt nicht zu '
+                    f'{self._global_frame!r}')
+                return self._finish_result(result, frontiers_visited)
+
+            robot_pose = self._robot_pose()
+            if robot_pose is None:
+                if time.monotonic() - t_start > self._map_timeout_s:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'Roboterpose im Kartenframe fehlt'
+                    return self._finish_result(result, frontiers_visited)
+                time.sleep(0.1)
+                continue
+            robot_xy = robot_pose[:2]
+            if self._start_xy is None:
+                self._start_xy = robot_xy
+
+            if not initial_scan_done:
+                self.get_logger().info(
+                    'Phase 1/2: kontrollierter 360-Grad-LiDAR-Rundblick.')
+                scan_status, achieved = self._scan_in_place(
+                    stop_requested=lambda: (
+                        goal_handle.is_cancel_requested
+                        or overall_expired()
+                        or self._map is None))
+                if scan_status != 'success':
+                    if goal_handle.is_cancel_requested:
+                        goal_handle.canceled()
+                        result.message = '360-Grad-Rundblick abgebrochen'
+                    elif overall_expired():
+                        goal_handle.succeed()
+                        result.success = True
+                        result.message = (
+                            'Zeitlimit waehrend des Rundblicks erreicht; '
+                            'Roboter bestaetigt gestoppt')
+                    else:
+                        goal_handle.abort()
+                        result.message = (
+                            f'360-Grad-Rundblick fehlgeschlagen: {scan_status}; '
+                            f'erreicht {math.degrees(achieved):.1f} Grad')
+                    return self._finish_result(result, frontiers_visited)
+                initial_scan_done = True
+                self.get_logger().info(
+                    f'Rundblick vollstaendig: {math.degrees(achieved):.1f} Grad; '
+                    'Phase 2/2 startet mit frischer Frontier-Neuplanung.')
+                time.sleep(self._replan_period_s)
+                continue
+
             frontiers = self._detect_frontiers(grid, min_frontier_m)
             if self._visualize:
                 self._publish_markers(frontiers, grid.header.frame_id)
-            candidates = self._rank_frontiers(frontiers, robot_xy, grid.info.resolution)
+            candidates = self._rank_frontiers(
+                frontiers, robot_xy, grid, robot_yaw=robot_pose[2])
 
-            # 5) Keine offenen Frontiers -> Wohnung vollstaendig erkundet
             if not candidates:
-                result.success = True
-                result.message = 'Keine offenen Frontiers mehr - Wohnung vollstaendig erkundet'
+                success, message, reason = self._classify_frontier_completion(
+                    bool(frontiers), frontiers_visited)
+                result.success = success
+                result.message = message
+                if not success:
+                    goal_handle.abort()
+                    return self._finish_result(result, frontiers_visited)
+                completion_reason = reason
                 break
 
             best = candidates[0]
-
-            # 6) Feedback an den Aufrufer (GUI/BT)
             fb = ExploreArea.Feedback()
             fb.explored_percent = self._progress_percent(grid)
             fb.frontiers_remaining = len(candidates)
             goal_pose = PoseStamped()
             goal_pose.header.frame_id = self._global_frame
             goal_pose.header.stamp = self.get_clock().now().to_msg()
-            goal_pose.pose.position.x = best.cx
-            goal_pose.pose.position.y = best.cy
+            goal_pose.pose.position.x = best.goal_x
+            goal_pose.pose.position.y = best.goal_y
             goal_pose.pose.orientation.w = 1.0
             fb.current_goal = goal_pose
             goal_handle.publish_feedback(fb)
 
-            # 7) Beste Frontier anfahren
+            turn_status, turned, heading_error, residual_error = (
+                self._prealign_to_goal(
+                best.goal_x, best.goal_y, robot_pose,
+                stop_requested=lambda: (
+                    goal_handle.is_cancel_requested
+                    or overall_expired()
+                    or self._map is None)))
             self.get_logger().info(
-                f"Fahre zu Frontier ({best.cx:.2f}, {best.cy:.2f}), "
-                f"Groesse={best.size}, offen={len(candidates)}")
-            status = self._navigate_to(best.cx, best.cy, self._goal_timeout_s)
+                f'Frontier-Vorausrichtung: Soll '
+                f'{math.degrees(heading_error):+.1f} Grad, erreicht '
+                f'{math.degrees(turned):.1f} Grad, Karten-Restfehler '
+                f'{math.degrees(residual_error):+.1f} Grad, '
+                f'Status={turn_status}.')
+            if turn_status not in ('success', 'skipped'):
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    result.success = False
+                    result.message = 'Erkundung waehrend Vorausrichtung abgebrochen'
+                    return self._finish_result(result, frontiers_visited)
+                if overall_expired():
+                    goal_handle.succeed()
+                    result.success = True
+                    result.message = (
+                        'Zeitlimit waehrend Vorausrichtung erreicht; '
+                        'Roboter bestaetigt gestoppt')
+                    return self._finish_result(result, frontiers_visited)
+                if turn_status in (
+                        'odom_stale', 'wrong_direction', 'stop_unconfirmed',
+                        'interrupted', 'map_pose_missing',
+                        'map_no_improvement', 'map_alignment_failed'):
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = (
+                        f'Sichere Frontier-Vorausrichtung fehlgeschlagen: '
+                        f'{turn_status}')
+                    return self._finish_result(result, frontiers_visited)
+                self._blacklist.append((best.cx, best.cy))
+                failed_goals += 1
+                self.get_logger().warn(
+                    f'Frontier wegen Vorausrichtung {turn_status} gesperrt; '
+                    f'Fehlversuch {failed_goals}/{self._max_failed_goals}')
+                if failed_goals >= self._max_failed_goals:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'Zu viele nicht ausrichtbare Frontier-Ziele'
+                    return self._finish_result(result, frontiers_visited)
+                continue
+
+            # Die Vorausrichtung kann map->odom und den sicheren Anfahrpunkt
+            # verschieben. Deshalb wird das Ziel immer neu aus der aktuellen
+            # Karte berechnet und anschliessend nochmals im Kartenframe
+            # ausgerichtet. Erst danach darf Nav2 eine Translation erhalten.
+            refreshed_pose = self._robot_pose()
+            refreshed_grid = self._map
+            refreshed_goal = None
+            if (refreshed_pose is not None and refreshed_grid is not None
+                    and self._map_is_fresh()):
+                refreshed_goal = self._frontier_approach_goal(
+                    best, refreshed_pose[:2], refreshed_grid)
+            if refreshed_goal is None:
+                self._blacklist.append((best.cx, best.cy))
+                failed_goals += 1
+                self.get_logger().warn(
+                    'Frontier nach Vorausrichtung nicht mehr sicher; '
+                    f'Fehlversuch {failed_goals}/{self._max_failed_goals}')
+                if failed_goals >= self._max_failed_goals:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'Zu viele nach Messung unsichere Frontiers'
+                    return self._finish_result(result, frontiers_visited)
+                continue
+            best.goal_x, best.goal_y = refreshed_goal
+
+            verify_status, verify_turned, verify_error, verify_residual = (
+                self._prealign_to_goal(
+                    best.goal_x, best.goal_y, refreshed_pose,
+                    stop_requested=lambda: (
+                        goal_handle.is_cancel_requested
+                        or overall_expired()
+                        or self._map is None)))
+            self.get_logger().info(
+                f'Karten-Uebergabepruefung: Soll '
+                f'{math.degrees(verify_error):+.1f} Grad, erreicht '
+                f'{math.degrees(verify_turned):.1f} Grad, Restfehler '
+                f'{math.degrees(verify_residual):+.1f} Grad, '
+                f'Status={verify_status}.')
+            if verify_status not in ('success', 'skipped'):
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    result.success = False
+                    result.message = (
+                        'Erkundung waehrend Karten-Uebergabe abgebrochen')
+                    return self._finish_result(result, frontiers_visited)
+                if overall_expired():
+                    goal_handle.succeed()
+                    result.success = True
+                    result.message = (
+                        'Zeitlimit waehrend Karten-Uebergabe erreicht; '
+                        'Roboter bestaetigt gestoppt')
+                    return self._finish_result(result, frontiers_visited)
+                if verify_status in (
+                        'odom_stale', 'wrong_direction', 'stop_unconfirmed',
+                        'interrupted', 'map_pose_missing',
+                        'map_no_improvement', 'map_alignment_failed'):
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = (
+                        'Sichere Karten-Uebergabe an Nav2 fehlgeschlagen: '
+                        f'{verify_status}')
+                    return self._finish_result(result, frontiers_visited)
+                self._blacklist.append((best.cx, best.cy))
+                failed_goals += 1
+                self.get_logger().warn(
+                    f'Frontier wegen Karten-Uebergabe {verify_status} '
+                    f'gesperrt; Fehlversuch '
+                    f'{failed_goals}/{self._max_failed_goals}')
+                if failed_goals >= self._max_failed_goals:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'Zu viele nicht ausrichtbare Frontier-Ziele'
+                    return self._finish_result(result, frontiers_visited)
+                continue
+
+            self.get_logger().info(
+                f'Fahre zu sicherem Frontier-Anfahrpunkt; '
+                f'Groesse={best.size}, offen={len(candidates)}')
+            status = self._navigate_to(
+                best.goal_x, best.goal_y, self._goal_timeout_s,
+                stop_requested=lambda: (
+                    goal_handle.is_cancel_requested
+                    or overall_expired()
+                    or not self._map_is_fresh()))
 
             if status == 'success':
                 frontiers_visited += 1
-                time.sleep(self._replan_period_s)   # Karte kurz aktualisieren lassen
-            else:
-                # Ziel blacklisten, damit wir uns nicht festfahren
-                self._blacklist.append((best.cx, best.cy))
-                self.get_logger().warn(
-                    f"Ziel {status} - blacklistet ({best.cx:.2f}, {best.cy:.2f})")
-                time.sleep(0.5)
+                time.sleep(self._replan_period_s)
+                continue
 
-        # 8) Optional zur Startpose zurueck
+            if status == 'canceled':
+                if goal_handle.is_cancel_requested:
+                    goal_handle.canceled()
+                    result.success = False
+                    result.message = 'Erkundung und Nav2-Kindziel abgebrochen'
+                elif overall_expired():
+                    result.success = True
+                    result.message = 'Zeitlimit erreicht - Erkundung sauber beendet'
+                    goal_handle.succeed()
+                else:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = 'SLAM-Karte waehrend der Fahrt veraltet'
+                return self._finish_result(result, frontiers_visited)
+
+            if status == 'cancel_failed':
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Nav2-Kindziel konnte nicht bestaetigt beendet werden; '
+                    'Fahrtor muss blockiert bleiben')
+                return self._finish_result(result, frontiers_visited)
+
+            self._blacklist.append((best.cx, best.cy))
+            failed_goals += 1
+            self.get_logger().warn(
+                f'Frontier-Ziel {status}; Fehlversuch '
+                f'{failed_goals}/{self._max_failed_goals}')
+            if failed_goals >= self._max_failed_goals:
+                goal_handle.abort()
+                result.success = False
+                result.message = 'Zu viele nicht erreichbare Frontier-Ziele'
+                return self._finish_result(result, frontiers_visited)
+
         if return_to_start and self._start_xy is not None:
-            self.get_logger().info("Kehre zur Startpose zurueck ...")
-            self._navigate_to(self._start_xy[0], self._start_xy[1], self._goal_timeout_s)
+            self.get_logger().info('Kehre zur Startpose zurueck ...')
+            status = self._navigate_to(
+                self._start_xy[0], self._start_xy[1], self._goal_timeout_s,
+                stop_requested=lambda: goal_handle.is_cancel_requested)
+            if status != 'success':
+                goal_handle.abort()
+                result.success = False
+                result.message = f'Rueckkehr zur Startpose fehlgeschlagen: {status}'
+                return self._finish_result(result, frontiers_visited)
 
-        # 9) Ergebnis abschliessen
-        result.frontiers_visited = frontiers_visited
-        if self._map is not None:
-            data = np.asarray(self._map.data, dtype=np.int16)
-            free_cells = int(np.count_nonzero(data == 0))
-            result.explored_area_m2 = float(free_cells) * (self._map.info.resolution ** 2)
-        goal_handle.succeed()
-        self.get_logger().info(f"Exploration beendet: {result.message}")
-        return result
+        if completion_reason in {'timeout', 'complete', 'safe_complete'}:
+            goal_handle.succeed()
+        self.get_logger().info(f'Exploration beendet: {result.message}')
+        return self._finish_result(result, frontiers_visited)
 
     # ======================= Visualisierung =============================
     def _publish_markers(self, frontiers: List[Frontier], frame_id: str):
@@ -436,7 +1195,8 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

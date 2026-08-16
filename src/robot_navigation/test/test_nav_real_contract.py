@@ -8,6 +8,9 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    explore_health_authorized,
+    explore_motion_authorized,
+    explore_scan_values_valid,
     localization_search_authorized,
     localization_search_values_valid,
     localization_motion_authorized,
@@ -27,6 +30,28 @@ def test_real_command_chain_contains_smoother_before_collision_monitor():
     assert "'static_map_odom_x'" in launch_source
     assert "'static_map_odom_y'" in launch_source
     assert "'static_map_odom_yaw'" in launch_source
+
+
+def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
+    source = (
+        PACKAGE_ROOT / 'launch' / 'nav_mapping.launch.py'
+    ).read_text(encoding='utf-8')
+
+    assert "'slam_lidar.launch.py'" in source
+    assert "'vl53_near_field.launch.py'" in source
+    assert "'collision_monitor_mapping_params.yaml'" in source
+    assert "'collision_params_file': mapping_collision_params" in source
+    assert "'safety_monitor.launch.py'" in source
+    assert "'explore.launch.py'" in source
+    assert "'enable_auto_explore', default_value='false'" in source
+    assert "'allow_explore_mission'" in source
+    assert "'enable_real_explore': enable_auto_explore" in source
+    assert "period=4.0" in source
+    assert 'nav2_map_server' not in source
+    assert 'nav2_amcl' not in source
+    assert 'static_transform_publisher' not in source
+    assert "package='nav2_behaviors'" in source
+    assert "('cmd_vel', 'cmd_vel_recovery_blocked')" in source
 
 
 def test_real_smoother_and_controller_limits_are_conservative():
@@ -82,6 +107,49 @@ def test_mission_gate_is_fail_closed():
     assert not room_motion_authorized({
         **running, 'active_command': {'type': 'explore'}})
     assert not room_motion_authorized(None)
+
+
+def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
+    running = {
+        'state': 'running',
+        'phase': 'Explore',
+        'active_command': {'type': 'explore'},
+    }
+    assert not explore_motion_authorized(running, False)
+    assert explore_motion_authorized(running, True)
+    assert not explore_motion_authorized({**running, 'phase': 'gestartet'}, True)
+    assert not explore_motion_authorized(
+        {**running, 'active_command': {'type': 'go_to_room'}}, True)
+
+    assert explore_health_authorized(
+        True, 9.0, 9.8, 9.8, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+    assert not explore_health_authorized(
+        False, 9.0, 9.8, 9.8, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+    assert not explore_health_authorized(
+        True, 9.0, 9.0, 9.8, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+    assert explore_health_authorized(
+        True, 1.0, 9.8, 9.8, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8,
+        allow_stale_map_for_scan=True)
+    assert not explore_health_authorized(
+        True, 9.0, 9.8, None, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+
+
+def test_explore_scan_input_is_rotation_only_and_bounded():
+    assert explore_scan_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.12), 0.15)
+    assert explore_scan_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), 0.15)
+    assert not explore_scan_values_valid(
+        (0.01, 0.0, 0.0, 0.0, 0.0, 0.12), 0.15)
+    assert not explore_scan_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.151), 0.15)
+    assert not explore_scan_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, float('nan')), 0.15)
+
+    source = (PACKAGE_ROOT / 'robot_navigation' /
+              'cmd_vel_mission_gate.py').read_text(encoding='utf-8')
+    assert "'/cmd_vel_explore_scan_raw'" in source
+    assert 'self._on_explore_scan_command' in source
 
 
 def test_required_localization_gate_is_fail_closed_and_monotonic():

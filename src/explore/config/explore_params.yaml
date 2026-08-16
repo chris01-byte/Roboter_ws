@@ -25,20 +25,78 @@ explore_node:
     global_frame: "map"
     robot_base_frame: "base_link"
     nav_action_name: "navigate_to_pose"
+    # Wird vom Launch auf einen absoluten, Recovery-freien Nav2-Baum gesetzt.
+    # Leer ist absichtlich ungueltig und laesst den Node fail-closed starten.
+    behavior_tree: ""
 
     # --- Explorationsrhythmus / Grenzen ---
     replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]
     min_frontier_size_m: 0.30       # kleinste beachtete Frontier-Ausdehnung [m]
-    goal_timeout_s: 45.0            # max. Fahrzeit zu EINER Frontier [s]
-    overall_timeout_s: 0.0          # Gesamtlimit [s] (0 = unbegrenzt; Goal kann ueberschreiben)
+    goal_timeout_s: 90.0            # max. Fahrzeit zu EINER Frontier [s]
+    overall_timeout_s: 600.0        # erster Raumscan: hartes Gesamtlimit [s]
+    nav_cancel_timeout_s: 3.0       # Kindziel muss so schnell terminal werden
+    map_timeout_s: 5.0              # veraltete SLAM-Karte stoppt die Mission
+    max_failed_goals: 6             # keine endlose Folge unerreichbarer Ziele
 
     # --- Frontier-Bewertung (Kosten/Nutzen, Idee wie explore_lite) ---
     potential_scale: 3.0            # Gewicht der Distanz (hoeher = naeher bevorzugt)
     gain_scale: 1.0                 # Gewicht der Frontier-Groesse (hoeher = groessere bevorzugt)
+    heading_scale: 0.75             # bevorzugt Ziele in aktueller Blickrichtung
+
+    # --- Phase 1: kontrollierter Rundblick vor jeder Fahrt ---
+    odom_topic: "/odom"
+    scan_command_topic: "/cmd_vel_explore_scan_raw"
+    initial_scan_enabled: true
+    initial_scan_angle_rad: 6.283185307179586
+    initial_scan_angular_speed_radps: 0.12
+    # Der collision_monitor darf die 0,12-rad/s-Drehung in seiner SlowZone
+    # auf 30 % reduzieren. Eine volle Drehung dauert dann real rund 175 s.
+    initial_scan_timeout_s: 210.0
+    scan_odom_timeout_s: 0.8
+    scan_no_progress_timeout_s: 8.0
+    scan_progress_window_rad: 0.03
+    # Realtest 16.08.2026: Sanfte 2-s-Motorrampe plus aktive SlowZone ergaben
+    # beim Anlauf 0,167 rad Fortschritt, bevor die alte 0,03-rad/s-Grenze
+    # faelschlich abbrach. Wie bei der Vorausrichtung tolerieren wir deshalb
+    # langsame, aber gemessene Bewegung. Blockade (8 s ohne 0,03 rad) und der
+    # harte 210-s-Gesamttimeout bleiben unveraendert fail-closed aktiv.
+    scan_rate_check_after_s: 15.0
+    scan_min_average_rate_radps: 0.01
+    scan_reverse_limit_rad: 0.08
+    scan_stop_timeout_s: 4.0
+    scan_stop_angular_tolerance_radps: 0.02
+    scan_command_rate_hz: 20.0
+
+    # --- Phase 2: konstante Vorausrichtung vor jedem Nav2-Fahrziel ---
+    # Vermeidet das real beobachtete Ueberschwingen der Nav2-Drehregelung bei
+    # der 2000-ms-Hardwarerampe. Dieselbe odometriegepruefte, reine Drehspur
+    # wie beim Rundblick bleibt hinter Gate und collision_monitor.
+    prealign_enabled: true
+    # Nav2 erhaelt das Ziel erst bei hoechstens 9,7 Grad Restfehler in map.
+    # Die reine Drehung stoppt 5,7 Grad vorher, um die 2-s-Rampe abzufangen.
+    prealign_handoff_tolerance_rad: 0.17
+    prealign_stop_margin_rad: 0.10
+    prealign_angular_speed_radps: 0.12
+    # Im Realtest erreichte eine durch Slow-/Stop-Phasen unterbrochene, aber
+    # korrekte Drehung 0,019 rad/s im Mittel. Das Rundblick-Kriterium 0,03
+    # haette sie faelschlich nach zehn Sekunden verworfen. Echte Blockade wird
+    # weiterhin nach 8 s ohne 0,03 rad Fortschritt erkannt.
+    prealign_timeout_s: 180.0
+    prealign_rate_check_after_s: 15.0
+    prealign_min_average_rate_radps: 0.01
+    # Nach jeder odometrisch korrekten Drehung wird map->base_link erneut
+    # gemessen. Verschlechtert sich der Kartenfehler oder bleibt er praktisch
+    # gleich, wird kein Nav2-Ziel freigegeben.
+    prealign_map_settle_s: 1.0
+    prealign_max_passes: 3
+    prealign_min_improvement_rad: 0.04
 
     # --- Zielauswahl / Selbstbefreiung ---
     min_goal_distance_m: 0.30       # Ziel muss mind. so weit von der Basis weg sein [m]
     blacklist_radius_m: 0.35        # Radius, in dem ein gescheitertes Ziel gesperrt wird [m]
+    frontier_approach_distance_m: 0.45  # Ziel bleibt im bekannten Freiraum
+    goal_clearance_m: 0.35          # frei von Wand und unbekanntem Raum
+    goal_search_radius_m: 0.30      # sicheren Nachbarpunkt suchen
 
     # --- Verhalten nach Fertigstellung ---
     return_to_start: false          # nach vollstaendiger Karte zur Startpose zurueck?

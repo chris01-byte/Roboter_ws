@@ -19,6 +19,11 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
+            'enable_real_explore',
+            default_value='false',
+            description='true = Explore-Auftraege an den echten Behavior-Tree '
+                        'senden. Nur zusammen mit dem Explore-Fahrtor.'),
+        DeclareLaunchArgument(
             'enable_real_go_to_room',
             default_value='false',
             description='true = go_to_room sendet ein echtes Nav2-Ziel. '
@@ -41,6 +46,9 @@ def generate_launch_description():
             name='mission_manager',
             output='screen',
             parameters=[params, {
+                'enable_real_explore': ParameterValue(
+                    LaunchConfiguration('enable_real_explore'),
+                    value_type=bool),
                 'enable_real_go_to_room': ParameterValue(
                     LaunchConfiguration('enable_real_go_to_room'),
                     value_type=bool),

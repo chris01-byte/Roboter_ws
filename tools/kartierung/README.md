@@ -37,6 +37,85 @@ Die Messung in beiden Richtungen und für Motor 1 und 2 wiederholen. Der genaue
 Akzeptanzvertrag, insbesondere Counts, `0x0011` und `0x0101`, steht in
 `docs/ENCODER_ODOMETRIE_FIX.md`.
 
+## Automatische LiDAR-Raumkartierung
+
+Die automatische Kartierung arbeitet bewusst in zwei Phasen:
+
+1. kontrollierter 360-Grad-Rundblick mit 0,12 rad/s; der tatsaechliche Winkel,
+   Fortschritt, Drehrichtung und anschliessende Stillstand kommen aus der
+   Encoder-Odometrie;
+2. Frontier-Exploration auf der laufend aktualisierten SLAM-Karte. Ziele
+   liegen im bereits bekannten Freiraum vor den Grenzen zu unbekanntem Raum,
+   besitzen Sicherheitsabstand und werden nach jedem Fahrabschnitt neu
+   bewertet. Vor einem groesseren Richtungswechsel richtet sich der Roboter
+   mit einem konstanten, encodergeprueften Drehkommando aus und bestaetigt den
+   Stillstand; erst danach erhaelt Nav2 das eigentliche Fahrziel.
+
+Die Kartenaufloesung bleibt bei 3 cm. Das ist fuer den rund 18-m2-Raum ein
+guter Kompromiss aus Wanddetail, stabiler Frontier-Erkennung und Rechenlast
+auf dem Jetson. Eine feinere Zellgroesse behebt weder Odometriefehler noch
+dynamische Hindernisse und wuerde die Navigation unnoetig verteuern.
+
+Der verifizierte Sensorframe-Vertrag lautet `laser_scan_dir: true` und
+`tf_yaw: +1.5708`. Der Treiber publiziert damit ROS-konform gegen den
+Uhrzeigersinn; der Montage-TF bildet den physischen Vorwaertsstrahl korrekt
+auf `base_link +X` ab. Beide Werte sind gekoppelt und duerfen nie einzeln
+geaendert werden.
+
+Motorloser Gesamttest:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_automatische_kartierung.sh \
+  active_drive:=false enable_auto_explore:=true
+```
+
+Scharfer Start nur nach persoenlicher Freigabe, freiem Raum und erreichbarem
+Hard-Not-Aus:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_automatische_kartierung.sh \
+  active_drive:=true enable_auto_explore:=true
+```
+
+Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
+LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
+sind, genau einen Auftrag senden:
+
+```bash
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String \
+  "{data: '{\"type\":\"explore\"}'}"
+```
+
+Ein laufender Auftrag wird fail-closed abgebrochen mit:
+
+```bash
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String \
+  "{data: '{\"type\":\"cancel\"}'}"
+```
+
+Der Rundblick beendet sich ausserdem selbst, wenn nach 15 Sekunden im Mittel
+weniger als 0,01 rad/s erreicht werden, die Odometrie ausfaellt, der Roboter in
+die falsche Richtung dreht, acht Sekunden keinen Fortschritt macht oder das
+210-Sekunden-Limit erreicht. Das Zeitbudget beruecksichtigt, dass der aktive
+Kollisionsmonitor die Drehung in seiner SlowZone auf 30 % reduziert. Die
+gesamte Mission endet spaetestens nach zehn Minuten; ein einzelnes Nav2-Ziel
+nach 90 Sekunden. Recovery-Drehungen und -Rueckwaertsfahrten von Nav2 sind
+nicht mit der Hardware verbunden.
+
+Nach mindestens einem erfolgreich erreichten Frontier-Ziel ist eine Karte
+auch dann sicher fertig, wenn zwar noch eine unbekannte Grenze existiert, aber
+kein Anfahrpunkt mit dem vorgeschriebenen Abstand im bekannten Freiraum. Der
+Explorer meldet dann `safe_complete`. Findet er schon am Start keinen einzigen
+sicheren Punkt, bleibt das Ergebnis ein Fehler.
+
+Die Karte zwischendurch rendern und ansehen. Erst eine plausible Karte ueber
+den Kartenmanager speichern. Danach Auftrag abbrechen, Nullkommando und 0 rpm
+pruefen und ausschliesslich den Launch-Prozess einmal mit Strg-C beenden.
+Wohnungsgeometrie, Bags und Diagnosebilder bleiben lokal.
+
 ## Reihenfolge einer kompletten Kartenaufnahme
 
 ```bash

@@ -220,14 +220,17 @@ def eine_richtung(n, ziel, w_soll, name):
 
     o = np.array([p[0] for p in punkte])
     l = np.array([p[1] for p in punkte])
-    # Vorzeichen der LiDAR-Achse an die Odometrie angleichen: die Bin-Richtung
-    # des Sensors ist Konvention, die Physik ist es nicht.
+    # Unter ROS ist die Bin-Richtung KEINE freie Konvention: Ein positiver
+    # angle_increment bedeutet gegen den Uhrzeigersinn. Deshalb muss die zum
+    # Referenzscan noetige Roll-Verschiebung dasselbe Vorzeichen wie die
+    # Odometrie haben. Der alte Stand hat einen Vorzeichenfehler hier nur fuer
+    # die Betragskalibrierung umgedreht und damit vor slam_toolbox verborgen.
     if np.dot(o, l) < 0:
         l = -l
-        richtungshinweis = ('Bin-Richtung des Sensors laeuft der Odometrie '
-                            'entgegen (erwartet, laser_scan_dir=Clockwise)')
+        richtungshinweis = (
+            'FEHLER: LaserScan-Bins sind gespiegelt; laser_scan_dir/TF pruefen')
     else:
-        richtungshinweis = 'Bin-Richtung laeuft mit der Odometrie'
+        richtungshinweis = 'ROS-Haendigkeit korrekt: LiDAR und Odometrie stimmen'
 
     # Ursprungsgerade: die Drehung startet definitionsgemaess bei 0/0.
     k_faktor = float(np.dot(o, l) / np.dot(o, o))

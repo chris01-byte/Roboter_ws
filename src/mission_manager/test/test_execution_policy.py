@@ -14,8 +14,20 @@ from mission_manager.execution_policy import (
 class ExecutionPolicyTests(unittest.TestCase):
     def test_go_to_room_is_removed_from_configured_real_types(self):
         self.assertEqual(
-            effective_real_types(['explore', 'go_to_room']),
+            effective_real_types(
+                ['explore', 'go_to_room'], enable_real_explore=True),
             {'explore'},
+        )
+
+    def test_explore_requires_separate_real_opt_in(self):
+        self.assertEqual(
+            effective_real_types(['pick_and_place', 'explore']),
+            {'pick_and_place'},
+        )
+        self.assertEqual(
+            effective_real_types(
+                ['pick_and_place', 'explore'], enable_real_explore=True),
+            {'pick_and_place', 'explore'},
         )
 
     def test_go_to_room_remains_simulated_even_with_bad_runtime_set(self):
@@ -34,6 +46,15 @@ class ExecutionPolicyTests(unittest.TestCase):
     def test_existing_action_types_remain_real(self):
         self.assertEqual(execution_mode('explore', {'explore'}), 'real')
         self.assertEqual(execution_mode('pick_object', {'explore'}), 'sim')
+
+    def test_real_explore_is_default_off_and_separately_guarded(self):
+        node_path = (
+            Path(__file__).resolve().parents[1]
+            / 'mission_manager' / 'mission_manager_node.py')
+        source = node_path.read_text(encoding='utf-8')
+        self.assertIn(
+            "declare_parameter('enable_real_explore', False)", source)
+        self.assertIn('enable_real_explore=self.enable_real_explore', source)
 
     def test_short_localization_loss_stops_but_does_not_cancel_mission(self):
         started, expired = localization_loss_state(

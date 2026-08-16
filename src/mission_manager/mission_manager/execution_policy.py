@@ -17,9 +17,14 @@ def go_to_room_execution_status(real_navigation_enabled: bool) -> str:
     )
 
 
-def effective_real_types(configured_types: Iterable[str]) -> Set[str]:
-    """Return action-backed types while keeping go_to_room fail-closed."""
-    return {str(value) for value in configured_types if str(value) != 'go_to_room'}
+def effective_real_types(
+        configured_types: Iterable[str], *, enable_real_explore: bool = False
+        ) -> Set[str]:
+    """Return action-backed types with navigation types fail-closed."""
+    blocked = {'go_to_room'}
+    if enable_real_explore is not True:
+        blocked.add('explore')
+    return {str(value) for value in configured_types if str(value) not in blocked}
 
 
 def execution_mode(command_type: str, real_types: Iterable[str]) -> str:

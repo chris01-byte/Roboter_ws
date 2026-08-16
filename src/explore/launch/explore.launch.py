@@ -22,6 +22,8 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg = get_package_share_directory('explore')
     params = os.path.join(pkg, 'config', 'explore_params.yaml')
+    safe_bt = os.path.join(
+        pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
         Node(
@@ -29,6 +31,6 @@ def generate_launch_description():
             executable='explore',
             name='explore_node',
             output='screen',
-            parameters=[params],
+            parameters=[params, {'behavior_tree': safe_bt}],
         )
     ])

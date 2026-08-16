@@ -230,6 +230,67 @@ class NodeSafetyContractTests(unittest.TestCase):
             [(1, 0x001D), (2, 0x001D), (1, 0x0027), (2, 0x0027)],
         )
 
+    def test_unchanged_running_setpoint_does_not_restart_ramp(self):
+        adapter = method_class(
+            '_send_rs485_velocity', '_write_motor_setpoint',
+            '_write_motor_start', '_quantize_motor_rpm', '_clamp')
+        node = adapter()
+        node.rs485_ready = True
+        node.last_modbus_write = 0.0
+        node.modbus_write_period_s = 0.0
+        node.gear_ratio = 1.0
+        node.max_motor_rpm = 700.0
+        node.left_motor_id = 1
+        node.right_motor_id = 2
+        node.rpm_scale = 1.0
+        node.rpm_register = 0x001D
+        node.command_register = 0x0027
+        node.velocity_start_value = 2
+        node.last_sent_left_rpm = 10.0
+        node.last_sent_right_rpm = 20.0
+        node._handle_drive_write_failure = lambda stage: self.fail(stage)
+        node._command_timed_out = lambda: False
+        calls = []
+        node._write_register = lambda motor, address, value: (
+            calls.append((motor, address, value)) or True)
+        command = type('Command', (), {'rpm_left': 10.0, 'rpm_right': 20.0})()
+
+        self.assertTrue(node._send_rs485_velocity(command))
+        self.assertEqual(calls, [])
+
+    def test_running_speed_change_updates_setpoints_without_restart(self):
+        adapter = method_class(
+            '_send_rs485_velocity', '_write_motor_setpoint',
+            '_write_motor_start', '_quantize_motor_rpm', '_clamp')
+        node = adapter()
+        node.rs485_ready = True
+        node.last_modbus_write = 0.0
+        node.modbus_write_period_s = 0.0
+        node.gear_ratio = 1.0
+        node.max_motor_rpm = 700.0
+        node.left_motor_id = 1
+        node.right_motor_id = 2
+        node.rpm_scale = 1.0
+        node.rpm_register = 0x001D
+        node.command_register = 0x0027
+        node.velocity_start_value = 2
+        node.last_sent_left_rpm = 10.0
+        node.last_sent_right_rpm = 20.0
+        node._handle_drive_write_failure = lambda stage: self.fail(stage)
+        node._command_timed_out = lambda: False
+        calls = []
+        node._write_register = lambda motor, address, value: (
+            calls.append((motor, address, value)) or True)
+        command = type('Command', (), {'rpm_left': 15.0, 'rpm_right': 25.0})()
+
+        self.assertTrue(node._send_rs485_velocity(command))
+        self.assertEqual(
+            calls,
+            [(1, 0x001D, 15), (2, 0x001D, 25)],
+        )
+        self.assertEqual(node.last_sent_left_rpm, 15.0)
+        self.assertEqual(node.last_sent_right_rpm, 25.0)
+
     def test_failed_setpoint_never_sends_a_start(self):
         adapter = method_class(
             '_send_rs485_velocity', '_write_motor_setpoint',

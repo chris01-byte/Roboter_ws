@@ -67,9 +67,9 @@ def generate_launch_description():
                         'config/stl27l.yaml gemessen sind UND der Link nicht schon aus '
                         'der URDF kommt.'),
         # Montagepose, GEMESSEN am 11.08.2026 (Herleitung siehe config/stl27l.yaml).
-        # Der yaw ist der kritische Wert: Der Sensornullpunkt zeigt nach RECHTS,
-        # nicht nach vorn - ermittelt an einem Rohr genau vor dem Roboter, das im
-        # Scan bei +89 Grad erschien.
+        # Der yaw ist mit laser_scan_dir=true gekoppelt: Nach der Umkehr auf
+        # ROS-Gegenuhrzeigersinn erscheint das vermessene Frontobjekt bei
+        # -89 Grad und wird mit +90 Grad wieder auf base_link +X abgebildet.
         DeclareLaunchArgument('tf_x', default_value='0.245',
                               description='[m] Radmitte 275 mm zur Vorderkante minus 30 mm'),
         DeclareLaunchArgument('tf_y', default_value='0.0',
@@ -78,8 +78,8 @@ def generate_launch_description():
                               description='[m] 750 mm ueber Boden minus 90 mm base_link-Hoehe'),
         DeclareLaunchArgument('tf_roll', default_value='0.0'),
         DeclareLaunchArgument('tf_pitch', default_value='0.0'),
-        DeclareLaunchArgument('tf_yaw', default_value='-1.5708',
-                              description='[rad] -90 Grad, Sensornullpunkt zeigt nach rechts'),
+        DeclareLaunchArgument('tf_yaw', default_value='1.5708',
+                              description='[rad] +90 Grad fuer ROS-CCW-Scanbins'),
 
         LogInfo(condition=UnlessCondition(tf_on),
                 msg='STL-27L: KEIN base_link->laser_frame (Montagepose noch nicht '

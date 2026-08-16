@@ -1,0 +1,25 @@
+<!--
+  Recovery-freier Nav2-Baum fuer autonome Frontier-Unterziele.
+  Planungs- oder Regelfehler brechen das Unterziel ab. Insbesondere gibt es
+  kein BackUp, Spin, Wait oder selbsttaetiges Costmap-Clearing.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="NavigateWithoutRecovery">
+      <RateController hz="1.0">
+        <Fallback>
+          <ReactiveSequence>
+            <Inverter>
+              <GlobalUpdatedGoal/>
+            </Inverter>
+            <IsPathValid path="{path}"/>
+          </ReactiveSequence>
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"
+                             server_timeout="2000"/>
+        </Fallback>
+      </RateController>
+      <FollowPath path="{path}" controller_id="FollowPath"
+                  server_timeout="2000"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

@@ -1,9 +1,11 @@
 # Inventar
 
 **Hardwarestand:** 16.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 16.08.2026 · Branch `feature/globale-lokalisierung`;
-stationaere globale LiDAR-Lokalisierung bei drei Kaltstarts und anschliessende
-beaufsichtigte semantische Nav2-Raumfahrt bestanden
+**Softwaredelta:** 16.08.2026 · Branch
+`feature/automatische-lidar-kartierung`; zweistufige automatische
+LiDAR-Kartierung mit 360-Grad-Rundblick und anschliessender
+Frontier-Exploration real abgenommen: vier sichere Ziele erreicht und danach
+ohne weitere sicher erreichbare Frontier beendet
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -38,11 +40,11 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
 | `semantic_perception` | Objekterkennung auf OAK-Bildern | Entwurf |
 | `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
-| `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung | Entwurf |
+| `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung mit reaktiver Not-Aus-Bedingung und sicherem Subscription-Vorlauf | **erprobt** (in realer Explore-Kette abgenommen) |
 | `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Erkundungslogik | Entwurf |
+| `explore` | Zweistufige Erkundung: odometriegepruefter 360-Grad-Rundblick, Kartenframe-Vorausrichtung und sichere Frontier-Ziele | **produktiv** (16.08.2026: Rundblick und vier Ziele real bestanden) |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |
@@ -59,6 +61,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
 | Globale LiDAR-Lokalisierung, Preflight | `bash tools/kartierung/start_lidar_lokalisierung.sh /absolut/map.yaml oak:=false` | nein (`dry_run`) |
 | Globale LiDAR-Lokalisierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_lidar_lokalisierung.sh /absolut/map.yaml active_drive:=true oak:=false` | **ja, Motoren bestromt** |
+| Automatische LiDAR-Kartierung, Preflight | `bash tools/kartierung/start_automatische_kartierung.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`) |
+| Automatische LiDAR-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_automatische_kartierung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 
@@ -79,6 +83,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Datei | Zweck |
 |---|---|
 | `tools/kartierung/start_slam.sh` / `stop_slam.sh` | SLAM starten; **sauber** beenden mit Wörterbuch-Kontrolle |
+| `tools/kartierung/start_automatische_kartierung.sh` | zweistufige SLAM-/Nav2-/Explore-Gesamtkette; scharf nur mit zwei Opt-ins |
 | `tools/kartierung/start_lokalisierung.sh` | Lokalisierungsmodus, wahlweise ohne Vorwissen |
 | `tools/kartierung/kartierfahrt.py` | autonome Fahrt, hält selbst vor Hindernissen |
 | `tools/kartierung/erkundungsfahrt.py` | Ziele an der Grenze bekannt/unbekannt |

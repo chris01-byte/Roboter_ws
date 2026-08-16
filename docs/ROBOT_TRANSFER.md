@@ -1,5 +1,73 @@
 # Übertragung auf den realen Roboter
 
+## Automatische LiDAR-Raumkartierung — real abgenommen (16.08.2026)
+
+**Branch:** `feature/automatische-lidar-kartierung`
+
+Der neue Ablauf besitzt zwei klar getrennte Phasen. Zuerst dreht Amadeus mit
+0,12 rad/s einmal vollstaendig auf der Stelle. Der erreichte Winkel wird aus
+der Encoder-Odometrie ueber den +-Pi-Uebergang akkumuliert; ein Zeitlimit,
+Mindestfortschritt, Drehrichtung und der anschliessende Stillstand werden
+aktiv ueberwacht. Erst danach wertet der Explorer die neue 3-cm-SLAM-Karte aus
+und faehrt sichere Punkte im bekannten Freiraum vor den Grenzen zu noch
+unbekannten Bereichen an. Nach jedem Ziel wird neu geplant, bis keine
+ausreichend grosse sicher erreichbare Frontier mehr vorhanden oder das
+zehnminuetige Gesamtlimit erreicht ist. Nach bereits erzieltem Fortschritt
+gilt der erste Fall als `safe_complete`, nicht als Fahrfehler.
+
+Der komplette Ablauf ist motorlos und real getestet. Der Dry-run erreichte
+360,4 Grad, bestaetigte den Stopp, fand drei sichere Frontier-Kandidaten und
+uebergab genau ein Ziel an Nav2. Der anschliessende Cancel sperrte das Fahrtor,
+stornierte das Nav2-Kindziel und endete bei Nullkommando.
+
+Im beaufsichtigten Realtest drehte Amadeus 360,2 Grad, erreichte vier sichere,
+jeweils neu geplante Frontier-Ziele und beendete danach wegen der einzigen
+verbliebenen, nicht sicher anfahrbaren Frontier. Ein kurz veralteter
+`map->odom`-Transform wurde fail-closed gestoppt und ohne Recovery-Bewegung
+begrenzt neu versucht. Die Abschlusskarte war zusammenhaengend und frei von
+doppelten Waenden oder getrennten Teilkarten (195 x 221 Zellen bei 3 cm,
+5,85 x 6,63 m, 16,1 m2 freie Flaeche). Diese reale Karte bleibt lokal.
+
+Voraussetzung fuer das korrekte Verhalten ist das verifizierte LiDAR-Paar
+`laser_scan_dir: true` und `tf_yaw: +1.5708`. Vorher liefen Odometrie
+(-96,9 Grad) und Kartenwinkel gegeneinander; danach stimmten sie in einem
+echten Teilturn mit +99,10 und +98,10 Grad ueberein. Richtung und TF nie
+einzeln aendern.
+
+Der sichere Start ist absichtlich nicht automatisch:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_automatische_kartierung.sh \
+  active_drive:=true enable_auto_explore:=true
+```
+
+Erst nach Live-Pruefung von 0 rpm, LiDAR, beiden VL53, Odometrie, SLAM-Karte,
+Kollisionsmonitor und freiem Dreh-/Fahrbereich darf genau ein Explore-Auftrag
+gesendet werden. Der erste echte Rundblick ist gleichzeitig ein A/B-Test fuer
+die Basis: Nach 15 Sekunden muessen im Mittel mindestens 0,01 rad/s erreicht
+sein. Zusaetzlich gelten acht Sekunden ohne 0,03 rad Fortschritt, falsche
+Drehrichtung, veraltete Odometrie oder 210 Sekunden Gesamtzeit als sicherer
+Abbruch. Die niedrige Rate beruecksichtigt die reale 2-s-Motorrampe und die
+30-Prozent-SlowZone des Kollisionsmonitors.
+
+Abbruch eines laufenden Auftrags:
+
+```bash
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String \
+  "{data: '{\"type\":\"cancel\"}'}"
+```
+
+Danach Nullkommando und 0 rpm bestaetigen und nur den Launch-Prozess einmal
+mit Strg-C beenden. Keine Prozessgruppe signalisieren. Die reale Karte erst
+nach Sichtkontrolle ueber den Kartenmanager speichern; Wohnungsdaten bleiben
+lokal. Rueckfall: `enable_auto_explore:=false` oder `active_drive:=false`.
+Ein flaches Stromkabel kann unterhalb der Sensor-Sicht liegen; auch bei
+`left=false`, `right=false`, `middle=false` ersetzt das keine Sichtkontrolle.
+
+---
+
 ## A* und Zielfahrt mit aktivem VL53-Schutz (16.08.2026)
 
 **Branch:** `fix/nav2-astar-vl53-zieltest`
@@ -701,7 +769,14 @@ ps -eo pid=,cmd= | grep -E '[l]dlidar|[a]sync_slam_toolbox|[b]ase_hardware|[s]ca
   | awk -v my="$MY" '$1 != my'
 ```
 
-**Der Odometrie-Winkelfehler ist geklärt: −1,45° je Umdrehung.** Die früher
+**Korrektur vom 16.08.2026:** Die folgende Messung klaerte die
+Betragsabweichung, nicht das Vorzeichen. Das Werkzeug spiegelte den
+LiDAR-Zuwachs vor der Regression und verdeckte damit die falsche
+Treiber-Handedness. Seit dem gekoppelten Paar `laser_scan_dir: true` und
+`tf_yaw: +1.5708` stimmen Odometrie (+99,10 Grad) und Kartenwinkel
+(+98,10 Grad) in einem echten Teilturn ueberein.
+
+**Die Odometrie-Betragsabweichung liegt bei -1,45 Grad je Umdrehung.** Die früher
 gemeldeten −6,3° bis −6,5° waren ein Artefakt von `odometrie_drehtest.py`.
 Sauber gemessen mit `tools/kartierung/odometrie_winkel_messen.py` (283
 Messpunkte je Richtung, R² = 0,997): Skalenfaktor 0,99628 gegen den und 0,99564
