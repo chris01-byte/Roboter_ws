@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## Adaptive App-Raumkartierung — motorlos integriert (16.08.2026)
+## Adaptive App-Raumkartierung — real abgenommen (17.08.2026)
 
 **Branch:** `feature/hybrid-erkundung-app`
 
@@ -13,10 +13,15 @@ Die Erkundung hat jetzt drei Phasen:
 Phase 3 verwendet die gemessene Fahrspur. Standardabschluss sind 85 % der
 zusammenhaengenden, um 0,40 m von Wand und unbekanntem Raum freigehaltenen
 Flaeche innerhalb eines 0,65-m-Korridors um diese Spur. Maximal 14
-Abdeckungsziele und 900 s begrenzen den Lauf. Eine SLAM-Korrektur ueber 0,35 m
-wird nicht als gefahrene Verbindung gezaehlt. Unterhalb des Zielwerts melden
-Zeitlimit oder fehlendes sicheres Ziel einen Fehler; die App zeigt dann nicht
-„Karte kann gespeichert werden".
+Abdeckungsziele, 150 s pro Nav2-Ziel und 1200 s Gesamtzeit begrenzen den Lauf.
+Eine SLAM-Korrektur ueber 0,35 m wird nicht als gefahrene Verbindung gezaehlt.
+Unterhalb des Zielwerts melden Zeitlimit oder fehlendes sicheres Ziel einen
+Fehler; die App zeigt dann nicht „Karte kann gespeichert werden".
+
+Erfolgreich bediente Frontier-Anfahrbereiche werden innerhalb 0,60 m fuer den
+Rest des Laufs gesperrt. Das verhindert die real beobachtete Folge sofortiger
+Nav2-Erfolge ohne Bewegung. Ein zusaetzliches Limit von 20 Frontier-Zielen
+bricht eine unerwartete Wiederholung fail-closed ab.
 
 Fuer App, Kartierung und Raumeditor gibt es jetzt genau einen gemeinsamen
 Startpfad. Motorlos:
@@ -27,8 +32,8 @@ bash tools/kartierung/start_app_erkundung.sh \
   active_drive:=false enable_auto_explore:=true
 ```
 
-Spaeterer beaufsichtigter Realtest, erst nach freiem Raum, erreichtem
-Hard-Not-Aus und neuer ausdruecklicher Fahrfreigabe:
+Beaufsichtigter Realstart, erst nach freiem Raum, erreichtem Hard-Not-Aus und
+neuer ausdruecklicher Fahrfreigabe:
 
 ```bash
 cd ~/roboter_ws
@@ -54,9 +59,19 @@ Kartenmanager vom allgemeinen Stillstandshelfer absichtlich erlaubt werden.
 Motorlos auf dem Jetson bestaetigt: je ein Besitzer aller zentralen Knoten,
 `dry_run=True`, 0 rpm, Explorer-Heartbeat, echter rosbridge-Empfang und der
 vollstaendige App-Pfad `explore -> running -> cancel -> canceled`.
-`map_ready_to_save` blieb beim Abbruch korrekt falsch. Die adaptive Phase ist
-noch nicht real gefahren; ihr erster scharfer Lauf ist eine neue
-Hardwareabnahme und keine Fortsetzung der alten Fahrfreigabe.
+`map_ready_to_save` blieb beim Abbruch korrekt falsch.
+
+Reale Abnahme am 17.08.2026: Der erste 900-s-Akkulauf erreichte 82,72 % und
+lief nur in das Gesamtzeitlimit. Ein Folgelauf deckte danach eine
+Frontier-Wiederholung auf und wurde sicher abgebrochen. Mit der 0,60-m-Sperre
+fuhr Amadeus den 360-Grad-Rundblick und fuenf verschiedene Frontier-Ziele in
+732 s. Die adaptive Zielwahl wechselte bei neu entdeckten Grenzen korrekt
+zurueck in die Frontier-Phase. Abschluss: 88,30 % von 5,0706 m2 sicher
+erreichbarer Flaeche, 4,4775 m2 abgedeckt, keine Frontiers offen,
+`map_ready_to_save=true`, Mission erfolgreich und danach 0 rpm. Beide VL53
+und der Kollisionsmonitor waren aktiv. Die lokale Sichtkontrolle zeigte eine
+zusammenhaengende 3-cm-Karte ohne offensichtliche Doppelwaende; sie wurde
+nicht ins Repository uebernommen.
 
 Rueckfall: `enable_auto_explore:=false`, `active_drive:=false` oder den neuen
 App-Launch nicht verwenden. `coverage_enabled:false` in

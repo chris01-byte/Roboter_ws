@@ -121,9 +121,11 @@ weniger als 0,01 rad/s erreicht werden, die Odometrie ausfaellt, der Roboter in
 die falsche Richtung dreht, acht Sekunden keinen Fortschritt macht oder das
 210-Sekunden-Limit erreicht. Das Zeitbudget beruecksichtigt, dass der aktive
 Kollisionsmonitor die Drehung in seiner SlowZone auf 30 % reduziert. Die
-gesamte Mission endet spaetestens nach 15 Minuten; ein einzelnes Nav2-Ziel
-nach 90 Sekunden. Recovery-Drehungen und -Rueckwaertsfahrten von Nav2 sind
-nicht mit der Hardware verbunden.
+gesamte Mission endet spaetestens nach 20 Minuten; ein einzelnes Nav2-Ziel
+nach 150 Sekunden. Erfolgreich bediente Frontier-Umfelder werden im Radius
+von 0,60 m nicht erneut angefahren; 20 Frontier-Ziele sind die zusaetzliche
+fail-closed Obergrenze. Recovery-Drehungen und -Rueckwaertsfahrten von Nav2
+sind nicht mit der Hardware verbunden.
 
 Ein beendeter Frontier-Abschnitt ist noch keine vollstaendige Raumabdeckung.
 Standardmaessig meldet der Explorer erst Erfolg, wenn mindestens 85 % der

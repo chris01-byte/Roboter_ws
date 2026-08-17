@@ -17,6 +17,70 @@ Rückfallweg:
 
 ---
 
+## 2026-08-17 — Adaptive Erkundung real bestanden und Frontier-Schleife gesperrt
+
+**Entscheidung:** Erfolgreich angefahrene Frontier-Umfelder werden fuer den
+Rest derselben Mission in einem Radius von 0,60 m nicht erneut als Ziel
+zugelassen. Zusaetzlich beendet ein hartes Limit von 20 Frontier-Zielen einen
+fehlerhaften Lauf fail-closed. Wegen der realen, durch die aktive
+VL53-SlowZone bis auf etwa 0,034 m/s reduzierten Fahrt gelten jetzt 150 s pro
+Nav2-Ziel und 1200 s fuer den gesamten Rundblick-, Frontier- und
+Abdeckungslauf.
+
+**Grund / beobachtete Evidenz:** Der erste Akku-Realtest mit 90 s pro Ziel und
+900 s Gesamtzeit endete waehrend Frontier 6 bei 82,72 % statt der geforderten
+85 %. Nach der Zeiterhoehung zeigte ein weiterer scharfer Lauf einen anderen
+Fehler: Nach zwei echten Frontier-Fahrten meldete Nav2 denselben bereits
+erreichten Anfahrbereich wiederholt sofort als Erfolg. Die Abdeckung blieb bei
+23,45 %, waehrend der Frontier-Zaehler ohne Bewegung bis 21 stieg. Der Auftrag
+wurde abgebrochen und der Roboter bei 0 rpm gestoppt. Ursache war, dass nur
+gescheiterte Ziele gesperrt wurden; erfolgreich bediente lokale
+Frontier-Umfelder blieben erneut waehlbar.
+
+Der beaufsichtigte Wiederholungslauf mit Sperre bestand in 732 s. Nach dem
+360-Grad-Rundblick wurden fuenf verschiedene Frontier-Ziele real bedient. Die
+Abdeckung stieg dabei nachvollziehbar von 3,69 ueber 6,47, 20,41, 35,01,
+54,01 und 72,81 auf 88,30 %. Die adaptive Phase plante zwischenzeitlich ein
+Abdeckungsziel; dessen Fahrt oeffnete neue Frontiers, worauf der Explorer
+korrekt zur Frontier-Phase zurueckwechselte. Abschlusswerte:
+`reachable_area_m2=5.0706`, `covered_area_m2=4.4775`,
+`frontiers_visited=5`, `frontiers_remaining=0` und
+`map_ready_to_save=true`.
+
+**Betroffene Dateien und Hardware:** `explore_node`, Explorer-Parameter und
+-Tests sowie Kartierungs- und Uebergabedokumentation. Der Realtest lief auf
+Akku mit STL-27L, beiden VL53, Encoder-Odometrie, SLAM, Nav2,
+`collision_monitor`, Missions-Gate und realem Antrieb. Wohnungsgeometrie und
+Kartenbild liegen nur lokal unter `/tmp` und nicht im Repository.
+
+**Teststatus:** 92 Tests aus `explore`, `robot_navigation`,
+`mission_manager` und `robot_bringup` bestanden. Die vier Pakete `explore`,
+`robot_navigation`, `robot_bringup` und `smartphone_gui` bauten erfolgreich.
+Ein motorloser Gesamtstart bestaetigte die neuen Live-Parameter und brach bei
+unveraenderter physischer LiDAR-Szene erwartungsgemaess fail-closed ab. Vor
+dem scharfen Lauf waren Not-Aus frei, Odometrie 0/0, LiDAR und beide VL53
+frisch und `collision_monitor` der einzige `/cmd_vel`-Publisher zur Basis.
+Am Ende meldeten Explorer und Mission Erfolg, Odometrie 0/0 und die Basis
+wiederholt 0 rpm. Der gerenderte 3-cm-Kartenausschnitt hatte 139 x 236 Zellen
+(4,17 x 7,08 m), 16,99 m2 freie Zellen und keine offensichtlichen doppelten
+Wandzuege. Danach wurde der gesamte Stack beendet.
+
+**Offene Risiken:** Die Prozentzahl bezieht sich weiterhin auf die um 0,40 m
+erodierte, vom Start aus erreichbare Freiflaeche und einen 0,65-m-Korridor um
+die reale Fahrspur, nicht auf jede freie Karten- oder Bodenstelle. Die
+Kartenansicht muss vor dauerhaftem Speichern durch eine Person bestaetigt
+werden. Flache Kabel koennen unterhalb der Sensoren liegen. Die bekannten
+Shutdown-Ausnahmen von LiDAR, `base_hardware` und VL53 traten erst nach
+Nullkommando beim Strg-C-Beenden auf.
+
+**Rueckfallweg:** `frontier_revisit_radius_m` und `max_frontier_goals` koennen
+auf den vorherigen Commit zurueckgesetzt werden; fuer einen sicheren
+Funktionsrueckfall `coverage_enabled:false`, `enable_auto_explore:=false`
+oder `active_drive:=false` verwenden. Ein laufender Auftrag wird mit
+`{"type":"cancel"}` beendet.
+
+---
+
 ## 2026-08-16 — Frontier-Erkundung um adaptive Flaechenabdeckung und App-Preflight erweitert
 
 **Entscheidung:** Die reale Raumkartierung besitzt nun drei Phasen: den

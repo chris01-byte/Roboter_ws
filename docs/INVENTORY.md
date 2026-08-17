@@ -1,10 +1,9 @@
 # Inventar
 
-**Hardwarestand:** 16.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 16.08.2026 · Branch
-`feature/hybrid-erkundung-app`; die real abgenommene Frontier-Kette wurde
-motorlos um adaptive, raumgroessenabhaengige Fahrspur-Abdeckung,
-Explorer-Heartbeat und einen gemeinsamen App-/Kartierungsstart erweitert
+**Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
+**Softwaredelta:** 17.08.2026 · Branch
+`feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
+abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -30,7 +29,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
-| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack | **erprobt** (neuer App-Stack motorlos) |
+| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack | **produktiv** (App-Erkundungsstack real abgenommen) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
@@ -43,7 +42,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **erprobt** (Rundblick/Frontiers real; Abdeckungsphase motorlos) |
+| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |

@@ -251,6 +251,10 @@ class ExploreNode(Node):
         self._heading_scale     = float(self.declare_parameter('heading_scale', 0.75).value)
         self._min_goal_dist_m   = float(self.declare_parameter('min_goal_distance_m', 0.30).value)
         self._blacklist_radius  = float(self.declare_parameter('blacklist_radius_m', 0.35).value)
+        self._frontier_revisit_radius = float(self.declare_parameter(
+            'frontier_revisit_radius_m', 0.60).value)
+        self._max_frontier_goals = int(self.declare_parameter(
+            'max_frontier_goals', 20).value)
         self._approach_dist_m   = float(self.declare_parameter('frontier_approach_distance_m', 0.45).value)
         self._goal_clearance_m  = float(self.declare_parameter('goal_clearance_m', 0.35).value)
         self._goal_search_m     = float(self.declare_parameter('goal_search_radius_m', 0.30).value)
@@ -335,6 +339,7 @@ class ExploreNode(Node):
         self._map: Optional[OccupancyGrid] = None
         self._map_received_at: Optional[float] = None
         self._blacklist: List[Tuple[float, float]] = []   # gescheiterte Ziele (Weltkoord.)
+        self._visited_frontier_goals: List[Tuple[float, float]] = []
         self._start_xy: Optional[Tuple[float, float]] = None
         self._active_goal = False
         self._active_goal_lock = threading.Lock()
@@ -361,6 +366,8 @@ class ExploreNode(Node):
                 or self._map_timeout_s <= 0.0
                 or self._cancel_timeout_s <= 0.0
                 or self._max_failed_goals <= 0
+                or self._frontier_revisit_radius <= self._min_goal_dist_m
+                or self._max_frontier_goals <= 0
                 or self._heading_scale < 0.0
                 or self._initial_scan_angle <= 0.0
                 or not 0.0 < self._initial_scan_speed <= 0.15
@@ -794,6 +801,8 @@ class ExploreNode(Node):
             dist = math.hypot(f.goal_x - rx, f.goal_y - ry)
             if dist < self._min_goal_dist_m:
                 continue   # zu nah (quasi schon erreicht)
+            if self._is_visited_frontier_goal(f.goal_x, f.goal_y):
+                continue   # dieses lokale Frontier-Umfeld wurde schon bedient
             if self._is_blacklisted(f.cx, f.cy):
                 continue   # zuvor gescheitertes Ziel meiden
             # Kosten/Nutzen (Idee wie explore_lite):
@@ -811,6 +820,21 @@ class ExploreNode(Node):
     def _is_blacklisted(self, x: float, y: float) -> bool:
         for bx, by in self._blacklist:
             if math.hypot(x - bx, y - by) < self._blacklist_radius:
+                return True
+        return False
+
+    def _is_visited_frontier_goal(self, x: float, y: float) -> bool:
+        """Reject a local frontier neighborhood already served successfully.
+
+        A still-visible frontier can otherwise remain just outside the
+        explorer's minimum distance while Nav2 considers its approach pose
+        reached. Re-submitting that pose creates an unbounded sequence of
+        immediate successes without driven coverage.
+        """
+        for visited_x, visited_y in getattr(
+                self, '_visited_frontier_goals', []):
+            if math.hypot(x - visited_x, y - visited_y) < (
+                    self._frontier_revisit_radius):
                 return True
         return False
 
@@ -1200,6 +1224,7 @@ class ExploreNode(Node):
         return_to_start = req.return_to_start or self._return_to_start_p
 
         self._blacklist.clear()
+        self._visited_frontier_goals.clear()
         self._start_xy = None
         self._coverage_path.clear()
         self._coverage_ratio = 0.0
@@ -1328,6 +1353,14 @@ class ExploreNode(Node):
 
             coverage_goal = False
             if candidates:
+                if frontiers_visited >= self._max_frontier_goals:
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = (
+                        'Frontier-Limit ohne Abschluss erreicht '
+                        f'({frontiers_visited}/{self._max_frontier_goals}); '
+                        'Wiederholungs- oder Kartenfortschritt pruefen')
+                    return self._finish_result(result, frontiers_visited)
                 best = candidates[0]
                 self._status_phase = 'frontier'
                 self._status_message = (
@@ -1544,6 +1577,8 @@ class ExploreNode(Node):
                 if coverage_goal:
                     self._coverage_goals_visited += 1
                 else:
+                    self._visited_frontier_goals.append(
+                        (best.goal_x, best.goal_y))
                     frontiers_visited += 1
                     self._frontiers_visited_status = frontiers_visited
                 time.sleep(self._replan_period_s)

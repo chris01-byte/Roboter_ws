@@ -22,10 +22,10 @@ explore_node:
     # --- Explorationsrhythmus / Grenzen ---
     replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]
     min_frontier_size_m: 0.30       # kleinste beachtete Frontier-Ausdehnung [m]
-    goal_timeout_s: 90.0            # max. Fahrzeit zu EINER Frontier [s]
-    # 360-Grad-Rundblick plus Frontier- und Abdeckungsphase. Der Realtest
-    # zeigte, dass 600 s fuer einen groesseren Raum nur eine Teilfahrt zulassen.
-    overall_timeout_s: 900.0        # hartes Gesamtlimit fuer alle 3 Phasen [s]
+    goal_timeout_s: 150.0           # Akku/VL53-SlowZone: max. Fahrzeit pro Ziel [s]
+    # Der Akku-Realtest endete nach 900 s noch waehrend Frontier 6 bei 82,7 %.
+    # 1200 s geben der real auf ca. 0,034 m/s gebremsten Fahrt Abschlussreserve.
+    overall_timeout_s: 1200.0       # hartes Gesamtlimit fuer alle 3 Phasen [s]
     nav_cancel_timeout_s: 3.0       # Kindziel muss so schnell terminal werden
     map_timeout_s: 5.0              # veraltete SLAM-Karte stoppt die Mission
     max_failed_goals: 6             # keine endlose Folge unerreichbarer Ziele
@@ -86,6 +86,8 @@ explore_node:
     # --- Zielauswahl / Selbstbefreiung ---
     min_goal_distance_m: 0.30       # Ziel muss mind. so weit von der Basis weg sein [m]
     blacklist_radius_m: 0.35        # Radius, in dem ein gescheitertes Ziel gesperrt wird [m]
+    frontier_revisit_radius_m: 0.60 # erfolgreich bedientes Umfeld nicht neu anfahren
+    max_frontier_goals: 20          # fail-closed gegen sofortige Erfolgs-Schleifen
     frontier_approach_distance_m: 0.45  # Ziel bleibt im bekannten Freiraum
     goal_clearance_m: 0.35          # frei von Wand und unbekanntem Raum
     goal_search_radius_m: 0.30      # sicheren Nachbarpunkt suchen

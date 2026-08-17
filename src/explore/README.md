@@ -54,6 +54,8 @@ Alle Werte in [config/explore_params.yaml](config/explore_params.yaml)
 - `potential_scale` / `gain_scale` – Kosten/Nutzen-Gewichtung (nah vs. groß)
 - `goal_timeout_s` – max. Fahrzeit pro Frontier
 - `blacklist_radius_m` – sperrt gescheiterte Ziele (Selbstbefreiung)
+- `frontier_revisit_radius_m` – sperrt erfolgreich bediente Frontier-Umfelder
+- `max_frontier_goals` – harte Obergrenze gegen Zielwiederholungen
 - `coverage_target_ratio` – erforderlicher Anteil der sicher befahrbaren Flaeche
 - `coverage_visit_radius_m` – Korridor um die gemessene Fahrspur
 - `coverage_clearance_m` – Kartenabstand der Abdeckungsziele
@@ -62,9 +64,11 @@ Alle Werte in [config/explore_params.yaml](config/explore_params.yaml)
 
 ## Abnahmestand und Grenzen
 
-Rundblick und Frontier-Phase wurden am echten Roboter gefahren. Die adaptive
-Abdeckungsphase, ihr App-Heartbeat sowie Start/Abbruch ueber rosbridge sind auf
-dem Jetson motorlos getestet; der erste scharfe Abdeckungslauf ist noch offen.
+Der komplette Ablauf ist auf dem echten Roboter gefahren. Der beaufsichtigte
+Akku-Lauf vom 17.08.2026 beendete Rundblick, adaptive Frontier-/Abdeckungswahl
+und Mission nach 732 s mit 88,30 % Abdeckung, fuenf verschiedenen
+Frontier-Zielen und `map_ready_to_save=true`. Beide VL53 und der
+Kollisionsmonitor waren aktiv; danach standen Odometrie und Basis bei null.
 Der Standardwert 85 % bezieht sich auf den erodierten, zusammenhaengenden
 Freiraum innerhalb von 0,65 m zur Fahrspur und ersetzt keine visuelle
 Kartenpruefung. Gedrehte Karten-Origin wird beruecksichtigt.

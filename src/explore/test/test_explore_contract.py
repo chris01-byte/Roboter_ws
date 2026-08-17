@@ -88,6 +88,8 @@ def test_frontier_ranking_prefers_forward_candidate_when_distance_matches():
     node._min_goal_dist_m = 0.30
     node._blacklist = []
     node._blacklist_radius = 0.35
+    node._visited_frontier_goals = []
+    node._frontier_revisit_radius = 0.60
     node._frontier_approach_goal = lambda frontier, _robot, _grid: (
         frontier.cx, frontier.cy)
     grid = _grid(resolution=0.05)
@@ -98,6 +100,28 @@ def test_frontier_ranking_prefers_forward_candidate_when_distance_matches():
         [sideways, forward], (0.0, 0.0), grid, robot_yaw=0.0)
 
     assert ranked[0] is forward
+
+
+def test_frontier_ranking_does_not_resubmit_served_goal_neighborhood():
+    node = ExploreNode.__new__(ExploreNode)
+    node._potential_scale = 3.0
+    node._gain_scale = 1.0
+    node._heading_scale = 0.0
+    node._min_goal_dist_m = 0.30
+    node._blacklist = []
+    node._blacklist_radius = 0.35
+    node._visited_frontier_goals = [(1.0, 0.0)]
+    node._frontier_revisit_radius = 0.60
+    node._frontier_approach_goal = lambda frontier, _robot, _grid: (
+        frontier.cx, frontier.cy)
+    grid = _grid(resolution=0.05)
+    repeated = Frontier((1.25, 0.0), 20)
+    new_region = Frontier((0.0, 1.0), 10)
+
+    ranked = node._rank_frontiers(
+        [repeated, new_region], (0.0, 0.0), grid, robot_yaw=0.0)
+
+    assert ranked == [new_region]
 
 
 def test_clearance_mask_and_component_keep_goals_on_robot_side_of_wall():
@@ -286,8 +310,11 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
         'navigate_to_pose_no_recovery.xml').read_text()
     source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
 
-    assert 'overall_timeout_s: 900.0' in config
+    assert 'goal_timeout_s: 150.0' in config
+    assert 'overall_timeout_s: 1200.0' in config
     assert 'max_failed_goals: 6' in config
+    assert 'frontier_revisit_radius_m: 0.60' in config
+    assert 'max_frontier_goals: 20' in config
     assert 'initial_scan_enabled: true' in config
     assert 'initial_scan_angular_speed_radps: 0.12' in config
     assert 'scan_no_progress_timeout_s: 8.0' in config
