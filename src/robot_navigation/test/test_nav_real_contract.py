@@ -60,9 +60,9 @@ def test_real_smoother_and_controller_limits_are_conservative():
     parameters = yaml.safe_load(
         (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
     )
-    controller = parameters['controller_server']['ros__parameters']['FollowPath']
-    progress = parameters['controller_server']['ros__parameters'][
-        'progress_checker']
+    controller_server = parameters['controller_server']['ros__parameters']
+    controller = controller_server['FollowPath']
+    progress = controller_server['progress_checker']
     smoother = parameters['velocity_smoother']['ros__parameters']
 
     assert controller['desired_linear_vel'] <= 0.10
@@ -80,6 +80,11 @@ def test_real_smoother_and_controller_limits_are_conservative():
     assert smoother['max_accel'] == [0.12, 0.0, 0.30]
     assert smoother['max_accel'][2] < controller['max_angular_accel']
     assert smoother['velocity_timeout'] <= 0.5
+    # Ein gemessener 0,95-s-Aussetzer von map->odom darf die Nav2-Action nicht
+    # verwerfen. Die Kommandokette stoppt dank Smoother trotzdem spaetestens
+    # nach 0,5 s ohne neue Reglerausgabe.
+    assert controller_server['failure_tolerance'] >= 1.5
+    assert smoother['velocity_timeout'] < controller_server['failure_tolerance']
     assert parameters['bt_navigator']['ros__parameters'][
         'default_server_timeout'] >= 2000
 

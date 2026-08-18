@@ -64,9 +64,36 @@ VL53 (`VL53L5CXException: 0`). Der sofortige isolierte Wiederholungstest war
 erfolgreich; beide Seiten publizierten stabil rund 3,98 Hz. Bei Wiederholung
 bleibt die Mission gesperrt und der Sensorstart wird nicht uebergangen.
 
+### Erster begrenzter Realtest und TF-Korrektur (18.08.2026)
+
+Der erste Motorstart blieb vor jedem Auftrag stehen, weil beide Regler bei
+aktivem Motor-Halt nicht auf Modbus antworteten. Nach physischem Entriegeln
+wurde RS485 vollstaendig bestaetigt. Ein transient fehlgeschlagener linker
+VL53-Start wurde nicht uebergangen; der isolierte Neustart lieferte auf beiden
+Seiten 3,78 Hz mit maximal 0,44 s Datenluecke bei 0,8 s Fahrtorgrenze.
+
+Der scharfe Ein-Ziel-Lauf absolvierte den Rundblick mit 360,0 Grad und die
+Frontier-Vorausrichtung mit 3,0 Grad Kartenrestfehler. Genau ein Nav2-Ziel wurde
+angenommen. Nach rund 0,28 m Fahrt brach Nav2 ab, obwohl Planer, Footprint,
+Encoder, RS485 und VL53 fehlerfrei waren. Im Controllerlog steht die
+eigentliche Ursache: `map->odom` war unter Jetson-Last mindestens 0,95 s alt;
+`controller_server.failure_tolerance` betrug nur 0,5 s. Das begrenzte Profil
+endete korrekt nach dem ersten Fehlversuch, 0 rpm wurde bestaetigt und alle
+Knoten wurden beendet. Dieser Lauf ist **noch kein bestandener Tuerdurchgang**.
+
+Die installierte reale Nav2-Konfiguration verwendet jetzt
+`failure_tolerance: 1.5`. `velocity_smoother.velocity_timeout` bleibt 0,5 s,
+damit fehlende Reglerausgaben weiterhin frueher ein Nullkommando erzeugen.
+Direkt bestanden 15 Vertragspruefungen; der registrierte Paketlauf bestand
+31/31 Navigationstests. Ein anschliessender Dry-run bestaetigte live 1,5 s,
+0,5 s, `dry_run=true` und 0 rpm. Vor einer Wiederholung Roboter erneut vor der
+Tuer ausrichten, beide VL53 pruefen und eine neue persoenliche Fahrfreigabe
+einholen.
+
 Rueckfall: lokales/globales `robot_radius: 0.40`, Mapping-Approach-Kreis
 `radius: 0.40`, Explorer `coverage_clearance_m: 0.40`, oder ohne Bewegung
-`active_drive:=false`.
+`active_drive:=false`. Die TF-Aenderung kann separat mit
+`controller_server.failure_tolerance: 0.5` zurueckgenommen werden.
 
 ---
 

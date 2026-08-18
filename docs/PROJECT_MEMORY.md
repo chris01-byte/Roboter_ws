@@ -69,6 +69,21 @@ Zellen beziehungsweise 0,69 m breite Tuer. Die `ComputePathToPose`-Action
 endete mit `SUCCEEDED` nach rund 0,7 ms; auch dabei blieb die Basis im Dry-run
 bei 0 rpm. Die temporaere Karte wurde danach geloescht.
 
+Der erste begrenzte Realtest am 18.08.2026 bestaetigte den 360,0-Grad-Rundblick,
+die Karten-Vorausrichtung mit 3,0 Grad Restfehler und die Uebergabe genau eines
+Nav2-Ziels. Amadeus fuhr rund 0,28 m, bevor der Controller abbrach. Ursache war
+weder Footprint noch Planung: `map->odom` blieb unter Jetson-Last mindestens
+0,95 s hinter der aktuellen Odometrie zurueck, waehrend der Controller nur
+0,5 s Ausfall tolerierte. Das Ein-Ziel-Profil endete daraufhin wie vorgesehen
+nach dem ersten Fehlversuch; die Tuerdurchfahrt gilt damit noch nicht als
+bestanden. Der Controller toleriert nun 1,5 s. Der nachgeschaltete
+`velocity_smoother` bleibt unveraendert bei 0,5 s und setzt die Geschwindigkeit
+damit frueher auf null; ein dauerhaft fehlender TF fuehrt weiterhin zum
+Abbruch. 15 direkte und 31 registrierte Navigationstests bestanden. Im
+motorlosen Live-Stack waren `failure_tolerance=1.5`, `velocity_timeout=0.5`,
+`dry_run=true` und 0 rpm aktiv. Nach beiden Laeufen waren keine
+Amadeus-Knoten mehr aktiv.
+
 Fuer die reale Einzelabnahme existiert zusaetzlich das explizite Profil
 `door_test_params.yaml`: Rundblick und Vorausrichtung bleiben aktiv, aber es
 sind hoechstens ein Frontier-Ziel, ein Fehlversuch, keine Coverage-Fahrt und
@@ -86,13 +101,16 @@ zulaessig. NavFn garantiert keine global kinematisch gueltige Route fuer
 Rechteckroboter; der lokale Polygonpruefer verhindert die Ausfuehrung einer
 unpassenden Route, kann aber zu einem Stillstand fuehren. Der Wohnungs-
 Abschlussvertrag muss noch um ungeloeste Portale und Kartenstabilitaet
-erweitert werden.
+erweitert werden. Die neue TF-Ausfalltoleranz ist motorlos verifiziert; die
+reale Tuerdurchfahrt muss nach erneutem Aufstellen und neuer Fahrfreigabe
+wiederholt werden.
 
 **Rueckfallweg:** In `nav2_params_real.yaml` lokal/global wieder
 `robot_radius: 0.40` setzen, im Mapping-Kollisionsmonitor den 0,40-m-Kreis
 wiederherstellen und `coverage_clearance_m: 0.40` verwenden. Sicherer
 Funktionsrueckfall bleibt `enable_auto_explore:=false` oder
-`active_drive:=false`.
+`active_drive:=false`. Nur die TF-Ausfalltoleranz laesst sich separat durch
+`controller_server.failure_tolerance: 0.5` zuruecknehmen.
 
 ---
 

@@ -96,7 +96,13 @@ controller_server:
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
-    failure_tolerance: 0.5
+    # REAL 18.08.2026: slam_toolbox hielt map->odom unter Jetson-Last einmal
+    # 0,95 s alt. 0,5 s brach dadurch eine freie Frontier-Fahrt nach 28 cm ab.
+    # 1,5 s ueberbrueckt diesen gemessenen TF-Aussetzer mit Reserve. Der
+    # nachgeschaltete velocity_smoother bleibt bei 0,5 s und setzt die
+    # Fahrgeschwindigkeit deshalb weiterhin frueher auf null; ein dauerhaft
+    # fehlender TF beendet die Action weiterhin fail-closed.
+    failure_tolerance: 1.5
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
