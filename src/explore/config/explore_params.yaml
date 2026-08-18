@@ -34,6 +34,8 @@ explore_node:
     potential_scale: 3.0            # Gewicht der Distanz (hoeher = naeher bevorzugt)
     gain_scale: 1.0                 # Gewicht der Frontier-Groesse (hoeher = groessere bevorzugt)
     heading_scale: 0.75             # bevorzugt Ziele in aktueller Blickrichtung
+    # 0 deaktiviert die harte Richtungsbegrenzung in der Wohnungserkundung.
+    frontier_forward_cone_half_angle_rad: 0.0
 
     # --- Phase 1: kontrollierter Rundblick vor jeder Fahrt ---
     odom_topic: "/odom"

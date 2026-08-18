@@ -71,18 +71,34 @@ bei 0 rpm. Die temporaere Karte wurde danach geloescht.
 
 Der erste begrenzte Realtest am 18.08.2026 bestaetigte den 360,0-Grad-Rundblick,
 die Karten-Vorausrichtung mit 3,0 Grad Restfehler und die Uebergabe genau eines
-Nav2-Ziels. Amadeus fuhr rund 0,28 m, bevor der Controller abbrach. Ursache war
-weder Footprint noch Planung: `map->odom` blieb unter Jetson-Last mindestens
-0,95 s hinter der aktuellen Odometrie zurueck, waehrend der Controller nur
-0,5 s Ausfall tolerierte. Das Ein-Ziel-Profil endete daraufhin wie vorgesehen
-nach dem ersten Fehlversuch; die Tuerdurchfahrt gilt damit noch nicht als
-bestanden. Der Controller toleriert nun 1,5 s. Der nachgeschaltete
+Nav2-Ziels. Die aeussere Beobachtung und das nachtraeglich ausgewertete Log
+zeigten jedoch einen bereits davor liegenden Zielwahlfehler: Die gewaehlte
+Frontier lag 30,6 Grad seitlich zur Startfront und fuehrte nicht zur Tuer.
+`heading_scale: 3.0` bevorzugte die Front nur weich und konnte dieses Ziel
+nicht ausschliessen. Amadeus fuhr rund 0,28 m in diese falsche Richtung, bevor
+der Controller zusaetzlich abbrach. Diese zweite Ursache war weder Footprint
+noch Planung: `map->odom` blieb unter Jetson-Last mindestens 0,95 s hinter der
+aktuellen Odometrie zurueck, waehrend der Controller nur 0,5 s Ausfall
+tolerierte. Das Ein-Ziel-Profil endete daraufhin wie vorgesehen nach dem ersten
+Fehlversuch; die Tuerdurchfahrt gilt damit noch nicht als bestanden. Der
+Controller toleriert nun 1,5 s. Der nachgeschaltete
 `velocity_smoother` bleibt unveraendert bei 0,5 s und setzt die Geschwindigkeit
 damit frueher auf null; ein dauerhaft fehlender TF fuehrt weiterhin zum
 Abbruch. 15 direkte und 31 registrierte Navigationstests bestanden. Im
 motorlosen Live-Stack waren `failure_tolerance=1.5`, `velocity_timeout=0.5`,
 `dry_run=true` und 0 rpm aktiv. Nach beiden Laeufen waren keine
 Amadeus-Knoten mehr aktiv.
+
+Nur das Tuerprofil setzt deshalb jetzt einen harten Vorwaertskorridor von
++/-20 Grad (`frontier_forward_cone_half_angle_rad`). Ausserhalb liegende
+Frontier-Anfahrpunkte werden vor jeder Vorausrichtung und Translation
+verworfen. Gibt es keinen sicheren Kandidaten im Korridor, endet der Test
+explizit ohne Translation. Das normale Wohnungsprofil setzt den Wert auf null
+und behaelt seine unbeschraenkte Frontier-Auswahl. Der neue Auswahlvertrag
+bestand 20/20 Explorer-Tests. Der installierte motorlose Live-Stack bestaetigte
+den 20-Grad-Wert, ein Ziel/einen Fehlversuch, deaktivierte Coverage, 300 s,
+`dry_run=true`, `allow_rs485=false` und 0 rpm. Beide VL53 liefen mit rund
+3,5--3,9 Hz, der normierte LiDAR mit rund 10 Hz.
 
 Fuer die reale Einzelabnahme existiert zusaetzlich das explizite Profil
 `door_test_params.yaml`: Rundblick und Vorausrichtung bleiben aktiv, aber es
@@ -102,15 +118,16 @@ Rechteckroboter; der lokale Polygonpruefer verhindert die Ausfuehrung einer
 unpassenden Route, kann aber zu einem Stillstand fuehren. Der Wohnungs-
 Abschlussvertrag muss noch um ungeloeste Portale und Kartenstabilitaet
 erweitert werden. Die neue TF-Ausfalltoleranz ist motorlos verifiziert; die
-reale Tuerdurchfahrt muss nach erneutem Aufstellen und neuer Fahrfreigabe
-wiederholt werden.
+reale Tuerdurchfahrt mit Vorwaertskorridor muss nach erneutem Aufstellen und
+neuer Fahrfreigabe wiederholt werden.
 
 **Rueckfallweg:** In `nav2_params_real.yaml` lokal/global wieder
 `robot_radius: 0.40` setzen, im Mapping-Kollisionsmonitor den 0,40-m-Kreis
 wiederherstellen und `coverage_clearance_m: 0.40` verwenden. Sicherer
 Funktionsrueckfall bleibt `enable_auto_explore:=false` oder
 `active_drive:=false`. Nur die TF-Ausfalltoleranz laesst sich separat durch
-`controller_server.failure_tolerance: 0.5` zuruecknehmen.
+`controller_server.failure_tolerance: 0.5` zuruecknehmen. Der Tuerkegel laesst
+sich separat mit `frontier_forward_cone_half_angle_rad: 0.0` deaktivieren.
 
 ---
 

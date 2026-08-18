@@ -99,8 +99,12 @@ groessere Frontier. Abnahmebedingungen:
 Dieser Test trennt Footprint/Planer von der spaeteren Wohnungsstrategie.
 Er verwendet `door_test_params.yaml`: Rundblick und Vorausrichtung bleiben
 aktiv, aber es gibt hoechstens ein Frontier-Ziel, einen Fehlversuch, keine
-Coverage-Fahrt und ein hartes Gesamtlimit von 300 s. Die Zielpose wird vor der
-Translation im Log geprueft. Erst danach wird die Mission freigegeben.
+Coverage-Fahrt und ein hartes Gesamtlimit von 300 s. Nach dem ersten Realtest
+ist ausserdem ein harter +/-20-Grad-Vorwaertskorridor aktiv: Das damalige,
+30,6 Grad seitliche Ziel kann nicht erneut ausgewaehlt werden. Gibt es keine
+sichere Frontier in Fahrtrichtung, endet der Test ohne Translation. Dieser
+Korridor gilt bewusst nur fuer die Einzelabnahme; die spaetere
+Wohnungserkundung muss Frontiers in allen Richtungen erreichen koennen.
 
 ### Stufe 2: Frontier-basierte Wohnungskartierung
 

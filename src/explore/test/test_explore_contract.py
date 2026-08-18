@@ -86,6 +86,7 @@ def test_frontier_ranking_prefers_forward_candidate_when_distance_matches():
     node._potential_scale = 3.0
     node._gain_scale = 1.0
     node._heading_scale = 0.75
+    node._frontier_forward_cone_half_angle = 0.0
     node._min_goal_dist_m = 0.30
     node._blacklist = []
     node._blacklist_radius = 0.35
@@ -103,11 +104,36 @@ def test_frontier_ranking_prefers_forward_candidate_when_distance_matches():
     assert ranked[0] is forward
 
 
+def test_frontier_forward_cone_rejects_sideways_candidate():
+    node = ExploreNode.__new__(ExploreNode)
+    node._potential_scale = 3.0
+    node._gain_scale = 1.0
+    node._heading_scale = 0.0
+    node._frontier_forward_cone_half_angle = math.radians(20.0)
+    node._min_goal_dist_m = 0.30
+    node._blacklist = []
+    node._blacklist_radius = 0.35
+    node._visited_frontier_goals = []
+    node._frontier_revisit_radius = 0.60
+    node._frontier_approach_goal = lambda frontier, _robot, _grid: (
+        frontier.cx, frontier.cy)
+    grid = _grid(resolution=0.05)
+    forward = Frontier((1.0, math.tan(math.radians(10.0))), 10)
+    sideways = Frontier((1.0, math.tan(math.radians(30.0))), 100)
+
+    ranked = node._rank_frontiers(
+        [sideways, forward], (0.0, 0.0), grid, robot_yaw=0.0)
+
+    assert ranked == [forward]
+    assert node._frontiers_rejected_by_heading == 1
+
+
 def test_frontier_ranking_does_not_resubmit_served_goal_neighborhood():
     node = ExploreNode.__new__(ExploreNode)
     node._potential_scale = 3.0
     node._gain_scale = 1.0
     node._heading_scale = 0.0
+    node._frontier_forward_cone_half_angle = 0.0
     node._min_goal_dist_m = 0.30
     node._blacklist = []
     node._blacklist_radius = 0.35
@@ -379,6 +405,14 @@ def test_door_profile_allows_only_one_frontier_without_coverage():
     assert parameters['coverage_enabled'] is False
     assert parameters['overall_timeout_s'] == 300.0
     assert parameters['heading_scale'] >= 3.0
+    assert math.isclose(
+        parameters['frontier_forward_cone_half_angle_rad'],
+        math.radians(20.0), abs_tol=1e-12)
+
+    normal_parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'explore_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+    assert normal_parameters['frontier_forward_cone_half_angle_rad'] == 0.0
 
     launch_source = (
         PACKAGE_ROOT / 'launch' / 'explore.launch.py').read_text()

@@ -74,9 +74,12 @@ Seiten 3,78 Hz mit maximal 0,44 s Datenluecke bei 0,8 s Fahrtorgrenze.
 
 Der scharfe Ein-Ziel-Lauf absolvierte den Rundblick mit 360,0 Grad und die
 Frontier-Vorausrichtung mit 3,0 Grad Kartenrestfehler. Genau ein Nav2-Ziel wurde
-angenommen. Nach rund 0,28 m Fahrt brach Nav2 ab, obwohl Planer, Footprint,
-Encoder, RS485 und VL53 fehlerfrei waren. Im Controllerlog steht die
-eigentliche Ursache: `map->odom` war unter Jetson-Last mindestens 0,95 s alt;
+angenommen. Es war mit 30,6 Grad zur Startfront jedoch bereits das falsche,
+seitliche Ziel und fuehrte nicht zur Tuer; das bestaetigten Beobachter und Log.
+Die bisherige `heading_scale` war nur eine weiche Praeferenz. Nach rund 0,28 m
+Fahrt brach Nav2 zusaetzlich ab, obwohl Planer, Footprint, Encoder, RS485 und
+VL53 fehlerfrei waren. Im Controllerlog steht diese zweite Ursache:
+`map->odom` war unter Jetson-Last mindestens 0,95 s alt;
 `controller_server.failure_tolerance` betrug nur 0,5 s. Das begrenzte Profil
 endete korrekt nach dem ersten Fehlversuch, 0 rpm wurde bestaetigt und alle
 Knoten wurden beendet. Dieser Lauf ist **noch kein bestandener Tuerdurchgang**.
@@ -90,10 +93,22 @@ Direkt bestanden 15 Vertragspruefungen; der registrierte Paketlauf bestand
 Tuer ausrichten, beide VL53 pruefen und eine neue persoenliche Fahrfreigabe
 einholen.
 
+Das begrenzte Tuerprofil akzeptiert nun zusaetzlich nur Frontier-Anfahrpunkte
+innerhalb von +/-20 Grad zur aktuellen Front. Ein Ziel ausserhalb dieses
+Korridors kann nicht mehr durch Groesse oder Naehe gewinnen. Fehlt ein sicherer
+Kandidat vor der Front, bricht die Mission vor Vorausrichtung und Translation
+mit einer eindeutigen Meldung ab. Die normale Wohnungserkundung bleibt mit
+Kegelwert null unveraendert. 20/20 Explorer-Tests bestanden. Im installierten
+Dry-run waren der Wert `0.3490658503988659`, ein Ziel/ein Fehlversuch,
+deaktivierte Coverage, 300 s, `allow_rs485=false`, 0 rpm, beide VL53 mit rund
+3,5--3,9 Hz und `/scan_normiert` mit rund 10 Hz aktiv. Danach liefen keine
+Amadeus-Knoten mehr.
+
 Rueckfall: lokales/globales `robot_radius: 0.40`, Mapping-Approach-Kreis
 `radius: 0.40`, Explorer `coverage_clearance_m: 0.40`, oder ohne Bewegung
 `active_drive:=false`. Die TF-Aenderung kann separat mit
-`controller_server.failure_tolerance: 0.5` zurueckgenommen werden.
+`controller_server.failure_tolerance: 0.5` zurueckgenommen werden; nur der
+Tuerkegel mit `frontier_forward_cone_half_angle_rad: 0.0`.
 
 ---
 

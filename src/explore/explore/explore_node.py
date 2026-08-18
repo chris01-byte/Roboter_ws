@@ -257,6 +257,8 @@ class ExploreNode(Node):
         self._potential_scale   = float(self.declare_parameter('potential_scale', 3.0).value)
         self._gain_scale        = float(self.declare_parameter('gain_scale', 1.0).value)
         self._heading_scale     = float(self.declare_parameter('heading_scale', 0.75).value)
+        self._frontier_forward_cone_half_angle = float(self.declare_parameter(
+            'frontier_forward_cone_half_angle_rad', 0.0).value)
         self._min_goal_dist_m   = float(self.declare_parameter('min_goal_distance_m', 0.30).value)
         self._blacklist_radius  = float(self.declare_parameter('blacklist_radius_m', 0.35).value)
         self._frontier_revisit_radius = float(self.declare_parameter(
@@ -377,6 +379,7 @@ class ExploreNode(Node):
                 or self._frontier_revisit_radius <= self._min_goal_dist_m
                 or self._max_frontier_goals <= 0
                 or self._heading_scale < 0.0
+                or not 0.0 <= self._frontier_forward_cone_half_angle <= math.pi
                 or self._initial_scan_angle <= 0.0
                 or not 0.0 < self._initial_scan_speed <= 0.15
                 or self._initial_scan_timeout <= 0.0
@@ -792,6 +795,7 @@ class ExploreNode(Node):
         rx, ry = robot_xy
         res = grid.info.resolution
         candidates: List[Frontier] = []
+        self._frontiers_rejected_by_heading = 0
         for f in frontiers:
             approach = self._frontier_approach_goal(f, robot_xy, grid)
             if approach is None:
@@ -810,8 +814,14 @@ class ExploreNode(Node):
             f.cost = self._potential_scale * dist - self._gain_scale * (f.size * res)
             if robot_yaw is not None:
                 goal_heading = math.atan2(f.goal_y - ry, f.goal_x - rx)
-                f.cost += self._heading_scale * abs(normalize_angle(
-                    goal_heading - robot_yaw))
+                heading_error = abs(normalize_angle(goal_heading - robot_yaw))
+                if (
+                        self._frontier_forward_cone_half_angle > 0.0
+                        and heading_error
+                        > self._frontier_forward_cone_half_angle):
+                    self._frontiers_rejected_by_heading += 1
+                    continue
+                f.cost += self._heading_scale * heading_error
             candidates.append(f)
         candidates.sort(key=lambda fr: fr.cost)   # kleinste Kosten zuerst
         return candidates
@@ -1366,6 +1376,16 @@ class ExploreNode(Node):
                     f'Kartengrenze {frontiers_visited + 1} wird angefahren; '
                     f'{len(candidates)} sichere Kandidaten offen.')
             elif not self._coverage_enabled:
+                if (
+                        frontiers
+                        and self._frontiers_rejected_by_heading > 0
+                        and frontiers_visited == 0):
+                    goal_handle.abort()
+                    result.success = False
+                    result.message = (
+                        'Tuerprofil: keine sichere Frontier im freigegebenen '
+                        'Vorwaertskorridor; keine Translation ausgefuehrt')
+                    return self._finish_result(result, frontiers_visited)
                 success, message, reason = self._classify_frontier_completion(
                     bool(frontiers), frontiers_visited)
                 result.success = success
