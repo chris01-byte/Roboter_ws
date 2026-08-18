@@ -1,0 +1,17 @@
+# Begrenztes Profil fuer genau den beaufsichtigten Tuer-Abnahmetest.
+# Nur zusammen mit active_drive:=true, enable_auto_explore:=true und einer
+# frischen persoenlichen Fahrfreigabe verwenden. Die normale Wohnungserkundung
+# laedt weiterhin explore_params.yaml ohne diese Ueberschreibungen.
+explore_node:
+  ros__parameters:
+    # Rundblick und Vorausrichtung bleiben aktiv. Danach ist hoechstens ein
+    # erfolgreiches Frontier-Ziel erlaubt; eine weitere Frontier fuehrt zum
+    # fail-closed Abbruch statt zur naechsten Fahrt.
+    max_frontier_goals: 1
+    max_failed_goals: 1
+    coverage_enabled: false
+    overall_timeout_s: 300.0
+    # Nach dem Rundblick steht der Roboter wieder zur Tuer. Diese Gewichtung
+    # bevorzugt die Frontier in aktueller Blickrichtung, garantiert sie aber
+    # nicht; deshalb bleibt die Zielpose vor Translation im Log zu pruefen.
+    heading_scale: 3.0

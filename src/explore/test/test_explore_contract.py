@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
+import yaml
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
@@ -366,3 +367,20 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'RotationProgress' in source
     assert 'self._stop_scan_and_confirm()' in source
     assert 'self._prealign_to_goal(' in source
+
+
+def test_door_profile_allows_only_one_frontier_without_coverage():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'door_test_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['max_frontier_goals'] == 1
+    assert parameters['max_failed_goals'] == 1
+    assert parameters['coverage_enabled'] is False
+    assert parameters['overall_timeout_s'] == 300.0
+    assert parameters['heading_scale'] >= 3.0
+
+    launch_source = (
+        PACKAGE_ROOT / 'launch' / 'explore.launch.py').read_text()
+    assert "'explore_params_overlay'" in launch_source
+    assert 'params_overlay' in launch_source

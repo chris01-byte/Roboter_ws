@@ -47,6 +47,8 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
             source.count("executable='rosbridge_websocket'"), 1)
         self.assertIn("'enable_auto_explore': enable_auto_explore", source)
         self.assertIn("'active_drive': active_drive", source)
+        self.assertIn(
+            "'explore_params_overlay': explore_params_overlay", source)
         self.assertIn('roboterknoten.py\" --still', helper)
         self.assertIn('AMADEUS_FAHRFREIGABE', helper)
         self.assertIn('/robot_map_manager', helper)

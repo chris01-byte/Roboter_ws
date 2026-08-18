@@ -23,8 +23,8 @@ Wohnungsplan stehen in `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
 Motorlos bestaetigt:
 
 - 33 gezielte Footprint-/Explorer-Tests bestanden;
-- registrierter Paketlauf: Explorer 18/18 und Navigation 31/31, insgesamt
-  49 Tests ohne Fehler/Fehlschlaege/uebersprungene Tests;
+- registrierter Paketlauf: Explorer 19/19, Navigation 31/31 und Bring-up 3/3,
+  insgesamt 53 Tests ohne Fehler/Fehlschlaege/uebersprungene Tests;
 - `robot_description`, `explore`, `robot_navigation`, `vl53_near_field`
   gebaut und Xacro validiert;
 - vermessener Nav2-Livefootprint exakt `x=-0,13..+0,33 m`, `y=+/-0,25 m`;
@@ -42,6 +42,27 @@ sind motorlos abgeschlossen. Als naechstes folgt ein einzelner beaufsichtigter
 Tuerdurchgang, nicht sofort eine volle Wohnungserkundung. Arm/Greifer muessen
 in Transportpose sein. Hard-Not-Aus, freie Tuer und neue persoenliche
 Fahrfreigabe bleiben Pflicht.
+
+Begrenztes Profil fuer diese Einzelabnahme:
+
+```bash
+cd /home/p/roboter_ws
+AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung.sh \
+  active_drive:=true enable_auto_explore:=true start_web_gui:=false \
+  explore_params_overlay:=/home/p/roboter_ws/install/explore/share/explore/config/door_test_params.yaml
+```
+
+Der Befehl ist **keine dauerhafte Fahrfreigabe** und darf erst nach neuer
+persoenlicher Zustimmung ausgefuehrt werden. Das Profil laesst den Rundblick
+und die sichere Vorausrichtung zu, aber hoechstens ein Frontier-Nav2-Ziel,
+einen Fehlversuch, keine Coverage-Fahrt und maximal 300 s. Vor dem
+Explore-Kommando muessen `max_frontier_goals=1`, `coverage_enabled=false`,
+der Polygon-Footprint, beide VL53-Punktwolken und 0 rpm bestaetigt sein.
+
+Ein motorloser Profilstart zeigte einmal einen transienten Fehler beim rechten
+VL53 (`VL53L5CXException: 0`). Der sofortige isolierte Wiederholungstest war
+erfolgreich; beide Seiten publizierten stabil rund 3,98 Hz. Bei Wiederholung
+bleibt die Mission gesperrt und der Sensorstart wird nicht uebergangen.
 
 Rueckfall: lokales/globales `robot_radius: 0.40`, Mapping-Approach-Kreis
 `radius: 0.40`, Explorer `coverage_clearance_m: 0.40`, oder ohne Bewegung

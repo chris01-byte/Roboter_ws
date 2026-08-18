@@ -16,21 +16,29 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     pkg = get_package_share_directory('explore')
     params = os.path.join(pkg, 'config', 'explore_params.yaml')
+    params_overlay = LaunchConfiguration('explore_params_overlay')
     safe_bt = os.path.join(
         pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'explore_params_overlay', default_value=params,
+            description='Optionales zweites Parameterprofil; Standard '
+                        'wiederholt die normalen Explorer-Parameter.'),
         Node(
             package='explore',
             executable='explore',
             name='explore_node',
             output='screen',
-            parameters=[params, {'behavior_tree': safe_bt}],
+            parameters=[
+                params, params_overlay, {'behavior_tree': safe_bt}],
         )
     ])

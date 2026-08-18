@@ -55,8 +55,8 @@ Antrieb blieben aus. Keine echte Karte wurde ins Repository uebernommen.
 
 **Teststatus:** 33 gezielte Footprint-/Explorer-Tests bestanden. Nachdem die
 vorhandenen Tests korrekt in `colcon test` registriert wurden, bestanden
-18/18 Explorer- und 31/31 Navigationstests, zusammen 49 Tests ohne Fehler,
-Fehlschlaege oder Auslassungen. Vier betroffene Pakete bauten erfolgreich;
+19/19 Explorer-, 31/31 Navigations- und 3/3 Bring-up-Tests, zusammen 53 Tests
+ohne Fehler, Fehlschlaege oder Auslassungen. Vier betroffene Pakete bauten erfolgreich;
 das Xacro ist gueltig. Im Jetson-Dry-run publizierte Nav2 exakt die gepaddeten
 Ecken `x=-0,13..+0,33 m`, `y=+/-0,25 m`; der Kollisionsmonitor publizierte
 dieselben vier Punkte im `base_link`-Frame. Globaler Radius sowie Explorer-
@@ -68,6 +68,16 @@ aktiv. Abschliessend plante der reale NavFn-Stack auf einer temporaeren
 Zellen beziehungsweise 0,69 m breite Tuer. Die `ComputePathToPose`-Action
 endete mit `SUCCEEDED` nach rund 0,7 ms; auch dabei blieb die Basis im Dry-run
 bei 0 rpm. Die temporaere Karte wurde danach geloescht.
+
+Fuer die reale Einzelabnahme existiert zusaetzlich das explizite Profil
+`door_test_params.yaml`: Rundblick und Vorausrichtung bleiben aktiv, aber es
+sind hoechstens ein Frontier-Ziel, ein Fehlversuch, keine Coverage-Fahrt und
+300 s Gesamtdauer erlaubt. Der Parameter-Overlay wird von App-, Mapping- und
+Explorer-Launch durchgereicht. Im Dry-run waren alle Begrenzungen live aktiv,
+`allow_rs485=false` und 0 rpm. Ein VL53-Start schlug einmal rechts mit
+`VL53L5CXException: 0` fehl; der isolierte Wiederholungstest initialisierte
+anschliessend beide Sensoren und beide Punktwolken liefen stabil mit rund
+3,98 Hz. Jeder scharfe Start muss deshalb beide Topics erneut pruefen.
 
 **Offene Risiken:** Die abgeschraegten Vorderecken sind ohne gemessene
 Schraegentiefe absichtlich nicht ausgespart; die Rechteckhuelle ist sicherer,

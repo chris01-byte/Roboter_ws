@@ -144,6 +144,11 @@ Kontur. Der Explorer erodiert Ziel- und Abdeckungsflaeche kreisfoermig um
 breit; fuer den lokal gepaddeten Footprint bleiben 0,09 m je Seite.
 Ein motorloser NavFn-Test plante auf einer 3-cm-Synthetikkarte geradlinig
 durch eine 0,69-m-Oeffnung (`ComputePathToPose: SUCCEEDED`).
+Fuer die einzelne reale Tuerabnahme muss der App-Launch den Overlay
+`install/explore/share/explore/config/door_test_params.yaml` erhalten. Er
+begrenzt auf Rundblick/Vorausrichtung plus maximal ein Frontier-Ziel, schaltet
+Coverage aus und bricht nach hoechstens 300 s ab. Vor dem Explore-Kommando
+beide VL53-Punktwolken und die aktiven Parameter auslesen.
 Die Mehrraumstrategie und Abnahmereihenfolge stehen in
 `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
 

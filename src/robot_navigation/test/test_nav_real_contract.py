@@ -47,6 +47,7 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert "'enable_auto_explore', default_value='false'" in source
     assert "'allow_explore_mission'" in source
     assert "'enable_real_explore': enable_auto_explore" in source
+    assert "'explore_params_overlay': explore_params_overlay" in source
     assert "period=4.0" in source
     assert 'nav2_map_server' not in source
     assert 'nav2_amcl' not in source

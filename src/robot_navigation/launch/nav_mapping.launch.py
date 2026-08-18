@@ -24,11 +24,15 @@ def generate_launch_description():
     mapping_collision_params = os.path.join(
         get_package_share_directory('vl53_near_field'), 'config',
         'collision_monitor_mapping_params.yaml')
+    default_explore_params = os.path.join(
+        get_package_share_directory('explore'), 'config',
+        'explore_params.yaml')
 
     active_drive = LaunchConfiguration('active_drive')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
+    explore_params_overlay = LaunchConfiguration('explore_params_overlay')
 
     nav_cmd_remap = [('cmd_vel', 'cmd_vel_nav_raw')]
     smoother_cmd_remap = [
@@ -102,6 +106,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'crop', default_value='true',
             description='Vermessenen Mastsektor im LiDAR maskieren.'),
+        DeclareLaunchArgument(
+            'explore_params_overlay', default_value=default_explore_params,
+            description='Optionales begrenzendes Explorer-Profil.'),
 
         LogInfo(msg='Automatische Kartierung: OAK bleibt deaktiviert; '
                     'Hinderniskette ist dual-VL53 plus collision_monitor.'),
@@ -133,7 +140,10 @@ def generate_launch_description():
         # und frischen Gate-Status keinen Motor.
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
-                'explore', 'explore.launch.py'))),
+                'explore', 'explore.launch.py')),
+            launch_arguments={
+                'explore_params_overlay': explore_params_overlay,
+            }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'bt_orchestrator', 'bt_orchestrator.launch.py'))),

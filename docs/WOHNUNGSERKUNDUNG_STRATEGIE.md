@@ -97,6 +97,10 @@ groessere Frontier. Abnahmebedingungen:
 - Encoder-Odometrie und SLAM-Karte bleiben konsistent.
 
 Dieser Test trennt Footprint/Planer von der spaeteren Wohnungsstrategie.
+Er verwendet `door_test_params.yaml`: Rundblick und Vorausrichtung bleiben
+aktiv, aber es gibt hoechstens ein Frontier-Ziel, einen Fehlversuch, keine
+Coverage-Fahrt und ein hartes Gesamtlimit von 300 s. Die Zielpose wird vor der
+Translation im Log geprueft. Erst danach wird die Mission freigegeben.
 
 ### Stufe 2: Frontier-basierte Wohnungskartierung
 
