@@ -30,10 +30,13 @@ Der erste Patch ersetzt diese Kombination durch:
 
 ## Aktueller Realstand
 
-Der erste Wechsel in einen Folgeraum ist am 18.08.2026 sensorisch gelungen.
+Der erste Wechsel in einen Folgeraum ist am 18.08.2026 sensorisch und physisch
+bestaetigt gelungen.
 Nav2 erreichte nach der Tuerdiagnose ein regulaeres Frontier-Ziel bei
 `(1,05, 0,05) m`; der Explorer zaehlte die Frontier als besucht und die Basis
-stand danach mit beiden Motoren bei 0 rpm. Zuvor hatte ein eigener Portallauf
+stand danach mit beiden Motoren bei 0 rpm. Der anwesende Beobachter bestaetigte,
+dass der Roboter die Schwelle vollstaendig verlassen und den Folgeraum erreicht
+hatte. Zuvor hatte ein eigener Portallauf
 den entscheidenden Zwischenzustand sichtbar gemacht: Nach 0,347 m Anfahrt
 wuchsen zwei kuenstlich getrennte Costmap-Komponenten zu einer einzigen
 2,251-m2-Komponente zusammen. Das alte Verhalten wertete diese Verbesserung
@@ -54,8 +57,7 @@ Der Explorer kann jetzt beide Faelle auseinanderhalten:
 Der einzelne Lauf beweist noch keine vollstaendige Wohnung. Der naechste
 Meilenstein ist deshalb nicht ein weiterer Schwellentest, sondern ein
 richtungsfreier Lauf ueber mehrere Frontiers und mindestens einen weiteren
-Raumwechsel. Die externe Sichtbestaetigung der aktuellen physischen Endlage
-bleibt zusaetzlich zur sensorischen Evidenz festzuhalten.
+Raumwechsel.
 
 Die Chassiskontur wurde am 18.08.2026 relativ zur mittigen Antriebsachse mit
 270 mm vorne, 110 mm hinten und 230 mm je Seite gemessen. Die schmalste Tuer
@@ -215,8 +217,8 @@ die Geometriemodellierung, nicht die Rasteraufloesung.
 1. Vermessener Footprint im Nav2-/Kollisionsstack: abgeschlossen.
 2. Synthetische 0,68-m-Tuer in der Explorer-Erreichbarkeit: abgeschlossen.
 3. Motorloser NavFn-Plan durch eine 0,69-m-Synthetiktuer: abgeschlossen.
-4. Beaufsichtigter Wechsel zum 1,05-m-Ziel im Folgeraum: sensorisch
-   abgeschlossen; externe Sichtbestaetigung der Endlage festhalten.
+4. Beaufsichtigter Wechsel zum 1,05-m-Ziel im Folgeraum: sensorisch und durch
+   aeussere Sichtpruefung abgeschlossen.
 5. Richtungsfreien Mehrraumlauf mit normalem Wohnungsprofil starten und
    mehrere Frontiers, weitere Tueren, Log und lokale Karte auswerten.
 6. Abschluss erst freigeben, wenn keine ungeloesten Frontiers/Portale bleiben

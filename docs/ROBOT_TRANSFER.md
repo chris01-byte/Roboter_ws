@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## Mehrraum-Uebergang — sensorisch real erreicht (18.08.2026)
+## Mehrraum-Uebergang — sensorisch und extern bestaetigt (18.08.2026)
 
 **Branch:** `fix/polygon-footprint-wohnung`
 
@@ -40,9 +40,9 @@ Softwareabnahme: Explorer 58/58; gesamter registrierter Bestand 165 Tests,
 10,8 Hz und beide VL53 mit 3,8 Hz; Motoren standen bei 0 rpm. Nach der Fahrt
 wurde der gesamte Stack mit genau einem Ctrl-C am Launch-Elternprozess beendet.
 Es laufen derzeit keine fuer diese Abnahme absichtlich gestarteten
-Amadeus-Knoten. Die aktuelle physische Endlage im Folgeraum muss der anwesende
-Beobachter noch verbal bestaetigen; Sensorik und Nav2 bestaetigen den
-Mehrraumwechsel bereits.
+Amadeus-Knoten. Der anwesende Beobachter bestaetigte nach dem Stillstand, dass
+der Roboter die Schwelle vollstaendig verlassen und den Folgeraum real erreicht
+hatte. Die aeussere Sichtpruefung stimmt damit mit Sensorik und Nav2 ueberein.
 
 **Naechster Schritt:** Kein weiterer Schwellen-Sondertest. Mit neuer
 persoenlicher Fahrfreigabe das normale, richtungsfreie Wohnungsprofil starten

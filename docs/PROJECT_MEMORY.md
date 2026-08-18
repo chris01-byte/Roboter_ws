@@ -57,9 +57,10 @@ sicheren Komponente durch die Fahrspur abgedeckt. Eine nur fuer diese Abnahme
 temporär aktivierte harte Vorwaertsbegrenzung verwarf danach drei seitliche
 Frontiers, weshalb die Gesamtmission korrekt als unvollstaendig endete. Diese
 Begrenzung gehoert nicht zum Wohnungsprofil und wurde wieder entfernt. Die
-sensorische Mehrraumfahrt ist damit nachgewiesen; die abschliessende
-Beobachterbestaetigung der physischen Endlage bleibt als externe Sichtpruefung
-festzuhalten.
+sensorische Mehrraumfahrt ist damit nachgewiesen. Der anwesende Beobachter
+bestaetigte anschliessend, dass der Roboter die Schwelle vollstaendig verlassen
+und den Folgeraum real erreicht hatte. Damit stimmen Nav2-Erfolg, Sensorik und
+aeussere Sichtpruefung ueberein.
 
 **Betroffene Dateien und Hardware:** `explore_node.py`, neue Module
 `portal_planning.py` und `lidar_motion.py`, Explorer-Parameter und Tests,
@@ -83,8 +84,7 @@ dem erreichten Folgeraum mehrere Frontiers und weitere Tueren bedienen. Die
 Portal-Direktbruecke wurde real noch nicht ausgefuehrt, weil die Live-Karte die
 Tuer rechtzeitig regulaer fuer Nav2 verband. Schwellen und Teppiche bleiben
 Schlupfquellen; deshalb darf der direkte Portalpfad nicht auf Encoderabschluss
-zurueckfallen. Eine verbale aeussere Bestaetigung der aktuellen Endlage ist
-noch einzuholen.
+zurueckfallen.
 
 **Rueckfallweg:** `portal_crossing_enabled: false` deaktiviert nur die neue
 Portalbruecke; normale Frontier-Navigation bleibt erhalten. Der sicherste
