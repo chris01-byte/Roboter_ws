@@ -89,23 +89,23 @@ explore_node:
     frontier_revisit_radius_m: 0.60 # erfolgreich bedientes Umfeld nicht neu anfahren
     max_frontier_goals: 20          # fail-closed gegen sofortige Erfolgs-Schleifen
     frontier_approach_distance_m: 0.45  # Ziel bleibt im bekannten Freiraum
-    goal_clearance_m: 0.35          # frei von Wand und unbekanntem Raum
+    goal_clearance_m: 0.28          # halbe Breite 0.23 m + 0.05 m Reserve
     goal_search_radius_m: 0.30      # sicheren Nachbarpunkt suchen
 
     # --- Phase 3: adaptive Abdeckung der sicher befahrbaren Raumflaeche ---
     # Frontier-Ziele kartieren unbekannte Grenzen, beweisen aber nicht, dass
     # der Roboter den Raum wirklich abgefahren hat. Danach wird deshalb die
-    # gemessene Fahrspur auf die zusammenhaengende, mit 30 cm radialem Abstand
-    # befahrbare Freiflaeche projiziert. 30 cm entsprechen dem globalen
-    # NavFn-Modell (25 cm halbe Plattformbreite plus 5 cm Reserve); die lokale
-    # Kollisionspruefung verwendet zusaetzlich das volle 0.70x0.50-m-Polygon.
+    # gemessene Fahrspur auf die zusammenhaengende, mit 28 cm radialem Abstand
+    # befahrbare Freiflaeche projiziert. 28 cm entsprechen dem globalen
+    # NavFn-Modell (23 cm halbe gemessene Breite plus 5 cm Reserve); die lokale
+    # Kollisionspruefung verwendet zusaetzlich die volle asymmetrische Kontur.
     # Der geodaetisch am weitesten noch
     # nicht abgedeckte Punkt wird zum naechsten Ziel. Dadurch waechst die Zahl
     # der Ziele automatisch mit Raumgroesse und Grundriss.
     coverage_enabled: true
     coverage_target_ratio: 0.85
     coverage_visit_radius_m: 0.65
-    coverage_clearance_m: 0.30
+    coverage_clearance_m: 0.28
     coverage_min_goal_distance_m: 0.70
     coverage_path_sample_m: 0.12
     # Kartenkorrekturen ueber diesem Sprung werden als neuer Messpunkt, aber

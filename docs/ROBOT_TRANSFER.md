@@ -4,33 +4,43 @@
 
 **Branch:** `fix/polygon-footprint-wohnung`
 
-Der reale lokale Nav2-Footprint ist jetzt ein Rechteck mit den Rohpunkten
-`(+/-0.35, +/-0.25) m` um `base_link` und `footprint_padding: 0.02`.
-Zur Laufzeit entstehen damit die Punkte `(+/-0.37, +/-0.27) m`. Der
+Der reale lokale Nav2-Footprint ist jetzt die sichere Rechteckhuelle mit den
+Rohpunkten `x=-0.11..+0.31 m`, `y=+/-0.23 m` relativ zur mittigen
+Antriebsachse und `footprint_padding: 0.02`. Zur Laufzeit werden daraus
+`x=-0.13..+0.33 m`, `y=+/-0.25 m`. Das Chassis selbst wurde am 18.08.2026 mit
+270 mm vor, 110 mm hinter der Achse und maximal 460 mm Breite gemessen. Die
+bekannte VL53-Montage verlaengert die sichere Kontur vorne auf 310 mm. Der
 Kartierungs-`collision_monitor` abonniert dieses Polygon auf
 `/local_costmap/published_footprint`, sodass lokaler Regler und reaktive
 Approach-Pruefung dieselbe Kontur verwenden.
 
-NavFn bleibt vorerst aktiv und plant global mit `robot_radius: 0.30`; die
-Explorer-Abdeckungsrechnung verwendet dazu eine kreisfoermige 0,30-m-Maske.
+NavFn bleibt vorerst aktiv und plant global mit `robot_radius: 0.28`; die
+Explorer-Ziel- und Abdeckungsrechnung verwendet dazu eine kreisfoermige
+0,28-m-Maske.
 Das ist absichtlich kein Smac-Umbau. Die Entscheidung und der gestufte
 Wohnungsplan stehen in `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
 
 Motorlos bestaetigt:
 
-- 32 gezielte Tests bestanden;
-- vollstaendiger Paketlauf: 72 Tests, 0 Fehler/Fehlschlaege/uebersprungen;
-- `explore`, `robot_navigation`, `vl53_near_field` gebaut;
-- Nav2-Livepolygon exakt `(+/-0.37, +/-0.27) m`;
+- 33 gezielte Footprint-/Explorer-Tests bestanden;
+- registrierter Paketlauf: Explorer 18/18 und Navigation 31/31, insgesamt
+  49 Tests ohne Fehler/Fehlschlaege/uebersprungene Tests;
+- `robot_description`, `explore`, `robot_navigation`, `vl53_near_field`
+  gebaut und Xacro validiert;
+- vermessener Nav2-Livefootprint exakt `x=-0,13..+0,33 m`, `y=+/-0,25 m`;
 - `collision_mapping_approach` identisch im `base_link`-Frame;
+- globaler Radius und beide Explorer-Abstaende live jeweils 0,28 m;
+- realer NavFn-Stack plante auf einer temporaeren 3-cm-Synthetikkarte einen
+  geraden 1,50-m-Pfad durch eine 0,69-m-Tuer (`SUCCEEDED`, ca. 0,7 ms);
 - `dry_run=true`, `allow_rs485=false`, 0 rpm;
 - nach dem Test keine Amadeus-Knoten aktiv.
 
-Vor einem scharfen Test ist zwingend nachzumessen: maximale feste Ausdehnung
-vorn, hinten, links und rechts relativ zu `base_link`, Arm/Greifer in
-Transportpose. Die URDF-Werte 0,70 x 0,50 m tragen noch `[ANPASSEN]`. Erst
-danach folgt ein einzelner beaufsichtigter Tuerdurchgang, nicht sofort eine
-volle Wohnungserkundung. Hard-Not-Aus, freie Tuer und neue persoenliche
+Die schmalste Tuer ist mit 680 mm gemessen. Gegenueber der 500 mm breiten,
+gepaddingten lokalen Kontur bleiben 90 mm je Seite bei exakt mittiger Fahrt;
+das globale 560-mm-Modell laesst 60 mm je Seite. Laufzeit- und NavFn-Tuertest
+sind motorlos abgeschlossen. Als naechstes folgt ein einzelner beaufsichtigter
+Tuerdurchgang, nicht sofort eine volle Wohnungserkundung. Arm/Greifer muessen
+in Transportpose sein. Hard-Not-Aus, freie Tuer und neue persoenliche
 Fahrfreigabe bleiben Pflicht.
 
 Rueckfall: lokales/globales `robot_radius: 0.40`, Mapping-Approach-Kreis
@@ -50,7 +60,7 @@ Die Erkundung hat jetzt drei Phasen:
 3. adaptive Abdeckungsziele in der sicher befahrbaren bekannten Flaeche.
 
 Phase 3 verwendet die gemessene Fahrspur. Standardabschluss sind 85 % der
-zusammenhaengenden, radial um 0,30 m von Wand und unbekanntem Raum freigehaltenen
+zusammenhaengenden, radial um 0,28 m von Wand und unbekanntem Raum freigehaltenen
 Flaeche innerhalb eines 0,65-m-Korridors um diese Spur. Maximal 14
 Abdeckungsziele, 150 s pro Nav2-Ziel und 1200 s Gesamtzeit begrenzen den Lauf.
 Eine SLAM-Korrektur ueber 0,35 m wird nicht als gefahrene Verbindung gezaehlt.

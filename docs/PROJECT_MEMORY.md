@@ -17,16 +17,20 @@ Rückfallweg:
 
 ---
 
-## 2026-08-18 — Tuergaengiger Polygon-Footprint motorlos verifiziert
+## 2026-08-18 — Vermessener, tuergaengiger Polygon-Footprint
 
-**Entscheidung:** Die lokale reale Nav2-Costmap verwendet die dokumentierte
-rechteckige Plattformkontur 0,70 x 0,50 m mit 0,02 m Padding. NavFn bleibt als
-bewaehrter 2D-Planer vorerst global kreisfoermig, sein Radius sinkt von 0,40
-auf 0,30 m (halbe Plattformbreite plus 0,05 m Reserve). Der Kartierungs-
-`collision_monitor` uebernimmt dynamisch den lokalen Polygon-Footprint. Die
+**Entscheidung:** Die lokale reale Nav2-Costmap verwendet die am 18.08.2026
+relativ zur mittigen Antriebsachse gemessene, asymmetrische Plattformkontur:
+Chassis vorn +0,27 m, hinten -0,11 m und seitlich +/-0,23 m. Weil die bekannten
+VL53-Frames bei x=+0,29 m liegen und ihr Modell bis +0,305 m reicht, umfasst die
+sichere Rechteckhuelle x=-0,11..+0,31 m und y=+/-0,23 m. Dazu kommen 0,02 m
+Padding. NavFn bleibt als bewaehrter 2D-Planer vorerst global kreisfoermig;
+sein Radius sinkt von 0,40 auf 0,28 m (halbe Breite plus 0,05 m Reserve). Der
+Kartierungs-`collision_monitor` uebernimmt dynamisch den lokalen
+Polygon-Footprint. Die
 Explorer-Ziel- und Abdeckungsmaske wird kreisfoermig statt mit einem
 quadratischen Fenster erodiert; die Abdeckungsreserve sinkt passend auf
-0,30 m. Die etablierte Frontier-Methode bleibt Grundlage der
+0,28 m. Die etablierte Frontier-Methode bleibt Grundlage der
 Wohnungserkundung; ein Raumgraph oder Smac State Lattice folgt nur nach einem
 reproduzierbaren Bedarf.
 
@@ -39,7 +43,9 @@ Kartenschnappschuss vergroesserte die kreisfoermige 0,30-m-Maske die groesste
 zusammenhaengende sichere Komponente deutlich und verband zuvor getrennte
 Bereiche. Nav2 empfiehlt fuer nicht kreisfoermige Roboter den geometrischen
 Footprint; NavFn selbst bleibt jedoch ein 2D-Planer, weshalb lokales Polygon
-und globales Breitenmodell getrennt sind.
+und globales Breitenmodell getrennt sind. Die nachgemessene schmalste Tuer ist
+0,68 m breit. Gegenueber der 0,50-m-gepaddeten Plattformbreite bleiben 0,18 m
+Gesamtreserve, gegenueber dem globalen 0,56-m-Kreis 0,12 m.
 
 **Betroffene Dateien und Hardware:** `nav2_params_real.yaml`,
 `collision_monitor_mapping_params.yaml`, `explore_node`, Explorer-Parameter
@@ -47,22 +53,30 @@ und Tests sowie `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`. Der motorlose Live-Test
 startete STL-27L, beide VL53, SLAM, Nav2 und `collision_monitor`; RS485 und
 Antrieb blieben aus. Keine echte Karte wurde ins Repository uebernommen.
 
-**Teststatus:** 32 gezielte Explorer-/Navigationstests bestanden; der
-vollstaendige Lauf fuer die drei betroffenen Pakete endete mit 72 Tests, 0
-Fehlern, 0 Fehlschlaegen und 0 uebersprungenen Tests. Alle drei Pakete bauten
-erfolgreich. Im Jetson-Dry-run publizierte Nav2 exakt die gepaddeten
-Ecken `(+/-0,37, +/-0,27) m`; der Kollisionsmonitor publizierte dieselben vier
-Punkte im `base_link`-Frame. `base_hardware` meldete dabei durchgehend
-`dry_run=true`, `allow_rs485=false` und 0 rpm. Der Stack wurde danach sauber
-ueber den Launch-Prozess beendet.
+**Teststatus:** 33 gezielte Footprint-/Explorer-Tests bestanden. Nachdem die
+vorhandenen Tests korrekt in `colcon test` registriert wurden, bestanden
+18/18 Explorer- und 31/31 Navigationstests, zusammen 49 Tests ohne Fehler,
+Fehlschlaege oder Auslassungen. Vier betroffene Pakete bauten erfolgreich;
+das Xacro ist gueltig. Im Jetson-Dry-run publizierte Nav2 exakt die gepaddeten
+Ecken `x=-0,13..+0,33 m`, `y=+/-0,25 m`; der Kollisionsmonitor publizierte
+dieselben vier Punkte im `base_link`-Frame. Globaler Radius sowie Explorer-
+Ziel- und Abdeckungsabstand waren zur Laufzeit jeweils 0,28 m.
+`base_hardware` meldete durchgehend `dry_run=true` und 0 rpm. Der Stack wurde
+danach ueber den Launch-Prozess beendet; danach waren keine Amadeus-Knoten
+aktiv. Abschliessend plante der reale NavFn-Stack auf einer temporaeren
+3-cm-Synthetikkarte geradlinig von x=-0,75 m nach x=+0,75 m durch eine 23
+Zellen beziehungsweise 0,69 m breite Tuer. Die `ComputePathToPose`-Action
+endete mit `SUCCEEDED` nach rund 0,7 ms; auch dabei blieb die Basis im Dry-run
+bei 0 rpm. Die temporaere Karte wurde danach geloescht.
 
-**Offene Risiken:** Die 0,70 x 0,50 m im Robotermodell sind als `[ANPASSEN]`
-markiert. Vor jeder realen Tuerfahrt muessen Front, Heck, links und rechts bei
-eingefahrenem Arm relativ zu `base_link` nachgemessen werden. NavFn garantiert
-keine global kinematisch gueltige Route fuer Rechteckroboter; der lokale
-Polygonpruefer verhindert die Ausfuehrung einer unpassenden Route, kann aber
-zu einem Stillstand fuehren. Der Wohnungs-Abschlussvertrag muss noch um
-ungeloeste Portale und Kartenstabilitaet erweitert werden.
+**Offene Risiken:** Die abgeschraegten Vorderecken sind ohne gemessene
+Schraegentiefe absichtlich nicht ausgespart; die Rechteckhuelle ist sicherer,
+aber beim Drehen konservativer. Die Erkundung ist nur mit eingefahrenem Arm
+zulaessig. NavFn garantiert keine global kinematisch gueltige Route fuer
+Rechteckroboter; der lokale Polygonpruefer verhindert die Ausfuehrung einer
+unpassenden Route, kann aber zu einem Stillstand fuehren. Der Wohnungs-
+Abschlussvertrag muss noch um ungeloeste Portale und Kartenstabilitaet
+erweitert werden.
 
 **Rueckfallweg:** In `nav2_params_real.yaml` lokal/global wieder
 `robot_radius: 0.40` setzen, im Mapping-Kollisionsmonitor den 0,40-m-Kreis

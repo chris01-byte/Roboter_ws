@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 
+import pytest
 import yaml
 
 
@@ -103,15 +104,34 @@ def test_real_footprint_fits_doors_without_hiding_platform_length():
     footprint = yaml.safe_load(local['footprint'])
 
     assert footprint == [
-        [0.35, 0.25], [0.35, -0.25],
-        [-0.35, -0.25], [-0.35, 0.25],
+        [0.31, 0.23], [0.31, -0.23],
+        [-0.11, -0.23], [-0.11, 0.23],
     ]
     assert local['footprint_padding'] == 0.02
     assert 'robot_radius' not in local
     # NavFn prueft keine SE2-Polygone. Sein globales Breitenmodell bleibt
     # deshalb separat und konservativer als die halbe Plattformbreite.
-    assert global_costmap['robot_radius'] == 0.30
+    assert global_costmap['robot_radius'] == 0.28
     assert global_costmap['footprint_padding'] == 0.0
+
+    measured_door_width = 0.68
+    padded_platform_width = 0.46 + 2 * local['footprint_padding']
+    assert measured_door_width - padded_platform_width == pytest.approx(0.18)
+    assert measured_door_width - 2 * global_costmap['robot_radius'] == (
+        pytest.approx(0.12))
+
+
+def test_description_uses_measured_asymmetric_chassis_geometry():
+    description = (
+        PACKAGE_ROOT.parent / 'robot_description' / 'urdf' /
+        'mobile_manipulator_dummy.urdf.xacro'
+    ).read_text()
+
+    assert 'name="base_length" value="0.38"' in description
+    assert 'name="base_width"  value="0.46"' in description
+    assert 'name="base_center_x" value="0.08"' in description
+    assert 'origin xyz="${base_center_x} 0 0"' in description
+    assert 'name="vl53_x"          value="0.290"' in description
 
 
 def test_mapping_collision_monitor_uses_local_nav2_footprint():

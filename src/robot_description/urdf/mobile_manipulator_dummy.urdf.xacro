@@ -23,12 +23,16 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mobile_pick_place_dummy">
 
   <!-- ================================================================
-       BASIS-MASSE [ANPASSEN]
+       BASIS-MASSE [GEMESSEN 18.08.2026]
        Koordinaten: x vorne, y links, z oben. base_footprint liegt am Boden.
-       base_link liegt im geometrischen Zentrum der Chassis-Box.
+       base_link liegt in der Antriebsachse, mittig zwischen den Raedern.
+       Chassis: 270 mm vor und 110 mm hinter base_link, maximal 460 mm breit;
+       die vordere Stirn ist 360 mm breit. Die Vorderecken sind abgeschraegt;
+       ohne gemessene Schraegentiefe ist die Box ihre sichere Huelle.
        ================================================================ -->
-  <xacro:property name="base_length" value="0.70"/>    <!-- [m] Plattformlaenge -->
-  <xacro:property name="base_width"  value="0.50"/>    <!-- [m] Plattformbreite -->
+  <xacro:property name="base_length" value="0.38"/>    <!-- [m] Chassislaenge -->
+  <xacro:property name="base_width"  value="0.46"/>    <!-- [m] maximale Breite -->
+  <xacro:property name="base_center_x" value="0.08"/>  <!-- (0.270 - 0.110) / 2 -->
   <xacro:property name="base_height" value="0.18"/>    <!-- [m] Plattformhoehe -->
 
   <!-- ================================================================
@@ -151,10 +155,12 @@
 
   <link name="base_link">
     <visual>
+      <origin xyz="${base_center_x} 0 0" rpy="0 0 0"/>
       <geometry><box size="${base_length} ${base_width} ${base_height}"/></geometry>
       <material name="mat_base"/>
     </visual>
     <collision>
+      <origin xyz="${base_center_x} 0 0" rpy="0 0 0"/>
       <geometry><box size="${base_length} ${base_width} ${base_height}"/></geometry>
     </collision>
   </link>

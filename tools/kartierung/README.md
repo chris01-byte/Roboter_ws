@@ -135,12 +135,15 @@ oder fehlendes sicheres Ziel unterhalb 85 % bleiben Fehler. Der 1-Hz-Status
 auf `/explore/status_json` liefert `coverage_percent` und setzt
 `map_ready_to_save:true` nur nach bestaetigtem Abschluss.
 
-Seit dem Wohnungsbefund vom 18.08.2026 verwendet die lokale Costmap einen
-0,70 x 0,50-m-Polygon-Footprint plus 0,02 m Padding. NavFn plant global mit
-0,30 m Radius; der lokale Regler und `collision_monitor` pruefen das volle
-Polygon. Der Explorer erodiert die Abdeckungsflaeche kreisfoermig um 0,30 m
-statt quadratisch um 0,40 m. Die Plattformmasse im URDF sind noch
-`[ANPASSEN]` und muessen vor der ersten scharfen Tuerfahrt nachgemessen werden.
+Seit dem Wohnungsbefund vom 18.08.2026 verwendet die lokale Costmap die
+gemessene asymmetrische Rechteckhuelle `x=-0,11..+0,31 m`, `y=+/-0,23 m` plus
+0,02 m Padding. Die Front schliesst die VL53-Montage ein. NavFn plant global
+mit 0,28 m Radius; der lokale Regler und `collision_monitor` pruefen die volle
+Kontur. Der Explorer erodiert Ziel- und Abdeckungsflaeche kreisfoermig um
+0,28 m statt quadratisch um 0,40 m. Die schmalste gemessene Tuer ist 0,68 m
+breit; fuer den lokal gepaddeten Footprint bleiben 0,09 m je Seite.
+Ein motorloser NavFn-Test plante auf einer 3-cm-Synthetikkarte geradlinig
+durch eine 0,69-m-Oeffnung (`ComputePathToPose: SUCCEEDED`).
 Die Mehrraumstrategie und Abnahmereihenfolge stehen in
 `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
 

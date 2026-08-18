@@ -15,22 +15,24 @@ in Flure und weitere Zimmer erweitert.
 Der gescheiterte Wohnungsversuch widerlegt die Methode nicht. Drei lokale
 Geometrieentscheidungen trennten die Karte am Tuerbereich kuenstlich:
 
-1. ein globaler 0,40-m-Kreis fuer eine 0,50 m breite rechteckige Plattform;
+1. ein globaler 0,40-m-Kreis fuer die nachgemessen nur 0,46 m breite Plattform;
 2. dieselbe Kreisannahme im reaktiven Kollisionsmonitor;
 3. eine quadratische 0,40-m-Erosion in der Explorer-Abdeckungsrechnung.
 
 Der erste Patch ersetzt diese Kombination durch:
 
-- lokalen Nav2-Footprint: 0,70 x 0,50 m, um 0,02 m gepaddet;
-- globales NavFn-Modell: Radius 0,30 m (halbe Breite plus 0,05 m Reserve);
+- lokalen Nav2-Footprint: x=-0,11..+0,31 m und y=+/-0,23 m, um 0,02 m
+  gepaddet; die Front umfasst dabei auch die VL53-Montage;
+- globales NavFn-Modell: Radius 0,28 m (halbe Breite plus 0,05 m Reserve);
 - `collision_monitor`: dynamisches Polygon aus
   `/local_costmap/published_footprint`;
-- Explorer: kreisfoermige 0,30-m-Erreichbarkeitsmaske.
+- Explorer: kreisfoermige 0,28-m-Erreichbarkeitsmaske.
 
-Die lokalen Plattformmasse stammen aus dem noch als `[ANPASSEN]` markierten
-Robotermodell. Vor einem scharfen Tuerdurchgang muessen Front, Heck, links und
-rechts relativ zu `base_link` am aufgebauten, fuer die Erkundung vollstaendig
-eingefahrenen Roboter nachgemessen werden.
+Die Chassiskontur wurde am 18.08.2026 relativ zur mittigen Antriebsachse mit
+270 mm vorne, 110 mm hinten und 230 mm je Seite gemessen. Die schmalste Tuer
+misst 680 mm. Mit lokalem Padding ist die Kontur 500 mm breit, sodass bei
+mittiger Fahrt 90 mm je Seite bleiben. Die abgeschraegten Vorderecken werden
+ohne zusaetzliches Tiefenmass vorerst nicht ausgespart.
 
 ## Warum wir Frontier-Exploration behalten
 
@@ -55,10 +57,10 @@ Quellen:
 NavFn plant in einem zweidimensionalen Gitter und prueft keinen orientierten
 Rechteck-Footprint. Nav2 weist deshalb darauf hin, dass NavFn fuer enge Wege
 eines nicht kreisfoermigen Roboters keine kinematisch gueltige Route
-garantiert. Als begrenzter Zwischenschritt bekommt NavFn ein 0,30-m-
-Breitenmodell; der lokale Regler und der Kollisionsmonitor pruefen das volle
-0,74 x 0,54-m-Polygon. Eine global unpassende Route wird damit lokal gestoppt,
-nicht blind ausgefuehrt.
+garantiert. Als begrenzter Zwischenschritt bekommt NavFn ein 0,28-m-
+Breitenmodell; der lokale Regler und der Kollisionsmonitor pruefen die volle
+gepaddingte asymmetrische Kontur. Eine global unpassende Route wird damit
+lokal gestoppt, nicht blind ausgefuehrt.
 
 Wenn ein korrekt vermessener Roboter trotz ausreichend breiter Tuer einen
 NavFn-Pfad erhaelt, den der lokale Polygonpruefer wiederholt verwirft, folgt
@@ -74,13 +76,12 @@ Quellen:
 
 ## Empfohlener Ablauf
 
-### Stufe 0: Geometrie verifizieren
+### Stufe 0: Geometrie verifizieren — abgeschlossen
 
-Bei eingefahrenem Arm und Greifer vier Abstaende von `base_link` messen:
-vorn, hinten, links und rechts. Zusaetzlich jede feste niedrige Auskragung
-erfassen. Aus diesen vier Werten wird notfalls ein asymmetrisches Polygon.
-Der dynamische Footprint fuer ausgefahrenen Arm ist ein spaeterer Schritt;
-Erkundung ist bis dahin nur in definierter Transportpose erlaubt.
+Die Chassisabstaende und die schmalste Tuer sind gemessen. Der bekannte
+VL53-Ueberstand ist in der sicheren Rechteckhuelle enthalten. Der dynamische
+Footprint fuer ausgefahrenen Arm ist ein spaeterer Schritt; Erkundung ist bis
+dahin nur in definierter Transportpose erlaubt.
 
 ### Stufe 1: Einen Tuerdurchgang beweisen
 
@@ -158,15 +159,16 @@ dem Footprint-Fix noch unzureichend ist.
 ## Aufloesung
 
 Die 3-cm-SLAM-Aufloesung bleibt richtig. Sie bildet Tuerbreiten und den
-0,54-m-gepaddeten Plattformquerschnitt deutlich feiner ab als die 5-cm-
+0,50-m-gepaddeten Plattformquerschnitt deutlich feiner ab als die 5-cm-
 Costmaps und war in den bisherigen Karten stabil. Der aktuelle Fehler war
 die Geometriemodellierung, nicht die Rasteraufloesung.
 
 ## Naechste reale Entscheidungspunkte
 
-1. Plattformgrenzen messen und den Polygonwert bestaetigen oder korrigieren.
-2. Motorlos eine gespeicherte/synthetische Tuerkarte mit globalem Plan testen.
-3. Beaufsichtigten einzelnen Tuerdurchgang fahren.
-4. Erst danach einen neuen Wohnungslauf starten und Log/Karte auswerten.
-5. Nur bei erneutem Scheitern zwischen Frontier-Zielwahl, Portalgraph oder
+1. Vermessener Footprint im Nav2-/Kollisionsstack: abgeschlossen.
+2. Synthetische 0,68-m-Tuer in der Explorer-Erreichbarkeit: abgeschlossen.
+3. Motorloser NavFn-Plan durch eine 0,69-m-Synthetiktuer: abgeschlossen.
+4. Beaufsichtigten einzelnen Tuerdurchgang fahren.
+5. Erst danach einen neuen Wohnungslauf starten und Log/Karte auswerten.
+6. Nur bei erneutem Scheitern zwischen Frontier-Zielwahl, Portalgraph oder
    `SmacPlannerLattice` anhand der Messdaten entscheiden.

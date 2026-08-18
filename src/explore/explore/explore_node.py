@@ -264,7 +264,7 @@ class ExploreNode(Node):
         self._max_frontier_goals = int(self.declare_parameter(
             'max_frontier_goals', 20).value)
         self._approach_dist_m   = float(self.declare_parameter('frontier_approach_distance_m', 0.45).value)
-        self._goal_clearance_m  = float(self.declare_parameter('goal_clearance_m', 0.35).value)
+        self._goal_clearance_m  = float(self.declare_parameter('goal_clearance_m', 0.28).value)
         self._goal_search_m     = float(self.declare_parameter('goal_search_radius_m', 0.30).value)
         self._map_timeout_s     = float(self.declare_parameter('map_timeout_s', 5.0).value)
         self._cancel_timeout_s  = float(self.declare_parameter('nav_cancel_timeout_s', 3.0).value)
@@ -329,7 +329,7 @@ class ExploreNode(Node):
         self._coverage_visit_radius_m = float(self.declare_parameter(
             'coverage_visit_radius_m', 0.65).value)
         self._coverage_clearance_m = float(self.declare_parameter(
-            'coverage_clearance_m', 0.40).value)
+            'coverage_clearance_m', 0.28).value)
         self._coverage_min_goal_distance_m = float(self.declare_parameter(
             'coverage_min_goal_distance_m', 0.70).value)
         self._coverage_path_sample_m = float(self.declare_parameter(
