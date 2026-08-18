@@ -93,6 +93,44 @@ def test_real_planner_uses_measured_astar_configuration():
     assert planner['allow_unknown'] is False
 
 
+def test_real_footprint_fits_doors_without_hiding_platform_length():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
+    )
+    local = parameters['local_costmap']['local_costmap']['ros__parameters']
+    global_costmap = parameters['global_costmap']['global_costmap'][
+        'ros__parameters']
+    footprint = yaml.safe_load(local['footprint'])
+
+    assert footprint == [
+        [0.35, 0.25], [0.35, -0.25],
+        [-0.35, -0.25], [-0.35, 0.25],
+    ]
+    assert local['footprint_padding'] == 0.02
+    assert 'robot_radius' not in local
+    # NavFn prueft keine SE2-Polygone. Sein globales Breitenmodell bleibt
+    # deshalb separat und konservativer als die halbe Plattformbreite.
+    assert global_costmap['robot_radius'] == 0.30
+    assert global_costmap['footprint_padding'] == 0.0
+
+
+def test_mapping_collision_monitor_uses_local_nav2_footprint():
+    config = yaml.safe_load(
+        (
+            PACKAGE_ROOT.parent / 'vl53_near_field' / 'config' /
+            'collision_monitor_mapping_params.yaml'
+        ).read_text()
+    )
+    approach = config['collision_monitor']['ros__parameters'][
+        'FootprintApproach']
+
+    assert approach['type'] == 'polygon'
+    assert approach['footprint_topic'] == (
+        '/local_costmap/published_footprint')
+    assert 'radius' not in approach
+    assert approach['action_type'] == 'approach'
+
+
 def test_mission_gate_is_fail_closed():
     running = {
         'state': 'running',

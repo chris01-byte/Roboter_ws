@@ -13,9 +13,9 @@ from explore.explore_node import (  # noqa: E402
     ExploreNode,
     Frontier,
     RotationProgress,
+    circular_clearance_mask,
     connected_mask,
     farthest_uncovered_cell,
-    square_clearance_mask,
     stamp_coverage,
 )
 
@@ -124,15 +124,36 @@ def test_frontier_ranking_does_not_resubmit_served_goal_neighborhood():
     assert ranked == [new_region]
 
 
-def test_clearance_mask_and_component_keep_goals_on_robot_side_of_wall():
+def test_circular_clearance_and_component_keep_goals_on_robot_side_of_wall():
     data = np.zeros((30, 50), dtype=np.int16)
     data[:, 25] = 100
-    safe = square_clearance_mask(data, clearance_cells=2)
+    safe = circular_clearance_mask(data, clearance_cells=2)
     reachable = connected_mask(safe, (15, 10))
 
     assert reachable[15, 10]
     assert not reachable[15, 40]
     assert not np.any(safe[:, 23:28])
+
+
+def test_circular_clearance_does_not_overblock_diagonal_corner():
+    data = np.zeros((21, 21), dtype=np.int16)
+    data[5, 5] = 100
+
+    safe = circular_clearance_mask(data, clearance_cells=5)
+
+    assert not safe[5, 10]       # exakt 5 Zellen vom Hindernis
+    assert safe[10, 10]          # diagonal sqrt(50) > 5 Zellen
+
+
+def test_thirty_centimeter_clearance_connects_normal_doorway():
+    data = np.zeros((60, 80), dtype=np.int16)
+    data[:, 40] = 100
+    data[22:38, 40] = 0          # 0.80-m-Durchgang bei 5-cm-Zellen
+    safe = circular_clearance_mask(data, clearance_cells=6)
+
+    reachable = connected_mask(safe, (30, 15))
+
+    assert reachable[30, 65]
 
 
 def test_farthest_coverage_goal_expands_away_from_measured_path():
@@ -330,7 +351,7 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'prealign_min_average_rate_radps: 0.01' in config
     assert 'coverage_enabled: true' in config
     assert 'coverage_target_ratio: 0.85' in config
-    assert 'coverage_clearance_m: 0.40' in config
+    assert 'coverage_clearance_m: 0.30' in config
     assert 'coverage_max_interpolation_gap_m: 0.35' in config
     assert 'coverage_max_goals: 14' in config
     assert "'/explore/status_json'" in source

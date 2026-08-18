@@ -95,14 +95,17 @@ explore_node:
     # --- Phase 3: adaptive Abdeckung der sicher befahrbaren Raumflaeche ---
     # Frontier-Ziele kartieren unbekannte Grenzen, beweisen aber nicht, dass
     # der Roboter den Raum wirklich abgefahren hat. Danach wird deshalb die
-    # gemessene Fahrspur auf die zusammenhaengende, mit 40 cm Abstand sicher
-    # befahrbare Freiflaeche projiziert. Der geodaetisch am weitesten noch
+    # gemessene Fahrspur auf die zusammenhaengende, mit 30 cm radialem Abstand
+    # befahrbare Freiflaeche projiziert. 30 cm entsprechen dem globalen
+    # NavFn-Modell (25 cm halbe Plattformbreite plus 5 cm Reserve); die lokale
+    # Kollisionspruefung verwendet zusaetzlich das volle 0.70x0.50-m-Polygon.
+    # Der geodaetisch am weitesten noch
     # nicht abgedeckte Punkt wird zum naechsten Ziel. Dadurch waechst die Zahl
     # der Ziele automatisch mit Raumgroesse und Grundriss.
     coverage_enabled: true
     coverage_target_ratio: 0.85
     coverage_visit_radius_m: 0.65
-    coverage_clearance_m: 0.40
+    coverage_clearance_m: 0.30
     coverage_min_goal_distance_m: 0.70
     coverage_path_sample_m: 0.12
     # Kartenkorrekturen ueber diesem Sprung werden als neuer Messpunkt, aber

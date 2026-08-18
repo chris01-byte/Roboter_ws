@@ -8,12 +8,13 @@
 #  Stelle drehen. Die normale rechteckige StopZone vor der Basis kennt die
 #  Bewegungsrichtung nicht und blockiert daher auch sichere Drehungen.
 #
-#  Der Approach-Kreis bildet die in nav2_params_real.yaml verwendete,
-#  konservative Roboterkontur von 0,40 m um die Radachse ab. Nav2 Humble
-#  simuliert die angeforderte Bewegung fuer zwei Sekunden:
-#    * Punkt innerhalb 0,40 m -> Ausgabe geht auf null.
+#  Das Approach-Modell uebernimmt den Polygon-Footprint aus dem lokalen
+#  Nav2-Costmap-Topic. Damit pruefen Regler und reaktiver Monitor dieselbe
+#  Kontur; der fruehere 0,40-m-Kreis sperrte normale Tueren seitlich zu.
+#  Nav2 Humble simuliert die angeforderte Bewegung fuer zwei Sekunden:
+#    * Punkt innerhalb der gepaddeten Plattformkontur -> Ausgabe geht auf null.
 #    * Vorwaertsfahrt auf ein Hindernis zu -> vorausschauend langsamer/null.
-#    * Reine Drehung, alle Punkte ausserhalb 0,40 m -> darf weiterlaufen.
+#    * Reine Drehung, alle Punkte ausserhalb der Kontur -> darf weiterlaufen.
 #  Die groessere SlowZone bleibt als zusaetzliche Komfort-/Warnzone aktiv.
 #
 #  Die vorgelagerte cmd_vel_mission_gate bleibt fail-closed und setzt bei
@@ -33,12 +34,12 @@ collision_monitor:
 
     polygons: ["FootprintApproach", "SlowZone"]
 
-    # Bewegungsabhaengige, kreisfoermige Roboterkontur. Der Kreis ist bewusst
-    # identisch zum realen Nav2-Sicherheitsradius und etwas groesser als die
-    # gemessene Plattform-Umschreibung (~0,37 m).
+    # Bewegungsabhaengige Roboterkontur. Nav2 publiziert 0.70 x 0.50 m plus
+    # 0.02 m Padding auf diesem Topic. Das Fahrtor gibt eine Explore-Mission
+    # erst bei laufendem Nav2 frei; vorher bleibt die Ausgabe null.
     FootprintApproach:
-      type: "circle"
-      radius: 0.40
+      type: "polygon"
+      footprint_topic: "/local_costmap/published_footprint"
       action_type: "approach"
       time_before_collision: 2.0
       simulation_time_step: 0.05

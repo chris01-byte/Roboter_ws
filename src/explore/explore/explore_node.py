@@ -71,24 +71,32 @@ class CoveragePlan:
     goal_cell: Optional[Tuple[int, int]]
 
 
-def square_clearance_mask(data: np.ndarray, clearance_cells: int) -> np.ndarray:
-    """Erode known-free space by a conservative square clearance window."""
+def circular_clearance_mask(
+        data: np.ndarray, clearance_cells: int) -> np.ndarray:
+    """Erode known-free space by an isotropic circular clearance radius.
+
+    The previous square window treated a diagonal corner at ``r * sqrt(2)``
+    like an obstacle only ``r`` away. On a 3-cm map that disconnected ordinary
+    doorways although Nav2's circular global model could pass them. Unknown
+    cells and map borders remain blocked; this changes geometry, not safety.
+    """
     free = data == 0
     if clearance_cells <= 0:
         return free
     radius = int(clearance_cells)
-    window = 2 * radius + 1
+    height, width = free.shape
     blocked = np.pad(
-        (~free).astype(np.int32), radius, mode='constant',
-        constant_values=1)
-    integral = np.pad(blocked, ((1, 0), (1, 0)), mode='constant')
-    integral = integral.cumsum(axis=0).cumsum(axis=1)
-    blocked_count = (
-        integral[window:, window:]
-        - integral[:-window, window:]
-        - integral[window:, :-window]
-        + integral[:-window, :-window])
-    return free & (blocked_count == 0)
+        ~free, radius, mode='constant', constant_values=True)
+    unsafe = np.zeros_like(free, dtype=bool)
+    radius_squared = radius * radius
+    for drow in range(-radius, radius + 1):
+        dcol_max = math.isqrt(radius_squared - drow * drow)
+        rows = blocked[
+            radius + drow:radius + drow + height, :]
+        for dcol in range(-dcol_max, dcol_max + 1):
+            unsafe |= rows[
+                :, radius + dcol:radius + dcol + width]
+    return free & ~unsafe
 
 
 def connected_mask(mask: np.ndarray, seed: Tuple[int, int]) -> np.ndarray:
@@ -565,7 +573,8 @@ class ExploreNode(Node):
 
         clearance_cells = int(math.ceil(
             self._coverage_clearance_m / info.resolution))
-        safe = square_clearance_mask(data, clearance_cells) & same_free_space
+        safe = circular_clearance_mask(
+            data, clearance_cells) & same_free_space
         safe_seed = nearest_mask_cell(
             safe, robot_row, robot_col,
             max(1, int(math.ceil(
@@ -760,23 +769,13 @@ class ExploreNode(Node):
         search_cells = int(math.ceil(self._goal_search_m / info.resolution))
         clearance_cells = int(math.ceil(
             self._goal_clearance_m / info.resolution))
+        safe_goal_cells = circular_clearance_mask(data, clearance_cells)
         choices = []
         for row in range(center_row - search_cells, center_row + search_cells + 1):
             for col in range(center_col - search_cells, center_col + search_cells + 1):
                 if not (0 <= row < info.height and 0 <= col < info.width):
                     continue
-                if data[row, col] != 0:
-                    continue
-                r0 = max(0, row - clearance_cells)
-                r1 = min(info.height, row + clearance_cells + 1)
-                c0 = max(0, col - clearance_cells)
-                c1 = min(info.width, col + clearance_cells + 1)
-                patch = data[r0:r1, c0:c1]
-                if patch.shape != (
-                        2 * clearance_cells + 1,
-                        2 * clearance_cells + 1):
-                    continue
-                if np.any(patch < 0) or np.any(patch >= 50):
+                if not safe_goal_cells[row, col]:
                     continue
                 wx, wy = self._grid_to_world(col, row, info)
                 choices.append((math.hypot(wx - desired_x, wy - desired_y), wx, wy))
