@@ -1,5 +1,44 @@
 # Übertragung auf den realen Roboter
 
+## Polygon-Footprint fuer Tuerdurchgaenge — motorlos verifiziert (18.08.2026)
+
+**Branch:** `fix/polygon-footprint-wohnung`
+
+Der reale lokale Nav2-Footprint ist jetzt ein Rechteck mit den Rohpunkten
+`(+/-0.35, +/-0.25) m` um `base_link` und `footprint_padding: 0.02`.
+Zur Laufzeit entstehen damit die Punkte `(+/-0.37, +/-0.27) m`. Der
+Kartierungs-`collision_monitor` abonniert dieses Polygon auf
+`/local_costmap/published_footprint`, sodass lokaler Regler und reaktive
+Approach-Pruefung dieselbe Kontur verwenden.
+
+NavFn bleibt vorerst aktiv und plant global mit `robot_radius: 0.30`; die
+Explorer-Abdeckungsrechnung verwendet dazu eine kreisfoermige 0,30-m-Maske.
+Das ist absichtlich kein Smac-Umbau. Die Entscheidung und der gestufte
+Wohnungsplan stehen in `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
+
+Motorlos bestaetigt:
+
+- 32 gezielte Tests bestanden;
+- vollstaendiger Paketlauf: 72 Tests, 0 Fehler/Fehlschlaege/uebersprungen;
+- `explore`, `robot_navigation`, `vl53_near_field` gebaut;
+- Nav2-Livepolygon exakt `(+/-0.37, +/-0.27) m`;
+- `collision_mapping_approach` identisch im `base_link`-Frame;
+- `dry_run=true`, `allow_rs485=false`, 0 rpm;
+- nach dem Test keine Amadeus-Knoten aktiv.
+
+Vor einem scharfen Test ist zwingend nachzumessen: maximale feste Ausdehnung
+vorn, hinten, links und rechts relativ zu `base_link`, Arm/Greifer in
+Transportpose. Die URDF-Werte 0,70 x 0,50 m tragen noch `[ANPASSEN]`. Erst
+danach folgt ein einzelner beaufsichtigter Tuerdurchgang, nicht sofort eine
+volle Wohnungserkundung. Hard-Not-Aus, freie Tuer und neue persoenliche
+Fahrfreigabe bleiben Pflicht.
+
+Rueckfall: lokales/globales `robot_radius: 0.40`, Mapping-Approach-Kreis
+`radius: 0.40`, Explorer `coverage_clearance_m: 0.40`, oder ohne Bewegung
+`active_drive:=false`.
+
+---
+
 ## Adaptive App-Raumkartierung — real abgenommen (17.08.2026)
 
 **Branch:** `feature/hybrid-erkundung-app`
@@ -11,7 +50,7 @@ Die Erkundung hat jetzt drei Phasen:
 3. adaptive Abdeckungsziele in der sicher befahrbaren bekannten Flaeche.
 
 Phase 3 verwendet die gemessene Fahrspur. Standardabschluss sind 85 % der
-zusammenhaengenden, um 0,40 m von Wand und unbekanntem Raum freigehaltenen
+zusammenhaengenden, radial um 0,30 m von Wand und unbekanntem Raum freigehaltenen
 Flaeche innerhalb eines 0,65-m-Korridors um diese Spur. Maximal 14
 Abdeckungsziele, 150 s pro Nav2-Ziel und 1200 s Gesamtzeit begrenzen den Lauf.
 Eine SLAM-Korrektur ueber 0,35 m wird nicht als gefahrene Verbindung gezaehlt.

@@ -135,6 +135,15 @@ oder fehlendes sicheres Ziel unterhalb 85 % bleiben Fehler. Der 1-Hz-Status
 auf `/explore/status_json` liefert `coverage_percent` und setzt
 `map_ready_to_save:true` nur nach bestaetigtem Abschluss.
 
+Seit dem Wohnungsbefund vom 18.08.2026 verwendet die lokale Costmap einen
+0,70 x 0,50-m-Polygon-Footprint plus 0,02 m Padding. NavFn plant global mit
+0,30 m Radius; der lokale Regler und `collision_monitor` pruefen das volle
+Polygon. Der Explorer erodiert die Abdeckungsflaeche kreisfoermig um 0,30 m
+statt quadratisch um 0,40 m. Die Plattformmasse im URDF sind noch
+`[ANPASSEN]` und muessen vor der ersten scharfen Tuerfahrt nachgemessen werden.
+Die Mehrraumstrategie und Abnahmereihenfolge stehen in
+`docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
+
 Die Karte zwischendurch rendern und ansehen. Erst eine plausible Karte ueber
 den Kartenmanager speichern. Danach Auftrag abbrechen, Nullkommando und 0 rpm
 pruefen und ausschliesslich den Launch-Prozess einmal mit Strg-C beenden.

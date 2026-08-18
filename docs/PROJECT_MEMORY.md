@@ -17,6 +17,61 @@ Rückfallweg:
 
 ---
 
+## 2026-08-18 — Tuergaengiger Polygon-Footprint motorlos verifiziert
+
+**Entscheidung:** Die lokale reale Nav2-Costmap verwendet die dokumentierte
+rechteckige Plattformkontur 0,70 x 0,50 m mit 0,02 m Padding. NavFn bleibt als
+bewaehrter 2D-Planer vorerst global kreisfoermig, sein Radius sinkt von 0,40
+auf 0,30 m (halbe Plattformbreite plus 0,05 m Reserve). Der Kartierungs-
+`collision_monitor` uebernimmt dynamisch den lokalen Polygon-Footprint. Die
+Explorer-Ziel- und Abdeckungsmaske wird kreisfoermig statt mit einem
+quadratischen Fenster erodiert; die Abdeckungsreserve sinkt passend auf
+0,30 m. Die etablierte Frontier-Methode bleibt Grundlage der
+Wohnungserkundung; ein Raumgraph oder Smac State Lattice folgt nur nach einem
+reproduzierbaren Bedarf.
+
+**Grund / beobachtete Evidenz:** Der Wohnungslauf beendete sich formal mit
+86,21 %, obwohl der Roboter den Startraum nicht verlassen hatte. Es lag kein
+Motor-, Encoder-, Sensor- oder Nav2-Fehler vor. Die alte 0,40-m-Quadratmaske
+trennte die lokale Karte am Tuerbereich und zaehlte nur einen Teil des bereits
+kartografisch freien Raums als erreichbar. Auf demselben nur lokal gehaltenen
+Kartenschnappschuss vergroesserte die kreisfoermige 0,30-m-Maske die groesste
+zusammenhaengende sichere Komponente deutlich und verband zuvor getrennte
+Bereiche. Nav2 empfiehlt fuer nicht kreisfoermige Roboter den geometrischen
+Footprint; NavFn selbst bleibt jedoch ein 2D-Planer, weshalb lokales Polygon
+und globales Breitenmodell getrennt sind.
+
+**Betroffene Dateien und Hardware:** `nav2_params_real.yaml`,
+`collision_monitor_mapping_params.yaml`, `explore_node`, Explorer-Parameter
+und Tests sowie `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`. Der motorlose Live-Test
+startete STL-27L, beide VL53, SLAM, Nav2 und `collision_monitor`; RS485 und
+Antrieb blieben aus. Keine echte Karte wurde ins Repository uebernommen.
+
+**Teststatus:** 32 gezielte Explorer-/Navigationstests bestanden; der
+vollstaendige Lauf fuer die drei betroffenen Pakete endete mit 72 Tests, 0
+Fehlern, 0 Fehlschlaegen und 0 uebersprungenen Tests. Alle drei Pakete bauten
+erfolgreich. Im Jetson-Dry-run publizierte Nav2 exakt die gepaddeten
+Ecken `(+/-0,37, +/-0,27) m`; der Kollisionsmonitor publizierte dieselben vier
+Punkte im `base_link`-Frame. `base_hardware` meldete dabei durchgehend
+`dry_run=true`, `allow_rs485=false` und 0 rpm. Der Stack wurde danach sauber
+ueber den Launch-Prozess beendet.
+
+**Offene Risiken:** Die 0,70 x 0,50 m im Robotermodell sind als `[ANPASSEN]`
+markiert. Vor jeder realen Tuerfahrt muessen Front, Heck, links und rechts bei
+eingefahrenem Arm relativ zu `base_link` nachgemessen werden. NavFn garantiert
+keine global kinematisch gueltige Route fuer Rechteckroboter; der lokale
+Polygonpruefer verhindert die Ausfuehrung einer unpassenden Route, kann aber
+zu einem Stillstand fuehren. Der Wohnungs-Abschlussvertrag muss noch um
+ungeloeste Portale und Kartenstabilitaet erweitert werden.
+
+**Rueckfallweg:** In `nav2_params_real.yaml` lokal/global wieder
+`robot_radius: 0.40` setzen, im Mapping-Kollisionsmonitor den 0,40-m-Kreis
+wiederherstellen und `coverage_clearance_m: 0.40` verwenden. Sicherer
+Funktionsrueckfall bleibt `enable_auto_explore:=false` oder
+`active_drive:=false`.
+
+---
+
 ## 2026-08-17 — Adaptive Erkundung real bestanden und Frontier-Schleife gesperrt
 
 **Entscheidung:** Erfolgreich angefahrene Frontier-Umfelder werden fuer den
