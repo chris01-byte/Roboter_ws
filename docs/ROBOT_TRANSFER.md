@@ -1,5 +1,61 @@
 # Übertragung auf den realen Roboter
 
+## Mehrraum-Uebergang — sensorisch real erreicht (18.08.2026)
+
+**Branch:** `fix/polygon-footprint-wohnung`
+
+Der Explorer besitzt jetzt neben normaler Frontier-Navigation eine
+fail-closed Portalbehandlung fuer den real gemessenen Sonderfall, dass Nav2
+eine offene Tuer wegen Inflation in zwei freie Costmap-Komponenten trennt.
+Normale erreichbare Frontiers bleiben vorrangig. Eine direkte Portalbruecke
+ist nur nach frischer vollbreiter LiDAR-Korridorpruefung zulaessig und wird
+ueber eingefrorene LiDAR-Geometrie statt ausschliesslich ueber Radencoder
+beendet. Wenn neue Scans beide Komponenten waehrend der Anfahrt verbinden,
+wechselt der Explorer nun zur regulaeren Nav2-Fahrt hinter die Tuer, statt
+faelschlich `portal_geometry_changed` zu melden.
+
+Gemessener Ablauf der Realabnahme:
+
+- erster scharfer Lauf: Portal 0,887 m2, Luecke 0,488 m, Anfahrt 0,454 m;
+- nach 0,347 m Anfahrt verschmolzen beide Gebiete zu einer regulaer
+  befahrbaren 2,251-m2-Costmap-Komponente; alter Zielpunkt weiterhin Kosten 90;
+- nach dem Softwarefix plante Nav2 aus der neuen Startlage ein normales Ziel
+  bei `(1,05, 0,05) m` deutlich hinter der Tuer;
+- Nav2 meldete Erfolg, Explorer meldete `frontiers_visited=1`;
+- Endwerte: Encoderpose `x=1,018 m`, `y=-0,102 m`, `yaw=0,398 rad`, beide
+  Motoren 0 rpm, RS485 und Encoder ohne Fehler;
+- die Live-Karte wuchs in Fahrtrichtung und die Fahrspurabdeckung erreichte
+  23,70 % der aktuellen sicheren Komponente.
+
+Der terminale Missionsstatus dieses begrenzten Laufs war danach absichtlich
+`failed`: Ein nur temporaer fuer die Abnahme gesetzter +/-20-Grad-Kegel
+verwarf drei seitliche Folgefrontiers. Er kam erst nach dem erfolgreich
+erreichten 1,05-m-Ziel zum Tragen und ist kein Tuerfahrfehler. Das normale
+Wohnungsprofil bleibt richtungsfrei (`frontier_forward_cone_half_angle_rad:
+0.0`). Die temporaere Begrenzung ist nicht Teil des installierten
+Produktionsprofils.
+
+Softwareabnahme: Explorer 58/58; gesamter registrierter Bestand 165 Tests,
+0 Fehler, 0 Fehlschlaege, 0 Auslassungen. Vor der Fahrt liefen LiDAR mit
+10,8 Hz und beide VL53 mit 3,8 Hz; Motoren standen bei 0 rpm. Nach der Fahrt
+wurde der gesamte Stack mit genau einem Ctrl-C am Launch-Elternprozess beendet.
+Es laufen derzeit keine fuer diese Abnahme absichtlich gestarteten
+Amadeus-Knoten. Die aktuelle physische Endlage im Folgeraum muss der anwesende
+Beobachter noch verbal bestaetigen; Sensorik und Nav2 bestaetigen den
+Mehrraumwechsel bereits.
+
+**Naechster Schritt:** Kein weiterer Schwellen-Sondertest. Mit neuer
+persoenlicher Fahrfreigabe das normale, richtungsfreie Wohnungsprofil starten
+und aus dem Folgeraum mehrere Frontiers bedienen lassen. Erst dieser Lauf
+prueft weitere Tueren und den globalen Abschlussvertrag. Echte Karten, Fotos
+und ROS-Bags bleiben lokal.
+
+Rueckfall: `portal_crossing_enabled: false` deaktiviert die Portalbruecke,
+ohne normale Frontier-Navigation zu entfernen. Vollstaendig motorlos bleibt
+`active_drive:=false`.
+
+---
+
 ## Polygon-Footprint fuer Tuerdurchgaenge — motorlos verifiziert (18.08.2026)
 
 **Branch:** `fix/polygon-footprint-wohnung`

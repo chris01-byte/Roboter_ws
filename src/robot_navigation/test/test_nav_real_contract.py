@@ -9,6 +9,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    explore_direct_values_valid,
     explore_health_authorized,
     explore_motion_authorized,
     explore_scan_values_valid,
@@ -74,7 +75,7 @@ def test_real_smoother_and_controller_limits_are_conservative():
     assert progress['plugin'] == 'nav2_controller::PoseProgressChecker'
     assert progress['required_movement_radius'] == 0.10
     assert progress['required_movement_angle'] == 0.05
-    assert progress['movement_time_allowance'] >= 20.0
+    assert progress['movement_time_allowance'] == 30.0
     assert smoother['feedback'] == 'OPEN_LOOP'
     assert smoother['max_velocity'] == [0.12, 0.0, 0.25]
     assert smoother['max_accel'] == [0.12, 0.0, 0.30]
@@ -214,6 +215,26 @@ def test_explore_scan_input_is_rotation_only_and_bounded():
               'cmd_vel_mission_gate.py').read_text(encoding='utf-8')
     assert "'/cmd_vel_explore_scan_raw'" in source
     assert 'self._on_explore_scan_command' in source
+
+
+def test_explore_direct_input_is_forward_only_and_tightly_bounded():
+    assert explore_direct_values_valid(
+        (0.08, 0.0, 0.0, 0.0, 0.0, 0.10), 0.08, 0.10)
+    assert explore_direct_values_valid(
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), 0.08, 0.10)
+    assert not explore_direct_values_valid(
+        (-0.01, 0.0, 0.0, 0.0, 0.0, 0.0), 0.08, 0.10)
+    assert not explore_direct_values_valid(
+        (0.081, 0.0, 0.0, 0.0, 0.0, 0.0), 0.08, 0.10)
+    assert not explore_direct_values_valid(
+        (0.08, 0.0, 0.0, 0.0, 0.0, 0.101), 0.08, 0.10)
+    assert not explore_direct_values_valid(
+        (float('nan'), 0.0, 0.0, 0.0, 0.0, 0.0), 0.08, 0.10)
+
+    source = (PACKAGE_ROOT / 'robot_navigation' /
+              'cmd_vel_mission_gate.py').read_text(encoding='utf-8')
+    assert "'/cmd_vel_explore_direct_raw'" in source
+    assert 'self._on_explore_direct_command' in source
 
 
 def test_required_localization_gate_is_fail_closed_and_monotonic():

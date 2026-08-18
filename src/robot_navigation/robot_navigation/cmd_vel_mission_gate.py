@@ -86,6 +86,28 @@ def explore_scan_values_valid(values, max_angular_speed):
     )
 
 
+def explore_direct_values_valid(
+        values, max_linear_speed, max_angular_speed):
+    """Allow only bounded forward motion with a small steering correction."""
+    if len(values) != 6 or not all(math.isfinite(value) for value in values):
+        return False
+    if (
+            not math.isfinite(max_linear_speed)
+            or max_linear_speed <= 0.0
+            or not math.isfinite(max_angular_speed)
+            or max_angular_speed <= 0.0):
+        return False
+    linear_x, linear_y, linear_z, angular_x, angular_y, angular_z = values
+    return (
+        -1e-9 <= linear_x <= max_linear_speed
+        and abs(linear_y) <= 1e-9
+        and abs(linear_z) <= 1e-9
+        and abs(angular_x) <= 1e-9
+        and abs(angular_y) <= 1e-9
+        and abs(angular_z) <= max_angular_speed
+    )
+
+
 def localization_motion_authorized(
         required, ready, received_at, now, timeout_s):
     """Fail closed when a required localization signal is false or stale."""
@@ -167,6 +189,12 @@ class CmdVelMissionGate(Node):
         self.declare_parameter(
             'explore_scan_command_topic', '/cmd_vel_explore_scan_raw')
         self.declare_parameter('explore_scan_max_angular', 0.15)
+        self.declare_parameter(
+            'explore_direct_command_topic', '/cmd_vel_explore_direct_raw')
+        self.declare_parameter('explore_direct_max_linear', 0.08)
+        # Der reale Schwellenlauf benoetigt bis 0.10 rad/s Gegenlenkung. Bei
+        # 0.08 m/s bleiben damit beide Antriebsraeder vorwaerts gerichtet.
+        self.declare_parameter('explore_direct_max_angular', 0.10)
         self.declare_parameter('explore_map_topic', '/map')
         self.declare_parameter('explore_scan_topic', '/scan_normiert')
         self.declare_parameter(
@@ -205,6 +233,10 @@ class CmdVelMissionGate(Node):
             self.get_parameter('allow_explore_mission').value)
         self._explore_scan_max_angular = float(
             self.get_parameter('explore_scan_max_angular').value)
+        self._explore_direct_max_linear = float(
+            self.get_parameter('explore_direct_max_linear').value)
+        self._explore_direct_max_angular = float(
+            self.get_parameter('explore_direct_max_angular').value)
         self._allow_localization_search = bool(
             self.get_parameter('allow_localization_search').value)
         rate_hz = float(self.get_parameter('publish_rate_hz').value)
@@ -245,7 +277,9 @@ class CmdVelMissionGate(Node):
                 or self._explore_map_timeout <= 0.0
                 or self._explore_sensor_timeout <= 0.0
                 or self._explore_odom_timeout <= 0.0
-                or self._explore_scan_max_angular <= 0.0):
+                or self._explore_scan_max_angular <= 0.0
+                or self._explore_direct_max_linear <= 0.0
+                or self._explore_direct_max_angular <= 0.0):
             raise ValueError('Gate-Timeouts muessen > 0 sein')
 
         self._status = None
@@ -275,6 +309,11 @@ class CmdVelMissionGate(Node):
             Twist,
             self.get_parameter('explore_scan_command_topic').value,
             self._on_explore_scan_command,
+            10)
+        self.create_subscription(
+            Twist,
+            self.get_parameter('explore_direct_command_topic').value,
+            self._on_explore_direct_command,
             10)
         self.create_subscription(String, status_topic, self._on_status, 10)
         self.create_subscription(
@@ -340,6 +379,24 @@ class CmdVelMissionGate(Node):
         self._command = message
         self._command_time = time.monotonic()
         self._command_source = 'explore_scan'
+
+    def _on_explore_direct_command(self, message):
+        values = (message.linear.x, message.linear.y, message.linear.z,
+                  message.angular.x, message.angular.y, message.angular.z)
+        if not explore_direct_values_valid(
+                values, self._explore_direct_max_linear,
+                self._explore_direct_max_angular):
+            self._command = Twist()
+            self._command_time = time.monotonic()
+            self._command_source = 'explore_direct'
+            self._publisher.publish(Twist())
+            self.get_logger().error(
+                'Direkter Explore-Befehl verworfen: nur begrenzte '
+                'Vorwaertsfahrt mit kleiner Lenkkorrektur ist erlaubt.')
+            return
+        self._command = message
+        self._command_time = time.monotonic()
+        self._command_source = 'explore_direct'
 
     def _on_status(self, message):
         try:

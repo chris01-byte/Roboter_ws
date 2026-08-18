@@ -28,6 +28,35 @@ Der erste Patch ersetzt diese Kombination durch:
   `/local_costmap/published_footprint`;
 - Explorer: kreisfoermige 0,28-m-Erreichbarkeitsmaske.
 
+## Aktueller Realstand
+
+Der erste Wechsel in einen Folgeraum ist am 18.08.2026 sensorisch gelungen.
+Nav2 erreichte nach der Tuerdiagnose ein regulaeres Frontier-Ziel bei
+`(1,05, 0,05) m`; der Explorer zaehlte die Frontier als besucht und die Basis
+stand danach mit beiden Motoren bei 0 rpm. Zuvor hatte ein eigener Portallauf
+den entscheidenden Zwischenzustand sichtbar gemacht: Nach 0,347 m Anfahrt
+wuchsen zwei kuenstlich getrennte Costmap-Komponenten zu einer einzigen
+2,251-m2-Komponente zusammen. Das alte Verhalten wertete diese Verbesserung
+faelschlich als `portal_geometry_changed`.
+
+Der Explorer kann jetzt beide Faelle auseinanderhalten:
+
+1. Ist die Tuer bereits regulaer verbunden, bleibt die Fahrt vollstaendig bei
+   Nav2, Polygon-Footprint und Kollisionsmonitor.
+2. Bleibt sie kuenstlich getrennt, existiert eine begrenzte Portalbruecke. Sie
+   braucht einen frisch beobachteten, footprintbreiten LiDAR-Korridor und
+   misst die reale Bewegung aus eingefrorener LiDAR-Geometrie; Radencoder sind
+   auf Schwellen nur ein hartes Wegbudget.
+3. Waechst die Karte waehrend der Portal-Anfahrt zusammen, muss der
+   urspruengliche Fernseitenpunkt nun in derselben Costmap-Komponente liegen.
+   Dann uebernimmt wieder Nav2 bis zu einem Auslaufpunkt hinter der Tuer.
+
+Der einzelne Lauf beweist noch keine vollstaendige Wohnung. Der naechste
+Meilenstein ist deshalb nicht ein weiterer Schwellentest, sondern ein
+richtungsfreier Lauf ueber mehrere Frontiers und mindestens einen weiteren
+Raumwechsel. Die externe Sichtbestaetigung der aktuellen physischen Endlage
+bleibt zusaetzlich zur sensorischen Evidenz festzuhalten.
+
 Die Chassiskontur wurde am 18.08.2026 relativ zur mittigen Antriebsachse mit
 270 mm vorne, 110 mm hinten und 230 mm je Seite gemessen. Die schmalste Tuer
 misst 680 mm. Mit lokalem Padding ist die Kontur 500 mm breit, sodass bei
@@ -83,7 +112,7 @@ VL53-Ueberstand ist in der sicheren Rechteckhuelle enthalten. Der dynamische
 Footprint fuer ausgefahrenen Arm ist ein spaeterer Schritt; Erkundung ist bis
 dahin nur in definierter Transportpose erlaubt.
 
-### Stufe 1: Einen Tuerdurchgang beweisen
+### Stufe 1: Einen Tuerdurchgang beweisen — sensorisch abgeschlossen
 
 Kein voller Wohnungslauf. Der Roboter startet etwa ein bis zwei Meter im
 bekannten Zimmer, eine vollstaendig geoeffnete Tuer ist die einzige attraktive
@@ -105,6 +134,12 @@ ist ausserdem ein harter +/-20-Grad-Vorwaertskorridor aktiv: Das damalige,
 sichere Frontier in Fahrtrichtung, endet der Test ohne Translation. Dieser
 Korridor gilt bewusst nur fuer die Einzelabnahme; die spaetere
 Wohnungserkundung muss Frontiers in allen Richtungen erreichen koennen.
+
+Die Abnahme erreichte anschliessend ein normales Nav2-Frontier-Ziel 1,05 m
+hinter der neuen Startpose. Der Explorer meldete eine besuchte Frontier, die
+Basis stoppte fehlerfrei bei 0 rpm. Ein spaeterer Gesamtfehler im selben Lauf
+kam ausschliesslich vom temporaeren 20-Grad-Kegel, der drei seitliche
+Folgefrontiers verwarf; er ist fuer die Wohnungserkundung wieder deaktiviert.
 
 ### Stufe 2: Frontier-basierte Wohnungskartierung
 
@@ -134,7 +169,7 @@ Wenn eine offene Frontier existiert, aber kein sicherer Pfad dorthin gefunden
 wird, lautet der Zustand `partial` beziehungsweise `failed`, niemals
 `map_ready_to_save=true`.
 
-### Stufe 4: Raumgraph nur bei nachgewiesenem Bedarf
+### Stufe 4: Leichte Portalbruecke aktiv; voller Raumgraph nur bei Bedarf
 
 Falls reine Frontier-Auswahl zwar Tueren passieren kann, aber in komplexeren
 Wohnungen ineffizient pendelt, wird die Karte hierarchisch gegliedert:
@@ -146,9 +181,13 @@ Wohnungen ineffizient pendelt, wird die Karte hierarchisch gegliedert:
   kartiert und abgedeckt;
 - die App kann daraus spaeter benennbare Raeume anbieten.
 
-Das ist eine Erweiterung der Frontier-Methode, kein Ersatz. Sie wird erst
-implementiert, wenn reale Logs zeigen, dass der flache Frontier-Ansatz nach
-dem Footprint-Fix noch unzureichend ist.
+Die reale Tuerdiagnose hat den kleinsten notwendigen Teil inzwischen
+gerechtfertigt: Der Explorer erkennt grosse, getrennte Costmap-Komponenten
+und kann genau eine begrenzte, unabhaengig mit LiDAR gepruefte Bruecke planen.
+Das ist eine Erweiterung der Frontier-Methode, kein Ersatz. Ein persistenter
+Raumgraph mit IDs, Rueckkehrlogik und App-Raumbenennung bleibt dagegen bewusst
+offen, bis ein richtungsfreier Mehrraumlauf Pendeln oder falsche
+Portalwiederholungen tatsaechlich nachweist.
 
 ## Was nicht empfohlen wird
 
@@ -176,7 +215,11 @@ die Geometriemodellierung, nicht die Rasteraufloesung.
 1. Vermessener Footprint im Nav2-/Kollisionsstack: abgeschlossen.
 2. Synthetische 0,68-m-Tuer in der Explorer-Erreichbarkeit: abgeschlossen.
 3. Motorloser NavFn-Plan durch eine 0,69-m-Synthetiktuer: abgeschlossen.
-4. Beaufsichtigten einzelnen Tuerdurchgang fahren.
-5. Erst danach einen neuen Wohnungslauf starten und Log/Karte auswerten.
-6. Nur bei erneutem Scheitern zwischen Frontier-Zielwahl, Portalgraph oder
+4. Beaufsichtigter Wechsel zum 1,05-m-Ziel im Folgeraum: sensorisch
+   abgeschlossen; externe Sichtbestaetigung der Endlage festhalten.
+5. Richtungsfreien Mehrraumlauf mit normalem Wohnungsprofil starten und
+   mehrere Frontiers, weitere Tueren, Log und lokale Karte auswerten.
+6. Abschluss erst freigeben, wenn keine ungeloesten Frontiers/Portale bleiben
+   und die globale sowie regionale Abdeckung stabil ist.
+7. Nur bei erneutem Scheitern zwischen erweitertem Portalgraph oder
    `SmacPlannerLattice` anhand der Messdaten entscheiden.

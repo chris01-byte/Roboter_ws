@@ -36,6 +36,14 @@ explore_node:
     heading_scale: 0.75             # bevorzugt Ziele in aktueller Blickrichtung
     # 0 deaktiviert die harte Richtungsbegrenzung in der Wohnungserkundung.
     frontier_forward_cone_half_angle_rad: 0.0
+    # Ziel selbst bleibt unterhalb des Nav2-Inscribed-Bereichs (<99).
+    frontier_goal_max_cost: 90
+    # 0.0 deaktiviert direkte Costmap-Etappen im normalen Wohnungsprofil.
+    frontier_forward_stage_max_distance_m: 0.0
+    # Wird ein waehrend der Fahrt dynamisch ungueltiger Nav2-Pfad nach
+    # mindestens dieser encoderbasierten Strecke sauber abgebrochen, darf
+    # daraus genau eine frisch geplante Zwischenetappe entstehen.
+    frontier_stage_min_progress_m: 0.30
 
     # --- Phase 1: kontrollierter Rundblick vor jeder Fahrt ---
     odom_topic: "/odom"
@@ -47,6 +55,11 @@ explore_node:
     # auf 30 % reduzieren. Eine volle Drehung dauert dann real rund 175 s.
     initial_scan_timeout_s: 210.0
     scan_odom_timeout_s: 0.8
+    # Ab 0.8 s sofort Nullkommando. Der reale Tuerlauf am 18.08.2026 zeigte
+    # bei weiterhin gesunden Encodern eine lokale Callback-Luecke > 2.0 s.
+    # Nur wenn Encoder-Odometrie binnen 5.0 s wieder frisch eintrifft, darf die
+    # Drehung mit nachgetragenem Winkel fortsetzen; andernfalls Abbruch.
+    scan_odom_recovery_timeout_s: 5.0
     scan_no_progress_timeout_s: 8.0
     scan_progress_window_rad: 0.03
     # Realtest 16.08.2026: Sanfte 2-s-Motorrampe plus aktive SlowZone ergaben
@@ -60,6 +73,56 @@ explore_node:
     scan_stop_timeout_s: 4.0
     scan_stop_angular_tolerance_radps: 0.02
     scan_command_rate_hz: 20.0
+
+    # --- Beaufsichtigte, LiDAR-lokalisierte Tuerabnahme ---
+    # 0.0 deaktiviert diese Sonderetappe in der normalen Erkundung. Sie nutzt
+    # einen eigenen streng begrenzten Gate-Eingang; velocity_smoother und
+    # collision_monitor bleiben unveraendert nachgeschaltet. Encoder dienen
+    # weiterhin Hardwaregesundheit und Stillstand, aber nicht als alleiniger
+    # Weg-/Kursbeweis: Auf Schwellen und Teppich koennen die Raeder schluepfen.
+    door_traverse_distance_m: 0.0
+    # Nur fuer einen persoenlich beaufsichtigten Schwellen-Abnahmelauf. In
+    # diesem Modus ist door_traverse_distance_m ein maximales Radbudget und
+    # ausdruecklich kein physischer Wegnachweis. Normale Erkundung bleibt aus.
+    door_supervised_wheel_budget_mode: false
+    # Bevorzugter Schwellenmodus: Ein beim Start eingefrorener lokaler
+    # LiDAR-Scan misst die echte Chassisbewegung. Encoder sind nur
+    # Gesundheitspruefung und hartes Radbudget; Durchdrehen kann daher keinen
+    # Erfolg mehr vortaeuschen. Im normalen Wohnungsprofil deaktiviert.
+    door_lidar_motion_mode: false
+    door_encoder_wheel_budget_m: 0.0
+    door_lidar_scan_topic: "/scan_normiert"
+    door_lidar_scan_timeout_s: 0.5
+    door_lidar_recovery_timeout_s: 2.0
+    door_lidar_max_range_m: 4.0
+    door_lidar_min_points: 400
+    door_lidar_max_cost_m: 0.08
+    door_lidar_min_support_ratio: 0.45
+    door_lidar_min_distinct_gap_m: 0.0005
+    door_lidar_max_step_m: 0.08
+    door_lidar_max_yaw_step_rad: 0.12
+    door_command_topic: "/cmd_vel_explore_direct_raw"
+    door_linear_speed_mps: 0.08
+    door_heading_kp: 0.8
+    door_lateral_kp: 0.8
+    door_max_angular_speed_radps: 0.05
+    door_max_heading_error_rad: 0.17
+    door_max_lateral_error_m: 0.08
+    door_timeout_s: 120.0
+    door_no_progress_timeout_s: 12.0
+    door_progress_window_m: 0.02
+    door_reverse_limit_m: 0.03
+    door_stop_linear_tolerance_mps: 0.01
+    # Frische map->base_link-TF ist die physische LiDAR/SLAM-Referenz. Bei
+    # Ausfall gilt sofort Nullkommando; nur eine kurze Erholung ist erlaubt.
+    door_localization_timeout_s: 0.8
+    door_localization_recovery_timeout_s: 3.0
+    # Schlupf an einer Schwelle ist erlaubt, aber nie unbegrenzt. Umgekehrt
+    # darf ein SLAM-Sprung keinen vorgetaeuschten Fahrterfolg erzeugen.
+    door_max_encoder_overrun_m: 0.45
+    door_max_localization_lead_m: 0.15
+    door_max_localized_step_m: 0.12
+    door_max_localized_yaw_step_rad: 0.17
 
     # --- Phase 2: konstante Vorausrichtung vor jedem Nav2-Fahrziel ---
     # Vermeidet das real beobachtete Ueberschwingen der Nav2-Drehregelung bei
@@ -84,6 +147,37 @@ explore_node:
     prealign_map_settle_s: 1.0
     prealign_max_passes: 3
     prealign_min_improvement_rad: 0.04
+
+    # --- Raumuebergaenge zwischen getrennten Costmap-Komponenten ---
+    # Nav2 bleibt fuer normale Freiflaechen zustaendig. Trennt die Inflation
+    # zwei hinreichend grosse bekannte Bereiche an einer schmalen Tuer, wird
+    # zuerst ein sicherer Punkt auf der aktuellen Seite mit Nav2 angefahren.
+    # Nur die kurze Luecke wird anschliessend mit einem frischen, ueber die
+    # volle Roboterbreite freien LiDAR-Korridor ueberbrueckt. Der physische Weg
+    # kommt vom eingefrorenen LiDAR-Scan; Encoder sind nur ein hartes Radbudget.
+    portal_crossing_enabled: true
+    portal_min_component_area_m2: 0.40
+    portal_min_gap_m: 0.12
+    portal_max_gap_m: 0.80
+    portal_exit_margin_m: 0.25
+    portal_max_traverse_distance_m: 1.00
+    # Schwellen-/Teppichschlupf darf den LiDAR-bestaetigten Weg nicht vorzeitig
+    # beenden, bleibt aber mit maximal 2,0 m Radweg absolut begrenzt.
+    portal_encoder_budget_factor: 2.2
+    portal_encoder_budget_margin_m: 0.20
+    portal_max_encoder_budget_m: 2.00
+    # 0,25 m = gemessene halbe Maximalbreite 0,23 m plus 2 cm Reserve.
+    # 0,33 m = gemessene Front 0,31 m plus 2 cm Footprint-Reserve.
+    portal_lidar_corridor_half_width_m: 0.25
+    portal_front_overhang_m: 0.33
+    portal_lidar_min_far_points: 12
+    portal_max_crossings: 8
+    # Nur fuer eine beaufsichtigte Einzelabnahme per Parameter-Overlay. Im
+    # normalen Wohnungsprofil wird nach jedem Uebergang weiter erkundet.
+    portal_stop_after_crossing: false
+    # Verhindert, dass der Roboter denselben Durchgang sofort rueckwaerts
+    # wieder als neuen Portaluebergang auswaehlt.
+    portal_revisit_radius_m: 0.60
 
     # --- Zielauswahl / Selbstbefreiung ---
     min_goal_distance_m: 0.30       # Ziel muss mind. so weit von der Basis weg sein [m]

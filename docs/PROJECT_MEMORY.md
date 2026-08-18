@@ -17,6 +17,84 @@ Rückfallweg:
 
 ---
 
+## 2026-08-18 — Mehrraum-Uebergang erreicht; Portalwechsel robust gemacht
+
+**Entscheidung:** Der Explorer behandelt eine durch Inflation kuenstlich in
+zwei Costmap-Komponenten getrennte Tuer als begrenztes Portal. Normale,
+unprojizierte Frontier-Ziele bleiben immer vorrangig. Nur wenn alle
+Frontier-Ziele auf die aktuelle Komponente zurueckprojiziert werden, darf der
+Explorer ein benachbartes, ausreichend grosses Gebiet ueber eine begrenzte
+Bruecke anfahren. Vor einer direkten Bruecke sind weiterhin eine frische
+vollbreite LiDAR-Korridorpruefung, Missions-Gate, Geschwindigkeitsglaettung und
+Kollisionsmonitor vorgeschrieben; der reale Fortschritt wird aus einem
+eingefrorenen LiDAR-Referenzscan statt nur aus den auf Schwellen schlupfenden
+Radencodern bestimmt. Wird die Tuer waehrend der Nav2-Anfahrt durch neue
+Kartenevidenz regulaer verbunden, ist das kein Fehler mehr: Der urspruengliche
+Fernseitenpunkt muss nun exakt in der Roboterkomponente liegen, danach
+uebernimmt der normale Nav2-Pfad bis mindestens eine halbe Auslaufreserve
+hinter diesem Punkt. Ungeklaerte Frontiers oder Portale verhindern weiterhin
+`map_ready_to_save=true`.
+
+**Grund / beobachtete Evidenz:** Der erste scharfe Portallauf erkannte vor der
+Fahrt genau einen Uebergang: Zielgebiet 0,887 m2, Costmap-Luecke 0,488 m,
+Nav2-Anfahrt 0,454 m und begrenzte Bruecke 0,797 m. Nach 0,347 m realer
+Anfahrt wuchs die Karte. Die bislang getrennten Gebiete bildeten danach eine
+einzige 2,251-m2-Komponente; Roboter, alter Anfahrpunkt und alter Zielpunkt
+lagen alle in Label 1. Der alte Zielpunkt bei etwa `(1,001, 0,025) m` hatte
+Kosten 90 und war regulaer erreichbar. Die fruehere Prüfung deutete das
+Verschwinden des Portalobjekts trotzdem als `portal_geometry_changed` und
+stoppte bei 0 rpm. Das war ein falscher Fehlerzustand, nicht eine blockierte
+Tuer.
+
+Nach der Korrektur und einem motorlosen Start plante der echte Nav2-Stack aus
+der bereits vorgerueckten Position ein normales Frontier-Ziel bei
+`(1,05, 0,05) m` im Folgeraum. Im beaufsichtigten Realtest meldete Nav2 dieses
+Ziel als erreicht; der Explorer zaehlte eine besuchte Frontier. Die Basis
+endete bei Encoderpose `x=1,018 m`, `y=-0,102 m`, `yaw=0,398 rad`, beiden
+Motoren 0 rpm, fehlerfreiem RS485 und fehlerfreien Encodern. Die Karte wuchs
+waehrend der Fahrt deutlich; zum Stoppzeitpunkt waren 23,70 % der aktuellen
+sicheren Komponente durch die Fahrspur abgedeckt. Eine nur fuer diese Abnahme
+temporär aktivierte harte Vorwaertsbegrenzung verwarf danach drei seitliche
+Frontiers, weshalb die Gesamtmission korrekt als unvollstaendig endete. Diese
+Begrenzung gehoert nicht zum Wohnungsprofil und wurde wieder entfernt. Die
+sensorische Mehrraumfahrt ist damit nachgewiesen; die abschliessende
+Beobachterbestaetigung der physischen Endlage bleibt als externe Sichtpruefung
+festzuhalten.
+
+**Betroffene Dateien und Hardware:** `explore_node.py`, neue Module
+`portal_planning.py` und `lidar_motion.py`, Explorer-Parameter und Tests,
+Missions-Gate-/Nav2-Vertraege sowie diese Dokumentation. Der Realtest nutzte
+STL-27L, beide VL53, SLAM, Nav2, Polygon-Footprint, Kollisionsmonitor,
+Encoder-Odometrie und beide ESS23-RS-Antriebe. Karte und Wohnungsgeometrie
+blieben ausschliesslich lokal.
+
+**Teststatus:** 58/58 Explorer-Tests bestanden, darunter synthetische
+Portalgeometrie, LiDAR-Korridor, eingefrorene Scanbewegung, Nav2-Uebergabe bei
+zusammengewachsener Costmap und fail-closed Gegenfaelle. Der gesamte aktuell
+registrierte Bestand meldet 165 Tests, 0 Fehler, 0 Fehlschlaege und 0
+Auslassungen. Vor der realen Fahrt: `dry_run=false`, `allow_rs485=true`,
+`rs485_ready=true`, Encoderfeedback frisch, 0 rpm, LiDAR 10,8 Hz und beide
+VL53 3,8 Hz. Nach der Fahrt erneut 0 rpm; der Stack wurde ueber genau ein
+Ctrl-C am Launch-Elternprozess beendet.
+
+**Offene Risiken:** Ein einzelner Wechsel beweist noch keine vollstaendige
+Wohnungserkundung. Als naechstes muss das unbeschraenkte Wohnungsprofil aus
+dem erreichten Folgeraum mehrere Frontiers und weitere Tueren bedienen. Die
+Portal-Direktbruecke wurde real noch nicht ausgefuehrt, weil die Live-Karte die
+Tuer rechtzeitig regulaer fuer Nav2 verband. Schwellen und Teppiche bleiben
+Schlupfquellen; deshalb darf der direkte Portalpfad nicht auf Encoderabschluss
+zurueckfallen. Eine verbale aeussere Bestaetigung der aktuellen Endlage ist
+noch einzuholen.
+
+**Rueckfallweg:** `portal_crossing_enabled: false` deaktiviert nur die neue
+Portalbruecke; normale Frontier-Navigation bleibt erhalten. Der sicherste
+Funktionsrueckfall ist `enable_auto_explore:=false` oder
+`active_drive:=false`. Der neue Verbundenheitswechsel kann separat entfernt
+werden; dann stoppt ein waehrend der Anfahrt zusammengewachsenes Portal wieder
+fail-closed mit `portal_geometry_changed`.
+
+---
+
 ## 2026-08-18 — Vermessener, tuergaengiger Polygon-Footprint
 
 **Entscheidung:** Die lokale reale Nav2-Costmap verwendet die am 18.08.2026
