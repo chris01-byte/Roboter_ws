@@ -2,64 +2,56 @@
 
 **Stand:** 2026-08-19
 
-**Geltung:** Dieser Status beschreibt die Mainline-Konsolidierung. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
+**Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
 
 ## Kurzfassung
 
-- `main` ist weiterhin der Default-Branch, liegt aber hinter der aktuellen Integrationslinie.
-- `chore/repository-mainline-cleanup` ist der vollstaendige Mainline-Kandidat: Er basiert auf `fix/polygon-footprint-wohnung`, archiviert veraltete Juli-Unterlagen und enthaelt die Arm- sowie Diagnostikplaene.
-- Es werden durch diese Dokumentationsarbeiten keine Motoren, Sensoren oder Sicherheitsparameter bewegt oder konfiguriert.
-- Neue Entwicklungsarbeit startet erst nach erfolgreicher Mainline-PR von `main`, nicht mehr auf historischen Feature- oder Fix-Branches.
+- PR #10 hat die vollstaendige, zuvor gestapelte Integrationslinie nach `main` gebracht.
+- Die automatisierten Mainline-Checks sind gruen: `python-contracts`, `swift-contracts` und `offline-tests` (3/3).
+- Historische Juli-Pruefplaene und Statussnapshots liegen nun unter `docs/archive/2026-07/`.
+- Historische Draft-PRs und ihre vollstaendig enthaltenen Branches wurden geschlossen bzw. geloescht.
+- Die Konsolidierung hat keine Hardwarebewegung oder neue Hardwarefreigabe ausgeloest.
 
-## Aktuelle Integrationslinie
+## Aktueller Entwicklungsstand
 
-Die Plattform wurde in aufeinander aufbauenden Branches entwickelt. Der vollständige Kandidat fuer `main` ist:
+`main` enthaelt Fahrbasis, Encoder-Odometrie, STL-27L, VL53-Nahbereichsschutz, Navigation, Lokalisierung, Mehrraum-Erkundung, Missionslogik, semantische Karte, iOS-/Web-Bedienung sowie die Dokumentationsplaene fuer Arm und Diagnostik.
+
+Die aktuelle Projektstruktur ist damit wieder einfach:
 
 ```text
 main
-  -> feature/stl27l-integration
-  -> agent/slam-toolbox-pure-rotation-fix
-  -> fix/encoder-position-odometry
-  -> feature/semantic-map-editor
-  -> fix/sanfteres-anfahren
-  -> feature/reale-raumfahrt
-  -> feature/globale-lokalisierung
-  -> feature/automatische-lidar-kartierung
-  -> feature/hybrid-erkundung-app
-  -> fix/polygon-footprint-wohnung
-  -> chore/repository-mainline-cleanup
+  -> neue, klar abgegrenzte Themenbranches
+  -> Pull Request mit Tests und Rueckfallweg
+  -> Merge nach main
+  -> Branch loeschen
 ```
 
-Die noch offenen Pull Requests #2, #4, #5 und #6 sind Teil dieser historischen Stapelstruktur. Sie sind nicht als voneinander unabhaengige Kandidaten fuer einen direkten Merge nach `main` zu behandeln.
+## Verbleibende Betriebsabnahme
 
-## Mainline-Gates
+Die CI beweist den automatisierten Quellvertragsstand, ersetzt aber keine reale Zielsystemabnahme. Vor einer neuen scharfen Hardwarefreigabe sind weiterhin erforderlich:
 
-Bevor `main` auf den aktuellen Integrationsstand wechselt, muessen diese Schritte in der Mainline-PR dokumentiert und bestanden sein:
+1. Betroffene ROS-2-Humble-Pakete auf dem Jetson bauen und testen.
+2. Launch-, Schnittstellen- und Sicherheitskonfiguration gegen die reale Hardware pruefen.
+3. Den jeweils passenden dokumentierten Rueckfallweg bereithalten.
+4. Reale Bewegung nur mit ausdruecklicher Freigabe, Aufsicht und hardwired Not-Aus.
 
-1. Basis der PR ist `main`; Head ist `chore/repository-mainline-cleanup`.
-2. GitHub Actions sind gruen oder ein fehlender Check ist fachlich begruendet.
-3. Auf dem Jetson wurden die betroffenen ROS-2-Humble-Pakete gebaut und ihre Tests ausgefuehrt.
-4. Keine Konflikte in Dokumentation, Launch-Dateien, Schnittstellen oder Sicherheitsparametern.
-5. Die Abnahme bleibt nachvollziehbar: Testumfang, Hardwareumfang und Rueckfallweg werden im PR beschrieben.
-6. Erst nach Merge: alte, vollstaendig enthaltene Draft-PRs schliessen und ihre Branches loeschen.
-
-Ein Mainline-Merge ersetzt keine scharfe Hardwareabnahme. Der letzte dokumentierte Teststand ist immer gegen die tatsaechliche Hardware- und Konfigurationsrevision zu bewerten.
+Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere rein softwareseitige Entwicklungsarbeit auf `main`.
 
 ## Aktive fachliche Arbeit
 
 | Bereich | Status | Naechster sicherer Schritt |
 |---|---|---|
-| Fahrbasis und Encoder | ESS23-Encoderpfad, Nav2, LiDAR, VL53 und Mehrraum-Explorer sind im Mainline-Kandidaten enthalten. | Mainline-PR bauen und testen; keine alte Teil-PR einzeln nach `main` mergen. |
-| Diagnostik und Selbstbefreiung | Plan ist in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) integriert. | Nach Mainline-Merge als separaten, read-only und motorlosen Implementierungsschritt planen. |
-| Arm-Integration | Physischer Arm vorhanden; Produktionstreiber, Homing, echtes URDF und ROS-2-Control sind noch nicht integriert. | M0 plus read-only M1 aus [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); keine Mehrachsbewegung vor Achsprotokollen. |
+| Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
+| Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
+| Arm-Integration | Physischer Arm vorhanden; Produktionstreiber, Homing, echtes URDF und ROS-2-Control sind noch nicht integriert. | M0 plus read-only M1 aus [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md). |
 | OAK-Hand-Auge-Kalibrierung | Recorder und Loeser existieren; reale Arm-/TF-Voraussetzungen fehlen noch. | Erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen; danach kalibrieren. |
-| App und semantische Karte | Bestehende passive Funktionen bleiben Bestandteil des Mainline-Kandidaten. | Gegen aktuelle Mainline testen, nicht gegen den Juli-Status. |
+| App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 
 ## Sicherheitsrahmen
 
-- `/safety/estop` mit `true` bedeutet Not-Aus aktiv und blockiert softwareseitige Bewegungsfreigaben.
+- `/safety/estop=true` bedeutet Not-Aus aktiv und blockiert softwareseitige Bewegungsfreigaben.
 - Die hardwired Sicherheitskette bleibt primaer; die Software ersetzt sie nicht.
 - Reale Basisfahrt und Armfahrt bleiben getrennte, explizit freigegebene Schritte.
 - Greifen und Kamera-Feinpose verwenden `base_link`, nicht `map`.
@@ -71,20 +63,18 @@ Ein Mainline-Merge ersetzt keine scharfe Hardwareabnahme. Der letzte dokumentier
 - Evidenz- und Entscheidungslog: [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md)
 - Aktive Plaene: Arm-Software und Diagnostik/Selbstbefreiung unter `docs/`
 - Historische Juli-Unterlagen: [`docs/archive/2026-07/`](docs/archive/2026-07/)
-- Der fruehere Status-Snapshot liegt unter [`docs/archive/2026-07/PROJEKT_STATUS_2026-07-09.md`](docs/archive/2026-07/PROJEKT_STATUS_2026-07-09.md).
 
-## Branch-Regeln nach der Konsolidierung
+## Branch-Regeln
 
-1. `main` ist die einzige Startbasis fuer neue Entwicklungsbranches.
+1. Neue Arbeit startet von `main`.
 2. Ein Branch hat genau ein fachliches Thema und eine klar definierte Zielbasis.
-3. Hardwareaenderungen, Dokumentationsaufraeumungen und Featurearbeit werden getrennt reviewed.
-4. Nach Merge werden vollstaendig enthaltene Branches geloescht; offene PRs werden nicht dauerhaft als historische Ablage verwendet.
+3. Jede Aenderung enthaelt Tests und einen klaren Rueckfallweg.
+4. Nach Merge wird der vollstaendig enthaltene Branch geloescht.
 5. Messdaten und abgeschlossene Pruefprotokolle gehen nach `docs/archive/<jahr-monat>/`, nicht in die Root-Ebene.
 
-## Unmittelbare Reihenfolge
+## Naechste Reihenfolge
 
-1. Mainline-PR von `chore/repository-mainline-cleanup` nach `main` erstellen.
-2. GitHub Actions sowie die vereinbarte Jetson-Abnahme ausfuehren.
-3. Nach gruener Abnahme nach `main` mergen.
-4. Die enthaltenen historischen Draft-PRs und Branches geordnet schliessen bzw. loeschen.
-5. Neue Arbeit nur noch von `main` starten.
+1. Jetson-Regression fuer die betroffenen Pakete auf dem aktuellen `main`-Stand ausfuehren.
+2. Arm-Integration mit M0 und dem read-only Teil von M1 beginnen.
+3. Diagnostik- und Selbstbefreiungsplan als separaten motorlosen Schritt umsetzen.
+4. Neue Arbeit nur noch auf klar abgegrenzten Branches von `main` starten.
