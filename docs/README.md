@@ -9,7 +9,7 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 3. Die fachliche Dokumentation zum gerade bearbeiteten System.
 4. Vor Hardwarebetrieb die zugehoerige aktuelle Inbetriebnahme- oder Abnahmeanweisung.
 
-`main` ist die Zielbasis fuer neue Arbeit, nachdem die Mainline-PR gruen geprueft und gemerged ist. Kurzlebige Themenbranches beginnen dann von `main` und erhalten genau einen klaren Zweck.
+`main` ist die aktuelle Entwicklungsbasis. Neue, kurzlebige Themenbranches beginnen von `main` und erhalten genau einen klaren Zweck.
 
 ## Aktive Dokumentation
 
