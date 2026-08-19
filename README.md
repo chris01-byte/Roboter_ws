@@ -13,7 +13,8 @@ Der Repository-Root ist bewusst knapp gehalten. Der aktuelle Arbeitsstand und di
 | [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md) | Entscheidungen mit Evidenz, Teststatus und Rueckfallwegen. |
 | [`docs/ROBOT_TRANSFER.md`](docs/ROBOT_TRANSFER.md) | Jetson-/Hardwareuebergabe und Betriebswissen. |
 | [`KONZEPT_KALIBRIERUNG_OAK_ARM.md`](KONZEPT_KALIBRIERUNG_OAK_ARM.md) | Hand-Auge-Kalibrierung Arm <-> OAK. |
-| [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Zielbild und Meilensteine der ESS17-Armsoftware; wird mit dem Dokumentationsbranch in die Mainline uebernommen. |
+| [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | ESS17-Armsoftware: Commissioning, ros2_control, MoveIt 2 und Interlocks. |
+| [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Diagnostik, Selbstbefreiung, Ereignisprotokoll und Supervision. |
 
 Historische Pruefplaene und Ergebnisprotokolle liegen unter [`docs/archive/`](docs/archive/). Sie bewahren Nachweise, sind aber keine aktuelle Freigabe.
 
