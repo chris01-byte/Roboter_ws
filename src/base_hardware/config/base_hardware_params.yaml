@@ -24,10 +24,103 @@ base_hardware:
     odom_topic: "/odom"
     state_topic: "/base_hardware/state_json"
 
-    # --- Geometrie [GEMESSEN 13.07.2026 am aufgebauten Roboter] ---
-    wheel_radius_m: 0.0625      # Raddurchmesser 125 mm -> Radius 62,5 mm
-    wheel_separation_m: 0.378   # Abstand Radmitte <-> Radmitte 378 mm
-    # Radumfang = 2*pi*0.0625 = 0.3927 m  (eine Radumdrehung = 39,27 cm Weg)
+    # --- Geometrie [NEU KALIBRIERT 12.08.2026 abends, siehe unten] ---
+    # WIRKSAMER Rollradius unter Last, nicht der Katalogwert.
+    #
+    # ACHTUNG - der Odometriefehler besteht aus ZWEI Anteilen, und nur einer
+    # davon gehoert in diese Datei:
+    #
+    #   echte Strecke = 16.6 mm  +  1.0150 * gemeldete Strecke
+    #                   ^^^^^^^     ^^^^^^
+    #                   je FAHRT    Skalenfehler -> hier korrigierbar
+    #                   konstant
+    #
+    # Der feste Anteil von rund 17 mm faellt bei JEDER Fahrt einmal an,
+    # unabhaengig von ihrer Laenge. Er ist KEIN Radiusfehler und laesst sich
+    # durch keinen Wert in dieser Datei beheben. Wer es doch versucht, bekommt
+    # eine Odometrie, die bei genau einer Streckenlaenge stimmt und bei allen
+    # anderen daneben liegt - bei kurzen Fahrten stark, bei langen kaum.
+    #
+    # NACHWEIS (12.08.2026, Lasermessgeraet; Radius zum Messzeitpunkt in
+    # Klammern, deshalb sind die Rohwerte nur ueber die Radumdrehung
+    # vergleichbar):
+    #   gemeldet 0.410 m -> gemessen 0.434 m   (0.0612)
+    #   gemeldet 1.012 m -> gemessen 1.044 m   (0.0612)
+    #   gemeldet 0.511 m -> gemessen 0.540 m   (0.0612)
+    #   gemeldet 0.510 m -> gemessen 0.528 m   (0.0612)
+    #   gemeldet 1.001 m -> gemessen 1.029 m   (0.0621)
+    #   gemeldet 0.314 m -> gemessen 0.334 m   (0.0621)
+    #   gemeldet 2.511 m -> gemessen 2.539 m   (0.0621)
+    # Waere es ein reiner Radiusfehler, muesste die Abweichung proportional zur
+    # Strecke wachsen. Tut sie nicht. Entscheidender Versuch: zweimal 0.50 m
+    # getrennt gefahren ergab zusammen 1.068 m bei 1.021 m gemeldet, waehrend
+    # dieselbe Strecke am Stueck nur 1.044 m bei 1.012 m ergab. Die zweite
+    # Fahrt brachte einen zweiten Versatz mit. Vorhergesagt waren 1.072 m fuer
+    # "Versatz je Fahrt" gegen 1.053 m fuer "Versatz nur einmal".
+    #
+    # Der interne Mechanismus des alten 0x000C-Drehzahlwerts bleibt offen.
+    # 50-Hz-Polling widerlegte reine Unterabtastung; Freigabe der Welle und
+    # rein kinetisches Rutschen wurden ebenfalls durch Messungen widerlegt.
+    # Der neue Encoderpfad adressiert den Softwarefehler, ist aber erst nach der
+    # H2-Countsbestimmung und der H4-A/B-Fahrt am realen Roboter bestaetigt.
+    #
+    # WARUM DIE MESSREIHE SO LANG WURDE: Fester Versatz und Skalenfaktor sind
+    # stark korreliert, solange alle Fahrten aehnlich lang sind. Aus den ersten
+    # vier Fahrten (0.41 bis 1.01 m) kamen je nach Auswertung Radien zwischen
+    # 0.0621 und 0.0631 heraus - eine Vorhersage aus dieser Anpassung wurde
+    # anschliessend widerlegt. Erst der Hebel aus einer KURZEN und einer LANGEN
+    # Fahrt trennt beide Groessen: bei 0.30 m macht ein 16-mm-Versatz 5 % aus,
+    # bei 2.50 m nur 0.6 %.
+    #
+    # Ausgleichsgerade ueber alle sieben Fahrten, in Radumdrehung gerechnet
+    # (Hebel 5.1 bis 40.4 rad), groesste Restabweichung 8.0 mm:
+    #   wirksamer Radius 0.06241 m, fester Versatz 16.0 mm je Fahrt
+    # Gegenprobe allein aus dem 0.30/2.50-Hebel: 0.06233 m und 18.9 mm -
+    # zwei unabhaengige Auswertungen, 0.13 % auseinander.
+    #
+    # Plausibel: 62.4 mm liegen unter dem Katalogwert 62.5 mm, wie es die
+    # Abplattung des Reifens unter Last erwarten laesst. Die frueheren
+    # Einpunktrechnungen ergaben bis zu 64.8 mm - groesser als der Katalogwert
+    # und damit physikalisch unsinnig.
+    wheel_radius_m: 0.0624      # [KALIBRIERT 12.08.2026 abends, vorher 0.0612]
+    # ACHTUNG - haengt am Radradius: Der Drehwinkel wird als
+    #   theta = Radradius * (Raddifferenz) / Spurweite
+    # berechnet. Wird der Radius geaendert, MUSS die Spurweite im selben
+    # Verhaeltnis mitgehen, sonst stimmt die Drehung nicht mehr.
+    #
+    # Kalibrierweg am 12.08.2026 (abends), zwei getrennte Messungen:
+    #
+    #   1. WINKEL, mit tools/kartierung/odometrie_winkel_messen.py: je eine
+    #      volle Umdrehung in beide Richtungen bei 0.25 rad/s, der Winkel
+    #      durchgehend gegen den LiDAR verfolgt statt nur Anfang gegen Ende.
+    #      283 Messpunkte je Richtung, R2 = 0.997.
+    #        gegen den Uhrzeigersinn 0.99628, im Uhrzeigersinn 0.99564
+    #      Beide Richtungen stimmen auf 0.00064 ueberein - ein echter
+    #      Skalenfehler, kein richtungsabhaengiger Effekt. -1.45 Grad je
+    #      Umdrehung.
+    #      WICHTIG: Eine Winkelmessung bestimmt nur das VERHAELTNIS r/W, nie
+    #      die Spurweite allein. Genau deshalb blieb der Streckenfehler
+    #      frueher unentdeckt: r und W waren beide zu klein, aber im fast
+    #      gleichen Verhaeltnis - die Drehung stimmte, die Strecke nicht.
+    #
+    #   2. STRECKE, sieben Fahrten mit dem Lasermessgeraet (s.o.): wirksamer
+    #      Radius 0.06241 m nach Abzug des festen Anfahrversatzes.
+    #
+    #   Daraus: W_neu = (0.06241 / 0.0612) * 0.3755 / 0.99596 = 0.3845
+    #   (Der Winkelfaktor 0.99596 wurde mit Radius 0.0612 und Spurweite 0.3755
+    #   gemessen; beide gehen deshalb in die Umrechnung ein.)
+    #
+    # Plausibilitaet: 384.5 mm liegen 6.5 mm ueber den abgemessenen 378 mm
+    # Radmitte-zu-Radmitte. Der Aufstandspunkt eines breiten Reifens liegt
+    # nicht exakt unter der Radmitte, und beim Drehen auf der Stelle radiert
+    # der Reifen - beides vergroessert die WIRKSAME Spurweite gegenueber der
+    # geometrischen. 1.7 Prozent Aufschlag sind dafuer erwartbar.
+    #
+    # Gegenprobe: r/W aendert sich von 0.16298 auf 0.16232, also um
+    # -1.47 Grad je Umdrehung - der unabhaengig gemessene Winkelfehler betrug
+    # -1.45 Grad. Die beiden Messwege sind damit in sich stimmig.
+    wheel_separation_m: 0.3845  # [KALIBRIERT 12.08.2026 abends, vorher 0.3755]
+    # Radumfang = 2*pi*0.0624 = 0.3921 m  (eine Radumdrehung = 39,21 cm Weg)
 
     # --- Getriebe [GEMESSEN: Schrittmotor-Getriebe 10:1] ---
     # Motorumdrehungen pro RAD-Umdrehung. Der Node rechnet Rad-Drehzahl in
@@ -78,12 +171,54 @@ base_hardware:
     # Zielgeschwindigkeit - DAS war der Ruck beim Anfahren, nicht die Rampe.
     start_speed_register: 0x0020
     start_speed_rpm: 5          # [TUNE] kleiner = weicher los, zu klein = evtl. zaeh
-    accel_ms: 800               # [TUNE] hoeher = sanfter anfahren (800 = Nicken weg)
+    # ACHTUNG ZUR EINHEIT: Die fruehere Annahme, die Rampenzeit werde mit der
+    # angeforderten Drehzahl gegen 3000 rpm skaliert, ist durch den Bodentest
+    # vom 14.08.2026 widerlegt. Ein 1,0-s-Fahrimpuls mit 0,12 m/s ergab bei
+    # accel_ms=2000 nur 0,0439 m Encoderweg statt rund 0,12 m bei sofortigem
+    # Sollwert. Die Rampe wirkt damit weit staerker und offenbar weitgehend
+    # direkt auf die Sollwertaenderung. Der Nutzer bestaetigte das Anfahren als
+    # gut und sanft. Mit den zuvor aktiven 100 ms war es praktisch ein Sprung;
+    # bei der manuellen LiDAR-Runde wackelte der hohe Aufbau entsprechend stark.
+    # Verstaerkt wird das dadurch, dass das Steuerkreuz digital ist: Druecken
+    # heisst sofort voller Ausschlag, es gibt kein sanftes Andosieren.
+    # ================== GEMESSEN 13.08.2026 - BITTE LESEN ==================
+    # Der Antrieb LEHNT 2500 AB. Ein Schreibversuch beantwortet er mit
+    # ExceptionResponse(function_code=134, exception_code=7), also negative
+    # acknowledge. Abgetastet wurde die Grenze am realen Motorpaar:
+    #   0x001E akzeptiert bis 2000, lehnt 2500 und 5000 ab
+    #   0x001F akzeptiert bis 2000, lehnt 2500 und 5000 ab
+    #
+    # Die Anfahrrampe war damit NIE wirksam konfiguriert. Ausgelesen standen in
+    # 0x001E auf beiden Motoren 100 - weder die frueher eingetragenen 800 noch
+    # die 2500. 0x001F (400) und 0x0020 (5) dagegen stimmten mit dieser Datei
+    # ueberein, Schreibzugriffe funktionieren also grundsaetzlich.
+    #
+    # Aufgefallen ist das erst, weil der Encoder-Branch die Rueckgabewerte der
+    # Schreibvorgaenge PRUEFT. Der vorherige Code rief _write_register dreimal
+    # ohne jede Auswertung auf und verschluckte den Fehlschlag. Das erklaert
+    # rueckwirkend den Eintrag vom 28.07.2026, die Solldrehzahl sei "nach ~110 ms
+    # zu 90 % erreicht, trotz 800-ms-Rampe" - die Rampe stand nie auf 800.
+    #
+    # AENDERUNG 14.08.2026: Nach erfolgreichem H4-Encoder-Nachweis wird die
+    # weichere Rampe jetzt als eigener Sicherheits-/Fahrverhaltensschritt auf
+    # den real bestaetigten Hoechstwert 2000 gesetzt. Die Odometrie liest die
+    # absoluten Positionsregister 0x000A/0x000B und erfasst damit auch den Weg
+    # waehrend der Rampe; der alte feste Stop/Start-Versatz aus 0x000C kann
+    # dadurch nicht wiederkehren. Bremsen bleibt getrennt bei 400 ms.
+    # =======================================================================
+    accel_ms: 2000              # [TUNE] real bestaetigte Obergrenze; 2500 wird abgelehnt
     # Bremsen MUSS deutlich haerter sein als Beschleunigen. Mit 800 ms lief der
     # Roboter nach dem Loslassen des Sticks sichtbar nach - das ist gefaehrlich,
     # weil der Bremsweg dann laenger ist als der Sensorhorizont der VL53.
-    decel_ms: 400               # [TUNE] kleiner = schneller stehen (250 war zu ruppig,
-                                # 800 lief nach - 400 ist der abgestimmte Kompromiss)
+    # Bremsen MUSS deutlich haerter sein als Beschleunigen. Beim Loslassen soll
+    # der Roboter stehen, nicht ausrollen - ein langer Bremsweg ist gefaehrlich,
+    # weil er den Sensorhorizont uebersteigt, und beim Kartieren stoert er die
+    # Positionsschaetzung.
+    # Abgestimmte Werte aus der Praxis (Nutzerurteil am Geraet):
+    #   250 ms zu ruppig, 800 und 1200 ms liefen sichtbar nach, 400 ms passt.
+    # Beschleunigen darf davon unabhaengig lang sein - das ist kein Widerspruch,
+    # sondern Absicht: sanft los, zuegig stehen.
+    decel_ms: 400               # [TUNE] kleiner = schneller stehen
 
     rpm_scale: 1.0              # Registerwert je Motor-rpm (1.0 = direkt in rpm)
     # Obergrenze in MOTOR-rpm (nach Getriebe). 700 deckt die Limits oben ab
@@ -91,23 +226,60 @@ base_hardware:
     max_motor_rpm: 700.0
     # 0.05 war zu knapp: eine Transaktion braucht real ~5 ms, aber waehrend des
     # Startgewitters (OAK + VL53 + RTAB-Map belegen gleichzeitig den USB-Bus)
-    # lief sie in den Timeout und riss die Verbindung. 0.1 gibt Luft; teuer wird
-    # es nur im Fehlerfall (pymodbus wiederholt 3x), und der Node baut die
-    # Verbindung jetzt selbsttaetig wieder auf (_ensure_rs485).
+    # lief sie in den Timeout und riss die Verbindung. 0.1 gibt Luft. Verdeckte
+    # pymodbus-Wiederholungen sind deaktiviert; der Node zaehlt Fehler sichtbar
+    # und baut die Verbindung kontrolliert wieder auf (_ensure_rs485).
     modbus_timeout_s: 0.1
+    modbus_retries: 0       # kein verstecktes 3x-Blocking im Stop-/Fehlerpfad
     modbus_write_period_s: 0.05
 
-    # --- Drehzahl-Rueckmeldung -> GEMESSENE Odometrie (24.07.2026) ---
-    # Die Motoren melden ihre Ist-Drehzahl in 0x000C (signed int16, read-only).
-    # Damit integriert der Node die tatsaechlich gefahrene statt der befohlenen
-    # Bewegung. Faellt bei Lesefehlern automatisch auf den Sollwert zurueck.
-    # WICHTIG: Lesen geht nur per FC03 (read_holding_registers) - auf FC04
-    # antwortet der ESS23-RS NICHT.
-    # Timing: ein Read kostet ~16 ms bei FTDI-Default latency_timer=16, aber nur
-    # ~1-2 ms mit latency_timer=1 (udev-Regel 82-ftdi-latency.rules).
+    # --- Encoderpositions-Odometrie (13.08.2026 Softwarestand) ---
+    # 0x000A/0x000B zaehlen absolute Motorposition; 0x000C bleibt reine
+    # Diagnosetelemetrie. Im realen Betrieb gibt es niemals Sollwertfallback.
+    # WICHTIG: Die Positionseinheit ist am echten Motor noch zu bestimmen.
+    # Deshalb blockiert counts=0 den echten Encoderbetrieb fail-closed.
+    odometry_source: "encoder_position"
+    encoder_position_register: 0x000A
+    encoder_segment_register: 0x0011
+    encoder_word_order_register: 0x0019
+    encoder_resolution_register: 0x0101
+    # H2 GEMESSEN 13.08.2026 am realen Motorpaar, aufgebockt, Raeder frei.
+    # Verfahren: Encoderstand strikt lesend vor und nach einem befristeten
+    # Motorlauf erfasst (das Lesewerkzeug und base_hardware liefen NIE
+    # gleichzeitig - zwei Modbus-Master sind verboten). Bodenreferenz war eine
+    # Markierung am Rad, vom Nutzer in BEIDEN Richtungen mit genau 5
+    # Radumdrehungen bestaetigt.
+    #
+    #   Lauf                 M1 Delta   M2 Delta   Counts/Motorumdrehung
+    #   vorwaerts  65.3 s     +50040     -50045    1000.8 / 1000.9
+    #   rueckwaerts 65.3 s    -50009     +50017    1000.2 / 1000.3
+    #
+    # Richtungsunterschied 0.062 % (M1) und 0.056 % (M2); Vorzeichen kehren sich
+    # sauber um. Ein dritter Lauf ueber 65.0 s ergab konsistent +49804/-49810.
+    # Gegenrechnung ueber die kommandierte Motordrehzahl (46 rpm) ergab 999.4
+    # bis 999.5 - ein voellig anderer Weg, dasselbe Ergebnis.
+    #
+    # Alle vier Messwerte liegen innerhalb 0.1 % um 1000. Das deckt sich mit
+    # 0x0011=1000, war aber NICHT von dort uebernommen - die Uebergabe verbietet
+    # das ausdruecklich, und der Wert ist unabhaengig gemessen.
+    encoder_counts_per_motor_revolution: 1000.0   # [H2 GEMESSEN 13.08.2026]
+    # Beidseitig read-only bestaetigt und ueber alle Messlaeufe unveraendert
+    # (Vorher-/Nachher-Vergleich): 0x0011=1000, 0x0019=0 (high/low), 0x0101=4000
+    # auf Motor 1 UND Motor 2. Damit ist die Verriegelung scharf: Weicht ein
+    # Antrieb spaeter davon ab, sperrt der Knoten den Encoderpfad.
+    encoder_expected_segment: 1000
+    encoder_expected_resolution: 4000
+    encoder_feedback_period_s: 0.05           # 20 Hz; 50 Hz Buslast wurde bewiesen
+    encoder_stale_timeout_s: 0.30
+    encoder_max_recovery_gap_s: 2.0
+    encoder_max_delta_factor: 1.5
+    encoder_failure_stop_count: 5
+
+    # Legacy-Drehzahlquelle bleibt fuer dokumentierten Rollback verfuegbar.
+    # Sie integriert im realen Betrieb ebenfalls nie mehr den Sollwert.
     use_speed_feedback: true
     speed_register: 0x000C
-    feedback_period_s: 0.1      # 10 Hz - bremst den 50-Hz-Schreibtakt nicht
+    feedback_period_s: 0.1
 
     # --- Frames ---
     odom_frame_id: "odom"
@@ -120,3 +292,9 @@ base_hardware:
     # ZURUECK AUF false setzen, sobald ekf_node/SLAM diesen TF uebernimmt,
     # sonst publizieren zwei Quellen denselben Transform (Konflikt).
     publish_tf: true
+    # Konservative Startvarianzen, noch nicht hardwarekalibriert. In H4/H5
+    # gegen wiederholte externe Messungen bestimmen; null waere "perfekt".
+    odom_pose_xy_variance: 0.0025
+    odom_yaw_variance: 0.0076
+    odom_twist_linear_variance: 0.01
+    odom_twist_angular_variance: 0.03

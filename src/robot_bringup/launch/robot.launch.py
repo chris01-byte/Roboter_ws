@@ -35,6 +35,7 @@ def generate_launch_description():
 
     start_bt = LaunchConfiguration('start_bt')
     start_map_manager = LaunchConfiguration('start_map_manager')
+    start_semantic_map_manager = LaunchConfiguration('start_semantic_map_manager')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -47,6 +48,11 @@ def generate_launch_description():
             description='Fahrbewegungsfreien Kartenmanager mitstarten. Er beobachtet '
                         '/map, publiziert die Roboterpose und speichert Karten nur '
                         'nach explizitem Befehl. Er startet selbst kein SLAM/Nav2.'),
+        DeclareLaunchArgument(
+            'start_semantic_map_manager', default_value='true',
+            description='Passiven semantischen Kartenmanager mitstarten. Er verwaltet '
+                        'nur manuelle Raumdaten und sendet weder Nav2- noch '
+                        'Motorbefehle.'),
 
         # --- Onboard-Not-Aus-Waechter (K4): publiziert /safety/estop ---
         #     MUSS laufen, sonst haelt der BT jede echte Mission sofort an.
@@ -63,6 +69,15 @@ def generate_launch_description():
                 get_package_share_directory('robot_map_manager'), 'launch',
                 'map_manager.launch.py')),
             condition=IfCondition(start_map_manager)),
+
+        # --- Manuelle Raeume/Orte als Schicht ueber der metrischen Karte ---
+        #     Rein passiv: Persistenz, Validierung und App-Schnittstelle; keine
+        #     Action, kein Nav2-Goal und kein cmd_vel-Publisher.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(
+                get_package_share_directory('semantic_map_manager'), 'launch',
+                'semantic_map_manager.launch.py')),
+            condition=IfCondition(start_semantic_map_manager)),
 
         # --- Reaktive Nahbereichs-Sicherheit (VL53) ---
         _include('vl53_near_field', 'vl53_near_field.launch.py'),

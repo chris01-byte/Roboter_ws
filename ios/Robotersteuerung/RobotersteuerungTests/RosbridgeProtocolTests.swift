@@ -6,7 +6,7 @@ struct RosbridgeProtocolTests {
     @Test
     func setupFramesMatchExistingBrowserProtocol() throws {
         let frames = try RosbridgeProtocol.setupFrames()
-        #expect(frames.count == 4)
+        #expect(frames.count == 5)
 
         let decoded = try frames.map(jsonObject)
         #expect(decoded[0]["op"] as? String == "advertise")
@@ -16,7 +16,8 @@ struct RosbridgeProtocolTests {
         #expect(decoded[1]["type"] as? String == "std_msgs/Bool")
         #expect(decoded[2]["op"] as? String == "subscribe")
         #expect(decoded[2]["topic"] as? String == RosbridgeTopics.status)
-        #expect(decoded[3]["topic"] as? String == RosbridgeTopics.estop)
+        #expect(decoded[3]["topic"] as? String == RosbridgeTopics.exploreStatus)
+        #expect(decoded[4]["topic"] as? String == RosbridgeTopics.estop)
     }
 
     @Test
@@ -76,11 +77,13 @@ struct RosbridgeProtocolTests {
           "progress":0.42,
           "active_command":{"type":"go_to_room","room":"Kueche"},
           "rooms":["Wohnzimmer","Kueche"],
+          "pick_and_place_rooms":["Kueche"],
           "targets":["Tisch"],
           "objects":["Tasse"],
           "offboard_available":true,
           "cancel_pending":true,
           "last_rejection":"",
+          "explore_execution":"bt_explicit_opt_in",
           "time":123.0
         }
         """
@@ -95,8 +98,63 @@ struct RosbridgeProtocolTests {
         #expect(decoded.phase == "Navigation")
         #expect(abs(decoded.normalizedProgress - 0.42) < 0.0001)
         #expect(decoded.activeCommand?.description == "Fahre: Kueche")
+        #expect(decoded.pickAndPlaceRooms == ["Kueche"])
         #expect(decoded.offboardAvailable == true)
         #expect(decoded.cancelPending == true)
+        #expect(decoded.exploreExecution == "bt_explicit_opt_in")
+    }
+
+    @Test
+    func decodesCompleteExploreStatusEvent() throws {
+        let status = """
+        {
+          "schema_version":1,
+          "backend_ready":true,
+          "state":"running",
+          "phase":"coverage",
+          "message":"Abdeckungsziel 3 wird angefahren",
+          "strategy":"frontier_then_adaptive_coverage",
+          "coverage_ratio":0.64,
+          "coverage_percent":64.0,
+          "target_coverage_percent":85.0,
+          "reachable_area_m2":12.5,
+          "covered_area_m2":8.0,
+          "frontiers_visited":4,
+          "coverage_goals_visited":2,
+          "frontiers_remaining":0,
+          "map_ready_to_save":false,
+          "time":123.0
+        }
+        """
+        let frame = try outerStringPublish(
+            topic: RosbridgeTopics.exploreStatus,
+            data: status
+        )
+        let event = try RosbridgeProtocol.decodeEvent(from: frame)
+
+        guard case let .exploreStatus(decoded)? = event else {
+            Issue.record("Erkundungsstatus erwartet")
+            return
+        }
+        #expect(decoded.state == "running")
+        #expect(decoded.phase == "coverage")
+        #expect(abs(decoded.normalizedCoverage - 0.64) < 0.0001)
+        #expect(decoded.coverageGoalsVisited == 2)
+        #expect(decoded.mapReadyToSave == false)
+    }
+
+    @Test
+    func rejectsIncompleteExploreStatus() throws {
+        let frame = try outerStringPublish(
+            topic: RosbridgeTopics.exploreStatus,
+            data: "{\"state\":\"running\"}"
+        )
+        do {
+            _ = try RosbridgeProtocol.decodeEvent(from: frame)
+            Issue.record("Unvollständiger Erkundungsstatus hätte abgelehnt werden müssen")
+        } catch RosbridgeProtocolError.invalidExploreStatusPayload {
+            // Erwartet.
+        }
     }
 
     @Test

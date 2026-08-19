@@ -28,9 +28,11 @@
 //  Hochfahren selbst (siehe mock_servers/dry_run.launch.py).
 // ============================================================================
 #include <algorithm>
+#include <cmath>
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
@@ -116,6 +118,8 @@ public:
   {
     // --- Parameter ---
     tick_hz_        = node_->declare_parameter<double>("tick_rate_hz", 10.0);
+    subscription_warmup_s_ = node_->declare_parameter<double>(
+      "mission_subscription_warmup_s", 1.0);
     default_object_ = node_->declare_parameter<std::string>("target_object", "Tasse");
     enable_groot2_  = node_->declare_parameter<bool>("enable_groot2", true);
     groot2_port_    = node_->declare_parameter<int>("groot2_port", 1667);
@@ -123,6 +127,10 @@ public:
     explore_xml_    = node_->declare_parameter<std::string>("explore_xml", "bt_xml/explore.xml");
     action_name_    = node_->declare_parameter<std::string>("run_mission.action_name", "/run_mission");
     autostart_      = node_->declare_parameter<std::string>("autostart_mission", "");
+    if (!std::isfinite(subscription_warmup_s_) || subscription_warmup_s_ <= 0.0) {
+      throw std::invalid_argument(
+        "mission_subscription_warmup_s muss endlich und > 0 sein");
+    }
     // Rueckwaertskompatibel: bt_xml_file bleibt als Alias fuer pick_and_place_xml.
     const std::string legacy_xml = node_->declare_parameter<std::string>("bt_xml_file", "");
     if (!legacy_xml.empty()) {
@@ -275,10 +283,15 @@ private:
     }
 
     est_total_leaves_ = is_explore ? 1 : 12;   // grobe Basis fuer Fortschritt
+    mission_tick_ready_at_ = std::chrono::steady_clock::now() +
+      std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+        std::chrono::duration<double>(subscription_warmup_s_));
     active_goal_ = gh;
     RCLCPP_INFO(node_->get_logger(),
-                "Mission '%s' gestartet (Objekt '%s', Baum '%s').",
-                goal->mission_type.c_str(), obj.c_str(), xml.c_str());
+                "Mission '%s' gestartet (Objekt '%s', Baum '%s'); "
+                "Sicherheits-Subscriptions erhalten %.1f s Vorlauf.",
+                goal->mission_type.c_str(), obj.c_str(), xml.c_str(),
+                subscription_warmup_s_);
     return true;
   }
 
@@ -298,6 +311,16 @@ private:
       active_goal_->canceled(res);
       RCLCPP_INFO(node_->get_logger(), "Mission beendet mit Status: CANCELED");
       finishMission();
+      return;
+    }
+
+    // Topic-basierte BT-Bedingungen werden erst zusammen mit dem Baum
+    // erzeugt. Ohne diesen Vorlauf trifft der erste Tick IsEstopClear noch
+    // vor der ersten (transient-local und periodischen) Statusnachricht und
+    // beendet eine freie Mission faelschlich. Waere das Topic wirklich weg
+    // oder der Not-Aus aktiv, liefert der erste Tick danach weiterhin
+    // fail-closed FAILURE. Vor dem ersten Tick kann noch keine Action starten.
+    if (std::chrono::steady_clock::now() < mission_tick_ready_at_) {
       return;
     }
 
@@ -378,6 +401,7 @@ private:
   BT::BehaviorTreeFactory factory_;
 
   double tick_hz_{10.0};
+  double subscription_warmup_s_{1.0};
   std::string default_object_{"Tasse"};
   bool enable_groot2_{true};
   int groot2_port_{1667};
@@ -387,6 +411,7 @@ private:
   rclcpp_action::Client<RunMission>::SharedPtr self_client_;
   rclcpp::TimerBase::SharedPtr tick_timer_;
   rclcpp::TimerBase::SharedPtr autostart_timer_;
+  std::chrono::steady_clock::time_point mission_tick_ready_at_{};
 
   std::shared_ptr<GoalHandle> active_goal_;
   std::unique_ptr<BT::Tree> tree_;

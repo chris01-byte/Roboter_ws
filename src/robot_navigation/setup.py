@@ -16,10 +16,20 @@ setup(
         (os.path.join('share', package_name, 'maps'), glob('maps/*')),
     ],
     install_requires=['setuptools'],
+    tests_require=['pytest'],
     zip_safe=True,
     maintainer='QTG0900',
     maintainer_email='qtg0900@example.com',
     description='Nav2-Konfiguration + Testkarte: echte Navigation ohne Hardware (virtuelle Basis).',
     license='MIT',
-    entry_points={'console_scripts': []},
+    entry_points={
+        'console_scripts': [
+            'cmd_vel_mission_gate = '
+            'robot_navigation.cmd_vel_mission_gate:main',
+            'localization_guard = '
+            'robot_navigation.localization_guard:main',
+            'global_scan_localizer = '
+            'robot_navigation.global_scan_localizer:main',
+        ],
+    },
 )

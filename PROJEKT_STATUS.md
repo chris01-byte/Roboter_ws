@@ -1,47 +1,90 @@
-# Projekt-Status roboter_ws (Stand: 09.07.2026)
+# Projektstatus: Roboter_ws
 
-**Single Source of Truth.** Zuerst hier lesen, nicht den `src/`-Baum scannen.
-Nach jeder Änderung kurz aktualisieren.
+**Stand:** 2026-08-19
 
-## Meilenstein: SOFTWARE-ABNAHME BESTANDEN (08.07.2026, Jetson)
-`./pruefplan_jetson.sh --software` — alle 10 Stufen grün: Build (16 eigene Pakete + BT-Source),
-Trockenlauf, **K1** Missionsbrücke (Auftrag -> BT echt), **K2** Objektgedächtnis, **K4** Not-Aus-
-Wächter, **K5** Offboard-Guard, **N1** echtes Nav2, **N2 Königstest** (Auftrag -> BT -> Nav2
-fährt virtuell -> Ablage am Katalog-Ziel -> success), D2. Details: `pruefplan_ergebnisse.md`.
-**Alle Software-Befunde des Prüfberichts sind damit geschlossen** (K1,K2,K4,K5,K6,K7,S1,S2,
-Pose-Katalog, GUI-Ausbau, Nav2 virtuell). Rest ist hardwaregebunden.
+**Geltung:** Dieser Status beschreibt die Mainline-Konsolidierung. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
-## Zuletzt (13.07): robot_face Redesign
-Cartoon-Gesicht ersetzt durch **humanoides Android-Design** (weisse Hochglanz-Schale, Panel-Fugen,
-technische blaue Iris, Hals-Leuchte) nach Nutzer-Referenzbildern. Nur `robot_face/web/index.html`
-(Single-File, kein sw.js) getauscht - Ausdrucks-Engine/rosbridge unveraendert, im Browser ueber
-neutral/happy/alarm/sleeping/surprised verifiziert. Zum Jetson: normaler Stick-Sync, dann
-Kiosk-Browser neu laden (kein Cache).
+---
 
-## Betriebs-Fakten (nicht neu herleiten)
-- **Eine Kopie:** dieser USB-Stick `/Volumes/64GB/roboter_ws` ist der gesamte Stand.
-  Gebaut/getestet wird direkt hier auf dem Jetson (oder in `~/roboter_ws`-Kopie).
-- **exFAT kann keine Symlinks** -> B0 erkennt das und baut ohne `--symlink-install`.
-- macOS-Reste (`._*`, `.DS_Store`, `__pycache__`) räumt B0 vor jedem Build weg.
-- `behaviortree_ros2` liegt als **Source in `src/`** (nicht per apt verfügbar) — nie löschen.
-- Es entwickelt NUR Claude (Mac) am Code; „schon erledigt" wirkende Arbeit stammt aus
-  eigenen früheren Sessions (5h-Limit). Erst diese Datei prüfen, dann implementieren.
-- Nutzer-Feedback: sparsam mit Tokens; Doku aktuell halten statt Stick scannen.
-- Konventionen: XML-Kommentare `====` statt `--` · Suchanker statt Zeilennummern ·
-  `sw.js` CACHE_NAME bei GUI-Änderungen hochzählen.
+## Kurzfassung
 
-## Nächste Schritte (alle hardwaregebunden)
-1. **Arm-Integration:** echtes Arm-URDF + `/joint_states` (iCL-Stepper, Projektordner
-   „Roboterarm" auf dem Mac) -> dann Hand-Auge-Kalibrierung nach
-   `KONZEPT_KALIBRIERUNG_OAK_ARM.md` Stufe A–G (`handeye_recorder`/`handeye_solve` liegen bereit).
-2. **OAK montieren -> SLAM (RTAB-Map):** ersetzt Testkarte + statische TF in
-   `robot_navigation/nav_test.launch.py`; danach Pose-Katalog mit echter Karte einmessen.
-3. **Hardware-Prüfstufen** B1–C4 (`Roboter_Pruefplan.md` Teil 3), inkl. abgesichertem
-   RS485-Radtest; VL53-Montagepose einmalig in der URDF festlegen (Prüfbericht I7).
-4. Optional/Feinschliff: Live-Detektion vor Gedächtnis bevorzugen, wenn Objekt sichtbar;
-   TTS fürs Gesicht (Piper, lokal); `robot_radius` real ~0.43 prüfen (aktuell 0.30 für Testkarte).
+- `main` ist weiterhin der Default-Branch, liegt aber hinter der aktuellen Integrationslinie.
+- `chore/repository-mainline-cleanup` ist der vollstaendige Mainline-Kandidat: Er basiert auf `fix/polygon-footprint-wohnung`, archiviert veraltete Juli-Unterlagen und enthaelt die Arm- sowie Diagnostikplaene.
+- Es werden durch diese Dokumentationsarbeiten keine Motoren, Sensoren oder Sicherheitsparameter bewegt oder konfiguriert.
+- Neue Entwicklungsarbeit startet erst nach erfolgreicher Mainline-PR von `main`, nicht mehr auf historischen Feature- oder Fix-Branches.
 
-## Testen
-`./pruefplan_jetson.sh --software` (Abnahmelauf) · `--stage <ID>` einzeln · `--alle` inkl.
-Hardware · Menü ohne Argument. Stufenliste: `--hilfe`. Ergebnisse: `~/pruefplan_ergebnisse.md`
-(Kopie der Abnahme hier im Workspace).
+## Aktuelle Integrationslinie
+
+Die Plattform wurde in aufeinander aufbauenden Branches entwickelt. Der vollständige Kandidat fuer `main` ist:
+
+```text
+main
+  -> feature/stl27l-integration
+  -> agent/slam-toolbox-pure-rotation-fix
+  -> fix/encoder-position-odometry
+  -> feature/semantic-map-editor
+  -> fix/sanfteres-anfahren
+  -> feature/reale-raumfahrt
+  -> feature/globale-lokalisierung
+  -> feature/automatische-lidar-kartierung
+  -> feature/hybrid-erkundung-app
+  -> fix/polygon-footprint-wohnung
+  -> chore/repository-mainline-cleanup
+```
+
+Die noch offenen Pull Requests #2, #4, #5 und #6 sind Teil dieser historischen Stapelstruktur. Sie sind nicht als voneinander unabhaengige Kandidaten fuer einen direkten Merge nach `main` zu behandeln.
+
+## Mainline-Gates
+
+Bevor `main` auf den aktuellen Integrationsstand wechselt, muessen diese Schritte in der Mainline-PR dokumentiert und bestanden sein:
+
+1. Basis der PR ist `main`; Head ist `chore/repository-mainline-cleanup`.
+2. GitHub Actions sind gruen oder ein fehlender Check ist fachlich begruendet.
+3. Auf dem Jetson wurden die betroffenen ROS-2-Humble-Pakete gebaut und ihre Tests ausgefuehrt.
+4. Keine Konflikte in Dokumentation, Launch-Dateien, Schnittstellen oder Sicherheitsparametern.
+5. Die Abnahme bleibt nachvollziehbar: Testumfang, Hardwareumfang und Rueckfallweg werden im PR beschrieben.
+6. Erst nach Merge: alte, vollstaendig enthaltene Draft-PRs schliessen und ihre Branches loeschen.
+
+Ein Mainline-Merge ersetzt keine scharfe Hardwareabnahme. Der letzte dokumentierte Teststand ist immer gegen die tatsaechliche Hardware- und Konfigurationsrevision zu bewerten.
+
+## Aktive fachliche Arbeit
+
+| Bereich | Status | Naechster sicherer Schritt |
+|---|---|---|
+| Fahrbasis und Encoder | ESS23-Encoderpfad, Nav2, LiDAR, VL53 und Mehrraum-Explorer sind im Mainline-Kandidaten enthalten. | Mainline-PR bauen und testen; keine alte Teil-PR einzeln nach `main` mergen. |
+| Diagnostik und Selbstbefreiung | Plan ist in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) integriert. | Nach Mainline-Merge als separaten, read-only und motorlosen Implementierungsschritt planen. |
+| Arm-Integration | Physischer Arm vorhanden; Produktionstreiber, Homing, echtes URDF und ROS-2-Control sind noch nicht integriert. | M0 plus read-only M1 aus [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); keine Mehrachsbewegung vor Achsprotokollen. |
+| OAK-Hand-Auge-Kalibrierung | Recorder und Loeser existieren; reale Arm-/TF-Voraussetzungen fehlen noch. | Erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen; danach kalibrieren. |
+| App und semantische Karte | Bestehende passive Funktionen bleiben Bestandteil des Mainline-Kandidaten. | Gegen aktuelle Mainline testen, nicht gegen den Juli-Status. |
+
+## Sicherheitsrahmen
+
+- `/safety/estop` mit `true` bedeutet Not-Aus aktiv und blockiert softwareseitige Bewegungsfreigaben.
+- Die hardwired Sicherheitskette bleibt primaer; die Software ersetzt sie nicht.
+- Reale Basisfahrt und Armfahrt bleiben getrennte, explizit freigegebene Schritte.
+- Greifen und Kamera-Feinpose verwenden `base_link`, nicht `map`.
+- Keine direkte Bewegungssteuerung ueber historische `JointState`-Command-Topics oder unbestaetigte ESS17-Registerannahmen.
+
+## Dokumentationsstruktur
+
+- Aktuelle Navigation: [`docs/README.md`](docs/README.md)
+- Evidenz- und Entscheidungslog: [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md)
+- Aktive Plaene: Arm-Software und Diagnostik/Selbstbefreiung unter `docs/`
+- Historische Juli-Unterlagen: [`docs/archive/2026-07/`](docs/archive/2026-07/)
+- Der fruehere Status-Snapshot liegt unter [`docs/archive/2026-07/PROJEKT_STATUS_2026-07-09.md`](docs/archive/2026-07/PROJEKT_STATUS_2026-07-09.md).
+
+## Branch-Regeln nach der Konsolidierung
+
+1. `main` ist die einzige Startbasis fuer neue Entwicklungsbranches.
+2. Ein Branch hat genau ein fachliches Thema und eine klar definierte Zielbasis.
+3. Hardwareaenderungen, Dokumentationsaufraeumungen und Featurearbeit werden getrennt reviewed.
+4. Nach Merge werden vollstaendig enthaltene Branches geloescht; offene PRs werden nicht dauerhaft als historische Ablage verwendet.
+5. Messdaten und abgeschlossene Pruefprotokolle gehen nach `docs/archive/<jahr-monat>/`, nicht in die Root-Ebene.
+
+## Unmittelbare Reihenfolge
+
+1. Mainline-PR von `chore/repository-mainline-cleanup` nach `main` erstellen.
+2. GitHub Actions sowie die vereinbarte Jetson-Abnahme ausfuehren.
+3. Nach gruener Abnahme nach `main` mergen.
+4. Die enthaltenen historischen Draft-PRs und Branches geordnet schliessen bzw. loeschen.
+5. Neue Arbeit nur noch von `main` starten.

@@ -37,6 +37,7 @@ from robot_map_manager.map_core import (
     RequestIDConflict,
     StoragePolicy,
     json_message,
+    parse_cached_command_response,
     parse_command_json,
     raw_cell_digest,
     validate_grid_shape_and_length,
@@ -445,8 +446,31 @@ class RobotMapManager(Node):
                 )
                 return
             if cached_response is not None:
+                try:
+                    cached_result = parse_cached_command_response(
+                        cached_response,
+                        expected_request_id=command.request_id,
+                        expected_command=command.command,
+                    )
+                except MapStorageError as error:
+                    self._last_error = str(error)
+                    self._last_operation = "command_replay_rejected"
+                    self._publish_status(
+                        event="command_result",
+                        ok=False,
+                        command=command.command,
+                        request_id=command.request_id,
+                        message=str(error),
+                    )
+                    return
                 self._idempotent_replays += 1
-                self.status_publisher.publish(String(data=cached_response))
+                replay = cached_result.publish_kwargs(
+                    current_status_ok=self._last_error is None
+                )
+                # Das Kommandoergebnis bleibt idempotent. Der globale Zustand
+                # (map/storage/pose/time/counters) wird dagegen immer frisch in
+                # _publish_status aufgebaut und niemals aus dem Cache replayt.
+                self._publish_status(**replay)
                 return
 
         if command.command == "save":
@@ -494,10 +518,15 @@ class RobotMapManager(Node):
             )
 
         if command.request_id is not None and self._last_status_json is not None:
+            cached_result = parse_cached_command_response(
+                self._last_status_json,
+                expected_request_id=command.request_id,
+                expected_command=command.command,
+            )
             self.request_cache.store(
                 command.request_id,
                 signature,
-                self._last_status_json,
+                cached_result.as_cache_json(),
             )
 
     def _command_signature(self, command: MapCommand) -> tuple[Any, ...]:

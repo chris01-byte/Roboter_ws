@@ -6,11 +6,15 @@
 #    - obstacle_layer in local + global costmap, gespeist aus den beiden
 #      VL53-Punktwolken -> Nav2 sieht reale Hindernisse und plant drumherum.
 #    - use_collision_detection: true (Regler bremst vor Costmap-Hindernissen).
-#    - desired_linear_vel: 0.12 (bewusst langsam fuer die erste autonome Fahrt).
-#    - robot_radius: 0.40 (Sicherheitswert; Plattform 0.70x0.50 -> ~0.43
-#      umschrieben). In nav2_params.yaml ist er bewusst 0.30 (Testwohnungs-
-#      Tueren) - deshalb eine EIGENE Datei, damit der virtuelle Test unberuehrt
-#      bleibt.
+#    - konservativ abgestimmter Regler + echter velocity_smoother fuer die
+#      traege 2000-ms-Anfahrtsrampe der Motoren.
+#    - lokaler Polygon-Footprint x=-0.11..+0.31 m, y=+/-0.23 m plus 0.02 m
+#      Padding. +0.31 m schliesst die vor dem 0.27-m-Chassis montierten VL53
+#      ein. Die sichere Rechteckhuelle ignoriert vorerst die Frontschraegen.
+#    - globaler NavFn-Radius 0.28 m. NavFn plant nur in 2D und wertet keinen
+#      orientierten Polygon-Footprint aus; der kleinere Kreis bildet deshalb
+#      Breite plus Reserve ab. Der nachgeschaltete Regler prueft weiterhin das
+#      vollstaendige lokale Polygon.
 #  WICHTIG - Raeumen: Der obstacle_layer nutzt NICHT die sparsame Original-Wolke
 #  (/near_field/*/points; die liefert bei freier Sicht 0 Punkte -> keine
 #  Raeum-Strahlen -> Geister-Hindernisse), sondern die costmap-freundliche Wolke
@@ -20,9 +24,61 @@
 #                              liegen darueber -> werden NICHT markiert)
 #    raytrace_max_range 0.7   (>0.60 -> Clear-Punkte raeumen ihren Strahl)
 #  Der collision_monitor bleibt auf der Original-Wolke (unveraendert verifiziert).
-#  cmd_vel-Verkettung: Regler+Behavior publizieren (per Launch-Remap) auf
-#  cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> base_hardware.
+#  cmd_vel-Verkettung: Regler+Behavior -> cmd_vel_nav_raw -> fail-closed
+#  mission_cmd_vel_gate -> cmd_vel_nav -> velocity_smoother
+#  -> cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> base_hardware.
+#  Der Sicherheitsstopp bleibt hinter dem Komfort-Smoother und wird daher
+#  nicht verzoegert.
 # =====================================================================
+
+amcl:
+  ros__parameters:
+    # Startpose wird absichtlich weder geraten noch aus einem frueheren Lauf
+    # uebernommen. localization_guard ruft nach Karten-/LiDAR-Pruefung den
+    # globalen AMCL-Reset auf und verteilt die Partikel ueber die ganze Karte.
+    use_sim_time: false
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 10.0
+    laser_min_range: -1.0
+    laser_model_type: "likelihood_field"
+    max_beams: 60
+    max_particles: 2000
+    min_particles: 500
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    # Eine volle Suchdrehung soll nicht nur alle 11,5 Grad ein Update liefern.
+    # 0,05 rad ergibt rund 125 voneinander getrennte Winkelbeobachtungen.
+    update_min_a: 0.05
+    update_min_d: 0.02
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: /scan_normiert
+    set_initial_pose: false
+    always_reset_initial_pose: true
+    first_map_only: false
 
 bt_navigator:
   ros__parameters:
@@ -30,21 +86,40 @@ bt_navigator:
     robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10
-    default_server_timeout: 20
+    # Humble verwirft bei Ablauf den noch ausstehenden Unterziel-Handle. Unter
+    # Jetson-Last kam die FollowPath-Annahme real erst nach ~590 ms; 20 ms
+    # erzeugten dadurch ein verwaistes, weiterfahrendes Controller-Ziel.
+    default_server_timeout: 2000
 
 controller_server:
   ros__parameters:
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
-    failure_tolerance: 0.5
+    # REAL 18.08.2026: slam_toolbox hielt map->odom unter Jetson-Last einmal
+    # 0,95 s alt. 0,5 s brach dadurch eine freie Frontier-Fahrt nach 28 cm ab.
+    # 1,5 s ueberbrueckt diesen gemessenen TF-Aussetzer mit Reserve. Der
+    # nachgeschaltete velocity_smoother bleibt bei 0,5 s und setzt die
+    # Fahrgeschwindigkeit deshalb weiterhin frueher auf null; ein dauerhaft
+    # fehlender TF beendet die Action weiterhin fail-closed.
+    failure_tolerance: 1.5
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
     progress_checker:
-      plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.3
-      movement_time_allowance: 15.0
+      plugin: "nav2_controller::PoseProgressChecker"
+      # Die bestaetigte 2000-ms-Hardware-Rampe bewegt Amadeus beim sanften
+      # Start in 15 s nur etwa 0,19 m. Die fruehere 0,30-m-Schwelle brach
+      # deshalb eine freie, gerade Fahrt faelschlich als festgefahren ab.
+      # SimpleProgressChecker zaehlt nur Translation und brach am 15.08.2026
+      # eine nachweislich laufende Drehung nach 20 s als "Failed to make
+      # progress" ab. PoseProgressChecker akzeptiert auch Encoder-Winkelfortschritt.
+      # REAL 18.08.2026: In der 30-%-SlowZone wurden 0,085 m in 20 s
+      # encoderbasiert gemessen. 30 s bewahren die 0,10-m-Fortschrittsschwelle,
+      # geben der bewusst verlangsamten Fahrt aber ausreichend Zeit.
+      required_movement_radius: 0.10
+      required_movement_angle: 0.05
+      movement_time_allowance: 30.0
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
       stateful: True
@@ -52,17 +127,22 @@ controller_server:
       yaw_goal_tolerance: 0.40
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.12        # REAL: langsam fuer erste autonome Fahrt
-      lookahead_dist: 0.5
-      min_lookahead_dist: 0.3
-      max_lookahead_dist: 0.8
+      desired_linear_vel: 0.10        # REAL: konservativ fuer 2000-ms-Motorrampe
+      lookahead_dist: 0.8
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 1.0
       use_velocity_scaled_lookahead_dist: false
       transform_tolerance: 0.2
       use_rotate_to_heading: true
-      rotate_to_heading_angular_vel: 0.6
+      rotate_to_heading_angular_vel: 0.2
+      # Nicht als zweite geschlossene Rampe gegen die gemessene Odometrie
+      # wirken lassen: 0,3 begrenzte den Regler im motorlosen Pipeline-Test
+      # auf 0,015 rad/s. Der nachgeschaltete velocity_smoother bleibt die
+      # verbindliche Komfortgrenze bei 0,30 rad/s^2; danach folgt weiterhin
+      # die verifizierte 2000-ms-Hardwarerampe der Motoren.
       max_angular_accel: 2.0
-      regulated_linear_scaling_min_radius: 0.6
-      regulated_linear_scaling_min_speed: 0.1
+      regulated_linear_scaling_min_radius: 0.8
+      regulated_linear_scaling_min_speed: 0.04
       use_collision_detection: true    # REAL: Sensorik vorhanden -> Regler-Kollisionscheck an
       allow_reversing: false
 
@@ -81,7 +161,13 @@ local_costmap:
       width: 6
       height: 6
       resolution: 0.05
-      robot_radius: 0.40             # REAL: Sicherheitswert (Plattform ~0.43 umschrieben)
+      # Gemessen 18.08.2026 relativ zur mittigen Antriebsachse: Chassis vorn
+      # +0.27 m, hinten -0.11 m, links/rechts +/-0.23 m. Die bekannte
+      # VL53-Montage reicht modelliert bis +0.305 m; +0.31 m schliesst sie
+      # konservativ ein. Das Padding ergibt effektiv x=-0.13..+0.33 m und
+      # y=+/-0.25 m. Transportpose des Arms bleibt Voraussetzung.
+      footprint: "[[0.31, 0.23], [0.31, -0.23], [-0.11, -0.23], [-0.11, 0.23]]"
+      footprint_padding: 0.02
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -132,7 +218,11 @@ global_costmap:
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
-      robot_radius: 0.40
+      # NavFn ist ein 2D-Punktplaner und kann ein orientiertes Rechteck nicht
+      # kinematisch pruefen. 0.28 m = halbe gemessene Breite 0.23 m plus 5 cm
+      # globale Planungsreserve; lokal bleibt das volle Polygon verbindlich.
+      robot_radius: 0.28
+      footprint_padding: 0.0
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -188,7 +278,10 @@ planner_server:
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.3
-      use_astar: false
+      # A/B-Messung auf der realen 3-cm-Karte: Dijkstra brach trotz
+      # zusammenhaengender freier Zellen ab; A* lieferte bei unveraendert
+      # aktiven VL53-Obstacle-Layern sofort einen gueltigen Pfad.
+      use_astar: true
       allow_unknown: false
 
 behavior_server:
@@ -212,6 +305,24 @@ behavior_server:
     max_rotational_vel: 0.6
     min_rotational_vel: 0.2
     rotational_acc_lim: 2.0
+
+velocity_smoother:
+  ros__parameters:
+    smoothing_frequency: 20.0
+    scale_velocities: true
+    # OPEN_LOOP ist hier absichtlich: CLOSED_LOOP plus der zusaetzlichen
+    # 2000-ms-Motorrampe bildete im Realtest eine doppelte Rueckkopplung und
+    # liess nach 3 s nur etwa 0.007 m/s durch. Die Encoder bleiben unveraendert
+    # die Odometriequelle fuer Nav2 und alle Sicherheitspruefungen.
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.12, 0.0, 0.25]
+    min_velocity: [0.0, 0.0, -0.25]
+    max_accel: [0.12, 0.0, 0.30]
+    max_decel: [-0.30, 0.0, -0.60]
+    odom_topic: "/odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 0.5
 
 map_server:
   ros__parameters:

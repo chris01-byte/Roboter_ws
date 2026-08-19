@@ -3,8 +3,10 @@
 #  nav_real.launch.py  -  Nav2 auf REALER Hardware (VL53-Umfahrung)
 #  ====================================================================
 #  Geschlossener Navigationskreis mit ECHTER Basis + VL53-Sensorik:
-#    Nav2 plant/regelt -> cmd_vel_smoothed -> collision_monitor -> /cmd_vel
-#    -> base_hardware -> Motoren -> gemessene Odometrie (/odom + TF
+#    Nav2 plant/regelt -> cmd_vel_nav_raw -> mission_cmd_vel_gate
+#    -> cmd_vel_nav -> velocity_smoother
+#    -> cmd_vel_smoothed -> collision_monitor -> /cmd_vel -> base_hardware
+#    -> Motoren -> gemessene Odometrie (/odom + TF
 #    odom->base_link) -> Nav2 sieht die Bewegung. Reale VL53-Hindernisse
 #    landen im obstacle_layer beider Costmaps -> Nav2 plant drumherum.
 #
@@ -52,6 +54,12 @@ def generate_launch_description():
 
     map_yaml = LaunchConfiguration('map')
     active_drive = LaunchConfiguration('active_drive')
+    static_map_odom_x = LaunchConfiguration('static_map_odom_x')
+    static_map_odom_y = LaunchConfiguration('static_map_odom_y')
+    static_map_odom_yaw = LaunchConfiguration('static_map_odom_yaw')
+    require_localization = LaunchConfiguration('require_localization')
+    allow_localization_search = LaunchConfiguration(
+        'allow_localization_search')
 
     # active_drive steuert den Basis-Modus:
     #   false -> dry_run=true,  allow_rs485=false  (Stufe 1, kein Motorstrom)
@@ -62,10 +70,13 @@ def generate_launch_description():
         PythonExpression(["'", active_drive, "' == 'true'"]), value_type=bool)
 
     nav_nodes = ['controller_server', 'planner_server',
-                 'behavior_server', 'bt_navigator']
+                 'behavior_server', 'bt_navigator', 'velocity_smoother']
 
-    # Nav2-Ausgang durch den collision_monitor leiten (nicht direkt auf /cmd_vel):
-    cmd_remap = [('cmd_vel', 'cmd_vel_smoothed')]
+    # Nav2-Regler vor dem collision_monitor glaetten. Der Monitor bleibt die
+    # letzte Instanz vor /cmd_vel und kann deshalb unverzoegert stoppen.
+    nav_cmd_remap = [('cmd_vel', 'cmd_vel_nav_raw')]
+    smoother_cmd_remap = [('cmd_vel', 'cmd_vel_nav'),
+                          ('cmd_vel_smoothed', 'cmd_vel_smoothed')]
 
     return LaunchDescription([
         DeclareLaunchArgument('map', default_value=default_map,
@@ -75,12 +86,31 @@ def generate_launch_description():
             description='Statisches map->odom als Platzhalter-Lokalisierung. ZWINGEND '
                         'false, sobald SLAM (RTAB-Map) oder AMCL laeuft - die sind dann '
                         'die einzige Quelle fuer diesen Transform.'),
+        DeclareLaunchArgument(
+            'static_map_odom_x', default_value='0.0',
+            description='Nur Platzhalter-Lokalisierung: Startpose x im map-Frame.'),
+        DeclareLaunchArgument(
+            'static_map_odom_y', default_value='0.0',
+            description='Nur Platzhalter-Lokalisierung: Startpose y im map-Frame.'),
+        DeclareLaunchArgument(
+            'static_map_odom_yaw', default_value='0.0',
+            description='Nur Platzhalter-Lokalisierung: Startpose yaw [rad].'),
         DeclareLaunchArgument('oak', default_value='true',
                               description='OAK-Tiefenkamera mitstarten (Fernsicht '
                                           'fuer den obstacle_layer).'),
         DeclareLaunchArgument('active_drive', default_value='false',
                               description='true = base_hardware SCHARF (Motoren '
                                           'fahren!). false = dry_run (Stufe-1-Test).'),
+        DeclareLaunchArgument(
+            'require_localization', default_value='false',
+            description='true = Fahrtor verlangt zusaetzlich eine frische '
+                        '/localization/ready-Freigabe. Der globale '
+                        'Lokalisierungs-Launch setzt dies zwingend auf true.'),
+        DeclareLaunchArgument(
+            'allow_localization_search', default_value='false',
+            description='Nur im globalen Lokalisierungs-Launch: begrenzte '
+                        'Suchdrehung und Vorwaertsfahrt vor der ersten '
+                        'AMCL-Freigabe.'),
 
         # --- Karte + "Lokalisierung" ---
         Node(package='nav2_map_server', executable='map_server',
@@ -95,7 +125,8 @@ def generate_launch_description():
         Node(package='tf2_ros', executable='static_transform_publisher',
              name='tf_map_odom', output='screen',
              condition=IfCondition(LaunchConfiguration('static_map_odom')),
-             arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']),
+             arguments=[static_map_odom_x, static_map_odom_y, '0',
+                        static_map_odom_yaw, '0', '0', 'map', 'odom']),
 
         # --- Echte Basis: base_hardware (dry_run/scharf via active_drive) ---
         Node(package='base_hardware', executable='base_hardware',
@@ -114,17 +145,31 @@ def generate_launch_description():
         IncludeLaunchDescription(PythonLaunchDescriptionSource(oak_launch),
                                  condition=IfCondition(LaunchConfiguration('oak'))),
 
-        # --- Nav2-Kern (Regler + Behavior -> cmd_vel_smoothed) ---
+        # Fail-closed: Ein verspaetet angenommenes/verwaistes Nav2-Unterziel
+        # darf nach terminalem Missionsstatus keine Bewegung mehr ausloesen.
+        Node(package='robot_navigation', executable='cmd_vel_mission_gate',
+             name='cmd_vel_mission_gate', output='screen',
+             parameters=[{
+                 'require_localization': ParameterValue(
+                     require_localization, value_type=bool),
+                 'allow_localization_search': ParameterValue(
+                     allow_localization_search, value_type=bool),
+             }]),
+
+        # --- Nav2-Kern (Regler + Behavior -> cmd_vel_nav_raw) ---
         Node(package='nav2_controller', executable='controller_server',
              name='controller_server', output='screen',
-             parameters=[params], remappings=cmd_remap),
+             parameters=[params], remappings=nav_cmd_remap),
         Node(package='nav2_planner', executable='planner_server',
              name='planner_server', output='screen', parameters=[params]),
         Node(package='nav2_behaviors', executable='behavior_server',
              name='behavior_server', output='screen',
-             parameters=[params], remappings=cmd_remap),
+             parameters=[params], remappings=nav_cmd_remap),
         Node(package='nav2_bt_navigator', executable='bt_navigator',
              name='bt_navigator', output='screen', parameters=[params]),
+        Node(package='nav2_velocity_smoother', executable='velocity_smoother',
+             name='velocity_smoother', output='screen',
+             parameters=[params], remappings=smoother_cmd_remap),
 
         # --- Lifecycle: erst Karte, dann Navigation ---
         Node(package='nav2_lifecycle_manager', executable='lifecycle_manager',

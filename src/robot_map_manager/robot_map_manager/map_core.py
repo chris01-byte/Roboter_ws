@@ -48,6 +48,17 @@ _STAGING_ARTIFACTS = {
 }
 _IDENTITY_TRANSLATION = bytes(range(256))
 _VALID_COMPACT_CELL_BYTES = bytes(range(101)) + b"\xff"
+_CACHED_RESPONSE_EXTRA_FIELDS = frozenset(
+    {
+        "limit",
+        "list_policy",
+        "maps",
+        "name_filter",
+        "origin",
+        "requested_name",
+        "saved",
+    }
+)
 
 
 class MapValidationError(ValueError):
@@ -68,6 +79,109 @@ class SaveProtectionError(MapStorageError):
 
 class RequestIDConflict(CommandValidationError):
     """Eine request_id wurde bereits für ein anderes Kommando verwendet."""
+
+
+@dataclass(frozen=True)
+class CachedCommandResponse:
+    """Nur das unveränderliche Ergebnis eines idempotenten Kommandos.
+
+    Laufzeitfelder wie ``map``, ``storage``, ``pose``, ``time`` und ``counters``
+    dürfen nie aus einem alten Cacheeintrag erneut als aktueller globaler
+    Kartenstatus erscheinen. Der ROS-Node baut sie bei jedem Replay neu auf.
+    """
+
+    event: str
+    ok: bool
+    command: str
+    request_id: str
+    message: str
+    extra: dict[str, Any]
+
+    def publish_kwargs(self, *, current_status_ok: bool = True) -> dict[str, Any]:
+        if not isinstance(current_status_ok, bool):
+            raise MapStorageError("current_status_ok muss boolesch sein.")
+        extra = dict(self.extra)
+        extra["idempotent_replay"] = True
+        return {
+            "event": self.event,
+            # Ein früher erfolgreiches Kommando darf einen inzwischen
+            # fehlerhaften Kartenstatus nicht vorübergehend wieder freigeben.
+            "ok": self.ok and current_status_ok,
+            "command": self.command,
+            "request_id": self.request_id,
+            "message": self.message,
+            "extra": extra,
+        }
+
+    def as_cache_json(self) -> str:
+        return json_message(
+            {
+                "schema_version": 1,
+                "event": self.event,
+                "ok": self.ok,
+                "command": self.command,
+                "request_id": self.request_id,
+                "message": self.message,
+                **self.extra,
+            }
+        )
+
+
+def parse_cached_command_response(
+    text: Any,
+    *,
+    expected_request_id: Optional[str] = None,
+    expected_command: Optional[str] = None,
+) -> CachedCommandResponse:
+    """Reduziert einen alten Status auf replay-sichere Ergebnisfelder.
+
+    Die Funktion akzeptiert absichtlich auch vollständige Statusnachrichten
+    aus dem bisherigen Cacheformat. Zustandsfelder werden dabei verworfen, so
+    dass ein Kartenwechsel vor einem späten Replay nicht zurückgerollt wird.
+    """
+
+    if not isinstance(text, str):
+        raise MapStorageError("Gecachte Kommandoantwort muss Text sein.")
+    try:
+        payload = json.loads(text)
+    except (json.JSONDecodeError, UnicodeError) as error:
+        raise MapStorageError("Gecachte Kommandoantwort ist kein gültiges JSON.") from error
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        raise MapStorageError("Gecachte Kommandoantwort hat ein ungültiges Schema.")
+
+    event = payload.get("event")
+    ok = payload.get("ok")
+    command = payload.get("command")
+    request_id = payload.get("request_id")
+    message = payload.get("message")
+    if not isinstance(event, str) or not event or len(event) > 64:
+        raise MapStorageError("Gecachte Kommandoantwort hat ein ungültiges event.")
+    if not isinstance(ok, bool):
+        raise MapStorageError("Gecachte Kommandoantwort hat kein boolesches ok.")
+    if not isinstance(command, str) or command not in {"save", "list", "status"}:
+        raise MapStorageError("Gecachte Kommandoantwort hat ein ungültiges command.")
+    if not isinstance(request_id, str) or not _REQUEST_ID_RE.fullmatch(request_id):
+        raise MapStorageError("Gecachte Kommandoantwort hat eine ungültige request_id.")
+    if not isinstance(message, str) or not message or len(message) > 1_000:
+        raise MapStorageError("Gecachte Kommandoantwort hat eine ungültige message.")
+    if expected_request_id is not None and request_id != expected_request_id:
+        raise MapStorageError("Gecachte Antwort gehört zu einer anderen request_id.")
+    if expected_command is not None and command != expected_command:
+        raise MapStorageError("Gecachte Antwort gehört zu einem anderen Kommando.")
+
+    extra = {
+        key: payload[key]
+        for key in _CACHED_RESPONSE_EXTRA_FIELDS
+        if key in payload
+    }
+    return CachedCommandResponse(
+        event=event,
+        ok=ok,
+        command=command,
+        request_id=request_id,
+        message=message,
+        extra=extra,
+    )
 
 
 @dataclass(frozen=True)
@@ -755,11 +869,15 @@ def parse_command_json(text: Any) -> MapCommand:
 
     if not isinstance(text, str):
         raise CommandValidationError("Kommando muss als JSON-Zeichenkette ankommen.")
-    if len(text.encode("utf-8")) > MAXIMUM_COMMAND_BYTES:
+    try:
+        encoded_size = len(text.encode("utf-8"))
+    except UnicodeError as error:
+        raise CommandValidationError("Kommando enthält kein gültiges Unicode.") from error
+    if encoded_size > MAXIMUM_COMMAND_BYTES:
         raise CommandValidationError("Kommando überschreitet 4096 Bytes.")
     try:
         payload = json.loads(text)
-    except (json.JSONDecodeError, UnicodeError) as error:
+    except (json.JSONDecodeError, UnicodeError, RecursionError) as error:
         raise CommandValidationError("Kommando enthält kein gültiges JSON.") from error
     if not isinstance(payload, dict):
         raise CommandValidationError("Kommando muss ein JSON-Objekt sein.")

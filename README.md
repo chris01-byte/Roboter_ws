@@ -1,74 +1,62 @@
-# roboter_ws — ROS 2 Workspace (Ubuntu 22.04 / ROS 2 Humble)
+# roboter_ws
 
-Code zum Projekt **Mobiler Pick-and-Place-Roboter** (Jetson onboard + KI-Server offboard).
-Software-Stand am 08.07.2026 auf dem Jetson **komplett abgenommen** (alle Prüfstufen grün,
-inkl. echter Missionskette und echtem Nav2 ohne Hardware).
+ROS 2 Humble workspace fuer die mobile Roboterplattform Amadeus: Fahrbasis, LiDAR-Navigation, Nahbereichsschutz, Missionslogik, semantische Karte, iOS-Bedienung, OAK-Wahrnehmung und die vorbereitete Arm-Integration.
 
-## Dokumente (nur diese vier)
-| Datei | Zweck |
+Der Repository-Root ist bewusst knapp gehalten. Der aktuelle Arbeitsstand und die detaillierte Dokumentation liegen unter `PROJEKT_STATUS.md` und `docs/`.
+
+## Einstieg
+
+| Dokument | Zweck |
 |---|---|
-| `README.md` | Überblick + Schnellstart (diese Datei) |
-| `PROJEKT_STATUS.md` | **Aktueller Stand** — zuerst hier lesen |
-| `Roboter_Pruefplan.md` | Der EINE finale Prüfplan (+ `pruefplan_jetson.sh`) |
-| `KONZEPT_KALIBRIERUNG_OAK_ARM.md` | Hand-Auge-Kalibrierung (nächste Hardware-Phase) |
+| [`PROJEKT_STATUS.md`](PROJEKT_STATUS.md) | Aktueller Gesamtstatus, Mainline-Gates und naechster sicherer Schritt. |
+| [`docs/README.md`](docs/README.md) | Navigation der aktiven und historischen Dokumentation. |
+| [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md) | Entscheidungen mit Evidenz, Teststatus und Rueckfallwegen. |
+| [`docs/ROBOT_TRANSFER.md`](docs/ROBOT_TRANSFER.md) | Jetson-/Hardwareuebergabe und Betriebswissen. |
+| [`KONZEPT_KALIBRIERUNG_OAK_ARM.md`](KONZEPT_KALIBRIERUNG_OAK_ARM.md) | Hand-Auge-Kalibrierung Arm <-> OAK. |
+| [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | ESS17-Armsoftware: Commissioning, ros2_control, MoveIt 2 und Interlocks. |
+| [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Diagnostik, Selbstbefreiung, Ereignisprotokoll und Supervision. |
 
-## Pakete
-| Paket | Inhalt |
-|---|---|
-| `robot_interfaces` | Eigene `msg`/`srv`/`action` (GetObjectPose, RunMission, ExploreArea, …) |
-| `bt_orchestrator` | Behavior-Tree als **Missions-Action-Server** (`run_mission`) |
-| `mission_manager` | Bedien-Layer: GUI/LLM-Auftrag -> echte Mission (Action-Client) + Pose-Katalog |
-| `mock_servers` | Gegenstellen für Trockentests (Arm/Greifer/Wahrnehmung; Nav/Not-Aus abschaltbar) |
-| `robot_navigation` | Echter Nav2-Stack + Testkarte: Navigation ohne Hardware (virtuelle Basis) |
-| `safety_monitor` | Onboard-Not-Aus-Wächter: publiziert `/safety/estop` (latched) |
-| `smartphone_gui` | iPhone-Web-App/PWA: Aufträge, Erkunden, NOT-AUS, KI-Status (Port 8080) |
-| `robot_face` | Cartoon-Gesicht fürs 7-Zoll-Display (Port 8081) |
-| `base_hardware` | Basisantrieb: Dry-Run (`/cmd_vel` -> RPM + `/odom`) / später RS485 |
-| `explore` | Autonome Frontier-Erkundung: `/explore_area` -> Nav2 |
-| `vl53_near_field` | 2x VL53L7CX Nahbereich + collision_monitor-Konfiguration |
-| `semantic_perception` | Open-Vocabulary-Erkennung (YOLO-World) **mit Objektgedächtnis** (offboard) |
-| `llm_planner` | Sprache (qwen2.5/Ollama) -> mission_manager command_json (offboard) |
-| `robot_bringup` | Onboard-/Offboard-Start, Netzwerk/DDS, link_monitor |
-| `robot_description` | Dummy-URDF/TF-Baum für RViz (Arm-Maße folgen mit echtem Arm) |
-| `handeye_calibration` | Messpaar-Recorder + Löser für die Hand-Auge-Kalibrierung |
-| `behaviortree_ros2`* | Source-Abhängigkeit (BT.CPP-ROS2-Anbindung; nicht per apt verfügbar) |
+Historische Pruefplaene und Ergebnisprotokolle liegen unter [`docs/archive/`](docs/archive/). Sie bewahren Nachweise, sind aber keine aktuelle Freigabe.
 
-## Bauen & Prüfen
-```bash
-cd ~/roboter_ws            # bzw. Stick-Pfad; exFAT: ohne --symlink-install (macht B0 automatisch)
-./pruefplan_jetson.sh --software    # baut UND prüft alles (finaler Abnahmelauf, ~10 min)
-```
-Einmalige Voraussetzungen: `sudo apt install ros-humble-behaviortree-cpp ros-humble-navigation2 ros-humble-rosbridge-server`
+## Komponenten
 
-## Schnellstart (nach dem Build)
-```bash
-# Roboter (onboard): Basis, Sicherheit, Gesicht, mission_manager, BT-Server
-ros2 launch robot_bringup robot.launch.py
-# KI-Server (offboard): LLM-Planer + Semantik   (beide: gleiche ROS_DOMAIN_ID!)
-# Ersteinrichtung des Servers: src/robot_bringup/README.md
-ros2 launch robot_bringup server.launch.py
-# Bedienung: GUI + rosbridge
-ros2 launch smartphone_gui smartphone_gui.launch.py    # iPhone: http://JETSON-IP:8080
-
-# Trockentests einzeln (Details: Roboter_Pruefplan.md):
-ros2 launch mock_servers dry_run.launch.py             # BT allein
-ros2 launch mock_servers dry_run_mission.launch.py     # echte Auftragskette
-ros2 launch mock_servers dry_run_safety.launch.py      # + echter Not-Aus-Wächter
-ros2 launch mock_servers dry_run_nav_mission.launch.py # + echtes Nav2 (Testwohnung)
+```text
+Fahrbasis:       base_hardware -> encoder odometry -> cmd_vel mission gate
+Navigation:      STL-27L -> scan normalization -> SLAM/Nav2 -> exploration
+Nahbereich:      VL53L7CX -> collision monitor
+Missionen:       mission_manager -> Behavior Tree -> robot interfaces
+Bedienung:       smartphone GUI / iOS app -> rosbridge
+Wahrnehmung:     OAK-D-S2 -> semantic perception -> base_link grasp targets
+Arm (geplant):   ESS17-RS -> ros2_control -> MoveIt 2 -> arm action server
 ```
 
-## Wo ändere ich was?
-- **ROS-Namen/Timeouts/Testobjekt** -> `src/bt_orchestrator/config/bt_params.yaml` (Suchanker im Kopf)
-- **Missionsablauf** -> `src/bt_orchestrator/bt_xml/pick_and_place.xml` (nach `[TUNE:...]` suchen)
-- **Ablageorte/Katalog** -> `src/mission_manager/config/mission_catalog.yaml` (Pose-Katalog)
-- **Gesichtsausdrücke** -> `src/robot_face/config/event_expression_map.yaml` (nur Daten, kein Code)
-- **Neue BT-Aktion** -> Header unter `src/bt_orchestrator/include/.../nodes/` + in `bt_orchestrator_main.cpp` registrieren
+## Sicherer Betrieb
 
-**Konventionen:** XML-Kommentare mit `====` trennen (niemals `--`, bricht XML) · keine
-Zeilennummern in Doku-Köpfen (Suchanker verwenden) · nach Änderungen an `smartphone_gui/web/`
-den `CACHE_NAME` in `sw.js` hochzählen.
+- `/safety/estop=true` bedeutet Not-Aus aktiv; softwareseitige Bewegungsfreigaben muessen dann gesperrt bleiben.
+- Die hardwired Sicherheitskette ist primaer. Software ersetzt keinen Hardware-Not-Aus.
+- Echte Fahrbewegung bleibt ein expliziter, beaufsichtigter Schritt mit der passenden Hardwareabnahme.
+- Greifziele werden fuer die Feinmanipulation in `base_link` verarbeitet, nicht in `map`.
+- Die ESS17-Registersemantik wird vor der Arm-Integration pro Achse gemessen; ESS23-Annahmen werden nicht uebertragen.
 
-## Was noch Hardware braucht
-Arm-Action-Server (MoveIt 2) und Greifer sind noch Mocks; SLAM (RTAB-Map) ersetzt die Testkarte,
-sobald die OAK montiert ist; RS485-Antrieb erst nach aufgebocktem Test (`Roboter_Pruefplan.md`,
-Teil 3). Erste Arm-Schritte: `KONZEPT_KALIBRIERUNG_OAK_ARM.md` (Stufe A).
+## Bauen und Pruefen
+
+Die konkrete Build- und Abnahmeanweisung richtet sich nach dem bearbeiteten Paket und der Zielmaschine. Massgeblich sind:
+
+1. die Pakettests und GitHub Actions der jeweiligen Aenderung,
+2. die aktuelle Jetson-Abnahme in [`docs/ROBOT_TRANSFER.md`](docs/ROBOT_TRANSFER.md),
+3. die Eintraege in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md).
+
+`pruefplan_jetson.sh` bleibt als historische Referenz im Root. Er ist kein pauschaler Freigabebefehl fuer den heutigen Stand, solange seine Stages nicht gegen die aktuelle Paketstruktur und Hardware erneut validiert wurden.
+
+## Branch-Regeln
+
+`main` ist die Zielbasis fuer neue Arbeit, sobald die laufende Mainline-Konsolidierung gemerged ist. Bis dahin werden keine alten gestapelten Feature-/Fix-Branches direkt nach `main` gemerged.
+
+Jede neue Aenderung:
+
+1. startet von dem aktuellen `main`,
+2. hat genau ein fachliches Thema,
+3. enthaelt Tests und einen klaren Rueckfallweg,
+4. wird nach erfolgreichem Merge bereinigt: PR schliessen/mergen, vollstaendig enthaltenen Branch loeschen.
+
+Details zum aktuellen Konsolidierungsstand stehen in [`PROJEKT_STATUS.md`](PROJEKT_STATUS.md).

@@ -1,0 +1,11 @@
+# Offizieller slam_toolbox-Humble-Stand, bewusst auf den zuletzt fuer Amadeus
+# untersuchten Commit gepinnt. Der Quellcode bleibt in einem separaten Overlay;
+# /opt/ros/humble wird weder veraendert noch ueberschrieben.
+#
+# Reproduzierbarer Aufbau inklusive Amadeus-Backport:
+#   tools/kartierung/build_slam_toolbox_humble_overlay.sh
+repositories:
+  slam_toolbox:
+    type: git
+    url: https://github.com/SteveMacenski/slam_toolbox.git
+    version: 51a99767b3e2ed4076ae5763ff14b69343ffd884

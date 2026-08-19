@@ -28,6 +28,8 @@
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>
 
+  <test_depend>ament_cmake_pytest</test_depend>
+
   <!-- Zum Starten via Launch-Datei -->
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>

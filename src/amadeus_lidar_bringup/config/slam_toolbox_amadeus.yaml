@@ -1,0 +1,96 @@
+# =====================================================================
+#  slam_toolbox fuer Amadeus - 2D-Karte aus dem STL-27L
+#  ====================================================================
+#  Projektspezifisch, KEIN generischer Standardlauf. Die Frames sind die
+#  vorhandenen Amadeus-Frames; der Herstellertreiber bleibt unberuehrt.
+#
+#  WICHTIG - NICHT GLEICHZEITIG MIT RTAB-MAP BETREIBEN:
+#  Beide wuerden map->odom publizieren. Zwei Publisher fuer denselben
+#  Transform ergeben einen springenden Roboter und unbrauchbare Karten.
+#  Der Integrationsplan verlangt ohnehin zuerst eine reine LiDAR-Baseline,
+#  bevor ueber eine Fusion mit der Kamera nachgedacht wird.
+# =====================================================================
+slam_toolbox:
+  ros__parameters:
+    # ---- Solver ----
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # ---- Amadeus-Frames ----
+    # odom -> base_link kommt von base_hardware (gemessene Raddrehzahl).
+    # base_link -> laser_frame ist die vermessene Montagepose.
+    # map -> odom erzeugt slam_toolbox selbst.
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /scan
+    mode: mapping
+
+    debug_logging: false
+    throttle_scans: 1
+    transform_publish_period: 0.02      # 50 Hz map->odom
+    map_update_interval: 1.0            # s zwischen Kartenaktualisierungen
+    # 3 cm je Zelle. Feiner als die 5 cm der Kamera-Karte: schaerfere
+    # Wandkonturen, schmale Durchfahrten werden erkennbar. Der STL-27L loest
+    # 0.167 Grad auf, das sind auf 3 m rund 9 mm - die Sensoraufloesung gibt
+    # also mehr her als 5 cm. Rechenlast auf dem Jetson unkritisch.
+    resolution: 0.03
+
+    # Der STL-27L kann 25 m. Im Testraum (3,8 x 4,9 m) waeren das fast nur
+    # Reflexionen ueber Tuerkanten hinweg; 10 m deckt auch angrenzende Raeume ab
+    # und haelt die Rechenlast klein.
+    max_laser_range: 10.0
+    minimum_time_interval: 0.2
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.0
+    stack_size_to_use: 40000000
+
+    # ---- Wann ein neuer Kartenknoten entsteht ----
+    # GEMESSEN 12.08.2026: Eine reine 360-Grad-Drehung aenderte 0 von 29640
+    # Kartenzellen; 40 cm Translation im selben Lauf aenderten 2410 Zellen.
+    # Ursache ist der bekannte Humble-Vorfilterfehler aus slam_toolbox #807:
+    # Vor Karto wurde nur die Translation, nicht die Winkelaenderung geprueft.
+    # Der gepinnte Backport des offiziellen Fixes #808 stellt die beabsichtigte
+    # ODER-Logik wieder her. Ohne dieses Overlay ist der folgende Schalter
+    # wirkungslos beziehungsweise in der Humble-Version noch nicht vorhanden.
+    check_min_dist_and_heading_precisely: true
+    minimum_travel_distance: 0.01       # m; fuer ersten A/B-Test beibehalten
+    minimum_travel_heading: 0.15        # rad (8.6 Grad); danach fein abstimmen
+
+    # ---- Scan-Abgleich ----
+    use_scan_matching: true
+    use_scan_barycenter: true
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+
+    # ---- Schleifenschluss ----
+    do_loop_closing: true
+    loop_search_maximum_distance: 3.0
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+
+    # ---- Korrelation ----
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # ---- Bewegungsrauschen ----
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution: 0.0349
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true

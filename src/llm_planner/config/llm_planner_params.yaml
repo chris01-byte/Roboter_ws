@@ -26,6 +26,10 @@ llm_planner:
     # --- Topics ---
     instruction_topic: "/llm_planner/instruction"
     command_topic: "/mission_manager/command_json"
+    # Manuell in der semantischen Karte angelegte Raeume ersetzen die statische
+    # Raumliste. Fehlt/ist der Katalog ungueltig, bleibt der Fallback erhalten.
+    use_dynamic_catalog: true
+    catalog_topic: "/semantic/catalog_json"
 
     # --- Katalog (KONSISTENT mit mission_manager/mission_catalog.yaml halten!) ---
     rooms:

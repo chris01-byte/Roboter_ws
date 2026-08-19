@@ -3,18 +3,21 @@ import Foundation
 enum RosbridgeTopics {
     static let command = "/mission_manager/command_json"
     static let status = "/mission_manager/status_json"
+    static let exploreStatus = "/explore/status_json"
     static let estopRequest = "/safety/estop_request"
     static let estop = "/safety/estop"
 }
 
 enum RosbridgeEvent: Equatable {
     case status(MissionStatus)
+    case exploreStatus(ExploreStatus)
     case estop(Bool)
 }
 
 enum RosbridgeProtocolError: LocalizedError {
     case invalidTextFrame
     case invalidStatusPayload
+    case invalidExploreStatusPayload
 
     var errorDescription: String? {
         switch self {
@@ -22,6 +25,8 @@ enum RosbridgeProtocolError: LocalizedError {
             return "Ungültiger rosbridge-Datenrahmen."
         case .invalidStatusPayload:
             return "Der Missionsstatus enthält kein gültiges JSON."
+        case .invalidExploreStatusPayload:
+            return "Der Erkundungsstatus enthält kein gültiges JSON."
         }
     }
 }
@@ -50,6 +55,11 @@ enum RosbridgeProtocol {
             encode(TopicFrame(
                 op: "subscribe",
                 topic: RosbridgeTopics.status,
+                type: "std_msgs/String"
+            )),
+            encode(TopicFrame(
+                op: "subscribe",
+                topic: RosbridgeTopics.exploreStatus,
                 type: "std_msgs/String"
             )),
             encode(TopicFrame(
@@ -102,6 +112,19 @@ enum RosbridgeProtocol {
                 return .status(status)
             } catch {
                 throw RosbridgeProtocolError.invalidStatusPayload
+            }
+        case let (RosbridgeTopics.exploreStatus, .string(statusJSON)):
+            guard let statusData = statusJSON.data(using: .utf8) else {
+                throw RosbridgeProtocolError.invalidExploreStatusPayload
+            }
+            do {
+                let status = try decoder.decode(ExploreStatus.self, from: statusData)
+                guard status.isCompleteSnapshot else {
+                    throw RosbridgeProtocolError.invalidExploreStatusPayload
+                }
+                return .exploreStatus(status)
+            } catch {
+                throw RosbridgeProtocolError.invalidExploreStatusPayload
             }
         case let (RosbridgeTopics.estop, .bool(active)):
             return .estop(active)

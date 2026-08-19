@@ -81,9 +81,15 @@
     </section>
 
     <section class="mission-card" id="panel-explore">
-      <p class="hint-text">Der Roboter erkundet die Wohnung selbststaendig
-      (Frontier-Methode) und baut dabei sein Objektgedaechtnis auf.</p>
-      <button class="primary" id="exploreBtn">Erkundung starten</button>
+      <p class="hint-text">Der Roboter kartiert zuerst unbekannte Grenzen und
+      faehrt danach die sicher erreichbare Raumflaeche gezielt ab.</p>
+      <div class="progress-track"><div id="exploreProgress" class="progress-bar"></div></div>
+      <div class="status-grid">
+        <div><span>Explorer</span><strong id="explorePhase">warte auf Status</strong></div>
+        <div><span>Abdeckung</span><strong id="explorePercent">0 %</strong></div>
+      </div>
+      <p class="hint-text" id="exploreReady"></p>
+      <button class="primary" id="exploreBtn" disabled>Erkundung starten</button>
     </section>
 
     <!-- Not-Aus: publiziert /safety/estop_request an den safety_monitor (K4).

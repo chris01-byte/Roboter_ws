@@ -38,6 +38,29 @@ mission_manager:
     real_mission_types: ["pick_and_place", "explore"]
     run_mission_action: "/run_mission"
 
+    # Automatische Erkundung ist trotz Eintrag oben standardmaessig nur
+    # Simulation. Der echte BT-/Nav2-Pfad braucht einen separaten Launch-
+    # Opt-in und ein unabhaengig freigegebenes cmd_vel-Fahrtor.
+    enable_real_explore: false
+
+    # Reale Raumfahrt bleibt standardmaessig AUS und kann nicht ueber
+    # real_mission_types aktiviert werden. Nur fuer einen beaufsichtigten,
+    # zuvor motorlos bestandenen Nav2-Lauf per Launch-Argument einschalten.
+    enable_real_go_to_room: false
+    navigate_to_pose_action: "/navigate_to_pose"
+    # Wird vom Launchfile auf den mitgelieferten Recovery-freien Baum gesetzt.
+    # Bei direktem Node-Start muss dieser Pfad explizit angegeben werden.
+    go_to_room_behavior_tree: ""
+    # Zweite, unabhaengige Schranke neben dem cmd_vel-Gate: Ohne frische
+    # globale Kartenlokalisierung wird kein reales Raumziel gesendet. Das
+    # separate cmd_vel-Fahrtor stoppt bei Verlust sofort; nur die endgueltige
+    # Nav2-Stornierung wartet mehrere Guard-Zyklen ab, damit ein einzelner
+    # 0,2-s-Ausreisser die Mission nicht irreversibel beendet.
+    require_localization_for_real_go_to_room: true
+    localization_ready_topic: "/localization/ready"
+    localization_ready_timeout_s: 1.0
+    localization_loss_grace_s: 0.8
+
     # --- Pose-Katalog fuer Ablageorte (fuellt place_base_goal/place_pose im Goal) ---
     # Frames der Ablageposen:
     place_base_frame: "map"          # Basis-Zielpose faehrt Nav2 an
@@ -61,9 +84,21 @@ mission_manager:
     # Simulationsdauer je Phase [s] fuer die noch simulierten Typen.
     phase_duration_s: 1.2
 
-    # --- WP-5 Anbindung (optional, Default aus) ---
-    # Katalog dynamisch aus der semantischen Karte (semantic_perception) beziehen:
-    use_dynamic_catalog: false
+    # --- Semantische Karte (read-only in diesem Paket) ---
+    # Auswahlkatalog automatisch aus semantic_map_manager beziehen. Bei
+    # fehlender/ungueltiger/leerer Meldung bleiben die statischen Listen oben
+    # erhalten. Ein go_to_room-Auftrag verlangt zusaetzlich einen gueltigen,
+    # Karten- und Revisions-gebundenen Raumstatus. Ohne den expliziten
+    # enable_real_go_to_room-Schalter bleibt der Auftrag reine Simulation.
+    use_dynamic_catalog: true
     catalog_topic: "/semantic/catalog_json"
+    semantic_map_status_topic: "/semantic_map/status_json"
+    semantic_map_expected_frame: "map"
+    # Wenn der semantische Manager ausfaellt, wird ein zuvor gueltiges
+    # Raumziel spaetestens nach dieser monotonic gemessenen Zeit verworfen.
+    semantic_map_status_stale_timeout_s: 6.0
+    # Optional auf einen konkreten Kartenfingerprint verriegeln. Leer bedeutet:
+    # den vom semantic_map_manager bestaetigten aktiven Fingerprint verwenden.
+    semantic_map_expected_fingerprint: ""
     # Offboard-Erreichbarkeit (link_monitor) im Status mitfuehren:
     offboard_topic: "/offboard/available"

@@ -25,6 +25,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -40,6 +41,19 @@ def generate_launch_description():
             description='Ziel-Topic. Vorgabe geht durch den collision_monitor. '
                         'NUR fuer Notfaelle auf /cmd_vel umstellen - das umgeht '
                         'die Notbremse.'),
+        DeclareLaunchArgument(
+            'linear_scale', default_value='0.12',
+            description='Normale Vorwaertsgeschwindigkeit [m/s]. Fuer reine '
+                        'Lokalisierungsdrehungen auf 0 setzen.'),
+        DeclareLaunchArgument(
+            'angular_scale', default_value='0.40',
+            description='Normale Drehgeschwindigkeit [rad/s].'),
+        DeclareLaunchArgument(
+            'linear_turbo_scale', default_value='0.20',
+            description='Vorwaertsgeschwindigkeit mit R1 [m/s].'),
+        DeclareLaunchArgument(
+            'angular_turbo_scale', default_value='0.70',
+            description='Drehgeschwindigkeit mit R1 [rad/s].'),
 
         Node(package='joy', executable='joy_node', name='joy_node',
              output='screen',
@@ -58,6 +72,17 @@ def generate_launch_description():
 
         Node(package='teleop_twist_joy', executable='teleop_node',
              name='teleop_twist_joy_node', output='screen',
-             parameters=[params],
+             parameters=[params, {
+                 'scale_linear.x': ParameterValue(
+                     LaunchConfiguration('linear_scale'), value_type=float),
+                 'scale_angular.yaw': ParameterValue(
+                     LaunchConfiguration('angular_scale'), value_type=float),
+                 'scale_linear_turbo.x': ParameterValue(
+                     LaunchConfiguration('linear_turbo_scale'),
+                     value_type=float),
+                 'scale_angular_turbo.yaw': ParameterValue(
+                     LaunchConfiguration('angular_turbo_scale'),
+                     value_type=float),
+             }],
              remappings=[('/cmd_vel', LaunchConfiguration('cmd_topic'))]),
     ])

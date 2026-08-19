@@ -303,7 +303,7 @@ struct DashboardView: View {
                     HStack(alignment: .top, spacing: 10) {
                         CatalogPicker(
                             title: "Zielraum",
-                            values: controller.rooms,
+                            values: controller.pickAndPlaceRooms,
                             selection: $controller.selectedCarryRoom
                         )
                         CatalogPicker(
@@ -317,7 +317,7 @@ struct DashboardView: View {
                         systemImage: "shippingbox.fill",
                         enabled: controller.canSendMission &&
                             !controller.objects.isEmpty &&
-                            !controller.rooms.isEmpty &&
+                            !controller.pickAndPlaceRooms.isEmpty &&
                             !controller.targets.isEmpty
                     ) {
                         commandHaptic()
@@ -326,17 +326,67 @@ struct DashboardView: View {
 
                 case .explore:
                     Text(
-                        "Der Roboter erkundet die Wohnung selbstständig mit der "
-                            + "Frontier-Methode und baut dabei sein Objektgedächtnis auf."
+                        "Der Roboter kartiert zuerst unbekannte Grenzen und fährt "
+                            + "danach die sicher erreichbare Raumfläche gezielt ab."
                     )
                     .font(.subheadline)
                     .foregroundStyle(RobotPalette.muted)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label(
+                                controller.exploreStatusIsFresh ? "Explorer live" : "Explorer fehlt",
+                                systemImage: controller.exploreStatusIsFresh
+                                    ? "checkmark.circle.fill"
+                                    : "clock.badge.exclamationmark"
+                            )
+                            .foregroundStyle(
+                                controller.exploreStatusIsFresh
+                                    ? RobotPalette.success
+                                    : RobotPalette.muted
+                            )
+                            Spacer()
+                            Text("\(Int((controller.explorationProgress * 100).rounded())) %")
+                                .monospacedDigit()
+                        }
+                        .font(.caption)
+
+                        ProgressView(value: controller.explorationProgress)
+                            .tint(RobotPalette.success)
+
+                        Text(controller.explorationMessage)
+                            .font(.caption)
+                            .foregroundStyle(RobotPalette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let status = controller.exploreStatus {
+                            HStack(alignment: .top, spacing: 12) {
+                                statusValue(
+                                    title: "Phase",
+                                    value: controller.explorationPhase
+                                )
+                                Divider().overlay(RobotPalette.line)
+                                statusValue(
+                                    title: "Fahrziele",
+                                    value: "\(status.frontiersVisited ?? 0) + \(status.coverageGoalsVisited ?? 0)"
+                                )
+                            }
+                            if status.mapReadyToSave == true {
+                                Label(
+                                    "Zielabdeckung erreicht – Karte kann gespeichert werden.",
+                                    systemImage: "checkmark.seal.fill"
+                                )
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(RobotPalette.success)
+                            }
+                        }
+                    }
+
                     PrimaryActionButton(
                         title: "Erkundung starten",
                         systemImage: "map.fill",
-                        enabled: controller.canSendMission
+                        enabled: controller.canStartExploration
                     ) {
                         commandHaptic()
                         controller.startExploration()
@@ -475,11 +525,11 @@ struct DashboardView: View {
 
     private var aiStatus: (text: String, tone: StatusPill.Tone) {
         switch controller.offboardAvailable {
-        case true:
+        case .some(true):
             return ("KI verbunden", .success)
-        case false:
+        case .some(false):
             return ("KI getrennt", .error)
-        case nil:
+        case .none:
             return ("KI unbekannt", .neutral)
         }
     }
@@ -508,6 +558,17 @@ struct DashboardView: View {
         }
         if controller.estopActive == true {
             return "Missionen sind bei aktivem NOT-AUS gesperrt."
+        }
+        if selectedMission == .explore {
+            guard controller.missionStatus?.exploreExecution == "bt_explicit_opt_in" else {
+                return "Echte Erkundung ist im gestarteten Roboter-Stack nicht freigeschaltet."
+            }
+            guard controller.exploreStatusIsFresh else {
+                return "Warte auf den aktuellen Status des Explorer-Backends."
+            }
+            guard controller.exploreStatus?.backendReady == true else {
+                return "Das Explorer-Backend ist nicht fahrbereit."
+            }
         }
         if controller.missionRequestPending {
             return "Auftrag gesendet – warte auf Bestätigung des Roboters."

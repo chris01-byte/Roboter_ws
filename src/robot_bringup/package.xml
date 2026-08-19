@@ -28,6 +28,7 @@
   <exec_depend>safety_monitor</exec_depend>
   <exec_depend>base_hardware</exec_depend>
   <exec_depend>robot_map_manager</exec_depend>
+  <exec_depend>semantic_map_manager</exec_depend>
   <exec_depend>vl53_near_field</exec_depend>
   <exec_depend>explore</exec_depend>
   <exec_depend>mission_manager</exec_depend>
@@ -35,10 +36,13 @@
   <exec_depend>robot_face</exec_depend>
   <exec_depend>smartphone_gui</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>robot_navigation</exec_depend>
 
   <!-- OFFBOARD-Pakete, die server.launch.py startet -->
   <exec_depend>llm_planner</exec_depend>
   <exec_depend>semantic_perception</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

@@ -25,7 +25,9 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg = get_package_share_directory('vl53_near_field')
     vl53_params = os.path.join(pkg, 'config', 'vl53_params.yaml')
-    collision_params = os.path.join(pkg, 'config', 'collision_monitor_params.yaml')
+    default_collision_params = os.path.join(
+        pkg, 'config', 'collision_monitor_params.yaml')
+    collision_params = LaunchConfiguration('collision_params_file')
 
     # 1) VL53-Node
     vl53_node = Node(
@@ -84,4 +86,9 @@ def generate_launch_description():
             description='Statische TFs base_link->vl53_*_link publizieren. Auf false '
                         'setzen, sobald ein robot_state_publisher dieselben Frames aus '
                         'der URDF liefert - sonst zwei Publisher fuer denselben TF.'),
+        DeclareLaunchArgument(
+            'collision_params_file', default_value=default_collision_params,
+            description='Parameterdatei fuer den collision_monitor. Ohne '
+                        'Angabe bleibt die abgenommene Standardkonfiguration '
+                        'aktiv; Mapping darf eine eigene Kontur verwenden.'),
         vl53_node, tf_left, tf_right, collision_monitor, lifecycle_mgr])

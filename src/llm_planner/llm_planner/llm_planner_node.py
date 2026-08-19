@@ -29,13 +29,17 @@
 # ============================================================================
 
 import json
-import re
 from typing import Dict, List, Optional
 
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 from std_msgs.msg import String
+
+from llm_planner.catalog import CatalogValidationError, merge_catalog_json
+
+
+MAXIMUM_LLM_RESPONSE_BYTES = 64 * 1024
 
 
 class LlmPlanner(Node):
@@ -55,6 +59,13 @@ class LlmPlanner(Node):
         self._rooms   = list(self.declare_parameter('rooms', ['Wohnzimmer', 'Kueche', 'Flur']).value)
         self._targets = list(self.declare_parameter('targets', ['Tisch', 'Regal']).value)
         self._objects = list(self.declare_parameter('objects', ['Tasse', 'Flasche']).value)
+        self._static_rooms = tuple(self._rooms)
+        self._static_targets = tuple(self._targets)
+        self._static_objects = tuple(self._objects)
+        self._use_dynamic_catalog = bool(
+            self.declare_parameter('use_dynamic_catalog', True).value)
+        self._catalog_topic = self.declare_parameter(
+            'catalog_topic', '/semantic/catalog_json').value
 
         # -------------------------------------------------------------------
         #  ROS-Schnittstellen
@@ -66,11 +77,39 @@ class LlmPlanner(Node):
         self._command_pub = self.create_publisher(String, self._command_topic, 10)
         self._status_pub = self.create_publisher(String, '/llm_planner/status_json', latched)
         self.create_subscription(String, self._instr_topic, self._on_instruction, 10)
+        if self._use_dynamic_catalog:
+            self.create_subscription(
+                String, self._catalog_topic, self._on_catalog, latched)
 
         mode = 'Ollama' if self._use_ollama else 'Regel-Fallback'
         self.get_logger().info(
             f"llm_planner bereit ({mode}). Anweisungen an '{self._instr_topic}', "
             f"Auftraege an '{self._command_topic}'.")
+
+    def _on_catalog(self, msg: String):
+        """Uebernimmt nur vollstaendig validierte, nichtleere Teilkataloge."""
+        try:
+            catalog = merge_catalog_json(
+                msg.data,
+                rooms=self._static_rooms,
+                targets=self._static_targets,
+                objects=self._static_objects,
+            )
+        except CatalogValidationError as exc:
+            self.get_logger().warn(f"Semantik-Katalog verworfen: {exc}")
+            return
+        changed = (
+            tuple(self._rooms) != catalog.rooms
+            or tuple(self._targets) != catalog.targets
+            or tuple(self._objects) != catalog.objects
+        )
+        self._rooms = list(catalog.rooms)
+        self._targets = list(catalog.targets)
+        self._objects = list(catalog.objects)
+        if changed:
+            self.get_logger().info(
+                f"Semantik-Katalog aktiv: {len(self._rooms)} Raeume, "
+                f"{len(self._targets)} Ziele, {len(self._objects)} Objekte.")
 
     # ======================= Eingang ====================================
     def _on_instruction(self, msg: String):
@@ -139,6 +178,8 @@ class LlmPlanner(Node):
             '  {"type": "explore"}\n'
             '  {"type": "cancel"}\n'
             f"Erlaubte RAUM-Werte: {self._rooms}\n"
+            f"RAUM fuer pick_and_place nur aus dieser statischen Liste: "
+            f"{list(self._static_rooms)}\n"
             f"Erlaubte OBJEKT-Werte: {self._objects}\n"
             f"Erlaubte ABLAGE-Werte: {self._targets}\n"
             "Antworte AUSSCHLIESSLICH mit dem JSON-Objekt - ohne Erklaerung, ohne Markdown.\n"
@@ -147,8 +188,19 @@ class LlmPlanner(Node):
 
     @staticmethod
     def _extract_json(text: str) -> Optional[Dict]:
-        """Holt das erste vollstaendige JSON-Objekt aus einem LLM-Text."""
-        if not text:
+        """Holt ein begrenztes erstes JSON-Objekt fail-closed aus LLM-Text."""
+        if not isinstance(text, str) or not text:
+            return None
+        # Das Offboard-Modell ist keine vertrauenswuerdige JSON-Quelle. Dieselbe
+        # 64-KiB-Grenze wie am Missionseingang verhindert grosse Kopien; eine
+        # ungueltige Surrogat-Zeichenfolge wird bereits vor json.loads verworfen.
+        if len(text) > MAXIMUM_LLM_RESPONSE_BYTES:
+            return None
+        try:
+            encoded_size = len(text.encode('utf-8'))
+        except UnicodeError:
+            return None
+        if encoded_size > MAXIMUM_LLM_RESPONSE_BYTES:
             return None
         # ```json ... ``` entfernen, dann erstes balanciertes { ... } suchen.
         depth = 0
@@ -163,7 +215,7 @@ class LlmPlanner(Node):
                 if depth == 0 and start >= 0:
                     try:
                         return json.loads(text[start:i + 1])
-                    except json.JSONDecodeError:
+                    except (json.JSONDecodeError, UnicodeError, RecursionError):
                         start = -1
         return None
 
@@ -179,10 +231,16 @@ class LlmPlanner(Node):
 
         obj = self._match_catalog(low, self._objects)
         room = self._match_catalog(low, self._rooms)
+        carry_room = self._match_catalog(low, list(self._static_rooms))
         target = self._match_catalog(low, self._targets)
 
-        if obj and room and target:
-            return {'type': 'pick_and_place', 'object': obj, 'room': room, 'target': target}
+        if obj and carry_room and target:
+            return {
+                'type': 'pick_and_place',
+                'object': obj,
+                'room': carry_room,
+                'target': target,
+            }
         if obj:
             return {'type': 'pick_object', 'object': obj}
         if room:
@@ -211,7 +269,7 @@ class LlmPlanner(Node):
         if t == 'pick_and_place':
             if cmd.get('object') not in self._objects:
                 return False, f"Objekt ungueltig: {cmd.get('object')}"
-            if cmd.get('room') not in self._rooms:
+            if cmd.get('room') not in self._static_rooms:
                 return False, f"Raum ungueltig: {cmd.get('room')}"
             if cmd.get('target') not in self._targets:
                 return False, f"Ablage ungueltig: {cmd.get('target')}"

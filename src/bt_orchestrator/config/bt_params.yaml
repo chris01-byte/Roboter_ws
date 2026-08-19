@@ -20,6 +20,10 @@ bt_orchestrator:
   ros__parameters:
     # --- Allgemein ---
     tick_rate_hz: 10.0
+    # Neu erzeugte Topic-Conditions muessen vor dem ersten Tick mindestens
+    # eine Statusnachricht empfangen koennen. Fehlende/aktive Sicherheit
+    # bleibt danach unveraendert FAILURE.
+    mission_subscription_warmup_s: 1.0
     target_object: "Tasse"                    # Default-Objekt (K6: deutsch, wie Katalog)
 
     # --- Missions-Action-Server (K1) ---

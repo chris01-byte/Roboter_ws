@@ -1,0 +1,76 @@
+# =====================================================================
+#  collision_monitor_mapping_params.yaml
+#  Reaktive VL53-Sicherung ausschliesslich fuer automatische Kartierung.
+#
+#  WARUM EINE EIGENE DATEI?
+#  Die normale, bereits abgenommene Teleop-/Navigationskonfiguration bleibt
+#  unveraendert. Bei der Kartierung muss der Roboter jedoch haeufig auf der
+#  Stelle drehen. Die normale rechteckige StopZone vor der Basis kennt die
+#  Bewegungsrichtung nicht und blockiert daher auch sichere Drehungen.
+#
+#  Das Approach-Modell uebernimmt den Polygon-Footprint aus dem lokalen
+#  Nav2-Costmap-Topic. Damit pruefen Regler und reaktiver Monitor dieselbe
+#  Kontur; der fruehere 0,40-m-Kreis sperrte normale Tueren seitlich zu.
+#  Nav2 Humble simuliert die angeforderte Bewegung fuer zwei Sekunden:
+#    * Punkt innerhalb der gepaddeten Plattformkontur -> Ausgabe geht auf null.
+#    * Vorwaertsfahrt auf ein Hindernis zu -> vorausschauend langsamer/null.
+#    * Reine Drehung, alle Punkte ausserhalb der Kontur -> darf weiterlaufen.
+#  Die groessere SlowZone bleibt als zusaetzliche Komfort-/Warnzone aktiv.
+#
+#  Die vorgelagerte cmd_vel_mission_gate bleibt fail-closed und setzt bei
+#  veralteten VL53-, LiDAR-, Karten- oder Odometrie-Daten auf null.
+# =====================================================================
+collision_monitor:
+  ros__parameters:
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.3
+    source_timeout: 3.0
+    base_shift_correction: False
+    stop_pub_timeout: 2.0
+
+    polygons: ["FootprintApproach", "SlowZone"]
+
+    # Bewegungsabhaengige Roboterkontur. Nav2 publiziert 0.70 x 0.50 m plus
+    # 0.02 m Padding auf diesem Topic. Das Fahrtor gibt eine Explore-Mission
+    # erst bei laufendem Nav2 frei; vorher bleibt die Ausgabe null.
+    FootprintApproach:
+      type: "polygon"
+      footprint_topic: "/local_costmap/published_footprint"
+      action_type: "approach"
+      time_before_collision: 2.0
+      simulation_time_step: 0.05
+      max_points: 1
+      visualize: True
+      polygon_pub_topic: "collision_mapping_approach"
+      enabled: True
+
+    # Hindernisse 1..51 cm vor den VL53 verlangsamen weiterhin jede Bewegung
+    # auf 30 %. Das ist bei Drehungen beabsichtigt; nur ein bewegungsblinder
+    # Komplettstopp ausserhalb der Roboterkontur wird vermieden.
+    SlowZone:
+      type: "polygon"
+      points: [0.80, 0.25, 0.80, -0.25, 0.30, -0.25, 0.30, 0.25]
+      action_type: "slowdown"
+      max_points: 1
+      slowdown_ratio: 0.3
+      visualize: True
+      polygon_pub_topic: "collision_slow_zone"
+      enabled: True
+
+    observation_sources: ["vl53_left", "vl53_right"]
+    vl53_left:
+      type: "pointcloud"
+      topic: "/near_field/left/points"
+      min_height: 0.05
+      max_height: 0.50
+      enabled: True
+    vl53_right:
+      type: "pointcloud"
+      topic: "/near_field/right/points"
+      min_height: 0.05
+      max_height: 0.50
+      enabled: True

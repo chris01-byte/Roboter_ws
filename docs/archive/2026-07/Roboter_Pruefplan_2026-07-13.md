@@ -28,7 +28,7 @@ chmod +x ~/roboter_ws/pruefplan_jetson.sh
 ```bash
 sudo apt install ros-humble-navigation2 ros-humble-rosbridge-server \
                  ros-humble-joint-state-publisher-gui ros-humble-depthai-ros
-python3 -m pip install pymodbus                    # RS485-Antrieb
+python3 -m pip install -r src/base_hardware/requirements-modbus.txt                    # RS485-Antrieb
 sudo usermod -aG dialout $USER                     # Zugriff auf /dev/ttyUSB*  (danach neu anmelden!)
 ```
 

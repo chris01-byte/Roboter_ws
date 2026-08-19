@@ -2,12 +2,26 @@ import SwiftUI
 import UIKit
 
 struct RobotMapView: View {
+    private enum RoomEditorPhase: Equatable {
+        case inactive
+        case polygon
+        case navigationGoal
+    }
+
     @EnvironmentObject private var robotController: RobotController
     @Environment(\.scenePhase) private var scenePhase
 
     @StateObject private var mapController = RobotMapController()
     @State private var isVisible = false
     @State private var showEstopReleaseConfirmation = false
+    @State private var roomEditorPhase: RoomEditorPhase = .inactive
+    @State private var roomName = ""
+    @State private var roomPoints: [MapPoint] = []
+    @State private var navigationGoal: MapPoint?
+    @State private var navigationYaw = 0.0
+    @State private var roomEditorError: String?
+    @State private var selectedRoomID: String?
+    @State private var roomPendingDeletion: SemanticRoom?
 
     var body: some View {
         ZStack {
@@ -18,6 +32,7 @@ struct RobotMapView: View {
                 LazyVStack(spacing: 12) {
                     header
                     connectionNotice
+                    semanticControls
                     mapCard
                     mapInformation
                     emergencySection
@@ -56,6 +71,17 @@ struct RobotMapView: View {
                 break
             }
         }
+        .onChange(of: mapController.map?.contentFingerprint) { _ in
+            guard roomEditorPhase != .inactive else { return }
+            cancelRoomEditing(
+                message: "Die Kartenbasis hat sich geändert. Der Raumentwurf wurde verworfen."
+            )
+        }
+        .onChange(of: mapController.semanticWriteState) { state in
+            if case .succeeded = state {
+                resetRoomEditor()
+            }
+        }
         .alert("NOT-AUS freigeben?", isPresented: $showEstopReleaseConfirmation) {
             Button("Abbrechen", role: .cancel) {}
             Button("Freigeben", role: .destructive) {
@@ -65,8 +91,28 @@ struct RobotMapView: View {
         } message: {
             Text(
                 "Nur freigeben, wenn der Gefahrenbereich kontrolliert wurde. "
-                    + "Der Roboter erhält anschließend wieder die Software-Freigabe."
+                + "Der Roboter erhält anschließend wieder die Software-Freigabe."
             )
+        }
+        .confirmationDialog(
+            "Raum löschen?",
+            isPresented: Binding(
+                get: { roomPendingDeletion != nil },
+                set: { if !$0 { roomPendingDeletion = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let room = roomPendingDeletion {
+                Button("„\(room.name)“ löschen", role: .destructive) {
+                    mapController.deleteRoom(id: room.id)
+                    roomPendingDeletion = nil
+                }
+            }
+            Button("Abbrechen", role: .cancel) {
+                roomPendingDeletion = nil
+            }
+        } message: {
+            Text("Nur die Beschriftung wird gelöscht. Die metrische Wohnungskarte bleibt unverändert.")
         }
     }
 
@@ -122,12 +168,284 @@ struct RobotMapView: View {
         }
     }
 
+    private var semanticControls: some View {
+        RobotCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Label("Räume", systemImage: "square.3.layers.3d")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if let revision = mapController.semanticRevision {
+                        Text("Revision \(revision)")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(RobotPalette.muted)
+                    }
+                }
+
+                if roomEditorPhase == .inactive {
+                    roomOverviewControls
+                } else {
+                    roomEditorControls
+                }
+
+                semanticOperationNotice
+                if roomEditorPhase == .inactive, let error = roomEditorError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(RobotPalette.highlight)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var roomOverviewControls: some View {
+        if mapController.canEditRooms {
+            HStack(spacing: 10) {
+                Button {
+                    beginRoomEditing()
+                } label: {
+                    Label("Raum hinzufügen", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(RobotPalette.accent)
+
+                Text("\(mapController.displayedRooms.count) gespeichert")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.muted)
+            }
+        } else if mapController.canSaveCurrentMapForRooms || mapController.mapSaveState.isPending {
+            Button {
+                mapController.saveCurrentMapForRooms()
+            } label: {
+                HStack(spacing: 8) {
+                    if mapController.mapSaveState.isPending {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "externaldrive.badge.plus")
+                    }
+                    Text(
+                        mapController.mapSaveState.isPending
+                            ? "Karte wird gespeichert …"
+                            : "Karte für Räume speichern"
+                    )
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(RobotPalette.accent)
+            .disabled(mapController.mapSaveState.isPending)
+        }
+
+        if let room = selectedRoom {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(roomColor(room.color))
+                    .frame(width: 12, height: 12)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(room.name)
+                        .font(.subheadline.weight(.semibold))
+                    Text("Auf der Karte ausgewählt")
+                        .font(.caption2)
+                        .foregroundStyle(RobotPalette.muted)
+                }
+                Spacer()
+                Button(role: .destructive) {
+                    roomPendingDeletion = room
+                } label: {
+                    Label("Löschen", systemImage: "trash")
+                        .labelStyle(.iconOnly)
+                }
+                .disabled(!mapController.canEditRooms)
+                .accessibilityLabel("Raum \(room.name) löschen")
+            }
+            .padding(10)
+            .background(RobotPalette.surfaceRaised)
+            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        }
+
+        if let issue = mapController.semanticBindingIssue {
+            Label(issue, systemImage: "lock.trianglebadge.exclamationmark")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.highlight)
+        } else {
+            Label(
+                "Raumflächen sind Beschriftungen. Sie lösen keine Fahrt aus.",
+                systemImage: "checkmark.shield"
+            )
+            .font(.caption)
+            .foregroundStyle(RobotPalette.muted)
+        }
+    }
+
+    private var roomEditorControls: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            TextField("Raumname, z. B. Wohnzimmer", text: $roomName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled(false)
+                .padding(.horizontal, 11)
+                .frame(minHeight: 44)
+                .background(RobotPalette.surfaceRaised)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(RobotPalette.line, lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .disabled(mapController.semanticWriteState.isPending)
+
+            if roomEditorPhase == .polygon {
+                Text(
+                    "Tippe mindestens drei Eckpunkte der Raumgrenze in Reihenfolge an. "
+                        + "Zoomen und Verschieben bleiben möglich."
+                )
+                .font(.caption)
+                .foregroundStyle(RobotPalette.muted)
+
+                HStack(spacing: 9) {
+                    Button("Abbrechen") { resetRoomEditor() }
+                        .buttonStyle(.bordered)
+                    Button {
+                        if !roomPoints.isEmpty { roomPoints.removeLast() }
+                        roomEditorError = nil
+                    } label: {
+                        Label("Rückgängig", systemImage: "arrow.uturn.backward")
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(roomPoints.isEmpty)
+                    Spacer()
+                    Button("Fläche fertig") {
+                        if SemanticGeometry.isSimplePolygon(roomPoints) {
+                            roomEditorPhase = .navigationGoal
+                            roomEditorError = nil
+                        } else {
+                            roomEditorError = SemanticMapValidationError.invalidPolygon.localizedDescription
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RobotPalette.accent)
+                    .disabled(!SemanticGeometry.isSimplePolygon(roomPoints))
+                }
+            } else {
+                Text(
+                    "Tippe jetzt innerhalb der Fläche auf einen freien, sicher erreichbaren "
+                        + "Navigationspunkt."
+                )
+                .font(.caption)
+                .foregroundStyle(RobotPalette.muted)
+
+                HStack {
+                    Text("Blickrichtung")
+                        .font(.caption)
+                    Slider(value: $navigationYaw, in: -Double.pi...Double.pi)
+                        .tint(RobotPalette.accent)
+                    Text("\(Int(navigationYaw * 180 / .pi))°")
+                        .font(.caption.monospacedDigit())
+                        .frame(width: 42, alignment: .trailing)
+                }
+                .disabled(mapController.semanticWriteState.isPending)
+
+                HStack(spacing: 9) {
+                    Button("Abbrechen") { resetRoomEditor() }
+                        .buttonStyle(.bordered)
+                    Button("Grenze ändern") {
+                        navigationGoal = nil
+                        roomEditorPhase = .polygon
+                    }
+                    .buttonStyle(.bordered)
+                    Spacer()
+                    Button {
+                        saveRoom()
+                    } label: {
+                        if mapController.semanticWriteState.isPending {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Raum speichern")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RobotPalette.accent)
+                    .disabled(
+                        navigationGoal == nil ||
+                            roomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            !mapController.canEditRooms
+                    )
+                }
+            }
+
+            if let error = roomEditorError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.danger)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var semanticOperationNotice: some View {
+        switch mapController.mapSaveState {
+        case let .succeeded(message):
+            Label(message, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.success)
+        case let .failed(message):
+            Label(message, systemImage: "xmark.octagon.fill")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.danger)
+        case let .statusUnknown(message):
+            VStack(alignment: .leading, spacing: 7) {
+                Label(message, systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.danger)
+                Button("Kartenstand neu laden") {
+                    mapController.retry()
+                }
+                .buttonStyle(.bordered)
+            }
+        case .idle, .pending:
+            EmptyView()
+        }
+
+        switch mapController.semanticWriteState {
+        case let .pending(message):
+            Label(message, systemImage: "arrow.triangle.2.circlepath")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.highlight)
+        case let .succeeded(message):
+            Label(message, systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.success)
+        case let .failed(message):
+            Label(message, systemImage: "xmark.octagon.fill")
+                .font(.caption)
+                .foregroundStyle(RobotPalette.danger)
+        case let .revisionConflict(message), let .statusUnknown(message):
+            VStack(alignment: .leading, spacing: 7) {
+                Label(message, systemImage: "arrow.trianglehead.2.clockwise.rotate.90")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.danger)
+                Button("Kartenstand neu laden") {
+                    mapController.retry()
+                }
+                .buttonStyle(.bordered)
+            }
+        case .idle:
+            EmptyView()
+        }
+    }
+
     private var mapCard: some View {
         RobotCard {
             RobotMapCanvas(
                 image: mapController.mapImage,
+                map: mapController.map,
+                rooms: mapController.displayedRooms,
+                selectedRoomID: selectedRoomID,
+                draftPoints: roomPoints,
+                draftNavigationGoal: navigationGoal,
+                editorIsActive: roomEditorPhase != .inactive,
+                onMapTap: handleMapTap,
                 contentID: mapController.map.map {
-                    "\($0.width)x\($0.height)"
+                    $0.contentFingerprint
                 } ?? "keine-karte",
                 showsOfflineOverlay: mapController.map != nil && !mapController.streamState.isLive
             )
@@ -300,6 +618,100 @@ struct RobotMapView: View {
         }
     }
 
+    private var selectedRoom: SemanticRoom? {
+        guard let selectedRoomID else { return nil }
+        return mapController.displayedRooms.first { $0.id == selectedRoomID }
+    }
+
+    private func beginRoomEditing() {
+        guard mapController.canEditRooms else { return }
+        selectedRoomID = nil
+        roomName = ""
+        roomPoints = []
+        navigationGoal = nil
+        navigationYaw = 0
+        roomEditorError = nil
+        roomEditorPhase = .polygon
+    }
+
+    private func resetRoomEditor() {
+        roomEditorPhase = .inactive
+        roomName = ""
+        roomPoints = []
+        navigationGoal = nil
+        navigationYaw = 0
+        roomEditorError = nil
+    }
+
+    private func cancelRoomEditing(message: String) {
+        resetRoomEditor()
+        roomEditorError = message
+    }
+
+    private func handleMapTap(_ point: MapPoint) {
+        guard !mapController.semanticWriteState.isPending else { return }
+        switch roomEditorPhase {
+        case .inactive:
+            selectedRoomID = mapController.displayedRooms.reversed().first {
+                SemanticGeometry.contains(point, in: $0.polygon)
+            }?.id
+        case .polygon:
+            if let previous = roomPoints.last,
+               hypot(point.x - previous.x, point.y - previous.y) < 0.01 {
+                roomEditorError = "Der neue Eckpunkt liegt zu nah am vorherigen Punkt."
+                return
+            }
+            roomPoints.append(point)
+            roomEditorError = nil
+        case .navigationGoal:
+            guard SemanticGeometry.strictlyContains(point, in: roomPoints) else {
+                roomEditorError = SemanticMapValidationError
+                    .navigationGoalOutsideRoom.localizedDescription
+                return
+            }
+            navigationGoal = point
+            roomEditorError = nil
+        }
+    }
+
+    private func saveRoom() {
+        guard let navigationGoal else {
+            roomEditorError = SemanticMapValidationError
+                .navigationGoalOutsideRoom.localizedDescription
+            return
+        }
+        do {
+            let colors = [
+                "#4FB3A5", "#F2B84B", "#6FA8FF", "#C77DFF",
+                "#F57C93", "#70C1B3", "#FF9F68", "#8BC34A"
+            ]
+            let room = try SemanticRoom(
+                id: "room-\(UUID().uuidString.lowercased())",
+                name: roomName,
+                color: colors[mapController.displayedRooms.count % colors.count],
+                polygon: roomPoints,
+                navigationGoal: SemanticNavigationGoal(
+                    x: navigationGoal.x,
+                    y: navigationGoal.y,
+                    yaw: navigationYaw
+                )
+            )
+            mapController.upsertRoom(room)
+            roomEditorError = nil
+        } catch {
+            roomEditorError = error.localizedDescription
+        }
+    }
+
+    private func roomColor(_ value: String?) -> Color {
+        guard let value,
+              value.count == 7,
+              let parsed = UInt32(value.dropFirst(), radix: 16) else {
+            return RobotPalette.accent
+        }
+        return Color(hex: parsed)
+    }
+
     private func warningHaptic() {
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
@@ -311,6 +723,13 @@ struct RobotMapView: View {
 
 private struct RobotMapCanvas: View {
     let image: CGImage?
+    let map: RobotMapSnapshot?
+    let rooms: [SemanticRoom]
+    let selectedRoomID: String?
+    let draftPoints: [MapPoint]
+    let draftNavigationGoal: MapPoint?
+    let editorIsActive: Bool
+    let onMapTap: (MapPoint) -> Void
     let contentID: String
     let showsOfflineOverlay: Bool
 
@@ -338,6 +757,8 @@ private struct RobotMapCanvas: View {
                             x: offset.width + gestureOffset.width,
                             y: offset.height + gestureOffset.height
                         )
+
+                    semanticOverlay(in: proxy.size)
                 } else {
                     VStack(spacing: 10) {
                         ProgressView()
@@ -398,7 +819,23 @@ private struct RobotMapCanvas: View {
                     .stroke(RobotPalette.line, lineWidth: 1)
             }
             .gesture(combinedGesture(in: proxy.size))
+            .simultaneousGesture(
+                SpatialTapGesture()
+                    .onEnded { value in
+                        guard let transform = viewportTransform(in: proxy.size),
+                              let point = transform.mapPoint(
+                                forScreenPoint: ViewportPoint(
+                                    x: value.location.x,
+                                    y: value.location.y
+                                )
+                              ) else {
+                            return
+                        }
+                        onMapTap(point)
+                    }
+            )
             .onTapGesture(count: 2) {
+                guard !editorIsActive else { return }
                 withAnimation(.easeOut(duration: 0.2)) {
                     scale = 1
                     offset = .zero
@@ -409,6 +846,155 @@ private struct RobotMapCanvas: View {
                 offset = .zero
             }
         }
+    }
+
+    private func semanticOverlay(in size: CGSize) -> some View {
+        Canvas { context, canvasSize in
+            guard let transform = viewportTransform(in: canvasSize) else { return }
+
+            for room in rooms {
+                let path = polygonPath(room.polygon, transform: transform)
+                let color = roomColor(room.color)
+                context.fill(path, with: .color(color.opacity(0.22)))
+                context.stroke(
+                    path,
+                    with: .color(
+                        room.id == selectedRoomID ? Color.white : color
+                    ),
+                    lineWidth: room.id == selectedRoomID ? 3 : 1.5
+                )
+
+                let goal = transform.screenPoint(for: room.navigationGoal.point)
+                let goalRect = CGRect(
+                    x: goal.x - 5,
+                    y: goal.y - 5,
+                    width: 10,
+                    height: 10
+                )
+                context.fill(
+                    Path(ellipseIn: goalRect),
+                    with: .color(color)
+                )
+                context.stroke(
+                    Path(ellipseIn: goalRect),
+                    with: .color(.white),
+                    lineWidth: 1.5
+                )
+
+                if let center = polygonCenter(room.polygon, transform: transform) {
+                    context.draw(
+                        Text(room.name)
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(.white),
+                        at: center
+                    )
+                }
+            }
+
+            if !draftPoints.isEmpty {
+                var draftPath = Path()
+                let first = transform.screenPoint(for: draftPoints[0])
+                draftPath.move(to: CGPoint(x: first.x, y: first.y))
+                for point in draftPoints.dropFirst() {
+                    let screen = transform.screenPoint(for: point)
+                    draftPath.addLine(to: CGPoint(x: screen.x, y: screen.y))
+                }
+                if draftPoints.count >= 3 {
+                    draftPath.closeSubpath()
+                    context.fill(
+                        draftPath,
+                        with: .color(RobotPalette.highlight.opacity(0.18))
+                    )
+                }
+                context.stroke(
+                    draftPath,
+                    with: .color(RobotPalette.highlight),
+                    style: StrokeStyle(lineWidth: 2, dash: [7, 4])
+                )
+
+                for point in draftPoints {
+                    let screen = transform.screenPoint(for: point)
+                    let rect = CGRect(
+                        x: screen.x - 5,
+                        y: screen.y - 5,
+                        width: 10,
+                        height: 10
+                    )
+                    context.fill(Path(ellipseIn: rect), with: .color(RobotPalette.highlight))
+                    context.stroke(Path(ellipseIn: rect), with: .color(.black), lineWidth: 1)
+                }
+            }
+
+            if let draftNavigationGoal {
+                let screen = transform.screenPoint(for: draftNavigationGoal)
+                let outer = CGRect(
+                    x: screen.x - 10,
+                    y: screen.y - 10,
+                    width: 20,
+                    height: 20
+                )
+                context.fill(
+                    Path(ellipseIn: outer),
+                    with: .color(RobotPalette.success.opacity(0.9))
+                )
+                context.stroke(Path(ellipseIn: outer), with: .color(.white), lineWidth: 2)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
+    }
+
+    private func polygonPath(
+        _ polygon: [MapPoint],
+        transform: RobotMapViewportTransform
+    ) -> Path {
+        var path = Path()
+        guard let first = polygon.first else { return path }
+        let firstScreen = transform.screenPoint(for: first)
+        path.move(to: CGPoint(x: firstScreen.x, y: firstScreen.y))
+        for point in polygon.dropFirst() {
+            let screen = transform.screenPoint(for: point)
+            path.addLine(to: CGPoint(x: screen.x, y: screen.y))
+        }
+        path.closeSubpath()
+        return path
+    }
+
+    private func polygonCenter(
+        _ polygon: [MapPoint],
+        transform: RobotMapViewportTransform
+    ) -> CGPoint? {
+        guard !polygon.isEmpty else { return nil }
+        let sum = polygon.reduce((x: 0.0, y: 0.0)) {
+            ($0.x + $1.x, $0.y + $1.y)
+        }
+        let center = MapPoint(
+            x: sum.x / Double(polygon.count),
+            y: sum.y / Double(polygon.count)
+        )
+        let screen = transform.screenPoint(for: center)
+        return CGPoint(x: screen.x, y: screen.y)
+    }
+
+    private func viewportTransform(in size: CGSize) -> RobotMapViewportTransform? {
+        guard let map, size.width > 0, size.height > 0 else { return nil }
+        return RobotMapViewportTransform(
+            map: map,
+            viewportWidth: size.width,
+            viewportHeight: size.height,
+            scale: displayedScale,
+            offsetX: offset.width + gestureOffset.width,
+            offsetY: offset.height + gestureOffset.height
+        )
+    }
+
+    private func roomColor(_ value: String?) -> Color {
+        guard let value,
+              value.count == 7,
+              let parsed = UInt32(value.dropFirst(), radix: 16) else {
+            return RobotPalette.accent
+        }
+        return Color(hex: parsed)
     }
 
     private func combinedGesture(in size: CGSize) -> some Gesture {

@@ -1,7 +1,8 @@
 # Gedächtnisprotokoll – native iOS-Robotersteuerung
 
-**Stand:** 26.07.2026  
-**Arbeitsbereich:** `/Volumes/64GB/roboter_ws`  
+**Stand:** 16.08.2026
+**Arbeitsbereiche:** Jetson `/home/p/roboter_ws`, Mac/USB
+`/Volumes/64GB/roboter_ws`
 **App:** `ios/Robotersteuerung`
 
 Dieses Dokument ist der Einstiegspunkt für spätere Arbeit an der nativen
@@ -21,24 +22,33 @@ Enthalten sind:
 - Verbindungseingabe mit lokal gespeicherter, zuletzt erfolgreicher URL
 - automatischer Start, Ping und Wiederverbindung mit Backoff
 - Erkennung veralteter Missions- und Sicherheitsdaten
+- fail-closed Explorer-Preflight und 1-Hz-Fortschritt der real abgefahrenen
+  Flaechenabdeckung
 - Raumfahrt, Greifen, Bringen und autonome Erkundung
-- dynamische Räume, Objekte und Ablageziele aus dem Missionsstatus
+- manuell deklarierte Räume aus dem Semantikstatus; Objekte, Ablageziele und
+  die reale `pick_and_place`-Raumliste bleiben statisch freigegeben
 - Mission abbrechen, Statusanzeige und lokales Ereignislog
 - feedback-gesteuerter Software-NOT-AUS mit bestätigter Freigabe
 - eigener Tab für die Live-Wohnungskarte mit Zoom, Verschieben, Reset,
   Metadaten und Legende
+- manuelle Raumdeklaration als farbiges Polygon mit Name, Navigationspunkt,
+  Blickrichtung, Auswahl und Löschen
+- fail-closed Kartenbindung über denselben SHA-256 wie `robot_map_manager`
+  und optimistische Semantik-Revisionen
 - separate, nur im Karten-Tab aktive WebSocket-Verbindung für `/map`, damit
   große Kartenframes Steuerung und NOT-AUS nicht verzögern
 - klare Kennzeichnung der letzten gültigen Karte als **NICHT LIVE**, sobald
   ihre Verbindung abbricht
 - lokale Netzwerkfreigabe, enge ATS-Ausnahme und Privacy Manifest
 - lokaler, abhängigkeitfreier rosbridge-Mock einschließlich Testwohnung
-- 21 Swift-Tests für Steuerungs-, Sicherheits- und Kartenprotokoll
+- 41 Swift-Tests für Steuerungs-, Sicherheits-, Explorer-, Karten- und
+  Semantikprotokoll
 
 ## Verbindungsvertrag
 
-Standardadresse der App: `ws://roboter.local:9090/`. Falls der Jetson unter
-diesem mDNS-Namen nicht erreichbar ist, in der App seine WLAN-IP eintragen:
+Standardadresse der App: `ws://p-desktop.local:9090/`. Das ist der auf dem
+realen Jetson bestätigte mDNS-Hostname. Falls mDNS im lokalen WLAN nicht
+funktioniert, in der App seine WLAN-IP eintragen:
 `ws://<JETSON-IP>:9090/`.
 
 Nach dem Öffnen des WebSockets werden diese Frames gesendet:
@@ -47,6 +57,7 @@ Nach dem Öffnen des WebSockets werden diese Frames gesendet:
 {"op":"advertise","topic":"/mission_manager/command_json","type":"std_msgs/String"}
 {"op":"advertise","topic":"/safety/estop_request","type":"std_msgs/Bool"}
 {"op":"subscribe","topic":"/mission_manager/status_json","type":"std_msgs/String"}
+{"op":"subscribe","topic":"/explore/status_json","type":"std_msgs/String"}
 {"op":"subscribe","topic":"/safety/estop","type":"std_msgs/Bool"}
 ```
 
@@ -75,17 +86,44 @@ Statusfelder in dem JSON-String auf `/mission_manager/status_json`:
 ```text
 state, phase, message, progress, active_command,
 rooms, targets, objects, offboard_available, cancel_pending,
-last_rejection, time
+pick_and_place_rooms, last_rejection, explore_execution, time
 ```
+
+`/explore/status_json` ist ebenfalls ein JSON-String in `std_msgs/String` und
+muss als vollstaendiger Snapshot dekodiert werden:
+
+```text
+schema_version, backend_ready, state, phase, message, strategy,
+coverage_ratio, coverage_percent, target_coverage_percent,
+reachable_area_m2, covered_area_m2, frontiers_visited,
+coverage_goals_visited, frontiers_remaining, map_ready_to_save, time
+```
+
+Der Erkunden-Button ist nur aktiv, wenn alle bisherigen Missions- und
+NOT-AUS-Regeln gelten, beide Statusstroeme hoechstens 2,5 s alt sind,
+`explore_execution == "bt_explicit_opt_in"` und
+`backend_ready == true` melden und der Explorer nicht bereits laeuft. Ein
+gesendeter WebSocket-Frame ist weiterhin keine Auftragsbestaetigung. Nur der
+folgende Missionsstatus darf `missionRequestPending` aufheben.
+
+`coverage_ratio` beschreibt die gemessene Fahrspur relativ zur sicher
+befahrbaren Kartenflaeche, nicht den bekannten Anteil des OccupancyGrid.
+`map_ready_to_save:true` erscheint ausschliesslich nach bestaetigtem
+Abdeckungsabschluss; die Karte muss trotzdem visuell geprueft werden.
 
 Der Karten-Tab öffnet unabhängig davon eine zweite Verbindung zu derselben
-Adresse. Nur solange er sichtbar ist, sendet er:
+Adresse. Nur solange er sichtbar ist, registriert er:
 
 ```json
+{"op":"advertise","topic":"/robot_map_manager/command_json","type":"std_msgs/String"}
+{"op":"advertise","topic":"/semantic_map/command_json","type":"std_msgs/String"}
 {"op":"subscribe","id":"amadeus-map","topic":"/map","throttle_rate":1000,"queue_length":1}
+{"op":"subscribe","id":"amadeus-map-manager-status","topic":"/robot_map_manager/status_json","type":"std_msgs/String","queue_length":1}
+{"op":"subscribe","id":"amadeus-semantic-map-status","topic":"/semantic_map/status_json","type":"std_msgs/String","queue_length":1}
 ```
 
-Beim Verlassen des Tabs folgt vor dem Schließen des Sockets:
+Beim Verlassen des Tabs werden alle drei Subscriptions beendet und beide
+Command-Topics wieder unadvertised. Der erste Teardown-Frame lautet:
 
 ```json
 {"op":"unsubscribe","id":"amadeus-map","topic":"/map"}
@@ -105,11 +143,94 @@ den untypisierten Topicnamen nicht auflösen. Solange die Ansicht
 ein Unsubscribe/Subscribe aus. So erscheint die Karte auch dann automatisch,
 wenn SLAM erst später gestartet wird.
 
+## Vertrag der manuellen Raumdeklaration
+
+Die App berechnet aus `/map` exakt denselben Inhaltsfingerabdruck wie
+`robot_map_manager`: SHA-256 über Dimensionen, Auflösung, Frame-ID, die sieben
+Origin-Werte und alle kompakten Zellen; ROS-Zeitstempel sind nicht enthalten.
+Raumschreiben ist nur erlaubt, wenn
+
+```text
+/map-Fingerprint == map.summary.fingerprint == semantic_map.map_ref.fingerprint
+```
+
+und Geometrie, Frame-ID, Origin, `editable=true` sowie die aktuelle Revision
+ebenfalls stimmen. Zusätzlich muss der aktuelle `robot_map_manager`-Status
+`ok:true` melden; bei `ok:false` werden Save, Overlay und Bearbeitung gesperrt.
+Ein persistiertes semantisches Dokument darf nach einem
+Node-Neustart auch bei `storage.last_saved: null` wieder aktiv werden. Nur die
+erste Anlage verlangt eine identisch gespeicherte metrische Version.
+Gespeicherte Versionen folgen dem echten `robot_map_manager`-Format
+`YYYYMMDDTHHMMSSffffffZ-<12 kleine Fingerprint-Hexzeichen>`; ein optionales
+Suffix `-NN` kennzeichnet eine Kollision.
+
+Hierfür bietet die App bewusst den Knopf **Karte für Räume speichern** an und
+publiziert genau diesen JSON-String in `msg.data`:
+
+```json
+{"command":"save","name":"wohnung","request_id":"ios-map-<uuid>"}
+```
+
+Es gibt keine automatische Wiederholung. Nur ein `save_result` mit derselben
+`request_id` ist eine Antwort. Der Save-Knopf erscheint nur, wenn weder eine
+passende `semantic_map.map_ref` noch ein passendes `storage.last_saved`
+existiert. Eine passende, aber wegen `editable=false` gesperrte Semantik führt
+stattdessen zu einem sichtbaren Blockgrund und niemals zu einem unnötigen
+zweiten Erst-Save.
+
+Raum anlegen beziehungsweise löschen:
+
+```json
+{
+  "command":"upsert_room",
+  "request_id":"ios-room-<uuid>",
+  "map_fingerprint":"<64 kleine Hexzeichen>",
+  "base_revision":3,
+  "room":{
+    "id":"room-<uuid>",
+    "name":"Wohnzimmer",
+    "color":"#4FB3A5",
+    "polygon":[{"x":1.0,"y":1.0},{"x":4.0,"y":1.0},{"x":4.0,"y":3.0}],
+    "navigation_goal":{"x":2.0,"y":2.0,"yaw":0.0}
+  }
+}
+```
+
+```json
+{
+  "command":"delete_room",
+  "request_id":"ios-room-<uuid>",
+  "map_fingerprint":"<fingerprint>",
+  "base_revision":4,
+  "room_id":"room-<uuid>"
+}
+```
+
+`/semantic_map/status_json` liefert `schema_version`, `event`, `ok`,
+`request_id`, `message` und `semantic_map` mit `map_ref`, `revision`, `rooms`
+und `editable`. Bei einem Revisionskonflikt sendet die App nichts erneut,
+sperrt den Editor und verlangt ein bewusstes Neuladen.
+
+Save, Upsert und Delete haben jeweils eine lokale Antwortfrist von zwölf
+Sekunden. Geht ein ACK verloren, wird der Pending-Zustand beendet, aber das
+Ergebnis als unbekannt markiert; es gibt keinen automatischen Retry. Auch ein
+positives ACK gilt erst dann als Erfolg, wenn es weiterhin zur aktuellen
+Live-/Manager-Karte gehört, `editable=true` meldet, eine höhere Revision als
+`base_revision` enthält und den erwarteten Raum tatsächlich enthält
+beziehungsweise nicht mehr enthält. Raum-IDs folgen exakt
+`[a-z0-9][a-z0-9_-]{0,63}`; ein Snapshot enthält höchstens 256 Räume.
+
+Die Bildschirm-/ROS-Transformation berücksichtigt Origin-Translation,
+Origin-Yaw, vertikale OccupancyGrid-Spiegelung, aspect-fit, Zoom und Pan. Der
+Navigationspunkt muss strikt innerhalb des einfachen Polygons liegen. Er ist
+nur Metadatum und löst keinen Nav2-Auftrag aus.
+
 Quellen des Vertrags:
 
 - `src/smartphone_gui/web/app.js`
 - `src/mission_manager/mission_manager/mission_manager_node.py`
 - `src/safety_monitor/safety_monitor/safety_monitor_node.py`
+- `src/semantic_map_manager/semantic_map_manager/semantic_map_manager_node.py`
 
 ## Sicherheitsinvarianten
 
@@ -133,6 +254,9 @@ Diese Regeln bei Änderungen nicht aufweichen:
 8. Klar sichtbar lassen: Software-NOT-AUS ist kein Hardware-NOT-AUS.
 9. Kartendaten bleiben reine Anzeige und laufen über einen eigenen Socket. Sie
    dürfen niemals Missionsfreigaben oder Sicherheitszustände beeinflussen.
+10. Semantische Schreibvorgänge laufen auf diesem getrennten Karten-Socket,
+    sind keine Sicherheitskette und lösen keine Bewegung aus. Ein gesendeter
+    Frame ist auch hier niemals ein ACK.
 
 ## Architektur und wichtige Dateien
 
@@ -149,6 +273,7 @@ Robotersteuerung/
 ├── Views/DashboardView.swift
 ├── Views/RobotMapView.swift
 ├── Tools/mock_rosbridge.py
+├── Tools/test_mock_rosbridge.py
 ├── Assets.xcassets/
 ├── Info.plist
 └── PrivacyInfo.xcprivacy
@@ -163,9 +288,10 @@ Robotersteuerung/
   Main Actors; veröffentlicht wird nur die fertige Karte. Bei schnellen
   Updates wird höchstens eine Karte verarbeitet und nur der neueste wartende
   Stand behalten, damit alte große Frames keine neueren überschreiben.
-- `RobotMapModels.swift` validiert das OccupancyGrid und erzeugt ein
-  zeilengespiegeltes RGBA-Bild. `MapRosbridgeProtocol.swift` kapselt genau den
-  Subscribe-/Unsubscribe- und Publish-Vertrag für `/map`.
+- `RobotMapModels.swift` validiert das OccupancyGrid, berechnet den
+  Kartenfingerabdruck, prüft Polygone und enthält die testbare
+  Bildschirm-/map-Transformation. `MapRosbridgeProtocol.swift` kapselt Karte,
+  Kartenmanager, Semantikstatus und die Schreibbefehle.
 - `AmadeusRootView.swift` stellt die Tabs **Steuerung** und **Karte** bereit.
   `RobotMapView.swift` enthält Bitmap, Gesten, Zoomtasten, Metadaten, Legende
   und den auch dort erreichbaren Software-NOT-AUS.
@@ -215,9 +341,14 @@ Während dieser Abnahme wurden drei Sicherheitslücken geschlossen:
 3. Ein alter, offen gebliebener NOT-AUS-Freigabedialog konnte die
    Freshness-Prüfung umgehen.
 
-Im abschließenden Stand bestehen 21 Swift-Tests im macOS-Test-Harness und im
-iOS-Simulator-Test-Target sowie 9 lokale Backend-Tests. Zusätzlich ist der
-Strict-Concurrency-Build mit Warnungen als Fehler grün.
+Im Stand vom 14.08.2026 bestanden 39 Swift-Tests im macOS-Test-Harness und im
+iPhone-17-Pro-Simulator, darunter Fingerprint-, Status-, Kommando-, Polygon-
+und Transformtests. Am 16.08.2026 kamen zwei Explorer-Protokolltests hinzu;
+sie muessen auf dem Mac/Xcode noch ausgefuehrt werden, weil der Jetson kein
+Swift/Xcode besitzt. Sechs Python-Tests pruefen den erweiterten semantischen
+Mock- und Explorerstatus auf dem Jetson erfolgreich. Der vorherige
+Strict-Concurrency-Build mit Warnungen als Fehler war erfolgreich. Eine reale
+adaptive Erkundungsfahrt bleibt ein separater Abnahmeschritt.
 
 ## Installation auf echtem iPhone vom 26.07.2026
 
@@ -277,8 +408,9 @@ abgewiesen; nach dem Entsperren genügt ein normales Antippen der App.
   bereits erfolgreichen Lauf nicht in „abgebrochen“ umdeuten. Lokale
   Zustands-, Payload- und Outcome-Tests bestehen; der unmittelbare
   Start-und-Abbruch bleibt als Jetson-Integrationstest erforderlich.
-- `go_to_room` und `pick_object` sind laut Backend derzeit Simulation;
-  `pick_and_place` und `explore` laufen über den echten Behavior Tree.
+- `go_to_room` und `pick_object` sind im normalen Backend weiterhin
+  Simulation. `explore` laeuft nur im expliziten App-Kartierungsstack ueber
+  den echten Behavior Tree; die App prueft diesen Opt-in vor dem Senden.
 - Es gibt im Repository noch keine Akkutelemetrie.
 
 ## Prüfbefehle
@@ -286,6 +418,7 @@ abgewiesen; nach dem Entsperren genügt ein normales Antippen der App.
 ```bash
 cd /Volumes/64GB/roboter_ws/ios/Robotersteuerung
 swift test --scratch-path /tmp/robotersteuerung-swift-tests
+python3 -m unittest discover -s Tools -p 'test_mock_rosbridge.py' -v
 xcodebuild -list -project Robotersteuerung.xcodeproj
 xcodebuild \
   -project Robotersteuerung.xcodeproj \
@@ -322,6 +455,10 @@ python3 Tools/mock_rosbridge.py
 # Späten SLAM-Start simulieren:
 # http://127.0.0.1:9091/map-disable
 # http://127.0.0.1:9091/map-enable
+# Semantik zurücksetzen / konkurrierende Revision / stille Revision:
+# http://127.0.0.1:9091/semantic-reset
+# http://127.0.0.1:9091/semantic-bump
+# http://127.0.0.1:9091/semantic-bump-silent
 ```
 
 Nach jeder Protokolländerung mindestens die Tests in

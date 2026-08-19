@@ -8,7 +8,7 @@ Server-Erreichbarkeit überwacht (WLAN-Ausfall-Fallback).
 
 | Läuft auf | Nodes | Start |
 |---|---|---|
-| **Roboter (onboard)** | base_hardware, robot_map_manager, vl53_near_field, explore, mission_manager, bt_orchestrator (Missions-Server), safety_monitor, robot_face, link_monitor — (SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
+| **Roboter (onboard)** | base_hardware, robot_map_manager, semantic_map_manager, vl53_near_field, explore, mission_manager, bt_orchestrator (Missions-Server), safety_monitor, robot_face, link_monitor — (SLAM/OAK/MoveIt folgen) | `robot.launch.py` |
 | **Server (offboard)** | llm_planner (qwen2.5/Ollama), semantic_perception (YOLO-World + Objektgedächtnis) | `server.launch.py` |
 
 **Grundregel:** Sicherheit, Navigation und Exploration laufen **immer onboard**. Fällt der
@@ -76,6 +76,8 @@ ros2 launch robot_bringup robot.launch.py
 ros2 launch robot_bringup robot.launch.py start_bt:=true
 # Kartenmanager nur zur Fehlersuche auslassen:
 ros2 launch robot_bringup robot.launch.py start_map_manager:=false
+# Semantische Raumverwaltung nur zur Fehlersuche auslassen:
+ros2 launch robot_bringup robot.launch.py start_semantic_map_manager:=false
 ```
 
 ## Kartenintegration für die Amadeus-App
@@ -103,6 +105,26 @@ und Prüfkommandos stehen im README des Pakets `robot_map_manager`.
 Wichtig: Der Kartenmanager ersetzt keinen SLAM-Publisher und keine
 Lokalisierung. Solange RTAB-Map beziehungsweise ein `map_server` nicht läuft,
 wartet die App korrekt auf `/map`.
+
+## Semantische Raumverwaltung
+
+`robot.launch.py` startet standardmaessig auch den
+`semantic_map_manager`. Er ist eine persistente Beschriftungsschicht ueber der
+metrischen Karte und in diesem Integrationsstand vollstaendig passiv:
+
+- keine Action-Clients oder Nav2-Ziele;
+- kein Publisher auf `cmd_vel`/`cmd_vel_smoothed`;
+- keine Motor- oder Sensorparameteraenderung;
+- Schreibzugriffe nur nach explizitem App-Kommando mit Kartenfingerprint und
+  Basisrevision.
+
+Der `mission_manager` liest dessen transient-local Status und Katalog. Er kann
+ein manuell deklariertes Raumziel validieren und im eigenen Status anzeigen;
+`go_to_room` bleibt standardmaessig `simulation_only_no_navigation`. Nur der
+separate Opt-in `enable_real_go_to_room:=true` im `mission_manager` aktiviert
+den fail-closed Nav2-Pfad aus `robot_navigation`; der Semantikmanager selbst
+bleibt ohne Bewegungswirkung. Das Launch-Argument
+`start_semantic_map_manager` ist deshalb weiterhin standardmaessig `true`.
 
 **Auf dem Server:**
 ```bash

@@ -35,18 +35,32 @@ import json
 import math
 import time
 from dataclasses import dataclass
+from typing import Any
 
 import rclpy
 from rclpy.node import Node
+from rcl_interfaces.msg import SetParametersResult
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
 from tf2_ros import TransformBroadcaster
 
+from .encoder_odometry import (
+    EncoderOdometry,
+    EncoderUpdate,
+    MotorFeedback,
+    decode_i16,
+    decode_position_words,
+    u32_to_i32,
+)
+
+ModbusSerialClient: Any
 try:
-    from pymodbus.client import ModbusSerialClient
+    from pymodbus.client import ModbusSerialClient as _ModbusSerialClient
 except Exception:  # pragma: no cover - auf Entwicklungs-PC evtl. nicht installiert
     ModbusSerialClient = None
+else:
+    ModbusSerialClient = _ModbusSerialClient
 
 
 @dataclass
@@ -116,6 +130,7 @@ class BaseHardware(Node):
         self.declare_parameter('rpm_scale', 1.0)
         self.declare_parameter('max_motor_rpm', 120.0)
         self.declare_parameter('modbus_timeout_s', 0.05)
+        self.declare_parameter('modbus_retries', 0)
         self.declare_parameter('modbus_write_period_s', 0.05)
 
         # -------------------------------------------------------------------
@@ -127,7 +142,7 @@ class BaseHardware(Node):
         # -------------------------------------------------------------------
         self.declare_parameter('accel_register', 0x001E)
         self.declare_parameter('decel_register', 0x001F)
-        self.declare_parameter('accel_ms', 800)
+        self.declare_parameter('accel_ms', 2000)
         self.declare_parameter('decel_ms', 800)
         # Startgeschwindigkeit: die Drehzahl, mit der der Antrieb SOFORT einsetzt,
         # bevor die Rampe ueberhaupt greift. Stand auf 30 rpm (aus dem
@@ -148,6 +163,22 @@ class BaseHardware(Node):
         self.declare_parameter('speed_register', 0x000C)
         self.declare_parameter('feedback_period_s', 0.1)
 
+        # Absolute Position statt Momentaufnahme der Drehzahl. Counts=0 sperrt
+        # den Produktionsmodus, bis die Einheit am echten Motor bestimmt ist.
+        self.declare_parameter('odometry_source', 'encoder_position')
+        self.declare_parameter('encoder_position_register', 0x000A)
+        self.declare_parameter('encoder_segment_register', 0x0011)
+        self.declare_parameter('encoder_word_order_register', 0x0019)
+        self.declare_parameter('encoder_resolution_register', 0x0101)
+        self.declare_parameter('encoder_counts_per_motor_revolution', 0.0)
+        self.declare_parameter('encoder_expected_segment', 0)
+        self.declare_parameter('encoder_expected_resolution', 0)
+        self.declare_parameter('encoder_feedback_period_s', 0.05)
+        self.declare_parameter('encoder_stale_timeout_s', 0.30)
+        self.declare_parameter('encoder_max_recovery_gap_s', 2.0)
+        self.declare_parameter('encoder_max_delta_factor', 1.5)
+        self.declare_parameter('encoder_failure_stop_count', 5)
+
         # -------------------------------------------------------------------
         # Frames: Standardentscheidung im Projekt: EKF publiziert spaeter TF.
         # Deshalb publish_tf standardmaessig false.
@@ -155,6 +186,10 @@ class BaseHardware(Node):
         self.declare_parameter('odom_frame_id', 'odom')
         self.declare_parameter('base_frame_id', 'base_link')
         self.declare_parameter('publish_tf', False)
+        self.declare_parameter('odom_pose_xy_variance', 0.0025)
+        self.declare_parameter('odom_yaw_variance', 0.0076)
+        self.declare_parameter('odom_twist_linear_variance', 0.01)
+        self.declare_parameter('odom_twist_angular_variance', 0.03)
 
         gp = self.get_parameter
         self.cmd_vel_topic = str(gp('cmd_vel_topic').value)
@@ -169,6 +204,7 @@ class BaseHardware(Node):
         self.update_rate = float(gp('update_rate_hz').value)
         self.dry_run = bool(gp('dry_run').value)
         self.allow_rs485 = bool(gp('allow_rs485').value)
+        self.use_sim_time = bool(gp('use_sim_time').value)
         self.rs485_port = str(gp('rs485_port').value)
         self.baudrate = int(gp('baudrate').value)
         self.left_motor_id = int(gp('left_motor_id').value)
@@ -183,6 +219,7 @@ class BaseHardware(Node):
         self.rpm_scale = float(gp('rpm_scale').value)
         self.max_motor_rpm = float(gp('max_motor_rpm').value)
         self.modbus_timeout_s = float(gp('modbus_timeout_s').value)
+        self.modbus_retries = int(gp('modbus_retries').value)
         self.modbus_write_period_s = float(gp('modbus_write_period_s').value)
         self.accel_register = int(gp('accel_register').value)
         self.decel_register = int(gp('decel_register').value)
@@ -193,9 +230,30 @@ class BaseHardware(Node):
         self.use_speed_feedback = bool(gp('use_speed_feedback').value)
         self.speed_register = int(gp('speed_register').value)
         self.feedback_period_s = float(gp('feedback_period_s').value)
+        self.odometry_source = str(gp('odometry_source').value).strip().lower()
+        self.encoder_position_register = int(gp('encoder_position_register').value)
+        self.encoder_segment_register = int(gp('encoder_segment_register').value)
+        self.encoder_word_order_register = int(gp('encoder_word_order_register').value)
+        self.encoder_resolution_register = int(gp('encoder_resolution_register').value)
+        self.encoder_counts_per_motor_revolution = float(
+            gp('encoder_counts_per_motor_revolution').value)
+        self.encoder_expected_segment = int(gp('encoder_expected_segment').value)
+        self.encoder_expected_resolution = int(
+            gp('encoder_expected_resolution').value)
+        self.encoder_feedback_period_s = float(gp('encoder_feedback_period_s').value)
+        self.encoder_stale_timeout_s = float(gp('encoder_stale_timeout_s').value)
+        self.encoder_max_recovery_gap_s = float(gp('encoder_max_recovery_gap_s').value)
+        self.encoder_max_delta_factor = float(gp('encoder_max_delta_factor').value)
+        self.encoder_failure_stop_count = int(gp('encoder_failure_stop_count').value)
         self.odom_frame_id = str(gp('odom_frame_id').value)
         self.base_frame_id = str(gp('base_frame_id').value)
         self.publish_tf = bool(gp('publish_tf').value)
+        self.odom_pose_xy_variance = float(gp('odom_pose_xy_variance').value)
+        self.odom_yaw_variance = float(gp('odom_yaw_variance').value)
+        self.odom_twist_linear_variance = float(
+            gp('odom_twist_linear_variance').value)
+        self.odom_twist_angular_variance = float(
+            gp('odom_twist_angular_variance').value)
 
         self._validate_parameters()
 
@@ -203,11 +261,13 @@ class BaseHardware(Node):
         # Interner Zustand fuer simulierte Odometrie
         # -------------------------------------------------------------------
         self.last_cmd_time = self.get_clock().now()
+        self.last_cmd_monotonic = time.monotonic()
         self.last_update_time = self.get_clock().now()
         self.last_log_time = 0.0
         self.cmd_v = 0.0
         self.cmd_w = 0.0
         self.active_wheel_cmd = WheelCommand()
+        self.invalid_cmd_count = 0
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
@@ -220,20 +280,56 @@ class BaseHardware(Node):
         self.last_feedback_read = 0.0
         self.last_reconnect_try = 0.0
         self.reconnect_period_s = 2.0
+        self.modbus_read_failures = 0
         self.meas_motor_rpm_left = None
         self.meas_motor_rpm_right = None
         self.meas_v = None
         self.meas_w = None
         self.feedback_ok = False
+        self.encoder_tracker = None
+        if (self.odometry_source == 'encoder_position' and
+                self.encoder_counts_per_motor_revolution > 0.0):
+            self.encoder_tracker = EncoderOdometry(
+                wheel_radius_m=self.wheel_radius,
+                wheel_separation_m=self.wheel_separation,
+                gear_ratio=self.gear_ratio,
+                counts_per_motor_revolution=self.encoder_counts_per_motor_revolution,
+                invert_left=self.invert_left,
+                invert_right=self.invert_right,
+                max_motor_rpm=self.max_motor_rpm,
+                max_delta_factor=self.encoder_max_delta_factor,
+                max_recovery_gap_s=self.encoder_max_recovery_gap_s,
+            )
+        self.encoder_last_poll = 0.0
+        self.encoder_last_success = None
+        self.encoder_feedback_ok = False
+        self.encoder_consecutive_failures = 0
+        self.encoder_last_failure_reason = 'noch_keine_probe'
+        self.encoder_last_update = EncoderUpdate(False, False, 'noch_keine_probe')
+        self.encoder_left_feedback = None
+        self.encoder_right_feedback = None
+        self.encoder_left_high_word_first = None
+        self.encoder_right_high_word_first = None
+        self.encoder_segment_left = None
+        self.encoder_segment_right = None
+        self.encoder_resolution_left = None
+        self.encoder_resolution_right = None
+        self.encoder_poll_left_first = True
+        self.encoder_connection_initialized = False
+        self.encoder_new_measurement = False
+        self.encoder_config_fault_latched = False
 
         # -------------------------------------------------------------------
         # Publisher / Subscriber
         # -------------------------------------------------------------------
-        self.cmd_sub = self.create_subscription(Twist, self.cmd_vel_topic, self._on_cmd_vel, 10)
+        self.cmd_sub = self.create_subscription(
+            Twist, self.cmd_vel_topic, self._on_cmd_vel, 1)
         self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
         self.state_pub = self.create_publisher(String, self.state_topic, 10)
         self.tf_broadcaster = TransformBroadcaster(self) if self.publish_tf else None
 
+        self._parameter_callback = self.add_on_set_parameters_callback(
+            self._guard_runtime_parameters)
         self.timer = self.create_timer(1.0 / self.update_rate, self._update)
 
         if not self.dry_run and not self.allow_rs485:
@@ -249,29 +345,101 @@ class BaseHardware(Node):
 
     # ======================= Parameter / Sicherheit =====================
     def _validate_parameters(self):
-        if self.wheel_radius <= 0.0:
-            raise ValueError('wheel_radius_m muss > 0 sein')
-        if self.wheel_separation <= 0.0:
-            raise ValueError('wheel_separation_m muss > 0 sein')
-        if self.gear_ratio <= 0.0:
-            raise ValueError('gear_ratio muss > 0 sein (Motorumdrehungen je Radumdrehung)')
-        if self.update_rate <= 0.0:
-            raise ValueError('update_rate_hz muss > 0 sein')
-        if self.cmd_timeout <= 0.0:
-            raise ValueError('cmd_timeout_s muss > 0 sein')
-        if self.max_motor_rpm <= 0.0:
-            raise ValueError('max_motor_rpm muss > 0 sein')
-        if self.modbus_write_period_s <= 0.0:
-            raise ValueError('modbus_write_period_s muss > 0 sein')
+        positive_finite = {
+            'wheel_radius_m': self.wheel_radius,
+            'wheel_separation_m': self.wheel_separation,
+            'gear_ratio': self.gear_ratio,
+            'max_linear_speed_mps': self.max_linear,
+            'max_angular_speed_radps': self.max_angular,
+            'update_rate_hz': self.update_rate,
+            'cmd_timeout_s': self.cmd_timeout,
+            'rpm_scale': self.rpm_scale,
+            'max_motor_rpm': self.max_motor_rpm,
+            'modbus_timeout_s': self.modbus_timeout_s,
+            'modbus_write_period_s': self.modbus_write_period_s,
+            'feedback_period_s': self.feedback_period_s,
+            'encoder_feedback_period_s': self.encoder_feedback_period_s,
+            'encoder_stale_timeout_s': self.encoder_stale_timeout_s,
+            'encoder_max_recovery_gap_s': self.encoder_max_recovery_gap_s,
+            'encoder_max_delta_factor': self.encoder_max_delta_factor,
+            'odom_pose_xy_variance': self.odom_pose_xy_variance,
+            'odom_yaw_variance': self.odom_yaw_variance,
+            'odom_twist_linear_variance': self.odom_twist_linear_variance,
+            'odom_twist_angular_variance': self.odom_twist_angular_variance,
+        }
+        for name, value in positive_finite.items():
+            if not math.isfinite(value) or value <= 0.0:
+                raise ValueError(f'{name} muss endlich und > 0 sein')
+        if self.modbus_retries < 0:
+            raise ValueError('modbus_retries muss >= 0 sein')
+        if not 1 <= self.left_motor_id <= 247 or not 1 <= self.right_motor_id <= 247:
+            raise ValueError('Motor-IDs muessen im Modbus-Bereich 1..247 liegen')
+        if self.left_motor_id == self.right_motor_id:
+            raise ValueError('left_motor_id und right_motor_id muessen verschieden sein')
+        for name, value in (
+                ('rpm_register', self.rpm_register),
+                ('command_register', self.command_register),
+                ('speed_register', self.speed_register),
+                ('encoder_position_register', self.encoder_position_register),
+                ('encoder_segment_register', self.encoder_segment_register),
+                ('encoder_word_order_register', self.encoder_word_order_register),
+                ('encoder_resolution_register', self.encoder_resolution_register)):
+            if not 0 <= value <= 0xFFFF:
+                raise ValueError(f'{name} muss ein uint16-Register sein')
+        if self.odometry_source not in ('encoder_position', 'speed'):
+            raise ValueError('odometry_source muss encoder_position oder speed sein')
+        if self.encoder_failure_stop_count < 1:
+            raise ValueError('encoder_failure_stop_count muss >= 1 sein')
+        if self.encoder_expected_segment < 0 or self.encoder_expected_resolution < 0:
+            raise ValueError('Erwartete Encoderregister muessen >= 0 sein')
+        if (not math.isfinite(self.encoder_counts_per_motor_revolution) or
+                self.encoder_counts_per_motor_revolution < 0.0):
+            raise ValueError(
+                'encoder_counts_per_motor_revolution muss endlich und >= 0 sein')
+        if not self.dry_run and self.allow_rs485 and self.use_sim_time:
+            raise ValueError(
+                'use_sim_time=true ist fuer scharfe Motorsteuerung verboten; '
+                'der Watchdog braucht eine laufende Echtzeituhr.')
+        if not self.dry_run and self.odometry_source == 'encoder_position':
+            if self.encoder_counts_per_motor_revolution <= 0.0:
+                raise ValueError(
+                    'encoder_counts_per_motor_revolution ist unbekannt (0). '
+                    'Zuerst encoder_position_pruefen.py read-only ausfuehren.')
+            if (self.encoder_expected_segment <= 0 or
+                    self.encoder_expected_resolution <= 0):
+                raise ValueError(
+                    'encoder_expected_segment und encoder_expected_resolution '
+                    'muessen nach H2 auf die read-only ausgelesenen Werte gesetzt sein.')
+
+    def _guard_runtime_parameters(self, parameters):
+        if not self.dry_run and self.allow_rs485:
+            for parameter in parameters:
+                if parameter.name == 'use_sim_time' and bool(parameter.value):
+                    return SetParametersResult(
+                        successful=False,
+                        reason='use_sim_time ist bei scharfer Motorsteuerung gesperrt')
+        return SetParametersResult(successful=True)
 
     # ======================= Eingang: /cmd_vel ==========================
     def _on_cmd_vel(self, msg: Twist):
-        # Nur die fuer Differentialantrieb relevanten Komponenten verwenden.
-        v = self._clamp(float(msg.linear.x), -self.max_linear, self.max_linear)
-        w = self._clamp(float(msg.angular.z), -self.max_angular, self.max_angular)
+        # NaN/Inf duerfen niemals durch min/max zu Vollgeschwindigkeit werden.
+        raw_v = float(msg.linear.x)
+        raw_w = float(msg.angular.z)
+        if not math.isfinite(raw_v) or not math.isfinite(raw_w):
+            self.invalid_cmd_count += 1
+            self.cmd_v = 0.0
+            self.cmd_w = 0.0
+            self.active_wheel_cmd = WheelCommand()
+            self.last_cmd_time = self.get_clock().now()
+            self.last_cmd_monotonic = time.monotonic()
+            self.get_logger().error('Nicht-endlicher /cmd_vel verworfen; Stop angefordert')
+            return
+        v = self._clamp(raw_v, -self.max_linear, self.max_linear)
+        w = self._clamp(raw_w, -self.max_angular, self.max_angular)
         self.cmd_v = v
         self.cmd_w = w
         self.last_cmd_time = self.get_clock().now()
+        self.last_cmd_monotonic = time.monotonic()
         self.active_wheel_cmd = self._twist_to_wheels(v, w)
 
     # ======================= Kinematik =================================
@@ -294,14 +462,19 @@ class BaseHardware(Node):
 
     # ======================= Hauptupdate ===============================
     def _update(self):
+        # Watchdog zuerst und ausschliesslich gegen monotone Echtzeit. Ein
+        # stehender/rueckwaerts springender ROS-Clock darf den Motor-Stopp
+        # niemals ueberspringen.
+        timed_out = self._command_timed_out()
+        if timed_out and not self.dry_run and self.allow_rs485:
+            self.active_wheel_cmd = WheelCommand()
+            self._send_stop_if_needed()
+
         now = self.get_clock().now()
         dt = (now - self.last_update_time).nanoseconds * 1e-9
         self.last_update_time = now
         if dt <= 0.0:
             return
-
-        age = (now - self.last_cmd_time).nanoseconds * 1e-9
-        timed_out = age > self.cmd_timeout
         if timed_out:
             v = 0.0
             w = 0.0
@@ -311,23 +484,57 @@ class BaseHardware(Node):
             w = self.cmd_w
 
         if not self.dry_run and self.allow_rs485:
+            motion_requested = (
+                self._quantize_motor_rpm(
+                    self.active_wheel_cmd.rpm_left * self.gear_ratio) != 0 or
+                self._quantize_motor_rpm(
+                    self.active_wheel_cmd.rpm_right * self.gear_ratio) != 0)
+            # Ein Nullbefehl ist ein Stop-Ereignis und darf nicht hinter einem
+            # potenziell blockierenden Feedback-Read warten.
+            if not motion_requested:
+                self._send_stop_if_needed()
             self._ensure_rs485()
-            if timed_out:
+            encoder_ready = True
+            if (self.odometry_source == "encoder_position" and
+                    self.rs485_ready and not self.encoder_connection_initialized):
+                encoder_ready = self._initialize_encoder_feedback()
+            if self.odometry_source == "encoder_position":
+                if encoder_ready:
+                    self._poll_encoder_feedback()
+                motion_allowed = self._encoder_motion_allowed()
+            else:
+                self._poll_speed_feedback()
+                motion_allowed = self.feedback_ok
+            # Reconnect, Konfigurations- und Feedbackzugriffe koennen den
+            # Single-Thread-Executor laenger als cmd_timeout blockieren. Den
+            # Fahrbefehl deshalb direkt vor einem Start erneut altern lassen.
+            if self._command_timed_out():
+                timed_out = True
+                self.active_wheel_cmd = WheelCommand()
+            if timed_out or not motion_allowed or not motion_requested:
                 self._send_stop_if_needed()
             else:
                 self._send_rs485_velocity(self.active_wheel_cmd)
-            self._poll_speed_feedback()
 
-        # Odometrie: wenn die Motoren ihre IST-Drehzahl melden, wird DIESE
-        # integriert (echte Rueckmeldung). Sonst Rueckfall auf den Sollwert -
-        # im Dry-run gibt es nichts anderes, und ohne Rueckmeldung ist die
-        # Sollwert-Integration immer noch besser als gar keine Odometrie.
-        if self.feedback_ok and self.meas_v is not None:
-            odom_v, odom_w = self.meas_v, self.meas_w
-        else:
+        publish_odom = True
+        if self.dry_run:
             odom_v, odom_w = v, w
-        self._integrate_odom(odom_v, odom_w, dt)
-        self._publish_odom(now, odom_v, odom_w)
+            self._integrate_odom(odom_v, odom_w, dt)
+        elif self.odometry_source == "encoder_position":
+            # Eine neue /odom-Messung nur zu einem neuen gueltigen Encoderpaar.
+            # Keine identische Pose mit neuem Zeitstempel und altem Twist.
+            odom_v, odom_w = self._encoder_twist()
+            publish_odom = self.encoder_new_measurement
+            self.encoder_new_measurement = False
+        elif self.feedback_ok and self.meas_v is not None:
+            odom_v, odom_w = self.meas_v, self.meas_w
+            self._integrate_odom(odom_v, odom_w, dt)
+        else:
+            # Im realen Betrieb niemals eine nicht gemessene Sollbewegung erfinden.
+            odom_v, odom_w = 0.0, 0.0
+
+        if publish_odom:
+            self._publish_odom(now, odom_v, odom_w)
         self._publish_state(now, timed_out)
         self._throttled_log(timed_out)
 
@@ -347,6 +554,20 @@ class BaseHardware(Node):
         msg.pose.pose.orientation.w = math.cos(self.yaw / 2.0)
         msg.twist.twist.linear.x = v
         msg.twist.twist.angular.z = w
+        # Encoder erfassen keinen Schlupf und keine Seitwaertsbewegung. Null
+        # wuerde in ROS faelschlich perfekte Sicherheit bedeuten.
+        msg.pose.covariance[0] = self.odom_pose_xy_variance
+        msg.pose.covariance[7] = self.odom_pose_xy_variance
+        msg.pose.covariance[14] = 1e6
+        msg.pose.covariance[21] = 1e6
+        msg.pose.covariance[28] = 1e6
+        msg.pose.covariance[35] = self.odom_yaw_variance
+        msg.twist.covariance[0] = self.odom_twist_linear_variance
+        msg.twist.covariance[7] = 1e6
+        msg.twist.covariance[14] = 1e6
+        msg.twist.covariance[21] = 1e6
+        msg.twist.covariance[28] = 1e6
+        msg.twist.covariance[35] = self.odom_twist_angular_variance
         self.odom_pub.publish(msg)
 
         if self.tf_broadcaster:
@@ -365,6 +586,7 @@ class BaseHardware(Node):
             'timed_out': timed_out,
             'cmd_v_mps': self.cmd_v,
             'cmd_w_radps': self.cmd_w,
+            'invalid_cmd_count': self.invalid_cmd_count,
             'v_left_mps': self.active_wheel_cmd.v_left_mps,
             'v_right_mps': self.active_wheel_cmd.v_right_mps,
             'rpm_left': self.active_wheel_cmd.rpm_left,        # Rad-Drehzahl
@@ -375,6 +597,40 @@ class BaseHardware(Node):
             'x': self.x,
             'y': self.y,
             'yaw': self.yaw,
+            'odometry_source': self.odometry_source,
+            'encoder_initialized': bool(self.encoder_tracker and self.encoder_tracker.initialized),
+            'encoder_feedback_ok': self.encoder_feedback_ok,
+            'encoder_stale': self._encoder_is_stale(),
+            'encoder_feedback_age_s': self._encoder_feedback_age(),
+            'encoder_counts_per_motor_revolution': self.encoder_counts_per_motor_revolution,
+            'encoder_expected_segment': self.encoder_expected_segment,
+            'encoder_expected_resolution': self.encoder_expected_resolution,
+            'encoder_connection_initialized': self.encoder_connection_initialized,
+            'encoder_config_fault_latched': self.encoder_config_fault_latched,
+            'encoder_position_left_u32': (self.encoder_left_feedback.position_u32
+                                          if self.encoder_left_feedback else None),
+            'encoder_position_right_u32': (self.encoder_right_feedback.position_u32
+                                           if self.encoder_right_feedback else None),
+            'encoder_position_left_i32': (u32_to_i32(self.encoder_left_feedback.position_u32)
+                                          if self.encoder_left_feedback else None),
+            'encoder_position_right_i32': (u32_to_i32(self.encoder_right_feedback.position_u32)
+                                           if self.encoder_right_feedback else None),
+            'encoder_delta_left': self.encoder_last_update.left_delta_counts,
+            'encoder_delta_right': self.encoder_last_update.right_delta_counts,
+            'encoder_sample_dt_s': self.encoder_last_update.sample_dt_s,
+            'encoder_last_reason': self.encoder_last_failure_reason,
+            'encoder_consecutive_failures': self.encoder_consecutive_failures,
+            'modbus_read_failures': self.modbus_read_failures,
+            'encoder_rejected_updates': (self.encoder_tracker.rejected_update_count
+                                         if self.encoder_tracker else 0),
+            'encoder_rebases': (self.encoder_tracker.rebase_count
+                                if self.encoder_tracker else 0),
+            'encoder_word_order_left': self.encoder_left_high_word_first,
+            'encoder_word_order_right': self.encoder_right_high_word_first,
+            'encoder_segment_left': self.encoder_segment_left,
+            'encoder_segment_right': self.encoder_segment_right,
+            'encoder_resolution_left': self.encoder_resolution_left,
+            'encoder_resolution_right': self.encoder_resolution_right,
             # GEMESSENE Rueckmeldung (None = keine gueltige Messung)
             'feedback_ok': self.feedback_ok,
             'meas_motor_rpm_left': self.meas_motor_rpm_left,
@@ -394,15 +650,9 @@ class BaseHardware(Node):
         if ModbusSerialClient is None:
             self.get_logger().error(
                 'pymodbus ist nicht installiert. Installiere auf dem Jetson: pip install pymodbus')
-            self.rs485_ready = False
+            self._mark_bus_fault('pymodbus_fehlt')
             return
 
-        # Alten Client ZUERST schliessen. Sonst haelt er das exklusive Lock auf
-        # dem Port und jeder Neuaufbau scheitert an
-        #   "[Errno 11] Could not exclusively lock port ...".
-        # Real aufgetreten (27.07.2026): ein Timeout im Startgewitter setzte
-        # rs485_ready=False, danach kam der Neuaufbau nie mehr durch - die
-        # Selbstheilung blockierte sich selbst.
         if self.modbus_client is not None:
             try:
                 self.modbus_client.close()
@@ -410,24 +660,95 @@ class BaseHardware(Node):
                 self.get_logger().warn(f'Alten RS485-Client schliessen fehlgeschlagen: {exc}')
             self.modbus_client = None
 
-        self.modbus_client = ModbusSerialClient(
-            port=self.rs485_port,
-            baudrate=self.baudrate,
-            bytesize=8,
-            parity='N',
-            stopbits=1,
-            timeout=self.modbus_timeout_s,
-        )
-        self.rs485_ready = bool(self.modbus_client.connect())
-        if self.rs485_ready:
-            self.get_logger().warn(
-                f'RS485 AKTIV auf {self.rs485_port} @ {self.baudrate}. '
-                'Raeder muessen frei drehen, Not-Aus bereithalten.')
-            self._write_ramps()
-            self._write_motor_stop(self.left_motor_id)
-            self._write_motor_stop(self.right_motor_id)
-        else:
-            self.get_logger().error(f'RS485-Verbindung fehlgeschlagen: {self.rs485_port}')
+        # Jeder neue Client ist eine neue Zaehler-Epoche. Der Motorcontroller
+        # koennte zwischenzeitlich neu gestartet und sein Zaehler auf null
+        # gesetzt worden sein. Deshalb niemals eine alte Baseline ueber einen
+        # echten Reconnect hinweg verwenden.
+        self._prepare_encoder_reconnect()
+        client = None
+        try:
+            client = ModbusSerialClient(
+                port=self.rs485_port,
+                baudrate=self.baudrate,
+                bytesize=8,
+                parity='N',
+                stopbits=1,
+                timeout=self.modbus_timeout_s,
+                retries=self.modbus_retries,
+            )
+            if not client.connect():
+                client.close()
+                self._mark_bus_fault('rs485_connect_fehlgeschlagen')
+                self.get_logger().error(
+                    f'RS485-Verbindung fehlgeschlagen: {self.rs485_port}')
+                return
+            self.modbus_client = client
+            self.rs485_ready = True
+        except Exception as exc:
+            if client is not None:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+            self._mark_bus_fault('rs485_connect_exception')
+            self.get_logger().error(
+                f'RS485-Verbindungsaufbau fehlgeschlagen: {exc}')
+            return
+
+        self.get_logger().warn(
+            f'RS485 verbunden auf {self.rs485_port} @ {self.baudrate}; '
+            'Fahrfreigabe erst nach bestaetigtem Stop, Rampen und Feedback.')
+        if not self._stop_both_motors(force=True):
+            return
+        if not self._write_ramps():
+            self._mark_bus_fault('rampen_nicht_bestaetigt')
+            return
+        if self.odometry_source == 'encoder_position':
+            self.encoder_connection_initialized = self._initialize_encoder_feedback()
+            if not self.encoder_connection_initialized:
+                if not self.encoder_config_fault_latched:
+                    self._mark_bus_fault('encoder_initialisierung_fehlgeschlagen')
+                return
+        self.get_logger().warn(
+            'RS485 Initialisierung vollstaendig bestaetigt. '
+            'Raeder muessen frei drehen, Not-Aus bereithalten.')
+
+    def _prepare_encoder_reconnect(self):
+        if self.encoder_tracker is not None:
+            self.encoder_tracker.reset_baseline()
+        self.encoder_connection_initialized = False
+        self.encoder_new_measurement = False
+        self.encoder_feedback_ok = False
+        self.encoder_last_success = None
+        self.modbus_read_failures = 0
+        self.encoder_last_update = EncoderUpdate(
+            False, False, 'client_neu_baseline_noetig')
+        self.encoder_last_failure_reason = 'client_neu_baseline_noetig'
+        self.encoder_left_high_word_first = None
+        self.encoder_right_high_word_first = None
+        self.meas_v = None
+        self.meas_w = None
+        self.feedback_ok = False
+
+    def _handle_bus_read_failure(self, reason):
+        if self.modbus_client is not None and self.rs485_ready:
+            self._stop_both_motors(force=True)
+        self._mark_bus_fault(reason)
+
+    def _note_modbus_read_failure(self, reason):
+        self.modbus_read_failures += 1
+        if self.modbus_read_failures >= self.encoder_failure_stop_count:
+            self._handle_bus_read_failure(reason)
+
+    def _mark_bus_fault(self, reason):
+        self.rs485_ready = False
+        self.encoder_connection_initialized = False
+        self.encoder_new_measurement = False
+        self.encoder_feedback_ok = False
+        self.feedback_ok = False
+        self.meas_v = None
+        self.meas_w = None
+        self.encoder_last_failure_reason = reason
 
     def _write_ramps(self):
         """Beschleunigungs- und Bremsrampe in die Motoren schreiben.
@@ -446,15 +767,21 @@ class BaseHardware(Node):
         volle Drehzahlaenderung) laut "Modbus Series Bus Driver Function Manual".
         """
         if not self.rs485_ready:
-            return
+            return False
         for motor_id in (self.left_motor_id, self.right_motor_id):
-            self._write_register(motor_id, self.accel_register, self.accel_ms)
-            self._write_register(motor_id, self.decel_register, self.decel_ms)
-            self._write_register(motor_id, self.start_speed_register,
-                                 self.start_speed_rpm)
+            for register, value in (
+                    (self.accel_register, self.accel_ms),
+                    (self.decel_register, self.decel_ms),
+                    (self.start_speed_register, self.start_speed_rpm)):
+                if not self._write_register(motor_id, register, value):
+                    self.get_logger().error(
+                        f'Anfahrparameter Motor {motor_id}, Reg 0x{register:04X} '
+                        'nicht bestaetigt')
+                    return False
         self.get_logger().info(
-            f'Anfahrverhalten gesetzt: Beschleunigen {self.accel_ms} ms, '
+            f'Anfahrverhalten bestaetigt: Beschleunigen {self.accel_ms} ms, '
             f'Bremsen {self.decel_ms} ms, Startdrehzahl {self.start_speed_rpm} rpm.')
+        return True
 
     def _ensure_rs485(self):
         """Verbindung selbstheilend halten.
@@ -468,6 +795,8 @@ class BaseHardware(Node):
         Timeout; danach meldete der Node dauerhaft rs485_ready=False, obwohl
         die Motoren einwandfrei antworteten.
         """
+        if self.encoder_config_fault_latched:
+            return
         if self.rs485_ready:
             return
         now = time.monotonic()
@@ -480,55 +809,299 @@ class BaseHardware(Node):
 
     def _send_rs485_velocity(self, wheel_cmd: WheelCommand):
         if not self.rs485_ready:
-            self._connect_modbus()
-            if not self.rs485_ready:
-                return
+            return False
 
         now = time.monotonic()
         if now - self.last_modbus_write < self.modbus_write_period_s:
-            return
+            return True
         self.last_modbus_write = now
 
-        # WICHTIG: rpm_left/right sind RAD-Drehzahlen. Der Motor sitzt hinter
-        # dem Getriebe -> Motor-rpm = Rad-rpm * gear_ratio. Ohne diese
-        # Umrechnung fuehre der Roboter um den Faktor gear_ratio zu langsam.
+        # Beide Sollwerte muessen bestaetigt sein, bevor auch nur ein Motor den
+        # Startbefehl erhaelt. Sonst koennte ein alter Sollwert oder nur eine
+        # Seite anlaufen.
         left_rpm = self._clamp(wheel_cmd.rpm_left * self.gear_ratio,
                                -self.max_motor_rpm, self.max_motor_rpm)
         right_rpm = self._clamp(wheel_cmd.rpm_right * self.gear_ratio,
                                 -self.max_motor_rpm, self.max_motor_rpm)
-        self._write_motor_velocity(self.left_motor_id, left_rpm)
-        self._write_motor_velocity(self.right_motor_id, right_rpm)
-        self.last_sent_left_rpm = left_rpm      # Motor-rpm (nach Getriebe)
+        left_setpoint = self._quantize_motor_rpm(left_rpm)
+        right_setpoint = self._quantize_motor_rpm(right_rpm)
+        last_left_setpoint = (
+            None if self.last_sent_left_rpm is None
+            else self._quantize_motor_rpm(self.last_sent_left_rpm))
+        last_right_setpoint = (
+            None if self.last_sent_right_rpm is None
+            else self._quantize_motor_rpm(self.last_sent_right_rpm))
+
+        # Das ESS-RS-Handbuch beschreibt 0x0027 Bit1 als StartIMPULS nach dem
+        # Setzen der Geschwindigkeitsparameter. Der fruehere Code wiederholte
+        # diesen Impuls alle 50 ms und startete damit die 2000-ms-Anfahrrampe
+        # fortlaufend neu. Real gemessen am 16.08.2026: nur 0,360 rad in etwa
+        # 10 s bei konstant angeforderten 0,12 rad/s.
+        #
+        # Identische, bereits laufende Registerwerte brauchen keinen weiteren
+        # Buszugriff. Geaenderte Sollwerte werden beidseitig aktualisiert; ein
+        # neuer Startimpuls ist nur fuer Stillstand -> Fahrt erforderlich.
+        if (left_setpoint == last_left_setpoint and
+                right_setpoint == last_right_setpoint):
+            return True
+        was_moving = (
+            last_left_setpoint not in (None, 0) or
+            last_right_setpoint not in (None, 0))
+
+        if not self._write_motor_setpoint(self.left_motor_id, left_rpm):
+            self._handle_drive_write_failure('sollwert_links')
+            return False
+        if not self._write_motor_setpoint(self.right_motor_id, right_rpm):
+            self._handle_drive_write_failure('sollwert_rechts')
+            return False
+        # Auch zwei bestaetigte Setpoint-Writes koennen zusammen laenger als
+        # der Watchdog dauern. Ein inzwischen alter Befehl darf nie starten.
+        if self._command_timed_out():
+            self._stop_both_motors(force=True)
+            return False
+        if was_moving:
+            self.last_sent_left_rpm = left_rpm
+            self.last_sent_right_rpm = right_rpm
+            return True
+        if not self._write_motor_start(self.left_motor_id):
+            self._handle_drive_write_failure('start_links')
+            return False
+        if self._command_timed_out():
+            self._stop_both_motors(force=True)
+            return False
+        if not self._write_motor_start(self.right_motor_id):
+            self._handle_drive_write_failure('start_rechts')
+            return False
+
+        self.last_sent_left_rpm = left_rpm
         self.last_sent_right_rpm = right_rpm
+        return True
 
     def _send_stop_if_needed(self):
-        if self.last_sent_left_rpm == 0.0 and self.last_sent_right_rpm == 0.0:
-            return
+        return self._stop_both_motors(force=False)
+
+    def _stop_both_motors(self, force=False):
+        if (not force and self.last_sent_left_rpm == 0.0 and
+                self.last_sent_right_rpm == 0.0):
+            return True
         if not self.rs485_ready:
-            return
-        self._write_motor_stop(self.left_motor_id)
-        self._write_motor_stop(self.right_motor_id)
-        self.last_sent_left_rpm = 0.0
-        self.last_sent_right_rpm = 0.0
+            return False
+        left_ok = self._write_motor_stop(self.left_motor_id)
+        right_ok = self._write_motor_stop(self.right_motor_id)
+        if left_ok and right_ok:
+            self.last_sent_left_rpm = 0.0
+            self.last_sent_right_rpm = 0.0
+            return True
+        self.get_logger().error(
+            f'Stop nicht von beiden Motoren bestaetigt: '
+            f'links={left_ok}, rechts={right_ok}; Reconnect erforderlich')
+        self._mark_bus_fault('stop_nicht_bestaetigt')
+        return False
 
-    def _write_motor_velocity(self, motor_id: int, rpm: float):
-        # ESS23-RS: Die Drehrichtung steckt im VORZEICHEN des signed-int16-Werts
-        # im rpm_register (0x001D). Es gibt KEIN separates Richtungsregister -
-        # das frueher benutzte 0x001C ist laut offizieller StepperOnline-
-        # Registertabelle nicht dafuer vorgesehen und zeigte keine Wirkung.
-        # Negative Drehzahl daher als Zweierkomplement uebertragen (KEIN abs()!).
+    def _handle_drive_write_failure(self, stage):
+        self.get_logger().error(
+            f'Motorbefehl in Phase {stage} fehlgeschlagen; bestaetigter Stopversuch')
+        # _write_register kann den Bus bereits als fehlerhaft markieren. Fuer
+        # den bestmoeglichen Stopversuch bleibt derselbe Client noch nutzbar.
+        if self.modbus_client is not None:
+            self.rs485_ready = True
+            self._stop_both_motors(force=True)
+        self._mark_bus_fault(f'motorbefehl_{stage}_fehlgeschlagen')
+
+    def _quantize_motor_rpm(self, rpm: float) -> int:
         signed_rpm = int(round(rpm * self.rpm_scale))
-        signed_rpm = int(self._clamp(signed_rpm, -32768, 32767))
-        raw = signed_rpm & 0xFFFF          # int16 -> uint16 (Zweierkomplement)
+        return int(self._clamp(signed_rpm, -32768, 32767))
 
-        ok = True
-        ok &= self._write_register(motor_id, self.rpm_register, raw)
-        ok &= self._write_register(motor_id, self.command_register, self.velocity_start_value)
-        if not ok:
-            self.get_logger().error(f'Modbus-Schreiben Motor {motor_id} fehlgeschlagen')
+    def _write_motor_setpoint(self, motor_id: int, rpm: float) -> bool:
+        signed_rpm = self._quantize_motor_rpm(rpm)
+        return self._write_register(motor_id, self.rpm_register, signed_rpm & 0xFFFF)
 
-    def _write_motor_stop(self, motor_id: int):
-        self._write_register(motor_id, self.command_register, self.stop_value)
+    def _write_motor_start(self, motor_id: int) -> bool:
+        return self._write_register(
+            motor_id, self.command_register, self.velocity_start_value)
+
+    def _write_motor_stop(self, motor_id: int) -> bool:
+        return self._write_register(motor_id, self.command_register, self.stop_value)
+
+    def _latch_encoder_config_fault(self, reason):
+        """Sperrt Fahrt bis zum Neustart; Reconnect heilt Konfigfehler nicht."""
+        self._encoder_failure(reason)
+        if self.modbus_client is not None and self.rs485_ready:
+            self._stop_both_motors(force=True)
+        self.encoder_config_fault_latched = True
+        self._mark_bus_fault(reason)
+        if self.modbus_client is not None:
+            try:
+                self.modbus_client.close()
+            except Exception as exc:
+                self.get_logger().warn(
+                    f'RS485-Client nach Encoder-Konfigfehler nicht schliessbar: {exc}')
+            self.modbus_client = None
+        self.get_logger().error(
+            f'Encoder-Konfiguration gesperrt: {reason}. '
+            'Treiber/YAML pruefen und Node danach neu starten.')
+
+    # ------------------- Positions-Rueckmeldung (lesend) ----------------
+    def _initialize_encoder_feedback(self):
+        """Liest Treibereinstellungen und setzt vor jedem Start die Baseline."""
+        if not (self.rs485_ready and self.encoder_tracker):
+            self.encoder_feedback_ok = False
+            self.encoder_last_failure_reason = "encoder_nicht_konfiguriert"
+            return False
+
+        config = []
+        for motor_id in (self.left_motor_id, self.right_motor_id):
+            segment = self._read_register(motor_id, self.encoder_segment_register)
+            order = self._read_register(motor_id, self.encoder_word_order_register)
+            resolution = self._read_register(motor_id, self.encoder_resolution_register)
+            if segment is None or order is None or resolution is None:
+                self._encoder_failure("treibereinstellungen_nicht_lesbar")
+                return False
+            if order not in (0, 1):
+                self._latch_encoder_config_fault('ungueltige_encoder_wortfolge')
+                return False
+            config.append((segment, order == 0, resolution))
+        (self.encoder_segment_left, self.encoder_left_high_word_first,
+         self.encoder_resolution_left) = config[0]
+        (self.encoder_segment_right, self.encoder_right_high_word_first,
+         self.encoder_resolution_right) = config[1]
+        if self.encoder_segment_left != self.encoder_segment_right:
+            self._latch_encoder_config_fault('segmentierung_links_rechts_abweichend')
+            return False
+        if self.encoder_resolution_left != self.encoder_resolution_right:
+            self._latch_encoder_config_fault('encoderaufloesung_links_rechts_abweichend')
+            return False
+        if (self.encoder_expected_segment and
+                self.encoder_segment_left != self.encoder_expected_segment):
+            self._latch_encoder_config_fault('segmentierung_abweichend_von_abnahme')
+            return False
+        if (self.encoder_expected_resolution and
+                self.encoder_resolution_left != self.encoder_expected_resolution):
+            self._latch_encoder_config_fault('encoderaufloesung_abweichend_von_abnahme')
+            return False
+
+        read_started = time.monotonic()
+        pair = self._read_encoder_pair()
+        sample_time = (read_started + time.monotonic()) / 2.0
+        if pair is None:
+            self._encoder_failure("baseline_nicht_lesbar")
+            return False
+        # Beim ersten Start oder nach einem neuen Modbus-Client entsteht nur
+        # die Baseline. Kurze Lesefehler innerhalb desselben Clients behalten
+        # sie; ein echter Reconnect rebased bewusst gegen Controllerresets.
+        self._accept_encoder_pair(pair, sample_time)
+        if self.encoder_connection_initialized:
+            self.modbus_read_failures = 0
+        return self.encoder_connection_initialized
+
+    def _poll_encoder_feedback(self):
+        if not (self.rs485_ready and self.encoder_tracker):
+            return
+        read_started = time.monotonic()
+        if read_started - self.encoder_last_poll < self.encoder_feedback_period_s:
+            return
+        self.encoder_last_poll = read_started
+        pair = self._read_encoder_pair()
+        sample_time = (read_started + time.monotonic()) / 2.0
+        if pair is None:
+            self._encoder_failure("encoderpaar_nicht_lesbar")
+            return
+        self._accept_encoder_pair(pair, sample_time)
+        if self.encoder_feedback_ok:
+            self.modbus_read_failures = 0
+
+    def _accept_encoder_pair(self, pair, timestamp):
+        left, right = pair
+        update = self.encoder_tracker.update(
+            left.position_u32, right.position_u32, timestamp)
+        self.encoder_left_feedback = left
+        self.encoder_right_feedback = right
+        self.meas_motor_rpm_left = left.speed_rpm
+        self.meas_motor_rpm_right = right.speed_rpm
+        self.encoder_last_update = update
+        self.encoder_last_failure_reason = update.reason
+        if update.accepted:
+            self.x = self.encoder_tracker.x_m
+            self.y = self.encoder_tracker.y_m
+            self.yaw = self.encoder_tracker.yaw_rad
+            self.meas_v = update.linear_velocity_mps
+            self.meas_w = update.angular_velocity_radps
+        if update.reason.startswith("unplausibles_delta") or \
+                update.reason.startswith("mehrdeutiges_delta"):
+            self.get_logger().warn(f"Encoderprobe verworfen: {update.reason}")
+        self.encoder_feedback_ok = (update.reason == "ok" or
+                                    update.reason == "baseline_initialisiert")
+        if self.encoder_feedback_ok:
+            self.encoder_last_success = timestamp
+            self.encoder_consecutive_failures = 0
+            self.encoder_new_measurement = True
+        else:
+            self.meas_v = None
+            self.meas_w = None
+            self.encoder_consecutive_failures = self.encoder_failure_stop_count
+        self.encoder_connection_initialized = self.encoder_feedback_ok
+        self.feedback_ok = self.encoder_feedback_ok
+
+    def _read_encoder_pair(self):
+        if self.encoder_left_high_word_first is None or \
+                self.encoder_right_high_word_first is None:
+            return None
+        ids = [(self.left_motor_id, self.encoder_left_high_word_first),
+               (self.right_motor_id, self.encoder_right_high_word_first)]
+        if not self.encoder_poll_left_first:
+            ids.reverse()
+        self.encoder_poll_left_first = not self.encoder_poll_left_first
+        result = {}
+        for motor_id, high_word_first in ids:
+            feedback = self._read_motor_feedback(motor_id, high_word_first)
+            if feedback is None:
+                return None
+            result[motor_id] = feedback
+        return result[self.left_motor_id], result[self.right_motor_id]
+
+    def _read_motor_feedback(self, motor_id, high_word_first):
+        words = self._read_registers(motor_id, self.encoder_position_register, 3)
+        if words is None:
+            return None
+        try:
+            return MotorFeedback(
+                decode_position_words(words[:2], high_word_first),
+                float(decode_i16(words[2])) / self.rpm_scale,
+            )
+        except (TypeError, ValueError) as exc:
+            self.get_logger().warn(f"Ungueltige Encoderantwort Motor {motor_id}: {exc}")
+            return None
+
+    def _encoder_failure(self, reason):
+        self.encoder_feedback_ok = False
+        self.feedback_ok = False
+        self.meas_v = None
+        self.meas_w = None
+        self.encoder_consecutive_failures += 1
+        self.encoder_last_failure_reason = reason
+        if (self.encoder_consecutive_failures >= self.encoder_failure_stop_count or
+                self._encoder_is_stale()):
+            self._send_stop_if_needed()
+
+    def _encoder_feedback_age(self):
+        if self.encoder_last_success is None:
+            return None
+        return max(0.0, time.monotonic() - self.encoder_last_success)
+
+    def _encoder_is_stale(self):
+        age = self._encoder_feedback_age()
+        return age is None or age > self.encoder_stale_timeout_s
+
+    def _encoder_motion_allowed(self):
+        return bool(self.encoder_tracker and self.encoder_tracker.initialized and
+                    self.encoder_connection_initialized and
+                    not self._encoder_is_stale() and
+                    self.encoder_consecutive_failures < self.encoder_failure_stop_count)
+
+    def _encoder_twist(self):
+        if self._encoder_is_stale() or not self.encoder_connection_initialized:
+            return 0.0, 0.0
+        return (self.meas_v or 0.0, self.meas_w or 0.0)
 
     # ------------------- Drehzahl-Rueckmeldung (lesend) -----------------
     def _poll_speed_feedback(self):
@@ -538,6 +1111,9 @@ class BaseHardware(Node):
         Lesezugriffe die Motorregelung nicht ausbremsen.
         """
         if not (self.use_speed_feedback and self.rs485_ready):
+            self.feedback_ok = False
+            self.meas_v = None
+            self.meas_w = None
             return
         now = time.monotonic()
         if now - self.last_feedback_read < self.feedback_period_s:
@@ -548,6 +1124,8 @@ class BaseHardware(Node):
         rpm_r = self._read_motor_speed(self.right_motor_id)
         if rpm_l is None or rpm_r is None:
             self.feedback_ok = False
+            self.meas_v = None
+            self.meas_w = None
             return
 
         self.meas_motor_rpm_left = rpm_l
@@ -568,6 +1146,7 @@ class BaseHardware(Node):
         self.meas_v = (v_left + v_right) / 2.0
         self.meas_w = (v_right - v_left) / self.wheel_separation
         self.feedback_ok = True
+        self.modbus_read_failures = 0
 
     def _read_motor_speed(self, motor_id: int):
         """Ist-Drehzahl in MOTOR-rpm (vorzeichenbehaftet) oder None."""
@@ -578,29 +1157,37 @@ class BaseHardware(Node):
             raw -= 0x10000
         return float(raw) / self.rpm_scale
 
-    def _read_register(self, motor_id: int, address: int):
-        """Ein Halteregister lesen (FC03). Gibt den Rohwert oder None zurueck.
-
-        FC04 (read_input_registers) beantwortet der ESS23-RS NICHT - nur FC03.
-        """
-        if self.modbus_client is None:
+    def _read_registers(self, motor_id: int, address: int, count: int):
+        """Liest FC03-Register atomar; unterstuetzt pymodbus-3.x-Keywords."""
+        if self.modbus_client is None or count < 1:
             return None
         try:
-            for kw in ('device_id', 'slave', 'unit'):
+            for kw in ("device_id", "slave", "unit"):
                 try:
                     result = self.modbus_client.read_holding_registers(
-                        address, count=1, **{kw: motor_id})
+                        address, count=count, **{kw: motor_id})
                 except TypeError:
                     continue
                 if result is None or result.isError():
+                    self._note_modbus_read_failure('modbus_leseantwort_fehlerhaft')
                     return None
-                return int(result.registers[0])
+                words = [int(word) for word in result.registers]
+                if len(words) != count:
+                    self._note_modbus_read_failure('modbus_leseantwort_unvollstaendig')
+                    return None
+                return words
+            self._handle_bus_read_failure('pymodbus_api_unbekannt')
             return None
         except Exception as exc:
+            self._handle_bus_read_failure('modbus_leseexception')
             self.get_logger().warn(
-                f'Modbus-Lesefehler Motor {motor_id}, Reg 0x{address:04X}: {exc}',
+                f"Modbus-Lesefehler Motor {motor_id}, Reg 0x{address:04X}: {exc}",
                 throttle_duration_sec=5.0)
             return None
+
+    def _read_register(self, motor_id: int, address: int):
+        words = self._read_registers(motor_id, address, 1)
+        return words[0] if words else None
 
     def _write_register(self, motor_id: int, address: int, value: int) -> bool:
         if self.modbus_client is None:
@@ -615,13 +1202,20 @@ class BaseHardware(Node):
                     result = self.modbus_client.write_register(address, value, slave=motor_id)
                 except TypeError:
                     result = self.modbus_client.write_register(address, value, unit=motor_id)
-            return result is not None and not result.isError()
+            if result is None or result.isError():
+                self._mark_bus_fault('modbus_schreibantwort_fehlerhaft')
+                return False
+            return True
         except Exception as exc:
-            self.rs485_ready = False
+            self._mark_bus_fault('modbus_schreibexception')
             self.get_logger().error(f'Modbus-Fehler Motor {motor_id}, Reg 0x{address:04X}: {exc}')
             return False
 
     # ======================= Helfer ====================================
+    def _command_timed_out(self) -> bool:
+        age = max(0.0, time.monotonic() - self.last_cmd_monotonic)
+        return age > self.cmd_timeout
+
     def _throttled_log(self, timed_out: bool):
         now = time.monotonic()
         if now - self.last_log_time < 1.0:

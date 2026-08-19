@@ -1,0 +1,36 @@
+# DKMS-Konfiguration fuer den CH341/CH347-USB-zu-I2C-Treiber.
+#
+# WARUM: Ohne DKMS ist dieses Out-of-Tree-Modul nur fuer GENAU den Kernel
+# gebaut, unter dem "make install" lief. Ein Kernel-Update legt ein neues
+# /lib/modules/<version>/ an, in dem das Modul fehlt - der Treiber laedt dann
+# nicht mehr, die VL53-Sensoren sind tot und der collision_monitor reicht ohne
+# Sensordaten jeden Fahrbefehl durch.
+#
+# Genau das ist am 14.08.2026 aufgefallen: Das Modul war fuer 5.15.185-tegra
+# gebaut, der Jetson lief auf 5.15.199-tegra. Siehe docs/PROJECT_MEMORY.md im
+# Roboter-Repository.
+#
+# Mit DKMS baut sich das Modul bei jedem Kernel-Update selbst neu.
+#
+# Einrichten (einmalig, braucht root):
+#   sudo apt install dkms
+#   sudo ln -s ~/ch34x_mphsi_master_linux/driver /usr/src/ch34x-mphsi-1.0
+#   sudo dkms add     -m ch34x-mphsi -v 1.0
+#   sudo dkms build   -m ch34x-mphsi -v 1.0
+#   sudo dkms install -m ch34x-mphsi -v 1.0
+#
+# Pruefen:      dkms status
+# Entfernen:    sudo dkms remove -m ch34x-mphsi -v 1.0 --all
+
+PACKAGE_NAME="ch34x-mphsi"
+PACKAGE_VERSION="1.0"
+
+BUILT_MODULE_NAME[0]="ch34x_mphsi_master"
+DEST_MODULE_LOCATION[0]="/kernel/drivers/usb/misc"
+
+# Das Makefile leitet KERNELDIR selbst aus "uname -r" ab; unter DKMS muss
+# stattdessen der Kernel gebaut werden, fuer den DKMS gerade arbeitet.
+MAKE[0]="make -C ${kernel_source_dir} M=${dkms_tree}/${PACKAGE_NAME}/${PACKAGE_VERSION}/build modules"
+CLEAN="make clean"
+
+AUTOINSTALL="yes"

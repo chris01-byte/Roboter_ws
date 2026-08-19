@@ -6,6 +6,7 @@
 // =====================================================================
 const commandTopic = '/mission_manager/command_json';
 const statusTopic = '/mission_manager/status_json';
+const exploreStatusTopic = '/explore/status_json';
 const estopRequestTopic = '/safety/estop_request';   // -> safety_monitor (K4)
 const estopTopic = '/safety/estop';                  // Ist-Zustand (latched)
 
@@ -16,7 +17,11 @@ const fallbackObjects = ['Tasse', 'Flasche', 'Fernbedienung'];
 let ws = null;
 let connected = false;
 let lastStatus = null;
+let lastStatusAt = 0;
+let lastExploreStatus = null;
+let lastExploreStatusAt = 0;
 let estopActive = null;      // null = unbekannt (kein safety_monitor gesehen)
+let lastEstopAt = 0;
 let lastRejection = '';      // zuletzt gemeldete Auftrags-Ablehnung
 
 const el = (id) => document.getElementById(id);
@@ -71,6 +76,7 @@ function connect() {
     sendRosbridge({ op: 'advertise', topic: commandTopic, type: 'std_msgs/String' });
     sendRosbridge({ op: 'advertise', topic: estopRequestTopic, type: 'std_msgs/Bool' });
     sendRosbridge({ op: 'subscribe', topic: statusTopic, type: 'std_msgs/String' });
+    sendRosbridge({ op: 'subscribe', topic: exploreStatusTopic, type: 'std_msgs/String' });
     sendRosbridge({ op: 'subscribe', topic: estopTopic, type: 'std_msgs/Bool' });
   };
 
@@ -80,6 +86,8 @@ function connect() {
     if (frame.op !== 'publish' || !frame.msg) { return; }
     if (frame.topic === statusTopic && frame.msg.data) {
       handleStatus(frame.msg.data);
+    } else if (frame.topic === exploreStatusTopic && frame.msg.data) {
+      handleExploreStatus(frame.msg.data);
     } else if (frame.topic === estopTopic) {
       updateEstop(frame.msg.data === true);
     }
@@ -87,6 +95,7 @@ function connect() {
 
   ws.onclose = () => {
     setConnectionState(false, 'ROS getrennt');
+    updateExploreAvailability();
     log('rosbridge getrennt');
   };
 
@@ -118,12 +127,14 @@ function describeCommand(command) {
 
 // ---------------------- Not-Aus (safety_monitor, K4) -------------------
 function updateEstop(active) {
+  lastEstopAt = Date.now();
   if (estopActive === active) { return; }
   estopActive = active;
   const btn = el('estopBtn');
   btn.classList.toggle('active', active);
   btn.textContent = active ? 'NOT-AUS FREIGEBEN' : 'NOT-AUS';
   log(active ? 'NOT-AUS AKTIV - Roboter angehalten' : 'Not-Aus freigegeben');
+  updateExploreAvailability();
 }
 
 function toggleEstop() {
@@ -143,6 +154,7 @@ function handleStatus(data) {
   let status;
   try { status = JSON.parse(data); } catch { return; }
   lastStatus = status;
+  lastStatusAt = Date.now();
 
   const state = status.state || 'unknown';
   const phase = status.phase || '-';
@@ -177,6 +189,47 @@ function handleStatus(data) {
   }
 
   fillSelects(status.rooms || fallbackRooms, status.objects || fallbackObjects, status.targets || fallbackTargets);
+  updateExploreAvailability();
+}
+
+function handleExploreStatus(data) {
+  let status;
+  try { status = JSON.parse(data); } catch { return; }
+  if (status.schema_version !== 1 || status.backend_ready !== true) { return; }
+  lastExploreStatus = status;
+  lastExploreStatusAt = Date.now();
+  const ratio = Math.max(0, Math.min(1, Number(status.coverage_ratio || 0)));
+  el('exploreProgress').style.width = `${Math.round(ratio * 100)}%`;
+  el('explorePercent').textContent = `${Math.round(ratio * 100)} %`;
+  el('explorePhase').textContent = status.message || status.phase || '-';
+  el('exploreReady').textContent = status.map_ready_to_save === true
+    ? 'Zielabdeckung erreicht – Karte kann gespeichert werden.'
+    : '';
+  updateExploreAvailability();
+}
+
+function explorationStartAllowed(now = Date.now()) {
+  const terminalStates = ['idle', 'success', 'failed', 'canceled'];
+  return connected &&
+    now - lastStatusAt <= 2500 &&
+    now - lastExploreStatusAt <= 2500 &&
+    now - lastEstopAt <= 2500 &&
+    estopActive === false &&
+    lastStatus?.explore_execution === 'bt_explicit_opt_in' &&
+    terminalStates.includes(lastStatus?.state) &&
+    lastStatus?.cancel_pending !== true &&
+    lastExploreStatus?.backend_ready === true &&
+    lastExploreStatus?.state !== 'running';
+}
+
+function updateExploreAvailability() {
+  const button = el('exploreBtn');
+  if (!button) return;
+  const allowed = explorationStartAllowed();
+  button.disabled = !allowed;
+  button.title = allowed
+    ? 'Adaptive Raumerkundung starten'
+    : 'Warte auf frische Sicherheits-, Missions- und Explorer-Daten';
 }
 
 function fillSelect(selectEl, values) {
@@ -227,7 +280,13 @@ function setupButtons() {
     room: el('carryRoomSelect').value,
     target: el('targetSelect').value
   }));
-  el('exploreBtn').addEventListener('click', () => publishCommand({ type: 'explore' }));
+  el('exploreBtn').addEventListener('click', () => {
+    if (!explorationStartAllowed()) {
+      log('Erkundung gesperrt: echtes Explorer-Backend oder Telemetrie nicht bereit');
+      return;
+    }
+    publishCommand({ type: 'explore' });
+  });
   el('estopBtn').addEventListener('click', toggleEstop);
   el('cancelBtn').addEventListener('click', () => publishCommand({ type: 'cancel' }));
   el('refreshBtn').addEventListener('click', () => {
@@ -241,6 +300,8 @@ function init() {
   fillSelects(fallbackRooms, fallbackObjects, fallbackTargets);
   setupTabs();
   setupButtons();
+  updateExploreAvailability();
+  window.setInterval(updateExploreAvailability, 1000);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }

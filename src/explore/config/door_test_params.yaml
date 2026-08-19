@@ -1,0 +1,36 @@
+# Begrenztes Profil fuer genau den beaufsichtigten Tuer-Abnahmetest.
+# Nur zusammen mit active_drive:=true, enable_auto_explore:=true und einer
+# frischen persoenlichen Fahrfreigabe verwenden. Die normale Wohnungserkundung
+# laedt weiterhin explore_params.yaml ohne diese Ueberschreibungen.
+explore_node:
+  ros__parameters:
+    # Genau eine beaufsichtigte gerade Vorwaertsetappe. Das ist eine physische
+    # Tuerabnahme, keine allgemeine Frontier-Erkundung.
+    max_frontier_goals: 1
+    max_failed_goals: 1
+    coverage_enabled: false
+    overall_timeout_s: 180.0
+    # Die anwesende Person richtet die Front auf die Tuer aus. Ein erneuter
+    # Rundblick waere unmittelbar vor der Schwelle unnoetig und koennte diese
+    # Ausrichtung wieder verschlechtern.
+    initial_scan_enabled: false
+    # Der aktuelle Abnahmestand hat die Plattform bis auf ein Hinterrad durch
+    # die Tuer gebracht. Diese erste LiDAR-Abnahme misst deshalb bewusst eine
+    # 20-cm-Freifahretappe ab dem aktuellen Stand. Nach ihrer realen Abnahme
+    # wird fuer den kompletten Neustartweg auf 0,60 m umgestellt.
+    #
+    # Encoder UND slam_toolbox-Kartenpose liefen auf der Schwelle mit den
+    # durchdrehenden Raedern mit. Der eingefrorene lokale LiDAR-Referenzscan
+    # tut das nicht: Nur echte Bewegung der Raumkontur kann Erfolg melden.
+    door_supervised_wheel_budget_mode: false
+    door_lidar_motion_mode: true
+    door_traverse_distance_m: 0.20
+    door_encoder_wheel_budget_m: 0.60
+    # Beide Raeder bleiben auch am Korrekturgrenzwert vorwaerts angetrieben.
+    door_heading_kp: 0.8
+    door_lateral_kp: 0.8
+    door_max_angular_speed_radps: 0.10
+    # 680-mm-Tuer minus 460-mm-Plattform erlaubt diesen begrenzten Kursfehler
+    # bei gleichzeitig strengerer seitlicher Abbruchgrenze.
+    door_max_heading_error_rad: 0.26
+    door_max_lateral_error_m: 0.06
