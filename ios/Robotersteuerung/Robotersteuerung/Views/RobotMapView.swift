@@ -794,31 +794,6 @@ private struct RobotMapCanvas: View {
                     .padding(10)
                 }
 
-                VStack {
-                    Spacer()
-                    HStack(spacing: 8) {
-                        Spacer()
-                        mapControlButton(
-                            icon: "minus.magnifyingglass",
-                            label: "Verkleinern"
-                        ) {
-                            setScale(scale / 1.5, in: proxy.size)
-                        }
-                        mapControlButton(icon: "arrow.counterclockwise", label: "Ansicht zurücksetzen") {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                scale = 1
-                                offset = .zero
-                            }
-                        }
-                        mapControlButton(
-                            icon: "plus.magnifyingglass",
-                            label: "Vergrößern"
-                        ) {
-                            setScale(scale * 1.5, in: proxy.size)
-                        }
-                    }
-                }
-                .padding(10)
             }
             .contentShape(Rectangle())
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -1085,26 +1060,7 @@ private struct RobotMapCanvas: View {
         )
     }
 
-    private func mapControlButton(
-        icon: String,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.body.weight(.semibold))
-                .frame(width: 44, height: 44)
-                .foregroundStyle(RobotPalette.text)
-                .background(RobotPalette.surfaceRaised.opacity(0.94))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(RobotPalette.line, lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
+
 }
 
 #Preview {
