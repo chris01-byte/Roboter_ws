@@ -122,7 +122,7 @@ struct RobotMapOrigin: Sendable, Equatable, Codable {
     }
 }
 
-struct RobotMapSnapshot: Sendable, Equatable {
+struct RobotMapSnapshot: Sendable, Equatable, Codable {
     static let maximumCellCount = 4_000_000
 
     let width: Int
@@ -132,6 +132,37 @@ struct RobotMapSnapshot: Sendable, Equatable {
     let frameID: String
     let cells: [Int8]
     let contentFingerprint: String
+
+    private enum CodingKeys: String, CodingKey {
+        case width
+        case height
+        case resolution
+        case origin
+        case frameID
+        case cells
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            width: try container.decode(Int.self, forKey: .width),
+            height: try container.decode(Int.self, forKey: .height),
+            resolution: try container.decode(Double.self, forKey: .resolution),
+            origin: try container.decode(RobotMapOrigin.self, forKey: .origin),
+            frameID: try container.decode(String.self, forKey: .frameID),
+            cells: try container.decode([Int].self, forKey: .cells)
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(width, forKey: .width)
+        try container.encode(height, forKey: .height)
+        try container.encode(resolution, forKey: .resolution)
+        try container.encode(origin, forKey: .origin)
+        try container.encode(frameID, forKey: .frameID)
+        try container.encode(cells.map(Int.init), forKey: .cells)
+    }
 
     init(
         width: Int,
@@ -288,6 +319,44 @@ struct RobotMapSnapshot: Sendable, Equatable {
         }
 
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
+struct CachedRobotMapSnapshot: Codable, Equatable, Sendable {
+    let map: RobotMapSnapshot
+    let savedAt: Date
+}
+
+struct RobotMapSnapshotStore: Sendable {
+    private let fileURL: URL
+
+    init(fileURL: URL = Self.defaultFileURL()) {
+        self.fileURL = fileURL
+    }
+
+    func load() -> CachedRobotMapSnapshot? {
+        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        return try? PropertyListDecoder().decode(CachedRobotMapSnapshot.self, from: data)
+    }
+
+    func save(_ snapshot: CachedRobotMapSnapshot) throws {
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        try encoder.encode(snapshot).write(to: fileURL, options: .atomic)
+    }
+
+    private static func defaultFileURL() -> URL {
+        let directory = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first ?? FileManager.default.temporaryDirectory
+        return directory
+            .appendingPathComponent("Robotersteuerung", isDirectory: true)
+            .appendingPathComponent("last-robot-map.plist", isDirectory: false)
     }
 }
 

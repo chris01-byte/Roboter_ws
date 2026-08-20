@@ -91,6 +91,8 @@ enum MapSaveState: Equatable {
 @MainActor
 final class RobotMapController: NSObject, ObservableObject {
     private static let maximumMessageSize = 32 * 1_024 * 1_024
+    private static let offlineSnapshotMinimumSaveInterval: TimeInterval = 15
+
 
     @Published private(set) var streamState: RobotMapStreamState = .inactive
     @Published private(set) var map: RobotMapSnapshot?
@@ -121,6 +123,9 @@ final class RobotMapController: NSObject, ObservableObject {
     private var pendingSemanticFingerprint: String?
     private var pendingSemanticExpectation: SemanticMutationExpectation?
     private var pendingMapSaveRequestID: String?
+    private let snapshotStore = RobotMapSnapshotStore()
+    private var lastPersistedMapFingerprint: String?
+    private var lastMapSnapshotPersistedAt: Date?
 
     var displayedRooms: [SemanticRoom] {
         matchedSemanticMap?.rooms ?? []
@@ -215,6 +220,26 @@ final class RobotMapController: NSObject, ObservableObject {
         return false
     }
 
+    func restoreOfflineSnapshot() {
+        guard map == nil,
+              let cached = snapshotStore.load(),
+              let image = Self.makeImage(
+                  from: RenderedRobotMap(
+                      map: cached.map,
+                      pixels: cached.map.rgbaPixels()
+                  )
+              )
+        else {
+            return
+        }
+
+        map = cached.map
+        mapImage = image
+        lastMapReceivedAt = cached.savedAt
+        lastPersistedMapFingerprint = cached.map.contentFingerprint
+        lastMapSnapshotPersistedAt = cached.savedAt
+    }
+
     func start(bridgeURL: String) {
         let trimmedURL = bridgeURL.trimmingCharacters(in: .whitespacesAndNewlines)
         if shouldStream,
@@ -244,6 +269,7 @@ final class RobotMapController: NSObject, ObservableObject {
     }
 
     func stop() {
+        persistCurrentMapIfNeeded(force: true)
         shouldStream = false
         cancelReconnect()
         closeCurrentSocket(sendUnsubscribe: true)
@@ -362,6 +388,30 @@ final class RobotMapController: NSObject, ObservableObject {
                     "Raum konnte nicht gelöscht werden: \(error.localizedDescription)"
                 )
             }
+        }
+    }
+
+    private func persistCurrentMapIfNeeded(force: Bool) {
+        guard let map, let receivedAt = lastMapReceivedAt,
+              map.contentFingerprint != lastPersistedMapFingerprint
+        else {
+            return
+        }
+
+        if !force,
+           let lastPersistedAt = lastMapSnapshotPersistedAt,
+           receivedAt.timeIntervalSince(lastPersistedAt) <
+               Self.offlineSnapshotMinimumSaveInterval {
+            return
+        }
+
+        let snapshot = CachedRobotMapSnapshot(map: map, savedAt: receivedAt)
+        let store = snapshotStore
+        lastPersistedMapFingerprint = map.contentFingerprint
+        lastMapSnapshotPersistedAt = receivedAt
+
+        Task.detached(priority: .utility) {
+            try? store.save(snapshot)
         }
     }
 
@@ -636,11 +686,13 @@ final class RobotMapController: NSObject, ObservableObject {
                         continue
                     }
 
+                    let receivedAt = Date()
                     self.map = rendered.map
                     self.mapImage = image
-                    self.lastMapReceivedAt = Date()
+                    self.lastMapReceivedAt = receivedAt
                     self.lastProtocolError = nil
                     self.streamState = .live
+                    self.persistCurrentMapIfNeeded(force: false)
                 } catch is CancellationError {
                     return
                 } catch {

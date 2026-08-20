@@ -890,6 +890,25 @@ struct RobotMapProtocolTests {
         #expect(try MapRosbridgeProtocol.decodeMap(from: frame) == nil)
     }
 
+    @Test
+    func offlineMapSnapshotStoreRoundTripsValidatedMap() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let fileURL = directory.appendingPathComponent("last-robot-map.plist")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let stored = CachedRobotMapSnapshot(
+            map: try policyMap(),
+            savedAt: Date(timeIntervalSinceReferenceDate: 123_456)
+        )
+        let store = RobotMapSnapshotStore(fileURL: fileURL)
+
+        try store.save(stored)
+        let loaded = try #require(store.load())
+
+        #expect(loaded == stored)
+    }
+
     private var validOrigin: RobotMapOrigin {
         RobotMapOrigin(
             positionX: -1.25,
