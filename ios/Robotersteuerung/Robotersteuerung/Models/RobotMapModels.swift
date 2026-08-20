@@ -957,6 +957,25 @@ struct RobotMapViewportTransform: Equatable, Sendable {
     let scale: Double
     let offsetX: Double
     let offsetY: Double
+    let rotationRadians: Double
+
+    init(
+        map: RobotMapSnapshot,
+        viewportWidth: Double,
+        viewportHeight: Double,
+        scale: Double,
+        offsetX: Double,
+        offsetY: Double,
+        rotationRadians: Double = 0
+    ) {
+        self.map = map
+        self.viewportWidth = viewportWidth
+        self.viewportHeight = viewportHeight
+        self.scale = scale
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.rotationRadians = rotationRadians
+    }
 
     private var fittedSize: (width: Double, height: Double) {
         let imageAspect = Double(map.width) / Double(map.height)
@@ -970,10 +989,10 @@ struct RobotMapViewportTransform: Equatable, Sendable {
     func screenPoint(for mapPoint: MapPoint) -> ViewportPoint {
         let dx = mapPoint.x - map.origin.positionX
         let dy = mapPoint.y - map.origin.positionY
-        let cosine = cos(map.origin.yaw)
-        let sine = sin(map.origin.yaw)
-        let localX = cosine * dx + sine * dy
-        let localY = -sine * dx + cosine * dy
+        let mapCosine = cos(map.origin.yaw)
+        let mapSine = sin(map.origin.yaw)
+        let localX = mapCosine * dx + mapSine * dy
+        let localY = -mapSine * dx + mapCosine * dy
 
         let fitted = fittedSize
         let originX = (viewportWidth - fitted.width) / 2
@@ -983,22 +1002,33 @@ struct RobotMapViewportTransform: Equatable, Sendable {
             (1 - localY / (Double(map.height) * map.resolution)) * fitted.height
         let centerX = viewportWidth / 2
         let centerY = viewportHeight / 2
+        let scaledX = (unscaledX - centerX) * scale
+        let scaledY = (unscaledY - centerY) * scale
+        let rotationCosine = cos(rotationRadians)
+        let rotationSine = sin(rotationRadians)
         return ViewportPoint(
-            x: centerX + (unscaledX - centerX) * scale + offsetX,
-            y: centerY + (unscaledY - centerY) * scale + offsetY
+            x: centerX + rotationCosine * scaledX - rotationSine * scaledY + offsetX,
+            y: centerY + rotationSine * scaledX + rotationCosine * scaledY + offsetY
         )
     }
 
     func mapPoint(forScreenPoint point: ViewportPoint) -> MapPoint? {
         guard viewportWidth > 0, viewportHeight > 0, scale >= 1,
-              scale.isFinite, offsetX.isFinite, offsetY.isFinite else {
+              scale.isFinite, offsetX.isFinite, offsetY.isFinite,
+              rotationRadians.isFinite else {
             return nil
         }
 
         let centerX = viewportWidth / 2
         let centerY = viewportHeight / 2
-        let unscaledX = centerX + (point.x - offsetX - centerX) / scale
-        let unscaledY = centerY + (point.y - offsetY - centerY) / scale
+        let translatedX = point.x - offsetX - centerX
+        let translatedY = point.y - offsetY - centerY
+        let rotationCosine = cos(rotationRadians)
+        let rotationSine = sin(rotationRadians)
+        let unrotatedX = rotationCosine * translatedX + rotationSine * translatedY
+        let unrotatedY = -rotationSine * translatedX + rotationCosine * translatedY
+        let unscaledX = centerX + unrotatedX / scale
+        let unscaledY = centerY + unrotatedY / scale
         let fitted = fittedSize
         let originX = (viewportWidth - fitted.width) / 2
         let originY = (viewportHeight - fitted.height) / 2
@@ -1011,11 +1041,11 @@ struct RobotMapViewportTransform: Equatable, Sendable {
             Double(map.width) * map.resolution
         let localY = (1 - (unscaledY - originY) / fitted.height) *
             Double(map.height) * map.resolution
-        let cosine = cos(map.origin.yaw)
-        let sine = sin(map.origin.yaw)
+        let mapCosine = cos(map.origin.yaw)
+        let mapSine = sin(map.origin.yaw)
         return MapPoint(
-            x: map.origin.positionX + cosine * localX - sine * localY,
-            y: map.origin.positionY + sine * localX + cosine * localY
+            x: map.origin.positionX + mapCosine * localX - mapSine * localY,
+            y: map.origin.positionY + mapSine * localX + mapCosine * localY
         )
     }
 }
