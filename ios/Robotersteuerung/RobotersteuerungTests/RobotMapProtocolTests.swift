@@ -727,6 +727,50 @@ struct RobotMapProtocolTests {
     }
 
     @Test
+    func viewportTransformRoundTripsGestureRotation() throws {
+        let map = try policyMap()
+        let rotated = RobotMapViewportTransform(
+            map: map,
+            viewportWidth: 400,
+            viewportHeight: 300,
+            scale: 1.8,
+            offsetX: 12,
+            offsetY: -8,
+            rotationRadians: .pi / 3
+        )
+        let unrotated = RobotMapViewportTransform(
+            map: map,
+            viewportWidth: 400,
+            viewportHeight: 300,
+            scale: 1.8,
+            offsetX: 12,
+            offsetY: -8
+        )
+        let worldPoint = MapPoint(x: 4, y: 7)
+        let rotatedScreen = rotated.screenPoint(for: worldPoint)
+        let unrotatedScreen = unrotated.screenPoint(for: worldPoint)
+
+        #expect(
+            abs(rotatedScreen.x - unrotatedScreen.x) > 0.001 ||
+                abs(rotatedScreen.y - unrotatedScreen.y) > 0.001
+        )
+        let roundTrip = try #require(rotated.mapPoint(forScreenPoint: rotatedScreen))
+        #expect(abs(roundTrip.x - worldPoint.x) < 0.000_001)
+        #expect(abs(roundTrip.y - worldPoint.y) < 0.000_001)
+
+        let invalidRotation = RobotMapViewportTransform(
+            map: map,
+            viewportWidth: 400,
+            viewportHeight: 300,
+            scale: 1,
+            offsetX: 0,
+            offsetY: 0,
+            rotationRadians: .infinity
+        )
+        #expect(invalidRotation.mapPoint(forScreenPoint: rotatedScreen) == nil)
+    }
+
+    @Test
     func rgbaRenderingMirrorsRowsVertically() throws {
         let frame = try mapFrame(
             width: 2,

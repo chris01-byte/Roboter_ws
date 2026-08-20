@@ -743,11 +743,17 @@ private struct RobotMapCanvas: View {
 
     @State private var scale: CGFloat = 1
     @State private var offset: CGSize = .zero
+    @State private var rotation: Angle = .zero
     @GestureState private var gestureScale: CGFloat = 1
     @GestureState private var gestureOffset: CGSize = .zero
+    @GestureState private var gestureRotation: Angle = .zero
 
     private var displayedScale: CGFloat {
         min(8, max(1, scale * gestureScale))
+    }
+
+    private var displayedRotation: Angle {
+        Angle(radians: rotation.radians + gestureRotation.radians)
     }
 
     var body: some View {
@@ -756,17 +762,20 @@ private struct RobotMapCanvas: View {
                 Color(hex: 0x0A0D10)
 
                 if let image {
-                    Image(image, scale: 1, label: Text("Wohnungskarte"))
-                        .resizable()
-                        .interpolation(.none)
-                        .aspectRatio(contentMode: .fit)
-                        .scaleEffect(displayedScale)
-                        .offset(
-                            x: offset.width + gestureOffset.width,
-                            y: offset.height + gestureOffset.height
-                        )
+                    ZStack {
+                        Image(image, scale: 1, label: Text("Wohnungskarte"))
+                            .resizable()
+                            .interpolation(.none)
+                            .aspectRatio(contentMode: .fit)
 
-                    semanticOverlay(in: proxy.size)
+                        semanticOverlay(in: proxy.size)
+                    }
+                    .scaleEffect(displayedScale)
+                    .rotationEffect(displayedRotation)
+                    .offset(
+                        x: offset.width + gestureOffset.width,
+                        y: offset.height + gestureOffset.height
+                    )
                 } else {
                     VStack(spacing: 10) {
                         ProgressView()
@@ -794,31 +803,6 @@ private struct RobotMapCanvas: View {
                     .padding(10)
                 }
 
-                VStack {
-                    Spacer()
-                    HStack(spacing: 8) {
-                        Spacer()
-                        mapControlButton(
-                            icon: "minus.magnifyingglass",
-                            label: "Verkleinern"
-                        ) {
-                            setScale(scale / 1.5, in: proxy.size)
-                        }
-                        mapControlButton(icon: "arrow.counterclockwise", label: "Ansicht zurücksetzen") {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                scale = 1
-                                offset = .zero
-                            }
-                        }
-                        mapControlButton(
-                            icon: "plus.magnifyingglass",
-                            label: "Vergrößern"
-                        ) {
-                            setScale(scale * 1.5, in: proxy.size)
-                        }
-                    }
-                }
-                .padding(10)
             }
             .contentShape(Rectangle())
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
@@ -847,11 +831,13 @@ private struct RobotMapCanvas: View {
                 withAnimation(.easeOut(duration: 0.2)) {
                     scale = 1
                     offset = .zero
+                    rotation = .zero
                 }
             }
             .onChange(of: contentID) { _ in
                 scale = 1
                 offset = .zero
+                rotation = .zero
             }
         }
     }
@@ -992,7 +978,8 @@ private struct RobotMapCanvas: View {
             viewportHeight: size.height,
             scale: displayedScale,
             offsetX: offset.width + gestureOffset.width,
-            offsetY: offset.height + gestureOffset.height
+            offsetY: offset.height + gestureOffset.height,
+            rotationRadians: displayedRotation.radians
         )
     }
 
@@ -1007,31 +994,48 @@ private struct RobotMapCanvas: View {
 
     private func combinedGesture(in size: CGSize) -> some Gesture {
         SimultaneousGesture(
-            MagnificationGesture()
-                .updating($gestureScale) { value, state, _ in
+            SimultaneousGesture(
+                MagnificationGesture()
+                    .updating($gestureScale) { value, state, _ in
+                        state = value
+                    }
+                    .onEnded { value in
+                        setScale(scale * value, in: size)
+                    },
+                DragGesture(minimumDistance: 4)
+                    .updating($gestureOffset) { value, state, _ in
+                        guard displayedScale > 1 else {
+                            state = .zero
+                            return
+                        }
+                        state = value.translation
+                    }
+                    .onEnded { value in
+                        guard scale > 1 else {
+                            offset = .zero
+                            return
+                        }
+                        let proposed = CGSize(
+                            width: offset.width + value.translation.width,
+                            height: offset.height + value.translation.height
+                        )
+                        offset = clampedOffset(
+                            proposed,
+                            in: size,
+                            scale: scale,
+                            rotation: displayedRotation
+                        )
+                    }
+            ),
+            RotationGesture()
+                .updating($gestureRotation) { value, state, _ in
                     state = value
                 }
                 .onEnded { value in
-                    setScale(scale * value, in: size)
-                },
-            DragGesture(minimumDistance: 4)
-                .updating($gestureOffset) { value, state, _ in
-                    guard displayedScale > 1 else {
-                        state = .zero
-                        return
-                    }
-                    state = value.translation
-                }
-                .onEnded { value in
-                    guard scale > 1 else {
-                        offset = .zero
-                        return
-                    }
-                    let proposed = CGSize(
-                        width: offset.width + value.translation.width,
-                        height: offset.height + value.translation.height
+                    setRotation(
+                        Angle(radians: rotation.radians + value.radians),
+                        in: size
                     )
-                    offset = clampedOffset(proposed, in: size, scale: scale)
                 }
         )
     }
@@ -1042,18 +1046,45 @@ private struct RobotMapCanvas: View {
             scale = newScale
             offset = newScale == 1
                 ? .zero
-                : clampedOffset(offset, in: size, scale: newScale)
+                : clampedOffset(
+                    offset,
+                    in: size,
+                    scale: newScale,
+                    rotation: displayedRotation
+                )
+        }
+    }
+
+    private func setRotation(_ proposed: Angle, in size: CGSize) {
+        let normalizedRadians = proposed.radians
+            .truncatingRemainder(dividingBy: 2 * Double.pi)
+        let newRotation = Angle(radians: normalizedRadians)
+        withAnimation(.easeOut(duration: 0.16)) {
+            rotation = newRotation
+            offset = scale == 1
+                ? .zero
+                : clampedOffset(
+                    offset,
+                    in: size,
+                    scale: scale,
+                    rotation: newRotation
+                )
         }
     }
 
     private func clampedOffset(
         _ proposed: CGSize,
         in size: CGSize,
-        scale: CGFloat
+        scale: CGFloat,
+        rotation: Angle
     ) -> CGSize {
         let fittedSize = fittedImageSize(in: size)
-        let maximumX = max(0, (fittedSize.width * scale - size.width) / 2)
-        let maximumY = max(0, (fittedSize.height * scale - size.height) / 2)
+        let cosine = abs(CGFloat(cos(rotation.radians)))
+        let sine = abs(CGFloat(sin(rotation.radians)))
+        let rotatedWidth = (cosine * fittedSize.width + sine * fittedSize.height) * scale
+        let rotatedHeight = (sine * fittedSize.width + cosine * fittedSize.height) * scale
+        let maximumX = max(0, (rotatedWidth - size.width) / 2)
+        let maximumY = max(0, (rotatedHeight - size.height) / 2)
         return CGSize(
             width: min(maximumX, max(-maximumX, proposed.width)),
             height: min(maximumY, max(-maximumY, proposed.height))
@@ -1085,26 +1116,7 @@ private struct RobotMapCanvas: View {
         )
     }
 
-    private func mapControlButton(
-        icon: String,
-        label: String,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.body.weight(.semibold))
-                .frame(width: 44, height: 44)
-                .foregroundStyle(RobotPalette.text)
-                .background(RobotPalette.surfaceRaised.opacity(0.94))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(RobotPalette.line, lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
+
 }
 
 #Preview {
