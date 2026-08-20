@@ -113,7 +113,8 @@ def _valid_room_payload(room, map_ref):
     if not isinstance(room, dict):
         return False
     required = {'id', 'name', 'polygon'}
-    if not required <= set(room) or set(room) - required - {'color', 'navigation_goal'}:
+    allowed = required | {'color', 'navigation_goal'}
+    if not required <= set(room) or set(room) - allowed:
         return False
     room_id = room.get('id')
     name = room.get('name')
@@ -153,13 +154,11 @@ def _valid_room_payload(room, map_ref):
     minimum_y = origin['y']
     maximum_x = minimum_x + map_ref['width'] * map_ref['resolution']
     maximum_y = minimum_y + map_ref['height'] * map_ref['resolution']
-    points_to_check = polygon
-    if goal is not None:
-        points_to_check += [(goal['x'], goal['y'])]
+    coordinates = polygon if goal is None else polygon + [(goal['x'], goal['y'])]
     if not all(
         minimum_x - 1e-9 <= x <= maximum_x + 1e-9
         and minimum_y - 1e-9 <= y <= maximum_y + 1e-9
-        for x, y in points_to_check
+        for x, y in coordinates
     ):
         return False
     return goal is None or _point_inside_polygon((goal['x'], goal['y']), polygon)
