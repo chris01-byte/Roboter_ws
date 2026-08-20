@@ -493,7 +493,7 @@ class Room:
     id: str
     name: str
     polygon: tuple[Point2D, ...]
-    navigation_goal: NavigationGoal
+    navigation_goal: Optional[NavigationGoal] = None
     color: Optional[str] = None
 
     @classmethod
@@ -501,8 +501,8 @@ class Room:
         payload = _strict_object(
             value,
             name="room",
-            required={"id", "name", "polygon", "navigation_goal"},
-            optional={"color"},
+            required={"id", "name", "polygon"},
+            optional={"color", "navigation_goal"},
         )
         room_id = payload["id"]
         if not isinstance(room_id, str) or not _SAFE_ID_RE.fullmatch(room_id):
@@ -522,15 +522,17 @@ class Room:
                 raise SemanticValidationError(
                     f"room.polygon[{index}] liegt außerhalb der metrischen Karte."
                 )
-        navigation_goal = NavigationGoal.from_dict(payload["navigation_goal"])
-        if not map_ref.contains_map_point(navigation_goal.point):
-            raise SemanticValidationError(
-                "room.navigation_goal liegt außerhalb der metrischen Karte."
-            )
-        if not point_strictly_inside_polygon(navigation_goal.point, polygon):
-            raise SemanticValidationError(
-                "room.navigation_goal muss strikt innerhalb des Raum-Polygons liegen."
-            )
+        navigation_goal = None
+        if "navigation_goal" in payload:
+            navigation_goal = NavigationGoal.from_dict(payload["navigation_goal"])
+            if not map_ref.contains_map_point(navigation_goal.point):
+                raise SemanticValidationError(
+                    "room.navigation_goal liegt außerhalb der metrischen Karte."
+                )
+            if not point_strictly_inside_polygon(navigation_goal.point, polygon):
+                raise SemanticValidationError(
+                    "room.navigation_goal muss strikt innerhalb des Raum-Polygons liegen."
+                )
         color = payload.get("color")
         if color is not None:
             if not isinstance(color, str) or not _COLOR_RE.fullmatch(color):
@@ -551,8 +553,9 @@ class Room:
             "id": self.id,
             "name": self.name,
             "polygon": [point.as_dict() for point in self.polygon],
-            "navigation_goal": self.navigation_goal.as_dict(),
         }
+        if self.navigation_goal is not None:
+            payload["navigation_goal"] = self.navigation_goal.as_dict()
         if self.color is not None:
             payload["color"] = self.color
         return payload

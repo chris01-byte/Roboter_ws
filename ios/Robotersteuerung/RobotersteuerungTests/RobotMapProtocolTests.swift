@@ -519,6 +519,46 @@ struct RobotMapProtocolTests {
     }
 
     @Test
+    func boundaryOnlyRoomOmitsNavigationGoalOnTheWire() throws {
+        let room = try SemanticRoom(
+            id: "room-boundary-only",
+            name: "Abstellraum",
+            color: "#4FC3F7",
+            polygon: [
+                MapPoint(x: 1, y: 1),
+                MapPoint(x: 5, y: 1),
+                MapPoint(x: 5, y: 5),
+                MapPoint(x: 1, y: 5)
+            ]
+        )
+        let encoded = try JSONEncoder().encode(room)
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        #expect(object["navigation_goal"] == nil)
+        #expect(try JSONDecoder().decode(SemanticRoom.self, from: encoded).navigationGoal == nil)
+
+        let frame = try MapRosbridgeProtocol.upsertRoomFrame(
+            room: room,
+            mapFingerprint: String(repeating: "b", count: 64),
+            baseRevision: 0,
+            requestID: "ios-room-boundary-only"
+        )
+        let command = try innerCommand(frame)
+        let roomPayload = try #require(command["room"] as? [String: Any])
+        #expect(roomPayload["navigation_goal"] == nil)
+
+        let map = try policyMap()
+        let status = policySemanticStatus(
+            for: map,
+            revision: 1,
+            editable: true,
+            rooms: [room]
+        )
+        #expect(status.semanticMap?.isValid == true)
+    }
+
+    @Test
     func boundedTimeoutResolutionNeverRequestsAnAutomaticRetry() {
         #expect(SemanticMapClientPolicy.responseTimeoutNanoseconds == 12_000_000_000)
         #expect(SemanticMapClientPolicy.timeoutResolution(

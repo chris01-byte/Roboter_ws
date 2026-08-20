@@ -550,6 +550,7 @@ class SemanticMapManager(Node):
                     "navigation_goal": room.navigation_goal.as_dict(),
                 }
                 for room in document.rooms
+                if room.navigation_goal is not None
             ]
         )
         payload = {

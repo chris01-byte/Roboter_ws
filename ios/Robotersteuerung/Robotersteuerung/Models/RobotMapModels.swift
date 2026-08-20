@@ -381,7 +381,7 @@ struct SemanticRoom: Codable, Equatable, Identifiable, Sendable {
     let name: String
     let color: String?
     let polygon: [MapPoint]
-    let navigationGoal: SemanticNavigationGoal
+    let navigationGoal: SemanticNavigationGoal?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -396,7 +396,7 @@ struct SemanticRoom: Codable, Equatable, Identifiable, Sendable {
         name: String,
         color: String?,
         polygon: [MapPoint],
-        navigationGoal: SemanticNavigationGoal
+        navigationGoal: SemanticNavigationGoal? = nil
     ) throws {
         let cleanID = id
         let cleanName = name.precomposedStringWithCanonicalMapping
@@ -418,10 +418,12 @@ struct SemanticRoom: Codable, Equatable, Identifiable, Sendable {
         guard SemanticGeometry.isSimplePolygon(polygon) else {
             throw SemanticMapValidationError.invalidPolygon
         }
-        guard navigationGoal.isFinite,
-              (-Double.pi...Double.pi).contains(navigationGoal.yaw),
-              SemanticGeometry.strictlyContains(navigationGoal.point, in: polygon) else {
-            throw SemanticMapValidationError.navigationGoalOutsideRoom
+        if let navigationGoal {
+            guard navigationGoal.isFinite,
+                  (-Double.pi...Double.pi).contains(navigationGoal.yaw),
+                  SemanticGeometry.strictlyContains(navigationGoal.point, in: polygon) else {
+                throw SemanticMapValidationError.navigationGoalOutsideRoom
+            }
         }
         if let color, !SemanticRoom.isValidColor(color) {
             throw SemanticMapValidationError.invalidColor
@@ -441,7 +443,7 @@ struct SemanticRoom: Codable, Equatable, Identifiable, Sendable {
             name: container.decode(String.self, forKey: .name),
             color: container.decodeIfPresent(String.self, forKey: .color),
             polygon: container.decode([MapPoint].self, forKey: .polygon),
-            navigationGoal: container.decode(
+            navigationGoal: container.decodeIfPresent(
                 SemanticNavigationGoal.self,
                 forKey: .navigationGoal
             )
@@ -563,7 +565,7 @@ struct SemanticMapSnapshot: Codable, Equatable, Sendable {
         }
         return mapRef.isValid && revision >= 0 && rooms.allSatisfy { room in
             room.polygon.allSatisfy(mapRef.contains) &&
-                mapRef.contains(room.navigationGoal.point)
+                (room.navigationGoal.map { mapRef.contains($0.point) } ?? true)
         }
     }
 }

@@ -97,6 +97,43 @@ class SemanticMockTests(unittest.TestCase):
         })
         self.assertFalse(conflict['ok'])
 
+    def test_boundary_only_room_is_saved_but_not_exposed_as_mission_room(self):
+        self.state.save_map_for_rooms({
+            'command': 'save',
+            'name': 'wohnung',
+            'request_id': 'ios-map-boundary-only',
+        })
+        fingerprint = self.state.semantic_map['map_ref']['fingerprint']
+        room = {
+            'id': 'room-boundary-only',
+            'name': 'Abstellraum',
+            'polygon': [
+                {'x': -2.0, 'y': -1.0},
+                {'x': 0.0, 'y': -1.0},
+                {'x': 0.0, 'y': 1.0},
+            ],
+        }
+        created = self.state.apply_semantic_command({
+            'command': 'upsert_room',
+            'request_id': 'ios-room-boundary-only',
+            'map_fingerprint': fingerprint,
+            'base_revision': 0,
+            'room': room,
+        })
+        self.assertTrue(created['ok'])
+        self.assertEqual(created['semantic_map']['rooms'], [room])
+        self.assertEqual(self.state.status['rooms'], list(self.state.DEFAULT_ROOMS))
+
+        rejected = self.state.apply_semantic_command({
+            'command': 'upsert_room',
+            'request_id': 'ios-room-null-goal',
+            'map_fingerprint': fingerprint,
+            'base_revision': 1,
+            'room': dict(room, navigation_goal=None),
+        })
+        self.assertFalse(rejected['ok'])
+        self.assertEqual(rejected['event'], 'validation_error')
+
     def test_room_upsert_silent_revision_conflict_and_delete(self):
         self.state.save_map_for_rooms({
             'command': 'save',

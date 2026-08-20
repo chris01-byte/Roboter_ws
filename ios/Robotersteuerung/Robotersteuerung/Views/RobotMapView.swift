@@ -5,6 +5,7 @@ struct RobotMapView: View {
     private enum RoomEditorPhase: Equatable {
         case inactive
         case polygon
+        case details
         case navigationGoal
     }
 
@@ -246,7 +247,7 @@ struct RobotMapView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(room.name)
                         .font(.subheadline.weight(.semibold))
-                    Text("Auf der Karte ausgewählt")
+                    Text(room.navigationGoal == nil ? "Nur Fläche, kein Fahrziel" : "Fahrziel hinterlegt")
                         .font(.caption2)
                         .foregroundStyle(RobotPalette.muted)
                 }
@@ -281,27 +282,12 @@ struct RobotMapView: View {
 
     private var roomEditorControls: some View {
         VStack(alignment: .leading, spacing: 11) {
-            TextField("Raumname, z. B. Wohnzimmer", text: $roomName)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled(false)
-                .padding(.horizontal, 11)
-                .frame(minHeight: 44)
-                .background(RobotPalette.surfaceRaised)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .stroke(RobotPalette.line, lineWidth: 1)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                .disabled(mapController.semanticWriteState.isPending)
-
             if roomEditorPhase == .polygon {
-                Text(
-                    "Tippe mindestens drei Eckpunkte der Raumgrenze in Reihenfolge an. "
-                        + "Zoomen und Verschieben bleiben möglich."
-                )
-                .font(.caption)
-                .foregroundStyle(RobotPalette.muted)
-
+                Text("Schritt 1 von 3: Fläche markieren")
+                    .font(.subheadline.weight(.semibold))
+                Text("Tippe mindestens drei Eckpunkte der Raumgrenze in Reihenfolge an. Zoomen und Verschieben bleiben möglich.")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.muted)
                 HStack(spacing: 9) {
                     Button("Abbrechen") { resetRoomEditor() }
                         .buttonStyle(.bordered)
@@ -314,29 +300,68 @@ struct RobotMapView: View {
                     .buttonStyle(.bordered)
                     .disabled(roomPoints.isEmpty)
                     Spacer()
-                    Button("Fläche fertig") {
-                        if SemanticGeometry.isSimplePolygon(roomPoints) {
-                            roomEditorPhase = .navigationGoal
-                            roomEditorError = nil
-                        } else {
+                    Button("Weiter") {
+                        guard SemanticGeometry.isSimplePolygon(roomPoints) else {
                             roomEditorError = SemanticMapValidationError.invalidPolygon.localizedDescription
+                            return
                         }
+                        roomEditorPhase = .details
+                        roomEditorError = nil
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(RobotPalette.accent)
                     .disabled(!SemanticGeometry.isSimplePolygon(roomPoints))
                 }
+            } else if roomEditorPhase == .details {
+                Text("Schritt 2 von 3: Raum speichern")
+                    .font(.subheadline.weight(.semibold))
+                Text("Ein Fahrziel ist optional. Speichere nur die Fläche oder ergänze einen Zielpunkt für spätere Navigation.")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.muted)
+                TextField("Raumname, z. B. Wohnzimmer", text: $roomName)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled(false)
+                    .padding(.horizontal, 11)
+                    .frame(minHeight: 44)
+                    .background(RobotPalette.surfaceRaised)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(RobotPalette.line, lineWidth: 1)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .disabled(mapController.semanticWriteState.isPending)
+                HStack(spacing: 9) {
+                    Button("Abbrechen") { resetRoomEditor() }
+                        .buttonStyle(.bordered)
+                    Button("Grenze ändern") {
+                        roomEditorPhase = .polygon
+                        roomEditorError = nil
+                    }
+                    .buttonStyle(.bordered)
+                    Spacer()
+                }
+                Button("Nur Fläche speichern") { saveRoom() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RobotPalette.accent)
+                    .frame(maxWidth: .infinity)
+                    .disabled(!canSaveRoom)
+                Button {
+                    roomEditorPhase = .navigationGoal
+                    roomEditorError = nil
+                } label: {
+                    Label("Fahrziel hinzufügen", systemImage: "mappin.and.ellipse")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(!canSaveRoom)
             } else {
-                Text(
-                    "Tippe jetzt innerhalb der Fläche auf einen freien, sicher erreichbaren "
-                        + "Navigationspunkt."
-                )
-                .font(.caption)
-                .foregroundStyle(RobotPalette.muted)
-
+                Text("Schritt 3 von 3: Fahrziel festlegen")
+                    .font(.subheadline.weight(.semibold))
+                Text("Optional: Tippe innerhalb der Fläche auf einen freien, sicher erreichbaren Punkt. Ohne Auswahl bleibt der Raum nur eine Fläche.")
+                    .font(.caption)
+                    .foregroundStyle(RobotPalette.muted)
                 HStack {
-                    Text("Blickrichtung")
-                        .font(.caption)
+                    Text("Blickrichtung").font(.caption)
                     Slider(value: $navigationYaw, in: -Double.pi...Double.pi)
                         .tint(RobotPalette.accent)
                     Text("\(Int(navigationYaw * 180 / .pi))°")
@@ -344,41 +369,38 @@ struct RobotMapView: View {
                         .frame(width: 42, alignment: .trailing)
                 }
                 .disabled(mapController.semanticWriteState.isPending)
-
                 HStack(spacing: 9) {
-                    Button("Abbrechen") { resetRoomEditor() }
-                        .buttonStyle(.bordered)
-                    Button("Grenze ändern") {
+                    Button("Zurück") {
                         navigationGoal = nil
-                        roomEditorPhase = .polygon
+                        roomEditorPhase = .details
+                        roomEditorError = nil
                     }
                     .buttonStyle(.bordered)
                     Spacer()
-                    Button {
+                    Button("Ohne Fahrziel speichern") {
+                        navigationGoal = nil
                         saveRoom()
-                    } label: {
-                        if mapController.semanticWriteState.isPending {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Raum speichern")
-                        }
                     }
+                    .buttonStyle(.bordered)
+                    .disabled(!canSaveRoom)
+                }
+                Button("Mit Fahrziel speichern") { saveRoom() }
                     .buttonStyle(.borderedProminent)
                     .tint(RobotPalette.accent)
-                    .disabled(
-                        navigationGoal == nil ||
-                            roomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                            !mapController.canEditRooms
-                    )
-                }
+                    .frame(maxWidth: .infinity)
+                    .disabled(navigationGoal == nil || !canSaveRoom)
             }
-
             if let error = roomEditorError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(RobotPalette.danger)
             }
         }
+    }
+
+    private var canSaveRoom: Bool {
+        !roomName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            mapController.canEditRooms && !mapController.semanticWriteState.isPending
     }
 
     @ViewBuilder
@@ -671,6 +693,8 @@ struct RobotMapView: View {
             }
             roomPoints.append(point)
             roomEditorError = nil
+        case .details:
+            break
         case .navigationGoal:
             guard SemanticGeometry.strictlyContains(point, in: roomPoints) else {
                 roomEditorError = SemanticMapValidationError
@@ -683,11 +707,6 @@ struct RobotMapView: View {
     }
 
     private func saveRoom() {
-        guard let navigationGoal else {
-            roomEditorError = SemanticMapValidationError
-                .navigationGoalOutsideRoom.localizedDescription
-            return
-        }
         do {
             let colors = [
                 "#4FB3A5", "#F2B84B", "#6FA8FF", "#C77DFF",
@@ -698,11 +717,9 @@ struct RobotMapView: View {
                 name: roomName,
                 color: colors[mapController.displayedRooms.count % colors.count],
                 polygon: roomPoints,
-                navigationGoal: SemanticNavigationGoal(
-                    x: navigationGoal.x,
-                    y: navigationGoal.y,
-                    yaw: navigationYaw
-                )
+                navigationGoal: navigationGoal.map { point in
+                    SemanticNavigationGoal(x: point.x, y: point.y, yaw: navigationYaw)
+                }
             )
             mapController.upsertRoom(room)
             roomEditorError = nil
@@ -762,20 +779,17 @@ private struct RobotMapCanvas: View {
                 Color(hex: 0x0A0D10)
 
                 if let image {
-                    ZStack {
-                        Image(image, scale: 1, label: Text("Wohnungskarte"))
-                            .resizable()
-                            .interpolation(.none)
-                            .aspectRatio(contentMode: .fit)
-
-                        semanticOverlay(in: proxy.size)
-                    }
-                    .scaleEffect(displayedScale)
-                    .rotationEffect(displayedRotation)
-                    .offset(
-                        x: offset.width + gestureOffset.width,
-                        y: offset.height + gestureOffset.height
-                    )
+                    Image(image, scale: 1, label: Text("Wohnungskarte"))
+                        .resizable()
+                        .interpolation(.none)
+                        .aspectRatio(contentMode: .fit)
+                        .scaleEffect(displayedScale)
+                        .rotationEffect(displayedRotation)
+                        .offset(
+                            x: offset.width + gestureOffset.width,
+                            y: offset.height + gestureOffset.height
+                        )
+                    semanticOverlay(in: proxy.size)
                 } else {
                     VStack(spacing: 10) {
                         ProgressView()
@@ -858,22 +872,21 @@ private struct RobotMapCanvas: View {
                     lineWidth: room.id == selectedRoomID ? 3 : 1.5
                 )
 
-                let goal = transform.screenPoint(for: room.navigationGoal.point)
-                let goalRect = CGRect(
-                    x: goal.x - 5,
-                    y: goal.y - 5,
-                    width: 10,
-                    height: 10
-                )
-                context.fill(
-                    Path(ellipseIn: goalRect),
-                    with: .color(color)
-                )
-                context.stroke(
-                    Path(ellipseIn: goalRect),
-                    with: .color(.white),
-                    lineWidth: 1.5
-                )
+                if let navigationGoal = room.navigationGoal {
+                    let goal = transform.screenPoint(for: navigationGoal.point)
+                    let goalRect = CGRect(
+                        x: goal.x - 5,
+                        y: goal.y - 5,
+                        width: 10,
+                        height: 10
+                    )
+                    context.fill(Path(ellipseIn: goalRect), with: .color(color))
+                    context.stroke(
+                        Path(ellipseIn: goalRect),
+                        with: .color(.white),
+                        lineWidth: 1.5
+                    )
+                }
 
                 if let center = polygonCenter(room.polygon, transform: transform) {
                     context.draw(
