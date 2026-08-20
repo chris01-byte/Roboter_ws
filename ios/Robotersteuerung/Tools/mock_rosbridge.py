@@ -112,8 +112,8 @@ def _point_inside_polygon(point, polygon):
 def _valid_room_payload(room, map_ref):
     if not isinstance(room, dict):
         return False
-    required = {'id', 'name', 'polygon', 'navigation_goal'}
-    if not required <= set(room) or set(room) - required - {'color'}:
+    required = {'id', 'name', 'polygon'}
+    if not required <= set(room) or set(room) - required - {'color', 'navigation_goal'}:
         return False
     room_id = room.get('id')
     name = room.get('name')
@@ -139,25 +139,30 @@ def _valid_room_payload(room, map_ref):
         polygon.append((float(raw_point['x']), float(raw_point['y'])))
     if len(set(polygon)) != len(polygon):
         return False
-    goal = room.get('navigation_goal')
-    if not isinstance(goal, dict) or set(goal) != {'x', 'y', 'yaw'}:
-        return False
-    if not all(_finite_number(goal[key]) for key in ('x', 'y', 'yaw')):
-        return False
-    if not -math.pi <= goal['yaw'] <= math.pi:
-        return False
+    goal = None
+    if 'navigation_goal' in room:
+        goal = room['navigation_goal']
+        if not isinstance(goal, dict) or set(goal) != {'x', 'y', 'yaw'}:
+            return False
+        if not all(_finite_number(goal[key]) for key in ('x', 'y', 'yaw')):
+            return False
+        if not -math.pi <= goal['yaw'] <= math.pi:
+            return False
     origin = map_ref['origin']['position']
     minimum_x = origin['x']
     minimum_y = origin['y']
     maximum_x = minimum_x + map_ref['width'] * map_ref['resolution']
     maximum_y = minimum_y + map_ref['height'] * map_ref['resolution']
+    points_to_check = polygon
+    if goal is not None:
+        points_to_check += [(goal['x'], goal['y'])]
     if not all(
         minimum_x - 1e-9 <= x <= maximum_x + 1e-9
         and minimum_y - 1e-9 <= y <= maximum_y + 1e-9
-        for x, y in polygon + [(goal['x'], goal['y'])]
+        for x, y in points_to_check
     ):
         return False
-    return _point_inside_polygon((goal['x'], goal['y']), polygon)
+    return goal is None or _point_inside_polygon((goal['x'], goal['y']), polygon)
 
 
 def _fill_rectangle(cells, x_min, y_min, x_max, y_max, value):
@@ -407,7 +412,11 @@ class RobotState:
         names = (
             []
             if self.semantic_map is None
-            else [room['name'] for room in self.semantic_map['rooms']]
+            else [
+                room['name']
+                for room in self.semantic_map['rooms']
+                if 'navigation_goal' in room
+            ]
         )
         self.status['rooms'] = names or list(self.DEFAULT_ROOMS)
 
