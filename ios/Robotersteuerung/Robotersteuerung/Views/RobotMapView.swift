@@ -48,6 +48,7 @@ struct RobotMapView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             isVisible = true
+            mapController.restoreOfflineSnapshot()
             mapController.start(bridgeURL: robotController.bridgeURL)
         }
         .onDisappear {
@@ -463,7 +464,11 @@ struct RobotMapView: View {
                             .font(.subheadline.weight(.semibold))
                         Spacer()
                         if let date = mapController.lastMapReceivedAt {
-                            Text("Empfangen \(date.formatted(date: .omitted, time: .standard))")
+                            Text(
+                                mapController.streamState.isLive
+                                    ? "Empfangen \(date.formatted(date: .omitted, time: .standard))"
+                                    : "Offline-Stand \(date.formatted(date: .abbreviated, time: .shortened))"
+                            )
                                 .font(.caption2.monospacedDigit())
                                 .foregroundStyle(RobotPalette.muted)
                         }
@@ -561,7 +566,10 @@ struct RobotMapView: View {
         guard let map = mapController.map else {
             return "Live-Ansicht des ROS-Topics /map"
         }
-        return "\(map.width) × \(map.height) Zellen · letzte gültige Karte bleibt sichtbar"
+        let source = mapController.streamState.isLive
+            ? "Live-Karte"
+            : "gespeicherter Offline-Stand"
+        return "\(map.width) × \(map.height) Zellen · \(source)"
     }
 
     private var mapStatusTone: StatusPill.Tone {
