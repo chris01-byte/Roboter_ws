@@ -1,5 +1,31 @@
 # Übertragung auf den realen Roboter
 
+## LiDAR-Nachscan auf gefliestem Boden verworfen (24.08.2026)
+
+Ein beaufsichtigter manueller Nachscan erzeugte lokal fächerfoermig versetzte
+Konturen und ist **kein freigegebener Kartenstand**. Die davor gespeicherte
+Referenz bleibt erhalten; echte Karten, Bilder und ROS-Bags bleiben lokal.
+
+Der Antrieb meldete waehrend der Fahrt fehlerfreie absolute Encoderpositionen,
+RS485 und 0 ungueltige Kommandos. Die anwesende Person beobachtete jedoch
+deutliches Kippeln an groesseren Fliesenfugen. Encoder koennen Schlupf und
+reale Chassisbewegung nicht sehen; gleichzeitig veraendert Kippeln die Ebene
+des 0,66 m hoch montierten 2D-LiDARs. Damit koennen Odometrievorhersage und
+Scan-Matching am selben Bodenereignis gleichzeitig unzuverlaessig werden.
+
+Vor einer neuen Kartierfahrt ist deshalb keine Parameterkorrektur, sondern
+eine Messung vorgesehen: OAK-D-S2-IMU (`/oak/imu/data`), `/odom`, LiDAR und TF
+bei einer kurzen langsamen Fugenfahrt gemeinsam lokal aufzeichnen. Jeder
+Motorstart braucht erneut freie Strecke, Hard-Not-Aus und ausdrueckliche
+persoenliche Freigabe. Danach werden IMU-Fusion, Kipp-Scanfilter und
+mechanische Massnahmen bewertet. Details:
+`docs/SLAM_BODENUNEBENHEITEN.md`.
+
+Aktueller Zustand nach der Diagnose: keine Amadeus-Knoten aktiv, keine
+Motoren bestromt, keine installierte Konfiguration geaendert.
+
+---
+
 ## Mehrraum-Uebergang — sensorisch und extern bestaetigt (18.08.2026)
 
 **Branch:** `fix/polygon-footprint-wohnung`

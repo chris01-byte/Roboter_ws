@@ -17,6 +17,41 @@ Rückfallweg:
 
 ---
 
+## 2026-08-24 — Gefliester Boden kann 2D-SLAM gleichzeitig auf zwei Wegen stoeren
+
+**Entscheidung:** Der lokal fehlerhafte LiDAR-Nachscan wird nicht zum neuen
+Referenzstand. Vor einer Wiederholung werden OAK-IMU, Encoder-Odometrie, LiDAR
+und TF bei einer kurzen Fugenfahrt gemeinsam gemessen. Bis dahin werden weder
+Odometrie- noch SLAM-Parameter aus diesem Lauf nachkalibriert.
+
+**Grund / beobachtete Evidenz:** Der Roboter kippelte sichtbar auf groesseren
+Fliesenfugen. Gleichzeitig entstanden lokal fächerfoermig versetzte Konturen,
+obwohl RS485 und absolute Encoderposition fehlerfrei blieben und der
+Posegraph keinen einzelnen grossen Sprung zeigte. Motorencoder messen
+Motorumdrehung, nicht Schlupf oder reale Chassisbewegung; Kippeln veraendert
+zusaetzlich die feste 2D-Scanebene. Der LiDAR-Abgleich kann normalen Schlupf
+nur korrigieren, solange sein eigener Scan geometrisch verlaesslich bleibt.
+Die vollstaendige, von realen Wohnungsdaten bereinigte Evidenz und der
+Messplan stehen in `docs/SLAM_BODENUNEBENHEITEN.md`.
+
+**Betroffene Dateien und Hardware:** Dokumentation; Antriebsradkontakt,
+Stuetzrollen, Mast/LiDAR und die bereits konfigurierte OAK-D-S2-IMU. Keine
+Laufzeitparameter oder installierten Jetson-Dateien wurden geaendert.
+
+**Teststatus:** Fehlerhafter Graph motorlos erfolgreich zurueckgeladen; die
+Datei ist intakt, die enthaltene lokale Geometrie jedoch nicht akzeptiert.
+Alle fuer die Diagnose gestarteten ROS-Knoten sind beendet.
+
+**Offene Risiken:** Anteil von Radschlupf, Chassiskippeln, Mastbewegung,
+reflektierenden/repetitiven Flaechen und Scan-Warteschlange ist noch nicht
+getrennt gemessen. Die OAK-IMU ist aktiviert, aber noch nicht fusioniert.
+
+**Rueckfallweg:** Der vorherige lokale Posegraph bleibt Referenz; der
+fehlerhafte Nachscan wird nicht geladen. Dokumentation hat keine
+Hardwarewirkung.
+
+---
+
 ## 2026-08-18 — Mehrraum-Uebergang erreicht; Portalwechsel robust gemacht
 
 **Entscheidung:** Der Explorer behandelt eine durch Inflation kuenstlich in
