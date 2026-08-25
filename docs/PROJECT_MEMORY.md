@@ -17,6 +17,69 @@ Rückfallweg:
 
 ---
 
+## 2026-08-25 — Deutsche Objektanfrage liefert reale OAK-3D-Pose
+
+**Entscheidung:** App, Behavior Tree und Service verwenden weiterhin die
+deutschen kanonischen Objektklassen (`Tasse`, `Flasche`, ...). Fuer
+YOLO-World/CLIP werden sie positionsgleich auf robuste englische Modell-Prompts
+(`cup`, `bottle`, ...) abgebildet. Die Zuordnung muss vollstaendig,
+eineindeutig und frei von Leerwerten sein; andernfalls startet der Node nicht.
+Die bestehende Konfidenzschwelle 0,35 bleibt unveraendert.
+
+**Grund / beobachtete Evidenz:** Auf demselben lokal gehaltenen 640-x-360-
+OAK-Bild war die rosa Tasse auf einem Stuhl klar sichtbar. Ein isolierter
+A/B-Lauf auf der RTX 3090 lieferte mit einem gemischten Vokabular fuer `cup`
+Konfidenz 0,322, fuer `Tasse` dagegen nur 0,029 und eine falsche, fast
+bildgrosse Box. Mit dem exakten englischen Betriebsvokabular stieg derselbe
+korrekte `cup`-Treffer auf 0,396. Das Problem war damit der Text-Prompt, nicht
+Tassenposition, Kamera, CUDA oder die bestehende Schwelle.
+
+Nach dem Softwarefix meldete der laufende Server wiederholt nur noch den
+fehlenden Transform `oak_rgb_camera_optical_frame -> map`. Damit waren
+2D-Treffer und gueltiger Tiefenwert bereits belegt. Fuer einen rein motorlosen
+Endtest lief kurz ein ausdruecklich kuenstlicher Identitaets-TF
+`map -> base_link`; zuvor waren weder Karten-TF noch Motor-, Nav2- oder
+Missionsknoten vorhanden. `GetObjectPose(Tasse)` antwortete danach mit
+`found=true`, Konfidenz 0,4048 und der Testkoordinate
+`(x=1,621; y=-0,308; z=0,555) m`. Hoehe und Entfernung waren fuer die Tasse
+auf dem Stuhl plausibel. Diese Pose beweist Projektion und TF-Kette, nicht die
+globale Roboterlokalisierung. Der Test-TF wurde sofort beendet und der
+KI-Dienst neu gestartet, damit die kuenstliche Pose nicht im Objektgedaechtnis
+bleibt. Der abschliessende Serviceaufruf lieferte ohne echten Karten-TF wieder
+fail-closed `found=false`.
+
+**Betroffene Dateien und Hardware:** `semantic_perception_node.py`, Parameter,
+neun Backend-/Prompt-Vertragstests, Paket-README, Inventar und
+Uebergabedokumentation. Real beteiligt waren OAK-D-S2, WLAN und RTX 3090.
+Keine Motor-, Navigations- oder Kartenkomponente lief; Kamerabild und
+Testkoordinaten wurden nicht als Datei ins Repository aufgenommen.
+
+**Teststatus:** Neun direkte Tests, Python-Kompilierung, YAML- und
+Whitespacepruefung sowie Colcon-Build auf Jetson/Python 3.10 bestanden. Auf
+dem KI-Server bestanden dieselben neun Tests und der normale Colcon-Build unter
+Python 3.12. Ein Symlink-Build ist dort mit der vorhandenen
+Setuptools-Kombination nicht kompatibel (`--editable`/`--uninstall`); der
+bewaehrte normale Installationsmodus baut das Paket sauber. Der Live-Test
+bestaetigte englisches Modellvokabular, echte OAK-Box, Tiefe, Kamera-TF,
+positive 3D-Serviceantwort und anschliessenden fail-closed Endzustand.
+
+**Offene Risiken:** Eine positive Pose im echten `map`-Frame verlangt
+gleichzeitig die reale, bestaetigte Lokalisierung. Die 640-x-360-Aufloesung war
+fuer die Referenztasse ausreichend; ein dauerhaftes semantisches
+Hochaufloesungsprofil ist noch nicht vermessen. 1920-x-1080-RGB plus
+ausgerichtete Tiefe ungefiltert ueber WLAN wuerden Bandbreite und Inferenzlast
+stark erhoehen. Das wird als getrennte Sensorkonfigurationsaenderung mit
+komprimierten oder bedarfsgesteuerten Schluesselbildern bewertet, nicht in
+diesen Prompt-Fix gemischt. Der Hintergrundscan fuehrt weiterhin eine
+Vorhersage je Klasse aus.
+
+**Rueckfallweg:** Den Prompt-Commit revertieren und `semantic_perception` im
+normalen Modus neu bauen. Kamera und KI-Dienst koennen getrennt beendet
+werden. Ohne echten Karten-TF bleibt die reale Antwort fail-closed; fuer
+Trockentests ist weiterhin ausschliesslich `model_backend: stub` zulaessig.
+
+---
+
 ## 2026-08-25 — OAK-zu-RTX-Wahrnehmung fail-closed und live verbunden
 
 **Entscheidung:** Ein reales `semantic_perception`-Backend darf bei fehlendem

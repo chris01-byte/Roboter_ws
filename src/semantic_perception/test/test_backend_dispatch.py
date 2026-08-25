@@ -99,10 +99,36 @@ class BackendDispatchTests(unittest.TestCase):
         )
         self.assertIsNone(SemanticPerception._canonical_class(node, 'Schuh'))
 
+    def test_canonical_app_class_uses_english_model_prompt(self):
+        node = SimpleNamespace(
+            _model_prompt_by_class=SemanticPerception._build_model_prompt_map(
+                ['Tasse', 'Flasche'], ['cup', 'bottle']),
+        )
+
+        self.assertEqual(
+            SemanticPerception._model_prompt_for_class(node, 'Tasse'),
+            'cup',
+        )
+        self.assertIsNone(
+            SemanticPerception._model_prompt_for_class(node, 'Schuh'))
+
+    def test_model_prompt_map_rejects_ambiguous_configuration(self):
+        cases = (
+            (['Tasse'], ['cup', 'mug']),
+            (['Tasse', 'tasse'], ['cup', 'mug']),
+            (['Tasse', 'Becher'], ['cup', 'CUP']),
+            (['Tasse'], ['']),
+        )
+        for class_queries, prompts in cases:
+            with self.subTest(class_queries=class_queries, prompts=prompts):
+                with self.assertRaises(ValueError):
+                    SemanticPerception._build_model_prompt_map(
+                        class_queries, prompts)
+
     def test_best_box_filters_by_actual_class_before_confidence(self):
         results = [
             _Result(
-                {0: 'Tasse', 1: 'Flasche'},
+                {0: 'cup', 1: 'bottle'},
                 [
                     _Box(1, 0.99, [0.0, 0.0, 20.0, 20.0]),
                     _Box(0, 0.65, [10.0, 20.0, 30.0, 40.0]),
@@ -112,7 +138,7 @@ class BackendDispatchTests(unittest.TestCase):
         ]
 
         self.assertEqual(
-            SemanticPerception._best_box(results, 'Tasse'),
+            SemanticPerception._best_box(results, 'cup'),
             (40.0, 50.0, 0.80),
         )
-        self.assertIsNone(SemanticPerception._best_box(results, 'Werkzeug'))
+        self.assertIsNone(SemanticPerception._best_box(results, 'tool'))

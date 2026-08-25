@@ -40,9 +40,13 @@ Ablauf: RGB-Bild → YOLO-World mit dem Text-Query → beste 2D-Box → Tiefe an
 (Bibliothek/Bild/Tiefe/Intrinsics/TF), meldet der Node fail-closed `found: false`.
 Eine simulierte Pose wird ausschließlich mit dem ausdrücklich konfigurierten
 `model_backend: "stub"` erzeugt; ein reales Backend fällt niemals auf den Stub zurück.
-Die konfigurierten `class_queries` werden vor dem ersten CUDA-Lauf einmalig als
-gemeinsames YOLO-World-Vokabular gesetzt. Antworten werden danach anhand der
-tatsächlichen Box-Klasse gefiltert; unbekannte Serviceanfragen liefern keinen Treffer.
+Die App- und Servicebegriffe aus `class_queries` bleiben deutsch. Die parallel
+konfigurierten `model_class_prompts` bilden sie positionsgleich auf robuste
+englische YOLO-World-/CLIP-Prompts ab, zum Beispiel `Tasse` auf `cup`. Dieses
+Modellvokabular wird vor dem ersten CUDA-Lauf einmalig gesetzt. Antworten werden
+danach anhand des zugeordneten tatsächlichen Modell-Prompts gefiltert; unbekannte
+Serviceanfragen oder eine mehrdeutige Prompt-Konfiguration liefern keinen Treffer
+beziehungsweise verhindern den Node-Start.
 
 ## Start & Test
 
@@ -73,8 +77,13 @@ Diagnose-Topic; `service_name` entspricht dem, was der Behavior-Tree aufruft
 
 ## Grenzen / offen
 
-- `yoloworld` ist eingebaut, aber noch nicht vollständig mit echter OAK-Pose
-  im `map`-Frame abgenommen (API-Stand ultralytics).
-  `cv_bridge` + `ultralytics` müssen installiert sein; Tiefe/CameraInfo müssen zur Kamera passen.
+- Die positive OAK-3D-Projektion ist mit einem motorlosen Test-TF abgenommen.
+  Eine positive Pose im echten `map`-Frame bleibt an die separat bestaetigte
+  Roboterlokalisierung gebunden. Ohne diesen TF antwortet das reale Backend
+  absichtlich `found: false`.
+- `cv_bridge` + `ultralytics` müssen installiert sein; Tiefe/CameraInfo müssen zur Kamera passen.
+- Die Abnahme lief mit 640 x 360. Ein dauerhaftes hochaufloesendes
+  Semantikprofil braucht eine eigene Messung von WLAN-Datenrate, Latenz und
+  GPU-Last; das 320-x-180-Navigationsprofil bleibt davon getrennt.
 - Für `owlvit`/NanoOWL analog `_detect_with_model()` erweitern.
-- `py_compile` bestanden.
+- `py_compile`, neun direkte Tests und der motorlose OAK-zu-RTX-Livetest bestanden.

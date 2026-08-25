@@ -19,6 +19,7 @@
 #    model_path ............ Zeile 40
 #    depth_scale ........... Zeile 41
 #    class_queries ......... Zeile 44
+#    model_class_prompts ... Zeile 51
 #    publish_catalog ....... Zeile 52
 #    catalog_topic ......... Zeile 53
 #    catalog_period_s ...... Zeile 54
@@ -56,6 +57,16 @@ semantic_perception:
       - Fernbedienung
       - Werkzeug
       - Schluessel
+
+    # Service/App bleiben deutsch. YOLO-World/CLIP erkennt dieselben Objekte
+    # mit englischen Prompts reproduzierbar besser. Die Listen sind bewusst
+    # positionsgleich; eine abweichende Laenge oder Dopplung stoppt den Node.
+    model_class_prompts:
+      - cup
+      - bottle
+      - remote control
+      - tool
+      - key
 
     # --- Wahrnehmungs-Katalog (Diagnose / spaetere Objektfusion) ---
     # /semantic/catalog_json gehoert dem semantic_map_manager als einziger

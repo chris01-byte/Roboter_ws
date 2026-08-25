@@ -1,5 +1,47 @@
 # Übertragung auf den realen Roboter
 
+## OAK-Objektpose mit deutschem Servicevertrag — motorlos bestanden (25.08.2026)
+
+**Branch:** `fix/semantic-object-prompts`
+
+Die externe Klasse bleibt deutsch. `GetObjectPose(Tasse)` und spaeter die App
+muessen nicht auf englische Begriffe umgestellt werden. Intern setzt
+YOLO-World einmalig das validierte Vokabular `cup`, `bottle`,
+`remote control`, `tool`, `key`. Eine unvollstaendige, leere oder doppelte
+Zuordnung verhindert den Node-Start statt eine falsche Klasse zu liefern.
+
+Die A/B-Messung auf demselben lokalen OAK-Bild ergab fuer die sichtbare Tasse
+`cup=0,396`, aber fuer `Tasse=0,029` mit falscher Box. Mit dem Fix erkannte der
+Server die Tasse fortlaufend und erreichte ihre gueltige Tiefe. Ohne
+Lokalisierung endete die Verarbeitung korrekt am fehlenden `map`-TF. Ein
+kurzzeitiger, kuenstlicher Identitaets-TF pruefte ausschliesslich die restliche
+3D-Kette und lieferte `found=true`, Konfidenz 0,4048 und
+`(1,621; -0,308; 0,555) m` im Testframe. Dabei liefen nur OAK, Bildanzeige,
+KI-Server und der Test-TF; keine Motor-, Nav2- oder Missionsknoten. Der TF
+wurde danach entfernt und der KI-Dienst neu gestartet. Die Testpose ist nicht
+mehr im Gedaechtnis; ohne echten Karten-TF antwortet der Service wieder
+`found=false`.
+
+Auf Jetson/Python 3.10 und KI-Server/Python 3.12 bestehen je neun direkte
+Tests, Python-Kompilierung und normaler Colcon-Build. Auf dem KI-Server keinen
+`--symlink-install`-Wechsel verwenden: Die dortige Setuptools-Version lehnt
+die dazu verwendeten Optionen ab. Der normale, isolierte Colcon-Install ist
+der bestaetigte Deploymentpfad.
+
+Die Live-Abnahme nutzte 640 x 360. Das bisherige 320-x-180-Nav2-Profil war
+fuer Sichtkontrolle und kleine Gegenstaende unnoetig knapp; eine dauerhafte
+1920-x-1080-Uebertragung ist aber noch nicht freigegeben. Hochaufloesendes RGB
+und ausgerichtete Tiefe erzeugen roh eine hohe WLAN- und GPU-Last. Ein
+separates Semantikprofil soll deshalb komprimierte oder bedarfsgesteuerte
+Schluesselbilder messen, ohne das schlanke Navigationsprofil zu veraendern.
+
+Rueckfall: Prompt-Commit revertieren, `semantic_perception` normal neu bauen
+und den KI-Dienst neu starten. Ohne reale Lokalisierung keinen statischen
+`map -> base_link` stehen lassen; ein solcher TF war nur fuer diesen
+motorlosen Projektionstest zulaessig.
+
+---
+
 ## Mehrraum-Uebergang — sensorisch und extern bestaetigt (18.08.2026)
 
 **Branch:** `fix/polygon-footprint-wohnung`
