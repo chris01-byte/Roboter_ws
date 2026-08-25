@@ -36,7 +36,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `robot_navigation` | Nav2-Realprofil mit globalem Zwei-Scan-Lokalisierer, fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (drei Kaltstarts an bestaetigter Pose und anschliessendes Raumziel real bestanden) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
-| `semantic_perception` | Objekterkennung auf OAK-Bildern | **erprobt** (OAK→RTX-Datenpfad und fail-closed Inferenz; positive 3D-Pose offen) |
+| `semantic_perception` | Objekterkennung auf OAK-Bildern | **erprobt** (OAK→RTX, fail-closed und positive 3D-Pose mit motorlosem Test-TF; echter Karten-TF offen) |
 | `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung mit reaktiver Not-Aus-Bedingung und sicherem Subscription-Vorlauf | **erprobt** (in realer Explore-Kette abgenommen) |
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
