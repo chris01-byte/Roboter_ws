@@ -36,7 +36,7 @@ curl -fsSL https://ollama.com/install.sh | sh           # Ollama
 ollama pull qwen2.5                                      # LLM des Planers
 pip install ultralytics                                  # YOLO-World
 # dann in src/semantic_perception/config/semantic_perception_params.yaml:
-#   model_backend: "yoloworld"   (ohne Kamerabild: automatischer Stub-Rückfall)
+#   model_backend: "yoloworld"   (ohne vollständige Evidenz: found=false)
 
 # 4) Netzwerk einrichten (Abschnitt unten), Server starten:
 ros2 launch robot_bringup server.launch.py
@@ -49,6 +49,28 @@ ros2 service call /world_model/get_object_pose robot_interfaces/srv/GetObjectPos
 
 Nicht nötig auf dem Server: `navigation2`, `rosbridge` (laufen auf dem Jetson).
 
+### Aktueller Ubuntu-26.04-Server ueber Pixi
+
+Der am 25.08.2026 abgenommene RTX-3090-Server verwendet wegen des neueren
+Hostsystems eine isolierte RoboStack-Humble-/Python-3.12-Umgebung. Das
+mitgelieferte [offboard_pixi.toml](config/offboard_pixi.toml) pinnt neben
+Ultralytics auch dessen nicht automatisch reproduzierbare CLIP-Abhaengigkeit:
+
+```bash
+pixi install --manifest-path \
+  ~/roboter_ws/src/robot_bringup/config/offboard_pixi.toml
+pixi run --manifest-path \
+  ~/roboter_ws/src/robot_bringup/config/offboard_pixi.toml \
+  bash -lc 'cd ~/roboter_ws && colcon build --packages-select \
+    robot_interfaces llm_planner semantic_perception robot_bringup'
+```
+
+Der Serverdienst muss aus dieser Umgebung starten und weiterhin
+`ROS_DOMAIN_ID=42`, `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` sowie sein lokales
+`CYCLONEDDS_URI` setzen. `semantic_perception` ist im Realprofil
+`model_backend: yoloworld`; nur ein ausdrueckliches `stub` darf Testposen
+erzeugen.
+
 ## Netzwerk-Setup (einmalig)
 
 1. **Roboter und Server im selben WLAN.**
@@ -56,13 +78,23 @@ Nicht nötig auf dem Server: `navigation2`, `rosbridge` (laufen auf dem Jetson).
    ```bash
    export ROS_DOMAIN_ID=42
    ```
-3. **Empfohlen (WLAN):** CycloneDDS mit dem mitgelieferten Profil verwenden, damit die
+3. **Erforderlich fuer Custom-Services im abgenommenen WLAN-Pfad:** CycloneDDS
+   auf beiden Rechnern mit dem mitgelieferten Profil verwenden, damit die
    Kommunikation auch ohne Multicast funktioniert:
    ```bash
    export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
    export CYCLONEDDS_URI=file://$(ros2 pkg prefix robot_bringup)/share/robot_bringup/config/cyclonedds_profile.xml
    ```
    In der Profildatei die **echten IPs** von Roboter und Server als `<Peer .../>` eintragen.
+
+   Auf dem Humble-Jetson muss das RMW-Paket vorhanden sein:
+   ```bash
+   sudo apt install ros-humble-rmw-cyclonedds-cpp
+   ```
+   Fast DDS auf dem Jetson gegen CycloneDDS auf dem Server zeigte zwar
+   Standardtopics, uebertrug den benutzerdefinierten `GetObjectPose`-Service
+   im Realtest aber nicht korrekt. Sichtbare Nodes allein reichen daher nicht
+   als Verbindungstest.
 
 > Tipp: Diese `export`-Zeilen in die `~/.bashrc` beider Rechner schreiben, dann gelten sie
 > in jedem Terminal.

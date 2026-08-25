@@ -17,6 +17,71 @@ Rückfallweg:
 
 ---
 
+## 2026-08-25 — OAK-zu-RTX-Wahrnehmung fail-closed und live verbunden
+
+**Entscheidung:** Ein reales `semantic_perception`-Backend darf bei fehlendem
+Bild, Tiefe, CameraInfo, TF, Modell oder einer leeren Detektion niemals auf die
+simulierte Stub-Pose zurueckfallen. Der Stub ist nur noch mit dem expliziten
+Parameter `model_backend: stub` aktiv. YOLO-World erhaelt die konfigurierten
+Klassen genau einmal vor dem ersten CUDA-Lauf; jede Antwort wird danach gegen
+die tatsaechliche Box-Klasse gefiltert. Jetson und KI-Server verwenden fuer
+Custom-Services dieselbe CycloneDDS-Middleware und feste WLAN-Peers.
+
+**Grund / beobachtete Evidenz:** Der laufende Server war auf `yoloworld`
+konfiguriert, meldete aber ohne einen einzigen Kamera-Publisher eine Tasse an
+der festen Stub-Pose `(1,0; 0,0; 0,5) m` mit Konfidenz 0,8 und fuehrte alle
+fuenf Klassen unter `seen`. Nach dem Fail-closed-Fix ergab dieselbe Anfrage
+`found=false`, Konfidenz 0 und `seen=[]`.
+
+Ein zweiter A/B-Test zeigte, dass ein Jetson-Client ueber Fast DDS beim
+benutzerdefinierten `GetObjectPose`-Service einen leeren Request am Server
+ausloeste und keine Antwort erhielt. Nach Installation von
+`rmw_cyclonedds_cpp` und Start mit demselben CycloneDDS-Profil wurde `Tasse`
+unveraendert uebertragen und die Antwort empfangen. Standardtopics allein
+hatten diesen Interoperabilitaetsfehler zuvor verdeckt.
+
+Im ersten echten OAK-Lauf kamen rektifizierte RGB-Bilder mit etwa 13 bis
+20 Hz auf dem Server an. Dabei wurden zunaechst die nicht deklarierte
+Ultralytics-CLIP-Abhaengigkeit und danach wiederholtes `set_classes()` als
+CPU/CUDA-Mischfehler sichtbar. CLIP ist nun auf Commit `68dce32140994dfcb645a1320c4ebdc034fc19fd`
+gepinnt; das gemeinsame Klassenvokabular wird einmalig gesetzt. Der finale
+Mehrzyklustest nutzte die RTX 3090 mit rund 2,1 GB VRAM ohne CLIP-,
+Auto-Install- oder Device-Fehler. Eine Live-Serviceanfrage antwortete in rund
+zwei Sekunden korrekt `found=false`, weil keine bestaetigte Tasse samt
+Karten-TF vorlag.
+
+**Betroffene Dateien und Hardware:** `semantic_perception_node.py`, sieben
+Backend-/Klassenfiltertests, Paket-README, reproduzierbares Pixi-Beispiel im
+`robot_bringup` sowie dieses Projektgedaechtnis. Real beteiligt waren die
+OAK-D-S2 am Jetson, WLAN und die RTX 3090. Auf dem Jetson wurden das
+CycloneDDS-RMW-Paket und ein lokales Peer-Profil installiert; auf dem Server
+liegt die gepinnte CLIP-Abhaengigkeit in der Pixi-Konfiguration ausserhalb des
+Repositories. Keine Motor-, Karten- oder Navigationskomponente lief.
+
+**Teststatus:** Python-Kompilierung, sieben direkte Unittests, Build und
+Colcon-Test auf Jetson/Python 3.10 sowie KI-Server/Python 3.12 bestanden.
+Der motorlose Live-Test bestaetigte USB 3, OAK-D-S2, RGB/Depth/CameraInfo,
+passende Reliable-QoS, WLAN-Datenrate, CUDA-Modelllauf, fail-closed Service und
+sauberes Kamera-Shutdown. Eine frische Jetson-Shell waehlt persistent
+CycloneDDS und bestand den Custom-Service-Test; der KI-Dienst blieb aktiv.
+
+**Offene Risiken:** Noch nicht abgenommen ist ein positiver Treffer mit real
+sichtbarem Referenzobjekt, gueltiger Tiefe und gleichzeitig vorhandenem
+`map -> base_link -> camera`-TF. Erst dieser Test darf eine reale 3D-Objektpose
+freigeben. Der Hintergrundscan fuehrt derzeit fuer jede der fuenf Klassen eine
+eigene Vorhersage aus; eine spaetere Ein-Pass-Auswertung kann die GPU-Last
+senken, darf aber den Klassenfilter nicht umgehen. Die realen Peer-IPs und
+systemd-/Pixi-Dateien bleiben absichtlich lokale Deploymentkonfiguration.
+
+**Rueckfallweg:** Den Wahrnehmungs-Fix revertieren und den Serverdienst neu
+bauen; fuer Trockentests stattdessen bewusst `model_backend: stub` setzen.
+Die Jetson-Shellvariablen lassen sich entfernen, ohne ROS-Pakete zu loeschen;
+ohne gemeinsames RMW sind benutzerdefinierte WLAN-Services jedoch nicht
+freigegeben. Kamera und KI-Server koennen jederzeit getrennt gestoppt werden;
+Navigation und Sicherheit laufen davon unabhaengig onboard.
+
+---
+
 ## 2026-08-25 — Offboard-Nodes unter CycloneDDS sauber beendet
 
 **Entscheidung:** `llm_planner` und `semantic_perception` behandeln beim
