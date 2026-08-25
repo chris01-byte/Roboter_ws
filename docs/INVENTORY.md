@@ -39,7 +39,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `semantic_perception` | Objekterkennung auf OAK-Bildern | **erprobt** (OAK→RTX-Datenpfad und fail-closed Inferenz; positive 3D-Pose offen) |
 | `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung mit reaktiver Not-Aus-Bedingung und sicherem Subscription-Vorlauf | **erprobt** (in realer Explore-Kette abgenommen) |
-| `llm_planner` | Sprachgestützte Auftragsplanung | Entwurf |
+| `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
 | `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |

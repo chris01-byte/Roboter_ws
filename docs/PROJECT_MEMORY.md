@@ -50,6 +50,14 @@ Auto-Install- oder Device-Fehler. Eine Live-Serviceanfrage antwortete in rund
 zwei Sekunden korrekt `found=false`, weil keine bestaetigte Tasse samt
 Karten-TF vorlag.
 
+Der getrennte LLM-End-to-End-Test schickte anschliessend die Anweisung
+`Erkunde bitte die Wohnung` ueber WLAN an Qwen 2.5/Ollama. Nach rund 2,4 s
+publizierte `llm_planner` exakt `{"type":"explore"}` und den Status
+`dispatched`. `/mission_manager/command_json` hatte dabei keinen Subscriber;
+auf dem Jetson liefen weiterhin keine Roboter- oder Fahrknoten. Damit sind
+Sprachmodell, Parser, Validator und DDS-Ausgabe belegt, nicht jedoch eine reale
+Missionsausfuehrung durch diesen Test.
+
 **Betroffene Dateien und Hardware:** `semantic_perception_node.py`, sieben
 Backend-/Klassenfiltertests, Paket-README, reproduzierbares Pixi-Beispiel im
 `robot_bringup` sowie dieses Projektgedaechtnis. Real beteiligt waren die
@@ -64,6 +72,8 @@ Der motorlose Live-Test bestaetigte USB 3, OAK-D-S2, RGB/Depth/CameraInfo,
 passende Reliable-QoS, WLAN-Datenrate, CUDA-Modelllauf, fail-closed Service und
 sauberes Kamera-Shutdown. Eine frische Jetson-Shell waehlt persistent
 CycloneDDS und bestand den Custom-Service-Test; der KI-Dienst blieb aktiv.
+Der motorlose LLM-Vertrag bestand zusaetzlich Anweisung, Ollama-Antwort,
+Validierung, Auftrags-Topic und Status-Topic ohne Missionsempfaenger.
 
 **Offene Risiken:** Noch nicht abgenommen ist ein positiver Treffer mit real
 sichtbarem Referenzobjekt, gueltiger Tiefe und gleichzeitig vorhandenem
