@@ -40,9 +40,13 @@ Ablauf: RGB-Bild → YOLO-World mit dem Text-Query → beste 2D-Box → Tiefe an
 (Bibliothek/Bild/Tiefe/Intrinsics/TF), meldet der Node fail-closed `found: false`.
 Eine simulierte Pose wird ausschließlich mit dem ausdrücklich konfigurierten
 `model_backend: "stub"` erzeugt; ein reales Backend fällt niemals auf den Stub zurück.
-Die konfigurierten `class_queries` werden vor dem ersten CUDA-Lauf einmalig als
-gemeinsames YOLO-World-Vokabular gesetzt. Antworten werden danach anhand der
-tatsächlichen Box-Klasse gefiltert; unbekannte Serviceanfragen liefern keinen Treffer.
+Die App- und Servicebegriffe aus `class_queries` bleiben deutsch. Die parallel
+konfigurierten `model_class_prompts` bilden sie positionsgleich auf robuste
+englische YOLO-World-/CLIP-Prompts ab, zum Beispiel `Tasse` auf `cup`. Dieses
+Modellvokabular wird vor dem ersten CUDA-Lauf einmalig gesetzt. Antworten werden
+danach anhand des zugeordneten tatsächlichen Modell-Prompts gefiltert; unbekannte
+Serviceanfragen oder eine mehrdeutige Prompt-Konfiguration liefern keinen Treffer
+beziehungsweise verhindern den Node-Start.
 
 ## Start & Test
 

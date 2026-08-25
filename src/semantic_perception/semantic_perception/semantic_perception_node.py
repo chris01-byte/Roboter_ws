@@ -46,6 +46,12 @@ import tf2_ros
 import tf2_geometry_msgs  # noqa: F401  (registriert do_transform fuer PointStamped)
 
 
+DEFAULT_CLASS_QUERIES = [
+    'Tasse', 'Flasche', 'Fernbedienung', 'Werkzeug', 'Schluessel']
+DEFAULT_MODEL_CLASS_PROMPTS = [
+    'cup', 'bottle', 'remote control', 'tool', 'key']
+
+
 class SemanticPerception(Node):
     def __init__(self):
         super().__init__('semantic_perception')
@@ -63,7 +69,11 @@ class SemanticPerception(Node):
         self._camera_frame   = self.declare_parameter('camera_frame', 'oak_rgb_camera_optical_frame').value
         self._conf_threshold = float(self.declare_parameter('confidence_threshold', 0.35).value)
         self._class_queries  = list(self.declare_parameter(
-            'class_queries', ['Tasse', 'Flasche', 'Fernbedienung', 'Werkzeug', 'Schluessel']).value)
+            'class_queries', DEFAULT_CLASS_QUERIES).value)
+        self._model_class_prompts = list(self.declare_parameter(
+            'model_class_prompts', DEFAULT_MODEL_CLASS_PROMPTS).value)
+        self._model_prompt_by_class = self._build_model_prompt_map(
+            self._class_queries, self._model_class_prompts)
         self._publish_catalog = bool(self.declare_parameter('publish_catalog', True).value)
         self._catalog_topic = self.declare_parameter(
             'catalog_topic', '/semantic/perception_catalog_json').value
@@ -125,7 +135,8 @@ class SemanticPerception(Node):
         if self._backend == 'yoloworld':
             self.get_logger().info(
                 "Backend 'yoloworld' aktiv - benoetigt ultralytics + Gewichte + Kamera "
-                "(RGB/Depth/CameraInfo). Fehlt etwas, bleibt die Erkennung fail-closed.")
+                "(RGB/Depth/CameraInfo). Fehlende Voraussetzungen liefern keinen Treffer. "
+                f"Modell-Prompts: {self._model_class_prompts}")
         elif self._backend != 'stub':
             self.get_logger().warn(
                 f"Backend '{self._backend}' ist nicht implementiert "
@@ -243,6 +254,30 @@ class SemanticPerception(Node):
     def _matches_known(self, query: str) -> bool:
         return self._canonical_class(query) is not None
 
+    @staticmethod
+    def _build_model_prompt_map(class_queries, model_class_prompts):
+        """Build a fail-closed, one-to-one UI-class -> model-prompt map."""
+        if len(class_queries) != len(model_class_prompts):
+            raise ValueError(
+                'class_queries und model_class_prompts muessen gleich lang sein')
+
+        mapping = {}
+        used_prompts = set()
+        for canonical, prompt in zip(class_queries, model_class_prompts):
+            canonical_key = str(canonical).strip().casefold()
+            model_prompt = str(prompt).strip()
+            prompt_key = model_prompt.casefold()
+            if not canonical_key or not model_prompt:
+                raise ValueError(
+                    'class_queries und model_class_prompts duerfen nicht leer sein')
+            if canonical_key in mapping:
+                raise ValueError(f'Doppelte Objektklasse: {canonical}')
+            if prompt_key in used_prompts:
+                raise ValueError(f'Doppelter Modell-Prompt: {model_prompt}')
+            mapping[canonical_key] = model_prompt
+            used_prompts.add(prompt_key)
+        return mapping
+
     def _canonical_class(self, query: str) -> Optional[str]:
         q = query.strip().casefold()
         if not q:
@@ -252,6 +287,13 @@ class SemanticPerception(Node):
             if normalized and (normalized in q or q in normalized):
                 return item
         return None
+
+    def _model_prompt_for_class(
+            self, canonical_class: Optional[str]) -> Optional[str]:
+        if not canonical_class:
+            return None
+        return self._model_prompt_by_class.get(
+            canonical_class.strip().casefold())
 
     # ------------------------------------------------------------------
     #  ECHTE MODELL-INTEGRATION - YOLO-World (open-vocabulary)
@@ -270,7 +312,7 @@ class SemanticPerception(Node):
             # sein CLIP-Modell auf dem aktuellen Device. Wiederholtes
             # set_classes() nach dem automatischen CUDA-Wechsel mischt sonst
             # CPU-Tokens und GPU-Gewichte.
-            model.set_classes(list(self._class_queries))
+            model.set_classes(list(self._model_class_prompts))
             self._model = model
             self.get_logger().info(f"YOLO-World geladen: {self._model_path}")
         except Exception as exc:
@@ -284,8 +326,9 @@ class SemanticPerception(Node):
         """Open-Vocabulary-Erkennung: Text-Query -> 2D-Box -> 3D-Pose (map)."""
         if self._backend != 'yoloworld':
             return None   # owlvit / NanoOWL hier separat einhaengen
-        target_class = self._canonical_class(query)
-        if target_class is None:
+        canonical_class = self._canonical_class(query)
+        target_prompt = self._model_prompt_for_class(canonical_class)
+        if canonical_class is None or target_prompt is None:
             return None
         model = self._ensure_model()
         if model is None or self._last_image is None:
@@ -302,7 +345,7 @@ class SemanticPerception(Node):
             self.get_logger().warn(f"YOLO-World-Inferenz fehlgeschlagen ({exc}).")
             return None
 
-        box = self._best_box(results, target_class)
+        box = self._best_box(results, target_prompt)
         if box is None:
             return None
         u, v, conf = box
@@ -313,10 +356,10 @@ class SemanticPerception(Node):
         return (pose, conf) if pose is not None else None
 
     @staticmethod
-    def _best_box(results, target_class: str):
+    def _best_box(results, target_prompt: str):
         """Beste Box der angefragten Klasse als (u_mitte, v_mitte, conf)."""
         best = None
-        wanted = target_class.strip().casefold()
+        wanted = target_prompt.strip().casefold()
         try:
             for r in results:
                 if r.boxes is None:
