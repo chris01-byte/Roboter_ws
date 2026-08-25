@@ -17,6 +17,139 @@ Rückfallweg:
 
 ---
 
+## 2026-08-25 — OAK-zu-RTX-Wahrnehmung fail-closed und live verbunden
+
+**Entscheidung:** Ein reales `semantic_perception`-Backend darf bei fehlendem
+Bild, Tiefe, CameraInfo, TF, Modell oder einer leeren Detektion niemals auf die
+simulierte Stub-Pose zurueckfallen. Der Stub ist nur noch mit dem expliziten
+Parameter `model_backend: stub` aktiv. YOLO-World erhaelt die konfigurierten
+Klassen genau einmal vor dem ersten CUDA-Lauf; jede Antwort wird danach gegen
+die tatsaechliche Box-Klasse gefiltert. Jetson und KI-Server verwenden fuer
+Custom-Services dieselbe CycloneDDS-Middleware und feste WLAN-Peers.
+
+**Grund / beobachtete Evidenz:** Der laufende Server war auf `yoloworld`
+konfiguriert, meldete aber ohne einen einzigen Kamera-Publisher eine Tasse an
+der festen Stub-Pose `(1,0; 0,0; 0,5) m` mit Konfidenz 0,8 und fuehrte alle
+fuenf Klassen unter `seen`. Nach dem Fail-closed-Fix ergab dieselbe Anfrage
+`found=false`, Konfidenz 0 und `seen=[]`.
+
+Ein zweiter A/B-Test zeigte, dass ein Jetson-Client ueber Fast DDS beim
+benutzerdefinierten `GetObjectPose`-Service einen leeren Request am Server
+ausloeste und keine Antwort erhielt. Nach Installation von
+`rmw_cyclonedds_cpp` und Start mit demselben CycloneDDS-Profil wurde `Tasse`
+unveraendert uebertragen und die Antwort empfangen. Standardtopics allein
+hatten diesen Interoperabilitaetsfehler zuvor verdeckt.
+
+Im ersten echten OAK-Lauf kamen rektifizierte RGB-Bilder mit etwa 13 bis
+20 Hz auf dem Server an. Dabei wurden zunaechst die nicht deklarierte
+Ultralytics-CLIP-Abhaengigkeit und danach wiederholtes `set_classes()` als
+CPU/CUDA-Mischfehler sichtbar. CLIP ist nun auf Commit `68dce32140994dfcb645a1320c4ebdc034fc19fd`
+gepinnt; das gemeinsame Klassenvokabular wird einmalig gesetzt. Der finale
+Mehrzyklustest nutzte die RTX 3090 mit rund 2,1 GB VRAM ohne CLIP-,
+Auto-Install- oder Device-Fehler. Eine Live-Serviceanfrage antwortete in rund
+zwei Sekunden korrekt `found=false`, weil keine bestaetigte Tasse samt
+Karten-TF vorlag.
+
+Der getrennte LLM-End-to-End-Test schickte anschliessend die Anweisung
+`Erkunde bitte die Wohnung` ueber WLAN an Qwen 2.5/Ollama. Nach rund 2,4 s
+publizierte `llm_planner` exakt `{"type":"explore"}` und den Status
+`dispatched`. `/mission_manager/command_json` hatte dabei keinen Subscriber;
+auf dem Jetson liefen weiterhin keine Roboter- oder Fahrknoten. Damit sind
+Sprachmodell, Parser, Validator und DDS-Ausgabe belegt, nicht jedoch eine reale
+Missionsausfuehrung durch diesen Test.
+
+**Betroffene Dateien und Hardware:** `semantic_perception_node.py`, sieben
+Backend-/Klassenfiltertests, Paket-README, reproduzierbares Pixi-Beispiel im
+`robot_bringup` sowie dieses Projektgedaechtnis. Real beteiligt waren die
+OAK-D-S2 am Jetson, WLAN und die RTX 3090. Auf dem Jetson wurden das
+CycloneDDS-RMW-Paket und ein lokales Peer-Profil installiert; auf dem Server
+liegt die gepinnte CLIP-Abhaengigkeit in der Pixi-Konfiguration ausserhalb des
+Repositories. Keine Motor-, Karten- oder Navigationskomponente lief.
+
+**Teststatus:** Python-Kompilierung, sieben direkte Unittests, Build und
+Colcon-Test auf Jetson/Python 3.10 sowie KI-Server/Python 3.12 bestanden.
+Der motorlose Live-Test bestaetigte USB 3, OAK-D-S2, RGB/Depth/CameraInfo,
+passende Reliable-QoS, WLAN-Datenrate, CUDA-Modelllauf, fail-closed Service und
+sauberes Kamera-Shutdown. Eine frische Jetson-Shell waehlt persistent
+CycloneDDS und bestand den Custom-Service-Test; der KI-Dienst blieb aktiv.
+Der motorlose LLM-Vertrag bestand zusaetzlich Anweisung, Ollama-Antwort,
+Validierung, Auftrags-Topic und Status-Topic ohne Missionsempfaenger.
+
+**Offene Risiken:** Noch nicht abgenommen ist ein positiver Treffer mit real
+sichtbarem Referenzobjekt, gueltiger Tiefe und gleichzeitig vorhandenem
+`map -> base_link -> camera`-TF. Erst dieser Test darf eine reale 3D-Objektpose
+freigeben. Der Hintergrundscan fuehrt derzeit fuer jede der fuenf Klassen eine
+eigene Vorhersage aus; eine spaetere Ein-Pass-Auswertung kann die GPU-Last
+senken, darf aber den Klassenfilter nicht umgehen. Die realen Peer-IPs und
+systemd-/Pixi-Dateien bleiben absichtlich lokale Deploymentkonfiguration.
+
+**Rueckfallweg:** Den Wahrnehmungs-Fix revertieren und den Serverdienst neu
+bauen; fuer Trockentests stattdessen bewusst `model_backend: stub` setzen.
+Die Jetson-Shellvariablen lassen sich entfernen, ohne ROS-Pakete zu loeschen;
+ohne gemeinsames RMW sind benutzerdefinierte WLAN-Services jedoch nicht
+freigegeben. Kamera und KI-Server koennen jederzeit getrennt gestoppt werden;
+Navigation und Sicherheit laufen davon unabhaengig onboard.
+
+---
+
+## 2026-08-25 — Offboard-Nodes unter CycloneDDS sauber beendet
+
+**Entscheidung:** `llm_planner` und `semantic_perception` behandeln beim
+externen Dienststopp neben `KeyboardInterrupt` auch
+`ExternalShutdownException`. `rclpy.shutdown()` wird nur noch aufgerufen,
+solange der Kontext aktiv ist.
+
+**Grund / beobachtete Evidenz:** Beim kontrollierten Neustart des
+KI-Server-Dienstes beendete CycloneDDS den ROS-Kontext vor dem Python-Spin.
+Beide Nodes meldeten deshalb erst `ExternalShutdownException` und danach einen
+zweiten Fehler fuer `rcl_shutdown already called`, obwohl der Neustart
+funktional gelang. Der Guard trennt diesen normalen Dienststopp von echten
+Laufzeitfehlern.
+
+**Betroffene Dateien und Hardware:** Einstiegspunkte von `llm_planner` und
+`semantic_perception`; keine Roboter-Hardware und keine Bewegungssteuerung.
+
+**Teststatus:** Python-Kompilierung, alle 15 Sprachplaner-Tests, erneuter Build
+beider Pakete und ein kontrollierter systemd-Neustart ohne Traceback bestanden.
+
+**Offene Risiken:** Fehler waehrend der eigentlichen Node-Ausfuehrung bleiben
+weiterhin sichtbar und fuehren zum Dienstneustart.
+
+**Rueckfallweg:** Diesen Commit revertieren; dadurch kehren nur die
+Shutdown-Tracebacks zurueck. ROS-Schnittstellen und Modellparameter bleiben
+unveraendert.
+
+---
+
+## 2026-08-25 — LLM-JSON-Tiefenlimit unter Python 3.12 explizit gemacht
+
+**Entscheidung:** Der Offboard-Sprachplaner begrenzt verschachtelte
+LLM-JSON-Antworten jetzt unabhaengig von der Python-Laufzeit auf 64 Ebenen.
+Der Extraktor beruecksichtigt dabei Strings und Escape-Sequenzen, bevor er das
+erste vollstaendige JSON-Objekt an `json.loads` uebergibt.
+
+**Grund / beobachtete Evidenz:** Der vorhandene Negativtest mit 1.500
+Verschachtelungsebenen verliess sich indirekt auf `RecursionError`. Python 3.12
+akzeptierte dieselbe Struktur, sodass sie bis zur Auftragsvalidierung gelangte.
+Eine feste Grenze erhaelt den fail-closed-Vertrag ueber Python-Versionen hinweg.
+
+**Betroffene Dateien und Hardware:** `llm_planner_node.py` und dieser Eintrag.
+Nur der asynchrone Offboard-Planer ist betroffen; keine Aktoren oder
+Roboter-Hardware wurden angesprochen.
+
+**Teststatus:** Alle 15 direkten `llm_planner`-Tests unter Python 3.12 sowie
+Python-Kompilierung bestanden, einschliesslich tiefem JSON, ungueltigem Unicode
+und gueltigem JSON mit Praefixtext.
+
+**Offene Risiken:** Der Planer bleibt eine High-Level-Komponente. Jeder neue
+Auftragstyp muss weiterhin separat in `_validate()` freigegeben werden.
+
+**Rueckfallweg:** Diesen Parser-Commit revertieren. Dadurch gilt wieder das
+laufzeitabhaengige Rekursionsverhalten; Motor-, Navigations- und
+Sicherheitskonfigurationen bleiben unveraendert.
+
+---
+
 ## 2026-08-18 — Mehrraum-Uebergang erreicht; Portalwechsel robust gemacht
 
 **Entscheidung:** Der Explorer behandelt eine durch Inflation kuenstlich in

@@ -1,0 +1,27 @@
+[workspace]
+name = "amadeus-ki-server"
+description = "Reproduzierbare ROS-2-Humble-Laufzeit fuer den Amadeus-KI-Server"
+channels = ["https://prefix.dev/robostack-humble", "conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+python = "3.12.*"
+ros-humble-ros-base = "*"
+ros-humble-cv-bridge = "*"
+ros-humble-tf2-geometry-msgs = "*"
+ros-humble-rmw-cyclonedds-cpp = "*"
+ros-dev-tools = "*"
+requests = "*"
+numpy = "<2"
+cmake = ">=3.22,<4"
+compilers = "*"
+make = "*"
+ninja = "*"
+pkg-config = "*"
+
+[pypi-dependencies]
+ultralytics = "==8.4.128"
+clip = { git = "https://github.com/ultralytics/CLIP.git", rev = "68dce32140994dfcb645a1320c4ebdc034fc19fd" }
+
+[tasks]
+ros-version = "ros2 --version"

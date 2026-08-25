@@ -37,7 +37,12 @@ depth_topic: "/oak/stereo/depth"   # + camera_info_topic passend zur Kamera
 ```
 Ablauf: RGB-Bild → YOLO-World mit dem Text-Query → beste 2D-Box → Tiefe an der Box-Mitte
 + Kamera-Intrinsics → 3D-Punkt → TF in den `map`-Frame. Fehlt eine Voraussetzung
-(Bibliothek/Bild/Tiefe/Intrinsics), fällt der Node automatisch auf den Stub zurück.
+(Bibliothek/Bild/Tiefe/Intrinsics/TF), meldet der Node fail-closed `found: false`.
+Eine simulierte Pose wird ausschließlich mit dem ausdrücklich konfigurierten
+`model_backend: "stub"` erzeugt; ein reales Backend fällt niemals auf den Stub zurück.
+Die konfigurierten `class_queries` werden vor dem ersten CUDA-Lauf einmalig als
+gemeinsames YOLO-World-Vokabular gesetzt. Antworten werden danach anhand der
+tatsächlichen Box-Klasse gefiltert; unbekannte Serviceanfragen liefern keinen Treffer.
 
 ## Start & Test
 
@@ -68,7 +73,8 @@ Diagnose-Topic; `service_name` entspricht dem, was der Behavior-Tree aufruft
 
 ## Grenzen / offen
 
-- `yoloworld` ist eingebaut, aber **in ROS/GPU noch nicht getestet** (API-Stand ultralytics).
+- `yoloworld` ist eingebaut, aber noch nicht vollständig mit echter OAK-Pose
+  im `map`-Frame abgenommen (API-Stand ultralytics).
   `cv_bridge` + `ultralytics` müssen installiert sein; Tiefe/CameraInfo müssen zur Kamera passen.
 - Für `owlvit`/NanoOWL analog `_detect_with_model()` erweitern.
 - `py_compile` bestanden.

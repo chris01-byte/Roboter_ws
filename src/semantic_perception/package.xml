@@ -33,6 +33,8 @@
   <exec_depend>launch_ros</exec_depend>
   <!-- Fuer echte Modelle spaeter: python3-opencv, cv_bridge, ONNX/TensorRT/PyTorch -->
 
+  <test_depend>python3-pytest</test_depend>
+
   <export>
     <build_type>ament_python</build_type>
   </export>

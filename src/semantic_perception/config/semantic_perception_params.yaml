@@ -3,7 +3,9 @@
 # ---------------------------------------------------------------------
 #  Backend 'stub' = simulierte Erkennung (Trockentest, Standard).
 #  Backend 'yoloworld' = echte Open-Vocabulary-Erkennung (ultralytics).
-#    Voraussetzung:  pip install ultralytics  + RGB/Depth/CameraInfo-Topics.
+#    Voraussetzung:  pip install ultralytics  + RGB/Depth/CameraInfo/TF.
+#    Bei fehlender Voraussetzung liefert ein reales Backend keinen Treffer;
+#    simulierte Posen gibt es nur mit dem expliziten Backend "stub".
 #
 #  PARAMETER-INDEX:
 #    model_backend ......... Zeile 30

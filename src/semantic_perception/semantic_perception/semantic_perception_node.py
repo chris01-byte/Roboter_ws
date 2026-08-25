@@ -16,8 +16,9 @@
 #  MODELL-BACKEND (Parameter model_backend):
 #    "stub"      -> simulierte Erkennung fuer den Trockentest (Standard).
 #    "yoloworld" -> YOLO-World (open-vocabulary) via ultralytics, IMPLEMENTIERT.
-#    "owlvit"    -> Platzhalter fuer OWL-ViT / NanoOWL.
+#    "owlvit"    -> Platzhalter fuer OWL-ViT / NanoOWL; meldet keine Treffer.
 #    yoloworld benoetigt: pip install ultralytics + RGB/Depth/CameraInfo-Topics.
+#    WICHTIG: Nur das explizite Backend "stub" darf simulierte Posen liefern.
 #
 #  SCHNITTSTELLEN:
 #    Service : <service_name> (Standard /world_model/get_object_pose)  GetObjectPose
@@ -124,11 +125,11 @@ class SemanticPerception(Node):
         if self._backend == 'yoloworld':
             self.get_logger().info(
                 "Backend 'yoloworld' aktiv - benoetigt ultralytics + Gewichte + Kamera "
-                "(RGB/Depth/CameraInfo). Fehlt etwas, faellt der Node auf den Stub zurueck.")
+                "(RGB/Depth/CameraInfo). Fehlt etwas, bleibt die Erkennung fail-closed.")
         elif self._backend != 'stub':
             self.get_logger().warn(
-                f"Backend '{self._backend}' ist noch ein PLATZHALTER (nur stub/yoloworld "
-                "implementiert). -> Stub-Verhalten.")
+                f"Backend '{self._backend}' ist nicht implementiert "
+                "(nur stub/yoloworld). Erkennung bleibt fail-closed.")
 
     # ======================= Kamera-Eingang =============================
     def _on_image(self, msg: Image):
@@ -215,9 +216,12 @@ class SemanticPerception(Node):
             return None
         if self._backend == 'stub':
             return self._detect_stub(query)
-        # yoloworld / owlvit -> echtes Modell (aktuell Platzhalter -> Stub-Rueckfall)
-        result = self._detect_with_model(query)
-        return result if result is not None else self._detect_stub(query)
+        if self._backend == 'yoloworld':
+            return self._detect_with_model(query)
+        # Ein reales oder unbekanntes Backend darf nie eine simulierte Pose
+        # ausgeben. Fehlende Bilder, Tiefe, TF, Gewichte oder Implementierung
+        # bedeuten deshalb immer "nicht gefunden".
+        return None
 
     def _detect_stub(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
         """Simulierte Erkennung fuer den Trockentest ohne echtes Modell.
@@ -237,13 +241,22 @@ class SemanticPerception(Node):
         return pose, self._stub_confidence
 
     def _matches_known(self, query: str) -> bool:
-        q = query.lower()
-        return any(item.lower() in q or q in item.lower() for item in self._class_queries)
+        return self._canonical_class(query) is not None
+
+    def _canonical_class(self, query: str) -> Optional[str]:
+        q = query.strip().casefold()
+        if not q:
+            return None
+        for item in self._class_queries:
+            normalized = item.strip().casefold()
+            if normalized and (normalized in q or q in normalized):
+                return item
+        return None
 
     # ------------------------------------------------------------------
     #  ECHTE MODELL-INTEGRATION - YOLO-World (open-vocabulary)
     #  Alle schweren Importe sind LAZY -> Node laeuft auch ohne die
-    #  Bibliotheken (dann Stub-Rueckfall). In ROS/GPU NICHT getestet;
+    #  Bibliotheken (dann fail-closed ohne Treffer). In ROS/GPU NICHT getestet;
     #  API-Stand: ultralytics YOLOWorld.
     # ------------------------------------------------------------------
     def _ensure_model(self):
@@ -252,19 +265,28 @@ class SemanticPerception(Node):
             return self._model
         try:
             from ultralytics import YOLOWorld   # pip install ultralytics
-            self._model = YOLOWorld(self._model_path)
+            model = YOLOWorld(self._model_path)
+            # Einmal vor dem ersten predict() setzen. Ultralytics cached dabei
+            # sein CLIP-Modell auf dem aktuellen Device. Wiederholtes
+            # set_classes() nach dem automatischen CUDA-Wechsel mischt sonst
+            # CPU-Tokens und GPU-Gewichte.
+            model.set_classes(list(self._class_queries))
+            self._model = model
             self.get_logger().info(f"YOLO-World geladen: {self._model_path}")
         except Exception as exc:
             self._model_failed = True
             self.get_logger().error(
                 f"YOLO-World nicht ladbar ({exc}) - 'pip install ultralytics' + Gewichte "
-                "pruefen. -> Stub-Rueckfall.")
+                "pruefen. Erkennung bleibt fail-closed.")
         return self._model
 
     def _detect_with_model(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
         """Open-Vocabulary-Erkennung: Text-Query -> 2D-Box -> 3D-Pose (map)."""
         if self._backend != 'yoloworld':
             return None   # owlvit / NanoOWL hier separat einhaengen
+        target_class = self._canonical_class(query)
+        if target_class is None:
+            return None
         model = self._ensure_model()
         if model is None or self._last_image is None:
             return None
@@ -275,13 +297,12 @@ class SemanticPerception(Node):
             self.get_logger().warn(f"Bildkonvertierung fehlgeschlagen ({exc}).")
             return None
         try:
-            model.set_classes([query])   # open-vocabulary Text-Prompt
             results = model.predict(rgb, conf=self._conf_threshold, verbose=False)
         except Exception as exc:
             self.get_logger().warn(f"YOLO-World-Inferenz fehlgeschlagen ({exc}).")
             return None
 
-        box = self._best_box(results)
+        box = self._best_box(results, target_class)
         if box is None:
             return None
         u, v, conf = box
@@ -292,14 +313,22 @@ class SemanticPerception(Node):
         return (pose, conf) if pose is not None else None
 
     @staticmethod
-    def _best_box(results):
-        """Beste Detektion (hoechste Confidence) als (u_mitte, v_mitte, conf)."""
+    def _best_box(results, target_class: str):
+        """Beste Box der angefragten Klasse als (u_mitte, v_mitte, conf)."""
         best = None
+        wanted = target_class.strip().casefold()
         try:
             for r in results:
                 if r.boxes is None:
                     continue
                 for b in r.boxes:
+                    class_index = int(b.cls[0])
+                    if isinstance(r.names, dict):
+                        detected_class = r.names.get(class_index, '')
+                    else:
+                        detected_class = r.names[class_index]
+                    if str(detected_class).strip().casefold() != wanted:
+                        continue
                     conf = float(b.conf[0])
                     x1, y1, x2, y2 = b.xyxy[0].tolist()
                     if best is None or conf > best[2]:
@@ -372,15 +401,18 @@ class SemanticPerception(Node):
 
 
 def main(args=None):
+    from rclpy.executors import ExternalShutdownException
+
     rclpy.init(args=args)
     node = SemanticPerception()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
