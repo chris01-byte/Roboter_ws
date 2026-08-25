@@ -35,6 +35,18 @@ und ausgerichtete Tiefe erzeugen roh eine hohe WLAN- und GPU-Last. Ein
 separates Semantikprofil soll deshalb komprimierte oder bedarfsgesteuerte
 Schluesselbilder messen, ohne das schlanke Navigationsprofil zu veraendern.
 
+Wichtig fuer diesen Folgeschritt: Auch der 640-x-360-Lauf war noch kein
+Dauertest. Nach 17 min 18 s meldete der Treiber erstmals `No Data` und danach
+etwa alle fuenf Sekunden erneut. Am Fehlerbeginn gab es keinen Kernel-USB-
+Reset oder Disconnect. Beim Beenden hing der Komponentencontainer ueber
+SIGINT und SIGTERM hinaus und wurde erst durch die normale Launch-Eskalation
+per SIGKILL beendet; der USB-Disconnect folgte erst dabei. Die Ursache darf
+nicht geraten werden. Vor 1080p deshalb mindestens drei motorlose A/B-Laeufe:
+Kamera nur lokal, Kamera plus Offboard-Subscriber ohne Inferenz und Kamera plus
+Inferenz. Je Lauf Bildrate, Datenluecken, DDS-Transport, Serverlatenz und
+Shutdown protokollieren. Erst danach Transport/Kompression oder Aufloesung
+festlegen.
+
 Rueckfall: Prompt-Commit revertieren, `semantic_perception` normal neu bauen
 und den KI-Dienst neu starten. Ohne reale Lokalisierung keinen statischen
 `map -> base_link` stehen lassen; ein solcher TF war nur fuer diesen
