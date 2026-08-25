@@ -18,7 +18,7 @@ setup(
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
     ],
     install_requires=['setuptools'],
-    tests_require=['pytest'],
+    test_suite='test',
     zip_safe=True,
     maintainer='QTG0900',
     maintainer_email='qtg0900@example.com',

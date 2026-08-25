@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import unittest
 
 from semantic_perception.semantic_perception_node import SemanticPerception
 
@@ -22,41 +23,39 @@ def _subject(backend, model_result=None, stub_result=None):
     return node, calls
 
 
-def test_stub_backend_is_the_only_backend_allowed_to_simulate_a_pose():
-    expected = ('simulated-pose', 0.8)
-    node, calls = _subject('stub', stub_result=expected)
+class BackendDispatchTests(unittest.TestCase):
+    def test_stub_backend_is_the_only_backend_allowed_to_simulate_a_pose(self):
+        expected = ('simulated-pose', 0.8)
+        node, calls = _subject('stub', stub_result=expected)
 
-    assert SemanticPerception._detect(node, 'Tasse') == expected
-    assert calls == {'model': 0, 'stub': 1}
+        self.assertEqual(SemanticPerception._detect(node, 'Tasse'), expected)
+        self.assertEqual(calls, {'model': 0, 'stub': 1})
 
+    def test_yoloworld_returns_a_real_model_result(self):
+        expected = ('model-pose', 0.91)
+        node, calls = _subject(
+            'yoloworld', model_result=expected, stub_result=('fake', 0.8))
 
-def test_yoloworld_returns_a_real_model_result():
-    expected = ('model-pose', 0.91)
-    node, calls = _subject(
-        'yoloworld', model_result=expected, stub_result=('fake', 0.8))
+        self.assertEqual(SemanticPerception._detect(node, 'Tasse'), expected)
+        self.assertEqual(calls, {'model': 1, 'stub': 0})
 
-    assert SemanticPerception._detect(node, 'Tasse') == expected
-    assert calls == {'model': 1, 'stub': 0}
+    def test_yoloworld_failure_never_falls_back_to_a_simulated_pose(self):
+        node, calls = _subject(
+            'yoloworld', model_result=None, stub_result=('fake', 0.8))
 
+        self.assertIsNone(SemanticPerception._detect(node, 'Tasse'))
+        self.assertEqual(calls, {'model': 1, 'stub': 0})
 
-def test_yoloworld_failure_never_falls_back_to_a_simulated_pose():
-    node, calls = _subject(
-        'yoloworld', model_result=None, stub_result=('fake', 0.8))
+    def test_unknown_or_placeholder_backend_fails_closed(self):
+        for backend in ('owlvit', 'unknown'):
+            with self.subTest(backend=backend):
+                node, calls = _subject(backend, stub_result=('fake', 0.8))
 
-    assert SemanticPerception._detect(node, 'Tasse') is None
-    assert calls == {'model': 1, 'stub': 0}
+                self.assertIsNone(SemanticPerception._detect(node, 'Tasse'))
+                self.assertEqual(calls, {'model': 0, 'stub': 0})
 
+    def test_empty_query_never_calls_any_backend(self):
+        node, calls = _subject('stub', stub_result=('fake', 0.8))
 
-def test_unknown_or_placeholder_backend_fails_closed():
-    for backend in ('owlvit', 'unknown'):
-        node, calls = _subject(backend, stub_result=('fake', 0.8))
-
-        assert SemanticPerception._detect(node, 'Tasse') is None
-        assert calls == {'model': 0, 'stub': 0}
-
-
-def test_empty_query_never_calls_any_backend():
-    node, calls = _subject('stub', stub_result=('fake', 0.8))
-
-    assert SemanticPerception._detect(node, '') is None
-    assert calls == {'model': 0, 'stub': 0}
+        self.assertIsNone(SemanticPerception._detect(node, ''))
+        self.assertEqual(calls, {'model': 0, 'stub': 0})
