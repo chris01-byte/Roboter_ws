@@ -4,6 +4,30 @@ import unittest
 from semantic_perception.semantic_perception_node import SemanticPerception
 
 
+class _Values:
+    def __init__(self, values):
+        self._values = values
+
+    def __getitem__(self, index):
+        return self._values[index]
+
+    def tolist(self):
+        return list(self._values)
+
+
+class _Box:
+    def __init__(self, class_index, confidence, xyxy):
+        self.cls = _Values([class_index])
+        self.conf = _Values([confidence])
+        self.xyxy = [_Values(xyxy)]
+
+
+class _Result:
+    def __init__(self, names, boxes):
+        self.names = names
+        self.boxes = boxes
+
+
 def _subject(backend, model_result=None, stub_result=None):
     calls = {'model': 0, 'stub': 0}
 
@@ -59,3 +83,36 @@ class BackendDispatchTests(unittest.TestCase):
 
         self.assertIsNone(SemanticPerception._detect(node, ''))
         self.assertEqual(calls, {'model': 0, 'stub': 0})
+
+    def test_query_is_resolved_to_a_configured_canonical_class(self):
+        node = SimpleNamespace(
+            _class_queries=['Tasse', 'Flasche'],
+        )
+
+        self.assertEqual(
+            SemanticPerception._canonical_class(node, 'finde die TASSE bitte'),
+            'Tasse',
+        )
+        self.assertEqual(
+            SemanticPerception._canonical_class(node, 'flasch'),
+            'Flasche',
+        )
+        self.assertIsNone(SemanticPerception._canonical_class(node, 'Schuh'))
+
+    def test_best_box_filters_by_actual_class_before_confidence(self):
+        results = [
+            _Result(
+                {0: 'Tasse', 1: 'Flasche'},
+                [
+                    _Box(1, 0.99, [0.0, 0.0, 20.0, 20.0]),
+                    _Box(0, 0.65, [10.0, 20.0, 30.0, 40.0]),
+                    _Box(0, 0.80, [20.0, 30.0, 60.0, 70.0]),
+                ],
+            ),
+        ]
+
+        self.assertEqual(
+            SemanticPerception._best_box(results, 'Tasse'),
+            (40.0, 50.0, 0.80),
+        )
+        self.assertIsNone(SemanticPerception._best_box(results, 'Werkzeug'))
