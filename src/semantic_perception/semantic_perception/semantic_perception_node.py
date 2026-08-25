@@ -16,8 +16,9 @@
 #  MODELL-BACKEND (Parameter model_backend):
 #    "stub"      -> simulierte Erkennung fuer den Trockentest (Standard).
 #    "yoloworld" -> YOLO-World (open-vocabulary) via ultralytics, IMPLEMENTIERT.
-#    "owlvit"    -> Platzhalter fuer OWL-ViT / NanoOWL.
+#    "owlvit"    -> Platzhalter fuer OWL-ViT / NanoOWL; meldet keine Treffer.
 #    yoloworld benoetigt: pip install ultralytics + RGB/Depth/CameraInfo-Topics.
+#    WICHTIG: Nur das explizite Backend "stub" darf simulierte Posen liefern.
 #
 #  SCHNITTSTELLEN:
 #    Service : <service_name> (Standard /world_model/get_object_pose)  GetObjectPose
@@ -124,11 +125,11 @@ class SemanticPerception(Node):
         if self._backend == 'yoloworld':
             self.get_logger().info(
                 "Backend 'yoloworld' aktiv - benoetigt ultralytics + Gewichte + Kamera "
-                "(RGB/Depth/CameraInfo). Fehlt etwas, faellt der Node auf den Stub zurueck.")
+                "(RGB/Depth/CameraInfo). Fehlt etwas, bleibt die Erkennung fail-closed.")
         elif self._backend != 'stub':
             self.get_logger().warn(
-                f"Backend '{self._backend}' ist noch ein PLATZHALTER (nur stub/yoloworld "
-                "implementiert). -> Stub-Verhalten.")
+                f"Backend '{self._backend}' ist nicht implementiert "
+                "(nur stub/yoloworld). Erkennung bleibt fail-closed.")
 
     # ======================= Kamera-Eingang =============================
     def _on_image(self, msg: Image):
@@ -215,9 +216,12 @@ class SemanticPerception(Node):
             return None
         if self._backend == 'stub':
             return self._detect_stub(query)
-        # yoloworld / owlvit -> echtes Modell (aktuell Platzhalter -> Stub-Rueckfall)
-        result = self._detect_with_model(query)
-        return result if result is not None else self._detect_stub(query)
+        if self._backend == 'yoloworld':
+            return self._detect_with_model(query)
+        # Ein reales oder unbekanntes Backend darf nie eine simulierte Pose
+        # ausgeben. Fehlende Bilder, Tiefe, TF, Gewichte oder Implementierung
+        # bedeuten deshalb immer "nicht gefunden".
+        return None
 
     def _detect_stub(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
         """Simulierte Erkennung fuer den Trockentest ohne echtes Modell.
@@ -243,7 +247,7 @@ class SemanticPerception(Node):
     # ------------------------------------------------------------------
     #  ECHTE MODELL-INTEGRATION - YOLO-World (open-vocabulary)
     #  Alle schweren Importe sind LAZY -> Node laeuft auch ohne die
-    #  Bibliotheken (dann Stub-Rueckfall). In ROS/GPU NICHT getestet;
+    #  Bibliotheken (dann fail-closed ohne Treffer). In ROS/GPU NICHT getestet;
     #  API-Stand: ultralytics YOLOWorld.
     # ------------------------------------------------------------------
     def _ensure_model(self):
@@ -258,7 +262,7 @@ class SemanticPerception(Node):
             self._model_failed = True
             self.get_logger().error(
                 f"YOLO-World nicht ladbar ({exc}) - 'pip install ultralytics' + Gewichte "
-                "pruefen. -> Stub-Rueckfall.")
+                "pruefen. Erkennung bleibt fail-closed.")
         return self._model
 
     def _detect_with_model(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
