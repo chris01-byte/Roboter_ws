@@ -372,15 +372,18 @@ class SemanticPerception(Node):
 
 
 def main(args=None):
+    from rclpy.executors import ExternalShutdownException
+
     rclpy.init(args=args)
     node = SemanticPerception()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

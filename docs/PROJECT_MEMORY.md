@@ -17,6 +17,35 @@ Rückfallweg:
 
 ---
 
+## 2026-08-25 — Offboard-Nodes unter CycloneDDS sauber beendet
+
+**Entscheidung:** `llm_planner` und `semantic_perception` behandeln beim
+externen Dienststopp neben `KeyboardInterrupt` auch
+`ExternalShutdownException`. `rclpy.shutdown()` wird nur noch aufgerufen,
+solange der Kontext aktiv ist.
+
+**Grund / beobachtete Evidenz:** Beim kontrollierten Neustart des
+KI-Server-Dienstes beendete CycloneDDS den ROS-Kontext vor dem Python-Spin.
+Beide Nodes meldeten deshalb erst `ExternalShutdownException` und danach einen
+zweiten Fehler fuer `rcl_shutdown already called`, obwohl der Neustart
+funktional gelang. Der Guard trennt diesen normalen Dienststopp von echten
+Laufzeitfehlern.
+
+**Betroffene Dateien und Hardware:** Einstiegspunkte von `llm_planner` und
+`semantic_perception`; keine Roboter-Hardware und keine Bewegungssteuerung.
+
+**Teststatus:** Python-Kompilierung, alle 15 Sprachplaner-Tests, erneuter Build
+beider Pakete und ein kontrollierter systemd-Neustart ohne Traceback bestanden.
+
+**Offene Risiken:** Fehler waehrend der eigentlichen Node-Ausfuehrung bleiben
+weiterhin sichtbar und fuehren zum Dienstneustart.
+
+**Rueckfallweg:** Diesen Commit revertieren; dadurch kehren nur die
+Shutdown-Tracebacks zurueck. ROS-Schnittstellen und Modellparameter bleiben
+unveraendert.
+
+---
+
 ## 2026-08-25 — LLM-JSON-Tiefenlimit unter Python 3.12 explizit gemacht
 
 **Entscheidung:** Der Offboard-Sprachplaner begrenzt verschachtelte
