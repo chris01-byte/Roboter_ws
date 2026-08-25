@@ -17,6 +17,35 @@ Rückfallweg:
 
 ---
 
+## 2026-08-25 — LLM-JSON-Tiefenlimit unter Python 3.12 explizit gemacht
+
+**Entscheidung:** Der Offboard-Sprachplaner begrenzt verschachtelte
+LLM-JSON-Antworten jetzt unabhaengig von der Python-Laufzeit auf 64 Ebenen.
+Der Extraktor beruecksichtigt dabei Strings und Escape-Sequenzen, bevor er das
+erste vollstaendige JSON-Objekt an `json.loads` uebergibt.
+
+**Grund / beobachtete Evidenz:** Der vorhandene Negativtest mit 1.500
+Verschachtelungsebenen verliess sich indirekt auf `RecursionError`. Python 3.12
+akzeptierte dieselbe Struktur, sodass sie bis zur Auftragsvalidierung gelangte.
+Eine feste Grenze erhaelt den fail-closed-Vertrag ueber Python-Versionen hinweg.
+
+**Betroffene Dateien und Hardware:** `llm_planner_node.py` und dieser Eintrag.
+Nur der asynchrone Offboard-Planer ist betroffen; keine Aktoren oder
+Roboter-Hardware wurden angesprochen.
+
+**Teststatus:** Alle 15 direkten `llm_planner`-Tests unter Python 3.12 sowie
+Python-Kompilierung bestanden, einschliesslich tiefem JSON, ungueltigem Unicode
+und gueltigem JSON mit Praefixtext.
+
+**Offene Risiken:** Der Planer bleibt eine High-Level-Komponente. Jeder neue
+Auftragstyp muss weiterhin separat in `_validate()` freigegeben werden.
+
+**Rueckfallweg:** Diesen Parser-Commit revertieren. Dadurch gilt wieder das
+laufzeitabhaengige Rekursionsverhalten; Motor-, Navigations- und
+Sicherheitskonfigurationen bleiben unveraendert.
+
+---
+
 ## 2026-08-18 — Mehrraum-Uebergang erreicht; Portalwechsel robust gemacht
 
 **Entscheidung:** Der Explorer behandelt eine durch Inflation kuenstlich in

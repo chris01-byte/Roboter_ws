@@ -40,6 +40,7 @@ from llm_planner.catalog import CatalogValidationError, merge_catalog_json
 
 
 MAXIMUM_LLM_RESPONSE_BYTES = 64 * 1024
+MAXIMUM_LLM_JSON_NESTING = 64
 
 
 class LlmPlanner(Node):
@@ -202,21 +203,50 @@ class LlmPlanner(Node):
             return None
         if encoded_size > MAXIMUM_LLM_RESPONSE_BYTES:
             return None
-        # ```json ... ``` entfernen, dann erstes balanciertes { ... } suchen.
-        depth = 0
+        # Erstes balanciertes JSON-Objekt suchen. Die Tiefe wird explizit
+        # begrenzt, weil neuere Python-Versionen sehr tiefe JSON-Strukturen
+        # akzeptieren koennen, statt mit RecursionError abzubrechen.
+        stack = []
         start = -1
+        in_string = False
+        escaped = False
         for i, ch in enumerate(text):
-            if ch == '{':
-                if depth == 0:
+            if start < 0:
+                if ch == '{':
                     start = i
-                depth += 1
-            elif ch == '}':
-                depth -= 1
-                if depth == 0 and start >= 0:
+                    stack = ['{']
+                continue
+
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif ch == '\\':
+                    escaped = True
+                elif ch == '"':
+                    in_string = False
+                continue
+
+            if ch == '"':
+                in_string = True
+                continue
+            if ch in ('{', '['):
+                stack.append(ch)
+                if len(stack) > MAXIMUM_LLM_JSON_NESTING:
+                    return None
+                continue
+            if ch in ('}', ']'):
+                expected = '{' if ch == '}' else '['
+                if not stack or stack[-1] != expected:
+                    start = -1
+                    stack = []
+                    continue
+                stack.pop()
+                if not stack:
                     try:
                         return json.loads(text[start:i + 1])
                     except (json.JSONDecodeError, UnicodeError, RecursionError):
                         start = -1
+                        stack = []
         return None
 
     # ======================= Regel-Fallback =============================
