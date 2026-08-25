@@ -63,10 +63,25 @@ bewaehrte normale Installationsmodus baut das Paket sauber. Der Live-Test
 bestaetigte englisches Modellvokabular, echte OAK-Box, Tiefe, Kamera-TF,
 positive 3D-Serviceantwort und anschliessenden fail-closed Endzustand.
 
+Der anschliessende Dauerbetrieb deckte getrennt einen offenen Kamerafehler auf:
+Die 640-x-360-Pipeline war ab `22:19:39` bereit und meldete nach 17 min 18 s
+erstmals `Camera diagnostics error: No Data`. Danach kam die Meldung alle etwa
+fuenf Sekunden. Im Kernel-Log steht zum Fehlerbeginn weder USB-Reset noch
+Disconnect; der physische USB-Disconnect erschien erst beim spaeteren
+erzwungenen Prozessende. Der DepthAI-Komponentencontainer reagierte weder auf
+SIGINT noch SIGTERM und wurde vom Launch nach dessen normalen Fristen per
+SIGKILL beendet. Damit ist der positive Objekttest gueltig, ein stabiler
+640-x-360-Dauerstream aber noch nicht abgenommen. Ob DDS-Rueckstau,
+Treiber/Pipeline oder eine andere Lastkopplung die Ursache ist, ist nicht
+gemessen entschieden.
+
 **Offene Risiken:** Eine positive Pose im echten `map`-Frame verlangt
 gleichzeitig die reale, bestaetigte Lokalisierung. Die 640-x-360-Aufloesung war
-fuer die Referenztasse ausreichend; ein dauerhaftes semantisches
-Hochaufloesungsprofil ist noch nicht vermessen. 1920-x-1080-RGB plus
+fuer die Referenztasse ausreichend, ist nach dem spaeten `No Data` aber noch
+nicht dauerstabil. Vor jeder Aufloesungserhoehung muss ein isolierter
+Dauer-A/B-Lauf lokalen Kamerabetrieb, Offboard-Subscriber und Inferenzlast
+trennen. Ein dauerhaftes semantisches Hochaufloesungsprofil ist noch nicht
+vermessen. 1920-x-1080-RGB plus
 ausgerichtete Tiefe ungefiltert ueber WLAN wuerden Bandbreite und Inferenzlast
 stark erhoehen. Das wird als getrennte Sensorkonfigurationsaenderung mit
 komprimierten oder bedarfsgesteuerten Schluesselbildern bewertet, nicht in
