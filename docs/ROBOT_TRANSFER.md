@@ -1,5 +1,70 @@
 # Übertragung auf den realen Roboter
 
+## OAK-RGB-D-Transport dauerstabil und selbstheilend (26.08.2026)
+
+**Branch:** `codex/fix-oak-semantic-stream`
+
+Die OAK-Konfiguration liefert nun tatsaechlich 640 x 360 bei 10 Hz
+(ISP-Faktor 1/3). `oak.launch.py` startet standardmaessig zwei lokale,
+motorunabhaengige Prozesse:
+
+- `oak_rectifier` publiziert `/oak/rgb/image_rect` fuer RTAB-Map ohne
+  Exact-Sync zwischen Bild und der stabilen CameraInfo;
+- `semantic_stream_relay` publiziert nur 2 Hz JPEG-RGB, verlustfreies
+  16UC1-PNG und CameraInfo unter `/oak/semantic/...`.
+
+Der KI-Server muss `compressed_input: true` und ausschliesslich diese drei
+Semantiktopics verwenden. Direkte Serverabonnements von
+`/oak/rgb/image_raw`, `/oak/rgb/image_rect` oder `/oak/stereo/image_raw` sind
+nicht zulaessig. Status:
+
+```bash
+ros2 topic echo /oak/rgb/rectifier_status_json --once
+ros2 topic echo /oak/semantic/stream_status_json --once
+```
+
+`ready` muss wahr sein, Bildformen muessen 640 x 360 zeigen und
+`codec_errors`, `stale_rgb`, `stale_depth` muessen null bleiben. Ein Wert in
+`subscription_restarts` dokumentiert einen automatisch geheilten lokalen
+DDS-Endpunktstillstand und darf nicht verschwiegen werden.
+
+Motorlose Abnahme im isolierten Overlay: OAK 33 min 49 s ohne spaeten USB-
+oder Geraetefehler; Relay 17 min 31 s mit 2.068 Paaren und null Codec-/
+Altersfehlern; 24 Semantik- und 7 Bring-up-Tests bestanden. Je ein gezielter
+2,5-s-Ausfall von Tiefe und RGB wurde durch genau einen Endpoint-Neuaufbau
+geheilt. Nach leerem RTX-Objektgedaechtnis lieferte die sichtbare Tasse eine
+echte positive 3D-Pose mit Konfidenz 0,694. Keine Motor-, Nav2-, VL53- oder
+Missionskomponente lief.
+
+**Produktionsdeployment:** Commit `a2d8ccc` ist auf dem Jetson als normal
+kopiertes, nicht vom temporaeren Worktree abhaengiges Colcon-Install aktiv.
+Ersetzt wurden ausschliesslich `install/robot_bringup` und
+`install/semantic_perception`. Der vorherige vollstaendige Paketstand liegt
+lokal unter
+`~/.local/share/amadeus/deploy-backups/oak-stream-a2d8ccc-predeploy/`.
+Die schmutzige Haupt-Arbeitskopie wurde nicht veraendert.
+
+Auf dem KI-Server wurde derselbe Commit normal unter Python 3.12 gebaut; dort
+bestanden 24/24 Tests. Die externe Produktions-YAML nutzt jetzt nur die
+komprimierten Semantiktopics. Ihr Vorgänger liegt als
+`~/.config/amadeus-server/semantic_perception.yaml.pre-a2d8ccc-20260826` vor.
+`amadeus-ki.service` ist aktiv und startet genau einen `llm_planner` sowie
+einen `semantic_perception` aus dem Produktions-Install.
+
+Der anschliessende Produktionsstart aus `/home/p/roboter_ws/install` meldete
+nach 190 Paaren weiterhin `ready=true`, 0,052 s Publikationsalter, null stale
+Frames und null Codecfehler. Der Entzerrer meldete 957/957 Bilder, null Drops
+und 640 x 360. Genau ein RTX-Subscriber hing am komprimierten RGB-Topic. Eine
+Tassenabfrage blieb ohne laufende Kartenlokalisierung korrekt fail-closed im
+`map`-Frame. Aktiv blieben nur OAK, Entzerrer, Relay und beide KI-Server-Nodes;
+Motoren, Nav2, VL53 und Missionsausfuehrung waren aus.
+
+Rueckfall: OAK und KI-Dienst stoppen, auf dem Jetson die beiden gesicherten
+Paketverzeichnisse zurueckkopieren und auf dem Server die gesicherte YAML
+wiederherstellen; alternativ `semantic_relay:=false` oder Commit revertieren.
+
+---
+
 ## OAK-Objektpose mit deutschem Servicevertrag — motorlos bestanden (25.08.2026)
 
 **Branch:** `fix/semantic-object-prompts`

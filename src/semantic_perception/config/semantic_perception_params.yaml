@@ -34,14 +34,13 @@ semantic_perception:
     service_name: "/world_model/get_object_pose"
 
     # --- Kamera / Frames ---
-    # [KORRIGIERT 27.07.2026] Die Namen waren geraten und existierten nicht.
-    # Real vom depthai_ros_driver (siehe robot_bringup/launch/oak.launch.py):
-    #   /oak/rgb/image_rect   (rektifiziert - fuer Erkennung besser als image_raw)
-    #   /oak/stereo/image_raw (Tiefe; mit i_align_depth deckungsgleich zum RGB)
-    # Frueher stand hier "/oak/rgb" und "/oak/stereo/depth" - beide gibt es nicht.
-    rgb_topic: "/oak/rgb/image_rect"
-    depth_topic: "/oak/stereo/image_raw"
-    camera_info_topic: "/oak/rgb/camera_info"
+    # Das lokale Relay in oak.launch.py publiziert nur 2 Hz, komprimiert und
+    # Best-Effort. Direkte Rohbild-Subscriptions vom KI-Server sind verboten:
+    # sie drueckten RGB im A/B-Test bis unter 1 Hz und blockierten image_proc.
+    compressed_input: true
+    rgb_topic: "/oak/semantic/rgb/compressed"
+    depth_topic: "/oak/semantic/depth/compressed"
+    camera_info_topic: "/oak/semantic/camera_info"
     global_frame: "map"
     # Frame des OAK-Treibers. Die URDF nennt ihn camera_rgb_optical_frame, der
     # Treiber oak_rgb_camera_optical_frame - im Betrieb gilt der Treiber-Frame.
@@ -49,6 +48,9 @@ semantic_perception:
     confidence_threshold: 0.35
     model_path: "yolov8s-worldv2.pt"       # YOLO-World-Gewichte (nur Backend 'yoloworld')
     depth_scale: 0.001                     # Tiefen-Rohwert -> Meter (OAK: mm -> 0.001)
+    max_input_age_s: 2.0                   # alte WLAN-/Kameraframes fail-closed ablehnen
+    max_rgb_depth_skew_s: 0.20             # nur zeitlich passendes RGB-D projizieren
+    input_pair_queue_size: 10              # Empfangsrennen RGB vor Tiefe lokal abfangen
 
     # --- Erkennbare Objekte (open-vocabulary Queries) ---
     class_queries:

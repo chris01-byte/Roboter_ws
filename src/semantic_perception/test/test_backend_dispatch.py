@@ -1,5 +1,7 @@
+from collections import deque
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 from semantic_perception.semantic_perception_node import SemanticPerception
 
@@ -142,3 +144,63 @@ class BackendDispatchTests(unittest.TestCase):
             (40.0, 50.0, 0.80),
         )
         self.assertIsNone(SemanticPerception._best_box(results, 'tool'))
+
+    def test_background_scan_runs_one_prediction_for_all_classes(self):
+        calls = {'predict': 0, 'class': [], 'remember': []}
+
+        def predict():
+            calls['predict'] += 1
+            return ['single-model-result']
+
+        def detect(canonical, results):
+            calls['class'].append((canonical, results))
+            return (f'pose-{canonical}', 0.7) if canonical == 'Tasse' else None
+
+        def remember(name, pose, confidence):
+            calls['remember'].append((name, pose, confidence))
+
+        node = SimpleNamespace(
+            _backend='yoloworld',
+            _class_queries=['Tasse', 'Flasche', 'Werkzeug'],
+            _predict_current_image=predict,
+            _detection_from_results=detect,
+            _remember=remember,
+        )
+
+        SemanticPerception._scan_cb(node)
+
+        self.assertEqual(calls['predict'], 1)
+        self.assertEqual(
+            [canonical for canonical, _ in calls['class']],
+            ['Tasse', 'Flasche', 'Werkzeug'],
+        )
+        self.assertEqual(calls['remember'], [('Tasse', 'pose-Tasse', 0.7)])
+
+    def test_server_promotes_only_a_matching_rgb_depth_pair(self):
+        rgb_old = object()
+        rgb_matching = object()
+        depth_matching = object()
+        node = SimpleNamespace(
+            _image_frames=deque([
+                (rgb_old, 99.2, 200.0),
+                (rgb_matching, 99.8, 200.5),
+            ]),
+            _depth_frames=deque([
+                (depth_matching, 99.9, 200.5),
+            ]),
+            _max_input_age_s=2.0,
+            _max_rgb_depth_skew_s=0.05,
+            _last_image=None,
+            _last_depth=None,
+            _last_image_received_s=0.0,
+            _last_depth_received_s=0.0,
+        )
+
+        with mock.patch(
+                'semantic_perception.semantic_perception_node.time.monotonic',
+                return_value=100.0):
+            selected = SemanticPerception._refresh_input_pair(node)
+
+        self.assertTrue(selected)
+        self.assertIs(node._last_image, rgb_matching)
+        self.assertIs(node._last_depth, depth_matching)

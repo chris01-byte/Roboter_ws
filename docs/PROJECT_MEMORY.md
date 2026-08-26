@@ -17,6 +17,91 @@ Rückfallweg:
 
 ---
 
+## 2026-08-26 — OAK-RGB-D-Dauerstream entkoppelt und selbstheilend
+
+**Entscheidung:** Die OAK-D-S2 liefert im Semantik-/SLAM-Profil real
+640 x 360 bei 10 Hz. Die RGB-Entzerrung laeuft ausserhalb des DepthAI-
+Komponentencontainers im eigenen `oak_rectifier`; Bild und CameraInfo werden
+unabhaengig mit Best-Effort/KEEP_LAST(1) empfangen. CameraInfo ist die stabile
+Kalibrierung und wird nicht mehr fuer jedes Bild per Exact-Sync erzwungen.
+
+Der KI-Server darf keine OAK-Rohbilder abonnieren. Ein lokaler
+`semantic_stream_relay` waehlt aus begrenzten Puffern nur frische, per
+Quellzeitstempel passende RGB-/Tiefenpaare und sendet 2 Hz als JPEG plus
+verlustfreies 16UC1-PNG. Server und Relay lehnen Bilder ueber 2 s sowie mehr
+als 0,20 s RGB-/Tiefenversatz fail-closed ab. DepthAIs geraeteinterne
+Synchronisierung bleibt aus, weil sie im Realtest wiederholt etwa 10 s lange
+RGB-Luecken erzeugte. Bleibt ein lokaler CycloneDDS-Bild- oder Tiefenendpunkt
+mehr als 3 s still, wird nur diese Best-Effort-Subscription mit 5 s Cooldown
+neu aufgebaut; jeder Eingriff steht gezaehlt im Status.
+
+**Grund / beobachtete Evidenz:** `i_width/i_height=640x360` skalierte beim
+Humble-Treiber nur Metadaten; `/oak/rgb/image_raw` blieb tatsaechlich
+1280 x 720. Erst der explizite ISP-Faktor 1/3 lieferte real 640 x 360. Direkte
+Offboard-Rohbildabonnenten drueckten den lokalen RGB-Pfad von rund 30 Hz auf
+unter 1 Hz. Im alten gemeinsamen Container fiel RGB nach 17 min 18 s mit
+`No Data` aus, ohne zeitgleichen Kernel-USB-Reset.
+
+Ein getrennt gestarteter Standard-`image_proc`-Rectifier verlor in einem
+weiteren A/B-Lauf nach rund 8,5 min dauerhaft nur seine Bildseite, waehrend
+dasselbe `/oak/rgb/image_raw` nachgemessen mit 10,0 Hz weiterlief. Der eigene
+Entzerrer ohne CameraSubscriber-Synchronisierung beseitigt diesen Pfad. Im
+anschliessenden langen Lauf blieb die OAK insgesamt 33 min 49 s aktiv; es gab
+nach dem absichtlichen USB-Neuaufbau beim Start keinen Reset, Disconnect oder
+DepthAI-Fehler. Das Vollbild war symmetrisch, 640 x 360 und enthielt das gesamte
+gemessene Sichtfeld. Feste OpenCV-Remap-Tabellen benoetigten im Jetson-Benchmark
+4,24 statt 5,38 ms pro Bild (21 % schneller).
+
+Der erste Relay-Endpunkt verlor nach rund 11 min nur Tiefe (`rgb_queue=80`,
+`depth_queue=0`), obwohl ein neu gestarteter Subscriber dasselbe Tiefentopic
+sofort mit 8--9 Hz empfing. Ein frisch erzeugter Relay lief danach real
+17 min 31 s ueber die fruehere Grenze: 2.068 publizierte Paare, 36 verworfene
+Timerzyklen, null stale RGB-/Tiefenframes, null Codecfehler, zuletzt 0,077 s
+Publikationsalter und `ready=true`. Zwei isolierte Wiederanlauftests pausierten
+jeweils Tiefe beziehungsweise RGB fuer 2,5 s. In beiden Faellen wurde exakt
+der betroffene Endpoint einmal neu aufgebaut und lieferte danach wieder Daten;
+der Endstatus war `ready=true` und ohne Codec-/Bildfehler.
+
+Der RTX-Knoten wurde fuer den Positivtest mit leerem Objektgedaechtnis gestartet.
+Die sichtbare Tasse wurde neu mit Konfidenz 0,694 erkannt und im motorlosen
+Testframe `base_link` plausibel bei `(1,259; 0,051; 0,831) m` projiziert. Das
+ist eine echte RGB-D-/CUDA-/TF-Projektion, keine globale Kartenlokalisierung.
+
+**Betroffene Dateien und Hardware:** OAK-Profile und `oak.launch.py` in
+`robot_bringup`; eigener Entzerrer samt Status; komprimierender Relay,
+Codec/Pairing und Servereingang in `semantic_perception`; OAK-D-S2, Jetson,
+WLAN und RTX 3090. Keine Karte oder Aufnahme liegt im Repository. Motor-,
+Nav2-, VL53- und Missionsknoten waren waehrend aller Tests aus.
+
+**Teststatus:** 24 direkte Semantiktests und 7 Bring-up-Tests bestanden,
+einschliesslich verlustfreier 16-Bit-Tiefe, Frische-/Skew-Grenzen,
+ISP-Vertrag, Aufloesungssperre und Watchdog-Zeitlogik. Beide Pakete bauten im
+isolierten Jetson-Overlay. Zusaetzlich bestanden die zwei realen, synthetisch
+unterbrochenen ROS-Wiederanlauftests, der 33:49-min-OAK-Lauf, der
+17:31-min-Relay-Lauf, Vollbildsichtkontrolle und die frische positive
+Tassenpose. Das Abschalten erfolgte per Einzelsignal an die Elternprozesse;
+DepthAI endete sauber. Das Produktionsdeployment ist getrennt im
+`ROBOT_TRANSFER.md` protokolliert. Dabei wurden beide Pakete als normale
+Kopien im Jetson-Produktions-Install und `semantic_perception` auf dem
+KI-Server installiert. Der Produktionsdienst und ein weiterer motorloser
+OAK-Start bestaetigten dieselben komprimierten Topics, 640 x 360, frische
+Statuswerte und den erwarteten fail-closed `map`-Service ohne Lokalisierung.
+
+**Offene Risiken:** 640 x 360 nutzt das volle Sichtfeld, aber nicht die volle
+Sensor-Pixelaufloesung. Eine spaetere hoehere Objekterkennungsaufloesung braucht
+einen eigenen Bandbreiten-, CPU-, Temperatur- und Dauertest. Ein
+`subscription_restarts`-Zaehler groesser null ist ein geheilter Transportfehler,
+aber weiterhin eine Diagnose, die beobachtet werden soll. Fuer eine Pose im
+`map`-Frame muss die reale Lokalisierung separat bestaetigt sein.
+
+**Rueckfallweg:** Relay mit `semantic_relay:=false` abschalten oder den Commit
+revertieren und beide Pakete neu bauen. Der KI-Server bleibt ohne frische
+komprimierte Bilder fail-closed. Bei einem Rueckfall auf den alten Rectifier
+muss dessen gemessener Spaetausfall einkalkuliert werden; OAK, Server und
+Navigation koennen weiterhin getrennt gestoppt werden.
+
+---
+
 ## 2026-08-25 — Deutsche Objektanfrage liefert reale OAK-3D-Pose
 
 **Entscheidung:** App, Behavior Tree und Service verwenden weiterhin die

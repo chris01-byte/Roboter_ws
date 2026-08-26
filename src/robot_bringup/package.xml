@@ -18,11 +18,17 @@
   <buildtool_depend>ament_python</buildtool_depend>
 
   <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
 
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>depthai_ros_driver</exec_depend>
+  <exec_depend>depth_image_proc</exec_depend>
 
   <!-- ONBOARD-Pakete, die robot.launch.py startet -->
   <exec_depend>safety_monitor</exec_depend>
