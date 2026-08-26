@@ -29,7 +29,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import LoadComposableNodes, Node
 from launch_ros.descriptions import ComposableNode
 
 # =====================================================================
@@ -62,9 +62,14 @@ PARENT_FRAME = 'base_link'
 def generate_launch_description():
     bringup = get_package_share_directory('robot_bringup')
     params = os.path.join(bringup, 'config', 'oak_params.yaml')
+    semantic_perception = get_package_share_directory('semantic_perception')
+    relay_params = os.path.join(
+        semantic_perception, 'config', 'semantic_stream_relay_params.yaml')
     depthai = get_package_share_directory('depthai_ros_driver')
 
     pointcloud = LaunchConfiguration('pointcloud')
+    semantic_relay = LaunchConfiguration('semantic_relay')
+    external_rectifier = LaunchConfiguration('external_rectifier')
 
     # Gemeinsame Argumente fuer beide Treiber-Launches
     common = {
@@ -76,12 +81,25 @@ def generate_launch_description():
         'cam_roll': LaunchConfiguration('cam_roll'),
         'cam_pitch': LaunchConfiguration('cam_pitch'),
         'cam_yaw': LaunchConfiguration('cam_yaw'),
+        # Der eingebaute Rectifier teilt sonst den single-threaded Container
+        # mit dem OAK-Treiber. Entzerrung laeuft unten separat und ohne die im
+        # Dauertest ebenfalls ausgefallene image_transport-CameraSubscriber-
+        # Zeitstempelsynchronisierung.
+        'rectify_rgb': 'false',
     }
 
     return LaunchDescription([
         DeclareLaunchArgument('params_file', default_value=params),
         DeclareLaunchArgument('pointcloud', default_value='true',
                               description='true = mit /oak/points (fuer Nav2-Costmap)'),
+        DeclareLaunchArgument(
+            'semantic_relay', default_value='true',
+            description='Komprimierten 2-Hz-RGB-D-Strom fuer den KI-Server starten.'),
+        DeclareLaunchArgument(
+            'semantic_relay_params', default_value=relay_params),
+        DeclareLaunchArgument(
+            'external_rectifier', default_value='true',
+            description='RGB in einem getrennten Prozess entzerren.'),
         DeclareLaunchArgument('parent_frame', default_value=PARENT_FRAME),
         DeclareLaunchArgument('cam_pos_x', default_value=CAM_POS_X),
         DeclareLaunchArgument('cam_pos_y', default_value=CAM_POS_Y),
@@ -95,6 +113,32 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(
                 os.path.join(depthai, 'launch', 'camera.launch.py')),
             launch_arguments=common.items()),
+
+        # Eigener Prozess: CameraInfo ist eine stabile Kalibrierung und muss
+        # nicht fuer jedes Bild einen identischen Zeitstempel tragen. Der
+        # Standard-image_proc-CameraSubscriber verlor im Realtest nach rund
+        # acht Minuten dauerhaft nur seinen RGB-Eingang, obwohl image_raw mit
+        # 10,0 Hz weiterlief. Dieser Node verwendet deshalb zwei unabhaengige
+        # Best-Effort/KEEP_LAST(1)-Subscriptions.
+        Node(
+            package='robot_bringup',
+            executable='oak_rectifier',
+            name='oak_rectifier',
+            output='screen',
+            condition=IfCondition(external_rectifier),
+        ),
+
+        # Der KI-Server abonniert niemals die unkomprimierten OAK-Topics.
+        # Das lokale Relay verwirft alte Frames statt per Reliable-DDS
+        # Rueckstau bis in image_proc/DepthAI zu erzeugen.
+        Node(
+            package='semantic_perception',
+            executable='semantic_stream_relay',
+            name='semantic_stream_relay',
+            output='screen',
+            condition=IfCondition(semantic_relay),
+            parameters=[LaunchConfiguration('semantic_relay_params')],
+        ),
 
         # --- Punktwolke fuer die Nav2-Costmap ---
         # BEWUSST PointCloudXyz (nur Tiefe + camera_info), NICHT das

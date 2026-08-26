@@ -29,14 +29,14 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
-| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack | **produktiv** (App-Erkundungsstack real abgenommen) |
+| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
 | `robot_navigation` | Nav2-Realprofil mit globalem Zwei-Scan-Lokalisierer, fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (drei Kaltstarts an bestaetigter Pose und anschliessendes Raumziel real bestanden) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
-| `semantic_perception` | Objekterkennung auf OAK-Bildern | **erprobt** (OAK→RTX, fail-closed und positive 3D-Pose mit motorlosem Test-TF; echter Karten-TF offen) |
+| `semantic_perception` | Objekterkennung auf gedrosseltem, komprimiertem OAK-RGB-D-Stream mit frischem Pairing und Endpoint-Watchdog | **erprobt** (33:49-min OAK, 17:31-min Relay und frische positive RTX-3D-Pose; echter Karten-TF offen) |
 | `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung mit reaktiver Not-Aus-Bedingung und sicherem Subscription-Vorlauf | **erprobt** (in realer Explore-Kette abgenommen) |
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |

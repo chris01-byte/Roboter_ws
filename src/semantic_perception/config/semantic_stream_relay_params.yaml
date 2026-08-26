@@ -1,0 +1,32 @@
+semantic_stream_relay:
+  ros__parameters:
+    # Direkte OAK-Topics auf dem Jetson. image_raw umgeht den im Dauertest
+    # kollabierten image_rect/CameraInfo-Synchronisationspfad.
+    rgb_input: "/oak/rgb/image_raw"
+    depth_input: "/oak/stereo/image_raw"
+    camera_info_input: "/oak/rgb/camera_info"
+
+    # Nur diese komprimierten, gedrosselten Topics duerfen der KI-Server
+    # abonnieren. Best-Effort/Queue 1 verhindert WLAN-Rueckstau zur Kamera.
+    rgb_output: "/oak/semantic/rgb/compressed"
+    depth_output: "/oak/semantic/depth/compressed"
+    camera_info_output: "/oak/semantic/camera_info"
+    status_topic: "/oak/semantic/stream_status_json"
+
+    publish_rate_hz: 2.0
+    jpeg_quality: 80
+    png_compression: 1
+    # DepthAI-RGB und die langsamere Tiefenpipeline bleiben bewusst NICHT
+    # geraeteintern synchronisiert: jener Modus erzeugte 10-s-RGB-Luecken.
+    # Der lokale Puffer ordnet verzoegert eintreffende Tiefe per Quellstempel zu.
+    max_input_age_s: 2.0
+    max_rgb_depth_skew_s: 0.20
+    # Harte Speichergrenze mit Reserve; die Frischegrenze oben verwirft alles
+    # ueber 2 s unabhaengig davon. DDS bleibt Best-Effort/KEEP_LAST(1).
+    frame_queue_size: 80
+    # CycloneDDS verlor im 11-min-A/B-Lauf einen bestehenden lokalen
+    # Tiefen-Endpunkt, obwohl ein neuer Subscriber dasselbe Topic sofort mit
+    # 8--9 Hz empfing. Nur den betroffenen lokalen Endpoint neu aufbauen.
+    input_stall_timeout_s: 3.0
+    subscription_restart_cooldown_s: 5.0
+    startup_grace_s: 10.0

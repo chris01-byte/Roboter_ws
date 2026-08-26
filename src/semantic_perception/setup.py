@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'semantic_perception = semantic_perception.semantic_perception_node:main',
+            'semantic_stream_relay = semantic_perception.semantic_stream_relay_node:main',
         ],
     },
 )

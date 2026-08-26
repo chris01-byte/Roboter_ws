@@ -28,6 +28,11 @@
       i_nn_type: none
       i_enable_imu: true           # /oak/imu/data - spaeter fuer EKF/VIO nutzbar
 
+    left:
+      i_fps: 10.0
+    right:
+      i_fps: 10.0
+
     stereo:
       i_align_depth: true          # Tiefe deckungsgleich zu RGB (Pflicht fuer RGB-D-SLAM)
       i_board_socket_id: 2
@@ -38,5 +43,13 @@
       i_height: 360
 
     rgb:
+      i_fps: 10.0
+      # i_width/i_height allein skalieren bei diesem Humble-Treiber nur die
+      # Kalibrierung bzw. das ausgerichtete Tiefenbild. Die ISP-Ausgabe blieb
+      # im Live-Test am 26.08.2026 bei 1280x720 (Default 2/3) und ueberlastete
+      # den lokalen RGB-Pfad. 1920x1080 * 1/3 = wirklich 640x360.
+      i_set_isp_scale: true
+      i_isp_num: 1
+      i_isp_den: 3
       i_width: 640
       i_height: 360

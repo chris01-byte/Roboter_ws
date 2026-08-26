@@ -22,28 +22,42 @@
 #
 #  SCHNITTSTELLEN:
 #    Service : <service_name> (Standard /world_model/get_object_pose)  GetObjectPose
-#    Subscribe: <rgb_topic> (sensor_msgs/Image)   [fuer echte Modelle]
+#    Subscribe: komprimiertes RGB, 16-Bit-Tiefen-PNG und CameraInfo
 #    Publish : <catalog_topic> (std_msgs/String)  dynamischer Katalog (optional)
 #    TF      : <camera_frame> -> <global_frame>    [fuer echte 3D-Projektion]
 #
 #  ALLE PARAMETER -> config/semantic_perception_params.yaml.
 # ============================================================================
 
+from collections import deque
 import json
+import time
 from typing import Optional, Tuple
 
 import rclpy
 from rclpy.node import Node
 from rclpy.duration import Duration
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
+from rclpy.qos import (
+    QoSHistoryPolicy,
+    QoSProfile,
+    QoSDurabilityPolicy,
+    QoSReliabilityPolicy,
+)
 
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from geometry_msgs.msg import PoseStamped, PointStamped
 from std_msgs.msg import String
 from robot_interfaces.srv import GetObjectPose
 
 import tf2_ros
 import tf2_geometry_msgs  # noqa: F401  (registriert do_transform fuer PointStamped)
+
+from .stream_codec import (
+    decode_depth_png,
+    decode_rgb_jpeg,
+    select_freshest_pair,
+    stamp_seconds,
+)
 
 
 DEFAULT_CLASS_QUERIES = [
@@ -64,7 +78,10 @@ class SemanticPerception(Node):
         # [KORRIGIERT 27.07.2026] Defaults auf die real vom depthai_ros_driver
         # gelieferten Namen. Frueher '/oak/rgb' bzw. camera_rgb_optical_frame -
         # beides existiert im Betrieb nicht.
-        self._rgb_topic      = self.declare_parameter('rgb_topic', '/oak/rgb/image_rect').value
+        self._compressed_input = bool(self.declare_parameter(
+            'compressed_input', True).value)
+        self._rgb_topic      = self.declare_parameter(
+            'rgb_topic', '/oak/semantic/rgb/compressed').value
         self._global_frame   = self.declare_parameter('global_frame', 'map').value
         self._camera_frame   = self.declare_parameter('camera_frame', 'oak_rgb_camera_optical_frame').value
         self._conf_threshold = float(self.declare_parameter('confidence_threshold', 0.35).value)
@@ -83,10 +100,22 @@ class SemanticPerception(Node):
         self._stub_position   = list(self.declare_parameter('stub_position', [1.0, 0.0, 0.5]).value)
         self._stub_confidence = float(self.declare_parameter('stub_confidence', 0.8).value)
         # --- Echtes Modell (YOLO-World) + 3D-Projektion ---
-        self._depth_topic     = self.declare_parameter('depth_topic', '/oak/stereo/image_raw').value
-        self._caminfo_topic   = self.declare_parameter('camera_info_topic', '/oak/rgb/camera_info').value
+        self._depth_topic     = self.declare_parameter(
+            'depth_topic', '/oak/semantic/depth/compressed').value
+        self._caminfo_topic   = self.declare_parameter(
+            'camera_info_topic', '/oak/semantic/camera_info').value
         self._model_path      = self.declare_parameter('model_path', 'yolov8s-worldv2.pt').value
         self._depth_scale     = float(self.declare_parameter('depth_scale', 0.001).value)  # mm -> m
+        self._max_input_age_s = float(self.declare_parameter(
+            'max_input_age_s', 2.0).value)
+        self._max_rgb_depth_skew_s = float(self.declare_parameter(
+            'max_rgb_depth_skew_s', 0.20).value)
+        self._input_pair_queue_size = int(self.declare_parameter(
+            'input_pair_queue_size', 10).value)
+        if self._max_input_age_s <= 0.0 or self._max_rgb_depth_skew_s < 0.0:
+            raise ValueError('Zeitgrenzen der Wahrnehmung sind ungueltig')
+        if not 2 <= self._input_pair_queue_size <= 120:
+            raise ValueError('input_pair_queue_size muss zwischen 2 und 120 liegen')
         # --- Objekt-Gedaechtnis / semantische Karte (Befund K2) ---
         # Ein Hintergrund-Scan erkennt laufend und merkt sich Objekte im map-Frame.
         # So findet get_object_pose ein Objekt auch, wenn es GERADE nicht im Bild
@@ -101,6 +130,10 @@ class SemanticPerception(Node):
         self._last_image: Optional[Image] = None
         self._last_depth: Optional[Image] = None
         self._camera_info: Optional[CameraInfo] = None
+        self._last_image_received_s = 0.0
+        self._last_depth_received_s = 0.0
+        self._image_frames = deque(maxlen=self._input_pair_queue_size)
+        self._depth_frames = deque(maxlen=self._input_pair_queue_size)
         self._model = None            # lazy geladenes YOLO-World-Modell
         self._model_failed = False    # True, wenn Laden fehlschlug (kein Retry-Spam)
         # Objekt-Gedaechtnis: name.lower() -> {'name', 'pose'(map), 'conf', 'stamp'}
@@ -113,9 +146,19 @@ class SemanticPerception(Node):
         # -------------------------------------------------------------------
         #  ROS-Schnittstellen
         # -------------------------------------------------------------------
-        self.create_subscription(Image, self._rgb_topic, self._on_image, 1)
-        self.create_subscription(Image, self._depth_topic, self._on_depth, 1)
-        self.create_subscription(CameraInfo, self._caminfo_topic, self._on_caminfo, 1)
+        sensor_qos = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.VOLATILE,
+        )
+        image_type = CompressedImage if self._compressed_input else Image
+        self.create_subscription(
+            image_type, self._rgb_topic, self._on_image, sensor_qos)
+        self.create_subscription(
+            image_type, self._depth_topic, self._on_depth, sensor_qos)
+        self.create_subscription(
+            CameraInfo, self._caminfo_topic, self._on_caminfo, sensor_qos)
         self._service = self.create_service(
             GetObjectPose, self._service_name, self._on_get_object_pose)
 
@@ -136,6 +179,7 @@ class SemanticPerception(Node):
             self.get_logger().info(
                 "Backend 'yoloworld' aktiv - benoetigt ultralytics + Gewichte + Kamera "
                 "(RGB/Depth/CameraInfo). Fehlende Voraussetzungen liefern keinen Treffer. "
+                f"Eingang={'komprimiert' if self._compressed_input else 'roh'}, "
                 f"Modell-Prompts: {self._model_class_prompts}")
         elif self._backend != 'stub':
             self.get_logger().warn(
@@ -144,10 +188,14 @@ class SemanticPerception(Node):
 
     # ======================= Kamera-Eingang =============================
     def _on_image(self, msg: Image):
-        self._last_image = msg   # letztes RGB-Bild fuer die Modell-Inferenz
+        self._image_frames.append((
+            msg, time.monotonic(), stamp_seconds(msg.header.stamp)))
+        self._refresh_input_pair()
 
     def _on_depth(self, msg: Image):
-        self._last_depth = msg   # letztes Tiefenbild fuer die 3D-Projektion
+        self._depth_frames.append((
+            msg, time.monotonic(), stamp_seconds(msg.header.stamp)))
+        self._refresh_input_pair()
 
     def _on_caminfo(self, msg: CameraInfo):
         self._camera_info = msg  # Kamera-Intrinsics (K-Matrix)
@@ -195,6 +243,15 @@ class SemanticPerception(Node):
         """Hintergrund-Scan: erkennt die bekannten Klassen im aktuellen Bild
         und merkt sich Treffer im map-Frame. Baut so die semantische Karte auf,
         waehrend der Roboter faehrt/erkundet."""
+        if self._backend == 'yoloworld':
+            results = self._predict_current_image()
+            if results is None:
+                return
+            for cls in self._class_queries:
+                det = self._detection_from_results(cls, results)
+                if det is not None:
+                    self._remember(cls, det[0], det[1])
+            return
         for cls in self._class_queries:
             det = self._detect(cls)
             if det is not None:
@@ -322,29 +379,77 @@ class SemanticPerception(Node):
                 "pruefen. Erkennung bleibt fail-closed.")
         return self._model
 
-    def _detect_with_model(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
-        """Open-Vocabulary-Erkennung: Text-Query -> 2D-Box -> 3D-Pose (map)."""
-        if self._backend != 'yoloworld':
-            return None   # owlvit / NanoOWL hier separat einhaengen
-        canonical_class = self._canonical_class(query)
-        target_prompt = self._model_prompt_for_class(canonical_class)
-        if canonical_class is None or target_prompt is None:
+    def _input_is_fresh(self, received_s: float) -> bool:
+        return (
+            received_s > 0.0 and
+            time.monotonic() - received_s <= self._max_input_age_s
+        )
+
+    def _refresh_input_pair(self) -> bool:
+        """Atomically select matching RGB/depth messages from the WLAN stream."""
+        pair = select_freshest_pair(
+            self._image_frames,
+            self._depth_frames,
+            now_s=time.monotonic(),
+            max_age_s=self._max_input_age_s,
+            max_skew_s=self._max_rgb_depth_skew_s,
+        )
+        if pair is None:
+            return False
+        image_sample, depth_sample = pair
+        self._last_image = image_sample[0]
+        self._last_image_received_s = image_sample[1]
+        self._last_depth = depth_sample[0]
+        self._last_depth_received_s = depth_sample[1]
+        return True
+
+    def _rgb_array(self):
+        if self._last_image is None:
+            return None
+        if self._compressed_input:
+            return decode_rgb_jpeg(self._last_image.data)
+        from cv_bridge import CvBridge
+        return CvBridge().imgmsg_to_cv2(
+            self._last_image, desired_encoding='bgr8')
+
+    def _depth_array(self):
+        if self._last_depth is None:
+            return None
+        if self._compressed_input:
+            return decode_depth_png(self._last_depth.data)
+        from cv_bridge import CvBridge
+        return CvBridge().imgmsg_to_cv2(
+            self._last_depth, desired_encoding='passthrough')
+
+    def _predict_current_image(self):
+        """Run YOLO exactly once for the newest fresh RGB frame."""
+        if (
+                not self._refresh_input_pair() or
+                not self._input_is_fresh(self._last_image_received_s)):
             return None
         model = self._ensure_model()
-        if model is None or self._last_image is None:
+        if model is None:
             return None
         try:
-            from cv_bridge import CvBridge
-            rgb = CvBridge().imgmsg_to_cv2(self._last_image, desired_encoding='bgr8')
+            rgb = self._rgb_array()
         except Exception as exc:
             self.get_logger().warn(f"Bildkonvertierung fehlgeschlagen ({exc}).")
             return None
+        if rgb is None:
+            return None
         try:
-            results = model.predict(rgb, conf=self._conf_threshold, verbose=False)
+            return model.predict(
+                rgb, conf=self._conf_threshold, verbose=False)
         except Exception as exc:
             self.get_logger().warn(f"YOLO-World-Inferenz fehlgeschlagen ({exc}).")
             return None
 
+    def _detection_from_results(
+            self, canonical_class: str, results
+            ) -> Optional[Tuple[PoseStamped, float]]:
+        target_prompt = self._model_prompt_for_class(canonical_class)
+        if target_prompt is None:
+            return None
         box = self._best_box(results, target_prompt)
         if box is None:
             return None
@@ -354,6 +459,18 @@ class SemanticPerception(Node):
             return None
         pose = self._to_global(point_cam)
         return (pose, conf) if pose is not None else None
+
+    def _detect_with_model(self, query: str) -> Optional[Tuple[PoseStamped, float]]:
+        """Open-Vocabulary-Erkennung: Text-Query -> 2D-Box -> 3D-Pose (map)."""
+        if self._backend != 'yoloworld':
+            return None   # owlvit / NanoOWL hier separat einhaengen
+        canonical_class = self._canonical_class(query)
+        if canonical_class is None:
+            return None
+        results = self._predict_current_image()
+        if results is None:
+            return None
+        return self._detection_from_results(canonical_class, results)
 
     @staticmethod
     def _best_box(results, target_prompt: str):
@@ -382,13 +499,24 @@ class SemanticPerception(Node):
 
     def _pixel_to_3d(self, u: float, v: float):
         """Pixel + Tiefe -> PointStamped im Kamera-Frame (Pinhole-Modell)."""
-        if self._last_depth is None or self._camera_info is None:
+        if (
+                self._last_depth is None or self._camera_info is None or
+                not self._input_is_fresh(self._last_depth_received_s)):
             self.get_logger().warn("Tiefe/CameraInfo fehlt - keine 3D-Projektion.")
             return None
         try:
             import math
-            from cv_bridge import CvBridge
-            depth = CvBridge().imgmsg_to_cv2(self._last_depth, desired_encoding='passthrough')
+            if self._last_image is None:
+                return None
+            rgb_stamp = stamp_seconds(self._last_image.header.stamp)
+            depth_stamp = stamp_seconds(self._last_depth.header.stamp)
+            if abs(rgb_stamp - depth_stamp) > self._max_rgb_depth_skew_s:
+                self.get_logger().warn(
+                    "RGB/Tiefe zeitlich zu weit auseinander - keine 3D-Projektion.")
+                return None
+            depth = self._depth_array()
+            if depth is None:
+                return None
             di, dj = int(round(v)), int(round(u))
             if di < 0 or dj < 0 or di >= depth.shape[0] or dj >= depth.shape[1]:
                 return None

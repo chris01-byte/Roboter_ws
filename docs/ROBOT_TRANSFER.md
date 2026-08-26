@@ -1,5 +1,48 @@
 # Übertragung auf den realen Roboter
 
+## OAK-RGB-D-Transport dauerstabil und selbstheilend (26.08.2026)
+
+**Branch:** `codex/fix-oak-semantic-stream`
+
+Die OAK-Konfiguration liefert nun tatsaechlich 640 x 360 bei 10 Hz
+(ISP-Faktor 1/3). `oak.launch.py` startet standardmaessig zwei lokale,
+motorunabhaengige Prozesse:
+
+- `oak_rectifier` publiziert `/oak/rgb/image_rect` fuer RTAB-Map ohne
+  Exact-Sync zwischen Bild und der stabilen CameraInfo;
+- `semantic_stream_relay` publiziert nur 2 Hz JPEG-RGB, verlustfreies
+  16UC1-PNG und CameraInfo unter `/oak/semantic/...`.
+
+Der KI-Server muss `compressed_input: true` und ausschliesslich diese drei
+Semantiktopics verwenden. Direkte Serverabonnements von
+`/oak/rgb/image_raw`, `/oak/rgb/image_rect` oder `/oak/stereo/image_raw` sind
+nicht zulaessig. Status:
+
+```bash
+ros2 topic echo /oak/rgb/rectifier_status_json --once
+ros2 topic echo /oak/semantic/stream_status_json --once
+```
+
+`ready` muss wahr sein, Bildformen muessen 640 x 360 zeigen und
+`codec_errors`, `stale_rgb`, `stale_depth` muessen null bleiben. Ein Wert in
+`subscription_restarts` dokumentiert einen automatisch geheilten lokalen
+DDS-Endpunktstillstand und darf nicht verschwiegen werden.
+
+Motorlose Abnahme im isolierten Overlay: OAK 33 min 49 s ohne spaeten USB-
+oder Geraetefehler; Relay 17 min 31 s mit 2.068 Paaren und null Codec-/
+Altersfehlern; 24 Semantik- und 7 Bring-up-Tests bestanden. Je ein gezielter
+2,5-s-Ausfall von Tiefe und RGB wurde durch genau einen Endpoint-Neuaufbau
+geheilt. Nach leerem RTX-Objektgedaechtnis lieferte die sichtbare Tasse eine
+echte positive 3D-Pose mit Konfidenz 0,694. Keine Motor-, Nav2-, VL53- oder
+Missionskomponente lief.
+
+Das Produktionsdeployment auf Jetson und KI-Server wird nach dem Branch-
+Commit in diesem Abschnitt ergaenzt. Bis dahin ist der getestete Code nur im
+isolierten Worktree `/tmp/roboter_ws-oak-stream` gebaut. Rueckfall:
+`semantic_relay:=false`, KI-Dienst stoppen oder den Branch-Commit revertieren.
+
+---
+
 ## OAK-Objektpose mit deutschem Servicevertrag — motorlos bestanden (25.08.2026)
 
 **Branch:** `fix/semantic-object-prompts`

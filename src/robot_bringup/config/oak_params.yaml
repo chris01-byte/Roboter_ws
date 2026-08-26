@@ -34,6 +34,10 @@
       i_nn_type: none              # kein neuronales Netz -> spart CPU/Strom.
                                    # semantic_perception braucht spaeter 'spatial'.
       i_enable_imu: true           # /oak/imu/data (spaeter fuer EKF/Odometrie)
+    left:
+      i_fps: 10.0
+    right:
+      i_fps: 10.0
     stereo:
       # MUSS true bleiben. Versuch am 26.07.2026, per false das groessere
       # vertikale Blickfeld der Mono-Kameras zu bekommen, ist GESCHEITERT:
@@ -66,5 +70,12 @@
     # von ~1.5 m fuer FLACH liegende Dinge - fuer den Zweck der OAK (Raum
     # ueberblicken, groessere Hindernisse frueh sehen) unkritisch.
     rgb:
+      i_fps: 10.0
+      # i_width/i_height allein aendern mit depthai_ros_driver unter Humble
+      # nicht die reale ISP-Ausgabe. Explizit 1920x1080 / 6 skalieren, sonst
+      # bleibt /oak/rgb/image_raw unbemerkt bei 1280x720 (Default 2/3).
+      i_set_isp_scale: true
+      i_isp_num: 1
+      i_isp_den: 6
       i_width: 320
       i_height: 180
