@@ -80,8 +80,12 @@ isolierten Jetson-Overlay. Zusaetzlich bestanden die zwei realen, synthetisch
 unterbrochenen ROS-Wiederanlauftests, der 33:49-min-OAK-Lauf, der
 17:31-min-Relay-Lauf, Vollbildsichtkontrolle und die frische positive
 Tassenpose. Das Abschalten erfolgte per Einzelsignal an die Elternprozesse;
-DepthAI endete sauber. Produktionsdeployment wird getrennt im
-`ROBOT_TRANSFER.md` protokolliert.
+DepthAI endete sauber. Das Produktionsdeployment ist getrennt im
+`ROBOT_TRANSFER.md` protokolliert. Dabei wurden beide Pakete als normale
+Kopien im Jetson-Produktions-Install und `semantic_perception` auf dem
+KI-Server installiert. Der Produktionsdienst und ein weiterer motorloser
+OAK-Start bestaetigten dieselben komprimierten Topics, 640 x 360, frische
+Statuswerte und den erwarteten fail-closed `map`-Service ohne Lokalisierung.
 
 **Offene Risiken:** 640 x 360 nutzt das volle Sichtfeld, aber nicht die volle
 Sensor-Pixelaufloesung. Eine spaetere hoehere Objekterkennungsaufloesung braucht

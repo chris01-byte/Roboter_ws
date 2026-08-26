@@ -36,10 +36,32 @@ geheilt. Nach leerem RTX-Objektgedaechtnis lieferte die sichtbare Tasse eine
 echte positive 3D-Pose mit Konfidenz 0,694. Keine Motor-, Nav2-, VL53- oder
 Missionskomponente lief.
 
-Das Produktionsdeployment auf Jetson und KI-Server wird nach dem Branch-
-Commit in diesem Abschnitt ergaenzt. Bis dahin ist der getestete Code nur im
-isolierten Worktree `/tmp/roboter_ws-oak-stream` gebaut. Rueckfall:
-`semantic_relay:=false`, KI-Dienst stoppen oder den Branch-Commit revertieren.
+**Produktionsdeployment:** Commit `a2d8ccc` ist auf dem Jetson als normal
+kopiertes, nicht vom temporaeren Worktree abhaengiges Colcon-Install aktiv.
+Ersetzt wurden ausschliesslich `install/robot_bringup` und
+`install/semantic_perception`. Der vorherige vollstaendige Paketstand liegt
+lokal unter
+`~/.local/share/amadeus/deploy-backups/oak-stream-a2d8ccc-predeploy/`.
+Die schmutzige Haupt-Arbeitskopie wurde nicht veraendert.
+
+Auf dem KI-Server wurde derselbe Commit normal unter Python 3.12 gebaut; dort
+bestanden 24/24 Tests. Die externe Produktions-YAML nutzt jetzt nur die
+komprimierten Semantiktopics. Ihr Vorgänger liegt als
+`~/.config/amadeus-server/semantic_perception.yaml.pre-a2d8ccc-20260826` vor.
+`amadeus-ki.service` ist aktiv und startet genau einen `llm_planner` sowie
+einen `semantic_perception` aus dem Produktions-Install.
+
+Der anschliessende Produktionsstart aus `/home/p/roboter_ws/install` meldete
+nach 190 Paaren weiterhin `ready=true`, 0,052 s Publikationsalter, null stale
+Frames und null Codecfehler. Der Entzerrer meldete 957/957 Bilder, null Drops
+und 640 x 360. Genau ein RTX-Subscriber hing am komprimierten RGB-Topic. Eine
+Tassenabfrage blieb ohne laufende Kartenlokalisierung korrekt fail-closed im
+`map`-Frame. Aktiv blieben nur OAK, Entzerrer, Relay und beide KI-Server-Nodes;
+Motoren, Nav2, VL53 und Missionsausfuehrung waren aus.
+
+Rueckfall: OAK und KI-Dienst stoppen, auf dem Jetson die beiden gesicherten
+Paketverzeichnisse zurueckkopieren und auf dem Server die gesicherte YAML
+wiederherstellen; alternativ `semantic_relay:=false` oder Commit revertieren.
 
 ---
 
