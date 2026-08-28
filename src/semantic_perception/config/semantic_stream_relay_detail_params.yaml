@@ -1,0 +1,22 @@
+semantic_stream_relay:
+  ros__parameters:
+    rgb_input: "/oak/rgb/image_raw"
+    depth_input: "/oak/stereo/image_raw"
+    camera_info_input: "/oak/rgb/camera_info"
+    rgb_output: "/oak/semantic/rgb/compressed"
+    depth_output: "/oak/semantic/depth/compressed"
+    camera_info_output: "/oak/semantic/camera_info"
+    status_topic: "/oak/semantic/stream_status_json"
+    profile_name: "detail_hd"
+
+    # HD ist bedarfsgesteuert und wird nicht parallel zum Dauerprofil gestartet.
+    # Ein Bildpaar pro Sekunde begrenzt JPEG-/PNG-CPU- und WLAN-Last.
+    publish_rate_hz: 1.0
+    jpeg_quality: 90
+    png_compression: 1
+    max_input_age_s: 2.0
+    max_rgb_depth_skew_s: 0.20
+    frame_queue_size: 40
+    input_stall_timeout_s: 3.0
+    subscription_restart_cooldown_s: 5.0
+    startup_grace_s: 12.0

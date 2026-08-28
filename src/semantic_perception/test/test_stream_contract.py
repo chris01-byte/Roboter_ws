@@ -81,6 +81,37 @@ class SemanticStreamContractTests(unittest.TestCase):
             relay['subscription_restart_cooldown_s'],
             relay['input_stall_timeout_s'])
 
+    def test_detail_profile_is_hd_bounded_and_separate(self):
+        detail = yaml.safe_load(
+            (SOURCE_ROOT / 'robot_bringup' / 'config' /
+             'oak_params_detail.yaml').read_text(encoding='utf-8'))[
+                 '/oak']['ros__parameters']
+        relay = yaml.safe_load(
+            (PACKAGE_ROOT / 'config' /
+             'semantic_stream_relay_detail_params.yaml').read_text(
+                 encoding='utf-8'))[
+                     'semantic_stream_relay']['ros__parameters']
+        launch_source = (
+            SOURCE_ROOT / 'robot_bringup' / 'launch' /
+            'oak_detail.launch.py').read_text(encoding='utf-8')
+
+        self.assertEqual(
+            (detail['rgb']['i_isp_num'], detail['rgb']['i_isp_den']),
+            (2, 3))
+        self.assertEqual(
+            (detail['rgb']['i_width'], detail['rgb']['i_height']),
+            (1280, 720))
+        self.assertEqual(detail['rgb']['i_fps'], 5.0)
+        self.assertEqual(detail['stereo']['i_width'], 1280)
+        self.assertEqual(detail['stereo']['i_height'], 720)
+        self.assertLessEqual(relay['publish_rate_hz'], 1.0)
+        self.assertEqual(relay['profile_name'], 'detail_hd')
+        self.assertIn('oak_params_detail.yaml', launch_source)
+        self.assertIn('semantic_stream_relay_detail_params.yaml', launch_source)
+        self.assertIn("'pointcloud': 'false'", launch_source)
+        self.assertIn("'maximum_runtime_s'", launch_source)
+        self.assertIn('TimerAction', launch_source)
+
     def test_bringup_declares_external_rectifier_dependencies(self):
         root = ElementTree.parse(
             SOURCE_ROOT / 'robot_bringup' / 'package.xml').getroot()

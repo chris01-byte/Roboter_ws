@@ -12,6 +12,7 @@ semantic_stream_relay:
     depth_output: "/oak/semantic/depth/compressed"
     camera_info_output: "/oak/semantic/camera_info"
     status_topic: "/oak/semantic/stream_status_json"
+    profile_name: "standard"
 
     publish_rate_hz: 2.0
     jpeg_quality: 80

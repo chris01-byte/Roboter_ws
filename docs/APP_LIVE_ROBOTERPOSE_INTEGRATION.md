@@ -1,8 +1,19 @@
 # Live-Roboterpose in der iOS-App
 
-## Integrationsanweisung für den nächsten Agenten
+## Integrationsanweisung und Umsetzungsnachweis
 
 **Planungsstand:** 16.08.2026
+
+**Umsetzungsstand:** 28.08.2026, Branch `feature/semantic-object-map-app`
+
+Backend, Rosbridge-Protokoll, Controllerzustand, Kartenoverlay und Mock sind
+implementiert. Zusaetzlich zeigt die App nur kartenfeste Objekte aus
+`/semantic/object_map_json`. Python-Semantik- und Mocktests sowie der
+motorlose Jetson-Protokolltest sind bestanden. Ein realer iOS-Build war auf
+dem Jetson mangels Swift-/Xcode-Toolchain nicht moeglich; die sichtbare
+iPhone-Abnahme bleibt deshalb offen. Der aktuelle Wohnungsscan war in zwei
+unabhaengigen Stillstandslaeufen global mehrdeutig. Das Backend verhielt sich
+korrekt fail-closed und publizierte keine als aktuell markierte Kartenpose.
 
 **Ziel:** Die iOS-App zeigt die aktuelle Position und Blickrichtung von
 Amadeus auf der bereits dargestellten Karte an. Die Anzeige soll sich ungefähr

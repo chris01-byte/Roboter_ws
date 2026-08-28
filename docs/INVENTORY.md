@@ -1,9 +1,9 @@
 # Inventar
 
-**Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 17.08.2026 · Branch
-`feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
-abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
+**Hardwarestand:** 28.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
+**Softwaredelta:** 28.08.2026 · Branch
+`feature/semantic-object-map-app`; kartenfeste Live-Pose/Objektkarte,
+bedarfsgesteuertes OAK-HD-Profil und erhoehte CycloneDDS-Teilnehmersuche
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -29,14 +29,14 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
-| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |
+| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und App-Kartierungsstack; OAK-Standard-/Detailprofil; CycloneDDS-Profil fuer grosse Nav2-Starts | **produktiv** (App-Erkundung real; OAK Standard/HD motorlos abgenommen) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
 | `robot_navigation` | Nav2-Realprofil mit globalem Zwei-Scan-Lokalisierer, fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (drei Kaltstarts an bestaetigter Pose und anschliessendes Raumziel real bestanden) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
-| `semantic_perception` | Objekterkennung auf gedrosseltem, komprimiertem OAK-RGB-D-Stream mit frischem Pairing und Endpoint-Watchdog | **erprobt** (33:49-min OAK, 17:31-min Relay und frische positive RTX-3D-Pose; echter Karten-TF offen) |
+| `semantic_perception` | Objekterkennung auf komprimiertem OAK-RGB-D-Stream; Objektgedaechtnis strikt an frische globale Lokalisierung und Kartenfingerprint gebunden | **erprobt** (Standardtransport und HD-3D-Pose real; kartenfeste Live-Pose am aktuellen mehrdeutigen Standort korrekt gesperrt) |
 | `mission_manager` | Auftragsverwaltung; Raumziel standardmäßig simuliert, reale Nav2-Fahrt nur per explizitem Opt-in | **erprobt** (ein beaufsichtigtes Raumziel real erreicht) |
 | `bt_orchestrator` | Behavior-Tree-Ablaufsteuerung mit reaktiver Not-Aus-Bedingung und sicherem Subscription-Vorlauf | **erprobt** (in realer Explore-Kette abgenommen) |
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
@@ -54,6 +54,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Zweck | Befehl | Hardware aktiv? |
 |---|---|---|
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
+| Kamera-HD-Detailtest (max. 45 s) | `ros2 launch robot_bringup oak_detail.launch.py` | nein |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
@@ -93,6 +94,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/karte_ansehen.py` | rendert Karte mit Maßstabsraster |
 | `tools/kartierung/merkmale_messen.py` | Bildmerkmale und Tiefenabdeckung |
 | `tools/kartierung/encoder_position_pruefen.py` | strikt read-only: Position, Wortfolge und Counts/Umdrehung bestimmen |
+| `tools/perception/oak_static_acceptance.py` | motorlose Standard-Transport- oder HD-Objekt-/3D-Abnahme ohne Bildspeicherung |
 | `docs/82-ftdi-latency.rules` | udev-Regel, senkt FTDI-Latenz 16 ms → 1 ms |
 
 ---
@@ -145,6 +147,6 @@ Bereiche enthalten.
 
 | Komponente | Pfad | Reifegrad |
 |---|---|---|
-| iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor und Raumwahl am realen ROS-System abgenommen |
+| iOS-App „Amadeus" | `ios/Robotersteuerung/` | Raumeditor real abgenommen; kartenfeste Live-Roboter-/Objektmarker implementiert, Xcode-/iPhone-Abnahme offen |
 | Übergabeprotokolle | `integration/` | Dokumentation |
 | Prüfplan | `Roboter_Pruefplan.md`, `pruefplan_jetson.sh` | produktiv genutzt |

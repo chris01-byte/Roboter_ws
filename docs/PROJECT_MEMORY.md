@@ -17,6 +17,82 @@ Rückfallweg:
 
 ---
 
+## 2026-08-28 — Live-Pose und Objektkarte strikt an Lokalisierung gebunden
+
+**Entscheidung:** Die iOS-App abonniert die vom `robot_map_manager` gepruefte
+Pose, den Lokalisierungsstatus und die neue semantische Objektkarte. Ein
+Roboter- oder Objektmarker gilt nur dann als aktuell, wenn Socket-Generation,
+Kartenframe und Kartenfingerabdruck uebereinstimmen und zwei frische,
+fortschreitende Lokalisierungsstatusmeldungen `localized/completed` bestaetigen.
+Bei Verlust dieser Kette wird die Roboterpose als letzter bekannter Stand grau
+dargestellt und die Objektkarte fail-closed verworfen. Die App berechnet keinen
+TF und publiziert durch diese Anzeige keine ROS-Kommandos.
+
+Das OAK-Navigationsprofil bleibt klein und wurde real mit 320 x 180 als reiner
+RGB-D-Transport abgenommen. Objekterkennung und 3D-Stabilitaet werden getrennt
+im bedarfsgesteuerten Profil `detail_hd` bei 1280 x 720 geprueft. Fuer solche
+Eingangsbilder verwendet YOLO-World die auf demselben Bild vermessene
+Inferenzgroesse 960; der Detailstart beendet sich nach 45 s automatisch. So
+bleibt die hohe Last ein kurzer Diagnose-/Detailmodus und kann nicht
+versehentlich parallel zum Standardprofil dauerhaft laufen.
+
+**Grund / beobachtete Evidenz:** Auf demselben realen HD-Bild erreichte die
+Tasse mit Inferenzgroesse 640 nur Konfidenz 0,318, mit 960 dagegen 0,896 und
+mit 1280 wieder nur 0,682. Die reale motorlose HD-Abnahme lieferte 11 von 11
+gueltigen 3D-Posen in 20 s, Mindestkonfidenz 0,878 und maximal 7,2 mm Streuung.
+Der Standard-Transporttest lieferte 12 frische Statusmeldungen mit exakt
+320 x 180, fortschreitendem Paarzaehler und `ready=true`. Bilder und
+Diagnoseberichte bleiben lokal ausserhalb des Repositories.
+
+Ein motorloser End-to-End-Start mit der lokalen Wohnungskarte bestaetigte die
+identische Bindung von metrischer Karte, semantischer Karte und Objektstatus.
+Der globale LiDAR-Abgleich lehnte die aktuelle Position in zwei unabhaengigen
+Kaltstarts jedoch korrekt als mehrdeutig ab: bester Score rund 0,863,
+Wandtrefferquote 84,3--84,4 % und Abstand zum zweitbesten Kandidaten nur
+1,045 beziehungsweise 1,052 statt mindestens 1,15. Deshalb wurden weder
+`map -> odom` noch eine aktuelle App-Pose freigegeben. Die Schutzschwellen
+wurden nicht abgesenkt.
+
+Beim ersten Gesamtstart erreichte CycloneDDS ausserdem seine voreingestellte
+Suche nach automatischen Teilnehmerindizes. Das WLAN-Profil setzt deshalb
+nun `MaxAutoParticipantIndex=120`. Danach startete derselbe Verbund ohne
+Teilnehmerfehler; ein zusaetzlicher motorloser Stresstest hielt 20 von 20
+weiteren ROS-Prozessen gleichzeitig aktiv. `base_hardware` blieb bei beiden
+Lokalisierungslaeufen `dry_run=true`, `allow_rs485=false` und 0 rpm.
+
+**Betroffene Dateien und Hardware:** `semantic_perception`, OAK-Detailprofil
+und DDS-Profil in `robot_bringup`, iOS-Modelle/Protokoll/Controller/Kartenview,
+Mock-Rosbridge sowie motorlos OAK-D-S2, Jetson, WLAN und RTX-KI-Server. Die
+Produktionspakete auf Jetson und KI-Server wurden aus dem isolierten Branch
+installiert; die schmutzige Hauptarbeitskopie blieb unangetastet.
+
+**Teststatus:** 30 Semantiktests, 3 OAK-Abnahmetests, 9 Python-App-Mocktests,
+8 Bring-up-Vertragstests einschliesslich DDS, isolierte Colcon-Builds
+auf Jetson und KI-Server sowie beide realen OAK-Profile bestanden. Die
+Rosbridge-App-Schnittstelle startete motorlos auf Port 9090. Swift-/Xcode-
+Tests konnten auf dem Jetson mangels Apple-Toolchain nicht ausgefuehrt werden;
+der echte iPhone-Marker ist deshalb noch nicht visuell abgenommen.
+
+**Offene Risiken:** Eine positive reale `map`-Objektpose und der gruene
+Live-Marker benoetigen zuerst eine eindeutig bestaetigte Wohnungslokalisierung.
+Der aktuelle Stillstandsort ist fuer die Wohnungskarte mehrdeutig. Das
+HD-Tiefen-Relay verlor in einem laengeren Einzelversuch nach etwa 53 s seinen
+Depth-Endpunkt; der auf 45 s begrenzte Detailmodus umgeht diese ungeklaerte
+Dauerbetriebsgrenze, ersetzt aber keinen spaeteren Dauertest. Vor einer
+Freigabe fuer Investoren muessen App-Build und Darstellung auf iPhone/Xcode
+noch bestaetigt werden.
+
+**Rueckfallweg:** Die neuen App-Subscriptions und Marker koennen entfernt
+werden, ohne Karte, Raumeditor oder Navigation zu veraendern. Auf dem Jetson
+liegen Paketbackups unter
+`~/.local/share/amadeus/deploy-backups/semantic-map-*-predeploy/`, auf dem
+KI-Server unter demselben Unterpfad. Das vorherige DDS-Profil liegt lokal als
+`~/.local/share/amadeus/deploy-backups/cyclonedds-pre-semantic-map-20260828.xml`.
+Ohne eindeutige Lokalisierung bleibt die Objektkarte absichtlich gesperrt;
+kein statischer Ersatz-TF darf im Produktivbetrieb gesetzt werden.
+
+---
+
 ## 2026-08-26 — OAK-RGB-D-Dauerstream entkoppelt und selbstheilend
 
 **Entscheidung:** Die OAK-D-S2 liefert im Semantik-/SLAM-Profil real

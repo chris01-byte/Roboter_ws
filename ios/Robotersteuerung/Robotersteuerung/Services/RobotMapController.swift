@@ -103,6 +103,9 @@ final class RobotMapController: NSObject, ObservableObject {
     @Published private(set) var semanticStatus: SemanticMapStatusEnvelope?
     @Published private(set) var semanticWriteState: SemanticMapWriteState = .idle
     @Published private(set) var mapSaveState: MapSaveState = .idle
+    @Published private(set) var robotPoseDisplayState: RobotPoseDisplayState =
+        .unavailable(message: "Roboterposition nicht verfügbar.")
+    @Published private(set) var displayedObjectMarkers: [SemanticObjectSample] = []
 
     private var session: URLSession?
     private var socketTask: URLSessionWebSocketTask?
@@ -113,6 +116,7 @@ final class RobotMapController: NSObject, ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var semanticRequestTimeoutTask: Task<Void, Never>?
     private var mapSaveTimeoutTask: Task<Void, Never>?
+    private var poseFreshnessTask: Task<Void, Never>?
     private var pendingMapText: String?
     private var mapProcessingGeneration = 0
     private var requestedBridgeURL = ""
@@ -126,6 +130,16 @@ final class RobotMapController: NSObject, ObservableObject {
     private let snapshotStore = RobotMapSnapshotStore()
     private var lastPersistedMapFingerprint: String?
     private var lastMapSnapshotPersistedAt: Date?
+    private var socketGeneration: UInt64 = 0
+    private var currentRobotPose: RobotPoseSample?
+    private var lastConfirmedRobotPose: RobotPoseSample?
+    private var localizationStatus: LocalizationStatusEnvelope?
+    private var localizationReceivedAt: Date?
+    private var localizationLastBackendTime: Double?
+    private var localizationProgressCount = 0
+    private var mapManagerStatusReceivedAt: Date?
+    private var semanticObjectMapStatus: SemanticObjectMapEnvelope?
+    private var semanticObjectMapReceivedAt: Date?
 
     var displayedRooms: [SemanticRoom] {
         matchedSemanticMap?.rooms ?? []
@@ -452,9 +466,12 @@ final class RobotMapController: NSObject, ObservableObject {
         streamState = .waitingForMap
         mapManagerStatus = nil
         semanticStatus = nil
+        socketGeneration &+= 1
+        resetLivePoseState()
 
         startReceiveLoop(for: task)
         startPingLoop(for: task)
+        startPoseFreshnessLoop(for: task)
 
         Task { [weak self, task] in
             do {
@@ -560,6 +577,21 @@ final class RobotMapController: NSObject, ObservableObject {
         }
     }
 
+    private func startPoseFreshnessLoop(for task: URLSessionWebSocketTask) {
+        poseFreshnessTask?.cancel()
+        poseFreshnessTask = Task { [weak self, task] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: 500_000_000)
+                } catch {
+                    return
+                }
+                guard let self, self.socketTask === task else { return }
+                self.refreshPoseAndObjects(now: Date())
+            }
+        }
+    }
+
     private func sendPing(on task: URLSessionWebSocketTask) async throws {
         try await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<Void, Error>) in
@@ -612,6 +644,35 @@ final class RobotMapController: NSObject, ObservableObject {
                         "Ungültiger Kartenmanager-Status. Kartenstand neu laden."
                     )
                     lastProtocolError = error.localizedDescription
+                    mapManagerStatusReceivedAt = nil
+                    refreshPoseAndObjects(now: Date())
+                }
+            case MapRosbridgeProtocol.robotPoseTopic:
+                do {
+                    currentRobotPose = try MapRosbridgeProtocol.decodeRobotPose(
+                        from: text,
+                        receivedAt: Date(),
+                        socketGeneration: socketGeneration
+                    )
+                    lastProtocolError = nil
+                } catch {
+                    currentRobotPose = nil
+                    lastProtocolError = error.localizedDescription
+                }
+                refreshPoseAndObjects(now: Date())
+            case MapRosbridgeProtocol.localizationStatusTopic:
+                do {
+                    if let status = try MapRosbridgeProtocol.decodeLocalizationStatus(
+                        from: text
+                    ) {
+                        handleLocalizationStatus(status, receivedAt: Date())
+                    }
+                } catch {
+                    localizationStatus = nil
+                    localizationReceivedAt = nil
+                    localizationProgressCount = 0
+                    lastProtocolError = error.localizedDescription
+                    refreshPoseAndObjects(now: Date())
                 }
             case MapRosbridgeProtocol.semanticStatusTopic:
                 do {
@@ -626,6 +687,18 @@ final class RobotMapController: NSObject, ObservableObject {
                     )
                     lastProtocolError = error.localizedDescription
                 }
+            case MapRosbridgeProtocol.semanticObjectMapTopic:
+                do {
+                    semanticObjectMapStatus =
+                        try MapRosbridgeProtocol.decodeSemanticObjectMap(from: text)
+                    semanticObjectMapReceivedAt = Date()
+                    lastProtocolError = nil
+                } catch {
+                    semanticObjectMapStatus = nil
+                    semanticObjectMapReceivedAt = nil
+                    lastProtocolError = error.localizedDescription
+                }
+                refreshPoseAndObjects(now: Date())
             case .none:
                 break
             default:
@@ -687,11 +760,16 @@ final class RobotMapController: NSObject, ObservableObject {
                     }
 
                     let receivedAt = Date()
+                    let previousFingerprint = self.map?.contentFingerprint
                     self.map = rendered.map
                     self.mapImage = image
                     self.lastMapReceivedAt = receivedAt
                     self.lastProtocolError = nil
                     self.streamState = .live
+                    if previousFingerprint != rendered.map.contentFingerprint {
+                        self.resetLivePoseState()
+                    }
+                    self.refreshPoseAndObjects(now: receivedAt)
                     self.persistCurrentMapIfNeeded(force: false)
                 } catch is CancellationError {
                     return
@@ -710,7 +788,9 @@ final class RobotMapController: NSObject, ObservableObject {
 
     private func handleMapManagerStatus(_ status: RobotMapManagerStatusEnvelope) {
         mapManagerStatus = status
+        mapManagerStatusReceivedAt = Date()
         lastProtocolError = nil
+        refreshPoseAndObjects(now: Date())
         guard let requestID = pendingMapSaveRequestID,
               status.requestID == requestID,
               status.event == "save_result" else {
@@ -792,6 +872,70 @@ final class RobotMapController: NSObject, ObservableObject {
         semanticWriteState = .succeeded(status.message)
     }
 
+    private func handleLocalizationStatus(
+        _ status: LocalizationStatusEnvelope,
+        receivedAt: Date
+    ) {
+        if let previous = localizationLastBackendTime {
+            if status.time > previous {
+                localizationProgressCount += 1
+            } else if status.time < previous {
+                localizationProgressCount = 1
+                lastConfirmedRobotPose = nil
+            }
+        } else {
+            localizationProgressCount = 1
+        }
+        localizationLastBackendTime = status.time
+        localizationStatus = status
+        localizationReceivedAt = receivedAt
+        lastProtocolError = nil
+        refreshPoseAndObjects(now: receivedAt)
+    }
+
+    private func refreshPoseAndObjects(now: Date) {
+        let state = RobotPoseClientPolicy.displayState(
+            mapIsLive: streamState.isLive,
+            currentMap: map,
+            managerStatus: mapManagerStatus,
+            managerReceivedAt: mapManagerStatusReceivedAt,
+            localizationStatus: localizationStatus,
+            localizationReceivedAt: localizationReceivedAt,
+            localizationProgressCount: localizationProgressCount,
+            currentPose: currentRobotPose,
+            lastConfirmedPose: lastConfirmedRobotPose,
+            socketGeneration: socketGeneration,
+            now: now
+        )
+        if case let .live(sample) = state {
+            lastConfirmedRobotPose = sample
+        }
+        robotPoseDisplayState = state
+        displayedObjectMarkers = RobotPoseClientPolicy.visibleObjects(
+            status: semanticObjectMapStatus,
+            receivedAt: semanticObjectMapReceivedAt,
+            map: map,
+            robotPoseState: state,
+            now: now
+        )
+    }
+
+    private func resetLivePoseState() {
+        currentRobotPose = nil
+        lastConfirmedRobotPose = nil
+        localizationStatus = nil
+        localizationReceivedAt = nil
+        localizationLastBackendTime = nil
+        localizationProgressCount = 0
+        mapManagerStatusReceivedAt = nil
+        semanticObjectMapStatus = nil
+        semanticObjectMapReceivedAt = nil
+        robotPoseDisplayState = .unavailable(
+            message: "Roboterposition wird neu gebunden."
+        )
+        displayedObjectMarkers = []
+    }
+
     private static func makeImage(from rendered: RenderedRobotMap) -> CGImage? {
         let data = Data(rendered.pixels)
         guard let provider = CGDataProvider(data: data as CFData) else {
@@ -854,10 +998,12 @@ final class RobotMapController: NSObject, ObservableObject {
         pingLoopTask?.cancel()
         mapDiscoveryTask?.cancel()
         mapProcessingTask?.cancel()
+        poseFreshnessTask?.cancel()
         receiveLoopTask = nil
         pingLoopTask = nil
         mapDiscoveryTask = nil
         mapProcessingTask = nil
+        poseFreshnessTask = nil
         pendingMapText = nil
         mapProcessingGeneration &+= 1
         semanticRequestTimeoutTask?.cancel()
@@ -866,6 +1012,7 @@ final class RobotMapController: NSObject, ObservableObject {
         mapSaveTimeoutTask = nil
         mapManagerStatus = nil
         semanticStatus = nil
+        resetLivePoseState()
         if pendingSemanticRequestID != nil {
             semanticWriteState = .statusUnknown(
                 "Verbindung während der Raumänderung beendet. Vor einem neuen Versuch den Kartenstand neu laden."

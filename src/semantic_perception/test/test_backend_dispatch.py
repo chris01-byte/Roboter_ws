@@ -204,3 +204,17 @@ class BackendDispatchTests(unittest.TestCase):
         self.assertTrue(selected)
         self.assertIs(node._last_image, rgb_matching)
         self.assertIs(node._last_depth, depth_matching)
+
+    def test_hd_input_selects_measured_detail_inference_size(self):
+        node = SimpleNamespace(
+            _model_image_size=640,
+            _detail_model_image_size=960,
+            _detail_input_min_width=1000,
+        )
+
+        self.assertEqual(
+            SemanticPerception._inference_size_for_width(node, 320), 640)
+        self.assertEqual(
+            SemanticPerception._inference_size_for_width(node, 999), 640)
+        self.assertEqual(
+            SemanticPerception._inference_size_for_width(node, 1280), 960)

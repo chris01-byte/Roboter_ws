@@ -35,6 +35,11 @@
       </Peers>
       <!-- Etwas laengere Lease-Zeit gegen WLAN-Latenzspitzen. -->
       <ParticipantIndex>auto</ParticipantIndex>
+      <!-- Nav2/AMCL starten mehr als zehn getrennte ROS-Prozesse. Ohne eine
+           erhoehte Suchgrenze endet CycloneDDS mit "Failed to find a free
+           participant index", obwohl alle Prozesse zum selben Roboter
+           gehoeren. -->
+      <MaxAutoParticipantIndex>120</MaxAutoParticipantIndex>
     </Discovery>
 
     <Internal>

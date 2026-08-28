@@ -1,5 +1,79 @@
 # Übertragung auf den realen Roboter
 
+## Kartenfeste Live-Pose, Objektkarte und OAK-Detailmodus (28.08.2026)
+
+**Branch:** `feature/semantic-object-map-app`
+
+Der Jetson publiziert weiterhin die gepruefte App-Pose unter
+`/robot_map_manager/robot_pose`. Neu hinzugekommen sind eine strikt
+kartenfeste Objektliste unter `/semantic/object_map_json` und ein
+motorunabhaengiger Kameradiagnosestatus unter
+`/semantic/observation_status_json`. Der Semantiknode akzeptiert eine
+`map`-Pose erst nach zwei frischen, fortschreitenden Meldungen auf
+`/localization/status_json`; Karte, Frame und Fingerabdruck muessen exakt
+zusammenpassen. Bei Kartenwechsel wird das Objektgedaechtnis geloescht.
+
+Die iOS-App besitzt die passenden Rosbridge-Subscriptions und zeigt eine
+frische Pose gruen mit Blickrichtung, einen letzten bekannten Stand grau und
+kartenfeste Objektmarker. Reconnect, stale Daten, falscher Frame oder
+Fingerprint und `ready=false` arbeiten fail-closed. Die Funktion ist rein
+lesend und kann keine Fahrt freigeben. Der Python-Mockvertrag ist mit neun
+Tests abgenommen; Swift/Xcode steht auf dem Jetson nicht zur Verfuegung und
+muss auf dem Entwicklungs-Mac beziehungsweise iPhone noch gebaut und visuell
+geprueft werden.
+
+Kameraprofile:
+
+- `ros2 launch robot_bringup oak.launch.py`: Standardprofil, real 320 x 180;
+- `ros2 launch robot_bringup oak_detail.launch.py`: `detail_hd`, real
+  1280 x 720, 1-Hz-Relay, JPEG-Qualitaet 90, automatisches Ende nach 45 s;
+- `python3 tools/perception/oak_static_acceptance.py --stream-only
+  --position standard`: reiner Standard-Transporttest;
+- dieselbe Abnahme ohne `--stream-only` und mit
+  `--expected-profile detail_hd --expected-width 1280 --expected-height 720`:
+  Objekt-/3D-Test.
+
+Die reale HD-Abnahme der sichtbaren Tasse bestand mit 11/11 gueltigen
+3D-Posen, Mindestkonfidenz 0,878 und maximal 7,2 mm Streuung. Inferenzgroesse
+960 war auf demselben HD-Bild klar besser als 640 und 1280. Das Standardprofil
+bestand mit 12 frischen 320-x-180-Statusmeldungen. Standard und Detail duerfen
+nie gleichzeitig auf dieselbe OAK zugreifen. Der Detailmodus ist absichtlich
+kurz: In einem laengeren Versuch verlor sein Tiefen-Relay nach etwa 53 s den
+DDS-Endpunkt, obwohl die Rohdaten weiterliefen.
+
+Der Produktionsstand ist auf Jetson (`semantic_perception`, `robot_bringup`)
+und KI-Server (`semantic_perception`) installiert. Lokale Rueckfallkopien
+liegen jeweils unter
+`~/.local/share/amadeus/deploy-backups/semantic-map-*-predeploy/`. Das
+Standard-OAK-Profil und `amadeus-ki.service` wurden nach der HD-Abnahme wieder
+gestartet.
+
+Fuer grosse Nav2-/AMCL-Starts enthaelt das CycloneDDS-Profil jetzt
+`MaxAutoParticipantIndex=120`. Vorher brach der Verbund mit `Failed to find a
+free participant index for domain 42` ab; danach liefen 20 zusaetzliche
+motorlose Testteilnehmer gleichzeitig. Das aktive Jetson-Profil wurde vor der
+Aenderung unter
+`~/.local/share/amadeus/deploy-backups/cyclonedds-pre-semantic-map-20260828.xml`
+gesichert.
+
+Die lokale Wohnungskarte wurde ausserhalb des Repositories im Kartenmanager
+versioniert und Semantik, Karte und Objektpipeline meldeten dieselbe Bindung.
+Zwei motorlose globale Kaltstarts lehnten den aktuellen Standort dennoch
+reproduzierbar als mehrdeutig ab (Score etwa 0,863, Wandtreffer 84,3--84,4 %,
+Bestenabstand 1,045/1,052 statt mindestens 1,15). Daher gab es bewusst keinen
+`map -> odom`, keinen gruenen App-Marker und keine kartenfeste Objektpose.
+Motorstatus blieb `dry_run=true`, `allow_rs485=false`, 0 rpm. Vor einem realen
+Fahrtest muss der Roboter fuer einen neuen motorlosen Versuch an einen
+LiDAR-eindeutigeren Standort gestellt werden; erst bei
+`/localization/ready=true` darf eine gesonderte Fahrfreigabe erfragt werden.
+
+Rueckfall: neue Pakete aus den genannten Sicherungen ersetzen, das gesicherte
+DDS-Profil zurueckkopieren und die App-Subscriptions entfernen. Niemals die
+Lokalisierungsschwellen absenken oder einen statischen `map -> base_link` als
+Produktiv-Ersatz setzen.
+
+---
+
 ## OAK-RGB-D-Transport dauerstabil und selbstheilend (26.08.2026)
 
 **Branch:** `codex/fix-oak-semantic-stream`

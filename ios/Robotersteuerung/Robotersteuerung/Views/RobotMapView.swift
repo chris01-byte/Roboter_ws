@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import UIKit
 
@@ -462,6 +463,8 @@ struct RobotMapView: View {
                 image: mapController.mapImage,
                 map: mapController.map,
                 rooms: mapController.displayedRooms,
+                robotPoseState: mapController.robotPoseDisplayState,
+                objectMarkers: mapController.displayedObjectMarkers,
                 selectedRoomID: selectedRoomID,
                 draftPoints: roomPoints,
                 draftNavigationGoal: navigationGoal,
@@ -750,6 +753,8 @@ private struct RobotMapCanvas: View {
     let image: CGImage?
     let map: RobotMapSnapshot?
     let rooms: [SemanticRoom]
+    let robotPoseState: RobotPoseDisplayState
+    let objectMarkers: [SemanticObjectSample]
     let selectedRoomID: String?
     let draftPoints: [MapPoint]
     let draftNavigationGoal: MapPoint?
@@ -790,6 +795,7 @@ private struct RobotMapCanvas: View {
                             y: offset.height + gestureOffset.height
                         )
                     semanticOverlay(in: proxy.size)
+                    poseStatusOverlay
                 } else {
                     VStack(spacing: 10) {
                         ProgressView()
@@ -825,6 +831,8 @@ private struct RobotMapCanvas: View {
                     .stroke(RobotPalette.line, lineWidth: 1)
             }
             .gesture(combinedGesture(in: proxy.size))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(poseAccessibilitySummary))
             .simultaneousGesture(
                 SpatialTapGesture()
                     .onEnded { value in
@@ -853,6 +861,27 @@ private struct RobotMapCanvas: View {
                 offset = .zero
                 rotation = .zero
             }
+        }
+    }
+
+    private var poseAccessibilitySummary: String {
+        let objects = objectMarkers.map(\.name).joined(separator: ", ")
+        let objectText = objects.isEmpty
+            ? "Keine bestätigten Objektmarker."
+            : "Objekte: \(objects)."
+        switch robotPoseState {
+        case let .live(sample):
+            return String(
+                format: "Roboterposition live, x %.2f Meter, y %.2f Meter. %@",
+                sample.point.x, sample.point.y, objectText
+            )
+        case let .lastKnown(sample, message):
+            return String(
+                format: "Letzte Roboterposition, x %.2f Meter, y %.2f Meter. %@ %@",
+                sample.point.x, sample.point.y, message, objectText
+            )
+        case let .localizing(message), let .unavailable(message):
+            return "\(message) \(objectText)"
         }
     }
 
@@ -946,9 +975,114 @@ private struct RobotMapCanvas: View {
                 )
                 context.stroke(Path(ellipseIn: outer), with: .color(.white), lineWidth: 2)
             }
+
+            for object in objectMarkers {
+                let screen = transform.screenPoint(for: object.point)
+                let marker = CGRect(
+                    x: screen.x - 7, y: screen.y - 7,
+                    width: 14, height: 14
+                )
+                context.fill(
+                    Path(ellipseIn: marker),
+                    with: .color(RobotPalette.highlight.opacity(0.95))
+                )
+                context.stroke(Path(ellipseIn: marker), with: .color(.white), lineWidth: 2)
+                context.draw(
+                    Text(object.name)
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(.white),
+                    at: CGPoint(x: screen.x, y: screen.y - 15)
+                )
+            }
+
+            drawRobotMarker(
+                robotPoseState,
+                context: &context,
+                transform: transform
+            )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
+    }
+
+    @ViewBuilder
+    private var poseStatusOverlay: some View {
+        switch robotPoseState {
+        case let .localizing(message), let .unavailable(message):
+            VStack {
+                HStack {
+                    Spacer()
+                    Text(message)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 9)
+                        .frame(minHeight: 26)
+                        .background(Color.black.opacity(0.72))
+                        .clipShape(Capsule())
+                }
+                Spacer()
+            }
+            .padding(10)
+            .allowsHitTesting(false)
+        case .live, .lastKnown:
+            EmptyView()
+        }
+    }
+
+    private func drawRobotMarker(
+        _ state: RobotPoseDisplayState,
+        context: inout GraphicsContext,
+        transform: RobotMapViewportTransform
+    ) {
+        let sample: RobotPoseSample
+        let color: Color
+        let label: String?
+        switch state {
+        case let .live(value):
+            sample = value
+            color = RobotPalette.success
+            label = nil
+        case let .lastKnown(value, _):
+            sample = value
+            color = Color.gray.opacity(0.75)
+            label = "LETZTE POSITION"
+        case .localizing, .unavailable:
+            return
+        }
+        let center = transform.screenPoint(for: sample.point)
+        let angle = RobotPoseClientPolicy.screenHeading(
+            robotYaw: sample.yaw,
+            mapOriginYaw: transform.map.origin.yaw,
+            viewportRotation: transform.rotationRadians
+        )
+        let cosine = cos(angle)
+        let sine = sin(angle)
+        func rotated(_ x: Double, _ y: Double) -> CGPoint {
+            CGPoint(
+                x: center.x + cosine * x - sine * y,
+                y: center.y + sine * x + cosine * y
+            )
+        }
+        var marker = Path()
+        marker.move(to: rotated(15, 0))
+        marker.addLine(to: rotated(-10, 9))
+        marker.addLine(to: rotated(-6, 0))
+        marker.addLine(to: rotated(-10, -9))
+        marker.closeSubpath()
+        context.fill(marker, with: .color(color))
+        context.stroke(marker, with: .color(.white), lineWidth: 2)
+        let centerDot = CGRect(
+            x: center.x - 3, y: center.y - 3, width: 6, height: 6
+        )
+        context.fill(Path(ellipseIn: centerDot), with: .color(.white))
+        if let label {
+            context.draw(
+                Text(label)
+                    .font(.caption2.weight(.heavy))
+                    .foregroundColor(.white),
+                at: CGPoint(x: center.x, y: center.y + 22)
+            )
+        }
     }
 
     private func polygonPath(

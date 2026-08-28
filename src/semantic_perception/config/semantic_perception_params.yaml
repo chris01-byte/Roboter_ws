@@ -45,8 +45,12 @@ semantic_perception:
     # Frame des OAK-Treibers. Die URDF nennt ihn camera_rgb_optical_frame, der
     # Treiber oak_rgb_camera_optical_frame - im Betrieb gilt der Treiber-Frame.
     camera_frame: "oak_rgb_camera_optical_frame"
+    base_frame: "base_link"
     confidence_threshold: 0.35
     model_path: "yolov8s-worldv2.pt"       # YOLO-World-Gewichte (nur Backend 'yoloworld')
+    model_image_size: 640                  # Standardprofil 320x180 -> YOLO-Eingang 640
+    detail_model_image_size: 960           # HD-Detailprofil: real gemessen deutlich robuster
+    detail_input_min_width: 1000           # ab dieser RGB-Breite Detail-Inferenz verwenden
     depth_scale: 0.001                     # Tiefen-Rohwert -> Meter (OAK: mm -> 0.001)
     max_input_age_s: 2.0                   # alte WLAN-/Kameraframes fail-closed ablehnen
     max_rgb_depth_skew_s: 0.20             # nur zeitlich passendes RGB-D projizieren
@@ -88,6 +92,16 @@ semantic_perception:
     scan_period_s: 2.0        # wie oft im Hintergrund erkannt + gemerkt wird [s]
     memory_ttl_s: 0.0         # Gedaechtnis-Verfall [s]; 0 = nie verfallen
     live_fallback: true       # bei Cache-Miss zusaetzlich das aktuelle Bild pruefen
+
+    # --- Kartenbindung und App-Status ---
+    localization_status_topic: "/localization/status_json"
+    localization_max_age_s: 1.0
+    require_localization_for_map: true
+    object_map_topic: "/semantic/object_map_json"
+    observation_status_topic: "/semantic/observation_status_json"
+    semantic_status_period_s: 1.0
+    observation_ttl_s: 5.0
+    maximum_object_markers: 64
 
     # --- Stub-Verhalten (nur Backend 'stub') ---
     stub_position: [1.0, 0.0, 0.5]

@@ -194,13 +194,7 @@ struct RobotMapSnapshot: Sendable, Equatable, Codable {
         }
 
         let cleanedFrameID = frameID.trimmingCharacters(in: .whitespacesAndNewlines)
-        let frameBytes = Data(cleanedFrameID.utf8)
-        guard !cleanedFrameID.isEmpty,
-              cleanedFrameID.unicodeScalars.count <= 128,
-              frameBytes.count <= Int(UInt16.max),
-              cleanedFrameID.unicodeScalars.allSatisfy({ scalar in
-                  scalar.value >= 0x20 && scalar.value != 0x7F
-              }) else {
+        guard RobotFrameID.isValid(cleanedFrameID) else {
             throw RobotMapValidationError.invalidFrameID
         }
         guard cells.count == cellCount else {
@@ -365,6 +359,132 @@ struct MapPoint: Codable, Hashable, Sendable {
     let y: Double
 
     var isFinite: Bool { x.isFinite && y.isFinite }
+}
+
+enum RobotFrameID {
+    static func isValid(_ value: String) -> Bool {
+        let cleaned = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bytes = Data(cleaned.utf8)
+        return !cleaned.isEmpty && cleaned == value &&
+            cleaned.unicodeScalars.count <= 128 &&
+            bytes.count <= Int(UInt16.max) &&
+            cleaned.unicodeScalars.allSatisfy { scalar in
+                scalar.value >= 0x20 && scalar.value != 0x7F
+            }
+    }
+}
+
+struct RobotPoseSample: Equatable, Sendable {
+    let point: MapPoint
+    let z: Double
+    let yaw: Double
+    let frameID: String
+    let sourceStampNanoseconds: Int64
+    let receivedAt: Date
+    let socketGeneration: UInt64
+}
+
+enum RobotPoseDisplayState: Equatable, Sendable {
+    case unavailable(message: String)
+    case localizing(message: String)
+    case live(RobotPoseSample)
+    case lastKnown(RobotPoseSample, message: String)
+}
+
+struct LocalizationStatusEnvelope: Decodable, Equatable, Sendable {
+    let schemaVersion: Int
+    let ready: Bool
+    let state: String
+    let reasons: [String]
+    let mapFingerprint: String?
+    let globalInitialization: String
+    let time: Double
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case ready
+        case state
+        case reasons
+        case mapFingerprint = "map_fingerprint"
+        case globalInitialization = "global_initialization"
+        case time
+    }
+
+    var isValid: Bool {
+        schemaVersion == 1 && !state.isEmpty && state.count <= 64 &&
+            !globalInitialization.isEmpty && globalInitialization.count <= 64 &&
+            reasons.count <= 64 && reasons.allSatisfy { $0.count <= 512 } &&
+            time.isFinite && time > 0 &&
+            (mapFingerprint.map(SemanticMapReference.isFingerprint) ?? true) &&
+            (!ready || (
+                state == "localized" && globalInitialization == "completed" &&
+                mapFingerprint != nil
+            ))
+    }
+}
+
+struct SemanticObjectSample: Decodable, Equatable, Sendable, Identifiable {
+    let name: String
+    let confidence: Double
+    let position: Position
+    let lastSeenTime: Double
+    let ageSeconds: Double
+
+    var id: String { name.lowercased() }
+    var point: MapPoint { MapPoint(x: position.x, y: position.y) }
+
+    struct Position: Decodable, Equatable, Sendable {
+        let x: Double
+        let y: Double
+        let z: Double
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case confidence
+        case position
+        case lastSeenTime = "last_seen_time"
+        case ageSeconds = "age_s"
+    }
+
+    var isValid: Bool {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !cleanName.isEmpty && cleanName == name && name.count <= 80 &&
+            cleanName.unicodeScalars.allSatisfy {
+                $0.value >= 0x20 && $0.value != 0x7F
+            } &&
+            confidence.isFinite && (0...1).contains(confidence) &&
+            position.x.isFinite && position.y.isFinite && position.z.isFinite &&
+            lastSeenTime.isFinite && lastSeenTime > 0 &&
+            ageSeconds.isFinite && ageSeconds >= 0
+    }
+}
+
+struct SemanticObjectMapEnvelope: Decodable, Equatable, Sendable {
+    let schemaVersion: Int
+    let ready: Bool
+    let frameID: String
+    let mapFingerprint: String?
+    let time: Double
+    let objects: [SemanticObjectSample]
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case ready
+        case frameID = "frame_id"
+        case mapFingerprint = "map_fingerprint"
+        case time
+        case objects
+    }
+
+    var isValid: Bool {
+        schemaVersion == 1 && RobotFrameID.isValid(frameID) &&
+            time.isFinite && time > 0 && objects.count <= 64 &&
+            Set(objects.map(\.id)).count == objects.count &&
+            objects.allSatisfy(\.isValid) &&
+            (mapFingerprint.map(SemanticMapReference.isFingerprint) ?? true) &&
+            (!ready || mapFingerprint != nil)
+    }
 }
 
 struct SemanticNavigationGoal: Codable, Equatable, Sendable {
@@ -595,6 +715,7 @@ struct RobotMapManagerStatusEnvelope: Decodable, Equatable, Sendable {
     let requestID: String?
     let message: String
     let map: MapState
+    let pose: PoseState?
     let storage: StorageState
 
     enum CodingKeys: String, CodingKey {
@@ -604,7 +725,28 @@ struct RobotMapManagerStatusEnvelope: Decodable, Equatable, Sendable {
         case requestID = "request_id"
         case message
         case map
+        case pose
         case storage
+    }
+
+    init(
+        schemaVersion: Int,
+        event: String,
+        ok: Bool,
+        requestID: String?,
+        message: String,
+        map: MapState,
+        pose: PoseState? = nil,
+        storage: StorageState
+    ) {
+        self.schemaVersion = schemaVersion
+        self.event = event
+        self.ok = ok
+        self.requestID = requestID
+        self.message = message
+        self.map = map
+        self.pose = pose
+        self.storage = storage
     }
 
     struct MapState: Decodable, Equatable, Sendable {
@@ -649,6 +791,44 @@ struct RobotMapManagerStatusEnvelope: Decodable, Equatable, Sendable {
 
         enum CodingKeys: String, CodingKey {
             case lastSaved = "last_saved"
+        }
+    }
+
+    struct PoseState: Decodable, Equatable, Sendable {
+        let available: Bool
+        let topic: String
+        let targetFrame: String?
+        let snapshotFrame: String?
+        let baseFrame: String
+        let lastPublished: String?
+        let zeroStampStaticAssumption: Bool?
+        let tfStampNanoseconds: Int64?
+        let tfAgeSeconds: Double?
+        let maximumDynamicTFAgeSeconds: Double
+        let error: String?
+
+        enum CodingKeys: String, CodingKey {
+            case available
+            case topic
+            case targetFrame = "target_frame"
+            case snapshotFrame = "snapshot_frame"
+            case baseFrame = "base_frame"
+            case lastPublished = "last_published"
+            case zeroStampStaticAssumption = "zero_stamp_static_assumption"
+            case tfStampNanoseconds = "tf_stamp_ns"
+            case tfAgeSeconds = "tf_age_seconds"
+            case maximumDynamicTFAgeSeconds = "maximum_dynamic_tf_age_s"
+            case error
+        }
+
+        var isValid: Bool {
+            !topic.isEmpty && !baseFrame.isEmpty &&
+                RobotFrameID.isValid(baseFrame) &&
+                (targetFrame.map(RobotFrameID.isValid) ?? true) &&
+                (snapshotFrame.map(RobotFrameID.isValid) ?? true) &&
+                maximumDynamicTFAgeSeconds.isFinite &&
+                maximumDynamicTFAgeSeconds > 0 &&
+                (tfAgeSeconds.map { $0.isFinite } ?? true)
         }
     }
 
@@ -697,6 +877,144 @@ enum SemanticMutationAcknowledgement: Equatable, Sendable {
 enum BoundedRequestTimeoutResolution: Equatable, Sendable {
     case ignore
     case statusUnknownNoRetry
+}
+
+enum RobotPoseClientPolicy {
+    static let poseLiveAge: TimeInterval = 2.5
+    static let localizationLiveAge: TimeInterval = 1.0
+    static let managerLiveAge: TimeInterval = 4.5
+    static let lastKnownAdditionalAge: TimeInterval = 5.0
+    static let objectMapLiveAge: TimeInterval = 5.0
+
+    static func displayState(
+        mapIsLive: Bool,
+        currentMap: RobotMapSnapshot?,
+        managerStatus: RobotMapManagerStatusEnvelope?,
+        managerReceivedAt: Date?,
+        localizationStatus: LocalizationStatusEnvelope?,
+        localizationReceivedAt: Date?,
+        localizationProgressCount: Int,
+        currentPose: RobotPoseSample?,
+        lastConfirmedPose: RobotPoseSample?,
+        socketGeneration: UInt64,
+        now: Date
+    ) -> RobotPoseDisplayState {
+        func lastKnown(_ message: String) -> RobotPoseDisplayState? {
+            guard let pose = lastConfirmedPose,
+                  pose.socketGeneration == socketGeneration,
+                  now.timeIntervalSince(pose.receivedAt) <=
+                    poseLiveAge + lastKnownAdditionalAge,
+                  let map = currentMap, pose.frameID == map.frameID,
+                  contains(pose.point, in: map) else { return nil }
+            return .lastKnown(pose, message: message)
+        }
+
+        guard mapIsLive, let map = currentMap else {
+            return .unavailable(message: "Keine Live-Karte für die Roboterposition.")
+        }
+        guard let managerStatus, let managerReceivedAt,
+              now.timeIntervalSince(managerReceivedAt) <= managerLiveAge,
+              managerStatus.ok,
+              managerStatus.map.snapshotAvailable,
+              managerStatus.map.summary?.matches(map) == true,
+              let poseState = managerStatus.pose,
+              poseState.isValid,
+              poseState.available,
+              poseState.topic == "/robot_map_manager/robot_pose",
+              poseState.targetFrame == map.frameID,
+              poseState.snapshotFrame == map.frameID else {
+            return lastKnown("Kartenmanager-Pose nicht bestätigt.") ??
+                .unavailable(message: "Kartenmanager-Pose nicht bestätigt.")
+        }
+        guard let localizationStatus, let localizationReceivedAt,
+              now.timeIntervalSince(localizationReceivedAt) <= localizationLiveAge,
+              localizationProgressCount >= 2 else {
+            return lastKnown("Lokalisierung ist nicht mehr aktuell.") ??
+                .localizing(message: "Position wird ermittelt …")
+        }
+        guard localizationStatus.isValid,
+              localizationStatus.ready,
+              localizationStatus.mapFingerprint == map.contentFingerprint else {
+            return lastKnown("Lokalisierung verloren.") ??
+                .localizing(message: "Position wird ermittelt …")
+        }
+        guard let pose = currentPose,
+              pose.socketGeneration == socketGeneration,
+              pose.frameID == map.frameID,
+              contains(pose.point, in: map) else {
+            return lastKnown("Keine gültige Pose in dieser Karte.") ??
+                .unavailable(message: "Keine gültige Pose in dieser Karte.")
+        }
+        guard now.timeIntervalSince(pose.receivedAt) <= poseLiveAge else {
+            return lastKnown("Letzte Pose ist veraltet.") ??
+                .unavailable(message: "Roboterpose ist veraltet.")
+        }
+        return .live(pose)
+    }
+
+    static func visibleObjects(
+        status: SemanticObjectMapEnvelope?,
+        receivedAt: Date?,
+        map: RobotMapSnapshot?,
+        robotPoseState: RobotPoseDisplayState,
+        now: Date
+    ) -> [SemanticObjectSample] {
+        guard case .live = robotPoseState,
+              let status, status.isValid, status.ready,
+              let receivedAt,
+              now.timeIntervalSince(receivedAt) <= objectMapLiveAge,
+              let map,
+              status.frameID == map.frameID,
+              status.mapFingerprint == map.contentFingerprint else { return [] }
+        return status.objects.filter { contains($0.point, in: map) }
+    }
+
+    static func contains(_ point: MapPoint, in map: RobotMapSnapshot) -> Bool {
+        guard point.isFinite else { return false }
+        let dx = point.x - map.origin.positionX
+        let dy = point.y - map.origin.positionY
+        let cosine = cos(map.origin.yaw)
+        let sine = sin(map.origin.yaw)
+        let localX = cosine * dx + sine * dy
+        let localY = -sine * dx + cosine * dy
+        let epsilon = max(map.resolution * 1e-6, 1e-9)
+        return localX >= -epsilon && localY >= -epsilon &&
+            localX <= Double(map.width) * map.resolution + epsilon &&
+            localY <= Double(map.height) * map.resolution + epsilon
+    }
+
+    static func screenHeading(
+        robotYaw: Double,
+        mapOriginYaw: Double,
+        viewportRotation: Double = 0
+    ) -> Double {
+        normalizedAngle(
+            -(robotYaw - mapOriginYaw) + viewportRotation
+        )
+    }
+
+    static func shouldAnimate(
+        from previous: RobotPoseSample?,
+        to next: RobotPoseSample
+    ) -> Bool {
+        guard let previous,
+              previous.socketGeneration == next.socketGeneration,
+              previous.frameID == next.frameID else { return false }
+        let distance = hypot(
+            next.point.x - previous.point.x,
+            next.point.y - previous.point.y
+        )
+        let yawDifference = abs(normalizedAngle(next.yaw - previous.yaw))
+        return distance <= 0.50 && yawDifference <= Double.pi / 6
+    }
+
+    private static func normalizedAngle(_ value: Double) -> Double {
+        guard value.isFinite else { return value }
+        var result = value.truncatingRemainder(dividingBy: 2 * Double.pi)
+        if result > Double.pi { result -= 2 * Double.pi }
+        if result < -Double.pi { result += 2 * Double.pi }
+        return result
+    }
 }
 
 /// Reine, testbare Entscheidungen für den semantischen Kartenclient.
