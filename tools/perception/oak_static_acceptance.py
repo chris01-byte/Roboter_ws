@@ -151,6 +151,9 @@ def main():
     parser.add_argument('--minimum-samples', type=int, default=3)
     parser.add_argument('--minimum-confidence', type=float, default=0.35)
     parser.add_argument('--maximum-spread-m', type=float, default=0.20)
+    parser.add_argument(
+        '--stream-only', action='store_true',
+        help='Prueft nur den laufenden RGB-D-Transport, keine Objekterkennung')
     parser.add_argument('--expected-profile', default='standard')
     parser.add_argument('--expected-width', type=int, default=320)
     parser.add_argument('--expected-height', type=int, default=180)
@@ -173,12 +176,24 @@ def main():
         node.destroy_node()
         rclpy.shutdown()
 
-    result = evaluate_samples(
-        node.samples,
-        minimum_samples=args.minimum_samples,
-        minimum_confidence=args.minimum_confidence,
-        maximum_spread_m=args.maximum_spread_m,
-    )
+    if args.stream_only:
+        result = {
+            'passed': True,
+            'sample_count': len(node.samples),
+            'valid_3d_count': None,
+            'median_base_point_m': None,
+            'maximum_spread_m': None,
+            'minimum_confidence': None,
+            'median_depth_m': None,
+            'reasons': [],
+        }
+    else:
+        result = evaluate_samples(
+            node.samples,
+            minimum_samples=args.minimum_samples,
+            minimum_confidence=args.minimum_confidence,
+            maximum_spread_m=args.maximum_spread_m,
+        )
     last_status_age_s = (
         math.inf if node.last_stream_status_received_s <= 0.0 else
         max(0.0, time.monotonic() - node.last_stream_status_received_s))
@@ -198,6 +213,7 @@ def main():
         'schema_version': 1,
         'object': args.object,
         'position': args.position,
+        'stream_only': args.stream_only,
         'duration_s': args.duration_s,
         'stream_ready': stream_result['passed'],
         'expected_stream_profile': args.expected_profile,

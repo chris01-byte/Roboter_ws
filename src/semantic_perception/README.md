@@ -119,14 +119,15 @@ Dynamischen Wahrnehmungskatalog beobachten:
 ```bash
 ros2 topic echo /semantic/perception_catalog_json
 ```
-Motorlose OAK-Abnahme mit sichtbarer Tasse:
+Motorlose Transportabnahme des kleinen Navigationsprofils:
 ```bash
 python3 tools/perception/oak_static_acceptance.py \
-  --object Tasse --position mitte
+  --stream-only --position standard
 ```
-Ohne weitere Argumente prueft sie das ressourcenschonende Navigationsprofil
-`standard` auf real 320 x 180. Fuer den getrennten Detailmodus gelten
-`--expected-profile detail_hd --expected-width 1280 --expected-height 720`.
+Sie prueft das ressourcenschonende Profil `standard` auf real 320 x 180.
+Die strenge Objekt-/3D-Abnahme erfolgt im getrennten Detailmodus mit
+`--expected-profile detail_hd --expected-width 1280 --expected-height 720`;
+dabei darf `--stream-only` nicht gesetzt sein.
 Das Detailprofil verwendet fuer Bilder ab 1000 Pixel Breite eine gemessene
 YOLO-Inferenzgroesse von 960 und beendet sich standardmaessig nach 45 Sekunden.
 Beide Profile duerfen niemals parallel dieselbe OAK oeffnen.
