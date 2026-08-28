@@ -56,31 +56,43 @@ struct RobotMapProtocolTests {
     @Test
     func mapSocketRegistersSemanticAndMapManagerTopics() throws {
         let frames = try MapRosbridgeProtocol.connectionSetupFrames().map(jsonObject)
-        #expect(frames.count == 5)
+        #expect(frames.count == 8)
         #expect(frames.map { $0["op"] as? String } == [
-            "advertise", "advertise", "subscribe", "subscribe", "subscribe"
+            "advertise", "advertise", "subscribe", "subscribe", "subscribe",
+            "subscribe", "subscribe", "subscribe"
         ])
         #expect(frames[0]["topic"] as? String == "/robot_map_manager/command_json")
         #expect(frames[1]["topic"] as? String == "/semantic_map/command_json")
         #expect(frames[2]["topic"] as? String == "/map")
         #expect(frames[3]["topic"] as? String == "/robot_map_manager/status_json")
-        #expect(frames[4]["topic"] as? String == "/semantic_map/status_json")
+        #expect(frames[4]["topic"] as? String == "/robot_map_manager/robot_pose")
+        #expect(frames[5]["topic"] as? String == "/localization/status_json")
+        #expect(frames[6]["topic"] as? String == "/semantic_map/status_json")
+        #expect(frames[7]["topic"] as? String == "/semantic/object_map_json")
         #expect(frames[0]["type"] as? String == "std_msgs/String")
         #expect(frames[3]["id"] as? String == "amadeus-map-manager-status")
-        #expect(frames[4]["id"] as? String == "amadeus-semantic-map-status")
+        #expect(frames[4]["throttle_rate"] as? Int == 1_000)
+        #expect(frames[4]["type"] as? String == "geometry_msgs/PoseStamped")
+        #expect(frames[5]["id"] as? String == "amadeus-localization-status")
+        #expect(frames[6]["id"] as? String == "amadeus-semantic-map-status")
+        #expect(frames[7]["id"] as? String == "amadeus-semantic-object-map")
     }
 
     @Test
     func mapSocketTearsDownAllSemanticAndManagerRegistrations() throws {
         let frames = try MapRosbridgeProtocol.connectionTeardownFrames().map(jsonObject)
-        #expect(frames.count == 5)
+        #expect(frames.count == 8)
         #expect(frames.map { $0["op"] as? String } == [
-            "unsubscribe", "unsubscribe", "unsubscribe", "unadvertise", "unadvertise"
+            "unsubscribe", "unsubscribe", "unsubscribe", "unsubscribe",
+            "unsubscribe", "unsubscribe", "unadvertise", "unadvertise"
         ])
         #expect(frames.map { $0["topic"] as? String } == [
             "/map",
             "/robot_map_manager/status_json",
+            "/robot_map_manager/robot_pose",
+            "/localization/status_json",
             "/semantic_map/status_json",
+            "/semantic/object_map_json",
             "/robot_map_manager/command_json",
             "/semantic_map/command_json"
         ])
@@ -147,6 +159,168 @@ struct RobotMapProtocolTests {
         #expect(semantic.semanticMap?.revision == 4)
         #expect(semantic.semanticMap?.rooms.first?.name == "Wohnzimmer")
         #expect(semantic.semanticMap?.mapRef?.fingerprint == fingerprint)
+    }
+
+    @Test
+    func decodesValidatedRobotPoseLocalizationAndObjectMap() throws {
+        let receivedAt = Date(timeIntervalSinceReferenceDate: 50)
+        let pose = try #require(MapRosbridgeProtocol.decodeRobotPose(
+            from: try poseFrame(x: 1.2, y: -0.4, yaw: .pi / 2),
+            receivedAt: receivedAt,
+            socketGeneration: 7
+        ))
+        #expect(abs(pose.point.x - 1.2) < 0.000_001)
+        #expect(abs(pose.yaw - .pi / 2) < 0.000_001)
+        #expect(pose.sourceStampNanoseconds == 123_456_000_000)
+        #expect(pose.socketGeneration == 7)
+
+        let fingerprint = String(repeating: "a", count: 64)
+        let localization = try #require(
+            MapRosbridgeProtocol.decodeLocalizationStatus(
+                from: try stringTopicFrame(
+                    topic: "/localization/status_json",
+                    inner: [
+                        "schema_version": 1,
+                        "ready": true,
+                        "state": "localized",
+                        "reasons": [],
+                        "map_fingerprint": fingerprint,
+                        "global_initialization": "completed",
+                        "time": 123.5
+                    ]
+                )
+            )
+        )
+        #expect(localization.ready)
+
+        let objectMap = try #require(
+            MapRosbridgeProtocol.decodeSemanticObjectMap(
+                from: try stringTopicFrame(
+                    topic: "/semantic/object_map_json",
+                    inner: [
+                        "schema_version": 1,
+                        "ready": true,
+                        "frame_id": "map",
+                        "map_fingerprint": fingerprint,
+                        "time": 124.0,
+                        "objects": [[
+                            "name": "Tasse",
+                            "confidence": 0.71,
+                            "position": ["x": 1.0, "y": 2.0, "z": 0.8],
+                            "last_seen_time": 123.8,
+                            "age_s": 0.2
+                        ]]
+                    ]
+                )
+            )
+        )
+        #expect(objectMap.objects.first?.name == "Tasse")
+        #expect(objectMap.mapFingerprint == fingerprint)
+    }
+
+    @Test
+    func rejectsInvalidPoseAndUnboundReadyLocalization() throws {
+        #expect(throws: MapRosbridgeProtocolError.invalidRobotPose) {
+            try MapRosbridgeProtocol.decodeRobotPose(
+                from: try poseFrame(
+                    x: 1, y: 1, yaw: 0,
+                    quaternionScale: 0
+                )
+            )
+        }
+        #expect(throws: MapRosbridgeProtocolError.invalidLocalizationStatus) {
+            try MapRosbridgeProtocol.decodeLocalizationStatus(
+                from: try stringTopicFrame(
+                    topic: "/localization/status_json",
+                    inner: [
+                        "schema_version": 1,
+                        "ready": true,
+                        "state": "localized",
+                        "reasons": [],
+                        "map_fingerprint": NSNull(),
+                        "global_initialization": "completed",
+                        "time": 1.0
+                    ]
+                )
+            )
+        }
+    }
+
+    @Test
+    func robotPosePolicyIsMapBoundFreshAndFailClosed() throws {
+        let map = try policyMap()
+        let now = Date(timeIntervalSinceReferenceDate: 1_000)
+        let pose = RobotPoseSample(
+            point: MapPoint(x: 2, y: 3), z: 0, yaw: .pi / 2,
+            frameID: "map", sourceStampNanoseconds: 10,
+            receivedAt: now.addingTimeInterval(-0.5), socketGeneration: 4
+        )
+        let localization = LocalizationStatusEnvelope(
+            schemaVersion: 1, ready: true, state: "localized", reasons: [],
+            mapFingerprint: map.contentFingerprint,
+            globalInitialization: "completed", time: 100
+        )
+        let manager = policyPoseManager(for: map)
+
+        let firstHeartbeat = RobotPoseClientPolicy.displayState(
+            mapIsLive: true, currentMap: map, managerStatus: manager,
+            managerReceivedAt: now, localizationStatus: localization,
+            localizationReceivedAt: now, localizationProgressCount: 1,
+            currentPose: pose, lastConfirmedPose: nil,
+            socketGeneration: 4, now: now
+        )
+        if case .localizing = firstHeartbeat {} else {
+            Issue.record("Eine gelatchte erste Statusmeldung darf nicht live werden")
+        }
+
+        let live = RobotPoseClientPolicy.displayState(
+            mapIsLive: true, currentMap: map, managerStatus: manager,
+            managerReceivedAt: now, localizationStatus: localization,
+            localizationReceivedAt: now, localizationProgressCount: 2,
+            currentPose: pose, lastConfirmedPose: nil,
+            socketGeneration: 4, now: now
+        )
+        #expect(live == .live(pose))
+
+        let stale = RobotPoseClientPolicy.displayState(
+            mapIsLive: true, currentMap: map, managerStatus: manager,
+            managerReceivedAt: now, localizationStatus: localization,
+            localizationReceivedAt: now.addingTimeInterval(-1.1),
+            localizationProgressCount: 2,
+            currentPose: pose, lastConfirmedPose: pose,
+            socketGeneration: 4, now: now
+        )
+        if case .lastKnown = stale {} else {
+            Issue.record("Verlorene Lokalisierung muss als letzte Position erscheinen")
+        }
+    }
+
+    @Test
+    func headingAndAnimationPolicyHandleMapRotationAndJumps() {
+        #expect(abs(RobotPoseClientPolicy.screenHeading(
+            robotYaw: .pi / 2, mapOriginYaw: 0
+        ) + .pi / 2) < 0.000_001)
+        #expect(abs(RobotPoseClientPolicy.screenHeading(
+            robotYaw: .pi / 2, mapOriginYaw: .pi / 2
+        )) < 0.000_001)
+        let now = Date()
+        let first = RobotPoseSample(
+            point: MapPoint(x: 0, y: 0), z: 0, yaw: 0,
+            frameID: "map", sourceStampNanoseconds: 0,
+            receivedAt: now, socketGeneration: 1
+        )
+        let small = RobotPoseSample(
+            point: MapPoint(x: 0.1, y: 0), z: 0, yaw: 0.1,
+            frameID: "map", sourceStampNanoseconds: 1,
+            receivedAt: now, socketGeneration: 1
+        )
+        let jump = RobotPoseSample(
+            point: MapPoint(x: 1, y: 0), z: 0, yaw: 0,
+            frameID: "map", sourceStampNanoseconds: 2,
+            receivedAt: now, socketGeneration: 1
+        )
+        #expect(RobotPoseClientPolicy.shouldAnimate(from: first, to: small))
+        #expect(!RobotPoseClientPolicy.shouldAnimate(from: first, to: jump))
     }
 
     @Test
@@ -1038,6 +1212,37 @@ struct RobotMapProtocolTests {
         return try #require(String(data: data, encoding: .utf8))
     }
 
+    private func poseFrame(
+        x: Double,
+        y: Double,
+        yaw: Double,
+        quaternionScale: Double = 1
+    ) throws -> String {
+        let object: [String: Any] = [
+            "op": "publish",
+            "topic": "/robot_map_manager/robot_pose",
+            "msg": [
+                "header": [
+                    "stamp": ["sec": 123, "nanosec": 456_000_000],
+                    "frame_id": "map"
+                ],
+                "pose": [
+                    "position": ["x": x, "y": y, "z": 0],
+                    "orientation": [
+                        "x": 0,
+                        "y": 0,
+                        "z": sin(yaw / 2) * quaternionScale,
+                        "w": cos(yaw / 2) * quaternionScale
+                    ]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(
+            withJSONObject: object, options: [.sortedKeys]
+        )
+        return try #require(String(data: data, encoding: .utf8))
+    }
+
     private func jsonObject(_ text: String) throws -> [String: Any] {
         let data = try #require(text.data(using: .utf8))
         return try #require(
@@ -1154,6 +1359,43 @@ struct RobotMapProtocolTests {
                 )
             ),
             storage: .init(lastSaved: saved)
+        )
+    }
+
+    private func policyPoseManager(
+        for map: RobotMapSnapshot
+    ) -> RobotMapManagerStatusEnvelope {
+        RobotMapManagerStatusEnvelope(
+            schemaVersion: 1,
+            event: "status",
+            ok: true,
+            requestID: nil,
+            message: "Kartenmanager bereit",
+            map: .init(
+                snapshotAvailable: true,
+                summary: .init(
+                    width: map.width,
+                    height: map.height,
+                    resolution: map.resolution,
+                    frameID: map.frameID,
+                    origin: map.origin,
+                    fingerprint: map.contentFingerprint
+                )
+            ),
+            pose: .init(
+                available: true,
+                topic: "/robot_map_manager/robot_pose",
+                targetFrame: map.frameID,
+                snapshotFrame: map.frameID,
+                baseFrame: "base_link",
+                lastPublished: "2026-08-28T12:00:00Z",
+                zeroStampStaticAssumption: false,
+                tfStampNanoseconds: 1,
+                tfAgeSeconds: 0.1,
+                maximumDynamicTFAgeSeconds: 1.0,
+                error: nil
+            ),
+            storage: .init(lastSaved: nil)
         )
     }
 

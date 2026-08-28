@@ -17,6 +17,8 @@ getrennten Wahrnehmungs-Diagnosekatalog; er füllt den Missionskatalog nicht.
 | Subscribe | `/oak/semantic/depth/compressed` | `sensor_msgs/CompressedImage` (verlustfreies 16UC1-PNG) |
 | Subscribe | `/oak/semantic/camera_info` | `sensor_msgs/CameraInfo` |
 | Publish (opt) | `<catalog_topic>` (`/semantic/perception_catalog_json`) | `std_msgs/String` |
+| Publish | `/semantic/object_map_json` | lokalisierungs- und kartengebundene Objektmarker |
+| Publish | `/semantic/observation_status_json` | motorlose Kamera-/Roboterframe-Diagnose |
 | TF | `<camera_frame>` → `<global_frame>` | für 3D-Projektion |
 
 ## Modell-Backend
@@ -52,6 +54,14 @@ Modellvokabular wird vor dem ersten CUDA-Lauf einmalig gesetzt. Antworten werden
 danach anhand des zugeordneten tatsächlichen Modell-Prompts gefiltert; unbekannte
 Serviceanfragen oder eine mehrdeutige Prompt-Konfiguration liefern keinen Treffer
 beziehungsweise verhindern den Node-Start.
+
+Eine Objektpose im `map`-Frame wird nur gespeichert, wenn zwei
+fortschreitende, frische Nachrichten von `/localization/status_json` exakt
+`ready/localized/completed` samt gueltigem Kartenfingerabdruck bestaetigen.
+Ein vorhandener TF allein reicht nicht. Ein Kartenwechsel leert das gebundene
+Objektgedaechtnis. Die getrennte Beobachtungsdiagnose kann dagegen Klasse,
+Konfidenz, Tiefe und `base_link`-Pose im Stillstand pruefen, ohne eine globale
+Kartenpose vorzutäuschen.
 
 ## OAK-Transport zum KI-Server
 
@@ -109,6 +119,13 @@ Dynamischen Wahrnehmungskatalog beobachten:
 ```bash
 ros2 topic echo /semantic/perception_catalog_json
 ```
+Motorlose OAK-Abnahme mit sichtbarer Tasse:
+```bash
+python3 tools/perception/oak_static_acceptance.py \
+  --object Tasse --position mitte
+```
+Der JSON-Bericht enthält keine Bilder und bleibt lokal unter
+`~/.local/share/amadeus/diagnostics/`.
 
 Der kanonische Raumkatalog `/semantic/catalog_json` wird vom
 `semantic_map_manager` publiziert. `semantic_perception` verwendet bewusst ein
@@ -124,10 +141,10 @@ Diagnose-Topic; `service_name` entspricht dem, was der Behavior-Tree aufruft
 
 ## Grenzen / offen
 
-- Die positive OAK-3D-Projektion ist mit einem motorlosen Test-TF abgenommen.
-  Eine positive Pose im echten `map`-Frame bleibt an die separat bestaetigte
-  Roboterlokalisierung gebunden. Ohne diesen TF antwortet das reale Backend
-  absichtlich `found: false`.
+- Kamera-/Roboterframe-Projektion ist motorlos pruefbar. Eine positive Pose im
+  echten `map`-Frame bleibt zusaetzlich an den frischen Lokalisierungsstatus
+  und dessen Kartenfingerabdruck gebunden; ohne beides antwortet das reale
+  Backend absichtlich `found: false`.
 - `cv_bridge`, OpenCV und `ultralytics` müssen installiert sein;
   Tiefe/CameraInfo müssen zur Kamera passen.
 - Die Abnahme lief mit 640 x 360. Ein dauerhaftes hochaufloesendes

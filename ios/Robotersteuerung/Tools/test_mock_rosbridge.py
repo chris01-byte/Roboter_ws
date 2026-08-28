@@ -4,6 +4,7 @@
 import re
 import math
 import sys
+import time
 import unittest
 from pathlib import Path
 
@@ -31,6 +32,37 @@ class SemanticMockTests(unittest.TestCase):
         running = self.state.explore_snapshot()
         self.assertEqual(running['state'], 'running')
         self.assertEqual(running['phase'], 'initial_scan')
+
+    def test_live_pose_localization_and_object_map_share_current_fingerprint(self):
+        fingerprint = self.state.map_summary()['fingerprint']
+        manager = self.state.map_manager_status()
+        pose = self.state.robot_pose()
+        localization = self.state.localization_status()
+        objects = self.state.semantic_object_map()
+
+        self.assertTrue(manager['pose']['available'])
+        self.assertEqual(manager['pose']['topic'], mock.ROBOT_POSE_TOPIC)
+        self.assertEqual(pose['header']['frame_id'], 'map')
+        self.assertTrue(localization['ready'])
+        self.assertEqual(localization['map_fingerprint'], fingerprint)
+        self.assertEqual(objects['map_fingerprint'], fingerprint)
+        self.assertEqual(objects['objects'][0]['name'], 'Tasse')
+
+        self.state.advance_map()
+        changed = self.state.localization_status()
+        self.assertNotEqual(changed['map_fingerprint'], fingerprint)
+
+    def test_pose_and_localization_pauses_are_independent(self):
+        now = time.monotonic()
+        self.state.pause_pose_until = now + 4
+        self.state.pause_localization_until = now + 2
+
+        self.assertGreater(self.state.pause_pose_until, now)
+        self.assertGreater(self.state.pause_localization_until, now)
+        self.assertNotEqual(
+            self.state.pause_pose_until,
+            self.state.pause_localization_until,
+        )
 
     def test_mock_map_fingerprint_is_stable_and_content_sensitive(self):
         initial = self.state.map_summary()['fingerprint']

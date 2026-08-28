@@ -58,6 +58,12 @@ from .stream_codec import (
     select_freshest_pair,
     stamp_seconds,
 )
+from .semantic_state import (
+    SemanticStateError,
+    bounded_object_status,
+    localization_is_live,
+    parse_localization_status,
+)
 
 
 DEFAULT_CLASS_QUERIES = [
@@ -84,6 +90,7 @@ class SemanticPerception(Node):
             'rgb_topic', '/oak/semantic/rgb/compressed').value
         self._global_frame   = self.declare_parameter('global_frame', 'map').value
         self._camera_frame   = self.declare_parameter('camera_frame', 'oak_rgb_camera_optical_frame').value
+        self._base_frame     = self.declare_parameter('base_frame', 'base_link').value
         self._conf_threshold = float(self.declare_parameter('confidence_threshold', 0.35).value)
         self._class_queries  = list(self.declare_parameter(
             'class_queries', DEFAULT_CLASS_QUERIES).value)
@@ -123,6 +130,29 @@ class SemanticPerception(Node):
         self._scan_period_s = float(self.declare_parameter('scan_period_s', 2.0).value)
         self._memory_ttl_s  = float(self.declare_parameter('memory_ttl_s', 0.0).value)  # 0 = nie verfallen
         self._live_fallback = bool(self.declare_parameter('live_fallback', True).value)
+        self._localization_status_topic = self.declare_parameter(
+            'localization_status_topic', '/localization/status_json').value
+        self._localization_max_age_s = float(self.declare_parameter(
+            'localization_max_age_s', 1.0).value)
+        self._require_localization = bool(self.declare_parameter(
+            'require_localization_for_map', True).value)
+        self._object_map_topic = self.declare_parameter(
+            'object_map_topic', '/semantic/object_map_json').value
+        self._observation_topic = self.declare_parameter(
+            'observation_status_topic',
+            '/semantic/observation_status_json').value
+        self._status_period_s = float(self.declare_parameter(
+            'semantic_status_period_s', 1.0).value)
+        self._observation_ttl_s = float(self.declare_parameter(
+            'observation_ttl_s', 5.0).value)
+        self._maximum_objects = int(self.declare_parameter(
+            'maximum_object_markers', 64).value)
+        if (
+                self._localization_max_age_s <= 0.0 or
+                self._status_period_s <= 0.0 or
+                self._observation_ttl_s <= 0.0 or
+                not 1 <= self._maximum_objects <= 256):
+            raise ValueError('Semantik-/Lokalisierungsstatusparameter sind ungueltig')
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -138,6 +168,13 @@ class SemanticPerception(Node):
         self._model_failed = False    # True, wenn Laden fehlschlug (kein Retry-Spam)
         # Objekt-Gedaechtnis: name.lower() -> {'name', 'pose'(map), 'conf', 'stamp'}
         self._memory = {}
+        self._observations = {}
+        self._localization_status = None
+        self._localization_received_s = 0.0
+        self._localization_last_backend_time = None
+        self._localization_progress_count = 0
+        self._localization_errors = 0
+        self._active_map_fingerprint = None
 
         # TF fuer die 3D-Projektion (Kamera -> map) bei echten Modellen.
         self._tf_buffer = tf2_ros.Buffer()
@@ -159,11 +196,26 @@ class SemanticPerception(Node):
             image_type, self._depth_topic, self._on_depth, sensor_qos)
         self.create_subscription(
             CameraInfo, self._caminfo_topic, self._on_caminfo, sensor_qos)
+        localization_qos = QoSProfile(depth=1)
+        localization_qos.reliability = QoSReliabilityPolicy.RELIABLE
+        localization_qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+        self.create_subscription(
+            String, self._localization_status_topic,
+            self._on_localization_status, localization_qos)
         self._service = self.create_service(
             GetObjectPose, self._service_name, self._on_get_object_pose)
 
         # Hintergrund-Scan fuellt das Objekt-Gedaechtnis (K2).
         self.create_timer(self._scan_period_s, self._scan_cb)
+
+        status_qos = QoSProfile(depth=1)
+        status_qos.reliability = QoSReliabilityPolicy.RELIABLE
+        status_qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
+        self._object_map_pub = self.create_publisher(
+            String, self._object_map_topic, status_qos)
+        self._observation_pub = self.create_publisher(
+            String, self._observation_topic, status_qos)
+        self.create_timer(self._status_period_s, self._publish_semantic_status)
 
         if self._publish_catalog:
             latched = QoSProfile(depth=1)
@@ -199,6 +251,42 @@ class SemanticPerception(Node):
 
     def _on_caminfo(self, msg: CameraInfo):
         self._camera_info = msg  # Kamera-Intrinsics (K-Matrix)
+
+    def _on_localization_status(self, msg: String):
+        try:
+            status = parse_localization_status(msg.data)
+        except SemanticStateError as exc:
+            self._localization_errors += 1
+            self._localization_status = None
+            self._localization_progress_count = 0
+            self.get_logger().warn(
+                f'Ungueltiger Lokalisierungsstatus ({exc}); Kartenposen gesperrt.')
+            return
+
+        old_fingerprint = self._active_map_fingerprint
+        new_fingerprint = status.map_fingerprint
+        if old_fingerprint != new_fingerprint:
+            self._memory.clear()
+            self._active_map_fingerprint = new_fingerprint
+        previous_time = self._localization_last_backend_time
+        if previous_time is None or status.backend_time < previous_time:
+            self._localization_progress_count = 1
+        elif status.backend_time > previous_time:
+            self._localization_progress_count += 1
+        self._localization_last_backend_time = status.backend_time
+        self._localization_status = status
+        self._localization_received_s = time.monotonic()
+
+    def _localization_ready(self) -> bool:
+        if not self._require_localization or self._global_frame != 'map':
+            return True
+        return localization_is_live(
+            self._localization_status,
+            received_s=self._localization_received_s,
+            now_s=time.monotonic(),
+            progress_count=self._localization_progress_count,
+            maximum_age_s=self._localization_max_age_s,
+        )
 
     # ======================= Service: GetObjectPose =====================
     def _on_get_object_pose(self, request, response):
@@ -258,18 +346,33 @@ class SemanticPerception(Node):
                 self._remember(cls, det[0], det[1])
 
     def _remember(self, name: str, pose: PoseStamped, conf: float):
+        if not self._localization_ready():
+            return
+        fingerprint = (
+            None if self._localization_status is None
+            else self._localization_status.map_fingerprint)
         self._memory[name.lower()] = {
             'name': name, 'pose': pose, 'conf': float(conf),
-            'stamp': self.get_clock().now()}
+            'stamp': self.get_clock().now(),
+            'last_seen_time': time.time(),
+            'map_fingerprint': fingerprint,
+        }
 
     def _recall(self, query: str):
         """Bestes (konfidentestes, frisches) Gedaechtnis-Objekt zur Anfrage.
         Rueckgabe (pose, conf, alter_s) oder None. Tolerant/teilstring."""
+        if not self._localization_ready():
+            return None
         q = query.lower()
         now = self.get_clock().now()
+        fingerprint = (
+            None if self._localization_status is None
+            else self._localization_status.map_fingerprint)
         best = None
         for key, e in self._memory.items():
             if key not in q and q not in key:
+                continue
+            if e.get('map_fingerprint') != fingerprint:
                 continue
             age = (now - e['stamp']).nanoseconds * 1e-9
             if self._memory_ttl_s > 0.0 and age > self._memory_ttl_s:
@@ -457,6 +560,7 @@ class SemanticPerception(Node):
         point_cam = self._pixel_to_3d(u, v)
         if point_cam is None:
             return None
+        self._record_observation(canonical_class, point_cam, conf, u, v)
         pose = self._to_global(point_cam)
         return (pose, conf) if pose is not None else None
 
@@ -538,6 +642,11 @@ class SemanticPerception(Node):
 
     def _to_global(self, point_cam) -> Optional[PoseStamped]:
         """Transformiert einen Kamera-Punkt in den global_frame -> PoseStamped."""
+        if not self._localization_ready():
+            self.get_logger().warn(
+                'Globale Lokalisierung nicht frisch bestaetigt; '
+                'Objekt-Kartenpose bleibt gesperrt.')
+            return None
         try:
             tp = self._tf_buffer.transform(
                 point_cam, self._global_frame, timeout=Duration(seconds=0.5))
@@ -553,6 +662,74 @@ class SemanticPerception(Node):
         pose.pose.position.z = tp.point.z
         pose.pose.orientation.w = 1.0
         return pose
+
+    def _record_observation(
+            self, canonical_class: str, point_cam: PointStamped,
+            confidence: float, u: float, v: float) -> None:
+        base_point = None
+        try:
+            base_point = self._tf_buffer.transform(
+                point_cam, self._base_frame, timeout=Duration(seconds=0.5))
+        except Exception:
+            pass
+        self._observations[canonical_class.casefold()] = {
+            'name': canonical_class,
+            'confidence': float(confidence),
+            'pixel': [float(u), float(v)],
+            'camera_frame': point_cam.header.frame_id,
+            'camera_point': [
+                float(point_cam.point.x), float(point_cam.point.y),
+                float(point_cam.point.z)],
+            'base_frame': self._base_frame,
+            'base_point': None if base_point is None else [
+                float(base_point.point.x), float(base_point.point.y),
+                float(base_point.point.z)],
+            'last_seen_time': time.time(),
+        }
+
+    def _publish_semantic_status(self):
+        now = time.time()
+        localization_ready = self._localization_ready()
+        fingerprint = (
+            None if self._localization_status is None
+            else self._localization_status.map_fingerprint)
+        try:
+            object_payload = bounded_object_status(
+                frame_id=self._global_frame,
+                map_fingerprint=fingerprint,
+                now=now,
+                ready=localization_ready,
+                memory=self._memory,
+                maximum_objects=self._maximum_objects,
+                memory_ttl_s=self._memory_ttl_s,
+            )
+        except SemanticStateError as exc:
+            self.get_logger().warn(f'Objektkartenstatus nicht publizierbar ({exc}).')
+            return
+        object_payload['localization'] = {
+            'required': self._require_localization and self._global_frame == 'map',
+            'progress_count': self._localization_progress_count,
+            'status_errors': self._localization_errors,
+        }
+        self._object_map_pub.publish(String(data=json.dumps(
+            object_payload, ensure_ascii=False)))
+
+        observations = []
+        for entry in self._observations.values():
+            age = max(0.0, now - entry['last_seen_time'])
+            if age > self._observation_ttl_s:
+                continue
+            observation = dict(entry)
+            observation['age_s'] = age
+            observations.append(observation)
+        observations.sort(
+            key=lambda item: (-item['confidence'], item['name']))
+        self._observation_pub.publish(String(data=json.dumps({
+            'schema_version': 1,
+            'ready': bool(observations),
+            'time': now,
+            'observations': observations[:self._maximum_objects],
+        }, ensure_ascii=False)))
 
     # ======================= Dynamischer Katalog ========================
     def _publish_catalog_cb(self):

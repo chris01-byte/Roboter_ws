@@ -27,6 +27,9 @@ MAP_MANAGER_STATUS_TOPIC = '/robot_map_manager/status_json'
 MAP_MANAGER_COMMAND_TOPIC = '/robot_map_manager/command_json'
 SEMANTIC_STATUS_TOPIC = '/semantic_map/status_json'
 SEMANTIC_COMMAND_TOPIC = '/semantic_map/command_json'
+ROBOT_POSE_TOPIC = '/robot_map_manager/robot_pose'
+LOCALIZATION_STATUS_TOPIC = '/localization/status_json'
+SEMANTIC_OBJECT_MAP_TOPIC = '/semantic/object_map_json'
 REQUEST_ID_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$')
 SAFE_ID_RE = re.compile(r'^[a-z0-9][a-z0-9_-]{0,63}$')
 FINGERPRINT_RE = re.compile(r'^[0-9a-f]{64}$')
@@ -232,6 +235,8 @@ class RobotState:
         self.generation = 0
         self.pause_status_until = 0.0
         self.pause_estop_until = 0.0
+        self.pause_pose_until = 0.0
+        self.pause_localization_until = 0.0
         self.estop = False
         self.reset()
 
@@ -366,7 +371,75 @@ class RobotState:
                 'storage': {
                     'last_saved': self.last_saved_map,
                 },
+                'pose': {
+                    'available': summary is not None,
+                    'topic': ROBOT_POSE_TOPIC,
+                    'target_frame': 'map' if summary is not None else None,
+                    'snapshot_frame': 'map' if summary is not None else None,
+                    'base_frame': 'base_link',
+                    'last_published': datetime.now(timezone.utc).isoformat(),
+                    'zero_stamp_static_assumption': False,
+                    'tf_stamp_ns': int(time.time() * 1_000_000_000),
+                    'tf_age_seconds': 0.05,
+                    'maximum_dynamic_tf_age_s': 1.0,
+                    'error': None if summary is not None else 'Keine Karte',
+                },
             }
+
+    def robot_pose(self):
+        now = time.time()
+        phase = now % 12.0
+        x = -1.5 + min(phase, 4.0) * 0.45
+        y = -0.8
+        yaw = 0.0
+        if phase > 4.0:
+            x = 0.3
+            y = -0.8 + min(phase - 4.0, 4.0) * 0.45
+            yaw = math.pi / 2
+        if phase > 8.0:
+            x = 0.3 - min(phase - 8.0, 4.0) * 0.45
+            y = 1.0
+            yaw = math.pi
+        return {
+            'header': {'stamp': _ros_time(now), 'frame_id': 'map'},
+            'pose': {
+                'position': {'x': x, 'y': y, 'z': 0.0},
+                'orientation': {
+                    'x': 0.0, 'y': 0.0,
+                    'z': math.sin(yaw / 2), 'w': math.cos(yaw / 2),
+                },
+            },
+        }
+
+    def localization_status(self):
+        return {
+            'schema_version': 1,
+            'ready': self.map_available,
+            'state': 'localized' if self.map_available else 'converging',
+            'reasons': [] if self.map_available else ['Mock-Karte fehlt'],
+            'map_fingerprint': (
+                self.map_summary()['fingerprint'] if self.map_available else None),
+            'global_initialization': (
+                'completed' if self.map_available else 'waiting_for_map'),
+            'time': time.time(),
+        }
+
+    def semantic_object_map(self):
+        fingerprint = self.map_summary()['fingerprint']
+        return {
+            'schema_version': 1,
+            'ready': self.map_available,
+            'frame_id': 'map',
+            'map_fingerprint': fingerprint,
+            'time': time.time(),
+            'objects': [{
+                'name': 'Tasse',
+                'confidence': 0.72,
+                'position': {'x': -0.8, 'y': 0.4, 'z': 0.75},
+                'last_seen_time': time.time() - 0.2,
+                'age_s': 0.2,
+            }],
+        }
 
     def semantic_status(
         self,
@@ -834,6 +907,14 @@ def ros_map_publish(message):
     }, ensure_ascii=False, separators=(',', ':'))
 
 
+def ros_pose_publish(message):
+    return json.dumps({
+        'op': 'publish',
+        'topic': ROBOT_POSE_TOPIC,
+        'msg': message,
+    }, ensure_ascii=False, separators=(',', ':'))
+
+
 class WebSocketHandler(socketserver.BaseRequestHandler):
     def setup(self):
         self.send_lock = threading.Lock()
@@ -844,6 +925,9 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
         self.map_subscription_ids = set()
         self.map_manager_status_subscribed = False
         self.semantic_status_subscribed = False
+        self.robot_pose_subscribed = False
+        self.localization_status_subscribed = False
+        self.semantic_object_map_subscribed = False
 
     @property
     def map_subscribed(self):
@@ -976,6 +1060,27 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
                         separators=(',', ':'),
                     ),
                 ))
+            if topic == ROBOT_POSE_TOPIC:
+                self.robot_pose_subscribed = True
+                self.send_text(ros_pose_publish(STATE.robot_pose()))
+            if topic == LOCALIZATION_STATUS_TOPIC:
+                self.localization_status_subscribed = True
+                self.send_text(ros_publish(
+                    LOCALIZATION_STATUS_TOPIC,
+                    json.dumps(
+                        STATE.localization_status(),
+                        ensure_ascii=False, separators=(',', ':'),
+                    ),
+                ))
+            if topic == SEMANTIC_OBJECT_MAP_TOPIC:
+                self.semantic_object_map_subscribed = True
+                self.send_text(ros_publish(
+                    SEMANTIC_OBJECT_MAP_TOPIC,
+                    json.dumps(
+                        STATE.semantic_object_map(),
+                        ensure_ascii=False, separators=(',', ':'),
+                    ),
+                ))
             if topic == MAP_TOPIC:
                 subscription_id = frame.get('id') or MAP_TOPIC
                 if STATE.is_map_available():
@@ -1000,6 +1105,12 @@ class WebSocketHandler(socketserver.BaseRequestHandler):
                 self.map_manager_status_subscribed = False
             if topic == SEMANTIC_STATUS_TOPIC:
                 self.semantic_status_subscribed = False
+            if topic == ROBOT_POSE_TOPIC:
+                self.robot_pose_subscribed = False
+            if topic == LOCALIZATION_STATUS_TOPIC:
+                self.localization_status_subscribed = False
+            if topic == SEMANTIC_OBJECT_MAP_TOPIC:
+                self.semantic_object_map_subscribed = False
             if topic == MAP_TOPIC and subscription_id is None:
                 self.map_subscription_ids.clear()
             elif subscription_id in self.map_subscription_ids:
@@ -1126,6 +1237,10 @@ class ControlHandler(BaseHTTPRequestHandler):
                     STATE.pause_status_until = time.monotonic() + seconds
                 if stream in ('estop', 'all'):
                     STATE.pause_estop_until = time.monotonic() + seconds
+                if stream in ('pose', 'all'):
+                    STATE.pause_pose_until = time.monotonic() + seconds
+                if stream in ('localization', 'all'):
+                    STATE.pause_localization_until = time.monotonic() + seconds
             self._json({'ok': True, 'stream': stream, 'seconds': seconds})
             return
         if parsed.path in ('/malformed', '/partial', '/unknown'):
@@ -1158,7 +1273,7 @@ class ControlHandler(BaseHTTPRequestHandler):
                 '/semantic-bump',
                 '/semantic-bump-silent',
                 '/semantic-reset',
-                '/pause?stream=status|estop|all&seconds=4',
+                '/pause?stream=status|estop|pose|localization|all&seconds=4',
                 '/malformed',
                 '/partial',
                 '/unknown',
@@ -1237,11 +1352,35 @@ def telemetry_loop():
                 separators=(',', ':'),
             ),
         )
+        pose_text = ros_pose_publish(STATE.robot_pose())
+        localization_text = ros_publish(
+            LOCALIZATION_STATUS_TOPIC,
+            json.dumps(
+                STATE.localization_status(),
+                ensure_ascii=False, separators=(',', ':'),
+            ),
+        )
+        object_text = ros_publish(
+            SEMANTIC_OBJECT_MAP_TOPIC,
+            json.dumps(
+                STATE.semantic_object_map(),
+                ensure_ascii=False, separators=(',', ':'),
+            ),
+        )
+        map_manager_text = ros_publish(
+            MAP_MANAGER_STATUS_TOPIC,
+            json.dumps(
+                STATE.map_manager_status(),
+                ensure_ascii=False, separators=(',', ':'),
+            ),
+        )
         with STATE.lock:
             clients = list(STATE.clients)
             estop = STATE.estop
             status_paused = now < STATE.pause_status_until
             estop_paused = now < STATE.pause_estop_until
+            pose_paused = now < STATE.pause_pose_until
+            localization_paused = now < STATE.pause_localization_until
         estop_text = ros_publish('/safety/estop', estop)
         for client in clients:
             if client.status_subscribed and not status_paused:
@@ -1250,6 +1389,14 @@ def telemetry_loop():
                 client.send_text(explore_status_text)
             if client.estop_subscribed and not estop_paused:
                 client.send_text(estop_text)
+            if client.robot_pose_subscribed and not pose_paused:
+                client.send_text(pose_text)
+            if client.localization_status_subscribed and not localization_paused:
+                client.send_text(localization_text)
+            if client.semantic_object_map_subscribed and not localization_paused:
+                client.send_text(object_text)
+            if client.map_manager_status_subscribed and not pose_paused:
+                client.send_text(map_manager_text)
         time.sleep(0.35)
 
 

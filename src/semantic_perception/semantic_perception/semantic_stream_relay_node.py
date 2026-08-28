@@ -65,6 +65,8 @@ class SemanticStreamRelay(Node):
             'camera_info_output', '/oak/semantic/camera_info').value
         self._status_topic = self.declare_parameter(
             'status_topic', '/oak/semantic/stream_status_json').value
+        self._profile_name = self.declare_parameter(
+            'profile_name', 'standard').value
         self._rate_hz = float(self.declare_parameter(
             'publish_rate_hz', 2.0).value)
         self._jpeg_quality = int(self.declare_parameter(
@@ -131,7 +133,8 @@ class SemanticStreamRelay(Node):
         self.create_timer(1.0, self._publish_status)
         self.create_timer(1.0, self._watch_inputs)
         self.get_logger().info(
-            f'Semantik-Relay bereit: {self._rate_hz:.2f} Hz, '
+            f'Semantik-Relay bereit ({self._profile_name}): '
+            f'{self._rate_hz:.2f} Hz, '
             f'JPEG {self._jpeg_quality}, PNG {self._png_compression}; '
             'Best-Effort, Queue-Tiefe 1.')
 
@@ -330,7 +333,10 @@ class SemanticStreamRelay(Node):
         if self._last_depth_received_s > 0.0:
             depth_input_age = max(0.0, now_s - self._last_depth_received_s)
         payload = {
+            'schema_version': 1,
+            'time': time.time(),
             'ready': age is not None and age <= self._max_age_s,
+            'profile_name': self._profile_name,
             'publish_rate_hz': self._rate_hz,
             'pairs_published': self._published,
             'pairs_rejected': self._rejected,
