@@ -34,6 +34,25 @@
       i_nn_type: none              # kein neuronales Netz -> spart CPU/Strom.
                                    # semantic_perception braucht spaeter 'spatial'.
       i_enable_imu: true           # /oak/imu/data (spaeter fuer EKF/Odometrie)
+
+    # OAK-D-S2/BMI270: Werte nicht den Treiber-Defaults ueberlassen. Im alten
+    # Vollprofil existierte der ROS-Publisher, blieb aber ohne Nachrichten.
+    # Die implizite 400-Hz-Anforderung ergab separat nur ca. 231--240 Hz mit
+    # stark gebuendelten Paketen. 100 Hz RAW + COPY lief reproduzierbar mit
+    # ca. 101 Hz und vollstaendigen Accel-/Gyrodaten.
+    # BMI270 besitzt weder Magnetometer noch internen Rotationsvektor.
+    imu:
+      i_message_type: IMU
+      i_sync_method: COPY
+      i_enable_acc: true
+      i_acc_mode: ACCELEROMETER_RAW
+      i_acc_freq: 100
+      i_enable_gyro: true
+      i_gyro_mode: GYROSCOPE_RAW
+      i_gyro_freq: 100
+      i_enable_mag: false
+      i_enable_rotation: false
+
     left:
       i_fps: 10.0
     right:

@@ -1,9 +1,9 @@
 # Inventar
 
 **Hardwarestand:** 28.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 28.08.2026 · Branch
-`feature/semantic-object-map-app`; kartenfeste Live-Pose/Objektkarte,
-bedarfsgesteuertes OAK-HD-Profil und erhoehte CycloneDDS-Teilnehmersuche
+**Softwaredelta:** 28.08.2026 · Branch `fix/oak-imu-stream`; OAK-BMI270 in
+allen drei Profilen mit explizitem 100-Hz-RAW-Vertrag und motorlosem
+Nachrichten-Akzeptanztest
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -29,7 +29,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
-| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und App-Kartierungsstack; OAK-Standard-/Detailprofil; CycloneDDS-Profil fuer grosse Nav2-Starts | **produktiv** (App-Erkundung real; OAK Standard/HD motorlos abgenommen) |
+| `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und App-Kartierungsstack; OAK-Standard-/SLAM-/Detailprofil mit geprüftem BMI270-Strom; CycloneDDS-Profil fuer grosse Nav2-Starts | **produktiv** (App-Erkundung real; OAK RGB-D und IMU motorlos abgenommen) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
@@ -55,6 +55,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
 | Kamera-HD-Detailtest (max. 45 s) | `ros2 launch robot_bringup oak_detail.launch.py` | nein |
+| Laufenden OAK-IMU-Strom pruefen | `ros2 run robot_bringup oak_imu_check --duration 8` | nein |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
@@ -95,6 +96,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/merkmale_messen.py` | Bildmerkmale und Tiefenabdeckung |
 | `tools/kartierung/encoder_position_pruefen.py` | strikt read-only: Position, Wortfolge und Counts/Umdrehung bestimmen |
 | `tools/perception/oak_static_acceptance.py` | motorlose Standard-Transport- oder HD-Objekt-/3D-Abnahme ohne Bildspeicherung |
+| `ros2 run robot_bringup oak_imu_check` | motorlose IMU-Abnahme: echte Nachrichten, Rate, Zeitstempel, Frame und Plausibilitaet |
 | `docs/82-ftdi-latency.rules` | udev-Regel, senkt FTDI-Latenz 16 ms → 1 ms |
 
 ---

@@ -101,6 +101,24 @@ erzeugen.
 
 ## Starten
 
+### OAK-IMU motorlos pruefen
+
+Alle OAK-Profile pinnen den BMI270 auf 100 Hz RAW fuer Beschleunigung und
+Drehrate. Magnetometer und interner Rotationsvektor bleiben aus, weil diese
+Hardware sie nicht bereitstellt. Nach einem Kamerastart prueft der folgende
+Befehl echte Nachrichten, Frequenz, Sensorzeitstempel, Frame und plausible
+Messwerte; die blosse Existenz von `/oak/imu/data` reicht nicht:
+
+```bash
+ros2 run robot_bringup oak_imu_check --duration 8
+```
+
+Erfolg ist eine JSON-Zeile mit `"ok": true`, etwa 100 Hz,
+`"frames": ["oak_imu_frame"]` und ohne Fehler. Der Test startet keine
+Motor-, Navigations- oder Missionskomponente. Die IMU liefert derzeit nur
+Rohbeschleunigung und Rohdrehrate; eine Fusion oder Lageorientierung ist ein
+getrennter Folgeschritt.
+
 **Auf dem Roboter:**
 ```bash
 ros2 launch robot_bringup robot.launch.py

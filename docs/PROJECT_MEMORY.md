@@ -17,6 +17,66 @@ Rückfallweg:
 
 ---
 
+## 2026-08-28 — OAK-BMI270-Datenstrom explizit und messbar abgenommen
+
+**Entscheidung:** Standard-, SLAM- und kurzzeitiges Detailprofil konfigurieren
+den BMI270 ausdruecklich mit 100 Hz `ACCELEROMETER_RAW` und `GYROSCOPE_RAW`.
+Der ROS-Treiber verwendet `COPY`; Magnetometer und interner Rotationsvektor
+sind explizit aus. `oak_imu_check` bewertet echte Nachrichten, Empfangs- und
+Sensorzeit, Frame, endliche Werte sowie einen plausiblen Beschleunigungsbetrag.
+Ein sichtbares Topic oder ein vorhandener Publisher gilt nicht als Abnahme.
+
+**Grund / beobachtete Evidenz:** Im vorherigen Vollbetrieb existierte
+`/oak/imu/data` mit Publisher, lieferte bei zwei Messversuchen aber keine
+Nachricht. Ein isoliertes C++-Programm gegen die installierte DepthAI-Bibliothek
+empfing vom selben Geraet in 5 s 497 Beschleunigungs- und 496 Gyropakete; OAK,
+USB, Firmware und BMI270 waren damit nachweislich funktionsfaehig. Der
+offizielle Treiber 2.12.2 fordert ohne Profilwerte 400 Hz und zeitliche
+Interpolation an. In der motorlosen Testmatrix lieferte die explizite
+400-Hz-Anforderung real nur etwa 231--240 Hz mit gebuendelter Ankunft, waehrend
+100 Hz sowohl mit Interpolation als auch `COPY` stabil rund 101 Hz ergaben.
+Die genaue Ursache des vorherigen einmaligen Treiberstillstands ist damit
+nicht bewiesen; die neue Konfiguration beseitigt jedoch die impliziten Werte
+und besitzt einen reproduzierbaren End-to-End-Nachweis.
+
+**Betroffene Dateien und Hardware:** Drei OAK-Parameterprofile,
+`oak_imu_check`, Tests und Bring-up-Dokumentation; OAK-D-S2/BMI270 und Jetson.
+Motor-, Nav2-, VL53-, Karten- und Missionsknoten blieben aus. Es wurden keine
+Bilder, Karten oder Bags gespeichert.
+
+**Teststatus:** Direkter Hardwaretest 497/496 Pakete in 5 s; 12 Bring-up-Tests
+und isolierter Paketbuild bestanden. Im vollstaendigen Standardprofil wurden
+810 IMU-Nachrichten in 8 s mit 101,145 Hz Empfang, 101,129 Hz Sensorzeit,
+keinem nicht steigenden Zeitstempel und 9,729 m/s2 Median gemessen. Das
+640-x-360-SLAM-Profil lieferte ebenfalls 810 Nachrichten, 101,120/101,127 Hz,
+null Zeitstempelfehler und 9,725 m/s2. RGB-D, Punktwolke, Entzerrer und
+Semantik-Relay liefen gleichzeitig; Standard-RGB und -Tiefe blieben bei
+10 Hz, Relay `ready=true`. Das 1280-x-720-Detailprofil lieferte ebenfalls 810
+Nachrichten mit 101,131/101,134 Hz, null Zeitstempelfehlern und 9,735 m/s2.
+Sein Relay erreichte nach dem Anlauf `ready=true`, 21 publizierte Paare,
+keine Codec-/Stale-Fehler und keine Subscription-Neustarts.
+
+Das Produktionspaket `robot_bringup` wurde nach lokaler Vollsicherung aus dem
+isolierten Branch neu installiert. Der anschliessende Standardstart direkt
+aus `/home/p/roboter_ws/install` bestand erneut mit 810 Nachrichten,
+101,138/101,137 Hz, null Zeitstempelfehlern und 9,736 m/s2. RGB und Tiefe
+liefen bei 10,0 Hz; das Relay war mit 320 x 180 `ready=true`, ohne Stale-,
+Codec- oder Subscription-Restart-Fehler.
+
+**Offene Risiken:** Diese Abnahme liefert Rohbeschleunigung und Rohdrehrate,
+aber noch keine kalibrierte Orientierung, IMU-/Encoderfusion oder
+Unebenheitskompensation. Kovarianzen und Bias duerfen erst nach Messung fuer
+einen Filter festgelegt werden. Ein kuenftiges Treiberupdate verlangt die
+erneute Abnahme aller drei Profile.
+
+**Rueckfallweg:** Den IMU-Block in den drei Profilen und den Checker-Commit
+revertieren. OAK kann unabhaengig von Motoren und Navigation gestoppt werden;
+die Paketkopie unter
+`~/.local/share/amadeus/deploy-backups/oak-imu-20260828-1744-predeploy/`
+stellt den vorherigen Stand wieder her.
+
+---
+
 ## 2026-08-28 — Live-Pose und Objektkarte strikt an Lokalisierung gebunden
 
 **Entscheidung:** Die iOS-App abonniert die vom `robot_map_manager` gepruefte

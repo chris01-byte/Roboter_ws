@@ -28,6 +28,21 @@
       i_nn_type: none
       i_enable_imu: true           # /oak/imu/data - spaeter fuer EKF/VIO nutzbar
 
+    # Explizites, real verifiziertes BMI270-Profil. Siehe oak_params.yaml.
+    # COPY vermeidet einen zusaetzlichen Interpolationszustand; bei gleichen
+    # 100-Hz-RAW-Raten enthaelt jedes Paket Beschleunigung und Drehrate.
+    imu:
+      i_message_type: IMU
+      i_sync_method: COPY
+      i_enable_acc: true
+      i_acc_mode: ACCELEROMETER_RAW
+      i_acc_freq: 100
+      i_enable_gyro: true
+      i_gyro_mode: GYROSCOPE_RAW
+      i_gyro_freq: 100
+      i_enable_mag: false
+      i_enable_rotation: false
+
     left:
       i_fps: 10.0
     right:

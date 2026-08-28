@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'link_monitor = robot_bringup.link_monitor_node:main',
+            'oak_imu_check = robot_bringup.oak_imu_check:main',
             'oak_rectifier = robot_bringup.oak_rectifier_node:main',
         ],
     },

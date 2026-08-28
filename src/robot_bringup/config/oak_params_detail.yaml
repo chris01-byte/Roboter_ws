@@ -6,6 +6,19 @@
     camera:
       i_nn_type: none
       i_enable_imu: true
+    # Identisch zum real abgenommenen BMI270-Vertrag der Standard-/SLAM-
+    # Profile. Auch im kurzzeitigen HD-Modus keine impliziten Treiberwerte.
+    imu:
+      i_message_type: IMU
+      i_sync_method: COPY
+      i_enable_acc: true
+      i_acc_mode: ACCELEROMETER_RAW
+      i_acc_freq: 100
+      i_enable_gyro: true
+      i_gyro_mode: GYROSCOPE_RAW
+      i_gyro_freq: 100
+      i_enable_mag: false
+      i_enable_rotation: false
     left:
       i_fps: 5.0
     right:

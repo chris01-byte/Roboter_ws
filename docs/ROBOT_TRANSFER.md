@@ -1,5 +1,53 @@
 # Übertragung auf den realen Roboter
 
+## OAK-BMI270-IMU — drei Profile motorlos abgenommen (28.08.2026)
+
+**Branch:** `fix/oak-imu-stream`
+
+Die OAK-D-S2-Hardware ist gesund; ein direkter DepthAI-Test lieferte in 5 s
+497 Beschleunigungs- und 496 Gyropakete. Der ROS-Treiber hatte das Topic zuvor
+zwar angelegt, aber im beobachteten Vollbetrieb keine Nachrichten geliefert.
+Alle OAK-Profile setzen deshalb statt impliziter Treiberwerte denselben
+verifizierten Vertrag: 100 Hz RAW-Beschleunigung und RAW-Drehrate, `COPY`,
+kein Magnetometer und kein interner Rotationsvektor.
+
+Nach laufendem OAK-Start pruefen:
+
+```bash
+ros2 run robot_bringup oak_imu_check --duration 8
+```
+
+Der Befehl muss mit Exitcode 0 und `"ok": true` enden. Erwartet werden etwa
+100 Hz, ausschliesslich `oak_imu_frame`, steigende Sensorzeitstempel und ein
+Beschleunigungsmedian nahe der Erdbeschleunigung. Ein vorhandener Publisher
+ohne diese Messung ist kein Erfolg.
+
+Standard und 640-x-360-SLAM wurden im kompletten OAK-Stack je acht Sekunden
+abgenommen: jeweils 810 Nachrichten und rund 101,1 Hz, keine fehlerhaften
+Zeitstempel, Median 9,729 beziehungsweise 9,725 m/s2. Beim Standardprofil
+blieben RGB und Tiefe gleichzeitig bei 10 Hz und das Semantik-Relay bereit.
+Das 1280-x-720-Detailprofil bestand mit 810 Nachrichten, 101,131 Hz Empfang,
+101,134 Hz Sensorzeit, null Zeitstempelfehlern und 9,735 m/s2. Nach dem Anlauf
+war sein Relay ebenfalls `ready=true`, ohne Codec-/Stale-Fehler oder
+Subscription-Neustart. 12 Bring-up-Tests sowie der isolierte Colcon-Build
+bestanden. Keine Aktoren, Navigation, VL53 oder Mission liefen.
+
+**Produktionsdeployment:** Nur `robot_bringup` wurde aus dem isolierten Branch
+in `/home/p/roboter_ws/install` neu installiert. Der danach von dort gestartete
+Standardstack lieferte 810 IMU-Nachrichten in 8 s, 101,138/101,137 Hz,
+null Zeitstempelfehler und 9,736 m/s2. RGB und Tiefe blieben bei 10,0 Hz; das
+320-x-180-Relay meldete `ready=true`, 0 Stale-/Codecfehler und 0 Endpoint-
+Neustarts. Dieser Standard-OAK-Stack blieb aktiv; Motor-, Nav2-, VL53- und
+Missionsprozesse wurden nicht gestartet.
+
+Die IMU ist damit als Rohdatenquelle bereit, aber noch nicht in Odometrie oder
+SLAM fusioniert. Bias, Kovarianzen und Filterparameter nicht schaetzen; das
+ist ein spaeterer, separat zu vermessender Schritt. Rueckfall: OAK stoppen,
+`~/.local/share/amadeus/deploy-backups/oak-imu-20260828-1744-predeploy/robot_bringup`
+zurueckkopieren oder den Commit revertieren.
+
+---
+
 ## Kartenfeste Live-Pose, Objektkarte und OAK-Detailmodus (28.08.2026)
 
 **Branch:** `feature/semantic-object-map-app`
