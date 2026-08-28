@@ -112,6 +112,12 @@ class SemanticPerception(Node):
         self._caminfo_topic   = self.declare_parameter(
             'camera_info_topic', '/oak/semantic/camera_info').value
         self._model_path      = self.declare_parameter('model_path', 'yolov8s-worldv2.pt').value
+        self._model_image_size = int(self.declare_parameter(
+            'model_image_size', 640).value)
+        self._detail_model_image_size = int(self.declare_parameter(
+            'detail_model_image_size', 960).value)
+        self._detail_input_min_width = int(self.declare_parameter(
+            'detail_input_min_width', 1000).value)
         self._depth_scale     = float(self.declare_parameter('depth_scale', 0.001).value)  # mm -> m
         self._max_input_age_s = float(self.declare_parameter(
             'max_input_age_s', 2.0).value)
@@ -121,6 +127,13 @@ class SemanticPerception(Node):
             'input_pair_queue_size', 10).value)
         if self._max_input_age_s <= 0.0 or self._max_rgb_depth_skew_s < 0.0:
             raise ValueError('Zeitgrenzen der Wahrnehmung sind ungueltig')
+        if (
+                not 320 <= self._model_image_size <= 1536 or
+                not 320 <= self._detail_model_image_size <= 1536 or
+                self._model_image_size % 32 != 0 or
+                self._detail_model_image_size % 32 != 0 or
+                self._detail_input_min_width < 1):
+            raise ValueError('YOLO-Inferenzgroessen sind ungueltig')
         if not 2 <= self._input_pair_queue_size <= 120:
             raise ValueError('input_pair_queue_size muss zwischen 2 und 120 liegen')
         # --- Objekt-Gedaechtnis / semantische Karte (Befund K2) ---
@@ -541,11 +554,18 @@ class SemanticPerception(Node):
         if rgb is None:
             return None
         try:
+            inference_size = self._inference_size_for_width(rgb.shape[1])
             return model.predict(
-                rgb, conf=self._conf_threshold, verbose=False)
+                rgb, conf=self._conf_threshold, imgsz=inference_size,
+                verbose=False)
         except Exception as exc:
             self.get_logger().warn(f"YOLO-World-Inferenz fehlgeschlagen ({exc}).")
             return None
+
+    def _inference_size_for_width(self, image_width: int) -> int:
+        if image_width >= self._detail_input_min_width:
+            return self._detail_model_image_size
+        return self._model_image_size
 
     def _detection_from_results(
             self, canonical_class: str, results

@@ -152,8 +152,8 @@ def main():
     parser.add_argument('--minimum-confidence', type=float, default=0.35)
     parser.add_argument('--maximum-spread-m', type=float, default=0.20)
     parser.add_argument('--expected-profile', default='standard')
-    parser.add_argument('--expected-width', type=int, default=640)
-    parser.add_argument('--expected-height', type=int, default=360)
+    parser.add_argument('--expected-width', type=int, default=320)
+    parser.add_argument('--expected-height', type=int, default=180)
     parser.add_argument(
         '--report-directory',
         default='~/.local/share/amadeus/diagnostics/oak-object-acceptance')

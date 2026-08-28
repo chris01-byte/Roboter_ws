@@ -48,6 +48,9 @@ semantic_perception:
     base_frame: "base_link"
     confidence_threshold: 0.35
     model_path: "yolov8s-worldv2.pt"       # YOLO-World-Gewichte (nur Backend 'yoloworld')
+    model_image_size: 640                  # Standardprofil 320x180 -> YOLO-Eingang 640
+    detail_model_image_size: 960           # HD-Detailprofil: real gemessen deutlich robuster
+    detail_input_min_width: 1000           # ab dieser RGB-Breite Detail-Inferenz verwenden
     depth_scale: 0.001                     # Tiefen-Rohwert -> Meter (OAK: mm -> 0.001)
     max_input_age_s: 2.0                   # alte WLAN-/Kameraframes fail-closed ablehnen
     max_rgb_depth_skew_s: 0.20             # nur zeitlich passendes RGB-D projizieren

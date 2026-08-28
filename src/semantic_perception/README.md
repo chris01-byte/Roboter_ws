@@ -124,6 +124,12 @@ Motorlose OAK-Abnahme mit sichtbarer Tasse:
 python3 tools/perception/oak_static_acceptance.py \
   --object Tasse --position mitte
 ```
+Ohne weitere Argumente prueft sie das ressourcenschonende Navigationsprofil
+`standard` auf real 320 x 180. Fuer den getrennten Detailmodus gelten
+`--expected-profile detail_hd --expected-width 1280 --expected-height 720`.
+Das Detailprofil verwendet fuer Bilder ab 1000 Pixel Breite eine gemessene
+YOLO-Inferenzgroesse von 960 und beendet sich standardmaessig nach 45 Sekunden.
+Beide Profile duerfen niemals parallel dieselbe OAK oeffnen.
 Der JSON-Bericht enthält keine Bilder und bleibt lokal unter
 `~/.local/share/amadeus/diagnostics/`.
 

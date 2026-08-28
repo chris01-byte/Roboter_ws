@@ -109,6 +109,8 @@ class SemanticStreamContractTests(unittest.TestCase):
         self.assertIn('oak_params_detail.yaml', launch_source)
         self.assertIn('semantic_stream_relay_detail_params.yaml', launch_source)
         self.assertIn("'pointcloud': 'false'", launch_source)
+        self.assertIn("'maximum_runtime_s'", launch_source)
+        self.assertIn('TimerAction', launch_source)
 
     def test_bringup_declares_external_rectifier_dependencies(self):
         root = ElementTree.parse(
