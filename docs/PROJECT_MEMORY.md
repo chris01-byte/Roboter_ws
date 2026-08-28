@@ -17,6 +17,69 @@ Rückfallweg:
 
 ---
 
+## 2026-08-28 — Echte Stillstands-Scans statt nur angesagter Haltepunkte
+
+**Entscheidung:** Fuer den einfachen Kuechen-Nachscan gibt es einen getrennten
+`stationary_slam_lidar.launch.py`. `slam_toolbox` sieht darin ausschliesslich
+`/scan_stillstand`. Ein fail-closed Gate oeffnet nach 1,2 s durch Odometrie und
+OAK-IMU bestaetigtem Stillstand genau 2 s, schliesst bei Bewegung sofort und
+bleibt danach bis zu einem nachgewiesenen Positionswechsel geschlossen. Der
+normale LiDAR-SLAM-Launch bleibt unveraendert. Ein vorhandener Wohnungsgraph
+kann nur mit vollstaendig vorhandener `.posegraph`-/`.data`-Paarung und einer
+zuvor verifizierten Startpose fortgesetzt werden.
+
+**Grund / beobachtete Evidenz:** Beim ersten Versuch wurden P1 bis P21 zwar
+menschlich im Stillstand angesagt, technisch abonnierte `slam_toolbox` aber
+durchgehend `/scan_normiert`. Damit gingen weiterhin alle Scans waehrend des
+Kippelns ueber Fliesenfugen in den Graphen; die Stopps konnten bereits
+eingelesene Geometrie nicht rueckgaengig machen. Der neue Live-Dry-run gab bei
+10,0 Hz Eingang genau 20 Scans im zweisekundigen P1-Fenster weiter und danach
+in mehr als drei Sekunden keinen weiteren. `slam_toolbox` hatte genau einen
+Subscriber auf `/scan_stillstand`. OAK lieferte dabei rund 101 Hz, 0
+nicht-steigende Zeitstempel und rund 9,71 m/s2 Beschleunigungsbetrag.
+
+**Betroffene Dateien und Hardware:** Neues ROS-unabhaengiges Gate-Modul,
+ROS-Knoten, Parameterprofil und separater Launch im Paket
+`amadeus_lidar_bringup`; Start-, lokale Bag- und Save-Helfer unter
+`tools/kartierung/`; OAK-BMI270, STL-27L und Basis-Odometrie. Der Controller
+kann im expliziten Sondermodus mit 0,08 m/s direkt auf `/cmd_vel` gestartet
+werden. Weil dieser Modus die vom Nutzer bewusst unerwuenschte VL53-Kette
+nicht startet, verlangt er neben der frischen Fahrfreigabe ein zweites
+bewusstes Opt-in. Im aktuellen Test blieben `dry_run=true`,
+`allow_rs485=false` und beide Motoren bei 0 rpm.
+
+**Teststatus:** 19 Paket-/Vertragstests, Flake8, Shell-Syntax und isolierter
+Colcon-Build bestanden. Ein unvollstaendiger Fortsetzungsgraph brach mit
+Exitcode 1 ab, bevor ein Hardwareknoten erschien. Eine lokale Testkarte wurde
+als PGM/YAML plus Posegraph/Datenpaar gespeichert und anschliessend an Pose
+0/0/0 erfolgreich wieder geladen; das Gate nahm danach genau P1 auf. Der neue
+Gate-Prozess beendete sich bei SIGINT sauber. Der vorhandene STL-27L-Treiber
+meldet beim Beenden weiterhin Buffer-Overflow/Exit -6 und `base_hardware`
+einen bereits beendeten rclpy-Context/Exit 1; beide bekannten Fehler treten
+erst beim Shutdown auf und werden nicht in dieser sicherheitsbezogenen
+Aenderung mitbehoben.
+
+Das Paket liegt bis zur spaeteren Zusammenfuehrung mit den parallelen
+Arbeitszweigen in einem isolierten lokalen Overlay unter
+`~/.local/share/amadeus/overlays/stationary-scan-gate-current/`. Dadurch
+blieben die nicht committeten Lastreduktionen des normalen LiDAR-Starts
+unangetastet.
+
+**Offene Risiken:** Der Modus ist real noch nicht ueber Fliesen gefahren. Die
+IMU dient nur als Aufnahme-Gate, nicht als kalibrierte Orientierung oder
+Odometriefusion. Eine statische Schraeglage kann allein aus Betrag und
+Drehrate nicht sicher erkannt werden; der Bediener muss auf ebener
+Fliesenflaeche stoppen. Vor dem Kuechen-Nachscan muss die Startpose gegen die
+unverfaelschte Referenzkarte motorlos eindeutig bestimmt werden. Erst danach
+darf der vorhandene Graph fortgesetzt werden.
+
+**Rueckfallweg:** Den separaten Launch nicht starten und den Symlink
+`stationary-scan-gate-current` entfernen; der normale LiDAR-/Kartierstack ist
+unveraendert. Neue Karten immer unter einem neuen lokalen Pfad speichern, nie
+den Referenzgraphen ueberschreiben.
+
+---
+
 ## 2026-08-28 — OAK-BMI270-Datenstrom explizit und messbar abgenommen
 
 **Entscheidung:** Standard-, SLAM- und kurzzeitiges Detailprofil konfigurieren

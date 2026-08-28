@@ -26,5 +26,7 @@ setup(
     entry_points={'console_scripts': [
         'scan_vereinheitlichen ='
         ' amadeus_lidar_bringup.scan_vereinheitlichen:main',
+        'stationary_scan_gate ='
+        ' amadeus_lidar_bringup.stationary_scan_gate:main',
     ]},
 )

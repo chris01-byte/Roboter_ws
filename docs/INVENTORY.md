@@ -1,9 +1,9 @@
 # Inventar
 
 **Hardwarestand:** 28.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 28.08.2026 · Branch `fix/oak-imu-stream`; OAK-BMI270 in
-allen drei Profilen mit explizitem 100-Hz-RAW-Vertrag und motorlosem
-Nachrichten-Akzeptanztest
+**Softwaredelta:** 28.08.2026 · Branch `feature/stationary-scan-gate`;
+OAK-/Odometrie-gepruefte Stillstandsfenster fuer einfachen Fliesen-Nachscan,
+motorlos mit Speichern und Wiederladen abgenommen
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -28,6 +28,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Paket | Zweck | Reifegrad |
 |---|---|---|
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
+| `amadeus_lidar_bringup` | STL-27L, Scan-Normierung und getrennter fail-closed Stillstands-SLAM-Modus | **erprobt** (Gate, Save/Reload motorlos real; Fliesenfahrt offen) |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und App-Kartierungsstack; OAK-Standard-/SLAM-/Detailprofil mit geprüftem BMI270-Strom; CycloneDDS-Profil fuer grosse Nav2-Starts | **produktiv** (App-Erkundung real; OAK RGB-D und IMU motorlos abgenommen) |
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
@@ -56,6 +57,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
 | Kamera-HD-Detailtest (max. 45 s) | `ros2 launch robot_bringup oak_detail.launch.py` | nein |
 | Laufenden OAK-IMU-Strom pruefen | `ros2 run robot_bringup oak_imu_check --duration 8` | nein |
+| Stillstands-Kartierung, Preflight | `bash tools/kartierung/start_stationaere_kartierung.sh` | nein (`dry_run`) |
+| Stillstands-Kartierung, beaufsichtigt | zwei frische Opt-ins plus `active_drive:=true manual_teleop:=true` | **ja, ohne VL53-Sicherung** |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
@@ -85,6 +88,9 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Datei | Zweck |
 |---|---|
 | `tools/kartierung/start_slam.sh` / `stop_slam.sh` | SLAM starten; **sauber** beenden mit Wörterbuch-Kontrolle |
+| `tools/kartierung/start_stationaere_kartierung.sh` | einfacher Stop-and-go-LiDAR-Modus; SLAM erhaelt nur IMU-/Odometrie-bestaetigte Stillstandsfenster |
+| `tools/kartierung/record_stationary_mapping_bag.sh` | IMU/Odom/LiDAR/TF/Gate lokal ohne RGB aufzeichnen |
+| `tools/kartierung/save_stationaere_kartierung.sh` | Rasterkarte und fortsetzbaren Posegraphen unter neuem lokalem Pfad speichern |
 | `tools/kartierung/start_automatische_kartierung.sh` | dreistufige SLAM-/Nav2-/Explore-Kette ohne App-Dienste; scharf nur mit zwei Opt-ins |
 | `tools/kartierung/start_app_erkundung.sh` | einzelner dreistufiger Kartierungs-, App-, rosbridge- und Kartenmanager-Stack; Doppelstartschutz |
 | `tools/kartierung/start_lokalisierung.sh` | Lokalisierungsmodus, wahlweise ohne Vorwissen |

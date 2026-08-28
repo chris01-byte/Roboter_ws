@@ -1,0 +1,31 @@
+stationary_scan_gate:
+  ros__parameters:
+    input_scan_topic: /scan_normiert
+    output_scan_topic: /scan_stillstand
+    imu_topic: /oak/imu/data
+    odom_topic: /odom
+    status_topic: /stationary_scan_gate/status_json
+
+    # Ein Haltepunkt gilt erst nach dieser durchgehend ruhigen Zeit als bereit.
+    settle_duration_s: 1.2
+    # Danach erhaelt slam_toolbox genau ein kurzes Fenster mit frischen Scans.
+    capture_duration_s: 2.0
+    # Fehlende oder alte IMU/Odometrie schliesst das Gate sofort.
+    sensor_max_age_s: 0.35
+
+    # Encoderbasierter Stillstand. Die Werte sind bewusst deutlich kleiner als
+    # jede beabsichtigte manuelle Fahrt, aber oberhalb numerischen Rauschens.
+    maximum_linear_speed_m_s: 0.01
+    maximum_angular_speed_rad_s: 0.025
+
+    # Die OAK sitzt auf dem Mast und erkennt dessen Nachschwingen direkt.
+    # Beschleunigungsbetrag ist unabhaengig von der festen Kameraneigung.
+    maximum_imu_angular_speed_rad_s: 0.08
+    gravity_m_s2: 9.80665
+    maximum_acceleration_deviation_m_s2: 0.8
+
+    # Nach einer fertigen Aufnahme ist eine neue Position erst nach echter
+    # Odometriebewegung freigegeben; blosses Warten erzeugt keine weiteren P.
+    rearm_motion_duration_s: 0.15
+    rearm_translation_m: 0.08
+    rearm_rotation_rad: 0.08

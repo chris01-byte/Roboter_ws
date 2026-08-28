@@ -1,5 +1,69 @@
 # Übertragung auf den realen Roboter
 
+## Stillstands-Kartierung fuer geflieste Raeume — motorlos abgenommen (28.08.2026)
+
+**Branch:** `feature/stationary-scan-gate`
+
+Der fruehere P1-bis-P21-Ablauf war kein technischer Stillstandsmodus:
+`slam_toolbox` erhielt auch waehrend der Fahrt jeden Scan. Der neue getrennte
+Launch fuehrt nur noch ein automatisch freigegebenes Topic an SLAM. Nach
+1,2 s bestaetigtem Stillstand werden 2 s LiDAR-Daten durchgelassen; Bewegung
+oder alte OAK-/Odom-Daten schliessen das Gate sofort. Nach P1 ist P2 erst nach
+einem echten Positionswechsel moeglich. Status:
+
+```bash
+ros2 topic echo --once --full-length \
+  /stationary_scan_gate/status_json
+```
+
+Motorloser Start:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_stationaere_kartierung.sh
+```
+
+Bis zur Zusammenfuehrung der parallelen Branches wird das Paket aus
+`~/.local/share/amadeus/overlays/stationary-scan-gate-current/` geladen. Das
+Produktionspaket und die parallel entwickelten 5-Hz-LiDAR-Aenderungen wurden
+nicht ueberschrieben.
+
+Eine vorhandene Wohnung muss fuer einen Kuechen-Nachscan nicht komplett neu
+aufgenommen werden. Erforderlich sind aber der unverfaelschte lokale
+Posegraph-Stamm und eine zuvor motorlos verifizierte Pose:
+
+```bash
+bash tools/kartierung/start_stationaere_kartierung.sh \
+  map_file_name:=/ABSOLUT/PFAD/ZUM/POSEGRAPH_STAMM \
+  map_start_x:=X map_start_y:=Y map_start_yaw:=YAW
+```
+
+Ohne `.posegraph` und `.data` oder bei nicht-endlichen Posewerten startet
+nichts. Die Referenzdateien werden nur gelesen. Ergebnis unter einem neuen
+lokalen Verzeichnis speichern:
+
+```bash
+bash tools/kartierung/save_stationaere_kartierung.sh
+```
+
+Der scharfe Controllerlauf ist ein beaufsichtigter Sondermodus ohne VL53. Er
+startet nur mit frischer persoenlicher Fahrfreigabe, freiem Weg, Hard-Not-Aus
+und beiden expliziten Umgebungs-Opt-ins. Der Startbefehl wird erst unmittelbar
+vor dem Realtest verwendet; dieses Dokument erteilt keine Fahrfreigabe.
+
+Motorlose Abnahme: 19 Tests, Flake8, Shell-Pruefung und isolierter Build
+bestanden. OAK etwa 101 Hz, LiDAR 10,0 Hz, exakt 20 weitergegebene Scans in P1
+und danach geschlossen. Leerer Testgraph wurde lokal gespeichert und wieder
+geladen. `dry_run=true`, `allow_rs485=false`, 0 rpm. Der neue Knoten endet
+sauber; die bekannten ausschliesslichen Shutdownfehler des STL-27L-Treibers
+und von `base_hardware` bleiben getrennte Altbefunde.
+
+Rueckfall: separaten Launch nicht verwenden und den lokalen Overlay-Symlink
+entfernen. Der normale LiDAR-Launch wurde nicht veraendert. Keine echte Karte,
+kein Bag und kein Kamerabild liegt im Repository.
+
+---
+
 ## OAK-BMI270-IMU — drei Profile motorlos abgenommen (28.08.2026)
 
 **Branch:** `fix/oak-imu-stream`

@@ -37,6 +37,56 @@ Die Messung in beiden Richtungen und für Motor 1 und 2 wiederholen. Der genaue
 Akzeptanzvertrag, insbesondere Counts, `0x0011` und `0x0101`, steht in
 `docs/ENCODER_ODOMETRIE_FIX.md`.
 
+## Einfacher Stop-and-go-Nachscan auf Fliesen
+
+Nur angesagte Haltepunkte reichen nicht: Solange `slam_toolbox` direkt
+`/scan_normiert` abonniert, nimmt es auch waehrend der Fugenfahrt auf. Der
+getrennte Stillstandsmodus gibt deshalb ausschliesslich kurze, durch frische
+OAK-IMU und Encoder-Odometrie bestaetigte Fenster auf `/scan_stillstand` frei.
+Er ist keine IMU-Fusion und veraendert den normalen LiDAR-Launch nicht.
+
+Motorloser Preflight:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_stationaere_kartierung.sh
+```
+
+Im Status muss nach P1 `state: wait_movement`, `gate_open: false` stehen. Ein
+neues Fenster wird erst nach Bewegung und erneut 1,2 s Stillstand erzeugt:
+
+```bash
+ros2 topic echo --once --full-length \
+  /stationary_scan_gate/status_json
+```
+
+Fuer einen Kuechen-Nachscan muss nicht die ganze Wohnung neu aufgenommen
+werden. Vor dem Start ist die reale Pose jedoch motorlos gegen genau die
+Rasterkarte zu bestimmen, zu der der unverfaelschte Posegraph gehoert. Dann
+den Graphstamm ohne Dateiendung und die verifizierte Pose uebergeben:
+
+```bash
+bash tools/kartierung/start_stationaere_kartierung.sh \
+  map_file_name:=/ABSOLUT/PFAD/ZUM/GRAPHSTAMM \
+  map_start_x:=X map_start_y:=Y map_start_yaw:=YAW
+```
+
+Die Referenz nie ueberschreiben. Solange SLAM noch laeuft, unter einem neuen
+lokalen Verzeichnis speichern:
+
+```bash
+bash tools/kartierung/save_stationaere_kartierung.sh
+```
+
+Der optionale Controller startet direkt auf `/cmd_vel`, langsam mit 0,08 m/s,
+und besitzt bewusst keine VL53-Sicherung. Dieser Sondermodus verlangt fuer
+jeden realen Start eine neue persoenliche Freigabe, freien Weg, Hard-Not-Aus
+und beide Opt-ins `AMADEUS_FAHRFREIGABE=JA` sowie
+`AMADEUS_OHNE_NAHBEREICH=1`. Ohne sie startet kein Motor. Der Roboter soll fuer
+jede Aufnahme sichtbar eben stehen, nicht mit einem Rad auf Fuge oder
+Schwelle. Details und Grenzen stehen in
+`docs/SLAM_BODENUNEBENHEITEN.md`.
+
 ## Automatische LiDAR-Raumkartierung
 
 Die automatische Kartierung arbeitet bewusst in drei Phasen:
