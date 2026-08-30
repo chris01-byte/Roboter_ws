@@ -1,0 +1,110 @@
+sensor_adapter:
+  ros__parameters:
+    # Hardware adapters publish standard ROS messages here.  A successor
+    # robot changes these topic names, not the fusion code.
+    wheel_odom_input: /wheel/odom_raw
+    wheel_odom_output: /fusion/wheel_odom
+    imu_input: /oak/imu/data
+    imu_output: /fusion/imu
+    reference_odom_input: /fusion/reference_odom
+    status_topic: /sensor_fusion/status_json
+    diagnostics_topic: /diagnostics
+
+    expected_odom_frame: odom
+    expected_base_frame: base_link
+    expected_imu_frame: ''
+    require_imu: true
+    # The independent LiDAR/visual source is initially a monitor.  It becomes
+    # mandatory only after a measured real-world acceptance test.
+    require_reference_odom: false
+    # The OAK has no absolute heading reference.  The first profile therefore
+    # fuses angular velocity, not its orientation quaternion.
+    use_imu_orientation: false
+    # OAK publishes zero covariances and a measurable stationary gyro offset.
+    # Calibrate once at startup, but only while fresh wheel odometry confirms
+    # standstill.  No corrected IMU samples leave the adapter before success.
+    calibrate_gyro_bias: true
+    gyro_bias_calibration_s: 2.0
+    gyro_bias_minimum_samples: 300
+    gyro_bias_maximum_stddev_radps: 0.02
+    gyro_bias_maximum_sample_radps: 0.20
+    gyro_bias_stationary_linear_threshold_mps: 0.01
+    gyro_bias_stationary_angular_threshold_radps: 0.03
+    sensor_timeout_s: 0.35
+
+    # Encoder values are the already measured Amadeus starting covariances.
+    wheel_pose_xy_variance: 0.0025
+    wheel_pose_yaw_variance: 0.0076
+    wheel_twist_linear_variance: 0.01
+    # Differential-drive non-holonomic constraint.  It is deliberately much
+    # less certain than a real lateral sensor and is inflated on slip.
+    wheel_twist_lateral_variance: 0.04
+    wheel_twist_angular_variance: 0.03
+    enforce_nonholonomic_lateral_velocity: true
+    # Conservative fallbacks, used only if the driver reports zero/unknown.
+    # They must be recalibrated from a local stationary/motion bag before the
+    # profile is called production-ready.
+    imu_angular_velocity_variance: 0.02
+    imu_linear_acceleration_variance: 0.25
+
+    reference_max_twist_variance: 0.25
+    maximum_linear_velocity_error_mps: 0.10
+    maximum_angular_velocity_error_radps: 0.22
+    minimum_evaluation_speed_mps: 0.025
+    minimum_evaluation_rate_radps: 0.08
+    maximum_stamp_skew_s: 0.16
+    bad_samples_to_latch: 2
+    good_samples_to_recover: 5
+    suspect_covariance_scale: 10.0
+    slip_covariance_scale: 100.0
+
+scan_quality_gate:
+  ros__parameters:
+    scan_input: /scan_normiert
+    scan_output: /scan_qualitaet
+    imu_input: /fusion/imu
+    status_topic: /sensor_fusion/scan_quality_json
+    diagnostics_topic: /diagnostics
+    base_frame: base_link
+    # Mapping must never accept a scan whose plane could not be assessed.
+    fail_closed: true
+    imu_timeout_s: 0.35
+
+    # Provisional conservative limits.  Pure planar translation and yaw are
+    # allowed; roll, pitch and a short impact/settling interval are blocked.
+    gravity_mps2: 9.80665
+    minimum_acceleration_mps2: 7.0
+    maximum_acceleration_mps2: 12.5
+    maximum_gravity_direction_change_rad: 0.05235987755982989
+    maximum_roll_pitch_rate_radps: 0.24434609527920614
+    baseline_time_constant_s: 4.0
+    warmup_s: 0.6
+    settle_s: 0.45
+
+lidar_odometry:
+  ros__parameters:
+    # Optional independent monitor.  The launch keeps it disabled by default
+    # until a stationary and a short real-motion acceptance test have passed.
+    scan_input: /scan_qualitaet
+    odom_output: /fusion/reference_odom
+    status_topic: /sensor_fusion/lidar_odometry_json
+    base_frame: base_link
+    odom_frame: lidar_odom
+    minimum_update_interval_s: 0.18
+    maximum_range_m: 6.0
+    minimum_points: 200
+    resolution_m: 0.015
+    field_margin_m: 0.90
+    maximum_points: 600
+    maximum_cost_m: 0.08
+    minimum_support_ratio: 0.45
+    minimum_distinct_gap_m: 0.0005
+    rebase_translation_m: 0.35
+    rebase_yaw_rad: 0.2617993877991494
+    maximum_static_lidar_tilt_rad: 0.05235987755982989
+    # Pose- and velocity variances have different physical units.  Do not
+    # reuse one value for both; velocity uncertainty is derived using dt^2.
+    minimum_position_variance_m2: 0.0004
+    minimum_yaw_variance_rad2: 0.0025
+    minimum_linear_velocity_variance_m2ps2: 0.0025
+    minimum_angular_velocity_variance_rad2ps2: 0.01

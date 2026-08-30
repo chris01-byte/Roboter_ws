@@ -5,6 +5,10 @@
 `feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
 abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
 
+**Sensorfusionsdelta:** 30.08.2026 · Branch `feature/modulare-sensorfusion`;
+modulare Encoder-/OAK-IMU-Fusion, Start-Biaskalibrierung, Kipp-Scanfilter und
+optionale radunabhaengige LiDAR-Bewegungsreferenz motorlos live abgenommen
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
@@ -33,6 +37,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `robot_map_manager` | versionierte Kartenablage, Schnittstelle zur App | **produktiv** |
 | `semantic_map_manager` | manuelle Raum-Overlays, fest an gespeicherte Kartenfingerprints gebunden | **produktiv** (App-/Jetson-Persistenz und reales Raumziel abgenommen) |
 | `robot_description` | URDF/Xacro, Sensor-Frames | erprobt |
+| `robot_state_estimation` | portable Sensoradapter, Qualitaets-/Schlupfueberwachung, IMU-Scanfilter und lokaler `robot_localization`-EKF | **erprobt (motorlos)** |
 | `robot_navigation` | Nav2-Realprofil mit globalem Zwei-Scan-Lokalisierer, fail-closed Missions-Gate, Glättung und VL53-Kollisionskette | **erprobt** (drei Kaltstarts an bestaetigter Pose und anschliessendes Raumziel real bestanden) |
 | `robot_interfaces` | eigene Nachrichten (u. a. `NearFieldStatus`) | **produktiv** |
 | `safety_monitor` | Sicherheitsüberwachung | erprobt |
@@ -54,6 +59,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Zweck | Befehl | Hardware aktiv? |
 |---|---|---|
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
+| Sensor-Fusion, harter Motorlos-Test | `ros2 launch robot_bringup state_estimation_validation.launch.py` | nein (`dry_run=true`, RS485 gesperrt) |
+| Nur passive Fusionsknoten | `ros2 launch robot_state_estimation fusion.launch.py` | nein; startet keine Treiber |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |

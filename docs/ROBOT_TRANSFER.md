@@ -1,5 +1,70 @@
 # Übertragung auf den realen Roboter
 
+## Modulare Sensor-Fusion — motorlos live abgenommen (30.08.2026)
+
+**Branch:** `feature/modulare-sensorfusion`
+
+Das neue Paket `robot_state_estimation` trennt Hardwareadapter,
+Qualitaetsentscheidungen und Zustandsschaetzung. Der lokale
+`robot_localization`-EKF ist kuenftig der vorgesehene einzige Besitzer von
+`odom->base_link`; SLAM/Lokalisierung behaelt `map->odom`. Das Defaultprofil
+nimmt Encoder-Vorwaerts-/Giergeschwindigkeit, die
+Differentialantriebs-Seitwaertsbedingung und die OAK-Gierrate. Es verwendet
+weder `cmd_vel` noch OAK-Orientierung oder Beschleunigung. Ein neuer Sensor
+kann als standardisierte IMU oder Odometriequelle ergaenzt werden, ohne den
+portablen Qualitaetskern zu aendern.
+
+Neu vorhanden:
+
+- Startkalibrierung des OAK-Gyrofehlers nur bei encoderbestaetigtem Stillstand;
+- Frische-, Frame-, Zeitstempel- und Kovarianzpruefung;
+- radunabhaengige Bewegungsreferenz mit hysteretischer Schlupferkennung;
+- IMU-gestuetztes, fail-closed Gate von `/scan_normiert` nach
+  `/scan_qualitaet` fuer Kipp-/Stossphasen;
+- optionale lokale LiDAR-Odometrie ohne Radinput, TF oder Aktorausgabe;
+- JSON- und ROS-Diagnose fuer jede Vertrauensentscheidung;
+- ein Validierungslaunch, dessen Motorpfad nicht per Argument freigeschaltet
+  werden kann.
+
+Der echte motorlose Jetson-Lauf war mehrere Minuten stabil. Die OAK lieferte
+etwa 249 IMU-Proben pro Sekunde. Aus 495 ruhigen Proben wurde der bei jedem
+Start neu zu messende Gyro-Bias bestimmt. Danach blieb die Filterposition bei
+0,00 m und die Gierlage etwa 0,5 Grad vom Start entfernt. Keine Encoder- oder
+IMU-Probe wurde verworfen, der Status war `nominal`, ein Testscan wurde im
+stabilen Zustand weitergegeben und es gab keinen konkurrierenden
+`odom->base_link`-Publisher. `base_hardware` lief ausschliesslich mit
+`dry_run=true`, `allow_rs485=false`, `publish_tf=false` und 0 rpm. Alle
+Testknoten sind beendet. Die beiden betroffenen Pakete bauten erfolgreich;
+21 gezielte Tests und der registrierte Gesamtbestand von 193 Tests liefen
+ohne Fehler, Fehlschlag oder Auslassung.
+
+Sicherer Wiederholungsstart ohne Motorwirkung:
+
+```bash
+cd /home/p/roboter_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch robot_bringup state_estimation_validation.launch.py
+```
+
+Das ROS-Humble-Paket `robot_localization` ist auf dem Jetson als
+Systemabhaengigkeit installiert. Der neue Code veraendert keine
+Motorregister, keine Karten und keine Daten ausserhalb des Workspace.
+
+**Noch nicht produktiv umschalten:** Reale Geradeaus-, Dreh-, Fugen-,
+Schwellen- und Dropouttests fehlen. Sie brauchen erneut persoenliche
+Fahrfreigabe, freien Weg und Hard-Not-Aus. Erst danach werden
+Kartierungs-/Nav-Starts von Basis-TF und `/scan_normiert` auf EKF-TF und
+`/scan_qualitaet` umgestellt. Die optionale LiDAR-Odometrie bleibt bis zu
+ihrer eigenen Realabnahme standardmaessig aus.
+
+Rueckfall: Fusionslaunch beenden und den bisherigen Basisweg auf `/odom` mit
+`publish_tf=true` sowie SLAM direkt auf `/scan_normiert` verwenden. Der volle
+Schnittstellen-, Portierungs- und Akzeptanzvertrag steht in
+`docs/SENSOR_FUSION_ARCHITEKTUR.md`.
+
+---
+
 ## LiDAR-Nachscan auf gefliestem Boden verworfen (24.08.2026)
 
 Ein beaufsichtigter manueller Nachscan erzeugte lokal fächerfoermig versetzte

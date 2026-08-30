@@ -17,6 +17,65 @@ Rückfallweg:
 
 ---
 
+## 2026-08-30 — Lokale Sensor-Fusion modular aufgebaut und motorlos abgenommen
+
+**Entscheidung:** Die kontinuierliche lokale Fahrzeugpose wird kuenftig in
+drei getrennten Ebenen aufgebaut: roboterspezifische Adapter liefern
+Standardnachrichten, eine explizite Qualitaetsschicht bewertet Quellen und ein
+gepflegter `robot_localization`-EKF besitzt allein `odom->base_link`. SLAM oder
+Kartenlokalisierung bleibt alleiniger Besitzer von `map->odom`. Das erste
+Amadeus-Profil fusioniert nur Encoder-Vorwaerts-/Giergeschwindigkeit,
+Nicht-Seitwaerts-Bedingung und die OAK-Gierrate. OAK-Orientierung,
+Beschleunigung und Fahrbefehle werden nicht fusioniert. Eine vom Rad
+unabhaengige Odometrie wird zuerst nur zur Schlupferkennung verwendet; ihre
+direkte Fusion bleibt bis zur Realabnahme aus.
+
+**Grund / beobachtete Evidenz:** Motorencoder messen auch bei Schlupf weiterhin
+Motorumdrehung. Auf Fliesenfugen kippelte das Chassis sichtbar, wodurch
+gleichzeitig Encoderbewegung und die feste Ebene des 2D-LiDARs unzuverlaessig
+werden koennen. Ein einzelner Sensor oder eine pauschal erhoehte Kovarianz
+loest diesen gemeinsamen Fehler nicht. Die live gemessene OAK-IMU lieferte
+etwa 249 Hz, aber Null-Kovarianzen und einen stationaeren Gyro-Offset. Deshalb
+kalibriert der Adapter den Bias bei jedem Start nur waehrend encoderbestaetigtem
+Stillstand. Ein IMU-Qualitaetsgate sperrt nur voruebergehende Roll-/Nick- und
+Stossphasen. Neue LiDAR-, VIO- oder Bodenflussquellen koennen ueber
+`/fusion/reference_odom` angeschlossen werden, ohne den Filterkern an konkrete
+Hardware zu binden.
+
+**Betroffene Dateien und Hardware:** Neues Paket `robot_state_estimation`,
+motorloser Validierungsstart in `robot_bringup`,
+`docs/SENSOR_FUSION_ARCHITEKTUR.md` sowie diese Inventar- und
+Transferdokumentation. Auf dem Jetson wurde die ROS-Humble-Systemabhaengigkeit
+`robot_localization` installiert. Der Live-Test nutzte OAK-D-S2-IMU und die
+stillstehende Dry-run-Radodometrie. Keine Motorregister, Karten oder reale
+Wohnungsdaten wurden veraendert.
+
+**Teststatus:** Beide betroffenen Pakete bauten erfolgreich; ihre 21 Tests
+(18 Fusion, 3 Bring-up) sowie der registrierte Gesamtbestand von 193 Tests
+liefen ohne Fehler, Fehlschlag oder Auslassung. Ein mehrminuetiger Jetson-Lauf
+wurde motorlos durchgefuehrt. Die Biasmessung verwendete 495
+ruhige IMU-Proben und ergab ungefaehr
+`(+0,00147, +0,00605, -0,00398) rad/s`. Nach mehreren Minuten blieb die
+gefilterte Position bei 0,00 m; die Gierabweichung lag bei ungefaehr 0,5 Grad.
+Der Sensorstatus war `nominal`, ein stabiler Testscan passierte das Gate und
+der EKF war der einzige Publisher fuer den lokalen Fahrwerks-TF. Die Basis war
+hart auf `dry_run=true`, `allow_rs485=false`, `publish_tf=false` und 0 rpm
+gesetzt. Alle gestarteten Knoten sind beendet.
+
+**Offene Risiken:** Geradeausfahrt, Drehung, Fugen-/Schwellenfahrt,
+Sensorausfaelle und die optionale radunabhaengige LiDAR-Odometrie sind real
+noch nicht abgenommen. Die produktiven Kartierungsstarts verwenden weiterhin
+den bisherigen direkten Encoder-/Scanpfad. Die motorlose Abnahme beweist
+daher Architektur und Stillstand, noch keine verbesserte Wohnungskarte.
+
+**Rueckfallweg:** Die neue Fusion bleibt parallel und wird in den produktiven
+Starts noch nicht aktiviert. Ihr Launch kann beendet werden, ohne
+Hardwarezustand zu aendern. Der bisherige Pfad bleibt Basis auf `/odom` mit
+`publish_tf=true` und SLAM direkt auf `/scan_normiert`. Details und
+Stufenplan: `docs/SENSOR_FUSION_ARCHITEKTUR.md`.
+
+---
+
 ## 2026-08-24 — Gefliester Boden kann 2D-SLAM gleichzeitig auf zwei Wegen stoeren
 
 **Entscheidung:** Der lokal fehlerhafte LiDAR-Nachscan wird nicht zum neuen
