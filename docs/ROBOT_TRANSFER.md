@@ -4,6 +4,46 @@
 
 **Branch:** `feature/stationary-scan-gate`
 
+**Nachtrag-Branch (lokales DDS):**
+`codex/fix/stationary-mapping-local-dds`
+
+### Lokaler DDS-Nachtrag vom 30.08.2026
+
+Der Stillstandsworkflow verwendet jetzt ausschliesslich Loopback-DDS. Vor dem
+Mapping muss die OAK deshalb ebenfalls mit dem zugehoerigen Helfer starten:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_stationaere_oak.sh
+```
+
+Danach `start_stationaere_kartierung.sh` wie unten aufrufen. Start-, Save- und
+Bag-Helfer laden `stationaere_ros_umgebung.sh` automatisch. Fuer manuelle
+Statusabfragen in einer weiteren Shell zuerst ausfuehren:
+
+```bash
+source tools/kartierung/stationaere_ros_umgebung.sh
+```
+
+Evidenz auf dem Jetson: Der vorherige WLAN-Lauf erzeugte nach einem Wechsel
+zum iPhone-Hotspot 164.407 `ddsi_udp_conn_write`-Fehler und ein 21-MB-Log.
+Der lokale motorlose Gesamttest lieferte 809 IMU-Nachrichten in 8 s bei
+101,1 Hz, danach genau 20 Scans im P1-Fenster, `dry_run=true`, gesperrtes
+RS485 und 0 rpm. Nach rund 30 s hatte das Mappinglog 8,5 kB und null
+DDS-Sendefehler. App, rosbridge und KI-Server sind im lokalen Profil bewusst
+nicht sichtbar; fuer sie bleibt das normale WLAN-Profil erforderlich.
+
+Der DualShock wurde danach per USB als Sony `054c:09cc`, `ID_BUS=usb` und
+`/dev/input/js0` erkannt. Ein motorloser `joy_node` lieferte neutrale
+Nachrichten mit rund 15,4 Hz. Fuer den USB-Betrieb wurde der reine
+Bluetooth-Keepalive voruebergehend gestoppt; bei spaeterem Funkbetrieb muss
+`systemctl start amadeus-dualshock-keepalive.service` ihn wieder aktivieren.
+Das Kabel gehoert unter Aufsicht aus Rad- und Fahrbereich gehalten.
+
+Rueckfall: die drei Stillstandshelfer nicht verwenden und OAK/Kartierung wie
+zuvor im normalen WLAN-Profil starten. Der allgemeine App-/KI-DDS-Vertrag
+wurde nicht geaendert.
+
 Der fruehere P1-bis-P21-Ablauf war kein technischer Stillstandsmodus:
 `slam_toolbox` erhielt auch waehrend der Fahrt jeden Scan. Der neue getrennte
 Launch fuehrt nur noch ein automatisch freigegebenes Topic an SLAM. Nach

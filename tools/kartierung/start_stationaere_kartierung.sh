@@ -12,6 +12,7 @@
 
 set -o pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DATA_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/amadeus"
 LOCAL_OVERLAY="$DATA_ROOT/overlays/stationary-scan-gate-current/install/local_setup.bash"
 
@@ -22,6 +23,7 @@ source "$HOME/roboter_ws/install/local_setup.bash"
 if [ -f "$LOCAL_OVERLAY" ]; then
     source "$LOCAL_OVERLAY"
 fi
+source "$SCRIPT_DIR/stationaere_ros_umgebung.sh"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_DIR="$DATA_ROOT/logs"
@@ -47,7 +49,7 @@ if [ "$ACTIVE" = true ]; then
     fi
 fi
 
-EXISTING_NODES="$(ros2 node list 2>/dev/null || true)"
+EXISTING_NODES="$(ros2 node list --no-daemon 2>/dev/null || true)"
 for node in \
     /slam_toolbox \
     /base_hardware \
@@ -63,13 +65,15 @@ done
 echo "Pruefe den realen OAK-IMU-Strom motorlos ..."
 if ! ros2 run robot_bringup oak_imu_check --duration 3; then
     echo "ABBRUCH: OAK-IMU nicht abgenommen; Scan-Gate bleibt geschlossen."
-    echo "Zuerst starten: ros2 launch robot_bringup oak.launch.py"
+    echo "Zuerst lokal starten:"
+    echo "bash tools/kartierung/start_stationaere_oak.sh"
     exit 1
 fi
 
 echo "Stillstandskartierung startet. Log: $LOG_PATH"
-echo "Status: ros2 topic echo --once --full-length \
-/stationary_scan_gate/status_json"
+echo "Status aus einer Shell mit derselben lokalen Umgebung:"
+echo "source tools/kartierung/stationaere_ros_umgebung.sh"
+echo "ros2 topic echo --once --full-length /stationary_scan_gate/status_json"
 
 if [ "$ACTIVE" = true ]; then
     echo ">>> Beaufsichtigter manueller Stop-and-go-Test OHNE VL53."

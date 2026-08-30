@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 
 import yaml
 
@@ -194,6 +195,61 @@ class StationaryScanGateContractTests(unittest.TestCase):
         self.assertIn('AMADEUS_FAHRFREIGABE', script)
         self.assertIn('oak_imu_check --duration 3', script)
         self.assertIn('AMADEUS_OHNE_NAHBEREICH', script)
+
+    def test_stationary_workflow_uses_local_dds_only(self):
+        tools = PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung'
+        profile = tools / 'cyclonedds_stationaer_lokal.xml'
+        root = ET.parse(profile).getroot()
+
+        interfaces = [
+            element for element in root.iter()
+            if element.tag.rsplit('}', 1)[-1] == 'NetworkInterface'
+        ]
+        peers = [
+            element for element in root.iter()
+            if element.tag.rsplit('}', 1)[-1] == 'Peer'
+        ]
+        values = {
+            element.tag.rsplit('}', 1)[-1]: (element.text or '').strip()
+            for element in root.iter()
+        }
+
+        self.assertEqual(len(interfaces), 1)
+        self.assertEqual(interfaces[0].attrib.get('name'), 'lo')
+        self.assertEqual(peers, [])
+        self.assertEqual(values.get('ParticipantIndex'), 'auto')
+        self.assertGreaterEqual(int(values['MaxAutoParticipantIndex']), 64)
+
+        environment = (
+            tools / 'stationaere_ros_umgebung.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('RMW_IMPLEMENTATION=rmw_cyclonedds_cpp', environment)
+        self.assertIn('cyclonedds_stationaer_lokal.xml', environment)
+
+        for script_name in (
+                'start_stationaere_oak.sh',
+                'start_stationaere_kartierung.sh',
+                'save_stationaere_kartierung.sh',
+                'record_stationary_mapping_bag.sh'):
+            script = (tools / script_name).read_text(encoding='utf-8')
+            self.assertIn(
+                'source "$SCRIPT_DIR/stationaere_ros_umgebung.sh"', script)
+
+        oak_start = (
+            tools / 'start_stationaere_oak.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('oak.launch.py pointcloud:=false', oak_start)
+        self.assertIn('ros2 node list --no-daemon', oak_start)
+
+        mapping_start = (
+            tools / 'start_stationaere_kartierung.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('ros2 node list --no-daemon', mapping_start)
+
+        save = (
+            tools / 'save_stationaere_kartierung.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('ros2 service list --no-daemon', save)
 
     def test_local_save_keeps_raster_and_posegraph(self):
         script = (

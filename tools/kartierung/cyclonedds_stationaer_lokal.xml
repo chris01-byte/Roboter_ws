@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  Rein lokales CycloneDDS-Profil fuer den beaufsichtigten Stop-and-go-Modus.
+
+  Kartierung, OAK, LiDAR, Odometrie und Controller laufen dabei auf demselben
+  Jetson. WLAN-Peers sind weder erforderlich noch erwuenscht: Ein Netzwechsel
+  darf keine alten DDS-Endpunkte fluten oder lokale Sensorpfade stoeren.
+
+  Das normale WLAN-/App-/KI-Profil in robot_bringup bleibt unveraendert.
+-->
+<CycloneDDS xmlns="https://cdds.io/config"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" priority="default" multicast="true"/>
+      </Interfaces>
+      <AllowMulticast>spdp</AllowMulticast>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>120</MaxAutoParticipantIndex>
+    </Discovery>
+    <Internal>
+      <Watermarks>
+        <WhcHigh>500kB</WhcHigh>
+      </Watermarks>
+    </Internal>
+  </Domain>
+</CycloneDDS>

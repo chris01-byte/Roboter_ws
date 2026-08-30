@@ -1,9 +1,10 @@
 # Inventar
 
-**Hardwarestand:** 28.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 28.08.2026 · Branch `feature/stationary-scan-gate`;
-OAK-/Odometrie-gepruefte Stillstandsfenster fuer einfachen Fliesen-Nachscan,
-motorlos mit Speichern und Wiederladen abgenommen
+**Hardwarestand:** 30.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
+**Softwaredelta:** 30.08.2026 · Branch
+`codex/fix/stationary-mapping-local-dds`; OAK-/Odometrie-gepruefte
+Stillstandsfenster plus rein lokales DDS-Profil fuer den beaufsichtigten
+Fliesen-Nachscan, motorlos auf dem echten Jetson abgenommen
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -55,6 +56,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Zweck | Befehl | Hardware aktiv? |
 |---|---|---|
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
+| Kamera fuer lokalen Stillstandsmodus | `bash tools/kartierung/start_stationaere_oak.sh` | nein; nur Loopback-DDS |
 | Kamera-HD-Detailtest (max. 45 s) | `ros2 launch robot_bringup oak_detail.launch.py` | nein |
 | Laufenden OAK-IMU-Strom pruefen | `ros2 run robot_bringup oak_imu_check --duration 8` | nein |
 | Stillstands-Kartierung, Preflight | `bash tools/kartierung/start_stationaere_kartierung.sh` | nein (`dry_run`) |
@@ -89,6 +91,8 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 |---|---|
 | `tools/kartierung/start_slam.sh` / `stop_slam.sh` | SLAM starten; **sauber** beenden mit Wörterbuch-Kontrolle |
 | `tools/kartierung/start_stationaere_kartierung.sh` | einfacher Stop-and-go-LiDAR-Modus; SLAM erhaelt nur IMU-/Odometrie-bestaetigte Stillstandsfenster |
+| `tools/kartierung/start_stationaere_oak.sh` | OAK fuer den Stillstandsmodus im rein lokalen Loopback-DDS starten |
+| `tools/kartierung/stationaere_ros_umgebung.sh` | gemeinsames lokales DDS-Profil fuer Start, Status, Save und Bag |
 | `tools/kartierung/record_stationary_mapping_bag.sh` | IMU/Odom/LiDAR/TF/Gate lokal ohne RGB aufzeichnen |
 | `tools/kartierung/save_stationaere_kartierung.sh` | Rasterkarte und fortsetzbaren Posegraphen unter neuem lokalem Pfad speichern |
 | `tools/kartierung/start_automatische_kartierung.sh` | dreistufige SLAM-/Nav2-/Explore-Kette ohne App-Dienste; scharf nur mit zwei Opt-ins |
@@ -114,7 +118,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
-| Controller | `/dev/input/js0` | DualShock über Bluetooth |
+| Controller | `/dev/input/js0` | DualShock; fuer Stillstandskartierung USB bevorzugt, Bluetooth-Keepalive sonst aktiv |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04
 antwortet der Antrieb **nicht**):

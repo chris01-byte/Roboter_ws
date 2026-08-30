@@ -4,9 +4,11 @@
 
 set -o pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source /opt/ros/humble/setup.bash
 source "$HOME/amadeus_slam_toolbox_ws/install/setup.bash"
 source "$HOME/roboter_ws/install/local_setup.bash"
+source "$SCRIPT_DIR/stationaere_ros_umgebung.sh"
 
 DATA_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/amadeus"
 STAMP="$(date +%Y%m%d_%H%M%S)"
@@ -25,11 +27,11 @@ for suffix in .yaml .pgm .posegraph .data; do
     fi
 done
 
-if ! ros2 service list | rg -F -x -q /slam_toolbox/save_map; then
+if ! ros2 service list --no-daemon | rg -F -x -q /slam_toolbox/save_map; then
     echo "ABBRUCH: /slam_toolbox/save_map ist nicht bereit."
     exit 1
 fi
-if ! ros2 service list | rg -F -x -q /slam_toolbox/serialize_map; then
+if ! ros2 service list --no-daemon | rg -F -x -q /slam_toolbox/serialize_map; then
     echo "ABBRUCH: /slam_toolbox/serialize_map ist nicht bereit."
     exit 1
 fi

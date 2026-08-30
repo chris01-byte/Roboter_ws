@@ -17,6 +17,62 @@ Rückfallweg:
 
 ---
 
+## 2026-08-30 — Stillstands-Kartierung vom wechselnden WLAN entkoppelt
+
+**Entscheidung:** Der beaufsichtigte Stop-and-go-Modus besitzt ein eigenes
+CycloneDDS-Profil auf dem Loopback-Interface. OAK, LiDAR, Odometrie,
+Stillstands-Gate, Status, Save und lokale Bags verwenden in diesem Workflow
+denselben rein lokalen ROS-Raum. Das normale WLAN-Profil fuer App, rosbridge
+und KI-Server bleibt unveraendert. Die OAK wird fuer diesen Modus ueber
+`start_stationaere_oak.sh` gestartet; die uebrigen Helfer laden die lokale
+Umgebung automatisch.
+
+**Grund / beobachtete Evidenz:** Waehrend der manuellen Wohnungsfortsetzung
+wechselte der Jetson in den iPhone-Hotspot `172.20.10.x`, waehrend laufende
+CycloneDDS-Teilnehmer noch alte Heimnetz- und lokale Endpunkte ansprachen. Das
+Kartierungslog wuchs auf 21 MB und enthielt 164.407 fehlgeschlagene
+`ddsi_udp_conn_write`-Aufrufe. Gleichzeitig war der DualShock mehrere Minuten
+getrennt. Die Kartierung braucht keine externe DDS-Gegenstelle; WLAN-Traffic
+ist fuer diesen Sondermodus daher eine unnoetige Fehlerkopplung.
+
+**Betroffene Dateien und Hardware:** Lokales DDS-Profil und gemeinsamer
+Umgebungshelfer unter `tools/kartierung/`, neuer lokaler OAK-Starter sowie
+Start-, Save- und Bag-Helfer. Motor-, App-, KI-, Standard-OAK- und allgemeines
+WLAN-DDS-Profil wurden nicht veraendert. Real beteiligt waren OAK-D-S2,
+STL-27L und der Jetson; die Basis lief ausschliesslich im Dry-run.
+
+**Teststatus:** Shell-Syntax und 13 Gate-/Vertragstests bestanden. Ein echter
+Loopback-Publisher wurde von einem getrennten Subscriber empfangen. Die OAK
+lieferte danach 809 IMU-Nachrichten in 8 s mit 101,104 Hz Empfang,
+101,138 Hz Sensorzeit, null nicht-steigenden Zeitstempeln und 9,736 m/s2
+Median. Der anschliessende motorlose Gesamtstart bestaetigte genau 20 Scans im
+P1-Fenster, `gate_open=false`, keine Unterbrechung, `dry_run=true`,
+`allow_rs485=false` und beide Motoren 0 rpm. Das Log blieb nach rund 30 s bei
+8,5 kB und enthielt null DDS-Sendefehler. OAK und Kartierungslaunch endeten
+jeweils sauber ueber ein Signal an den Elternprozess. Der anschliessend per
+USB angeschlossene DualShock wurde als Sony `054c:09cc`, `ID_BUS=usb` und
+`/dev/input/js0` erkannt. Ein isolierter `joy_node` publizierte neutrale
+Nachrichten mit rund 15,4 Hz; Teleop und Basis liefen dabei nicht. Der reine
+Bluetooth-Keepalive wurde fuer diese USB-Sitzung kontrolliert gestoppt.
+
+**Offene Risiken:** Der lokale Modus ist absichtlich nicht mit App oder
+KI-Server sichtbar und darf nicht fuer App-Erkundung verwendet werden. Er
+beseitigt den DDS-Netzwerksturm, aber nicht automatisch 2,4-GHz-Stoerungen des
+Bluetooth-Controllers. Der gemessene iPhone-Hotspot lief auf 2437 MHz; vor
+weiteren Controllerfahrten ist ein stabiler 5-GHz-Pfad oder eine kabelgebundene
+Bedienung separat zu bestaetigen.
+
+Im USB-Betrieb ist das Funkrisiko beseitigt, dafuer entsteht ein reales
+Kabelrisiko. Das Kabel muss unter Aufsicht ausserhalb von Raedern und Fahrweg
+bleiben. Vor einer spaeteren Bluetooth-Sitzung ist der Keepalive-Dienst wieder
+zu starten.
+
+**Rueckfallweg:** Die lokalen Stillstandshelfer nicht verwenden oder diesen
+Commit revertieren. Standard-OAK, App, KI-Server und das normale
+`cyclonedds_profile.xml` bleiben davon unberuehrt.
+
+---
+
 ## 2026-08-28 — Echte Stillstands-Scans statt nur angesagter Haltepunkte
 
 **Entscheidung:** Fuer den einfachen Kuechen-Nachscan gibt es einen getrennten

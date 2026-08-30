@@ -45,6 +45,19 @@ getrennte Stillstandsmodus gibt deshalb ausschliesslich kurze, durch frische
 OAK-IMU und Encoder-Odometrie bestaetigte Fenster auf `/scan_stillstand` frei.
 Er ist keine IMU-Fusion und veraendert den normalen LiDAR-Launch nicht.
 
+Dieser Sondermodus laeuft absichtlich in einem **rein lokalen DDS-Raum** auf
+dem Jetson. OAK, LiDAR, Odometrie, Gate, Save- und Diagnosebefehle verwenden
+dabei nur Loopback. Ein Wechsel zwischen Heim-WLAN und Hotspot kann deshalb
+keine alten KI-/App-Peers in den Kartierungsprozess ziehen. Das normale
+WLAN-/App-/KI-Profil bleibt unveraendert und sieht diesen Lauf nicht.
+
+Zuerst die OAK in einem eigenen Terminal mit demselben lokalen Profil starten:
+
+```bash
+cd ~/roboter_ws
+bash tools/kartierung/start_stationaere_oak.sh
+```
+
 Motorloser Preflight:
 
 ```bash
@@ -56,6 +69,7 @@ Im Status muss nach P1 `state: wait_movement`, `gate_open: false` stehen. Ein
 neues Fenster wird erst nach Bewegung und erneut 1,2 s Stillstand erzeugt:
 
 ```bash
+source tools/kartierung/stationaere_ros_umgebung.sh
 ros2 topic echo --once --full-length \
   /stationary_scan_gate/status_json
 ```
@@ -78,6 +92,12 @@ lokalen Verzeichnis speichern:
 bash tools/kartierung/save_stationaere_kartierung.sh
 ```
 
+`start_stationaere_kartierung.sh`, `save_stationaere_kartierung.sh` und der
+lokale Bag-Helfer laden die Loopback-Umgebung automatisch. Eigene ROS-Befehle
+in einem weiteren Terminal muessen sie wie im Statusbeispiel einmal sourcen.
+Fuer App, rosbridge oder KI-Server darf diese Umgebung nicht verwendet werden;
+dort gilt weiterhin das normale WLAN-CycloneDDS-Profil.
+
 Der optionale Controller startet direkt auf `/cmd_vel`, langsam mit 0,08 m/s,
 und besitzt bewusst keine VL53-Sicherung. Dieser Sondermodus verlangt fuer
 jeden realen Start eine neue persoenliche Freigabe, freien Weg, Hard-Not-Aus
@@ -86,6 +106,13 @@ und beide Opt-ins `AMADEUS_FAHRFREIGABE=JA` sowie
 jede Aufnahme sichtbar eben stehen, nicht mit einem Rad auf Fuge oder
 Schwelle. Details und Grenzen stehen in
 `docs/SLAM_BODENUNEBENHEITEN.md`.
+
+Fuer laengere manuelle Wohnungslaeufe den DualShock bevorzugt per USB
+anschliessen. Dann muss `udevadm info --query=property --name=/dev/input/js0`
+`ID_BUS=usb` melden. Der reine Bluetooth-Keepalive kann fuer diese Sitzung mit
+`systemctl stop amadeus-dualshock-keepalive.service` beendet werden; nach
+Rueckkehr zum Funkbetrieb wird er mit `systemctl start ...` wieder aktiviert.
+Das USB-Kabel muss so gefuehrt werden, dass es weder Rad noch Fahrweg erreicht.
 
 ## Automatische LiDAR-Raumkartierung
 
