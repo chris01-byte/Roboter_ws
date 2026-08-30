@@ -35,6 +35,8 @@ setup(
             'robot_state_estimation.scan_quality_gate_node:main',
             'lidar_odometry = '
             'robot_state_estimation.lidar_odometry_node:main',
+            'hwt601_imu = '
+            'robot_state_estimation.hwt601_imu_node:main',
         ],
     },
 )

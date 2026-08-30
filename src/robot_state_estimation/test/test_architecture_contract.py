@@ -34,6 +34,8 @@ def test_launch_and_nodes_have_no_actuator_topic():
         ROOT / 'robot_state_estimation' / 'sensor_adapter_node.py',
         ROOT / 'robot_state_estimation' / 'scan_quality_gate_node.py',
         ROOT / 'robot_state_estimation' / 'lidar_odometry_node.py',
+        ROOT / 'robot_state_estimation' / 'hwt601_imu_node.py',
+        ROOT / 'robot_state_estimation' / 'hwt601_transport.py',
     ]
     text = '\n'.join(path.read_text() for path in sources)
 
@@ -79,6 +81,7 @@ def test_package_declares_standard_filter_dependency():
 
     assert '<exec_depend>robot_localization</exec_depend>' in package_xml
     assert '<depend>diagnostic_msgs</depend>' in package_xml
+    assert '<exec_depend>python3-serial</exec_depend>' in package_xml
 
 
 def test_reference_profile_adds_independent_twist_without_map_pose():
@@ -120,3 +123,38 @@ def test_amadeus_validation_launch_is_hard_coded_motorless():
     assert "'publish_tf': False" in text
     assert "'odom_topic': '/wheel/odom_raw'" in text
     assert "'active_drive'" not in text
+
+
+def test_hwt601_profiles_are_separate_read_only_and_not_fused_by_default():
+    driver = yaml.safe_load(
+        (ROOT / 'config' / 'hwt601_driver.yaml').read_text())[
+            'hwt601_imu']['ros__parameters']
+    adapter = yaml.safe_load(
+        (ROOT / 'config' / 'amadeus_hwt601.yaml').read_text())[
+            'sensor_adapter']['ros__parameters']
+    protocol = (
+        ROOT / 'robot_state_estimation' / 'hwt601_protocol.py').read_text()
+    node = (ROOT / 'robot_state_estimation' / 'hwt601_imu_node.py').read_text()
+    validation = (
+        ROOT.parent / 'robot_bringup' / 'launch'
+        / 'state_estimation_hwt601_validation.launch.py').read_text()
+
+    assert driver['port'] == '/dev/ttyUSB_HWT601'
+    assert driver['port'] != '/dev/ttyUSB_BASE'
+    assert driver['device_address'] == 80
+    assert driver['poll_rate_hz'] <= 200.0
+    assert driver['frame_id'] == 'hwt601_link'
+    assert driver['angular_velocity_variance'] > 0.0
+    assert driver['linear_acceleration_variance'] > 0.0
+    assert adapter['imu_input'] == '/hwt601/imu/data_raw'
+    assert adapter['expected_imu_frame'] == 'hwt601_link'
+    assert adapter['use_imu_orientation'] is False
+    assert 'READ_HOLDING_REGISTERS = 0x03' in protocol
+    assert 'WRITE_SINGLE_REGISTER' not in protocol
+    assert 'message.orientation_covariance[0] = -1.0' in node
+    assert 'os.path.realpath(self.port) == os.path.realpath(motor_port)' in node
+    assert "'start_fusion_adapter', default_value='false'" in validation
+    assert "'start_ekf', default_value='false'" in validation
+    assert "'start_oak', default_value='false'" in validation
+    assert "'dry_run': True" in validation
+    assert "'allow_rs485': False" in validation

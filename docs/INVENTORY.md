@@ -11,6 +11,11 @@ abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
 stillstandsgebundene thermische Biasnachfuehrung, Kipp-Scanfilter und optionale
 radunabhaengige LiDAR-Bewegungsreferenz; Langzeitstillstand motorlos bestanden
 
+**HWT601-Delta:** 30.08.2026 · Branch `feature/hwt601-integration`;
+read-only Modbus-Treiber, eigener USB-RS485-Pfad, Diagnose und motorloser
+Stufenstart vorbereitet; Hardware, Montage-TF, Skala und Kovarianzen noch nicht
+real abgenommen
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
@@ -63,6 +68,8 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | Kamera allein | `ros2 launch robot_bringup oak.launch.py` | nein |
 | Sensor-Fusion, harter Motorlos-Test | `ros2 launch robot_bringup state_estimation_validation.launch.py` | nein (`dry_run=true`, RS485 gesperrt) |
 | Nur passive Fusionsknoten | `ros2 launch robot_state_estimation fusion.launch.py` | nein; startet keine Treiber |
+| Nur HWT601-Rohdaten | `ros2 launch robot_state_estimation hwt601.launch.py` | nein; liest nur die IMU, keine OAK/Motoren |
+| HWT601-Stufentest | `ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py` | nein (`dry_run=true`, Motor-RS485 gesperrt; OAK/Fusion aus) |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
 | Lokalisierung | `slam.launch.py delete_db:=false localization:=true start_at_origin:=true` | **ja** |
@@ -103,6 +110,8 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/merkmale_messen.py` | Bildmerkmale und Tiefenabdeckung |
 | `tools/kartierung/encoder_position_pruefen.py` | strikt read-only: Position, Wortfolge und Counts/Umdrehung bestimmen |
 | `docs/82-ftdi-latency.rules` | udev-Regel, senkt FTDI-Latenz 16 ms → 1 ms |
+| `tools/sensorfusion/hwt601_usb_pruefen.py` | liest USB-Merkmale und erzeugt nur bei eindeutiger Seriennummer einen udev-Vorschlag |
+| `docs/83-hwt601.rules.example` | nicht installierbare Vorlage fuer den getrennten HWT-USB-RS485-Alias |
 
 ---
 
@@ -113,6 +122,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
+| HWT601-AGV-485 | geplant: `/dev/ttyUSB_HWT601` | eigener isolierter USB-RS485-Adapter; Hardware noch nicht geliefert |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04

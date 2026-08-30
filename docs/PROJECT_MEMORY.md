@@ -17,6 +17,58 @@ Rückfallweg:
 
 ---
 
+## 2026-08-30 — HWT601 als getrennte read-only Chassis-IMU vorbereitet
+
+**Entscheidung:** Fuer den bestellten preisguenstigen Sensor wird die Variante
+`HWT601-AGV-485` vorbereitet. Sie erhaelt einen eigenen, seriennummergebundenen
+USB-RS485-Pfad `/dev/ttyUSB_HWT601` und bleibt nach Lieferung zunaechst eine
+reine Beobachtungsquelle. Der neue Treiber implementiert nur Modbus-Funktion
+`0x03`, markiert die Orientierung als unbekannt, publiziert im physischen
+Frame `hwt601_link` und verwirft CRC-, Adress-, Laengen- und Saettigungsfehler.
+OAK, Adapter, Scan-Gate und EKF sind im HWT-Validierungsstart standardmaessig
+aus. Der Basisprozess ist dort nicht per Argument scharfstellbar.
+
+**Grund / beobachtete Evidenz:** Der HWT601-Hersteller nennt fuer das Modell
+`+/-4 g`, eine Gyroaufloesung von `0,0122 Grad/s/LSB`, Modbus RTU und bis zu
+200 Hz interne Ausgabe. Das veroeffentlichte High-Precision-Protokoll legt
+AX..GZ auf `0x34..0x39`. Die daraus abgeleitete 400-Grad/s-Skalierung bleibt
+konfigurierbar, weil das gelieferte Firmwareverhalten erst anhand der
+Erdbeschleunigung bestaetigt werden kann. Die OAK-IMU kann softwareseitig in
+ihrem um 18,94 Grad geneigten Frame behandelt werden, sitzt aber hoch und in
+der warmen Kamera. Der HWT wird deshalb spaeter tief und steif am Chassis
+montiert; ein Montage-TF wird vor der Messung nicht erfunden.
+
+**Betroffene Dateien und Hardware:** Neues read-only HWT-Protokoll, serieller
+Transport und ROS-Knoten im Paket `robot_state_estimation`; getrennte Treiber-
+und Adapterprofile; passiver Launch und hart motorloser Bring-up-Launch;
+udev-Pruefwerkzeug und Vorlage; `docs/HWT601_INTEGRATION.md` sowie Architektur-,
+Inventar- und Transferdokumentation. Es wurde keine neue Hardware angeschlossen,
+keine udev-Regel installiert und keine Jetson-Systemdatei veraendert.
+
+**Teststatus:** `robot_state_estimation` und `robot_bringup` bauen im isolierten
+Worktree. 31 Pakettests liefen ohne Fehler, Fehlschlag oder Auslassung; darin
+enthalten sind bekannte Modbus-CRC-Vektoren, exakte HWT-Leseanfrage,
+Antwortfehler, SI-Skalierung, Saettigung und der Sicherheitsvertrag. Ein echter
+Standalone-Start ohne Sensor publizierte wie vorgesehen
+`ready=false`, `state=getrennt` und endete mit einmal Ctrl-C sauber. Ein
+zusaetzlicher Bring-up-Start blieb bei `dry_run=true`, 0 m/s und 0 rpm; die
+fehlende HWT wurde nicht durch Daten ersetzt. Alle Testprozesse sind beendet.
+
+**Offene Risiken:** Hardware und genaue Bestellvariante sind noch nicht
+eingetroffen. Versorgungsspannung, Adapterkennung, Adresse/Baudrate,
+Registerskalierung, Achsen, Montagekoordinaten, Zeitstempelverzug, Temperatur-
+und Vibrationsdrift sowie Kovarianzen sind real unbekannt. Der Treiber verwendet
+vorlaeufig die Host-Empfangszeit. Ohne vermessenen statischen TF darf der HWT
+weder EKF noch Scan-Gate speisen.
+
+**Rueckfallweg:** Branch `feature/hwt601-integration` basiert auf dem motorlos
+abgenommenen Biasstand `2750ad6`. Der HWT ist in keinem vorhandenen Start
+aktiv. Rueckfall bedeutet, den neuen HWT-Launch nicht zu starten bzw. zu
+beenden; OAK- und bisherige Sensorfusionspfade bleiben unveraendert. Es wurden
+keine Sensor- oder Motorregister geschrieben.
+
+---
+
 ## 2026-08-30 — OAK-Gyrodrift im Stillstand gemessen und fail-closed korrigiert
 
 **Entscheidung:** Die zweisekuendige feste Start-Biaskalibrierung wird fuer das

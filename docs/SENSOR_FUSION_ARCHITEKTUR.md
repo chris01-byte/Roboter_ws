@@ -215,6 +215,8 @@ Momentanwerte sofort die einzige produktive Odometrie beschaedigt.
 | Datei | Zweck | Freigabestatus |
 |---|---|---|
 | `config/amadeus.yaml` | Topics, Frames, Bias- und Qualitaetsgrenzen | motorlos abgenommen |
+| `config/hwt601_driver.yaml` | read-only HWT601-RS485-Treiber | synthetisch getestet, Hardware ausstehend |
+| `config/amadeus_hwt601.yaml` | alternative HWT601-Quelle und vorlaeufige Biasgrenzen | nur Entwurf bis Realmessung |
 | `config/ekf_encoder_imu.yaml` | Encoder + OAK-Gierrate | motorlos abgenommen |
 | `config/ekf_encoder_imu_reference.yaml` | zusaetzlich radunabhaengige Geschwindigkeit | erst nach Realabnahme |
 
@@ -222,6 +224,15 @@ Der optionale lokale LiDAR-Matcher ist standardmaessig aus. Er ist keine
 zweite SLAM-Instanz: Er haelt nur einen kleinen lokalen Referenzscan und dient
 als unabhaengiger Kurzzeit-Bewegungsmesser. Spaeter kann OAK-VIO oder ein
 optischer Bodensensor dasselbe `/fusion/reference_odom` liefern.
+
+Der geplante `HWT601-AGV-485` folgt derselben Reihenfolge. Sein Treiber liest
+nur Modbus-Funktion 0x03 auf einem eigenen USB-RS485-Adapter und publiziert
+`/hwt601/imu/data_raw` im physischen Frame `hwt601_link`. HWT-Orientierung
+wird nicht verwendet. Bis Skala, Achsen, statischer Montage-TF, Zeitverhalten
+und Kovarianzen am gelieferten Sensor gemessen sind, bleiben Adapter, EKF und
+Scan-Gate in seinem motorlosen Validierungslaunch standardmaessig aus. Die
+OAK ist dort ebenfalls aus und wird nur fuer einen begrenzten Vergleich
+zugeschaltet. Einbau- und Abnahmefolge: `docs/HWT601_INTEGRATION.md`.
 
 ## 7. Abnahme in sieben Stufen
 
@@ -328,3 +339,6 @@ Kalibrierdatei ausserhalb des Workspace. Das installierte Systempaket
 - fuer Roboter 2 bevorzugt eine tiefer und steifer montierte IMU nahe dem
   Chassisschwerpunkt sowie eine radunabhaengige Bewegungssicht nach unten oder
   per VIO vorsehen.
+- gelieferten HWT601 zuerst nur lesen und gegen
+  `docs/HWT601_INTEGRATION.md` abnehmen; vor vermessenem TF und Kovarianzen
+  weder EKF noch Scan-Gate darauf umschalten.

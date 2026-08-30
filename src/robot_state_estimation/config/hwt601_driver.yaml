@@ -1,0 +1,29 @@
+hwt601_imu:
+  ros__parameters:
+    # A dedicated alias is mandatory. Never point this at the motor RS485 bus.
+    port: /dev/ttyUSB_HWT601
+    baud: 115200
+    device_address: 80
+    poll_rate_hz: 100.0
+    response_timeout_s: 0.03
+    reconnect_interval_s: 1.0
+    errors_before_reconnect: 3
+    sensor_timeout_s: 0.20
+
+    # This is the physical sensor frame. Its measured static TF to base_link
+    # is deliberately not invented before the IMU is mounted.
+    frame_id: hwt601_link
+    imu_topic: /hwt601/imu/data_raw
+    status_topic: /hwt601/status_json
+    diagnostics_topic: /diagnostics
+
+    # HWT601-AGV data-sheet values. Confirm the delivered firmware with the
+    # gravity and +/-90-degree tests before this source enters the EKF.
+    acceleration_full_scale_g: 4.0
+    angular_velocity_full_scale_dps: 400.0
+    saturation_margin_counts: 8
+
+    # Deliberately conservative placeholders until stationary bags have been
+    # evaluated. They prevent the unmeasured sensor from being over-trusted.
+    angular_velocity_variance: 0.02
+    linear_acceleration_variance: 0.25

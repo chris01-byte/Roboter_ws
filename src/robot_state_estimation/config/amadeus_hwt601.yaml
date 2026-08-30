@@ -1,0 +1,98 @@
+sensor_adapter:
+  ros__parameters:
+    wheel_odom_input: /wheel/odom_raw
+    wheel_odom_output: /fusion/wheel_odom
+    imu_input: /hwt601/imu/data_raw
+    imu_output: /fusion/imu
+    reference_odom_input: /fusion/reference_odom
+    status_topic: /sensor_fusion/status_json
+    diagnostics_topic: /diagnostics
+
+    expected_odom_frame: odom
+    expected_base_frame: base_link
+    expected_imu_frame: hwt601_link
+    require_imu: true
+    require_reference_odom: false
+    # The 6-axis HWT601 has no absolute heading reference. Fuse yaw rate only.
+    use_imu_orientation: false
+    # Provisional fail-closed values. Refit them from cold/warm stationary
+    # recordings after delivery; movement freezes all bias adaptation.
+    calibrate_gyro_bias: true
+    gyro_bias_initial_settle_s: 15.0
+    gyro_bias_calibration_s: 10.0
+    gyro_bias_minimum_samples: 800
+    gyro_bias_maximum_stddev_radps: 0.005
+    gyro_bias_maximum_sample_radps: 0.03
+    gyro_bias_maximum_sample_gap_s: 0.10
+    gyro_bias_stationary_linear_threshold_mps: 0.005
+    gyro_bias_stationary_angular_threshold_radps: 0.005
+    gyro_bias_stationary_settle_s: 2.0
+    gyro_bias_stationary_adaptation_time_constant_s: 30.0
+    gyro_bias_stationary_residual_time_constant_s: 2.0
+    gyro_bias_maximum_stationary_residual_radps: 0.001
+    gyro_bias_stationary_recovery_s: 3.0
+    sensor_timeout_s: 0.35
+
+    wheel_pose_xy_variance: 0.0025
+    wheel_pose_yaw_variance: 0.0076
+    wheel_twist_linear_variance: 0.01
+    wheel_twist_lateral_variance: 0.04
+    wheel_twist_angular_variance: 0.03
+    enforce_nonholonomic_lateral_velocity: true
+    # These provisional fallbacks match the conservative first-stage profile.
+    imu_angular_velocity_variance: 0.02
+    imu_linear_acceleration_variance: 0.25
+
+    reference_max_twist_variance: 0.25
+    maximum_linear_velocity_error_mps: 0.10
+    maximum_angular_velocity_error_radps: 0.22
+    minimum_evaluation_speed_mps: 0.025
+    minimum_evaluation_rate_radps: 0.08
+    maximum_stamp_skew_s: 0.16
+    bad_samples_to_latch: 2
+    good_samples_to_recover: 5
+    suspect_covariance_scale: 10.0
+    slip_covariance_scale: 100.0
+
+scan_quality_gate:
+  ros__parameters:
+    scan_input: /scan_normiert
+    scan_output: /scan_qualitaet
+    imu_input: /fusion/imu
+    status_topic: /sensor_fusion/scan_quality_json
+    diagnostics_topic: /diagnostics
+    base_frame: base_link
+    fail_closed: true
+    imu_timeout_s: 0.35
+    gravity_mps2: 9.80665
+    minimum_acceleration_mps2: 7.0
+    maximum_acceleration_mps2: 12.5
+    maximum_gravity_direction_change_rad: 0.05235987755982989
+    maximum_roll_pitch_rate_radps: 0.24434609527920614
+    baseline_time_constant_s: 4.0
+    warmup_s: 0.6
+    settle_s: 0.45
+
+lidar_odometry:
+  ros__parameters:
+    scan_input: /scan_qualitaet
+    odom_output: /fusion/reference_odom
+    status_topic: /sensor_fusion/lidar_odometry_json
+    base_frame: base_link
+    odom_frame: lidar_odom
+    minimum_update_interval_s: 0.18
+    maximum_range_m: 6.0
+    minimum_points: 200
+    resolution_m: 0.015
+    field_margin_m: 0.90
+    maximum_points: 600
+    maximum_cost_m: 0.08
+    minimum_support_ratio: 0.45
+    minimum_distinct_gap_m: 0.0005
+    rebase_translation_m: 0.35
+    rebase_yaw_rad: 0.2617993877991494
+    maximum_static_lidar_tilt_rad: 0.05235987755982989
+    minimum_position_variance_m2: 0.0004
+    minimum_yaw_variance_rad2: 0.0025
+    minimum_linear_velocity_variance_m2ps2: 0.0025
+    minimum_angular_velocity_variance_rad2ps2: 0.01

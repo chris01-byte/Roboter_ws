@@ -1,5 +1,60 @@
 # Übertragung auf den realen Roboter
 
+## HWT601-Chassis-IMU — Software vor Lieferung vorbereitet (30.08.2026)
+
+**Branch:** `feature/hwt601-integration`, Basis `2750ad6`
+
+Vorbereitet ist die RS485-Variante `HWT601-AGV-485`. Der neue ROS-Knoten liest
+nur AX..GZ per Modbus-Funktion `0x03`, prueft die komplette RTU-Antwort und
+publiziert SI-Rohdaten auf `/hwt601/imu/data_raw`. Er kann keine Konfiguration,
+Kalibrierung oder Motoraktion schreiben. Diagnose und JSON-Status melden
+Verbindung, Frische, Rate und Fehlerzaehler; bei Fehlern oder Saettigung wird
+nichts publiziert.
+
+Die IMU erhaelt einen eigenen isolierten USB-RS485-Adapter und den eindeutigen
+Alias `/dev/ttyUSB_HWT601`. Der Treiber verweigert den Motoralias
+`/dev/ttyUSB_BASE` auch dann, wenn beide Namen auf dasselbe reale Geraet
+zeigen. Eine udev-Regel wird erst nach Lieferung aus VID, PID und eindeutiger
+Seriennummer erzeugt. Es wurde jetzt keine Regel installiert.
+
+Sicherer Rohdatenstart nach dem Build:
+
+```bash
+cd /home/p/roboter_ws
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+ros2 launch robot_state_estimation hwt601.launch.py
+```
+
+Der gestufte Integrationsstart lautet:
+
+```bash
+ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py
+```
+
+Dabei sind Basis-RS485, Bewegung und Basis-TF hart gesperrt
+(`dry_run=true`, `allow_rs485=false`, `publish_tf=false`). OAK, Fusionsadapter,
+Scan-Gate und EKF sind standardmaessig aus. So kann der HWT allein betrieben
+werden, ohne die OAK dauerhaft zu erwaermen. Die OAK wird spaeter nur per
+`start_oak:=true` fuer einen begrenzten Vergleich zugeschaltet.
+
+Die HWT-Datenblattskalen und konservativen Kovarianzen sind vorlaeufig. Ebenso
+existiert absichtlich noch kein `base_link -> hwt601_link`: Position,
+aufgedruckte Achsen und Orientierung muessen nach der tiefen, steifen Montage
+am Roboterboden gemessen werden. Ohne bestaetigte Gravitation, Drehrichtung,
+Datenrate, Drift und statischen TF bleiben Adapter, Scan-Gate und EKF aus.
+
+Softwaretest: beide Pakete gebaut, 31 Tests ohne Fehler; Standalone-Start ohne
+Sensor meldete korrekt `ready=false`, `state=getrennt` und endete sauber. Der
+motorlose Bring-up blieb bei 0 m/s und 0 rpm. Keine Hardware-, Motor- oder
+Sensorregister wurden veraendert. Vollstaendige Verdrahtungs-, Einbau- und
+Abnahmefolge: `docs/HWT601_INTEGRATION.md`.
+
+Rueckfall: HWT-Launch beenden oder nicht starten. Kein vorhandener Produktiv-
+oder OAK-Start referenziert den neuen Treiber.
+
+---
+
 ## Modulare Sensor-Fusion — motorlos live abgenommen (30.08.2026)
 
 **Ausgangsstand:** `feature/modulare-sensorfusion`, Commit `00f6e52`

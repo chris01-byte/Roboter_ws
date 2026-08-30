@@ -1,0 +1,6 @@
+# TEMPLATE ONLY - do not install with these placeholders.
+# Read the dedicated HWT601 USB-RS485 adapter with:
+#   python3 tools/sensorfusion/hwt601_usb_pruefen.py /dev/ttyUSBX
+# A serial-number match is mandatory so this rule can never claim the motor
+# adapter. Replace all three placeholders with the values from that adapter.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="VID_HERE", ATTRS{idProduct}=="PID_HERE", ATTRS{serial}=="SERIAL_HERE", SYMLINK+="ttyUSB_HWT601", GROUP="dialout", MODE="0660"

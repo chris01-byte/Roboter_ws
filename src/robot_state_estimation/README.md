@@ -9,6 +9,7 @@ It never publishes an actuator command.
 ```text
 wheel driver ---- /wheel/odom_raw -- sensor_adapter -- /fusion/wheel_odom --+
 OAK/other IMU --- /oak/imu/data ---- sensor_adapter -- /fusion/imu ---------+--> EKF --> /odom + odom->base_link
+HWT601-AGV-485 -- /hwt601/imu/data_raw --/ (alternative IMU source)
 independent LiDAR/visual/floor motion --------------- /fusion/reference_odom -+    (quality monitor only at first)
 
 /scan_normiert + /fusion/imu --> scan_quality_gate --> /scan_qualitaet --> SLAM
@@ -79,3 +80,17 @@ ros2 launch robot_bringup state_estimation_validation.launch.py
 The STL-27L and the independent reference stay off unless explicitly enabled
 with `start_lidar:=true start_lidar_reference:=true`.  Even then, the base
 remains hard-coded to dry-run.
+
+The planned chassis IMU has its own read-only start. It does not start the
+OAK, base driver, TF or filter:
+
+```bash
+ros2 launch robot_state_estimation hwt601.launch.py
+```
+
+For staged integration use
+`robot_bringup/state_estimation_hwt601_validation.launch.py`. Its base remains
+hard-coded motorless, while OAK, adapter and EKF all default to off. Exact
+wiring, mounting and acceptance are documented in
+`docs/HWT601_INTEGRATION.md`; the static mount TF is intentionally absent
+until the delivered sensor is physically measured.
