@@ -70,14 +70,24 @@ class SensorAdapter(Node):
         self.declare_parameter('require_reference_odom', False)
         self.declare_parameter('use_imu_orientation', False)
         self.declare_parameter('calibrate_gyro_bias', True)
+        self.declare_parameter('gyro_bias_initial_settle_s', 0.0)
         self.declare_parameter('gyro_bias_calibration_s', 2.0)
         self.declare_parameter('gyro_bias_minimum_samples', 300)
         self.declare_parameter('gyro_bias_maximum_stddev_radps', 0.02)
         self.declare_parameter('gyro_bias_maximum_sample_radps', 0.20)
+        self.declare_parameter('gyro_bias_maximum_sample_gap_s', 0.25)
         self.declare_parameter(
             'gyro_bias_stationary_linear_threshold_mps', 0.01)
         self.declare_parameter(
             'gyro_bias_stationary_angular_threshold_radps', 0.03)
+        self.declare_parameter('gyro_bias_stationary_settle_s', 0.0)
+        self.declare_parameter(
+            'gyro_bias_stationary_adaptation_time_constant_s', 0.0)
+        self.declare_parameter(
+            'gyro_bias_stationary_residual_time_constant_s', 1.0)
+        self.declare_parameter(
+            'gyro_bias_maximum_stationary_residual_radps', 0.001)
+        self.declare_parameter('gyro_bias_stationary_recovery_s', 1.0)
         self.declare_parameter('sensor_timeout_s', 0.35)
         self.declare_parameter('wheel_pose_xy_variance', 0.0025)
         self.declare_parameter('wheel_pose_yaw_variance', 0.0076)
@@ -175,6 +185,8 @@ class SensorAdapter(Node):
             slip_covariance_scale=float(gp('slip_covariance_scale').value),
         ))
         self.gyro_bias = GyroBiasEstimator(GyroBiasConfig(
+            initial_settle_s=float(
+                gp('gyro_bias_initial_settle_s').value),
             calibration_duration_s=float(
                 gp('gyro_bias_calibration_s').value),
             minimum_samples=int(gp('gyro_bias_minimum_samples').value),
@@ -182,6 +194,18 @@ class SensorAdapter(Node):
                 gp('gyro_bias_maximum_stddev_radps').value),
             maximum_sample_magnitude_radps=float(
                 gp('gyro_bias_maximum_sample_radps').value),
+            maximum_sample_gap_s=float(
+                gp('gyro_bias_maximum_sample_gap_s').value),
+            stationary_settle_s=float(
+                gp('gyro_bias_stationary_settle_s').value),
+            stationary_adaptation_time_constant_s=float(gp(
+                'gyro_bias_stationary_adaptation_time_constant_s').value),
+            stationary_residual_time_constant_s=float(gp(
+                'gyro_bias_stationary_residual_time_constant_s').value),
+            maximum_stationary_residual_radps=float(gp(
+                'gyro_bias_maximum_stationary_residual_radps').value),
+            stationary_recovery_s=float(
+                gp('gyro_bias_stationary_recovery_s').value),
         ))
 
         self._last_wheel: Optional[Odometry] = None
@@ -346,7 +370,7 @@ class SensorAdapter(Node):
         if self.calibrate_gyro_bias:
             bias = self.gyro_bias.update(
                 stamp_s, raw_angular, wheel_stationary)
-            if not bias.calibrated:
+            if not bias.calibrated or not bias.stable:
                 return
             corrected_angular = self.gyro_bias.correct(raw_angular)
         else:
@@ -426,12 +450,17 @@ class SensorAdapter(Node):
             and reference_age <= self.sensor_timeout_s)
         consistency = self.consistency.last_result
         gyro_bias = self.gyro_bias.result
+        bias_ready = (
+            not self.calibrate_gyro_bias
+            or (gyro_bias.calibrated and gyro_bias.stable))
         ready = (
             wheel_fresh
             and (imu_fresh or not self.require_imu)
             and (reference_fresh or not self.require_reference)
-            and consistency.state != 'slip')
-        degraded = consistency.state in ('suspect', 'slip')
+            and consistency.state != 'slip'
+            and bias_ready)
+        degraded = (
+            consistency.state in ('suspect', 'slip') or not bias_ready)
         reasons = []
         if not wheel_fresh:
             reasons.append('rad_odom_fehlt_oder_alt')
@@ -441,12 +470,15 @@ class SensorAdapter(Node):
             reasons.append('referenz_odom_fehlt_oder_alt')
         if consistency.state in ('suspect', 'slip'):
             reasons.append(consistency.reason)
+        if not bias_ready:
+            reasons.append(gyro_bias.reason)
         if not reasons:
             reasons.append('bereit')
         payload = {
             'ready': ready,
             'state': (
-                consistency.state if degraded
+                consistency.state
+                if consistency.state in ('suspect', 'slip')
                 else ('nominal' if ready else 'degraded')),
             'reasons': reasons,
             'actuator_output': False,
@@ -468,13 +500,22 @@ class SensorAdapter(Node):
                 'bias_calibration_enabled': self.calibrate_gyro_bias,
                 'bias_calibrated': (
                     gyro_bias.calibrated or not self.calibrate_gyro_bias),
+                'bias_stable': (
+                    gyro_bias.stable or not self.calibrate_gyro_bias),
                 'bias_reason': (
                     gyro_bias.reason if self.calibrate_gyro_bias
                     else 'treiber_bias_wird_vertraut'),
                 'bias_samples': gyro_bias.samples,
+                'bias_adaptation_samples': gyro_bias.adaptation_samples,
                 'bias_radps': list(gyro_bias.bias_radps),
                 'bias_stddev_radps': [
                     _json_number(value) for value in gyro_bias.stddev_radps],
+                'bias_residual_mean_radps': [
+                    _json_number(value)
+                    for value in gyro_bias.residual_mean_radps],
+                'bias_residual_norm_radps': _json_number(math.sqrt(sum(
+                    value * value
+                    for value in gyro_bias.residual_mean_radps))),
             },
             'reference_odometry': {
                 'required': self.require_reference,
@@ -502,6 +543,13 @@ class SensorAdapter(Node):
         diagnostic.values = [
             KeyValue(key='wheel_fresh', value=str(wheel_fresh).lower()),
             KeyValue(key='imu_fresh', value=str(imu_fresh).lower()),
+            KeyValue(key='gyro_bias_ready', value=str(bias_ready).lower()),
+            KeyValue(key='gyro_bias_reason', value=gyro_bias.reason),
+            KeyValue(
+                key='gyro_bias_residual_norm_radps',
+                value=str(_json_number(math.sqrt(sum(
+                    value * value
+                    for value in gyro_bias.residual_mean_radps))))),
             KeyValue(key='reference_fresh', value=str(reference_fresh).lower()),
             KeyValue(
                 key='wheel_covariance_scale',

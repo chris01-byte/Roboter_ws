@@ -59,19 +59,39 @@ def rotate_vector_by_quaternion(
 
 @dataclass(frozen=True)
 class GyroBiasConfig:
+    initial_settle_s: float = 0.0
     calibration_duration_s: float = 2.0
     minimum_samples: int = 300
     maximum_stddev_radps: float = 0.02
     maximum_sample_magnitude_radps: float = 0.20
+    maximum_sample_gap_s: float = 0.25
+    stationary_settle_s: float = 0.0
+    stationary_adaptation_time_constant_s: float = 0.0
+    stationary_residual_time_constant_s: float = 1.0
+    maximum_stationary_residual_radps: float = 0.001
+    stationary_recovery_s: float = 1.0
 
     def validate(self) -> None:
-        values = (
+        positive = (
             self.calibration_duration_s,
             self.maximum_stddev_radps,
             self.maximum_sample_magnitude_radps,
+            self.maximum_sample_gap_s,
+            self.stationary_residual_time_constant_s,
+            self.maximum_stationary_residual_radps,
         )
-        if not all(math.isfinite(value) and value > 0.0 for value in values):
+        nonnegative = (
+            self.initial_settle_s,
+            self.stationary_settle_s,
+            self.stationary_adaptation_time_constant_s,
+            self.stationary_recovery_s,
+        )
+        if not all(math.isfinite(value) and value > 0.0 for value in positive):
             raise ValueError('Gyro-Kalibriergrenzen muessen positiv sein')
+        if not all(
+                math.isfinite(value) and value >= 0.0
+                for value in nonnegative):
+            raise ValueError('Gyro-Zeitgrenzen duerfen nicht negativ sein')
         if self.minimum_samples < 2:
             raise ValueError('Gyro-Kalibrierung braucht mindestens zwei Proben')
 
@@ -79,30 +99,48 @@ class GyroBiasConfig:
 @dataclass(frozen=True)
 class GyroBiasResult:
     calibrated: bool
+    stable: bool
     reason: str
     samples: int
     bias_radps: Vector3
     stddev_radps: Vector3
+    residual_mean_radps: Vector3
+    adaptation_samples: int
 
 
 class GyroBiasEstimator:
-    """Estimate a fixed startup gyro bias only during confirmed standstill."""
+    """Estimate and cautiously track gyro bias at confirmed standstill.
+
+    The initial estimate is intentionally delayed so a warming IMU cannot
+    define its bias from the first seconds after startup.  Once calibrated,
+    the estimate is frozen whenever wheel odometry reports motion.  During
+    standstill it follows slow thermal drift and exposes a fail-closed
+    stability flag when the remaining low-pass residual is too large.
+    """
 
     def __init__(self, config: Optional[GyroBiasConfig] = None):
         self.config = config or GyroBiasConfig()
         self.config.validate()
         self._calibrated = False
+        self._stable = False
+        self._stationary_since_s: Optional[float] = None
         self._first_stamp_s: Optional[float] = None
         self._last_stamp_s: Optional[float] = None
         self._samples = 0
         self._mean = [0.0, 0.0, 0.0]
         self._m2 = [0.0, 0.0, 0.0]
+        self._residual_mean = [0.0, 0.0, 0.0]
+        self._stable_since_s: Optional[float] = None
+        self._adaptation_samples = 0
         self._result = GyroBiasResult(
             calibrated=False,
+            stable=False,
             reason='warte_auf_bestaetigten_stillstand',
             samples=0,
             bias_radps=(0.0, 0.0, 0.0),
             stddev_radps=(float('inf'),) * 3,
+            residual_mean_radps=(float('inf'),) * 3,
+            adaptation_samples=0,
         )
 
     @property
@@ -112,6 +150,7 @@ class GyroBiasEstimator:
     def reset(self, reason: str) -> GyroBiasResult:
         if self._calibrated:
             return self._result
+        self._stationary_since_s = None
         self._first_stamp_s = None
         self._last_stamp_s = None
         self._samples = 0
@@ -119,31 +158,136 @@ class GyroBiasEstimator:
         self._m2 = [0.0, 0.0, 0.0]
         self._result = GyroBiasResult(
             calibrated=False,
+            stable=False,
             reason=reason,
             samples=0,
             bias_radps=(0.0, 0.0, 0.0),
             stddev_radps=(float('inf'),) * 3,
+            residual_mean_radps=(float('inf'),) * 3,
+            adaptation_samples=0,
         )
         return self._result
+
+    def _post_calibration_result(self, reason: str) -> GyroBiasResult:
+        self._result = GyroBiasResult(
+            calibrated=True,
+            stable=self._stable,
+            reason=reason,
+            samples=self._samples,
+            bias_radps=tuple(self._mean),  # type: ignore[arg-type]
+            stddev_radps=self._result.stddev_radps,
+            residual_mean_radps=tuple(  # type: ignore[arg-type]
+                self._residual_mean),
+            adaptation_samples=self._adaptation_samples,
+        )
+        return self._result
+
+    def _mark_unstable(self, reason: str) -> GyroBiasResult:
+        self._stable = False
+        self._stable_since_s = None
+        return self._post_calibration_result(reason)
 
     def update(
             self, stamp_s: float, angular_velocity_radps: Vector3,
             stationary: bool) -> GyroBiasResult:
-        if self._calibrated:
-            return self._result
         if (
                 not math.isfinite(stamp_s)
                 or not _finite_vector(angular_velocity_radps, 3)):
+            if self._calibrated:
+                return self._mark_unstable('gyro_probe_ungueltig')
             return self.reset('gyro_probe_ungueltig')
-        if not stationary:
-            return self.reset('warte_auf_bestaetigten_stillstand')
         if self._last_stamp_s is not None and stamp_s <= self._last_stamp_s:
+            if self._calibrated:
+                return self._mark_unstable('gyro_zeit_nicht_monoton')
             return self.reset('gyro_zeit_nicht_monoton')
-        if _norm(angular_velocity_radps) > self.config.maximum_sample_magnitude_radps:
+        sample_gap_s = (
+            None if self._last_stamp_s is None
+            else stamp_s - self._last_stamp_s)
+        if (
+                sample_gap_s is not None
+                and sample_gap_s > self.config.maximum_sample_gap_s):
+            if not self._calibrated:
+                return self.reset('gyro_datenluecke')
+            self._last_stamp_s = stamp_s
+            self._stationary_since_s = stamp_s if stationary else None
+            self._residual_mean = [0.0, 0.0, 0.0]
+            self._stable_since_s = None
+            return self._post_calibration_result('gyro_datenluecke')
+        self._last_stamp_s = stamp_s
+        if not stationary:
+            if self._calibrated:
+                self._stationary_since_s = None
+                self._residual_mean = [0.0, 0.0, 0.0]
+                self._stable_since_s = None
+                return self._post_calibration_result(
+                    'gyro_bias_fixiert_bewegung')
+            return self.reset('warte_auf_bestaetigten_stillstand')
+        if (
+                _norm(angular_velocity_radps)
+                > self.config.maximum_sample_magnitude_radps):
+            if self._calibrated:
+                return self._mark_unstable(
+                    'gyro_bewegung_trotz_radstillstand')
             return self.reset('gyro_bewegung_waehrend_kalibrierung')
+
+        if self._stationary_since_s is None:
+            self._stationary_since_s = stamp_s
+        stationary_elapsed_s = stamp_s - self._stationary_since_s
+
+        if self._calibrated:
+            if stationary_elapsed_s < self.config.stationary_settle_s:
+                return self._post_calibration_result(
+                    'gyro_bias_wartet_nach_bewegung')
+            if self.config.stationary_adaptation_time_constant_s <= 0.0:
+                return self._post_calibration_result('gyro_bias_fixiert')
+
+            assert sample_gap_s is not None
+            residual = [
+                value - bias
+                for value, bias in zip(angular_velocity_radps, self._mean)]
+            residual_alpha = 1.0 - math.exp(
+                -sample_gap_s
+                / self.config.stationary_residual_time_constant_s)
+            for index, value in enumerate(residual):
+                self._residual_mean[index] += residual_alpha * (
+                    value - self._residual_mean[index])
+
+            adaptation_alpha = 1.0 - math.exp(
+                -sample_gap_s
+                / self.config.stationary_adaptation_time_constant_s)
+            for index, value in enumerate(residual):
+                self._mean[index] += adaptation_alpha * value
+            self._adaptation_samples += 1
+
+            residual_norm = _norm(tuple(self._residual_mean))
+            if residual_norm > self.config.maximum_stationary_residual_radps:
+                return self._mark_unstable('gyro_bias_restoffset_zu_gross')
+            if not self._stable:
+                if self._stable_since_s is None:
+                    self._stable_since_s = stamp_s
+                if (
+                        stamp_s - self._stable_since_s
+                        < self.config.stationary_recovery_s):
+                    return self._post_calibration_result(
+                        'gyro_bias_erholt_sich')
+                self._stable = True
+            return self._post_calibration_result('gyro_bias_nachgefuehrt')
+
+        if stationary_elapsed_s < self.config.initial_settle_s:
+            self._result = GyroBiasResult(
+                calibrated=False,
+                stable=False,
+                reason='gyro_bias_einlaufzeit',
+                samples=0,
+                bias_radps=(0.0, 0.0, 0.0),
+                stddev_radps=(float('inf'),) * 3,
+                residual_mean_radps=(float('inf'),) * 3,
+                adaptation_samples=0,
+            )
+            return self._result
+
         if self._first_stamp_s is None:
             self._first_stamp_s = stamp_s
-        self._last_stamp_s = stamp_s
         self._samples += 1
         for index, value in enumerate(angular_velocity_radps):
             delta = value - self._mean[index]
@@ -160,20 +304,29 @@ class GyroBiasEstimator:
             return self.reset('gyro_kalibrierung_zu_unruhig')
         if enough:
             self._calibrated = True
+            self._stable = True
+            self._stable_since_s = stamp_s
+            self._residual_mean = [0.0, 0.0, 0.0]
             self._result = GyroBiasResult(
                 calibrated=True,
+                stable=True,
                 reason='gyro_bias_kalibriert',
                 samples=self._samples,
                 bias_radps=tuple(self._mean),  # type: ignore[arg-type]
                 stddev_radps=stddev,  # type: ignore[arg-type]
+                residual_mean_radps=(0.0, 0.0, 0.0),
+                adaptation_samples=0,
             )
             return self._result
         self._result = GyroBiasResult(
             calibrated=False,
+            stable=False,
             reason='gyro_bias_warmup',
             samples=self._samples,
             bias_radps=tuple(self._mean),  # type: ignore[arg-type]
             stddev_radps=stddev,  # type: ignore[arg-type]
+            residual_mean_radps=(float('inf'),) * 3,
+            adaptation_samples=0,
         )
         return self._result
 

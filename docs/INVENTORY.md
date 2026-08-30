@@ -5,9 +5,11 @@
 `feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
 abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
 
-**Sensorfusionsdelta:** 30.08.2026 · Branch `feature/modulare-sensorfusion`;
-modulare Encoder-/OAK-IMU-Fusion, Start-Biaskalibrierung, Kipp-Scanfilter und
-optionale radunabhaengige LiDAR-Bewegungsreferenz motorlos live abgenommen
+**Sensorfusionsdelta:** 30.08.2026 · Ausgangscommit `00f6e52` auf
+`feature/modulare-sensorfusion`, Driftkorrektur auf
+`fix/sensorfusion-imu-bias`; modulare Encoder-/OAK-IMU-Fusion,
+stillstandsgebundene thermische Biasnachfuehrung, Kipp-Scanfilter und optionale
+radunabhaengige LiDAR-Bewegungsreferenz; Langzeitstillstand motorlos bestanden
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet

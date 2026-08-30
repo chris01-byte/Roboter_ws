@@ -17,6 +17,68 @@ Rückfallweg:
 
 ---
 
+## 2026-08-30 — OAK-Gyrodrift im Stillstand gemessen und fail-closed korrigiert
+
+**Entscheidung:** Die zweisekuendige feste Start-Biaskalibrierung wird fuer das
+Amadeus-OAK-Profil durch 15 s Einlaufzeit, 5 s Anfangsmessung und eine langsame
+Biasnachfuehrung mit 5 s Zeitkonstante ersetzt. Nachgefuehrt wird
+ausschliesslich bei frischer, encoderbestaetigter Ruhe. Bei Radbewegung bleibt
+der letzte gute Bias eingefroren. Ueberschreitet der geglaettete verbleibende
+Gyrofehler im Stillstand `0,001 rad/s`, wird die korrigierte IMU gesperrt und
+der Fusionsstatus meldet degradiert, bis der Fehler zwei Sekunden lang wieder
+unter der Grenze liegt.
+
+**Grund / beobachtete Evidenz:** Der zuerst plausible feste Startwert war
+thermisch nicht stabil. In einer 615,7-s-Stillstandsmessung integrierte der
+damit korrigierte OAK-Gyro zu `-49,24 Grad`; die EKF-Gierlage wanderte um
+`-43,33 Grad`. Bereits das formale 329,4-s-Kriterium der Stufe C war mit
+`-23,91 Grad` klar verfehlt. Die Rohdaten zeigten eine langsame Verschiebung
+des Nullpunkts nach der ersten Kalibrierung. Eine Offline-Wiedergabe derselben
+Daten ergab fuer die nur im Stillstand aktive 5-s-Nachfuehrung `-0,46 Grad`
+statt `-49,36 Grad` integrierten Gierfehler. Eine externe IMU ist damit fuer
+den naechsten Testschritt nicht erforderlich; sie bleibt eine moegliche
+spaetere Robustheitsverbesserung.
+
+**Betroffene Dateien und Hardware:** `quality_core.py`,
+`sensor_adapter_node.py`, das Profil `config/amadeus.yaml`, Vertrags- und
+Unittests sowie Sensorfusions-, Transfer- und Inventardokumentation. Gemessen
+wurde nur mit OAK-D-S2 und stillstehender Dry-run-Radodometrie. Die lokalen
+Messbags enthalten keine Bilder, Scans, Karten oder Wohnungsdaten und werden
+nicht ins Repository aufgenommen. Motorregister und installierte
+Jetson-Konfiguration wurden nicht veraendert.
+
+**Teststatus:** `robot_state_estimation` und `robot_bringup` bauen; 24 gezielte
+Tests liefen ohne Fehler. Der anschliessende reale Motorlos-Lauf zeichnete
+342,5 s auf, davon 330,8 s nach der ersten Freigabe. Bei unveraenderter Pose
+blieben `x` und `y` exakt 0, die EKF-Gierabweichung betrug `-0,090 Grad` und
+die kontinuierlich integrierte korrigierte IMU `-0,058 Grad`. Der
+Restfehler lag im Median bei `0,000145 rad/s`, im 95-%-Quantil bei
+`0,000615 rad/s`. Eine groessere Drift wurde bei maximal `0,001214 rad/s`
+korrekt erkannt: Die IMU war 3,5 s gesperrt und durchlief danach 2,0 s
+Erholzeit; anschliessend blieb sie bis Testende nominal. Es gab genau einen
+dynamischen `odom->base_link`-Strom. `base_hardware` meldete durchgehend
+`dry_run=true`, `allow_rs485=false`, `rs485_ready=false`, 0 m/s und 0 rpm.
+Alle Testprozesse sind beendet.
+
+**Offene Risiken:** Die Nachfuehrung darf bei echter Chassisbewegung nicht
+lernen; das ist bisher nur synthetisch durch den Einfrier-Test, noch nicht mit
+bewegten oder aufgebockten Raedern real bestaetigt. Langsame aeussere Drehung
+bei gleichzeitig stillstehenden Encodern ist ohne zweite Referenz nicht von
+Biasdrift unterscheidbar. Geradeaus-, Dreh-, Fugen-, Schwellen- und
+Sensorausfalltests sowie Kovarianzkalibrierung bleiben offen. Beim Beenden
+meldet `base_hardware` weiterhin den bereits bekannten Humble-Fehler
+`rcl_shutdown already called`; der trockene Hardwarepfad war davor bereits
+gestoppt. Dieser getrennte Fehler wurde im sicherheitsrelevanten Bias-Branch
+nicht mitveraendert.
+
+**Rueckfallweg:** Die Aenderung ist auf `fix/sensorfusion-imu-bias` isoliert.
+Der gepushte Ausgangsstand bleibt Commit `00f6e52` auf
+`feature/modulare-sensorfusion`. Die Fusion ist weiterhin in keinem
+Produktionsstart aktiviert; ihr Motorlos-Launch kann beendet und der bisherige
+Basis-/SLAM-Pfad unveraendert verwendet werden.
+
+---
+
 ## 2026-08-30 — Lokale Sensor-Fusion modular aufgebaut und motorlos abgenommen
 
 **Entscheidung:** Die kontinuierliche lokale Fahrzeugpose wird kuenftig in

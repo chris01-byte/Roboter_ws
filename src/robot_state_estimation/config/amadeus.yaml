@@ -20,16 +20,26 @@ sensor_adapter:
     # The OAK has no absolute heading reference.  The first profile therefore
     # fuses angular velocity, not its orientation quaternion.
     use_imu_orientation: false
-    # OAK publishes zero covariances and a measurable stationary gyro offset.
-    # Calibrate once at startup, but only while fresh wheel odometry confirms
-    # standstill.  No corrected IMU samples leave the adapter before success.
+    # OAK publishes zero covariances and its stationary gyro offset continues
+    # to move after startup.  The measured profile therefore waits through the
+    # first thermal transient, calibrates only at encoder-confirmed standstill
+    # and then follows slow drift with a conservative five-second time
+    # constant.  Motion freezes the estimate.  An excessive remaining offset
+    # blocks the corrected IMU and makes the fusion status fail closed.
     calibrate_gyro_bias: true
-    gyro_bias_calibration_s: 2.0
-    gyro_bias_minimum_samples: 300
-    gyro_bias_maximum_stddev_radps: 0.02
-    gyro_bias_maximum_sample_radps: 0.20
-    gyro_bias_stationary_linear_threshold_mps: 0.01
-    gyro_bias_stationary_angular_threshold_radps: 0.03
+    gyro_bias_initial_settle_s: 15.0
+    gyro_bias_calibration_s: 5.0
+    gyro_bias_minimum_samples: 1000
+    gyro_bias_maximum_stddev_radps: 0.005
+    gyro_bias_maximum_sample_radps: 0.03
+    gyro_bias_maximum_sample_gap_s: 0.10
+    gyro_bias_stationary_linear_threshold_mps: 0.005
+    gyro_bias_stationary_angular_threshold_radps: 0.005
+    gyro_bias_stationary_settle_s: 1.0
+    gyro_bias_stationary_adaptation_time_constant_s: 5.0
+    gyro_bias_stationary_residual_time_constant_s: 1.0
+    gyro_bias_maximum_stationary_residual_radps: 0.001
+    gyro_bias_stationary_recovery_s: 2.0
     sensor_timeout_s: 0.35
 
     # Encoder values are the already measured Amadeus starting covariances.

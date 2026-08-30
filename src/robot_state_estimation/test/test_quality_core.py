@@ -45,8 +45,70 @@ def test_gyro_bias_is_measured_only_during_confirmed_standstill():
     calibrated = estimator.update(2.25, bias, True)
 
     assert calibrated.calibrated
+    assert calibrated.stable
     assert calibrated.bias_radps == bias
     assert all(abs(value) <= 1e-12 for value in estimator.correct(bias))
+
+
+def test_gyro_bias_waits_for_initial_settle_before_collecting():
+    estimator = GyroBiasEstimator(GyroBiasConfig(
+        initial_settle_s=0.3,
+        calibration_duration_s=0.2,
+        minimum_samples=3,
+        maximum_sample_gap_s=0.2,
+    ))
+    bias = (0.004, -0.006, 0.003)
+
+    first = estimator.update(1.0, bias, True)
+    settling = estimator.update(1.2, bias, True)
+    collecting = estimator.update(1.31, bias, True)
+    estimator.update(1.41, bias, True)
+    calibrated = estimator.update(1.52, bias, True)
+
+    assert first.reason == 'gyro_bias_einlaufzeit'
+    assert settling.samples == 0
+    assert collecting.samples == 1
+    assert calibrated.calibrated
+    assert calibrated.samples == 3
+
+
+def test_gyro_bias_tracks_drift_only_at_confirmed_standstill_and_recovers():
+    estimator = GyroBiasEstimator(GyroBiasConfig(
+        calibration_duration_s=0.02,
+        minimum_samples=3,
+        maximum_sample_gap_s=0.05,
+        stationary_adaptation_time_constant_s=0.05,
+        stationary_residual_time_constant_s=0.02,
+        maximum_stationary_residual_radps=0.003,
+        stationary_recovery_s=0.03,
+    ))
+    initial_bias = (0.004, -0.006, 0.003)
+    shifted_bias = (0.014, -0.006, 0.003)
+
+    estimator.update(1.00, initial_bias, True)
+    estimator.update(1.01, initial_bias, True)
+    calibrated = estimator.update(1.02, initial_bias, True)
+    unstable = estimator.update(1.03, shifted_bias, True)
+
+    assert calibrated.stable
+    assert not unstable.stable
+    assert unstable.reason == 'gyro_bias_restoffset_zu_gross'
+
+    recovered = unstable
+    for index in range(1, 51):
+        recovered = estimator.update(
+            1.03 + index * 0.01, shifted_bias, True)
+
+    assert recovered.stable
+    assert recovered.adaptation_samples == 51
+    assert abs(estimator.correct(shifted_bias)[0]) < 0.001
+
+    adapted_bias = recovered.bias_radps
+    moving = estimator.update(1.54, (0.10, -0.006, 0.003), False)
+
+    assert moving.stable
+    assert moving.reason == 'gyro_bias_fixiert_bewegung'
+    assert moving.bias_radps == adapted_bias
 
 
 def _monitor():

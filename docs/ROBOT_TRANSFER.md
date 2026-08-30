@@ -2,7 +2,9 @@
 
 ## Modulare Sensor-Fusion — motorlos live abgenommen (30.08.2026)
 
-**Branch:** `feature/modulare-sensorfusion`
+**Ausgangsstand:** `feature/modulare-sensorfusion`, Commit `00f6e52`
+
+**Aktueller Fix-Branch:** `fix/sensorfusion-imu-bias`
 
 Das neue Paket `robot_state_estimation` trennt Hardwareadapter,
 Qualitaetsentscheidungen und Zustandsschaetzung. Der lokale
@@ -16,7 +18,9 @@ portablen Qualitaetskern zu aendern.
 
 Neu vorhanden:
 
-- Startkalibrierung des OAK-Gyrofehlers nur bei encoderbestaetigtem Stillstand;
+- thermisch verzoegerte Startkalibrierung und langsame Nachfuehrung des
+  OAK-Gyrofehlers nur bei encoderbestaetigtem Stillstand;
+- fail-closed Sperre der korrigierten IMU bei zu grossem Restoffset;
 - Frische-, Frame-, Zeitstempel- und Kovarianzpruefung;
 - radunabhaengige Bewegungsreferenz mit hysteretischer Schlupferkennung;
 - IMU-gestuetztes, fail-closed Gate von `/scan_normiert` nach
@@ -26,17 +30,31 @@ Neu vorhanden:
 - ein Validierungslaunch, dessen Motorpfad nicht per Argument freigeschaltet
   werden kann.
 
-Der echte motorlose Jetson-Lauf war mehrere Minuten stabil. Die OAK lieferte
-etwa 249 IMU-Proben pro Sekunde. Aus 495 ruhigen Proben wurde der bei jedem
-Start neu zu messende Gyro-Bias bestimmt. Danach blieb die Filterposition bei
-0,00 m und die Gierlage etwa 0,5 Grad vom Start entfernt. Keine Encoder- oder
-IMU-Probe wurde verworfen, der Status war `nominal`, ein Testscan wurde im
-stabilen Zustand weitergegeben und es gab keinen konkurrierenden
-`odom->base_link`-Publisher. `base_hardware` lief ausschliesslich mit
-`dry_run=true`, `allow_rs485=false`, `publish_tf=false` und 0 rpm. Alle
-Testknoten sind beendet. Die beiden betroffenen Pakete bauten erfolgreich;
-21 gezielte Tests und der registrierte Gesamtbestand von 193 Tests liefen
-ohne Fehler, Fehlschlag oder Auslassung.
+Ein laengerer Stillstandstest widerlegte die erste feste
+2-s-Startkalibrierung: Ueber 615,7 s wanderte die EKF-Gierlage um
+`-43,33 Grad`. Ursache war ein weiter driftender OAK-Nullpunkt, kein Encoder-
+oder TF-Fehler. Das Amadeus-Profil wartet deshalb jetzt 15 s, misst danach 5 s
+und fuehrt den Bias im bestaetigten Stillstand mit 5 s Zeitkonstante nach. Bei
+Radbewegung ist die Schätzung eingefroren. Ab `0,001 rad/s` geglaettetem
+Restfehler sperrt der Adapter die IMU und degradiert sichtbar.
+
+Der korrigierte echte Motorlos-Lauf dauerte 342,5 s, davon 330,8 s nach der
+ersten Freigabe. Die OAK lieferte 85.620 Rohproben; nach Einlaufzeit,
+Kalibrierung und Qualitaetsgate wurden 80.171 korrigierte Proben aufgezeichnet.
+Bei exakt 0,00 m Positionsaenderung driftete die EKF-Gierlage nur
+`-0,090 Grad`; die korrigierte IMU integrierte zu `-0,058 Grad`. Der
+Restoffset lag im Median bei `0,000145 rad/s` und im 95-%-Quantil bei
+`0,000615 rad/s`. Eine thermische Spitze von `0,001214 rad/s` loeste wie
+vorgesehen 3,5 s Sperre plus 2,0 s Erholzeit aus; danach blieb das System bis
+Testende nominal. Es gab nur den EKF-Strom fuer `odom->base_link`.
+`base_hardware` blieb durchgehend bei `dry_run=true`, `allow_rs485=false`,
+`rs485_ready=false`, 0 m/s und 0 rpm. Alle Testknoten sind beendet. Die beiden
+Pakete bauten erfolgreich; 24 gezielte Tests liefen ohne Fehler.
+
+Beim Beenden zeigt `base_hardware` weiterhin den bekannten, getrennten
+Humble-Shutdownfehler `rcl_shutdown already called`. Zu diesem Zeitpunkt war
+der Trockenlauf bereits gestoppt; der Fix-Branch veraendert den Basis-/Motorcode
+bewusst nicht.
 
 Sicherer Wiederholungsstart ohne Motorwirkung:
 
@@ -51,7 +69,8 @@ Das ROS-Humble-Paket `robot_localization` ist auf dem Jetson als
 Systemabhaengigkeit installiert. Der neue Code veraendert keine
 Motorregister, keine Karten und keine Daten ausserhalb des Workspace.
 
-**Noch nicht produktiv umschalten:** Reale Geradeaus-, Dreh-, Fugen-,
+**Noch nicht produktiv umschalten:** Stufe C (Langzeitstillstand) ist bestanden,
+aber reale Geradeaus-, Dreh-, Fugen-,
 Schwellen- und Dropouttests fehlen. Sie brauchen erneut persoenliche
 Fahrfreigabe, freien Weg und Hard-Not-Aus. Erst danach werden
 Kartierungs-/Nav-Starts von Basis-TF und `/scan_normiert` auf EKF-TF und

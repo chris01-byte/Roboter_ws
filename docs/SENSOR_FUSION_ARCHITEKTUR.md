@@ -94,9 +94,12 @@ beschriebenen Standardvertrag erfuellt.
 Qualitaetslogik bleibt ausserhalb des EKF. Dadurch ist sichtbar, **warum**
 eine Quelle gerade weniger Gewicht erhaelt.
 
-- `GyroBiasEstimator` misst beim Start den IMU-Nullfehler. Die Kalibrierung
-  laeuft nur, wenn frische Encoderdaten Stillstand bestaetigen. Bis zum Erfolg
-  wird keine korrigierte IMU publiziert.
+- `GyroBiasEstimator` wartet beim Start den ersten thermischen Uebergang ab
+  und misst danach den IMU-Nullfehler. Ein langsamer Tiefpass fuehrt den Bias
+  nur weiter, wenn frische Encoderdaten Stillstand bestaetigen. Bei Bewegung
+  bleibt der letzte gute Wert eingefroren. Bis zur Anfangskalibrierung sowie
+  bei einem geglaetteten Restoffset ueber der Profilgrenze wird keine
+  korrigierte IMU publiziert; der Status degradiert sichtbar.
 - `MotionConsistencyMonitor` vergleicht Radgeschwindigkeit und eine
   radunabhaengige Bewegung. Zwei schlechte Proben markieren Schlupf; gute
   Proben loesen ihn erst mit Hysterese. Das Radgewicht wird ueber die
@@ -246,24 +249,39 @@ Filter darf dabei degradieren, aber nicht still falsche Sicherheit melden.
 
 ## 8. Aktuell gemessener Stand vom 30.08.2026
 
-Der motorlose Jetson-Lauf verwendete echte OAK-IMU-Daten und die im
-`dry_run`-Modus publizierte stillstehende Rad-Odometrie. Der Adapter nahm 495
-ruhige IMU-Proben auf. Der gemessene Gyro-Nullfehler betrug ungefaehr
-`(+0,00147, +0,00605, -0,00398) rad/s`; er wird nicht hart codiert, sondern bei
-jedem Start neu bestimmt.
+Der erste lange motorlose Lauf zeigte, dass eine einzelne 2-s-Biasmessung
+nicht genuegt. Obwohl Encoderposition, Frames und Datenraten stabil waren,
+verschob sich der OAK-Gyro-Nullpunkt nach der Kalibrierung weiter. Ueber
+615,7 s integrierte das korrigierte Rohsignal zu `-49,24 Grad`; die EKF-Gierlage
+wanderte um `-43,33 Grad`. Das formale 329,4-s-Fenster der Stufe C war bereits
+mit `-23,91 Grad` klar durchgefallen.
 
-Nach mehreren Minuten blieb die gefilterte Position bei exakt 0,00 m. Die
-Gierlage lag etwa 0,5 Grad vom Start entfernt. Encoder- und IMU-Nachrichten
-waren frisch, ohne verworfene Probe, und das System meldete `nominal`. Das
-Qualitaetsgate akzeptierte einen eingespeisten Testscan bei stabiler IMU. Auf
-`/tf` publizierten der OAK-Zustandspublisher nur die Sensorframes und der EKF
-als einziger Knoten den lokalen Fahrwerks-TF. Es wurden keine Motorbefehle
-gesendet; der Basisstart war hart auf `dry_run=true`, `allow_rs485=false` und
-0 rpm festgelegt.
+Eine Wiedergabe der Rohdaten wurde fuer Zeitkonstanten von 0,5 bis 10 s
+ausgewertet. Gewaehlt wurden konservative 5 s, weil die Nachfuehrung damit den
+simulierten Fehler auf `-0,46 Grad` begrenzte, ohne eine echte langsame Drehung
+so aggressiv wie kuerzere Konstanten zu absorbieren. Das Profil verwendet nun:
 
-Dieser Test beweist Start, Verkabelung, Frames, Bias-Korrektur und
-Stillstandsverhalten. Er beweist noch nicht, dass die Bodenfugen bereits
-beherrscht sind. Dafuer fehlen Stufen E und F.
+- 15 s zusammenhaengenden encoderbestaetigten Stillstand als Einlaufzeit;
+- danach 5 s und mindestens 1.000 Proben fuer die Anfangskalibrierung;
+- 5 s Zeitkonstante fuer Nachfuehrung nur bei Stillstand;
+- 1 s Zeitkonstante fuer den Restfehler und `0,001 rad/s` als Sperrgrenze;
+- 2 s unterhalb der Grenze vor der erneuten Freigabe.
+
+Der reale Wiederholungslauf zeichnete 342,5 s auf, davon 330,8 s nach der
+ersten Freigabe. `x` und `y` blieben exakt 0, die EKF-Gierlage aenderte sich um
+`-0,090 Grad` und die korrigierte IMU integrierte zu `-0,058 Grad`. Der
+Restoffset lag im Median bei `0,000145 rad/s`, im 95-%-Quantil bei
+`0,000615 rad/s`. Eine einzelne Driftphase erreichte `0,001214 rad/s`; der
+Adapter sperrte die IMU 3,5 s, wartete weitere 2,0 s zur Erholung und meldete
+danach wieder bis Testende nominal. Der EKF ueberbrueckte diese Phase mit der
+stillstehenden Radodometrie, ohne Positionsbewegung zu erzeugen.
+
+Auf `/tf` gab es genau den dynamischen Uebergang `odom->base_link` sowie die
+statischen OAK-Sensorframes. Der Basisstart blieb hart auf `dry_run=true`,
+`allow_rs485=false`, `publish_tf=false`, `rs485_ready=false`, 0 m/s und 0 rpm.
+Damit ist Stufe C bestanden. Der Test beweist weiterhin keine korrekte
+Biassperre waehrend realer Bewegung und keine Beherrschung von Bodenfugen;
+dafuer fehlen Stufen D bis F.
 
 ## 9. Start und Rueckfall
 
@@ -301,7 +319,8 @@ Kalibrierdatei ausserhalb des Workspace. Das installierte Systempaket
 
 ## 10. Offene Arbeit
 
-- IMU-Rausch- und Temperaturmessung aus einem lokalen ROS-Bag;
+- Bias-Einfrierung und Achsvorzeichen zuerst mit aufgebockten Raedern pruefen;
+- weiteren Temperaturbereich und Neustart nach bereits warmer OAK messen;
 - realer Geradeaus- und Drehtest des Defaultprofils;
 - Fugenfahrt mit Roh-IMU, Encoder, LiDAR-Gate und externer Beobachtung;
 - reale Abnahme und Kovarianzkalibrierung der unabhaengigen LiDAR-Odometrie;

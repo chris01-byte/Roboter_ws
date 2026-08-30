@@ -58,6 +58,22 @@ def test_amadeus_profile_is_fail_closed_for_scan_quality():
     assert gate['fail_closed'] is True
 
 
+def test_amadeus_gyro_bias_profile_handles_warmup_drift_fail_closed():
+    data = yaml.safe_load((ROOT / 'config' / 'amadeus.yaml').read_text())
+    adapter = data['sensor_adapter']['ros__parameters']
+    source = (
+        ROOT / 'robot_state_estimation' / 'sensor_adapter_node.py').read_text()
+
+    assert adapter['gyro_bias_initial_settle_s'] >= 10.0
+    assert adapter['gyro_bias_calibration_s'] >= 5.0
+    assert adapter['gyro_bias_minimum_samples'] >= 1000
+    assert adapter['gyro_bias_stationary_adaptation_time_constant_s'] == 5.0
+    assert adapter['gyro_bias_maximum_stationary_residual_radps'] <= 0.001
+    assert adapter['gyro_bias_stationary_angular_threshold_radps'] <= 0.005
+    assert 'and bias_ready' in source
+    assert 'not bias.calibrated or not bias.stable' in source
+
+
 def test_package_declares_standard_filter_dependency():
     package_xml = (ROOT / 'package.xml').read_text()
 
