@@ -1,5 +1,20 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Stillstand/Bias: zehn Minuten bestanden (08.09.2026)
+
+`feature/hwt601-stationary-bias`: vorhandenes Biasprofil unveraendert mit
+echter IMU geprueft. Nach 25 s Einlauf/Kalibrierung volle 600 s ausgewertet,
+59.993 Proben, rund 100 Hz, maximal 47,72 ms Luecke, keine Sperrung.
+Z-Rohintegral +4,65769 Grad; fester Bias -0,12022 Grad; nachgefuehrt
+-0,03439 Grad (absoluter Spitzenwert 0,03985 Grad). Unabhaengige CSV-
+Nachrechnung bestaetigt Ergebnis. Keine Produktionswerte ersetzt.
+71 Softwaretests bestanden. Prozess beendet/Port geschlossen, keine
+Motor-/OAK-/Fusionsknoten gestartet. Kein Kaltstart- oder Bewegungsnachweis;
+Stillstand durch Nutzerabsprache, nicht Encoder. Details und Wiederholung:
+`docs/HWT601_BIAS_STILLSTAND.md`. Keine Fahrfreigabe.
+
+---
+
 ## HWT-Montagereferenz separat vorbereitet (08.09.2026)
 
 `feature/hwt601-mount-frame`: Nutzerachsen X rechts/Y vorne/Z oben ergeben

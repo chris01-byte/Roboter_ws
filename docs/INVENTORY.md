@@ -31,6 +31,11 @@ per TF geprueft. -90 Grad Yaw, x=0,084/y=0/z=-0,056 m zu bestehendem
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
+**HWT-Biasdelta:** `feature/hwt601-stationary-bias`, 08.09.2026:
+zehn Minuten echte IMU mit bestehender Biasnachfuehrung bestanden;
+maximaler absoluter korrigierter Z-Winkel 0,03985 Grad. Nur abgesprochener
+Stillstand des bereits eingeschalteten Sensors, keine Bewegungsfreigabe.
+
 ---
 
 ## 1. Umgebung

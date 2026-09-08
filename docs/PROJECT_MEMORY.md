@@ -17,6 +17,42 @@ Rückfallweg:
 
 ---
 
+## 2026-09-08 — HWT-Gyrobias ueber volle zehn Minuten motorlos bestanden
+
+**Entscheidung:** Auf ausdruecklichen Nutzerwunsch Schritt 1 ausgefuehrt:
+vorhandenen GyroBiasEstimator mit dem unveraenderten HWT-Profil an echten
+Rohdaten testen, gegen einen einmal bestimmten festen Bias vergleichen.
+Eigener Branch `feature/hwt601-stationary-bias` ab `517cbbb`; keine neuen
+Produktions-/Sensorkalibrierwerte setzen und keinen Motor-/OAK-/EKF-Start.
+
+**Grund / Evidenz:** Nach 15 s Einlauf und 10 s Anfangskalibrierung volle
+600 s ausgewertet. 59.993 Proben, 99,987 Hz, groesste Luecke 47,719 ms,
+keine Bias-Sperrprobe oder Serialfehler. Z-Rohintegral +4,65769 Grad;
+fester Bias -0,12022 Grad; adaptive Korrektur -0,03439 Grad, maximaler
+absoluter adaptiver Z-Winkel 0,03985 Grad. Vorab definiertes Ziel unter
+1 Grad klar eingehalten, auch der feste Bias besteht fuer Z in diesem Lauf.
+Alle Achsen und Grenzen stehen in `docs/HWT601_BIAS_STILLSTAND.md`.
+
+**Betroffene Dateien/Hardware:** Reproduzierbares read-only Messskript mit
+lokaler CSV/JSON-Aufzeichnung, Integrator-/Referenztests, Dokumentation.
+Rohdaten ausschliesslich unter
+`/home/p/.local/share/amadeus/hwt601/bias-20260908-230201/`.
+Produktivprofile, Motorbus, OAK und Basis-TFs unveraendert.
+
+**Teststatus:** Vollstaendiger Hardwarelauf bestanden, alle drei
+Integralverlaeufe samt Spitzen unabhaengig aus CSV nachgerechnet (Abweichung
+<1e-8 Grad). 71 Softwaretests bestanden. Port und Messprozess sauber beendet.
+
+**Offene Risiken:** Stillstand nur von der anwesenden Person vorausgesetzt,
+nicht encoderbestaetigt; bewusst keine erfundenen Radmesswerte. Bereits
+eingeschalteter Sensor, kein belegter Kaltstart. Gyroskala/Drehrichtung und
+Bewegung/Schlupf weiter offen. Keine Fusions- oder Fahrfreigabe.
+
+**Rueckfall:** Keine Produktionsumstellung vorgenommen. Test beenden/nicht
+wiederholen; bestehende USB- und Montage-Rueckfallwege bleiben unveraendert.
+
+---
+
 ## 2026-09-08 — HWT-Montagereferenz getrennt vom unbekannten Chipursprung
 
 **Entscheidung:** Eigener Branch `feature/hwt601-mount-frame` ab `a31b816`.
