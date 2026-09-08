@@ -17,6 +17,68 @@ Rückfallweg:
 
 ---
 
+## 2026-09-08 — HWT601 angeschlossen, USB-Kernelpfad getrennt vorbereitet
+
+**Entscheidung:** Die bestehende HWT-Vorbereitung `a326ab0` wird auf
+`fix/hwt601-usb-commissioning` im dauerhaften Worktree
+`/home/p/roboter_worktrees/hwt601-usb-commissioning` weitergefuehrt. Die fremden
+uncommitteten Erkundungsaenderungen in `/home/p/roboter_ws` bleiben erhalten.
+Fuer den vom Nutzer gemeldeten HWT601 wird zuerst der gemessene USB-Blocker
+behoben; keine EKF-Freigabe, erfundene Montage-TFs oder Motorstarts.
+
+**Grund / beobachtete Evidenz:** USB `1a86:7523`/CH340 ist am Pfad
+`1-2.4.4.4` sichtbar, ohne individuelle Seriennummer. Es gibt keinen TTY-Pfad.
+Kernel `5.15.199-tegra` hat `CONFIG_USB_SERIAL_CH341` nicht aktiviert und
+`modprobe ch341` findet kein Modul. Zusaetzlich klassifiziert udev den Adapter
+als Braillegeraet; im Journal hat `brltty` auch FTDI/Motor und CP210x/LiDAR
+von ihren seriellen Treibern verdraengt. `sudo -n true` verlangt ein Passwort.
+USB-Erkennung beweist noch keine HWT-Antwort oder passende Sensorversorgung.
+
+**Betroffene Dateien und Hardware:** Ein lokaler Installer baut den gepinnten
+Linux-Stable-CH341-Treiber gegen vorhandene Jetson-Header. Er bereitet einen
+VID/PID-plus-Steckplatz-Alias, eine nur fuer HWT geltende brltty-Ausnahme sowie
+einen ModemManager-Ausschluss vor. Fremde Systemdateien werden nicht ersetzt;
+Rueckfall verschiebt nur manifestgebundene eigene Dateien. Der vorhandene
+VL53-CH341A-I2C-Treiber bleibt unveraendert. Motor-/LiDAR-USB-Wiederherstellung
+ist getrennte Arbeit, kein Rebind in diesem Installer. Serielle Abfragen
+bekommen eine Gesamtfrist statt eines neuen Timeouts je Fragment; fehlerhafte
+Antwortkoepfe werden frueh verworfen und blockierendes `tcdrain` vermieden.
+Motoralias und bekannte FTDI-Seriennummer werden bei jedem Oeffnen gesperrt.
+Der begrenzte Messlauf lauscht zuerst ohne Senden; nur mit `--modbus` und ohne
+unaufgeforderte Daten fragt er FC03 ab. Rohdatenerfolg ist keine Fusionsfreigabe.
+
+**Teststatus:** Kernelmodul gebaut, `vermagic=5.15.199-tegra`, USB-Kennung
+`1a86:5512` nicht in dessen Aliasliste. Beide ROS-Pakete mit vorhandener
+Produktivinstallation als Build-Unterbau gebaut; diese wurde nicht veraendert.
+55 pytest-Tests bestanden, einschliesslich Fragmenten/Gesamtfrist, Motor-
+Verwechslungsschutz, Statistik, geschuetzten Installationszielen und
+wiederherstellbarem Rueckfall (letztere synthetisch, ohne echte Root-Aktionen).
+ROS-Standalone mit fehlendem Alias: acht Statusnachrichten, null IMU-Nachrichten,
+`ready=false`, `raw_data_ready=false`, `fusion_ready=false`, sauberer Abschluss
+mit einem SIGINT an den Launch-Elternprozess. Der Test verwendete nur fuer
+diesen Prozess eine lokale DDS-Domain/Localhost-Peer, keine Netzdateiaenderung.
+Der erste Startversuch deckte einen falschen Overlay-Pfad im neuen Wrapper auf;
+dieser wurde korrigiert und der Start wiederholt bestanden.
+
+**Offene Risiken:** Systeminstallation steht wegen lokaler sudo-Authentifizierung
+aus; noch keine realen HWT-Rohdaten. Versorgung/RS485-Typenschild, Gyro- und
+Beschleunigungsskala jeweils separat, Achsen, Montage-TF, Langzeitdrift,
+Zeitverhalten und Kovarianzen sind weiterhin offen. Der Kernelmodul-Installer
+ist absichtlich versionsgebunden, kein DKMS-Autoupdate. Die brltty-Regelkopie
+muss nach Paketupdates erneut gegen die Originalregeln abgeglichen werden.
+Einmaliges Stoppen des systemweiten brltty-USB-Dienstes beim Installieren kann
+ein darueber bedientes Braillegeraet voruebergehend unterbrechen; der separate
+Desktop-Brailleprozess bleibt bestehen.
+
+**Rueckfall:** Vor Systeminstallation genuegt es, diesen Worktree nicht zu
+starten. Danach dokumentierter `hwt601_usb_setup.py rollback`; geaenderte
+fremde Regeln werden nicht angefasst. Keine Produktiv-Launchdatei wurde
+umgestellt, keine Systemregel installiert, kein Modul geladen, keine Aktoren
+oder Sensor-Konfigurationsregister angesprochen. Ablauf und exakte Befehle:
+`docs/HWT601_USB_INBETRIEBNAHME.md`.
+
+---
+
 ## 2026-08-30 — HWT601 als getrennte read-only Chassis-IMU vorbereitet
 
 **Entscheidung:** Fuer den bestellten preisguenstigen Sensor wird die Variante

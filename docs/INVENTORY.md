@@ -16,6 +16,11 @@ read-only Modbus-Treiber, eigener USB-RS485-Pfad, Diagnose und motorloser
 Stufenstart vorbereitet; Hardware, Montage-TF, Skala und Kovarianzen noch nicht
 real abgenommen
 
+**HWT601-USB-Delta:** 08.09.2026 · `fix/hwt601-usb-commissioning`;
+CH340 `1a86:7523` physisch erkannt. Fehlender CH341-Kerneltreiber gebaut,
+gezielte USB-Regeln/Installer/Rueckfall und Messwerkzeug getestet vorbereitet.
+Systeminstallation braucht noch lokales sudo; keine realen IMU-Daten abgenommen.
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
@@ -111,6 +116,8 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/encoder_position_pruefen.py` | strikt read-only: Position, Wortfolge und Counts/Umdrehung bestimmen |
 | `docs/82-ftdi-latency.rules` | udev-Regel, senkt FTDI-Latenz 16 ms → 1 ms |
 | `tools/sensorfusion/hwt601_usb_pruefen.py` | liest USB-Merkmale und erzeugt nur bei eindeutiger Seriennummer einen udev-Vorschlag |
+| `tools/sensorfusion/hwt601_usb_setup.py` | Jetson-CH340-Treiber vorbereiten/installieren, gezielte udev-Ausnahme, recoverbarer Rueckfall |
+| `tools/sensorfusion/hwt601_messen.py` | begrenzter, ROS-/motorloser HWT-Rohdatentest; default nur lauschen |
 | `docs/83-hwt601.rules.example` | nicht installierbare Vorlage fuer den getrennten HWT-USB-RS485-Alias |
 
 ---
@@ -122,7 +129,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
-| HWT601-AGV-485 | geplant: `/dev/ttyUSB_HWT601` | eigener isolierter USB-RS485-Adapter; Hardware noch nicht geliefert |
+| HWT601 (Nutzerangabe) | vorbereitet: `/dev/ttyUSB_HWT601` | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Treiberinstallation/Antwort/Versorgung/Isolation noch offen |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04

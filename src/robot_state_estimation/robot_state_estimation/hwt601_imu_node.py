@@ -158,6 +158,8 @@ class Hwt601ImuNode(Node):
         if self._transport is not None:
             self._transport.close()
         self._transport = None
+        self._sample_times.clear()
+        self._last_received_at = None
 
     def _record_error(self, error: Exception) -> None:
         self._rejected += 1
@@ -239,6 +241,8 @@ class Hwt601ImuNode(Node):
         rate_hz = self._observed_rate_hz()
         payload = {
             'ready': ready,
+            'raw_data_ready': ready,
+            'fusion_ready': False,
             'state': state,
             'reason': reason,
             'actuator_output': False,

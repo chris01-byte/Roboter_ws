@@ -1,9 +1,13 @@
 # HWT601-AGV-485: Einbau und gestufte Inbetriebnahme
 
-**Stand:** 30.08.2026
+**Stand:** 08.09.2026
 
-**Softwarestatus:** vorbereitet und synthetisch getestet, echte Hardware noch
-nicht vorhanden. Der HWT bleibt bis zur abgeschlossenen Abnahme eine
+**Softwarestatus:** vorbereitet und synthetisch getestet. Der Nutzer hat den
+HWT601 montiert; sein CH340-USB-Adapter ist sichtbar, aber Kernel-Treiber und
+gezielte udev-Korrektur sind noch systemweit zu installieren. Konkreter
+Befund, Installationsbefehl und Rueckfall stehen in
+[HWT601_USB_INBETRIEBNAHME.md](HWT601_USB_INBETRIEBNAHME.md).
+Der HWT bleibt bis zur abgeschlossenen Abnahme eine
 Beobachtungsquelle und ist in keinem Produktionsstart aktiv.
 
 Diese Vorbereitung gilt fuer die **RS485-Variante HWT601-AGV-485**. Vor dem
@@ -41,8 +45,11 @@ Die veröffentlichte Kabelfarbbelegung lautet:
 | Gelb | RS485 A |
 | Gruen | RS485 B |
 
-Vorgesehen ist ein **eigener galvanisch getrennter USB-RS485-Adapter** mit
-eindeutiger Seriennummer. Der HWT darf weder elektrisch noch softwareseitig
+Empfohlen ist ein **eigener galvanisch getrennter USB-RS485-Adapter** mit
+eindeutiger Seriennummer. Der jetzt angeschlossene CH340 hat keine individuelle
+Seriennummer; er wird deshalb an seinen vermessenen USB-Steckplatz gebunden.
+Eine galvanische Trennung des gelieferten Adapters ist nicht bestaetigt.
+Der HWT darf weder elektrisch noch softwareseitig
 am Motorbus `/dev/ttyUSB_BASE` haengen. Die Versorgung wird passend zum
 Sensortyp abgesichert; A/B oder Versorgung werden nur spannungsfrei
 umgeklemmt. Schirmung, Signalbezug und Abschlusswiderstand richten sich nach
@@ -195,7 +202,7 @@ Freigabe, freien Weg und erreichbaren Not-Aus.
 - Herstellerreferenz fuer das High-Precision-Modbus-Protokoll:
   <https://github.com/WITMOTION/WitHighModbus_HWT9073485>
 
-Noch offen bis zur Lieferung: exakte Bestellvariante, Typenschildspannung,
-USB-Adapterkennung, reale Modbus-Antwort, Skala, Achsorientierung,
+Noch offen bis zur Abnahme: RS485-Suffix/Typenschildspannung,
+reale Modbus-Antwort, Skala, Achsorientierung,
 Montagekoordinaten, Rauschen, Temperaturdrift und Kovarianzen. Keine dieser
 Groessen wird vorab als bestanden behandelt.

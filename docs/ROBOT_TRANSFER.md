@@ -1,5 +1,40 @@
 # Übertragung auf den realen Roboter
 
+## HWT601: USB-Pfad fertig vorbereitet, Root-Installation offen (08.09.2026)
+
+**Branch:** `fix/hwt601-usb-commissioning`, Basis `a326ab0`.
+**Worktree:** `/home/p/roboter_worktrees/hwt601-usb-commissioning`.
+Die uncommitteten Aenderungen in `/home/p/roboter_ws` sind unveraendert.
+
+Gemessen: angeschlossener CH340 `1a86:7523`, keine Seriennummer, fester
+USB-Pfad `1-2.4.4.4`; fehlender serieller CH341-Kerneltreiber und falsche
+brltty-Zuordnung verhindern aktuell den IMU-TTY. Der Nutzer nennt HWT601;
+eine echte Sensorantwort/Skala/Montage ist noch nicht abgenommen.
+
+Vorbereitet und getestet: passendes Kernelmodul, pruefsummengebundener
+Installer mit Rueckfall, Alias am exakten Steckplatz, gezielte brltty-/ModemManager-
+Ausnahme, begrenzter Rohdaten-Messlauf und separater ROS-Start ohne OAK,
+Basisprozess, EKF oder TF. 55 Tests bestanden, beide ROS-Pakete gebaut.
+Standalone-Start mit fehlendem TTY bestaetigte acht Statusnachrichten mit
+`ready=false`, `fusion_ready=false`, null erfundene IMU-Nachrichten und
+sauberes Ende. Keine Aktoren aktiviert und keine Systemdateien installiert.
+
+Es fehlt einmal die lokale Administratorauthentifizierung:
+
+```bash
+sudo python3 /home/p/roboter_worktrees/hwt601-usb-commissioning/tools/sensorfusion/hwt601_usb_setup.py install
+```
+
+Passwort ausschliesslich im lokalen Terminal eingeben. Zuvor Motorversorgung
+ausschalten, Roboter sichern. Installer stoppt einmal `brltty-udev.service`,
+nicht den Desktop-Brailleprozess, und bindet weder Motor noch LiDAR neu.
+Kein globales Deaktivieren von Braille-Diensten, kein Aendern des VL53-I2C-
+Treibers. Modul ist kernelgebunden; brltty-Regelkopie nach Updates pruefen.
+Rohdatenstart, Messfolge, Hardwarewirkung, Wartung und wiederherstellbarer
+Rueckfall sind vollstaendig in `docs/HWT601_USB_INBETRIEBNAHME.md` beschrieben.
+
+---
+
 ## HWT601-Chassis-IMU — Software vor Lieferung vorbereitet (30.08.2026)
 
 **Branch:** `feature/hwt601-integration`, Basis `2750ad6`
