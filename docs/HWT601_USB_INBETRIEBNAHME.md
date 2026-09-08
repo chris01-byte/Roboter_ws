@@ -8,6 +8,12 @@ Erkundungsaenderungen bleibt unveraendert. **Keine Fahrfreigabe.**
 
 ## Gemessener Befund
 
+**Nachtrag nach lokaler Installation:** USB-Pfad und reale IMU-Rohdaten
+sind inzwischen geprueft (60 s, 6.000 Antworten ohne Fehler); auch der
+ROS-Start funktioniert. Montage/Bias/Gyroskala bleiben offen. Details:
+[HWT601_ERSTMESSUNG.md](HWT601_ERSTMESSUNG.md).
+Die folgende Befundliste beschreibt den Zustand **vor** der Installation.
+
 - Nutzer meldet HWT601 montiert und per USB angeschlossen. Der genannte
   [Herstellerartikel](https://witmotion-sensor.com/products/hwt601-3-axis-imu-inertial-navigation-ros-robot-module-mems-tilt-angle-sensor-built-in-dof-crystal-gyroscope)
   bietet HWT601-AGV-485, WT601-AGV-485 und USB-485-Adapter an. USB-Erkennung

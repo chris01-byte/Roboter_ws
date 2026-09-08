@@ -1,5 +1,21 @@
 # Übertragung auf den realen Roboter
 
+## HWT601: USB installiert, reale Rohdaten erfolgreich geprueft (08.09.2026)
+
+Der Nutzer hat die Installation aus dem folgenden historischen Abschnitt
+ausgefuehrt. Alias `/dev/ttyUSB_HWT601`, CH341-Treiber und Steckplatzbindung
+sind bestaetigt. Der 60-s-Test lieferte 6.000 gueltige Antworten bei rund
+100 Hz, null Fehler, maximal 13,85 ms Luecke. Beschleunigungsnorm 9,88344 m/s²,
+unkorrigiertes Z-Gyrointegral 0,38760 Grad in dieser Minute. Auch X/Y zeigen
+Bias; noch keine Langzeit- oder Fusionsabnahme.
+
+ROS-Rohdatenstart ebenfalls bestanden (822 Nachrichten); alle Testprozesse
+sauber beendet. Motor/OAK/EKF und Sensorkonfiguration unangetastet. Montage-
+TF, Gyroskala, Drehrichtung und Bias bleiben offen. Details und alle Achsenwerte:
+`docs/HWT601_ERSTMESSUNG.md`. Keine erneute Installation erforderlich.
+
+---
+
 ## HWT601: USB-Pfad fertig vorbereitet, Root-Installation offen (08.09.2026)
 
 **Branch:** `fix/hwt601-usb-commissioning`, Basis `a326ab0`.

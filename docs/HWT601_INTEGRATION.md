@@ -2,7 +2,11 @@
 
 **Stand:** 08.09.2026
 
-**Softwarestatus:** vorbereitet und synthetisch getestet. Der Nutzer hat den
+**Nachtrag:** USB-Installation inzwischen vom Nutzer ausgefuehrt. Erster
+realer 60-s-Rohdatenlauf und ROS-Ausgabe bestanden; keine Fusionsfreigabe.
+Messwerte und verbleibende Pruefungen: `HWT601_ERSTMESSUNG.md`.
+
+**Vorheriger Softwarestatus:** vorbereitet und synthetisch getestet. Der Nutzer hat den
 HWT601 montiert; sein CH340-USB-Adapter ist sichtbar, aber Kernel-Treiber und
 gezielte udev-Korrektur sind noch systemweit zu installieren. Konkreter
 Befund, Installationsbefehl und Rueckfall stehen in

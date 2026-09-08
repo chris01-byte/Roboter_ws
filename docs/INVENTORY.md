@@ -19,7 +19,9 @@ real abgenommen
 **HWT601-USB-Delta:** 08.09.2026 · `fix/hwt601-usb-commissioning`;
 CH340 `1a86:7523` physisch erkannt. Fehlender CH341-Kerneltreiber gebaut,
 gezielte USB-Regeln/Installer/Rueckfall und Messwerkzeug getestet vorbereitet.
-Systeminstallation braucht noch lokales sudo; keine realen IMU-Daten abgenommen.
+Systeminstallation inzwischen vom Nutzer ausgefuehrt. 60-s-Rohdatenlauf:
+6.000 Antworten ohne Fehler bei rund 100 Hz; ROS-Ausgabe bestanden.
+Montage-TF, Gyroskala, Bias/Langzeitverhalten und Fusionsfreigabe noch offen.
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -129,7 +131,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
-| HWT601 (Nutzerangabe) | vorbereitet: `/dev/ttyUSB_HWT601` | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Treiberinstallation/Antwort/Versorgung/Isolation noch offen |
+| HWT601 (Nutzerangabe) | `/dev/ttyUSB_HWT601` → ttyUSB0 | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Rohdaten/ROS geprueft; Montage, Gyroskala, Langzeitverhalten/Isolation offen |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04

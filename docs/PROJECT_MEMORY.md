@@ -17,6 +17,42 @@ Rückfallweg:
 
 ---
 
+## 2026-09-08 — HWT601 liefert erstmals reale Rohdaten und ROS-Nachrichten
+
+**Entscheidung:** Nach der vom Nutzer lokal ausgefuehrten USB-Installation
+wird der HWT als funktionsfaehige Rohdatenquelle bestaetigt, noch nicht als
+freigegebene Fusionsquelle. Keine Skalen-/Bias-/TF-Aenderung aus einem kurzen
+Stillstandslauf ableiten.
+
+**Grund / beobachtete Evidenz:** Alias zeigt auf den vermessenen CH340-Port,
+Kernel `ch341` aktiv, brltty-Systemdienst inaktiv. Nach passivem Lauschen ohne
+Bytes antwortet der Sensor auf FC03 bei 115200 Baud/Adresse 80. Im
+60-s-Lauf: 6.000 Antworten, null verworfen, 99,99988 Hz, groesste Luecke
+13,85 ms, Beschleunigungsnorm im Mittel 9,88344 m/s². Rohes Z-Gyrointegral
+0,38760 Grad; X/Y-Integrale 4,9651/23,0669 Grad zeigen ebenfalls Nullpunkt-
+abweichungen. Ohne Biasabzug ist dies keine EKF-/Kartendriftmessung.
+
+**Betroffene Dateien und Hardware:** Nur dokumentierte Sensorlese- und
+ROS-Pruefung, keine neuen Laufzeitaenderungen. Vollstaendige Werte und
+Messbedingungen: `docs/HWT601_ERSTMESSUNG.md`.
+
+**Teststatus:** Kurzer 5-s-Vorlauf und 60-s-Rohdatentest bestanden. ROS-Test
+empfing 822 IMU-Nachrichten mit rund 100 Hz, korrektem physischen Frame,
+unbekannter Orientierung, endlichen Werten und streng steigenden Zeitstempeln.
+Status `raw_data_ready=true`, `fusion_ready=false`, null Fehler. Sauberer
+Abschluss, keine Motoren/OAK/Fusion gestartet, keine Konfigurationsregister
+geschrieben. Lokale DDS-Testumgebung ohne dauerhafte Netzaenderung.
+
+**Offene Risiken:** Montageachsen/Koordinaten, Gyroskala und Drehrichtung,
+Bias-/Langzeit-/Kaltstartverhalten und USB-Neustartfestigkeit noch offen.
+Beschleunigungsdaten erlauben keine Bestimmung der Ausrichtung zur Front.
+
+**Rueckfall:** Keine Produktivstarts umgestellt; Leser sind beendet. Der
+bereits dokumentierte USB-Installer-Rueckfall bleibt verfuegbar. Fremde
+Arbeitskopie und Motor-/LiDAR-Pfade bleiben unangetastet.
+
+---
+
 ## 2026-09-08 — HWT601 angeschlossen, USB-Kernelpfad getrennt vorbereitet
 
 **Entscheidung:** Die bestehende HWT-Vorbereitung `a326ab0` wird auf
