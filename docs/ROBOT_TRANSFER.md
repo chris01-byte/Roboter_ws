@@ -1,5 +1,19 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Schritt 2: manueller Drehtest vorbereitet, noch nicht ausgefuehrt
+
+`feature/hwt601-turn-test` ab `3205e9a`: Anleitung in
+`docs/HWT601_DREHTEST.md`, Werkzeug `tools/sensorfusion/hwt601_drehtest.py`.
+Standardaufruf prueft nur USB-Metadaten, ohne den Port zu oeffnen.
+Zwei externe, rechtwinklige Richtungsmarken fuer +90/-90 Grad; fester
+Anfangsbias, keine adaptive Korrektur und keine Live-Winkelvorgabe.
+91 Softwaretests bestanden, realer Drehtest ausdruecklich noch offen.
+Nur bei bestaetigt ausgeschaltetem Motorstrom und leichtgaengiger, sicherer
+manueller Drehbarkeit starten; keine Bewegung oder Aktorfreigabe erfolgt.
+Produktivprofile/TFs unveraendert. Rueckfall: Test nicht starten/beenden.
+
+---
+
 ## HWT-Stillstand/Bias: zehn Minuten bestanden (08.09.2026)
 
 `feature/hwt601-stationary-bias`: vorhandenes Biasprofil unveraendert mit

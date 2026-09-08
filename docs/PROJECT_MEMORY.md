@@ -17,6 +17,38 @@ Rückfallweg:
 
 ---
 
+## 2026-09-08 — Schritt 2 als unabhaengiger manueller Drehtest vorbereitet
+
+**Entscheidung:** Auf Nutzerwunsch nur Vorbereitung, keine reale Drehung.
+Eigener Branch `feature/hwt601-turn-test` ab `3205e9a`. Zwei getrennte
+Messungen +90 Grad links / -90 Grad rechts gegen rechtwinklige Bodenmarken.
+Anfangsbias wird im Stillstand bestimmt und fuer die Drehung eingefroren;
+keine adaptive Korrektur und keine Winkelanzeige waehrend des Ausrichtens.
+
+**Grund / Evidenz:** Schritt 1 belegt Stillstandsverhalten, aber weder
+Gyroskala noch Drehrichtung. Eine externe Winkelreferenz vermeidet einen
+zirkulaeren Test. Exakt gleicher Drehpunkt ist fuer den Gyrotest nicht noetig.
+
+**Betroffene Dateien/Hardware:** Neues eigenstaendiges Messskript mit lokaler
+CSV/JSON-Ausgabe und Anleitung `docs/HWT601_DREHTEST.md`. Standardaufruf
+prueft nur USB-Metadaten; echter Lauf verlangt interaktives Terminal und
+ausdrueckliche Angaben zu Motorstrom aus/Stillstand. Nur HWT-FC03-Lesezugriffe,
+keine Registerkonfiguration, ROS-, OAK- oder Motorstarts.
+
+**Teststatus:** 91 Softwaretests bestanden, einschliesslich vollstaendigem
+synthetischem Messablauf, Vorzeichen-/Skalenfehlern und Datenluecken.
+USB-Metadatenvorpruefung bestanden, kein echter Messport geoeffnet.
+
+**Offene Risiken:** Reale Drehung noch offen; +/-5 Grad ist nur eine grobe
+Plausibilitaetsgrenze. Motorstromfreiheit und sichere manuelle Drehbarkeit
+muessen vor Ort bestaetigt werden. Nicht gegen Getriebe/Bremse/Haltemoment
+drehen. Keine Fusions- oder Fahrfreigabe.
+
+**Rueckfall:** Werkzeug nicht starten/beenden; Produktionswerte unveraendert.
+Messabbruch stoppt keine physische Bewegung.
+
+---
+
 ## 2026-09-08 — HWT-Gyrobias ueber volle zehn Minuten motorlos bestanden
 
 **Entscheidung:** Auf ausdruecklichen Nutzerwunsch Schritt 1 ausgefuehrt:

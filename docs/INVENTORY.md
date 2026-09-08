@@ -36,6 +36,11 @@ zehn Minuten echte IMU mit bestehender Biasnachfuehrung bestanden;
 maximaler absoluter korrigierter Z-Winkel 0,03985 Grad. Nur abgesprochener
 Stillstand des bereits eingeschalteten Sensors, keine Bewegungsfreigabe.
 
+**HWT-Drehtestdelta:** `feature/hwt601-turn-test`, 08.09.2026:
+Schritt 2 gegen externe +/-90-Grad-Bodenreferenz vorbereitet, nicht real
+ausgefuehrt. Fester Anfangsbias, rein lesender Sensorzugriff, keine Aktoren.
+91 Softwaretests bestanden; Anleitung `docs/HWT601_DREHTEST.md`.
+
 ---
 
 ## 1. Umgebung
