@@ -1,5 +1,18 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Montagereferenz separat vorbereitet (08.09.2026)
+
+`feature/hwt601-mount-frame`: Nutzerachsen X rechts/Y vorne/Z oben ergeben
+Yaw -90 Grad. Nominale Fussplattenreferenz relativ zum bestehenden
+`base_link`: x=0,084, y=0, z=-0,056 m. Unsicherheit der 84 mm nicht bekannt.
+Eigener opt-in Launch `robot_state_estimation hwt601_mount.launch.py`,
+ausschliesslich `base_link -> hwt601_mount`, ohne Hardware-/Fusionsstart.
+Kein erfundener TF zum unbekannten Chipursprung `hwt601_link`.
+Paket gebaut, 66 Tests bestanden; Details und Rueckfall: `HWT601_MONTAGE.md`.
+Vorhandene Produktivstarts, Basis-, Rad-, OAK- und VL53-Frames unveraendert.
+
+---
+
 ## HWT601: USB installiert, reale Rohdaten erfolgreich geprueft (08.09.2026)
 
 Der Nutzer hat die Installation aus dem folgenden historischen Abschnitt

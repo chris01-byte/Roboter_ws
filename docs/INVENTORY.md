@@ -23,6 +23,11 @@ Systeminstallation inzwischen vom Nutzer ausgefuehrt. 60-s-Rohdatenlauf:
 6.000 Antworten ohne Fehler bei rund 100 Hz; ROS-Ausgabe bestanden.
 Montage-TF, Gyroskala, Bias/Langzeitverhalten und Fusionsfreigabe noch offen.
 
+**HWT-Montagereferenz:** `feature/hwt601-mount-frame`; Nutzerangaben als
+separater nominaler Fussplattenframe `hwt601_mount` hinterlegt und motorlos
+per TF geprueft. -90 Grad Yaw, x=0,084/y=0/z=-0,056 m zu bestehendem
+`base_link`. Kein erfundener Chipursprung; keine automatische Fusionsfreigabe.
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

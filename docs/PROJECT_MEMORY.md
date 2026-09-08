@@ -17,6 +17,41 @@ Rückfallweg:
 
 ---
 
+## 2026-09-08 — HWT-Montagereferenz getrennt vom unbekannten Chipursprung
+
+**Entscheidung:** Eigener Branch `feature/hwt601-mount-frame` ab `a31b816`.
+Die Nutzerangaben (X rechts/Y vorwaerts/Z oben, etwa 84 mm vor Antriebsachse,
+mittig, Fussplatte 34 mm ueber Boden) werden als nominale Montagereferenz
+`hwt601_mount` mit Yaw -90 Grad hinterlegt, nicht als fertiger IMU-Messpunkt.
+
+**Grund / Evidenz:** Das bestehende Modell und OAK/VL53 rechnen mit
+`base_link` 90 mm ueber Boden. Daher Fussplatten-z=-56 mm, nicht +34 mm.
+Der alte URDF-Kommentar zur Antriebsachse ist vertikal ungenau; Radmittelpunkte
+sind im Modell 62,5 mm hoch. Keine Aenderung dieses bestehenden Bezugs.
+Hersteller-PDF vollstaendig gelesen, Masszeichnung Seite 8 visuell geprueft:
+23 mm Gehaeusehoehe, aber keine eindeutige interne Messpunktkoordinate.
+Halbe Gehaeusehoehe wird nicht zum scheinbar gemessenen Chipversatz erklaert.
+
+**Betroffene Dateien und Hardware:** Neues Montageprofil, reiner TF-Launch,
+Validierungsfunktion/Tests und Dokumentation. Kein vorhandener Start wird
+erweitert. Kein `base_link -> hwt601_link`, kein Motor, keine Kamera, kein EKF.
+Unbekannte Positionsunsicherheit und Chipversatz explizit null.
+
+**Teststatus:** Paket gebaut; 66 Tests bestanden, darunter Rotation aller
+Achsen, Rechtshaendigkeit und Abwehr falscher Frames/Einheiten. Separater
+ROS-TF-Test prueft nominale Translation und (1,2,3)->(2,-1,3); Rohdatenframe
+bleibt absichtlich unverbunden. Keine Hardware oder Kalibrierwerte veraendert.
+
+**Offene Risiken:** Physische Messunsicherheit nicht quantifiziert; voller
+Sensor-TF, Gyroskala/Drehrichtung, Bias und Langzeitverhalten nicht freigegeben.
+Chipversatz ist fuer reine Winkelgeschwindigkeit kein mathematischer Blocker,
+wohl aber fuer einen als exakt ausgegebenen Messpunkt/Hebelarmkorrekturen.
+
+**Rueckfall:** Montage-Launch beenden/nicht starten. Produktivstarts und
+alte TFs bleiben unberuehrt. Details: `docs/HWT601_MONTAGE.md`.
+
+---
+
 ## 2026-09-08 — HWT601 liefert erstmals reale Rohdaten und ROS-Nachrichten
 
 **Entscheidung:** Nach der vom Nutzer lokal ausgefuehrten USB-Installation
