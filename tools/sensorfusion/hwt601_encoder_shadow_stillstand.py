@@ -1053,6 +1053,15 @@ def _run(duration_s: float, output: Path) -> int:
             self.measurement_start_imu_index: int | None = None
             self.measurement_end_imu_index: int | None = None
             self.measurement_start_received_s: float | None = None
+            self.maximum_observed_stamp_gap_s = {
+                'imu': 0.0,
+                'encoder': 0.0,
+            }
+            self.maximum_observed_receive_gap_s = {
+                'imu': 0.0,
+                'encoder': 0.0,
+            }
+            self.gap_fault_detail: dict[str, object] | None = None
             self.graph_nodes: list[tuple[str, str]] = []
             self.graph_publishers: dict[str, list[str]] = {}
             self.graph_endpoint_ids: dict[str, list[str]] = {}
@@ -1188,10 +1197,21 @@ def _run(duration_s: float, output: Path) -> int:
                 return
             if self.imu_samples:
                 gap = stamp_s - self.imu_samples[-1].stamp_s
+                receive_gap = received_at - self.imu_received_monotonic[-1]
+                self.maximum_observed_stamp_gap_s['imu'] = max(
+                    self.maximum_observed_stamp_gap_s['imu'], gap)
+                self.maximum_observed_receive_gap_s['imu'] = max(
+                    self.maximum_observed_receive_gap_s['imu'], receive_gap)
                 if gap <= 0.0:
                     self.latch('imu_zeitstempel_nicht_monoton')
                     return
                 if gap > MAX_IMU_GAP_S:
+                    self.gap_fault_detail = {
+                        'source': 'imu',
+                        'stamp_gap_s': gap,
+                        'receive_gap_s': receive_gap,
+                        'maximum_allowed_gap_s': MAX_IMU_GAP_S,
+                    }
                     self.latch('imu_datenluecke')
                     return
             sample = ImuYawSample(stamp_s, float(message.angular_velocity.z))
@@ -1241,10 +1261,23 @@ def _run(duration_s: float, output: Path) -> int:
                 return
             if self.wheel_samples:
                 gap = stamp_s - self.wheel_samples[-1].stamp_s
+                receive_gap = received_at - self.wheel_received_monotonic[-1]
+                self.maximum_observed_stamp_gap_s['encoder'] = max(
+                    self.maximum_observed_stamp_gap_s['encoder'], gap)
+                self.maximum_observed_receive_gap_s['encoder'] = max(
+                    self.maximum_observed_receive_gap_s['encoder'],
+                    receive_gap,
+                )
                 if gap <= 0.0:
                     self.latch('encoder_zeitstempel_nicht_monoton')
                     return
                 if gap > MAX_ENCODER_GAP_S:
+                    self.gap_fault_detail = {
+                        'source': 'encoder',
+                        'stamp_gap_s': gap,
+                        'receive_gap_s': receive_gap,
+                        'maximum_allowed_gap_s': MAX_ENCODER_GAP_S,
+                    }
                     self.latch('encoder_datenluecke')
                     return
             sample = WheelPoseSample(
@@ -1563,6 +1596,13 @@ def _run(duration_s: float, output: Path) -> int:
                 None if comparison is None else comparison.duration_s),
             'duration_clock_skew_s': duration_clock_skew_s,
             'maximum_allowed_clock_skew_s': MAX_DURATION_CLOCK_SKEW_S,
+        },
+        'stream_timing': {
+            'maximum_observed_stamp_gap_s': (
+                node.maximum_observed_stamp_gap_s),
+            'maximum_observed_receive_gap_s': (
+                node.maximum_observed_receive_gap_s),
+            'gap_fault_detail': node.gap_fault_detail,
         },
         'status_continuity': {
             'valid': node.status_guard.fault_reason is None,
