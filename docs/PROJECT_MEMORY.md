@@ -62,6 +62,12 @@ freigegeben. Encoder-wz-Kovarianz, Motorvibration, Temperatur, Kaltstart,
 absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
 ist keine Kartenfreigabe.
 
+Der passive Stillstandsbeobachter erlaubt auf den lokalen ROS-Topics bis zu
+0,15 s Abstand, nachdem reale Wiederholungen 0,100152 bis 0,100314 s bei
+gleichzeitig null Quellen-Rejects zeigten. Die HWT- und Encoderquellen selbst
+bleiben unveraendert bei maximal 0,10 s; fuer Bewegung ist diese
+Transporttoleranz nicht freigegeben.
+
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
 Launch-Elternprozess einmal mit SIGINT beenden, beide Ports und Domain pruefen.

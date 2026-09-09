@@ -19,6 +19,10 @@ GID-Provenienz geprueft. Alle Statusquellen und die erste Graphpruefung muessen
 schon vor den ausgewaehlten Messproben vorliegen. Ein Erfolg verlangt
 zusaetzlich von jeder Quelle binnen zwei Sekunden nach der letzten
 ausgewerteten Messprobe einen neuen Status.
+Die Quellen verriegeln weiterhin bei mehr als 0,10 s internem Probenabstand;
+der passive Stillstandsbeobachter erlaubt nach real gemessenen, fehlerfreien
+Topic-Aussetzern bis 0,15 s ROS-Transportabstand. Das ist keine dynamische
+Freigabe.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

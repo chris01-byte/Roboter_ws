@@ -52,8 +52,9 @@ BASE_FRAME = 'base_link'
 IMU_Z_VARIANCE = 5.0e-7
 UNOBSERVED_VARIANCE = 1.0e6
 
-MAX_IMU_GAP_S = 0.10
-MAX_ENCODER_GAP_S = 0.10
+MAX_IMU_GAP_S = 0.15
+MAX_ENCODER_GAP_S = 0.15
+ENCODER_SOURCE_MAX_SAMPLE_GAP_S = 0.10
 MAX_PAIR_DURATION_S = 0.05
 MIN_IMU_RATE_HZ = 80.0
 MIN_ENCODER_RATE_HZ = 10.0
@@ -762,7 +763,7 @@ def validate_encoder_status(
         'rpm_scale': 1.0,
         'poll_rate_hz': 20.0,
         'max_pair_read_duration_s': MAX_PAIR_DURATION_S,
-        'max_sample_gap_s': MAX_ENCODER_GAP_S,
+        'max_sample_gap_s': ENCODER_SOURCE_MAX_SAMPLE_GAP_S,
     }
     for key, expected in exact.items():
         if status.get(key) != expected or (
