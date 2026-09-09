@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supervised single left turn. Default is passive preflight, never drive.
+"""Supervised single signed turn. Default is passive preflight, never drive.
 
 Requires separately started, isolated base driver. No launch/config writes.
 LiDAR raw-scan odometry is independent of IMU and wheels. Local JSONL only.
@@ -40,7 +40,10 @@ def stationary(state):
                for k in ('meas_v_mps', 'meas_w_radps'))
 
 
-def drive_decision(elapsed, lidar_deg, encoder_deg, displacement, imu_deg):
+def drive_decision(elapsed, lidar_deg, encoder_deg, displacement, imu_deg, direction=1):
+    if direction not in (-1, 1):
+        raise ValueError('Ungueltige Drehrichtung')
+    lidar_deg, encoder_deg = direction*lidar_deg, direction*encoder_deg
     values = (elapsed, lidar_deg, encoder_deg, displacement, imu_deg)
     if not all(math.isfinite(v) for v in values):
         raise ValueError('Nicht-endlicher Bewegungswert')
@@ -52,13 +55,16 @@ def drive_decision(elapsed, lidar_deg, encoder_deg, displacement, imu_deg):
         raise ValueError('Kein bestaetigter Drehfortschritt')
     if abs(lidar_deg - encoder_deg) > 12:
         raise ValueError('LiDAR und Encoder widersprechen sich')
-    return 0.0 if lidar_deg >= 88 else .10
+    return 0.0 if lidar_deg >= 88 else direction*.10
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--direction', choices=('left', 'right'), default='left')
     args = parser.parse_args()
+    direction = 1 if args.direction == 'left' else -1
+    direction_label = 'links' if direction == 1 else 'rechts'
     if args.execute and (os.environ.get('AMADEUS_FAHRFREIGABE') != 'JA'
                          or not sys.stdin.isatty()):
         parser.error('Echter Lauf braucht persoenliche Freigabe/TTY und AMADEUS_FAHRFREIGABE=JA')
@@ -82,6 +88,7 @@ def main():
     fixed = None
     publisher = None
     summary = {'complete': False, 'passed': False, 'execute': args.execute,
+               'direction': args.direction,
                'fusion_ready': False, 'reference': 'lidar_raw_scan_only',
                'collision_monitor': False, 'supervision_required': True}
 
@@ -162,7 +169,7 @@ def main():
             fixed=tuple(bias.result.bias_radps)
             summary['fixed_bias_radps_xyz']=fixed
             phase='armed'
-            print('BEREIT: s + Enter fuer EINE langsame Linksdrehung, q bricht ab. Noch keine Drehung.',flush=True)
+            print(f'BEREIT: s + Enter fuer EINE langsame Drehung {direction_label}, q bricht ab. Noch keine Drehung.',flush=True)
             until=time.monotonic()+90
             while True:
                 zero(); rclpy.spin_once(node,timeout_sec=.01); ready(True)
@@ -174,14 +181,14 @@ def main():
             start_lidar=data['lidar'][1].copy(); start_base=data['base'][1].copy()
             phase='turning'; start=time.monotonic(); next_command=start
             integral.add(data['imu'][1]['stamp'],tuple(v-b for v,b in zip(data['imu'][1]['gyro'],fixed)))
-            print('DREHUNG STARTET: links, 0.10 rad/s, maximal 24 s.',flush=True)
+            print(f'DREHUNG STARTET: {direction_label}, {direction*.10:+.2f} rad/s, maximal 24 s.',flush=True)
             while rclpy.ok():
                 rclpy.spin_once(node,timeout_sec=.01); ready()
                 l=data['lidar'][1]; b=data['base'][1]
                 ld=math.degrees(angle_delta(l['yaw'],start_lidar['yaw']))
                 ed=math.degrees(angle_delta(b['yaw'],start_base['yaw']))
                 displacement=math.hypot(b['x']-start_base['x'],b['y']-start_base['y'])
-                command=drive_decision(time.monotonic()-start,ld,ed,displacement,integral.value[2])
+                command=drive_decision(time.monotonic()-start,ld,ed,displacement,integral.value[2],direction)
                 if command==0:break
                 if node.count_publishers(COMMAND)!=1 or node.count_subscribers(COMMAND)!=1:
                     raise ValueError('Befehlskanal nicht mehr exklusiv')
@@ -199,7 +206,7 @@ def main():
             summary.update(complete=True, lidar_deg=lidar, encoder_deg=encoder,
                            imu_deg_xyz=integral.value, peak_imu_deg_xyz=integral.peak,
                            imu_minus_lidar_deg=integral.value[2]-lidar,
-                           passed=(85<=lidar<=95 and abs(integral.value[2]-lidar)<=5))
+                           passed=(85<=direction*lidar<=95 and abs(integral.value[2]-lidar)<=5))
     except (Exception,KeyboardInterrupt) as exc:
         summary['error']=f'{type(exc).__name__}: {exc}'
     finally:

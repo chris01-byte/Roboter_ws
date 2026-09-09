@@ -1,5 +1,43 @@
 # HWT601: erste motorische Linksdrehung, 09.09.2026
 
+## Nachtrag: freigegebene Gegendrehung rechts bestanden
+
+Auf ausdruecklichen Nutzerwunsch eine Rechtsdrehung mit unveraenderten
+Geschwindigkeits-/Zeit-/Feedbackgrenzen ausgefuehrt. Eigener Branch
+`feature/hwt601-right-turn-test` ab `ad77217`; Werkzeug erhaelt
+`--direction right` (Standard bleibt links). Alle Richtungspruefungen werden
+mit dem Sollvorzeichen normiert, Messwerte bleiben vorzeichenbehaftet.
+
+105 Softwaretests bestanden, inklusive Rechtsstopp, falscher Richtung und
+Grenzverletzungen. Reales motorloses Rechtskommando -0,10 rad/s mit
+anschliessendem Watchdog-Stopp bestanden. Danach echter passiver Preflight,
+neue Anfangskalibrierung mit Radruhe und separate Startankuendigung.
+
+| Quelle | Rechtswinkel |
+|---|---:|
+| HWT601 mit festem Anfangsbias | -90,57797 Grad |
+| Unabhaengiger LiDAR | -91,25000 Grad |
+| Encoder | -89,80342 Grad |
+
+IMU minus LiDAR +0,67203 Grad. Stillstand bestaetigt; beide groben
+Vorzeichen-/Skalenchecks bestanden, keine weitere Bewegung ausgefuehrt.
+Die Summe der beiden IMU-Winkel ist +0,35434 Grad. Sie ist nur eine
+Plausibilitaetskontrolle: getrennte Biasbestimmung/Referenzinitialisierung,
+diskrete LiDAR-Suche und keine durchgehende globale Rueckkehrmessung.
+Die exakte urspruengliche Bodenpose ist damit nicht bewiesen.
+
+1.981 IMU-Proben mit Startanker, 19,80035 s inklusive Endruhe,
+99,99824 Hz, maximal 18,664 ms Luecke. Alle 990 Encoderzustandsmeldungen
+gesund und alle LiDAR-Statusmeldungen im Messfenster gueltig. Maximale
+gemeldete lineare Geschwindigkeit 0,00265 m/s. Unabhaengige NumPy-
+Nachrechnung aller IMU-Integrale: maximale Abweichung 1,5e-13 Grad.
+
+Lokale Daten: `/home/p/.local/share/amadeus/hwt601/powered-20260909-164111/`
+und Bag `right-scans-20260909-164100` im selben Elternverzeichnis.
+Alle Testprozesse nach bestaetigtem Stopp beendet; Motorversorgung nicht
+physisch abgeschaltet. Keine Produktions-/Kalibrierwerte geaendert.
+Wiederholbarkeit, Gesamtfusion und Kartenqualitaet bleiben offen.
+
 ## Ergebnis
 
 Nach ausdruecklicher Nutzerfreigabe fuer motorische Drehung und bestaetigtem

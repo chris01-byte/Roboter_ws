@@ -17,6 +17,28 @@ Rückfallweg:
 
 ---
 
+## 2026-09-09 — HWT-Gegendrehung rechts bestaetigt Vorzeichen/Skala
+
+**Entscheidung / Evidenz:** Explizit freigegebene Gegendrehung auf
+`feature/hwt601-right-turn-test` ab `ad77217`. Gleiche Grenzen, separate
+Biasbestimmung im gemessenen Stillstand: IMU -90,57797 Grad, unabhaengiger
+LiDAR -91,25000 Grad, Encoder -89,80342 Grad. Differenz IMU/LiDAR +0,67203
+Grad. Beide Richtungen grob plausibel; keine automatische Nachkalibrierung.
+
+**Teststatus:** 105 Tests, motorloses negatives ROS-Kommando mit Watchdog,
+passiver echter Preflight und eine Rechtsdrehung bestanden. Stillstand
+bestaetigt, Prozesse beendet. 1.981 IMU-Proben, 99,998 Hz, max. Luecke
+18,664 ms; unabhaengige Nachrechnung stimmt bis 1,5e-13 Grad ueberein.
+
+**Hardware / Risiken / Rueckfall:** Beide Motoren wie beim Linkstest,
+kein collision_monitor, persoenliche Aufsicht. Keine Produktionsparameter,
+Sensorregisterkonfiguration oder Karte geaendert. Werkzeug nicht erneut
+starten; keine physische Stromtrennung. Summe der IMU-Winkel +0,35434 Grad
+belegt keine exakte Rueckkehrpose. Wiederholung/Gesamtfusion weiter offen.
+Details: `docs/HWT601_MOTOR_DREHTEST.md`.
+
+---
+
 ## 2026-09-09 — Motorischer HWT-Linksvergleich gegen unabhaengigen LiDAR bestanden
 
 **Entscheidung / Evidenz:** Manuelle Drehung wegen blockierter Raeder verworfen.

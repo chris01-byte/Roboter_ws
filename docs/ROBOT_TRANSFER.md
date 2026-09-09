@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## HWT: Gegendrehung rechts ebenfalls bestanden (09.09.2026)
+
+`feature/hwt601-right-turn-test`: `--direction right` bei unveraenderten
+Grenzen. IMU -90,57797 Grad gegen LiDAR -91,25000 Grad, Differenz +0,67203
+Grad. 105 Softwaretests plus negativer motorloser Watchdog-Test bestanden.
+Neue Biasbestimmung und persoenlich freigegebener Realtest; Stillstand
+bestaetigt, Testprozesse beendet. Keine physische Motorstromabschaltung.
+Beide Richtungen grob plausibel, exakte Rueckkehrpose/Gesamtfusion offen.
+Details und lokale Daten: `docs/HWT601_MOTOR_DREHTEST.md`.
+
+---
+
 ## HWT: erste motorische Linksdrehung bestanden (09.09.2026)
 
 Nach persoenlicher Freigabe: IMU +90,93231 Grad, unabhaengiger LiDAR

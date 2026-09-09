@@ -46,6 +46,10 @@ erste freigegebene Linksdrehung: IMU 90,93231 Grad, unabhaengiger LiDAR
 91,25000 Grad; Stillstand bestaetigt, 104 Softwaretests. Gegenrichtung/Fusion
 offen. Hardwarewirkung und Rueckfall: `docs/HWT601_MOTOR_DREHTEST.md`.
 
+**HWT-Gegendrehung:** `feature/hwt601-right-turn-test`, 09.09.2026:
+rechts IMU -90,57797 Grad gegen LiDAR -91,25000 Grad bestanden, Stillstand
+bestaetigt. 105 Tests. Beide groben Richtungschecks erledigt; Fusion offen.
+
 ---
 
 ## 1. Umgebung
