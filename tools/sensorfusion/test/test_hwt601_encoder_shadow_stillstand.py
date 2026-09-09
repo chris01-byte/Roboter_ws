@@ -497,6 +497,8 @@ def test_observer_source_has_no_output_or_hardware_control_path():
     assert 'return _bracketing_indices(self.imu_stamps, stamp_s)' in source
     assert 'index = len(self.wheel_samples) - 1' in source
     assert 'ever-growing history on every' in source
+    assert 'node_stamps = [node.stamp_s for node in nodes]' in source
+    assert '_integral_at(nodes, node_stamps, prefix, sample.stamp_s)' in source
     assert "'gap_fault_detail': node.gap_fault_detail" in source
     assert "'stamp_gap_s': gap" in source
     assert "'receive_gap_s': receive_gap" in source

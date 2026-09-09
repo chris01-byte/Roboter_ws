@@ -73,7 +73,12 @@ und fuer jede Suche die gesamte IMU-Zeitliste neu aufgebaut. Der Beobachter
 haelt die Zeitliste jetzt separat vor und prueft nur den neuesten moeglichen
 Fensterendpunkt. HWT-Ausgang und Beobachter bleiben `RELIABLE` mit Tiefe 200,
 der Encoder mit Tiefe 10; die strenge 0,100-s-Abnahmegrenze gilt wieder fuer
-Quelle und Beobachter. Der volle Realtest steht noch aus.
+Quelle und Beobachter. Ein anschliessendes vollstaendiges 600-s-Messfenster
+blieb ohne Laufzeitfehler, deckte aber eine zweite quadratische Vollsuche in
+der Abschlussintegration auf: Fuer jeden Encoderwert wurde die gesamte
+IMU-Zeitstempelliste neu aufgebaut. Der Lauf wurde beendet, weil dadurch die
+Abschlussstatus veraltet waeren. Auch die Integration verwendet die einmalig
+aufgebaute Zeitstempelliste; der volle Wiederholungslauf steht noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

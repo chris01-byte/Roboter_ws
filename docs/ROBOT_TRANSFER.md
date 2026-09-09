@@ -27,8 +27,13 @@ fehlerfreie HWT-Quelle 1697 Werte publiziert, der Beobachter aber nur 1032
 gespeichert. Dessen wiederholte Vollsuche durch die wachsende Encoder- und
 IMU-Historie war die Ursache. Er haelt die IMU-Zeitliste jetzt separat vor und
 prueft nur den neuesten moeglichen Fensterendpunkt. Die strenge
-0,100-s-Abnahmegrenze gilt wieder fuer Quelle und Beobachter. Der volle
-Wiederholungslauf und jede dynamische Freigabe sind offen.
+0,100-s-Abnahmegrenze gilt wieder fuer Quelle und Beobachter. Der naechste
+Lauf zeichnete das volle 600-s-Fenster ohne Laufzeitfehler auf, deckte aber in
+der Abschlussintegration eine zweite quadratische Vollsuche auf: Fuer jeden
+Encoderwert wurde die IMU-Zeitstempelliste neu aufgebaut. Weil dadurch die
+Abschlussstatus veraltet waeren, wurde er beendet. Die Integration baut die
+Zeitliste jetzt nur einmal auf. Der volle Wiederholungslauf und jede dynamische
+Freigabe sind offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

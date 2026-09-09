@@ -267,11 +267,11 @@ def _trapezoid_prefix(
 
 
 def _integral_at(
-    nodes: Sequence[ImuYawSample], prefix: Sequence[float], stamp_s: float,
+    nodes: Sequence[ImuYawSample], node_stamps: Sequence[float],
+    prefix: Sequence[float], stamp_s: float,
 ) -> float:
-    stamps = [node.stamp_s for node in nodes]
-    exact = bisect_left(stamps, stamp_s)
-    if exact < len(stamps) and stamps[exact] == stamp_s:
+    exact = bisect_left(node_stamps, stamp_s)
+    if exact < len(node_stamps) and node_stamps[exact] == stamp_s:
         return prefix[exact]
     right = exact
     left = right - 1
@@ -309,11 +309,12 @@ def compare_angles(
     start_s = encoder_samples[0].stamp_s
     end_s = encoder_samples[-1].stamp_s
     nodes = _integration_nodes(imu_samples, start_s, end_s)
+    node_stamps = [node.stamp_s for node in nodes]
     prefix, peak_hwt = _trapezoid_prefix(nodes)
     encoder_angles = unwrap_encoder_yaw(encoder_samples)
     first_encoder = encoder_samples[0]
     hwt_at_encoder = [
-        _integral_at(nodes, prefix, sample.stamp_s)
+        _integral_at(nodes, node_stamps, prefix, sample.stamp_s)
         for sample in encoder_samples
     ]
     differences = [

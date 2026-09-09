@@ -121,10 +121,11 @@ verlangt unter anderem:
 - HWT mindestens 80 Hz, Encoder mindestens 10 Hz und Datenluecken jeweils
   hoechstens 0,10 s; der isolierte HWT-Ausgang und der Beobachter verwenden
   dafuer lokal `RELIABLE` mit 200 Nachrichten Puffer, der Encoder-Ausgang
-  `RELIABLE` mit 10. Der Beobachter haelt die IMU-Zeitstempel separat vor und
-  prueft pro Callback nur den neuesten moeglichen Fensterendpunkt, damit seine
-  Laufzeit nicht mit der gesamten Messhistorie waechst; Motorpaarspanne
-  hoechstens 0,05 s;
+  `RELIABLE` mit 10. Der Beobachter haelt die IMU-Zeitstempel sowohl waehrend
+  der Aufnahme als auch fuer die Abschlussintegration separat vor und prueft
+  pro Callback nur den neuesten moeglichen Fensterendpunkt, damit seine
+  Laufzeit nicht quadratisch mit der gesamten Messhistorie waechst;
+  Motorpaarspanne hoechstens 0,05 s;
 - HWT-, Encoder- und Differenzwinkel, jeweils Endwert und absoluter
   Zwischenpeak, strikt unter 1 Grad;
 - Encodertranslation relativ zum Messstart und zur echten Startbaseline
