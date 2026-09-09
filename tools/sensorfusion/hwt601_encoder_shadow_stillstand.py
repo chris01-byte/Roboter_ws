@@ -78,6 +78,7 @@ GRAPH_CHECK_INTERVAL_S = 0.5
 MAX_GRAPH_CHECK_GAP_S = 1.0
 POST_WINDOW_STATUS_TIMEOUT_S = 2.0
 POST_WINDOW_STATUS_SOURCES = ('hwt', 'hwt_raw', 'encoder')
+SENSOR_BUFFER_DEPTH = 200
 
 
 class AnalysisError(ValueError):
@@ -1021,13 +1022,24 @@ def _run(duration_s: float, output: Path) -> int:
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
-    from rclpy.qos import qos_profile_sensor_data
+    from rclpy.qos import (
+        DurabilityPolicy,
+        HistoryPolicy,
+        QoSProfile,
+        ReliabilityPolicy,
+    )
     from sensor_msgs.msg import Imu
     from std_msgs.msg import String
 
     output.mkdir(parents=True, exist_ok=False)
     csv_path = output / 'samples.csv'
     summary_path = output / 'summary.json'
+    sensor_buffer_qos = QoSProfile(
+        history=HistoryPolicy.KEEP_LAST,
+        depth=SENSOR_BUFFER_DEPTH,
+        reliability=ReliabilityPolicy.BEST_EFFORT,
+        durability=DurabilityPolicy.VOLATILE,
+    )
 
     class DirectObserver(Node):
         def __init__(self, writer: csv.writer) -> None:
@@ -1066,10 +1078,10 @@ def _run(duration_s: float, output: Path) -> int:
             self.graph_publishers: dict[str, list[str]] = {}
             self.graph_endpoint_ids: dict[str, list[str]] = {}
             self.create_subscription(
-                Imu, IMU_TOPIC, self._on_imu, qos_profile_sensor_data)
+                Imu, IMU_TOPIC, self._on_imu, sensor_buffer_qos)
             self.create_subscription(
                 Odometry, WHEEL_TOPIC, self._on_wheel,
-                qos_profile_sensor_data)
+                sensor_buffer_qos)
             self.create_subscription(
                 String, HWT_STATUS_TOPIC, self._on_hwt_status, 10)
             self.create_subscription(

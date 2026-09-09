@@ -488,6 +488,8 @@ def test_observer_source_has_no_output_or_hardware_control_path():
     assert MODULE.IMU_TOPIC == '/shadow/hwt601/imu/yaw_rate'
     assert MODULE.WHEEL_TOPIC == '/shadow/hwt601/wheel_odom_raw'
     assert MODULE.HWT_RAW_STATUS_TOPIC == '/shadow/hwt601/raw_status_json'
+    assert MODULE.SENSOR_BUFFER_DEPTH == 200
+    assert 'depth=SENSOR_BUFFER_DEPTH' in source
     assert "'gap_fault_detail': node.gap_fault_detail" in source
     assert "'stamp_gap_s': gap" in source
     assert "'receive_gap_s': receive_gap" in source
