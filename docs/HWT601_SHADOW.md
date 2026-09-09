@@ -113,12 +113,16 @@ Bias wird nie ueber einen vermuteten Sensorneustart hinweg weiterverwendet.
 - Stopp per einmaligem SIGINT am Launchprozess, nicht an der Prozessgruppe;
 - Produktionsstarts und bestehende Kartenprofile bleiben unveraendert.
 
-Der zehnminuetige Schattenstillstand ist inzwischen bestanden. Als naechste
-getrennte Stufe wird ein eigener `publish_tf=false`-EKF gegen **echte**
-Encoderodometrie vorbereitet. Der vorhandene 180-Grad-Bag enthaelt nur
-Encoderstatus als JSON, kein `nav_msgs/Odometry`; synthetische Nullodometrie
-darf nicht als Messung eingesetzt werden. Jede neue reale Bewegung braucht
-weiterhin eine eigene Freigabe.
+Der zehnminuetige HWT-Schattenstillstand ist inzwischen bestanden. Die naechste
+Stufe gegen **echte** Encoderodometrie ist auf
+`codex/hwt601-encoder-shadow` softwareseitig vorbereitet, aber noch nicht
+gemeinsam an beiden realen Ports gelaufen. Sie verwendet einen eigenen
+FC03-only-Encoderleser und wertet HWT und Encoder zuerst direkt aus; das
+getrennte `publish_tf=false`-EKF startet absichtlich nicht mit. Der vorhandene
+180-Grad-Bag enthaelt nur Encoderstatus als JSON, kein `nav_msgs/Odometry`;
+synthetische Nullodometrie darf nicht als Messung eingesetzt werden. Ablauf und
+Grenzen: `docs/HWT601_ENCODER_SHADOW.md`. Jede neue reale Portabnahme oder
+Bewegung braucht weiterhin eine eigene Freigabe.
 
 ## Reale kurze Abnahme am 09.09.2026
 

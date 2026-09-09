@@ -100,10 +100,12 @@ def test_reference_profile_adds_independent_twist_without_map_pose():
 def test_process_noise_matrices_are_complete_homogeneous_ros_arrays():
     for filename in (
             'ekf_encoder_imu.yaml',
-            'ekf_encoder_imu_reference.yaml'):
+            'ekf_encoder_imu_reference.yaml',
+            'ekf_hwt601_encoder_shadow.yaml'):
         data = yaml.safe_load((ROOT / 'config' / filename).read_text())
-        matrix = data['ekf_filter_node']['ros__parameters'][
-            'process_noise_covariance']
+        assert len(data) == 1
+        node = next(iter(data.values()))
+        matrix = node['ros__parameters']['process_noise_covariance']
 
         # ROS 2 parameters require a homogeneous array.  A single integer 0
         # among floats makes robot_localization reject the complete YAML file.
@@ -228,3 +230,81 @@ def test_hwt601_shadow_wrapper_requires_stillness_and_free_ports():
     assert 'ros2 node list --no-daemon 2>/dev/null || true' not in wrapper
     assert 'base_hardware' not in wrapper
     assert '/cmd_vel' not in wrapper
+
+
+def test_hwt601_encoder_shadow_ekf_selects_only_measured_vx_and_yaw_rates():
+    data = yaml.safe_load(
+        (ROOT / 'config' / 'ekf_hwt601_encoder_shadow.yaml').read_text())
+    assert set(data) == {'hwt601_encoder_shadow_ekf'}
+    params = data['hwt601_encoder_shadow_ekf']['ros__parameters']
+
+    assert params['two_d_mode'] is True
+    assert params['publish_tf'] is False
+    assert params['use_control'] is False
+    assert params['world_frame'] == 'odom'
+    assert params['base_link_frame'] == 'base_link'
+    assert params['odom0'] == '/shadow/hwt601/wheel_odom_raw'
+    assert params['imu0'] == '/shadow/hwt601/imu/yaw_rate'
+
+    wheel = params['odom0_config']
+    imu = params['imu0_config']
+    assert len(wheel) == 15
+    assert len(imu) == 15
+    assert [index for index, enabled in enumerate(wheel) if enabled] == [6, 11]
+    assert [index for index, enabled in enumerate(imu) if enabled] == [11]
+    assert wheel[7] is False  # No fictional lateral-velocity measurement.
+
+    sensor_keys = {
+        key for key in params
+        if key.startswith(('odom', 'imu', 'pose', 'twist', 'accel'))
+        and key[-1:].isdigit()
+    }
+    assert sensor_keys == {'odom0', 'imu0'}
+
+
+def test_hwt601_encoder_shadow_ekf_launch_is_one_isolated_filter():
+    launch = (
+        ROOT / 'launch' / 'hwt601_encoder_shadow_ekf.launch.py').read_text()
+
+    assert launch.count('Node(') == 1
+    assert "package='robot_localization'" in launch
+    assert "executable='ekf_node'" in launch
+    assert "name='hwt601_encoder_shadow_ekf'" in launch
+    assert "'config', 'ekf_hwt601_encoder_shadow.yaml'" in launch
+    assert "('odometry/filtered', '/shadow/hwt601/odom')" in launch
+    assert "('/diagnostics', '/shadow/hwt601/diagnostics/ekf')" in launch
+    assert "('set_pose', '/shadow/hwt601/set_pose')" in launch
+    assert "'/shadow/hwt601/toggle_filter_processing'" in launch
+    assert "DeclareLaunchArgument('config'" not in launch
+    assert 'IncludeLaunchDescription' not in launch
+    assert 'ExecuteProcess' not in launch
+    assert all(topic not in launch for topic in (
+        "'/odom'", "'/map'", "'/tf'", "'/tf_static'"))
+
+    forbidden = (
+        'base_hardware', 'hwt601_imu', 'hwt601_shadow', 'sensor_adapter',
+        'depthai', 'oak', 'lidar', 'scan', 'slam', 'nav2', 'cmd_vel',
+        'TransformBroadcaster',
+    )
+    assert all(token not in launch for token in forbidden)
+
+
+def test_hwt601_encoder_sources_launch_contains_only_read_only_sources():
+    launch = (
+        ROOT / 'launch'
+        / 'hwt601_encoder_sources_shadow.launch.py').read_text()
+    package_xml = (ROOT / 'package.xml').read_text()
+
+    assert "'launch', 'hwt601_shadow.launch.py'" in launch
+    assert "'launch', 'encoder_shadow.launch.py'" in launch
+    assert 'operator_stationary_confirmed' in launch
+    assert "default_value='true'" not in launch
+    assert "default_value='false'" not in launch
+    assert "'operator_stationary_confirmed': LaunchConfiguration(" in launch
+    assert "executable='base_hardware'" not in launch
+    assert 'hwt601_encoder_shadow_ekf.launch.py' not in launch
+    assert 'ekf_node' not in launch
+    assert 'cmd_vel' not in launch
+    assert "'/odom'" not in launch
+    assert "'/tf'" not in launch
+    assert '<exec_depend>base_hardware</exec_depend>' in package_xml

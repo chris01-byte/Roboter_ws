@@ -17,6 +17,59 @@ Rückfallweg:
 
 ---
 
+## 2026-09-09 — Echte Encoder-/HWT-Schattenabnahme softwareseitig vorbereitet
+
+**Entscheidung:** Vor jedem EKF- oder Kartentest werden HWT-Gyro-Z und die
+echten absoluten ESS23-Encoder direkt verglichen. Ein eigener
+`encoder_shadow_reader` liest den Motorbus ausschliesslich mit FC03 und
+publiziert nur unter `/shadow/hwt601/*`. Das gemeinsame Quellen-Launch startet
+noch kein EKF. Ein getrenntes `publish_tf=false`-EKF-Profil darf erst nach der
+direkten Abnahme beobachtet werden.
+
+**Grund / beobachtete Evidenz:** Der produktive Basisknoten ist fuer einen
+reinen Lesetest nicht geeignet: im Dry-run ist seine Odometrie
+kommandobasiert, im echten Modus besitzt er FC06-Initialisierungs-, Stopp- und
+Fahrpfade. Ausserdem wuerde die vorlaeufige EKF-Varianz HWT gegen Encoder-wz
+etwa 60.000:1 gewichten; ein plausibles Filterergebnis waere daher kein
+unabhaengiger Vergleich. Der neue direkte Beobachter prueft Winkel,
+Translation und Twist ueber 600 s, die volle beobachtete Biasphase, monotone
+Echt- und ROS-Zeit, Statusabdeckung vor der ersten Messprobe, Statuszaehler,
+einen Status jeder Quelle binnen zwei Sekunden nach der letzten Messprobe
+sowie Node-, Publisher- und GID-Provenienz.
+
+**Betroffene Dateien und Hardware:** Branch `codex/hwt601-encoder-shadow`;
+neuer FC03-Encoderleser in `base_hardware`, isolierte Quellen-/EKF-Launches,
+Startwrapper, passiver Beobachter und
+`docs/HWT601_ENCODER_SHADOW.md`. Der Leser akzeptiert nur den festen
+`/dev/ttyUSB_BASE`, die sysfs-Identitaet FTDI `0403:6001/BG03R8RZ`, einen
+getrennten HWT-Alias und einen exklusiv offenen Socket. Verbindungsverlust,
+Konfigurationsabweichung, unvollstaendiges Paar oder unplausibles Delta
+verriegeln ohne Reconnect. Produktivstarts und Kartenpfade bleiben
+unveraendert.
+
+**Teststatus:** 259 gezielte Python-Tests fuer `base_hardware`,
+`robot_state_estimation`, `robot_bringup` und Sensorfusionswerkzeuge bestanden.
+Zehn neue/geaenderte Python-Dateien bestehen Flake8; Python-/Shell-Syntax und
+`git diff --check` sind sauber. Beide ROS-Pakete bauen; Colcon meldet fuer
+`base_hardware` 99 und fuer `robot_state_estimation` 67 Tests, jeweils null
+Fehler. In dieser Stufe wurden keine seriellen Ports, Hardware oder ROS-Knoten
+gestartet und keine Register gelesen oder geschrieben.
+
+**Offene Risiken:** Die reale gemeinsame 600-s-Abnahme fehlt. Nacheinander
+gelesene linke/rechte Motorwerte besitzen nur einen gemeinsamen Mittelpunkt
+und sind ohne dynamische Zeitfehlerabnahme ausschliesslich fuer Stillstand
+freigegeben. Encoder-wz-Kovarianz, Motorvibration, Temperatur, Kaltstart,
+absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
+ist keine Kartenfreigabe.
+
+**Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
+Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
+Launch-Elternprozess einmal mit SIGINT beenden, beide Ports und Domain pruefen.
+Der FC03-Leser schreibt weder Motor- noch Sensorregister; bereits versorgte
+Motorcontroller koennen dennoch Haltemoment behalten.
+
+---
+
 ## 2026-09-09 — Faktor-zwei-Verdacht verworfen, isolierter HWT-Shadow vorbereitet
 
 **Entscheidung:** Der Nutzer bestaetigte ausdruecklich, den extern gestoppten

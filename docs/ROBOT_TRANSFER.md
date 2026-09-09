@@ -1,5 +1,51 @@
 # Übertragung auf den realen Roboter
 
+## HWT-/Encoder-Shadow softwarefertig, reale gemeinsame Abnahme offen (09.09.2026)
+
+`codex/hwt601-encoder-shadow` fuegt einen vom Fahrknoten getrennten
+ESS23-Encoderleser hinzu. Er besitzt nur Modbus-FC03 fuer die bestaetigten
+Positions-/Konfigurationsregister, keine Subscription, keine Schreibmethode,
+keine Aktorausgabe und kein TF. `/dev/ttyUSB_BASE`, FTDI
+`0403:6001/BG03R8RZ`, der getrennte HWT-Alias und der exklusive serielle Socket
+werden im Prozess selbst geprueft. Ein verlorener Port darf keinen impliziten
+Pymodbus-Reconnect ausloesen, sondern verriegelt bis zum Neustart.
+
+Der direkte Beobachter muss in Domain 145 vor den Quellen laufen. Der
+Quellenwrapper akzeptiert exakt diesen einen vorhandenen Node; dadurch kann
+die HWT-Biasphase nicht unbemerkt vor der Encoderbeobachtung ablaufen. Ueber
+600 s werden HWT-/Encoderwinkel samt Peaks, Translation, Twist, ROS- und
+monotone Echtzeit, Statusluecken/-zaehler sowie Node-, Publisher- und
+GID-Provenienz geprueft. Alle Statusquellen und die erste Graphpruefung muessen
+schon vor den ausgewaehlten Messproben vorliegen. Ein Erfolg verlangt
+zusaetzlich von jeder Quelle binnen zwei Sekunden nach der letzten
+ausgewerteten Messprobe einen neuen Status.
+Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
+des Repositories geschrieben werden.
+
+Das getrennte EKF-Profil konsumiert nur Encoder-`vx`/`wz` und HWT-`wz`, bleibt
+auf `/shadow/hwt601/odom`, ohne TF und ohne Kontrolleingang. Es startet nicht
+mit den Quellen und ist nicht freigegeben: die vorlaeufigen Varianzen gewichten
+HWT gegen Encoder-wz ungefaehr 60.000:1, und ein absoluter Heading-Anker fehlt.
+Ein plausibler EKF-Winkel beweist daher noch keine Kartenloesung.
+
+Offline bestanden: 259 gezielte Python-Tests, Flake8/Python-/Shell-Syntax und
+Diffpruefung. Beide ROS-Pakete bauen; Colcon meldet 99 Tests fuer
+`base_hardware` und 67 fuer `robot_state_estimation`, jeweils null Fehler. In
+dieser Stufe wurden weder Hardware/Ports noch ROS-Knoten gestartet, keine
+Register gelesen oder geschrieben und keine System- oder Kartendatei
+veraendert.
+
+Die spaetere reale Abnahme braucht eine neue ausdrueckliche Freigabe,
+bestaetigten Chassisstillstand, sauber beendeten Basisstack und erreichbaren
+Not-Aus. Der Motorbus wird zwar nur gelesen, bereits versorgte Controller
+koennen aber Haltemoment haben. Verbindliche Zwei-Terminal-Reihenfolge,
+Grenzwerte, Abschluss und Rueckfall stehen in
+`docs/HWT601_ENCODER_SHADOW.md`. Rueckfall: beide Shadow-Prozesse nicht starten
+oder jeweils sauber beenden; Produktivlaunches und Motorparameter sind
+unveraendert.
+
+---
+
 ## HWT-Winkelskala geklaert, warmer Schattenpfad bestanden (09.09.2026)
 
 Der Nutzer hat inzwischen ausdruecklich bestaetigt, den extern beobachteten

@@ -112,6 +112,22 @@ covariance, isolated ROS-domain procedure and acceptance limits. The warm
 600-second standstill acceptance has passed; cold start, temperature, motor
 vibration, encoder fusion and production use remain explicitly open.
 
+The next source stage is prepared separately on
+`codex/hwt601-encoder-shadow`. It combines the yaw-only HWT shadow with a
+dedicated real FC03 encoder reader, but deliberately starts no EKF. A passive
+observer must be running before the sources so encoder evidence covers the
+startup-bias phase and the subsequent 600-second direct comparison. It checks
+monotonic runtime, translation, twist, angle peaks, source counters and ROS
+publisher identity. This stage has not yet opened both real ports together;
+see `docs/HWT601_ENCODER_SHADOW.md`.
+
+Only after that direct comparison passes may
+`hwt601_encoder_shadow_ekf.launch.py` be used as an isolated observation
+filter. It publishes only `/shadow/hwt601/odom` and no TF. Its provisional
+covariances strongly favour the HWT yaw rate and neither source supplies an
+absolute heading reference, so its output is not yet evidence of a solved map
+problem or production readiness.
+
 For staged integration use
 `robot_bringup/state_estimation_hwt601_validation.launch.py`. Its base remains
 hard-coded motorless, while OAK, adapter and EKF all default to off. Exact

@@ -71,6 +71,15 @@ konservativer Warm-Stillstandswert `5,0e-7 (rad/s)^2`. Zehn-Minuten-Realtest:
 Endintegral +0,01323 Grad und Spitzenintegral 0,08574 Grad. Kaltstart,
 Temperatur, Motorvibration und echte Encoderfusion offen.
 
+**HWT-/Encoder-Shadowdelta:** `codex/hwt601-encoder-shadow`, 09.09.2026:
+eigener ESS23-Leser mit ausschliesslich FC03, fester FTDI-sysfs-Identitaet,
+atomaren vollstaendigen Motorpaaren und gelatchtem Fehlerverhalten. Direkter
+passiver 600-s-Beobachter prueft Encoderstillstand, HWT-Winkel, Echtzeit,
+Statuskontinuitaet und ROS-Publisher-Provenienz. Getrenntes EKF bleibt ohne TF
+und ist nicht Teil des Quellenstarts. Software offline getestet; gemeinsame
+reale Port-/Stillstandsabnahme, dynamische Paarzeitpruefung und Kartenfreigabe
+offen.
+
 ---
 
 ## 1. Umgebung
@@ -122,6 +131,8 @@ Temperatur, Motorvibration und echte Encoderfusion offen.
 | Nur passive Fusionsknoten | `ros2 launch robot_state_estimation fusion.launch.py` | nein; startet keine Treiber |
 | Nur HWT601-Rohdaten | `ros2 launch robot_state_estimation hwt601.launch.py` | nein; liest nur die IMU, keine OAK/Motoren |
 | HWT601-Gyro-Z-Shadow | `AMADEUS_HWT601_STILLSTAND=JA bash tools/sensorfusion/start_hwt601_shadow.sh` | nein; port-/graphgeprueft, nur `/shadow/hwt601/*`, kein Odom/TF/Basistreiber |
+| HWT-/Encoder-Beobachter | `bash tools/sensorfusion/start_hwt601_encoder_shadow_observer.sh /absoluter/lokaler/Ausgabeordner` | nein; nur Subscriber, muss vor den Quellen laufen |
+| HWT-/Encoder-Quellen | nach neuer Freigabe: `AMADEUS_HWT601_ENCODER_STILLSTAND=JA AMADEUS_BASE_STACK_GESTOPPT=JA bash tools/sensorfusion/start_hwt601_encoder_shadow.sh` | keine Schreib-/Fahrbefehle; oeffnet HWT- und Motorbus nur FC03, Controller koennen Haltemoment haben |
 | HWT601-Stufentest | `ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py` | nein (`dry_run=true`, Motor-RS485 gesperrt; OAK/Fusion aus) |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
@@ -166,6 +177,8 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/sensorfusion/hwt601_usb_pruefen.py` | liest USB-Merkmale und erzeugt nur bei eindeutiger Seriennummer einen udev-Vorschlag |
 | `tools/sensorfusion/hwt601_usb_setup.py` | Jetson-CH340-Treiber vorbereiten/installieren, gezielte udev-Ausnahme, recoverbarer Rueckfall |
 | `tools/sensorfusion/hwt601_messen.py` | begrenzter, ROS-/motorloser HWT-Rohdatentest; default nur lauschen |
+| `tools/sensorfusion/hwt601_encoder_shadow_stillstand.py` | passiver direkter HWT-/Encodervergleich; lokale CSV/JSON-Evidenz |
+| `tools/sensorfusion/start_hwt601_encoder_shadow*.sh` | Observer zuerst, danach streng gepruefter FC03-Quellenstart in Domain 145 |
 | `docs/83-hwt601.rules.example` | nicht installierbare Vorlage fuer den getrennten HWT-USB-RS485-Alias |
 
 ---

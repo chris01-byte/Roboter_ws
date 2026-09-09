@@ -72,6 +72,24 @@ konservative Startwerte. Sie stehen nicht für bereits gemessene Genauigkeit
 und werden erst in H4 aus wiederholten Fahrten gegen eine externe Referenz
 kalibriert.
 
+## Strikt lesender Encoder-Shadow
+
+Fuer den direkten HWT601-Vergleich existiert ein eigener
+`encoder_shadow_reader`. Er ist nicht der Fahrknoten: keine Subscription,
+keine TF-Ausgabe und ausschliesslich FC03-Lesezugriffe auf die vier
+freigegebenen ESS23-Registerbereiche. Fester Basisalias, exakte FTDI-
+USB-Identitaet, getrennter HWT-Alias, exklusiver Socket, Motorkonfiguration und
+vollstaendige links/rechts-Paare werden fail-closed geprueft. Ein Fehler
+verriegelt den Prozess; ein stiller Pymodbus-Reconnect ist gesperrt.
+
+Der gemeinsame Start erfolgt nur ueber die zweistufigen Wrapper aus
+`tools/sensorfusion/` und nach einer neuen Freigabe. Ein Direktstart des
+Launchfiles ist kein Abnahmeverfahren. Da linkes und rechtes Register
+nacheinander gelesen und nur durch einen gemeinsamen Paarmittelpunkt
+repraesentiert werden, ist diese Stufe bis zur dynamischen Zeitfehlerpruefung
+ausschliesslich fuer Stillstand freigegeben. Details:
+`docs/HWT601_ENCODER_SHADOW.md`.
+
 ## Funktionen v1
 - Subscribed `/cmd_vel` (`geometry_msgs/Twist`)
 - Berechnet linke/rechte Radgeschwindigkeit und RPM
