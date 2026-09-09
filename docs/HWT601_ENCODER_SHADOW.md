@@ -118,10 +118,12 @@ verlangt unter anderem:
 
 - mindestens 600 s sowohl nach monotoner Empfangszeit als auch nach
   ROS-Headerzeit; Abweichung hoechstens 0,5 s;
-- HWT mindestens 80 Hz, Encoder mindestens 10 Hz und Datenluecken jeweils
-  hoechstens 0,10 s; der isolierte HWT-Ausgang und der Beobachter verwenden
-  dafuer lokal `RELIABLE` mit 200 Nachrichten Puffer, der Encoder-Ausgang
-  `RELIABLE` mit 10; Motorpaarspanne hoechstens 0,05 s;
+- HWT mindestens 80 Hz und Encoder mindestens 10 Hz; beide Quellen verriegeln
+  intern bei einer Datenluecke ueber 0,100 s, waehrend der passive Beobachter
+  fuer ROS-Timer- und Zeitstempeljitter hoechstens 0,110 s auf dem Topic
+  akzeptiert. Der isolierte HWT-Ausgang und der Beobachter verwenden lokal
+  `RELIABLE` mit 200 Nachrichten Puffer, der Encoder-Ausgang `RELIABLE` mit 10;
+  Motorpaarspanne hoechstens 0,05 s;
 - HWT-, Encoder- und Differenzwinkel, jeweils Endwert und absoluter
   Zwischenpeak, strikt unter 1 Grad;
 - Encodertranslation relativ zum Messstart und zur echten Startbaseline

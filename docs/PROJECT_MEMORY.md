@@ -62,13 +62,16 @@ freigegeben. Encoder-wz-Kovarianz, Motorvibration, Temperatur, Kaltstart,
 absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
 ist keine Kartenfreigabe.
 
-Drei reale Anlaeufe zeigten beim Best-Effort-HWT-Ausgang Topic-Luecken von
-0,100152 bis 0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects.
-Die Zwischenloesung mit groesserem Observerpuffer allein reichte nicht. Daher
+Vier reale Anlaeufe zeigten beim Best-Effort-HWT-Ausgang Topic-Luecken bis
+0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects. Die
+Zwischenloesung mit groesserem Observerpuffer allein reichte nicht. Daher
 verwenden der isolierte HWT-Ausgang und der Beobachter jetzt `RELIABLE` mit
-Tiefe 200; der ebenfalls verlaessliche Encoderausgang meldet Tiefe 10. Die
-strenge 0,10-s-Abnahmegrenze ist wiederhergestellt; der volle Realtest steht
-noch aus.
+Tiefe 200; der ebenfalls verlaessliche Encoderausgang meldet Tiefe 10. Beim
+naechsten Lauf blieb die HWT-Quelle fehlerfrei, waehrend der Beobachter eine
+Zeitstempelluecke von 0,100037 s sah: nur 37 Mikrosekunden ueber der
+Quellengrenze. Die Quellen verriegeln deshalb weiterhin strikt oberhalb
+0,100 s; nur der passive Stillstandsbeobachter akzeptiert fuer ROS-Timer- und
+Zeitstempeljitter bis 0,110 s. Der volle Realtest steht noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

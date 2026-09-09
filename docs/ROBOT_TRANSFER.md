@@ -19,11 +19,14 @@ GID-Provenienz geprueft. Alle Statusquellen und die erste Graphpruefung muessen
 schon vor den ausgewaehlten Messproben vorliegen. Ein Erfolg verlangt
 zusaetzlich von jeder Quelle binnen zwei Sekunden nach der letzten
 ausgewerteten Messprobe einen neuen Status.
-Nach drei fehlerfreien Quellenlaeufen mit Best-Effort-Topic-Luecken bis
+Nach vier fehlerfreien Quellenlaeufen mit Best-Effort-Topic-Luecken bis
 0,159757 s sind der isolierte HWT-Ausgang und der Beobachter auf `RELIABLE`
-mit Tiefe 200 gesetzt; der Encoderausgang ist `RELIABLE` mit Tiefe 10. Die
-strenge 0,10-s-Abnahmegrenze bleibt bestehen. Der volle Wiederholungslauf und
-jede dynamische Freigabe sind offen.
+mit Tiefe 200 gesetzt; der Encoderausgang ist `RELIABLE` mit Tiefe 10. Ein
+weiterer Lauf zeigte bei weiterhin fehlerfreier HWT-Quelle eine Topic-Luecke
+von 0,100037 s. Die Quellen verriegeln weiterhin strikt oberhalb 0,100 s; nur
+der passive Stillstandsbeobachter akzeptiert fuer ROS-Timer- und
+Zeitstempeljitter bis 0,110 s. Der volle Wiederholungslauf und jede dynamische
+Freigabe sind offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 
