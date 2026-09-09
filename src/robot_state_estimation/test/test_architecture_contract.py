@@ -211,6 +211,9 @@ def test_hwt601_shadow_is_isolated_yaw_only_and_has_no_control_path():
     assert 'self.core.reject_invalid_message()' in source
     assert "'fusion_ready': False" in source
     assert "'publishes_tf': False" in source
+    assert 'SHADOW_OUTPUT_QOS_DEPTH = 200' in source
+    assert 'reliability=ReliabilityPolicy.RELIABLE' in source
+    assert "'output_qos': 'reliable_keep_last_200'" in source
 
 
 def test_hwt601_shadow_wrapper_requires_stillness_and_free_ports():

@@ -48,6 +48,7 @@ def test_node_has_no_command_subscription_write_or_tf_surface():
     assert 'sendTransform' not in source
     assert "'/cmd_vel'" not in source
     assert "'/tf'" not in source
+    assert "'output_qos': 'reliable_keep_last_10'" in source
 
 
 def test_config_uses_measured_geometry_and_strict_shadow_contract():

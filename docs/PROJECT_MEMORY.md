@@ -62,11 +62,13 @@ freigegeben. Encoder-wz-Kovarianz, Motorvibration, Temperatur, Kaltstart,
 absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
 ist keine Kartenfreigabe.
 
-Der passive Stillstandsbeobachter erlaubt auf den lokalen ROS-Topics bis zu
-0,15 s Abstand, nachdem reale Wiederholungen 0,100152 bis 0,100314 s bei
-gleichzeitig null Quellen-Rejects zeigten. Die HWT- und Encoderquellen selbst
-bleiben unveraendert bei maximal 0,10 s; fuer Bewegung ist diese
-Transporttoleranz nicht freigegeben.
+Drei reale Anlaeufe zeigten beim Best-Effort-HWT-Ausgang Topic-Luecken von
+0,100152 bis 0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects.
+Die Zwischenloesung mit groesserem Observerpuffer allein reichte nicht. Daher
+verwenden der isolierte HWT-Ausgang und der Beobachter jetzt `RELIABLE` mit
+Tiefe 200; der ebenfalls verlaessliche Encoderausgang meldet Tiefe 10. Die
+strenge 0,10-s-Abnahmegrenze ist wiederhergestellt; der volle Realtest steht
+noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

@@ -9,7 +9,13 @@ from typing import Optional
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import (
+    DurabilityPolicy,
+    HistoryPolicy,
+    QoSProfile,
+    ReliabilityPolicy,
+    qos_profile_sensor_data,
+)
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
@@ -18,6 +24,9 @@ from .hwt601_shadow_core import (
     valid_hwt601_shadow_input,
 )
 from .quality_core import GyroBiasConfig
+
+
+SHADOW_OUTPUT_QOS_DEPTH = 200
 
 
 def _stamp_seconds(message: Imu) -> float:
@@ -113,8 +122,14 @@ class Hwt601ShadowNode(Node):
         self._last_reason = 'noch_keine_daten'
         self._last_output_at: Optional[float] = None
 
+        shadow_output_qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=SHADOW_OUTPUT_QOS_DEPTH,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.VOLATILE,
+        )
         self.imu_pub = self.create_publisher(
-            Imu, self.imu_output, qos_profile_sensor_data)
+            Imu, self.imu_output, shadow_output_qos)
         self.status_pub = self.create_publisher(
             String, self.status_topic, 10)
         self.diagnostics_pub = self.create_publisher(
@@ -229,6 +244,7 @@ class Hwt601ShadowNode(Node):
             'input_frame': self.expected_input_frame,
             'output_topic': self.imu_output,
             'output_frame': self.output_frame,
+            'output_qos': 'reliable_keep_last_200',
             'age_s': age_s,
             'raw_received': self._raw_received,
             'published': self._published,

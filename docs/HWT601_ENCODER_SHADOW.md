@@ -118,10 +118,10 @@ verlangt unter anderem:
 
 - mindestens 600 s sowohl nach monotoner Empfangszeit als auch nach
   ROS-Headerzeit; Abweichung hoechstens 0,5 s;
-- HWT mindestens 80 Hz und Encoder mindestens 10 Hz; die Quellen bleiben
-  intern fail-closed bei mehr als 0,10 s Probenabstand, waehrend der passive
-  Stillstandsbeobachter einzelne ROS-Transportluecken nur bis 0,15 s erlaubt;
-  Motorpaarspanne hoechstens 0,05 s;
+- HWT mindestens 80 Hz, Encoder mindestens 10 Hz und Datenluecken jeweils
+  hoechstens 0,10 s; der isolierte HWT-Ausgang und der Beobachter verwenden
+  dafuer lokal `RELIABLE` mit 200 Nachrichten Puffer, der Encoder-Ausgang
+  `RELIABLE` mit 10; Motorpaarspanne hoechstens 0,05 s;
 - HWT-, Encoder- und Differenzwinkel, jeweils Endwert und absoluter
   Zwischenpeak, strikt unter 1 Grad;
 - Encodertranslation relativ zum Messstart und zur echten Startbaseline

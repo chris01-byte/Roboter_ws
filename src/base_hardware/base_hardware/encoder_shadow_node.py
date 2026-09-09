@@ -433,6 +433,7 @@ class EncoderShadowNode(Node):
         )
         payload.update({
             'topic': self.odom_topic,
+            'output_qos': 'reliable_keep_last_10',
             'odom_frame_id': self.odom_frame_id,
             'base_frame_id': self.base_frame_id,
             'wheel_radius_m': self.wheel_radius_m,

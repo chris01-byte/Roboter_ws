@@ -52,8 +52,8 @@ BASE_FRAME = 'base_link'
 IMU_Z_VARIANCE = 5.0e-7
 UNOBSERVED_VARIANCE = 1.0e6
 
-MAX_IMU_GAP_S = 0.15
-MAX_ENCODER_GAP_S = 0.15
+MAX_IMU_GAP_S = 0.10
+MAX_ENCODER_GAP_S = 0.10
 ENCODER_SOURCE_MAX_SAMPLE_GAP_S = 0.10
 MAX_PAIR_DURATION_S = 0.05
 MIN_IMU_RATE_HZ = 80.0
@@ -706,6 +706,7 @@ def validate_hwt_status(
         'input_frame': 'hwt601_link',
         'output_topic': IMU_TOPIC,
         'output_frame': IMU_FRAME,
+        'output_qos': 'reliable_keep_last_200',
     }
     for key, expected in exact.items():
         if status.get(key) != expected:
@@ -745,6 +746,7 @@ def validate_encoder_status(
         'left_motor_id': 1,
         'right_motor_id': 2,
         'topic': WHEEL_TOPIC,
+        'output_qos': 'reliable_keep_last_10',
         'odom_frame_id': ODOM_FRAME,
         'base_frame_id': BASE_FRAME,
         'wheel_radius_m': 0.0624,
@@ -1038,7 +1040,7 @@ def _run(duration_s: float, output: Path) -> int:
     sensor_buffer_qos = QoSProfile(
         history=HistoryPolicy.KEEP_LAST,
         depth=SENSOR_BUFFER_DEPTH,
-        reliability=ReliabilityPolicy.BEST_EFFORT,
+        reliability=ReliabilityPolicy.RELIABLE,
         durability=DurabilityPolicy.VOLATILE,
     )
 

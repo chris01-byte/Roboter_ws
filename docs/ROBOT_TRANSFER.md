@@ -19,10 +19,11 @@ GID-Provenienz geprueft. Alle Statusquellen und die erste Graphpruefung muessen
 schon vor den ausgewaehlten Messproben vorliegen. Ein Erfolg verlangt
 zusaetzlich von jeder Quelle binnen zwei Sekunden nach der letzten
 ausgewerteten Messprobe einen neuen Status.
-Die Quellen verriegeln weiterhin bei mehr als 0,10 s internem Probenabstand;
-der passive Stillstandsbeobachter erlaubt nach real gemessenen, fehlerfreien
-Topic-Aussetzern bis 0,15 s ROS-Transportabstand. Das ist keine dynamische
-Freigabe.
+Nach drei fehlerfreien Quellenlaeufen mit Best-Effort-Topic-Luecken bis
+0,159757 s sind der isolierte HWT-Ausgang und der Beobachter auf `RELIABLE`
+mit Tiefe 200 gesetzt; der Encoderausgang ist `RELIABLE` mit Tiefe 10. Die
+strenge 0,10-s-Abnahmegrenze bleibt bestehen. Der volle Wiederholungslauf und
+jede dynamische Freigabe sind offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 
