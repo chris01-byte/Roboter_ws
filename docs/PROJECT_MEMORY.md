@@ -17,6 +17,30 @@ Rückfallweg:
 
 ---
 
+## 2026-09-09 — Motorischer HWT-Linksvergleich gegen unabhaengigen LiDAR bestanden
+
+**Entscheidung / Evidenz:** Manuelle Drehung wegen blockierter Raeder verworfen.
+Nach ausdruecklicher Motorfreigabe und freiem Schwenkbereich neuer isolierter
+Test auf `feature/hwt601-powered-turn-test`: IMU +90,93231 Grad, LiDAR
++91,25000 Grad, Encoder +89,84432 Grad; IMU/LiDAR-Differenz -0,31769 Grad.
+LiDAR nutzt ausschliesslich Rohscans, keine Rad-/IMU-Vorhersage. Keine
+automatische Nachkalibrierung; Rechtslauf und Fusionsfreigabe bleiben offen.
+
+**Teststatus:** 104 Softwaretests, ROS-Dry-run inklusive Watchdog-Stopp,
+echter passiver Preflight und eine beaufsichtigte Linksdrehung bestanden.
+1.979 IMU-Proben mit Startanker, 99,993 Hz, max. Luecke 18,081 ms.
+Integrale aus JSONL unabhaengig nachgerechnet, Fehler <2,8e-13 Grad.
+Stillstand bestaetigt, Testprozesse beendet. Keine Rueckdrehung.
+
+**Hardware / Risiken / Rueckfall:** Basis initialisierte bestehende Rampen
+(2.000/400 ms, Start 5 rpm) und steuerte beide Motoren. Kein collision_monitor;
+isolierter beaufsichtigter Test, nicht autonome Navigation. OAK/SLAM/EKF aus,
+HWT-Konfigurationsregister und Produktionsdateien unveraendert. Werkzeug
+nicht erneut starten; Motorstrom dadurch nicht physisch getrennt.
+Details, Daten und Grenzen: `docs/HWT601_MOTOR_DREHTEST.md`.
+
+---
+
 ## 2026-09-08 — Schritt 2 als unabhaengiger manueller Drehtest vorbereitet
 
 **Entscheidung:** Auf Nutzerwunsch nur Vorbereitung, keine reale Drehung.

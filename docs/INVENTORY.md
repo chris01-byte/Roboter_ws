@@ -41,6 +41,11 @@ Schritt 2 gegen externe +/-90-Grad-Bodenreferenz vorbereitet, nicht real
 ausgefuehrt. Fester Anfangsbias, rein lesender Sensorzugriff, keine Aktoren.
 91 Softwaretests bestanden; Anleitung `docs/HWT601_DREHTEST.md`.
 
+**HWT-Motordrehdelta:** `feature/hwt601-powered-turn-test`, 09.09.2026:
+erste freigegebene Linksdrehung: IMU 90,93231 Grad, unabhaengiger LiDAR
+91,25000 Grad; Stillstand bestaetigt, 104 Softwaretests. Gegenrichtung/Fusion
+offen. Hardwarewirkung und Rueckfall: `docs/HWT601_MOTOR_DREHTEST.md`.
+
 ---
 
 ## 1. Umgebung

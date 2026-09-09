@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## HWT: erste motorische Linksdrehung bestanden (09.09.2026)
+
+Nach persoenlicher Freigabe: IMU +90,93231 Grad, unabhaengiger LiDAR
++91,25000 Grad, Encoder +89,84432 Grad. Stillstand bestaetigt, Testprozesse
+beendet; keine Rueckdrehung. 104 Softwaretests plus Dry-run-Watchdog geprueft.
+Basis initialisierte bestehende Motorregister, HWT-Konfiguration unveraendert.
+Keine OAK/Fusion/SLAM, kein collision_monitor; isolierter beaufsichtigter Test.
+Branch `feature/hwt601-powered-turn-test`, Details/Rueckfall und lokale Daten:
+`docs/HWT601_MOTOR_DREHTEST.md`. Gegenrichtung und Fusionsabnahme weiter offen.
+
+---
+
 ## HWT-Schritt 2: manueller Drehtest vorbereitet, noch nicht ausgefuehrt
 
 `feature/hwt601-turn-test` ab `3205e9a`: Anleitung in
