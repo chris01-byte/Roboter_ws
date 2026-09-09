@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## HWT-/Encoder-Shadow softwarefertig, reale gemeinsame Abnahme offen (09.09.2026)
+## HWT-/Encoder-Shadow: reale Stillstandsabnahme bestanden (09.09.2026)
 
 `codex/hwt601-encoder-shadow` fuegt einen vom Fahrknoten getrennten
 ESS23-Encoderleser hinzu. Er besitzt nur Modbus-FC03 fuer die bestaetigten
@@ -32,8 +32,15 @@ Lauf zeichnete das volle 600-s-Fenster ohne Laufzeitfehler auf, deckte aber in
 der Abschlussintegration eine zweite quadratische Vollsuche auf: Fuer jeden
 Encoderwert wurde die IMU-Zeitstempelliste neu aufgebaut. Weil dadurch die
 Abschlussstatus veraltet waeren, wurde er beendet. Die Integration baut die
-Zeitliste jetzt nur einmal auf. Der volle Wiederholungslauf und jede dynamische
-Freigabe sind offen.
+Zeitliste jetzt nur einmal auf. Der formale Wiederholungslauf bestand danach:
+`encoder-shadow-20260909-230007` meldete `passed: true` und `faults: []` fuer
+600,499827 s, 60046 HWT-Proben bei 99,993329 Hz und 12011 Encoderproben bei
+20,000006 Hz. Maximale Zeitstempelluecken waren 0,030666 s beziehungsweise
+0,054657 s. Encoderweg, Encoderdrehung, Rejects, Reconnects und Rebases blieben
+null; der HWT integrierte 0,968490 Grad. Alle Quellen- und Graphstatus waren
+gueltig, der CSV-Hash wurde unabhaengig bestaetigt. Nach genau einem SIGINT
+endeten alle Quellen sauber; beide Ports waren frei und Domain 145 leer. Jede
+dynamische Freigabe bleibt offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

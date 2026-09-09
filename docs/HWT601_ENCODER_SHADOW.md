@@ -4,8 +4,8 @@
 
 **Branch:** `codex/hwt601-encoder-shadow`
 
-**Status:** Software vorbereitet und offline getestet; beide seriellen Quellen
-in dieser Stufe noch nicht gemeinsam am realen Roboter gestartet.
+**Status:** Reale gemeinsame 600-s-Stillstandsabnahme bestanden. Das
+vorbereitete EKF und jede dynamische Nutzung bleiben gesperrt.
 
 Diese Stufe beantwortet vor jeder EKF-Bewertung eine einfachere Frage: Bleiben
 der korrigierte HWT-Gierwinkel und die aus den echten absoluten
@@ -71,12 +71,12 @@ auch noch kein EKF.
 
 ## Reale Abnahme: Reihenfolge ist verbindlich
 
-Dieser Abschnitt dokumentiert den spaeteren Lauf; er ist am 09.09.2026 noch
-nicht ausgefuehrt. Das Oeffnen des Motorbusses erfolgt erst nach einer neuen
-ausdruecklichen Freigabe der anwesenden Person. Der Roboter muss stillstehen,
-der regulaere Basisstack muss sauber beendet sein und der Not-Aus bleibt in
-Reichweite. Auch ohne Schreibzugriff koennen bereits versorgte Controller
-Haltemoment erzeugen.
+Der folgende Ablauf wurde am 09.09.2026 ausgefuehrt und bleibt fuer jede
+Wiederholung verbindlich. Das Oeffnen des Motorbusses erfolgt erst nach einer
+neuen ausdruecklichen Freigabe der anwesenden Person. Der Roboter muss
+stillstehen, der regulaere Basisstack muss sauber beendet sein und der Not-Aus
+bleibt in Reichweite. Auch ohne Schreibzugriff koennen bereits versorgte
+Controller Haltemoment erzeugen.
 
 Zuerst wird in Terminal A der rein abonnierende Beobachter gestartet. Er
 oeffnet kein Geraet und verlangt eine zuvor leere, auf Loopback isolierte
@@ -142,6 +142,24 @@ verlangt unter anderem:
   Quellentopic; null Publisher auf
   Produktiv-Odometrie, Karte, TF, Fusion oder Fahrbefehlen;
 - CSV-Hash in der Zusammenfassung; reale CSV/JSON-Dateien bleiben lokal.
+
+## Ergebnis vom 09.09.2026
+
+Der lokale Lauf `encoder-shadow-20260909-230007` endete mit `passed: true`,
+`faults: []` und gueltigen HWT-, Roh-HWT-, Encoder-, Graph- und
+Abschlussstatus. Das ausgewertete Fenster dauerte 600,499827 s und enthielt
+60046 HWT- sowie 12011 Encoderproben. Gemessen wurden 99,993329 Hz und
+20,000006 Hz, maximale Zeitstempelluecken von 0,030666 s und 0,054657 s,
+0 m Encodertranslation, 0 Grad Encoderdrehung und 0,968490 Grad HWT-Drift.
+Rejects, Reconnects, Rebases und erkannte Bewegung waren jeweils null. Der
+SHA-256 der CSV wurde unabhaengig gegen `summary.json` bestaetigt:
+`c6b2256674cc7e91ef0b767e5ac5c891f4caecd4528588fa1c4687054b386c36`.
+Nach Erfolg wurden alle Quellen mit genau einem SIGINT sauber beendet; beide
+Ports waren frei und Domain 145 leer.
+
+Die HWT-Drift bestand die strikte 1-Grad-Grenze mit nur rund 0,032 Grad
+Reserve. Das ist eine bestandene Stillstandsabnahme, aber noch keine Freigabe
+fuer Fahrt, EKF, Navigation oder Kartenverbesserung.
 
 ## EKF ist erst die nachgeordnete Beobachtungsstufe
 

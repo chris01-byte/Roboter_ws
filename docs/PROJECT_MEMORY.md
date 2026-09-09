@@ -52,15 +52,16 @@ unveraendert.
 Zehn neue/geaenderte Python-Dateien bestehen Flake8; Python-/Shell-Syntax und
 `git diff --check` sind sauber. Beide ROS-Pakete bauen; Colcon meldet fuer
 `base_hardware` 99 und fuer `robot_state_estimation` 67 Tests, jeweils null
-Fehler. In dieser Stufe wurden keine seriellen Ports, Hardware oder ROS-Knoten
-gestartet und keine Register gelesen oder geschrieben.
+Fehler. Die reale gemeinsame 600-s-Stillstandsabnahme ist ebenfalls bestanden;
+der Motorbus wurde dabei ausschliesslich mit FC03 gelesen und es gab keine
+Registerschreib-, TF- oder Fahrbefehlspfade.
 
-**Offene Risiken:** Die reale gemeinsame 600-s-Abnahme fehlt. Nacheinander
-gelesene linke/rechte Motorwerte besitzen nur einen gemeinsamen Mittelpunkt
-und sind ohne dynamische Zeitfehlerabnahme ausschliesslich fuer Stillstand
-freigegeben. Encoder-wz-Kovarianz, Motorvibration, Temperatur, Kaltstart,
-absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
-ist keine Kartenfreigabe.
+**Offene Risiken:** Nacheinander gelesene linke/rechte Motorwerte besitzen nur
+einen gemeinsamen Mittelpunkt und sind ohne dynamische Zeitfehlerabnahme
+ausschliesslich fuer Stillstand freigegeben. Die HWT-Drift lag mit 0,968490
+Grad nur rund 0,032 Grad unter der 1-Grad-Grenze. Encoder-wz-Kovarianz,
+Motorvibration, Temperatur, Kaltstart, absoluter Heading-Anker und Karten-A/B-
+Test bleiben offen. Das vorbereitete EKF ist keine Kartenfreigabe.
 
 Vier reale Anlaeufe zeigten beim Best-Effort-HWT-Ausgang Topic-Luecken bis
 0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects. `RELIABLE`
@@ -79,6 +80,19 @@ der Abschlussintegration auf: Fuer jeden Encoderwert wurde die gesamte
 IMU-Zeitstempelliste neu aufgebaut. Der Lauf wurde beendet, weil dadurch die
 Abschlussstatus veraltet waeren. Auch die Integration verwendet die einmalig
 aufgebaute Zeitstempelliste; der volle Wiederholungslauf steht noch aus.
+
+Der anschliessende formale Lauf
+`~/.local/share/amadeus/hwt601/encoder-shadow-20260909-230007` bestand mit
+`passed: true` und `faults: []`. Das 600,499827-s-Fenster enthielt 60046 HWT-
+und 12011 Encoderproben bei 99,993329 Hz beziehungsweise 20,000006 Hz. Die
+maximalen Zeitstempelluecken lagen bei 0,030666 s und 0,054657 s. Encoderweg,
+Encoderdrehung, Geschwindigkeit, Rejects, Reconnects und Rebases blieben null;
+der HWT integrierte 0,968490 Grad. Alle drei Abschlussstatus und der ROS-Graph
+waren gueltig. Der CSV-Hash
+`c6b2256674cc7e91ef0b767e5ac5c891f4caecd4528588fa1c4687054b386c36`
+wurde unabhaengig bestaetigt. Danach endeten alle drei Quellen sauber; beide
+Ports waren frei und Domain 145 leer. Dies gibt nur die direkte
+Stillstandsquelle frei, nicht EKF, Fahrt oder Karte.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
