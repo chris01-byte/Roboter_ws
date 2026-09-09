@@ -95,6 +95,10 @@ def test_observer_wrapper_is_loopback_only_and_starts_no_source_or_hardware():
     assert 'ros2 launch' not in source
     assert '/dev/tty' not in source
     assert 'cmd_vel' not in source
+    assert source.index('source /opt/ros/humble/setup.bash') < source.index(
+        'set -u')
+    assert source.index('source "${workspace_dir}/install/setup.bash"') < (
+        source.index('set -u'))
 
 
 def test_observer_wrapper_rejects_dotdot_alias_back_into_repository():

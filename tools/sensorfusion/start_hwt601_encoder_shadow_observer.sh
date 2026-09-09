@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start the passive observer before the HWT601/encoder shadow sources.
 
-set -euo pipefail
+set -eo pipefail
 
 if [[ $# -ne 1 || -z "$1" ]]; then
   echo "Aufruf: $0 /absoluter/lokaler/Ausgabeordner" >&2
@@ -44,6 +44,7 @@ if [[ ! -f "${workspace_dir}/install/setup.bash" ]]; then
   exit 3
 fi
 source "${workspace_dir}/install/setup.bash"
+set -u
 
 export ROS_DOMAIN_ID="${AMADEUS_HWT_ENCODER_SHADOW_DOMAIN:-145}"
 export ROS_LOCALHOST_ONLY=0
