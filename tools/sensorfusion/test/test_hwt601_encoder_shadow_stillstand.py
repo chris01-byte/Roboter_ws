@@ -385,8 +385,8 @@ def test_600_second_acceptance_checks_rates_gaps_final_and_peak_angles():
         (('requested_duration_s',), 599.0),
         (('comparison', 'imu_rate_hz'), 79.9),
         (('comparison', 'encoder_rate_hz'), 9.9),
-        (('comparison', 'maximum_imu_gap_s'), 0.111),
-        (('comparison', 'maximum_encoder_gap_s'), 0.111),
+        (('comparison', 'maximum_imu_gap_s'), 0.101),
+        (('comparison', 'maximum_encoder_gap_s'), 0.101),
         (('comparison', 'hwt_angle_deg'), 1.0),
         (('comparison', 'encoder_angle_deg'), -1.0),
         (('comparison', 'difference_deg'), 1.0),
@@ -493,6 +493,10 @@ def test_observer_source_has_no_output_or_hardware_control_path():
     assert MODULE.SENSOR_BUFFER_DEPTH == 200
     assert 'depth=SENSOR_BUFFER_DEPTH' in source
     assert 'reliability=ReliabilityPolicy.RELIABLE' in source
+    assert 'self.imu_stamps.append(stamp_s)' in source
+    assert 'return _bracketing_indices(self.imu_stamps, stamp_s)' in source
+    assert 'index = len(self.wheel_samples) - 1' in source
+    assert 'ever-growing history on every' in source
     assert "'gap_fault_detail': node.gap_fault_detail" in source
     assert "'stamp_gap_s': gap" in source
     assert "'receive_gap_s': receive_gap" in source

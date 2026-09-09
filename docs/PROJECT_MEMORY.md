@@ -63,15 +63,17 @@ absoluter Heading-Anker und Karten-A/B-Test bleiben offen. Das vorbereitete EKF
 ist keine Kartenfreigabe.
 
 Vier reale Anlaeufe zeigten beim Best-Effort-HWT-Ausgang Topic-Luecken bis
-0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects. Die
-Zwischenloesung mit groesserem Observerpuffer allein reichte nicht. Daher
-verwenden der isolierte HWT-Ausgang und der Beobachter jetzt `RELIABLE` mit
-Tiefe 200; der ebenfalls verlaessliche Encoderausgang meldet Tiefe 10. Beim
-naechsten Lauf blieb die HWT-Quelle fehlerfrei, waehrend der Beobachter eine
-Zeitstempelluecke von 0,100037 s sah: nur 37 Mikrosekunden ueber der
-Quellengrenze. Die Quellen verriegeln deshalb weiterhin strikt oberhalb
-0,100 s; nur der passive Stillstandsbeobachter akzeptiert fuer ROS-Timer- und
-Zeitstempeljitter bis 0,110 s. Der volle Realtest steht noch aus.
+0,159757 s bei gleichzeitig rund 100 Hz und null Quellen-Rejects. `RELIABLE`
+mit Tiefe 200 allein beseitigte das Problem nicht: zwei weitere Anlaeufe
+brachen bei 0,100037 beziehungsweise 0,120361 s ab. Im letzten Lauf hatte die
+HWT-Quelle bereits 1697 Werte publiziert, der Beobachter aber nur 1032
+gespeichert. Ursache war dessen quadratische Arbeit: Nach Wahl des Messstarts
+wurden bei jedem ROS-Callback alle bisherigen Encoderwerte erneut durchsucht
+und fuer jede Suche die gesamte IMU-Zeitliste neu aufgebaut. Der Beobachter
+haelt die Zeitliste jetzt separat vor und prueft nur den neuesten moeglichen
+Fensterendpunkt. HWT-Ausgang und Beobachter bleiben `RELIABLE` mit Tiefe 200,
+der Encoder mit Tiefe 10; die strenge 0,100-s-Abnahmegrenze gilt wieder fuer
+Quelle und Beobachter. Der volle Realtest steht noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

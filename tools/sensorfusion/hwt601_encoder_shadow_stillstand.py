@@ -52,8 +52,8 @@ BASE_FRAME = 'base_link'
 IMU_Z_VARIANCE = 5.0e-7
 UNOBSERVED_VARIANCE = 1.0e6
 
-MAX_IMU_GAP_S = 0.11
-MAX_ENCODER_GAP_S = 0.11
+MAX_IMU_GAP_S = 0.10
+MAX_ENCODER_GAP_S = 0.10
 ENCODER_SOURCE_MAX_SAMPLE_GAP_S = 0.10
 MAX_PAIR_DURATION_S = 0.05
 MIN_IMU_RATE_HZ = 80.0
@@ -1049,6 +1049,7 @@ def _run(duration_s: float, output: Path) -> int:
             super().__init__('hwt601_encoder_shadow_stillstand_observer')
             self.writer = writer
             self.imu_samples: list[ImuYawSample] = []
+            self.imu_stamps: list[float] = []
             self.wheel_samples: list[WheelPoseSample] = []
             self.imu_received_monotonic: list[float] = []
             self.wheel_received_monotonic: list[float] = []
@@ -1231,6 +1232,7 @@ def _run(duration_s: float, output: Path) -> int:
                     return
             sample = ImuYawSample(stamp_s, float(message.angular_velocity.z))
             self.imu_samples.append(sample)
+            self.imu_stamps.append(stamp_s)
             self.imu_received_monotonic.append(received_at)
             self.writer.writerow((
                 'imu', received_at, stamp_s, '', '', '',
@@ -1315,11 +1317,10 @@ def _run(duration_s: float, output: Path) -> int:
             ))
 
         def _imu_bracket(self, stamp_s: float) -> tuple[int, int] | None:
-            if len(self.imu_samples) < 2:
+            if len(self.imu_stamps) < 2:
                 return None
-            stamps = [sample.stamp_s for sample in self.imu_samples]
             try:
-                return _bracketing_indices(stamps, stamp_s)
+                return _bracketing_indices(self.imu_stamps, stamp_s)
             except AnalysisError:
                 return None
 
@@ -1370,27 +1371,29 @@ def _run(duration_s: float, output: Path) -> int:
             if self.measurement_start_index is None:
                 return False
             start = self.wheel_samples[self.measurement_start_index].stamp_s
-            for index in range(
-                self.measurement_start_index + 1, len(self.wheel_samples)
+            # Only the newest wheel sample can become the end of a still-open
+            # window.  Rescanning the complete, ever-growing history on every
+            # ROS callback made the observer fall behind its reliable queues.
+            index = len(self.wheel_samples) - 1
+            if index <= self.measurement_start_index:
+                return False
+            sample = self.wheel_samples[index]
+            imu_bracket = self._imu_bracket(sample.stamp_s)
+            if (
+                sample.stamp_s - start >= duration_s
+                and self.wheel_received_monotonic[index]
+                - self.wheel_received_monotonic[
+                    self.measurement_start_index] >= duration_s
+                and imu_bracket is not None
             ):
-                sample = self.wheel_samples[index]
-                imu_bracket = self._imu_bracket(sample.stamp_s)
-                if (
-                    sample.stamp_s - start >= duration_s
-                    and self.wheel_received_monotonic[index]
-                    - self.wheel_received_monotonic[
-                        self.measurement_start_index] >= duration_s
-                    and imu_bracket is not None
-                ):
-                    self.measurement_end_index = index
-                    self.measurement_end_imu_index = imu_bracket[1]
-                    last_sample_received = max(
-                        self.wheel_received_monotonic[index],
-                        self.imu_received_monotonic[imu_bracket[1]],
-                    )
-                    self.post_window_status_guard.start(
-                        last_sample_received)
-                    return True
+                self.measurement_end_index = index
+                self.measurement_end_imu_index = imu_bracket[1]
+                last_sample_received = max(
+                    self.wheel_received_monotonic[index],
+                    self.imu_received_monotonic[imu_bracket[1]],
+                )
+                self.post_window_status_guard.start(last_sample_received)
+                return True
             return False
 
         @staticmethod
