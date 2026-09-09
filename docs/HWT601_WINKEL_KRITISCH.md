@@ -59,6 +59,19 @@ Test-/Sensortopics null Publisher. Das ist kein historischer Nachweis.
 
 ## Naechster notwendiger Nachweis
 
+**Erste native Stillstandsmessung 09.09.2026:** Nutzer bestaetigt Motorstrom
+aus, 40 mm breites Ziel frontal in 600 mm Entfernung ab LiDAR und in dessen
+Scanebene. `lidar_uart_probe.py --capture` liest ausschliesslich den
+seriennummerngeprueften LiDAR-USB-Port, ohne Sendebytes/ROS/SDK-Scanmatcher.
+47-Byte-Pakete mit CRC-8 geprueft und native Hundertstelgrad dekodiert.
+9.062 gueltige Pakete, null CRC-Fehler. Schmales Ziel in nativen CW-Bins
+87..90 Grad mit Medianentfernungen 604..610 mm; passt zum Hefter, Identitaet
+noch durch gezieltes Versetzen zu bestaetigen. Dies ist keine Winkelabnahme.
+Originalbytes und Histogramm lokal unter
+`/home/p/.local/share/amadeus/hwt601/lidar-native-20260909-173937/`.
+Port danach geschlossen; Motor-/IMU-Port unangetastet. Parser-Tests fuer
+Winkel, Entfernungen, Wrap, CRC-Verwerfung und fehlenden Sendeaufruf ergaenzt.
+
 Zuerst LiDAR-Winkelskala ohne Roboterbewegung gegen ein physisch vermessenes
 Ziel an zwei bekannten Positionen pruefen: Winkel aus Zielkoordinaten relativ
 zum LiDAR, nicht aus ROS. Dabei native UART-Bytes und Sensoridentitaet sichern;
