@@ -59,6 +59,22 @@ Test-/Sensortopics null Publisher. Das ist kein historischer Nachweis.
 
 ## Naechster notwendiger Nachweis
 
+**Zweite native Zielmessung 09.09.2026:** Nach vom Nutzer bestaetigtem
+seitlichem Versetzen gemaess Anleitung erneute rein passive UART-Aufnahme:
+9.063 gueltige Pakete, null CRC-Fehler. Altes nahes Ziel in CW-Bins 87..90
+verschwindet (wieder Hintergrund ~3,05 m); neues Ziel in Bins 48..50 erscheint
+bei 829..834 mm. Aus einzelnen Zielpunkten: Medianwinkel vorher 88,98409 Grad
+(1.406 Treffer, 607 mm), nachher 49,50182 Grad (1.120 Treffer, 831 mm).
+Differenz 39,48227 Grad. Auswahl: vorher 500..700 mm/nachher 750..1000 mm,
+jeweils native Winkel 0..110 Grad und Intensitaet >0. Lokale Zweitaufnahme:
+`/home/p/.local/share/amadeus/hwt601/lidar-native-20260909-175250/`.
+Nur die beiden Zielsektoren aendern ihren 1-Grad-Distanzmedian um >300 mm.
+Das stuetzt die Identitaet des bewegten Ziels. Der Test zeigt keine Meldung
+von ~90 Grad fuer die angeleitete Zielverschiebung, ist aber wegen 39,48
+statt nominell 45 Grad KEINE bestandene Winkelskalierungsabnahme. Tatsaechliche
+Zielkoordinaten/Seitwaertsverschiebung muessen nachgemessen werden; weder
+Aufstellfehler noch LiDAR-Skalenfehler damit bereits bewiesen. Motorsperre bleibt.
+
 **Erste native Stillstandsmessung 09.09.2026:** Nutzer bestaetigt Motorstrom
 aus, 40 mm breites Ziel frontal in 600 mm Entfernung ab LiDAR und in dessen
 Scanebene. `lidar_uart_probe.py --capture` liest ausschliesslich den

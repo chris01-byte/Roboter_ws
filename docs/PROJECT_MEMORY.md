@@ -19,6 +19,13 @@ Rückfallweg:
 
 ## 2026-09-09 — KRITISCH: Beide Drehabnahmen zurueckgezogen, Motor-Test gesperrt
 
+**Spaetere native Zielgegenprobe, weiter offen:** Hefter zuerst ~607 mm,
+nach angewiesenen 600 mm Seitwaertsverschiebung ~831 mm. Altes Ziel
+verschwindet/neues erscheint; Rohwinkeldifferenz 39,48227 Grad, nicht ~90,
+aber auch nicht die nominell erwarteten 45 Grad. 9.062/9.063 UART-Pakete
+ohne CRC-Fehler, keine Sendebytes oder Motoren. Tatsaechliche Zielkoordinaten
+nachmessen; keine neue Kalibrierfreigabe. Details im kritischen Bericht.
+
 **Evidenz:** Nutzer bestaetigt physisch 45 Grad anhand vorher gesetzter
 Bodenmarken, Software meldet rund 90 Grad. Bisherige Software-Pass-Ergebnisse
 sind keine gueltige Hardwareabnahme. Ursache offen; kein pauschales Halbieren.
