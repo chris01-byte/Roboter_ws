@@ -1,10 +1,12 @@
 # Inventar
 
-**KRITISCH 09.09.2026:** HWT-/LiDAR-Drehabnahmen zurueckgezogen: physische
-45-Grad-Bodenreferenz widerspricht Softwarewinkeln um 90 Grad. Motorisches
-Testwerkzeug gesperrt, Ursache offen, keine Fusionsfreigabe. Historische
-Pass-Angaben unten gelten nicht als Hardwareabnahme. Siehe
-`docs/HWT601_WINKEL_KRITISCH.md`.
+**HWT-Winkelabschluss 09.09.2026:** Nutzer bestaetigt den extern beobachteten
+180-Grad-Haltpunkt. HWT 178,164 Grad, LiDAR 178,250 Grad und freier Raw-Scan-
+Fit 178,129 Grad verwerfen den Faktor-zwei-Verdacht; keine Skalenhalbierung.
+Die frueheren 45-Grad-Laeufe bleiben historisch zurueckgezogen, ihr genauer
+Referenzfehler ist nicht rekonstruierbar. Motorwerkzeug bleibt gesperrt;
+passiver, strikt isolierter Gyro-Z-Schattenpfad ist warm motorlos bestanden. Siehe
+`docs/HWT601_WINKEL_KRITISCH.md` und `docs/HWT601_SHADOW.md`.
 
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
 **Softwaredelta:** 17.08.2026 · Branch
@@ -47,14 +49,27 @@ Schritt 2 gegen externe +/-90-Grad-Bodenreferenz vorbereitet, nicht real
 ausgefuehrt. Fester Anfangsbias, rein lesender Sensorzugriff, keine Aktoren.
 91 Softwaretests bestanden; Anleitung `docs/HWT601_DREHTEST.md`.
 
-**HWT-Motordrehdelta:** `feature/hwt601-powered-turn-test`, 09.09.2026:
-erste freigegebene Linksdrehung: IMU 90,93231 Grad, unabhaengiger LiDAR
-91,25000 Grad; Stillstand bestaetigt, 104 Softwaretests. Gegenrichtung/Fusion
-offen. Hardwarewirkung und Rueckfall: `docs/HWT601_MOTOR_DREHTEST.md`.
+**HWT-Motordrehdelta, historisch zurueckgezogen:**
+`feature/hwt601-powered-turn-test`, 09.09.2026: damalige Linksdrehung meldete
+IMU 90,93231 Grad und LiDAR 91,25000 Grad. Wegen der spaeteren
+45-Grad-Beobachtung keine eigenstaendige Hardwareabnahme; nur zusammen mit
+der bestaetigten externen 180-Grad-Gegenprobe als Diagnosehistorie nutzbar.
+Hardwarewirkung und Rueckfall: `docs/HWT601_MOTOR_DREHTEST.md`.
 
-**HWT-Gegendrehung:** `feature/hwt601-right-turn-test`, 09.09.2026:
-rechts IMU -90,57797 Grad gegen LiDAR -91,25000 Grad bestanden, Stillstand
-bestaetigt. 105 Tests. Beide groben Richtungschecks erledigt; Fusion offen.
+**HWT-Gegendrehung, historisch zurueckgezogen:**
+`feature/hwt601-right-turn-test`, 09.09.2026: damalige Rechtsdrehung meldete
+IMU -90,57797 Grad gegen LiDAR -91,25000 Grad. Kein eigenstaendiger
+Hardware-Pass; aktueller Skalenbefund stammt aus der extern bestaetigten
+180-Grad-Gegenprobe.
+
+**HWT-Shadowdelta:** `feature/hwt601-shadow-fusion`, 09.09.2026: nur
+HWT-FC03 und `/shadow/hwt601/*`, einmaliger explizit bestaetigter Startbias,
+danach eingefroren; bekannte Montage auf reines Gyro-Z in `base_link`
+abgebildet. Kein Basis-/Kamera-/LiDAR-/TF-/Odom-/Kartenpfad. Gemessener
+konservativer Warm-Stillstandswert `5,0e-7 (rad/s)^2`. Zehn-Minuten-Realtest:
+59.991 Proben bei 99,982 Hz, null Rejects/Reconnects, maximale Luecke 30,744 ms,
+Endintegral +0,01323 Grad und Spitzenintegral 0,08574 Grad. Kaltstart,
+Temperatur, Motorvibration und echte Encoderfusion offen.
 
 ---
 
@@ -106,6 +121,7 @@ bestaetigt. 105 Tests. Beide groben Richtungschecks erledigt; Fusion offen.
 | Sensor-Fusion, harter Motorlos-Test | `ros2 launch robot_bringup state_estimation_validation.launch.py` | nein (`dry_run=true`, RS485 gesperrt) |
 | Nur passive Fusionsknoten | `ros2 launch robot_state_estimation fusion.launch.py` | nein; startet keine Treiber |
 | Nur HWT601-Rohdaten | `ros2 launch robot_state_estimation hwt601.launch.py` | nein; liest nur die IMU, keine OAK/Motoren |
+| HWT601-Gyro-Z-Shadow | `AMADEUS_HWT601_STILLSTAND=JA bash tools/sensorfusion/start_hwt601_shadow.sh` | nein; port-/graphgeprueft, nur `/shadow/hwt601/*`, kein Odom/TF/Basistreiber |
 | HWT601-Stufentest | `ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py` | nein (`dry_run=true`, Motor-RS485 gesperrt; OAK/Fusion aus) |
 | SLAM/Kartierung | `ros2 launch robot_bringup slam.launch.py active_drive:=true` | **ja, Motoren bestromt** |
 | SLAM ohne Nahbereichsschutz | zusätzlich `safety:=false` | **ja, ohne Notbremse** |
@@ -161,7 +177,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
-| HWT601 (Nutzerangabe) | `/dev/ttyUSB_HWT601` → ttyUSB0 | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Rohdaten/ROS geprueft; Montage, Gyroskala, Langzeitverhalten/Isolation offen |
+| HWT601 (Nutzerangabe) | `/dev/ttyUSB_HWT601` → ttyUSB0 | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Rohdaten, Achsen, 600-s-Stillstand und extern bestaetigte 180-Grad-Skala geprueft; Temperatur/Vibration/Produktivfusion offen |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04

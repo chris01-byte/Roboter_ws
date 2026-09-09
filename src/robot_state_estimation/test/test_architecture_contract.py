@@ -144,6 +144,7 @@ def test_hwt601_profiles_are_separate_read_only_and_not_fused_by_default():
     assert driver['device_address'] == 80
     assert driver['poll_rate_hz'] <= 200.0
     assert driver['frame_id'] == 'hwt601_link'
+    assert driver['angular_velocity_full_scale_dps'] == 400.0
     assert driver['angular_velocity_variance'] > 0.0
     assert driver['linear_acceleration_variance'] > 0.0
     assert adapter['imu_input'] == '/hwt601/imu/data_raw'
@@ -158,3 +159,72 @@ def test_hwt601_profiles_are_separate_read_only_and_not_fused_by_default():
     assert "'start_oak', default_value='false'" in validation
     assert "'dry_run': True" in validation
     assert "'allow_rs485': False" in validation
+
+
+def test_hwt601_shadow_is_isolated_yaw_only_and_has_no_control_path():
+    launch = (ROOT / 'launch' / 'hwt601_shadow.launch.py').read_text()
+    source = (
+        ROOT / 'robot_state_estimation' / 'hwt601_shadow_node.py').read_text()
+    core = (
+        ROOT / 'robot_state_estimation' / 'hwt601_shadow_core.py').read_text()
+    config = yaml.safe_load(
+        (ROOT / 'config' / 'hwt601_shadow.yaml').read_text())
+    driver = config['hwt601_shadow_reader']['ros__parameters']
+    shadow = config['hwt601_shadow']['ros__parameters']
+
+    forbidden_launch_text = (
+        'base_hardware', 'depthai', 'scan_quality_gate', 'lidar_odometry',
+        'slam', 'nav2', 'cmd_vel', "'/odom'", "'/map'", "'/tf'",
+        '/fusion/imu', '/fusion/wheel_odom',
+    )
+    assert all(token not in launch for token in forbidden_launch_text)
+    assert 'operator_stationary_confirmed' in launch
+    assert "default_value='true'" not in launch
+    assert "default_value='false'" not in launch
+    assert "executable='hwt601_imu'" in launch
+    assert "executable='hwt601_shadow'" in launch
+
+    topics = (
+        driver['imu_topic'], driver['status_topic'],
+        driver['diagnostics_topic'], shadow['imu_input'],
+        shadow['imu_output'], shadow['status_topic'],
+        shadow['diagnostics_topic'],
+    )
+    assert all(topic.startswith('/shadow/hwt601/') for topic in topics)
+    assert driver['frame_id'] == 'hwt601_link'
+    assert shadow['expected_input_frame'] == 'hwt601_link'
+    assert shadow['output_frame'] == 'base_link'
+    assert shadow['operator_stationary_confirmed'] is False
+    assert shadow['angular_velocity_z_variance'] == 5.0e-7
+    assert driver['angular_velocity_variance'] == 5.0e-7
+
+    combined = launch + source + core
+    assert 'TransformBroadcaster' not in combined
+    assert 'create_subscription(\n            Twist' not in combined
+    assert 'create_publisher(\n            Odometry' not in combined
+    assert 'output.orientation_covariance[0] = -1.0' in source
+    assert 'output.linear_acceleration_covariance[0] = -1.0' in source
+    assert 'output.angular_velocity.z = result.yaw_rate_radps' in source
+    assert 'message.angular_velocity_covariance[8] > 0.0' in source
+    assert 'self.core.reject_invalid_message()' in source
+    assert "'fusion_ready': False" in source
+    assert "'publishes_tf': False" in source
+
+
+def test_hwt601_shadow_wrapper_requires_stillness_and_free_ports():
+    wrapper = (
+        ROOT.parents[1] / 'tools' / 'sensorfusion'
+        / 'start_hwt601_shadow.sh').read_text()
+
+    assert 'AMADEUS_HWT601_STILLSTAND' in wrapper
+    assert '!= "JA"' in wrapper
+    assert 'check_port_free /dev/ttyUSB_HWT601' in wrapper
+    assert 'check_port_free /dev/ttyUSB_BASE' in wrapper
+    assert 'status} -ne 1 || -n "${output}"' in wrapper
+    assert 'NetworkInterface name="lo"' in wrapper
+    assert 'RMW_IMPLEMENTATION=rmw_cyclonedds_cpp' in wrapper
+    assert 'operator_stationary_confirmed:=true' in wrapper
+    assert 'ros2 node list --no-daemon 2>&1' in wrapper
+    assert 'ros2 node list --no-daemon 2>/dev/null || true' not in wrapper
+    assert 'base_hardware' not in wrapper
+    assert '/cmd_vel' not in wrapper

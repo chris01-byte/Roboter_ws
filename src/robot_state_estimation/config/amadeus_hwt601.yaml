@@ -39,7 +39,8 @@ sensor_adapter:
     wheel_twist_lateral_variance: 0.04
     wheel_twist_angular_variance: 0.03
     enforce_nonholonomic_lateral_velocity: true
-    # These provisional fallbacks match the conservative first-stage profile.
+    # General profile remains conservative until cold/temperature/vibration
+    # tests pass. The measured value is isolated in hwt601_shadow.yaml.
     imu_angular_velocity_variance: 0.02
     imu_linear_acceleration_variance: 0.25
 

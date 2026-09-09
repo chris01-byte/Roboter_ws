@@ -23,7 +23,8 @@ hwt601_imu:
     angular_velocity_full_scale_dps: 400.0
     saturation_margin_counts: 8
 
-    # Deliberately conservative placeholders until stationary bags have been
-    # evaluated. They prevent the unmeasured sensor from being over-trusted.
+    # The general/non-shadow profile stays deliberately conservative until
+    # cold-start, temperature and motor-vibration validation are complete.
+    # The measured warm-stationary value exists only in hwt601_shadow.yaml.
     angular_velocity_variance: 0.02
     linear_acceleration_variance: 0.25

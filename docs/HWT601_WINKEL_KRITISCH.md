@@ -1,7 +1,11 @@
-# Kritischer Winkelwiderspruch — Drehabnahme zurueckgezogen
+# Kritischer Winkelwiderspruch — Faktor-zwei-Verdacht abgeschlossen
 
-Stand 09.09.2026. **Ursache offen, NICHT behoben. Keine Bewegungs- oder
-Fusionsabnahme aus den beiden Drehversuchen ableiten.**
+Stand 09.09.2026. Der Nutzer bestaetigte nachtraeglich ausdruecklich den
+visuell beobachteten 180-Grad-Haltpunkt. Damit ist ein Faktor-zwei-Fehler der
+HWT-/LiDAR-Winkelskala verworfen. Es gibt keine Skalenhalbierung. Die genaue
+Ursache der aelteren 45-Grad-Wahrnehmung ist nicht rekonstruierbar; jene beiden
+Laeufe bleiben historisch zurueckgezogen. Freigegeben ist nur der passive,
+isolierte Gyro-Z-Schattenpfad, keine autonome Bewegung oder Kartenintegration.
 
 ## Extern gestoppte 180-Grad-Gegenprobe
 
@@ -31,12 +35,12 @@ der Punkte liegen im Mittel 23,96 mm auseinander. Die 0,475-m-Translation des
 LiDAR-Ursprungs ist bei dessen 0,245-m-Hebelarm und einer Drehung nahe 180 Grad
 erwartbar und keine Chassisfahrt von einem halben Meter.
 
-Dieser Lauf ist starke Evidenz gegen einen Faktor-zwei-Fehler in HWT- oder
-LiDAR-Winkelskala: doppelte Befehlsdauer gegenueber den frueheren Laeufen
-ergibt doppelte Sensorwinkel, und der physische Endpunkt kam vom anwesenden
-Nutzer. Formale Schlussfolgerung bleibt an dessen Bestaetigung gebunden, dass
-der Motor-Halt tatsaechlich am beobachteten 180-Grad-Punkt betaetigt wurde.
-Bis dahin bleibt die Werkzeugsperre bestehen. Keine Kalibrierwerte geaendert.
+Dieser Lauf und die spaetere ausdrueckliche Nutzerbestaetigung verwerfen einen
+Faktor-zwei-Fehler in HWT- oder LiDAR-Winkelskala: doppelte Befehlsdauer
+gegenueber den frueheren Laeufen ergibt doppelte Sensorwinkel, und der
+physische Endpunkt kam vom anwesenden Nutzer. Die Werkzeugsperre bleibt als
+Schutz vor einer unnoetigen Wiederholung bestehen. Keine Skalenwerte wurden
+geaendert.
 
 Lokales Bag:
 `/home/p/.local/share/amadeus/hwt601/external-180-20260909/`, SHA-256 der DB3
@@ -100,7 +104,7 @@ lueckenlos ausschliessen. **Keine Fremdquelle nachgewiesen:** aktuelle
 achtsekündige Graphabfrage bei gestoppten Testprozessen fand auf allen fuenf
 Test-/Sensortopics null Publisher. Das ist kein historischer Nachweis.
 
-## Naechster notwendiger Nachweis
+## Historische native Zielmessungen
 
 **Zweite native Zielmessung 09.09.2026:** Nach vom Nutzer bestaetigtem
 seitlichem Versetzen gemaess Anleitung erneute rein passive UART-Aufnahme:
@@ -131,15 +135,13 @@ Originalbytes und Histogramm lokal unter
 Port danach geschlossen; Motor-/IMU-Port unangetastet. Parser-Tests fuer
 Winkel, Entfernungen, Wrap, CRC-Verwerfung und fehlenden Sendeaufruf ergaenzt.
 
-Zuerst LiDAR-Winkelskala ohne Roboterbewegung gegen ein physisch vermessenes
-Ziel an zwei bekannten Positionen pruefen: Winkel aus Zielkoordinaten relativ
-zum LiDAR, nicht aus ROS. Dabei native UART-Bytes und Sensoridentitaet sichern;
-ROS separat vergleichen, Quellen auf lokale Prozesse/GIDs begrenzen.
-Danach HWT native Rohregister/Hersteller-Winkelausgabe gegen eine unabhaengig
-definierte physische Winkelbewegung pruefen; Vorgehen erst nach neuer konkreter
-Absprache. Nicht automatisch nochmal 90 Grad fahren und nicht beide
-Skalen pauschal halbieren. Die aktuelle Sperre bleibt bis Ursachen- und
-Regressionsnachweis bestehen.
+Diese Zielmessungen bleiben als Nachweis des damaligen Diagnosewegs erhalten.
+Der ungenaue manuelle Aufbau ist nach der bestaetigten 180-Grad-Gegenprobe
+nicht mehr Grundlage einer Skalenentscheidung. Nicht automatisch erneut
+fahren und keine Skala pauschal halbieren. Der motorlose Schattenpfad aus
+`docs/HWT601_SHADOW.md` hat seinen warmen 600-s-Stillstand bestanden; eine
+spaetere echte Encodergegenprobe bleibt eine getrennte Stufe mit eigener
+Freigabe fuer jeden Hardwarezugriff oder Fahrtest.
 
 ## Integritaet der lokalen Evidenz
 

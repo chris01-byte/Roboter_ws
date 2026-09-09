@@ -1,10 +1,13 @@
 # HWT601-AGV-485: Einbau und gestufte Inbetriebnahme
 
-**Stand:** 08.09.2026
+**Stand:** 09.09.2026
 
-**Nachtrag:** USB-Installation inzwischen vom Nutzer ausgefuehrt. Erster
-realer 60-s-Rohdatenlauf und ROS-Ausgabe bestanden; keine Fusionsfreigabe.
-Messwerte und verbleibende Pruefungen: `HWT601_ERSTMESSUNG.md`.
+**Nachtrag:** USB-Installation, 600-s-Stillstand und die extern beobachtete,
+vom Nutzer bestaetigte 180-Grad-Skalenpruefung sind erfolgt. Ein Faktor-zwei-
+Fehler ist verworfen; keine Skalenhalbierung. Der isolierte Gyro-Z-
+Schattenpfad ohne Odometrie, TF oder Aktoren hat inzwischen auch seinen warmen
+600-s-Stillstand bestanden. Details: `HWT601_SHADOW.md`. Eine Produktions-
+oder Kartenfreigabe ist das noch nicht.
 
 **Vorheriger Softwarestatus:** vorbereitet und synthetisch getestet. Der Nutzer hat den
 HWT601 montiert; sein CH340-USB-Adapter ist sichtbar, aber Kernel-Treiber und
@@ -111,9 +114,13 @@ begrenzt neu verbunden.
 
 Die Orientierung ist immer explizit unbekannt
 (`orientation_covariance[0] = -1`). Die Datenblattskalierung `+/-4 g` und
-`400 Grad/s` Vollbereich ist konfigurierbar und bleibt bis zum Gravitationstest
-als **noch zu bestaetigen** markiert. Kovarianzen sind konservative
-Startwerte, keine gemessene Kalibrierung.
+`400 Grad/s` Vollbereich ist konfigurierbar. Gravitation und Gyro-Skala sind
+am gelieferten Sensor plausibilisiert; die bestaetigte externe 180-Grad-
+Gegenprobe schliesst insbesondere den Faktor zwei aus. Nur das isolierte
+Shadow-Profil verwendet `5,0e-7 (rad/s)^2` als Weissrauschersatz aus dem
+warmen 600-s-Stillstand. Das allgemeine HWT-Profil bleibt bis zur
+Produktionsabnahme bei `0.02`. Beschleunigungskovarianz, Kaltstart, Temperatur
+und Motorvibration bleiben ungemessen.
 
 ## 5. Inbetriebnahme nach Lieferung
 
@@ -156,46 +163,48 @@ Baudrate wird erst dokumentiert und dann im YAML-Profil angepasst.
 1. Ruhend muss der Betrag der Beschleunigung ungefaehr `9,81 m/s²` sein;
    vorlaeufiger Toleranzbereich `9,3..10,3 m/s²`.
 2. Jede Achse einzeln nach oben halten. Vorzeichen und Betrag dokumentieren.
-3. Den ausgeschalteten/gesicherten Roboter von Hand um etwa `+90 Grad` und
-   `-90 Grad` drehen. Positive Basis-Gier ist gegen den Uhrzeigersinn von oben.
-4. Erst aus diesen Messungen den statischen TF festlegen und erneut pruefen.
+3. Positive Basis-Gier ist gegen den Uhrzeigersinn von oben. Die Skala wurde
+   inzwischen mit einem vom Nutzer visuell bei etwa 180 Grad gestoppten Lauf
+   gegen HWT und zwei unabhaengige LiDAR-Auswertungen geprueft.
+4. Fuer Gyro-Z wird die bekannte Achsrotation direkt angewendet. Ein exakter
+   Chipursprung wird weiterhin nicht als statischer TF erfunden.
 
 Weicht die Beschleunigungsnorm ungefaehr um Faktor 2 oder 4 ab, wird nicht
 "zurechtkalibriert": Zuerst Firmware/Registerkarte und Vollbereich des
 gelieferten Modells klaeren. Die konfigurierbaren Skalen dienen der
 nachvollziehbaren Anpassung, nicht dem Kaschieren eines falschen Protokolls.
 
-### 5.4 Motorloser Langzeittest
+### 5.4 Motorloser Langzeit- und Schattentest
 
 ```bash
-ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py
+AMADEUS_HWT601_STILLSTAND=JA \
+  bash tools/sensorfusion/start_hwt601_shadow.sh
 ```
 
-Dieser Start haelt `dry_run=true`, `allow_rs485=false`, `publish_tf=false` und
-startet standardmaessig weder OAK noch Fusion/EKF. Danach stufenweise:
-
-```bash
-# Nach bestandener Rohdatenpruefung: Adapter und Biasdiagnose, EKF weiter aus
-ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py \
-  start_fusion_adapter:=true
-
-# Nur fuer den begrenzten Vergleich zusaetzlich OAK einschalten
-ros2 launch robot_bringup state_estimation_hwt601_validation.launch.py \
-  start_oak:=true
-```
+Dieser Start besitzt ueberhaupt keinen Basistreiber und damit auch keinen
+synthetischen Null-Odom-Strom, der faelschlich als Encoderstillstand gelten
+koennte. Er startet weder OAK, LiDAR, EKF noch TF und verwendet nur eigene
+`/shadow/hwt601/*`-Topics. Der erforderliche Launchwert darf nur bei
+tatsaechlichem Stillstand gesetzt werden. Nach 15 s Einlauf und 10 s
+Kalibrierung wird der Bias fest eingefroren. Das bisherige motorlose
+Bringup-Validierungslaunch bleibt fuer Architekturtests erhalten, ist aber
+nicht mehr der Abnahmepfad fuer einen physisch bestaetigten HWT-Bias.
 
 Abnahmedaten bleiben lokal. Aufzuzeichnen sind mindestens Kaltstart,
 30 Minuten Warmbetrieb, Datenrate, groesste Luecke, Beschleunigungsnorm,
 Gyro-Mittelwert/-Streuung und integrierte Gier. Vorlaeufig gelten bei 100-Hz-
-Abfrage mindestens 80 Hz, keine Luecke ueber 0,20 s und weniger als 1 Grad
-Gierdrift in 10 ruhigen Minuten nach dem Einlaufen. Grenzwerte und
-Kovarianzen werden anschliessend aus den echten Daten festgelegt.
+Abfrage mindestens 80 Hz, keine Luecke ueber 0,10 s und weniger als 1 Grad
+Gierdrift in 10 ruhigen Minuten nach dem Einlaufen. Grenzwerte und die noch
+fehlenden Temperatur-/Vibrationsanteile werden anschliessend aus den echten
+Daten festgelegt. Die erste Ruheauswertung und ihre reproduzierbare
+Berechnung stehen in `HWT601_SHADOW.md`.
 
 ### 5.5 Erst spaeter: EKF und Bewegung
 
-`start_ekf:=true` und `start_scan_gate:=true` sind erst nach bestaetigter
-Skala, Vorzeichen, Zeitverhalten und gemessenem statischen TF zulaessig. Der
-erste Bewegungstest folgt wieder den Stufen aus
+Ein eigener Schatten-EKF folgt erst mit echter Encoderodometrie und bleibt auf
+`/shadow/hwt601/odom` sowie `publish_tf=false` begrenzt. Der produktive EKF und
+`start_scan_gate:=true` bleiben bis zur vollstaendigen Abnahme aus. Der erste
+weitere Bewegungstest folgt wieder den Stufen aus
 `docs/SENSOR_FUSION_ARCHITEKTUR.md`: aufgebockte Raeder, dann glatter Boden,
 erst danach Fugen/Schwellen. Jede Aktorpruefung braucht eine neue persoenliche
 Freigabe, freien Weg und erreichbaren Not-Aus.
@@ -206,7 +215,8 @@ Freigabe, freien Weg und erreichbaren Not-Aus.
 - Herstellerreferenz fuer das High-Precision-Modbus-Protokoll:
   <https://github.com/WITMOTION/WitHighModbus_HWT9073485>
 
-Noch offen bis zur Abnahme: RS485-Suffix/Typenschildspannung,
-reale Modbus-Antwort, Skala, Achsorientierung,
-Montagekoordinaten, Rauschen, Temperaturdrift und Kovarianzen. Keine dieser
-Groessen wird vorab als bestanden behandelt.
+Noch offen bis zur Produktionsabnahme: dokumentierte Typenschildspannung,
+exakter Chipursprung (nur fuer Beschleunigung relevant), Kaltstart,
+Temperaturdrift, Motor-/Bodenvibration, Beschleunigungskovarianz und die echte
+Encoder-HWT-Schattenfusion. Modbus-Rohdaten, Achsen, Gravitation,
+Gyro-Vorzeichen/-Skala sowie warmes Ruherauschen sind inzwischen gemessen.

@@ -1,22 +1,29 @@
 # Übertragung auf den realen Roboter
 
-## KRITISCHE SPERRE — HWT/LiDAR-Drehabnahmen ungueltig (09.09.2026)
+## HWT-Winkelskala geklaert, warmer Schattenpfad bestanden (09.09.2026)
 
-Physische Bodenreferenz laut Nutzer 45 Grad je Richtung, gemeldet etwa 90.
-Alle folgenden Dreh-Pass-Eintraege sind historisch und zurueckgezogen.
-`fix/hwt601-angle-discrepancy-lock` sperrt das neue Motor-Testwerkzeug vor
-ROS-Start; keine andere Navigation damit freigegeben. Ursache nicht behoben.
-107 Tests, keine Hardware gestartet. Keine pauschale Skalenhalbierung.
-Status/Evidenz/naechster physischer Nachweis: `docs/HWT601_WINKEL_KRITISCH.md`.
+Der Nutzer hat inzwischen ausdruecklich bestaetigt, den extern beobachteten
+Test bei visuell etwa 180 Grad gestoppt zu haben. HWT 178,164, LiDAR 178,250,
+Encoder 175,616 und freier Raw-Scan-Fit 178,129 Grad verwerfen damit den
+Faktor-zwei-Verdacht. Keine Skalenhalbierung. Die aelteren 45-Grad-Beobachtungen
+bleiben historisch zurueckgezogen; ihr genauer Referenzfehler ist nachtraeglich
+nicht rekonstruierbar. Das Motor-Testwerkzeug bleibt vorsorglich gesperrt.
 
-Nachtrag: auf erneute ausdrueckliche Nutzeranweisung extern beobachteter
-180-Grad-Test in lokaler Domain, Sensoren bestimmten den Stopp nicht. Beim
-Motor-Halt: HWT 178,164, LiDAR 178,250, Encoder 175,616 und freier Raw-Scan-Fit
-178,129 Grad. Starke Evidenz gegen Faktor zwei; ausdrueckliche Bestaetigung des
-physischen Haltpunkts noch ausstehend. Prozesse beendet, Ports frei; Sperre
-und fehlende Fusionsfreigabe bleiben vorerst bestehen.
+`feature/hwt601-shadow-fusion` bereitet nun einen rein passiven Start mit
+eigenen `/shadow/hwt601/*`-Topics vor: einmaliger, explizit bestaetigter
+Startbias, danach fest; nur Gyro-Z im `base_link`-Frame. Kein Motorport,
+`cmd_vel`, OAK, LiDAR, `/odom`, TF, SLAM, Navigation oder Kartenpfad.
+Warm-Stillstandskovarianz konservativ `5,0e-7 (rad/s)^2`; Temperatur,
+Kaltstart und Motorvibration bleiben offen. Der abschliessende 600,009-s-
+Realtest lieferte 59.991 Proben bei 99,982 Hz, null Rejects/Reconnects,
+30,744 ms Maximalluecke, +0,01323 Grad Endintegral und 0,08574 Grad maximales
+Zwischenintegral. Der Bias blieb nach der Startkalibrierung fest bei
+`adaptation_samples=0`. Der isolierte Graph hatte nur die zwei HWT-Knoten und
+den Messbeobachter, keine Produktiv-Odom-/TF-/Map-/Befehlspublisher; Motorport,
+OAK, Basis, SLAM und RTAB-Map blieben aus. Prozesse sauber beendet, beide Ports
+und Domain frei, Kartensignatur unveraendert. Details: `docs/HWT601_SHADOW.md`.
 
-## HWT: Gegendrehung rechts ebenfalls bestanden (09.09.2026)
+## Historie, Abnahme zurueckgezogen: HWT-Gegendrehung rechts (09.09.2026)
 
 `feature/hwt601-right-turn-test`: `--direction right` bei unveraenderten
 Grenzen. IMU -90,57797 Grad gegen LiDAR -91,25000 Grad, Differenz +0,67203
@@ -28,7 +35,7 @@ Details und lokale Daten: `docs/HWT601_MOTOR_DREHTEST.md`.
 
 ---
 
-## HWT: erste motorische Linksdrehung bestanden (09.09.2026)
+## Historie, Abnahme zurueckgezogen: HWT-Linksdrehung (09.09.2026)
 
 Nach persoenlicher Freigabe: IMU +90,93231 Grad, unabhaengiger LiDAR
 +91,25000 Grad, Encoder +89,84432 Grad. Stillstand bestaetigt, Testprozesse

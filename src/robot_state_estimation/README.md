@@ -88,6 +88,30 @@ OAK, base driver, TF or filter:
 ros2 launch robot_state_estimation hwt601.launch.py
 ```
 
+After the confirmed external 180-degree scale check, the first integration
+stage is an isolated yaw-rate shadow. It requires a fresh explicit stationary
+declaration, calibrates once, freezes the bias and publishes only under
+`/shadow/hwt601/*`; it creates no odometry or TF:
+
+From the workspace root, use the checked wrapper rather than invoking the
+launch file directly. It verifies both serial ports, an empty graph and a
+CycloneDDS loopback-only domain before starting:
+
+```bash
+AMADEUS_HWT601_STILLSTAND=JA \
+  bash tools/sensorfusion/start_hwt601_shadow.sh
+```
+
+Direct launch invocation is only an unqualified developer mechanism and is
+not an acceptance procedure.
+
+The derived message is in `base_link` because only the measured, aligned Z
+axis is retained. Orientation and acceleration are marked unavailable; no
+sensor-origin TF is fabricated. See `docs/HWT601_SHADOW.md` for the measured
+covariance, isolated ROS-domain procedure and acceptance limits. The warm
+600-second standstill acceptance has passed; cold start, temperature, motor
+vibration, encoder fusion and production use remain explicitly open.
+
 For staged integration use
 `robot_bringup/state_estimation_hwt601_validation.launch.py`. Its base remains
 hard-coded motorless, while OAK, adapter and EKF all default to off. Exact

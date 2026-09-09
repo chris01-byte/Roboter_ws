@@ -37,6 +37,8 @@ setup(
             'robot_state_estimation.lidar_odometry_node:main',
             'hwt601_imu = '
             'robot_state_estimation.hwt601_imu_node:main',
+            'hwt601_shadow = '
+            'robot_state_estimation.hwt601_shadow_node:main',
         ],
     },
 )

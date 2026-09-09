@@ -17,15 +17,61 @@ Rückfallweg:
 
 ---
 
-## 2026-09-09 — KRITISCH: Beide Drehabnahmen zurueckgezogen, Motor-Test gesperrt
+## 2026-09-09 — Faktor-zwei-Verdacht verworfen, isolierter HWT-Shadow vorbereitet
+
+**Entscheidung:** Der Nutzer bestaetigte ausdruecklich, den extern gestoppten
+Test nach eigener visueller Chassisbeobachtung bei etwa 180 Grad beendet zu
+haben. HWT +178,164 Grad, LiDAR-Odom +178,250 Grad und freier Raw-Scan-Fit
++178,129 Grad bilden damit drei konsistente Messpfade gegen die externe
+Referenz. Ein Faktor-zwei-Fehler der HWT-/LiDAR-Winkelskala ist verworfen;
+keine Skalenhalbierung. Die genaue Ursache der frueher wahrgenommenen
+45-Grad-Endpunkte ist nicht rekonstruierbar. Deren Pass-Markierungen bleiben
+historisch zurueckgezogen, blockieren aber nicht mehr passive HWT-Pruefungen.
+
+**Software:** Neuer `feature/hwt601-shadow-fusion`-Pfad liest nur HWT-FC03,
+kalibriert den Bias nach explizit deklariertem Startstillstand einmal und
+friert ihn danach ein. Aus der bekannten Achsabbildung wird ausschliesslich
+Gyro-Z im `base_link`-Frame auf `/shadow/hwt601/*` publiziert. Kein erfundener
+Chip-TF, keine Orientierung/Beschleunigung, kein `/odom`, TF, Motor-, OAK-,
+LiDAR-, SLAM-, Navigations- oder Kartenpfad. Der alte Motortest bleibt als
+zusaetzliche Schutzmassnahme hart gesperrt.
+
+**Kovarianz:** 59.993 Proben/600 s ergeben im Sensorframe Diagonalvarianzen
+`[1,809e-7, 1,997e-7, 1,154e-8] (rad/s)^2`. Wegen quantisiertem,
+zeitkorreliertem Z-Rauschen liegt der effektive Wert bis 100 s bei
+`4,179e-7`; konservativer Schattenwert `5,0e-7`. Reproduzierbares
+Offline-Werkzeug und Grenzen in `docs/HWT601_SHADOW.md`. Kein Kaltstart-,
+Temperatur- oder Motorvibrationsnachweis, daher keine Produktionsfreigabe.
+
+**Teststatus:** 124 Python-Tests fuer `robot_state_estimation`,
+`robot_bringup` und die Sensorfusionswerkzeuge sowie 67 Colcon-Ergebnisse ohne
+Fehler. Reale Loopback-Domain-144-Abnahme: exakt zwei erwartete HWT-Nodes,
+100,0 Hz, null Rejects/Reconnects, 2.500 Startproben blockiert, Bias aus 1.001
+Proben und danach `adaptation_samples=0`. Getrennte 20-s-Aufnahme: 2.001
+Proben, maximale Luecke 12,13 ms, korrigiertes Z-Integral +0,0463 Grad. Null
+Publisher auf Produktiv-Odom-/TF-/Karten-/Fusions-/Befehlstopics. Der
+abschliessende 600,009-s-Lauf hatte 59.991 Proben bei 99,982 Hz, null
+Rejects/Reconnects, maximal 30,744 ms Luecke, +0,01323 Grad Endintegral und
+0,08574 Grad maximales Zwischenintegral. Mit Beobachter waren exakt drei
+Nodes aktiv; Motorport, OAK, Basis, SLAM und RTAB-Map blieben aus.
+
+**Offene Risiken/Rueckfall:** Kaltstart, Temperatur, Motorvibration und echte
+Encoderfusion offen. Ein SIGINT am
+Launch-Elternprozess beendete beide Nodes sauber; danach beide Ports und
+Domain frei. Die Kartensignatur blieb unveraendert. Bestehende
+Produktivstarts sind unveraendert.
+
+---
+
+## 2026-09-09 — Historie: Drehabnahmen zeitweise zurueckgezogen
 
 **Extern gestoppte 180-Grad-Gegenprobe:** Nach erneuter ausdruecklicher
 Nutzeranweisung in lokaler ROS-Domain 143, ohne sensorbestimmten Stopp.
 Nutzer betaetigte Motor-Halt am beobachteten Rueckwaertspunkt; nach 32,609 s:
 HWT +178,164 Grad, LiDAR-Odom +178,250 Grad, Encoder +175,616 Grad,
 separater freier Raw-Scan-Fit +178,129 Grad. Das spricht stark gegen einen
-Faktor-zwei-Sensorfehler. Schlussfolgerung wartet auf ausdrueckliche
-Nutzerbestaetigung des physischen 180-Grad-Haltpunkts; Sperre bleibt bis dahin.
+Faktor-zwei-Sensorfehler. Die damals noch ausstehende Nutzerbestaetigung ist
+inzwischen erfolgt; die aktuelle Schlussfolgerung steht im Eintrag darueber.
 Prozesse beendet, Ports frei, keine Kalibrierwerte geaendert.
 
 **Spaetere native Zielgegenprobe, weiter offen:** Hefter zuerst ~607 mm,
