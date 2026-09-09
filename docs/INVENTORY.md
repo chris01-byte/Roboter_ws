@@ -1,5 +1,11 @@
 # Inventar
 
+**KRITISCH 09.09.2026:** HWT-/LiDAR-Drehabnahmen zurueckgezogen: physische
+45-Grad-Bodenreferenz widerspricht Softwarewinkeln um 90 Grad. Motorisches
+Testwerkzeug gesperrt, Ursache offen, keine Fusionsfreigabe. Historische
+Pass-Angaben unten gelten nicht als Hardwareabnahme. Siehe
+`docs/HWT601_WINKEL_KRITISCH.md`.
+
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
 **Softwaredelta:** 17.08.2026 · Branch
 `feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %

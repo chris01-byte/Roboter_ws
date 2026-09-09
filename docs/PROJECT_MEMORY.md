@@ -17,6 +17,27 @@ Rückfallweg:
 
 ---
 
+## 2026-09-09 — KRITISCH: Beide Drehabnahmen zurueckgezogen, Motor-Test gesperrt
+
+**Evidenz:** Nutzer bestaetigt physisch 45 Grad anhand vorher gesetzter
+Bodenmarken, Software meldet rund 90 Grad. Bisherige Software-Pass-Ergebnisse
+sind keine gueltige Hardwareabnahme. Ursache offen; kein pauschales Halbieren.
+
+**Massnahme:** `fix/hwt601-angle-discrepancy-lock`: --execute vor ROS-Start
+unbedingt gesperrt. 107 Tests bestanden. Keine Hardware gestartet oder
+Konfiguration geaendert. Originalmessungen unveraendert, Hashes gesichert.
+Nicht auf alten Branch ausweichen; dort fehlt die neue lokale Werkzeugsperre.
+
+**Befund/Grenzen:** Keine Zeitverdopplung/Quaternion-Fehlumrechnung gefunden.
+Separater freier Offline-Scanfit bestaetigt etwa +/-91 Grad nur in ROS-Daten.
+Sensorquellen wurden nicht per GID/Exklusivitaet abgesichert; normale
+netzwerkfaehige Domain 42, native UART-Frames fehlen. Fremddaten nicht
+nachgewiesen (aktuell null Publisher), historisch nicht sicher ausgeschlossen.
+Naechster Nachweis: native LiDAR-Winkel gegen physisches Ziel ohne
+Roboterbewegung. Details: `docs/HWT601_WINKEL_KRITISCH.md`.
+
+---
+
 ## 2026-09-09 — HWT-Gegendrehung rechts bestaetigt Vorzeichen/Skala
 
 **Entscheidung / Evidenz:** Explizit freigegebene Gegendrehung auf

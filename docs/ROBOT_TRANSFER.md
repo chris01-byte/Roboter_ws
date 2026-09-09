@@ -1,5 +1,14 @@
 # Übertragung auf den realen Roboter
 
+## KRITISCHE SPERRE — HWT/LiDAR-Drehabnahmen ungueltig (09.09.2026)
+
+Physische Bodenreferenz laut Nutzer 45 Grad je Richtung, gemeldet etwa 90.
+Alle folgenden Dreh-Pass-Eintraege sind historisch und zurueckgezogen.
+`fix/hwt601-angle-discrepancy-lock` sperrt das neue Motor-Testwerkzeug vor
+ROS-Start; keine andere Navigation damit freigegeben. Ursache nicht behoben.
+107 Tests, keine Hardware gestartet. Keine pauschale Skalenhalbierung.
+Status/Evidenz/naechster physischer Nachweis: `docs/HWT601_WINKEL_KRITISCH.md`.
+
 ## HWT: Gegendrehung rechts ebenfalls bestanden (09.09.2026)
 
 `feature/hwt601-right-turn-test`: `--direction right` bei unveraenderten

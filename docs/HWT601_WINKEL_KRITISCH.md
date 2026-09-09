@@ -1,0 +1,86 @@
+# Kritischer Winkelwiderspruch — Drehabnahme zurueckgezogen
+
+Stand 09.09.2026. **Ursache offen, NICHT behoben. Keine Bewegungs- oder
+Fusionsabnahme aus den beiden Drehversuchen ableiten.**
+
+Der anwesende Nutzer bestaetigt anhand vorher gesetzter Bodenmarkierungen
+und der Chassisausrichtung jeweils etwa 45 Grad links und rechts. Dagegen
+meldeten die aufgezeichneten IMU-/LiDAR-/Encoderwerte etwa 90 Grad.
+Die physische Referenz darf nicht durch die Uebereinstimmung der Softwarewerte
+ueberstimmt werden. Die frueheren `passed=true`-Ergebnisse sind als
+Hardwareabnahme zurueckgezogen. Originaldateien bleiben als Evidenz unveraendert.
+
+## Sofortmassnahme
+
+Branch `fix/hwt601-angle-discrepancy-lock`: motorisches Testwerkzeug verweigert
+`--execute` vor ROS-Initialisierung, auch bei gesetzter Fahrfreigabe und fuer
+beide Richtungen. Kein Freigabeschalter umgeht die Sperre. 107 Softwaretests
+bestanden, darunter beide Sperrfaelle. Keine Antriebe/Sensoren gestartet,
+keine Motor-/Sensorkonfiguration geschrieben. Die Sperre gilt fuer dieses
+Werkzeug in diesem Worktree, nicht fuer alte Branches oder andere Startwege.
+Kein autonomer Prozess lief; alle drei seriellen Ports waren frei.
+Die Motorversorgung wurde nicht physisch ausgeschaltet.
+
+## Nachgeprueft, ohne Bewegung
+
+- Die Stoppschwelle war 88 Grad **LiDAR-Schätzung**, nicht ein aus Laufzeit
+  erzeugter Ergebniswert. IMU wurde mit festem Bias unabhaengig integriert.
+- ROS-Zeitdauer/monotone Empfangsdauer im Bewegungsfenster: links 0,99994,
+  rechts 1,00001. Keine beobachtete Verdopplung der Zeitbasis.
+- LiDAR-SDK dekodiert Hundertstelgrad mit `/100`, ROS-Umrechnung ist
+  pi/180; Scanmetadaten spannen rund 360 Grad auf. Quaternion verwendet
+  sin(yaw/2), cos(yaw/2), Rueckrechnung atan2 korrekt. In diesen gelesenen
+  Codepfaden keine Faktor-zwei-Stelle identifiziert. SDK-Arbeitskopie sauber,
+  Commit `bf668a89baf722a787dadc442860dcbf33a82f5a`; ausgefuehrtes Binary ist
+  das Build-Overlay. Historische Binary-/Hardwareidentitaet nicht lueckenlos
+  attestiert.
+- Encoderformel ist (rechter Weg - linker Weg)/Spurweite, Counts=1000,
+  Getriebe=10. Rohzaehleraenderungen links (-7688,-7690), rechts (7684,7687).
+  Formelkorrektheit beweist nicht die physisch richtige Parametrierung.
+- IMU nutzt Z-Skala 400/32768 Grad/s je Rohwert. Herstellerangabe stuetzt
+  diesen Wert, aber beweist nicht die gelieferte Firmwarekonfiguration.
+- Separater Offline-Scanvergleich mit KD-Baum und freier SE(2)-Suche ueber
+  -180..180 Grad, ohne Online-Matcher, IMU oder Encoder: links +91,3765,
+  rechts -91,1585 Grad. Beste 70 % der Punkte im Mittel 11,8/13,9 mm
+  auseinander. Suche um +/-45 Grad passte deutlich schlechter. Das belegt
+  Konsistenz der **gespeicherten ROS-Scans**, nicht die physische Winkelreferenz
+  oder deren fehlerfreie Entstehung.
+
+## Konkrete Luecke im Pruefaufbau
+
+Nur der Befehlskanal wurde auf Publisher-/Subscriberanzahl geprueft, nicht
+die Sensorquellen. Verwendet wurde die normale netzwerkfaehige ROS-Domain 42,
+nicht eine rein lokale Testdomain. Bags enthalten keine Sender-GIDs je
+Nachricht und keine originalen UART-Frames beider Sensoren. Eine moegliche
+Fremdquelle/Ersetzung vor dem Recording laesst sich daher rueckwirkend nicht
+lueckenlos ausschliessen. **Keine Fremdquelle nachgewiesen:** aktuelle
+achtsekündige Graphabfrage bei gestoppten Testprozessen fand auf allen fuenf
+Test-/Sensortopics null Publisher. Das ist kein historischer Nachweis.
+
+## Naechster notwendiger Nachweis
+
+Zuerst LiDAR-Winkelskala ohne Roboterbewegung gegen ein physisch vermessenes
+Ziel an zwei bekannten Positionen pruefen: Winkel aus Zielkoordinaten relativ
+zum LiDAR, nicht aus ROS. Dabei native UART-Bytes und Sensoridentitaet sichern;
+ROS separat vergleichen, Quellen auf lokale Prozesse/GIDs begrenzen.
+Danach HWT native Rohregister/Hersteller-Winkelausgabe gegen eine unabhaengig
+definierte physische Winkelbewegung pruefen; Vorgehen erst nach neuer konkreter
+Absprache. Nicht automatisch nochmal 90 Grad fahren und nicht beide
+Skalen pauschal halbieren. Die aktuelle Sperre bleibt bis Ursachen- und
+Regressionsnachweis bestehen.
+
+## Integritaet der lokalen Evidenz
+
+Alle Pfade relativ zu `/home/p/.local/share/amadeus/hwt601/`:
+
+| Datei | SHA-256 |
+|---|---|
+| powered-20260909-162248/samples.jsonl | d78c69d3b29e7ff71a36825cfb09b19120ed70a189baf49cd60ebb32bd29c650 |
+| powered-20260909-164111/samples.jsonl | 623b3415fc7b3889de0751b8d9b2909f589a6bba675525cbbf84807cfa955d10 |
+| powered-scans-20260909-162330/powered-scans-20260909-162330_0.db3 | 6f290ba19df4e7da2d350754b5a22dc5cfde57cca8082774156924f87ee4a2c7 |
+| right-scans-20260909-164100/right-scans-20260909-164100_0.db3 | 08caba8e2adc4c3504493460163fad5e6c74b28647177c3db108645a91dbfd9f |
+
+Rohdaten enthalten Wohnungsgeometrie und bleiben ausschliesslich lokal.
+Rueckfall der Aenderung darf nicht als Fahrfreigabe verwendet werden:
+vorherige Branches enthalten ungesperrte Testwerkzeuge und bleiben fuer
+Bewegung ebenfalls nicht freigegeben.

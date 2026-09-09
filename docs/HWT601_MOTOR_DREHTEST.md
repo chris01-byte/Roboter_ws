@@ -1,5 +1,11 @@
 # HWT601: erste motorische Linksdrehung, 09.09.2026
 
+> **KRITISCH: Die nachstehenden Abnahmen sind zurueckgezogen.** Nutzer bestaetigt
+> physisch jeweils nur 45 Grad an Bodenmarkierungen statt gemeldeter 90 Grad.
+> Ursache offen, motorisches Testwerkzeug gesperrt. Die folgenden Werte sind
+> historische Softwareergebnisse, keine gueltige Hardwareabnahme.
+> Aktueller Stand: `docs/HWT601_WINKEL_KRITISCH.md`.
+
 ## Nachtrag: freigegebene Gegendrehung rechts bestanden
 
 Auf ausdruecklichen Nutzerwunsch eine Rechtsdrehung mit unveraenderten

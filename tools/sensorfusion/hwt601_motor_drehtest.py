@@ -18,6 +18,9 @@ from hwt601_bias_stillstand import Integral, profile_config
 from robot_state_estimation.quality_core import GyroBiasEstimator
 
 COMMAND = '/hwt_test/cmd_vel'
+MOTION_BLOCK_REASON = (
+    'KRITISCHE SPERRE: Bodenreferenz 45 Grad widerspricht Sensorwerten um 90 Grad. '
+    'Drehabnahme zurueckgezogen; keine weitere Bewegung bis Ursachenabnahme.')
 
 
 def angle_delta(a, b):
@@ -63,6 +66,8 @@ def main():
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--direction', choices=('left', 'right'), default='left')
     args = parser.parse_args()
+    if args.execute:
+        parser.error(MOTION_BLOCK_REASON)
     direction = 1 if args.direction == 'left' else -1
     direction_label = 'links' if direction == 1 else 'rechts'
     if args.execute and (os.environ.get('AMADEUS_FAHRFREIGABE') != 'JA'

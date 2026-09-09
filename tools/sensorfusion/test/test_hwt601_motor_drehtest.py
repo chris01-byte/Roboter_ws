@@ -8,6 +8,16 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from hwt601_motor_drehtest import angle_delta, base_healthy, stationary, drive_decision
 
 
+@pytest.mark.parametrize('direction',['left','right'])
+def test_critical_lock_precedes_ros_and_permission(monkeypatch,capsys,direction):
+    import hwt601_motor_drehtest as module
+    monkeypatch.setattr(sys,'argv',['test','--execute','--direction',direction])
+    monkeypatch.setenv('AMADEUS_FAHRFREIGABE','JA')
+    with pytest.raises(SystemExit) as exc:module.main()
+    assert exc.value.code == 2
+    assert 'KRITISCHE SPERRE' in capsys.readouterr().err
+
+
 def test_wrapping():
     assert math.degrees(angle_delta(math.radians(-179),math.radians(179))) == pytest.approx(2)
 
