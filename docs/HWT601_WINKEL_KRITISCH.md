@@ -3,6 +3,49 @@
 Stand 09.09.2026. **Ursache offen, NICHT behoben. Keine Bewegungs- oder
 Fusionsabnahme aus den beiden Drehversuchen ableiten.**
 
+## Extern gestoppte 180-Grad-Gegenprobe
+
+Der Nutzer verlangte nach der Sperre ausdruecklich eine beaufsichtigte
+180-Grad-Drehung und wollte den physischen Endpunkt selbst beobachten. Fuer
+diesen einzelnen Test bestimmte deshalb **kein Sensor** den Stopp: langsames
+Linkskommando +0,10 rad/s, Nutzer betaetigte Motor-Halt/Not-Aus am beobachteten
+Rueckwaertspunkt; automatische zweite Grenze 35 s. Eine lokale, nur ueber
+Loopback erreichbare ROS-Domain 143 wurde verwendet. Vorher waren genau je ein
+lokaler Publisher fuer LiDAR, HWT, LiDAR-Odometrie und Basiszustand, null
+Befehlspublisher, ein Befehlssubscriber, gesunde Encoder und Stillstand
+bestaetigt. OAK, SLAM, Navigation und collision_monitor liefen nicht.
+
+Motor-Halt wurde nach 32,60936 s positivem Kommando als RS485-/Encoderverlust
+erkannt. Aufzeichnung bis zu diesem externen Ereignis:
+
+| Auswertung | Drehwinkel |
+|---|---:|
+| HWT-Gyro, Bias aus 1.400 Vorlaufproben | +178,16378 Grad |
+| lokale rad-/IMU-unabhaengige LiDAR-Odometrie | +178,25000 Grad |
+| Encoderpositions-Odometrie | +175,61648 Grad |
+| separater Anfangs-/Endscan-Fit, freie Suche -180..180 | +178,12888 Grad |
+
+IMU: 3.333 Bewegungsproben, 99,97166 Hz, maximale Luecke 25,239 ms.
+Der freie Raw-Scan-Fit nutzt weder Online-Matcher noch IMU/Encoder; beste 70 %
+der Punkte liegen im Mittel 23,96 mm auseinander. Die 0,475-m-Translation des
+LiDAR-Ursprungs ist bei dessen 0,245-m-Hebelarm und einer Drehung nahe 180 Grad
+erwartbar und keine Chassisfahrt von einem halben Meter.
+
+Dieser Lauf ist starke Evidenz gegen einen Faktor-zwei-Fehler in HWT- oder
+LiDAR-Winkelskala: doppelte Befehlsdauer gegenueber den frueheren Laeufen
+ergibt doppelte Sensorwinkel, und der physische Endpunkt kam vom anwesenden
+Nutzer. Formale Schlussfolgerung bleibt an dessen Bestaetigung gebunden, dass
+der Motor-Halt tatsaechlich am beobachteten 180-Grad-Punkt betaetigt wurde.
+Bis dahin bleibt die Werkzeugsperre bestehen. Keine Kalibrierwerte geaendert.
+
+Lokales Bag:
+`/home/p/.local/share/amadeus/hwt601/external-180-20260909/`, SHA-256 der DB3
+`0ac4a4c73d80627704c4c38919b3282dfca7f3bbd26cd114f451072072aa3a51`.
+Alle Prozesse einzeln per SIGINT beendet, serielle Ports frei. Der Motor-Halt
+blieb die physische Rueckfallebene; Basis beendete danach mit dem bekannten
+Shutdown-Doppelfehler, erst nach bereits gesendetem Stopp und erkannter
+Hardwareunterbrechung.
+
 Der anwesende Nutzer bestaetigt anhand vorher gesetzter Bodenmarkierungen
 und der Chassisausrichtung jeweils etwa 45 Grad links und rechts. Dagegen
 meldeten die aufgezeichneten IMU-/LiDAR-/Encoderwerte etwa 90 Grad.

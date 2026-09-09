@@ -9,6 +9,13 @@ ROS-Start; keine andere Navigation damit freigegeben. Ursache nicht behoben.
 107 Tests, keine Hardware gestartet. Keine pauschale Skalenhalbierung.
 Status/Evidenz/naechster physischer Nachweis: `docs/HWT601_WINKEL_KRITISCH.md`.
 
+Nachtrag: auf erneute ausdrueckliche Nutzeranweisung extern beobachteter
+180-Grad-Test in lokaler Domain, Sensoren bestimmten den Stopp nicht. Beim
+Motor-Halt: HWT 178,164, LiDAR 178,250, Encoder 175,616 und freier Raw-Scan-Fit
+178,129 Grad. Starke Evidenz gegen Faktor zwei; ausdrueckliche Bestaetigung des
+physischen Haltpunkts noch ausstehend. Prozesse beendet, Ports frei; Sperre
+und fehlende Fusionsfreigabe bleiben vorerst bestehen.
+
 ## HWT: Gegendrehung rechts ebenfalls bestanden (09.09.2026)
 
 `feature/hwt601-right-turn-test`: `--direction right` bei unveraenderten

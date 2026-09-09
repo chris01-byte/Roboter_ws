@@ -19,6 +19,15 @@ Rückfallweg:
 
 ## 2026-09-09 — KRITISCH: Beide Drehabnahmen zurueckgezogen, Motor-Test gesperrt
 
+**Extern gestoppte 180-Grad-Gegenprobe:** Nach erneuter ausdruecklicher
+Nutzeranweisung in lokaler ROS-Domain 143, ohne sensorbestimmten Stopp.
+Nutzer betaetigte Motor-Halt am beobachteten Rueckwaertspunkt; nach 32,609 s:
+HWT +178,164 Grad, LiDAR-Odom +178,250 Grad, Encoder +175,616 Grad,
+separater freier Raw-Scan-Fit +178,129 Grad. Das spricht stark gegen einen
+Faktor-zwei-Sensorfehler. Schlussfolgerung wartet auf ausdrueckliche
+Nutzerbestaetigung des physischen 180-Grad-Haltpunkts; Sperre bleibt bis dahin.
+Prozesse beendet, Ports frei, keine Kalibrierwerte geaendert.
+
 **Spaetere native Zielgegenprobe, weiter offen:** Hefter zuerst ~607 mm,
 nach angewiesenen 600 mm Seitwaertsverschiebung ~831 mm. Altes Ziel
 verschwindet/neues erscheint; Rohwinkeldifferenz 39,48227 Grad, nicht ~90,
