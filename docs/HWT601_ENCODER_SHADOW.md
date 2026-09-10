@@ -182,7 +182,29 @@ weiterhin unfreigegeben.
 `hwt601_encoder_shadow_ekf.launch.py` ist vorbereitet, aber noch nicht real
 abgenommen. Es nutzt nur Encoder-`vx`/`wz` und HWT-`wz`, publiziert nur
 `/shadow/hwt601/odom`, setzt `publish_tf=false` und `use_control=false` und
-startet keine Hardware.
+startet keine Hardware. Vor einem langen oder dynamischen Lauf prueft ein
+eigener 120-s-Beobachter den Filter im Stillstand. Er muss vor den Quellen
+laufen; der EKF darf erst nach den drei Quellen starten:
+
+```bash
+bash tools/sensorfusion/start_hwt601_encoder_shadow_ekf_observer.sh \
+  ~/.local/share/amadeus/hwt601/encoder-shadow-ekf-YYYYMMDD-HHMMSS
+
+AMADEUS_HWT601_ENCODER_STILLSTAND=JA \
+AMADEUS_BASE_STACK_GESTOPPT=JA \
+  bash tools/sensorfusion/start_hwt601_encoder_shadow.sh
+
+AMADEUS_HWT_ENCODER_EKF_STILLSTAND=JA \
+  bash tools/sensorfusion/start_hwt601_encoder_shadow_ekf.sh
+```
+
+Der EKF-Pruefer besitzt keine Publisher, Hardware- oder Kontrollpfade. Er
+verlangt mindestens 25 Hz und hoechstens 0,10 s Datenluecke am EKF-Ausgang,
+weniger als 1 mm Translation, 1 Grad relative Gierabweichung sowie weniger als
+0,005 m/s und 0,005 rad/s im Stillstand. Parallel muessen der direkte
+HWT-/Encodervergleich, alle Quellstatus, frische Abschlussstatus und die
+Publisher-GIDs gueltig bleiben. `/odom`, `/map`, `/tf`, `/tf_static`,
+Fusions- und Fahrbefehlstopics duerfen keinen Publisher besitzen.
 
 Der aktuelle HWT-Wert `5e-7 (rad/s)^2` gegen die vorlaeufige Encoder-
 Winkelgeschwindigkeitsvarianz `0,03 (rad/s)^2` bedeutet ungefaehr 60.000:1
@@ -192,7 +214,7 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 
 Vor einer Kartierungsintegration fehlen weiterhin:
 
-1. diese reale gemeinsame Stillstandsabnahme;
+1. die reale 120-s-EKF-Stillstandsabnahme;
 2. ein separat freigegebener dynamischer HWT-/Encodervergleich in beiden
    Drehrichtungen, einschliesslich Bewertung des zeitversetzten linken/rechten
    FC03-Paars;

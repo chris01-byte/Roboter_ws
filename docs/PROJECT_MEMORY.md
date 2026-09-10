@@ -117,6 +117,17 @@ Aktorausgabe. Nach vor Ort hergestellter Motorbusbereitschaft gelang der oben
 dokumentierte Lauf. Motorversorgung und Motor-Halt bleiben deshalb vor jedem
 Shadow-Start explizit zu pruefen.
 
+Als naechste, weiterhin motorlose Stufe ist ein isolierter 120-s-EKF-
+Stillstandsbeobachter vorbereitet. Er startet vor den Quellen unter demselben
+passiven Observer-Gate, waehrend ein eigener Wrapper den EKF erst bei exakt
+Observer plus drei Quellnodes zulaesst. Der Filter bleibt auf
+`/shadow/hwt601/odom`, `publish_tf=false` und `use_control=false`. Die Abnahme
+verlangt mindestens 25 Hz, hoechstens 0,10 s EKF-Datenluecke, weniger als 1 mm
+Translation, 1 Grad relative Gier, 0,005 m/s und 0,005 rad/s sowie weiterhin
+gueltige direkte Quellen-, Abschluss-, Graph- und GID-Evidenz. Publisher auf
+Produktiv-Odometrie, Karte, TF, Fusion oder Fahrbefehlen verriegeln den Lauf.
+262 gezielte Offline-Tests bestehen; der Realtest steht noch aus.
+
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
 Launch-Elternprozess einmal mit SIGINT beenden, beide Ports und Domain pruefen.

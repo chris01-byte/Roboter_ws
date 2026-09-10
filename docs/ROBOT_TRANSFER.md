@@ -54,6 +54,16 @@ Ein erster Versuch nach dem Ausschalten verriegelte ohne Schreibzugriff, weil
 die ESS23 auf FC03 noch nicht antworteten. Vor jedem Start sind deshalb
 Motorversorgung und Motor-Halt zu pruefen. EKF und dynamische Nutzung bleiben
 offen.
+
+Fuer die naechste motorlose Stufe ist ein eigener 120-s-EKF-Beobachter samt
+zweitem Startwrapper vorbereitet. Reihenfolge: Beobachter, die drei strikt
+lesenden Quellen, dann der isolierte Filter. Der EKF-Wrapper akzeptiert vor
+seinem Start exakt diese vier vorhandenen Nodes. Der Beobachter prueft neben
+Rate, Luecken, Translation, Gier und Twist weiterhin alle Quellstatus und
+Publisher-GIDs; `/odom`, Karte, TF, Fusion und Fahrbefehle muessen ohne
+Publisher bleiben. Der Filter publiziert nur `/shadow/hwt601/odom`, kein TF,
+und besitzt keinen Kontrolleingang. 262 Offline-Tests bestehen; reale
+120-s-Abnahme offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

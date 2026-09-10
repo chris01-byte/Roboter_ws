@@ -108,9 +108,10 @@ not an acceptance procedure.
 The derived message is in `base_link` because only the measured, aligned Z
 axis is retained. Orientation and acceleration are marked unavailable; no
 sensor-origin TF is fabricated. See `docs/HWT601_SHADOW.md` for the measured
-covariance, isolated ROS-domain procedure and acceptance limits. The warm
-600-second standstill acceptance has passed; cold start, temperature, motor
-vibration, encoder fusion and production use remain explicitly open.
+covariance, isolated ROS-domain procedure and acceptance limits. Warm and cold
+600-second direct HWT/encoder standstill acceptances have passed. Temperature
+dependence remains measurable; motor vibration, dynamic encoder timing and
+production use remain explicitly open.
 
 The next source stage is prepared separately on
 `codex/hwt601-encoder-shadow`. It combines the yaw-only HWT shadow with a
@@ -118,15 +119,16 @@ dedicated real FC03 encoder reader, but deliberately starts no EKF. A passive
 observer must be running before the sources so encoder evidence covers the
 startup-bias phase and the subsequent 600-second direct comparison. It checks
 monotonic runtime, translation, twist, angle peaks, source counters and ROS
-publisher identity. This stage has not yet opened both real ports together;
+publisher identity. The direct warm and cold stages passed on both real ports;
 see `docs/HWT601_ENCODER_SHADOW.md`.
 
-Only after that direct comparison passes may
-`hwt601_encoder_shadow_ekf.launch.py` be used as an isolated observation
-filter. It publishes only `/shadow/hwt601/odom` and no TF. Its provisional
-covariances strongly favour the HWT yaw rate and neither source supplies an
-absolute heading reference, so its output is not yet evidence of a solved map
-problem or production readiness.
+After the direct comparison passed,
+`hwt601_encoder_shadow_ekf.launch.py` was admitted to a separately guarded
+120-second stationary smoke-test stage. It publishes only
+`/shadow/hwt601/odom` and no TF. Its provisional covariances strongly favour
+the HWT yaw rate and neither source supplies an absolute heading reference,
+so its output is not yet evidence of a solved map problem or production
+readiness.
 
 For staged integration use
 `robot_bringup/state_estimation_hwt601_validation.launch.py`. Its base remains
