@@ -50,25 +50,47 @@ Produktivstarts, Karten und Kalibrierwerte blieben unveraendert. Lokale Daten:
 `dynamic-left-20260910-181707` und `dynamic-right-20260910-181746` unter
 `~/.local/share/amadeus/hwt601/`.
 
-**Teststatus:** 278 Python-Tests bestanden; `base_hardware` und
+**Teststatus:** 290 Python-Tests bestanden; `base_hardware` und
 `robot_state_estimation` gebaut. Ein vorgeschalteter echter passiver Preflight
 und ein motorloser ROS-Kommando-/Watchdoglauf bestanden. Ein erster scharfer
 Anlauf brach vor jedem Fahrbefehl wegen eines zu frueh gesetzten IMU-Ankers
-fail-closed ab; die Baseline liegt nun nach der Warnpause, durch 18 Tests
-bestaetigt. Rohdaten-Hashes: links
+fail-closed ab; die Baseline liegt nun nach der Warnpause. Einschliesslich der
+Geradeausgrenzen ist das Werkzeug durch 30 gezielte Tests bestaetigt.
+Rohdaten-Hashes: links
 `16c0cb3ebc0831014b1c9502036eacf28af9cfa6b4b337c07dae27c3e558c303`,
 rechts `8419b93d0dc7236d91547a4118ba2bc0e29eab40ae3a0838da6057fa1bc9e196`.
 Nach dem Test waren beide Ports frei und Domain 148 leer. Beim Beenden trat
 erst nach lange bestaetigten 0 rpm der bekannte Modbus-/doppelte
 `rcl_shutdown`-Abschlussfehler auf.
 
-**Offene Risiken:** Dies ist ein kleiner Drehversuch auf glattem Boden, keine
-Kovarianzkalibrierung, Vibrations-/Schwellen-/Geradeausabnahme und kein
-absoluter Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
+Eine zweite beidseitige Drehfolge zeichnete zusaetzlich alle sechs HWT-
+Rohachsen auf. Links lagen Beschleunigungsnorm, maximale Roll-/Nickrate und
+groesster Gravitaetsrichtungsschritt bei 9,874..9,892 m/s², 0,01105 rad/s und
+0,003635 rad; rechts bei 9,875..9,892 m/s², 0,00932 rad/s und 0,002689 rad.
+Damit blieben alle 1547 Bewegungs-/Bremsproben deutlich innerhalb der
+vorbereiteten Scan-Grenzen 7..12,5 m/s², 0,244 rad/s und 0,05236 rad. Die
+Winkeldifferenzen HWT minus Encoder betrugen +0,00795/+0,10220 Grad; wieder
+null Bus-/Encoderfehler und abschliessend 0 rpm. Rohdaten:
+`dynamic-left-20260910-183207` (SHA-256
+`394381136a7454d473031389cb764980ceee078ac48dc83b65ee1a3e2b07fd5a`)
+und `dynamic-right-20260910-183244` (SHA-256
+`7c68c870a840b17857e7fba16f88946abb2a83ba20e578d23eecaef5314e7722`).
+
+Die zeitlich bestangepasste Drehrateninnovation ueber vier Laeufe enthaelt
+1477 Plateauproben: Mittel +0,000122 rad/s, Varianz
+`1,1504e-5 (rad/s)^2`, RMS 0,003393 rad/s und 95-%-Absolutwert
+0,007184 rad/s. Die je Lauf optimale Zeitverschiebung lag zwischen -13,5 und
+-27,0 ms. Das ist eine belastbare Warnung gegen die bisherige 60.000:1-
+Gewichtung, aber bei nur einer Geschwindigkeit noch keine Freigabe fuer einen
+neuen Produktionswert.
+
+**Offene Risiken:** Dies ist ein kleiner Drehversuch auf glattem Boden, noch
+keine Kovarianzkalibrierung, Schwellen-/Geradeausabnahme und kein absoluter
+Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
 der EKF dem HWT erwartungsgemaess sehr eng; das allein beweist weder eine
 korrekte Innovation noch eine geloeste Karte. Als naechstes dynamische
-Rohinnovationen/Kovarianzen auswerten, danach Geradeaus-, Fugen- und
-Temperaturtests und erst dann Karten-A/B.
+Geradeaus-/Rueckwaertslauf bei bestaetigtem 40-cm-Korridor ausfuehren, danach
+Fugen-/Temperaturtests und erst dann Karten-A/B.
 
 **Rueckfallweg:** Teststack nicht starten beziehungsweise Basistreiber zuerst
 mit Nullkommando beenden, danach EKF und HWT. Produktive Starts bleiben

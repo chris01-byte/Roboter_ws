@@ -23,9 +23,22 @@ Rohdaten-SHA-256 links
 `16c0cb3ebc0831014b1c9502036eacf28af9cfa6b4b337c07dae27c3e558c303`,
 rechts `8419b93d0dc7236d91547a4118ba2bc0e29eab40ae3a0838da6057fa1bc9e196`.
 Beide Ports danach frei, Domain leer. Dies gibt noch keine Kartenintegration
-frei: Innovation/Kovarianz, Geradeausfahrt, Vibration/Schwelle, Temperatur und
-ein absoluter Heading-Anker bleiben offen. Rueckfall: Teststack aus lassen;
+frei: Innovation/Kovarianz ueber weitere Bewegungsarten, Geradeausfahrt,
+Schwellen, Temperatur und ein absoluter Heading-Anker bleiben offen.
+Rueckfall: Teststack aus lassen;
 Produktivstarts sind unveraendert.
+
+Die anschliessende Rohachsenwiederholung bestand ebenfalls. Links/rechts lagen
+die Beschleunigungsnormen bei 9,874..9,892/9,875..9,892 m/s², maximale
+Roll-/Nickrate bei 0,01105/0,00932 rad/s und maximale Aenderung der
+Gravitationsrichtung bei 0,003635/0,002689 rad. Damit blieben 1547 Proben weit
+innerhalb der Scan-Grenzen; reine Motorvibration auf glattem Boden ist
+bestanden. Vier Drehlauf-Plateaus ergeben fuer HWT minus Encoder vorlaeufig
+`1,1504e-5 (rad/s)^2` Restvarianz und 0,003393 rad/s RMS. Den produktiven
+Encoderwert noch nicht aendern: nur eine Geschwindigkeit und kein
+Geradeaus-/Schwellenfall. Das Werkzeug kann den naechsten 12-cm-Geradelauf
+bereits fail-closed ausfuehren; real wartet er auf einen bestaetigten freien
+40-cm-Korridor vor und hinter dem Roboter.
 
 ---
 

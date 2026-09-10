@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supervised, bounded HWT601/encoder/EKF turn in one direction.
+"""Supervised, bounded HWT601/encoder/EKF turn or straight segment.
 
 The separately started validation stack owns both serial ports.  This tool
 only observes its isolated topics and publishes a bounded yaw command.  The
@@ -21,6 +21,7 @@ COMMAND = '/hwt_dynamic/cmd_vel'
 BASE_STATE = '/hwt_dynamic/base_state'
 WHEEL_ODOM = '/shadow/hwt601/wheel_odom_raw'
 IMU = '/shadow/hwt601/imu/yaw_rate'
+RAW_IMU = '/shadow/hwt601/imu/data_raw'
 EKF_ODOM = '/shadow/hwt601/odom'
 HWT_STATUS = '/shadow/hwt601/status_json'
 RAW_STATUS = '/shadow/hwt601/raw_status_json'
@@ -31,6 +32,14 @@ TARGET_STOP_DEG = 17.0
 HARD_ANGLE_DEG = 30.0
 COMMAND_RADPS = 0.08
 MAX_TURN_S = 10.0
+TARGET_STRAIGHT_STOP_M = 0.12
+HARD_STRAIGHT_DISTANCE_M = 0.22
+STRAIGHT_COMMAND_MPS = 0.05
+MAX_STRAIGHT_S = 12.0
+MIN_ACCEL_MPS2 = 7.0
+MAX_ACCEL_MPS2 = 12.5
+MAX_ROLL_PITCH_RATE_RADPS = math.radians(14.0)
+MAX_GRAVITY_STEP_RAD = math.radians(3.0)
 
 
 def angle_delta(current, start):
@@ -91,6 +100,83 @@ def turn_command(elapsed_s, encoder_deg, imu_deg, ekf_deg,
     return 0.0 if signed[0] >= TARGET_STOP_DEG else direction * COMMAND_RADPS
 
 
+def straight_command(elapsed_s, forward_m, lateral_m, encoder_deg, imu_deg,
+                     ekf_deg, direction):
+    signed_forward = direction * forward_m
+    values = (
+        elapsed_s, signed_forward, lateral_m, encoder_deg, imu_deg, ekf_deg)
+    if direction not in (-1, 1) or not all(math.isfinite(v) for v in values):
+        raise ValueError('ungueltige Geradeauswerte')
+    if elapsed_s > MAX_STRAIGHT_S:
+        raise ValueError('Geradeaus-Zeitlimit')
+    if signed_forward < -0.02 or signed_forward > HARD_STRAIGHT_DISTANCE_M:
+        raise ValueError('Geradeaus-Richtung/Streckengrenze')
+    if abs(lateral_m) > 0.02:
+        raise ValueError('Seitwaertsgrenze')
+    if max(abs(encoder_deg), abs(imu_deg), abs(ekf_deg)) > 5.0:
+        raise ValueError('Geradeaus-Winkelgrenze')
+    if elapsed_s > 7.0 and signed_forward < 0.02:
+        raise ValueError('kein bestaetigter Geradeausfortschritt')
+    if signed_forward >= 0.03:
+        if abs(encoder_deg - imu_deg) > 3.0:
+            raise ValueError('HWT und Encoder widersprechen sich')
+        if abs(ekf_deg - imu_deg) > 3.0:
+            raise ValueError('EKF und HWT widersprechen sich')
+    return 0.0 if signed_forward >= TARGET_STRAIGHT_STOP_M \
+        else direction * STRAIGHT_COMMAND_MPS
+
+
+def _percentile(values, fraction):
+    ordered = sorted(values)
+    if not ordered:
+        raise ValueError('keine Vibrationsproben')
+    index = int(round((len(ordered) - 1) * fraction))
+    return ordered[index]
+
+
+def vibration_metrics(samples):
+    """Evaluate raw acceleration and non-yaw rate against scan-gate limits."""
+    if len(samples) < 2:
+        raise ValueError('zu wenige Vibrationsproben')
+    accel_norms = []
+    roll_pitch_rates = []
+    gravity_steps = []
+    previous_accel = None
+    for sample in samples:
+        accel = tuple(float(value) for value in sample['accel'])
+        gyro = tuple(float(value) for value in sample['gyro'])
+        if not all(math.isfinite(value) for value in (*accel, *gyro)):
+            raise ValueError('nicht-endliche Vibrationsprobe')
+        norm = math.sqrt(sum(value * value for value in accel))
+        accel_norms.append(norm)
+        # A pure yaw mounting rotation preserves the X/Y norm.  Thus this is
+        # the base-frame roll/pitch-rate magnitude without inventing a chip
+        # lever arm or orientation measurement.
+        roll_pitch_rates.append(math.hypot(gyro[0], gyro[1]))
+        if previous_accel is not None:
+            previous_norm = math.sqrt(
+                sum(value * value for value in previous_accel))
+            if norm > 0.0 and previous_norm > 0.0:
+                cosine = sum(a * b for a, b in zip(accel, previous_accel)) / (
+                    norm * previous_norm)
+                gravity_steps.append(math.acos(max(-1.0, min(1.0, cosine))))
+        previous_accel = accel
+    return {
+        'samples': len(samples),
+        'acceleration_norm_mean_mps2': sum(accel_norms) / len(accel_norms),
+        'acceleration_norm_min_mps2': min(accel_norms),
+        'acceleration_norm_max_mps2': max(accel_norms),
+        'roll_pitch_rate_p95_radps': _percentile(roll_pitch_rates, 0.95),
+        'roll_pitch_rate_peak_radps': max(roll_pitch_rates),
+        'gravity_direction_step_peak_rad': max(gravity_steps),
+        'within_scan_gate_envelope': (
+            min(accel_norms) >= MIN_ACCEL_MPS2
+            and max(accel_norms) <= MAX_ACCEL_MPS2
+            and max(roll_pitch_rates) <= MAX_ROLL_PITCH_RATE_RADPS
+            and max(gravity_steps) <= MAX_GRAVITY_STEP_RAD),
+    }
+
+
 class ScalarIntegral:
     def __init__(self):
         self.last_stamp = None
@@ -110,8 +196,15 @@ class ScalarIntegral:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--execute', action='store_true')
-    parser.add_argument('--direction', choices=('left', 'right'), default='left')
+    parser.add_argument('--motion', choices=('turn', 'straight'), default='turn')
+    parser.add_argument(
+        '--direction', choices=('left', 'right', 'forward', 'reverse'),
+        default='left')
     args = parser.parse_args()
+    if ((args.motion == 'turn' and args.direction not in ('left', 'right')) or
+            (args.motion == 'straight' and
+             args.direction not in ('forward', 'reverse'))):
+        parser.error('Richtung passt nicht zur Bewegungsart')
     if args.execute and (
             os.environ.get('AMADEUS_DYNAMISCHE_FAHRFREIGABE') != 'JA'
             or not sys.stdin.isatty()):
@@ -125,21 +218,29 @@ def main():
     from std_msgs.msg import String
     from rclpy.qos import qos_profile_sensor_data
 
-    direction = 1 if args.direction == 'left' else -1
+    direction = 1 if args.direction in ('left', 'forward') else -1
+    is_turn = args.motion == 'turn'
     rclpy.init()
     node = rclpy.create_node('hwt601_encoder_dynamic_turn')
     output = (Path.home() / '.local/share/amadeus/hwt601' /
-              time.strftime(f'dynamic-{args.direction}-%Y%m%d-%H%M%S'))
+              time.strftime(
+                  f'dynamic-{args.motion}-{args.direction}-%Y%m%d-%H%M%S'))
     output.mkdir(parents=True, exist_ok=False)
     samples = (output / 'samples.jsonl').open('x')
     data = {}
     phase = 'preflight'
     integral = ScalarIntegral()
+    raw_motion = []
     publisher = None
     summary = {
         'complete': False, 'passed': False, 'execute': args.execute,
-        'direction': args.direction, 'target_stop_deg': TARGET_STOP_DEG,
-        'command_radps': COMMAND_RADPS, 'output': str(output),
+        'motion': args.motion, 'direction': args.direction,
+        'target_stop_deg': TARGET_STOP_DEG if is_turn else None,
+        'target_straight_stop_m': (
+            TARGET_STRAIGHT_STOP_M if not is_turn else None),
+        'command_radps': COMMAND_RADPS if is_turn else None,
+        'command_mps': STRAIGHT_COMMAND_MPS if not is_turn else None,
+        'output': str(output),
         'forbidden_production_publishers_checked': list(
             FORBIDDEN_PRODUCTION_TOPICS),
     }
@@ -158,6 +259,22 @@ def main():
         if phase in ('turning', 'stopping'):
             integral.add(stamp, value)
 
+    def on_raw_imu(message):
+        value = {
+            'stamp': message.header.stamp.sec + message.header.stamp.nanosec * 1e-9,
+            'gyro': [
+                float(message.angular_velocity.x),
+                float(message.angular_velocity.y),
+                float(message.angular_velocity.z)],
+            'accel': [
+                float(message.linear_acceleration.x),
+                float(message.linear_acceleration.y),
+                float(message.linear_acceleration.z)],
+        }
+        receive('raw_imu', value)
+        if phase in ('turning', 'stopping'):
+            raw_motion.append(value)
+
     def on_odom(kind, message):
         receive(kind, {
             'stamp': message.header.stamp.sec + message.header.stamp.nanosec * 1e-9,
@@ -169,6 +286,8 @@ def main():
         })
 
     node.create_subscription(Imu, IMU, on_imu, qos_profile_sensor_data)
+    node.create_subscription(
+        Imu, RAW_IMU, on_raw_imu, qos_profile_sensor_data)
     node.create_subscription(
         Odometry, WHEEL_ODOM, lambda m: on_odom('wheel', m), 10)
     node.create_subscription(
@@ -183,7 +302,7 @@ def main():
     def ready(require_still=False):
         now = time.monotonic()
         limits = {
-            'imu': 0.15, 'wheel': 0.20, 'ekf': 0.20,
+            'imu': 0.15, 'raw_imu': 0.15, 'wheel': 0.20, 'ekf': 0.20,
             'base': 0.30, 'hwt_status': 1.0, 'raw_status': 1.0,
         }
         for key, limit in limits.items():
@@ -262,9 +381,20 @@ def main():
                 displacement = math.hypot(
                     wheel['x'] - start_wheel['x'],
                     wheel['y'] - start_wheel['y'])
-                command = turn_command(
-                    time.monotonic() - started, encoder_deg, imu_deg,
-                    ekf_deg, displacement, direction)
+                dx = wheel['x'] - start_wheel['x']
+                dy = wheel['y'] - start_wheel['y']
+                forward = (math.cos(start_wheel['yaw']) * dx +
+                           math.sin(start_wheel['yaw']) * dy)
+                lateral = (-math.sin(start_wheel['yaw']) * dx +
+                           math.cos(start_wheel['yaw']) * dy)
+                if is_turn:
+                    command = turn_command(
+                        time.monotonic() - started, encoder_deg, imu_deg,
+                        ekf_deg, displacement, direction)
+                else:
+                    command = straight_command(
+                        time.monotonic() - started, forward, lateral,
+                        encoder_deg, imu_deg, ekf_deg, direction)
                 if command == 0.0:
                     break
                 if (node.count_publishers(COMMAND) != 1 or
@@ -275,7 +405,10 @@ def main():
                     raise ValueError('Bedienerabbruch')
                 if time.monotonic() >= next_command:
                     message = Twist()
-                    message.angular.z = command
+                    if is_turn:
+                        message.angular.z = command
+                    else:
+                        message.linear.x = command
                     publisher.publish(message)
                     next_command = time.monotonic() + 0.05
 
@@ -297,15 +430,30 @@ def main():
             displacement = math.hypot(
                 wheel['x'] - start_wheel['x'],
                 wheel['y'] - start_wheel['y'])
-            signed_encoder = direction * encoder_deg
+            dx = wheel['x'] - start_wheel['x']
+            dy = wheel['y'] - start_wheel['y']
+            forward = (math.cos(start_wheel['yaw']) * dx +
+                       math.sin(start_wheel['yaw']) * dy)
+            lateral = (-math.sin(start_wheel['yaw']) * dx +
+                       math.cos(start_wheel['yaw']) * dy)
+            vibration = vibration_metrics(raw_motion)
             counters_unchanged = all(
                 base.get(key) == start_base.get(key)
                 for key in ('encoder_rejected_updates', 'encoder_rebases'))
+            if is_turn:
+                passed = (
+                    15.0 <= direction * encoder_deg <= 25.0
+                    and abs(imu_deg - encoder_deg) <= 3.0
+                    and abs(ekf_deg - imu_deg) <= 2.0
+                    and displacement <= 0.03)
+            else:
+                passed = (
+                    0.10 <= direction * forward <= 0.18
+                    and abs(lateral) <= 0.01
+                    and max(abs(encoder_deg), abs(imu_deg), abs(ekf_deg)) <= 2.0
+                    and abs(imu_deg - encoder_deg) <= 1.0)
             passed = (
-                15.0 <= signed_encoder <= 25.0
-                and abs(imu_deg - encoder_deg) <= 3.0
-                and abs(ekf_deg - imu_deg) <= 2.0
-                and displacement <= 0.03
+                passed and vibration['within_scan_gate_envelope']
                 and counters_unchanged
                 and base.get('modbus_read_failures') == 0)
             summary.update(
@@ -314,13 +462,16 @@ def main():
                 imu_minus_encoder_deg=imu_deg - encoder_deg,
                 ekf_minus_imu_deg=ekf_deg - imu_deg,
                 encoder_translation_m=displacement,
+                encoder_forward_m=forward,
+                encoder_lateral_m=lateral,
                 encoder_pair_read_duration_s=base.get(
                     'encoder_pair_read_duration_s'),
                 encoder_maximum_pair_read_duration_s=base.get(
                     'encoder_maximum_pair_read_duration_s'),
                 encoder_pair_left_first=base.get('encoder_pair_left_first'),
                 encoder_counters_unchanged=counters_unchanged,
-                modbus_read_failures=base.get('modbus_read_failures'))
+                modbus_read_failures=base.get('modbus_read_failures'),
+                vibration=vibration)
     except (Exception, KeyboardInterrupt) as exc:
         summary['error'] = f'{type(exc).__name__}: {exc}'
     finally:

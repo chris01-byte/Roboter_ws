@@ -240,9 +240,9 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 
 Vor einer Kartierungsintegration fehlen weiterhin:
 
-1. reale Encoder-`wz`-Kovarianz und Innovationsauswertung;
-2. eine Heading-Korrekturstrategie sowie Kaltstart-, Temperatur- und
-   Motorvibrationspruefungen;
+1. Kovarianz-/Innovationsabsicherung bei weiterer Bewegungsart/Geschwindigkeit;
+2. eine Heading-Korrekturstrategie sowie Geradeaus-, Schwellen- und
+   Temperaturpruefungen;
 3. erst danach ein kontrollierter Karten-A/B-Test.
 
 Der zuvor offene beidseitige Dynamikpunkt bestand am 10.09.2026 mit kleinen
@@ -252,6 +252,13 @@ gelesene Motorseite ergab waehrend Bewegung maximal 13,092/11,607 ms
 Paarfenster, null Rejects/Rebases/Modbusfehler und abschliessend 0 rpm.
 Vollstaendige Evidenz und Hardwarewirkung stehen im neuesten Eintrag von
 `docs/PROJECT_MEMORY.md`; lokale Rohdaten bleiben ausserhalb des Repositories.
+
+Eine zweite Folge mit 1547 HWT-Rohproben bestand die glatte
+Motorvibrationspruefung deutlich: Beschleunigungsnorm immer
+9,874..9,892 m/s², Roll-/Nickrate hoechstens 0,01105 rad/s und
+Gravitationsrichtungsschritt hoechstens 0,003635 rad. Vier Drehplateaus
+ergeben vorlaeufig `1,1504e-5 (rad/s)^2` Innovationsvarianz bei nur einer
+Geschwindigkeit. Deshalb wird der Produktionswert noch nicht angepasst.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von

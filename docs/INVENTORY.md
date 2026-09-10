@@ -80,8 +80,12 @@ und ist nicht Teil des Quellenstarts. Warmer und kalter 600-s-Stillstand sowie
 das isolierte 120-s-EKF bestanden. Beidseitiger dynamischer Kleindrehtest am
 10.09.2026 ebenfalls bestanden: HWT gegen Encoder -0,015/+0,148 Grad
 Differenz, Paarlesedauer in Bewegung maximal 13,092/11,607 ms, null
-Bus-/Encoderfehler. Kovarianz/Innovation, Heading-Anker, Vibrations-/
-Geradeauspruefung und Kartenfreigabe bleiben offen.
+Bus-/Encoderfehler. Kovarianz/Innovation ueber weitere Bewegungsarten,
+Heading-Anker, Geradeaus-/Schwellenpruefung und Kartenfreigabe bleiben offen.
+Eine zweite beidseitige Rohachsenfolge bestand die
+Motorvibrations-/Scan-Grenzen; vier Drehplateaus
+ergeben vorlaeufig `1,1504e-5 (rad/s)^2` HWT-/Encoder-Restvarianz. Noch keine
+Produktionskovarianz aus nur einer Geschwindigkeit.
 
 ---
 
@@ -193,7 +197,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | Antrieb RS485 | `/dev/ttyUSB_BASE` → ttyUSB0 | FTDI FT232, udev-Alias, `latency_timer=1` |
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
-| HWT601 (Nutzerangabe) | `/dev/ttyUSB_HWT601` → ttyUSB0 | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Rohdaten, Achsen, 600-s-Stillstand und extern bestaetigte 180-Grad-Skala geprueft; Temperatur/Vibration/Produktivfusion offen |
+| HWT601 (Nutzerangabe) | `/dev/ttyUSB_HWT601` → ttyUSB0 | CH340 `1a86:7523`, fester USB-Port `1-2.4.4.4`; Rohdaten, Achsen, 600-s-Stillstand, extern bestaetigte 180-Grad-Skala und glatte Motorvibration geprueft; Temperatur/Schwelle/Produktivfusion offen |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04

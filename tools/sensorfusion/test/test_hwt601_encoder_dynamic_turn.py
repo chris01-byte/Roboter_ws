@@ -6,7 +6,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from hwt601_encoder_dynamic_turn import (  # noqa: E402
-    angle_delta, base_healthy, stationary, turn_command)
+    angle_delta, base_healthy, stationary, straight_command, turn_command,
+    vibration_metrics)
 
 
 def healthy_state():
@@ -59,3 +60,45 @@ def test_bounded_command_and_target(direction):
 def test_turn_faults(values):
     with pytest.raises(ValueError):
         turn_command(*values)
+
+
+def test_vibration_metrics_accept_smooth_gravity():
+    result = vibration_metrics([
+        {'accel': (0.01, -0.02, 9.81), 'gyro': (0.01, 0.02, 0.08)},
+        {'accel': (0.02, -0.01, 9.80), 'gyro': (0.02, 0.01, 0.08)},
+    ])
+    assert result['within_scan_gate_envelope']
+    assert result['samples'] == 2
+
+
+@pytest.mark.parametrize('sample', [
+    {'accel': (0, 0, 6.9), 'gyro': (0, 0, 0)},
+    {'accel': (0, 0, 12.6), 'gyro': (0, 0, 0)},
+    {'accel': (0, 0, 9.81), 'gyro': (0.25, 0, 0)},
+])
+def test_vibration_metrics_reject_scan_gate_violation(sample):
+    nominal = {'accel': (0, 0, 9.81), 'gyro': (0, 0, 0)}
+    assert not vibration_metrics([nominal, sample])[
+        'within_scan_gate_envelope']
+
+
+@pytest.mark.parametrize('direction', (-1, 1))
+def test_straight_command_is_bounded(direction):
+    assert straight_command(
+        3.0, direction * 0.05, 0.0, 0.1, 0.1, 0.1, direction) \
+        == direction * 0.05
+    assert straight_command(
+        5.0, direction * 0.12, 0.0, 0.1, 0.1, 0.1, direction) == 0.0
+
+
+@pytest.mark.parametrize('values', [
+    (12.1, 0.1, 0, 0, 0, 0, 1),
+    (3, -0.021, 0, 0, 0, 0, 1),
+    (3, 0.05, 0.021, 0, 0, 0, 1),
+    (3, 0.05, 0, 5.1, 0, 0, 1),
+    (3, 0.05, 0, 0, 3.1, 0, 1),
+    (7.1, 0.01, 0, 0, 0, 0, 1),
+])
+def test_straight_faults(values):
+    with pytest.raises(ValueError):
+        straight_command(*values)
