@@ -1,5 +1,33 @@
 # Übertragung auf den realen Roboter
 
+## Fugenbefund: HWT/LiDAR -3 Grad, Encoder praktisch 0 Grad (10.09.2026)
+
+Ein freigegebener, auf 0,75 m geplanter Geradeauslauf wurde nach nur 8,5 cm
+fail-closed beendet: HWT -3,21 Grad gegen Encoder +0,006 Grad. Stillstand war
+bestaetigt; kein Ruecklauf. Die motorlose Wiederverarbeitung der gleichzeitig
+aufgezeichneten LiDAR-Scans ergab -3,00 Grad auf 0,065 m, 435 akzeptierte
+Matcherupdates, null Rejects/Rebases, 0,00853 m Kosten und 96,67 % Stuetzung.
+Damit bestaetigen HWT und LiDAR eine reale, fuer die Motorencoder unsichtbare
+Chassisgier auf der Fuge.
+
+Das Scan-Gate nahm waehrend der Bewegung 25 Scans an und verwarf keinen. Das
+ist korrekt: maximale Gravitationsrichtungsanderung 0,01907 rad, rohe
+Roll-/Nickrate 0,03910 rad/s und Beschleunigungsnorm 9,837..9,920 m/s² lagen
+weit innerhalb der Grenzen. Ebene reale Gier ist kein Kippereignis. OAK,
+SLAM, Karte, Navigation und Produktiv-TF waren aus. Lokale Evidenz:
+`fugen-20260910-2115`, `dynamic-straight-forward-20260910-211652` und
+`fugen-lidar-replay-20260910-2120`. Alle Ports danach frei, Domains 152/153
+leer.
+
+Keine Grenze lockern und keinen weiteren reinen Encoder-Fugenlauf starten.
+Als naechstes einen isolierten Karten-A/B-Start vorbereiten: HWT-Gierrate in
+der lokalen Odometrie, LiDAR-Matcher zuerst nur als unabhaengiger Waechter,
+SLAM weiterhin alleiniger Besitzer von `map -> odom`. Produktivstarts und
+Kartenprofile sind noch unveraendert; Rueckfall bleibt der bisherige direkte
+Encoderpfad.
+
+---
+
 ## HWT-/Encoder-/EKF-Dreh- und Geradelauf bestanden (10.09.2026)
 
 In isolierter Domain 148 nach ausdruecklicher Fahrfreigabe zwei begrenzte
@@ -46,8 +74,9 @@ HWT-gegen-Encoder-Restwinkel, obwohl der Encoderweg bis auf 0,059 mm schliesst.
 Null Bus-/Encoderfehler, beide Vibrationspruefungen bestanden, beide Laeufe
 endeten mit 0 rpm. Evidenz: `dynamic-straight-forward-20260910-185828` und
 `dynamic-straight-reverse-20260910-185926`. Nach geordnetem Ende waren beide
-Ports frei und Domain 151 leer. Das ist noch keine Kartenfreigabe: als
-naechstes Schwellen-/Fugenfall, Temperatur und Heading-Strategie pruefen.
+Ports frei und Domain 151 leer. Die anschliessende Fugenpruefung steht im
+neueren Eintrag oben; Temperatur, Heading-Strategie und Karten-A/B bleiben
+offen.
 
 ---
 

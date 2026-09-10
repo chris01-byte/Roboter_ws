@@ -2,6 +2,24 @@
 
 Stand: 24.08.2026
 
+## Nachtrag 10.09.2026: Ursache praktisch reproduziert
+
+Der geplante HWT-/LiDAR-Fugenlauf reproduzierte den entscheidenden Fehler nach
+nur 8,5 cm und brach automatisch ab. Encoder meldeten im gemeinsamen
+Bewegungsfenster +0,006 Grad, der neue chassisfeste HWT -3,21 Grad. Ein
+anschliessender motorloser Lauf des radunabhaengigen LiDAR-Matchers ueber die
+aufgezeichneten Scans ergab -3,00 Grad. HWT und LiDAR bestaetigen damit eine
+reale Chassisgier, welche die technisch fehlerfreien Motorencoder nicht sehen.
+
+Die fruehere Hypothese "Fuge kann Encoderbewegung verfalschen" ist damit fuer
+diesen konkreten Lauf bestaetigt. Gleichzeitig blieb die Scanebene innerhalb
+der vorbereiteten Kippgrenzen; das Scan-Gate akzeptierte alle 25 Scans im
+Bewegungsfenster. Der unmittelbare Fehler war hier also ebene Gier/Schlupf,
+nicht ein unzulaessiger Roll-/Nickstoss. Ein weiterer nackter Encoderlauf ist
+nicht noetig. Der naechste Kartenvergleich muss HWT-Gierrate in der lokalen
+Odometrie verwenden und den LiDAR-Matcher zunaechst unabhaengig mitfuehren.
+SLAM bleibt alleiniger Besitzer von `map -> odom`.
+
 ## Anlass
 
 Ein kontrollierter LiDAR-Nachscan in einem gefliesten Bereich erzeugte lokal

@@ -33,9 +33,8 @@ HARD_ANGLE_DEG = 30.0
 COMMAND_RADPS = 0.08
 MAX_TURN_S = 10.0
 TARGET_STRAIGHT_STOP_M = 0.12
-HARD_STRAIGHT_DISTANCE_M = 0.22
 STRAIGHT_COMMAND_MPS = 0.05
-MAX_STRAIGHT_S = 12.0
+MAX_STRAIGHT_TARGET_M = 1.0
 MIN_ACCEL_MPS2 = 7.0
 MAX_ACCEL_MPS2 = 12.5
 MAX_ROLL_PITCH_RATE_RADPS = math.radians(14.0)
@@ -101,17 +100,24 @@ def turn_command(elapsed_s, encoder_deg, imu_deg, ekf_deg,
 
 
 def straight_command(elapsed_s, forward_m, lateral_m, encoder_deg, imu_deg,
-                     ekf_deg, direction):
+                     ekf_deg, direction,
+                     target_stop_m=TARGET_STRAIGHT_STOP_M):
+    if (not math.isfinite(target_stop_m)
+            or not 0.10 <= target_stop_m <= MAX_STRAIGHT_TARGET_M):
+        raise ValueError('ungueltiges Geradeausziel')
+    hard_distance_m = target_stop_m + 0.12
+    maximum_time_s = target_stop_m / STRAIGHT_COMMAND_MPS + 10.0
+    lateral_limit_m = 0.02 if target_stop_m <= 0.20 else 0.04
     signed_forward = direction * forward_m
     values = (
         elapsed_s, signed_forward, lateral_m, encoder_deg, imu_deg, ekf_deg)
     if direction not in (-1, 1) or not all(math.isfinite(v) for v in values):
         raise ValueError('ungueltige Geradeauswerte')
-    if elapsed_s > MAX_STRAIGHT_S:
+    if elapsed_s > maximum_time_s:
         raise ValueError('Geradeaus-Zeitlimit')
-    if signed_forward < -0.02 or signed_forward > HARD_STRAIGHT_DISTANCE_M:
+    if signed_forward < -0.02 or signed_forward > hard_distance_m:
         raise ValueError('Geradeaus-Richtung/Streckengrenze')
-    if abs(lateral_m) > 0.02:
+    if abs(lateral_m) > lateral_limit_m:
         raise ValueError('Seitwaertsgrenze')
     if max(abs(encoder_deg), abs(imu_deg), abs(ekf_deg)) > 5.0:
         raise ValueError('Geradeaus-Winkelgrenze')
@@ -122,7 +128,7 @@ def straight_command(elapsed_s, forward_m, lateral_m, encoder_deg, imu_deg,
             raise ValueError('HWT und Encoder widersprechen sich')
         if abs(ekf_deg - imu_deg) > 3.0:
             raise ValueError('EKF und HWT widersprechen sich')
-    return 0.0 if signed_forward >= TARGET_STRAIGHT_STOP_M \
+    return 0.0 if signed_forward >= target_stop_m \
         else direction * STRAIGHT_COMMAND_MPS
 
 
@@ -200,11 +206,19 @@ def main():
     parser.add_argument(
         '--direction', choices=('left', 'right', 'forward', 'reverse'),
         default='left')
+    parser.add_argument(
+        '--target-distance-m', type=float, default=TARGET_STRAIGHT_STOP_M,
+        help='Geradeausziel 0,10..1,00 m; fuer Drehungen unzulaessig.')
     args = parser.parse_args()
     if ((args.motion == 'turn' and args.direction not in ('left', 'right')) or
             (args.motion == 'straight' and
              args.direction not in ('forward', 'reverse'))):
         parser.error('Richtung passt nicht zur Bewegungsart')
+    if args.motion == 'turn' and args.target_distance_m != TARGET_STRAIGHT_STOP_M:
+        parser.error('--target-distance-m gilt nur fuer Geradeausfahrt')
+    if (not math.isfinite(args.target_distance_m)
+            or not 0.10 <= args.target_distance_m <= MAX_STRAIGHT_TARGET_M):
+        parser.error('--target-distance-m muss zwischen 0,10 und 1,00 liegen')
     if args.execute and (
             os.environ.get('AMADEUS_DYNAMISCHE_FAHRFREIGABE') != 'JA'
             or not sys.stdin.isatty()):
@@ -238,7 +252,7 @@ def main():
         'motion': args.motion, 'direction': args.direction,
         'target_stop_deg': TARGET_STOP_DEG if is_turn else None,
         'target_straight_stop_m': (
-            TARGET_STRAIGHT_STOP_M if not is_turn else None),
+            args.target_distance_m if not is_turn else None),
         'command_radps': COMMAND_RADPS if is_turn else None,
         'command_mps': STRAIGHT_COMMAND_MPS if not is_turn else None,
         'output': str(output),
@@ -397,7 +411,8 @@ def main():
                 else:
                     command = straight_command(
                         time.monotonic() - started, forward, lateral,
-                        encoder_deg, imu_deg, ekf_deg, direction)
+                        encoder_deg, imu_deg, ekf_deg, direction,
+                        args.target_distance_m)
                 if command == 0.0:
                     break
                 if (node.count_publishers(COMMAND) != 1 or
@@ -451,10 +466,12 @@ def main():
                     and displacement <= 0.03)
             else:
                 passed = (
-                    0.10 <= direction * forward <= 0.18
-                    and abs(lateral) <= 0.01
-                    and max(abs(encoder_deg), abs(imu_deg), abs(ekf_deg)) <= 2.0
-                    and abs(imu_deg - encoder_deg) <= 1.0)
+                    args.target_distance_m - 0.02
+                    <= direction * forward
+                    <= args.target_distance_m + 0.10
+                    and abs(lateral) <= 0.03
+                    and max(abs(encoder_deg), abs(imu_deg), abs(ekf_deg)) <= 3.0
+                    and abs(imu_deg - encoder_deg) <= 2.0)
             passed = (
                 passed and vibration['within_scan_gate_envelope']
                 and counters_unchanged

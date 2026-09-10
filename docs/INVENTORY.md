@@ -81,7 +81,7 @@ das isolierte 120-s-EKF bestanden. Beidseitiger dynamischer Kleindrehtest am
 10.09.2026 ebenfalls bestanden: HWT gegen Encoder -0,015/+0,148 Grad
 Differenz, Paarlesedauer in Bewegung maximal 13,092/11,607 ms, null
 Bus-/Encoderfehler. Kovarianz/Innovation ueber weitere Bewegungsarten,
-Heading-Anker, Schwellenpruefung und Kartenfreigabe bleiben offen.
+Heading-Anker, produktive Integration und Kartenfreigabe bleiben offen.
 Eine zweite beidseitige Rohachsenfolge bestand die
 Motorvibrations-/Scan-Grenzen; vier Drehplateaus
 ergeben vorlaeufig `1,1504e-5 (rad/s)^2` HWT-/Encoder-Restvarianz. Noch keine
@@ -91,6 +91,10 @@ maximal 0,058 Grad Encoderwinkel, weniger als 0,013 mm Seitversatz, null
 Bus-/Encoderfehlern und bestandener Rohachsen-Vibrationsgrenze. Der HWT-
 Encoder-Restwinkel nach Hin-/Ruecklauf von -0,271 Grad bleibt fuer die
 Heading-Strategie relevant.
+Ein freigegebener Fugenlauf stoppte anschliessend nach 8,5 cm bei -3,21 Grad
+HWT gegen +0,006 Grad Encoder. Der motorlos ausgewertete LiDAR bestaetigte
+-3,00 Grad. Damit ist encoderunsichtbare reale Gier auf diesem Bodenereignis
+nachgewiesen; die Karten-A/B-Integration bleibt der naechste offene Schritt.
 
 ---
 

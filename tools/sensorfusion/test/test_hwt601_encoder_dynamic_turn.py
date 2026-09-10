@@ -89,10 +89,16 @@ def test_straight_command_is_bounded(direction):
         == direction * 0.05
     assert straight_command(
         5.0, direction * 0.12, 0.0, 0.1, 0.1, 0.1, direction) == 0.0
+    assert straight_command(
+        12.0, direction * 0.50, 0.0, 0.1, 0.1, 0.1, direction,
+        0.75) == direction * 0.05
+    assert straight_command(
+        18.0, direction * 0.75, 0.0, 0.1, 0.1, 0.1, direction,
+        0.75) == 0.0
 
 
 @pytest.mark.parametrize('values', [
-    (12.1, 0.1, 0, 0, 0, 0, 1),
+    (12.5, 0.1, 0, 0, 0, 0, 1),
     (3, -0.021, 0, 0, 0, 0, 1),
     (3, 0.05, 0.021, 0, 0, 0, 1),
     (3, 0.05, 0, 5.1, 0, 0, 1),
@@ -102,3 +108,9 @@ def test_straight_command_is_bounded(direction):
 def test_straight_faults(values):
     with pytest.raises(ValueError):
         straight_command(*values)
+
+
+@pytest.mark.parametrize('target', (0.09, 1.01, float('nan')))
+def test_straight_rejects_unsafe_target(target):
+    with pytest.raises(ValueError):
+        straight_command(1, 0, 0, 0, 0, 0, 1, target)

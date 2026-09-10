@@ -131,6 +131,14 @@ the HWT yaw rate and neither source supplies an absolute heading reference,
 so its output is not yet evidence of a solved map problem or production
 readiness.
 
+A supervised floor-joint run has since provided the missing independent
+dynamic evidence: over the same short motion the HWT integrated -3.21 degrees,
+the wheel encoders +0.006 degrees and the wheel-independent LiDAR matcher
+-3.00 degrees. The guard stopped the robot after 8.5 cm. This validates the
+HWT as the local yaw-rate source for the next isolated mapping A/B stage; it
+does not yet approve the LiDAR matcher for direct fusion or any production
+launch.
+
 For staged integration use
 `robot_bringup/state_estimation_hwt601_validation.launch.py`. Its base remains
 hard-coded motorless, while OAK, adapter and EKF all default to off. Exact

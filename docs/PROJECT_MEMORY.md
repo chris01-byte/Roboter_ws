@@ -17,6 +17,71 @@ Rückfallweg:
 
 ---
 
+## 2026-09-10 — Fuge erzeugt 3 Grad encoderunsichtbare Gier; HWT und LiDAR stimmen ueberein
+
+**Entscheidung:** Der geplante 0,75-m-Fugenlauf wurde nach 8,5 cm nicht
+fortgesetzt und nicht rueckwaerts wiederholt. Der vorhandene fail-closed-
+Vergleich brach bei 3 Grad HWT-/Encoderwiderspruch mit Nullkommando ab. Diese
+Grenze wird nicht gelockert: Die anschliessende motorlose LiDAR-Auswertung
+zeigt, dass nicht der HWT falsch lag, sondern die Radencoder eine reale
+Chassisgier auf der Fuge praktisch nicht sahen. Der naechste Schritt ist daher
+kein weiterer encodergefuehrter Fugenlauf, sondern ein isolierter Karten-A/B-
+Pfad mit HWT-Gierrate und LiDAR-Odometrie zunaechst nur als unabhaengigem
+Waechter.
+
+**Grund / beobachtete Evidenz:** Der reale Lauf in Domain 152 war auf 0,75 m
+Ziel, 1,0 m harte Softwareobergrenze und 0,05 m/s begrenzt. Er stoppte nach
+2,88 s Bewegung und 0,085217 m endgueltigem Encoderweg. Im gemeinsamen
+Bewegungsfenster meldeten Encoder +0,00584 Grad, HWT -3,21307 Grad und der
+offline aus denselben Scans laufende radunabhaengige LiDAR-Matcher exakt
+-3,00 Grad bei 0,065 m. Der Matcher akzeptierte insgesamt 435 Updates ohne
+Reject oder Rebase; Schlusskosten 0,00853 m und Stuetzanteil 0,9667. Seine
+Endpose ueber den gesamten aufgezeichneten Bewegungsabschnitt war 0,075 m,
+-0,005 m und -3,25 Grad. Damit bestaetigen HWT und LiDAR unabhaengig die reale
+Gier, waehrend die Motorwellen nahezu gleiche Strecke meldeten.
+
+Das Scan-Gate arbeitete ebenfalls korrekt: waehrend der Bewegung 25
+akzeptierte und null verworfene Scans, kein TF-Fehler. Die maximale beobachtete
+Gravitationsrichtungsanderung war 0,01907 rad, Roll-/Nickrate in den
+Gate-Stichproben 0,01567 rad/s; die vollen Rohdaten erreichten 0,03910 rad/s
+und 9,837..9,920 m/s². Alles liegt deutlich unter 0,05236 rad, 0,24435 rad/s
+und 7..12,5 m/s². Eine reale ebene Gier darf das Kipp-Gate nicht sperren.
+
+**Betroffene Dateien und Hardware:** Motoren bewegten den Roboter nur 8,5 cm;
+der Ruecklauf wurde nicht gestartet. OAK, SLAM, Karte, Navigation und
+Produktiv-TF blieben aus. LiDAR, HWT, Encoder, Shadow-EKF und Scan-Gate wurden
+lokal aufgezeichnet. Rohdaten liegen ausschliesslich unter
+`~/.local/share/amadeus/hwt601/`: `fugen-20260910-2115`,
+`dynamic-straight-forward-20260910-211652` und
+`fugen-lidar-replay-20260910-2120`. SHA-256 des Live-Bags:
+`923ce57f1d04f4e56b8efe3d7dc7fcdbcca1caa84b5e5e811c5809f5fb75de54`;
+der Fahrproben:
+`c9fd4fe61256a2696bd33b32eac023aeec2c14c69d8b6e6dd4e5fe4af9f7c7fc`.
+Der reale Stack wurde Basis zuerst beendet; alle drei USB-Ports waren danach
+frei und die Domains 152/153 leer. Der bekannte Basis-`rcl_shutdown`- und
+LiDAR-Pufferfehler traten nur beim geordneten Beenden nach bestaetigtem
+Stillstand auf.
+
+**Teststatus:** Das verlaengerbare Geradeauswerkzeug akzeptiert nur Ziele von
+0,10 bis 1,00 m und behaelt Zeit-, Richtungs-, Seiten-, Winkel-,
+Sensorwiderspruchs- und Busgrenzen. Der Live-Preflight bestaetigte LiDAR
+10,0 Hz, normierte/gefilterte Scans 5,0 Hz, Gate `stabil`, exklusiven
+Befehlskanal und 0 rpm. Der reale Abbruch und die motorlose LiDAR-
+Gegenpruefung arbeiteten bestimmungsgemaess.
+
+**Offene Risiken:** Der HWT ist weiterhin eine Gierratenquelle ohne absoluten
+Nord-/Wohnungswinkel. LiDAR-Odometrie bestaetigt hier den kurzen relativen
+Winkel, ist aber noch nicht fuer die produktive Fusion freigegeben. Vor dem
+Karten-A/B-Lauf muessen ein eigener isolierter Start, TF-Eigentum,
+Kovarianzen, Sensoralterung und Rueckfall auf den bisherigen Encoderpfad
+fail-closed festgelegt werden. Temperaturdrift bleibt fuer lange Laeufe offen.
+
+**Rueckfallweg:** Kein weiterer Fahrbefehl aus diesem Test. Teststack und
+LiDAR-Replay aus lassen; produktive Starts, Karten und Kalibrierwerte sind
+unveraendert.
+
+---
+
 ## 2026-09-10 — HWT/Encoder/Shadow-EKF bei Dreh- und Geradelauf bestanden
 
 **Entscheidung:** Die erste dynamische Schattenabnahme verwendet einen einzigen
@@ -50,7 +115,7 @@ Produktivstarts, Karten und Kalibrierwerte blieben unveraendert. Lokale Daten:
 `dynamic-left-20260910-181707` und `dynamic-right-20260910-181746` unter
 `~/.local/share/amadeus/hwt601/`.
 
-**Teststatus:** 290 Python-Tests bestanden; `base_hardware` und
+**Teststatus:** 293 Python-Tests bestanden; `base_hardware` und
 `robot_state_estimation` gebaut. Ein vorgeschalteter echter passiver Preflight
 und ein motorloser ROS-Kommando-/Watchdoglauf bestanden. Ein erster scharfer
 Anlauf brach vor jedem Fahrbefehl wegen eines zu frueh gesetzten IMU-Ankers
@@ -102,14 +167,12 @@ Nach dem Basistreiber wurden EKF und HWT beendet; beide Ports waren frei und
 Domain 151 leer. Der Basistreiber zeigte erst beim Beenden nach bestaetigtem
 Stillstand den bekannten doppelten `rcl_shutdown`-Abschlussfehler.
 
-**Offene Risiken:** Dies sind kleine Dreh- und Geradeausversuche auf glattem
-Boden, noch keine Kovarianzkalibrierung, Schwellen-/Fugenabnahme und kein
-absoluter Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
+**Offene Risiken dieses Teilstands:** Die kleinen Dreh- und Geradeausversuche
+auf glattem Boden waren noch keine Kovarianzkalibrierung oder Fugenabnahme und
+lieferten keinen absoluten Heading-Anker. Der anschliessende Fugenbefund steht
+im neueren Eintrag oben. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
 der EKF dem HWT erwartungsgemaess sehr eng; das allein beweist weder eine
-korrekte Innovation noch eine geloeste Karte. Als naechstes folgen ein
-beaufsichtigter Fugen-/Schwellenfall mit LiDAR-Qualitaetsbeobachtung, die
-Temperaturabsicherung und eine Heading-Korrekturstrategie; erst danach
-Karten-A/B.
+korrekte Innovation noch eine geloeste Karte.
 
 **Rueckfallweg:** Teststack nicht starten beziehungsweise Basistreiber zuerst
 mit Nullkommando beenden, danach EKF und HWT. Produktive Starts bleiben

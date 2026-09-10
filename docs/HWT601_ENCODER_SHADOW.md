@@ -241,7 +241,7 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 Vor einer Kartierungsintegration fehlen weiterhin:
 
 1. Kovarianz-/Innovationsabsicherung bei weiterer Bewegungsart/Geschwindigkeit;
-2. eine Heading-Korrekturstrategie sowie Schwellen- und Temperaturpruefungen;
+2. eine Heading-Korrekturstrategie sowie Temperaturpruefungen;
 3. erst danach ein kontrollierter Karten-A/B-Test.
 
 Der zuvor offene beidseitige Dynamikpunkt bestand am 10.09.2026 mit kleinen
@@ -266,6 +266,15 @@ Rohachsenfolgen blieben innerhalb der Scan-Grenzen und endeten mit
 bestaetigtem Stillstand. Der netto verbleibende HWT-Encoder-Winkel von -0,271
 Grad zeigt weiterhin, dass ein absoluter Heading-Anker nicht durch die
 Kurzstreckenabnahme ersetzt wird.
+
+Der erste laengere Fugenlauf reproduzierte danach den eigentlichen
+Encoderfehler und brach bestimmungsgemaess nach 8,5 cm ab: HWT -3,21 Grad,
+Encoder +0,006 Grad. Die unabhaengige motorlose Auswertung der zeitgleichen
+LiDAR-Scans ergab -3,00 Grad. Der HWT-Ausreisser war somit reale, von den
+Motorwellen nicht erfasste Chassisgier. Das Scan-Gate akzeptierte alle Scans,
+weil Roll/Nick und Beschleunigungsbetrag innerhalb der Grenzen blieben. Die
+naechste Stufe ist ein isolierter Karten-A/B-Pfad mit HWT-Gierrate; der
+LiDAR-Matcher bleibt zunaechst Waechter statt direkt fusionierter Quelle.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von
