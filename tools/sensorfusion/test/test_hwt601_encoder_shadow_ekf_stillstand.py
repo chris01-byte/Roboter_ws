@@ -76,6 +76,15 @@ def test_acceptance_passes_only_complete_bounded_isolated_result():
         assert not MODULE._passed(candidate), path
 
 
+def test_graph_allows_only_ephemeral_ros2_cli_probe_outside_contract():
+    expected = set(MODULE.EXPECTED_NODES)
+
+    assert not MODULE._unexpected_non_cli_nodes(
+        expected | {'/_ros2cli_12345'})
+    assert MODULE._unexpected_non_cli_nodes(
+        expected | {'/foreign_node'}) == {'/foreign_node'}
+
+
 def test_observer_has_no_publisher_hardware_or_control_path():
     source = SCRIPT.read_text(encoding='utf-8')
 

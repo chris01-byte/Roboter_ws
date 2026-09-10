@@ -63,6 +63,14 @@ def _qualified(name: str, namespace: str) -> str:
     return f'{namespace.rstrip("/")}/{name}'.replace('//', '/')
 
 
+def _unexpected_non_cli_nodes(nodes) -> set[str]:
+    """Ignore only the short-lived ros2 CLI probes used by start gates."""
+    return {
+        node for node in set(nodes) - EXPECTED_NODES
+        if not node.startswith('/_ros2cli_')
+    }
+
+
 def _passed(summary: Mapping[str, object]) -> bool:
     ekf = summary.get('ekf')
     sources = summary.get('sources')
@@ -318,8 +326,10 @@ def _run(duration_s: float, output: Path) -> int:
                 for name, namespace in self.get_node_names_and_namespaces())
             self.graph_nodes = nodes
             unexpected = set(nodes) - EXPECTED_NODES
-            if unexpected:
+            if _unexpected_non_cli_nodes(nodes):
                 self.latch('ros_graph_nodes_unerwartet')
+                return
+            if unexpected:
                 return
             if set(nodes) != EXPECTED_NODES:
                 return

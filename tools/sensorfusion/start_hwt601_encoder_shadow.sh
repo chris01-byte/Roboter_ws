@@ -100,12 +100,19 @@ export ROS_LOCALHOST_ONLY=0
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export CYCLONEDDS_URI='<CycloneDDS xmlns="https://cdds.io/config"><Domain id="any"><General><Interfaces><NetworkInterface name="lo" multicast="false"/></Interfaces><AllowMulticast>false</AllowMulticast></General><Discovery><Peers><Peer address="localhost"/></Peers><ParticipantIndex>auto</ParticipantIndex><MaxAutoParticipantIndex>20</MaxAutoParticipantIndex></Discovery></Domain></CycloneDDS>'
 
-if ! existing_nodes="$(ros2 node list --no-daemon 2>&1)"; then
-  echo "ABBRUCH: Die lokale Encoder-Shadow-Domain ist nicht pruefbar:" >&2
-  echo "${existing_nodes}" >&2
-  exit 7
-fi
 expected_observer="/hwt601_encoder_shadow_stillstand_observer"
+existing_nodes=""
+for _attempt in {1..10}; do
+  if ! existing_nodes="$(ros2 node list --no-daemon 2>&1)"; then
+    echo "ABBRUCH: Die lokale Encoder-Shadow-Domain ist nicht pruefbar:" >&2
+    echo "${existing_nodes}" >&2
+    exit 7
+  fi
+  if [[ -n "${existing_nodes}" ]]; then
+    break
+  fi
+  sleep 0.5
+done
 if [[ "${existing_nodes}" != "${expected_observer}" ]]; then
   echo "ABBRUCH: Vor dem Quellenstart muss ausschliesslich der passive" >&2
   echo "Observer ${expected_observer} in der lokalen Domain laufen." >&2

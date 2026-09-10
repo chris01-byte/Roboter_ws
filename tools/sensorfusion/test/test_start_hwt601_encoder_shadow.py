@@ -54,6 +54,8 @@ def test_wrapper_hardens_ports_identity_domain_and_launch_scope():
         'expected_observer="/hwt601_encoder_shadow_stillstand_observer"'
         in source
     )
+    assert 'for _attempt in {1..10}' in source
+    assert 'sleep 0.5' in source
     assert '"${existing_nodes}" != "${expected_observer}"' in source
     assert 'hwt601_encoder_sources_shadow.launch.py' in source
     assert 'operator_stationary_confirmed:=true' in source
