@@ -17,6 +17,67 @@ Rückfallweg:
 
 ---
 
+## 2026-09-10 — Korrigierter HWT-Karten-Rundblick real bestanden
+
+**Entscheidung:** Der reine HWT-Karten-Rundblick ist nach der Explorer-
+Zeitrace-Korrektur real bestanden. Damit ist der begrenzte Scan-only-Pfad als
+erste Kartenabnahme freigegeben; daraus folgt noch keine Freigabe fuer eine
+autonome Mehrraumfahrt. Der LiDAR-Matcher bleibt unabhaengiger Beobachter und
+wird weiterhin nicht in den EKF fusioniert.
+
+**Grund / beobachtete Evidenz:** Der beaufsichtigte Wiederholungslauf fuehrte
+alle acht Drehsegmente aus und endete selbsttaetig mit Missionsstatus
+`SUCCESS`, gesperrtem Fahrtor und bestaetigtem Stillstand. Es gab keinen
+`odom_stale`-Abbruch. Ueber das Bewegungsfenster ergaben sich kumulativ
+HWT/EKF/LiDAR/Encoder `+362,092/+362,107/+361,750/+358,028` Grad. HWT und
+LiDAR unterscheiden sich damit nur um 0,342 Grad; die Radencoder
+unterschaetzen den Vollkreis gegen HWT um 4,064 Grad. Die Kartenodometrie
+folgt wie vorgesehen dem HWT und nicht der Encoder-Gier.
+
+Beide aufgezeichneten Fahrbefehlstopics hatten exakt
+`max |linear.x| = 0`, `max |angular.z| = 0,08 rad/s` und endeten bei null.
+HWT, EKF und Radodometrie hatten maximale Empfangsluecken von
+47,853/67,306/86,935 ms; HWT meldete null Rejects. Der LiDAR-Matcher nahm
+1.527 Updates an, verwarf keines und setzte seinen lokalen Rechenursprung
+23-mal neu. Das ist fuer 361,75 Grad mit der konfigurierten 15-Grad-
+Rebasegrenze erwartbar und kein Messausfall. Er beobachtete 16,57 mm
+Netto-Rumpfverschiebung auf den engen Fliesenfugen, waehrend die
+Radodometrie 0,11 mm meldete.
+
+**Betroffene Dateien und Hardware:** Keine weitere Softwareaenderung fuer den
+Echtlauf. Beide Motoren drehten den Roboter ausschliesslich links; es gab keine
+Translation und die OAK blieb aus. Die lokale Bag und Karte liegen unter
+`~/.local/share/amadeus/bags/hwt601-rundblick-repeat-20260910-2317` und
+`~/.local/share/amadeus/maps/hwt601-rundblick-repeat-20260910-2317` und
+bleiben aus dem Repository ausgeschlossen. Bag-SHA-256:
+`5dfb5155615be658c032a556342dd5f82416bd2b91eab193e55cb982a01319a9`.
+
+**Teststatus:** Vor Bewegung waren HWT-Bias, LiDAR-Beobachter, normierter
+Scan, beide Nahbereichssensoren, Collision-Monitor, Nav2 sowie die eindeutigen
+`/odom`-/`/map`-Publisher geprueft. Der HWT-Bias war aus 1.001 Proben stabil,
+Z-Streuung `0,000107451 rad/s`, null Rejects. Die gespeicherte Karte misst
+116 x 249 Zellen bei 0,03 m/Zelle und enthaelt 11,146 m2 freie Zellen. Die
+Sichtpruefung zeigt einen zusammenhaengenden Grundriss mit einfachen
+Wandkonturen ohne gedoppelte oder gegeneinander verdrehte Raumkopien. Nach
+geordnetem Ende waren Domain 157 und alle drei seriellen Ports frei. Die
+bekannten LiDAR-/Basis-/VL53-Abschlussmeldungen sowie die bereits bekannte
+Humble-HWT-Subscription-Take-Race erschienen ausschliesslich beim globalen
+SIGINT nach bestaetigtem Stillstand.
+
+**Offene Risiken:** Ein Rundblick prueft noch keine Translation, keine
+Tuerdurchfahrt, keinen erneuten Besuch eines Raumes und keinen grossen
+Schleifenschluss. Die 16,57 mm vom LiDAR beobachtete Fugenverschiebung sowie
+die 4,064 Grad Encoder-Gierabweichung bestaetigen, dass die naechste
+Kartenstufe weiterhin HWT-Gier und LiDAR-Kontrolle benoetigt. Vor einer
+Mehrraumfahrt ist ein einzeln begrenzter Translations-/Tuerabschnitt mit
+frischer persoenlicher Freigabe auszuwerten.
+
+**Rueckfallweg:** Der HWT-Pfad bleibt Opt-in. Fuer Rueckfall den normalen
+Encoder-Kartenstart verwenden beziehungsweise den Rundblick-Wrapper nicht
+starten. Keine Karte wurde automatisch produktiv geladen.
+
+---
+
 ## 2026-09-10 — Erster HWT-Karten-Rundblick stoppt sicher; Explorer-Zeitrace behoben
 
 **Entscheidung:** Fuer die erste reale Kartenintegration gibt es ein explizites

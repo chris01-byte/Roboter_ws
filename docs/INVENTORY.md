@@ -104,7 +104,11 @@ LiDAR-Matcher nur als radunabhaengiger Beobachter. HWT-Status sperrt die
 Fahrkette bis stabile Startkalibrierung vorliegt und bei Datenverlust nach
 maximal 0,8 s. Motorloser vollstaendiger Preflight bestanden: HWT/EKF/Scan
 100,009/30,016/10,002 Hz, 616 LiDAR-Matches ohne Reject und nur -0,068 Grad
-EKF-Stillstandsdrift in 56 s. Reale Kartenfahrt offen.
+EKF-Stillstandsdrift in 56 s. Der anschliessende begrenzte 360-Grad-
+Kartenrundblick ist real bestanden: HWT/EKF/LiDAR/Encoder
+`362,092/362,107/361,750/358,028` Grad, keine Translation, keine Rejects und
+eine visuell zusammenhaengende Karte ohne gedoppelte Raumkonturen. Begrenzte
+Translations-/Tuerabnahme und Mehrraumfahrt bleiben offen.
 
 ---
 

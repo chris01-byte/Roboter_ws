@@ -1,5 +1,44 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Scan-only: korrigierter 360-Grad-Lauf bestanden (10.09.2026)
+
+Der beaufsichtigte Wiederholungslauf des korrigierten
+`start_hwt601_rundblick.sh` ist real bestanden. Alle acht Segmente liefen ohne
+`odom_stale` bis zum selbsttaetigen Missionsstatus `SUCCESS`; danach waren das
+Fahrtor gesperrt, beide Befehlstopics bei null und die Basis im Stillstand.
+Es wurde zu keinem Zeitpunkt Translation befohlen.
+
+Kumulierte Winkel im Bewegungsfenster:
+
+- HWT: `+362,092 Grad`
+- HWT-/Encoder-EKF auf `/odom`: `+362,107 Grad`
+- unabhaengiger LiDAR-Beobachter: `+361,750 Grad`
+- reine Radodometrie: `+358,028 Grad`
+
+HWT und LiDAR unterscheiden sich nur um 0,342 Grad. Die Encoder-Gier liegt
+4,064 Grad unter HWT; der neue Kartenpfad verhindert wie vorgesehen, dass
+diese Radgier die Karte fuehrt. Der LiDAR-Matcher hatte 1.527 akzeptierte,
+null verworfene Updates. Seine 23 Rebases sind bei einer 15-Grad-Grenze ueber
+einen Vollkreis erwartbar. Die von ihm gemessene Netto-Rumpfverschiebung von
+16,57 mm gegen 0,11 mm Radodometrie ist auf dem Fugenboden weiterhin relevant.
+
+Die gespeicherte 116-x-249-Karte bei 3 cm/Zelle zeigt in der Sichtpruefung
+einen zusammenhaengenden Grundriss ohne gedoppelte oder verdrehte
+Raumkonturen. Lokale Evidenz, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-rundblick-repeat-20260910-2317` und
+`~/.local/share/amadeus/maps/hwt601-rundblick-repeat-20260910-2317`.
+Bag-SHA-256:
+`5dfb5155615be658c032a556342dd5f82416bd2b91eab193e55cb982a01319a9`.
+
+Nach Ctrl-C waren Domain 157 und HWT-, Basis- und LiDAR-Port frei. Die
+bekannten Abschlussmeldungen von LiDAR/Basis/VL53 und die bekannte
+HWT-Humble-Take-Race traten erst beim globalen Shutdown auf. Der bestandene
+Rundblick gibt noch keine autonome Mehrraumfahrt frei. Als naechste Stufe nur
+einen begrenzten Translations-/Tuerabschnitt mit eigener persoenlicher
+Fahrfreigabe fahren; HWT bleibt Karten-Gierquelle, LiDAR nur Beobachter.
+
+---
+
 ## HWT-Scan-only: erster Lauf deckt Explorer-Zeitrace auf (10.09.2026)
 
 Fuer die erste HWT-Kartenabnahme ist jetzt
