@@ -81,11 +81,16 @@ das isolierte 120-s-EKF bestanden. Beidseitiger dynamischer Kleindrehtest am
 10.09.2026 ebenfalls bestanden: HWT gegen Encoder -0,015/+0,148 Grad
 Differenz, Paarlesedauer in Bewegung maximal 13,092/11,607 ms, null
 Bus-/Encoderfehler. Kovarianz/Innovation ueber weitere Bewegungsarten,
-Heading-Anker, Geradeaus-/Schwellenpruefung und Kartenfreigabe bleiben offen.
+Heading-Anker, Schwellenpruefung und Kartenfreigabe bleiben offen.
 Eine zweite beidseitige Rohachsenfolge bestand die
 Motorvibrations-/Scan-Grenzen; vier Drehplateaus
 ergeben vorlaeufig `1,1504e-5 (rad/s)^2` HWT-/Encoder-Restvarianz. Noch keine
 Produktionskovarianz aus nur einer Geschwindigkeit.
+Der anschliessende 13,4-cm-Geradelauf vorwaerts/rueckwaerts bestand mit
+maximal 0,058 Grad Encoderwinkel, weniger als 0,013 mm Seitversatz, null
+Bus-/Encoderfehlern und bestandener Rohachsen-Vibrationsgrenze. Der HWT-
+Encoder-Restwinkel nach Hin-/Ruecklauf von -0,271 Grad bleibt fuer die
+Heading-Strategie relevant.
 
 ---
 

@@ -241,8 +241,7 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 Vor einer Kartierungsintegration fehlen weiterhin:
 
 1. Kovarianz-/Innovationsabsicherung bei weiterer Bewegungsart/Geschwindigkeit;
-2. eine Heading-Korrekturstrategie sowie Geradeaus-, Schwellen- und
-   Temperaturpruefungen;
+2. eine Heading-Korrekturstrategie sowie Schwellen- und Temperaturpruefungen;
 3. erst danach ein kontrollierter Karten-A/B-Test.
 
 Der zuvor offene beidseitige Dynamikpunkt bestand am 10.09.2026 mit kleinen
@@ -259,6 +258,14 @@ Motorvibrationspruefung deutlich: Beschleunigungsnorm immer
 Gravitationsrichtungsschritt hoechstens 0,003635 rad. Vier Drehplateaus
 ergeben vorlaeufig `1,1504e-5 (rad/s)^2` Innovationsvarianz bei nur einer
 Geschwindigkeit. Deshalb wird der Produktionswert noch nicht angepasst.
+
+Der anschliessende Geradelauf vorwaerts/rueckwaerts bestand bei jeweils rund
+13,4 cm Encoderweg: Seitversatz kleiner 0,013 mm, Encoderwinkel maximal 0,058
+Grad, HWT minus Encoder -0,474/+0,203 Grad und null Bus-/Encoderfehler. Beide
+Rohachsenfolgen blieben innerhalb der Scan-Grenzen und endeten mit
+bestaetigtem Stillstand. Der netto verbleibende HWT-Encoder-Winkel von -0,271
+Grad zeigt weiterhin, dass ein absoluter Heading-Anker nicht durch die
+Kurzstreckenabnahme ersetzt wird.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von

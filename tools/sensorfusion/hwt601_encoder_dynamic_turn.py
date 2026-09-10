@@ -220,6 +220,7 @@ def main():
 
     direction = 1 if args.direction in ('left', 'forward') else -1
     is_turn = args.motion == 'turn'
+    motion_label = 'Drehung' if is_turn else 'Geradeausfahrt'
     rclpy.init()
     node = rclpy.create_node('hwt601_encoder_dynamic_turn')
     output = (Path.home() / '.local/share/amadeus/hwt601' /
@@ -349,7 +350,9 @@ def main():
         else:
             publisher = node.create_publisher(Twist, COMMAND, 1)
             for remaining in (3, 2, 1):
-                print(f'Drehung startet in {remaining} s; Enter bricht ab.', flush=True)
+                print(
+                    f'{motion_label} startet in {remaining} s; '
+                    'Enter bricht ab.', flush=True)
                 deadline = time.monotonic() + 1.0
                 while time.monotonic() < deadline:
                     zero()

@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## HWT-/Encoder-/EKF-Dynamik beidseitig bestanden (10.09.2026)
+## HWT-/Encoder-/EKF-Dreh- und Geradelauf bestanden (10.09.2026)
 
 In isolierter Domain 148 nach ausdruecklicher Fahrfreigabe zwei begrenzte
 Drehungen mit 0,08 rad/s: links Encoder/HWT/EKF
@@ -23,8 +23,8 @@ Rohdaten-SHA-256 links
 `16c0cb3ebc0831014b1c9502036eacf28af9cfa6b4b337c07dae27c3e558c303`,
 rechts `8419b93d0dc7236d91547a4118ba2bc0e29eab40ae3a0838da6057fa1bc9e196`.
 Beide Ports danach frei, Domain leer. Dies gibt noch keine Kartenintegration
-frei: Innovation/Kovarianz ueber weitere Bewegungsarten, Geradeausfahrt,
-Schwellen, Temperatur und ein absoluter Heading-Anker bleiben offen.
+frei: Innovation/Kovarianz ueber weitere Bewegungsarten, Schwellen,
+Temperatur und ein absoluter Heading-Anker bleiben offen.
 Rueckfall: Teststack aus lassen;
 Produktivstarts sind unveraendert.
 
@@ -35,10 +35,19 @@ Gravitationsrichtung bei 0,003635/0,002689 rad. Damit blieben 1547 Proben weit
 innerhalb der Scan-Grenzen; reine Motorvibration auf glattem Boden ist
 bestanden. Vier Drehlauf-Plateaus ergeben fuer HWT minus Encoder vorlaeufig
 `1,1504e-5 (rad/s)^2` Restvarianz und 0,003393 rad/s RMS. Den produktiven
-Encoderwert noch nicht aendern: nur eine Geschwindigkeit und kein
-Geradeaus-/Schwellenfall. Das Werkzeug kann den naechsten 12-cm-Geradelauf
-bereits fail-closed ausfuehren; real wartet er auf einen bestaetigten freien
-40-cm-Korridor vor und hinter dem Roboter.
+Encoderwert noch nicht aendern: nur eine Drehgeschwindigkeit und kein
+Schwellenfall.
+
+Der danach ausgefuehrte Geradeaus-/Rueckwaertslauf bestand ebenfalls. Bei
+0,05 m/s waren die Wege +0,133931/-0,133873 m, Seitversatz nur
++0,0126/-0,0014 mm und Encoderwinkel +0,05842/-0,04090 Grad. HWT minus
+Encoder lag bei -0,47398/+0,20282 Grad; netto bleibt damit -0,27076 Grad
+HWT-gegen-Encoder-Restwinkel, obwohl der Encoderweg bis auf 0,059 mm schliesst.
+Null Bus-/Encoderfehler, beide Vibrationspruefungen bestanden, beide Laeufe
+endeten mit 0 rpm. Evidenz: `dynamic-straight-forward-20260910-185828` und
+`dynamic-straight-reverse-20260910-185926`. Nach geordnetem Ende waren beide
+Ports frei und Domain 151 leer. Das ist noch keine Kartenfreigabe: als
+naechstes Schwellen-/Fugenfall, Temperatur und Heading-Strategie pruefen.
 
 ---
 

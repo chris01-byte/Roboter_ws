@@ -17,7 +17,7 @@ Rückfallweg:
 
 ---
 
-## 2026-09-10 — HWT/Encoder/Shadow-EKF dynamisch beidseitig bestanden
+## 2026-09-10 — HWT/Encoder/Shadow-EKF bei Dreh- und Geradelauf bestanden
 
 **Entscheidung:** Die erste dynamische Schattenabnahme verwendet einen einzigen
 Besitzer des Motorbusses: `base_hardware` liest die absoluten ESS23-Positionen
@@ -84,13 +84,32 @@ Die zeitlich bestangepasste Drehrateninnovation ueber vier Laeufe enthaelt
 Gewichtung, aber bei nur einer Geschwindigkeit noch keine Freigabe fuer einen
 neuen Produktionswert.
 
-**Offene Risiken:** Dies ist ein kleiner Drehversuch auf glattem Boden, noch
-keine Kovarianzkalibrierung, Schwellen-/Geradeausabnahme und kein absoluter
-Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
+Der anschliessende Geradelauf in Domain 151 bestand nach je einem passiven
+Preflight vorwaerts und rueckwaerts. Bei 0,05 m/s wurden relativ zum jeweiligen
+Start +0,133931/-0,133873 m vorwaerts und nur +0,0126/-0,0014 mm seitwaerts
+gemessen. Die Encoderwinkel waren +0,05842/-0,04090 Grad, HWT
+-0,41556/+0,16192 Grad und EKF -0,41572/+0,16167 Grad. Damit betraegt die
+HWT-Encoder-Abweichung -0,47398/+0,20282 Grad und nach Hin-/Ruecklauf netto
+-0,27076 Grad; der Encoderweg schliesst dagegen bis auf 0,059 mm und der
+Encoderwinkel bis auf 0,01753 Grad. Beide Laeufe hatten null Modbusfehler,
+Rejects oder Rebases und endeten mit bestaetigtem Stillstand. Die jeweils 652
+Rohachsenproben blieben innerhalb der Scan-Grenzen. Lokale Evidenz:
+`dynamic-straight-forward-20260910-185828` (Samples-SHA-256
+`1092f2a3579a1760e41aa2bb8dd59eae9eea7ffed6494aeed706ca4b3ca35c6a`)
+und `dynamic-straight-reverse-20260910-185926` (Samples-SHA-256
+`3bbb0defdbc6c4f34431fbd8000348ca4ca7a26e52b34a59aa0baf9215f088a3`).
+Nach dem Basistreiber wurden EKF und HWT beendet; beide Ports waren frei und
+Domain 151 leer. Der Basistreiber zeigte erst beim Beenden nach bestaetigtem
+Stillstand den bekannten doppelten `rcl_shutdown`-Abschlussfehler.
+
+**Offene Risiken:** Dies sind kleine Dreh- und Geradeausversuche auf glattem
+Boden, noch keine Kovarianzkalibrierung, Schwellen-/Fugenabnahme und kein
+absoluter Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
 der EKF dem HWT erwartungsgemaess sehr eng; das allein beweist weder eine
-korrekte Innovation noch eine geloeste Karte. Als naechstes dynamische
-Geradeaus-/Rueckwaertslauf bei bestaetigtem 40-cm-Korridor ausfuehren, danach
-Fugen-/Temperaturtests und erst dann Karten-A/B.
+korrekte Innovation noch eine geloeste Karte. Als naechstes folgen ein
+beaufsichtigter Fugen-/Schwellenfall mit LiDAR-Qualitaetsbeobachtung, die
+Temperaturabsicherung und eine Heading-Korrekturstrategie; erst danach
+Karten-A/B.
 
 **Rueckfallweg:** Teststack nicht starten beziehungsweise Basistreiber zuerst
 mit Nullkommando beenden, danach EKF und HWT. Produktive Starts bleiben
