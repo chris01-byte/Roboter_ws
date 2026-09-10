@@ -124,7 +124,8 @@ see `docs/HWT601_ENCODER_SHADOW.md`.
 
 After the direct comparison passed,
 `hwt601_encoder_shadow_ekf.launch.py` was admitted to a separately guarded
-120-second stationary smoke-test stage. It publishes only
+120-second stationary smoke-test stage, which passed with zero translation
+and 0.101303 degrees relative yaw. It publishes only
 `/shadow/hwt601/odom` and no TF. Its provisional covariances strongly favour
 the HWT yaw rate and neither source supplies an absolute heading reference,
 so its output is not yet evidence of a solved map problem or production

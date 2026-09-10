@@ -69,6 +69,17 @@ Instanz. Der zweite Smoke-Start bewies, dass der Prozess trotz
 `publish_tf=false` einen `/tf`-Publisher anlegt. Das isolierte Launch remappt
 `/tf` und `/tf_static` auf Shadow-Sinktopics. Der Beobachter verlangt dort
 null Nachrichten und auf den produktiven TF-Topics null Publisher.
+
+Der formale Lauf `encoder-shadow-ekf-20260910-175348` bestand danach mit
+`passed: true` und `faults: []`: 120,030024 s, 3602 EKF-Proben bei
+30,000827 Hz, maximale Zeitstempelluecke 0,050077 s, null Translation und
++0,101303 Grad relative Endgier. Der direkte HWT-Pfad lag bei +0,102181 Grad,
+der Encoder bei 0 Grad; HWT minus EKF waren 0,000877 Grad. Quellen,
+Abschlussstatus, Graph und Publisher waren gueltig. Produktive TF-Publisher
+und Nachrichten auf den beiden isolierten TF-Sinks blieben null. CSV-Hash:
+`10db9d350459f1bbf5231fc3ba92e4cf7fc03c116b633c18b59ddfc89fcc9de3`.
+Nach Erfolg wurden EKF und Quellen sauber beendet; Ports frei, Domain 145
+leer. Diese Abnahme gilt nur fuer das isolierte motorlose Stillstands-EKF.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

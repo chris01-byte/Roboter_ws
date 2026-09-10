@@ -134,7 +134,22 @@ Offline-Tests bestehen. Der zweite Startversuch zeigte zusaetzlich, dass der
 EKF-Prozess trotz `publish_tf=false` einen `/tf`-Publisher anlegt. Das
 isolierte Launch remappt deshalb `/tf` und `/tf_static` auf Shadow-Sinktopics;
 der Beobachter verlangt dort null Nachrichten und auf den produktiven Topics
-null Publisher. Der Realtest steht noch aus.
+null Publisher.
+
+Der anschliessende formale Lauf
+`~/.local/share/amadeus/hwt601/encoder-shadow-ekf-20260910-175348` bestand mit
+`passed: true` und `faults: []`. 3602 ausgewaehlte EKF-Proben deckten
+120,030024 s bei 30,000827 Hz und maximal 0,050077 s Zeitstempelluecke ab.
+Translation und lineare Geschwindigkeit blieben null; die relative EKF-Gier
+endete bei +0,101303 Grad mit 0,101939 Grad Peak. Der direkte HWT-Pfad
+integrierte gleichzeitig +0,102181 Grad, der Encoder 0 Grad; die Differenz
+HWT minus EKF betrug nur 0,000877 Grad. Quell- und Abschlussstatus, Graph und
+Publisher waren gueltig, produktive TF-Publisher und Nachrichten auf beiden
+Shadow-TF-Sinks blieben null. Der CSV-Hash
+`10db9d350459f1bbf5231fc3ba92e4cf7fc03c116b633c18b59ddfc89fcc9de3`
+wurde unabhaengig bestaetigt. Nach Erfolg endeten EKF und alle Quellen sauber;
+beide Ports waren frei und Domain 145 leer. Freigegeben ist damit nur das
+isolierte motorlose EKF im Stillstand, nicht TF, Fahrt, Navigation oder Karte.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

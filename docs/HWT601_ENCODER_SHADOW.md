@@ -179,8 +179,8 @@ weiterhin unfreigegeben.
 
 ## EKF ist erst die nachgeordnete Beobachtungsstufe
 
-`hwt601_encoder_shadow_ekf.launch.py` ist vorbereitet, aber noch nicht real
-abgenommen. Es nutzt nur Encoder-`vx`/`wz` und HWT-`wz`, publiziert nur
+`hwt601_encoder_shadow_ekf.launch.py` ist im 120-s-Stillstand real abgenommen.
+Es nutzt nur Encoder-`vx`/`wz` und HWT-`wz`, publiziert nur
 `/shadow/hwt601/odom`, setzt `publish_tf=false` und `use_control=false` und
 startet keine Hardware. Vor einem langen oder dynamischen Lauf prueft ein
 eigener 120-s-Beobachter den Filter im Stillstand. Er muss vor den Quellen
@@ -213,6 +213,25 @@ einen `/tf`-Publisher anlegt, remappt das isolierte Launch dessen `/tf` und
 keine einzige Nachricht erscheinen; auf den produktiven TF-Topics darf nicht
 einmal ein Publisher existieren.
 
+Der lokale Lauf `encoder-shadow-ekf-20260910-175348` bestand mit
+`passed: true` und `faults: []`. Das EKF lieferte ueber 120,030024 s 3602
+ausgewertete Proben bei 30,000827 Hz; die maximale Zeitstempelluecke betrug
+0,050077 s. Translation und lineare Geschwindigkeit blieben null, die
+relative Endgier lag bei +0,101303 Grad und der Peak bei 0,101939 Grad. Im
+gleichen Fenster integrierte der direkte HWT-Pfad +0,102181 Grad bei exakt
+0 Grad Encoderwinkel; HWT und EKF unterschieden sich damit nur um 0,000877
+Grad. Alle Quellen- und Abschlussstatus sowie Graph und Publisher-GIDs waren
+gueltig. Auf beiden isolierten TF-Sinks erschienen null Nachrichten und auf
+den produktiven TF-Topics null Publisher. Der unabhaengig bestaetigte CSV-Hash
+lautet
+`10db9d350459f1bbf5231fc3ba92e4cf7fc03c116b633c18b59ddfc89fcc9de3`.
+
+Zwei Vorlaeufe brachen vor dem Messfenster fail-closed ab: zuerst wegen noch
+laufender DDS-Discovery des Observer-Gates, danach wegen des trotz
+`publish_tf=false` angelegten `/tf`-Publishers. Beim ersten Vorlauf wurde kein
+Port geoeffnet; beim zweiten wurden EKF und Quellen sofort sauber beendet. Die
+daraus entstandenen Korrekturen sind durch 263 Offline-Tests abgesichert.
+
 Der aktuelle HWT-Wert `5e-7 (rad/s)^2` gegen die vorlaeufige Encoder-
 Winkelgeschwindigkeitsvarianz `0,03 (rad/s)^2` bedeutet ungefaehr 60.000:1
 Gewichtung zugunsten des HWT. Beide Quellen liefern zudem nur Drehrate, keinen
@@ -221,14 +240,13 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 
 Vor einer Kartierungsintegration fehlen weiterhin:
 
-1. die reale 120-s-EKF-Stillstandsabnahme;
-2. ein separat freigegebener dynamischer HWT-/Encodervergleich in beiden
+1. ein separat freigegebener dynamischer HWT-/Encodervergleich in beiden
    Drehrichtungen, einschliesslich Bewertung des zeitversetzten linken/rechten
    FC03-Paars;
-3. reale Encoder-`wz`-Kovarianz und Innovationsauswertung;
-4. eine Heading-Korrekturstrategie sowie Kaltstart-, Temperatur- und
+2. reale Encoder-`wz`-Kovarianz und Innovationsauswertung;
+3. eine Heading-Korrekturstrategie sowie Kaltstart-, Temperatur- und
    Motorvibrationspruefungen;
-5. erst danach ein kontrollierter Karten-A/B-Test.
+4. erst danach ein kontrollierter Karten-A/B-Test.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von
