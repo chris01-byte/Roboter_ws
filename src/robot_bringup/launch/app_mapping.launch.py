@@ -22,6 +22,9 @@ def generate_launch_description():
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
+    use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    operator_stationary_confirmed = LaunchConfiguration(
+        'operator_stationary_confirmed')
     start_web_gui = LaunchConfiguration('start_web_gui')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
     default_explore_params = os.path.join(
@@ -42,6 +45,12 @@ def generate_launch_description():
             'crop', default_value='true',
             description='Vermessenen Mastsektor im LiDAR maskieren.'),
         DeclareLaunchArgument(
+            'use_hwt601_odometry', default_value='false',
+            description='Opt-in A/B fuer HWT601-Gier in der Kartenodometrie.'),
+        DeclareLaunchArgument(
+            'operator_stationary_confirmed', default_value='false',
+            description='Nur nach physisch bestaetigtem Startstillstand true.'),
+        DeclareLaunchArgument(
             'start_web_gui', default_value='true',
             description='Web-Fallback auf Port 8080 mitstarten.'),
         DeclareLaunchArgument(
@@ -59,6 +68,9 @@ def generate_launch_description():
                 'enable_auto_explore': enable_auto_explore,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
+                'use_hwt601_odometry': use_hwt601_odometry,
+                'operator_stationary_confirmed': (
+                    operator_stationary_confirmed),
                 'explore_params_overlay': explore_params_overlay,
             }.items()),
 

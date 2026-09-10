@@ -13,6 +13,7 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
     explore_health_authorized,
     explore_motion_authorized,
     explore_scan_values_valid,
+    hwt601_motion_authorized,
     localization_search_authorized,
     localization_search_values_valid,
     localization_motion_authorized,
@@ -55,6 +56,11 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert 'static_transform_publisher' not in source
     assert "package='nav2_behaviors'" in source
     assert "('cmd_vel', 'cmd_vel_recovery_blocked')" in source
+    assert "'use_hwt601_odometry', default_value='false'" in source
+    assert "condition=UnlessCondition(use_hwt601_odometry)" in source
+    assert "'slam_lidar_hwt601.launch.py'" in source
+    assert "condition=IfCondition(use_hwt601_odometry)" in source
+    assert "'require_hwt601_yaw'" in source
 
 
 def test_real_smoother_and_controller_limits_are_conservative():
@@ -244,6 +250,29 @@ def test_required_localization_gate_is_fail_closed_and_monotonic():
     assert not localization_motion_authorized(True, True, None, 10.1, 1.0)
     assert not localization_motion_authorized(True, True, 11.0, 10.1, 1.0)
     assert localization_motion_authorized(False, False, None, 99.0, 1.0)
+
+
+def test_required_hwt601_gate_accepts_only_fresh_validated_yaw_status():
+    valid = {
+        'ready': True,
+        'shadow_only': True,
+        'actuator_output': False,
+        'publishes_tf': False,
+        'operator_stationary_confirmed': True,
+        'latched_fault': None,
+        'bias': {'calibrated': True, 'stable': True},
+    }
+    assert hwt601_motion_authorized(True, valid, 10.0, 10.7, 0.8)
+    assert not hwt601_motion_authorized(True, valid, 10.0, 10.81, 0.8)
+    assert not hwt601_motion_authorized(
+        True, {**valid, 'ready': False}, 10.0, 10.1, 0.8)
+    assert not hwt601_motion_authorized(
+        True, {**valid, 'latched_fault': 'imu_datenluecke'},
+        10.0, 10.1, 0.8)
+    assert not hwt601_motion_authorized(
+        True, {**valid, 'bias': {'calibrated': False, 'stable': True}},
+        10.0, 10.1, 0.8)
+    assert hwt601_motion_authorized(False, None, None, 99.0, 0.8)
 
 
 def test_localization_search_is_bounded_fresh_and_one_shot():

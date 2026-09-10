@@ -1,5 +1,46 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Karten-A/B softwareseitig bereit (10.09.2026)
+
+Der neue HWT-Kartenpfad ist ein Opt-in; der bisherige Encoderstart bleibt der
+Rueckfall. Im HWT-Pfad besitzt `base_hardware` weder `/odom` noch TF, sondern
+publiziert nur gemessene Rad-Odometrie auf
+`/fusion/hwt601/wheel_odom_raw`. Der EKF fusioniert daraus ausschliesslich
+Vorwaertsgeschwindigkeit und aus `/shadow/hwt601/imu/yaw_rate` ausschliesslich
+Giergeschwindigkeit. Er ist der einzige Besitzer von `/odom` und
+`odom -> base_link`; `slam_toolbox` bleibt allein fuer `map -> odom`
+zustaendig. Der LiDAR-Matcher schreibt nur seine unabhaengige Kontrolle unter
+`/shadow/hwt601/` und wird noch nicht fusioniert.
+
+Der sichere Start fuer den spaeteren, neu freizugebenden Kartenversuch lautet:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_HWT601_STILLSTAND=JA \
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_app_erkundung_hwt601.sh \
+    active_drive:=true enable_auto_explore:=true
+```
+
+Vor Ausfuehrung muessen Roboter und Bereich frei, Not-Aus erreichbar und alle
+alten Robotikstacks beendet sein. Nach dem Start mindestens 30 Sekunden nicht
+bewegen. Der Wrapper setzt die HWT-Argumente selbst und verweigert
+Gegenueberschreibungen. Das Fahrtor bleibt bis zum stabilen Bias geschlossen
+und stoppt bei Fehler sofort beziehungsweise bei Statusverlust nach hoechstens
+0,8 Sekunden. Die App sendet den Explore-Auftrag weiterhin separat; der Start
+allein loest keine Mission aus.
+
+Motorlos bestanden: vier Pakete gebaut, Launch in Domain 154 mit
+`active_drive=false` und ohne Stillstandsfreigabe gestartet. `/odom` hatte
+genau den EKF als Publisher, Rad-Rohdaten genau die Basis. HWT blieb korrekt
+`ready=false`, die Basis meldete `dry_run=True`, und anschliessend waren alle
+Ports frei. Der reale Karten-A/B-Lauf ist noch offen und braucht eine neue
+ausdrueckliche Bewegungsfreigabe. Rueckfall: den normalen
+`start_app_erkundung.sh` verwenden; dessen HWT-Schalter ist standardmaessig
+`false`.
+
+---
+
 ## Fugenbefund: HWT/LiDAR -3 Grad, Encoder praktisch 0 Grad (10.09.2026)
 
 Ein freigegebener, auf 0,75 m geplanter Geradeauslauf wurde nach nur 8,5 cm
@@ -20,11 +61,11 @@ SLAM, Karte, Navigation und Produktiv-TF waren aus. Lokale Evidenz:
 leer.
 
 Keine Grenze lockern und keinen weiteren reinen Encoder-Fugenlauf starten.
-Als naechstes einen isolierten Karten-A/B-Start vorbereiten: HWT-Gierrate in
-der lokalen Odometrie, LiDAR-Matcher zuerst nur als unabhaengiger Waechter,
-SLAM weiterhin alleiniger Besitzer von `map -> odom`. Produktivstarts und
-Kartenprofile sind noch unveraendert; Rueckfall bleibt der bisherige direkte
-Encoderpfad.
+Der oben beschriebene isolierte Karten-A/B-Start setzt diese Konsequenz nun
+um: HWT-Gierrate in der lokalen Odometrie, LiDAR-Matcher nur als
+unabhaengiger Waechter und SLAM weiterhin alleiniger Besitzer von
+`map -> odom`. Die reale Fahrt ist noch offen; Rueckfall bleibt der bisherige
+direkte Encoderpfad.
 
 ---
 

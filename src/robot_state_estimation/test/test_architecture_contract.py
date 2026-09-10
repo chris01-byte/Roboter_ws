@@ -101,7 +101,8 @@ def test_process_noise_matrices_are_complete_homogeneous_ros_arrays():
     for filename in (
             'ekf_encoder_imu.yaml',
             'ekf_encoder_imu_reference.yaml',
-            'ekf_hwt601_encoder_shadow.yaml'):
+            'ekf_hwt601_encoder_shadow.yaml',
+            'ekf_hwt601_mapping.yaml'):
         data = yaml.safe_load((ROOT / 'config' / filename).read_text())
         assert len(data) == 1
         node = next(iter(data.values()))
@@ -263,6 +264,51 @@ def test_hwt601_encoder_shadow_ekf_selects_only_measured_vx_and_yaw_rates():
         and key[-1:].isdigit()
     }
     assert sensor_keys == {'odom0', 'imu0'}
+
+
+def test_hwt601_mapping_ekf_promotes_only_encoder_vx_and_hwt_yaw():
+    data = yaml.safe_load(
+        (ROOT / 'config' / 'ekf_hwt601_mapping.yaml').read_text())
+    assert set(data) == {'hwt601_mapping_ekf'}
+    params = data['hwt601_mapping_ekf']['ros__parameters']
+
+    assert params['publish_tf'] is True
+    assert params['world_frame'] == 'odom'
+    assert params['use_control'] is False
+    assert params['odom0'] == '/fusion/hwt601/wheel_odom_raw'
+    assert params['imu0'] == '/shadow/hwt601/imu/yaw_rate'
+    assert [
+        index for index, enabled in enumerate(params['odom0_config'])
+        if enabled] == [6]
+    assert [
+        index for index, enabled in enumerate(params['imu0_config'])
+        if enabled] == [11]
+    assert not any(
+        key.startswith(('odom1', 'imu1', 'pose', 'twist', 'accel'))
+        for key in params)
+
+
+def test_hwt601_mapping_launch_has_exactly_one_local_and_global_tf_owner():
+    launch = (
+        ROOT.parent / 'amadeus_lidar_bringup' / 'launch' /
+        'slam_lidar_hwt601.launch.py').read_text()
+    package_xml = (
+        ROOT.parent / 'amadeus_lidar_bringup' / 'package.xml').read_text()
+
+    assert launch.count("executable='base_hardware'") == 1
+    assert "'odom_topic': '/fusion/hwt601/wheel_odom_raw'" in launch
+    assert "'publish_tf': False" in launch
+    assert launch.count("executable='ekf_node'") == 1
+    assert "name='hwt601_mapping_ekf'" in launch
+    assert "('odometry/filtered', '/odom')" in launch
+    assert launch.count("executable='async_slam_toolbox_node'") == 1
+    assert "'hwt601_shadow.launch.py'" in launch
+    assert "'operator_stationary_confirmed'" in launch
+    assert "executable='lidar_odometry'" in launch
+    assert "'odom_output': '/shadow/hwt601/lidar_odom'" in launch
+    assert "'status_topic': '/shadow/hwt601/lidar_status_json'" in launch
+    assert '<exec_depend>robot_state_estimation</exec_depend>' in package_xml
+    assert '<exec_depend>robot_localization</exec_depend>' in package_xml
 
 
 def test_hwt601_encoder_shadow_ekf_launch_is_one_isolated_filter():

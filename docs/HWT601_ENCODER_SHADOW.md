@@ -5,7 +5,9 @@
 **Branch:** `codex/hwt601-encoder-shadow`
 
 **Status:** Reale gemeinsame 600-s-Stillstandsabnahme bestanden. Das
-vorbereitete EKF und jede dynamische Nutzung bleiben gesperrt.
+isolierte Schatten-EKF sowie Dreh-, Geradeaus- und Fugenabnahme sind
+bestanden. Ein eigener Karten-A/B-Pfad ist softwareseitig vorbereitet; seine
+reale Kartierungsabnahme bleibt gesperrt.
 
 Diese Stufe beantwortet vor jeder EKF-Bewertung eine einfachere Frage: Bleiben
 der korrigierte HWT-Gierwinkel und die aus den echten absoluten
@@ -21,6 +23,14 @@ ESS23 /dev/ttyUSB_BASE ---- nur FC03 --> Encoder-Odometrie --+    Beobachter
 erst nach bestandener direkter Abnahme:
 beide Schatten-Topics --> getrenntes EKF, publish_tf=false
 ```
+
+Der spaetere Karten-A/B-Pfad ist davon weiterhin getrennt: Dort ist
+`base_hardware` der einzige Motorbusbesitzer, publiziert Encoder-Rohdaten ohne
+TF, und ein eigener EKF besitzt als einzige Instanz `/odom` sowie
+`odom -> base_link`. Er verwendet nur Encoder-`vx`, nicht Encoder-Gier, und
+HWT-`wz`. Der LiDAR-Matcher beobachtet nur. Der Start erfolgt ausschliesslich
+ueber `tools/kartierung/start_app_erkundung_hwt601.sh`; Details und aktueller
+Abnahmestand stehen in `docs/ROBOT_TRANSFER.md`.
 
 ## Warum ein eigener Encoderleser noetig ist
 
@@ -238,11 +248,11 @@ Gewichtung zugunsten des HWT. Beide Quellen liefern zudem nur Drehrate, keinen
 absoluten Heading-Anker. Ein optisch plausibler EKF-Winkel waere deshalb noch
 kein Nachweis, dass das Kartenproblem geloest ist.
 
-Vor einer Kartierungsintegration fehlen weiterhin:
-
-1. Kovarianz-/Innovationsabsicherung bei weiterer Bewegungsart/Geschwindigkeit;
-2. eine Heading-Korrekturstrategie sowie Temperaturpruefungen;
-3. erst danach ein kontrollierter Karten-A/B-Test.
+Diese Punkte waren zu diesem Zeitpunkt noch vor einer Kartierungsintegration
+offen. Die folgenden Dreh-, Geradeaus- und Fugenmessungen lieferten danach die
+Entscheidungsgrundlage fuer einen bewusst isolierten A/B-Versuch. Eine
+Produktionsfreigabe ist das nicht: Kovarianzen, Temperatur und absoluter
+Heading-Anker bleiben offene Bewertungspunkte des Kartenlaufs.
 
 Der zuvor offene beidseitige Dynamikpunkt bestand am 10.09.2026 mit kleinen
 `+18,32/-18,33`-Grad-Drehungen. HWT minus Encoder lagen bei -0,015/+0,148
@@ -273,8 +283,10 @@ Encoder +0,006 Grad. Die unabhaengige motorlose Auswertung der zeitgleichen
 LiDAR-Scans ergab -3,00 Grad. Der HWT-Ausreisser war somit reale, von den
 Motorwellen nicht erfasste Chassisgier. Das Scan-Gate akzeptierte alle Scans,
 weil Roll/Nick und Beschleunigungsbetrag innerhalb der Grenzen blieben. Die
-naechste Stufe ist ein isolierter Karten-A/B-Pfad mit HWT-Gierrate; der
-LiDAR-Matcher bleibt zunaechst Waechter statt direkt fusionierter Quelle.
+daraufhin vorbereitete naechste Stufe ist ein isolierter Karten-A/B-Pfad mit
+HWT-Gierrate; der LiDAR-Matcher bleibt zunaechst Waechter statt direkt
+fusionierter Quelle. Sein motorloser Publisher-/Starttest ist bestanden, die
+reale Kartierungsfahrt aber noch nicht.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von

@@ -124,6 +124,32 @@ def localization_motion_authorized(
     )
 
 
+def hwt601_motion_authorized(
+        required, status, received_at, now, timeout_s):
+    """Fail closed unless the validated yaw-only HWT path is fresh and ready."""
+    if not required:
+        return True
+    values = (received_at, now, timeout_s)
+    if not all(value is not None and math.isfinite(value) for value in values):
+        return False
+    if timeout_s <= 0.0 or not 0.0 <= now - received_at <= timeout_s:
+        return False
+    if not isinstance(status, dict):
+        return False
+    bias = status.get('bias')
+    return (
+        status.get('ready') is True
+        and status.get('shadow_only') is True
+        and status.get('actuator_output') is False
+        and status.get('publishes_tf') is False
+        and status.get('operator_stationary_confirmed') is True
+        and status.get('latched_fault') is None
+        and isinstance(bias, dict)
+        and bias.get('calibrated') is True
+        and bias.get('stable') is True
+    )
+
+
 def localization_search_authorized(
         enabled, ready, ever_ready, localization_received_at,
         command_received_at, search_started_at, odom_received_at,
@@ -185,6 +211,10 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('status_timeout_s', 1.0)
         self.declare_parameter('command_timeout_s', 0.25)
         self.declare_parameter('require_localization', True)
+        self.declare_parameter('require_hwt601_yaw', False)
+        self.declare_parameter(
+            'hwt601_status_topic', '/shadow/hwt601/status_json')
+        self.declare_parameter('hwt601_status_timeout_s', 0.8)
         self.declare_parameter('allow_explore_mission', False)
         self.declare_parameter(
             'explore_scan_command_topic', '/cmd_vel_explore_scan_raw')
@@ -229,6 +259,8 @@ class CmdVelMissionGate(Node):
             'localization_search_odom_topic').value
         self._require_localization = bool(
             self.get_parameter('require_localization').value)
+        self._require_hwt601 = bool(
+            self.get_parameter('require_hwt601_yaw').value)
         self._allow_explore = bool(
             self.get_parameter('allow_explore_mission').value)
         self._explore_scan_max_angular = float(
@@ -249,6 +281,8 @@ class CmdVelMissionGate(Node):
             self.get_parameter('command_timeout_s').value)
         self._localization_timeout = float(
             self.get_parameter('localization_timeout_s').value)
+        self._hwt601_timeout = float(
+            self.get_parameter('hwt601_status_timeout_s').value)
         self._explore_map_timeout = float(
             self.get_parameter('explore_map_timeout_s').value)
         self._explore_sensor_timeout = float(
@@ -269,6 +303,7 @@ class CmdVelMissionGate(Node):
                 self._status_timeout <= 0.0
                 or self._command_timeout <= 0.0
                 or self._localization_timeout <= 0.0
+                or self._hwt601_timeout <= 0.0
                 or self._search_max_angular <= 0.0
                 or self._search_max_linear <= 0.0
                 or self._search_max_duration <= 0.0
@@ -290,6 +325,8 @@ class CmdVelMissionGate(Node):
         self._localization_ready = False
         self._localization_time = None
         self._ever_localized = False
+        self._hwt601_status = None
+        self._hwt601_status_time = None
         self._search_command = Twist()
         self._search_command_time = None
         self._search_started_at = None
@@ -319,6 +356,11 @@ class CmdVelMissionGate(Node):
         self.create_subscription(
             Bool, localization_topic, self._on_localization, 10)
         self.create_subscription(
+            String,
+            self.get_parameter('hwt601_status_topic').value,
+            self._on_hwt601_status,
+            10)
+        self.create_subscription(
             Twist, search_topic, self._on_search_command, 10)
         self.create_subscription(
             Odometry, search_odom_topic, self._on_odom, 20)
@@ -343,6 +385,10 @@ class CmdVelMissionGate(Node):
             self.get_logger().warn(
                 'AUTOMATISCHE ERKUNDUNG im Fahrtor freigegeben; Karte, LiDAR, '
                 'Odometrie und beide VL53 muessen fortlaufend frisch bleiben.')
+        if self._require_hwt601:
+            self.get_logger().warn(
+                'HWT601-Fahrtfreigabe aktiv: unkalibrierter, fehlerhafter '
+                'oder veralteter Gierstatus stoppt die Kommandokette.')
         if self._allow_localization_search:
             self.get_logger().warn(
                 'Lokalisierungssuche freigegeben: vorwaerts bis '
@@ -501,6 +547,21 @@ class CmdVelMissionGate(Node):
             # Lokalisierungsverlust ist ein unmittelbarer, harter Gate-Stopp.
             self._publisher.publish(Twist())
 
+    def _on_hwt601_status(self, message):
+        try:
+            status = json.loads(message.data)
+        except (json.JSONDecodeError, TypeError):
+            status = None
+        self._hwt601_status = status
+        self._hwt601_status_time = time.monotonic()
+        if not hwt601_motion_authorized(
+                self._require_hwt601,
+                self._hwt601_status,
+                self._hwt601_status_time,
+                time.monotonic(),
+                self._hwt601_timeout):
+            self._publisher.publish(Twist())
+
     def _search_authorized(self, now):
         return localization_search_authorized(
             self._allow_localization_search,
@@ -532,10 +593,16 @@ class CmdVelMissionGate(Node):
         )
         command_fresh = now - self._command_time <= self._command_timeout
         search_authorized = self._search_authorized(now)
-        if search_authorized:
+        hwt601_authorized = hwt601_motion_authorized(
+            self._require_hwt601,
+            self._hwt601_status,
+            self._hwt601_status_time,
+            now,
+            self._hwt601_timeout)
+        if search_authorized and hwt601_authorized:
             command = self._search_command
             mode = 'localization_search'
-        elif mission_authorized and command_fresh:
+        elif mission_authorized and command_fresh and hwt601_authorized:
             command = self._command
             mode = 'mission'
         else:

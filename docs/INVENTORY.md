@@ -94,7 +94,15 @@ Heading-Strategie relevant.
 Ein freigegebener Fugenlauf stoppte anschliessend nach 8,5 cm bei -3,21 Grad
 HWT gegen +0,006 Grad Encoder. Der motorlos ausgewertete LiDAR bestaetigte
 -3,00 Grad. Damit ist encoderunsichtbare reale Gier auf diesem Bodenereignis
-nachgewiesen; die Karten-A/B-Integration bleibt der naechste offene Schritt.
+nachgewiesen; der softwareseitig vorbereitete reale Karten-A/B-Lauf bleibt
+der naechste offene Schritt.
+
+**HWT-Karten-A/B-Delta:** `codex/hwt601-encoder-shadow`, 10.09.2026:
+separater Opt-in-Start mit Encoder-`vx`, HWT-`wz`, genau einem `/odom`-/
+`odom->base_link`-EKF und `slam_toolbox` als alleinigem `map->odom`-Owner.
+LiDAR-Matcher nur als radunabhaengiger Beobachter. HWT-Status sperrt die
+Fahrkette bis stabile Startkalibrierung vorliegt und bei Datenverlust nach
+maximal 0,8 s. Motorloser Smoke-Test bestanden; reale Kartenfahrt offen.
 
 ---
 
@@ -159,6 +167,8 @@ nachgewiesen; die Karten-A/B-Integration bleibt der naechste offene Schritt.
 | Automatische LiDAR-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_automatische_kartierung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
 | App-Kartierung, Preflight | `bash tools/kartierung/start_app_erkundung.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`) |
 | App-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
+| HWT-Karten-A/B, Preflight | `AMADEUS_HWT601_STILLSTAND=JA bash tools/kartierung/start_app_erkundung_hwt601.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`; HWT/LiDAR werden gelesen) |
+| HWT-Karten-A/B, scharf | `AMADEUS_HWT601_STILLSTAND=JA AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung_hwt601.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend; neue Freigabe erforderlich** |
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 
@@ -181,6 +191,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | `tools/kartierung/start_slam.sh` / `stop_slam.sh` | SLAM starten; **sauber** beenden mit Wörterbuch-Kontrolle |
 | `tools/kartierung/start_automatische_kartierung.sh` | dreistufige SLAM-/Nav2-/Explore-Kette ohne App-Dienste; scharf nur mit zwei Opt-ins |
 | `tools/kartierung/start_app_erkundung.sh` | einzelner dreistufiger Kartierungs-, App-, rosbridge- und Kartenmanager-Stack; Doppelstartschutz |
+| `tools/kartierung/start_app_erkundung_hwt601.sh` | expliziter HWT-Karten-A/B-Start; verlangt Startstillstand, freien HWT-Port und sperrt widerspruechliche Argumente |
 | `tools/kartierung/start_lokalisierung.sh` | Lokalisierungsmodus, wahlweise ohne Vorwissen |
 | `tools/kartierung/kartierfahrt.py` | autonome Fahrt, hält selbst vor Hindernissen |
 | `tools/kartierung/erkundungsfahrt.py` | Ziele an der Grenze bekannt/unbekannt |

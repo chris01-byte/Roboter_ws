@@ -48,12 +48,25 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         self.assertIn("'enable_auto_explore': enable_auto_explore", source)
         self.assertIn("'active_drive': active_drive", source)
         self.assertIn(
+            "'use_hwt601_odometry': use_hwt601_odometry", source)
+        self.assertIn(
+            "'operator_stationary_confirmed': (", source)
+        self.assertIn(
             "'explore_params_overlay': explore_params_overlay", source)
         self.assertIn('roboterknoten.py\" --still', helper)
         self.assertIn('AMADEUS_FAHRFREIGABE', helper)
         self.assertIn('/robot_map_manager', helper)
         self.assertIn('/semantic_map_manager', helper)
         self.assertIn('robot_bringup app_mapping.launch.py', helper)
+
+        hwt_helper = (
+            PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+            'start_app_erkundung_hwt601.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('AMADEUS_HWT601_STILLSTAND', hwt_helper)
+        self.assertIn('fuser /dev/ttyUSB_HWT601', hwt_helper)
+        self.assertIn('use_hwt601_odometry:=true', hwt_helper)
+        self.assertIn('operator_stationary_confirmed:=true', hwt_helper)
 
 
 if __name__ == '__main__':

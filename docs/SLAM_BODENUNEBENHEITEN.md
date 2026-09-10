@@ -20,6 +20,24 @@ nicht noetig. Der naechste Kartenvergleich muss HWT-Gierrate in der lokalen
 Odometrie verwenden und den LiDAR-Matcher zunaechst unabhaengig mitfuehren.
 SLAM bleibt alleiniger Besitzer von `map -> odom`.
 
+## Nachtrag 10.09.2026: Karten-A/B-Pfad softwareseitig vorbereitet
+
+Die Konsequenz aus der Messung ist jetzt als eigener, weiterhin nicht
+produktiver Startpfad umgesetzt. Im HWT-Modus liefert die Basis nur die
+Encoder-Vorwaertsgeschwindigkeit auf einem Roh-Topic und keinen TF. Ein
+einziger EKF integriert diese Translation mit der chassisfest gemessenen
+HWT-Gierrate zu `/odom` und `odom -> base_link`. Encoder-Gier wird bewusst
+nicht fusioniert, weil genau sie auf der Fuge widerlegt wurde. `slam_toolbox`
+bleibt allein fuer `map -> odom` verantwortlich.
+
+Der LiDAR-Scanmatcher laeuft im ersten Kartenversuch nur als unabhaengiger
+Beobachter. So bleibt sichtbar, ob HWT, LiDAR und Kartenpose bei einer Fuge
+uebereinstimmen; eine zweite Korrekturquelle kann den Fehler nicht verdecken.
+Das Fahrtor verlangt im Opt-in-Modus einen frischen, stabil kalibrierten und
+fehlerfreien HWT-Status. Der direkte Encoderpfad ist unveraendert der
+Rueckfall. Ein motorloser Smoke-Test bestaetigte die eindeutigen
+Publisher-Eigentuemer; die reale Kartenqualitaet ist noch nicht abgenommen.
+
 ## Anlass
 
 Ein kontrollierter LiDAR-Nachscan in einem gefliesten Bereich erzeugte lokal

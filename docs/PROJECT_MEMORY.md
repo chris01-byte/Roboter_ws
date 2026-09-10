@@ -17,6 +17,66 @@ Rückfallweg:
 
 ---
 
+## 2026-09-10 — HWT-Karten-A/B opt-in und fail-closed vorbereitet
+
+**Entscheidung:** Der bestehende Kartenstart bleibt standardmaessig bei der
+direkten Encoder-Odometrie. Nur der neue explizite HWT-A/B-Pfad verwendet
+Encoder-`vx` und die validierte HWT-Gierrate. Darin publiziert die Basis ihre
+Messung ausschliesslich auf `/fusion/hwt601/wheel_odom_raw` und keinen TF; ein
+einziger `robot_localization`-EKF besitzt `/odom` und `odom -> base_link`.
+`slam_toolbox` bleibt alleiniger Besitzer von `/map` und `map -> odom`. Der
+radunabhaengige LiDAR-Matcher laeuft zunaechst nur als Beobachter auf
+`/shadow/hwt601/*` und ist kein EKF-Eingang.
+
+**Grund / beobachtete Evidenz:** Der unmittelbar vorherige Fugenlauf bewies
+-3,21 Grad reale HWT-Gier und -3,00 Grad LiDAR-Gier, waehrend die Encoder nur
++0,006 Grad meldeten. Deshalb wird Encoder-Gier im neuen Karten-EKF bewusst
+nicht fusioniert; sie bleibt im Roh-Topic diagnostizierbar. Ein eigener
+HWT-Statusvertrag sperrt jede Fahrt, bis der explizite Startstillstand, der
+eingefrorene stabile Bias, ein fehlerfreier Sensorpfad und frische Daten
+vorliegen. Ein HWT-Fehler stoppt unmittelbar; ohne neuen Status faellt das
+Fahrtor spaetestens nach 0,8 s zu. `/odom`-Alter, Karte, LiDAR und beide VL53
+bleiben zusaetzlich im vorhandenen Explore-Gate ueberwacht.
+
+**Betroffene Dateien und Hardware:** Neues Opt-in-Launch
+`slam_lidar_hwt601.launch.py`, EKF-Profil `ekf_hwt601_mapping.yaml` und
+Startwrapper `start_app_erkundung_hwt601.sh`; Argumente werden durch
+`nav_mapping.launch.py` und `app_mapping.launch.py` gereicht. Das Missions-Gate
+erhielt eine standardmaessig deaktivierte HWT-Pruefung. Beim motorlosen
+Smoke-Test wurden HWT und LiDAR nur gelesen; `base_hardware` meldete
+`dry_run=True`, `/dev/ttyUSB_BASE` wurde nicht geoeffnet und kein
+Motorregister geschrieben. Der HWT-Treiber verwendete ausschliesslich FC03;
+der normale LiDAR-Treiber wurde fuer den Scan-Smoke-Test gestartet.
+
+**Teststatus:** 36 gezielte Vertrags-/Gate-Tests bestanden; vier betroffene
+ROS-Pakete gebaut. Der Gesamtlauf ergab 589 bestandene Tests und einen bereits
+vorhandenen unabhaengigen Widerspruch: Der VL53-Pakettest erwartet noch einen
+Kreis, waehrend aktive Mapping-Konfiguration und Navigationstest das
+vermessene Polygon verlangen. Im gesperrten Echtstart in Domain 154 hatte
+`/odom` genau einen Publisher (`hwt601_mapping_ekf`) und das Rad-Roh-Topic
+genau einen (`base_hardware`). Der HWT meldete ohne Stillstandsfreigabe korrekt
+`ready=false`; LiDAR-Matcher und Scan-Normalisierung starteten. Danach waren
+Graph und alle drei seriellen Ports frei. Die bekannten LiDAR-Puffer- und
+Basis-`rcl_shutdown`-Fehler traten erst beim Herunterfahren auf.
+
+**Offene Risiken:** Der eigentliche Karten-A/B-Lauf ist noch nicht gefahren.
+Die HWT-Gierrate liefert keinen absoluten Wohnungswinkel; Schleifenschluesse
+bleiben Aufgabe von `slam_toolbox`. Temperaturverhalten waehrend einer langen
+Kartierung, Kartenqualitaet und das Verhalten bei echten HWT-Dropouts unter
+Fahrt muessen praktisch bewertet werden. Der LiDAR-Beobachter wird vorerst
+absichtlich nicht fusioniert. Das 2D-Scan-Kipp-Gate ist in diesem reinen
+Yaw-A/B-Pfad noch nicht aktiv; die Fugenmessung lag allerdings deutlich
+innerhalb seiner Roll-/Nickgrenzen.
+
+**Rueckfallweg:** Den bisherigen
+`tools/kartierung/start_app_erkundung.sh` ohne HWT-Argumente verwenden; dessen
+Default `use_hwt601_odometry=false` startet unveraendert
+`slam_lidar.launch.py`. Der neue Wrapper ist der einzige vorgesehene HWT-Opt-in
+und verlangt `AMADEUS_HWT601_STILLSTAND=JA`. Kein Karten- oder
+Produktionsparameter wurde ueberschrieben.
+
+---
+
 ## 2026-09-10 — Fuge erzeugt 3 Grad encoderunsichtbare Gier; HWT und LiDAR stimmen ueberein
 
 **Entscheidung:** Der geplante 0,75-m-Fugenlauf wurde nach 8,5 cm nicht

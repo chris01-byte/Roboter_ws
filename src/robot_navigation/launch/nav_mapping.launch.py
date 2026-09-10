@@ -7,6 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, TimerAction)
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -32,6 +33,9 @@ def generate_launch_description():
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
+    use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    operator_stationary_confirmed = LaunchConfiguration(
+        'operator_stationary_confirmed')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
 
     nav_cmd_remap = [('cmd_vel', 'cmd_vel_nav_raw')]
@@ -53,6 +57,8 @@ def generate_launch_description():
                 output='screen',
                 parameters=[{
                     'require_localization': False,
+                    'require_hwt601_yaw': ParameterValue(
+                        use_hwt601_odometry, value_type=bool),
                     'allow_localization_search': False,
                     'allow_explore_mission': ParameterValue(
                         enable_auto_explore, value_type=bool),
@@ -107,6 +113,13 @@ def generate_launch_description():
             'crop', default_value='true',
             description='Vermessenen Mastsektor im LiDAR maskieren.'),
         DeclareLaunchArgument(
+            'use_hwt601_odometry', default_value='false',
+            description='Opt-in A/B: HWT601-Gier plus Encoder-vx statt '
+                        'direkter Encoder-Odometrie.'),
+        DeclareLaunchArgument(
+            'operator_stationary_confirmed', default_value='false',
+            description='Nur fuer HWT-A/B nach frisch bestaetigtem Stillstand.'),
+        DeclareLaunchArgument(
             'explore_params_overlay', default_value=default_explore_params,
             description='Optionales begrenzendes Explorer-Profil.'),
 
@@ -117,8 +130,21 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'amadeus_lidar_bringup', 'slam_lidar.launch.py')),
+            condition=UnlessCondition(use_hwt601_odometry),
             launch_arguments={
                 'active_drive': active_drive,
+                'normalize_scan': normalize_scan,
+                'crop': crop,
+            }.items()),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(_launch_file(
+                'amadeus_lidar_bringup', 'slam_lidar_hwt601.launch.py')),
+            condition=IfCondition(use_hwt601_odometry),
+            launch_arguments={
+                'active_drive': active_drive,
+                'operator_stationary_confirmed': (
+                    operator_stationary_confirmed),
                 'normalize_scan': normalize_scan,
                 'crop': crop,
             }.items()),
