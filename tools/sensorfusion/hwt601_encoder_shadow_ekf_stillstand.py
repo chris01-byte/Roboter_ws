@@ -17,6 +17,8 @@ import hwt601_encoder_shadow_stillstand as direct
 
 
 EKF_TOPIC = '/shadow/hwt601/odom'
+EKF_TF_SINK = '/shadow/hwt601/tf_unused'
+EKF_TF_STATIC_SINK = '/shadow/hwt601/tf_static_unused'
 EXPECTED_NODES = frozenset({
     '/hwt601_encoder_shadow_stillstand_observer',
     '/hwt601_encoder_shadow_reader',
@@ -32,6 +34,10 @@ EXPECTED_PUBLISHERS = {
     direct.HWT_RAW_STATUS_TOPIC: '/hwt601_shadow_reader',
     direct.ENCODER_STATUS_TOPIC: '/hwt601_encoder_shadow_reader',
     EKF_TOPIC: '/hwt601_encoder_shadow_ekf',
+    EKF_TF_SINK: '/hwt601_encoder_shadow_ekf',
+}
+OPTIONAL_PUBLISHERS = {
+    EKF_TF_STATIC_SINK: '/hwt601_encoder_shadow_ekf',
 }
 FORBIDDEN_TOPICS = (
     '/odom', '/map', '/tf', '/tf_static', '/cmd_vel',
@@ -126,6 +132,8 @@ def _passed(summary: Mapping[str, object]) -> bool:
         ))
         and graph.get('valid') is True
         and graph.get('forbidden_publishers_absent') is True
+        and graph.get('isolated_tf_messages') == 0
+        and graph.get('isolated_tf_static_messages') == 0
     )
 
 
@@ -141,6 +149,7 @@ def _run(duration_s: float, output: Path) -> int:
     )
     from sensor_msgs.msg import Imu
     from std_msgs.msg import String
+    from tf2_msgs.msg import TFMessage
 
     output.mkdir(parents=True, exist_ok=False)
     csv_path = output / 'samples.csv'
@@ -175,12 +184,18 @@ def _run(duration_s: float, output: Path) -> int:
             self.measurement_start_index: int | None = None
             self.measurement_end_index: int | None = None
             self.measurement_end_received_s: float | None = None
+            self.tf_messages = 0
+            self.tf_static_messages = 0
             self.create_subscription(
                 Imu, direct.IMU_TOPIC, self._on_imu, reliable_qos)
             self.create_subscription(
                 Odometry, direct.WHEEL_TOPIC, self._on_wheel, reliable_qos)
             self.create_subscription(
                 Odometry, EKF_TOPIC, self._on_ekf, reliable_qos)
+            self.create_subscription(
+                TFMessage, EKF_TF_SINK, self._on_tf, 10)
+            self.create_subscription(
+                TFMessage, EKF_TF_STATIC_SINK, self._on_tf_static, 10)
             self.create_subscription(
                 String, direct.HWT_STATUS_TOPIC,
                 lambda msg: self._on_status('hwt', msg), 10)
@@ -190,6 +205,14 @@ def _run(duration_s: float, output: Path) -> int:
             self.create_subscription(
                 String, direct.ENCODER_STATUS_TOPIC,
                 lambda msg: self._on_status('encoder', msg), 10)
+
+        def _on_tf(self, _message: TFMessage) -> None:
+            self.tf_messages += 1
+            self.latch('ekf_hat_tf_nachricht_gesendet')
+
+        def _on_tf_static(self, _message: TFMessage) -> None:
+            self.tf_static_messages += 1
+            self.latch('ekf_hat_tf_static_nachricht_gesendet')
 
         def latch(self, reason: str) -> None:
             if reason not in self.faults:
@@ -353,7 +376,12 @@ def _run(duration_s: float, output: Path) -> int:
                 return
             publishers: dict[str, list[str]] = {}
             endpoint_ids: dict[str, list[str]] = {}
-            for topic in tuple(EXPECTED_PUBLISHERS) + FORBIDDEN_TOPICS:
+            graph_topics = (
+                tuple(EXPECTED_PUBLISHERS)
+                + tuple(OPTIONAL_PUBLISHERS)
+                + FORBIDDEN_TOPICS
+            )
+            for topic in graph_topics:
                 infos = list(self.get_publishers_info_by_topic(topic))
                 publishers[topic] = sorted(
                     _qualified(info.node_name, info.node_namespace)
@@ -363,6 +391,9 @@ def _run(duration_s: float, output: Path) -> int:
             self.graph_publishers = publishers
             for topic, expected in EXPECTED_PUBLISHERS.items():
                 if publishers[topic] != [expected]:
+                    self.latch(f'ros_graph_publisher_unerwartet:{topic}')
+            for topic, expected in OPTIONAL_PUBLISHERS.items():
+                if publishers[topic] not in ([], [expected]):
                     self.latch(f'ros_graph_publisher_unerwartet:{topic}')
             for topic in FORBIDDEN_TOPICS:
                 if publishers[topic]:
@@ -590,6 +621,8 @@ def _run(duration_s: float, output: Path) -> int:
             'publishers': node.graph_publishers,
             'maximum_check_gap_s': node.maximum_graph_gap_s,
             'forbidden_publishers_absent': forbidden_absent,
+            'isolated_tf_messages': node.tf_messages,
+            'isolated_tf_static_messages': node.tf_static_messages,
         },
         'faults': node.faults,
         'samples_sha256': _sha256(csv_path),

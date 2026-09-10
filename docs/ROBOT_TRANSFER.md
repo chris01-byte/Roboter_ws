@@ -65,7 +65,10 @@ Publisher bleiben. Der Filter publiziert nur `/shadow/hwt601/odom`, kein TF,
 und besitzt keinen Kontrolleingang. 263 Offline-Tests bestehen; reale
 120-s-Abnahme offen. `robot_localization` erzeugt intern genau einen
 `transform_listener_impl_*`-Node; der Beobachter erlaubt diese abonnierende
-Instanz, verlangt aber weiterhin null Publisher auf `/tf` und `/tf_static`.
+Instanz. Der zweite Smoke-Start bewies, dass der Prozess trotz
+`publish_tf=false` einen `/tf`-Publisher anlegt. Das isolierte Launch remappt
+`/tf` und `/tf_static` auf Shadow-Sinktopics. Der Beobachter verlangt dort
+null Nachrichten und auf den produktiven TF-Topics null Publisher.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

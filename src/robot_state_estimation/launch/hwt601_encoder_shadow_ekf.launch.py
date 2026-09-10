@@ -29,6 +29,11 @@ def generate_launch_description():
             remappings=[
                 ('odometry/filtered', '/shadow/hwt601/odom'),
                 ('/diagnostics', '/shadow/hwt601/diagnostics/ekf'),
+                # robot_localization advertises a TF endpoint even with
+                # publish_tf=false.  Keep that endpoint out
+                # of the production TF graph and observable in this sandbox.
+                ('/tf', '/shadow/hwt601/tf_unused'),
+                ('/tf_static', '/shadow/hwt601/tf_static_unused'),
                 ('set_pose', '/shadow/hwt601/set_pose'),
                 ('toggle_filter_processing',
                  '/shadow/hwt601/toggle_filter_processing'),

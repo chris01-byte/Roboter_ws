@@ -50,6 +50,8 @@ def _passing_summary():
         'graph': {
             'valid': True,
             'forbidden_publishers_absent': True,
+            'isolated_tf_messages': 0,
+            'isolated_tf_static_messages': 0,
         },
     }
 
@@ -69,6 +71,8 @@ def test_acceptance_passes_only_complete_bounded_isolated_result():
         (('direct_comparison', 'hwt_angle_deg'), 1.0),
         (('sources', 'post_window_fresh'), False),
         (('graph', 'forbidden_publishers_absent'), False),
+        (('graph', 'isolated_tf_messages'), 1),
+        (('graph', 'isolated_tf_static_messages'), 1),
     )
     for path, value in failures:
         candidate = _passing_summary()
@@ -101,12 +105,14 @@ def test_observer_has_no_publisher_hardware_or_control_path():
     assert 'subprocess' not in source
     assert 'TransformBroadcaster' not in source
     assert "EKF_TOPIC = '/shadow/hwt601/odom'" in source
+    assert "EKF_TF_SINK = '/shadow/hwt601/tf_unused'" in source
     assert "'/odom', '/map', '/tf', '/tf_static', '/cmd_vel'" in source
     assert (
         "super().__init__('hwt601_encoder_shadow_stillstand_observer')"
         in source
     )
     assert 'post_window_fresh' in source
+    assert "self.latch('ekf_hat_tf_nachricht_gesendet')" in source
     assert 'samples_sha256' in source
 
 

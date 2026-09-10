@@ -206,7 +206,12 @@ HWT-/Encodervergleich, alle Quellstatus, frische Abschlussstatus und die
 Publisher-GIDs gueltig bleiben. `/odom`, `/map`, `/tf`, `/tf_static`,
 Fusions- und Fahrbefehlstopics duerfen keinen Publisher besitzen. Der von
 `robot_localization` intern erzeugte einzelne `transform_listener_impl_*`-Node
-ist Teil des erwarteten Graphen, darf aber ebenfalls keinen TF publizieren.
+ist Teil des erwarteten Graphen. Weil der Prozess trotz `publish_tf=false`
+einen `/tf`-Publisher anlegt, remappt das isolierte Launch dessen `/tf` und
+`/tf_static` auf `/shadow/hwt601/tf_unused` beziehungsweise
+`/shadow/hwt601/tf_static_unused`. Dort darf waehrend der gesamten Abnahme
+keine einzige Nachricht erscheinen; auf den produktiven TF-Topics darf nicht
+einmal ein Publisher existieren.
 
 Der aktuelle HWT-Wert `5e-7 (rad/s)^2` gegen die vorlaeufige Encoder-
 Winkelgeschwindigkeitsvarianz `0,03 (rad/s)^2` bedeutet ungefaehr 60.000:1

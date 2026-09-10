@@ -276,13 +276,15 @@ def test_hwt601_encoder_shadow_ekf_launch_is_one_isolated_filter():
     assert "'config', 'ekf_hwt601_encoder_shadow.yaml'" in launch
     assert "('odometry/filtered', '/shadow/hwt601/odom')" in launch
     assert "('/diagnostics', '/shadow/hwt601/diagnostics/ekf')" in launch
+    assert "('/tf', '/shadow/hwt601/tf_unused')" in launch
+    assert "('/tf_static', '/shadow/hwt601/tf_static_unused')" in launch
     assert "('set_pose', '/shadow/hwt601/set_pose')" in launch
     assert "'/shadow/hwt601/toggle_filter_processing'" in launch
     assert "DeclareLaunchArgument('config'" not in launch
     assert 'IncludeLaunchDescription' not in launch
     assert 'ExecuteProcess' not in launch
     assert all(topic not in launch for topic in (
-        "'/odom'", "'/map'", "'/tf'", "'/tf_static'"))
+        "('/odom',", "('/map',"))
 
     forbidden = (
         'base_hardware', 'hwt601_imu', 'hwt601_shadow', 'sensor_adapter',

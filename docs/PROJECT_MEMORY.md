@@ -130,7 +130,11 @@ Der erste Startversuch zeigte, dass `robot_localization` trotz
 `publish_tf=false` einen privaten `transform_listener_impl_*`-Node zum
 Abonnieren von TF anlegt. Genau eine solche interne Instanz ist nun erlaubt;
 Publisher auf `/tf` und `/tf_static` bleiben verboten. 263 gezielte
-Offline-Tests bestehen; der Realtest steht noch aus.
+Offline-Tests bestehen. Der zweite Startversuch zeigte zusaetzlich, dass der
+EKF-Prozess trotz `publish_tf=false` einen `/tf`-Publisher anlegt. Das
+isolierte Launch remappt deshalb `/tf` und `/tf_static` auf Shadow-Sinktopics;
+der Beobachter verlangt dort null Nachrichten und auf den produktiven Topics
+null Publisher. Der Realtest steht noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
