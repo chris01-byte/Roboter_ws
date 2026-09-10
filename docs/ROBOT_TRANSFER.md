@@ -1,5 +1,34 @@
 # Übertragung auf den realen Roboter
 
+## HWT-/Encoder-/EKF-Dynamik beidseitig bestanden (10.09.2026)
+
+In isolierter Domain 148 nach ausdruecklicher Fahrfreigabe zwei begrenzte
+Drehungen mit 0,08 rad/s: links Encoder/HWT/EKF
+`+18,321744/+18,306255/+18,306116` Grad, rechts
+`-18,327586/-18,180042/-18,179794` Grad. HWT minus Encoder damit
+-0,015489/+0,147544 Grad; Netto nach der Gegenbewegung
+-0,005842/+0,126212/+0,126323 Grad. Translation nur 0,011/0,021 mm, null
+Modbusfehler, Encoder-Rejects oder Rebases, jeweils abschliessend 0 rpm.
+
+`base_hardware` war einziger Besitzer von `/dev/ttyUSB_BASE`, fuehrte sowohl
+Fahrbefehle als auch absolute Positionslesung aus und stellt nun die Dauer der
+sequentiellen FC03-Paarabfrage bereit. Bewegungsmaximum 13,092/11,607 ms;
+Links-/Rechts-Erstlesung wechselte nahezu 50:50. Der separate read-only
+Encoder-Shadow darf in diesem Modus nicht laufen. OAK, LiDAR, SLAM, Karte,
+Navigation, produktive Odometrie und TF waren aus; das EKF blieb ohne TF.
+
+Lokale Evidenz: `~/.local/share/amadeus/hwt601/`
+`dynamic-left-20260910-181707` und `dynamic-right-20260910-181746`.
+Rohdaten-SHA-256 links
+`16c0cb3ebc0831014b1c9502036eacf28af9cfa6b4b337c07dae27c3e558c303`,
+rechts `8419b93d0dc7236d91547a4118ba2bc0e29eab40ae3a0838da6057fa1bc9e196`.
+Beide Ports danach frei, Domain leer. Dies gibt noch keine Kartenintegration
+frei: Innovation/Kovarianz, Geradeausfahrt, Vibration/Schwelle, Temperatur und
+ein absoluter Heading-Anker bleiben offen. Rueckfall: Teststack aus lassen;
+Produktivstarts sind unveraendert.
+
+---
+
 ## HWT-/Encoder-Shadow: reale Stillstandsabnahme bestanden (09.09.2026)
 
 `codex/hwt601-encoder-shadow` fuegt einen vom Fahrknoten getrennten

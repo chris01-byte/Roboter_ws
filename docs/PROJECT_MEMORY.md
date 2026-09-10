@@ -17,6 +17,65 @@ Rückfallweg:
 
 ---
 
+## 2026-09-10 — HWT/Encoder/Shadow-EKF dynamisch beidseitig bestanden
+
+**Entscheidung:** Die erste dynamische Schattenabnahme verwendet einen einzigen
+Besitzer des Motorbusses: `base_hardware` liest die absoluten ESS23-Positionen
+und fuehrt die begrenzten Fahrbefehle aus. Der separate FC03-Shadow-Leser darf
+dabei nicht parallel laufen. HWT-Gyro-Z und ein `publish_tf=false`-EKF bleiben
+auf isolierten `/shadow/hwt601/*`-Topics. OAK, LiDAR, SLAM, Karte, Navigation
+und produktive TF-/Odometriepfade bleiben aus.
+
+**Grund / beobachtete Evidenz:** Nach ausdruecklicher Nutzerfreigabe und
+bestaetigtem Freiraum je eine langsame Drehung mit 0,08 rad/s ausgefuehrt.
+Links: Encoder +18,321744 Grad, HWT +18,306255 Grad, EKF +18,306116 Grad;
+HWT minus Encoder -0,015489 Grad. Rechts: Encoder -18,327586 Grad, HWT
+-18,180042 Grad, EKF -18,179794 Grad; HWT minus Encoder +0,147544 Grad.
+Nach dem Paar bleiben netto Encoder -0,005842 Grad, HWT +0,126212 Grad und
+EKF +0,126323 Grad. Die Encodertranslationen betrugen nur 0,011/0,021 mm.
+
+Die linke/rechte FC03-Paarreihenfolge wechselte im Bewegungsfenster nahezu
+gleichmaessig (links 120/117, rechts 118/120 Zustandsproben). Die maximale
+Paarlesedauer waehrend Bewegung war 13,092 ms links und 11,607 ms rechts;
+der seit Stackstart beobachtete Maximalwert 21,121 ms. Es gab null
+Modbus-Lesefehler, Encoder-Rejects oder Rebases. Beide Laeufe endeten mit
+drei Sekunden Nullkommando und bestaetigtem Encoderstillstand.
+
+**Betroffene Dateien und Hardware:** Neues beaufsichtigtes Werkzeug
+`tools/sensorfusion/hwt601_encoder_dynamic_turn.py`; `base_hardware` stellt
+Paarlesedauer und wechselnde Erstleseseite nur als Diagnose im Status bereit.
+Beide Motoren wurden bewegt; der Basistreiber bestaetigte Stop sowie die
+vorhandenen Rampen 2000/400 ms und Startdrehzahl 5 rpm. HWT-Register,
+Produktivstarts, Karten und Kalibrierwerte blieben unveraendert. Lokale Daten:
+`dynamic-left-20260910-181707` und `dynamic-right-20260910-181746` unter
+`~/.local/share/amadeus/hwt601/`.
+
+**Teststatus:** 278 Python-Tests bestanden; `base_hardware` und
+`robot_state_estimation` gebaut. Ein vorgeschalteter echter passiver Preflight
+und ein motorloser ROS-Kommando-/Watchdoglauf bestanden. Ein erster scharfer
+Anlauf brach vor jedem Fahrbefehl wegen eines zu frueh gesetzten IMU-Ankers
+fail-closed ab; die Baseline liegt nun nach der Warnpause, durch 18 Tests
+bestaetigt. Rohdaten-Hashes: links
+`16c0cb3ebc0831014b1c9502036eacf28af9cfa6b4b337c07dae27c3e558c303`,
+rechts `8419b93d0dc7236d91547a4118ba2bc0e29eab40ae3a0838da6057fa1bc9e196`.
+Nach dem Test waren beide Ports frei und Domain 148 leer. Beim Beenden trat
+erst nach lange bestaetigten 0 rpm der bekannte Modbus-/doppelte
+`rcl_shutdown`-Abschlussfehler auf.
+
+**Offene Risiken:** Dies ist ein kleiner Drehversuch auf glattem Boden, keine
+Kovarianzkalibrierung, Vibrations-/Schwellen-/Geradeausabnahme und kein
+absoluter Heading-Anker. Wegen der vorlaeufig etwa 60.000:1-Gewichtung folgt
+der EKF dem HWT erwartungsgemaess sehr eng; das allein beweist weder eine
+korrekte Innovation noch eine geloeste Karte. Als naechstes dynamische
+Rohinnovationen/Kovarianzen auswerten, danach Geradeaus-, Fugen- und
+Temperaturtests und erst dann Karten-A/B.
+
+**Rueckfallweg:** Teststack nicht starten beziehungsweise Basistreiber zuerst
+mit Nullkommando beenden, danach EKF und HWT. Produktive Starts bleiben
+unveraendert; kein automatischer Fahr- oder Kartenpfad wurde freigegeben.
+
+---
+
 ## 2026-09-09 — Echte Encoder-/HWT-Schattenabnahme softwareseitig vorbereitet
 
 **Entscheidung:** Vor jedem EKF- oder Kartentest werden HWT-Gyro-Z und die

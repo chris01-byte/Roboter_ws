@@ -76,9 +76,12 @@ eigener ESS23-Leser mit ausschliesslich FC03, fester FTDI-sysfs-Identitaet,
 atomaren vollstaendigen Motorpaaren und gelatchtem Fehlerverhalten. Direkter
 passiver 600-s-Beobachter prueft Encoderstillstand, HWT-Winkel, Echtzeit,
 Statuskontinuitaet und ROS-Publisher-Provenienz. Getrenntes EKF bleibt ohne TF
-und ist nicht Teil des Quellenstarts. Software offline getestet; gemeinsame
-reale Port-/Stillstandsabnahme, dynamische Paarzeitpruefung und Kartenfreigabe
-offen.
+und ist nicht Teil des Quellenstarts. Warmer und kalter 600-s-Stillstand sowie
+das isolierte 120-s-EKF bestanden. Beidseitiger dynamischer Kleindrehtest am
+10.09.2026 ebenfalls bestanden: HWT gegen Encoder -0,015/+0,148 Grad
+Differenz, Paarlesedauer in Bewegung maximal 13,092/11,607 ms, null
+Bus-/Encoderfehler. Kovarianz/Innovation, Heading-Anker, Vibrations-/
+Geradeauspruefung und Kartenfreigabe bleiben offen.
 
 ---
 

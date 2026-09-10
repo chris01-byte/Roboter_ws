@@ -240,13 +240,18 @@ kein Nachweis, dass das Kartenproblem geloest ist.
 
 Vor einer Kartierungsintegration fehlen weiterhin:
 
-1. ein separat freigegebener dynamischer HWT-/Encodervergleich in beiden
-   Drehrichtungen, einschliesslich Bewertung des zeitversetzten linken/rechten
-   FC03-Paars;
-2. reale Encoder-`wz`-Kovarianz und Innovationsauswertung;
-3. eine Heading-Korrekturstrategie sowie Kaltstart-, Temperatur- und
+1. reale Encoder-`wz`-Kovarianz und Innovationsauswertung;
+2. eine Heading-Korrekturstrategie sowie Kaltstart-, Temperatur- und
    Motorvibrationspruefungen;
-4. erst danach ein kontrollierter Karten-A/B-Test.
+3. erst danach ein kontrollierter Karten-A/B-Test.
+
+Der zuvor offene beidseitige Dynamikpunkt bestand am 10.09.2026 mit kleinen
+`+18,32/-18,33`-Grad-Drehungen. HWT minus Encoder lagen bei -0,015/+0,148
+Grad, das EKF jeweils innerhalb 0,00025 Grad am HWT. Die wechselnd zuerst
+gelesene Motorseite ergab waehrend Bewegung maximal 13,092/11,607 ms
+Paarfenster, null Rejects/Rebases/Modbusfehler und abschliessend 0 rpm.
+Vollstaendige Evidenz und Hardwarewirkung stehen im neuesten Eintrag von
+`docs/PROJECT_MEMORY.md`; lokale Rohdaten bleiben ausserhalb des Repositories.
 
 Rueckfall: beide Shadow-Prozesse beenden oder gar nicht starten. Kein
 Produktivlaunch, Motorregister, Sensorregister, TF oder Kartenprofil wird von
