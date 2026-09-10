@@ -126,7 +126,11 @@ verlangt mindestens 25 Hz, hoechstens 0,10 s EKF-Datenluecke, weniger als 1 mm
 Translation, 1 Grad relative Gier, 0,005 m/s und 0,005 rad/s sowie weiterhin
 gueltige direkte Quellen-, Abschluss-, Graph- und GID-Evidenz. Publisher auf
 Produktiv-Odometrie, Karte, TF, Fusion oder Fahrbefehlen verriegeln den Lauf.
-262 gezielte Offline-Tests bestehen; der Realtest steht noch aus.
+Der erste Startversuch zeigte, dass `robot_localization` trotz
+`publish_tf=false` einen privaten `transform_listener_impl_*`-Node zum
+Abonnieren von TF anlegt. Genau eine solche interne Instanz ist nun erlaubt;
+Publisher auf `/tf` und `/tf_static` bleiben verboten. 263 gezielte
+Offline-Tests bestehen; der Realtest steht noch aus.
 
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den

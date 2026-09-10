@@ -45,6 +45,7 @@ MAX_SPEED_MPS = 0.005
 MAX_YAW_RATE_RADPS = 0.005
 STARTUP_TIMEOUT_S = 60.0
 POST_STATUS_TIMEOUT_S = 2.0
+TRANSFORM_LISTENER_PREFIX = '/transform_listener_impl_'
 
 
 def _sha256(path: Path) -> str:
@@ -64,11 +65,24 @@ def _qualified(name: str, namespace: str) -> str:
 
 
 def _unexpected_non_cli_nodes(nodes) -> set[str]:
-    """Ignore only the short-lived ros2 CLI probes used by start gates."""
+    """Return real nodes outside sources, EKF and its private TF listener."""
     return {
         node for node in set(nodes) - EXPECTED_NODES
         if not node.startswith('/_ros2cli_')
+        and not node.startswith(TRANSFORM_LISTENER_PREFIX)
     }
+
+
+def _complete_expected_node_set(nodes) -> bool:
+    meaningful = {
+        node for node in nodes if not node.startswith('/_ros2cli_')}
+    listeners = {
+        node for node in meaningful
+        if node.startswith(TRANSFORM_LISTENER_PREFIX)}
+    return bool(
+        len(listeners) == 1
+        and meaningful - listeners == EXPECTED_NODES
+    )
 
 
 def _passed(summary: Mapping[str, object]) -> bool:
@@ -329,9 +343,13 @@ def _run(duration_s: float, output: Path) -> int:
             if _unexpected_non_cli_nodes(nodes):
                 self.latch('ros_graph_nodes_unerwartet')
                 return
-            if unexpected:
+            listeners = {
+                node for node in unexpected
+                if node.startswith(TRANSFORM_LISTENER_PREFIX)}
+            if len(listeners) > 1:
+                self.latch('ros_graph_transform_listener_mehrdeutig')
                 return
-            if set(nodes) != EXPECTED_NODES:
+            if not _complete_expected_node_set(nodes):
                 return
             publishers: dict[str, list[str]] = {}
             endpoint_ids: dict[str, list[str]] = {}

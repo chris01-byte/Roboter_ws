@@ -204,7 +204,9 @@ weniger als 1 mm Translation, 1 Grad relative Gierabweichung sowie weniger als
 0,005 m/s und 0,005 rad/s im Stillstand. Parallel muessen der direkte
 HWT-/Encodervergleich, alle Quellstatus, frische Abschlussstatus und die
 Publisher-GIDs gueltig bleiben. `/odom`, `/map`, `/tf`, `/tf_static`,
-Fusions- und Fahrbefehlstopics duerfen keinen Publisher besitzen.
+Fusions- und Fahrbefehlstopics duerfen keinen Publisher besitzen. Der von
+`robot_localization` intern erzeugte einzelne `transform_listener_impl_*`-Node
+ist Teil des erwarteten Graphen, darf aber ebenfalls keinen TF publizieren.
 
 Der aktuelle HWT-Wert `5e-7 (rad/s)^2` gegen die vorlaeufige Encoder-
 Winkelgeschwindigkeitsvarianz `0,03 (rad/s)^2` bedeutet ungefaehr 60.000:1

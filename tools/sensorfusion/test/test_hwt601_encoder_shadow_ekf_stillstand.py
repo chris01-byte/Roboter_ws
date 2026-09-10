@@ -78,11 +78,18 @@ def test_acceptance_passes_only_complete_bounded_isolated_result():
 
 def test_graph_allows_only_ephemeral_ros2_cli_probe_outside_contract():
     expected = set(MODULE.EXPECTED_NODES)
+    listener = '/transform_listener_impl_1234'
 
     assert not MODULE._unexpected_non_cli_nodes(
-        expected | {'/_ros2cli_12345'})
+        expected | {'/_ros2cli_12345', listener})
     assert MODULE._unexpected_non_cli_nodes(
         expected | {'/foreign_node'}) == {'/foreign_node'}
+    assert MODULE._complete_expected_node_set(expected | {listener})
+    assert MODULE._complete_expected_node_set(
+        expected | {listener, '/_ros2cli_12345'})
+    assert not MODULE._complete_expected_node_set(expected)
+    assert not MODULE._complete_expected_node_set(
+        expected | {listener, '/transform_listener_impl_5678'})
 
 
 def test_observer_has_no_publisher_hardware_or_control_path():
