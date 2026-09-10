@@ -59,6 +59,28 @@ genau einen (`base_hardware`). Der HWT meldete ohne Stillstandsfreigabe korrekt
 Graph und alle drei seriellen Ports frei. Die bekannten LiDAR-Puffer- und
 Basis-`rcl_shutdown`-Fehler traten erst beim Herunterfahren auf.
 
+Nach frischer Nutzerbestaetigung des Stillstands bestand in Domain 155 auch
+der vollstaendige motorlose Start mit echter Biaskalibrierung. Der HWT-Shadow
+meldete `ready=true`, eingefrorenen stabilen Bias aus 998 Proben,
+Z-Standardabweichung 0,00010107 rad/s, null Rejects und null Reconnects. Die
+gemessenen Raten waren 100,009 Hz HWT, 30,016 Hz EKF und 10,002 Hz normierter
+Scan. Ueber einen 56-s-Stillstandsabschnitt aenderte sich die EKF-Gier nur um
+rund -0,068 Grad bei exakt null Translation. Der LiDAR-Beobachter akzeptierte
+616 Updates, verwarf keines und endete numerisch bei null Pose
+(`1,25e-14 m`, `-6,26e-15` Quaternion-z). Alle 1495 Eingangsscans wurden trotz
+26 verschiedener Strahlenzahlen (2123..2176) auf 2160 umgesetzt. `/odom` und
+`/map` hatten jeweils genau einen Publisher; `odom -> base_link` und
+`map -> odom` waren verfuegbar. Die Basis blieb `dry_run=True` und der
+Motorbus ungeoeffnet.
+
+Nach einmaligem Ctrl-C waren Domain und alle Ports frei. Der LiDAR-Treiber
+endete diesmal sauber. Neben dem bekannten Basis-`rcl_shutdown` trat im
+HWT-Shadow einmal die Humble-Subscription-Take-Race erst waehrend des globalen
+SIGINT auf. Ein versuchtes nur auf `rclpy.ok()` begrenztes Abfangen wurde
+wieder verworfen, weil der Kontext zu diesem Zeitpunkt noch `ok` meldet und
+ein pauschales Unterdruecken echte Laufzeitfehler verbergen koennte. Der
+Messbetrieb selbst blieb fehlerfrei.
+
 **Offene Risiken:** Der eigentliche Karten-A/B-Lauf ist noch nicht gefahren.
 Die HWT-Gierrate liefert keinen absoluten Wohnungswinkel; Schleifenschluesse
 bleiben Aufgabe von `slam_toolbox`. Temperaturverhalten waehrend einer langen

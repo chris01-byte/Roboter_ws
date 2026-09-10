@@ -102,7 +102,9 @@ separater Opt-in-Start mit Encoder-`vx`, HWT-`wz`, genau einem `/odom`-/
 `odom->base_link`-EKF und `slam_toolbox` als alleinigem `map->odom`-Owner.
 LiDAR-Matcher nur als radunabhaengiger Beobachter. HWT-Status sperrt die
 Fahrkette bis stabile Startkalibrierung vorliegt und bei Datenverlust nach
-maximal 0,8 s. Motorloser Smoke-Test bestanden; reale Kartenfahrt offen.
+maximal 0,8 s. Motorloser vollstaendiger Preflight bestanden: HWT/EKF/Scan
+100,009/30,016/10,002 Hz, 616 LiDAR-Matches ohne Reject und nur -0,068 Grad
+EKF-Stillstandsdrift in 56 s. Reale Kartenfahrt offen.
 
 ---
 

@@ -39,6 +39,18 @@ ausdrueckliche Bewegungsfreigabe. Rueckfall: den normalen
 `start_app_erkundung.sh` verwenden; dessen HWT-Schalter ist standardmaessig
 `false`.
 
+Der anschliessende vollstaendige Stillstands-Preflight in Domain 155 bestand nach
+frischer Nutzerbestaetigung ebenfalls. HWT-Status `ready=true`, 998 stabile
+Biasproben, null Rejects/Reconnects; Raten HWT/EKF/Scan
+`100,009/30,016/10,002 Hz`. Die EKF-Gier driftete in 56 s nur rund
+-0,068 Grad bei null Translation. Der unabhaengige LiDAR-Beobachter hatte 616
+akzeptierte und null verworfene Updates und blieb numerisch auf der Startpose.
+Alle 1495 LiDAR-Scans wurden normiert. `/odom` und `/map` hatten je genau einen
+Publisher, beide vorgesehenen dynamischen TFs waren vorhanden. Kein
+Motorzugriff. Nach Ctrl-C waren Domain und Ports frei; die bekannte
+Basis-Abschlussrace und einmal eine HWT-Humble-Take-Race erschienen nur beim
+Herunterfahren, nicht im Messbetrieb.
+
 ---
 
 ## Fugenbefund: HWT/LiDAR -3 Grad, Encoder praktisch 0 Grad (10.09.2026)
