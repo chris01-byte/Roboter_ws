@@ -41,6 +41,19 @@ null; der HWT integrierte 0,968490 Grad. Alle Quellen- und Graphstatus waren
 gueltig, der CSV-Hash wurde unabhaengig bestaetigt. Nach genau einem SIGINT
 endeten alle Quellen sauber; beide Ports waren frei und Domain 145 leer. Jede
 dynamische Freigabe bleibt offen.
+
+Der abgekuehlte Wiederholungslauf `encoder-shadow-cold-20260910-170933`
+bestand ebenfalls: 600,495658 s, 99,993605 Hz HWT, 20,000145 Hz Encoder,
+maximale Zeitstempelluecken 0,024880 s/0,058095 s, exakt null Encoderbewegung
+und -0,393725 Grad HWT-Drift. Der CSV-Hash
+`92cd288373c9ecb4db016edec498df5505144da3f67aa11b8e8090f74da9ff6e`
+wurde unabhaengig bestaetigt. Gegenueber dem warmen Lauf verschob sich der
+eingefrorene Z-Bias um 0,000066043 rad/s; beide Laeufe bestehen, zeigen aber
+Temperaturabhaengigkeit und beim warmen Lauf nur 0,032 Grad Driftreserve.
+Ein erster Versuch nach dem Ausschalten verriegelte ohne Schreibzugriff, weil
+die ESS23 auf FC03 noch nicht antworteten. Vor jedem Start sind deshalb
+Motorversorgung und Motor-Halt zu pruefen. EKF und dynamische Nutzung bleiben
+offen.
 Messdaten duerfen nur in einen kanonisch geprueften lokalen Ordner ausserhalb
 des Repositories geschrieben werden.
 

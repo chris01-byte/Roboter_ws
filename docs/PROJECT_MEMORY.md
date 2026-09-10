@@ -94,6 +94,29 @@ wurde unabhaengig bestaetigt. Danach endeten alle drei Quellen sauber; beide
 Ports waren frei und Domain 145 leer. Dies gibt nur die direkte
 Stillstandsquelle frei, nicht EKF, Fahrt oder Karte.
 
+Am 10.09.2026 bestand der nach vollstaendigem Ausschalten abgekuehlte Lauf
+`~/.local/share/amadeus/hwt601/encoder-shadow-cold-20260910-170933`
+ebenfalls mit `passed: true` und `faults: []`. Ueber 600,495658 s lagen HWT
+und Encoder bei 99,993605 Hz und 20,000145 Hz; maximale Zeitstempelluecken
+waren 0,024880 s und 0,058095 s. Der Encoder blieb bei exakt null Bewegung,
+der HWT integrierte -0,393725 Grad. Alle Abschlussstatus, Graphpruefungen,
+Rejects und Reconnects waren fehlerfrei; der unabhaengig bestaetigte CSV-Hash
+ist `92cd288373c9ecb4db016edec498df5505144da3f67aa11b8e8090f74da9ff6e`.
+Gegenueber dem warmen Lauf verschob sich der eingefrorene Z-Bias um
+0,000066043 rad/s und die Drift um -1,362215 Grad. Beide Einzelbetraege
+bleiben unter 1 Grad, belegen aber eine Temperaturabhaengigkeit und die geringe
+Reserve des warmen Laufs. Die thermische Stillstandswiederholbarkeit ist damit
+bestanden; eine dynamische oder Kartenfreigabe folgt daraus nicht.
+
+Ein erster Kaltstartversuch `encoder-shadow-cold-20260910-064419` brach vor
+der Biasphase fail-closed ab: Der korrekte FTDI-Adapter war vorhanden, aber
+die ESS23 antworteten nach dem vollstaendigen Ausschalten noch nicht auf die
+erste reine FC03-Konfigurationsabfrage. Der Leser verriegelte als
+`encoderkonfiguration_ungueltig`; es gab keinen Schreibzugriff und keine
+Aktorausgabe. Nach vor Ort hergestellter Motorbusbereitschaft gelang der oben
+dokumentierte Lauf. Motorversorgung und Motor-Halt bleiben deshalb vor jedem
+Shadow-Start explizit zu pruefen.
+
 **Rueckfallweg:** Shadow-Starts beenden oder nicht ausfuehren; bestehende
 Produktivlaunches sind nicht referenziert. Bei einem spaeteren Lauf nur den
 Launch-Elternprozess einmal mit SIGINT beenden, beide Ports und Domain pruefen.

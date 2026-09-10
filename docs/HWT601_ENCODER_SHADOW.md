@@ -157,9 +157,25 @@ SHA-256 der CSV wurde unabhaengig gegen `summary.json` bestaetigt:
 Nach Erfolg wurden alle Quellen mit genau einem SIGINT sauber beendet; beide
 Ports waren frei und Domain 145 leer.
 
-Die HWT-Drift bestand die strikte 1-Grad-Grenze mit nur rund 0,032 Grad
-Reserve. Das ist eine bestandene Stillstandsabnahme, aber noch keine Freigabe
-fuer Fahrt, EKF, Navigation oder Kartenverbesserung.
+Der abgekuehlte Wiederholungslauf `encoder-shadow-cold-20260910-170933`
+bestand ebenfalls mit `passed: true`, `faults: []`, 600,495658 s,
+99,993605 Hz HWT und 20,000145 Hz Encoder. Die maximalen Zeitstempelluecken
+lagen bei 0,024880 s und 0,058095 s. Encodertranslation und -drehung blieben
+null; der HWT integrierte -0,393725 Grad. Der unabhaengig bestaetigte CSV-Hash
+lautet
+`92cd288373c9ecb4db016edec498df5505144da3f67aa11b8e8090f74da9ff6e`.
+Ein erster Versuch am selben Morgen verriegelte erwartungsgemaess, weil die
+ESS23 nach dem vollstaendigen Ausschalten auf die erste FC03-Abfrage noch
+nicht antworteten. Es gab keinen Schreibzugriff; nach vor Ort hergestellter
+Motorbusbereitschaft lief die Wiederholung fehlerfrei.
+
+Damit bestehen je ein warmer und ein abgekuehlter Stillstandslauf. Der
+eingefrorene Z-Bias verschob sich dabei um 0,000066043 rad/s und die
+integrierte Drift von +0,968490 auf -0,393725 Grad. Das zeigt eine messbare
+Temperaturabhaengigkeit; insbesondere der warme Lauf hatte nur rund 0,032 Grad
+Reserve zur strikten 1-Grad-Grenze. Die thermische Stillstandswiederholbarkeit
+ist bestanden, aber Fahrt, EKF, Navigation und Kartenverbesserung bleiben
+weiterhin unfreigegeben.
 
 ## EKF ist erst die nachgeordnete Beobachtungsstufe
 
