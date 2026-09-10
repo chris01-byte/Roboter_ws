@@ -1,0 +1,18 @@
+# Begrenzter HWT601-Kartenabnahmetest auf engem Fliesenraster.
+# Nach acht langsamen Drehsegmenten wird die Mission erfolgreich beendet;
+# Frontier-, Portal- und Abdeckungsfahrten bleiben unerreichbar.
+explore_node:
+  ros__parameters:
+    scan_only: true
+    initial_scan_enabled: true
+    initial_scan_angle_rad: 6.283185307179586
+    initial_scan_angular_speed_radps: 0.08
+    initial_scan_segment_angle_rad: 0.7853981633974483
+    initial_scan_segment_pause_s: 1.0
+    initial_scan_timeout_s: 280.0
+    overall_timeout_s: 300.0
+    coverage_enabled: false
+    portal_crossing_enabled: false
+    door_traverse_distance_m: 0.0
+    max_frontier_goals: 1
+    max_failed_goals: 1

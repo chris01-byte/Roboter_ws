@@ -1,5 +1,43 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Scan-only: erster Lauf deckt Explorer-Zeitrace auf (10.09.2026)
+
+Fuer die erste HWT-Kartenabnahme ist jetzt
+`tools/kartierung/start_hwt601_rundblick.sh` vorgesehen. Er erzwingt ein
+installiertes `hwt601_scan_only_params.yaml`, HWT-Odometrie, scharfen
+Motor-Opt-in und Explore-Freigabe. Das Profil darf nur acht langsame
+45-Grad-Drehsegmente mit je einer Sekunde Pause ausfuehren und beendet die
+Mission danach, bevor Frontiers oder andere Translationen geplant werden.
+`scan_only=false` bleibt der normale Default.
+
+Der erste ausdruecklich freigegebene Lauf stoppte beim dritten Segment sicher:
+Explorer-Resultat `odom_stale`, 110,4 Grad erreicht, danach Fahrtor gesperrt
+und 0 rpm. Die Bag zeigt, dass kein Sensor ausgefallen war. Maximale Luecken:
+HWT 39,229 ms, EKF-`/odom` 45,026 ms, Radodometrie 92,932 ms. Bis zum
+Bremsstillstand: HWT/EKF/LiDAR/Encoder
+`+115,593/+115,593/+115,250/+115,492` Grad; lineare Befehle immer exakt null.
+Der LiDAR beobachtete 18,81 mm reale Fugenverschiebung gegen nur 0,05 mm in der
+Radodometrie. Die unvollstaendige 115-Grad-Karte ist sauber, aber kein
+360-Grad-Nachweis.
+
+Ursache des falschen `odom_stale`: Der Explorer las seine monotone
+Vergleichszeit vor dem parallel gesperrten Odometrie-Snapshot. Ein dazwischen
+eingetroffenes neues Paket hatte dadurch kurz eine spaetere Empfangszeit und
+wurde sofort als Uhrfehler verworfen. Alle Bewegungshelfer lesen nun zuerst
+die Snapshots und danach die Uhr; eine kleine, auf das normale Frischefenster
+begrenzte Zukunftstoleranz deckt dieselbe Callback-Race ab. 63 ausgewaehlte
+Pakettests bestehen, der vorhandene Build-Testbestand meldet 271/271. Noch
+keine reale Wiederholung: Sie braucht neue persoenliche Fahrfreigabe.
+
+Lokale Daten, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-rundblick-20260910-2249` und
+`~/.local/share/amadeus/maps/hwt601-rundblick-20260910-2249`. Nach dem Lauf
+waren Domain und alle drei seriellen Ports frei. Die bekannten
+Shutdown-Meldungen von LiDAR, Basis und VL53 traten erst nach bestaetigtem
+Stillstand auf.
+
+---
+
 ## HWT-Karten-A/B softwareseitig bereit (10.09.2026)
 
 Der neue HWT-Kartenpfad ist ein Opt-in; der bisherige Encoderstart bleibt der

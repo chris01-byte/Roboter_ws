@@ -49,8 +49,15 @@ explore_node:
     odom_topic: "/odom"
     scan_command_topic: "/cmd_vel_explore_scan_raw"
     initial_scan_enabled: true
+    # Nur fuer explizite Rundblick-Abnahmen aktivieren. Standard-Erkundung
+    # plant nach dem Scan weiterhin Frontiers und Raumabdeckung.
+    scan_only: false
     initial_scan_angle_rad: 6.283185307179586
     initial_scan_angular_speed_radps: 0.12
+    # 0.0 behaelt die bewaehrte kontinuierliche Drehung bei. Ein positives
+    # Segmentprofil stoppt kontrolliert zwischen den Teilwinkeln.
+    initial_scan_segment_angle_rad: 0.0
+    initial_scan_segment_pause_s: 0.0
     # Der collision_monitor darf die 0,12-rad/s-Drehung in seiner SlowZone
     # auf 30 % reduzieren. Eine volle Drehung dauert dann real rund 175 s.
     initial_scan_timeout_s: 210.0

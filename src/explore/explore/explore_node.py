@@ -209,6 +209,13 @@ def odom_freshness_state(
             if 0.0 <= now - started_at <= recovery_timeout_s
             else 'expired')
     age = now - received_at
+    # ``received_at`` is written by a parallel ROS callback. A caller which
+    # sampled ``now`` immediately before taking the locked snapshot can
+    # therefore observe a few milliseconds of negative age. That is newer,
+    # not stale, data. Keep the tolerance bounded by the ordinary freshness
+    # limit so a real monotonic-clock anomaly still fails closed.
+    if -freshness_timeout_s <= age < 0.0:
+        return 'fresh'
     if age < 0.0:
         return 'expired'
     if age <= freshness_timeout_s:
@@ -447,12 +454,18 @@ class ExploreNode(Node):
             'scan_command_topic', '/cmd_vel_explore_scan_raw').value
         self._initial_scan_enabled = bool(self.declare_parameter(
             'initial_scan_enabled', True).value)
+        self._scan_only = bool(self.declare_parameter(
+            'scan_only', False).value)
         self._initial_scan_angle = float(self.declare_parameter(
             'initial_scan_angle_rad', 2.0 * math.pi).value)
         self._initial_scan_speed = float(self.declare_parameter(
             'initial_scan_angular_speed_radps', 0.12).value)
         self._initial_scan_timeout = float(self.declare_parameter(
             'initial_scan_timeout_s', 210.0).value)
+        self._initial_scan_segment_angle = float(self.declare_parameter(
+            'initial_scan_segment_angle_rad', 0.0).value)
+        self._initial_scan_segment_pause = float(self.declare_parameter(
+            'initial_scan_segment_pause_s', 0.0).value)
         self._scan_odom_timeout = float(self.declare_parameter(
             'scan_odom_timeout_s', 0.8).value)
         self._scan_odom_recovery_timeout = float(self.declare_parameter(
@@ -664,6 +677,11 @@ class ExploreNode(Node):
                 or self._initial_scan_angle <= 0.0
                 or not 0.0 < self._initial_scan_speed <= 0.15
                 or self._initial_scan_timeout <= 0.0
+                or self._initial_scan_segment_angle < 0.0
+                or self._initial_scan_segment_pause < 0.0
+                or (
+                    self._scan_only
+                    and not self._initial_scan_enabled)
                 or self._scan_odom_timeout <= 0.0
                 or self._scan_odom_recovery_timeout
                 <= self._scan_odom_timeout
@@ -1095,7 +1113,10 @@ class ExploreNode(Node):
             'state': state,
             'phase': self._status_phase,
             'message': self._status_message,
-            'strategy': 'frontier_portal_then_adaptive_coverage',
+            'strategy': (
+                'bounded_segmented_scan_only'
+                if self._scan_only
+                else 'frontier_portal_then_adaptive_coverage'),
             'coverage_ratio': self._coverage_ratio,
             'coverage_percent': 100.0 * self._coverage_ratio,
             'target_coverage_percent': 100.0 * self._coverage_target_ratio,
@@ -1760,12 +1781,15 @@ class ExploreNode(Node):
 
                 (xy, yaw, _linear_speed, _angular_speed,
                  received_at) = self._motion_odom_snapshot()
+                localized_pose, localized_age = self._robot_pose_sample()
+                # Snapshot first, clock second: callbacks may update their
+                # monotonic receive time in parallel with this drive loop.
+                now = time.monotonic()
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
                     self._scan_odom_recovery_timeout,
                     sample_valid=xy is not None and yaw is not None)
-                localized_pose, localized_age = self._robot_pose_sample()
                 localized_sample_valid = (
                     localized_pose is not None
                     and localized_age is not None
@@ -1966,6 +1990,9 @@ class ExploreNode(Node):
 
                 (xy, yaw, _linear_speed, _angular_speed,
                  received_at) = self._motion_odom_snapshot()
+                scan = self._door_lidar_scan_snapshot()
+                # Both receive timestamps were captured before this clock.
+                now = time.monotonic()
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
@@ -2021,7 +2048,6 @@ class ExploreNode(Node):
                     status = 'encoder_no_progress'
                     break
 
-                scan = self._door_lidar_scan_snapshot()
                 scan_fresh = (
                     scan is not None
                     and 0.0 <= now - scan['received_at']
@@ -2288,6 +2314,7 @@ class ExploreNode(Node):
 
                 (xy, yaw, _linear_speed, _angular_speed,
                  received_at) = self._motion_odom_snapshot()
+                now = time.monotonic()
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
@@ -2447,6 +2474,7 @@ class ExploreNode(Node):
                     break
 
                 yaw, _angular_speed, received_at = self._odom_snapshot()
+                now = time.monotonic()
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
@@ -2504,19 +2532,58 @@ class ExploreNode(Node):
         finally:
             self._publish_scan_stop()
 
-        achieved = 0.0 if accumulator is None else accumulator.progress
         stop_status = self._stop_scan_and_confirm()
+        # Braking is physical rotation too. Re-sample only after the confirmed
+        # stop so segmented scans do not add one unmeasured coast angle per
+        # segment and finish far beyond their requested total angle.
+        if accumulator is not None:
+            final_yaw, _angular_speed, _received_at = self._odom_snapshot()
+            if final_yaw is not None:
+                accumulator.update(final_yaw)
+        achieved = 0.0 if accumulator is None else accumulator.progress
         if stop_status != 'success':
             return stop_status, achieved
         return status, achieved
 
     def _scan_in_place(self, stop_requested=lambda: False) -> Tuple[str, float]:
-        """Perform one odometry-measured, bounded, counter-clockwise scan."""
-        return self._rotate_in_place(
-            self._initial_scan_angle,
-            self._initial_scan_speed,
-            self._initial_scan_timeout,
-            stop_requested=stop_requested)
+        """Perform one bounded scan, optionally stopping between segments."""
+        if self._initial_scan_segment_angle <= 0.0:
+            return self._rotate_in_place(
+                self._initial_scan_angle,
+                self._initial_scan_speed,
+                self._initial_scan_timeout,
+                stop_requested=stop_requested)
+
+        deadline = time.monotonic() + self._initial_scan_timeout
+        achieved_total = 0.0
+        while achieved_total + 1e-9 < self._initial_scan_angle:
+            if stop_requested():
+                return 'interrupted', achieved_total
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0.0:
+                return 'timeout', achieved_total
+            segment_angle = min(
+                self._initial_scan_segment_angle,
+                self._initial_scan_angle - achieved_total)
+            status, achieved = self._rotate_in_place(
+                segment_angle,
+                self._initial_scan_speed,
+                remaining_time,
+                stop_requested=stop_requested)
+            achieved_total += achieved
+            if status != 'success':
+                return status, achieved_total
+
+            pause_deadline = min(
+                deadline,
+                time.monotonic() + self._initial_scan_segment_pause)
+            while time.monotonic() < pause_deadline:
+                if stop_requested():
+                    return 'interrupted', achieved_total
+                self._publish_scan_stop()
+                time.sleep(min(0.05, pause_deadline - time.monotonic()))
+
+        return 'success', achieved_total
 
     def _prealign_to_goal(
             self, goal_x: float, goal_y: float,
@@ -3201,6 +3268,13 @@ class ExploreNode(Node):
                             f'erreicht {math.degrees(achieved):.1f} Grad')
                     return self._finish_result(result, frontiers_visited)
                 initial_scan_done = True
+                if self._scan_only:
+                    result.success = True
+                    result.message = (
+                        'Begrenzter Rundblick abgeschlossen; Stillstand '
+                        'bestaetigt, keine Vorwaertsfahrt freigegeben')
+                    completion_reason = 'scan_only_complete'
+                    break
                 self.get_logger().info(
                     f'Rundblick vollstaendig: {math.degrees(achieved):.1f} Grad; '
                     'Phase 2/3 startet mit frischer Frontier-Neuplanung.')
@@ -3704,7 +3778,8 @@ class ExploreNode(Node):
 
         if completion_reason in {
                 'coverage_complete', 'complete', 'safe_complete',
-                'door_traverse_complete', 'portal_crossing_complete'}:
+                'door_traverse_complete', 'portal_crossing_complete',
+                'scan_only_complete'}:
             goal_handle.succeed()
         self.get_logger().info(f'Exploration beendet: {result.message}')
         return self._finish_result(result, frontiers_visited)

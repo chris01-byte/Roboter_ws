@@ -225,6 +225,15 @@ def test_odom_gap_expires_at_hard_recovery_limit():
         freshness_timeout_s=0.8, recovery_timeout_s=5.0) == 'expired'
 
 
+def test_concurrent_newer_odom_sample_is_not_misclassified_as_stale():
+    assert odom_freshness_state(
+        now=10.0, received_at=10.01, started_at=5.0,
+        freshness_timeout_s=0.8, recovery_timeout_s=5.0) == 'fresh'
+    assert odom_freshness_state(
+        now=10.0, received_at=11.0, started_at=5.0,
+        freshness_timeout_s=0.8, recovery_timeout_s=5.0) == 'expired'
+
+
 def test_relative_planar_motion_uses_encoder_start_heading():
     forward, lateral, heading = relative_planar_motion(
         (1.0, 2.0), math.pi / 2.0,
@@ -874,3 +883,32 @@ def test_door_profile_uses_lidar_truth_and_encoder_only_as_budget():
     assert 'match_executor.submit(' in source
     assert 'match_executor.shutdown(wait=True, cancel_futures=True)' in source
     assert 'self._drive_forward_odom(' not in source
+
+
+def test_hwt601_scan_only_profile_cannot_enter_translation_phases():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'hwt601_scan_only_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['scan_only'] is True
+    assert parameters['initial_scan_enabled'] is True
+    assert math.isclose(
+        parameters['initial_scan_angle_rad'], 2.0 * math.pi)
+    assert parameters['initial_scan_angular_speed_radps'] <= 0.08
+    assert math.isclose(
+        parameters['initial_scan_segment_angle_rad'], math.pi / 4.0)
+    assert parameters['initial_scan_segment_pause_s'] >= 1.0
+    assert parameters['initial_scan_timeout_s'] < parameters['overall_timeout_s']
+    assert parameters['coverage_enabled'] is False
+    assert parameters['portal_crossing_enabled'] is False
+    assert parameters['door_traverse_distance_m'] == 0.0
+    assert parameters['max_frontier_goals'] == 1
+
+    source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
+    scan_only_exit = source.index("completion_reason = 'scan_only_complete'")
+    frontier_detection = source.index(
+        'frontiers = self._detect_frontiers(', scan_only_exit)
+    assert scan_only_exit < frontier_detection
+    assert "'scan_only_complete'}" in source
+    assert "'bounded_segmented_scan_only'" in source
+    assert 'final_yaw, _angular_speed, _received_at' in source

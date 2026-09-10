@@ -68,6 +68,16 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         self.assertIn('use_hwt601_odometry:=true', hwt_helper)
         self.assertIn('operator_stationary_confirmed:=true', hwt_helper)
 
+        roundlook_helper = (
+            PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+            'start_hwt601_rundblick.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('hwt601_scan_only_params.yaml', roundlook_helper)
+        self.assertIn('active_drive:=true', roundlook_helper)
+        self.assertIn('enable_auto_explore:=true', roundlook_helper)
+        self.assertIn('explore_params_overlay:="$PROFILE"', roundlook_helper)
+        self.assertIn('active_drive:=*|enable_auto_explore:=*', roundlook_helper)
+
 
 if __name__ == '__main__':
     unittest.main()

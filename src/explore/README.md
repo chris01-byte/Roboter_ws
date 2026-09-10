@@ -56,6 +56,9 @@ Alle Werte in [config/explore_params.yaml](config/explore_params.yaml)
 - `blacklist_radius_m` – sperrt gescheiterte Ziele (Selbstbefreiung)
 - `frontier_revisit_radius_m` – sperrt erfolgreich bediente Frontier-Umfelder
 - `max_frontier_goals` – harte Obergrenze gegen Zielwiederholungen
+- `scan_only` – nach dem initialen Rundblick ohne Navigationsziel beenden
+- `initial_scan_segment_angle_rad` / `initial_scan_segment_pause_s` –
+  optionaler kontrollierter Teilwinkel und Stillstand zwischen Scansegmenten
 - `coverage_target_ratio` – erforderlicher Anteil der sicher befahrbaren Flaeche
 - `coverage_visit_radius_m` – Korridor um die gemessene Fahrspur
 - `coverage_clearance_m` – Kartenabstand der Abdeckungsziele

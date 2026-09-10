@@ -17,6 +17,72 @@ Rückfallweg:
 
 ---
 
+## 2026-09-10 — Erster HWT-Karten-Rundblick stoppt sicher; Explorer-Zeitrace behoben
+
+**Entscheidung:** Fuer die erste reale Kartenintegration gibt es ein explizites
+Scan-only-Profil: acht langsame 45-Grad-Abschnitte mit bestaetigtem Stillstand
+dazwischen, insgesamt 360 Grad, keinerlei Frontier-, Portal- oder
+Abdeckungsfahrt. `scan_only` ist standardmaessig `false`; nur
+`hwt601_scan_only_params.yaml` aktiviert den vorzeitigen erfolgreichen
+Missionsabschluss. Der Wrapper `start_hwt601_rundblick.sh` erzwingt HWT,
+Motor- und Explore-Opt-in sowie genau dieses Profil.
+
+Der erste freigegebene Echtlauf wurde nicht wiederholt. Er brach beim dritten
+Segment fail-closed ab, weil der Explorer eine neue Odometrieprobe fuer wenige
+Millisekunden als aus der Zukunft und deshalb sofort als `odom_stale`
+klassifizierte. Die Ursache war die Reihenfolge im parallelen Callbackpfad:
+`now` wurde vor dem gesperrten Odometrie-Snapshot gelesen. Alle Bewegungshelfer
+nehmen nun zuerst Sensor-Snapshots und erst danach die Vergleichszeit. Eine nur
+bis zum normalen Frischelimit reichende negative Alterstoleranz verhindert
+dieselbe Race zusaetzlich; groessere Uhranomalien bleiben gesperrt.
+
+**Grund / beobachtete Evidenz:** Der Explorer meldete Abbruch bei 110,4 Grad.
+Die gleichzeitig lokale Bagaufzeichnung beweist jedoch durchgaengige Quellen:
+maximale Empfangsluecken HWT 39,229 ms, EKF-`/odom` 45,026 ms und Radodometrie
+92,932 ms; HWT blieb `ready=true`, 0 Rejects/0 Reconnects, der LiDAR-Beobachter
+ebenfalls `ready=true`. Bis zum vollstaendigen Bremsstillstand stimmten
+HWT-Integral, EKF, LiDAR und Encoder mit
+`+115,593/+115,593/+115,250/+115,492` Grad ueberein. HWT gegen LiDAR wich nur
+0,343 Grad ab. Der LiDAR sah 18,81 mm reale planare Bewegung, obwohl die
+Radodometrie nur 0,05 mm meldete; die engen Fugen verschieben den Rumpf also
+auch bei der Drehung messbar. Beide aufgezeichneten Befehlstopics hatten
+`max |linear.x| = 0`, `max |angular.z| = 0,08 rad/s` und endeten bei null.
+
+**Betroffene Dateien und Hardware:** `explore_node.py`, normales
+`explore_params.yaml`, neues `hwt601_scan_only_params.yaml`, neuer
+Rundblick-Wrapper und Vertragsprüfungen. Beide Motoren drehten den Roboter nur
+115,6 Grad links; keine Vorwaertsfahrt. OAK blieb aus. Karte und Bag liegen
+ausschliesslich lokal unter
+`~/.local/share/amadeus/maps/hwt601-rundblick-20260910-2249` und
+`~/.local/share/amadeus/bags/hwt601-rundblick-20260910-2249`.
+
+**Teststatus:** Vor Fahrt HWT-Bias aus 999 stabilen Proben, Z-Streuung
+0,00010739 rad/s; HWT-/LiDAR-Status bereit, Collision-Monitor und Nav2 aktiv,
+Not-Aus-Status frei, genau ein `/odom`- und `/map`-Publisher. Der Abbruch
+sperrte das Fahrtor und die Basis bestaetigte fortlaufend 0 rpm. Die Teilkarte
+238 x 137 bei 0,03 m/Zelle ist fuer nur 115 Grad geometrisch sauber, kann aber
+keinen 360-Grad-Schleifenschluss beweisen. Danach Domain leer und Basis-, HWT-
+und LiDAR-Port frei. Die Race-Korrektur und Scan-only-Vertraege bestehen in 63
+ausgewaehlten Pakettests; der vorhandene Build-Testbestand meldet 271 Tests,
+0 Fehler. Der bekannte LiDAR-Pufferabbruch sowie doppelte `rcl_shutdown` von
+Basis/VL53 erschienen erst beim globalen Herunterfahren nach langem Stillstand.
+
+**Offene Risiken:** Die Race-Korrektur ist noch nicht in einem zweiten realen
+360-Grad-Lauf bestaetigt. Die Teilkarte darf nicht als bestandene
+Kartenqualitaetsabnahme gewertet werden. Der LiDAR-Beobachter meldete sieben
+Rebases ueber den gesamten Stacklauf; fuer die Bewegungswinkel blieb seine
+Uebereinstimmung gut, die Ursache der Rebases wird beim vollstaendigen Lauf
+erneut bewertet. Ein neuer Versuch braucht eine neue ausdrueckliche
+Motorfreigabe.
+
+**Rueckfallweg:** `scan_only` und die Segmentparameter bleiben im normalen
+Profil deaktiviert. Den neuen Rundblick-Wrapper nicht starten beziehungsweise
+den normalen Encoder-Wrapper verwenden. Bei jedem Fehler Mission abbrechen und
+den Stack einmal mit Ctrl-C beenden; keine gespeicherte Karte wird automatisch
+produktiv geladen.
+
+---
+
 ## 2026-09-10 — HWT-Karten-A/B opt-in und fail-closed vorbereitet
 
 **Entscheidung:** Der bestehende Kartenstart bleibt standardmaessig bei der

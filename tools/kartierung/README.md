@@ -100,6 +100,22 @@ AMADEUS_FAHRFREIGABE=JA \
   active_drive:=true enable_auto_explore:=true
 ```
 
+Fuer die erste HWT601-Kartenabnahme nicht das volle Explorerprofil verwenden,
+sondern den begrenzten Rundblick. Er erzwingt acht langsame 45-Grad-Segmente
+mit Pause, verbietet jede Translation und beendet die Mission danach:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_HWT601_STILLSTAND=JA \
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_hwt601_rundblick.sh
+```
+
+Auch dieser Start sendet noch keinen Auftrag. Den Roboter waehrend der
+HWT-Biaskalibrierung mindestens 30 Sekunden stillhalten, alle unten genannten
+Live-Signale pruefen und erst dann genau den einen Explore-Auftrag senden.
+Jede Wiederholung benoetigt eine neue persoenliche Fahrfreigabe.
+
 Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
 LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
 sind, genau einen Auftrag senden:
