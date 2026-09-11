@@ -912,3 +912,37 @@ def test_hwt601_scan_only_profile_cannot_enter_translation_phases():
     assert "'scan_only_complete'}" in source
     assert "'bounded_segmented_scan_only'" in source
     assert 'final_yaw, _angular_speed, _received_at' in source
+
+
+def test_hwt601_translation_only_profile_is_one_bounded_lidar_stage():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' /
+         'hwt601_translation_only_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['overall_timeout_s'] <= 90.0
+    assert parameters['max_frontier_goals'] == 1
+    assert parameters['max_failed_goals'] == 1
+    assert parameters['initial_scan_enabled'] is False
+    assert parameters['scan_only'] is False
+    assert parameters['coverage_enabled'] is False
+    assert parameters['portal_crossing_enabled'] is False
+    assert parameters['door_supervised_wheel_budget_mode'] is False
+    assert parameters['door_lidar_motion_mode'] is True
+    assert 0.0 < parameters['door_traverse_distance_m'] <= 0.50
+    assert (
+        parameters['door_traverse_distance_m']
+        < parameters['door_encoder_wheel_budget_m'] <= 0.90)
+    assert parameters['door_linear_speed_mps'] <= 0.05
+    assert parameters['door_timeout_s'] <= 60.0
+    assert parameters['door_no_progress_timeout_s'] <= 8.0
+    assert parameters['door_max_angular_speed_radps'] <= 0.05
+    assert parameters['door_max_heading_error_rad'] <= 0.17
+    assert parameters['door_max_lateral_error_m'] <= 0.06
+
+    source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
+    door_exit = source.index("completion_reason = 'door_traverse_complete'")
+    initial_scan = source.index('if not initial_scan_done:', door_exit)
+    frontier_detection = source.index(
+        'frontiers = self._detect_frontiers(', initial_scan)
+    assert door_exit < initial_scan < frontier_detection
