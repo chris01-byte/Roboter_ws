@@ -1,12 +1,13 @@
-"""Pure helpers for bridging narrow, costmap-disconnected portals.
+"""Pure helpers for finding and bridging narrow room transitions.
 
 Nav2 can split two physically connected rooms into separate traversable
 components when the inflated doorway is only a few cells wide.  The explorer
 must not treat that as a completed room.  This module identifies a bounded
 bridge from the robot's current component to a sizeable neighbouring free
-component.  Execution remains outside this module and still requires a fresh
-LiDAR corridor check, the mission gate, velocity smoothing and collision
-monitoring.
+component.  A second detector deliberately tightens only the *analysis*
+clearance so a doorway which Nav2 can already traverse remains recognisable
+as the neck between two rooms.  Execution remains outside this module and
+keeps the real Nav2 footprint, collision monitoring and sensor gates.
 """
 
 from dataclasses import dataclass
@@ -170,6 +171,109 @@ def find_portal_bridges(
         bridge.gap_m,
     ))
     return bridges
+
+
+def _grid_line_is_true(
+        mask: np.ndarray, start: Tuple[int, int],
+        end: Tuple[int, int]) -> bool:
+    """Return whether every Bresenham cell between two endpoints is true."""
+    row0, col0 = start
+    row1, col1 = end
+    height, width = mask.shape
+    dcol = abs(col1 - col0)
+    drow = -abs(row1 - row0)
+    step_col = 1 if col0 < col1 else -1
+    step_row = 1 if row0 < row1 else -1
+    error = dcol + drow
+    while True:
+        if not (
+                0 <= row0 < height and 0 <= col0 < width
+                and mask[row0, col0]):
+            return False
+        if row0 == row1 and col0 == col1:
+            return True
+        twice_error = 2 * error
+        if twice_error >= drow:
+            error += drow
+            col0 += step_col
+        if twice_error <= dcol:
+            error += dcol
+            row0 += step_row
+
+
+def find_connected_clearance_portals(
+        occupancy: np.ndarray, robot_cell: Tuple[int, int], *,
+        resolution_m: float, analysis_clearance_m: float,
+        min_target_area_m2: float, min_gap_m: float, max_gap_m: float,
+        exit_margin_m: float, max_traverse_distance_m: float,
+        robot_seed_search_m: float = 0.75) -> List[PortalBridge]:
+    """Find narrow necks inside one already connected known-free region.
+
+    ``occupancy`` uses SLAM map semantics and only cells equal to zero count
+    as measured free space.  The real map component must already connect both
+    sides.  For detection only, a larger circular clearance erodes that same
+    component; sizeable pieces separated by the erosion are room candidates.
+    Their shortest bridge is accepted only if its straight grid line remains
+    measured free in the original component.  Thus a thin wall or unknown
+    strip cannot be mistaken for an open doorway.
+
+    This helper does not alter a planner costmap or authorise motion.  It only
+    supplies transition geometry which the caller must revalidate against the
+    live Nav2 costmap.
+    """
+    values = (
+        resolution_m, analysis_clearance_m, min_target_area_m2,
+        min_gap_m, max_gap_m, exit_margin_m,
+        max_traverse_distance_m, robot_seed_search_m,
+    )
+    if not all(math.isfinite(value) and value > 0.0 for value in values):
+        raise ValueError(
+            'Verbundene Portalgrenzen muessen endlich und positiv sein')
+    array = np.asarray(occupancy, dtype=np.int16)
+    if array.ndim != 2 or array.size == 0:
+        raise ValueError('Portal-Karte muss zweidimensional und nichtleer sein')
+    robot_row, robot_col = robot_cell
+    if not (
+            0 <= robot_row < array.shape[0]
+            and 0 <= robot_col < array.shape[1]):
+        return []
+
+    measured_free = array == 0
+    seed = _nearest_true_cell(
+        measured_free, robot_row, robot_col,
+        max(1, int(math.ceil(robot_seed_search_m / resolution_m))))
+    if seed is None:
+        return []
+    broad_labels, _component_count = label(measured_free)
+    broad_label = int(broad_labels[seed])
+    if broad_label <= 0:
+        return []
+    broad_component = broad_labels == broad_label
+
+    # Padding makes the map edge an obstacle as it is for the real planner.
+    padded = np.pad(
+        broad_component, 1, mode='constant', constant_values=False)
+    clearance_m = distance_transform_edt(padded)[1:-1, 1:-1] * resolution_m
+    analysis_safe = broad_component & (
+        clearance_m > analysis_clearance_m)
+    synthetic_costs = np.where(analysis_safe, 0, -1).astype(np.int16)
+    bridges = find_portal_bridges(
+        synthetic_costs, robot_cell,
+        resolution_m=resolution_m,
+        goal_max_cost=0,
+        min_target_area_m2=min_target_area_m2,
+        min_gap_m=min_gap_m,
+        max_gap_m=max_gap_m,
+        exit_margin_m=exit_margin_m,
+        max_traverse_distance_m=max_traverse_distance_m,
+        robot_seed_search_m=robot_seed_search_m)
+    return [
+        bridge for bridge in bridges
+        if _grid_line_is_true(
+            broad_component,
+            (bridge.staging_row, bridge.staging_col),
+            (bridge.target_row, bridge.target_col))
+    ]
 
 
 def front_lidar_corridor_check(

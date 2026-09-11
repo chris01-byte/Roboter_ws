@@ -163,6 +163,16 @@ explore_node:
     # volle Roboterbreite freien LiDAR-Korridor ueberbrueckt. Der physische Weg
     # kommt vom eingefrorenen LiDAR-Scan; Encoder sind nur ein hartes Radbudget.
     portal_crossing_enabled: true
+    # Standardmaessig bleiben regulaer per Nav2 erreichbare Frontiers zuerst.
+    # Nur begrenzte Mehrbereichs-Abnahmen duerfen einen erkannten Portalplan
+    # vor noch offenen Frontiers desselben Raums ausfuehren.
+    portal_priority_when_available: false
+    # Opt-in Analyse fuer bereits zusammenhaengend kartierte Tueren: Ein nur
+    # fuer die Erkennung schrittweise bis zu diesem Maximum vergroesserter
+    # Freiraumradius kann den schmalen Hals zwischen zwei Bereichen sichtbar
+    # machen. Nav2 behaelt bei der Fahrt unveraendert sein reales 0,28-m-Modell.
+    # Standardmaessig deaktiviert.
+    connected_portal_analysis_clearance_m: 0.0
     portal_min_component_area_m2: 0.40
     portal_min_gap_m: 0.12
     portal_max_gap_m: 0.80
@@ -179,9 +189,23 @@ explore_node:
     portal_front_overhang_m: 0.33
     portal_lidar_min_far_points: 12
     portal_max_crossings: 8
+    # Ein normaler Wohnungsauftrag darf ohne vorgeschriebenen Raumwechsel
+    # enden. Begrenzte Mehrbereichstests setzen diesen Wert explizit groesser.
+    required_portal_crossings: 0
+    # Neue Kartenevidenz darf den sicheren Vorpunkt verschieben. Der Roboter
+    # darf hoechstens dreimal per normalem Nav2 kontrolliert nachruecken.
+    portal_max_staging_goals: 3
+    # NavFn darf mit seiner Planertoleranz vor einem Ziel enden. Erst die
+    # gemessene Kartenpose bestaetigt den Pflichtauslauf; bleibt er zu kurz,
+    # ist genau eine weiter vorgeschobene, erneut voll ueberwachte Etappe frei.
+    portal_connected_max_goals: 2
     # Nur fuer eine beaufsichtigte Einzelabnahme per Parameter-Overlay. Im
     # normalen Wohnungsprofil wird nach jedem Uebergang weiter erkundet.
     portal_stop_after_crossing: false
+    # Wenn Nav2 die Tuer regulaer als verbundenen Freiraum durchfaehrt, gibt
+    # es keine Portalbruecke. Ein Einzeltest kann trotzdem nach genau diesem
+    # ersten Nav2-Ziel stoppen; das Wohnungsprofil faehrt standardmaessig weiter.
+    stop_after_first_navigation_goal: false
     # Verhindert, dass der Roboter denselben Durchgang sofort rueckwaerts
     # wieder als neuen Portaluebergang auswaehlt.
     portal_revisit_radius_m: 0.60

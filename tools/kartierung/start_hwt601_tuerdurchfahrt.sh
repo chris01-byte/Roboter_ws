@@ -19,9 +19,9 @@ if [ "${AMADEUS_TUER_OFFEN:-NEIN}" != "JA" ]; then
     exit 1
 fi
 
-if [ "${AMADEUS_TUER_AUSGERICHTET:-NEIN}" != "JA" ]; then
-    echo "ABBRUCH: Startaufstellung nicht bestaetigt."
-    echo "Mittig/parallel ausrichten; Frontkante 0,10 m vor die Tuerebene."
+if [ "${AMADEUS_TUER_VORNE:-NEIN}" != "JA" ]; then
+    echo "ABBRUCH: offene Tuer im vorderen Suchsektor nicht bestaetigt."
+    echo "Tuer muss vor dem Roboter liegen; AMADEUS_TUER_VORNE=JA setzen."
     exit 1
 fi
 
@@ -40,7 +40,7 @@ for arg in "$@"; do
     esac
 done
 
-echo "HWT601-Tuerabnahme: 0,60 m LiDAR-bestaetigt; danach sofortiger Stopp."
+echo "HWT601-Tuerabnahme: selbst scannen, ausrichten und einmal navigieren."
 exec bash "$SCRIPT_DIR/start_app_erkundung_hwt601.sh" \
     active_drive:=true \
     enable_auto_explore:=true \

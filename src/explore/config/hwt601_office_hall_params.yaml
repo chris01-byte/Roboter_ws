@@ -1,0 +1,59 @@
+# Beaufsichtigter Zwei-Bereich-Test: ein Startraum und der angrenzende Flur.
+# Der Roboter darf genau einen LiDAR-geprueften Portaluebergang ausfuehren,
+# erkundet danach weiter, darf aber keinen zweiten getrennten Kartenbereich
+# betreten und kehrt nicht automatisch zum Start zurueck.
+explore_node:
+  ros__parameters:
+    # Der segmentierte Rundblick benoetigt real rund 146 s. Der Rest des
+    # Zeitbudgets ist fuer Startraum, eine Tuer und einen begrenzten Flurlauf.
+    overall_timeout_s: 900.0
+    goal_timeout_s: 120.0
+    max_failed_goals: 3
+    max_frontier_goals: 10
+
+    initial_scan_enabled: true
+    scan_only: false
+    initial_scan_angular_speed_radps: 0.08
+    initial_scan_segment_angle_rad: 0.7853981633974483
+    initial_scan_segment_pause_s: 1.0
+    initial_scan_timeout_s: 280.0
+    scan_no_progress_timeout_s: 15.0
+
+    # Keine vorgegebene Blindfahrt. Normale Nav2-Ziele und genau eine
+    # erforderlichenfalls LiDAR-bestaetigte Portalbruecke bleiben erlaubt.
+    door_traverse_distance_m: 0.0
+    door_supervised_wheel_budget_mode: false
+    door_lidar_motion_mode: false
+    door_encoder_wheel_budget_m: 0.0
+    portal_crossing_enabled: true
+    # Der erste Echtlauf stellte einen getrennten Flurplan hinter Zimmerziele;
+    # der zweite Lauf sah Tuer und Flur bereits als eine Nav2-Komponente. Fuer
+    # genau diesen Ein-Uebergang-Test werden beide Geometrien priorisiert. Der
+    # schrittweise bis 0,40 m vergroesserte Abstand gilt nur fuer die
+    # Engstellen-Erkennung;
+    # geplant und gefahren wird unveraendert mit Nav2s realem 0,28-m-Modell.
+    portal_priority_when_available: true
+    connected_portal_analysis_clearance_m: 0.40
+    portal_max_crossings: 1
+    # Kartenabdeckung allein darf diesen Test nie mehr als bestanden melden.
+    required_portal_crossings: 1
+    portal_max_staging_goals: 3
+    portal_connected_max_goals: 2
+    portal_stop_after_crossing: false
+    stop_after_first_navigation_goal: false
+    portal_max_traverse_distance_m: 1.00
+    portal_max_encoder_budget_m: 2.00
+    door_linear_speed_mps: 0.04
+    door_timeout_s: 90.0
+    door_no_progress_timeout_s: 8.0
+    door_max_angular_speed_radps: 0.04
+    door_max_heading_error_rad: 0.10
+    door_max_lateral_error_m: 0.04
+
+    # Nach der Tuer wird die zusammenhaengende Flaeche weiter kartiert. Das
+    # Ziel dieses Testes wird beaufsichtigt anhand der gerenderten Karte
+    # beendet; diese Grenzen verhindern eine unbegrenzte Wohnungsfahrt.
+    coverage_enabled: true
+    coverage_target_ratio: 0.70
+    coverage_max_goals: 6
+    return_to_start: false

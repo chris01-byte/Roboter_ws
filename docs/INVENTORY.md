@@ -117,10 +117,68 @@ Raumkopie. Das 600-s-Limit endete bei 50,302 % Abdeckung und ist deshalb auf
 weiterhin begrenzte 900 s angepasst; vollstaendige Raumabnahme, Tuer-,
 Rueckkehr- und Mehrraumfahrt bleiben offen. Eine frische einzelne
 Tuerdurchfahrt ist softwareseitig als `hwt601_door_only_params.yaml` plus
-`start_hwt601_tuerdurchfahrt.sh` vorbereitet: 0,60 m LiDAR-bestaetigt,
-0,04 m/s, 1,00 m Encoderradbudget, enge Kurs-/Seitengrenzen und sofortiger
-Stopp. Noch nicht real gefahren; das alte 0,20-m-Tuerprofil ist dafuer
+`start_hwt601_tuerdurchfahrt.sh` vorbereitet: eigener Rundblick, harter
++/-20-Grad-Frontsektor, selbsttaetige Karten-/HWT-Vorausrichtung, bis zu drei
+begrenzte Nav2-Vorpunkte bei bewegter Costmap und genau ein LiDAR-gepruefter
+Portalwechsel. Der erste HWT-Echtlauf bestand Rundblick, Zielerkennung und
+Anfahrt, stoppte aber vor der Schwelle fail-closed, weil der frisch verschobene
+Vorpunkt 1,21 m direkte Restfahrt verlangt haette (Limit 1,00 m). Die
+Restaging-Korrektur ist offline vorbereitet; reale Wiederholung und
+Tuerabnahme bleiben offen. Ein zweiter Echtlauf stoppte schon bei 307,3 Grad
+Rundblick, nachdem der gemeinsame Dual-VL53-Prozess einmalig 10,924 s lang
+keine Daten lieferte. Das 0,8-s-Fahrtor reagierte korrekt; HWT/EKF (307,4 Grad)
+und Encoder (302,9 Grad) blieben kohaerent. Nur der rotationsreine Rundblick
+wartet nun begrenzt 15 s auf Sensorwiederkehr; die Vorwaertsfahrt bleibt bei
+8 s ohne Fortschritt fail-closed. Der dritte Lauf bestand den 360,8-Grad-Scan
+und 0,34 m autonome Nav2-Anfahrt. Er deckte eine zweite bewegte-Karte-Falle auf:
+Der Schwerpunkt des wachsenden Zielraums wanderte rund 0,85 m, waehrend die
+lokale Tuergeometrie weniger als 0,15 m driftete. Die Portalzuordnung verwendet
+nun Nah-/Fernpunkt, Mitte und gleichbleibende Richtung statt des
+Raumschwerpunkts; Offline-Replay und 68 Explorer-Tests bestanden. Der vierte
+Lauf erreichte anschliessend per Nav2 den Durchgang und ein Ziel hinter der
+Tuer, stoppte aber 0,383 m vor dem angeforderten Auslaufziel. Die getrennte
+Kartenpruefung erkannte, dass der robuste Pflichtauslauf noch fehlte. Ursache
+ist die moegliche Addition aus 0,30 m NavFn- und 0,15 m Controller-Toleranz.
+Statt diese global zu aendern, darf nun hoechstens ein zweites, aus dem
+gemessenen Restweg vorgeschobenes Nav2-Ziel folgen; der echte Bag ergibt dafuer
+0,725 m und bleibt unter 1,00 m. 71 Explorer-Tests, insgesamt 282 registrierte
+Tests ohne Fehler, sowie ein motorloser
+Gesamtstart bestanden. Der Nutzer bestaetigte anschliessend, dass das gesamte
+Chassis in der Kueche stand; die physische Schwellenueberquerung ist damit
+bestanden. Die strengere Softwareabnahme und die neue zweite Auslaufetappe sind
+real noch offen. Das alte
+0,20-m-Tuerprofil ist fuer diese Abnahme
 ausdruecklich nicht zu verwenden.
+
+Der anschliessende Zwei-Bereich-Test verwendet das getrennte Overlay
+`hwt601_office_hall_params.yaml`. Sein erster Echtlauf ist fehlgeschlagen: Der
+Roboter blieb nach eindeutiger Nutzerbeobachtung im Arbeitszimmer. Die
+zusammenhaengenden Kartenpixel waren nur LiDAR-Sicht durch die offene Tuer und
+kein Fahrnachweis. Der Bag zeigt einen spaet erkannten, begrenzten Portalplan,
+der hinter fuenf normalen Zimmer-Frontiers zurueckgestellt wurde. Nur dieses
+Overlay aktiviert deshalb nun `portal_priority_when_available: true`.
+Auch der zweite Lauf blieb im Arbeitszimmer: Diesmal waren Tuer und sichtbarer
+Flur bereits eine Costmap-Komponente, weshalb der getrennte Portaldetektor
+waehrend der gesamten Fahrt null Plaene lieferte. Das Overlay erkennt nun
+opt-in auch schmale Haelse innerhalb verbundenen Freiraums, ohne Nav2s reales
+0,28-m-Modell zu veraendern, und fordert mit
+`required_portal_crossings: 1` zwingend einen gemessenen Raumwechsel. 79
+Explorer-Tests, Build, Echtkarten-Replay und motorloser Gesamtstart bestanden;
+die Livekarte lieferte einen verbundenen 0,614-m2-Zielbereich mit sicheren
+Costmap-Endpunkten. Standard- und Tuerprofil bleiben unveraendert. Die reale
+Wiederholung fuhr danach den verbundenen Uebergang softwareseitig nachweisbar:
+`portal_crossings=1/1` und `room_transition_confirmed=true`. Die gespeicherte
+3-cm-Karte zeigt Arbeitszimmer, Tuerhals und Flur zusammenhaengend. Eine durch
+neue Kartengeometrie verschobene zweite Erkennung desselben Portals loeste
+anschliessend faelschlich das 1/1-Limit aus. Nach erfuelltem explizitem
+Uebergangsvertrag werden weitere Portalangebote deshalb ignoriert und die
+normale Kartierung fortgesetzt; allgemeine Profile bleiben fail-closed. 80
+Explorer-Tests und Build sind gruen. Fuer den Erfolg war zusaetzlich die
+physische Nutzerbestaetigung der Schwellenueberquerung erforderlich. Diese
+liegt nun vor: Der Roboter
+fuhr vollstaendig in den Flur und sah sich dort weiter um. Der Zwei-Bereich-Test
+ist damit bestanden; nur die nachgelagerte Abschlusskorrektur ist real noch
+nicht wiederholt.
 
 ---
 
@@ -187,6 +245,7 @@ ausdruecklich nicht zu verwenden.
 | App-Kartierung, scharf | `AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend** |
 | HWT-Karten-A/B, Preflight | `AMADEUS_HWT601_STILLSTAND=JA bash tools/kartierung/start_app_erkundung_hwt601.sh active_drive:=false enable_auto_explore:=true` | nein (`dry_run`; HWT/LiDAR werden gelesen) |
 | HWT-Karten-A/B, scharf | `AMADEUS_HWT601_STILLSTAND=JA AMADEUS_FAHRFREIGABE=JA bash tools/kartierung/start_app_erkundung_hwt601.sh active_drive:=true enable_auto_explore:=true` | **ja, autonom fahrend; neue Freigabe erforderlich** |
+| HWT Arbeitszimmer + Flur | wie HWT-Karten-A/B, zusaetzlich `explore_params_overlay:=$(pwd)/src/explore/config/hwt601_office_hall_params.yaml` | **ja, autonom fahrend; genau ein begrenzter Mehrbereichstest** |
 | Handsteuerung | `ros2 launch robot_bringup teleop_joy.launch.py` | fährt über `cmd_vel_smoothed` |
 | Handsteuerung ohne Monitor | zusätzlich `cmd_topic:=/cmd_vel` | **ja, ohne Notbremse** |
 

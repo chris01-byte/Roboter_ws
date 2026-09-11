@@ -579,7 +579,7 @@ def test_served_or_close_frontiers_do_not_block_coverage_completion():
     }) == 0
 
 
-def _portal_plan(staging_x=0.40, target_x=1.00):
+def _portal_plan(staging_x=0.40, target_x=1.00, *, connected=False):
     bridge = PortalBridge(
         staging_row=10, staging_col=20,
         target_row=10, target_col=40,
@@ -591,11 +591,13 @@ def _portal_plan(staging_x=0.40, target_x=1.00):
         staging_xy=(staging_x, 0.0),
         target_xy=(target_x, 0.0),
         target_center_xy=(1.50, 0.0),
-        midpoint_xy=((staging_x + target_x) / 2.0, 0.0))
+        midpoint_xy=((staging_x + target_x) / 2.0, 0.0),
+        connected_traversable=connected)
 
 
 def _portal_execution_node(plan):
     node = ExploreNode.__new__(ExploreNode)
+    node._global_costmap = _grid(resolution=0.03)
     state = {'pose': (0.0, 0.0, 0.0)}
     node._robot_pose = lambda: state['pose']
     node._matching_portal_plan = lambda _reference, _pose: plan
@@ -605,6 +607,8 @@ def _portal_execution_node(plan):
     node._goal_timeout_s = 150.0
     node._portal_exit_margin = 0.25
     node._portal_max_traverse_distance = 1.0
+    node._portal_max_staging_goals = 3
+    node._portal_connected_max_goals = 2
     node._prealign_handoff_tolerance = 0.17
     node._portal_max_encoder_budget = 2.0
     node._portal_encoder_budget_factor = 2.2
@@ -661,6 +665,166 @@ def test_portal_execution_never_drives_when_lidar_corridor_is_blocked():
     assert status == 'portal_corridor_blocked'
 
 
+def test_connected_transition_stages_then_remains_a_nav2_move():
+    plan = _portal_plan(connected=True)
+    node = _portal_execution_node(plan)
+    calls = []
+
+    def connected_exit(reference, pose, stop_requested):
+        calls.append((reference, pose, stop_requested()))
+        return 'connected_success'
+
+    node._navigate_connected_portal_exit = connected_exit
+    node._drive_forward_lidar = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError('connected Nav2 transition must not use direct drive'))
+
+    status, midpoint = node._execute_portal_plan(plan)
+
+    assert status == 'connected_success'
+    assert midpoint == plan.midpoint_xy
+    assert calls == [(plan, (0.40, 0.0, 0.0), False)]
+
+
+def test_multi_room_completion_requires_the_configured_transition_count():
+    node = ExploreNode.__new__(ExploreNode)
+    node._required_portal_crossings = 1
+    node._portal_max_crossings = 1
+    node._portal_crossings = 0
+
+    assert not node._room_transition_requirement_met()
+    assert not node._bounded_portal_scope_complete()
+
+    node._portal_crossings = 1
+    assert node._room_transition_requirement_met()
+    assert node._bounded_portal_scope_complete()
+
+
+def test_default_exploration_keeps_fail_closed_portal_limit():
+    node = ExploreNode.__new__(ExploreNode)
+    node._required_portal_crossings = 0
+    node._portal_max_crossings = 8
+    node._portal_crossings = 8
+
+    assert node._room_transition_requirement_met()
+    assert not node._bounded_portal_scope_complete()
+
+
+def test_portal_execution_restages_when_fresh_map_moves_safe_staging_point():
+    initial = _portal_plan(staging_x=0.40, target_x=1.00)
+    shifted = _portal_plan(staging_x=0.80, target_x=1.50)
+    node = _portal_execution_node(initial)
+    state = {'pose': (0.0, 0.0, 0.0)}
+    goals = []
+    driven = {}
+    node._robot_pose = lambda: state['pose']
+    node._matching_portal_plan = lambda _reference, pose: (
+        initial if pose[0] < 0.40 else shifted)
+
+    def navigate(x, y, *_args, **_kwargs):
+        goals.append((x, y))
+        state['pose'] = (x, y, 0.0)
+        return 'success'
+
+    def drive(distance, *_args, **_kwargs):
+        driven['distance'] = distance
+        return 'success', distance, distance, 0.0, 0.0, 0.01, 0.9, 0
+
+    node._navigate_to = navigate
+    node._fresh_front_lidar_corridor = lambda distance: (
+        'success', CorridorCheck(True, distance + 0.33, 2.4, 30))
+    node._drive_forward_lidar = drive
+
+    status, midpoint = node._execute_portal_plan(initial)
+
+    assert status == 'success'
+    assert midpoint == initial.midpoint_xy
+    assert goals == [(0.40, 0.0), (0.80, 0.0)]
+    assert math.isclose(driven['distance'], 0.95, abs_tol=1e-9)
+
+
+def test_portal_match_uses_local_gap_when_target_component_expands():
+    reference = _portal_plan(staging_x=0.40, target_x=1.00)
+    expanded = PortalPlan(
+        bridge=reference.bridge,
+        staging_xy=(0.48, 0.03),
+        target_xy=(0.94, 0.10),
+        target_center_xy=(3.20, -0.20),
+        midpoint_xy=(0.71, 0.065))
+    node = ExploreNode.__new__(ExploreNode)
+    node._portal_plans = lambda _pose: [expanded]
+    node._portal_revisit_radius = 0.60
+
+    assert node._matching_portal_plan(
+        reference, (0.30, 0.0, 0.0)) is expanded
+
+
+def test_portal_match_rejects_reversed_gap_even_when_midpoint_is_near():
+    reference = _portal_plan(staging_x=0.40, target_x=1.00)
+    reversed_plan = PortalPlan(
+        bridge=reference.bridge,
+        staging_xy=(0.98, 0.02),
+        target_xy=(0.42, -0.02),
+        target_center_xy=(-1.50, 0.0),
+        midpoint_xy=(0.70, 0.0))
+    node = ExploreNode.__new__(ExploreNode)
+    node._portal_plans = lambda _pose: [reversed_plan]
+    node._portal_revisit_radius = 0.60
+
+    assert node._matching_portal_plan(
+        reference, (0.30, 0.0, 0.0)) is None
+
+
+def test_portal_priority_is_opt_in_and_overrides_room_frontiers_only_when_set():
+    node = ExploreNode.__new__(ExploreNode)
+    portal = _portal_plan()
+    frontier = Frontier((0.5, 0.0), 4)
+
+    node._portal_priority_when_available = False
+    assert not node._portal_precedes_frontiers([portal], [frontier])
+    assert node._portal_precedes_frontiers([portal], [])
+
+    node._portal_priority_when_available = True
+    assert node._portal_precedes_frontiers([portal], [frontier])
+    assert not node._portal_precedes_frontiers([], [frontier])
+
+
+def test_portal_execution_limits_repeated_staging_goals():
+    initial = _portal_plan(staging_x=0.40, target_x=1.00)
+    shifted = _portal_plan(staging_x=0.80, target_x=1.50)
+    node = _portal_execution_node(initial)
+    state = {'pose': (0.0, 0.0, 0.0)}
+    goals = []
+    node._portal_max_staging_goals = 1
+    node._robot_pose = lambda: state['pose']
+    node._matching_portal_plan = lambda _reference, pose: (
+        initial if pose[0] < 0.40 else shifted)
+
+    def navigate(x, y, *_args, **_kwargs):
+        goals.append((x, y))
+        state['pose'] = (x, y, 0.0)
+        return 'success'
+
+    node._navigate_to = navigate
+    node._drive_forward_lidar = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError('staging limit must fail before direct drive'))
+
+    status, _midpoint = node._execute_portal_plan(initial)
+
+    assert status == 'portal_staging_limit'
+    assert goals == [(0.40, 0.0)]
+
+
+def test_portal_execution_keeps_direct_traverse_limit_after_staging():
+    plan = _portal_plan(staging_x=0.10, target_x=1.50)
+    node = _portal_execution_node(plan)
+    node._drive_forward_lidar = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError('out-of-bounds traverse must not receive a drive command'))
+
+    status, _midpoint = node._execute_portal_plan(plan)
+
+    assert status == 'portal_traverse_out_of_bounds'
+
+
 def _portal_connectivity_node(costs):
     node = ExploreNode.__new__(ExploreNode)
     node._global_costmap = _grid(width=80, height=40, resolution=0.05)
@@ -670,6 +834,7 @@ def _portal_connectivity_node(costs):
     node._global_frame = 'map'
     node._frontier_goal_max_cost = 90
     node._portal_exit_margin = 0.25
+    node._portal_max_traverse_distance = 1.0
     return node
 
 
@@ -678,7 +843,7 @@ def test_portal_merge_selects_reachable_goal_beyond_original_target():
     node = _portal_connectivity_node(costs)
     plan = _portal_plan()
 
-    goal = node._connected_portal_exit_goal(plan, (0.10, 0.10, 0.0))
+    goal = node._connected_portal_exit_goal(plan, (0.40, 0.10, 0.0))
 
     assert goal is not None
     assert goal[0] >= plan.target_xy[0] + 0.20
@@ -691,7 +856,19 @@ def test_portal_merge_rejects_original_target_in_other_component():
     plan = _portal_plan()
 
     assert node._connected_portal_exit_goal(
-        plan, (0.10, 0.10, 0.0)) is None
+        plan, (0.40, 0.10, 0.0)) is None
+
+
+def test_portal_merge_retry_goal_compensates_early_nav2_success():
+    costs = np.zeros((40, 80), dtype=np.int16)
+    node = _portal_connectivity_node(costs)
+    plan = _portal_plan()
+
+    goal = node._connected_portal_exit_goal(
+        plan, (0.85, 0.0, 0.0), desired_exit_progress_m=0.55)
+
+    assert goal is not None
+    assert goal[0] >= plan.target_xy[0] + 0.50
 
 
 def test_portal_execution_hands_merged_geometry_back_to_nav2():
@@ -717,6 +894,63 @@ def test_portal_execution_hands_merged_geometry_back_to_nav2():
     assert status == 'connected_success'
     assert midpoint == plan.midpoint_xy
     assert goals == [(1.25, 0.0)]
+
+
+def test_portal_connected_nav2_early_success_gets_one_bounded_retry():
+    plan = _portal_plan()
+    node = _portal_execution_node(plan)
+    state = {'pose': (0.40, 0.0, 0.0)}
+    node._robot_pose = lambda: state['pose']
+    node._matching_portal_plan = lambda *_args: None
+    requested_progress = []
+    goals = []
+
+    def connected_goal(_plan, _pose, desired_exit_progress_m=None):
+        requested_progress.append(desired_exit_progress_m)
+        return (1.25, 0.0) if len(requested_progress) == 1 else (1.60, 0.0)
+
+    def navigate(x, y, *_args, **_kwargs):
+        goals.append((x, y))
+        # First action reproduces the real combined NavFn/controller early
+        # success. The retry reaches the independently checked exit margin.
+        state['pose'] = (
+            (0.85, 0.0, 0.0)
+            if len(goals) == 1
+            else (1.20, 0.0, 0.0))
+        return 'success'
+
+    node._connected_portal_exit_goal = connected_goal
+    node._navigate_to = navigate
+
+    status, midpoint = node._execute_portal_plan(plan)
+
+    assert status == 'connected_success'
+    assert midpoint == plan.midpoint_xy
+    assert goals == [(1.25, 0.0), (1.60, 0.0)]
+    assert requested_progress[0] == node._portal_exit_margin
+    assert requested_progress[1] > requested_progress[0]
+
+
+def test_portal_connected_second_early_success_still_fails_closed():
+    plan = _portal_plan()
+    node = _portal_execution_node(plan)
+    state = {'pose': (0.40, 0.0, 0.0)}
+    node._robot_pose = lambda: state['pose']
+    node._matching_portal_plan = lambda *_args: None
+    node._connected_portal_exit_goal = lambda *_args: (1.60, 0.0)
+    goals = []
+
+    def navigate(x, y, *_args, **_kwargs):
+        goals.append((x, y))
+        state['pose'] = (0.90, 0.0, 0.0)
+        return 'success'
+
+    node._navigate_to = navigate
+
+    status, _midpoint = node._execute_portal_plan(plan)
+
+    assert status == 'portal_connected_exit_not_reached'
+    assert goals == [(1.60, 0.0), (1.60, 0.0)]
 
 
 def test_portal_execution_still_fails_closed_when_geometry_is_unresolved():
@@ -780,8 +1014,12 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'portal_min_component_area_m2: 0.40' in config
     assert 'portal_max_traverse_distance_m: 1.00' in config
     assert 'portal_max_encoder_budget_m: 2.00' in config
+    assert 'portal_priority_when_available: false' in config
+    assert 'connected_portal_analysis_clearance_m: 0.0' in config
+    assert 'required_portal_crossings: 0' in config
     assert 'portal_lidar_corridor_half_width_m: 0.25' in config
     assert 'portal_front_overhang_m: 0.33' in config
+    assert 'portal_connected_max_goals: 2' in config
     assert 'portal_stop_after_crossing: false' in config
     assert 'coverage_enabled: true' in config
     assert 'coverage_target_ratio: 0.85' in config
@@ -864,6 +1102,7 @@ def test_door_profile_uses_lidar_truth_and_encoder_only_as_budget():
     assert normal_parameters['portal_lidar_corridor_half_width_m'] >= 0.25
     assert normal_parameters['portal_front_overhang_m'] >= 0.33
     assert normal_parameters['portal_stop_after_crossing'] is False
+    assert normal_parameters['stop_after_first_navigation_goal'] is False
     assert 0 <= normal_parameters['frontier_goal_max_cost'] < 99
     assert normal_parameters['frontier_stage_min_progress_m'] >= 0.30
     assert (
@@ -909,7 +1148,7 @@ def test_hwt601_scan_only_profile_cannot_enter_translation_phases():
     frontier_detection = source.index(
         'frontiers = self._detect_frontiers(', scan_only_exit)
     assert scan_only_exit < frontier_detection
-    assert "'scan_only_complete'}" in source
+    assert "'scan_only_complete', 'navigation_goal_complete'}" in source
     assert "'bounded_segmented_scan_only'" in source
     assert 'final_yaw, _angular_speed, _received_at' in source
 
@@ -949,25 +1188,47 @@ def test_hwt601_translation_only_profile_is_one_bounded_lidar_stage():
     assert door_exit < initial_scan < frontier_detection
 
 
-def test_hwt601_door_only_profile_is_one_tight_lidar_stage():
+def test_hwt601_door_only_profile_self_aligns_and_navigates_once():
     parameters = yaml.safe_load(
         (PACKAGE_ROOT / 'config' /
          'hwt601_door_only_params.yaml').read_text()
     )['explore_node']['ros__parameters']
 
-    assert parameters['overall_timeout_s'] <= 120.0
+    assert parameters['overall_timeout_s'] <= 480.0
+    assert parameters['goal_timeout_s'] <= 120.0
     assert parameters['max_frontier_goals'] == 1
     assert parameters['max_failed_goals'] == 1
-    assert parameters['initial_scan_enabled'] is False
+    assert parameters['initial_scan_enabled'] is True
     assert parameters['scan_only'] is False
+    assert parameters['initial_scan_angular_speed_radps'] <= 0.08
+    assert math.isclose(
+        parameters['initial_scan_segment_angle_rad'], math.pi / 4.0)
+    assert parameters['initial_scan_segment_pause_s'] >= 1.0
+    assert parameters['initial_scan_timeout_s'] < parameters['overall_timeout_s']
+    # A measured 10.924-s dual-VL53 process stall stopped the fail-closed gate.
+    # The rotation-only scan may wait for recovery, while forward portal motion
+    # retains its tighter no-progress bound below.
+    assert 10.924 < parameters['scan_no_progress_timeout_s'] <= 15.0
     assert parameters['coverage_enabled'] is False
-    assert parameters['portal_crossing_enabled'] is False
+    assert math.isclose(
+        parameters['frontier_forward_cone_half_angle_rad'],
+        math.radians(20.0))
+    assert parameters['frontier_forward_stage_max_distance_m'] == 0.0
     assert parameters['door_supervised_wheel_budget_mode'] is False
-    assert parameters['door_lidar_motion_mode'] is True
-    assert parameters['door_traverse_distance_m'] == 0.60
-    assert (
-        parameters['door_traverse_distance_m']
-        < parameters['door_encoder_wheel_budget_m'] <= 1.00)
+    assert parameters['door_lidar_motion_mode'] is False
+    assert parameters['door_traverse_distance_m'] == 0.0
+    assert parameters['door_encoder_wheel_budget_m'] == 0.0
+    assert parameters['portal_crossing_enabled'] is True
+    assert parameters['portal_priority_when_available'] is False
+    assert parameters['portal_max_crossings'] == 1
+    assert parameters['portal_max_staging_goals'] == 3
+    assert parameters['portal_connected_max_goals'] == 2
+    assert parameters['portal_stop_after_crossing'] is True
+    # A mere Nav2 staging goal before the threshold is not yet a passed door
+    # test; success requires the bounded portal crossing itself.
+    assert parameters['stop_after_first_navigation_goal'] is False
+    assert parameters['portal_max_traverse_distance_m'] <= 1.0
+    assert parameters['portal_max_encoder_budget_m'] <= 2.0
     assert parameters['door_linear_speed_mps'] <= 0.04
     assert parameters['door_timeout_s'] <= 90.0
     assert parameters['door_no_progress_timeout_s'] <= 8.0
@@ -981,11 +1242,16 @@ def test_hwt601_door_only_profile_is_one_tight_lidar_stage():
     wrapper = wrapper_path.read_text()
     assert wrapper_path.stat().st_mode & 0o111
     assert 'AMADEUS_TUER_OFFEN' in wrapper
-    assert 'AMADEUS_TUER_AUSGERICHTET' in wrapper
+    assert 'AMADEUS_TUER_VORNE' in wrapper
     assert 'AMADEUS_TUERZIEL_FREI' in wrapper
     assert 'active_drive:=true' in wrapper
     assert 'enable_auto_explore:=true' in wrapper
     assert 'hwt601_door_only_params.yaml' in wrapper
+
+    source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
+    assert "completion_reason = 'navigation_goal_complete'" in source
+    assert "'navigation_goal_complete'}" in source
+    assert "'bounded_front_door_navigation'" in source
 
 
 def test_hwt601_room_only_profile_cannot_use_door_or_portal_motion():
@@ -1010,5 +1276,50 @@ def test_hwt601_room_only_profile_cannot_use_door_or_portal_motion():
     assert parameters['portal_crossing_enabled'] is False
     assert parameters['coverage_enabled'] is True
     assert 0.0 < parameters['coverage_target_ratio'] <= 0.75
+    assert parameters['coverage_max_goals'] <= 6
+    assert parameters['return_to_start'] is False
+
+
+def test_hwt601_office_hall_profile_allows_exactly_one_room_transition():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' /
+         'hwt601_office_hall_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['overall_timeout_s'] <= 900.0
+    assert parameters['goal_timeout_s'] <= 120.0
+    assert parameters['max_failed_goals'] <= 3
+    assert parameters['max_frontier_goals'] <= 10
+    assert parameters['initial_scan_enabled'] is True
+    assert parameters['scan_only'] is False
+    assert parameters['initial_scan_angular_speed_radps'] <= 0.08
+    assert math.isclose(
+        parameters['initial_scan_segment_angle_rad'], math.pi / 4.0)
+    assert parameters['initial_scan_segment_pause_s'] >= 1.0
+    assert parameters['scan_no_progress_timeout_s'] <= 15.0
+    assert parameters['door_traverse_distance_m'] == 0.0
+    assert parameters['door_supervised_wheel_budget_mode'] is False
+    assert parameters['door_lidar_motion_mode'] is False
+    assert parameters['door_encoder_wheel_budget_m'] == 0.0
+    assert parameters['portal_crossing_enabled'] is True
+    assert parameters['portal_priority_when_available'] is True
+    assert math.isclose(
+        parameters['connected_portal_analysis_clearance_m'], 0.40)
+    assert parameters['portal_max_crossings'] == 1
+    assert parameters['required_portal_crossings'] == 1
+    assert parameters['portal_max_staging_goals'] <= 3
+    assert parameters['portal_connected_max_goals'] <= 2
+    assert parameters['portal_stop_after_crossing'] is False
+    assert parameters['stop_after_first_navigation_goal'] is False
+    assert parameters['portal_max_traverse_distance_m'] <= 1.0
+    assert parameters['portal_max_encoder_budget_m'] <= 2.0
+    assert parameters['door_linear_speed_mps'] <= 0.04
+    assert parameters['door_timeout_s'] <= 90.0
+    assert parameters['door_no_progress_timeout_s'] <= 8.0
+    assert parameters['door_max_angular_speed_radps'] <= 0.04
+    assert parameters['door_max_heading_error_rad'] <= 0.10
+    assert parameters['door_max_lateral_error_m'] <= 0.04
+    assert parameters['coverage_enabled'] is True
+    assert parameters['coverage_target_ratio'] <= 0.70
     assert parameters['coverage_max_goals'] <= 6
     assert parameters['return_to_start'] is False

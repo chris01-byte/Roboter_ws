@@ -157,19 +157,23 @@ Fahrfreigabe.
 
 Nach dem bestandenen HWT-Rundblick, der 0,50-m-Translation und einer
 kohaerenten Raumerkundung darf genau eine Tuer mit dem getrennten Profil
-`hwt601_door_only_params.yaml` abgenommen werden. Es faehrt ausschliesslich
-0,60 m vorwaerts bei maximal 0,04 m/s, misst den echten Rumpfweg mit dem beim
-Start eingefrorenen LiDAR-Scan, nutzt 1,00 m Encoderradweg als harte
-Notgrenze und endet danach sofort. Frontiers, Portale, Rundblick und Coverage
-sind dabei aus.
+`hwt601_door_only_params.yaml` abgenommen werden. Der Roboter fuehrt zuerst
+den segmentierten 360-Grad-HWT-Rundblick aus, akzeptiert danach nur ein
+Kartenziel innerhalb von +/-20 Grad zur wiederhergestellten Startfront,
+richtet sich selbst darauf aus und navigiert mit Nav2 durch die Tuer. Trennt
+die Inflation beide Raeume, darf genau eine LiDAR-gepruefte Portalbruecke
+uebernehmen. Verschiebt neue Kartenevidenz dabei den sicheren Vorpunkt, darf
+Nav2 hoechstens dreimal kontrolliert nachruecken; die direkte LiDAR-Bruecke
+bleibt auf maximal 1,00 m begrenzt. Ein erreichter Vorpunkt allein ist kein
+Erfolg: Erst der bestaetigte Portalwechsel beendet den Test und sperrt jede
+weitere Fahrt. Coverage bleibt aus.
 
 Vor dem Start die Tuer vollstaendig oeffnen und gegen Zuschlagen sichern. Den
-Roboter mittig und parallel zur Durchgangsachse stellen, mit der vordersten
-Chassiskante 0,10 m vor der Tuerebene. Der Durchgang muss mindestens 0,68 m
-breit sein; Arm/Greifer bleiben in Transportpose. Hinter der Tuer muessen fuer
-die gesamte Plattform, 0,60 m Weg und Bremsreserve Boden und Nahbereich frei
-sein. Mit der bekannten Huelle liegt die Hinterkante nach der Etappe
-rechnerisch 0,08 m hinter der Tuerebene.
+Roboter so vor den Durchgang stellen, dass die offene Tuer innerhalb des
+vorderen +/-20-Grad-Suchsektors liegt; manuelles Zentrieren oder paralleles
+Ausrichten ist nicht Teil der Voraussetzung. Der Durchgang muss mindestens
+0,68 m breit sein; Arm/Greifer bleiben in Transportpose. Hinter der Tuer
+muessen Plattform, Zielweg und Bremsreserve frei sein.
 
 Erst nach dieser physischen Pruefung und einer neuen persoenlichen
 Fahrfreigabe starten:
@@ -177,7 +181,7 @@ Fahrfreigabe starten:
 ```bash
 cd ~/roboter_ws
 AMADEUS_TUER_OFFEN=JA \
-AMADEUS_TUER_AUSGERICHTET=JA \
+AMADEUS_TUER_VORNE=JA \
 AMADEUS_TUERZIEL_FREI=JA \
 AMADEUS_HWT601_STILLSTAND=JA \
 AMADEUS_FAHRFREIGABE=JA \
@@ -187,8 +191,102 @@ AMADEUS_FAHRFREIGABE=JA \
 Auch dieser Start bewegt noch nichts. Nach mindestens 30 s absolutem
 Stillstand werden HWT, LiDAR, Odometrie, beide VL53, Collision-Monitor und
 Basis im Live-Preflight geprueft; erst danach wird genau ein Explore-Auftrag
-gesendet. Jede Wiederholung benoetigt eine neue Freigabe und erneute
-Aufstellungspruefung.
+gesendet. Der Auftrag darf zunaechst den notwendigen Rundblick und die
+selbsttaetige Vorausrichtung ausfuehren. Jede Wiederholung benoetigt eine neue
+Freigabe und erneute Aufstellungspruefung.
+
+Erster Echtlauf am 11.09.2026: Rundblick 360,7 Grad, Tuerziel 4,24 m2 und
+autonome Nav2-Anfahrt erkannt. Die Costmap verschob danach den Vorpunkt um
+rund 0,30 m; die dadurch 1,21 m lange direkte Restfahrt wurde am unveraenderten
+1,00-m-Limit korrekt verweigert. Die anschliessende Softwarekorrektur plant in
+diesem Fall einen weiteren Nav2-Vorpunkt.
+
+Der zweite Echtlauf stoppte vor jeder Translation bei 307,3 Grad Rundblick:
+Der gemeinsame Dual-VL53-Prozess lieferte einmalig 10,924 s lang weder Status
+noch Punktwolken. Das Fahrtor sperrte nach 0,8 s korrekt. HWT/EKF (307,4 Grad)
+und Encoder (302,9 Grad) blieben kohaerent; HWT, LiDAR, Encoder und Not-Aus
+zeigten keinen Fehler. In fuenf frueheren Bags ueber rund 32 Minuten betrug die
+groesste VL53-Luecke 0,854 s. Deshalb wartet nur dieser rotationsreine
+Rundblick jetzt hoechstens 15 s auf Wiederfreigabe. Fahrtor und die strengere
+8-s-Abbruchgrenze waehrend Vorwaertsfahrt bleiben unveraendert. Eine reale
+Wiederholung war ohne erneuten Aussetzer erfolgreich.
+
+Im dritten Echtlauf gelangen 360,8 Grad Rundblick und eine autonome
+0,34-m-Nav2-Anfahrt zum ersten Vorpunkt. Der getrennte Zielbereich wuchs dabei
+von 1,758 auf 3,859 m2. Sein Flaechenschwerpunkt wanderte rund 0,85 m, obwohl
+die lokale Tuergeometrie weniger als 0,15 m versetzt blieb. Die fruehere
+Zuordnung ueber den Raumschwerpunkt meldete deshalb falsch
+`portal_geometry_changed`; der Roboter stoppte sicher vor jeder direkten
+Portalbewegung. Die Korrektur verfolgt nun Nah-/Fernpunkt, Portalmitte und
+Durchfahrtsrichtung. Der aufgezeichnete Bag besteht damit alle fuenf
+Costmap-Zeitpunkte; eine umgekehrte nahe Oeffnung bleibt fail-closed. Der
+naechste Echtlauf verwendete diese Zuordnung erfolgreich.
+
+Im vierten Echtlauf verband die Costmap die Tuer waehrend der Anfahrt und Nav2
+meldete das Ziel `(1,53, -0,20) m` als erreicht. Die unabhaengige
+Explorer-Pruefung stoppte trotzdem fail-closed: `map->base_link` lag erst bei
+rund `(1,151, -0,146) m`, 0,383 m vor dem angeforderten Ziel und 0,138 m vor
+dem festen Fernseitenpunkt. NavFns 0,30-m-Planertoleranz und die 0,15-m-
+Zieltoleranz des Controllers koennen sich addieren. Darum bestaetigt allein
+`NavigateToPose: SUCCEEDED` noch keinen Portalwechsel. Fehlt der gemessene
+Pflichtauslauf, plant der Explorer jetzt hoechstens ein zweites, weiter
+vorgeschobenes Nav2-Auslaufziel. Es muss frisch sicher und verbunden sein und
+hoechstens 1,00 m von der aktuellen Pose entfernt liegen. Auf der echten
+End-Costmap waeren das 0,725 m. Bleibt auch diese Etappe zu kurz, endet der
+Auftrag weiterhin fail-closed. Der Nutzer bestaetigte nach diesem Lauf, dass
+das gesamte Chassis in der Kueche stand; die physische Schwellenueberquerung
+ist damit bestanden. Die strengere softwareseitige Abnahme und die reale
+Wiederholung der neuen zweiten Auslaufetappe stehen noch aus.
+
+Fuer einen anschliessenden beaufsichtigten Test aus genau einem Startraum in
+den angrenzenden offenen Flur steht das getrennte Overlay
+`hwt601_office_hall_params.yaml` bereit. Es erlaubt nach dem Rundblick bis zu
+zehn normale Frontier-Ziele und hoechstens einen gesonderten Portalwechsel,
+erkundet nach einer Tuer weiter, kehrt aber nicht automatisch zurueck. Das
+Overlay ist keine allgemeine Wohnungsfreigabe:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_HWT601_STILLSTAND=JA AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_app_erkundung_hwt601.sh \
+  active_drive:=true enable_auto_explore:=true \
+  explore_params_overlay:="$(pwd)/src/explore/config/hwt601_office_hall_params.yaml"
+```
+
+Der erste Echtlauf am 11.09.2026 ist fehlgeschlagen: Der Roboter blieb nach
+eindeutiger Beobachtung des anwesenden Nutzers im Arbeitszimmer. Durch die
+offene Tuer sichtbare, zusammenhaengende LiDAR-Pixel sind kein Nachweis einer
+Schwellenueberquerung. Der Bag zeigt nach 620 s einen sicheren Portalplan zum
+1,569-m2-Zielbereich, gleichzeitig aber noch fuenf normale Zimmer-Frontiers.
+Die Standardstrategie stellte den Portalplan deshalb zurueck. Nur dieses
+begrenzte Overlay aktiviert nun `portal_priority_when_available: true`, damit
+ein gemessener Portalplan Vorrang vor weiteren Zimmerzielen erhaelt. Der
+Standard bleibt unveraendert. Diese erste Korrektur bestand den motorlosen
+Test, loeste im zweiten Echtlauf aber noch nicht die unten beschriebene
+verbundene Tuergeometrie. Der reale Erfolg verlangt immer die Beobachtung der
+anwesenden Person.
+
+Auch der zweite Echtlauf blieb im Arbeitszimmer. Diesmal gab es waehrend des
+gesamten Auftrags keinen getrennten Portalplan: Die echte Costmap sah Tuer und
+Flur bereits als eine zusammenhaengende Komponente. Das Overlay aktiviert
+deshalb zusaetzlich `connected_portal_analysis_clearance_m: 0.40`. Nur die
+Erkennung vergroessert ihren Abstand zellenweise bis zu diesem Maximum; beide
+Endpunkte muessen in der unveraenderten Nav2-Costmap verbunden und unter
+Zielkosten 90 sein. Der Uebergang wird dann regulaer von Nav2 gefahren. Mit
+`required_portal_crossings: 1` bleibt jeder Abschluss ohne gemessenen Auslauf
+ein Fehler. Build, 79 Explorer-Tests und motorloser Gesamt-Preflight sind
+bestanden; die aktuelle Livekarte lieferte passiv einen passenden verbundenen
+Plan mit 0,614 m2 Zielbereich und sicheren Endpunktkosten 82/70. Die reale
+Wiederholung fuhr den Uebergang anschliessend mit Nav2 und bestaetigte
+`portal_crossings=1/1`. Eine durch neue Kartengeometrie verschobene erneute
+Erkennung desselben Tuerhalses loeste danach faelschlich das bereits erreichte
+1/1-Limit aus. Fuer explizit begrenzte Profile werden weitere Portalangebote
+nach erfuelltem Vertrag nun ignoriert, damit Frontier-/Coverage-Kartierung im
+Zielbereich weiterlaeuft; allgemeine Profile bleiben am Limit fail-closed.
+80 Explorer-Tests und Build sind gruen. Der anwesende Nutzer bestaetigte, dass
+der Roboter vollstaendig in den Flur fuhr und sich dort noch etwas umsah. Der
+Zwei-Bereich-Test ist damit bestanden; die nachgelagerte Abschlusskorrektur ist
+real noch nicht wiederholt.
 
 Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
 LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
@@ -208,11 +306,11 @@ ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String \
 
 Der Rundblick beendet sich ausserdem selbst, wenn nach 15 Sekunden im Mittel
 weniger als 0,01 rad/s erreicht werden, die Odometrie ausfaellt, der Roboter in
-die falsche Richtung dreht, acht Sekunden keinen Fortschritt macht oder das
-210-Sekunden-Limit erreicht. Das Zeitbudget beruecksichtigt, dass der aktive
+die falsche Richtung dreht, 15 Sekunden keinen Fortschritt macht oder das
+280-Sekunden-Limit erreicht. Das Zeitbudget beruecksichtigt, dass der aktive
 Kollisionsmonitor die Drehung in seiner SlowZone auf 30 % reduziert. Die
-gesamte Mission endet spaetestens nach 20 Minuten; ein einzelnes Nav2-Ziel
-nach 150 Sekunden. Erfolgreich bediente Frontier-Umfelder werden im Radius
+gesamte Einzelabnahme endet spaetestens nach acht Minuten; ein Nav2-Ziel
+nach 120 Sekunden. Erfolgreich bediente Frontier-Umfelder werden im Radius
 von 0,60 m nicht erneut angefahren; 20 Frontier-Ziele sind die zusaetzliche
 fail-closed Obergrenze. Recovery-Drehungen und -Rueckwaertsfahrten von Nav2
 sind nicht mit der Hardware verbunden.
@@ -246,6 +344,13 @@ Die Karte zwischendurch rendern und ansehen. Erst eine plausible Karte ueber
 den Kartenmanager speichern. Danach Auftrag abbrechen, Nullkommando und 0 rpm
 pruefen und ausschliesslich den Launch-Prozess einmal mit Strg-C beenden.
 Wohnungsgeometrie, Bags und Diagnosebilder bleiben lokal.
+
+Bei einer parallelen Bag-Aufzeichnung darf der exakte Zielpfad vor
+`ros2 bag record -o ZIELPFAD ...` **nicht** angelegt werden: rosbag2 bricht bei
+einem bereits vorhandenen Ordner ab. Nur den Elternordner erzeugen, fuer `-o`
+einen noch nicht existierenden Kindpfad verwenden und unmittelbar danach PID,
+Prozessstatus sowie die entstehende `metadata.yaml`/Datenbank pruefen. Ein
+gestarteter Karten-Stack ist noch kein Nachweis, dass der Recorder laeuft.
 
 ## Reihenfolge einer kompletten Kartenaufnahme
 

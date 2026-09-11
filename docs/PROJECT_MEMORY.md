@@ -17,50 +17,407 @@ Rückfallweg:
 
 ---
 
-## 2026-09-11 — Frische HWT-Tuerdurchfahrt als einzelne LiDAR-Etappe vorbereitet
+## 2026-09-11 — Arbeitszimmer-Flur-Test physisch bestanden
 
-**Entscheidung:** Die erste reale HWT-Tuerabnahme verwendet ein neues,
+**Entscheidung:** Ein Profil mit ausdruecklich gefordertem und zugleich
+erreichtem Portallimit bietet nach dem letzten erlaubten Raumwechsel keine
+weiteren Portalplaene mehr an. Es setzt die Kartierung mit normalen Frontiers
+und Coverage-Zielen im erreichten Bereich fort. Profile ohne expliziten
+Raumwechselvertrag behalten den bisherigen fail-closed Abbruch am
+Portallimit. Damit kann eine durch neue Kartenevidenz verschobene Erkennung
+derselben Tuer den begrenzten Zwei-Bereich-Lauf nicht mehr nachtraeglich
+abbrechen.
+
+**Grund / beobachtete Evidenz:** Im dritten beaufsichtigten Echtlauf waehlte
+der Explorer nach 361,7 Grad Rundblick zuerst einen sicheren Zimmerpunkt und
+danach den verbundenen Raumuebergang. Nav2 erreichte den Vorpunkt bei etwa
+`(2,29, 0,40) m`, verband das Portal durch neue Kartenevidenz regulaer und
+fuhr den Auslauf bis zum Ziel `(3,28, 0,53) m`. Danach meldete der Explorer
+`portal_crossings=1`, `required_portal_crossings=1` und
+`room_transition_confirmed=true` und plante weitere Flur-Frontiers. Spaeter
+verschob sich die Engstellengeometrie und erschien erneut als Portal; beim
+bereits erreichten Limit 1/1 brach die alte Logik formal mit
+`Portal-Uebergangslimit ohne Wohnungsabschluss erreicht` ab. Endstand waren
+48,84 % Spurabdeckung, 9,449 m2 sicher erreichbare Flaeche, 4,615 m2 davon
+durch die reale Fahrspur abgedeckt, zwei erreichte Frontiers und eine sichere
+Zwischenetappe.
+
+Die gesicherte 3-cm-Karte misst 7,05 x 7,44 m und enthaelt 21,7 m2 freie
+Zellen. Das Renderbild zeigt Arbeitszimmer, Tuerhals und den laenglichen Flur
+in einer zusammenhaengenden Geometrie. Der anwesende Nutzer bestaetigte danach
+ausdruecklich, dass der Roboter vollstaendig in den Flur gefahren ist und sich
+dort noch etwas umgesehen hat. Damit sind physische Tuerdurchfahrt und das
+geforderte Kartenkriterium in demselben Arbeitsgang bestanden.
+
+**Betroffene Dateien und Hardware:** Explorer-Abschlusslogik und
+Regressionstests. Im Echtlauf waren Motoren, HWT601, Encoder, STL-27L, beide
+VL53 und `collision_monitor` aktiv; die OAK blieb aus. Lokale Evidenz, nicht
+committen: Bag
+`~/.local/share/amadeus/bags/hwt601-office-hall-connected-retest-20260911-190824/`
+(858,247 s, 776,1 MiB, 626630 Nachrichten, DB3-SHA-256
+`a2e4b902bbff4f3b8de4c134158824761e336272b19efe2bf7ffcdcfcd188aad`)
+und Karte
+`~/.local/share/amadeus/maps/amadeus/20260911T172212855412Z-8b17202048c2/`.
+
+**Teststatus:** Die neue Abschlusslogik besteht 80 Explorer-Tests; der
+`explore`-Build ist gruen. Am Ende des Echtlaufs standen Soll und Ist auf
+0 rpm; alle Encoder-/Modbus-/Befehlszaehler waren null. HWT meldete 85090
+Rohmessungen, 82664 Ausgaben und null verworfene Messungen; der LiDAR-Abgleich
+4340 akzeptierte gegen eine verworfene Messung, 0,0072 m Restkosten und
+98,3 % Stuetzung. Beide Nahbereiche waren frei, Not-Aus false. Bag und Karte
+wurden vor dem einmaligen Shutdown sauber geschrieben; danach waren alle
+Prozesse beendet und die seriellen Ports frei. Beim Shutdown trat nur das
+bekannte LDLiDAR-Buffer-Overflow-/rclpy-Doppelshutdown-Rauschen auf.
+
+**Offene Risiken:** Die Korrektur nach dem real gefundenen 1/1-Abschlussfall
+ist noch nicht erneut scharf gefahren. Unter hoher
+SLAM-Rechenlast traten zeitweise TF-Zukunftsextrapolationen und verpasste
+Controller-Zyklen auf; Nav2 hielt oder reduzierte dabei die Geschwindigkeit,
+doch die Last ist vor einer groesseren Wohnungsfahrt getrennt zu optimieren.
+
+**Rueckfallweg:** Das Zwei-Bereich-Overlay nicht laden oder
+`required_portal_crossings: 0` setzen; damit greift wieder der allgemeine
+fail-closed Portallimitvertrag. Die Korrektur veraendert weder Nav2-Abstaende
+noch Motor-, Sensor- oder Kollisionsparameter.
+
+---
+
+## 2026-09-11 — Zweiter Arbeitszimmer-Flur-Test fehlgeschlagen; verbundene Tuer erkannt
+
+**Entscheidung:** Der Zwei-Bereich-Test erkennt zusaetzlich zu getrennten
+Costmap-Portalen nun auch schmale Raumuebergaenge innerhalb einer bereits
+zusammenhaengenden bekannten Freiflaeche. Das Overlay aktiviert dafuer die
+opt-in Analyse `connected_portal_analysis_clearance_m: 0.40`: Nur fuer die
+Geometrieerkennung wird der Abstand von 0,28 m zellenweise bis maximal 0,40 m
+erhoeht. Der erste dadurch abgetrennte, mindestens 0,40 m2 grosse Zielbereich
+wird priorisiert. Beide Endpunkte muessen weiterhin in derselben echten
+Nav2-Costmap-Komponente liegen und unter den unveraenderten Zielkosten bleiben;
+die Fahrt erfolgt regulaer durch Nav2, nicht als Blindfahrt. Ausserdem fordert
+dieses Profil `required_portal_crossings: 1`. Ohne sensorisch bestaetigten
+Auslauf hinter dem Uebergang darf weder Coverage-Erfolg noch
+`map_ready_to_save` gemeldet werden. Standardprofil und reale Nav2-Abstaende
+bleiben unveraendert.
+
+**Grund / beobachtete Evidenz:** Auch im zweiten Echtlauf beobachtete der
+anwesende Nutzer eindeutig, dass der Roboter das Arbeitszimmer nicht verliess.
+Der Test ist nicht bestanden. Der Rundblick erreichte 361,9 Grad. Danach gab es
+zwei erreichte Frontiers und zwei sicher beendete Zwischenetappen, aber auch
+drei nicht erreichbare Ziele; der Auftrag endete mit 64,37 % Spurabdeckung,
+`portal_crossings=0`, `portals_remaining=0` und
+`Zu viele nicht erreichbare Erkundungsziele`.
+
+Die Ursache unterscheidet sich vom ersten Lauf: Die finale 3-cm-Karte war beim
+realen Nav2-Radius von 0,28 m eine einzige grosse freie Komponente. Der offene
+Tuerblick hatte den Flur also bereits ohne topologische Luecke eingezeichnet;
+der bisherige Portalalgorithmus konnte korrekt kein *getrenntes* Portal
+finden. Erst die reine Analyseerosion trennt die Engstelle: auf der lokal
+gespeicherten Echtkarte entsteht erstmals bei 0,37 m ein 0,494-m2-Zielbereich
+mit 0,297 m Engstellenabstand; bei 0,40 m bleiben 0,409 m2 und 0,558 m. Eine
+offene Rechteckflaeche erzeugt im Regressionstest keinen Uebergang, ein zu
+kleiner Nebenbereich und eine unbekannte Wand werden ebenfalls verworfen.
+
+**Betroffene Dateien und Hardware:** Explorer-Portalplanung, Explorer-Node,
+Standard- und Zwei-Bereich-Konfiguration, Regressionstests sowie
+Kartierungs-/Transferdokumentation. Im fehlgeschlagenen Echtlauf waren Motoren,
+HWT601, Encoder, STL-27L, beide VL53 und `collision_monitor` aktiv; die OAK war
+aus. Lokale Karte, nicht committen:
+`~/.local/share/amadeus/test-results/hwt601-office-hall-retest-20260911-1803/`.
+Der beabsichtigte Bag fehlt: `ros2 bag record` verweigerte den Start, weil das
+exakte Ausgabeverzeichnis vorher bereits angelegt worden war.
+
+**Teststatus:** Beide Echtlaeufe sind fehlgeschlagen. Die neue Engstellenlogik
+besteht ihre synthetischen Geometrie-, Sicherheits- und Profiltests. Build und
+die komplette Explorer-Suite bestehen mit 79 Tests, null Fehlern/Fehlschlaegen
+und null Skips. Im motorlosen Gesamtstack waren `dry_run=true`,
+`allow_rs485=false`, genau ein `/odom`-Publisher (`hwt601_mapping_ekf`), stabile
+HWT-Bereitschaft, gueltiger LiDAR-Matcher, beide VL53 mit rund 3,9 Hz,
+Not-Aus-Status false und Explorer idle ohne Auftrag. Das Live-Kartenbild
+lieferte bereits bei 0,31 m Analyseabstand einen 0,614-m2-Zielbereich mit
+0,660 m Engstellenabstand; beide Endpunkte lagen in derselben echten
+Costmap-Komponente bei Kosten 82/70 unter der Grenze 90. Live blieben
+`room_transition_confirmed=false` und `map_ready_to_save=false`. Beim Shutdown
+trat nur das bekannte LDLiDAR-Buffer-Overflow-/rclpy-Doppelshutdown-Rauschen
+auf; anschliessend waren alle Prozesse beendet und Basis-, HWT- sowie
+LiDAR-Port frei. Die reale Wiederholung steht noch aus.
+
+**Offene Risiken:** Die Livekarte unmittelbar nach dem *bewegten* Rundblick
+kann eine andere Engstellengeometrie als der motorlose Stillstand zeigen. Der neue Plan wird deshalb erst
+freigegeben, wenn Zielbereich und beide Endpunkte gross/genug, frisch und in
+der echten Nav2-Costmap erreichbar sind. Eine reale Tuerdurchfahrt ist erst
+bestanden, wenn `portal_crossings=1`, die Karte Arbeitszimmer und Flur
+zusammenhaengend zeigt und die anwesende Person die physische Flureinfahrt
+bestaetigt. Kein einzelnes Softwaremerkmal ersetzt diese Beobachtung.
+
+**Rueckfallweg:** Overlay nicht laden oder
+`connected_portal_analysis_clearance_m: 0.0` setzen; damit ist die neue
+Engstellenerkennung vollstaendig deaktiviert. `required_portal_crossings: 0`
+stellt den allgemeinen Abschlussvertrag wieder her. Nav2- und
+Kollisionsparameter wurden nicht veraendert.
+
+---
+
+## 2026-09-11 — Arbeitszimmer-Flur-Test fehlgeschlagen; Portal-Prioritaet korrigiert
+
+**Entscheidung:** Fuer den ersten Mehrbereichstest gilt ein eigenes begrenztes
+Profil `hwt601_office_hall_params.yaml`. Ein darin erkannter Portalplan erhaelt
+nun ausdruecklich Vorrang vor weiteren normalen Frontiers im Startraum. Diese
+Prioritaet ist ueber `portal_priority_when_available` nur fuer das
+Zwei-Bereich-Profil aktiv; Standard- und Tuerprofil behalten das bisherige
+Verhalten. Ein zweiter Portalwechsel, Blindfahrt und automatische Rueckkehr
+bleiben gesperrt. OAK bleibt aus.
+
+**Grund / beobachtete Evidenz:** Der anwesende Nutzer beobachtete eindeutig,
+dass der Roboter das Arbeitszimmer nie verliess. Damit ist der Test nicht
+bestanden. Die erste Auswertung hatte 95,291 % zusammenhaengende freie
+Kartenpixel faelschlich als physische Flurdurchfahrt gewertet. Der offene
+Tuerblick liess den LiDAR den Flur aus dem Arbeitszimmer einzeichnen; reine
+Pixelkonnektivitaet beweist weder eine Schwellenueberquerung noch befahrenen
+Flur.
+
+Der Bag bestaetigt die Beobachtung. Nach 361,7 Grad Rundblick erreichte der
+Roboter Ziele bei `(0,92, -0,07)` und `(1,29, 1,64) m`, blieb damit aber im
+Arbeitszimmer. Die Fahrt nach `(1,95, 0,71) m` wurde nach 120 s abgebrochen,
+ein Ziel `(2,36, 2,39) m` war nicht planbar, und die letzte Fahrt nach
+`(-0,62, -1,54) m` lief erneut in das 120-s-Limit. Erst danach meldete die
+Costmap einen Portalplan zum getrennten Zielbereich: Vorpunkt
+`(1,755, 1,851) m`, Fernpunkt `(2,085, 2,331) m`, Zielbereich 1,569 m2,
+Brueckenweg 0,832 m. Gleichzeitig existierten noch fuenf normale,
+unprojizierte Frontiers. Der Code gab diesen immer Vorrang und fuhr deshalb
+statt des erkannten Flurportals wieder ein Zimmerziel an. Am Ende standen
+`portal_crossings=0`, 47,87 % Spurabdeckung und
+`failed: Zu viele nicht erreichbare Erkundungsziele`.
+
+**Betroffene Dateien und Hardware:** Neues Explorerprofil, opt-in
+Portalprioritaet und zugehoerige Vertragstests; Dokumentation. Im Echtlauf
+waren beide Motoren, HWT601, Encoder,
+STL-27L, beide VL53 und `collision_monitor` aktiv. Die OAK war aus. Lokale
+Evidenz, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-office-hall-20260911-1734` (824 MiB) und
+`~/.local/share/amadeus/maps/hwt601-office-hall-20260911-1734`. SHA-256 der
+Bag-Datenbank: `131e10b08f68d22f04faf83a173d385d791e25fc2077dcaa09bea9623c503106`;
+Karten-PGM: `18944a0746be4421306ac5a2b159b5ee05c5c54b59d79bb1ba8c1ae5e942deb2`.
+
+**Teststatus:** Der erste Echtlauf ist als Arbeitszimmer-Flur-Test
+fehlgeschlagen. Build und Vertragstests werden nach der opt-in Korrektur erneut
+ausgefuehrt. Im
+motorlosen Gesamt-Preflight blieb der Basisport geschlossen, genau ein
+`/odom`-Publisher war aktiv, HWT-Bias war stabil/eingefroren und der
+LiDAR-Matcher bereit. Im Echtlauf blieben Basiszaehler fuer ungueltige
+Befehle, Modbus-/Encoderfehler, Encoder-Rejects und Rebases null. Der letzte
+HWT-Status hatte null Rejects; der letzte LiDAR-Status einen Reject bei 3.824
+akzeptierten Matches. Nach Missionsende waren Soll und Ist 0 rpm. Bag wurde
+vor dem Stack beendet; danach waren beide seriellen Ports frei.
+
+**Offene Risiken:** Die neue Portalprioritaet ist noch nicht motorlos im
+Gesamtstack und noch nicht real abgenommen. Der zweite Lauf ist erst bestanden,
+wenn die anwesende Person die physische Schwellenueberquerung und Flurfahrt
+bestaetigt; Kartenpixel oder ein Nav2-Erfolg allein reichen nicht. Auch die
+wiederkehrenden SLAM-Queue-/Regelzykluswarnungen bleiben vor einer groesseren
+Wohnungsfahrt auszuwerten.
+
+**Rueckfallweg:** Das Overlay nicht laden oder
+`portal_crossing_enabled: false` verwenden. Ohne einen neuen Explore-Auftrag
+bleibt der Fahrpfad inaktiv. Ein laufender Auftrag wird ueber den vorhandenen
+Missionsabbruch beendet; die unveraenderten 0,8-s-Sensorgates und der
+`collision_monitor` bleiben die technische Rueckfallebene.
+
+---
+
+## 2026-09-11 — Nav2-Tuerfahrt erreicht Durchgang; Auslauf-Nachpruefung korrigiert
+
+**Entscheidung:** Ein `NavigateToPose`-Erfolg hinter einer verbunden gewordenen
+Tuer bleibt nur ein Zwischenergebnis. Der Explorer bestaetigt weiterhin die
+gemessene Kartenpose relativ zum festen Fernseitenpunkt. Meldet Nav2 wegen
+seiner Toleranzen zu frueh Erfolg, darf genau ein zweites, aus der tatsaechlich
+fehlenden Strecke berechnetes Nav2-Auslaufziel folgen. Jedes einzelne Ziel
+bleibt hoechstens 1,00 m entfernt; Zielzelle, verbundene Costmap, Polygon-
+Footprint, VL53 und `collision_monitor` werden nicht umgangen. Ohne sicheren
+zweiten Zielpunkt oder ohne gemessenen Pflichtauslauf bleibt der Test
+fail-closed.
+
+**Grund / beobachtete Evidenz:** Im vierten autonomen Tuerlauf absolvierte der
+Roboter den Rundblick und beide bewegten Nav2-Vorpunkte. Danach war die Tuer
+regulaer verbunden; Nav2 plante vom Kartenpunkt etwa `(0,64, -0,06) m` zum
+Auslaufziel `(1,53, -0,20) m` und meldete Erfolg. Die unabhaengige
+Explorer-Nachpruefung meldete jedoch korrekt
+`portal_connected_exit_not_reached`. Bag-Rekonstruktion: Der letzte stabile
+Portalplan hatte Nah-/Fernpunkt `(0,751, -0,031)` / `(1,291, -0,151) m` und
+Mitte `(1,021, -0,091) m`. Bei Nav2-Erfolg lag `map->base_link` erst bei rund
+`(1,151, -0,146) m`, also 0,383 m vor dem angeforderten Ziel und 0,138 m vor
+dem Fernseitenpunkt. Ursache ist die moegliche Kombination aus 0,30 m
+NavFn-Planertoleranz und 0,15 m Controller-Zieltoleranz; beide lagen bereits
+im unveraenderten Nav2-Realprofil. Der Roboter lag zwar etwa 0,132 m hinter
+der Portalmitte, der verlangte robuste Auslauf von 0,125 m *hinter dem
+Fernseitenpunkt* war aber noch nicht erreicht.
+
+Die Korrektur kompensiert den real gemessenen vorzeitigen Zielabschluss statt
+globale Nav2-Toleranzen fuer alle Missionen zu veraendern. Offline auf der
+letzten echten Costmap ergibt sich nach dem ersten Teilerfolg ein zweites Ziel
+bei `(1,861, -0,289) m`, nur 0,725 m von der Stillstandsposition entfernt und
+damit innerhalb der unveraenderten Grenze. Ein eigener Regressionstest bildet
+den ersten vorzeitigen Erfolg und den zweiten bestaetigten Auslauf nach.
+
+**Betroffene Dateien und Hardware:** `explore_node.py`, beide Explorerprofile,
+Vertragstests und Tuerdokumentation. OAK blieb aus. Die reale Fahrt verwendete
+Motoren, HWT601, Encoder, STL-27L und beide VL53. Lokale Evidenz, nicht
+committen: `~/.local/share/amadeus/bags/hwt601-door-retest3-20260911-163204`,
+432,0 MiB, SHA-256
+`ad0dfd52d9e60a37f6e41e1946f0bc97dabb3c9b570669437d5202990a393a9b`.
+
+**Teststatus:** Der Rundblick war mit HWT/EKF/LiDAR/Encoder
+`360,728/360,731/361,000/355,533 Grad` kohaerent. Alle 3.171 Not-Aus-Proben
+waren frei. VL53-Status/linke/rechte Punktwolke hatten maximal
+`0,506/0,505/0,504 s` Luecke. Basiszaehler fuer ungueltige Befehle,
+Modbus-/Encoderfehler und Rebases blieben null; beide Motoren standen nach der
+fail-closed Meldung mehrfach mit Soll und Ist 0 rpm. HWT endete mit 60.707
+publizierten Werten ohne Reject, der LiDAR-Beobachter mit 3.187 akzeptierten,
+null verworfenen Matches. Maximalbefehle waren 0,10 m/s und 0,1604 rad/s.
+Build und 71 Explorer-Tests bestanden; der gespeicherte Gesamtbericht enthaelt
+282 Tests ohne Fehler, Fehlschlag oder Skip. Die echte Costmap-Wiederauswertung
+erzeugt das erwartete begrenzte zweite Ziel. Im anschliessenden motorlosen
+Gesamtstart waren `dry_run=true`, `allow_rs485=false`, der Basisport
+ungeoeffnet, der Explorer idle, `portal_connected_max_goals=2` und genau ein
+`/odom`-Publisher aktiv; HWT blieb stabil und der LiDAR-Matcher akzeptierte
+260/260 Updates.
+
+**Externe Abnahme:** Der anwesende Nutzer bestaetigte unmittelbar nach dem
+Stillstand, dass der Roboter vollstaendig in die Kueche gefahren war. Das
+stimmt mit der rekonstruierten Chassis-Hinterkante rund 2,2 cm hinter der
+Portalmitte ueberein. Damit ist die physische Tuerschwellenueberquerung dieses
+Laufs bestanden.
+
+**Offene Risiken:** Die neu implementierte zweite Nav2-Auslaufetappe ist noch
+nicht end-to-end real gefahren. Die strengere interne Einzelabnahme gilt
+softwareseitig erst als bestanden, wenn der Explorer `portal_crossings=1` und
+einen partiellen Erfolg meldet. Die visuell bestandene Schwellenueberquerung
+ersetzt diesen robusten Auslaufvertrag nicht.
+
+**Rueckfallweg:** `portal_connected_max_goals` auf 1 setzen oder den getrennten
+Tuerwrapper nicht starten. Dann bleibt das Verhalten des vierten Laufs erhalten:
+Nav2-Teilerfolg wird erkannt, Fahrtor sperrt und die Mission endet ohne weitere
+Bewegung. Keine globale Nav2-Toleranz wurde geaendert.
+
+---
+
+## 2026-09-11 — Drei autonome HWT-Tueranfahrten; Portalidentitaet korrigiert
+
+**Entscheidung:** Die erste reale HWT-Tuerabnahme bleibt ein getrenntes,
 zustandsunabhaengiges Profil statt des historischen 0,20-m-Restwegprofils.
-Der Roboter wird mittig und parallel mit seiner vordersten Kante 0,10 m vor
-der offenen Tuerebene aufgestellt. `hwt601_door_only_params.yaml` faehrt genau
-0,60 m mit hoechstens 0,04 m/s, bestaetigt den realen Rumpfweg durch lokalen
-LiDAR-Abgleich und beendet die Mission sofort. Encoder dienen nur als
-Gesundheitspruefung und harte 1,00-m-Radweggrenze. Ein eigener Wrapper fordert
-offene/gesicherte Tuer, korrekte Ausrichtung, freien Zielbereich, HWT-
-Stillstand und persoenliche Fahrfreigabe explizit an.
+Nach dem segmentierten Rundblick waehlt und richtet der Roboter den vorderen
+Durchgang selbst aus. Eine nur erreichte Nav2-Anfahrt ist noch kein Erfolg;
+erst der bestaetigte Portalwechsel beendet die Einzelabnahme. Verschiebt neue
+Kartenevidenz den sicheren Vorpunkt, darf Nav2 bis zu dreimal kontrolliert
+nachruecken. Die direkte LiDAR-Bruecke bleibt unveraendert auf hoechstens
+1,00 m begrenzt. Dieselbe Tuer wird beim Nachruecken ueber ihre lokalen
+Nah-/Fernendpunkte, ihre Mitte und eine gleichbleibende Durchfahrtsrichtung
+identifiziert. Der Schwerpunkt des noch wachsenden Zielraums ist dafuer keine
+stabile Identitaet.
 
-**Grund / beobachtete Evidenz:** HWT-Rundblick, 0,50-m-Translation und die
-3,82-m-Raumerkundung liefen mit kohaerenter HWT-/EKF-/LiDAR-Gier und ohne
-LiDAR-Reject. Damit ist eine nur 0,10 m laengere Einzeletappe der naechste
-kleine Pruefschritt. Die Plattformhuelle reicht relativ zur Antriebsachse von
-x=-0,11 bis +0,31 m. Beginnt die Front 0,10 m vor der Tuerebene, steht die
-Achse 0,41 m davor; nach 0,60 m Weg liegt die Hinterkante 0,08 m dahinter.
-Bei der gemessenen schmalsten Tuer von 0,68 m und 0,50 m gepaddelter Breite
-bleiben mittig 0,09 m je Seite. Darum gelten strengere Abbruchgrenzen von
-0,04 m lateral und 0,10 rad Heading; der Collision-Monitor bleibt zusaetzlich
-aktiv.
+**Grund / beobachtete Evidenz:** Im ersten Echtlauf absolvierte der Roboter den
+Rundblick mit 360,7 Grad, erkannte hinter der Tuer einen getrennten Bereich von
+4,24 m2, richtete sich selbst aus und erreichte ein Nav2-Ziel etwa 0,31 m vor
+ihm. Waehrend der anschliessenden Zielausrichtung verschob die Costmap den
+sicheren Portal-Vorpunkt von etwa 0,34 m auf 0,64 m vor dem Start. Die
+Roboterpose lag erst bei etwa 0,22 m; Ziel plus 0,25-m-Auslauf haetten deshalb
+1,21 m Direktfahrt verlangt. Der bisherige Code pruefte nach dieser
+Verschiebung nicht erneut, ob ein weiterer Nav2-Vorpunkt noetig ist, sondern
+brach korrekt mit `portal_traverse_out_of_bounds` ab. Das ist kein IMU- oder
+LiDAR-Ausfall und kein Grund, die 1,00-m-Grenze zu erhoehen.
 
-**Betroffene Dateien und Hardware:** Neues Tuerprofil, eigener Startwrapper,
-Vertragstest, Kartierungsanleitung und Uebergabedokumentation. Der kuenftige
-Test bewegt beide Fahrmotoren durch genau eine offene Tuer. OAK bleibt aus;
-HWT, LiDAR, Encoder und beide VL53 bleiben aktiv.
+**Betroffene Dateien und Hardware:** `explore_node.py`, beide Explorerprofile,
+Vertragstests, Tuerwrapper und Dokumentation. Beim Echtlauf bewegten beide
+Motoren den Roboter fuer Rundblick, Ausrichtung und 0,21 m Encoder-Nettofahrt;
+OAK blieb aus. Lokale Evidenz:
+`~/.local/share/amadeus/bags/hwt601-door-auto-20260911-1458` und Karte
+`amadeus/20260911T130417266664Z-f5664a7aa21d`; nicht committen. Bag-SHA-256:
+`56024b504fe38690b4f1e372eae1d1124fe0b07af4cd8973dcff93f366a0177f`.
 
-**Teststatus:** Nur Software vorbereitet; noch keine Tuerfahrt ausgefuehrt.
-Der Wrapper startet keine Mission selbst. Mit aktuell geschlossenen Tueren ist
-keine Bewegung erlaubt. `explore` wurde erfolgreich neu gebaut, alle 63
-Pakettests sowie der gesamte vorhandene Bericht mit 274 Tests bestehen ohne
-Fehler; Wrapper-Syntax und ausfuehrbares Dateibit sind geprueft.
+**Teststatus:** Der reale Test ist als sichere Anfahrt bestanden, als
+Tuerdurchfahrt noch nicht bestanden. Fahrtor sperrte nach dem Fehler, Soll und
+Ist standen bei 0, beide Motoren bei 0 rpm. In 1.916 Not-Aus-Proben war keine
+aktiv; Basis: null ungueltige Befehle, Modbusfehler, Encoder-Rejects und
+Encoder-Rebases. HWT publizierte 45.802 korrigierte Werte ohne Reject; der
+LiDAR-Beobachter akzeptierte 2.424 Matches ohne Reject, zuletzt 0,0149 m Kosten
+und 94,7 % Stuetzung. Die aufgezeichneten Befehle blieben unter 0,0166 m/s und
+0,12 rad/s. Der neue Restaging-Vertrag hat eigene Erfolgs-, Grenz- und
+Limit-Regressionstests; Build und alle 66 Explorer-Tests bestanden. Der
+Gesamtbericht enthaelt 277 Tests ohne Fehler, Fehlschlag oder Skip. Im
+anschliessenden motorlosen Gesamtstart waren `dry_run=true`,
+`allow_rs485=false`, genau ein `/odom`-Publisher und der Explorer idle mit
+`bounded_front_door_navigation`; die Liveparameter bestaetigten drei
+Vorpunkte, 1,00 m Direktlimit und Erfolg erst nach Portalwechsel. HWT-Bias war
+stabil, der LiDAR-Observer bereit. Es wurde kein Auftrag gesendet.
 
-**Offene Risiken:** Der LiDAR-Abgleich mit einem eingefrorenen Startscan ist
-ueber 0,60 m und den Sichtwechsel durch die Tuere real noch nicht abgenommen.
-Schwelle, Tuerschwenkbereich, manuelle Zentrierung und freier Zielraum muessen
-vor Ort kontrolliert werden. Erfolg dieser Einzeletappe gibt weder autonome
-Tuersuche noch Mehrraumexploration frei.
+Im zweiten beaufsichtigten Echtlauf blieb der Roboter im Rundblick und erreichte
+307,4 Grad HWT-/EKF-Drehung; die Encoder meldeten 302,9 Grad. Dann lieferte der
+gemeinsame Dual-VL53-Prozess 10,924 s lang weder Status noch beide Punktwolken.
+Das Fahrtor sperrte nach rund 0,8 s wie vorgesehen und beide Motoren standen;
+acht Sekunden spaeter brach der Explorer mit `no_progress` bei 307,3 Grad ab,
+noch vor Zielwahl oder Translation. HWT lief waehrenddessen weiter, LiDAR und
+Encoder blieben fehlerfrei, Not-Aus war frei. Der VL53-Prozess erholte sich
+selbst. Ein Vergleich mit fuenf frueheren Bags ueber rund 32 Minuten ergab
+sonst maximal 0,854 s VL53-Luecke; der 10,924-s-Haenger war ein einzelner
+Ausreisser. Deshalb wartet nur der rotationsreine Rundblick nun bis zu 15 s
+auf die sichere Wiederfreigabe. Das 0,8-s-Fahrtor bleibt unveraendert und die
+Vorwaertsfahrt bricht weiterhin nach hoechstens 8 s ohne Fortschritt ab.
+Lokale Evidenz: Bag
+`~/.local/share/amadeus/bags/hwt601-door-retest-20260911-155022`, SHA-256
+`d1606abcada94bc2127149088553615449b92de00c4cdf0bb04d7692e0f06c09`,
+Diagnosekarte `amadeus/20260911T135911461849Z-d26058427879`; nicht committen.
 
-**Rueckfallweg:** Wrapper nicht starten beziehungsweise Mission abbrechen;
-Profil ist ein getrenntes Opt-in und aendert weder normale Erkundung noch das
-historische Profil. Sensorverlust, Grenzverletzung, fehlender Fortschritt,
-Zeitlimit oder Encoderradbudget beenden die Etappe fail-closed.
+Der dritte Echtlauf bestaetigte die neue Rundblickgrenze unter normalen
+Sensorbedingungen: EKF/LiDAR/Encoder maßen `360,787/360,750/355,410 Grad`;
+die groesste Luecke von VL53-Status/linker/rechter Punktwolke betrug nur
+`0,514/0,506/0,508 s`. Danach erkannte der Roboter autonom einen 1,758-m2-
+Zielbereich und erreichte per Nav2 den ersten Vorpunkt bei etwa
+`(0,484, -0,071) m`; die Encoderpose endete bei
+`(0,342, -0,088, -0,373 rad)`. Die Karte wuchs waehrend dieser 0,34-m-Anfahrt:
+Der Zielbereich erreichte 3,859 m2 und sein Schwerpunkt wanderte von
+`(2,333, 0,008) m` nach `(3,162, -0,170) m`, also rund 0,85 m. Die lokale
+Tuergeometrie blieb dagegen dieselbe: Portalmitte nur rund 0,10 m versetzt,
+Nah-/Fernendpunkte jeweils weniger als 0,15 m. Die alte Schwerpunktzuordnung
+ueberschritt dadurch den 0,60-m-Radius und meldete falsch
+`portal_geometry_changed`. Der Fahrtpfad reagierte trotzdem fail-closed:
+keine direkte Portalbruecke, Fahrtor `blocked`, beide Motoren 0 rpm.
+
+Die Zuordnung verwendet deshalb nun ausschliesslich die lokale Tuergeometrie.
+Neben Nahpunkt, Fernpunkt und Mitte innerhalb des bestehenden 0,60-m-Radius
+muss die Durchfahrtsrichtung innerhalb 45 Grad bleiben; eine umgekehrte oder
+andere nahe Oeffnung wird nicht uebernommen. Eine Offline-Wiederauswertung der
+fuenf Costmap-Zeitpunkte aus dem Echtlauf erkennt dieselbe Tuer nun durchgehend.
+Zwei neue Regressionstests pruefen Raumwachstum und Richtungsumkehr. Build und
+68 Explorer-Tests bestanden; der Gesamtbericht enthaelt 279 Tests ohne Fehler,
+Fehlschlag oder Skip. Lokale Evidenz, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-door-retest2-20260911-1610`, 272,3 MiB,
+SHA-256 `9f228788a63b91dc69026d1995e2736cfe48f9d2b02ef1eb773a251610976267`.
+Im gesamten Bag waren alle 2.003 Not-Aus-Proben frei; Basiszaehler fuer
+ungueltige Befehle, Modbus-/Encoderfehler und Rebases blieben null. Der
+LiDAR-Beobachter endete mit 2.243 akzeptierten, null verworfenen Matches,
+4,1-mm-Kosten und 99,7 % Stuetzung. HWT blieb bereit und stabil.
+
+Der anschliessende motorlose Gesamtstart lud exakt das Tuerprofil mit
+`scan_no_progress_timeout_s=15`, `door_no_progress_timeout_s=8` und drei
+Vorpunkten. Die Basis meldete `dry_run=true`, `allow_rs485=false`; am
+Basisport war kein Prozess offen. Genau ein `/odom`-Publisher war aktiv, der
+Explorer blieb ohne Auftrag idle. HWT-Bias und LiDAR-Matcher waren stabil,
+letzterer mit 181 akzeptierten und null verworfenen Matches. Es wurde keine
+Mission gesendet.
+
+**Offene Risiken:** Der korrigierte Ablauf hat die Tuer noch nicht real
+ueberquert; der naechste Lauf muss nach der bestandenen Anfahrt erstmals die
+Vorausrichtung und frische LiDAR-Korridorpruefung vor der begrenzten Bruecke
+erreichen. Die 15-s-Rundblick-Wiederaufnahme nach einem tatsaechlichen
+VL53-Haenger ist nur durch die aufgezeichnete Zeitreihe, noch nicht durch einen
+absichtlich oder erneut auftretenden Aussetzer belegt. Die
+gespeicherte 263-x-251-Karte bei 3 cm/Zelle enthaelt noch grosse unbekannte
+Keile; sie ist Diagnose, keine Produktivkarte. Der Frontkegel beweist keine
+allgemeine Tuersuche in beliebiger Richtung. Erfolg gibt noch keine weitere
+Mehrraumfahrt frei.
+
+**Rueckfallweg:** `portal_max_staging_goals` auf 1 setzen beziehungsweise den
+Wrapper nicht starten oder die Mission abbrechen. Das Profil ist getrenntes
+Opt-in. Sensorverlust, Nav2-Fehler, instabile Geometrie, dritter Vorpunkt,
+Zeitlimit oder mehr als 1,00 m direkte Restfahrt beenden weiterhin fail-closed.
 
 ---
 
