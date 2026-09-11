@@ -1,0 +1,27 @@
+# Einmalige, beaufsichtigte HWT601-Abnahme durch genau eine offene Tuer.
+#
+# Aufstellung: Roboter mittig und parallel zur Durchgangsachse, vorderste
+# Chassiskante 0,10 m vor der Tuerebene. Bei x=-0,11..+0,31 m relativ zur
+# Antriebsachse bringt ein realer 0,60-m-Weg die Hinterkante rechnerisch
+# 0,08 m hinter die Tuerebene. LiDAR misst den Chassisweg; Encoder sind nur
+# Gesundheitspruefung und hartes Radbudget. Danach endet die Mission sofort.
+explore_node:
+  ros__parameters:
+    overall_timeout_s: 120.0
+    max_frontier_goals: 1
+    max_failed_goals: 1
+    initial_scan_enabled: false
+    scan_only: false
+    coverage_enabled: false
+    portal_crossing_enabled: false
+
+    door_supervised_wheel_budget_mode: false
+    door_lidar_motion_mode: true
+    door_traverse_distance_m: 0.60
+    door_encoder_wheel_budget_m: 1.00
+    door_linear_speed_mps: 0.04
+    door_timeout_s: 90.0
+    door_no_progress_timeout_s: 8.0
+    door_max_angular_speed_radps: 0.04
+    door_max_heading_error_rad: 0.10
+    door_max_lateral_error_m: 0.04

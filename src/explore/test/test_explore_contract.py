@@ -949,6 +949,45 @@ def test_hwt601_translation_only_profile_is_one_bounded_lidar_stage():
     assert door_exit < initial_scan < frontier_detection
 
 
+def test_hwt601_door_only_profile_is_one_tight_lidar_stage():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' /
+         'hwt601_door_only_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['overall_timeout_s'] <= 120.0
+    assert parameters['max_frontier_goals'] == 1
+    assert parameters['max_failed_goals'] == 1
+    assert parameters['initial_scan_enabled'] is False
+    assert parameters['scan_only'] is False
+    assert parameters['coverage_enabled'] is False
+    assert parameters['portal_crossing_enabled'] is False
+    assert parameters['door_supervised_wheel_budget_mode'] is False
+    assert parameters['door_lidar_motion_mode'] is True
+    assert parameters['door_traverse_distance_m'] == 0.60
+    assert (
+        parameters['door_traverse_distance_m']
+        < parameters['door_encoder_wheel_budget_m'] <= 1.00)
+    assert parameters['door_linear_speed_mps'] <= 0.04
+    assert parameters['door_timeout_s'] <= 90.0
+    assert parameters['door_no_progress_timeout_s'] <= 8.0
+    assert parameters['door_max_angular_speed_radps'] <= 0.04
+    assert parameters['door_max_heading_error_rad'] <= 0.10
+    assert parameters['door_max_lateral_error_m'] <= 0.04
+
+    wrapper_path = (
+        PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+        'start_hwt601_tuerdurchfahrt.sh')
+    wrapper = wrapper_path.read_text()
+    assert wrapper_path.stat().st_mode & 0o111
+    assert 'AMADEUS_TUER_OFFEN' in wrapper
+    assert 'AMADEUS_TUER_AUSGERICHTET' in wrapper
+    assert 'AMADEUS_TUERZIEL_FREI' in wrapper
+    assert 'active_drive:=true' in wrapper
+    assert 'enable_auto_explore:=true' in wrapper
+    assert 'hwt601_door_only_params.yaml' in wrapper
+
+
 def test_hwt601_room_only_profile_cannot_use_door_or_portal_motion():
     parameters = yaml.safe_load(
         (PACKAGE_ROOT / 'config' / 'hwt601_room_only_params.yaml').read_text()

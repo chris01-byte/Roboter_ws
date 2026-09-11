@@ -1,5 +1,35 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Tuerdurchfahrt: einzelne 0,60-m-Stufe vorbereitet (11.09.2026)
+
+Nach bestandenem Rundblick, 0,50-m-Geradelauf und kohaerenter Raumerkundung
+ist die erste frische Tueretappe als getrenntes Opt-in vorbereitet. Ausschliesslich
+`tools/kartierung/start_hwt601_tuerdurchfahrt.sh` mit
+`hwt601_door_only_params.yaml` verwenden. Das historische
+`door_test_params.yaml` beginnt bei einem bereits fast durchgefahrenen Roboter
+und ist fuer diese Abnahme falsch.
+
+Aufstellung: Tuer vollstaendig offen und gesichert, mindestens 0,68 m breit;
+Roboter mittig und parallel, vorderste Chassiskante 0,10 m vor der Tuerebene;
+Arm/Greifer in Transportpose; Zielraum und Bremsweg frei. Das Profil faehrt
+einmal 0,60 m mit maximal 0,04 m/s. LiDAR ist die reale Wegwahrheit, Encoder
+sind nur Gesundheitspruefung und 1,00-m-Hardlimit. Seitlich 0,04 m und Heading
+0,10 rad sind fail-closed; danach endet die Mission sofort. OAK bleibt aus.
+
+Der Wrapper verlangt zusaetzlich zu HWT-Stillstand und Fahrfreigabe:
+`AMADEUS_TUER_OFFEN=JA`, `AMADEUS_TUER_AUSGERICHTET=JA` und
+`AMADEUS_TUERZIEL_FREI=JA`. Er sendet selbst keinen Explore-Auftrag. Vor der
+Mission mindestens 30 s Stillstand und vollstaendigen Live-Preflight abwarten.
+Aktuell sind alle Tueren geschlossen; deshalb wurde keine Bewegung ausgefuehrt.
+`explore` ist im Arbeitsbaum gebaut; 63/63 Pakettests und 274/274 Tests im
+Gesamtbericht bestehen, ebenso Wrapper-Syntax und Ausfuehrungsbit.
+
+Rueckfall: Wrapper nicht starten oder den separat gesendeten Auftrag abbrechen.
+Das Profil veraendert den normalen Kartierungsweg nicht und gibt keine
+Mehrraumfahrt frei.
+
+---
+
 ## HWT-Raumerkundung: Sensorfusion bestanden, Zeitlimit angepasst (11.09.2026)
 
 Der erste autonome Lauf des geschlossenen Raumprofils absolvierte einen

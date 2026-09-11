@@ -115,7 +115,12 @@ Raumerkundung fuhr 3,823 m und drei Frontiers; HWT/EKF/LiDAR-Netto-Gier
 `345,721/345,757/344,000 Grad`, null LiDAR-Rejects und keine versetzte
 Raumkopie. Das 600-s-Limit endete bei 50,302 % Abdeckung und ist deshalb auf
 weiterhin begrenzte 900 s angepasst; vollstaendige Raumabnahme, Tuer-,
-Rueckkehr- und Mehrraumfahrt bleiben offen.
+Rueckkehr- und Mehrraumfahrt bleiben offen. Eine frische einzelne
+Tuerdurchfahrt ist softwareseitig als `hwt601_door_only_params.yaml` plus
+`start_hwt601_tuerdurchfahrt.sh` vorbereitet: 0,60 m LiDAR-bestaetigt,
+0,04 m/s, 1,00 m Encoderradbudget, enge Kurs-/Seitengrenzen und sofortiger
+Stopp. Noch nicht real gefahren; das alte 0,20-m-Tuerprofil ist dafuer
+ausdruecklich nicht zu verwenden.
 
 ---
 

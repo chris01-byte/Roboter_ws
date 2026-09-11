@@ -155,6 +155,41 @@ Der Start sendet weiterhin keinen Auftrag. Eine neue Ausfuehrung braucht eine
 neue persoenliche Fahrfreigabe; das erhoehte Zeitbudget ist keine automatische
 Fahrfreigabe.
 
+Nach dem bestandenen HWT-Rundblick, der 0,50-m-Translation und einer
+kohaerenten Raumerkundung darf genau eine Tuer mit dem getrennten Profil
+`hwt601_door_only_params.yaml` abgenommen werden. Es faehrt ausschliesslich
+0,60 m vorwaerts bei maximal 0,04 m/s, misst den echten Rumpfweg mit dem beim
+Start eingefrorenen LiDAR-Scan, nutzt 1,00 m Encoderradweg als harte
+Notgrenze und endet danach sofort. Frontiers, Portale, Rundblick und Coverage
+sind dabei aus.
+
+Vor dem Start die Tuer vollstaendig oeffnen und gegen Zuschlagen sichern. Den
+Roboter mittig und parallel zur Durchgangsachse stellen, mit der vordersten
+Chassiskante 0,10 m vor der Tuerebene. Der Durchgang muss mindestens 0,68 m
+breit sein; Arm/Greifer bleiben in Transportpose. Hinter der Tuer muessen fuer
+die gesamte Plattform, 0,60 m Weg und Bremsreserve Boden und Nahbereich frei
+sein. Mit der bekannten Huelle liegt die Hinterkante nach der Etappe
+rechnerisch 0,08 m hinter der Tuerebene.
+
+Erst nach dieser physischen Pruefung und einer neuen persoenlichen
+Fahrfreigabe starten:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_TUER_OFFEN=JA \
+AMADEUS_TUER_AUSGERICHTET=JA \
+AMADEUS_TUERZIEL_FREI=JA \
+AMADEUS_HWT601_STILLSTAND=JA \
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_hwt601_tuerdurchfahrt.sh
+```
+
+Auch dieser Start bewegt noch nichts. Nach mindestens 30 s absolutem
+Stillstand werden HWT, LiDAR, Odometrie, beide VL53, Collision-Monitor und
+Basis im Live-Preflight geprueft; erst danach wird genau ein Explore-Auftrag
+gesendet. Jede Wiederholung benoetigt eine neue Freigabe und erneute
+Aufstellungspruefung.
+
 Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
 LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
 sind, genau einen Auftrag senden:
@@ -199,11 +234,11 @@ Kontur. Der Explorer erodiert Ziel- und Abdeckungsflaeche kreisfoermig um
 breit; fuer den lokal gepaddeten Footprint bleiben 0,09 m je Seite.
 Ein motorloser NavFn-Test plante auf einer 3-cm-Synthetikkarte geradlinig
 durch eine 0,69-m-Oeffnung (`ComputePathToPose: SUCCEEDED`).
-Fuer die einzelne reale Tuerabnahme muss der App-Launch den Overlay
-`install/explore/share/explore/config/door_test_params.yaml` erhalten. Er
-begrenzt auf Rundblick/Vorausrichtung plus maximal ein Frontier-Ziel, schaltet
-Coverage aus und bricht nach hoechstens 300 s ab. Vor dem Explore-Kommando
-beide VL53-Punktwolken und die aktiven Parameter auslesen.
+Das alte `door_test_params.yaml` dokumentiert nur die historische 0,20-m-
+Restwegetappe aus einer bereits begonnenen Tuerfahrt und darf nicht fuer einen
+frischen HWT-Tuerstart verwendet werden. Dafuer ist ausschliesslich der oben
+beschriebene `start_hwt601_tuerdurchfahrt.sh` vorgesehen. Vor dem
+Explore-Kommando beide VL53-Punktwolken und die aktiven Parameter auslesen.
 Die Mehrraumstrategie und Abnahmereihenfolge stehen in
 `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`.
 

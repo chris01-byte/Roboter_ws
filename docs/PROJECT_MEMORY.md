@@ -17,6 +17,53 @@ Rückfallweg:
 
 ---
 
+## 2026-09-11 — Frische HWT-Tuerdurchfahrt als einzelne LiDAR-Etappe vorbereitet
+
+**Entscheidung:** Die erste reale HWT-Tuerabnahme verwendet ein neues,
+zustandsunabhaengiges Profil statt des historischen 0,20-m-Restwegprofils.
+Der Roboter wird mittig und parallel mit seiner vordersten Kante 0,10 m vor
+der offenen Tuerebene aufgestellt. `hwt601_door_only_params.yaml` faehrt genau
+0,60 m mit hoechstens 0,04 m/s, bestaetigt den realen Rumpfweg durch lokalen
+LiDAR-Abgleich und beendet die Mission sofort. Encoder dienen nur als
+Gesundheitspruefung und harte 1,00-m-Radweggrenze. Ein eigener Wrapper fordert
+offene/gesicherte Tuer, korrekte Ausrichtung, freien Zielbereich, HWT-
+Stillstand und persoenliche Fahrfreigabe explizit an.
+
+**Grund / beobachtete Evidenz:** HWT-Rundblick, 0,50-m-Translation und die
+3,82-m-Raumerkundung liefen mit kohaerenter HWT-/EKF-/LiDAR-Gier und ohne
+LiDAR-Reject. Damit ist eine nur 0,10 m laengere Einzeletappe der naechste
+kleine Pruefschritt. Die Plattformhuelle reicht relativ zur Antriebsachse von
+x=-0,11 bis +0,31 m. Beginnt die Front 0,10 m vor der Tuerebene, steht die
+Achse 0,41 m davor; nach 0,60 m Weg liegt die Hinterkante 0,08 m dahinter.
+Bei der gemessenen schmalsten Tuer von 0,68 m und 0,50 m gepaddelter Breite
+bleiben mittig 0,09 m je Seite. Darum gelten strengere Abbruchgrenzen von
+0,04 m lateral und 0,10 rad Heading; der Collision-Monitor bleibt zusaetzlich
+aktiv.
+
+**Betroffene Dateien und Hardware:** Neues Tuerprofil, eigener Startwrapper,
+Vertragstest, Kartierungsanleitung und Uebergabedokumentation. Der kuenftige
+Test bewegt beide Fahrmotoren durch genau eine offene Tuer. OAK bleibt aus;
+HWT, LiDAR, Encoder und beide VL53 bleiben aktiv.
+
+**Teststatus:** Nur Software vorbereitet; noch keine Tuerfahrt ausgefuehrt.
+Der Wrapper startet keine Mission selbst. Mit aktuell geschlossenen Tueren ist
+keine Bewegung erlaubt. `explore` wurde erfolgreich neu gebaut, alle 63
+Pakettests sowie der gesamte vorhandene Bericht mit 274 Tests bestehen ohne
+Fehler; Wrapper-Syntax und ausfuehrbares Dateibit sind geprueft.
+
+**Offene Risiken:** Der LiDAR-Abgleich mit einem eingefrorenen Startscan ist
+ueber 0,60 m und den Sichtwechsel durch die Tuere real noch nicht abgenommen.
+Schwelle, Tuerschwenkbereich, manuelle Zentrierung und freier Zielraum muessen
+vor Ort kontrolliert werden. Erfolg dieser Einzeletappe gibt weder autonome
+Tuersuche noch Mehrraumexploration frei.
+
+**Rueckfallweg:** Wrapper nicht starten beziehungsweise Mission abbrechen;
+Profil ist ein getrenntes Opt-in und aendert weder normale Erkundung noch das
+historische Profil. Sensorverlust, Grenzverletzung, fehlender Fortschritt,
+Zeitlimit oder Encoderradbudget beenden die Etappe fail-closed.
+
+---
+
 ## 2026-09-11 — HWT-Raumerkundung kartiert kohaerent; 10-Minuten-Limit zu kurz
 
 **Entscheidung:** Der erste autonome HWT-Test bleibt eine physisch auf genau
