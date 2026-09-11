@@ -3,7 +3,11 @@
 # modelliert sein. Dieses Profil darf keine Portal-/Tuerbruecke ausfuehren.
 explore_node:
   ros__parameters:
-    overall_timeout_s: 600.0
+    # Der erste Echtlauf benoetigte fuer den langsamen Rundblick 146 s und
+    # erreichte nach 600 s erst drei Frontiers/50,3 % Abdeckung. 15 Minuten
+    # lassen die unveraendert begrenzten acht Frontiers bzw. sechs
+    # Abdeckungsziele auslaufen, ohne das Profil unbegrenzt zu machen.
+    overall_timeout_s: 900.0
     goal_timeout_s: 120.0
     max_failed_goals: 3
     max_frontier_goals: 8

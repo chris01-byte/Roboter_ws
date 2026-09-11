@@ -134,6 +134,27 @@ die Fahrt, die 0,31-m-Front und Bremsreserve frei sein. Der Start allein loest
 keine Bewegung aus; der Auftrag bleibt separat und jede Wiederholung braucht
 eine neue persoenliche Freigabe.
 
+Fuer die anschliessende HWT-Erkundung genau eines physisch geschlossenen
+Raums gilt das eigene Profil `hwt601_room_only_params.yaml`. Es deaktiviert
+Tuer-/Portalbewegung und Rueckkehr, begrenzt auf acht Frontiers und sechs
+Abdeckungsziele und endet spaetestens nach 15 Minuten. Der erste Echtlauf
+zeigte, dass 10 Minuten nicht genuegen: Der langsame Rundblick benoetigte
+146 s; nach drei erreichten Frontiers und 3,82 m EKF-Weg wurde das vierte Ziel
+bei 50,3 % Abdeckung nur durch das Zeitlimit abgebrochen. Alle Ausgaenge
+muessen geschlossen sein:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_RAUM_GESCHLOSSEN=JA \
+AMADEUS_HWT601_STILLSTAND=JA \
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_hwt601_raumerkundung.sh
+```
+
+Der Start sendet weiterhin keinen Auftrag. Eine neue Ausfuehrung braucht eine
+neue persoenliche Fahrfreigabe; das erhoehte Zeitbudget ist keine automatische
+Fahrfreigabe.
+
 Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
 LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
 sind, genau einen Auftrag senden:

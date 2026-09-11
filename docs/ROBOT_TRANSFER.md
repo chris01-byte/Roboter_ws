@@ -1,5 +1,41 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Raumerkundung: Sensorfusion bestanden, Zeitlimit angepasst (11.09.2026)
+
+Der erste autonome Lauf des geschlossenen Raumprofils absolvierte einen
+362,2-Grad-Rundblick und drei Frontier-Ziele. Das vierte Ziel wurde nach dem
+festen 600-s-Gesamtlimit sicher abgebrochen: Fahrtor danach `blocked`, Basis
+0 rpm, Not-Aus immer frei. Der Explorer meldete korrekt nur 50,302 %
+Spurabdeckung und `map_ready_to_save=false`; das ist keine vollstaendige
+Raumabnahme.
+
+Die Bewegungsmessung selbst ist belastbar. EKF und Encoder legten
+3,823/3,785 m zurueck. Netto-Gier HWT/EKF/LiDAR/Encoder:
+`345,721/345,757/344,000/342,090 Grad`. Der LiDAR hatte null verworfene
+Matches, die Basis null Modbus-/Encoderfehler. Der Nahbereich erkannte die
+Annaeherung an Raumkonturen und der Kollisionsmonitor verlangsamte. Die
+gespeicherte 212-x-153-Karte bei 3 cm/Zelle ist zusammenhaengend und zeigt
+keine getrennt versetzte oder verdrehte Raumkopie; kurze Doppelkonturen und
+unbekannte Raender bleiben.
+
+Weil allein der bewusst langsame Rundblick 146 s benoetigte, wird nur
+`overall_timeout_s` im `hwt601_room_only_params.yaml` auf 900 s erhoeht.
+Frontier-/Coverage-Grenzen, 120-s-Ziellimit, ausgeschaltete Tuer-/Portalbewegung
+und der physisch geschlossene Raum bleiben unveraendert. Vor dem naechsten
+Lauf `explore` neu bauen; neue persoenliche Fahrfreigabe erforderlich.
+
+Lokale Evidenz, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-room-20260911-135008` und
+`~/.local/share/amadeus/maps/hwt601-room-20260911-135008`.
+Bag-SHA-256:
+`777121ffd858d1235474da88502b15c9c38e37a009458121bf7ff9b3ea51667a`.
+
+Rueckfall: Raumwrapper nicht starten oder das Gesamtlimit wieder auf 600 s
+setzen. Keine Testkarte wurde produktiv geladen. Tuerdurchfahrt bleibt eine
+eigene, noch neu freizugebende Abnahmestufe.
+
+---
+
 ## HWT-Kartentranslation: 0,50 m real bestanden (11.09.2026)
 
 Das neue Profil `hwt601_translation_only_params.yaml` und der Wrapper

@@ -17,6 +17,68 @@ Rückfallweg:
 
 ---
 
+## 2026-09-11 — HWT-Raumerkundung kartiert kohaerent; 10-Minuten-Limit zu kurz
+
+**Entscheidung:** Der erste autonome HWT-Test bleibt eine physisch auf genau
+einen geschlossenen Raum begrenzte Erkundung ohne Tuer-/Portalbewegung und
+ohne Rueckkehr. Das Profil bleibt bei hoechstens acht Frontiers, sechs
+Abdeckungszielen, 120 s je Ziel und 75 % Zielabdeckung. Nur das gemessenermassen
+zu kurze Gesamtlimit wird von 600 auf 900 s erhoeht; eine neue Ausfuehrung
+braucht weiterhin eine neue persoenliche Fahrfreigabe.
+
+**Grund / beobachtete Evidenz:** Der beaufsichtigte Echtlauf absolvierte den
+segmentierten Rundblick mit 362,2 Grad sowie drei Frontier-Ziele. Beim vierten
+Ziel griff nach exakt rund 600 s das Gesamtlimit, brach Nav2 ab und sperrte das
+Fahrtor. Der Explorer meldete daher korrekt `failed`, `map_ready_to_save=false`
+und `Zeitlimit erreicht; Zielabdeckung nicht bestaetigt (50 %)`, nicht einen
+Sensor- oder Navigationsausfall. Der langsame Rundblick allein benoetigte
+146 s. Bis zum Abbruch lagen die EKF-/Encoder-Wege bei 3,823/3,785 m und die
+Spurabdeckung bei 50,302 %. Das unveraenderte 600-s-Limit liess damit nur rund
+454 s fuer Ausrichtung und Fahrt und war fuer den vorgesehenen Zielvertrag
+praktisch nicht ausreichend.
+
+Ueber das gesamte Bewegungsfenster stimmte die Netto-Gier HWT/EKF/LiDAR/
+Encoder mit `345,721/345,757/344,000/342,090 Grad` ueberein. HWT gegen EKF
+wich nur 0,036 Grad, HWT gegen den unabhaengigen LiDAR 1,721 Grad ab. Der
+LiDAR-Matcher akzeptierte waehrend der gesamten Bag 3.298 neue Updates,
+verwarf keines und blieb mit hoechstens 0,0154 m Matchkosten und mindestens
+94 % Stuetzung gueltig. Seine 77 Rebases ueber die Gesamtlaufzeit sind an den
+konfigurierten 15-Grad-/0,35-m-Grenzen erwartete lokale Referenzwechsel.
+
+**Betroffene Dateien und Hardware:** Das Raumprofil, sein Vertragstest, die
+Kartierungsanleitung und diese Dokumentation. Beide Motoren bewegten den
+Roboter nur im geschlossenen Kuechenraum; OAK blieb aus. Lokale Evidenz:
+`~/.local/share/amadeus/bags/hwt601-room-20260911-135008` und
+`~/.local/share/amadeus/maps/hwt601-room-20260911-135008`; nicht committen.
+Bag-SHA-256:
+`777121ffd858d1235474da88502b15c9c38e37a009458121bf7ff9b3ea51667a`.
+
+**Teststatus:** Not-Aus blieb in 3.312 Proben frei. Die Nahbereichskette
+erkannte reale Annaeherungen bis 0,206/0,207/0,169 m links/rechts/mitte und der
+Collision-Monitor verlangsamte; alle Flags waren am Ende wieder frei. Die
+Basis meldete null ungueltige Befehle, Modbusfehler, Encoder-Rejects oder
+Encoder-Rebases und durchgehend gueltige Rueckmeldung. Alle Befehle endeten
+bei null. Die gespeicherte Karte hat 212 x 153 Zellen bei 0,03 m/Zelle
+(6,36 x 4,59 m, 9,61 m2 freie Zellen). Sichtpruefung: ein zusammenhaengender
+Grundriss ohne getrennt versetzte oder verdrehte Raumkopien; einige kurze
+Doppelkonturen und noch unbekannte Randflaechen verhindern eine vollstaendige
+Raumabnahme. Nach geordnetem Ende waren alle seriellen Ports frei. Die
+bekannten LiDAR-/Basis-/VL53-Shutdownmeldungen kamen erst nach Stillstand.
+
+**Offene Risiken:** Die 75-%-Abdeckung und `map_ready_to_save=true` sind real
+noch nicht erreicht; das 15-Minuten-Profil ist noch nicht gefahren. Die
+LiDAR-Pfadlaenge aus Scanmatching ist wegen lokaler Jitterbewegung nicht als
+Streckenreferenz verwendbar. Tuerdurchfahrt, Raumwechsel, Rueckkehr und
+Schleifenschluss bleiben offen und benoetigen getrennte Profile und neue
+Freigaben.
+
+**Rueckfallweg:** `overall_timeout_s` wieder auf 600 s setzen oder den
+Raumwrapper nicht starten. Das Profil bleibt ein getrenntes Opt-in und kann
+weder Tuer-/Portalbewegung noch unbegrenztes Fahren ausloesen. Keine lokale
+Karte wurde als Produktivkarte geladen.
+
+---
+
 ## 2026-09-11 — Erste HWT-Kartentranslation real bestanden
 
 **Entscheidung:** Nach dem bestandenen Rundblick ist auch eine einzeln

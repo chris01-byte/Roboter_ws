@@ -954,7 +954,7 @@ def test_hwt601_room_only_profile_cannot_use_door_or_portal_motion():
         (PACKAGE_ROOT / 'config' / 'hwt601_room_only_params.yaml').read_text()
     )['explore_node']['ros__parameters']
 
-    assert parameters['overall_timeout_s'] <= 600.0
+    assert parameters['overall_timeout_s'] <= 900.0
     assert parameters['goal_timeout_s'] <= 120.0
     assert parameters['max_failed_goals'] <= 3
     assert parameters['max_frontier_goals'] <= 8

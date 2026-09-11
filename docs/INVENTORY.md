@@ -110,8 +110,12 @@ Kartenrundblick ist real bestanden: HWT/EKF/LiDAR/Encoder
 eine visuell zusammenhaengende Karte ohne gedoppelte Raumkonturen. Die erste
 LiDAR-bestaetigte 0,50-m-Kartentranslation ist ebenfalls real bestanden:
 EKF/LiDAR/Encoder `0,5225/0,5200/0,5224 m`, HWT gegen LiDAR nur 0,249 Grad
-Gierdifferenz und keine Doppelkontur. Tuer-, Rueckkehr- und Mehrraumfahrt
-bleiben offen.
+Gierdifferenz und keine Doppelkontur. Eine erste geschlossene
+Raumerkundung fuhr 3,823 m und drei Frontiers; HWT/EKF/LiDAR-Netto-Gier
+`345,721/345,757/344,000 Grad`, null LiDAR-Rejects und keine versetzte
+Raumkopie. Das 600-s-Limit endete bei 50,302 % Abdeckung und ist deshalb auf
+weiterhin begrenzte 900 s angepasst; vollstaendige Raumabnahme, Tuer-,
+Rueckkehr- und Mehrraumfahrt bleiben offen.
 
 ---
 
