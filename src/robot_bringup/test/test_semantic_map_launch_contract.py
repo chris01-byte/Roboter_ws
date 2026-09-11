@@ -78,6 +78,19 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         self.assertIn('explore_params_overlay:="$PROFILE"', roundlook_helper)
         self.assertIn('active_drive:=*|enable_auto_explore:=*', roundlook_helper)
 
+        translation_helper = (
+            PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+            'start_hwt601_translation.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn(
+            'hwt601_translation_only_params.yaml', translation_helper)
+        self.assertIn('active_drive:=true', translation_helper)
+        self.assertIn('enable_auto_explore:=true', translation_helper)
+        self.assertIn(
+            'explore_params_overlay:="$PROFILE"', translation_helper)
+        self.assertIn(
+            'active_drive:=*|enable_auto_explore:=*', translation_helper)
+
 
 if __name__ == '__main__':
     unittest.main()

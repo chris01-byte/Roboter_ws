@@ -941,6 +941,7 @@ def test_hwt601_translation_only_profile_is_one_bounded_lidar_stage():
     assert parameters['door_max_lateral_error_m'] <= 0.06
 
     source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
+    assert "'bounded_lidar_translation_only'" in source
     door_exit = source.index("completion_reason = 'door_traverse_complete'")
     initial_scan = source.index('if not initial_scan_done:', door_exit)
     frontier_detection = source.index(

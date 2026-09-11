@@ -1116,6 +1116,13 @@ class ExploreNode(Node):
             'strategy': (
                 'bounded_segmented_scan_only'
                 if self._scan_only
+                else 'bounded_lidar_translation_only'
+                if (
+                    self._door_lidar_motion_mode
+                    and self._door_distance > 0.0
+                    and not self._initial_scan_enabled
+                    and not self._coverage_enabled
+                    and not self._portal_enabled)
                 else 'frontier_portal_then_adaptive_coverage'),
             'coverage_ratio': self._coverage_ratio,
             'coverage_percent': 100.0 * self._coverage_ratio,

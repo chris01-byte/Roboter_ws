@@ -1,5 +1,45 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Kartentranslation: 0,50 m real bestanden (11.09.2026)
+
+Das neue Profil `hwt601_translation_only_params.yaml` und der Wrapper
+`tools/kartierung/start_hwt601_translation.sh` begrenzen die erste Translation
+auf genau eine lokal LiDAR-bestaetigte 0,50-m-Etappe bei maximal 0,05 m/s.
+Encoder sind nur Gesundheitspruefung und 0,90-m-Radbudget. Rundblick,
+Frontiers, Portale und Abdeckung bleiben aus; der Start sendet noch keine
+Mission. Der Status nennt diese Betriebsart eindeutig
+`bounded_lidar_translation_only`.
+
+Der beaufsichtigte Echtlauf in der freien Kueche bestand. Vorher war der
+0,50-m-breite Frontkorridor bis 1,545 m frei. Die Mission stoppte selbst mit
+`SUCCESS`, Fahrtor `blocked` und 0 rpm. Am LiDAR-Schaltpunkt: realer Weg
+0,500 m, Encoder-Radweg 0,508 m, seitlich -15 mm, Heading -2,5 Grad,
+Matchkosten 0,023 m, 88,5 % Stuetzung, null Rejects. Einschliesslich der
+400-ms-Bremsrampe:
+
+- EKF: 0,5225 m, -2,502 Grad
+- unabhaengiger LiDAR-Beobachter: 0,5200 m, -2,750 Grad
+- reine Radodometrie: 0,5224 m, -1,198 Grad
+- HWT-Integral: -2,501 Grad
+
+Damit stimmen HWT und LiDAR bis 0,249 Grad ueberein, waehrend die
+Encoder-Gier 1,303 Grad abweicht. Genau diese Radgier bleibt aus der
+Kartenodometrie ausgeschlossen. Not-Aus und beide Nahbereichsseiten loesten
+nie aus; alle Befehle blieben innerhalb 0,05 m/s und 0,04691 rad/s und endeten
+bei null. Die finale 166-x-128-Karte bei 3 cm/Zelle besitzt deckungsgleiche,
+dichter gewordene Waende ohne Doppelkontur.
+
+Lokale Evidenz, nicht committen:
+`~/.local/share/amadeus/bags/hwt601-translation-20260911-131558` und
+`~/.local/share/amadeus/maps/hwt601-translation-20260911-131558`.
+Bag-SHA-256:
+`f692504fca46204be3cc2039ff6abd630483c6813db4dc6aa0411e9390ee0dec`.
+Danach waren Domain 158 und alle Ports frei. Die bekannten Shutdownfehler
+traten erst beim Beenden auf. Naechste Stufe: begrenzte Hin-/Rueck- oder
+Tueretappe mit neuer persoenlicher Freigabe; noch keine Mehrraumfreigabe.
+
+---
+
 ## HWT-Scan-only: korrigierter 360-Grad-Lauf bestanden (10.09.2026)
 
 Der beaufsichtigte Wiederholungslauf des korrigierten

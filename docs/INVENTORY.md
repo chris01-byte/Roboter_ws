@@ -107,8 +107,11 @@ maximal 0,8 s. Motorloser vollstaendiger Preflight bestanden: HWT/EKF/Scan
 EKF-Stillstandsdrift in 56 s. Der anschliessende begrenzte 360-Grad-
 Kartenrundblick ist real bestanden: HWT/EKF/LiDAR/Encoder
 `362,092/362,107/361,750/358,028` Grad, keine Translation, keine Rejects und
-eine visuell zusammenhaengende Karte ohne gedoppelte Raumkonturen. Begrenzte
-Translations-/Tuerabnahme und Mehrraumfahrt bleiben offen.
+eine visuell zusammenhaengende Karte ohne gedoppelte Raumkonturen. Die erste
+LiDAR-bestaetigte 0,50-m-Kartentranslation ist ebenfalls real bestanden:
+EKF/LiDAR/Encoder `0,5225/0,5200/0,5224 m`, HWT gegen LiDAR nur 0,249 Grad
+Gierdifferenz und keine Doppelkontur. Tuer-, Rueckkehr- und Mehrraumfahrt
+bleiben offen.
 
 ---
 

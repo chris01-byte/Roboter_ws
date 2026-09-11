@@ -116,6 +116,24 @@ HWT-Biaskalibrierung mindestens 30 Sekunden stillhalten, alle unten genannten
 Live-Signale pruefen und erst dann genau den einen Explore-Auftrag senden.
 Jede Wiederholung benoetigt eine neue persoenliche Fahrfreigabe.
 
+Nach bestandenem Rundblick prueft die erste HWT-Translation genau 0,50 m
+geradeaus. Der lokale LiDAR-Abgleich bestaetigt den realen Chassisweg; die
+Encoder begrenzen nur den maximalen Radweg auf 0,90 m. Das Profil deaktiviert
+Rundblick, Frontiers, Portale und Abdeckung und beendet die Mission unmittelbar
+nach bestaetigtem Stillstand:
+
+```bash
+cd ~/roboter_ws
+AMADEUS_HWT601_STILLSTAND=JA \
+AMADEUS_FAHRFREIGABE=JA \
+  bash tools/kartierung/start_hwt601_translation.sh
+```
+
+Vor dem Explore-Kommando muss der 0,50 m breite Korridor vor dem Roboter fuer
+die Fahrt, die 0,31-m-Front und Bremsreserve frei sein. Der Start allein loest
+keine Bewegung aus; der Auftrag bleibt separat und jede Wiederholung braucht
+eine neue persoenliche Freigabe.
+
 Der Launch startet absichtlich noch keine Mission. Erst wenn Basisstillstand,
 LiDAR, beide VL53, Odometrie, SLAM-Karte, Kollisionsmonitor und Nav2 bereit
 sind, genau einen Auftrag senden:

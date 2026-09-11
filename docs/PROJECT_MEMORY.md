@@ -17,6 +17,63 @@ Rückfallweg:
 
 ---
 
+## 2026-09-11 — Erste HWT-Kartentranslation real bestanden
+
+**Entscheidung:** Nach dem bestandenen Rundblick ist auch eine einzeln
+begrenzte HWT-Kartentranslation real bestanden. Das neue Opt-in-Profil
+`hwt601_translation_only_params.yaml` faehrt genau eine gerade, lokal durch
+LiDAR bestaetigte 0,50-m-Etappe mit maximal 0,05 m/s und beendet die Mission
+danach. Rundblick, Frontiers, Portale und Abdeckung sind deaktiviert; Encoder
+sind nur Gesundheitspruefung und hartes 0,90-m-Radbudget. Der eigene Wrapper
+`start_hwt601_translation.sh` sperrt widerspruechliche Startargumente.
+
+**Grund / beobachtete Evidenz:** Vor der Fahrt war der 0,50 m breite
+Frontkorridor bis 1,545 m frei; benoetigt wurden 0,665 m ab LiDAR einschliesslich
+Roboterfront. Die Etappe endete selbsttaetig mit `SUCCESS`, gesperrtem Fahrtor
+und 0 rpm. Der interne lokale LiDAR-Matcher meldete am 0,500-m-Schaltpunkt
+0,508 m Encoder-Radweg, -15 mm seitlich, -2,5 Grad Heading, 0,023 m
+Matchkosten, 88,5 % Stuetzung und null verworfene Matches. Durch die 400-ms-
+Bremsrampe ergaben die Endwege EKF/LiDAR/Encoder
+`0,5225/0,5200/0,5224 m` sowie die Gier HWT/EKF/LiDAR/Encoder
+`-2,501/-2,502/-2,750/-1,198 Grad`. HWT und LiDAR unterscheiden sich nur um
+0,249 Grad; die Encoder-Gier liegt 1,303 Grad naeher an null und darf die
+Kartenrichtung daher weiterhin nicht fuehren.
+
+**Betroffene Dateien und Hardware:** Neues Translationsprofil, dedizierter
+Startwrapper, Vertragspruefungen und eindeutiger Statusname
+`bounded_lidar_translation_only`. Beide Motoren bewegten den Roboter einmal
+vorwaerts; OAK blieb aus. Lokale Bag und Karte:
+`~/.local/share/amadeus/bags/hwt601-translation-20260911-131558` und
+`~/.local/share/amadeus/maps/hwt601-translation-20260911-131558`; nicht
+committen. Bag-SHA-256:
+`f692504fca46204be3cc2039ff6abd630483c6813db4dc6aa0411e9390ee0dec`.
+
+**Teststatus:** HWT-Startbias aus 998 stabilen Proben,
+Z-Streuung `0,000089437 rad/s`, null HWT-Rejects. Maximale Empfangsluecken
+HWT/EKF/LiDAR/Encoder `48,300/68,843/333,552/88,429 ms`; der groessere
+LiDAR-Abstand entspricht seinem niedrigeren Beobachtertakt. Der globale
+LiDAR-Beobachter hatte waehrend der Bag null neue Rejects und einen bei 0,35 m
+erwarteten Rebase. Not-Aus blieb immer frei, beide Nahbereichsseiten meldeten
+nie Stop. Alle drei Kommandostufen blieben bei maximal 0,05 m/s und
+0,04691 rad/s und endeten bei null. Die finale Karte ist 166 x 128 bei
+0,03 m/Zelle mit 8,191 m2 freien Zellen. Vor-/Nach-Sichtpruefung zeigt dichter
+gewordene, deckungsgleiche Waende ohne Doppelkontur oder verdrehte Raumkopie.
+48 Explore-Vertragstests bestehen; Paket neu gebaut. Nach geordnetem Ende
+waren Domain 158 und alle drei seriellen Ports frei. Nur die bekannten
+LiDAR-/Basis-/VL53-Abschlussmeldungen erschienen beim globalen SIGINT.
+
+**Offene Risiken:** Eine einzelne Gerade prueft weder Tuerdurchfahrt noch
+Rueckkehr, Schleifenschluss oder mehrere Raumwechsel. Der naechste reale Test
+ist eine begrenzte Hin-/Rueck- beziehungsweise Tueretappe; erst danach folgt
+die richtungsfreie Mehrraumexploration. Jede neue Bewegung braucht eine neue
+persoenliche Freigabe.
+
+**Rueckfallweg:** Profil und Wrapper nicht starten; beide sind getrennte
+Opt-ins. Der normale Encoder- und der HWT-Rundblickpfad bleiben unveraendert.
+Keine Testkarte wurde automatisch produktiv geladen.
+
+---
+
 ## 2026-09-10 — Korrigierter HWT-Karten-Rundblick real bestanden
 
 **Entscheidung:** Der reine HWT-Karten-Rundblick ist nach der Explorer-
