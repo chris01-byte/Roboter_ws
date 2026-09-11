@@ -947,3 +947,29 @@ def test_hwt601_translation_only_profile_is_one_bounded_lidar_stage():
     frontier_detection = source.index(
         'frontiers = self._detect_frontiers(', initial_scan)
     assert door_exit < initial_scan < frontier_detection
+
+
+def test_hwt601_room_only_profile_cannot_use_door_or_portal_motion():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'hwt601_room_only_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+
+    assert parameters['overall_timeout_s'] <= 600.0
+    assert parameters['goal_timeout_s'] <= 120.0
+    assert parameters['max_failed_goals'] <= 3
+    assert parameters['max_frontier_goals'] <= 8
+    assert parameters['initial_scan_enabled'] is True
+    assert parameters['scan_only'] is False
+    assert parameters['initial_scan_angular_speed_radps'] <= 0.08
+    assert math.isclose(
+        parameters['initial_scan_segment_angle_rad'], math.pi / 4.0)
+    assert parameters['initial_scan_segment_pause_s'] >= 1.0
+    assert parameters['door_traverse_distance_m'] == 0.0
+    assert parameters['door_supervised_wheel_budget_mode'] is False
+    assert parameters['door_lidar_motion_mode'] is False
+    assert parameters['door_encoder_wheel_budget_m'] == 0.0
+    assert parameters['portal_crossing_enabled'] is False
+    assert parameters['coverage_enabled'] is True
+    assert 0.0 < parameters['coverage_target_ratio'] <= 0.75
+    assert parameters['coverage_max_goals'] <= 6
+    assert parameters['return_to_start'] is False

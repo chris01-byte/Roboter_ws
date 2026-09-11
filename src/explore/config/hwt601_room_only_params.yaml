@@ -1,0 +1,27 @@
+# Begrenzte Erkundung genau eines physisch geschlossenen Raums mit HWT-Odometrie.
+# Offene Ausgaenge muessen vor dem Start geschlossen oder separat als Keepout
+# modelliert sein. Dieses Profil darf keine Portal-/Tuerbruecke ausfuehren.
+explore_node:
+  ros__parameters:
+    overall_timeout_s: 600.0
+    goal_timeout_s: 120.0
+    max_failed_goals: 3
+    max_frontier_goals: 8
+
+    initial_scan_enabled: true
+    scan_only: false
+    initial_scan_angular_speed_radps: 0.08
+    initial_scan_segment_angle_rad: 0.7853981633974483
+    initial_scan_segment_pause_s: 1.0
+    initial_scan_timeout_s: 280.0
+
+    door_traverse_distance_m: 0.0
+    door_supervised_wheel_budget_mode: false
+    door_lidar_motion_mode: false
+    door_encoder_wheel_budget_m: 0.0
+    portal_crossing_enabled: false
+
+    coverage_enabled: true
+    coverage_target_ratio: 0.75
+    coverage_max_goals: 6
+    return_to_start: false

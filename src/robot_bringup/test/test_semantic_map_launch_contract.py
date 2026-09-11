@@ -91,6 +91,18 @@ class SemanticMapLaunchContractTests(unittest.TestCase):
         self.assertIn(
             'active_drive:=*|enable_auto_explore:=*', translation_helper)
 
+        room_helper = (
+            PACKAGE_ROOT.parents[1] / 'tools' / 'kartierung' /
+            'start_hwt601_raumerkundung.sh'
+        ).read_text(encoding='utf-8')
+        self.assertIn('hwt601_room_only_params.yaml', room_helper)
+        self.assertIn('AMADEUS_RAUM_GESCHLOSSEN', room_helper)
+        self.assertIn('active_drive:=true', room_helper)
+        self.assertIn('enable_auto_explore:=true', room_helper)
+        self.assertIn('explore_params_overlay:="$PROFILE"', room_helper)
+        self.assertIn(
+            'active_drive:=*|enable_auto_explore:=*', room_helper)
+
 
 if __name__ == '__main__':
     unittest.main()
