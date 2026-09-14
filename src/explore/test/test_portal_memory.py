@@ -15,11 +15,13 @@ from explore.portal_memory import (  # noqa: E402
     ObservationDisposition,
     Point2D,
     PortalMapContext,
+    PortalConfirmationState,
     PortalMemory,
     PortalMemoryError,
     PortalMemoryPolicy,
     PortalObservation,
     PortalSide,
+    PortalStructuralEvidence,
     ReachabilityConflictError,
     ReachabilityState,
     ReachabilityUpdate,
@@ -40,7 +42,8 @@ CONTEXT = PortalMapContext(
 
 def observation(
         observation_id, revision, near=(0.0, 0.0), far=(1.0, 0.0),
-        *, context=CONTEXT, uncertainty=0.0):
+        *, context=CONTEXT, uncertainty=0.0,
+        evidence=PortalStructuralEvidence.QUALIFIED):
     return PortalObservation(
         observation_id=observation_id,
         context=context,
@@ -48,6 +51,7 @@ def observation(
         near_side=Point2D(*near),
         far_side=Point2D(*far),
         uncertainty_m=uncertainty,
+        structural_evidence=evidence,
     )
 
 
@@ -330,6 +334,141 @@ def test_default_policy_is_explicitly_bounded_and_ids_are_deterministic():
     assert second.portal_id == "portal_000002"
     assert 0 < policy.max_portals < 10_000
     assert 0 < policy.max_observations < 100_000
+
+
+def test_repeated_furniture_bottleneck_evidence_never_confirms_a_portal():
+    memory = PortalMemory(CONTEXT)
+    created = memory.observe(observation(
+        "furniture-1", 1,
+        evidence=PortalStructuralEvidence.INSUFFICIENT))
+    memory.observe(observation(
+        "furniture-2", 2, near=(0.01, 0.0), far=(1.01, 0.0),
+        evidence=PortalStructuralEvidence.INSUFFICIENT))
+    memory.observe(observation(
+        "furniture-3", 3, near=(-0.01, 0.0), far=(0.99, 0.0),
+        evidence=PortalStructuralEvidence.INSUFFICIENT))
+
+    snapshot = memory.snapshot(created.portal_id)
+    assert snapshot.evidence_count == 3
+    assert snapshot.qualified_evidence_count == 0
+    assert snapshot.confirmation_state is PortalConfirmationState.CANDIDATE
+    assert not snapshot.confirmed
+
+
+def test_missing_structural_evidence_defaults_fail_closed_to_candidate():
+    memory = PortalMemory(CONTEXT)
+    raw_observation = PortalObservation(
+        observation_id="no-structural-verdict",
+        context=CONTEXT,
+        map_revision=1,
+        near_side=Point2D(0.0, 0.0),
+        far_side=Point2D(1.0, 0.0),
+    )
+
+    result = memory.observe(raw_observation)
+    snapshot = memory.snapshot(result.portal_id)
+
+    assert not result.qualified_evidence_added
+    assert snapshot.confirmation_state is PortalConfirmationState.CANDIDATE
+    assert not snapshot.confirmed
+
+
+def test_contradictory_evidence_marks_uncertain_until_newer_qualification():
+    memory = PortalMemory(CONTEXT)
+    created = memory.observe(observation("qualified-1", 1))
+    memory.observe(observation("qualified-2", 2))
+    assert memory.snapshot(created.portal_id).confirmed
+
+    contradiction = memory.observe(observation(
+        "contradiction", 3,
+        evidence=PortalStructuralEvidence.CONTRADICTORY))
+    uncertain = memory.snapshot(created.portal_id)
+
+    assert contradiction.evidence_added
+    assert not contradiction.qualified_evidence_added
+    assert uncertain.confirmation_state is PortalConfirmationState.UNCERTAIN
+    assert not uncertain.confirmed
+
+    memory.observe(observation(
+        "missing-after-conflict", 4,
+        evidence=PortalStructuralEvidence.INSUFFICIENT))
+    assert memory.snapshot(
+        created.portal_id).confirmation_state is PortalConfirmationState.UNCERTAIN
+
+    recovered = memory.observe(observation("qualified-again", 5))
+    assert recovered.qualified_evidence_added
+    assert memory.snapshot(
+        created.portal_id).confirmation_state is PortalConfirmationState.CONFIRMED
+
+
+def test_qualified_repeats_of_one_revision_count_only_once():
+    memory = PortalMemory(CONTEXT)
+    created = memory.observe(observation("same-revision-1", 7))
+    repeated = memory.observe(observation(
+        "same-revision-2", 7, near=(0.01, 0.0), far=(1.01, 0.0)))
+
+    snapshot = memory.snapshot(created.portal_id)
+
+    assert not repeated.evidence_added
+    assert not repeated.qualified_evidence_added
+    assert snapshot.evidence_count == 1
+    assert snapshot.qualified_evidence_count == 1
+    assert snapshot.confirmation_state is PortalConfirmationState.CANDIDATE
+
+
+def test_lost_structural_visibility_preserves_confirmed_identity():
+    memory = PortalMemory(CONTEXT)
+    created = memory.observe(observation("visible-1", 1))
+    memory.observe(observation("visible-2", 2))
+    before = memory.snapshot(created.portal_id)
+
+    lost = memory.observe(observation(
+        "not-visible-enough", 3, near=(0.02, 0.0), far=(1.02, 0.0),
+        evidence=PortalStructuralEvidence.INSUFFICIENT))
+    after = memory.snapshot(created.portal_id)
+
+    assert before.confirmed
+    assert lost.portal_id == created.portal_id
+    assert not lost.qualified_evidence_added
+    assert after.portal_id == before.portal_id
+    assert after.confirmation_state is PortalConfirmationState.CONFIRMED
+
+
+def test_room_centroid_motion_is_not_part_of_portal_identity_input():
+    memory = PortalMemory(CONTEXT)
+    synthetic_room_centroid_before = (2.0, 1.0)
+    synthetic_room_centroid_after = (3.5, -0.5)
+
+    first = memory.observe(observation("centroid-independent-1", 1))
+    second = memory.observe(observation(
+        "centroid-independent-2", 2,
+        near=(0.03, 0.01), far=(1.03, -0.01)))
+
+    assert synthetic_room_centroid_before != synthetic_room_centroid_after
+    assert second.portal_id == first.portal_id
+    assert memory.snapshot(first.portal_id).confirmed
+
+
+def test_detected_portals_observations_and_crossings_remain_separate_counts():
+    memory = PortalMemory(CONTEXT)
+    first = memory.observe(observation("door-a-1", 1))
+    memory.observe(observation("door-a-2", 2))
+    second = memory.observe(observation(
+        "door-b-1", 3, near=(0.0, 1.0), far=(1.0, 1.0)))
+    memory.record_traversal(traversal(
+        "only-crossing", first.portal_id, revision=3))
+
+    snapshots = memory.snapshots()
+
+    assert len(snapshots) == 2
+    assert sum(item.observation_count for item in snapshots) == 3
+    assert memory.confirmed_traversal_count() == 1
+    assert memory.confirmed_traversal_count(second.portal_id) == 0
+
+
+def test_invalid_structural_evidence_type_is_rejected():
+    with pytest.raises(PortalMemoryError):
+        observation("invalid-evidence", 1, evidence="qualified")
 
 
 def test_confirmed_traversal_is_counted_exactly_once_on_replay():
