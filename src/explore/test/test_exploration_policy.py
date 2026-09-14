@@ -27,6 +27,18 @@ from explore.exploration_policy import (  # noqa: E402
     assess_exploration_policy,
     score_task_utilities,
 )
+from explore.exploration_completion import (  # noqa: E402
+    AccessibleScopeState,
+    ChildNavigationState,
+    CompletionObservation,
+    CompletionPolicy,
+    ExplorationCompletionCapacityError,
+    ExplorationCompletionError,
+    ExplorationCompletionSession,
+    ExplorationResultState,
+    ReturnResultState,
+    TerminationCause,
+)
 from explore.portal_memory import (  # noqa: E402
     Point2D,
     PortalMapContext,
@@ -870,3 +882,190 @@ def test_scoring_capacity_and_configuration_are_strict():
         TaskScoringPolicy(route_normalization_m=0.0)
     with pytest.raises(ExplorationPolicyError):
         TaskScoringPolicy(route_weight=0.0, information_weight=0.0)
+
+
+def _completion_observation(
+        observation_id, revision, assessment, *,
+        scope=AccessibleScopeState.VERIFIED,
+        child=ChildNavigationState.IDLE,
+        termination=TerminationCause.NONE,
+        map_saved=None,
+        return_result=ReturnResultState.NOT_REQUESTED):
+    return CompletionObservation(
+        observation_id=observation_id,
+        context=CONTEXT,
+        map_revision=revision,
+        assessment=assessment,
+        accessible_scope=scope,
+        child_navigation=child,
+        termination=termination,
+        reason=f"reason_{termination.value}",
+        map_saved=map_saved,
+        return_result=return_result,
+    )
+
+
+def _completion_assessments(revisions):
+    policy_session = ExplorationTaskPolicySession(CONTEXT)
+    base = _fresh_single_region_source(complete=True)
+    return tuple(
+        policy_session.assess(_advance_source(base, revision))
+        for revision in revisions
+    )
+
+
+def test_three_fresh_qualified_revisions_are_required_for_complete_accessible():
+    assessments = _completion_assessments((2, 3, 4))
+    session = ExplorationCompletionSession(CONTEXT)
+    results = tuple(
+        session.observe(_completion_observation(
+            f"complete-{revision}", revision, assessment))
+        for revision, assessment in zip((2, 3, 4), assessments)
+    )
+
+    assert [item.state for item in results] == [
+        ExplorationResultState.IN_PROGRESS,
+        ExplorationResultState.IN_PROGRESS,
+        ExplorationResultState.COMPLETE_ACCESSIBLE,
+    ]
+    assert results[-1].qualifying_observation_count == 3
+    assert results[-1].terminal is True
+
+
+@pytest.mark.parametrize("scope, child, blocker", [
+    (
+        AccessibleScopeState.UNVERIFIED,
+        ChildNavigationState.IDLE,
+        "accessible_scope_unverified",
+    ),
+    (
+        AccessibleScopeState.VERIFIED,
+        ChildNavigationState.ACTIVE,
+        "child_navigation_active",
+    ),
+    (
+        AccessibleScopeState.VERIFIED,
+        ChildNavigationState.UNKNOWN,
+        "child_navigation_unknown",
+    ),
+])
+def test_scope_and_child_navigation_fail_closed(scope, child, blocker):
+    assessment = _completion_assessments((2,))[0]
+    result = ExplorationCompletionSession(CONTEXT).observe(
+        _completion_observation(
+            "blocked", 2, assessment, scope=scope, child=child))
+
+    assert result.state is ExplorationResultState.IN_PROGRESS
+    assert result.blocker_codes == (blocker,)
+    assert result.qualifying_observation_count == 0
+
+
+def test_blocked_revision_resets_the_consecutive_fresh_window():
+    assessments = _completion_assessments((2, 3, 4))
+    session = ExplorationCompletionSession(
+        CONTEXT, CompletionPolicy(required_fresh_observations=2))
+    first = session.observe(_completion_observation(
+        "first", 2, assessments[0]))
+    blocked = session.observe(_completion_observation(
+        "blocked", 3, assessments[1], child=ChildNavigationState.ACTIVE))
+    resumed = session.observe(_completion_observation(
+        "resumed", 4, assessments[2]))
+
+    assert first.qualifying_observation_count == 1
+    assert blocked.qualifying_observation_count == 0
+    assert resumed.qualifying_observation_count == 1
+    assert resumed.state is ExplorationResultState.IN_PROGRESS
+
+
+def test_open_or_only_filtered_tasks_cannot_start_completion_window():
+    source = _source_with_two_open_tasks()
+    policy_session = ExplorationTaskPolicySession(CONTEXT)
+    filtered = policy_session.assess(source, (
+        _availability("a-other", TaskAvailabilityState.FILTERED),
+        _availability("z-current", TaskAvailabilityState.FILTERED),
+    ))
+    result = ExplorationCompletionSession(CONTEXT).observe(
+        _completion_observation("filtered", 4, filtered))
+
+    assert result.state is ExplorationResultState.IN_PROGRESS
+    assert result.blocker_codes == ("policy_not_quiescent",)
+    assert result.qualifying_observation_count == 0
+
+
+@pytest.mark.parametrize("cause, expected", [
+    (TerminationCause.BUDGET_EXHAUSTED, ExplorationResultState.PARTIAL),
+    (TerminationCause.SYSTEM_FAILURE, ExplorationResultState.ABORTED),
+    (TerminationCause.USER_CANCELED, ExplorationResultState.CANCELED),
+])
+def test_terminal_causes_remain_distinct(cause, expected):
+    assessment = _completion_assessments((2,))[0]
+    result = ExplorationCompletionSession(CONTEXT).observe(
+        _completion_observation(
+            f"terminal-{cause.value}", 2, assessment,
+            termination=cause))
+
+    assert result.state is expected
+    assert result.terminal is True
+
+
+def test_map_save_and_return_result_do_not_change_exploration_success():
+    assessments = _completion_assessments((2, 3, 4))
+    session = ExplorationCompletionSession(CONTEXT)
+    for revision, assessment in zip((2, 3), assessments[:2]):
+        session.observe(_completion_observation(
+            f"pending-{revision}", revision, assessment))
+    result = session.observe(_completion_observation(
+        "complete", 4, assessments[2],
+        map_saved=False,
+        return_result=ReturnResultState.FAILED,
+    ))
+
+    assert result.state is ExplorationResultState.COMPLETE_ACCESSIBLE
+    assert result.map_saved is False
+    assert result.return_result is ReturnResultState.FAILED
+
+
+def test_completion_replay_is_idempotent_and_terminal_is_immutable():
+    assessments = _completion_assessments((2, 3))
+    session = ExplorationCompletionSession(
+        CONTEXT, CompletionPolicy(required_fresh_observations=1))
+    observation = _completion_observation("done", 2, assessments[0])
+    first = session.observe(observation)
+    assert session.observe(observation) is first
+    with pytest.raises(ExplorationCompletionError, match="unveraenderlich"):
+        session.observe(_completion_observation(
+            "later", 3, assessments[1]))
+
+
+def test_completion_rejects_uncorrelated_replay_and_capacity_overflow():
+    assessments = _completion_assessments((2, 3))
+    uncorrelated = _completion_observation("bad", 3, assessments[0])
+    with pytest.raises(ExplorationCompletionError, match="korreliert"):
+        ExplorationCompletionSession(CONTEXT).observe(uncorrelated)
+
+    session = ExplorationCompletionSession(
+        CONTEXT, CompletionPolicy(
+            required_fresh_observations=3, max_observations=1))
+    first = _completion_observation("first", 2, assessments[0])
+    session.observe(first)
+    with pytest.raises(ExplorationCompletionCapacityError):
+        session.observe(_completion_observation(
+            "second", 3, assessments[1]))
+    with pytest.raises(ExplorationCompletionError, match="widerspruechlich"):
+        session.observe(replace(first, reason="different"))
+
+
+def test_completion_module_has_no_ros_navigation_process_or_device_imports():
+    source_path = PACKAGE_ROOT / "explore" / "exploration_completion.py"
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    imported_roots = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_roots.update(
+                alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_roots.add(node.module.split(".")[0])
+    assert imported_roots.isdisjoint({
+        "action_msgs", "geometry_msgs", "nav2_msgs", "rclpy",
+        "serial", "subprocess",
+    })

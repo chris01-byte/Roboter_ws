@@ -138,6 +138,8 @@ class PolicyTaskAssessment:
 class ExplorationPolicyAssessment:
     """Explainable passive result with no navigation output."""
 
+    context: PortalMapContext
+    source_map_revision: int
     state: PolicyAssessmentState
     current_region_id: Optional[str]
     source_ready: bool
@@ -434,6 +436,8 @@ def assess_exploration_policy(
         ))
 
     return ExplorationPolicyAssessment(
+        context=source.context,
+        source_map_revision=source.source_map_revision,
         state=state,
         current_region_id=current_region_id,
         source_ready=not stale_sources,
