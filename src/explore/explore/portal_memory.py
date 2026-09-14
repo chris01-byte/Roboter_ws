@@ -39,6 +39,18 @@ class MemoryCapacityError(PortalMemoryError):
     """A configured hard memory bound would be exceeded."""
 
 
+class UnknownPortalError(PortalMemoryError):
+    """An event or state update references no known portal identity."""
+
+
+class TraversalConflictError(PortalMemoryError):
+    """A traversal event ID was reused with different content."""
+
+
+class ReachabilityConflictError(PortalMemoryError):
+    """A reachability update ID was reused with different content."""
+
+
 def _validate_identifier(value: object, name: str) -> str:
     if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
         raise PortalMemoryError(
@@ -62,6 +74,19 @@ def _finite_number(value: object, name: str) -> float:
     if not math.isfinite(result):
         raise PortalMemoryError(f"{name} muss eine endliche Zahl sein")
     return result
+
+
+def _nonnegative_integer(value: object, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise PortalMemoryError(f"{name} muss eine nichtnegative Ganzzahl sein")
+    return value
+
+
+def _bounded_text(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip() or len(value) > 256:
+        raise PortalMemoryError(
+            f"{name} muss 1 bis 256 Textzeichen enthalten")
+    return value
 
 
 @dataclass(frozen=True)
@@ -110,12 +135,7 @@ class PortalObservation:
         _validate_identifier(self.observation_id, "observation_id")
         if not isinstance(self.context, PortalMapContext):
             raise PortalMemoryError("context muss PortalMapContext sein")
-        if (
-                isinstance(self.map_revision, bool)
-                or not isinstance(self.map_revision, int)
-                or self.map_revision < 0):
-            raise PortalMemoryError(
-                "map_revision muss eine nichtnegative Ganzzahl sein")
+        _nonnegative_integer(self.map_revision, "map_revision")
         if not isinstance(self.near_side, Point2D):
             raise PortalMemoryError("near_side muss Point2D sein")
         if not isinstance(self.far_side, Point2D):
@@ -138,6 +158,8 @@ class PortalMemoryPolicy:
     confirmation_revisions: int = 2
     max_portals: int = 256
     max_observations: int = 4096
+    max_traversal_events: int = 4096
+    max_reachability_updates: int = 4096
 
     def __post_init__(self) -> None:
         positive_names = (
@@ -157,7 +179,8 @@ class PortalMemoryPolicy:
                 "max_axis_angle_rad muss kleiner als pi/2 sein")
         for name in (
                 "confirmation_revisions", "max_portals",
-                "max_observations"):
+                "max_observations", "max_traversal_events",
+                "max_reachability_updates"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise PortalMemoryError(f"{name} muss eine positive Ganzzahl sein")
@@ -169,13 +192,30 @@ class ObservationDisposition(str, Enum):
     AMBIGUOUS = "ambiguous"
 
 
+class PortalSide(str, Enum):
+    A = "A"
+    B = "B"
+
+
+class TraversalDirection(str, Enum):
+    A_TO_B = "a_to_b"
+    B_TO_A = "b_to_a"
+
+
+class ReachabilityState(str, Enum):
+    OPEN = "open"
+    TEMPORARILY_BLOCKED = "temporarily_blocked"
+    UNKNOWN = "unknown"
+    EXCLUDED = "excluded"
+
+
 @dataclass(frozen=True)
 class ObservationResult:
     """Outcome of one observation without any movement implication."""
 
     disposition: ObservationDisposition
     portal_id: Optional[str]
-    approach_side: Optional[str]
+    approach_side: Optional[PortalSide]
     candidate_ids: Tuple[str, ...] = ()
     evidence_added: bool = False
     duplicate: bool = False
@@ -193,6 +233,98 @@ class PortalSnapshot:
     observation_count: int
     evidence_count: int
     confirmed: bool
+    confirmed_traversal_count: int
+
+
+@dataclass(frozen=True)
+class TraversalEvent:
+    """Immutable result of an externally validated crossing check.
+
+    This class does not inspect poses, footprints, encoders, or sensors.  The
+    caller must set ``crossing_confirmed`` only after that separate validation.
+    """
+
+    event_id: str
+    portal_id: str
+    context: PortalMapContext
+    map_revision: int
+    event_time_ns: int
+    direction: TraversalDirection
+    crossing_confirmed: bool
+
+    def __post_init__(self) -> None:
+        _validate_identifier(self.event_id, "event_id")
+        _validate_identifier(self.portal_id, "portal_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise PortalMemoryError("context muss PortalMapContext sein")
+        _nonnegative_integer(self.map_revision, "map_revision")
+        _nonnegative_integer(self.event_time_ns, "event_time_ns")
+        if not isinstance(self.direction, TraversalDirection):
+            raise PortalMemoryError("direction muss TraversalDirection sein")
+        if not isinstance(self.crossing_confirmed, bool):
+            raise PortalMemoryError("crossing_confirmed muss bool sein")
+
+
+@dataclass(frozen=True)
+class TraversalResult:
+    """Idempotent accounting result for one traversal event."""
+
+    event_id: str
+    portal_id: str
+    direction: TraversalDirection
+    crossing_confirmed: bool
+    counted: bool
+    duplicate: bool
+    portal_traversal_count: int
+
+
+@dataclass(frozen=True)
+class ReachabilityUpdate:
+    """One externally evaluated, side-specific reachability state."""
+
+    update_id: str
+    portal_id: str
+    side: PortalSide
+    context: PortalMapContext
+    map_revision: int
+    observed_at_ns: int
+    state: ReachabilityState
+    reason: str
+    recheck_condition: str
+
+    def __post_init__(self) -> None:
+        _validate_identifier(self.update_id, "update_id")
+        _validate_identifier(self.portal_id, "portal_id")
+        if not isinstance(self.side, PortalSide):
+            raise PortalMemoryError("side muss PortalSide sein")
+        if not isinstance(self.context, PortalMapContext):
+            raise PortalMemoryError("context muss PortalMapContext sein")
+        _nonnegative_integer(self.map_revision, "map_revision")
+        _nonnegative_integer(self.observed_at_ns, "observed_at_ns")
+        if not isinstance(self.state, ReachabilityState):
+            raise PortalMemoryError("state muss ReachabilityState sein")
+        _bounded_text(self.reason, "reason")
+        _bounded_text(self.recheck_condition, "recheck_condition")
+
+
+@dataclass(frozen=True)
+class ReachabilitySnapshot:
+    """Current reachability of one portal side, separate from history."""
+
+    portal_id: str
+    side: PortalSide
+    state: ReachabilityState
+    reason: str
+    recheck_condition: str
+    map_revision: Optional[int]
+    observed_at_ns: Optional[int]
+    update_id: Optional[str]
+
+
+@dataclass(frozen=True)
+class ReachabilityResult:
+    snapshot: ReachabilitySnapshot
+    duplicate: bool
 
 
 @dataclass
@@ -205,12 +337,13 @@ class _PortalState:
     last_revision: int
     observation_count: int = 1
     evidence_revisions: set[int] = field(default_factory=set)
+    confirmed_traversal_count: int = 0
 
 
 @dataclass(frozen=True)
 class _Candidate:
     portal_id: str
-    approach_side: str
+    approach_side: PortalSide
     score_m: float
 
 
@@ -252,6 +385,11 @@ class PortalMemory:
         self._portals: Dict[str, _PortalState] = {}
         self._observations: Dict[
             str, Tuple[PortalObservation, ObservationResult]] = {}
+        self._traversal_events: Dict[
+            str, Tuple[TraversalEvent, TraversalResult]] = {}
+        self._reachability_updates: Dict[str, ReachabilityUpdate] = {}
+        self._current_reachability: Dict[
+            Tuple[str, PortalSide], ReachabilityUpdate] = {}
         self._next_portal_number = 1
         self._latest_revision = -1
 
@@ -271,12 +409,70 @@ class PortalMemory:
         )
 
     def snapshot(self, portal_id: str) -> PortalSnapshot:
-        _validate_identifier(portal_id, "portal_id")
-        try:
-            state = self._portals[portal_id]
-        except KeyError as exc:
-            raise PortalMemoryError(f"Unbekannte Portal-ID: {portal_id}") from exc
-        return self._snapshot(state)
+        return self._snapshot(self._require_portal(portal_id))
+
+    def confirmed_traversal_count(self, portal_id: Optional[str] = None) -> int:
+        """Return confirmed crossings, independently from detected portals."""
+        if portal_id is None:
+            return sum(
+                state.confirmed_traversal_count
+                for state in self._portals.values())
+        return self._require_portal(portal_id).confirmed_traversal_count
+
+    def traversal_events(
+            self, portal_id: Optional[str] = None,
+            *, confirmed_only: bool = False) -> Tuple[TraversalEvent, ...]:
+        """Return immutable traversal history in accepted event order."""
+        if portal_id is not None:
+            self._require_portal(portal_id)
+        return tuple(
+            event
+            for event, _result in self._traversal_events.values()
+            if (portal_id is None or event.portal_id == portal_id)
+            and (not confirmed_only or event.crossing_confirmed)
+        )
+
+    def reachability_snapshot(
+            self, portal_id: str, side: PortalSide) -> ReachabilitySnapshot:
+        """Return current state; absence is explicit UNKNOWN, never OPEN."""
+        self._require_portal(portal_id)
+        if not isinstance(side, PortalSide):
+            raise PortalMemoryError("side muss PortalSide sein")
+        update = self._current_reachability.get((portal_id, side))
+        if update is None:
+            return ReachabilitySnapshot(
+                portal_id=portal_id,
+                side=side,
+                state=ReachabilityState.UNKNOWN,
+                reason="not_evaluated",
+                recheck_condition="fresh_external_evaluation",
+                map_revision=None,
+                observed_at_ns=None,
+                update_id=None,
+            )
+        return self._reachability_snapshot(update)
+
+    def reachability_snapshots(self) -> Tuple[ReachabilitySnapshot, ...]:
+        """Return both sides for every portal in deterministic order."""
+        return tuple(
+            self.reachability_snapshot(portal_id, side)
+            for portal_id in sorted(self._portals)
+            for side in (PortalSide.A, PortalSide.B)
+        )
+
+    def reachability_history(
+            self, portal_id: Optional[str] = None,
+            side: Optional[PortalSide] = None) -> Tuple[ReachabilityUpdate, ...]:
+        """Return accepted state updates without collapsing their history."""
+        if portal_id is not None:
+            self._require_portal(portal_id)
+        if side is not None and not isinstance(side, PortalSide):
+            raise PortalMemoryError("side muss PortalSide sein")
+        return tuple(
+            update for update in self._reachability_updates.values()
+            if (portal_id is None or update.portal_id == portal_id)
+            and (side is None or update.side is side)
+        )
 
     def observe(self, observation: PortalObservation) -> ObservationResult:
         """Associate one observation or report explicit ambiguity.
@@ -354,8 +550,91 @@ class PortalMemory:
             self._latest_revision, observation.map_revision)
         return result
 
+    def record_traversal(self, event: TraversalEvent) -> TraversalResult:
+        """Record one immutable external crossing verdict exactly once."""
+        if not isinstance(event, TraversalEvent):
+            raise PortalMemoryError("event muss TraversalEvent sein")
+        self._require_context(event.context)
+
+        previous = self._traversal_events.get(event.event_id)
+        if previous is not None:
+            previous_event, previous_result = previous
+            if previous_event != event:
+                raise TraversalConflictError(
+                    "event_id wurde mit anderem Inhalt wiederverwendet")
+            current_count = self._require_portal(
+                previous_event.portal_id).confirmed_traversal_count
+            return replace(
+                previous_result,
+                duplicate=True,
+                counted=False,
+                portal_traversal_count=current_count,
+            )
+
+        state = self._require_portal(event.portal_id)
+        self._require_current_revision(event.map_revision)
+        if len(self._traversal_events) >= self._policy.max_traversal_events:
+            raise MemoryCapacityError("Durchfahrtsereignisspeicher ist voll")
+
+        counted = event.crossing_confirmed
+        if counted:
+            state.confirmed_traversal_count += 1
+        result = TraversalResult(
+            event_id=event.event_id,
+            portal_id=event.portal_id,
+            direction=event.direction,
+            crossing_confirmed=event.crossing_confirmed,
+            counted=counted,
+            duplicate=False,
+            portal_traversal_count=state.confirmed_traversal_count,
+        )
+        self._traversal_events[event.event_id] = (event, result)
+        self._latest_revision = max(self._latest_revision, event.map_revision)
+        return result
+
+    def update_reachability(
+            self, update: ReachabilityUpdate) -> ReachabilityResult:
+        """Apply a newer side-specific state without changing portal history."""
+        if not isinstance(update, ReachabilityUpdate):
+            raise PortalMemoryError("update muss ReachabilityUpdate sein")
+        self._require_context(update.context)
+
+        previous = self._reachability_updates.get(update.update_id)
+        if previous is not None:
+            if previous != update:
+                raise ReachabilityConflictError(
+                    "update_id wurde mit anderem Inhalt wiederverwendet")
+            return ReachabilityResult(
+                snapshot=self.reachability_snapshot(
+                    previous.portal_id, previous.side),
+                duplicate=True,
+            )
+
+        self._require_portal(update.portal_id)
+        self._require_current_revision(update.map_revision)
+        current = self._current_reachability.get(
+            (update.portal_id, update.side))
+        if current is not None and (
+                update.map_revision, update.observed_at_ns
+        ) <= (current.map_revision, current.observed_at_ns):
+            raise StaleObservationError(
+                "Erreichbarkeitsstand ist nicht neuer als der aktuelle Stand")
+        if (
+                len(self._reachability_updates)
+                >= self._policy.max_reachability_updates):
+            raise MemoryCapacityError("Erreichbarkeitsverlauf ist voll")
+
+        self._reachability_updates[update.update_id] = update
+        self._current_reachability[(update.portal_id, update.side)] = update
+        self._latest_revision = max(self._latest_revision, update.map_revision)
+        return ReachabilityResult(
+            snapshot=self._reachability_snapshot(update),
+            duplicate=False,
+        )
+
     def _create_portal(
-            self, observation: PortalObservation) -> Tuple[_PortalState, str]:
+            self, observation: PortalObservation,
+    ) -> Tuple[_PortalState, PortalSide]:
         portal_id = f"portal_{self._next_portal_number:06d}"
         self._next_portal_number += 1
         near_key = (observation.near_side.x, observation.near_side.y)
@@ -363,11 +642,11 @@ class PortalMemory:
         if near_key <= far_key:
             side_a = observation.near_side
             side_b = observation.far_side
-            approach_side = "A"
+            approach_side = PortalSide.A
         else:
             side_a = observation.far_side
             side_b = observation.near_side
-            approach_side = "B"
+            approach_side = PortalSide.B
         return _PortalState(
             portal_id=portal_id,
             side_a=side_a,
@@ -399,10 +678,10 @@ class PortalMemory:
             )
             if sum(direct) <= sum(reversed_assignment):
                 endpoint_distances = direct
-                approach_side = "A"
+                approach_side = PortalSide.A
             else:
                 endpoint_distances = reversed_assignment
-                approach_side = "B"
+                approach_side = PortalSide.B
             uncertainty = (
                 observation.uncertainty_m + state.anchor_uncertainty_m)
             if max(endpoint_distances) > (
@@ -432,4 +711,37 @@ class PortalMemory:
             evidence_count=evidence_count,
             confirmed=(
                 evidence_count >= self._policy.confirmation_revisions),
+            confirmed_traversal_count=state.confirmed_traversal_count,
+        )
+
+    def _require_context(self, context: PortalMapContext) -> None:
+        if context != self._context:
+            raise ContextMismatchError(
+                "Ereignis passt nicht zu Sitzung, Karte und Frame")
+
+    def _require_current_revision(self, map_revision: int) -> None:
+        if map_revision < self._latest_revision:
+            raise StaleObservationError(
+                "Ereignis stammt aus einer veralteten Kartenrevision")
+
+    def _require_portal(self, portal_id: str) -> _PortalState:
+        _validate_identifier(portal_id, "portal_id")
+        try:
+            return self._portals[portal_id]
+        except KeyError as exc:
+            raise UnknownPortalError(
+                f"Unbekannte Portal-ID: {portal_id}") from exc
+
+    @staticmethod
+    def _reachability_snapshot(
+            update: ReachabilityUpdate) -> ReachabilitySnapshot:
+        return ReachabilitySnapshot(
+            portal_id=update.portal_id,
+            side=update.side,
+            state=update.state,
+            reason=update.reason,
+            recheck_condition=update.recheck_condition,
+            map_revision=update.map_revision,
+            observed_at_ns=update.observed_at_ns,
+            update_id=update.update_id,
         )

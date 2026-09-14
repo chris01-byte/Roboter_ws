@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M1/A)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M1/B)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,18 +10,18 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M1/A – Portalidentität als reine Logik softwaregeprüft, zur Review.** Ein
-neues, noch nicht in den Explorer eingebundenes Speichermodul ordnet normalisierte
-metrische Beobachtungen stabilen Portal-IDs und kanonischen Seiten zu. Details,
-Tests und Grenzen stehen im jüngsten Eintrag in Abschnitt 6. WE-M1 ist damit noch
-nicht insgesamt erfüllt; insbesondere Durchfahrtsereignisse und aktuelle
-Erreichbarkeit fehlen.
+**WE-M1/B – Durchfahrtshistorie und aktuelle Erreichbarkeit als reine Logik
+softwaregeprüft, zur Review.** Das weiterhin nicht eingebundene Portalmodul führt
+extern validierte Durchfahrtsurteile idempotent und hält die aktuelle
+Erreichbarkeit pro Portalseite getrennt von Identität, Beobachtung und Historie.
+Details, Tests und Grenzen stehen im jüngsten Eintrag in Abschnitt 6. WE-M1 ist
+damit noch nicht insgesamt erfüllt.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M1/B**, weiterhin
-reine, ROS-unabhängige Logik. Er ergänzt idempotente Durchfahrtsereignisse und eine
-von Beobachtung/Bestätigung getrennte aktuelle Erreichbarkeit samt Negativtests.
-Keine Einbindung in `explore_node.py`, keine Zielwahl, keine Persistenz, keine
-Fahrsoftware und keine Geräteaktivierung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M1/C**, ebenfalls
+ohne ROS- oder Fahrwirkung. Er schärft die Bestätigungsevidenz so, dass mehrere
+Revisionen einer bloßen Möbelengstelle nicht allein ein bestätigtes Portal ergeben,
+und schließt die verbleibenden synthetischen WE-M1-Negativfälle. Keine
+Detektorneuentwicklung, Explorer-Einbindung, Zielwahl oder Persistenz.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -42,6 +42,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | Lokale Installationen | Primärinstallation und separates HWT-Overlay dateibasiert geprüft; Details unten. Keine Geräte, ROS-Nodes, Karten oder Bags geöffnet. |
 | WE-M0/A-Fortschreibung `cf3a40bfe004a174eccae18b22cb3a17126bed3e` auf `docs/we-m0a-bestandspruefung` | Dokumentationsbasis von WE-M1/A; vereinigt die belegten lokalen und isolierten Gegenprüfungen, funktionaler Code darunter weiterhin Main `05439c7`. |
 | WE-M1/A `feature/we-m1a-portal-memory` | Zwei neue, nicht eingebundene Python-Dateien plus dieser Statusnachtrag; Reviewstand, kein Deployment. |
+| WE-M1/B `feature/we-m1b-portal-state` | Gestapelter reiner Logikschritt auf WE-M1/A; nur Portalmodul, dessen Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -278,7 +279,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-D0 | Dokumentiert; zur Review | Dokumentationszweig/PR ist nicht automatisch Main oder Jetson-Deployment. |
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
-| WE-M1 | In Arbeit | WE-M1/A als isolierter Identitätskern softwaregeprüft; WE-M1/B für Ereignisse und Erreichbarkeit sowie spätere Integrationsnachweise offen. |
+| WE-M1 | In Arbeit | WE-M1/A und WE-M1/B als isolierte Logik softwaregeprüft; qualifizierte Bestätigungsevidenz und verbleibende WE-M1-Negativfälle in WE-M1/C offen. |
 | WE-M2 | Geplant | Regionsgraph und passive Integration. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
@@ -307,9 +308,10 @@ Referenz noch nicht erneut physisch abgenommen.
 Controllerzyklen unter SLAM-Last. Aktuellen Zustand messen, nicht aus alten Werten
 als erledigt betrachten.
 
-**Identität und Abschluss:** WE-M1/A stellt eine stabile Identität nur innerhalb
-eines expliziten Sitzungs-/Karten-/Frame-Kontexts bereit. Es löst weder dauerhafte
-Kartenbindung noch Durchfahrtsbeleg, Erreichbarkeit, Regionsgraph oder Abschluss.
+**Identität und Abschluss:** WE-M1/A/B stellt Identität, Ereignishistorie und
+aktuelle Erreichbarkeit nur innerhalb eines expliziten Sitzungs-/Karten-/Frame-
+Kontexts bereit. Bewegungsbelege werden nicht selbst validiert. Qualifizierte
+Portalbestätigung, dauerhafte Kartenbindung, Regionsgraph und Abschluss fehlen.
 
 **Kartenintegration:** Manuelle Raum-Overlays, Fingerprints und Speicherverträge
 existieren. Die Zuordnung automatischer Erkundungsregionen und laufender Karten-
@@ -320,6 +322,69 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M1/B: Ereignis und Erreichbarkeit getrennt geführt
+
+**Entscheidung / Umfang:** Das reine `portal_memory.py` ausschließlich um zwei
+Zustandsachsen ergänzt. Ein `TraversalEvent` übernimmt ein bereits extern
+validiertes Urteil mit Ereignis-ID, Portal-ID, Richtung, Zeit sowie Kartenkontext
+und -revision. Eine `ReachabilityUpdate` beschreibt unabhängig davon den aktuellen
+Zustand einer Portalseite als offen, vorübergehend blockiert, unklar oder bewusst
+ausgeschlossen, jeweils mit Grund und erneuter Prüfbedingung. Das Modul liest
+keine Pose, keinen Footprint, Encoder oder Sensoren und trifft keine Fahrentscheidung.
+
+**Nachgewiesenes Verhalten:** Bestätigte Überquerungen werden genau einmal
+gezählt; ein identisches Replay ändert weder Zähler noch Historie. Unbestätigte
+Ereignisse bleiben sichtbar, zählen aber nicht als Überquerung. Hin- und Rückweg
+sind getrennte Ereignisse derselben Portal-ID. Konfligierende IDs, unbekannte
+Portale, fremde Kontexte, veraltete Revisionen, ungültige Felder und harte
+Speichergrenzen werden abgelehnt. Ohne Bewertung ist jede Seite ausdrücklich
+`unknown`, nicht stillschweigend offen. Verlorene Sicht löscht keine Identität;
+ein neuerer externer Befund kann `temporarily_blocked` wieder auf `open` setzen.
+Die Seitenzustände bleiben unabhängig, und ein historisch beobachteter Rückweg
+wird nicht durch diese reine Buchhaltung unterdrückt.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M1B-PORTAL | Portalgedächtnis-Suite: **43 passed**, davon 23 neue Ereignis-/Erreichbarkeitsfälle. |
+| WE-M1B-ADJACENT | Explorer-, Kartenmanager- und Semantikmanager-Suiten gemeinsam: **203 passed**. |
+| WE-M1B-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; anschließender Pakettest: **101 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M1B-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Geprüft sind Replay nach späterem Zählerstand, bestätigte/unbestätigte Ereignisse,
+beide Richtungen, Kontext-/Revisionsfehler, verlorene Sicht, blockiert → offen,
+seitenspezifische Zustände, unveränderte Historie sowie getrennte Kapazitätsgrenzen.
+Der Colcon-Aufbau überschrieb das vorhandene `explore` nur in einem temporären
+Ausgabeverzeichnis und nutzte `robot_interfaces` aus dem vorhandenen Underlay;
+er ist kein sauberer Gesamtworkspace- oder Zielsystemaufbau. Nicht ausgeführt
+wurden ROS-/Zielsystemstart, Jetson-, Sensor-, Footprint- oder Hardwaretests.
+Softwaretests validieren keine reale Überquerung.
+
+**Offene Risiken / Integrationsabhängigkeiten:** `crossing_confirmed` ist bewusst
+ein externes Urteil; Quelle, Frische und vollständiger Chassis-/Auslaufnachweis
+werden erst in einem späteren Integrationsschritt festgelegt und dürfen nicht aus
+Nav2-Erfolg allein entstehen. Die aktuellen Zeitfelder definieren noch keine
+ROS-Uhrquelle. Erreichbarkeit erzeugt weder Blacklists noch Navigationsfreigaben.
+Vor allem genügt die bisherige Zahl unterschiedlicher Kartenrevisionen noch nicht,
+um eine wiederholt sichtbare Möbelengstelle als Tür auszuschließen. Deshalb bleibt
+WE-M1 trotz grüner Tests in Arbeit.
+
+**Nächster abgegrenzter Schritt WE-M1/C:** Nur Portalmodul, synthetische Tests und
+diese STATUS.md ändern. Die Bestätigung benötigt neben unabhängiger Revision eine
+explizite, detectorseitig gelieferte qualifizierte Strukturevidenz; fehlende oder
+widersprüchliche Evidenz bleibt Kandidat beziehungsweise unsicher. Tests für eine
+wiederholt beobachtete Möbelengstelle, verlorene Sicht ohne Identitätsverlust,
+bewegten Raumschwerpunkt und stabile Zählertrennung ergänzen. Keine neue
+Bild-/Costmap-Erkennung implementieren und keine Schwellen als Hardwaremessung
+ausgeben. Erst danach WE-M1 als reine Logik insgesamt bewerten.
+
+**Rückfallweg:** Den WE-M1/B-Commit beziehungsweise dessen gestapelten Review-PR
+zurücknehmen. WE-M1/A bleibt separat reviewbar. Da weiterhin kein bestehender
+Runtime-Pfad das Modul importiert, gibt es keine Runtime- oder Geräteänderung
+zurückzusetzen.
 
 ### 2026-09-14 – WE-M1/A: stabile Portalidentität ohne Laufzeitbindung
 
