@@ -22,15 +22,15 @@ explore_node:
     # --- Passiver Regionsgraph-Schatten (WE-M2/Q) ---
     # Standardmaessig entstehen weder Subscription noch Publisher oder Timer.
     # Aktivierung erfordert pro Prozessstart explizite, nichtleere IDs. Der
-    # Pfad verarbeitet vorerst nur Kartenmanagerstatus und hat keinen Anschluss
-    # an Portalplanung, Zielwahl, Navigation oder Aktoren.
+    # Pfad hat keinen Anschluss an Zielwahl, Navigation oder Aktoren.
     region_graph_shadow_enabled: false
     region_graph_shadow_raw_map_enabled: false
     # 0 ist ein Sperrwert. Bei Aktivierung nach Messung explizit positiv setzen.
     region_graph_shadow_raw_map_capacity: 0
-    # Dritter Opt-in: nur exakt korrelierte Rohkarten-Portalkandidaten. Diese
-    # bleiben unqualifiziert und koennen weder Graph noch Navigation aendern.
+    # Dritter Opt-in: exakt korrelierte topologische Portalbeobachtungen.
     region_graph_shadow_connected_portals_enabled: false
+    # Unabhaengiger Opt-in: ungefilterte Rohkarten-Frontiers als passive Tasks.
+    region_graph_shadow_frontiers_enabled: false
     region_graph_shadow_portal_analysis_clearance_m: 0.20
     region_graph_shadow_portal_uncertainty_m: 0.05
     region_graph_shadow_portal_retry_limit: 30

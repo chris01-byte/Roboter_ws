@@ -29,6 +29,7 @@ from explore.explore_node import (  # noqa: E402
     relative_planar_motion,
     stamp_coverage,
     validated_shadow_connected_portal_feed,
+    validated_shadow_frontier_task_feed,
     validated_shadow_raw_map_capacity,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
@@ -895,6 +896,7 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_raw_map_enabled'] is False
     assert parameters['region_graph_shadow_raw_map_capacity'] == 0
     assert parameters['region_graph_shadow_connected_portals_enabled'] is False
+    assert parameters['region_graph_shadow_frontiers_enabled'] is False
     assert parameters['region_graph_shadow_portal_analysis_clearance_m'] == 0.20
     assert parameters['region_graph_shadow_portal_uncertainty_m'] == 0.05
     assert parameters['region_graph_shadow_portal_retry_limit'] == 30
@@ -1020,6 +1022,42 @@ def test_enabled_shadow_passes_only_explicit_raw_map_capacity(monkeypatch):
         ('session-raw', 'map', 'start-raw'),
         {'raw_map_capacity': 3},
     )]
+
+
+def test_enabled_frontier_feed_passes_existing_revisit_radius(monkeypatch):
+    lifecycle_calls = []
+
+    class FakeLifecycle:
+        def __init__(self, *args, **kwargs):
+            lifecycle_calls.append((args, kwargs))
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_enabled = True
+    node._region_graph_shadow_raw_map_join_capacity = 2
+    node._region_graph_shadow_frontier_task_feed = True
+    node._region_graph_shadow_connected_portal_feed = False
+    node._region_graph_shadow_raw_event_feed = True
+    node._frontier_revisit_radius = 0.75
+    node._region_graph_shadow_session_id = 'session-frontier'
+    node._region_graph_shadow_start_observation_id = 'start-frontier'
+    node._region_graph_shadow_map_status_topic = '/map-status'
+    node._region_graph_shadow_status_topic = '/shadow-status'
+    node._global_frame = 'map'
+    node._cb = object()
+    node.create_publisher = lambda *args, **kwargs: object()
+    node.create_subscription = lambda *args, **kwargs: object()
+    node.create_timer = lambda *args, **kwargs: object()
+    monkeypatch.setattr(
+        explore_node_module, 'RegionGraphShadowLifecycle', FakeLifecycle)
+
+    node._initialize_region_graph_shadow()
+
+    args, kwargs = lifecycle_calls[0]
+    assert args == ('session-frontier', 'map', 'start-frontier')
+    assert kwargs['raw_map_capacity'] == 2
+    assert kwargs['frontier_policy'].association_radius_m == 0.75
+    assert hasattr(node, '_region_graph_shadow_frontier_processed_correlation')
+    assert not hasattr(node, '_region_graph_shadow_processed_correlation')
 
 
 def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
@@ -1320,6 +1358,116 @@ def test_connected_portal_feed_requires_all_three_opt_ins():
             pass
         else:
             raise AssertionError(f'Ungueltiger Portalfeed akzeptiert: {values}')
+
+
+def test_frontier_task_feed_requires_shadow_and_raw_map_but_not_portals():
+    assert validated_shadow_frontier_task_feed(True, True, True, 2)
+    assert not validated_shadow_frontier_task_feed(True, True, False, 2)
+    for values in (
+            (False, True, True, 2),
+            (True, False, True, 2),
+            (True, True, True, 0),
+            (True, True, 1, 2)):
+        try:
+            validated_shadow_frontier_task_feed(*values)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(
+                f'Ungueltiger Frontierfeed akzeptiert: {values}')
+
+
+def test_frontier_feed_uses_raw_clusters_before_rank_or_blacklist(monkeypatch):
+    correlation = SimpleNamespace(
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+        context=SimpleNamespace(frame_id='map'),
+        map_revision=7,
+    )
+    source = SimpleNamespace(
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+        frame_id='map',
+    )
+    first = Frontier((1.0, 2.0), 8)
+    second = Frontier((3.0, 4.0), 12)
+    inventory = object()
+    lifecycle_calls = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_frontier_task_feed = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_latest_raw_map = _grid(width=2, height=2)
+    node._region_graph_shadow_latest_raw_source = source
+    node._region_graph_shadow_latest_correlation = correlation
+    node._region_graph_shadow_frontier_processed_correlation = None
+    node._min_frontier_m = 0.30
+    node._blacklist = [(1.0, 2.0)]
+    node._detect_frontiers = lambda message, minimum: (
+        [first, second]
+        if message is node._region_graph_shadow_latest_raw_map
+        and minimum == 0.30
+        else (_ for _ in ()).throw(AssertionError('Falscher Detektoraufruf')))
+    node._rank_frontiers = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError('Passive Zufuehrung darf nicht ranken'))
+    node._region_graph_shadow = SimpleNamespace(
+        observe_frontier_inventory=lambda value, **kwargs: lifecycle_calls.append(
+            (value, kwargs)))
+
+    def build_inventory(value, clusters):
+        assert value is correlation
+        assert not node._region_graph_shadow_lock.locked()
+        assert tuple(clusters) == ((1.0, 2.0, 8), (3.0, 4.0, 12))
+        return inventory
+
+    monkeypatch.setattr(
+        explore_node_module, 'frontier_inventory_from_clusters',
+        build_inventory)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 50.0)
+
+    node._try_observe_correlated_raw_map_frontiers()
+    node._try_observe_correlated_raw_map_frontiers()
+
+    assert lifecycle_calls == [(
+        inventory, {'observed_monotonic_seconds': 50.0})]
+    assert node._region_graph_shadow_frontier_processed_correlation == (
+        'a' * 64, 123, 'map', 7)
+
+
+def test_frontier_feed_discards_result_when_exact_cache_changes(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_frontier_task_feed = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_latest_raw_map = _grid(width=2, height=2)
+    node._region_graph_shadow_latest_raw_source = SimpleNamespace(
+        fingerprint='a' * 64, source_stamp_ns=123, frame_id='map')
+    original = SimpleNamespace(
+        fingerprint='a' * 64, source_stamp_ns=123,
+        context=SimpleNamespace(frame_id='map'), map_revision=7)
+    node._region_graph_shadow_latest_correlation = original
+    node._region_graph_shadow_frontier_processed_correlation = None
+    node._min_frontier_m = 0.30
+    node._detect_frontiers = lambda *args: []
+    calls = []
+    node._region_graph_shadow = SimpleNamespace(
+        observe_frontier_inventory=lambda *args, **kwargs: calls.append(
+            (args, kwargs)))
+
+    def change_cache(*args, **kwargs):
+        node._region_graph_shadow_latest_correlation = SimpleNamespace(
+            fingerprint='b' * 64, source_stamp_ns=456,
+            context=SimpleNamespace(frame_id='map'), map_revision=8)
+        return object()
+
+    monkeypatch.setattr(
+        explore_node_module, 'frontier_inventory_from_clusters', change_cache)
+
+    node._try_observe_correlated_raw_map_frontiers()
+
+    assert original.map_revision == 7
+    assert calls == []
+    assert node._region_graph_shadow_frontier_processed_correlation is None
 
 
 def _portal_feed_node():
