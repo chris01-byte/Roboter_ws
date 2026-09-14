@@ -14,7 +14,13 @@ from explore.map_status_adapter import (  # noqa: E402
     MapStatusAdapterError,
     MapStatusCorrelationPolicy,
 )
-from explore.portal_memory import PortalMemoryPolicy  # noqa: E402
+from explore.portal_memory import (  # noqa: E402
+    ObservationDisposition,
+    PortalMapContext,
+    PortalMemoryPolicy,
+    StaleObservationError,
+)
+from explore.portal_plan_adapter import PortalPlanCandidate  # noqa: E402
 from explore.region_graph import RegionGraphPolicy  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
@@ -86,6 +92,19 @@ def accept_status(owner, text=None, *, at=100.0):
 
 def build_status(owner, *, now=100.0):
     return owner.build_status_json(now_monotonic_seconds=now)
+
+
+def candidate(owner, **changes):
+    values = {
+        "observation_id": "portal-plan-1",
+        "context": owner.context,
+        "map_revision": owner.latest_map_status.map_revision,
+        "staging_xy": (0.0, 0.0),
+        "target_xy": (1.0, 0.0),
+        "uncertainty_m": 0.05,
+    }
+    values.update(changes)
+    return PortalPlanCandidate(**values)
 
 
 def test_owner_waits_without_inventing_context_or_status():
@@ -293,6 +312,186 @@ def test_not_ready_status_failure_does_not_advance_monotonic_order():
     assert accept_status(owner, at=50.0).session_started is True
 
 
+def test_portal_plan_requires_active_session_without_advancing_time():
+    owner = lifecycle()
+    pending_context = PortalMapContext(
+        "session-20260914", f"map-{FINGERPRINT_A}", "map")
+    pending = PortalPlanCandidate(
+        "pending-plan", pending_context, 3,
+        (0.0, 0.0), (1.0, 0.0), 0.05)
+
+    with pytest.raises(RegionGraphShadowNotReadyError):
+        owner.observe_portal_plan(
+            pending, observed_monotonic_seconds=100.0)
+
+    assert accept_status(owner, at=50.0).session_started is True
+
+
+def test_new_portal_plan_sets_portal_age_without_graph_connection():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    result = owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=101.0)
+    payload = json.loads(build_status(owner, now=102.0))
+
+    assert result.disposition is ObservationDisposition.CREATED
+    assert result.duplicate is False
+    assert payload["source"]["portal_memory"]["age_seconds"] == 1.0
+    assert payload["source"]["region_graph"]["age_seconds"] == 2.0
+    assert payload["summary"]["portal_count"] == 1
+    assert payload["summary"]["confirmed_portal_count"] == 0
+    assert payload["summary"]["connection_count"] == 0
+
+
+def test_exact_portal_replay_does_not_refresh_portal_age():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    plan = candidate(owner)
+    owner.observe_portal_plan(plan, observed_monotonic_seconds=101.0)
+
+    replay = owner.observe_portal_plan(
+        plan, observed_monotonic_seconds=110.0)
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert replay.duplicate is True
+    assert payload["source"]["portal_memory"]["age_seconds"] == 10.0
+
+
+def test_new_matching_observation_refreshes_portal_age():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=101.0)
+
+    matched = owner.observe_portal_plan(
+        candidate(
+            owner,
+            observation_id="portal-plan-2",
+            staging_xy=(0.01, 0.0),
+            target_xy=(1.01, 0.0),
+        ),
+        observed_monotonic_seconds=110.0,
+    )
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert matched.disposition is ObservationDisposition.MATCHED
+    assert matched.duplicate is False
+    assert payload["source"]["portal_memory"]["age_seconds"] == 1.0
+
+
+def test_future_portal_revision_fails_before_memory_or_time_changes():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        owner.observe_portal_plan(
+            candidate(owner, map_revision=4),
+            observed_monotonic_seconds=110.0,
+        )
+
+    accepted = owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=105.0)
+    assert accepted.disposition is ObservationDisposition.CREATED
+
+
+def test_portal_revision_before_graph_start_fails_atomically():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    with pytest.raises(StaleObservationError):
+        owner.observe_portal_plan(
+            candidate(owner, map_revision=2),
+            observed_monotonic_seconds=110.0,
+        )
+
+    accepted = owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=105.0)
+    assert accepted.disposition is ObservationDisposition.CREATED
+
+
+def test_foreign_portal_context_fails_before_memory_or_time_changes():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    foreign = PortalMapContext(
+        "other-session", owner.context.map_id, owner.context.frame_id)
+
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        owner.observe_portal_plan(
+            candidate(owner, context=foreign),
+            observed_monotonic_seconds=110.0,
+        )
+
+    accepted = owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=105.0)
+    assert accepted.disposition is ObservationDisposition.CREATED
+
+
+def test_ambiguous_new_observation_refreshes_memory_age_but_not_graph():
+    owner = lifecycle(portal_policy=PortalMemoryPolicy(
+        max_endpoint_distance_m=0.16,
+        max_midpoint_distance_m=0.16,
+        ambiguity_margin_m=0.01,
+    ))
+    accept_status(owner, at=100.0)
+    owner.observe_portal_plan(
+        candidate(owner, observation_id="door-1", uncertainty_m=0.0),
+        observed_monotonic_seconds=101.0,
+    )
+    owner.observe_portal_plan(
+        candidate(
+            owner,
+            observation_id="door-2",
+            staging_xy=(0.0, 0.24),
+            target_xy=(1.0, 0.24),
+            uncertainty_m=0.0,
+        ),
+        observed_monotonic_seconds=102.0,
+    )
+
+    ambiguous = owner.observe_portal_plan(
+        candidate(
+            owner,
+            observation_id="between",
+            staging_xy=(0.0, 0.12),
+            target_xy=(1.0, 0.12),
+            uncertainty_m=0.0,
+        ),
+        observed_monotonic_seconds=110.0,
+    )
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert ambiguous.disposition is ObservationDisposition.AMBIGUOUS
+    assert payload["source"]["portal_memory"]["age_seconds"] == 1.0
+    assert payload["source"]["region_graph"]["age_seconds"] == 11.0
+    assert payload["summary"]["connection_count"] == 0
+
+
+@pytest.mark.parametrize("invalid", [-1.0, float("nan"), float("inf"), True, "1"])
+def test_invalid_portal_monotonic_time_fails_closed(invalid):
+    owner = lifecycle()
+    accept_status(owner)
+
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        owner.observe_portal_plan(
+            candidate(owner), observed_monotonic_seconds=invalid)
+
+    assert json.loads(build_status(owner))["summary"]["portal_count"] == 0
+
+
+def test_wrong_portal_candidate_type_fails_without_advancing_time():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        owner.observe_portal_plan(
+            "candidate", observed_monotonic_seconds=110.0)
+
+    accepted = owner.observe_portal_plan(
+        candidate(owner), observed_monotonic_seconds=105.0)
+    assert accepted.disposition is ObservationDisposition.CREATED
+
+
 @pytest.mark.parametrize("invalid", [-1.0, float("nan"), float("inf"), True, "1"])
 def test_invalid_received_monotonic_time_fails_closed(invalid):
     owner = lifecycle()
@@ -380,13 +579,13 @@ def test_valid_policy_objects_are_not_mutated_or_replaced():
     assert (map_policy, portal_policy, graph_policy, status_policy) == before
 
 
-def test_update_is_immutable_and_owner_has_no_reset_or_portal_api():
+def test_update_is_immutable_and_owner_has_no_privileged_or_reset_api():
     owner = lifecycle()
     update = accept_status(owner)
 
     with pytest.raises(FrozenInstanceError):
         update.session_started = False
     assert not hasattr(owner, "reset")
-    assert not hasattr(owner, "observe_portal_plan")
     assert not hasattr(owner, "qualify_portal")
     assert not hasattr(owner, "record_traversal")
+    assert not hasattr(owner, "create_goal")
