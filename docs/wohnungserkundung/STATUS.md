@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/O)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/P)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,23 +10,29 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/O – unqualifizierte Portalzuführung und Portalalter softwaregeprüft, zur
-Review.** Der reine Lebenszyklus nimmt nach Sitzungsstart vorhandene
-`PortalPlanCandidate`-Eingänge auf. Kontext und Revision werden gegen den
-aktuellen Kartenstand geprüft. Neue und mehrdeutige Beobachtungen setzen das
-Portalalter, exaktes Replay nicht. Kandidaten bleiben unqualifiziert und erzeugen
-weder Graphverbindung noch Eintritt. Es gibt weiterhin keine echte Uhr, ROS-,
-Explorer- oder Fahrwirkung.
+**WE-M2/P – passive Runtime-Naht quellenbasiert festgelegt, zur Review.** Main,
+HWT-Erprobungsstand, lokaler Mischstand und die gestapelte WE-Reihe wurden nach
+`git fetch origin` verglichen. Der erste ROS-Schritt darf ausschließlich den
+Kartenmanagerstatus in einem standardmäßig deaktivierten, getrennten
+Schattenpfad verarbeiten und höchstens mit 1 Hz auf
+`/explore/region_graph/status_json` ausgeben. Das bestehende
+`/explore/status_json`, Zielwahl, Navigation und Aktorpfade bleiben unberührt.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/P.** Vor dem
-ersten ROS-Eingriff ausschließlich die passive Integrationsnaht erneut
-quellenbasiert festlegen: aktuellen Main-, HWT-, lokalen Explorer- und gestapelten
-WE-Stand vergleichen; konkrete Besitzer-, Callback-, Portalplan-, Session-ID-,
-monotone Uhr-, Topic-/QoS-, 1-Hz-Ausgabe- und Fehlerpfade benennen. Insbesondere
-klären, welcher Branch die sichere Runtime-Basis ist und wie
-`region_graph_shadow_enabled: false` ohne Änderung des bestehenden
-`/explore/status_json` garantiert wird. Nur diese STATUS.md; keine Funktions-,
-Node-, Launch-, Parameter- oder Fahrsoftware und kein Branchmerge.
+Eine Portalzuführung ist für diesen ersten Laufzeitschritt ausdrücklich
+gesperrt: `PortalPlan` entsteht primär aus der asynchronen Nav2-Global-Costmap
+und besitzt weder stabile Beobachtungs-ID noch Kartenrevision oder metrische
+Unsicherheit. Der jeweils jüngsten Kartenmanagerrevision zugeordnet zu werden
+wäre keine Korrelation, sondern erfundene Provenienz.
+
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/Q.** Auf der
+gestapelten, Main-basierten WE-Reihe nur eine passive, standardmäßig
+deaktivierte Kartenstatus-ROS-Hülle im bestehenden Explorer ergänzen. Sitzung
+und Startbeobachtung müssen beim Aktivieren explizit konfiguriert sein; ohne sie
+startet der Schattenpfad nicht. Eigene Subscription, Publisher, Sperre und
+1-s-Timer verwenden `time.monotonic()`, bleiben von der bestehenden
+Statusausgabe isoliert und stoppen bei Decoder-, Zeit- oder Epochenfehlern
+fail-closed. Noch keine Portalpläne, qualifizierte Evidenz, Ziele, Fahrwirkung,
+Launch-Änderung, Installation oder Hardwareprüfung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -64,6 +70,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/M `feature/we-m2m-shadow-lifecycle` | Gestapelter reiner Lebenszyklusbesitzer für Decoder, Kartenkorrelator und genau eine Schatten-Sitzung; neues Modul, Tests und Status. |
 | WE-M2/N `feature/we-m2n-shadow-monotonic-age` | Gestapelte explizite monotone Eingangszeit und daraus abgeleitetes Graphalter im reinen Lebenszyklus; Modul, Tests und Status. |
 | WE-M2/O `feature/we-m2o-shadow-portal-feed` | Gestapelte unqualifizierte Portalplan-Zuführung mit replayfestem Portalalter im reinen Lebenszyklus; Modul, Tests und Status. |
+| WE-M2/P `docs/we-m2p-shadow-runtime-seam` | Gestapelte quellenbasierte Festlegung der ersten passiven ROS-Naht einschließlich gesperrter Portal-Provenienz; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -301,7 +308,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis O decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus sowie monotones Graph- und Portalalter ab. Runtime-Basis, ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis P decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portalalter und die quellenbasierte Runtime-Naht ab. Passive Kartenstatus-ROS-Hülle, belastbare Portal-Provenienz, qualifizierte Evidenz und Zielsystemnachweis offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -310,8 +317,13 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 
 ## 5. Bekannte offene Punkte
 
-**Codebasis:** Main und HWT-Erprobungszweig bleiben divergent. WE-M1/A benötigt
-keine funktionale HWT-Übernahme. Vor einer späteren Explorer-Einbindung sind
+**Codebasis:** Main und HWT-Erprobungszweig bleiben divergent. Der HWT-Zweig
+ändert unter `src/explore/` elf Dateien gegenüber Main (unter anderem 670
+Zeilen im Node), der lokale Primärbaum nochmals drei Explorerdateien und eine
+nicht eingecheckte strukturierte Strategie. Die gestapelte WE-Reihe verändert
+den bestehenden `explore_node.py` dagegen nicht und bleibt deshalb die einzige
+reproduzierbare Reviewbasis für die passive Hülle; sie ist weder Deployment-
+noch HWT-Integrationsfreigabe. Vor einer späteren funktionalen Einbindung sind
 Engstellendetektor, Auslaufkorrektur, strukturierte lokale Konturstrategie und
 Sensorfusionsprofil gezielt gegeneinander zu integrieren; ein
 Dokumentationsmerge nimmt diese Funktionen nicht mit.
@@ -358,8 +370,18 @@ dieses Ergebnis typisiert und revisionsmonoton an die Sitzung. WE-M2/L decodiert
 den tatsächlichen Statusumschlag rein und begrenzt. WE-M2/M besitzt daraus genau
 eine Sitzung und verweigert automatische Epochenübernahme. WE-M2/N leitet das
 Graphalter aus expliziten monotonen Zeitpunkten ab. WE-M2/O führt unqualifizierte
-Portalpläne mit replayfestem Portalalter zu; Runtime-Basis, ROS-Subscription,
-qualifizierte Evidenz und echte Laufzeitmessung fehlen weiterhin.
+Portalpläne mit replayfestem Portalalter zu. WE-M2/P legt die erste passive
+ROS-Naht fest, weist aber zugleich nach, dass `PortalPlan` aus der
+Nav2-Global-Costmap nicht belastbar einer Kartenmanagerrevision zugeordnet
+werden kann. Deshalb bleiben Portalzuführung, qualifizierte Evidenz und echte
+Laufzeitmessung weiterhin offen.
+
+**Statusfrische:** Der Kartenmanager publiziert seinen Status standardmäßig
+alle 2,0 s, während der reine Schattenvertrag Kartenquellen nach mehr als 2,0 s
+als veraltet bewertet. Gleichheit der Grenzwerte lässt keinen Spielraum für
+Scheduling und Transport. WE-M2/Q darf diese Schwellen nicht unbelegt
+verändern; der motorlose ROS-Test muss Grenzfall, Startreihenfolge und
+Transient-Local-Replay sichtbar machen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -378,6 +400,79 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/P: erster ROS-Schritt bleibt kartenbasiert und passiv
+
+**Verglichene Stände:** Nach erfolgreichem `git fetch origin` wurden Main
+`05439c7`, HWT `1d91229`, der unverändert belassene lokale Primärbaum und die
+gestapelte WE-Spitze `1d27c94` quellenbasiert verglichen. Main und die WE-Spitze
+besitzen denselben bestehenden Explorer-Laufzeitcode. HWT ergänzt insbesondere
+Engstellen in verbundenem Freiraum und weitere Portalabläufe; der lokale Baum
+enthält abweichende, teilweise nicht eingecheckte strukturierte Erkundung.
+Keiner der beiden letztgenannten Stände ist eine saubere Basis für diesen kleinen
+Integrationsschritt. Die laufende Arbeitskopie wurde weder gewechselt noch
+verändert.
+
+**Besitz und Einfügepunkte für WE-M2/Q:** Der bestehende `ExploreNode` bleibt
+einziger Prozessbesitzer. In `__init__` werden neben den vorhandenen Parametern
+nur `region_graph_shadow_enabled` (Standard `false`), explizite nichtleere
+Sitzungs- und Startbeobachtungs-ID, Kartenstatus-Topic mit Standard
+`/robot_map_manager/status_json` sowie das getrennte Ausgabe-Topic
+`/explore/region_graph/status_json` deklariert. Nur bei Aktivierung werden genau
+ein `RegionGraphShadowLifecycle`, eine eigene Sperre, eine String-Subscription,
+ein String-Publisher und ein eigener 1,0-s-Timer erzeugt. Die Subscription und
+der Publisher verwenden KeepLast 1, Reliable und Transient Local passend zum
+Kartenmanagerstatus und zur Entscheidung aus WE-M2/F. `explore.launch.py`
+benötigt keine Änderung, weil es das vorhandene YAML-Profil bereits lädt.
+
+Der Kartenstatus-Callback erfasst `time.monotonic()` genau einmal pro Nachricht
+und übergibt Text und Zeitpunkt an den reinen Lebenszyklus. Der getrennte Timer
+erfasst die monotone Zeit genau einmal, publiziert erst nach aktivem
+Sitzungsstart und niemals häufiger als 1 Hz. Eine eigene Sperre ist wegen der
+vorhandenen `ReentrantCallbackGroup` erforderlich. Ausnahmen des Schattenpfads
+dürfen weder den bestehenden 1-Hz-Status noch Action, Nav2-Client,
+Geschwindigkeitspublisher oder Zielwahl erreichen. Ein Decoder-, Zeitfolge-
+oder Kartenepochenfehler setzt den Schattenpfad für diesen Prozessstart
+fail-closed; insbesondere wird keine Sitzung automatisch zur neuen Epoche
+umgebogen. Ein Neustart mit neuer expliziter Sitzungs-ID bleibt der
+Wiederanlaufweg.
+
+**Bewusst fehlende Portalzuführung:** Main erstellt `PortalPlan` aus der
+Nav2-Global-Costmap; HWT ergänzt zwar einen zweiten, teilweise auf `/map`
+gestützten Detektor, erzeugt am Ende aber denselben laufzeitnahen Plan ohne
+stabile Beobachtungs-ID, Kartenrevision und Unsicherheit. Es gibt keinen
+belegten Vertrag, der den Erstellungsstand der asynchronen Global-Costmap mit
+dem Fingerprint und der Revision des Kartenmanagerstatus verbindet. WE-M2/Q
+darf daher keinen `PortalPlanCandidate` erzeugen. Das erfordert zuerst einen
+separaten, reviewbaren Costmap-/Karten-Korrelations- und Identitätsvertrag.
+
+**Betroffene Dateien des nächsten Schritts:** ausschließlich
+`src/explore/explore/explore_node.py`,
+`src/explore/config/explore_params.yaml`,
+`src/explore/test/test_explore_contract.py` und diese STATUS.md. Keine Änderung
+an Portalplanung, Action-/Statusschema, Navigation, Bring-up, Kartenmanager,
+Semantik, Launches oder Gerätekonfiguration.
+
+**Prüfplan für WE-M2/Q:** Quellvertragstests müssen belegen, dass der Standard
+deaktiviert ist, dann keine Schatten-ROS-Schnittstelle entsteht und der
+bestehende Status unverändert bleibt. Aktivierte Tests prüfen Pflicht-IDs,
+exaktes Topic/QoS, getrennten Timer, genau einen monotonen Zeitwert je Callback,
+Warten auf unvollständigen Kartenstatus, Ausgabe erst nach gültiger Karte sowie
+dauerhaftes Fail-closed bei ungültigem JSON, Zeitrücklauf und Epochenwechsel.
+Danach vollständige Explorer-Suite, isolierter `colcon build/test` und ein
+motorloser ROS-Topic-Test mit deaktiviertem und aktiviertem Pfad. Der
+2,0-s-Frischegrenzfall ist als Messwert zu protokollieren, nicht stillschweigend
+umzukonfigurieren. Keine Nav-Action, keine Aktoren und keine Hardwareabnahme.
+
+**Rückfallweg:** Da WE-M2/P nur diese STATUS.md ändert, kann der Abschnitt
+entfernt oder der Dokumentations-PR geschlossen werden. Für WE-M2/Q ist der
+Rückfall `region_graph_shadow_enabled: false`; vollständig werden die drei
+Runtime-/Parameter-/Teständerungen revertiert. Der bestehende
+`/explore/status_json` und alle Fahrpfade dürfen dabei keinen Zustand verlieren.
+
+**Grenzen der Aussage:** Keine ROS-Nodes, Karten, Geräte oder Aktoren wurden
+gestartet; kein Zielsystem, Timing, Discovery, QoS-Replay, Speicherbedarf,
+Portal, Durchfahrt oder Hardwareverhalten ist damit abgenommen.
 
 ### 2026-09-14 – WE-M2/O: Portal-Replay verjüngt die Quelle nicht
 
