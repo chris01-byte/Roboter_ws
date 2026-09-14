@@ -48,6 +48,7 @@ import numpy as np
 
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
@@ -879,8 +880,11 @@ class ExploreNode(Node):
                 'wohnungserkundung_evidence_max_cells', 262144).value)
         self._wohnungserkundung_scope_id = str(self.declare_parameter(
             'wohnungserkundung_scope_id', '').value).strip()
-        scope_polygon_values = tuple(self.declare_parameter(
-            'wohnungserkundung_scope_polygon_xy', []).value)
+        scope_polygon_values = tuple(
+            self.declare_parameter(
+                'wohnungserkundung_scope_polygon_xy',
+                Parameter.Type.DOUBLE_ARRAY,
+            ).value or ())
         self._wohnungserkundung_scope_vertices = tuple(
             PortalPoint2D(
                 float(scope_polygon_values[index]),
@@ -4599,7 +4603,9 @@ class ExploreNode(Node):
                         traversal_result = (
                             self._region_graph_shadow
                             .record_validated_traversal(
-                                assessment.traversal_event))
+                                assessment.traversal_event,
+                                observed_monotonic_seconds=time.monotonic(),
+                            ))
                     if not traversal_result.graph.entered:
                         raise RuntimeError(
                             'Portalereignis hat keine Region betreten')

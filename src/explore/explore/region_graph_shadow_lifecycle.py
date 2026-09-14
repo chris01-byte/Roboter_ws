@@ -188,6 +188,13 @@ class RegionGraphShadowLifecycle:
                 "Frontiertracks warten noch auf eine Schatten-Sitzung")
         return self._session.frontier_tracks()
 
+    def portal_snapshots(self):
+        """Expose immutable portal snapshots through the runtime owner."""
+        if self._session is None:
+            raise RegionGraphShadowNotReadyError(
+                "Portalbestand wartet noch auf eine Schatten-Sitzung")
+        return self._session.portal_snapshots()
+
     @property
     def raw_map_diagnostics(self) -> RawMapCorrelationDiagnostics:
         joiner = self._raw_map_joiner

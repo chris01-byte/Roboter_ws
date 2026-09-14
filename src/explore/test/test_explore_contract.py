@@ -941,6 +941,7 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['wohnungserkundung_policy_enabled'] is False
     assert parameters['wohnungserkundung_navigation_enabled'] is False
     assert parameters['wohnungserkundung_accessible_scope_verified'] is False
+    assert 'wohnungserkundung_scope_polygon_xy' not in parameters
     assert parameters['wohnungserkundung_completion_required_revisions'] == 3
     assert parameters['wohnungserkundung_evidence_clearance_m'] == 0.28
     assert parameters['wohnungserkundung_robot_seed_search_m'] == 0.75
@@ -1443,7 +1444,7 @@ def _portal_runtime_node(monkeypatch, outcome):
         record_attempt=attempts.append)
     node._region_graph_shadow = SimpleNamespace(
         portal_snapshots=lambda: (portal,),
-        record_validated_traversal=lambda event: (
+        record_validated_traversal=lambda event, **_kwargs: (
             traversal_events.append(event)
             or SimpleNamespace(graph=SimpleNamespace(entered=True))),
     )
