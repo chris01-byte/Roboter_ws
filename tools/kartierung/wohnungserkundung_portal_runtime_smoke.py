@@ -177,7 +177,7 @@ def main():
 
     shadow = SimpleNamespace(
         portal_snapshots=lambda: (portal,),
-        record_validated_traversal=lambda selected: (
+        record_validated_traversal=lambda selected, **_kwargs: (
             recorded_events.append(selected)
             or SimpleNamespace(graph=SimpleNamespace(entered=True))),
     )

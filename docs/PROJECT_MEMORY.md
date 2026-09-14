@@ -17,6 +17,43 @@ Rückfallweg:
 
 ---
 
+## 2026-09-14 — WE-Portalfortschritt an echten Prozessbeleg gebunden
+
+**Entscheidung:** Das separat aktivierbare WE-Profil versendet Portalziele nur
+mit verifiziertem Scope und vollständig gesetztem, eingefrorenem
+LiDAR-Traversierungsmonitor. Erst ein bestätigtes Ereignis darf Region und
+Portalaufgabe atomar fortschreiben. Das optionale Scope-Polygon besitzt im
+ROS-Knoten ausdrücklich den Typ `DOUBLE_ARRAY`; ein leeres, typmehrdeutiges
+Standard-YAML-Array wird nicht gesetzt.
+
+**Grund / beobachtete Evidenz:** Ein isolierter Prozesslauf des echten
+`ExploreNode` mit synthetischem Kartenmanagerstatus, Rohkarte, TF/Scan und
+Fake-Nav2 fand drei durch Objekt-Fakes verdeckte Nähte: falsche ROS-Array-
+Typableitung, fehlende Portalsnapshot-Delegation des Lifecycle-Besitzers und
+fehlende monotone Zeit beim Ereignisaufruf. Nach der Korrektur beendete der
+Positivlauf die Portalaufgabe und betrat genau eine neue Region. Fehlendes
+exaktes TF stornierte das einzige Kindziel, ließ die Portalaufgabe offen und
+erzeugte keinen Eintritt. Beide Läufe beobachteten null Command-Nachrichten.
+
+**Betroffene Dateien und Hardware:** Eng begrenzte Explorer-Parameter-,
+Lifecycle- und Ereignisnaht, zugehörige Tests sowie gerätefreier Prozessprüfer;
+keine Fahrsoftware, Geräte, reale Karten oder Installation verändert.
+
+**Teststatus:** 1053 angrenzende Quelltests; frischer Drei-Paket-Aufbau mit 875
+Tests ohne Fehler; positiver und abbrechender Prozesslauf in isolierter
+ROS-Domain. Das sind Softwarebelege, keine Chassisvermessung, Fahrt oder
+Hardwareabnahme.
+
+**Offene Risiken:** Profilwerte sind synthetisch. Parallele SLAM-/Nav2-/
+Sicherheitslast, reale Kartenrevisionsfrequenz und motorlose
+Zielprofilintegration bleiben offen.
+
+**Rückfallweg:** Gestapelten WE-M3/U-Commit zurücknehmen oder WE-Navigation und
+Portalmonitor deaktiviert lassen. Ohne explizites Scope- und Monitorprofil wird
+kein Portalziel versandt.
+
+---
+
 ## 2026-09-14 — Kartenfingerprint in azyklisches Blattpaket extrahiert
 
 **Entscheidung:** Die kanonische, ROS-unabhängige Fingerprintberechnung liegt im

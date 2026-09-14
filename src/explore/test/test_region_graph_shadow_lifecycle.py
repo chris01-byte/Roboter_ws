@@ -120,6 +120,25 @@ def build_status(owner, *, now=100.0):
     return owner.build_status_json(now_monotonic_seconds=now)
 
 
+def test_portal_snapshots_require_started_lifecycle_and_delegate_immutably():
+    owner = lifecycle()
+    with pytest.raises(RegionGraphShadowNotReadyError):
+        owner.portal_snapshots()
+
+    accept_status(owner)
+    owner.observe_portal_inventory(
+        PortalObservationInventory(
+            inventory_id="portal-inventory-lifecycle",
+            context=owner.context,
+            map_revision=owner.latest_map_status.map_revision,
+            observations=(),
+        ),
+        observed_monotonic_seconds=101.0,
+    )
+
+    assert owner.portal_snapshots() == ()
+
+
 def candidate(owner, **changes):
     values = {
         "observation_id": "portal-plan-1",
