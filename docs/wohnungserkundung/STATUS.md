@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/G)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/H)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,20 +10,19 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/G – monotone Zeitfrische als reine Logik softwaregeprüft, zur Review.**
-Der Schattenstatus bewertet Kartenquelle, Portalgedächtnis und Regionsgraph jetzt
-jeweils mit explizit vom späteren Adapter zu lieferndem Alter zusätzlich zum
-Revisionsabstand. Fehlendes Alter bleibt sichtbar `missing`, Überschreitung wird
-`stale`, ungültige Zeitwerte schlagen geschlossen fehl. Eine eingefrorene Quelle
-kann dadurch nicht mehr allein wegen gleicher Revision als frisch erscheinen.
-Es gibt weiterhin keinen ROS-Publisher, Explorer-Eingriff, Ziel oder Fahrwirkung.
+**WE-M2/H – Portalplan-Normalisierung als reine Logik softwaregeprüft, zur
+Review.** Ein neuer Adapter übernimmt ausschließlich explizit gelieferte
+Portalplan-Geometrie, Kontext, Kartenrevision, stabile Beobachtungs-ID und
+metrische Unsicherheit. Er erzeugt deterministisch eine `PortalObservation` mit
+festem `INSUFFICIENT`; Bestätigung, Durchfahrt, ROS, Zielwahl und Fahrwirkung sind
+nicht möglich.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/H.** Einen reinen
-Normalisierungsvertrag für vorhandene `PortalPlan`-Kandidaten abgrenzen und
-synthetisch testen. Kontext, Kartenrevision und Beobachtungs-ID müssen explizit
-sein; bestehende Vorschläge dürfen ausschließlich `INSUFFICIENT`-Evidenz erzeugen.
-Nur neues Adaptermodul, dessen Tests und diese STATUS.md; noch keine
-Explorer-/ROS-Einbindung, keine `QUALIFIED`-Evidenz und kein Durchfahrtsereignis.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/I.** Einen reinen,
+sitzungsgebundenen Schattenaggregator für Portalgedächtnis, Regionsgraph und
+Statusprojektion erstellen. Er darf normalisierte Kandidaten passiv annehmen,
+aber ohne separat qualifizierte Evidenz weder Graphverbindung noch Eintritt
+erzeugen. Nur neues Aggregatmodul, dessen Tests und diese STATUS.md; keine
+Explorer-/ROS-/Launch-/Parameterintegration und keine Fahrsoftware.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -53,6 +52,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/E `feature/we-m2e-shadow-status` | Gestapelte reine JSON-Schattenprojektion mit expliziter Revisionsfrische und harten Ausgabegrenzen; neues Modul, Tests und Status, kein Publisher oder Deployment. |
 | WE-M2/F `docs/we-m2f-shadow-integration` | Gestapelte Integrationsentscheidung zu Eingängen, Zustandsbesitz, getrenntem Topic, QoS, Frische und Rückfall; nur Statusdokumentation. |
 | WE-M2/G `feature/we-m2g-source-ages` | Gestapelte reine Zeitfrische für Kartenquelle, Portalgedächtnis und Regionsgraph; Statusmodul, Tests und Status, keine Runtime-Einbindung. |
+| WE-M2/H `feature/we-m2h-portal-adapter` | Gestapelte fail-closed Normalisierung vorhandener Portalpläne zu ausschließlich unqualifizierten Beobachtungen; neues Modul, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -290,7 +290,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis G decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze und Zeitfrische ab. Eingangsadapter und passive ROS-Schattenausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis H decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische und unqualifizierte Portalplan-Normalisierung ab. Schattenaggregation, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -336,7 +336,10 @@ vorhandenen Stand passiv, revisionsgebunden und ohne metrische Geometrie
 serialisieren. WE-M2/F legt getrenntes Topic, QoS und Zustandsbesitz fest, belegt
 aber zugleich, dass Zeitfrische und zulässige Evidenzadapter vor der ROS-Ausgabe
 fehlen. WE-M2/G ergänzt die Zeitfrische fail-closed; die Alterswerte selbst muss
-der noch fehlende Runtime-Adapter aus einer monotonen Uhr liefern.
+der noch fehlende Runtime-Adapter aus einer monotonen Uhr liefern. WE-M2/H kann
+vorhandene Portalpläne ohne ROS-Abhängigkeit normalisieren, stuft sie aber bewusst
+nicht als bestätigte Struktur ein und verbindet sie daher noch nicht mit dem
+Regionsgraphen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -355,6 +358,66 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/H: Costmap-Portalplan bleibt unqualifizierter Kandidat
+
+**Entscheidung / Umfang:** Neu `portal_plan_adapter.py` als reine
+Normalisierungsgrenze. `PortalPlanCandidate` verlangt explizit eine stabile
+Beobachtungs-ID, den vollständigen `PortalMapContext`, eine nichtnegative
+Kartenrevision, unveränderliche metrische Nah-/Fernseiten sowie eine endliche
+nichtnegative Unsicherheit. Die vorhandene `PortalPlan`-Klasse im ROS-Explorer
+wird nicht importiert oder verändert; ein späterer Runtime-Aufrufer muss diese
+fehlenden Angaben nach belegtem Vertrag liefern und darf sie nicht aus einem
+flüchtigen Listenindex ableiten.
+
+`normalize_portal_plan_candidate()` erhält die Richtung `staging_xy` →
+`target_xy`, prüft den erwarteten Sitzungs-/Karten-/Frame-Kontext und erzeugt
+ausschließlich `PortalStructuralEvidence.INSUFFICIENT`. Die öffentliche Eingabe
+besitzt kein Feld, mit dem ein Aufrufer `QUALIFIED` oder `CONTRADICTORY` setzen
+könnte. Das Modul führt keinen Zustand und bietet weder Bestätigungs-,
+Erreichbarkeits-, Graph-, Ziel- noch Durchfahrtsfunktion.
+
+**Nachgewiesenes Verhalten:** Gleicher Eingang ergibt dieselbe unveränderliche
+Beobachtung; ein Replay im `PortalMemory` wird genau einmal gezählt. Zwei passende
+Beobachtungen verschiedener Revisionen bleiben trotz geometrischer Zuordnung ein
+unbestätigter Kandidat mit null qualifizierten Evidenzen und null bestätigten
+Durchfahrten. Die Gegenrichtung bleibt erhalten. Abweichende Sitzung, Karte oder
+Frame, fehlende/negative/boolsche Revision, unsichere Kennung, veränderliche oder
+falsch dimensionierte XY-Eingabe, `NaN`, Unendlich, negative Unsicherheit und
+degenerierte Achse schlagen vor jeder Zustandsänderung geschlossen fehl.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und `robot_interfaces` aus dem vorhandenen Underlay,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2H-ADAPTER | Neue Adapter-Suite: **23 passed**. |
+| WE-M2H-MEMORY | Adapter- und Portalgedächtnis-Suiten gemeinsam: **74 passed**. |
+| WE-M2H-EXPLORE | Gesamte Explorer-Suite: **254 passed**. |
+| WE-M2H-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **359 passed**. |
+| WE-M2H-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut und neues Modul installiert; Pakettest: **254 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2H-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Nicht geprüft wurden ein realer `PortalPlan`-Aufrufer, die Herkunft und Güte der
+Unsicherheit, qualifizierende Wand-/Rand- oder LiDAR-Evidenz, monotone Quellalter,
+ROS-QoS/Discovery, Publisher, Jetson-Laufzeit/Speicher, Sensorik, Footprint,
+Kollisionswirkung oder Hardware. Bestandene Tests bestätigen weder eine Tür noch
+eine Durchfahrt oder Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/I:** Ein neues reines Aggregatmodul soll
+genau einen expliziten Kartenkontext besitzen, normalisierte Beobachtungen an ein
+begrenztes `PortalMemory` übergeben, einen getrennten `RegionGraph` halten und
+einen `ShadowStatusSource` erzeugen. Unqualifizierte Kandidaten dürfen keine
+Graphverbindung und keinen Eintritt erzeugen. Kontextwechsel, Replay, veraltete
+Revision, fehlende Alterswerte und feste Kapazitätsgrenzen synthetisch prüfen.
+Keine Uhr lesen, keine automatische Strukturqualifikation, keine
+ROS-/Explorer-/Launch-/Parameteränderung, kein Publisher, Ziel oder Fahrbefehl.
+
+**Rückfallweg:** `portal_plan_adapter.py`, dessen Test und diesen
+WE-M2/H-Statusabschnitt entfernen beziehungsweise den gestapelten PR schließen.
+WE-M2/A bis G bleiben separat reviewbar; kein Runtime-, Installations- oder
+Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/G: gleiche Revision belegt keine zeitliche Frische
 
