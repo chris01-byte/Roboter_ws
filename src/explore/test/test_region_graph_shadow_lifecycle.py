@@ -167,7 +167,7 @@ def test_periodic_same_map_updates_age_without_starting_another_session():
     assert update.map_status.context == first.map_status.context
     assert update.map_status.map_revision == 3
     assert update.map_status.map_changed is False
-    assert payload["source"]["source_map"]["age_seconds"] == 1.25
+    assert payload["source"]["source_map"]["age_seconds"] == 1.75
     assert payload["source"]["region_graph"]["age_seconds"] == 1.5
     assert payload["summary"]["region_count"] == 1
 
@@ -201,6 +201,41 @@ def test_exact_replay_is_forwarded_without_starting_another_session():
     assert replay.session_started is False
     assert replay.map_status.replayed is True
     assert replay.map_status.map_revision == 3
+
+
+def test_map_source_age_advances_from_successful_receive_time():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    payload = json.loads(build_status(owner, now=101.5))
+
+    assert payload["source"]["source_map"]["age_seconds"] == 1.75
+
+
+def test_exact_map_status_replay_does_not_refresh_source_age():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    replay = accept_status(owner, at=110.0)
+
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert replay.map_status.replayed is True
+    assert payload["source"]["source_map"]["age_seconds"] == 11.25
+
+
+def test_new_periodic_status_reanchors_its_reported_source_age():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    update = accept_status(owner, status_json(
+        time=1_800_000_010.0,
+        age_seconds=0.5,
+    ), at=110.0)
+
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert update.map_status.replayed is False
+    assert update.map_status.map_changed is False
+    assert payload["source"]["source_map"]["age_seconds"] == 1.5
 
 
 def test_counter_rollback_requires_new_owner_without_mutating_active_state():
