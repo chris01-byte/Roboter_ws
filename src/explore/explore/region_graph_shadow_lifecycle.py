@@ -7,7 +7,7 @@ unqualified portal-plan contract.  A map epoch change is deliberately not healed
 in place: callers must create a new owner with a new explicit session identifier.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 import math
 from typing import Optional
@@ -108,6 +108,7 @@ class RegionGraphShadowLifecycle:
         self._session: Optional[RegionGraphShadowSession] = None
         self._latest_map_status: Optional[MapStatusCorrelationResult] = None
         self._last_monotonic_seconds: Optional[float] = None
+        self._map_status_received_monotonic_seconds: Optional[float] = None
         self._graph_changed_monotonic_seconds: Optional[float] = None
         self._portal_changed_monotonic_seconds: Optional[float] = None
 
@@ -161,6 +162,7 @@ class RegionGraphShadowLifecycle:
             self._session = session
             self._latest_map_status = result
             self._last_monotonic_seconds = received
+            self._map_status_received_monotonic_seconds = received
             self._graph_changed_monotonic_seconds = received
             return ShadowLifecycleUpdate(
                 state=ShadowLifecycleState.ACTIVE,
@@ -175,6 +177,8 @@ class RegionGraphShadowLifecycle:
         )
         self._latest_map_status = result
         self._last_monotonic_seconds = received
+        if not result.replayed:
+            self._map_status_received_monotonic_seconds = received
         return ShadowLifecycleUpdate(
             state=ShadowLifecycleState.ACTIVE,
             map_status=result,
@@ -216,6 +220,10 @@ class RegionGraphShadowLifecycle:
         if self._session is None or self._latest_map_status is None:
             raise RegionGraphShadowNotReadyError(
                 "Schatten-Sitzung wartet noch auf einen Kartensnapshot")
+        map_status_received = self._map_status_received_monotonic_seconds
+        if map_status_received is None:
+            raise RegionGraphShadowLifecycleError(
+                "Karten-Empfangszeit fehlt trotz aktiver Schatten-Sitzung")
         graph_changed = self._graph_changed_monotonic_seconds
         if graph_changed is None:
             raise RegionGraphShadowLifecycleError(
@@ -223,8 +231,14 @@ class RegionGraphShadowLifecycle:
         portal_age = None
         if self._portal_changed_monotonic_seconds is not None:
             portal_age = now - self._portal_changed_monotonic_seconds
-        payload = self._session.build_status_json(
+        current_map_status = replace(
             self._latest_map_status,
+            source_map_age_seconds=(
+                self._latest_map_status.source_map_age_seconds
+                + now - map_status_received),
+        )
+        payload = self._session.build_status_json(
+            current_map_status,
             portal_memory_age_seconds=portal_age,
             region_graph_age_seconds=now - graph_changed,
         )

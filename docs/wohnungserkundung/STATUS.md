@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/Q)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/R)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,26 +10,22 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/Q – passive Kartenstatus-ROS-Hülle softwaregeprüft, zur Review.** Der
-Explorer erzeugt den getrennten Schattenpfad nur bei expliziter Aktivierung und
-nichtleeren Sitzungs-/Startbeobachtungs-IDs. Dann besitzt er genau einen reinen
-Lebenszyklus, eine eigene Sperre, Kartenstatus-Subscription, Status-Publisher
-und einen 1-s-Timer. QoS ist KeepLast 1, Reliable und Transient Local. Der
-Standard bleibt `false`; `/explore/status_json`, Portalplanung, Ziele,
-Navigation und Aktorpfade wurden nicht angebunden oder geändert.
+**WE-M2/R – monotones Kartenquellalter softwaregeprüft, zur Review.** Der reine
+Lebenszyklus addiert bei jeder Statusprojektion die monotone Laufzeit seit dem
+letzten neuen Kartenmanagerstatus zu dessen gemeldetem Kartenalter. Ein exaktes
+Status-Replay nimmt an der globalen Zeitordnung teil, setzt diesen Anker aber
+nicht neu und kann die Quelle daher nicht verjüngen. Ein neuer periodischer
+Managerstatus darf sein frisch gemessenes Alter neu verankern. Keine ROS-,
+Explorer-, Portal-, Ziel- oder Fahrwirkung wurde ergänzt.
 
-Ein isolierter motorloser ROS-Smoke-Test belegte, dass deaktiviert kein
-Shadow-Topic entsteht und aktiviert ein synthetischer gültiger Kartenstatus auf
-`/explore/region_graph/status_json` ausgegeben wird. Das ist keine Jetson- oder
-Hardwareabnahme.
-
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/R.** Rein und
-ohne ROS die Altersfortschreibung des letzten Kartenmanagerstatus schließen:
-Das bei Empfang gemeldete Kartenalter muss bei jeder späteren Statusprojektion
-um die monotone Zeit seit genau diesem erfolgreichen Empfang wachsen. Replay,
-Fehler, Warten und Zeitrücklauf dürfen die Quelle nicht verjüngen. Nur
-Lebenszyklusmodul, dessen Tests und diese STATUS.md; keine Node-, Parameter-,
-Portal-, Ziel-, Fahr- oder Hardwarewirkung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/S.** Nur die
+Pflichttest- und Abnahmematrix von WE-M2 gegen die vorhandenen Tests und den
+passiven ROS-Nachweis stellen. Für jedes Szenario Startraum–Flur–Zimmer,
+verbundener Freiraum, L-Flur/Schleife, offener Wohnbereich, Möbelunterteilung,
+Kartenkorrektur, Betrachten ohne Eintritt, Flurrückkehr, Merge/Split,
+globale Frontiers, Datenfrische sowie Laufzeit/Speicher exakte Nachweisstelle
+oder Lücke benennen. Daraus genau den kleinsten fehlenden M2-Schritt auswählen.
+Nur diese STATUS.md; keine Funktions-, ROS-, Fahr- oder Hardwareänderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -69,6 +65,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/O `feature/we-m2o-shadow-portal-feed` | Gestapelte unqualifizierte Portalplan-Zuführung mit replayfestem Portalalter im reinen Lebenszyklus; Modul, Tests und Status. |
 | WE-M2/P `docs/we-m2p-shadow-runtime-seam` | Gestapelte quellenbasierte Festlegung der ersten passiven ROS-Naht einschließlich gesperrter Portal-Provenienz; nur diese STATUS.md. |
 | WE-M2/Q `feature/we-m2q-shadow-map-runtime` | Gestapelte, standardmäßig deaktivierte und kartenstatusbasierte ROS-Schattenhülle; Explorer-Node, Standardparameter, Vertragstests und Status. |
+| WE-M2/R `feature/we-m2r-shadow-map-age` | Gestapelte reine monotone Fortführung des Kartenquellalters mit replayfestem Empfangsanker; Lebenszyklus, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -306,7 +303,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis Q decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portalalter, Runtime-Naht und passive Kartenstatus-ROS-Hülle ab. Fortlaufendes Kartenquellalter, belastbare Portal-Provenienz, qualifizierte Evidenz und Zielsystemnachweis offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis R decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portal-/Kartenquellalter, Runtime-Naht und passive Kartenstatus-ROS-Hülle ab. Pflichttestmatrix, belastbare Portal-Provenienz, qualifizierte Evidenz und Zielsystemnachweis offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -379,10 +376,10 @@ offen.
 alle 2,0 s, während der reine Schattenvertrag Kartenquellen nach mehr als 2,0 s
 als veraltet bewertet. Gleichheit der Grenzwerte lässt keinen Spielraum für
 Scheduling und Transport. Der WE-M2/Q-Smoke-Test belegt Discovery und Ausgabe,
-nicht diese Frischegrenze. Zudem bleibt das vom letzten Kartenmanagerumschlag
-übernommene Kartenalter zwischen zwei Eingängen konstant; nur Graph- und
-Portalalter werden bereits monoton fortgeschrieben. WE-M2/R muss deshalb zuerst
-das Kartenquellalter ohne Grenzwertänderung monoton fortschreiben.
+nicht diese Frischegrenze. WE-M2/R schreibt das vom letzten neuen
+Kartenmanagerumschlag übernommene Kartenalter nun zwischen den Eingängen monoton
+fort; ein exaktes Replay verjüngt es nicht. Der echte 2,0-s-Grenzfall unter
+Managerperiodik und Scheduling bleibt dennoch ungemessen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -401,6 +398,55 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/R: Kartenalter folgt der monotonen Empfangszeit
+
+**Entscheidung / Umfang:** `RegionGraphShadowLifecycle` speichert neben dem
+letzten gültigen Kartenstatus dessen monotonen Empfangszeitpunkt. Bei jeder
+späteren `build_status_json()`-Ausgabe wird
+`source_map_age_seconds` als vom Kartenmanager gemeldetes Alter plus monotone
+Differenz seit diesem Empfang projiziert. Der unveränderliche korrelierte
+Status wird dafür nur per `dataclasses.replace()` als Ausgabewert kopiert; weder
+Kartenrevision, Fingerprint, Kontext noch Korrelatorzustand werden umgeschrieben.
+
+Ein neuer, nicht als Replay erkannter periodischer Kartenmanagerstatus setzt
+den Empfangsanker auf seinen expliziten monotonen Eingangszeitpunkt und bringt
+sein eigenes gemessenes Kartenalter mit. Ein byte-/feldgleich decodiertes Replay
+nimmt weiterhin an der globalen monotonen Reihenfolge teil, setzt den Anker aber
+nicht neu. Wartestatus vor Sitzungsbeginn, Decoder-/Epochenfehler, ungültige oder
+rückläufige Zeit und fehlgeschlagene Ausgabe verändern den Kartenanker nicht.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und vorhandenem `robot_interfaces`-Underlay, ohne
+ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2R-AGE | Erweiterte Lebenszyklus-Suite mit Fortschreibung, Replay und neuer periodischer Verankerung: **53 passed**. |
+| WE-M2R-EXPLORE | Vollständige Explorer-Suite: **435 passed**. |
+| WE-M2R-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **540 passed**. |
+| WE-M2R-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **435 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2R-STATIC | `git diff --check` und `flake8 --diff` (E501/W503 ausgenommen): bestanden. |
+
+**Nächster abgegrenzter Schritt WE-M2/S:** Ausschließlich in dieser STATUS.md
+eine nachprüfbare Matrix aller WE-M2-Pflichttests und Abnahmekriterien gegen
+konkrete Testnamen beziehungsweise fehlende Nachweise erstellen. Insbesondere
+dürfen reine Einzelverträge nicht ohne kombiniertes Szenario als Nachweis für
+Startraum–Flur–Zimmer, L-Flur/Schleife, offenen Wohnbereich,
+Möbelunterteilung, Betrachten ohne Eintritt, Flurrückkehr oder begrenzte
+Laufzeit/Speicher gelten. Danach genau eine kleinste Lücke auswählen; keine
+Funktions-, ROS-, Fahr- oder Hardwareänderung in WE-M2/S.
+
+**Rückfallweg:** Den zusätzlichen Karten-Empfangsanker und die
+Ausgabe-Fortschreibung aus Lebenszyklus und Tests entfernen sowie diesen
+Statusabschnitt zurücknehmen beziehungsweise den gestapelten PR schließen.
+WE-M2/Q bleibt standardmäßig deaktiviert; kein Runtime-, Installations- oder
+Gerätezustand ist zurückzusetzen.
+
+**Abnahmegrenze:** Die Tests belegen deterministische monotone Algebra, keine
+reale Kartenmanagerperiode, DDS-Latenz, Jetson-Uhr, Zielsystemlast, Portal-,
+Navigations- oder Hardwarefunktion. Insbesondere ist der 2,0-s-Grenzfall nicht
+allein durch bestandene Softwaretests freigegeben.
 
 ### 2026-09-14 – WE-M2/Q: ROS-Hülle sieht nur Kartenstatus und bleibt opt-in
 
