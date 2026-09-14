@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AB)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AC)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AB – Besitzer- und Messvertrag der passiven Runtime dokumentiert.**
-Der bestehende `RegionGraphShadowLifecycle` bleibt einziger Besitzer von
-Kartenstatussequenz, Schatten-Sitzung und künftig dem optionalen Joiner. Der
-Explorer-Node darf nur den unveränderlichen Rohkartensnapshot außerhalb des
-Schatten-Locks bilden und unter dem Lock übergeben. Ein eigener, standardmäßig
-deaktivierter Opt-in und eine zwingend explizite positive Kapazität verhindern
-ungeplante Digestlast. Diagnosefelder bleiben im getrennten Schattenstatus;
-`/explore/status_json` wird nicht geändert.
+**WE-M2/AC – optionaler Rohkartenjoin im reinen Lebenszyklus softwaregeprüft, zur Review.**
+`RegionGraphShadowLifecycle` besitzt den `RawMapStatusJoiner` jetzt nur bei
+explizit positiver Kapazität. Rohkarte und Kartenstatus können in beiden
+Reihenfolgen eintreffen; das optionale Exaktresultat steht in derselben
+Lebenszyklusantwort. Feste, unveränderliche Diagnosezähler melden Beobachtungen,
+Dubletten, wartende und verdrängte Identitäten sowie Joins. Ohne Kapazität ist
+der Joiner abwesend und das bisherige Verhalten bleibt unverändert. ROS, JSON,
+Node und Parameter sind noch unberührt.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,12 +25,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AC:** Ausschließlich den optionalen
-`RawMapStatusJoiner` in den reinen `RegionGraphShadowLifecycle` aufnehmen.
-Ohne explizite Kapazität bleibt er vollständig abwesend. Reine Übergaben und
-begrenzte Diagnosezähler werden für beide Eingangsreihenfolgen getestet; noch
-keine JSON-Schema-, Parameter-, Node-, Callback-, Topic-, Detektor-, Ziel- oder
-Fahränderung.
+**Nächster abgegrenzter Schritt WE-M2/AD:** Ausschließlich die vorhandene reine
+Schattenstatusprojektion um einen optionalen, begrenzten Diagnoseblock für die
+Rohkartenkorrelation erweitern. Bei deaktiviertem Joiner muss der JSON-Text
+bytegleich bleiben; bei Aktivierung erscheinen nur Zähler/Zustand, keine Raster-
+oder Wohnungsdaten. Noch keine Parameter-, Node-, Callback-, Topic-, Detektor-,
+Ziel- oder Fahränderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -81,6 +81,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/Z `feature/we-m2z-shared-cell-normalization` | Gestapelte gemeinsame ROS-freie, begrenzte Zellnormalisierung für Kartenmanager und Explorer; reine Module, Tests, Inventar und Status, kein Deployment. |
 | WE-M2/AA `feature/we-m2aa-raw-map-status-join` | Gestapelter reiner, explizit begrenzter und beidseitig anstoßbarer Exaktjoin von Rohkartenidentität und Kartenmanagerstatus; Adapter, Tests und Status, kein Deployment. |
 | WE-M2/AB `docs/we-m2ab-raw-map-runtime-owner` | Gestapelte Besitzer-, Opt-in-, Diagnose- und Messentscheidung für die spätere passive Runtime; nur diese STATUS.md, kein Deployment. |
+| WE-M2/AC `feature/we-m2ac-lifecycle-raw-map-owner` | Gestapelter optionaler Joiner-Besitz im reinen Schattenlebenszyklus mit begrenzten Diagnosezählern und beidseitigen Übergaben; reine Module, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -415,6 +416,65 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AC: optionaler Joiner-Besitz im reinen Lebenszyklus
+
+**Entscheidung / Umfang:** `RegionGraphShadowLifecycle` nimmt optional
+`raw_map_capacity` entgegen. Nur ein positiver, nichtboolescher Ganzzahlwert
+erzeugt genau einen `RawMapStatusJoiner`; `None` lässt ihn vollständig abwesend.
+Null und ungültige Werte werden am reinen Konstruktionsrand verworfen. Der
+bisherige Konstruktor bleibt durch den optionalen Standardwert kompatibel.
+
+Der neue reine Eingang `accept_raw_map_source()` übernimmt ausschließlich ein
+bereits unveränderliches `RawMapPortalSource` plus explizite monotone
+Empfangszeit. Bei deaktiviertem Joiner oder falschem Typ entsteht ein
+`RegionGraphShadowLifecycleError`, ohne Zeit, Sitzung oder Diagnosezähler zu
+verändern. Bei gültigem Eingang gibt die bestehende `ShadowLifecycleUpdate`
+neben Zustand und aktuellem Kartenstatus optional die exakte
+`PortalSourceCorrelation` zurück. Dasselbe optionale Feld wird nach jedem
+gültigen Kartenstatus gefüllt, falls bereits eine passende Rohkarte wartet.
+Somit bleiben Status-vor-Karte und Karte-vor-Status gleichwertig.
+
+Die unveränderliche Eigenschaft `raw_map_diagnostics` projiziert nur feste
+Skalare: aktiviert, Kapazität, alle Quellenaufrufe, innerhalb des begrenzten
+Fensters eindeutige Quellen und Dubletten, aktuell wartend, verdrängt,
+ausgegebene Korrelationen und letzte korrelierte Revision. Keine Rasterbytes,
+Fingerprints, Frames oder Geometrien werden dupliziert. Der zugrunde liegende
+Joiner zählt eine Wiederholung der zuletzt ausgegebenen Identität als Dublette,
+nicht als neue wartende Quelle.
+
+**Geänderte Dateien:** `src/explore/explore/portal_source_adapter.py`,
+`src/explore/explore/region_graph_shadow_lifecycle.py`, deren zwei reine
+Testsuiten und diese STATUS.md. Keine Änderung an Status-JSON, Node, Launch,
+Parametern, Topics, Kartenmanager, Portalfeed, Navigation oder Fahrsoftware.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz, für die vollständige
+Explorer-Suite ROS-Humble-Underlay und vorhandene generierte Schnittstellen;
+keine Nodes, Geräte, Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AC-FOCUSED | Portalquellenjoin und Schattenlebenszyklus gemeinsam: **111 passed**. |
+| WE-M2AC-EXPLORER | Vollständige Explorer-Suite: **509 passed**. |
+| WE-M2AC-ADJACENT | Zusätzlich Blattpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **650 passed**. |
+| WE-M2AC-COLCON | Temporärer isolierter Build von Blattpaket und Explorer: 2 Pakete gebaut; **36 + 509 = 545 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AC-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+
+**Offene Grenzen / Rückfall:** Diagnosezähler liegen nur als reine
+Lebenszykluseigenschaft vor und werden noch nicht serialisiert. Es gibt weiterhin
+keinen Runtime-Default und keine ROS-Zuführung. Die Tests messen weder Jetson-
+Kosten noch echte Karten-/Statuslatenz und sind keine Zielsystem- oder
+Hardwareabnahme. Rückfall ist das Zurücknehmen des einzelnen WE-M2/AC-Commits;
+ohne `raw_map_capacity` entspricht der Lebenszyklus bereits dem vorherigen
+Verhalten.
+
+**Nächster abgegrenzter Schritt WE-M2/AD:** Den Diagnosetyp in eine von Joiner,
+Lebenszyklus und Statusprojektion gemeinsam nutzbare reine Modulgrenze legen und
+`ShadowStatusSource` optional darum ergänzen. Der bestehende kanonische JSON-Text
+muss bei `None` bytegleich bleiben; andernfalls kommt ein kleiner Block mit
+Kapazität, Zählern, letzter Revision und abgeleitetem Zustand hinzu. Grenzen,
+Konsistenz, Serialisierungsgröße und deaktivierte Rückwärtskompatibilität werden
+rein getestet. Noch keine ROS- oder Fahrwirkung.
 
 ### 2026-09-14 – WE-M2/AB: Besitzer-, Opt-in- und Messvertrag der Runtime
 

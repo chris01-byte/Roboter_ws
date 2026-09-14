@@ -25,6 +25,12 @@ from .portal_memory import (
     PortalMemoryPolicy,
 )
 from .portal_plan_adapter import PortalPlanCandidate
+from .portal_source_adapter import (
+    PortalSourceAdapterError,
+    PortalSourceCorrelation,
+    RawMapPortalSource,
+    RawMapStatusJoiner,
+)
 from .region_graph import RegionGraphPolicy, RegionSeed
 from .region_graph_shadow import RegionGraphShadowSession
 from .region_graph_status import ShadowStatusPolicy
@@ -48,6 +54,20 @@ class ShadowLifecycleUpdate:
     state: ShadowLifecycleState
     map_status: Optional[MapStatusCorrelationResult]
     session_started: bool = False
+    raw_map_correlation: Optional[PortalSourceCorrelation] = None
+
+
+@dataclass(frozen=True)
+class RawMapCorrelationDiagnostics:
+    enabled: bool
+    capacity: int
+    source_observations: int
+    unique_sources: int
+    duplicate_sources: int
+    pending_sources: int
+    evicted_sources: int
+    emitted_correlations: int
+    last_emitted_revision: Optional[int]
 
 
 def _monotonic_seconds(value: object, name: str) -> float:
@@ -70,7 +90,8 @@ class RegionGraphShadowLifecycle:
             map_policy: Optional[MapStatusCorrelationPolicy] = None,
             portal_policy: Optional[PortalMemoryPolicy] = None,
             graph_policy: Optional[RegionGraphPolicy] = None,
-            status_policy: Optional[ShadowStatusPolicy] = None) -> None:
+            status_policy: Optional[ShadowStatusPolicy] = None,
+            raw_map_capacity: Optional[int] = None) -> None:
         if portal_policy is not None and not isinstance(
                 portal_policy, PortalMemoryPolicy):
             raise RegionGraphShadowLifecycleError(
@@ -99,12 +120,23 @@ class RegionGraphShadowLifecycle:
             raise RegionGraphShadowLifecycleError(
                 "Sitzungs-, Frame- oder Startbeobachtungs-ID ist ungueltig"
             ) from exc
+        try:
+            raw_map_joiner = (
+                None
+                if raw_map_capacity is None
+                else RawMapStatusJoiner(capacity=raw_map_capacity)
+            )
+        except PortalSourceAdapterError as exc:
+            raise RegionGraphShadowLifecycleError(
+                "raw_map_capacity muss eine positive Ganzzahl sein"
+            ) from exc
 
         self._start_observation_id = start_observation_id
         self._portal_policy = portal_policy
         self._graph_policy = graph_policy
         self._status_policy = status_policy
         self._correlator = correlator
+        self._raw_map_joiner = raw_map_joiner
         self._session: Optional[RegionGraphShadowSession] = None
         self._latest_map_status: Optional[MapStatusCorrelationResult] = None
         self._last_monotonic_seconds: Optional[float] = None
@@ -128,6 +160,57 @@ class RegionGraphShadowLifecycle:
     def latest_map_status(self) -> Optional[MapStatusCorrelationResult]:
         return self._latest_map_status
 
+    @property
+    def raw_map_diagnostics(self) -> RawMapCorrelationDiagnostics:
+        joiner = self._raw_map_joiner
+        if joiner is None:
+            return RawMapCorrelationDiagnostics(
+                enabled=False,
+                capacity=0,
+                source_observations=0,
+                unique_sources=0,
+                duplicate_sources=0,
+                pending_sources=0,
+                evicted_sources=0,
+                emitted_correlations=0,
+                last_emitted_revision=None,
+            )
+        return RawMapCorrelationDiagnostics(
+            enabled=True,
+            capacity=joiner.capacity,
+            source_observations=joiner.source_observation_count,
+            unique_sources=joiner.unique_source_count,
+            duplicate_sources=joiner.duplicate_source_count,
+            pending_sources=joiner.pending_source_count,
+            evicted_sources=joiner.evicted_source_count,
+            emitted_correlations=joiner.emitted_correlation_count,
+            last_emitted_revision=joiner.last_emitted_revision,
+        )
+
+    def accept_raw_map_source(
+            self, source: RawMapPortalSource, *,
+            received_monotonic_seconds: float) -> ShadowLifecycleUpdate:
+        """Offer one immutable raw-map identity to the optional joiner."""
+        joiner = self._raw_map_joiner
+        if joiner is None:
+            raise RegionGraphShadowLifecycleError(
+                "Rohkartenkorrelation ist nicht aktiviert")
+        received = self._validate_monotonic_progress(
+            received_monotonic_seconds,
+            "received_monotonic_seconds",
+        )
+        try:
+            correlation = joiner.observe_source(source)
+        except PortalSourceAdapterError as exc:
+            raise RegionGraphShadowLifecycleError(
+                "Rohkartenquelle ist fuer den Schatten ungueltig") from exc
+        self._last_monotonic_seconds = received
+        return ShadowLifecycleUpdate(
+            state=self.state,
+            map_status=self._latest_map_status,
+            raw_map_correlation=correlation,
+        )
+
     def accept_map_status_json(
             self, text: str, *,
             received_monotonic_seconds: float) -> ShadowLifecycleUpdate:
@@ -145,6 +228,16 @@ class RegionGraphShadowLifecycle:
                 state=ShadowLifecycleState.WAITING_FOR_MAP,
                 map_status=None,
             )
+
+        raw_map_correlation = None
+        if self._raw_map_joiner is not None:
+            try:
+                raw_map_correlation = self._raw_map_joiner.observe_status(
+                    result)
+            except PortalSourceAdapterError as exc:
+                raise RegionGraphShadowLifecycleError(
+                    "Kartenstatus widerspricht der Rohkartenkorrelation"
+                ) from exc
 
         if self._session is None:
             seed = RegionSeed(
@@ -168,6 +261,7 @@ class RegionGraphShadowLifecycle:
                 state=ShadowLifecycleState.ACTIVE,
                 map_status=result,
                 session_started=True,
+                raw_map_correlation=raw_map_correlation,
             )
 
         self._session.status_source(
@@ -182,6 +276,7 @@ class RegionGraphShadowLifecycle:
         return ShadowLifecycleUpdate(
             state=ShadowLifecycleState.ACTIVE,
             map_status=result,
+            raw_map_correlation=raw_map_correlation,
         )
 
     def observe_portal_plan(
