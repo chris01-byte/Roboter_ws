@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AT)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/A)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AT – die vollständige passive Softwarekette ist über 240 wachsende und
-geometrisch wechselnde synthetische Karten reproduzierbar langlaufgeprüft; zur
-Review.** Exaktjoin, ungefilterte Frontierbildung, topologische
-Portalbeobachtung, Regionsgraph und Aufgaben blieben über 2.496.160 bytegleich
-kontrollierte Eingangszellen bei einer Frontier-ID, einem bestätigten Portal,
-zwei Regionen, einer Verbindung und konstant drei Aufgaben. Der beobachtete
-Prozess-RSS-Anstieg betrug 2.940.928 Byte; das ist eine lokale Messung ohne
-Jetson- oder Freigabeschwelle.
+**WE-M3/A – der reine Eingangs- und Ergebnisvertrag der hierarchischen Policy
+ist implementiert und gerätefrei geprüft; zur Review.** Der Vertrag bewertet
+den vollständigen passiven Aufgabenbestand, explizite revisionsgebundene
+Verfügbarkeitsbelege, Quellenfrische, Regionskontinuität, Portal-/Regionszustand
+und Erreichbarkeit. Er liefert ausschließlich Aufgaben- und Blocker-IDs sowie
+nichtterminale Bewertungszustände, aber weder Koordinaten noch Ziel, Pfad,
+Action, Command oder Fahrfreigabe.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -26,13 +25,17 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
+WE-M3 bleibt ebenfalls offen: M3/A erzeugt noch keine zustandsbehaftete
+Hysterese, Aufgabenalterung, Fehlversuchs-/Retryverwaltung, geodätische
+Bewertung, Runtime-Einbindung oder Migration bestehender Ergebnisverbraucher.
 
-**Nächster abgegrenzter Schritt WE-M3/A:** Ohne die vertagten Geräteprüfungen
-vorzuziehen, den reinen Eingangs- und Ergebnisvertrag einer hierarchischen
-Aufgabenpolicy festlegen und implementieren. Sie darf ausschließlich passive
-Snapshots bewerten, keine Ziele erzeugen und weder Action-, Nav2-, Command- noch
-Twist-Schnittstellen besitzen. Abschluss bleibt gesperrt, solange offene oder
-nur gefilterte Aufgaben, veraltete Quellen oder unklare Erreichbarkeit bestehen.
+**Nächster abgegrenzter Schritt WE-M3/B:** Auf dem reinen M3/A-Vertrag einen
+begrenzten, revisionsgetriebenen Aufgabenverlauf für Alter, letzten Versuch,
+Fehlversuch, Retrybudget und explizite Reaktivierung aufbauen. Dieser Schritt
+darf weiterhin nur stabile Aufgaben-IDs priorisierbar machen, kein metrisches
+Fahrziel bilden und keine Action-, Nav2-, Command- oder Twist-Schnittstelle
+besitzen. Verhungern, Pendeln, Kartenreplay, Blockade und Reaktivierung sind in
+deterministischen Offline-Szenarien zu prüfen.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -101,6 +104,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AR `feature/we-m2ar-automatic-shadow-events` | Gestapelte dritt-opt-in Kette von exakt korrelierter Rohkarte über topologischen Strukturbeleg und revisionsgebundene Portalbestätigung bis zu vorläufiger Region, Verbindung und passiven Beobachtungs-/Portalaufgaben; validierte Traversalschnittstelle ohne Fahrpfadanbindung. |
 | WE-M2/AS `feature/we-m2as-passive-frontier-tasks` | Gestapelte unabhängige Opt-in-Zuführung aller ungefilterten Rohkarten-Frontiers in sitzungsstabile offene Graphaufgaben; eindeutige Assoziation, mehrdeutige Zusatzaufgabe, Replay-/Kapazitätsgrenzen und kein Abschluss durch Verschwinden oder Filter. |
 | WE-M2/AT `chore/we-m2at-passive-chain-load-probe` | Gestapelter gerätefreier Offline-Langläufer für Exaktjoin, Frontier-/Portalereignisse, Regionen und Aufgaben über wachsende synthetische Karten; bytegleiche Eingangsprüfung, Zeit-/Prozess-RSS-Messung und atomarer Kapazitätsfall. |
+| WE-M3/A `feature/we-m3a-policy-contract` | Gestapelter ROS-freier Policyvertrag auf vollständigen passiven Snapshots; revisionsgebundene Aufgabenverfügbarkeit, Quellen-/Erreichbarkeitsblocker, Regionskontinuität und ausschließlich nichtterminale Ergebnisse ohne Ziel- oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -339,7 +343,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
+| WE-M3 | Begonnen; M3/A softwaregeprüft | Reiner Eingangs-/Ergebnisvertrag liegt vor. Zustandsbehaftete Auswahl, Hysterese, Aufgabenalter, Retries, geodätische Bewertung, kompatible Runtime-/Ergebnismigration und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -435,6 +439,85 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/A: passiver Policy-Eingangs- und Ergebnisvertrag
+
+**Arbeitsbasis und Umfang:** Nach `git fetch origin --prune` blieb
+`ff4e42a1793fe66202f820dd081c1a1c5cd7049e` auf
+`chore/we-m2at-passive-chain-load-probe` der neueste belegte WE-Status. Der
+isolierte Branch `feature/we-m3a-policy-contract` baut direkt darauf auf; die
+laufende, lokal veränderte Roboter-Arbeitskopie wurde weder gewechselt noch
+beschrieben. Betroffen sind ausschließlich
+`explore/exploration_policy.py`, die formatunabhängig öffentlich gemachte
+Snapshotvalidierung in `region_graph_status.py`, deren Tests und diese
+STATUS.md.
+
+**Eingangsvertrag:** `assess_exploration_policy()` akzeptiert genau einen
+vollständig konsistenten `ShadowStatusSource` und optional je offener Aufgabe
+einen expliziten `TaskAvailability`-Beleg aus demselben Kartenkontext. Die
+Zustände `available`, `filtered`, `temporarily_blocked`, `unknown` und
+`excluded` sind revisionsgebunden und enthalten Grund sowie erneute
+Prüfbedingung. Fehlender oder zu alter Beleg wird nicht als Wegfall behandelt,
+sondern als unbekannt beziehungsweise `stale_evidence`. Fremde Kontexte,
+zukünftige Revisionen, doppelte oder unbekannte Aufgaben-IDs, Belege für bereits
+erledigte Aufgaben und Kapazitätsüberschreitungen werden fail-closed abgewiesen.
+Die vorhandenen Grenzen und Frischewerte der Schattenprojektion werden
+wiederverwendet; es wurden keine nachträglichen Hardware- oder Abnahmewerte
+erfunden.
+
+**Ergebnisvertrag:** Das unveränderliche Ergebnis enthält den vollständigen
+offenen Aufgabenbestand vor jeder Verfügbarkeitsfilterung, getrennte Aufgaben
+der aktuellen und anderer Regionen, eine deterministisch nach aktueller Region
+gruppierte Liste lediglich geeigneter Aufgaben-IDs sowie den Einzelzustand jeder
+Aufgabe. Außerdem weist es veraltete Quellen, unbestätigte Portale, unbekannte,
+blockierte und ausgeschlossene Portalseiten, nicht betretene beziehungsweise
+nicht fertig bewertete Regionen und maschinenlesbare Blocker aus. Eine
+verfügbare Aufgabe ergibt `ready_with_tasks`; ausschließlich fehlende oder
+veraltete Aufgabenevidenz wartet auf Neubewertung; nur gefilterte, blockierte
+oder ausgeschlossene Restaufgaben ergeben einen erklärten
+`partial_candidate`. Veraltete Quellen haben Vorrang vor jeder positiven
+Aufgabenbewertung.
+
+Selbst frische, vollständig als Kandidat bewertete Regionen ohne offene Aufgabe
+ergeben nur `completion_window_required`. Das Ergebnis setzt
+`completion_allowed` ausnahmslos auf `false` und nennt dann zusätzlich das noch
+fehlende frische Mehrfachbeobachtungsfenster, den zugänglichen Auftragsscope und
+den Kindnavigationsstatus. M3/A kann daher weder `complete_accessible` noch ein
+Fahrziel behaupten. Es besitzt keine Uhr, ROS-, Action-, Nav2-, Planner-,
+Prozess-, Geräte-, Command- oder Twist-Abhängigkeit und ist an keinen
+Produktionspfad angebunden.
+
+**Ausgeführte Prüfungen:** Lokaler Entwicklungsrechner mit ROS Humble nur als
+Build-/Testumgebung; keine ROS-Knoten oder Geräte wurden gestartet:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3A-FOCUS | Neue reine Policyfälle für Regionskontinuität, vollständigen Bestand, Determinismus/Unveränderlichkeit, alle Verfügbarkeitszustände, fehlende/veraltete Evidenz, Quellenfrische, Abschlussblockade, Struktur-/Erreichbarkeitsblocker, Eingabefehler, Kapazität und Importgrenze: **18 passed**. Zusammen mit der Statusprojektion: **68 passed**. |
+| WE-M3A-EXPLORER | Vollständige Explorer-Suite: **597 passed**. |
+| WE-M3A-ADJACENT | Explorer plus gemeinsame Fingerprintquelle, Kartenmanager, Semantikmanager sowie semantische Mission-/Launch-Verträge: **760 passed**. |
+| WE-M3A-COLCON | Frischer temporärer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 597 = 633 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3A-STATIC | `compileall`, `flake8` unter den Projekt-Ausnahmen E501/W503 und `git diff --check`: bestanden. |
+
+**Nachweisgrenze:** Diese Prüfungen belegen den reinen Softwarevertrag und seine
+konservative Abschlussblockade. Sie belegen keine Güte eines Planers, keine
+tatsächliche/geodätische Weglänge, keinen Informationsgewinn, keine
+Lokalisierung, Sicherheitsfreigabe, Durchfahrt, Jetsonlast oder
+Hardwareabnahme. Insbesondere ist `available` keine Aussage über einen aktuell
+sicheren Pfad und `partial_candidate` noch kein endgültiges Action-Ergebnis.
+
+**Nächster abgegrenzter Schritt WE-M3/B:** In
+`explore/exploration_policy.py` einen begrenzten, nur durch explizite Revisionen
+fortgeschriebenen Verlauf für Aufgabenalter, letzten Versuch, Fehlversuche,
+Retrybudget und Reaktivierungsbedingung ergänzen. Die zugehörigen reinen Tests
+müssen Replay, spätere Freigabe blockierter Aufgaben, deterministische
+Regionshysterese sowie ausbleibendes Pendeln und Verhungern abdecken. Ausgabe
+bleibt eine Aufgaben-ID, niemals Pose oder Fahrziel; Node, Action, Nav2 und
+bestehende Zielwahl bleiben in diesem Schritt unverändert.
+
+**Rückfall:** Den einzelnen WE-M3/A-Commit zurücknehmen oder das neue Modul
+nicht importieren. Da kein Runtime-Aufrufer, Publisher, Ziel oder Gerätezugriff
+hinzukam, gibt es keinen Prozess-, Fahr- oder Hardwarezustand zurückzusetzen;
+WE-M2/AT bleibt unverändert nutzbar.
 
 ### 2026-09-14 – WE-M2/AT: wachsender Langlauf der passiven Gesamtkette
 
