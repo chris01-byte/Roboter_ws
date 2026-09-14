@@ -103,6 +103,11 @@ from explore.frontier_task_evidence import (
     build_frontier_task_evidence,
 )
 from explore.frontier_goal_candidate import build_frontier_goal_candidate
+from explore.exploration_nav_runtime import (
+    ExplorationNavigationSession,
+    NavigationSourceState,
+    NavigationStopCause,
+)
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -479,6 +484,22 @@ def validated_passive_policy_enabled(
     return policy_enabled
 
 
+def validated_we_navigation_enabled(
+        shadow_enabled: bool, raw_map_enabled: bool,
+        frontier_feed_enabled: bool, policy_enabled: bool,
+        navigation_enabled: bool) -> bool:
+    """Require the complete passive chain before active WE opt-in."""
+    flags = (
+        shadow_enabled, raw_map_enabled, frontier_feed_enabled,
+        policy_enabled, navigation_enabled)
+    if any(not isinstance(value, bool) for value in flags):
+        raise ValueError('WE-Navigations-Opt-ins muessen bool sein')
+    if navigation_enabled and not all(flags[:-1]):
+        raise ValueError(
+            'WE-Navigation braucht Schatten, Rohkarte, Frontierfeed und Policy')
+    return navigation_enabled
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -764,6 +785,9 @@ class ExploreNode(Node):
         self._wohnungserkundung_policy_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_policy_enabled', False).value)
+        self._wohnungserkundung_navigation_enabled = bool(
+            self.declare_parameter(
+                'wohnungserkundung_navigation_enabled', False).value)
         self._wohnungserkundung_evidence_clearance = float(
             self.declare_parameter(
                 'wohnungserkundung_evidence_clearance_m', 0.28).value)
@@ -985,6 +1009,15 @@ class ExploreNode(Node):
                 self._wohnungserkundung_policy_enabled,
             )
         )
+        self._wohnungserkundung_navigation_enabled = (
+            validated_we_navigation_enabled(
+                self._region_graph_shadow_enabled,
+                self._region_graph_shadow_raw_map_enabled,
+                self._region_graph_shadow_frontier_task_feed,
+                self._wohnungserkundung_policy_enabled,
+                self._wohnungserkundung_navigation_enabled,
+            )
+        )
         if self._wohnungserkundung_policy_enabled:
             self._wohnungserkundung_evidence_policy = (
                 FrontierTaskEvidencePolicy(
@@ -1004,6 +1037,10 @@ class ExploreNode(Node):
             self._wohnungserkundung_evidence_cache = None
             self._wohnungserkundung_goal_cache_key = None
             self._wohnungserkundung_goal_cache = None
+            self._wohnungserkundung_runtime_lock = threading.Lock()
+            self._wohnungserkundung_navigation_snapshot = None
+            self._wohnungserkundung_active_child = None
+            self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
             self._wohnungserkundung_stateful_assessment = None
             self._wohnungserkundung_status_extension = (
@@ -1333,6 +1370,7 @@ class ExploreNode(Node):
         self._try_observe_connected_raw_map_portals()
         evidence_inputs = None
         candidate_inputs = None
+        navigation_snapshot = None
         evidence_unavailable_reason = (
             'frontier_task_feed_disabled'
             if not getattr(
@@ -1459,37 +1497,39 @@ class ExploreNode(Node):
                     utility_evidence,
                     status.source.source_map_revision,
                 )
-                task_policy_session = (
-                    self._wohnungserkundung_task_policy_session)
-                if task_policy_session is None:
-                    task_policy_session = ExplorationTaskPolicySession(
-                        status.source.context)
-                    self._wohnungserkundung_task_policy_session = (
-                        task_policy_session)
-                latest_stateful_revision = (
-                    task_policy_session.latest_assessment_revision)
-                if (
-                        latest_stateful_revision is None
-                        or status.source.source_map_revision
-                        > latest_stateful_revision):
-                    stateful = task_policy_session.assess(
-                        status.source,
-                        task_availability,
-                        utility_evidence if assessment.state is (
-                            PolicyAssessmentState.READY_WITH_TASKS)
-                        else (),
-                    )
-                    self._wohnungserkundung_stateful_assessment = stateful
-                elif status.source.source_map_revision < (
-                        latest_stateful_revision):
-                    raise ValueError(
-                        'Policy-Snapshot ist aelter als der Runtimeverlauf')
-                else:
-                    stateful = (
-                        self._wohnungserkundung_stateful_assessment)
-                    if stateful is None:
+                with self._wohnungserkundung_runtime_lock:
+                    task_policy_session = (
+                        self._wohnungserkundung_task_policy_session)
+                    if task_policy_session is None:
+                        task_policy_session = ExplorationTaskPolicySession(
+                            status.source.context)
+                        self._wohnungserkundung_task_policy_session = (
+                            task_policy_session)
+                    latest_stateful_revision = (
+                        task_policy_session.latest_assessment_revision)
+                    if (
+                            latest_stateful_revision is None
+                            or status.source.source_map_revision
+                            > latest_stateful_revision):
+                        stateful = task_policy_session.assess(
+                            status.source,
+                            task_availability,
+                            utility_evidence if assessment.state is (
+                                PolicyAssessmentState.READY_WITH_TASKS)
+                            else (),
+                        )
+                        self._wohnungserkundung_stateful_assessment = stateful
+                    elif status.source.source_map_revision < (
+                            latest_stateful_revision):
                         raise ValueError(
-                            'Stateful-Policycache fehlt fuer aktuelle Revision')
+                            'Policy-Snapshot ist aelter als der Runtimeverlauf')
+                    else:
+                        stateful = (
+                            self._wohnungserkundung_stateful_assessment)
+                        if stateful is None:
+                            raise ValueError(
+                                'Stateful-Policycache fehlt fuer aktuelle '
+                                'Revision')
                 extension = build_passive_we_status_extension(
                     assessment,
                     utility_scores=scores,
@@ -1516,9 +1556,11 @@ class ExploreNode(Node):
                                 raise ValueError(
                                     'Auswahl braucht genau eine Graphaufgabe')
                             goal_key = (*evidence_key, intent.intent_id)
-                            if goal_key == self._wohnungserkundung_goal_cache_key:
+                            with self._wohnungserkundung_runtime_lock:
+                                cached_goal_key = (
+                                    self._wohnungserkundung_goal_cache_key)
                                 candidate = self._wohnungserkundung_goal_cache
-                            else:
+                            if goal_key != cached_goal_key:
                                 origin = raw_map.info.origin
                                 candidate = build_frontier_goal_candidate(
                                     intent,
@@ -1552,9 +1594,12 @@ class ExploreNode(Node):
                                     policy=(
                                         self._wohnungserkundung_evidence_policy),
                                 )
-                                self._wohnungserkundung_goal_cache_key = goal_key
-                                self._wohnungserkundung_goal_cache = candidate
+                                with self._wohnungserkundung_runtime_lock:
+                                    self._wohnungserkundung_goal_cache_key = (
+                                        goal_key)
+                                    self._wohnungserkundung_goal_cache = candidate
                             goal_status = build_goal_candidate_status(candidate)
+                            navigation_snapshot = (intent, candidate)
                         except Exception as goal_error:
                             goal_status = (
                                 build_unavailable_goal_candidate_status(
@@ -1563,16 +1608,36 @@ class ExploreNode(Node):
                 extension['goal_candidate'] = goal_status
             except Exception as error:
                 fault = f'policy_error:{type(error).__name__}'
-                self._wohnungserkundung_status_extension = (
-                    build_unavailable_we_status_extension(fault))
+                unavailable = build_unavailable_we_status_extension(fault)
+                with self._wohnungserkundung_runtime_lock:
+                    self._wohnungserkundung_status_extension = unavailable
+                    self._wohnungserkundung_navigation_snapshot = None
                 if self._wohnungserkundung_policy_fault != fault:
                     self.get_logger().error(
                         'Passive Wohnungserkundungs-Policy bleibt ohne '
                         f'Wirkung ({fault}).')
                 self._wohnungserkundung_policy_fault = fault
             else:
-                self._wohnungserkundung_status_extension = extension
-                self._wohnungserkundung_policy_fault = None
+                with self._wohnungserkundung_runtime_lock:
+                    active_child = self._wohnungserkundung_active_child
+                    consumed_intent_id = (
+                        self._wohnungserkundung_consumed_intent_id)
+                    if navigation_snapshot is not None:
+                        intent, candidate = navigation_snapshot
+                        if (
+                                active_child is not None
+                                and active_child[0].intent_id
+                                == intent.intent_id):
+                            extension['goal_candidate'][
+                                'navigation_dispatched'] = True
+                            extension['goal_candidate']['child_state'] = (
+                                'active')
+                        elif consumed_intent_id == intent.intent_id:
+                            extension['goal_candidate']['state'] = 'consumed'
+                    self._wohnungserkundung_status_extension = extension
+                    self._wohnungserkundung_navigation_snapshot = (
+                        navigation_snapshot)
+                    self._wohnungserkundung_policy_fault = None
 
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
@@ -2404,7 +2469,8 @@ class ExploreNode(Node):
     # ======================= Nav2 anfahren ==============================
     def _navigate_to(
             self, x: float, y: float, timeout_s: float,
-            stop_requested=lambda: False) -> str:
+            stop_requested=lambda: False, *,
+            goal_yaw: Optional[float] = None) -> str:
         """Sendet EIN Fahrziel an Nav2 und wartet (blockierend) auf das Ergebnis.
 
         Rueckgabe: 'success' | 'aborted' | 'rejected' | 'timeout'
@@ -2419,7 +2485,11 @@ class ExploreNode(Node):
         ps.pose.position.x = x
         ps.pose.position.y = y
         rxy = self._robot_xy()
-        yaw = math.atan2(y - rxy[1], x - rxy[0]) if rxy else 0.0   # zum Ziel blicken
+        yaw = (
+            goal_yaw if goal_yaw is not None
+            else math.atan2(y - rxy[1], x - rxy[0]) if rxy else 0.0)
+        if not isinstance(yaw, (int, float)) or not math.isfinite(float(yaw)):
+            return 'rejected'
         ps.pose.orientation.z = math.sin(yaw / 2.0)
         ps.pose.orientation.w = math.cos(yaw / 2.0)
 
@@ -3758,6 +3828,198 @@ class ExploreNode(Node):
             end_odom[0] - start_odom[0],
             end_odom[1] - start_odom[1])
 
+    def _wohnungserkundung_source_state(
+            self, intent, candidate) -> NavigationSourceState:
+        """Read whether the exact passive candidate source is still current."""
+        with self._region_graph_shadow_lock:
+            correlation = self._region_graph_shadow_latest_correlation
+        if correlation is None:
+            return NavigationSourceState(
+                intent.context, intent.map_revision, False)
+        current = (
+            correlation.context == intent.context
+            and correlation.map_revision == intent.map_revision
+            and correlation.fingerprint == candidate.source_fingerprint
+            and correlation.source_stamp_ns == candidate.source_stamp_ns
+            and correlation.context.frame_id == candidate.frame_id
+        )
+        return NavigationSourceState(
+            correlation.context, correlation.map_revision, current)
+
+    def _current_wohnungserkundung_navigation_target(self):
+        """Return one atomic unconsumed preview only while its source matches."""
+        with self._wohnungserkundung_runtime_lock:
+            snapshot = self._wohnungserkundung_navigation_snapshot
+            consumed = self._wohnungserkundung_consumed_intent_id
+        if snapshot is None or snapshot[0].intent_id == consumed:
+            return None
+        intent, candidate = snapshot
+        source = self._wohnungserkundung_source_state(intent, candidate)
+        if not source.current:
+            return None
+        return snapshot
+
+    def _run_wohnungserkundung_child(
+            self, navigation_session, intent, candidate,
+            goal_handle, overall_expired):
+        """Dispatch exactly one validated child through the existing client."""
+        with self._wohnungserkundung_runtime_lock:
+            if self._wohnungserkundung_active_child is not None:
+                raise RuntimeError(
+                    'Wohnungserkundung besitzt bereits ein aktives Kindziel')
+            self._wohnungserkundung_active_child = (intent, candidate)
+        try:
+            run = navigation_session.run(
+                intent,
+                candidate,
+                lambda selected, stop_requested: self._navigate_to(
+                    selected.target_x_m,
+                    selected.target_y_m,
+                    self._goal_timeout_s,
+                    stop_requested=stop_requested,
+                    goal_yaw=selected.target_yaw_rad,
+                ),
+                lambda: self._wohnungserkundung_source_state(
+                    intent, candidate),
+                lambda: goal_handle.is_cancel_requested,
+                overall_expired,
+            )
+            with self._wohnungserkundung_runtime_lock:
+                task_policy = self._wohnungserkundung_task_policy_session
+                if task_policy is None:
+                    raise RuntimeError(
+                        'Aufgabenpolicy fehlt bei terminalem Kindziel')
+                if run.disposition.attempt is not None:
+                    task_policy.record_attempt(run.disposition.attempt)
+                self._wohnungserkundung_consumed_intent_id = intent.intent_id
+            return run
+        finally:
+            with self._wohnungserkundung_runtime_lock:
+                self._wohnungserkundung_active_child = None
+
+    def _execute_wohnungserkundung_navigation(
+            self, goal_handle, overall_timeout):
+        """Run the opt-in WE child loop without legacy frontier competition."""
+        self._coverage_ratio = 0.0
+        self._reachable_area_m2 = 0.0
+        self._covered_area_m2 = 0.0
+        self._frontiers_visited_status = 0
+        self._frontiers_remaining = 0
+        self._coverage_complete = False
+        with self._wohnungserkundung_runtime_lock:
+            self._wohnungserkundung_active_child = None
+            self._wohnungserkundung_consumed_intent_id = None
+        self._status_phase = 'we_waiting_for_goal'
+        self._status_message = (
+            'Wohnungserkundung aktiv; warte auf aktuellen Zielkandidaten.')
+        self._publish_status('running')
+        started = time.monotonic()
+        result = ExploreArea.Result()
+        navigation_session = None
+        reached_goals = 0
+        attempted_goals = 0
+
+        def overall_expired():
+            return (
+                overall_timeout > 0.0
+                and time.monotonic() - started >= overall_timeout)
+
+        while rclpy.ok():
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundung durch Nutzer abgebrochen; '
+                    'kein aktives Kindziel')
+                return self._finish_result(result, reached_goals)
+            if overall_expired():
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundungsbudget erreicht; Teilstand, kein '
+                    'Vollabschluss')
+                return self._finish_result(result, reached_goals)
+
+            target = self._current_wohnungserkundung_navigation_target()
+            if target is None:
+                time.sleep(0.05)
+                continue
+            intent, candidate = target
+            if navigation_session is None:
+                navigation_session = ExplorationNavigationSession(
+                    intent.context)
+            elif navigation_session.context != intent.context:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Kartenkontext wechselte waehrend der '
+                    'Wohnungserkundung; neuer Auftrag erforderlich')
+                return self._finish_result(result, reached_goals)
+            if attempted_goals >= self._max_frontier_goals:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundungs-Ziellimit erreicht; Teilstand, kein '
+                    'Vollabschluss')
+                return self._finish_result(result, reached_goals)
+
+            self._status_phase = 'we_frontier_navigation'
+            self._status_message = (
+                f'WE-Frontierziel {intent.task_id} aus Revision '
+                f'{intent.map_revision} wird vom vorhandenen Nav2-Client '
+                'angefahren.')
+            self._publish_status('running')
+            feedback = ExploreArea.Feedback()
+            feedback.explored_percent = 100.0 * self._coverage_ratio
+            feedback.frontiers_remaining = self._frontiers_remaining
+            feedback.current_goal.header.frame_id = candidate.frame_id
+            feedback.current_goal.header.stamp = (
+                self.get_clock().now().to_msg())
+            feedback.current_goal.pose.position.x = candidate.target_x_m
+            feedback.current_goal.pose.position.y = candidate.target_y_m
+            feedback.current_goal.pose.orientation.z = math.sin(
+                candidate.target_yaw_rad / 2.0)
+            feedback.current_goal.pose.orientation.w = math.cos(
+                candidate.target_yaw_rad / 2.0)
+            goal_handle.publish_feedback(feedback)
+
+            run = self._run_wohnungserkundung_child(
+                navigation_session,
+                intent,
+                candidate,
+                goal_handle,
+                overall_expired,
+            )
+            attempted_goals += 1
+            disposition = run.disposition
+            if disposition.state.value == 'progressed':
+                reached_goals += 1
+                self._frontiers_visited_status = reached_goals
+                time.sleep(self._replan_period_s)
+                continue
+            if disposition.state.value in {'retry_scheduled', 'reevaluate'}:
+                time.sleep(self._replan_period_s)
+                continue
+            if run.stop_cause is NavigationStopCause.USER_CANCELED:
+                goal_handle.canceled()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundung und Nav2-Kindziel durch Nutzer '
+                    'abgebrochen')
+            elif run.stop_cause is NavigationStopCause.BUDGET_EXHAUSTED:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundungsbudget waehrend Kindziel erreicht; '
+                    'Teilstand, kein Vollabschluss')
+            else:
+                goal_handle.abort()
+                result.success = False
+                result.message = (
+                    'Wohnungserkundungs-Kindziel sicher abgebrochen: '
+                    f'{run.navigation_status}')
+            return self._finish_result(result, reached_goals)
+
     def _execute_reserved(self, goal_handle):
         req = goal_handle.request
         overall_timeout = (
@@ -3766,6 +4028,10 @@ class ExploreNode(Node):
             req.min_frontier_size_m
             if req.min_frontier_size_m > 0 else self._min_frontier_m)
         return_to_start = req.return_to_start or self._return_to_start_p
+
+        if getattr(self, '_wohnungserkundung_navigation_enabled', False):
+            return self._execute_wohnungserkundung_navigation(
+                goal_handle, overall_timeout)
 
         self._blacklist.clear()
         self._visited_frontier_goals.clear()
