@@ -22,6 +22,7 @@ from .exploration_child_goal import (
     ExplorationGoalIntent,
 )
 from .frontier_goal_candidate import FrontierGoalCandidate
+from .portal_task_evidence import PortalGoalCandidate
 from .portal_memory import PortalMapContext
 
 
@@ -98,8 +99,8 @@ class ExplorationNavigationSession:
     def run(
             self,
             intent: ExplorationGoalIntent,
-            candidate: FrontierGoalCandidate,
-            navigate: Callable[[FrontierGoalCandidate, Callable[[], bool]], str],
+            candidate,
+            navigate: Callable[[object, Callable[[], bool]], str],
             source_state: Callable[[], NavigationSourceState],
             user_canceled: Callable[[], bool],
             budget_exhausted: Callable[[], bool],
@@ -107,9 +108,9 @@ class ExplorationNavigationSession:
         if not isinstance(intent, ExplorationGoalIntent):
             raise ExplorationNavigationRuntimeError(
                 "intent muss ExplorationGoalIntent sein")
-        if not isinstance(candidate, FrontierGoalCandidate):
+        if not isinstance(candidate, (FrontierGoalCandidate, PortalGoalCandidate)):
             raise ExplorationNavigationRuntimeError(
-                "candidate muss FrontierGoalCandidate sein")
+                "candidate muss ein unterstuetzter Zielkandidat sein")
         if (
                 intent.context != self._context
                 or candidate.intent_id != intent.intent_id
