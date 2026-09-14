@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AC)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AD)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AC – optionaler Rohkartenjoin im reinen Lebenszyklus softwaregeprüft, zur Review.**
-`RegionGraphShadowLifecycle` besitzt den `RawMapStatusJoiner` jetzt nur bei
-explizit positiver Kapazität. Rohkarte und Kartenstatus können in beiden
-Reihenfolgen eintreffen; das optionale Exaktresultat steht in derselben
-Lebenszyklusantwort. Feste, unveränderliche Diagnosezähler melden Beobachtungen,
-Dubletten, wartende und verdrängte Identitäten sowie Joins. Ohne Kapazität ist
-der Joiner abwesend und das bisherige Verhalten bleibt unverändert. ROS, JSON,
-Node und Parameter sind noch unberührt.
+**WE-M2/AD – optionale Rohkartendiagnose im Schattenstatus softwaregeprüft, zur Review.**
+Die reine Schattenstatusprojektion übernimmt die validierten begrenzten
+Joiner-Zähler nun optional. Bei deaktiviertem Joiner bleibt der Schema-1-JSON-
+Text ohne neuen Block; bei Aktivierung erscheint nur
+`raw_map_correlation` mit Kapazität, Zählern, letzter Revision und abgeleitetem
+Zustand. Fingerprint, Frame, Zellen und Geometrie werden nicht ausgegeben. Der
+bestehende Maximalumfang des JSON wird weiterhin nach der Erweiterung geprüft.
+ROS, Node und Parameter sind noch unberührt.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,12 +25,13 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AD:** Ausschließlich die vorhandene reine
-Schattenstatusprojektion um einen optionalen, begrenzten Diagnoseblock für die
-Rohkartenkorrelation erweitern. Bei deaktiviertem Joiner muss der JSON-Text
-bytegleich bleiben; bei Aktivierung erscheinen nur Zähler/Zustand, keine Raster-
-oder Wohnungsdaten. Noch keine Parameter-, Node-, Callback-, Topic-, Detektor-,
-Ziel- oder Fahränderung.
+**Nächster abgegrenzter Schritt WE-M2/AE:** Ausschließlich den
+standardmäßig deaktivierten ROS-Adapter für die Rohkartenidentität ergänzen:
+zwei Opt-in-Parameter, Snapshot/Digest nach den unveränderten `_on_map`-
+Zuweisungen außerhalb des Schatten-Locks und Übergabe unter dem Lock. Der
+deaktivierte Pfad darf weder Kopie noch Digest ausführen; Fehler bleiben auf den
+Schatten begrenzt. Vertragstests und ein isolierter ROS-Smoke ohne Geräte oder
+Action-Auftrag, kein Detektor, Portalfeed, Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -82,6 +83,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AA `feature/we-m2aa-raw-map-status-join` | Gestapelter reiner, explizit begrenzter und beidseitig anstoßbarer Exaktjoin von Rohkartenidentität und Kartenmanagerstatus; Adapter, Tests und Status, kein Deployment. |
 | WE-M2/AB `docs/we-m2ab-raw-map-runtime-owner` | Gestapelte Besitzer-, Opt-in-, Diagnose- und Messentscheidung für die spätere passive Runtime; nur diese STATUS.md, kein Deployment. |
 | WE-M2/AC `feature/we-m2ac-lifecycle-raw-map-owner` | Gestapelter optionaler Joiner-Besitz im reinen Schattenlebenszyklus mit begrenzten Diagnosezählern und beidseitigen Übergaben; reine Module, Tests und Status, kein Deployment. |
+| WE-M2/AD `feature/we-m2ad-raw-map-status-diagnostics` | Gestapelte optionale, begrenzte Rohkarten-Korrelationsdiagnose im getrennten reinen Schattenstatus; reine Module, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -416,6 +418,70 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AD: optionale Diagnose im getrennten Schattenstatus
+
+**Entscheidung / Umfang:** `RawMapCorrelationDiagnostics` liegt nun bei der
+reinen Joiner-Schnittstelle und ist damit ohne zyklischen Import für Joiner,
+Lebenszyklus, Schatten-Sitzung und Statusprojektion nutzbar. Der unveränderliche
+Typ prüft nichtnegative Ganzzahlzähler und die Erhaltung
+`eindeutig = wartend + verdrängt + ausgegeben`. Deaktiviert sind Kapazität und
+alle Zähler null. Aktiviert ist die Kapazität positiv, die wartende Anzahl liegt
+nicht darüber und eine letzte Revision existiert genau dann, wenn mindestens
+eine Korrelation ausgegeben wurde.
+
+Der abgeleitete Zustand ist `waiting`, solange weder Join noch Verdrängung
+belegt ist, `matched` nach mindestens einem Join und `evicted` als absichtlich
+haftender Warnzustand nach jeder Verdrängung. Die Einzelzähler bleiben daneben
+sichtbar; ein späterer Treffer verdeckt eine zu kleine Kapazität deshalb nicht.
+`RawMapStatusJoiner.diagnostics` erzeugt diesen validierten Snapshot, und der
+Lebenszyklus delegiert seine Eigenschaft an genau denselben Besitzer.
+
+`ShadowStatusSource` akzeptiert die Diagnose optional. `None` fügt dem
+kanonischen Schema-1-Dokument kein Feld hinzu; die vorhandenen deaktivierten
+Statusverträge bleiben damit strukturell unverändert. Ein aktiver Snapshot wird
+als Top-Level-Block `raw_map_correlation` mit `enabled`, Zustand, Kapazität,
+Quellen-/Dubletten-/Warte-/Verdrängungs-/Joinzählern und letzter Revision
+serialisiert. Deaktivierte oder typfremde Diagnoseobjekte werden verworfen.
+Fingerprint, Frame, Quellstempel, Zellen und Wohnungsgeometrie fehlen bewusst.
+Die vorhandene `max_serialized_bytes`-Prüfung läuft erst über das vollständige
+erweiterte Dokument.
+
+**Geänderte Dateien:** Reine Adapter-, Lebenszyklus-, Sitzungs- und
+Statusmodule unter `src/explore/explore/`, deren vier Testsuiten und diese
+STATUS.md. Keine Änderung an Node, Launch, Parametern, Topics, Kartenmanager,
+Detektor, Portalfeed, Navigation oder Fahrsoftware.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz, für die vollständige
+Explorer-Suite ROS-Humble-Underlay und vorhandene generierte Schnittstellen;
+keine Nodes, Geräte, Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AD-FOCUSED | Joiner-, Status-, Schatten-Sitzungs- und Lebenszyklusverträge gemeinsam: **201 passed**. |
+| WE-M2AD-EXPLORER | Vollständige Explorer-Suite: **522 passed**. |
+| WE-M2AD-ADJACENT | Zusätzlich Blattpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **663 passed**. |
+| WE-M2AD-COLCON | Temporärer isolierter Build von Blattpaket und Explorer: 2 Pakete gebaut; **36 + 522 = 558 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AD-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+
+**Offene Grenzen / Rückfall:** Der Block zeigt bisher ausschließlich reine
+synthetische Zustände; ohne ROS-Adapter entstehen keine realen Runtimezähler.
+Schema 1 bleibt wegen des ausschließlich additiven optionalen Feldes erhalten;
+vor einer externen Nutzung muss ein Verbraucher unbekannte optionale Felder wie
+vereinbart tolerieren. Es gibt keinen Jetson-, DDS-, Last- oder
+Hardware-Nachweis. Rückfall ist das Zurücknehmen des einzelnen WE-M2/AD-Commits;
+bei `None` ist der Block ohnehin abwesend.
+
+**Nächster abgegrenzter Schritt WE-M2/AE:** Im Explorer zwei Parameter mit den
+Sperrdefaults `region_graph_shadow_raw_map_enabled: false` und
+`region_graph_shadow_raw_map_capacity: 0` deklarieren und ihre Kombination
+streng validieren. Nur bei doppeltem Opt-in erzeugt der Lebenszyklus seinen
+Joiner. `_on_map()` übernimmt zuerst unverändert Karte und monotone Empfangszeit,
+bildet dann außerhalb des Schatten-Locks über den gemeinsamen Factoryvertrag
+die Identität und übergibt sie unter dem Lock. Tests belegen deaktivierte
+Nullkosten, Feldnormalisierung, Lockgrenze, beide Callbackreihenfolgen und
+isolierten Schattenfehler. Ein isolierter DDS-Smoke darf nur ohne Motor-/Sensor-
+Nodes und ohne Action-Auftrag laufen.
 
 ### 2026-09-14 – WE-M2/AC: optionaler Joiner-Besitz im reinen Lebenszyklus
 

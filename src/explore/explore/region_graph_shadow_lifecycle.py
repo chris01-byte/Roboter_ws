@@ -28,6 +28,7 @@ from .portal_plan_adapter import PortalPlanCandidate
 from .portal_source_adapter import (
     PortalSourceAdapterError,
     PortalSourceCorrelation,
+    RawMapCorrelationDiagnostics,
     RawMapPortalSource,
     RawMapStatusJoiner,
 )
@@ -55,19 +56,6 @@ class ShadowLifecycleUpdate:
     map_status: Optional[MapStatusCorrelationResult]
     session_started: bool = False
     raw_map_correlation: Optional[PortalSourceCorrelation] = None
-
-
-@dataclass(frozen=True)
-class RawMapCorrelationDiagnostics:
-    enabled: bool
-    capacity: int
-    source_observations: int
-    unique_sources: int
-    duplicate_sources: int
-    pending_sources: int
-    evicted_sources: int
-    emitted_correlations: int
-    last_emitted_revision: Optional[int]
 
 
 def _monotonic_seconds(value: object, name: str) -> float:
@@ -175,17 +163,7 @@ class RegionGraphShadowLifecycle:
                 emitted_correlations=0,
                 last_emitted_revision=None,
             )
-        return RawMapCorrelationDiagnostics(
-            enabled=True,
-            capacity=joiner.capacity,
-            source_observations=joiner.source_observation_count,
-            unique_sources=joiner.unique_source_count,
-            duplicate_sources=joiner.duplicate_source_count,
-            pending_sources=joiner.pending_source_count,
-            evicted_sources=joiner.evicted_source_count,
-            emitted_correlations=joiner.emitted_correlation_count,
-            last_emitted_revision=joiner.last_emitted_revision,
-        )
+        return joiner.diagnostics
 
     def accept_raw_map_source(
             self, source: RawMapPortalSource, *,
@@ -336,6 +314,11 @@ class RegionGraphShadowLifecycle:
             current_map_status,
             portal_memory_age_seconds=portal_age,
             region_graph_age_seconds=now - graph_changed,
+            raw_map_correlation=(
+                None
+                if self._raw_map_joiner is None
+                else self.raw_map_diagnostics
+            ),
         )
         self._last_monotonic_seconds = now
         return payload

@@ -19,6 +19,9 @@ from explore.portal_memory import (  # noqa: E402
     ReachabilityState,
     ReachabilityUpdate,
 )
+from explore.portal_source_adapter import (  # noqa: E402
+    RawMapCorrelationDiagnostics,
+)
 from explore.region_graph import (  # noqa: E402
     PortalLinkObservation,
     RegionExplorationState,
@@ -153,6 +156,7 @@ def test_shadow_status_is_versioned_passive_complete_and_geometry_free():
     assert payload["schema_version"] == SCHEMA_VERSION == 1
     assert payload["mode"] == "shadow"
     assert payload["passive"] is True
+    assert "raw_map_correlation" not in payload
     assert payload["context"] == {
         "session_id": CONTEXT.session_id,
         "map_id": CONTEXT.map_id,
@@ -198,6 +202,86 @@ def test_shadow_status_is_versioned_passive_complete_and_geometry_free():
     assert '"side_b"' not in serialized
     assert '"x"' not in serialized
     assert '"y"' not in serialized
+
+
+def test_optional_raw_map_diagnostics_are_bounded_and_geometry_free():
+    diagnostics = RawMapCorrelationDiagnostics(
+        enabled=True,
+        capacity=4,
+        source_observations=7,
+        unique_sources=5,
+        duplicate_sources=2,
+        pending_sources=1,
+        evicted_sources=1,
+        emitted_correlations=3,
+        last_emitted_revision=5,
+    )
+
+    payload = json.loads(build_shadow_status_json(replace(
+        populated_source(), raw_map_correlation=diagnostics)))
+
+    assert payload["schema_version"] == 1
+    assert payload["raw_map_correlation"] == {
+        "enabled": True,
+        "state": "evicted",
+        "capacity": 4,
+        "source_observations": 7,
+        "unique_sources": 5,
+        "duplicate_sources": 2,
+        "pending_sources": 1,
+        "evicted_sources": 1,
+        "emitted_correlations": 3,
+        "last_emitted_revision": 5,
+    }
+    serialized_block = json.dumps(payload["raw_map_correlation"])
+    assert "fingerprint" not in serialized_block
+    assert "frame" not in serialized_block
+    assert "cells" not in serialized_block
+
+
+def test_disabled_or_wrong_raw_map_diagnostics_cannot_be_projected():
+    disabled = RawMapCorrelationDiagnostics(
+        enabled=False,
+        capacity=0,
+        source_observations=0,
+        unique_sources=0,
+        duplicate_sources=0,
+        pending_sources=0,
+        evicted_sources=0,
+        emitted_correlations=0,
+        last_emitted_revision=None,
+    )
+    with pytest.raises(ShadowStatusError):
+        replace(populated_source(), raw_map_correlation=disabled)
+    with pytest.raises(ShadowStatusError):
+        replace(populated_source(), raw_map_correlation="enabled")
+
+
+def test_serialized_limit_includes_optional_raw_map_diagnostics():
+    source = populated_source()
+    base = build_shadow_status_json(source)
+    diagnostics = RawMapCorrelationDiagnostics(
+        enabled=True,
+        capacity=1,
+        source_observations=0,
+        unique_sources=0,
+        duplicate_sources=0,
+        pending_sources=0,
+        evicted_sources=0,
+        emitted_correlations=0,
+        last_emitted_revision=None,
+    )
+    exact_base_limit = len(base.encode("utf-8"))
+
+    assert build_shadow_status_json(
+        source,
+        ShadowStatusPolicy(max_serialized_bytes=exact_base_limit),
+    ) == base
+    with pytest.raises(ShadowStatusCapacityError):
+        build_shadow_status_json(
+            replace(source, raw_map_correlation=diagnostics),
+            ShadowStatusPolicy(max_serialized_bytes=exact_base_limit),
+        )
 
 
 def test_projection_is_byte_deterministic_for_reordered_snapshots():

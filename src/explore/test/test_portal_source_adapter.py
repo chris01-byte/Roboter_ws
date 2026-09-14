@@ -17,6 +17,7 @@ from explore.portal_memory import PortalMapContext  # noqa: E402
 from explore.portal_source_adapter import (  # noqa: E402
     PortalSourceAdapterError,
     RawMapPortalSource,
+    RawMapCorrelationDiagnostics,
     RawMapStatusJoiner,
     correlate_raw_map_portal_source,
     raw_map_portal_source_from_values,
@@ -170,6 +171,64 @@ def test_joiner_can_start_from_an_upstream_replay_status():
 
     assert joiner.observe_status(replay) is None
     assert joiner.observe_source(source()).map_revision == 12
+
+
+def test_joiner_diagnostics_are_validated_and_derive_state():
+    joiner = RawMapStatusJoiner(capacity=2)
+    assert joiner.diagnostics.state == "waiting"
+
+    joiner.observe_source(source())
+    joiner.observe_status(map_status())
+    diagnostics = joiner.diagnostics
+
+    assert diagnostics.state == "matched"
+    assert diagnostics.enabled is True
+    assert diagnostics.emitted_correlations == 1
+    assert diagnostics.last_emitted_revision == 12
+
+
+@pytest.mark.parametrize("changes", [
+    {"enabled": 1},
+    {"capacity": -1},
+    {"pending_sources": 3},
+    {"source_observations": 1},
+    {"evicted_sources": 2},
+    {"emitted_correlations": 1},
+    {"last_emitted_revision": 12},
+])
+def test_inconsistent_raw_map_diagnostics_are_rejected(changes):
+    values = {
+        "enabled": True,
+        "capacity": 2,
+        "source_observations": 2,
+        "unique_sources": 2,
+        "duplicate_sources": 0,
+        "pending_sources": 2,
+        "evicted_sources": 0,
+        "emitted_correlations": 0,
+        "last_emitted_revision": None,
+    }
+    values.update(changes)
+    with pytest.raises(PortalSourceAdapterError):
+        RawMapCorrelationDiagnostics(**values)
+
+
+def test_disabled_raw_map_diagnostics_must_be_empty():
+    disabled = RawMapCorrelationDiagnostics(
+        enabled=False,
+        capacity=0,
+        source_observations=0,
+        unique_sources=0,
+        duplicate_sources=0,
+        pending_sources=0,
+        evicted_sources=0,
+        emitted_correlations=0,
+        last_emitted_revision=None,
+    )
+    assert disabled.state == "disabled"
+
+    with pytest.raises(PortalSourceAdapterError):
+        replace(disabled, capacity=1)
 
 
 def test_joiner_evicts_only_oldest_identity_at_explicit_capacity():
