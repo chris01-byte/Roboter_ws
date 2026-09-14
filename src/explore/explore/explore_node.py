@@ -83,6 +83,11 @@ from explore.frontier_task_feed import (
     FrontierTaskPolicy,
     frontier_inventory_from_clusters,
 )
+from explore.exploration_migration import (
+    build_passive_we_status_extension,
+    build_unavailable_we_status_extension,
+)
+from explore.exploration_policy import assess_exploration_policy
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -446,6 +451,18 @@ def validated_shadow_frontier_task_feed(
     return frontiers_enabled
 
 
+def validated_passive_policy_enabled(
+        shadow_enabled: bool, policy_enabled: bool) -> bool:
+    """Validate the diagnostic policy opt-in without enabling its source."""
+    if not isinstance(shadow_enabled, bool) or not isinstance(
+            policy_enabled, bool):
+        raise ValueError('Policy-Opt-ins muessen bool sein')
+    if policy_enabled and not shadow_enabled:
+        raise ValueError(
+            'Passive Wohnungserkundungs-Policy braucht aktiven Schatten')
+    return policy_enabled
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -728,6 +745,9 @@ class ExploreNode(Node):
         self._region_graph_shadow_status_topic = str(self.declare_parameter(
             'region_graph_shadow_status_topic',
             '/explore/region_graph/status_json').value).strip()
+        self._wohnungserkundung_policy_enabled = bool(
+            self.declare_parameter(
+                'wohnungserkundung_policy_enabled', False).value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -928,6 +948,17 @@ class ExploreNode(Node):
         self._region_graph_shadow_raw_event_feed = (
             self._region_graph_shadow_connected_portal_feed
             or self._region_graph_shadow_frontier_task_feed)
+        self._wohnungserkundung_policy_enabled = (
+            validated_passive_policy_enabled(
+                self._region_graph_shadow_enabled,
+                self._wohnungserkundung_policy_enabled,
+            )
+        )
+        if self._wohnungserkundung_policy_enabled:
+            self._wohnungserkundung_status_extension = (
+                build_unavailable_we_status_extension(
+                    'waiting_for_shadow_snapshot'))
+            self._wohnungserkundung_policy_fault = None
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -1255,16 +1286,33 @@ class ExploreNode(Node):
                 return
             now = time.monotonic()
             try:
-                payload = self._region_graph_shadow.build_status_json(
+                status = self._region_graph_shadow.build_status(
                     now_monotonic_seconds=now)
             except RegionGraphShadowNotReadyError:
                 return
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Statusausgabe', error)
                 return
+            payload = status.serialized
             message = String()
             message.data = payload
             self._region_graph_shadow_pub.publish(message)
+        if getattr(self, '_wohnungserkundung_policy_enabled', False):
+            try:
+                assessment = assess_exploration_policy(status.source)
+                extension = build_passive_we_status_extension(assessment)
+            except Exception as error:
+                fault = f'policy_error:{type(error).__name__}'
+                self._wohnungserkundung_status_extension = (
+                    build_unavailable_we_status_extension(fault))
+                if self._wohnungserkundung_policy_fault != fault:
+                    self.get_logger().error(
+                        'Passive Wohnungserkundungs-Policy bleibt ohne '
+                        f'Wirkung ({fault}).')
+                self._wohnungserkundung_policy_fault = fault
+            else:
+                self._wohnungserkundung_status_extension = extension
+                self._wohnungserkundung_policy_fault = None
 
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
@@ -1616,6 +1664,9 @@ class ExploreNode(Node):
                 state == 'success' and self._coverage_complete),
             'time': time.time(),
         }
+        if getattr(self, '_wohnungserkundung_policy_enabled', False):
+            payload['wohnungserkundung'] = (
+                self._wohnungserkundung_status_extension)
         self._status_pub.publish(String(data=json.dumps(
             payload, ensure_ascii=False, separators=(',', ':'))))
 

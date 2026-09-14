@@ -38,6 +38,9 @@ explore_node:
     region_graph_shadow_start_observation_id: ""
     region_graph_shadow_map_status_topic: "/robot_map_manager/status_json"
     region_graph_shadow_status_topic: "/explore/region_graph/status_json"
+    # WE-M3/F: nur Diagnose im bestehenden Status, keine Ziel-/Fahrwirkung.
+    # Erfordert einen explizit aktivierten Regionsgraph-Schatten.
+    wohnungserkundung_policy_enabled: false
 
     # --- Explorationsrhythmus / Grenzen ---
     replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]

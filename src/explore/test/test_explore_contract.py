@@ -1,3 +1,4 @@
+import json
 import math
 from pathlib import Path
 import sys
@@ -7,6 +8,7 @@ from types import SimpleNamespace
 
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
+import pytest
 from std_msgs.msg import String
 import yaml
 
@@ -31,6 +33,7 @@ from explore.explore_node import (  # noqa: E402
     validated_shadow_connected_portal_feed,
     validated_shadow_frontier_task_feed,
     validated_shadow_raw_map_capacity,
+    validated_passive_policy_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
@@ -906,10 +909,20 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
         '/robot_map_manager/status_json')
     assert parameters['region_graph_shadow_status_topic'] == (
         '/explore/region_graph/status_json')
+    assert parameters['wohnungserkundung_policy_enabled'] is False
     assert parameters['region_graph_shadow_status_topic'] != (
         parameters['status_topic'])
     assert 'PortalPlanCandidate' not in source
     assert '.observe_structural_portal(' in source
+
+
+def test_passive_policy_requires_explicit_shadow_opt_in():
+    assert validated_passive_policy_enabled(False, False) is False
+    assert validated_passive_policy_enabled(True, False) is False
+    assert validated_passive_policy_enabled(True, True) is True
+    for values in ((False, True), (1, True), (True, 1)):
+        with pytest.raises(ValueError):
+            validated_passive_policy_enabled(*values)
 
 
 def test_disabled_region_graph_shadow_creates_no_interface():
@@ -1297,7 +1310,7 @@ def test_region_graph_status_waits_without_fault_or_publication(monkeypatch):
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
-    node._region_graph_shadow = SimpleNamespace(build_status_json=not_ready)
+    node._region_graph_shadow = SimpleNamespace(build_status=not_ready)
     node._region_graph_shadow_pub = SimpleNamespace(
         publish=publications.append)
     monkeypatch.setattr(
@@ -1321,7 +1334,8 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
     node._region_graph_shadow = SimpleNamespace(
-        build_status_json=lambda **kwargs: build_calls.append(kwargs) or '{}')
+        build_status=lambda **kwargs: build_calls.append(kwargs) or (
+            SimpleNamespace(serialized='{}', source=object())))
     node._region_graph_shadow_pub = SimpleNamespace(
         publish=publications.append)
     monkeypatch.setattr(
@@ -1337,6 +1351,125 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
     assert len(publications) == 1
     assert isinstance(publications[0], String)
     assert publications[0].data == '{}'
+
+
+def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
+        monkeypatch):
+    assessment = object()
+    source = object()
+    extension = {"schema_version": 1, "mode": "passive_shadow"}
+    publications = []
+    assessed = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        build_status=lambda **kwargs: SimpleNamespace(
+            serialized='{"shadow":true}', source=source))
+    node._region_graph_shadow_pub = SimpleNamespace(
+        publish=publications.append)
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_policy_fault = None
+
+    def assess_outside_shadow_lock(value):
+        assert not node._region_graph_shadow_lock.locked()
+        assessed.append(value)
+        return assessment
+
+    monkeypatch.setattr(
+        explore_node_module, 'assess_exploration_policy',
+        assess_outside_shadow_lock)
+    monkeypatch.setattr(
+        explore_node_module, 'build_passive_we_status_extension',
+        lambda value: extension if value is assessment else None)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
+
+    node._publish_region_graph_shadow_status()
+
+    assert assessed == [source]
+    assert node._wohnungserkundung_status_extension is extension
+    assert node._wohnungserkundung_policy_fault is None
+    assert len(publications) == 1
+    assert publications[0].data == '{"shadow":true}'
+
+
+def _status_node(policy_enabled):
+    node = ExploreNode.__new__(ExploreNode)
+    node._status_phase = 'idle'
+    node._status_message = 'ready'
+    node._coverage_ratio = 0.0
+    node._coverage_target_ratio = 0.85
+    node._reachable_area_m2 = 0.0
+    node._covered_area_m2 = 0.0
+    node._frontiers_visited_status = 0
+    node._frontier_stages_completed = 0
+    node._portal_crossings = 0
+    node._portals_remaining = 0
+    node._unresolved_frontiers = 0
+    node._coverage_goals_visited = 0
+    node._frontiers_remaining = 0
+    node._frontier_rank_stats = {}
+    node._coverage_complete = False
+    node._wohnungserkundung_policy_enabled = policy_enabled
+    node._status_pub = SimpleNamespace(publish=lambda message: None)
+    return node
+
+
+def test_legacy_status_is_unchanged_when_passive_policy_is_disabled(
+        monkeypatch):
+    publications = []
+    node = _status_node(False)
+    node._status_pub.publish = publications.append
+    monkeypatch.setattr(explore_node_module.time, 'time', lambda: 42.0)
+
+    node._publish_status('idle')
+
+    payload = json.loads(publications[0].data)
+    assert 'wohnungserkundung' not in payload
+    assert payload['time'] == 42.0
+
+
+def test_enabled_passive_policy_adds_only_nested_status_extension(
+        monkeypatch):
+    publications = []
+    node = _status_node(True)
+    node._wohnungserkundung_status_extension = {
+        'schema_version': 1,
+        'mode': 'passive_shadow',
+        'completion_allowed': False,
+    }
+    node._status_pub.publish = publications.append
+    monkeypatch.setattr(explore_node_module.time, 'time', lambda: 42.0)
+
+    node._publish_status('idle')
+
+    payload = json.loads(publications[0].data)
+    assert payload['wohnungserkundung'] == (
+        node._wohnungserkundung_status_extension)
+    del payload['wohnungserkundung']
+    assert payload == json.loads(json.dumps({
+        'schema_version': 1,
+        'backend_ready': True,
+        'state': 'idle',
+        'phase': 'idle',
+        'message': 'ready',
+        'strategy': 'frontier_portal_then_adaptive_coverage',
+        'coverage_ratio': 0.0,
+        'coverage_percent': 0.0,
+        'target_coverage_percent': 85.0,
+        'reachable_area_m2': 0.0,
+        'covered_area_m2': 0.0,
+        'frontiers_visited': 0,
+        'frontier_stages_completed': 0,
+        'portal_crossings': 0,
+        'portals_remaining': 0,
+        'unresolved_frontiers': 0,
+        'coverage_goals_visited': 0,
+        'frontiers_remaining': 0,
+        'frontier_ranking': {},
+        'map_ready_to_save': False,
+        'time': 42.0,
+    }))
 
 
 def test_connected_portal_feed_requires_all_three_opt_ins():

@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/E)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/F)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,12 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/E – Verbraucherbestand und additive Migrationsnaht sind quellenbasiert
-inventarisiert, als reiner Vertrag implementiert und gerätefrei geprüft; zur
-Review.** `ExploreArea` und Statusschema 1 bleiben unverändert. Nur
-`complete_accessible` wird auf Legacy-Erfolg abgebildet; der neue Vertrag ist
-als versioniertes verschachteltes Statusobjekt vorgesehen. Es entsteht keine
-Runtime- oder Fahrwirkung.
+**WE-M3/F – Der erste passive Runtimeadapter ist standardmäßig deaktiviert,
+gerätefrei durchgängig geprüft und zur Review.** Bei explizitem Opt-in bewertet
+er atomar genau den typisierten Snapshot des vorhandenen Regionsgraph-Schatten
+und hängt eine begrenzte, versionierte `wohnungserkundung`-Diagnose an den
+Legacy-Status. Ohne Opt-in bleibt dessen Payload unverändert. Mangels
+Aufgabenverfügbarkeitsbelegen bleibt jede offene Aufgabe unbekannt und der
+Abschluss immer gesperrt; Zielwahl und Fahrpfade lesen den neuen Zustand nicht.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -24,15 +25,20 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis E sind reine Logik und
-Migrationsvertrag. Separat aktivierbares Profil, passive Runtime-Zuführung der
-Policybelege, Zielbildung/-übergabe und motorlose Zielsystemabnahme fehlen.
+WE-M3 bleibt ebenfalls offen: M3/A bis F umfassen Logik, Migrationsvertrag und
+die erste rein diagnostische Runtimeprojektion. Echte revisionsgebundene
+Verfügbarkeits-/Wegkostenbelege, zustandsbehaftete Auswahl, Zielbildung und
+-übergabe, Abschluss-/Actionintegration, eingefrorenes begrenztes Profil sowie
+die motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/F:** Einen standardmäßig deaktivierten
-passiven Runtimeadapter ergänzen, der den bereits vorhandenen Schattenstatus in
-den M3/A-Vertrag überführt und die versionierte WE-Erweiterung ausgibt. Fehlende
-Aufgabenverfügbarkeits-/Wegkostenbelege bleiben sichtbar unbekannt; keine
-Zielwahl, Action-, Nav2-, Command- oder Twist-Wirkung.
+**Nächster abgegrenzter Schritt WE-M3/G:** Die fehlende Belegnaht ohne
+Zielübergabe ergänzen: aus exakt derselben korrelierten Rohkarte, dem vollständigen
+Frontierbestand und einem expliziten Roboterbezug revisionsgebundene
+Aufgabenverfügbarkeit, geodätische Weglänge und Informationsgewinn ableiten.
+Fehlende Karte/Pose, nicht auflösbare Aufgaben, Planungsfehler und veraltete
+Revisionen müssen als unbekannt beziehungsweise blockiert sichtbar bleiben.
+Zunächst nur reine Adapter-/Szenariotests und passive Statusdiagnose; keine
+Action-, Nav2-Ziel-, Command- oder Twist-Wirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -106,6 +112,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/C `feature/we-m3c-task-scoring` | Gestapelte revisionsgebundene skalare Bewertung geeigneter Aufgaben-IDs aus geodätischer Weglänge in Metern und Informationsgewinn in Quadratmetern; explizite Normierung/Gewichte, vollständige Belege und deterministische Gleichstände ohne Pfad-/Zielausgabe. |
 | WE-M3/D `feature/we-m3d-completion-contract` | Gestapelter reiner Abschlussautomat mit drei frischen qualifizierten Revisionen, Reset bei Blockade, getrennten Voll-/Teil-/System-/Nutzerzuständen und unabhängigen Speicher-/Rückkehrergebnissen; keine Runtime- oder Fahrwirkung. |
 | WE-M3/E `feature/we-m3e-consumer-migration` | Gestapelte quellenbasierte Verbraucher-/ABI-Inventur und reine additive Abbildung von WE-Ergebnissen auf unveränderte Legacy-Action-/Statuszustände; versionierte verschachtelte Statuserweiterung, keine Runtimewirkung. |
+| WE-M3/F `feature/we-m3f-passive-runtime-status` | Gestapelter standardmäßig deaktivierter Runtimeadapter vom atomaren typisierten Schattensnapshot zur begrenzten versionierten `wohnungserkundung`-Diagnose im Legacy-Status; ohne Verfügbarkeitsbeleg kein geeignetes Ziel und stets gesperrter Abschluss. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -344,7 +351,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis E softwaregeprüft | Reiner Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat und additive Migrationsnaht liegen vor. Profil, passive Belegzuführung, Ziel-/Runtime-Einbindung und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis F softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration und passiver Status-Runtimepfad liegen vor. Belegzuführung, Auswahl-/Zielintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -440,6 +447,76 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/F: passiver Runtime- und Statusadapter
+
+**Arbeitsbasis und Umfang:** `feature/we-m3f-passive-runtime-status` baut direkt
+auf M3/E `d7dbcd1` auf. `RegionGraphShadowLifecycle.build_status()` liefert nun
+atomar den unveränderlichen typisierten Snapshot und dessen weiterhin
+bytebegrenzte kanonische Schattenprojektion; die bestehende
+`build_status_json()`-Schnittstelle bleibt kompatibel. Erst der neue Parameter
+`wohnungserkundung_policy_enabled`, standardmäßig `false`, lässt den Explorer
+diesen Snapshot mit dem M3/A-Vertrag bewerten. Die Policyarbeit läuft nach
+Freigabe der Schatten-Sperre.
+
+**Status- und Sicherheitsvertrag:** Vor dem ersten vollständigen Snapshot ist
+die verschachtelte Diagnose ausdrücklich `unavailable`. Danach enthält sie
+Schema, passiven Modus, Kontext/Revision, Quellenfrische, aktuelle Region,
+begrenzte Blockercodes und ausschließlich Zähler. `result_state` bleibt
+`in_progress`, `terminal` und `completion_allowed` bleiben `false`. Maximal 128
+Blockercodes werden ausgegeben; Gesamtzahl und Abschneidung bleiben sichtbar.
+Fehler im Policyadapter sperren nur dessen Diagnose und unterdrücken den
+separaten Schattenstatus nicht. Der Adapter erhält bewusst keine
+Aufgabenverfügbarkeit: vorhandene offene Aufgaben werden deshalb
+`unknown`, nicht auswählbar. Bei deaktiviertem Opt-in besitzt der Legacystatus
+kein `wohnungserkundung`-Feld und bleibt in allen bisherigen Feldern gleich.
+
+Geändert wurden ausschließlich der Lebenszyklus-/Migrationsadapter, der passive
+Abschnitt des bestehenden Explorer-Nodes, ein Standardparameter, zugehörige
+Vertragstests und diese Statusdatei. `ExploreArea`, Nav2-Action, Zielbildung,
+Frontier-/Portalwahl, Coverageabschluss, Command-/Twist-Publisher, Karten- und
+Semantikmanager sowie Apps wurden nicht funktional geändert.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+frischem temporären Overlay; keine Geräte, realen Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3F-FOCUS | Lebenszyklus-, Migration- und Nodevertrag gemeinsam: **155 passed**; darunter atomarer Snapshot, Pflicht-Opt-in, gesperrter Abschluss, Ausgabegrenze, Sperrfreigabe sowie identischer Legacy-OFF-Pfad. |
+| WE-M3F-EXPLORER | Vollständige Explorer-Suite: **648 passed**. |
+| WE-M3F-ADJACENT | Explorer plus Fingerprint-, Karten-, Semantik-, Mission- und Launch-Verträge: **811 passed**. |
+| WE-M3F-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 648 = 684 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3F-ROS | Isolierte lokale DDS-Domain, direkter Explorer ohne Action: synthetischer Kartenmanagerstatus ergab Revision **1**, Policyzustand `waiting_for_fresh_sources`, `completion_allowed=false` und **0** Nachrichten auf beiden Explorer-Command-Topics. |
+| WE-M3F-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+Der erste ROS-Probelauf verwendete versehentlich einen volatilen
+Kartenstatus-Publisher und wurde von der korrekt transient-lokalen Subscription
+wegen inkompatibler QoS abgewiesen; nach Korrektur auf Reliable/Transient Local
+bestand derselbe gerätefreie Test. Das ist Testaufbau-Evidenz, kein Produktfehler
+und keine Hardwareaussage.
+
+**Offene Grenzen:** Der Adapter belegt die passive Runtimeverkabelung, liefert
+aber noch keine echte Verfügbarkeit, Weglänge, Informationsfläche, Auswahl,
+Attempt-/Retryfortschreibung, Kindzielkorrelation oder Abschlussbeobachtung. Die
+fehlende Portalgedächtnisrevision im bewusst minimalen ROS-Smoke macht die Quelle
+korrekt veraltet. Reale Managerperiodik, Plannerverfügbarkeit, Jetsonlast,
+HWT-/lokale Mischstandintegration, Sicherheitskette, Sensorik und Hardware sind
+nicht geprüft. Softwaretests bedeuten keine Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/G:** Eine reine und anschließend nur
+passiv diagnostische Belegnaht auf der exakt korrelierten Rohkarte festlegen und
+implementieren. Sie ordnet Frontieraufgaben ihrer stabilen Geometrie zu und
+liefert revisionsgebundene Verfügbarkeit, geodätische Weglänge und
+Informationsgewinn; fehlende Pose/Karte, veraltete Identität, nicht auflösbare
+Portal-/Beobachtungsaufgaben und Berechnungsfehler bleiben explizit unbekannt.
+Noch keine zustandsbehaftete Auswahl, kein Ziel und kein Nav2-Aufruf.
+
+**Rückfall:** `wohnungserkundung_policy_enabled: false` entfernt die neue
+Bewertung und das verschachtelte Statusfeld, ohne den vorhandenen Schatten zu
+deaktivieren. Vollständiger Rückfall ist der einzelne M3/F-Revert; bestehender
+Schatten-, Legacy-, Action-, Navigations- und Fahrzustand bleibt unverändert.
+Es wurde nichts deployed oder an Hardware aktiviert.
 
 ### 2026-09-14 – WE-M3/E: Verbraucher- und Migrationsvertrag
 

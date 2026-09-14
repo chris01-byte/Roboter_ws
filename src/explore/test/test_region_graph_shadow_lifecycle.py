@@ -39,6 +39,7 @@ from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowLifecycleError,
     RegionGraphShadowNotReadyError,
+    ShadowLifecycleStatus,
     ShadowLifecycleState,
 )
 from explore.region_graph_status import (  # noqa: E402
@@ -170,6 +171,25 @@ def test_owner_waits_without_inventing_context_or_status():
     assert owner.latest_map_status is None
     with pytest.raises(RegionGraphShadowNotReadyError):
         build_status(owner)
+
+
+def test_atomic_status_exposes_the_exact_source_used_for_serialization():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    status = owner.build_status(now_monotonic_seconds=100.5)
+
+    assert isinstance(status, ShadowLifecycleStatus)
+    payload = json.loads(status.serialized)
+    assert status.source.context == owner.context
+    assert status.source.source_map_revision == 3
+    assert payload["context"] == {
+        "session_id": status.source.context.session_id,
+        "map_id": status.source.context.map_id,
+        "frame_id": status.source.context.frame_id,
+    }
+    assert payload["source"]["map_revision"] == (
+        status.source.source_map_revision)
 
 
 def test_raw_map_join_is_absent_without_explicit_capacity():
