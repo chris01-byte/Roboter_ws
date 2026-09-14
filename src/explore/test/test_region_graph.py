@@ -28,7 +28,10 @@ from explore.region_graph import (  # noqa: E402
     RegionGraphError,
     RegionGraphPolicy,
     RegionMerge,
+    RegionPortalEnd,
     RegionSeed,
+    RegionSplit,
+    RegionSplitTarget,
     RegionTaskKind,
     RegionTaskState,
     RegionTaskUpdate,
@@ -114,6 +117,25 @@ def task_update(
         kind=kind,
         subject_id=subject_id,
         state=state,
+    )
+
+
+def region_split(
+        split_id, revision, source_region_id,
+        retained_portal_ends, created_portal_ends,
+        retained_task_ids, created_task_ids, state_target,
+        *, context=CONTEXT, reason="synthetic_partition"):
+    return RegionSplit(
+        split_id=split_id,
+        context=context,
+        map_revision=revision,
+        source_region_id=source_region_id,
+        retained_portal_ends=tuple(retained_portal_ends),
+        created_portal_ends=tuple(created_portal_ends),
+        retained_task_ids=tuple(retained_task_ids),
+        created_task_ids=tuple(created_task_ids),
+        state_target=state_target,
+        reason=reason,
     )
 
 
@@ -966,5 +988,318 @@ def test_task_filters_do_not_change_inventory():
     ],
 )
 def test_invalid_task_policy_and_fields_are_rejected(factory):
+    with pytest.raises(RegionGraphError):
+        factory()
+
+
+def split_ready_path(*, policy=None):
+    path = three_region_path(policy=policy)
+    graph = path["graph"]
+    graph.update_task(task_update(
+        "task-retained-update", "task-retained", 4, path["start_room"],
+        RegionTaskKind.FRONTIER, "frontier-retained", RegionTaskState.OPEN))
+    graph.update_task(task_update(
+        "task-created-update", "task-created", 4, path["next_room"],
+        RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+        RegionTaskState.COMPLETED))
+    graph.merge_regions(RegionMerge(
+        "merge-before-split", CONTEXT, 5,
+        path["next_room"], path["start_room"], "synthetic_loop"))
+    path["split"] = region_split(
+        "stable-split", 6, path["next_room"],
+        (RegionPortalEnd(path["first_portal"].portal_id, PortalSide.A),),
+        (RegionPortalEnd(path["second_portal"].portal_id, PortalSide.B),),
+        ("task-retained",), ("task-created",),
+        RegionSplitTarget.CREATED,
+    )
+    return path
+
+
+def test_explicit_split_partitions_portal_ends_tasks_and_whole_state():
+    path = split_ready_path()
+    graph = path["graph"]
+    before_entry_count = graph.snapshot().confirmed_entry_count
+
+    result = graph.split_region(path["split"])
+
+    retained = graph.region(result.retained_region_id)
+    created = graph.region(result.created_region_id)
+    first_connection = graph.connection(path["first_portal"].portal_id)
+    second_connection = graph.connection(path["second_portal"].portal_id)
+    assert result.retained_region_id == path["start_room"]
+    assert result.created_region_id == "region_000004"
+    assert result.state_region_id == result.created_region_id
+    assert first_connection.side_a_region_id == result.retained_region_id
+    assert second_connection.side_b_region_id == result.created_region_id
+    assert retained.portal_ids == (path["first_portal"].portal_id,)
+    assert created.portal_ids == (path["second_portal"].portal_id,)
+    assert retained.task_ids == ("task-retained",)
+    assert created.task_ids == ("task-created",)
+    assert graph.task("task-retained").region_id == result.retained_region_id
+    assert graph.task("task-created").region_id == result.created_region_id
+    assert not retained.seen and not retained.entered
+    assert retained.entry_count == 0
+    assert created.seen and created.entered
+    assert created.entry_count == 1
+    assert graph.current_region_id == result.created_region_id
+    assert graph.snapshot().confirmed_entry_count == before_entry_count
+
+
+def test_split_of_noncurrent_region_keeps_current_and_retains_state():
+    path = three_region_path()
+    graph = path["graph"]
+    split = region_split(
+        "split-hall", 5, path["hall"],
+        (RegionPortalEnd(path["first_portal"].portal_id, PortalSide.B),),
+        (RegionPortalEnd(path["second_portal"].portal_id, PortalSide.A),),
+        (), (), RegionSplitTarget.RETAINED,
+    )
+
+    result = graph.split_region(split)
+
+    assert graph.current_region_id == path["next_room"]
+    assert result.state_region_id == path["hall"]
+    assert graph.region(path["hall"]).entered
+    assert graph.region(path["hall"]).entry_count == 1
+    assert not graph.region(result.created_region_id).entered
+    assert graph.snapshot().confirmed_entry_count == 2
+
+
+def test_split_replay_is_idempotent():
+    path = split_ready_path()
+    graph = path["graph"]
+    accepted = graph.split_region(path["split"])
+    before = graph.snapshot()
+    reordered = replace(
+        path["split"],
+        retained_task_ids=tuple(reversed(path["split"].retained_task_ids)),
+        created_task_ids=tuple(reversed(path["split"].created_task_ids)),
+    )
+
+    replay = graph.split_region(reordered)
+
+    assert replay.duplicate
+    assert replay.retained_region_id == accepted.retained_region_id
+    assert replay.created_region_id == accepted.created_region_id
+    assert graph.snapshot() == before
+    with pytest.raises(RegionGraphConflictError):
+        graph.split_region(replace(path["split"], reason="other_reason"))
+
+
+def test_split_assignment_order_is_canonicalized():
+    split = region_split(
+        "ordered-split", 1, "region_000001",
+        (
+            RegionPortalEnd("portal-z", PortalSide.B),
+            RegionPortalEnd("portal-a", PortalSide.A),
+        ),
+        (), ("task-z", "task-a"), (), RegionSplitTarget.RETAINED,
+    )
+
+    assert split.retained_portal_ends == (
+        RegionPortalEnd("portal-a", PortalSide.A),
+        RegionPortalEnd("portal-z", PortalSide.B),
+    )
+    assert split.retained_task_ids == ("task-a", "task-z")
+
+
+def test_split_can_assign_both_ends_of_internal_portal_separately():
+    memory = PortalMemory(CONTEXT)
+    portal = confirmed_portal(memory, "internal-door", 1)
+    graph, start_room = started_graph()
+    link = graph.observe_portal(link_observation(
+        "internal-link", 2, portal, start_room, PortalSide.A))
+    graph.merge_regions(RegionMerge(
+        "make-internal", CONTEXT, 3,
+        start_room, link.opposite_region_id, "synthetic_open_area"))
+    assert graph.connection(portal.portal_id).internal
+
+    result = graph.split_region(region_split(
+        "restore-boundary", 4, start_room,
+        (RegionPortalEnd(portal.portal_id, PortalSide.A),),
+        (RegionPortalEnd(portal.portal_id, PortalSide.B),),
+        (), (), RegionSplitTarget.RETAINED,
+    ))
+
+    connection = graph.connection(portal.portal_id)
+    assert not connection.internal
+    assert connection.side_a_region_id == result.retained_region_id
+    assert connection.side_b_region_id == result.created_region_id
+    assert graph.region(result.retained_region_id).portal_ids == (
+        portal.portal_id,)
+    assert graph.region(result.created_region_id).portal_ids == (
+        portal.portal_id,)
+
+
+def test_historical_alias_stays_with_retained_region_after_split():
+    path = split_ready_path()
+    graph = path["graph"]
+
+    result = graph.split_region(path["split"])
+
+    assert graph.resolve_region_id(path["next_room"]) == result.retained_region_id
+    assert path["next_room"] in graph.region(
+        result.retained_region_id).alias_ids
+    assert graph.resolve_region_id(result.created_region_id) == (
+        result.created_region_id)
+
+
+def test_portal_and_traversal_replays_follow_split_end_assignments():
+    path = split_ready_path()
+    graph = path["graph"]
+    result = graph.split_region(path["split"])
+
+    first_link = graph.observe_portal(path["first_link_input"])
+    second_link = graph.observe_portal(path["second_link_input"])
+    first_crossing = graph.record_traversal(path["first_event"])
+    second_crossing = graph.record_traversal(path["second_event"])
+
+    assert first_link.duplicate and second_link.duplicate
+    assert first_link.current_region_id == result.retained_region_id
+    assert first_link.opposite_region_id == path["hall"]
+    assert second_link.current_region_id == path["hall"]
+    assert second_link.opposite_region_id == result.created_region_id
+    assert first_crossing.duplicate and second_crossing.duplicate
+    assert first_crossing.source_region_id == result.retained_region_id
+    assert first_crossing.target_region_id == path["hall"]
+    assert second_crossing.source_region_id == path["hall"]
+    assert second_crossing.target_region_id == result.created_region_id
+
+
+def test_task_replay_follows_split_while_old_source_cannot_move_task():
+    path = split_ready_path()
+    graph = path["graph"]
+    result = graph.split_region(path["split"])
+    original = task_update(
+        "task-created-update", "task-created", 4, path["next_room"],
+        RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+        RegionTaskState.COMPLETED)
+
+    replay = graph.update_task(original)
+
+    assert replay.duplicate
+    assert replay.task.region_id == result.created_region_id
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_task(task_update(
+            "wrong-region-update", "task-created", 7, path["next_room"],
+            RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+            RegionTaskState.COMPLETED))
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"retained_portal_ends": ()},
+        {"created_portal_ends": ()},
+        {"created_portal_ends": (
+            RegionPortalEnd("portal_000001", PortalSide.A),)},
+        {"retained_portal_ends": (
+            RegionPortalEnd("portal_unknown", PortalSide.A),)},
+        {"retained_task_ids": ()},
+        {"created_task_ids": ()},
+        {"created_task_ids": ("task-retained",)},
+        {"retained_task_ids": ("task-unknown",)},
+    ],
+)
+def test_incomplete_duplicate_or_unknown_split_assignments_are_atomic(change):
+    path = split_ready_path()
+    graph = path["graph"]
+    before = graph.snapshot()
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.split_region(replace(path["split"], **change))
+
+    assert graph.snapshot() == before
+
+
+def test_split_context_unknown_source_and_stale_revision_are_atomic():
+    path = split_ready_path()
+    graph = path["graph"]
+    before = graph.snapshot()
+    foreign = PortalMapContext("other-session", CONTEXT.map_id, "map")
+
+    with pytest.raises(RegionContextMismatchError):
+        graph.split_region(replace(path["split"], context=foreign))
+    with pytest.raises(UnknownRegionError):
+        graph.split_region(replace(
+            path["split"], split_id="unknown-source",
+            source_region_id="region_999999"))
+    with pytest.raises(StaleGraphUpdateError):
+        graph.split_region(replace(
+            path["split"], split_id="stale-split", map_revision=4))
+    assert graph.snapshot() == before
+
+
+def test_split_region_and_history_capacities_fail_atomically():
+    graph, region_id = started_graph(policy=RegionGraphPolicy(max_regions=1))
+    capacity_split = region_split(
+        "no-room", 1, region_id, (), (), (), (),
+        RegionSplitTarget.RETAINED)
+    before = graph.snapshot()
+    with pytest.raises(RegionGraphCapacityError):
+        graph.split_region(capacity_split)
+    assert graph.snapshot() == before
+
+    path = split_ready_path(policy=RegionGraphPolicy(max_region_splits=1))
+    graph = path["graph"]
+    accepted = graph.split_region(path["split"])
+    before = graph.snapshot()
+    with pytest.raises(RegionGraphCapacityError):
+        graph.split_region(region_split(
+            "over-history", 7, accepted.created_region_id,
+            (RegionPortalEnd(path["second_portal"].portal_id, PortalSide.B),),
+            (), (), ("task-created",), RegionSplitTarget.RETAINED))
+    assert graph.snapshot() == before
+
+
+def test_merge_after_split_restores_one_region_without_reference_loss():
+    path = split_ready_path()
+    graph = path["graph"]
+    split_result = graph.split_region(path["split"])
+
+    merge_result = graph.merge_regions(RegionMerge(
+        "merge-after-split", CONTEXT, 7,
+        split_result.retained_region_id, split_result.created_region_id,
+        "synthetic_reconciliation"))
+    replay = graph.split_region(path["split"])
+
+    assert merge_result.canonical_region_id == path["start_room"]
+    assert graph.region(path["start_room"]).task_ids == (
+        "task-created", "task-retained")
+    assert graph.region(path["start_room"]).portal_ids == (
+        path["first_portal"].portal_id, path["second_portal"].portal_id)
+    assert replay.duplicate
+    assert replay.retained_region_id == replay.created_region_id
+    assert replay.state_region_id == path["start_room"]
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: RegionGraphPolicy(max_region_splits=0),
+        lambda: RegionPortalEnd("bad id", PortalSide.A),
+        lambda: RegionPortalEnd("portal_000001", "A"),
+        lambda: RegionSplit(
+            "split", CONTEXT, 1, "region_000001", [], (), (), (),
+            RegionSplitTarget.RETAINED, "reason"),
+        lambda: RegionSplit(
+            "split", CONTEXT, 1, "region_000001",
+            (RegionPortalEnd("portal_000001", PortalSide.A),) * 2,
+            (), (), (), RegionSplitTarget.RETAINED, "reason"),
+        lambda: RegionSplit(
+            "split", CONTEXT, 1, "region_000001", (), (),
+            ("task-1", "task-1"), (), RegionSplitTarget.RETAINED, "reason"),
+        lambda: RegionSplit(
+            "split", CONTEXT, 1, "region_000001", (), (), (), (),
+            "retained", "reason"),
+        lambda: RegionSplit(
+            "split", CONTEXT, True, "region_000001", (), (), (), (),
+            RegionSplitTarget.RETAINED, "reason"),
+        lambda: RegionSplit(
+            "split", CONTEXT, 1, "region_000001", (), (), (), (),
+            RegionSplitTarget.RETAINED, " "),
+    ],
+)
+def test_invalid_split_policy_and_fields_are_rejected(factory):
     with pytest.raises(RegionGraphError):
         factory()
