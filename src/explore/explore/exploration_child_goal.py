@@ -127,6 +127,7 @@ class ChildGoalResolution:
     result_id: str
     intent_id: str
     task_id: str
+    context: PortalMapContext
     intent_map_revision: int
     observed_map_revision: int
     reported_outcome: ChildGoalOutcome
@@ -352,6 +353,7 @@ class ExplorationChildGoalSession:
             result_id=result.result_id,
             intent_id=active.intent_id,
             task_id=active.task_id,
+            context=self._context,
             intent_map_revision=active.map_revision,
             observed_map_revision=result.observed_map_revision,
             reported_outcome=result.outcome,
