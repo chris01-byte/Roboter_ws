@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AA)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AB)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AA – begrenzter asynchroner Rohkarten-/Statusjoin softwaregeprüft, zur Review.**
-Der reine `RawMapStatusJoiner` nimmt Rohkartenidentität und validierten
-Kartenmanagerstatus in beliebiger Reihenfolge entgegen. Er speichert nur eine
-explizit vom Aufrufer begrenzte Folge kleiner Identitätsobjekte, gibt ausschließlich
-bei exakter Fingerprint-/Stempel-/Frame-Gleichheit frei, dedupliziert Replays und
-weist widersprüchliche Statusfolgen zurück. Erwartete Nichttreffer bleiben
-wartender Zustand. Noch ist der Joiner in keinen Lebenszyklus oder ROS-Callback
-eingebunden.
+**WE-M2/AB – Besitzer- und Messvertrag der passiven Runtime dokumentiert.**
+Der bestehende `RegionGraphShadowLifecycle` bleibt einziger Besitzer von
+Kartenstatussequenz, Schatten-Sitzung und künftig dem optionalen Joiner. Der
+Explorer-Node darf nur den unveränderlichen Rohkartensnapshot außerhalb des
+Schatten-Locks bilden und unter dem Lock übergeben. Ein eigener, standardmäßig
+deaktivierter Opt-in und eine zwingend explizite positive Kapazität verhindern
+ungeplante Digestlast. Diagnosefelder bleiben im getrennten Schattenstatus;
+`/explore/status_json` wird nicht geändert.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,12 +25,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AB:** Ausschließlich den Besitzer- und
-Messvertrag für die spätere passive Runtime-Einbindung festlegen: opt-in-
-Parameter, Lebenszyklusübergaben, sichtbare Nichttreffer-/Verdrängungsmetriken,
-Callback-Reihenfolge und ein motorloses Jetson-Messprofil. Zunächst nur
-STATUS.md; noch kein ROS-Callback, Runtime-Default, Detektor, Portalfeed, Ziel
-oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/AC:** Ausschließlich den optionalen
+`RawMapStatusJoiner` in den reinen `RegionGraphShadowLifecycle` aufnehmen.
+Ohne explizite Kapazität bleibt er vollständig abwesend. Reine Übergaben und
+begrenzte Diagnosezähler werden für beide Eingangsreihenfolgen getestet; noch
+keine JSON-Schema-, Parameter-, Node-, Callback-, Topic-, Detektor-, Ziel- oder
+Fahränderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -80,6 +80,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/Y `docs/we-m2y-raw-map-runtime-seam` | Gestapelte Quellen- und Nebenläufigkeitsentscheidung zur passiven Rohkartennaht mit lokaler synthetischer Typ-/Kostenmessung; nur diese STATUS.md, kein Deployment. |
 | WE-M2/Z `feature/we-m2z-shared-cell-normalization` | Gestapelte gemeinsame ROS-freie, begrenzte Zellnormalisierung für Kartenmanager und Explorer; reine Module, Tests, Inventar und Status, kein Deployment. |
 | WE-M2/AA `feature/we-m2aa-raw-map-status-join` | Gestapelter reiner, explizit begrenzter und beidseitig anstoßbarer Exaktjoin von Rohkartenidentität und Kartenmanagerstatus; Adapter, Tests und Status, kein Deployment. |
+| WE-M2/AB `docs/we-m2ab-raw-map-runtime-owner` | Gestapelte Besitzer-, Opt-in-, Diagnose- und Messentscheidung für die spätere passive Runtime; nur diese STATUS.md, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -414,6 +415,93 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AB: Besitzer-, Opt-in- und Messvertrag der Runtime
+
+**Entscheidung / Umfang:** Dieser Schritt ändert nur diese STATUS.md. Die
+Quellen von `ExploreNode`, `RegionGraphShadowLifecycle`, Statusprojektion,
+Standardparametern und Vertragstests wurden auf der gestapelten WE-M2/AA-Basis
+`6ba1e25` geprüft. Es wurden keine Nodes gestartet, keine Geräte oder lokalen
+Kartendaten geöffnet und keine Fahrsoftware verändert.
+
+**Besitz und Übergaben:** `RegionGraphShadowLifecycle` besitzt bereits genau
+einen `MapManagerStatusCorrelator`, die daraus erzeugte Kartenepoch, die
+Schatten-Sitzung und die monotonen Eingangszeiten. Er wird deshalb auch einziger
+Besitzer des optionalen `RawMapStatusJoiner`; ein zweiter Joiner im Node oder in
+der Statusprojektion würde Sequenzprüfung und Zähler aufteilen. Der Lebenszyklus
+erhält später einen reinen Rohkarteneingang und führt nach jedem gültigen
+Kartenstatus beide Seiten dem Joiner zu. Ein optionales Korrelationsresultat
+wird in der jeweiligen Lebenszyklusantwort zurückgegeben. Ohne konfigurierte
+Kapazität existiert kein Joiner und alle bisherigen Antworten bleiben gleich.
+
+Der ROS-Node bleibt nur Adapter. `_on_map()` muss zuerst wie bisher `self._map`
+und `self._map_received_at` setzen. Nur beim späteren separaten Rohkarten-Opt-in
+liest er danach Dimensionen, Auflösung, normalisierten Frame, Ursprung,
+Quellstempel und Zellen. Bytekopie, Werteprüfung und Digest geschehen außerhalb
+von `_region_graph_shadow_lock`. Unter dem Lock wird ausschließlich das fertige
+kleine `RawMapPortalSource` übergeben. Eine ungültige Quelle faultet nur den
+optionalen Schatten; ein gültiger Nichttreffer bleibt wartend. Der
+Kartenstatuscallback bleibt unter demselben Lock, sodass Lebenszyklus und Joiner
+trotz `ReentrantCallbackGroup` serialisiert werden. Weder Rasterkopie noch
+Memoryview werden im Besitzer gehalten.
+
+**Opt-in-Vertrag:** Für die spätere Node-Stufe sind zwei getrennte Parameter
+vorgesehen:
+
+- `region_graph_shadow_raw_map_enabled: false` aktiviert ausschließlich Bildung
+  und Join der Rohkartenidentität; der übergeordnete Schatten muss zugleich
+  aktiviert sein.
+- `region_graph_shadow_raw_map_capacity: 0` ist im deaktivierten Stand ein
+  Sperrwert, kein gemessener Default. Bei aktiviertem Rohkartenpfad muss der
+  Nutzer einen positiven Wert explizit setzen. Ein gesetzter Wert bei
+  deaktiviertem Pfad wird als widersprüchliche Konfiguration abgelehnt, damit
+  keine scheinbare Aktivierung entsteht.
+
+Die bestehende `/map`-Subscription mit Tiefe eins wird wiederverwendet; es
+entsteht kein zweiter Kartenabonnent. Der Opt-in ändert weder
+`/explore/status_json` noch Action, Nav2-Ziele oder `cmd_vel`. Ohne beide
+Aktivierungen darf `_on_map()` keine zusätzliche Kopie und keinen Digest bilden.
+
+**Diagnosevertrag:** Die spätere additive Diagnose gehört ausschließlich in den
+getrennten `/explore/region_graph/status_json`-Schattenstatus und wird nur beim
+Rohkarten-Opt-in ausgegeben. Schema 1 bleibt nur dann zulässig, wenn der neue
+Block optional ist und der deaktivierte JSON-Text bytegleich bleibt. Der Block
+benennt mindestens: konfigurierte Kapazität, beobachtete eindeutige Quellen,
+aktuelle wartende Quellen, Verdrängungen, erfolgreiche Joins, letzte korrelierte
+Kartenrevision und Zustand `waiting`, `matched` oder `evicted`. Er enthält weder
+Rasterdaten noch Wohnungsgeometrie. Callback-/Digestzeiten und Prozessspeicher
+gehören in den Messbericht, nicht als unbeschränkt wachsende Zeitreihe in das
+Statusdokument.
+
+**Motorloser Messplan:** Zuerst wird auf dem Jetson in einer isolierten DDS-
+Domain eine synthetische `OccupancyGrid`-/Statusfolge an einen alleinstehenden
+passiven Explorer gespeist. Vorher ist anhand der tatsächlich laufenden Prozesse
+zu belegen, dass weder `base_hardware`, Bewegungscontroller, Missionsausführung
+noch reale Sensorstarts beteiligt sind; bloßes `dry_run` genügt nicht. Gemessen
+werden Rastergröße, Publikationsrate, Digest- und gesamte Callbackzeit
+(Median/p95/Maximum), Join-Wartezeit, wartende Spitze, Verdrängungen sowie
+Prozess-RSS vor/während/nach der Folge. Kapazitäten werden als explizite
+Testmatrix gesetzt, nicht als Produktionsdefault.
+
+Eine reale Kartenrate und Managerverzögerung kann dieser synthetische Lauf nicht
+beweisen. Dafür ist anschließend entweder eine vorhandene geeignete lokale Bag
+in isolierter Wiedergabe oder eine ausdrücklich freigegebene passive Beobachtung
+eines bereits laufenden Kartenstacks nötig. Ohne Bag beziehungsweise Freigabe
+bleibt die Produktionskapazität offen; Kamera/SLAM werden nicht allein für diese
+Messung aktiviert. Keine dieser Messungen erteilt eine Fahr- oder
+Hardwareabnahme.
+
+**Ausgeführte Prüfungen / Rückfall:** Quellenvergleich und `git diff --check`;
+keine Funktions-, ROS-, Zielsystem- oder Hardwaretests, weil nur die fachliche
+Entscheidung geändert wird. Rückfall ist das Zurücknehmen dieses
+Dokumentationscommits; WE-M2/AA bleibt reine, nicht eingebundene Logik.
+
+**Nächster abgegrenzter Schritt WE-M2/AC:** Nur den reinen Lebenszyklus um einen
+optionalen, ausschließlich bei explizit positiver Kapazität erzeugten Joiner,
+einen Rohkarteneingang und feste Zählerzustände erweitern. Kartenstatus-vor-
+Rohkarte, Rohkarte-vor-Status, Replay, Nichttreffer, Verdrängung, ungültige
+Quelle, Kartenepochwechsel und vollständig deaktiviertes Legacyverhalten werden
+ohne ROS getestet. JSON, Node, Parameter und Runtime bleiben unverändert.
 
 ### 2026-09-14 – WE-M2/AA: begrenzter beidseitiger Rohkarten-/Statusjoin
 
