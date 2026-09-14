@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AF)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AG)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,28 +10,27 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AF – synthetischer Rohkarten-Lastprüfer abgegrenzt, zur Review.**
-Die Quellenprüfung weist eine vorhandene sichere Konvention für synthetische
-ROS-Prüfer und begrenzte JSON-Diagnosen nach, aber keinen bestehenden Helfer für
-Rohkarten-Digest, Joinlatenz oder Explorer-RSS. Der festgelegte Folgehelfer
-verwendet ausschließlich synthetische Karten in einer vor `rclpy` gesetzten,
-expliziten DDS-Domain. Er bildet den Managerfingerprint erst aus einer
-zurückempfangenen Wire-Nachricht und prüft eine explizite Größen-/Kapazitätsmatrix
-gegen die bereits passiv angebundene Statusnaht. Produktionscode bleibt in
-diesem Schritt unverändert.
+**WE-M2/AG – synthetischer Rohkarten-Lastprüfer lokal softwaregeprüft, zur Review.**
+Der neue eigenständige Helfer prüft die doppelt opt-in passive Explorernaht in
+einer zuvor zwei Sekunden lang leer beobachteten DDS-Domain. Potenziell aktive
+Schnittstellen sind auf private Testtopics umgebogen; Action und Twist bleiben
+bei null. Eine vollständige lokale Matrix bis 512×512 sowie ein einzelner
+Vier-Millionen-Zellen-Grenzfall belegten Exaktjoin, Kapazität,
+Duplikaterkennung, Verdrängung, begrenzte Laufzeit und Prozess-RSS. Keine
+Produktionsnode-, Launch- oder Standardparameterdatei wurde geändert.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
 Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
-zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
-einen wachsenden Belastungstest nachgewiesen.
+zugeführt. Laufzeit und Speicher sind jetzt für wachsende synthetische Karten
+lokal begrenzt beobachtet, aber noch nicht auf dem Jetson unter dessen realer
+Parallel- und SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AG:** Den in WE-M2/AF festgelegten einen
-synthetischen Prüfer samt reinen Vertragstests implementieren. Er darf nur den
-Explorerprozess, einen eigenen Publisher/Beobachter und private Testtopics in
-einer nachweislich isolierten Domain verwenden. Ausgabe und Laufzeit bleiben
-hart begrenzt; keine Jetson-, Geräte-, Detektor-, Ziel- oder Fahraktivierung und
-keine Änderung an Produktionsnode, Launch oder Standardparametern.
+**Nächster abgegrenzter Schritt WE-M2/AH:** Ausschließlich die noch fehlenden
+kombinierten WE-M2-Szenarien gegen vorhandene reine Detektor-/Graph-Funktionen
+abgleichen und die kleinste synthetische Fixture-Naht festlegen. Zunächst
+Quellen, heutige Testabdeckung und eindeutige Wahrheitszuordnungen in dieser
+STATUS.md dokumentieren; keine Runtime-, Zielwahl-, Geräte- oder Fahränderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -86,6 +85,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AD `feature/we-m2ad-raw-map-status-diagnostics` | Gestapelte optionale, begrenzte Rohkarten-Korrelationsdiagnose im getrennten reinen Schattenstatus; reine Module, Tests und Status, kein Deployment. |
 | WE-M2/AE `feature/we-m2ae-passive-raw-map-runtime` | Gestapelter doppelt opt-in passiver Rohkartenadapter im Explorer mit gemeinsamer Identität, isoliertem Schattenfehler und getrennten Diagnosen; Node, Standardparameter, Tests und Status, kein Deployment. |
 | WE-M2/AF `docs/we-m2af-raw-map-load-probe-plan` | Gestapelte Quellen-, Sicherheits-, Mess- und Schnittstellenentscheidung für genau einen gerätefreien synthetischen Rohkarten-Lastprüfer; nur diese STATUS.md. |
+| WE-M2/AG `chore/we-m2ag-raw-map-load-probe` | Gestapelter gerätefreier synthetischer DDS-Prüfer für Wire-Digest, Exaktjoin, begrenzte Kapazität/Laufzeit/Ausgabe und Explorer-RSS samt reinen Tests und Status; kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -421,6 +421,100 @@ festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
 
+### 2026-09-14 – WE-M2/AG: gerätefreier Rohkarten-Lastprüfer
+
+**Entscheidung / Umfang:** Der eigenständige Helfer
+`tools/kartierung/rohkarten_schatten_lasttest.py` führt ausschließlich einen
+synthetischen Publisher/Beobachter und je Matrixfall einen frischen Explorer
+aus. Er setzt die gewählte `ROS_DOMAIN_ID` vor `rclpy`, akzeptiert nur Domains
+0 bis 232 und beobachtet die Domain vor jedem Kindstart zwei Sekunden lang
+durchgehend. Jeder fremde Node bricht den Lauf ab. Der Explorer wird wie beim
+vorhandenen synthetischen SLAM-Test als direkt aufgelöstes installiertes
+Programm gestartet, nicht über `ros2 run`; so erreicht SIGINT genau das Kind.
+Die installierte Parameterdatei muss zuvor beide WE-M2/AE-Sperrdefaults
+enthalten, sonst wird ein veraltetes Overlay abgelehnt.
+
+Karte, Kartenmanager- und Schattenstatus sowie alle unbenutzten Odometrie-,
+Scan-, Command-, Nav-Action-, Explore-Action- und Visualisierungsschnittstellen
+sind je Fall auf einen privaten Testpräfix gelegt. Der Helfer startet keinen
+Kartenmanager, SLAM-, Nav2-, Missions-, Sensor- oder Hardwareknoten, sendet
+keine Action und publiziert keinen Twist. Kartenwerte und Ursprungsdaten werden
+deterministisch im Speicher erzeugt; reale Karten, Bags und Wohnungsgeometrie
+werden nicht gelesen oder geschrieben.
+
+Der passende synthetische Managerstatus entsteht erst aus der eigenen, über DDS
+zurückempfangenen `OccupancyGrid`-Nachricht. Damit wird insbesondere die
+float32-Wire-Auflösung statt des Python-Ausgangsliterals gehasht. Je Fall wird
+zuerst ein Exaktjoin erzeugt, danach werden Kapazität plus zwei eindeutige
+unpassende Quellen sowie explizite Duplikate angeboten. Die erwartete
+Zählererhaltung, volle Warteschlange und genau zwei Verdrängungen sind harte
+Erfolgskriterien.
+
+CLI-Grenzen beschränken Zellzahl auf 4.000.000, Kapazität auf 32,
+Wiederholungen auf 20, Matrix auf 12 Fälle, Intervall und Fall-/Gesamtdauer
+sowie das Ergebnis-JSON auf 65.536 Byte. Ausgegeben werden nur Aggregate,
+keine Rohzellen, Fingerprints oder Geometrie. Factoryzeiten stammen aus dem
+zurückempfangenen Wire-Snapshot. Die externe Joinstatuslatenz enthält den
+1-Hz-Schattenstatus-Timer und ist weiterhin keine interne Callbackzeit. RSS
+wird ohne neue Abhängigkeit aus `/proc/<explorer-pid>/status` abgetastet und ist
+Prozess-RSS, nicht exklusiver Python-Heap.
+
+**Geänderte Dateien:** Der neue Helfer, sein reiner Vertragstest unter
+`tools/kartierung/` und diese STATUS.md. Explorer, gemeinsames
+Fingerprintpaket, Kartenmanager, Launchdateien, installierte Standards,
+Detektoren, Graphlogik, Navigation, Fahrsoftware und Sicherheitsparameter sind
+unverändert.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble,
+maßgeblicher Installationsstand nur als Underlay gelesen und WE-M2/X plus
+WE-M2/AE in `/tmp/we-m2ag-colcon.gORVLq` gebaut. Keine Geräte, realen Karten,
+Bags, Actions oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AG-TOOL | Domain-, CLI-/Matrix-, Wire-Roundtrip-, Digeststatus-, Zähler-, Topic-, Ausgabe- und Einzelsignalverträge: **9 passed**. |
+| WE-M2AG-SOURCE | Helfertests plus gemeinsames Fingerprintpaket und vollständige Explorer-Suite: **574 passed**. |
+| WE-M2AG-ADJACENT | Zusätzlich Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **679 passed**. |
+| WE-M2AG-BUILD | Temporärer isolierter Build von `amadeus_map_identity` und `explore`: **2 Pakete gebaut**. |
+| WE-M2AG-STATIC | `compileall`, `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+| WE-M2AG-MATRIX | Endstand in Domain 214; Kanten 64/256/512, Kapazitäten 1/4, je drei Duplikate: **6/6 Fälle bestanden**, 65,88 s gesamt einschließlich je 2 s Isolationsprüfung. Jeder Fall: ein Exaktjoin, Wartespitze gleich Kapazität, genau zwei Verdrängungen und drei Duplikate. |
+| WE-M2AG-MAX | Endstand in Domain 213; 2000×2000 = **4.000.000 Zellen**, Kapazität 1, ein Duplikat: bestanden in 11,05 s gesamt einschließlich Isolationsprüfung; ein Exaktjoin, Wartespitze 1, zwei Verdrängungen. |
+
+In der finalen Sechs-Fall-Matrix lagen die Wire-Factory-Mediane zwischen 0,233
+und 2,632 ms; über alle Fälle reichten die Einzelwerte von 0,216 bis 7,049 ms.
+Die externe Joinstatuslatenz lag erwartungsgemäß zwischen 998,1 und 1000,3 ms.
+Der höchste beobachtete Explorer-RSS betrug 73.596.928 Byte; der größte Anstieg
+von Start zu Spitze 5.181.440 Byte. Im finalen Vier-Millionen-Zellen-Fall
+betrugen Factory-Minimum/Median/Maximum 19,59/25,49/30,70 ms, die
+Joinstatuslatenz 997,1 ms und der RSS Start/Spitze/Ende
+69.132.288/104.996.864/98.209.792 Byte. Das sind lokale Messwerte, keine
+eingefrorenen Produktionsgrenzen und keine Jetson- oder Hardwareabnahme.
+
+Ein erster Buildaufruf endete vor jedem ROS-Start wegen der lokal erforderlichen
+Position von `--log-base` vor dem `build`-Unterbefehl. Der erste Explorerstart
+danach fand ohne vollständig gesourctes Workspace-Underlay die generierten
+`robot_interfaces` nicht. Nach dem rein lesenden Sourcen des vorhandenen
+Underlays wurde als zweite fehlende Voraussetzung der absichtlich verpflichtende
+Recovery-freie Behavior Tree sichtbar. Der Helfer übergibt ihn nun explizit.
+Ein erfolgreicher Einzelfall zeigte anschließend, dass `ros2 run` SIGINT nicht
+an sein Kind weitergibt; entsprechend der bereits dokumentierten
+Kartierungsfalle wird nun das aufgelöste Explorerprogramm direkt gestartet.
+Nach jedem Versuch wurden die konkreten Kindprozesse beendet; es blieb kein
+Testnode zurück.
+
+**Rückfall:** Den einzelnen WE-M2/AG-Commit zurücknehmen. Der Helfer ist nicht in
+Launch, Installation oder CI eingebunden und verändert keine Runtime. Temporäre
+Buildartefakte liegen ausschließlich unter `/tmp`; Geräte-, Karten- und
+Installationszustand blieben unverändert.
+
+**Nächster abgegrenzter Schritt WE-M2/AH:** Die verbleibenden WE-M2-Pflichttests
+Startraum–Flur–Zimmer, verbundener Freiraum mit offenen Türen, L-Flur/Schleife,
+offener Wohnbereich, Möbelunterteilung, Kartenwachstum/-rotation/-korrektur,
+Betrachten ohne Eintritt, Flurrückkehr sowie Split/Merge mit Aufgaben anhand der
+heutigen reinen Detektor-, Portalgedächtnis- und Graphtests inventarisieren.
+Nur fehlende kombinierte Wahrheitsfixtures und ihre kleinste API-Naht
+spezifizieren; noch keine Implementierung, Runtime, Zielwahl oder Fahrt.
+
 ### 2026-09-14 – WE-M2/AF: synthetischen Rohkarten-Lastprüfer abgegrenzt
 
 **Quellen- und Werkzeugbefund:** Die WE-M2-Abnahme fordert begrenzte Laufzeit
@@ -446,9 +540,10 @@ als Prozess-RSS und nicht als exklusiver Python-Heap zu bezeichnen.
 `tools/kartierung/rohkarten_schatten_lasttest.py` und
 `tools/kartierung/test_rohkarten_schatten_lasttest.py`. Das Programm setzt eine
 vom Aufrufer wählbare, gültige und standardmäßig reservierte Testdomain vor
-`rclpy`, startet ausschließlich `ros2 run explore explore` mit beiden
-Schatten-Opt-ins, expliziter Joinerkapazität und privaten Karten-, Managerstatus-
-und Schattenstatustopics. Es startet weder Kartenmanager, SLAM, Nav2,
+`rclpy`, startet ausschließlich das direkt aufgelöste installierte
+Explorerprogramm mit beiden Schatten-Opt-ins, expliziter Joinerkapazität und
+privaten Karten-, Managerstatus- und Schattenstatustopics. Es startet weder
+Kartenmanager, SLAM, Nav2,
 Missionsmanager, Sensor- noch Hardwareknoten und sendet keinen Actionauftrag
 oder Twist. Vor dem Lastlauf muss die Domain außer dem Prüfer und dem von ihm
 gestarteten Explorer leer sein; fremde Knoten führen fail-closed zum Abbruch.
