@@ -190,6 +190,81 @@ gestartet. Rückfall besteht ausschließlich aus Entfernen der beiden neuen
 Dateien beziehungsweise Revert des kleinen PR; bestehender Explorer und jede
 Runtime bleiben unverändert.
 
+### 3.6 Ergänzende Gegenprüfung aus isolierter Audit-Umgebung
+
+**Fortgeschriebene Basis:** Während der Veröffentlichung einer separaten
+Gegenprüfung wurde dieser Status mit Commit
+`630c38cd3e563b564b4a0dd6bf35b128f80bd3cc` weitergeführt. Dessen Bestandsbericht,
+Installationsbefunde, Tests und WE-M1/A-Abgrenzung bleiben vollständig erhalten.
+Der vorher parallel entstandene Auditstand `c8d97cb88863513187dbea3dc74df48c084a1a5d`
+ist damit nicht mehr der aktuelle Status. Dieser Zusatz setzt WE-M0/A nicht
+zurück und beginnt keine Implementierung von WE-M1/A.
+
+**Getrennte Nachweise:** Die Jetson-Dateiinventur und die in Abschnitt 3.4
+berichteten 160/80/67 Testläufe stammen aus dem dortigen Prüfauftrag. Sie wurden
+in der folgenden separaten Chat-Audit-Umgebung nicht selbst wiederholt.
+Hier war kein Jetson-Installationsbaum verfügbar. `git fetch origin` wurde in
+einem neu angelegten isolierten Audit-Repository versucht und scheiterte mit
+Exit 128 (`Could not resolve host: github.com`). Referenzen und Quelldateien
+wurden ersatzweise über den GitHub-Connector gelesen. Diese Einschränkung betrifft
+nur die Gegenprüfung und widerruft nicht die oben dokumentierte Dateiinventur.
+Keine laufende Roboter-Arbeitskopie wurde gewechselt oder verändert.
+
+**Eigene ausgeführte Tests:** Linux x86_64, Python 3.13.5, NumPy 2.3.5,
+SciPy 1.17.0 und pytest 9.0.2; ohne ROS oder Gerätezugriff. Je Referenz wurden
+nur `portal_planning.py` und `test_portal_planning.py` isoliert bereitgestellt.
+Vor Ausführung stimmten die vollständigen Git-Blob-Hashes mit den gepinnten
+Repository-Dateien überein. Keine veränderten Tests, kein vollständiger Clone
+und kein Installations- oder Hardwaretest.
+
+| Referenz | Eigenes Ergebnis für `test_portal_planning.py` | Exit |
+|---|---|---|
+| Main `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1` | 8 bestanden; keine Fehler, Fehlschläge oder Skips. | 0 |
+| HWT `1d91229dc10ff4bb791938d49aae8e9808a5dfff` | 12 bestanden; keine Fehler, Fehlschläge oder Skips. | 0 |
+
+Die Suiten überlappen: nicht 20 unterschiedliche Testfälle und nicht zusätzlich
+zu den anderen Läufen als neue Funktionsabdeckung zählen. Die Gegenprüfung betrifft
+Portalgeometrie, Endpunktkosten, Größenlimits und LiDAR-Korridore, nicht stabile
+Portalidentität, Durchfahrtsereignisse oder einen Wohnungsabschluss.
+
+| Datei unter `src/explore/` | Main-Git-Blob | HWT-Git-Blob |
+|---|---|---|
+| `explore/portal_planning.py` | `f66717088d0fb552f0d63b5f586ecf78ef89b376` | `7cd85d19e433de708c27d98e0574a7b3449bf807` |
+| `test/test_portal_planning.py` | `a30c03ce747558bb3838aa0ee3628f6b7bff560b` | `a8ee5de695aeb947db1a68f007febecfaf1ce77c` |
+
+Reproduktion jeweils aus dem passenden isolierten Paketverzeichnis:
+
+```bash
+report_dir="$(mktemp -d /tmp/we-m0a-portal.XXXXXX)"
+PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+python -m pytest -q -p no:cacheprovider test/test_portal_planning.py \
+  --junitxml="$report_dir/portal.xml"
+```
+
+Konsolenlogs, JUnit-Berichte, Exit-Codes und SHA-256-Werte sind im separaten
+Audit-Prüfsatz enthalten. Die übrigen Explorer-/Manager-Verträge wurden hier
+statisch anhand relevanter Quellen und ausgewählter Tests gelesen, nicht als
+vollständige ROS-/Colcon-/Manager-Testläufe wiederholt.
+
+**Zusätzlicher offener Vertragsbefund:** Die
+[Kartenmanager-README auf Main](https://github.com/chris01-byte/Roboter_ws/blob/05439c7a13d7a92e69b9eb4663e3a2a1b44626a1/src/robot_map_manager/README.md)
+verlangt bytegleiche wiederholte Antworten. Der
+[zugehörige Node](https://github.com/chris01-byte/Roboter_ws/blob/05439c7a13d7a92e69b9eb4663e3a2a1b44626a1/src/robot_map_manager/robot_map_manager/robot_map_manager_node.py)
+erzeugt beim Cache-Replay über `CachedCommandResponse.publish_kwargs` und
+`_publish_status` jedoch den globalen Map-/Storage-/Pose-/Zeit-/Zählerstatus
+frisch. Idempotentes Kommandoergebnis und bytegleicher gesamter Statusumschlag
+sind daher getrennte Verträge. Vor einer späteren Adapterintegration mit einem
+fokussierten Test und Dokumentationsabgleich klären; hier keine Funktionsänderung.
+Eine frische Statuswiederholung ist zudem kein Beleg einer neuen unabhängigen
+Portalbeobachtung. Der isolierte WE-M1/A-Schritt aus Abschnitt 3.5 benötigt diesen
+Adapter noch nicht und bleibt unverändert.
+
+**Änderungsumfang / Rückfall:** Nur diese Ergänzung in der fachlichen STATUS.md;
+keine andere Repository-Datei, kein funktionaler Branchmerge und kein Deployment.
+Den fortgeschriebenen Status aus `630c38c` bei der Dokumentationszusammenführung
+erhalten. Rückfall dieser Gegenprüfung: ausschließlich Abschnitt 3.6 entfernen
+oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurücksetzen.
+
 ## 4. Meilensteinstand
 
 | Stufe | Stand | Fehlender Nachweis / nächste Abgrenzung |
