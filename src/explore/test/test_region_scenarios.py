@@ -6,6 +6,7 @@ verdict from a geometric candidate or a planner result.
 """
 
 from pathlib import Path
+import math
 import sys
 
 import numpy as np
@@ -34,7 +35,10 @@ from explore.region_graph import (  # noqa: E402
     PortalLinkObservation,
     RegionGraph,
     RegionMerge,
+    RegionPortalEnd,
     RegionSeed,
+    RegionSplit,
+    RegionSplitTarget,
     RegionTaskKind,
     RegionTaskState,
     RegionTaskUpdate,
@@ -107,6 +111,29 @@ def _observation(
             bridge.target_row * RESOLUTION_M,
         ),
         structural_evidence=evidence,
+    )
+
+
+def _transformed_observation(
+        observation_id, revision, bridge, *, origin, yaw):
+    cosine = math.cos(yaw)
+    sine = math.sin(yaw)
+
+    def metric_point(row, col):
+        local_x = col * RESOLUTION_M
+        local_y = row * RESOLUTION_M
+        return Point2D(
+            origin[0] + cosine * local_x - sine * local_y,
+            origin[1] + sine * local_x + cosine * local_y,
+        )
+
+    return PortalObservation(
+        observation_id=observation_id,
+        context=CONTEXT,
+        map_revision=revision,
+        near_side=metric_point(bridge.staging_row, bridge.staging_col),
+        far_side=metric_point(bridge.target_row, bridge.target_col),
+        structural_evidence=PortalStructuralEvidence.QUALIFIED,
     )
 
 
@@ -420,3 +447,123 @@ def test_l_hall_loop_merge_reuses_start_region_and_keeps_two_portals():
     } == {frozenset((start_room, hall))}
     assert snapshot.confirmed_entry_count == 3
     assert graph.region(hall).entry_count == 2
+
+
+def test_map_growth_rotation_and_correction_keep_ids_and_tasks_explicit():
+    occupancy = _room_hall_room_map()
+    original = occupancy.copy()
+    base_bridge, = _portals_from(occupancy, (30, 20))
+
+    grown = np.pad(
+        occupancy, ((10, 0), (20, 0)),
+        mode="constant", constant_values=-1)
+    grown_original = grown.copy()
+    grown_bridge, = _portals_from(grown, (40, 40))
+
+    rotated = np.rot90(occupancy)
+    rotated_original = rotated.copy()
+    rotated_robot = (occupancy.shape[1] - 1 - 20, 30)
+    rotated_bridge, = _portals_from(rotated, rotated_robot)
+
+    base_observation = _transformed_observation(
+        "map-base", 1, base_bridge, origin=(0.0, 0.0), yaw=0.0)
+    grown_observation = _transformed_observation(
+        "map-grown", 2, grown_bridge,
+        origin=(-20 * RESOLUTION_M, -10 * RESOLUTION_M), yaw=0.0)
+    rotated_observation = _transformed_observation(
+        "map-rotated", 3, rotated_bridge,
+        origin=((occupancy.shape[1] - 1) * RESOLUTION_M, 0.0),
+        yaw=math.pi / 2.0)
+    np.testing.assert_allclose(
+        (base_observation.near_side.x, base_observation.near_side.y,
+         base_observation.far_side.x, base_observation.far_side.y),
+        (grown_observation.near_side.x, grown_observation.near_side.y,
+         grown_observation.far_side.x, grown_observation.far_side.y))
+    np.testing.assert_allclose(
+        (base_observation.near_side.x, base_observation.near_side.y,
+         base_observation.far_side.x, base_observation.far_side.y),
+        (rotated_observation.near_side.x, rotated_observation.near_side.y,
+         rotated_observation.far_side.x, rotated_observation.far_side.y),
+        atol=1e-12)
+
+    memory = PortalMemory(CONTEXT)
+    base_result = memory.observe(base_observation)
+    grown_result = memory.observe(grown_observation)
+    rotated_result = memory.observe(rotated_observation)
+    portal_id = base_result.portal_id
+    assert portal_id == "portal_000001"
+    assert grown_result.portal_id == portal_id
+    assert rotated_result.portal_id == portal_id
+    assert memory.snapshot(portal_id).confirmation_state is (
+        PortalConfirmationState.CONFIRMED)
+
+    graph = RegionGraph(CONTEXT)
+    start_room = graph.start(
+        RegionSeed("map-change-start", CONTEXT, 0)).region_id
+    linked = graph.observe_portal(_link(
+        "map-change-link", 3, memory.snapshot(portal_id),
+        start_room, rotated_result.approach_side))
+    hall = linked.opposite_region_id
+    assert start_room == "region_000001"
+    assert hall == "region_000002"
+    graph.update_task(RegionTaskUpdate(
+        update_id="map-change-task-create",
+        task_id="task-map-change",
+        context=CONTEXT,
+        map_revision=3,
+        region_id=hall,
+        kind=RegionTaskKind.PORTAL,
+        subject_id=portal_id,
+        state=RegionTaskState.OPEN,
+    ))
+    enter_hall = _traversal(
+        "map-change-enter-hall", portal_id, 4,
+        _direction_from(rotated_result.approach_side), confirmed=True)
+    memory.record_traversal(enter_hall)
+    graph.record_traversal(enter_hall)
+    assert graph.current_region_id == hall
+    assert graph.task("task-map-change").region_id == hall
+
+    graph.merge_regions(RegionMerge(
+        merge_id="map-correction-merge",
+        context=CONTEXT,
+        map_revision=5,
+        first_region_id=start_room,
+        second_region_id=hall,
+        reason="fixture_supplied_map_overlap",
+    ))
+    assert graph.current_region_id == start_room
+    assert graph.task("task-map-change").region_id == start_room
+
+    corrected = graph.split_region(RegionSplit(
+        split_id="map-correction-split",
+        context=CONTEXT,
+        map_revision=6,
+        source_region_id=start_room,
+        retained_portal_ends=(RegionPortalEnd(portal_id, PortalSide.A),),
+        created_portal_ends=(RegionPortalEnd(portal_id, PortalSide.B),),
+        retained_task_ids=(),
+        created_task_ids=("task-map-change",),
+        state_target=RegionSplitTarget.CREATED,
+        reason="fixture_supplied_corrected_boundary",
+    ))
+
+    snapshot = graph.snapshot()
+    assert corrected.retained_region_id == start_room
+    assert corrected.created_region_id == "region_000003"
+    assert graph.current_region_id == corrected.created_region_id
+    assert graph.resolve_region_id(hall) == start_room
+    assert snapshot.region_aliases == ((hall, start_room),)
+    assert tuple(region.region_id for region in snapshot.regions) == (
+        start_room, corrected.created_region_id)
+    assert graph.task("task-map-change").region_id == (
+        corrected.created_region_id)
+    assert graph.task("task-map-change").state is RegionTaskState.OPEN
+    connection = graph.connection(portal_id)
+    assert connection.side_a_region_id == start_room
+    assert connection.side_b_region_id == corrected.created_region_id
+    assert tuple(portal.portal_id for portal in memory.snapshots()) == (
+        portal_id,)
+    assert np.array_equal(occupancy, original)
+    assert np.array_equal(grown, grown_original)
+    assert np.array_equal(rotated, rotated_original)

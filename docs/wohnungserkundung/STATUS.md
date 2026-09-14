@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AL)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AM)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,25 +10,25 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AL – L-Flur und Schleifenschluss kombiniert synthetisch belegt, zur
-Review.** Zwei Detektorportale an den Armen einer L-förmigen Flurgeometrie
-führen zunächst zu drei vorläufigen Regionen. Erst eine ausdrücklich gesetzte
-Schleifenwahrheit vereinigt Ziel- und Startregion. Danach bestehen genau zwei
-Portale zwischen denselben zwei dauerhaften Regionen; der Rückweg endet erneut
-im selben Flur.
+**WE-M2/AM – Kartenwachstum, Rasterrotation und Korrektur kombiniert
+synthetisch belegt, zur Review.** Basisraster, gepolsterte Wachstumskarte und
+um 90° gedrehte Rasterdarstellung ergeben nach expliziter metrischer
+Normalisierung dasselbe Portal und dieselben vorläufigen Regionen. Ein danach
+ausdrücklich gesetzter Merge/Split erhält Portal- und Aufgabenidentität; alle
+drei Eingabekarten bleiben bytegleich unverändert.
 
-WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
-Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
-Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
-zugeführt. Laufzeit und Speicher sind jetzt für wachsende synthetische Karten
-lokal begrenzt beobachtet, aber noch nicht auf dem Jetson unter dessen realer
-Parallel- und SLAM-Last gemessen.
+WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien sind
+jetzt lokal softwaregeprüft. Frontiers und qualifizierte Portalbeobachtungen
+werden der passiven Runtime jedoch noch nicht revisionssicher zugeführt.
+Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
+beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
+SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AM:** Dieselbe reine Szenariotestdatei nur
-um Kartenwachstum, geänderten Ursprung/Rasterorientierung und eine simulierte
-Korrektur erweitern. Portal- und Regions-IDs sowie Aufgabenreferenzen müssen
-über metrisch äquivalente Revisionen stabil bleiben; Split/Merge bleibt ein
-expliziter Wahrheitseingang. Keine Produktions-API oder Runtime-Anbindung.
+**Nächster abgegrenzter Schritt WE-M2/AN:** Ausschließlich dokumentierend die
+aktuelle Frontier-, Portalplan-, Rohkarten- und Schattenstatus-Naht im Explorer
+erneut abgleichen und daraus genau einen passiven, standardmäßig deaktivierten
+Runtime-Zuführungsschritt bestimmen. Betroffene Dateien, Frischevertrag,
+Nullkostenpfad, Prüfplan und Rückfall festhalten; noch keine Funktionsänderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -89,6 +89,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AJ `feature/we-m2aj-room-hall-scenario` | Gestapeltes reines Kombinationsszenario von Rastergeometrie bis Regionsgraph für Startraum–Flur–Zimmer, Wahrheitsgrenzen, Aufgabenbezug und identische Flurrückkehr; nur Tests und Status. |
 | WE-M2/AK `feature/we-m2ak-negative-region-scenarios` | Gestapelte reine Kombinations-Negativfälle für offenen Wohnbereich und Möbelunterteilung; Kandidat/Strukturwahrheit, Graph und Aufgaben bleiben getrennt, nur Tests und Status. |
 | WE-M2/AL `feature/we-m2al-l-hall-loop-scenario` | Gestapeltes reines L-Flur-/Schleifenszenario mit Detektorportalen und ausdrücklich separater Merge-Wahrheit; nur Tests und Status. |
+| WE-M2/AM `feature/we-m2am-map-change-scenario` | Gestapeltes reines Kartenänderungsszenario für Wachstum, Origin-/Rasterrotation und explizite Merge-/Split-Korrektur ohne Identitäts- oder Aufgabenverlust; nur Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -326,7 +327,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AL decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, Türen im verbundenen Freiraum, Startraum–Flur–Zimmer mit identischer Flurrückkehr, kombinierte Negativfälle sowie L-Flur/Schleife ab. Kartenänderungsszenario, Runtime-Portal-/Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AM decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast und sämtliche geforderten kombinierten Geometrieszenarien einschließlich Kartenänderung und Aufgabenbestand ab. Runtime-Portal-/Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -423,6 +424,63 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AM: kombiniertes Kartenänderungsszenario
+
+**Abgrenzung:** Nur `src/explore/test/test_region_scenarios.py` und diese
+STATUS.md wurden ergänzt. Produktionsmodule, Runtime, Parameter, Launch,
+Navigation, Zielwahl, Fahrsoftware und Sicherheitskonfiguration bleiben
+unverändert.
+
+**Nachgewiesener Ablauf:** Derselbe synthetische Raum–Flur-Kartenausschnitt
+wird zunächst im Basisraster detektiert, dann oben/links mit unbekannten Zellen
+vergrößert und schließlich um 90 Grad gedreht. Die Fixture deklariert für jede
+Darstellung Auflösung, Ursprung und Yaw und transformiert ausschließlich die
+jeweiligen Detektorendpunkte in den gemeinsamen metrischen Kartenframe. Die
+resultierenden vier Koordinaten stimmen bis auf Rundungsgenauigkeit überein.
+Drei qualifizierte Revisionen werden deshalb deterministisch demselben
+`portal_000001` zugeordnet; Startregion `region_000001`, gesehener Flur
+`region_000002` und `task-map-change` bleiben vor der Korrektur stabil.
+
+Die anschließende simulierte Kartenkorrektur ist kein Detektorschluss: Ein
+expliziter Fixture-Merge vereinigt die beiden vorläufigen Regionen, danach
+partitioniert ein expliziter Fixture-Split die beiden Portalenden erneut. Der
+neue Korrekturstand ist `region_000003`; der historische Flur bleibt Alias der
+Startregion. Portal-ID, offene Aufgaben-ID, Aufgabenstatus und bestätigter
+Eintritt bleiben erhalten, die Aufgabe folgt vollständig der deklarierten
+Splitpartition. Bytegleiche Vergleiche belegen außerdem, dass Detektor und
+Fixture Basis-, Wachstums- und Rotationsraster nicht verändern.
+
+Mit WE-M2/AJ bis AM sind damit alle in WE-M2 verlangten kombinierten
+Geometriefälle lokal abgedeckt: Startraum–Flur–Zimmer, derselbe Flur bei
+Rückkehr, verbundene Türen, L-Flur/Schleife, offener Wohnbereich,
+Möbelunterteilung, Kartenwachstum/Origin-Rotation/Korrektur, gesehen ohne
+Eintritt sowie Split/Merge ohne Aufgabenverlust. Dies ersetzt nicht die noch
+fehlende passive Runtimezuführung oder Zielsystemabnahme.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble nur als
+Build-/Test-Underlay; keine ROS-Nodes, Geräte, realen Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AM-SCENARIOS | Alle fünf kombinierten Szenarien: **5 passed**. |
+| WE-M2AM-EXPLORER | Vollständige Explorer-Suite: **538 passed**. |
+| WE-M2AM-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **679 passed**. |
+| WE-M2AM-COLCON | Frischer temporärer Build von `amadeus_map_identity` und `explore`; **36 + 538 = 574 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AM-STATIC | `compileall`, `flake8` mit den projektüblichen Ausnahmen E501/W503 sowie `git diff --check`: bestanden. |
+
+Diese synthetischen Softwaretests sind keine Jetson-, Runtime- oder
+Hardwareabnahme und keine Fahrfreigabe.
+
+**Rückfall:** Den einzelnen WE-M2/AM-Commit zurücknehmen oder seinen PR
+schließen. Dadurch entfallen nur ein Test und der Statusnachtrag; frühere
+Schritte und Produktionsverhalten bleiben unverändert.
+
+**Nächster abgegrenzter Schritt WE-M2/AN:** Nur die inzwischen erreichte
+Abdeckung gegen die tatsächlichen Explorer-Runtime-Nähte auditieren und den
+kleinsten passiven Frontier-/Portal-Zuführungsschritt festlegen. Noch keine
+Funktionsänderung, kein Deployment und keine Geräteprüfung.
 
 ### 2026-09-14 – WE-M2/AL: kombiniertes L-Flur-/Schleifenszenario
 
