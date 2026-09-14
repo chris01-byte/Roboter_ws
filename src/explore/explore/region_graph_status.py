@@ -407,6 +407,23 @@ def _validate_source(
                 "Regions-Portalreferenzen sind nicht vollstaendig")
 
 
+def validate_shadow_status_source(
+        source: ShadowStatusSource,
+        policy: Optional[ShadowStatusPolicy] = None) -> None:
+    """Validate one complete passive snapshot without serializing it.
+
+    Consumers such as the exploration policy need the same fail-closed
+    consistency checks as the JSON projection, but must not depend on its
+    presentation format or byte limit.
+    """
+    if not isinstance(source, ShadowStatusSource):
+        raise ShadowStatusError("source muss ShadowStatusSource sein")
+    selected_policy = policy or ShadowStatusPolicy()
+    if not isinstance(selected_policy, ShadowStatusPolicy):
+        raise ShadowStatusError("policy muss ShadowStatusPolicy sein")
+    _validate_source(source, selected_policy)
+
+
 def build_shadow_status_json(
         source: ShadowStatusSource,
         policy: Optional[ShadowStatusPolicy] = None) -> str:
@@ -416,7 +433,7 @@ def build_shadow_status_json(
     selected_policy = policy or ShadowStatusPolicy()
     if not isinstance(selected_policy, ShadowStatusPolicy):
         raise ShadowStatusError("policy muss ShadowStatusPolicy sein")
-    _validate_source(source, selected_policy)
+    validate_shadow_status_source(source, selected_policy)
 
     portal_freshness = _source_freshness(
         source.portal_memory_revision,

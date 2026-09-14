@@ -40,6 +40,7 @@ from explore.region_graph_status import (  # noqa: E402
     ShadowStatusPolicy,
     ShadowStatusSource,
     build_shadow_status_json,
+    validate_shadow_status_source,
 )
 
 
@@ -150,6 +151,7 @@ def empty_source():
 
 
 def test_shadow_status_is_versioned_passive_complete_and_geometry_free():
+    assert validate_shadow_status_source(populated_source()) is None
     serialized = build_shadow_status_json(populated_source())
     payload = json.loads(serialized)
 
