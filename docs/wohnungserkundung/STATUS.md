@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/V)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/W)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/V – exakte Rohkartenkorrelation softwaregeprüft, zur Review.** Ein neues
-reines Adaptermodul gibt Kartenkontext und -revision nur frei, wenn Fingerprint,
-Quellstempel und Frame der vom passiven Detektor verwendeten Rohkarte exakt dem
-aktuellen korrelierten Kartenmanagerstatus entsprechen. Abweichende oder
-ungültige Identitäten, ältere Momentaufnahmen und erfundene Statuswerte schlagen
-geschlossen fehl. Ein Nullstempel wird nur bei beiderseitiger exakter
-Übereinstimmung erhalten und nie durch Empfangszeit ersetzt. Costmap-only-Pläne
-besitzen keinen Eingang in diesen Vertrag.
+**WE-M2/W – gemeinsame Fingerprint-Abhängigkeit geklärt, zur Review.** Der in
+WE-M2/V zunächst vorgeschlagene direkte Import von
+`robot_map_manager.map_core.MapSnapshot` in `explore` ist unzulässig: Die
+Paketmetadaten enthalten bereits
+`robot_map_manager → robot_navigation → explore`; der Rückimport würde einen
+Build-/Installationszyklus erzeugen. Es wurde deshalb weder eine verdeckte
+Abhängigkeit noch eine zweite Digestimplementierung ergänzt.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,12 +24,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/W:** Rein und ohne ROS die Herkunft der
-`RawMapPortalSource` an den bereits kanonisch fingerprintenden
-`robot_map_manager.map_core.MapSnapshot` binden. Die eine vorhandene
-Fingerprintimplementierung wiederverwenden, keine zweite Digestdefinition
-anlegen; Paketabhängigkeit und Cross-Contract testen. Noch kein Node-Callback,
-Detektor, Portalfeed, Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/X:** Die bestehende Fingerprintfunktion in
+ein kleines ROS-freies, abhängigkeitloses Blattpaket
+`amadeus_map_identity` extrahieren. `robot_map_manager.MapSnapshot` und der reine
+Explorer-Quellenadapter verwenden danach dieselbe Funktion; bekannte
+Fingerprintvektoren, unveränderte Kartenmanagerverträge und einen azyklischen
+Paketgraphen prüfen. Kein Node-Callback, Detektor, Portalfeed, Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -75,6 +74,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/T `feature/we-m2t-region-exploration-state` | Gestapelter expliziter Regions-Erkundungsstatus mit konservativer Merge-/Split-Behandlung und passiver Statusprojektion; Graph, Tests und Status, kein Deployment. |
 | WE-M2/U `docs/we-m2u-portal-provenance` | Gestapelte Quellenentscheidung zur fehlenden Rohkartenlinie der Nav2-Master-Costmap und zum fail-closed Korrelationsvertrag; nur diese STATUS.md. |
 | WE-M2/V `feature/we-m2v-raw-map-source` | Gestapelter reiner Exaktabgleich von Rohkartenfingerprint, -stempel und Frame gegen den aktuellen Kartenmanagerstand; neues Modul, Tests und Status, kein Deployment. |
+| WE-M2/W `docs/we-m2w-map-identity-dependency` | Gestapelte Abhängigkeitsentscheidung gegen den zyklischen Direktimport des Kartenmanagers und für eine neutrale Fingerprintquelle; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -409,6 +409,64 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/W: `MapSnapshot`-Direktimport würde Paketzyklus erzeugen
+
+**Geprüfte Abhängigkeit:** Der WE-M2/V-Adapter benötigt langfristig exakt
+denselben Fingerprint wie der Kartenmanager. Ein direkter Laufzeitimport von
+`robot_map_manager.map_core.MapSnapshot` wäre technisch naheliegend, ist im
+vorhandenen Paketgraphen aber nicht zulässig:
+
+```text
+robot_map_manager --exec--> robot_navigation --exec--> explore
+       ^                                             |
+       +---------------- geplanter Import -----------+
+```
+
+`robot_map_manager/package.xml` benötigt `robot_navigation` für seinen
+vorhandenen Smoke-Launch; `robot_navigation/package.xml` benötigt `explore` für
+den Mapping-/Erkundungslaunch. `colcon list --topological-order --packages-up-to
+explore robot_map_manager` bestätigt heute die azyklische Reihenfolge
+`explore → robot_navigation → robot_map_manager`. Eine neue
+`explore → robot_map_manager`-Kante würde diese Reihenfolge unmöglich machen.
+
+**Entscheidung:** Weder ein nicht deklarierter Python-Import noch ein zweiter,
+nur durch ähnliche Tests synchron gehaltener SHA-256-Algorithmus wird
+eingeführt. `robot_interfaces` bleibt auf ROS-IDL beschränkt und wird nicht mit
+einer fachfremden Python-Hilfsbibliothek erweitert. Stattdessen wird nur die
+kanonische Fingerprintberechnung aus `MapSnapshot.__post_init__` in ein kleines
+ROS-freies Blattpaket extrahiert. Dieses Blatt kennt weder Kartenmanager,
+Navigation noch Explorer; Kartenmanager und Explorer dürfen von ihm abhängen.
+Die Validierung und Speicherung des `MapSnapshot` bleiben Eigentum des
+Kartenmanagers.
+
+Die Extraktion muss byteidentisch bleiben: Breite/Höhe/Auflösung in der
+vorhandenen Network-Byte-Order, Länge und Bytes des UTF-8-Frames, sieben
+Ursprungswerte und die bereits validierten kompakten Zellbytes. Der
+`source_stamp_ns` bleibt wie bisher absichtlich außerhalb des Inhaltsfingerprints.
+Bekannte Vektoren und bestehende Kartenmanager-Fingerprinttests müssen vor und
+nach der Extraktion identisch sein. Damit wird keine Karten-ID migriert.
+
+**Ausgeführte Prüfungen:** Paketmetadaten, Launchverwendungen und der einzige
+vollständige MapSnapshot-Fingerprintpfad wurden quellenbasiert geprüft; der
+aktuelle Paketgraph wurde mit Colcon aufgelistet. Die unveränderte vollständige
+Explorer-Suite bestand erneut mit **476 passed**, `git diff --check` bestand.
+Keine ROS-Nodes, Kartendaten, Geräte oder Aktoren wurden gestartet. Dies ist
+eine Architekturentscheidung, keine Runtime-, Zielsystem- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M2/X:** Neues Blattpaket
+`src/amadeus_map_identity` mit genau einer reinen Fingerprintfunktion und
+bekannten Testvektoren. `robot_map_manager.MapSnapshot` darauf umstellen und
+den Explorer-Adapter aus expliziten, bereits normalisierten Rohkartenfeldern
+dieselbe Funktion verwenden lassen. Paketmetadaten, Inventar,
+Kartenmanager-/Explorer-Cross-Contracts und Gesamtgraph prüfen. Keine ROS-
+Callbacks, Detektoren, Parameter, Launches, Portalzuführung oder Fahrsoftware
+ändern.
+
+**Rückfallweg:** WE-M2/W ändert nur diese STATUS.md. Den
+Dokumentationscommit beziehungsweise Review-PR zurücknehmen; WE-M2/V bleibt
+funktionsfähig, aber weiterhin ohne Erzeuger für seinen Fingerprint. Kein
+Betriebs- oder Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/V: Revision nur bei exakter Rohkartenidentität
 
