@@ -51,6 +51,17 @@ explore_node:
     wohnungserkundung_task_cell_search_m: 0.60
     wohnungserkundung_information_radius_m: 0.75
     wohnungserkundung_evidence_max_cells: 262144
+    # Leere ID/Polygon sperren portalbezogene Ziele. Koordinaten sind flach
+    # [x0, y0, x1, y1, ...] im Kartenframe und werden nie automatisch geraten.
+    wohnungserkundung_scope_id: ""
+    wohnungserkundung_scope_polygon_xy: []
+    # Synthetische Startwerte fuer reine Scope-/Portal-Routenpruefung.
+    wohnungserkundung_scope_clearance_m: 0.28
+    wohnungserkundung_portal_rear_overhang_m: 0.35
+    wohnungserkundung_portal_exit_clearance_m: 0.10
+    wohnungserkundung_portal_target_search_m: 0.35
+    wohnungserkundung_portal_target_lateral_m: 0.25
+    wohnungserkundung_portal_path_radius_m: 0.25
 
     # --- Explorationsrhythmus / Grenzen ---
     replan_period_s: 2.0            # wie oft Frontiers neu bewertet werden [s]

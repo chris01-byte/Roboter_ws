@@ -21,6 +21,7 @@ from .exploration_policy import (
     TaskUtilityScore,
 )
 from .frontier_goal_candidate import FrontierGoalCandidate
+from .portal_task_evidence import PortalGoalCandidate
 
 
 WE_STATUS_SCHEMA_VERSION = 1
@@ -314,17 +315,16 @@ def build_unavailable_we_status_extension(reason: str) -> dict:
     }
 
 
-def build_goal_candidate_status(candidate: FrontierGoalCandidate) -> dict:
+def build_goal_candidate_status(candidate) -> dict:
     """Project one numeric preview while explicitly denying dispatch."""
-    if not isinstance(candidate, FrontierGoalCandidate):
+    if not isinstance(candidate, (FrontierGoalCandidate, PortalGoalCandidate)):
         raise ExplorationMigrationError(
-            "candidate muss FrontierGoalCandidate sein")
-    return {
+            "candidate muss ein unterstuetzter Zielkandidat sein")
+    payload = {
         "state": "current",
         "intent_id": candidate.intent_id,
         "task_id": candidate.task_id,
         "region_id": candidate.region_id,
-        "frontier_id": candidate.frontier_id,
         "map_revision": candidate.map_revision,
         "frame_id": candidate.frame_id,
         "source_fingerprint": candidate.source_fingerprint,
@@ -336,15 +336,30 @@ def build_goal_candidate_status(candidate: FrontierGoalCandidate) -> dict:
             "row": candidate.target_row,
             "col": candidate.target_col,
         },
-        "frontier": {
-            "x_m": candidate.frontier_x_m,
-            "y_m": candidate.frontier_y_m,
-        },
         "route_length_m": candidate.route_length_m,
-        "information_gain_square_m": (
-            candidate.information_gain_square_m),
         "navigation_dispatched": False,
     }
+    if isinstance(candidate, FrontierGoalCandidate):
+        payload.update({
+            "frontier_id": candidate.frontier_id,
+            "frontier": {
+                "x_m": candidate.frontier_x_m,
+                "y_m": candidate.frontier_y_m,
+            },
+            "information_gain_square_m": (
+                candidate.information_gain_square_m),
+        })
+    else:
+        payload.update({
+            "kind": "portal",
+            "portal_id": candidate.portal_id,
+            "direction": candidate.direction.value,
+            "scope_id": candidate.scope_id,
+            "scope_fingerprint": candidate.scope_fingerprint,
+            "path_cell_count": len(candidate.path_cells),
+            "information_gain_square_m": 0.0,
+        })
+    return payload
 
 
 def build_unavailable_goal_candidate_status(reason: str) -> dict:

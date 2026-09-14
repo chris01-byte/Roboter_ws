@@ -126,11 +126,18 @@ from explore.exploration_nav_runtime import (
     NavigationStopCause,
 )
 from explore.portal_source_adapter import raw_map_portal_source_from_values
+from explore.exploration_scope import AuthorizedExplorationScope
+from explore.portal_memory import Point2D as PortalPoint2D
+from explore.portal_task_evidence import (
+    PortalTaskEvidencePolicy,
+    bind_portal_goal_candidate,
+    build_portal_task_evidence,
+)
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
-from explore.region_graph import RegionTaskState
+from explore.region_graph import RegionTaskKind, RegionTaskState
 
 import tf2_ros
 
@@ -841,6 +848,43 @@ class ExploreNode(Node):
         self._wohnungserkundung_evidence_max_cells = int(
             self.declare_parameter(
                 'wohnungserkundung_evidence_max_cells', 262144).value)
+        self._wohnungserkundung_scope_id = str(self.declare_parameter(
+            'wohnungserkundung_scope_id', '').value).strip()
+        scope_polygon_values = tuple(self.declare_parameter(
+            'wohnungserkundung_scope_polygon_xy', []).value)
+        self._wohnungserkundung_scope_vertices = tuple(
+            PortalPoint2D(
+                float(scope_polygon_values[index]),
+                float(scope_polygon_values[index + 1]),
+            )
+            for index in range(0, len(scope_polygon_values), 2)
+        ) if len(scope_polygon_values) % 2 == 0 else ()
+        self._wohnungserkundung_scope_configuration_valid = (
+            (not self._wohnungserkundung_scope_id
+             and not scope_polygon_values)
+            or (
+                bool(self._wohnungserkundung_scope_id)
+                and len(scope_polygon_values) >= 6
+                and len(scope_polygon_values) % 2 == 0)
+        )
+        self._wohnungserkundung_scope_clearance = float(
+            self.declare_parameter(
+                'wohnungserkundung_scope_clearance_m', 0.28).value)
+        self._wohnungserkundung_portal_rear_overhang = float(
+            self.declare_parameter(
+                'wohnungserkundung_portal_rear_overhang_m', 0.35).value)
+        self._wohnungserkundung_portal_exit_clearance = float(
+            self.declare_parameter(
+                'wohnungserkundung_portal_exit_clearance_m', 0.10).value)
+        self._wohnungserkundung_portal_target_search = float(
+            self.declare_parameter(
+                'wohnungserkundung_portal_target_search_m', 0.35).value)
+        self._wohnungserkundung_portal_target_lateral = float(
+            self.declare_parameter(
+                'wohnungserkundung_portal_target_lateral_m', 0.25).value)
+        self._wohnungserkundung_portal_path_radius = float(
+            self.declare_parameter(
+                'wohnungserkundung_portal_path_radius_m', 0.25).value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -1012,6 +1056,9 @@ class ExploreNode(Node):
             raise ValueError(
                 'Aktiver Regionsgraph-Schatten braucht explizite IDs und '
                 'getrennte, nichtleere Topics')
+        if not self._wohnungserkundung_scope_configuration_valid:
+            raise ValueError(
+                'WE-Scope braucht eine ID und mindestens drei XY-Ecken')
         self._region_graph_shadow_raw_map_join_capacity = (
             validated_shadow_raw_map_capacity(
                 self._region_graph_shadow_enabled,
@@ -1076,6 +1123,26 @@ class ExploreNode(Node):
                         self._wohnungserkundung_information_radius),
                     max_cells=(
                         self._wohnungserkundung_evidence_max_cells),
+                )
+            )
+            self._wohnungserkundung_portal_evidence_policy = (
+                PortalTaskEvidencePolicy(
+                    clearance_m=self._wohnungserkundung_evidence_clearance,
+                    scope_clearance_m=(
+                        self._wohnungserkundung_scope_clearance),
+                    robot_seed_search_m=(
+                        self._wohnungserkundung_robot_seed_search),
+                    chassis_rear_overhang_m=(
+                        self._wohnungserkundung_portal_rear_overhang),
+                    exit_clearance_m=(
+                        self._wohnungserkundung_portal_exit_clearance),
+                    target_search_m=(
+                        self._wohnungserkundung_portal_target_search),
+                    maximum_target_lateral_m=(
+                        self._wohnungserkundung_portal_target_lateral),
+                    portal_path_radius_m=(
+                        self._wohnungserkundung_portal_path_radius),
+                    max_cells=self._wohnungserkundung_evidence_max_cells,
                 )
             )
             self._wohnungserkundung_evidence_cache_key = None
@@ -1641,18 +1708,81 @@ class ExploreNode(Node):
                             ),
                             tasks=tuple(
                                 task for task in status.source.graph.tasks
-                                if task.state is RegionTaskState.OPEN),
+                                if (
+                                    task.state is RegionTaskState.OPEN
+                                    and getattr(
+                                        task, 'kind',
+                                        RegionTaskKind.FRONTIER)
+                                    is RegionTaskKind.FRONTIER)),
                             tracks=tracks,
                             policy=self._wohnungserkundung_evidence_policy,
                         )
                         self._wohnungserkundung_evidence_cache_key = (
                             evidence_key)
                         self._wohnungserkundung_evidence_cache = evidence
-                    task_availability = evidence.availability
-                    utility_evidence = evidence.utilities
+                    portal_evidence = None
+                    if getattr(self, '_wohnungserkundung_scope_id', ''):
+                        scope = AuthorizedExplorationScope(
+                            scope_id=self._wohnungserkundung_scope_id,
+                            context=status.source.context,
+                            vertices=(
+                                self._wohnungserkundung_scope_vertices),
+                        )
+                        portal_evidence = build_portal_task_evidence(
+                            correlation,
+                            width=raw_map.info.width,
+                            height=raw_map.info.height,
+                            resolution=raw_map.info.resolution,
+                            frame_id=raw_map.header.frame_id.strip(),
+                            origin=(
+                                origin.position.x,
+                                origin.position.y,
+                                origin.position.z,
+                                origin.orientation.x,
+                                origin.orientation.y,
+                                origin.orientation.z,
+                                origin.orientation.w,
+                            ),
+                            cells=raw_map.data,
+                            source_stamp_ns=(
+                                int(raw_map.header.stamp.sec)
+                                * 1_000_000_000
+                                + int(raw_map.header.stamp.nanosec)
+                            ),
+                            robot_xy=(
+                                None if robot_pose is None
+                                else (robot_pose[0], robot_pose[1])
+                            ),
+                            current_region_id=(
+                                status.source.graph.current_region_id),
+                            tasks=tuple(
+                                task for task
+                                in status.source.graph.tasks
+                                if (
+                                    task.state is RegionTaskState.OPEN
+                                    and task.kind is RegionTaskKind.PORTAL)),
+                            portals=status.source.portals,
+                            connections=status.source.graph.connections,
+                            scope=scope,
+                            policy=(
+                                self._wohnungserkundung_portal_evidence_policy),
+                        )
+                    if portal_evidence is None:
+                        task_availability = evidence.availability
+                        utility_evidence = evidence.utilities
+                    else:
+                        task_availability = tuple(sorted(
+                            evidence.availability
+                            + portal_evidence.availability,
+                            key=lambda item: item.task_id,
+                        ))
+                        utility_evidence = tuple(sorted(
+                            evidence.utilities + portal_evidence.utilities,
+                            key=lambda item: item.task_id,
+                        ))
                     candidate_inputs = (
                         raw_map, correlation, tracks, evidence,
-                        robot_pose, evidence_key)
+                        portal_evidence, robot_pose, evidence_key)
                     evidence_status = {
                         'state': 'current',
                         'map_revision': evidence.source_map_revision,
@@ -1660,9 +1790,11 @@ class ExploreNode(Node):
                             evidence.robot_seed_available),
                         'current_frontier_track_count': (
                             evidence.current_frontier_track_count),
-                        'availability_count': len(evidence.availability),
-                        'utility_count': len(evidence.utilities),
+                        'availability_count': len(task_availability),
+                        'utility_count': len(utility_evidence),
                     }
+                    if portal_evidence is not None:
+                        evidence_status['portal_scope_state'] = 'current'
                 assessment = assess_exploration_policy(
                     status.source, task_availability)
                 scores = score_task_utilities(
@@ -1719,8 +1851,9 @@ class ExploreNode(Node):
                         goal_status = build_unavailable_goal_candidate_status(
                             'withheld_by_current_policy')
                     else:
-                        raw_map, correlation, tracks, evidence, robot_pose, (
-                            evidence_key) = candidate_inputs
+                        raw_map, correlation, tracks, evidence, (
+                            portal_evidence), robot_pose, evidence_key = (
+                                candidate_inputs)
                         matching_tasks = tuple(
                             task for task in status.source.graph.tasks
                             if task.task_id == intent.task_id)
@@ -1735,44 +1868,76 @@ class ExploreNode(Node):
                                 candidate = self._wohnungserkundung_goal_cache
                             if goal_key != cached_goal_key:
                                 origin = raw_map.info.origin
-                                candidate = build_frontier_goal_candidate(
-                                    intent,
-                                    correlation,
-                                    width=raw_map.info.width,
-                                    height=raw_map.info.height,
-                                    resolution=raw_map.info.resolution,
-                                    frame_id=raw_map.header.frame_id.strip(),
-                                    origin=(
-                                        origin.position.x,
-                                        origin.position.y,
-                                        origin.position.z,
-                                        origin.orientation.x,
-                                        origin.orientation.y,
-                                        origin.orientation.z,
-                                        origin.orientation.w,
-                                    ),
-                                    cells=raw_map.data,
-                                    source_stamp_ns=(
-                                        int(raw_map.header.stamp.sec)
-                                        * 1_000_000_000
-                                        + int(raw_map.header.stamp.nanosec)
-                                    ),
-                                    robot_xy=(
-                                        None if robot_pose is None
-                                        else (robot_pose[0], robot_pose[1])
-                                    ),
-                                    task=matching_tasks[0],
-                                    tracks=tracks,
-                                    evidence=evidence,
-                                    policy=(
-                                        self._wohnungserkundung_evidence_policy),
-                                )
+                                selected_task = matching_tasks[0]
+                                selected_kind = getattr(
+                                    selected_task, 'kind',
+                                    RegionTaskKind.FRONTIER)
+                                if selected_kind is (
+                                        RegionTaskKind.FRONTIER):
+                                    candidate = build_frontier_goal_candidate(
+                                        intent,
+                                        correlation,
+                                        width=raw_map.info.width,
+                                        height=raw_map.info.height,
+                                        resolution=raw_map.info.resolution,
+                                        frame_id=(
+                                            raw_map.header.frame_id.strip()),
+                                        origin=(
+                                            origin.position.x,
+                                            origin.position.y,
+                                            origin.position.z,
+                                            origin.orientation.x,
+                                            origin.orientation.y,
+                                            origin.orientation.z,
+                                            origin.orientation.w,
+                                        ),
+                                        cells=raw_map.data,
+                                        source_stamp_ns=(
+                                            int(raw_map.header.stamp.sec)
+                                            * 1_000_000_000
+                                            + int(raw_map.header.stamp.nanosec)
+                                        ),
+                                        robot_xy=(
+                                            None if robot_pose is None
+                                            else (robot_pose[0], robot_pose[1])
+                                        ),
+                                        task=selected_task,
+                                        tracks=tracks,
+                                        evidence=evidence,
+                                        policy=(self.
+                                            _wohnungserkundung_evidence_policy),
+                                    )
+                                elif (
+                                        selected_kind
+                                        is RegionTaskKind.PORTAL
+                                        and portal_evidence is not None):
+                                    proposals = tuple(
+                                        item for item
+                                        in portal_evidence.proposals
+                                        if item.task_id == intent.task_id)
+                                    if len(proposals) != 1:
+                                        raise ValueError(
+                                            'Portalwahl braucht genau eine '
+                                            'gepruefte Scope-Route')
+                                    candidate = bind_portal_goal_candidate(
+                                        intent, proposals[0])
+                                else:
+                                    raise ValueError(
+                                        'Aufgabenart besitzt keinen '
+                                        'Zieladapter')
                                 with self._wohnungserkundung_runtime_lock:
                                     self._wohnungserkundung_goal_cache_key = (
                                         goal_key)
                                     self._wohnungserkundung_goal_cache = candidate
                             goal_status = build_goal_candidate_status(candidate)
-                            navigation_snapshot = (intent, candidate)
+                            if getattr(
+                                    matching_tasks[0], 'kind',
+                                    RegionTaskKind.FRONTIER) is (
+                                    RegionTaskKind.FRONTIER):
+                                navigation_snapshot = (intent, candidate)
+                            else:
+                                goal_status['dispatch_blocked_reason'] = (
+                                    'portal_traversal_monitor_unavailable')
                         except Exception as goal_error:
                             goal_status = (
                                 build_unavailable_goal_candidate_status(

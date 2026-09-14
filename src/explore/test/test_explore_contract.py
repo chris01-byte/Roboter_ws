@@ -40,7 +40,7 @@ from explore.explore_node import (  # noqa: E402
     validated_we_navigation_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
-from explore.portal_memory import PortalMapContext  # noqa: E402
+from explore.portal_memory import Point2D, PortalMapContext  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.exploration_completion import (  # noqa: E402
     CompletionAssessment,
@@ -55,7 +55,7 @@ from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
-from explore.region_graph import RegionTaskState  # noqa: E402
+from explore.region_graph import RegionTaskKind, RegionTaskState  # noqa: E402
 import explore.explore_node as explore_node_module  # noqa: E402
 
 
@@ -1976,6 +1976,209 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     assert stateful_builds == [source]
     assert len(publications) == 2
     assert all(message.data == '{"shadow":true}' for message in publications)
+
+
+def test_passive_runtime_previews_scoped_portal_without_dispatch(monkeypatch):
+    raw_map = SimpleNamespace(
+        info=SimpleNamespace(
+            width=4,
+            height=3,
+            resolution=0.1,
+            origin=SimpleNamespace(
+                position=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+                orientation=SimpleNamespace(
+                    x=0.0, y=0.0, z=0.0, w=1.0),
+            ),
+        ),
+        header=SimpleNamespace(
+            frame_id='map',
+            stamp=SimpleNamespace(sec=2, nanosec=3),
+        ),
+        data=[0] * 12,
+    )
+    context = PortalMapContext('session-node', 'map-node', 'map')
+    portal_task = SimpleNamespace(
+        task_id='task-portal-1',
+        region_id='region-2',
+        kind=RegionTaskKind.PORTAL,
+        state=RegionTaskState.OPEN,
+    )
+    graph = SimpleNamespace(
+        tasks=(portal_task,),
+        current_region_id='region-1',
+        connections=(object(),),
+    )
+    source = SimpleNamespace(
+        context=context,
+        source_map_revision=8,
+        graph=graph,
+        portals=(object(),),
+    )
+    correlation = SimpleNamespace(
+        map_revision=8,
+        context=context,
+        fingerprint='b' * 64,
+        source_stamp_ns=2000000003,
+    )
+    raw_source = object()
+    portal_availability = SimpleNamespace(task_id=portal_task.task_id)
+    portal_utility = SimpleNamespace(task_id=portal_task.task_id)
+    proposal = SimpleNamespace(task_id=portal_task.task_id)
+    portal_evidence = SimpleNamespace(
+        availability=(portal_availability,),
+        utilities=(portal_utility,),
+        proposals=(proposal,),
+    )
+    frontier_evidence = SimpleNamespace(
+        source_map_revision=8,
+        availability=(),
+        utilities=(),
+        robot_seed_available=True,
+        current_frontier_track_count=0,
+    )
+    assessment = SimpleNamespace(
+        eligible_task_ids=(portal_task.task_id,),
+        state=PolicyAssessmentState.READY_WITH_TASKS,
+    )
+    stateful = object()
+    intent = SimpleNamespace(
+        intent_id='intent-portal-1', task_id=portal_task.task_id)
+    candidate = object()
+    publications = []
+    portal_builds = []
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_frontier_task_feed = True
+    node._region_graph_shadow_latest_raw_map = raw_map
+    node._region_graph_shadow_latest_correlation = correlation
+    node._region_graph_shadow_latest_raw_source = raw_source
+    node._region_graph_shadow = SimpleNamespace(
+        build_status=lambda **kwargs: SimpleNamespace(
+            serialized='{"shadow":true}', source=source),
+        frontier_tracks=lambda: (),
+    )
+    node._region_graph_shadow_pub = SimpleNamespace(
+        publish=publications.append)
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_policy_fault = None
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = None
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_portal_evidence_policy = object()
+    node._wohnungserkundung_scope_id = 'scope-node'
+    node._wohnungserkundung_scope_vertices = (
+        Point2D(0.0, 0.0), Point2D(1.0, 0.0),
+        Point2D(1.0, 1.0), Point2D(0.0, 1.0),
+    )
+    node._wohnungserkundung_evidence_cache_key = None
+    node._wohnungserkundung_evidence_cache = None
+    node._wohnungserkundung_goal_cache_key = None
+    node._wohnungserkundung_goal_cache = None
+    node._wohnungserkundung_stateful_assessment = None
+    node._try_observe_correlated_raw_map_frontiers = lambda: None
+    node._try_resolve_successful_wohnungserkundung_frontier = lambda: None
+    node._try_observe_connected_raw_map_portals = lambda: None
+    node._shadow_source_matches_correlation = lambda left, right: (
+        left is raw_source and right is correlation)
+    node._robot_pose = lambda: (0.1, 0.1, 0.0)
+    node._world_to_grid = lambda x, y, info: (1, 1)
+
+    class FakeTaskPolicySession:
+        latest_assessment_revision = None
+
+        def assess(self, selected_source, availability, utilities):
+            assert selected_source is source
+            assert availability == (portal_availability,)
+            assert utilities == (portal_utility,)
+            self.latest_assessment_revision = 8
+            return stateful
+
+    node._wohnungserkundung_task_policy_session = FakeTaskPolicySession()
+
+    monkeypatch.setattr(
+        explore_node_module,
+        'build_frontier_task_evidence',
+        lambda *args, **kwargs: frontier_evidence,
+    )
+
+    def build_portal(*args, **kwargs):
+        assert not node._region_graph_shadow_lock.locked()
+        assert args == (correlation,)
+        assert kwargs['tasks'] == (portal_task,)
+        assert kwargs['portals'] is source.portals
+        assert kwargs['connections'] is graph.connections
+        assert kwargs['scope'].scope_id == 'scope-node'
+        assert kwargs['scope'].context == context
+        portal_builds.append(kwargs)
+        return portal_evidence
+
+    monkeypatch.setattr(
+        explore_node_module, 'build_portal_task_evidence', build_portal)
+    monkeypatch.setattr(
+        explore_node_module,
+        'assess_exploration_policy',
+        lambda selected_source, availability: assessment
+        if selected_source is source
+        and availability == (portal_availability,) else None,
+    )
+    monkeypatch.setattr(
+        explore_node_module,
+        'score_task_utilities',
+        lambda task_ids, utilities, revision: ()
+        if task_ids == (portal_task.task_id,)
+        and utilities == (portal_utility,)
+        and revision == 8 else None,
+    )
+    monkeypatch.setattr(
+        explore_node_module,
+        'build_passive_we_status_extension',
+        lambda *args, **kwargs: {'schema_version': 1},
+    )
+    monkeypatch.setattr(
+        explore_node_module,
+        'current_goal_intent_from_assessments',
+        lambda *args: intent,
+    )
+    monkeypatch.setattr(
+        explore_node_module,
+        'bind_portal_goal_candidate',
+        lambda selected_intent, selected_proposal: candidate
+        if selected_intent is intent and selected_proposal is proposal
+        else None,
+    )
+    monkeypatch.setattr(
+        explore_node_module,
+        'build_goal_candidate_status',
+        lambda selected: {'state': 'current'}
+        if selected is candidate else None,
+    )
+
+    node._publish_region_graph_shadow_status()
+
+    assert len(portal_builds) == 1
+    assert node._wohnungserkundung_navigation_snapshot is None
+    assert node._wohnungserkundung_status_extension == {
+        'schema_version': 1,
+        'task_evidence_source': {
+            'state': 'current',
+            'map_revision': 8,
+            'robot_seed_available': True,
+            'current_frontier_track_count': 0,
+            'availability_count': 1,
+            'utility_count': 1,
+            'portal_scope_state': 'current',
+        },
+        'goal_candidate': {
+            'state': 'current',
+            'dispatch_blocked_reason': (
+                'portal_traversal_monitor_unavailable'),
+        },
+    }
+    assert len(publications) == 1
 
 
 def _status_node(policy_enabled):

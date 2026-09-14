@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/R)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/S)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,17 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/R – Ein Portalübergang besitzt jetzt einen strengen reinen
-Evidenzvertrag.** Reguläres Nav2 und die bestehende Sonderbrücke werden gleich
-behandelt: Ausführungserfolg ist nur eine Voraussetzung. Erst eine frische,
-revisionskonsistente Folge gerichteter Kartenposen, vollständig vor und nach
-dem Portal liegendes Chassis sowie eine dazu passende schlupfresistente
-unabhängige Bewegungsmessung erzeugen ein deterministisches bestätigtes
-`TraversalEvent`. Früher Erfolg, halber Auslauf, Encoder-only, TF-Sprung,
-Gegenrichtung und Quellenwiderspruch bleiben ohne Ereignis. Es existiert noch
-kein Runtime-Aufrufer; das Profil bleibt standardmäßig deaktiviert.
+**WE-M3/S – Offene Portalaufgaben besitzen jetzt eine fail-closed,
+scope-gebundene Zielvorschau.** Aus exakter Rohkarte, bestätigtem Portal,
+Graphverbindung, aktueller Region und einem expliziten Polygon wird ein
+revisionsgebundener Zielkandidat auf der kanonischen Gegenseite abgeleitet. Jede
+Rasterzelle des vollständigen A*-Pfads liegt nach Karten- und Scope-Abstand im
+freigegebenen Bereich; der Pfad muss den gewählten Portalmittelquerschnitt
+tatsächlich schneiden. Fehlender Scope, fehlende Pose, unbestätigte oder interne
+Portale und unpassierbare Pfade bleiben ohne Ziel. Die Runtime zeigt diesen
+Kandidaten nur passiv und sperrt seinen Versand ausdrücklich, bis der
+M3/R-Traversierungsmonitor begrenzt gekoppelt ist. Das Profil bleibt
+standardmäßig deaktiviert.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -27,23 +29,22 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis R umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis S umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
 Auswahl, Zielvorschlag, Einzel-Kindziel, Resultat-/Attemptableitung,
 Abschlussvertrag, positive Frontier-Erledigung und konservativer
 Regionsfortschritt sind nun im separaten Runtimeprofil gekoppelt. Der reine
-Portal-Durchfahrtsbeleg ist vorhanden; portalbezogene Zielbildung und
-Runtime-Zuführung, das eingefrorene begrenzte Profil sowie die motorlose
-Zielsystemabnahme fehlen.
+Portal-Durchfahrtsbeleg sowie die scope-gebundene Portalzielbildung sind
+vorhanden; Runtime-Zuführung, das eingefrorene begrenzte Profil sowie die
+motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/S:** Für genau eine aktuell ausgewählte
-offene Portalaufgabe einen revisionsgebundenen regulären Nav2-Zielkandidaten auf
-der kanonischen Gegenseite ableiten. Zielzelle, vollständiger Pfad und
-Auftragsscope müssen positiv belegt sein. Die Runtime darf das Ziel nur über den
-vorhandenen Einzel-Kindzielbesitzer versenden und M3/R erst mit einer begrenzten
-frischen Posen-/Bewegungsfolge speisen. Fake-Actions und synthetische Quellen,
-keine Geräteaktivierung oder Fahrt.
+**Nächster abgegrenzter Schritt WE-M3/T:** Den scope-gebundenen Portalkandidaten
+nur über den vorhandenen Einzel-Kindzielbesitzer an einen Fake-Nav2-Server
+geben, dabei eine streng begrenzte frische Posen-/Bewegungsfolge sammeln und
+M3/R auswerten. Nur ein bestätigtes Traversalereignis darf anschließend die
+Portalaufgabe und aktuelle Region fortschreiben; Action-Erfolg allein bleibt
+wirkungslos. Synthetische DDS-Quellen, keine Geräteaktivierung oder Fahrt.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -464,6 +465,67 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/S: Portalziel und vollständiger Pfad im Auftragsscope
+
+**Entscheidung / Umfang:** Ein neuer unveränderlicher Auftragsscope bindet ein
+einfaches Polygon und dessen Fingerprint an Karten- und Sitzungsidentität. Die
+Portalzielevidenz verwendet ausschließlich die exakt korrelierte Rohkarte, eine
+aktuelle offene Portalaufgabe, bestätigte kanonische Portalgeometrie, die
+zugehörige nichtinterne Graphverbindung und die aktuelle Region. Ziel und A*-Pfad
+müssen freie Zellen mit getrenntem Hindernis- und Scope-Abstand belegen; diagonales
+Schneiden von Hindernisecken ist untersagt. Der Zielpunkt liegt mindestens um
+synthetisch konfigurierten Hecküberhang plus Auslaufreserve hinter der Gegenseite,
+und der vollständige Pfad muss den ausgewählten Portalquerschnitt schneiden.
+
+Die bestehende passive WE-Runtime führt Frontier- und Portalverfügbarkeit sowie
+geodätische Wegkosten zusammen. Ein ausgewählter Portalkandidat wird an dieselbe
+revisionsgebundene Kindzielabsicht gebunden und im kompatiblen Statusformat als
+Portal, Richtung, Scope-Fingerprint und Pfadlänge sichtbar. In M3/S wird er
+absichtlich nicht an Nav2 gereicht; `portal_traversal_monitor_unavailable` ist
+der explizite Sperrgrund. Das deaktivierte Standardprofil besitzt weder Scope-ID
+noch Polygon und erzeugt daher weiterhin kein Portalziel.
+
+**Nachgewiesenes Verhalten:** Hin- und Rückrichtung erzeugen kanonisch
+verschiedene Ziele. Fehlende Pose oder Graphbelege, unbestätigte beziehungsweise
+interne Portale, falsche aktuelle Region, fremder Scope-Kontext, zukünftige
+Revisionen, zu große Karten, Wände und ein Scope ohne vollständigen Auslaufpfad
+bleiben fail-closed. Selbstschneidende, entartete oder zu große Polygone werden
+abgewiesen. Der Knotenvertrag belegt zusätzlich, dass eine erfolgreiche passive
+Portalwahl keinen Navigations-Snapshot erzeugt.
+
+**Ausgeführte Prüfungen:** Lokaler aarch64-Arbeitsplatz mit ROS Humble, aber ohne
+ROS-Start; ausschließlich synthetische Karten, Graphen, Posen und Fakeobjekte,
+keine Geräte, realen Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3S-FOCUS | Scope-, Portalziel-, Migration-, Kindlauf- und Explorer-Knotenverträge: **142 passed**. |
+| WE-M3S-ADJACENT | Kartenidentität, Explorer, Kartenmanager, Semantikmanager, Mission und Bring-up: **1027 passed**. |
+| WE-M3S-COLCON | Frischer temporärer Aufbau von `amadeus_map_identity`, `robot_interfaces` und `explore`; **849 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3S-INSTALL | Neue Scope-/Portalmodule und die installierte Konfiguration aus dem frischen Overlay importiert beziehungsweise gefunden. |
+| WE-M3S-STATIC | `compileall`, `flake8` F/E9 und `git diff --check`: bestanden. |
+
+**Offene Risiken / Integrationsabhängigkeiten:** Es existiert weiterhin kein
+Runtime-Sampler für die M3/R-Posen- und unabhängige Bewegungsfolge. Deshalb ist
+kein Portalziel versandfähig und kein Portalereignis wird automatisch verbucht.
+Die metrischen Werte sind synthetische Softwarestartwerte, keine vermessene
+Chassiskontur und keine Zielsystemfreigabe. Planerweg und ausgeführte Bewegung
+können später voneinander abweichen; daher muss der Scope auch während des
+Kindlaufs und nicht nur bei der Zielbildung überwacht werden. Softwaretests sind
+keine Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/T:** Einen begrenzten Runtime-Sampler um
+den vorhandenen Einzel-Kindzielbesitzer legen. Er darf nur bei explizit
+verifiziertem Scope starten, muss Quellenrevision, Posen, unabhängige Bewegung
+und Abbruchbedingungen festhalten und darf den Schatten erst nach positivem
+M3/R-Ereignis fortschreiben. Zunächst Fake-Action/DDS, keine Geräte oder Fahrt.
+
+**Rückfallweg:** Den M3/S-Commit beziehungsweise Review-PR zurücknehmen oder
+Scope-ID und Polygon leer lassen. Dann entfallen ausschließlich Scopeprojektion,
+Portalzielevidenz und passive Portalvorschau; M3/R, Frontier-Navigation, Legacy-
+Explorer und Geräteverhalten bleiben unverändert. Es gab kein Deployment und
+keinen Gerätezustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M3/R: Portalquerung nur aus vollständiger Evidenz
 
