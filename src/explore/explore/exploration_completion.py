@@ -153,6 +153,15 @@ class ExplorationCompletionSession:
         self._latest_revision: Optional[int] = None
         self._qualifying_count = 0
         self._terminal: Optional[CompletionAssessment] = None
+        self._termination_request = None
+
+    @property
+    def latest_revision(self) -> Optional[int]:
+        return self._latest_revision
+
+    @property
+    def qualifying_observation_count(self) -> int:
+        return self._qualifying_count
 
     def observe(self, item: CompletionObservation) -> CompletionAssessment:
         if not isinstance(item, CompletionObservation):
@@ -216,6 +225,34 @@ class ExplorationCompletionSession:
             self._terminal = result
         return result
 
+    def terminate(
+            self, cause: TerminationCause, reason: str, *,
+            map_saved: Optional[bool] = None,
+            return_result: ReturnResultState = (
+                ReturnResultState.NOT_REQUESTED),
+    ) -> CompletionAssessment:
+        """End for an external budget, system, or user cause without a fake map."""
+        request = (cause, reason, map_saved, return_result)
+        if self._termination_request is not None:
+            if request != self._termination_request or self._terminal is None:
+                raise ExplorationCompletionError(
+                    "Abschlussanforderung wurde widerspruechlich wiederholt")
+            return self._terminal
+        if self._terminal is not None:
+            raise ExplorationCompletionError(
+                "Terminaler Abschlusszustand ist unveraenderlich")
+        result = completion_from_termination(
+            cause,
+            reason,
+            qualifying_observation_count=self._qualifying_count,
+            policy=self._policy,
+            map_saved=map_saved,
+            return_result=return_result,
+        )
+        self._termination_request = request
+        self._terminal = result
+        return result
+
     def _completion_blockers(
             self, item: CompletionObservation) -> Tuple[str, ...]:
         assessment = item.assessment
@@ -250,3 +287,47 @@ class ExplorationCompletionSession:
             return_result=item.return_result,
             terminal=terminal,
         )
+
+
+def completion_from_termination(
+        cause: TerminationCause,
+        reason: str, *,
+        qualifying_observation_count: int = 0,
+        policy: Optional[CompletionPolicy] = None,
+        map_saved: Optional[bool] = None,
+        return_result: ReturnResultState = ReturnResultState.NOT_REQUESTED,
+) -> CompletionAssessment:
+    """Create a terminal result without inventing a fresh map observation."""
+    if not isinstance(cause, TerminationCause) or cause is TerminationCause.NONE:
+        raise ExplorationCompletionError(
+            "Terminaler Abschluss braucht eine Abbruchursache")
+    if not isinstance(reason, str) or not reason.strip() or len(reason) > 256:
+        raise ExplorationCompletionError("reason ist ungueltig")
+    if (
+            isinstance(qualifying_observation_count, bool)
+            or not isinstance(qualifying_observation_count, int)
+            or qualifying_observation_count < 0):
+        raise ExplorationCompletionError(
+            "qualifying_observation_count ist ungueltig")
+    selected = policy or CompletionPolicy()
+    if not isinstance(selected, CompletionPolicy):
+        raise ExplorationCompletionError("policy ist ungueltig")
+    if map_saved is not None and not isinstance(map_saved, bool):
+        raise ExplorationCompletionError("map_saved ist ungueltig")
+    if not isinstance(return_result, ReturnResultState):
+        raise ExplorationCompletionError("return_result ist ungueltig")
+    state = {
+        TerminationCause.BUDGET_EXHAUSTED: ExplorationResultState.PARTIAL,
+        TerminationCause.SYSTEM_FAILURE: ExplorationResultState.ABORTED,
+        TerminationCause.USER_CANCELED: ExplorationResultState.CANCELED,
+    }[cause]
+    return CompletionAssessment(
+        state=state,
+        reason=reason,
+        qualifying_observation_count=qualifying_observation_count,
+        required_observation_count=selected.required_fresh_observations,
+        blocker_codes=(),
+        map_saved=map_saved,
+        return_result=return_result,
+        terminal=True,
+    )

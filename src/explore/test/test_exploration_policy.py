@@ -38,6 +38,7 @@ from explore.exploration_completion import (  # noqa: E402
     ExplorationResultState,
     ReturnResultState,
     TerminationCause,
+    completion_from_termination,
 )
 from explore.portal_memory import (  # noqa: E402
     Point2D,
@@ -1050,6 +1051,68 @@ def test_terminal_causes_remain_distinct(cause, expected):
 
     assert result.state is expected
     assert result.terminal is True
+
+
+@pytest.mark.parametrize("cause, expected", [
+    (TerminationCause.BUDGET_EXHAUSTED, ExplorationResultState.PARTIAL),
+    (TerminationCause.SYSTEM_FAILURE, ExplorationResultState.ABORTED),
+    (TerminationCause.USER_CANCELED, ExplorationResultState.CANCELED),
+])
+def test_external_termination_needs_no_invented_map_revision(cause, expected):
+    result = completion_from_termination(
+        cause,
+        "external_runtime_stop",
+        qualifying_observation_count=2,
+        policy=CompletionPolicy(required_fresh_observations=3),
+    )
+
+    assert result.state is expected
+    assert result.qualifying_observation_count == 2
+    assert result.required_observation_count == 3
+    assert result.terminal is True
+
+
+def test_session_termination_preserves_progress_and_is_idempotent():
+    assessment = _completion_assessments((2,))[0]
+    session = ExplorationCompletionSession(CONTEXT)
+    session.observe(_completion_observation("pending", 2, assessment))
+
+    first = session.terminate(
+        TerminationCause.BUDGET_EXHAUSTED,
+        "budget",
+        map_saved=False,
+        return_result=ReturnResultState.FAILED,
+    )
+
+    assert session.latest_revision == 2
+    assert session.qualifying_observation_count == 1
+    assert first.qualifying_observation_count == 1
+    assert session.terminate(
+        TerminationCause.BUDGET_EXHAUSTED,
+        "budget",
+        map_saved=False,
+        return_result=ReturnResultState.FAILED,
+    ) is first
+    with pytest.raises(ExplorationCompletionError, match="widerspruechlich"):
+        session.terminate(TerminationCause.SYSTEM_FAILURE, "other")
+    with pytest.raises(ExplorationCompletionError, match="unveraenderlich"):
+        session.observe(replace(
+            _completion_observation("later", 3, assessment),
+            assessment=replace(
+                assessment,
+                passive=replace(assessment.passive, source_map_revision=3))))
+
+
+def test_external_termination_validation_fails_closed():
+    for invalid in (TerminationCause.NONE, "budget_exhausted", None):
+        with pytest.raises(ExplorationCompletionError):
+            completion_from_termination(invalid, "stop")
+    with pytest.raises(ExplorationCompletionError):
+        completion_from_termination(
+            TerminationCause.SYSTEM_FAILURE,
+            "stop",
+            qualifying_observation_count=True,
+        )
 
 
 def test_map_save_and_return_result_do_not_change_exploration_success():

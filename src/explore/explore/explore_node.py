@@ -88,6 +88,19 @@ from explore.exploration_migration import (
     build_passive_we_status_extension,
     build_unavailable_goal_candidate_status,
     build_unavailable_we_status_extension,
+    build_we_status_extension,
+    project_completion_for_legacy,
+)
+from explore.exploration_completion import (
+    AccessibleScopeState,
+    ChildNavigationState,
+    CompletionObservation,
+    CompletionPolicy,
+    ExplorationCompletionSession,
+    ExplorationResultState,
+    ReturnResultState,
+    TerminationCause,
+    completion_from_termination,
 )
 from explore.exploration_child_goal import (
     current_goal_intent_from_assessments,
@@ -500,6 +513,21 @@ def validated_we_navigation_enabled(
     return navigation_enabled
 
 
+def validated_we_completion_configuration(
+        accessible_scope_verified: bool,
+        required_fresh_revisions: int):
+    """Validate the explicit software-only completion confidence contract."""
+    if not isinstance(accessible_scope_verified, bool):
+        raise ValueError('WE-Bereichsnachweis muss bool sein')
+    try:
+        policy = CompletionPolicy(
+            required_fresh_observations=required_fresh_revisions)
+    except ValueError as error:
+        raise ValueError(
+            'WE-Abschlussfenster muss eine positive Ganzzahl sein') from error
+    return accessible_scope_verified, policy
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -788,6 +816,12 @@ class ExploreNode(Node):
         self._wohnungserkundung_navigation_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_navigation_enabled', False).value)
+        self._wohnungserkundung_accessible_scope_verified = (
+            self.declare_parameter(
+                'wohnungserkundung_accessible_scope_verified', False).value)
+        self._wohnungserkundung_completion_required_revisions = (
+            self.declare_parameter(
+                'wohnungserkundung_completion_required_revisions', 3).value)
         self._wohnungserkundung_evidence_clearance = float(
             self.declare_parameter(
                 'wohnungserkundung_evidence_clearance_m', 0.28).value)
@@ -1018,6 +1052,13 @@ class ExploreNode(Node):
                 self._wohnungserkundung_navigation_enabled,
             )
         )
+        (
+            self._wohnungserkundung_accessible_scope_verified,
+            self._wohnungserkundung_completion_policy,
+        ) = validated_we_completion_configuration(
+            self._wohnungserkundung_accessible_scope_verified,
+            self._wohnungserkundung_completion_required_revisions,
+        )
         if self._wohnungserkundung_policy_enabled:
             self._wohnungserkundung_evidence_policy = (
                 FrontierTaskEvidencePolicy(
@@ -1043,6 +1084,8 @@ class ExploreNode(Node):
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
             self._wohnungserkundung_stateful_assessment = None
+            self._wohnungserkundung_policy_snapshot = None
+            self._wohnungserkundung_completion_assessment = None
             self._wohnungserkundung_status_extension = (
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
@@ -1612,6 +1655,7 @@ class ExploreNode(Node):
                 with self._wohnungserkundung_runtime_lock:
                     self._wohnungserkundung_status_extension = unavailable
                     self._wohnungserkundung_navigation_snapshot = None
+                    self._wohnungserkundung_policy_snapshot = None
                 if self._wohnungserkundung_policy_fault != fault:
                     self.get_logger().error(
                         'Passive Wohnungserkundungs-Policy bleibt ohne '
@@ -1634,9 +1678,18 @@ class ExploreNode(Node):
                                 'active')
                         elif consumed_intent_id == intent.intent_id:
                             extension['goal_candidate']['state'] = 'consumed'
+                    completion = (
+                        getattr(
+                            self,
+                            '_wohnungserkundung_completion_assessment',
+                            None))
+                    if completion is not None:
+                        extension['runtime_result'] = (
+                            build_we_status_extension(completion))
                     self._wohnungserkundung_status_extension = extension
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
+                    self._wohnungserkundung_policy_snapshot = stateful
                     self._wohnungserkundung_policy_fault = None
 
     # ======================= Karten-Eingang =============================
@@ -3756,7 +3809,26 @@ class ExploreNode(Node):
         """Run one bounded exploration and own every child Nav2 goal."""
         try:
             result = self._execute_reserved(goal_handle)
-            if goal_handle.is_cancel_requested or 'abgebrochen' in result.message:
+            completion = None
+            if getattr(self, '_wohnungserkundung_navigation_enabled', False):
+                with self._wohnungserkundung_runtime_lock:
+                    completion = (
+                        getattr(
+                            self,
+                            '_wohnungserkundung_completion_assessment',
+                            None))
+            if completion is not None:
+                projection = project_completion_for_legacy(completion)
+                state = projection.legacy_status_state
+                self._status_phase = {
+                    ExplorationResultState.COMPLETE_ACCESSIBLE: 'complete',
+                    ExplorationResultState.PARTIAL: 'partial',
+                    ExplorationResultState.ABORTED: 'failed',
+                    ExplorationResultState.CANCELED: 'canceled',
+                    ExplorationResultState.IN_PROGRESS: 'running',
+                }[completion.state]
+            elif goal_handle.is_cancel_requested or (
+                    'abgebrochen' in result.message):
                 state = 'canceled'
                 self._status_phase = 'canceled'
             elif result.success and self._coverage_complete:
@@ -3897,6 +3969,75 @@ class ExploreNode(Node):
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = None
 
+    def _store_wohnungserkundung_completion(self, completion):
+        """Publish one immutable completion view beneath the existing status."""
+        with self._wohnungserkundung_runtime_lock:
+            self._wohnungserkundung_completion_assessment = completion
+            extension = dict(getattr(
+                self, '_wohnungserkundung_status_extension', {}))
+            extension['runtime_result'] = build_we_status_extension(completion)
+            self._wohnungserkundung_status_extension = extension
+
+    def _observe_wohnungserkundung_completion(self, session, stateful):
+        """Consume each exact stateful map revision at most once."""
+        passive = stateful.passive
+        if session is None:
+            session = ExplorationCompletionSession(
+                passive.context, self._wohnungserkundung_completion_policy)
+        elif session.latest_revision is not None and (
+                passive.source_map_revision <= session.latest_revision):
+            return session, None
+        with self._wohnungserkundung_runtime_lock:
+            active_child = self._wohnungserkundung_active_child
+        result = session.observe(CompletionObservation(
+            observation_id=(
+                f'runtime-completion-{passive.source_map_revision}'),
+            context=passive.context,
+            map_revision=passive.source_map_revision,
+            assessment=stateful,
+            accessible_scope=(
+                AccessibleScopeState.VERIFIED
+                if self._wohnungserkundung_accessible_scope_verified
+                else AccessibleScopeState.UNVERIFIED),
+            child_navigation=(
+                ChildNavigationState.IDLE
+                if active_child is None else ChildNavigationState.ACTIVE),
+            termination=TerminationCause.NONE,
+            reason='runtime_policy_observation',
+        ))
+        self._store_wohnungserkundung_completion(result)
+        return session, result
+
+    def _finish_wohnungserkundung_completion(
+            self, goal_handle, completion, reached_goals):
+        """Apply the documented additive projection to the legacy Action."""
+        projection = project_completion_for_legacy(completion)
+        result = ExploreArea.Result()
+        result.success = bool(projection.legacy_action_success)
+        result.message = {
+            ExplorationResultState.COMPLETE_ACCESSIBLE: (
+                'Zugaenglicher Erkundungsbereich durch mehrere frische '
+                'Kartenrevisionen abgeschlossen'),
+            ExplorationResultState.PARTIAL: (
+                'Wohnungserkundungsbudget erreicht; belegter Teilstand, '
+                'kein Vollabschluss'),
+            ExplorationResultState.ABORTED: (
+                f'Wohnungserkundung sicher abgebrochen: {completion.reason}'),
+            ExplorationResultState.CANCELED: (
+                'Wohnungserkundung durch Nutzer storniert'),
+        }[completion.state]
+        if completion.state is ExplorationResultState.COMPLETE_ACCESSIBLE:
+            self._coverage_complete = True
+            goal_handle.succeed()
+        elif completion.state is ExplorationResultState.PARTIAL:
+            goal_handle.succeed()
+        elif completion.state is ExplorationResultState.ABORTED:
+            goal_handle.abort()
+        else:
+            goal_handle.canceled()
+        self._store_wohnungserkundung_completion(completion)
+        return self._finish_result(result, reached_goals)
+
     def _execute_wohnungserkundung_navigation(
             self, goal_handle, overall_timeout):
         """Run the opt-in WE child loop without legacy frontier competition."""
@@ -3909,13 +4050,14 @@ class ExploreNode(Node):
         with self._wohnungserkundung_runtime_lock:
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_consumed_intent_id = None
+            self._wohnungserkundung_completion_assessment = None
         self._status_phase = 'we_waiting_for_goal'
         self._status_message = (
             'Wohnungserkundung aktiv; warte auf aktuellen Zielkandidaten.')
         self._publish_status('running')
         started = time.monotonic()
-        result = ExploreArea.Result()
         navigation_session = None
+        completion_session = None
         reached_goals = 0
         attempted_goals = 0
 
@@ -3924,21 +4066,51 @@ class ExploreNode(Node):
                 overall_timeout > 0.0
                 and time.monotonic() - started >= overall_timeout)
 
+        def terminate(cause, reason):
+            if completion_session is None:
+                completion = completion_from_termination(
+                    cause,
+                    reason,
+                    policy=self._wohnungserkundung_completion_policy,
+                    return_result=ReturnResultState.NOT_REQUESTED,
+                )
+            else:
+                completion = completion_session.terminate(
+                    cause,
+                    reason,
+                    return_result=ReturnResultState.NOT_REQUESTED,
+                )
+            return self._finish_wohnungserkundung_completion(
+                goal_handle, completion, reached_goals)
+
         while rclpy.ok():
             if goal_handle.is_cancel_requested:
-                goal_handle.canceled()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundung durch Nutzer abgebrochen; '
-                    'kein aktives Kindziel')
-                return self._finish_result(result, reached_goals)
+                return terminate(
+                    TerminationCause.USER_CANCELED,
+                    'user_canceled_without_active_child')
             if overall_expired():
-                goal_handle.abort()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundungsbudget erreicht; Teilstand, kein '
-                    'Vollabschluss')
-                return self._finish_result(result, reached_goals)
+                return terminate(
+                    TerminationCause.BUDGET_EXHAUSTED,
+                    'overall_budget_exhausted')
+
+            with self._wohnungserkundung_runtime_lock:
+                policy_snapshot = getattr(
+                    self, '_wohnungserkundung_policy_snapshot', None)
+            if policy_snapshot is not None:
+                try:
+                    completion_session, completion = (
+                        self._observe_wohnungserkundung_completion(
+                            completion_session, policy_snapshot))
+                except Exception as error:
+                    return terminate(
+                        TerminationCause.SYSTEM_FAILURE,
+                        f'completion_observation_{type(error).__name__}')
+                if (
+                        completion is not None
+                        and completion.state is (
+                            ExplorationResultState.COMPLETE_ACCESSIBLE)):
+                    return self._finish_wohnungserkundung_completion(
+                        goal_handle, completion, reached_goals)
 
             target = self._current_wohnungserkundung_navigation_target()
             if target is None:
@@ -3949,19 +4121,13 @@ class ExploreNode(Node):
                 navigation_session = ExplorationNavigationSession(
                     intent.context)
             elif navigation_session.context != intent.context:
-                goal_handle.abort()
-                result.success = False
-                result.message = (
-                    'Kartenkontext wechselte waehrend der '
-                    'Wohnungserkundung; neuer Auftrag erforderlich')
-                return self._finish_result(result, reached_goals)
+                return terminate(
+                    TerminationCause.SYSTEM_FAILURE,
+                    'map_context_changed')
             if attempted_goals >= self._max_frontier_goals:
-                goal_handle.abort()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundungs-Ziellimit erreicht; Teilstand, kein '
-                    'Vollabschluss')
-                return self._finish_result(result, reached_goals)
+                return terminate(
+                    TerminationCause.BUDGET_EXHAUSTED,
+                    'goal_budget_exhausted')
 
             self._status_phase = 'we_frontier_navigation'
             self._status_message = (
@@ -4001,24 +4167,16 @@ class ExploreNode(Node):
                 time.sleep(self._replan_period_s)
                 continue
             if run.stop_cause is NavigationStopCause.USER_CANCELED:
-                goal_handle.canceled()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundung und Nav2-Kindziel durch Nutzer '
-                    'abgebrochen')
+                cause = TerminationCause.USER_CANCELED
+                reason = 'user_canceled_active_child'
             elif run.stop_cause is NavigationStopCause.BUDGET_EXHAUSTED:
-                goal_handle.abort()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundungsbudget waehrend Kindziel erreicht; '
-                    'Teilstand, kein Vollabschluss')
+                cause = TerminationCause.BUDGET_EXHAUSTED
+                reason = 'child_navigation_budget_exhausted'
             else:
-                goal_handle.abort()
-                result.success = False
-                result.message = (
-                    'Wohnungserkundungs-Kindziel sicher abgebrochen: '
-                    f'{run.navigation_status}')
-            return self._finish_result(result, reached_goals)
+                cause = TerminationCause.SYSTEM_FAILURE
+                reason = f'child_navigation_{run.navigation_status}'
+            return terminate(cause, reason)
+        return terminate(TerminationCause.SYSTEM_FAILURE, 'ros_shutdown')
 
     def _execute_reserved(self, goal_handle):
         req = goal_handle.request

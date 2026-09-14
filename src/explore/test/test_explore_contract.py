@@ -36,11 +36,18 @@ from explore.explore_node import (  # noqa: E402
     validated_shadow_frontier_task_feed,
     validated_shadow_raw_map_capacity,
     validated_passive_policy_enabled,
+    validated_we_completion_configuration,
     validated_we_navigation_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
 from explore.portal_memory import PortalMapContext  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
+from explore.exploration_completion import (  # noqa: E402
+    CompletionAssessment,
+    CompletionPolicy,
+    ExplorationResultState,
+    ReturnResultState,
+)
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
@@ -917,6 +924,8 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
         '/explore/region_graph/status_json')
     assert parameters['wohnungserkundung_policy_enabled'] is False
     assert parameters['wohnungserkundung_navigation_enabled'] is False
+    assert parameters['wohnungserkundung_accessible_scope_verified'] is False
+    assert parameters['wohnungserkundung_completion_required_revisions'] == 3
     assert parameters['wohnungserkundung_evidence_clearance_m'] == 0.28
     assert parameters['wohnungserkundung_robot_seed_search_m'] == 0.75
     assert parameters['wohnungserkundung_task_cell_search_m'] == 0.60
@@ -952,6 +961,18 @@ def test_we_navigation_requires_complete_explicit_opt_in_chain():
             validated_we_navigation_enabled(*values)
 
 
+def test_we_completion_requires_explicit_scope_and_positive_window():
+    verified, policy = validated_we_completion_configuration(True, 3)
+    assert verified is True
+    assert policy.required_fresh_observations == 3
+    verified, policy = validated_we_completion_configuration(False, 1)
+    assert verified is False
+    assert policy.required_fresh_observations == 1
+    for values in ((1, 3), (False, 0), (False, True)):
+        with pytest.raises(ValueError):
+            validated_we_completion_configuration(*values)
+
+
 def test_we_execute_branch_precedes_legacy_frontier_state_mutation():
     node = ExploreNode.__new__(ExploreNode)
     node._wohnungserkundung_navigation_enabled = True
@@ -970,6 +991,121 @@ def test_we_execute_branch_precedes_legacy_frontier_state_mutation():
         ) else None)
 
     assert node._execute_reserved(handle) is sentinel
+
+
+@pytest.mark.parametrize("state, terminal_method, success, complete", [
+    (ExplorationResultState.COMPLETE_ACCESSIBLE, 'succeed', True, True),
+    (ExplorationResultState.PARTIAL, 'succeed', False, False),
+    (ExplorationResultState.ABORTED, 'abort', False, False),
+    (ExplorationResultState.CANCELED, 'canceled', False, False),
+])
+def test_we_completion_projects_distinct_action_terminals(
+        state, terminal_method, success, complete):
+    calls = []
+    handle = SimpleNamespace(
+        succeed=lambda: calls.append('succeed'),
+        abort=lambda: calls.append('abort'),
+        canceled=lambda: calls.append('canceled'),
+    )
+    completion = CompletionAssessment(
+        state=state,
+        reason='test_terminal',
+        qualifying_observation_count=2,
+        required_observation_count=3,
+        blocker_codes=(),
+        map_saved=None,
+        return_result=ReturnResultState.NOT_REQUESTED,
+        terminal=True,
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._coverage_complete = False
+    node._map = None
+
+    result = node._finish_wohnungserkundung_completion(
+        handle, completion, 4)
+
+    assert calls == [terminal_method]
+    assert result.success is success
+    assert result.frontiers_visited == 4
+    assert node._coverage_complete is complete
+    assert node._wohnungserkundung_status_extension[
+        'runtime_result']['result_state'] == state.value
+
+
+def test_we_runtime_budget_returns_successful_action_with_partial_payload(
+        monkeypatch):
+    calls = []
+    clock = iter((10.0, 11.0))
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = None
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
+    node._map = None
+    node._publish_status = lambda state: calls.append(f'publish:{state}')
+    handle = SimpleNamespace(
+        is_cancel_requested=False,
+        succeed=lambda: calls.append('succeed'),
+        abort=lambda: calls.append('abort'),
+        canceled=lambda: calls.append('canceled'),
+    )
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+
+    result = node._execute_wohnungserkundung_navigation(handle, 0.5)
+
+    assert result.success is False
+    assert calls == ['publish:running', 'succeed']
+    assert node._wohnungserkundung_completion_assessment.state is (
+        ExplorationResultState.PARTIAL)
+
+
+def test_we_runtime_completes_before_requesting_another_navigation_target(
+        monkeypatch):
+    calls = []
+    completion = CompletionAssessment(
+        state=ExplorationResultState.COMPLETE_ACCESSIBLE,
+        reason='fresh_observation_window_satisfied',
+        qualifying_observation_count=3,
+        required_observation_count=3,
+        blocker_codes=(),
+        map_saved=None,
+        return_result=ReturnResultState.NOT_REQUESTED,
+        terminal=True,
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = object()
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
+    node._map = None
+    node._publish_status = lambda state: calls.append(f'publish:{state}')
+    node._observe_wohnungserkundung_completion = (
+        lambda session, snapshot: (object(), completion))
+    node._current_wohnungserkundung_navigation_target = lambda: (
+        (_ for _ in ()).throw(
+            AssertionError('Nach Vollabschluss darf kein Ziel entstehen')))
+    handle = SimpleNamespace(
+        is_cancel_requested=False,
+        succeed=lambda: calls.append('succeed'),
+        abort=lambda: calls.append('abort'),
+        canceled=lambda: calls.append('canceled'),
+    )
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+
+    result = node._execute_wohnungserkundung_navigation(handle, 5.0)
+
+    assert result.success is True
+    assert calls == ['publish:running', 'succeed']
+    assert node._coverage_complete is True
 
 
 def test_exact_unconsumed_we_target_is_withheld_after_revision_change():
