@@ -116,6 +116,9 @@ def populated_source():
         graph=graph.snapshot(),
         portals=memory.snapshots(),
         reachability=memory.reachability_snapshots(),
+        source_map_age_seconds=0.5,
+        portal_memory_age_seconds=0.4,
+        region_graph_age_seconds=0.3,
     )
 
 
@@ -129,6 +132,7 @@ def empty_source():
         graph=graph.snapshot(),
         portals=memory.snapshots(),
         reachability=memory.reachability_snapshots(),
+        source_map_age_seconds=0.0,
     )
 
 
@@ -146,6 +150,12 @@ def test_shadow_status_is_versioned_passive_complete_and_geometry_free():
     }
     assert payload["source"]["stale"] is False
     assert payload["source"]["stale_sources"] == []
+    assert payload["source"]["source_map"] == {
+        "age_seconds": 0.5,
+        "lag_revisions": 0,
+        "revision": 5,
+        "state": "fresh",
+    }
     assert payload["summary"] == {
         "blocked_reachability_side_count": 1,
         "completed_task_count": 1,
@@ -199,9 +209,11 @@ def test_revision_lag_marks_each_stale_source_explicitly():
     assert payload["source"]["stale_sources"] == [
         "portal_memory", "region_graph"]
     assert payload["source"]["portal_memory"] == {
-        "lag_revisions": 3, "revision": 4, "state": "stale"}
+        "age_seconds": 0.4, "lag_revisions": 3,
+        "revision": 4, "state": "stale"}
     assert payload["source"]["region_graph"] == {
-        "lag_revisions": 3, "revision": 4, "state": "stale"}
+        "age_seconds": 0.3, "lag_revisions": 3,
+        "revision": 4, "state": "stale"}
 
 
 def test_policy_can_tighten_revision_freshness_without_changing_input():
@@ -221,11 +233,97 @@ def test_empty_sources_are_missing_not_fresh_or_complete():
     assert payload["source"]["stale"] is True
     assert payload["source"]["stale_sources"] == [
         "portal_memory", "region_graph"]
+    assert payload["source"]["source_map"]["state"] == "fresh"
     assert payload["source"]["portal_memory"]["state"] == "missing"
     assert payload["source"]["region_graph"]["state"] == "missing"
     assert payload["summary"]["portal_count"] == 0
     assert payload["summary"]["region_count"] == 0
     assert payload["summary"]["open_task_count"] == 0
+
+
+def test_equal_revisions_do_not_hide_frozen_sources():
+    source = replace(
+        populated_source(),
+        source_map_revision=4,
+        source_map_age_seconds=10.0,
+        portal_memory_age_seconds=10.0,
+        region_graph_age_seconds=10.0,
+    )
+    policy = ShadowStatusPolicy(
+        maximum_source_map_age_seconds=1.0,
+        maximum_portal_memory_age_seconds=1.0,
+        maximum_region_graph_age_seconds=1.0,
+    )
+
+    payload = json.loads(build_shadow_status_json(source, policy))
+
+    assert payload["source"]["stale"] is True
+    assert payload["source"]["stale_sources"] == [
+        "source_map", "portal_memory", "region_graph"]
+    for name in payload["source"]["stale_sources"]:
+        assert payload["source"][name]["lag_revisions"] == 0
+        assert payload["source"][name]["age_seconds"] == 10.0
+        assert payload["source"][name]["state"] == "stale"
+
+
+def test_missing_age_is_visible_even_when_revision_is_current():
+    source = replace(
+        populated_source(),
+        source_map_age_seconds=None,
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=None,
+    )
+
+    payload = json.loads(build_shadow_status_json(source))
+
+    assert payload["source"]["stale_sources"] == [
+        "source_map", "portal_memory", "region_graph"]
+    assert payload["source"]["source_map"]["state"] == "missing"
+    assert payload["source"]["portal_memory"]["state"] == "missing"
+    assert payload["source"]["region_graph"]["state"] == "missing"
+
+
+def test_each_age_limit_is_evaluated_independently():
+    source = replace(
+        populated_source(),
+        source_map_age_seconds=1.1,
+        portal_memory_age_seconds=1.2,
+        region_graph_age_seconds=1.3,
+    )
+    policy = ShadowStatusPolicy(
+        maximum_source_map_age_seconds=1.0,
+        maximum_portal_memory_age_seconds=1.2,
+        maximum_region_graph_age_seconds=1.4,
+    )
+
+    payload = json.loads(build_shadow_status_json(source, policy))
+
+    assert payload["source"]["source_map"]["state"] == "stale"
+    assert payload["source"]["portal_memory"]["state"] == "fresh"
+    assert payload["source"]["region_graph"]["state"] == "fresh"
+    assert payload["source"]["stale_sources"] == ["source_map"]
+
+
+@pytest.mark.parametrize("field,value", [
+    ("source_map_age_seconds", -0.1),
+    ("source_map_age_seconds", float("nan")),
+    ("portal_memory_age_seconds", float("inf")),
+    ("region_graph_age_seconds", True),
+])
+def test_invalid_or_backward_age_fails_closed(field, value):
+    with pytest.raises(ShadowStatusError):
+        replace(populated_source(), **{field: value})
+
+
+def test_age_without_component_revision_fails_closed():
+    source = replace(
+        empty_source(),
+        portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0,
+    )
+
+    with pytest.raises(ShadowStatusError):
+        build_shadow_status_json(source)
 
 
 @pytest.mark.parametrize("change", [
@@ -328,6 +426,9 @@ def test_serialized_byte_limit_fails_closed():
 
 @pytest.mark.parametrize("factory", [
     lambda: ShadowStatusPolicy(maximum_revision_lag=-1),
+    lambda: ShadowStatusPolicy(maximum_source_map_age_seconds=-1.0),
+    lambda: ShadowStatusPolicy(maximum_portal_memory_age_seconds=float("nan")),
+    lambda: ShadowStatusPolicy(maximum_region_graph_age_seconds=float("inf")),
     lambda: ShadowStatusPolicy(max_serialized_bytes=0),
     lambda: ShadowStatusSource(
         CONTEXT, True, None, empty_source().graph, (), ()),
