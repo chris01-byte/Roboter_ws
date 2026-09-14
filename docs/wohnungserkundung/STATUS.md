@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AG)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AH)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AG – synthetischer Rohkarten-Lastprüfer lokal softwaregeprüft, zur Review.**
-Der neue eigenständige Helfer prüft die doppelt opt-in passive Explorernaht in
-einer zuvor zwei Sekunden lang leer beobachteten DDS-Domain. Potenziell aktive
-Schnittstellen sind auf private Testtopics umgebogen; Action und Twist bleiben
-bei null. Eine vollständige lokale Matrix bis 512×512 sowie ein einzelner
-Vier-Millionen-Zellen-Grenzfall belegten Exaktjoin, Kapazität,
-Duplikaterkennung, Verdrängung, begrenzte Laufzeit und Prozess-RSS. Keine
-Produktionsnode-, Launch- oder Standardparameterdatei wurde geändert.
+**WE-M2/AH – kombinierte Szenarien und HWT-Abhängigkeit inventarisiert, zur Review.**
+Die reine Graphlogik belegt Startraum–Flur–Zimmer, Flurrückkehr, offene
+Einregionflächen, Portalwiedererkennung, Schleifen-Merge sowie Split/Merge mit
+Aufgaben bereits einzeln. Nicht belegt ist die durchgängige Kette von
+synthetischer Geometrie über Detektor und Portalgedächtnis in diesen Graphen.
+Der hierfür nötige Detektor für Türen innerhalb bereits verbundenen Freiraums
+liegt weiterhin nur im HWT-Commit `1d91229`; die kleinste isolierbare Übernahme
+betrifft zwei Dateien und keinerlei Runtime oder Fahrsoftware.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -26,11 +26,12 @@ zugeführt. Laufzeit und Speicher sind jetzt für wachsende synthetische Karten
 lokal begrenzt beobachtet, aber noch nicht auf dem Jetson unter dessen realer
 Parallel- und SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AH:** Ausschließlich die noch fehlenden
-kombinierten WE-M2-Szenarien gegen vorhandene reine Detektor-/Graph-Funktionen
-abgleichen und die kleinste synthetische Fixture-Naht festlegen. Zunächst
-Quellen, heutige Testabdeckung und eindeutige Wahrheitszuordnungen in dieser
-STATUS.md dokumentieren; keine Runtime-, Zielwahl-, Geräte- oder Fahränderung.
+**Nächster abgegrenzter Schritt WE-M2/AI, nach ausdrücklicher Abstimmung der
+HWT-Teilübernahme:** Ausschließlich `find_connected_clearance_portals()` und
+seine vier reinen Tests aus HWT `1d91229` auf die aktuelle gestapelte Basis
+übertragen. Betroffen sind nur `portal_planning.py`, dessen Test und diese
+STATUS.md; keine Explorer-Node-, Parameter-, Launch-, Zielwahl- oder
+Fahranbindung. Ohne diese Abstimmung keine funktionale Übernahme.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -86,6 +87,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AE `feature/we-m2ae-passive-raw-map-runtime` | Gestapelter doppelt opt-in passiver Rohkartenadapter im Explorer mit gemeinsamer Identität, isoliertem Schattenfehler und getrennten Diagnosen; Node, Standardparameter, Tests und Status, kein Deployment. |
 | WE-M2/AF `docs/we-m2af-raw-map-load-probe-plan` | Gestapelte Quellen-, Sicherheits-, Mess- und Schnittstellenentscheidung für genau einen gerätefreien synthetischen Rohkarten-Lastprüfer; nur diese STATUS.md. |
 | WE-M2/AG `chore/we-m2ag-raw-map-load-probe` | Gestapelter gerätefreier synthetischer DDS-Prüfer für Wire-Digest, Exaktjoin, begrenzte Kapazität/Laufzeit/Ausgabe und Explorer-RSS samt reinen Tests und Status; kein Deployment. |
+| WE-M2/AH `docs/we-m2ah-region-scenario-fixtures` | Gestapelte Abdeckungs- und Nahtinventur der WE-M2-Szenarien mit exakt abgegrenzter reiner HWT-Detektorabhängigkeit; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -420,6 +422,82 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AH: kombinierte Szenarien und HWT-Naht inventarisiert
+
+**Bestandsabgleich:** Geprüft wurden die aktuellen reinen Schnittstellen und
+Tests von `portal_planning`, `portal_memory`, `portal_plan_adapter`,
+`portal_source_adapter`, `region_graph`, `region_graph_shadow` und
+`region_graph_shadow_lifecycle` sowie der HWT-Stand `1d91229`. Die heutige
+Abdeckung gegenüber den WE-M2-Pflichttests ist:
+
+| WE-M2-Szenario | Bereits belegte Teilfunktion | Fehlender kombinierter Nachweis |
+|---|---|---|
+| Startraum–Flur–Zimmer und Flurrückkehr | `test_start_room_hall_room_and_return_reuse_the_same_hall_region` führt zwei bestätigte Portale, drei Regionen und die Rückkehr in exakt denselben Flur. | Portale sind direkt als qualifizierte Wahrheit erzeugt; keine synthetische Kartengeometrie oder Detektorausgabe fließt ein. |
+| Verbundener Freiraum mit offenen Türen | HWT `find_connected_clearance_portals()` erkennt eine gemessene schmale Tür und verwirft offenen Einraum, kleine Nische und Wand mit Umweg. | Funktion und vier Tests fehlen auf der aktuellen gestapelten Basis; keine Verbindung zu Portalgedächtnis/Graph. |
+| L-Flur und Schleife | Graph-Merge rewritet Topologie, Traversals und Aliase deterministisch; Rückweg über eine umgeschriebene Verbindung ist getestet. | Keine L-förmige Rasterfixture, keine Detektorfolge und kein geometrisch geschlossener Portalring. |
+| Offener Wohnbereich | `test_open_area_without_confirmed_portal_remains_one_region` verhindert eine erfundene zweite Region; Merge kann Teilregionen wieder vereinigen. | Kein Detektor-Negativfall auf dieser Basis und keine gemeinsame Geometrie-/Graphfixture. |
+| Möbelunterteilung | Portalgedächtnis bestätigt wiederholte Möbelengstellen ohne qualifizierte Strukturevidenz niemals. HWT verwirft eine kleine Nische. | HWT-Negativdetektor fehlt; keine kombinierte Prüfung, dass Graph und Aufgabenbestand unverändert bleiben. |
+| Kartenwachstum, Ursprungsrotation und Korrektur | Kartenstatus korreliert Wachstum; Portalgedächtnis prüft metrische Normalisierung und Achsrotation; Graph prüft Merge/Split. | Kein einziger Ablauf bindet dieselben Wahrheitsportale und Aufgaben über geänderten Wire-Snapshot, Ursprung und Korrektur hinweg. |
+| Raum gesehen, nicht betreten | Eine bestätigte Portalverbindung erzeugt die Gegenseite `seen=true`, `entered=false`; eine unbestätigte Durchfahrt ändert weder Region noch Eintritt. | Noch nicht gemeinsam aus einer Detektorfixture und expliziter Traversalwahrheit geprüft. |
+| Split/Merge ohne verlorene Aufgaben | Expliziter Split partitioniert Portalenden, Zustände und Aufgaben atomar; anschließender Merge stellt eine Region ohne Referenzverlust her. | Kein vorgeschalteter geometrischer Korrekturfall; Split-/Merge-Entscheidung bleibt wie vorgesehen externer Wahrheitseingang. |
+
+Die Einzelnachweise sind belastbare Modultests, aber kein Ersatz für die
+geforderte kombinierte Szenariomatrix. Besonders wichtig: `PortalBridge`
+enthält Rasterendpunkte und Kosten-/Flächengrößen, aber keine Kartenidentität,
+Strukturevidenz oder stabile Portal-ID. `PortalPlanCandidate` trägt metrische
+Endpunkte und Revision, wird jedoch absichtlich nur als
+`PortalStructuralEvidence.INSUFFICIENT` normalisiert. Der Schattenbesitzer
+besitzt ausdrücklich keine API zum Qualifizieren, zum Bestätigen einer
+Durchfahrt oder zum Anwenden von Split, Merge und Aufgaben. Deshalb können
+Portalpläne heute keine Graphverbindung erzeugen; dies fail-closed zu umgehen
+wäre eine neue Gesamtlösung, nicht eine Testfixture.
+
+**HWT-Abhängigkeit:** Auf `origin/codex/hwt601-encoder-shadow` ergänzt Commit
+`1d91229` den reinen `find_connected_clearance_portals()` in
+`src/explore/explore/portal_planning.py` und vier zugehörige Fälle in
+`src/explore/test/test_portal_planning.py`. Gegen Main umfasst die reine
+Zweidateien-Teilmenge 112 hinzugefügte/geänderte Quell- und 54 Testzeilen
+(insgesamt 162 Diff-Zeilen einschließlich kleiner Modultextänderungen) und
+verwendet nur bereits vorhandene NumPy-/SciPy-Funktionen. Sie erodiert nur eine
+Analysemaske, lässt die reale Karte/Costmap unverändert und gibt ausschließlich
+`PortalBridge`-Geometrie zurück.
+
+Der vollständige HWT-Commit verändert dagegen 12 Dateien mit 1.875
+Einfügungen, darunter Explorer-Node, Fahrprofile, Portalpriorität und
+Türdurchfahrt. Diese funktionale Gesamtheit ist weder nötig noch als Teil von
+WE-M2/AH zulässig. Eine gezielte Übernahme darf daher ausschließlich die reine
+Funktion und ihre vier Tests betreffen. Auch diese Übernahme ist gemäß
+Agentenauftrag vorab ausdrücklich abzustimmen, weil sie aus dem divergenten
+HWT-Zweig stammt.
+
+**Kleinste Fixture-Naht danach:** Erst nach dem reinen Detektorschritt soll
+eine einzelne neue Testdatei synthetische Wahrheitsfälle komponieren. Sie darf
+Detektorresultate in metrische Testpunkte umrechnen, muss
+Strukturqualifikation und Traversalentscheidung aber ausdrücklich als getrennte
+Fixture-Wahrheit markieren. Sie darf diese Belege weder aus Geometrie noch aus
+einem Nav2-Ergebnis erfinden. Erwartete Portal-, Regions-, Alias-, Aufgaben- und
+Eintritts-IDs werden pro Revision vollständig festgehalten. Produktionsmodule
+erhalten dafür zunächst keine neue API.
+
+**Geänderte Dateien / Prüfung:** Nur diese STATUS.md. Verglichen wurden die
+oben genannten aktuellen Tests und APIs, der reine HWT-Diff sowie dessen
+Einbettung im Gesamtcommit. Die sieben betroffenen reinen Testdateien bestanden
+gemeinsam mit **324 passed**; `git diff --check` bestand. Es wurden keine
+ROS-Nodes, Geräte, Karten, Bags, Aktoren oder Fahrpfade gestartet; dies ist
+keine Softwareübernahme, Lastmessung, Jetson- oder Hardwareabnahme.
+
+**Rückfall:** Den einzelnen WE-M2/AH-Dokumentationscommit zurücknehmen. Keine
+Runtime-, Installations- oder Gerätewirkung.
+
+**Nächster abgegrenzter Schritt WE-M2/AI, nur nach ausdrücklicher Zustimmung:**
+Aus HWT `1d91229` ausschließlich `find_connected_clearance_portals()` samt
+privatem Bresenham-Helfer und genau den vier Positiv-/Negativtests in die
+aktuelle gestapelte Basis übertragen. Prüfplan: vier fokussierte Fälle,
+vollständige Portalplanung, gesamte Explorer-Suite, angrenzende Pakete,
+temporärer Build und statische Prüfungen. Rückfall: dieser eine reine Commit;
+die Funktion bleibt ohne Node-Aufruf ohnehin ohne Runtimewirkung. Keine
+Explorer-Node-, Konfigurations-, Launch-, Ziel-, Command- oder Fahränderung.
 
 ### 2026-09-14 – WE-M2/AG: gerätefreier Rohkarten-Lastprüfer
 
