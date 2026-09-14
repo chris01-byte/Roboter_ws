@@ -1,11 +1,13 @@
 import math
 from pathlib import Path
 import sys
+import threading
 import time
 from types import SimpleNamespace
 
 import numpy as np
 from nav_msgs.msg import OccupancyGrid
+from std_msgs.msg import String
 import yaml
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +30,10 @@ from explore.explore_node import (  # noqa: E402
     stamp_coverage,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
+from explore.region_graph_shadow_lifecycle import (  # noqa: E402
+    RegionGraphShadowNotReadyError,
+)
+import explore.explore_node as explore_node_module  # noqa: E402
 
 
 def _grid(width=80, height=80, resolution=0.05):
@@ -874,3 +880,189 @@ def test_door_profile_uses_lidar_truth_and_encoder_only_as_budget():
     assert 'match_executor.submit(' in source
     assert 'match_executor.shutdown(wait=True, cancel_futures=True)' in source
     assert 'self._drive_forward_odom(' not in source
+
+
+def test_region_graph_shadow_is_disabled_and_separate_by_default():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'explore_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+    source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
+
+    assert parameters['region_graph_shadow_enabled'] is False
+    assert parameters['region_graph_shadow_session_id'] == ''
+    assert parameters['region_graph_shadow_start_observation_id'] == ''
+    assert parameters['region_graph_shadow_map_status_topic'] == (
+        '/robot_map_manager/status_json')
+    assert parameters['region_graph_shadow_status_topic'] == (
+        '/explore/region_graph/status_json')
+    assert parameters['region_graph_shadow_status_topic'] != (
+        parameters['status_topic'])
+    assert 'PortalPlanCandidate' not in source
+    assert '.observe_portal_plan(' not in source
+
+
+def test_disabled_region_graph_shadow_creates_no_interface():
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_enabled = False
+    node.create_publisher = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError('Publisher darf deaktiviert nicht entstehen'))
+    node.create_subscription = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError('Subscription darf deaktiviert nicht entstehen'))
+    node.create_timer = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError('Timer darf deaktiviert nicht entstehen'))
+
+    node._initialize_region_graph_shadow()
+
+    assert not hasattr(node, '_region_graph_shadow')
+
+
+def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
+    lifecycle_calls = []
+    interface_calls = []
+
+    class FakeLifecycle:
+        def __init__(self, *args):
+            lifecycle_calls.append(args)
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_enabled = True
+    node._region_graph_shadow_session_id = 'session-7'
+    node._region_graph_shadow_start_observation_id = 'start-7'
+    node._region_graph_shadow_map_status_topic = (
+        '/robot_map_manager/status_json')
+    node._region_graph_shadow_status_topic = (
+        '/explore/region_graph/status_json')
+    node._global_frame = 'map'
+    node._cb = object()
+    node.create_publisher = lambda *args, **kwargs: interface_calls.append(
+        ('publisher', args, kwargs)) or object()
+    node.create_subscription = lambda *args, **kwargs: interface_calls.append(
+        ('subscription', args, kwargs)) or object()
+    node.create_timer = lambda *args, **kwargs: interface_calls.append(
+        ('timer', args, kwargs)) or object()
+    monkeypatch.setattr(
+        explore_node_module, 'RegionGraphShadowLifecycle', FakeLifecycle)
+
+    node._initialize_region_graph_shadow()
+
+    assert lifecycle_calls == [('session-7', 'map', 'start-7')]
+    assert [call[0] for call in interface_calls] == [
+        'publisher', 'subscription', 'timer']
+    publisher_qos = interface_calls[0][1][2]
+    subscription_qos = interface_calls[1][1][3]
+    assert publisher_qos.history.name == 'KEEP_LAST'
+    assert publisher_qos.depth == 1
+    assert publisher_qos.durability.name == 'TRANSIENT_LOCAL'
+    assert publisher_qos.reliability.name == 'RELIABLE'
+    assert subscription_qos is publisher_qos
+    assert interface_calls[1][2]['callback_group'] is node._cb
+    assert interface_calls[2][1][0] == 1.0
+    assert interface_calls[2][2]['callback_group'] is node._cb
+    assert isinstance(node._region_graph_shadow_lock, type(threading.Lock()))
+    assert node._region_graph_shadow_fault is None
+
+
+def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
+    accepted = []
+    clock_calls = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        accept_map_status_json=lambda text, **kwargs: accepted.append(
+            (text, kwargs)))
+    monkeypatch.setattr(
+        explore_node_module.time,
+        'monotonic',
+        lambda: clock_calls.append(True) or 42.5,
+    )
+
+    node._on_region_graph_map_status(SimpleNamespace(data='{"schema": 1}'))
+
+    assert accepted == [(
+        '{"schema": 1}', {'received_monotonic_seconds': 42.5})]
+    assert len(clock_calls) == 1
+    assert node._region_graph_shadow_fault is None
+
+
+def test_region_graph_map_error_permanently_faults_only_shadow(monkeypatch):
+    lifecycle_calls = []
+    clock_calls = []
+    errors = []
+
+    def reject(*args, **kwargs):
+        lifecycle_calls.append((args, kwargs))
+        raise ValueError('epoch changed')
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        accept_map_status_json=reject)
+    node.get_logger = lambda: SimpleNamespace(error=errors.append)
+    monkeypatch.setattr(
+        explore_node_module.time,
+        'monotonic',
+        lambda: clock_calls.append(True) or 8.0,
+    )
+    message = SimpleNamespace(data='invalid')
+
+    node._on_region_graph_map_status(message)
+    node._on_region_graph_map_status(message)
+
+    assert len(lifecycle_calls) == 1
+    assert len(clock_calls) == 1
+    assert len(errors) == 1
+    assert 'ValueError: epoch changed' in node._region_graph_shadow_fault
+
+
+def test_region_graph_status_waits_without_fault_or_publication(monkeypatch):
+    publications = []
+    clock_calls = []
+
+    def not_ready(**kwargs):
+        raise RegionGraphShadowNotReadyError('waiting')
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(build_status_json=not_ready)
+    node._region_graph_shadow_pub = SimpleNamespace(
+        publish=publications.append)
+    monkeypatch.setattr(
+        explore_node_module.time,
+        'monotonic',
+        lambda: clock_calls.append(True) or 9.0,
+    )
+
+    node._publish_region_graph_shadow_status()
+
+    assert len(clock_calls) == 1
+    assert publications == []
+    assert node._region_graph_shadow_fault is None
+
+
+def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
+    build_calls = []
+    publications = []
+    clock_calls = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        build_status_json=lambda **kwargs: build_calls.append(kwargs) or '{}')
+    node._region_graph_shadow_pub = SimpleNamespace(
+        publish=publications.append)
+    monkeypatch.setattr(
+        explore_node_module.time,
+        'monotonic',
+        lambda: clock_calls.append(True) or 11.0,
+    )
+
+    node._publish_region_graph_shadow_status()
+
+    assert build_calls == [{'now_monotonic_seconds': 11.0}]
+    assert len(clock_calls) == 1
+    assert len(publications) == 1
+    assert isinstance(publications[0], String)
+    assert publications[0].data == '{}'
