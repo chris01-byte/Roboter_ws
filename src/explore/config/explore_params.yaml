@@ -25,6 +25,9 @@ explore_node:
     # Pfad verarbeitet vorerst nur Kartenmanagerstatus und hat keinen Anschluss
     # an Portalplanung, Zielwahl, Navigation oder Aktoren.
     region_graph_shadow_enabled: false
+    region_graph_shadow_raw_map_enabled: false
+    # 0 ist ein Sperrwert. Bei Aktivierung nach Messung explizit positiv setzen.
+    region_graph_shadow_raw_map_capacity: 0
     region_graph_shadow_session_id: ""
     region_graph_shadow_start_observation_id: ""
     region_graph_shadow_map_status_topic: "/robot_map_manager/status_json"

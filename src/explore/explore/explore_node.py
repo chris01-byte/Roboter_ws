@@ -76,6 +76,7 @@ from explore.portal_planning import (
     find_portal_bridges,
     front_lidar_corridor_check,
 )
+from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
@@ -368,6 +369,31 @@ def quaternion_yaw(q) -> float:
         1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 
 
+def validated_shadow_raw_map_capacity(
+        shadow_enabled: bool, raw_map_enabled: bool,
+        configured_capacity: int) -> Optional[int]:
+    """Return the explicit join capacity or keep the raw-map path absent."""
+    if not isinstance(shadow_enabled, bool) or not isinstance(
+            raw_map_enabled, bool):
+        raise ValueError('Schatten-Opt-ins muessen bool sein')
+    if (
+            isinstance(configured_capacity, bool)
+            or not isinstance(configured_capacity, int)
+            or configured_capacity < 0):
+        raise ValueError(
+            'Rohkartenkapazitaet muss eine nichtnegative Ganzzahl sein')
+    if raw_map_enabled:
+        if not shadow_enabled or configured_capacity <= 0:
+            raise ValueError(
+                'Rohkarten-Schatten braucht aktiven Regionsgraph und eine '
+                'explizit positive Kapazitaet')
+        return configured_capacity
+    if configured_capacity != 0:
+        raise ValueError(
+            'Deaktivierter Rohkarten-Schatten braucht Kapazitaet 0')
+    return None
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -613,6 +639,12 @@ class ExploreNode(Node):
             'status_topic', '/explore/status_json').value)
         self._region_graph_shadow_enabled = bool(self.declare_parameter(
             'region_graph_shadow_enabled', False).value)
+        self._region_graph_shadow_raw_map_enabled = bool(
+            self.declare_parameter(
+                'region_graph_shadow_raw_map_enabled', False).value)
+        self._region_graph_shadow_raw_map_capacity = int(
+            self.declare_parameter(
+                'region_graph_shadow_raw_map_capacity', 0).value)
         self._region_graph_shadow_session_id = str(self.declare_parameter(
             'region_graph_shadow_session_id', '').value).strip()
         self._region_graph_shadow_start_observation_id = str(
@@ -798,6 +830,13 @@ class ExploreNode(Node):
             raise ValueError(
                 'Aktiver Regionsgraph-Schatten braucht explizite IDs und '
                 'getrennte, nichtleere Topics')
+        self._region_graph_shadow_raw_map_join_capacity = (
+            validated_shadow_raw_map_capacity(
+                self._region_graph_shadow_enabled,
+                self._region_graph_shadow_raw_map_enabled,
+                self._region_graph_shadow_raw_map_capacity,
+            )
+        )
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -860,10 +899,15 @@ class ExploreNode(Node):
         """Create the isolated, map-only shadow path when explicitly enabled."""
         if not self._region_graph_shadow_enabled:
             return
+        lifecycle_arguments = {}
+        if self._region_graph_shadow_raw_map_join_capacity is not None:
+            lifecycle_arguments['raw_map_capacity'] = (
+                self._region_graph_shadow_raw_map_join_capacity)
         self._region_graph_shadow = RegionGraphShadowLifecycle(
             self._region_graph_shadow_session_id,
             self._global_frame,
             self._region_graph_shadow_start_observation_id,
+            **lifecycle_arguments,
         )
         self._region_graph_shadow_lock = threading.Lock()
         self._region_graph_shadow_fault = None
@@ -932,6 +976,49 @@ class ExploreNode(Node):
     def _on_map(self, msg: OccupancyGrid):
         self._map = msg
         self._map_received_at = time.monotonic()
+        if not getattr(self, '_region_graph_shadow_raw_map_enabled', False):
+            return
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+        try:
+            origin = msg.info.origin
+            source = raw_map_portal_source_from_values(
+                width=msg.info.width,
+                height=msg.info.height,
+                resolution=msg.info.resolution,
+                frame_id=msg.header.frame_id.strip(),
+                origin=(
+                    origin.position.x,
+                    origin.position.y,
+                    origin.position.z,
+                    origin.orientation.x,
+                    origin.orientation.y,
+                    origin.orientation.z,
+                    origin.orientation.w,
+                ),
+                cells=msg.data,
+                source_stamp_ns=(
+                    int(msg.header.stamp.sec) * 1_000_000_000
+                    + int(msg.header.stamp.nanosec)
+                ),
+            )
+        except Exception as error:  # isolated telemetry must not escape
+            with self._region_graph_shadow_lock:
+                if self._region_graph_shadow_fault is None:
+                    self._fault_region_graph_shadow('Rohkarte', error)
+            return
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            received_at = time.monotonic()
+            try:
+                self._region_graph_shadow.accept_raw_map_source(
+                    source,
+                    received_monotonic_seconds=received_at,
+                )
+            except Exception as error:  # isolated telemetry must not escape
+                self._fault_region_graph_shadow('Rohkarte', error)
 
     def _on_global_costmap(self, msg: OccupancyGrid):
         self._global_costmap = msg
