@@ -453,6 +453,7 @@ Geräte, Karten, Bags oder Bewegung:
 | WE-M2Z-ADJACENT | Zusätzlich Semantikmanager- und Semantik-Launch-Verträge: **624 passed**. |
 | WE-M2Z-COLCON | Temporärer isolierter Build der drei Pakete: 3 Pakete gebaut; Blattpaket **36** und Explorer **483** Pakettests bestanden, Kartenmanager-Colcon-Hook führt historisch 0 Tests. Gesamt `colcon test-result`: **519 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**; die **51** Kartenmanager-Quelltests sind in WE-M2Z-COMPONENTS enthalten. |
 | WE-M2Z-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+| WE-M2Z-REMOTE-CI | PR #50 ist laut GitHub mergebar, aber nicht grün. Der unveränderte `python-contracts`-Workflow brach wie bei WE-M2/X im Bring-up-Vertrag bereits beim Import von `test_oak_rectifier.py` ab, weil dem Ubuntu-Runner `cv2` fehlt. Der Kartenmanagerschritt wurde dadurch nicht erreicht; Blattpaket und Explorer gehören weiterhin nicht zu den Pfaden beziehungsweise Tests dieses Workflows. Dies ist kein entfernter Nachweis für WE-M2/Z. |
 
 Eine erste kombinierte Testanweisung enthielt einen falschen
 Semantik-Launch-Dateinamen; die korrigierte Anweisung lief vollständig. Ein
