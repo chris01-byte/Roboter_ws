@@ -3,7 +3,7 @@
 <package format="3">
   <name>amadeus_map_identity</name>
   <version>0.1.0</version>
-  <description>ROS-unabhängiger kanonischer Kartenfingerprint für Amadeus.</description>
+  <description>ROS-unabhängige kanonische Kartenidentität für Amadeus.</description>
   <maintainer email="qtg0900@example.com">QTG0900</maintainer>
   <license>MIT</license>
 

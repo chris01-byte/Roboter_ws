@@ -19,6 +19,6 @@ setup(
     zip_safe=True,
     maintainer="QTG0900",
     maintainer_email="qtg0900@example.com",
-    description="Canonical ROS-independent map fingerprint for Amadeus.",
+    description="Canonical ROS-independent map identity helpers for Amadeus.",
     license="MIT",
 )

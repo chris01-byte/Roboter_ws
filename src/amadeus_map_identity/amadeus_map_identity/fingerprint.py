@@ -3,15 +3,91 @@
 import hashlib
 import math
 import struct
-from typing import Tuple
+from typing import Any, Iterable, Tuple
 
 
 _VALID_COMPACT_CELL_BYTES = bytes(range(101)) + b"\xff"
 _IDENTITY_TRANSLATION = bytes(range(256))
+MAXIMUM_OCCUPANCY_CELL_COUNT = 4_000_000
 
 
 class MapIdentityError(ValueError):
     """The supplied values cannot form one canonical map identity."""
+
+
+def compact_occupancy_cells(
+        *, cells: Iterable[Any], cell_count: int,
+) -> bytes:
+    """Return canonical uint8 bytes for one ROS int8 occupancy raster.
+
+    Occupancy values 0..100 are preserved and ROS unknown (-1) becomes 255.
+    One-dimensional contiguous byte buffers use a C-level copy and validation;
+    other iterables use the strict element-by-element fallback.
+    """
+    if (
+            isinstance(cell_count, bool)
+            or not isinstance(cell_count, int)
+            or cell_count < 0
+            or cell_count > MAXIMUM_OCCUPANCY_CELL_COUNT):
+        raise MapIdentityError(
+            "cell_count muss zwischen 0 und "
+            f"{MAXIMUM_OCCUPANCY_CELL_COUNT} liegen")
+
+    try:
+        view = memoryview(cells)
+    except TypeError:
+        view = None
+
+    if (
+            view is not None
+            and view.ndim == 1
+            and view.itemsize == 1
+            and view.c_contiguous
+            and view.format in {"b", "B", "c"}):
+        compact = view.cast("B").tobytes()
+        if len(compact) != cell_count:
+            raise MapIdentityError(
+                f"Karte erwartet {cell_count} Zellwerte, enthält aber "
+                f"{len(compact)}.")
+        invalid = compact.translate(
+            _IDENTITY_TRANSLATION, _VALID_COMPACT_CELL_BYTES)
+        if invalid:
+            raw_value = invalid[0]
+            signed_value = raw_value if raw_value < 128 else raw_value - 256
+            raise MapIdentityError(
+                f"Kartenwert {signed_value!r} liegt nicht als Ganzzahl "
+                "zwischen -1 und 100 vor.")
+        return compact
+
+    compact_cells = bytearray()
+    try:
+        iterator = iter(cells)
+    except TypeError as error:
+        raise MapIdentityError("Kartendaten müssen iterierbar sein.") from error
+    try:
+        for index, value in enumerate(iterator):
+            if index >= cell_count:
+                raise MapIdentityError(
+                    f"Karte erwartet {cell_count} Zellwerte, enthält aber mehr.")
+            if (
+                    isinstance(value, bool)
+                    or not isinstance(value, int)
+                    or value < -1
+                    or value > 100):
+                raise MapIdentityError(
+                    f"Kartenwert {value!r} an Position {index} liegt nicht "
+                    "als Ganzzahl zwischen -1 und 100 vor.")
+            compact_cells.append(255 if value == -1 else value)
+    except MapIdentityError:
+        raise
+    except (TypeError, ValueError, NotImplementedError, OverflowError) as error:
+        raise MapIdentityError(
+            "Kartendaten können nicht kanonisch gelesen werden.") from error
+    if len(compact_cells) != cell_count:
+        raise MapIdentityError(
+            f"Karte erwartet {cell_count} Zellwerte, enthält aber "
+            f"{len(compact_cells)}.")
+    return bytes(compact_cells)
 
 
 def _positive_uint32(value: object, name: str) -> int:
