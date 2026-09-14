@@ -8,6 +8,7 @@ place: callers must create a new owner with a new explicit session identifier.
 
 from dataclasses import dataclass
 from enum import Enum
+import math
 from typing import Optional
 
 from .map_status_adapter import (
@@ -41,6 +42,17 @@ class ShadowLifecycleUpdate:
     state: ShadowLifecycleState
     map_status: Optional[MapStatusCorrelationResult]
     session_started: bool = False
+
+
+def _monotonic_seconds(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RegionGraphShadowLifecycleError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    normalized = float(value)
+    if not math.isfinite(normalized) or normalized < 0.0:
+        raise RegionGraphShadowLifecycleError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    return normalized
 
 
 class RegionGraphShadowLifecycle:
@@ -89,6 +101,8 @@ class RegionGraphShadowLifecycle:
         self._correlator = correlator
         self._session: Optional[RegionGraphShadowSession] = None
         self._latest_map_status: Optional[MapStatusCorrelationResult] = None
+        self._last_monotonic_seconds: Optional[float] = None
+        self._graph_changed_monotonic_seconds: Optional[float] = None
 
     @property
     def state(self) -> ShadowLifecycleState:
@@ -106,12 +120,19 @@ class RegionGraphShadowLifecycle:
     def latest_map_status(self) -> Optional[MapStatusCorrelationResult]:
         return self._latest_map_status
 
-    def accept_map_status_json(self, text: str) -> ShadowLifecycleUpdate:
+    def accept_map_status_json(
+            self, text: str, *,
+            received_monotonic_seconds: float) -> ShadowLifecycleUpdate:
         """Decode and accept one status without silently crossing map epochs."""
         sample = decode_map_manager_status_json(text)
+        received = self._validate_monotonic_progress(
+            received_monotonic_seconds,
+            "received_monotonic_seconds",
+        )
         try:
             result = self._correlator.accept(sample)
         except MapStatusUnavailableError:
+            self._last_monotonic_seconds = received
             return ShadowLifecycleUpdate(
                 state=ShadowLifecycleState.WAITING_FOR_MAP,
                 map_status=None,
@@ -132,6 +153,8 @@ class RegionGraphShadowLifecycle:
             )
             self._session = session
             self._latest_map_status = result
+            self._last_monotonic_seconds = received
+            self._graph_changed_monotonic_seconds = received
             return ShadowLifecycleUpdate(
                 state=ShadowLifecycleState.ACTIVE,
                 map_status=result,
@@ -144,20 +167,39 @@ class RegionGraphShadowLifecycle:
             region_graph_age_seconds=None,
         )
         self._latest_map_status = result
+        self._last_monotonic_seconds = received
         return ShadowLifecycleUpdate(
             state=ShadowLifecycleState.ACTIVE,
             map_status=result,
         )
 
-    def build_status_json(
-            self, *, portal_memory_age_seconds: Optional[float],
-            region_graph_age_seconds: Optional[float]) -> str:
+    def build_status_json(self, *, now_monotonic_seconds: float) -> str:
         """Build status only after a complete map initialized the owner."""
+        now = self._validate_monotonic_progress(
+            now_monotonic_seconds,
+            "now_monotonic_seconds",
+        )
         if self._session is None or self._latest_map_status is None:
             raise RegionGraphShadowNotReadyError(
                 "Schatten-Sitzung wartet noch auf einen Kartensnapshot")
-        return self._session.build_status_json(
+        graph_changed = self._graph_changed_monotonic_seconds
+        if graph_changed is None:
+            raise RegionGraphShadowLifecycleError(
+                "Graphzeitpunkt fehlt trotz aktiver Schatten-Sitzung")
+        payload = self._session.build_status_json(
             self._latest_map_status,
-            portal_memory_age_seconds=portal_memory_age_seconds,
-            region_graph_age_seconds=region_graph_age_seconds,
+            portal_memory_age_seconds=None,
+            region_graph_age_seconds=now - graph_changed,
         )
+        self._last_monotonic_seconds = now
+        return payload
+
+    def _validate_monotonic_progress(
+            self, value: object, name: str) -> float:
+        normalized = _monotonic_seconds(value, name)
+        if (
+                self._last_monotonic_seconds is not None
+                and normalized < self._last_monotonic_seconds):
+            raise RegionGraphShadowLifecycleError(
+                f"{name} ist gegenueber dem letzten Eingang ruecklaeufig")
+        return normalized
