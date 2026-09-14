@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M0/A)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,10 +10,18 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M0/A – reine Bestands- und Integrationsprüfung.** Main, HWT-Referenz und
-verfügbaren lokalen Installationsstand vergleichen, vorhandene Karten-/Semantik-
-verträge prüfen und den kleinsten nächsten Integrations-/Prüfschritt dokumentieren.
-Noch keine neue Fahrsoftware, Geräteaktivierung oder funktionale Branchübernahme.
+**WE-M1/A – Portalidentität als isolierte reine Logik vorbereiten.** Auf dem
+dann aktuellen `main` nach Übernahme dieser Planunterlagen ausschließlich ein
+In-Memory-Modul für normalisierte Portalbeobachtungen, stabile IDs und
+mehrdeutige Zuordnung samt synthetischen Negativtests ergänzen. Noch keine
+Einbindung in `explore_node`, kein Durchfahrtszähler, keine Persistenz, keine
+ROS-Schnittstelle und keine Fahrwirkung.
+
+WE-M0/A ist mit der unten protokollierten Leseanalyse abgeschlossen. Sie gibt
+weder den HWT-Zweig noch den lokal veränderten Jetson-Arbeitsbaum als neue
+Entwicklungsbasis frei. Die HWT-Funktionen werden für WE-M1/A nur als
+Beobachtungsquelle berücksichtigt; ihre funktionale Integration und der
+Zielsystem-Nachtest bleiben eigene, später ausdrücklich abzugrenzende Schritte.
 
 Eine Wiederholung des Arbeitszimmer-Flur-Laufs gehört zu WE-M0/B und benötigt
 zusätzlich Zielsystemprüfung, sicheren Aufbau und eine neue ausdrückliche
@@ -23,9 +31,11 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 
 | Referenz am 14.09.2026 | Nachgewiesener Umfang |
 |---|---|
-| Main `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1` | Remote gelesen; Elternbasis des Dokumentationszweigs. |
-| HWT `1d91229dc10ff4bb791938d49aae8e9808a5dfff` auf `codex/hwt601-encoder-shadow` | Remote-Referenz und eingecheckter Bericht gelesen; nicht pauschal nach Main übernommen. |
-| Jetson-Installation und lokale Rohdaten | In diesem Dokumentationsauftrag nicht ausgelesen oder unabhängig verifiziert. |
+| Dokumentation `96cebee986e55cde2d10da0f86e65294e6004a82` | Nach `git fetch origin` über `origin/docs/wohnungserkundung-agentenplan` gelesen. Nicht in `origin/main` enthalten; PR #20 ist offen und laut GitHub `MERGEABLE/CLEAN`. |
+| Main `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1` | Aktueller Remote-Stand. Mit HWT ab gemeinsamem Vorfahren `9822962` divergent: 16 nur auf Main, 46 nur auf HWT. |
+| HWT `1d91229dc10ff4bb791938d49aae8e9808a5dfff` auf `codex/hwt601-encoder-shadow` | Remote-Referenz sowie sauberer separater Worktree unter `/home/p/roboter_worktrees/hwt601-usb-commissioning` nachgewiesen; nicht pauschal nach Main übernommen. |
+| Maßgebliche Arbeitskopie `/home/p/roboter_ws` | Branch `feature/modulare-sensorfusion`, HEAD `00f6e521085b6cb0e38a62a029638d28195a544c`, mit bestehenden lokalen Änderungen unter anderem in Explorer, LiDAR, Navigation und Dokumentation. Kein Branchwechsel und keine Änderung dieses Bestands. |
+| Lokale Installationen | Primärinstallation und separates HWT-Overlay dateibasiert geprüft; Details unten. Keine Geräte, ROS-Nodes, Karten oder Bags geöffnet. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -37,14 +47,157 @@ aber ausdrücklich noch nicht erneut real gefahren.
 Dies sind historische, im Repository berichtete Nachweise. Der neue Plan
 setzt weder diese Tests noch den gesamten Wohnungslauf eigenständig auf bestanden.
 
-## 3. Meilensteinstand
+## 3. Ergebnis WE-M0/A – Bestand und Integrationsentscheidung
+
+### 3.1 Main, HWT und lokal verfügbarer Stand
+
+**Main:** `origin/main` enthält den bisherigen Explorer mit Rundblick,
+Frontier-Auswahl, Koordinaten-/Radius-Blacklist, getrennten Costmap-Portalen,
+LiDAR-Korridorprüfung, Nav2-Auslaufprüfung, Fahrspurabdeckung und 1-Hz-Status.
+`robot_state_estimation` und die HWT601-Profile sind dort nicht enthalten.
+Die 16 nur auf Main vorhandenen Commits betreffen spätere OAK-/Offboard- und
+Semantikarbeit. Ein Gesamtmerge des HWT-Zweigs wäre deshalb weder eine kleine
+Portalübernahme noch eine zulässige Integrationsbasis.
+
+**HWT:** `1d91229` ergänzt gegenüber der gemeinsamen Basis insbesondere die
+modulare Sensorfusion/HWT601-Kette, begrenzte HWT-Startprofile, eine opt-in
+Engstellenerkennung in bereits verbundenem Freiraum, Portalpriorität,
+`required_portal_crossings`, begrenztes Nachrücken und genau einen zusätzlichen
+Nav2-Auslaufversuch nach vorzeitigem Erfolg. Die Abschlusskorrektur ignoriert
+weitere Portalangebote, wenn ein expliziter Ein-Übergang-Vertrag bereits 1/1
+erfüllt ist. Diese Korrektur ist laut HWT-Protokoll softwaregeprüft, aber nach
+dem realen Befund nicht erneut physisch gefahren.
+
+**Primärinstallation:** `install/explore` ist eine Symlink-Installation auf den
+lokal veränderten Quellbaum. Dessen `explore_node.py` und Parameter entsprechen
+weder Main noch HWT; zusätzlich liegt die nicht eingecheckte
+`structured_exploration.py` vor. `portal_planning.py` entspricht dagegen Main
+und besitzt die HWT-Engstellenerkennung nicht. Dieser Mischstand ist keine
+reproduzierbare Integrationsbasis. `robot_map_manager` ist installiert und sein
+Core entspricht dem aktuellen Main-Quellstand. Die installierten Kopien von
+`semantic_map_manager` sind dagegen älter als der Quellstand: `semantic_core.py`
+entspricht dem Stand vor optionalen Räumen ohne Navigationsziel, der Node dem
+Stand vor dem Ausschluss solcher reinen Raumgrenzen aus dem Zielkatalog.
+
+**HWT-Overlay:** Der saubere HWT-Worktree besitzt gebaute Präfixe für sechs
+Pakete einschließlich `explore`, `robot_state_estimation`, Navigation und
+Bring-up. Er verwendet `robot_map_manager`, `semantic_map_manager`, Mission und
+weitere Pakete aus `/home/p/roboter_ws/install` als Underlay. Mehrere HWT-Wrapper
+erwarten ihre Explorerprofile außerdem hart unter
+`/home/p/roboter_ws/install/explore`; dort fehlen die HWT-Profile im aktuellen
+lokalen Zustand. Das vorhandene Overlay ist daher heute nicht als
+selbstständiger, sauber reproduzierbarer Gesamtinstallationsstand belegt.
+
+Zum Zeitpunkt der Prozessprüfung wurden keine laufenden Amadeus-/ROS-Prozesse
+mit den geprüften Namen gefunden. Daraus folgt keine Aussage zu Versorgung,
+Not-Aus, seriellen Geräten oder physischer Fahrbereitschaft; diese wurden
+absichtlich nicht abgefragt oder aktiviert.
+
+### 3.2 Vorhandene Explorer- und Portalfunktionen
+
+- `ExploreArea` bleibt die einzige Explorer-Action. Ihr Resultat unterscheidet
+  nur `success`, Klartext, Frontierzahl und Fläche. Der BT-Verbraucher reduziert
+  dies auf Erfolg/Fehler. `complete_accessible`, `partial`, `aborted`,
+  `canceled`, Speichern und Rückkehr sind noch kein expliziter Ergebnisvertrag.
+- `/explore/status_json` enthält auf Main unter anderem Phase, Coverage,
+  Frontier-/Portalzähler und `map_ready_to_save`. HWT ergänzt Pflichtübergänge
+  und `room_transition_confirmed`. iOS und Web konsumieren den bestehenden
+  Kernstatus, aber keine stabile Portal-/Regionsidentität oder vollständige
+  Aufgabenliste.
+- Main erkennt getrennte befahrbare Costmap-Komponenten und prüft eine
+  Sonderbrücke mit frischem LiDAR. HWT kann zusätzlich eine Türengstelle in
+  bereits verbundenem gemessenem Freiraum finden; die echte Costmap und der
+  reale Footprint bleiben dabei unverändert.
+- HWT gleicht einen während einer Etappe veränderten Portalplan anhand von Nah-,
+  Fern- und Mittelpunkt sowie gleicher Richtung ab. Dauerhaft besucht bleibt
+  ein Portal jedoch nur als Kartenkoordinate in `_visited_portals` mit
+  Radiusvergleich. Es gibt weder Portal-ID noch kanonische Seiten, getrennte
+  Beobachtungs-/Erreichbarkeitszustände, Evidenzrevision oder idempotentes
+  Durchfahrtsereignis.
+- Weder Main noch HWT enthalten `portal_memory.py`, `region_graph.py` oder
+  `exploration_policy.py`. Der lokal vorhandene `room_index` der strukturierten
+  Konturstrategie ist nur ein Laufzeitzähler und kein stabiler Regionsgraph.
+
+### 3.3 Kartenmanager, Semantik und Integrationsgrenzen
+
+- `robot_map_manager` liefert validierte Live-Snapshots, inhaltsbasierte
+  SHA-256-Fingerprints, unveränderliche atomare Kartenversionen, Status/Listen
+  und idempotente Speicherkommandos. Er lädt oder löscht absichtlich keine
+  Karten und besitzt kein Schema für Erkundungssitzungen, Portal- oder
+  Regionsdaten.
+- `semantic_map_manager` bindet manuelle Raum-IDs, Polygone, optionale
+  Navigationsziele und Revisionen fail-closed an eine gespeicherte
+  Kartenidentität. `/semantic/catalog_json` ist bereits gemeinsamer Verbraucher
+  für Mission und LLM-Planer. Automatische Regionen dürfen diese Raum-IDs nicht
+  ersetzen; eine explizite Zuordnungsschnittstelle existiert noch nicht.
+- Karten- und Semantikquellen sind zwischen aktuellem Main und HWT bytegleich.
+  Für WE-M1 ist deshalb kein zweiter Speicher und keine Änderung dieser Pakete
+  erforderlich. Der Bezug einer laufenden Portalbeobachtung auf Kartenrevision,
+  Ursprung und spätere gespeicherte Identität bleibt bis WE-M2/WE-M5 offen.
+- Der bestehende Semantik-Core erlaubt seit Main Räume ohne Navigationsziel;
+  der Katalog filtert sie. Dafür existiert ein iOS-Serialisierungstest, aber
+  kein gezielter Python-Backendtest. Vor einer späteren automatischen
+  Regionszuordnung ist dieser Negativvertrag nachzutesten und die lokale
+  Installation frisch aufzubauen.
+
+### 3.4 Ausgeführte Prüfungen
+
+Alle folgenden Läufe waren reine Python-/Quelltests ohne ROS-Launch oder
+Gerätezugriff:
+
+- exakter Main-/Dokumentationsbasisstand: 160 Tests bestanden
+  (`explore` 58, `robot_map_manager` 51, `semantic_map_manager` 51);
+- exakter HWT-Explorerstand `1d91229`: 80 Tests bestanden;
+- lokal veränderter Primär-Explorerstand: 67 Tests bestanden.
+
+Die bestehenden HWT-Tests decken unter anderem verbundene Engstellen,
+Richtungsumkehr beim lokalen Portalabgleich, begrenztes Nachrücken, frühen
+Nav2-Erfolg und den Ein-Übergang-Abschluss ab. Nicht abgedeckt sind die für
+WE-M1 geforderten stabilen Identitäten über beide Portalansichten,
+Ursprungs-/Rasteränderungen, zwei benachbarte ähnliche Türen, unabhängige
+Beobachtungsevidenz, Ambiguität, blockiert → offen und idempotente
+Durchfahrtsereignisse.
+
+Nicht ausgeführt wurden Colcon-Neubuild, ROS-Smoke-/Zielsystemstart,
+TF-/Controllerlastmessung, Geräte-/Portprüfung, Karten-/Bag-Auswertung und jede
+Bewegung. Vorhandene Buildartefakte und historische Fahrberichte sind keine
+heutige Zielsystem- oder Hardwareabnahme.
+
+### 3.5 Integrationsbasis und kleinster nächster PR
+
+**Integrationsbasis:** neuer Themenbranch vom dann aktuellen `main`, nachdem
+PR #20 aufgenommen oder die vier Planunterlagen anderweitig eindeutig verfügbar
+sind. Weder der lokale Mischstand noch der HWT-Gesamtzweig wird als Basis
+verwendet. Das reine Identitätsmodul akzeptiert eine kleine normalisierte
+Portalbeobachtung und bleibt dadurch von Main-/HWT-Detektordetails getrennt.
+
+**WE-M1/A – betroffene Dateien:** neu
+`src/explore/explore/portal_memory.py`, neu
+`src/explore/test/test_portal_memory.py` und dieser Status. Keine Änderung an
+`explore_node.py`, Launches, Parametern, Action/Status, Navigation,
+Sensorfusion, Kartenmanagern oder Semantik.
+
+**Prüfplan:** deterministische Unit-Tests für gleiche Tür von beiden Seiten,
+kleines Kartenwachstum, verschobenen Ursprung/Rasterbezug, zwei nahe Türen,
+identische wiederholte Kartenrevision und mehrdeutige Zuordnung. Ambiguität
+darf keine ID verschmelzen oder Evidenz erhöhen. Danach bestehende
+Explorer-Suite und `colcon build/test --packages-select explore`; keine Nodes
+starten. Passageereignisse, ROS-Schattenintegration und Persistenz bleiben
+bewusst Folgeschritte.
+
+**Rückfallweg:** Das neue Modul wird in WE-M1/A nirgends importiert oder
+gestartet. Rückfall besteht ausschließlich aus Entfernen der beiden neuen
+Dateien beziehungsweise Revert des kleinen PR; bestehender Explorer und jede
+Runtime bleiben unverändert.
+
+## 4. Meilensteinstand
 
 | Stufe | Stand | Fehlender Nachweis / nächste Abgrenzung |
 |---|---|---|
 | WE-D0 | Dokumentiert; zur Review | Dokumentationszweig/PR ist nicht automatisch Main oder Jetson-Deployment. |
-| WE-M0/A | Geplant | Gezielter Code-/Installationsvergleich und bestätigte Integrationsbasis. |
+| WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
-| WE-M1 | Geplant | Stabile Portalidentität samt Negativtests. |
+| WE-M1 | Geplant; nächster Schritt WE-M1/A | Reines In-Memory-Identitätsmodul samt Negativtests, noch ohne Explorer-/ROS-Einbindung. |
 | WE-M2 | Geplant | Regionsgraph und passive Integration. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
@@ -52,11 +205,19 @@ setzt weder diese Tests noch den gesamten Wohnungslauf eigenständig auf bestand
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
 | WE-M7 | Geplant, ergänzend | App-Transparenz und manuelle Benennung. |
 
-## 4. Bekannte offene Punkte
+## 5. Bekannte offene Punkte
 
-**Codebasis:** Main und HWT-Erprobungszweig unterscheiden sich. Welche Abhängigkeiten
-für die nächste Implementierung übernommen werden müssen, ist noch zu prüfen.
-Ein Dokumentationsmerge nimmt diese Funktionen nicht mit.
+**Codebasis:** Main und HWT-Erprobungszweig bleiben divergent. WE-M1/A benötigt
+keine funktionale HWT-Übernahme. Vor einer späteren Explorer-Einbindung sind
+Engstellendetektor, Auslaufkorrektur, strukturierte lokale Konturstrategie und
+Sensorfusionsprofil gezielt gegeneinander zu integrieren; ein
+Dokumentationsmerge nimmt diese Funktionen nicht mit.
+
+**Installation:** Primärinstallation folgt teils einem lokal veränderten
+Symlink-Quellbaum, teils älteren kopierten Semantikartefakten. Das HWT-Overlay
+ist auf dieses Underlay angewiesen. Vor WE-M0/B oder jeder Zielsystembehauptung
+ist ein isolierter, commitgebundener Neuaufbau mit nachgewiesener Overlay-
+Reihenfolge erforderlich.
 
 **Baseline:** Die nach dem letzten Realtest geänderte Abschlusslogik ist laut
 Referenz noch nicht erneut physisch abgenommen.
@@ -77,7 +238,37 @@ revisionen muss diese erhalten; konkrete Schema-/API-Erweiterungen sind noch off
 Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
-## 5. Entscheidungslog
+## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M0/A auf Main-basierte reine Portalidentität begrenzt
+
+**Entscheidung:** Der erste Funktionsschritt wird als WE-M1/A auf dem dann
+aktuellen Main ausgeführt und liefert nur eine nicht eingebundene, reine
+Portalidentitätslogik. HWT bleibt Referenz für Beobachtungsgeometrie und
+historische Fahrt, wird aber weder insgesamt gemerged noch als installierte
+Gesamtbasis behauptet.
+
+**Grund / Evidenz:** Main, HWT und lokale Installation sind drei verschiedene
+Stände. HWT besitzt wichtige Portal-/Auslaufkorrekturen, aber noch keine
+stabilen IDs. Die lokale Primärinstallation ist ein nicht reproduzierbarer
+Mischstand; zugleich sind Karten-/Semantikquellen auf Main und HWT identisch.
+Damit kann der fehlende Identitätskern ohne Fahrwirkung und ohne Vorwegnahme
+der späteren Drei-Wege-Integration isoliert getestet werden.
+
+**Betroffene Dateien und Hardware:** Nur diese fachliche Statusdatei. Die
+Bestandsprüfung las Git-Objekte, lokale Build-/Installationspfade und Quelltests.
+Keine Fahrsoftware, ROS-Prozesse, Geräte, Karten, Bags oder Hardware geändert.
+
+**Teststatus:** 160 Tests auf der Main-/Dokumentationsbasis, 80 HWT-Explorer-
+Tests und 67 Tests des lokalen Explorer-Quellstands bestanden. Dies sind
+Softwaretests ohne Zielsystem- oder Hardwareabnahme.
+
+**Offene Risiken:** Drei-Wege-Integration von HWT, lokaler Konturstrategie und
+aktuellem Main; stale Semantikinstallation; HWT-Underlay-/Profilpfade;
+Last-/TF-Befunde sowie reale Wiederholung der HWT-Abschlusskorrektur.
+
+**Rückfallweg:** Diese Statusergänzung revertieren. Es existiert keine
+Runtime-Wirkung und keine funktionale Branchübernahme.
 
 ### 2026-09-14 – WE-1 als schrittweises Vorhaben festgelegt
 
@@ -106,7 +297,7 @@ Sicherheitsnachweis allein durch diesen Plan.
 **Rückfallweg:** Nur den Dokumentationscommit zurücknehmen. Der bisherige
 Strategiestand liegt unverändert im Archiv; Roboterlaufzeit bleibt unberührt.
 
-## 6. Pflege nach jedem Arbeitsschritt
+## 7. Pflege nach jedem Arbeitsschritt
 
 Nächsten Schritt, betroffene Statuszeilen und neue Evidenz aktualisieren; keine
 vorweggenommenen Gesamthäkchen. Planabweichungen und relevante Entscheidungen hier
