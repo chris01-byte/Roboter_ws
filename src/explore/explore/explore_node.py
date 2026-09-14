@@ -88,6 +88,8 @@ from explore.exploration_migration import (
     build_unavailable_we_status_extension,
 )
 from explore.exploration_policy import (
+    ExplorationTaskPolicySession,
+    PolicyAssessmentState,
     assess_exploration_policy,
     score_task_utilities,
 )
@@ -994,6 +996,8 @@ class ExploreNode(Node):
             )
             self._wohnungserkundung_evidence_cache_key = None
             self._wohnungserkundung_evidence_cache = None
+            self._wohnungserkundung_task_policy_session = None
+            self._wohnungserkundung_stateful_assessment = None
             self._wohnungserkundung_status_extension = (
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
@@ -1443,8 +1447,42 @@ class ExploreNode(Node):
                     utility_evidence,
                     status.source.source_map_revision,
                 )
+                task_policy_session = (
+                    self._wohnungserkundung_task_policy_session)
+                if task_policy_session is None:
+                    task_policy_session = ExplorationTaskPolicySession(
+                        status.source.context)
+                    self._wohnungserkundung_task_policy_session = (
+                        task_policy_session)
+                latest_stateful_revision = (
+                    task_policy_session.latest_assessment_revision)
+                if (
+                        latest_stateful_revision is None
+                        or status.source.source_map_revision
+                        > latest_stateful_revision):
+                    stateful = task_policy_session.assess(
+                        status.source,
+                        task_availability,
+                        utility_evidence if assessment.state is (
+                            PolicyAssessmentState.READY_WITH_TASKS)
+                        else (),
+                    )
+                    self._wohnungserkundung_stateful_assessment = stateful
+                elif status.source.source_map_revision < (
+                        latest_stateful_revision):
+                    raise ValueError(
+                        'Policy-Snapshot ist aelter als der Runtimeverlauf')
+                else:
+                    stateful = (
+                        self._wohnungserkundung_stateful_assessment)
+                    if stateful is None:
+                        raise ValueError(
+                            'Stateful-Policycache fehlt fuer aktuelle Revision')
                 extension = build_passive_we_status_extension(
-                    assessment, utility_scores=scores)
+                    assessment,
+                    utility_scores=scores,
+                    stateful=stateful,
+                )
                 extension['task_evidence_source'] = evidence_status
             except Exception as error:
                 fault = f'policy_error:{type(error).__name__}'

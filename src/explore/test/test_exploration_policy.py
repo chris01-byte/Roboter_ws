@@ -507,6 +507,20 @@ def test_stateful_session_selects_only_an_id_and_tracks_first_seen_revision():
     assert not hasattr(result, "pose")
 
 
+def test_stateful_session_never_selects_from_stale_sources():
+    source = replace(
+        _source_with_two_open_tasks(), source_map_age_seconds=None)
+    session = ExplorationTaskPolicySession(CONTEXT)
+
+    result = session.assess(source, _all_available(4))
+
+    assert result.passive.state is (
+        PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES)
+    assert result.selected_task_id is None
+    assert result.selected_region_id is None
+    assert result.selection_reason == "no_selectable_task"
+
+
 def test_exact_assessment_replay_is_idempotent_and_conflict_is_rejected():
     source = _source_with_two_open_tasks()
     evidence = _all_available(4)
@@ -592,6 +606,36 @@ def test_retry_failure_defers_then_releases_task_by_explicit_revision():
     assert deferred.retry_deferred_task_ids == ("z-current",)
     assert "retry_deferred:z-current" in deferred.blocker_codes
     assert released.selected_task_id == "z-current"
+
+
+def test_retry_filter_accepts_complete_eligible_utility_evidence():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    utilities = (
+        _utility("a-other", 4, 1.0, 9.0),
+        _utility("z-current", 4, 10.0, 1.0),
+    )
+    first = session.assess(source, _all_available(4), utilities)
+    session.record_attempt(TaskAttempt(
+        "attempt-score-retry",
+        first.selected_task_id,
+        CONTEXT,
+        4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE,
+        "temporary",
+        6,
+    ))
+
+    result = session.assess(
+        _advance_source(source, 5),
+        _all_available(5),
+        tuple(replace(item, map_revision=5) for item in utilities),
+    )
+
+    assert result.retry_deferred_task_ids == (first.selected_task_id,)
+    assert first.selected_task_id not in {
+        item.task_id for item in result.utility_scores}
+    assert result.selected_task_id != first.selected_task_id
 
 
 def test_retry_budget_exhaustion_requires_explicit_reactivation():

@@ -27,6 +27,8 @@ from explore.exploration_migration import (  # noqa: E402
 from explore.exploration_policy import (  # noqa: E402
     ExplorationPolicyAssessment,
     PolicyAssessmentState,
+    StatefulPolicyAssessment,
+    TaskHistorySnapshot,
     TaskUtilityScore,
 )
 from explore.portal_memory import PortalMapContext  # noqa: E402
@@ -215,6 +217,98 @@ def test_passive_status_requires_exact_eligible_utility_coverage():
 
     with pytest.raises(ExplorationMigrationError, match="exakt"):
         build_passive_we_status_extension(assessment)
+
+
+def _stateful(passive, *, selected_task_id="task-1"):
+    history = TaskHistorySnapshot(
+        task_id="task-1",
+        region_id="region-1",
+        first_seen_revision=3,
+        last_seen_revision=7,
+        age_revisions=4,
+        last_selected_revision=7,
+        selection_count=1,
+        last_attempt_revision=None,
+        attempt_count=0,
+        retryable_failure_count=0,
+        retry_not_before_revision=None,
+        last_attempt_reason=None,
+        last_reactivation_revision=None,
+        completed=False,
+    )
+    return StatefulPolicyAssessment(
+        passive=passive,
+        selected_task_id=selected_task_id,
+        selected_region_id=(
+            "region-1" if selected_task_id is not None else None),
+        selection_reason=(
+            "current_region" if selected_task_id is not None
+            else "no_selectable_task"),
+        retry_deferred_task_ids=(),
+        retry_exhausted_task_ids=(),
+        utility_scores=(),
+        history=(history,),
+        blocker_codes=passive.blocker_codes,
+        completion_allowed=False,
+    )
+
+
+def test_stateful_selection_and_history_are_bounded_diagnostics_only():
+    passive = replace(
+        _passive_assessment(),
+        state=PolicyAssessmentState.READY_WITH_TASKS,
+        eligible_task_ids=("task-1",),
+    )
+    score = TaskUtilityScore(
+        "task-1", 2.5, 1.25, 0.125, 0.125, 0.5)
+
+    extension = build_passive_we_status_extension(
+        passive,
+        utility_scores=(score,),
+        stateful=_stateful(passive),
+    )
+
+    assert extension["selection"] == {
+        "assessment_revision": 7,
+        "task_id": "task-1",
+        "region_id": "region-1",
+        "reason": "current_region",
+        "current": True,
+    }
+    assert extension["history_count"] == 1
+    assert extension["history"][0]["age_revisions"] == 4
+    assert extension["history"][0]["selection_count"] == 1
+    assert extension["history_truncated"] is False
+    assert "goal" not in extension
+    assert "path" not in extension
+
+
+def test_stale_current_policy_withholds_cached_stateful_selection():
+    selected_passive = replace(
+        _passive_assessment(),
+        state=PolicyAssessmentState.READY_WITH_TASKS,
+        eligible_task_ids=("task-1",),
+    )
+    stale = replace(
+        selected_passive,
+        state=PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES,
+        source_ready=False,
+        stale_sources=("source_map",),
+    )
+    score = TaskUtilityScore(
+        "task-1", 2.5, 1.25, 0.125, 0.125, 0.5)
+
+    extension = build_passive_we_status_extension(
+        stale,
+        utility_scores=(score,),
+        stateful=_stateful(selected_passive),
+    )
+
+    assert extension["selection"]["task_id"] is None
+    assert extension["selection"]["region_id"] is None
+    assert extension["selection"]["current"] is False
+    assert extension["selection"]["reason"] == (
+        "withheld_by_current_passive_policy")
 
 
 @pytest.mark.parametrize("value", [None, "assessment", 1])

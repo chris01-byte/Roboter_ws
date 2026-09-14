@@ -880,7 +880,11 @@ class ExplorationTaskPolicySession:
             if self._tasks[task_id].retryable_failure_count
             >= self._policy.maximum_retryable_failures
         ))
-        selectable = eligible - set(retry_deferred) - set(retry_exhausted)
+        selectable = (
+            eligible - set(retry_deferred) - set(retry_exhausted)
+            if passive.state is PolicyAssessmentState.READY_WITH_TASKS
+            else set()
+        )
         utility_scores = ()
         if task_utilities:
             if not isinstance(task_utilities, tuple) or any(
@@ -891,9 +895,20 @@ class ExplorationTaskPolicySession:
             if any(item.context != self._context for item in task_utilities):
                 raise ExplorationPolicyError(
                     "Bewertungsevidenz hat einen fremden Kartenkontext")
+            utilities_by_task = {
+                item.task_id: item for item in task_utilities}
+            if len(utilities_by_task) != len(task_utilities):
+                raise ExplorationPolicyError(
+                    "Bewertungsevidenz enthaelt doppelte Aufgaben-IDs")
+            if set(utilities_by_task) != eligible:
+                raise ExplorationPolicyError(
+                    "Bewertungsevidenz muss den geeigneten Bestand exakt "
+                    "abdecken")
             utility_scores = score_task_utilities(
                 tuple(sorted(selectable)),
-                task_utilities,
+                tuple(
+                    utilities_by_task[task_id]
+                    for task_id in sorted(selectable)),
                 revision,
                 scoring_policy,
             )

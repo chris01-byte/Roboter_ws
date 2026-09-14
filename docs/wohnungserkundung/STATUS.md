@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/H)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/I)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,15 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/H – Der vollständige passive Portalbestand einschließlich gültigem
-Leerbestand ist gerätefrei durchgängig geprüft und zur Review.** Ein erfolgreicher
-exakt korrelierter Detektorlauf erzeugt nun atomar genau ein begrenztes Inventar
-pro Kartenrevision. Nur ein vollständiger Runtimebestand aktualisiert die
-Portalquellenrevision; fehlende oder gescheiterte Auswertung erfindet keinen
-Leerstand. Im gemeinsamen synthetischen ROS-Lauf sind Karte, Regionsgraph,
-Portal-Leerbestand und Frontierbeleg frisch, daher erreicht die Diagnose mit
-einer geeigneten Aufgabe `ready_with_tasks`. Sie bleibt nichtterminal und hat
-weder Ziel-, Action-, Nav2- noch Fahrwirkung.
+**WE-M3/I – Die zustandsbehaftete hierarchische Auswahl ist im Opt-in-Pfad
+gerätefrei durchgängig geprüft und zur Review.** Genau einmal pro neuer
+Kartenrevision übernimmt die vorhandene reine Policy den vollständigen Snapshot
+und seine skalaren Belege. Die additive Diagnose zeigt ausgewählte Aufgaben- und
+Regions-ID, Begründung, Alter, Auswahlzähler sowie begrenzte Retry-/Historienfelder.
+Replay derselben Revision erhöht den Zähler nicht; stale Quellen halten eine
+gespeicherte Auswahl sofort zurück. Im synthetischen ROS-Lauf wurde genau
+`task-frontier_000001` in `region_000001` ausgewählt, ohne Zielpose, Kind-Action,
+Nav2-Aufruf oder Command-Nachricht.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -27,20 +27,19 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis H umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis I umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
-Zustandsbehaftete Auswahl, Zielbildung und -übergabe,
-Abschluss-/Actionintegration, eingefrorenes begrenztes Profil sowie die
-motorlose Zielsystemabnahme fehlen.
+Die zustandsbehaftete Auswahl ist diagnostisch integriert. Zielbildung und
+-übergabe, Attemptableitung, Abschluss-/Actionintegration, eingefrorenes
+begrenztes Profil sowie die motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/I:** Den bereits reinen
-`ExplorationTaskPolicySession` im Opt-in-Runtimepfad besitzen und ausschließlich
-die ausgewählte Aufgaben-/Regions-ID, Auswahlbegründung, Retryzustände und
-begrenzte Historie diagnostisch projizieren. Derselbe Snapshot/Revision darf die
-Historie nicht mehrfach fortschreiben; Kontext- oder Revisionswechsel muss
-fail-closed bleiben. Noch keine Attemptableitung aus Nav2, kein Ziel, keine
-Action-, Command- oder Twist-Wirkung.
+**Nächster abgegrenzter Schritt WE-M3/J:** Einen reinen, revisionsgebundenen
+Zielabsichts- und Kindziel-Lebenszyklusvertrag für die ausgewählte Frontier-ID
+festlegen. Er muss Zielwechsel, Cancel, Erfolg/Fehler, veraltete Kartenrevision
+und genau ein aktives Kindziel deterministisch modellieren, zunächst nur mit
+synthetischen Ereignissen und Diagnose. Noch keine Übergabe an den bestehenden
+Nav2-Client und keine Action-, Command- oder Twist-Wirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -117,6 +116,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/F `feature/we-m3f-passive-runtime-status` | Gestapelter standardmäßig deaktivierter Runtimeadapter vom atomaren typisierten Schattensnapshot zur begrenzten versionierten `wohnungserkundung`-Diagnose im Legacy-Status; ohne Verfügbarkeitsbeleg kein geeignetes Ziel und stets gesperrter Abschluss. |
 | WE-M3/G `feature/we-m3g-frontier-evidence` | Gestapelte exakte Rohkarten-/Frontier-Belegnaht mit vollständiger Aufgabenverfügbarkeit, skalarer geodätischer Weglänge und Informationsfläche sowie passiver Statusprojektion; keine Ziel-, Action-, Nav2- oder Fahrwirkung. |
 | WE-M3/H `feature/we-m3h-portal-inventory` | Gestapelter vollständiger, atomarer und begrenzter Portalbestand pro exakter Kartenrevision einschließlich explizitem Leerbestand; schließt die passive Quellenfrische ohne erfundene Portale oder Fahrwirkung. |
+| WE-M3/I `feature/we-m3i-stateful-runtime` | Gestapelte einmal-pro-Revision Runtimefortschreibung der reinen hierarchischen Aufgabenpolicy mit begrenzter Auswahl-, Retry- und Historiendiagnose; gespeicherte Auswahl wird bei aktueller Blockade zurückgehalten, keine Ziel- oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -355,7 +355,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis H softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad, exakte Frontierbelege und vollständige Portalquellenfrische liegen vor. Auswahl-/Zielintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis I softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad, exakte Frontier-/Portalquellen und diagnostische hierarchische Auswahl liegen vor. Ziel-/Attemptintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -451,6 +451,69 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/I: zustandsbehaftete Auswahl in der Runtimediagnose
+
+**Arbeitsbasis und Umfang:** `feature/we-m3i-stateful-runtime` baut direkt auf
+M3/H `8c8b6b9` auf. Der vorhandene ROS-freie
+`ExplorationTaskPolicySession` wird erst bei aktivierter WE-Policy und dem
+ersten vollständigen Schattenkontext erzeugt. Der Node führt ihn höchstens
+einmal je strikt neuer Kartenrevision fort und hält das Ergebnis getrennt von
+der weiterhin bei jedem Statustakt neu berechneten passiven Frischebewertung.
+Damit verändern Statusreplays weder Auswahlzähler noch Aufgabenalter oder
+Regionshaltezeit.
+
+**Sichere Auswahlprojektion:** Der reine Policykern wählt jetzt grundsätzlich
+nichts, wenn seine vollständigen Quellen nicht frisch sind. Skalare Evidenz darf
+den kompletten geeigneten Aufgabenbestand beschreiben; Retry-zurückgestellte oder
+-erschöpfte IDs werden intern vor dem Scoring entfernt. Die Migration gibt
+ausgewählte Aufgaben-/Regions-ID und Begründung nur als Diagnose aus. Wird die
+aktuelle passive Bewertung innerhalb derselben Revision stale oder ist die
+gespeicherte ID nicht mehr geeignet, werden beide IDs sofort auf `null` gesetzt
+und der Grund lautet `withheld_by_current_passive_policy`. Es entsteht keine
+Zielpose, kein Pfad und keine Ausführungserlaubnis.
+
+Die Diagnose begrenzt Aufgabenbelege, Scores, Retrylisten und Historie jeweils
+auf 128 Einträge; Gesamtzahlen und Abschneidung sind sichtbar. Pro Historieneintrag
+werden ausschließlich ID, Region, erste/letzte Revision, Revisionsalter,
+Auswahl-/Versuchszähler, Retrystand, letzter Grund, Reaktivierung und Erledigtstand
+ausgegeben. Der alte Status bleibt bei deaktiviertem Opt-in unverändert.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+frischem temporären Overlay; keine Geräte, realen Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3I-FOCUS | Policy-, Migration- und Nodevertrag: **143 passed**; darunter stale Auswahlblockade, exakte Retry-/Scorefilterung, begrenzte Projektion und einmalige Runtimefortschreibung je Revision. |
+| WE-M3I-EXPLORER | Vollständige Explorer-Suite: **683 passed**. |
+| WE-M3I-ADJACENT | Explorer plus vollständige Fingerprint-, Karten-, Semantik-, Mission- und Launch-Suiten: **873 passed**. |
+| WE-M3I-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 683 = 719 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3I-ROS | Isolierte lokale DDS-Domain, direkter Explorer ohne Action: `ready_with_tasks`, Auswahl `task-frontier_000001`/`region_000001`, Grund `current_region`, Historie 1, Auswahlzähler trotz wiederholter Statusausgabe 1, `completion_allowed=false`, **0** Command-Nachrichten. |
+| WE-M3I-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+**Offene Grenzen:** Die Auswahl ist nur eine ID-Diagnose. Es existiert noch
+keine revisionsgebundene Zielabsicht, keine Zielpose, kein Nav2-Kindziel, keine
+Attempt-/Retryableitung aus einem Kindresultat und kein Cancel-/Wechselvertrag in
+der Runtime. Fehlt Pose/Evidenz bei der ersten Bewertung einer Revision, bleibt
+die zustandsbehaftete Auswahl konservativ bis zur nächsten Kartenrevision leer;
+die stateless Diagnose zeigt die aktuelle Ursache weiter. Portal-/
+Beobachtungsaufgaben besitzen noch keine metrische Zielevidenz. Abschlussruntime,
+Profilgrenzen, Jetsonlast und Hardwareprüfung fehlen. Softwaretests sind keine
+Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/J:** Einen reinen Zielabsichts- und
+Kindzielautomaten für genau eine revisionsgebundene ausgewählte Frontier-ID
+implementieren. Zielwechsel, Cancel, Erfolg, retrybarer Fehler und
+Revisionsinvalidierung müssen ohne konkurrierende aktive Kindziele und zunächst
+nur über synthetische Ereignisse/Diagnose nachgewiesen werden. Noch keine
+Nav2-Übergabe oder Fahrwirkung.
+
+**Rückfall:** Den einzelnen M3/I-Commit zurücknehmen oder
+`wohnungserkundung_policy_enabled: false` lassen. Dann existieren weder
+zustandsbehaftete Runtimepolicy noch Auswahl-/Historiendiagnose; Schatten,
+Legacy-, Action-, Nav2- und Fahrpfade bleiben unverändert. Nichts wurde deployed
+oder an Hardware aktiviert.
 
 ### 2026-09-14 – WE-M3/H: vollständiger Portalbestand und Quellenfrische
 

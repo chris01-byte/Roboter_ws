@@ -36,6 +36,7 @@ from explore.explore_node import (  # noqa: E402
     validated_passive_policy_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
+from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
@@ -1361,8 +1362,15 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
 
 def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         monkeypatch):
-    assessment = SimpleNamespace(eligible_task_ids=())
-    source = SimpleNamespace(source_map_revision=7)
+    assessment = SimpleNamespace(
+        eligible_task_ids=(),
+        state=PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES,
+    )
+    source = SimpleNamespace(
+        source_map_revision=7,
+        context=SimpleNamespace(frame_id='map'),
+    )
+    stateful = object()
     extension = {"schema_version": 1, "mode": "passive_shadow"}
     publications = []
     assessed = []
@@ -1376,6 +1384,16 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         publish=publications.append)
     node._wohnungserkundung_policy_enabled = True
     node._wohnungserkundung_policy_fault = None
+    node._wohnungserkundung_stateful_assessment = None
+    node._wohnungserkundung_task_policy_session = SimpleNamespace(
+        latest_assessment_revision=None,
+        assess=lambda selected_source, selected_availability,
+        selected_utilities: stateful if (
+            selected_source is source
+            and selected_availability == ()
+            and selected_utilities == ()
+        ) else None,
+    )
 
     def assess_outside_shadow_lock(value, task_availability):
         assert not node._region_graph_shadow_lock.locked()
@@ -1390,7 +1408,7 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         explore_node_module, 'build_passive_we_status_extension',
         lambda value, **kwargs: (
             extension if value is assessment and kwargs == {
-                'utility_scores': ()} else None))
+                'utility_scores': (), 'stateful': stateful} else None))
     monkeypatch.setattr(
         explore_node_module, 'score_task_utilities',
         lambda task_ids, evidence, revision: () if (
@@ -1443,7 +1461,11 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     availability = (object(),)
     utilities = (object(),)
     scores = (object(),)
-    assessment = SimpleNamespace(eligible_task_ids=('task-1',))
+    assessment = SimpleNamespace(
+        eligible_task_ids=('task-1',),
+        state=PolicyAssessmentState.READY_WITH_TASKS,
+    )
+    stateful = object()
     evidence = SimpleNamespace(
         source_map_revision=7,
         availability=availability,
@@ -1453,6 +1475,7 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     )
     publications = []
     evidence_builds = []
+    stateful_builds = []
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
@@ -1472,6 +1495,22 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     node._wohnungserkundung_evidence_policy = object()
     node._wohnungserkundung_evidence_cache_key = None
     node._wohnungserkundung_evidence_cache = None
+    node._wohnungserkundung_stateful_assessment = None
+
+    class FakeTaskPolicySession:
+        latest_assessment_revision = None
+
+        def assess(
+                self, selected_source, selected_availability,
+                selected_utilities):
+            assert selected_source is source
+            assert selected_availability is availability
+            assert selected_utilities is utilities
+            stateful_builds.append(selected_source)
+            self.latest_assessment_revision = 7
+            return stateful
+
+    node._wohnungserkundung_task_policy_session = FakeTaskPolicySession()
     node._try_observe_correlated_raw_map_frontiers = lambda: None
     node._try_observe_connected_raw_map_portals = lambda: None
     node._shadow_source_matches_correlation = (
@@ -1509,7 +1548,10 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         explore_node_module, 'build_passive_we_status_extension',
         lambda selected_assessment, **kwargs: {'schema_version': 1} if (
             selected_assessment is assessment
-            and kwargs == {'utility_scores': scores}
+            and kwargs == {
+                'utility_scores': scores,
+                'stateful': stateful,
+            }
         ) else None)
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
 
@@ -1528,6 +1570,7 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         },
     }
     assert len(evidence_builds) == 1
+    assert stateful_builds == [source]
     assert len(publications) == 2
     assert all(message.data == '{"shadow":true}' for message in publications)
 
