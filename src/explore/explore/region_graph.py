@@ -65,6 +65,13 @@ def _revision(value: object, name: str = "map_revision") -> int:
     return value
 
 
+def _text(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value.strip() or len(value) > 256:
+        raise RegionGraphError(
+            f"{name} muss 1 bis 256 Textzeichen enthalten")
+    return value
+
+
 @dataclass(frozen=True)
 class RegionGraphPolicy:
     """Hard in-memory bounds, not physical apartment limits."""
@@ -73,11 +80,13 @@ class RegionGraphPolicy:
     max_connections: int = 512
     max_portal_observations: int = 4096
     max_traversal_events: int = 4096
+    max_region_merges: int = 1024
 
     def __post_init__(self) -> None:
         for name in (
                 "max_regions", "max_connections",
-                "max_portal_observations", "max_traversal_events"):
+                "max_portal_observations", "max_traversal_events",
+                "max_region_merges"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise RegionGraphError(f"{name} muss eine positive Ganzzahl sein")
@@ -151,6 +160,7 @@ class RegionSnapshot:
     entered: bool
     entry_count: int
     portal_ids: Tuple[str, ...]
+    alias_ids: Tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -160,6 +170,7 @@ class PortalConnectionSnapshot:
     side_b_region_id: str
     first_revision: int
     last_revision: int
+    internal: bool
 
 
 @dataclass(frozen=True)
@@ -181,6 +192,36 @@ class RegionGraphSnapshot:
     regions: Tuple[RegionSnapshot, ...]
     connections: Tuple[PortalConnectionSnapshot, ...]
     confirmed_entry_count: int
+    region_aliases: Tuple[Tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class RegionMerge:
+    """Explicit external decision to unify two provisional regions."""
+
+    merge_id: str
+    context: PortalMapContext
+    map_revision: int
+    first_region_id: str
+    second_region_id: str
+    reason: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.merge_id, "merge_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+        _identifier(self.first_region_id, "first_region_id")
+        _identifier(self.second_region_id, "second_region_id")
+        _text(self.reason, "reason")
+
+
+@dataclass(frozen=True)
+class RegionMergeResult:
+    merge_id: str
+    canonical_region_id: str
+    removed_region_id: str
+    duplicate: bool = False
 
 
 @dataclass
@@ -192,6 +233,7 @@ class _RegionState:
     entered: bool
     entry_count: int = 0
     portal_ids: set[str] = field(default_factory=set)
+    alias_ids: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -221,6 +263,9 @@ class RegionGraph:
             str, Tuple[PortalLinkObservation, PortalLinkResult]] = {}
         self._traversal_events: Dict[
             str, Tuple[TraversalEvent, GraphTraversalResult]] = {}
+        self._region_merges: Dict[
+            str, Tuple[RegionMerge, RegionMergeResult]] = {}
+        self._region_aliases: Dict[str, str] = {}
         self._start_seed: Optional[RegionSeed] = None
         self._start_result: Optional[RegionStartResult] = None
         self._current_region_id: Optional[str] = None
@@ -276,7 +321,16 @@ class RegionGraph:
             if previous_observation != observation:
                 raise RegionGraphConflictError(
                     "observation_id wurde widerspruechlich wiederverwendet")
-            return replace(previous_result, duplicate=True)
+            return replace(
+                previous_result,
+                current_region_id=self.resolve_region_id(
+                    previous_result.current_region_id),
+                opposite_region_id=(
+                    None if previous_result.opposite_region_id is None
+                    else self.resolve_region_id(
+                        previous_result.opposite_region_id)),
+                duplicate=True,
+            )
 
         current_region = self._require_region(observation.current_region_id)
         if self._current_region_id != current_region.region_id:
@@ -368,6 +422,10 @@ class RegionGraph:
                     "event_id wurde widerspruechlich wiederverwendet")
             return replace(
                 previous_result,
+                source_region_id=self.resolve_region_id(
+                    previous_result.source_region_id),
+                target_region_id=self.resolve_region_id(
+                    previous_result.target_region_id),
                 entered=False,
                 current_region_id=self._current_region_id,
                 duplicate=True,
@@ -387,7 +445,9 @@ class RegionGraph:
             raise RegionGraphConflictError(
                 "Durchfahrtsrichtung beginnt nicht in der aktuellen Region")
 
-        entered = event.crossing_confirmed
+        entered = (
+            event.crossing_confirmed
+            and source_region_id != target_region_id)
         if entered:
             source = self._require_region(source_region_id)
             target = self._require_region(target_region_id)
@@ -410,8 +470,95 @@ class RegionGraph:
         self._latest_revision = max(self._latest_revision, event.map_revision)
         return result
 
+    def merge_regions(self, merge: RegionMerge) -> RegionMergeResult:
+        """Apply one explicit merge and preserve all old region references."""
+        if not isinstance(merge, RegionMerge):
+            raise RegionGraphError("merge muss RegionMerge sein")
+        self._require_context(merge.context)
+
+        previous = self._region_merges.get(merge.merge_id)
+        if previous is not None:
+            previous_merge, previous_result = previous
+            if previous_merge != merge:
+                raise RegionGraphConflictError(
+                    "merge_id wurde widerspruechlich wiederverwendet")
+            return replace(
+                previous_result,
+                canonical_region_id=self.resolve_region_id(
+                    previous_result.canonical_region_id),
+                duplicate=True,
+            )
+
+        first_id = self.resolve_region_id(merge.first_region_id)
+        second_id = self.resolve_region_id(merge.second_region_id)
+        if first_id == second_id:
+            raise RegionGraphConflictError(
+                "Region kann nicht mit sich selbst vereinigt werden")
+        self._require_current_revision(merge.map_revision)
+        if len(self._region_merges) >= self._policy.max_region_merges:
+            raise RegionGraphCapacityError("Regionsvereinigungsverlauf ist voll")
+
+        canonical_id, removed_id = sorted((first_id, second_id))
+        canonical = self._regions[canonical_id]
+        removed = self._regions[removed_id]
+        canonical.first_revision = min(
+            canonical.first_revision, removed.first_revision)
+        canonical.last_revision = max(
+            canonical.last_revision, removed.last_revision,
+            merge.map_revision)
+        canonical.seen = canonical.seen or removed.seen
+        canonical.entered = canonical.entered or removed.entered
+        canonical.entry_count += removed.entry_count
+        canonical.portal_ids.update(removed.portal_ids)
+        canonical.alias_ids.update(removed.alias_ids)
+        canonical.alias_ids.add(removed_id)
+
+        for connection in self._connections.values():
+            if connection.side_a_region_id == removed_id:
+                connection.side_a_region_id = canonical_id
+            if connection.side_b_region_id == removed_id:
+                connection.side_b_region_id = canonical_id
+            if (
+                    connection.side_a_region_id == canonical_id
+                    or connection.side_b_region_id == canonical_id):
+                connection.last_revision = max(
+                    connection.last_revision, merge.map_revision)
+
+        for alias_id, target_id in tuple(self._region_aliases.items()):
+            if target_id == removed_id:
+                self._region_aliases[alias_id] = canonical_id
+        self._region_aliases[removed_id] = canonical_id
+        del self._regions[removed_id]
+        if self._current_region_id == removed_id:
+            self._current_region_id = canonical_id
+
+        result = RegionMergeResult(
+            merge_id=merge.merge_id,
+            canonical_region_id=canonical_id,
+            removed_region_id=removed_id,
+        )
+        self._region_merges[merge.merge_id] = (merge, result)
+        self._latest_revision = max(
+            self._latest_revision, merge.map_revision)
+        return result
+
     def region(self, region_id: str) -> RegionSnapshot:
         return self._region_snapshot(self._require_region(region_id))
+
+    def resolve_region_id(self, region_id: str) -> str:
+        """Resolve a canonical region or any retained historical alias."""
+        _identifier(region_id, "region_id")
+        if region_id in self._regions:
+            return region_id
+        try:
+            canonical_id = self._region_aliases[region_id]
+        except KeyError as exc:
+            raise UnknownRegionError(
+                f"Unbekannte Region: {region_id}") from exc
+        if canonical_id not in self._regions:
+            raise RegionGraphConflictError(
+                "Regionsalias verweist nicht auf eine kanonische Region")
+        return canonical_id
 
     def connection(self, portal_id: str) -> PortalConnectionSnapshot:
         _identifier(portal_id, "portal_id")
@@ -435,6 +582,7 @@ class RegionGraph:
                 for portal_id in sorted(self._connections)),
             confirmed_entry_count=sum(
                 region.entry_count for region in self._regions.values()),
+            region_aliases=tuple(sorted(self._region_aliases.items())),
         )
 
     def _new_region(
@@ -523,12 +671,7 @@ class RegionGraph:
                 "Eingabe stammt aus einer veralteten Kartenrevision")
 
     def _require_region(self, region_id: str) -> _RegionState:
-        _identifier(region_id, "region_id")
-        try:
-            return self._regions[region_id]
-        except KeyError as exc:
-            raise UnknownRegionError(
-                f"Unbekannte Region: {region_id}") from exc
+        return self._regions[self.resolve_region_id(region_id)]
 
     @staticmethod
     def _region_snapshot(state: _RegionState) -> RegionSnapshot:
@@ -540,6 +683,7 @@ class RegionGraph:
             entered=state.entered,
             entry_count=state.entry_count,
             portal_ids=tuple(sorted(state.portal_ids)),
+            alias_ids=tuple(sorted(state.alias_ids)),
         )
 
     @staticmethod
@@ -551,4 +695,6 @@ class RegionGraph:
             side_b_region_id=state.side_b_region_id,
             first_revision=state.first_revision,
             last_revision=state.last_revision,
+            internal=(
+                state.side_a_region_id == state.side_b_region_id),
         )
