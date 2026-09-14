@@ -58,6 +58,12 @@ def _room_hall_room_map():
     return occupancy
 
 
+def _open_living_area_map():
+    occupancy = np.full((60, 100), -1, dtype=np.int16)
+    occupancy[5:55, 3:97] = 0
+    return occupancy
+
+
 def _portals_from(occupancy, robot_cell):
     return find_connected_clearance_portals(
         occupancy,
@@ -260,3 +266,53 @@ def test_room_hall_room_and_return_keep_truth_and_identity_separate():
         "task-portal-000002",)
     assert snapshot.tasks[0].region_id == next_room
     assert snapshot.tasks[0].state is RegionTaskState.COMPLETED
+
+
+def test_open_living_area_creates_no_portal_region_or_task():
+    memory = PortalMemory(CONTEXT)
+    graph = RegionGraph(CONTEXT)
+    start_room = graph.start(
+        RegionSeed("open-area-start", CONTEXT, 0)).region_id
+
+    assert _portals_from(_open_living_area_map(), (30, 20)) == []
+    assert memory.snapshots() == ()
+
+    snapshot = graph.snapshot()
+    assert tuple(region.region_id for region in snapshot.regions) == (
+        start_room,)
+    assert snapshot.connections == ()
+    assert snapshot.tasks == ()
+    assert snapshot.confirmed_entry_count == 0
+
+
+def test_furniture_neck_stays_uncertain_and_does_not_split_region():
+    occupancy = _open_living_area_map()
+    # A large synthetic furniture island leaves two routes inside one room.
+    # Its upper route resembles a neck after analysis erosion, but the fixture
+    # explicitly supplies contradictory structural truth.
+    occupancy[12:48, 45:55] = -1
+    bridge, = _portals_from(occupancy, (30, 20))
+    memory = PortalMemory(CONTEXT)
+    graph = RegionGraph(CONTEXT)
+    start_room = graph.start(
+        RegionSeed("furniture-start", CONTEXT, 0)).region_id
+
+    observed = memory.observe(_observation(
+        "furniture-neck", 1, bridge,
+        PortalStructuralEvidence.CONTRADICTORY))
+    portal = memory.snapshot(observed.portal_id)
+    assert portal.confirmation_state is PortalConfirmationState.UNCERTAIN
+    assert not portal.confirmed
+
+    deferred = graph.observe_portal(_link(
+        "furniture-neck-link", 1, portal,
+        start_room, observed.approach_side))
+    assert deferred.disposition is PortalLinkDisposition.DEFERRED
+    assert deferred.opposite_region_id is None
+
+    snapshot = graph.snapshot()
+    assert tuple(region.region_id for region in snapshot.regions) == (
+        start_room,)
+    assert snapshot.connections == ()
+    assert snapshot.tasks == ()
+    assert snapshot.confirmed_entry_count == 0
