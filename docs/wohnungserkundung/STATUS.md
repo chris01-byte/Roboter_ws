@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AD)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AE)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,15 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AD – optionale Rohkartendiagnose im Schattenstatus softwaregeprüft, zur Review.**
-Die reine Schattenstatusprojektion übernimmt die validierten begrenzten
-Joiner-Zähler nun optional. Bei deaktiviertem Joiner bleibt der Schema-1-JSON-
-Text ohne neuen Block; bei Aktivierung erscheint nur
-`raw_map_correlation` mit Kapazität, Zählern, letzter Revision und abgeleitetem
-Zustand. Fingerprint, Frame, Zellen und Geometrie werden nicht ausgegeben. Der
-bestehende Maximalumfang des JSON wird weiterhin nach der Erweiterung geprüft.
-ROS, Node und Parameter sind noch unberührt.
+**WE-M2/AE – passive Rohkartenidentität doppelt opt-in softwaregeprüft, zur Review.**
+Der Explorer besitzt nun die standardmäßig deaktivierten Parameter
+`region_graph_shadow_raw_map_enabled: false` und
+`region_graph_shadow_raw_map_capacity: 0`. Nur zusammen mit aktiviertem
+Regionsgraph und explizit positiver Kapazität wird der reine Joiner erzeugt.
+`_on_map()` übernimmt weiterhin zuerst die Explorerkarte; nur im Opt-in bildet
+es danach Snapshot/Digest außerhalb des Schatten-Locks und übergibt die kleine
+Identität darunter. Ein isolierter synthetischer DDS-Smoke lieferte den exakten
+passiven Join. Kein Portalfeed, Ziel oder Fahrpfad wurde ergänzt.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,13 +26,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AE:** Ausschließlich den
-standardmäßig deaktivierten ROS-Adapter für die Rohkartenidentität ergänzen:
-zwei Opt-in-Parameter, Snapshot/Digest nach den unveränderten `_on_map`-
-Zuweisungen außerhalb des Schatten-Locks und Übergabe unter dem Lock. Der
-deaktivierte Pfad darf weder Kopie noch Digest ausführen; Fehler bleiben auf den
-Schatten begrenzt. Vertragstests und ein isolierter ROS-Smoke ohne Geräte oder
-Action-Auftrag, kein Detektor, Portalfeed, Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/AF:** Ausschließlich einen
+reproduzierbaren synthetischen Last-/Latenzprüfer für die passive Rohkartennaht
+planen und als gerätefreien Testhelfer abgrenzen. Er muss Wire-Typen korrekt
+erzeugen, Kapazitäten explizit variieren und Digest-/Callbackzeit, Joinlatenz,
+Verdrängung und RSS begrenzt ausgeben. Zunächst Quellen-/Werkzeugprüfung und
+STATUS.md; keine Jetson-, Geräte-, Detektor-, Ziel- oder Fahraktivierung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -84,6 +84,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AB `docs/we-m2ab-raw-map-runtime-owner` | Gestapelte Besitzer-, Opt-in-, Diagnose- und Messentscheidung für die spätere passive Runtime; nur diese STATUS.md, kein Deployment. |
 | WE-M2/AC `feature/we-m2ac-lifecycle-raw-map-owner` | Gestapelter optionaler Joiner-Besitz im reinen Schattenlebenszyklus mit begrenzten Diagnosezählern und beidseitigen Übergaben; reine Module, Tests und Status, kein Deployment. |
 | WE-M2/AD `feature/we-m2ad-raw-map-status-diagnostics` | Gestapelte optionale, begrenzte Rohkarten-Korrelationsdiagnose im getrennten reinen Schattenstatus; reine Module, Tests und Status, kein Deployment. |
+| WE-M2/AE `feature/we-m2ae-passive-raw-map-runtime` | Gestapelter doppelt opt-in passiver Rohkartenadapter im Explorer mit gemeinsamer Identität, isoliertem Schattenfehler und getrennten Diagnosen; Node, Standardparameter, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -418,6 +419,83 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AE: doppelt opt-in passive Rohkarten-Runtime
+
+**Entscheidung / Umfang:** `ExploreNode` deklariert zusätzlich
+`region_graph_shadow_raw_map_enabled` mit Standard `false` und
+`region_graph_shadow_raw_map_capacity` mit Sperrwert `0`. Die reine Validierung
+akzeptiert den Rohkartenpfad nur, wenn zugleich der übergeordnete
+`region_graph_shadow_enabled` gesetzt und eine positive Kapazität ausdrücklich
+angegeben ist. Bei deaktiviertem Rohkartenpfad muss die Kapazität null bleiben;
+ein wirkungsloser positiver Wert wird als Konfigurationswiderspruch verworfen.
+Es gibt weiterhin keinen geratenen Runtime- oder Produktionsdefault.
+
+Nur beim doppelten Opt-in übergibt `_initialize_region_graph_shadow()` die
+Kapazität an genau einen `RegionGraphShadowLifecycle`. Es entsteht keine neue
+Subscription: Der bestehende `/map`-Callback wird wiederverwendet. Im
+deaktivierten Standard kehrt er nach seinen zwei bisherigen Zuweisungen zurück
+und ruft die Factory nicht auf; damit entstehen weder zusätzliche Rasterkopie
+noch Digest.
+
+Im Opt-in setzt `_on_map()` zuerst unverändert `self._map` und die monotone
+Explorer-Empfangszeit. Nach einer kurzen Fehlerprüfung wird außerhalb von
+`_region_graph_shadow_lock` aus Breite, Höhe, wire-genauer Auflösung,
+getrimmtem Frame, vollständigem Ursprung, Quellstempel und `data` über den
+gemeinsamen WE-M2/Z-Vertrag ein `RawMapPortalSource` gebildet. Erst danach wird
+unter dem Lock eine neue monotone Übergabezeit erfasst und die kleine Identität
+an den Lebenszyklus gegeben. Dadurch blockiert die Millionen-Zellen-Kopie nicht
+den Kartenstatus-/Ausgabe-Lock. Factory- oder Übergabefehler werden einmal nur
+im vorhandenen Schattenfehler festgehalten; Karte und Empfangszeit des
+bestehenden Explorers bleiben gesetzt. Nach dem Fehler werden weitere Digests
+vermieden.
+
+**Geänderte Dateien:** `src/explore/explore/explore_node.py`,
+`src/explore/config/explore_params.yaml`, Explorer-Vertragstests und diese
+STATUS.md. Kein Launch, Kartenmanager, Detektor, Portalplan, Actionvertrag,
+Navigationsziel, Geschwindigkeitskommando oder Sicherheitsparameter wurde
+geändert.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+vorhandenen generierten Schnittstellen; keine Robotergeräte, realen Karten/Bags,
+Nav-Action oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AE-CONTRACT | Explorer-Node-/Parametervertrag einschließlich Doppel-Opt-in, Nullkostenpfad, Wire-Felder, Lockgrenze, echter reiner Lifecycle und isolierter Fehler: **59 passed**. |
+| WE-M2AE-EXPLORER | Vollständige Explorer-Suite: **529 passed**. |
+| WE-M2AE-ADJACENT | Zusätzlich Blattpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **670 passed**. |
+| WE-M2AE-COLCON | Temporärer isolierter Build von Blattpaket und Explorer: 2 Pakete gebaut; **36 + 529 = 565 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AE-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+| WE-M2AE-ROS | Frischer Explorer in isolierter DDS-Domain 228, beide Opt-ins und Kapazität 2; synthetische 2×2-Rohkarte plus exakt gleicher Schema-1-Managerstatus ergaben `mode=shadow`, `passive=true`, eine Region und `raw_map_correlation.state=matched`, `emitted_correlations=1`, `evicted_sources=0`. Prozess per SIGINT beendet. |
+
+Der erste synthetische Statusversuch verwendete für `MapMetaData.resolution`
+den Python-Doublewert `0.05` statt des nach DDS-Serialisierung empfangenen
+float32-Werts. Der Exaktjoin blieb korrekt `waiting`. Ein danach im selben
+Lebenszyklus widersprüchlich fortgeschriebener Teststatus löste wie vorgesehen
+den Schattenfehler aus. Der erfolgreiche Wiederholungslauf verwendete eine
+frische Domain und die wire-normalisierte Auflösung. Dieser Befund ist zugleich
+ein Testharness-Hinweis: synthetische Fingerprints müssen aus den tatsächlich
+empfangenen Feldtypen entstehen, nicht aus Vorserialisierungs-Literalen.
+
+In der isolierten Domain wurden keine Motor-, Sensor- oder Missions-Nodes
+gestartet und kein Action-Auftrag gesendet. Der Explorer legt seine bestehenden
+Geschwindigkeitspublisher zwar an, veröffentlichte im Test aber keinen
+Fahrbefehl. Dies ist ein lokaler Software-/DDS-Nachweis, keine Jetson-, Last-,
+Hardware- oder Fahrabnahme.
+
+**Rückfall:** Beide neuen Standardparameter bleiben `false`/`0`; dadurch ist
+der gesamte neue Callbackteil bereits inaktiv. Vollständiger Rückfall ist das
+Zurücknehmen des einzelnen WE-M2/AE-Commits. Kein Installations-, Karten- oder
+Gerätezustand wurde verändert.
+
+**Nächster abgegrenzter Schritt WE-M2/AF:** Erst Quellen und vorhandene
+Werkzeugkonventionen prüfen und einen eigenständigen synthetischen Prüfer für
+dieselbe passive DDS-Naht spezifizieren. Er erzeugt den Fingerprint erst aus
+wire-normalisierten beziehungsweise zurückempfangenen Feldern, variiert eine
+explizite Kapazitätsmatrix und protokolliert nur begrenzte Aggregate für
+Digest-/Callbackzeit, Joinlatenz, Wartespitze, Verdrängungen und RSS. Noch keine
+Jetson-Ausführung, reale Map, Bag, Geräte- oder Fahraktivierung.
 
 ### 2026-09-14 – WE-M2/AD: optionale Diagnose im getrennten Schattenstatus
 

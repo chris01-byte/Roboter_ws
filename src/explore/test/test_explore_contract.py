@@ -28,9 +28,11 @@ from explore.explore_node import (  # noqa: E402
     odom_freshness_state,
     relative_planar_motion,
     stamp_coverage,
+    validated_shadow_raw_map_capacity,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
+    RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
 import explore.explore_node as explore_node_module  # noqa: E402
@@ -889,6 +891,8 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     source = (PACKAGE_ROOT / 'explore' / 'explore_node.py').read_text()
 
     assert parameters['region_graph_shadow_enabled'] is False
+    assert parameters['region_graph_shadow_raw_map_enabled'] is False
+    assert parameters['region_graph_shadow_raw_map_capacity'] == 0
     assert parameters['region_graph_shadow_session_id'] == ''
     assert parameters['region_graph_shadow_start_observation_id'] == ''
     assert parameters['region_graph_shadow_map_status_topic'] == (
@@ -921,11 +925,12 @@ def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
     interface_calls = []
 
     class FakeLifecycle:
-        def __init__(self, *args):
-            lifecycle_calls.append(args)
+        def __init__(self, *args, **kwargs):
+            lifecycle_calls.append((args, kwargs))
 
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_enabled = True
+    node._region_graph_shadow_raw_map_join_capacity = None
     node._region_graph_shadow_session_id = 'session-7'
     node._region_graph_shadow_start_observation_id = 'start-7'
     node._region_graph_shadow_map_status_topic = (
@@ -945,7 +950,7 @@ def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
 
     node._initialize_region_graph_shadow()
 
-    assert lifecycle_calls == [('session-7', 'map', 'start-7')]
+    assert lifecycle_calls == [(('session-7', 'map', 'start-7'), {})]
     assert [call[0] for call in interface_calls] == [
         'publisher', 'subscription', 'timer']
     publisher_qos = interface_calls[0][1][2]
@@ -960,6 +965,56 @@ def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
     assert interface_calls[2][2]['callback_group'] is node._cb
     assert isinstance(node._region_graph_shadow_lock, type(threading.Lock()))
     assert node._region_graph_shadow_fault is None
+
+
+def test_shadow_raw_map_configuration_requires_double_opt_in_and_capacity():
+    assert validated_shadow_raw_map_capacity(False, False, 0) is None
+    assert validated_shadow_raw_map_capacity(True, False, 0) is None
+    assert validated_shadow_raw_map_capacity(True, True, 3) == 3
+    for values in (
+            (False, True, 3),
+            (True, True, 0),
+            (True, False, 3),
+            (1, True, 3),
+            (True, 1, 3),
+            (True, True, True),
+            (True, True, -1)):
+        try:
+            validated_shadow_raw_map_capacity(*values)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'Ungueltige Konfiguration akzeptiert: {values}')
+
+
+def test_enabled_shadow_passes_only_explicit_raw_map_capacity(monkeypatch):
+    lifecycle_calls = []
+
+    class FakeLifecycle:
+        def __init__(self, *args, **kwargs):
+            lifecycle_calls.append((args, kwargs))
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_enabled = True
+    node._region_graph_shadow_raw_map_join_capacity = 3
+    node._region_graph_shadow_session_id = 'session-raw'
+    node._region_graph_shadow_start_observation_id = 'start-raw'
+    node._region_graph_shadow_map_status_topic = '/map-status'
+    node._region_graph_shadow_status_topic = '/shadow-status'
+    node._global_frame = 'map'
+    node._cb = object()
+    node.create_publisher = lambda *args, **kwargs: object()
+    node.create_subscription = lambda *args, **kwargs: object()
+    node.create_timer = lambda *args, **kwargs: object()
+    monkeypatch.setattr(
+        explore_node_module, 'RegionGraphShadowLifecycle', FakeLifecycle)
+
+    node._initialize_region_graph_shadow()
+
+    assert lifecycle_calls == [(
+        ('session-raw', 'map', 'start-raw'),
+        {'raw_map_capacity': 3},
+    )]
 
 
 def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
@@ -982,6 +1037,161 @@ def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
     assert accepted == [(
         '{"schema": 1}', {'received_monotonic_seconds': 42.5})]
     assert len(clock_calls) == 1
+    assert node._region_graph_shadow_fault is None
+
+
+def test_disabled_raw_map_shadow_preserves_map_without_factory(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_raw_map_enabled = False
+    message = _grid(width=2, height=2)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 7.0)
+    monkeypatch.setattr(
+        explore_node_module,
+        'raw_map_portal_source_from_values',
+        lambda **kwargs: (_ for _ in ()).throw(
+            AssertionError('Deaktivierter Pfad darf keinen Digest bilden')),
+    )
+
+    node._on_map(message)
+
+    assert node._map is message
+    assert node._map_received_at == 7.0
+
+
+def test_enabled_raw_map_snapshot_is_built_outside_and_joined_inside_lock(
+        monkeypatch):
+    factory_calls = []
+    lifecycle_calls = []
+    clock_values = iter((10.0, 11.0))
+    lock = threading.Lock()
+    source = object()
+    message = _grid(width=2, height=2, resolution=0.1)
+    message.header.frame_id = ' map '
+    message.header.stamp.sec = 12
+    message.header.stamp.nanosec = 34
+    message.info.origin.position.x = 1.5
+
+    def build_source(**kwargs):
+        assert not lock.locked()
+        assert node._map is message
+        assert node._map_received_at == 10.0
+        factory_calls.append(kwargs)
+        return source
+
+    def accept_source(value, **kwargs):
+        assert lock.locked()
+        lifecycle_calls.append((value, kwargs))
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_lock = lock
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        accept_raw_map_source=accept_source)
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: next(clock_values))
+    monkeypatch.setattr(
+        explore_node_module, 'raw_map_portal_source_from_values', build_source)
+
+    node._on_map(message)
+
+    assert factory_calls == [{
+        'width': 2,
+        'height': 2,
+        'resolution': 0.1,
+        'frame_id': 'map',
+        'origin': (1.5, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        'cells': message.data,
+        'source_stamp_ns': 12_000_000_034,
+    }]
+    assert lifecycle_calls == [(
+        source, {'received_monotonic_seconds': 11.0})]
+    assert node._region_graph_shadow_fault is None
+
+
+def test_invalid_raw_map_faults_only_shadow_after_preserving_map(monkeypatch):
+    errors = []
+    factory_calls = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        accept_raw_map_source=lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError('Ungueltige Quelle darf den Besitzer nicht erreichen')))
+    node.get_logger = lambda: SimpleNamespace(error=errors.append)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 8.0)
+
+    def reject_source(**kwargs):
+        factory_calls.append(kwargs)
+        raise ValueError('invalid cells')
+
+    monkeypatch.setattr(
+        explore_node_module, 'raw_map_portal_source_from_values', reject_source)
+    first = _grid(width=2, height=2)
+    second = _grid(width=3, height=1)
+
+    node._on_map(first)
+    node._on_map(second)
+
+    assert node._map is second
+    assert node._map_received_at == 8.0
+    assert len(factory_calls) == 1
+    assert len(errors) == 1
+    assert 'Rohkarte: ValueError: invalid cells' in (
+        node._region_graph_shadow_fault)
+
+
+def test_raw_map_lifecycle_error_faults_only_shadow(monkeypatch):
+    errors = []
+    message = _grid(width=1, height=1)
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = SimpleNamespace(
+        accept_raw_map_source=lambda *args, **kwargs: (_ for _ in ()).throw(
+            ValueError('join rejected')))
+    node.get_logger = lambda: SimpleNamespace(error=errors.append)
+    times = iter((20.0, 21.0))
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: next(times))
+    monkeypatch.setattr(
+        explore_node_module,
+        'raw_map_portal_source_from_values',
+        lambda **kwargs: object(),
+    )
+
+    node._on_map(message)
+
+    assert node._map is message
+    assert node._map_received_at == 20.0
+    assert len(errors) == 1
+    assert 'Rohkarte: ValueError: join rejected' in (
+        node._region_graph_shadow_fault)
+
+
+def test_raw_map_callback_reaches_real_pure_lifecycle(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow = RegionGraphShadowLifecycle(
+        'session-runtime-contract',
+        'map',
+        'start-runtime-contract',
+        raw_map_capacity=2,
+    )
+    times = iter((30.0, 31.0))
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: next(times))
+
+    node._on_map(_grid(width=2, height=2))
+
+    diagnostics = node._region_graph_shadow.raw_map_diagnostics
+    assert diagnostics.source_observations == 1
+    assert diagnostics.pending_sources == 1
+    assert diagnostics.emitted_correlations == 0
     assert node._region_graph_shadow_fault is None
 
 
