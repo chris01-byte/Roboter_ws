@@ -17,6 +17,41 @@ Rückfallweg:
 
 ---
 
+## 2026-09-14 — Kartenfingerprint in azyklisches Blattpaket extrahiert
+
+**Entscheidung:** Die kanonische, ROS-unabhängige Fingerprintberechnung liegt im
+neuen Blattpaket `amadeus_map_identity`. `robot_map_manager.MapSnapshot` und der
+reine WE-M2-Portalquellenadapter verwenden dieselbe Funktion. Der
+`source_stamp_ns` bleibt bewusst getrennt von der Inhaltsidentität.
+
+**Grund / beobachtete Evidenz:** Ein Direktimport von `robot_map_manager` in
+`explore` würde den vorhandenen Paketpfad
+`robot_map_manager → robot_navigation → explore` zyklisch schließen. Eine
+zweite Digestimplementierung könnte unbemerkt von gespeicherten Karten- und
+Semantikfingerprints abweichen. Der bekannte Kartenmanagervektor blieb nach der
+Extraktion bytegleich; Colcon listet das neue Paket vor beiden Verbrauchern.
+
+**Betroffene Dateien und Hardware:** Neues reines Python-Paket
+`amadeus_map_identity`; Fingerprintaufruf und Paketmetadaten in
+`robot_map_manager`; reiner Quellenadapter und Paketmetadaten in `explore`;
+Inventar und Wohnungserkundungsstatus. Keine ROS-Callbacks, Kartenformate,
+Geräte, Navigation oder Fahrsoftware geändert.
+
+**Teststatus:** Bekannte Digestvektoren, vollständige Kartenmanager-/Explorer-
+Quelltests, angrenzende Semantikverträge und isolierter Drei-Paket-Build
+bestanden. Dies ist kein Jetson-Deployment und keine Hardwareabnahme.
+
+**Offene Risiken:** Der Explorer erzeugt noch keine normalisierte
+Rohkartenidentität aus einer ROS-Nachricht. Laufzeit- und Speicherwirkung dieser
+späteren opt-in Berechnung sind vor Aktivierung auf dem Zielsystem zu messen.
+
+**Rückfallweg:** Gestapelten WE-M2/X-Commit zurücknehmen. Dadurch verwendet der
+Kartenmanager wieder seine vorherige interne, inhaltlich identische
+Fingerprintberechnung; Karten-IDs und gespeicherte Artefakte benötigen keine
+Migration.
+
+---
+
 ## 2026-08-26 — OAK-RGB-D-Dauerstream entkoppelt und selbstheilend
 
 **Entscheidung:** Die OAK-D-S2 liefert im Semantik-/SLAM-Profil real

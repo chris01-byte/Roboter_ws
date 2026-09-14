@@ -76,6 +76,11 @@ class SnapshotValidationTests(unittest.TestCase):
         first = valid_snapshot(stamp=1)
         second = valid_snapshot(stamp=999)
         self.assertEqual(first.fingerprint, second.fingerprint)
+        self.assertEqual(
+            first.fingerprint,
+            "1d326ce4c3579a26b519c3a9083bb6c2"
+            "2b7c22d1fe320bfb05076da850b01261",
+        )
         self.assertEqual(first.summary()["width"], 2)
         self.assertIsInstance(first.cells, bytes)
         self.assertEqual(first.cells, bytes((0, 100, 255, 50)))

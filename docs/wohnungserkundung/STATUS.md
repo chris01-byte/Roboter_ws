@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/W)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/X)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,13 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/W – gemeinsame Fingerprint-Abhängigkeit geklärt, zur Review.** Der in
-WE-M2/V zunächst vorgeschlagene direkte Import von
-`robot_map_manager.map_core.MapSnapshot` in `explore` ist unzulässig: Die
-Paketmetadaten enthalten bereits
-`robot_map_manager → robot_navigation → explore`; der Rückimport würde einen
-Build-/Installationszyklus erzeugen. Es wurde deshalb weder eine verdeckte
-Abhängigkeit noch eine zweite Digestimplementierung ergänzt.
+**WE-M2/X – gemeinsame azyklische Kartenidentität softwaregeprüft, zur Review.**
+Die bestehende Kartenmanager-Digestberechnung liegt nun im neuen ROS-freien
+Blattpaket `amadeus_map_identity`. `robot_map_manager.MapSnapshot` und der reine
+Explorer-Quellenadapter verwenden exakt diese eine Funktion. Bekannte
+Fingerprintvektoren blieben bytegleich; der Quellstempel bleibt getrennt von
+der Inhaltsidentität. Der Paketgraph ordnet das Blatt vor Explorer,
+Navigation und Kartenmanager ein und enthält keinen neuen Zyklus.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -24,12 +24,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/X:** Die bestehende Fingerprintfunktion in
-ein kleines ROS-freies, abhängigkeitloses Blattpaket
-`amadeus_map_identity` extrahieren. `robot_map_manager.MapSnapshot` und der reine
-Explorer-Quellenadapter verwenden danach dieselbe Funktion; bekannte
-Fingerprintvektoren, unveränderte Kartenmanagerverträge und einen azyklischen
-Paketgraphen prüfen. Kein Node-Callback, Detektor, Portalfeed, Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/Y:** Ausschließlich die passive
+ROS-Rohkartennaht planen und quellenbasiert prüfen: kanonische, speicherschonende
+Umwandlung des tatsächlichen `OccupancyGrid.data`-Typs, Callback-Snapshot,
+Nebenläufigkeit, Fehlerisolation und Messpunkte für Digestzeit/-speicher
+festlegen. Zunächst nur STATUS.md; noch kein Callback, Detektor, Portalfeed,
+Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -75,6 +75,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/U `docs/we-m2u-portal-provenance` | Gestapelte Quellenentscheidung zur fehlenden Rohkartenlinie der Nav2-Master-Costmap und zum fail-closed Korrelationsvertrag; nur diese STATUS.md. |
 | WE-M2/V `feature/we-m2v-raw-map-source` | Gestapelter reiner Exaktabgleich von Rohkartenfingerprint, -stempel und Frame gegen den aktuellen Kartenmanagerstand; neues Modul, Tests und Status, kein Deployment. |
 | WE-M2/W `docs/we-m2w-map-identity-dependency` | Gestapelte Abhängigkeitsentscheidung gegen den zyklischen Direktimport des Kartenmanagers und für eine neutrale Fingerprintquelle; nur diese STATUS.md. |
+| WE-M2/X `feature/we-m2x-shared-map-identity` | Gestapelte gemeinsame ROS-freie Fingerprintquelle für Kartenmanager und Explorer mit bytegleichen Vektoren und azyklischem Paketgraphen; kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -409,6 +410,74 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/X: eine gemeinsame bytegleiche Kartenidentität
+
+**Entscheidung / Umfang:** Neu ist das ament-Python-Blattpaket
+`amadeus_map_identity` ohne ROS- oder Projektpaketabhängigkeit. Seine einzige
+fachliche Funktion bildet den bisherigen Kartenmanager-SHA-256 aus positiver
+Breite/Höhe, positiver Auflösung, normalisiertem Frame, sieben endlichen
+Ursprungswerten und bereits kompakten Kartenzellen. Die Byteordnung und
+Feldreihenfolge sind unverändert. Erlaubt sind Zellbytes 0 bis 100 und 255 für
+ROS-Unknown; der Quellstempel gehört weiterhin nicht zum Inhaltsfingerprint.
+
+`robot_map_manager.MapSnapshot` validiert und normalisiert weiterhin seinen
+vollständigen Kartenvertrag, delegiert danach aber die eine Digestberechnung an
+das Blattpaket. Ein bekannter Fingerprintvektor wurde im Kartenmanagertest
+festgeschrieben. Dadurch ändern sich weder Statusschema, gespeicherte
+Fingerprintwerte noch Dateiformat. `explore` deklariert ebenfalls nur die
+Abhängigkeit zum Blattpaket. Sein reiner Quellenadapter kann aus expliziten,
+bereits normalisierten Kartenfeldern eine `RawMapPortalSource` bilden und nutzt
+dabei denselben bekannten Digestvektor.
+
+Der Paketgraph bleibt azyklisch:
+
+```text
+amadeus_map_identity --> explore --> robot_navigation --> robot_map_manager
+                    \--------------------------------------->|
+```
+
+Das neue Blatt kennt keinen seiner Verbraucher. Der bereits vorhandene Pfad
+zwischen Explorer, Navigation und Kartenmanager bleibt unverändert. Ein
+isolierter Drei-Paket-Build ordnete deshalb zuerst `amadeus_map_identity`, dann
+`explore` und zuletzt `robot_map_manager` an.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Underlay,
+ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2X-FOCUSED | Gemeinsame Fingerprint-, Kartenmanager-Core- und Portalquellen-Suiten: **100 passed**. |
+| WE-M2X-CORE | Neues Blattpaket, vollständige Explorer- und Kartenmanager-Suiten gemeinsam: **551 passed**. |
+| WE-M2X-ADJACENT | Zusätzlich Semantikmanager- und Semantik-Launch-Verträge: **605 passed**. |
+| WE-M2X-COLCON | Temporärer isolierter Build der drei Pakete: 3 Pakete gebaut; Blattpaket **18** und Explorer **482** Pakettests bestanden, Kartenmanager-Colcon-Hook führt historisch 0 Tests; seine **51** Quelltests sind separat in WE-M2X-CORE enthalten. Gesamt `colcon test-result`: **500 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2X-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+| WE-M2X-REMOTE-CI | PR #48 ist laut GitHub mergebar, aber nicht grün: Beide `python-contracts`-Läufe brachen im unveränderten `src/robot_bringup/test/test_oak_rectifier.py` bereits beim Import ab, weil dem Ubuntu-Runner `cv2` fehlt. Der nachfolgende Kartenmanagertest lief dadurch nicht. Der Workflow überwacht und testet außerdem weder `src/amadeus_map_identity/**` noch `src/explore/**`; dies ist deshalb ausdrücklich **kein** entfernter Testnachweis für WE-M2/X. Ein Swift-Lauf war erfolgreich, der zweite beim Abruf noch aktiv. |
+
+**Offene Grenzen / Integrationsabhängigkeiten:** Der neue Explorer-Factory-
+Vertrag akzeptiert absichtlich nur bereits normalisierte kompakte Bytes. Noch
+ist nicht festgelegt, wie der reale rclpy-`OccupancyGrid.data`-Puffer ohne
+unnötige Millionen-Zellen-Python-Schleife in genau diesen unveränderlichen
+Snapshot überführt wird. Explorer und Kartenmanager empfangen `/map` weiterhin
+in getrennten Callbacks; erst der spätere exakte Abgleich aus WE-M2/V darf eine
+Revision freigeben. Keine HWT-Detektorfunktion wurde übernommen, kein Portal
+beobachtet und keine Runtime aktiviert. Die Testläufe sind keine Zielsystem-
+oder Hardwareabnahme. Der bestehende, außerhalb dieses Schritts liegende
+CI-Umgebungs-/Abdeckungsbefund wird nicht durch eine fachfremde Workflow- oder
+OpenCV-Änderung in WE-M2/X verdeckt; er muss separat abgegrenzt werden.
+
+**Nächster abgegrenzter Schritt WE-M2/Y:** Nur quellenbasiert den tatsächlichen
+rclpy-Datentyp, die vorhandenen schnellen Kartenmanagerpfade und die
+Reentrant-Callback-Nebenläufigkeit prüfen. Einen begrenzten Snapshotvertrag,
+Fehlerisolation und Messplan für Digestzeit sowie Spitzenspeicher festlegen,
+bevor der standardmäßig deaktivierte Schattenpfad eine Rohkarte verarbeitet.
+Zunächst nur diese STATUS.md; keine Funktions- oder Runtimeänderung.
+
+**Rückfallweg:** Den WE-M2/X-Commit beziehungsweise gestapelten Review-PR
+zurücknehmen. `MapSnapshot` verwendet danach wieder seinen vorherigen internen,
+bytegleichen Digest; Karten-IDs und gespeicherte Karten brauchen keine
+Migration. Explorer-Quellenadapter WE-M2/V bleibt ohne Erzeuger bestehen. Kein
+Installations- oder Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/W: `MapSnapshot`-Direktimport würde Paketzyklus erzeugen
 

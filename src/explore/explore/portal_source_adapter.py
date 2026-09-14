@@ -10,6 +10,9 @@ identity because they describe costmap publication rather than map lineage.
 from dataclasses import dataclass
 import math
 import re
+from typing import Tuple
+
+from amadeus_map_identity import MapIdentityError, map_snapshot_fingerprint
 
 from .map_status_adapter import MapStatusCorrelationResult
 from .portal_memory import PortalMapContext
@@ -78,6 +81,31 @@ class PortalSourceCorrelation:
     map_revision: int
     fingerprint: str
     source_stamp_ns: int
+
+
+def raw_map_portal_source_from_values(
+        *, width: int, height: int, resolution: float, frame_id: str,
+        origin: Tuple[float, float, float, float, float, float, float],
+        compact_cells: bytes, source_stamp_ns: int,
+) -> RawMapPortalSource:
+    """Build identity from normalized values using the shared map digest."""
+    try:
+        fingerprint = map_snapshot_fingerprint(
+            width=width,
+            height=height,
+            resolution=resolution,
+            frame_id=frame_id,
+            origin=origin,
+            compact_cells=compact_cells,
+        )
+        return RawMapPortalSource(
+            fingerprint=fingerprint,
+            source_stamp_ns=source_stamp_ns,
+            frame_id=frame_id,
+        )
+    except (MapIdentityError, PortalSourceAdapterError) as error:
+        raise PortalSourceAdapterError(
+            "Rohkartenwerte bilden keine kanonische Portalquelle") from error
 
 
 def _validate_map_status(status: MapStatusCorrelationResult) -> None:

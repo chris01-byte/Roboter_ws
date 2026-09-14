@@ -17,6 +17,7 @@ from explore.portal_source_adapter import (  # noqa: E402
     PortalSourceAdapterError,
     RawMapPortalSource,
     correlate_raw_map_portal_source,
+    raw_map_portal_source_from_values,
 )
 
 
@@ -47,6 +48,50 @@ def map_status(**changes):
     }
     values.update(changes)
     return MapStatusCorrelationResult(**values)
+
+
+def source_from_values(**changes):
+    values = {
+        "width": 2,
+        "height": 2,
+        "resolution": 0.05,
+        "frame_id": "map",
+        "origin": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
+        "compact_cells": bytes((0, 100, 255, 42)),
+        "source_stamp_ns": 123,
+    }
+    values.update(changes)
+    return raw_map_portal_source_from_values(**values)
+
+
+def test_normalized_values_use_the_shared_known_fingerprint_vector():
+    raw_source = source_from_values()
+
+    assert raw_source.fingerprint == (
+        "cc800c3239900c2716fb3392a18e6a85"
+        "b40413ef5a619bba7f02dcc77913b9c8")
+    assert raw_source.source_stamp_ns == 123
+    assert raw_source.frame_id == "map"
+
+
+def test_source_stamp_is_carried_but_not_part_of_content_fingerprint():
+    first = source_from_values(source_stamp_ns=1)
+    second = source_from_values(source_stamp_ns=999)
+
+    assert first.fingerprint == second.fingerprint
+    assert first.source_stamp_ns == 1
+    assert second.source_stamp_ns == 999
+
+
+@pytest.mark.parametrize("changes", [
+    {"width": 0},
+    {"origin": (0.0,) * 6},
+    {"compact_cells": bytes((0, 100, 254, 42))},
+    {"source_stamp_ns": -1},
+])
+def test_noncanonical_values_do_not_create_a_portal_source(changes):
+    with pytest.raises(PortalSourceAdapterError):
+        source_from_values(**changes)
 
 
 def test_exact_current_raw_map_identity_releases_context_and_revision():
