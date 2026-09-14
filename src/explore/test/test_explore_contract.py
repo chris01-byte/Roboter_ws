@@ -40,6 +40,7 @@ from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
+from explore.region_graph import RegionTaskState  # noqa: E402
 import explore.explore_node as explore_node_module  # noqa: E402
 
 
@@ -910,6 +911,11 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_status_topic'] == (
         '/explore/region_graph/status_json')
     assert parameters['wohnungserkundung_policy_enabled'] is False
+    assert parameters['wohnungserkundung_evidence_clearance_m'] == 0.28
+    assert parameters['wohnungserkundung_robot_seed_search_m'] == 0.75
+    assert parameters['wohnungserkundung_task_cell_search_m'] == 0.60
+    assert parameters['wohnungserkundung_information_radius_m'] == 0.75
+    assert parameters['wohnungserkundung_evidence_max_cells'] == 262144
     assert parameters['region_graph_shadow_status_topic'] != (
         parameters['status_topic'])
     assert 'PortalPlanCandidate' not in source
@@ -1355,8 +1361,8 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
 
 def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         monkeypatch):
-    assessment = object()
-    source = object()
+    assessment = SimpleNamespace(eligible_task_ids=())
+    source = SimpleNamespace(source_map_revision=7)
     extension = {"schema_version": 1, "mode": "passive_shadow"}
     publications = []
     assessed = []
@@ -1371,8 +1377,9 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     node._wohnungserkundung_policy_enabled = True
     node._wohnungserkundung_policy_fault = None
 
-    def assess_outside_shadow_lock(value):
+    def assess_outside_shadow_lock(value, task_availability):
         assert not node._region_graph_shadow_lock.locked()
+        assert task_availability == ()
         assessed.append(value)
         return assessment
 
@@ -1381,7 +1388,14 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         assess_outside_shadow_lock)
     monkeypatch.setattr(
         explore_node_module, 'build_passive_we_status_extension',
-        lambda value: extension if value is assessment else None)
+        lambda value, **kwargs: (
+            extension if value is assessment and kwargs == {
+                'utility_scores': ()} else None))
+    monkeypatch.setattr(
+        explore_node_module, 'score_task_utilities',
+        lambda task_ids, evidence, revision: () if (
+            task_ids == () and evidence == () and revision == 7
+        ) else (_ for _ in ()).throw(AssertionError('unerwartete Bewertung')))
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
 
     node._publish_region_graph_shadow_status()
@@ -1391,6 +1405,131 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     assert node._wohnungserkundung_policy_fault is None
     assert len(publications) == 1
     assert publications[0].data == '{"shadow":true}'
+
+
+def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
+        monkeypatch):
+    raw_map = SimpleNamespace(
+        info=SimpleNamespace(
+            width=2,
+            height=2,
+            resolution=0.1,
+            origin=SimpleNamespace(
+                position=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+                orientation=SimpleNamespace(
+                    x=0.0, y=0.0, z=0.0, w=1.0),
+            ),
+        ),
+        header=SimpleNamespace(
+            frame_id='map',
+            stamp=SimpleNamespace(sec=1, nanosec=2),
+        ),
+        data=[0, 0, 0, -1],
+    )
+    task = SimpleNamespace(state=RegionTaskState.OPEN)
+    source = SimpleNamespace(
+        context=SimpleNamespace(frame_id='map'),
+        source_map_revision=7,
+        graph=SimpleNamespace(tasks=(task,)),
+    )
+    correlation = SimpleNamespace(
+        map_revision=7,
+        context=source.context,
+        fingerprint='a' * 64,
+        source_stamp_ns=1000000002,
+    )
+    raw_source = object()
+    tracks = (object(),)
+    availability = (object(),)
+    utilities = (object(),)
+    scores = (object(),)
+    assessment = SimpleNamespace(eligible_task_ids=('task-1',))
+    evidence = SimpleNamespace(
+        source_map_revision=7,
+        availability=availability,
+        utilities=utilities,
+        robot_seed_available=True,
+        current_frontier_track_count=1,
+    )
+    publications = []
+    evidence_builds = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_frontier_task_feed = True
+    node._region_graph_shadow_latest_raw_map = raw_map
+    node._region_graph_shadow_latest_correlation = correlation
+    node._region_graph_shadow_latest_raw_source = raw_source
+    node._region_graph_shadow = SimpleNamespace(
+        build_status=lambda **kwargs: SimpleNamespace(
+            serialized='{"shadow":true}', source=source),
+        frontier_tracks=lambda: tracks,
+    )
+    node._region_graph_shadow_pub = SimpleNamespace(
+        publish=publications.append)
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_policy_fault = None
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_evidence_cache_key = None
+    node._wohnungserkundung_evidence_cache = None
+    node._try_observe_correlated_raw_map_frontiers = lambda: None
+    node._try_observe_connected_raw_map_portals = lambda: None
+    node._shadow_source_matches_correlation = (
+        lambda selected_source, selected_correlation: (
+            selected_source is raw_source
+            and selected_correlation is correlation))
+
+    def build_evidence(*args, **kwargs):
+        assert not node._region_graph_shadow_lock.locked()
+        evidence_builds.append((args, kwargs))
+        assert args == (correlation,)
+        assert kwargs['robot_xy'] == (1.0, 2.0)
+        assert kwargs['tasks'] == (task,)
+        assert kwargs['tracks'] == tracks
+        return evidence
+
+    node._robot_pose = lambda: (1.0, 2.0, 0.0)
+    node._world_to_grid = lambda x, y, info: (10, 20)
+    monkeypatch.setattr(
+        explore_node_module, 'build_frontier_task_evidence', build_evidence)
+    monkeypatch.setattr(
+        explore_node_module, 'assess_exploration_policy',
+        lambda selected_source, selected_availability: assessment if (
+            selected_source is source
+            and selected_availability is availability
+        ) else None)
+    monkeypatch.setattr(
+        explore_node_module, 'score_task_utilities',
+        lambda task_ids, selected_utilities, revision: scores if (
+            task_ids == ('task-1',)
+            and selected_utilities is utilities
+            and revision == 7
+        ) else None)
+    monkeypatch.setattr(
+        explore_node_module, 'build_passive_we_status_extension',
+        lambda selected_assessment, **kwargs: {'schema_version': 1} if (
+            selected_assessment is assessment
+            and kwargs == {'utility_scores': scores}
+        ) else None)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
+
+    node._publish_region_graph_shadow_status()
+    node._publish_region_graph_shadow_status()
+
+    assert node._wohnungserkundung_status_extension == {
+        'schema_version': 1,
+        'task_evidence_source': {
+            'state': 'current',
+            'map_revision': 7,
+            'robot_seed_available': True,
+            'current_frontier_track_count': 1,
+            'availability_count': 1,
+            'utility_count': 1,
+        },
+    }
+    assert len(evidence_builds) == 1
+    assert len(publications) == 2
+    assert all(message.data == '{"shadow":true}' for message in publications)
 
 
 def _status_node(policy_enabled):

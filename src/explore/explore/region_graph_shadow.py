@@ -17,6 +17,7 @@ from typing import Optional, Tuple
 from .frontier_task_feed import (
     FrontierInventory,
     FrontierInventoryResult,
+    FrontierTrackSnapshot,
     FrontierTaskPolicy,
     FrontierTaskTracker,
 )
@@ -154,6 +155,10 @@ class RegionGraphShadowSession:
     @property
     def start_result(self) -> RegionStartResult:
         return self._start_result
+
+    def frontier_tracks(self) -> Tuple[FrontierTrackSnapshot, ...]:
+        """Return immutable stable frontier geometry for passive evidence."""
+        return self._frontier_tasks.tracks()
 
     def _latest_event_revision(self) -> int:
         revisions = [self._region_graph.latest_revision]

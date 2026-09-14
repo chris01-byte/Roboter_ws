@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 import sys
 
@@ -26,6 +27,7 @@ from explore.exploration_migration import (  # noqa: E402
 from explore.exploration_policy import (  # noqa: E402
     ExplorationPolicyAssessment,
     PolicyAssessmentState,
+    TaskUtilityScore,
 )
 from explore.portal_memory import PortalMapContext  # noqa: E402
 
@@ -173,6 +175,46 @@ def test_unavailable_passive_status_is_explicitly_fail_closed():
         "blocker_codes": ["waiting_for_shadow_snapshot"],
         "blocker_codes_truncated": False,
     }
+
+
+def test_passive_status_exposes_bounded_scalar_task_evidence():
+    assessment = replace(
+        _passive_assessment(),
+        eligible_task_ids=("task-1",),
+    )
+    score = TaskUtilityScore(
+        task_id="task-1",
+        geodesic_path_length_m=2.5,
+        information_gain_square_m=1.25,
+        normalized_route_cost=0.125,
+        normalized_information_gain=0.125,
+        score=0.5,
+    )
+
+    extension = build_passive_we_status_extension(
+        assessment, utility_scores=(score,))
+
+    assert extension["task_evidence_count"] == 0
+    assert extension["task_evidence"] == []
+    assert extension["task_evidence_truncated"] is False
+    assert extension["utility_score_count"] == 1
+    assert extension["utility_scores"] == [{
+        "task_id": "task-1",
+        "geodesic_path_length_m": 2.5,
+        "information_gain_square_m": 1.25,
+        "normalized_route_cost": 0.125,
+        "normalized_information_gain": 0.125,
+        "score": 0.5,
+    }]
+    assert extension["utility_scores_truncated"] is False
+
+
+def test_passive_status_requires_exact_eligible_utility_coverage():
+    assessment = replace(
+        _passive_assessment(), eligible_task_ids=("task-1",))
+
+    with pytest.raises(ExplorationMigrationError, match="exakt"):
+        build_passive_we_status_extension(assessment)
 
 
 @pytest.mark.parametrize("value", [None, "assessment", 1])

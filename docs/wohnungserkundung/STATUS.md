@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/F)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/G)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,13 +10,15 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/F – Der erste passive Runtimeadapter ist standardmäßig deaktiviert,
-gerätefrei durchgängig geprüft und zur Review.** Bei explizitem Opt-in bewertet
-er atomar genau den typisierten Snapshot des vorhandenen Regionsgraph-Schatten
-und hängt eine begrenzte, versionierte `wohnungserkundung`-Diagnose an den
-Legacy-Status. Ohne Opt-in bleibt dessen Payload unverändert. Mangels
-Aufgabenverfügbarkeitsbelegen bleibt jede offene Aufgabe unbekannt und der
-Abschluss immer gesperrt; Zielwahl und Fahrpfade lesen den neuen Zustand nicht.
+**WE-M3/G – Die passive Frontier-Belegnaht ist gerätefrei durchgängig geprüft
+und zur Review.** Bei den bereits getrennten Opt-ins korreliert sie genau einen
+Rohkartensnapshot mit Kartenrevision, stabilem Frontierbestand und Roboterpose.
+Für jede offene Aufgabe entstehen vollständige Verfügbarkeitsevidenz sowie nur
+für erreichbare aktuelle Frontiers skalare geodätische Weglänge und
+Informationsfläche. Die begrenzte, versionierte `wohnungserkundung`-Diagnose
+enthält diese Belege; sie enthält weder Zielpose noch Pfad oder Fahrfreigabe.
+Ohne Opt-in bleibt der Legacy-Status unverändert. Zielwahl und Fahrpfade lesen
+den neuen Zustand weiterhin nicht.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -25,20 +27,21 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis F umfassen Logik, Migrationsvertrag und
-die erste rein diagnostische Runtimeprojektion. Echte revisionsgebundene
-Verfügbarkeits-/Wegkostenbelege, zustandsbehaftete Auswahl, Zielbildung und
--übergabe, Abschluss-/Actionintegration, eingefrorenes begrenztes Profil sowie
-die motorlose Zielsystemabnahme fehlen.
+WE-M3 bleibt ebenfalls offen: M3/A bis G umfassen Logik, Migrationsvertrag,
+rein diagnostische Runtimeprojektion und echte revisionsgebundene
+Frontier-Verfügbarkeits-/Wegkostenbelege. Vollständige Portalinventarfrische,
+zustandsbehaftete Auswahl, Zielbildung und -übergabe,
+Abschluss-/Actionintegration, eingefrorenes begrenztes Profil sowie die
+motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/G:** Die fehlende Belegnaht ohne
-Zielübergabe ergänzen: aus exakt derselben korrelierten Rohkarte, dem vollständigen
-Frontierbestand und einem expliziten Roboterbezug revisionsgebundene
-Aufgabenverfügbarkeit, geodätische Weglänge und Informationsgewinn ableiten.
-Fehlende Karte/Pose, nicht auflösbare Aufgaben, Planungsfehler und veraltete
-Revisionen müssen als unbekannt beziehungsweise blockiert sichtbar bleiben.
-Zunächst nur reine Adapter-/Szenariotests und passive Statusdiagnose; keine
-Action-, Nav2-Ziel-, Command- oder Twist-Wirkung.
+**Nächster abgegrenzter Schritt WE-M3/H:** Die im M3/G-Smoke nachgewiesene
+Frischelücke schließen: Der korrelierte Portaldetektorlauf muss pro Revision
+einen vollständigen, begrenzten Portalbestand einschließlich des gültigen
+Leerbestands melden. Nur dieser explizite Bestand darf die Portalgedächtnisquelle
+als aktuell markieren; fehlender Lauf oder Detektorfehler bleibt veraltet. Danach
+rein diagnostisch belegen, dass eine Frontieraufgabe bei gemeinsam frischen
+Quellen `ready_with_tasks` erreicht. Noch keine Auswahlfortschreibung, kein Ziel,
+keine Action-, Nav2-, Command- oder Twist-Wirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -113,6 +116,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/D `feature/we-m3d-completion-contract` | Gestapelter reiner Abschlussautomat mit drei frischen qualifizierten Revisionen, Reset bei Blockade, getrennten Voll-/Teil-/System-/Nutzerzuständen und unabhängigen Speicher-/Rückkehrergebnissen; keine Runtime- oder Fahrwirkung. |
 | WE-M3/E `feature/we-m3e-consumer-migration` | Gestapelte quellenbasierte Verbraucher-/ABI-Inventur und reine additive Abbildung von WE-Ergebnissen auf unveränderte Legacy-Action-/Statuszustände; versionierte verschachtelte Statuserweiterung, keine Runtimewirkung. |
 | WE-M3/F `feature/we-m3f-passive-runtime-status` | Gestapelter standardmäßig deaktivierter Runtimeadapter vom atomaren typisierten Schattensnapshot zur begrenzten versionierten `wohnungserkundung`-Diagnose im Legacy-Status; ohne Verfügbarkeitsbeleg kein geeignetes Ziel und stets gesperrter Abschluss. |
+| WE-M3/G `feature/we-m3g-frontier-evidence` | Gestapelte exakte Rohkarten-/Frontier-Belegnaht mit vollständiger Aufgabenverfügbarkeit, skalarer geodätischer Weglänge und Informationsfläche sowie passiver Statusprojektion; keine Ziel-, Action-, Nav2- oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -351,7 +355,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis F softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration und passiver Status-Runtimepfad liegen vor. Belegzuführung, Auswahl-/Zielintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis G softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad und exakte Frontierbelege liegen vor. Vollständige Portalquellenfrische, Auswahl-/Zielintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -447,6 +451,91 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/G: exakte passive Frontier-Belegnaht
+
+**Arbeitsbasis und Umfang:** `feature/we-m3g-frontier-evidence` baut direkt auf
+M3/F `e0db4c3` auf. Das neue ROS-freie Modul
+`frontier_task_evidence.py` nimmt ausschließlich den exakt korrelierten
+Rohkartensnapshot, offene typisierte Graphaufgaben, unveränderliche stabile
+Frontiertracks und optional die Roboterposition im Kartenframe entgegen. Der
+Lebenszyklus gibt dazu nach Sitzungsstart eine unveränderliche Kopie der
+Frontiertracks frei. Der Explorer berechnet die Evidenz erst außerhalb der
+Schatten-Sperre und cachet sie nur für dieselbe Fingerprint-/Stempel-/Frame-/
+Revisionsidentität und dieselbe Roboterrasterzelle.
+
+**Evidenzvertrag:** Die Rohkarte wird mit der gemeinsamen kanonischen
+Zellnormalisierung und Fingerprintfunktion erneut verifiziert. Pro offener
+Aufgabe entsteht genau ein revisionsgebundener Zustand. Ein aktueller
+Frontiertrack mit verfügbarer Pose, sicherer Startzelle, erreichbarer Zielzelle
+und positiver unbekannter Fläche ist `available`. Fehlende Pose oder
+Trackzuordnung bleibt `unknown`; fehlender sicherer Start oder Rohkartenweg ist
+`temporarily_blocked`; fehlender Informationsgewinn ist `filtered`.
+Portal-/Beobachtungsaufgaben bleiben mangels eigener Belegquelle ausdrücklich
+`unknown`. Die Zielzelle wird zuerst geometrisch an die nächstgelegene sichere
+Zelle gebunden und erst danach auf Erreichbarkeit geprüft, damit ein großer
+Suchradius nicht durch eine Wand auf die roboterseitige Komponente springt.
+
+Die Weglänge ist die skalare 8-Nachbar-Dijkstra-Distanz auf freien Zellen nach
+euklidischer Hindernisabstandsprüfung; diagonales Eckenschneiden ist gesperrt.
+Der Informationsgewinn ist die unbekannte Rasterfläche in einem metrischen
+Radius um den stabilen Frontiermittelpunkt. Weder Rasterzelle, Pose, Pfad noch
+Ziel werden ausgegeben. Die Statusmigration ergänzt begrenzt höchstens 128
+Aufgabenbelege und 128 Scores; Anzahl und Abschneidung bleiben sichtbar, und
+Scores müssen die geeigneten Aufgaben exakt abdecken.
+
+**Vorläufige Grenzen und Messung:** Die Softwarestartwerte sind 0,28 m
+Freiraum, 0,75 m Startzellensuche, 0,60 m Frontier-Zellensuche und 0,75 m
+Informationsradius. Sie sind ausdrücklich nicht hardwarevermessen oder für eine
+Abnahme eingefroren. Die Evidenzkarte ist hart auf 512 × 512 = 262.144 Zellen
+begrenzt. Eine lokale x86_64-Messung verwarf die erste Python-Heap-Variante
+(128²/256²/512²: 0,128/0,528/2,298 s; Spitzen-RSS bei 512² 59.948 KiB) zugunsten
+des begrenzten SciPy-Sparse-Laufs (0,024/0,090/0,372 s; Spitzen-RSS bei 512²
+112.884 KiB). Der höhere, aber begrenzte Speicherbedarf und die lokale Laufzeit
+sind keine Jetsonmessung.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+frischem temporären Overlay; keine Geräte, realen Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3G-FOCUS | Evidenz-, Lebenszyklus-, Migration- und Nodevertrag: **173 passed**; darunter Exaktidentität, Wand-/Ecktrennung, fehlende/stale Eingänge, Rasterrotation, vollständige Ordnung, Kapazität, Cache/Sperrdisziplin und importfreie Fahrgrenze. |
+| WE-M3G-EXPLORER | Vollständige Explorer-Suite nach dem Wand-Suchradius-Randfall: **666 passed**. |
+| WE-M3G-ADJACENT | Explorer plus vollständige Fingerprint-, Karten-, Semantik-, Mission- und Launch-Suiten: **856 passed**. |
+| WE-M3G-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; letzter Testlauf **36 + 666 = 702 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3G-ROS | Isolierte lokale DDS-Domain, direkter Explorer ohne Action: ein 40 × 40-Snapshot ergab eine offene und geeignete Frontieraufgabe, 1,700000025 m Rohkartenweg, 0,900000027 m² Informationsfläche, `completion_allowed=false` und **0** Nachrichten auf beiden Explorer-Command-Topics. |
+| WE-M3G-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+Der erste synthetische Exaktjoin verwendete für die Fingerprintberechnung
+Python-Double `0.1`, während die ROS-Nachricht die Auflösung als Float32
+`0.10000000149…` transportiert. Der Join verweigerte dies korrekt. Mit dem
+tatsächlich transportierten Float32-Wert bestand der Test. Ein weiterer
+Prüfskriptlauf scheiterte ausschließlich an einem falsch auf oberster Ebene
+statt unter `counts` gelesenen Diagnosefeld; das Produktfeld und die
+abschließende korrigierte Prüfung waren korrekt.
+
+**Offene Grenzen:** Trotz geeigneter Frontieraufgabe meldet die Policy im
+ROS-Smoke korrekt `waiting_for_fresh_sources`: Der verbundene Portaldetektorfeed
+führt einzelne Beobachtungen zu, aber keinen vollständigen Portalbestand. Bei
+einem gültigen Leerbestand bleibt `portal_memory_revision` deshalb unbekannt.
+Diese Lücke darf nicht durch erfundene Frische oder ein stillschweigendes
+„keine Portale“ geschlossen werden. Weiter fehlen zustandsbehaftete Auswahl,
+Versuchs-/Retryfortschreibung in der Runtime, Portal-/Beobachtungsevidenz,
+Ziel-/Kindzielkorrelation, Abschlussbeobachtung, Zielsystemlast und jede
+Hardwareprüfung. Softwaretests sind keine Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/H:** Einen expliziten, korrelierten und
+begrenzten vollständigen Portalinventarvertrag einschließlich Leerbestand durch
+Adapter, Lebenszyklus und passive Runtime führen. Fehlende oder gescheiterte
+Detektorauswertung bleibt veraltet. Rein diagnostisch muss der bestehende
+Frontierfall danach bei gemeinsam frischen Quellen `ready_with_tasks` erreichen;
+noch keine Auswahlfortschreibung, Zielbildung, Action, Nav2- oder Fahrwirkung.
+
+**Rückfall:** `wohnungserkundung_policy_enabled: false` entfernt Bewertung und
+Evidenzdiagnose; die anderen Schatten-Opt-ins bleiben getrennt. Vollständiger
+Rückfall ist der einzelne M3/G-Revert. Legacy-Status, Action-, Navigations- und
+Fahrpfade bleiben unverändert; nichts wurde deployed oder an Hardware aktiviert.
 
 ### 2026-09-14 – WE-M3/F: passiver Runtime- und Statusadapter
 
