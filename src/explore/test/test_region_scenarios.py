@@ -33,6 +33,7 @@ from explore.region_graph import (  # noqa: E402
     PortalLinkDisposition,
     PortalLinkObservation,
     RegionGraph,
+    RegionMerge,
     RegionSeed,
     RegionTaskKind,
     RegionTaskState,
@@ -61,6 +62,17 @@ def _room_hall_room_map():
 def _open_living_area_map():
     occupancy = np.full((60, 100), -1, dtype=np.int16)
     occupancy[5:55, 3:97] = 0
+    return occupancy
+
+
+def _l_hall_map():
+    occupancy = np.full((90, 120), -1, dtype=np.int16)
+    occupancy[5:45, 3:43] = 0
+    occupancy[18:32, 47:85] = 0
+    occupancy[18:65, 71:85] = 0
+    occupancy[69:86, 40:110] = 0
+    occupancy[22:28, 43:47] = 0
+    occupancy[65:69, 76:82] = 0
     return occupancy
 
 
@@ -316,3 +328,95 @@ def test_furniture_neck_stays_uncertain_and_does_not_split_region():
     assert snapshot.connections == ()
     assert snapshot.tasks == ()
     assert snapshot.confirmed_entry_count == 0
+
+
+def test_l_hall_loop_merge_reuses_start_region_and_keeps_two_portals():
+    occupancy = _l_hall_map()
+    # These two free cells are on different arms of the same L-shaped hall.
+    assert occupancy[25, 60] == 0
+    assert occupancy[50, 78] == 0
+    memory = PortalMemory(CONTEXT)
+    graph = RegionGraph(CONTEXT)
+    start_room = graph.start(
+        RegionSeed("loop-start", CONTEXT, 0)).region_id
+    assert start_room == "region_000001"
+
+    first_bridge, = _portals_from(occupancy, (25, 20))
+    memory.observe(_observation(
+        "loop-door-one-qualified-1", 1, first_bridge))
+    first_observed = memory.observe(_observation(
+        "loop-door-one-qualified-2", 2, first_bridge))
+    first_portal_id = first_observed.portal_id
+    assert first_portal_id == "portal_000001"
+    assert first_observed.approach_side is PortalSide.A
+    first_link = graph.observe_portal(_link(
+        "loop-door-one-link", 2, memory.snapshot(first_portal_id),
+        start_room, first_observed.approach_side))
+    hall = first_link.opposite_region_id
+    assert hall == "region_000002"
+    enter_hall = _traversal(
+        "loop-enter-hall", first_portal_id, 3,
+        _direction_from(first_observed.approach_side), confirmed=True)
+    memory.record_traversal(enter_hall)
+    graph.record_traversal(enter_hall)
+
+    hall_bridges = _portals_from(occupancy, (25, 60))
+    assert len(hall_bridges) == 2
+    second_bridge, = (
+        bridge for bridge in hall_bridges
+        if bridge.target_center_row > 70.0)
+    memory.observe(_observation(
+        "loop-door-two-qualified-1", 4, second_bridge))
+    second_observed = memory.observe(_observation(
+        "loop-door-two-qualified-2", 5, second_bridge))
+    second_portal_id = second_observed.portal_id
+    assert second_portal_id == "portal_000002"
+    assert second_observed.approach_side is PortalSide.A
+    second_link = graph.observe_portal(_link(
+        "loop-door-two-link", 5, memory.snapshot(second_portal_id),
+        hall, second_observed.approach_side))
+    provisional_return_region = second_link.opposite_region_id
+    assert provisional_return_region == "region_000003"
+    enter_provisional_region = _traversal(
+        "loop-enter-provisional-region", second_portal_id, 6,
+        _direction_from(second_observed.approach_side), confirmed=True)
+    memory.record_traversal(enter_provisional_region)
+    graph.record_traversal(enter_provisional_region)
+    assert tuple(region.region_id for region in graph.snapshot().regions) == (
+        "region_000001", "region_000002", "region_000003")
+
+    merged = graph.merge_regions(RegionMerge(
+        merge_id="explicit-loop-truth",
+        context=CONTEXT,
+        map_revision=7,
+        first_region_id=provisional_return_region,
+        second_region_id=start_room,
+        reason="fixture_supplied_loop_closure",
+    ))
+    assert merged.canonical_region_id == start_room
+    assert merged.removed_region_id == provisional_return_region
+    assert graph.current_region_id == start_room
+
+    return_to_hall = _traversal(
+        "loop-return-to-hall", second_portal_id, 8,
+        TraversalDirection.B_TO_A, confirmed=True)
+    memory.record_traversal(return_to_hall)
+    returned = graph.record_traversal(return_to_hall)
+
+    snapshot = graph.snapshot()
+    assert returned.target_region_id == hall
+    assert returned.current_region_id == hall
+    assert tuple(portal.portal_id for portal in memory.snapshots()) == (
+        "portal_000001", "portal_000002")
+    assert tuple(region.region_id for region in snapshot.regions) == (
+        start_room, hall)
+    assert snapshot.region_aliases == (
+        (provisional_return_region, start_room),)
+    assert len(snapshot.connections) == 2
+    assert {
+        frozenset((connection.side_a_region_id,
+                   connection.side_b_region_id))
+        for connection in snapshot.connections
+    } == {frozenset((start_room, hall))}
+    assert snapshot.confirmed_entry_count == 3
+    assert graph.region(hall).entry_count == 2
