@@ -76,6 +76,9 @@ from explore.portal_planning import (
     find_portal_bridges,
     front_lidar_corridor_check,
 )
+from explore.raw_map_portal_adapter import (
+    correlated_connected_portal_candidates,
+)
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -394,6 +397,36 @@ def validated_shadow_raw_map_capacity(
     return None
 
 
+def validated_shadow_connected_portal_feed(
+        shadow_enabled: bool, raw_map_enabled: bool,
+        connected_portals_enabled: bool, raw_map_capacity: int,
+        analysis_clearance_m: float, uncertainty_m: float,
+        retry_limit: int) -> bool:
+    """Validate the third opt-in without creating runtime work."""
+    flags = (shadow_enabled, raw_map_enabled, connected_portals_enabled)
+    if any(not isinstance(value, bool) for value in flags):
+        raise ValueError('Portalfeed-Opt-ins muessen bool sein')
+    numeric_limits = (analysis_clearance_m, uncertainty_m)
+    if (
+            any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(float(value))
+                for value in numeric_limits)
+            or analysis_clearance_m <= 0.0
+            or not 0.0 <= uncertainty_m <= 0.10
+            or isinstance(retry_limit, bool)
+            or not isinstance(retry_limit, int)
+            or retry_limit <= 0):
+        raise ValueError('Portalfeed-Grenzen sind ungueltig')
+    if connected_portals_enabled and (
+            not shadow_enabled or not raw_map_enabled
+            or raw_map_capacity <= 0):
+        raise ValueError(
+            'Portalfeed braucht Schatten und positive Rohkartenkorrelation')
+    return connected_portals_enabled
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -645,6 +678,20 @@ class ExploreNode(Node):
         self._region_graph_shadow_raw_map_capacity = int(
             self.declare_parameter(
                 'region_graph_shadow_raw_map_capacity', 0).value)
+        self._region_graph_shadow_connected_portals_enabled = bool(
+            self.declare_parameter(
+                'region_graph_shadow_connected_portals_enabled',
+                False).value)
+        self._region_graph_shadow_portal_analysis_clearance = float(
+            self.declare_parameter(
+                'region_graph_shadow_portal_analysis_clearance_m',
+                0.20).value)
+        self._region_graph_shadow_portal_uncertainty = float(
+            self.declare_parameter(
+                'region_graph_shadow_portal_uncertainty_m', 0.05).value)
+        self._region_graph_shadow_portal_retry_limit = int(
+            self.declare_parameter(
+                'region_graph_shadow_portal_retry_limit', 30).value)
         self._region_graph_shadow_session_id = str(self.declare_parameter(
             'region_graph_shadow_session_id', '').value).strip()
         self._region_graph_shadow_start_observation_id = str(
@@ -837,6 +884,17 @@ class ExploreNode(Node):
                 self._region_graph_shadow_raw_map_capacity,
             )
         )
+        self._region_graph_shadow_connected_portal_feed = (
+            validated_shadow_connected_portal_feed(
+                self._region_graph_shadow_enabled,
+                self._region_graph_shadow_raw_map_enabled,
+                self._region_graph_shadow_connected_portals_enabled,
+                self._region_graph_shadow_raw_map_capacity,
+                self._region_graph_shadow_portal_analysis_clearance,
+                self._region_graph_shadow_portal_uncertainty,
+                self._region_graph_shadow_portal_retry_limit,
+            )
+        )
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -911,6 +969,12 @@ class ExploreNode(Node):
         )
         self._region_graph_shadow_lock = threading.Lock()
         self._region_graph_shadow_fault = None
+        if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+            self._region_graph_shadow_latest_raw_map = None
+            self._region_graph_shadow_latest_raw_source = None
+            self._region_graph_shadow_latest_correlation = None
+            self._region_graph_shadow_processed_correlation = None
+            self._region_graph_shadow_portal_retry_count = 0
 
         shadow_qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -940,6 +1004,132 @@ class ExploreNode(Node):
             'Passiver Regionsgraph-Schatten bleibt bis zum Neustart '
             f'deaktiviert ({self._region_graph_shadow_fault}).')
 
+    def _remember_shadow_raw_map_correlation(self, update):
+        """Retain at most one exact join result while holding the lock."""
+        if not getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+            return
+        correlation = getattr(update, 'raw_map_correlation', None)
+        if correlation is None:
+            return
+        self._region_graph_shadow_latest_correlation = correlation
+        self._region_graph_shadow_portal_retry_count = 0
+
+    @staticmethod
+    def _shadow_correlation_key(correlation):
+        return (
+            correlation.fingerprint,
+            correlation.source_stamp_ns,
+            correlation.context.frame_id,
+            correlation.map_revision,
+        )
+
+    @staticmethod
+    def _shadow_source_matches_correlation(source, correlation):
+        return (
+            source.fingerprint == correlation.fingerprint
+            and source.source_stamp_ns == correlation.source_stamp_ns
+            and source.frame_id == correlation.context.frame_id)
+
+    def _try_observe_connected_raw_map_portals(self):
+        """Try one bounded passive feed without holding the shadow lock."""
+        if not getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+            return
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            message = self._region_graph_shadow_latest_raw_map
+            source = self._region_graph_shadow_latest_raw_source
+            correlation = self._region_graph_shadow_latest_correlation
+            if message is None or source is None or correlation is None:
+                return
+            correlation_key = self._shadow_correlation_key(correlation)
+            if self._region_graph_shadow_processed_correlation == correlation_key:
+                return
+            if not self._shadow_source_matches_correlation(source, correlation):
+                return
+
+        robot_pose = self._robot_pose()
+        if robot_pose is None:
+            with self._region_graph_shadow_lock:
+                if (
+                        self._region_graph_shadow_fault is None
+                        and self._region_graph_shadow_latest_correlation
+                        == correlation
+                        and self._region_graph_shadow_latest_raw_source
+                        == source):
+                    self._region_graph_shadow_portal_retry_count += 1
+                    if (
+                            self._region_graph_shadow_portal_retry_count
+                            >= self._region_graph_shadow_portal_retry_limit):
+                        self._fault_region_graph_shadow(
+                            'Portalfeed', ValueError(
+                                'Roboterpose fehlt nach begrenztem Retry'))
+            return
+
+        try:
+            origin = message.info.origin
+            candidates = correlated_connected_portal_candidates(
+                correlation,
+                width=message.info.width,
+                height=message.info.height,
+                resolution=message.info.resolution,
+                frame_id=message.header.frame_id.strip(),
+                origin=(
+                    origin.position.x,
+                    origin.position.y,
+                    origin.position.z,
+                    origin.orientation.x,
+                    origin.orientation.y,
+                    origin.orientation.z,
+                    origin.orientation.w,
+                ),
+                cells=message.data,
+                source_stamp_ns=(
+                    int(message.header.stamp.sec) * 1_000_000_000
+                    + int(message.header.stamp.nanosec)
+                ),
+                robot_xy=(robot_pose[0], robot_pose[1]),
+                uncertainty_m=self._region_graph_shadow_portal_uncertainty,
+                analysis_clearance_m=(
+                    self._region_graph_shadow_portal_analysis_clearance),
+                min_target_area_m2=self._portal_min_component_area,
+                min_gap_m=self._portal_min_gap,
+                max_gap_m=self._portal_max_gap,
+                exit_margin_m=self._portal_exit_margin,
+                max_traverse_distance_m=(
+                    self._portal_max_traverse_distance),
+            )
+        except Exception as error:
+            with self._region_graph_shadow_lock:
+                if (
+                        self._region_graph_shadow_fault is None
+                        and self._region_graph_shadow_latest_correlation
+                        == correlation
+                        and self._region_graph_shadow_latest_raw_source
+                        == source):
+                    self._fault_region_graph_shadow('Portalfeed', error)
+            return
+
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            if (
+                    self._region_graph_shadow_latest_correlation != correlation
+                    or self._region_graph_shadow_latest_raw_source != source):
+                return
+            observed_at = time.monotonic()
+            try:
+                for candidate in candidates:
+                    self._region_graph_shadow.observe_portal_plan(
+                        candidate,
+                        observed_monotonic_seconds=observed_at,
+                    )
+            except Exception as error:
+                self._fault_region_graph_shadow('Portalfeed', error)
+                return
+            self._region_graph_shadow_processed_correlation = correlation_key
+            self._region_graph_shadow_portal_retry_count = 0
+
     def _on_region_graph_map_status(self, msg: String):
         """Accept one map-manager envelope without affecting exploration."""
         with self._region_graph_shadow_lock:
@@ -947,15 +1137,17 @@ class ExploreNode(Node):
                 return
             received_at = time.monotonic()
             try:
-                self._region_graph_shadow.accept_map_status_json(
+                update = self._region_graph_shadow.accept_map_status_json(
                     msg.data,
                     received_monotonic_seconds=received_at,
                 )
+                self._remember_shadow_raw_map_correlation(update)
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Kartenstatus', error)
 
     def _publish_region_graph_shadow_status(self):
         """Publish at most once per timer tick after a complete map status."""
+        self._try_observe_connected_raw_map_portals()
         with self._region_graph_shadow_lock:
             if self._region_graph_shadow_fault is not None:
                 return
@@ -1011,12 +1203,17 @@ class ExploreNode(Node):
         with self._region_graph_shadow_lock:
             if self._region_graph_shadow_fault is not None:
                 return
+            if getattr(
+                    self, '_region_graph_shadow_connected_portal_feed', False):
+                self._region_graph_shadow_latest_raw_map = msg
+                self._region_graph_shadow_latest_raw_source = source
             received_at = time.monotonic()
             try:
-                self._region_graph_shadow.accept_raw_map_source(
+                update = self._region_graph_shadow.accept_raw_map_source(
                     source,
                     received_monotonic_seconds=received_at,
                 )
+                self._remember_shadow_raw_map_correlation(update)
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Rohkarte', error)
 
