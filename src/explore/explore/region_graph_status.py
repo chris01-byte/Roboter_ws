@@ -3,10 +3,13 @@
 This module has no ROS, filesystem, planner, or actuator dependency.  It does
 not create goals, infer freshness from wall time, or expose metric apartment
 geometry.  Callers must supply one explicit current map revision.
+Freshness additionally requires explicit monotonic ages supplied by the caller;
+the projection never reads a clock itself.
 """
 
 from dataclasses import dataclass
 import json
+import math
 from typing import Optional, Tuple
 
 from .portal_memory import (
@@ -48,11 +51,35 @@ def _optional_revision(value: object, name: str) -> Optional[int]:
     return _revision(value, name)
 
 
+def _optional_age_seconds(value: object, name: str) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ShadowStatusError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    normalized = float(value)
+    if not math.isfinite(normalized) or normalized < 0.0:
+        raise ShadowStatusError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    return normalized
+
+
+def _maximum_age_seconds(value: object, name: str) -> float:
+    normalized = _optional_age_seconds(value, name)
+    if normalized is None:
+        raise ShadowStatusError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    return normalized
+
+
 @dataclass(frozen=True)
 class ShadowStatusPolicy:
-    """Hard output bounds and a synthetic revision-lag start value."""
+    """Hard bounds and synthetic revision/age freshness start values."""
 
     maximum_revision_lag: int = 1
+    maximum_source_map_age_seconds: float = 2.0
+    maximum_portal_memory_age_seconds: float = 2.0
+    maximum_region_graph_age_seconds: float = 2.0
     max_portals: int = 256
     max_regions: int = 256
     max_connections: int = 512
@@ -62,6 +89,11 @@ class ShadowStatusPolicy:
 
     def __post_init__(self) -> None:
         _revision(self.maximum_revision_lag, "maximum_revision_lag")
+        for name in (
+                "maximum_source_map_age_seconds",
+                "maximum_portal_memory_age_seconds",
+                "maximum_region_graph_age_seconds"):
+            _maximum_age_seconds(getattr(self, name), name)
         for name in (
                 "max_portals", "max_regions", "max_connections",
                 "max_tasks", "max_reachability_sides",
@@ -82,6 +114,9 @@ class ShadowStatusSource:
     graph: RegionGraphSnapshot
     portals: Tuple[PortalSnapshot, ...]
     reachability: Tuple[ReachabilitySnapshot, ...]
+    source_map_age_seconds: Optional[float] = None
+    portal_memory_age_seconds: Optional[float] = None
+    region_graph_age_seconds: Optional[float] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.context, PortalMapContext):
@@ -89,6 +124,12 @@ class ShadowStatusSource:
         _revision(self.source_map_revision, "source_map_revision")
         _optional_revision(
             self.portal_memory_revision, "portal_memory_revision")
+        _optional_age_seconds(
+            self.source_map_age_seconds, "source_map_age_seconds")
+        _optional_age_seconds(
+            self.portal_memory_age_seconds, "portal_memory_age_seconds")
+        _optional_age_seconds(
+            self.region_graph_age_seconds, "region_graph_age_seconds")
         if not isinstance(self.graph, RegionGraphSnapshot):
             raise ShadowStatusError("graph muss RegionGraphSnapshot sein")
         if not isinstance(self.portals, tuple) or any(
@@ -104,17 +145,36 @@ class ShadowStatusSource:
 
 def _source_freshness(
         accepted_revision: Optional[int], source_map_revision: int,
-        maximum_revision_lag: int) -> dict:
+        maximum_revision_lag: int, age_seconds: Optional[float],
+        maximum_age_seconds: float) -> dict:
     if accepted_revision is None:
-        return {"revision": None, "lag_revisions": None, "state": "missing"}
+        if age_seconds is not None:
+            raise ShadowStatusError(
+                "Quellalter ohne zugehoerige Revision ist ungueltig")
+        return {
+            "revision": None,
+            "lag_revisions": None,
+            "age_seconds": None,
+            "state": "missing",
+        }
     if accepted_revision > source_map_revision:
         raise ShadowStatusError(
             "Quellrevision liegt vor der angegebenen aktuellen Kartenrevision")
     lag = source_map_revision - accepted_revision
+    normalized_age = _optional_age_seconds(age_seconds, "source age_seconds")
+    if normalized_age is None:
+        state = "missing"
+    elif (
+            lag > maximum_revision_lag
+            or normalized_age > maximum_age_seconds):
+        state = "stale"
+    else:
+        state = "fresh"
     return {
         "revision": accepted_revision,
         "lag_revisions": lag,
-        "state": "fresh" if lag <= maximum_revision_lag else "stale",
+        "age_seconds": normalized_age,
+        "state": state,
     }
 
 
@@ -315,14 +375,26 @@ def build_shadow_status_json(
         source.portal_memory_revision,
         source.source_map_revision,
         selected_policy.maximum_revision_lag,
+        source.portal_memory_age_seconds,
+        selected_policy.maximum_portal_memory_age_seconds,
     )
     graph_freshness = _source_freshness(
         source.graph.latest_revision,
         source.source_map_revision,
         selected_policy.maximum_revision_lag,
+        source.region_graph_age_seconds,
+        selected_policy.maximum_region_graph_age_seconds,
+    )
+    map_freshness = _source_freshness(
+        source.source_map_revision,
+        source.source_map_revision,
+        selected_policy.maximum_revision_lag,
+        source.source_map_age_seconds,
+        selected_policy.maximum_source_map_age_seconds,
     )
     stale_sources = tuple(
         name for name, status in (
+            ("source_map", map_freshness),
             ("portal_memory", portal_freshness),
             ("region_graph", graph_freshness),
         )
@@ -374,6 +446,7 @@ def build_shadow_status_json(
         },
         "source": {
             "map_revision": source.source_map_revision,
+            "source_map": map_freshness,
             "portal_memory": portal_freshness,
             "region_graph": graph_freshness,
             "stale": bool(stale_sources),
