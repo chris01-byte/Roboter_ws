@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AO)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AP)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,13 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AO – korrelierter Rohkarten-Portalkandidatenadapter softwaregeprüft,
-zur Review.** Das neue ROS-freie Modul prüft Fingerprint, Quellstempel, Frame
-und tatsächlich verwendete Zellen erneut gegen genau eine
-`PortalSourceCorrelation`, validiert planaren Origin/Yaw, führt den verbundenen
-Detektor aus und liefert deterministische `PortalPlanCandidate`s. Sie bleiben
-über den bestehenden Adapter ausdrücklich `INSUFFICIENT`; es gibt weiterhin
-keinen Node-Aufrufer.
+**WE-M2/AP – Besitzer- und Nebenläufigkeitsvertrag des passiven Portalfeeds
+festgelegt, zur Review.** Die vorhandene Schattenhülle kann die in WE-M2/AO
+erzeugten unqualifizierten Kandidaten ohne neue ROS-Schnittstelle übernehmen.
+Die kleinste sichere Anbindung benötigt einen dritten Opt-in, ein exakt
+gepaartes Raw-Map-/Identitätscache, die letzte Join-Korrelation und einen
+begrenzten Pose-Retry. Fingerprint/Detektion und TF bleiben außerhalb der
+Schatten-Sperre; vor Zustandsmutation wird das Paar unter der Sperre erneut
+verglichen.
 
 WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien sind
 jetzt lokal softwaregeprüft. Frontiers und qualifizierte Portalbeobachtungen
@@ -25,12 +26,11 @@ Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
 beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
 SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AP:** Ausschließlich dokumentierend den
-Node-Besitz der letzten exakten Korrelation, Raw-Map-Cache-Rennen,
-Pose-Verfügbarkeit, Wiederholungsregel und Sperrreihenfolge festlegen. Daraus
-genau einen doppelt opt-in passiven Portalfeed mit Nullkostenpfad, begrenztem
-Retry, Fehlertrennung, Tests und Rückfall bestimmen; noch keine Node- oder
-Parameteränderung.
+**Nächster abgegrenzter Schritt WE-M2/AQ:** Genau den dokumentierten
+standardmäßig deaktivierten Portalfeed in `explore_node.py` und
+`explore_params.yaml` samt Vertragstests umsetzen. Keine neue Subscription,
+kein Publisher, kein Launch, keine Qualifikation/Graphverbindung und keine
+Änderung an Zielwahl, Navigation, Commands oder Fahrsoftware.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -94,6 +94,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AM `feature/we-m2am-map-change-scenario` | Gestapeltes reines Kartenänderungsszenario für Wachstum, Origin-/Rasterrotation und explizite Merge-/Split-Korrektur ohne Identitäts- oder Aufgabenverlust; nur Tests und Status. |
 | WE-M2/AN `docs/we-m2an-runtime-feed-seam` | Gestapelte erneute Runtime-Nahtinventur nach Abschluss der kombinierten Szenarien; legt den fehlenden reinen Rohkarten-Kandidatenadapter als nächste Voraussetzung fest, nur diese STATUS.md. |
 | WE-M2/AO `feature/we-m2ao-correlated-raw-map-portals` | Gestapelter ROS-freier Adapter von exakt korrelierten Rohkartenzellen zu stabilen unqualifizierten verbundenen Portalkandidaten samt reinen Verträgen; kein Runtime-Aufrufer. |
+| WE-M2/AP `docs/we-m2ap-passive-portal-feed-owner` | Gestapelter Besitzer-, Cache-, Retry-, Sperr- und Fehlervertrag für die spätere dritte Opt-in-Portalzuführung; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -331,7 +332,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AO decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien und korrelierte unqualifizierte Rohkarten-Portalkandidaten ab. Node-Zuführung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AP decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien, korrelierte unqualifizierte Rohkarten-Portalkandidaten und deren Node-Besitzvertrag ab. Node-Zuführung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -428,6 +429,86 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AP: Besitzervertrag des passiven Portalfeeds
+
+**Bestandsbefund:** `ExploreNode` besitzt bereits genau einen optionalen
+Schattenlebenszyklus, dessen Sperre, Kartenstatus-Subscription,
+Rohkartenidentitätszuführung und 1-Hz-Statustimer. Beide Eingangsreihenfolgen
+werden im reinen `RawMapStatusJoiner` unterstützt; der Callback verwirft das in
+`ShadowLifecycleUpdate.raw_map_correlation` zurückgegebene Exaktergebnis aber
+noch. Der Node hält zwar die jeweils letzte `/map`-Nachricht, doch ein späterer
+Kartenmanagerstatus kann zu einem älteren wartenden Identitätswert gehören.
+Deshalb darf weder der letzte Cachewert noch eine bloß gleiche Frame-/Zeitnähe
+ungeprüft verwendet werden. `observe_portal_plan()` ist vorhanden, akzeptiert
+aber absichtlich nur `INSUFFICIENT`-Kandidaten und verändert den Regionsgraphen
+nicht.
+
+**Aktivierung und Parameter:** WE-M2/AQ ergänzt
+`region_graph_shadow_connected_portals_enabled: false`. `true` ist nur zusammen
+mit aktivem Schatten, aktivierter Rohkartenkorrelation und positiver Kapazität
+zulässig. Zusätzlich sind ausschließlich Analyse-Clearance,
+Kandidatenunsicherheit und ein positiver Retry-Grenzwert eigene
+Schattenparameter. Flächen-, Lücken-, Auslauf- und Seed-Grenzen werden aus den
+bereits validierten reinen Portalgeometriegrenzen gelesen; dies erteilt keine
+Fahrerlaubnis und ändert deren Werte nicht. Ohne den dritten Opt-in werden
+weder Cache-/Korrelationsbesitz noch TF, Detektor, Digest oder Portalfeed
+ausgeführt.
+
+**Cache und Reihenfolge:** Unter der vorhandenen Schatten-Sperre hält der Node
+höchstens ein Paar aus unveränderlich referenzierter letzter Raw-Map-Nachricht
+und genau der außerhalb der Sperre berechneten `RawMapPortalSource`, außerdem
+höchstens eine letzte emittierte `PortalSourceCorrelation`, ihren Retryzähler
+und den zuletzt abgeschlossenen Korrelationsschlüssel. Beide vorhandenen
+Callbacks übernehmen eine nichtleere Korrelation aus dem Lebenszyklus. Ein
+Kandidat darf erst berechnet werden, wenn Cache-Identität und Korrelation in
+Fingerprint, Quellstempel und Frame exakt übereinstimmen. Ein erwartetes
+asynchrones Nichtpassen wartet auf das nächste Paar und ist kein Schattenfehler.
+
+**Sperr- und Retryregel:** Der 1-Hz-Schatten-Timer stößt vor seiner
+Statusprojektion höchstens einen Versuch an. Er kopiert das passende Paar unter
+der Sperre, gibt sie frei und liest erst dann Roboterpose, Rasterzellen und den
+WE-M2/AO-Adapter. Fehlende Pose verbraucht genau einen der konfiguriert
+begrenzten Versuche; bis dahin bleibt die Quelle sichtbar `missing`. Nach
+Erschöpfung wird nur der Schattenpfad dauerhaft fail-closed gesetzt. Digest,
+NumPy/SciPy-Detektion und TF laufen nie unter der Sperre. Vor
+`observe_portal_plan()` wird unter der Sperre geprüft, dass Korrelation und
+Cachepaar noch exakt dieselben Objekte/Identitäten sind; ein inzwischen neueres
+Paar verwirft das berechnete Ergebnis ohne Mutation. Alle Kandidaten eines
+Snapshots erhalten denselben danach gelesenen monotonen Zeitpunkt. Exaktes
+Replay wird vom Lebenszyklus idempotent behandelt, ein abgeschlossenes Paar
+nicht erneut detektiert.
+
+**Fehlergrenze:** Ungültige exakt passende Kartendaten, Adapterfehler,
+Zeitkonflikt oder Lebenszyklusfehler sperren ausschließlich den Schatten bis
+zum Neustart. Erwartete Reihenfolgeabweichung, noch fehlender Kartenstatus und
+ein während der Berechnung fortgeschriebener Cache sind Wartesituationen. Der
+bestehende Explorerstatus, Actionserver, Nav2-Client, Twist-Publisher,
+Costmap-Portalplan und Frontierstrategie lesen keinen neuen Zustand.
+
+**Geänderte Dateien / Prüfplan für WE-M2/AQ:** Nur `explore_node.py`,
+`explore_params.yaml`, `test_explore_contract.py` und STATUS.md. Zu prüfen sind
+OFF-Nullkostenpfad, ungültige Aktivierung, beide Join-Reihenfolgen, exakt
+gepaartes Cacheobjekt, Digest/Detektor außerhalb der Sperre, Pose-Retry und
+-Erschöpfung, Cachewechsel während Berechnung, idempotentes Replay,
+Schattenfehlerisolation, unveränderte ROS-Schnittstellen sowie ein synthetischer
+ROS-Smoke ohne Action. Danach vollständige Suiten, temporärer Build und
+statische Prüfungen. Keine Geräte, realen Karten, Navigation oder Bewegung.
+
+**Rückfall:** WE-M2/AP ändert ausschließlich diese STATUS.md. Für WE-M2/AQ ist
+der sofortige Rückfall der neue dritte Parameter `false`; vollständig werden
+die vier Dateien des einzelnen Commits zurückgenommen. Bestehender Schatten,
+Explorer und Fahrpfad bleiben dabei erhalten.
+
+**Eigene Prüfung:** Die bestehenden Callback-, Rohkarten-, Adapter- und
+Lebenszyklusverträge wurden quellenbasiert gelesen; ihre vier relevanten
+Testdateien bestanden gemeinsam mit **192 passed**, `git diff --check` bestand.
+Keine ROS-Nodes, Geräte, Karten, Bags, Actions oder Bewegung wurden gestartet.
+Dies ist keine Runtime-, Zielsystem- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M2/AQ:** Nur diesen dritten Opt-in-Feed samt
+Vertragstests umsetzen. Keine Frontier-, Qualifikations-, Graph-, Ziel- oder
+Fahrintegration.
 
 ### 2026-09-14 – WE-M2/AO: korrelierte Rohkarten-Portalkandidaten
 
