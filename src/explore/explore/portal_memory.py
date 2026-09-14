@@ -167,6 +167,49 @@ class PortalObservation:
 
 
 @dataclass(frozen=True)
+class PortalObservationInventory:
+    """Complete detector outcome for one exact map revision.
+
+    An empty tuple is a positive statement that the detector completed and
+    found no portals.  Absence of this object is therefore deliberately
+    different from an empty inventory.
+    """
+
+    inventory_id: str
+    context: PortalMapContext
+    map_revision: int
+    observations: Tuple[PortalObservation, ...]
+
+    def __post_init__(self) -> None:
+        if (
+                not isinstance(self.inventory_id, str)
+                or not self.inventory_id.startswith("portal-inventory-")
+                or len(self.inventory_id) > 128
+                or not self.inventory_id.isascii()):
+            raise PortalMemoryError("inventory_id ist ungueltig")
+        if not isinstance(self.context, PortalMapContext):
+            raise PortalMemoryError("context muss PortalMapContext sein")
+        _nonnegative_integer(self.map_revision, "map_revision")
+        if not isinstance(self.observations, tuple) or any(
+                not isinstance(item, PortalObservation)
+                for item in self.observations):
+            raise PortalMemoryError(
+                "observations muss ein Tupel aus PortalObservation sein")
+        if any(
+                item.context != self.context
+                or item.map_revision != self.map_revision
+                for item in self.observations):
+            raise PortalMemoryError(
+                "Portalbestand und Beobachtungen muessen Kontext und "
+                "Revision teilen")
+        observation_ids = tuple(
+            item.observation_id for item in self.observations)
+        if len(set(observation_ids)) != len(observation_ids):
+            raise PortalMemoryError(
+                "Portalbestand enthaelt doppelte Beobachtungs-IDs")
+
+
+@dataclass(frozen=True)
 class PortalMemoryPolicy:
     """Synthetic, bounded matching policy; not a hardware calibration."""
 
@@ -177,6 +220,7 @@ class PortalMemoryPolicy:
     maximum_uncertainty_m: float = 0.10
     confirmation_revisions: int = 2
     max_portals: int = 256
+    max_inventory_observations: int = 256
     max_observations: int = 4096
     max_traversal_events: int = 4096
     max_reachability_updates: int = 4096
@@ -199,6 +243,7 @@ class PortalMemoryPolicy:
                 "max_axis_angle_rad muss kleiner als pi/2 sein")
         for name in (
                 "confirmation_revisions", "max_portals",
+                "max_inventory_observations",
                 "max_observations", "max_traversal_events",
                 "max_reachability_updates"):
             value = getattr(self, name)

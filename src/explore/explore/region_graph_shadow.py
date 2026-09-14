@@ -10,7 +10,7 @@ this owner never infers motion or creates goals.
 """
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 from typing import Optional, Tuple
 
@@ -29,6 +29,7 @@ from .portal_memory import (
     PortalMemory,
     PortalMemoryPolicy,
     PortalObservation,
+    PortalObservationInventory,
     StaleObservationError,
     TraversalEvent,
     TraversalResult,
@@ -69,6 +70,16 @@ class ShadowPortalEventResult:
     observation: ObservationResult
     link: Optional[PortalLinkResult]
     task_updates: Tuple[RegionTaskResult, ...]
+
+
+@dataclass(frozen=True)
+class ShadowPortalInventoryResult:
+    """Atomic complete portal-detector outcome for one map revision."""
+
+    inventory_id: str
+    map_revision: int
+    events: Tuple[ShadowPortalEventResult, ...]
+    duplicate: bool = False
 
 
 @dataclass(frozen=True)
@@ -139,9 +150,17 @@ class RegionGraphShadowSession:
             raise RegionGraphShadowError(
                 "status_policy muss ShadowStatusPolicy sein")
 
+        selected_portal_policy = portal_policy or PortalMemoryPolicy()
         self._context = initial_map_status.context
         self._map_status = initial_map_status
-        self._portal_memory = PortalMemory(self._context, portal_policy)
+        self._portal_memory = PortalMemory(
+            self._context, selected_portal_policy)
+        self._portal_inventory_max_observations = (
+            selected_portal_policy.max_inventory_observations)
+        self._last_portal_inventory: Optional[
+            Tuple[PortalObservationInventory, ShadowPortalInventoryResult]
+        ] = None
+        self._portal_inventory_revision: Optional[int] = None
         self._frontier_tasks = FrontierTaskTracker(
             self._context, policy=frontier_policy)
         self._region_graph = RegionGraph(self._context, graph_policy)
@@ -199,6 +218,16 @@ class RegionGraphShadowSession:
 
         memory = deepcopy(self._portal_memory)
         graph = deepcopy(self._region_graph)
+        result = self._apply_structural_portal(
+            memory, graph, observation)
+        self._portal_memory = memory
+        self._region_graph = graph
+        return result
+
+    def _apply_structural_portal(
+            self, memory: PortalMemory, graph: RegionGraph,
+            observation: PortalObservation) -> ShadowPortalEventResult:
+        """Apply one observation to caller-owned candidate state."""
         observed = memory.observe(observation)
         link = None
         task_updates = []
@@ -260,13 +289,61 @@ class RegionGraphShadowSession:
                         state=RegionTaskState.OPEN,
                     )))
 
-        self._portal_memory = memory
-        self._region_graph = graph
         return ShadowPortalEventResult(
             observation=observed,
             link=link,
             task_updates=tuple(task_updates),
         )
+
+    def observe_portal_inventory(
+            self, inventory: PortalObservationInventory,
+    ) -> ShadowPortalInventoryResult:
+        """Atomically apply and acknowledge one complete detector run."""
+        if not isinstance(inventory, PortalObservationInventory):
+            raise RegionGraphShadowError(
+                "inventory muss PortalObservationInventory sein")
+        if inventory.context != self._context:
+            raise RegionGraphShadowError(
+                "Portalbestand passt nicht zum Schattenkontext")
+        previous = self._last_portal_inventory
+        if previous is not None and previous[0].inventory_id == (
+                inventory.inventory_id):
+            if previous[0] != inventory:
+                raise RegionGraphShadowError(
+                    "Portal-inventory_id wurde widerspruechlich "
+                    "wiederverwendet")
+            return replace(previous[1], duplicate=True)
+        if (
+                self._portal_inventory_revision is not None
+                and inventory.map_revision
+                <= self._portal_inventory_revision):
+            raise StaleObservationError(
+                "Kartenrevision besitzt bereits einen anderen oder neueren "
+                "Portalbestand")
+        if inventory.map_revision < self._latest_event_revision():
+            raise StaleObservationError(
+                "Portalbestand stammt aus einer veralteten Graphrevision")
+        if len(inventory.observations) > (
+                self._portal_inventory_max_observations):
+            raise RegionGraphShadowError(
+                "Portalbestand ueberschreitet die Sitzungsgrenze")
+
+        memory = deepcopy(self._portal_memory)
+        graph = deepcopy(self._region_graph)
+        events = tuple(
+            self._apply_structural_portal(memory, graph, observation)
+            for observation in inventory.observations
+        )
+        result = ShadowPortalInventoryResult(
+            inventory_id=inventory.inventory_id,
+            map_revision=inventory.map_revision,
+            events=events,
+        )
+        self._portal_memory = memory
+        self._region_graph = graph
+        self._last_portal_inventory = (inventory, result)
+        self._portal_inventory_revision = inventory.map_revision
+        return result
 
     def observe_frontier_inventory(
             self, inventory: FrontierInventory) -> ShadowFrontierEventResult:
@@ -386,7 +463,10 @@ class RegionGraphShadowSession:
         return ShadowStatusSource(
             context=self._context,
             source_map_revision=map_status.map_revision,
-            portal_memory_revision=self._portal_memory.latest_revision,
+            portal_memory_revision=(
+                self._portal_inventory_revision
+                if self._portal_inventory_revision is not None
+                else self._portal_memory.latest_revision),
             graph=self._region_graph.snapshot(),
             portals=self._portal_memory.snapshots(),
             reachability=self._portal_memory.reachability_snapshots(),

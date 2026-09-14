@@ -77,7 +77,7 @@ from explore.portal_planning import (
     front_lidar_corridor_check,
 )
 from explore.raw_map_portal_adapter import (
-    correlated_connected_portal_observations,
+    correlated_connected_portal_inventory,
 )
 from explore.frontier_task_feed import (
     FrontierTaskPolicy,
@@ -1183,7 +1183,7 @@ class ExploreNode(Node):
 
         try:
             origin = message.info.origin
-            observations = correlated_connected_portal_observations(
+            inventory = correlated_connected_portal_inventory(
                 correlation,
                 width=message.info.width,
                 height=message.info.height,
@@ -1234,11 +1234,10 @@ class ExploreNode(Node):
                 return
             observed_at = time.monotonic()
             try:
-                for observation in observations:
-                    self._region_graph_shadow.observe_structural_portal(
-                        observation,
-                        observed_monotonic_seconds=observed_at,
-                    )
+                self._region_graph_shadow.observe_portal_inventory(
+                    inventory,
+                    observed_monotonic_seconds=observed_at,
+                )
             except Exception as error:
                 self._fault_region_graph_shadow('Portalfeed', error)
                 return

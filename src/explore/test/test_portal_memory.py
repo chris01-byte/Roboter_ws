@@ -20,6 +20,7 @@ from explore.portal_memory import (  # noqa: E402
     PortalMemoryError,
     PortalMemoryPolicy,
     PortalObservation,
+    PortalObservationInventory,
     PortalSide,
     PortalStructuralEvidence,
     ReachabilityConflictError,
@@ -333,7 +334,30 @@ def test_default_policy_is_explicitly_bounded_and_ids_are_deterministic():
     assert first.portal_id == "portal_000001"
     assert second.portal_id == "portal_000002"
     assert 0 < policy.max_portals < 10_000
+    assert 0 < policy.max_inventory_observations < 10_000
     assert 0 < policy.max_observations < 100_000
+
+
+def test_portal_inventory_requires_one_context_revision_and_unique_ids():
+    first = observation("inventory-a", 3)
+    foreign = observation(
+        "inventory-b", 3,
+        context=PortalMapContext("other", "map", "map"))
+
+    with pytest.raises(PortalMemoryError, match="Kontext und Revision"):
+        PortalObservationInventory(
+            "portal-inventory-" + "a" * 64,
+            CONTEXT,
+            3,
+            (first, foreign),
+        )
+    with pytest.raises(PortalMemoryError, match="doppelte"):
+        PortalObservationInventory(
+            "portal-inventory-" + "a" * 64,
+            CONTEXT,
+            3,
+            (first, first),
+        )
 
 
 def test_repeated_furniture_bottleneck_evidence_never_confirms_a_portal():

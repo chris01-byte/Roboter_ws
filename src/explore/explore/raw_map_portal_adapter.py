@@ -24,6 +24,7 @@ from .portal_memory import (
     Point2D,
     PortalMapContext,
     PortalObservation,
+    PortalObservationInventory,
     PortalStructuralEvidence,
 )
 from .portal_plan_adapter import PortalPlanCandidate
@@ -350,3 +351,51 @@ def correlated_connected_portal_observations(
             structural_evidence=evidence,
         ))
     return tuple(observations)
+
+
+def correlated_connected_portal_inventory(
+        correlation: PortalSourceCorrelation, *,
+        maximum_observations: int = 256, **arguments,
+) -> PortalObservationInventory:
+    """Return one explicit complete detector outcome, including empty.
+
+    Construction succeeds only after the exact-map detector call succeeds.
+    A missing object therefore remains distinct from a valid empty inventory.
+    """
+    if (
+            isinstance(maximum_observations, bool)
+            or not isinstance(maximum_observations, int)
+            or maximum_observations <= 0):
+        raise RawMapPortalCandidateError(
+            "maximum_observations muss eine positive Ganzzahl sein")
+    observations = tuple(sorted(
+        correlated_connected_portal_observations(
+            correlation, **arguments),
+        key=lambda item: item.observation_id,
+    ))
+    if len(observations) > maximum_observations:
+        raise RawMapPortalCandidateError(
+            "Portalbestand ueberschreitet maximum_observations")
+
+    digest = hashlib.sha256()
+    digest.update(b"we-portal-inventory-v1\0")
+    digest.update(correlation.context.session_id.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(correlation.context.map_id.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(correlation.context.frame_id.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(str(correlation.map_revision).encode("ascii"))
+    digest.update(b"\0")
+    digest.update(correlation.fingerprint.encode("ascii"))
+    digest.update(b"\0")
+    digest.update(str(correlation.source_stamp_ns).encode("ascii"))
+    for observation in observations:
+        digest.update(b"\0")
+        digest.update(observation.observation_id.encode("ascii"))
+    return PortalObservationInventory(
+        inventory_id=f"portal-inventory-{digest.hexdigest()}",
+        context=correlation.context,
+        map_revision=correlation.map_revision,
+        observations=observations,
+    )
