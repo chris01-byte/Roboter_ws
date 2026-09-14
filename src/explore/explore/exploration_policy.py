@@ -10,7 +10,7 @@ never report ``complete_accessible``.
 from dataclasses import dataclass, field
 from enum import Enum
 import math
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from .portal_memory import (
     PortalConfirmationState,
@@ -453,3 +453,446 @@ def assess_exploration_policy(
         blocker_codes=tuple(blocker_codes),
         completion_allowed=False,
     )
+
+
+class TaskAttemptOutcome(str, Enum):
+    """External attempt evidence without any motion-success inference."""
+
+    PROGRESSED = "progressed"
+    RETRYABLE_FAILURE = "retryable_failure"
+
+
+@dataclass(frozen=True)
+class TaskAttempt:
+    attempt_id: str
+    task_id: str
+    context: PortalMapContext
+    map_revision: int
+    outcome: TaskAttemptOutcome
+    reason: str
+    retry_not_before_revision: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        _identifier(self.attempt_id, "attempt_id")
+        _identifier(self.task_id, "task_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise ExplorationPolicyError(
+                "context muss PortalMapContext sein")
+        _revision(self.map_revision, "map_revision")
+        if not isinstance(self.outcome, TaskAttemptOutcome):
+            raise ExplorationPolicyError(
+                "outcome muss TaskAttemptOutcome sein")
+        _text(self.reason, "reason")
+        if self.outcome is TaskAttemptOutcome.RETRYABLE_FAILURE:
+            retry_revision = _revision(
+                self.retry_not_before_revision,
+                "retry_not_before_revision",
+            )
+            if retry_revision <= self.map_revision:
+                raise ExplorationPolicyError(
+                    "Retryrevision muss nach dem Fehlversuch liegen")
+        elif self.retry_not_before_revision is not None:
+            raise ExplorationPolicyError(
+                "Fortschritt darf keine Retryrevision setzen")
+
+
+@dataclass(frozen=True)
+class TaskReactivation:
+    reactivation_id: str
+    task_id: str
+    context: PortalMapContext
+    map_revision: int
+    reason: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.reactivation_id, "reactivation_id")
+        _identifier(self.task_id, "task_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise ExplorationPolicyError(
+                "context muss PortalMapContext sein")
+        _revision(self.map_revision, "map_revision")
+        _text(self.reason, "reason")
+
+
+@dataclass(frozen=True)
+class TaskHistoryPolicy:
+    """Bounded revision thresholds, not timing or hardware limits."""
+
+    assessment_config: ExplorationPolicyConfig = field(
+        default_factory=ExplorationPolicyConfig)
+    maximum_retryable_failures: int = 3
+    minimum_region_hold_revisions: int = 2
+    starvation_revision_threshold: int = 8
+    max_tracked_tasks: int = 4096
+    max_attempts: int = 8192
+    max_reactivations: int = 4096
+
+    def __post_init__(self) -> None:
+        if not isinstance(
+                self.assessment_config, ExplorationPolicyConfig):
+            raise ExplorationPolicyError(
+                "assessment_config muss ExplorationPolicyConfig sein")
+        for name in (
+                "maximum_retryable_failures",
+                "minimum_region_hold_revisions",
+                "starvation_revision_threshold",
+                "max_tracked_tasks", "max_attempts", "max_reactivations"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ExplorationPolicyError(
+                    f"{name} muss eine positive Ganzzahl sein")
+
+
+@dataclass(frozen=True)
+class TaskHistorySnapshot:
+    task_id: str
+    region_id: str
+    first_seen_revision: int
+    last_seen_revision: int
+    age_revisions: int
+    last_selected_revision: Optional[int]
+    selection_count: int
+    last_attempt_revision: Optional[int]
+    attempt_count: int
+    retryable_failure_count: int
+    retry_not_before_revision: Optional[int]
+    last_attempt_reason: Optional[str]
+    last_reactivation_revision: Optional[int]
+    completed: bool
+
+
+@dataclass(frozen=True)
+class StatefulPolicyAssessment:
+    passive: ExplorationPolicyAssessment
+    selected_task_id: Optional[str]
+    selected_region_id: Optional[str]
+    selection_reason: str
+    retry_deferred_task_ids: Tuple[str, ...]
+    retry_exhausted_task_ids: Tuple[str, ...]
+    history: Tuple[TaskHistorySnapshot, ...]
+    blocker_codes: Tuple[str, ...]
+    completion_allowed: bool = False
+
+
+@dataclass
+class _TaskHistoryState:
+    task_id: str
+    region_id: str
+    first_seen_revision: int
+    last_seen_revision: int
+    last_selected_revision: Optional[int] = None
+    selection_count: int = 0
+    last_attempt_revision: Optional[int] = None
+    attempt_count: int = 0
+    retryable_failure_count: int = 0
+    retry_not_before_revision: Optional[int] = None
+    last_attempt_reason: Optional[str] = None
+    last_reactivation_revision: Optional[int] = None
+    completed: bool = False
+
+
+class ExplorationTaskPolicySession:
+    """Revision-driven task history and ID-only hierarchical selection."""
+
+    def __init__(
+            self, context: PortalMapContext,
+            policy: Optional[TaskHistoryPolicy] = None) -> None:
+        if not isinstance(context, PortalMapContext):
+            raise ExplorationPolicyError(
+                "context muss PortalMapContext sein")
+        selected_policy = policy or TaskHistoryPolicy()
+        if not isinstance(selected_policy, TaskHistoryPolicy):
+            raise ExplorationPolicyError(
+                "policy muss TaskHistoryPolicy sein")
+        self._context = context
+        self._policy = selected_policy
+        self._tasks: Dict[str, _TaskHistoryState] = {}
+        self._attempts: Dict[str, TaskAttempt] = {}
+        self._reactivations: Dict[str, TaskReactivation] = {}
+        self._last_request = None
+        self._last_result: Optional[StatefulPolicyAssessment] = None
+        self._latest_assessment_revision: Optional[int] = None
+        self._active_region_id: Optional[str] = None
+        self._active_region_since_revision: Optional[int] = None
+
+    @property
+    def context(self) -> PortalMapContext:
+        return self._context
+
+    @property
+    def latest_assessment_revision(self) -> Optional[int]:
+        return self._latest_assessment_revision
+
+    def history(self) -> Tuple[TaskHistorySnapshot, ...]:
+        return tuple(
+            self._snapshot(self._tasks[task_id])
+            for task_id in sorted(self._tasks)
+        )
+
+    def record_attempt(self, attempt: TaskAttempt) -> TaskHistorySnapshot:
+        if not isinstance(attempt, TaskAttempt):
+            raise ExplorationPolicyError("attempt muss TaskAttempt sein")
+        self._require_context(attempt.context)
+        previous = self._attempts.get(attempt.attempt_id)
+        if previous is not None:
+            if previous != attempt:
+                raise ExplorationPolicyError(
+                    "attempt_id wurde widerspruechlich wiederverwendet")
+            return self._snapshot(self._tasks[attempt.task_id])
+        task = self._require_task(attempt.task_id)
+        self._require_event_revision(attempt.map_revision, task)
+        if task.completed:
+            raise ExplorationPolicyError(
+                "Erledigte Aufgabe darf keinen Versuch erhalten")
+        if self._is_retry_deferred(task, attempt.map_revision):
+            raise ExplorationPolicyError(
+                "Aufgabe ist bis zur Retryrevision zurueckgestellt")
+        if (
+                task.retryable_failure_count
+                >= self._policy.maximum_retryable_failures):
+            raise ExplorationPolicyError(
+                "Retrybudget ist ohne Reaktivierung erschoepft")
+        if len(self._attempts) >= self._policy.max_attempts:
+            raise ExplorationPolicyCapacityError(
+                "Versuchsverlauf ist voll")
+
+        task.last_attempt_revision = attempt.map_revision
+        task.attempt_count += 1
+        task.last_attempt_reason = attempt.reason
+        if attempt.outcome is TaskAttemptOutcome.RETRYABLE_FAILURE:
+            task.retryable_failure_count += 1
+            task.retry_not_before_revision = (
+                attempt.retry_not_before_revision)
+        else:
+            task.retry_not_before_revision = None
+        self._attempts[attempt.attempt_id] = attempt
+        self._clear_assessment_replay()
+        return self._snapshot(task)
+
+    def reactivate(
+            self, reactivation: TaskReactivation) -> TaskHistorySnapshot:
+        if not isinstance(reactivation, TaskReactivation):
+            raise ExplorationPolicyError(
+                "reactivation muss TaskReactivation sein")
+        self._require_context(reactivation.context)
+        previous = self._reactivations.get(reactivation.reactivation_id)
+        if previous is not None:
+            if previous != reactivation:
+                raise ExplorationPolicyError(
+                    "reactivation_id wurde widerspruechlich wiederverwendet")
+            return self._snapshot(self._tasks[reactivation.task_id])
+        task = self._require_task(reactivation.task_id)
+        self._require_event_revision(reactivation.map_revision, task)
+        if task.completed:
+            raise ExplorationPolicyError(
+                "Erledigte Aufgabe darf nicht reaktiviert werden")
+        if len(self._reactivations) >= self._policy.max_reactivations:
+            raise ExplorationPolicyCapacityError(
+                "Reaktivierungsverlauf ist voll")
+
+        task.retryable_failure_count = 0
+        task.retry_not_before_revision = None
+        task.last_reactivation_revision = reactivation.map_revision
+        self._reactivations[reactivation.reactivation_id] = reactivation
+        self._clear_assessment_replay()
+        return self._snapshot(task)
+
+    def assess(
+            self, source: ShadowStatusSource,
+            task_availability: Tuple[TaskAvailability, ...] = (),
+    ) -> StatefulPolicyAssessment:
+        if not isinstance(source, ShadowStatusSource):
+            raise ExplorationPolicyError(
+                "source muss ShadowStatusSource sein")
+        self._require_context(source.context)
+        revision = source.source_map_revision
+        request = (source, task_availability)
+        if self._latest_assessment_revision is not None:
+            if revision < self._latest_assessment_revision:
+                raise ExplorationPolicyError(
+                    "Policy-Snapshot ist aelter als der letzte Stand")
+            if revision == self._latest_assessment_revision:
+                if request != self._last_request or self._last_result is None:
+                    raise ExplorationPolicyError(
+                        "Kartenrevision wurde widerspruechlich neu bewertet")
+                return self._last_result
+
+        passive = assess_exploration_policy(
+            source,
+            task_availability,
+            self._policy.assessment_config,
+        )
+        self._observe_tasks(source)
+
+        eligible = set(passive.eligible_task_ids)
+        retry_deferred = tuple(sorted(
+            task_id for task_id in eligible
+            if self._is_retry_deferred(self._tasks[task_id], revision)
+        ))
+        retry_exhausted = tuple(sorted(
+            task_id for task_id in eligible
+            if self._tasks[task_id].retryable_failure_count
+            >= self._policy.maximum_retryable_failures
+        ))
+        selectable = eligible - set(retry_deferred) - set(retry_exhausted)
+        selected_task_id, reason = self._select_task(
+            selectable, source, revision)
+        selected_region_id = (
+            self._tasks[selected_task_id].region_id
+            if selected_task_id is not None else None)
+        if selected_task_id is not None:
+            selected_task = self._tasks[selected_task_id]
+            selected_task.last_selected_revision = revision
+            selected_task.selection_count += 1
+        if selected_region_id is not None and (
+                selected_region_id != self._active_region_id):
+            self._active_region_id = selected_region_id
+            self._active_region_since_revision = revision
+
+        blocker_codes = list(passive.blocker_codes)
+        blocker_codes.extend(
+            f"retry_deferred:{task_id}" for task_id in retry_deferred)
+        blocker_codes.extend(
+            f"retry_exhausted:{task_id}" for task_id in retry_exhausted)
+        result = StatefulPolicyAssessment(
+            passive=passive,
+            selected_task_id=selected_task_id,
+            selected_region_id=selected_region_id,
+            selection_reason=reason,
+            retry_deferred_task_ids=retry_deferred,
+            retry_exhausted_task_ids=retry_exhausted,
+            history=self.history(),
+            blocker_codes=tuple(blocker_codes),
+            completion_allowed=False,
+        )
+        self._latest_assessment_revision = revision
+        self._last_request = request
+        self._last_result = result
+        return result
+
+    def _observe_tasks(self, source: ShadowStatusSource) -> None:
+        new_tasks = [
+            task for task in source.graph.tasks
+            if task.task_id not in self._tasks]
+        if len(self._tasks) + len(new_tasks) > self._policy.max_tracked_tasks:
+            raise ExplorationPolicyCapacityError(
+                "Aufgabenverlauf ist voll")
+        for task in source.graph.tasks:
+            state = self._tasks.get(task.task_id)
+            if state is None:
+                state = _TaskHistoryState(
+                    task_id=task.task_id,
+                    region_id=task.region_id,
+                    first_seen_revision=task.created_revision,
+                    last_seen_revision=source.source_map_revision,
+                )
+                self._tasks[task.task_id] = state
+            elif state.region_id != task.region_id:
+                state.region_id = task.region_id
+            state.last_seen_revision = source.source_map_revision
+            state.completed = task.state is RegionTaskState.COMPLETED
+
+    def _select_task(
+            self, selectable: set, source: ShadowStatusSource,
+            revision: int) -> Tuple[Optional[str], str]:
+        if not selectable or not source.graph.current_region_id:
+            return None, "no_selectable_task"
+        ordered = sorted(
+            selectable,
+            key=lambda task_id: (
+                self._tasks[task_id].first_seen_revision,
+                task_id,
+            ),
+        )
+        if (
+                self._active_region_id is not None
+                and self._active_region_since_revision is not None
+                and revision - self._active_region_since_revision
+                < self._policy.minimum_region_hold_revisions):
+            held = [
+                task_id for task_id in ordered
+                if self._tasks[task_id].region_id == self._active_region_id]
+            if held:
+                return held[0], "region_hysteresis"
+
+        starved = sorted(
+            (
+                task_id for task_id in ordered
+                if revision - (
+                    self._tasks[task_id].last_selected_revision
+                    if self._tasks[task_id].last_selected_revision is not None
+                    else self._tasks[task_id].first_seen_revision)
+                >= self._policy.starvation_revision_threshold
+            ),
+            key=lambda task_id: (
+                self._tasks[task_id].last_selected_revision
+                if self._tasks[task_id].last_selected_revision is not None
+                else self._tasks[task_id].first_seen_revision,
+                task_id,
+            ),
+        )
+        if starved:
+            return starved[0], "starvation_prevention"
+
+        current = [
+            task_id for task_id in ordered
+            if self._tasks[task_id].region_id
+            == source.graph.current_region_id]
+        if current:
+            return current[0], "current_region"
+        return ordered[0], "oldest_available_task"
+
+    def _require_context(self, context: PortalMapContext) -> None:
+        if context != self._context:
+            raise ExplorationPolicyError(
+                "Policy-Ereignis hat einen fremden Kartenkontext")
+
+    def _require_task(self, task_id: str) -> _TaskHistoryState:
+        try:
+            return self._tasks[task_id]
+        except KeyError as exc:
+            raise ExplorationPolicyError(
+                "Policy-Ereignis verweist auf unbekannte Aufgabe") from exc
+
+    def _require_event_revision(
+            self, revision: int, task: _TaskHistoryState) -> None:
+        if (
+                self._latest_assessment_revision is None
+                or revision != self._latest_assessment_revision
+                or revision != task.last_seen_revision
+                or (
+                    task.last_attempt_revision is not None
+                    and revision < task.last_attempt_revision)):
+            raise ExplorationPolicyError(
+                "Policy-Ereignis gehoert nicht zum aktuellen Snapshot")
+
+    def _is_retry_deferred(
+            self, task: _TaskHistoryState, revision: int) -> bool:
+        return (
+            task.retry_not_before_revision is not None
+            and revision < task.retry_not_before_revision
+        )
+
+    def _clear_assessment_replay(self) -> None:
+        self._last_request = None
+        self._last_result = None
+
+    @staticmethod
+    def _snapshot(task: _TaskHistoryState) -> TaskHistorySnapshot:
+        return TaskHistorySnapshot(
+            task_id=task.task_id,
+            region_id=task.region_id,
+            first_seen_revision=task.first_seen_revision,
+            last_seen_revision=task.last_seen_revision,
+            age_revisions=(
+                task.last_seen_revision - task.first_seen_revision),
+            last_selected_revision=task.last_selected_revision,
+            selection_count=task.selection_count,
+            last_attempt_revision=task.last_attempt_revision,
+            attempt_count=task.attempt_count,
+            retryable_failure_count=task.retryable_failure_count,
+            retry_not_before_revision=task.retry_not_before_revision,
+            last_attempt_reason=task.last_attempt_reason,
+            last_reactivation_revision=task.last_reactivation_revision,
+            completed=task.completed,
+        )

@@ -10,13 +10,18 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from explore.exploration_policy import (  # noqa: E402
+    ExplorationTaskPolicySession,
     ExplorationPolicyCapacityError,
     ExplorationPolicyConfig,
     ExplorationPolicyError,
     PolicyAssessmentState,
     PolicyTaskState,
+    TaskAttempt,
+    TaskAttemptOutcome,
     TaskAvailability,
     TaskAvailabilityState,
+    TaskHistoryPolicy,
+    TaskReactivation,
     assess_exploration_policy,
 )
 from explore.portal_memory import (  # noqa: E402
@@ -130,6 +135,29 @@ def _availability(task_id, state=TaskAvailabilityState.AVAILABLE,
         state=state,
         reason=f"evidence_{state.value}",
         recheck_condition="next_map_revision",
+    )
+
+
+def _advance_source(source, revision, current_region_id=None):
+    graph = replace(
+        source.graph,
+        latest_revision=revision,
+        current_region_id=(
+            source.graph.current_region_id
+            if current_region_id is None else current_region_id),
+    )
+    return replace(
+        source,
+        source_map_revision=revision,
+        portal_memory_revision=revision,
+        graph=graph,
+    )
+
+
+def _all_available(revision):
+    return (
+        _availability("a-other", revision=revision),
+        _availability("z-current", revision=revision),
     )
 
 
@@ -409,3 +437,268 @@ def test_source_projection_policy_bounds_are_reused():
 
     with pytest.raises(ExplorationPolicyError, match="Aufgaben"):
         assess_exploration_policy(source, config=config)
+
+
+def test_stateful_session_selects_only_an_id_and_tracks_first_seen_revision():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+
+    result = session.assess(source, _all_available(4))
+
+    assert result.selected_task_id == "z-current"
+    assert result.selected_region_id == source.graph.current_region_id
+    assert result.selection_reason == "current_region"
+    assert result.completion_allowed is False
+    assert [item.task_id for item in result.history] == [
+        "a-other", "z-current"]
+    assert {item.first_seen_revision for item in result.history} == {3}
+    selected = next(
+        item for item in result.history if item.task_id == "z-current")
+    assert selected.age_revisions == 1
+    assert selected.last_selected_revision == 4
+    assert selected.selection_count == 1
+    assert not hasattr(result, "goal")
+    assert not hasattr(result, "pose")
+
+
+def test_exact_assessment_replay_is_idempotent_and_conflict_is_rejected():
+    source = _source_with_two_open_tasks()
+    evidence = _all_available(4)
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, evidence)
+
+    assert session.assess(source, evidence) is first
+    with pytest.raises(ExplorationPolicyError, match="widerspruechlich"):
+        session.assess(source, tuple(reversed(evidence)))
+
+
+def test_region_hysteresis_prevents_immediate_switch_but_then_releases():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+    other_region = next(
+        region.region_id for region in source.graph.regions
+        if region.region_id != first.selected_region_id)
+
+    held = session.assess(
+        _advance_source(source, 5, other_region), _all_available(5))
+    released = session.assess(
+        _advance_source(source, 6, other_region), _all_available(6))
+
+    assert held.selected_task_id == "z-current"
+    assert held.selection_reason == "region_hysteresis"
+    assert released.selected_task_id == "a-other"
+    assert released.selection_reason == "current_region"
+
+
+def test_old_remote_region_task_preempts_current_region_to_avoid_starvation():
+    source = _advance_source(_source_with_two_open_tasks(), 12)
+    session = ExplorationTaskPolicySession(CONTEXT)
+
+    result = session.assess(source, _all_available(12))
+
+    assert result.selected_task_id == "a-other"
+    assert result.selection_reason == "starvation_prevention"
+
+
+def test_starvation_rotation_still_honors_the_region_hold_window():
+    source = _advance_source(_source_with_two_open_tasks(), 12)
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(12))
+    held = session.assess(
+        _advance_source(source, 13), _all_available(13))
+    rotated = session.assess(
+        _advance_source(source, 14), _all_available(14))
+
+    assert first.selected_task_id == "a-other"
+    assert held.selected_task_id == "a-other"
+    assert held.selection_reason == "region_hysteresis"
+    assert rotated.selected_task_id == "z-current"
+    assert rotated.selection_reason == "starvation_prevention"
+
+
+def test_retry_failure_defers_then_releases_task_by_explicit_revision():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    snapshot = session.record_attempt(TaskAttempt(
+        attempt_id="attempt-1",
+        task_id="z-current",
+        context=CONTEXT,
+        map_revision=4,
+        outcome=TaskAttemptOutcome.RETRYABLE_FAILURE,
+        reason="planner_temporarily_unavailable",
+        retry_not_before_revision=6,
+    ))
+
+    deferred = session.assess(
+        _advance_source(source, 5),
+        (_availability("z-current", revision=5),),
+    )
+    released = session.assess(
+        _advance_source(source, 6),
+        (_availability("z-current", revision=6),),
+    )
+
+    assert snapshot.attempt_count == 1
+    assert snapshot.retryable_failure_count == 1
+    assert deferred.selected_task_id is None
+    assert deferred.retry_deferred_task_ids == ("z-current",)
+    assert "retry_deferred:z-current" in deferred.blocker_codes
+    assert released.selected_task_id == "z-current"
+
+
+def test_retry_budget_exhaustion_requires_explicit_reactivation():
+    policy = TaskHistoryPolicy(maximum_retryable_failures=2)
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT, policy)
+    session.assess(source, (_availability("z-current"),))
+    session.record_attempt(TaskAttempt(
+        "attempt-1", "z-current", CONTEXT, 4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "first_failure", 5))
+    session.assess(
+        _advance_source(source, 5),
+        (_availability("z-current", revision=5),))
+    session.record_attempt(TaskAttempt(
+        "attempt-2", "z-current", CONTEXT, 5,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "second_failure", 6))
+
+    exhausted = session.assess(
+        _advance_source(source, 6),
+        (_availability("z-current", revision=6),))
+    assert exhausted.selected_task_id is None
+    assert exhausted.retry_exhausted_task_ids == ("z-current",)
+
+    reactivated = session.reactivate(TaskReactivation(
+        "reactivate-1", "z-current", CONTEXT, 6,
+        "new_map_evidence"))
+    resumed = session.assess(
+        _advance_source(source, 7),
+        (_availability("z-current", revision=7),))
+    assert reactivated.retryable_failure_count == 0
+    assert reactivated.last_reactivation_revision == 6
+    assert resumed.selected_task_id == "z-current"
+
+
+def test_attempt_and_reactivation_replays_are_idempotent_but_conflicts_fail():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    attempt = TaskAttempt(
+        "attempt-1", "z-current", CONTEXT, 4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "temporary", 5)
+    first = session.record_attempt(attempt)
+    replay = session.record_attempt(attempt)
+    assert first == replay
+    with pytest.raises(ExplorationPolicyError, match="widerspruechlich"):
+        session.record_attempt(replace(attempt, reason="different"))
+
+    reactivation = TaskReactivation(
+        "reactivate-1", "z-current", CONTEXT, 4, "fresh_evidence")
+    first_reactivation = session.reactivate(reactivation)
+    assert session.reactivate(reactivation) == first_reactivation
+    with pytest.raises(ExplorationPolicyError, match="widerspruechlich"):
+        session.reactivate(replace(reactivation, reason="different"))
+
+
+def test_progress_clears_retry_delay_without_claiming_task_completion():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    session.record_attempt(TaskAttempt(
+        "failure", "z-current", CONTEXT, 4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "temporary", 6))
+    with pytest.raises(ExplorationPolicyError, match="Retryrevision"):
+        session.record_attempt(TaskAttempt(
+            "early-progress", "z-current", CONTEXT, 4,
+            TaskAttemptOutcome.PROGRESSED, "too_early"))
+    session.assess(
+        _advance_source(source, 6),
+        (_availability("z-current", revision=6),))
+    progress = session.record_attempt(TaskAttempt(
+        "progress", "z-current", CONTEXT, 6,
+        TaskAttemptOutcome.PROGRESSED, "new_observation"))
+
+    assert progress.attempt_count == 2
+    assert progress.retry_not_before_revision is None
+    assert progress.completed is False
+
+
+def test_completed_graph_task_is_retained_as_completed_history_not_selected():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    completed = replace(
+        source.graph.tasks[1],
+        state=RegionTaskState.COMPLETED,
+        last_revision=5,
+    )
+    open_task = source.graph.tasks[0]
+    graph = replace(
+        source.graph,
+        latest_revision=5,
+        tasks=(open_task, completed),
+        open_task_count=1,
+        completed_task_count=1,
+        regions=tuple(
+            replace(
+                region,
+                last_revision=max(region.last_revision, 5)
+                if completed.task_id in region.task_ids
+                else region.last_revision,
+            )
+            for region in source.graph.regions
+        ),
+    )
+    updated = replace(
+        source,
+        source_map_revision=5,
+        portal_memory_revision=5,
+        graph=graph,
+    )
+
+    result = session.assess(
+        updated, (_availability(open_task.task_id, revision=5),))
+
+    completed_history = next(
+        item for item in result.history if item.task_id == completed.task_id)
+    assert completed_history.completed is True
+    assert completed.task_id not in result.passive.open_task_ids
+    assert result.selected_task_id == open_task.task_id
+
+
+def test_history_capacity_and_foreign_or_stale_events_fail_closed():
+    source = _source_with_two_open_tasks()
+    limited = ExplorationTaskPolicySession(
+        CONTEXT, TaskHistoryPolicy(max_tracked_tasks=1))
+    with pytest.raises(ExplorationPolicyCapacityError):
+        limited.assess(source, _all_available(4))
+
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    foreign = PortalMapContext("foreign", "map", "map")
+    with pytest.raises(ExplorationPolicyError, match="fremden"):
+        session.record_attempt(TaskAttempt(
+            "foreign", "z-current", foreign, 4,
+            TaskAttemptOutcome.PROGRESSED, "invalid_context"))
+    with pytest.raises(ExplorationPolicyError, match="unbekannte"):
+        session.record_attempt(TaskAttempt(
+            "unknown", "unknown-task", CONTEXT, 4,
+            TaskAttemptOutcome.PROGRESSED, "missing_task"))
+    with pytest.raises(ExplorationPolicyError, match="aktuellen"):
+        session.record_attempt(TaskAttempt(
+            "old", "z-current", CONTEXT, 3,
+            TaskAttemptOutcome.PROGRESSED, "stale_attempt"))
+
+
+def test_retry_and_history_policy_inputs_are_strict():
+    with pytest.raises(ExplorationPolicyError):
+        TaskAttempt(
+            "bad-retry", "task", CONTEXT, 4,
+            TaskAttemptOutcome.RETRYABLE_FAILURE, "temporary", 4)
+    with pytest.raises(ExplorationPolicyError):
+        TaskAttempt(
+            "bad-progress", "task", CONTEXT, 4,
+            TaskAttemptOutcome.PROGRESSED, "progress", 5)
+    with pytest.raises(ExplorationPolicyError):
+        TaskHistoryPolicy(maximum_retryable_failures=0)
