@@ -84,13 +84,15 @@ class RegionGraphPolicy:
     max_region_splits: int = 1024
     max_tasks: int = 4096
     max_task_updates: int = 8192
+    max_region_exploration_updates: int = 8192
 
     def __post_init__(self) -> None:
         for name in (
                 "max_regions", "max_connections",
                 "max_portal_observations", "max_traversal_events",
                 "max_region_merges", "max_region_splits",
-                "max_tasks", "max_task_updates"):
+                "max_tasks", "max_task_updates",
+                "max_region_exploration_updates"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise RegionGraphError(f"{name} muss eine positive Ganzzahl sein")
@@ -146,6 +148,14 @@ class PortalLinkDisposition(str, Enum):
     DEFERRED = "deferred"
 
 
+class RegionExplorationState(str, Enum):
+    """Passive regional progress, never a whole-apartment completion result."""
+
+    UNASSESSED = "unassessed"
+    IN_PROGRESS = "in_progress"
+    COMPLETE_CANDIDATE = "complete_candidate"
+
+
 @dataclass(frozen=True)
 class PortalLinkResult:
     disposition: PortalLinkDisposition
@@ -166,6 +176,39 @@ class RegionSnapshot:
     portal_ids: Tuple[str, ...]
     alias_ids: Tuple[str, ...]
     task_ids: Tuple[str, ...]
+    exploration_state: RegionExplorationState
+    exploration_reason: Optional[str]
+    exploration_revision: Optional[int]
+
+
+@dataclass(frozen=True)
+class RegionExplorationUpdate:
+    """One explicit regional progress statement without completion authority."""
+
+    update_id: str
+    context: PortalMapContext
+    map_revision: int
+    region_id: str
+    state: RegionExplorationState
+    reason: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.update_id, "update_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+        _identifier(self.region_id, "region_id")
+        if not isinstance(self.state, RegionExplorationState):
+            raise RegionGraphError(
+                "state muss RegionExplorationState sein")
+        _text(self.reason, "reason")
+
+
+@dataclass(frozen=True)
+class RegionExplorationResult:
+    region: RegionSnapshot
+    state_changed: bool
+    duplicate: bool = False
 
 
 @dataclass(frozen=True)
@@ -374,6 +417,10 @@ class _RegionState:
     portal_ids: set[str] = field(default_factory=set)
     alias_ids: set[str] = field(default_factory=set)
     task_ids: set[str] = field(default_factory=set)
+    exploration_state: RegionExplorationState = (
+        RegionExplorationState.UNASSESSED)
+    exploration_reason: Optional[str] = None
+    exploration_revision: Optional[int] = None
 
 
 @dataclass
@@ -422,6 +469,9 @@ class RegionGraph:
         self._tasks: Dict[str, _TaskState] = {}
         self._task_updates: Dict[
             str, Tuple[RegionTaskUpdate, RegionTaskResult]] = {}
+        self._region_exploration_updates: Dict[
+            str, Tuple[
+                RegionExplorationUpdate, RegionExplorationResult]] = {}
         self._start_seed: Optional[RegionSeed] = None
         self._start_result: Optional[RegionStartResult] = None
         self._current_region_id: Optional[str] = None
@@ -715,6 +765,72 @@ class RegionGraph:
             self._latest_revision, update.map_revision)
         return result
 
+    def update_region_exploration(
+            self,
+            update: RegionExplorationUpdate,
+    ) -> RegionExplorationResult:
+        """Advance one passive regional state without declaring completion."""
+        if not isinstance(update, RegionExplorationUpdate):
+            raise RegionGraphError(
+                "update muss RegionExplorationUpdate sein")
+        self._require_context(update.context)
+
+        previous = self._region_exploration_updates.get(update.update_id)
+        if previous is not None:
+            previous_update, _previous_result = previous
+            if previous_update != update:
+                raise RegionGraphConflictError(
+                    "update_id wurde widerspruechlich wiederverwendet")
+            return RegionExplorationResult(
+                region=self.region(previous_update.region_id),
+                state_changed=False,
+                duplicate=True,
+            )
+
+        region = self._require_region(update.region_id)
+        self._require_current_revision(update.map_revision)
+        if (
+                len(self._region_exploration_updates)
+                >= self._policy.max_region_exploration_updates):
+            raise RegionGraphCapacityError(
+                "Regionsstatus-Aktualisierungsverlauf ist voll")
+        if (
+                region.exploration_revision is not None
+                and update.map_revision <= region.exploration_revision):
+            raise StaleGraphUpdateError(
+                "Regionsstatus-Aktualisierung ist nicht neuer als der Zustand")
+
+        allowed = {
+            RegionExplorationState.UNASSESSED: {
+                RegionExplorationState.UNASSESSED,
+                RegionExplorationState.IN_PROGRESS,
+            },
+            RegionExplorationState.IN_PROGRESS: {
+                RegionExplorationState.IN_PROGRESS,
+                RegionExplorationState.COMPLETE_CANDIDATE,
+            },
+            RegionExplorationState.COMPLETE_CANDIDATE: {
+                RegionExplorationState.COMPLETE_CANDIDATE,
+            },
+        }
+        if update.state not in allowed[region.exploration_state]:
+            raise RegionGraphConflictError(
+                "Regionsstatus darf keine Stufe ueberspringen oder zurueckfallen")
+
+        state_changed = region.exploration_state is not update.state
+        region.exploration_state = update.state
+        region.exploration_reason = update.reason
+        region.exploration_revision = update.map_revision
+        region.last_revision = max(region.last_revision, update.map_revision)
+        self._latest_revision = max(
+            self._latest_revision, update.map_revision)
+        result = RegionExplorationResult(
+            region=self._region_snapshot(region),
+            state_changed=state_changed,
+        )
+        self._region_exploration_updates[update.update_id] = (update, result)
+        return result
+
     def merge_regions(self, merge: RegionMerge) -> RegionMergeResult:
         """Apply one explicit merge and preserve all old region references."""
         if not isinstance(merge, RegionMerge):
@@ -754,6 +870,19 @@ class RegionGraph:
         canonical.seen = canonical.seen or removed.seen
         canonical.entered = canonical.entered or removed.entered
         canonical.entry_count += removed.entry_count
+        if canonical.exploration_state is not removed.exploration_state:
+            exploration_order = (
+                RegionExplorationState.UNASSESSED,
+                RegionExplorationState.IN_PROGRESS,
+                RegionExplorationState.COMPLETE_CANDIDATE,
+            )
+            canonical.exploration_state = min(
+                canonical.exploration_state,
+                removed.exploration_state,
+                key=exploration_order.index,
+            )
+            canonical.exploration_reason = "region_merge_conservative"
+            canonical.exploration_revision = merge.map_revision
         canonical.portal_ids.update(removed.portal_ids)
         canonical.alias_ids.update(removed.alias_ids)
         canonical.alias_ids.add(removed_id)
@@ -855,6 +984,13 @@ class RegionGraph:
             state_region = created
         else:
             state_region = source
+
+        # A geometry split changes the assessed scope of both resulting
+        # regions. Neither child may inherit a completion candidate silently.
+        for region in (source, created):
+            region.exploration_state = RegionExplorationState.UNASSESSED
+            region.exploration_reason = "region_split_requires_reassessment"
+            region.exploration_revision = split.map_revision
 
         source.portal_ids = {
             portal_end.portal_id for portal_end in retained_portal_ends}
@@ -1086,6 +1222,9 @@ class RegionGraph:
             portal_ids=tuple(sorted(state.portal_ids)),
             alias_ids=tuple(sorted(state.alias_ids)),
             task_ids=tuple(sorted(state.task_ids)),
+            exploration_state=state.exploration_state,
+            exploration_reason=state.exploration_reason,
+            exploration_revision=state.exploration_revision,
         )
 
     @staticmethod
