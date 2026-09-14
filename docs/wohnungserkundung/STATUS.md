@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/C)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/D)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,12 +10,12 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/C – revisionsgebundene skalare Wegkosten-/Informationsbelege sind in die
-reine hierarchische Aufgaben-ID-Auswahl integriert und gerätefrei geprüft; zur
-Review.** Geodätische Weglänge in Metern und Informationsgewinn in Quadratmetern
-werden an expliziten Kappen normiert und mit sichtbaren Gewichten bewertet.
-Vollständigkeit, Kontext und Revision der Belege sind fail-closed; Gleichstände
-bleiben deterministisch. Es entstehen weder Pfad, Pose noch Fahrziel.
+**WE-M3/D – der reine revisionsgebundene Abschlussautomat ist implementiert und
+gerätefrei geprüft; zur Review.** Drei aufeinanderfolgende frische, qualifizierte
+Neubewertungen sind für `complete_accessible` erforderlich; jede Blockade setzt
+das Fenster zurück. `partial`, `aborted` und `canceled` bleiben getrennt,
+Speicher- und Rückkehrergebnis unabhängig. Es entsteht keine Runtime- oder
+Fahrwirkung.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -24,16 +24,15 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis C erzeugen noch keinen zeitfensterfesten
-Abschlussentscheid, keine metrische Zielbildung, Runtime-Einbindung oder
-Migration bestehender Ergebnisverbraucher.
+WE-M3 bleibt ebenfalls offen: M3/A bis D sind reine Logik. Bestandsaufnahme und
+kompatible Migration bestehender Ergebnisverbraucher, separat aktivierbares
+Profil, Runtime-Einbindung, Zielbildung und motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/D:** Den reinen Abschlussautomaten für
-mehrere frische Neubewertungen ergänzen. Offene/gefilterte Aufgaben,
-Quellenalter, unklare oder blockierte Erreichbarkeit, unbetretene Regionen,
-laufende Kindnavigation und fehlender zugänglicher Auftragsscope müssen den
-Vollabschluss sperren; Teilstand, Abbruch und Nutzerabbruch bleiben getrennt.
-Keine Action-/Statusmigration oder Runtime-Anbindung in diesem Schritt.
+**Nächster abgegrenzter Schritt WE-M3/E:** Alle tatsächlichen Verbraucher von
+`ExploreArea`, `/explore/status_json`, Coverage und `map_ready_to_save`
+quellenbasiert inventarisieren und eine konkrete abwärtskompatible
+Versions-/Migrationsnaht festlegen. Noch keine Runtime-, Action- oder
+Fahrsoftware ändern.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -105,6 +104,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/A `feature/we-m3a-policy-contract` | Gestapelter ROS-freier Policyvertrag auf vollständigen passiven Snapshots; revisionsgebundene Aufgabenverfügbarkeit, Quellen-/Erreichbarkeitsblocker, Regionskontinuität und ausschließlich nichtterminale Ergebnisse ohne Ziel- oder Fahrwirkung. |
 | WE-M3/B `feature/we-m3b-task-history` | Gestapelter begrenzter, revisionsgetriebener Aufgabenverlauf mit Alter, Auswahl-/Versuchshistorie, Retryverzögerung/-budget, expliziter Reaktivierung, Regionshaltezeit und Anti-Verhungerungsrotation; nur Aufgaben-ID, keine Fahrwirkung. |
 | WE-M3/C `feature/we-m3c-task-scoring` | Gestapelte revisionsgebundene skalare Bewertung geeigneter Aufgaben-IDs aus geodätischer Weglänge in Metern und Informationsgewinn in Quadratmetern; explizite Normierung/Gewichte, vollständige Belege und deterministische Gleichstände ohne Pfad-/Zielausgabe. |
+| WE-M3/D `feature/we-m3d-completion-contract` | Gestapelter reiner Abschlussautomat mit drei frischen qualifizierten Revisionen, Reset bei Blockade, getrennten Voll-/Teil-/System-/Nutzerzuständen und unabhängigen Speicher-/Rückkehrergebnissen; keine Runtime- oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -343,7 +343,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis C softwaregeprüft | Reiner Vertrag, begrenzter Aufgabenverlauf und skalare Wegkosten-/Informationsbewertung liegen vor. Abschlussautomat, Zielbildung, kompatible Runtime-/Ergebnismigration und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis D softwaregeprüft | Reiner Vertrag, Aufgabenverlauf, skalare Bewertung und Abschlussautomat liegen vor. Verbraucher-/Migrationsaudit, Profil, Ziel-/Runtime-Einbindung und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -439,6 +439,62 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/D: reiner Abschlussautomat
+
+**Arbeitsbasis und Umfang:** `feature/we-m3d-completion-contract` baut direkt
+auf M3/C `d758a29` auf. Neu sind `exploration_completion.py`, reine Tests sowie
+die explizite Kontext-/Revisionsangabe im bestehenden Policyergebnis und diese
+STATUS.md. Node, Profile, Actions, Statuspublisher und Fahrpfade bleiben
+unverändert.
+
+**Abschlussvertrag:** Eine `CompletionObservation` korreliert exakt einen
+M3-Policyentscheid mit Kartenkontext und -revision, explizit geprüftem
+zugänglichem Auftragsscope und Kindnavigationszustand. Der begrenzte Automat
+akzeptiert nur streng steigende inhaltlich neue Revisionen; exaktes ID-Replay
+ist idempotent, widersprüchliche IDs oder Revisionen scheitern fail-closed.
+Standardmäßig sind drei aufeinanderfolgende qualifizierte Neubewertungen nötig.
+Nur `completion_window_required`, verifizierter Scope, sicher `idle` gemeldete
+Kindnavigation und das Fehlen von Retryblockern zählen. Jede offene/gefilterte
+Aufgabe oder sonstige Policyblockade, aktives/unklares Kindziel oder ungeklärter
+Scope setzt die Folge auf null.
+
+**Getrennte Ergebnisse:** Erst das vollständige Fenster erzeugt terminal
+`complete_accessible`. Explizites Budget-/Zeit-/Energieende ergibt `partial`,
+System-/Sensorfehler `aborted`, Nutzerabbruch `canceled`; diese Gründe werden
+nicht ineinander oder in Erfolg umgedeutet. `map_saved` und das getrennte
+Rückkehrergebnis bleiben unabhängige Felder und verändern den
+Erkundungszustand nicht. Ein terminaler Zustand ist unveränderlich. Der Automat
+liest keine Uhr und besitzt keine ROS-, Action-, Planner-, Ziel-, Command-,
+Dateisystem- oder Geräteabhängigkeit. Drei Revisionen sind ein synthetischer
+Softwarestartwert und vor späterer Abnahme zu begründen und einzufrieren.
+
+**Ausgeführte Prüfungen:** Nur lokale Software-/Buildumgebung, keine ROS-Knoten
+oder Geräte gestartet:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3D-FOCUS | **13 neue** Fälle für Drei-Revisionen-Fenster, Scope-/Kindzielblockade, Reset, offene/gefilterte Aufgaben, getrennte Terminalgründe, unabhängige Speicherung/Rückkehr, Replay/Terminalität, Korrelation/Kapazität und Importgrenze; gesamte Policy-/Abschlusssuite: **50 passed**. |
+| WE-M3D-EXPLORER | Vollständige Explorer-Suite: **629 passed**. |
+| WE-M3D-ADJACENT | Explorer plus Fingerprint-, Karten-, Semantik-, Mission- und Launch-Verträge: **792 passed**. |
+| WE-M3D-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 629 = 665 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3D-STATIC | `compileall`, `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+**Nachweisgrenze:** Belegt ist ausschließlich der reine deterministische
+Softwarevertrag. Nicht belegt sind reale Quellenfrequenz, Planner, laufende
+Kindnavigation, Aktionsabbruch, Speicherung, Rückfahrt, Jetsonlast, Sensorik,
+Fahrt oder Hardwareabnahme. Die neuen Resultate sind noch an keinen bestehenden
+Verbraucher veröffentlicht.
+
+**Nächster abgegrenzter Schritt WE-M3/E:** Verbraucher von `ExploreArea`,
+`/explore/status_json`, Coverage und `map_ready_to_save` vollständig im aktuellen
+Stack inventarisieren. Darauf eine versionierte oder additive
+Kompatibilitätsnaht mit exakten Dateien, Tests und Rückfall festlegen; noch keine
+Action-/Runtime-/Fahränderung.
+
+**Rückfall:** Den einzelnen M3/D-Commit zurücknehmen. M3/C und alle Runtimepfade
+bleiben unverändert; es gibt keinen Prozess-, Fahr- oder Hardwarezustand
+zurückzusetzen.
 
 ### 2026-09-14 – WE-M3/C: revisionsgebundene skalare Aufgabenbewertung
 
