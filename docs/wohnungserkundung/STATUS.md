@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M1/B)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M1/C)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,18 +10,18 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M1/B – Durchfahrtshistorie und aktuelle Erreichbarkeit als reine Logik
-softwaregeprüft, zur Review.** Das weiterhin nicht eingebundene Portalmodul führt
-extern validierte Durchfahrtsurteile idempotent und hält die aktuelle
-Erreichbarkeit pro Portalseite getrennt von Identität, Beobachtung und Historie.
-Details, Tests und Grenzen stehen im jüngsten Eintrag in Abschnitt 6. WE-M1 ist
-damit noch nicht insgesamt erfüllt.
+**WE-M1 – Portalgedächtnis als reine Logik softwaregeprüft, zur Review.** WE-M1/C
+verlangt neben unabhängigen Revisionen eine explizite qualifizierte
+Strukturevidenz, bevor ein Portal bestätigt wird. Die synthetischen Pflichtfälle
+von WE-M1 sind damit in den gestapelten Schritten A bis C abgedeckt. Das Modul ist
+weiterhin nicht in den Explorer eingebunden; dies ist keine Zielsystem- oder
+Hardwareabnahme. Details und Grenzen stehen im jüngsten Eintrag in Abschnitt 6.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M1/C**, ebenfalls
-ohne ROS- oder Fahrwirkung. Er schärft die Bestätigungsevidenz so, dass mehrere
-Revisionen einer bloßen Möbelengstelle nicht allein ein bestätigtes Portal ergeben,
-und schließt die verbleibenden synthetischen WE-M1-Negativfälle. Keine
-Detektorneuentwicklung, Explorer-Einbindung, Zielwahl oder Persistenz.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/A.** Als neuen,
+reinen Logikkern nur vorläufige Regions-IDs und Portalverbindungen mit explizitem
+Karten-/Revisionsbezug modellieren und synthetisch prüfen. Noch keine Aufgaben-
+oder Zielauswahl, keine ROS-/Marker-Ausgabe, keine Explorer-Einbindung, keine
+Persistenz und keine Fahrwirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -43,6 +43,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M0/A-Fortschreibung `cf3a40bfe004a174eccae18b22cb3a17126bed3e` auf `docs/we-m0a-bestandspruefung` | Dokumentationsbasis von WE-M1/A; vereinigt die belegten lokalen und isolierten Gegenprüfungen, funktionaler Code darunter weiterhin Main `05439c7`. |
 | WE-M1/A `feature/we-m1a-portal-memory` | Zwei neue, nicht eingebundene Python-Dateien plus dieser Statusnachtrag; Reviewstand, kein Deployment. |
 | WE-M1/B `feature/we-m1b-portal-state` | Gestapelter reiner Logikschritt auf WE-M1/A; nur Portalmodul, dessen Tests und Status, kein Deployment. |
+| WE-M1/C `feature/we-m1c-portal-evidence` | Gestapelter Abschluss der reinen WE-M1-Logik; qualifizierte Bestätigungsevidenz und verbleibende synthetische Negativfälle, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -279,8 +280,8 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-D0 | Dokumentiert; zur Review | Dokumentationszweig/PR ist nicht automatisch Main oder Jetson-Deployment. |
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
-| WE-M1 | In Arbeit | WE-M1/A und WE-M1/B als isolierte Logik softwaregeprüft; qualifizierte Bestätigungsevidenz und verbleibende WE-M1-Negativfälle in WE-M1/C offen. |
-| WE-M2 | Geplant | Regionsgraph und passive Integration. |
+| WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
+| WE-M2 | Geplant; nächster Schritt WE-M2/A | Zunächst reiner Regions-/Verbindungskern; passive Laufzeitbeobachtung bleibt ein späterer Teilschritt. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -308,10 +309,11 @@ Referenz noch nicht erneut physisch abgenommen.
 Controllerzyklen unter SLAM-Last. Aktuellen Zustand messen, nicht aus alten Werten
 als erledigt betrachten.
 
-**Identität und Abschluss:** WE-M1/A/B stellt Identität, Ereignishistorie und
-aktuelle Erreichbarkeit nur innerhalb eines expliziten Sitzungs-/Karten-/Frame-
-Kontexts bereit. Bewegungsbelege werden nicht selbst validiert. Qualifizierte
-Portalbestätigung, dauerhafte Kartenbindung, Regionsgraph und Abschluss fehlen.
+**Identität und Abschluss:** WE-M1/A bis C stellt Identität, qualifizierte
+Bestätigung, Ereignishistorie und aktuelle Erreichbarkeit nur innerhalb eines
+expliziten Sitzungs-/Karten-/Frame-Kontexts bereit. Struktur- und Bewegungsbelege
+werden nicht selbst erzeugt oder physisch validiert. Dauerhafte Kartenbindung,
+Regionsgraph und Abschluss fehlen.
 
 **Kartenintegration:** Manuelle Raum-Overlays, Fingerprints und Speicherverträge
 existieren. Die Zuordnung automatischer Erkundungsregionen und laufender Karten-
@@ -322,6 +324,65 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M1/C: Bestätigung an qualifizierte Evidenz gebunden
+
+**Entscheidung / Umfang:** `PortalObservation` führt nun eine explizite, vom
+Detektor zu liefernde Strukturevidenz `qualified`, `insufficient` oder
+`contradictory`. Fehlt sie, gilt fail-closed `insufficient`. Das Gedächtnis
+implementiert keine Tür-/Möbelerkennung, sondern zählt qualifizierte Evidenz nur
+einmal je Kartenrevision. Der öffentliche Zustand unterscheidet Kandidat,
+bestätigt und unsicher. Bestehende Ereignis- und Erreichbarkeitsachsen bleiben
+getrennt. Keine Runtime-Datei außerhalb des reinen Moduls und seiner Tests geändert.
+
+**Nachgewiesenes Verhalten:** Wiederholte unzureichende Beobachtungen einer
+synthetischen Möbelengstelle bestätigen kein Portal. Widersprüchliche Evidenz
+setzt den Zustand auf `uncertain`; unzureichende Folgebeobachtungen heben dies
+nicht stillschweigend auf, erst eine neuere qualifizierte Revision kann erneut
+bestätigen. Mehrere qualifizierte Meldungen derselben Kartenrevision zählen nur
+einmal. Verlorene Struktursicht löscht eine zuvor belastbare Identität nicht.
+Verschobene Raumschwerpunkte sind kein Identitätsmerkmal. Zahl erkannter Portale,
+Beobachtungen und bestätigter Überquerungen bleiben getrennte Kennzahlen.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M1C-PORTAL | Portalgedächtnis-Suite: **51 passed**, davon 8 neue Evidenz-/Abgrenzungsfälle. |
+| WE-M1C-ADJACENT | Explorer-, Kartenmanager- und Semantikmanager-Suiten gemeinsam: **211 passed**. |
+| WE-M1C-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **109 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M1C-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Damit sind die synthetischen WE-M1-Pflichtfälle Gegenrichtung, Kartenwachstum,
+bewegter Raumschwerpunkt, Ursprung/Raster, nahe Türen, Möbelengstelle, verlorene
+Sicht, identische Kartenrevision, blockiert → offen, Ambiguität und Ereignisreplay
+abgedeckt. Der temporäre Colcon-Aufbau überschreibt keine Arbeitsinstallation und
+nutzt `robot_interfaces` aus dem vorhandenen Underlay; er ist kein vollständiger
+Workspace- oder Zielsystemnachweis.
+
+**Offene Risiken / Integrationsabhängigkeiten:** Die Evidenzklasse ist ein
+Eingabevertrag, kein gemessener Nachweis. Welcher vorhandene Main-/HWT-Detektor
+sie unter welchen begründeten Schwellen liefern darf, bleibt vor einer passiven
+Integration zu klären. Große SLAM-Korrekturen werden weiterhin nicht über
+Kartenkontexte hinweg vereinigt. Ebenso bleiben reale Pose-/Footprint-Prüfung,
+Zeitquelle, Zielsystemlast, dauerhafte Speicherung und jede Fahrwirkung offen.
+Deshalb bedeutet `softwaregeprüft` hier nur den isolierten WE-M1-Logikkern.
+
+**Nächster abgegrenzter Schritt WE-M2/A:** Neu ausschließlich
+`src/explore/explore/region_graph.py` und
+`src/explore/test/test_region_graph.py` sowie diese STATUS.md. Vorläufige stabile
+Regions-IDs, Verbindungen über bestätigte Portal-IDs, Seitenzuordnung und
+gesehen/betreten mit Karten-/Revisionsbezug als reines In-Memory-Modell führen.
+Synthetisch Startraum–Flur–Zimmer, Rückkehr in denselben Flur, offenen Wohnbereich,
+unbekannte/unsichere Portale, Kontextfehler und harte Speichergrenzen prüfen.
+Teilung/Vereinigung, Aufgabenbestand, Policy und passive ROS-Ausgabe bleiben
+nachfolgende WE-M2-Teilschritte; das Graphmodell erzeugt keine Navigationsziele.
+
+**Rückfallweg:** Den WE-M1/C-Commit beziehungsweise den gestapelten Review-PR
+zurücknehmen. WE-M1/A und B bleiben separat reviewbar. Da kein bestehender
+Runtime-Pfad das Portalmodul importiert, gibt es keine Runtime- oder
+Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M1/B: Ereignis und Erreichbarkeit getrennt geführt
 

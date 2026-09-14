@@ -3,7 +3,8 @@
 This module deliberately has no ROS, Nav2, filesystem, or actuator imports.
 Detectors remain responsible for converting grid observations into metric
 coordinates in one validated map frame.  The memory only associates those
-observations inside one explicit mapping session and map epoch.
+observations inside one explicit mapping session and map epoch.  Structural
+qualification is an explicit detector input; this module does not infer it.
 
 All default matching limits are synthetic software starting values.  They are
 not measured door, footprint, localization, or hardware tolerances.
@@ -49,6 +50,20 @@ class TraversalConflictError(PortalMemoryError):
 
 class ReachabilityConflictError(PortalMemoryError):
     """A reachability update ID was reused with different content."""
+
+
+class PortalStructuralEvidence(str, Enum):
+    """Detector-supplied structural verdict; no detection happens here."""
+
+    QUALIFIED = "qualified"
+    INSUFFICIENT = "insufficient"
+    CONTRADICTORY = "contradictory"
+
+
+class PortalConfirmationState(str, Enum):
+    CANDIDATE = "candidate"
+    CONFIRMED = "confirmed"
+    UNCERTAIN = "uncertain"
 
 
 def _validate_identifier(value: object, name: str) -> str:
@@ -130,6 +145,8 @@ class PortalObservation:
     near_side: Point2D
     far_side: Point2D
     uncertainty_m: float = 0.0
+    structural_evidence: PortalStructuralEvidence = (
+        PortalStructuralEvidence.INSUFFICIENT)
 
     def __post_init__(self) -> None:
         _validate_identifier(self.observation_id, "observation_id")
@@ -144,6 +161,9 @@ class PortalObservation:
             raise PortalMemoryError("Portalachse braucht zwei getrennte Seiten")
         object.__setattr__(self, "uncertainty_m", _finite_nonnegative(
             self.uncertainty_m, "uncertainty_m"))
+        if not isinstance(self.structural_evidence, PortalStructuralEvidence):
+            raise PortalMemoryError(
+                "structural_evidence muss PortalStructuralEvidence sein")
 
 
 @dataclass(frozen=True)
@@ -218,6 +238,7 @@ class ObservationResult:
     approach_side: Optional[PortalSide]
     candidate_ids: Tuple[str, ...] = ()
     evidence_added: bool = False
+    qualified_evidence_added: bool = False
     duplicate: bool = False
 
 
@@ -232,6 +253,8 @@ class PortalSnapshot:
     last_revision: int
     observation_count: int
     evidence_count: int
+    qualified_evidence_count: int
+    confirmation_state: PortalConfirmationState
     confirmed: bool
     confirmed_traversal_count: int
 
@@ -337,6 +360,8 @@ class _PortalState:
     last_revision: int
     observation_count: int = 1
     evidence_revisions: set[int] = field(default_factory=set)
+    qualified_evidence_revisions: set[int] = field(default_factory=set)
+    contradictory_evidence_revisions: set[int] = field(default_factory=set)
     confirmed_traversal_count: int = 0
 
 
@@ -497,7 +522,11 @@ class PortalMemory:
                 raise ObservationConflictError(
                     "observation_id wurde mit anderem Inhalt wiederverwendet")
             return replace(
-                previous_result, duplicate=True, evidence_added=False)
+                previous_result,
+                duplicate=True,
+                evidence_added=False,
+                qualified_evidence_added=False,
+            )
 
         if observation.map_revision < self._latest_revision:
             raise StaleObservationError(
@@ -523,7 +552,23 @@ class PortalMemory:
             candidate = candidates[0]
             state = self._portals[candidate.portal_id]
             evidence_added = observation.map_revision not in state.evidence_revisions
+            qualified_evidence_added = (
+                observation.structural_evidence
+                is PortalStructuralEvidence.QUALIFIED
+                and observation.map_revision
+                not in state.qualified_evidence_revisions
+            )
             state.evidence_revisions.add(observation.map_revision)
+            if (
+                    observation.structural_evidence
+                    is PortalStructuralEvidence.QUALIFIED):
+                state.qualified_evidence_revisions.add(
+                    observation.map_revision)
+            elif (
+                    observation.structural_evidence
+                    is PortalStructuralEvidence.CONTRADICTORY):
+                state.contradictory_evidence_revisions.add(
+                    observation.map_revision)
             state.last_revision = max(
                 state.last_revision, observation.map_revision)
             state.observation_count += 1
@@ -532,6 +577,7 @@ class PortalMemory:
                 portal_id=state.portal_id,
                 approach_side=candidate.approach_side,
                 evidence_added=evidence_added,
+                qualified_evidence_added=qualified_evidence_added,
             )
         else:
             if len(self._portals) >= self._policy.max_portals:
@@ -543,6 +589,9 @@ class PortalMemory:
                 portal_id=state.portal_id,
                 approach_side=approach_side,
                 evidence_added=True,
+                qualified_evidence_added=(
+                    observation.structural_evidence
+                    is PortalStructuralEvidence.QUALIFIED),
             )
 
         self._observations[observation.observation_id] = (observation, result)
@@ -647,6 +696,16 @@ class PortalMemory:
             side_a = observation.far_side
             side_b = observation.near_side
             approach_side = PortalSide.B
+        qualified_revisions = set()
+        contradictory_revisions = set()
+        if (
+                observation.structural_evidence
+                is PortalStructuralEvidence.QUALIFIED):
+            qualified_revisions.add(observation.map_revision)
+        elif (
+                observation.structural_evidence
+                is PortalStructuralEvidence.CONTRADICTORY):
+            contradictory_revisions.add(observation.map_revision)
         return _PortalState(
             portal_id=portal_id,
             side_a=side_a,
@@ -655,6 +714,8 @@ class PortalMemory:
             first_revision=observation.map_revision,
             last_revision=observation.map_revision,
             evidence_revisions={observation.map_revision},
+            qualified_evidence_revisions=qualified_revisions,
+            contradictory_evidence_revisions=contradictory_revisions,
         ), approach_side
 
     def _matching_candidates(
@@ -701,6 +762,8 @@ class PortalMemory:
 
     def _snapshot(self, state: _PortalState) -> PortalSnapshot:
         evidence_count = len(state.evidence_revisions)
+        qualified_evidence_count = len(state.qualified_evidence_revisions)
+        confirmation_state = self._confirmation_state(state)
         return PortalSnapshot(
             portal_id=state.portal_id,
             side_a=state.side_a,
@@ -709,10 +772,28 @@ class PortalMemory:
             last_revision=state.last_revision,
             observation_count=state.observation_count,
             evidence_count=evidence_count,
+            qualified_evidence_count=qualified_evidence_count,
+            confirmation_state=confirmation_state,
             confirmed=(
-                evidence_count >= self._policy.confirmation_revisions),
+                confirmation_state is PortalConfirmationState.CONFIRMED),
             confirmed_traversal_count=state.confirmed_traversal_count,
         )
+
+    def _confirmation_state(
+            self, state: _PortalState) -> PortalConfirmationState:
+        latest_qualified = max(
+            state.qualified_evidence_revisions, default=-1)
+        latest_contradictory = max(
+            state.contradictory_evidence_revisions, default=-1)
+        if (
+                latest_contradictory >= latest_qualified
+                and latest_contradictory >= 0):
+            return PortalConfirmationState.UNCERTAIN
+        if (
+                len(state.qualified_evidence_revisions)
+                >= self._policy.confirmation_revisions):
+            return PortalConfirmationState.CONFIRMED
+        return PortalConfirmationState.CANDIDATE
 
     def _require_context(self, context: PortalMapContext) -> None:
         if context != self._context:
