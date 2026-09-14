@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/M)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/N)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,16 +10,17 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/M – Der metrische Zielvorschlag ist im vorhandenen passiven
-Opt-in-Runtimepfad gerätefrei durchgängig geprüft und zur Review.** Auswahl,
-ID-Absicht und exakt kartengebundener Frontier-Kandidat werden außerhalb der
-Schattensperre zusammengeführt und anhand Korrelation, Roboterzelle und Absicht
-begrenzt gecacht. Die versionierte Diagnose enthält Frame, Revision,
-Quellfingerprint, Zielzelle, X/Y/Yaw sowie skalare Belege und setzt ausdrücklich
-`navigation_dispatched=false`. Fehlende/stale Evidenz oder eine nicht mehr
-aktuelle Auswahl hält den Vorschlag sofort zurück. Der isolierte DDS-Lauf
-erzeugte einen aktuellen Kandidaten bei null Actions und null
-Command-Nachrichten.
+**WE-M3/N – Das separate WE-Navigationsprofil ist standardmäßig deaktiviert,
+gerätefrei mit Fake-Actions durchgängig geprüft und zur Review.** Es ist nur bei
+gleichzeitiger Aktivierung von Schatten, Rohkartenjoin, Frontierfeed und Policy
+zulässig. Die neue Schleife läuft innerhalb des vorhandenen Explorer-
+Actionservers und sendet den aktuellen exakt gebundenen Kandidaten über dessen
+einzigen bestehenden Nav2-Client; die konkurrierende Legacy-Auswahl wird in
+diesem Profil nicht ausgeführt. Genau ein Kindziel ist aktiv. Karten-/Quellwechsel
+löst zuerst Cancel aus, verspäteter Erfolg bleibt invalidiert, und terminale
+Ergebnisse fließen in die M3/L-Policy zurück. Im isolierten DDS-Lauf erhielt ein
+Fake-Nav2-Server genau ein Ziel; Nutzer-Cancel beendete den Auftrag, und beide
+Command-Topics blieben bei null Nachrichten.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -28,21 +29,21 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis M umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis N umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
-Die zustandsbehaftete Auswahl und der metrische Vorschlag sind diagnostisch
-integriert; Kindzielautomat und Ergebnis-/Attemptableitung sind rein
-spezifiziert. Aktive Runtime-Zielübergabe und -resultatkopplung,
-Abschluss-/Actionintegration, eingefrorenes
+Auswahl, Zielvorschlag, Einzel-Kindziel und Resultat-/Attemptableitung sind nun
+im separaten Runtimeprofil gekoppelt. Abschluss-/Actionintegration,
+eingefrorenes
 begrenztes Profil sowie die motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/N:** Ein separates, standardmäßig
-deaktiviertes WE-Navigationsprofil in die bestehende Explorer-Orchestrierung
-einfügen. Nur dieser vorhandene Eigentümer darf den aktuellen validierten
-Kandidaten als genau ein Nav2-Kindziel senden, bei Kartenwechsel zuerst canceln
-und terminale Ergebnisse über M3/L zurückführen. Vollständig gerätefrei mit
-Fake-Actionserver prüfen; keine reale Fahrt oder Geräteaktivierung.
+**Nächster abgegrenzter Schritt WE-M3/O:** Den vorhandenen reinen
+Abschlussautomaten in das WE-Runtimeprofil einbinden. Nur mehrere frische
+qualifizierte Revisionen ohne offene/blockierte/ungeklärte Aufgaben und ohne
+aktives Kindziel dürfen `complete_accessible` ergeben. Zeit-/Versuchslimit muss
+`partial`, Systemfehler `aborted` und Nutzerabbruch `canceled` bleiben; Legacy-
+Actionprojektion kompatibel halten. Nur Fake-Actions/synthetische Daten, keine
+reale Fahrt oder Geräteaktivierung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -124,6 +125,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/K `feature/we-m3k-frontier-goal-candidate` | Gestapelte reine metrische Zielkandidatenbildung aus exakt korrelierter Rohkarte, aktueller offener Frontier-Aufgabe, eindeutigem Track und übereinstimmender Skalarbelegung; begrenzte sichere Zielzellensuche, keine ROS-, Nav2- oder Fahrwirkung. |
 | WE-M3/L `feature/we-m3l-child-result-policy` | Gestapelte reine Rückführung terminaler Kindzielresultate in idempotenten Fortschrittsversuch, begrenzten Retry oder getrennte Neubewertungs-/Abbruch-/Canceldisposition; Erfolg erledigt keine Frontier allein, keine Runtime- oder Fahrwirkung. |
 | WE-M3/M `feature/we-m3m-runtime-goal-preview` | Gestapelte passive Runtimekopplung von aktueller Auswahl, Zielabsicht und exakt kartengebundenem Zahlenkandidaten mit begrenztem Cache und explizit nicht versandter Statusdiagnose; keine Action-, Command- oder Fahrwirkung. |
+| WE-M3/N `feature/we-m3n-nav-child-runtime` | Gestapeltes separat opt-in WE-Navigationsprofil im vorhandenen Explorer-/Nav2-Eigentümer mit exakt einem Kindziel, Revisionscancel vor Neuziel und Resultat-/Attemptrückführung; gerätefrei nur gegen Fake-Actions geprüft. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -362,7 +364,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis M softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad, exakte Frontier-/Portalquellen, hierarchische Auswahl, Einzel-Kindzielautomat, metrische Frontier-Zielbildung, Resultat-/Attemptableitung und passiver Runtime-Zielvorschlag liegen vor. Aktive Runtime-Ziel-/Resultatkopplung, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis N softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passive Quellen/Diagnose sowie separat aktivierbare hierarchische Ziel-, Einzel-Kindziel- und Resultat-/Attemptkopplung im vorhandenen Nav2-Eigentümer liegen vor. Abschlussruntime, eingefrorenes begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -458,6 +460,65 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/N: Einzel-Kindziel im vorhandenen Nav2-Eigentümer
+
+**Arbeitsbasis und Umfang:** `feature/we-m3n-nav-child-runtime` baut direkt auf
+M3/M `cc49f27` auf. Der neue Parameter
+`wohnungserkundung_navigation_enabled` ist standardmäßig `false` und wird beim
+Start abgewiesen, solange Schatten, Rohkartenkorrelation, Frontierfeed und
+passive WE-Policy nicht sämtlich explizit aktiv sind. Nur dann verzweigt der
+vorhandene `ExploreArea`-Executor vor der Legacy-Frontier-/Portal-/Coverage-
+Schleife in das WE-Profil. Beide Strategien können daher nicht gleichzeitig
+Nav2-Ziele besitzen; der vorhandene `_active_goal`-Schutz lässt weiterhin nur
+einen Erkundungsauftrag zu.
+
+**Kindziel-, Cancel- und Resultatpfad:** Der ROS-freie Laufzeitvertrag prüft vor
+Versand Kontext, Revision, Frame und Kandidatenbindung und besitzt genau einen
+M3/J-Kindzielautomaten. Der Node ruft ausschließlich seinen bereits vorhandenen
+`NavigateToPose`-Client samt Recovery-freiem Behavior Tree auf; für den
+validierten Kandidaten wird zusätzlich dessen belegtes Yaw übernommen.
+Während des blockierenden Aufrufs prüfen Stopcallbacks Nutzerabbruch, Zeitbudget
+und die weiterhin exakte Korrelation. Ein Revisions-/Fingerprint-/Kontextwechsel
+canceln das alte Nav2-Ziel; auch ein gleichzeitig eintreffender Erfolg wird als
+`invalidated` ohne Attempt behandelt. Erfolg/retrybarer Fehler werden
+idempotent in die vorhandene Policyhistorie übernommen. Transport-/Cancelfehler
+brechen sicher ab. Eine verbrauchte Absicht kann vor einer neuen Revision kein
+zweites Kind starten.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+frischem temporären Overlay; Fake-Callbacks beziehungsweise Fake-Actionserver,
+synthetische Karten/TF in isolierter DDS-Domain, keine Geräte, realen Karten,
+Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3N-FOCUS | Navigationsruntime und Nodevertrag: **90 passed**; darunter Erfolg/Retry/Abort/Cancel, verspäteter Erfolg nach Revision, Dispatchausnahme, vollständige Opt-in-Kette, Legacy-Ausschluss, konsumierte Absicht und explizites Ziel-Yaw am bestehenden Client. |
+| WE-M3N-EXPLORER | Vollständige Explorer-Suite: **744 passed**. |
+| WE-M3N-ADJACENT | Explorer plus vollständige Fingerprint-, Karten-, Semantik-, Mission- und Launch-Suiten: **934 passed**. |
+| WE-M3N-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 744 = 780 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3N-ROS | Isolierte lokale DDS-Domain: aktueller Kandidat, exakt **1** Ziel am Fake-`NavigateToPose`-Server, danach erfolgreicher Nutzer-Cancel der äußeren Action, **0** Nachrichten auf beiden Command-Topics. |
+| WE-M3N-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+**Offene Grenzen:** Das WE-Profil besitzt noch keinen Runtime-Aufrufer des
+Abschlussautomaten. Ohne Ziel wartet es daher bis Nutzerabbruch oder Budget und
+kann noch keinen fachlichen Voll-/Teilabschluss in Action und Status ausgeben.
+Portal-/Beobachtungsaufgaben bleiben ohne metrischen Zieladapter gesperrt. Die
+konfigurierten Grenzwerte sind Softwarestartwerte, noch kein eingefrorenes
+Zielsystemprofil. Jetsonlast, Pfad-Scope, unveränderte Sicherheitskette und
+Hardwarewirkung sind noch nicht abgenommen. Softwaretests und Fake-Actions sind
+keine Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/O:** Abschlussautomat und additive
+Legacyprojektion in die WE-Schleife übernehmen. Frische qualifizierte
+Revisionsfenster, Teilstand, Systemabbruch und Nutzer-Cancel müssen mit
+synthetischen Actionfällen getrennt belegt werden; kein schwächerer
+Legacy-Abschluss und keine reale Fahrt.
+
+**Rückfall:** `wohnungserkundung_navigation_enabled: false` belässt den gesamten
+neuen aktiven Pfad unerreichbar; vollständiger Rückfall ist der einzelne
+M3/N-Commit. Passive M3/M-Diagnose und Legacy-Explorer bleiben erhalten. Nichts
+wurde deployed oder an Hardware aktiviert.
 
 ### 2026-09-14 – WE-M3/M: passiver Runtime-Zielvorschlag
 

@@ -7,6 +7,8 @@ import time
 from types import SimpleNamespace
 
 import numpy as np
+from action_msgs.msg import GoalStatus
+from builtin_interfaces.msg import Time
 from nav_msgs.msg import OccupancyGrid
 import pytest
 from std_msgs.msg import String
@@ -34,8 +36,10 @@ from explore.explore_node import (  # noqa: E402
     validated_shadow_frontier_task_feed,
     validated_shadow_raw_map_capacity,
     validated_passive_policy_enabled,
+    validated_we_navigation_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
+from explore.portal_memory import PortalMapContext  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
@@ -912,6 +916,7 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_status_topic'] == (
         '/explore/region_graph/status_json')
     assert parameters['wohnungserkundung_policy_enabled'] is False
+    assert parameters['wohnungserkundung_navigation_enabled'] is False
     assert parameters['wohnungserkundung_evidence_clearance_m'] == 0.28
     assert parameters['wohnungserkundung_robot_seed_search_m'] == 0.75
     assert parameters['wohnungserkundung_task_cell_search_m'] == 0.60
@@ -930,6 +935,130 @@ def test_passive_policy_requires_explicit_shadow_opt_in():
     for values in ((False, True), (1, True), (True, 1)):
         with pytest.raises(ValueError):
             validated_passive_policy_enabled(*values)
+
+
+def test_we_navigation_requires_complete_explicit_opt_in_chain():
+    assert validated_we_navigation_enabled(
+        True, True, True, True, True) is True
+    assert validated_we_navigation_enabled(
+        True, True, True, True, False) is False
+    for values in (
+            (False, True, True, True, True),
+            (True, False, True, True, True),
+            (True, True, False, True, True),
+            (True, True, True, False, True),
+            (True, True, True, True, 1)):
+        with pytest.raises(ValueError):
+            validated_we_navigation_enabled(*values)
+
+
+def test_we_execute_branch_precedes_legacy_frontier_state_mutation():
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_navigation_enabled = True
+    node._overall_timeout_s = 300.0
+    node._min_frontier_m = 0.30
+    node._return_to_start_p = False
+    sentinel = object()
+    handle = SimpleNamespace(request=SimpleNamespace(
+        timeout_s=12.0,
+        min_frontier_size_m=0.4,
+        return_to_start=False,
+    ))
+    node._execute_wohnungserkundung_navigation = (
+        lambda selected_handle, timeout: sentinel if (
+            selected_handle is handle and timeout == 12.0
+        ) else None)
+
+    assert node._execute_reserved(handle) is sentinel
+
+
+def test_exact_unconsumed_we_target_is_withheld_after_revision_change():
+    context = PortalMapContext('session-m3n', 'map-m3n', 'map')
+    intent = SimpleNamespace(
+        intent_id='intent-1', context=context, map_revision=7)
+    candidate = SimpleNamespace(
+        source_fingerprint='a' * 64,
+        source_stamp_ns=123,
+        frame_id='map',
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context,
+        map_revision=7,
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+    )
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = (intent, candidate)
+    node._wohnungserkundung_consumed_intent_id = None
+
+    assert node._current_wohnungserkundung_navigation_target() == (
+        intent, candidate)
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context,
+        map_revision=8,
+        fingerprint='b' * 64,
+        source_stamp_ns=456,
+    )
+    assert node._current_wohnungserkundung_navigation_target() is None
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context,
+        map_revision=7,
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+    )
+    node._wohnungserkundung_consumed_intent_id = 'intent-1'
+    assert node._current_wohnungserkundung_navigation_target() is None
+
+
+def test_existing_nav_client_receives_explicit_we_candidate_yaw():
+    sent = []
+
+    class ImmediateFuture:
+        def __init__(self, value):
+            self._value = value
+
+        def result(self):
+            return self._value
+
+        def add_done_callback(self, callback):
+            callback(self)
+            return self
+
+    result_future = ImmediateFuture(SimpleNamespace(
+        status=GoalStatus.STATUS_SUCCEEDED))
+    nav_handle = SimpleNamespace(
+        accepted=True,
+        get_result_async=lambda: result_future,
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._nav_client = SimpleNamespace(
+        wait_for_server=lambda timeout_sec: timeout_sec == 5.0,
+        send_goal_async=lambda goal: (
+            sent.append(goal) or ImmediateFuture(nav_handle)),
+    )
+    node._global_frame = 'map'
+    node._behavior_tree = '/fake/no_recovery.xml'
+    node._cancel_timeout_s = 1.0
+    node._robot_xy = lambda: (0.0, 0.0)
+    node._record_coverage_pose = lambda _pose: None
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(
+            to_msg=lambda: Time(sec=1, nanosec=2)))
+
+    status = node._navigate_to(
+        1.0, 2.0, 10.0, goal_yaw=math.pi / 2.0)
+
+    assert status == 'success'
+    assert len(sent) == 1
+    assert sent[0].behavior_tree == '/fake/no_recovery.xml'
+    assert math.isclose(
+        sent[0].pose.pose.orientation.z,
+        math.sin(math.pi / 4.0), abs_tol=1e-9)
+    assert math.isclose(
+        sent[0].pose.pose.orientation.w,
+        math.cos(math.pi / 4.0), abs_tol=1e-9)
 
 
 def test_disabled_region_graph_shadow_creates_no_interface():
@@ -1384,6 +1513,10 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
         publish=publications.append)
     node._wohnungserkundung_policy_enabled = True
     node._wohnungserkundung_policy_fault = None
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = None
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
     node._wohnungserkundung_stateful_assessment = None
     node._wohnungserkundung_task_policy_session = SimpleNamespace(
         latest_assessment_revision=None,
@@ -1495,6 +1628,10 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         publish=publications.append)
     node._wohnungserkundung_policy_enabled = True
     node._wohnungserkundung_policy_fault = None
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = None
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
     node._wohnungserkundung_evidence_policy = object()
     node._wohnungserkundung_evidence_cache_key = None
     node._wohnungserkundung_evidence_cache = None

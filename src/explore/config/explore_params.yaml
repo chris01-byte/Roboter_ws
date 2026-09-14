@@ -41,6 +41,7 @@ explore_node:
     # WE-M3/F: nur Diagnose im bestehenden Status, keine Ziel-/Fahrwirkung.
     # Erfordert einen explizit aktivierten Regionsgraph-Schatten.
     wohnungserkundung_policy_enabled: false
+    wohnungserkundung_navigation_enabled: false
     # Synthetische Softwarestartwerte; vor Abnahme begründen und einfrieren.
     wohnungserkundung_evidence_clearance_m: 0.28
     wohnungserkundung_robot_seed_search_m: 0.75
