@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/R)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/S)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,22 +10,27 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/R – monotones Kartenquellalter softwaregeprüft, zur Review.** Der reine
-Lebenszyklus addiert bei jeder Statusprojektion die monotone Laufzeit seit dem
-letzten neuen Kartenmanagerstatus zu dessen gemeldetem Kartenalter. Ein exaktes
-Status-Replay nimmt an der globalen Zeitordnung teil, setzt diesen Anker aber
-nicht neu und kann die Quelle daher nicht verjüngen. Ein neuer periodischer
-Managerstatus darf sein frisch gemessenes Alter neu verankern. Keine ROS-,
-Explorer-, Portal-, Ziel- oder Fahrwirkung wurde ergänzt.
+**WE-M2/S – Pflichttest- und Abnahmematrix erstellt, zur Review.** Die Matrix
+ordnet jeden WE-M2-Punkt konkreten Tests oder einer ausdrücklichen Lücke zu.
+Belegt sind unter anderem Startraum–Flur–Zimmer mit Rückkehr in dieselbe Flur-ID,
+idempotente Portal-/Durchfahrtsereignisse, explizite Merge-/Split-Korrekturen
+ohne Aufgabenverlust, begrenzte Zustände, Frischeprojektion und eine passive
+standardmäßig deaktivierte ROS-Ausgabe ohne Ziel- oder Aktoranbindung.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/S.** Nur die
-Pflichttest- und Abnahmematrix von WE-M2 gegen die vorhandenen Tests und den
-passiven ROS-Nachweis stellen. Für jedes Szenario Startraum–Flur–Zimmer,
-verbundener Freiraum, L-Flur/Schleife, offener Wohnbereich, Möbelunterteilung,
-Kartenkorrektur, Betrachten ohne Eintritt, Flurrückkehr, Merge/Split,
-globale Frontiers, Datenfrische sowie Laufzeit/Speicher exakte Nachweisstelle
-oder Lücke benennen. Daraus genau den kleinsten fehlenden M2-Schritt auswählen.
-Nur diese STATUS.md; keine Funktions-, ROS-, Fahr- oder Hardwareänderung.
+WE-M2 bleibt offen: Der Graph besitzt keinen eigenen Erkundungsstatus je Region;
+L-Flur, verbundene Türen, offener Wohnbereich und Möbelunterteilung sind nicht
+als kombinierte Detektor–Graph-Szenarien belegt. Frontiers und Portalpläne
+werden der Runtime noch nicht revisionssicher zugeführt, und Laufzeit/Speicher
+sind nur durch Kapazitätsgrenzen, nicht durch einen wachsenden Belastungstest
+nachgewiesen.
+
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/T.** Im reinen
+`region_graph.py` einen von Seen/Entered getrennten, nur explizit aktualisierbaren
+Regions-Erkundungsstatus ergänzen. Er darf in WE-M2 noch keinen endgültigen
+Wohnungsabschluss behaupten; ein Kandidat für abgearbeitet bleibt von der
+WE-M3-Abschlussentscheidung getrennt. Merge, Split, Replay, Revisionen und
+Statusprojektion müssen ihn verlustfrei behandeln. Nur Graph, Graph-/Statustests
+und diese STATUS.md; keine ROS-, Detektor-, Ziel-, Fahr- oder Hardwarewirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -66,6 +71,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/P `docs/we-m2p-shadow-runtime-seam` | Gestapelte quellenbasierte Festlegung der ersten passiven ROS-Naht einschließlich gesperrter Portal-Provenienz; nur diese STATUS.md. |
 | WE-M2/Q `feature/we-m2q-shadow-map-runtime` | Gestapelte, standardmäßig deaktivierte und kartenstatusbasierte ROS-Schattenhülle; Explorer-Node, Standardparameter, Vertragstests und Status. |
 | WE-M2/R `feature/we-m2r-shadow-map-age` | Gestapelte reine monotone Fortführung des Kartenquellalters mit replayfestem Empfangsanker; Lebenszyklus, Tests und Status. |
+| WE-M2/S `docs/we-m2s-acceptance-matrix` | Gestapelte vollständige Zuordnung der WE-M2-Lieferung, Pflichttests und Abnahme zu konkreten Nachweisen oder Lücken; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -303,7 +309,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis R decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portal-/Kartenquellalter, Runtime-Naht und passive Kartenstatus-ROS-Hülle ab. Pflichttestmatrix, belastbare Portal-Provenienz, qualifizierte Evidenz und Zielsystemnachweis offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis S decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portal-/Kartenquellalter, Runtime-Naht, passive Kartenstatus-ROS-Hülle und die Abnahmematrix ab. Regions-Erkundungsstatus, kombinierte Geometrieszenarien, Runtime-Portal-/Frontierzuführung, Belastungsnachweis und Zielsystemnachweis offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -370,7 +376,9 @@ ROS-Naht fest, weist aber zugleich nach, dass `PortalPlan` aus der
 Nav2-Global-Costmap nicht belastbar einer Kartenmanagerrevision zugeordnet
 werden kann. WE-M2/Q bindet ausschließlich den Kartenstatus passiv und
 standardmäßig deaktiviert an; Portalzuführung und qualifizierte Evidenz bleiben
-offen.
+offen. WE-M2/R führt das Kartenquellalter monoton fort. Die Matrix aus WE-M2/S
+weist außerdem den fehlenden eigenen Regions-Erkundungsstatus, noch nicht
+kombinierte Geometrieszenarien und fehlende Runtime-/Belastungsnachweise aus.
 
 **Statusfrische:** Der Kartenmanager publiziert seinen Status standardmäßig
 alle 2,0 s, während der reine Schattenvertrag Kartenquellen nach mehr als 2,0 s
@@ -398,6 +406,77 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/S: grüne Einzeltests ersetzen keine M2-Abnahmematrix
+
+**Bewertungsregel:** „Belegt“ bedeutet, dass ein vorhandener Test den genannten
+Vertrag direkt prüft. „Teilbelegt“ bedeutet, dass reine Einzelverträge vorhanden
+sind, aber die im Meilenstein verlangte Kombination oder Runtime-Zuführung
+fehlt. „Offen“ darf nicht aus ähnlichen Tests als bestanden abgeleitet werden.
+
+**Lieferumfang:**
+
+| WE-M2-Lieferung | Nachweis | Bewertung |
+|---|---|---|
+| Vorläufige IDs, Regionszuordnung, Verbindungen und Revisionen | `test_start_room_hall_room_and_return_reuse_the_same_hall_region`, Gegenansicht- und Revisions-Negativtests in `test_region_graph.py` | Belegt für explizite reine Eingänge. |
+| Seen und Entered getrennt | `test_unconfirmed_traversal_changes_neither_entry_nor_current_region`, Split-Zustandstests | Belegt. |
+| Eigener Erkundungsstatus je Region | `RegionSnapshot` enthält nur `seen`, `entered`, `entry_count` und Referenzen. | Offen; weder Zustand noch Update-/Replayvertrag vorhanden. |
+| Aufgabenbezug und Erhalt bei Korrekturen | Task-, Merge- und Split-Tests, insbesondere `test_merge_preserves_open_and_completed_tasks_without_loss` und `test_explicit_split_partitions_portal_ends_tasks_and_whole_state` | Belegt als passive Referenzlogik; keine Runtime-Frontierzuführung. |
+| Bestehende Portaldetektoren, Analyse-Erosion getrennt von realer Costmap | Explorer-/Portalplanungstests prüfen Main-Geometrie; HWT besitzt zusätzliche verbundene Engstellen. Die Shadow-Runtime ruft keinen Detektor auf. | Teilbelegt; HWT/Main-Integration und revisionssichere Detektorzuführung offen. |
+| Kartenkorrektur, Merge und Split | Explizite atomare Merge-/Split-Suiten einschließlich Replays und Aliasen | Teilbelegt; Entscheidung wird bewusst extern geliefert, kein Geometrieadapter. |
+| Frühe passive Status-/Marker-Ausgabe | Versionierter begrenzter JSON-Status, WE-M2/Q-ROS-Smoke und Standard `false` | Status belegt; kein eigener Marker nötig. Runtime enthält bisher nur die Startregion aus Kartenstatus. |
+
+**Pflichttests:**
+
+| Gefordertes Szenario | Konkrete vorhandene Evidenz | Bewertung |
+|---|---|---|
+| Startraum–Flur–Zimmer | Gleichnamiger Drei-Regions-Test mit zwei Portalen und drei bestätigten Eintritten | Belegt als reines Graphszenario. |
+| Verbundener Freiraum mit offenen Türen | Offener Bereich bleibt eine Region; unqualifizierte Kandidaten erzeugen keine Region. HWT-Detektortests liegen außerhalb der WE-Basis. | Teilbelegt; kein kombinierter Detektor–Portalgedächtnis–Graph-Test. |
+| L-Flur und Schleife | Schleifen-Merge, Alias- und interner-Verbindungs-Tests | Teilbelegt; L-Geometrie und Detektorzuführung fehlen. |
+| Offener Wohnbereich | `test_open_area_without_confirmed_portal_remains_one_region` und Merge nach synthetischer Fehlteilung | Teilbelegt; keine synthetische Flächengeometrie. |
+| Möbelunterteilung | `test_repeated_furniture_bottleneck_evidence_never_confirms_a_portal` | Teilbelegt; kein kombinierter Graph-/Korrekturverlauf. |
+| Kartenwachstum, Ursprungsrotation, simulierte Korrektur | Kartenstatuswachstum, metrische Portalnormalisierung nach Ursprung/Auflösung sowie Merge-/Split-Suiten | Teilbelegt; kein durchgängiges Szenario mit rotierter/korrigierter Geometrie. |
+| Betrachten ohne Eintritt | Unqualifizierter Kandidat ändert nur Gedächtnis; unbestätigte Durchfahrt ändert weder Eintritt noch aktuelle Region. | Belegt als reine Zustandsgrenze. |
+| Rückkehr in denselben Flur | Drei-Regions-Test kehrt über dasselbe zweite Portal in exakt dieselbe Flur-ID zurück. | Belegt als reine Graphlogik. |
+| Merge/Split ohne verlorene Aufgaben | Vollständige Zuordnung aller Portalenden/Aufgaben, atomare Negativfälle und Merge nach Split | Belegt. |
+
+**Abnahmekriterien:**
+
+| WE-M2-Abnahme | Nachweis | Bewertung |
+|---|---|---|
+| Derselbe Flur erhält keine neue ID | Rückkehr- und Gegenansichttests | Belegt als reine Logik. |
+| Unsegmentierte Frontiers bleiben global sichtbar | `test_task_filters_do_not_change_inventory` erhält eine Frontier-Referenz trotz Filterung. Der Explorer speist seine realen Frontiers aber nicht in den Graphen. | Teilbelegt; Runtime-Vertrag offen. |
+| Rohkarte und Nav2-Kosten unverändert | Shadow-Callback verarbeitet nur Kartenmanager-`String`; kein Karten-/Costmap-Objekt oder Planer wird übergeben. | Quellenbasiert belegt, aber kein gezielter Mutations-/ROS-Vertragstest. |
+| Keine Navigationsziele oder Fahrbefehle | Node-Vertrag sperrt Portaladapter; Shadow-Callbacks besitzen nur Lebenszyklus und String-Publisher. Deaktivierter/aktivierter ROS-Smoke ohne Action. | Softwarebelegt; keine Hardwareaussage. |
+| Veraltete Daten werden gemeldet | Revisions-, Alters-, Missing- und monotone Lebenszyklustests einschließlich WE-M2/R | Belegt als Softwarevertrag; echter 2,0-s-Zielsystemgrenzfall offen. |
+| Laufzeit/Speicher bei wachsender synthetischer Karte begrenzt | Harte Kapazitäten für Portale, Beobachtungen, Regionen, Verbindungen, Aufgaben, Historien und 1-MiB-JSON; atomare Grenztests | Teilbelegt; kein wachsender Szenario-/Zeit-/Speichermesslauf. |
+| Rückfall | `region_graph_shadow_enabled: false`; ROS-OFF-Inventar ohne Shadow-Topic | Belegt für die gestapelte Main-Basis, nicht für HWT/lokalen Mischstand. |
+
+**Gesamtergebnis:** WE-M2 ist nicht abgenommen. Die Matrix verhindert
+insbesondere, dass Kapazitätstests als Laufzeitmessung, getrennte Geometrietests
+als durchgängige Wohnungsgrundrisse oder die kartenbasierte Ein-Regions-Ausgabe
+als Portal-/Frontierintegration ausgegeben werden.
+
+**Ausgeführte Prüfungen:** Alle Testnamen und Behauptungen wurden gegen die
+gestapelte Spitze `8bdb8f4` und die verbindlichen Abschnitte in Strategie und
+MEILENSTEINEN gelesen. Die unveränderte Explorer-Suite wurde erneut ausgeführt:
+**435 passed**. `git diff --check` bestand. Keine ROS-Nodes, Geräte, Karten oder
+Aktoren wurden gestartet.
+
+**Nächster abgegrenzter Schritt WE-M2/T:** Zuerst die kleinste unabhängige
+Lieferlücke schließen: ein passiver, explizit revisionsgebundener
+Regions-Erkundungsstatus, getrennt von Seen und Entered. Mindestens
+`unassessed`, `in_progress` und `complete_candidate` unterscheiden; letzterer
+ist ausdrücklich kein WE-M3-Wohnungsabschluss. Updates benötigen stabile IDs,
+Grund und Revision, sind replayfest und dürfen abgeschlossene Kandidaten in
+WE-M2 nicht stillschweigend wieder öffnen. Merge/Split müssen den konservativeren
+Status erhalten beziehungsweise explizit zuordnen. Betroffen sind nur
+`region_graph.py`, `test_region_graph.py`, `region_graph_status.py`, dessen Test
+und diese STATUS.md. Keine Runtime-, ROS-, Detektor-, Ziel- oder Fahrwirkung.
+
+**Rückfallweg:** WE-M2/S ändert nur diese STATUS.md; der Abschnitt kann
+entfernt oder der Dokumentations-PR geschlossen werden. Kein Funktions-,
+Installations- oder Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/R: Kartenalter folgt der monotonen Empfangszeit
 
