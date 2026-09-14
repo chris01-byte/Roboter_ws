@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/J)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/K)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,15 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/J – Der reine revisionsgebundene Zielabsichts- und
-Kindziel-Lebenszyklusvertrag ist gerätefrei geprüft und zur Review.** Aus einer
-aktuellen Policy-Auswahl entsteht deterministisch eine ausschließlich
-ID-basierte Zielabsicht. Der begrenzte Automat erlaubt exakt ein aktives
-Kindziel, trennt Erfolg, retrybaren Fehler, Abbruch und Cancel und stuft auch
-einen verspäteten Erfolg nach Revisionsinvalidierung als `invalidated` ein.
-Widersprüchliche oder alte Start-, Cancel- und Ergebnisereignisse scheitern
-geschlossen. Das Modul enthält weder Zielpose/Pfad noch ROS-, Nav2-, Action-
-oder Bewegungszugriff.
+**WE-M3/K – Die reine metrische Frontier-Zielkandidatenbildung ist gerätefrei
+geprüft und zur Review.** Der Adapter akzeptiert nur eine aktuelle Zielabsicht,
+die passende offene Frontier-Aufgabe, genau einen Track, vollständige skalare
+Evidenz und den exakt korrelierten Rohkartensnapshot. Er bestimmt innerhalb
+harter Such-/Speichergrenzen eine erreichbare freie Zielzelle im Kartenframe und
+eine zur Frontier gerichtete Orientierung. Geodätische Weglänge und
+Informationsgewinn werden aus denselben Zellen erneut berechnet und müssen den
+Auswahlbelegen entsprechen. Der Kandidat ist nur ein unveränderlicher
+Zahlenvertrag; es gibt weiterhin keinen ROS-Pose-, Nav2-, Action- oder Fahrpfad.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -27,21 +27,20 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis J umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis K umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
-Die zustandsbehaftete Auswahl ist diagnostisch integriert und der anschließende
-Kindzielautomat rein spezifiziert. Metrische Zielbildung und -übergabe,
+Die zustandsbehaftete Auswahl ist diagnostisch integriert; Kindzielautomat und
+metrische Frontier-Zielbildung sind rein spezifiziert. Runtime-Zielübergabe,
 Attemptableitung, Abschluss-/Actionintegration, eingefrorenes
 begrenztes Profil sowie die motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/K:** Aus der exakt korrelierten Rohkarte
-und dem zur ausgewählten Frontier-Aufgabe gehörenden stabilen Track einen
-reinen, revisionsgebundenen metrischen Zielkandidaten ableiten. Der Adapter muss
-Frame, Aufgabe, Track, befahrbare Zielzelle, Ausrichtung und harte Suchgrenzen
-belegen und bei fehlender Eindeutigkeit geschlossen scheitern. Zunächst keine
-Übergabe an den bestehenden Nav2-Client und keine Action-, Command- oder
-Twist-Wirkung.
+**Nächster abgegrenzter Schritt WE-M3/L:** Kindzielresultate deterministisch in
+revisionsgebundene Attempt-/Retryereignisse und Aufgabenfortschritt übersetzen.
+Erfolg darf nur als Versuch/Fortschritt gelten und eine Frontier nicht allein
+terminal erledigen; retrybarer Fehler braucht eine begrenzte spätere
+Neubewertung, Invalidierung/Cancel/Abbruch dürfen nicht als Fortschritt zählen.
+Zunächst reiner Vertrag ohne Nav2-, Action-, Command- oder Twist-Wirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -120,6 +119,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/H `feature/we-m3h-portal-inventory` | Gestapelter vollständiger, atomarer und begrenzter Portalbestand pro exakter Kartenrevision einschließlich explizitem Leerbestand; schließt die passive Quellenfrische ohne erfundene Portale oder Fahrwirkung. |
 | WE-M3/I `feature/we-m3i-stateful-runtime` | Gestapelte einmal-pro-Revision Runtimefortschreibung der reinen hierarchischen Aufgabenpolicy mit begrenzter Auswahl-, Retry- und Historiendiagnose; gespeicherte Auswahl wird bei aktueller Blockade zurückgehalten, keine Ziel- oder Fahrwirkung. |
 | WE-M3/J `feature/we-m3j-child-goal-contract` | Gestapelter reiner, revisionsgebundener Zielabsichts- und Einzel-Kindzielautomat mit replayfesten Start-/Cancel-/Resultatereignissen, expliziter Revisionsinvalidierung und begrenzten Verläufen; keine Zielpose, ROS-, Nav2- oder Fahrwirkung. |
+| WE-M3/K `feature/we-m3k-frontier-goal-candidate` | Gestapelte reine metrische Zielkandidatenbildung aus exakt korrelierter Rohkarte, aktueller offener Frontier-Aufgabe, eindeutigem Track und übereinstimmender Skalarbelegung; begrenzte sichere Zielzellensuche, keine ROS-, Nav2- oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -358,7 +358,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
 | WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
-| WE-M3 | Begonnen; M3/A bis J softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad, exakte Frontier-/Portalquellen, diagnostische hierarchische Auswahl und reiner Einzel-Kindzielautomat liegen vor. Metrische Ziel-/Attemptintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
+| WE-M3 | Begonnen; M3/A bis K softwaregeprüft | Vertrag, Aufgabenverlauf, skalare Bewertung, Abschlussautomat, additive Migration, passiver Status-Runtimepfad, exakte Frontier-/Portalquellen, diagnostische hierarchische Auswahl, Einzel-Kindzielautomat und reine metrische Frontier-Zielbildung liegen vor. Runtime-Ziel-/Attemptintegration, Abschlussruntime, begrenztes Profil und motorlose Zielsystemabnahme fehlen. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
 | WE-M6 | Geplant | Wiederholbarer Abschluss des zugänglichen Wohnungsumfangs. |
@@ -454,6 +454,56 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/K: exakt kartengebundener Frontier-Zielkandidat
+
+**Arbeitsbasis und Umfang:** `feature/we-m3k-frontier-goal-candidate` baut
+direkt auf M3/J `1068262` auf. Das neue ROS-freie Modul nimmt genau eine
+revisionsgebundene Absicht, die passende offene Frontier-Aufgabe, einen
+vollständigen begrenzten Trackbestand, die M3/G-Skalarbelege und denselben exakt
+korrelierten Rohkartensnapshot entgegen. Nur der eindeutige aktuelle Track darf
+innerhalb der bereits verwendeten Clearance-/Seed-/Zielsuchgrenzen eine freie,
+vom aktuellen Roboterseed geodätisch erreichbare Zielzelle liefern.
+
+**Doppelte Belegprüfung und Ausgabegrenze:** Zielzelle, Route und
+Informationsfläche werden erneut aus dem über Fingerprint, Stempel, Frame und
+Revision gebundenen Zellbestand berechnet. Sie müssen den zuvor zur Auswahl
+verwendeten Skalarbelegen entsprechen; dadurch kann weder eine fremde Karte
+noch eine mit anderen Grenzwerten berechnete Bewertung still als Ziel dienen.
+Die Ausgabe enthält nur Kontext-IDs, Quellbindung, Kartenzeile/-spalte sowie
+endliche metrische X-/Y-/Yaw-, Weg- und Informationswerte. Sie ist weder
+`PoseStamped` noch Actionziel oder Bewegungserlaubnis.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble und
+frischem temporären Overlay; ausschließlich synthetische Raster/Positionen,
+keine Geräte, realen Karten, Bags, Nodes, Actions oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3K-FOCUS | Zielkandidatenadapter: **13 passed**; darunter exakter Kandidat, rotierter Ursprung, Frontierausrichtung, Kontext-/Revisions-/Aufgaben-/Trackfehler, fehlende Pose, blockierte Route, Skalarwiderspruch und harte Grenzen. |
+| WE-M3K-EXPLORER | Vollständige Explorer-Suite: **709 passed**. |
+| WE-M3K-ADJACENT | Explorer plus vollständige Fingerprint-, Karten-, Semantik-, Mission- und Launch-Suiten: **899 passed**. |
+| WE-M3K-COLCON | Frischer Build von `amadeus_map_identity`, `robot_interfaces` und `explore`; **36 + 709 = 745 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3K-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+**Offene Grenzen:** Der Zahlenkandidat ist nicht in den Node eingebunden und
+wird weder in eine ROS-Pose umgewandelt noch an den vorhandenen Nav2-Client
+übergeben. Nur Frontier-Aufgaben besitzen diesen metrischen Pfad; Portal- und
+Beobachtungsaufgaben bleiben mangels spezifischer Zielevidenz gesperrt. Ein
+Kindresultat wird noch nicht als Attempt/Retry verarbeitet. Abschlussruntime,
+Profilgrenzen, Zielsystemlast und Hardwareprüfung fehlen. Softwaretests sind
+keine Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/L:** Einen reinen Ergebnisadapter vom
+Kindzielautomaten zur bestehenden Aufgabenhistorie implementieren. Erfolg,
+retrybarer Fehler, Invalidierung, Systemabbruch und Nutzer-Cancel müssen
+unterschiedlich bleiben; insbesondere erledigt ein bloßer Nav-Erfolg die
+Frontier-Aufgabe nicht. Keine Nav2-Übergabe oder Fahrwirkung.
+
+**Rückfall:** Den einzelnen M3/K-Commit zurücknehmen. M3/J-Automat und alle
+passiven Runtimepfade bleiben unverändert; das neue Modul besitzt keinen
+Runtime-Aufrufer, Parameter, Publisher, Subscriber oder Actionpfad. Nichts wurde
+deployed oder an Hardware aktiviert.
 
 ### 2026-09-14 – WE-M3/J: revisionsgebundener Einzel-Kindzielvertrag
 
