@@ -255,12 +255,11 @@ def test_result_initializes_passive_shadow_session_without_invention():
     result = correlator().accept(sample())
 
     shadow = RegionGraphShadowSession(
-        result.context,
+        result,
         RegionSeed("start", result.context, result.map_revision),
     )
     payload = shadow.build_status_json(
-        source_map_revision=result.map_revision,
-        source_map_age_seconds=result.source_map_age_seconds,
+        result,
         portal_memory_age_seconds=None,
         region_graph_age_seconds=0.0,
     )
