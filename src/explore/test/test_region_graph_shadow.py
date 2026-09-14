@@ -8,6 +8,9 @@ import pytest
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
+from explore.map_status_adapter import (  # noqa: E402
+    MapStatusCorrelationResult,
+)
 from explore.portal_memory import (  # noqa: E402
     MemoryCapacityError,
     ObservationDisposition,
@@ -33,16 +36,31 @@ from explore.region_graph_status import (  # noqa: E402
 )
 
 
+FINGERPRINT = "a" * 64
 CONTEXT = PortalMapContext(
     session_id="session-20260914",
-    map_id="live-map-epoch-1",
+    map_id=f"map-{FINGERPRINT}",
     frame_id="map",
 )
 
 
+def map_status(**changes):
+    values = {
+        "context": CONTEXT,
+        "map_revision": 10,
+        "fingerprint": FINGERPRINT,
+        "source_stamp_ns": 1_800_000_000_000_000_000,
+        "source_map_age_seconds": 0.5,
+        "map_changed": True,
+        "replayed": False,
+    }
+    values.update(changes)
+    return MapStatusCorrelationResult(**values)
+
+
 def session(**policies):
     return RegionGraphShadowSession(
-        CONTEXT,
+        map_status(),
         RegionSeed("start-observation", CONTEXT, 10),
         **policies,
     )
@@ -63,8 +81,7 @@ def candidate(**changes):
 
 def status_arguments(**changes):
     values = {
-        "source_map_revision": 10,
-        "source_map_age_seconds": 0.5,
+        "map_status": map_status(),
         "portal_memory_age_seconds": 0.4,
         "region_graph_age_seconds": 0.3,
     }
@@ -166,22 +183,26 @@ def test_candidate_before_start_revision_fails_without_state_change():
     assert after == before
 
 
-def test_missing_ages_remain_visible_in_composed_status():
+def test_caller_ages_remain_explicit_and_correlated_map_age_is_copied():
     shadow = session()
     shadow.observe_portal_plan(candidate())
 
     payload = json.loads(shadow.build_status_json(**status_arguments(
-        source_map_age_seconds=None,
         portal_memory_age_seconds=None,
         region_graph_age_seconds=None,
     )))
 
     assert payload["source"]["stale"] is True
     assert payload["source"]["stale_sources"] == [
-        "source_map", "portal_memory", "region_graph"]
-    assert all(
-        payload["source"][name]["state"] == "missing"
-        for name in payload["source"]["stale_sources"])
+        "portal_memory", "region_graph"]
+    assert payload["source"]["source_map"] == {
+        "revision": 10,
+        "lag_revisions": 0,
+        "age_seconds": 0.5,
+        "state": "fresh",
+    }
+    assert payload["source"]["portal_memory"]["state"] == "missing"
+    assert payload["source"]["region_graph"]["state"] == "missing"
 
 
 def test_source_revision_behind_owned_state_fails_closed():
@@ -190,7 +211,7 @@ def test_source_revision_behind_owned_state_fails_closed():
 
     with pytest.raises(ShadowStatusError):
         shadow.build_status_json(**status_arguments(
-            source_map_revision=11))
+            map_status=map_status(map_revision=11)))
 
 
 def test_portal_memory_capacity_is_enforced_by_session():
@@ -224,8 +245,25 @@ def test_status_capacity_is_enforced_by_session():
             portal_memory_age_seconds=None))
 
 
+def test_serialization_failure_does_not_accept_new_map_revision():
+    shadow = session(status_policy=ShadowStatusPolicy(
+        max_serialized_bytes=64))
+
+    with pytest.raises(ShadowStatusCapacityError):
+        shadow.build_status_json(**status_arguments(
+            map_status=map_status(map_revision=12, fingerprint="b" * 64),
+            portal_memory_age_seconds=None))
+
+    source = shadow.status_source(
+        map_status(map_revision=11, fingerprint="c" * 64),
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=None,
+    )
+    assert source.source_map_revision == 11
+
+
 @pytest.mark.parametrize("change", [
-    {"context": "context"},
+    {"initial_map_status": "map-status"},
     {"start_seed": "seed"},
     {"portal_policy": "policy"},
     {"graph_policy": "policy"},
@@ -233,8 +271,8 @@ def test_status_capacity_is_enforced_by_session():
 ])
 def test_invalid_session_arguments_fail_closed(change):
     arguments = {
-        "context": CONTEXT,
-        "start_seed": RegionSeed("start", CONTEXT, 0),
+        "initial_map_status": map_status(),
+        "start_seed": RegionSeed("start", CONTEXT, 10),
     }
     arguments.update(change)
 
@@ -247,7 +285,132 @@ def test_foreign_start_context_fails_closed():
 
     with pytest.raises(RegionGraphShadowError):
         RegionGraphShadowSession(
-            CONTEXT, RegionSeed("foreign-start", foreign, 0))
+            map_status(), RegionSeed("foreign-start", foreign, 10))
+
+
+def test_start_revision_must_match_first_map_result():
+    with pytest.raises(RegionGraphShadowError):
+        RegionGraphShadowSession(
+            map_status(), RegionSeed("late-start", CONTEXT, 11))
+
+
+@pytest.mark.parametrize("initial", [
+    map_status(map_changed=False),
+    map_status(replayed=True),
+])
+def test_session_requires_first_new_map_result(initial):
+    with pytest.raises(RegionGraphShadowError):
+        RegionGraphShadowSession(
+            initial, RegionSeed("start", CONTEXT, 10))
+
+
+def test_map_growth_updates_revision_and_copies_source_age():
+    shadow = session()
+    grown = map_status(
+        map_revision=12,
+        fingerprint="b" * 64,
+        source_stamp_ns=1_800_000_001_000_000_000,
+        source_map_age_seconds=0.125,
+    )
+
+    source = shadow.status_source(
+        grown,
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.25,
+    )
+
+    assert source.context == CONTEXT
+    assert source.source_map_revision == 12
+    assert source.source_map_age_seconds == 0.125
+    assert source.portal_memory_age_seconds is None
+    assert source.region_graph_age_seconds == 0.25
+
+
+def test_same_revision_periodic_status_can_refresh_correlated_map_age():
+    shadow = session()
+    periodic = map_status(
+        source_map_age_seconds=0.25,
+        map_changed=False,
+    )
+
+    source = shadow.status_source(
+        periodic,
+        portal_memory_age_seconds=0.75,
+        region_graph_age_seconds=1.0,
+    )
+
+    assert source.source_map_revision == 10
+    assert source.source_map_age_seconds == 0.25
+    assert source.portal_memory_age_seconds == 0.75
+    assert source.region_graph_age_seconds == 1.0
+
+
+def test_exact_correlated_status_replay_is_accepted():
+    shadow = session()
+    replay = map_status(map_changed=False, replayed=True)
+
+    source = shadow.status_source(
+        replay,
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=None,
+    )
+
+    assert source.source_map_revision == 10
+    assert source.source_map_age_seconds == 0.5
+
+
+def test_foreign_map_status_fails_without_changing_latest_revision():
+    shadow = session()
+    current = map_status(map_revision=12, fingerprint="b" * 64)
+    shadow.status_source(
+        current,
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=None,
+    )
+    foreign = PortalMapContext("other-session", CONTEXT.map_id, "map")
+
+    with pytest.raises(RegionGraphShadowError):
+        shadow.status_source(
+            map_status(context=foreign, map_revision=13),
+            portal_memory_age_seconds=None,
+            region_graph_age_seconds=None,
+        )
+
+    with pytest.raises(RegionGraphShadowError):
+        shadow.status_source(
+            map_status(map_revision=11),
+            portal_memory_age_seconds=None,
+            region_graph_age_seconds=None,
+        )
+
+
+def test_revision_rollback_fails_without_changing_latest_revision():
+    shadow = session()
+    current = map_status(map_revision=12, fingerprint="b" * 64)
+    shadow.status_source(
+        current,
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=None,
+    )
+
+    for _ in range(2):
+        with pytest.raises(RegionGraphShadowError):
+            shadow.status_source(
+                map_status(map_revision=11),
+                portal_memory_age_seconds=None,
+                region_graph_age_seconds=None,
+            )
+
+
+def test_status_requires_typed_map_result():
+    shadow = session()
+
+    with pytest.raises(RegionGraphShadowError):
+        shadow.status_source(
+            "map-status",
+            portal_memory_age_seconds=None,
+            region_graph_age_seconds=None,
+        )
 
 
 def test_policy_objects_are_not_mutated_or_replaced():
