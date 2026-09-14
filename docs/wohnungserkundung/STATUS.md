@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AP)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AQ)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,27 +10,32 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AP – Besitzer- und Nebenläufigkeitsvertrag des passiven Portalfeeds
-festgelegt, zur Review.** Die vorhandene Schattenhülle kann die in WE-M2/AO
-erzeugten unqualifizierten Kandidaten ohne neue ROS-Schnittstelle übernehmen.
-Die kleinste sichere Anbindung benötigt einen dritten Opt-in, ein exakt
-gepaartes Raw-Map-/Identitätscache, die letzte Join-Korrelation und einen
-begrenzten Pose-Retry. Fingerprint/Detektion und TF bleiben außerhalb der
-Schatten-Sperre; vor Zustandsmutation wird das Paar unter der Sperre erneut
-verglichen.
+**WE-M2/AQ – passive, exakt korrelierte Rohkarten-Portalzuführung umgesetzt und
+lokal softwaregeprüft; zur Review.** Der standardmäßig deaktivierte dritte
+Opt-in führt die in WE-M2/AO erzeugten unqualifizierten Kandidaten über den
+vorhandenen Schattenlebenszyklus zu. Cache, Korrelation, TF-Retry und
+Schattenfehler bleiben begrenzt und isoliert; Fingerprint und Detektor laufen
+außerhalb der Zustandssperre. Ein gerätefreier ROS-Smoke belegte die Kette
+synthetische `OccupancyGrid` → Exaktjoin → Kandidat → Schattenstatus mit genau
+einem unbestätigten Portal, ohne Action oder Command.
 
 WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien sind
-jetzt lokal softwaregeprüft. Frontiers und qualifizierte Portalbeobachtungen
-werden der passiven Runtime jedoch noch nicht revisionssicher zugeführt.
+lokal softwaregeprüft und die unqualifizierte Portalgeometrie wird nun
+revisionssicher zugeführt. Qualifizierte Strukturevidenz und bestätigte
+Durchfahrtsereignisse werden der passiven Runtime jedoch noch nicht automatisch
+zugeführt.
 Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
 beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
 SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AQ:** Genau den dokumentierten
-standardmäßig deaktivierten Portalfeed in `explore_node.py` und
-`explore_params.yaml` samt Vertragstests umsetzen. Keine neue Subscription,
-kein Publisher, kein Launch, keine Qualifikation/Graphverbindung und keine
-Änderung an Zielwahl, Navigation, Commands oder Fahrsoftware.
+**Nächster abgegrenzter Schritt WE-M2/AR:** Die zulässigen vorhandenen
+Softwarequellen für automatische Struktur- und Durchfahrtsereignisse gegen den
+WE-M1-Vertrag prüfen und daraus die kleinste fail-closed Ereignisbildung bis zur
+bestehenden Raum-/Aufgabenverwaltung umsetzen. Ein wiederholter
+Rohkarten-Kandidat allein darf keine Strukturwahrheit erfinden; ein Nav2-Erfolg
+allein darf keine Durchfahrt bestätigen. Die Kette bleibt dritt-opt-in, passiv
+und ohne Action-, Zielwahl-, Command- oder Fahrwirkung und wird ausschließlich
+synthetisch gerätefrei geprüft.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -95,6 +100,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AN `docs/we-m2an-runtime-feed-seam` | Gestapelte erneute Runtime-Nahtinventur nach Abschluss der kombinierten Szenarien; legt den fehlenden reinen Rohkarten-Kandidatenadapter als nächste Voraussetzung fest, nur diese STATUS.md. |
 | WE-M2/AO `feature/we-m2ao-correlated-raw-map-portals` | Gestapelter ROS-freier Adapter von exakt korrelierten Rohkartenzellen zu stabilen unqualifizierten verbundenen Portalkandidaten samt reinen Verträgen; kein Runtime-Aufrufer. |
 | WE-M2/AP `docs/we-m2ap-passive-portal-feed-owner` | Gestapelter Besitzer-, Cache-, Retry-, Sperr- und Fehlervertrag für die spätere dritte Opt-in-Portalzuführung; nur diese STATUS.md. |
+| WE-M2/AQ `feature/we-m2aq-passive-connected-portal-feed` | Gestapelte dritt-opt-in passive Node-Zuführung exakt korrelierter Rohkarten-Portalkandidaten mit begrenztem Pose-Retry, Sperrdisziplin, Fehlerisolation und gerätefreiem ROS-Smoke; keine Qualifikation, Graphverbindung oder Fahrwirkung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -332,7 +338,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AP decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien, korrelierte unqualifizierte Rohkarten-Portalkandidaten und deren Node-Besitzvertrag ab. Node-Zuführung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AQ decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die exakt korrelierte Node-Zuführung unqualifizierter Rohkarten-Portalkandidaten ab. Automatische qualifizierte Ereignisbildung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -429,6 +435,74 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AQ: passive korrelierte Portalzuführung
+
+**Umfang und Aktivierung:** `ExploreNode` übernimmt die in WE-M2/AO
+implementierte reine Detektion nur bei dem neuen dritten Opt-in
+`region_graph_shadow_connected_portals_enabled`. Der bestehende Schatten, die
+Rohkartenkorrelation und eine positive Join-Kapazität müssen gleichzeitig
+aktiv sein; ungültige Kombinationen werden beim Start abgelehnt. Die
+Standardkonfiguration bleibt vollständig deaktiviert. Eigene, validierte
+Schattenparameter begrenzen Analyse-Clearance, Kandidatenunsicherheit und
+Pose-Retry. Es entstehen keine neuen ROS-Endpunkte.
+
+**Nachgewiesene Datenkette:** Der Rohkarten-Callback hält unter der bestehenden
+Schatten-Sperre höchstens die letzte Nachricht zusammen mit ihrer daraus
+berechneten Identität. Beide bereits vorhandenen Join-Reihenfolgen können die
+letzte exakte Korrelation bereitstellen. Der 1-Hz-Schatten-Timer verarbeitet
+nur ein Paar, bei dem Fingerprint, Quellstempel und Frame übereinstimmen.
+Pose-Lesen, erneuter Fingerprint und verbundene Clearance-Detektion laufen
+außerhalb der Sperre; vor der Mutation wird dasselbe Paar erneut verglichen.
+Ein zwischenzeitlicher Cachewechsel verwirft das alte Ergebnis. Exaktes Replay
+wird nicht erneut detektiert. Fehlende Pose verbraucht einen begrenzten Retry;
+danach oder bei ungültigem passendem Raster wird ausschließlich der Schatten
+fail-closed gesetzt.
+
+Die Kandidaten gelangen über das bestehende
+`RegionGraphShadowLifecycle.observe_portal_plan()` in das Portalgedächtnis.
+Sie behalten absichtlich `PortalStructuralEvidence.INSUFFICIENT`; deshalb
+erzeugt diese Zuführung weder Portalbestätigung noch Graphverbindung,
+Gegenregion oder Aufgabe. Explorerstatus, Actionserver, Nav2-Client,
+Costmap-Portalplanung, Frontierauswahl und beide Twist-Publisher konsumieren
+keinen neuen Zustand.
+
+**Ausgeführte Prüfungen:** Lokaler Arbeitsplatz mit ROS Humble als
+Build-/Testumgebung; ausschließlich synthetische Raster und eine statische
+Testtransformation, keine Geräte, realen Karten, Bags, Actions oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AQ-CONTRACT | Node-/Parameter-/Callback-Verträge einschließlich OFF-Pfad, Aktivierung, beide Join-Reihenfolgen, Sperrgrenzen, Retry, Replay, Cachewechsel und Fehlerisolation: **64 passed**. |
+| WE-M2AQ-FOCUS | Vertrag gemeinsam mit Rohkarten-Kandidatenadapter und Schattenlebenszyklus: **140 passed**. |
+| WE-M2AQ-EXPLORER | Vollständige Explorer-Suite: **555 passed**. |
+| WE-M2AQ-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **696 passed**. |
+| WE-M2AQ-COLCON | Frischer temporärer Build von Abhängigkeiten und `explore`; Paketprüfungen: **36 + 555 = 591 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AQ-ROS | Isolierte Domain 231, direkter Explorer und statischer TF: exakte Korrelation **1**, Portal **1 unbestätigt**, Regionen **1**, Verbindungen/Aufgaben **0**, Actions/Commands **0**, Hardwarezugriff **false**. |
+| WE-M2AQ-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+Der ROS-Smoke bestätigt die Softwareverkabelung und den bewusst
+unqualifizierten Zustand, nicht die reale Türgeometrie, Lokalisierung,
+Parallel-/SLAM-Last, Jetson-Eignung oder eine Hardwareabnahme.
+
+**Offene Grenze:** Der aktuelle Rohkartendetektor liefert geometrische
+Kandidaten, aber keine qualifizierte Strukturevidenz. Die Runtime besitzt auch
+keine unabhängige, vollständige Bewegungsquelle, die beide Portalseiten und den
+Chassisauslauf revisionsgebunden belegt. Ohne diese Ereignisse darf die bereits
+vorhandene Raum-/Aufgabenverwaltung nicht automatisch fortgeschrieben werden.
+
+**Nächster abgegrenzter Schritt WE-M2/AR:** Vorhandene Quellen für genau diese
+beiden Belegarten inventarisieren und nur eine belegbare, fail-closed
+Ereignisbildung an den vorhandenen Schattenlebenszyklus anbinden. Der
+funktionale Softwarepfad soll anschließend synthetisch von Eingangsdaten bis
+zu Region und Aufgabe laufen. Wiederholung allein qualifiziert keine Struktur,
+Nav2-Erfolg allein bestätigt keine Durchfahrt. Keine Action, kein Command,
+keine Zielwahl und kein Fahrpfad werden verändert.
+
+**Rückfall:** Den einzelnen WE-M2/AQ-Commit zurücknehmen oder den neuen dritten
+Opt-in auf `false` belassen. Dann existieren weder Portalfeed-Cache noch dessen
+TF-/Digest-/Detektorarbeit; der vorherige Schatten und sämtliche Betriebswege
+bleiben unverändert.
 
 ### 2026-09-14 – WE-M2/AP: Besitzervertrag des passiven Portalfeeds
 

@@ -28,6 +28,7 @@ from explore.explore_node import (  # noqa: E402
     odom_freshness_state,
     relative_planar_motion,
     stamp_coverage,
+    validated_shadow_connected_portal_feed,
     validated_shadow_raw_map_capacity,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
@@ -893,6 +894,10 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_enabled'] is False
     assert parameters['region_graph_shadow_raw_map_enabled'] is False
     assert parameters['region_graph_shadow_raw_map_capacity'] == 0
+    assert parameters['region_graph_shadow_connected_portals_enabled'] is False
+    assert parameters['region_graph_shadow_portal_analysis_clearance_m'] == 0.20
+    assert parameters['region_graph_shadow_portal_uncertainty_m'] == 0.05
+    assert parameters['region_graph_shadow_portal_retry_limit'] == 30
     assert parameters['region_graph_shadow_session_id'] == ''
     assert parameters['region_graph_shadow_start_observation_id'] == ''
     assert parameters['region_graph_shadow_map_status_topic'] == (
@@ -902,7 +907,7 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_status_topic'] != (
         parameters['status_topic'])
     assert 'PortalPlanCandidate' not in source
-    assert '.observe_portal_plan(' not in source
+    assert '.observe_portal_plan(' in source
 
 
 def test_disabled_region_graph_shadow_creates_no_interface():
@@ -1020,12 +1025,17 @@ def test_enabled_shadow_passes_only_explicit_raw_map_capacity(monkeypatch):
 def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
     accepted = []
     clock_calls = []
+    correlation = object()
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
+    node._region_graph_shadow_connected_portal_feed = True
+    node._region_graph_shadow_latest_correlation = None
+    node._region_graph_shadow_portal_retry_count = 3
     node._region_graph_shadow = SimpleNamespace(
         accept_map_status_json=lambda text, **kwargs: accepted.append(
-            (text, kwargs)))
+            (text, kwargs)) or SimpleNamespace(
+                raw_map_correlation=correlation))
     monkeypatch.setattr(
         explore_node_module.time,
         'monotonic',
@@ -1038,6 +1048,8 @@ def test_region_graph_map_callback_passes_one_monotonic_timestamp(monkeypatch):
         '{"schema": 1}', {'received_monotonic_seconds': 42.5})]
     assert len(clock_calls) == 1
     assert node._region_graph_shadow_fault is None
+    assert node._region_graph_shadow_latest_correlation is correlation
+    assert node._region_graph_shadow_portal_retry_count == 0
 
 
 def test_disabled_raw_map_shadow_preserves_map_without_factory(monkeypatch):
@@ -1065,6 +1077,7 @@ def test_enabled_raw_map_snapshot_is_built_outside_and_joined_inside_lock(
     clock_values = iter((10.0, 11.0))
     lock = threading.Lock()
     source = object()
+    correlation = object()
     message = _grid(width=2, height=2, resolution=0.1)
     message.header.frame_id = ' map '
     message.header.stamp.sec = 12
@@ -1081,11 +1094,17 @@ def test_enabled_raw_map_snapshot_is_built_outside_and_joined_inside_lock(
     def accept_source(value, **kwargs):
         assert lock.locked()
         lifecycle_calls.append((value, kwargs))
+        return SimpleNamespace(raw_map_correlation=correlation)
 
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_raw_map_enabled = True
     node._region_graph_shadow_lock = lock
     node._region_graph_shadow_fault = None
+    node._region_graph_shadow_connected_portal_feed = True
+    node._region_graph_shadow_latest_raw_map = None
+    node._region_graph_shadow_latest_raw_source = None
+    node._region_graph_shadow_latest_correlation = None
+    node._region_graph_shadow_portal_retry_count = 4
     node._region_graph_shadow = SimpleNamespace(
         accept_raw_map_source=accept_source)
     monkeypatch.setattr(
@@ -1107,6 +1126,10 @@ def test_enabled_raw_map_snapshot_is_built_outside_and_joined_inside_lock(
     assert lifecycle_calls == [(
         source, {'received_monotonic_seconds': 11.0})]
     assert node._region_graph_shadow_fault is None
+    assert node._region_graph_shadow_latest_raw_map is message
+    assert node._region_graph_shadow_latest_raw_source is source
+    assert node._region_graph_shadow_latest_correlation is correlation
+    assert node._region_graph_shadow_portal_retry_count == 0
 
 
 def test_invalid_raw_map_faults_only_shadow_after_preserving_map(monkeypatch):
@@ -1276,3 +1299,143 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
     assert len(publications) == 1
     assert isinstance(publications[0], String)
     assert publications[0].data == '{}'
+
+
+def test_connected_portal_feed_requires_all_three_opt_ins():
+    assert validated_shadow_connected_portal_feed(
+        True, True, True, 2, 0.20, 0.05, 30)
+    assert not validated_shadow_connected_portal_feed(
+        True, True, False, 2, 0.20, 0.05, 30)
+    for values in (
+            (False, True, True, 2, 0.20, 0.05, 30),
+            (True, False, True, 2, 0.20, 0.05, 30),
+            (True, True, True, 0, 0.20, 0.05, 30),
+            (True, True, True, 2, 0.0, 0.05, 30),
+            (True, True, True, 2, 0.20, 0.11, 30),
+            (True, True, True, 2, 0.20, 0.05, 0),
+            (True, True, 1, 2, 0.20, 0.05, 30)):
+        try:
+            validated_shadow_connected_portal_feed(*values)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f'Ungueltiger Portalfeed akzeptiert: {values}')
+
+
+def _portal_feed_node():
+    correlation = SimpleNamespace(
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+        context=SimpleNamespace(frame_id='map'),
+        map_revision=7,
+    )
+    source = SimpleNamespace(
+        fingerprint='a' * 64,
+        source_stamp_ns=123,
+        frame_id='map',
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_connected_portal_feed = True
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_latest_raw_map = _grid(width=2, height=2)
+    node._region_graph_shadow_latest_raw_source = source
+    node._region_graph_shadow_latest_correlation = correlation
+    node._region_graph_shadow_processed_correlation = None
+    node._region_graph_shadow_portal_retry_count = 0
+    node._region_graph_shadow_portal_retry_limit = 2
+    node._region_graph_shadow_portal_uncertainty = 0.05
+    node._region_graph_shadow_portal_analysis_clearance = 0.20
+    node._portal_min_component_area = 0.40
+    node._portal_min_gap = 0.12
+    node._portal_max_gap = 0.80
+    node._portal_exit_margin = 0.25
+    node._portal_max_traverse_distance = 1.00
+    return node, source, correlation
+
+
+def test_disabled_connected_portal_feed_has_zero_runtime_work():
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_connected_portal_feed = False
+    node._robot_pose = lambda: (_ for _ in ()).throw(
+        AssertionError('Deaktivierter Portalfeed darf keine Pose lesen'))
+
+    node._try_observe_connected_raw_map_portals()
+
+
+def test_exact_connected_portal_feed_computes_outside_and_mutates_inside_lock(
+        monkeypatch):
+    node, _source, correlation = _portal_feed_node()
+    candidate = object()
+    observations = []
+    node._robot_pose = lambda: (0.1, 0.1, 0.0)
+
+    def build_candidates(value, **kwargs):
+        assert value is correlation
+        assert not node._region_graph_shadow_lock.locked()
+        assert kwargs['robot_xy'] == (0.1, 0.1)
+        return (candidate,)
+
+    def observe(value, **kwargs):
+        assert node._region_graph_shadow_lock.locked()
+        observations.append((value, kwargs))
+
+    node._region_graph_shadow = SimpleNamespace(observe_portal_plan=observe)
+    monkeypatch.setattr(
+        explore_node_module,
+        'correlated_connected_portal_candidates',
+        build_candidates)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 50.0)
+
+    node._try_observe_connected_raw_map_portals()
+    node._try_observe_connected_raw_map_portals()
+
+    assert observations == [(
+        candidate, {'observed_monotonic_seconds': 50.0})]
+    assert node._region_graph_shadow_processed_correlation == (
+        'a' * 64, 123, 'map', 7)
+    assert node._region_graph_shadow_portal_retry_count == 0
+
+
+def test_missing_pose_faults_only_shadow_after_bounded_retry():
+    errors = []
+    node, _source, _correlation = _portal_feed_node()
+    node._robot_pose = lambda: None
+    node.get_logger = lambda: SimpleNamespace(error=errors.append)
+
+    node._try_observe_connected_raw_map_portals()
+    assert node._region_graph_shadow_fault is None
+    node._try_observe_connected_raw_map_portals()
+
+    assert len(errors) == 1
+    assert 'Roboterpose fehlt nach begrenztem Retry' in (
+        node._region_graph_shadow_fault)
+
+
+def test_cache_change_during_detection_discards_candidates(monkeypatch):
+    node, _source, correlation = _portal_feed_node()
+    observations = []
+    node._robot_pose = lambda: (0.1, 0.1, 0.0)
+    node._region_graph_shadow = SimpleNamespace(
+        observe_portal_plan=lambda *args, **kwargs: observations.append(
+            (args, kwargs)))
+
+    def change_cache(*args, **kwargs):
+        node._region_graph_shadow_latest_correlation = SimpleNamespace(
+            fingerprint='b' * 64,
+            source_stamp_ns=456,
+            context=SimpleNamespace(frame_id='map'),
+            map_revision=8,
+        )
+        return (object(),)
+
+    monkeypatch.setattr(
+        explore_node_module,
+        'correlated_connected_portal_candidates',
+        change_cache)
+
+    node._try_observe_connected_raw_map_portals()
+
+    assert correlation.map_revision == 7
+    assert observations == []
+    assert node._region_graph_shadow_processed_correlation is None
