@@ -452,6 +452,7 @@ ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
 | WE-M2X-ADJACENT | Zusätzlich Semantikmanager- und Semantik-Launch-Verträge: **605 passed**. |
 | WE-M2X-COLCON | Temporärer isolierter Build der drei Pakete: 3 Pakete gebaut; Blattpaket **18** und Explorer **482** Pakettests bestanden, Kartenmanager-Colcon-Hook führt historisch 0 Tests; seine **51** Quelltests sind separat in WE-M2X-CORE enthalten. Gesamt `colcon test-result`: **500 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
 | WE-M2X-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+| WE-M2X-REMOTE-CI | PR #48 ist laut GitHub mergebar, aber nicht grün: Beide `python-contracts`-Läufe brachen im unveränderten `src/robot_bringup/test/test_oak_rectifier.py` bereits beim Import ab, weil dem Ubuntu-Runner `cv2` fehlt. Der nachfolgende Kartenmanagertest lief dadurch nicht. Der Workflow überwacht und testet außerdem weder `src/amadeus_map_identity/**` noch `src/explore/**`; dies ist deshalb ausdrücklich **kein** entfernter Testnachweis für WE-M2/X. Ein Swift-Lauf war erfolgreich, der zweite beim Abruf noch aktiv. |
 
 **Offene Grenzen / Integrationsabhängigkeiten:** Der neue Explorer-Factory-
 Vertrag akzeptiert absichtlich nur bereits normalisierte kompakte Bytes. Noch
@@ -461,7 +462,9 @@ Snapshot überführt wird. Explorer und Kartenmanager empfangen `/map` weiterhin
 in getrennten Callbacks; erst der spätere exakte Abgleich aus WE-M2/V darf eine
 Revision freigeben. Keine HWT-Detektorfunktion wurde übernommen, kein Portal
 beobachtet und keine Runtime aktiviert. Die Testläufe sind keine Zielsystem-
-oder Hardwareabnahme.
+oder Hardwareabnahme. Der bestehende, außerhalb dieses Schritts liegende
+CI-Umgebungs-/Abdeckungsbefund wird nicht durch eine fachfremde Workflow- oder
+OpenCV-Änderung in WE-M2/X verdeckt; er muss separat abgegrenzt werden.
 
 **Nächster abgegrenzter Schritt WE-M2/Y:** Nur quellenbasiert den tatsächlichen
 rclpy-Datentyp, die vorhandenen schnellen Kartenmanagerpfade und die
