@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AN)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AO)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AN – fehlende passive Runtime-Zuführung neu abgegrenzt, zur Review.**
-Der Explorer erkennt Frontiers nur im aktiven Actionlauf und Costmap-Portale
-ohne Rohkartenprovenienz. Der neue verbundene Rohkartendetektor besitzt keinen
-Node-Aufrufer. Die passive Schattenhülle korreliert zwar Rohkartenidentität und
-Managerrevision exakt, verwirft danach aber die Korrelation und führt weder
-Raster/Detektorausgabe noch Frontiers zu. Vor einer Node-Anbindung fehlt daher
-ein reiner Adapter, der genau einen korrelierten Rohkartensnapshot erneut
-identitätsprüft und daraus stabile, weiterhin unqualifizierte Kandidaten bildet.
+**WE-M2/AO – korrelierter Rohkarten-Portalkandidatenadapter softwaregeprüft,
+zur Review.** Das neue ROS-freie Modul prüft Fingerprint, Quellstempel, Frame
+und tatsächlich verwendete Zellen erneut gegen genau eine
+`PortalSourceCorrelation`, validiert planaren Origin/Yaw, führt den verbundenen
+Detektor aus und liefert deterministische `PortalPlanCandidate`s. Sie bleiben
+über den bestehenden Adapter ausdrücklich `INSUFFICIENT`; es gibt weiterhin
+keinen Node-Aufrufer.
 
 WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien sind
 jetzt lokal softwaregeprüft. Frontiers und qualifizierte Portalbeobachtungen
@@ -26,13 +25,12 @@ Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
 beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
 SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AO:** Ein neues ROS-freies Adaptermodul
-nimmt explizite Rohkartenfelder/Zellen, Roboterposition, Detektorgrenzen,
-Unsicherheit und eine bereits exakt belegte `PortalSourceCorrelation`. Es
-berechnet die Rohkartenidentität erneut, verwirft jede Abweichung und liefert
-deterministische `PortalPlanCandidate`s mit Kontext/Revision und stabiler ID.
-Die Kandidaten bleiben `insufficient`; keine Node-, Parameter-, Frontier-,
-Qualifikations-, Durchfahrts-, Ziel- oder Fahranbindung.
+**Nächster abgegrenzter Schritt WE-M2/AP:** Ausschließlich dokumentierend den
+Node-Besitz der letzten exakten Korrelation, Raw-Map-Cache-Rennen,
+Pose-Verfügbarkeit, Wiederholungsregel und Sperrreihenfolge festlegen. Daraus
+genau einen doppelt opt-in passiven Portalfeed mit Nullkostenpfad, begrenztem
+Retry, Fehlertrennung, Tests und Rückfall bestimmen; noch keine Node- oder
+Parameteränderung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -95,6 +93,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AL `feature/we-m2al-l-hall-loop-scenario` | Gestapeltes reines L-Flur-/Schleifenszenario mit Detektorportalen und ausdrücklich separater Merge-Wahrheit; nur Tests und Status. |
 | WE-M2/AM `feature/we-m2am-map-change-scenario` | Gestapeltes reines Kartenänderungsszenario für Wachstum, Origin-/Rasterrotation und explizite Merge-/Split-Korrektur ohne Identitäts- oder Aufgabenverlust; nur Tests und Status. |
 | WE-M2/AN `docs/we-m2an-runtime-feed-seam` | Gestapelte erneute Runtime-Nahtinventur nach Abschluss der kombinierten Szenarien; legt den fehlenden reinen Rohkarten-Kandidatenadapter als nächste Voraussetzung fest, nur diese STATUS.md. |
+| WE-M2/AO `feature/we-m2ao-correlated-raw-map-portals` | Gestapelter ROS-freier Adapter von exakt korrelierten Rohkartenzellen zu stabilen unqualifizierten verbundenen Portalkandidaten samt reinen Verträgen; kein Runtime-Aufrufer. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -332,7 +331,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AN decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien und die erneute Runtime-Nahtinventur ab. Korrelierter Rohkarten-Kandidatenadapter, Runtime-Portal-/Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AO decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien und korrelierte unqualifizierte Rohkarten-Portalkandidaten ab. Node-Zuführung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -429,6 +428,65 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AO: korrelierte Rohkarten-Portalkandidaten
+
+**Umfang:** Neu sind `explore/raw_map_portal_adapter.py`, sein reiner Test und
+dieser Statusnachtrag. Das Modul hat keine ROS-, Node-, Uhr-, Dateisystem-,
+Planner-, Navigations- oder Aktorabhängigkeit. Explorer-Node, Parameter,
+Launch, Actionloop, Costmap-Portalpfad, Frontierlogik, Statusschema und
+Fahrsoftware bleiben unverändert.
+
+**Vertrag:** `correlated_connected_portal_candidates()` erhält eine bereits
+belegte `PortalSourceCorrelation` sowie vollständige explizite Felder und
+Zellen genau des verwendeten Rohkartensnapshots. Die gemeinsame
+Zellnormalisierung und Fingerprintimplementierung werden erneut auf diesen
+Zellen ausgeführt. Nur bei exakter Übereinstimmung von Fingerprint,
+Quellstempel und Frame geht die Verarbeitung weiter. Der Ursprung muss eine
+endliche, normierte planare Pose sein; Roboter-Weltposition und Raster werden
+damit gegenseitig transformiert. Eingaben bleiben unverändert.
+
+Der verbundene Clearance-Detektor erzeugt weiterhin nur Geometrie. Für jede
+Brücke entsteht eine stabile ASCII-ID als SHA-256 über die versionierte
+Detektorart, exakte Quellenidentität und vier Rasterendpunkte. Empfangszeit und
+Listenposition gehen nicht ein. Kontext und Revision stammen ausschließlich
+aus der Korrelation; Unsicherheit ist ein expliziter Eingang. Ausgegeben wird
+ein unveränderliches Tupel bestehender `PortalPlanCandidate`s. Deren bestehende
+Normalisierung setzt ausnahmslos
+`PortalStructuralEvidence.INSUFFICIENT`: keine Bestätigung, Durchfahrt,
+Graphverbindung, Zielwahl oder Bewegung.
+
+**Nachweise:** Exaktes Replay liefert bytegleiche Kandidaten-IDs. Gepolstertes
+Kartenwachstum und eine um 90 Grad gedrehte Rasterdarstellung erzeugen mit
+ihren eigenen Identitäten/Revisionen unterschiedliche Beobachtungs-IDs, aber
+metrisch gleiche Portalachsen und deshalb dieselbe Portalgedächtnis-ID.
+Stempel-, Frame-, Zell- oder Korrelationsfingerprintabweichung, nichtplanare
+oder nichtnormierte Orientierung sowie ungültige Unsicherheit/Detektorgrenzen
+schlagen vor Ausgabe geschlossen fehl. Eine Roboterposition außerhalb des
+exakten Rasters liefert ausdrücklich ein leeres Tupel.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble nur als
+Build-/Test-Underlay; keine ROS-Nodes, Geräte, realen Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AO-FOCUS | Exaktkorrelation, Replay, Wachstum/Rotation, Identität und Negativgrenzen: **12 passed**. |
+| WE-M2AO-EXPLORER | Vollständige Explorer-Suite: **550 passed**. |
+| WE-M2AO-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **691 passed**. |
+| WE-M2AO-COLCON | Frischer temporärer Build von `amadeus_map_identity` und `explore`; **36 + 550 = 586 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AO-STATIC | `compileall`, `flake8` mit den projektüblichen Ausnahmen E501/W503 sowie `git diff --check`: bestanden. |
+
+Dies ist reine synthetische Softwareevidenz, keine Runtime-, Jetson- oder
+Hardwareabnahme und keine Fahrfreigabe.
+
+**Rückfall:** Den einzelnen WE-M2/AO-Commit zurücknehmen oder seinen PR
+schließen. Das neue Modul besitzt keinen Produktionsaufrufer; frühere Schritte
+und der Betriebszustand bleiben unverändert.
+
+**Nächster abgegrenzter Schritt WE-M2/AP:** Nur Cache-, Korrelation-, Pose-,
+Retry- und Sperrbesitz für eine spätere doppelt opt-in Node-Zuführung festlegen.
+Noch keine Node-, Parameter-, Frontier-, Ziel- oder Fahränderung.
 
 ### 2026-09-14 – WE-M2/AN: Runtime-Zuführungsnaht nach Szenarioabschluss
 
