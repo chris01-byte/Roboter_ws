@@ -1,18 +1,23 @@
 """Correlate one raw-map portal source without inventing map provenance.
 
-The adapter accepts only an already computed identity of the exact raw
-``OccupancyGrid`` used by a passive detector.  It does not hash ROS messages,
-read a clock, inspect a costmap, invoke a detector, or mutate shadow state.
-Nav2 master-costmap timestamps are deliberately not accepted as raw-map
-identity because they describe costmap publication rather than map lineage.
+The correlator accepts only an identity of the exact raw ``OccupancyGrid`` used
+by a passive detector.  The pure factory normalizes explicit message fields but
+does not import ROS.  Neither path reads a clock, inspects a costmap, invokes a
+detector, or mutates shadow state.  Nav2 master-costmap timestamps are
+deliberately not accepted as raw-map identity because they describe costmap
+publication rather than map lineage.
 """
 
 from dataclasses import dataclass
 import math
 import re
-from typing import Tuple
+from typing import Any, Iterable, Tuple
 
-from amadeus_map_identity import MapIdentityError, map_snapshot_fingerprint
+from amadeus_map_identity import (
+    MapIdentityError,
+    compact_occupancy_cells,
+    map_snapshot_fingerprint,
+)
 
 from .map_status_adapter import MapStatusCorrelationResult
 from .portal_memory import PortalMapContext
@@ -86,10 +91,25 @@ class PortalSourceCorrelation:
 def raw_map_portal_source_from_values(
         *, width: int, height: int, resolution: float, frame_id: str,
         origin: Tuple[float, float, float, float, float, float, float],
-        compact_cells: bytes, source_stamp_ns: int,
+        cells: Iterable[Any], source_stamp_ns: int,
 ) -> RawMapPortalSource:
-    """Build identity from normalized values using the shared map digest."""
+    """Build identity from raw cells using the shared normalization/digest."""
     try:
+        if (
+                isinstance(width, bool)
+                or not isinstance(width, int)
+                or width <= 0
+                or width > 0xffffffff
+                or isinstance(height, bool)
+                or not isinstance(height, int)
+                or height <= 0
+                or height > 0xffffffff):
+            raise MapIdentityError(
+                "Kartendimensionen muessen positive 32-Bit-Werte sein")
+        compact_cells = compact_occupancy_cells(
+            cells=cells,
+            cell_count=width * height,
+        )
         fingerprint = map_snapshot_fingerprint(
             width=width,
             height=height,

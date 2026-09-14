@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/Y)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/Z)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,13 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/Y – passive Rohkartennaht quellenbasiert festgelegt, dokumentiert.**
-Der tatsächliche Humble-Python-Typ von `OccupancyGrid.data`, die vorhandenen
-schnellen Kartenmanagerpfade und die reentrante Explorer-Callback-Struktur sind
-geprüft. Der nächste Runtime-Schritt darf daraus noch nicht folgen: Zuerst muss
-die bytegleiche, speicherschonende Zellnormalisierung in das gemeinsame
-ROS-freie Blattpaket verschoben werden. Die asynchrone Karten-/Statuszuordnung
-benötigt anschließend einen beidseitigen Exaktabgleich mit gemessen begrenztem
-Identitätspuffer; ein vorübergehender Nichttreffer ist kein Fehlerzustand.
+**WE-M2/Z – gemeinsame begrenzte Zellnormalisierung softwaregeprüft, zur Review.**
+Das ROS-freie Blattpaket `amadeus_map_identity` besitzt nun neben dem Digest die
+eine kanonische Umwandlung von ROS-int8-Zellen in unveränderliche Bytes. Der
+Kartenmanager delegiert seinen bisherigen privaten Schnell-/Fallbackpfad dorthin;
+der reine Explorer-Quellenadapter verarbeitet denselben Vertrag. Die bestehende
+Vier-Millionen-Zellen-Grenze, bekannte Fingerprints und der Kartenmanager-
+Fehlertyp bleiben erhalten. Noch ist kein ROS-Callback oder Puffer angebunden.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,12 +24,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/Z:** Ausschließlich die kanonische
-Zellnormalisierung als reine Funktion in `amadeus_map_identity` übernehmen und
-Kartenmanager sowie reinen Explorer-Quellenadapter darauf umstellen. Bytegleiche
-Fingerprintvektoren, schneller `array('b')`-/Memoryview-Pfad und generischer
-Negativpfad werden softwaregeprüft. Noch kein ROS-Callback, Puffer, Detektor,
-Portalfeed, Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/AA:** Ausschließlich einen reinen,
+beidseitig anstoßbaren Exaktabgleich zwischen begrenzten Rohkartenidentitäten und
+dem aktuellen Kartenmanagerstatus entwerfen und softwareprüfen. Die Kapazität
+muss der Aufrufer explizit setzen; es gibt noch keinen Runtime-Default und keine
+ROS-Anbindung. Erwartete asynchrone Nichttreffer dürfen nicht zum dauerhaften
+Fehler werden. Kein Detektor, Portalfeed, Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -78,6 +77,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/W `docs/we-m2w-map-identity-dependency` | Gestapelte Abhängigkeitsentscheidung gegen den zyklischen Direktimport des Kartenmanagers und für eine neutrale Fingerprintquelle; nur diese STATUS.md. |
 | WE-M2/X `feature/we-m2x-shared-map-identity` | Gestapelte gemeinsame ROS-freie Fingerprintquelle für Kartenmanager und Explorer mit bytegleichen Vektoren und azyklischem Paketgraphen; kein Deployment. |
 | WE-M2/Y `docs/we-m2y-raw-map-runtime-seam` | Gestapelte Quellen- und Nebenläufigkeitsentscheidung zur passiven Rohkartennaht mit lokaler synthetischer Typ-/Kostenmessung; nur diese STATUS.md, kein Deployment. |
+| WE-M2/Z `feature/we-m2z-shared-cell-normalization` | Gestapelte gemeinsame ROS-freie, begrenzte Zellnormalisierung für Kartenmanager und Explorer; reine Module, Tests, Inventar und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -412,6 +412,73 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/Z: eine gemeinsame begrenzte Zellnormalisierung
+
+**Entscheidung / Umfang:** `amadeus_map_identity.compact_occupancy_cells()`
+ist nun die einzige Umwandlung von ROS-signierten Belegungszellen in die
+kanonische unveränderliche Bytefolge. Werte 0 bis 100 bleiben gleich, `-1` wird
+zum Bitmuster 255. Eindimensionale, zusammenhängende Buffer mit Elementgröße
+eins und Format `b`, `B` oder `c` nutzen Memoryview, eine C-seitige Bytekopie
+und C-seitige Werteprüfung. Andere Iterables werden streng elementweise geprüft.
+Länge, Ganzzahltyp, `bool`, Wertebereich und Lesefehler werden fail-closed
+behandelt.
+
+Die bestehende Kartenmanagergrenze von 4.000.000 Zellen ist als gemeinsame
+Konstante in das Blattpaket verschoben. Eine größere angegebene Länge wird vor
+Iteration verworfen. `robot_map_manager` behält den Namen
+`MAXIMUM_CELL_COUNT` und übersetzt einen `MapIdentityError` weiterhin in seinen
+vorhandenen `MapValidationError`; gespeicherte Bytes, bekannte SHA-256-Werte,
+Statusschema und Dateiformat ändern sich nicht. Der reine Explorer-Factory-
+Vertrag nimmt nun rohe `cells` entgegen, validiert positive 32-Bit-Dimensionen,
+normalisiert über dieselbe Funktion und bildet erst dann den gemeinsamen
+Fingerprint. Er ist weiterhin in keinen Node eingebunden.
+
+**Geänderte Dateien:** Implementierung, Export, Metadaten und Tests unter
+`src/amadeus_map_identity/`; Delegation in
+`src/robot_map_manager/robot_map_manager/map_core.py`; reiner Factory-Vertrag
+und Tests in `src/explore/explore/portal_source_adapter.py` beziehungsweise
+`src/explore/test/test_portal_source_adapter.py`; Paketbeschreibung in
+`docs/INVENTORY.md` und dieser Status. Keine Node-, Launch-, Parameter-,
+Navigations-, Sensor- oder Fahränderung.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz, ROS-Humble-Underlay und
+für generierte Schnittstellen die vorhandene lokale Installation; keine Nodes,
+Geräte, Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2Z-FOCUSED | Blatt-, Portalquellen- und Kartenmanager-Core-Verträge gemeinsam: **119 passed**. |
+| WE-M2Z-COMPONENTS | Blattpaket **36**, vollständiger Explorer **483**, Kartenmanager **51** Tests; zusammen **570 passed**. |
+| WE-M2Z-ADJACENT | Zusätzlich Semantikmanager- und Semantik-Launch-Verträge: **624 passed**. |
+| WE-M2Z-COLCON | Temporärer isolierter Build der drei Pakete: 3 Pakete gebaut; Blattpaket **36** und Explorer **483** Pakettests bestanden, Kartenmanager-Colcon-Hook führt historisch 0 Tests. Gesamt `colcon test-result`: **519 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**; die **51** Kartenmanager-Quelltests sind in WE-M2Z-COMPONENTS enthalten. |
+| WE-M2Z-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+| WE-M2Z-REMOTE-CI | PR #50 ist laut GitHub mergebar, aber nicht grün. Der unveränderte `python-contracts`-Workflow brach wie bei WE-M2/X im Bring-up-Vertrag bereits beim Import von `test_oak_rectifier.py` ab, weil dem Ubuntu-Runner `cv2` fehlt. Der Kartenmanagerschritt wurde dadurch nicht erreicht; Blattpaket und Explorer gehören weiterhin nicht zu den Pfaden beziehungsweise Tests dieses Workflows. Dies ist kein entfernter Nachweis für WE-M2/Z. |
+
+Eine erste kombinierte Testanweisung enthielt einen falschen
+Semantik-Launch-Dateinamen; die korrigierte Anweisung lief vollständig. Ein
+zweiter Vorlauf ohne die lokal installierten generierten `robot_interfaces`
+brach bei der Sammlung ab; nach explizitem Read-only-Underlay lief die oben
+ausgewiesene vollständige Suite. Beides waren Testaufbaufehler vor Ausführung
+der Produkttests, keine bestandenen oder fehlgeschlagenen Produktnachweise.
+
+**Offene Grenzen / Rückfall:** Der Schritt beweist Byte- und Vertragsgleichheit
+auf dem lokalen Rechner, nicht Kosten oder Scheduling auf dem Jetson. Er hält
+noch keine Identität über Callbacks, ordnet keinen Kartenstatus zu, beobachtet
+kein Portal und beeinflusst keine Navigation. Rückfall ist das Zurücknehmen des
+einzelnen WE-M2/Z-Commits; WE-M2/Y bleibt als Dokumentationsvertrag bestehen,
+und WE-M2/X kann wieder die vorherige private Kartenmanagernormalisierung nutzen.
+Keine physische Abnahme ist erfolgt.
+
+**Nächster abgegrenzter Schritt WE-M2/AA:** Als reine Logik einen beidseitig
+anstoßbaren Korrelator ergänzen. Er hält nur eine vom Aufrufer explizit begrenzte
+Folge unveränderlicher `RawMapPortalSource`-Objekte und den aktuellen validierten
+Kartenstatus, gibt ausschließlich bei exakter Fingerprint-/Stempel-/Frame-
+Gleichheit eine Revision frei, dedupliziert Replays und unterscheidet erwarteten
+Nichttreffer von ungültigem Eingang. Tests decken Status-vor-Karte,
+Karte-vor-Status, Kartenwachstum, Replay, Verdrängung und Fälschungen ab. Noch
+kein Defaultwert, ROS-Callback, Portalfeed oder Fahrpfad. Rückfall: das neue
+reine Modul nicht einbinden beziehungsweise den einzelnen Commit zurücknehmen.
 
 ### 2026-09-14 – WE-M2/Y: Vertrag der passiven Rohkartennaht
 

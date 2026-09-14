@@ -25,10 +25,15 @@ import time
 from typing import Any, Iterable, Optional, Sequence
 import uuid
 
-from amadeus_map_identity import MapIdentityError, map_snapshot_fingerprint
+from amadeus_map_identity import (
+    MAXIMUM_OCCUPANCY_CELL_COUNT,
+    MapIdentityError,
+    compact_occupancy_cells,
+    map_snapshot_fingerprint,
+)
 
 
-MAXIMUM_CELL_COUNT = 4_000_000
+MAXIMUM_CELL_COUNT = MAXIMUM_OCCUPANCY_CELL_COUNT
 MAXIMUM_DIMENSION = 100_000
 MAXIMUM_COMMAND_BYTES = 4_096
 MAXIMUM_METADATA_BYTES = 128 * 1_024
@@ -583,68 +588,14 @@ class MapOrigin:
 
 
 def _validated_compact_cells(cells: Iterable[Any], cell_count: int) -> bytes:
-    """Übernimmt ROS-int8-Puffer schnell, mit vollständiger Werteprüfung."""
-
+    """Preserve the manager error type around the shared normalization."""
     try:
-        view = memoryview(cells)
-    except TypeError:
-        view = None
-
-    if (
-        view is not None
-        and view.ndim == 1
-        and view.itemsize == 1
-        and view.c_contiguous
-        and view.format in {"b", "B", "c"}
-    ):
-        compact = view.cast("B").tobytes()
-        if len(compact) != cell_count:
-            raise MapValidationError(
-                f"Karte erwartet {cell_count} Zellwerte, enthält aber "
-                f"{len(compact)}."
-            )
-        # bytes.translate arbeitet in C. Nach dem Löschen aller erlaubten
-        # Werte bleiben ausschließlich ungültige int8-Bitmuster übrig.
-        invalid = compact.translate(
-            _IDENTITY_TRANSLATION,
-            _VALID_COMPACT_CELL_BYTES,
+        return compact_occupancy_cells(
+            cells=cells,
+            cell_count=cell_count,
         )
-        if invalid:
-            raw_value = invalid[0]
-            signed_value = raw_value if raw_value < 128 else raw_value - 256
-            raise MapValidationError(
-                f"Kartenwert {signed_value!r} liegt nicht als Ganzzahl "
-                "zwischen -1 und 100 vor."
-            )
-        return compact
-
-    compact_cells = bytearray()
-    try:
-        iterator = iter(cells)
-    except TypeError as error:
-        raise MapValidationError("Kartendaten müssen iterierbar sein.") from error
-    for index, value in enumerate(iterator):
-        if index >= cell_count:
-            raise MapValidationError(
-                f"Karte erwartet {cell_count} Zellwerte, enthält aber mehr."
-            )
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or value < -1
-            or value > 100
-        ):
-            raise MapValidationError(
-                f"Kartenwert {value!r} an Position {index} liegt nicht "
-                "als Ganzzahl zwischen -1 und 100 vor."
-            )
-        compact_cells.append(255 if value == -1 else value)
-    if len(compact_cells) != cell_count:
-        raise MapValidationError(
-            f"Karte erwartet {cell_count} Zellwerte, enthält aber "
-            f"{len(compact_cells)}."
-        )
-    return bytes(compact_cells)
+    except MapIdentityError as error:
+        raise MapValidationError(str(error)) from error
 
 
 def raw_cell_digest(

@@ -1,3 +1,4 @@
+from array import array
 from dataclasses import FrozenInstanceError, replace
 import math
 from pathlib import Path
@@ -57,7 +58,7 @@ def source_from_values(**changes):
         "resolution": 0.05,
         "frame_id": "map",
         "origin": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0),
-        "compact_cells": bytes((0, 100, 255, 42)),
+        "cells": array("b", [0, 100, -1, 42]),
         "source_stamp_ns": 123,
     }
     values.update(changes)
@@ -83,10 +84,16 @@ def test_source_stamp_is_carried_but_not_part_of_content_fingerprint():
     assert second.source_stamp_ns == 999
 
 
+def test_generic_cells_use_the_same_shared_normalization():
+    raw_source = source_from_values(cells=(value for value in (0, 100, -1, 42)))
+
+    assert raw_source.fingerprint == source_from_values().fingerprint
+
+
 @pytest.mark.parametrize("changes", [
     {"width": 0},
     {"origin": (0.0,) * 6},
-    {"compact_cells": bytes((0, 100, 254, 42))},
+    {"cells": bytes((0, 100, 254, 42))},
     {"source_stamp_ns": -1},
 ])
 def test_noncanonical_values_do_not_create_a_portal_source(changes):
