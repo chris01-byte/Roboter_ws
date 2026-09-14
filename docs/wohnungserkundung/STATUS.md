@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/X)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/Y)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,13 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/X – gemeinsame azyklische Kartenidentität softwaregeprüft, zur Review.**
-Die bestehende Kartenmanager-Digestberechnung liegt nun im neuen ROS-freien
-Blattpaket `amadeus_map_identity`. `robot_map_manager.MapSnapshot` und der reine
-Explorer-Quellenadapter verwenden exakt diese eine Funktion. Bekannte
-Fingerprintvektoren blieben bytegleich; der Quellstempel bleibt getrennt von
-der Inhaltsidentität. Der Paketgraph ordnet das Blatt vor Explorer,
-Navigation und Kartenmanager ein und enthält keinen neuen Zyklus.
+**WE-M2/Y – passive Rohkartennaht quellenbasiert festgelegt, dokumentiert.**
+Der tatsächliche Humble-Python-Typ von `OccupancyGrid.data`, die vorhandenen
+schnellen Kartenmanagerpfade und die reentrante Explorer-Callback-Struktur sind
+geprüft. Der nächste Runtime-Schritt darf daraus noch nicht folgen: Zuerst muss
+die bytegleiche, speicherschonende Zellnormalisierung in das gemeinsame
+ROS-freie Blattpaket verschoben werden. Die asynchrone Karten-/Statuszuordnung
+benötigt anschließend einen beidseitigen Exaktabgleich mit gemessen begrenztem
+Identitätspuffer; ein vorübergehender Nichttreffer ist kein Fehlerzustand.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -24,12 +25,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/Y:** Ausschließlich die passive
-ROS-Rohkartennaht planen und quellenbasiert prüfen: kanonische, speicherschonende
-Umwandlung des tatsächlichen `OccupancyGrid.data`-Typs, Callback-Snapshot,
-Nebenläufigkeit, Fehlerisolation und Messpunkte für Digestzeit/-speicher
-festlegen. Zunächst nur STATUS.md; noch kein Callback, Detektor, Portalfeed,
-Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/Z:** Ausschließlich die kanonische
+Zellnormalisierung als reine Funktion in `amadeus_map_identity` übernehmen und
+Kartenmanager sowie reinen Explorer-Quellenadapter darauf umstellen. Bytegleiche
+Fingerprintvektoren, schneller `array('b')`-/Memoryview-Pfad und generischer
+Negativpfad werden softwaregeprüft. Noch kein ROS-Callback, Puffer, Detektor,
+Portalfeed, Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -76,6 +77,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/V `feature/we-m2v-raw-map-source` | Gestapelter reiner Exaktabgleich von Rohkartenfingerprint, -stempel und Frame gegen den aktuellen Kartenmanagerstand; neues Modul, Tests und Status, kein Deployment. |
 | WE-M2/W `docs/we-m2w-map-identity-dependency` | Gestapelte Abhängigkeitsentscheidung gegen den zyklischen Direktimport des Kartenmanagers und für eine neutrale Fingerprintquelle; nur diese STATUS.md. |
 | WE-M2/X `feature/we-m2x-shared-map-identity` | Gestapelte gemeinsame ROS-freie Fingerprintquelle für Kartenmanager und Explorer mit bytegleichen Vektoren und azyklischem Paketgraphen; kein Deployment. |
+| WE-M2/Y `docs/we-m2y-raw-map-runtime-seam` | Gestapelte Quellen- und Nebenläufigkeitsentscheidung zur passiven Rohkartennaht mit lokaler synthetischer Typ-/Kostenmessung; nur diese STATUS.md, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -410,6 +412,95 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/Y: Vertrag der passiven Rohkartennaht
+
+**Entscheidung / Umfang:** Dieser Schritt ändert ausschließlich diese
+STATUS.md. Er schließt noch keinen ROS-Callback an. Geprüft wurden der lokal
+installierte ROS-Humble-Nachrichtentyp, der Kartenmanager-Quellpfad und der
+standardmäßig deaktivierte Explorer-Schattenpfad auf der gestapelten
+WE-M2/X-Basis `340d6c5`. Es wurden keine Nodes gestartet, keine Geräte geöffnet,
+keine Karten oder Bags gelesen und keine Fahrsoftware verändert.
+
+**Nachgewiesener Datentyp und Kopiergrenze:** Die lokal installierte, von
+`rosidl_generator_py` erzeugte Klasse `nav_msgs.msg.OccupancyGrid` speichert
+`data` als `array.array('b')`. Auch zugewiesene Python-Sequenzen werden nach der
+int8-Prüfung in diesen Typ überführt. Ein tatsächliches Testobjekt lieferte einen
+eindimensionalen, C-zusammenhängenden Memoryview mit Format `b` und Elementgröße
+1. `[-1]` besitzt darin das Bitmuster `0xff`; die Testfolge
+`[0, 100, -1, 42]` wurde bytegleich zu `00 64 ff 2a` kopiert. Damit ist der
+vorhandene Kartenmanager-Schnellpfad `memoryview(...).cast("B").tobytes()` für
+den lokalen Humble-Stand anwendbar und vermeidet die Python-Schleife über jede
+Zelle. Die unveränderliche Bytekopie ist zugleich die Besitzgrenze: Der
+Explorer darf nach Rückkehr aus dem Callback keinen geliehenen ROS-Puffer für
+eine spätere Digestberechnung behalten.
+
+Die Normalisierung ist heute jedoch privat in
+`robot_map_manager.map_core._validated_compact_cells()` implementiert. Der
+Explorer darf weder diesen Import und damit den in WE-M2/W nachgewiesenen
+Paketzyklus einführen noch die Werteprüfung duplizieren. Deshalb bleibt die
+Runtime-Anbindung gesperrt, bis der exakt gleiche Schnell- und Fallbackpfad im
+neutralen Blattpaket liegt.
+
+**Callback- und Fehlervertrag:** `ExploreNode` verwendet eine
+`ReentrantCallbackGroup`; Karten-, Kartenmanagerstatus- und Statustimer-Callbacks
+können sich daher überlappen. `_on_map()` setzt bislang nur die bestehende
+Explorerkarte und deren monotone Empfangszeit. Diese beiden Zuweisungen müssen
+bei einer späteren Erweiterung zuerst und unverändert erfolgen. Nur wenn der
+Schattenmodus aktiviert ist, darf danach aus den Nachrichtenfeldern eine
+unveränderliche Rohkartenidentität gebildet werden. Digest und Bytekopie erfolgen
+außerhalb von `_region_graph_shadow_lock`; unter dem Lock werden nur kleine
+Identitäts-/Statusobjekte korreliert und der Schattenzustand verändert.
+
+Eine ungültige Rohkarte darf ausschließlich den optionalen Schattenpfad in
+seinen bestehenden fail-closed-Fehlerzustand versetzen; die Exception darf den
+vorhandenen Explorer-Kartenpfad nicht verlassen. Ein gültiger, aber aktuell
+nicht passender Kartenfingerprint ist dagegen beim Kartenwachstum und durch die
+asynchronen Callbacks erwartbar und **kein** dauerhafter Fehler. Rohkarten- und
+Kartenstatus-Callback müssen denselben Exaktabgleich aus WE-M2/V jeweils erneut
+auslösen können. Erlaubt ist nur Gleichheit von Fingerprint, Quellstempel und
+Frame; Zeitnähe, Framegleichheit allein oder eine Nav2-Costmap-Zeit bilden keine
+Provenienz.
+
+Bis zur Messung wird keine Puffergröße erfunden. Eine spätere Implementierung
+darf nur eine feste Anzahl kleiner `RawMapPortalSource`-Identitäten und den
+aktuellen validierten Kartenstatus halten, niemals mehrere Rasterkopien. Zu
+messen sind auf dem Jetson vor Aktivierung: Kartenrate, Abstand zwischen
+Rohkartenempfang und passendem Managerstatus, Zahl dazwischen empfangener
+verschiedener Identitäten, Nichttreffer/Verdrängungen, Callback-Gesamtzeit,
+Digestzeit sowie RSS-/Spitzenspeicher. Aus beobachteter Verzögerung und Rate ist
+anschließend eine harte Kapazität mit Reserve festzulegen; Überschreitung bleibt
+sichtbar nicht bereit und erzeugt keine erfundene Revision.
+
+**Lokale synthetische Kostenprobe:** Auf dem x86_64-Arbeitsplatz wurde ohne ROS-
+Node ein Raster mit der bestehenden Höchstgrenze von 4.000.000 Zellen fünfmal
+kopiert und durch den WE-M2/X-Explorer-Factory-/Digestpfad geführt. Median:
+1,976 ms Bytekopie, 11,856 ms Digest/Validierung und 13,832 ms gesamt. Ein
+separater `tracemalloc`-Durchlauf meldete 4.000.129 Byte verbleibend und
+8.000.198 Byte Spitze bei 12,706 ms Gesamtzeit. Das belegt nur die Größenordnung
+dieses lokalen CPython-/x86-Laufs; es ist weder ein Jetson-Budget noch ein
+Runtime-, Last-, Zielsystem- oder Hardware-Nachweis.
+
+**Ausgeführte Prüfungen:** Quellprüfung der installierten generierten
+`OccupancyGrid`-Klasse, der Kartenmanager-Konvertierung/-Callbackfolge, der
+Explorer-`ReentrantCallbackGroup` und des Schatten-Locks; tatsächlicher
+`array('b')`-/Memoryview-Test sowie die vorstehende synthetische Kostenprobe;
+`git diff --check`. Nicht ausgeführt wurden ROS-Start, DDS-Zuordnung,
+Callback-Lasttest, Jetson-Messung, Karten-/Bag-Auswertung und jede physische
+Abnahme.
+
+**Nächster abgegrenzter Schritt WE-M2/Z:** Im Blattpaket eine öffentliche reine
+Zellnormalisierung mit unveränderlichen Bytes, vollständiger Längen-/Werteprüfung,
+Memoryview-Schnellpfad und generischem Fallback ergänzen. Der Kartenmanager
+delegiert seinen bisherigen privaten Pfad dorthin; der reine Explorer-Factory-
+Vertrag nutzt dieselbe Funktion. Betroffen sind ausschließlich
+`src/amadeus_map_identity/`, `src/robot_map_manager/robot_map_manager/map_core.py`,
+die reinen `portal_source_adapter`-Dateien und diese STATUS.md. Prüfplan:
+bekannte Byte-/Fingerprintvektoren, `array('b')`, `bytes`, ungültige Formate,
+Länge/Werte, Generator-Fallback, vollständige gemeinsame Unit-Suiten,
+isolierter Drei-Paket-Colcon-Test und statische Prüfungen. Rückfall: den einen
+WE-M2/Z-Commit zurücknehmen; WE-M2/X bleibt funktionsfähig, weil keine Runtime-
+Schnittstelle und kein Format geändert werden.
 
 ### 2026-09-14 – WE-M2/X: eine gemeinsame bytegleiche Kartenidentität
 
