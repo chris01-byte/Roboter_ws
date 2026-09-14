@@ -36,11 +36,24 @@ from explore.explore_node import (  # noqa: E402
     validated_shadow_frontier_task_feed,
     validated_shadow_raw_map_capacity,
     validated_passive_policy_enabled,
+    validated_portal_monitor_enabled,
     validated_we_completion_configuration,
     validated_we_navigation_enabled,
 )
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
-from explore.portal_memory import Point2D, PortalMapContext  # noqa: E402
+from explore.portal_memory import (  # noqa: E402
+    Point2D,
+    PortalConfirmationState,
+    PortalMapContext,
+    PortalSnapshot,
+    TraversalDirection,
+    TraversalEvent,
+)
+from explore.portal_task_evidence import PortalGoalCandidate  # noqa: E402
+from explore.portal_traversal_runtime import (  # noqa: E402
+    PortalTraversalRuntimeOutcome,
+)
+from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.exploration_completion import (  # noqa: E402
     CompletionAssessment,
@@ -934,6 +947,13 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['wohnungserkundung_task_cell_search_m'] == 0.60
     assert parameters['wohnungserkundung_information_radius_m'] == 0.75
     assert parameters['wohnungserkundung_evidence_max_cells'] == 262144
+    assert parameters['wohnungserkundung_portal_monitor_enabled'] is False
+    assert parameters['wohnungserkundung_traversal_front_overhang_m'] == 0.0
+    assert parameters['wohnungserkundung_traversal_rear_overhang_m'] == 0.0
+    assert parameters['wohnungserkundung_traversal_max_source_age_s'] == 0.0
+    assert parameters['wohnungserkundung_traversal_minimum_pose_samples'] == 3
+    assert parameters['wohnungserkundung_traversal_maximum_pose_samples'] == 256
+    assert parameters['wohnungserkundung_traversal_max_pose_interval_s'] == 0.0
     assert parameters['region_graph_shadow_status_topic'] != (
         parameters['status_topic'])
     assert 'PortalPlanCandidate' not in source
@@ -962,6 +982,20 @@ def test_we_navigation_requires_complete_explicit_opt_in_chain():
             (True, True, True, True, 1)):
         with pytest.raises(ValueError):
             validated_we_navigation_enabled(*values)
+
+
+def test_portal_monitor_requires_navigation_scope_and_independent_lidar():
+    assert validated_portal_monitor_enabled(
+        True, True, True, True) is True
+    assert validated_portal_monitor_enabled(
+        True, True, True, False) is False
+    for values in (
+            (False, True, True, True),
+            (True, False, True, True),
+            (True, True, False, True),
+            (True, True, True, 1)):
+        with pytest.raises(ValueError):
+            validated_portal_monitor_enabled(*values)
 
 
 def test_we_completion_requires_explicit_scope_and_positive_window():
@@ -1292,6 +1326,273 @@ def test_existing_nav_client_receives_explicit_we_candidate_yaw():
     assert math.isclose(
         sent[0].pose.pose.orientation.w,
         math.cos(math.pi / 4.0), abs_tol=1e-9)
+
+
+def test_existing_nav_client_calls_portal_progress_observer():
+    observations = []
+
+    class ImmediateFuture:
+        def __init__(self, value):
+            self._value = value
+
+        def result(self):
+            return self._value
+
+        def add_done_callback(self, callback):
+            callback(self)
+            return self
+
+    result_future = ImmediateFuture(SimpleNamespace(
+        status=GoalStatus.STATUS_SUCCEEDED))
+    nav_handle = SimpleNamespace(
+        accepted=True,
+        get_result_async=lambda: result_future,
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._nav_client = SimpleNamespace(
+        wait_for_server=lambda timeout_sec: timeout_sec == 5.0,
+        send_goal_async=lambda goal: ImmediateFuture(nav_handle),
+    )
+    node._global_frame = 'map'
+    node._behavior_tree = '/fake/no_recovery.xml'
+    node._cancel_timeout_s = 1.0
+    node._robot_xy = lambda: (0.0, 0.0)
+    node._record_coverage_pose = lambda _pose: None
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(
+            to_msg=lambda: Time(sec=1, nanosec=2)))
+
+    status = node._navigate_to(
+        1.0,
+        0.0,
+        10.0,
+        goal_yaw=0.0,
+        progress_observer=lambda: observations.append(True) or True,
+    )
+
+    assert status == 'success'
+    assert observations == [True, True]
+
+
+def _portal_runtime_candidate():
+    return PortalGoalCandidate(
+        intent_id='intent-portal-8',
+        task_id='task-portal_000001',
+        region_id='region_000002',
+        portal_id='portal_000001',
+        direction=TraversalDirection.A_TO_B,
+        context=PortalMapContext('session-node', 'map-node', 'map'),
+        map_revision=8,
+        frame_id='map',
+        source_fingerprint='a' * 64,
+        source_stamp_ns=8_000_000_000,
+        scope_id='scope-node',
+        scope_fingerprint='b' * 64,
+        target_x_m=1.5,
+        target_y_m=0.0,
+        target_yaw_rad=0.0,
+        target_row=0,
+        target_col=2,
+        route_length_m=2.0,
+        path_cells=((0, 0), (0, 1), (0, 2)),
+    )
+
+
+def _portal_runtime_snapshot():
+    return PortalSnapshot(
+        portal_id='portal_000001',
+        side_a=Point2D(0.0, 0.0),
+        side_b=Point2D(1.0, 0.0),
+        first_revision=6,
+        last_revision=7,
+        observation_count=2,
+        evidence_count=2,
+        qualified_evidence_count=2,
+        confirmation_state=PortalConfirmationState.CONFIRMED,
+        confirmed=True,
+        confirmed_traversal_count=0,
+    )
+
+
+def _portal_runtime_node(monkeypatch, outcome):
+    candidate = _portal_runtime_candidate()
+    intent = ExplorationGoalIntent(
+        intent_id=candidate.intent_id,
+        task_id=candidate.task_id,
+        region_id=candidate.region_id,
+        context=candidate.context,
+        map_revision=candidate.map_revision,
+    )
+    portal = _portal_runtime_snapshot()
+    attempts = []
+    traversal_events = []
+    observations = []
+    monitor = SimpleNamespace(
+        observe=lambda: observations.append(True) or True,
+        finish=lambda **kwargs: outcome,
+    )
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._region_graph_shadow_lock = threading.Lock()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_accessible_scope_verified = True
+    node._wohnungserkundung_portal_monitor_factory = (
+        lambda selected, current: monitor
+        if selected is candidate and current is portal else None)
+    node._wohnungserkundung_task_policy_session = SimpleNamespace(
+        record_attempt=attempts.append)
+    node._region_graph_shadow = SimpleNamespace(
+        portal_snapshots=lambda: (portal,),
+        record_validated_traversal=lambda event: (
+            traversal_events.append(event)
+            or SimpleNamespace(graph=SimpleNamespace(entered=True))),
+    )
+    node._goal_timeout_s = 10.0
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(nanoseconds=9))
+
+    def navigate(*args, **kwargs):
+        assert kwargs['progress_observer'] is monitor.observe
+        assert kwargs['progress_observer']() is True
+        return 'success'
+
+    node._navigate_to = navigate
+    run = SimpleNamespace(
+        navigation_status='success',
+        disposition=SimpleNamespace(attempt=object()),
+    )
+
+    class NavigationSession:
+        def run(self, selected_intent, selected_candidate, navigate_child,
+                source_state, user_canceled, budget_exhausted):
+            assert selected_intent is intent
+            assert selected_candidate is candidate
+            assert navigate_child(candidate, lambda: False) == 'success'
+            return run
+
+    result = node._run_wohnungserkundung_child(
+        NavigationSession(),
+        intent,
+        candidate,
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False,
+    )
+    return (
+        node, intent, candidate, run, attempts, traversal_events,
+        observations, result)
+
+
+def test_confirmed_portal_runtime_records_event_without_progress_attempt(
+        monkeypatch):
+    event = TraversalEvent(
+        event_id='runtime-event-8',
+        portal_id='portal_000001',
+        context=_portal_runtime_candidate().context,
+        map_revision=8,
+        event_time_ns=8,
+        direction=TraversalDirection.A_TO_B,
+        crossing_confirmed=True,
+    )
+    outcome = PortalTraversalRuntimeOutcome(
+        confirmed=True,
+        reason='full_chassis_crossing_confirmed',
+        sample_count=4,
+        assessment=SimpleNamespace(traversal_event=event),
+    )
+
+    (node, intent, _candidate, run, attempts, traversal_events,
+     observations, result) = _portal_runtime_node(monkeypatch, outcome)
+
+    assert result == (run, outcome)
+    assert attempts == []
+    assert traversal_events == [event]
+    assert observations == [True]
+    assert node._wohnungserkundung_consumed_intent_id == intent.intent_id
+    assert node._wohnungserkundung_active_child is None
+    assert node._wohnungserkundung_portal_traversal_status['state'] == (
+        'confirmed')
+
+
+def test_unconfirmed_portal_runtime_records_retry_instead_of_event(
+        monkeypatch):
+    outcome = PortalTraversalRuntimeOutcome(
+        confirmed=False,
+        reason='chassis_exit_not_complete',
+        sample_count=4,
+        assessment=None,
+    )
+
+    (node, _intent, _candidate, _run, attempts, traversal_events,
+     _observations, _result) = _portal_runtime_node(monkeypatch, outcome)
+
+    assert traversal_events == []
+    assert len(attempts) == 1
+    assert attempts[0].outcome.value == 'retryable_failure'
+    assert attempts[0].reason == (
+        'portal_traversal_unconfirmed:chassis_exit_not_complete')
+    assert attempts[0].retry_not_before_revision == 9
+    assert node._wohnungserkundung_portal_traversal_status['state'] == (
+        'unconfirmed')
+
+
+def test_portal_monitor_adapter_uses_fresh_retained_scan(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._door_lidar_scan_timeout = 0.5
+    node._door_lidar_max_range = 4.0
+    node._door_lidar_min_points = 200
+    node._door_lidar_scan_snapshot = lambda: {
+        'ranges': np.ones(240, dtype=np.float64),
+        'angle_min': -1.2,
+        'angle_increment': 0.01,
+        'range_min': 0.1,
+        'range_max': 8.0,
+        'frame_id': 'laser',
+        'key': (7, 8, 240),
+        'received_at': 10.0,
+    }
+    node._door_lidar_mount = lambda frame: (
+        (0.1, 0.0, 0.0) if frame == 'laser' else None)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.1)
+
+    sample = node._wohnungserkundung_frozen_scan_sample()
+
+    assert sample.sample_id == 'we-scan-7-8-240'
+    assert sample.stamp_ns == 7_000_000_008
+    assert sample.points.shape == (240, 2)
+    assert sample.points.flags.writeable is False
+
+
+def test_portal_monitor_adapter_reads_map_pose_at_exact_scan_time():
+    candidate = _portal_runtime_candidate()
+    correlation = SimpleNamespace(
+        context=candidate.context,
+        map_revision=candidate.map_revision,
+        fingerprint=candidate.source_fingerprint,
+        source_stamp_ns=candidate.source_stamp_ns,
+    )
+    requested_times = []
+    transform = SimpleNamespace(transform=SimpleNamespace(
+        translation=SimpleNamespace(x=0.25, y=-0.1),
+        rotation=SimpleNamespace(x=0.0, y=0.0, z=0.0, w=1.0),
+    ))
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation = correlation
+    node._global_frame = 'map'
+    node._robot_base_frame = 'base_link'
+    node._tf_buffer = SimpleNamespace(
+        lookup_transform=lambda target, source, stamp: (
+            requested_times.append((target, source, stamp.nanoseconds))
+            or transform))
+
+    pose = node._wohnungserkundung_exact_time_pose(
+        candidate, 7_000_000_008)
+
+    assert requested_times == [('map', 'base_link', 7_000_000_008)]
+    assert pose.context == candidate.context
+    assert pose.map_revision == candidate.map_revision
+    assert pose.stamp_ns == 7_000_000_008
+    assert (pose.x, pose.y, pose.yaw) == (0.25, -0.1, 0.0)
 
 
 def test_disabled_region_graph_shadow_creates_no_interface():
@@ -2179,6 +2480,15 @@ def test_passive_runtime_previews_scoped_portal_without_dispatch(monkeypatch):
         },
     }
     assert len(publications) == 1
+
+    node._wohnungserkundung_portal_monitor_factory = object()
+    node._wohnungserkundung_accessible_scope_verified = True
+    node._publish_region_graph_shadow_status()
+
+    assert node._wohnungserkundung_navigation_snapshot == (intent, candidate)
+    assert 'dispatch_blocked_reason' not in (
+        node._wohnungserkundung_status_extension['goal_candidate'])
+    assert len(publications) == 2
 
 
 def _status_node(policy_enabled):

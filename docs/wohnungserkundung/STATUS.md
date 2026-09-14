@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/S)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/T)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,17 +10,19 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/S – Offene Portalaufgaben besitzen jetzt eine fail-closed,
-scope-gebundene Zielvorschau.** Aus exakter Rohkarte, bestätigtem Portal,
-Graphverbindung, aktueller Region und einem expliziten Polygon wird ein
-revisionsgebundener Zielkandidat auf der kanonischen Gegenseite abgeleitet. Jede
-Rasterzelle des vollständigen A*-Pfads liegt nach Karten- und Scope-Abstand im
-freigegebenen Bereich; der Pfad muss den gewählten Portalmittelquerschnitt
-tatsächlich schneiden. Fehlender Scope, fehlende Pose, unbestätigte oder interne
-Portale und unpassierbare Pfade bleiben ohne Ziel. Die Runtime zeigt diesen
-Kandidaten nur passiv und sperrt seinen Versand ausdrücklich, bis der
-M3/R-Traversierungsmonitor begrenzt gekoppelt ist. Das Profil bleibt
-standardmäßig deaktiviert.
+**WE-M3/T – Der gerätefreie Softwarepfad von Portalaufgabe bis bestätigtem
+Raumwechsel ist jetzt fail-closed gekoppelt.** Nur bei verifiziertem Scope,
+explizitem Monitor-Opt-in und vollständig gesetztem eingefrorenem LiDAR-Profil
+darf die scope-gebundene Portalvorschau über den vorhandenen einzelnen
+Nav2-Kindzielbesitzer versandt werden. Währenddessen werden zeitlich exakt
+zugeordnete Kartenposen mit einer vom aktuellen TF getrennten, eingefrorenen
+LiDAR-Referenzbewegung gepaart, auf Scope-, Quellen-, Qualitäts- und
+Kapazitätsgrenzen geprüft und dem M3/R-Vertrag zugeführt. Erst dessen bestätigtes
+Traversalereignis schreibt Portalgedächtnis, aktuelle Region und Portalaufgabe
+atomar fort. Ein Action-Erfolg allein erzeugt weder Durchfahrt noch Fortschritt,
+sondern höchstens einen begrenzten Wiederholungsversuch. Alle neuen
+Standardparameter bleiben `false` beziehungsweise absichtlich unbrauchbare
+Nullwerte; ohne vermessenes Profil ist Portalversand somit gesperrt.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -29,22 +31,26 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis S umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis T umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
 Auswahl, Zielvorschlag, Einzel-Kindziel, Resultat-/Attemptableitung,
 Abschlussvertrag, positive Frontier-Erledigung und konservativer
-Regionsfortschritt sind nun im separaten Runtimeprofil gekoppelt. Der reine
-Portal-Durchfahrtsbeleg sowie die scope-gebundene Portalzielbildung sind
-vorhanden; Runtime-Zuführung, das eingefrorene begrenzte Profil sowie die
-motorlose Zielsystemabnahme fehlen.
+Regionsfortschritt sind nun im separaten Runtimeprofil gekoppelt. Auch
+Portalziel, begrenzte Runtime-Zuführung, eingefrorene LiDAR-Bewegungsreferenz und
+atomare Ereignis-/Raum-/Aufgabenfortschreibung sind softwareseitig verbunden.
+Noch fehlen ein vollständiger synthetischer Prozessstart des echten Knotens mit
+positivem und abbrechendem DDS-Pfad sowie begründete Zielsystemwerte. Reale
+Parallel-/SLAM-Last, Jetson-Nachtest und Hardwareabnahme bleiben ausdrücklich
+offen.
 
-**Nächster abgegrenzter Schritt WE-M3/T:** Den scope-gebundenen Portalkandidaten
-nur über den vorhandenen Einzel-Kindzielbesitzer an einen Fake-Nav2-Server
-geben, dabei eine streng begrenzte frische Posen-/Bewegungsfolge sammeln und
-M3/R auswerten. Nur ein bestätigtes Traversalereignis darf anschließend die
-Portalaufgabe und aktuelle Region fortschreiben; Action-Erfolg allein bleibt
-wirkungslos. Synthetische DDS-Quellen, keine Geräteaktivierung oder Fahrt.
+**Nächster abgegrenzter Schritt WE-M3/U:** Den vollständigen Explorer-Knoten in
+einem temporären, gerätefreien ROS-Domainprofil mit synthetischen Kartenstatus-,
+Rohkarten-, TF-/Scan- und Fake-Nav2-Quellen starten. Positivfall und mindestens
+ein Monitorfehler müssen Zielbesitz, Ereignis-/Aufgabenfortschreibung,
+Action-Abbruch und Statusdiagnose prozessübergreifend belegen. Keine realen
+Topics, Geräteaktivierung oder Fahrt; anschließend ist der vereinbarte
+gerätefreie M3-Softwareumfang gegen die Meilensteinmatrix abzugrenzen.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -131,6 +137,8 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/P `feature/we-m3p-frontier-resolution` | Gestapelte positive Erledigung einer erreichten Frontier-Aufgabe ausschließlich aus neuer exakt korrelierter Rohkarte, vollständigem bekannten Informationsfenster und leerem aktuellem Nahbestand; atomare Graph-/Runtimezuführung, kein Deployment. |
 | WE-M3/Q `feature/we-m3q-region-task-state` | Gestapelte konservative Regionsfortschreibung aus offenen und positiv erledigten Aufgaben sowie replayfeste Freshness-/Revisionsfortführung vollständiger leerer Inventuren; gerätefreier End-to-End-Abschluss mit Fake-Nav2, kein Deployment. |
 | WE-M3/R `feature/we-m3r-portal-traversal-evidence` | Gestapelter ROS-freier Portal-Durchfahrtsbeleg aus frischer Karten-/Posenfolge, vollständigem Chassisauslauf und schlupfresistenter unabhängiger Bewegung; Nav2-Erfolg allein erzeugt kein Ereignis, kein Deployment. |
+| WE-M3/S `feature/we-m3s-portal-task-evidence` | Gestapelte scope-gebundene Portalziel- und vollständige Pfadevidenz auf exakter Rohkarte; in diesem Stand nur passive Vorschau und explizite Versandsperre, kein Deployment. |
+| WE-M3/T `feature/we-m3t-portal-runtime-evidence` | Gestapelte begrenzte Runtimekopplung von Portalziel, Einzel-Kindziel, exakter Pose, eingefrorener LiDAR-Bewegung und atomarem bestätigtem Traversalereignis; Standardprofil fail-closed, gerätefrei geprüft, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -465,6 +473,79 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/T: Portalziel nur mit laufendem Durchfahrtsbeleg
+
+**Entscheidung / Umfang:** Der vorhandene einzelne Nav2-Kindzielbesitzer erhält
+einen begrenzten synchronen Fortschrittsbeobachter. Für Portalaufgaben wird er
+nur erzeugt, wenn Wohnungserkundungsnavigation, verifizierter Auftragsscope,
+eingefrorener LiDAR-Bewegungsmodus und der neue Traversierungsmonitor gemeinsam
+explizit aktiviert sind. Sämtliche geometrischen und zeitlichen Profilwerte
+müssen positiv beziehungsweise endlich gesetzt sein; die Standardkonfiguration
+bleibt mit `false` und Nullwerten geschlossen.
+
+Der Monitor friert vor der Portalquerung einen ausreichend großen frischen
+LiDAR-Scan ein, ordnet Folgescans exakt gestempelte Kartenposen zu und ermittelt
+die Bewegung gegen diese feste Referenz. Er akzeptiert weder Radencoder allein
+noch Quellenwechsel, Replay, zu alte Daten, Sprünge, zu viele Ablehnungen oder
+ein Verlassen des vollständigen Scope-Abstands. Die gepaarten Werte werden
+ausschließlich über den bestehenden M3/R-Vertrag bewertet. Eine positive
+Bewertung erzeugt genau ein typisiertes Traversalereignis und verbucht es atomar
+im Schattenzustand; dadurch wechseln aktuelle Region und offene Portalaufgabe
+gemeinsam. Bei Monitorfehler wird das aktive Kindziel abgebrochen. Ein reiner
+Nav2-Erfolg ohne bestätigtes Ereignis bleibt ein begrenzter Retry und darf weder
+Region noch Aufgabe fortschreiben.
+
+**Nachgewiesenes Verhalten:** Ein reines durchgängiges Szenario führt wechselnde
+exakt korrelierte Rohkarten automatisch über stabilen Portalbestand,
+Portalbestätigung, vorläufigen Regionsgraphen und offene Portalaufgabe bis zu
+Scope-Route, Zielabsicht, gepaarter Traversalevidenz, bestätigtem Ereignis,
+Regionswechsel und erledigter Aufgabe. Knotentests belegen zusätzlich den
+positiven Monitorpfad, den wirkungslosen Action-Erfolg ohne Ereignis, Abbruch bei
+Beobachterfehler, eingefrorene Scan-Konvertierung und exakt gestempeltes TF.
+Ein lokaler DDS-Smoke verwendete einen Fake-NavigateToPose-Server und den echten
+Kindzielbesitzer; sieben synthetische Beobachtungen ergaben ein bestätigtes
+Ereignis, während Beobachter für Geschwindigkeitskommandos null Nachrichten
+sahen. Dieser Smoke injiziert das Monitorurteil und ersetzt daher nicht den
+reinen Test des konkreten Scan-Matchers oder einen vollständigen Knotenstart.
+
+**Ausgeführte Prüfungen:** Lokaler aarch64-Arbeitsplatz mit ROS Humble;
+ausschließlich synthetische Raster, Scans, Posen, TF-Ersatzwerte und ein
+Fake-Actionserver, keine Geräte, realen Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3T-FOCUS | Scope-, Portalziel-, Traversal-, Matcher-, Pipeline-, Graph-, Kindlauf- und Explorer-Knotenverträge: **207 passed**. |
+| WE-M3T-ADJACENT | Kartenidentität, Explorer, Kartenmanager, Semantikmanager, Mission und Bring-up: **1052 passed**. |
+| WE-M3T-COLCON | Frischer temporärer Aufbau von `amadeus_map_identity`, `robot_interfaces` und `explore`; **874 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3T-DDS | Frisches Overlay, isolierte Domain 194: **1** Fake-Nav2-Ziel, **7** Monitorbeobachtungen, **1** Ereignis, **0** Task-Attempts und **0** beobachtete Command-Nachrichten. |
+| WE-M3T-INSTALL | Neue Runtime-/Scanmodule und die installierte Konfiguration aus dem frischen Overlay importiert beziehungsweise gefunden. |
+| WE-M3T-STATIC | `compileall`, `flake8` F/E9 und `git diff --check`: bestanden. |
+
+**Offene Risiken / Integrationsabhängigkeiten:** Die LiDAR-, Kontur-, Zeit- und
+Qualitätsgrenzen sind synthetische Testwerte und keine Chassisvermessung oder
+Zielsystemfreigabe. Scanmatching gegen eine eingefrorene Referenz ist
+softwareseitig plausibilisiert, aber nicht auf Jetson unter paralleler SLAM-Last
+oder bei realer Sichtänderung belegt. Der kleine DDS-Smoke startet nicht den
+vollständigen Explorer-Prozess und injiziert das Monitorergebnis. Außerdem kann
+die absichtlich exakte Revisionsbindung ein laufendes Portalziel bei jeder
+inhaltlich neuen Karte abbrechen; ob die reale Kartenfrequenz ausreichend lange
+stabile Fenster liefert, ist offen. Softwaretests sind keine Fahr- oder
+Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M3/U:** Einen vollständigen synthetischen
+Prozessprüfer für das echte Explorer-Profil aufbauen. Er speist Kartenstatus,
+Rohkarte, Pose/TF, Scan und Fake-Nav2 in einer isolierten Domain, belegt den
+positiven Ereignis-/Raum-/Aufgabenpfad sowie mindestens Monitorfehler,
+Kindzielabbruch und begrenzte Statusdiagnose. Danach den gerätefreien
+M3-Softwareumfang gegen `MEILENSTEINE.md` abgrenzen; Zielsystemwerte und reale
+Fahrt bleiben getrennte, freigabepflichtige Arbeiten.
+
+**Rückfallweg:** Den M3/T-Commit beziehungsweise Review-PR zurücknehmen oder den
+Monitorparameter auf `false` belassen. Dann bleibt die M3/S-Portalvorschau
+sichtbar, ihr Versand aber ausdrücklich gesperrt; Frontier-Navigation und
+Legacy-Explorer bleiben auf dem vorherigen Verhalten. Es gab kein Deployment
+und keinen Gerätezustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M3/S: Portalziel und vollständiger Pfad im Auftragsscope
 

@@ -129,9 +129,22 @@ from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.exploration_scope import AuthorizedExplorationScope
 from explore.portal_memory import Point2D as PortalPoint2D
 from explore.portal_task_evidence import (
+    PortalGoalCandidate,
     PortalTaskEvidencePolicy,
     bind_portal_goal_candidate,
     build_portal_task_evidence,
+)
+from explore.portal_traversal_runtime import (
+    PortalTraversalRuntimePolicy,
+    PortalTraversalRuntimeOutcome,
+    retry_attempt_from_portal_outcome,
+)
+from explore.portal_traversal_evidence import PortalTraversalPolicy
+from explore.portal_frozen_scan_runtime import (
+    ExactTimeMapPose,
+    FrozenScanMonitorPolicy,
+    FrozenScanPortalMonitor,
+    FrozenScanSample,
 )
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -524,6 +537,22 @@ def validated_we_navigation_enabled(
     return navigation_enabled
 
 
+def validated_portal_monitor_enabled(
+        navigation_enabled: bool, scope_verified: bool,
+        lidar_motion_mode: bool, monitor_enabled: bool) -> bool:
+    """Require every independent portal-monitor opt-in explicitly."""
+    flags = (
+        navigation_enabled, scope_verified,
+        lidar_motion_mode, monitor_enabled)
+    if any(not isinstance(value, bool) for value in flags):
+        raise ValueError('Portalmonitor-Opt-ins muessen bool sein')
+    if monitor_enabled and not all(flags[:-1]):
+        raise ValueError(
+            'Portalmonitor braucht WE-Navigation, verifizierten Scope und '
+            'eingefrorene LiDAR-Bewegungsmessung')
+    return monitor_enabled
+
+
 def validated_we_completion_configuration(
         accessible_scope_verified: bool,
         required_fresh_revisions: int):
@@ -885,6 +914,62 @@ class ExploreNode(Node):
         self._wohnungserkundung_portal_path_radius = float(
             self.declare_parameter(
                 'wohnungserkundung_portal_path_radius_m', 0.25).value)
+        self._wohnungserkundung_portal_monitor_requested = bool(
+            self.declare_parameter(
+                'wohnungserkundung_portal_monitor_enabled', False).value)
+        self._wohnungserkundung_traversal_front_overhang = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_front_overhang_m', 0.0).value)
+        self._wohnungserkundung_traversal_rear_overhang = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_rear_overhang_m', 0.0).value)
+        self._wohnungserkundung_traversal_start_clearance = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_start_clearance_m', 0.0).value)
+        self._wohnungserkundung_traversal_exit_clearance = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_exit_clearance_m', 0.0).value)
+        self._wohnungserkundung_traversal_lateral_deviation = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_lateral_deviation_m',
+                0.0).value)
+        self._wohnungserkundung_traversal_pose_step = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_pose_step_m', 0.0).value)
+        self._wohnungserkundung_traversal_pose_speed = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_pose_speed_mps', 0.0).value)
+        self._wohnungserkundung_traversal_yaw_error = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_yaw_error_rad', 0.0).value)
+        self._wohnungserkundung_traversal_yaw_step = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_yaw_step_rad', 0.0).value)
+        self._wohnungserkundung_traversal_backward_step = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_backward_step_m', 0.0).value)
+        self._wohnungserkundung_traversal_motion_disagreement = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_motion_disagreement_m',
+                0.0).value)
+        self._wohnungserkundung_traversal_source_age = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_source_age_s', 0.0).value)
+        self._wohnungserkundung_traversal_revision_lag = int(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_revision_lag', 0).value)
+        self._wohnungserkundung_traversal_minimum_samples = int(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_minimum_pose_samples', 3).value)
+        self._wohnungserkundung_traversal_maximum_samples = int(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_maximum_pose_samples', 256).value)
+        self._wohnungserkundung_traversal_pose_interval = float(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_pose_interval_s', 0.0).value)
+        self._wohnungserkundung_traversal_scan_rejections = int(
+            self.declare_parameter(
+                'wohnungserkundung_traversal_max_scan_rejections', 3).value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -1110,6 +1195,14 @@ class ExploreNode(Node):
             self._wohnungserkundung_accessible_scope_verified,
             self._wohnungserkundung_completion_required_revisions,
         )
+        self._wohnungserkundung_portal_monitor_enabled = (
+            validated_portal_monitor_enabled(
+                self._wohnungserkundung_navigation_enabled,
+                self._wohnungserkundung_accessible_scope_verified,
+                self._door_lidar_motion_mode,
+                self._wohnungserkundung_portal_monitor_requested,
+            )
+        )
         if self._wohnungserkundung_policy_enabled:
             self._wohnungserkundung_evidence_policy = (
                 FrontierTaskEvidencePolicy(
@@ -1145,6 +1238,61 @@ class ExploreNode(Node):
                     max_cells=self._wohnungserkundung_evidence_max_cells,
                 )
             )
+            if self._wohnungserkundung_portal_monitor_enabled:
+                self._wohnungserkundung_portal_traversal_policy = (
+                    PortalTraversalPolicy(
+                        chassis_front_overhang_m=(
+                            self._wohnungserkundung_traversal_front_overhang),
+                        chassis_rear_overhang_m=(
+                            self._wohnungserkundung_traversal_rear_overhang),
+                        start_clearance_m=(
+                            self._wohnungserkundung_traversal_start_clearance),
+                        exit_clearance_m=(
+                            self._wohnungserkundung_traversal_exit_clearance),
+                        maximum_lateral_deviation_m=(
+                            self._wohnungserkundung_traversal_lateral_deviation),
+                        maximum_pose_step_m=(
+                            self._wohnungserkundung_traversal_pose_step),
+                        maximum_pose_speed_mps=(
+                            self._wohnungserkundung_traversal_pose_speed),
+                        maximum_yaw_error_rad=(
+                            self._wohnungserkundung_traversal_yaw_error),
+                        maximum_yaw_step_rad=(
+                            self._wohnungserkundung_traversal_yaw_step),
+                        maximum_backward_step_m=(
+                            self._wohnungserkundung_traversal_backward_step),
+                        maximum_motion_disagreement_m=(
+                            self._wohnungserkundung_traversal_motion_disagreement),
+                        maximum_source_age_ns=int(round(
+                            self._wohnungserkundung_traversal_source_age
+                            * 1_000_000_000)),
+                        maximum_revision_lag=(
+                            self._wohnungserkundung_traversal_revision_lag),
+                        minimum_pose_samples=(
+                            self._wohnungserkundung_traversal_minimum_samples),
+                    )
+                )
+                self._wohnungserkundung_portal_runtime_policy = (
+                    PortalTraversalRuntimePolicy(
+                        max_samples=(
+                            self._wohnungserkundung_traversal_maximum_samples),
+                        maximum_sample_interval_ns=int(round(
+                            self._wohnungserkundung_traversal_pose_interval
+                            * 1_000_000_000)),
+                    ))
+                self._wohnungserkundung_frozen_scan_policy = (
+                    FrozenScanMonitorPolicy(
+                        max_cost_m=self._door_lidar_max_cost,
+                        min_support_ratio=self._door_lidar_min_support,
+                        min_distinct_gap_m=(
+                            self._door_lidar_min_distinct_gap),
+                        maximum_scan_step_m=self._door_lidar_max_step,
+                        maximum_scan_yaw_step_rad=(
+                            self._door_lidar_max_yaw_step),
+                        maximum_consecutive_rejections=(
+                            self._wohnungserkundung_traversal_scan_rejections),
+                    )
+                )
             self._wohnungserkundung_evidence_cache_key = None
             self._wohnungserkundung_evidence_cache = None
             self._wohnungserkundung_goal_cache_key = None
@@ -1165,6 +1313,16 @@ class ExploreNode(Node):
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
             self._wohnungserkundung_policy_fault = None
+            # A later target-profile adapter must provide paired map-pose and
+            # slip-resistant motion samples.  Without it portal dispatch is
+            # impossible even when regular WE navigation is enabled.
+            self._wohnungserkundung_portal_monitor_factory = (
+                self._create_wohnungserkundung_portal_monitor
+                if self._wohnungserkundung_portal_monitor_enabled else None)
+            self._wohnungserkundung_portal_traversal_status = {
+                'state': 'unavailable',
+                'reason': 'portal_traversal_monitor_unavailable',
+            }
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -1936,8 +2094,22 @@ class ExploreNode(Node):
                                     RegionTaskKind.FRONTIER):
                                 navigation_snapshot = (intent, candidate)
                             else:
-                                goal_status['dispatch_blocked_reason'] = (
-                                    'portal_traversal_monitor_unavailable')
+                                monitor_factory = getattr(
+                                    self,
+                                    '_wohnungserkundung_portal_monitor_factory',
+                                    None,
+                                )
+                                if monitor_factory is None:
+                                    goal_status['dispatch_blocked_reason'] = (
+                                        'portal_traversal_monitor_unavailable')
+                                elif not getattr(
+                                        self,
+                                        '_wohnungserkundung_accessible_scope_verified',
+                                        False):
+                                    goal_status['dispatch_blocked_reason'] = (
+                                        'portal_scope_not_verified')
+                                else:
+                                    navigation_snapshot = (intent, candidate)
                         except Exception as goal_error:
                             goal_status = (
                                 build_unavailable_goal_candidate_status(
@@ -1989,6 +2161,14 @@ class ExploreNode(Node):
                     if resolution_status is not None:
                         extension['frontier_resolution'] = dict(
                             resolution_status)
+                    traversal_status = getattr(
+                        self,
+                        '_wohnungserkundung_portal_traversal_status',
+                        None,
+                    )
+                    if traversal_status is not None:
+                        extension['portal_traversal'] = dict(
+                            traversal_status)
                     self._wohnungserkundung_status_extension = extension
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
@@ -2185,6 +2365,90 @@ class ExploreNode(Node):
     def _robot_pose(self) -> Optional[Tuple[float, float, float]]:
         pose, _age_s = self._robot_pose_sample()
         return pose
+
+    def _wohnungserkundung_frozen_scan_sample(self):
+        """Convert one fresh retained scan without reading a device directly."""
+        scan = self._door_lidar_scan_snapshot()
+        now = time.monotonic()
+        if (
+                scan is None
+                or not 0.0 <= now - scan['received_at']
+                <= self._door_lidar_scan_timeout):
+            return None
+        mount = self._door_lidar_mount(scan['frame_id'])
+        if mount is None:
+            return None
+        try:
+            points = scan_points_in_base(
+                scan['ranges'],
+                scan['angle_min'],
+                scan['angle_increment'],
+                scan['range_min'],
+                scan['range_max'],
+                laser_x_m=mount[0],
+                laser_y_m=mount[1],
+                laser_yaw_rad=mount[2],
+                maximum_range_m=self._door_lidar_max_range,
+            )
+        except (ValueError, MemoryError):
+            return None
+        if points.shape[0] < self._door_lidar_min_points:
+            return None
+        second, nanosecond, count = scan['key']
+        stamp_ns = second * 1_000_000_000 + nanosecond
+        try:
+            return FrozenScanSample(
+                sample_id=f'we-scan-{second}-{nanosecond}-{count}',
+                stamp_ns=stamp_ns,
+                points=points,
+            )
+        except ValueError:
+            return None
+
+    def _wohnungserkundung_exact_time_pose(
+            self, candidate, stamp_ns):
+        """Read map pose at the exact independent scan timestamp."""
+        if not self._wohnungserkundung_source_state(
+                candidate, candidate).current:
+            return None
+        try:
+            transform = self._tf_buffer.lookup_transform(
+                self._global_frame,
+                self._robot_base_frame,
+                rclpy.time.Time(nanoseconds=stamp_ns),
+            )
+            pose = ExactTimeMapPose(
+                context=candidate.context,
+                map_revision=candidate.map_revision,
+                stamp_ns=stamp_ns,
+                x=float(transform.transform.translation.x),
+                y=float(transform.transform.translation.y),
+                yaw=quaternion_yaw(transform.transform.rotation),
+            )
+        except Exception:
+            return None
+        return pose
+
+    def _create_wohnungserkundung_portal_monitor(
+            self, candidate, portal):
+        """Create one target-profile monitor for the selected child only."""
+        scope = AuthorizedExplorationScope(
+            scope_id=self._wohnungserkundung_scope_id,
+            context=candidate.context,
+            vertices=self._wohnungserkundung_scope_vertices,
+        )
+        return FrozenScanPortalMonitor(
+            candidate,
+            portal,
+            self._wohnungserkundung_portal_traversal_policy,
+            self._wohnungserkundung_portal_runtime_policy,
+            self._wohnungserkundung_frozen_scan_policy,
+            scope,
+            self._wohnungserkundung_scope_clearance,
+            self._wohnungserkundung_frozen_scan_sample,
+            lambda stamp_ns: self._wohnungserkundung_exact_time_pose(
+                candidate, stamp_ns),
+        )
 
     def _robot_xy(self) -> Optional[Tuple[float, float]]:
         pose = self._robot_pose()
@@ -2826,7 +3090,8 @@ class ExploreNode(Node):
     def _navigate_to(
             self, x: float, y: float, timeout_s: float,
             stop_requested=lambda: False, *,
-            goal_yaw: Optional[float] = None) -> str:
+            goal_yaw: Optional[float] = None,
+            progress_observer=None) -> str:
         """Sendet EIN Fahrziel an Nav2 und wartet (blockierend) auf das Ergebnis.
 
         Rueckgabe: 'success' | 'aborted' | 'rejected' | 'timeout'
@@ -2834,6 +3099,14 @@ class ExploreNode(Node):
         if not self._nav_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error("Nav2-Action 'navigate_to_pose' nicht erreichbar")
             return 'rejected'
+        if progress_observer is not None:
+            if not callable(progress_observer):
+                return 'error'
+            try:
+                if progress_observer() is not True:
+                    return 'error'
+            except Exception:
+                return 'error'
 
         ps = PoseStamped()
         ps.header.frame_id = self._global_frame
@@ -2886,6 +3159,14 @@ class ExploreNode(Node):
         cancel_started = None
         while rclpy.ok() and not done.wait(timeout=0.05):
             now = time.monotonic()
+            if stop_reason is None and progress_observer is not None:
+                try:
+                    monitor_current = progress_observer() is True
+                except Exception:
+                    monitor_current = False
+                if not monitor_current:
+                    stop_reason = 'error'
+                    stop_reason_started = now
             if now - last_path_sample_at >= 0.25:
                 self._record_coverage_pose(self._robot_xy())
                 last_path_sample_at = now
@@ -2911,6 +3192,12 @@ class ExploreNode(Node):
         if not done.is_set():
             return 'cancel_failed' if stop_reason is not None else 'aborted'
         self._record_coverage_pose(self._robot_xy())
+        if stop_reason is None and progress_observer is not None:
+            try:
+                if progress_observer() is not True:
+                    return 'error'
+            except Exception:
+                return 'error'
         if stop_reason is not None:
             return stop_reason
         if holder['status'] == GoalStatus.STATUS_SUCCEEDED:
@@ -4238,6 +4525,33 @@ class ExploreNode(Node):
             self, navigation_session, intent, candidate,
             goal_handle, overall_expired):
         """Dispatch exactly one validated child through the existing client."""
+        portal_monitor = None
+        if isinstance(candidate, PortalGoalCandidate):
+            monitor_factory = getattr(
+                self, '_wohnungserkundung_portal_monitor_factory', None)
+            if monitor_factory is None:
+                raise RuntimeError(
+                    'Portalziel besitzt keinen Traversierungsmonitor')
+            if not getattr(
+                    self,
+                    '_wohnungserkundung_accessible_scope_verified', False):
+                raise RuntimeError(
+                    'Portalziel besitzt keinen verifizierten Auftragsscope')
+            with self._region_graph_shadow_lock:
+                portals = tuple(
+                    portal for portal
+                    in self._region_graph_shadow.portal_snapshots()
+                    if portal.portal_id == candidate.portal_id)
+            if len(portals) != 1:
+                raise RuntimeError(
+                    'Portalziel braucht genau einen aktuellen Portalbeleg')
+            portal_monitor = monitor_factory(candidate, portals[0])
+            if (
+                    portal_monitor is None
+                    or not callable(getattr(portal_monitor, 'observe', None))
+                    or not callable(getattr(portal_monitor, 'finish', None))):
+                raise RuntimeError(
+                    'Portalmonitor besitzt keinen Laufzeitvertrag')
         with self._wohnungserkundung_runtime_lock:
             if self._wohnungserkundung_active_child is not None:
                 raise RuntimeError(
@@ -4253,21 +4567,76 @@ class ExploreNode(Node):
                     self._goal_timeout_s,
                     stop_requested=stop_requested,
                     goal_yaw=selected.target_yaw_rad,
+                    progress_observer=(
+                        None if portal_monitor is None
+                        else portal_monitor.observe),
                 ),
                 lambda: self._wohnungserkundung_source_state(
                     intent, candidate),
                 lambda: goal_handle.is_cancel_requested,
                 overall_expired,
             )
+            portal_outcome = None
+            if portal_monitor is not None:
+                portal_outcome = portal_monitor.finish(
+                    execution_succeeded=(
+                        run.navigation_status == 'success'),
+                    evaluated_at_ns=int(
+                        self.get_clock().now().nanoseconds),
+                )
+                if not isinstance(
+                        portal_outcome, PortalTraversalRuntimeOutcome):
+                    raise RuntimeError(
+                        'Portalmonitor lieferte kein typisiertes Ergebnis')
+                if portal_outcome.confirmed:
+                    assessment = portal_outcome.assessment
+                    if (
+                            assessment is None
+                            or assessment.traversal_event is None):
+                        raise RuntimeError(
+                            'Bestaetigter Portalmonitor besitzt kein Ereignis')
+                    with self._region_graph_shadow_lock:
+                        traversal_result = (
+                            self._region_graph_shadow
+                            .record_validated_traversal(
+                                assessment.traversal_event))
+                    if not traversal_result.graph.entered:
+                        raise RuntimeError(
+                            'Portalereignis hat keine Region betreten')
             with self._wohnungserkundung_runtime_lock:
                 task_policy = self._wohnungserkundung_task_policy_session
                 if task_policy is None:
                     raise RuntimeError(
                         'Aufgabenpolicy fehlt bei terminalem Kindziel')
-                if run.disposition.attempt is not None:
+                if (
+                        portal_outcome is not None
+                        and run.navigation_status == 'success'
+                        and not portal_outcome.confirmed):
+                    task_policy.record_attempt(
+                        retry_attempt_from_portal_outcome(
+                            intent, portal_outcome))
+                elif (
+                        portal_outcome is None
+                        and run.disposition.attempt is not None):
                     task_policy.record_attempt(run.disposition.attempt)
+                elif (
+                        portal_outcome is not None
+                        and run.navigation_status != 'success'
+                        and run.disposition.attempt is not None):
+                    task_policy.record_attempt(run.disposition.attempt)
+                if portal_outcome is not None:
+                    self._wohnungserkundung_portal_traversal_status = {
+                        'state': (
+                            'confirmed'
+                            if portal_outcome.confirmed else 'unconfirmed'),
+                        'task_id': intent.task_id,
+                        'portal_id': candidate.portal_id,
+                        'map_revision': intent.map_revision,
+                        'sample_count': portal_outcome.sample_count,
+                        'reason': portal_outcome.reason,
+                    }
                 self._wohnungserkundung_consumed_intent_id = intent.intent_id
-            return run
+            return run, portal_outcome
         finally:
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = None
@@ -4358,6 +4727,9 @@ class ExploreNode(Node):
             self._wohnungserkundung_frontier_resolution_status = {
                 'state': 'none',
             }
+            self._wohnungserkundung_portal_traversal_status = {
+                'state': 'none',
+            }
         self._status_phase = 'we_waiting_for_goal'
         self._status_message = (
             'Wohnungserkundung aktiv; warte auf aktuellen Zielkandidaten.')
@@ -4436,9 +4808,13 @@ class ExploreNode(Node):
                     TerminationCause.BUDGET_EXHAUSTED,
                     'goal_budget_exhausted')
 
-            self._status_phase = 'we_frontier_navigation'
+            portal_candidate = isinstance(candidate, PortalGoalCandidate)
+            self._status_phase = (
+                'we_portal_navigation'
+                if portal_candidate else 'we_frontier_navigation')
             self._status_message = (
-                f'WE-Frontierziel {intent.task_id} aus Revision '
+                f'WE-{("Portal" if portal_candidate else "Frontier")}ziel '
+                f'{intent.task_id} aus Revision '
                 f'{intent.map_revision} wird vom vorhandenen Nav2-Client '
                 'angefahren.')
             self._publish_status('running')
@@ -4456,7 +4832,7 @@ class ExploreNode(Node):
                 candidate.target_yaw_rad / 2.0)
             goal_handle.publish_feedback(feedback)
 
-            run = self._run_wohnungserkundung_child(
+            run, portal_outcome = self._run_wohnungserkundung_child(
                 navigation_session,
                 intent,
                 candidate,
@@ -4465,6 +4841,15 @@ class ExploreNode(Node):
             )
             attempted_goals += 1
             disposition = run.disposition
+            if portal_outcome is not None:
+                if portal_outcome.confirmed:
+                    reached_goals += 1
+                    self._frontiers_visited_status = reached_goals
+                    time.sleep(self._replan_period_s)
+                    continue
+                if run.navigation_status == 'success':
+                    time.sleep(self._replan_period_s)
+                    continue
             if disposition.state.value == 'progressed':
                 reached_goals += 1
                 self._frontiers_visited_status = reached_goals
