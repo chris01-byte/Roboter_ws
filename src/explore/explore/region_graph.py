@@ -81,12 +81,14 @@ class RegionGraphPolicy:
     max_portal_observations: int = 4096
     max_traversal_events: int = 4096
     max_region_merges: int = 1024
+    max_tasks: int = 4096
+    max_task_updates: int = 8192
 
     def __post_init__(self) -> None:
         for name in (
                 "max_regions", "max_connections",
                 "max_portal_observations", "max_traversal_events",
-                "max_region_merges"):
+                "max_region_merges", "max_tasks", "max_task_updates"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise RegionGraphError(f"{name} muss eine positive Ganzzahl sein")
@@ -161,6 +163,7 @@ class RegionSnapshot:
     entry_count: int
     portal_ids: Tuple[str, ...]
     alias_ids: Tuple[str, ...]
+    task_ids: Tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -193,6 +196,9 @@ class RegionGraphSnapshot:
     connections: Tuple[PortalConnectionSnapshot, ...]
     confirmed_entry_count: int
     region_aliases: Tuple[Tuple[str, str], ...]
+    tasks: Tuple["RegionTaskSnapshot", ...]
+    open_task_count: int
+    completed_task_count: int
 
 
 @dataclass(frozen=True)
@@ -224,6 +230,63 @@ class RegionMergeResult:
     duplicate: bool = False
 
 
+class RegionTaskKind(str, Enum):
+    FRONTIER = "frontier"
+    PORTAL = "portal"
+    OBSERVATION = "observation"
+
+
+class RegionTaskState(str, Enum):
+    OPEN = "open"
+    COMPLETED = "completed"
+
+
+@dataclass(frozen=True)
+class RegionTaskUpdate:
+    """Idempotent passive task-reference update without execution semantics."""
+
+    update_id: str
+    task_id: str
+    context: PortalMapContext
+    map_revision: int
+    region_id: str
+    kind: RegionTaskKind
+    subject_id: str
+    state: RegionTaskState
+
+    def __post_init__(self) -> None:
+        _identifier(self.update_id, "update_id")
+        _identifier(self.task_id, "task_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+        _identifier(self.region_id, "region_id")
+        if not isinstance(self.kind, RegionTaskKind):
+            raise RegionGraphError("kind muss RegionTaskKind sein")
+        _identifier(self.subject_id, "subject_id")
+        if not isinstance(self.state, RegionTaskState):
+            raise RegionGraphError("state muss RegionTaskState sein")
+
+
+@dataclass(frozen=True)
+class RegionTaskSnapshot:
+    task_id: str
+    region_id: str
+    kind: RegionTaskKind
+    subject_id: str
+    state: RegionTaskState
+    created_revision: int
+    last_revision: int
+
+
+@dataclass(frozen=True)
+class RegionTaskResult:
+    task: RegionTaskSnapshot
+    created: bool
+    state_changed: bool
+    duplicate: bool = False
+
+
 @dataclass
 class _RegionState:
     region_id: str
@@ -234,6 +297,7 @@ class _RegionState:
     entry_count: int = 0
     portal_ids: set[str] = field(default_factory=set)
     alias_ids: set[str] = field(default_factory=set)
+    task_ids: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -242,6 +306,17 @@ class _ConnectionState:
     side_a_region_id: str
     side_b_region_id: str
     first_revision: int
+    last_revision: int
+
+
+@dataclass
+class _TaskState:
+    task_id: str
+    region_id: str
+    kind: RegionTaskKind
+    subject_id: str
+    state: RegionTaskState
+    created_revision: int
     last_revision: int
 
 
@@ -266,6 +341,9 @@ class RegionGraph:
         self._region_merges: Dict[
             str, Tuple[RegionMerge, RegionMergeResult]] = {}
         self._region_aliases: Dict[str, str] = {}
+        self._tasks: Dict[str, _TaskState] = {}
+        self._task_updates: Dict[
+            str, Tuple[RegionTaskUpdate, RegionTaskResult]] = {}
         self._start_seed: Optional[RegionSeed] = None
         self._start_result: Optional[RegionStartResult] = None
         self._current_region_id: Optional[str] = None
@@ -470,6 +548,78 @@ class RegionGraph:
         self._latest_revision = max(self._latest_revision, event.map_revision)
         return result
 
+    def update_task(self, update: RegionTaskUpdate) -> RegionTaskResult:
+        """Create or complete one passive task reference idempotently."""
+        if not isinstance(update, RegionTaskUpdate):
+            raise RegionGraphError("update muss RegionTaskUpdate sein")
+        self._require_context(update.context)
+
+        previous = self._task_updates.get(update.update_id)
+        if previous is not None:
+            previous_update, previous_result = previous
+            if previous_update != update:
+                raise RegionGraphConflictError(
+                    "update_id wurde widerspruechlich wiederverwendet")
+            return RegionTaskResult(
+                task=self.task(previous_update.task_id),
+                created=False,
+                state_changed=False,
+                duplicate=True,
+            )
+
+        region = self._require_region(update.region_id)
+        self._require_current_revision(update.map_revision)
+        if len(self._task_updates) >= self._policy.max_task_updates:
+            raise RegionGraphCapacityError("Aufgabenaktualisierungsverlauf ist voll")
+
+        state = self._tasks.get(update.task_id)
+        if state is None:
+            if len(self._tasks) >= self._policy.max_tasks:
+                raise RegionGraphCapacityError("Aufgabenspeicher ist voll")
+            state = _TaskState(
+                task_id=update.task_id,
+                region_id=region.region_id,
+                kind=update.kind,
+                subject_id=update.subject_id,
+                state=update.state,
+                created_revision=update.map_revision,
+                last_revision=update.map_revision,
+            )
+            self._tasks[state.task_id] = state
+            region.task_ids.add(state.task_id)
+            created = True
+            state_changed = False
+        else:
+            if (
+                    state.kind is not update.kind
+                    or state.subject_id != update.subject_id
+                    or state.region_id != region.region_id):
+                raise RegionGraphConflictError(
+                    "Aufgabenidentitaet, Subjekt oder Region widerspricht")
+            if update.map_revision <= state.last_revision:
+                raise StaleGraphUpdateError(
+                    "Aufgabenaktualisierung ist nicht neuer als der Zustand")
+            if (
+                    state.state is RegionTaskState.COMPLETED
+                    and update.state is RegionTaskState.OPEN):
+                raise RegionGraphConflictError(
+                    "Abgeschlossene Aufgabe darf hier nicht reaktiviert werden")
+            created = False
+            state_changed = state.state is not update.state
+            state.state = update.state
+            state.last_revision = update.map_revision
+
+        result = RegionTaskResult(
+            task=self._task_snapshot(state),
+            created=created,
+            state_changed=state_changed,
+        )
+        self._task_updates[update.update_id] = (update, result)
+        region.last_revision = max(region.last_revision, update.map_revision)
+        self._latest_revision = max(
+            self._latest_revision, update.map_revision)
+        return result
+
     def merge_regions(self, merge: RegionMerge) -> RegionMergeResult:
         """Apply one explicit merge and preserve all old region references."""
         if not isinstance(merge, RegionMerge):
@@ -512,6 +662,7 @@ class RegionGraph:
         canonical.portal_ids.update(removed.portal_ids)
         canonical.alias_ids.update(removed.alias_ids)
         canonical.alias_ids.add(removed_id)
+        canonical.task_ids.update(removed.task_ids)
 
         for connection in self._connections.values():
             if connection.side_a_region_id == removed_id:
@@ -528,6 +679,9 @@ class RegionGraph:
             if target_id == removed_id:
                 self._region_aliases[alias_id] = canonical_id
         self._region_aliases[removed_id] = canonical_id
+        for task in self._tasks.values():
+            if task.region_id == removed_id:
+                task.region_id = canonical_id
         del self._regions[removed_id]
         if self._current_region_id == removed_id:
             self._current_region_id = canonical_id
@@ -544,6 +698,38 @@ class RegionGraph:
 
     def region(self, region_id: str) -> RegionSnapshot:
         return self._region_snapshot(self._require_region(region_id))
+
+    def task(self, task_id: str) -> RegionTaskSnapshot:
+        _identifier(task_id, "task_id")
+        try:
+            state = self._tasks[task_id]
+        except KeyError as exc:
+            raise RegionGraphError(f"Unbekannte Aufgabe: {task_id}") from exc
+        return self._task_snapshot(state)
+
+    def tasks(
+            self, region_id: Optional[str] = None,
+            *, kind: Optional[RegionTaskKind] = None,
+            state: Optional[RegionTaskState] = None,
+    ) -> Tuple[RegionTaskSnapshot, ...]:
+        """Return deterministic passive references with optional exact filters."""
+        canonical_region_id = None
+        if region_id is not None:
+            canonical_region_id = self.resolve_region_id(region_id)
+        if kind is not None and not isinstance(kind, RegionTaskKind):
+            raise RegionGraphError("kind muss RegionTaskKind sein")
+        if state is not None and not isinstance(state, RegionTaskState):
+            raise RegionGraphError("state muss RegionTaskState sein")
+        return tuple(
+            self._task_snapshot(task)
+            for task in sorted(
+                self._tasks.values(), key=lambda item: item.task_id)
+            if (
+                canonical_region_id is None
+                or task.region_id == canonical_region_id)
+            and (kind is None or task.kind is kind)
+            and (state is None or task.state is state)
+        )
 
     def resolve_region_id(self, region_id: str) -> str:
         """Resolve a canonical region or any retained historical alias."""
@@ -583,6 +769,13 @@ class RegionGraph:
             confirmed_entry_count=sum(
                 region.entry_count for region in self._regions.values()),
             region_aliases=tuple(sorted(self._region_aliases.items())),
+            tasks=self.tasks(),
+            open_task_count=sum(
+                task.state is RegionTaskState.OPEN
+                for task in self._tasks.values()),
+            completed_task_count=sum(
+                task.state is RegionTaskState.COMPLETED
+                for task in self._tasks.values()),
         )
 
     def _new_region(
@@ -684,6 +877,19 @@ class RegionGraph:
             entry_count=state.entry_count,
             portal_ids=tuple(sorted(state.portal_ids)),
             alias_ids=tuple(sorted(state.alias_ids)),
+            task_ids=tuple(sorted(state.task_ids)),
+        )
+
+    @staticmethod
+    def _task_snapshot(state: _TaskState) -> RegionTaskSnapshot:
+        return RegionTaskSnapshot(
+            task_id=state.task_id,
+            region_id=state.region_id,
+            kind=state.kind,
+            subject_id=state.subject_id,
+            state=state.state,
+            created_revision=state.created_revision,
+            last_revision=state.last_revision,
         )
 
     @staticmethod

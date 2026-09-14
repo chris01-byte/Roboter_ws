@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/B)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/C)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,18 +10,19 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/B – kontrollierte Regionsvereinigung als reine Logik softwaregeprüft,
-zur Review.** Explizite revisionsgebundene Merge-Aufträge vereinigen vorläufige
-Regionen deterministisch. Historische IDs bleiben als Alias auflösbar;
-Verbindungen, aktueller Ort, gesehen/betreten und Eintrittszähler werden ohne
-Verlust umgeschrieben. Dies ist weiterhin nicht der gesamte WE-M2-Umfang und
-keine Zielsystem- oder Hardwareabnahme.
+**WE-M2/C – stabile passive Aufgabenreferenzen als reine Logik softwaregeprüft,
+zur Review.** Der begrenzte Regionsgraph führt opake Aufgaben-IDs der Typen
+`frontier`, `portal` und `observation` samt kanonischem Regionsbezug,
+Erzeugungs-/Aktualisierungsrevision und Zustand `open`/`completed`.
+Regionsvereinigungen erhalten alle Referenzen aliasfest. Dies ist weiterhin
+nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder Hardwareabnahme.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/C.** Im reinen
-Graphmodul nur einen begrenzten Bestand stabiler, opaker Aufgabenreferenzen
-(`frontier`, `portal`, `observation`) mit Regionsbezug und Revisionskontext führen
-und bei Regionsvereinigung aliasfest erhalten. Keine Bewertung, Zielauswahl,
-Retries, automatische Teilung, ROS-Ausgabe, Navigation oder Fahrwirkung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/D.** Im reinen
+Graphmodul nur eine explizite, revisionsgebundene und vollständig spezifizierte
+Regionsteilung ergänzen. Jeder Portalendpunkt und jede Aufgaben-ID der
+Ausgangsregion muss genau einer der Ergebnisregionen zugewiesen sein; bei Lücken,
+Dopplungen oder Konflikten geschlossen abbrechen. Keine automatische
+Teilungsentscheidung, Geometrieanalyse, ROS-Ausgabe, Navigation oder Fahrwirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -46,6 +47,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M1/C `feature/we-m1c-portal-evidence` | Gestapelter Abschluss der reinen WE-M1-Logik; qualifizierte Bestätigungsevidenz und verbleibende synthetische Negativfälle, kein Deployment. |
 | WE-M2/A `feature/we-m2a-region-graph` | Gestapelter, nicht eingebundener Regions-/Verbindungskern auf WE-M1/C; zwei neue Python-Dateien und Status, kein Deployment. |
 | WE-M2/B `feature/we-m2b-region-merge` | Gestapelte, explizit ausgelöste Regionsvereinigung mit Aliasauflösung; nur Graphmodul, Tests und Status, kein Deployment. |
+| WE-M2/C `feature/we-m2c-task-references` | Gestapelte passive Aufgabenreferenzen mit aliasfestem Regionsbezug; nur Graphmodul, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -283,7 +285,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A und B als reine Topologie samt Vereinigung softwaregeprüft; Aufgabenbezug, kontrollierte Teilung und passive Integration offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis C als reine Topologie samt Vereinigung und Aufgabenbezug softwaregeprüft; kontrollierte Teilung und passive Integration offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -319,10 +321,19 @@ vollständiger Regionsgraph und Abschluss fehlen.
 
 **Regionsgraph:** WE-M2/A kann einen Start–Flur–Raum-Pfad und die Rückkehr in
 dieselbe Flur-ID führen. WE-M2/B schließt Schleifen durch explizite
-Regionsvereinigung und erhält alte IDs als Alias. Eine neue bestätigte Portal-ID
-erzeugt weiterhin zunächst eine vorläufige Gegenregion. Automatische
-Mergeentscheidung, Teilung, Geometriekorrekturen, Aufgabenreferenzen und passive
-Runtime-Ausgabe fehlen noch.
+Regionsvereinigung und erhält alte IDs als Alias. WE-M2/C erhält offene und
+erledigte Aufgabenreferenzen bei diesen Vereinigungen und löst ihren Regionsbezug
+kanonisch auf. Eine neue bestätigte Portal-ID erzeugt weiterhin zunächst eine
+vorläufige Gegenregion. Automatische Mergeentscheidung, Teilung,
+Geometriekorrekturen und passive Runtime-Ausgabe fehlen noch.
+
+**Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
+Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
+`FootprintApproach`, während die bereits auf der WE-M2/B-Basis eingecheckte
+Konfiguration ein Polygon enthält (268 bestanden, 1 fehlgeschlagen). WE-M2/C
+ändert weder Test noch Konfiguration. Ursache und beabsichtigter Vertrag sind in
+einem eigenen sicherheitsrelevanten Auftrag zu klären; dieser Befund ist keine
+Freigabe, eine Kollisionsüberwachung zu ändern oder Hardware zu betreiben.
 
 **Kartenintegration:** Manuelle Raum-Overlays, Fingerprints und Speicherverträge
 existieren. Die Zuordnung automatischer Erkundungsregionen und laufender Karten-
@@ -333,6 +344,67 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/C: Aufgabenreferenzen bleiben bei Merge stabil
+
+**Entscheidung / Umfang:** `region_graph.py` ausschließlich um einen begrenzten,
+idempotenten Bestand passiver `RegionTaskUpdate`-Eingaben ergänzt. Jede stabile
+Aufgaben-ID bindet genau einen opaken Gegenstand der Art `frontier`, `portal` oder
+`observation` an eine kanonische Region und führt Erzeugungs- sowie letzte
+Aktualisierungsrevision. Der Zustand unterscheidet nur `open` und `completed`.
+Das Modul bewertet, priorisiert oder startet Aufgaben nicht und erzeugt keine
+Ziele oder Bewegungsfreigaben.
+
+**Nachgewiesenes Verhalten:** Erzeugung, zustandsunveränderte Aktualisierung und
+Abschluss sind revisionsgebunden. Exakte Update-Replays bleiben idempotent;
+widersprüchliche Update-IDs, Identitätswechsel, Umzug in eine nicht vereinigte
+Region, veraltete Revisionen, unbekannte Regionen, fremde Kontexte,
+Wiederöffnung abgeschlossener Aufgaben und feste Speichergrenzen schlagen vor
+einer Teiländerung geschlossen fehl. Filter und Snapshots sind deterministisch.
+Eine Regionsvereinigung übernimmt offene und abgeschlossene Aufgaben ohne
+Verlust, schreibt deren Bezug auf die kanonische Region um und akzeptiert danach
+sowohl alte Alias-IDs als auch das Replay eines vor dem Merge erzeugten Updates.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2C-GRAPH | Regionsgraph-Suite: **52 passed**, einschließlich Aufgaben-/Merge-/Alias- und Negativfällen. |
+| WE-M2C-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **266 passed**. |
+| WE-M2C-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **161 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2C-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Der Colcon-Aufbau überschreibt keine Arbeitsinstallation und nutzt
+`robot_interfaces` aus dem vorhandenen Underlay; er ist kein vollständiger
+Workspace- oder Zielsystemnachweis. Der zusätzliche Nahbereichslauf mit einem
+unabhängigen, geerbten Vertragsfehler ist in Abschnitt 5 getrennt dokumentiert.
+Nicht geprüft wurden reale Aufgaben, Ausführungsreihenfolge, ROS-QoS/TF,
+Laufzeitlast, Sensorik, Footprint, Kollisionswirkung oder Hardware.
+
+**Offene Risiken / Integrationsabhängigkeiten:** Aufgaben-ID, Gegenstand,
+Regionszuordnung und Abschlussurteil sind externe Eingaben; ihre Adapter und
+Evidenzquellen fehlen bewusst. Abgeschlossene Aufgaben werden in diesem kleinen
+Schritt nicht reaktiviert. Priorität, Retry-/Blacklistlogik, Zielkoordinaten,
+Abhängigkeiten und Persistenz sind nicht Teil des Modells. Eine Region kann noch
+nicht kontrolliert geteilt werden; dadurch ist noch nicht gezeigt, dass alle
+Referenzen auch nach einer späteren Korrektur zu grober Segmentierung erhalten
+bleiben. Keine grüne Prüfung belegt eine reale Aufgabe oder Region.
+
+**Nächster abgegrenzter Schritt WE-M2/D:** Nur `region_graph.py`, dessen Tests
+und diese STATUS.md ändern. Eine explizite Regionsteilung muss zwei stabile
+Ergebnisregionen bilden und Portalenden sowie sämtliche Aufgabenreferenzen der
+Ausgangsregion vollständig und eindeutig zuweisen. Gesehen/betreten,
+Eintrittszähler, aktuelle Region, Verbindungen, IDs und Aliasauflösung müssen
+deterministisch erhalten beziehungsweise nach dokumentierter Vorgabe verteilt
+werden. Unvollständige, doppelte, veraltete oder widersprüchliche Aufträge
+schlagen atomar fehl. Noch keine automatische Teilungsentscheidung,
+Geometrieschwelle, Detektoranbindung, ROS-Ausgabe oder Navigation.
+
+**Rückfallweg:** Den WE-M2/C-Commit beziehungsweise den gestapelten Review-PR
+zurücknehmen. WE-M2/A und B sowie WE-M1 bleiben separat reviewbar. Da kein
+Runtime-Pfad den Regionsgraph importiert, gibt es keine Runtime- oder
+Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/B: Regionsvereinigung erhält Referenzen
 

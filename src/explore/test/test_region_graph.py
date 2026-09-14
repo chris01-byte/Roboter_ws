@@ -29,6 +29,9 @@ from explore.region_graph import (  # noqa: E402
     RegionGraphPolicy,
     RegionMerge,
     RegionSeed,
+    RegionTaskKind,
+    RegionTaskState,
+    RegionTaskUpdate,
     StaleGraphUpdateError,
     UnknownPortalConnectionError,
     UnknownRegionError,
@@ -96,6 +99,21 @@ def traversal(
         event_time_ns=event_time_ns,
         direction=direction,
         crossing_confirmed=confirmed,
+    )
+
+
+def task_update(
+        update_id, task_id, revision, region_id, kind, subject_id, state,
+        *, context=CONTEXT):
+    return RegionTaskUpdate(
+        update_id=update_id,
+        task_id=task_id,
+        context=context,
+        map_revision=revision,
+        region_id=region_id,
+        kind=kind,
+        subject_id=subject_id,
+        state=state,
     )
 
 
@@ -670,5 +688,283 @@ def test_successive_merges_flatten_all_historical_aliases():
     ],
 )
 def test_invalid_merge_policy_and_fields_are_rejected(factory):
+    with pytest.raises(RegionGraphError):
+        factory()
+
+
+def test_task_kinds_are_passive_stable_references_in_deterministic_order():
+    graph, region_id = started_graph()
+    graph.update_task(task_update(
+        "update-frontier", "task-frontier", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-17", RegionTaskState.OPEN))
+    graph.update_task(task_update(
+        "update-portal", "task-portal", 2, region_id,
+        RegionTaskKind.PORTAL, "portal_000001", RegionTaskState.OPEN))
+    graph.update_task(task_update(
+        "update-observation", "task-observation", 3, region_id,
+        RegionTaskKind.OBSERVATION, "observation-9", RegionTaskState.OPEN))
+
+    tasks = graph.tasks()
+
+    assert tuple(task.task_id for task in tasks) == (
+        "task-frontier", "task-observation", "task-portal")
+    assert all(task.region_id == region_id for task in tasks)
+    assert graph.region(region_id).task_ids == (
+        "task-frontier", "task-observation", "task-portal")
+    assert graph.snapshot().open_task_count == 3
+    assert graph.snapshot().completed_task_count == 0
+
+
+def test_open_task_can_complete_once_without_execution_side_effects():
+    graph, region_id = started_graph()
+    created = graph.update_task(task_update(
+        "create", "task-1", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    completed = graph.update_task(task_update(
+        "complete", "task-1", 2, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.COMPLETED))
+
+    assert created.created
+    assert not created.state_changed
+    assert not completed.created
+    assert completed.state_changed
+    assert completed.task.state is RegionTaskState.COMPLETED
+    assert completed.task.created_revision == 1
+    assert completed.task.last_revision == 2
+    assert graph.snapshot().open_task_count == 0
+    assert graph.snapshot().completed_task_count == 1
+    assert graph.current_region_id == region_id
+
+
+def test_newer_same_state_update_preserves_identity_and_reports_no_change():
+    graph, region_id = started_graph()
+    graph.update_task(task_update(
+        "create", "task-1", 1, region_id,
+        RegionTaskKind.OBSERVATION, "observation-1", RegionTaskState.OPEN))
+
+    refreshed = graph.update_task(task_update(
+        "refresh", "task-1", 2, region_id,
+        RegionTaskKind.OBSERVATION, "observation-1", RegionTaskState.OPEN))
+
+    assert not refreshed.created
+    assert not refreshed.state_changed
+    assert refreshed.task.task_id == "task-1"
+    assert refreshed.task.last_revision == 2
+    assert len(graph.tasks()) == 1
+
+
+def test_merge_preserves_open_and_completed_tasks_without_loss():
+    path = three_region_path()
+    graph = path["graph"]
+    graph.update_task(task_update(
+        "open-update", "open-task", 4, path["next_room"],
+        RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+        RegionTaskState.OPEN))
+    graph.update_task(task_update(
+        "done-update", "done-task", 4, path["start_room"],
+        RegionTaskKind.FRONTIER, "frontier-complete",
+        RegionTaskState.COMPLETED))
+
+    graph.merge_regions(RegionMerge(
+        "merge-with-tasks", CONTEXT, 5,
+        path["next_room"], path["start_room"], "synthetic_loop"))
+
+    assert tuple(task.task_id for task in graph.tasks()) == (
+        "done-task", "open-task")
+    assert all(
+        task.region_id == path["start_room"] for task in graph.tasks())
+    assert graph.region(path["start_room"]).task_ids == (
+        "done-task", "open-task")
+    assert graph.snapshot().open_task_count == 1
+    assert graph.snapshot().completed_task_count == 1
+
+
+def test_task_update_replay_after_merge_returns_current_canonical_region():
+    path = three_region_path()
+    graph = path["graph"]
+    original = task_update(
+        "stable-update", "task-1", 4, path["next_room"],
+        RegionTaskKind.OBSERVATION, "observation-1", RegionTaskState.OPEN)
+    graph.update_task(original)
+    graph.merge_regions(RegionMerge(
+        "merge-before-replay", CONTEXT, 5,
+        path["next_room"], path["start_room"], "synthetic_loop"))
+    before = graph.snapshot()
+
+    replay = graph.update_task(original)
+
+    assert replay.duplicate
+    assert not replay.created
+    assert not replay.state_changed
+    assert replay.task.region_id == path["start_room"]
+    assert graph.snapshot() == before
+
+
+def test_historical_alias_can_complete_task_after_merge():
+    path = three_region_path()
+    graph = path["graph"]
+    graph.update_task(task_update(
+        "create-before-merge", "task-1", 4, path["next_room"],
+        RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+        RegionTaskState.OPEN))
+    graph.merge_regions(RegionMerge(
+        "merge-before-complete", CONTEXT, 5,
+        path["next_room"], path["start_room"], "synthetic_loop"))
+
+    completed = graph.update_task(task_update(
+        "complete-by-alias", "task-1", 6, path["next_room"],
+        RegionTaskKind.PORTAL, path["second_portal"].portal_id,
+        RegionTaskState.COMPLETED))
+
+    assert completed.state_changed
+    assert completed.task.region_id == path["start_room"]
+    assert graph.tasks(path["next_room"]) == graph.tasks(path["start_room"])
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("kind", RegionTaskKind.PORTAL),
+        ("subject_id", "another-subject"),
+    ],
+)
+def test_existing_task_identity_fields_cannot_change(field, value):
+    graph, region_id = started_graph()
+    graph.update_task(task_update(
+        "create", "task-1", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    changed = task_update(
+        "changed", "task-1", 2, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN)
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_task(replace(changed, **{field: value}))
+    assert len(graph.tasks()) == 1
+
+
+def test_existing_task_cannot_move_to_unrelated_region():
+    path = three_region_path()
+    graph = path["graph"]
+    graph.update_task(task_update(
+        "create", "task-1", 4, path["start_room"],
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_task(task_update(
+            "move", "task-1", 5, path["hall"],
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    assert graph.task("task-1").region_id == path["start_room"]
+
+
+def test_completed_task_cannot_reopen_in_reference_only_scope():
+    graph, region_id = started_graph()
+    graph.update_task(task_update(
+        "created-done", "task-1", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.COMPLETED))
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_task(task_update(
+            "reopen", "task-1", 2, region_id,
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    assert graph.task("task-1").state is RegionTaskState.COMPLETED
+
+
+def test_task_update_id_reuse_and_stale_revision_fail_closed():
+    graph, region_id = started_graph()
+    original = task_update(
+        "fixed-update", "task-1", 2, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN)
+    graph.update_task(original)
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_task(replace(original, subject_id="frontier-2"))
+    with pytest.raises(StaleGraphUpdateError):
+        graph.update_task(task_update(
+            "same-revision", "task-1", 2, region_id,
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.COMPLETED))
+    assert graph.task("task-1").state is RegionTaskState.OPEN
+
+
+def test_task_context_and_unknown_region_fail_closed():
+    graph, region_id = started_graph()
+    foreign = PortalMapContext("other-session", CONTEXT.map_id, "map")
+
+    with pytest.raises(RegionContextMismatchError):
+        graph.update_task(task_update(
+            "foreign", "task-1", 1, region_id,
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN,
+            context=foreign))
+    with pytest.raises(UnknownRegionError):
+        graph.update_task(task_update(
+            "unknown-region", "task-1", 1, "region_999999",
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    assert graph.tasks() == ()
+
+
+def test_task_and_update_capacities_are_independent_and_atomic():
+    task_limited, region_id = started_graph(policy=RegionGraphPolicy(
+        max_tasks=1))
+    task_limited.update_task(task_update(
+        "first-update", "task-1", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    with pytest.raises(RegionGraphCapacityError):
+        task_limited.update_task(task_update(
+            "second-update", "task-2", 2, region_id,
+            RegionTaskKind.PORTAL, "portal_000001", RegionTaskState.OPEN))
+    assert tuple(task.task_id for task in task_limited.tasks()) == ("task-1",)
+
+    update_limited, region_id = started_graph(policy=RegionGraphPolicy(
+        max_task_updates=1))
+    update_limited.update_task(task_update(
+        "first-update", "task-1", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    with pytest.raises(RegionGraphCapacityError):
+        update_limited.update_task(task_update(
+            "complete-update", "task-1", 2, region_id,
+            RegionTaskKind.FRONTIER, "frontier-1",
+            RegionTaskState.COMPLETED))
+    assert update_limited.task("task-1").state is RegionTaskState.OPEN
+
+
+def test_task_filters_do_not_change_inventory():
+    graph, region_id = started_graph()
+    graph.update_task(task_update(
+        "frontier-update", "frontier-task", 1, region_id,
+        RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN))
+    graph.update_task(task_update(
+        "portal-update", "portal-task", 2, region_id,
+        RegionTaskKind.PORTAL, "portal_000001", RegionTaskState.COMPLETED))
+
+    assert tuple(task.task_id for task in graph.tasks(
+        kind=RegionTaskKind.FRONTIER)) == ("frontier-task",)
+    assert tuple(task.task_id for task in graph.tasks(
+        state=RegionTaskState.COMPLETED)) == ("portal-task",)
+    assert len(graph.tasks()) == 2
+    with pytest.raises(RegionGraphError):
+        graph.tasks(kind="frontier")
+    with pytest.raises(RegionGraphError):
+        graph.tasks(state="open")
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: RegionGraphPolicy(max_tasks=0),
+        lambda: RegionGraphPolicy(max_task_updates=0),
+        lambda: RegionTaskUpdate(
+            "bad id", "task-1", CONTEXT, 1, "region_000001",
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN),
+        lambda: RegionTaskUpdate(
+            "update", "task-1", CONTEXT, True, "region_000001",
+            RegionTaskKind.FRONTIER, "frontier-1", RegionTaskState.OPEN),
+        lambda: RegionTaskUpdate(
+            "update", "task-1", CONTEXT, 1, "region_000001",
+            "frontier", "frontier-1", RegionTaskState.OPEN),
+        lambda: RegionTaskUpdate(
+            "update", "task-1", CONTEXT, 1, "region_000001",
+            RegionTaskKind.FRONTIER, "frontier-1", "open"),
+    ],
+)
+def test_invalid_task_policy_and_fields_are_rejected(factory):
     with pytest.raises(RegionGraphError):
         factory()
