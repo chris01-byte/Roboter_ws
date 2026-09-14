@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/K)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/L)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,25 +10,24 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/K – Kartenstatusübergabe an die Schatten-Sitzung softwaregeprüft, zur
-Review.** `RegionGraphShadowSession` entsteht nur noch aus dem ersten neuen
-`MapStatusCorrelationResult`; Startkontext und Startrevision müssen exakt dazu
-passen. Weitere Statusprojektionen akzeptieren nur denselben Kontext und eine
-nicht rückläufige Kartenrevision. Kartenrevision und Kartenalter können nicht
-mehr unabhängig voneinander behauptet werden. Es gibt weiterhin keine JSON-/ROS-
-Subscription, Explorer- oder Fahrwirkung.
+**WE-M2/L – Kartenmanager-Status-JSON rein decodiert und softwaregeprüft, zur
+Review.** Der tatsächliche Schema-1-Umschlag von
+`/robot_map_manager/status_json` wird größen- und tiefenbegrenzt auf
+`MapManagerStatusSample` abgebildet. Pflichtpfade und Typen werden nicht geraten
+oder umgewandelt; zusätzliche reale Statusfelder bleiben innerhalb der Grenzen
+zulässig. Es gibt weiterhin keine ROS-Subscription, Uhr-, Explorer- oder
+Fahrwirkung.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/L.** Ausschließlich
-den bestehenden Schema-1-JSON-Umschlag von `/robot_map_manager/status_json` mit
-einer reinen, größenbegrenzten Decoderfunktion in `map_status_adapter.py` auf
-`MapManagerStatusSample` abbilden. Die verschachtelten Felder `map.available`,
-`map.snapshot_available`, `map.age_seconds`, die drei Summary-Felder
-`fingerprint`, `frame_id`, `source_stamp_ns`, außerdem
-`counters.accepted_maps`, `schema_version` und `time` müssen
-vollständig und typgetreu übernommen werden; fehlende, widersprüchliche,
-überdimensionierte oder ungültige JSON-Eingaben schlagen geschlossen fehl. Nur
-Adapter, dessen Tests und diese STATUS.md; noch keine ROS-Subscription, Uhr,
-Sitzungserzeugung, Node-, Launch-, Parameter- oder Fahrsoftware.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/M.** Eine neue
+reine Lebenszyklusklasse soll genau einen `MapManagerStatusCorrelator` und nach
+dem ersten gültigen decodierten Status genau eine `RegionGraphShadowSession`
+besitzen. Sie erhält Sitzungs-ID, erwarteten Frame und Startbeobachtungs-ID
+explizit, erzeugt den `RegionSeed` erst aus dem ersten Korrelationsresultat und
+führt weitere Status-JSONs fail-closed fort. Nichtverfügbarkeit vor dem ersten
+Snapshot bleibt wartend; Epochenwechsel, Kontextfehler und Neustart werden nicht
+automatisch über alte Zustände hinweg geheilt. Nur neues reines Modul, dessen
+Tests und diese STATUS.md; noch keine ROS-Subscription, Uhr, Portalzuführung,
+Node-, Launch-, Parameter- oder Fahrsoftware.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -62,6 +61,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/I `feature/we-m2i-shadow-session` | Gestapelte reine Sitzungsaggregation aus begrenztem Portalgedächtnis, Regionsgraph und Schattenstatus; neues Modul, Tests und Status. |
 | WE-M2/J `feature/we-m2j-map-status-adapter` | Gestapelte reine Korrelation des vorhandenen Kartenmanagerstatus zu Kontext, sitzungsbezogener Revision und Quellalter; neues Modul, Tests und Status. |
 | WE-M2/K `feature/we-m2k-map-shadow-handoff` | Gestapelte typisierte Übergabe von Kartenstatuskorrelation an die reine Schatten-Sitzung; Aggregatmodul, Vertragstests und Status. |
+| WE-M2/L `feature/we-m2l-map-status-json` | Gestapelte reine, begrenzte Decodierung des tatsächlichen Kartenmanager-Status-JSON in den bestehenden Korrelationsvertrag; Adapter, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -299,7 +299,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis K decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation und deren typisierte Übergabe ab. JSON-/ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis L decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, deren typisierte Übergabe und die reine JSON-Decodierung ab. Lebenszyklus-/ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -352,7 +352,8 @@ Regionsgraphen. WE-M2/I besitzt diese Zustände nun in genau einer passiven
 Sitzung; die tatsächliche Kartenepoche und monotone Quellzeit bleiben explizite,
 noch nicht angebundene Eingaben. WE-M2/J kann diese Angaben aus einem konsistenten
 Verlauf der explizit extrahierten Kartenmanagerfelder ableiten. WE-M2/K bindet
-dieses Ergebnis nun typisiert und revisionsmonoton an die Sitzung; JSON-Decodierung,
+dieses Ergebnis typisiert und revisionsmonoton an die Sitzung. WE-M2/L decodiert
+den tatsächlichen Statusumschlag rein und begrenzt; Lebenszyklusbesitz,
 ROS-Subscription und echte Laufzeitalter fehlen weiterhin.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
@@ -372,6 +373,75 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/L: realen Statusumschlag ohne ROS decodieren
+
+**Quellbefund:** `robot_map_manager_node.py` erzeugt Schema 1 mit
+`schema_version` und Unix-Statuszeit `time` auf der obersten Ebene. Unter `map`
+liegen `available`, `snapshot_available`, `age_seconds` und `summary`; bei
+verfügbarer Karte enthält `summary` unter anderem `fingerprint`, `frame_id` und
+`source_stamp_ns`, andernfalls ist es `null`. `accepted_maps` liegt getrennt
+unter `counters`. Ereignis, Meldung, Pose, Speicherstatus und weitere Zähler
+gehören zum realen Umschlag, werden für WE-M2 aber nicht als Kartenidentität
+umgedeutet.
+
+**Entscheidung / Umfang:** `decode_map_manager_status_json()` in
+`map_status_adapter.py` bildet ausschließlich diese Pflichtfelder auf den bereits
+validierten `MapManagerStatusSample` ab. Der Decoder verlangt Text und ein
+JSON-Objekt, übernimmt Werte ohne Typkonvertierung und lässt zusätzliche Felder
+zu. Fehlende Pfade, falsche Zwischenobjekte, doppelte JSON-Schlüssel, nicht
+endliche JSON-Konstanten, ungültiges Unicode/JSON und eine Teil-Summary schlagen
+geschlossen fehl. Bei nicht verfügbarer Karte muss `summary` exakt `null` sein;
+der bestehende Sample-Vertrag verlangt zusätzlich Zählerstand 0 und keine
+Kartenalter-/Identitätswerte.
+
+Der Eingangsumschlag ist auf **1.048.576 UTF-8-Bytes** und **32 Ebenen** begrenzt.
+Beide Werte sind konservative synthetische Softwaregrenzen, keine gemessene
+Jetson-Lastabnahme. Die Tiefenprüfung betrachtet auch irrelevante Zusatzfelder,
+damit diese die Begrenzung nicht umgehen. Der Decoder liest keine Uhr, Datei,
+Karte oder ROS-Schnittstelle und besitzt keinen Korrelations- oder
+Sitzungszustand.
+
+**Nachgewiesenes Verhalten:** Synthetische Umschläge in der tatsächlichen
+Kartenmanagerstruktur werden für verfügbare und noch nicht verfügbare Karten
+feldgleich decodiert. Begrenzte zusätzliche Status- und Summary-Felder werden
+ignoriert, auch wenn `ok=false` ist; Kartenverfügbarkeit bleibt der getrennte
+Vertrag. Jede Pflichtfeldlücke und alle geprüften Typ-/Strukturfehler werden
+abgewiesen. Ein decodiertes Sample durchläuft den bestehenden Korrelator ohne
+zusätzliche oder erfundene Werte.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und `robot_interfaces` aus dem vorhandenen Underlay,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2L-DECODER | Kartenstatusadapter-Suite einschließlich Decodergrenzen: **91 passed**. |
+| WE-M2L-EXPLORE | Gesamte Explorer-Suite: **375 passed**. |
+| WE-M2L-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **480 passed**. |
+| WE-M2L-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **375 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2L-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Nicht geprüft wurden eine reale Topic-Nachricht, ROS-Subscription/QoS/Discovery,
+Publisher, tatsächliche Statusrate oder Restartfolge, ROS-/Wall-/monotone
+Zeitbezüge, Jetson-Laufzeit/Speicher, reale Karten, Portal-/LiDAR-Evidenz,
+Sensorik, Footprint, Kollisionswirkung oder Hardware. Die JSON-Decodierung
+bestätigt weder Karte, Portal, Durchfahrt noch Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/M:** Neu ausschließlich eine reine
+Lebenszyklusklasse, deren Test und diese STATUS.md. Die Klasse besitzt einen
+explizit konfigurierten `MapManagerStatusCorrelator`, decodiert über die neue
+Funktion und erzeugt beim ersten gültigen Kartenresultat genau eine
+`RegionGraphShadowSession` samt revisionsgleichem `RegionSeed`. Weitere
+Statusumschläge werden nur in diese Sitzung fortgeführt. Vor erster Karte bleibt
+Nichtverfügbarkeit sichtbar, Epochenwechsel und widersprüchliche Folgen verlangen
+einen neuen Besitzer statt stiller Wiederverwendung. Noch keine ROS-Subscription,
+Uhr, Portalzuführung, Ausgabe, Node-, Launch-, Parameter-, Ziel- oder Fahrsoftware.
+
+**Rückfallweg:** Decoderfunktion und Decoder-Testfälle sowie diesen
+WE-M2/L-Statusabschnitt entfernen beziehungsweise den gestapelten PR schließen.
+WE-M2/A bis K bleiben separat reviewbar; kein Runtime-, Installations- oder
+Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/K: Kartenrevision und Kartenalter nur noch gemeinsam
 
