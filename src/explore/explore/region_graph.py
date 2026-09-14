@@ -81,6 +81,7 @@ class RegionGraphPolicy:
     max_portal_observations: int = 4096
     max_traversal_events: int = 4096
     max_region_merges: int = 1024
+    max_region_splits: int = 1024
     max_tasks: int = 4096
     max_task_updates: int = 8192
 
@@ -88,7 +89,8 @@ class RegionGraphPolicy:
         for name in (
                 "max_regions", "max_connections",
                 "max_portal_observations", "max_traversal_events",
-                "max_region_merges", "max_tasks", "max_task_updates"):
+                "max_region_merges", "max_region_splits",
+                "max_tasks", "max_task_updates"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
                 raise RegionGraphError(f"{name} muss eine positive Ganzzahl sein")
@@ -230,6 +232,80 @@ class RegionMergeResult:
     duplicate: bool = False
 
 
+@dataclass(frozen=True)
+class RegionPortalEnd:
+    """One concrete side of a portal connection assigned during a split."""
+
+    portal_id: str
+    side: PortalSide
+
+    def __post_init__(self) -> None:
+        _identifier(self.portal_id, "portal_id")
+        if not isinstance(self.side, PortalSide):
+            raise RegionGraphError("side muss PortalSide sein")
+
+
+class RegionSplitTarget(str, Enum):
+    RETAINED = "retained"
+    CREATED = "created"
+
+
+@dataclass(frozen=True)
+class RegionSplit:
+    """Explicit complete partition of one provisional region."""
+
+    split_id: str
+    context: PortalMapContext
+    map_revision: int
+    source_region_id: str
+    retained_portal_ends: Tuple[RegionPortalEnd, ...]
+    created_portal_ends: Tuple[RegionPortalEnd, ...]
+    retained_task_ids: Tuple[str, ...]
+    created_task_ids: Tuple[str, ...]
+    state_target: RegionSplitTarget
+    reason: str
+
+    def __post_init__(self) -> None:
+        _identifier(self.split_id, "split_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+        _identifier(self.source_region_id, "source_region_id")
+        for name in ("retained_portal_ends", "created_portal_ends"):
+            value = getattr(self, name)
+            if not isinstance(value, tuple) or any(
+                    not isinstance(item, RegionPortalEnd) for item in value):
+                raise RegionGraphError(
+                    f"{name} muss ein Tupel aus RegionPortalEnd sein")
+            ordered = tuple(sorted(
+                value, key=lambda item: (item.portal_id, item.side.value)))
+            if len(set(ordered)) != len(ordered):
+                raise RegionGraphError(f"{name} enthaelt Duplikate")
+            object.__setattr__(self, name, ordered)
+        for name in ("retained_task_ids", "created_task_ids"):
+            value = getattr(self, name)
+            if not isinstance(value, tuple):
+                raise RegionGraphError(f"{name} muss ein Tupel sein")
+            for task_id in value:
+                _identifier(task_id, f"{name}-Eintrag")
+            ordered = tuple(sorted(value))
+            if len(set(ordered)) != len(ordered):
+                raise RegionGraphError(f"{name} enthaelt Duplikate")
+            object.__setattr__(self, name, ordered)
+        if not isinstance(self.state_target, RegionSplitTarget):
+            raise RegionGraphError("state_target muss RegionSplitTarget sein")
+        _text(self.reason, "reason")
+
+
+@dataclass(frozen=True)
+class RegionSplitResult:
+    split_id: str
+    retained_region_id: str
+    created_region_id: str
+    state_region_id: str
+    duplicate: bool = False
+
+
 class RegionTaskKind(str, Enum):
     FRONTIER = "frontier"
     PORTAL = "portal"
@@ -340,6 +416,8 @@ class RegionGraph:
             str, Tuple[TraversalEvent, GraphTraversalResult]] = {}
         self._region_merges: Dict[
             str, Tuple[RegionMerge, RegionMergeResult]] = {}
+        self._region_splits: Dict[
+            str, Tuple[RegionSplit, RegionSplitResult]] = {}
         self._region_aliases: Dict[str, str] = {}
         self._tasks: Dict[str, _TaskState] = {}
         self._task_updates: Dict[
@@ -399,14 +477,27 @@ class RegionGraph:
             if previous_observation != observation:
                 raise RegionGraphConflictError(
                     "observation_id wurde widerspruechlich wiederverwendet")
-            return replace(
-                previous_result,
-                current_region_id=self.resolve_region_id(
-                    previous_result.current_region_id),
-                opposite_region_id=(
+            connection = self._connections.get(previous_result.portal_id)
+            if (
+                    connection is not None
+                    and previous_result.opposite_region_id is not None):
+                current_region_id = self._region_on_side(
+                    connection, previous_observation.current_side)
+                opposite_region_id = self._region_on_side(
+                    connection,
+                    self._opposite_side(previous_observation.current_side),
+                )
+            else:
+                current_region_id = self.resolve_region_id(
+                    previous_result.current_region_id)
+                opposite_region_id = (
                     None if previous_result.opposite_region_id is None
                     else self.resolve_region_id(
-                        previous_result.opposite_region_id)),
+                        previous_result.opposite_region_id))
+            return replace(
+                previous_result,
+                current_region_id=current_region_id,
+                opposite_region_id=opposite_region_id,
                 duplicate=True,
             )
 
@@ -498,12 +589,16 @@ class RegionGraph:
             if previous_event != event:
                 raise RegionGraphConflictError(
                     "event_id wurde widerspruechlich wiederverwendet")
+            connection = self._connections.get(previous_event.portal_id)
+            if connection is None:
+                raise UnknownPortalConnectionError(
+                    f"Unbekannte Portalverbindung: {previous_event.portal_id}")
+            source_region_id, target_region_id = self._traversal_regions(
+                connection, previous_event.direction)
             return replace(
                 previous_result,
-                source_region_id=self.resolve_region_id(
-                    previous_result.source_region_id),
-                target_region_id=self.resolve_region_id(
-                    previous_result.target_region_id),
+                source_region_id=source_region_id,
+                target_region_id=target_region_id,
                 entered=False,
                 current_region_id=self._current_region_id,
                 duplicate=True,
@@ -696,6 +791,108 @@ class RegionGraph:
             self._latest_revision, merge.map_revision)
         return result
 
+    def split_region(self, split: RegionSplit) -> RegionSplitResult:
+        """Apply one explicit, complete partition without inferring geometry."""
+        if not isinstance(split, RegionSplit):
+            raise RegionGraphError("split muss RegionSplit sein")
+        self._require_context(split.context)
+
+        previous = self._region_splits.get(split.split_id)
+        if previous is not None:
+            previous_split, previous_result = previous
+            if previous_split != split:
+                raise RegionGraphConflictError(
+                    "split_id wurde widerspruechlich wiederverwendet")
+            return replace(
+                previous_result,
+                retained_region_id=self.resolve_region_id(
+                    previous_result.retained_region_id),
+                created_region_id=self.resolve_region_id(
+                    previous_result.created_region_id),
+                state_region_id=self.resolve_region_id(
+                    previous_result.state_region_id),
+                duplicate=True,
+            )
+
+        source = self._require_region(split.source_region_id)
+        self._require_current_revision(split.map_revision)
+        if len(self._region_splits) >= self._policy.max_region_splits:
+            raise RegionGraphCapacityError("Regionsteilungsverlauf ist voll")
+        if len(self._regions) >= self._policy.max_regions:
+            raise RegionGraphCapacityError("Regionsspeicher ist voll")
+
+        expected_portal_ends = self._portal_ends(source.region_id)
+        retained_portal_ends = set(split.retained_portal_ends)
+        created_portal_ends = set(split.created_portal_ends)
+        if retained_portal_ends & created_portal_ends:
+            raise RegionGraphConflictError(
+                "Portalende wurde beiden Ergebnisregionen zugewiesen")
+        if retained_portal_ends | created_portal_ends != expected_portal_ends:
+            raise RegionGraphConflictError(
+                "Portalenden sind nicht vollstaendig und exakt zugewiesen")
+
+        expected_task_ids = set(source.task_ids)
+        retained_task_ids = set(split.retained_task_ids)
+        created_task_ids = set(split.created_task_ids)
+        if retained_task_ids & created_task_ids:
+            raise RegionGraphConflictError(
+                "Aufgabe wurde beiden Ergebnisregionen zugewiesen")
+        if retained_task_ids | created_task_ids != expected_task_ids:
+            raise RegionGraphConflictError(
+                "Aufgaben sind nicht vollstaendig und exakt zugewiesen")
+
+        created = self._new_region(
+            revision=split.map_revision, seen=False, entered=False)
+        source.last_revision = max(
+            source.last_revision, split.map_revision)
+        if split.state_target is RegionSplitTarget.CREATED:
+            created.seen = source.seen
+            created.entered = source.entered
+            created.entry_count = source.entry_count
+            source.seen = False
+            source.entered = False
+            source.entry_count = 0
+            state_region = created
+        else:
+            state_region = source
+
+        source.portal_ids = {
+            portal_end.portal_id for portal_end in retained_portal_ends}
+        created.portal_ids = {
+            portal_end.portal_id for portal_end in created_portal_ends}
+        source.task_ids = retained_task_ids
+        created.task_ids = created_task_ids
+
+        for portal_end in created_portal_ends:
+            connection = self._connections[portal_end.portal_id]
+            if portal_end.side is PortalSide.A:
+                connection.side_a_region_id = created.region_id
+            else:
+                connection.side_b_region_id = created.region_id
+            connection.last_revision = max(
+                connection.last_revision, split.map_revision)
+        for portal_end in retained_portal_ends:
+            connection = self._connections[portal_end.portal_id]
+            connection.last_revision = max(
+                connection.last_revision, split.map_revision)
+        for task_id in created_task_ids:
+            self._tasks[task_id].region_id = created.region_id
+
+        self._regions[created.region_id] = created
+        if self._current_region_id == source.region_id:
+            self._current_region_id = state_region.region_id
+
+        result = RegionSplitResult(
+            split_id=split.split_id,
+            retained_region_id=source.region_id,
+            created_region_id=created.region_id,
+            state_region_id=state_region.region_id,
+        )
+        self._region_splits[split.split_id] = (split, result)
+        self._latest_revision = max(
+            self._latest_revision, split.map_revision)
+        return result
+
     def region(self, region_id: str) -> RegionSnapshot:
         return self._region_snapshot(self._require_region(region_id))
 
@@ -865,6 +1062,17 @@ class RegionGraph:
 
     def _require_region(self, region_id: str) -> _RegionState:
         return self._regions[self.resolve_region_id(region_id)]
+
+    def _portal_ends(self, region_id: str) -> set[RegionPortalEnd]:
+        portal_ends = set()
+        for connection in self._connections.values():
+            if connection.side_a_region_id == region_id:
+                portal_ends.add(RegionPortalEnd(
+                    connection.portal_id, PortalSide.A))
+            if connection.side_b_region_id == region_id:
+                portal_ends.add(RegionPortalEnd(
+                    connection.portal_id, PortalSide.B))
+        return portal_ends
 
     @staticmethod
     def _region_snapshot(state: _RegionState) -> RegionSnapshot:

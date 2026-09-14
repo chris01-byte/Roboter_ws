@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/C)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/D)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,19 +10,20 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/C – stabile passive Aufgabenreferenzen als reine Logik softwaregeprüft,
-zur Review.** Der begrenzte Regionsgraph führt opake Aufgaben-IDs der Typen
-`frontier`, `portal` und `observation` samt kanonischem Regionsbezug,
-Erzeugungs-/Aktualisierungsrevision und Zustand `open`/`completed`.
-Regionsvereinigungen erhalten alle Referenzen aliasfest. Dies ist weiterhin
-nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder Hardwareabnahme.
+**WE-M2/D – kontrollierte Regionsteilung als reine Logik softwaregeprüft, zur
+Review.** Ein expliziter revisionsgebundener Auftrag verteilt jeden konkreten
+Portalendpunkt und jede Aufgaben-ID einer vorläufigen Region vollständig auf die
+beibehaltene und eine neue stabile Regions-ID. Der bisherige Regionszustand wird
+konservativ genau einer Seite zugewiesen; Replays folgen der korrigierten
+Topologie. Dies ist weiterhin nicht der gesamte WE-M2-Umfang und keine
+Zielsystem- oder Hardwareabnahme.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/D.** Im reinen
-Graphmodul nur eine explizite, revisionsgebundene und vollständig spezifizierte
-Regionsteilung ergänzen. Jeder Portalendpunkt und jede Aufgaben-ID der
-Ausgangsregion muss genau einer der Ergebnisregionen zugewiesen sein; bei Lücken,
-Dopplungen oder Konflikten geschlossen abbrechen. Keine automatische
-Teilungsentscheidung, Geometrieanalyse, ROS-Ausgabe, Navigation oder Fahrwirkung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/E.** Als reinen
+Schema-/Projektionsschritt einen begrenzten, deterministischen Schattenstatus aus
+Portal- und Regionssnapshots erzeugen. Er muss Kontext, Graphrevision, Datenalter
+beziehungsweise veralteten Stand, aktuelle Region, Verbindungen und vollständige
+Aufgabenzähler sichtbar machen, aber noch keinen ROS-Publisher einbinden. Keine
+Zielbewertung, Marker-Geometrie, Navigation oder Fahrwirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -48,6 +49,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/A `feature/we-m2a-region-graph` | Gestapelter, nicht eingebundener Regions-/Verbindungskern auf WE-M1/C; zwei neue Python-Dateien und Status, kein Deployment. |
 | WE-M2/B `feature/we-m2b-region-merge` | Gestapelte, explizit ausgelöste Regionsvereinigung mit Aliasauflösung; nur Graphmodul, Tests und Status, kein Deployment. |
 | WE-M2/C `feature/we-m2c-task-references` | Gestapelte passive Aufgabenreferenzen mit aliasfestem Regionsbezug; nur Graphmodul, Tests und Status, kein Deployment. |
+| WE-M2/D `feature/we-m2d-region-split` | Gestapelte, vollständig spezifizierte Regionsteilung; nur Graphmodul, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -285,7 +287,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis C als reine Topologie samt Vereinigung und Aufgabenbezug softwaregeprüft; kontrollierte Teilung und passive Integration offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis D als reine Topologie samt Vereinigung, Aufgabenbezug und kontrollierter Teilung softwaregeprüft; passive Statusprojektion und ROS-Schattenintegration offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -323,9 +325,10 @@ vollständiger Regionsgraph und Abschluss fehlen.
 dieselbe Flur-ID führen. WE-M2/B schließt Schleifen durch explizite
 Regionsvereinigung und erhält alte IDs als Alias. WE-M2/C erhält offene und
 erledigte Aufgabenreferenzen bei diesen Vereinigungen und löst ihren Regionsbezug
-kanonisch auf. Eine neue bestätigte Portal-ID erzeugt weiterhin zunächst eine
-vorläufige Gegenregion. Automatische Mergeentscheidung, Teilung,
-Geometriekorrekturen und passive Runtime-Ausgabe fehlen noch.
+kanonisch auf. WE-M2/D teilt eine Region nur nach vollständiger externer
+Zuordnung aller Portalenden und Aufgaben und erhält Replays. Eine neue bestätigte
+Portal-ID erzeugt weiterhin zunächst eine vorläufige Gegenregion. Automatische
+Merge-/Splitentscheidung, Geometriekorrekturen und passive Runtime-Ausgabe fehlen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -344,6 +347,75 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/D: Regionsteilung ordnet alle Referenzen explizit zu
+
+**Entscheidung / Umfang:** `region_graph.py` ausschließlich um einen begrenzten,
+idempotenten `RegionSplit`-Vertrag ergänzt. Die kanonische Ausgangs-ID bleibt als
+eine Ergebnisregion erhalten, genau eine neue ID wird deterministisch erzeugt.
+Der Auftrag nennt für jede Seite A/B jeder betroffenen Portalverbindung und jede
+Aufgaben-ID eindeutig `retained` oder `created`. Er leitet keine Teilung aus
+Karte, Sensorik oder Geometrie ab.
+
+Gesehen, betreten und Eintrittszähler werden als unteilbarer historischer Zustand
+konservativ genau dem explizit gewählten `state_target` zugewiesen; dadurch werden
+Belege und Zähler weder erfunden noch verdoppelt. War die Ausgangsregion aktuell,
+folgt die aktuelle Region demselben Ziel. Historische Alias-IDs bleiben bei der
+beibehaltenen ID, weil eine einzelne alte ID nicht mehrdeutig auf zwei Regionen
+auflösbar sein darf.
+
+**Nachgewiesenes Verhalten:** Portalenden – einschließlich beider Seiten einer
+internen Verbindung – und Aufgaben werden ohne Verlust auf beide Ergebnisse
+verteilt. Alte Portalbeobachtungs-, Durchfahrts- und Aufgaben-Replays liefern die
+nach der Teilung aktuelle Zuordnung, ohne Zustand erneut zu verändern. Ein
+anschließender expliziter Merge vereinigt beide Ergebnisse wieder ohne verlorene
+Portale oder Aufgaben. Exakte Split-Replays sind idempotent und normalisieren
+später vereinigte IDs.
+
+Unvollständige, doppelte oder fremde Portal-/Aufgabenzuordnungen,
+widersprüchliche Split-IDs, fremder Kontext, unbekannte Ausgangsregion,
+veraltete Revision sowie feste Regions- und Verlaufsgrenzen schlagen vor der
+ersten Änderung geschlossen fehl. Die Eingabetupel werden kanonisch sortiert,
+damit ihre Reihenfolge keine zweite Operation erzeugt.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2D-GRAPH | Regionsgraph-Suite: **80 passed**, einschließlich 28 neuer Split-/Replay-/Negativfälle. |
+| WE-M2D-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **294 passed**. |
+| WE-M2D-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **189 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2D-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Der zusätzliche Lauf einschließlich des bereits in Abschnitt 5 abgegrenzten
+VL53-Vertragstests ergab **296 bestanden, 1 fehlgeschlagen**; Fehlerbild und
+betroffene unveränderte Dateien entsprechen WE-M2/C. Der Colcon-Aufbau
+überschreibt keine Arbeitsinstallation und nutzt `robot_interfaces` aus dem
+vorhandenen Underlay. Nicht geprüft wurden reale Segmentierung oder Korrekturen,
+ROS-QoS/TF, Laufzeitlast, Sensorik, Footprint, Kollisionswirkung oder Hardware.
+
+**Offene Risiken / Integrationsabhängigkeiten:** Teilungsgrund und komplette
+Zuordnung sind externe Eingaben; ein Detektor oder geometrischer Beleg fehlt
+bewusst. Der konservative unteilbare Zustand kann historische Eintritte nicht auf
+beide Ergebnisse verteilen, weil der bisherige Graph keine ortsgebundenen
+Eintrittsbelege besitzt. Eine falsche externe Zuordnung bleibt logisch konsistent,
+ist aber keine belegte reale Raumkorrektur. Statusschema, Datenfrische,
+Schattenausgabe, Kartenursprungs-/Rotationsadapter und Ressourcenmessung fehlen.
+
+**Nächster abgegrenzter Schritt WE-M2/E:** Neu nur ein reines
+Statusprojektionsmodul, dessen Tests und diese STATUS.md. Einen versionierten,
+begrenzten und deterministischen Schattenstatus aus vorhandenen unveränderlichen
+Portal-/Graphsnapshots bilden. Kontext, Quell-/Graphrevision, explizite
+Frischebewertung, aktuelle Region, Verbindungs- und Aufgabenbestand sowie
+ungelöste/unsichere Zustände ausweisen. Noch keine ROS-Node-Änderung,
+Marker-Geometrie, Zielauswahl, Navigation oder Fahrwirkung; die spätere
+Publisher-Einbindung bleibt ein eigener Schritt.
+
+**Rückfallweg:** Den WE-M2/D-Commit beziehungsweise den gestapelten Review-PR
+zurücknehmen. WE-M2/A bis C und WE-M1 bleiben separat reviewbar. Da kein
+Runtime-Pfad den Regionsgraph importiert, gibt es keine Runtime- oder
+Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/C: Aufgabenreferenzen bleiben bei Merge stabil
 
