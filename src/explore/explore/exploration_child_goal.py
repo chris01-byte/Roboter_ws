@@ -10,7 +10,11 @@ import hashlib
 import re
 from typing import Dict, Optional, Tuple
 
-from .exploration_policy import StatefulPolicyAssessment
+from .exploration_policy import (
+    ExplorationPolicyAssessment,
+    PolicyAssessmentState,
+    StatefulPolicyAssessment,
+)
 from .portal_memory import PortalMapContext
 
 
@@ -211,6 +215,32 @@ def goal_intent_from_selection(
         context=assessment.passive.context,
         map_revision=assessment.passive.source_map_revision,
     )
+
+
+def current_goal_intent_from_assessments(
+        current: ExplorationPolicyAssessment,
+        stateful: StatefulPolicyAssessment,
+) -> Optional[ExplorationGoalIntent]:
+    """Return an intent only while the live passive assessment still agrees."""
+    if not isinstance(current, ExplorationPolicyAssessment):
+        raise ChildGoalContractError(
+            "current muss ExplorationPolicyAssessment sein")
+    if not isinstance(stateful, StatefulPolicyAssessment):
+        raise ChildGoalContractError(
+            "stateful muss StatefulPolicyAssessment sein")
+    if (
+            current.context != stateful.passive.context
+            or current.source_map_revision
+            != stateful.passive.source_map_revision):
+        raise ChildGoalContractError(
+            "Aktuelle und zustandsbehaftete Bewertung passen nicht zusammen")
+    if (
+            current.state is not PolicyAssessmentState.READY_WITH_TASKS
+            or not current.source_ready
+            or stateful.selected_task_id is None
+            or stateful.selected_task_id not in current.eligible_task_ids):
+        return None
+    return goal_intent_from_selection(stateful)
 
 
 class ExplorationChildGoalSession:

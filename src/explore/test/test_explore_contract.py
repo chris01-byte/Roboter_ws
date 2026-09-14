@@ -1444,7 +1444,8 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         ),
         data=[0, 0, 0, -1],
     )
-    task = SimpleNamespace(state=RegionTaskState.OPEN)
+    task = SimpleNamespace(
+        task_id='task-1', state=RegionTaskState.OPEN)
     source = SimpleNamespace(
         context=SimpleNamespace(frame_id='map'),
         source_map_revision=7,
@@ -1466,6 +1467,8 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         state=PolicyAssessmentState.READY_WITH_TASKS,
     )
     stateful = object()
+    intent = SimpleNamespace(intent_id='intent-1', task_id='task-1')
+    candidate = object()
     evidence = SimpleNamespace(
         source_map_revision=7,
         availability=availability,
@@ -1495,6 +1498,8 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     node._wohnungserkundung_evidence_policy = object()
     node._wohnungserkundung_evidence_cache_key = None
     node._wohnungserkundung_evidence_cache = None
+    node._wohnungserkundung_goal_cache_key = None
+    node._wohnungserkundung_goal_cache = None
     node._wohnungserkundung_stateful_assessment = None
 
     class FakeTaskPolicySession:
@@ -1553,6 +1558,30 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
                 'stateful': stateful,
             }
         ) else None)
+    monkeypatch.setattr(
+        explore_node_module, 'current_goal_intent_from_assessments',
+        lambda selected_assessment, selected_stateful: intent if (
+            selected_assessment is assessment
+            and selected_stateful is stateful
+        ) else None)
+    goal_builds = []
+
+    def build_goal(selected_intent, selected_correlation, **kwargs):
+        assert not node._region_graph_shadow_lock.locked()
+        assert selected_intent is intent
+        assert selected_correlation is correlation
+        assert kwargs['task'] is task
+        assert kwargs['tracks'] is tracks
+        assert kwargs['evidence'] is evidence
+        assert kwargs['robot_xy'] == (1.0, 2.0)
+        goal_builds.append((selected_intent, selected_correlation))
+        return candidate
+
+    monkeypatch.setattr(
+        explore_node_module, 'build_frontier_goal_candidate', build_goal)
+    monkeypatch.setattr(
+        explore_node_module, 'build_goal_candidate_status',
+        lambda value: {'state': 'current'} if value is candidate else None)
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
 
     node._publish_region_graph_shadow_status()
@@ -1568,8 +1597,12 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
             'availability_count': 1,
             'utility_count': 1,
         },
+        'goal_candidate': {
+            'state': 'current',
+        },
     }
     assert len(evidence_builds) == 1
+    assert len(goal_builds) == 1
     assert stateful_builds == [source]
     assert len(publications) == 2
     assert all(message.data == '{"shadow":true}' for message in publications)

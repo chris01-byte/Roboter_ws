@@ -20,6 +20,7 @@ from explore.exploration_child_goal import (  # noqa: E402
     ChildGoalState,
     ExplorationChildGoalSession,
     ExplorationGoalIntent,
+    current_goal_intent_from_assessments,
     goal_intent_from_selection,
 )
 from explore.exploration_policy import (  # noqa: E402
@@ -124,6 +125,30 @@ def test_selection_derives_stable_id_only_intent():
     assert not hasattr(first, "pose")
     assert not hasattr(first, "path")
     assert goal_intent_from_selection(_assessment(task_id=None)) is None
+
+
+def test_live_assessment_must_still_agree_before_intent_is_current():
+    stateful = _assessment()
+    assert current_goal_intent_from_assessments(
+        stateful.passive, stateful) == goal_intent_from_selection(stateful)
+
+    stale = replace(
+        stateful.passive,
+        state=PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES,
+        source_ready=False,
+        stale_sources=("source_map",),
+        eligible_task_ids=(),
+    )
+    assert current_goal_intent_from_assessments(stale, stateful) is None
+    deselected = replace(stateful.passive, eligible_task_ids=())
+    assert current_goal_intent_from_assessments(deselected, stateful) is None
+
+
+def test_live_and_stateful_revision_mismatch_fails_closed():
+    stateful = _assessment()
+    with pytest.raises(ChildGoalContractError, match="passen nicht"):
+        current_goal_intent_from_assessments(
+            replace(stateful.passive, source_map_revision=8), stateful)
 
 
 def test_exact_start_replay_is_idempotent_and_competing_child_is_rejected():
