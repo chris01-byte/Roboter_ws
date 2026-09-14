@@ -1,9 +1,10 @@
 """Pure lifecycle owner for one decoded passive region-graph shadow session.
 
 The owner composes the bounded JSON decoder, map-status correlator, and shadow
-session without reading a clock or exposing ROS, portal, navigation, filesystem,
-or actuator interfaces.  A map epoch change is deliberately not healed in
-place: callers must create a new owner with a new explicit session identifier.
+session without reading a clock or exposing ROS, qualified evidence, traversal,
+navigation, filesystem, or actuator interfaces.  It accepts only the existing
+unqualified portal-plan contract.  A map epoch change is deliberately not healed
+in place: callers must create a new owner with a new explicit session identifier.
 """
 
 from dataclasses import dataclass
@@ -18,7 +19,12 @@ from .map_status_adapter import (
     MapStatusUnavailableError,
     decode_map_manager_status_json,
 )
-from .portal_memory import PortalMapContext, PortalMemoryPolicy
+from .portal_memory import (
+    ObservationResult,
+    PortalMapContext,
+    PortalMemoryPolicy,
+)
+from .portal_plan_adapter import PortalPlanCandidate
 from .region_graph import RegionGraphPolicy, RegionSeed
 from .region_graph_shadow import RegionGraphShadowSession
 from .region_graph_status import ShadowStatusPolicy
@@ -103,6 +109,7 @@ class RegionGraphShadowLifecycle:
         self._latest_map_status: Optional[MapStatusCorrelationResult] = None
         self._last_monotonic_seconds: Optional[float] = None
         self._graph_changed_monotonic_seconds: Optional[float] = None
+        self._portal_changed_monotonic_seconds: Optional[float] = None
 
     @property
     def state(self) -> ShadowLifecycleState:
@@ -173,6 +180,33 @@ class RegionGraphShadowLifecycle:
             map_status=result,
         )
 
+    def observe_portal_plan(
+            self, candidate: PortalPlanCandidate, *,
+            observed_monotonic_seconds: float) -> ObservationResult:
+        """Accept one unqualified portal plan in the active map context."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Portalplan wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(candidate, PortalPlanCandidate):
+            raise RegionGraphShadowLifecycleError(
+                "candidate muss PortalPlanCandidate sein")
+        if candidate.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Portalplan passt nicht zum aktiven Kartenkontext")
+        if candidate.map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Portalplan liegt vor dem aktuellen Kartenstatus")
+
+        result = self._session.observe_portal_plan(candidate)
+        self._last_monotonic_seconds = observed
+        if not result.duplicate:
+            self._portal_changed_monotonic_seconds = observed
+        return result
+
     def build_status_json(self, *, now_monotonic_seconds: float) -> str:
         """Build status only after a complete map initialized the owner."""
         now = self._validate_monotonic_progress(
@@ -186,9 +220,12 @@ class RegionGraphShadowLifecycle:
         if graph_changed is None:
             raise RegionGraphShadowLifecycleError(
                 "Graphzeitpunkt fehlt trotz aktiver Schatten-Sitzung")
+        portal_age = None
+        if self._portal_changed_monotonic_seconds is not None:
+            portal_age = now - self._portal_changed_monotonic_seconds
         payload = self._session.build_status_json(
             self._latest_map_status,
-            portal_memory_age_seconds=None,
+            portal_memory_age_seconds=portal_age,
             region_graph_age_seconds=now - graph_changed,
         )
         self._last_monotonic_seconds = now

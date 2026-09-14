@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/N)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/O)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,22 +10,23 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/N – monotones Graphalter im reinen Lebenszyklus softwaregeprüft, zur
-Review.** Kartenstatuseingang und Statusprojektion verlangen explizite monotone
-Zeitpunkte. Das Graphalter beginnt beim einmaligen Sitzungsstart und wächst trotz
-weiterer Kartenstatusmeldungen weiter; Portalalter bleibt mangels Portalzuführung
-sichtbar `missing`. Zeitrücklauf oder ungültige Werte scheitern atomar. Es gibt
-weiterhin keine echte Uhr, ROS-, Portal-, Explorer- oder Fahrwirkung.
+**WE-M2/O – unqualifizierte Portalzuführung und Portalalter softwaregeprüft, zur
+Review.** Der reine Lebenszyklus nimmt nach Sitzungsstart vorhandene
+`PortalPlanCandidate`-Eingänge auf. Kontext und Revision werden gegen den
+aktuellen Kartenstand geprüft. Neue und mehrdeutige Beobachtungen setzen das
+Portalalter, exaktes Replay nicht. Kandidaten bleiben unqualifiziert und erzeugen
+weder Graphverbindung noch Eintritt. Es gibt weiterhin keine echte Uhr, ROS-,
+Explorer- oder Fahrwirkung.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/O.** Dem reinen
-Lebenszyklus ausschließlich die bestehende `PortalPlanCandidate`-Zuführung aus
-WE-M2/H hinzufügen. Sie ist erst nach Sitzungsstart zulässig, muss zum Kontext
-passen und darf nicht vor der Graph- oder nach der aktuell korrelierten
-Kartenrevision liegen. Ein expliziter monotoner Beobachtungszeitpunkt aktualisiert
-das Portalalter nur bei einer neuen, nicht als Replay erkannten Beobachtung;
-Replay darf Frische nicht vortäuschen. Nur Lebenszyklusmodul, dessen Test und
-diese STATUS.md; keine Qualifikation, Graphverbindung, Durchfahrt, echte Uhr,
-ROS-, Node-, Launch-, Parameter-, Ziel- oder Fahrsoftware.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/P.** Vor dem
+ersten ROS-Eingriff ausschließlich die passive Integrationsnaht erneut
+quellenbasiert festlegen: aktuellen Main-, HWT-, lokalen Explorer- und gestapelten
+WE-Stand vergleichen; konkrete Besitzer-, Callback-, Portalplan-, Session-ID-,
+monotone Uhr-, Topic-/QoS-, 1-Hz-Ausgabe- und Fehlerpfade benennen. Insbesondere
+klären, welcher Branch die sichere Runtime-Basis ist und wie
+`region_graph_shadow_enabled: false` ohne Änderung des bestehenden
+`/explore/status_json` garantiert wird. Nur diese STATUS.md; keine Funktions-,
+Node-, Launch-, Parameter- oder Fahrsoftware und kein Branchmerge.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -62,6 +63,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/L `feature/we-m2l-map-status-json` | Gestapelte reine, begrenzte Decodierung des tatsächlichen Kartenmanager-Status-JSON in den bestehenden Korrelationsvertrag; Adapter, Tests und Status. |
 | WE-M2/M `feature/we-m2m-shadow-lifecycle` | Gestapelter reiner Lebenszyklusbesitzer für Decoder, Kartenkorrelator und genau eine Schatten-Sitzung; neues Modul, Tests und Status. |
 | WE-M2/N `feature/we-m2n-shadow-monotonic-age` | Gestapelte explizite monotone Eingangszeit und daraus abgeleitetes Graphalter im reinen Lebenszyklus; Modul, Tests und Status. |
+| WE-M2/O `feature/we-m2o-shadow-portal-feed` | Gestapelte unqualifizierte Portalplan-Zuführung mit replayfestem Portalalter im reinen Lebenszyklus; Modul, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -299,7 +301,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis N decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus und monotones Graphalter ab. Portalzuführung/-alter, ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis O decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus sowie monotones Graph- und Portalalter ab. Runtime-Basis, ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -355,8 +357,9 @@ Verlauf der explizit extrahierten Kartenmanagerfelder ableiten. WE-M2/K bindet
 dieses Ergebnis typisiert und revisionsmonoton an die Sitzung. WE-M2/L decodiert
 den tatsächlichen Statusumschlag rein und begrenzt. WE-M2/M besitzt daraus genau
 eine Sitzung und verweigert automatische Epochenübernahme. WE-M2/N leitet das
-Graphalter aus expliziten monotonen Zeitpunkten ab; Portalzuführung/-alter,
-ROS-Subscription und echte Laufzeitmessung fehlen weiterhin.
+Graphalter aus expliziten monotonen Zeitpunkten ab. WE-M2/O führt unqualifizierte
+Portalpläne mit replayfestem Portalalter zu; Runtime-Basis, ROS-Subscription,
+qualifizierte Evidenz und echte Laufzeitmessung fehlen weiterhin.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -375,6 +378,63 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/O: Portal-Replay verjüngt die Quelle nicht
+
+**Entscheidung / Umfang:** `RegionGraphShadowLifecycle.observe_portal_plan()`
+nimmt nach dem ersten vollständigen Kartenstatus genau den bestehenden
+`PortalPlanCandidate` aus WE-M2/H und einen expliziten monotonen
+Beobachtungszeitpunkt entgegen. Vor Mutation werden aktiver Sitzungsbesitz,
+exakter `PortalMapContext` und eine Revision geprüft, die weder vor dem
+Graphstart noch nach dem letzten korrelierten Kartenstatus liegt. Die vorhandene
+Sitzung normalisiert den Kandidaten weiterhin ausschließlich zu unqualifizierter
+`INSUFFICIENT`-Evidenz.
+
+Jede erfolgreich gespeicherte neue Beobachtung setzt den Portal-
+Änderungszeitpunkt, auch wenn ihre Zuordnung mehrdeutig bleibt und deshalb kein
+Portal verändert wird. Ein exaktes Beobachtungs-ID-Replay wird zwar idempotent
+angenommen und nimmt an der globalen monotonen Reihenfolge teil, setzt diesen
+Zeitpunkt aber nicht neu. Damit kann wiederholtes Abspielen derselben Beobachtung
+keine Portalfrische vortäuschen. Die Statusausgabe berechnet das Portalalter nun
+intern; ohne Beobachtung bleibt die Quelle `missing`. Der Graphzeitpunkt bleibt
+von Portalplänen unverändert.
+
+Fremder Kontext, Zukunfts- oder Alt-Revision, ungültiger Kandidat, Zeitrücklauf
+und Kapazitäts-/Adapterfehler verändern weder Portalgedächtnis noch den letzten
+gültigen Zeitstand. Die öffentliche Lebenszyklus-API besitzt weiterhin keine
+Qualifikation, Durchfahrt, Graphverbindung, Zielwahl oder Resetfunktion.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und `robot_interfaces` aus dem vorhandenen Underlay,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2O-PORTAL | Erweiterte Lebenszyklus-Suite: **50 passed**. |
+| WE-M2O-EXPLORE | Gesamte Explorer-Suite: **425 passed**. |
+| WE-M2O-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **530 passed**. |
+| WE-M2O-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **425 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2O-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Nicht geprüft wurden eine echte monotone Uhr, ein realer Explorer-Portalplan,
+qualifizierende Struktur-/LiDAR-Evidenz, eine reale Topic-Nachricht,
+ROS-Subscription/QoS/Discovery, Publisher, Jetson-Laufzeit/Speicher, reale Karten,
+Sensorik, Footprint, Kollisionswirkung oder Hardware. Eine gespeicherte
+unqualifizierte Beobachtung bestätigt weder Tür, Durchfahrt noch Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/P:** Ausschließlich diese STATUS.md anhand
+des nach `git fetch origin` belegten Main-, HWT-, lokalen und gestapelten
+WE-Stands fortschreiben. Exakte Einfügepunkte und Besitzverhältnisse im Explorer,
+Quelle der `PortalPlanCandidate`-Felder, Erzeugung/Validierung der Sitzungs-ID,
+Verwendung einer monotonen Uhr, Kartenstatus-Subscription, getrenntes
+`/explore/region_graph/status_json`, QoS, maximal 1 Hz, standardmäßig deaktivierte
+Parameter und Fehler-/Epochenverhalten festlegen. Noch kein funktionaler
+Branchmerge und keine Node-, Launch-, Parameter-, Ziel- oder Fahrsoftware.
+
+**Rückfallweg:** Portalzuführung und Portalzeitpunkt aus Lebenszyklus und Test
+entfernen sowie diesen WE-M2/O-Statusabschnitt zurücknehmen beziehungsweise den
+gestapelten PR schließen. WE-M2/A bis N bleiben separat reviewbar; kein Runtime-,
+Installations- oder Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/N: Graphfrische beginnt bei der tatsächlichen Erzeugung
 
