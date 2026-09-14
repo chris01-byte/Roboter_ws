@@ -22,7 +22,10 @@ from explore.exploration_policy import (  # noqa: E402
     TaskAvailabilityState,
     TaskHistoryPolicy,
     TaskReactivation,
+    TaskScoringPolicy,
+    TaskUtilityEvidence,
     assess_exploration_policy,
+    score_task_utilities,
 )
 from explore.portal_memory import (  # noqa: E402
     Point2D,
@@ -159,6 +162,37 @@ def _all_available(revision):
         _availability("a-other", revision=revision),
         _availability("z-current", revision=revision),
     )
+
+
+def _utility(task_id, revision, route_m, information_square_m):
+    return TaskUtilityEvidence(
+        task_id=task_id,
+        context=CONTEXT,
+        map_revision=revision,
+        geodesic_path_length_m=route_m,
+        information_gain_square_m=information_square_m,
+    )
+
+
+def _same_region_source():
+    source = _source_with_two_open_tasks()
+    current = source.graph.current_region_id
+    tasks = tuple(
+        replace(task, region_id=current) for task in source.graph.tasks)
+    graph = replace(
+        source.graph,
+        tasks=tasks,
+        regions=tuple(
+            replace(
+                region,
+                task_ids=tuple(sorted(
+                    task.task_id for task in tasks
+                    if task.region_id == region.region_id)),
+            )
+            for region in source.graph.regions
+        ),
+    )
+    return replace(source, graph=graph)
 
 
 def _fresh_single_region_source(*, complete):
@@ -702,3 +736,137 @@ def test_retry_and_history_policy_inputs_are_strict():
             TaskAttemptOutcome.PROGRESSED, "progress", 5)
     with pytest.raises(ExplorationPolicyError):
         TaskHistoryPolicy(maximum_retryable_failures=0)
+
+
+def test_scalar_utility_is_normalized_with_explicit_units_and_weights():
+    scores = score_task_utilities(
+        ("a-other", "z-current"),
+        (
+            _utility("z-current", 4, 10.0, 5.0),
+            _utility("a-other", 4, 40.0, 20.0),
+        ),
+        4,
+    )
+
+    assert [item.task_id for item in scores] == ["a-other", "z-current"]
+    capped, middle = scores
+    assert capped.normalized_route_cost == 1.0
+    assert capped.normalized_information_gain == 1.0
+    assert capped.score == pytest.approx(0.6)
+    assert middle.normalized_route_cost == 0.5
+    assert middle.normalized_information_gain == 0.5
+    assert middle.score == pytest.approx(0.5)
+
+
+def test_utility_refines_selection_only_within_the_hierarchical_candidate_set():
+    source = _same_region_source()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    result = session.assess(
+        source,
+        _all_available(4),
+        (
+            _utility("a-other", 4, 2.0, 9.0),
+            _utility("z-current", 4, 15.0, 1.0),
+        ),
+    )
+
+    assert result.selected_task_id == "a-other"
+    assert result.selection_reason == "current_region"
+    assert [item.task_id for item in result.utility_scores] == [
+        "a-other", "z-current"]
+    assert result.completion_allowed is False
+    assert not hasattr(result, "goal")
+    assert not hasattr(result, "path")
+
+
+def test_equal_utility_uses_stable_task_id_tie_break():
+    source = _same_region_source()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    result = session.assess(
+        source,
+        _all_available(4),
+        (
+            _utility("z-current", 4, 5.0, 5.0),
+            _utility("a-other", 4, 5.0, 5.0),
+        ),
+    )
+    assert result.selected_task_id == "a-other"
+
+
+def test_custom_weights_are_visible_and_change_the_id_order():
+    source = _same_region_source()
+    evidence = (
+        _utility("a-other", 4, 18.0, 9.0),
+        _utility("z-current", 4, 2.0, 1.0),
+    )
+    route_only = TaskScoringPolicy(
+        route_weight=1.0, information_weight=0.0)
+    information_only = TaskScoringPolicy(
+        route_weight=0.0, information_weight=1.0)
+
+    route_result = ExplorationTaskPolicySession(CONTEXT).assess(
+        source, _all_available(4), evidence, route_only)
+    information_result = ExplorationTaskPolicySession(CONTEXT).assess(
+        source, _all_available(4), evidence, information_only)
+
+    assert route_result.selected_task_id == "z-current"
+    assert information_result.selected_task_id == "a-other"
+
+
+def test_utility_must_exactly_cover_selectable_ids_at_current_revision():
+    source = _same_region_source()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    with pytest.raises(ExplorationPolicyError, match="exakt abdecken"):
+        session.assess(
+            source,
+            _all_available(4),
+            (_utility("a-other", 4, 1.0, 1.0),),
+        )
+    with pytest.raises(ExplorationPolicyError, match="aktuellen"):
+        ExplorationTaskPolicySession(CONTEXT).assess(
+            source,
+            _all_available(4),
+            (
+                _utility("a-other", 3, 1.0, 1.0),
+                _utility("z-current", 3, 1.0, 1.0),
+            ),
+        )
+
+
+def test_duplicate_foreign_nonfinite_and_unpaired_scoring_inputs_fail_closed():
+    source = _same_region_source()
+    duplicate = _utility("a-other", 4, 1.0, 1.0)
+    with pytest.raises(ExplorationPolicyError, match="doppelte"):
+        score_task_utilities(
+            ("a-other",), (duplicate, duplicate), 4)
+    foreign = replace(
+        duplicate,
+        context=PortalMapContext("foreign", "map", "map"),
+    )
+    with pytest.raises(ExplorationPolicyError, match="fremden"):
+        ExplorationTaskPolicySession(CONTEXT).assess(
+            source,
+            _all_available(4),
+            (foreign, _utility("z-current", 4, 1.0, 1.0)),
+        )
+    with pytest.raises(ExplorationPolicyError):
+        _utility("bad", 4, float("nan"), 1.0)
+    with pytest.raises(ExplorationPolicyError, match="ohne"):
+        ExplorationTaskPolicySession(CONTEXT).assess(
+            source, _all_available(4), scoring_policy=TaskScoringPolicy())
+
+
+def test_scoring_capacity_and_configuration_are_strict():
+    evidence = (
+        _utility("a-other", 4, 1.0, 1.0),
+        _utility("z-current", 4, 1.0, 1.0),
+    )
+    with pytest.raises(ExplorationPolicyCapacityError):
+        score_task_utilities(
+            ("a-other", "z-current"), evidence, 4,
+            TaskScoringPolicy(max_evidence=1),
+        )
+    with pytest.raises(ExplorationPolicyError):
+        TaskScoringPolicy(route_normalization_m=0.0)
+    with pytest.raises(ExplorationPolicyError):
+        TaskScoringPolicy(route_weight=0.0, information_weight=0.0)
