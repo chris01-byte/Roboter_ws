@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/E)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/F)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,21 +10,21 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/E – versionierte Schattenstatus-Projektion als reine Logik
-softwaregeprüft, zur Review.** Das neue Modul bildet bestehende unveränderliche
-Portal-, Erreichbarkeits- und Regionssnapshots deterministisch auf begrenztes JSON
-ab. Kontext, Quellrevisionen, Revisionsalter, aktuelle Region, Verbindungen,
-Aufgaben und ungelöste Zustände werden sichtbar; metrische Wohnungsgeometrie und
-Ziele fehlen absichtlich. Es wird noch nichts publiziert. Dies ist weiterhin
-nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder Hardwareabnahme.
+**WE-M2/F – passive Integrationsabgrenzung dokumentiert, zur Review.** Main,
+HWT-Erprobungsstand, lokaler Mischstand, Explorer-Statusvertrag, Kartenmanager und
+iOS-/Web-Verbraucher wurden erneut quellen- und testbasiert verglichen. Die
+spätere Schattenausgabe erhält ein separates Topic; `/explore/status_json` und
+`ExploreArea` bleiben unverändert. Kein vorhandener Portalvorschlag darf ohne
+zusätzlichen Evidenzadapter als bestätigte Struktur oder Durchfahrt eingehen.
+Dies ist weiterhin nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder
+Hardwareabnahme.
 
-**Nächster vorgeschlagener Schritt nach Review: WE-M2/F – passive
-Integrationsabgrenzung.** Vor einer Runtime-Änderung Main-, HWT- und lokalen
-Explorerstand sowie Statusverbraucher erneut gegenprüfen und die konkrete Quelle
-normalisierter Portal-/Graphereignisse, Besitzer/Lebensdauer des Schattenzustands,
-Topic/QoS, standardmäßig deaktivierten Start und Ressourcenbudget festlegen.
-Ergebnis zunächst nur in dieser STATUS.md; keine Fahrsoftware, ROS-Ausgabe,
-Navigation oder Gerätewirkung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/G.** Die reine
+Schattenprojektion um explizit vom späteren Adapter gelieferte monotone
+Alterswerte für Kartenquelle, Portalgedächtnis und Regionsgraph ergänzen. Eine
+eingefrorene Quelle muss auch bei unveränderter Revisionsdifferenz als `stale`
+erscheinen. Nur `region_graph_status.py`, dessen Tests und diese STATUS.md;
+noch kein ROS-Publisher, Explorer-Eingriff, Ziel oder Fahrwirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -52,6 +52,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/C `feature/we-m2c-task-references` | Gestapelte passive Aufgabenreferenzen mit aliasfestem Regionsbezug; nur Graphmodul, Tests und Status, kein Deployment. |
 | WE-M2/D `feature/we-m2d-region-split` | Gestapelte, vollständig spezifizierte Regionsteilung; nur Graphmodul, Tests und Status, kein Deployment. |
 | WE-M2/E `feature/we-m2e-shadow-status` | Gestapelte reine JSON-Schattenprojektion mit expliziter Revisionsfrische und harten Ausgabegrenzen; neues Modul, Tests und Status, kein Publisher oder Deployment. |
+| WE-M2/F `docs/we-m2f-shadow-integration` | Gestapelte Integrationsentscheidung zu Eingängen, Zustandsbesitz, getrenntem Topic, QoS, Frische und Rückfall; nur Statusdokumentation. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -289,7 +290,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis E als reine Topologie samt Korrekturen, Aufgabenbezug und Statusprojektion softwaregeprüft; Integrationsabgrenzung und passive ROS-Schattenausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis E als reine Topologie samt Korrekturen, Aufgabenbezug und Statusprojektion softwaregeprüft; WE-M2/F grenzt die Integration ab. Zeitfrische, Eingangsadapter und passive ROS-Schattenausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -332,7 +333,9 @@ Zuordnung aller Portalenden und Aufgaben und erhält Replays. Eine neue bestäti
 Portal-ID erzeugt weiterhin zunächst eine vorläufige Gegenregion. Automatische
 Merge-/Splitentscheidung und Geometriekorrekturen fehlen. WE-M2/E kann den
 vorhandenen Stand passiv, revisionsgebunden und ohne metrische Geometrie
-serialisieren; Runtime-Besitz, Eingangsdaten und ROS-Ausgabe sind noch offen.
+serialisieren. WE-M2/F legt getrenntes Topic, QoS und Zustandsbesitz fest, belegt
+aber zugleich, dass Zeitfrische und zulässige Evidenzadapter vor der
+ROS-Ausgabe fehlen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -351,6 +354,103 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/F: Schattenintegration bleibt getrennt und fail-closed
+
+**Verglichener Stand:** Nach erneutem `git fetch origin` blieb Main auf
+`05439c7a13d7a92e69b9eb4663e3a2a1b44626a1`, HWT auf
+`1d91229dc10ff4bb791938d49aae8e9808a5dfff`; beide sind ab `9822962` weiterhin
+mit 16 nur auf Main und 46 nur auf HWT vorhandenen Commits divergent. Der lokale
+Primärbaum blieb auf `feature/modulare-sensorfusion`/`00f6e52` mit den bereits
+dokumentierten Änderungen und der nicht eingecheckten Konturstrategie. Er wurde
+weder gewechselt noch beschrieben.
+
+**Eingangsentscheidung:** Main liefert `PortalPlan` aus getrennten
+Costmap-Komponenten und frischer LiDAR-Prüfung, aber keine stabile Portal-ID,
+Strukturevidenz oder Kartenrevision. HWT ergänzt verbundene Engstellen,
+Portalpriorität, begrenztes Nachrücken und einen expliziten Übergangszähler,
+jedoch ebenfalls keinen WE-M1-Evidenzvertrag. Der lokale Konturstand führt nur
+einen flüchtigen `room_index`; er ist weder stabiler Regionsgraph noch
+reproduzierbare Integrationsbasis.
+
+Darum gilt fail-closed: Vorhandene Main-/HWT-Portalangebote dürfen ein passives
+Gedächtnis zunächst höchstens mit `INSUFFICIENT` speisen. `QUALIFIED` benötigt
+einen separat getesteten Adapter mit benannter frischer Geometrie-/LiDAR-Evidenz.
+Eine bestätigte Durchfahrt benötigt den getrennten vollständigen
+Chassis-/Auslauf-, Pose-, Sensor- und Plausibilitätsvertrag; Nav2-Erfolg,
+Portalzähler oder `room_index` allein genügen nicht. WE-M2 erweitert damit keine
+Fahrbefugnis und verändert weder Costmap noch Rohkarte.
+
+**Karten- und Frischeentscheidung:** `robot_map_manager` akzeptiert `/map`,
+unterdrückt inhaltsgleiche Snapshots anhand SHA-256-Fingerprint und stellt
+Fingerprint, Quellstempel, Empfangsalter sowie den sitzungsbezogenen Zähler
+`accepted_maps` im Status bereit. Dieser Zähler kann nach Prozessneustart nicht
+als dauerhafte Kartenidentität dienen; innerhalb einer expliziten
+Schatten-Sitzung ist er aber die kleinste wiederverwendbare Revisionsquelle.
+Fingerprint und Quellstempel müssen zur Korrelation sichtbar bleiben. Rücklauf,
+fehlender Fingerprint oder Kartenmanager-Neustart erzwingt einen neuen Kontext
+beziehungsweise `stale`, niemals stilles Weiterzählen.
+
+WE-M2/E bewertet bisher nur Revisionsabstand. Bleiben Karte und beide abgeleiteten
+Stände gemeinsam eingefroren, bleibt dieser Abstand null und würde fälschlich
+frisch aussehen. Vor einem Publisher muss der reine Vertrag deshalb zusätzlich
+extern gemessene monotone Alterswerte führen; die Projektionsfunktion liest auch
+dann selbst keine Uhr.
+
+**Ausgabe- und Besitzerentscheidung:** `/explore/status_json` bleibt unverändert.
+iOS verlangt dort ein vollständiges Schema 1 und verwendet Frische sowie
+`backend_ready` zur Startfreigabe; Web prüft dieselben Felder und zeigt
+`map_ready_to_save`. Ein Schattenstatus auf diesem Topic könnte abgelehnt oder
+mit Fahrbereitschaft verwechselt werden. Mission, Navigation, LLM und Gesicht
+haben laut Quellsuche keinen direkten Verbraucher dieses Explorerstatus; die
+bestehenden App-Verbraucher sind dennoch verbindlich.
+
+Die spätere Ausgabe erhält daher ausschließlich
+`/explore/region_graph/status_json` als `std_msgs/msg/String`, QoS Keep-last 1,
+reliable und transient-local, maximal 1 Hz sowie bei relevanter Zustandsänderung
+zusammengefasst. Sie bleibt mit `region_graph_shadow_enabled: false`
+standardmäßig aus. Der Schattenzustand soll nach geklärter Runtime-Basis im
+bestehenden Explorerprozess leben: Dort liegen Detektor- und
+Durchfahrtsentscheidungen bereits vor, ohne zweiten Karten-, Nav2- oder
+Motorbesitzer. Marker, App-Abonnement und Abschlusslogik bleiben getrennte
+Folgeschritte.
+
+**Ausgeführte Prüfungen:** Ausschließlich Quell-/Konfigurationsvergleich und
+Python-Tests, ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2F-STACK | Gestapelter WE-M2/E-Explorerstand: **220 passed**. |
+| WE-M2F-HWT | Sauberer HWT-Explorerstand `1d91229`: **80 passed**. |
+| WE-M2F-LOCAL | Lokal veränderter Primär-Explorerstand: **67 passed**. |
+| WE-M2F-APP-MOCK | Python-Tests des iOS-rosbridge-Mocks: **7 passed**. |
+| WE-M2F-STATIC | `git diff --check`: bestanden. |
+
+Swift-/Xcode-Tests, Browser-Lauf, ROS-QoS/Discovery, Publisherrate,
+Kartenmanager-Neustart, Jetson-Ressourcen, Sensorik, Footprint und Hardware
+wurden nicht ausgeführt. Grüne Quelltests belegen keine zulässige
+Strukturevidenz, reale Durchfahrt oder Hardwareabnahme.
+
+**Offene Abhängigkeiten:** Die funktionale Runtime-Basis bleibt zwischen Main,
+HWT und lokalem Konturstand ungeklärt; kein Gesamtmerge ist freigegeben. Der
+Kartenmanagerstatus ist asynchron zum Explorer-Map-Callback und braucht einen
+expliziten Korrelations-/Neustartvertrag. Schwellen für monotones Alter,
+Publisherbudget und `QUALIFIED`-Evidenz sind noch nicht gemessen. Ohne diese
+Punkte darf der Schattenstatus weder `fresh` noch einen Eintritt erfinden.
+
+**Nächster abgegrenzter Schritt WE-M2/G:** Nur
+`region_graph_status.py`, `test_region_graph_status.py` und diese STATUS.md.
+Nichtnegative endliche, vom späteren Adapter gelieferte monotone Alterswerte für
+Kartenquelle, Portalgedächtnis und Regionsgraph in die Frischeentscheidung
+aufnehmen. Fehlend, zu alt, inkonsistent oder zeitlich zurücklaufend muss sichtbar
+`missing`/`stale` oder fail-closed werden; eine eingefrorene Karte bei
+Revisionsgleichstand synthetisch testen. Grenzwerte ausdrücklich als
+Softwarestartwerte kennzeichnen. Noch kein ROS-, Node-, Launch-, Parameter-,
+Ziel- oder Fahrsoftwareeingriff.
+
+**Rückfallweg:** Nur diesen WE-M2/F-Statusabschnitt beziehungsweise den
+Dokumentations-PR zurücknehmen. WE-M2/A bis E bleiben separat reviewbar; es gibt
+keine Runtime-, Installations- oder Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/E: begrenzter Schattenstatus ohne Publisher
 
