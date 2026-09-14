@@ -569,6 +569,7 @@ class StatefulPolicyAssessment:
     selection_reason: str
     retry_deferred_task_ids: Tuple[str, ...]
     retry_exhausted_task_ids: Tuple[str, ...]
+    utility_scores: Tuple["TaskUtilityScore", ...]
     history: Tuple[TaskHistorySnapshot, ...]
     blocker_codes: Tuple[str, ...]
     completion_allowed: bool = False
@@ -589,6 +590,144 @@ class _TaskHistoryState:
     last_attempt_reason: Optional[str] = None
     last_reactivation_revision: Optional[int] = None
     completed: bool = False
+
+
+@dataclass(frozen=True)
+class TaskUtilityEvidence:
+    """Planner-independent scalar evidence; contains no pose or path."""
+
+    task_id: str
+    context: PortalMapContext
+    map_revision: int
+    geodesic_path_length_m: float
+    information_gain_square_m: float
+
+    def __post_init__(self) -> None:
+        _identifier(self.task_id, "task_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise ExplorationPolicyError(
+                "context muss PortalMapContext sein")
+        _revision(self.map_revision, "map_revision")
+        _finite_nonnegative(
+            self.geodesic_path_length_m, "geodesic_path_length_m")
+        _finite_nonnegative(
+            self.information_gain_square_m,
+            "information_gain_square_m",
+        )
+
+
+@dataclass(frozen=True)
+class TaskScoringPolicy:
+    """Visible synthetic normalization and weights for ID-only scoring."""
+
+    route_normalization_m: float = 20.0
+    information_normalization_square_m: float = 10.0
+    route_weight: float = 0.4
+    information_weight: float = 0.6
+    max_evidence: int = 4096
+
+    def __post_init__(self) -> None:
+        for name in (
+                "route_normalization_m",
+                "information_normalization_square_m"):
+            if _finite_nonnegative(getattr(self, name), name) <= 0.0:
+                raise ExplorationPolicyError(f"{name} muss positiv sein")
+        for name in ("route_weight", "information_weight"):
+            _finite_nonnegative(getattr(self, name), name)
+        if self.route_weight + self.information_weight <= 0.0:
+            raise ExplorationPolicyError(
+                "Mindestens ein Bewertungsgewicht muss positiv sein")
+        if (
+                isinstance(self.max_evidence, bool)
+                or not isinstance(self.max_evidence, int)
+                or self.max_evidence <= 0):
+            raise ExplorationPolicyError(
+                "max_evidence muss eine positive Ganzzahl sein")
+
+
+@dataclass(frozen=True)
+class TaskUtilityScore:
+    task_id: str
+    geodesic_path_length_m: float
+    information_gain_square_m: float
+    normalized_route_cost: float
+    normalized_information_gain: float
+    score: float
+
+
+def _finite_nonnegative(value: object, name: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ExplorationPolicyError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    normalized = float(value)
+    if not math.isfinite(normalized) or normalized < 0.0:
+        raise ExplorationPolicyError(
+            f"{name} muss eine nichtnegative endliche Zahl sein")
+    return normalized
+
+
+def score_task_utilities(
+        task_ids: Tuple[str, ...],
+        evidence: Tuple[TaskUtilityEvidence, ...],
+        source_revision: int,
+        policy: Optional[TaskScoringPolicy] = None,
+) -> Tuple[TaskUtilityScore, ...]:
+    """Return canonical bounded scalar scores for exactly the given IDs."""
+    selected_policy = policy or TaskScoringPolicy()
+    if not isinstance(selected_policy, TaskScoringPolicy):
+        raise ExplorationPolicyError("policy muss TaskScoringPolicy sein")
+    if not isinstance(task_ids, tuple):
+        raise ExplorationPolicyError("task_ids muss ein Tupel sein")
+    for task_id in task_ids:
+        _identifier(task_id, "task_id")
+    if len(set(task_ids)) != len(task_ids):
+        raise ExplorationPolicyError("task_ids enthaelt Duplikate")
+    if not isinstance(evidence, tuple) or any(
+            not isinstance(item, TaskUtilityEvidence) for item in evidence):
+        raise ExplorationPolicyError(
+            "evidence muss ein Tupel aus TaskUtilityEvidence sein")
+    if len(evidence) > selected_policy.max_evidence:
+        raise ExplorationPolicyCapacityError(
+            "Bewertungsevidenz ueberschreitet die Policygrenze")
+    evidence_ids = [item.task_id for item in evidence]
+    if len(set(evidence_ids)) != len(evidence_ids):
+        raise ExplorationPolicyError(
+            "Bewertungsevidenz enthaelt doppelte Aufgaben-IDs")
+    if set(evidence_ids) != set(task_ids):
+        raise ExplorationPolicyError(
+            "Bewertungsevidenz muss den Kandidatenbestand exakt abdecken")
+    if any(item.map_revision != source_revision for item in evidence):
+        raise ExplorationPolicyError(
+            "Bewertungsevidenz gehoert nicht zur aktuellen Kartenrevision")
+
+    total_weight = (
+        selected_policy.route_weight + selected_policy.information_weight)
+    scores = []
+    for item in evidence:
+        route = min(
+            float(item.geodesic_path_length_m)
+            / selected_policy.route_normalization_m,
+            1.0,
+        )
+        information = min(
+            float(item.information_gain_square_m)
+            / selected_policy.information_normalization_square_m,
+            1.0,
+        )
+        score = (
+            selected_policy.route_weight * (1.0 - route)
+            + selected_policy.information_weight * information
+        ) / total_weight
+        scores.append(TaskUtilityScore(
+            task_id=item.task_id,
+            geodesic_path_length_m=float(item.geodesic_path_length_m),
+            information_gain_square_m=float(
+                item.information_gain_square_m),
+            normalized_route_cost=route,
+            normalized_information_gain=information,
+            score=score,
+        ))
+    return tuple(sorted(scores, key=lambda item: item.task_id))
 
 
 class ExplorationTaskPolicySession:
@@ -700,13 +839,16 @@ class ExplorationTaskPolicySession:
     def assess(
             self, source: ShadowStatusSource,
             task_availability: Tuple[TaskAvailability, ...] = (),
+            task_utilities: Tuple[TaskUtilityEvidence, ...] = (),
+            scoring_policy: Optional[TaskScoringPolicy] = None,
     ) -> StatefulPolicyAssessment:
         if not isinstance(source, ShadowStatusSource):
             raise ExplorationPolicyError(
                 "source muss ShadowStatusSource sein")
         self._require_context(source.context)
         revision = source.source_map_revision
-        request = (source, task_availability)
+        request = (
+            source, task_availability, task_utilities, scoring_policy)
         if self._latest_assessment_revision is not None:
             if revision < self._latest_assessment_revision:
                 raise ExplorationPolicyError(
@@ -735,8 +877,29 @@ class ExplorationTaskPolicySession:
             >= self._policy.maximum_retryable_failures
         ))
         selectable = eligible - set(retry_deferred) - set(retry_exhausted)
+        utility_scores = ()
+        if task_utilities:
+            if not isinstance(task_utilities, tuple) or any(
+                    not isinstance(item, TaskUtilityEvidence)
+                    for item in task_utilities):
+                raise ExplorationPolicyError(
+                    "task_utilities muss TaskUtilityEvidence enthalten")
+            if any(item.context != self._context for item in task_utilities):
+                raise ExplorationPolicyError(
+                    "Bewertungsevidenz hat einen fremden Kartenkontext")
+            utility_scores = score_task_utilities(
+                tuple(sorted(selectable)),
+                task_utilities,
+                revision,
+                scoring_policy,
+            )
+        elif scoring_policy is not None:
+            raise ExplorationPolicyError(
+                "scoring_policy ohne Bewertungsevidenz ist ungueltig")
+        score_by_task = {
+            item.task_id: item.score for item in utility_scores}
         selected_task_id, reason = self._select_task(
-            selectable, source, revision)
+            selectable, source, revision, score_by_task)
         selected_region_id = (
             self._tasks[selected_task_id].region_id
             if selected_task_id is not None else None)
@@ -761,6 +924,7 @@ class ExplorationTaskPolicySession:
             selection_reason=reason,
             retry_deferred_task_ids=retry_deferred,
             retry_exhausted_task_ids=retry_exhausted,
+            utility_scores=utility_scores,
             history=self.history(),
             blocker_codes=tuple(blocker_codes),
             completion_allowed=False,
@@ -794,12 +958,15 @@ class ExplorationTaskPolicySession:
 
     def _select_task(
             self, selectable: set, source: ShadowStatusSource,
-            revision: int) -> Tuple[Optional[str], str]:
+            revision: int,
+            score_by_task: Dict[str, float],
+    ) -> Tuple[Optional[str], str]:
         if not selectable or not source.graph.current_region_id:
             return None, "no_selectable_task"
         ordered = sorted(
             selectable,
             key=lambda task_id: (
+                -score_by_task.get(task_id, 0.0),
                 self._tasks[task_id].first_seen_revision,
                 task_id,
             ),
@@ -828,6 +995,7 @@ class ExplorationTaskPolicySession:
                 self._tasks[task_id].last_selected_revision
                 if self._tasks[task_id].last_selected_revision is not None
                 else self._tasks[task_id].first_seen_revision,
+                -score_by_task.get(task_id, 0.0),
                 task_id,
             ),
         )
