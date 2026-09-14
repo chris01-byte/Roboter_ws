@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/Z)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AA)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,13 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/Z – gemeinsame begrenzte Zellnormalisierung softwaregeprüft, zur Review.**
-Das ROS-freie Blattpaket `amadeus_map_identity` besitzt nun neben dem Digest die
-eine kanonische Umwandlung von ROS-int8-Zellen in unveränderliche Bytes. Der
-Kartenmanager delegiert seinen bisherigen privaten Schnell-/Fallbackpfad dorthin;
-der reine Explorer-Quellenadapter verarbeitet denselben Vertrag. Die bestehende
-Vier-Millionen-Zellen-Grenze, bekannte Fingerprints und der Kartenmanager-
-Fehlertyp bleiben erhalten. Noch ist kein ROS-Callback oder Puffer angebunden.
+**WE-M2/AA – begrenzter asynchroner Rohkarten-/Statusjoin softwaregeprüft, zur Review.**
+Der reine `RawMapStatusJoiner` nimmt Rohkartenidentität und validierten
+Kartenmanagerstatus in beliebiger Reihenfolge entgegen. Er speichert nur eine
+explizit vom Aufrufer begrenzte Folge kleiner Identitätsobjekte, gibt ausschließlich
+bei exakter Fingerprint-/Stempel-/Frame-Gleichheit frei, dedupliziert Replays und
+weist widersprüchliche Statusfolgen zurück. Erwartete Nichttreffer bleiben
+wartender Zustand. Noch ist der Joiner in keinen Lebenszyklus oder ROS-Callback
+eingebunden.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -24,12 +25,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AA:** Ausschließlich einen reinen,
-beidseitig anstoßbaren Exaktabgleich zwischen begrenzten Rohkartenidentitäten und
-dem aktuellen Kartenmanagerstatus entwerfen und softwareprüfen. Die Kapazität
-muss der Aufrufer explizit setzen; es gibt noch keinen Runtime-Default und keine
-ROS-Anbindung. Erwartete asynchrone Nichttreffer dürfen nicht zum dauerhaften
-Fehler werden. Kein Detektor, Portalfeed, Ziel oder Fahrpfad.
+**Nächster abgegrenzter Schritt WE-M2/AB:** Ausschließlich den Besitzer- und
+Messvertrag für die spätere passive Runtime-Einbindung festlegen: opt-in-
+Parameter, Lebenszyklusübergaben, sichtbare Nichttreffer-/Verdrängungsmetriken,
+Callback-Reihenfolge und ein motorloses Jetson-Messprofil. Zunächst nur
+STATUS.md; noch kein ROS-Callback, Runtime-Default, Detektor, Portalfeed, Ziel
+oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -78,6 +79,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/X `feature/we-m2x-shared-map-identity` | Gestapelte gemeinsame ROS-freie Fingerprintquelle für Kartenmanager und Explorer mit bytegleichen Vektoren und azyklischem Paketgraphen; kein Deployment. |
 | WE-M2/Y `docs/we-m2y-raw-map-runtime-seam` | Gestapelte Quellen- und Nebenläufigkeitsentscheidung zur passiven Rohkartennaht mit lokaler synthetischer Typ-/Kostenmessung; nur diese STATUS.md, kein Deployment. |
 | WE-M2/Z `feature/we-m2z-shared-cell-normalization` | Gestapelte gemeinsame ROS-freie, begrenzte Zellnormalisierung für Kartenmanager und Explorer; reine Module, Tests, Inventar und Status, kein Deployment. |
+| WE-M2/AA `feature/we-m2aa-raw-map-status-join` | Gestapelter reiner, explizit begrenzter und beidseitig anstoßbarer Exaktjoin von Rohkartenidentität und Kartenmanagerstatus; Adapter, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -412,6 +414,66 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AA: begrenzter beidseitiger Rohkarten-/Statusjoin
+
+**Entscheidung / Umfang:** Neu ist ausschließlich der reine
+`RawMapStatusJoiner` im bestehenden `portal_source_adapter.py`. Seine Kapazität
+ist ein obligatorisches positives Konstruktorargument; dieser Schritt erfindet
+weder Messwert noch Runtime-Default. Er hält eine einfügungsgeordnete Abbildung
+aus exakter Rohkartenidentität und unveränderlichem `RawMapPortalSource`, nicht
+die Rasterzellen. Beim Überschreiten entfernt er genau die älteste noch
+wartende Identität und zählt die Verdrängung sichtbar.
+
+Sowohl `observe_source()` als auch `observe_status()` versuchen den Join erneut.
+Dadurch sind Status-vor-Karte und Karte-vor-Status gleichwertig. Nur identischer
+SHA-256-Fingerprint, identischer Quellstempel einschließlich null und identischer
+Frame führen über den Exaktvertrag aus WE-M2/V zu einer
+`PortalSourceCorrelation`. Ein fehlender Treffer liefert `None`, verändert den
+gültigen Status nicht und löst keinen Fehler aus. Wiederholte Quellen werden
+nicht mehrfach gepuffert; dieselbe bereits ausgegebene Identität/Revision wird
+nicht erneut ausgegeben.
+
+Der Joiner prüft außerdem die Folge bereits normalisierter Kartenstatusobjekte:
+Kontext- oder Revisionsrücksprung, Identitätswechsel ohne neue Revision, neue
+Revision ohne Identitätswechsel sowie widersprüchliche Änderungs-/Replayflags
+werden fail-closed verworfen, ohne den zuletzt gültigen Status zu überschreiben.
+Die vorgelagerte `MapManagerStatusCorrelator` bleibt Eigentümer von JSON,
+Kartenepoch und Zeitprüfung; der neue Joiner ersetzt ihn nicht.
+
+**Geänderte Dateien:** Nur
+`src/explore/explore/portal_source_adapter.py`, dessen reine Unit-Tests und diese
+STATUS.md. Keine Änderung an Node, Lebenszyklus, Launch, Parametern, Topics,
+Kartenmanager, Detektor, Navigation oder Fahrsoftware.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz, für die vollständige
+Explorer-Suite ROS-Humble-Underlay und vorhandene generierte Schnittstellen;
+keine Nodes, Geräte, Karten, Bags oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AA-FOCUSED | Vollständiger Portalquellenadapter einschließlich beider Eingangsreihenfolgen, Wachstum/Nichttreffer, Replay, Kapazitätsverdrängung und gefälschter Folgen: **48 passed**. |
+| WE-M2AA-EXPLORER | Vollständige Explorer-Suite: **499 passed**. |
+| WE-M2AA-ADJACENT | Zusätzlich Blattpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **640 passed**. |
+| WE-M2AA-COLCON | Temporärer isolierter Build von Blattpaket und Explorer: 2 Pakete gebaut; **36 + 499 = 535 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AA-STATIC | `git diff --check`, `flake8 --diff` (E501/W503 ausgenommen) und `compileall`: bestanden. |
+
+**Offene Grenzen / Rückfall:** Die explizite Kapazität beweist Begrenztheit der
+reinen Struktur, aber noch keinen ausreichenden Wert für die reale Kartenrate
+und Callbackverzögerung. Ohne Runtime-Besitzer existieren keine Messwerte für
+Nichttreffer oder Verdrängungen auf dem Jetson. Der Joiner gibt noch keinen
+Portalplan an den Schattenlebenszyklus und beeinflusst keine Navigation. Die
+Tests sind keine Zielsystem- oder Hardwareabnahme. Rückfall ist das
+Nichtverwenden des neuen Typs beziehungsweise das Zurücknehmen des einzelnen
+WE-M2/AA-Commits; der stateless Exaktabgleich aus WE-M2/V bleibt erhalten.
+
+**Nächster abgegrenzter Schritt WE-M2/AB:** Dokumentarisch festlegen, welcher
+bestehende Schattenbesitzer den Joiner hält, wie ein separater standardmäßig
+deaktivierter Opt-in und eine nur explizit gesetzte Kapazität validiert werden,
+welche Zähler/Frischeangaben ohne Änderung von `/explore/status_json` sichtbar
+werden und wie der motorlose Jetson-Lauf Kartenrate, Join-Latenz, Verdrängung,
+Digestzeit, Callbackzeit und Speicher misst. Erst danach darf ein passiver
+ROS-Integrationsschritt abgegrenzt werden.
 
 ### 2026-09-14 – WE-M2/Z: eine gemeinsame begrenzte Zellnormalisierung
 

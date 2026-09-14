@@ -17,6 +17,7 @@ from explore.portal_memory import PortalMapContext  # noqa: E402
 from explore.portal_source_adapter import (  # noqa: E402
     PortalSourceAdapterError,
     RawMapPortalSource,
+    RawMapStatusJoiner,
     correlate_raw_map_portal_source,
     raw_map_portal_source_from_values,
 )
@@ -99,6 +100,153 @@ def test_generic_cells_use_the_same_shared_normalization():
 def test_noncanonical_values_do_not_create_a_portal_source(changes):
     with pytest.raises(PortalSourceAdapterError):
         source_from_values(**changes)
+
+
+def test_joiner_matches_when_status_arrives_before_raw_source():
+    joiner = RawMapStatusJoiner(capacity=2)
+
+    assert joiner.observe_status(map_status()) is None
+    result = joiner.observe_source(source())
+
+    assert result is not None
+    assert result.map_revision == 12
+    assert joiner.pending_source_count == 0
+
+
+def test_joiner_matches_when_raw_source_arrives_before_status():
+    joiner = RawMapStatusJoiner(capacity=2)
+
+    assert joiner.observe_source(source()) is None
+    result = joiner.observe_status(map_status())
+
+    assert result is not None
+    assert result.fingerprint == FINGERPRINT
+    assert joiner.current_status == map_status()
+
+
+def test_expected_mismatch_stays_pending_and_can_match_later():
+    joiner = RawMapStatusJoiner(capacity=3)
+    future = source(fingerprint="b" * 64, source_stamp_ns=200)
+
+    assert joiner.observe_source(future) is None
+    assert joiner.observe_status(map_status()) is None
+    current = joiner.observe_source(source())
+
+    assert current is not None
+    assert current.map_revision == 12
+    assert joiner.pending_source_count == 1
+    next_status = map_status(
+        map_revision=13,
+        fingerprint="b" * 64,
+        source_stamp_ns=200,
+    )
+    following = joiner.observe_status(next_status)
+    assert following is not None
+    assert following.map_revision == 13
+
+
+def test_joiner_deduplicates_source_and_status_replays():
+    joiner = RawMapStatusJoiner(capacity=2)
+    assert joiner.observe_source(source()) is None
+    assert joiner.observe_source(source()) is None
+    assert joiner.pending_source_count == 1
+    assert joiner.observe_status(map_status()) is not None
+
+    assert joiner.observe_source(source()) is None
+    assert joiner.observe_status(replace(
+        map_status(), map_changed=False, replayed=True,
+    )) is None
+    assert joiner.pending_source_count == 0
+
+
+def test_joiner_can_start_from_an_upstream_replay_status():
+    joiner = RawMapStatusJoiner(capacity=1)
+    replay = replace(map_status(), map_changed=False, replayed=True)
+
+    assert joiner.observe_status(replay) is None
+    assert joiner.observe_source(source()).map_revision == 12
+
+
+def test_joiner_evicts_only_oldest_identity_at_explicit_capacity():
+    joiner = RawMapStatusJoiner(capacity=2)
+    first = source(fingerprint="1" * 64, source_stamp_ns=1)
+    second = source(fingerprint="2" * 64, source_stamp_ns=2)
+    third = source(fingerprint="3" * 64, source_stamp_ns=3)
+
+    assert joiner.observe_source(first) is None
+    assert joiner.observe_source(second) is None
+    assert joiner.observe_source(third) is None
+    assert joiner.pending_source_count == 2
+    assert joiner.evicted_source_count == 1
+    assert joiner.observe_status(map_status(
+        fingerprint="1" * 64,
+        source_stamp_ns=1,
+    )) is None
+    result = joiner.observe_status(map_status(
+        map_revision=13,
+        fingerprint="3" * 64,
+        source_stamp_ns=3,
+    ))
+    assert result is not None
+    assert result.fingerprint == "3" * 64
+
+
+@pytest.mark.parametrize("capacity", [0, -1, True, 1.5])
+def test_joiner_requires_an_explicit_positive_capacity(capacity):
+    with pytest.raises(PortalSourceAdapterError):
+        RawMapStatusJoiner(capacity=capacity)
+
+
+def test_joiner_rejects_invalid_input_types_without_changing_state():
+    joiner = RawMapStatusJoiner(capacity=2)
+
+    with pytest.raises(PortalSourceAdapterError):
+        joiner.observe_source("raw-map")
+    with pytest.raises(PortalSourceAdapterError):
+        joiner.observe_status("map-status")
+
+    assert joiner.pending_source_count == 0
+    assert joiner.current_status is None
+
+
+@pytest.mark.parametrize("next_status", [
+    map_status(
+        map_revision=12,
+        fingerprint="b" * 64,
+        source_stamp_ns=2,
+        map_changed=False,
+    ),
+    map_status(
+        map_revision=11,
+        fingerprint="b" * 64,
+        source_stamp_ns=2,
+    ),
+    map_status(
+        map_revision=13,
+        fingerprint="b" * 64,
+        source_stamp_ns=2,
+        map_changed=False,
+    ),
+    map_status(
+        map_revision=13,
+        fingerprint="b" * 64,
+        source_stamp_ns=2,
+        replayed=True,
+    ),
+    map_status(
+        context=PortalMapContext("other-session", "other-map", "map"),
+        map_changed=False,
+    ),
+])
+def test_joiner_rejects_forged_or_regressive_status_sequences(next_status):
+    joiner = RawMapStatusJoiner(capacity=2)
+    initial = map_status()
+    assert joiner.observe_status(initial) is None
+
+    with pytest.raises(PortalSourceAdapterError):
+        joiner.observe_status(next_status)
+
+    assert joiner.current_status == initial
 
 
 def test_exact_current_raw_map_identity_releases_context_and_revision():
