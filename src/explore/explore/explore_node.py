@@ -84,8 +84,13 @@ from explore.frontier_task_feed import (
     frontier_inventory_from_clusters,
 )
 from explore.exploration_migration import (
+    build_goal_candidate_status,
     build_passive_we_status_extension,
+    build_unavailable_goal_candidate_status,
     build_unavailable_we_status_extension,
+)
+from explore.exploration_child_goal import (
+    current_goal_intent_from_assessments,
 )
 from explore.exploration_policy import (
     ExplorationTaskPolicySession,
@@ -97,6 +102,7 @@ from explore.frontier_task_evidence import (
     FrontierTaskEvidencePolicy,
     build_frontier_task_evidence,
 )
+from explore.frontier_goal_candidate import build_frontier_goal_candidate
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -996,6 +1002,8 @@ class ExploreNode(Node):
             )
             self._wohnungserkundung_evidence_cache_key = None
             self._wohnungserkundung_evidence_cache = None
+            self._wohnungserkundung_goal_cache_key = None
+            self._wohnungserkundung_goal_cache = None
             self._wohnungserkundung_task_policy_session = None
             self._wohnungserkundung_stateful_assessment = None
             self._wohnungserkundung_status_extension = (
@@ -1324,6 +1332,7 @@ class ExploreNode(Node):
         self._try_observe_correlated_raw_map_frontiers()
         self._try_observe_connected_raw_map_portals()
         evidence_inputs = None
+        candidate_inputs = None
         evidence_unavailable_reason = (
             'frontier_task_feed_disabled'
             if not getattr(
@@ -1430,6 +1439,9 @@ class ExploreNode(Node):
                         self._wohnungserkundung_evidence_cache = evidence
                     task_availability = evidence.availability
                     utility_evidence = evidence.utilities
+                    candidate_inputs = (
+                        raw_map, correlation, tracks, evidence,
+                        robot_pose, evidence_key)
                     evidence_status = {
                         'state': 'current',
                         'map_revision': evidence.source_map_revision,
@@ -1484,6 +1496,71 @@ class ExploreNode(Node):
                     stateful=stateful,
                 )
                 extension['task_evidence_source'] = evidence_status
+                if candidate_inputs is None:
+                    goal_status = build_unavailable_goal_candidate_status(
+                        'exact_goal_evidence_unavailable')
+                else:
+                    intent = current_goal_intent_from_assessments(
+                        assessment, stateful)
+                    if intent is None:
+                        goal_status = build_unavailable_goal_candidate_status(
+                            'withheld_by_current_policy')
+                    else:
+                        raw_map, correlation, tracks, evidence, robot_pose, (
+                            evidence_key) = candidate_inputs
+                        matching_tasks = tuple(
+                            task for task in status.source.graph.tasks
+                            if task.task_id == intent.task_id)
+                        try:
+                            if len(matching_tasks) != 1:
+                                raise ValueError(
+                                    'Auswahl braucht genau eine Graphaufgabe')
+                            goal_key = (*evidence_key, intent.intent_id)
+                            if goal_key == self._wohnungserkundung_goal_cache_key:
+                                candidate = self._wohnungserkundung_goal_cache
+                            else:
+                                origin = raw_map.info.origin
+                                candidate = build_frontier_goal_candidate(
+                                    intent,
+                                    correlation,
+                                    width=raw_map.info.width,
+                                    height=raw_map.info.height,
+                                    resolution=raw_map.info.resolution,
+                                    frame_id=raw_map.header.frame_id.strip(),
+                                    origin=(
+                                        origin.position.x,
+                                        origin.position.y,
+                                        origin.position.z,
+                                        origin.orientation.x,
+                                        origin.orientation.y,
+                                        origin.orientation.z,
+                                        origin.orientation.w,
+                                    ),
+                                    cells=raw_map.data,
+                                    source_stamp_ns=(
+                                        int(raw_map.header.stamp.sec)
+                                        * 1_000_000_000
+                                        + int(raw_map.header.stamp.nanosec)
+                                    ),
+                                    robot_xy=(
+                                        None if robot_pose is None
+                                        else (robot_pose[0], robot_pose[1])
+                                    ),
+                                    task=matching_tasks[0],
+                                    tracks=tracks,
+                                    evidence=evidence,
+                                    policy=(
+                                        self._wohnungserkundung_evidence_policy),
+                                )
+                                self._wohnungserkundung_goal_cache_key = goal_key
+                                self._wohnungserkundung_goal_cache = candidate
+                            goal_status = build_goal_candidate_status(candidate)
+                        except Exception as goal_error:
+                            goal_status = (
+                                build_unavailable_goal_candidate_status(
+                                    f'goal_candidate_error:'
+                                    f'{type(goal_error).__name__}'))
+                extension['goal_candidate'] = goal_status
             except Exception as error:
                 fault = f'policy_error:{type(error).__name__}'
                 self._wohnungserkundung_status_extension = (

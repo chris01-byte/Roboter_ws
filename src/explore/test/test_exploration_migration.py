@@ -20,10 +20,13 @@ from explore.exploration_migration import (  # noqa: E402
     WE_PASSIVE_STATUS_MAX_BLOCKER_CODES,
     WE_STATUS_SCHEMA_VERSION,
     build_passive_we_status_extension,
+    build_goal_candidate_status,
+    build_unavailable_goal_candidate_status,
     build_unavailable_we_status_extension,
     build_we_status_extension,
     project_completion_for_legacy,
 )
+from explore.frontier_goal_candidate import FrontierGoalCandidate  # noqa: E402
 from explore.exploration_policy import (  # noqa: E402
     ExplorationPolicyAssessment,
     PolicyAssessmentState,
@@ -177,6 +180,62 @@ def test_unavailable_passive_status_is_explicitly_fail_closed():
         "blocker_codes": ["waiting_for_shadow_snapshot"],
         "blocker_codes_truncated": False,
     }
+
+
+def test_goal_candidate_projection_is_numeric_and_never_dispatched():
+    candidate = FrontierGoalCandidate(
+        intent_id="intent-1",
+        task_id="task-1",
+        region_id="region-1",
+        frontier_id="frontier-1",
+        map_revision=7,
+        frame_id="map",
+        source_fingerprint="a" * 64,
+        source_stamp_ns=123,
+        target_x_m=1.0,
+        target_y_m=2.0,
+        target_yaw_rad=0.5,
+        target_row=20,
+        target_col=10,
+        frontier_x_m=1.1,
+        frontier_y_m=2.1,
+        route_length_m=3.0,
+        information_gain_square_m=1.5,
+    )
+
+    assert build_goal_candidate_status(candidate) == {
+        "state": "current",
+        "intent_id": "intent-1",
+        "task_id": "task-1",
+        "region_id": "region-1",
+        "frontier_id": "frontier-1",
+        "map_revision": 7,
+        "frame_id": "map",
+        "source_fingerprint": "a" * 64,
+        "source_stamp_ns": 123,
+        "target": {
+            "x_m": 1.0,
+            "y_m": 2.0,
+            "yaw_rad": 0.5,
+            "row": 20,
+            "col": 10,
+        },
+        "frontier": {"x_m": 1.1, "y_m": 2.1},
+        "route_length_m": 3.0,
+        "information_gain_square_m": 1.5,
+        "navigation_dispatched": False,
+    }
+    assert build_unavailable_goal_candidate_status("stale") == {
+        "state": "unavailable",
+        "reason": "stale",
+        "navigation_dispatched": False,
+    }
+
+
+@pytest.mark.parametrize("value", [None, "candidate", 1])
+def test_goal_candidate_projection_rejects_wrong_type(value):
+    with pytest.raises(ExplorationMigrationError):
+        build_goal_candidate_status(value)
 
 
 def test_passive_status_exposes_bounded_scalar_task_evidence():

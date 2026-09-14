@@ -20,6 +20,7 @@ from .exploration_policy import (
     StatefulPolicyAssessment,
     TaskUtilityScore,
 )
+from .frontier_goal_candidate import FrontierGoalCandidate
 
 
 WE_STATUS_SCHEMA_VERSION = 1
@@ -310,4 +311,49 @@ def build_unavailable_we_status_extension(reason: str) -> dict:
         "blocker_count": 1,
         "blocker_codes": [reason],
         "blocker_codes_truncated": False,
+    }
+
+
+def build_goal_candidate_status(candidate: FrontierGoalCandidate) -> dict:
+    """Project one numeric preview while explicitly denying dispatch."""
+    if not isinstance(candidate, FrontierGoalCandidate):
+        raise ExplorationMigrationError(
+            "candidate muss FrontierGoalCandidate sein")
+    return {
+        "state": "current",
+        "intent_id": candidate.intent_id,
+        "task_id": candidate.task_id,
+        "region_id": candidate.region_id,
+        "frontier_id": candidate.frontier_id,
+        "map_revision": candidate.map_revision,
+        "frame_id": candidate.frame_id,
+        "source_fingerprint": candidate.source_fingerprint,
+        "source_stamp_ns": candidate.source_stamp_ns,
+        "target": {
+            "x_m": candidate.target_x_m,
+            "y_m": candidate.target_y_m,
+            "yaw_rad": candidate.target_yaw_rad,
+            "row": candidate.target_row,
+            "col": candidate.target_col,
+        },
+        "frontier": {
+            "x_m": candidate.frontier_x_m,
+            "y_m": candidate.frontier_y_m,
+        },
+        "route_length_m": candidate.route_length_m,
+        "information_gain_square_m": (
+            candidate.information_gain_square_m),
+        "navigation_dispatched": False,
+    }
+
+
+def build_unavailable_goal_candidate_status(reason: str) -> dict:
+    """Expose why no current preview exists without implying completion."""
+    if not isinstance(reason, str) or not reason or len(reason) > 128:
+        raise ExplorationMigrationError(
+            "reason muss 1 bis 128 Textzeichen enthalten")
+    return {
+        "state": "unavailable",
+        "reason": reason,
+        "navigation_dispatched": False,
     }
