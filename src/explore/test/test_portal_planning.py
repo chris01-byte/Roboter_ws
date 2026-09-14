@@ -9,6 +9,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from explore.portal_planning import (  # noqa: E402
+    find_connected_clearance_portals,
     find_portal_bridges,
     front_lidar_corridor_check,
 )
@@ -62,6 +63,59 @@ def test_bridge_endpoints_must_both_have_acceptable_nav2_cost():
     assert costs[bridge.target_row, bridge.target_col] <= 90
     assert bridge.staging_col == 25
     assert bridge.target_col == target_start + 2
+
+
+def _connected_rooms(*, target_rows=50):
+    occupancy = np.full((60, 100), -1, dtype=np.int16)
+    occupancy[5:55, 3:48] = 0
+    occupancy[5:5 + target_rows, 52:97] = 0
+    # A measured 30-cm-wide, 20-cm-long doorway joins both broad rooms.
+    occupancy[27:33, 48:52] = 0
+    return occupancy
+
+
+def _connected_portals(occupancy):
+    return find_connected_clearance_portals(
+        occupancy, (30, 20), resolution_m=0.05,
+        analysis_clearance_m=0.20,
+        min_target_area_m2=0.40,
+        min_gap_m=0.12, max_gap_m=0.80,
+        exit_margin_m=0.25, max_traverse_distance_m=1.00)
+
+
+def test_finds_narrow_doorway_inside_one_connected_free_component():
+    bridges = _connected_portals(_connected_rooms())
+
+    assert len(bridges) == 1
+    bridge = bridges[0]
+    assert bridge.staging_col < 48
+    assert bridge.target_col >= 52
+    assert 0.12 <= bridge.gap_m <= 0.80
+    assert bridge.traverse_distance_m <= 1.00
+    assert bridge.target_area_m2 > 1.0
+
+
+def test_connected_clearance_detector_ignores_one_open_room():
+    occupancy = np.full((60, 100), -1, dtype=np.int16)
+    occupancy[5:55, 3:97] = 0
+
+    assert _connected_portals(occupancy) == []
+
+
+def test_connected_clearance_detector_rejects_small_alcove():
+    occupancy = _connected_rooms(target_rows=8)
+
+    assert _connected_portals(occupancy) == []
+
+
+def test_connected_clearance_detector_rejects_a_wall_even_if_rooms_join_elsewhere():
+    occupancy = _connected_rooms()
+    occupancy[27:33, 48:52] = -1
+    # Both areas are still broadly connected by a long upper detour, while
+    # their shortest geometric separation remains the solid unknown wall.
+    occupancy[5:9, 48:52] = 0
+
+    assert _connected_portals(occupancy) == []
 
 
 def test_rejects_target_component_that_is_too_small():

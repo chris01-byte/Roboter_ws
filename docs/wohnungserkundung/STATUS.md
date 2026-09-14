@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AH)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AI)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,12 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AH – kombinierte Szenarien und HWT-Abhängigkeit inventarisiert, zur Review.**
-Die reine Graphlogik belegt Startraum–Flur–Zimmer, Flurrückkehr, offene
-Einregionflächen, Portalwiedererkennung, Schleifen-Merge sowie Split/Merge mit
-Aufgaben bereits einzeln. Nicht belegt ist die durchgängige Kette von
-synthetischer Geometrie über Detektor und Portalgedächtnis in diesen Graphen.
-Der hierfür nötige Detektor für Türen innerhalb bereits verbundenen Freiraums
-liegt weiterhin nur im HWT-Commit `1d91229`; die kleinste isolierbare Übernahme
-betrifft zwei Dateien und keinerlei Runtime oder Fahrsoftware.
+**WE-M2/AI – reiner Detektor für Türen in verbundenem Freiraum übernommen, zur
+Review.** Nach ausdrücklicher Zustimmung wurde aus HWT `1d91229` ausschließlich
+`find_connected_clearance_portals()` samt privatem Linienprüfer und vier
+synthetischen Positiv-/Negativfällen übertragen. Die Funktion verändert keine
+Karte oder Costmap und besitzt keinen Runtime-Aufrufer; sie liefert nur
+`PortalBridge`-Geometrie für spätere, getrennt zu qualifizierende Tests.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -26,12 +24,13 @@ zugeführt. Laufzeit und Speicher sind jetzt für wachsende synthetische Karten
 lokal begrenzt beobachtet, aber noch nicht auf dem Jetson unter dessen realer
 Parallel- und SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AI, nach ausdrücklicher Abstimmung der
-HWT-Teilübernahme:** Ausschließlich `find_connected_clearance_portals()` und
-seine vier reinen Tests aus HWT `1d91229` auf die aktuelle gestapelte Basis
-übertragen. Betroffen sind nur `portal_planning.py`, dessen Test und diese
-STATUS.md; keine Explorer-Node-, Parameter-, Launch-, Zielwahl- oder
-Fahranbindung. Ohne diese Abstimmung keine funktionale Übernahme.
+**Nächster abgegrenzter Schritt WE-M2/AJ:** Eine einzige neue reine Testdatei
+komponiert zunächst Startraum–Tür–Flur–Tür–Zimmer samt Flurrückkehr aus
+synthetischen Karten, dem neuen Detektor, ausdrücklich gesetzter
+Strukturwahrheit, Portalgedächtnis und Regionsgraph. Produktionsmodule und
+Runtime bleiben unverändert. Der Test muss beweisen, dass Detektorgeometrie
+allein weder Portalbestätigung noch Durchfahrt behauptet und dass die Rückkehr
+dieselbe Flurregion nutzt. Rückfall ist nur diese Testdatei plus Statusnachtrag.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -88,6 +87,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AF `docs/we-m2af-raw-map-load-probe-plan` | Gestapelte Quellen-, Sicherheits-, Mess- und Schnittstellenentscheidung für genau einen gerätefreien synthetischen Rohkarten-Lastprüfer; nur diese STATUS.md. |
 | WE-M2/AG `chore/we-m2ag-raw-map-load-probe` | Gestapelter gerätefreier synthetischer DDS-Prüfer für Wire-Digest, Exaktjoin, begrenzte Kapazität/Laufzeit/Ausgabe und Explorer-RSS samt reinen Tests und Status; kein Deployment. |
 | WE-M2/AH `docs/we-m2ah-region-scenario-fixtures` | Gestapelte Abdeckungs- und Nahtinventur der WE-M2-Szenarien mit exakt abgegrenzter reiner HWT-Detektorabhängigkeit; nur diese STATUS.md. |
+| WE-M2/AI `feature/we-m2ai-connected-portal-detector` | Gestapelte, ausdrücklich freigegebene Übernahme nur des reinen HWT-Detektors für Türen in verbundenem Freiraum samt vier Tests; kein Runtime-Aufrufer oder Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -325,7 +325,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis S decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung, Sitzungslebenszyklus, monotones Graph-/Portal-/Kartenquellalter, Runtime-Naht, passive Kartenstatus-ROS-Hülle und die Abnahmematrix ab. Regions-Erkundungsstatus, kombinierte Geometrieszenarien, Runtime-Portal-/Frontierzuführung, Belastungsnachweis und Zielsystemnachweis offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AI decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast und den reinen Detektor für Türen im verbundenen Freiraum ab. Kombinierte Geometrieszenarien, Runtime-Portal-/Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -422,6 +422,54 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AI: reiner Detektor für verbundene Türen
+
+**Freigabe und Abgrenzung:** Der Nutzer hat die in WE-M2/AH verlangte gezielte
+HWT-Teilübernahme ausdrücklich bestätigt. Aus Commit `1d91229` wurden nur
+`find_connected_clearance_portals()`, dessen privater Bresenham-Linienprüfer
+und genau vier synthetische Tests übernommen. Explorer-Node, Parameter,
+Launchdateien, Zielwahl, Actions, Geschwindigkeitsausgabe, Fahrprofile und alle
+übrigen HWT-Änderungen bleiben ausgeschlossen.
+
+**Nachgewiesene Funktion:** Der reine Detektor betrachtet ausschließlich als
+frei gemessene Zellen einer zusammenhängenden Belegungskartenkomponente. Eine
+nur zur Analyse erodierte Maske trennt mögliche Raumseiten; der bestehende
+begrenzte Brückendetektor liefert Kandidaten. Eine Kandidatenlinie muss in der
+ursprünglichen freien Komponente vollständig frei bleiben. Der Positivfall
+findet eine schmale gemessene Tür zwischen zwei großen Bereichen. Negativfälle
+verwerfen einen offenen Einzelraum, eine zu kleine Nische und eine trennende
+Wand trotz anderweitiger Verbindung. `rg` weist als einzige Python-Verwendungen
+die Funktionsdefinition und ihre Testdatei aus: Es gibt keinen Runtime-Aufrufer.
+
+**Geänderte Dateien:** `src/explore/explore/portal_planning.py`,
+`src/explore/test/test_portal_planning.py` und diese STATUS.md. Keine
+Fahrsoftware, Navigation, Sicherheitsparameter, Installation oder Geräte.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS Humble nur als
+Build-/Test-Underlay; keine ROS-Nodes, Geräte, Karten, Bags, Actions oder
+Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AI-FOCUS | Vollständige Portalplanung einschließlich vier neuer Fälle: **12 passed**. |
+| WE-M2AI-EXPLORER | Vollständige Explorer-Suite: **533 passed**. |
+| WE-M2AI-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **674 passed**. |
+| WE-M2AI-COLCON | Frischer temporärer Build von `amadeus_map_identity` und `explore`; **36 + 533 = 569 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AI-STATIC | `compileall`, `flake8` mit den projektüblichen Ausnahmen E501/W503 sowie `git diff --check`: bestanden. |
+
+Die Softwaretests belegen nur die reine Geometriefunktion auf synthetischen
+Rasterdaten. Sie sind weder Jetson-/Runtime-Nachweis noch Hardwareabnahme und
+erteilen keine Fahrfreigabe.
+
+**Rückfall:** Den einzelnen WE-M2/AI-Commit zurücknehmen oder seinen PR
+schließen. Da die neue Funktion keinen Produktionsaufrufer hat, entsteht ohne
+spätere gesonderte Integration keine Runtimewirkung.
+
+**Nächster abgegrenzter Schritt WE-M2/AJ:** Nur eine kombinierte synthetische
+Testszenario-Datei für Startraum–Flur–Zimmer und Rückkehr ergänzen. Geometrie,
+Strukturqualifikation und Durchfahrtswahrheit bleiben darin sichtbar getrennte
+Fixture-Eingaben; Produktions-APIs und Runtime werden nicht geändert.
 
 ### 2026-09-14 – WE-M2/AH: kombinierte Szenarien und HWT-Naht inventarisiert
 
