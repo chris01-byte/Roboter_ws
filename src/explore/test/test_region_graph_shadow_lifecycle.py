@@ -165,6 +165,9 @@ def test_raw_map_join_matches_status_before_source():
     assert raw_update.raw_map_correlation.map_revision == 3
     assert owner.raw_map_diagnostics.emitted_correlations == 1
     assert owner.raw_map_diagnostics.last_emitted_revision == 3
+    payload = json.loads(build_status(owner, now=101.0))
+    assert payload["raw_map_correlation"]["state"] == "matched"
+    assert payload["raw_map_correlation"]["last_emitted_revision"] == 3
 
 
 def test_raw_map_join_matches_source_before_status():
@@ -201,6 +204,13 @@ def test_raw_map_join_tracks_duplicates_pending_and_eviction_boundedly():
     assert diagnostics.evicted_sources == 1
     assert diagnostics.emitted_correlations == 0
     assert diagnostics.last_emitted_revision is None
+
+
+def test_disabled_lifecycle_status_remains_without_raw_map_block():
+    owner = lifecycle()
+    accept_status(owner)
+
+    assert "raw_map_correlation" not in json.loads(build_status(owner))
 
 
 def test_valid_mismatch_waits_until_matching_growth_source_arrives():

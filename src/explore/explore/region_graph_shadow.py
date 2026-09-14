@@ -23,6 +23,7 @@ from .portal_plan_adapter import (
     PortalPlanCandidate,
     normalize_portal_plan_candidate,
 )
+from .portal_source_adapter import RawMapCorrelationDiagnostics
 from .region_graph import (
     RegionGraph,
     RegionGraphPolicy,
@@ -104,12 +105,15 @@ class RegionGraphShadowSession:
     def status_source(
             self, map_status: MapStatusCorrelationResult, *,
             portal_memory_age_seconds: Optional[float],
-            region_graph_age_seconds: Optional[float]) -> ShadowStatusSource:
+            region_graph_age_seconds: Optional[float],
+            raw_map_correlation: Optional[
+                RawMapCorrelationDiagnostics] = None) -> ShadowStatusSource:
         """Accept one correlated map status and return immutable snapshots."""
         source = self._status_source_for(
             map_status,
             portal_memory_age_seconds=portal_memory_age_seconds,
             region_graph_age_seconds=region_graph_age_seconds,
+            raw_map_correlation=raw_map_correlation,
         )
         self._map_status = map_status
         return source
@@ -117,7 +121,9 @@ class RegionGraphShadowSession:
     def _status_source_for(
             self, map_status: MapStatusCorrelationResult, *,
             portal_memory_age_seconds: Optional[float],
-            region_graph_age_seconds: Optional[float]) -> ShadowStatusSource:
+            region_graph_age_seconds: Optional[float],
+            raw_map_correlation: Optional[
+                RawMapCorrelationDiagnostics] = None) -> ShadowStatusSource:
         if not isinstance(map_status, MapStatusCorrelationResult):
             raise RegionGraphShadowError(
                 "map_status muss MapStatusCorrelationResult sein")
@@ -137,17 +143,21 @@ class RegionGraphShadowSession:
             source_map_age_seconds=map_status.source_map_age_seconds,
             portal_memory_age_seconds=portal_memory_age_seconds,
             region_graph_age_seconds=region_graph_age_seconds,
+            raw_map_correlation=raw_map_correlation,
         )
 
     def build_status_json(
             self, map_status: MapStatusCorrelationResult, *,
             portal_memory_age_seconds: Optional[float],
-            region_graph_age_seconds: Optional[float]) -> str:
+            region_graph_age_seconds: Optional[float],
+            raw_map_correlation: Optional[
+                RawMapCorrelationDiagnostics] = None) -> str:
         """Validate and serialize one bounded passive status document."""
         source = self._status_source_for(
             map_status,
             portal_memory_age_seconds=portal_memory_age_seconds,
             region_graph_age_seconds=region_graph_age_seconds,
+            raw_map_correlation=raw_map_correlation,
         )
         payload = build_shadow_status_json(source, self._status_policy)
         self._map_status = map_status

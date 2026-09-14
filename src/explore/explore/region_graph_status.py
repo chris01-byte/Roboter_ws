@@ -20,6 +20,7 @@ from .portal_memory import (
     ReachabilitySnapshot,
     ReachabilityState,
 )
+from .portal_source_adapter import RawMapCorrelationDiagnostics
 from .region_graph import (
     RegionExplorationState,
     RegionGraphSnapshot,
@@ -118,6 +119,7 @@ class ShadowStatusSource:
     source_map_age_seconds: Optional[float] = None
     portal_memory_age_seconds: Optional[float] = None
     region_graph_age_seconds: Optional[float] = None
+    raw_map_correlation: Optional[RawMapCorrelationDiagnostics] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.context, PortalMapContext):
@@ -131,6 +133,18 @@ class ShadowStatusSource:
             self.portal_memory_age_seconds, "portal_memory_age_seconds")
         _optional_age_seconds(
             self.region_graph_age_seconds, "region_graph_age_seconds")
+        if (
+                self.raw_map_correlation is not None
+                and not isinstance(
+                    self.raw_map_correlation,
+                    RawMapCorrelationDiagnostics)):
+            raise ShadowStatusError(
+                "raw_map_correlation muss Rohkartendiagnose sein")
+        if (
+                self.raw_map_correlation is not None
+                and not self.raw_map_correlation.enabled):
+            raise ShadowStatusError(
+                "Deaktivierte Rohkartendiagnose darf nicht projiziert werden")
         if not isinstance(self.graph, RegionGraphSnapshot):
             raise ShadowStatusError("graph muss RegionGraphSnapshot sein")
         if not isinstance(self.portals, tuple) or any(
@@ -558,6 +572,21 @@ def build_shadow_status_json(
             for alias_id, canonical_id in sorted(graph.region_aliases)
         ],
     }
+    raw_diagnostics = source.raw_map_correlation
+    if raw_diagnostics is not None:
+        payload["raw_map_correlation"] = {
+            "enabled": True,
+            "state": raw_diagnostics.state,
+            "capacity": raw_diagnostics.capacity,
+            "source_observations": raw_diagnostics.source_observations,
+            "unique_sources": raw_diagnostics.unique_sources,
+            "duplicate_sources": raw_diagnostics.duplicate_sources,
+            "pending_sources": raw_diagnostics.pending_sources,
+            "evicted_sources": raw_diagnostics.evicted_sources,
+            "emitted_correlations": raw_diagnostics.emitted_correlations,
+            "last_emitted_revision": (
+                raw_diagnostics.last_emitted_revision),
+        }
     serialized = json.dumps(
         payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
     if len(serialized.encode("utf-8")) > selected_policy.max_serialized_bytes:

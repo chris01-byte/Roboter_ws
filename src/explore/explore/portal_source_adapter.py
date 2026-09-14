@@ -89,6 +89,76 @@ class PortalSourceCorrelation:
     source_stamp_ns: int
 
 
+@dataclass(frozen=True)
+class RawMapCorrelationDiagnostics:
+    """Bounded scalar diagnostics without map identity or raster contents."""
+
+    enabled: bool
+    capacity: int
+    source_observations: int
+    unique_sources: int
+    duplicate_sources: int
+    pending_sources: int
+    evicted_sources: int
+    emitted_correlations: int
+    last_emitted_revision: Optional[int]
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise PortalSourceAdapterError("enabled muss bool sein")
+        counts = (
+            self.capacity,
+            self.source_observations,
+            self.unique_sources,
+            self.duplicate_sources,
+            self.pending_sources,
+            self.evicted_sources,
+            self.emitted_correlations,
+        )
+        if any(
+                isinstance(value, bool)
+                or not isinstance(value, int)
+                or value < 0
+                for value in counts):
+            raise PortalSourceAdapterError(
+                "Diagnosezaehler muessen nichtnegative Ganzzahlen sein")
+        if not self.enabled:
+            if any(counts) or self.last_emitted_revision is not None:
+                raise PortalSourceAdapterError(
+                    "Deaktivierte Rohkartendiagnose muss leer sein")
+            return
+        if self.capacity <= 0 or self.pending_sources > self.capacity:
+            raise PortalSourceAdapterError(
+                "Aktive Rohkartendiagnose verletzt ihre Kapazitaet")
+        if (
+                self.unique_sources + self.duplicate_sources
+                != self.source_observations
+                or self.unique_sources != (
+                    self.pending_sources
+                    + self.evicted_sources
+                    + self.emitted_correlations)
+                or self.evicted_sources > self.unique_sources
+                or self.emitted_correlations > self.unique_sources):
+            raise PortalSourceAdapterError(
+                "Rohkartendiagnosezaehler widersprechen sich")
+        if (self.last_emitted_revision is None) is not (
+                self.emitted_correlations == 0):
+            raise PortalSourceAdapterError(
+                "Letzte Rohkartenrevision widerspricht dem Joinzaehler")
+        if self.last_emitted_revision is not None:
+            _revision(self.last_emitted_revision)
+
+    @property
+    def state(self) -> str:
+        if not self.enabled:
+            return "disabled"
+        if self.evicted_sources:
+            return "evicted"
+        if self.emitted_correlations:
+            return "matched"
+        return "waiting"
+
+
 class RawMapStatusJoiner:
     """Join asynchronous raw identities and manager status without map data."""
 
@@ -147,6 +217,20 @@ class RawMapStatusJoiner:
     @property
     def current_status(self) -> Optional[MapStatusCorrelationResult]:
         return self._current_status
+
+    @property
+    def diagnostics(self) -> RawMapCorrelationDiagnostics:
+        return RawMapCorrelationDiagnostics(
+            enabled=True,
+            capacity=self.capacity,
+            source_observations=self.source_observation_count,
+            unique_sources=self.unique_source_count,
+            duplicate_sources=self.duplicate_source_count,
+            pending_sources=self.pending_source_count,
+            evicted_sources=self.evicted_source_count,
+            emitted_correlations=self.emitted_correlation_count,
+            last_emitted_revision=self.last_emitted_revision,
+        )
 
     def observe_source(
             self, source: RawMapPortalSource,
