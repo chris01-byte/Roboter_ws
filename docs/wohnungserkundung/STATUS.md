@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AE)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AF)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,15 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AE – passive Rohkartenidentität doppelt opt-in softwaregeprüft, zur Review.**
-Der Explorer besitzt nun die standardmäßig deaktivierten Parameter
-`region_graph_shadow_raw_map_enabled: false` und
-`region_graph_shadow_raw_map_capacity: 0`. Nur zusammen mit aktiviertem
-Regionsgraph und explizit positiver Kapazität wird der reine Joiner erzeugt.
-`_on_map()` übernimmt weiterhin zuerst die Explorerkarte; nur im Opt-in bildet
-es danach Snapshot/Digest außerhalb des Schatten-Locks und übergibt die kleine
-Identität darunter. Ein isolierter synthetischer DDS-Smoke lieferte den exakten
-passiven Join. Kein Portalfeed, Ziel oder Fahrpfad wurde ergänzt.
+**WE-M2/AF – synthetischer Rohkarten-Lastprüfer abgegrenzt, zur Review.**
+Die Quellenprüfung weist eine vorhandene sichere Konvention für synthetische
+ROS-Prüfer und begrenzte JSON-Diagnosen nach, aber keinen bestehenden Helfer für
+Rohkarten-Digest, Joinlatenz oder Explorer-RSS. Der festgelegte Folgehelfer
+verwendet ausschließlich synthetische Karten in einer vor `rclpy` gesetzten,
+expliziten DDS-Domain. Er bildet den Managerfingerprint erst aus einer
+zurückempfangenen Wire-Nachricht und prüft eine explizite Größen-/Kapazitätsmatrix
+gegen die bereits passiv angebundene Statusnaht. Produktionscode bleibt in
+diesem Schritt unverändert.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -26,12 +26,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/AF:** Ausschließlich einen
-reproduzierbaren synthetischen Last-/Latenzprüfer für die passive Rohkartennaht
-planen und als gerätefreien Testhelfer abgrenzen. Er muss Wire-Typen korrekt
-erzeugen, Kapazitäten explizit variieren und Digest-/Callbackzeit, Joinlatenz,
-Verdrängung und RSS begrenzt ausgeben. Zunächst Quellen-/Werkzeugprüfung und
-STATUS.md; keine Jetson-, Geräte-, Detektor-, Ziel- oder Fahraktivierung.
+**Nächster abgegrenzter Schritt WE-M2/AG:** Den in WE-M2/AF festgelegten einen
+synthetischen Prüfer samt reinen Vertragstests implementieren. Er darf nur den
+Explorerprozess, einen eigenen Publisher/Beobachter und private Testtopics in
+einer nachweislich isolierten Domain verwenden. Ausgabe und Laufzeit bleiben
+hart begrenzt; keine Jetson-, Geräte-, Detektor-, Ziel- oder Fahraktivierung und
+keine Änderung an Produktionsnode, Launch oder Standardparametern.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -85,6 +85,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AC `feature/we-m2ac-lifecycle-raw-map-owner` | Gestapelter optionaler Joiner-Besitz im reinen Schattenlebenszyklus mit begrenzten Diagnosezählern und beidseitigen Übergaben; reine Module, Tests und Status, kein Deployment. |
 | WE-M2/AD `feature/we-m2ad-raw-map-status-diagnostics` | Gestapelte optionale, begrenzte Rohkarten-Korrelationsdiagnose im getrennten reinen Schattenstatus; reine Module, Tests und Status, kein Deployment. |
 | WE-M2/AE `feature/we-m2ae-passive-raw-map-runtime` | Gestapelter doppelt opt-in passiver Rohkartenadapter im Explorer mit gemeinsamer Identität, isoliertem Schattenfehler und getrennten Diagnosen; Node, Standardparameter, Tests und Status, kein Deployment. |
+| WE-M2/AF `docs/we-m2af-raw-map-load-probe-plan` | Gestapelte Quellen-, Sicherheits-, Mess- und Schnittstellenentscheidung für genau einen gerätefreien synthetischen Rohkarten-Lastprüfer; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -419,6 +420,94 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AF: synthetischen Rohkarten-Lastprüfer abgegrenzt
+
+**Quellen- und Werkzeugbefund:** Die WE-M2-Abnahme fordert begrenzte Laufzeit
+und begrenzten Speicher bei wachsender synthetischer Karte. Die Strategie
+fordert relevante Kartenereignisse, begrenzte Puffer und kontrollierte
+Ausführung statt Vollanalyse in jedem LiDAR-Callback. Der bestehende
+`tools/kartierung/test_reine_drehung_synthetisch.py` setzt seine eigene
+`ROS_DOMAIN_ID` vor dem ersten `rclpy`-Import, nennt den Hardwareausschluss,
+begrenzt Dauer und Eingaben, schreibt Kindprozessausgabe in eine temporäre Datei
+und beendet nur den konkreten Prozess per SIGINT. Die lesenden Kartenwerkzeuge
+geben begrenzte, sortierte JSON-Metriken aus. Diese Konventionen sind für den
+neuen Prüfer zu übernehmen.
+
+Kein vorhandenes Werkzeug misst die passive Rohkartennaht, Digestkosten,
+Joinlatenz oder den RSS des Explorerprozesses. Im Repository wird weder
+`psutil` noch `tracemalloc` oder `resource.getrusage()` für vergleichbare
+Prozessmessungen verwendet. Der Prüfer benötigt deshalb keine neue Abhängigkeit:
+Zeitmessung erfolgt mit `time.perf_counter_ns()`, der Linux-RSS wird während des
+begrenzten Laufs aus genau `/proc/<explorer-pid>/status` abgetastet. Der Wert ist
+als Prozess-RSS und nicht als exklusiver Python-Heap zu bezeichnen.
+
+**Festgelegter Helfervertrag:** Der nächste Schritt ergänzt genau
+`tools/kartierung/rohkarten_schatten_lasttest.py` und
+`tools/kartierung/test_rohkarten_schatten_lasttest.py`. Das Programm setzt eine
+vom Aufrufer wählbare, gültige und standardmäßig reservierte Testdomain vor
+`rclpy`, startet ausschließlich `ros2 run explore explore` mit beiden
+Schatten-Opt-ins, expliziter Joinerkapazität und privaten Karten-, Managerstatus-
+und Schattenstatustopics. Es startet weder Kartenmanager, SLAM, Nav2,
+Missionsmanager, Sensor- noch Hardwareknoten und sendet keinen Actionauftrag
+oder Twist. Vor dem Lastlauf muss die Domain außer dem Prüfer und dem von ihm
+gestarteten Explorer leer sein; fremde Knoten führen fail-closed zum Abbruch.
+
+Ein kombinierter Publisher/Beobachter publiziert ausschließlich synthetische
+`OccupancyGrid`-Nachrichten. Entscheidend ist der WE-M2/AE-Befund: Er berechnet
+den dazugehörigen Schema-1-Managerstatus nicht aus dem ursprünglichen Python-
+Literal, sondern erst in einer eigenen Subscription aus der über DDS
+zurückempfangenen Nachricht. Damit entsprechen insbesondere `resolution` und
+Ursprungsfelder ihren ROS-Wire-Typen. Inhalt und Dimensionen sind deterministisch;
+Wohnungsgeometrie, Zufallsdaten, Bags oder lokale Karten werden nicht gelesen.
+
+Die CLI verlangt beziehungsweise begrenzt Domain, Rastergrößen, Kapazitäten,
+Wiederholungen, Publikationsrate und Gesamtfrist. Vorgesehen sind kleine,
+mittlere und bis zum bestehenden Vier-Millionen-Zellen-Vertrag wachsende
+quadratische Raster sowie mindestens zwei explizite Kapazitäten. Jeder
+Kapazitätsfall läuft in einem frischen Explorerprozess, damit Parameter und
+Zähler nicht vermischt werden. Der Ablauf erzeugt Duplikate, mehr eindeutige
+noch unkorrelierte Quellen als die jeweilige Kapazität und danach einen exakten
+Status für die jüngste Quelle. Dadurch müssen Wartespitze, Verdrängung,
+Duplikatzählung und abschließender Exaktjoin beobachtbar sein.
+
+**Metriken und Wahrheitsgrenzen:** Pro Größen-/Kapazitätsfall werden nur
+Aggregate ausgegeben: Zellenzahl, Wiederholungen, Digest-/Factoryzeit aus dem
+zurückempfangenen Wire-Snapshot (Minimum, Median, p95, Maximum), Zeit vom
+Publizieren des passenden Managerstatus bis zum ersten beobachteten
+`matched`-Schattenstatus, maximale wartende Quellen, Verdrängungen,
+Duplikate, ausgegebene Korrelationen, Start-/Spitzen-/End-RSS und Laufdauer.
+Rohzellen, Fingerprints, Frames, Geometrie und Einzelereignislisten werden
+nicht ausgegeben. Die externe Joinlatenz enthält bewusst die bis zu einsekündige
+Schattenstatusperiode; sie ist keine direkte interne Callbackdauer. Die lokal
+gemessene Factoryzeit deckt denselben Kopie-/Digestpfad ab, beweist aber nicht
+die gesamte Explorer-Callbackzeit.
+
+Der Prüfer schlägt fehl bei Timeout, fremdem Knoten, Prozessabbruch,
+unvollständiger Matrix, fehlendem Exaktjoin, falschen Zählererhaltungen,
+überschrittener Kapazität, ungültigen RSS-Werten oder Überschreitung der festen
+Ausgabegrenze. Er berichtet zunächst Messwerte und codiert noch keine erfundenen
+Jetson-Grenzwerte als Erfolgsschwellen. Erst ein späterer eigener Zielsystemlauf
+ohne Aktoren darf auf derselben Matrix belastbare Grenzwerte begründen.
+
+**Geänderte Dateien und Prüfung:** Nur diese STATUS.md. Geprüft wurden die
+WE-M2-Anforderungen, der bestehende synthetische ROS-Prüfer, lesende
+JSON-Diagnosewerkzeuge, Explorerparameter/-callback, gemeinsamer
+Fingerprintvertrag, Joinerdiagnose und Kartenmanagerstatusquelle.
+`git diff --check` muss vor Übergabe bestehen. Es wurden keine ROS-Nodes,
+Geräte, Karten,
+Bags, Aktoren oder Fahrpfade gestartet; dies ist eine dokumentierte
+Schnittstellenentscheidung, keine Last-, Jetson- oder Hardwareabnahme.
+
+**Rückfall:** Den einzelnen WE-M2/AF-Dokumentationscommit zurücknehmen. Es gibt
+keine Runtime-, Installations- oder Gerätewirkung.
+
+**Nächster abgegrenzter Schritt WE-M2/AG:** Ausschließlich den beschriebenen
+Helfer und seine reinen Parser-, Grenz-, Wire-Normalisierungs-, Aggregations-
+und Prozessbereinigungstests ergänzen. Danach auf dem lokalen x86_64-System eine
+kleine vollständige Matrix in einer leeren isolierten Domain ausführen und die
+tatsächlichen Messwerte dokumentieren. Keine Produktionsnode-, Launch-,
+Parameter-, Detektor-, Navigations- oder Hardwareänderung.
 
 ### 2026-09-14 – WE-M2/AE: doppelt opt-in passive Rohkarten-Runtime
 
