@@ -1,4 +1,6 @@
+import copy
 from dataclasses import FrozenInstanceError
+import json
 from pathlib import Path
 import math
 import sys
@@ -10,12 +12,14 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from explore.map_status_adapter import (  # noqa: E402
+    MAXIMUM_MAP_STATUS_BYTES,
     MapEpochChangeRequired,
     MapManagerStatusCorrelator,
     MapManagerStatusSample,
     MapStatusAdapterError,
     MapStatusCorrelationPolicy,
     MapStatusUnavailableError,
+    decode_map_manager_status_json,
 )
 from explore.region_graph import RegionSeed  # noqa: E402
 from explore.region_graph_shadow import RegionGraphShadowSession  # noqa: E402
@@ -24,6 +28,45 @@ from explore.region_graph_shadow import RegionGraphShadowSession  # noqa: E402
 FINGERPRINT_A = "a" * 64
 FINGERPRINT_B = "b" * 64
 FINGERPRINT_C = "c" * 64
+
+
+def status_payload(*, available=True):
+    summary = None
+    age_seconds = None
+    accepted_maps = 0
+    if available:
+        summary = {
+            "width": 640,
+            "height": 480,
+            "resolution": 0.03,
+            "frame_id": "map",
+            "origin": {"position": [0.0, 0.0]},
+            "source_stamp_ns": 1_799_999_999_500_000_000,
+            "fingerprint": FINGERPRINT_A,
+        }
+        age_seconds = 0.25
+        accepted_maps = 3
+    return {
+        "schema_version": 1,
+        "event": "status",
+        "ok": True,
+        "message": "Periodischer Kartenstatus.",
+        "time": 1_800_000_000.0,
+        "map": {
+            "available": available,
+            "snapshot_available": available,
+            "publisher_count": 1,
+            "age_seconds": age_seconds,
+            "source": "/map",
+            "summary": summary,
+        },
+        "pose": {"available": False},
+        "storage": {"root": "/not-consumed"},
+        "counters": {
+            "accepted_maps": accepted_maps,
+            "duplicate_maps": 0,
+        },
+    }
 
 
 def sample(**changes):
@@ -65,6 +108,152 @@ def unavailable_sample(**changes):
     }
     values.update(changes)
     return MapManagerStatusSample(**values)
+
+
+def test_decoder_maps_actual_available_status_envelope_exactly():
+    payload = status_payload()
+
+    decoded = decode_map_manager_status_json(json.dumps(payload))
+
+    assert decoded == sample()
+
+
+def test_decoder_maps_actual_unavailable_status_without_partial_map_data():
+    payload = status_payload(available=False)
+
+    decoded = decode_map_manager_status_json(json.dumps(payload))
+
+    assert decoded == unavailable_sample()
+
+
+def test_decoder_ignores_bounded_irrelevant_status_fields():
+    payload = status_payload()
+    payload["ok"] = False
+    payload["extra"] = {"bounded": [1, 2, {"value": "ignored"}]}
+    payload["map"]["summary"]["new_schema_field"] = "ignored"
+
+    decoded = decode_map_manager_status_json(json.dumps(payload))
+
+    assert decoded == sample()
+
+
+def test_decoded_status_flows_through_correlator_without_invention():
+    decoded = decode_map_manager_status_json(json.dumps(status_payload()))
+
+    result = correlator().accept(decoded)
+
+    assert result.map_revision == 3
+    assert result.fingerprint == FINGERPRINT_A
+    assert result.source_map_age_seconds == 0.25
+
+
+@pytest.mark.parametrize("path", [
+    ("schema_version",),
+    ("time",),
+    ("map",),
+    ("map", "available"),
+    ("map", "snapshot_available"),
+    ("map", "age_seconds"),
+    ("map", "summary"),
+    ("map", "summary", "fingerprint"),
+    ("map", "summary", "frame_id"),
+    ("map", "summary", "source_stamp_ns"),
+    ("counters",),
+    ("counters", "accepted_maps"),
+])
+def test_decoder_rejects_each_missing_required_path(path):
+    payload = copy.deepcopy(status_payload())
+    parent = payload
+    for element in path[:-1]:
+        parent = parent[element]
+    del parent[path[-1]]
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize(("path", "value"), [
+    (("schema_version",), "1"),
+    (("time",), "1800000000"),
+    (("map", "available"), 1),
+    (("map", "snapshot_available"), 1),
+    (("map", "age_seconds"), "0.25"),
+    (("map", "summary", "fingerprint"), FINGERPRINT_A.upper()),
+    (("map", "summary", "frame_id"), "bad frame"),
+    (("map", "summary", "source_stamp_ns"), 1.5),
+    (("counters", "accepted_maps"), 3.0),
+])
+def test_decoder_does_not_coerce_required_field_types(path, value):
+    payload = copy.deepcopy(status_payload())
+    parent = payload
+    for element in path[:-1]:
+        parent = parent[element]
+    parent[path[-1]] = value
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize(("path", "value"), [
+    (("map",), []),
+    (("counters",), None),
+    (("map", "summary"), []),
+])
+def test_decoder_rejects_wrong_intermediate_structures(path, value):
+    payload = copy.deepcopy(status_payload())
+    parent = payload
+    for element in path[:-1]:
+        parent = parent[element]
+    parent[path[-1]] = value
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(json.dumps(payload))
+
+
+def test_decoder_rejects_summary_when_map_is_unavailable():
+    payload = status_payload(available=False)
+    payload["map"]["summary"] = {}
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(json.dumps(payload))
+
+
+@pytest.mark.parametrize("text", [
+    "",
+    "not-json",
+    "[]",
+    '{"value":NaN}',
+    '{"schema_version":1,"schema_version":1}',
+    "{\"open\":",
+])
+def test_decoder_rejects_invalid_or_ambiguous_json(text):
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(text)
+
+
+@pytest.mark.parametrize("value", [None, b"{}", 1, {}])
+def test_decoder_requires_a_text_input(value):
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(value)
+
+
+def test_decoder_rejects_invalid_unicode_before_json_parsing():
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json("\ud800")
+
+
+def test_decoder_rejects_oversized_input_before_json_parsing():
+    text = " " * (MAXIMUM_MAP_STATUS_BYTES + 1)
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(text)
+
+
+def test_decoder_rejects_excessive_nesting_in_irrelevant_fields():
+    text = '{"nested":' * 40 + "null" + "}" * 40
+
+    with pytest.raises(MapStatusAdapterError):
+        decode_map_manager_status_json(text)
 
 
 def test_first_complete_status_creates_explicit_context_and_revision():

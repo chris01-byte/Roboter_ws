@@ -1,13 +1,15 @@
-"""Pure correlation of the existing robot-map-manager status contract.
+"""Pure decoding and correlation of the robot-map-manager status contract.
 
-The adapter consumes explicit, already parsed fields.  It does not subscribe,
-parse JSON, read a clock, inspect a map, or access files.  ``accepted_maps`` is
-treated only as a process-local revision: a counter reset, frame change, or
-inconsistent fingerprint transition requires a new explicit session rather
-than silently reusing portal or region state.
+The decoder consumes only explicitly supplied JSON text, while the correlator
+consumes its validated fields.  Neither subscribes, reads a clock, inspects a
+map, or accesses files.  ``accepted_maps`` is treated only as a process-local
+revision: a counter reset, frame change, or inconsistent fingerprint transition
+requires a new explicit session rather than silently reusing portal or region
+state.
 """
 
 from dataclasses import dataclass, replace
+import json
 import math
 import re
 from typing import Optional
@@ -16,6 +18,8 @@ from .portal_memory import PortalMapContext
 
 
 _FINGERPRINT = re.compile(r"^[0-9a-f]{64}$")
+MAXIMUM_MAP_STATUS_BYTES = 1_048_576
+MAXIMUM_MAP_STATUS_DEPTH = 32
 
 
 class MapStatusAdapterError(ValueError):
@@ -28,6 +32,50 @@ class MapStatusUnavailableError(MapStatusAdapterError):
 
 class MapEpochChangeRequired(MapStatusAdapterError):
     """The sequence can continue only in a new explicit map context."""
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise MapStatusAdapterError(
+                f"JSON-Feld {key!r} ist mehrfach vorhanden")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise MapStatusAdapterError(
+        f"Nicht endliche JSON-Zahl {value!r} ist ungueltig")
+
+
+def _validate_json_depth(value: object) -> None:
+    pending = [(value, 1)]
+    while pending:
+        current, depth = pending.pop()
+        if depth > MAXIMUM_MAP_STATUS_DEPTH:
+            raise MapStatusAdapterError(
+                "Kartenstatus-JSON ist zu tief verschachtelt")
+        if isinstance(current, dict):
+            pending.extend(
+                (child, depth + 1) for child in current.values())
+        elif isinstance(current, list):
+            pending.extend((child, depth + 1) for child in current)
+
+
+def _required(mapping: dict, key: str, path: str) -> object:
+    if key not in mapping:
+        raise MapStatusAdapterError(
+            f"Kartenstatus-JSON enthaelt {path}.{key} nicht")
+    return mapping[key]
+
+
+def _required_object(mapping: dict, key: str, path: str) -> dict:
+    value = _required(mapping, key, path)
+    if not isinstance(value, dict):
+        raise MapStatusAdapterError(
+            f"Kartenstatus-JSON erwartet ein Objekt bei {path}.{key}")
+    return value
 
 
 def _nonnegative_integer(value: object, name: str) -> int:
@@ -131,6 +179,75 @@ class MapManagerStatusSample:
             self, "source_stamp_ns", source_stamp_ns)
         object.__setattr__(
             self, "received_age_seconds", received_age_seconds)
+
+
+def decode_map_manager_status_json(text: str) -> MapManagerStatusSample:
+    """Decode the relevant fields of one bounded schema-1 status envelope."""
+    if not isinstance(text, str):
+        raise MapStatusAdapterError(
+            "Kartenstatus muss als JSON-Zeichenkette vorliegen")
+    try:
+        encoded_size = len(text.encode("utf-8"))
+    except UnicodeError as exc:
+        raise MapStatusAdapterError(
+            "Kartenstatus enthaelt kein gueltiges Unicode") from exc
+    if encoded_size > MAXIMUM_MAP_STATUS_BYTES:
+        raise MapStatusAdapterError(
+            "Kartenstatus-JSON ueberschreitet die Eingangsgrenze")
+    try:
+        payload = json.loads(
+            text,
+            object_pairs_hook=_unique_json_object,
+            parse_constant=_reject_json_constant,
+        )
+    except MapStatusAdapterError:
+        raise
+    except (json.JSONDecodeError, UnicodeError, RecursionError, ValueError) as exc:
+        raise MapStatusAdapterError(
+            "Kartenstatus enthaelt kein gueltiges JSON") from exc
+    _validate_json_depth(payload)
+    if not isinstance(payload, dict):
+        raise MapStatusAdapterError(
+            "Kartenstatus-JSON muss ein Objekt sein")
+
+    map_payload = _required_object(payload, "map", "root")
+    counters = _required_object(payload, "counters", "root")
+    map_available = _required(map_payload, "available", "root.map")
+    if not isinstance(map_available, bool):
+        raise MapStatusAdapterError(
+            "root.map.available muss bool sein")
+    summary = _required(map_payload, "summary", "root.map")
+    if map_available:
+        if not isinstance(summary, dict):
+            raise MapStatusAdapterError(
+                "Verfuegbare Karte braucht ein summary-Objekt")
+        fingerprint = _required(
+            summary, "fingerprint", "root.map.summary")
+        frame_id = _required(summary, "frame_id", "root.map.summary")
+        source_stamp_ns = _required(
+            summary, "source_stamp_ns", "root.map.summary")
+    else:
+        if summary is not None:
+            raise MapStatusAdapterError(
+                "Nicht verfuegbare Karte braucht summary null")
+        fingerprint = None
+        frame_id = None
+        source_stamp_ns = None
+
+    return MapManagerStatusSample(
+        schema_version=_required(payload, "schema_version", "root"),
+        status_time_seconds=_required(payload, "time", "root"),
+        map_available=map_available,
+        snapshot_available=_required(
+            map_payload, "snapshot_available", "root.map"),
+        accepted_maps=_required(
+            counters, "accepted_maps", "root.counters"),
+        fingerprint=fingerprint,
+        frame_id=frame_id,
+        source_stamp_ns=source_stamp_ns,
+        received_age_seconds=_required(
+            map_payload, "age_seconds", "root.map"),
+    )
 
 
 @dataclass(frozen=True)
