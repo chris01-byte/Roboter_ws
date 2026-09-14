@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/T)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/U)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/T – eigener regionaler Erkundungsstatus softwaregeprüft, zur Review.**
-Der reine Regionsgraph unterscheidet jetzt `unassessed`, `in_progress` und
-`complete_candidate` ausdrücklich von Seen, Entered und Eintrittszählern.
-Fortschritt wird nur mit Update-ID, Kontext, Kartenrevision und Grund angenommen;
-Replay ist idempotent, Stufen dürfen nicht übersprungen und ein Kandidat nicht
-stillschweigend wieder geöffnet werden. Eine Vereinigung nimmt bei abweichenden
-Zuständen den konservativeren Wert, eine Teilung setzt beide neuen Geometrieumfänge
-auf neu zu prüfen. Die passive JSON-Projektion gibt Zustand, Grund und Revision
-je Region aus. `complete_candidate` ist kein WE-M3-Wohnungsabschluss.
+**WE-M2/U – Portal-Provenienznaht quellenbasiert geklärt, zur Review.** Der
+vorhandene Main-Portalplan entsteht aus der Nav2-Master-Costmap. Deren Headerzeit
+ist die Publikationszeit und kein übernommener `/map`-Quellstempel; Hindernis-
+und Inflationslayer verändern zudem den Inhalt. Frame, Alter, Rastermetadaten
+oder Empfangsreihenfolge können deshalb keine Kartenmanagerrevision beweisen.
+Auch HWT koppelt seine rohe Karte und Costmap nur über getrennte
+Fünf-Sekunden-Frischeprüfungen. Die bisher gesperrte Portalzuführung bleibt
+somit zu Recht gesperrt.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -26,13 +25,13 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/U:** Ausschließlich quellenbasiert die
-Provenienznaht des vorhandenen Portalplans festlegen: prüfen, ob und wie
-Explorer-Karteneingang, Nav2-Global-Costmap und Kartenmanagerstatus anhand ihrer
-Header, Zeiten, Frames und Inhalte korreliert werden können. Für nicht beweisbare
-Zuordnung eine fail-closed Sperre festlegen und genau den kleinsten späteren
-Adapter-/Nachrichtenvertrag benennen. Zunächst nur diese STATUS.md; keine
-Portalzuführung, ROS-, Ziel-, Fahr- oder Hardwarewirkung.
+**Nächster abgegrenzter Schritt WE-M2/V:** Rein und ohne ROS einen Adapter für
+die exakte Identität einer rohen Kartenmomentaufnahme ergänzen. Nur wenn
+Fingerprint, Quellstempel und Frame exakt dem aktuellen korrelierten
+Kartenmanagerstatus entsprechen, darf der Adapter dessen Kontext und Revision
+an einen passiven Portal-Kandidaten weitergeben; sonst muss er ohne
+Zustandsänderung ablehnen. Costmap-only-Pläne bleiben ausdrücklich ausgeschlossen.
+Betroffen sind nur neues Adaptermodul, Unit-Tests und diese STATUS.md.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -75,6 +74,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/R `feature/we-m2r-shadow-map-age` | Gestapelte reine monotone Fortführung des Kartenquellalters mit replayfestem Empfangsanker; Lebenszyklus, Tests und Status. |
 | WE-M2/S `docs/we-m2s-acceptance-matrix` | Gestapelte vollständige Zuordnung der WE-M2-Lieferung, Pflichttests und Abnahme zu konkreten Nachweisen oder Lücken; nur diese STATUS.md. |
 | WE-M2/T `feature/we-m2t-region-exploration-state` | Gestapelter expliziter Regions-Erkundungsstatus mit konservativer Merge-/Split-Behandlung und passiver Statusprojektion; Graph, Tests und Status, kein Deployment. |
+| WE-M2/U `docs/we-m2u-portal-provenance` | Gestapelte Quellenentscheidung zur fehlenden Rohkartenlinie der Nav2-Master-Costmap und zum fail-closed Korrelationsvertrag; nur diese STATUS.md. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -409,6 +409,78 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/U: Costmap-Zeit ist keine Rohkarten-Provenienz
+
+**Geprüfte Quellen:** Auf der gestapelten Spitze `eec8c5e` wurden
+`ExploreNode.PortalPlan`, Karten-/Costmap-Callbacks und `_portal_plans()`, der
+Kartenmanager-Eingang samt `MapSnapshot`/Status, beide Nav2-Konfigurationen sowie
+die Portalpfade von Main, HWT `1d91229` und der unveränderten lokalen
+Primärarbeitskopie gelesen. Lokal installiert ist Nav2
+`nav2_costmap_2d` 1.1.20. Dessen zum Paketstand passender Upstream-Quelltext setzt
+beim Erzeugen der publizierten `OccupancyGrid`-Master-Costmap
+`header.stamp = clock_->now()`; er übernimmt dort weder den Quellstempel noch
+einen Fingerprint der statischen `/map`-Eingabe. Keine ROS-Nodes, Topics,
+Kartendaten oder Geräte wurden dafür geöffnet.
+
+**Nachgewiesene Datenwege:**
+
+| Quelle / Ergebnis | Tatsächlich vorhandener Bezug | Fehlender Beleg |
+|---|---|---|
+| Explorer `/map` | Vollständiges `OccupancyGrid` mit Frame, Quellstempel, Raster, Ursprung und Zellen; gespeichert werden Nachricht und monotone Empfangszeit. | Explorer bildet oder speichert keinen Kartenmanager-Fingerprint und keine angenommene Revision. |
+| `robot_map_manager` `/map` | Validiert dieselben Rohfelder, bildet SHA-256 über Raster, Frame, Ursprung und Zellen und veröffentlicht Fingerprint, `source_stamp_ns`, Frame sowie `accepted_maps`. | Sein Status kennzeichnet nicht, welche spätere Nav2-Master-Costmap diese Rohkarte bereits verarbeitet hat. |
+| Nav2 `/global_costmap/costmap` | Neuer Frame-/Publikationsstempel, Masterraster und -zellen. Im Realprofil kombiniert der Master statische Karte, OAK-/VL53-Hindernisse und Inflation; `always_send_full_costmap` ist aktiv. | Kein Rohkartenstempel, Rohkartenfingerprint oder statischer Layerstand wird mitpubliziert; `map_load_time` wird beim publizierten Grid nicht als Herkunft gesetzt. |
+| Main-`PortalPlan` | Geometrie und Ziele werden ausschließlich aus genau einer frischen Master-Costmap berechnet. | Plan enthält weder Costmap-Header/Fingerprint noch Rohkartenidentität, Detektor-ID, Beobachtungs-ID, Revision oder Unsicherheit. |
+| HWT-Portalplan | Getrennte Costmap-Brücken wie Main; zusätzlich verbundene Engstellen aus einer rohen Karte mit anschließender Erreichbarkeitsprüfung in der Costmap. Beide Eingänge müssen einzeln höchstens fünf Sekunden alt sein. | Die beiden neuesten Cachewerte werden nicht als zusammengehöriges Paar belegt; auch `connected_traversable` trägt keine Rohkarten- oder Costmapidentität. |
+| Lokaler Primärstand | Portalplan und Portalplanungsmodul entsprechen hinsichtlich Provenienz dem Main-Pfad; lokale Konturarbeit ergänzt keine Kartenidentität. | Der lokale Mischstand löst die Korrelation nicht und bleibt keine Integrationsbasis. |
+
+**Entscheidung:** Die Kartenmanagerrevision darf einem Portalplan weder als
+„zuletzt gesehen“, anhand gleicher Frames/Metadaten noch über ein Zeitfenster
+zugewiesen werden. Die Costmap-Headerzeit ist bei Nav2 1.1.20 nur deren
+Publikationszeit. Ein Costmap-Fingerprint wäre wegen statischem,
+dynamischem und Inflationsinhalt nicht mit dem Rohkartenfingerprint
+gleichzusetzen. Auch zwei jeweils frische Nachrichten können aus
+unterschiedlichen Rohkartenständen stammen. Deshalb bleiben Main- und
+HWT-Costmap-only-Pläne für den WE-M2-Schatten fail-closed gesperrt.
+
+Der kleinste belastbare Pfad beginnt stattdessen bei genau der rohen
+Kartenmomentaufnahme, auf der eine rein passive Erkennung läuft. Ein Adapter
+darf den Kartenmanagerkontext und `accepted_maps` nur übernehmen, wenn der
+vollständige Rohkartenfingerprint, `source_stamp_ns` und Frame exakt mit dem
+aktuellen `MapStatusCorrelationResult` übereinstimmen. Ein Nullstempel wird
+nicht durch Ankunftszeit ersetzt; er muss auf beiden Seiten identisch sein und
+der Inhaltsfingerprint bleibt maßgeblich. Abweichung, inzwischen weitergelaufener
+Managerstatus oder fehlende Identität verwirft den Kandidaten. Beobachtungs-IDs
+dürfen nicht aus einer Listenposition entstehen, sondern müssen später aus
+Detektorart, korrelierter Quellenidentität und kanonischer Geometrie stabil
+gebildet werden. Strukturevidenz bleibt zunächst `insufficient`.
+
+Diese Entscheidung verändert weder Nav2 noch die reale Costmap. Die vorhandene
+HWT-Rohkartenerkennung ist eine mögliche spätere Detektorquelle, aber ihre
+funktionale Übernahme ist damit weder beschlossen noch gemerged. Eine
+Costmap-basierte Erreichbarkeitsprüfung darf später zusätzliche passive
+Diagnose sein; ohne explizite Upstream-Linie darf sie die Rohkartenrevision
+nicht bestätigen oder ersetzen.
+
+**Ausgeführte Prüfungen:** Die unveränderte vollständige Explorer-Suite auf
+`eec8c5e` bestand mit **451 passed**. `git diff --check` bestand. Zusätzlich
+wurden das installierte Nav2-Paket als Version **1.1.20** und dessen passende
+Publisherimplementierung quellenbasiert geprüft. Das sind Quell- und
+Softwarebefunde, keine ROS-, Zielsystem-, Karten-, Fahr- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M2/V:** Neues reines Modul
+`src/explore/explore/portal_source_adapter.py`, neue zugehörige Unit-Tests und
+diese STATUS.md. Ein begrenzter Rohkarten-Identitätswert und ein Korrelator
+akzeptieren ausschließlich die exakte Übereinstimmung mit einem
+`MapStatusCorrelationResult` und liefern dann dessen Kontext/Revision;
+Fingerprint-, Stempel-, Frame-, Typ- und Epochenfehler schlagen atomar fehl.
+Noch keine Fingerprintberechnung aus ROS-Nachrichten, kein Detektoraufruf, keine
+Node-/Parameter-/Launchänderung und keine Portalzuführung.
+
+**Rückfallweg:** WE-M2/U ändert ausschließlich diese STATUS.md. Den
+Dokumentationscommit beziehungsweise gestapelten Review-PR zurücknehmen;
+WE-M2/T und die standardmäßig deaktivierte Schattenhülle bleiben unverändert.
+Kein Betriebs- oder Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/T: regionaler Fortschritt ist kein Wohnungsabschluss
 
