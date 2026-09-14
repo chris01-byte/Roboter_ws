@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/U)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/V)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,14 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/U – Portal-Provenienznaht quellenbasiert geklärt, zur Review.** Der
-vorhandene Main-Portalplan entsteht aus der Nav2-Master-Costmap. Deren Headerzeit
-ist die Publikationszeit und kein übernommener `/map`-Quellstempel; Hindernis-
-und Inflationslayer verändern zudem den Inhalt. Frame, Alter, Rastermetadaten
-oder Empfangsreihenfolge können deshalb keine Kartenmanagerrevision beweisen.
-Auch HWT koppelt seine rohe Karte und Costmap nur über getrennte
-Fünf-Sekunden-Frischeprüfungen. Die bisher gesperrte Portalzuführung bleibt
-somit zu Recht gesperrt.
+**WE-M2/V – exakte Rohkartenkorrelation softwaregeprüft, zur Review.** Ein neues
+reines Adaptermodul gibt Kartenkontext und -revision nur frei, wenn Fingerprint,
+Quellstempel und Frame der vom passiven Detektor verwendeten Rohkarte exakt dem
+aktuellen korrelierten Kartenmanagerstatus entsprechen. Abweichende oder
+ungültige Identitäten, ältere Momentaufnahmen und erfundene Statuswerte schlagen
+geschlossen fehl. Ein Nullstempel wird nur bei beiderseitiger exakter
+Übereinstimmung erhalten und nie durch Empfangszeit ersetzt. Costmap-only-Pläne
+besitzen keinen Eingang in diesen Vertrag.
 
 WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
 Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
@@ -25,13 +25,12 @@ Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
 zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
 einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster abgegrenzter Schritt WE-M2/V:** Rein und ohne ROS einen Adapter für
-die exakte Identität einer rohen Kartenmomentaufnahme ergänzen. Nur wenn
-Fingerprint, Quellstempel und Frame exakt dem aktuellen korrelierten
-Kartenmanagerstatus entsprechen, darf der Adapter dessen Kontext und Revision
-an einen passiven Portal-Kandidaten weitergeben; sonst muss er ohne
-Zustandsänderung ablehnen. Costmap-only-Pläne bleiben ausdrücklich ausgeschlossen.
-Betroffen sind nur neues Adaptermodul, Unit-Tests und diese STATUS.md.
+**Nächster abgegrenzter Schritt WE-M2/W:** Rein und ohne ROS die Herkunft der
+`RawMapPortalSource` an den bereits kanonisch fingerprintenden
+`robot_map_manager.map_core.MapSnapshot` binden. Die eine vorhandene
+Fingerprintimplementierung wiederverwenden, keine zweite Digestdefinition
+anlegen; Paketabhängigkeit und Cross-Contract testen. Noch kein Node-Callback,
+Detektor, Portalfeed, Ziel oder Fahrpfad.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -75,6 +74,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/S `docs/we-m2s-acceptance-matrix` | Gestapelte vollständige Zuordnung der WE-M2-Lieferung, Pflichttests und Abnahme zu konkreten Nachweisen oder Lücken; nur diese STATUS.md. |
 | WE-M2/T `feature/we-m2t-region-exploration-state` | Gestapelter expliziter Regions-Erkundungsstatus mit konservativer Merge-/Split-Behandlung und passiver Statusprojektion; Graph, Tests und Status, kein Deployment. |
 | WE-M2/U `docs/we-m2u-portal-provenance` | Gestapelte Quellenentscheidung zur fehlenden Rohkartenlinie der Nav2-Master-Costmap und zum fail-closed Korrelationsvertrag; nur diese STATUS.md. |
+| WE-M2/V `feature/we-m2v-raw-map-source` | Gestapelter reiner Exaktabgleich von Rohkartenfingerprint, -stempel und Frame gegen den aktuellen Kartenmanagerstand; neues Modul, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -409,6 +409,65 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/V: Revision nur bei exakter Rohkartenidentität
+
+**Entscheidung / Umfang:** Neu ist das reine Standardbibliotheksmodul
+`portal_source_adapter.py`. `RawMapPortalSource` trägt ausschließlich den
+bereits berechneten SHA-256-Fingerprint, `source_stamp_ns` und Frame der exakt
+vom passiven Detektor verwendeten Rohkartenmomentaufnahme. Der zustandslose
+`correlate_raw_map_portal_source()`-Vertrag vergleicht alle drei Werte mit einem
+aktuellen `MapStatusCorrelationResult`. Erst bei exakter Übereinstimmung gibt er
+dessen unveränderten Portal-/Kartenkontext und positive Prozessrevision frei.
+
+Jede Fingerprint-, Stempel- oder Frameabweichung wird verworfen; dadurch kann
+eine ältere Detektormomentaufnahme nicht die inzwischen neueste
+Kartenmanagerrevision erhalten. Ein Nullstempel bleibt als expliziter Wert
+zulässig, muss aber auf beiden Seiten null sein und ersetzt den Fingerprint
+nicht. Der Adapter validiert auch direkt konstruierte Statusobjekte und lehnt
+ungültige Revisionen, Fingerprints, Stempel, Alterswerte sowie nicht boolesche
+Änderungs-/Replaykennzeichen ab. Eingaben und Ergebnis sind unveränderlich.
+
+Das Modul akzeptiert keine `OccupancyGrid`, Costmap, Portalgeometrie oder
+Empfangszeit. Es berechnet noch keinen Fingerprint, ruft keinen Detektor auf,
+erzeugt keine Beobachtungs-ID und verändert weder Portalgedächtnis noch Graph.
+Damit kann insbesondere ein bestehender Costmap-only-`PortalPlan` die
+Provenienzsperre aus WE-M2/U nicht umgehen.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und vorhandenem `robot_interfaces`-Underlay, ohne
+ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2V-SOURCE | Quellenadapter-, Kartenstatus- und Portalplanadapter-Suiten gemeinsam: **139 passed**, davon 25 neue Quellenfälle. |
+| WE-M2V-EXPLORE | Vollständige Explorer-Suite: **476 passed**. |
+| WE-M2V-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **581 passed**. |
+| WE-M2V-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **476 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2V-STATIC | `git diff --check` und `flake8 --diff` (E501/W503 ausgenommen): bestanden. |
+
+**Offene Grenzen / Integrationsabhängigkeiten:** Der Adapter vertraut bewusst
+noch auf einen bereits kanonisch berechneten Fingerprint. Der Explorer erzeugt
+keine `RawMapPortalSource`, und es existiert weiterhin weder Detektor- noch
+Lifecycle-Zuführung. Eine unabhängige zweite Implementierung des
+Kartenmanager-Digests könnte auseinanderlaufen; deshalb muss der nächste Schritt
+die vorhandene `MapSnapshot`-Implementierung direkt wiederverwenden. Die
+HWT-Rohkartenerkennung ist nicht übernommen. Costmap-Provenienz,
+Strukturevidenz, Beobachtungs-ID und Unsicherheitsquelle bleiben offen.
+
+**Nächster abgegrenzter Schritt WE-M2/W:** Nur
+`portal_source_adapter.py`, dessen Tests, `explore/package.xml` und diese
+STATUS.md. Aus einem bereits validierten
+`robot_map_manager.map_core.MapSnapshot` eine `RawMapPortalSource` ableiten,
+damit Fingerprint, Quellstempel und Frame aus exakt derselben kanonischen
+Implementierung stammen. Die azyklische Laufzeitabhängigkeit deklarieren und
+positive/negative Cross-Package-Verträge prüfen. Keine ROS-Nachricht dekodieren,
+keinen Node, Detektor, Parameter, Launch oder Portalfeed ändern.
+
+**Rückfallweg:** Den WE-M2/V-Commit beziehungsweise gestapelten Review-PR
+zurücknehmen. WE-M2/U und die standardmäßig deaktivierte Schattenhülle bleiben
+separat reviewbar. Das neue Modul wird von keinem Runtime-Pfad importiert; es
+gibt keinen Installations- oder Gerätezustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/U: Costmap-Zeit ist keine Rohkarten-Provenienz
 
