@@ -171,6 +171,8 @@ def test_owner_waits_without_inventing_context_or_status():
     assert owner.latest_map_status is None
     with pytest.raises(RegionGraphShadowNotReadyError):
         build_status(owner)
+    with pytest.raises(RegionGraphShadowNotReadyError):
+        owner.frontier_tracks()
 
 
 def test_atomic_status_exposes_the_exact_source_used_for_serialization():
@@ -190,6 +192,7 @@ def test_atomic_status_exposes_the_exact_source_used_for_serialization():
     }
     assert payload["source"]["map_revision"] == (
         status.source.source_map_revision)
+    assert owner.frontier_tracks() == ()
 
 
 def test_raw_map_join_is_absent_without_explicit_capacity():
@@ -869,6 +872,10 @@ def test_lifecycle_keeps_unfiltered_frontier_tasks_open_across_revisions():
     assert [task["kind"] for task in payload["tasks"]] == [
         "frontier", "frontier"]
     assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.3)
+    tracks = owner.frontier_tracks()
+    assert tuple(track.frontier_id for track in tracks) == (
+        "frontier_000001", "frontier_000002")
+    assert all(track.last_revision == 3 for track in tracks)
 
 
 @pytest.mark.parametrize("changes", [

@@ -7,18 +7,23 @@ consumers remain deployed.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Tuple
 
 from .exploration_completion import (
     CompletionAssessment,
     ExplorationResultState,
     ReturnResultState,
 )
-from .exploration_policy import ExplorationPolicyAssessment
+from .exploration_policy import (
+    ExplorationPolicyAssessment,
+    TaskUtilityScore,
+)
 
 
 WE_STATUS_SCHEMA_VERSION = 1
 WE_PASSIVE_STATUS_MAX_BLOCKER_CODES = 128
+WE_PASSIVE_STATUS_MAX_TASK_EVIDENCE = 128
+WE_PASSIVE_STATUS_MAX_UTILITY_SCORES = 128
 
 
 class ExplorationMigrationError(ValueError):
@@ -92,7 +97,11 @@ def build_we_status_extension(completion: CompletionAssessment) -> dict:
 
 def build_passive_we_status_extension(
         assessment: ExplorationPolicyAssessment, *,
-        max_blocker_codes: int = WE_PASSIVE_STATUS_MAX_BLOCKER_CODES) -> dict:
+        utility_scores: Tuple[TaskUtilityScore, ...] = (),
+        max_blocker_codes: int = WE_PASSIVE_STATUS_MAX_BLOCKER_CODES,
+        max_task_evidence: int = WE_PASSIVE_STATUS_MAX_TASK_EVIDENCE,
+        max_utility_scores: int = WE_PASSIVE_STATUS_MAX_UTILITY_SCORES,
+) -> dict:
     """Project one passive assessment without implying a terminal result.
 
     The bounded summary is safe to attach beneath ``wohnungserkundung`` in the
@@ -102,13 +111,30 @@ def build_passive_we_status_extension(
     if not isinstance(assessment, ExplorationPolicyAssessment):
         raise ExplorationMigrationError(
             "assessment muss ExplorationPolicyAssessment sein")
-    if (
-            isinstance(max_blocker_codes, bool)
-            or not isinstance(max_blocker_codes, int)
-            or max_blocker_codes <= 0):
+    for name, value in (
+            ("max_blocker_codes", max_blocker_codes),
+            ("max_task_evidence", max_task_evidence),
+            ("max_utility_scores", max_utility_scores)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ExplorationMigrationError(
+                f"{name} muss eine positive Ganzzahl sein")
+    if not isinstance(utility_scores, tuple) or any(
+            not isinstance(item, TaskUtilityScore)
+            for item in utility_scores):
         raise ExplorationMigrationError(
-            "max_blocker_codes muss eine positive Ganzzahl sein")
+            "utility_scores muss ein Tupel aus TaskUtilityScore sein")
+    utility_ids = [item.task_id for item in utility_scores]
+    if len(set(utility_ids)) != len(utility_ids):
+        raise ExplorationMigrationError(
+            "utility_scores enthaelt doppelte Aufgaben-IDs")
+    if set(utility_ids) != set(assessment.eligible_task_ids):
+        raise ExplorationMigrationError(
+            "utility_scores muss geeignete Aufgaben exakt abdecken")
     blocker_codes = assessment.blocker_codes[:max_blocker_codes]
+    task_evidence = assessment.task_assessments[:max_task_evidence]
+    bounded_scores = tuple(sorted(
+        utility_scores, key=lambda item: item.task_id
+    ))[:max_utility_scores]
     return {
         "schema_version": WE_STATUS_SCHEMA_VERSION,
         "mode": "passive_shadow",
@@ -145,6 +171,38 @@ def build_passive_we_status_extension(
         "blocker_codes": list(blocker_codes),
         "blocker_codes_truncated": (
             len(blocker_codes) < len(assessment.blocker_codes)),
+        "task_evidence_count": len(assessment.task_assessments),
+        "task_evidence": [
+            {
+                "task_id": item.task_id,
+                "region_id": item.region_id,
+                "kind": item.kind.value,
+                "state": item.state.value,
+                "reason": item.reason,
+                "recheck_condition": item.recheck_condition,
+                "evidence_revision": item.evidence_revision,
+                "in_current_region": item.in_current_region,
+            }
+            for item in task_evidence
+        ],
+        "task_evidence_truncated": (
+            len(task_evidence) < len(assessment.task_assessments)),
+        "utility_score_count": len(utility_scores),
+        "utility_scores": [
+            {
+                "task_id": item.task_id,
+                "geodesic_path_length_m": item.geodesic_path_length_m,
+                "information_gain_square_m": (
+                    item.information_gain_square_m),
+                "normalized_route_cost": item.normalized_route_cost,
+                "normalized_information_gain": (
+                    item.normalized_information_gain),
+                "score": item.score,
+            }
+            for item in bounded_scores
+        ],
+        "utility_scores_truncated": (
+            len(bounded_scores) < len(utility_scores)),
     }
 
 

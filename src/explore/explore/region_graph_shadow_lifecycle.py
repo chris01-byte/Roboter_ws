@@ -12,7 +12,11 @@ from enum import Enum
 import math
 from typing import Optional
 
-from .frontier_task_feed import FrontierInventory, FrontierTaskPolicy
+from .frontier_task_feed import (
+    FrontierInventory,
+    FrontierTaskPolicy,
+    FrontierTrackSnapshot,
+)
 from .map_status_adapter import (
     MapManagerStatusCorrelator,
     MapStatusCorrelationPolicy,
@@ -173,6 +177,13 @@ class RegionGraphShadowLifecycle:
     @property
     def latest_map_status(self) -> Optional[MapStatusCorrelationResult]:
         return self._latest_map_status
+
+    def frontier_tracks(self) -> tuple[FrontierTrackSnapshot, ...]:
+        """Expose immutable track snapshots only after session creation."""
+        if self._session is None:
+            raise RegionGraphShadowNotReadyError(
+                "Frontiertracks warten noch auf eine Schatten-Sitzung")
+        return self._session.frontier_tracks()
 
     @property
     def raw_map_diagnostics(self) -> RawMapCorrelationDiagnostics:

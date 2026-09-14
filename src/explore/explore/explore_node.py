@@ -87,12 +87,20 @@ from explore.exploration_migration import (
     build_passive_we_status_extension,
     build_unavailable_we_status_extension,
 )
-from explore.exploration_policy import assess_exploration_policy
+from explore.exploration_policy import (
+    assess_exploration_policy,
+    score_task_utilities,
+)
+from explore.frontier_task_evidence import (
+    FrontierTaskEvidencePolicy,
+    build_frontier_task_evidence,
+)
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
+from explore.region_graph import RegionTaskState
 
 import tf2_ros
 
@@ -748,6 +756,21 @@ class ExploreNode(Node):
         self._wohnungserkundung_policy_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_policy_enabled', False).value)
+        self._wohnungserkundung_evidence_clearance = float(
+            self.declare_parameter(
+                'wohnungserkundung_evidence_clearance_m', 0.28).value)
+        self._wohnungserkundung_robot_seed_search = float(
+            self.declare_parameter(
+                'wohnungserkundung_robot_seed_search_m', 0.75).value)
+        self._wohnungserkundung_task_cell_search = float(
+            self.declare_parameter(
+                'wohnungserkundung_task_cell_search_m', 0.60).value)
+        self._wohnungserkundung_information_radius = float(
+            self.declare_parameter(
+                'wohnungserkundung_information_radius_m', 0.75).value)
+        self._wohnungserkundung_evidence_max_cells = int(
+            self.declare_parameter(
+                'wohnungserkundung_evidence_max_cells', 262144).value)
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -955,6 +978,22 @@ class ExploreNode(Node):
             )
         )
         if self._wohnungserkundung_policy_enabled:
+            self._wohnungserkundung_evidence_policy = (
+                FrontierTaskEvidencePolicy(
+                    clearance_m=(
+                        self._wohnungserkundung_evidence_clearance),
+                    robot_seed_search_m=(
+                        self._wohnungserkundung_robot_seed_search),
+                    task_cell_search_m=(
+                        self._wohnungserkundung_task_cell_search),
+                    information_radius_m=(
+                        self._wohnungserkundung_information_radius),
+                    max_cells=(
+                        self._wohnungserkundung_evidence_max_cells),
+                )
+            )
+            self._wohnungserkundung_evidence_cache_key = None
+            self._wohnungserkundung_evidence_cache = None
             self._wohnungserkundung_status_extension = (
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
@@ -1281,6 +1320,12 @@ class ExploreNode(Node):
         """Publish at most once per timer tick after a complete map status."""
         self._try_observe_correlated_raw_map_frontiers()
         self._try_observe_connected_raw_map_portals()
+        evidence_inputs = None
+        evidence_unavailable_reason = (
+            'frontier_task_feed_disabled'
+            if not getattr(
+                self, '_region_graph_shadow_frontier_task_feed', False)
+            else 'exact_frontier_map_evidence_unavailable')
         with self._region_graph_shadow_lock:
             if self._region_graph_shadow_fault is not None:
                 return
@@ -1294,13 +1339,114 @@ class ExploreNode(Node):
                 self._fault_region_graph_shadow('Statusausgabe', error)
                 return
             payload = status.serialized
+            if (
+                    getattr(
+                        self, '_wohnungserkundung_policy_enabled', False)
+                    and getattr(
+                        self, '_region_graph_shadow_frontier_task_feed', False)):
+                raw_map = self._region_graph_shadow_latest_raw_map
+                correlation = self._region_graph_shadow_latest_correlation
+                raw_source = self._region_graph_shadow_latest_raw_source
+                if (
+                        raw_map is not None
+                        and correlation is not None
+                        and raw_source is not None
+                        and self._shadow_source_matches_correlation(
+                            raw_source, correlation)
+                        and status.source.context == correlation.context
+                        and status.source.source_map_revision
+                        == correlation.map_revision):
+                    try:
+                        tracks = self._region_graph_shadow.frontier_tracks()
+                    except Exception as error:
+                        evidence_unavailable_reason = (
+                            f'frontier_track_snapshot_error:'
+                            f'{type(error).__name__}')
+                    else:
+                        evidence_inputs = (raw_map, correlation, tracks)
             message = String()
             message.data = payload
             self._region_graph_shadow_pub.publish(message)
         if getattr(self, '_wohnungserkundung_policy_enabled', False):
             try:
-                assessment = assess_exploration_policy(status.source)
-                extension = build_passive_we_status_extension(assessment)
+                task_availability = ()
+                utility_evidence = ()
+                evidence_status = {
+                    'state': 'unavailable',
+                    'reason': evidence_unavailable_reason,
+                }
+                if evidence_inputs is not None:
+                    raw_map, correlation, tracks = evidence_inputs
+                    robot_pose = self._robot_pose()
+                    origin = raw_map.info.origin
+                    robot_cell = (
+                        None if robot_pose is None
+                        else self._world_to_grid(
+                            robot_pose[0], robot_pose[1], raw_map.info)
+                    )
+                    evidence_key = (
+                        *self._shadow_correlation_key(correlation),
+                        robot_cell,
+                    )
+                    if evidence_key == (
+                            self._wohnungserkundung_evidence_cache_key):
+                        evidence = self._wohnungserkundung_evidence_cache
+                    else:
+                        evidence = build_frontier_task_evidence(
+                            correlation,
+                            width=raw_map.info.width,
+                            height=raw_map.info.height,
+                            resolution=raw_map.info.resolution,
+                            frame_id=raw_map.header.frame_id.strip(),
+                            origin=(
+                                origin.position.x,
+                                origin.position.y,
+                                origin.position.z,
+                                origin.orientation.x,
+                                origin.orientation.y,
+                                origin.orientation.z,
+                                origin.orientation.w,
+                            ),
+                            cells=raw_map.data,
+                            source_stamp_ns=(
+                                int(raw_map.header.stamp.sec) * 1_000_000_000
+                                + int(raw_map.header.stamp.nanosec)
+                            ),
+                            robot_xy=(
+                                None if robot_pose is None
+                                else (robot_pose[0], robot_pose[1])
+                            ),
+                            tasks=tuple(
+                                task for task in status.source.graph.tasks
+                                if task.state is RegionTaskState.OPEN),
+                            tracks=tracks,
+                            policy=self._wohnungserkundung_evidence_policy,
+                        )
+                        self._wohnungserkundung_evidence_cache_key = (
+                            evidence_key)
+                        self._wohnungserkundung_evidence_cache = evidence
+                    task_availability = evidence.availability
+                    utility_evidence = evidence.utilities
+                    evidence_status = {
+                        'state': 'current',
+                        'map_revision': evidence.source_map_revision,
+                        'robot_seed_available': (
+                            evidence.robot_seed_available),
+                        'current_frontier_track_count': (
+                            evidence.current_frontier_track_count),
+                        'availability_count': len(evidence.availability),
+                        'utility_count': len(evidence.utilities),
+                    }
+                assessment = assess_exploration_policy(
+                    status.source, task_availability)
+                scores = score_task_utilities(
+                    assessment.eligible_task_ids,
+                    utility_evidence,
+                    status.source.source_map_revision,
+                )
+                extension = build_passive_we_status_extension(
+                    assessment, utility_scores=scores)
+                extension['task_evidence_source'] = evidence_status
             except Exception as error:
                 fault = f'policy_error:{type(error).__name__}'
                 self._wohnungserkundung_status_extension = (
