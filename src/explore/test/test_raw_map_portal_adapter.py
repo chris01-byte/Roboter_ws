@@ -27,6 +27,7 @@ from explore.portal_source_adapter import (  # noqa: E402
 from explore.raw_map_portal_adapter import (  # noqa: E402
     RawMapPortalCandidateError,
     correlated_connected_portal_candidates,
+    correlated_connected_portal_observations,
 )
 
 
@@ -109,6 +110,34 @@ def test_exact_snapshot_produces_stable_unqualified_candidate():
     assert observation.structural_evidence is (
         PortalStructuralEvidence.INSUFFICIENT)
     assert np.array_equal(occupancy, _occupancy())
+
+
+def test_exact_door_neck_produces_qualified_structural_observation():
+    occupancy = _occupancy()
+    _source, correlation, arguments = _arguments(occupancy)
+
+    observation, = correlated_connected_portal_observations(
+        correlation, **arguments)
+
+    assert observation.observation_id.startswith("raw-connected-")
+    assert observation.context == CONTEXT
+    assert observation.map_revision == 1
+    assert observation.structural_evidence is (
+        PortalStructuralEvidence.QUALIFIED)
+    assert np.array_equal(occupancy, _occupancy())
+
+
+def test_furniture_neck_with_alternate_route_stays_insufficient():
+    occupancy = np.full((60, 100), -1, dtype=np.int8)
+    occupancy[5:55, 3:97] = 0
+    occupancy[12:48, 45:55] = -1
+    _source, correlation, arguments = _arguments(occupancy)
+
+    observation, = correlated_connected_portal_observations(
+        correlation, **arguments)
+
+    assert observation.structural_evidence is (
+        PortalStructuralEvidence.INSUFFICIENT)
 
 
 def test_growth_and_rotation_keep_metric_portal_identity_in_memory():

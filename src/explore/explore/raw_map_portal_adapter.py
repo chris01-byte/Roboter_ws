@@ -1,7 +1,8 @@
-"""Build passive portal candidates from one exactly correlated raw map.
+"""Build passive portal evidence from one exactly correlated raw map.
 
 This module is ROS-free and has no runtime, planner, filesystem or actuator
-side effects.  Its candidates remain structurally unqualified.
+side effects.  The legacy candidate adapter remains structurally unqualified;
+the richer observation adapter qualifies only a topologically separating neck.
 """
 
 import hashlib
@@ -10,6 +11,7 @@ import struct
 from typing import Any, Iterable, Tuple
 
 import numpy as np
+from scipy.ndimage import label
 
 from amadeus_map_identity import (
     MAXIMUM_OCCUPANCY_CELL_COUNT,
@@ -18,7 +20,12 @@ from amadeus_map_identity import (
     map_snapshot_fingerprint,
 )
 
-from .portal_memory import PortalMapContext
+from .portal_memory import (
+    Point2D,
+    PortalMapContext,
+    PortalObservation,
+    PortalStructuralEvidence,
+)
 from .portal_plan_adapter import PortalPlanCandidate
 from .portal_planning import find_connected_clearance_portals
 from .portal_source_adapter import (
@@ -215,3 +222,131 @@ def correlated_connected_portal_candidates(
         )
         for bridge in bridges
     )
+
+
+def _separator_evidence(
+        occupancy: np.ndarray, *, robot_cell: Tuple[int, int],
+        staging_cell: Tuple[int, int], target_cell: Tuple[int, int],
+        resolution_m: float, analysis_clearance_m: float,
+        minimum_region_area_m2: float) -> PortalStructuralEvidence:
+    """Qualify only a neck whose local removal separates two large areas.
+
+    This topological check cannot identify physical wall material.  It only
+    proves that the detected neck is a separator in this exact measured-free
+    raster.  Independent map revisions remain mandatory in ``PortalMemory``.
+    """
+    measured_free = occupancy == 0
+    height, width = measured_free.shape
+    robot_row, robot_col = robot_cell
+    if not (
+            0 <= robot_row < height and 0 <= robot_col < width
+            and measured_free[robot_row, robot_col]):
+        return PortalStructuralEvidence.INSUFFICIENT
+
+    staging_row, staging_col = staging_cell
+    target_row, target_col = target_cell
+    axis_row = float(target_row - staging_row)
+    axis_col = float(target_col - staging_col)
+    axis_length = math.hypot(axis_row, axis_col)
+    if axis_length <= 1e-9:
+        return PortalStructuralEvidence.INSUFFICIENT
+    unit_row = axis_row / axis_length
+    unit_col = axis_col / axis_length
+    probe_offset = int(math.ceil(
+        analysis_clearance_m / resolution_m)) + 2
+    far_row = int(round(target_row + probe_offset * unit_row))
+    far_col = int(round(target_col + probe_offset * unit_col))
+    if not (
+            0 <= far_row < height and 0 <= far_col < width
+            and measured_free[far_row, far_col]):
+        return PortalStructuralEvidence.INSUFFICIENT
+
+    rows, cols = np.ogrid[:height, :width]
+    midpoint_row = 0.5 * (staging_row + target_row)
+    midpoint_col = 0.5 * (staging_col + target_col)
+    cut = (
+        np.hypot(rows - midpoint_row, cols - midpoint_col) * resolution_m
+        <= analysis_clearance_m)
+    remaining = measured_free & ~cut
+    components, _component_count = label(remaining)
+    source_label = int(components[robot_row, robot_col])
+    target_label = int(components[far_row, far_col])
+    if source_label <= 0 or target_label <= 0 or source_label == target_label:
+        return PortalStructuralEvidence.INSUFFICIENT
+    minimum_cells = max(
+        1, int(math.ceil(minimum_region_area_m2 / resolution_m ** 2)))
+    sizes = np.bincount(components.ravel())
+    if (
+            sizes[source_label] < minimum_cells
+            or sizes[target_label] < minimum_cells):
+        return PortalStructuralEvidence.INSUFFICIENT
+    return PortalStructuralEvidence.QUALIFIED
+
+
+def correlated_connected_portal_observations(
+        correlation: PortalSourceCorrelation, **arguments,
+) -> Tuple[PortalObservation, ...]:
+    """Build exact-map observations with conservative separator evidence.
+
+    The underlying detector, fingerprint validation and candidate IDs are
+    unchanged.  A candidate is structurally qualified only when removing a
+    clearance-sized disk around its neck disconnects the robot side from a
+    sufficiently large far side in the same exact measured-free raster.
+    """
+    candidates = correlated_connected_portal_candidates(
+        correlation, **arguments)
+    if not candidates:
+        return ()
+
+    width = arguments["width"]
+    height = arguments["height"]
+    resolution_m = float(arguments["resolution"])
+    origin, yaw = _validated_planar_origin(arguments["origin"])
+    try:
+        compact_cells = compact_occupancy_cells(
+            cells=arguments["cells"], cell_count=width * height)
+    except MapIdentityError as error:
+        raise RawMapPortalCandidateError(
+            "Rohkartenzellen sind fuer Strukturevidenz ungueltig") from error
+    occupancy = np.frombuffer(
+        compact_cells, dtype=np.uint8).astype(np.int16).reshape(
+            (height, width))
+    occupancy[occupancy == 255] = -1
+    cosine = math.cos(yaw)
+    sine = math.sin(yaw)
+
+    def world_to_grid(point: Tuple[float, float]) -> Tuple[int, int]:
+        dx = point[0] - origin[0]
+        dy = point[1] - origin[1]
+        col = (cosine * dx + sine * dy) / resolution_m - 0.5
+        row = (-sine * dx + cosine * dy) / resolution_m - 0.5
+        return int(round(row)), int(round(col))
+
+    robot_xy = arguments["robot_xy"]
+    robot_dx = float(robot_xy[0]) - origin[0]
+    robot_dy = float(robot_xy[1]) - origin[1]
+    robot_cell = (
+        math.floor((-sine * robot_dx + cosine * robot_dy) / resolution_m),
+        math.floor((cosine * robot_dx + sine * robot_dy) / resolution_m),
+    )
+    observations = []
+    for candidate in candidates:
+        evidence = _separator_evidence(
+            occupancy,
+            robot_cell=robot_cell,
+            staging_cell=world_to_grid(candidate.staging_xy),
+            target_cell=world_to_grid(candidate.target_xy),
+            resolution_m=resolution_m,
+            analysis_clearance_m=float(arguments["analysis_clearance_m"]),
+            minimum_region_area_m2=float(arguments["min_target_area_m2"]),
+        )
+        observations.append(PortalObservation(
+            observation_id=candidate.observation_id,
+            context=candidate.context,
+            map_revision=candidate.map_revision,
+            near_side=Point2D(*candidate.staging_xy),
+            far_side=Point2D(*candidate.target_xy),
+            uncertainty_m=candidate.uncertainty_m,
+            structural_evidence=evidence,
+        ))
+    return tuple(observations)
