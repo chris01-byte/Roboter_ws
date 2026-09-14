@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/D)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/E)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,20 +10,21 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/D – kontrollierte Regionsteilung als reine Logik softwaregeprüft, zur
-Review.** Ein expliziter revisionsgebundener Auftrag verteilt jeden konkreten
-Portalendpunkt und jede Aufgaben-ID einer vorläufigen Region vollständig auf die
-beibehaltene und eine neue stabile Regions-ID. Der bisherige Regionszustand wird
-konservativ genau einer Seite zugewiesen; Replays folgen der korrigierten
-Topologie. Dies ist weiterhin nicht der gesamte WE-M2-Umfang und keine
-Zielsystem- oder Hardwareabnahme.
+**WE-M2/E – versionierte Schattenstatus-Projektion als reine Logik
+softwaregeprüft, zur Review.** Das neue Modul bildet bestehende unveränderliche
+Portal-, Erreichbarkeits- und Regionssnapshots deterministisch auf begrenztes JSON
+ab. Kontext, Quellrevisionen, Revisionsalter, aktuelle Region, Verbindungen,
+Aufgaben und ungelöste Zustände werden sichtbar; metrische Wohnungsgeometrie und
+Ziele fehlen absichtlich. Es wird noch nichts publiziert. Dies ist weiterhin
+nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder Hardwareabnahme.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/E.** Als reinen
-Schema-/Projektionsschritt einen begrenzten, deterministischen Schattenstatus aus
-Portal- und Regionssnapshots erzeugen. Er muss Kontext, Graphrevision, Datenalter
-beziehungsweise veralteten Stand, aktuelle Region, Verbindungen und vollständige
-Aufgabenzähler sichtbar machen, aber noch keinen ROS-Publisher einbinden. Keine
-Zielbewertung, Marker-Geometrie, Navigation oder Fahrwirkung.
+**Nächster vorgeschlagener Schritt nach Review: WE-M2/F – passive
+Integrationsabgrenzung.** Vor einer Runtime-Änderung Main-, HWT- und lokalen
+Explorerstand sowie Statusverbraucher erneut gegenprüfen und die konkrete Quelle
+normalisierter Portal-/Graphereignisse, Besitzer/Lebensdauer des Schattenzustands,
+Topic/QoS, standardmäßig deaktivierten Start und Ressourcenbudget festlegen.
+Ergebnis zunächst nur in dieser STATUS.md; keine Fahrsoftware, ROS-Ausgabe,
+Navigation oder Gerätewirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -50,6 +51,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/B `feature/we-m2b-region-merge` | Gestapelte, explizit ausgelöste Regionsvereinigung mit Aliasauflösung; nur Graphmodul, Tests und Status, kein Deployment. |
 | WE-M2/C `feature/we-m2c-task-references` | Gestapelte passive Aufgabenreferenzen mit aliasfestem Regionsbezug; nur Graphmodul, Tests und Status, kein Deployment. |
 | WE-M2/D `feature/we-m2d-region-split` | Gestapelte, vollständig spezifizierte Regionsteilung; nur Graphmodul, Tests und Status, kein Deployment. |
+| WE-M2/E `feature/we-m2e-shadow-status` | Gestapelte reine JSON-Schattenprojektion mit expliziter Revisionsfrische und harten Ausgabegrenzen; neues Modul, Tests und Status, kein Publisher oder Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -287,7 +289,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis D als reine Topologie samt Vereinigung, Aufgabenbezug und kontrollierter Teilung softwaregeprüft; passive Statusprojektion und ROS-Schattenintegration offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis E als reine Topologie samt Korrekturen, Aufgabenbezug und Statusprojektion softwaregeprüft; Integrationsabgrenzung und passive ROS-Schattenausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -328,7 +330,9 @@ erledigte Aufgabenreferenzen bei diesen Vereinigungen und löst ihren Regionsbez
 kanonisch auf. WE-M2/D teilt eine Region nur nach vollständiger externer
 Zuordnung aller Portalenden und Aufgaben und erhält Replays. Eine neue bestätigte
 Portal-ID erzeugt weiterhin zunächst eine vorläufige Gegenregion. Automatische
-Merge-/Splitentscheidung, Geometriekorrekturen und passive Runtime-Ausgabe fehlen.
+Merge-/Splitentscheidung und Geometriekorrekturen fehlen. WE-M2/E kann den
+vorhandenen Stand passiv, revisionsgebunden und ohne metrische Geometrie
+serialisieren; Runtime-Besitz, Eingangsdaten und ROS-Ausgabe sind noch offen.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -347,6 +351,72 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/E: begrenzter Schattenstatus ohne Publisher
+
+**Entscheidung / Umfang:** Neu `region_graph_status.py` als reine
+Standardbibliotheks-Projektion. Ein `ShadowStatusSource` übernimmt den expliziten
+Portal-/Kartenkontext, die aktuelle externe Kartenrevision, die letzte
+Portalgedächtnisrevision sowie unveränderliche Portal-, seitenspezifische
+Erreichbarkeits- und Regionsgraph-Snapshots. `build_shadow_status_json()` erzeugt
+kanonisches kompaktes JSON mit `schema_version: 1`, `mode: shadow` und
+`passive: true`. Das Modul liest keine Karte, Uhr, Datei oder ROS-Schnittstelle
+und publiziert nichts.
+
+**Nachgewiesenes Verhalten:** Gleicher Inhalt ergibt unabhängig von der
+Eingabereihenfolge bytegleiches JSON. Portalgeometrie (`x`, `y`, metrische Seiten)
+wird nicht ausgegeben. Enthalten sind Kontext, aktuelle Kartenrevision, getrennte
+Portal-/Graphrevision samt Abstand in Revisionen und `fresh`/`stale`/`missing`,
+aktuelle Region, Regionen, Portalverbindungen, Aliasbezug, vollständiger
+Aufgabenbestand, Bestätigungs-/Eintrittszähler sowie unbekannte oder vorübergehend
+blockierte Portalseiten. Fehlende Quellen gelten nicht als frisch.
+
+Der Projektor prüft vor Ausgabe Kontextgleichheit, aktuelle und nicht zukünftige
+Revisionen, eindeutige IDs, beide Erreichbarkeitsseiten jedes Portals,
+Verbindungs-/Regions-/Aufgabenreferenzen und die zugehörigen Zähler. Harte Grenzen
+für alle Bestände und die serialisierte Bytezahl verhindern unbeschränkte
+Ausgabe. Widerspruch, Lücke oder Grenzüberschreitung bricht geschlossen ab.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2E-STATUS | Neue Schattenstatus-Suite: **31 passed**. |
+| WE-M2E-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **325 passed**. |
+| WE-M2E-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **220 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2E-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Der zusätzliche Lauf einschließlich des bereits in Abschnitt 5 abgegrenzten
+VL53-Vertragstests ergab **327 bestanden, 1 fehlgeschlagen**; Fehlerbild und
+betroffene unveränderte Dateien entsprechen WE-M2/C und werden hier nicht
+angepasst. Der Colcon-Aufbau überschreibt keine Arbeitsinstallation und nutzt
+`robot_interfaces` aus dem vorhandenen Underlay. Nicht geprüft wurden ROS-QoS,
+Publisher, Statusverbraucher, echte Datenfrische, Laufzeit/Speicher auf dem
+Jetson, Sensorik, Footprint, Kollisionswirkung oder Hardware.
+
+**Offene Risiken / Integrationsabhängigkeiten:** `PortalSnapshot` selbst trägt
+keinen Kontext; der Aufrufer muss deshalb belegen, dass die zusammen übergebenen
+Portal- und Erreichbarkeitssnapshots zum deklarierten Kontext gehören. Die
+Revisionsabstandsgrenze `1` ist nur ein synthetischer Softwarestartwert, keine
+gemessene Laufzeit-Frische. Eingangsadapter, Zustandsbesitzer, Aktualisierungsrate,
+Topic/QoS, vorhandene `/explore/status_json`-Verbraucher und Jetson-Budget sind
+noch nicht festgelegt. Das JSON ist weder Abschlussurteil noch Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/F:** Nur Bestands- und
+Integrationsentscheidung in dieser STATUS.md. Aktuellen Main-, HWT- und lokalen
+Explorerstand sowie iOS/Web-/Missionsverbraucher prüfen. Festlegen, welche
+bestehenden Detektorausgaben ohne erfundene Strukturevidenz als normalisierte
+Eingänge dienen dürfen, wo der sitzungsgebundene Schattenzustand lebt, wie ein
+neues Topic benannt und mit welchem QoS/Rate-/Speicherbudget standardmäßig
+deaktiviert vorbereitet wird. Noch keine Node-, Launch-, Parameter-, Ziel- oder
+Fahrsoftware ändern. Erst der danach eindeutig abgegrenzte PR darf die passive
+Publisher-Hülle umsetzen.
+
+**Rückfallweg:** Die zwei neuen WE-M2/E-Dateien und diesen Statusabschnitt
+entfernen beziehungsweise den gestapelten Review-PR zurücknehmen. WE-M2/A bis D
+und WE-M1 bleiben separat reviewbar. Da kein Runtime-Pfad das neue Modul importiert,
+gibt es keine Runtime- oder Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/D: Regionsteilung ordnet alle Referenzen explizit zu
 
