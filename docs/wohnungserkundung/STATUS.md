@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AS)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AT)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,29 +10,29 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AS – der ungefilterte globale Frontierbestand wird zusätzlich passiv,
-revisions- und replayfest als Aufgabenbestand zugeführt; lokal softwaregeprüft,
-zur Review.** Die Zuführung liest alle Cluster direkt nach der vorhandenen
-Rohkarten-Frontiererkennung und vor Ranking, Besuchsfilter, Blacklist oder
-Planner. Eindeutig gegenseitig nächste Beobachtungen innerhalb des vorhandenen
-Revisit-Radius behalten eine sitzungsstabile Frontier-ID. Mehrdeutige
-Geometrie wird nicht zusammengeführt, sondern bleibt als zusätzliche offene
-Aufgabe sichtbar. Fehlende Cluster schließen keine Aufgabe ab.
+**WE-M2/AT – die vollständige passive Softwarekette ist über 240 wachsende und
+geometrisch wechselnde synthetische Karten reproduzierbar langlaufgeprüft; zur
+Review.** Exaktjoin, ungefilterte Frontierbildung, topologische
+Portalbeobachtung, Regionsgraph und Aufgaben blieben über 2.496.160 bytegleich
+kontrollierte Eingangszellen bei einer Frontier-ID, einem bestätigten Portal,
+zwei Regionen, einer Verbindung und konstant drei Aufgaben. Der beobachtete
+Prozess-RSS-Anstieg betrug 2.940.928 Byte; das ist eine lokale Messung ohne
+Jetson- oder Freigabeschwelle.
 
-WE-M2 bleibt offen: Die automatische Kette aus exakt korrelierter Rohkarte,
-Struktur-/Frontierereignissen, Regionen, Verbindungen und passiven Aufgaben ist
-lokal softwaregeprüft. Ein Durchfahrtsurteil kann atomar Portalgedächtnis,
-aktuelle Region und Portalaufgabe fortschreiben, wird aber absichtlich nur als
-bereits extern validierter Eingang akzeptiert. Der vorhandene Fahrpfad liefert
-noch keinen vollständigen Chassis-/Auslaufbeleg und ist nicht angebunden. Die
-neue kombinierte Ereigniskette besitzt noch keinen eigenen wachsenden
-Langlauf-/Speichernachweis; reale Parallel-/SLAM-Last und Jetson-Nachtest fehlen.
+WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
+wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
+kann atomar Portalgedächtnis, aktuelle Region und Portalaufgabe fortschreiben,
+wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
+Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
+und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
+Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
 
-**Nächster abgegrenzter Schritt WE-M2/AT:** Einen gerätefreien, reproduzierbaren
-Langlauf der jetzt vollständigen passiven Kette über wachsende und korrigierte
-synthetische Karten ergänzen. Zeit, RSS, Aufgaben-/Identitätswachstum,
-Kapazitätsfehler und unveränderte Raster müssen gemeinsam gemessen werden. Noch
-kein Jetson-/Hardwareurteil, keine Policy, Zielwahl, Action, Navigation oder Fahrt.
+**Nächster abgegrenzter Schritt WE-M3/A:** Ohne die vertagten Geräteprüfungen
+vorzuziehen, den reinen Eingangs- und Ergebnisvertrag einer hierarchischen
+Aufgabenpolicy festlegen und implementieren. Sie darf ausschließlich passive
+Snapshots bewerten, keine Ziele erzeugen und weder Action-, Nav2-, Command- noch
+Twist-Schnittstellen besitzen. Abschluss bleibt gesperrt, solange offene oder
+nur gefilterte Aufgaben, veraltete Quellen oder unklare Erreichbarkeit bestehen.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -100,6 +100,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AQ `feature/we-m2aq-passive-connected-portal-feed` | Gestapelte dritt-opt-in passive Node-Zuführung exakt korrelierter Rohkarten-Portalkandidaten mit begrenztem Pose-Retry, Sperrdisziplin, Fehlerisolation und gerätefreiem ROS-Smoke; keine Qualifikation, Graphverbindung oder Fahrwirkung. |
 | WE-M2/AR `feature/we-m2ar-automatic-shadow-events` | Gestapelte dritt-opt-in Kette von exakt korrelierter Rohkarte über topologischen Strukturbeleg und revisionsgebundene Portalbestätigung bis zu vorläufiger Region, Verbindung und passiven Beobachtungs-/Portalaufgaben; validierte Traversalschnittstelle ohne Fahrpfadanbindung. |
 | WE-M2/AS `feature/we-m2as-passive-frontier-tasks` | Gestapelte unabhängige Opt-in-Zuführung aller ungefilterten Rohkarten-Frontiers in sitzungsstabile offene Graphaufgaben; eindeutige Assoziation, mehrdeutige Zusatzaufgabe, Replay-/Kapazitätsgrenzen und kein Abschluss durch Verschwinden oder Filter. |
+| WE-M2/AT `chore/we-m2at-passive-chain-load-probe` | Gestapelter gerätefreier Offline-Langläufer für Exaktjoin, Frontier-/Portalereignisse, Regionen und Aufgaben über wachsende synthetische Karten; bytegleiche Eingangsprüfung, Zeit-/Prozess-RSS-Messung und atomarer Kapazitätsfall. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -337,7 +338,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AS decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die automatisch korrelierte Struktur-/Frontierereignis-, Regions- und Aufgabenkette ab. Kombinierter Langlauf, vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | Softwareumfang lokal geprüft; formale Abnahme offen | WE-M2/A bis AT decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, sämtliche Geometrieszenarien, automatisch korrelierte Struktur-/Frontierereignisse und den wachsenden Kettenlanglauf ab. Vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last, Zielsystem- und Hardwareabnahme bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -434,6 +435,74 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AT: wachsender Langlauf der passiven Gesamtkette
+
+**Werkzeug und Sicherheitsgrenze:**
+`tools/kartierung/passive_kette_lasttest.py` ist ein eigenständiger
+Offline-Prüfer. Er startet keine ROS-Knoten oder Kindprozesse, liest keine
+realen Karten/Bags und besitzt keine Publisher-, Action-, Nav2-, Twist- oder
+Geräteschnittstelle. Seine synthetischen OccupancyGrids durchlaufen die
+tatsächlichen reinen Produktionsmodule für Rohkartenidentität, Exaktjoin,
+Frontierdetektion, Portalbeobachtung, Schattenlebenszyklus, Regionsgraph und
+Aufgaben. Der separate ROS-Smoke aus AS bleibt Nachweis der Nodeverkabelung.
+
+**Deterministische Folge:** Der längere belegte Lauf umfasst 240 verschiedene
+Kartenrevisionen. Eine verbundene Raum–Tür–Raum-Geometrie wechselt die
+Engstellenkante geringfügig; alle zehn Revisionen wächst das Raster symmetrisch,
+bis maximal 24 Polsterzellen pro Seite erreicht sind. Der Kartenursprung wird
+gegenläufig verschoben, sodass die metrische Wohnungsgeometrie stabil bleibt.
+Ein belegter Marker außerhalb der Nutzgeometrie erzwingt pro Revision einen
+neuen exakten Fingerprint. Maximal wurden 15.984 Zellen pro Snapshot und
+insgesamt 2.496.160 Eingangsbytes verarbeitet.
+
+Vor und nach jeder Kette vergleicht der Prüfer Metadaten und Zellbytes. Alle 240
+Vergleiche blieben bytegleich. Jede Revision erzeugte genau eine qualifizierte
+Portalbeobachtung. Nach der zweiten Revision blieben ein bestätigtes Portal,
+zwei Regionen und eine Verbindung stabil. Der vollständige ungefilterte
+Frontierbestand blieb bei genau einer sitzungsstabilen Frontieraufgabe. Zusammen
+mit erledigter Beobachtungs- und offener Portalaufgabe betrug der Bestand
+durchgehend höchstens und am Ende genau drei Aufgaben. Ein separater Track mit
+Kapazität eins wies eine zweite neue Frontier zurück und blieb zustandsgleich auf
+dem vorherigen Snapshot; die integrierte Graphatomizität ist zusätzlich in AS
+getestet.
+
+**Gemessene lokale Ressourcen:** Auf dem aktuellen Entwicklungsrechner wurden
+pro vollständiger Revision Median 40.597.590 ns, p95 75.043.337 ns und maximal
+111.125.872 ns gemessen. Prozess-RSS Start/Spitze/Ende waren
+63.651.840/66.592.768/66.592.768 Byte, also 2.940.928 Byte beobachteter
+Spitzenanstieg. Das sind reproduzierbare Beobachtungswerte, keine eingefrorenen
+Grenzwerte und keine Jetson-Prognose; Hintergrundlast und Pythonallocator sind
+enthalten.
+
+**Ausgeführte Prüfungen:** Der 240-Revisionen-Lauf bestand mit Actions/Commands
+`0` und `hardware_access=false`. Die fünf neuen Offline-Vertragstests prüfen
+Kurzlauf, Wachstum/Ursprung, Kapazitätsatomizität, Argument-/Ausgabegrenzen und
+das Fehlen von Prozess-/Fahrschnittstellen. Gemeinsam mit dem vorhandenen
+Rohkartenlastprüfer bestanden **14 Tests**; zusammen mit der unveränderten
+Explorer-Suite **593 Tests**. `compileall`, geänderte Pythonzeilen mit `flake8`
+unter den Projekt-Ausnahmen E501/W503 und `git diff --check` bestanden. Da nur
+ein Werkzeug, dessen Tests, README und diese STATUS.md hinzukommen, ist der
+unveränderte frische AS-Paketbuild mit **615 Tests** weiterhin die Codebasis;
+AT benötigt und verändert kein installierbares ROS-Paket.
+
+**Abnahmegrenze:** Der Lauf belegt lokal, dass der vereinbarte passive
+Softwarepfad bei diesem synthetischen Wachstum keine Aufgaben-/Identitätsdrift,
+Rastermutation oder ungebremstes RSS-Wachstum zeigte. Er belegt keine reale
+Kartenrate, DDS-/TF-Parallelität, SLAM-Korrekturverteilung, Jetsonlast,
+Lokalisierung, Erreichbarkeit, Durchfahrt oder Hardwareabnahme. Mangels vorab
+eingefrorener Zeit-/RSS-Schwelle werden die Messwerte nicht nachträglich als
+Zielsystemfreigabe deklariert.
+
+**Nächster abgegrenzter Schritt WE-M3/A:** Einen ROS-freien, deterministischen
+Policyvertrag auf den vorhandenen passiven Snapshots aufbauen. Er muss offene
+Frontier-/Portal-/Beobachtungsaufgaben, Quellenfrische, Regionskontinuität,
+Blockade-/Unklarzustände und erklärbare Teilstände bewerten, aber noch kein
+Fahrziel erzeugen und keinen bestehenden Explorerpfad verändern.
+
+**Rückfall:** Den einzelnen WE-M2/AT-Commit zurücknehmen oder das neue
+Offline-Werkzeug nicht aufrufen. Es gibt keinen laufenden Prozess, Geräte- oder
+Fahrzustand zurückzusetzen; AS und alle Produktionsmodule bleiben unverändert.
 
 ### 2026-09-14 – WE-M2/AS: ungefilterte Frontiers bleiben offene Aufgaben
 

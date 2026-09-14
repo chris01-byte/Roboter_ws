@@ -3,6 +3,26 @@
 Am 27.07.2026 auf dem echten Roboter benutzt und dort verifiziert. Die Skripte
 setzen voraus, dass `~/roboter_ws/install/setup.bash` existiert.
 
+## Gerätefreie WE-M2-Lastprüfer
+
+`passive_kette_lasttest.py` prüft die vollständige passive Softwarekette aus
+synthetischer Rohkarte, Exaktjoin, Frontier-/Portalereignissen und
+Regions-/Aufgabenverwaltung. Es startet keine ROS-Knoten, liest keine reale
+Karte und greift auf keine Geräte zu. Der Standardlauf umfasst 60 Revisionen;
+der dokumentierte längere Prüfpunkt lautet:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /pfad/zum/geprueften_overlay/install/setup.bash
+python3 tools/kartierung/passive_kette_lasttest.py \
+  --revisionen 240 --wachstumsintervall 10 --max-polsterzellen 24
+```
+
+Die Ausgabe bezeichnet RSS ausdrücklich als Prozess-RSS. Sie belegt weder
+Jetsonlast noch Hardwareeignung. `rohkarten_schatten_lasttest.py` bleibt der
+separate synthetische DDS-/Node-Lastprüfer der Rohkartennaht. Beide Werkzeuge
+senden keine Action, keinen Twist und keine Gerätekommandos.
+
 ## Encoderposition strikt read-only prüfen
 
 `encoder_position_pruefen.py` liest ausschließlich Holding-Register mit FC03.
