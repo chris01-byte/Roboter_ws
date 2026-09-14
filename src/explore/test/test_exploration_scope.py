@@ -12,6 +12,7 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 from explore.exploration_scope import (  # noqa: E402
     AuthorizedExplorationScope,
     ExplorationScopeError,
+    point_within_scope_clearance,
     rasterize_scope,
 )
 from explore.portal_memory import Point2D, PortalMapContext  # noqa: E402
@@ -98,6 +99,18 @@ def test_scope_fingerprint_changes_when_geometry_changes_under_same_id():
 
     assert scope().fingerprint == scope().fingerprint
     assert changed.fingerprint != scope().fingerprint
+
+
+def test_metric_runtime_point_requires_inside_edge_clearance():
+    assert point_within_scope_clearance(
+        scope(), context=CONTEXT, x_m=1.0, y_m=0.5,
+        clearance_m=0.2) is True
+    assert point_within_scope_clearance(
+        scope(), context=CONTEXT, x_m=0.1, y_m=0.5,
+        clearance_m=0.2) is False
+    assert point_within_scope_clearance(
+        scope(), context=CONTEXT, x_m=2.1, y_m=0.5,
+        clearance_m=0.2) is False
 
 
 @pytest.mark.parametrize("vertices", [

@@ -198,3 +198,51 @@ def rasterize_scope(
             / denominator + first.x)
         inside ^= crossing & (world_x < crossing_x)
     return inside | boundary
+
+
+def point_within_scope_clearance(
+        scope: AuthorizedExplorationScope, *,
+        context: PortalMapContext,
+        x_m: float,
+        y_m: float,
+        clearance_m: float) -> bool:
+    """Return whether one metric point is inside and clear of every edge."""
+    if not isinstance(scope, AuthorizedExplorationScope):
+        raise ExplorationScopeError(
+            "scope muss AuthorizedExplorationScope sein")
+    if context != scope.context:
+        raise ExplorationScopeError(
+            "Scope passt nicht zum Kartenkontext")
+    values = (x_m, y_m, clearance_m)
+    if any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            for value in values) or clearance_m <= 0.0:
+        raise ExplorationScopeError(
+            "Punkt und Scope-Abstand muessen endlich und positiv sein")
+
+    point = Point2D(float(x_m), float(y_m))
+    inside = False
+    minimum_distance = math.inf
+    for first, second in zip(
+            scope.vertices, scope.vertices[1:] + scope.vertices[:1]):
+        dx = second.x - first.x
+        dy = second.y - first.y
+        length_squared = dx * dx + dy * dy
+        projection = max(0.0, min(1.0, (
+            (point.x - first.x) * dx
+            + (point.y - first.y) * dy) / length_squared))
+        nearest_x = first.x + projection * dx
+        nearest_y = first.y + projection * dy
+        minimum_distance = min(
+            minimum_distance,
+            math.hypot(point.x - nearest_x, point.y - nearest_y),
+        )
+        if (first.y > point.y) != (second.y > point.y):
+            crossing_x = (
+                (second.x - first.x) * (point.y - first.y)
+                / (second.y - first.y) + first.x)
+            if point.x < crossing_x:
+                inside = not inside
+    return inside and minimum_distance + 1e-12 >= clearance_m

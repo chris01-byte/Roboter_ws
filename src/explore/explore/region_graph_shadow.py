@@ -34,6 +34,7 @@ from .portal_memory import (
     PortalMemoryPolicy,
     PortalObservation,
     PortalObservationInventory,
+    PortalSnapshot,
     StaleObservationError,
     TraversalEvent,
     TraversalResult,
@@ -184,6 +185,10 @@ class RegionGraphShadowSession:
     def frontier_tracks(self) -> Tuple[FrontierTrackSnapshot, ...]:
         """Return immutable stable frontier geometry for passive evidence."""
         return self._frontier_tasks.tracks()
+
+    def portal_snapshots(self) -> Tuple[PortalSnapshot, ...]:
+        """Return immutable canonical portals for a runtime evidence adapter."""
+        return self._portal_memory.snapshots()
 
     def _latest_event_revision(self) -> int:
         revisions = [self._region_graph.latest_revision]
