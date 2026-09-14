@@ -1,0 +1,554 @@
+"""Pure provisional region graph built from confirmed portal identities.
+
+The graph has no ROS, filesystem, planner, or actuator dependency.  It consumes
+already validated portal snapshots and traversal verdicts.  It does not segment
+maps, validate motion, generate navigation goals, or grant permission to move.
+"""
+
+from dataclasses import dataclass, field, replace
+from enum import Enum
+from typing import Dict, Optional, Tuple
+
+from .portal_memory import (
+    PortalConfirmationState,
+    PortalMapContext,
+    PortalSide,
+    PortalSnapshot,
+    TraversalDirection,
+    TraversalEvent,
+)
+
+
+class RegionGraphError(ValueError):
+    """Base class for rejected graph operations."""
+
+
+class RegionContextMismatchError(RegionGraphError):
+    """An input belongs to another session, map, or frame."""
+
+
+class RegionGraphConflictError(RegionGraphError):
+    """An ID or topological assignment conflicts with accepted history."""
+
+
+class RegionGraphCapacityError(RegionGraphError):
+    """A configured hard graph bound would be exceeded."""
+
+
+class UnknownRegionError(RegionGraphError):
+    """An operation references no known provisional region."""
+
+
+class UnknownPortalConnectionError(RegionGraphError):
+    """A traversal references no accepted portal connection."""
+
+
+class StaleGraphUpdateError(RegionGraphError):
+    """A previously unseen update predates the graph revision."""
+
+
+def _identifier(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value or len(value) > 128:
+        raise RegionGraphError(f"{name} muss 1 bis 128 Zeichen enthalten")
+    if not value[0].isalnum() or any(
+            not (character.isalnum() or character in "_.:-")
+            for character in value):
+        raise RegionGraphError(f"{name} enthaelt unzulaessige Zeichen")
+    if not value.isascii():
+        raise RegionGraphError(f"{name} muss ASCII sein")
+    return value
+
+
+def _revision(value: object, name: str = "map_revision") -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise RegionGraphError(f"{name} muss eine nichtnegative Ganzzahl sein")
+    return value
+
+
+@dataclass(frozen=True)
+class RegionGraphPolicy:
+    """Hard in-memory bounds, not physical apartment limits."""
+
+    max_regions: int = 256
+    max_connections: int = 512
+    max_portal_observations: int = 4096
+    max_traversal_events: int = 4096
+
+    def __post_init__(self) -> None:
+        for name in (
+                "max_regions", "max_connections",
+                "max_portal_observations", "max_traversal_events"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise RegionGraphError(f"{name} muss eine positive Ganzzahl sein")
+
+
+@dataclass(frozen=True)
+class RegionSeed:
+    """Explicit start-region observation for one graph context."""
+
+    seed_id: str
+    context: PortalMapContext
+    map_revision: int
+
+    def __post_init__(self) -> None:
+        _identifier(self.seed_id, "seed_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+
+
+@dataclass(frozen=True)
+class RegionStartResult:
+    region_id: str
+    duplicate: bool = False
+
+
+@dataclass(frozen=True)
+class PortalLinkObservation:
+    """Topological view of one portal from a known current region."""
+
+    observation_id: str
+    context: PortalMapContext
+    map_revision: int
+    portal: PortalSnapshot
+    current_region_id: str
+    current_side: PortalSide
+
+    def __post_init__(self) -> None:
+        _identifier(self.observation_id, "observation_id")
+        if not isinstance(self.context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        _revision(self.map_revision)
+        if not isinstance(self.portal, PortalSnapshot):
+            raise RegionGraphError("portal muss PortalSnapshot sein")
+        _identifier(self.current_region_id, "current_region_id")
+        if not isinstance(self.current_side, PortalSide):
+            raise RegionGraphError("current_side muss PortalSide sein")
+
+
+class PortalLinkDisposition(str, Enum):
+    CREATED = "created"
+    MATCHED = "matched"
+    DEFERRED = "deferred"
+
+
+@dataclass(frozen=True)
+class PortalLinkResult:
+    disposition: PortalLinkDisposition
+    portal_id: str
+    current_region_id: str
+    opposite_region_id: Optional[str]
+    duplicate: bool = False
+
+
+@dataclass(frozen=True)
+class RegionSnapshot:
+    region_id: str
+    first_revision: int
+    last_revision: int
+    seen: bool
+    entered: bool
+    entry_count: int
+    portal_ids: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PortalConnectionSnapshot:
+    portal_id: str
+    side_a_region_id: str
+    side_b_region_id: str
+    first_revision: int
+    last_revision: int
+
+
+@dataclass(frozen=True)
+class GraphTraversalResult:
+    event_id: str
+    portal_id: str
+    source_region_id: str
+    target_region_id: str
+    entered: bool
+    current_region_id: str
+    duplicate: bool = False
+
+
+@dataclass(frozen=True)
+class RegionGraphSnapshot:
+    context: PortalMapContext
+    latest_revision: Optional[int]
+    current_region_id: Optional[str]
+    regions: Tuple[RegionSnapshot, ...]
+    connections: Tuple[PortalConnectionSnapshot, ...]
+    confirmed_entry_count: int
+
+
+@dataclass
+class _RegionState:
+    region_id: str
+    first_revision: int
+    last_revision: int
+    seen: bool
+    entered: bool
+    entry_count: int = 0
+    portal_ids: set[str] = field(default_factory=set)
+
+
+@dataclass
+class _ConnectionState:
+    portal_id: str
+    side_a_region_id: str
+    side_b_region_id: str
+    first_revision: int
+    last_revision: int
+
+
+class RegionGraph:
+    """Bounded provisional topology for one immutable map context."""
+
+    def __init__(
+            self, context: PortalMapContext,
+            policy: Optional[RegionGraphPolicy] = None) -> None:
+        if not isinstance(context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        self._context = context
+        self._policy = policy or RegionGraphPolicy()
+        if not isinstance(self._policy, RegionGraphPolicy):
+            raise RegionGraphError("policy muss RegionGraphPolicy sein")
+        self._regions: Dict[str, _RegionState] = {}
+        self._connections: Dict[str, _ConnectionState] = {}
+        self._portal_observations: Dict[
+            str, Tuple[PortalLinkObservation, PortalLinkResult]] = {}
+        self._traversal_events: Dict[
+            str, Tuple[TraversalEvent, GraphTraversalResult]] = {}
+        self._start_seed: Optional[RegionSeed] = None
+        self._start_result: Optional[RegionStartResult] = None
+        self._current_region_id: Optional[str] = None
+        self._next_region_number = 1
+        self._latest_revision = -1
+
+    @property
+    def context(self) -> PortalMapContext:
+        return self._context
+
+    @property
+    def current_region_id(self) -> Optional[str]:
+        return self._current_region_id
+
+    @property
+    def latest_revision(self) -> Optional[int]:
+        return None if self._latest_revision < 0 else self._latest_revision
+
+    def start(self, seed: RegionSeed) -> RegionStartResult:
+        """Create exactly one entered start region, idempotently."""
+        if not isinstance(seed, RegionSeed):
+            raise RegionGraphError("seed muss RegionSeed sein")
+        self._require_context(seed.context)
+        if self._start_seed is not None:
+            if self._start_seed != seed:
+                raise RegionGraphConflictError(
+                    "Startregion wurde mit anderem Inhalt erneut gesetzt")
+            return replace(self._start_result, duplicate=True)
+        self._require_current_revision(seed.map_revision)
+        if len(self._regions) >= self._policy.max_regions:
+            raise RegionGraphCapacityError("Regionsspeicher ist voll")
+
+        region = self._new_region(
+            revision=seed.map_revision, seen=True, entered=True)
+        self._regions[region.region_id] = region
+        self._current_region_id = region.region_id
+        self._latest_revision = seed.map_revision
+        self._start_seed = seed
+        self._start_result = RegionStartResult(region_id=region.region_id)
+        return self._start_result
+
+    def observe_portal(
+            self, observation: PortalLinkObservation) -> PortalLinkResult:
+        """Associate a confirmed portal or defer uncertain evidence."""
+        if not isinstance(observation, PortalLinkObservation):
+            raise RegionGraphError(
+                "observation muss PortalLinkObservation sein")
+        self._require_context(observation.context)
+
+        previous = self._portal_observations.get(observation.observation_id)
+        if previous is not None:
+            previous_observation, previous_result = previous
+            if previous_observation != observation:
+                raise RegionGraphConflictError(
+                    "observation_id wurde widerspruechlich wiederverwendet")
+            return replace(previous_result, duplicate=True)
+
+        current_region = self._require_region(observation.current_region_id)
+        if self._current_region_id != current_region.region_id:
+            raise RegionGraphConflictError(
+                "Portalbeobachtung stammt nicht aus der aktuellen Region")
+        self._require_current_revision(observation.map_revision)
+        self._validate_portal_snapshot(observation)
+        if (
+                len(self._portal_observations)
+                >= self._policy.max_portal_observations):
+            raise RegionGraphCapacityError("Portalbeobachtungsspeicher ist voll")
+
+        portal = observation.portal
+        if portal.confirmation_state is not PortalConfirmationState.CONFIRMED:
+            result = PortalLinkResult(
+                disposition=PortalLinkDisposition.DEFERRED,
+                portal_id=portal.portal_id,
+                current_region_id=current_region.region_id,
+                opposite_region_id=None,
+            )
+        else:
+            connection = self._connections.get(portal.portal_id)
+            if connection is None:
+                if len(self._connections) >= self._policy.max_connections:
+                    raise RegionGraphCapacityError("Verbindungsspeicher ist voll")
+                if len(self._regions) >= self._policy.max_regions:
+                    raise RegionGraphCapacityError("Regionsspeicher ist voll")
+                opposite_region = self._new_region(
+                    revision=observation.map_revision,
+                    seen=True,
+                    entered=False,
+                )
+                connection = self._new_connection(
+                    portal_id=portal.portal_id,
+                    current_region_id=current_region.region_id,
+                    current_side=observation.current_side,
+                    opposite_region_id=opposite_region.region_id,
+                    revision=observation.map_revision,
+                )
+                self._regions[opposite_region.region_id] = opposite_region
+                self._connections[portal.portal_id] = connection
+                current_region.portal_ids.add(portal.portal_id)
+                opposite_region.portal_ids.add(portal.portal_id)
+                result = PortalLinkResult(
+                    disposition=PortalLinkDisposition.CREATED,
+                    portal_id=portal.portal_id,
+                    current_region_id=current_region.region_id,
+                    opposite_region_id=opposite_region.region_id,
+                )
+            else:
+                assigned_region_id = self._region_on_side(
+                    connection, observation.current_side)
+                if assigned_region_id != current_region.region_id:
+                    raise RegionGraphConflictError(
+                        "Portalseite widerspricht der bestehenden Region")
+                connection.last_revision = max(
+                    connection.last_revision, observation.map_revision)
+                opposite_region_id = self._region_on_side(
+                    connection, self._opposite_side(observation.current_side))
+                opposite_region = self._require_region(opposite_region_id)
+                opposite_region.last_revision = max(
+                    opposite_region.last_revision, observation.map_revision)
+                result = PortalLinkResult(
+                    disposition=PortalLinkDisposition.MATCHED,
+                    portal_id=portal.portal_id,
+                    current_region_id=current_region.region_id,
+                    opposite_region_id=opposite_region.region_id,
+                )
+            current_region.last_revision = max(
+                current_region.last_revision, observation.map_revision)
+
+        self._portal_observations[observation.observation_id] = (
+            observation, result)
+        self._latest_revision = max(
+            self._latest_revision, observation.map_revision)
+        return result
+
+    def record_traversal(self, event: TraversalEvent) -> GraphTraversalResult:
+        """Apply an external traversal verdict without validating motion."""
+        if not isinstance(event, TraversalEvent):
+            raise RegionGraphError("event muss TraversalEvent sein")
+        self._require_context(event.context)
+
+        previous = self._traversal_events.get(event.event_id)
+        if previous is not None:
+            previous_event, previous_result = previous
+            if previous_event != event:
+                raise RegionGraphConflictError(
+                    "event_id wurde widerspruechlich wiederverwendet")
+            return replace(
+                previous_result,
+                entered=False,
+                current_region_id=self._current_region_id,
+                duplicate=True,
+            )
+
+        connection = self._connections.get(event.portal_id)
+        if connection is None:
+            raise UnknownPortalConnectionError(
+                f"Unbekannte Portalverbindung: {event.portal_id}")
+        self._require_current_revision(event.map_revision)
+        if len(self._traversal_events) >= self._policy.max_traversal_events:
+            raise RegionGraphCapacityError("Durchfahrtsverlauf ist voll")
+
+        source_region_id, target_region_id = self._traversal_regions(
+            connection, event.direction)
+        if self._current_region_id != source_region_id:
+            raise RegionGraphConflictError(
+                "Durchfahrtsrichtung beginnt nicht in der aktuellen Region")
+
+        entered = event.crossing_confirmed
+        if entered:
+            source = self._require_region(source_region_id)
+            target = self._require_region(target_region_id)
+            source.last_revision = max(source.last_revision, event.map_revision)
+            target.last_revision = max(target.last_revision, event.map_revision)
+            target.seen = True
+            target.entered = True
+            target.entry_count += 1
+            self._current_region_id = target_region_id
+
+        result = GraphTraversalResult(
+            event_id=event.event_id,
+            portal_id=event.portal_id,
+            source_region_id=source_region_id,
+            target_region_id=target_region_id,
+            entered=entered,
+            current_region_id=self._current_region_id,
+        )
+        self._traversal_events[event.event_id] = (event, result)
+        self._latest_revision = max(self._latest_revision, event.map_revision)
+        return result
+
+    def region(self, region_id: str) -> RegionSnapshot:
+        return self._region_snapshot(self._require_region(region_id))
+
+    def connection(self, portal_id: str) -> PortalConnectionSnapshot:
+        _identifier(portal_id, "portal_id")
+        try:
+            state = self._connections[portal_id]
+        except KeyError as exc:
+            raise UnknownPortalConnectionError(
+                f"Unbekannte Portalverbindung: {portal_id}") from exc
+        return self._connection_snapshot(state)
+
+    def snapshot(self) -> RegionGraphSnapshot:
+        return RegionGraphSnapshot(
+            context=self._context,
+            latest_revision=self.latest_revision,
+            current_region_id=self._current_region_id,
+            regions=tuple(
+                self._region_snapshot(self._regions[region_id])
+                for region_id in sorted(self._regions)),
+            connections=tuple(
+                self._connection_snapshot(self._connections[portal_id])
+                for portal_id in sorted(self._connections)),
+            confirmed_entry_count=sum(
+                region.entry_count for region in self._regions.values()),
+        )
+
+    def _new_region(
+            self, revision: int, *, seen: bool, entered: bool) -> _RegionState:
+        region_id = f"region_{self._next_region_number:06d}"
+        self._next_region_number += 1
+        return _RegionState(
+            region_id=region_id,
+            first_revision=revision,
+            last_revision=revision,
+            seen=seen,
+            entered=entered,
+        )
+
+    @staticmethod
+    def _new_connection(
+            portal_id: str, current_region_id: str,
+            current_side: PortalSide, opposite_region_id: str,
+            revision: int) -> _ConnectionState:
+        if current_side is PortalSide.A:
+            side_a_region_id = current_region_id
+            side_b_region_id = opposite_region_id
+        else:
+            side_a_region_id = opposite_region_id
+            side_b_region_id = current_region_id
+        return _ConnectionState(
+            portal_id=portal_id,
+            side_a_region_id=side_a_region_id,
+            side_b_region_id=side_b_region_id,
+            first_revision=revision,
+            last_revision=revision,
+        )
+
+    @staticmethod
+    def _region_on_side(
+            connection: _ConnectionState, side: PortalSide) -> str:
+        if side is PortalSide.A:
+            return connection.side_a_region_id
+        return connection.side_b_region_id
+
+    @staticmethod
+    def _opposite_side(side: PortalSide) -> PortalSide:
+        if side is PortalSide.A:
+            return PortalSide.B
+        return PortalSide.A
+
+    @staticmethod
+    def _traversal_regions(
+            connection: _ConnectionState,
+            direction: TraversalDirection) -> Tuple[str, str]:
+        if direction is TraversalDirection.A_TO_B:
+            return (
+                connection.side_a_region_id,
+                connection.side_b_region_id,
+            )
+        return (
+            connection.side_b_region_id,
+            connection.side_a_region_id,
+        )
+
+    def _validate_portal_snapshot(
+            self, observation: PortalLinkObservation) -> None:
+        portal = observation.portal
+        _identifier(portal.portal_id, "portal_id")
+        if not isinstance(
+                portal.confirmation_state, PortalConfirmationState):
+            raise RegionGraphError(
+                "portal.confirmation_state ist ungueltig")
+        expected_confirmed = (
+            portal.confirmation_state is PortalConfirmationState.CONFIRMED)
+        if portal.confirmed is not expected_confirmed:
+            raise RegionGraphError(
+                "Portalstatus und confirmed widersprechen sich")
+        if portal.last_revision > observation.map_revision:
+            raise StaleGraphUpdateError(
+                "Portalstand stammt aus einer zukuenftigen Revision")
+
+    def _require_context(self, context: PortalMapContext) -> None:
+        if context != self._context:
+            raise RegionContextMismatchError(
+                "Eingabe passt nicht zu Sitzung, Karte und Frame")
+
+    def _require_current_revision(self, revision: int) -> None:
+        if revision < self._latest_revision:
+            raise StaleGraphUpdateError(
+                "Eingabe stammt aus einer veralteten Kartenrevision")
+
+    def _require_region(self, region_id: str) -> _RegionState:
+        _identifier(region_id, "region_id")
+        try:
+            return self._regions[region_id]
+        except KeyError as exc:
+            raise UnknownRegionError(
+                f"Unbekannte Region: {region_id}") from exc
+
+    @staticmethod
+    def _region_snapshot(state: _RegionState) -> RegionSnapshot:
+        return RegionSnapshot(
+            region_id=state.region_id,
+            first_revision=state.first_revision,
+            last_revision=state.last_revision,
+            seen=state.seen,
+            entered=state.entered,
+            entry_count=state.entry_count,
+            portal_ids=tuple(sorted(state.portal_ids)),
+        )
+
+    @staticmethod
+    def _connection_snapshot(
+            state: _ConnectionState) -> PortalConnectionSnapshot:
+        return PortalConnectionSnapshot(
+            portal_id=state.portal_id,
+            side_a_region_id=state.side_a_region_id,
+            side_b_region_id=state.side_b_region_id,
+            first_revision=state.first_revision,
+            last_revision=state.last_revision,
+        )
