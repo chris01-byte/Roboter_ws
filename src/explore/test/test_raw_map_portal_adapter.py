@@ -27,6 +27,7 @@ from explore.portal_source_adapter import (  # noqa: E402
 from explore.raw_map_portal_adapter import (  # noqa: E402
     RawMapPortalCandidateError,
     correlated_connected_portal_candidates,
+    correlated_connected_portal_inventory,
     correlated_connected_portal_observations,
 )
 
@@ -125,6 +126,46 @@ def test_exact_door_neck_produces_qualified_structural_observation():
     assert observation.structural_evidence is (
         PortalStructuralEvidence.QUALIFIED)
     assert np.array_equal(occupancy, _occupancy())
+
+
+def test_exact_detector_result_is_a_stable_complete_inventory():
+    occupancy = _occupancy()
+    _source, correlation, arguments = _arguments(occupancy)
+
+    first = correlated_connected_portal_inventory(
+        correlation, **arguments)
+    replay = correlated_connected_portal_inventory(
+        correlation, **arguments)
+
+    assert replay == first
+    assert first.inventory_id.startswith("portal-inventory-")
+    assert first.context == correlation.context
+    assert first.map_revision == correlation.map_revision
+    assert len(first.observations) == 1
+    assert first.observations[0].structural_evidence is (
+        PortalStructuralEvidence.QUALIFIED)
+
+
+def test_successful_detector_with_no_neck_emits_explicit_empty_inventory():
+    occupancy = np.zeros((40, 40), dtype=np.int8)
+    _source, correlation, arguments = _arguments(
+        occupancy, robot_xy=(1.0, 1.0))
+
+    inventory = correlated_connected_portal_inventory(
+        correlation, **arguments)
+
+    assert inventory.map_revision == correlation.map_revision
+    assert inventory.observations == ()
+
+
+@pytest.mark.parametrize("limit", [0, -1, True, 1.5])
+def test_inventory_bound_must_be_a_positive_integer(limit):
+    occupancy = _occupancy()
+    _source, correlation, arguments = _arguments(occupancy)
+
+    with pytest.raises(RawMapPortalCandidateError, match="maximum"):
+        correlated_connected_portal_inventory(
+            correlation, maximum_observations=limit, **arguments)
 
 
 def test_furniture_neck_with_alternate_route_stays_insufficient():

@@ -919,7 +919,7 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
     assert parameters['region_graph_shadow_status_topic'] != (
         parameters['status_topic'])
     assert 'PortalPlanCandidate' not in source
-    assert '.observe_structural_portal(' in source
+    assert '.observe_portal_inventory(' in source
 
 
 def test_passive_policy_requires_explicit_shadow_opt_in():
@@ -1786,33 +1786,33 @@ def test_disabled_connected_portal_feed_has_zero_runtime_work():
 def test_exact_connected_portal_feed_computes_outside_and_mutates_inside_lock(
         monkeypatch):
     node, _source, correlation = _portal_feed_node()
-    observation = object()
-    observations = []
+    inventory = object()
+    inventories = []
     node._robot_pose = lambda: (0.1, 0.1, 0.0)
 
-    def build_observations(value, **kwargs):
+    def build_inventory(value, **kwargs):
         assert value is correlation
         assert not node._region_graph_shadow_lock.locked()
         assert kwargs['robot_xy'] == (0.1, 0.1)
-        return (observation,)
+        return inventory
 
     def observe(value, **kwargs):
         assert node._region_graph_shadow_lock.locked()
-        observations.append((value, kwargs))
+        inventories.append((value, kwargs))
 
     node._region_graph_shadow = SimpleNamespace(
-        observe_structural_portal=observe)
+        observe_portal_inventory=observe)
     monkeypatch.setattr(
         explore_node_module,
-        'correlated_connected_portal_observations',
-        build_observations)
+        'correlated_connected_portal_inventory',
+        build_inventory)
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 50.0)
 
     node._try_observe_connected_raw_map_portals()
     node._try_observe_connected_raw_map_portals()
 
-    assert observations == [(
-        observation, {'observed_monotonic_seconds': 50.0})]
+    assert inventories == [(
+        inventory, {'observed_monotonic_seconds': 50.0})]
     assert node._region_graph_shadow_processed_correlation == (
         'a' * 64, 123, 'map', 7)
     assert node._region_graph_shadow_portal_retry_count == 0
@@ -1835,10 +1835,10 @@ def test_missing_pose_faults_only_shadow_after_bounded_retry():
 
 def test_cache_change_during_detection_discards_candidates(monkeypatch):
     node, _source, correlation = _portal_feed_node()
-    observations = []
+    inventories = []
     node._robot_pose = lambda: (0.1, 0.1, 0.0)
     node._region_graph_shadow = SimpleNamespace(
-        observe_structural_portal=lambda *args, **kwargs: observations.append(
+        observe_portal_inventory=lambda *args, **kwargs: inventories.append(
             (args, kwargs)))
 
     def change_cache(*args, **kwargs):
@@ -1848,15 +1848,15 @@ def test_cache_change_during_detection_discards_candidates(monkeypatch):
             context=SimpleNamespace(frame_id='map'),
             map_revision=8,
         )
-        return (object(),)
+        return object()
 
     monkeypatch.setattr(
         explore_node_module,
-        'correlated_connected_portal_observations',
+        'correlated_connected_portal_inventory',
         change_cache)
 
     node._try_observe_connected_raw_map_portals()
 
     assert correlation.map_revision == 7
-    assert observations == []
+    assert inventories == []
     assert node._region_graph_shadow_processed_correlation is None

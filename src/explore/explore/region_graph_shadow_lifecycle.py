@@ -29,6 +29,7 @@ from .portal_memory import (
     PortalMapContext,
     PortalMemoryPolicy,
     PortalObservation,
+    PortalObservationInventory,
     TraversalEvent,
 )
 from .portal_plan_adapter import PortalPlanCandidate
@@ -44,6 +45,7 @@ from .region_graph_shadow import (
     RegionGraphShadowSession,
     ShadowFrontierEventResult,
     ShadowPortalEventResult,
+    ShadowPortalInventoryResult,
     ShadowTraversalEventResult,
 )
 from .region_graph_status import (
@@ -347,6 +349,36 @@ class RegionGraphShadowLifecycle:
         if not result.observation.duplicate:
             self._portal_changed_monotonic_seconds = observed
         if result.link is not None or result.task_updates:
+            self._graph_changed_monotonic_seconds = observed
+        return result
+
+    def observe_portal_inventory(
+            self, inventory: PortalObservationInventory, *,
+            observed_monotonic_seconds: float,
+    ) -> ShadowPortalInventoryResult:
+        """Apply one complete exact-map detector outcome atomically."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Portalbestand wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(inventory, PortalObservationInventory):
+            raise RegionGraphShadowLifecycleError(
+                "inventory muss PortalObservationInventory sein")
+        if inventory.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Portalbestand passt nicht zum aktiven Kartenkontext")
+        if inventory.map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Portalbestand liegt vor dem aktuellen Kartenstatus")
+        result = self._session.observe_portal_inventory(inventory)
+        self._last_monotonic_seconds = observed
+        if not result.duplicate:
+            self._portal_changed_monotonic_seconds = observed
+        if any(event.link is not None or event.task_updates
+               for event in result.events):
             self._graph_changed_monotonic_seconds = observed
         return result
 

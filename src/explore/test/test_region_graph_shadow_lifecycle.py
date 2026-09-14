@@ -18,12 +18,19 @@ from explore.frontier_task_feed import (  # noqa: E402
     FrontierTaskPolicy,
     frontier_inventory_from_clusters,
 )
+from explore.exploration_policy import (  # noqa: E402
+    PolicyAssessmentState,
+    TaskAvailability,
+    TaskAvailabilityState,
+    assess_exploration_policy,
+)
 from explore.portal_memory import (  # noqa: E402
     ObservationDisposition,
     Point2D,
     PortalMapContext,
     PortalMemoryPolicy,
     PortalObservation,
+    PortalObservationInventory,
     PortalStructuralEvidence,
     StaleObservationError,
     TraversalDirection,
@@ -146,6 +153,17 @@ def frontier_inventory(owner, clusters):
     ), clusters)
 
 
+def portal_inventory(owner, observations=(), *, suffix=None):
+    revision = owner.latest_map_status.map_revision
+    selected_suffix = f"{revision:064x}" if suffix is None else suffix
+    return PortalObservationInventory(
+        inventory_id=f"portal-inventory-{selected_suffix}",
+        context=owner.context,
+        map_revision=revision,
+        observations=observations,
+    )
+
+
 def raw_source(**changes):
     values = {
         "fingerprint": FINGERPRINT_A,
@@ -173,6 +191,63 @@ def test_owner_waits_without_inventing_context_or_status():
         build_status(owner)
     with pytest.raises(RegionGraphShadowNotReadyError):
         owner.frontier_tracks()
+    with pytest.raises(RegionGraphShadowNotReadyError):
+        owner.observe_portal_inventory(
+            PortalObservationInventory(
+                "portal-inventory-" + "a" * 64,
+                PortalMapContext("session", "map", "map"),
+                1,
+                (),
+            ),
+            observed_monotonic_seconds=1.0,
+        )
+
+
+def test_complete_empty_portal_inventory_sets_revision_and_replay_safe_age():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    inventory = portal_inventory(owner)
+
+    result = owner.observe_portal_inventory(
+        inventory, observed_monotonic_seconds=101.0)
+    replay = owner.observe_portal_inventory(
+        inventory, observed_monotonic_seconds=110.0)
+    payload = json.loads(build_status(owner, now=111.0))
+
+    assert result.events == ()
+    assert result.duplicate is False
+    assert replay.duplicate is True
+    assert payload["source"]["portal_memory"]["revision"] == 3
+    assert payload["source"]["portal_memory"]["age_seconds"] == 10.0
+    assert payload["source"]["portal_memory"]["state"] == "stale"
+    assert payload["summary"]["portal_count"] == 0
+
+
+def test_fresh_empty_portal_inventory_allows_ready_frontier_policy():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    owner.observe_portal_inventory(
+        portal_inventory(owner), observed_monotonic_seconds=100.1)
+    frontier = owner.observe_frontier_inventory(
+        frontier_inventory(owner, ((1.0, 2.0, 8),)),
+        observed_monotonic_seconds=100.2,
+    )
+    source = owner.build_status(now_monotonic_seconds=100.3).source
+    task_id = frontier.task_updates[0].task.task_id
+
+    assessment = assess_exploration_policy(source, (TaskAvailability(
+        task_id=task_id,
+        context=owner.context,
+        map_revision=source.source_map_revision,
+        state=TaskAvailabilityState.AVAILABLE,
+        reason="test_current_evidence",
+        recheck_condition="revalidate_before_navigation",
+    ),))
+
+    assert source.portal_memory_revision == source.source_map_revision
+    assert source.portals == ()
+    assert assessment.state is PolicyAssessmentState.READY_WITH_TASKS
+    assert assessment.eligible_task_ids == (task_id,)
 
 
 def test_atomic_status_exposes_the_exact_source_used_for_serialization():

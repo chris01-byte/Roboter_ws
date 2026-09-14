@@ -23,6 +23,7 @@ from explore.portal_memory import (  # noqa: E402
     PortalMapContext,
     PortalMemoryPolicy,
     PortalObservation,
+    PortalObservationInventory,
     PortalStructuralEvidence,
     StaleObservationError,
     TraversalDirection,
@@ -121,6 +122,16 @@ def frontier_inventory(revision, clusters):
     )
 
 
+def portal_inventory(revision, observations=(), *, suffix=None):
+    selected_suffix = f"{revision:064x}" if suffix is None else suffix
+    return PortalObservationInventory(
+        inventory_id=f"portal-inventory-{selected_suffix}",
+        context=CONTEXT,
+        map_revision=revision,
+        observations=observations,
+    )
+
+
 def status_arguments(**changes):
     values = {
         "map_status": map_status(),
@@ -150,6 +161,68 @@ def test_session_starts_one_region_in_exact_context_without_connections():
     assert payload["summary"]["portal_count"] == 0
     assert payload["summary"]["confirmed_entry_count"] == 0
     assert payload["regions"][0]["entered"] is True
+
+
+def test_explicit_empty_portal_inventory_makes_empty_source_current():
+    shadow = session()
+
+    result = shadow.observe_portal_inventory(portal_inventory(10))
+    replay = shadow.observe_portal_inventory(portal_inventory(10))
+    source = shadow.status_source(**status_arguments())
+
+    assert result.events == ()
+    assert result.duplicate is False
+    assert replay.duplicate is True
+    assert source.portal_memory_revision == 10
+    assert source.portals == ()
+
+
+def test_portal_inventory_applies_observations_and_graph_changes_atomically():
+    shadow = session()
+    observation = structural_observation("inventory-door-10", 10)
+
+    result = shadow.observe_portal_inventory(
+        portal_inventory(10, (observation,)))
+    source = shadow.status_source(**status_arguments())
+
+    assert len(result.events) == 1
+    assert result.events[0].observation.portal_id == "portal_000001"
+    assert len(result.events[0].task_updates) == 1
+    assert source.portal_memory_revision == 10
+    assert len(source.portals) == 1
+    assert len(source.graph.tasks) == 1
+
+
+def test_portal_inventory_rejects_second_result_for_same_revision():
+    shadow = session()
+    shadow.observe_portal_inventory(portal_inventory(10))
+
+    with pytest.raises(StaleObservationError, match="bereits"):
+        shadow.observe_portal_inventory(
+            portal_inventory(10, suffix="b" * 64))
+
+
+def test_oversized_portal_inventory_fails_without_partial_state():
+    shadow = session(portal_policy=PortalMemoryPolicy(
+        max_inventory_observations=1))
+    observations = (
+        structural_observation("inventory-door-a", 10),
+        structural_observation(
+            "inventory-door-b", 10,
+            near_side=Point2D(4.0, 2.0),
+            far_side=Point2D(4.8, 2.0),
+        ),
+    )
+
+    with pytest.raises(RegionGraphShadowError, match="Sitzungsgrenze"):
+        shadow.observe_portal_inventory(
+            portal_inventory(10, observations))
+
+    source = shadow.status_source(**status_arguments(
+        portal_memory_age_seconds=None))
+    assert source.portal_memory_revision is None
+    assert source.portals == ()
+    assert source.graph.tasks == ()
 
 
 def test_unqualified_candidate_changes_memory_but_not_graph_or_entry():
@@ -636,6 +709,7 @@ def test_session_has_explicit_evidence_apis_but_no_inference_or_goal_api():
 
     assert not hasattr(shadow, "qualify_portal")
     assert hasattr(shadow, "observe_structural_portal")
+    assert hasattr(shadow, "observe_portal_inventory")
     assert hasattr(shadow, "observe_frontier_inventory")
     assert hasattr(shadow, "record_validated_traversal")
     assert not hasattr(shadow, "record_traversal")
