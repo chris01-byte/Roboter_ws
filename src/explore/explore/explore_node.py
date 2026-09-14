@@ -79,6 +79,10 @@ from explore.portal_planning import (
 from explore.raw_map_portal_adapter import (
     correlated_connected_portal_observations,
 )
+from explore.frontier_task_feed import (
+    FrontierTaskPolicy,
+    frontier_inventory_from_clusters,
+)
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
@@ -427,6 +431,21 @@ def validated_shadow_connected_portal_feed(
     return connected_portals_enabled
 
 
+def validated_shadow_frontier_task_feed(
+        shadow_enabled: bool, raw_map_enabled: bool,
+        frontiers_enabled: bool, raw_map_capacity: int) -> bool:
+    """Validate the independent passive frontier-task opt-in."""
+    flags = (shadow_enabled, raw_map_enabled, frontiers_enabled)
+    if any(not isinstance(value, bool) for value in flags):
+        raise ValueError('Frontierfeed-Opt-ins muessen bool sein')
+    if frontiers_enabled and (
+            not shadow_enabled or not raw_map_enabled
+            or raw_map_capacity <= 0):
+        raise ValueError(
+            'Frontierfeed braucht Schatten und positive Rohkartenkorrelation')
+    return frontiers_enabled
+
+
 class RotationProgress:
     """Accumulate a full rotation across the +/-pi wraparound."""
 
@@ -682,6 +701,9 @@ class ExploreNode(Node):
             self.declare_parameter(
                 'region_graph_shadow_connected_portals_enabled',
                 False).value)
+        self._region_graph_shadow_frontiers_enabled = bool(
+            self.declare_parameter(
+                'region_graph_shadow_frontiers_enabled', False).value)
         self._region_graph_shadow_portal_analysis_clearance = float(
             self.declare_parameter(
                 'region_graph_shadow_portal_analysis_clearance_m',
@@ -895,6 +917,17 @@ class ExploreNode(Node):
                 self._region_graph_shadow_portal_retry_limit,
             )
         )
+        self._region_graph_shadow_frontier_task_feed = (
+            validated_shadow_frontier_task_feed(
+                self._region_graph_shadow_enabled,
+                self._region_graph_shadow_raw_map_enabled,
+                self._region_graph_shadow_frontiers_enabled,
+                self._region_graph_shadow_raw_map_capacity,
+            )
+        )
+        self._region_graph_shadow_raw_event_feed = (
+            self._region_graph_shadow_connected_portal_feed
+            or self._region_graph_shadow_frontier_task_feed)
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
@@ -961,6 +994,9 @@ class ExploreNode(Node):
         if self._region_graph_shadow_raw_map_join_capacity is not None:
             lifecycle_arguments['raw_map_capacity'] = (
                 self._region_graph_shadow_raw_map_join_capacity)
+        if getattr(self, '_region_graph_shadow_frontier_task_feed', False):
+            lifecycle_arguments['frontier_policy'] = FrontierTaskPolicy(
+                association_radius_m=self._frontier_revisit_radius)
         self._region_graph_shadow = RegionGraphShadowLifecycle(
             self._region_graph_shadow_session_id,
             self._global_frame,
@@ -969,12 +1005,15 @@ class ExploreNode(Node):
         )
         self._region_graph_shadow_lock = threading.Lock()
         self._region_graph_shadow_fault = None
-        if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+        if getattr(self, '_region_graph_shadow_raw_event_feed', False):
             self._region_graph_shadow_latest_raw_map = None
             self._region_graph_shadow_latest_raw_source = None
             self._region_graph_shadow_latest_correlation = None
+        if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
             self._region_graph_shadow_processed_correlation = None
             self._region_graph_shadow_portal_retry_count = 0
+        if getattr(self, '_region_graph_shadow_frontier_task_feed', False):
+            self._region_graph_shadow_frontier_processed_correlation = None
 
         shadow_qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -1006,13 +1045,19 @@ class ExploreNode(Node):
 
     def _remember_shadow_raw_map_correlation(self, update):
         """Retain at most one exact join result while holding the lock."""
-        if not getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+        if not getattr(
+                self, '_region_graph_shadow_raw_event_feed',
+                getattr(
+                    self, '_region_graph_shadow_connected_portal_feed', False)
+                or getattr(
+                    self, '_region_graph_shadow_frontier_task_feed', False)):
             return
         correlation = getattr(update, 'raw_map_correlation', None)
         if correlation is None:
             return
         self._region_graph_shadow_latest_correlation = correlation
-        self._region_graph_shadow_portal_retry_count = 0
+        if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
+            self._region_graph_shadow_portal_retry_count = 0
 
     @staticmethod
     def _shadow_correlation_key(correlation):
@@ -1130,6 +1175,62 @@ class ExploreNode(Node):
             self._region_graph_shadow_processed_correlation = correlation_key
             self._region_graph_shadow_portal_retry_count = 0
 
+    def _try_observe_correlated_raw_map_frontiers(self):
+        """Feed every unfiltered raw-map frontier into passive tasks."""
+        if not getattr(self, '_region_graph_shadow_frontier_task_feed', False):
+            return
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            message = self._region_graph_shadow_latest_raw_map
+            source = self._region_graph_shadow_latest_raw_source
+            correlation = self._region_graph_shadow_latest_correlation
+            if message is None or source is None or correlation is None:
+                return
+            correlation_key = self._shadow_correlation_key(correlation)
+            if (
+                    self._region_graph_shadow_frontier_processed_correlation
+                    == correlation_key):
+                return
+            if not self._shadow_source_matches_correlation(source, correlation):
+                return
+
+        try:
+            frontiers = self._detect_frontiers(message, self._min_frontier_m)
+            inventory = frontier_inventory_from_clusters(
+                correlation,
+                ((frontier.cx, frontier.cy, frontier.size)
+                 for frontier in frontiers),
+            )
+        except Exception as error:
+            with self._region_graph_shadow_lock:
+                if (
+                        self._region_graph_shadow_fault is None
+                        and self._region_graph_shadow_latest_correlation
+                        == correlation
+                        and self._region_graph_shadow_latest_raw_source
+                        == source):
+                    self._fault_region_graph_shadow('Frontierfeed', error)
+            return
+
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            if (
+                    self._region_graph_shadow_latest_correlation != correlation
+                    or self._region_graph_shadow_latest_raw_source != source):
+                return
+            try:
+                self._region_graph_shadow.observe_frontier_inventory(
+                    inventory,
+                    observed_monotonic_seconds=time.monotonic(),
+                )
+            except Exception as error:
+                self._fault_region_graph_shadow('Frontierfeed', error)
+                return
+            self._region_graph_shadow_frontier_processed_correlation = (
+                correlation_key)
+
     def _on_region_graph_map_status(self, msg: String):
         """Accept one map-manager envelope without affecting exploration."""
         with self._region_graph_shadow_lock:
@@ -1147,6 +1248,7 @@ class ExploreNode(Node):
 
     def _publish_region_graph_shadow_status(self):
         """Publish at most once per timer tick after a complete map status."""
+        self._try_observe_correlated_raw_map_frontiers()
         self._try_observe_connected_raw_map_portals()
         with self._region_graph_shadow_lock:
             if self._region_graph_shadow_fault is not None:
@@ -1204,7 +1306,13 @@ class ExploreNode(Node):
             if self._region_graph_shadow_fault is not None:
                 return
             if getattr(
-                    self, '_region_graph_shadow_connected_portal_feed', False):
+                    self, '_region_graph_shadow_raw_event_feed',
+                    getattr(
+                        self, '_region_graph_shadow_connected_portal_feed',
+                        False)
+                    or getattr(
+                        self, '_region_graph_shadow_frontier_task_feed',
+                        False)):
                 self._region_graph_shadow_latest_raw_map = msg
                 self._region_graph_shadow_latest_raw_source = source
             received_at = time.monotonic()

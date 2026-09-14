@@ -11,6 +11,10 @@ sys.path.insert(0, str(PACKAGE_ROOT))
 from explore.map_status_adapter import (  # noqa: E402
     MapStatusCorrelationResult,
 )
+from explore.frontier_task_feed import (  # noqa: E402
+    FrontierTaskPolicy,
+    frontier_inventory_from_clusters,
+)
 from explore.portal_memory import (  # noqa: E402
     MemoryCapacityError,
     ObservationDisposition,
@@ -28,7 +32,9 @@ from explore.portal_plan_adapter import (  # noqa: E402
     PortalPlanAdapterError,
     PortalPlanCandidate,
 )
+from explore.portal_source_adapter import PortalSourceCorrelation  # noqa: E402
 from explore.region_graph import (  # noqa: E402
+    RegionGraphCapacityError,
     RegionGraphPolicy,
     RegionSeed,
     RegionTaskState,
@@ -101,6 +107,18 @@ def structural_observation(observation_id, revision, **changes):
     }
     values.update(changes)
     return PortalObservation(**values)
+
+
+def frontier_inventory(revision, clusters):
+    return frontier_inventory_from_clusters(
+        PortalSourceCorrelation(
+            context=CONTEXT,
+            map_revision=revision,
+            fingerprint=f"{revision:064x}",
+            source_stamp_ns=revision,
+        ),
+        clusters,
+    )
 
 
 def status_arguments(**changes):
@@ -533,21 +551,73 @@ def test_status_requires_typed_map_result():
         )
 
 
+def test_frontier_inventory_creates_global_open_tasks_without_filtering():
+    shadow = session(frontier_policy=FrontierTaskPolicy(
+        association_radius_m=0.60))
+
+    first = shadow.observe_frontier_inventory(frontier_inventory(
+        10, [(1.0, 1.0, 8), (3.0, 1.0, 12)]))
+    missing = shadow.observe_frontier_inventory(frontier_inventory(11, []))
+    matched = shadow.observe_frontier_inventory(frontier_inventory(
+        12, [(1.2, 1.0, 9)]))
+    source = shadow.status_source(
+        map_status(map_revision=12, fingerprint=f"{12:064x}"),
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.0,
+    )
+
+    assert len(first.task_updates) == 2
+    assert missing.task_updates == ()
+    assert matched.task_updates == ()
+    assert matched.inventory.assignments[0].frontier_id == "frontier_000001"
+    assert tuple(task.subject_id for task in source.graph.tasks) == (
+        "frontier_000001", "frontier_000002")
+    assert all(task.state is RegionTaskState.OPEN for task in source.graph.tasks)
+    assert all(
+        task.region_id == source.graph.current_region_id
+        for task in source.graph.tasks)
+
+
+def test_frontier_replay_and_graph_capacity_failure_are_atomic():
+    shadow = session(graph_policy=RegionGraphPolicy(max_tasks=1))
+    first_inventory = frontier_inventory(10, [(1.0, 1.0, 8)])
+    first = shadow.observe_frontier_inventory(first_inventory)
+    replay = shadow.observe_frontier_inventory(first_inventory)
+    before = shadow.status_source(
+        map_status(), portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.0)
+
+    with pytest.raises(RegionGraphCapacityError, match="Aufgabenspeicher ist voll"):
+        shadow.observe_frontier_inventory(frontier_inventory(
+            11, [(1.0, 1.0, 8), (3.0, 1.0, 8)]))
+
+    after = shadow.status_source(
+        map_status(), portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.0)
+    assert first.task_updates[0].created is True
+    assert replay.inventory.duplicate is True
+    assert replay.task_updates == ()
+    assert after == before
+
+
 def test_policy_objects_are_not_mutated_or_replaced():
     portal_policy = PortalMemoryPolicy(max_observations=2)
+    frontier_policy = FrontierTaskPolicy(max_frontiers=2)
     graph_policy = RegionGraphPolicy(max_regions=2)
     status_policy = ShadowStatusPolicy(max_portals=2)
-    before = (portal_policy, graph_policy, status_policy)
+    before = (portal_policy, frontier_policy, graph_policy, status_policy)
 
     shadow = session(
         portal_policy=portal_policy,
+        frontier_policy=frontier_policy,
         graph_policy=graph_policy,
         status_policy=status_policy,
     )
     shadow.observe_portal_plan(candidate())
     shadow.build_status_json(**status_arguments())
 
-    assert (portal_policy, graph_policy, status_policy) == before
+    assert (
+        portal_policy, frontier_policy, graph_policy, status_policy) == before
 
 
 def test_status_source_is_an_immutable_snapshot_not_live_state():
@@ -566,6 +636,7 @@ def test_session_has_explicit_evidence_apis_but_no_inference_or_goal_api():
 
     assert not hasattr(shadow, "qualify_portal")
     assert hasattr(shadow, "observe_structural_portal")
+    assert hasattr(shadow, "observe_frontier_inventory")
     assert hasattr(shadow, "record_validated_traversal")
     assert not hasattr(shadow, "record_traversal")
     assert not hasattr(shadow, "create_goal")

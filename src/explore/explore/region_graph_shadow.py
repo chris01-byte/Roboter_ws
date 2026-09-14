@@ -14,6 +14,12 @@ from dataclasses import dataclass
 import hashlib
 from typing import Optional, Tuple
 
+from .frontier_task_feed import (
+    FrontierInventory,
+    FrontierInventoryResult,
+    FrontierTaskPolicy,
+    FrontierTaskTracker,
+)
 from .map_status_adapter import MapStatusCorrelationResult
 from .portal_memory import (
     ObservationResult,
@@ -73,6 +79,14 @@ class ShadowTraversalEventResult:
     task_update: Optional[RegionTaskResult]
 
 
+@dataclass(frozen=True)
+class ShadowFrontierEventResult:
+    """Atomic unfiltered frontier inventory and new-task outcome."""
+
+    inventory: FrontierInventoryResult
+    task_updates: Tuple[RegionTaskResult, ...]
+
+
 def _derived_id(kind: str, *values: str) -> str:
     digest = hashlib.sha256()
     digest.update(b"we-shadow-event-v1\0")
@@ -90,6 +104,7 @@ class RegionGraphShadowSession:
             self, initial_map_status: MapStatusCorrelationResult,
             start_seed: RegionSeed, *,
             portal_policy: Optional[PortalMemoryPolicy] = None,
+            frontier_policy: Optional[FrontierTaskPolicy] = None,
             graph_policy: Optional[RegionGraphPolicy] = None,
             status_policy: Optional[ShadowStatusPolicy] = None) -> None:
         if not isinstance(initial_map_status, MapStatusCorrelationResult):
@@ -114,6 +129,10 @@ class RegionGraphShadowSession:
                 graph_policy, RegionGraphPolicy):
             raise RegionGraphShadowError(
                 "graph_policy muss RegionGraphPolicy sein")
+        if frontier_policy is not None and not isinstance(
+                frontier_policy, FrontierTaskPolicy):
+            raise RegionGraphShadowError(
+                "frontier_policy muss FrontierTaskPolicy sein")
         if status_policy is not None and not isinstance(
                 status_policy, ShadowStatusPolicy):
             raise RegionGraphShadowError(
@@ -122,6 +141,8 @@ class RegionGraphShadowSession:
         self._context = initial_map_status.context
         self._map_status = initial_map_status
         self._portal_memory = PortalMemory(self._context, portal_policy)
+        self._frontier_tasks = FrontierTaskTracker(
+            self._context, policy=frontier_policy)
         self._region_graph = RegionGraph(self._context, graph_policy)
         self._status_policy = status_policy or ShadowStatusPolicy()
         self._start_result = self._region_graph.start(start_seed)
@@ -134,12 +155,20 @@ class RegionGraphShadowSession:
     def start_result(self) -> RegionStartResult:
         return self._start_result
 
+    def _latest_event_revision(self) -> int:
+        revisions = [self._region_graph.latest_revision]
+        if self._portal_memory.latest_revision is not None:
+            revisions.append(self._portal_memory.latest_revision)
+        if self._frontier_tasks.latest_revision is not None:
+            revisions.append(self._frontier_tasks.latest_revision)
+        return max(revisions)
+
     def observe_portal_plan(
             self, candidate: PortalPlanCandidate) -> ObservationResult:
         """Store one unqualified candidate without touching the region graph."""
         observation = normalize_portal_plan_candidate(
             candidate, self._context)
-        if observation.map_revision < self._region_graph.latest_revision:
+        if observation.map_revision < self._latest_event_revision():
             raise StaleObservationError(
                 "Portalplan stammt aus der Zeit vor der Schatten-Sitzung")
         return self._portal_memory.observe(observation)
@@ -159,7 +188,7 @@ class RegionGraphShadowSession:
         if observation.context != self._context:
             raise RegionGraphShadowError(
                 "Portalbeobachtung passt nicht zum Schattenkontext")
-        if observation.map_revision < self._region_graph.latest_revision:
+        if observation.map_revision < self._latest_event_revision():
             raise StaleObservationError(
                 "Portalbeobachtung stammt aus einer veralteten Graphrevision")
 
@@ -234,6 +263,49 @@ class RegionGraphShadowSession:
             task_updates=tuple(task_updates),
         )
 
+    def observe_frontier_inventory(
+            self, inventory: FrontierInventory) -> ShadowFrontierEventResult:
+        """Keep every raw frontier globally visible as a passive task.
+
+        Only newly assigned stable frontier identities create graph tasks.
+        Matched or missing clusters never complete, reopen, rank or filter one.
+        """
+        if not isinstance(inventory, FrontierInventory):
+            raise RegionGraphShadowError(
+                "inventory muss FrontierInventory sein")
+        if inventory.context != self._context:
+            raise RegionGraphShadowError(
+                "Frontierbestand passt nicht zum Schattenkontext")
+        if inventory.map_revision < self._latest_event_revision():
+            raise StaleObservationError(
+                "Frontierbestand stammt aus einer veralteten Graphrevision")
+
+        tracker = deepcopy(self._frontier_tasks)
+        graph = deepcopy(self._region_graph)
+        observed = tracker.observe(inventory)
+        task_updates = []
+        for assignment in observed.assignments:
+            if observed.duplicate or not assignment.created:
+                continue
+            task_updates.append(graph.update_task(RegionTaskUpdate(
+                update_id=_derived_id(
+                    "frontier-open", inventory.inventory_id,
+                    assignment.frontier_id),
+                task_id=f"task-{assignment.frontier_id}",
+                context=self._context,
+                map_revision=inventory.map_revision,
+                region_id=graph.current_region_id,
+                kind=RegionTaskKind.FRONTIER,
+                subject_id=assignment.frontier_id,
+                state=RegionTaskState.OPEN,
+            )))
+        self._frontier_tasks = tracker
+        self._region_graph = graph
+        return ShadowFrontierEventResult(
+            inventory=observed,
+            task_updates=tuple(task_updates),
+        )
+
     def record_validated_traversal(
             self, event: TraversalEvent) -> ShadowTraversalEventResult:
         """Atomically apply an externally validated traversal verdict."""
@@ -242,6 +314,9 @@ class RegionGraphShadowSession:
         if event.context != self._context:
             raise RegionGraphShadowError(
                 "Durchfahrtsereignis passt nicht zum Schattenkontext")
+        if event.map_revision < self._latest_event_revision():
+            raise StaleObservationError(
+                "Durchfahrtsereignis stammt aus einer veralteten Revision")
         memory = deepcopy(self._portal_memory)
         graph = deepcopy(self._region_graph)
         memory_result = memory.record_traversal(event)

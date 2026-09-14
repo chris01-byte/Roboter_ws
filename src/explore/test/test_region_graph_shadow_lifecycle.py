@@ -14,6 +14,10 @@ from explore.map_status_adapter import (  # noqa: E402
     MapStatusAdapterError,
     MapStatusCorrelationPolicy,
 )
+from explore.frontier_task_feed import (  # noqa: E402
+    FrontierTaskPolicy,
+    frontier_inventory_from_clusters,
+)
 from explore.portal_memory import (  # noqa: E402
     ObservationDisposition,
     Point2D,
@@ -26,7 +30,10 @@ from explore.portal_memory import (  # noqa: E402
     TraversalEvent,
 )
 from explore.portal_plan_adapter import PortalPlanCandidate  # noqa: E402
-from explore.portal_source_adapter import RawMapPortalSource  # noqa: E402
+from explore.portal_source_adapter import (  # noqa: E402
+    PortalSourceCorrelation,
+    RawMapPortalSource,
+)
 from explore.region_graph import RegionGraphPolicy  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
@@ -126,6 +133,16 @@ def structural_observation(owner, observation_id, **changes):
     }
     values.update(changes)
     return PortalObservation(**values)
+
+
+def frontier_inventory(owner, clusters):
+    status = owner.latest_map_status
+    return frontier_inventory_from_clusters(PortalSourceCorrelation(
+        context=owner.context,
+        map_revision=status.map_revision,
+        fingerprint=status.fingerprint,
+        source_stamp_ns=status.source_stamp_ns,
+    ), clusters)
 
 
 def raw_source(**changes):
@@ -806,12 +823,41 @@ def test_lifecycle_accepts_only_explicit_validated_traversal_input():
     assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.1)
 
 
+def test_lifecycle_keeps_unfiltered_frontier_tasks_open_across_revisions():
+    owner = lifecycle(frontier_policy=FrontierTaskPolicy(
+        association_radius_m=0.60))
+    accept_status(owner, at=100.0)
+    first = owner.observe_frontier_inventory(
+        frontier_inventory(owner, [(1.0, 1.0, 8), (3.0, 1.0, 12)]),
+        observed_monotonic_seconds=100.1,
+    )
+    accept_status(owner, status_json(
+        accepted_maps=4,
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        time=1_800_000_001.0,
+    ), at=100.2)
+    empty = owner.observe_frontier_inventory(
+        frontier_inventory(owner, []),
+        observed_monotonic_seconds=100.3,
+    )
+    payload = json.loads(build_status(owner, now=100.4))
+
+    assert len(first.task_updates) == 2
+    assert empty.task_updates == ()
+    assert payload["summary"]["open_task_count"] == 2
+    assert [task["kind"] for task in payload["tasks"]] == [
+        "frontier", "frontier"]
+    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.3)
+
+
 @pytest.mark.parametrize("changes", [
     {"session_id": ""},
     {"expected_frame_id": "bad frame"},
     {"start_observation_id": ""},
     {"map_policy": "policy"},
     {"portal_policy": "policy"},
+    {"frontier_policy": "policy"},
     {"graph_policy": "policy"},
     {"status_policy": "policy"},
 ])
@@ -823,20 +869,25 @@ def test_invalid_owner_configuration_fails_before_input(changes):
 def test_valid_policy_objects_are_not_mutated_or_replaced():
     map_policy = MapStatusCorrelationPolicy()
     portal_policy = PortalMemoryPolicy(max_observations=2)
+    frontier_policy = FrontierTaskPolicy(max_frontiers=2)
     graph_policy = RegionGraphPolicy(max_regions=2)
     status_policy = ShadowStatusPolicy(max_regions=2)
-    before = (map_policy, portal_policy, graph_policy, status_policy)
+    before = (
+        map_policy, portal_policy, frontier_policy, graph_policy, status_policy)
 
     owner = lifecycle(
         map_policy=map_policy,
         portal_policy=portal_policy,
+        frontier_policy=frontier_policy,
         graph_policy=graph_policy,
         status_policy=status_policy,
     )
     accept_status(owner)
     build_status(owner)
 
-    assert (map_policy, portal_policy, graph_policy, status_policy) == before
+    assert (
+        map_policy, portal_policy, frontier_policy,
+        graph_policy, status_policy) == before
 
 
 def test_update_is_immutable_and_owner_has_no_privileged_or_reset_api():
@@ -848,4 +899,5 @@ def test_update_is_immutable_and_owner_has_no_privileged_or_reset_api():
     assert not hasattr(owner, "reset")
     assert not hasattr(owner, "qualify_portal")
     assert not hasattr(owner, "record_traversal")
+    assert hasattr(owner, "observe_frontier_inventory")
     assert not hasattr(owner, "create_goal")

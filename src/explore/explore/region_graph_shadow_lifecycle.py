@@ -12,6 +12,7 @@ from enum import Enum
 import math
 from typing import Optional
 
+from .frontier_task_feed import FrontierInventory, FrontierTaskPolicy
 from .map_status_adapter import (
     MapManagerStatusCorrelator,
     MapStatusCorrelationPolicy,
@@ -37,6 +38,7 @@ from .portal_source_adapter import (
 from .region_graph import RegionGraphPolicy, RegionSeed
 from .region_graph_shadow import (
     RegionGraphShadowSession,
+    ShadowFrontierEventResult,
     ShadowPortalEventResult,
     ShadowTraversalEventResult,
 )
@@ -83,6 +85,7 @@ class RegionGraphShadowLifecycle:
             start_observation_id: str, *,
             map_policy: Optional[MapStatusCorrelationPolicy] = None,
             portal_policy: Optional[PortalMemoryPolicy] = None,
+            frontier_policy: Optional[FrontierTaskPolicy] = None,
             graph_policy: Optional[RegionGraphPolicy] = None,
             status_policy: Optional[ShadowStatusPolicy] = None,
             raw_map_capacity: Optional[int] = None) -> None:
@@ -94,6 +97,10 @@ class RegionGraphShadowLifecycle:
                 graph_policy, RegionGraphPolicy):
             raise RegionGraphShadowLifecycleError(
                 "graph_policy muss RegionGraphPolicy sein")
+        if frontier_policy is not None and not isinstance(
+                frontier_policy, FrontierTaskPolicy):
+            raise RegionGraphShadowLifecycleError(
+                "frontier_policy muss FrontierTaskPolicy sein")
         if status_policy is not None and not isinstance(
                 status_policy, ShadowStatusPolicy):
             raise RegionGraphShadowLifecycleError(
@@ -127,6 +134,7 @@ class RegionGraphShadowLifecycle:
 
         self._start_observation_id = start_observation_id
         self._portal_policy = portal_policy
+        self._frontier_policy = frontier_policy
         self._graph_policy = graph_policy
         self._status_policy = status_policy
         self._correlator = correlator
@@ -233,6 +241,7 @@ class RegionGraphShadowLifecycle:
                 result,
                 seed,
                 portal_policy=self._portal_policy,
+                frontier_policy=self._frontier_policy,
                 graph_policy=self._graph_policy,
                 status_policy=self._status_policy,
             )
@@ -343,6 +352,32 @@ class RegionGraphShadowLifecycle:
         if not result.memory.duplicate:
             self._portal_changed_monotonic_seconds = observed
         if not result.graph.duplicate or result.task_update is not None:
+            self._graph_changed_monotonic_seconds = observed
+        return result
+
+    def observe_frontier_inventory(
+            self, inventory: FrontierInventory, *,
+            observed_monotonic_seconds: float) -> ShadowFrontierEventResult:
+        """Apply one complete unfiltered frontier inventory passively."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Frontierbestand wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(inventory, FrontierInventory):
+            raise RegionGraphShadowLifecycleError(
+                "inventory muss FrontierInventory sein")
+        if inventory.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Frontierbestand passt nicht zum aktiven Kartenkontext")
+        if inventory.map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Frontierbestand liegt vor dem aktuellen Kartenstatus")
+        result = self._session.observe_frontier_inventory(inventory)
+        self._last_monotonic_seconds = observed
+        if result.task_updates:
             self._graph_changed_monotonic_seconds = observed
         return result
 

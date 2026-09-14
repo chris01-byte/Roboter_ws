@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AR)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AS)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,32 +10,29 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AR – exakt korrelierte Datenzuführung, automatische Strukturereignisse
-und passive Raum-/Aufgabenverwaltung zusammenhängend umgesetzt und lokal
-softwaregeprüft; zur Review.** Eine Engstelle wird nur dann strukturell
-qualifiziert, wenn ihr clearance-großer lokaler Schnitt die Roboterseite und
-eine ausreichend große Gegenseite in exakt demselben gemessenen Freiraum
-topologisch trennt. Das Portalgedächtnis verlangt weiterhin zwei unabhängige
-Kartenrevisionen. Bis dahin entsteht automatisch eine Beobachtungsaufgabe;
-danach eine vorläufige gesehene Gegenregion, eine Verbindung und eine offene
-Portalaufgabe. Alles bleibt im standardmäßig deaktivierten Schattenpfad.
+**WE-M2/AS – der ungefilterte globale Frontierbestand wird zusätzlich passiv,
+revisions- und replayfest als Aufgabenbestand zugeführt; lokal softwaregeprüft,
+zur Review.** Die Zuführung liest alle Cluster direkt nach der vorhandenen
+Rohkarten-Frontiererkennung und vor Ranking, Besuchsfilter, Blacklist oder
+Planner. Eindeutig gegenseitig nächste Beobachtungen innerhalb des vorhandenen
+Revisit-Radius behalten eine sitzungsstabile Frontier-ID. Mehrdeutige
+Geometrie wird nicht zusammengeführt, sondern bleibt als zusätzliche offene
+Aufgabe sichtbar. Fehlende Cluster schließen keine Aufgabe ab.
 
-WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien und
-die automatische Rohkarte–Strukturereignis–Region-/Aufgaben-Kette sind lokal
-softwaregeprüft. Ein Durchfahrtsurteil kann atomar Portalgedächtnis, aktuelle
-Region und Portalaufgabe fortschreiben, wird aber absichtlich nur als bereits
-extern validierter Eingang akzeptiert. Der vorhandene Fahrpfad liefert noch
-keinen vollständigen Chassis-/Auslaufbeleg und ist nicht angebunden.
-Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
-beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
-SLAM-Last gemessen.
+WE-M2 bleibt offen: Die automatische Kette aus exakt korrelierter Rohkarte,
+Struktur-/Frontierereignissen, Regionen, Verbindungen und passiven Aufgaben ist
+lokal softwaregeprüft. Ein Durchfahrtsurteil kann atomar Portalgedächtnis,
+aktuelle Region und Portalaufgabe fortschreiben, wird aber absichtlich nur als
+bereits extern validierter Eingang akzeptiert. Der vorhandene Fahrpfad liefert
+noch keinen vollständigen Chassis-/Auslaufbeleg und ist nicht angebunden. Die
+neue kombinierte Ereigniskette besitzt noch keinen eigenen wachsenden
+Langlauf-/Speichernachweis; reale Parallel-/SLAM-Last und Jetson-Nachtest fehlen.
 
-**Nächster abgegrenzter Schritt WE-M2/AS:** Die noch fehlende passive
-Frontier-Aufgabenzuführung revisions- und replayfest aus dem bereits im Explorer
-berechneten Frontierbestand ableiten. Unsegmentierte Frontiers müssen an die
-aktuelle Region beziehungsweise ausdrücklich global sichtbar gebunden bleiben;
-Filterung, Blacklist oder fehlender Planner dürfen sie nicht stillschweigend
-abschließen. Keine Auswahl-, Action-, Ziel-, Command- oder Fahrwirkung.
+**Nächster abgegrenzter Schritt WE-M2/AT:** Einen gerätefreien, reproduzierbaren
+Langlauf der jetzt vollständigen passiven Kette über wachsende und korrigierte
+synthetische Karten ergänzen. Zeit, RSS, Aufgaben-/Identitätswachstum,
+Kapazitätsfehler und unveränderte Raster müssen gemeinsam gemessen werden. Noch
+kein Jetson-/Hardwareurteil, keine Policy, Zielwahl, Action, Navigation oder Fahrt.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -102,6 +99,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AP `docs/we-m2ap-passive-portal-feed-owner` | Gestapelter Besitzer-, Cache-, Retry-, Sperr- und Fehlervertrag für die spätere dritte Opt-in-Portalzuführung; nur diese STATUS.md. |
 | WE-M2/AQ `feature/we-m2aq-passive-connected-portal-feed` | Gestapelte dritt-opt-in passive Node-Zuführung exakt korrelierter Rohkarten-Portalkandidaten mit begrenztem Pose-Retry, Sperrdisziplin, Fehlerisolation und gerätefreiem ROS-Smoke; keine Qualifikation, Graphverbindung oder Fahrwirkung. |
 | WE-M2/AR `feature/we-m2ar-automatic-shadow-events` | Gestapelte dritt-opt-in Kette von exakt korrelierter Rohkarte über topologischen Strukturbeleg und revisionsgebundene Portalbestätigung bis zu vorläufiger Region, Verbindung und passiven Beobachtungs-/Portalaufgaben; validierte Traversalschnittstelle ohne Fahrpfadanbindung. |
+| WE-M2/AS `feature/we-m2as-passive-frontier-tasks` | Gestapelte unabhängige Opt-in-Zuführung aller ungefilterten Rohkarten-Frontiers in sitzungsstabile offene Graphaufgaben; eindeutige Assoziation, mehrdeutige Zusatzaufgabe, Replay-/Kapazitätsgrenzen und kein Abschluss durch Verschwinden oder Filter. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -339,7 +337,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AR decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die automatisch korrelierte Strukturereignis-, Regions- und Portalaufgabenkette ab. Frontierzuführung, vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AS decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die automatisch korrelierte Struktur-/Frontierereignis-, Regions- und Aufgabenkette ab. Kombinierter Langlauf, vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -436,6 +434,79 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AS: ungefilterte Frontiers bleiben offene Aufgaben
+
+**Quellen- und Aktivierungsentscheidung:** Ein neuer unabhängiger Opt-in
+`region_graph_shadow_frontiers_enabled` ist standardmäßig `false` und nur mit
+aktivem Regionsgraph-Schatten, aktiver Rohkartenkorrelation und positiver
+Join-Kapazität zulässig. Er nutzt dieselbe exakt korrelierte Rohkartennachricht
+wie der Portalpfad. Auf ihr läuft ausschließlich die bereits vorhandene
+`_detect_frontiers()`-Erkennung mit der bestehenden Mindestgröße. Das Ergebnis
+wird vollständig vor `_rank_frontiers()`, Anfahrprojektion, Besuchsfilter,
+Blacklist und Planner in einen typisierten Inventarvertrag überführt. Damit
+kann keiner dieser ausführungsbezogenen Filter den passiven Bestand verkleinern.
+
+**Identität und Aufgabenverwaltung:** Der reine, begrenzte
+`FrontierTaskTracker` sortiert das vollständige Inventar deterministisch und
+hält höchstens 4096 sitzungsbezogene Tracks sowie genau das letzte Inventar für
+Replay. Eine neue Beobachtung übernimmt eine bestehende ID nur bei eindeutig
+gegenseitig nächster Zuordnung innerhalb des bereits konfigurierten
+`frontier_revisit_radius_m`. Bei Distanzgleichstand, Split-/Merge-Mehrdeutigkeit
+oder größerer Verschiebung entsteht eine zusätzliche offene Frontier-ID; alte
+IDs werden nicht stillschweigend verschmolzen oder gelöscht. Eine Folgesicht
+trifft diese neue ID wieder und erzeugt dadurch kein ungebremstes Duplikat.
+
+Neue IDs erzeugen transaktional genau eine `frontier`-Aufgabe in der zum
+Beobachtungszeitpunkt aktuellen vorläufigen Region. Die unsegmentierte globale
+Sicht bleibt über die ungefilterte Gesamtausgabe `tasks` erhalten. Wiedererkanntes
+oder exaktes Replay erzeugt keine zweite Graphaufgabe. Ein leeres oder später
+kleineres Inventar schließt ausdrücklich keine Aufgabe ab; Abschluss,
+Fehlversuch, Sperrgrund und Reaktivierung gehören zur späteren WE-M3-Policy.
+Kartenepochenwechsel bleiben wie zuvor ein fail-closed Neustartgrund.
+
+**Runtimewirkung:** Karten-/Statusjoin, Detektion und Inventarbildung laufen
+außerhalb der Schattensperre; vor der transaktionalen Mutation wird dasselbe
+Korrelationspaar erneut geprüft. Portal- und Frontierinventar besitzen getrennte
+Replayanker. Der Frontierpfad benötigt keine Pose. Er fügt keine ROS-Schnittstelle
+hinzu und wird weder von Explorerstatus, Actionserver, Zielwahl, Nav2-Client,
+Costmap-Portalplanung noch Twist-Publishern gelesen. Rohkarte und Costmap werden
+nicht verändert.
+
+**Ausgeführte Prüfungen:** Lokaler Arbeitsplatz mit ROS Humble, ausschließlich
+synthetische Raster und statischer Test-TF:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AS-FOCUS | Inventar-/Tracker-, Sitzung/Lifecycle- und Nodeverträge einschließlich Replay, Wachstum, Verschwinden, Mehrdeutigkeit, Kapazitätsatomizität, Cachewechsel und ungefilterter Übergabe: **180 passed**. |
+| WE-M2AS-EXPLORER | Vollständige Explorer-Suite: **579 passed**. |
+| WE-M2AS-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **720 passed**. |
+| WE-M2AS-COLCON | Frischer temporärer Build von drei Paketen; **36 + 579 = 615 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AS-ROS | Isolierte Domain 229, direkter Explorer und statischer TF über zwei Exaktkorrelationen: **1 stabile Frontieraufgabe**, 1 bestätigtes Portal, 2 Regionen, 1 Verbindung, insgesamt 2 offene/1 erledigte Aufgaben; Actions/Commands **0**, Hardwarezugriff **false**. |
+| WE-M2AS-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+Das ist ein gerätefreier Software- und ROS-Integrationsnachweis. Er belegt keine
+reale Frontier, Lokalisierung, Erreichbarkeit, Fahrt, Jetsonlast oder
+Hardwareabnahme. Insbesondere ist eine offene Aufgabe weder ein freigegebenes
+Ziel noch eine Aussage, dass der Bereich aktuell sicher erreichbar ist.
+
+**Offene Grenzen:** Frontier-IDs sind bewusst nur innerhalb der Kartenepoche und
+Prozesssitzung stabil; dauerhafte Wiederaufnahme gehört zu WE-M5. Die räumliche
+Zuordnung ist konservative Datenassoziation, keine Raumsegmentierung. Weil AS
+keine Aufgaben abschließt, kann der Bestand wachsen; genau dieses Wachstum und
+die kombinierte Portal-/Frontier-Rasterlast müssen im nächsten gerätefreien
+Langlauf gegen die vorhandenen Grenzen gemessen werden.
+
+**Nächster abgegrenzter Schritt WE-M2/AT:** Einen reproduzierbaren synthetischen
+Langlauf der gesamten passiven Kette mit Kartenwachstum, Origin-/Geometrieänderung,
+stabilen und verschwindenden Frontiers sowie Portalereignissen ausführen. Laufzeit,
+RSS, Aufgaben-/Identitätszuwachs, harte Kapazitätsreaktion und bytegleich
+unveränderte Eingangsraster protokollieren. Keine Geräte-, Ziel- oder Fahrwirkung.
+
+**Rückfall:** Den einzelnen WE-M2/AS-Commit zurücknehmen oder
+`region_graph_shadow_frontiers_enabled: false` belassen. Dann bleiben ARs
+Portal-/Regions-/Aufgabenkette und alle Betriebswege unverändert; es gibt keinen
+Geräte- oder Fahrzustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/AR: automatische Strukturereignisse bis Region und Aufgabe
 
