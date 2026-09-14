@@ -124,3 +124,28 @@ gemessene Evidenz mit Zahlen.
    geht. Dort stehen drei Fallen, die real Zeit gekostet haben.
 4. Bestand prüfen, bevor etwas verändert wird: Läuft schon etwas? Sind die
    Motoren bestromt? Steht der Roboter frei?
+
+---
+
+## 7. Wohnungserkundung: verbindlicher Zusatzkontext (WE-1, 14.09.2026)
+
+Bei Arbeiten an Mehrraum-Erkundung, Portal-/Raumgedächtnis, Rückwegen oder dem
+Erkundungsabschluss zusätzlich **vor jeder Änderung** lesen:
+
+1. [Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
+2. [Laufender Status und Entscheidungen](docs/wohnungserkundung/STATUS.md)
+3. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md)
+4. [Meilensteine und Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
+
+Die fachliche Fortschritts- und Entscheidungsführung für WE-1 liegt zentral in
+`docs/wohnungserkundung/STATUS.md`. Für diese fachlichen Einträge ergänzt sie die
+obige Projektgedächtnis-Checkliste; übergreifende Entscheidungen werden weiterhin
+mit Verweis in `docs/PROJECT_MEMORY.md` ergänzt. Keine parallelen aktuellen
+Statuskopien führen. Bestehende Sicherheitsregeln bleiben uneingeschränkt gültig.
+
+Der Plan beschreibt das Soll, nicht einen bereits implementierten Wohnungsmodus.
+Pro Auftrag nur einen abgegrenzten Schritt bearbeiten. Main, HWT-Referenzbranch und
+tatsächlichen Jetson-Stand unterscheiden; bei abweichenden Angaben Profil und
+Evidenz prüfen. Insbesondere sind allgemeine/historische Komponentenübersichten
+keine Freigabe des aktuell gestarteten SLAM- oder Antriebspfads. Dokumentation,
+Commit, Push oder Merge autorisieren keine Motoraktivierung oder Fahrt.

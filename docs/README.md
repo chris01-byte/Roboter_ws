@@ -19,7 +19,10 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 | Hardware- und Betriebsuebergabe | [`ROBOT_TRANSFER.md`](ROBOT_TRANSFER.md) | Wiederholbare Jetson-/Hardwareuebergabe und Rueckfallwege. |
 | Fahrbasis / Encoder | [`ENCODER_ODOMETRIE_FIX.md`](ENCODER_ODOMETRIE_FIX.md) | Bestaetigte ESS23-Encoderregeln und Abnahmeschritte. |
 | LiDAR-SLAM | [`SLAM_TOOLBOX_ROTATION_FIX.md`](SLAM_TOOLBOX_ROTATION_FIX.md) | Humble-Overlay, reine Drehung und Inbetriebnahmegrenzen. |
-| Wohnungserkundung | [`WOHNUNGSERKUNDUNG_STRATEGIE.md`](WOHNUNGSERKUNDUNG_STRATEGIE.md) | Frontier-, Portal- und Abschlussstrategie. |
+| Wohnungserkundung: Gesamtplan | [`WOHNUNGSERKUNDUNG_STRATEGIE.md`](WOHNUNGSERKUNDUNG_STRATEGIE.md) | WE-1: Frontier-, Raum-/Portalgedächtnis, Rückwege und Abschlussvertrag. |
+| Wohnungserkundung: Agentenauftrag | [`wohnungserkundung/AGENTENAUFTRAG.md`](wohnungserkundung/AGENTENAUFTRAG.md) | Pflichtkontext, Arbeitsumfang und sichere Übergabe. |
+| Wohnungserkundung: Meilensteine | [`wohnungserkundung/MEILENSTEINE.md`](wohnungserkundung/MEILENSTEINE.md) | WE-M0 bis WE-M7 mit Tests, Abnahmegrenzen und Rückfallwegen. |
+| Wohnungserkundung: Status | [`wohnungserkundung/STATUS.md`](wohnungserkundung/STATUS.md) | Einziger laufender WE-1-Status mit fachlichem Entscheidungslog. |
 | Zielkarte und Lokalisierung | [`ZIEL_KARTE_UND_LOKALISIERUNG.md`](ZIEL_KARTE_UND_LOKALISIERUNG.md) | Karten-/Lokalisierungsvertrag und Fail-closed Regeln. |
 | Semantische Karte | [`SEMANTIC_MAP_INTEGRATION.md`](SEMANTIC_MAP_INTEGRATION.md) | Manuelle Raumdaten, Persistenz und Schnittstellen. |
 | App-Livepose | [`APP_LIVE_ROBOTERPOSE_INTEGRATION.md`](APP_LIVE_ROBOTERPOSE_INTEGRATION.md) | Read-only Pose-/Lokalisierungsintegration fuer die App. |
@@ -38,9 +41,18 @@ Aktuelle Dokumentation beschreibt den vorgesehenen oder nachweislich laufenden Z
 
 `PROJECT_MEMORY.md` enthaelt historische und aktuelle Entscheidungen. Alte Eintraege bleiben dort, weil sie die Begruendung fuer heutige Schutzregeln liefern. Sie sind nicht automatisch aktuelle Arbeitsanweisungen.
 
+Für WE-1 stehen fachliche Entscheidungen und Fortschritt in
+[`wohnungserkundung/STATUS.md`](wohnungserkundung/STATUS.md). Übergreifende
+Projektentscheidungen werden zusätzlich im Projektgedächtnis verlinkt.
+
 ### Archiv
 
 `docs/archive/` enthaelt alte Pruefplaene, Ergebnisprotokolle und Statussnapshots. Sie werden nicht geloescht, damit Messnachweise und Git-Historie nachvollziehbar bleiben. Archivdateien duerfen keine Aussage wie "einzig gueltig" oder "Single Source of Truth" mehr fuer den heutigen Betrieb beanspruchen.
+
+Der vorherige Wohnungserkundungsplan bleibt als
+[Strategiestand vom 18.08.2026](archive/2026-08/WOHNUNGSERKUNDUNG_STRATEGIE_2026-08-18.md)
+erhalten. Die aktuelle Zielarchitektur steht unter dem bisherigen Strategiepfad;
+der historische Plan ist keine konkurrierende aktuelle Arbeitsanweisung.
 
 ## Legacy-Pruefpfad
 
