@@ -14,16 +14,26 @@ from explore.map_status_adapter import (  # noqa: E402
 from explore.portal_memory import (  # noqa: E402
     MemoryCapacityError,
     ObservationDisposition,
+    Point2D,
     PortalConfirmationState,
     PortalMapContext,
     PortalMemoryPolicy,
+    PortalObservation,
+    PortalStructuralEvidence,
     StaleObservationError,
+    TraversalDirection,
+    TraversalEvent,
 )
 from explore.portal_plan_adapter import (  # noqa: E402
     PortalPlanAdapterError,
     PortalPlanCandidate,
 )
-from explore.region_graph import RegionGraphPolicy, RegionSeed  # noqa: E402
+from explore.region_graph import (  # noqa: E402
+    RegionGraphPolicy,
+    RegionSeed,
+    RegionTaskState,
+    StaleGraphUpdateError,
+)
 from explore.region_graph_shadow import (  # noqa: E402
     RegionGraphShadowError,
     RegionGraphShadowSession,
@@ -77,6 +87,20 @@ def candidate(**changes):
     }
     values.update(changes)
     return PortalPlanCandidate(**values)
+
+
+def structural_observation(observation_id, revision, **changes):
+    values = {
+        "observation_id": observation_id,
+        "context": CONTEXT,
+        "map_revision": revision,
+        "near_side": Point2D(1.0, 2.0),
+        "far_side": Point2D(1.8, 2.0),
+        "uncertainty_m": 0.02,
+        "structural_evidence": PortalStructuralEvidence.QUALIFIED,
+    }
+    values.update(changes)
+    return PortalObservation(**values)
 
 
 def status_arguments(**changes):
@@ -141,6 +165,102 @@ def test_exact_candidate_replay_is_idempotent_and_status_is_stable():
     assert replay.duplicate is True
     assert replay.evidence_added is False
     assert status_after == status_before
+
+
+def test_structural_events_automatically_create_region_and_tasks():
+    shadow = session()
+
+    first = shadow.observe_structural_portal(
+        structural_observation("door-structure-10", 10))
+    first_payload = json.loads(shadow.build_status_json(**status_arguments()))
+
+    assert first.link is None
+    assert first.observation.qualified_evidence_added is True
+    assert first_payload["summary"]["region_count"] == 1
+    assert first_payload["summary"]["open_task_count"] == 1
+    assert first_payload["tasks"] == [{
+        "task_id": "task-observe-portal_000001",
+        "region_id": "region_000001",
+        "kind": "observation",
+        "subject_id": "portal_000001",
+        "state": "open",
+        "created_revision": 10,
+        "last_revision": 10,
+    }]
+
+    second = shadow.observe_structural_portal(
+        structural_observation("door-structure-11", 11))
+    payload = json.loads(shadow.build_status_json(**status_arguments(
+        map_status=map_status(map_revision=11))))
+
+    assert second.link.opposite_region_id == "region_000002"
+    assert payload["summary"]["confirmed_portal_count"] == 1
+    assert payload["summary"]["region_count"] == 2
+    assert payload["summary"]["connection_count"] == 1
+    assert payload["summary"]["open_task_count"] == 1
+    assert payload["summary"]["completed_task_count"] == 1
+    assert [(task["kind"], task["region_id"], task["state"])
+            for task in payload["tasks"]] == [
+        ("observation", "region_000001", "completed"),
+        ("portal", "region_000002", "open"),
+    ]
+    assert payload["regions"][1]["seen"] is True
+    assert payload["regions"][1]["entered"] is False
+
+
+def test_validated_traversal_enters_region_and_completes_portal_task():
+    shadow = session()
+    shadow.observe_structural_portal(
+        structural_observation("door-structure-10", 10))
+    second = shadow.observe_structural_portal(
+        structural_observation("door-structure-11", 11))
+    portal_id = second.observation.portal_id
+
+    result = shadow.record_validated_traversal(TraversalEvent(
+        event_id="validated-door-crossing-12",
+        portal_id=portal_id,
+        context=CONTEXT,
+        map_revision=12,
+        event_time_ns=12_000_000_000,
+        direction=TraversalDirection.A_TO_B,
+        crossing_confirmed=True,
+    ))
+    payload = json.loads(shadow.build_status_json(**status_arguments(
+        map_status=map_status(map_revision=12))))
+
+    assert result.memory.counted is True
+    assert result.graph.entered is True
+    assert result.task_update.task.state is RegionTaskState.COMPLETED
+    assert payload["summary"]["current_region_id"] == "region_000002"
+    assert payload["summary"]["confirmed_entry_count"] == 1
+    assert payload["summary"]["open_task_count"] == 0
+    assert payload["summary"]["completed_task_count"] == 2
+    assert payload["regions"][1]["entered"] is True
+
+
+def test_cross_component_event_is_atomic_when_task_revision_is_not_newer():
+    shadow = session()
+    shadow.observe_structural_portal(
+        structural_observation("door-structure-10", 10))
+    second = shadow.observe_structural_portal(
+        structural_observation("door-structure-11", 11))
+    before = shadow.build_status_json(**status_arguments(
+        map_status=map_status(map_revision=11)))
+
+    with pytest.raises(StaleGraphUpdateError):
+        shadow.record_validated_traversal(TraversalEvent(
+            event_id="same-revision-crossing",
+            portal_id=second.observation.portal_id,
+            context=CONTEXT,
+            map_revision=11,
+            event_time_ns=11_000_000_000,
+            direction=TraversalDirection.A_TO_B,
+            crossing_confirmed=True,
+        ))
+
+    after = shadow.build_status_json(**status_arguments(
+        map_status=map_status(map_revision=11)))
+    assert after == before
 
 
 def test_foreign_context_fails_before_any_session_state_changes():
@@ -441,9 +561,11 @@ def test_status_source_is_an_immutable_snapshot_not_live_state():
     assert shadow.status_source(**status_arguments()).portals != ()
 
 
-def test_session_has_no_qualification_traversal_or_goal_api():
+def test_session_has_explicit_evidence_apis_but_no_inference_or_goal_api():
     shadow = session()
 
     assert not hasattr(shadow, "qualify_portal")
+    assert hasattr(shadow, "observe_structural_portal")
+    assert hasattr(shadow, "record_validated_traversal")
     assert not hasattr(shadow, "record_traversal")
     assert not hasattr(shadow, "create_goal")

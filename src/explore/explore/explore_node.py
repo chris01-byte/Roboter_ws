@@ -77,7 +77,7 @@ from explore.portal_planning import (
     front_lidar_corridor_check,
 )
 from explore.raw_map_portal_adapter import (
-    correlated_connected_portal_candidates,
+    correlated_connected_portal_observations,
 )
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.region_graph_shadow_lifecycle import (
@@ -1068,7 +1068,7 @@ class ExploreNode(Node):
 
         try:
             origin = message.info.origin
-            candidates = correlated_connected_portal_candidates(
+            observations = correlated_connected_portal_observations(
                 correlation,
                 width=message.info.width,
                 height=message.info.height,
@@ -1119,9 +1119,9 @@ class ExploreNode(Node):
                 return
             observed_at = time.monotonic()
             try:
-                for candidate in candidates:
-                    self._region_graph_shadow.observe_portal_plan(
-                        candidate,
+                for observation in observations:
+                    self._region_graph_shadow.observe_structural_portal(
+                        observation,
                         observed_monotonic_seconds=observed_at,
                     )
             except Exception as error:

@@ -23,6 +23,8 @@ from .portal_memory import (
     ObservationResult,
     PortalMapContext,
     PortalMemoryPolicy,
+    PortalObservation,
+    TraversalEvent,
 )
 from .portal_plan_adapter import PortalPlanCandidate
 from .portal_source_adapter import (
@@ -33,7 +35,11 @@ from .portal_source_adapter import (
     RawMapStatusJoiner,
 )
 from .region_graph import RegionGraphPolicy, RegionSeed
-from .region_graph_shadow import RegionGraphShadowSession
+from .region_graph_shadow import (
+    RegionGraphShadowSession,
+    ShadowPortalEventResult,
+    ShadowTraversalEventResult,
+)
 from .region_graph_status import ShadowStatusPolicy
 
 
@@ -282,6 +288,62 @@ class RegionGraphShadowLifecycle:
         self._last_monotonic_seconds = observed
         if not result.duplicate:
             self._portal_changed_monotonic_seconds = observed
+        return result
+
+    def observe_structural_portal(
+            self, observation: PortalObservation, *,
+            observed_monotonic_seconds: float) -> ShadowPortalEventResult:
+        """Apply exact-map structural evidence to passive graph and tasks."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Portalbeobachtung wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(observation, PortalObservation):
+            raise RegionGraphShadowLifecycleError(
+                "observation muss PortalObservation sein")
+        if observation.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Portalbeobachtung passt nicht zum aktiven Kartenkontext")
+        if observation.map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Portalbeobachtung liegt vor dem aktuellen Kartenstatus")
+        result = self._session.observe_structural_portal(observation)
+        self._last_monotonic_seconds = observed
+        if not result.observation.duplicate:
+            self._portal_changed_monotonic_seconds = observed
+        if result.link is not None or result.task_updates:
+            self._graph_changed_monotonic_seconds = observed
+        return result
+
+    def record_validated_traversal(
+            self, event: TraversalEvent, *,
+            observed_monotonic_seconds: float) -> ShadowTraversalEventResult:
+        """Apply one externally validated event without inferring movement."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Durchfahrt wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(event, TraversalEvent):
+            raise RegionGraphShadowLifecycleError(
+                "event muss TraversalEvent sein")
+        if event.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Durchfahrt passt nicht zum aktiven Kartenkontext")
+        if event.map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Durchfahrt liegt vor dem aktuellen Kartenstatus")
+        result = self._session.record_validated_traversal(event)
+        self._last_monotonic_seconds = observed
+        if not result.memory.duplicate:
+            self._portal_changed_monotonic_seconds = observed
+        if not result.graph.duplicate or result.task_update is not None:
+            self._graph_changed_monotonic_seconds = observed
         return result
 
     def build_status_json(self, *, now_monotonic_seconds: float) -> str:

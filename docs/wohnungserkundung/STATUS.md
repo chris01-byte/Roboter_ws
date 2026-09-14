@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AQ)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/AR)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,32 +10,32 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/AQ – passive, exakt korrelierte Rohkarten-Portalzuführung umgesetzt und
-lokal softwaregeprüft; zur Review.** Der standardmäßig deaktivierte dritte
-Opt-in führt die in WE-M2/AO erzeugten unqualifizierten Kandidaten über den
-vorhandenen Schattenlebenszyklus zu. Cache, Korrelation, TF-Retry und
-Schattenfehler bleiben begrenzt und isoliert; Fingerprint und Detektor laufen
-außerhalb der Zustandssperre. Ein gerätefreier ROS-Smoke belegte die Kette
-synthetische `OccupancyGrid` → Exaktjoin → Kandidat → Schattenstatus mit genau
-einem unbestätigten Portal, ohne Action oder Command.
+**WE-M2/AR – exakt korrelierte Datenzuführung, automatische Strukturereignisse
+und passive Raum-/Aufgabenverwaltung zusammenhängend umgesetzt und lokal
+softwaregeprüft; zur Review.** Eine Engstelle wird nur dann strukturell
+qualifiziert, wenn ihr clearance-großer lokaler Schnitt die Roboterseite und
+eine ausreichend große Gegenseite in exakt demselben gemessenen Freiraum
+topologisch trennt. Das Portalgedächtnis verlangt weiterhin zwei unabhängige
+Kartenrevisionen. Bis dahin entsteht automatisch eine Beobachtungsaufgabe;
+danach eine vorläufige gesehene Gegenregion, eine Verbindung und eine offene
+Portalaufgabe. Alles bleibt im standardmäßig deaktivierten Schattenpfad.
 
-WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien sind
-lokal softwaregeprüft und die unqualifizierte Portalgeometrie wird nun
-revisionssicher zugeführt. Qualifizierte Strukturevidenz und bestätigte
-Durchfahrtsereignisse werden der passiven Runtime jedoch noch nicht automatisch
-zugeführt.
+WE-M2 bleibt offen: Die geforderten kombinierten Detektor–Graph-Szenarien und
+die automatische Rohkarte–Strukturereignis–Region-/Aufgaben-Kette sind lokal
+softwaregeprüft. Ein Durchfahrtsurteil kann atomar Portalgedächtnis, aktuelle
+Region und Portalaufgabe fortschreiben, wird aber absichtlich nur als bereits
+extern validierter Eingang akzeptiert. Der vorhandene Fahrpfad liefert noch
+keinen vollständigen Chassis-/Auslaufbeleg und ist nicht angebunden.
 Laufzeit und Speicher sind für wachsende synthetische Karten lokal begrenzt
 beobachtet, aber noch nicht auf dem Jetson unter dessen realer Parallel- und
 SLAM-Last gemessen.
 
-**Nächster abgegrenzter Schritt WE-M2/AR:** Die zulässigen vorhandenen
-Softwarequellen für automatische Struktur- und Durchfahrtsereignisse gegen den
-WE-M1-Vertrag prüfen und daraus die kleinste fail-closed Ereignisbildung bis zur
-bestehenden Raum-/Aufgabenverwaltung umsetzen. Ein wiederholter
-Rohkarten-Kandidat allein darf keine Strukturwahrheit erfinden; ein Nav2-Erfolg
-allein darf keine Durchfahrt bestätigen. Die Kette bleibt dritt-opt-in, passiv
-und ohne Action-, Zielwahl-, Command- oder Fahrwirkung und wird ausschließlich
-synthetisch gerätefrei geprüft.
+**Nächster abgegrenzter Schritt WE-M2/AS:** Die noch fehlende passive
+Frontier-Aufgabenzuführung revisions- und replayfest aus dem bereits im Explorer
+berechneten Frontierbestand ableiten. Unsegmentierte Frontiers müssen an die
+aktuelle Region beziehungsweise ausdrücklich global sichtbar gebunden bleiben;
+Filterung, Blacklist oder fehlender Planner dürfen sie nicht stillschweigend
+abschließen. Keine Auswahl-, Action-, Ziel-, Command- oder Fahrwirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -101,6 +101,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/AO `feature/we-m2ao-correlated-raw-map-portals` | Gestapelter ROS-freier Adapter von exakt korrelierten Rohkartenzellen zu stabilen unqualifizierten verbundenen Portalkandidaten samt reinen Verträgen; kein Runtime-Aufrufer. |
 | WE-M2/AP `docs/we-m2ap-passive-portal-feed-owner` | Gestapelter Besitzer-, Cache-, Retry-, Sperr- und Fehlervertrag für die spätere dritte Opt-in-Portalzuführung; nur diese STATUS.md. |
 | WE-M2/AQ `feature/we-m2aq-passive-connected-portal-feed` | Gestapelte dritt-opt-in passive Node-Zuführung exakt korrelierter Rohkarten-Portalkandidaten mit begrenztem Pose-Retry, Sperrdisziplin, Fehlerisolation und gerätefreiem ROS-Smoke; keine Qualifikation, Graphverbindung oder Fahrwirkung. |
+| WE-M2/AR `feature/we-m2ar-automatic-shadow-events` | Gestapelte dritt-opt-in Kette von exakt korrelierter Rohkarte über topologischen Strukturbeleg und revisionsgebundene Portalbestätigung bis zu vorläufiger Region, Verbindung und passiven Beobachtungs-/Portalaufgaben; validierte Traversalschnittstelle ohne Fahrpfadanbindung. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -338,7 +339,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis AQ decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die exakt korrelierte Node-Zuführung unqualifizierter Rohkarten-Portalkandidaten ab. Automatische qualifizierte Ereignisbildung, Frontierzuführung, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis AR decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenzen und -adapter, Zeitfrische, Sitzungslebenszyklus, passive Kartenstatus-/Rohkarten-ROS-Hüllen, Abnahmematrix, Regions-Erkundungsstatus, gerätefreie Rohkartenlast, sämtliche kombinierten Geometrieszenarien sowie die automatisch korrelierte Strukturereignis-, Regions- und Portalaufgabenkette ab. Frontierzuführung, vollständige Bewegungsbelegquelle, reale Parallel-/SLAM-Last und Zielsystemnachweis bleiben offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -435,6 +436,84 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/AR: automatische Strukturereignisse bis Region und Aufgabe
+
+**Quellenentscheidung:** Der vorhandene verbundene Clearance-Detektor belegt
+eine gemessene freie Engstelle, aber noch keine Raumgrenze. WE-M2/AR ergänzt
+deshalb genau einen konservativen topologischen Beleg auf demselben exakt
+korrelierten Rohkartensnapshot: Eine clearance-große Scheibe um den erkannten
+Hals wird nur für die Analyse entfernt. Sind die aktuelle Roboterseite und eine
+mindestens der vorhandenen Zielmindestfläche entsprechende Gegenseite danach
+verschiedene Freiraumkomponenten, lautet die detectorseitige Strukturevidenz
+`qualified`, andernfalls `insufficient`. Rohkarte und Nav2-Costmap bleiben
+unverändert. Material oder reale lichte Türbreite werden daraus nicht behauptet.
+
+Ein einzelner qualifizierter Snapshot bestätigt weiterhin kein Portal. Das
+vorhandene Portalgedächtnis verlangt zwei unterschiedliche Kartenrevisionen;
+identische Status-/Rohkartenreplays zählen nicht erneut. Die synthetische
+Möbelinsel mit einem zweiten freien Weg bleibt trotz erkannter Engstelle
+`insufficient`, weil der lokale Schnitt die Bereiche nicht trennt.
+
+**Automatische Verwaltung:** Die reine `RegionGraphShadowSession` verarbeitet
+eine solche `PortalObservation` transaktional auf tief kopiertem, begrenztem
+Portal- und Graphzustand. Ein unbestätigtes Portal öffnet genau eine stabile
+`observation`-Aufgabe in der aktuellen Region. Nach der zweiten qualifizierten
+Revision wird diese Aufgabe erledigt, das bestätigte Portal an die aktuelle
+Region gebunden, eine vorläufige gesehene/nicht betretene Gegenregion angelegt
+und dort genau eine `portal`-Aufgabe geöffnet. Replays sind idempotent;
+Fehler vor Abschluss übernehmen weder Teilzustände noch verlorene Aufgaben.
+
+Eine separate transaktionale Methode kann ein bereits extern vollständig
+validiertes `TraversalEvent` in Portalgedächtnis und Graph verbuchen und bei
+bestätigtem Eintritt die Portalaufgabe erledigen. Sie liest keine Pose,
+Footprint-, Encoder-, LiDAR-, Nav2- oder Actiondaten und bildet selbst kein
+Durchfahrtsurteil. Insbesondere ist der bestehende Explorer-Fahrerfolg nicht
+angebunden, weil weder Nav2-Erfolg noch Kartenpose allein den in der Strategie
+verlangten vollständigen Chassis-Auslauf belegen.
+
+**Runtimewirkung:** Der WE-M2/AQ-Nodepfad verwendet nun die reichere
+Rohkartenbeobachtung und lässt die reine Sitzung Region und Aufgaben bilden.
+Er läuft weiterhin nur bei denselben drei Opt-ins. Es gibt keine neue
+Subscription, keinen Publisher, kein Launchprofil und keinen Verbraucher im
+Action-, Zielwahl-, Costmap-, Navigations- oder Twist-Pfad.
+
+**Ausgeführte Prüfungen:** Lokaler Arbeitsplatz mit ROS Humble als
+Build-/Testumgebung; nur synthetische Raster und statischer Test-TF:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2AR-FOCUS | Rohkartenbeleg, atomare Sitzung/Lifecycle und Nodevertrag einschließlich Tür-/Möbelnegativfall, zwei Revisionen, Aufgaben, Traversal-Replay-/Fehlergrenze: **177 passed**. |
+| WE-M2AR-EXPLORER | Vollständige Explorer-Suite: **562 passed**. |
+| WE-M2AR-ADJACENT | Zusätzlich gemeinsames Fingerprintpaket, Kartenmanager, Semantikmanager und Semantik-Launch-Verträge: **703 passed**. |
+| WE-M2AR-COLCON | Frischer temporärer Build von Abhängigkeiten und `explore`; **36 + 562 = 598 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2AR-ROS | Isolierte Domain 230, direkter Explorer und statischer TF: zwei verschiedene Exaktkorrelationen, **1 bestätigtes Portal, 2 Regionen, 1 Verbindung, 1 offene und 1 erledigte Aufgabe**, Actions/Commands **0**, Hardwarezugriff **false**. |
+| WE-M2AR-STATIC | `compileall`, auf geänderte Zeilen begrenztes `flake8` mit E501/W503-Ausnahmen und `git diff --check`: bestanden. |
+
+Dies ist ein gerätefreier Software- und ROS-Integrationsnachweis. Er bestätigt
+weder reale Wände/Türen noch Lokalisierung, Chassisauslauf, Jetsonlast,
+Durchfahrt oder Hardware. Die neue Gegenregion ist ausdrücklich vorläufig und
+`entered=false`.
+
+**Offene Grenzen:** Ein topologischer Engpass in einer OccupancyGrid kann ohne
+zusätzliche Sensor-/Semantikquelle nicht sicher zwischen Baukörper und einem
+einzigen alternativen Weg versperrendem Möbelstück unterscheiden. Zwei
+unabhängige Revisionen und der Trennnachweis reduzieren Fehlereignisse, sind
+aber keine physische Türklassifikation. Die Durchfahrtsquelle bleibt offen,
+bis gesamte transformierte Kontur, Seitenfolge, Frische und Auslauf mit
+abgenommenen Konfigurationsdaten belegt werden können.
+
+**Nächster abgegrenzter Schritt WE-M2/AS:** Den bereits berechneten
+Frontierbestand passiv und revisionsgebunden in stabile Aufgaben überführen.
+Globale/unsegmentierte Sichtbarkeit, Replay, Verschwinden ohne Abschluss,
+Blacklist und Kartenwechsel fail-closed testen. Keine Policy, Zielauswahl,
+Action, Navigation, Commands oder Fahrt ändern.
+
+**Rückfall:** Den einzelnen WE-M2/AR-Commit zurücknehmen. Dann liefert der
+dritte Opt-in wieder ausschließlich unqualifizierte Portalkandidaten wie in
+WE-M2/AQ; keine automatische Region oder Aufgabe entsteht. Alternativ den
+dritten Opt-in auf `false` belassen. Es gibt keinen Geräte- oder Fahrzustand
+zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/AQ: passive korrelierte Portalzuführung
 

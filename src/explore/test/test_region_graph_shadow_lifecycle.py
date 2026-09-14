@@ -16,9 +16,14 @@ from explore.map_status_adapter import (  # noqa: E402
 )
 from explore.portal_memory import (  # noqa: E402
     ObservationDisposition,
+    Point2D,
     PortalMapContext,
     PortalMemoryPolicy,
+    PortalObservation,
+    PortalStructuralEvidence,
     StaleObservationError,
+    TraversalDirection,
+    TraversalEvent,
 )
 from explore.portal_plan_adapter import PortalPlanCandidate  # noqa: E402
 from explore.portal_source_adapter import RawMapPortalSource  # noqa: E402
@@ -37,6 +42,7 @@ from explore.region_graph_status import (  # noqa: E402
 
 FINGERPRINT_A = "a" * 64
 FINGERPRINT_B = "b" * 64
+FINGERPRINT_C = "c" * 64
 
 
 def status_json(**changes):
@@ -106,6 +112,20 @@ def candidate(owner, **changes):
     }
     values.update(changes)
     return PortalPlanCandidate(**values)
+
+
+def structural_observation(owner, observation_id, **changes):
+    values = {
+        "observation_id": observation_id,
+        "context": owner.context,
+        "map_revision": owner.latest_map_status.map_revision,
+        "near_side": Point2D(0.0, 0.0),
+        "far_side": Point2D(1.0, 0.0),
+        "uncertainty_m": 0.02,
+        "structural_evidence": PortalStructuralEvidence.QUALIFIED,
+    }
+    values.update(changes)
+    return PortalObservation(**values)
 
 
 def raw_source(**changes):
@@ -707,6 +727,83 @@ def test_status_capacity_policy_is_preserved_by_owner():
         build_status(owner)
 
     assert accept_status(owner, at=100.5).map_status.replayed is True
+
+
+def test_lifecycle_tracks_automatic_region_and_task_event_ages():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+
+    first = owner.observe_structural_portal(
+        structural_observation(owner, "qualified-door-3"),
+        observed_monotonic_seconds=100.1,
+    )
+    first_payload = json.loads(build_status(owner, now=100.2))
+
+    assert first.link is None
+    assert first_payload["summary"]["region_count"] == 1
+    assert first_payload["summary"]["open_task_count"] == 1
+
+    accept_status(owner, status_json(
+        accepted_maps=4,
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        time=1_800_000_001.0,
+    ), at=100.3)
+    second = owner.observe_structural_portal(
+        structural_observation(owner, "qualified-door-4"),
+        observed_monotonic_seconds=100.4,
+    )
+    payload = json.loads(build_status(owner, now=100.5))
+
+    assert second.link.opposite_region_id == "region_000002"
+    assert payload["summary"]["confirmed_portal_count"] == 1
+    assert payload["summary"]["region_count"] == 2
+    assert payload["summary"]["open_task_count"] == 1
+    assert payload["source"]["portal_memory"]["age_seconds"] == pytest.approx(0.1)
+    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.1)
+
+
+def test_lifecycle_accepts_only_explicit_validated_traversal_input():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    owner.observe_structural_portal(
+        structural_observation(owner, "qualified-door-3"),
+        observed_monotonic_seconds=100.1,
+    )
+    accept_status(owner, status_json(
+        accepted_maps=4,
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        time=1_800_000_001.0,
+    ), at=100.2)
+    second = owner.observe_structural_portal(
+        structural_observation(owner, "qualified-door-4"),
+        observed_monotonic_seconds=100.3,
+    )
+    accept_status(owner, status_json(
+        accepted_maps=5,
+        fingerprint=FINGERPRINT_C,
+        source_stamp_ns=1_800_000_001_500_000_000,
+        time=1_800_000_002.0,
+    ), at=100.4)
+
+    result = owner.record_validated_traversal(TraversalEvent(
+        event_id="externally-validated-crossing-5",
+        portal_id=second.observation.portal_id,
+        context=owner.context,
+        map_revision=owner.latest_map_status.map_revision,
+        event_time_ns=1_800_000_001_500_000_000,
+        direction=TraversalDirection.A_TO_B,
+        crossing_confirmed=True,
+    ), observed_monotonic_seconds=100.5)
+    payload = json.loads(build_status(owner, now=100.6))
+
+    assert result.graph.entered is True
+    assert payload["summary"]["current_region_id"] == "region_000002"
+    assert payload["summary"]["confirmed_entry_count"] == 1
+    assert payload["summary"]["open_task_count"] == 0
+    assert payload["source"]["portal_memory"]["age_seconds"] == pytest.approx(0.1)
+    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.1)
 
 
 @pytest.mark.parametrize("changes", [
