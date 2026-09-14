@@ -21,10 +21,11 @@ from pathlib import Path
 import re
 import shutil
 import stat
-import struct
 import time
 from typing import Any, Iterable, Optional, Sequence
 import uuid
+
+from amadeus_map_identity import MapIdentityError, map_snapshot_fingerprint
 
 
 MAXIMUM_CELL_COUNT = 4_000_000
@@ -750,28 +751,31 @@ class MapSnapshot:
         object.__setattr__(self, "frame_id", clean_frame)
         object.__setattr__(self, "origin", clean_origin)
 
-        # Der Fingerabdruck wird genau einmal berechnet. Das ist bei Karten
-        # mit mehreren Millionen Zellen wichtig, weil er in Status und
-        # Duplikatprüfung häufig gelesen wird.
-        digest = hashlib.sha256()
-        digest.update(struct.pack("!IId", self.width, self.height, self.resolution))
-        frame_bytes = self.frame_id.encode("utf-8")
-        digest.update(struct.pack("!H", len(frame_bytes)))
-        digest.update(frame_bytes)
-        digest.update(
-            struct.pack(
-                "!7d",
-                self.origin.position_x,
-                self.origin.position_y,
-                self.origin.position_z,
-                self.origin.orientation_x,
-                self.origin.orientation_y,
-                self.origin.orientation_z,
-                self.origin.orientation_w,
+        # Der gemeinsame Fingerabdruck wird genau einmal berechnet. Das ist
+        # bei Karten mit mehreren Millionen Zellen wichtig, weil er in Status
+        # und Duplikatprüfung häufig gelesen wird.
+        try:
+            fingerprint = map_snapshot_fingerprint(
+                width=self.width,
+                height=self.height,
+                resolution=self.resolution,
+                frame_id=self.frame_id,
+                origin=(
+                    self.origin.position_x,
+                    self.origin.position_y,
+                    self.origin.position_z,
+                    self.origin.orientation_x,
+                    self.origin.orientation_y,
+                    self.origin.orientation_z,
+                    self.origin.orientation_w,
+                ),
+                compact_cells=self.cells,
             )
-        )
-        digest.update(self.cells)
-        object.__setattr__(self, "fingerprint", digest.hexdigest())
+        except MapIdentityError as error:
+            raise MapValidationError(
+                f"Kartenfingerprint kann nicht gebildet werden: {error}"
+            ) from error
+        object.__setattr__(self, "fingerprint", fingerprint)
 
     @classmethod
     def from_values(
