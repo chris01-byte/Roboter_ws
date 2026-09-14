@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M1/C)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/A)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,18 +10,19 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M1 – Portalgedächtnis als reine Logik softwaregeprüft, zur Review.** WE-M1/C
-verlangt neben unabhängigen Revisionen eine explizite qualifizierte
-Strukturevidenz, bevor ein Portal bestätigt wird. Die synthetischen Pflichtfälle
-von WE-M1 sind damit in den gestapelten Schritten A bis C abgedeckt. Das Modul ist
-weiterhin nicht in den Explorer eingebunden; dies ist keine Zielsystem- oder
-Hardwareabnahme. Details und Grenzen stehen im jüngsten Eintrag in Abschnitt 6.
+**WE-M2/A – vorläufiger Regions- und Verbindungsgraph als reine Logik
+softwaregeprüft, zur Review.** Der neue, noch nicht eingebundene In-Memory-Kern
+erzeugt deterministische Regions-IDs aus einer expliziten Startregion und
+bestätigten Portalverbindungen. Kanonische Portalseiten, gesehen/betreten,
+aktuelle Region und idempotente Durchfahrten bleiben nachvollziehbar. Dies ist
+noch nicht der gesamte WE-M2-Umfang und keine Zielsystem- oder Hardwareabnahme.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/A.** Als neuen,
-reinen Logikkern nur vorläufige Regions-IDs und Portalverbindungen mit explizitem
-Karten-/Revisionsbezug modellieren und synthetisch prüfen. Noch keine Aufgaben-
-oder Zielauswahl, keine ROS-/Marker-Ausgabe, keine Explorer-Einbindung, keine
-Persistenz und keine Fahrwirkung.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/B.** Im reinen
+Graphmodul nur kontrollierte Regionsvereinigung mit stabiler Aliasauflösung und
+verlustfreier Umschreibung von Verbindungen sowie aktueller Region ergänzen.
+Synthetisch insbesondere eine Flur-/Schleifenschließung prüfen. Teilung,
+Aufgabenbestand, ROS-Schattenausgabe, Policy, Persistenz und Fahrwirkung bleiben
+weiterhin ausgeschlossen.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -44,6 +45,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M1/A `feature/we-m1a-portal-memory` | Zwei neue, nicht eingebundene Python-Dateien plus dieser Statusnachtrag; Reviewstand, kein Deployment. |
 | WE-M1/B `feature/we-m1b-portal-state` | Gestapelter reiner Logikschritt auf WE-M1/A; nur Portalmodul, dessen Tests und Status, kein Deployment. |
 | WE-M1/C `feature/we-m1c-portal-evidence` | Gestapelter Abschluss der reinen WE-M1-Logik; qualifizierte Bestätigungsevidenz und verbleibende synthetische Negativfälle, kein Deployment. |
+| WE-M2/A `feature/we-m2a-region-graph` | Gestapelter, nicht eingebundener Regions-/Verbindungskern auf WE-M1/C; zwei neue Python-Dateien und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -281,7 +283,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | Geplant; nächster Schritt WE-M2/A | Zunächst reiner Regions-/Verbindungskern; passive Laufzeitbeobachtung bleibt ein späterer Teilschritt. |
+| WE-M2 | In Arbeit | WE-M2/A als reiner Regions-/Verbindungskern softwaregeprüft; Schleifenschluss, Teilung/Vereinigung, Aufgabenbezug und passive Integration offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -313,7 +315,12 @@ als erledigt betrachten.
 Bestätigung, Ereignishistorie und aktuelle Erreichbarkeit nur innerhalb eines
 expliziten Sitzungs-/Karten-/Frame-Kontexts bereit. Struktur- und Bewegungsbelege
 werden nicht selbst erzeugt oder physisch validiert. Dauerhafte Kartenbindung,
-Regionsgraph und Abschluss fehlen.
+vollständiger Regionsgraph und Abschluss fehlen.
+
+**Regionsgraph:** WE-M2/A kann einen Start–Flur–Raum-Pfad und die Rückkehr in
+dieselbe Flur-ID führen. Eine neue bestätigte Portal-ID erzeugt derzeit stets eine
+neue vorläufige Gegenregion. Schleifen, Regionsvereinigung/-teilung,
+Geometriekorrekturen, Aufgabenreferenzen und passive Runtime-Ausgabe fehlen noch.
 
 **Kartenintegration:** Manuelle Raum-Overlays, Fingerprints und Speicherverträge
 existieren. Die Zuordnung automatischer Erkundungsregionen und laufender Karten-
@@ -324,6 +331,67 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/A: vorläufige Topologie ohne Laufzeitwirkung
+
+**Entscheidung / Umfang:** Neu `region_graph.py` als reines, begrenztes
+In-Memory-Modul. Eine explizite Startbeobachtung erzeugt genau eine Startregion.
+Nur ein konsistent als `confirmed` gelieferter Portalstand darf eine kanonische
+Verbindung A/B und eine vorläufige Gegenregion erzeugen; Kandidaten oder unsichere
+Portale werden sichtbar zurückgestellt. Ein bereits extern validiertes
+Durchfahrtsereignis kann gesehen/betreten und die aktuelle Region fortschreiben.
+Das Modul segmentiert keine Karte, validiert keine Bewegung und erzeugt keine
+Navigationsziele oder Freigaben.
+
+**Nachgewiesenes Verhalten:** Der synthetische Pfad Startzimmer → Flur → weiteres
+Zimmer und zurück verwendet beim Rückweg wieder dieselbe Flur-ID. Dieselbe Tür
+von der Gegenseite erzeugt weder neue Region noch Verbindung. Ein offener Bereich
+ohne bestätigtes Portal bleibt eine Region. Unbestätigte Durchfahrten ändern weder
+Eintritt noch aktuelle Region. Replays sind idempotent; widersprüchliche IDs,
+unbekannte Regionen/Portale, falsche aktuelle Region, fremder Kontext, veraltete
+Revision, zukünftiger Portalstand, inkonsistenter Bestätigungsstatus und feste
+Kapazitätsgrenzen schlagen geschlossen fehl.
+
+Eine über ein bestätigtes Portal erzeugte Gegenregion gilt topologisch als
+`seen`, aber erst nach bestätigtem externen Durchfahrtsereignis als `entered`.
+Der Start gilt als betreten, erhöht jedoch keinen Überquerungszähler. Diese
+Definitionen sind reine Modellsemantik und kein physischer Raumbeleg.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit ROS-Humble-Umgebung,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2A-GRAPH | Neue Regionsgraph-Suite: **17 passed**. |
+| WE-M2A-ADJACENT | Explorer-, Kartenmanager- und Semantikmanager-Suiten gemeinsam: **228 passed**. |
+| WE-M2A-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **126 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2A-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Der Colcon-Aufbau überschreibt keine Arbeitsinstallation und nutzt
+`robot_interfaces` aus dem vorhandenen Underlay; er ist kein vollständiger
+Workspace- oder Zielsystemnachweis. Nicht geprüft wurden ROS-QoS/TF, echte
+Regionen, SLAM-Korrekturen, Laufzeitlast, Sensorik, Footprint oder Hardware.
+
+**Offene Risiken / Integrationsabhängigkeiten:** `PortalSnapshot` und
+`TraversalEvent` sind reine Eingaben; der Adapter zu Main-/HWT-Detektoren und zur
+realen Bewegungsvalidierung fehlt. Der Graph nimmt keine automatische
+Raumsegmentierung oder feste Zimmerzahl an, kann aber deshalb noch nicht erkennen,
+dass zwei vorläufige IDs nach einem Schleifenschluss dieselbe Region meinen. Er
+führt noch keine Aufgaben und verarbeitet weder Teilung noch Kartenursprungs-
+oder Geometriekorrekturen. Keine der grünen Prüfungen belegt eine reale Region.
+
+**Nächster abgegrenzter Schritt WE-M2/B:** Nur `region_graph.py`, dessen Tests und
+diese STATUS.md ändern. Eine explizite, revisionsgebundene Merge-Operation muss
+zwei vorläufige Regionen deterministisch auf eine kanonische ID vereinigen,
+alte IDs als Alias lesbar halten und sämtliche Portalenden, gesehen/betreten,
+Eintrittszähler sowie aktuelle Region verlustfrei umschreiben. Replays,
+widersprüchliche/stale Merges, Selbstmerge, Kapazitätsgrenzen und eine L-Flur-
+Schleife testen. Noch keine automatische Mergeentscheidung, Regionsteilung,
+Aufgaben, ROS-Ausgabe oder Navigation.
+
+**Rückfallweg:** Den WE-M2/A-Commit beziehungsweise den gestapelten Review-PR
+zurücknehmen. WE-M1/A bis C bleiben separat reviewbar. Da keine Runtime-Datei den
+Regionsgraph importiert, gibt es keine Runtime- oder Geräteänderung zurückzusetzen.
 
 ### 2026-09-14 – WE-M1/C: Bestätigung an qualifizierte Evidenz gebunden
 
