@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/L)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/M)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,24 +10,23 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/L – Kartenmanager-Status-JSON rein decodiert und softwaregeprüft, zur
-Review.** Der tatsächliche Schema-1-Umschlag von
-`/robot_map_manager/status_json` wird größen- und tiefenbegrenzt auf
-`MapManagerStatusSample` abgebildet. Pflichtpfade und Typen werden nicht geraten
-oder umgewandelt; zusätzliche reale Statusfelder bleiben innerhalb der Grenzen
-zulässig. Es gibt weiterhin keine ROS-Subscription, Uhr-, Explorer- oder
-Fahrwirkung.
+**WE-M2/M – reiner Kartenstatus-/Sitzungslebenszyklus softwaregeprüft, zur
+Review.** Ein neuer Besitzer decodiert und korreliert Kartenstatus und erzeugt
+aus dem ersten vollständigen Snapshot genau eine `RegionGraphShadowSession`.
+Vorher bleibt er sichtbar wartend; Reset, Framewechsel oder erneute
+Nichtverfügbarkeit verlangen einen neuen Besitzer statt stiller Übernahme alter
+Topologie. Es gibt weiterhin keine ROS-Subscription, Uhr-, Portal-, Explorer-
+oder Fahrwirkung.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/M.** Eine neue
-reine Lebenszyklusklasse soll genau einen `MapManagerStatusCorrelator` und nach
-dem ersten gültigen decodierten Status genau eine `RegionGraphShadowSession`
-besitzen. Sie erhält Sitzungs-ID, erwarteten Frame und Startbeobachtungs-ID
-explizit, erzeugt den `RegionSeed` erst aus dem ersten Korrelationsresultat und
-führt weitere Status-JSONs fail-closed fort. Nichtverfügbarkeit vor dem ersten
-Snapshot bleibt wartend; Epochenwechsel, Kontextfehler und Neustart werden nicht
-automatisch über alte Zustände hinweg geheilt. Nur neues reines Modul, dessen
-Tests und diese STATUS.md; noch keine ROS-Subscription, Uhr, Portalzuführung,
-Node-, Launch-, Parameter- oder Fahrsoftware.
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/N.** Im reinen
+Lebenszyklus explizite monotone Eingangszeitpunkte führen: Der erste erfolgreiche
+Sitzungsstart setzt das Graph-Änderungsalter, reine Kartenstatusupdates dürfen es
+nicht verjüngen. `build_status_json()` soll aus einem explizit übergebenen
+monotonen Jetztwert das nichtnegative Graphalter ableiten; vorerst bleibt das
+Portalalter mangels Portalzuführung `missing`. Rückläufige oder nicht endliche
+Zeitwerte müssen ohne Zustandsänderung scheitern. Nur Lebenszyklusmodul, dessen
+Tests und diese STATUS.md; keine echte Uhr, ROS-, Portal-, Node-, Launch-,
+Parameter- oder Fahrsoftware.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -62,6 +61,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/J `feature/we-m2j-map-status-adapter` | Gestapelte reine Korrelation des vorhandenen Kartenmanagerstatus zu Kontext, sitzungsbezogener Revision und Quellalter; neues Modul, Tests und Status. |
 | WE-M2/K `feature/we-m2k-map-shadow-handoff` | Gestapelte typisierte Übergabe von Kartenstatuskorrelation an die reine Schatten-Sitzung; Aggregatmodul, Vertragstests und Status. |
 | WE-M2/L `feature/we-m2l-map-status-json` | Gestapelte reine, begrenzte Decodierung des tatsächlichen Kartenmanager-Status-JSON in den bestehenden Korrelationsvertrag; Adapter, Tests und Status. |
+| WE-M2/M `feature/we-m2m-shadow-lifecycle` | Gestapelter reiner Lebenszyklusbesitzer für Decoder, Kartenkorrelator und genau eine Schatten-Sitzung; neues Modul, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -299,7 +299,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis L decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, deren typisierte Übergabe und die reine JSON-Decodierung ab. Lebenszyklus-/ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis M decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation, Kartenstatuskorrelation, typisierte Übergabe, JSON-Decodierung und den reinen Sitzungslebenszyklus ab. Monotone abgeleitete Alterswerte, ROS-Eingang, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -353,8 +353,9 @@ Sitzung; die tatsächliche Kartenepoche und monotone Quellzeit bleiben explizite
 noch nicht angebundene Eingaben. WE-M2/J kann diese Angaben aus einem konsistenten
 Verlauf der explizit extrahierten Kartenmanagerfelder ableiten. WE-M2/K bindet
 dieses Ergebnis typisiert und revisionsmonoton an die Sitzung. WE-M2/L decodiert
-den tatsächlichen Statusumschlag rein und begrenzt; Lebenszyklusbesitz,
-ROS-Subscription und echte Laufzeitalter fehlen weiterhin.
+den tatsächlichen Statusumschlag rein und begrenzt. WE-M2/M besitzt daraus genau
+eine Sitzung und verweigert automatische Epochenübernahme; monotone abgeleitete
+Alterswerte, ROS-Subscription und echte Laufzeitmessung fehlen weiterhin.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -373,6 +374,66 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/M: ein Besitzer über Decoder, Korrelator und Sitzung
+
+**Entscheidung / Umfang:** Neu `region_graph_shadow_lifecycle.py` mit
+`RegionGraphShadowLifecycle`. Die reine Klasse erhält Sitzungs-ID, erwarteten
+Kartenframe und Startbeobachtungs-ID explizit und besitzt genau einen
+`MapManagerStatusCorrelator`. Sie decodiert jeden übergebenen Status über den
+WE-M2/L-Vertrag. Vor dem ersten vollständigen Kartensnapshot ist ihr Zustand
+`waiting_for_map`; ein formal gültiger Nichtverfügbarkeitsstatus erzeugt weder
+Kontext noch Region oder Schattenstatus.
+
+Das erste gültige Korrelationsresultat erzeugt intern einen revisionsgleichen
+`RegionSeed` und genau eine `RegionGraphShadowSession`. Periodischer Kartenstatus,
+Kartenwachstum und Replay werden in denselben Besitzer fortgeführt. Der
+Lebenszyklus liefert erst danach einen passiven Status und übernimmt weiterhin
+das Kartenalter aus dem Korrelationsresultat. Konfigurationsfehler werden vor
+jedem Eingang abgewiesen. Decoder-/Korrelationsfehler, Zählerrücklauf,
+Framewechsel und erneute Nichtverfügbarkeit verändern den letzten gültigen
+Sitzungsstand nicht.
+
+Es gibt absichtlich keine Resetmethode: Nach einer erkannten Epochengrenze muss
+der spätere Runtime-Besitzer eine neue explizite Sitzungs-ID und eine neue
+`RegionGraphShadowLifecycle` anlegen. Ebenso gibt es in diesem Schritt keine
+Portal-, Qualifikations-, Durchfahrts-, Ziel-, Uhr-, Datei- oder ROS-API. Die
+bestehenden begrenzten Karten-, Portal-, Graph- und Statusrichtlinien werden
+unverändert an die jeweiligen Besitzer weitergereicht.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und `robot_interfaces` aus dem vorhandenen Underlay,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2M-LIFECYCLE | Neue Lebenszyklus-Suite: **22 passed**. |
+| WE-M2M-EXPLORE | Gesamte Explorer-Suite: **397 passed**. |
+| WE-M2M-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **502 passed**. |
+| WE-M2M-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut und neues Modul installiert; Pakettest: **397 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2M-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Nicht geprüft wurden monotone Laufzeitwerte, Portalzuführung, eine reale
+Topic-Nachricht, ROS-Subscription/QoS/Discovery, Publisher, Restart im
+Prozessverbund, Jetson-Laufzeit/Speicher, reale Karten, Portal-/LiDAR-Evidenz,
+Sensorik, Footprint, Kollisionswirkung oder Hardware. Der reine Lebenszyklus
+bestätigt weder Karte, Portal, Durchfahrt noch Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/N:** Nur
+`region_graph_shadow_lifecycle.py`, dessen Test und diese STATUS.md. Beim
+Kartenstatuseingang einen expliziten, nichtnegativen endlichen monotonen
+Empfangszeitpunkt verlangen. Der erste erfolgreiche Sitzungsstart setzt daraus
+den Graph-Änderungszeitpunkt; spätere reine Kartenupdates verändern ihn nicht.
+Die Statusausgabe erhält ebenfalls einen expliziten monotonen Jetztwert und
+berechnet das Graphalter intern, während Portalalter bis zu einer späteren
+Portalzuführung `missing` bleibt. Zeitrücklauf und ungültige Werte scheitern
+atomar. Keine Uhr lesen und keine ROS-, Portal-, Node-, Launch-, Parameter-,
+Ziel- oder Fahrsoftware.
+
+**Rückfallweg:** Das neue Lebenszyklusmodul, dessen Test und diesen
+WE-M2/M-Statusabschnitt entfernen beziehungsweise den gestapelten PR schließen.
+WE-M2/A bis L bleiben separat reviewbar; kein Runtime-, Installations- oder
+Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/L: realen Statusumschlag ohne ROS decodieren
 
