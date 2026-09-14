@@ -14,9 +14,11 @@ from .exploration_completion import (
     ExplorationResultState,
     ReturnResultState,
 )
+from .exploration_policy import ExplorationPolicyAssessment
 
 
 WE_STATUS_SCHEMA_VERSION = 1
+WE_PASSIVE_STATUS_MAX_BLOCKER_CODES = 128
 
 
 class ExplorationMigrationError(ValueError):
@@ -85,4 +87,81 @@ def build_we_status_extension(completion: CompletionAssessment) -> dict:
         "blocker_codes": list(completion.blocker_codes),
         "map_saved": projection.map_saved,
         "return_result": projection.return_result.value,
+    }
+
+
+def build_passive_we_status_extension(
+        assessment: ExplorationPolicyAssessment, *,
+        max_blocker_codes: int = WE_PASSIVE_STATUS_MAX_BLOCKER_CODES) -> dict:
+    """Project one passive assessment without implying a terminal result.
+
+    The bounded summary is safe to attach beneath ``wohnungserkundung`` in the
+    legacy status document.  It deliberately contains no pose, path, metric
+    goal, navigation request, or motion authorization.
+    """
+    if not isinstance(assessment, ExplorationPolicyAssessment):
+        raise ExplorationMigrationError(
+            "assessment muss ExplorationPolicyAssessment sein")
+    if (
+            isinstance(max_blocker_codes, bool)
+            or not isinstance(max_blocker_codes, int)
+            or max_blocker_codes <= 0):
+        raise ExplorationMigrationError(
+            "max_blocker_codes muss eine positive Ganzzahl sein")
+    blocker_codes = assessment.blocker_codes[:max_blocker_codes]
+    return {
+        "schema_version": WE_STATUS_SCHEMA_VERSION,
+        "mode": "passive_shadow",
+        "result_state": ExplorationResultState.IN_PROGRESS.value,
+        "terminal": False,
+        "policy_state": assessment.state.value,
+        "completion_allowed": False,
+        "source": {
+            "session_id": assessment.context.session_id,
+            "map_id": assessment.context.map_id,
+            "frame_id": assessment.context.frame_id,
+            "map_revision": assessment.source_map_revision,
+            "ready": assessment.source_ready,
+            "stale_sources": list(assessment.stale_sources),
+        },
+        "current_region_id": assessment.current_region_id,
+        "counts": {
+            "open_tasks": len(assessment.open_task_ids),
+            "current_region_tasks": len(
+                assessment.current_region_task_ids),
+            "other_region_tasks": len(assessment.other_region_task_ids),
+            "eligible_tasks": len(assessment.eligible_task_ids),
+            "unresolved_portals": len(assessment.unresolved_portal_ids),
+            "unknown_reachability": len(
+                assessment.unknown_reachability),
+            "blocked_reachability": len(
+                assessment.blocked_reachability),
+            "excluded_reachability": len(
+                assessment.excluded_reachability),
+            "unentered_regions": len(assessment.unentered_region_ids),
+            "incomplete_regions": len(assessment.incomplete_region_ids),
+        },
+        "blocker_count": len(assessment.blocker_codes),
+        "blocker_codes": list(blocker_codes),
+        "blocker_codes_truncated": (
+            len(blocker_codes) < len(assessment.blocker_codes)),
+    }
+
+
+def build_unavailable_we_status_extension(reason: str) -> dict:
+    """Expose a fail-closed passive adapter state before a source exists."""
+    if not isinstance(reason, str) or not reason or len(reason) > 128:
+        raise ExplorationMigrationError(
+            "reason muss 1 bis 128 Textzeichen enthalten")
+    return {
+        "schema_version": WE_STATUS_SCHEMA_VERSION,
+        "mode": "passive_shadow",
+        "result_state": ExplorationResultState.IN_PROGRESS.value,
+        "terminal": False,
+        "policy_state": "unavailable",
+        "completion_allowed": False,
+        "reason": reason,
+        "blocker_count": 1,
+        "blocker_codes": [reason],
+        "blocker_codes_truncated": False,
     }

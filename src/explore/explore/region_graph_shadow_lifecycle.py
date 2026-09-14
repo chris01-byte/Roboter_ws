@@ -42,7 +42,11 @@ from .region_graph_shadow import (
     ShadowPortalEventResult,
     ShadowTraversalEventResult,
 )
-from .region_graph_status import ShadowStatusPolicy
+from .region_graph_status import (
+    ShadowStatusPolicy,
+    ShadowStatusSource,
+    build_shadow_status_json,
+)
 
 
 class RegionGraphShadowLifecycleError(ValueError):
@@ -64,6 +68,14 @@ class ShadowLifecycleUpdate:
     map_status: Optional[MapStatusCorrelationResult]
     session_started: bool = False
     raw_map_correlation: Optional[PortalSourceCorrelation] = None
+
+
+@dataclass(frozen=True)
+class ShadowLifecycleStatus:
+    """One source snapshot and its byte-bounded canonical projection."""
+
+    source: ShadowStatusSource
+    serialized: str
 
 
 def _monotonic_seconds(value: object, name: str) -> float:
@@ -136,7 +148,7 @@ class RegionGraphShadowLifecycle:
         self._portal_policy = portal_policy
         self._frontier_policy = frontier_policy
         self._graph_policy = graph_policy
-        self._status_policy = status_policy
+        self._status_policy = status_policy or ShadowStatusPolicy()
         self._correlator = correlator
         self._raw_map_joiner = raw_map_joiner
         self._session: Optional[RegionGraphShadowSession] = None
@@ -381,8 +393,8 @@ class RegionGraphShadowLifecycle:
             self._graph_changed_monotonic_seconds = observed
         return result
 
-    def build_status_json(self, *, now_monotonic_seconds: float) -> str:
-        """Build status only after a complete map initialized the owner."""
+    def build_status(self, *, now_monotonic_seconds: float) -> ShadowLifecycleStatus:
+        """Build one atomic typed snapshot and its canonical JSON projection."""
         now = self._validate_monotonic_progress(
             now_monotonic_seconds,
             "now_monotonic_seconds",
@@ -407,7 +419,7 @@ class RegionGraphShadowLifecycle:
                 self._latest_map_status.source_map_age_seconds
                 + now - map_status_received),
         )
-        payload = self._session.build_status_json(
+        source = self._session.status_source(
             current_map_status,
             portal_memory_age_seconds=portal_age,
             region_graph_age_seconds=now - graph_changed,
@@ -417,8 +429,14 @@ class RegionGraphShadowLifecycle:
                 else self.raw_map_diagnostics
             ),
         )
+        payload = build_shadow_status_json(source, self._status_policy)
         self._last_monotonic_seconds = now
-        return payload
+        return ShadowLifecycleStatus(source=source, serialized=payload)
+
+    def build_status_json(self, *, now_monotonic_seconds: float) -> str:
+        """Build status only after a complete map initialized the owner."""
+        return self.build_status(
+            now_monotonic_seconds=now_monotonic_seconds).serialized
 
     def _validate_monotonic_progress(
             self, value: object, name: str) -> float:

@@ -14,11 +14,20 @@ from explore.exploration_completion import (  # noqa: E402
     ReturnResultState,
 )
 from explore.exploration_migration import (  # noqa: E402
+    ExplorationMigrationError,
     LegacyActionTerminalState,
+    WE_PASSIVE_STATUS_MAX_BLOCKER_CODES,
     WE_STATUS_SCHEMA_VERSION,
+    build_passive_we_status_extension,
+    build_unavailable_we_status_extension,
     build_we_status_extension,
     project_completion_for_legacy,
 )
+from explore.exploration_policy import (  # noqa: E402
+    ExplorationPolicyAssessment,
+    PolicyAssessmentState,
+)
+from explore.portal_memory import PortalMapContext  # noqa: E402
 
 
 def _completion(state):
@@ -83,6 +92,93 @@ def test_nested_status_extension_is_versioned_and_keeps_results_separate():
         "map_saved": False,
         "return_result": "failed",
     }
+
+
+def _passive_assessment(blocker_codes=("open_task:task-1:unknown",)):
+    return ExplorationPolicyAssessment(
+        context=PortalMapContext("session-1", "map-1", "map"),
+        source_map_revision=7,
+        state=PolicyAssessmentState.WAITING_FOR_TASK_EVIDENCE,
+        current_region_id="region-1",
+        source_ready=True,
+        stale_sources=(),
+        open_task_ids=("task-1",),
+        current_region_task_ids=("task-1",),
+        other_region_task_ids=(),
+        eligible_task_ids=(),
+        task_assessments=(),
+        unresolved_portal_ids=("portal-1",),
+        unknown_reachability=("portal-1:a",),
+        blocked_reachability=(),
+        excluded_reachability=(),
+        unentered_region_ids=("region-2",),
+        incomplete_region_ids=("region-1", "region-2"),
+        blocker_codes=blocker_codes,
+        completion_allowed=False,
+    )
+
+
+def test_passive_status_extension_is_bounded_and_never_terminal():
+    blockers = tuple(
+        f"open_task:task-{index}:unknown"
+        for index in range(WE_PASSIVE_STATUS_MAX_BLOCKER_CODES + 2))
+    extension = build_passive_we_status_extension(
+        _passive_assessment(blockers))
+
+    assert extension["schema_version"] == WE_STATUS_SCHEMA_VERSION
+    assert extension["mode"] == "passive_shadow"
+    assert extension["result_state"] == "in_progress"
+    assert extension["terminal"] is False
+    assert extension["completion_allowed"] is False
+    assert extension["policy_state"] == "waiting_for_task_evidence"
+    assert extension["source"] == {
+        "session_id": "session-1",
+        "map_id": "map-1",
+        "frame_id": "map",
+        "map_revision": 7,
+        "ready": True,
+        "stale_sources": [],
+    }
+    assert extension["counts"] == {
+        "open_tasks": 1,
+        "current_region_tasks": 1,
+        "other_region_tasks": 0,
+        "eligible_tasks": 0,
+        "unresolved_portals": 1,
+        "unknown_reachability": 1,
+        "blocked_reachability": 0,
+        "excluded_reachability": 0,
+        "unentered_regions": 1,
+        "incomplete_regions": 2,
+    }
+    assert extension["blocker_count"] == len(blockers)
+    assert len(extension["blocker_codes"]) == (
+        WE_PASSIVE_STATUS_MAX_BLOCKER_CODES)
+    assert extension["blocker_codes_truncated"] is True
+
+
+def test_unavailable_passive_status_is_explicitly_fail_closed():
+    extension = build_unavailable_we_status_extension(
+        "waiting_for_shadow_snapshot")
+
+    assert extension == {
+        "schema_version": WE_STATUS_SCHEMA_VERSION,
+        "mode": "passive_shadow",
+        "result_state": "in_progress",
+        "terminal": False,
+        "policy_state": "unavailable",
+        "completion_allowed": False,
+        "reason": "waiting_for_shadow_snapshot",
+        "blocker_count": 1,
+        "blocker_codes": ["waiting_for_shadow_snapshot"],
+        "blocker_codes_truncated": False,
+    }
+
+
+@pytest.mark.parametrize("value", [None, "assessment", 1])
+def test_passive_status_rejects_non_assessments(value):
+    with pytest.raises(ExplorationMigrationError):
+        build_passive_we_status_extension(value)
 
 
 def test_explore_area_abi_is_unchanged_during_additive_migration():
