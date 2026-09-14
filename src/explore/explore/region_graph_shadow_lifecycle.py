@@ -377,9 +377,11 @@ class RegionGraphShadowLifecycle:
         result = self._session.observe_portal_inventory(inventory)
         self._last_monotonic_seconds = observed
         if not result.duplicate:
+            # A complete detector inventory is positive evidence for both the
+            # portal source and the topology derived from it, even when it is
+            # empty or leaves the graph unchanged.  Exact replays must not
+            # refresh either age.
             self._portal_changed_monotonic_seconds = observed
-        if any(event.link is not None or event.task_updates
-               for event in result.events):
             self._graph_changed_monotonic_seconds = observed
         return result
 
@@ -433,7 +435,10 @@ class RegionGraphShadowLifecycle:
                 "Frontierbestand liegt vor dem aktuellen Kartenstatus")
         result = self._session.observe_frontier_inventory(inventory)
         self._last_monotonic_seconds = observed
-        if result.task_updates:
+        if not result.inventory.duplicate:
+            # A complete unfiltered pass also proves that an empty inventory
+            # is current.  Task mutations are not required for source
+            # freshness; duplicate inventories remain replay-safe.
             self._graph_changed_monotonic_seconds = observed
         return result
 

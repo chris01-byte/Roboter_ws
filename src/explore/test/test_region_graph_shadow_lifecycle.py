@@ -880,6 +880,7 @@ def test_lifecycle_tracks_automatic_region_and_task_event_ages():
     assert payload["summary"]["open_task_count"] == 1
     assert payload["source"]["portal_memory"]["age_seconds"] == pytest.approx(0.1)
     assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.1)
+    assert payload["source"]["region_graph"]["revision"] == 4
 
 
 def test_lifecycle_accepts_only_explicit_validated_traversal_input():
@@ -950,11 +951,32 @@ def test_lifecycle_keeps_unfiltered_frontier_tasks_open_across_revisions():
     assert payload["summary"]["open_task_count"] == 2
     assert [task["kind"] for task in payload["tasks"]] == [
         "frontier", "frontier"]
-    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.3)
+    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.1)
+    assert payload["source"]["region_graph"]["revision"] == 4
     tracks = owner.frontier_tracks()
     assert tuple(track.frontier_id for track in tracks) == (
         "frontier_000001", "frontier_000002")
     assert all(track.last_revision == 3 for track in tracks)
+
+
+def test_complete_inventory_replays_do_not_refresh_source_ages():
+    owner = lifecycle()
+    accept_status(owner, at=100.0)
+    portals = portal_inventory(owner)
+    frontiers = frontier_inventory(owner, [])
+
+    owner.observe_portal_inventory(
+        portals, observed_monotonic_seconds=100.1)
+    owner.observe_frontier_inventory(
+        frontiers, observed_monotonic_seconds=100.2)
+    owner.observe_portal_inventory(
+        portals, observed_monotonic_seconds=100.3)
+    owner.observe_frontier_inventory(
+        frontiers, observed_monotonic_seconds=100.4)
+    payload = json.loads(build_status(owner, now=100.5))
+
+    assert payload["source"]["portal_memory"]["age_seconds"] == pytest.approx(0.4)
+    assert payload["source"]["region_graph"]["age_seconds"] == pytest.approx(0.3)
 
 
 def test_lifecycle_applies_positive_frontier_resolution_with_graph_age():
