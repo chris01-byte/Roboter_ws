@@ -490,6 +490,24 @@ class RegionGraph:
     def latest_revision(self) -> Optional[int]:
         return None if self._latest_revision < 0 else self._latest_revision
 
+    def observe_revision(
+            self, context: PortalMapContext, map_revision: int) -> bool:
+        """Advance source evidence without inventing a graph mutation.
+
+        A complete empty portal or frontier inventory still proves that the
+        graph-derived state was evaluated against that map revision. Region,
+        connection and task timestamps remain unchanged.
+        """
+        if not isinstance(context, PortalMapContext):
+            raise RegionGraphError("context muss PortalMapContext sein")
+        self._require_context(context)
+        revision = _revision(map_revision)
+        self._require_current_revision(revision)
+        if revision == self._latest_revision:
+            return False
+        self._latest_revision = revision
+        return True
+
     def start(self, seed: RegionSeed) -> RegionStartResult:
         """Create exactly one entered start region, idempotently."""
         if not isinstance(seed, RegionSeed):

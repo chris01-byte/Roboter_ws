@@ -49,6 +49,8 @@ from .region_graph import (
     PortalLinkResult,
     RegionGraph,
     RegionGraphPolicy,
+    RegionExplorationState,
+    RegionExplorationUpdate,
     RegionSeed,
     RegionStartResult,
     RegionTaskKind,
@@ -293,6 +295,12 @@ class RegionGraphShadowSession:
                         state=RegionTaskState.OPEN,
                     )))
 
+        self._advance_regions_from_task_inventory(
+            graph,
+            tuple(result.task.region_id for result in task_updates),
+            observation.map_revision,
+            observation.observation_id,
+        )
         return ShadowPortalEventResult(
             observation=observed,
             link=link,
@@ -338,6 +346,7 @@ class RegionGraphShadowSession:
             self._apply_structural_portal(memory, graph, observation)
             for observation in inventory.observations
         )
+        graph.observe_revision(self._context, inventory.map_revision)
         result = ShadowPortalInventoryResult(
             inventory_id=inventory.inventory_id,
             map_revision=inventory.map_revision,
@@ -385,6 +394,13 @@ class RegionGraphShadowSession:
                 subject_id=assignment.frontier_id,
                 state=RegionTaskState.OPEN,
             )))
+        self._advance_regions_from_task_inventory(
+            graph,
+            tuple(result.task.region_id for result in task_updates),
+            inventory.map_revision,
+            inventory.inventory_id,
+        )
+        graph.observe_revision(self._context, inventory.map_revision)
         self._frontier_tasks = tracker
         self._region_graph = graph
         return ShadowFrontierEventResult(
@@ -426,6 +442,12 @@ class RegionGraphShadowSession:
             subject_id=task.subject_id,
             state=RegionTaskState.COMPLETED,
         ))
+        self._advance_regions_from_task_inventory(
+            graph,
+            (task.region_id,),
+            evidence.evidence_map_revision,
+            evidence.resolution_id,
+        )
         self._region_graph = graph
         return result
 
@@ -462,6 +484,13 @@ class RegionGraphShadowSession:
                 subject_id=portal_task.subject_id,
                 state=RegionTaskState.COMPLETED,
             ))
+        if task_result is not None:
+            self._advance_regions_from_task_inventory(
+                graph,
+                (task_result.task.region_id,),
+                event.map_revision,
+                event.event_id,
+            )
         self._portal_memory = memory
         self._region_graph = graph
         return ShadowTraversalEventResult(
@@ -469,6 +498,42 @@ class RegionGraphShadowSession:
             graph=graph_result,
             task_update=task_result,
         )
+
+    def _advance_regions_from_task_inventory(
+            self, graph: RegionGraph, region_ids: Tuple[str, ...],
+            map_revision: int, trigger_id: str) -> None:
+        """Advance monotone region candidates from explicit task evidence."""
+        for region_id in sorted(set(region_ids)):
+            region = graph.region(region_id)
+            tasks = graph.tasks(region_id)
+            if not tasks:
+                continue
+            open_tasks = tuple(
+                task for task in tasks
+                if task.state is RegionTaskState.OPEN)
+            desired = None
+            reason = None
+            if region.exploration_state is RegionExplorationState.UNASSESSED:
+                desired = RegionExplorationState.IN_PROGRESS
+                reason = "task_inventory_became_observable"
+            elif (
+                    region.exploration_state
+                    is RegionExplorationState.IN_PROGRESS
+                    and not open_tasks):
+                desired = RegionExplorationState.COMPLETE_CANDIDATE
+                reason = "all_region_tasks_positively_completed"
+            if desired is None:
+                continue
+            graph.update_region_exploration(RegionExplorationUpdate(
+                update_id=_derived_id(
+                    "region-task-state", trigger_id, region_id,
+                    desired.value),
+                context=self._context,
+                map_revision=map_revision,
+                region_id=region_id,
+                state=desired,
+                reason=reason,
+            ))
 
     def status_source(
             self, map_status: MapStatusCorrelationResult, *,

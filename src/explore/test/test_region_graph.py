@@ -189,6 +189,23 @@ def three_region_path(*, policy=None):
     }
 
 
+def test_complete_source_revision_advances_without_graph_mutation():
+    graph, start_region = started_graph()
+
+    assert graph.observe_revision(CONTEXT, 3) is True
+    assert graph.observe_revision(CONTEXT, 3) is False
+
+    snapshot = graph.snapshot()
+    assert snapshot.latest_revision == 3
+    assert snapshot.regions[0].region_id == start_region
+    assert snapshot.regions[0].last_revision == 0
+    assert snapshot.tasks == ()
+    with pytest.raises(StaleGraphUpdateError):
+        graph.observe_revision(CONTEXT, 2)
+    with pytest.raises(RegionContextMismatchError):
+        graph.observe_revision(replace(CONTEXT, map_id="other-map"), 4)
+
+
 def test_start_room_hall_room_and_return_reuse_the_same_hall_region():
     memory = PortalMemory(CONTEXT)
     first_portal = confirmed_portal(memory, "door-one", 1, y=0.0)

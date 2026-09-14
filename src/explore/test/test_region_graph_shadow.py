@@ -39,6 +39,7 @@ from explore.portal_plan_adapter import (  # noqa: E402
 )
 from explore.portal_source_adapter import PortalSourceCorrelation  # noqa: E402
 from explore.region_graph import (  # noqa: E402
+    RegionExplorationState,
     RegionGraphCapacityError,
     RegionGraphPolicy,
     RegionSeed,
@@ -304,6 +305,7 @@ def test_structural_events_automatically_create_region_and_tasks():
         "created_revision": 10,
         "last_revision": 10,
     }]
+    assert first_payload['regions'][0]['exploration']['state'] == 'in_progress'
 
     second = shadow.observe_structural_portal(
         structural_observation("door-structure-11", 11))
@@ -323,6 +325,8 @@ def test_structural_events_automatically_create_region_and_tasks():
     ]
     assert payload["regions"][1]["seen"] is True
     assert payload["regions"][1]["entered"] is False
+    assert [region['exploration']['state'] for region in payload['regions']] == [
+        'complete_candidate', 'in_progress']
 
 
 def test_validated_traversal_enters_region_and_completes_portal_task():
@@ -353,6 +357,8 @@ def test_validated_traversal_enters_region_and_completes_portal_task():
     assert payload["summary"]["open_task_count"] == 0
     assert payload["summary"]["completed_task_count"] == 2
     assert payload["regions"][1]["entered"] is True
+    assert payload['regions'][1]['exploration']['state'] == (
+        'complete_candidate')
 
 
 def test_cross_component_event_is_atomic_when_task_revision_is_not_newer():
@@ -675,6 +681,8 @@ def test_frontier_inventory_creates_global_open_tasks_without_filtering():
     assert all(
         task.region_id == source.graph.current_region_id
         for task in source.graph.tasks)
+    assert source.graph.regions[0].exploration_state is (
+        RegionExplorationState.IN_PROGRESS)
 
 
 def test_positive_frontier_resolution_completes_exact_graph_task_idempotently():
@@ -689,6 +697,35 @@ def test_positive_frontier_resolution_completes_exact_graph_task_idempotently():
     assert first.state_changed is True
     assert replay.task.state is RegionTaskState.COMPLETED
     assert replay.duplicate is True
+    source = shadow.status_source(
+        map_status(map_revision=11, fingerprint='b' * 64),
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.0,
+    )
+    assert source.graph.regions[0].exploration_state is (
+        RegionExplorationState.COMPLETE_CANDIDATE)
+
+
+def test_new_task_after_region_candidate_blocks_work_without_silent_reopen():
+    shadow = session()
+    shadow.observe_frontier_inventory(frontier_inventory(
+        10, [(1.0, 1.0, 8)]))
+    shadow.resolve_frontier_task(frontier_resolution())
+
+    shadow.observe_frontier_inventory(frontier_inventory(
+        12, [(3.0, 1.0, 8)]))
+    source = shadow.status_source(
+        map_status(map_revision=12, fingerprint=f'{12:064x}'),
+        portal_memory_age_seconds=None,
+        region_graph_age_seconds=0.0,
+    )
+
+    assert source.graph.regions[0].exploration_state is (
+        RegionExplorationState.COMPLETE_CANDIDATE)
+    assert tuple(
+        task.task_id for task in source.graph.tasks
+        if task.state is RegionTaskState.OPEN
+    ) == ('task-frontier_000002',)
 
 
 def test_pending_foreign_or_mismatched_frontier_resolution_is_rejected():
