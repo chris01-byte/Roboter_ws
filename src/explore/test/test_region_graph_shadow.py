@@ -15,6 +15,10 @@ from explore.frontier_task_feed import (  # noqa: E402
     FrontierTaskPolicy,
     frontier_inventory_from_clusters,
 )
+from explore.frontier_task_resolution import (  # noqa: E402
+    FrontierTaskResolutionEvidence,
+    FrontierTaskResolutionState,
+)
 from explore.portal_memory import (  # noqa: E402
     MemoryCapacityError,
     ObservationDisposition,
@@ -120,6 +124,28 @@ def frontier_inventory(revision, clusters):
         ),
         clusters,
     )
+
+
+def frontier_resolution(**changes):
+    values = {
+        'resolution_id': 'frontier-resolution-test',
+        'context': CONTEXT,
+        'task_id': 'task-frontier_000001',
+        'region_id': 'region_000001',
+        'frontier_id': 'frontier_000001',
+        'intent_id': 'intent-10',
+        'child_result_id': 'result-10',
+        'goal_map_revision': 10,
+        'evidence_map_revision': 11,
+        'source_fingerprint': 'b' * 64,
+        'source_stamp_ns': 1100,
+        'state': FrontierTaskResolutionState.RESOLVED,
+        'reason': 'new_map_confirms_frontier_information_resolved',
+        'checked_information_cells': 49,
+        'unknown_information_cells': 0,
+    }
+    values.update(changes)
+    return FrontierTaskResolutionEvidence(**values)
 
 
 def portal_inventory(revision, observations=(), *, suffix=None):
@@ -649,6 +675,36 @@ def test_frontier_inventory_creates_global_open_tasks_without_filtering():
     assert all(
         task.region_id == source.graph.current_region_id
         for task in source.graph.tasks)
+
+
+def test_positive_frontier_resolution_completes_exact_graph_task_idempotently():
+    shadow = session()
+    shadow.observe_frontier_inventory(frontier_inventory(
+        10, [(1.0, 1.0, 8)]))
+
+    first = shadow.resolve_frontier_task(frontier_resolution())
+    replay = shadow.resolve_frontier_task(frontier_resolution())
+
+    assert first.task.state is RegionTaskState.COMPLETED
+    assert first.state_changed is True
+    assert replay.task.state is RegionTaskState.COMPLETED
+    assert replay.duplicate is True
+
+
+def test_pending_foreign_or_mismatched_frontier_resolution_is_rejected():
+    shadow = session()
+    shadow.observe_frontier_inventory(frontier_inventory(
+        10, [(1.0, 1.0, 8)]))
+
+    with pytest.raises(RegionGraphShadowError, match='positive'):
+        shadow.resolve_frontier_task(frontier_resolution(
+            state=FrontierTaskResolutionState.INFORMATION_WINDOW_INCOMPLETE))
+    with pytest.raises(RegionGraphShadowError, match='Schattenkontext'):
+        shadow.resolve_frontier_task(frontier_resolution(
+            context=PortalMapContext('foreign', 'map', 'map')))
+    with pytest.raises(RegionGraphShadowError, match='Graphaufgabe'):
+        shadow.resolve_frontier_task(frontier_resolution(
+            frontier_id='frontier_999999'))
 
 
 def test_frontier_replay_and_graph_capacity_failure_are_atomic():

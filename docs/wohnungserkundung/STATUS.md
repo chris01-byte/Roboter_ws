@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/O)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M3/P)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,15 +10,14 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M3/O – Der Abschlussautomat ist in das separate WE-Runtimeprofil
-eingebunden, standardmäßig gesperrt und gerätefrei geprüft.** Vollabschluss setzt
-nun ein explizites Bereichsurteil und drei aufeinanderfolgende frische,
-qualifizierte Policyrevisionen ohne aktives Kindziel voraus. Budgetende bleibt
-`partial`, Systemfehler `aborted` und Nutzerabbruch `canceled`; die bestehende
-Action und der Status erhalten ausschließlich die in M3/E festgelegte additive
-Projektion. Ein externer Abbruch erfindet keine Kartenrevision. Im isolierten
-DDS-Lauf ergab ein Zeitlimit einen terminalen Teilstand mit `success=false`,
-ohne Nav2-Ziel und ohne Nachrichten auf den beobachteten Fahrbefehlstopics.
+**WE-M3/P – Erfolgreich erreichte Frontier-Ziele werden erst nach positiver
+neuer Rohkartenevidenz als erledigt fortgeschrieben.** Der Runtimepfad speichert
+nach einem Kindzielerfolg nur einen begrenzten Prüfauftrag. Eine neuere exakt
+korrelierte Karte muss die Zielzelle weiter als frei, das vollständige
+Informationsfenster als bekannt und den aktuellen Frontierbestand dort als leer
+belegen. Erst dann wird genau die gebundene Graphaufgabe atomar abgeschlossen.
+Bloßes Verschwinden, Filterung, ein anderer Kontext oder ein weiterhin naher
+Frontier-Track genügen nicht. Das Profil bleibt standardmäßig deaktiviert.
 
 WE-M2 bleibt formal offen: Sein gerätefreier Softwareumfang einschließlich
 wachsenden Langlaufs ist umgesetzt und lokal geprüft. Ein Durchfahrtsurteil
@@ -27,22 +26,21 @@ wird aber absichtlich nur als bereits extern validierter Eingang akzeptiert.
 Der vorhandene Fahrpfad liefert noch keinen vollständigen Chassis-/Auslaufbeleg
 und ist nicht angebunden. Reale Parallel-/SLAM-Last, Jetson-Nachtest und
 Hardwareabnahme fehlen; der Offline-Langlauf ersetzt diese Nachweise nicht.
-WE-M3 bleibt ebenfalls offen: M3/A bis O umfassen Logik, Migrationsvertrag,
+WE-M3 bleibt ebenfalls offen: M3/A bis P umfassen Logik, Migrationsvertrag,
 rein diagnostische Runtimeprojektion, echte revisionsgebundene
 Frontier-Verfügbarkeits-/Wegkostenbelege und vollständige Portalquellenfrische.
 Auswahl, Zielvorschlag, Einzel-Kindziel, Resultat-/Attemptableitung und der
-Abschlussvertrag sind nun im separaten Runtimeprofil gekoppelt. Die automatische
-positive Erledigung einer erfolgreich abgefahrenen Frontier-Aufgabe,
-portalbezogene Zieltypen, das eingefrorene begrenzte Profil sowie die motorlose
-Zielsystemabnahme fehlen.
+Abschlussvertrag und positive Frontier-Erledigung sind nun im separaten
+Runtimeprofil gekoppelt. Die konsistente automatische Fortschreibung des
+Regions-Erkundungszustands, portalbezogene Zieltypen, das eingefrorene begrenzte
+Profil sowie die motorlose Zielsystemabnahme fehlen.
 
-**Nächster abgegrenzter Schritt WE-M3/P:** Nach einem erfolgreichen Kindziel
-eine Frontier-Aufgabe nur durch positive, exakt korrelierte Rohkartenevidenz als
-erledigt fortschreiben. Bloßes Verschwinden oder Filtern bleibt unzureichend;
-erforderlich sind neuer Kartenstand, fehlender aktueller Track und vollständig
-bekannter Ziel-/Informationsbereich. Replay, Kartenwechsel und widersprüchliche
-Evidenz müssen geschlossen fehlschlagen. Zunächst reine Logik plus Runtime-
-Zuführung und synthetische Tests, keine Portalziele, Geräte oder Fahrt.
+**Nächster abgegrenzter Schritt WE-M3/Q:** Den Regions-Erkundungszustand aus dem
+vollständigen Aufgabenbestand konservativ fortschreiben: neue offene Aufgaben
+setzen eine Region auf `in_progress`; nur positive Aufgabenabschlüsse dürfen sie
+bei leerem Regionsbestand auf `complete` setzen. Merge/Split, Replay, später neu
+auftauchende Frontiers und offene Portal-/Beobachtungsaufgaben negativ prüfen.
+Noch keine Portalzielbildung, Geräteaktivierung oder Fahrt.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -126,6 +124,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M3/M `feature/we-m3m-runtime-goal-preview` | Gestapelte passive Runtimekopplung von aktueller Auswahl, Zielabsicht und exakt kartengebundenem Zahlenkandidaten mit begrenztem Cache und explizit nicht versandter Statusdiagnose; keine Action-, Command- oder Fahrwirkung. |
 | WE-M3/N `feature/we-m3n-nav-child-runtime` | Gestapeltes separat opt-in WE-Navigationsprofil im vorhandenen Explorer-/Nav2-Eigentümer mit exakt einem Kindziel, Revisionscancel vor Neuziel und Resultat-/Attemptrückführung; gerätefrei nur gegen Fake-Actions geprüft. |
 | WE-M3/O `feature/we-m3o-completion-runtime` | Gestapelte Runtimekopplung des reinen Abschlussautomaten mit explizitem Bereichsgate, frischem Revisionsfenster und getrennten Voll-/Teil-/System-/Nutzerzuständen in kompatibler Action-/Statusprojektion; gerätefrei geprüft. |
+| WE-M3/P `feature/we-m3p-frontier-resolution` | Gestapelte positive Erledigung einer erreichten Frontier-Aufgabe ausschließlich aus neuer exakt korrelierter Rohkarte, vollständigem bekannten Informationsfenster und leerem aktuellem Nahbestand; atomare Graph-/Runtimezuführung, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -460,6 +459,70 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M3/P: positive Frontier-Erledigung nach Kindzielerfolg
+
+**Entscheidung / Umfang:** Zwischen den erfolgreichen M3/N-Kindlauf und eine
+Graphaufgaben-Erledigung eine neue reine Evidenzstufe gesetzt. Der Erfolg selbst
+erzeugt nur einen wartenden Prüfauftrag aus exakt gebundenem Zielkandidaten und
+M3/L-Disposition. Erst eine inhaltlich neuere Rohkarte desselben Kontexts darf
+entscheiden. Sie wird erneut gegen Fingerprint, Stempel, Frame, Zellzahl und
+Geometrie validiert.
+
+Eine Frontier gilt nur dann als positiv erledigt, wenn kein Track der aktuellen
+Revision im bisherigen Informationsradius liegt, die tatsächlich angefahrene
+Zielkoordinate weiterhin bekannte freie Zelle ist und das vollständige
+kreisförmige Informationsfenster um den alten Frontieranker innerhalb der Karte
+liegt und keine unbekannte Zelle mehr enthält. Ein historischer Track bleibt im
+Gedächtnis und ist erlaubt; ein aktueller gleicher oder neu zugeordneter naher
+Track sperrt dagegen. Nur `resolved` darf die exakt passende offene
+Frontier-Aufgabe über Schatten-Sitzung und Lebenszyklus atomar auf `completed`
+setzen. Identische Anwendung ist idempotent.
+
+**Nachgewiesenes Verhalten:** Weiterhin sichtbare und nahe neu identifizierte
+Frontiers, unbekannte Zellen, belegte Zielzelle, am Kartenrand abgeschnittenes
+Fenster, alte/fremde Karte, nicht erfolgreicher Kindlauf, doppelte oder
+zukünftige Tracks sowie Kapazitätsüberschreitung schließen die Erledigung aus.
+Positive Evidenz schließt genau die gebundene Aufgaben-ID, nicht eine Aufgabe
+nur aufgrund räumlicher Nähe. Der Node verwirft Ergebnisse bei zwischenzeitlich
+gewechselter Quelle und veröffentlicht den Prüfzustand begrenzt im vorhandenen
+WE-Status.
+
+**Ausgeführte Prüfungen:** Lokaler aarch64-Arbeitsplatz mit ROS Humble, ohne
+Gerätezugriff, reale Karte oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M3P-FOCUS | Neue Evidenz-, Schatten-, Lebenszyklus- und Node-Vertragstests: **206 passed**. |
+| WE-M3P-ADJACENT | Kartenidentität, Explorer, Kartenmanager, Semantikmanager, Mission und Bring-up: **958 passed**. |
+| WE-M3P-COLCON | Frischer temporärer Aufbau von `amadeus_map_identity`, `robot_interfaces` und `explore`; Explorer-Pakettest: **768 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M3P-STATIC | `compileall`, `flake8` F/E9 und `git diff --check`: bestanden. |
+
+Die Runtimekopplung wurde mit injizierten, synthetischen exakten Quellen und
+dem echten Schatten-Lebenszyklus geprüft. Es gab in diesem Schritt keinen neuen
+ROS-Start; der M3/O-DDS-Nachweis bleibt der letzte motorlose Action-Smoke. Weder
+Softwaretests noch der frühere DDS-Smoke sind eine Jetson- oder Hardwareabnahme.
+
+**Offene Risiken / Integrationsabhängigkeiten:** Das Informationsfenster und die
+übrigen Werte sind weiterhin synthetische Startwerte. Der Aufgabenabschluss
+setzt den Erkundungszustand der betroffenen Region noch nicht automatisch fort;
+dadurch kann der M3/O-Abschlussautomat trotz leerem Aufgabenbestand konservativ
+gesperrt bleiben. Portal- und Beobachtungsaufgaben besitzen noch keine
+Zielableitung. Auftragsscope und vollständige Nav2-Pfade sind noch nicht durch
+ein eingefrorenes Testprofil begrenzt.
+
+**Nächster abgegrenzter Schritt WE-M3/Q:** Graph-/Schattenlogik so ergänzen,
+dass eine neue offene Aufgabe die betroffene Region nachvollziehbar auf
+`in_progress` setzt und eine positive Erledigung nur bei leerem regionalem
+Aufgabenbestand `complete` ergibt. Neue Aufgaben nach vermeintlichem Abschluss,
+Portal-/Beobachtungsblocker, Replay sowie Merge/Split testen. Keine Zielpose,
+Geräteaktivierung oder Fahrt.
+
+**Rückfallweg:** Den M3/P-Commit beziehungsweise Review-PR zurücknehmen. Dann
+bleibt der M3/N-Erfolg wie zuvor nur Fortschritts-/Attemptbeleg und keine
+Frontier-Aufgabe wird automatisch erledigt. Alternativ das standardmäßig falsche
+WE-Navigations-Opt-in beibehalten. Es gab kein Deployment und keinen
+Gerätezustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M3/O: Abschlussautomat im WE-Runtimeprofil
 

@@ -116,6 +116,10 @@ from explore.frontier_task_evidence import (
     build_frontier_task_evidence,
 )
 from explore.frontier_goal_candidate import build_frontier_goal_candidate
+from explore.frontier_task_resolution import (
+    FrontierTaskResolutionState,
+    build_frontier_task_resolution_evidence,
+)
 from explore.exploration_nav_runtime import (
     ExplorationNavigationSession,
     NavigationSourceState,
@@ -1086,6 +1090,10 @@ class ExploreNode(Node):
             self._wohnungserkundung_stateful_assessment = None
             self._wohnungserkundung_policy_snapshot = None
             self._wohnungserkundung_completion_assessment = None
+            self._wohnungserkundung_pending_frontier_resolution = None
+            self._wohnungserkundung_frontier_resolution_status = {
+                'state': 'none',
+            }
             self._wohnungserkundung_status_extension = (
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
@@ -1392,6 +1400,127 @@ class ExploreNode(Node):
             self._region_graph_shadow_frontier_processed_correlation = (
                 correlation_key)
 
+    def _try_resolve_successful_wohnungserkundung_frontier(self):
+        """Resolve a reached frontier only from a newer exact map snapshot."""
+        if not getattr(self, '_wohnungserkundung_policy_enabled', False):
+            return
+        with self._wohnungserkundung_runtime_lock:
+            pending = getattr(
+                self, '_wohnungserkundung_pending_frontier_resolution', None)
+            previous_status = getattr(
+                self, '_wohnungserkundung_frontier_resolution_status', {})
+        if pending is None:
+            return
+        candidate, disposition = pending
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            raw_map = self._region_graph_shadow_latest_raw_map
+            raw_source = self._region_graph_shadow_latest_raw_source
+            correlation = self._region_graph_shadow_latest_correlation
+            if raw_map is None or raw_source is None or correlation is None:
+                return
+            correlation_key = self._shadow_correlation_key(correlation)
+            if (
+                    correlation.map_revision <= candidate.map_revision
+                    or self._region_graph_shadow_frontier_processed_correlation
+                    != correlation_key
+                    or not self._shadow_source_matches_correlation(
+                        raw_source, correlation)):
+                return
+            if previous_status.get('evidence_map_revision') == (
+                    correlation.map_revision):
+                return
+            try:
+                tracks = self._region_graph_shadow.frontier_tracks()
+            except Exception as error:
+                status = {
+                    'state': 'unavailable',
+                    'reason': (
+                        f'frontier_track_snapshot_error:'
+                        f'{type(error).__name__}'),
+                }
+                with self._wohnungserkundung_runtime_lock:
+                    if self._wohnungserkundung_pending_frontier_resolution == (
+                            pending):
+                        self._wohnungserkundung_frontier_resolution_status = (
+                            status)
+                return
+
+        origin = raw_map.info.origin
+        try:
+            evidence = build_frontier_task_resolution_evidence(
+                candidate,
+                disposition,
+                correlation,
+                width=raw_map.info.width,
+                height=raw_map.info.height,
+                resolution=raw_map.info.resolution,
+                frame_id=raw_map.header.frame_id.strip(),
+                origin=(
+                    origin.position.x,
+                    origin.position.y,
+                    origin.position.z,
+                    origin.orientation.x,
+                    origin.orientation.y,
+                    origin.orientation.z,
+                    origin.orientation.w,
+                ),
+                cells=raw_map.data,
+                source_stamp_ns=(
+                    int(raw_map.header.stamp.sec) * 1_000_000_000
+                    + int(raw_map.header.stamp.nanosec)),
+                tracks=tracks,
+                policy=self._wohnungserkundung_evidence_policy,
+            )
+        except Exception as error:
+            status = {
+                'state': 'unavailable',
+                'reason': f'resolution_evidence_error:{type(error).__name__}',
+                'evidence_map_revision': correlation.map_revision,
+            }
+            with self._wohnungserkundung_runtime_lock:
+                if self._wohnungserkundung_pending_frontier_resolution == pending:
+                    self._wohnungserkundung_frontier_resolution_status = status
+            return
+
+        if evidence.state is FrontierTaskResolutionState.RESOLVED:
+            with self._region_graph_shadow_lock:
+                if self._region_graph_shadow_fault is not None:
+                    return
+                if (
+                        self._region_graph_shadow_latest_correlation
+                        != correlation
+                        or self._region_graph_shadow_latest_raw_source
+                        != raw_source):
+                    return
+                try:
+                    self._region_graph_shadow.resolve_frontier_task(
+                        evidence,
+                        observed_monotonic_seconds=time.monotonic(),
+                    )
+                except Exception as error:
+                    self._fault_region_graph_shadow(
+                        'Frontierabschluss', error)
+                    return
+        status = {
+            'state': evidence.state.value,
+            'reason': evidence.reason,
+            'task_id': evidence.task_id,
+            'goal_map_revision': evidence.goal_map_revision,
+            'evidence_map_revision': evidence.evidence_map_revision,
+            'checked_information_cells': (
+                evidence.checked_information_cells),
+            'unknown_information_cells': (
+                evidence.unknown_information_cells),
+        }
+        with self._wohnungserkundung_runtime_lock:
+            if self._wohnungserkundung_pending_frontier_resolution != pending:
+                return
+            self._wohnungserkundung_frontier_resolution_status = status
+            if evidence.resolved:
+                self._wohnungserkundung_pending_frontier_resolution = None
+
     def _on_region_graph_map_status(self, msg: String):
         """Accept one map-manager envelope without affecting exploration."""
         with self._region_graph_shadow_lock:
@@ -1410,6 +1539,7 @@ class ExploreNode(Node):
     def _publish_region_graph_shadow_status(self):
         """Publish at most once per timer tick after a complete map status."""
         self._try_observe_correlated_raw_map_frontiers()
+        self._try_resolve_successful_wohnungserkundung_frontier()
         self._try_observe_connected_raw_map_portals()
         evidence_inputs = None
         candidate_inputs = None
@@ -1686,6 +1816,14 @@ class ExploreNode(Node):
                     if completion is not None:
                         extension['runtime_result'] = (
                             build_we_status_extension(completion))
+                    resolution_status = getattr(
+                        self,
+                        '_wohnungserkundung_frontier_resolution_status',
+                        None,
+                    )
+                    if resolution_status is not None:
+                        extension['frontier_resolution'] = dict(
+                            resolution_status)
                     self._wohnungserkundung_status_extension = extension
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
@@ -4051,6 +4189,10 @@ class ExploreNode(Node):
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_completion_assessment = None
+            self._wohnungserkundung_pending_frontier_resolution = None
+            self._wohnungserkundung_frontier_resolution_status = {
+                'state': 'none',
+            }
         self._status_phase = 'we_waiting_for_goal'
         self._status_message = (
             'Wohnungserkundung aktiv; warte auf aktuellen Zielkandidaten.')
@@ -4161,6 +4303,14 @@ class ExploreNode(Node):
             if disposition.state.value == 'progressed':
                 reached_goals += 1
                 self._frontiers_visited_status = reached_goals
+                with self._wohnungserkundung_runtime_lock:
+                    self._wohnungserkundung_pending_frontier_resolution = (
+                        candidate, disposition)
+                    self._wohnungserkundung_frontier_resolution_status = {
+                        'state': 'waiting_for_new_map',
+                        'task_id': candidate.task_id,
+                        'goal_map_revision': candidate.map_revision,
+                    }
                 time.sleep(self._replan_period_s)
                 continue
             if disposition.state.value in {'retry_scheduled', 'reevaluate'}:
