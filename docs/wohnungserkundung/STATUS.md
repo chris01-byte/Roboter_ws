@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/S)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/T)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,27 +10,29 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/S – Pflichttest- und Abnahmematrix erstellt, zur Review.** Die Matrix
-ordnet jeden WE-M2-Punkt konkreten Tests oder einer ausdrücklichen Lücke zu.
-Belegt sind unter anderem Startraum–Flur–Zimmer mit Rückkehr in dieselbe Flur-ID,
-idempotente Portal-/Durchfahrtsereignisse, explizite Merge-/Split-Korrekturen
-ohne Aufgabenverlust, begrenzte Zustände, Frischeprojektion und eine passive
-standardmäßig deaktivierte ROS-Ausgabe ohne Ziel- oder Aktoranbindung.
+**WE-M2/T – eigener regionaler Erkundungsstatus softwaregeprüft, zur Review.**
+Der reine Regionsgraph unterscheidet jetzt `unassessed`, `in_progress` und
+`complete_candidate` ausdrücklich von Seen, Entered und Eintrittszählern.
+Fortschritt wird nur mit Update-ID, Kontext, Kartenrevision und Grund angenommen;
+Replay ist idempotent, Stufen dürfen nicht übersprungen und ein Kandidat nicht
+stillschweigend wieder geöffnet werden. Eine Vereinigung nimmt bei abweichenden
+Zuständen den konservativeren Wert, eine Teilung setzt beide neuen Geometrieumfänge
+auf neu zu prüfen. Die passive JSON-Projektion gibt Zustand, Grund und Revision
+je Region aus. `complete_candidate` ist kein WE-M3-Wohnungsabschluss.
 
-WE-M2 bleibt offen: Der Graph besitzt keinen eigenen Erkundungsstatus je Region;
-L-Flur, verbundene Türen, offener Wohnbereich und Möbelunterteilung sind nicht
-als kombinierte Detektor–Graph-Szenarien belegt. Frontiers und Portalpläne
-werden der Runtime noch nicht revisionssicher zugeführt, und Laufzeit/Speicher
-sind nur durch Kapazitätsgrenzen, nicht durch einen wachsenden Belastungstest
-nachgewiesen.
+WE-M2 bleibt offen: L-Flur, verbundene Türen, offener Wohnbereich und
+Möbelunterteilung sind nicht als kombinierte Detektor–Graph-Szenarien belegt.
+Frontiers und Portalpläne werden der Runtime noch nicht revisionssicher
+zugeführt, und Laufzeit/Speicher sind nur durch Kapazitätsgrenzen, nicht durch
+einen wachsenden Belastungstest nachgewiesen.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/T.** Im reinen
-`region_graph.py` einen von Seen/Entered getrennten, nur explizit aktualisierbaren
-Regions-Erkundungsstatus ergänzen. Er darf in WE-M2 noch keinen endgültigen
-Wohnungsabschluss behaupten; ein Kandidat für abgearbeitet bleibt von der
-WE-M3-Abschlussentscheidung getrennt. Merge, Split, Replay, Revisionen und
-Statusprojektion müssen ihn verlustfrei behandeln. Nur Graph, Graph-/Statustests
-und diese STATUS.md; keine ROS-, Detektor-, Ziel-, Fahr- oder Hardwarewirkung.
+**Nächster abgegrenzter Schritt WE-M2/U:** Ausschließlich quellenbasiert die
+Provenienznaht des vorhandenen Portalplans festlegen: prüfen, ob und wie
+Explorer-Karteneingang, Nav2-Global-Costmap und Kartenmanagerstatus anhand ihrer
+Header, Zeiten, Frames und Inhalte korreliert werden können. Für nicht beweisbare
+Zuordnung eine fail-closed Sperre festlegen und genau den kleinsten späteren
+Adapter-/Nachrichtenvertrag benennen. Zunächst nur diese STATUS.md; keine
+Portalzuführung, ROS-, Ziel-, Fahr- oder Hardwarewirkung.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
 Jetson-Arbeitsbaum als Entwicklungsbasis frei. Deren funktionale Integration und
@@ -72,6 +74,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/Q `feature/we-m2q-shadow-map-runtime` | Gestapelte, standardmäßig deaktivierte und kartenstatusbasierte ROS-Schattenhülle; Explorer-Node, Standardparameter, Vertragstests und Status. |
 | WE-M2/R `feature/we-m2r-shadow-map-age` | Gestapelte reine monotone Fortführung des Kartenquellalters mit replayfestem Empfangsanker; Lebenszyklus, Tests und Status. |
 | WE-M2/S `docs/we-m2s-acceptance-matrix` | Gestapelte vollständige Zuordnung der WE-M2-Lieferung, Pflichttests und Abnahme zu konkreten Nachweisen oder Lücken; nur diese STATUS.md. |
+| WE-M2/T `feature/we-m2t-region-exploration-state` | Gestapelter expliziter Regions-Erkundungsstatus mit konservativer Merge-/Split-Behandlung und passiver Statusprojektion; Graph, Tests und Status, kein Deployment. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -406,6 +409,68 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/T: regionaler Fortschritt ist kein Wohnungsabschluss
+
+**Entscheidung / Umfang:** `RegionSnapshot` führt zusätzlich zu Seen, Entered
+und Eintrittszähler einen eigenen `RegionExplorationState`. Er beginnt mit
+`unassessed` und kann durch einen expliziten `RegionExplorationUpdate` nur über
+`in_progress` nach `complete_candidate` fortschreiten. Das Update trägt eine
+eindeutige Update-ID, Portal-/Kartenkontext, Kartenrevision, Regions-ID und einen
+begründenden Text. Identisches Replay ist wirkungslos; widersprüchliche IDs,
+fremde Kontexte, unbekannte Regionen, veraltete Revisionen, Sprünge und
+Rückstufungen schlagen geschlossen fehl. Eine eigene harte Verlaufsgrenze
+verhindert unbegrenztes Wachstum.
+
+Der Zustand besitzt ausdrücklich keine Abschlussautorität: `complete_candidate`
+besagt nur, dass ein späterer WE-M3-Vertrag diese Region erneut bewerten darf.
+Das Graphmodul liest weder Frontiers noch Karten, Zeit, ROS oder Planer und
+erzeugt keine Ziele. Bei einer Regionsvereinigung gewinnt bei abweichenden
+Zuständen der konservativere Wert samt Merge-Grund und -Revision. Eine
+Geometrieteilung setzt beide resultierenden Umfänge explizit auf `unassessed`,
+weil keiner stillschweigend den Kandidatenstatus der alten Gesamtfläche erben
+darf. Aufgaben, Portalenden, Aliase und der aktuelle Regionsbezug folgen dabei
+weiter den bereits geprüften Merge-/Split-Verträgen.
+
+Die reine Schattenprojektion validiert Zustand und zusammengehörige
+Grund-/Revisionsmetadaten und veröffentlicht sie geometriefrei je Region. Der
+vorhandene standardmäßig deaktivierte ROS-Schattenpfad übernimmt diese additive
+Ausgabe erst bei einer späteren Aufnahme des gestapelten Branches; in WE-M2/T
+wurden Node, Parameter, Launches, Detektoren und Navigation nicht geändert.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und vorhandenem `robot_interfaces`-Underlay, ohne
+ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2T-GRAPH-STATUS | Graph-, Status-, Schatten- und Lebenszyklusverträge gemeinsam: **221 passed**. |
+| WE-M2T-EXPLORE | Vollständige Explorer-Suite einschließlich 16 neuer Fälle: **451 passed**. |
+| WE-M2T-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **556 passed**. |
+| WE-M2T-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut; Pakettest: **451 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2T-STATIC | `git diff --check` und `flake8 --diff` (E501/W503 ausgenommen): bestanden. |
+
+**Offene Grenzen / Integrationsabhängigkeiten:** Kein Runtime-Eingang setzt den
+neuen Regionsstatus. Kriterien und Frischefenster für `in_progress` oder
+`complete_candidate` gehören in WE-M3 und dürfen nicht aus einer einzelnen
+Coverage-Zahl entstehen. Die in WE-M2/S aufgeführten kombinierten
+Geometrieszenarien, reale Frontierzuführung, revisionssichere Portalzuführung
+und wachsende Laufzeit-/Speichermessung bleiben offen. Softwaretests belegen
+weder einen realen Raumabschluss noch Zielsystem- oder Hardwareabnahme.
+
+**Nächster abgegrenzter Schritt WE-M2/U:** Nur die vorhandenen Quellpfade von
+Explorer-Karte, Nav2-Global-Costmap, Portalplan und Kartenmanagerstatus prüfen
+und den kleinstmöglichen revisionssicheren Provenienzvertrag dokumentieren.
+Insbesondere darf die zuletzt empfangene Kartenmanagerrevision keinem
+asynchron entstandenen Portalplan nachträglich zugeschrieben werden. Falls die
+vorhandenen Header-/Zeit-/Inhaltsdaten keine eindeutige Korrelation erlauben,
+bleibt die Portalzuführung gesperrt und der fehlende Adaptereingang wird exakt
+benannt. Betroffen zunächst nur diese STATUS.md; keine Runtimeänderung.
+
+**Rückfallweg:** Den WE-M2/T-Commit beziehungsweise den gestapelten Review-PR
+zurücknehmen. Der vorherige WE-M2/S-Stand bleibt separat reviewbar. Da weder
+Runtime, Installation, Parameter noch Geräte geändert wurden, ist kein
+Betriebszustand zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/S: grüne Einzeltests ersetzen keine M2-Abnahmematrix
 

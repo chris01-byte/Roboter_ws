@@ -21,6 +21,7 @@ from .portal_memory import (
     ReachabilityState,
 )
 from .region_graph import (
+    RegionExplorationState,
     RegionGraphSnapshot,
     RegionTaskKind,
     RegionTaskState,
@@ -281,6 +282,38 @@ def _validate_source(
                     region.first_revision > region.last_revision
                     or region.last_revision > graph.latest_revision):
                 raise ShadowStatusError("Regionsrevisionen sind widerspruechlich")
+            if not isinstance(
+                    region.exploration_state, RegionExplorationState):
+                raise ShadowStatusError(
+                    "Regions-Erkundungsstatus ist ungueltig")
+            exploration_metadata = (
+                region.exploration_reason,
+                region.exploration_revision,
+            )
+            if all(value is None for value in exploration_metadata):
+                if region.exploration_state is not (
+                        RegionExplorationState.UNASSESSED):
+                    raise ShadowStatusError(
+                        "Regions-Erkundungsstatus fehlt die Revision")
+            elif any(value is None for value in exploration_metadata):
+                raise ShadowStatusError(
+                    "Regions-Erkundungsstatus ist unvollstaendig")
+            else:
+                if (
+                        not isinstance(region.exploration_reason, str)
+                        or not region.exploration_reason.strip()
+                        or len(region.exploration_reason) > 256):
+                    raise ShadowStatusError(
+                        "Regions-Erkundungsgrund ist ungueltig")
+                exploration_revision = _revision(
+                    region.exploration_revision,
+                    "region.exploration_revision",
+                )
+                if not (
+                        region.first_revision <= exploration_revision
+                        <= region.last_revision):
+                    raise ShadowStatusError(
+                        "Regions-Erkundungsrevision ist widerspruechlich")
 
     connection_ids = [
         connection.portal_id for connection in graph.connections]
@@ -485,6 +518,11 @@ def build_shadow_status_json(
                 "seen": region.seen,
                 "entered": region.entered,
                 "entry_count": region.entry_count,
+                "exploration": {
+                    "state": region.exploration_state.value,
+                    "reason": region.exploration_reason,
+                    "revision": region.exploration_revision,
+                },
                 "portal_ids": list(region.portal_ids),
                 "alias_ids": list(region.alias_ids),
                 "task_ids": list(region.task_ids),

@@ -21,6 +21,8 @@ from explore.portal_memory import (  # noqa: E402
 )
 from explore.region_graph import (  # noqa: E402
     PortalLinkObservation,
+    RegionExplorationState,
+    RegionExplorationUpdate,
     RegionGraph,
     RegionGraphSnapshot,
     RegionSeed,
@@ -108,6 +110,14 @@ def populated_source():
         subject_id="observation-1",
         state=RegionTaskState.COMPLETED,
     ))
+    graph.update_region_exploration(RegionExplorationUpdate(
+        update_id="region-progress",
+        context=CONTEXT,
+        map_revision=4,
+        region_id=start.region_id,
+        state=RegionExplorationState.IN_PROGRESS,
+        reason="frontier_work_started",
+    ))
     assert second.portal_id != first.portal_id
     return ShadowStatusSource(
         context=CONTEXT,
@@ -174,6 +184,16 @@ def test_shadow_status_is_versioned_passive_complete_and_geometry_free():
         "frontier-task", "observation-task"]
     assert [item["portal_id"] for item in payload["portals"]] == [
         "portal_000001", "portal_000002"]
+    assert payload["regions"][0]["exploration"] == {
+        "state": "in_progress",
+        "reason": "frontier_work_started",
+        "revision": 4,
+    }
+    assert payload["regions"][1]["exploration"] == {
+        "state": "unassessed",
+        "reason": None,
+        "revision": None,
+    }
     assert '"side_a"' not in serialized
     assert '"side_b"' not in serialized
     assert '"x"' not in serialized
@@ -405,6 +425,32 @@ def test_inconsistent_task_region_or_entry_inventory_fails_closed(
     with pytest.raises(ShadowStatusError):
         build_shadow_status_json(replace(
             source, graph=graph_factory(source.graph)))
+
+
+@pytest.mark.parametrize("region_factory", [
+    lambda region: replace(region, exploration_state="in_progress"),
+    lambda region: replace(
+        region,
+        exploration_state=RegionExplorationState.COMPLETE_CANDIDATE,
+        exploration_reason=None,
+        exploration_revision=None,
+    ),
+    lambda region: replace(region, exploration_reason=None),
+    lambda region: replace(region, exploration_reason=" "),
+    lambda region: replace(
+        region, exploration_revision=region.last_revision + 1),
+])
+def test_invalid_region_exploration_status_fails_closed(region_factory):
+    source = populated_source()
+    changed = region_factory(source.graph.regions[0])
+    with pytest.raises(ShadowStatusError):
+        build_shadow_status_json(replace(
+            source,
+            graph=replace(
+                source.graph,
+                regions=(changed,) + source.graph.regions[1:],
+            ),
+        ))
 
 
 @pytest.mark.parametrize("policy", [

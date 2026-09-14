@@ -22,6 +22,8 @@ from explore.region_graph import (  # noqa: E402
     PortalLinkDisposition,
     PortalLinkObservation,
     RegionContextMismatchError,
+    RegionExplorationState,
+    RegionExplorationUpdate,
     RegionGraph,
     RegionGraphCapacityError,
     RegionGraphConflictError,
@@ -117,6 +119,19 @@ def task_update(
         kind=kind,
         subject_id=subject_id,
         state=state,
+    )
+
+
+def exploration_update(
+        update_id, revision, region_id, state,
+        *, reason="synthetic_progress", context=CONTEXT):
+    return RegionExplorationUpdate(
+        update_id=update_id,
+        context=context,
+        map_revision=revision,
+        region_id=region_id,
+        state=state,
+        reason=reason,
     )
 
 
@@ -464,6 +479,155 @@ def test_traversal_capacity_is_independent_and_preserves_current_region():
     ],
 )
 def test_invalid_policy_and_seed_fields_are_rejected(factory):
+    with pytest.raises(RegionGraphError):
+        factory()
+
+
+def test_region_exploration_progress_is_separate_and_ordered():
+    graph, region_id = started_graph()
+    initial = graph.region(region_id)
+
+    in_progress = graph.update_region_exploration(exploration_update(
+        "progress", 1, region_id, RegionExplorationState.IN_PROGRESS,
+        reason="frontier_work_started"))
+    complete_candidate = graph.update_region_exploration(exploration_update(
+        "candidate", 2, region_id,
+        RegionExplorationState.COMPLETE_CANDIDATE,
+        reason="no_open_tasks_in_current_snapshot"))
+
+    assert initial.seen and initial.entered
+    assert initial.exploration_state is RegionExplorationState.UNASSESSED
+    assert initial.exploration_reason is None
+    assert initial.exploration_revision is None
+    assert in_progress.state_changed
+    assert in_progress.region.exploration_state is (
+        RegionExplorationState.IN_PROGRESS)
+    assert complete_candidate.state_changed
+    assert complete_candidate.region.exploration_state is (
+        RegionExplorationState.COMPLETE_CANDIDATE)
+    assert complete_candidate.region.exploration_revision == 2
+    assert graph.current_region_id == region_id
+
+
+def test_region_exploration_cannot_skip_or_reopen_candidate():
+    graph, region_id = started_graph()
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_region_exploration(exploration_update(
+            "skip", 1, region_id,
+            RegionExplorationState.COMPLETE_CANDIDATE))
+
+    graph.update_region_exploration(exploration_update(
+        "progress", 1, region_id, RegionExplorationState.IN_PROGRESS))
+    graph.update_region_exploration(exploration_update(
+        "candidate", 2, region_id,
+        RegionExplorationState.COMPLETE_CANDIDATE))
+    before = graph.region(region_id)
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_region_exploration(exploration_update(
+            "reopen", 3, region_id, RegionExplorationState.IN_PROGRESS))
+
+    assert graph.region(region_id) == before
+
+
+def test_region_exploration_replay_is_idempotent_after_merge():
+    path = three_region_path()
+    update = exploration_update(
+        "stable-progress", 4, path["next_room"],
+        RegionExplorationState.IN_PROGRESS)
+    path["graph"].update_region_exploration(update)
+    merged = path["graph"].merge_regions(RegionMerge(
+        "merge-progress", CONTEXT, 5,
+        path["start_room"], path["next_room"], "synthetic_loop"))
+
+    replay = path["graph"].update_region_exploration(update)
+
+    assert replay.duplicate
+    assert replay.region.region_id == merged.canonical_region_id
+    assert replay.region.exploration_state is (
+        RegionExplorationState.UNASSESSED)
+    assert replay.region.exploration_reason == "region_merge_conservative"
+    assert replay.region.exploration_revision == 5
+
+
+def test_region_split_requires_reassessment_of_both_results():
+    path = split_ready_path()
+    graph = path["graph"]
+    graph.update_region_exploration(exploration_update(
+        "progress", 5, path["start_room"],
+        RegionExplorationState.IN_PROGRESS))
+    graph.update_region_exploration(exploration_update(
+        "candidate", 6, path["start_room"],
+        RegionExplorationState.COMPLETE_CANDIDATE))
+
+    result = graph.split_region(path["split"])
+
+    for region_id in (
+            result.retained_region_id, result.created_region_id):
+        region = graph.region(region_id)
+        assert region.exploration_state is RegionExplorationState.UNASSESSED
+        assert region.exploration_reason == (
+            "region_split_requires_reassessment")
+        assert region.exploration_revision == 6
+
+
+def test_region_exploration_update_capacity_is_atomic():
+    graph, region_id = started_graph(policy=RegionGraphPolicy(
+        max_region_exploration_updates=1))
+    graph.update_region_exploration(exploration_update(
+        "first", 1, region_id, RegionExplorationState.IN_PROGRESS))
+    before = graph.region(region_id)
+
+    with pytest.raises(RegionGraphCapacityError):
+        graph.update_region_exploration(exploration_update(
+            "over-capacity", 2, region_id,
+            RegionExplorationState.COMPLETE_CANDIDATE))
+
+    assert graph.region(region_id) == before
+
+
+def test_region_exploration_identity_context_and_revision_fail_closed():
+    graph, region_id = started_graph()
+    original = exploration_update(
+        "stable-update", 1, region_id,
+        RegionExplorationState.IN_PROGRESS)
+    graph.update_region_exploration(original)
+    before = graph.snapshot()
+
+    with pytest.raises(RegionGraphConflictError):
+        graph.update_region_exploration(replace(
+            original, reason="conflicting_reason"))
+    with pytest.raises(RegionContextMismatchError):
+        graph.update_region_exploration(exploration_update(
+            "foreign", 2, region_id,
+            RegionExplorationState.IN_PROGRESS,
+            context=PortalMapContext("other", CONTEXT.map_id, "map")))
+    with pytest.raises(StaleGraphUpdateError):
+        graph.update_region_exploration(exploration_update(
+            "stale", 0, region_id,
+            RegionExplorationState.IN_PROGRESS))
+    with pytest.raises(UnknownRegionError):
+        graph.update_region_exploration(exploration_update(
+            "unknown", 2, "region_999999",
+            RegionExplorationState.IN_PROGRESS))
+
+    assert graph.snapshot() == before
+
+
+@pytest.mark.parametrize("factory", [
+    lambda: RegionGraphPolicy(max_region_exploration_updates=0),
+    lambda: RegionExplorationUpdate(
+        "bad id", CONTEXT, 1, "region_000001",
+        RegionExplorationState.IN_PROGRESS, "reason"),
+    lambda: RegionExplorationUpdate(
+        "update", CONTEXT, True, "region_000001",
+        RegionExplorationState.IN_PROGRESS, "reason"),
+    lambda: RegionExplorationUpdate(
+        "update", CONTEXT, 1, "region_000001", "in_progress", "reason"),
+    lambda: RegionExplorationUpdate(
+        "update", CONTEXT, 1, "region_000001",
+        RegionExplorationState.IN_PROGRESS, " "),
+])
+def test_invalid_region_exploration_fields_are_rejected(factory):
     with pytest.raises(RegionGraphError):
         factory()
 
