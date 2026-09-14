@@ -21,6 +21,10 @@ from .frontier_task_feed import (
     FrontierTaskPolicy,
     FrontierTaskTracker,
 )
+from .frontier_task_resolution import (
+    FrontierTaskResolutionEvidence,
+    FrontierTaskResolutionState,
+)
 from .map_status_adapter import MapStatusCorrelationResult
 from .portal_memory import (
     ObservationResult,
@@ -387,6 +391,43 @@ class RegionGraphShadowSession:
             inventory=observed,
             task_updates=tuple(task_updates),
         )
+
+    def resolve_frontier_task(
+            self, evidence: FrontierTaskResolutionEvidence
+    ) -> RegionTaskResult:
+        """Complete one frontier task only from positive newer map evidence."""
+        if not isinstance(evidence, FrontierTaskResolutionEvidence):
+            raise RegionGraphShadowError(
+                "evidence muss FrontierTaskResolutionEvidence sein")
+        if evidence.context != self._context:
+            raise RegionGraphShadowError(
+                "Frontierabschluss passt nicht zum Schattenkontext")
+        if evidence.state is not FrontierTaskResolutionState.RESOLVED:
+            raise RegionGraphShadowError(
+                "Nur positive Frontierevidenz darf eine Aufgabe erledigen")
+        tasks = {task.task_id: task for task in self._region_graph.tasks()}
+        task = tasks.get(evidence.task_id)
+        if (
+                task is None
+                or task.region_id != evidence.region_id
+                or task.kind is not RegionTaskKind.FRONTIER
+                or task.subject_id != evidence.frontier_id):
+            raise RegionGraphShadowError(
+                "Frontierevidenz passt nicht zur Graphaufgabe")
+        graph = deepcopy(self._region_graph)
+        result = graph.update_task(RegionTaskUpdate(
+            update_id=_derived_id(
+                "frontier-complete", evidence.resolution_id),
+            task_id=task.task_id,
+            context=self._context,
+            map_revision=evidence.evidence_map_revision,
+            region_id=task.region_id,
+            kind=task.kind,
+            subject_id=task.subject_id,
+            state=RegionTaskState.COMPLETED,
+        ))
+        self._region_graph = graph
+        return result
 
     def record_validated_traversal(
             self, event: TraversalEvent) -> ShadowTraversalEventResult:

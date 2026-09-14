@@ -48,6 +48,9 @@ from explore.exploration_completion import (  # noqa: E402
     ExplorationResultState,
     ReturnResultState,
 )
+from explore.frontier_task_resolution import (  # noqa: E402
+    FrontierTaskResolutionState,
+)
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
@@ -1106,6 +1109,100 @@ def test_we_runtime_completes_before_requesting_another_navigation_target(
     assert result.success is True
     assert calls == ['publish:running', 'succeed']
     assert node._coverage_complete is True
+
+
+def test_we_runtime_applies_new_positive_frontier_resolution(monkeypatch):
+    candidate = SimpleNamespace(
+        map_revision=7,
+        task_id='task-frontier_000001',
+    )
+    disposition = object()
+    pending = (candidate, disposition)
+    correlation = SimpleNamespace(map_revision=8)
+    raw_source = object()
+    raw_map = SimpleNamespace(
+        info=SimpleNamespace(
+            width=2,
+            height=2,
+            resolution=0.1,
+            origin=SimpleNamespace(
+                position=SimpleNamespace(x=0.0, y=0.0, z=0.0),
+                orientation=SimpleNamespace(
+                    x=0.0, y=0.0, z=0.0, w=1.0),
+            ),
+        ),
+        header=SimpleNamespace(
+            frame_id='map',
+            stamp=SimpleNamespace(sec=1, nanosec=2),
+        ),
+        data=[0, 0, 0, 0],
+    )
+    tracks = (object(),)
+    evidence = SimpleNamespace(
+        state=FrontierTaskResolutionState.RESOLVED,
+        resolved=True,
+        reason='resolved',
+        task_id='task-frontier_000001',
+        goal_map_revision=7,
+        evidence_map_revision=8,
+        checked_information_cells=4,
+        unknown_information_cells=0,
+    )
+    applied = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_pending_frontier_resolution = pending
+    node._wohnungserkundung_frontier_resolution_status = {
+        'state': 'waiting_for_new_map'}
+    node._wohnungserkundung_evidence_policy = object()
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_latest_raw_map = raw_map
+    node._region_graph_shadow_latest_raw_source = raw_source
+    node._region_graph_shadow_latest_correlation = correlation
+    node._region_graph_shadow_frontier_processed_correlation = ('key',)
+    node._shadow_correlation_key = lambda value: (
+        ('key',) if value is correlation else None)
+    node._shadow_source_matches_correlation = (
+        lambda source, selected: source is raw_source and selected is correlation)
+    node._region_graph_shadow = SimpleNamespace(
+        frontier_tracks=lambda: tracks,
+        resolve_frontier_task=lambda selected, **kwargs: (
+            applied.append((selected, kwargs))),
+    )
+    node._fault_region_graph_shadow = lambda *args: (
+        (_ for _ in ()).throw(AssertionError('kein Schattenfehler erwartet')))
+
+    def build(selected_candidate, selected_disposition,
+              selected_correlation, **kwargs):
+        assert selected_candidate is candidate
+        assert selected_disposition is disposition
+        assert selected_correlation is correlation
+        assert kwargs['tracks'] is tracks
+        assert kwargs['cells'] == raw_map.data
+        return evidence
+
+    monkeypatch.setattr(
+        explore_node_module,
+        'build_frontier_task_resolution_evidence',
+        build,
+    )
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
+
+    node._try_resolve_successful_wohnungserkundung_frontier()
+
+    assert applied == [(evidence, {'observed_monotonic_seconds': 11.0})]
+    assert node._wohnungserkundung_pending_frontier_resolution is None
+    assert node._wohnungserkundung_frontier_resolution_status == {
+        'state': 'resolved',
+        'reason': 'resolved',
+        'task_id': 'task-frontier_000001',
+        'goal_map_revision': 7,
+        'evidence_map_revision': 8,
+        'checked_information_cells': 4,
+        'unknown_information_cells': 0,
+    }
 
 
 def test_exact_unconsumed_we_target_is_withheld_after_revision_change():

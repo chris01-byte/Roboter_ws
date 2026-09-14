@@ -17,6 +17,7 @@ from .frontier_task_feed import (
     FrontierTaskPolicy,
     FrontierTrackSnapshot,
 )
+from .frontier_task_resolution import FrontierTaskResolutionEvidence
 from .map_status_adapter import (
     MapManagerStatusCorrelator,
     MapStatusCorrelationPolicy,
@@ -40,7 +41,7 @@ from .portal_source_adapter import (
     RawMapPortalSource,
     RawMapStatusJoiner,
 )
-from .region_graph import RegionGraphPolicy, RegionSeed
+from .region_graph import RegionGraphPolicy, RegionSeed, RegionTaskResult
 from .region_graph_shadow import (
     RegionGraphShadowSession,
     ShadowFrontierEventResult,
@@ -433,6 +434,32 @@ class RegionGraphShadowLifecycle:
         result = self._session.observe_frontier_inventory(inventory)
         self._last_monotonic_seconds = observed
         if result.task_updates:
+            self._graph_changed_monotonic_seconds = observed
+        return result
+
+    def resolve_frontier_task(
+            self, evidence: FrontierTaskResolutionEvidence, *,
+            observed_monotonic_seconds: float) -> RegionTaskResult:
+        """Apply already positive frontier-resolution evidence atomically."""
+        if self._session is None or self._latest_map_status is None:
+            raise RegionGraphShadowNotReadyError(
+                "Frontierabschluss wartet noch auf eine Schatten-Sitzung")
+        observed = self._validate_monotonic_progress(
+            observed_monotonic_seconds,
+            "observed_monotonic_seconds",
+        )
+        if not isinstance(evidence, FrontierTaskResolutionEvidence):
+            raise RegionGraphShadowLifecycleError(
+                "evidence muss FrontierTaskResolutionEvidence sein")
+        if evidence.context != self._session.context:
+            raise RegionGraphShadowLifecycleError(
+                "Frontierabschluss passt nicht zum aktiven Kartenkontext")
+        if evidence.evidence_map_revision > self._latest_map_status.map_revision:
+            raise RegionGraphShadowLifecycleError(
+                "Frontierabschluss liegt vor dem aktuellen Kartenstatus")
+        result = self._session.resolve_frontier_task(evidence)
+        self._last_monotonic_seconds = observed
+        if not result.duplicate:
             self._graph_changed_monotonic_seconds = observed
         return result
 

@@ -18,6 +18,10 @@ from explore.frontier_task_feed import (  # noqa: E402
     FrontierTaskPolicy,
     frontier_inventory_from_clusters,
 )
+from explore.frontier_task_resolution import (  # noqa: E402
+    FrontierTaskResolutionEvidence,
+    FrontierTaskResolutionState,
+)
 from explore.exploration_policy import (  # noqa: E402
     PolicyAssessmentState,
     TaskAvailability,
@@ -951,6 +955,50 @@ def test_lifecycle_keeps_unfiltered_frontier_tasks_open_across_revisions():
     assert tuple(track.frontier_id for track in tracks) == (
         "frontier_000001", "frontier_000002")
     assert all(track.last_revision == 3 for track in tracks)
+
+
+def test_lifecycle_applies_positive_frontier_resolution_with_graph_age():
+    owner = lifecycle(frontier_policy=FrontierTaskPolicy())
+    accept_status(owner, at=100.0)
+    owner.observe_frontier_inventory(
+        frontier_inventory(owner, [(1.0, 1.0, 8)]),
+        observed_monotonic_seconds=100.1,
+    )
+    accept_status(owner, status_json(
+        accepted_maps=4,
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        time=1_800_000_001.0,
+    ), at=100.2)
+    owner.observe_frontier_inventory(
+        frontier_inventory(owner, []),
+        observed_monotonic_seconds=100.3,
+    )
+    evidence = FrontierTaskResolutionEvidence(
+        resolution_id='frontier-resolution-lifecycle',
+        context=owner.context,
+        task_id='task-frontier_000001',
+        region_id='region_000001',
+        frontier_id='frontier_000001',
+        intent_id='intent-3',
+        child_result_id='result-3',
+        goal_map_revision=3,
+        evidence_map_revision=4,
+        source_fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        state=FrontierTaskResolutionState.RESOLVED,
+        reason='new_map_confirms_frontier_information_resolved',
+        checked_information_cells=49,
+        unknown_information_cells=0,
+    )
+
+    result = owner.resolve_frontier_task(
+        evidence, observed_monotonic_seconds=100.35)
+    payload = json.loads(build_status(owner, now=100.4))
+
+    assert result.task.state.value == 'completed'
+    assert payload['summary']['open_task_count'] == 0
+    assert payload['source']['region_graph']['age_seconds'] == pytest.approx(0.05)
 
 
 @pytest.mark.parametrize("changes", [
