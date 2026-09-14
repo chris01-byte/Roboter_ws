@@ -26,6 +26,8 @@
 #    TF            : <global_frame> -> <robot_base_frame>  (Roboterpose)
 #    Publish (opt) : <marker_topic>       (visualization_msgs/MarkerArray)
 #    Publish       : /explore/status_json (std_msgs/String, 1 Hz)
+#    Publish (opt) : /explore/region_graph/status_json
+#                    (passiver Kartenstatus-Schatten, max. 1 Hz)
 #
 #  ALLE PARAMETER -> config/explore_params.yaml (nur dort aendern!).
 #
@@ -50,7 +52,7 @@ from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalRespons
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import (
-    DurabilityPolicy, QoSProfile, ReliabilityPolicy,
+    DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy,
     qos_profile_sensor_data,
 )
 
@@ -73,6 +75,10 @@ from explore.portal_planning import (
     PortalBridge,
     find_portal_bridges,
     front_lidar_corridor_check,
+)
+from explore.region_graph_shadow_lifecycle import (
+    RegionGraphShadowLifecycle,
+    RegionGraphShadowNotReadyError,
 )
 
 import tf2_ros
@@ -605,6 +611,22 @@ class ExploreNode(Node):
             'coverage_max_goals', 14).value)
         self._status_topic = str(self.declare_parameter(
             'status_topic', '/explore/status_json').value)
+        self._region_graph_shadow_enabled = bool(self.declare_parameter(
+            'region_graph_shadow_enabled', False).value)
+        self._region_graph_shadow_session_id = str(self.declare_parameter(
+            'region_graph_shadow_session_id', '').value).strip()
+        self._region_graph_shadow_start_observation_id = str(
+            self.declare_parameter(
+                'region_graph_shadow_start_observation_id', '').value
+        ).strip()
+        self._region_graph_shadow_map_status_topic = str(
+            self.declare_parameter(
+                'region_graph_shadow_map_status_topic',
+                '/robot_map_manager/status_json').value
+        ).strip()
+        self._region_graph_shadow_status_topic = str(self.declare_parameter(
+            'region_graph_shadow_status_topic',
+            '/explore/region_graph/status_json').value).strip()
 
         # -------------------------------------------------------------------
         #  Laufzeit-Zustand
@@ -764,11 +786,28 @@ class ExploreNode(Node):
             raise ValueError(
                 'behavior_tree ist Pflicht; autonome Navigation ohne '
                 'expliziten Recovery-freien Baum ist gesperrt')
+        if self._region_graph_shadow_enabled and (
+                not self._region_graph_shadow_session_id
+                or not self._region_graph_shadow_start_observation_id
+                or not self._region_graph_shadow_map_status_topic
+                or not self._region_graph_shadow_status_topic
+                or self._region_graph_shadow_status_topic
+                == self._status_topic
+                or self._region_graph_shadow_status_topic
+                == self._region_graph_shadow_map_status_topic):
+            raise ValueError(
+                'Aktiver Regionsgraph-Schatten braucht explizite IDs und '
+                'getrennte, nichtleere Topics')
 
         # Reentrant-Group: Map-Callback, Action-Server und Nav-Client duerfen
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
         # auf Nav-Ergebnisse, waehrend weiter Karten hereinkommen muessen).
         self._cb = ReentrantCallbackGroup()
+
+        # Ohne explizite Aktivierung existieren weder Schattenzustand noch
+        # zusaetzliche ROS-Schnittstellen. Der bestehende Explorerpfad bleibt
+        # damit unveraendert.
+        self._initialize_region_graph_shadow()
 
         # -------------------------------------------------------------------
         #  ROS-Schnittstellen
@@ -816,6 +855,78 @@ class ExploreNode(Node):
             f"explore_node bereit. Map='{self._map_topic}', Nav='{self._nav_action_name}'. "
             f"Erkundung starten via Action /explore_area.")
         self._publish_status('idle')
+
+    def _initialize_region_graph_shadow(self):
+        """Create the isolated, map-only shadow path when explicitly enabled."""
+        if not self._region_graph_shadow_enabled:
+            return
+        self._region_graph_shadow = RegionGraphShadowLifecycle(
+            self._region_graph_shadow_session_id,
+            self._global_frame,
+            self._region_graph_shadow_start_observation_id,
+        )
+        self._region_graph_shadow_lock = threading.Lock()
+        self._region_graph_shadow_fault = None
+
+        shadow_qos = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            reliability=ReliabilityPolicy.RELIABLE,
+        )
+        self._region_graph_shadow_pub = self.create_publisher(
+            String, self._region_graph_shadow_status_topic, shadow_qos)
+        self._region_graph_shadow_subscription = self.create_subscription(
+            String,
+            self._region_graph_shadow_map_status_topic,
+            self._on_region_graph_map_status,
+            shadow_qos,
+            callback_group=self._cb,
+        )
+        self._region_graph_shadow_timer = self.create_timer(
+            1.0,
+            self._publish_region_graph_shadow_status,
+            callback_group=self._cb,
+        )
+
+    def _fault_region_graph_shadow(self, operation, error):
+        self._region_graph_shadow_fault = (
+            f'{operation}: {type(error).__name__}: {error}')
+        self.get_logger().error(
+            'Passiver Regionsgraph-Schatten bleibt bis zum Neustart '
+            f'deaktiviert ({self._region_graph_shadow_fault}).')
+
+    def _on_region_graph_map_status(self, msg: String):
+        """Accept one map-manager envelope without affecting exploration."""
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            received_at = time.monotonic()
+            try:
+                self._region_graph_shadow.accept_map_status_json(
+                    msg.data,
+                    received_monotonic_seconds=received_at,
+                )
+            except Exception as error:  # isolated telemetry must not escape
+                self._fault_region_graph_shadow('Kartenstatus', error)
+
+    def _publish_region_graph_shadow_status(self):
+        """Publish at most once per timer tick after a complete map status."""
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            now = time.monotonic()
+            try:
+                payload = self._region_graph_shadow.build_status_json(
+                    now_monotonic_seconds=now)
+            except RegionGraphShadowNotReadyError:
+                return
+            except Exception as error:  # isolated telemetry must not escape
+                self._fault_region_graph_shadow('Statusausgabe', error)
+                return
+            message = String()
+            message.data = payload
+            self._region_graph_shadow_pub.publish(message)
 
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
