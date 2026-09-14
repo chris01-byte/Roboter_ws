@@ -1,6 +1,6 @@
 # Wohnungserkundung – laufender Status und Entscheidungen
 
-**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/I)**
+**Vorhaben WE-1 · Aktualisiert: 2026-09-14 (WE-M2/J)**
 
 Dies ist der einzige laufende Fortschrittsstand des Vorhabens. Die
 [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) beschreibt das Soll,
@@ -10,19 +10,19 @@ Quellen, aber ersetzen diesen statusbezogenen Einstieg nicht.
 
 ## 1. Aktueller nächster Schritt
 
-**WE-M2/I – sitzungsgebundene Schattenaggregation als reine Logik
-softwaregeprüft, zur Review.** Ein neuer Aggregator besitzt genau einen expliziten
-Kartenkontext, ein begrenztes Portalgedächtnis, einen getrennten Regionsgraphen
-und die bestehende Statuspolicy. Unqualifizierte Portalpläne verändern nur das
-Gedächtnis; Graphverbindung, Eintritt, ROS, Zielwahl und Fahrwirkung sind nicht
-möglich.
+**WE-M2/J – Kartenstatuskorrelation als reine Logik softwaregeprüft, zur Review.**
+Ein neuer Adapter validiert die relevanten Felder des bestehenden
+Kartenmanagerstatus und führt genau den letzten Stand einer expliziten Sitzung.
+`accepted_maps`, Fingerprint, Frame, Quellstempel und Empfangsalter werden
+fail-closed korreliert; Rücklauf oder Framewechsel verlangt eine neue Sitzung.
+Es gibt weiterhin keine JSON-/ROS-Subscription, Explorer- oder Fahrwirkung.
 
-**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/J.** Den
-Kartenmanagerstatus als reinen, versionsgebundenen Eingang normalisieren:
-Fingerprint, Quellstempel, Empfangsalter und `accepted_maps` validieren und daraus
-nur bei konsistentem, monotonem Verlauf Kartenepoche, Sitzungsrevision und
-Quellalter für den Schattenvertrag liefern. Nur neues Adaptermodul, dessen Tests
-und diese STATUS.md; keine Subscription, ROS-/Explorer-/Launch-/Parameteränderung
+**Nächster vorgeschlagener Umsetzungsschritt nach Review: WE-M2/K.** Die reine
+Übergabe von `MapStatusCorrelationResult` an `RegionGraphShadowSession`
+typgesichert schließen: Sitzung ausschließlich aus dem ersten gültigen
+Kartenresultat starten und spätere Statusprojektionen nur bei identischem Kontext
+und nicht rückläufiger Revision zulassen. Nur `region_graph_shadow.py`, dessen
+Tests und diese STATUS.md; keine JSON-/ROS-/Explorer-/Launch-/Parameterintegration
 und keine Fahrsoftware.
 
 WE-M0/A gibt weiterhin weder den HWT-Zweig noch den lokal veränderten
@@ -55,6 +55,7 @@ Freigabe. Das Schreiben oder Veröffentlichen dieses Plans erteilt diese nicht.
 | WE-M2/G `feature/we-m2g-source-ages` | Gestapelte reine Zeitfrische für Kartenquelle, Portalgedächtnis und Regionsgraph; Statusmodul, Tests und Status, keine Runtime-Einbindung. |
 | WE-M2/H `feature/we-m2h-portal-adapter` | Gestapelte fail-closed Normalisierung vorhandener Portalpläne zu ausschließlich unqualifizierten Beobachtungen; neues Modul, Tests und Status. |
 | WE-M2/I `feature/we-m2i-shadow-session` | Gestapelte reine Sitzungsaggregation aus begrenztem Portalgedächtnis, Regionsgraph und Schattenstatus; neues Modul, Tests und Status. |
+| WE-M2/J `feature/we-m2j-map-status-adapter` | Gestapelte reine Korrelation des vorhandenen Kartenmanagerstatus zu Kontext, sitzungsbezogener Revision und Quellalter; neues Modul, Tests und Status. |
 
 Der [Bericht vom 11.09.2026](https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md)
 dokumentiert den physischen Übergang vom Arbeitszimmer in den Flur mit
@@ -292,7 +293,7 @@ oder den Ergänzungs-PR schließen, nicht den neueren Bestandsbericht zurückset
 | WE-M0/A | Dokumentiert; Leseanalyse abgeschlossen | Keine Runtime-/Zielsystem-/Hardwareabnahme. Lokaler Mischstand und HWT-Gesamtmerge ausdrücklich nicht freigegeben. |
 | WE-M0/B | Offen | Neue Baseline-/Lastprüfung und reale Wiederholung der Abschlusskorrektur. |
 | WE-M1 | Softwaregeprüft; zur Review | WE-M1/A bis C decken den reinen In-Memory-Vertrag ab. Detektoradapter, ROS-/Zielsystemintegration und Hardwareabnahme sind ausdrücklich nicht enthalten. |
-| WE-M2 | In Arbeit | WE-M2/A bis I decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung und Schattenaggregation ab. Kartenstatusadapter, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
+| WE-M2 | In Arbeit | WE-M2/A bis J decken reine Topologie, Korrekturen, Aufgabenbezug, Statusprojektion, Integrationsgrenze, Zeitfrische, unqualifizierte Portalplan-Normalisierung, Schattenaggregation und Kartenstatuskorrelation ab. Typgesicherte Übergabe, qualifizierte Evidenz und passive ROS-Ausgabe offen. |
 | WE-M3 | Geplant | Hierarchische Policy, Abschlussvertrag und motorlose Abnahme. |
 | WE-M4 | Geplant | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur. |
 | WE-M5 | Geplant | Versionsgebundene Persistenz und sichere Wiederaufnahme. |
@@ -343,7 +344,9 @@ vorhandene Portalpläne ohne ROS-Abhängigkeit normalisieren, stuft sie aber bew
 nicht als bestätigte Struktur ein und verbindet sie daher noch nicht mit dem
 Regionsgraphen. WE-M2/I besitzt diese Zustände nun in genau einer passiven
 Sitzung; die tatsächliche Kartenepoche und monotone Quellzeit bleiben explizite,
-noch nicht angebundene Eingaben.
+noch nicht angebundene Eingaben. WE-M2/J kann diese Angaben aus einem konsistenten
+Verlauf der explizit extrahierten Kartenmanagerfelder ableiten; die typgesicherte
+Übergabe an die Sitzung und die spätere Status-Subscription fehlen weiterhin.
 
 **Unabhängiger Testbasisbefund:** Ein zusätzlich ausgeführter, unveränderter
 Nahbereichs-Vertragstest erwartet im Mapping-Profil einen kreisförmigen
@@ -362,6 +365,87 @@ Ressourcenbudgets und Wohnungsumfang müssen vor den jeweiligen Tests begründet
 festgelegt werden. Die Dokumentation ist kein Ersatz für diese Messungen.
 
 ## 6. Entscheidungslog
+
+### 2026-09-14 – WE-M2/J: Kartenfortschritt und Kartenepoche bleiben getrennt
+
+**Quellkorrektur:** Die erneute Prüfung des tatsächlichen Kartenmanagers zeigt:
+`accepted_maps` steigt nur, wenn ein neuer `MapSnapshot` einen anderen
+Inhaltsfingerprint besitzt. Ein Fingerprintwechsel zusammen mit höherem Zähler
+ist daher normaler Kartenfortschritt innerhalb derselben Sitzung, nicht pauschal
+eine neue Kartenepoche. Duplikate behalten Fingerprint, Quellstempel und Zähler;
+lediglich das Empfangsalter kann durch erneuten Empfang sinken. Der in WE-M2/I
+vorgeschlagene pauschale Epochenwechsel bei jedem Fingerprintwechsel wird damit
+quellenbasiert berichtigt.
+
+**Entscheidung / Umfang:** Neu `map_status_adapter.py`. Ein unveränderlicher
+`MapManagerStatusSample` bildet ausschließlich die relevanten bereits geparsten
+Schema-1-Felder ab: Statuszeit, beide Verfügbarkeitsflags, `accepted_maps`,
+SHA-256-Fingerprint, Frame, Quellstempel und Empfangsalter. Vollständigkeit,
+Datentypen, sichere Kennungen sowie nichtnegative endliche Zeiten werden vor der
+Korrelation geprüft. Nicht verfügbare Karten dürfen keine Teilfelder oder einen
+Zähler tragen.
+
+`MapManagerStatusCorrelator` verlangt eine externe Sitzungs-ID und einen
+erwarteten Frame. Der erste vollständige Status verankert die Kartenepoche am
+ersten beobachteten Fingerprint; `accepted_maps` bleibt unverändert die
+prozesslokale Revision. Spätere Fingerprint- und Zähleränderung müssen gemeinsam
+erfolgen, Zählersprünge wegen ausgelassener Statusmeldungen bleiben zulässig.
+Gleicher Kartenstand behält Revision und Kontext, darf aber ein aktualisiertes
+Empfangsalter liefern. Quellstempel null bleibt als explizit unbekannte ROS-Zeit
+zulässig.
+
+Zählerrücklauf, Framewechsel, erneute Nichtverfügbarkeit oder rückläufiger
+Quellstempel verlangen `MapEpochChangeRequired`; der Aufrufer muss dann eine neue
+Sitzungs-ID und neue Zustandsbesitzer anlegen. Rückläufige Statuszeit,
+Fingerprint/Zähler-Widerspruch oder Quellstempelwechsel ohne neue akzeptierte
+Karte wird als ungültig abgewiesen. Ein Quellstempel mehr als **0,5 s** vor der
+mitgelieferten Statuszeit wird ebenfalls verworfen. Diese Toleranz ist nur ein
+synthetischer Softwarestartwert und keine gemessene ROS-/Jetson-Zeitgrenze. Das
+Modul liest selbst keine Uhr, kein JSON, keine Karte und keine Datei.
+
+**Nachgewiesenes Verhalten:** Periodischer Status und exaktes Replay erhöhen die
+Revision nicht. Normaler Kartenfortschritt sowie ein Sprung über ausgelassene
+Zwischenmeldungen behalten denselben Kontext. Neustart mit zurückgesetztem Zähler
+wird im alten Korrelator abgewiesen; eine ausdrücklich neue Sitzungs-ID ergibt
+auch bei gleichem Anfangsfingerprint einen anderen `PortalMapContext`.
+Unvollständige, falsche oder nicht endliche Felder und alle beschriebenen
+Widerspruchsfolgen schlagen ohne Änderung des letzten gültigen Kontexts
+geschlossen fehl. Ein Korrelationsresultat kann bereits manuell und rein logisch
+eine `RegionGraphShadowSession` initialisieren; diese Übergabe ist aber noch
+nicht als eigene öffentliche Aggregat-API gekapselt.
+
+**Ausgeführte Prüfungen:** Lokaler x86_64-Arbeitsplatz mit eingeblendeter
+ROS-Humble-Python-Umgebung und `robot_interfaces` aus dem vorhandenen Underlay,
+aber ohne ROS-Start, Gerätezugriff, Kartendaten oder Bewegung:
+
+| Test-ID | Ergebnis |
+|---|---|
+| WE-M2J-MAP | Neue Kartenstatusadapter-Suite: **49 passed**. |
+| WE-M2J-EXPLORE | Gesamte Explorer-Suite: **323 passed**. |
+| WE-M2J-ADJACENT | Explorer-, Kartenmanager-, Semantikmanager- und Semantik-Launch-Vertragssuiten gemeinsam: **428 passed**. |
+| WE-M2J-COLCON | Temporärer isolierter `colcon build --packages-select explore`: 1 Paket gebaut und neues Modul installiert; Pakettest: **323 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**. |
+| WE-M2J-STATIC | `flake8` (E501/W503 ausgenommen) und `git diff --check`: bestanden. |
+
+Nicht geprüft wurden das Extrahieren aus realem Status-JSON, ROS-Subscription und
+QoS, tatsächlicher Kartenmanager-Neustart, ROS-/Wall-Zeitbezug, Jetson-
+Laufzeit/Speicher, reale Karten, qualifizierende Portal- oder LiDAR-Evidenz,
+Sensorik, Footprint, Kollisionswirkung oder Hardware. Der Korrelator bestätigt
+weder Kartenqualität, Portal, Durchfahrt noch Fahrfreigabe.
+
+**Nächster abgegrenzter Schritt WE-M2/K:** `RegionGraphShadowSession` nur über
+ein geprüftes erstes `MapStatusCorrelationResult` erzeugbar machen und eine
+Statusmethode ergänzen, die weitere Resultate ausschließlich bei exakt gleichem
+`PortalMapContext` und nicht rückläufiger `map_revision` annimmt. Das vom
+Kartenadapter gelieferte `source_map_age_seconds` wird unverändert übernommen;
+Portal-/Graphalter bleiben explizite Aufrufwerte. Kontextwechsel und alte
+Resultate müssen ohne Zustandsänderung scheitern. Nur Aggregatmodul, dessen Test
+und diese STATUS.md; keine JSON-/ROS-/Explorer-/Launch-/Parameteränderung,
+Qualifikation, Navigation oder Fahrwirkung.
+
+**Rückfallweg:** `map_status_adapter.py`, dessen Test und diesen
+WE-M2/J-Statusabschnitt entfernen beziehungsweise den gestapelten PR schließen.
+WE-M2/A bis I bleiben separat reviewbar; kein Runtime-, Installations- oder
+Gerätezustand ist zurückzusetzen.
 
 ### 2026-09-14 – WE-M2/I: ein Besitzer, weiterhin keine Fahr- oder Strukturbefugnis
 
