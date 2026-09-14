@@ -157,6 +157,11 @@ def test_joiner_deduplicates_source_and_status_replays():
         map_status(), map_changed=False, replayed=True,
     )) is None
     assert joiner.pending_source_count == 0
+    assert joiner.source_observation_count == 3
+    assert joiner.unique_source_count == 1
+    assert joiner.duplicate_source_count == 2
+    assert joiner.emitted_correlation_count == 1
+    assert joiner.last_emitted_revision == 12
 
 
 def test_joiner_can_start_from_an_upstream_replay_status():

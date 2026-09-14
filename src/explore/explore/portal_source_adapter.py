@@ -105,7 +105,12 @@ class RawMapStatusJoiner:
         ] = OrderedDict()
         self._current_status: Optional[MapStatusCorrelationResult] = None
         self._last_emitted_key: Optional[tuple[object, ...]] = None
+        self._source_observations = 0
+        self._unique_sources = 0
+        self._duplicate_sources = 0
         self._evicted_sources = 0
+        self._emitted_correlations = 0
+        self._last_emitted_revision: Optional[int] = None
 
     @property
     def capacity(self) -> int:
@@ -116,8 +121,28 @@ class RawMapStatusJoiner:
         return len(self._sources)
 
     @property
+    def source_observation_count(self) -> int:
+        return self._source_observations
+
+    @property
+    def unique_source_count(self) -> int:
+        return self._unique_sources
+
+    @property
+    def duplicate_source_count(self) -> int:
+        return self._duplicate_sources
+
+    @property
     def evicted_source_count(self) -> int:
         return self._evicted_sources
+
+    @property
+    def emitted_correlation_count(self) -> int:
+        return self._emitted_correlations
+
+    @property
+    def last_emitted_revision(self) -> Optional[int]:
+        return self._last_emitted_revision
 
     @property
     def current_status(self) -> Optional[MapStatusCorrelationResult]:
@@ -131,7 +156,15 @@ class RawMapStatusJoiner:
             raise PortalSourceAdapterError(
                 "source muss RawMapPortalSource sein")
         source_key = self._source_key(source)
-        if source_key not in self._sources:
+        self._source_observations += 1
+        emitted_identity = (
+            None if self._last_emitted_key is None
+            else self._last_emitted_key[:3]
+        )
+        if source_key in self._sources or source_key == emitted_identity:
+            self._duplicate_sources += 1
+        else:
+            self._unique_sources += 1
             if len(self._sources) == self._capacity:
                 self._sources.popitem(last=False)
                 self._evicted_sources += 1
@@ -205,6 +238,8 @@ class RawMapStatusJoiner:
             return None
         result = correlate_raw_map_portal_source(matching_source, status)
         self._last_emitted_key = emission_key
+        self._emitted_correlations += 1
+        self._last_emitted_revision = result.map_revision
         del self._sources[status_identity]
         return result
 

@@ -21,6 +21,7 @@ from explore.portal_memory import (  # noqa: E402
     StaleObservationError,
 )
 from explore.portal_plan_adapter import PortalPlanCandidate  # noqa: E402
+from explore.portal_source_adapter import RawMapPortalSource  # noqa: E402
 from explore.region_graph import RegionGraphPolicy  # noqa: E402
 from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
@@ -107,6 +108,23 @@ def candidate(owner, **changes):
     return PortalPlanCandidate(**values)
 
 
+def raw_source(**changes):
+    values = {
+        "fingerprint": FINGERPRINT_A,
+        "source_stamp_ns": 1_799_999_999_500_000_000,
+        "frame_id": "map",
+    }
+    values.update(changes)
+    return RawMapPortalSource(**values)
+
+
+def accept_raw(owner, source=None, *, at=100.0):
+    return owner.accept_raw_map_source(
+        raw_source() if source is None else source,
+        received_monotonic_seconds=at,
+    )
+
+
 def test_owner_waits_without_inventing_context_or_status():
     owner = lifecycle()
 
@@ -115,6 +133,106 @@ def test_owner_waits_without_inventing_context_or_status():
     assert owner.latest_map_status is None
     with pytest.raises(RegionGraphShadowNotReadyError):
         build_status(owner)
+
+
+def test_raw_map_join_is_absent_without_explicit_capacity():
+    owner = lifecycle()
+
+    assert owner.raw_map_diagnostics.enabled is False
+    assert owner.raw_map_diagnostics.capacity == 0
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        accept_raw(owner)
+
+    assert owner.state is ShadowLifecycleState.WAITING_FOR_MAP
+    assert owner.latest_map_status is None
+
+
+@pytest.mark.parametrize("capacity", [0, -1, True, 1.5])
+def test_raw_map_join_rejects_nonpositive_or_invalid_capacity(capacity):
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        lifecycle(raw_map_capacity=capacity)
+
+
+def test_raw_map_join_matches_status_before_source():
+    owner = lifecycle(raw_map_capacity=2)
+    status_update = accept_status(owner, at=100.0)
+
+    assert status_update.raw_map_correlation is None
+    raw_update = accept_raw(owner, at=101.0)
+
+    assert raw_update.state is ShadowLifecycleState.ACTIVE
+    assert raw_update.map_status == owner.latest_map_status
+    assert raw_update.raw_map_correlation.map_revision == 3
+    assert owner.raw_map_diagnostics.emitted_correlations == 1
+    assert owner.raw_map_diagnostics.last_emitted_revision == 3
+
+
+def test_raw_map_join_matches_source_before_status():
+    owner = lifecycle(raw_map_capacity=2)
+
+    raw_update = accept_raw(owner, at=100.0)
+    assert raw_update.state is ShadowLifecycleState.WAITING_FOR_MAP
+    assert raw_update.map_status is None
+    assert raw_update.raw_map_correlation is None
+
+    status_update = accept_status(owner, at=101.0)
+    assert status_update.session_started is True
+    assert status_update.raw_map_correlation.map_revision == 3
+
+
+def test_raw_map_join_tracks_duplicates_pending_and_eviction_boundedly():
+    owner = lifecycle(raw_map_capacity=2)
+    first = raw_source(fingerprint="1" * 64, source_stamp_ns=1)
+    second = raw_source(fingerprint="2" * 64, source_stamp_ns=2)
+    third = raw_source(fingerprint="3" * 64, source_stamp_ns=3)
+
+    accept_raw(owner, first, at=100.0)
+    accept_raw(owner, first, at=101.0)
+    accept_raw(owner, second, at=102.0)
+    accept_raw(owner, third, at=103.0)
+
+    diagnostics = owner.raw_map_diagnostics
+    assert diagnostics.enabled is True
+    assert diagnostics.capacity == 2
+    assert diagnostics.source_observations == 4
+    assert diagnostics.unique_sources == 3
+    assert diagnostics.duplicate_sources == 1
+    assert diagnostics.pending_sources == 2
+    assert diagnostics.evicted_sources == 1
+    assert diagnostics.emitted_correlations == 0
+    assert diagnostics.last_emitted_revision is None
+
+
+def test_valid_mismatch_waits_until_matching_growth_source_arrives():
+    owner = lifecycle(raw_map_capacity=2)
+    accept_raw(owner, raw_source(
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+    ), at=100.0)
+
+    first = accept_status(owner, at=101.0)
+    assert first.raw_map_correlation is None
+    growth = accept_status(owner, status_json(
+        time=1_800_000_001.0,
+        accepted_maps=4,
+        fingerprint=FINGERPRINT_B,
+        source_stamp_ns=1_800_000_000_500_000_000,
+        age_seconds=0.2,
+    ), at=102.0)
+
+    assert growth.raw_map_correlation.map_revision == 4
+    assert owner.raw_map_diagnostics.pending_sources == 0
+
+
+def test_invalid_raw_source_does_not_advance_lifecycle_time_or_state():
+    owner = lifecycle(raw_map_capacity=1)
+
+    with pytest.raises(RegionGraphShadowLifecycleError):
+        accept_raw(owner, "not-a-source", at=101.0)
+
+    update = accept_status(owner, at=100.0)
+    assert update.session_started is True
+    assert owner.raw_map_diagnostics.source_observations == 0
 
 
 def test_unavailable_status_before_first_map_remains_waiting():
