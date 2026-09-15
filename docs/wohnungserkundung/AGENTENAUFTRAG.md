@@ -1,158 +1,195 @@
 # Agentenauftrag – Wohnungserkundung Amadeus
 
-**Plan WE-1 · Version 2026-09-14 · Repository `chris01-byte/Roboter_ws`**
+**WE-1 · Version 2026-09-15 · Repository `chris01-byte/Roboter_ws`**
 
-Arbeite an der schrittweisen Umsetzung des
-[Gesamtplans](../WOHNUNGSERKUNDUNG_STRATEGIE.md). Dieses Vorhaben betrifft Amadeus,
-nicht HomeMy. Eine dokumentierte Zielarchitektur ist keine implementierte Funktion
-und keine Freigabe für Motoren oder eine unbeaufsichtigte Wohnungsfahrt.
+Die [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) bleibt unverändert.
+Dieses Vorhaben betrifft Amadeus, nicht HomeMy. Bereits erprobte Raumerkundung und
+Türdurchfahrt sind Ausgangsbasis, nicht erneut zu entwickelnde Funktionen.
+Aktuelle Priorität ist der zusammenhängende Softwareabschluss vor der erweiterten
+Probefahrt. Dokumentation, Commit und Merge sind keine Geräte- oder Fahrfreigabe.
 
-## 1. Pflichtkontext bei jeder neuen Sitzung
+## 1. Pflichtkontext und Quellenrang
 
-Lies in dieser Reihenfolge:
+Vor Änderungen alle geltenden [AGENTS.md](../../AGENTS.md),
+[Projektstatus](../../PROJEKT_STATUS.md), [Inventar](../INVENTORY.md) und einschlägige
+Einträge im [Projektgedächtnis](../PROJECT_MEMORY.md) lesen. Dann den aktuellen
+[WE-Status](STATUS.md), den betroffenen [Meilenstein](MEILENSTEINE.md), die Strategie
+und den relevanten Code einschließlich Tests lesen. Bei Kartierung außerdem das
+[Betriebswissen](../../tools/kartierung/README.md), vor freigegebenem Gerätezugriff
+die passende [Hardwareübergabe](../ROBOT_TRANSFER.md) des tatsächlichen Git-Stands.
 
-1. Alle für die betroffenen Pfade geltenden `AGENTS.md`, beginnend mit
-   [Root-AGENTS](../../AGENTS.md).
-2. [Projektstatus](../../PROJEKT_STATUS.md), [Inventar](../INVENTORY.md) und die
-   einschlägigen Entscheidungen in [Projektgedächtnis](../PROJECT_MEMORY.md).
-3. [Status dieses Vorhabens](STATUS.md): tatsächlicher Stand, Blocker, letzter
-   Nachweis und nächster zulässiger Schritt.
-4. [Gesamtplan](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und den betroffenen Eintrag in
-   [Meilensteine](MEILENSTEINE.md).
-5. Betroffene Implementierung, Tests und Konfiguration; bei Kartierung
-   [Betriebswissen](../../tools/kartierung/README.md), vor Gerätezugriff die
-   einschlägige [Hardwareübergabe](../ROBOT_TRANSFER.md) des richtigen Git-Stands.
+Strategie/Meilensteine definieren das Soll. Commitgebundener Code und datierte
+Nachweise belegen das Ist. Der kompakte STATUS ist der laufende Einstieg; historische
+Logs nur gezielt zu einem Befund nachladen. Bei Widersprüchen Datum, Commit,
+Profil und Testart vergleichen und den Konflikt sichtbar zuordnen, nicht die
+bequemere Aussage auswählen. Kein erneuter Start bei WE-M0/A, wenn sein Ergebnis
+bereits belegt ist. Fehlende aktuelle Hardwareabnahme löscht keinen historischen
+Fahrerfolg, gibt aber auch keinen geänderten Stand frei.
 
-Lade nicht routinemäßig alle historischen Logs und Fremdprojekte in den Kontext.
-Erweitere gezielt um den konkret betroffenen Befund. Die Planunterlagen sind
-verbindlich für das **Soll**; aktueller Code und datierte Messungen belegen das
-**Ist**. Bei widersprüchlichen Quellen nicht die günstigere Behauptung auswählen,
-sondern Commit, Profil und Evidenz vergleichen und den Konflikt offen eintragen.
+## 2. Git-Basis und Reviewgate
 
-## 2. Git-Basis zuerst klären
+Der bei diesem Abgleich jüngste funktionale Stand ist M3/U, PR #91, Commit
+`047455134894f700a115f6cea422479b99c702f6` auf
+`feature/we-m3u-process-runtime-evidence`. Die ursprüngliche Dokumentation bei
+`96cebee` ist nur die Planhistorie. Fortschritt nicht vom ursprünglichen
+Dokumentationsbranch oder einem veralteten Main-Snapshot ableiten.
 
-`main` ist die reguläre Entwicklungsbasis. Die Referenz der jüngsten besprochenen
-Fahrt liegt dagegen bei `1d91229dc10ff4bb791938d49aae8e9808a5dfff` auf
-`codex/hwt601-encoder-shadow`. Der Dokumentationszweig ist
-`docs/wohnungserkundung-agentenplan`, ausgehend von Main-Commit
-`05439c7a13d7a92e69b9eb4663e3a2a1b44626a1`.
+Nach `git fetch origin` Remote-Refs, HEAD, Arbeitsbaum und Worktrees prüfen.
+Neuere Arbeit nicht überschreiben und bereits erledigte Schritte nicht wiederholen.
+Der neueste PR allein bestimmt nicht die freigegebene Entwicklungsbasis;
+Abstammung und vorhandene Zustimmung müssen passen. `main` bleibt reguläres
+Integrationsziel. Die gestapelte WE-Basis wird für den explizit übergebenen
+Folgeauftrag isoliert geprüft; sie ist weder Main noch Produktionsinstallation.
 
-Vor Änderungen Remote, Branch, HEAD, Arbeitsbaum und vorhandene Worktrees prüfen.
-`git fetch origin` aktualisiert die Remote-Referenzen, ersetzt aber keine Prüfung
-des tatsächlich auf dem Jetson gestarteten Installationsstands. Kein blindes
-`git pull`, kein Wechsel einer laufenden Hardware-Arbeitskopie, kein automatischer
-Merge des gesamten HWT-Zweigs, kein Force-Push, kein `reset --hard` oder Aufräumen
-fremder Änderungen.
+Vor weiterer funktionaler WE-Arbeit die bis M3/U vorhandene Kette reviewen,
+relevante Prüfungen reproduzieren und den geprüften SHA samt Restbefunden benennen.
+Gerätefreie Weiterarbeit darf auf dieser geprüften, isolierten Basis erfolgen,
+wenn sie vom übergebenen Auftrag umfasst ist; dazu ist kein pauschaler Merge nötig.
+Ungeklärte funktionskritische Reviewbefunde sperren die betroffene Weiterarbeit.
+Main-Zusammenführung und zusätzliche funktionale HWT-Übernahmen bleiben gesondert
+abzustimmen. Kein automatischer Merge, Force-Push, blindes Pull, `reset --hard`,
+Löschen fremder Branches oder Wechsel einer laufenden Roboter-Arbeitskopie.
 
-Neue Implementierung auf einem isolierten Themenbranch vom aktuellen `main`.
-Fehlen notwendige HWT-/Portalvoraussetzungen dort, in WE-M0 einen gezielten
-Integrationsvorschlag mit exakten Abhängigkeiten erstellen. Eine abweichende
-Arbeitsbasis oder die Übernahme funktionaler Änderungen ausdrücklich abstimmen.
-Reine Leseanalyse und synthetische Tests dürfen dadurch nicht mit einer angeblich
-bestandenen Hardwarefreigabe verwechselt werden.
+Die divergente HWT-Referenz `1d91229dc10ff4bb791938d49aae8e9808a5dfff` und der
+lokal veränderte Jetson-Bestand werden nicht stillschweigend zur neuen Basis.
+Installationspfade und Overlay-Reihenfolge müssen vor Zielsystembehauptungen
+nachgewiesen werden; `git fetch` ist kein Installationsnachweis.
 
-Ist diese Dokumentation noch nicht nach `main` gemerged, lies die vier Planunterlagen
-über den Dokumentationsbranch, ohne deswegen die laufende Roboterinstallation
-umzustellen. Nach Merge genügt der aktuelle Main-Stand. Halte fest, welchen
-Dokumentationsstand du tatsächlich verwendet hast.
+## 3. Ein abgegrenzter Auftrag ist ein funktionales Ergebnis
 
-## 3. Umfang eines einzelnen Auftrags
+Bündele notwendige Schritte bis zu nutzbarem Verhalten statt bis zu einer einzelnen
+Hilfsfunktion. Kleine Commits und gezielte Tests bleiben möglich. Vor dem Eingriff
+Scope, vorhandene Anforderungen, Eingangs-SHA, betroffene Komponenten, erwartetes
+Verhalten, Prüfplan und Rückfall kurz benennen. Keine neue Parallelroadmap.
 
-Der erste Folgeauftrag ist **WE-M0/A: Bestands- und Integrationsprüfung ohne
-Geräteaktivierung**, sofern der Status nicht bereits einen belegten neueren Stand
-nennt. Erstelle keine vollständige neue Navigationslösung in einem Durchgang.
+Datenzuführung → automatische Ereignisse → Raum-/Aufgabenverwaltung → Zielwahl/
+Abschluss → Speicherung/Wiederaufnahme sind die vorhandene Kette. Erledigte
+Abschnitte wiederverwenden. Neue Module, Szenarien und Refaktorierungen benötigen
+einen konkreten offenen Vertrag oder Fehlerbefund und einen benannten Verbraucher.
+Kein ungenutztes Hilfsmodul als Abschluss einer Laufzeitintegration ausgeben.
 
-Bei jedem weiteren Auftrag:
-
-- Benenne Meilenstein und abgegrenzten Teilschritt, Eingangsstand, betroffene
-  Dateien, erwartete Wirkung, Tests und Rückfallweg vor dem Eingriff.
-- Bearbeite ausschließlich diesen Schritt. Erweitere den Umfang nicht auf
-  Kalibrierung, Treiber, Motorregelung, OAK, Netzwerke oder andere Projekte.
-- Trenne reine Berechnung, passive ROS-Integration und bewegungswirksame Integration.
-  Neue Funktion zunächst standardmäßig aus oder ausdrücklich passiv halten.
-- Beende den Auftrag mit einem Ergebnis und einer eindeutigen nächsten Aufgabe.
-  Ein bestandener Softwaretest startet niemals automatisch den nächsten Fahrtest.
-
-Fehlende Geräte, ROS-Umgebung oder lokale Bags sachlich als nicht verfügbar
-kennzeichnen. Keine synthetischen Daten als echte Fahrt ausgeben. Geeignete
-synthetische Fixtures und Testpläne sind trotzdem zulässige Lieferobjekte.
+Kein Nebenauftrag für Kalibrierung, Treiber, Motorregelung, OAK, Netzwerke, Arm,
+KI-Raumnamen oder Komfortoberflächen. Keine neue Navigation und kein umfangreiches
+zusätzliches Simulationsframework. Erweiterungen des genehmigten Umfangs einmal
+als konkretes Paket abstimmen, nicht unbemerkt anwachsen lassen.
 
 ## 4. Sicherheits- und Integrationsregeln
 
-Der Gesamtplan WE-01 bis WE-12 und die bestehende hardwired/softwareseitige
-Sicherheitskette gelten durchgehend. Diese Unterlagen autorisieren weder Bestromen
-noch Fahrt. Vor realem Gerätezugriff beziehungsweise Bewegung sind die vorhandenen
-Freigaberegeln der anwesenden Person und die jeweilige begrenzte Testabnahme
-anzuwenden; alte Freigaben sind nicht dauerhaft übertragbar.
+WE-01 bis WE-12 sowie die bestehenden hardwired/softwareseitigen Schutzketten
+gelten unverändert. Reine Berechnung, passive ROS-Anbindung und potenziell
+bewegungswirksame Integration getrennt prüfen. Neue aktive Funktionen bleiben
+standardmäßig deaktiviert oder benötigen ein explizites gültiges Profil.
 
-Keinen Test durch Deaktivieren von VL53, `collision_monitor`, Frischeprüfung,
-Lokalisierungsprüfung oder Footprint-Padding zum Bestehen bringen. Keine zusätzliche
-Motorbusöffnung und keine Umgehung des Missions-Gates. Ein "motorloser" Test ist
-vorher anhand der tatsächlich gestarteten Nodes und Gerätepfade zu überprüfen;
-ein bloßes `dry_run`-Label genügt nicht als Annahme über Hardwarezugriff.
+Keine Geräteaktivierung, kein Deployment und keine Fahrt ohne gesonderte
+Freigabe der anwesenden Person. Alte Fahrfreigaben nicht übertragen. Vor einem
+„motorlosen“ Start Nodes und Gerätepfade prüfen; `dry_run` allein beweist nichts.
+Gerätefreie ROS-Tests verwenden isolierte Domains und synthetische Gegenstellen;
+keine reale Motor-/Sensorverbindung und keine Commands in die Produktionsdomain.
 
-Bei laufender Bewegung hat sicherer Stopp Vorrang vor Logging, Speichern oder
-Reparieren. Bestehende Shutdown-Prozeduren verwenden; keine Prozessgruppen-Signale,
-unbegrenzten Wiederanläufe oder blind wiederholten Navigationsziele.
+Tests nicht durch Abschalten von VL53, `collision_monitor`, Frische-/Lokalisierungs-
+prüfung, Footprint-Padding oder Missions-Gates grün machen. Keine zusätzliche
+Motorbusöffnung. Synthetische Geometrie-/Zeitwerte sind keine Hardwareparameter.
+Nötige sicherheitsrelevante Änderungen separat begründen, freigeben und testen.
 
-## 5. Tests, Status und Nachweise
+Bei Bewegung geht sicherer Stopp vor Logging/Speichern. Bestehende kontrollierte
+Shutdown-Prozeduren verwenden, keine Prozessgruppen-Signale, endlosen Retries
+oder blind wiederholten Navigationsziele. Dieser Dokumentationsauftrag selbst
+startet weder Softwaretests mit Geräten noch irgendeine Bewegung.
 
-Verwende die [Statusstufen](MEILENSTEINE.md) getrennt für Software, Zielsystem und
-physische Abnahme. Ein Gesamt-Häkchen ist erst zulässig, wenn alle für diesen
-Meilenstein geforderten Nachweise vorliegen. Zahlen aus alten Protokollen sind
-keine heute ausgeführten Tests.
+## 5. Fertigkriterien und Statuspflege
 
-Prüfe normales Verhalten und die relevanten Negativfälle: falsche Portalzuordnung,
-verdeckte Sicht, Kartenkorrektur, fehlende Quellen, Abbruch, Blacklist, blockierter
-Rückweg, veraltete Metadaten und Wiederanlauf. Tests sollen Verhalten prüfen, nicht
-nur das Vorhandensein eines Parameternamens oder Quelltextfragments.
+„Softwareseitig fertig“ heißt: der vereinbarte Produktionspfad erzeugt seine
+Entscheidungen aus den Eingabedaten und besteht die gerätefreie Gesamtkette.
+Eine Testfixture darf Sensoren, Umgebung, Kartenmanager und Nav2 simulieren.
+Sie darf aber nicht die gerade geprüfte Portalbestätigung, Durchfahrt,
+Regionskorrektur oder Abschlussentscheidung als fertige Wahrheit einschleusen.
+Solche Modultests bleiben gültig, sind jedoch kein Ersatz für den Gesamtnachweis.
 
-Pflege [STATUS.md](STATUS.md) bei jedem Ergebnis oder Blocker. Fachentscheidungen
-dieses Vorhabens stehen dort im Entscheidungslog, ohne einen zweiten parallelen
-Fortschrittsstand aufzubauen. Übergreifende Änderungen gehören zusätzlich mit
-Verweis in `docs/PROJECT_MEMORY.md`; tatsächliche Jetson-Wirkung zusätzlich in
-`docs/ROBOT_TRANSFER.md`. Bestehende historische Einträge nicht nachträglich
-"grün" umschreiben.
+Unterscheide Quell-/Modultest, integrierten Gerätefreitest, Zielsystemprüfung und
+physische Abnahme. Null Commands im Fake-Nav2-Aufbau beweisen keine reale
+Kollisions- oder Not-Aus-Funktion. Überlappende Testzahlen nicht addieren.
+`MERGEABLE/CLEAN` ist kein funktionaler Review- oder Abnahmenachweis.
+
+Aktualisiere STATUS-Kopf, Meilensteintabelle und Restliste gemeinsam. Überholte
+Blocker datiert abschließen oder als historische Befunde kennzeichnen. Umfangreiche
+abgeschlossene Logs bei Bedarf unverändert archivieren, mit klarer Geltungswarnung
+und Quellenbezug. Keine zweite „aktuelle“ Statusdatei. Fachliche WE-Entscheidungen
+bleiben im STATUS-Log, übergreifende Änderungen zusätzlich im PROJECT_MEMORY und
+tatsächliche Jetson-Wirkung zusätzlich im ROBOT_TRANSFER.
 
 ## 6. Commit, Push und Übergabe
 
-Vor einem Commit Diff und Dateiliste prüfen, passende Tests ausführen,
-`git diff --check` verwenden sowie Geheimnisse und reale Wohnungsdaten ausschließen.
-Keine Bags, realen Karten, Graphgeometrien, Kamerabilder oder Build-Verzeichnisse
-mitnehmen. Nur den eigenen, thematisch abgegrenzten Dateisatz committen.
+Vor Commit den eigenen Diff/Dateisatz prüfen, passende Tests und `git diff --check`
+ausführen. Keine Tokens, Schlüssel, Zugangsdaten, echten Wohnungsgeometrien, Karten,
+Bags, Kamerabilder, Build- oder Installationsartefakte einchecken.
+Commitmuster: `typ: Grund der Änderung`; Hardwaregrenze und Rückfall dokumentieren.
+Eigenen Themenbranch pushen, Remote-HEAD prüfen und PR gegen die passende
+Reviewbasis erstellen. Keine funktionalen PRs automatisch mergen oder fremde
+Änderungen löschen. Veröffentlichung ist kein Deployment.
 
-Commit-Nachricht: `typ: Grund der Änderung`; bei Hardwarewirkung Abnahmegrenze und
-Rückfallweg nennen. Auf den eigenen Themenbranch pushen und Remote-HEAD prüfen.
-Keinen fremden Branch löschen und keinen ungetesteten Funktionsmerge erzwingen.
-Pull Request mit Zweck, Tests, offenen Gates, Hardwarewirkung und Rückfallweg.
-Ein Push ist kein Deployment und ein Merge keine Fahrfreigabe.
+Übergabe: geprüfte Basis/Scope; neu nutzbares Verhalten; geänderte Dateien;
+tatsächlich ausgeführte und nicht ausführbare Tests getrennt; verbleibende
+Blocker/Nachweise; Rückfall; Commit/Branch/PR; nächstes funktionales Ergebnis.
+Fehlende Umgebung offen nennen. Kein grüner Softwaretest startet automatisch
+Hardware und kein historisches Ergebnis wird nachträglich hochgestuft.
 
-Die Übergabe muss enthalten:
+## 7. Folgeauftrag: Softwareabschluss ohne Geräte
+
+Der folgende Auftrag wird erst nach ausdrücklicher Nutzerübergabe ausgeführt.
+Er ersetzt alte Startaufforderungen zu WE-M0/A, aber keine Sicherheitsgrenzen.
 
 ```text
-Meilenstein / Teilschritt:
-Dokumentationsstand und tatsächliche Codebasis:
-Ergebnis und geänderte Dateien:
-Ausgeführte Prüfungen mit Resultat:
-Nicht ausgeführte Prüfungen und Grund:
-Physische Abnahme / Freigabe: nicht erfolgt oder konkreter Nachweis
-Offene Fehler, Risiken und Rückfallweg:
-Commit, Remote-Branch und PR-Stand:
-Nächster exakt begrenzter Schritt:
+Projekt Amadeus / chris01-byte/Roboter_ws. Gesamtstrategie WE-1 unverändert.
+Arbeite auf den zusammenhängenden gerätefreien Softwareabschluss hin,
+nicht auf eine vorgezogene Probefahrt. Kein Neustart bei früheren Meilensteinen.
+
+Lies die geltenden AGENTS.md, den aktuellen WE-STATUS, AGENTENAUFTRAG,
+Strategie und betroffene Meilensteine. Prüfe nach git fetch origin die
+abgestimmte neueste WE-Basis. Ausgangsreferenz dieses Auftrags ist M3/U,
+PR #91, 047455134894f700a115f6cea422479b99c702f6, mit dem aktualisierten
+Dokumentationsnachtrag. Neueren belegten Fortschritt erhalten.
+
+A. Reviewgate vor funktionaler Weiterarbeit:
+Prüfe die gestapelte WE-Kette, nicht nur den letzten PR. Reproduziere die
+relevanten Pakettests und den vorhandenen echten Explorer-Prozessprüfer
+in einem isolierten temporären Aufbau. Ordne bekannte Altbefunde gezielt
+zu und benenne eine geprüfte commitgebundene Softwarebasis. Kein pauschaler
+HWT-/Main-Merge, kein Löschen und keine Änderung der Roboterinstallation.
+Bei funktionskritischen Reviewblockern erst diese begrenzt beheben oder
+zur notwendigen Freigabe vorlegen. Keine weitere allgemeine Planungsrunde.
+
+B. Danach innerhalb derselben geprüften WE-Linie das bestehende
+Mehrraum-/Persistenzpaket schließen (WE-M3-Restnachweise, WE-M5 offline):
+Verwende die vorhandene Produktionskette und vorhandenen Prüfer. Weise
+Startraum -> Flur -> weiteres Zimmer -> derselbe Flur mit sich entwickelnder
+Karte, Frontieraufgaben, automatischer Zielwahl und natürlichem erklärtem
+Abschluss nach. Fortlaufende Kartenrevisionen während aktiver Ziele dürfen
+nicht bloß eine endlose Cancel-/Retry-Schleife erzeugen. Sicherheits- und
+Frischeprüfungen nicht zum Bestehen abschwächen.
+
+Implementiere den minimalen WE-M5-Speicher-/Wiederaufnahmepfad über die
+bestehenden Kartenmanager-Verträge: validiertes Schema, eindeutige
+Kartenbindung, atomare Ablage, erhaltene Portal-/Regions-IDs und Restaufgaben.
+Manuelle Raumdaten erhalten. Keine konkurrierende Kartenablage. Teste alle
+bestehenden WE-M5-Pflichtfälle einschließlich beschädigter Daten, falscher
+Karte, abgebrochenem Schreiben, Neustart ohne gültige Pose und doppelten Events.
+Laden allein darf weder Navigationsziel noch Bewegung starten; nach erneut
+gültigen Quellen benötigt Fortsetzung einen neuen expliziten Auftrag.
+
+Verbinde Mehrraumtest und WE-M5 zu einem gerätefreien Gesamttest mit
+Unterbrechung, Speichern, Neustart und expliziter Fortsetzung. Simulierte
+Sensoren und Fake-Nav2 sind erlaubt; fertige Portal-/Durchfahrts-/Mergeurteile
+als Ersatz der zu prüfenden Produktionsentscheidung nicht. Plane keine Route
+heimlich für den Explorer vor. Füge Blockade, Datenfehler und Teilabschluss
+gezielt hinzu, statt weitere beliebige Szenarien zu erfinden.
+
+Kleine Commits sind möglich, Liefergegenstand bleibt das funktionierende Paket.
+Neue Hilfsmodule nur bei benanntem Bedarf. Keine neue Navigation, KI-Modelle,
+GUI-Erweiterung oder großes Simulationsframework. Notwendige zusätzliche
+HWT-Übernahmen und sicherheitsrelevante Änderungen paketweise abstimmen.
+
+Pflege STATUS-Kopf, Tabelle und Restliste konsistent. Berichte genau, welche
+Gesamtkette selbständig bestanden hat und welche Zielsystem-/Hardwaregates
+offen bleiben. Eigene Änderungen committen/pushen und zur Review stellen;
+keine automatischen Merges, Geräteaktivierung, Deployments oder Fahrten.
 ```
-
-## 7. Startauftrag für die nächste Agentensitzung
-
-> Lies zuerst alle geltenden AGENTS.md und die vier Unterlagen zur Wohnungserkundung:
-> `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`,
-> `docs/wohnungserkundung/AGENTENAUFTRAG.md`,
-> `docs/wohnungserkundung/MEILENSTEINE.md` und
-> `docs/wohnungserkundung/STATUS.md`.
-> Sie liegen bis zum Merge auf `docs/wohnungserkundung-agentenplan`.
-> Führe zunächst nur WE-M0/A aus, sofern kein neuerer belegter Status vorliegt:
-> vergleiche aktuellen Main-, HWT-Referenz- und verfügbaren lokalen Stand,
-> prüfe vorhandene Explorer-/Karten-/Semantikschnittstellen und liefere einen
-> gezielten Integrations- und Prüfplan. Keine Fahrsoftware ändern, keine Geräte
-> aktivieren, keine funktionalen Branches automatisch mergen und keine Fahrt
-> auslösen. Aktualisiere den fachlichen Status mit nachgewiesenen Ergebnissen
-> und dem nächsten abgegrenzten Schritt.
