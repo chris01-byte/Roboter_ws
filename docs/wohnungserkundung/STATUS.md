@@ -1,172 +1,132 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Dokumentationsabgleich: 2026-09-15**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Softwareabschluss: 2026-09-15**
 
-Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md)
-und [Meilensteine](MEILENSTEINE.md) beschreiben unverändert das Soll;
-[Agentenauftrag](AGENTENAUFTRAG.md) beschreibt Arbeitsweise und Folgeauftrag.
-Der vollständige vorherige Status einschließlich aller Entscheidungslogs liegt
-[unverändert im Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md).
-Seine früheren Aussagen über den „aktuellen“ Stand sind historische Snapshots.
+Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
+[Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
+unverändert. Der vorherige M3/U-Stand ist im
+[Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
-## 1. Arbeitspriorität und belastbarer Ausgangspunkt
+## 1. Geprüfte Basis und Reviewbefund
 
-**Zuerst den vereinbarten Softwareumfang zusammenhängend fertigstellen und
-gerätefrei prüfen. Keine vorgezogene Probefahrt, kein Neustart der Entwicklung.**
-Raumerkundung und die physische Arbeitszimmer-Flur-Durchfahrt waren bereits vor
-WE-1 erprobt; der [HWT-Bericht vom 11.09.2026][hwt] bleibt deren Nachweis.
-Die danach korrigierte Abschlusslogik und damalige Lastbefunde sind davon getrennt.
+Der Auftrag lief ausschließlich im separaten Worktree auf
+`feature/we-softwareabschluss`, ausgehend von Dokumentationscommit
+`56da2e3d93e2050b6178a2db5f770b746cab3512` und dessen funktionalem M3/U-Elternstand
+`047455134894f700a115f6cea422479b99c702f6`. `origin/main` stand nach
+`git fetch origin` auf `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1`; der getrennte HWT-Nachweis bleibt
+`1d91229dc10ff4bb791938d49aae8e9808a5dfff`. Es wurde nichts gemerged.
 
-Die WE-Entwicklung hat M3/U erreicht. Die automatische Portal-/Ereigniskette ist
-in einem echten Explorer-Prozess mit synthetischen Eingaben geprüft. Das ist mehr
-als die früheren Tests mit vorgegebenen Bestätigungsereignissen, aber noch kein
-Nachweis der gesamten Wohnung einschließlich Speicherung und Wiederaufnahme.
-**Der begrenzte M3/U-Softwareabschluss ist nicht „WE-1 komplett fertig“.**
+Die laufende Roboter-Arbeitskopie `/home/p/roboter_ws` blieb auf
+`feature/modulare-sensorfusion` (`00f6e521085b6cb0e38a62a029638d28195a544c`)
+mit ihren vorhandenen lokalen Änderungen unangetastet. Ihr `install/` enthält
+unter anderem Explorer, Kartenmanager und Semantikmanager, besitzt aber keinen
+commitgebundenen Installationsnachweis; daraus wird keine Gleichheit mit diesem
+WE-Stand behauptet.
 
-## 2. Referenzen und Nachweisgrenzen
+Reviewt wurde die gesamte gestapelte WE-Reihe gegen `origin/main`, nicht nur
+PR #92. Die Explorer-, Portal-, Regionsgraph-, Kartenmanager-, Semantik- und
+Testverträge wurden reproduziert. Zwei funktionskritische Befunde wurden behoben:
 
-| Referenz beim Dokumentationsabgleich | Bedeutung |
-|---|---|
-| [PR #91][pr91], `047455134894f700a115f6cea422479b99c702f6` | Neuester hier geprüfter funktionaler Stand, `feature/we-m3u-process-runtime-evidence`; PR offen, nicht gemerged. |
-| `main`: `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1` | Bisherige Main-Basis; die gestapelte WE-Reihe ist nicht automatisch darin enthalten. |
-| HWT: `1d91229dc10ff4bb791938d49aae8e9808a5dfff` | Separater erprobter Entwicklungszweig, keine pauschale Übernahmefreigabe. |
-| Ursprünglicher Dokumentationscommit `96cebee` | Historischer Planstart, nicht der heutige Fortschrittsstand. |
-| Lokale Jetson-Installation | Nur frühere Inventur im Archiv verfügbar; in diesem Dokumentationsauftrag nicht neu geprüft oder verändert. |
+- Eine neue Karte stornierte jedes aktive Ziel allein wegen ihrer Revisionsnummer.
+  Jetzt darf nur ein auf der neuen exakten Produktionsquelle identitäts- und
+  metrisch gleich bestätigtes Ziel weiterlaufen; geänderte, fehlende oder zu lange
+  ungeprüfte Evidenz storniert weiterhin.
+- Der natürliche Abschluss war nach bestätigter Durchfahrt durch dauerhaft
+  `unknown` bleibende Portalseiten blockiert. Ausschließlich eine vollständig
+  validierte Chassisdurchfahrt setzt beide Seiten auf `open`; ein Nav2-Erfolg allein
+  reicht weiterhin nicht.
 
-Quellen sind der [gepinnte M3/U-Status][oldstatus],
-[Projektgedächtnis][memory] und der [Prozessprüfer][smoke]. Die dortigen
-Softwaretestresultate sind **berichtete Nachweise**, in diesem
-Dokumentationsauftrag nicht erneut ausgeführte ROS-/Build-/Fahrtests.
-Bei späteren Änderungen zuerst den neueren Commit und dessen konkrete Evidenz
-prüfen; weder diesen Snapshot noch eine höhere PR-Nummer blind als Status benutzen.
+Ein kompletter `--packages-up-to`-Build bleibt auf diesem Review-PC durch die von
+`/opt/ros/humble` exportierte, lokal fehlende `behaviortree_cpp`-Bibliothek im
+Paket `bt_orchestrator` blockiert. Das ist ein Installations-/Underlaybefund,
+kein bestandener oder fehlgeschlagener WE-Pakettest. Das geänderte Paket `explore`
+wurde im isolierten Präfix erfolgreich gebaut und getestet.
 
-## 3. Aktueller Meilensteinstand
+## 2. Meilensteinstand
 
-| Stufe | Softwarestand | Verbleibende Grenze |
+| Stufe | Nachgewiesener Stand | Verbleibende Grenze |
 |---|---|---|
-| WE-D0 / WE-M0/A | Strategie und Bestandsprüfung dokumentiert. | Kein Deployment-/Hardwarebeleg; keine Wiederholung ohne neuen Befund. |
-| WE-M0/B | Historische Fahrbasis vorhanden. | Reproduzierbarer Zielsystemstand, Lastprüfung und gezielter Nachtest der Abschlusskorrektur offen. |
-| WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Nicht selbst eine Sensor- oder Hardwareabnahme. |
-| WE-M2 | Bis AT: Daten-/Struktur-/Frontierzuführung, Graph, Aufgaben und synthetischer Langlauf berichtet. | Neue M3-Monitoranbindung berücksichtigen; Zielsystem-/Gesamtnachweise noch offen. |
-| WE-M3 | **A bis U**: hierarchische Auswahl, Ziel-/Kindzielverwaltung, Resultate, Abschlussruntime, Portalmonitor und atomare Fortschreibung im Opt-in-Profil implementiert und im dokumentierten Umfang geprüft. | Vollständiger Mehrraum-Gesamtablauf mit fortlaufenden Kartenänderungen noch gesondert nachzuweisen; Zielprofil und Gesamtsicherheits-/SLAM-Last offen. |
-| WE-M4 | Reale Drei-Regionen-Abnahme geplant. | Arbeitszimmer → Flur → weiteres Zimmer → derselbe Flur; nicht durch einen synthetischen Einzelübergang erfüllt. |
-| WE-M5 | **WE-Persistenz/Wiederaufnahme noch geplant.** Vorhandene Kartenmanager sind Grundlage, kein fertiger WE-Speicher. | Schema, Kartenbindung, atomarer Save/Load, Restaufgaben und frische Wiederaufnahme gerätefrei umsetzen und prüfen. |
-| WE-M6 | Wiederholbarer Wohnungsabschluss nicht abgenommen. | Softwaregesamtkette und anschließend die bestehenden realen Abnahmekriterien erfüllen. |
-| WE-M7 | Ergänzende App-Transparenz und manuelle Benennung geplant. | Kein Blocker des geometrischen Kernziels; bestehende App-Verträge erhalten. |
+| WE-D0 / WE-M0/A | Strategie, Basisvergleich und Schnittstellenreview abgeschlossen. | Keine Wiederholung ohne neuen Befund. |
+| WE-M0/B | Frühere Fahrbasis dokumentiert. | Reproduzierbarer Zielsystem-/Laststand und freigegebener realer Nachtest offen. |
+| WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
+| WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
+| WE-M3 | **Gerätefreier Softwareumfang abgeschlossen:** automatische Zielwahl, revisionssichere Kindziele, Traversalfortschreibung und natürlicher Elternabschluss nachgewiesen. | Zielprofil, reale Last und Fahrwirkung nicht abgenommen. |
+| WE-M4 | Reale Drei-Regionen-Abnahme unverändert offen. | Neue Freigabe, Not-Aus, motorlose Vorprüfung und begrenzte Fahrt erforderlich. |
+| WE-M5 | **Gerätefrei abgeschlossen:** versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus. IDs, Graph, Restaufgaben und Blockaden bleiben erhalten; Semantikdaten werden nicht geschrieben. | Zielsystem-Dateisystem und reale Wiederaufnahme offen. |
+| WE-M6 | Software-Voraussetzungen zusammenhängend belegt. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt offen. |
+| WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
 
-Die alte M3-Tabellenangabe „A bis N“ und „Abschlussruntime fehlt“ ist durch den
-neueren M3/U-Bericht überholt. Ebenso gilt „keine Bewegungsbelegquelle angebunden“
-nicht mehr pauschal: Im **neuen Opt-in-Profil** ist der synthetisch geprüfte
-LiDAR-/TF-Monitor angebunden. Das ist keine Aussage über einen übernommenen
-HWT-Gesamtpfad oder die aktuell installierte Hardwarekette.
+## 3. Gerätefreie Gesamtnachweise
 
-## 4. Was M3/U konkret belegt – und was nicht
+Der Prozessprüfer startet den produktiven `ExploreNode` in einer isolierten
+ROS-Domain mit synthetischer Karte, TF/Scan und Fake-Nav2. Er publiziert auf den
+beobachteten Command-Topics keine Befehle.
 
-Der Prüfer startet den produktiven `ExploreNode` als eigenen Prozess in einer
-isolierten ROS-Domain. Synthetische Karten-/Statusrevisionen erzeugen automatisch
-Portalbestätigung, zwei Regionen und eine Portalaufgabe. Synthetische Scans und
-exakt zugeordnete TF-Posen laufen durch den konkreten LiDAR-Referenzmatcher.
-Die Durchfahrtsbestätigung wird dabei nicht als fertiges Monitorurteil injiziert.
-
-| Berichteter Versuch | Ergebnis |
+| Nachweis | Ergebnis |
 |---|---|
-| Positiver Portalübergang | Ein Nav2-Testziel, ein Eintritt, Portalaufgabe erledigt, null beobachtete Command-Nachrichten. |
-| Fehlende zeitlich passende TF-Daten | Ein Ziel, ein Cancel, kein Eintritt, Portalaufgabe offen, erklärter Abbruch, null beobachtete Command-Nachrichten. |
-| Quell-/Paketprüfung | 1053 Tests in der gemeinsamen Suite; separater temporärer Drei-Paket-Aufbau mit 875 Tests ohne Fehler, Fehlschläge oder Skips. Die Suiten überlappen und werden nicht addiert. |
+| Positiver Portalprozess | Ein automatisch gewähltes Nav2-Ziel, bestätigte Durchfahrt, atomarer Region-/Aufgabenfortschritt und **natürlicher erfolgreicher Elternabschluss**, kein Prüfer-Cancel. |
+| Fehlendes passendes TF | Kindziel wird storniert; kein Eintritt, Portalaufgabe offen, erklärter Fehlerabschluss. |
+| Unterbrechung/Wiederaufnahme | Expliziter Cancel → erfolgreicher Kartenmanager-Save → atomarer WE-Save → Prozessneustart → passives Laden ohne Ziel → neue Pose/Kartenrevision → neuer ausdrücklicher Auftrag → natürliche erfolgreiche Beendigung. Aufgaben-ID bleibt identisch. |
+| Mehrraum/Flurrückkehr | Produktionsdetektor und Traversierungsvalidator bilden Startraum → Flur → weiteres Zimmer; nach Save/Restore führt die Rückrichtung in `region_000002`, also denselben Flur, dessen Eintrittszähler auf zwei steigt. Zwei Portal- und drei Regions-IDs bleiben stabil. |
+| Frontierkette | Eine sich entwickelnde Rohkarte erzeugt automatisch einen Frontiercluster, stabile Aufgabe, Policyauswahl und metrischen Kandidaten; Fake-Nav2-Erfolg plus neuere vollständige Karte löst die Aufgabe über den Produktionsresolver. |
 
-**Grenzen:** Nav2, Karte, Kartenmanager, TF und Scans sind simuliert. Der
-Prozessversuch verwendet bekannte Raster ohne Frontiers; nach dem positiven
-Übergang beendet der Prüfer den Elternauftrag per Cancel. Er belegt daher keinen
-natürlichen vollständigen Mehrraumabschluss, keinen Rückweg durch mehrere Räume
-und keinen Save/Restart/Resume-Zyklus. Profilwerte sind synthetisch, keine
-vermessenen Chassis- oder Sicherheitswerte. Fehlende reale Commandausgabe in
-diesem Aufbau ist kein Not-Aus- oder Kollisionsnachweis.
+Die gemeinsame Regression bestand mit **1000 Tests**. `colcon test` für `explore`
+bestand separat mit **848 Tests, 0 Fehlern, 0 Fehlschlägen, 0 Skips**. Der
+Prozessprüfer bestand mit den Szenarien `positive`, `fault` und `resume`;
+alle meldeten `command_message_count: 0`. Die neuen/geänderten reinen Module,
+Tests und der Prüfer bestehen `ament_flake8` ohne Befund. Bestehende historische
+Stilfehler im großen `explore_node.py` wurden nicht als funktionale Änderung
+vermischt.
 
-## 5. Endliche Restarbeit innerhalb der bestehenden WE-Meilensteine
+## 4. WE-M5-Vertrag und Pflichtfälle
 
-Diese Liste bündelt Restanforderungen, sie eröffnet keine Parallelroadmap.
+WE-Metadaten liegen separat von unveränderlichen Kartenbytes und getrennt von
+`semantic_map_manager`-Raumdaten. Jede Revision bindet Kartenname, Version,
+Fingerprint, Breite, Höhe, Auflösung und Frame. Nur ein frischer, exakt zur
+aktuellen Karte passender Kartenmanagerstatus wird akzeptiert; Speichern verlangt
+zusätzlich ein erfolgreiches `save_result`.
 
-1. **Review und gemeinsame Softwarebasis:** Gestapelte Änderungen bis M3/U und
-   diesen Dokumentationsnachtrag prüfen, Abhängigkeiten/Regressionen zuordnen und
-   eine exakt bezeichnete isolierte Reviewbasis reproduzieren. Kein automatischer
-   Merge nach Main, kein pauschaler HWT-Merge und kein Wechsel der Roboterinstallation.
-2. **Mehrraum-Gesamtnachweis:** Vorhandenen Produktionspfad und Prüfer weiterverwenden.
-   Synthetische, sich entwickelnde Karten mit Frontiers, mehrere Portale,
-   Flurrückkehr und erklärten natürlichen Abschluss zusammen prüfen. Vorhandene
-   Einzelbelege zuordnen; nur fehlende Fälle ergänzen. Revisionswechsel während
-   aktiver Ziele müssen sowohl korrekte Invalidierung als auch begrenzten
-   Fortschritt zeigen. Nicht einfach Karte einfrieren oder Frischeprüfungen lockern.
-3. **WE-M5 gerätefrei schließen:** Vorhandene Karten-/Semantikverträge verwenden;
-   WE-IDs, Graph und offene Aufgaben passend zur gespeicherten Karte ablegen und
-   wiederherstellen. Historie bleibt erhalten, flüchtige Frische/Fahrberechtigungen
-   nicht. Laden startet keine Bewegung; Fortsetzung benötigt neue gültige Quellen
-   und einen neuen zulässigen Auftrag. Beschädigung, fremde Karte und unvollständige
-   Schreibvorgänge dürfen die letzte gültige Sicherung nicht zerstören.
-4. **Softwareabschluss zusammen nachweisen:** Den Mehrraumablauf mit Unterbrechung,
-   Speicherung, Neustart, erneuter Quellenprüfung und expliziter Fortsetzung
-   verbinden. Blockierter Rückweg, fehlende Quellen und Budgetende erzeugen
-   nachvollziehbaren Teilstand/Abbruch statt erfundener Vollständigkeit.
-5. **Danach Zielsystem und reale Abnahme:** Reproduzierbare Integration mit den
-   tatsächlich benötigten HWT-/Sensorfusionsanteilen, begründetes Zielprofil,
-   parallele SLAM-/Sicherheitslast, WE-M0/B und WE-M4/6 nach deren Freigaberegeln.
-   Offline-WE-M5 muss nicht auf eine vorgezogene Fahrt warten.
+Bestanden sind: Save/Load mit identischen Portal-/Regions-/Aufgaben-IDs,
+Fingerprint- und Geometriewiderspruch, veralteter Managerstatus, fremde Karte,
+beschädigte/abgebrochene Datei, unbekannte Schemaversion, Rückfall auf eine ältere
+gültige Revision, idempotentes doppeltes Save-Ereignis, Neustart ohne Pose,
+erhaltene blockierte Portalseite und unveränderte manuelle Semantikdatei. Laden
+erzeugt weder Absicht noch Navigationsziel. Fortsetzung erfolgt erst mit neuer
+gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
-Erwartete Szenarioereignisse sind Testorakel, keine Eingaben anstelle der zu
-prüfenden Produktionsentscheidung. Eindeutig simulierte Sensoren und Nav2 sind
-zulässig. Keine perfekte semantische Wohnungseinteilung, kein neuer Navigator,
-kein neues KI-Modell und kein großes zusätzliches Simulationsframework.
+## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-## 6. Noch zu prüfende Risiken ohne erfundene Erledigung
+Der vereinbarte **gerätefreie Softwareabschluss** ist erreicht. Offen sind keine
+weiteren allgemeinen WE-Softwareplanungsrunden, sondern getrennte Zielsystem- und
+Hardwaregates:
 
-- **Kartenrevisionen:** M3/U nennt mögliche laufende Zielabbrüche bei jeder
-  inhaltlich neuen Karte. Relevante Änderung, Frische und Fortschritt müssen
-  zusammen funktionieren; Zielprofil/Updatefrequenz nicht als gelöst behandeln.
-- **Installation und Last:** Gemischte alte Installationsanteile, HWT-Unterlay,
-  TF-Zukunftsextrapolationen und verpasste Controllerzyklen sind historische
-  Befunde. Keine neue Vor-Ort-Messung in diesem Auftrag; vor Hardwarebetrieb prüfen.
-- **Ältere offene Vertragsbefunde:** Die früher dokumentierte 2-s-Quellfrist bei
-  2-s-Statusperiode und der Kreis-/Polygon-Widerspruch eines Nahbereichstests
-  besitzen hier keinen belegten Abschluss. Im Review gezielt zuordnen: aktuellen
-  Fix nachweisen oder als offen führen. Keine Sicherheitskonfiguration passend
-  zu einem Test abschwächen.
-- **Regionskorrekturen:** Frühere Split-/Merge-Tests injizieren die Entscheidung.
-  Im aktuellen Produktionspfad belegen, welche Zuordnungs-/Korrekturfälle automatisch
-  behandelt werden und wo konservative Unsicherheit bleibt. Keine perfekte
-  Segmentierung fordern, aber auch keine verlorenen globalen Restaufgaben zulassen.
+1. Zielsystem-Underlay/Overlay commitgebunden neu bauen; die lokal fehlende
+   BehaviorTree.CPP-Bibliothek und die tatsächlich installierten Paketstände
+   klären. Keine alte Mischinstallation als Nachweis verwenden.
+2. Motorlos auf dem Zielsystem Topics, TF, Kartenmanager-Save/Load-Pfade,
+   Dateirechte, Speicherdauer/-grenzen und parallele SLAM-/Nav2-/Sicherheitslast
+   prüfen. Die historische 2-s-Quellfrist gegenüber der Statusperiode dort messen.
+3. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
+   Kollisionsüberwachung separat begründen und abnehmen; Softwaretests sind keine
+   Hardwarefreigabe.
+4. Erst nach ausdrücklicher Freigabe mit Not-Aus in Reichweite WE-M0/B und WE-M4
+   begrenzt fahren; anschließend WE-M6 wiederholt für den freigegebenen realen
+   Wohnungsumfang abnehmen.
 
-## 7. Fortschrittsschätzung für die Nutzerplanung
+Automatische Regions-Split-/Merge-Entscheidungen bleiben absichtlich konservativ;
+ungeklärte Korrekturen dürfen keinen erfundenen Raumabschluss erzeugen. Manuelle
+Raumnamen/-daten bleiben Eigentum des Semantikvertrags und werden durch WE-M5 nie
+überschrieben.
 
-**Ungefähr 65 % des WE-1-Kernziels insgesamt; ungefähr 75 % des gesamten
-Softwareumfangs.** Dies sind grobe fachliche Planungsschätzungen des
-Dokumentationsabgleichs, mit etwa ±10 Prozentpunkten Unsicherheit, keine Messwerte,
-keine aus Tests/PRs berechneten Quoten und keine Restzeitzusage. Bewertung: bereits
-arbeitende Kernlogik gegenüber offenem Gesamtablauf, Persistenz, Integration und
-realer Abnahme. Ein kleiner Rest kann erheblichen Debuggingaufwand verursachen.
+## 6. Rückfall und Nachweisgrenze
 
-100 % Kernziel heißt: alle im vereinbarten Umfang aktuell zugänglichen Bereiche
-systematisch erkunden, bekannte Rückwege nutzen, Restaufgaben ehrlich ausweisen,
-passend speichern/wiederaufnehmen und die bestehenden WE-M6-Abnahmekriterien
-wiederholt real erfüllen. Nicht gemeint: der ganze Roboter einschließlich Arm,
-Türöffnen, Ladestation oder optionale App-Komfortfunktionen. Die Prozentzahl ist
-kein Anlass, einen Meilenstein ohne dessen Belege abzuhaken.
+Rückfall: `wohnungserkundung_persistence_enabled: false` lässt den neuen
+Dateipfad vollständig unbenutzt; `wohnungserkundung_navigation_enabled: false`
+belässt die WE-Kette passiv. Der funktionale Commit kann als Ganzes zurückgenommen
+werden, ohne Karten- oder Semantikdateien zu löschen. Sichtbare gültige
+WE-Zustandsrevisionen werden nicht automatisch rotiert oder überschrieben.
 
-## 8. Dokumentationsentscheidung und nächster Auftrag
-
-**2026-09-15:** Kopf, Meilensteintabelle und offene Punkte auf die M3/U-Evidenz
-abgeglichen. Überholte Gegenwartsaussagen nicht als aktuelle Blocker fortführen.
-Der vollständige vorherige Status bleibt als identischer Git-Blob
-`6f07e2ae053847293edcce3825fe527f01b0d262` im Archiv; kein historisches Ergebnis
-wurde nachträglich auf bestanden gesetzt. Strategie und Abnahmekriterien bleiben
-unverändert. Der Auftrag änderte nur Dokumentation, nicht Produktionscode.
-
-Der [Folgeauftrag in Abschnitt 7 des Agentenauftrags](AGENTENAUFTRAG.md#7-folgeauftrag-softwareabschluss-ohne-geräte)
-beginnt mit Review der vorhandenen Kette und führt nach einem belegten Reviewgate
-zum begrenzten Mehrraum-/Persistenzpaket. Die Nutzerübergabe dieses Auftrags ist
-keine Hardware- oder automatische Mergefreigabe. Rückfall: nur diesen
-Dokumentationscommit zurücknehmen, nicht die funktionale M3/U-Basis.
-
-[pr91]: https://github.com/chris01-byte/Roboter_ws/pull/91
-[oldstatus]: https://github.com/chris01-byte/Roboter_ws/blob/047455134894f700a115f6cea422479b99c702f6/docs/wohnungserkundung/STATUS.md
-[memory]: https://github.com/chris01-byte/Roboter_ws/blob/047455134894f700a115f6cea422479b99c702f6/docs/PROJECT_MEMORY.md
-[smoke]: https://github.com/chris01-byte/Roboter_ws/blob/047455134894f700a115f6cea422479b99c702f6/tools/kartierung/wohnungserkundung_process_smoke.py
-[hwt]: https://github.com/chris01-byte/Roboter_ws/blob/1d91229dc10ff4bb791938d49aae8e9808a5dfff/docs/PROJECT_MEMORY.md
+Alle genannten Ergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2.
+Es wurden keine Geräte aktiviert, keine Fahrt ausgelöst, keine laufende
+Roboter-Arbeitskopie gewechselt, kein Deployment ausgeführt und keine reale
+Hardwareabnahme behauptet.

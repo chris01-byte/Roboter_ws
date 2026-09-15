@@ -544,6 +544,117 @@ class PortalMemory:
             and (side is None or update.side is side)
         )
 
+    def restore_snapshots(
+            self, portals: Tuple[PortalSnapshot, ...],
+            reachability: Tuple[ReachabilitySnapshot, ...], *,
+            map_revision: int) -> None:
+        """Restore bounded public state, rebound to one verified map epoch."""
+        if self._portals or self._latest_revision >= 0:
+            raise PortalMemoryError(
+                "Portalzustand darf nur in eine leere Sitzung geladen werden")
+        if not isinstance(portals, tuple) or any(
+                not isinstance(item, PortalSnapshot) for item in portals):
+            raise PortalMemoryError(
+                "portals muss ein Tupel aus PortalSnapshot sein")
+        if not isinstance(reachability, tuple) or any(
+                not isinstance(item, ReachabilitySnapshot)
+                for item in reachability):
+            raise PortalMemoryError(
+                "reachability muss ein Tupel aus ReachabilitySnapshot sein")
+        if len(portals) > self._policy.max_portals:
+            raise MemoryCapacityError(
+                "Gespeicherter Portalzustand ueberschreitet die Grenze")
+        _nonnegative_integer(map_revision, "map_revision")
+        next_number = 1
+        for item in portals:
+            _validate_identifier(item.portal_id, "portal_id")
+            try:
+                number = int(item.portal_id.removeprefix("portal_"))
+            except ValueError as error:
+                raise PortalMemoryError(
+                    "Gespeicherte Portal-ID ist ungueltig") from error
+            if item.portal_id != f"portal_{number:06d}" or number <= 0:
+                raise PortalMemoryError("Gespeicherte Portal-ID ist ungueltig")
+            if item.portal_id in self._portals:
+                raise PortalMemoryError("Gespeicherte Portal-ID ist doppelt")
+            counts = (
+                item.observation_count, item.evidence_count,
+                item.qualified_evidence_count,
+                item.confirmed_traversal_count)
+            if (
+                    not isinstance(item.side_a, Point2D)
+                    or not isinstance(item.side_b, Point2D)
+                    or any(isinstance(value, bool) or not isinstance(value, int)
+                           for value in counts)
+                    or item.observation_count <= 0
+                    or item.evidence_count <= 0
+                    or item.qualified_evidence_count < 0
+                    or item.qualified_evidence_count > item.evidence_count
+                    or item.confirmed_traversal_count < 0
+                    or item.observation_count > self._policy.max_observations
+                    or item.evidence_count > item.observation_count):
+                raise PortalMemoryError(
+                    "Gespeicherte Portalzaehler sind ungueltig")
+            if not isinstance(
+                    item.confirmation_state, PortalConfirmationState):
+                raise PortalMemoryError(
+                    "Gespeicherter Portalbestaetigungsstand ist ungueltig")
+            if (
+                    not isinstance(item.confirmed, bool)
+                    or item.confirmed is not (
+                        item.confirmation_state
+                        is PortalConfirmationState.CONFIRMED)):
+                raise PortalMemoryError(
+                    "Gespeicherter Portalbestaetigungsstand ist widerspruechlich")
+            qualified = set(range(item.qualified_evidence_count))
+            contradictory = set()
+            if item.confirmation_state is PortalConfirmationState.UNCERTAIN:
+                contradictory.add(max(qualified, default=-1) + 1)
+            state = _PortalState(
+                portal_id=item.portal_id,
+                side_a=item.side_a,
+                side_b=item.side_b,
+                anchor_uncertainty_m=0.0,
+                first_revision=map_revision,
+                last_revision=map_revision,
+                observation_count=item.observation_count,
+                evidence_revisions=set(range(item.evidence_count)),
+                qualified_evidence_revisions=qualified,
+                contradictory_evidence_revisions=contradictory,
+                confirmed_traversal_count=item.confirmed_traversal_count,
+            )
+            if self._confirmation_state(state) is not item.confirmation_state:
+                raise PortalMemoryError(
+                    "Gespeicherter Portalbestaetigungsstand ist widerspruechlich")
+            self._portals[item.portal_id] = state
+            next_number = max(next_number, number + 1)
+        expected_keys = {
+            (portal.portal_id, side)
+            for portal in portals for side in (PortalSide.A, PortalSide.B)}
+        actual_keys = {(item.portal_id, item.side) for item in reachability}
+        if actual_keys != expected_keys or len(actual_keys) != len(reachability):
+            raise PortalMemoryError(
+                "Gespeicherte Erreichbarkeit deckt Portalseiten nicht exakt ab")
+        for index, item in enumerate(reachability):
+            if item.state is ReachabilityState.UNKNOWN:
+                continue
+            update_id = item.update_id or f"restored-reachability-{index}"
+            update = ReachabilityUpdate(
+                update_id=update_id,
+                portal_id=item.portal_id,
+                side=item.side,
+                context=self._context,
+                map_revision=map_revision,
+                observed_at_ns=item.observed_at_ns or 0,
+                state=item.state,
+                reason=item.reason,
+                recheck_condition=item.recheck_condition,
+            )
+            self._reachability_updates[update_id] = update
+            self._current_reachability[(item.portal_id, item.side)] = update
+        self._next_portal_number = next_number
+        self._latest_revision = map_revision if portals else -1
+
     def observe(self, observation: PortalObservation) -> ObservationResult:
         """Associate one observation or report explicit ambiguity.
 

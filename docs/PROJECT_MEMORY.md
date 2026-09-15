@@ -17,6 +17,42 @@ Rückfallweg:
 
 ---
 
+## 2026-09-15 — WE-Softwarekette revisionssicher und passiv wiederaufnehmbar
+
+**Entscheidung:** WE-Ziele überleben neue Kartenrevisionen nur, wenn die neue
+exakte Produktionsauswertung dasselbe Ziel identitäts- und metrisch gleich erneut
+bestätigt. WE-Zustand wird nach einem erfolgreichen, passenden Kartenmanager-Save
+als eigene unveränderliche JSON-Revision gespeichert. Laden bleibt wirkungslos;
+Fortsetzung braucht frische Karte/Pose und einen neuen `ExploreArea`-Auftrag.
+
+**Grund / beobachtete Evidenz:** Zuvor stornierte jede neue Revisionsnummer ein
+aktives Ziel. Außerdem konnte ein grundsätzlich erfolgreicher Prozess nie
+natürlich abschließen, weil bestätigte Portale dauerhaft unbekannte Seiten
+behielten. Nach der Korrektur endete der echte Explorer-Prozess natürlich;
+Unterbrechung, atomarer Save, Neustart, passives Laden und ausdrückliche
+Fortsetzung endeten ebenfalls natürlich. Ein Produktionsdetektor-/Validatorfall
+behielt in Startraum → Flur → Zimmer → Flur dieselbe Flur-ID über Save/Restore.
+
+**Betroffene Dateien und Hardware:** Explorer-Laufzeit, reine Portal-/Frontier-/
+Graphzustände, neuer WE-Metadatenspeicher, Tests und Prozessprüfer. Keine
+Fahrparameter, Geräte, reale Karten, laufende Arbeitskopie oder Installation.
+
+**Teststatus:** 1000 gemeinsame Quelltests; 848 Explorer-Colcon-Tests; drei
+Prozessszenarien einschließlich natürlichem Abschluss und Wiederaufnahme;
+geänderte reine Module/Tests flake8-sauber. Voller Zielgraph-Build auf dem
+Review-PC durch fehlende systemweite `behaviortree_cpp`-Bibliothek blockiert.
+Keine Hardwareabnahme.
+
+**Offene Risiken:** Zielsystem-Build/Dateisystem, parallele reale Last,
+Chassis-/Portalprofil, Nahbereichsgeometrie sowie WE-M0/B, M4 und M6 bleiben
+gesonderte Abnahmen.
+
+**Rückfallweg:** Persistenz- und WE-Navigations-Opt-ins deaktivieren oder diesen
+funktionalen Commit zurücknehmen. Karten- und manuelle Semantikdaten werden vom
+WE-Speicher nicht überschrieben.
+
+---
+
 ## 2026-09-14 — WE-Portalfortschritt an echten Prozessbeleg gebunden
 
 **Entscheidung:** Das separat aktivierbare WE-Profil versendet Portalziele nur

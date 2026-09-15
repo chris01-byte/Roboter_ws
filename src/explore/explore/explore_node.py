@@ -39,6 +39,7 @@ import json
 import math
 import threading
 import time
+from pathlib import Path
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -103,6 +104,11 @@ from explore.exploration_completion import (
     TerminationCause,
     completion_from_termination,
 )
+from explore.exploration_persistence import (
+    ExplorationPersistenceError,
+    ExplorationStateRepository,
+    binding_from_map_manager_status,
+)
 from explore.exploration_child_goal import (
     current_goal_intent_from_assessments,
 )
@@ -116,7 +122,10 @@ from explore.frontier_task_evidence import (
     FrontierTaskEvidencePolicy,
     build_frontier_task_evidence,
 )
-from explore.frontier_goal_candidate import build_frontier_goal_candidate
+from explore.frontier_goal_candidate import (
+    FrontierGoalCandidate,
+    build_frontier_goal_candidate,
+)
 from explore.frontier_task_resolution import (
     FrontierTaskResolutionState,
     build_frontier_task_resolution_evidence,
@@ -857,6 +866,13 @@ class ExploreNode(Node):
         self._wohnungserkundung_navigation_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_navigation_enabled', False).value)
+        self._wohnungserkundung_persistence_enabled = bool(
+            self.declare_parameter(
+                'wohnungserkundung_persistence_enabled', False).value)
+        self._wohnungserkundung_persistence_directory = str(
+            self.declare_parameter(
+                'wohnungserkundung_persistence_directory',
+                '~/.local/share/amadeus/exploration_states').value).strip()
         self._wohnungserkundung_accessible_scope_verified = (
             self.declare_parameter(
                 'wohnungserkundung_accessible_scope_verified', False).value)
@@ -1303,6 +1319,7 @@ class ExploreNode(Node):
             self._wohnungserkundung_goal_cache = None
             self._wohnungserkundung_runtime_lock = threading.Lock()
             self._wohnungserkundung_navigation_snapshot = None
+            self._wohnungserkundung_policy_processed_revision = None
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
@@ -1317,6 +1334,15 @@ class ExploreNode(Node):
                 build_unavailable_we_status_extension(
                     'waiting_for_shadow_snapshot'))
             self._wohnungserkundung_policy_fault = None
+            self._wohnungserkundung_persistence_repository = None
+            self._wohnungserkundung_persistence_binding = None
+            self._wohnungserkundung_persistence_state = 'disabled'
+            if self._wohnungserkundung_persistence_enabled:
+                storage_path = Path(
+                    self._wohnungserkundung_persistence_directory).expanduser()
+                self._wohnungserkundung_persistence_repository = (
+                    ExplorationStateRepository(storage_path))
+                self._wohnungserkundung_persistence_state = 'waiting_for_map'
             # A later target-profile adapter must provide paired map-pose and
             # slip-resistant motion samples.  Without it portal dispatch is
             # impossible even when regular WE navigation is enabled.
@@ -1408,6 +1434,7 @@ class ExploreNode(Node):
             self._region_graph_shadow_latest_raw_map = None
             self._region_graph_shadow_latest_raw_source = None
             self._region_graph_shadow_latest_correlation = None
+            self._region_graph_shadow_latest_correlation_received_at = None
         if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
             self._region_graph_shadow_processed_correlation = None
             self._region_graph_shadow_portal_retry_count = 0
@@ -1442,7 +1469,7 @@ class ExploreNode(Node):
             'Passiver Regionsgraph-Schatten bleibt bis zum Neustart '
             f'deaktiviert ({self._region_graph_shadow_fault}).')
 
-    def _remember_shadow_raw_map_correlation(self, update):
+    def _remember_shadow_raw_map_correlation(self, update, received_at):
         """Retain at most one exact join result while holding the lock."""
         if not getattr(
                 self, '_region_graph_shadow_raw_event_feed',
@@ -1455,6 +1482,7 @@ class ExploreNode(Node):
         if correlation is None:
             return
         self._region_graph_shadow_latest_correlation = correlation
+        self._region_graph_shadow_latest_correlation_received_at = received_at
         if getattr(self, '_region_graph_shadow_connected_portal_feed', False):
             self._region_graph_shadow_portal_retry_count = 0
 
@@ -1757,11 +1785,51 @@ class ExploreNode(Node):
                 return
             received_at = time.monotonic()
             try:
+                binding = None
+                if getattr(
+                        self, '_wohnungserkundung_persistence_enabled', False):
+                    try:
+                        binding = binding_from_map_manager_status(msg.data)
+                    except ExplorationPersistenceError:
+                        binding = None
+                    if (
+                            binding is not None
+                            and self._region_graph_shadow.context is None
+                            and self._wohnungserkundung_persistence_binding
+                            is None):
+                        repository = (
+                            self._wohnungserkundung_persistence_repository)
+                        try:
+                            loaded = repository.load(binding)
+                        except ExplorationPersistenceError as load_error:
+                            version_directory = (
+                                repository.root / binding.name / binding.version)
+                            if version_directory.is_dir() and any(
+                                    version_directory.iterdir()):
+                                raise load_error
+                            self._wohnungserkundung_persistence_state = 'new'
+                        else:
+                            self._region_graph_shadow.prepare_persistent_restore(
+                                loaded.state)
+                            self._wohnungserkundung_persistence_state = 'loaded'
+                        self._wohnungserkundung_persistence_binding = binding
                 update = self._region_graph_shadow.accept_map_status_json(
                     msg.data,
                     received_monotonic_seconds=received_at,
                 )
-                self._remember_shadow_raw_map_correlation(update)
+                self._remember_shadow_raw_map_correlation(update, received_at)
+                if (
+                        binding is not None
+                        and json.loads(msg.data).get('event') == 'save_result'
+                        and json.loads(msg.data).get('ok') is True):
+                    save_binding = binding_from_map_manager_status(
+                        msg.data, require_successful_save_event=True)
+                    if self._region_graph_shadow.context is not None:
+                        self._wohnungserkundung_persistence_repository.save(
+                            save_binding,
+                            self._region_graph_shadow.persistent_state())
+                        self._wohnungserkundung_persistence_binding = save_binding
+                        self._wohnungserkundung_persistence_state = 'saved'
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Kartenstatus', error)
 
@@ -2173,9 +2241,25 @@ class ExploreNode(Node):
                     if traversal_status is not None:
                         extension['portal_traversal'] = dict(
                             traversal_status)
+                    if getattr(
+                            self, '_wohnungserkundung_persistence_enabled',
+                            False):
+                        persistence = {
+                            'state': self._wohnungserkundung_persistence_state,
+                        }
+                        binding = self._wohnungserkundung_persistence_binding
+                        if binding is not None:
+                            persistence.update({
+                                'map_name': binding.name,
+                                'map_version': binding.version,
+                                'map_fingerprint': binding.fingerprint,
+                            })
+                        extension['persistence'] = persistence
                     self._wohnungserkundung_status_extension = extension
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
+                    self._wohnungserkundung_policy_processed_revision = (
+                        status.source.source_map_revision)
                     self._wohnungserkundung_policy_snapshot = stateful
                     self._wohnungserkundung_policy_fault = None
 
@@ -2234,7 +2318,7 @@ class ExploreNode(Node):
                     source,
                     received_monotonic_seconds=received_at,
                 )
-                self._remember_shadow_raw_map_correlation(update)
+                self._remember_shadow_raw_map_correlation(update, received_at)
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Rohkarte', error)
 
@@ -4496,21 +4580,89 @@ class ExploreNode(Node):
 
     def _wohnungserkundung_source_state(
             self, intent, candidate) -> NavigationSourceState:
-        """Read whether the exact passive candidate source is still current."""
+        """Read whether current exact evidence still confirms the child goal.
+
+        A newer map revision is not by itself an invalidation.  During the
+        bounded status-timer hand-off it remains pending; afterwards the new
+        production candidate must confirm the same task and exact metric goal.
+        Any changed/withheld candidate still invalidates immediately.
+        """
         with self._region_graph_shadow_lock:
             correlation = self._region_graph_shadow_latest_correlation
+            received_at = getattr(
+                self, '_region_graph_shadow_latest_correlation_received_at',
+                None)
         if correlation is None:
             return NavigationSourceState(
                 intent.context, intent.map_revision, False)
-        current = (
+        exact_original = (
             correlation.context == intent.context
             and correlation.map_revision == intent.map_revision
             and correlation.fingerprint == candidate.source_fingerprint
             and correlation.source_stamp_ns == candidate.source_stamp_ns
             and correlation.context.frame_id == candidate.frame_id
         )
+        if exact_original:
+            return NavigationSourceState(
+                correlation.context, correlation.map_revision, True)
+        if (
+                correlation.context != intent.context
+                or correlation.map_revision < intent.map_revision
+                or correlation.context.frame_id != candidate.frame_id):
+            return NavigationSourceState(
+                correlation.context, correlation.map_revision, False)
+        with self._wohnungserkundung_runtime_lock:
+            processed_revision = getattr(
+                self, '_wohnungserkundung_policy_processed_revision', None)
+            snapshot = self._wohnungserkundung_navigation_snapshot
+        if processed_revision is None or processed_revision < (
+                correlation.map_revision):
+            pending = (
+                received_at is not None
+                and 0.0 <= time.monotonic() - received_at <= 1.25)
+            return NavigationSourceState(
+                correlation.context,
+                intent.map_revision if pending else correlation.map_revision,
+                pending,
+            )
+        current = (
+            snapshot is not None
+            and snapshot[1].map_revision == correlation.map_revision
+            and self._wohnungserkundung_same_metric_goal(
+                candidate, snapshot[1])
+        )
         return NavigationSourceState(
             correlation.context, correlation.map_revision, current)
+
+    @staticmethod
+    def _wohnungserkundung_same_metric_goal(previous, current):
+        """Require stable identity and bit-close metric goal across revisions."""
+        if type(previous) is not type(current):
+            return False
+        common = (
+            previous.task_id == current.task_id
+            and previous.region_id == current.region_id
+            and previous.frame_id == current.frame_id
+            and math.isclose(
+                previous.target_x_m, current.target_x_m,
+                rel_tol=0.0, abs_tol=1e-9)
+            and math.isclose(
+                previous.target_y_m, current.target_y_m,
+                rel_tol=0.0, abs_tol=1e-9)
+            and math.isclose(
+                previous.target_yaw_rad, current.target_yaw_rad,
+                rel_tol=0.0, abs_tol=1e-9)
+        )
+        if isinstance(previous, FrontierGoalCandidate):
+            return common and previous.frontier_id == current.frontier_id
+        if isinstance(previous, PortalGoalCandidate):
+            return (
+                common
+                and previous.portal_id == current.portal_id
+                and previous.direction is current.direction
+                and previous.scope_id == current.scope_id
+                and previous.scope_fingerprint == current.scope_fingerprint)
+        return False
 
     def _current_wohnungserkundung_navigation_target(self):
         """Return one atomic unconsumed preview only while its source matches."""

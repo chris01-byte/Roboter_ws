@@ -940,6 +940,9 @@ def test_region_graph_shadow_is_disabled_and_separate_by_default():
         '/explore/region_graph/status_json')
     assert parameters['wohnungserkundung_policy_enabled'] is False
     assert parameters['wohnungserkundung_navigation_enabled'] is False
+    assert parameters['wohnungserkundung_persistence_enabled'] is False
+    assert parameters['wohnungserkundung_persistence_directory'] == (
+        '~/.local/share/amadeus/exploration_states')
     assert parameters['wohnungserkundung_accessible_scope_verified'] is False
     assert 'wohnungserkundung_scope_polygon_xy' not in parameters
     assert parameters['wohnungserkundung_completion_required_revisions'] == 3

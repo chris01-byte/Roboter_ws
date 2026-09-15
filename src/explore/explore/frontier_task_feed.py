@@ -353,3 +353,51 @@ class FrontierTaskTracker:
             for track in sorted(
                 self._tracks.values(), key=lambda item: item.frontier_id)
         )
+
+    def restore_tracks(
+            self, tracks: Tuple[FrontierTrackSnapshot, ...], *,
+            map_revision: int) -> None:
+        """Restore one validated, map-rebound snapshot without inventing work."""
+        if self._tracks or self._latest_revision is not None:
+            raise FrontierTaskFeedError(
+                "Frontierzustand darf nur in eine leere Sitzung geladen werden")
+        if not isinstance(tracks, tuple) or any(
+                not isinstance(item, FrontierTrackSnapshot) for item in tracks):
+            raise FrontierTaskFeedError(
+                "tracks muss ein Tupel aus FrontierTrackSnapshot sein")
+        if len(tracks) > self._policy.max_frontiers:
+            raise FrontierTaskFeedCapacityError(
+                "Gespeicherter Frontierzustand ueberschreitet die Grenze")
+        if len({item.frontier_id for item in tracks}) != len(tracks):
+            raise FrontierTaskFeedError("Gespeicherte Frontier-IDs sind doppelt")
+        _positive_integer(map_revision + 1, "map_revision_plus_one")
+        next_number = 1
+        for item in tracks:
+            if (
+                    not isinstance(item.centroid, Point2D)
+                    or isinstance(item.observation_count, bool)
+                    or not isinstance(item.observation_count, int)
+                    or isinstance(item.size_cells, bool)
+                    or not isinstance(item.size_cells, int)
+                    or item.observation_count <= 0 or item.size_cells <= 0):
+                raise FrontierTaskFeedError(
+                    "Gespeicherter Frontierzaehler ist ungueltig")
+            try:
+                number = int(item.frontier_id.removeprefix("frontier_"))
+            except ValueError as error:
+                raise FrontierTaskFeedError(
+                    "Gespeicherte Frontier-ID ist ungueltig") from error
+            if item.frontier_id != f"frontier_{number:06d}" or number <= 0:
+                raise FrontierTaskFeedError(
+                    "Gespeicherte Frontier-ID ist ungueltig")
+            next_number = max(next_number, number + 1)
+            self._tracks[item.frontier_id] = _FrontierTrack(
+                frontier_id=item.frontier_id,
+                centroid=item.centroid,
+                size_cells=item.size_cells,
+                first_revision=map_revision,
+                last_revision=map_revision,
+                observation_count=item.observation_count,
+            )
+        self._next_frontier_number = next_number
+        self._latest_revision = map_revision if tracks else None

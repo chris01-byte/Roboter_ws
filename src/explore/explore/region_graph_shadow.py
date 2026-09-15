@@ -35,6 +35,12 @@ from .portal_memory import (
     PortalObservation,
     PortalObservationInventory,
     PortalSnapshot,
+    Point2D,
+    PortalSide,
+    ReachabilitySnapshot,
+    ReachabilityState,
+    ReachabilityUpdate,
+    ReachabilityResult,
     StaleObservationError,
     TraversalEvent,
     TraversalResult,
@@ -49,6 +55,7 @@ from .region_graph import (
     PortalLinkObservation,
     PortalLinkResult,
     RegionGraph,
+    RegionGraphSnapshot,
     RegionGraphPolicy,
     RegionExplorationState,
     RegionExplorationUpdate,
@@ -58,6 +65,9 @@ from .region_graph import (
     RegionTaskResult,
     RegionTaskState,
     RegionTaskUpdate,
+    RegionSnapshot,
+    PortalConnectionSnapshot,
+    RegionTaskSnapshot,
 )
 from .region_graph_status import (
     ShadowStatusPolicy,
@@ -190,6 +200,212 @@ class RegionGraphShadowSession:
         """Return immutable canonical portals for a runtime evidence adapter."""
         return self._portal_memory.snapshots()
 
+    def persistent_state(self) -> dict:
+        """Return bounded JSON-ready WE state; no map or manual room data."""
+        graph = self._region_graph.snapshot()
+        return {
+            "state_schema": 1,
+            "graph": {
+                "current_region_id": graph.current_region_id,
+                "regions": [
+                    {
+                        "region_id": item.region_id,
+                        "seen": item.seen,
+                        "entered": item.entered,
+                        "entry_count": item.entry_count,
+                        "portal_ids": list(item.portal_ids),
+                        "alias_ids": list(item.alias_ids),
+                        "task_ids": list(item.task_ids),
+                        "exploration_state": item.exploration_state.value,
+                        "exploration_reason": item.exploration_reason,
+                        "exploration_revision_present": (
+                            item.exploration_revision is not None),
+                    } for item in graph.regions
+                ],
+                "connections": [
+                    {
+                        "portal_id": item.portal_id,
+                        "side_a_region_id": item.side_a_region_id,
+                        "side_b_region_id": item.side_b_region_id,
+                    } for item in graph.connections
+                ],
+                "aliases": [list(item) for item in graph.region_aliases],
+                "tasks": [
+                    {
+                        "task_id": item.task_id,
+                        "region_id": item.region_id,
+                        "kind": item.kind.value,
+                        "subject_id": item.subject_id,
+                        "state": item.state.value,
+                    } for item in graph.tasks
+                ],
+            },
+            "portals": [
+                {
+                    "portal_id": item.portal_id,
+                    "side_a": [item.side_a.x, item.side_a.y],
+                    "side_b": [item.side_b.x, item.side_b.y],
+                    "observation_count": item.observation_count,
+                    "evidence_count": item.evidence_count,
+                    "qualified_evidence_count": item.qualified_evidence_count,
+                    "confirmation_state": item.confirmation_state.value,
+                    "confirmed_traversal_count": (
+                        item.confirmed_traversal_count),
+                } for item in self._portal_memory.snapshots()
+            ],
+            "reachability": [
+                {
+                    "portal_id": item.portal_id,
+                    "side": item.side.value,
+                    "state": item.state.value,
+                    "reason": item.reason,
+                    "recheck_condition": item.recheck_condition,
+                    "observed_at_ns": item.observed_at_ns,
+                    "update_id": item.update_id,
+                } for item in self._portal_memory.reachability_snapshots()
+            ],
+            "frontiers": [
+                {
+                    "frontier_id": item.frontier_id,
+                    "centroid": [item.centroid.x, item.centroid.y],
+                    "size_cells": item.size_cells,
+                    "observation_count": item.observation_count,
+                } for item in self._frontier_tasks.tracks()
+            ],
+        }
+
+    @classmethod
+    def restore_persistent_state(
+            cls, initial_map_status: MapStatusCorrelationResult,
+            start_seed: RegionSeed, payload: dict, **policies):
+        """Validate and restore WE state on the exact verified saved map."""
+        if not isinstance(payload, dict) or payload.get("state_schema") != 1:
+            raise RegionGraphShadowError(
+                "Gespeicherter WE-Zustand besitzt kein bekanntes Schema")
+        if set(payload) != {
+                "state_schema", "graph", "portals", "reachability",
+                "frontiers"}:
+            raise RegionGraphShadowError(
+                "Gespeicherter WE-Zustand besitzt unerwartete Felder")
+        context = initial_map_status.context
+        revision = initial_map_status.map_revision
+        try:
+            portals = tuple(PortalSnapshot(
+                portal_id=item["portal_id"],
+                side_a=Point2D(*item["side_a"]),
+                side_b=Point2D(*item["side_b"]),
+                first_revision=revision,
+                last_revision=revision,
+                observation_count=item["observation_count"],
+                evidence_count=item["evidence_count"],
+                qualified_evidence_count=item["qualified_evidence_count"],
+                confirmation_state=PortalConfirmationState(
+                    item["confirmation_state"]),
+                confirmed=(item["confirmation_state"] == "confirmed"),
+                confirmed_traversal_count=item["confirmed_traversal_count"],
+            ) for item in payload["portals"])
+            reachability = tuple(ReachabilitySnapshot(
+                portal_id=item["portal_id"],
+                side=PortalSide(item["side"]),
+                state=ReachabilityState(item["state"]),
+                reason=item["reason"],
+                recheck_condition=item["recheck_condition"],
+                map_revision=(
+                    None if item["state"] == "unknown" else revision),
+                observed_at_ns=item["observed_at_ns"],
+                update_id=item["update_id"],
+            ) for item in payload["reachability"])
+            frontiers = tuple(FrontierTrackSnapshot(
+                frontier_id=item["frontier_id"],
+                centroid=Point2D(*item["centroid"]),
+                size_cells=item["size_cells"],
+                first_revision=revision,
+                last_revision=revision,
+                observation_count=item["observation_count"],
+            ) for item in payload["frontiers"])
+            graph_payload = payload["graph"]
+            regions = tuple(RegionSnapshot(
+                region_id=item["region_id"],
+                first_revision=revision,
+                last_revision=revision,
+                seen=item["seen"],
+                entered=item["entered"],
+                entry_count=item["entry_count"],
+                portal_ids=tuple(item["portal_ids"]),
+                alias_ids=tuple(item["alias_ids"]),
+                task_ids=tuple(item["task_ids"]),
+                exploration_state=RegionExplorationState(
+                    item["exploration_state"]),
+                exploration_reason=item["exploration_reason"],
+                exploration_revision=(
+                    revision if item["exploration_revision_present"]
+                    else None),
+            ) for item in graph_payload["regions"])
+            connections = tuple(PortalConnectionSnapshot(
+                portal_id=item["portal_id"],
+                side_a_region_id=item["side_a_region_id"],
+                side_b_region_id=item["side_b_region_id"],
+                first_revision=revision,
+                last_revision=revision,
+                internal=(
+                    item["side_a_region_id"] == item["side_b_region_id"]),
+            ) for item in graph_payload["connections"])
+            tasks = tuple(RegionTaskSnapshot(
+                task_id=item["task_id"],
+                region_id=item["region_id"],
+                kind=RegionTaskKind(item["kind"]),
+                subject_id=item["subject_id"],
+                state=RegionTaskState(item["state"]),
+                created_revision=revision,
+                last_revision=revision,
+            ) for item in graph_payload["tasks"])
+            aliases = tuple(tuple(item) for item in graph_payload["aliases"])
+            graph = RegionGraphSnapshot(
+                context=context,
+                latest_revision=revision,
+                current_region_id=graph_payload["current_region_id"],
+                regions=regions,
+                connections=connections,
+                confirmed_entry_count=sum(item.entry_count for item in regions),
+                region_aliases=aliases,
+                tasks=tasks,
+                open_task_count=sum(
+                    item.state is RegionTaskState.OPEN for item in tasks),
+                completed_task_count=sum(
+                    item.state is RegionTaskState.COMPLETED for item in tasks),
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise RegionGraphShadowError(
+                "Gespeicherter WE-Zustand ist ungueltig") from error
+        restored = cls(initial_map_status, start_seed, **policies)
+        restored._portal_memory = PortalMemory(
+            context, policies.get("portal_policy"))
+        restored._portal_memory.restore_snapshots(
+            portals, reachability, map_revision=revision)
+        restored._frontier_tasks = FrontierTaskTracker(
+            context, policy=policies.get("frontier_policy"))
+        restored._frontier_tasks.restore_tracks(
+            frontiers, map_revision=revision)
+        restored._region_graph = RegionGraph(
+            context, policies.get("graph_policy"))
+        restored._region_graph.restore_snapshot(graph, map_revision=revision)
+        restored._portal_inventory_revision = revision if portals else None
+        restored._last_portal_inventory = None
+        restored._start_result = RegionStartResult(
+            region_id=graph.current_region_id)
+        if set(item.portal_id for item in portals) != set(
+                item.portal_id for item in connections):
+            raise RegionGraphShadowError(
+                "Gespeicherte Portale und Graphverbindungen widersprechen sich")
+        frontier_ids = {item.frontier_id for item in frontiers}
+        task_frontier_ids = {
+            item.subject_id for item in tasks
+            if item.kind is RegionTaskKind.FRONTIER}
+        if not task_frontier_ids.issubset(frontier_ids):
+            raise RegionGraphShadowError(
+                "Gespeicherte Frontieraufgabe besitzt keine stabile ID")
+        return restored
+
     def _latest_event_revision(self) -> int:
         revisions = [self._region_graph.latest_revision]
         if self._portal_memory.latest_revision is not None:
@@ -234,6 +450,11 @@ class RegionGraphShadowSession:
         self._portal_memory = memory
         self._region_graph = graph
         return result
+
+    def update_portal_reachability(
+            self, update: ReachabilityUpdate) -> ReachabilityResult:
+        """Store one external side verdict without changing topology."""
+        return self._portal_memory.update_reachability(update)
 
     def _apply_structural_portal(
             self, memory: PortalMemory, graph: RegionGraph,
@@ -470,6 +691,20 @@ class RegionGraphShadowSession:
         memory = deepcopy(self._portal_memory)
         graph = deepcopy(self._region_graph)
         memory_result = memory.record_traversal(event)
+        if event.crossing_confirmed and not memory_result.duplicate:
+            for side in (PortalSide.A, PortalSide.B):
+                memory.update_reachability(ReachabilityUpdate(
+                    update_id=_derived_id(
+                        "traversal-open", event.event_id, side.value),
+                    portal_id=event.portal_id,
+                    side=side,
+                    context=self._context,
+                    map_revision=event.map_revision,
+                    observed_at_ns=event.event_time_ns,
+                    state=ReachabilityState.OPEN,
+                    reason="validated_full_chassis_traversal",
+                    recheck_condition="fresh_route_evidence_required",
+                ))
         graph_result = graph.record_traversal(event)
         task_result = None
         portal_task_id = f"task-portal-{event.portal_id}"
