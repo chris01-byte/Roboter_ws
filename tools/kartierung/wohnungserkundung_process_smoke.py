@@ -92,15 +92,15 @@ def _map_message(node, revision):
     return message
 
 
-def _map_status(message, revision):
+def _map_status(message, revision, *, event="status", saved=None):
     stamp_ns = (
         int(message.header.stamp.sec) * 1_000_000_000
         + int(message.header.stamp.nanosec)
     )
     wire_resolution = float(np.float32(message.info.resolution))
-    return {
+    payload = {
         "schema_version": 1,
-        "event": "status",
+        "event": event,
         "ok": True,
         "message": "Synthetischer WE-M3/U-Kartenstatus.",
         "time": time.time(),
@@ -122,9 +122,12 @@ def _map_status(message, revision):
             },
         },
         "pose": {"available": False},
-        "storage": {"root": "/not-used"},
+        "storage": {"root": "/not-used", "last_saved": saved},
         "counters": {"accepted_maps": revision, "duplicate_maps": 0},
     }
+    if event == "save_result":
+        payload.update({"command": "save", "saved": saved})
+    return payload
 
 
 def _box_ranges(x_m, y_m, count=720):
@@ -155,7 +158,7 @@ def _box_ranges(x_m, y_m, count=720):
 
 
 class SyntheticWorld(Node):
-    def __init__(self, scenario):
+    def __init__(self, scenario, persistence_directory=None):
         super().__init__(f"we_m3u_world_{scenario}")
         self.scenario = scenario
         prefix = f"/we_m3u/{scenario}"
@@ -175,6 +178,9 @@ class SyntheticWorld(Node):
         self.nav_cancel_count = 0
         self.nav_goal_received = threading.Event()
         self.nav_release = threading.Event()
+        self.persistence_directory = persistence_directory
+        self.last_saved = None
+        self.last_map_message = None
         self._qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
@@ -251,7 +257,9 @@ class SyntheticWorld(Node):
 
     def publish_revision(self, revision):
         message = _map_message(self, revision)
-        status = String(data=json.dumps(_map_status(message, revision)))
+        self.last_map_message = message
+        status = String(data=json.dumps(_map_status(
+            message, revision, saved=self.last_saved)))
         self._map_pub.publish(message)
         self._costmap_pub.publish(message)
         # Exercise both arrival orders and allow the child executor to retain
@@ -260,6 +268,27 @@ class SyntheticWorld(Node):
         self._map_status_pub.publish(status)
         time.sleep(0.10)
         self._map_status_pub.publish(status)
+
+    def publish_save_result(self, revision):
+        message = self.last_map_message
+        if message is None:
+            raise RuntimeError("Speichern braucht eine zuvor publizierte Karte")
+        wire_resolution = float(np.float32(message.info.resolution))
+        self.last_saved = {
+            "name": "wohnung", "version": "20260915T120000Z-we-resume",
+            "path": "/synthetic/maps/wohnung/we-resume",
+            "saved_at": "2026-09-15T12:00:00Z",
+            "width": WIDTH, "height": HEIGHT,
+            "resolution": wire_resolution, "frame_id": "map",
+            "fingerprint": _fingerprint(
+                message.data, resolution=wire_resolution),
+            "durability_warning": None,
+        }
+        self._map_pub.publish(message)
+        self._costmap_pub.publish(message)
+        time.sleep(0.10)
+        self._map_status_pub.publish(String(data=json.dumps(_map_status(
+            message, revision, event="save_result", saved=self.last_saved))))
 
     def publish_pose_scan(self, x_m, *, publish_transform=True):
         stamp = self.get_clock().now().to_msg()
@@ -306,7 +335,7 @@ class SyntheticWorld(Node):
         self.wait_for(ready, timeout, "Portalzielkandidat")
         return self.latest_explore["wohnungserkundung"]["goal_candidate"]
 
-    def send_explore_goal(self, timeout_s=15.0):
+    def send_explore_goal(self, timeout_s=30.0):
         if not self._explore_client.wait_for_server(timeout_sec=8.0):
             raise RuntimeError("ExploreArea-Server fehlt")
         goal = ExploreArea.Goal()
@@ -335,7 +364,7 @@ def _parameter_text(world):
         "return_to_start": False,
         "replan_period_s": 0.05,
         "goal_timeout_s": 10.0,
-        "overall_timeout_s": 15.0,
+        "overall_timeout_s": 30.0,
         "nav_cancel_timeout_s": 1.5,
         "max_frontier_goals": 2,
         "map_timeout_s": 30.0,
@@ -366,6 +395,12 @@ def _parameter_text(world):
         "region_graph_shadow_status_topic": world.shadow_status_topic,
         "wohnungserkundung_policy_enabled": True,
         "wohnungserkundung_navigation_enabled": True,
+        "wohnungserkundung_persistence_enabled": (
+            world.persistence_directory is not None),
+        "wohnungserkundung_persistence_directory": (
+            str(world.persistence_directory)
+            if world.persistence_directory is not None
+            else "/tmp/we-m3u-persistence-disabled"),
         "wohnungserkundung_accessible_scope_verified": True,
         "wohnungserkundung_scope_id": f"scope-m3u-{world.scenario}",
         "wohnungserkundung_scope_polygon_xy": [
@@ -443,7 +478,9 @@ def _stop_explorer(process, log_handle, parameter_path):
 
 def _feed_portal_chain(world):
     world.publish_pose_scan(1.025)
-    for revision in (7, 8, 9):
+    # One fresh revision after portal-task creation separates the later
+    # traversal verdict from the graph mutation that opened the task.
+    for revision in (7, 8, 9, 10):
         world.publish_revision(revision)
         time.sleep(1.25)
     return world.wait_for_candidate()
@@ -499,11 +536,28 @@ def _run_scenario(executor, scenario, log_directory):
                 5.0,
                 "atomare Raum-/Aufgabenfortschreibung",
             )
-            cancel_future = explore_handle.cancel_goal_async()
-            world.wait_for(cancel_future.done, 3.0, "ExploreArea-Abbruch")
+            # A positive parent result must arise from the production
+            # completion window, never from canceling the checker-owned goal.
+            for revision in (11, 12, 13, 14, 15, 16):
+                world.publish_pose_scan(end_x)
+                world.publish_revision(revision)
+                if explore_result.done():
+                    break
+                time.sleep(0.70)
+            world.wait_for(
+                explore_result.done, 8.0,
+                "natuerlicher ExploreArea-Gesamtabschluss")
+            action_result = explore_result.result()
+            if (
+                    action_result is None
+                    or action_result.status != 4
+                    or not action_result.result.success):
+                raise AssertionError(
+                    f"kein natuerlicher positiver Abschluss: {action_result}")
             result = {
                 "scenario": scenario,
                 "portal_traversal": "confirmed",
+                "parent_result": "natural_success",
                 "completed_task_count": world.latest_shadow["summary"][
                     "completed_task_count"],
                 "confirmed_entry_count": world.latest_shadow["summary"][
@@ -588,6 +642,104 @@ def _run_scenario(executor, scenario, log_directory):
         world.destroy_node()
 
 
+def _run_resume_scenario(executor, log_directory, persistence_directory):
+    """Interrupt, save, restart, wait for pose/order, then finish naturally."""
+    world = SyntheticWorld("resume", persistence_directory)
+    executor.add_node(world)
+    processes = []
+
+    def start(label):
+        started = _start_explorer(world, log_directory / f"resume-{label}.log")
+        processes.append(started)
+        return started
+
+    first = start("before")
+    try:
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0, "erster Explorer-Prozessstart")
+        candidate = _feed_portal_chain(world)
+        target_x = float(candidate["target"]["x_m"])
+        start_x = max(0.5, target_x - 1.60)
+        world.publish_pose_scan(start_x)
+        first_handle, first_result = world.send_explore_goal()
+        world.wait_for(world.nav_goal_received.is_set, 8.0, "erstes Kindziel")
+        canceled = first_handle.cancel_goal_async()
+        world.wait_for(canceled.done, 4.0, "explizite Unterbrechung")
+        world.wait_for(first_result.done, 5.0, "unterbrochenes Elternergebnis")
+        world.publish_save_result(10)
+        world.wait_for(
+            lambda: bool(list(Path(persistence_directory).rglob(
+                "state-*.json"))),
+            5.0, "atomare WE-Zustandsspeicherung")
+        _stop_explorer(*first)
+
+        world.nav_goal_received.clear()
+        world.nav_release.clear()
+        goals_before_restart = world.nav_goal_count
+        start("after")
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0, "zweiter Explorer-Prozessstart")
+        # The transient save status loads state, but neither load nor a missing
+        # pose creates a child goal.  A new explicit ExploreArea goal follows.
+        time.sleep(1.5)
+        if world.nav_goal_count != goals_before_restart:
+            raise AssertionError("Laden startete unerlaubt ein Navigationsziel")
+        world.publish_pose_scan(start_x)
+        world.publish_revision(11)
+        resumed_candidate = world.wait_for_candidate()
+        if resumed_candidate.get("task_id") != candidate.get("task_id"):
+            raise AssertionError("Restaufgaben-ID ging beim Neustart verloren")
+        resumed_handle, resumed_result = world.send_explore_goal()
+        world.wait_for(world.nav_goal_received.is_set, 8.0, "fortgesetztes Kindziel")
+        end_x = min(4.7, target_x + 0.45)
+        distance = end_x - start_x
+        steps = max(24, int(math.ceil(distance / 0.04)))
+        for index in range(steps + 1):
+            world.publish_pose_scan(start_x + distance * index / steps)
+            time.sleep(0.055)
+        world.nav_release.set()
+        world.wait_for(
+            lambda: (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get(
+                    "portal_traversal", {}).get("state") == "confirmed",
+            8.0, "fortgesetzte bestaetigte Durchfahrt")
+        for revision in range(12, 20):
+            world.publish_pose_scan(end_x)
+            world.publish_revision(revision)
+            if resumed_result.done():
+                break
+            time.sleep(0.70)
+        world.wait_for(
+            resumed_result.done, 8.0, "natuerlicher Abschluss nach Neustart")
+        action_result = resumed_result.result()
+        if (
+                action_result is None or action_result.status != 4
+                or not action_result.result.success):
+            raise AssertionError(
+                f"Fortsetzung endete nicht erfolgreich: {action_result}")
+        return {
+            "scenario": "resume",
+            "interruption": "explicit_cancel",
+            "saved_versions": len(list(Path(persistence_directory).rglob(
+                "state-*.json"))),
+            "load_started_navigation": False,
+            "pose_revalidated": True,
+            "continuation_order": "new_explicit_explore_area_goal",
+            "task_id_preserved": resumed_candidate["task_id"],
+            "parent_result": "natural_success",
+            "nav_goal_count": world.nav_goal_count,
+            "command_message_count": world.command_count,
+        }
+    finally:
+        for process, handle, parameter in processes:
+            if process.poll() is None:
+                _stop_explorer(process, handle, parameter)
+        executor.remove_node(world)
+        world.destroy_node()
+
+
 def main():
     rclpy.init()
     executor = MultiThreadedExecutor(num_threads=6)
@@ -600,6 +752,8 @@ def main():
                 _run_scenario(executor, scenario, log_directory)
                 for scenario in ("positive", "fault")
             ]
+            results.append(_run_resume_scenario(
+                executor, log_directory, log_directory / "we-state"))
         print(json.dumps({
             "ros_domain_id": os.environ["ROS_DOMAIN_ID"],
             "scenarios": results,

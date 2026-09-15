@@ -1129,6 +1129,129 @@ class RegionGraph:
                 for task in self._tasks.values()),
         )
 
+    def restore_snapshot(
+            self, snapshot: RegionGraphSnapshot, *, map_revision: int) -> None:
+        """Restore validated topology and remaining tasks at a new revision."""
+        if self._regions or self._latest_revision >= 0:
+            raise RegionGraphError(
+                "Graphzustand darf nur in einen leeren Graph geladen werden")
+        if not isinstance(snapshot, RegionGraphSnapshot):
+            raise RegionGraphError("snapshot muss RegionGraphSnapshot sein")
+        if snapshot.context != self._context:
+            raise RegionContextMismatchError(
+                "Gespeicherter Graph passt nicht zum Kartenkontext")
+        _revision(map_revision)
+        if len(snapshot.regions) > self._policy.max_regions:
+            raise RegionGraphCapacityError("Gespeicherter Graph ist zu gross")
+        if (
+                not isinstance(snapshot.regions, tuple)
+                or not isinstance(snapshot.connections, tuple)
+                or not isinstance(snapshot.tasks, tuple)
+                or not isinstance(snapshot.region_aliases, tuple)
+                or len(snapshot.connections) > self._policy.max_connections
+                or len(snapshot.tasks) > self._policy.max_tasks):
+            raise RegionGraphCapacityError(
+                "Gespeicherter Graph ueberschreitet eine Strukturgrenze")
+        region_ids = {item.region_id for item in snapshot.regions}
+        if len(region_ids) != len(snapshot.regions) or not region_ids:
+            raise RegionGraphError("Gespeicherte Regionen sind leer oder doppelt")
+        if snapshot.current_region_id not in region_ids:
+            raise RegionGraphError("Gespeicherte aktuelle Region fehlt")
+        for item in snapshot.regions:
+            _identifier(item.region_id, "region_id")
+            if (
+                    not isinstance(item.seen, bool)
+                    or not isinstance(item.entered, bool)
+                    or isinstance(item.entry_count, bool)
+                    or not isinstance(item.entry_count, int)
+                    or item.entry_count < 0
+                    or not isinstance(item.portal_ids, tuple)
+                    or not isinstance(item.alias_ids, tuple)
+                    or not isinstance(item.task_ids, tuple)
+                    or not isinstance(
+                        item.exploration_state, RegionExplorationState)):
+                raise RegionGraphError(
+                    "Gespeicherter Regionszustand ist ungueltig")
+            self._regions[item.region_id] = _RegionState(
+                region_id=item.region_id,
+                first_revision=map_revision,
+                last_revision=map_revision,
+                seen=item.seen,
+                entered=item.entered,
+                entry_count=item.entry_count,
+                portal_ids=set(item.portal_ids),
+                alias_ids=set(item.alias_ids),
+                task_ids=set(item.task_ids),
+                exploration_state=item.exploration_state,
+                exploration_reason=item.exploration_reason,
+                exploration_revision=(
+                    None if item.exploration_revision is None
+                    else map_revision),
+            )
+        for item in snapshot.connections:
+            if (
+                    item.portal_id in self._connections
+                    or item.side_a_region_id not in region_ids
+                    or item.side_b_region_id not in region_ids):
+                raise RegionGraphError(
+                    "Gespeicherte Portalverbindung ist widerspruechlich")
+            self._connections[item.portal_id] = _ConnectionState(
+                portal_id=item.portal_id,
+                side_a_region_id=item.side_a_region_id,
+                side_b_region_id=item.side_b_region_id,
+                first_revision=map_revision,
+                last_revision=map_revision,
+            )
+        for item in snapshot.tasks:
+            if item.task_id in self._tasks or item.region_id not in region_ids:
+                raise RegionGraphError(
+                    "Gespeicherte Aufgabe ist widerspruechlich")
+            self._tasks[item.task_id] = _TaskState(
+                task_id=item.task_id,
+                region_id=item.region_id,
+                kind=item.kind,
+                subject_id=item.subject_id,
+                state=item.state,
+                created_revision=map_revision,
+                last_revision=map_revision,
+            )
+        self._region_aliases = dict(snapshot.region_aliases)
+        if any(
+                alias in region_ids or canonical not in region_ids
+                for alias, canonical in self._region_aliases.items()):
+            raise RegionGraphError("Gespeicherter Regionsalias ist ungueltig")
+        for region_id, state in self._regions.items():
+            if state.portal_ids != {
+                    portal_id for portal_id, connection
+                    in self._connections.items()
+                    if region_id in (
+                        connection.side_a_region_id,
+                        connection.side_b_region_id)}:
+                raise RegionGraphError(
+                    "Gespeicherte Portalreferenzen sind widerspruechlich")
+            if state.task_ids != {
+                    task_id for task_id, task in self._tasks.items()
+                    if task.region_id == region_id}:
+                raise RegionGraphError(
+                    "Gespeicherte Aufgabenreferenzen sind widerspruechlich")
+        self._current_region_id = snapshot.current_region_id
+        numbers = []
+        for region_id in sorted(region_ids):
+            try:
+                number = int(region_id.removeprefix("region_"))
+            except ValueError as error:
+                raise RegionGraphError(
+                    "Gespeicherte Region-ID ist ungueltig") from error
+            if region_id != f"region_{number:06d}" or number <= 0:
+                raise RegionGraphError("Gespeicherte Region-ID ist ungueltig")
+            numbers.append(number)
+        self._next_region_number = max(numbers) + 1
+        self._latest_revision = map_revision
+        self._start_seed = RegionSeed(
+            "restored-start", self._context, map_revision)
+        self._start_result = RegionStartResult(
+            region_id=sorted(region_ids)[0])
+
     def _new_region(
             self, revision: int, *, seen: bool, entered: bool) -> _RegionState:
         region_id = f"region_{self._next_region_number:06d}"

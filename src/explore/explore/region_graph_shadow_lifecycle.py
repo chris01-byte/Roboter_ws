@@ -164,6 +164,7 @@ class RegionGraphShadowLifecycle:
         self._map_status_received_monotonic_seconds: Optional[float] = None
         self._graph_changed_monotonic_seconds: Optional[float] = None
         self._portal_changed_monotonic_seconds: Optional[float] = None
+        self._pending_persistent_state: Optional[dict] = None
 
     @property
     def state(self) -> ShadowLifecycleState:
@@ -194,6 +195,22 @@ class RegionGraphShadowLifecycle:
             raise RegionGraphShadowNotReadyError(
                 "Portalbestand wartet noch auf eine Schatten-Sitzung")
         return self._session.portal_snapshots()
+
+    def persistent_state(self) -> dict:
+        if self._session is None:
+            raise RegionGraphShadowNotReadyError(
+                "WE-Zustand wartet noch auf eine Schatten-Sitzung")
+        return self._session.persistent_state()
+
+    def prepare_persistent_restore(self, payload: dict) -> None:
+        """Stage validated JSON state before the first map starts a session."""
+        if self._session is not None or self._latest_map_status is not None:
+            raise RegionGraphShadowLifecycleError(
+                "WE-Zustand darf nur vor Sitzungsstart vorbereitet werden")
+        if not isinstance(payload, dict):
+            raise RegionGraphShadowLifecycleError(
+                "WE-Zustand muss ein Objekt sein")
+        self._pending_persistent_state = payload
 
     @property
     def raw_map_diagnostics(self) -> RawMapCorrelationDiagnostics:
@@ -270,14 +287,18 @@ class RegionGraphShadowLifecycle:
                 result.context,
                 result.map_revision,
             )
-            session = RegionGraphShadowSession(
-                result,
-                seed,
-                portal_policy=self._portal_policy,
-                frontier_policy=self._frontier_policy,
-                graph_policy=self._graph_policy,
-                status_policy=self._status_policy,
-            )
+            arguments = {
+                "portal_policy": self._portal_policy,
+                "frontier_policy": self._frontier_policy,
+                "graph_policy": self._graph_policy,
+                "status_policy": self._status_policy,
+            }
+            if self._pending_persistent_state is None:
+                session = RegionGraphShadowSession(result, seed, **arguments)
+            else:
+                session = RegionGraphShadowSession.restore_persistent_state(
+                    result, seed, self._pending_persistent_state, **arguments)
+                self._pending_persistent_state = None
             self._session = session
             self._latest_map_status = result
             self._last_monotonic_seconds = received

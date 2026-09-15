@@ -42,6 +42,10 @@ explore_node:
     # Erfordert einen explizit aktivierten Regionsgraph-Schatten.
     wohnungserkundung_policy_enabled: false
     wohnungserkundung_navigation_enabled: false
+    # WE-M5: Speichert nur WE-Metadaten nach erfolgreichem Kartenmanager-Save.
+    # Laden bleibt passiv; erst ein neuer ExploreArea-Auftrag darf fortsetzen.
+    wohnungserkundung_persistence_enabled: false
+    wohnungserkundung_persistence_directory: "~/.local/share/amadeus/exploration_states"
     # Vollabschluss bleibt ohne explizit nachgewiesenen Erkundungsbereich aus.
     wohnungserkundung_accessible_scope_verified: false
     wohnungserkundung_completion_required_revisions: 3

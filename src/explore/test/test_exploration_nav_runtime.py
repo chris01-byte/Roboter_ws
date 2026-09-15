@@ -135,6 +135,25 @@ def test_map_revision_change_cancels_before_late_success_can_progress():
     assert result.disposition.attempt is None
 
 
+def test_newer_exactly_revalidated_source_does_not_cancel_child():
+    live = {"value": NavigationSourceState(CONTEXT, 7, True)}
+    stop_values = []
+
+    def navigate(_candidate_value, should_stop):
+        live["value"] = NavigationSourceState(CONTEXT, 8, True)
+        stop_values.append(should_stop())
+        return "success"
+
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), navigate,
+        lambda: live["value"], lambda: False, lambda: False)
+
+    assert stop_values == [False]
+    assert result.stop_cause is NavigationStopCause.NONE
+    assert result.disposition.state is ChildResultDispositionState.PROGRESSED
+
+
 @pytest.mark.parametrize("cancel,budget,cause", [
     (True, False, NavigationStopCause.USER_CANCELED),
     (False, True, NavigationStopCause.BUDGET_EXHAUSTED),

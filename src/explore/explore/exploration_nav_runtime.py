@@ -226,4 +226,4 @@ class ExplorationNavigationSession:
         return (
             source.current
             and source.context == intent.context
-            and source.map_revision == intent.map_revision)
+            and source.map_revision >= intent.map_revision)
