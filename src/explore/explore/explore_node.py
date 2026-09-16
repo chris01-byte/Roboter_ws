@@ -1995,7 +1995,9 @@ class ExploreNode(Node):
                                 in status.source.graph.tasks
                                 if (
                                     task.state is RegionTaskState.OPEN
-                                    and task.kind is RegionTaskKind.PORTAL)),
+                                    and task.kind in (
+                                        RegionTaskKind.PORTAL,
+                                        RegionTaskKind.TRANSIT))),
                             portals=status.source.portals,
                             connections=status.source.graph.connections,
                             scope=scope,
@@ -2144,7 +2146,9 @@ class ExploreNode(Node):
                                     )
                                 elif (
                                         selected_kind
-                                        is RegionTaskKind.PORTAL
+                                        in (
+                                            RegionTaskKind.PORTAL,
+                                            RegionTaskKind.TRANSIT)
                                         and portal_evidence is not None):
                                     proposals = tuple(
                                         item for item

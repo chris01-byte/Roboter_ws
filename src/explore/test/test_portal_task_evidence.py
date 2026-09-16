@@ -175,6 +175,20 @@ def test_open_portal_task_gets_scoped_route_and_zero_claimed_information():
                for row, col in proposal.path_cells)
 
 
+@pytest.mark.parametrize("kind", (
+    RegionTaskKind.PORTAL,
+    RegionTaskKind.TRANSIT,
+))
+def test_task_created_on_current_map_waits_for_a_newer_revision(kind):
+    current = build(tasks=(task(kind=kind, last_revision=10),))
+
+    assert current.availability[0].state is TaskAvailabilityState.UNKNOWN
+    assert current.availability[0].reason == (
+        "portal_task_requires_newer_map_revision")
+    assert current.proposals == ()
+    assert current.utilities == ()
+
+
 def test_reverse_portal_task_uses_canonical_b_to_a_direction():
     reverse_task = task(
         task_id="task-portal_000001-side-A",
@@ -279,4 +293,4 @@ def test_goal_value_objects_reject_forged_nonadjacent_path():
 
     with pytest.raises(PortalTaskEvidenceError):
         replace(proposal, path_cells=(proposal.path_cells[0],
-                                     proposal.path_cells[-1]))
+                                      proposal.path_cells[-1]))

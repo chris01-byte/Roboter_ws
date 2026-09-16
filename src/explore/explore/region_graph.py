@@ -352,6 +352,7 @@ class RegionSplitResult:
 class RegionTaskKind(str, Enum):
     FRONTIER = "frontier"
     PORTAL = "portal"
+    TRANSIT = "transit"
     OBSERVATION = "observation"
 
 

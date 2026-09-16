@@ -1,4 +1,4 @@
-"""Pure route and goal evidence for open portal tasks inside a fixed scope."""
+"""Pure route and goal evidence for open portal and transit tasks."""
 
 from dataclasses import dataclass
 import heapq
@@ -408,14 +408,15 @@ def build_portal_task_evidence(
             raise PortalTaskEvidenceCapacityError(
                 f"{name} ist ungueltig oder ueberschreitet die Grenze")
     if any(
-            task.kind is not RegionTaskKind.PORTAL
+            task.kind not in (
+                RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT)
             or task.state is not RegionTaskState.OPEN
             for task in tasks):
         raise PortalTaskEvidenceError(
-            "Portaladapter akzeptiert nur offene Portalaufgaben")
+            "Portaladapter akzeptiert nur offene Portal- oder Transitaufgaben")
     if len({task.task_id for task in tasks}) != len(tasks):
         raise PortalTaskEvidenceError(
-            "Portalaufgaben enthalten doppelte IDs")
+            "Portal- oder Transitaufgaben enthalten doppelte IDs")
     if len({item.portal_id for item in portals}) != len(portals):
         raise PortalTaskEvidenceError("Portalbestand enthaelt doppelte IDs")
     if len({item.portal_id for item in connections}) != len(connections):
@@ -470,7 +471,10 @@ def build_portal_task_evidence(
         proposal = None
         portal = portals_by_id.get(task.subject_id)
         connection = connections_by_id.get(task.subject_id)
-        if portal is None or connection is None:
+        if task.last_revision >= correlation.map_revision:
+            reason = "portal_task_requires_newer_map_revision"
+            recheck = "reassess_after_new_map_revision"
+        elif portal is None or connection is None:
             pass
         elif (
                 not portal.confirmed
