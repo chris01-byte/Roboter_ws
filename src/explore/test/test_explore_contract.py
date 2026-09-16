@@ -1,5 +1,6 @@
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
 import sys
 import threading
@@ -54,6 +55,7 @@ from explore.portal_traversal_runtime import (  # noqa: E402
     PortalTraversalRuntimeOutcome,
 )
 from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
+from explore.frontier_goal_candidate import FrontierGoalCandidate  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.exploration_completion import (  # noqa: E402
     CompletionAssessment,
@@ -1281,6 +1283,133 @@ def test_exact_unconsumed_we_target_is_withheld_after_revision_change():
     )
     node._wohnungserkundung_consumed_intent_id = 'intent-1'
     assert node._current_wohnungserkundung_navigation_target() is None
+
+
+def _we_source_state_node(context, *, revision=7, fingerprint='a' * 64,
+                          source_stamp_ns=123, received_at=10.0):
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=revision, fingerprint=fingerprint,
+        source_stamp_ns=source_stamp_ns)
+    node._region_graph_shadow_latest_correlation_received_at = received_at
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_policy_processed_revision = revision
+    node._wohnungserkundung_navigation_snapshot = None
+    node._wohnungserkundung_unconfirmed_intent_id = None
+    node._wohnungserkundung_unconfirmed_since = None
+    return node
+
+
+def _we_source_state_goal(context):
+    intent = SimpleNamespace(
+        intent_id='intent-grace', context=context, map_revision=7)
+    candidate = FrontierGoalCandidate(
+        intent_id=intent.intent_id, task_id='task-1', region_id='region-1',
+        frontier_id='frontier-1', map_revision=7, frame_id='map',
+        source_fingerprint='a' * 64, source_stamp_ns=123,
+        target_x_m=1.0, target_y_m=2.0, target_yaw_rad=0.0,
+        target_row=2, target_col=1, frontier_x_m=1.1, frontier_y_m=2.1,
+        route_length_m=2.5, information_gain_square_m=0.5)
+    return intent, candidate
+
+
+def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context)
+    node._wohnungserkundung_policy_processed_revision = 7
+    clock = {'now': 10.0}
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: clock['now'])
+
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=8, fingerprint='b' * 64,
+        source_stamp_ns=456)
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    assert node._wohnungserkundung_unconfirmed_since == 10.0
+
+    clock['now'] = 10.9
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=9, fingerprint='c' * 64,
+        source_stamp_ns=789)
+    node._region_graph_shadow_latest_correlation_received_at = 10.9
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    assert node._wohnungserkundung_unconfirmed_since == 10.0
+
+    clock['now'] = 11.26
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=10, fingerprint='d' * 64,
+        source_stamp_ns=1011)
+    node._region_graph_shadow_latest_correlation_received_at = 11.26
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+
+
+def test_we_new_revision_with_same_production_target_revalidates_child(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    confirmed = replace(
+        candidate, map_revision=8, source_fingerprint='b' * 64,
+        source_stamp_ns=456)
+    node._wohnungserkundung_navigation_snapshot = (intent, confirmed)
+    node._wohnungserkundung_unconfirmed_intent_id = intent.intent_id
+    node._wohnungserkundung_unconfirmed_since = 9.0
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
+
+    source = node._wohnungserkundung_source_state(intent, candidate)
+
+    assert source.current
+    assert source.map_revision == 8
+    assert node._wohnungserkundung_unconfirmed_intent_id is None
+
+
+@pytest.mark.parametrize('change', [
+    {'task_id': 'other-task'},
+    {'target_x_m': 1.01},
+])
+def test_we_changed_production_target_invalidates_child(change, monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    node._wohnungserkundung_navigation_snapshot = (
+        intent, replace(candidate, map_revision=8, **change))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
+
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+
+
+def test_we_continuous_map_stream_with_stalled_policy_exits_grace(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context)
+    node._wohnungserkundung_policy_processed_revision = 7
+    clock = {'now': 20.0}
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: clock['now'])
+
+    for revision, now in ((8, 20.0), (9, 20.4), (10, 20.8), (11, 21.2)):
+        clock['now'] = now
+        node._region_graph_shadow_latest_correlation = SimpleNamespace(
+            context=context, map_revision=revision,
+            fingerprint=chr(97 + revision) * 64,
+            source_stamp_ns=revision)
+        node._region_graph_shadow_latest_correlation_received_at = now
+        assert node._wohnungserkundung_source_state(intent, candidate).current
+
+    clock['now'] = 21.26
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=12, fingerprint='z' * 64,
+        source_stamp_ns=12)
+    node._region_graph_shadow_latest_correlation_received_at = 21.26
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
 
 
 def test_existing_nav_client_receives_explicit_we_candidate_yaw():

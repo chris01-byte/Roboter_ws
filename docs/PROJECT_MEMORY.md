@@ -17,6 +17,47 @@ Rückfallweg:
 
 ---
 
+## 2026-09-16 — WE-Releasekandidatencheck: Rückkehrkette noch nicht produktiv
+
+**Entscheidung:** PR #93 wird nach dem vollständigen Gerätefreireview nicht als
+WE-1-Software-Releasekandidat eingefroren. Die 1,25-s-Policyübergabe ist
+korrigiert, aber die produktive Kette besitzt keine automatisch auswählbare
+Transit-/Rückkehr-Aufgabe für die Gegenrichtung eines bereits bestätigten
+Portals.
+
+**Grund / beobachtete Evidenz:** Bei fortlaufenden Rohkarten konnte vorher jede
+neue Revision den pending-Handoff verlängern. Der neue Intent-gebundene Timer
+endet nach höchstens 1,25 s ab erster ungeprüfter Revision; vier gezielte Fälle
+belegen Stream ohne Bestätigung, gleiche Neu-Bestätigung, abweichendes Ziel und
+dauerhaft hängende Policy. Der isolierte reale Explorer-Prozess bestand erneut
+positiven natürlichen Abschluss, Fail-closed-TF-Fehler und Save/Restart/Resume
+ohne Command-Nachrichten. Der Codeaudit der gestapelten Mehrraumkette zeigt
+jedoch: bestätigte Durchfahrt schließt `task-portal-<id>`; der Policy-/Kandidat-
+pfad erstellt danach keine Rückkehr- oder Transitaufgabe. Der bisherige
+Mehrraumtest ruft die Gegenrichtung deshalb direkt am Validator auf und ist kein
+vollständiger ExploreNode-Prozessnachweis.
+
+**Betroffene Dateien und Hardware:** Eng begrenzte Explorer-Quellenprüfung und
+Regressionstests sowie WE-Status. Keine Fahrparameter, Geräte, reale Karten,
+Robotinstallation oder Hardwareprofile geändert.
+
+**Teststatus:** Isolierter Drei-Paket-Build bis `explore`; 853 Explorer-
+Colcon-Tests; 1005 gemeinsame Quelltests; Prozesssmoke mit positivem,
+Fehler- und Wiederaufnahmeszenario. Der vollständige Mehrraumprozess ist nicht
+bestanden, sondern durch den beschriebenen fehlenden Produktionsvertrag blockiert.
+Der bekannte vollständige Zielgraph-Build bleibt wegen der fehlenden
+`behaviortree_cpp`-Underlay-Bibliothek außerhalb des WE-Paketbefunds offen.
+
+**Offene Risiken:** Ein späterer Transitvertrag darf keine Route, Bewegung oder
+Türdurchfahrt fingieren. Er braucht frische Karten-/Routen-/Portalquellen,
+eigenständige Fail-closed-Negativfälle und Save/Restart-Identität.
+
+**Rückfallweg:** Den neuen Grace-Schutz oder den gesamten Reviewcommit
+zurücknehmen; das bestehende WE-Profil bleibt deaktivierbar. Keine Karten- oder
+Semantikdaten werden geändert oder gelöscht.
+
+---
+
 ## 2026-09-15 — WE-Softwarekette revisionssicher und passiv wiederaufnehmbar
 
 **Entscheidung:** WE-Ziele überleben neue Kartenrevisionen nur, wenn die neue

@@ -1,11 +1,53 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Softwareabschluss: 2026-09-15**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Releasekandidatencheck: 2026-09-16 · blockiert**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## 0. Releasekandidatencheck 2026-09-16
+
+Der Check lief ausschließlich im neuen separaten Worktree
+`fix/we-release-candidate-review`, ausgehend von PR #93,
+`570ffb84c840f2d9b1f36b317060dd70979fb2ae`; die laufende
+Roboter-Arbeitskopie blieb unverändert. `git fetch origin` ergab keinen neueren
+abgestimmten WE-Stand. Die gestapelte Kette bis M3/U einschließlich PR #93
+wurde als ein System geprüft.
+
+Ein konkreter Fehler in der 1,25-s-Übergabe zwischen Rohkarten- und
+Policyverarbeitung wurde gefunden und minimal korrigiert: vorher setzte jede
+schnell eintreffende neue Kartenrevision die Übergabefrist erneut. Jetzt beginnt
+die Frist je aktivem Intent mit der ersten ungeprüften Revision und endet auch
+bei fortlaufendem Kartenstrom. Revalidiert die Produktionspolicy auf einer
+neueren Revision exakt dasselbe Aufgaben-, Portal-/Frontier- und metrische Ziel,
+läuft das Kind weiter; bei geändertem Ziel, abweichender Geometrie oder
+ungültiger Quelle wird es weiterhin fail-closed storniert.
+
+Der vorhandene isolierte ROS-Prozessprüfer bestand danach in ROS-Domain 215:
+positiver natürlicher Abschluss, fehlendes-TF-Fehlerpfad sowie explizite
+Unterbrechung → Kartenmanager-Save → atomarer WE-Save → Neustart → passives
+Laden ohne Ziel → neue Pose/Quellen → neuer ausdrücklicher Auftrag → natürlicher
+Abschluss. Alle drei Szenarien meldeten `command_message_count: 0`.
+
+**Blocker:** Der verlangte vollständige produktive Mehrraumprozess kann auf
+diesem Stand nicht wahrheitsgemäß nachgewiesen werden. Nach einer bestätigten
+Durchfahrt schließt `RegionGraphShadowSession.record_validated_traversal()` die
+einzige `task-portal-<portal-id>`-Aufgabe. Der Policy-/Kandidatenpfad erzeugt
+keine eigene offene Transit- oder Rückkehr-Aufgabe für eine bereits bestätigte
+Gegenrichtung. Die bisherige reine Mehrraumprüfung beweist die Rückkehr deshalb
+nur durch einen direkt aufgerufenen Traversierungsvalidator, nicht durch eine
+automatische `ExploreNode`-Auswahl. Eine manuell eingespeiste Rückkehrroute
+wäre ein unzulässiger Fixture-Ersatz. Der vollständige Ablauf Startraum → Flur
+→ Zimmer → dieselber Flur → natürlicher Abschluss einschließlich Save/Restart
+kann daher nicht als Produktionskettennachweis gelten.
+
+Es wird keine Transitlogik in diesem Reviewauftrag erfunden. Der nächste
+separate funktionale Auftrag muss einen kleinen, revisionsgebundenen
+Rückkehr-/Transitaufgabenvertrag mit konkretem Verbraucher, Fail-closed-
+Evidenz und Prozessnachweis abstimmen und implementieren. Bis dahin gilt:
+**WE-1 gerätefreier Software-Releasekandidat: NEIN.**
 
 ## 1. Geprüfte Basis und Reviewbefund
 
@@ -50,9 +92,9 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | WE-M0/B | Frühere Fahrbasis dokumentiert. | Reproduzierbarer Zielsystem-/Laststand und freigegebener realer Nachtest offen. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
-| WE-M3 | **Gerätefreier Softwareumfang abgeschlossen:** automatische Zielwahl, revisionssichere Kindziele, Traversalfortschreibung und natürlicher Elternabschluss nachgewiesen. | Zielprofil, reale Last und Fahrwirkung nicht abgenommen. |
+| WE-M3 | Teilketten softwaregeprüft: automatische Zielwahl, revisionssichere Kindziele, Traversalfortschreibung und natürlicher Einportal-Elternabschluss. Der Grace-Fehler vom 16.09. ist korrigiert und regressionsgeprüft. | **Vollständiger produktiver Mehrraum-Rückweg blockiert:** keine automatisch auswählbare Transit-/Gegenrichtungsaufgabe nach bestätigter Portalaufgabe. Zielprofil, reale Last und Fahrwirkung ebenfalls offen. |
 | WE-M4 | Reale Drei-Regionen-Abnahme unverändert offen. | Neue Freigabe, Not-Aus, motorlose Vorprüfung und begrenzte Fahrt erforderlich. |
-| WE-M5 | **Gerätefrei abgeschlossen:** versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus. IDs, Graph, Restaufgaben und Blockaden bleiben erhalten; Semantikdaten werden nicht geschrieben. | Zielsystem-Dateisystem und reale Wiederaufnahme offen. |
+| WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind für den Einportalprozess softwaregeprüft. IDs, Graph, Restaufgaben und Blockaden bleiben erhalten; Semantikdaten werden nicht geschrieben. | Die Einbindung in den geforderten vollständigen Mehrraum-Rückweg bleibt mit WE-M3 blockiert; Zielsystem-Dateisystem und reale Wiederaufnahme offen. |
 | WE-M6 | Software-Voraussetzungen zusammenhängend belegt. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt offen. |
 | WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
 
@@ -67,11 +109,12 @@ beobachteten Command-Topics keine Befehle.
 | Positiver Portalprozess | Ein automatisch gewähltes Nav2-Ziel, bestätigte Durchfahrt, atomarer Region-/Aufgabenfortschritt und **natürlicher erfolgreicher Elternabschluss**, kein Prüfer-Cancel. |
 | Fehlendes passendes TF | Kindziel wird storniert; kein Eintritt, Portalaufgabe offen, erklärter Fehlerabschluss. |
 | Unterbrechung/Wiederaufnahme | Expliziter Cancel → erfolgreicher Kartenmanager-Save → atomarer WE-Save → Prozessneustart → passives Laden ohne Ziel → neue Pose/Kartenrevision → neuer ausdrücklicher Auftrag → natürliche erfolgreiche Beendigung. Aufgaben-ID bleibt identisch. |
-| Mehrraum/Flurrückkehr | Produktionsdetektor und Traversierungsvalidator bilden Startraum → Flur → weiteres Zimmer; nach Save/Restore führt die Rückrichtung in `region_000002`, also denselben Flur, dessen Eintrittszähler auf zwei steigt. Zwei Portal- und drei Regions-IDs bleiben stabil. |
+| Mehrraum/Flurrückkehr | Produktionsdetektor und Traversierungsvalidator bilden Startraum → Flur → weiteres Zimmer; nach Save/Restore führt ein **direkt geprüfter Validatoraufruf** in `region_000002`, also denselben Flur, dessen Eintrittszähler auf zwei steigt. Zwei Portal- und drei Regions-IDs bleiben stabil. Dies ist ein Komponenten-/Persistenznachweis, ausdrücklich kein automatischer ExploreNode-Rückwegprozess. |
 | Frontierkette | Eine sich entwickelnde Rohkarte erzeugt automatisch einen Frontiercluster, stabile Aufgabe, Policyauswahl und metrischen Kandidaten; Fake-Nav2-Erfolg plus neuere vollständige Karte löst die Aufgabe über den Produktionsresolver. |
 
-Die gemeinsame Regression bestand mit **1000 Tests**. `colcon test` für `explore`
-bestand separat mit **848 Tests, 0 Fehlern, 0 Fehlschlägen, 0 Skips**. Der
+Die gemeinsame Regression bestand im Releasekandidatencheck mit **1005 Tests**.
+`colcon test` für `explore` bestand separat mit **853 Tests, 0 Fehlern, 0
+Fehlschlägen, 0 Skips**. Der
 Prozessprüfer bestand mit den Szenarien `positive`, `fault` und `resume`;
 alle meldeten `command_message_count: 0`. Die neuen/geänderten reinen Module,
 Tests und der Prüfer bestehen `ament_flake8` ohne Befund. Bestehende historische
@@ -96,20 +139,30 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-Der vereinbarte **gerätefreie Softwareabschluss** ist erreicht. Offen sind keine
-weiteren allgemeinen WE-Softwareplanungsrunden, sondern getrennte Zielsystem- und
-Hardwaregates:
+Der vereinbarte **gerätefreie Softwareabschluss ist noch nicht als
+Releasekandidat erreicht**. Vor den getrennten Zielsystem- und Hardwaregates
+steht ein einzelner funktionaler Softwareblocker:
 
-1. Zielsystem-Underlay/Overlay commitgebunden neu bauen; die lokal fehlende
+1. Einen minimalen, revisionsgebundenen Transit-/Rückkehr-Aufgabenvertrag
+   abstimmen und umsetzen. Er muss eine bekannte offene Rückroute nur mit
+   frischer Karten-/Routen-/Portalquelle als Ziel anbieten, die Gegenrichtung
+   als neues Traversierungsereignis derselben Portal-ID verbuchen und nach
+   Save/Restart dieselben IDs erhalten. Eine manuelle Zielvorgabe oder ein
+   direkter Validatoraufruf ersetzt diesen Produktionspfad nicht.
+
+Erst nach dessen vollständigem gerätefreien Mehrraum- und
+Wiederaufnahmenachweis folgen die getrennten Zielsystem- und Hardwaregates:
+
+2. Zielsystem-Underlay/Overlay commitgebunden neu bauen; die lokal fehlende
    BehaviorTree.CPP-Bibliothek und die tatsächlich installierten Paketstände
    klären. Keine alte Mischinstallation als Nachweis verwenden.
-2. Motorlos auf dem Zielsystem Topics, TF, Kartenmanager-Save/Load-Pfade,
+3. Motorlos auf dem Zielsystem Topics, TF, Kartenmanager-Save/Load-Pfade,
    Dateirechte, Speicherdauer/-grenzen und parallele SLAM-/Nav2-/Sicherheitslast
    prüfen. Die historische 2-s-Quellfrist gegenüber der Statusperiode dort messen.
-3. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
+4. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
    Kollisionsüberwachung separat begründen und abnehmen; Softwaretests sind keine
    Hardwarefreigabe.
-4. Erst nach ausdrücklicher Freigabe mit Not-Aus in Reichweite WE-M0/B und WE-M4
+5. Erst nach ausdrücklicher Freigabe mit Not-Aus in Reichweite WE-M0/B und WE-M4
    begrenzt fahren; anschließend WE-M6 wiederholt für den freigegebenen realen
    Wohnungsumfang abnehmen.
 
