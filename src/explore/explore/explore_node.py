@@ -1320,6 +1320,11 @@ class ExploreNode(Node):
             self._wohnungserkundung_runtime_lock = threading.Lock()
             self._wohnungserkundung_navigation_snapshot = None
             self._wohnungserkundung_policy_processed_revision = None
+            # One map update may arrive just before the status timer publishes
+            # its matching policy result.  Track the first unconfirmed update
+            # per active intent so later raw maps cannot extend that interval.
+            self._wohnungserkundung_unconfirmed_intent_id = None
+            self._wohnungserkundung_unconfirmed_since = None
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
@@ -4583,9 +4588,11 @@ class ExploreNode(Node):
         """Read whether current exact evidence still confirms the child goal.
 
         A newer map revision is not by itself an invalidation.  During the
-        bounded status-timer hand-off it remains pending; afterwards the new
-        production candidate must confirm the same task and exact metric goal.
-        Any changed/withheld candidate still invalidates immediately.
+        bounded status-timer hand-off it remains pending. Its deadline starts
+        at the first unconfirmed revision for this intent, not at every later
+        raw-map update. Afterwards the new production candidate must confirm
+        the same task and exact metric goal. Any changed/withheld candidate
+        still invalidates immediately.
         """
         with self._region_graph_shadow_lock:
             correlation = self._region_graph_shadow_latest_correlation
@@ -4603,6 +4610,7 @@ class ExploreNode(Node):
             and correlation.context.frame_id == candidate.frame_id
         )
         if exact_original:
+            self._clear_wohnungserkundung_unconfirmed_intent(intent)
             return NavigationSourceState(
                 correlation.context, correlation.map_revision, True)
         if (
@@ -4617,9 +4625,8 @@ class ExploreNode(Node):
             snapshot = self._wohnungserkundung_navigation_snapshot
         if processed_revision is None or processed_revision < (
                 correlation.map_revision):
-            pending = (
-                received_at is not None
-                and 0.0 <= time.monotonic() - received_at <= 1.25)
+            pending = self._wohnungserkundung_unconfirmed_within_grace(
+                intent, received_at)
             return NavigationSourceState(
                 correlation.context,
                 intent.map_revision if pending else correlation.map_revision,
@@ -4631,8 +4638,43 @@ class ExploreNode(Node):
             and self._wohnungserkundung_same_metric_goal(
                 candidate, snapshot[1])
         )
+        if current:
+            self._clear_wohnungserkundung_unconfirmed_intent(intent)
         return NavigationSourceState(
             correlation.context, correlation.map_revision, current)
+
+    def _wohnungserkundung_unconfirmed_within_grace(
+            self, intent, received_at):
+        """Bound pending-policy grace to one interval per active intent."""
+        now = time.monotonic()
+        with self._wohnungserkundung_runtime_lock:
+            tracked_intent = getattr(
+                self, '_wohnungserkundung_unconfirmed_intent_id', None)
+            started_at = getattr(
+                self, '_wohnungserkundung_unconfirmed_since', None)
+            if tracked_intent != intent.intent_id or started_at is None:
+                # ``received_at`` is used only for the initial hand-off. A
+                # missing or non-monotonic value cannot widen the allowance.
+                started_at = (
+                    received_at if received_at is not None
+                    and received_at <= now else now)
+                self._wohnungserkundung_unconfirmed_intent_id = (
+                    intent.intent_id)
+                self._wohnungserkundung_unconfirmed_since = started_at
+            return 0.0 <= now - started_at <= 1.25
+
+    def _clear_wohnungserkundung_unconfirmed_intent(self, intent):
+        """Forget a grace interval only after a valid confirmation."""
+        lock = getattr(self, '_wohnungserkundung_runtime_lock', None)
+        if lock is None:
+            # Geometry-only unit callers do not initialize the WE runtime.
+            return
+        with lock:
+            if getattr(
+                    self, '_wohnungserkundung_unconfirmed_intent_id', None
+                    ) == intent.intent_id:
+                self._wohnungserkundung_unconfirmed_intent_id = None
+                self._wohnungserkundung_unconfirmed_since = None
 
     @staticmethod
     def _wohnungserkundung_same_metric_goal(previous, current):
@@ -4672,6 +4714,13 @@ class ExploreNode(Node):
         if snapshot is None or snapshot[0].intent_id == consumed:
             return None
         intent, candidate = snapshot
+        # The grace interval is solely for a child that was already dispatched.
+        # An unconsumed preview must remain exact and never become a new goal
+        # merely because policy processing is temporarily behind a raw map.
+        with self._region_graph_shadow_lock:
+            correlation = self._region_graph_shadow_latest_correlation
+        if correlation is None or correlation.map_revision != intent.map_revision:
+            return None
         source = self._wohnungserkundung_source_state(intent, candidate)
         if not source.current:
             return None
