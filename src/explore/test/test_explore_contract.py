@@ -2412,7 +2412,13 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
     assert all(message.data == '{"shadow":true}' for message in publications)
 
 
-def test_passive_runtime_previews_scoped_portal_without_dispatch(monkeypatch):
+@pytest.mark.parametrize(
+    "task_kind",
+    (RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT),
+    ids=("portal", "return-transit"),
+)
+def test_passive_runtime_previews_scoped_portal_without_dispatch(
+        monkeypatch, task_kind):
     raw_map = SimpleNamespace(
         info=SimpleNamespace(
             width=4,
@@ -2434,7 +2440,7 @@ def test_passive_runtime_previews_scoped_portal_without_dispatch(monkeypatch):
     portal_task = SimpleNamespace(
         task_id='task-portal-1',
         region_id='region-2',
-        kind=RegionTaskKind.PORTAL,
+        kind=task_kind,
         state=RegionTaskState.OPEN,
     )
     graph = SimpleNamespace(

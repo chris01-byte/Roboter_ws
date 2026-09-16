@@ -1,6 +1,6 @@
-"""Pure route and goal evidence for open portal tasks inside a fixed scope."""
+"""Pure route and goal evidence for open portal and transit tasks."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import heapq
 import math
 from typing import Any, Dict, Iterable, Optional, Tuple
@@ -20,13 +20,16 @@ from .exploration_scope import (
     rasterize_scope,
 )
 from .frontier_task_evidence import (
+    FrontierTaskEvidencePolicy,
     FrontierTaskEvidenceCapacityError,
     FrontierTaskEvidenceError,
     _nearest_mask_cell,
     _validated_robot_xy,
     _validated_snapshot,
     _world_to_grid,
+    build_frontier_task_evidence,
 )
+from .frontier_task_feed import FrontierTrackSnapshot
 from .frontier_goal_candidate import _grid_to_world
 from .portal_memory import (
     PortalConfirmationState,
@@ -250,6 +253,61 @@ class PortalTaskEvidenceBatch:
     robot_seed_available: bool
 
 
+@dataclass(frozen=True)
+class TransitPurposeAssessment:
+    """Why one otherwise safe transit route is, or is not, useful now.
+
+    The transit route itself remains a normal ``PortalGoalProposal``.  This
+    object binds it to one distinct task that can be started after entering the
+    route's target region.  It is evidence only: after the crossing the normal
+    task adapters still re-evaluate the actual next child goal.
+    """
+
+    transit_task_id: str
+    target_region_id: str
+    portal_id: str
+    state: TaskAvailabilityState
+    reason: str
+    recheck_condition: str
+    purpose_task_id: Optional[str] = None
+    purpose_kind: Optional[RegionTaskKind] = None
+    next_portal_id: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        _identifier(self.transit_task_id, "transit_task_id")
+        _identifier(self.target_region_id, "target_region_id")
+        _identifier(self.portal_id, "portal_id")
+        if not isinstance(self.state, TaskAvailabilityState):
+            raise PortalTaskEvidenceError("Transitbedarf besitzt keinen Zustand")
+        if not isinstance(self.reason, str) or not self.reason:
+            raise PortalTaskEvidenceError("Transitbedarf besitzt keinen Grund")
+        if (
+                not isinstance(self.recheck_condition, str)
+                or not self.recheck_condition):
+            raise PortalTaskEvidenceError(
+                "Transitbedarf besitzt keine Neubewertung")
+        if self.purpose_task_id is None:
+            if self.purpose_kind is not None or self.next_portal_id is not None:
+                raise PortalTaskEvidenceError(
+                    "Transitbedarf ohne Aufgabe enthaelt Zweckfelder")
+        else:
+            _identifier(self.purpose_task_id, "purpose_task_id")
+            if not isinstance(self.purpose_kind, RegionTaskKind):
+                raise PortalTaskEvidenceError(
+                    "Transitbedarf besitzt keine Aufgabenart")
+            if self.next_portal_id is not None:
+                _identifier(self.next_portal_id, "next_portal_id")
+
+
+@dataclass(frozen=True)
+class TransitPurposeEvidenceBatch:
+    """Availability replacements for all open transit tasks in one revision."""
+
+    source_map_revision: int
+    availability: Tuple[TaskAvailability, ...]
+    assessments: Tuple[TransitPurposeAssessment, ...]
+
+
 def _astar_path(
         traversable: np.ndarray, start: Tuple[int, int],
         goal: Tuple[int, int], *, max_expanded_cells: int,
@@ -408,14 +466,15 @@ def build_portal_task_evidence(
             raise PortalTaskEvidenceCapacityError(
                 f"{name} ist ungueltig oder ueberschreitet die Grenze")
     if any(
-            task.kind is not RegionTaskKind.PORTAL
+            task.kind not in (
+                RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT)
             or task.state is not RegionTaskState.OPEN
             for task in tasks):
         raise PortalTaskEvidenceError(
-            "Portaladapter akzeptiert nur offene Portalaufgaben")
+            "Portaladapter akzeptiert nur offene Portal- oder Transitaufgaben")
     if len({task.task_id for task in tasks}) != len(tasks):
         raise PortalTaskEvidenceError(
-            "Portalaufgaben enthalten doppelte IDs")
+            "Portal- oder Transitaufgaben enthalten doppelte IDs")
     if len({item.portal_id for item in portals}) != len(portals):
         raise PortalTaskEvidenceError("Portalbestand enthaelt doppelte IDs")
     if len({item.portal_id for item in connections}) != len(connections):
@@ -470,7 +529,10 @@ def build_portal_task_evidence(
         proposal = None
         portal = portals_by_id.get(task.subject_id)
         connection = connections_by_id.get(task.subject_id)
-        if portal is None or connection is None:
+        if task.last_revision >= correlation.map_revision:
+            reason = "portal_task_requires_newer_map_revision"
+            recheck = "reassess_after_new_map_revision"
+        elif portal is None or connection is None:
             pass
         elif (
                 not portal.confirmed
@@ -632,6 +694,208 @@ def build_portal_task_evidence(
         utilities=tuple(utilities),
         proposals=tuple(proposals),
         robot_seed_available=robot_seed is not None,
+    )
+
+
+def _portal_entry_region(
+        task: RegionTaskSnapshot,
+        connection: Optional[PortalConnectionSnapshot]) -> Optional[str]:
+    """Return the side from which ``task`` can start its portal crossing."""
+    if task.kind is not RegionTaskKind.PORTAL or connection is None:
+        return None
+    if connection.side_a_region_id == task.region_id:
+        return connection.side_b_region_id
+    if connection.side_b_region_id == task.region_id:
+        return connection.side_a_region_id
+    return None
+
+
+def build_transit_purpose_evidence(
+        correlation: PortalSourceCorrelation, *,
+        width: int, height: int, resolution: float, frame_id: str,
+        origin: Tuple[float, float, float, float, float, float, float],
+        cells: Iterable[Any], source_stamp_ns: int,
+        tasks: Tuple[RegionTaskSnapshot, ...],
+        portals: Tuple[PortalSnapshot, ...],
+        connections: Tuple[PortalConnectionSnapshot, ...],
+        tracks: Tuple[FrontierTrackSnapshot, ...],
+        scope: AuthorizedExplorationScope,
+        frontier_policy: FrontierTaskEvidencePolicy,
+        portal_policy: PortalTaskEvidencePolicy,
+        transit_evidence: PortalTaskEvidenceBatch,
+) -> TransitPurposeEvidenceBatch:
+    """Bind each selectable transit to fresh work after its exact crossing.
+
+    A transit proposal proves the first portal route from the robot's current
+    pose.  Its proposal endpoint is then used only as a *virtual* pose to
+    evaluate work that starts in the target region: a local frontier or the
+    next confirmed portal.  This reuses the existing route/evidence adapters;
+    it neither creates a graph path nor grants a later goal.  If no such work
+    is currently evidenced, the transit is held back while its graph task and
+    all blocked work remain visible for a later fresh reassessment.
+    """
+    if not isinstance(correlation, PortalSourceCorrelation):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Kartenkorrelation")
+    if not isinstance(transit_evidence, PortalTaskEvidenceBatch):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Portalevidenz")
+    if transit_evidence.source_map_revision != correlation.map_revision:
+        raise PortalTaskEvidenceError(
+            "Transitbedarf und Portalevidenz haben verschiedene Revisionen")
+    if not isinstance(tasks, tuple) or any(
+            not isinstance(task, RegionTaskSnapshot) for task in tasks):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Aufgabenbestand")
+    if not isinstance(tracks, tuple) or any(
+            not isinstance(track, FrontierTrackSnapshot) for track in tracks):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Frontierbestand")
+    if not isinstance(frontier_policy, FrontierTaskEvidencePolicy):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Frontierpolicy")
+    if not isinstance(portal_policy, PortalTaskEvidencePolicy):
+        raise PortalTaskEvidenceError("Transitbedarf braucht Portalpolicy")
+    if len({task.task_id for task in tasks}) != len(tasks):
+        raise PortalTaskEvidenceError("Transitbedarf besitzt doppelte Aufgaben")
+    if len({item.portal_id for item in connections}) != len(connections):
+        raise PortalTaskEvidenceError("Transitbedarf besitzt doppelte Verbindungen")
+
+    open_tasks = tuple(
+        task for task in tasks if task.state is RegionTaskState.OPEN)
+    transit_tasks = tuple(
+        task for task in open_tasks if task.kind is RegionTaskKind.TRANSIT)
+    availability_by_task = {
+        item.task_id: item for item in transit_evidence.availability}
+    proposal_by_task = {
+        item.task_id: item for item in transit_evidence.proposals}
+    connection_by_portal = {
+        item.portal_id: item for item in connections}
+    replacements = []
+    assessments = []
+
+    for transit in sorted(transit_tasks, key=lambda item: item.task_id):
+        route_availability = availability_by_task.get(transit.task_id)
+        if route_availability is None:
+            route_availability = TaskAvailability(
+                task_id=transit.task_id,
+                context=correlation.context,
+                map_revision=correlation.map_revision,
+                state=TaskAvailabilityState.UNKNOWN,
+                reason="missing_transit_route_evidence",
+                recheck_condition="build_exact_portal_route_evidence",
+            )
+        proposal = proposal_by_task.get(transit.task_id)
+        if route_availability.state is not TaskAvailabilityState.AVAILABLE:
+            replacements.append(route_availability)
+            assessments.append(TransitPurposeAssessment(
+                transit_task_id=transit.task_id,
+                target_region_id=transit.region_id,
+                portal_id=transit.subject_id,
+                state=route_availability.state,
+                reason=route_availability.reason,
+                recheck_condition=route_availability.recheck_condition,
+            ))
+            continue
+        if proposal is None:
+            raise PortalTaskEvidenceError(
+                "Verfuegbarer Transit besitzt keine exakte Portalroute")
+        if (
+                proposal.region_id != transit.region_id
+                or proposal.portal_id != transit.subject_id):
+            raise PortalTaskEvidenceError(
+                "Transitroute passt nicht zur Graphaufgabe")
+
+        target_frontiers = tuple(
+            task for task in open_tasks
+            if (
+                task.kind is RegionTaskKind.FRONTIER
+                and task.region_id == transit.region_id))
+        target_portals = tuple(
+            task for task in open_tasks
+            if (
+                task.kind is RegionTaskKind.PORTAL
+                and _portal_entry_region(
+                    task, connection_by_portal.get(task.subject_id))
+                == transit.region_id))
+        virtual_frontiers = build_frontier_task_evidence(
+            correlation,
+            width=width,
+            height=height,
+            resolution=resolution,
+            frame_id=frame_id,
+            origin=origin,
+            cells=cells,
+            source_stamp_ns=source_stamp_ns,
+            robot_xy=(proposal.target_x_m, proposal.target_y_m),
+            tasks=target_frontiers,
+            tracks=tracks,
+            policy=frontier_policy,
+        )
+        virtual_portals = build_portal_task_evidence(
+            correlation,
+            width=width,
+            height=height,
+            resolution=resolution,
+            frame_id=frame_id,
+            origin=origin,
+            cells=cells,
+            source_stamp_ns=source_stamp_ns,
+            robot_xy=(proposal.target_x_m, proposal.target_y_m),
+            current_region_id=transit.region_id,
+            tasks=target_portals,
+            portals=portals,
+            connections=connections,
+            scope=scope,
+            policy=portal_policy,
+        )
+        purpose_availability = {
+            item.task_id: item
+            for item in (
+                virtual_frontiers.availability + virtual_portals.availability)
+        }
+        purpose_tasks = tuple(
+            task for task in (*target_frontiers, *target_portals)
+            if purpose_availability[task.task_id].state
+            is TaskAvailabilityState.AVAILABLE)
+        if not purpose_tasks:
+            held = replace(
+                route_availability,
+                state=TaskAvailabilityState.TEMPORARILY_BLOCKED,
+                reason="transit_no_available_purpose_in_target_region",
+                recheck_condition=(
+                    "reassess_target_region_work_on_fresh_map_revision"),
+            )
+            replacements.append(held)
+            assessments.append(TransitPurposeAssessment(
+                transit_task_id=transit.task_id,
+                target_region_id=transit.region_id,
+                portal_id=transit.subject_id,
+                state=held.state,
+                reason=held.reason,
+                recheck_condition=held.recheck_condition,
+            ))
+            continue
+        purpose = sorted(purpose_tasks, key=lambda item: item.task_id)[0]
+        ready = replace(
+            route_availability,
+            reason="transit_purpose_available_after_crossing",
+            recheck_condition=(
+                "revalidate_transit_purpose_before_and_after_crossing"),
+        )
+        replacements.append(ready)
+        assessments.append(TransitPurposeAssessment(
+            transit_task_id=transit.task_id,
+            target_region_id=transit.region_id,
+            portal_id=transit.subject_id,
+            state=ready.state,
+            reason=ready.reason,
+            recheck_condition=ready.recheck_condition,
+            purpose_task_id=purpose.task_id,
+            purpose_kind=purpose.kind,
+            next_portal_id=(
+                purpose.subject_id
+                if purpose.kind is RegionTaskKind.PORTAL else None),
+        ))
+    return TransitPurposeEvidenceBatch(
+        source_map_revision=correlation.map_revision,
+        availability=tuple(replacements),
+        assessments=tuple(assessments),
     )
 
 

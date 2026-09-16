@@ -175,6 +175,20 @@ def test_open_portal_task_gets_scoped_route_and_zero_claimed_information():
                for row, col in proposal.path_cells)
 
 
+@pytest.mark.parametrize("kind", (
+    RegionTaskKind.PORTAL,
+    RegionTaskKind.TRANSIT,
+))
+def test_task_created_on_current_map_waits_for_a_newer_revision(kind):
+    current = build(tasks=(task(kind=kind, last_revision=10),))
+
+    assert current.availability[0].state is TaskAvailabilityState.UNKNOWN
+    assert current.availability[0].reason == (
+        "portal_task_requires_newer_map_revision")
+    assert current.proposals == ()
+    assert current.utilities == ()
+
+
 def test_reverse_portal_task_uses_canonical_b_to_a_direction():
     reverse_task = task(
         task_id="task-portal_000001-side-A",
@@ -212,13 +226,14 @@ def test_selected_proposal_binds_to_exact_child_intent():
                 CONTEXT, session_id="other-session")), proposal)
 
 
-def test_scope_excluding_far_side_blocks_goal_and_path():
+@pytest.mark.parametrize("kind", (RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT))
+def test_scope_excluding_far_side_blocks_goal_and_path(kind):
     restricted = scope(vertices=(
         Point2D(0.0, 0.0), Point2D(1.3, 0.0),
         Point2D(1.3, 2.0), Point2D(0.0, 2.0),
     ))
 
-    batch = build(scope=restricted)
+    batch = build(scope=restricted, tasks=(task(kind=kind),))
 
     assert batch.availability[0].state is (
         TaskAvailabilityState.TEMPORARILY_BLOCKED)
@@ -227,20 +242,22 @@ def test_scope_excluding_far_side_blocks_goal_and_path():
     assert batch.proposals == ()
 
 
-def test_wall_without_selected_portal_route_blocks_task():
+@pytest.mark.parametrize("kind", (RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT))
+def test_wall_without_selected_portal_route_blocks_task(kind):
     data = map_data()
     cells = list(data["cells"])
     for row in range(data["height"]):
         cells[row * data["width"] + 11] = 100
     blocked = map_data(cells=cells)
 
-    batch = build(**blocked)
+    batch = build(**blocked, tasks=(task(kind=kind),))
 
     assert batch.availability[0].state is (
         TaskAvailabilityState.TEMPORARILY_BLOCKED)
     assert batch.proposals == ()
 
 
+@pytest.mark.parametrize("kind", (RegionTaskKind.PORTAL, RegionTaskKind.TRANSIT))
 @pytest.mark.parametrize(("changes", "reason"), [
     ({"portals": ()}, "portal_graph_evidence_missing"),
     ({"connections": ()}, "portal_graph_evidence_missing"),
@@ -251,8 +268,8 @@ def test_wall_without_selected_portal_route_blocks_task():
     ({"current_region_id": "region_000099"},
      "portal_task_not_adjacent_to_current_region"),
 ])
-def test_missing_or_nontraversable_portal_evidence_is_explicit(changes, reason):
-    batch = build(**changes)
+def test_missing_or_nontraversable_portal_evidence_is_explicit(changes, reason, kind):
+    batch = build(**changes, tasks=(task(kind=kind),))
 
     assert batch.availability[0].reason == reason
     assert batch.proposals == ()
@@ -279,4 +296,4 @@ def test_goal_value_objects_reject_forged_nonadjacent_path():
 
     with pytest.raises(PortalTaskEvidenceError):
         replace(proposal, path_cells=(proposal.path_cells[0],
-                                     proposal.path_cells[-1]))
+                                      proposal.path_cells[-1]))

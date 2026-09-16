@@ -106,6 +106,7 @@ class ShadowTraversalEventResult:
     memory: TraversalResult
     graph: GraphTraversalResult
     task_update: Optional[RegionTaskResult]
+    transit_task_update: Optional[RegionTaskResult] = None
 
 
 @dataclass(frozen=True)
@@ -707,23 +708,73 @@ class RegionGraphShadowSession:
                 ))
         graph_result = graph.record_traversal(event)
         task_result = None
-        portal_task_id = f"task-portal-{event.portal_id}"
+        transit_task_result = None
         tasks = {task.task_id: task for task in graph.tasks()}
-        portal_task = tasks.get(portal_task_id)
+        completed_task = tasks.get(f"task-portal-{event.portal_id}")
         if (
-                graph_result.entered
-                and portal_task is not None
-                and portal_task.state is RegionTaskState.OPEN):
+                completed_task is None
+                or completed_task.region_id != graph_result.target_region_id
+                or completed_task.kind is not RegionTaskKind.PORTAL
+                or completed_task.state is not RegionTaskState.OPEN):
+            matching_transit_tasks = tuple(
+                task for task in tasks.values()
+                if (
+                    task.region_id == graph_result.target_region_id
+                    and task.kind is RegionTaskKind.TRANSIT
+                    and task.subject_id == event.portal_id
+                    and task.state is RegionTaskState.OPEN))
+            completed_task = (
+                matching_transit_tasks[0]
+                if len(matching_transit_tasks) == 1 else None)
+        if graph_result.entered and completed_task is not None:
             task_result = graph.update_task(RegionTaskUpdate(
                 update_id=_derived_id("portal-complete", event.event_id),
-                task_id=portal_task.task_id,
+                task_id=completed_task.task_id,
                 context=self._context,
                 map_revision=event.map_revision,
-                region_id=portal_task.region_id,
-                kind=portal_task.kind,
-                subject_id=portal_task.subject_id,
+                region_id=completed_task.region_id,
+                kind=completed_task.kind,
+                subject_id=completed_task.subject_id,
                 state=RegionTaskState.COMPLETED,
             ))
+        if graph_result.entered:
+            # A portal task belongs to the region *after* its own crossing,
+            # but the work starts on the adjacent side.  Treat that adjacent
+            # side as source work here so a room -> hall transit can be
+            # created for the hall's next confirmed portal.  Merely open
+            # transit tasks never create a return; availability is checked by
+            # the later purpose-evidence adapter before this task is selected.
+            source_open_work = []
+            for task in graph.tasks(state=RegionTaskState.OPEN):
+                if (
+                        task.kind is RegionTaskKind.FRONTIER
+                        and task.region_id == graph_result.source_region_id):
+                    source_open_work.append(task)
+                elif task.kind is RegionTaskKind.PORTAL:
+                    connection = graph.connection(task.subject_id)
+                    sides = (
+                        connection.side_a_region_id,
+                        connection.side_b_region_id)
+                    if (
+                            task.region_id in sides
+                            and graph_result.source_region_id in sides
+                            and task.region_id
+                            != graph_result.source_region_id):
+                        source_open_work.append(task)
+            if source_open_work:
+                transit_task_result = graph.update_task(RegionTaskUpdate(
+                    update_id=_derived_id(
+                        "transit-open", event.event_id),
+                    task_id=_derived_id(
+                        "transit-task", event.portal_id,
+                        graph_result.source_region_id, event.event_id),
+                    context=self._context,
+                    map_revision=event.map_revision,
+                    region_id=graph_result.source_region_id,
+                    kind=RegionTaskKind.TRANSIT,
+                    subject_id=event.portal_id,
+                    state=RegionTaskState.OPEN,
+                ))
         if task_result is not None:
             self._advance_regions_from_task_inventory(
                 graph,
@@ -737,6 +788,7 @@ class RegionGraphShadowSession:
             memory=memory_result,
             graph=graph_result,
             task_update=task_result,
+            transit_task_update=transit_task_result,
         )
 
     def _advance_regions_from_task_inventory(
@@ -806,13 +858,17 @@ class RegionGraphShadowSession:
         if map_status.map_revision < self._map_status.map_revision:
             raise RegionGraphShadowError(
                 "Kartenstatusrevision ist ruecklaeufig")
+        portal_revisions = tuple(
+            revision for revision in (
+                self._portal_inventory_revision,
+                self._portal_memory.latest_revision,
+            )
+            if revision is not None)
         return ShadowStatusSource(
             context=self._context,
             source_map_revision=map_status.map_revision,
             portal_memory_revision=(
-                self._portal_inventory_revision
-                if self._portal_inventory_revision is not None
-                else self._portal_memory.latest_revision),
+                max(portal_revisions) if portal_revisions else None),
             graph=self._region_graph.snapshot(),
             portals=self._portal_memory.snapshots(),
             reachability=self._portal_memory.reachability_snapshots(),

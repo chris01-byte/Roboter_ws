@@ -53,30 +53,44 @@ from robot_interfaces.action import ExploreArea  # noqa: E402
 
 
 WIDTH = 100
+MULTIROOM_WIDTH = 155
 HEIGHT = 60
 RESOLUTION = 0.05
 ORIGIN = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
 
-def _map_cells(revision):
-    """Known synthetic rooms: no frontier tasks, one connected doorway."""
-    occupancy = np.full((HEIGHT, WIDTH), 100, dtype=np.int8)
-    occupancy[5:55, 3:48] = 0
-    occupancy[5:55, 52:97] = 0
-    occupancy[27:33, 48:52] = 0
-    occupancy[0, revision % WIDTH] = 99
+def _map_cells(revision, *, width=WIDTH, height=HEIGHT,
+               multiroom=False, frontier_stage="none"):
+    """Return one device-free map, optionally with staged hall work."""
+    occupancy = np.full((height, width), 100, dtype=np.int8)
+    if multiroom:
+        occupancy[5:55, 3:48] = 0
+        occupancy[20:40, 52:100] = 0
+        occupancy[5:55, 104:149] = 0
+        occupancy[27:33, 48:52] = 0
+        occupancy[27:33, 100:104] = 0
+        if frontier_stage == "visible":
+            occupancy[20:27, 76:84] = -1
+        elif frontier_stage == "hidden":
+            occupancy[20:27, 76:84] = 100
+    else:
+        occupancy[5:55, 3:48] = 0
+        occupancy[5:55, 52:97] = 0
+        occupancy[27:33, 48:52] = 0
+    occupancy[0, revision % width] = 99
     return occupancy.ravel().tolist()
 
 
-def _fingerprint(cells, resolution=RESOLUTION):
+def _fingerprint(cells, *, width=WIDTH, height=HEIGHT,
+                 resolution=RESOLUTION):
     return map_snapshot_fingerprint(
-        width=WIDTH,
-        height=HEIGHT,
+        width=width,
+        height=height,
         resolution=float(resolution),
         frame_id="map",
         origin=ORIGIN,
         compact_cells=compact_occupancy_cells(
-            cells=cells, cell_count=WIDTH * HEIGHT),
+            cells=cells, cell_count=width * height),
     )
 
 
@@ -84,11 +98,17 @@ def _map_message(node, revision):
     message = OccupancyGrid()
     message.header.frame_id = "map"
     message.header.stamp = node.get_clock().now().to_msg()
-    message.info.width = WIDTH
-    message.info.height = HEIGHT
+    message.info.width = node.map_width
+    message.info.height = node.map_height
     message.info.resolution = RESOLUTION
     message.info.origin.orientation.w = 1.0
-    message.data = _map_cells(revision)
+    message.data = _map_cells(
+        revision,
+        width=node.map_width,
+        height=node.map_height,
+        multiroom=node.multiroom,
+        frontier_stage=node.frontier_stage,
+    )
     return message
 
 
@@ -111,14 +131,17 @@ def _map_status(message, revision, *, event="status", saved=None):
             "age_seconds": 0.05,
             "source": "synthetic",
             "summary": {
-                "width": WIDTH,
-                "height": HEIGHT,
+                "width": message.info.width,
+                "height": message.info.height,
                 "resolution": wire_resolution,
                 "frame_id": "map",
                 "origin": {"position": [0.0, 0.0]},
                 "source_stamp_ns": stamp_ns,
                 "fingerprint": _fingerprint(
-                    message.data, resolution=wire_resolution),
+                    message.data,
+                    width=message.info.width,
+                    height=message.info.height,
+                    resolution=wire_resolution),
             },
         },
         "pose": {"available": False},
@@ -130,15 +153,16 @@ def _map_status(message, revision, *, event="status", saved=None):
     return payload
 
 
-def _box_ranges(x_m, y_m, count=720):
-    """Return exact rays to a fixed asymmetric rectangular room contour."""
+def _box_ranges(x_m, y_m, *, yaw_rad=0.0, count=720):
+    """Return base-frame rays to a fixed asymmetric rectangular contour."""
     angles = -math.pi + np.arange(count, dtype=np.float64) * (
         2.0 * math.pi / count)
-    dx = np.cos(angles)
-    dy = np.sin(angles)
+    world_angles = angles + float(yaw_rad)
+    dx = np.cos(world_angles)
+    dy = np.sin(world_angles)
     candidates = np.full((4, count), np.inf, dtype=np.float64)
     with np.errstate(divide="ignore", invalid="ignore"):
-        for index, wall_x in enumerate((-1.0, 6.0)):
+        for index, wall_x in enumerate((-1.0, 9.0)):
             scale = (wall_x - x_m) / dx
             hit_y = y_m + scale * dy
             candidates[index] = np.where(
@@ -161,6 +185,10 @@ class SyntheticWorld(Node):
     def __init__(self, scenario, persistence_directory=None):
         super().__init__(f"we_m3u_world_{scenario}")
         self.scenario = scenario
+        self.multiroom = scenario == "multiroom"
+        self.map_width = MULTIROOM_WIDTH if self.multiroom else WIDTH
+        self.map_height = HEIGHT
+        self.frontier_stage = "none"
         prefix = f"/we_m3u/{scenario}"
         self.map_topic = f"{prefix}/map"
         self.costmap_topic = f"{prefix}/costmap"
@@ -278,10 +306,13 @@ class SyntheticWorld(Node):
             "name": "wohnung", "version": "20260915T120000Z-we-resume",
             "path": "/synthetic/maps/wohnung/we-resume",
             "saved_at": "2026-09-15T12:00:00Z",
-            "width": WIDTH, "height": HEIGHT,
+            "width": message.info.width, "height": message.info.height,
             "resolution": wire_resolution, "frame_id": "map",
             "fingerprint": _fingerprint(
-                message.data, resolution=wire_resolution),
+                message.data,
+                width=message.info.width,
+                height=message.info.height,
+                resolution=wire_resolution),
             "durability_warning": None,
         }
         self._map_pub.publish(message)
@@ -290,7 +321,9 @@ class SyntheticWorld(Node):
         self._map_status_pub.publish(String(data=json.dumps(_map_status(
             message, revision, event="save_result", saved=self.last_saved))))
 
-    def publish_pose_scan(self, x_m, *, publish_transform=True):
+    def publish_pose_scan(
+            self, x_m, *, y_m=1.525, yaw_rad=0.0,
+            publish_transform=True):
         stamp = self.get_clock().now().to_msg()
         if publish_transform:
             transform = TransformStamped()
@@ -298,8 +331,9 @@ class SyntheticWorld(Node):
             transform.child_frame_id = "base_link"
             transform.header.stamp = stamp
             transform.transform.translation.x = float(x_m)
-            transform.transform.translation.y = 1.525
-            transform.transform.rotation.w = 1.0
+            transform.transform.translation.y = float(y_m)
+            transform.transform.rotation.z = math.sin(float(yaw_rad) / 2.0)
+            transform.transform.rotation.w = math.cos(float(yaw_rad) / 2.0)
             self._tf.sendTransform(transform)
             time.sleep(0.025)
         scan = LaserScan()
@@ -310,7 +344,8 @@ class SyntheticWorld(Node):
         scan.angle_max = scan.angle_min + 719 * scan.angle_increment
         scan.range_min = 0.05
         scan.range_max = 8.0
-        scan.ranges = _box_ranges(float(x_m), 1.525).astype(float).tolist()
+        scan.ranges = _box_ranges(
+            float(x_m), float(y_m), yaw_rad=yaw_rad).astype(float).tolist()
         self._scan_pub.publish(scan)
 
     def wait_for(self, predicate, timeout, description):
@@ -333,6 +368,20 @@ class SyntheticWorld(Node):
             )
 
         self.wait_for(ready, timeout, "Portalzielkandidat")
+        return self.latest_explore["wohnungserkundung"]["goal_candidate"]
+
+    def wait_for_frontier_candidate(self, timeout=12.0):
+        def ready():
+            extension = (self.latest_explore or {}).get(
+                "wohnungserkundung", {})
+            candidate = extension.get("goal_candidate", {})
+            return (
+                candidate.get("state") == "current"
+                and "frontier_id" in candidate
+                and "dispatch_blocked_reason" not in candidate
+            )
+
+        self.wait_for(ready, timeout, "Frontierzielkandidat")
         return self.latest_explore["wohnungserkundung"]["goal_candidate"]
 
     def send_explore_goal(self, timeout_s=30.0):
@@ -364,9 +413,9 @@ def _parameter_text(world):
         "return_to_start": False,
         "replan_period_s": 0.05,
         "goal_timeout_s": 10.0,
-        "overall_timeout_s": 30.0,
+        "overall_timeout_s": 60.0 if world.multiroom else 30.0,
         "nav_cancel_timeout_s": 1.5,
-        "max_frontier_goals": 2,
+        "max_frontier_goals": 8 if world.multiroom else 2,
         "map_timeout_s": 30.0,
         "scan_command_topic": world.scan_command_topic,
         "door_command_topic": world.door_command_topic,
@@ -404,7 +453,10 @@ def _parameter_text(world):
         "wohnungserkundung_accessible_scope_verified": True,
         "wohnungserkundung_scope_id": f"scope-m3u-{world.scenario}",
         "wohnungserkundung_scope_polygon_xy": [
-            0.0, 0.0, 5.0, 0.0, 5.0, 3.0, 0.0, 3.0],
+            0.0, 0.0,
+            7.75 if world.multiroom else 5.0, 0.0,
+            7.75 if world.multiroom else 5.0, 3.0,
+            0.0, 3.0],
         "wohnungserkundung_evidence_clearance_m": 0.10,
         "wohnungserkundung_scope_clearance_m": 0.10,
         "wohnungserkundung_robot_seed_search_m": 0.20,
@@ -642,6 +694,370 @@ def _run_scenario(executor, scenario, log_directory):
         world.destroy_node()
 
 
+def _complete_portal_navigation(
+        world, candidate, *, entry_count, label, source_x=None):
+    """Feed bounded scan/TF evidence for the currently selected portal goal."""
+    target_x = float(candidate["target"]["x_m"])
+    yaw_rad = float(candidate["target"]["yaw_rad"])
+    if source_x is None:
+        start_x = target_x - 1.60
+    else:
+        start_x = float(source_x)
+    sign = 1.0 if target_x >= start_x else -1.0
+    end_x = target_x + sign * 0.45
+    world.publish_pose_scan(start_x, yaw_rad=yaw_rad)
+    time.sleep(0.15)
+    distance = end_x - start_x
+    steps = max(24, int(math.ceil(abs(distance) / 0.04)))
+    for index in range(steps + 1):
+        world.publish_pose_scan(
+            start_x + distance * index / steps, yaw_rad=yaw_rad)
+        time.sleep(0.055)
+    time.sleep(0.25)
+    world.nav_release.set()
+    world.wait_for(
+        lambda: (
+            (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get(
+                    "portal_traversal", {}).get("state") == "confirmed"
+            and (world.latest_shadow or {}).get(
+                "summary", {}).get("confirmed_entry_count", 0)
+            >= entry_count
+        ),
+        8.0,
+        f"bestaetigte Durchfahrt {label}",
+    )
+    world.nav_release.clear()
+
+
+def _next_map_revision(world):
+    source = (world.latest_shadow or {}).get("source", {})
+    return int(source.get("map_revision", 0)) + 1
+
+
+def _run_multiroom_scenario(executor, log_directory, persistence_directory):
+    """Production chain with restart: room -> hall -> room -> same hall."""
+    world = SyntheticWorld("multiroom", persistence_directory)
+    executor.add_node(world)
+    processes = []
+
+    def identity_snapshot():
+        status = world.latest_shadow
+        return {
+            "portal_ids": sorted(p["portal_id"] for p in status["portals"]),
+            "region_ids": sorted(r["region_id"] for r in status["regions"]),
+            "current_region_id": status["summary"]["current_region_id"],
+            "portal_traversal_counts": {
+                p["portal_id"]: p["confirmed_traversal_count"]
+                for p in status["portals"]},
+        }
+
+    def start(label):
+        started = _start_explorer(
+            world, log_directory / f"multiroom-{label}.log")
+        processes.append(started)
+        return started
+
+    current = start("before")
+    try:
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0,
+            "Mehrraum-Explorer-Prozessstart",
+        )
+        first_candidate = _feed_portal_chain(world)
+        handle, result_future = world.send_explore_goal(timeout_s=58.0)
+        world.wait_for(
+            lambda: world.nav_goal_count >= 1,
+            8.0,
+            "erstes Mehrraum-Kindziel",
+        )
+        _complete_portal_navigation(
+            world, first_candidate, entry_count=1, label="Startraum-Flur")
+        hall_region_id = world.latest_shadow["summary"]["current_region_id"]
+
+        # The raw detector itself first creates the remaining hall frontier.
+        # Removing its unknown cells later makes that task unavailable without
+        # completing it; therefore the independently discovered second portal
+        # is selected next and the return task is genuinely required.
+        world.frontier_stage = "visible"
+        # The raw frontier feed has no motion authority.  A map-frame pose
+        # outside safe free space intentionally prevents a child candidate in
+        # this one observation while still retaining the task for later work.
+        world.publish_pose_scan(3.75, y_m=0.10)
+        for revision in (11, 12):
+            world.publish_revision(revision)
+            time.sleep(0.55)
+        world.wait_for(
+            lambda: any(
+                task.get("kind") == "frontier"
+                and task.get("state") == "open"
+                for task in (world.latest_shadow or {}).get("tasks", [])
+            ),
+            6.0,
+            "automatisch gebildete Flur-Frontieraufgabe",
+        )
+        world.frontier_stage = "hidden"
+        world.publish_pose_scan(3.90)
+
+        def second_task_ready():
+            return any(
+                task.get("kind") == "portal"
+                and task.get("state") == "open"
+                and task.get("task_id") != first_candidate.get("task_id")
+                for task in (world.latest_shadow or {}).get("tasks", []))
+        for revision in range(13, 18):
+            world.publish_revision(revision)
+            time.sleep(0.35)
+            if second_task_ready():
+                break
+        world.wait_for(second_task_ready, 2.0,
+                       "zweite versionsgebundene Portalaufgabe")
+        world.publish_revision(_next_map_revision(world))
+
+        def second_portal_ready():
+            candidate = (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get("goal_candidate", {})
+            return (
+                candidate.get("state") == "current"
+                and candidate.get("kind") == "portal"
+                and candidate.get("task_id") != first_candidate.get("task_id")
+                and "dispatch_blocked_reason" not in candidate
+            )
+
+        world.wait_for(second_portal_ready, 10.0, "zweites Portalziel")
+        second_candidate = world.latest_explore[
+            "wohnungserkundung"]["goal_candidate"]
+        world.publish_pose_scan(3.90)
+        world.wait_for(
+            lambda: world.nav_goal_count >= 2,
+            8.0,
+            "zweites Mehrraum-Kindziel",
+        )
+        _complete_portal_navigation(
+            world, second_candidate, entry_count=2, label="Flur-Zimmer",
+            source_x=3.90)
+
+        world.wait_for(
+            lambda: any(
+                task.get("kind") == "transit"
+                and task.get("state") == "open"
+                for task in (world.latest_shadow or {}).get("tasks", [])
+            ),
+            6.0,
+            "versionsgebundene Rueckkehr-Aufgabe",
+        )
+        transit_task = next(
+            task for task in world.latest_shadow["tasks"]
+            if task.get("kind") == "transit"
+            and task.get("state") == "open")
+        before_restart = identity_snapshot()
+
+        # The parent is interrupted deliberately after the destination room
+        # has been entered.  The manager-backed save must retain its still
+        # open return task, but neither loading nor the missing fresh pose may
+        # dispatch a child goal.
+        interrupted = handle.cancel_goal_async()
+        world.wait_for(interrupted.done, 4.0, "Mehrraum-Unterbrechung")
+        world.wait_for(result_future.done, 5.0,
+                       "unterbrochenes Mehrraum-Elternergebnis")
+        save_revision = int(world.latest_shadow["source"]["map_revision"])
+        world.publish_save_result(save_revision)
+        world.wait_for(
+            lambda: bool(list(Path(persistence_directory).rglob(
+                "state-*.json"))),
+            5.0, "atomare Mehrraum-Zustandsspeicherung")
+        _stop_explorer(*current)
+
+        world.nav_goal_received.clear()
+        world.nav_release.clear()
+        goals_before_restart = world.nav_goal_count
+        world.latest_shadow = None
+        world.latest_explore = None
+        current = start("after")
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0, "Mehrraum-Explorer-Neustart")
+        time.sleep(1.5)
+        if world.nav_goal_count != goals_before_restart:
+            raise AssertionError("Mehrraumladen startete unerlaubt Navigation")
+
+        # The retained hall frontier becomes observable again before the
+        # return is considered.  It is the concrete purpose of the transit;
+        # the remote frontier itself still cannot dispatch directly from this
+        # room because the production policy requires the portal monitor.
+        world.frontier_stage = "visible"
+        # The forward endpoint lies past the portal exit.  A bounded Nav2
+        # approach inside the entered room re-establishes the independent
+        # monitor's source-side precondition before the return is selected.
+        world.publish_pose_scan(6.50, yaw_rad=math.pi)
+        # A traversal itself does not manufacture a raw-map update.  Supply a
+        # newer unchanged-map revision before evaluating the return target so
+        # the production freshness contract remains in force.
+        world.publish_revision(_next_map_revision(world))
+
+        def transit_ready():
+            candidate = (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get("goal_candidate", {})
+            return (
+                candidate.get("state") == "current"
+                and candidate.get("task_id") == transit_task["task_id"]
+                and candidate.get("kind") == "portal"
+                and candidate.get("transit_purpose", {}).get(
+                    "target_region_id") == hall_region_id
+                and candidate.get("transit_purpose", {}).get("task_id")
+                and "dispatch_blocked_reason" not in candidate
+            )
+
+        world.wait_for(transit_ready, 10.0, "automatisch gewaehltes Rueckportal")
+        after_restart = identity_snapshot()
+        if after_restart != before_restart:
+            raise AssertionError({"before_restart": before_restart,
+                                  "after_restart": after_restart})
+        if world.nav_goal_count != goals_before_restart:
+            raise AssertionError("Neue Quellen ohne Auftrag starteten Navigation")
+        transit_candidate = world.latest_explore[
+            "wohnungserkundung"]["goal_candidate"]
+        if transit_candidate["task_id"] != transit_task["task_id"]:
+            raise AssertionError("Rueckkehr-Aufgaben-ID ging beim Neustart verloren")
+        if transit_candidate["portal_id"] != second_candidate["portal_id"]:
+            raise AssertionError("Rueckweg verwendet nicht dieselbe Portal-ID")
+        world.publish_pose_scan(6.50, yaw_rad=float(
+            transit_candidate["target"]["yaw_rad"]))
+        _resumed_handle, resumed_result = world.send_explore_goal(timeout_s=58.0)
+        world.wait_for(
+            lambda: world.nav_goal_count >= 3,
+            8.0,
+            "Rueckkehr-Kindziel",
+        )
+        _complete_portal_navigation(
+            world, transit_candidate, entry_count=3, label="Zimmer-Flur",
+            source_x=6.50)
+        world.wait_for(
+            lambda: any(
+                task.get("task_id") == transit_task["task_id"]
+                and task.get("state") == "completed"
+                for task in (world.latest_shadow or {}).get("tasks", [])
+            ),
+            5.0,
+            "abgeschlossene Rueckkehr-Aufgabe",
+        )
+        after_return = identity_snapshot()
+        if after_return["current_region_id"] != hall_region_id:
+            raise AssertionError("Rueckweg erzeugte eine andere Flurregion")
+        for key in ("portal_ids", "region_ids"):
+            if after_return[key] != before_restart[key]:
+                raise AssertionError("Rueckweg erzeugte neue Portal-/Regions-IDs")
+        return_portal = transit_candidate["portal_id"]
+        if after_return["portal_traversal_counts"][return_portal] != (
+                before_restart["portal_traversal_counts"][return_portal] + 1):
+            raise AssertionError("Rueckweg besitzt kein neues Traversierungsereignis")
+
+        # The same persisted frontier is now local and therefore eligible.
+        # Its Nav2 success is resolved only by the newer all-free raw map.
+        world.publish_pose_scan(3.75)
+        world.publish_revision(_next_map_revision(world))
+        frontier_candidate = world.wait_for_frontier_candidate()
+        world.wait_for(
+            lambda: world.nav_goal_count >= 4,
+            8.0,
+            "Flur-Frontier-Kindziel",
+        )
+        world.nav_release.set()
+        world.wait_for(
+            lambda: (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get(
+                    "frontier_resolution", {}).get("state")
+            == "waiting_for_new_map",
+            5.0,
+            "positive Frontiernavigation",
+        )
+        world.nav_release.clear()
+        world.frontier_stage = "none"
+        # Keep the synthetic source alive until the unchanged production
+        # observation window completes. Five publications can be coalesced
+        # into only two policy observations on a loaded review machine.
+        completion_deadline = time.monotonic() + 12.0
+        revision = _next_map_revision(world)
+        while not resumed_result.done() and time.monotonic() < completion_deadline:
+            world.publish_pose_scan(float(frontier_candidate["target"]["x_m"]))
+            world.publish_revision(revision)
+            revision += 1
+            if resumed_result.done():
+                break
+            time.sleep(0.70)
+        world.wait_for(
+            resumed_result.done,
+            10.0,
+            "natuerlicher Mehrraum-Gesamtabschluss",
+        )
+        action_result = resumed_result.result()
+        if (
+                action_result is None
+                or action_result.status != 4
+                or not action_result.result.success):
+            raise AssertionError(
+                f"kein natuerlicher Mehrraumabschluss: {action_result}")
+        task_by_id = {
+            task["task_id"]: task
+            for task in world.latest_shadow["tasks"]}
+        result = {
+            "scenario": "multiroom",
+            "chain": "start_room-hall-room-same_hall",
+            "interruption": "explicit_cancel_after_destination_room",
+            "saved_versions": len(list(Path(persistence_directory).rglob(
+                "state-*.json"))),
+            "load_started_navigation": False,
+            "continuation_order": "new_explicit_explore_area_goal",
+            "parent_result": "natural_success",
+            "before_restart": before_restart,
+            "after_restart": after_restart,
+            "after_return": after_return,
+            "transit_task_id": transit_task["task_id"],
+            "transit_task_state_before_restart": transit_task["state"],
+            "frontier_task_id": frontier_candidate["task_id"],
+            "confirmed_entry_count": world.latest_shadow["summary"][
+                "confirmed_entry_count"],
+            "nav_goal_count": world.nav_goal_count,
+            "command_message_count": world.command_count,
+            "transit_task_state": task_by_id[transit_task["task_id"]]["state"],
+            "frontier_task_state": task_by_id[frontier_candidate["task_id"]][
+                "state"],
+            "child_process_alive": current[0].poll() is None,
+        }
+        if (
+                result["confirmed_entry_count"] < 3
+                or result["nav_goal_count"] != 4
+                or result["command_message_count"] != 0
+                or result["saved_versions"] < 1
+                or result["transit_task_state"] != "completed"
+                or result["frontier_task_state"] != "completed"):
+            raise AssertionError(result)
+        return result
+    except Exception as error:
+        current[1].flush()
+        try:
+            log_tail = Path(current[1].name).read_text(
+                encoding="utf-8", errors="replace")[-6000:]
+        except OSError:
+            log_tail = "<Log nicht lesbar>"
+        diagnostics = json.dumps({
+            "process_returncode": current[0].poll(),
+            "latest_shadow": world.latest_shadow,
+            "latest_explore": world.latest_explore,
+        }, sort_keys=True)
+        raise RuntimeError(
+            f"WE-Mehrraumszenario fehlgeschlagen: {error}\n"
+            f"--- Diagnosen ---\n{diagnostics}\n"
+            f"--- Explorer-Log ---\n{log_tail}") from error
+    finally:
+        for process, log_handle, parameter_path in processes:
+            if process.poll() is None:
+                _stop_explorer(process, log_handle, parameter_path)
+        executor.remove_node(world)
+        world.destroy_node()
+
+
 def _run_resume_scenario(executor, log_directory, persistence_directory):
     """Interrupt, save, restart, wait for pose/order, then finish naturally."""
     world = SyntheticWorld("resume", persistence_directory)
@@ -752,6 +1168,8 @@ def main():
                 _run_scenario(executor, scenario, log_directory)
                 for scenario in ("positive", "fault")
             ]
+            results.append(_run_multiroom_scenario(
+                executor, log_directory, log_directory / "we-multiroom-state"))
             results.append(_run_resume_scenario(
                 executor, log_directory, log_directory / "we-state"))
         print(json.dumps({
