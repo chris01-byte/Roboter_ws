@@ -115,6 +115,8 @@ from explore.exploration_child_goal import (
 from explore.exploration_policy import (
     ExplorationTaskPolicySession,
     PolicyAssessmentState,
+    TaskAvailability,
+    TaskAvailabilityState,
     assess_exploration_policy,
     score_task_utilities,
 )
@@ -143,6 +145,7 @@ from explore.portal_task_evidence import (
     PortalTaskEvidencePolicy,
     bind_portal_goal_candidate,
     build_portal_task_evidence,
+    build_transit_purpose_evidence,
 )
 from explore.portal_traversal_runtime import (
     PortalTraversalRuntimePolicy,
@@ -160,7 +163,11 @@ from explore.region_graph_shadow_lifecycle import (
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
-from explore.region_graph import RegionTaskKind, RegionTaskState
+from explore.region_graph import (
+    RegionTaskKind,
+    RegionTaskSnapshot,
+    RegionTaskState,
+)
 
 import tf2_ros
 
@@ -1955,7 +1962,41 @@ class ExploreNode(Node):
                         self._wohnungserkundung_evidence_cache_key = (
                             evidence_key)
                         self._wohnungserkundung_evidence_cache = evidence
+                    current_region_id = getattr(
+                        status.source.graph, 'current_region_id', None)
+                    current_frontier_task_ids = {
+                        task.task_id for task in status.source.graph.tasks
+                        if (
+                            task.state is RegionTaskState.OPEN
+                            and getattr(
+                                task, 'kind', RegionTaskKind.FRONTIER)
+                            is RegionTaskKind.FRONTIER
+                            and (
+                                current_region_id is None
+                                or getattr(
+                                    task, 'region_id', current_region_id)
+                                == current_region_id))}
+                    # A frontier's raw-map path may geometrically cross a
+                    # known doorway.  It is not, by itself, permission to
+                    # bypass the portal monitor into another region.  Remote
+                    # frontiers stay visible in the passive assessment and are
+                    # evaluated as a transit purpose below.
+                    if all(
+                            isinstance(item, TaskAvailability)
+                            for item in evidence.availability):
+                        current_frontier_availability = tuple(
+                            item for item in evidence.availability
+                            if item.task_id in current_frontier_task_ids)
+                        current_frontier_utilities = tuple(
+                            item for item in evidence.utilities
+                            if item.task_id in current_frontier_task_ids)
+                    else:
+                        # Test-only status stand-ins preserve the historical
+                        # passive contract without exercising typed transit.
+                        current_frontier_availability = evidence.availability
+                        current_frontier_utilities = evidence.utilities
                     portal_evidence = None
+                    transit_purposes = None
                     if getattr(self, '_wohnungserkundung_scope_id', ''):
                         scope = AuthorizedExplorationScope(
                             scope_id=self._wohnungserkundung_scope_id,
@@ -2005,21 +2046,82 @@ class ExploreNode(Node):
                                 self._wohnungserkundung_portal_evidence_policy),
                         )
                     if portal_evidence is None:
-                        task_availability = evidence.availability
-                        utility_evidence = evidence.utilities
+                        task_availability = current_frontier_availability
+                        utility_evidence = current_frontier_utilities
                     else:
+                        open_graph_tasks = tuple(
+                            task for task in status.source.graph.tasks
+                            if task.state is RegionTaskState.OPEN)
+                        typed_transits = tuple(
+                            task for task in open_graph_tasks
+                            if task.kind is RegionTaskKind.TRANSIT)
+                        if typed_transits and all(
+                                isinstance(task, RegionTaskSnapshot)
+                                for task in typed_transits):
+                            transit_purposes = build_transit_purpose_evidence(
+                                correlation,
+                                width=raw_map.info.width,
+                                height=raw_map.info.height,
+                                resolution=raw_map.info.resolution,
+                                frame_id=raw_map.header.frame_id.strip(),
+                                origin=(
+                                    origin.position.x,
+                                    origin.position.y,
+                                    origin.position.z,
+                                    origin.orientation.x,
+                                    origin.orientation.y,
+                                    origin.orientation.z,
+                                    origin.orientation.w,
+                                ),
+                                cells=raw_map.data,
+                                source_stamp_ns=(
+                                    int(raw_map.header.stamp.sec)
+                                    * 1_000_000_000
+                                    + int(raw_map.header.stamp.nanosec)
+                                ),
+                                tasks=open_graph_tasks,
+                                portals=status.source.portals,
+                                connections=status.source.graph.connections,
+                                tracks=tracks,
+                                scope=scope,
+                                frontier_policy=(
+                                    self._wohnungserkundung_evidence_policy),
+                                portal_policy=(
+                                    self._wohnungserkundung_portal_evidence_policy),
+                                transit_evidence=portal_evidence,
+                            )
+                            transit_availability = {
+                                item.task_id: item
+                                for item in transit_purposes.availability}
+                            portal_availability = tuple(
+                                transit_availability.get(
+                                    item.task_id, item)
+                                for item in portal_evidence.availability)
+                            portal_utilities = tuple(
+                                item for item in portal_evidence.utilities
+                                if transit_availability.get(
+                                    item.task_id,
+                                    None) is None
+                                or transit_availability[item.task_id].state
+                                is TaskAvailabilityState.AVAILABLE)
+                        else:
+                            # Compatibility for passive unit callers that use
+                            # status-shaped stand-ins rather than graph values.
+                            portal_availability = portal_evidence.availability
+                            portal_utilities = portal_evidence.utilities
                         task_availability = tuple(sorted(
-                            evidence.availability
-                            + portal_evidence.availability,
+                            current_frontier_availability
+                            + portal_availability,
                             key=lambda item: item.task_id,
                         ))
                         utility_evidence = tuple(sorted(
-                            evidence.utilities + portal_evidence.utilities,
+                            current_frontier_utilities + portal_utilities,
                             key=lambda item: item.task_id,
                         ))
                     candidate_inputs = (
                         raw_map, correlation, tracks, evidence,
-                        portal_evidence, robot_pose, evidence_key)
+                        portal_evidence, transit_purposes, robot_pose,
+                        evidence_key)
                     evidence_status = {
                         'state': 'current',
                         'map_revision': evidence.source_map_revision,
@@ -2032,6 +2134,21 @@ class ExploreNode(Node):
                     }
                     if portal_evidence is not None:
                         evidence_status['portal_scope_state'] = 'current'
+                    if transit_purposes is not None:
+                        evidence_status['transit_purposes'] = [
+                            {
+                                'task_id': item.transit_task_id,
+                                'target_region_id': item.target_region_id,
+                                'portal_id': item.portal_id,
+                                'state': item.state.value,
+                                'reason': item.reason,
+                                'purpose_task_id': item.purpose_task_id,
+                                'purpose_kind': (
+                                    None if item.purpose_kind is None
+                                    else item.purpose_kind.value),
+                                'next_portal_id': item.next_portal_id,
+                            }
+                            for item in transit_purposes.assessments]
                 assessment = assess_exploration_policy(
                     status.source, task_availability)
                 scores = score_task_utilities(
@@ -2089,8 +2206,9 @@ class ExploreNode(Node):
                             'withheld_by_current_policy')
                     else:
                         raw_map, correlation, tracks, evidence, (
-                            portal_evidence), robot_pose, evidence_key = (
-                                candidate_inputs)
+                            portal_evidence), transit_purposes, robot_pose, (
+                            evidence_key) = (
+                            candidate_inputs)
                         matching_tasks = tuple(
                             task for task in status.source.graph.tasks
                             if task.task_id == intent.task_id)
@@ -2098,6 +2216,10 @@ class ExploreNode(Node):
                             if len(matching_tasks) != 1:
                                 raise ValueError(
                                     'Auswahl braucht genau eine Graphaufgabe')
+                            selected_task = matching_tasks[0]
+                            selected_kind = getattr(
+                                selected_task, 'kind',
+                                RegionTaskKind.FRONTIER)
                             goal_key = (*evidence_key, intent.intent_id)
                             with self._wohnungserkundung_runtime_lock:
                                 cached_goal_key = (
@@ -2105,10 +2227,6 @@ class ExploreNode(Node):
                                 candidate = self._wohnungserkundung_goal_cache
                             if goal_key != cached_goal_key:
                                 origin = raw_map.info.origin
-                                selected_task = matching_tasks[0]
-                                selected_kind = getattr(
-                                    selected_task, 'kind',
-                                    RegionTaskKind.FRONTIER)
                                 if selected_kind is (
                                         RegionTaskKind.FRONTIER):
                                     candidate = build_frontier_goal_candidate(
@@ -2169,6 +2287,25 @@ class ExploreNode(Node):
                                         goal_key)
                                     self._wohnungserkundung_goal_cache = candidate
                             goal_status = build_goal_candidate_status(candidate)
+                            if (
+                                    selected_kind is RegionTaskKind.TRANSIT
+                                    and transit_purposes is not None):
+                                matching_purposes = tuple(
+                                    item for item in transit_purposes.assessments
+                                    if item.transit_task_id == intent.task_id)
+                                if len(matching_purposes) != 1:
+                                    raise ValueError(
+                                        'Transitwahl braucht genau einen Zweck')
+                                purpose = matching_purposes[0]
+                                if purpose.purpose_task_id is None:
+                                    raise ValueError(
+                                        'Transitwahl besitzt keinen Arbeitszweck')
+                                goal_status['transit_purpose'] = {
+                                    'task_id': purpose.purpose_task_id,
+                                    'kind': purpose.purpose_kind.value,
+                                    'target_region_id': purpose.target_region_id,
+                                    'next_portal_id': purpose.next_portal_id,
+                                }
                             if getattr(
                                     matching_tasks[0], 'kind',
                                     RegionTaskKind.FRONTIER) is (

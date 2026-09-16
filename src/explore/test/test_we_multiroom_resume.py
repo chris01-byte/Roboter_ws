@@ -66,6 +66,7 @@ from explore.portal_task_evidence import (  # noqa: E402
     PortalTaskEvidencePolicy,
     bind_portal_goal_candidate,
     build_portal_task_evidence,
+    build_transit_purpose_evidence,
 )
 from explore.raw_map_portal_adapter import (  # noqa: E402
     correlated_connected_portal_inventory,
@@ -92,6 +93,19 @@ def apartment_map():
     occupancy[5:55, 104:149] = 0    # weiteres Zimmer
     occupancy[27:33, 48:52] = 0
     occupancy[27:33, 100:104] = 0
+    return occupancy
+
+
+def three_door_apartment_map():
+    """One hall with a left, right and upper confirmed doorway."""
+    occupancy = np.full((80, 155), 100, dtype=np.int8)
+    occupancy[15:75, 3:48] = 0       # left start room
+    occupancy[35:65, 52:100] = 0     # common hall
+    occupancy[15:75, 104:149] = 0    # right room
+    occupancy[3:31, 65:86] = 0       # upper room
+    occupancy[47:53, 48:52] = 0      # left hall door
+    occupancy[47:53, 100:104] = 0    # right hall door
+    occupancy[31:35, 72:79] = 0      # upper hall door
     return occupancy
 
 
@@ -298,15 +312,20 @@ def test_return_transit_is_auto_selected_with_exact_portal_evidence():
     assert transit.task.region_id == "region_000002"
     assert transit.task.subject_id == second_portal.portal_id
 
-    source = shadow.status_source(
-        map_status(8), portal_memory_age_seconds=0.0,
-        region_graph_age_seconds=0.0)
+    # New unknown cells make the retained hall frontier a genuinely available
+    # purpose after the return, rather than merely an OPEN graph reference.
+    occupancy[27:33, 76:82] = -1
     raw_source = raw_map_portal_source_from_values(
         width=occupancy.shape[1], height=occupancy.shape[0],
         resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
         cells=occupancy.ravel(), source_stamp_ns=8_000_000_000)
     correlation = PortalSourceCorrelation(
         CONTEXT, 8, raw_source.fingerprint, raw_source.source_stamp_ns)
+    shadow.observe_frontier_inventory(frontier_inventory_from_clusters(
+        correlation, ((3.75, 1.50, 12),)))
+    source = shadow.status_source(
+        map_status(8), portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0)
     scope = AuthorizedExplorationScope(
         "scope-return-transit", CONTEXT, (
             Point2D(0.10, 0.10), Point2D(7.65, 0.10),
@@ -328,9 +347,24 @@ def test_return_transit_is_auto_selected_with_exact_portal_evidence():
                     and task.state is RegionTaskState.OPEN),
         portals=source.portals, connections=source.graph.connections,
         scope=scope, policy=route_policy)
-    passive = assess_exploration_policy(source, evidence.availability)
+    transit_purposes = build_transit_purpose_evidence(
+        correlation, width=occupancy.shape[1], height=occupancy.shape[0],
+        resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+        cells=occupancy.ravel(), source_stamp_ns=raw_source.source_stamp_ns,
+        tasks=tuple(task for task in source.graph.tasks
+                    if task.state is RegionTaskState.OPEN),
+        portals=source.portals, connections=source.graph.connections,
+        tracks=shadow.frontier_tracks(), scope=scope,
+        frontier_policy=FrontierTaskEvidencePolicy(
+            clearance_m=0.05, robot_seed_search_m=0.20,
+            task_cell_search_m=0.30, information_radius_m=0.30),
+        portal_policy=route_policy, transit_evidence=evidence)
+    purpose = transit_purposes.assessments[0]
+    assert purpose.purpose_task_id == "task-frontier_000001"
+    assert purpose.purpose_kind is RegionTaskKind.FRONTIER
+    passive = assess_exploration_policy(source, transit_purposes.availability)
     stateful = ExplorationTaskPolicySession(CONTEXT).assess(
-        source, evidence.availability, evidence.utilities)
+        source, transit_purposes.availability, evidence.utilities)
     intent = current_goal_intent_from_assessments(passive, stateful)
     assert intent is not None
     assert intent.task_id == transit.task.task_id
@@ -356,6 +390,332 @@ def test_return_transit_is_auto_selected_with_exact_portal_evidence():
     hall = next(item for item in final.graph.regions
                 if item.region_id == "region_000002")
     assert hall.entry_count == 2
+
+
+def test_transit_does_not_repeat_direction_without_work_progress():
+    """Unavailable work cannot make an otherwise safe transit selectable.
+
+    Both regions retain an unobserved frontier.  The production portal route,
+    frontier evidence and stateful selector are exercised on every new map
+    revision.  No new transit is selected or traversed, so event IDs and
+    revisions cannot manufacture an A-B-A-B sequence.
+    """
+    occupancy = apartment_map()
+    occupancy[:, 100:] = 100  # Only one known connection between two regions.
+    shadow = RegionGraphShadowSession(
+        map_status(1), RegionSeed("start", CONTEXT, 1))
+    first = observe_twice(shadow, occupancy, (30, 20), 1)
+    event = next(item for item in first.events if item.link is not None)
+    portal = shadow.portal_snapshots()[0]
+    shadow.observe_frontier_inventory(frontier_inventory_from_clusters(
+        PortalSourceCorrelation(CONTEXT, 3, FINGERPRINT, 3_000_000_000),
+        ((1.5, 1.5, 12),)))
+    shadow.record_validated_traversal(validated_crossing(
+        portal, direction_from(event.observation.approach_side), 4, "initial"))
+    shadow.observe_frontier_inventory(frontier_inventory_from_clusters(
+        PortalSourceCorrelation(CONTEXT, 5, FINGERPRINT, 5_000_000_000),
+        ((3.75, 1.5, 12),)))
+    policy = ExplorationTaskPolicySession(CONTEXT)
+    scope = AuthorizedExplorationScope("ping-pong-scope", CONTEXT, (
+        Point2D(0.10, 0.10), Point2D(4.90, 0.10),
+        Point2D(4.90, 2.90), Point2D(0.10, 2.90)))
+    route_policy = PortalTaskEvidencePolicy(
+        clearance_m=0.10, scope_clearance_m=0.10,
+        robot_seed_search_m=0.20, chassis_rear_overhang_m=0.20,
+        exit_clearance_m=0.10, target_search_m=0.20,
+        maximum_target_lateral_m=0.15, portal_path_radius_m=0.15)
+    for revision in (6, 8, 10, 12):
+        # The robot remains in region_000002 because the return is withheld.
+        # Revisions and repeated observations alone must not change that.
+        cell = (30, 75)
+        shadow.observe_portal_inventory(automatic_inventory(
+            occupancy, cell, revision))
+        raw = raw_map_portal_source_from_values(
+            width=155, height=60, resolution=RESOLUTION, frame_id="map",
+            origin=ORIGIN, cells=occupancy.ravel(),
+            source_stamp_ns=revision * 1_000_000_000)
+        correlation = PortalSourceCorrelation(
+            CONTEXT, revision, raw.fingerprint, raw.source_stamp_ns)
+        shadow.observe_frontier_inventory(frontier_inventory_from_clusters(
+            correlation, ()))
+        source = shadow.status_source(
+            map_status(revision), portal_memory_age_seconds=0.0,
+            region_graph_age_seconds=0.0)
+        snapshot = dict(
+            width=155, height=60, resolution=RESOLUTION, frame_id="map",
+            origin=ORIGIN, cells=occupancy.ravel(),
+            source_stamp_ns=raw.source_stamp_ns,
+            robot_xy=((cell[1] + 0.5) * RESOLUTION, 1.525))
+        frontiers = tuple(task for task in source.graph.tasks
+                          if task.kind is RegionTaskKind.FRONTIER)
+        assert len(frontiers) == 2
+        assert all(task.state is RegionTaskState.OPEN for task in frontiers)
+        frontier_evidence = build_frontier_task_evidence(
+            correlation, **snapshot, tasks=frontiers,
+            tracks=shadow.frontier_tracks())
+        assert all(item.reason == "frontier_not_observed_in_current_revision"
+                   for item in frontier_evidence.availability)
+        evidence = build_portal_task_evidence(
+            correlation, **snapshot,
+            current_region_id=source.graph.current_region_id,
+            tasks=tuple(task for task in source.graph.tasks
+                        if task.kind is RegionTaskKind.TRANSIT
+                        and task.state is RegionTaskState.OPEN),
+            portals=source.portals, connections=source.graph.connections,
+            scope=scope, policy=route_policy)
+        transit_purposes = build_transit_purpose_evidence(
+            correlation, width=155, height=60, resolution=RESOLUTION,
+            frame_id="map", origin=ORIGIN, cells=occupancy.ravel(),
+            source_stamp_ns=raw.source_stamp_ns, tasks=tuple(
+                task for task in source.graph.tasks
+                if task.state is RegionTaskState.OPEN),
+            portals=source.portals, connections=source.graph.connections,
+            tracks=shadow.frontier_tracks(), scope=scope,
+            frontier_policy=FrontierTaskEvidencePolicy(
+                clearance_m=0.05, robot_seed_search_m=0.20,
+                task_cell_search_m=0.30, information_radius_m=0.30),
+            portal_policy=route_policy, transit_evidence=evidence)
+        assert len(transit_purposes.assessments) == 1
+        purpose = transit_purposes.assessments[0]
+        assert purpose.state.value == "temporarily_blocked"
+        assert purpose.reason == (
+            "transit_no_available_purpose_in_target_region")
+        availability = (
+            transit_purposes.availability + frontier_evidence.availability)
+        passive = assess_exploration_policy(source, availability)
+        stateful = policy.assess(source, availability, ())
+        intent = current_goal_intent_from_assessments(passive, stateful)
+        assert intent is None
+        assert shadow.status_source(
+            map_status(revision), portal_memory_age_seconds=0.0,
+            region_graph_age_seconds=0.0).graph.current_region_id == (
+                source.graph.current_region_id)
+
+
+def test_transit_to_hall_binds_the_next_confirmed_portal_task():
+    """A hall remains usable as a transit region for work beyond it."""
+    occupancy = apartment_map()
+    shadow = RegionGraphShadowSession(
+        map_status(1), RegionSeed("start", CONTEXT, 1))
+    first = observe_twice(shadow, occupancy, (30, 20), 1)
+    first_event = next(item for item in first.events if item.link is not None)
+    first_portal = shadow.portal_snapshots()[0]
+    forward = direction_from(first_event.observation.approach_side)
+    shadow.record_validated_traversal(validated_crossing(
+        first_portal, forward, 3, "room-a-to-hall"))
+    second = observe_twice(shadow, occupancy, (30, 75), 4)
+    second_event = next(
+        item for item in second.events
+        if item.link is not None and item.link.portal_id == "portal_000002")
+    second_portal = next(
+        item for item in shadow.portal_snapshots()
+        if item.portal_id == second_event.link.portal_id)
+    reverse = (
+        TraversalDirection.B_TO_A
+        if forward is TraversalDirection.A_TO_B
+        else TraversalDirection.A_TO_B)
+    created = shadow.record_validated_traversal(validated_crossing(
+        first_portal, reverse, 6, "hall-to-room-a"))
+    transit = created.transit_task_update
+    assert transit is not None
+    assert transit.task.region_id == "region_000002"
+
+    observe_twice(shadow, occupancy, (30, 20), 7)
+    source = shadow.status_source(
+        map_status(8), portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0)
+    raw = raw_map_portal_source_from_values(
+        width=occupancy.shape[1], height=occupancy.shape[0],
+        resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+        cells=occupancy.ravel(), source_stamp_ns=8_000_000_000)
+    correlation = PortalSourceCorrelation(
+        CONTEXT, 8, raw.fingerprint, raw.source_stamp_ns)
+    scope = AuthorizedExplorationScope("scope-hall-next", CONTEXT, (
+        Point2D(0.10, 0.10), Point2D(7.65, 0.10),
+        Point2D(7.65, 2.90), Point2D(0.10, 2.90)))
+    route_policy = PortalTaskEvidencePolicy(
+        clearance_m=0.10, scope_clearance_m=0.10,
+        robot_seed_search_m=0.20, chassis_rear_overhang_m=0.20,
+        exit_clearance_m=0.10, target_search_m=0.20,
+        maximum_target_lateral_m=0.15, portal_path_radius_m=0.15)
+    transit_evidence = build_portal_task_evidence(
+        correlation, width=occupancy.shape[1], height=occupancy.shape[0],
+        resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+        cells=occupancy.ravel(), source_stamp_ns=raw.source_stamp_ns,
+        robot_xy=(1.025, 1.525),
+        current_region_id=source.graph.current_region_id,
+        tasks=tuple(task for task in source.graph.tasks
+                    if task.kind is RegionTaskKind.TRANSIT
+                    and task.state is RegionTaskState.OPEN),
+        portals=source.portals, connections=source.graph.connections,
+        scope=scope, policy=route_policy)
+    purposes = build_transit_purpose_evidence(
+        correlation, width=occupancy.shape[1], height=occupancy.shape[0],
+        resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+        cells=occupancy.ravel(), source_stamp_ns=raw.source_stamp_ns,
+        tasks=tuple(task for task in source.graph.tasks
+                    if task.state is RegionTaskState.OPEN),
+        portals=source.portals, connections=source.graph.connections,
+        tracks=shadow.frontier_tracks(), scope=scope,
+        frontier_policy=FrontierTaskEvidencePolicy(
+            clearance_m=0.05, robot_seed_search_m=0.20,
+            task_cell_search_m=0.30, information_radius_m=0.30),
+        portal_policy=route_policy, transit_evidence=transit_evidence)
+    purpose = purposes.assessments[0]
+    assert purpose.purpose_task_id == f"task-portal-{second_portal.portal_id}"
+    assert purpose.purpose_kind is RegionTaskKind.PORTAL
+    assert purpose.next_portal_id == second_portal.portal_id
+    stateful = ExplorationTaskPolicySession(CONTEXT).assess(
+        source, purposes.availability, transit_evidence.utilities)
+    intent = current_goal_intent_from_assessments(
+        assess_exploration_policy(source, purposes.availability), stateful)
+    assert intent is not None
+    assert intent.task_id == transit.task.task_id
+
+
+def test_three_hall_doors_hold_a_blocked_door_and_resume_in_order():
+    """Only current, purpose-bound work can choose one hall doorway.
+
+    The top and right doors are both known from the same hall.  The right
+    one first has no raw-map route, so the policy chooses the top one.  The
+    return transit is only released after a newer map proves that right-door
+    work is actionable; once back in the hall that exact remaining door is
+    selected.  Each assessment produces one child intent, never a competing
+    pair of door goals.
+    """
+    occupancy = three_door_apartment_map()
+    shadow = RegionGraphShadowSession(
+        map_status(1), RegionSeed("three-door-start", CONTEXT, 1))
+    first = observe_twice(shadow, occupancy, (50, 20), 1)
+    first_event = next(item for item in first.events if item.link is not None)
+    left_portal = shadow.portal_snapshots()[0]
+    shadow.record_validated_traversal(validated_crossing(
+        left_portal, direction_from(first_event.observation.approach_side),
+        3, "three-door-start-to-hall"))
+    hall_observations = observe_twice(shadow, occupancy, (50, 75), 4)
+    source = shadow.status_source(
+        map_status(6), portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0)
+    upper_portal = next(
+        portal for portal in source.portals
+        if abs(portal.side_a.x - portal.side_b.x) < 0.01)
+    right_portal = max(
+        source.portals,
+        key=lambda portal: max(portal.side_a.x, portal.side_b.x))
+    assert len(source.portals) == 3
+
+    scope = AuthorizedExplorationScope("scope-three-hall-doors", CONTEXT, (
+        Point2D(0.10, 0.10), Point2D(7.65, 0.10),
+        Point2D(7.65, 3.90), Point2D(0.10, 3.90),
+    ))
+    route_policy = PortalTaskEvidencePolicy(
+        clearance_m=0.10, scope_clearance_m=0.10,
+        robot_seed_search_m=0.20, chassis_rear_overhang_m=0.20,
+        exit_clearance_m=0.10, target_search_m=0.20,
+        maximum_target_lateral_m=0.15, portal_path_radius_m=0.15)
+    frontier_policy = FrontierTaskEvidencePolicy(
+        clearance_m=0.05, robot_seed_search_m=0.20,
+        task_cell_search_m=0.30, information_radius_m=0.30)
+
+    def route_evidence(status, cells, revision, robot_xy, kinds):
+        raw = raw_map_portal_source_from_values(
+            width=cells.shape[1], height=cells.shape[0],
+            resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+            cells=cells.ravel(), source_stamp_ns=revision * 1_000_000_000)
+        correlation = PortalSourceCorrelation(
+            CONTEXT, revision, raw.fingerprint, raw.source_stamp_ns)
+        evidence = build_portal_task_evidence(
+            correlation, width=cells.shape[1], height=cells.shape[0],
+            resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+            cells=cells.ravel(), source_stamp_ns=raw.source_stamp_ns,
+            robot_xy=robot_xy,
+            current_region_id=status.graph.current_region_id,
+            tasks=tuple(task for task in status.graph.tasks
+                        if task.state is RegionTaskState.OPEN
+                        and task.kind in kinds),
+            portals=status.portals, connections=status.graph.connections,
+            scope=scope, policy=route_policy)
+        return correlation, raw, evidence
+
+    # The right door stays visible in graph state, but its raw map corridor
+    # is blocked.  It therefore cannot win against the independently current
+    # upper-door route.
+    blocked = occupancy.copy()
+    blocked[47:53, 100:104] = 100
+    correlation, _raw, evidence = route_evidence(
+        source, blocked, 6, (3.775, 2.525), (RegionTaskKind.PORTAL,))
+    availability = {item.task_id: item for item in evidence.availability}
+    upper_task_id = f"task-portal-{upper_portal.portal_id}"
+    right_task_id = f"task-portal-{right_portal.portal_id}"
+    assert availability[upper_task_id].state.value == "available"
+    assert availability[right_task_id].state.value == "temporarily_blocked"
+    stateful = ExplorationTaskPolicySession(CONTEXT).assess(
+        source, evidence.availability, evidence.utilities)
+    first_intent = current_goal_intent_from_assessments(
+        assess_exploration_policy(source, evidence.availability), stateful)
+    assert first_intent is not None
+    assert first_intent.task_id == upper_task_id
+
+    upper_event = next(
+        item for item in hall_observations.events
+        if item.link is not None and item.link.portal_id == upper_portal.portal_id)
+    upper_direction = direction_from(upper_event.observation.approach_side)
+    entered_upper = shadow.record_validated_traversal(validated_crossing(
+        upper_portal, upper_direction, 7, "three-door-hall-to-upper"))
+    return_transit = entered_upper.transit_task_update
+    assert return_transit is not None
+    assert return_transit.task.kind is RegionTaskKind.TRANSIT
+
+    upper_source = shadow.status_source(
+        map_status(8), portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0)
+    correlation, raw, transit_evidence = route_evidence(
+        upper_source, occupancy, 8, (3.775, 1.025),
+        (RegionTaskKind.TRANSIT,))
+    purposes = build_transit_purpose_evidence(
+        correlation, width=occupancy.shape[1], height=occupancy.shape[0],
+        resolution=RESOLUTION, frame_id="map", origin=ORIGIN,
+        cells=occupancy.ravel(), source_stamp_ns=raw.source_stamp_ns,
+        tasks=tuple(task for task in upper_source.graph.tasks
+                    if task.state is RegionTaskState.OPEN),
+        portals=upper_source.portals,
+        connections=upper_source.graph.connections,
+        tracks=shadow.frontier_tracks(), scope=scope,
+        frontier_policy=frontier_policy, portal_policy=route_policy,
+        transit_evidence=transit_evidence)
+    purpose = purposes.assessments[0]
+    assert purpose.purpose_task_id == right_task_id
+    assert purpose.next_portal_id == right_portal.portal_id
+    stateful = ExplorationTaskPolicySession(CONTEXT).assess(
+        upper_source, purposes.availability, transit_evidence.utilities)
+    return_intent = current_goal_intent_from_assessments(
+        assess_exploration_policy(upper_source, purposes.availability), stateful)
+    assert return_intent is not None
+    assert return_intent.task_id == return_transit.task.task_id
+
+    return_direction = (
+        TraversalDirection.B_TO_A
+        if upper_direction is TraversalDirection.A_TO_B
+        else TraversalDirection.A_TO_B)
+    returned = shadow.record_validated_traversal(validated_crossing(
+        upper_portal, return_direction, 9, "three-door-upper-to-hall"))
+    assert returned.task_update is not None
+    assert returned.task_update.task.task_id == return_transit.task.task_id
+    assert returned.task_update.task.state is RegionTaskState.COMPLETED
+
+    final_source = shadow.status_source(
+        map_status(10), portal_memory_age_seconds=0.0,
+        region_graph_age_seconds=0.0)
+    _correlation, _raw, final_evidence = route_evidence(
+        final_source, occupancy, 10, (3.775, 2.525),
+        (RegionTaskKind.PORTAL,))
+    final_stateful = ExplorationTaskPolicySession(CONTEXT).assess(
+        final_source, final_evidence.availability, final_evidence.utilities)
+    final_intent = current_goal_intent_from_assessments(
+        assess_exploration_policy(final_source, final_evidence.availability),
+        final_stateful)
+    assert final_intent is not None
+    assert final_intent.task_id == right_task_id
 
 
 def test_evolving_raw_map_forms_selects_and_resolves_frontier_automatically():

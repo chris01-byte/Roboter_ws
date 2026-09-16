@@ -741,6 +741,17 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
     executor.add_node(world)
     processes = []
 
+    def identity_snapshot():
+        status = world.latest_shadow
+        return {
+            "portal_ids": sorted(p["portal_id"] for p in status["portals"]),
+            "region_ids": sorted(r["region_id"] for r in status["regions"]),
+            "current_region_id": status["summary"]["current_region_id"],
+            "portal_traversal_counts": {
+                p["portal_id"]: p["confirmed_traversal_count"]
+                for p in status["portals"]},
+        }
+
     def start(label):
         started = _start_explorer(
             world, log_directory / f"multiroom-{label}.log")
@@ -763,6 +774,7 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
         )
         _complete_portal_navigation(
             world, first_candidate, entry_count=1, label="Startraum-Flur")
+        hall_region_id = world.latest_shadow["summary"]["current_region_id"]
 
         # The raw detector itself first creates the remaining hall frontier.
         # Removing its unknown cells later makes that task unavailable without
@@ -839,6 +851,7 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
             task for task in world.latest_shadow["tasks"]
             if task.get("kind") == "transit"
             and task.get("state") == "open")
+        before_restart = identity_snapshot()
 
         # The parent is interrupted deliberately after the destination room
         # has been entered.  The manager-backed save must retain its still
@@ -859,6 +872,8 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
         world.nav_goal_received.clear()
         world.nav_release.clear()
         goals_before_restart = world.nav_goal_count
+        world.latest_shadow = None
+        world.latest_explore = None
         current = start("after")
         world.wait_for(
             lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
@@ -867,6 +882,11 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
         if world.nav_goal_count != goals_before_restart:
             raise AssertionError("Mehrraumladen startete unerlaubt Navigation")
 
+        # The retained hall frontier becomes observable again before the
+        # return is considered.  It is the concrete purpose of the transit;
+        # the remote frontier itself still cannot dispatch directly from this
+        # room because the production policy requires the portal monitor.
+        world.frontier_stage = "visible"
         # The forward endpoint lies past the portal exit.  A bounded Nav2
         # approach inside the entered room re-establishes the independent
         # monitor's source-side precondition before the return is selected.
@@ -883,14 +903,25 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
                 candidate.get("state") == "current"
                 and candidate.get("task_id") == transit_task["task_id"]
                 and candidate.get("kind") == "portal"
+                and candidate.get("transit_purpose", {}).get(
+                    "target_region_id") == hall_region_id
+                and candidate.get("transit_purpose", {}).get("task_id")
                 and "dispatch_blocked_reason" not in candidate
             )
 
         world.wait_for(transit_ready, 10.0, "automatisch gewaehltes Rueckportal")
+        after_restart = identity_snapshot()
+        if after_restart != before_restart:
+            raise AssertionError({"before_restart": before_restart,
+                                  "after_restart": after_restart})
+        if world.nav_goal_count != goals_before_restart:
+            raise AssertionError("Neue Quellen ohne Auftrag starteten Navigation")
         transit_candidate = world.latest_explore[
             "wohnungserkundung"]["goal_candidate"]
         if transit_candidate["task_id"] != transit_task["task_id"]:
             raise AssertionError("Rueckkehr-Aufgaben-ID ging beim Neustart verloren")
+        if transit_candidate["portal_id"] != second_candidate["portal_id"]:
+            raise AssertionError("Rueckweg verwendet nicht dieselbe Portal-ID")
         world.publish_pose_scan(6.50, yaw_rad=float(
             transit_candidate["target"]["yaw_rad"]))
         _resumed_handle, resumed_result = world.send_explore_goal(timeout_s=58.0)
@@ -911,10 +942,19 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
             5.0,
             "abgeschlossene Rueckkehr-Aufgabe",
         )
+        after_return = identity_snapshot()
+        if after_return["current_region_id"] != hall_region_id:
+            raise AssertionError("Rueckweg erzeugte eine andere Flurregion")
+        for key in ("portal_ids", "region_ids"):
+            if after_return[key] != before_restart[key]:
+                raise AssertionError("Rueckweg erzeugte neue Portal-/Regions-IDs")
+        return_portal = transit_candidate["portal_id"]
+        if after_return["portal_traversal_counts"][return_portal] != (
+                before_restart["portal_traversal_counts"][return_portal] + 1):
+            raise AssertionError("Rueckweg besitzt kein neues Traversierungsereignis")
 
-        # Reappearing unknown cells make the same persisted frontier eligible.
+        # The same persisted frontier is now local and therefore eligible.
         # Its Nav2 success is resolved only by the newer all-free raw map.
-        world.frontier_stage = "visible"
         world.publish_pose_scan(3.75)
         world.publish_revision(_next_map_revision(world))
         frontier_candidate = world.wait_for_frontier_candidate()
@@ -934,10 +974,15 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
         )
         world.nav_release.clear()
         world.frontier_stage = "none"
-        for revision in range(_next_map_revision(world),
-                              _next_map_revision(world) + 5):
+        # Keep the synthetic source alive until the unchanged production
+        # observation window completes. Five publications can be coalesced
+        # into only two policy observations on a loaded review machine.
+        completion_deadline = time.monotonic() + 12.0
+        revision = _next_map_revision(world)
+        while not resumed_result.done() and time.monotonic() < completion_deadline:
             world.publish_pose_scan(float(frontier_candidate["target"]["x_m"]))
             world.publish_revision(revision)
+            revision += 1
             if resumed_result.done():
                 break
             time.sleep(0.70)
@@ -965,6 +1010,12 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
             "load_started_navigation": False,
             "continuation_order": "new_explicit_explore_area_goal",
             "parent_result": "natural_success",
+            "before_restart": before_restart,
+            "after_restart": after_restart,
+            "after_return": after_return,
+            "transit_task_id": transit_task["task_id"],
+            "transit_task_state_before_restart": transit_task["state"],
+            "frontier_task_id": frontier_candidate["task_id"],
             "confirmed_entry_count": world.latest_shadow["summary"][
                 "confirmed_entry_count"],
             "nav_goal_count": world.nav_goal_count,

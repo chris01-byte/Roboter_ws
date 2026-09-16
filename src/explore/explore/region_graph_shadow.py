@@ -738,11 +738,29 @@ class RegionGraphShadowSession:
                 state=RegionTaskState.COMPLETED,
             ))
         if graph_result.entered:
-            source_open_work = tuple(
-                task for task in graph.tasks(graph_result.source_region_id)
+            # A portal task belongs to the region *after* its own crossing,
+            # but the work starts on the adjacent side.  Treat that adjacent
+            # side as source work here so a room -> hall transit can be
+            # created for the hall's next confirmed portal.  Merely open
+            # transit tasks never create a return; availability is checked by
+            # the later purpose-evidence adapter before this task is selected.
+            source_open_work = []
+            for task in graph.tasks(state=RegionTaskState.OPEN):
                 if (
-                    task.state is RegionTaskState.OPEN
-                    and task.kind is not RegionTaskKind.TRANSIT))
+                        task.kind is RegionTaskKind.FRONTIER
+                        and task.region_id == graph_result.source_region_id):
+                    source_open_work.append(task)
+                elif task.kind is RegionTaskKind.PORTAL:
+                    connection = graph.connection(task.subject_id)
+                    sides = (
+                        connection.side_a_region_id,
+                        connection.side_b_region_id)
+                    if (
+                            task.region_id in sides
+                            and graph_result.source_region_id in sides
+                            and task.region_id
+                            != graph_result.source_region_id):
+                        source_open_work.append(task)
             if source_open_work:
                 transit_task_result = graph.update_task(RegionTaskUpdate(
                     update_id=_derived_id(

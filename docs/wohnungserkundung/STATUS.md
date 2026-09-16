@@ -1,13 +1,93 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Gerätefreier Softwareabschluss: 2026-09-16 · nachgewiesen**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Gerätefreier Software-Releasekandidat: JA, PR #95-R1 zur Review · 2026-09-16**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
-## 0. Gerätefreier Abschlusscheck 2026-09-16
+## 0. Abschlusskorrektur PR95-R1, 2026-09-16
+
+Nach `git fetch origin` war der geprüfte Ausgangshead
+`feature/we-transit-return` bei
+`b1c44c61c065726fc6d943db985329b988960fa5`, inklusive Funktionscommit
+`5e7ba9ea2dca25a0f51676bf78e884f59e966678`, gegen die unmittelbare Basis
+`fix/we-release-candidate-review` bei
+`05d28f0a2ce5e7a6d100f3b52064d8399955102d`. Die gezielte Korrektur und ihre
+Nachweise entstehen ausschließlich im separaten Worktree; die laufende
+Roboter-Arbeitskopie blieb unangetastet. PR #95 bleibt offen und wird mit diesem
+Commit aktualisiert, nicht gemergt.
+
+### PR95-R1 behoben: Transit nur mit aktuellem Arbeitszweck
+
+Der frühere Gegenbeleg ist erhalten: Mit einer bekannten Tür und zwei jeweils
+offenen, aber aktuell nicht beobachteten Frontieraufgaben wählte die damalige
+Kette bei Revision 6 B → A, 8 A → B und 10 B → A. Ursache war, dass jede offene
+Nicht-Transitaufgabe die nächste Rückfahrt legitimierte, obwohl keine von ihnen
+auf der Zielseite konkret ausführbar war.
+
+`TRANSIT` bleibt eine ereignisgebundene Rückkehraufgabe, ist aber jetzt nur
+verfügbar, wenn seine vorhandene exakte Portalroute **und** eine frische,
+konkrete Aufgabe nach dem Übertritt belegt sind. Die neue Evidenz bewertet vom
+exakten Routenendpunkt aus ausschließlich lokale Frontierarbeit oder die
+Einstiegsseite der nächsten bestätigten Portalaufgabe. `OPEN` allein, andere
+Transitaufgaben und ein Transit als eigener Zweck reichen nicht. Der
+Regionsgraph berücksichtigt Portalaufgaben nur auf ihrer tatsächlichen
+Einstiegsseite, damit ein Raum → Flur → nächstes Zimmer möglich bleibt, ohne
+Transitpendeln zu erzeugen. Nach jeder neuen Rohkartenrevision erfolgt die
+vollständige Neubewertung; es gibt keinen Cooldown und keine gelockerte
+Frische-, Scope-, Routen- oder Durchfahrtsprüfung.
+
+Die Statusprojektion zeigt für eine wählbare Transitaufgabe die gebundene
+Zielaufgabe, deren Region und gegebenenfalls das nächste Portal. Remote
+Frontiers können keine direkte Kindnavigation am Portalmonitor vorbei
+veranlassen; sie sind ausschließlich Zwecknachweis bis zum tatsächlichen
+Übertritt. Dort entscheidet die bestehende Produktionskette erneut anhand
+aktueller Quellen. Wird der Zweck ungültig, wird auch der Transit nicht mehr
+angeboten beziehungsweise die vorhandene Quellprüfung beendet das Kindziel.
+
+### Durchgeführte Prüfungen
+
+- Der frühere `xfail` ist nun der reguläre Test
+  `test_transit_does_not_repeat_direction_without_work_progress`: vier frische
+  Revisionen mit weiterhin nicht beobachteter Arbeit wählen keinen Transit und
+  ändern die aktuelle Region nicht.
+- `test_three_hall_doors_hold_a_blocked_door_and_resume_in_order` bestätigt
+  drei bekannte Flurtüren: eine blockierte Tür bleibt sichtbar, aber
+  nicht wählbar; die andere wird zuerst gewählt; der Rücktransit erhält erst
+  nach frischem Nachweis der verbleibenden Tür einen Zweck und danach wird
+  genau diese Tür gewählt. Jede Policyentscheidung besitzt genau eine Absicht.
+- Bestehende Tests belegen weiterhin den Rücktransit zu einer aktuellen
+  Frontier sowie den Zweck „nächstes bestätigtes Portal“.
+- Isolierter Build: `amadeus_map_identity`, `robot_interfaces` und `explore`
+  bestanden. `pytest src/explore/test`: **868 bestanden**. Isoliertes
+  `colcon test --packages-select explore`: **868 bestanden**.
+- Kartenidentität, Kartenmanager, Semantikmanager, Missionsmanager und Explore:
+  **1.051 bestanden**. Der Kartenmanager lief dabei aus seinem Quellpfad, weil
+  sein Paket-Setup die nicht gebauten Zielsystem-Launch-Abhängigkeiten erwartet;
+  das ist kein ersatzweiser Installationsnachweis.
+- Der Produktionsprozessprüfer lief in `ROS_DOMAIN_ID=216`,
+  `ROS_LOCALHOST_ONLY=1` und ohne `CYCLONEDDS_URI` mit Exit 0. `positive`,
+  `fault`, `multiroom` und `resume` bestanden mit jeweils 0 Command-Nachrichten.
+  Der Mehrraumfall erreicht Startraum → Flur → Zimmer → Unterbrechung →
+  Speichern → Neustart ohne Autostart → frische Pose/Quellen → neuer
+  ausdrücklicher Auftrag → derselbe Flur → Frontierabschluss → natürlichen
+  Elternabschluss. Portal-/Regions-IDs bleiben erhalten, die Transitaufgabe
+  bleibt über den Neustart offen und wird erst nach dem zweckgebundenen
+  Rückübertritt abgeschlossen.
+- `git diff --check`, `compileall` und `ament_flake8` für alle geänderten
+  Dateien außer `explore_node.py` bestehen. Die 34 Befunde in
+  `explore_node.py` entsprechen dem bekannten historischen Bestand; keine
+  fachfremde Stilbereinigung.
+
+Der Prozessprüfer simuliert Sensoren, Fake-Nav2 sowie den erfolgreichen
+Kartenmanager-`save_result`; er schreibt und lädt die WE-Metadaten, aber startet
+keinen realen Kartenmanager-Speicherprozess. Das belegt keine Zielsystem- oder
+Hardwareabnahme. Es wurden keine Geräte aktiviert, keine Fahrt ausgelöst und
+keine reale Wohnungsgeometrie gespeichert.
+
+## 0.1. Historischer Gerätefrei-Check vor PR95-R1
 
 Der Check und die Korrektur liefen ausschließlich im separaten Worktree
 `feature/we-transit-return`, ausgehend vom Reviewstand
@@ -20,8 +100,9 @@ Der bisherige Mehrraumblocker ist behoben. Nach einer bestätigten Durchfahrt
 schließt der Regionsgraph nur die offene, zur Zielregion passende Portalaufgabe.
 Bleibt in der verlassenen Region echte Arbeit offen, erzeugt er eine einmalige
 revisionsgebundene `TRANSIT`-Aufgabe für dieselbe Portal-ID. Die Ankunft über
-diese Aufgabe schließt genau sie; Transitaufgaben erzeugen keine Ping-Pong-
-Rückwege. Mehrdeutige Transitaufgaben bleiben nicht auswählbar. Der vorhandene
+diese Aufgabe schließt genau sie. Der Ausschluss reiner Transitaufgaben als
+Bedarfsgrund verhindert jedoch nicht PR95-R1 bei beidseitig offener Arbeit.
+Mehrdeutige Transitzuordnungen werden nicht eindeutig abgeschlossen. Der vorhandene
 Portal-Evidenz- und Traversalpfad ist ihr konkreter Verbraucher: `ExploreNode`
 akzeptiert sie nur mit frischer Karten-, Scope-, Portal- und Routen-Evidenz.
 Eine Aufgabe kann nicht auf der Revision gewählt werden, auf der sie entstand;
@@ -31,8 +112,8 @@ Traversalstand fälschlich als veraltet zu melden.
 
 Der vorhandene isolierte ROS-Prozessprüfer bestand in ROS-Domain 215 mit
 synthetischer Karte, TF/Scan und Fake-Nav2. Er belegt die Produktionskette
-Startraum → Flur → weiteres Zimmer → Unterbrechung → atomarer Kartenmanager-
-und WE-Save → Neustart → passives Laden ohne Ziel → neue Pose/Quelle → neuer
+Startraum → Flur → weiteres Zimmer → Unterbrechung → synthetisches Kartenmanager-
+Save-Ergebnis und atomarer WE-Save → Neustart → passives Laden ohne Ziel → neue Pose/Quelle → neuer
 ausdrücklicher Auftrag → derselbe Flur → Frontierabschluss → natürlicher
 erklärter Elternabschluss. Die Rückkehraufgabe wurde automatisch gewählt,
 behielt ihre ID über den Neustart und wurde erst durch den vorhandenen
@@ -40,8 +121,9 @@ Durchfahrtsmonitor bestätigt. Der Prüfer gab keine Fahrbefehle aus
 (`command_message_count: 0`). Der bisherige Positiv-, Fehler- und
 Einportal-Wiederanlauffall bestehen ebenfalls.
 
-**WE-1 gerätefreier Softwareabschluss: nachgewiesen auf der genannten
-Entwicklungsbasis.** Dies ist weder eine Main-Integration noch ein
+Der damalige positive Prozessnachweis galt nur für sein Szenario. Die
+Korrektur und die zusätzlichen Gegenregressionen in Abschnitt 0 schließen
+PR95-R1 gerätefrei; auch das ist weder eine Main-Integration noch ein
 Installations-, Zielsystem- oder Hardwareabnahmenachweis.
 
 ## 1. Geprüfte Basis und Reviewbefund
@@ -87,10 +169,10 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | WE-M0/B | Frühere Fahrbasis dokumentiert. | Reproduzierbarer Zielsystem-/Laststand und freigegebener realer Nachtest offen. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
-| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, Traversalfortschreibung und natürlicher Mehrraum-Elternabschluss sind gerätefrei geprüft. Der Rückweg entsteht als versionsgebundene Transitaufgabe und wird über den vorhandenen Portalpfad automatisch ausgewählt. | Zielprofil, reale Last und Fahrwirkung sind getrennt offen. |
+| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Die Gegenregression hält unbewiesene Rücktransite auf jeder frischen Revision zurück. | Zielprofil, reale Last und Fahrwirkung getrennt offen. |
 | WE-M4 | Reale Drei-Regionen-Abnahme unverändert offen. | Neue Freigabe, Not-Aus, motorlose Vorprüfung und begrenzte Fahrt erforderlich. |
-| WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im vollständigen Mehrraum-Rückweg geprüft. Portal-, Regions- und offene Transit-IDs bleiben erhalten; Semantikdaten werden nicht geschrieben. | Zielsystem-Dateisystem und reale Wiederaufnahme offen. |
-| WE-M6 | Die gerätefreie Softwarekette ist zusammenhängend belegt. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt offen. |
+| WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im Mehrraum-Rückweg geprüft. Portal-, Regions- und offene Transit-IDs bleiben erhalten; Semantikdaten werden nicht geschrieben. | Zielsystem-Dateisystem und reale Wiederaufnahme offen. |
+| WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt separat offen. |
 | WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
 
 ## 3. Gerätefreie Gesamtnachweise
@@ -108,7 +190,7 @@ beobachteten Command-Topics keine Befehle.
 | Frontierkette | Eine sich entwickelnde Rohkarte erzeugt automatisch einen Frontiercluster, stabile Aufgabe, Policyauswahl und metrischen Kandidaten; Fake-Nav2-Erfolg plus neuere vollständige Karte löst die Aufgabe über den Produktionsresolver. |
 
 Die direkte Paketregression und `colcon test` für `explore` bestanden jeweils mit
-**857 Tests, 0 Fehlern, 0 Fehlschlägen, 0 Skips**. Der Prozessprüfer bestand mit
+**868 Tests, 0 Fehlern, 0 Fehlschlägen, 0 Skips**. Der Prozessprüfer bestand mit
 `positive`, `fault`, `multiroom` und `resume`; alle vier Szenarien meldeten
 `command_message_count: 0`. Die erweiterten reinen Module, Tests und der Prüfer
 bestehen `ament_flake8` ohne Befund. Bestehende historische Stilbefunde im großen
@@ -132,8 +214,9 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-Im vereinbarten **gerätefreien Softwareumfang besteht kein offener funktionaler
-Blocker**. Vor einer Integration oder Hardwarearbeit bleiben getrennte Gates:
+Im vereinbarten **gerätefreien Softwareumfang ist kein funktionaler Blocker
+bekannt**; PR95-R1 ist in Abschnitt 0 mit Gegenregression geschlossen. Vor einer
+Integration oder Hardwarearbeit bleiben getrennte Gates:
 
 1. Den Branch reviewen und nach ausdrücklicher Freigabe nach `main` integrieren;
    kein automatischer Merge.
@@ -159,8 +242,10 @@ Raumnamen/-daten bleiben Eigentum des Semantikvertrags und werden durch WE-M5 ni
 
 Rückfall: `wohnungserkundung_persistence_enabled: false` lässt den neuen
 Dateipfad vollständig unbenutzt; `wohnungserkundung_navigation_enabled: false`
-belässt die WE-Kette passiv. Der funktionale Commit `5e7ba9e` kann als Ganzes
-zurückgenommen werden, ohne Karten- oder Semantikdateien zu löschen. Sichtbare gültige
+belässt die WE-Kette passiv. Der R1-Korrekturcommit kann als Ganzes
+zurückgenommen werden, ohne Karten- oder Semantikdateien zu löschen; dann gilt
+der historische Pendelblocker wieder und der Branch darf nicht als
+gerätefreier Releasekandidat bewertet werden. Sichtbare gültige
 WE-Zustandsrevisionen werden nicht automatisch rotiert oder überschrieben.
 
 Alle genannten Ergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2.
