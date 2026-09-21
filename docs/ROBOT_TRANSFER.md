@@ -1,5 +1,46 @@
 # Übertragung auf den realen Roboter
 
+## WE-1: erster Realversuch sicher beendet, Scope-Fortsetzung gesperrt (21.09.2026)
+
+Christopher bestätigte Not-Aus, freie Türen und zwei Zimmer plus Flur; Treppen,
+Außenbereiche, Personen und Tiere waren ausgeschlossen. Der freigegebene Lauf
+bewegte Amadeus etwa 0,466 m und endete ohne Safety-, Encoder- oder Busfehler,
+aber nur mit einem Teilstand: Kartenrevisionen ersetzten fortlaufend den
+Frontierkandidaten und lösten zwölf sichere Cancel/Replans aus. Es wurde kein
+Portal überquert und kein natürlicher Mehrraumabschluss erreicht.
+
+Der Explorer hält nun das gesendete Frontierziel fest und prüft genau dieses
+Ziel auf jeder neuen Rohkarte erneut gegen Kartenidentität, Pose,
+Hindernisabstand, Scope und Erreichbarkeit. Der motorlose Produktionslauf hielt
+es von Revision 55 bis 119 aktuell; Basis blieb im Dry-run und alle
+Fahrbefehle waren null. Diese Softwareevidenz ist noch keine fahrende Abnahme
+der Korrektur.
+
+Amadeus steht nach dem ersten Lauf nicht mehr an der ursprünglichen Startpose.
+Ein aus der aufgezeichneten Endpose abgeleitetes lokales Profil lieferte im
+motorlosen Exaktkartentest null sicher erreichbare Frontierziele innerhalb des
+Scopes, obwohl sechs Ziele ohne Scope erreichbar wären. Beim zweiten aktiven
+Vorlauf wurde deshalb kein Auftrag gesendet. Danach wurden alle Prozesse sauber
+beendet; `/dev/ttyUSB_BASE` war frei. Der Fahrzustand war null, eine elektrische
+Motorstromfreiheit wurde dabei nicht separat gemessen.
+
+Vor dem nächsten Start ist genau eine der folgenden Vor-Ort-Aktionen nötig:
+
+1. Roboter zur ursprünglichen markierten Startpose einschließlich Orientierung
+   zurückstellen; oder
+2. einen neuen zusammenhängenden Scope ab der aktuellen Pose vermessen und
+   dessen Ausschluss von Treppen und Außenbereichen bestätigen.
+
+Das Profil liegt ausschließlich unter
+`~/.local/share/amadeus/profiles/we1-first-realtest-20260921.yaml`, der
+vollständige Fahrbag unter
+`~/.local/share/amadeus/bags/we1-real-full-20260921-2101`. Diese reale Geometrie
+nicht committen. Bis zur Vor-Ort-Aktion keine weitere WE-Fahrt auslösen und den
+Scope nicht aus bloßem Kartenfreiraum automatisch vergrößern. Der isolierte
+Overlaystand ist nicht in die laufende Roboter-Arbeitskopie deployt.
+
+---
+
 ## WE-1: motorloser Zielsystemcheck bestanden (21.09.2026)
 
 **Geprüfter Stand:** PR #95, Commit

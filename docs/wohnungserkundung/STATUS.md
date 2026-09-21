@@ -1,11 +1,56 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · erster Realversuch: TEILERGEBNIS, Scope-Restblocker · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Erster freigegebener WE-Realversuch, 2026-09-21
+
+Christopher bestätigte vor Ort erreichbaren Not-Aus, freie bekannte Türen und
+den befahrbaren Umfang aus zwei Zimmern und Flur; Treppen, Außenbereiche,
+Personen und Tiere waren ausgeschlossen. Der aktive Versuch verwendete nur das
+lokale Profil und den isolierten WE-Installationsstand. Er bewegte Amadeus etwa
+0,466 m, ohne Safety-, Encoder- oder Busfehler. Alle beobachteten Fahrkanäle
+waren beim Ende null, der Bag wurde geschlossen und der Gesamtstart anschließend
+mit genau einem SIGINT sauber beendet; `/dev/ttyUSB_BASE` war danach frei.
+
+Der Versuch ist **kein erfolgreicher WE-M4-/WE-M6-Abschluss**. Während sich die
+reale Karte entwickelte, ersetzte die Zielbildung denselben Frontierpunkt durch
+jeweils neu bevorzugte Punkte. Die revisionssichere Quellenprüfung stornierte
+dadurch jedes aktive Kindziel; nach zwölf solchen Sicherheits-Replans endete der
+Elternauftrag mit dem belegten Teilstand statt natürlich. Der lokale Bag liegt
+unter `~/.local/share/amadeus/bags/we1-real-full-20260921-2101`; reale Geometrie
+bleibt außerhalb des Repositorys.
+
+Die eng begrenzte Korrektur hält das einmal gesendete Frontierziel fest und
+validiert es auf jeder neueren, exakt korrelierten Rohkarte erneut gegen
+Kartenidentität, Pose, Hindernisabstand, freigegebenen Scope und geodätische
+Erreichbarkeit. Nur ein weiterhin sicheres Ziel läuft weiter; ein blockiertes,
+unerreichbares oder aus dem Scope gefallenes Ziel wird weiterhin fail-closed
+storniert. Solche Quellen-Replans verbrauchen nicht mehr das endliche
+Nav2-Ergebnisbudget; der Gesamt-Timeout begrenzt sie weiterhin. Der motorlose
+Produktionslauf hielt dasselbe aktive Ziel von Kartenrevision 55 bis 119 bei
+jeweils aktuellem Nachweis. Dabei blieben Basis im Dry-run, RS485 gesperrt und
+alle Fahrbefehle null.
+
+Vor einer zweiten Fahrt wurde aus der tatsächlich aufgezeichneten Endpose ein
+neues lokales Profil abgeleitet. Der anschließende motorlose Exaktkartentest
+fand ohne Scope sechs erreichbare Frontiers, innerhalb des freigegebenen
+Polygons jedoch **null**. Zwei Frontierpunkte lagen zwar geometrisch im Polygon,
+ihre sicher aufgeweitete Route war darin aber nicht mit der Roboterzelle
+verbunden. Deshalb wurde beim zweiten aktiven Vorlauf trotz frischer Sensoren,
+Odometrie und Safety **kein Auftrag gesendet**; der Start wurde wieder sauber
+beendet.
+
+Konkreter Restblocker: Der Roboter muss entweder zur markierten ursprünglichen
+Startpose einschließlich Orientierung zurückgestellt werden, oder ein vor Ort
+neu vermessener, zusammenhängender Scope muss die sichere Route ab der jetzigen
+Pose einschließen und Treppen/Außenbereiche weiterhin nachweislich ausschließen.
+Die Software darf diese reale Grenze nicht aus Kartenfreiraum erraten oder
+automatisch erweitern. Bis dahin keine weitere Fahrt und keine Hardwareabnahme.
 
 ## Motorloser Zielsystemcheck auf dem Jetson, 2026-09-21
 
@@ -231,13 +276,13 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | Stufe | Nachgewiesener Stand | Verbleibende Grenze |
 |---|---|---|
 | WE-D0 / WE-M0/A | Strategie, Basisvergleich und Schnittstellenreview abgeschlossen. | Keine Wiederholung ohne neuen Befund. |
-| WE-M0/B | Isolierter Jetson-Build, vollständige Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. | Freigegebener begrenzter Fahrnachtest bleibt offen. |
+| WE-M0/B | Isolierter Jetson-Build, vollständige Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. Ein freigegebener Realversuch fuhr ca. 0,466 m ohne Safety-, Encoder- oder Busfehler und endete sicher. | Das ist nur ein Teilnachweis, keine vollständige Fahrabnahme. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
-| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Die Gegenregression hält unbewiesene Rücktransite auf jeder frischen Revision zurück. | Zielprofil, reale Last und Fahrwirkung getrennt offen. |
-| WE-M4 | Lokales Profil für Startraum → bekannte Tür → begrenzter Flur ist fahrgesperrt vorbereitet. | Christophers Scope-Bestätigung, neue Fahrfreigabe, Not-Aus und begrenzte Fahrt erforderlich; keine Drei-Regionen-Abnahme behauptet. |
+| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Aktive Frontierziele werden auf jeder neueren Rohkarte am festen Ziel erneut geprüft; motorlos blieb ein Ziel über Revision 55 bis 119 stabil. | Der korrigierte Pfad ist noch nicht fahrend über mehrere Kartenrevisionen abgenommen. |
+| WE-M4 | Scope und Fahrt waren vor Ort freigegeben; der erste Realversuch lieferte einen sicheren Teilnachweis. Der zweite aktive Vorlauf sendete wegen null sicher erreichbarer Ziele bewusst keinen Auftrag. | Aktuelle Pose und lokaler Scope bilden keinen zusammenhängenden sicheren Pfad; Rückstellung oder neu vermessener Scope erforderlich. Keine Drei-Regionen-Abnahme. |
 | WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im Mehrraum-Rückweg geprüft. Auf dem Jetson bestanden echter Kartenmanager-Save, gebundener WE-Save, Falschkartensperre und passives Laden derselben Karte ohne Ziel. | Reale Wiederaufnahme nach Lokalisierung und Portal-/Transit-ID-Nachweis mit echter Mehrraumkarte bleiben offen. |
-| WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt separat offen. |
+| WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Reale Mehrraumkette, Unterbrechung/Wiederaufnahme und wiederholbarer Abschluss bleiben offen. |
 | WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
 
 ## 3. Gerätefreie Gesamtnachweise
@@ -280,22 +325,23 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
 Im vereinbarten **gerätefreien Software- und motorlosen Zielsystemumfang ist
-kein Blocker bekannt**. PR95-R1 ist in Abschnitt 0 mit Gegenregression
-geschlossen; Footprint-Vertrag, Shutdownpfade und Zielsystemwiederholung sind
-oben belegt. Vor einer Integration oder Hardwarearbeit bleiben getrennte Gates:
+kein Blocker bekannt**. Der erste Realversuch hat darüber hinaus einen
+Softwareblocker der aktiven Frontierfortsetzung offengelegt; die eng begrenzte
+Korrektur ist motorlos auf dem Produktionspfad belegt. Für die nächste reale
+Fahrt besteht nun ein physischer Scope-Blocker, kein Anlass zu einer neuen
+WE-Architektur:
 
 1. Den Branch reviewen und nach ausdrücklicher Freigabe nach `main` integrieren;
    kein automatischer Merge.
-2. Das ausschließlich lokale Scope-Polygon vor Ort als frei von Treppen,
-   Außenbereichen und sonstigen Gefahren bestätigen; reale Geometrie bleibt
-   außerhalb des Repositorys.
+2. Amadeus zur ursprünglichen markierten Startpose und Orientierung
+   zurückstellen oder den zusammenhängenden sicheren Scope ab der aktuellen
+   Pose neu vermessen; reale Geometrie bleibt außerhalb des Repositorys.
 3. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
    Kollisionsüberwachung bei der Fahrt weiter beobachten; Softwaretests sind
    keine Hardwarefreigabe.
-4. Erst nach bestätigtem begrenztem
-   Zielprofil und ausdrücklicher Freigabe mit Not-Aus in Reichweite WE-M0/B und
-   WE-M4 begrenzt fahren; anschließend WE-M6 wiederholt für den freigegebenen
-   realen Wohnungsumfang abnehmen.
+4. Erst nach Auflösung dieses Scope-Blockers und erneuter Vorprüfung den bereits
+   freigegebenen Umfang fahren; anschließend WE-M6 einschließlich realer
+   Unterbrechung/Wiederaufnahme wiederholt abnehmen.
 
 Automatische Regions-Split-/Merge-Entscheidungen bleiben absichtlich konservativ;
 ungeklärte Korrekturen dürfen keinen erfundenen Raumabschluss erzeugen. Manuelle
@@ -312,7 +358,9 @@ der historische Pendelblocker wieder und der Branch darf nicht als
 gerätefreier Releasekandidat bewertet werden. Sichtbare gültige
 WE-Zustandsrevisionen werden nicht automatisch rotiert oder überschrieben.
 
-Die Prozessprüfergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2;
-der getrennte Zielsystemlauf verwendete reale Sensoren, aber keine Aktoren. Es
-wurde keine Fahrt ausgelöst, keine laufende Roboter-Arbeitskopie gewechselt,
-kein Deployment ausgeführt und keine reale Fahr- oder Hardwareabnahme behauptet.
+Die Prozessprüfergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2.
+Der erste Realversuch aktivierte den vorhandenen isolierten Stand nach
+persönlicher Freigabe und erzeugte ausschließlich den oben beschriebenen
+Teilnachweis. Die laufende Roboter-Arbeitskopie wurde nicht gewechselt, ihr
+Install nicht ersetzt und keine vollständige Fahr- oder Hardwareabnahme
+behauptet.
