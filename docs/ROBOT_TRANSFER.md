@@ -1,19 +1,21 @@
 # Übertragung auf den realen Roboter
 
-## WE-1: motorloser Zielsystemcheck nicht bestanden (21.09.2026)
+## WE-1: motorloser Zielsystemcheck bestanden (21.09.2026)
 
-**Geprüfter Stand:** PR #95, Branch `feature/we-transit-return`, Commit
-`10e1858074e738df739077aea27078d6bbef7156`
+**Geprüfter Stand:** PR #95, Commit
+`10e1858074e738df739077aea27078d6bbef7156`, plus ausschließlich die
+Footprint-Test- und Shutdownkorrekturen auf `fix/we1-target-check-blockers`.
 
-Der WE-Releasekandidat wurde auf diesem Jetson ohne Motorfreigabe in einem
-getrennten Installationspräfix unter
-`~/.local/share/amadeus/releases/we1-10e1858074e7-r1` gebaut und geprüft. Die
+Der WE-Releasekandidat wurde auf diesem Jetson ohne Motorfreigabe in getrennten
+Installationspräfixen unter
+`~/.local/share/amadeus/releases/we1-target-blockers-20260921` gebaut und
+geprüft. Die
 laufende, lokal geänderte Arbeitskopie `/home/p/roboter_ws` und ihr Install
-wurden weder gewechselt noch ersetzt. Das lokale `activate.bash` sourct ROS
-Humble, das gepinnte SLAM-Toolbox-Overlay, das LiDAR-Overlay, ein lokales
-BehaviorTree.CPP-Kompatibilitätspräfix für die vorhandene ARM64-apt-Bibliothek
-und zuletzt ausschließlich den isolierten WE-Install. Rückfall: eine frische
-Shell verwenden und dieses Aktivierungsskript nicht sourcen.
+wurden weder gewechselt noch ersetzt. Das LiDAR-Overlay baut den gepinnten
+Vendor-Commit mit der engen seriellen Shutdownkorrektur; der Roboter-Workspace
+verwendet weiterhin ein lokales BehaviorTree.CPP-Kompatibilitätspräfix für die
+vorhandene ARM64-apt-Bibliothek. Rückfall: eine frische Shell verwenden und die
+isolierten Overlays nicht sourcen.
 
 Der gemeinsame Lauf mit LiDAR, beiden VL53, SLAM, Nav2, Explorer,
 Kartenmanager, `collision_monitor` und Safety war unter Last stabil. Typische
@@ -23,36 +25,39 @@ das vermessene Polygon über `/local_costmap/published_footprint`.
 `base_hardware` lief ausschließlich mit `dry_run=true`; `/dev/ttyUSB_BASE`
 blieb frei, Drehzahlen und Geschwindigkeiten blieben null.
 
-Der echte Kartenmanager-Save sowie der daran gebundene WE-Save bestanden ohne
-Durability-Warnung. Ein kompletter Neustart mit einer neu entstandenen
-Live-SLAM-Karte lehnte den alten Fingerprint korrekt ab. Ein Explorer-Neustart
-bei unveränderter Karte lud dieselbe Karten-/WE-Version passiv; eine Region und
-21 Aufgaben behielten ihre IDs. Über 105 Sekunden entstanden weder ein
-Nav2-Ziel noch ein nichtnull Geschwindigkeitsbefehl. Die lokale Prüfkarte
-`we1_target_check_20260921` und die WE-Zustandsrevision liegen nur unter
-`~/.local/share/amadeus/` und dürfen nicht ins Repository übernommen werden.
+Der veraltete VL53-Test prüft nun ausschließlich den bereits real abgenommenen
+Polygonvertrag; Produktionskonfiguration und Footprint-Architektur blieben
+unverändert. Der gepinnte LiDAR-Treiber schließt seinen seriellen Deskriptor
+erst nach dem Empfangsthread-Join. VL53 und Basis behandeln einen bereits durch
+SIGINT beendeten rclpy-Kontext idempotent; Fahrtor und Kartenmanager lassen
+echte RuntimeErrors weiter sichtbar und ignorieren nur den Humble-
+`take_message`-Fehler bei bereits beendetem Kontext.
 
-**MOTORLOSER WE-1-ZIELSYSTEMCHECK: NICHT BESTANDEN.** Konkrete Blocker:
+Der vollständige Build umfasste 23 Pakete. Direkt bestanden 1.206 Tests und
+registriert 1.016 Tests, jeweils ohne Fehler, Fehlschlag oder Skip. Der
+Produktionsprozessprüfer bestand positiv, Fehlerpfad, Mehrraum-Rückkehr und
+Speichern/Neustart/Fortsetzung mit natürlichem Abschluss und jeweils null
+Fahrbefehlen.
 
-1. Von 1.203 direkten Python-Tests besteht einer nicht: Der VL53-Vertragstest
-   erwartet noch den historischen Kreis mit 0,40 m Radius, während die
-   freigegebene Laufzeitkonfiguration absichtlich das reale Polygon verwendet.
-   Den Test eng auf den freigegebenen Polygonvertrag korrigieren und die
-   vollständige Suite wiederholen; keine Footprint-Architektur neu eröffnen.
-2. Beim kontrollierten SIGINT beendet sich der LiDAR-Treiber mit Buffer-Overflow,
-   VL53 und Basis melden doppeltes `rclpy.shutdown()`, und das Fahrtor meldete in
-   einem Lauf einen Konvertierungsfehler während des Shutdowns. Obwohl danach
-   keine Prozesse oder Gerätebesitzer übrig blieben, ist dieser Abbruchpfad vor
-   einer Fahrt zu klären.
-3. Das eingecheckte Standardprofil deaktiviert WE absichtlich. Das lokale
-   Prüfprofil hatte Navigation aus und einen ausdrücklich nicht freigegebenen
-   Scope. Für die spätere Fahrt ist ein konkretes, von Christopher bestätigtes
-   Zielprofil nötig.
+Der echte Kartenmanager-Save unter `we1_target_recheck_20260921` sowie der
+daran gebundene WE-Save bestanden ohne Durability-Warnung. Während 30 Sekunden
+gemeinsamer Last entstanden null Nav2-Ziele und null Nichtnull-Befehle. Zwei
+aufeinanderfolgende vollständige SIGINT-Stopps endeten danach ohne Traceback
+oder Prozessabbruch; LiDAR, beide VL53, Basis und Kartenmanager wurden sauber
+freigegeben. `/dev/ttyUSB_BASE`, `/dev/amadeus_lidar` und `/dev/i2c-9` waren
+frei.
 
-Es wurde kein Deployment vorgenommen. Nach Testende liefen keine für diese
-Prüfung gestarteten Roboterprozesse, und der Motorport war frei. Keine
-Fahrfreigabe aus diesem Abschnitt ableiten; zuerst die Blocker beheben und den
-motorlosen Check erneut vollständig bestehen.
+**MOTORLOSER WE-1-ZIELSYSTEMCHECK: BESTANDEN.** Das lokale Profil
+`~/.local/share/amadeus/profiles/we1-first-realtest-20260921.yaml` ist auf
+Startraum, bekannte offene Tür und einen begrenzten ersten Flurabschnitt
+zugeschnitten. Reale Wohnungsgeometrie und Zustände bleiben ausschließlich
+lokal. WE-Navigation, Scope-Freigabe und Portalmonitor stehen weiter auf
+`false`, bis Christopher den Ausschluss von Treppen, Außenbereichen und anderen
+Gefahren vor Ort bestätigt und ausdrücklich die Fahrt freigibt.
+
+Es wurde kein Deployment vorgenommen. Keine Hardware- oder Fahrfreigabe aus
+diesem Abschnitt ableiten; die nächste Aktion ist ausschließlich Christophers
+Scope- und Fahrbestätigung bei erreichbarem Not-Aus.
 
 ---
 

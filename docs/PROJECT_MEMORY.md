@@ -17,6 +17,48 @@ Rückfallweg:
 
 ---
 
+## 2026-09-21 — WE-1 motorloser Zielsystemcheck bestanden
+
+**Entscheidung:** Der motorlose WE-1-Zielsystemcheck gilt auf PR #95 plus den
+eng begrenzten Zielsystemkorrekturen als bestanden. Es folgt keine weitere
+Softwareentwicklung und keine Fahrt ohne neue persönliche Freigabe.
+
+**Grund / beobachtete Evidenz:** Der einzige rote Vertragstest erwartete noch
+den historischen Kreis statt des seit 18.08. real abgenommenen dynamischen
+Polygons; nur der Test wurde berichtigt. Die LiDAR-Abbruchursache war eine
+reproduzierbare Close-Race: Der Vendor-Treiber schloss und invalidierte den
+seriellen Deskriptor vor dem Empfangsthread-Join, sodass der Thread noch
+`FD_SET(-1)` erreichen konnte. Der separate Patch initialisiert die Atomics und
+schließt erst nach dem Join. Python-Knoten behandeln den bereits durch SIGINT
+beendeten Humble-Kontext idempotent; echte RuntimeErrors im gültigen Kontext
+bleiben sichtbar. Zwei vollständige Wiederholungen beendeten alle 24 Prozesse
+sauber und gaben LiDAR, I²C sowie `/dev/ttyUSB_BASE` frei.
+
+**Betroffene Dateien und Hardware:** Ausschließlich Footprint-Vertragstest,
+Shutdown-Hüllen von Basis, VL53, Fahrtor und Kartenmanager, reproduzierbarer
+Patch/Builder für den gepinnten STL-27L-Treiber sowie Dokumentation. Keine
+Fahrparameter, Produktions-Footprints, Live-Installation oder Aktoren geändert.
+Ein begrenztes Profil mit realer Wohnungsgeometrie liegt nur lokal und hält alle
+Fahr-Opt-ins bis zur Vor-Ort-Bestätigung auf `false`.
+
+**Teststatus:** Vollständiger isolierter 23-Paket-Build; 1.206 direkte und
+1.016 registrierte Tests ohne Fehler/Fehlschlag/Skip; vier bestandene
+Produktionsprozessszenarien. Reale gemeinsame Sensor-/SLAM-/Nav2-/Explorer-/
+Safety-Last mit 0 Nav2-Zielen und 0 Nichtnull-Fahrbefehlen; atomarer
+Kartenmanager- und gebundener WE-Save ohne Durability-Warnung; zwei
+aufeinanderfolgende saubere SIGINT-Gesamtstopps.
+
+**Offene Risiken:** Dies ist keine Hardware- oder Fahrabnahme. Der lokale Scope
+muss vor Ort nachweislich Treppen, Außenbereiche und andere Gefahren
+ausschließen. Not-Aus, freie Tür, Transportpose und Christophers ausdrückliche
+Fahrfreigabe bleiben Pflicht.
+
+**Rückfallweg:** Isolierte Overlays nicht sourcen beziehungsweise die
+Zielsystemkorrekturen zurücknehmen. Dadurch werden weder bestehender Live-
+Install noch Karten- oder Semantikdaten verändert.
+
+---
+
 ## 2026-09-16 — WE-Releasekandidatencheck: Rückkehrkette noch nicht produktiv
 
 **Entscheidung:** PR #93 wird nach dem vollständigen Gerätefreireview nicht als

@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: NICHT BESTANDEN · PR #95-R1 bleibt Software-Releasekandidat · 2026-09-21**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -9,93 +9,68 @@ unverändert. Der vorherige M3/U-Stand ist im
 
 ## Motorloser Zielsystemcheck auf dem Jetson, 2026-09-21
 
-**MOTORLOSER WE-1-ZIELSYSTEMCHECK: NICHT BESTANDEN.** Es wurde keine
-Fahrfreigabe abgeleitet. Motorstrom und RS485 blieben gesperrt, es wurde kein
-Navigations- oder Erkundungsauftrag gesendet und keine Fahrt ausgelöst.
+**MOTORLOSER WE-1-ZIELSYSTEMCHECK: BESTANDEN.** Daraus folgt ausdrücklich
+keine Hardware- oder Fahrfreigabe. Motorstrom und RS485 blieben gesperrt, es
+wurde kein Navigations- oder Erkundungsauftrag gesendet und keine Fahrt
+ausgelöst.
 
-Geprüft wurde unverändert Commit
-`10e1858074e738df739077aea27078d6bbef7156` aus PR #95. Lokaler Head und
-`origin/feature/we-transit-return` waren identisch; PR #95 war offen und gegen
-`fix/we-release-candidate-review` mergebar. Die laufende Arbeitskopie
-`/home/p/roboter_ws` blieb auf `feature/modulare-sensorfusion` bei `00f6e52`
-mit ihren vorhandenen lokalen Änderungen unangetastet. Vor dem Test liefen
-keine Roboterprozesse und `/dev/ttyUSB_BASE` war frei.
+Geprüfte Basis ist PR #95 bei
+`10e1858074e738df739077aea27078d6bbef7156` plus ausschließlich die hier
+dokumentierten Footprint-Test- und Shutdownkorrekturen auf
+`fix/we1-target-check-blockers`. Die laufende Arbeitskopie
+`/home/p/roboter_ws` und ihr Install blieben unverändert. Der vollständige
+23-Paket-Build liegt isoliert unter
+`~/.local/share/amadeus/releases/we1-target-blockers-20260921/main`; der
+gepatchte, weiterhin auf `bf668a89baf722a787dadc442860dcbf33a82f5a`
+gepinnte LiDAR-Treiber liegt in einem getrennten Overlay daneben.
 
-Der Commit wurde in einem getrennten, normal kopierten Releasepräfix unter
-`~/.local/share/amadeus/releases/we1-10e1858074e7-r1` vollständig gebaut. Die
-Source-Reihenfolge war ROS Humble, das gepinnte SLAM-Toolbox-Overlay, das
-LiDAR-Overlay und erst danach dieser isolierte Install. Der auf ARM64 fehlerhafte
-`behaviortree_cpp`-CMake-Export wurde reproduzierbar durch ein lokales,
-nicht systemweit installiertes Kompatibilitätspräfix auf die vorhandene
-apt-Bibliothek 4.9.1 aufgelöst. `bt_orchestrator` bindet damit die erwartete
-Bibliothek; kein Paketpräfix fiel auf das schmutzige Live-Install zurück.
+### Geschlossene Blocker und Gesamtnachweis
 
-### Bestandene Zielsystemnachweise
+- Der historische Kreis-Vertrag kam nur noch im VL53-Test vor. Der Test prüft
+  jetzt wie die seit 18.08. real abgenommene Produktionskonfiguration das
+  Polygon über `/local_costmap/published_footprint`; Produktionsparameter und
+  Footprint-Architektur wurden nicht geändert. Direkt bestanden **1.206 Tests**,
+  registriert **1.016 Tests**, jeweils 0 Fehler, 0 Fehlschläge, 0 Skips.
+- Die LiDAR-Ursache war eine konkrete Close-Race im gepinnten Vendor-Treiber:
+  der Empfangsthread konnte nach `IsOpened()` noch `FD_SET(-1)` erreichen,
+  während `Close()` den Deskriptor vor dem Thread-Join schloss. Der eng
+  getrennte Patch initialisiert die beteiligten Atomics und schließt erst nach
+  dem Join. VL53 und Basis vermeiden doppeltes `rclpy.shutdown()`;
+  Fahrtor und Kartenmanager unterdrücken ausschließlich den von Humble beim
+  bereits beendeten Kontext gelieferten `take_message`-`RuntimeError`.
+  Echte RuntimeErrors bei gültigem Kontext werden weiter ausgelöst.
+- Nach dem diagnostischen Erstlauf wurden zwei weitere vollständige
+  Start-/SIGINT-Zyklen mit LiDAR, beiden VL53, SLAM, Nav2, Explorer,
+  Kartenmanager, `collision_monitor` und Safety sauber beendet. Alle Prozesse
+  meldeten reguläres Ende; kein Buffer-Overflow, SIGABRT, doppeltes Shutdown
+  oder Konvertierungs-Traceback trat auf. Danach waren `/dev/ttyUSB_BASE`,
+  `/dev/amadeus_lidar` und `/dev/i2c-9` frei.
+- Alle Nav2-Lifecycle-Knoten und `collision_monitor` waren aktiv. Der
+  Laufzeit-Footprint war exakt `x=-0,13..+0,33 m`, `y=+/-0,25 m`. Gemessen
+  wurden 9,9 Hz LiDAR/Normalisierung, je 4,0 Hz VL53, 1,0 Hz Karte, 49,8 Hz
+  Odometrie und 99,6 Hz TF mit frischen Stamps. In 30 Sekunden entstanden 0
+  Nav2-Ziele und auf allen beobachteten Fahrkanälen 0 Nichtnull-Befehle;
+  `base_hardware` blieb `dry_run=true`, `allow_rs485=false`.
+- Der reale Kartenmanager speicherte
+  `we1_target_recheck_20260921` atomar ohne Durability-Warnung; der Explorer
+  schrieb die exakt daran gebundene WE-Revision lokal. Der vorhandene
+  Produktionsprozessprüfer bestand erneut `positive`, `fault`, `multiroom`
+  und `resume`, einschließlich natürlichem Abschluss und passivem Laden ohne
+  Autostart, jeweils mit `command_message_count: 0`.
+- Das lokale, nicht versionierte Profil
+  `~/.local/share/amadeus/profiles/we1-first-realtest-20260921.yaml` begrenzt
+  auf Startraum, bekannte offene Tür und den ersten Flurabschnitt. Sein Scope
+  stammt aus dem lokalen HWT-Bag; Chassis-, Footprint-, Portal-, LiDAR- und
+  Frischewerte stammen aus den realen Produktionsabnahmen. Der vorgesehene
+  Umfang endet vor späteren Flurabschnitten und nimmt Treppen, Außen- und
+  sonstige nicht bestätigte Flächen nicht auf. Bis Christopher diesen
+  Ausschluss vor Ort bestätigt, bleiben WE-Navigation, Scope-Freigabe und
+  Portalmonitor ausdrücklich `false`.
 
-- Alle 23 Pakete bauten im isolierten Präfix; relevante Python-Imports und die
-  native BehaviorTree-Bindung bestanden.
-- Im gemeinsamen motorlosen Lauf waren LiDAR, beide VL53-Sensoren, SLAM, Nav2,
-  Explorer, Kartenmanager, `collision_monitor` und Safety gleichzeitig aktiv.
-  Gemessen wurden ungefähr 10 Hz für `/scan`, 9,9 Hz für `/scan_normiert`, je
-  4,0 Hz für VL53, 1 Hz für `/map`, 50 Hz für `/odom` und 100 Hz für `/tf`.
-  Nach einer einzelnen Start-up-Queue-Warnung wurden keine fortlaufenden
-  TF-Extrapolationen, verpassten Regelzyklen oder Frequenzeinbrüche beobachtet.
-- Alle Nav2-Lifecycle-Knoten und `collision_monitor` waren aktiv. Der reale
-  Laufzeitvertrag war das gepaddete Polygon über
-  `/local_costmap/published_footprint`; die Befehlsverkettung blieb
-  Controller → Fahrtor → Smoother → Kollisionsmonitor → Basis.
-  `base_hardware` lief mit `dry_run=true`; der Motorport blieb unbenutzt und
-  alle beobachteten Geschwindigkeiten und Drehzahlen waren null.
-- Der echte `robot_map_manager` speicherte die lokale Prüfkartenrevision
-  atomar unter `we1_target_check_20260921`. Save-Fingerprint und aktueller
-  Kartenfingerprint waren identisch und ohne Durability-Warnung. Daraufhin
-  schrieb der Explorer eine gebundene WE-Zustandsrevision außerhalb des
-  Repositorys.
-- Ein vollständiger Stack-Neustart erzeugte aus den neuen Live-Sensordaten
-  erwartungsgemäß einen anderen Kartenfingerprint. Der fremd gebundene Zustand
-  blieb mit `waiting_for_map` gesperrt und löste kein Ziel aus. Bei einem
-  anschließenden reinen Explorer-Prozessneustart auf unveränderter Karte wurde
-  exakt die neue Karten-/WE-Version passiv als `loaded` übernommen. Eine
-  Region und 21 Frontieraufgaben behielten ihre ID-Mengen; in der stationären
-  Einraumaufnahme existierte kein Portal. Über 105 Sekunden wurden null
-  Nav2-Ziele, null Nachrichten auf `/cmd_vel_nav_raw` und null
-  Nichtnull-Geschwindigkeiten beobachtet.
-- Nach dem Test liefen keine absichtlich gestarteten Roboterprozesse mehr und
-  `/dev/ttyUSB_BASE` war wieder frei. Reale Karte und WE-Zustand blieben nur in
-  den lokalen Datenverzeichnissen und wurden nicht ins Repository aufgenommen.
-
-### Blocker für ein positives Gesamtergebnis
-
-1. Der vollständige direkte Python-Testlauf ergab **1.202 bestanden, 1
-   fehlgeschlagen**. Der reproduzierbare Fehler
-   `test_mapping_profile_uses_motion_aware_conservative_footprint` erwartet
-   weiterhin `FootprintApproach.type: circle` und Radius 0,40 m, während die
-   seit dem real vermessenen Türprofil beabsichtigte Produktionskonfiguration
-   `type: polygon` und `/local_costmap/published_footprint` verwendet. Laufzeit,
-   Strategie und frühere Abnahme stimmen miteinander überein; der registrierte
-   Vertragstest ist veraltet. Solange der Test nicht gezielt an den freigegebenen
-   Vertrag angepasst und die Gesamtsuite erneut grün ist, wird der
-   Zielsystemcheck nicht als bestanden bezeichnet.
-2. Kontrolliertes SIGINT beendet zwar den gesamten Stack und lässt keine
-   Geräteprozesse zurück, aber der LiDAR-Prozess endet mit Buffer-Overflow
-   (`SIGABRT`), `vl53_near_field` und `base_hardware` mit einem zweiten
-   `rclpy.shutdown()` und in einem Lauf `cmd_vel_mission_gate` mit einem
-   Konvertierungsfehler während des Shutdowns. Diese Abbruchpfade sind vor einer
-   realen Fahrstufe gezielt zu bereinigen oder nachvollziehbar zu entkräften.
-3. Das eingecheckte Standardprofil hält WE-Policy, WE-Navigation und
-   WE-Persistenz absichtlich deaktiviert. Der motorlose Nachweis verwendete ein
-   lokales passives Profil mit nicht freigegebenem Scope. Vor einer Fahrt ist
-   daher zusätzlich ein konkret begrenztes, von Christopher bestätigtes
-   Zielprofil erforderlich; das Testprofil ist keine Fahrfreigabe.
-
-Kleinster nächster Schritt ist ausschließlich eine gezielte Korrektur des
-veralteten VL53-Vertragstests an den bereits freigegebenen Polygonvertrag und
-eine reproduzierbare Diagnose der genannten Shutdownfehler. Danach denselben
-motorlosen Zielsystemcheck aus dem unveränderten Commit plus diesen eng
-begrenzten Korrekturen wiederholen. Erst bei grünem Ergebnis darf um eine neue
-persönliche Freigabe für den einzelnen bekannten Türdurchgang gebeten werden.
-Rückfall bleibt: das isolierte Release nicht sourcen; der bestehende Live-Install
-und die laufende Arbeitskopie wurden nicht ersetzt.
+Nächster Schritt ist kein weiterer Softwareumbau, sondern ausschließlich die
+persönliche Bestätigung dieses begrenzten Scopes und eine neue Fahrfreigabe.
+Rückfall: das isolierte Release und LiDAR-Overlay nicht sourcen beziehungsweise
+die eng begrenzten Korrekturen zurücknehmen; kein Live-Install wurde ersetzt.
 
 ## 0. Abschlusskorrektur PR95-R1, 2026-09-16
 
@@ -256,11 +231,11 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | Stufe | Nachgewiesener Stand | Verbleibende Grenze |
 |---|---|---|
 | WE-D0 / WE-M0/A | Strategie, Basisvergleich und Schnittstellenreview abgeschlossen. | Keine Wiederholung ohne neuen Befund. |
-| WE-M0/B | Frühere Fahrbasis dokumentiert; isolierter Jetson-Build und gemeinsame motorlose Zielsystemlast am 21.09. reproduziert. | Ein veralteter Footprint-Vertragstest und nicht saubere Shutdownpfade blockieren das positive Zielsystemurteil; freigegebener Fahrnachtest offen. |
+| WE-M0/B | Isolierter Jetson-Build, vollständige Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. | Freigegebener begrenzter Fahrnachtest bleibt offen. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
 | WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Die Gegenregression hält unbewiesene Rücktransite auf jeder frischen Revision zurück. | Zielprofil, reale Last und Fahrwirkung getrennt offen. |
-| WE-M4 | Reale Drei-Regionen-Abnahme unverändert offen. | Neue Freigabe, Not-Aus, motorlose Vorprüfung und begrenzte Fahrt erforderlich. |
+| WE-M4 | Lokales Profil für Startraum → bekannte Tür → begrenzter Flur ist fahrgesperrt vorbereitet. | Christophers Scope-Bestätigung, neue Fahrfreigabe, Not-Aus und begrenzte Fahrt erforderlich; keine Drei-Regionen-Abnahme behauptet. |
 | WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im Mehrraum-Rückweg geprüft. Auf dem Jetson bestanden echter Kartenmanager-Save, gebundener WE-Save, Falschkartensperre und passives Laden derselben Karte ohne Ziel. | Reale Wiederaufnahme nach Lokalisierung und Portal-/Transit-ID-Nachweis mit echter Mehrraumkarte bleiben offen. |
 | WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Wiederholbarer Abschluss der freigegebenen realen Wohnung bleibt separat offen. |
 | WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
@@ -304,24 +279,20 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-Im vereinbarten **gerätefreien Softwareumfang ist kein funktionaler WE-Blocker
-bekannt**; PR95-R1 ist in Abschnitt 0 mit Gegenregression geschlossen. Der
-motorlose Zielsystemcheck vom 21.09. ist wegen des veralteten registrierten
-Footprint-Vertragstests und der nicht sauberen Shutdownpfade dennoch **nicht
-bestanden**. Vor einer Integration oder Hardwarearbeit bleiben getrennte Gates:
+Im vereinbarten **gerätefreien Software- und motorlosen Zielsystemumfang ist
+kein Blocker bekannt**. PR95-R1 ist in Abschnitt 0 mit Gegenregression
+geschlossen; Footprint-Vertrag, Shutdownpfade und Zielsystemwiederholung sind
+oben belegt. Vor einer Integration oder Hardwarearbeit bleiben getrennte Gates:
 
 1. Den Branch reviewen und nach ausdrücklicher Freigabe nach `main` integrieren;
    kein automatischer Merge.
-2. Den VL53-Vertragstest gezielt auf den bereits freigegebenen Polygonvertrag
-   korrigieren und die vollständige Zielsystemsuite erneut grün ausführen.
-3. Die SIGINT-Abbruchfehler von LiDAR, VL53, Basis und Fahrtor reproduzierbar
-   diagnostizieren und korrigieren oder mit belastbarer Evidenz entkräften.
-   Danach den commitgebundenen isolierten Build sowie gemeinsamen
-   SLAM-/Nav2-/Explorer-/Safety-Lastlauf wiederholen.
-4. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
-   Kollisionsüberwachung separat begründen und abnehmen; Softwaretests sind keine
-   Hardwarefreigabe.
-5. Erst nach positivem motorlosen Zielsystemurteil, bestätigtem begrenztem
+2. Das ausschließlich lokale Scope-Polygon vor Ort als frei von Treppen,
+   Außenbereichen und sonstigen Gefahren bestätigen; reale Geometrie bleibt
+   außerhalb des Repositorys.
+3. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
+   Kollisionsüberwachung bei der Fahrt weiter beobachten; Softwaretests sind
+   keine Hardwarefreigabe.
+4. Erst nach bestätigtem begrenztem
    Zielprofil und ausdrücklicher Freigabe mit Not-Aus in Reichweite WE-M0/B und
    WE-M4 begrenzt fahren; anschließend WE-M6 wiederholt für den freigegebenen
    realen Wohnungsumfang abnehmen.
@@ -341,7 +312,7 @@ der historische Pendelblocker wieder und der Branch darf nicht als
 gerätefreier Releasekandidat bewertet werden. Sichtbare gültige
 WE-Zustandsrevisionen werden nicht automatisch rotiert oder überschrieben.
 
-Alle genannten Ergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2.
-Es wurden keine Geräte aktiviert, keine Fahrt ausgelöst, keine laufende
-Roboter-Arbeitskopie gewechselt, kein Deployment ausgeführt und keine reale
-Hardwareabnahme behauptet.
+Die Prozessprüfergebnisse sind Softwarebelege mit simulierten Sensoren/Fake-Nav2;
+der getrennte Zielsystemlauf verwendete reale Sensoren, aber keine Aktoren. Es
+wurde keine Fahrt ausgelöst, keine laufende Roboter-Arbeitskopie gewechselt,
+kein Deployment ausgeführt und keine reale Fahr- oder Hardwareabnahme behauptet.
