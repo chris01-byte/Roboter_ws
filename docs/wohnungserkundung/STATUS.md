@@ -1,11 +1,63 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · erster Realversuch: TEILERGEBNIS, Scope-Restblocker · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · Realversuch: SICHER GESTOPPT, Nahbereichsblocker · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Fortgesetzter freigegebener WE-Realversuch, 2026-09-21
+
+Nach der bestaetigten Freigabe fuer zwei Zimmer und den Flur wurde der zuletzt
+belegte Softwareblocker eng begrenzt bearbeitet. Die Produktionskette prueft
+jetzt vor dem Versand zusaetzlich, ob ein Frontierziel auf der aktuellen
+Nav2-Costmap erreichbar ist. Ein dort nur projizierbares Zwischenziel muss
+anschliessend erneut auf derselben Rohkarte, im freigegebenen Scope und mit dem
+unveraenderten realen Abstand belegt sein. Waehrend ein Kindziel laeuft, wird
+seine feste metrische Position auf jeder Rohkartenrevision vor der teureren
+Gesamtbewertung separat mit demselben fail-closed Vertrag revalidiert. Dadurch
+kann eine gueltige Fahrt nicht mehr allein wegen der Rechenzeit der
+Frontier-Gesamtbewertung in die fruehere feste Cancel-/Retry-Schleife geraten.
+Frische-, Scope-, Hindernis- und Sicherheitsgrenzen wurden nicht gelockert.
+
+Der isolierte Explorer-Test bestand danach mit **886 Tests**. Im motorlosen
+Produktionslauf blieb ein Kindziel nach zwei fruehen, durch die noch wachsende
+Karte veranlassten Neuwahlen ueber 87 Sekunden und viele Kartenrevisionen
+stabil; `base_hardware` blieb dabei `dry_run=true`, `allow_rs485=false`. Erst
+danach wurde ein neuer scharfer Stack gestartet. Vor dem Auftrag waren RS485
+und Encoder bereit, beide gemessenen Motordrehzahlen null, Safety frei, LiDAR
+bei etwa 10 Hz und beide VL53 bei etwa 4 Hz. Es wurde genau ein
+Erkundungsauftrag gesendet.
+
+Amadeus fuhr encoderbasiert von `(0,0,0)` auf etwa
+`(0,487 m, 0,034 m, 0,172 rad)`. Es gab keine Encoder-, Modbus- oder
+Safety-Stoerung. Danach stoppte der Regler reproduzierbar mit
+`RegulatedPurePursuitController detected collision ahead` und schliesslich
+`Controller patience exceeded`. Die Ursache ist kein Karten-/Policy-Race:
+Der linke VL53 meldete in allen acht Costmap-Strahlen 0,60 m frei, der rechte
+VL53 dagegen eine zusammenhaengende reale Punktreihe 0,12 bis 0,23 m vor dem
+Sensor. Im Basisrahmen lag sie etwa 0,40 bis 0,51 m vor der Antriebsachse und
+rechts der Mitte. Damit liegt ein moegliches Hindernis nur rund 7 cm vor der
+gepaddeten Vorderkante; Nav2 muss die Weiterfahrt und eine Drehung dort
+fail-closed verweigern. Die globale Karte oder ein bestandener Pfadplan duerfen
+diesen aktuellen Nahbereichsnachweis nicht ueberstimmen.
+
+Der Auftrag wurde bei nachgewiesenem Stillstand abgebrochen. Der Bag
+`~/.local/share/amadeus/bags/we1-real-fast-revalidation-20260921-2319`
+enthaelt 631,2 s und 123.884 Nachrichten; reale Geometrie bleibt lokal. Danach
+wurden Recorder und Gesamtstack sauber beendet. `/dev/ttyUSB_BASE`,
+`/dev/amadeus_lidar` und `/dev/i2c-9` sind frei.
+
+**Konkreter Restblocker:** Vor der naechsten Fahrt muss eine anwesende Person
+den Gegenstand beziehungsweise die Tuerkante rechts vor dem Roboter sichtbar
+pruefen. Ohne Veraenderung der Umgebung ist der sichere Rueckfall, den
+unbestromten Roboter auf dem bereits gefahrenen, freien Weg mindestens 0,20 m
+zurueckzusetzen und rechts vor der Front mindestens den gepaddeten
+Footprint-Abstand wiederherzustellen. Erst nach dieser physischen Bestaetigung
+darf derselbe begrenzte Auftrag neu gestartet werden. Eine kleinere Footprint-,
+Inflations- oder Kollisionsgrenze ist ausdrücklich **kein** zulaessiger
+Software-Fix.
 
 ## Erster freigegebener WE-Realversuch, 2026-09-21
 
