@@ -56,6 +56,7 @@ from explore.portal_traversal_runtime import (  # noqa: E402
 )
 from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
 from explore.frontier_goal_candidate import FrontierGoalCandidate  # noqa: E402
+from explore.exploration_nav_runtime import NavigationSourceState  # noqa: E402
 from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
 from explore.exploration_completion import (  # noqa: E402
     CompletionAssessment,
@@ -1296,6 +1297,7 @@ def _we_source_state_node(context, *, revision=7, fingerprint='a' * 64,
     node._wohnungserkundung_runtime_lock = threading.Lock()
     node._wohnungserkundung_policy_processed_revision = revision
     node._wohnungserkundung_navigation_snapshot = None
+    node._wohnungserkundung_active_frontier_source = None
     node._wohnungserkundung_unconfirmed_intent_id = None
     node._wohnungserkundung_unconfirmed_since = None
     return node
@@ -1346,17 +1348,18 @@ def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
     assert not node._wohnungserkundung_source_state(intent, candidate).current
 
 
-def test_we_new_revision_with_same_production_target_revalidates_child(
+def test_we_new_revision_with_current_raw_validation_revalidates_child(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
     intent, candidate = _we_source_state_goal(context)
     node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
                                  source_stamp_ns=456)
     node._wohnungserkundung_policy_processed_revision = 8
-    confirmed = replace(
-        candidate, map_revision=8, source_fingerprint='b' * 64,
-        source_stamp_ns=456)
-    node._wohnungserkundung_navigation_snapshot = (intent, confirmed)
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id,
+        NavigationSourceState(context, 8, True),
+        'fixed_goal_revalidated',
+    )
     node._wohnungserkundung_unconfirmed_intent_id = intent.intent_id
     node._wohnungserkundung_unconfirmed_since = 9.0
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
@@ -1368,18 +1371,18 @@ def test_we_new_revision_with_same_production_target_revalidates_child(
     assert node._wohnungserkundung_unconfirmed_intent_id is None
 
 
-@pytest.mark.parametrize('change', [
-    {'task_id': 'other-task'},
-    {'target_x_m': 1.01},
-])
-def test_we_changed_production_target_invalidates_child(change, monkeypatch):
+def test_we_failed_current_raw_validation_invalidates_frontier_child(
+        monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
     intent, candidate = _we_source_state_goal(context)
     node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
                                  source_stamp_ns=456)
     node._wohnungserkundung_policy_processed_revision = 8
-    node._wohnungserkundung_navigation_snapshot = (
-        intent, replace(candidate, map_revision=8, **change))
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id,
+        NavigationSourceState(context, 8, False),
+        'fixed_goal_invalid:FrontierGoalCandidateError',
+    )
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
 
     assert not node._wohnungserkundung_source_state(intent, candidate).current
@@ -2186,13 +2189,14 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     node._wohnungserkundung_consumed_intent_id = None
     node._wohnungserkundung_stateful_assessment = None
     node._wohnungserkundung_task_policy_session = SimpleNamespace(
-        latest_assessment_revision=None,
-        assess=lambda selected_source, selected_availability,
-        selected_utilities: stateful if (
-            selected_source is source
-            and selected_availability == ()
-            and selected_utilities == ()
-        ) else None,
+            latest_assessment_revision=None,
+            assess=lambda selected_source, selected_availability,
+            selected_utilities, preferred_task_id=None: stateful if (
+                selected_source is source
+                and selected_availability == ()
+                and selected_utilities == ()
+                and preferred_task_id is None
+            ) else None,
     )
 
     def assess_outside_shadow_lock(value, task_availability):
@@ -2311,10 +2315,11 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
 
         def assess(
                 self, selected_source, selected_availability,
-                selected_utilities):
+                selected_utilities, preferred_task_id=None):
             assert selected_source is source
             assert selected_availability is availability
             assert selected_utilities is utilities
+            assert preferred_task_id is None
             stateful_builds.append(selected_source)
             self.latest_assessment_revision = 7
             return stateful
@@ -2514,6 +2519,7 @@ def test_passive_runtime_previews_scoped_portal_without_dispatch(
         Point2D(0.0, 0.0), Point2D(1.0, 0.0),
         Point2D(1.0, 1.0), Point2D(0.0, 1.0),
     )
+    node._wohnungserkundung_scope_clearance = 0.1
     node._wohnungserkundung_evidence_cache_key = None
     node._wohnungserkundung_evidence_cache = None
     node._wohnungserkundung_goal_cache_key = None
@@ -2530,10 +2536,13 @@ def test_passive_runtime_previews_scoped_portal_without_dispatch(
     class FakeTaskPolicySession:
         latest_assessment_revision = None
 
-        def assess(self, selected_source, availability, utilities):
+        def assess(
+                self, selected_source, availability, utilities,
+                preferred_task_id=None):
             assert selected_source is source
             assert availability == (portal_availability,)
             assert utilities == (portal_utility,)
+            assert preferred_task_id is None
             self.latest_assessment_revision = 8
             return stateful
 

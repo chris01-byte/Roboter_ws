@@ -118,6 +118,7 @@ class MapManagerStatusSample:
     map_available: bool
     snapshot_available: bool
     accepted_maps: int
+    observed_maps: int
     fingerprint: Optional[str]
     frame_id: Optional[str]
     source_stamp_ns: Optional[int]
@@ -140,9 +141,12 @@ class MapManagerStatusSample:
                 "Karten- und Snapshot-Verfuegbarkeit widersprechen sich")
         accepted_maps = _nonnegative_integer(
             self.accepted_maps, "accepted_maps")
+        observed_maps = _nonnegative_integer(
+            self.observed_maps, "observed_maps")
 
         if not self.map_available:
-            if accepted_maps != 0 or any(value is not None for value in (
+            if accepted_maps != 0 or observed_maps != 0 or any(
+                    value is not None for value in (
                     self.fingerprint,
                     self.frame_id,
                     self.source_stamp_ns,
@@ -154,6 +158,9 @@ class MapManagerStatusSample:
         if accepted_maps <= 0:
             raise MapStatusAdapterError(
                 "Verfuegbare Karte braucht einen positiven accepted_maps-Zaehler")
+        if observed_maps < accepted_maps:
+            raise MapStatusAdapterError(
+                "observed_maps darf accepted_maps nicht unterschreiten")
         if (
                 not isinstance(self.fingerprint, str)
                 or _FINGERPRINT.fullmatch(self.fingerprint) is None):
@@ -242,6 +249,10 @@ def decode_map_manager_status_json(text: str) -> MapManagerStatusSample:
             map_payload, "snapshot_available", "root.map"),
         accepted_maps=_required(
             counters, "accepted_maps", "root.counters"),
+        observed_maps=counters.get(
+            "observed_maps",
+            _required(counters, "accepted_maps", "root.counters"),
+        ),
         fingerprint=fingerprint,
         frame_id=frame_id,
         source_stamp_ns=source_stamp_ns,
@@ -319,7 +330,7 @@ class MapManagerStatusCorrelator:
             )
             result = MapStatusCorrelationResult(
                 context=context,
-                map_revision=sample.accepted_maps,
+                map_revision=sample.observed_maps,
                 fingerprint=sample.fingerprint,
                 source_stamp_ns=sample.source_stamp_ns,
                 source_map_age_seconds=sample.received_age_seconds,
@@ -333,10 +344,10 @@ class MapManagerStatusCorrelator:
         if sample == previous:
             return replace(self._last_result, replayed=True, map_changed=False)
         self._validate_sequence(previous, sample)
-        map_changed = sample.accepted_maps > previous.accepted_maps
+        map_changed = sample.observed_maps > previous.observed_maps
         result = MapStatusCorrelationResult(
             context=self._context,
-            map_revision=sample.accepted_maps,
+            map_revision=sample.observed_maps,
             fingerprint=sample.fingerprint,
             source_stamp_ns=sample.source_stamp_ns,
             source_map_age_seconds=sample.received_age_seconds,
@@ -365,16 +376,23 @@ class MapManagerStatusCorrelator:
         if sample.accepted_maps < previous.accepted_maps:
             raise MapEpochChangeRequired(
                 "accepted_maps ist ruecklaeufig; neuer Kontext erforderlich")
-        counter_changed = sample.accepted_maps > previous.accepted_maps
+        if sample.observed_maps < previous.observed_maps:
+            raise MapEpochChangeRequired(
+                "observed_maps ist ruecklaeufig; neuer Kontext erforderlich")
+        accepted_changed = sample.accepted_maps > previous.accepted_maps
+        observed_changed = sample.observed_maps > previous.observed_maps
         fingerprint_changed = sample.fingerprint != previous.fingerprint
-        if counter_changed is not fingerprint_changed:
-            raise MapStatusAdapterError(
-                "Fingerprint- und accepted_maps-Verlauf widersprechen sich")
-        if (
-                not counter_changed
-                and sample.source_stamp_ns != previous.source_stamp_ns):
-            raise MapStatusAdapterError(
-                "Quellstempel wechselte ohne neue akzeptierte Karte")
+        source_stamp_changed = (
+            sample.source_stamp_ns != previous.source_stamp_ns)
         if sample.source_stamp_ns < previous.source_stamp_ns:
             raise MapEpochChangeRequired(
                 "Karten-Quellstempel ist ruecklaeufig; neuer Kontext erforderlich")
+        if accepted_changed is not fingerprint_changed:
+            raise MapStatusAdapterError(
+                "Fingerprint- und accepted_maps-Verlauf widersprechen sich")
+        if observed_changed is not source_stamp_changed:
+            raise MapStatusAdapterError(
+                "Quellstempel- und observed_maps-Verlauf widersprechen sich")
+        if accepted_changed and not observed_changed:
+            raise MapStatusAdapterError(
+                "Neue Kartengeometrie braucht eine neue Beobachtung")

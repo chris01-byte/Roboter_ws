@@ -9,10 +9,8 @@ from dataclasses import dataclass
 import math
 from typing import Any, Iterable, Optional, Tuple
 
-import numpy as np
-from scipy.ndimage import distance_transform_edt
-
 from .exploration_child_goal import ExplorationGoalIntent
+from .exploration_scope import AuthorizedExplorationScope
 from .exploration_policy import TaskAvailabilityState
 from .frontier_task_evidence import (
     FrontierTaskEvidenceBatch,
@@ -22,6 +20,7 @@ from .frontier_task_evidence import (
     _geodesic_distances,
     _information_gain_square_m,
     _nearest_mask_cell,
+    _traversable_mask,
     _validated_robot_xy,
     _validated_snapshot,
     _world_to_grid,
@@ -159,6 +158,8 @@ def build_frontier_goal_candidate(
         tracks: Tuple[FrontierTrackSnapshot, ...],
         evidence: FrontierTaskEvidenceBatch,
         policy: Optional[FrontierTaskEvidencePolicy] = None,
+        scope: Optional[AuthorizedExplorationScope] = None,
+        scope_clearance_m: Optional[float] = None,
 ) -> FrontierGoalCandidate:
     """Derive one exact, reachable map-frame candidate or fail closed."""
     if not isinstance(intent, ExplorationGoalIntent):
@@ -234,11 +235,19 @@ def build_frontier_goal_candidate(
         raise FrontierGoalCandidateError(
             "Zielbildung braucht eine aktuelle Roboterpose")
 
-    safe_free = occupancy == 0
-    clearance_cells = selected_policy.clearance_m / resolution_m
-    padded = np.pad(safe_free, 1, mode="constant", constant_values=False)
-    clearance = distance_transform_edt(padded)[1:-1, 1:-1]
-    traversable = safe_free & (clearance >= clearance_cells)
+    try:
+        traversable = _traversable_mask(
+            occupancy,
+            resolution_m,
+            correlation,
+            clean_origin,
+            map_yaw,
+            selected_policy,
+            scope=scope,
+            scope_clearance_m=scope_clearance_m,
+        )
+    except FrontierTaskEvidenceError as error:
+        raise FrontierGoalCandidateError(str(error)) from error
     robot_row, robot_col = _world_to_grid(
         normalized_robot_xy, clean_origin, map_yaw, resolution_m)
     robot_seed = _nearest_mask_cell(
@@ -320,3 +329,118 @@ def build_frontier_goal_candidate(
         route_length_m=computed_route_length_m,
         information_gain_square_m=computed_information_gain_square_m,
     )
+
+
+def revalidate_active_frontier_goal_candidate(
+        intent: ExplorationGoalIntent,
+        candidate: FrontierGoalCandidate,
+        correlation: PortalSourceCorrelation, *,
+        width: int, height: int, resolution: float, frame_id: str,
+        origin: Tuple[float, float, float, float, float, float, float],
+        cells: Iterable[Any], source_stamp_ns: int,
+        robot_xy: Optional[Tuple[float, float]],
+        policy: Optional[FrontierTaskEvidencePolicy] = None,
+        scope: Optional[AuthorizedExplorationScope] = None,
+        scope_clearance_m: Optional[float] = None,
+) -> float:
+    """Revalidate one already dispatched fixed target on a newer raw map.
+
+    Frontier centroids and their preferred safe cells legitimately move while
+    SLAM grows.  That must not replace an active Nav2 goal merely because a
+    newer candidate would be a few cells away.  Continuation is nevertheless
+    fail-closed: the *original metric target* must still be inside the
+    authorized scope, obstacle-clear, and geodesically reachable from the
+    current robot pose on the exact correlated raw-map revision.
+
+    The returned value is the freshly measured route length in metres.  This
+    helper does not dispatch, adjust, or authorize a different goal.
+    """
+    if not isinstance(intent, ExplorationGoalIntent):
+        raise FrontierGoalCandidateError(
+            "intent muss ExplorationGoalIntent sein")
+    if not isinstance(candidate, FrontierGoalCandidate):
+        raise FrontierGoalCandidateError(
+            "candidate muss FrontierGoalCandidate sein")
+    if (
+            candidate.intent_id != intent.intent_id
+            or candidate.task_id != intent.task_id
+            or candidate.region_id != intent.region_id
+            or candidate.map_revision != intent.map_revision
+            or candidate.frame_id != intent.context.frame_id):
+        raise FrontierGoalCandidateError(
+            "Aktiver Zielkandidat passt nicht zur Zielabsicht")
+    if (
+            not isinstance(correlation, PortalSourceCorrelation)
+            or correlation.context != intent.context
+            or correlation.map_revision < intent.map_revision):
+        raise FrontierGoalCandidateError(
+            "Aktive Zielpruefung braucht denselben neueren Kartenkontext")
+
+    selected_policy = policy or FrontierTaskEvidencePolicy()
+    if not isinstance(selected_policy, FrontierTaskEvidencePolicy):
+        raise FrontierGoalCandidateError(
+            "policy muss FrontierTaskEvidencePolicy sein")
+    try:
+        occupancy, resolution_m, clean_origin, map_yaw = _validated_snapshot(
+            correlation,
+            width=width,
+            height=height,
+            resolution=resolution,
+            frame_id=frame_id,
+            origin=origin,
+            cells=cells,
+            source_stamp_ns=source_stamp_ns,
+            max_cells=selected_policy.max_cells,
+        )
+        normalized_robot_xy = _validated_robot_xy(robot_xy)
+        traversable = _traversable_mask(
+            occupancy,
+            resolution_m,
+            correlation,
+            clean_origin,
+            map_yaw,
+            selected_policy,
+            scope=scope,
+            scope_clearance_m=scope_clearance_m,
+        )
+    except FrontierTaskEvidenceCapacityError as error:
+        raise FrontierGoalCandidateCapacityError(str(error)) from error
+    except FrontierTaskEvidenceError as error:
+        raise FrontierGoalCandidateError(str(error)) from error
+    if normalized_robot_xy is None:
+        raise FrontierGoalCandidateError(
+            "Aktive Zielpruefung braucht eine aktuelle Roboterpose")
+
+    robot_row, robot_col = _world_to_grid(
+        normalized_robot_xy, clean_origin, map_yaw, resolution_m)
+    robot_seed = _nearest_mask_cell(
+        traversable,
+        robot_row,
+        robot_col,
+        int(math.ceil(
+            selected_policy.robot_seed_search_m / resolution_m)),
+    )
+    if robot_seed is None:
+        raise FrontierGoalCandidateError(
+            "Roboterpose besitzt keine sichere Startzelle")
+
+    target_row, target_col = _world_to_grid(
+        (candidate.target_x_m, candidate.target_y_m),
+        clean_origin,
+        map_yaw,
+        resolution_m,
+    )
+    if (
+            target_row < 0
+            or target_col < 0
+            or target_row >= traversable.shape[0]
+            or target_col >= traversable.shape[1]
+            or not bool(traversable[target_row, target_col])):
+        raise FrontierGoalCandidateError(
+            "Aktives Ziel ist nicht mehr als sichere Zielzelle belegt")
+    distances = _geodesic_distances(traversable, robot_seed)
+    distance_cells = float(distances[target_row, target_col])
+    if not math.isfinite(distance_cells):
+        raise FrontierGoalCandidateError(
+            "Aktives Ziel ist auf der aktuellen Rohkarte nicht erreichbar")
+    return distance_cells * resolution_m

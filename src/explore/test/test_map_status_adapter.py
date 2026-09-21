@@ -64,6 +64,7 @@ def status_payload(*, available=True):
         "storage": {"root": "/not-consumed"},
         "counters": {
             "accepted_maps": accepted_maps,
+            "observed_maps": accepted_maps,
             "duplicate_maps": 0,
         },
     }
@@ -76,6 +77,7 @@ def sample(**changes):
         "map_available": True,
         "snapshot_available": True,
         "accepted_maps": 3,
+        "observed_maps": 3,
         "fingerprint": FINGERPRINT_A,
         "frame_id": "map",
         "source_stamp_ns": 1_799_999_999_500_000_000,
@@ -101,6 +103,7 @@ def unavailable_sample(**changes):
         "map_available": False,
         "snapshot_available": False,
         "accepted_maps": 0,
+        "observed_maps": 0,
         "fingerprint": None,
         "frame_id": None,
         "source_stamp_ns": None,
@@ -309,6 +312,7 @@ def test_changed_fingerprint_with_increased_counter_is_normal_map_growth():
     grown = adapter.accept(sample(
         status_time_seconds=1_800_000_001.0,
         accepted_maps=4,
+        observed_maps=4,
         fingerprint=FINGERPRINT_B,
         source_stamp_ns=1_800_000_000_500_000_000,
         received_age_seconds=0.2,
@@ -327,6 +331,7 @@ def test_skipped_status_messages_allow_counter_jump_with_new_fingerprint():
     jumped = adapter.accept(sample(
         status_time_seconds=1_800_000_005.0,
         accepted_maps=9,
+        observed_maps=9,
         fingerprint=FINGERPRINT_C,
         source_stamp_ns=1_800_000_004_500_000_000,
         received_age_seconds=0.1,
@@ -373,6 +378,7 @@ def test_frame_change_requires_new_epoch():
         adapter.accept(sample(
             status_time_seconds=1_800_000_001.0,
             accepted_maps=4,
+            observed_maps=4,
             fingerprint=FINGERPRINT_B,
             frame_id="map_corrected",
         ))
@@ -386,19 +392,39 @@ def test_source_stamp_rollback_requires_new_epoch():
         adapter.accept(sample(
             status_time_seconds=1_800_000_001.0,
             accepted_maps=4,
+            observed_maps=4,
             fingerprint=FINGERPRINT_B,
             source_stamp_ns=1_799_999_999_000_000_000,
         ))
 
 
-def test_source_stamp_change_without_new_map_fails_closed():
+def test_newer_observation_of_same_geometry_advances_observation_revision():
+    adapter = correlator()
+    first = adapter.accept(sample())
+
+    observed = adapter.accept(sample(
+        status_time_seconds=1_800_000_001.0,
+        observed_maps=4,
+        source_stamp_ns=1_800_000_000_000_000_000,
+        received_age_seconds=0.2,
+    ))
+
+    assert observed.context == first.context
+    assert observed.map_revision == first.map_revision + 1
+    assert observed.fingerprint == first.fingerprint
+    assert observed.source_stamp_ns == 1_800_000_000_000_000_000
+    assert observed.map_changed is True
+    assert observed.replayed is False
+
+
+def test_source_stamp_rollback_without_new_map_requires_new_epoch():
     adapter = correlator()
     adapter.accept(sample())
 
-    with pytest.raises(MapStatusAdapterError):
+    with pytest.raises(MapEpochChangeRequired):
         adapter.accept(sample(
             status_time_seconds=1_800_000_001.0,
-            source_stamp_ns=1_800_000_000_000_000_000,
+            source_stamp_ns=1_799_999_999_000_000_000,
             received_age_seconds=0.2,
         ))
 
@@ -433,7 +459,7 @@ def test_unavailable_status_is_missing_then_requires_new_epoch():
 def test_new_explicit_session_changes_context_after_manager_restart():
     first = correlator(session_id="session-before").accept(sample())
     restarted = correlator(session_id="session-after").accept(sample(
-        accepted_maps=1))
+        accepted_maps=1, observed_maps=1))
 
     assert restarted.context != first.context
     assert restarted.context.map_id == first.context.map_id

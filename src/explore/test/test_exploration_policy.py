@@ -578,6 +578,39 @@ def test_starvation_rotation_still_honors_the_region_hold_window():
     assert rotated.selection_reason == "starvation_prevention"
 
 
+def test_active_available_task_is_retained_across_new_map_revisions():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+
+    retained = session.assess(
+        _advance_source(source, 20),
+        _all_available(20),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    assert retained.selected_task_id == first.selected_task_id
+    assert retained.selection_reason == "active_task_continuity"
+
+
+def test_active_task_preference_never_revives_unavailable_task():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+    other_task_id = next(
+        task_id for task_id in ("a-other", "z-current")
+        if task_id != first.selected_task_id)
+
+    switched = session.assess(
+        _advance_source(source, 20),
+        (_availability(other_task_id, revision=20),),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    assert switched.selected_task_id == other_task_id
+    assert switched.selection_reason != "active_task_continuity"
+
+
 def test_retry_failure_defers_then_releases_task_by_explicit_revision():
     source = _source_with_two_open_tasks()
     session = ExplorationTaskPolicySession(CONTEXT)

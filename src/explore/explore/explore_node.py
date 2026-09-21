@@ -126,7 +126,9 @@ from explore.frontier_task_evidence import (
 )
 from explore.frontier_goal_candidate import (
     FrontierGoalCandidate,
+    FrontierGoalCandidateError,
     build_frontier_goal_candidate,
+    revalidate_active_frontier_goal_candidate,
 )
 from explore.frontier_task_resolution import (
     FrontierTaskResolutionState,
@@ -1333,6 +1335,7 @@ class ExploreNode(Node):
             self._wohnungserkundung_unconfirmed_intent_id = None
             self._wohnungserkundung_unconfirmed_since = None
             self._wohnungserkundung_active_child = None
+            self._wohnungserkundung_active_frontier_source = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
             self._wohnungserkundung_stateful_assessment = None
@@ -1911,6 +1914,14 @@ class ExploreNode(Node):
                     raw_map, correlation, tracks = evidence_inputs
                     robot_pose = self._robot_pose()
                     origin = raw_map.info.origin
+                    scope = None
+                    if getattr(self, '_wohnungserkundung_scope_id', ''):
+                        scope = AuthorizedExplorationScope(
+                            scope_id=self._wohnungserkundung_scope_id,
+                            context=status.source.context,
+                            vertices=(
+                                self._wohnungserkundung_scope_vertices),
+                        )
                     robot_cell = (
                         None if robot_pose is None
                         else self._world_to_grid(
@@ -1919,6 +1930,7 @@ class ExploreNode(Node):
                     evidence_key = (
                         *self._shadow_correlation_key(correlation),
                         robot_cell,
+                        None if scope is None else scope.fingerprint,
                     )
                     if evidence_key == (
                             self._wohnungserkundung_evidence_cache_key):
@@ -1958,6 +1970,10 @@ class ExploreNode(Node):
                                     is RegionTaskKind.FRONTIER)),
                             tracks=tracks,
                             policy=self._wohnungserkundung_evidence_policy,
+                            scope=scope,
+                            scope_clearance_m=(
+                                None if scope is None else
+                                self._wohnungserkundung_scope_clearance),
                         )
                         self._wohnungserkundung_evidence_cache_key = (
                             evidence_key)
@@ -1997,13 +2013,7 @@ class ExploreNode(Node):
                         current_frontier_utilities = evidence.utilities
                     portal_evidence = None
                     transit_purposes = None
-                    if getattr(self, '_wohnungserkundung_scope_id', ''):
-                        scope = AuthorizedExplorationScope(
-                            scope_id=self._wohnungserkundung_scope_id,
-                            context=status.source.context,
-                            vertices=(
-                                self._wohnungserkundung_scope_vertices),
-                        )
+                    if scope is not None:
                         portal_evidence = build_portal_task_evidence(
                             correlation,
                             width=raw_map.info.width,
@@ -2121,7 +2131,7 @@ class ExploreNode(Node):
                     candidate_inputs = (
                         raw_map, correlation, tracks, evidence,
                         portal_evidence, transit_purposes, robot_pose,
-                        evidence_key)
+                        evidence_key, scope)
                     evidence_status = {
                         'state': 'current',
                         'map_revision': evidence.source_map_revision,
@@ -2170,12 +2180,16 @@ class ExploreNode(Node):
                             latest_stateful_revision is None
                             or status.source.source_map_revision
                             > latest_stateful_revision):
+                        active_child = self._wohnungserkundung_active_child
                         stateful = task_policy_session.assess(
                             status.source,
                             task_availability,
                             utility_evidence if assessment.state is (
                                 PolicyAssessmentState.READY_WITH_TASKS)
                             else (),
+                            preferred_task_id=(
+                                None if active_child is None else
+                                active_child[0].task_id),
                         )
                         self._wohnungserkundung_stateful_assessment = stateful
                     elif status.source.source_map_revision < (
@@ -2207,7 +2221,7 @@ class ExploreNode(Node):
                     else:
                         raw_map, correlation, tracks, evidence, (
                             portal_evidence), transit_purposes, robot_pose, (
-                            evidence_key) = (
+                            evidence_key), scope = (
                             candidate_inputs)
                         matching_tasks = tuple(
                             task for task in status.source.graph.tasks
@@ -2261,6 +2275,10 @@ class ExploreNode(Node):
                                         evidence=evidence,
                                         policy=(self.
                                             _wohnungserkundung_evidence_policy),
+                                        scope=scope,
+                                        scope_clearance_m=(
+                                            None if scope is None else
+                                            self._wohnungserkundung_scope_clearance),
                                     )
                                 elif (
                                         selected_kind
@@ -2347,6 +2365,87 @@ class ExploreNode(Node):
                         f'Wirkung ({fault}).')
                 self._wohnungserkundung_policy_fault = fault
             else:
+                active_frontier_source = None
+                with self._wohnungserkundung_runtime_lock:
+                    child_for_validation = (
+                        self._wohnungserkundung_active_child)
+                if (
+                        child_for_validation is not None
+                        and isinstance(
+                            child_for_validation[1],
+                            FrontierGoalCandidate)):
+                    active_intent, active_candidate = child_for_validation
+                    validation_reason = 'exact_raw_map_unavailable'
+                    validation_current = False
+                    if candidate_inputs is not None:
+                        (raw_map, correlation, _tracks, _evidence,
+                         _portal_evidence, _transit_purposes, robot_pose,
+                         _evidence_key, scope) = candidate_inputs
+                        origin = raw_map.info.origin
+                        try:
+                            route_length_m = (
+                                revalidate_active_frontier_goal_candidate(
+                                    active_intent,
+                                    active_candidate,
+                                    correlation,
+                                    width=raw_map.info.width,
+                                    height=raw_map.info.height,
+                                    resolution=raw_map.info.resolution,
+                                    frame_id=(
+                                        raw_map.header.frame_id.strip()),
+                                    origin=(
+                                        origin.position.x,
+                                        origin.position.y,
+                                        origin.position.z,
+                                        origin.orientation.x,
+                                        origin.orientation.y,
+                                        origin.orientation.z,
+                                        origin.orientation.w,
+                                    ),
+                                    cells=raw_map.data,
+                                    source_stamp_ns=(
+                                        int(raw_map.header.stamp.sec)
+                                        * 1_000_000_000
+                                        + int(raw_map.header.stamp.nanosec)
+                                    ),
+                                    robot_xy=(
+                                        None if robot_pose is None else
+                                        (robot_pose[0], robot_pose[1])),
+                                    policy=(
+                                        self._wohnungserkundung_evidence_policy),
+                                    scope=scope,
+                                    scope_clearance_m=(
+                                        None if scope is None else
+                                        self._wohnungserkundung_scope_clearance),
+                                ))
+                        except FrontierGoalCandidateError as error:
+                            validation_reason = (
+                                f'fixed_goal_invalid:{type(error).__name__}')
+                        else:
+                            validation_current = True
+                            validation_reason = 'fixed_goal_revalidated'
+                            extension['active_goal_validation'] = {
+                                'state': 'current',
+                                'map_revision': correlation.map_revision,
+                                'task_id': active_intent.task_id,
+                                'route_length_m': route_length_m,
+                            }
+                        active_frontier_source = (
+                            active_intent.intent_id,
+                            NavigationSourceState(
+                                active_intent.context,
+                                correlation.map_revision,
+                                validation_current,
+                            ),
+                            validation_reason,
+                        )
+                    if not validation_current:
+                        extension['active_goal_validation'] = {
+                            'state': 'invalid',
+                            'map_revision': status.source.source_map_revision,
+                            'task_id': active_intent.task_id,
+                            'reason': validation_reason,
+                        }
                 with self._wohnungserkundung_runtime_lock:
                     active_child = self._wohnungserkundung_active_child
                     consumed_intent_id = (
@@ -2402,6 +2501,13 @@ class ExploreNode(Node):
                             })
                         extension['persistence'] = persistence
                     self._wohnungserkundung_status_extension = extension
+                    if (
+                            active_frontier_source is not None
+                            and active_child is not None
+                            and active_child[0].intent_id
+                            == active_frontier_source[0]):
+                        self._wohnungserkundung_active_frontier_source = (
+                            active_frontier_source)
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
                     self._wohnungserkundung_policy_processed_revision = (
@@ -4731,9 +4837,10 @@ class ExploreNode(Node):
         A newer map revision is not by itself an invalidation.  During the
         bounded status-timer hand-off it remains pending. Its deadline starts
         at the first unconfirmed revision for this intent, not at every later
-        raw-map update. Afterwards the new production candidate must confirm
-        the same task and exact metric goal. Any changed/withheld candidate
-        still invalidates immediately.
+        raw-map update. Afterwards a frontier child keeps its fixed metric
+        target only while that target is revalidated on the exact newer raw
+        map; a portal child still requires the exact current metric candidate.
+        Any changed or withheld source evidence invalidates immediately.
         """
         with self._region_graph_shadow_lock:
             correlation = self._region_graph_shadow_latest_correlation
@@ -4764,6 +4871,8 @@ class ExploreNode(Node):
             processed_revision = getattr(
                 self, '_wohnungserkundung_policy_processed_revision', None)
             snapshot = self._wohnungserkundung_navigation_snapshot
+            active_frontier_source = getattr(
+                self, '_wohnungserkundung_active_frontier_source', None)
         if processed_revision is None or processed_revision < (
                 correlation.map_revision):
             pending = self._wohnungserkundung_unconfirmed_within_grace(
@@ -4773,12 +4882,20 @@ class ExploreNode(Node):
                 intent.map_revision if pending else correlation.map_revision,
                 pending,
             )
-        current = (
-            snapshot is not None
-            and snapshot[1].map_revision == correlation.map_revision
-            and self._wohnungserkundung_same_metric_goal(
-                candidate, snapshot[1])
-        )
+        if isinstance(candidate, FrontierGoalCandidate):
+            current = (
+                active_frontier_source is not None
+                and active_frontier_source[0] == intent.intent_id
+                and active_frontier_source[1].context == intent.context
+                and active_frontier_source[1].map_revision
+                == correlation.map_revision
+                and active_frontier_source[1].current)
+        else:
+            current = (
+                snapshot is not None
+                and snapshot[1].map_revision == correlation.map_revision
+                and self._wohnungserkundung_same_metric_goal(
+                    candidate, snapshot[1]))
         if current:
             self._clear_wohnungserkundung_unconfirmed_intent(intent)
         return NavigationSourceState(
@@ -4903,6 +5020,13 @@ class ExploreNode(Node):
                 raise RuntimeError(
                     'Wohnungserkundung besitzt bereits ein aktives Kindziel')
             self._wohnungserkundung_active_child = (intent, candidate)
+            if isinstance(candidate, FrontierGoalCandidate):
+                self._wohnungserkundung_active_frontier_source = (
+                    intent.intent_id,
+                    NavigationSourceState(
+                        intent.context, intent.map_revision, True),
+                    'initial_exact_source',
+                )
         try:
             run = navigation_session.run(
                 intent,
@@ -4988,6 +5112,14 @@ class ExploreNode(Node):
         finally:
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = None
+                if (
+                        getattr(
+                            self,
+                            '_wohnungserkundung_active_frontier_source',
+                            None) is not None
+                        and self._wohnungserkundung_active_frontier_source[0]
+                        == intent.intent_id):
+                    self._wohnungserkundung_active_frontier_source = None
 
     def _store_wohnungserkundung_completion(self, completion):
         """Publish one immutable completion view beneath the existing status."""
@@ -5069,6 +5201,7 @@ class ExploreNode(Node):
         self._coverage_complete = False
         with self._wohnungserkundung_runtime_lock:
             self._wohnungserkundung_active_child = None
+            self._wohnungserkundung_active_frontier_source = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_completion_assessment = None
             self._wohnungserkundung_pending_frontier_resolution = None
@@ -5187,7 +5320,12 @@ class ExploreNode(Node):
                 goal_handle,
                 overall_expired,
             )
-            attempted_goals += 1
+            # A raw-map revision that invalidates a child is a safety replan,
+            # not a completed navigation attempt.  The overall timeout still
+            # bounds repeated revisions, while the goal budget remains for
+            # actual Nav2 outcomes.
+            if run.stop_cause is not NavigationStopCause.SOURCE_INVALIDATED:
+                attempted_goals += 1
             disposition = run.disposition
             if portal_outcome is not None:
                 if portal_outcome.confirmed:

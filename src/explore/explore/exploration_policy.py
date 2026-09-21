@@ -845,14 +845,18 @@ class ExplorationTaskPolicySession:
             task_availability: Tuple[TaskAvailability, ...] = (),
             task_utilities: Tuple[TaskUtilityEvidence, ...] = (),
             scoring_policy: Optional[TaskScoringPolicy] = None,
+            preferred_task_id: Optional[str] = None,
     ) -> StatefulPolicyAssessment:
         if not isinstance(source, ShadowStatusSource):
             raise ExplorationPolicyError(
                 "source muss ShadowStatusSource sein")
         self._require_context(source.context)
         revision = source.source_map_revision
+        if preferred_task_id is not None:
+            _identifier(preferred_task_id, "preferred_task_id")
         request = (
-            source, task_availability, task_utilities, scoring_policy)
+            source, task_availability, task_utilities, scoring_policy,
+            preferred_task_id)
         if self._latest_assessment_revision is not None:
             if revision < self._latest_assessment_revision:
                 raise ExplorationPolicyError(
@@ -918,7 +922,8 @@ class ExplorationTaskPolicySession:
         score_by_task = {
             item.task_id: item.score for item in utility_scores}
         selected_task_id, reason = self._select_task(
-            selectable, source, revision, score_by_task)
+            selectable, source, revision, score_by_task,
+            preferred_task_id=preferred_task_id)
         selected_region_id = (
             self._tasks[selected_task_id].region_id
             if selected_task_id is not None else None)
@@ -977,11 +982,13 @@ class ExplorationTaskPolicySession:
 
     def _select_task(
             self, selectable: set, source: ShadowStatusSource,
-            revision: int,
-            score_by_task: Dict[str, float],
+            revision: int, score_by_task: Dict[str, float], *,
+            preferred_task_id: Optional[str] = None,
     ) -> Tuple[Optional[str], str]:
         if not selectable or not source.graph.current_region_id:
             return None, "no_selectable_task"
+        if preferred_task_id in selectable:
+            return preferred_task_id, "active_task_continuity"
         ordered = sorted(
             selectable,
             key=lambda task_id: (
