@@ -748,6 +748,43 @@ def test_progress_clears_retry_delay_without_claiming_task_completion():
     assert progress.completed is False
 
 
+def test_revalidated_attempt_binds_child_result_to_current_snapshot():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+    session.assess(
+        _advance_source(source, 20),
+        _all_available(20),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    progress = session.record_revalidated_attempt(TaskAttempt(
+        "revalidated-progress", first.selected_task_id, CONTEXT, 4,
+        TaskAttemptOutcome.PROGRESSED, "child_goal_reached"), 20)
+
+    assert progress.last_attempt_revision == 20
+    assert progress.attempt_count == 1
+    assert progress.completed is False
+
+
+def test_revalidated_retry_preserves_revision_delay_and_fails_stale():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    session.assess(_advance_source(source, 20), _all_available(20))
+    attempt = TaskAttempt(
+        "revalidated-retry", "z-current", CONTEXT, 4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "temporary", 6)
+
+    snapshot = session.record_revalidated_attempt(attempt, 20)
+
+    assert snapshot.last_attempt_revision == 20
+    assert snapshot.retry_not_before_revision == 22
+    with pytest.raises(ExplorationPolicyError, match="aktuellen"):
+        session.record_revalidated_attempt(
+            replace(attempt, attempt_id="stale-revalidation"), 19)
+
+
 def test_completed_graph_task_is_retained_as_completed_history_not_selected():
     source = _source_with_two_open_tasks()
     session = ExplorationTaskPolicySession(CONTEXT)

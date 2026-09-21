@@ -7,7 +7,7 @@ can only identify work, waiting states, and completion *candidates*; it can
 never report ``complete_accessible``.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 import math
 from typing import Dict, Optional, Tuple
@@ -811,6 +811,36 @@ class ExplorationTaskPolicySession:
         self._attempts[attempt.attempt_id] = attempt
         self._clear_assessment_replay()
         return self._snapshot(task)
+
+    def record_revalidated_attempt(
+            self, attempt: TaskAttempt,
+            revalidated_map_revision: int) -> TaskHistorySnapshot:
+        """Record an older child result against one exact current snapshot.
+
+        A navigation child can keep the same fixed metric frontier goal while
+        newer raw maps are accepted.  The caller must have revalidated that
+        exact active goal on ``revalidated_map_revision``.  This method keeps
+        the event ID and retry distance stable, but binds the policy mutation
+        to the session's current snapshot.  All ordinary event checks remain
+        in ``record_attempt``.
+        """
+        if not isinstance(attempt, TaskAttempt):
+            raise ExplorationPolicyError("attempt muss TaskAttempt sein")
+        revision = _revision(
+            revalidated_map_revision, "revalidated_map_revision")
+        if revision < attempt.map_revision:
+            raise ExplorationPolicyError(
+                "Revalidierungsrevision liegt vor dem Kindzielereignis")
+        retry_revision = None
+        if attempt.retry_not_before_revision is not None:
+            retry_revision = revision + (
+                attempt.retry_not_before_revision - attempt.map_revision)
+        rebound = replace(
+            attempt,
+            map_revision=revision,
+            retry_not_before_revision=retry_revision,
+        )
+        return self.record_attempt(rebound)
 
     def reactivate(
             self, reactivation: TaskReactivation) -> TaskHistorySnapshot:

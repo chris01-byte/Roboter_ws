@@ -57,7 +57,11 @@ from explore.portal_traversal_runtime import (  # noqa: E402
 from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
 from explore.frontier_goal_candidate import FrontierGoalCandidate  # noqa: E402
 from explore.exploration_nav_runtime import NavigationSourceState  # noqa: E402
-from explore.exploration_policy import PolicyAssessmentState  # noqa: E402
+from explore.exploration_policy import (  # noqa: E402
+    PolicyAssessmentState,
+    TaskAvailability,
+    TaskAvailabilityState,
+)
 from explore.exploration_completion import (  # noqa: E402
     CompletionAssessment,
     CompletionPolicy,
@@ -71,7 +75,11 @@ from explore.region_graph_shadow_lifecycle import (  # noqa: E402
     RegionGraphShadowLifecycle,
     RegionGraphShadowNotReadyError,
 )
-from explore.region_graph import RegionTaskKind, RegionTaskState  # noqa: E402
+from explore.region_graph import (  # noqa: E402
+    RegionTaskKind,
+    RegionTaskSnapshot,
+    RegionTaskState,
+)
 import explore.explore_node as explore_node_module  # noqa: E402
 
 
@@ -170,6 +178,198 @@ def test_costmap_projects_goal_to_navfn_start_component():
         goal_x, goal_y, node._global_costmap.info)
     assert projected is True
     assert goal_col == 49
+
+
+def test_wohnungserkundung_costmap_keeps_exact_reachable_goal(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._global_costmap = _grid(width=100, height=40, resolution=0.05)
+    costs = np.zeros((40, 100), dtype=np.int16)
+    costs[:, 50] = 99
+    node._global_costmap.data = costs.ravel().tolist()
+    node._global_costmap_received_at = time.monotonic()
+    node._map_timeout_s = 5.0
+    node._global_frame = 'map'
+    node._frontier_goal_max_cost = 90
+    robot_xy = node._grid_to_world(10, 20, node._global_costmap.info)
+    reachable_xy = node._grid_to_world(40, 20, node._global_costmap.info)
+
+    def candidate_at(xy):
+        return FrontierGoalCandidate(
+            intent_id='intent-1',
+            task_id='task-1',
+            region_id='region-1',
+            frontier_id='frontier-1',
+            map_revision=1,
+            frame_id='map',
+            source_fingerprint='a' * 64,
+            source_stamp_ns=1,
+            target_x_m=xy[0],
+            target_y_m=xy[1],
+            target_yaw_rad=0.0,
+            target_row=20,
+            target_col=40,
+            frontier_x_m=xy[0],
+            frontier_y_m=xy[1],
+            route_length_m=1.0,
+            information_gain_square_m=1.0,
+        )
+
+    candidate = candidate_at(reachable_xy)
+    raw_map = _grid(width=100, height=40, resolution=0.05)
+
+    assert node._wohnungserkundung_bind_costmap_frontier_stage(
+        object(), candidate, object(), raw_map, (*robot_xy, 0.0), None,
+    ) is candidate
+
+
+def test_wohnungserkundung_costmap_fails_closed_without_runtime_costmap():
+    node = ExploreNode.__new__(ExploreNode)
+    candidate = FrontierGoalCandidate(
+        intent_id='intent-1',
+        task_id='task-1',
+        region_id='region-1',
+        frontier_id='frontier-1',
+        map_revision=1,
+        frame_id='map',
+        source_fingerprint='a' * 64,
+        source_stamp_ns=1,
+        target_x_m=1.0,
+        target_y_m=0.0,
+        target_yaw_rad=0.0,
+        target_row=0,
+        target_col=0,
+        frontier_x_m=1.0,
+        frontier_y_m=0.0,
+        route_length_m=1.0,
+        information_gain_square_m=1.0,
+    )
+
+    assert node._wohnungserkundung_bind_costmap_frontier_stage(
+        object(), candidate, object(), _grid(), (0.0, 0.0, 0.0), None,
+    ) is None
+
+
+def test_wohnungserkundung_costmap_stage_is_revalidated_on_raw_scope(
+        monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._global_costmap = _grid(width=100, height=40, resolution=0.05)
+    costs = np.zeros((40, 100), dtype=np.int16)
+    costs[:, 50] = 99
+    node._global_costmap.data = costs.ravel().tolist()
+    node._global_costmap_received_at = time.monotonic()
+    node._map_timeout_s = 5.0
+    node._global_frame = 'map'
+    node._frontier_goal_max_cost = 90
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_clearance = 0.28
+    robot_xy = node._grid_to_world(10, 20, node._global_costmap.info)
+    blocked_xy = node._grid_to_world(80, 20, node._global_costmap.info)
+    raw_map = _grid(width=100, height=40, resolution=0.05)
+    raw_map.data = np.zeros((40, 100), dtype=np.int16).ravel().tolist()
+    intent = object()
+    correlation = object()
+    scope = object()
+    candidate = FrontierGoalCandidate(
+        intent_id='intent-1', task_id='task-1', region_id='region-1',
+        frontier_id='frontier-1', map_revision=1, frame_id='map',
+        source_fingerprint='a' * 64, source_stamp_ns=1,
+        target_x_m=blocked_xy[0], target_y_m=blocked_xy[1],
+        target_yaw_rad=0.0, target_row=20, target_col=80,
+        frontier_x_m=blocked_xy[0], frontier_y_m=blocked_xy[1],
+        route_length_m=3.5, information_gain_square_m=1.0,
+    )
+    validations = []
+
+    def revalidate(selected_intent, selected_candidate, selected_correlation,
+                   **kwargs):
+        validations.append((
+            selected_intent, selected_candidate, selected_correlation, kwargs))
+        assert selected_candidate.target_col == 49
+        assert kwargs['scope'] is scope
+        assert kwargs['scope_clearance_m'] == 0.28
+        return 1.95
+
+    monkeypatch.setattr(
+        explore_node_module,
+        'revalidate_active_frontier_goal_candidate',
+        revalidate,
+    )
+
+    staged = node._wohnungserkundung_bind_costmap_frontier_stage(
+        intent, candidate, correlation, raw_map, (*robot_xy, 0.0), scope)
+
+    assert staged is not None
+    assert staged is not candidate
+    assert staged.target_col == 49
+    assert staged.target_row == 20
+    assert staged.route_length_m == 1.95
+    assert len(validations) == 1
+
+
+def test_wohnungserkundung_filters_too_short_costmap_stage_before_selection(
+        monkeypatch):
+    context = PortalMapContext('session-1', 'map-1', 'map')
+    correlation = SimpleNamespace(
+        context=context, map_revision=7, source_stamp_ns=1)
+    tasks = tuple(
+        RegionTaskSnapshot(
+            task_id=f'task-{index}', region_id='region-1',
+            kind=RegionTaskKind.FRONTIER, subject_id=f'frontier-{index}',
+            state=RegionTaskState.OPEN, created_revision=1, last_revision=7)
+        for index in (1, 2))
+    availability = tuple(
+        TaskAvailability(
+            task_id=task.task_id, context=context, map_revision=7,
+            state=TaskAvailabilityState.AVAILABLE,
+            reason='raw_map_geodesic_and_information_available',
+            recheck_condition='revalidate_before_navigation')
+        for task in tasks)
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_clearance = 0.28
+    node._min_goal_dist_m = 0.30
+
+    def candidate_for(task, x):
+        return FrontierGoalCandidate(
+            intent_id='preview-1', task_id=task.task_id,
+            region_id=task.region_id, frontier_id=task.subject_id,
+            map_revision=7, frame_id='map',
+            source_fingerprint='a' * 64, source_stamp_ns=1,
+            target_x_m=x, target_y_m=0.0, target_yaw_rad=0.0,
+            target_row=0, target_col=0,
+            frontier_x_m=1.0, frontier_y_m=0.0,
+            route_length_m=x, information_gain_square_m=1.0)
+
+    built = {}
+
+    def build(intent, selected_correlation, **kwargs):
+        task = kwargs['task']
+        candidate = candidate_for(task, 1.0)
+        candidate = replace(candidate, intent_id=intent.intent_id)
+        built[task.task_id] = candidate
+        return candidate
+
+    monkeypatch.setattr(
+        explore_node_module, 'build_frontier_goal_candidate', build)
+    node._wohnungserkundung_bind_costmap_frontier_stage = (
+        lambda intent, candidate, *args: replace(
+            candidate,
+            target_x_m=(0.10 if candidate.task_id == 'task-1' else 0.50),
+            route_length_m=(
+                0.10 if candidate.task_id == 'task-1' else 0.50)))
+
+    filtered = (
+        node._wohnungserkundung_costmap_filter_frontier_availability(
+            availability, tasks, raw_map, correlation, (), object(),
+            (0.0, 0.0, 0.0), None))
+
+    assert filtered[0].state is TaskAvailabilityState.TEMPORARILY_BLOCKED
+    assert filtered[0].reason == 'nav2_costmap_stage_too_short'
+    assert filtered[0].recheck_condition == (
+        'reassess_after_costmap_or_map_update')
+    assert filtered[1] is availability[1]
+    assert set(built) == {'task-1', 'task-2'}
 
 
 def _forward_stage_node(costmap):
@@ -1371,6 +1571,63 @@ def test_we_new_revision_with_current_raw_validation_revalidates_child(
     assert node._wohnungserkundung_unconfirmed_intent_id is None
 
 
+def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 7
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id,
+        NavigationSourceState(context, 8, True),
+        'fixed_goal_revalidated_fast',
+    )
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 20.0)
+
+    source = node._wohnungserkundung_source_state(intent, candidate)
+
+    assert source.current
+    assert source.map_revision == 8
+    assert node._wohnungserkundung_unconfirmed_since is None
+
+
+def test_we_fast_raw_validation_commits_current_active_child(monkeypatch):
+    context = PortalMapContext('session-fast', 'map-fast', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    correlation = SimpleNamespace(context=context, map_revision=8)
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    raw_map.header.stamp.sec = 3
+    raw_map.header.stamp.nanosec = 4
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_active_child = (intent, candidate)
+    node._wohnungserkundung_active_frontier_source = None
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_clearance = 0.28
+    calls = []
+
+    def revalidate(*args, **kwargs):
+        calls.append((args, kwargs))
+        return 0.5
+
+    monkeypatch.setattr(
+        explore_node_module,
+        'revalidate_active_frontier_goal_candidate',
+        revalidate,
+    )
+
+    node._wohnungserkundung_refresh_active_frontier_source(
+        raw_map, correlation, (0.0, 0.0, 0.0), None)
+
+    assert len(calls) == 1
+    assert node._wohnungserkundung_active_frontier_source == (
+        intent.intent_id,
+        NavigationSourceState(context, 8, True),
+        'fixed_goal_revalidated_fast',
+    )
+
+
 def test_we_failed_current_raw_validation_invalidates_frontier_child(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
@@ -1669,6 +1926,110 @@ def test_unconfirmed_portal_runtime_records_retry_instead_of_event(
     assert attempts[0].retry_not_before_revision == 9
     assert node._wohnungserkundung_portal_traversal_status['state'] == (
         'unconfirmed')
+
+
+def test_frontier_runtime_records_terminal_attempt_on_revalidated_revision():
+    context = PortalMapContext('session-runtime', 'map-runtime', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    attempt = object()
+    recorded = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_runtime_condition = threading.Condition(
+        node._wohnungserkundung_runtime_lock)
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_active_frontier_source = None
+    node._wohnungserkundung_task_policy_session = SimpleNamespace(
+        latest_assessment_revision=23,
+        record_revalidated_attempt=lambda selected, revision: (
+            recorded.append((selected, revision))),
+    )
+    node._wohnungserkundung_policy_processed_revision = 23
+    node._wohnungserkundung_policy_fault = None
+    node._goal_timeout_s = 10.0
+    node._navigate_to = lambda *_args, **_kwargs: 'success'
+    run = SimpleNamespace(
+        navigation_status='success',
+        disposition=SimpleNamespace(attempt=attempt),
+    )
+
+    class NavigationSession:
+        def run(self, *_args):
+            node._wohnungserkundung_active_frontier_source = (
+                intent.intent_id,
+                NavigationSourceState(context, 23, True),
+                'fixed_goal_revalidated',
+            )
+            return run
+
+    result = node._run_wohnungserkundung_child(
+        NavigationSession(), intent, candidate,
+        SimpleNamespace(is_cancel_requested=False), lambda: False)
+
+    assert result == (run, None)
+    assert recorded == [(attempt, 23)]
+    assert node._wohnungserkundung_consumed_intent_id == intent.intent_id
+    assert node._wohnungserkundung_active_child is None
+    assert node._wohnungserkundung_active_frontier_source is None
+
+
+def test_frontier_terminal_attempt_waits_for_atomic_policy_commit():
+    context = PortalMapContext('session-runtime', 'map-runtime', 'map')
+    intent, _candidate = _we_source_state_goal(context)
+    attempt = object()
+    recorded = []
+    pending_observed = threading.Event()
+
+    class FakePolicy:
+        @property
+        def latest_assessment_revision(self):
+            pending_observed.set()
+            return 24
+
+        def record_revalidated_attempt(self, selected, revision):
+            recorded.append((selected, revision))
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_runtime_condition = threading.Condition(
+        node._wohnungserkundung_runtime_lock)
+    node._wohnungserkundung_task_policy_session = FakePolicy()
+    node._wohnungserkundung_policy_processed_revision = 23
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id,
+        NavigationSourceState(context, 23, True),
+        'fixed_goal_revalidated',
+    )
+    node._wohnungserkundung_policy_fault = None
+    finished = threading.Event()
+    failures = []
+
+    def record_after_commit():
+        try:
+            node._record_revalidated_frontier_attempt(
+                intent, attempt, timeout_s=0.5)
+        except Exception as error:  # pragma: no cover - assertion captures it
+            failures.append(error)
+        finally:
+            finished.set()
+
+    recorder = threading.Thread(target=record_after_commit)
+    recorder.start()
+    assert pending_observed.wait(timeout=0.5)
+    assert not finished.is_set()
+    with node._wohnungserkundung_runtime_condition:
+        node._wohnungserkundung_active_frontier_source = (
+            intent.intent_id,
+            NavigationSourceState(context, 24, True),
+            'fixed_goal_revalidated',
+        )
+        node._wohnungserkundung_policy_processed_revision = 24
+        node._wohnungserkundung_runtime_condition.notify_all()
+    assert finished.wait(timeout=0.5)
+    recorder.join(timeout=0.5)
+
+    assert failures == []
+    assert recorded == [(attempt, 24)]
 
 
 def test_portal_monitor_adapter_uses_fresh_retained_scan(monkeypatch):
@@ -2343,6 +2704,8 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
 
     node._robot_pose = lambda: (1.0, 2.0, 0.0)
     node._world_to_grid = lambda x, y, info: (10, 20)
+    node._wohnungserkundung_bind_costmap_frontier_stage = (
+        lambda *args: candidate)
     monkeypatch.setattr(
         explore_node_module, 'build_frontier_task_evidence', build_evidence)
     monkeypatch.setattr(
