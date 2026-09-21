@@ -11,6 +11,7 @@ from typing import Any, Optional
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -920,8 +921,14 @@ def main(args: Optional[list[str]] = None) -> None:
     try:
         node = RobotMapManager()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # ROS 2 Humble kann beim globalen SIGINT waehrend take_message()
+        # anstelle von ExternalShutdownException einen RuntimeError werfen.
+        # Im weiterhin gueltigen Kontext bleiben echte Laufzeitfehler sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         if node is not None:
             node.destroy_node()

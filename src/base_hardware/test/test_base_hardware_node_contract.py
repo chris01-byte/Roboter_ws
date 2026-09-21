@@ -106,6 +106,12 @@ class NodeSafetyContractTests(unittest.TestCase):
     def test_node_source_is_valid_python(self):
         ast.parse(NODE_PATH.read_text(encoding='utf-8'))
 
+    def test_main_tolerates_a_context_already_stopped_by_sigint(self):
+        source = method_source('main')
+        self.assertIn(
+            'except (KeyboardInterrupt, ExternalShutdownException):', source)
+        self.assertIn('if rclpy.ok():\n            rclpy.shutdown()', source)
+
     def test_real_update_reads_encoder_before_motion_write(self):
         source = method_source('_update')
         self.assertLess(

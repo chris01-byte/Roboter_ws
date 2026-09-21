@@ -43,7 +43,7 @@ von Navigation. Der rotierende Sensorkopf wird nicht berührt oder blockiert.
 
 | Teil | Zustand |
 |---|---|
-| Herstellertreiber | gebaut in `~/amadeus_lidar_ws`, Commit gepinnt, **unverändert** |
+| Herstellertreiber | Commit gepinnt; Amadeus-Patch behebt ausschließlich die serielle Shutdown-Race |
 | Bringup-Paket | `src/amadeus_lidar_bringup/` — baut, Launch löst auf |
 | Sensorparameter | `config/stl27l.yaml`; ROS-CCW-Ausgabe (`laser_scan_dir: true`) |
 | udev-Beispielregel | `config/udev/99-amadeus-stl27l.rules.example` |
@@ -210,8 +210,13 @@ Der Zweig feature/stl27l-integration bleibt erhalten - auch fehlgeschlagene
 Ergebnisse gehören ins Protokoll.
 ```
 
-Der Treiber liegt in `~/amadeus_lidar_ws` **außerhalb** des Roboter-Workspace.
-Er beeinflusst den bestehenden Betrieb nicht, solange er nicht gesourct wird.
+Der Treiber liegt in einem eigenen Overlay **außerhalb** des Roboter-Workspace.
+Der reproduzierbare Aufbau erfolgt mit
+`tools/kartierung/build_ldlidar_stl27l_overlay.sh`. Der Patch wartet beim
+Stoppen auf den Empfangsthread, bevor dessen serieller Dateideskriptor
+geschlossen wird. Dadurch kann der Thread nicht mehr parallel mit
+`FD_SET(-1)` seinen Stack beschädigen. Das Overlay beeinflusst den bestehenden
+Betrieb nicht, solange es nicht gesourct wird.
 
 ---
 

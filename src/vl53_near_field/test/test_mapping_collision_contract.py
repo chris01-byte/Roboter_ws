@@ -17,9 +17,11 @@ def test_mapping_profile_uses_motion_aware_conservative_footprint():
 
     assert params['polygons'] == ['FootprintApproach', 'SlowZone']
     approach = params['FootprintApproach']
-    assert approach['type'] == 'circle'
+    assert approach['type'] == 'polygon'
+    assert approach['footprint_topic'] == (
+        '/local_costmap/published_footprint')
+    assert 'radius' not in approach
     assert approach['action_type'] == 'approach'
-    assert approach['radius'] == 0.40
     assert approach['time_before_collision'] >= 2.0
     assert 0.0 < approach['simulation_time_step'] <= 0.1
     assert approach['max_points'] <= 1
@@ -48,3 +50,12 @@ def test_vl53_launch_defaults_to_normal_profile_but_accepts_override():
     assert "'collision_params_file'" in source
     assert "'collision_monitor_params.yaml'" in source
     assert 'parameters=[collision_params]' in source
+
+
+def test_vl53_node_tolerates_a_context_already_stopped_by_sigint():
+    source = (
+        PACKAGE_ROOT / 'vl53_near_field' / 'vl53_near_field_node.py'
+    ).read_text(encoding='utf-8')
+
+    assert 'except (KeyboardInterrupt, ExternalShutdownException):' in source
+    assert 'if rclpy.ok():\n            rclpy.shutdown()' in source

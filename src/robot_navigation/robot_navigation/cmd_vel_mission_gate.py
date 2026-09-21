@@ -554,6 +554,12 @@ def main(args=None):
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Humble kann beim globalen SIGINT waehrend take_message() statt der
+        # vorgesehenen ExternalShutdownException einen RuntimeError werfen.
+        # Echte RuntimeError im laufenden Kontext bleiben sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         if rclpy.ok():
             try:
