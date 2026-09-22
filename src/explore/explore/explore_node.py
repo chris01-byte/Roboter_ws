@@ -2023,6 +2023,19 @@ class ExploreNode(Node):
                                 robot_pose,
                                 scope,
                             ))
+                        # The costmap stage can withhold an otherwise valid
+                        # raw-map frontier.  Its utility must be withheld in
+                        # the same snapshot: score_task_utilities requires an
+                        # exact one-to-one correspondence with selectable
+                        # tasks and a blocked goal must never remain scored.
+                        current_frontier_available_ids = {
+                            item.task_id
+                            for item in current_frontier_availability
+                            if item.state is TaskAvailabilityState.AVAILABLE
+                        }
+                        current_frontier_utilities = tuple(
+                            item for item in current_frontier_utilities
+                            if item.task_id in current_frontier_available_ids)
                     else:
                         # Test-only status stand-ins preserve the historical
                         # passive contract without exercising typed transit.
@@ -2413,7 +2426,7 @@ class ExploreNode(Node):
                 if report_fault:
                     self.get_logger().error(
                         'Passive Wohnungserkundungs-Policy bleibt ohne '
-                        f'Wirkung ({fault}).')
+                        f'Wirkung ({fault}: {error}).')
             else:
                 active_frontier_source = None
                 with self._wohnungserkundung_runtime_lock:
@@ -3376,6 +3389,10 @@ class ExploreNode(Node):
         with self._wohnungserkundung_runtime_lock:
             if self._wohnungserkundung_active_child == active_child:
                 self._wohnungserkundung_active_frontier_source = source
+                condition = getattr(
+                    self, '_wohnungserkundung_runtime_condition', None)
+                if condition is not None:
+                    condition.notify_all()
 
     def _wohnungserkundung_costmap_filter_frontier_availability(
             self, availability, tasks, raw_map, correlation, tracks, evidence,
@@ -5299,13 +5316,16 @@ class ExploreNode(Node):
         return snapshot
 
     def _record_revalidated_frontier_attempt(
-            self, intent, attempt, timeout_s=1.25):
+            self, intent, attempt, timeout_s=3.0):
         """Atomically bind a child result to the committed policy revision.
 
         The status callback first advances the stateful task policy and then
         revalidates the fixed metric goal.  A child may finish inside that
-        short calculation window.  Wait only for the matching status commit;
-        never accept an older source or relax its freshness decision.
+        short calculation window.  A raw-map revalidation can legitimately
+        arrive *ahead* of the next one-Hz policy commit while Nav2 reports its
+        terminal result.  Wait for that policy commit instead of treating the
+        newer, still-current source as an error.  Never accept an older source
+        or relax its freshness decision.
         """
         deadline = time.monotonic() + timeout_s
         condition = self._wohnungserkundung_runtime_condition
@@ -5327,24 +5347,24 @@ class ExploreNode(Node):
                     '_wohnungserkundung_policy_processed_revision',
                     None,
                 )
+                active_source = getattr(
+                    self,
+                    '_wohnungserkundung_active_frontier_source',
+                    None,
+                )
+                source_matches_intent = (
+                    active_source is not None
+                    and active_source[0] == intent.intent_id
+                    and active_source[1].context == intent.context)
+                if source_matches_intent and not active_source[1].current:
+                    raise RuntimeError(
+                        'Frontierabschluss verlor aktuelle Revalidierung')
                 if (
                         latest_revision is not None
-                        and processed_revision == latest_revision):
-                    active_source = getattr(
-                        self,
-                        '_wohnungserkundung_active_frontier_source',
-                        None,
-                    )
-                    if (
-                            active_source is None
-                            or active_source[0] != intent.intent_id
-                            or active_source[1].context != intent.context
-                            or active_source[1].map_revision
-                            != latest_revision
-                            or not active_source[1].current):
-                        raise RuntimeError(
-                            'Frontierabschluss besitzt keine aktuelle '
-                            'Revalidierung')
+                        and processed_revision == latest_revision
+                        and source_matches_intent
+                        and active_source[1].map_revision
+                        == latest_revision):
                     task_policy.record_revalidated_attempt(
                         attempt, latest_revision)
                     return

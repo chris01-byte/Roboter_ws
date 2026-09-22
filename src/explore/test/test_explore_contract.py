@@ -2032,6 +2032,62 @@ def test_frontier_terminal_attempt_waits_for_atomic_policy_commit():
     assert recorded == [(attempt, 24)]
 
 
+def test_frontier_terminal_attempt_waits_for_policy_to_catch_up_to_raw_map():
+    context = PortalMapContext('session-runtime', 'map-runtime', 'map')
+    intent, _candidate = _we_source_state_goal(context)
+    attempt = object()
+    recorded = []
+    latest_revision = [23]
+    pending_observed = threading.Event()
+
+    class FakePolicy:
+        @property
+        def latest_assessment_revision(self):
+            pending_observed.set()
+            return latest_revision[0]
+
+        def record_revalidated_attempt(self, selected, revision):
+            recorded.append((selected, revision))
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_runtime_condition = threading.Condition(
+        node._wohnungserkundung_runtime_lock)
+    node._wohnungserkundung_task_policy_session = FakePolicy()
+    node._wohnungserkundung_policy_processed_revision = 23
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id,
+        NavigationSourceState(context, 24, True),
+        'fixed_goal_revalidated_fast',
+    )
+    node._wohnungserkundung_policy_fault = None
+    finished = threading.Event()
+    failures = []
+
+    def record_after_catch_up():
+        try:
+            node._record_revalidated_frontier_attempt(
+                intent, attempt, timeout_s=0.5)
+        except Exception as error:  # pragma: no cover - assertion captures it
+            failures.append(error)
+        finally:
+            finished.set()
+
+    recorder = threading.Thread(target=record_after_catch_up)
+    recorder.start()
+    assert pending_observed.wait(timeout=0.5)
+    assert not finished.is_set()
+    with node._wohnungserkundung_runtime_condition:
+        latest_revision[0] = 24
+        node._wohnungserkundung_policy_processed_revision = 24
+        node._wohnungserkundung_runtime_condition.notify_all()
+    assert finished.wait(timeout=0.5)
+    recorder.join(timeout=0.5)
+
+    assert failures == []
+    assert recorded == [(attempt, 24)]
+
+
 def test_portal_monitor_adapter_uses_fresh_retained_scan(monkeypatch):
     node = ExploreNode.__new__(ExploreNode)
     node._door_lidar_scan_timeout = 0.5
