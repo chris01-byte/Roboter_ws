@@ -3326,6 +3326,25 @@ def test_frontier_feed_uses_raw_clusters_before_rank_or_blacklist(monkeypatch):
         'a' * 64, 123, 'map', 7)
 
 
+def test_we_frontier_feed_waits_until_initial_scan_arms_it():
+    """Pre-scan raw observations must not create persistent WE tasks."""
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_frontier_task_feed = True
+    node._wohnungserkundung_frontier_feed_armed = False
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_latest_raw_map = object()
+    node._region_graph_shadow_latest_raw_source = object()
+    node._region_graph_shadow_latest_correlation = object()
+    node._region_graph_shadow_frontier_processed_correlation = None
+    node._detect_frontiers = lambda *_args: (_ for _ in ()).throw(
+        AssertionError('Vor dem Rundblick darf kein Frontierfeed laufen'))
+
+    node._try_observe_correlated_raw_map_frontiers()
+
+    assert node._region_graph_shadow_frontier_processed_correlation is None
+
+
 def test_frontier_feed_discards_result_when_exact_cache_changes(monkeypatch):
     node = ExploreNode.__new__(ExploreNode)
     node._region_graph_shadow_frontier_task_feed = True

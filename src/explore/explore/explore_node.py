@@ -1218,6 +1218,15 @@ class ExploreNode(Node):
                 self._wohnungserkundung_navigation_enabled,
             )
         )
+        # A controlled initial scan intentionally changes the raw-map
+        # frontier topology.  Do not turn those incomplete, in-place
+        # observations into persistent tasks before the scan has ended: doing
+        # so retains every transient cluster as unresolved work even though
+        # no translational WE decision has been made yet.  Legacy and
+        # scan-free configurations keep their existing immediate feed.
+        self._wohnungserkundung_frontier_feed_armed = not (
+            self._wohnungserkundung_navigation_enabled
+            and self._initial_scan_enabled)
         (
             self._wohnungserkundung_accessible_scope_verified,
             self._wohnungserkundung_completion_policy,
@@ -1622,6 +1631,11 @@ class ExploreNode(Node):
     def _try_observe_correlated_raw_map_frontiers(self):
         """Feed every unfiltered raw-map frontier into passive tasks."""
         if not getattr(self, '_region_graph_shadow_frontier_task_feed', False):
+            return
+        # A WE start with an initial scan must first obtain that controlled
+        # all-around observation.  The gate only defers task creation; it
+        # neither changes raw maps nor permits any motion.
+        if not getattr(self, '_wohnungserkundung_frontier_feed_armed', True):
             return
         with self._region_graph_shadow_lock:
             if self._region_graph_shadow_fault is not None:
@@ -5711,6 +5725,52 @@ class ExploreNode(Node):
             with self._wohnungserkundung_runtime_lock:
                 policy_snapshot = getattr(
                     self, '_wohnungserkundung_policy_snapshot', None)
+
+            # The first full observation is a precondition for WE task
+            # creation and completion alike.  In particular, an empty
+            # pre-scan task inventory must never satisfy the completion
+            # window before it was armed from a real all-around observation.
+            if initial_scan_pending:
+                passive = getattr(policy_snapshot, 'passive', None)
+                if not getattr(passive, 'source_ready', False):
+                    time.sleep(0.05)
+                    continue
+                self._status_phase = 'we_initial_scan'
+                self._status_message = (
+                    'WE-Quellen sind frisch; kontrollierter 360-Grad-'
+                    'Rundblick vor der ersten Zielwahl laeuft.')
+                self._publish_status('running')
+                scan_status, _achieved = self._scan_in_place(
+                    stop_requested=lambda: (
+                        goal_handle.is_cancel_requested or overall_expired()))
+                if scan_status == 'success':
+                    if getattr(
+                            self,
+                            '_region_graph_shadow_frontier_task_feed',
+                            False):
+                        with self._region_graph_shadow_lock:
+                            self._wohnungserkundung_frontier_feed_armed = True
+                            # The latest exact correlation has deliberately
+                            # not been consumed while the gate was closed.
+                            # Resetting this marker makes the next timer pass
+                            # create one task inventory from that fresh map.
+                            self._region_graph_shadow_frontier_processed_correlation = (
+                                None)
+                    initial_scan_pending = False
+                    time.sleep(self._replan_period_s)
+                    continue
+                if goal_handle.is_cancel_requested:
+                    return terminate(
+                        TerminationCause.USER_CANCELED,
+                        'user_canceled_during_initial_scan')
+                if overall_expired():
+                    return terminate(
+                        TerminationCause.BUDGET_EXHAUSTED,
+                        'overall_budget_during_initial_scan')
+                return terminate(
+                    TerminationCause.SYSTEM_FAILURE,
+                    f'initial_scan_{scan_status}')
+
             if policy_snapshot is not None:
                 try:
                     completion_session, completion = (
@@ -5726,35 +5786,6 @@ class ExploreNode(Node):
                             ExplorationResultState.COMPLETE_ACCESSIBLE)):
                     return self._finish_wohnungserkundung_completion(
                         goal_handle, completion, reached_goals)
-
-            if initial_scan_pending:
-                passive = getattr(policy_snapshot, 'passive', None)
-                if not getattr(passive, 'source_ready', False):
-                    time.sleep(0.05)
-                    continue
-                self._status_phase = 'we_initial_scan'
-                self._status_message = (
-                    'WE-Quellen sind frisch; kontrollierter 360-Grad-'
-                    'Rundblick vor der ersten Zielwahl laeuft.')
-                self._publish_status('running')
-                scan_status, _achieved = self._scan_in_place(
-                    stop_requested=lambda: (
-                        goal_handle.is_cancel_requested or overall_expired()))
-                if scan_status == 'success':
-                    initial_scan_pending = False
-                    time.sleep(self._replan_period_s)
-                    continue
-                if goal_handle.is_cancel_requested:
-                    return terminate(
-                        TerminationCause.USER_CANCELED,
-                        'user_canceled_during_initial_scan')
-                if overall_expired():
-                    return terminate(
-                        TerminationCause.BUDGET_EXHAUSTED,
-                        'overall_budget_during_initial_scan')
-                return terminate(
-                    TerminationCause.SYSTEM_FAILURE,
-                    f'initial_scan_{scan_status}')
 
             target = self._current_wohnungserkundung_navigation_target()
             if target is None:
