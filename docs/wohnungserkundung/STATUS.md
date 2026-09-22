@@ -1,11 +1,51 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · Realversuch: SICHER GESTOPPT, Nahbereichsblocker · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-21**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · Realversuche: SICHER GESTOPPT, Nahbereichs- und Scope-Gate · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-22**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## R7 – Scope-Gate vor weiterer realer Erkundung, 2026-09-22
+
+Der reale, auf `402741d` getestete R7-Lauf begann erst nach vollständigem
+Preflight mit genau einem ausdrücklichen Erkundungsauftrag. Der neue
+odometrisch überwachte Rundblick lief ohne Translation; Safety, Encoder und
+Modbus blieben dabei unauffällig. Die Frontierzuführung blieb bis zu dessen
+Erfolg geschlossen. Danach wurde ein reines Nahziel als erreichter
+Beobachtungspunkt bewertet und erst durch eine neuere Rohkarte als
+informationsaufgelöst abgeschlossen. Das ist kein Fahrfortschritt in einen
+weiteren Bereich.
+
+Die anschließende exakte Statusbewertung hatte 15 offene Frontieraufgaben. Für
+14 aktuelle Aufgaben gab es im vorhandenen Profil keine sichere Rohkartenroute;
+eine weitere war auf der aktuellen Revision nicht beobachtet. Die offline aus
+dem lokalen R7-Bag reproduzierte Bewertung mit unveränderten realen
+Clearance-Werten fand ohne Scope fünf grundsätzlich erreichbare Aufgaben, im
+lokal bestätigten Scope jedoch keine. Damit ist weder eine gelockerte
+Clearance noch eine aus dem Kartenfreiraum geschätzte Scope-Erweiterung
+zulässig. Der Scope ist nach seinem dokumentierten Zweck nur für Startraum,
+bekannte Tür und den ersten Flurabschnitt vermessen; er ist kein Nachweis für
+den nun gewünschten Zwei-Zimmer-/Flur-Umfang.
+
+Die Mission wurde über den Missionsmanager abgebrochen. Vor dem Stopp waren
+Soll- und Messgeschwindigkeiten null, der Not-Aus frei sowie Encoder und Bus
+fehlerfrei; danach hielten kein Amadeus-Prozess und kein Nutzer `/dev/ttyUSB_BASE`
+offen. Die mit einer Terminal-Unterbrechung beendete Prozessgruppe ist
+ausdrücklich kein Ersatz für den vorgeschriebenen Einzel-PID-Shutdownnachweis
+und wird nicht als sauberer Shutdowntest gewertet. Reale Karte, Scope-Geometrie,
+Bag und Diagnosebilder bleiben ausschließlich lokal.
+
+**Nächster blockierter Schritt:** Vor einer weiteren Fahrt muss eine anwesende
+Person den zuvor rechts vor der Front beobachteten Nahbereich als frei
+bestätigen (oder Amadeus auf die markierte Ausgangspose zurücksetzen) **und**
+einen vor Ort vermessenen, zusammenhängenden lokalen Scope für exakt die zwei
+Zimmer und den Flur bestätigen. Treppen, Außenbereiche und alle übrigen
+Flächen müssen darin weiterhin ausgeschlossen sein. Erst dann darf dieser
+Scope mit unveränderten Footprint-, Frische- und Safetywerten motorlos geprüft
+und mit neuem ausdrücklichen Auftrag verwendet werden. Die Software darf
+diese physische Grenze nicht selbst erweitern.
 
 ## Fortgesetzter freigegebener WE-Realversuch, 2026-09-21
 
