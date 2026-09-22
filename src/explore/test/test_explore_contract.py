@@ -1486,6 +1486,37 @@ def test_exact_unconsumed_we_target_is_withheld_after_revision_change():
     assert node._current_wohnungserkundung_navigation_target() is None
 
 
+def test_frontier_preview_uses_identical_fresh_raw_map_before_dispatch():
+    context = PortalMapContext('session-m3n', 'map-m3n', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context,
+        map_revision=8,
+        fingerprint=candidate.source_fingerprint,
+        source_stamp_ns=456,
+    )
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = (intent, candidate)
+    node._wohnungserkundung_consumed_intent_id = None
+    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._costmap_reachable_goal = (
+        lambda proposed, desired, robot_xy: (proposed, False))
+    node._min_goal_dist_m = 0.30
+
+    assert node._current_wohnungserkundung_navigation_target() == (
+        intent, candidate)
+
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context,
+        map_revision=9,
+        fingerprint='b' * 64,
+        source_stamp_ns=789,
+    )
+    assert node._current_wohnungserkundung_navigation_target() is None
+
+
 def _we_source_state_node(context, *, revision=7, fingerprint='a' * 64,
                           source_stamp_ns=123, received_at=10.0):
     node = ExploreNode.__new__(ExploreNode)

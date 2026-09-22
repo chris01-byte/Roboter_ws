@@ -5308,8 +5308,39 @@ class ExploreNode(Node):
         # merely because policy processing is temporarily behind a raw map.
         with self._region_graph_shadow_lock:
             correlation = self._region_graph_shadow_latest_correlation
-        if correlation is None or correlation.map_revision != intent.map_revision:
+        if correlation is None:
             return None
+        if correlation.map_revision != intent.map_revision:
+            # SLAM may republish byte-identical maps faster than the one-Hz
+            # policy projection.  This is not a changed map decision: the
+            # current raw-map fingerprint proves the same metric target and
+            # scope evidence.  Before the first dispatch, additionally demand
+            # a fresh, unprojected Nav2-costmap route from the current pose.
+            # A changed fingerprint, context, frame, stale Costmap or a
+            # projected/zero-length route remains fail-closed until a fresh
+            # policy snapshot supplies a new exact candidate.
+            if not (
+                    isinstance(candidate, FrontierGoalCandidate)
+                    and correlation.context == intent.context
+                    and correlation.context.frame_id == candidate.frame_id
+                    and correlation.map_revision > intent.map_revision
+                    and correlation.fingerprint
+                    == candidate.source_fingerprint):
+                return None
+            robot_pose = self._robot_pose()
+            if robot_pose is None:
+                return None
+            checked = self._costmap_reachable_goal(
+                (candidate.target_x_m, candidate.target_y_m),
+                (candidate.target_x_m, candidate.target_y_m),
+                (robot_pose[0], robot_pose[1]),
+            )
+            if checked is None or checked[1] or math.hypot(
+                    candidate.target_x_m - robot_pose[0],
+                    candidate.target_y_m - robot_pose[1]) < (
+                        self._min_goal_dist_m):
+                return None
+            return snapshot
         source = self._wohnungserkundung_source_state(intent, candidate)
         if not source.current:
             return None
