@@ -418,6 +418,12 @@ def main(args=None):
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Beim globalen SIGINT/SIGTERM kann Humble einen bereits laufenden
+        # Publish-Callback erst nach dem Kontext-Shutdown fortsetzen. Nur
+        # dieser Fall ist ein normaler Stop; sonst den Fehler weiterreichen.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         if rclpy.ok():

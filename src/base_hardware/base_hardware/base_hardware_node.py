@@ -1261,6 +1261,12 @@ def main(args=None):
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Humble kann einen bereits global beendeten Kontext noch in einem
+        # laufenden Timer-/Publisher-Callback beobachten. Nur dieser
+        # Shutdownfall ist erwartbar; echte Laufzeitfehler bleiben sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
         if rclpy.ok():

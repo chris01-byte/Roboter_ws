@@ -110,6 +110,8 @@ class NodeSafetyContractTests(unittest.TestCase):
         source = method_source('main')
         self.assertIn(
             'except (KeyboardInterrupt, ExternalShutdownException):', source)
+        self.assertIn('except RuntimeError:', source)
+        self.assertIn('if rclpy.ok():\n            raise', source)
         self.assertIn('if rclpy.ok():\n            rclpy.shutdown()', source)
 
     def test_real_update_reads_encoder_before_motion_write(self):

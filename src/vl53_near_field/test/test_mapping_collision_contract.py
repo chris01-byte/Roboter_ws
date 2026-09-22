@@ -58,4 +58,6 @@ def test_vl53_node_tolerates_a_context_already_stopped_by_sigint():
     ).read_text(encoding='utf-8')
 
     assert 'except (KeyboardInterrupt, ExternalShutdownException):' in source
+    assert 'except RuntimeError:' in source
+    assert 'if rclpy.ok():\n            raise' in source
     assert 'if rclpy.ok():\n            rclpy.shutdown()' in source
