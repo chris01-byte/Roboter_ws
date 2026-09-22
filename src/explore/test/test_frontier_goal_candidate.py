@@ -15,10 +15,12 @@ from amadeus_map_identity import (  # noqa: E402
     map_snapshot_fingerprint,
 )
 from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
+from explore.exploration_scope import AuthorizedExplorationScope  # noqa: E402
 from explore.frontier_goal_candidate import (  # noqa: E402
     FrontierGoalCandidateCapacityError,
     FrontierGoalCandidateError,
     build_frontier_goal_candidate,
+    revalidate_active_frontier_goal_candidate,
 )
 from explore.frontier_task_evidence import (  # noqa: E402
     FrontierTaskEvidencePolicy,
@@ -38,7 +40,8 @@ CONTEXT = PortalMapContext("session-m3k", "map-epoch-1", "map")
 STAMP_NS = 1_800_000_000_000_000_000
 
 
-def _map(*, barrier=False, origin=None, width=21, height=21):
+def _map(*, barrier=False, origin=None, width=21, height=21,
+         revision=7, stamp_ns=STAMP_NS):
     resolution = 0.1
     selected_origin = origin or (
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
@@ -61,9 +64,9 @@ def _map(*, barrier=False, origin=None, width=21, height=21):
     )
     correlation = PortalSourceCorrelation(
         context=CONTEXT,
-        map_revision=7,
+        map_revision=revision,
         fingerprint=fingerprint,
-        source_stamp_ns=STAMP_NS,
+        source_stamp_ns=stamp_ns,
     )
     return {
         "correlation": correlation,
@@ -73,7 +76,7 @@ def _map(*, barrier=False, origin=None, width=21, height=21):
         "frame_id": "map",
         "origin": selected_origin,
         "cells": cells,
-        "source_stamp_ns": STAMP_NS,
+        "source_stamp_ns": stamp_ns,
     }
 
 
@@ -126,7 +129,7 @@ def _policy(**changes):
 
 
 def _inputs(*, map_values=None, robot_xy=(0.55, 1.05), task=None,
-            tracks=None, policy=None):
+            tracks=None, policy=None, scope=None, scope_clearance_m=None):
     values = _map() if map_values is None else map_values
     selected_task = _task() if task is None else task
     selected_tracks = (_track(),) if tracks is None else tracks
@@ -137,6 +140,8 @@ def _inputs(*, map_values=None, robot_xy=(0.55, 1.05), task=None,
         tasks=(selected_task,),
         tracks=selected_tracks,
         policy=selected_policy,
+        scope=scope,
+        scope_clearance_m=scope_clearance_m,
     )
     return {
         "intent": _intent(
@@ -148,6 +153,8 @@ def _inputs(*, map_values=None, robot_xy=(0.55, 1.05), task=None,
         "tracks": selected_tracks,
         "evidence": evidence,
         "policy": selected_policy,
+        "scope": scope,
+        "scope_clearance_m": scope_clearance_m,
     }
 
 
@@ -196,6 +203,87 @@ def test_goal_faces_frontier_when_safe_cell_is_offset():
     assert candidate.target_col == 14
     assert candidate.target_x_m < candidate.frontier_x_m
     assert math.isclose(candidate.target_yaw_rad, 0.0, abs_tol=1e-9)
+
+
+def test_goal_cannot_be_built_outside_authorized_scope():
+    scope = AuthorizedExplorationScope(
+        "scope-room",
+        CONTEXT,
+        tuple(Point2D(*xy) for xy in (
+            (0.0, 0.0), (1.0, 0.0), (1.0, 2.1), (0.0, 2.1))),
+    )
+    inputs = _inputs(scope=scope, scope_clearance_m=0.1)
+
+    assert inputs["evidence"].utilities == ()
+    with pytest.raises(FrontierGoalCandidateError, match="eindeutige"):
+        build_frontier_goal_candidate(**inputs)
+
+
+def _active_revalidation_inputs(candidate, map_values, *, robot_xy):
+    return {
+        "intent": _intent(),
+        "candidate": candidate,
+        **map_values,
+        "robot_xy": robot_xy,
+        "policy": _policy(),
+    }
+
+
+def test_active_fixed_goal_survives_new_map_when_still_safe_and_reachable():
+    candidate = build_frontier_goal_candidate(**_inputs())
+    newer = _map(revision=8, stamp_ns=STAMP_NS + 1)
+
+    route_length_m = revalidate_active_frontier_goal_candidate(
+        **_active_revalidation_inputs(
+            candidate, newer, robot_xy=(0.75, 1.05)))
+
+    assert math.isclose(route_length_m, 0.7, abs_tol=1e-9)
+
+
+def test_active_fixed_goal_fails_closed_when_new_map_blocks_target():
+    candidate = build_frontier_goal_candidate(**_inputs())
+    newer = _map(revision=8, stamp_ns=STAMP_NS + 1)
+    newer["cells"][candidate.target_row * newer["width"]
+                   + candidate.target_col] = 100
+    compact = compact_occupancy_cells(
+        cells=newer["cells"],
+        cell_count=newer["width"] * newer["height"],
+    )
+    newer["correlation"] = replace(
+        newer["correlation"],
+        fingerprint=map_snapshot_fingerprint(
+            width=newer["width"],
+            height=newer["height"],
+            resolution=newer["resolution"],
+            frame_id=newer["frame_id"],
+            origin=newer["origin"],
+            compact_cells=compact,
+        ),
+    )
+
+    with pytest.raises(FrontierGoalCandidateError, match="nicht mehr"):
+        revalidate_active_frontier_goal_candidate(
+            **_active_revalidation_inputs(
+                candidate, newer, robot_xy=(0.75, 1.05)))
+
+
+def test_active_fixed_goal_fails_closed_outside_current_scope():
+    candidate = build_frontier_goal_candidate(**_inputs())
+    newer = _map(revision=8, stamp_ns=STAMP_NS + 1)
+    scope = AuthorizedExplorationScope(
+        "scope-room",
+        CONTEXT,
+        tuple(Point2D(*xy) for xy in (
+            (0.0, 0.0), (1.0, 0.0), (1.0, 2.1), (0.0, 2.1))),
+    )
+
+    with pytest.raises(FrontierGoalCandidateError, match="nicht mehr"):
+        revalidate_active_frontier_goal_candidate(
+            **_active_revalidation_inputs(
+                candidate, newer, robot_xy=(0.55, 1.05)),
+            scope=scope,
+            scope_clearance_m=0.1,
+        )
 
 
 @pytest.mark.parametrize("change,match", [

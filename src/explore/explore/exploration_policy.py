@@ -7,7 +7,7 @@ can only identify work, waiting states, and completion *candidates*; it can
 never report ``complete_accessible``.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 import math
 from typing import Dict, Optional, Tuple
@@ -812,6 +812,36 @@ class ExplorationTaskPolicySession:
         self._clear_assessment_replay()
         return self._snapshot(task)
 
+    def record_revalidated_attempt(
+            self, attempt: TaskAttempt,
+            revalidated_map_revision: int) -> TaskHistorySnapshot:
+        """Record an older child result against one exact current snapshot.
+
+        A navigation child can keep the same fixed metric frontier goal while
+        newer raw maps are accepted.  The caller must have revalidated that
+        exact active goal on ``revalidated_map_revision``.  This method keeps
+        the event ID and retry distance stable, but binds the policy mutation
+        to the session's current snapshot.  All ordinary event checks remain
+        in ``record_attempt``.
+        """
+        if not isinstance(attempt, TaskAttempt):
+            raise ExplorationPolicyError("attempt muss TaskAttempt sein")
+        revision = _revision(
+            revalidated_map_revision, "revalidated_map_revision")
+        if revision < attempt.map_revision:
+            raise ExplorationPolicyError(
+                "Revalidierungsrevision liegt vor dem Kindzielereignis")
+        retry_revision = None
+        if attempt.retry_not_before_revision is not None:
+            retry_revision = revision + (
+                attempt.retry_not_before_revision - attempt.map_revision)
+        rebound = replace(
+            attempt,
+            map_revision=revision,
+            retry_not_before_revision=retry_revision,
+        )
+        return self.record_attempt(rebound)
+
     def reactivate(
             self, reactivation: TaskReactivation) -> TaskHistorySnapshot:
         if not isinstance(reactivation, TaskReactivation):
@@ -845,14 +875,18 @@ class ExplorationTaskPolicySession:
             task_availability: Tuple[TaskAvailability, ...] = (),
             task_utilities: Tuple[TaskUtilityEvidence, ...] = (),
             scoring_policy: Optional[TaskScoringPolicy] = None,
+            preferred_task_id: Optional[str] = None,
     ) -> StatefulPolicyAssessment:
         if not isinstance(source, ShadowStatusSource):
             raise ExplorationPolicyError(
                 "source muss ShadowStatusSource sein")
         self._require_context(source.context)
         revision = source.source_map_revision
+        if preferred_task_id is not None:
+            _identifier(preferred_task_id, "preferred_task_id")
         request = (
-            source, task_availability, task_utilities, scoring_policy)
+            source, task_availability, task_utilities, scoring_policy,
+            preferred_task_id)
         if self._latest_assessment_revision is not None:
             if revision < self._latest_assessment_revision:
                 raise ExplorationPolicyError(
@@ -918,7 +952,8 @@ class ExplorationTaskPolicySession:
         score_by_task = {
             item.task_id: item.score for item in utility_scores}
         selected_task_id, reason = self._select_task(
-            selectable, source, revision, score_by_task)
+            selectable, source, revision, score_by_task,
+            preferred_task_id=preferred_task_id)
         selected_region_id = (
             self._tasks[selected_task_id].region_id
             if selected_task_id is not None else None)
@@ -977,11 +1012,13 @@ class ExplorationTaskPolicySession:
 
     def _select_task(
             self, selectable: set, source: ShadowStatusSource,
-            revision: int,
-            score_by_task: Dict[str, float],
+            revision: int, score_by_task: Dict[str, float], *,
+            preferred_task_id: Optional[str] = None,
     ) -> Tuple[Optional[str], str]:
         if not selectable or not source.graph.current_region_id:
             return None, "no_selectable_task"
+        if preferred_task_id in selectable:
+            return preferred_task_id, "active_task_continuity"
         ordered = sorted(
             selectable,
             key=lambda task_id: (

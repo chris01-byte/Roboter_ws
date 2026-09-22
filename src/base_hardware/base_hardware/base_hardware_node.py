@@ -38,6 +38,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
 from geometry_msgs.msg import Twist, TransformStamped
@@ -1258,11 +1259,18 @@ def main(args=None):
     node = BaseHardware()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Humble kann einen bereits global beendeten Kontext noch in einem
+        # laufenden Timer-/Publisher-Callback beobachten. Nur dieser
+        # Shutdownfall ist erwartbar; echte Laufzeitfehler bleiben sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

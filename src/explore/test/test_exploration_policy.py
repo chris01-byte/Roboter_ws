@@ -578,6 +578,39 @@ def test_starvation_rotation_still_honors_the_region_hold_window():
     assert rotated.selection_reason == "starvation_prevention"
 
 
+def test_active_available_task_is_retained_across_new_map_revisions():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+
+    retained = session.assess(
+        _advance_source(source, 20),
+        _all_available(20),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    assert retained.selected_task_id == first.selected_task_id
+    assert retained.selection_reason == "active_task_continuity"
+
+
+def test_active_task_preference_never_revives_unavailable_task():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+    other_task_id = next(
+        task_id for task_id in ("a-other", "z-current")
+        if task_id != first.selected_task_id)
+
+    switched = session.assess(
+        _advance_source(source, 20),
+        (_availability(other_task_id, revision=20),),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    assert switched.selected_task_id == other_task_id
+    assert switched.selection_reason != "active_task_continuity"
+
+
 def test_retry_failure_defers_then_releases_task_by_explicit_revision():
     source = _source_with_two_open_tasks()
     session = ExplorationTaskPolicySession(CONTEXT)
@@ -713,6 +746,43 @@ def test_progress_clears_retry_delay_without_claiming_task_completion():
     assert progress.attempt_count == 2
     assert progress.retry_not_before_revision is None
     assert progress.completed is False
+
+
+def test_revalidated_attempt_binds_child_result_to_current_snapshot():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    first = session.assess(source, _all_available(4))
+    session.assess(
+        _advance_source(source, 20),
+        _all_available(20),
+        preferred_task_id=first.selected_task_id,
+    )
+
+    progress = session.record_revalidated_attempt(TaskAttempt(
+        "revalidated-progress", first.selected_task_id, CONTEXT, 4,
+        TaskAttemptOutcome.PROGRESSED, "child_goal_reached"), 20)
+
+    assert progress.last_attempt_revision == 20
+    assert progress.attempt_count == 1
+    assert progress.completed is False
+
+
+def test_revalidated_retry_preserves_revision_delay_and_fails_stale():
+    source = _source_with_two_open_tasks()
+    session = ExplorationTaskPolicySession(CONTEXT)
+    session.assess(source, _all_available(4))
+    session.assess(_advance_source(source, 20), _all_available(20))
+    attempt = TaskAttempt(
+        "revalidated-retry", "z-current", CONTEXT, 4,
+        TaskAttemptOutcome.RETRYABLE_FAILURE, "temporary", 6)
+
+    snapshot = session.record_revalidated_attempt(attempt, 20)
+
+    assert snapshot.last_attempt_revision == 20
+    assert snapshot.retry_not_before_revision == 22
+    with pytest.raises(ExplorationPolicyError, match="aktuellen"):
+        session.record_revalidated_attempt(
+            replace(attempt, attempt_id="stale-revalidation"), 19)
 
 
 def test_completed_graph_task_is_retained_as_completed_history_not_selected():

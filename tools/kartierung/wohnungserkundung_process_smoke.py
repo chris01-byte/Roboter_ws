@@ -712,7 +712,11 @@ def _complete_portal_navigation(
     for index in range(steps + 1):
         world.publish_pose_scan(
             start_x + distance * index / steps, yaw_rad=yaw_rad)
-        time.sleep(0.055)
+        # The productive monitor samples at 20 Hz.  Keep each synthetic pose
+        # long enough for that real callback cadence to observe every bounded
+        # 4 cm step; otherwise host scheduling can manufacture a >9 cm jump
+        # that the production contract must rightly reject.
+        time.sleep(0.10)
     time.sleep(0.25)
     world.nav_release.set()
     world.wait_for(
@@ -955,7 +959,10 @@ def _run_multiroom_scenario(executor, log_directory, persistence_directory):
 
         # The same persisted frontier is now local and therefore eligible.
         # Its Nav2 success is resolved only by the newer all-free raw map.
-        world.publish_pose_scan(3.75)
+        # Keep a real non-zero approach distance to the selected frontier.
+        # Placing the fake robot directly on its staged approach would rightly
+        # make the production Nav2-costmap gate withhold that no-op goal.
+        world.publish_pose_scan(3.00)
         world.publish_revision(_next_map_revision(world))
         frontier_candidate = world.wait_for_frontier_candidate()
         world.wait_for(

@@ -29,6 +29,7 @@ from explore.region_graph import (  # noqa: E402
     RegionTaskState,
 )
 from explore.exploration_policy import TaskAvailabilityState  # noqa: E402
+from explore.exploration_scope import AuthorizedExplorationScope  # noqa: E402
 
 
 CONTEXT = PortalMapContext("session-m3g", "map-epoch-1", "map")
@@ -111,7 +112,8 @@ def _policy(**changes):
 
 
 def _build(*, map_values=None, robot_xy=(0.55, 1.05),
-           tasks=None, tracks=None, policy=None):
+           tasks=None, tracks=None, policy=None, scope=None,
+           scope_clearance_m=None):
     values = _map() if map_values is None else map_values
     return build_frontier_task_evidence(
         **values,
@@ -119,6 +121,8 @@ def _build(*, map_values=None, robot_xy=(0.55, 1.05),
         tasks=(_task(),) if tasks is None else tasks,
         tracks=(_track(),) if tracks is None else tracks,
         policy=_policy() if policy is None else policy,
+        scope=scope,
+        scope_clearance_m=scope_clearance_m,
     )
 
 
@@ -144,6 +148,23 @@ def test_current_reachable_frontier_gets_scalar_evidence_without_goal():
 def test_occupied_barrier_keeps_task_visible_and_temporarily_blocked():
     result = _build(map_values=_map(barrier=True))
 
+    assert result.availability[0].state is (
+        TaskAvailabilityState.TEMPORARILY_BLOCKED)
+    assert result.availability[0].reason == "no_current_raw_map_route"
+    assert result.utilities == ()
+
+
+def test_authorized_scope_excludes_frontier_route_and_utility():
+    scope = AuthorizedExplorationScope(
+        "scope-room",
+        CONTEXT,
+        tuple(Point2D(*xy) for xy in (
+            (0.0, 0.0), (1.0, 0.0), (1.0, 2.1), (0.0, 2.1))),
+    )
+
+    result = _build(scope=scope, scope_clearance_m=0.1)
+
+    assert result.robot_seed_available is True
     assert result.availability[0].state is (
         TaskAvailabilityState.TEMPORARILY_BLOCKED)
     assert result.availability[0].reason == "no_current_raw_map_route"

@@ -17,6 +17,84 @@ Rückfallweg:
 
 ---
 
+## 2026-09-21 — Reale WE-Fortsetzung braucht festes Ziel und zusammenhängenden Scope
+
+**Entscheidung:** Ein einmal gesendetes Frontierziel bleibt bei neueren
+Rohkarten metrisch fest und darf nur weiterlaufen, wenn genau dieses Ziel auf
+der neuen Quelle erneut sicher, im autorisierten Scope und geodätisch erreichbar
+ist. Quellen-Replans verbrauchen nicht das Nav2-Ergebnisbudget. Die nächste
+Realfahrt bleibt bis zur Rückstellung an die ursprüngliche Startmarke oder bis
+zu einer neuen lokalen Scope-Vermessung gesperrt.
+
+**Grund / beobachtete Evidenz:** Der freigegebene Erstversuch fuhr etwa 0,466 m
+ohne Safety-, Encoder- oder Busfehler, wurde aber auf jeder Kartenrevision wegen
+eines neu bevorzugten Kandidaten storniert und endete nach zwölf Replans nur mit
+Teilstand. Nach der Korrektur blieb dasselbe Ziel motorlos von Revision 55 bis
+119 aktuell. Ein Exaktkartentest an der neuen Pose fand sechs Frontiers ohne
+Scope, aber null sicher erreichbare innerhalb des lokalen Polygons. Daher wurde
+beim zweiten aktiven Vorlauf kein Auftrag gesendet.
+
+**Betroffene Dateien und Hardware:** Explorer-Ziel-/Quellenprüfung,
+Frontier-Scope-Evidenz, Kartenrevisionsadapter und Kartenmanagerstatus samt
+Tests. Das reale Profil und beide Bags bleiben lokal. Keine
+Produktionskonfiguration, Fahrparameter oder Live-Arbeitskopie wurden ersetzt.
+
+**Teststatus:** Pakettests und motorloser Produktionslauf bestanden; sichere
+Bewegung und sauberer Stopp des Erstversuchs belegt. Kein natürlicher realer
+Mehrraumabschluss, keine reale Wiederaufnahme und keine Hardwareabnahme.
+
+**Offene Risiken:** Der aktuelle lokale Scope ist von der aktuellen Roboterpose
+aus nicht zusammenhängend traversierbar. Seine automatische Erweiterung könnte
+unbekannte Treppen- oder Außenbereiche freigeben und ist deshalb verboten.
+
+**Rückfallweg:** Die Zielstabilitätskorrektur zurücknehmen und WE-Navigation
+deaktiviert lassen; lokale Bags/Profile bleiben unangetastet. Dann gilt der
+beobachtete Cancel-/Budgetblocker wieder als offen.
+
+---
+
+## 2026-09-21 — WE-1 motorloser Zielsystemcheck bestanden
+
+**Entscheidung:** Der motorlose WE-1-Zielsystemcheck gilt auf PR #95 plus den
+eng begrenzten Zielsystemkorrekturen als bestanden. Es folgt keine weitere
+Softwareentwicklung und keine Fahrt ohne neue persönliche Freigabe.
+
+**Grund / beobachtete Evidenz:** Der einzige rote Vertragstest erwartete noch
+den historischen Kreis statt des seit 18.08. real abgenommenen dynamischen
+Polygons; nur der Test wurde berichtigt. Die LiDAR-Abbruchursache war eine
+reproduzierbare Close-Race: Der Vendor-Treiber schloss und invalidierte den
+seriellen Deskriptor vor dem Empfangsthread-Join, sodass der Thread noch
+`FD_SET(-1)` erreichen konnte. Der separate Patch initialisiert die Atomics und
+schließt erst nach dem Join. Python-Knoten behandeln den bereits durch SIGINT
+beendeten Humble-Kontext idempotent; echte RuntimeErrors im gültigen Kontext
+bleiben sichtbar. Zwei vollständige Wiederholungen beendeten alle 24 Prozesse
+sauber und gaben LiDAR, I²C sowie `/dev/ttyUSB_BASE` frei.
+
+**Betroffene Dateien und Hardware:** Ausschließlich Footprint-Vertragstest,
+Shutdown-Hüllen von Basis, VL53, Fahrtor und Kartenmanager, reproduzierbarer
+Patch/Builder für den gepinnten STL-27L-Treiber sowie Dokumentation. Keine
+Fahrparameter, Produktions-Footprints, Live-Installation oder Aktoren geändert.
+Ein begrenztes Profil mit realer Wohnungsgeometrie liegt nur lokal und hält alle
+Fahr-Opt-ins bis zur Vor-Ort-Bestätigung auf `false`.
+
+**Teststatus:** Vollständiger isolierter 23-Paket-Build; 1.206 direkte und
+1.016 registrierte Tests ohne Fehler/Fehlschlag/Skip; vier bestandene
+Produktionsprozessszenarien. Reale gemeinsame Sensor-/SLAM-/Nav2-/Explorer-/
+Safety-Last mit 0 Nav2-Zielen und 0 Nichtnull-Fahrbefehlen; atomarer
+Kartenmanager- und gebundener WE-Save ohne Durability-Warnung; zwei
+aufeinanderfolgende saubere SIGINT-Gesamtstopps.
+
+**Offene Risiken:** Dies ist keine Hardware- oder Fahrabnahme. Der lokale Scope
+muss vor Ort nachweislich Treppen, Außenbereiche und andere Gefahren
+ausschließen. Not-Aus, freie Tür, Transportpose und Christophers ausdrückliche
+Fahrfreigabe bleiben Pflicht.
+
+**Rückfallweg:** Isolierte Overlays nicht sourcen beziehungsweise die
+Zielsystemkorrekturen zurücknehmen. Dadurch werden weder bestehender Live-
+Install noch Karten- oder Semantikdaten verändert.
+
+---
+
 ## 2026-09-16 — WE-Releasekandidatencheck: Rückkehrkette noch nicht produktiv
 
 **Entscheidung:** PR #93 wird nach dem vollständigen Gerätefreireview nicht als

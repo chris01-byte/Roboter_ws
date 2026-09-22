@@ -440,6 +440,39 @@ class RuntimeGuardTests(unittest.TestCase):
         self.assertIn("self._publish_status(**replay)", replay_block)
         self.assertNotIn("self.status_publisher.publish", replay_block)
 
+    def test_node_tolerates_shutdown_context_race(self):
+        node_source = (
+            Path(__file__).parents[1]
+            / "robot_map_manager"
+            / "robot_map_manager_node.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "except (KeyboardInterrupt, ExternalShutdownException):",
+            node_source,
+        )
+        self.assertIn("except RuntimeError:", node_source)
+        self.assertIn("if rclpy.ok():\n            raise", node_source)
+
+    def test_duplicate_geometry_retains_latest_validated_observation(self):
+        node_source = (
+            Path(__file__).parents[1]
+            / "robot_map_manager"
+            / "robot_map_manager_node.py"
+        ).read_text(encoding="utf-8")
+        duplicate_start = node_source.index(
+            "        if snapshot.fingerprint == self._latest_fingerprint:")
+        duplicate_end = node_source.index(
+            "\n\n        self._latest_map = snapshot", duplicate_start)
+        duplicate_block = node_source[duplicate_start:duplicate_end]
+        self.assertIn("self._latest_map = snapshot", duplicate_block)
+        self.assertIn("self._latest_source = source", duplicate_block)
+        self.assertIn('event="map_observed"', duplicate_block)
+        self.assertLess(
+            node_source.index("self._observed_maps += 1", duplicate_start - 200),
+            duplicate_start,
+        )
+        self.assertNotIn("self._accepted_maps += 1", duplicate_block)
+
     def test_raw_duplicate_guard_skips_only_valid_cross_qos_delivery(self):
         guard = RawDuplicateGuard(1.0)
         signature = ("metadata", "complete-digest")

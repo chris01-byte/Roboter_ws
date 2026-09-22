@@ -22,6 +22,11 @@ from amadeus_map_identity import (
     map_snapshot_fingerprint,
 )
 
+from .exploration_scope import (
+    AuthorizedExplorationScope,
+    ExplorationScopeError,
+    rasterize_scope,
+)
 from .exploration_policy import (
     TaskAvailability,
     TaskAvailabilityState,
@@ -284,6 +289,57 @@ def _geodesic_distances(
     return distances.reshape((height, width))
 
 
+def _traversable_mask(
+        occupancy: np.ndarray, resolution_m: float,
+        correlation: PortalSourceCorrelation,
+        clean_origin: Tuple[float, ...], map_yaw: float,
+        policy: FrontierTaskEvidencePolicy, *,
+        scope: Optional[AuthorizedExplorationScope] = None,
+        scope_clearance_m: Optional[float] = None) -> np.ndarray:
+    """Combine measured obstacle clearance with an optional authorized scope."""
+    safe_free = occupancy == 0
+    padded = np.pad(safe_free, 1, mode="constant", constant_values=False)
+    clearance = distance_transform_edt(padded)[1:-1, 1:-1]
+    traversable = safe_free & (
+        clearance >= policy.clearance_m / resolution_m)
+    if scope is None:
+        if scope_clearance_m is not None:
+            raise FrontierTaskEvidenceError(
+                "scope_clearance_m ohne Scope ist ungueltig")
+        return traversable
+    if not isinstance(scope, AuthorizedExplorationScope):
+        raise FrontierTaskEvidenceError(
+            "scope muss AuthorizedExplorationScope sein")
+    clearance_m = _finite_nonnegative(
+        scope_clearance_m, "scope_clearance_m")
+    if clearance_m <= 0.0:
+        raise FrontierTaskEvidenceError(
+            "scope_clearance_m muss positiv sein")
+    try:
+        scope_mask = rasterize_scope(
+            scope,
+            context=correlation.context,
+            width=occupancy.shape[1],
+            height=occupancy.shape[0],
+            resolution_m=resolution_m,
+            origin_x_m=clean_origin[0],
+            origin_y_m=clean_origin[1],
+            origin_yaw_rad=map_yaw,
+            maximum_cells=policy.max_cells,
+        )
+    except ExplorationScopeError as error:
+        raise FrontierTaskEvidenceError(
+            "Auftragsscope passt nicht zur Rohkarte") from error
+    padded_scope = np.pad(
+        scope_mask, 1, mode="constant", constant_values=False)
+    scope_clearance = distance_transform_edt(padded_scope)[1:-1, 1:-1]
+    return (
+        traversable
+        & scope_mask
+        & (scope_clearance >= clearance_m / resolution_m)
+    )
+
+
 def _information_gain_square_m(
         occupancy: np.ndarray, row: int, col: int,
         radius_cells: int, resolution_m: float) -> float:
@@ -306,6 +362,8 @@ def build_frontier_task_evidence(
         tasks: Tuple[RegionTaskSnapshot, ...],
         tracks: Tuple[FrontierTrackSnapshot, ...],
         policy: Optional[FrontierTaskEvidencePolicy] = None,
+        scope: Optional[AuthorizedExplorationScope] = None,
+        scope_clearance_m: Optional[float] = None,
 ) -> FrontierTaskEvidenceBatch:
     """Build complete scalar evidence for all open tasks in one map revision."""
     selected_policy = policy or FrontierTaskEvidencePolicy()
@@ -357,11 +415,16 @@ def build_frontier_task_evidence(
         raise FrontierTaskEvidenceError(
             "Frontiertrack liegt vor der aktuellen Kartenrevision")
 
-    safe_free = occupancy == 0
-    clearance_cells = selected_policy.clearance_m / resolution_m
-    padded = np.pad(safe_free, 1, mode="constant", constant_values=False)
-    clearance = distance_transform_edt(padded)[1:-1, 1:-1]
-    traversable = safe_free & (clearance >= clearance_cells)
+    traversable = _traversable_mask(
+        occupancy,
+        resolution_m,
+        correlation,
+        clean_origin,
+        yaw,
+        selected_policy,
+        scope=scope,
+        scope_clearance_m=scope_clearance_m,
+    )
     robot_seed = None
     distances = np.full(occupancy.shape, np.inf, dtype=np.float64)
     if normalized_robot_xy is not None:

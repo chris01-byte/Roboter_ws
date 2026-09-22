@@ -335,3 +335,5 @@ def test_mission_gate_tolerates_shutdown_context_race():
     source = (PACKAGE_ROOT / 'robot_navigation' /
               'cmd_vel_mission_gate.py').read_text(encoding='utf-8')
     assert 'except RCLError:' in source
+    assert 'except RuntimeError:' in source
+    assert 'if rclpy.ok():\n            raise' in source

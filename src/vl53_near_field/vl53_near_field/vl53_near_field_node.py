@@ -28,6 +28,7 @@ import time
 
 import numpy as np
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 
@@ -415,11 +416,18 @@ def main(args=None):
     node = Vl53NearField()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # Beim globalen SIGINT/SIGTERM kann Humble einen bereits laufenden
+        # Publish-Callback erst nach dem Kontext-Shutdown fortsetzen. Nur
+        # dieser Fall ist ein normaler Stop; sonst den Fehler weiterreichen.
+        if rclpy.ok():
+            raise
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

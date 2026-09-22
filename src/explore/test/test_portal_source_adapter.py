@@ -127,7 +127,10 @@ def test_joiner_matches_when_raw_source_arrives_before_status():
 
 def test_expected_mismatch_stays_pending_and_can_match_later():
     joiner = RawMapStatusJoiner(capacity=3)
-    future = source(fingerprint="b" * 64, source_stamp_ns=200)
+    future = source(
+        fingerprint="b" * 64,
+        source_stamp_ns=1_800_000_000_500_000_000,
+    )
 
     assert joiner.observe_source(future) is None
     assert joiner.observe_status(map_status()) is None
@@ -139,7 +142,7 @@ def test_expected_mismatch_stays_pending_and_can_match_later():
     next_status = map_status(
         map_revision=13,
         fingerprint="b" * 64,
-        source_stamp_ns=200,
+        source_stamp_ns=future.source_stamp_ns,
     )
     following = joiner.observe_status(next_status)
     assert following is not None
@@ -171,6 +174,28 @@ def test_joiner_can_start_from_an_upstream_replay_status():
 
     assert joiner.observe_status(replay) is None
     assert joiner.observe_source(source()).map_revision == 12
+
+
+def test_joiner_matches_new_observation_without_new_geometry_revision():
+    joiner = RawMapStatusJoiner(capacity=2)
+    assert joiner.observe_status(map_status()) is None
+    assert joiner.observe_source(source()).map_revision == 12
+
+    newer_source = source(source_stamp_ns=1_799_999_999_600_000_000)
+    assert joiner.observe_source(newer_source) is None
+    newer_status = replace(
+        map_status(),
+        map_revision=13,
+        source_stamp_ns=newer_source.source_stamp_ns,
+        source_map_age_seconds=0.1,
+    )
+    result = joiner.observe_status(newer_status)
+
+    assert result is not None
+    assert result.map_revision == 13
+    assert result.fingerprint == FINGERPRINT
+    assert result.source_stamp_ns == newer_source.source_stamp_ns
+    assert joiner.emitted_correlation_count == 2
 
 
 def test_joiner_diagnostics_are_validated_and_derive_state():

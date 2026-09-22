@@ -11,6 +11,7 @@ from typing import Any, Optional
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import (
     DurabilityPolicy,
@@ -183,6 +184,7 @@ class RobotMapManager(Node):
         self._last_validation_error: Optional[str] = None
         self._last_status_json: Optional[str] = None
         self._accepted_maps = 0
+        self._observed_maps = 0
         self._duplicate_maps = 0
         self._early_duplicate_maps = 0
         self._rejected_maps = 0
@@ -344,9 +346,24 @@ class RobotMapManager(Node):
         self._last_map_received_wall = now
         self._last_map_received_iso = self._iso_time(now)
         self._last_error = None
+        self._observed_maps += 1
         if snapshot.fingerprint == self._latest_fingerprint:
+            # Keep the geometry revision stable, but retain the identity of
+            # the newest validated observation.  Consumers that correlate an
+            # exact raw OccupancyGrid need its current source stamp even when
+            # the raster content did not change.
+            self._latest_map = snapshot
+            self._latest_source = source
             self._duplicate_maps += 1
             self._last_operation = "map_duplicate"
+            self._publish_status(
+                event="map_observed",
+                ok=True,
+                message=(
+                    "Neue gültige Rohkartenbeobachtung bei unveränderter "
+                    "Kartengeometrie empfangen."
+                ),
+            )
             return
 
         self._latest_map = snapshot
@@ -831,6 +848,7 @@ class RobotMapManager(Node):
             },
             "counters": {
                 "accepted_maps": self._accepted_maps,
+                "observed_maps": self._observed_maps,
                 "duplicate_maps": self._duplicate_maps,
                 "early_qos_duplicates": self._early_duplicate_maps,
                 "rejected_maps": self._rejected_maps,
@@ -920,8 +938,14 @@ def main(args: Optional[list[str]] = None) -> None:
     try:
         node = RobotMapManager()
         rclpy.spin(node)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
+    except RuntimeError:
+        # ROS 2 Humble kann beim globalen SIGINT waehrend take_message()
+        # anstelle von ExternalShutdownException einen RuntimeError werfen.
+        # Im weiterhin gueltigen Kontext bleiben echte Laufzeitfehler sichtbar.
+        if rclpy.ok():
+            raise
     finally:
         if node is not None:
             node.destroy_node()
