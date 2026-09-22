@@ -5182,6 +5182,21 @@ class ExploreNode(Node):
             self._clear_wohnungserkundung_unconfirmed_intent(intent)
             return NavigationSourceState(
                 correlation.context, correlation.map_revision, True)
+        # SLAM can republish an unchanged occupancy grid with a fresh source
+        # stamp while Nav2 is executing a fixed Frontier goal.  The map
+        # fingerprint covers the metric geometry that was validated for this
+        # goal, so such a duplicate is current evidence, not a reason to
+        # cancel and redispatch it.  Any content/context/frame change still
+        # takes the normal exact newer-map revalidation path below.
+        if (
+                isinstance(candidate, FrontierGoalCandidate)
+                and correlation.context == intent.context
+                and correlation.map_revision >= intent.map_revision
+                and correlation.fingerprint == candidate.source_fingerprint
+                and correlation.context.frame_id == candidate.frame_id):
+            self._clear_wohnungserkundung_unconfirmed_intent(intent)
+            return NavigationSourceState(
+                correlation.context, correlation.map_revision, True)
         if (
                 correlation.context != intent.context
                 or correlation.map_revision < intent.map_revision

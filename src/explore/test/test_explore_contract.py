@@ -1602,6 +1602,18 @@ def test_we_new_revision_with_current_raw_validation_revalidates_child(
     assert node._wohnungserkundung_unconfirmed_intent_id is None
 
 
+def test_we_duplicate_raw_map_keeps_active_frontier_current():
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(
+        context, revision=8, fingerprint=candidate.source_fingerprint,
+        source_stamp_ns=456)
+
+    source = node._wohnungserkundung_source_state(intent, candidate)
+
+    assert source == NavigationSourceState(context, 8, True)
+
+
 def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
