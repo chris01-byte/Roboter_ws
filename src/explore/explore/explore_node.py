@@ -5839,8 +5839,24 @@ class ExploreNode(Node):
             # not a completed navigation attempt.  The overall timeout still
             # bounds repeated revisions, while the goal budget remains for
             # actual Nav2 outcomes.
-            if run.stop_cause is not NavigationStopCause.SOURCE_INVALIDATED:
-                attempted_goals += 1
+            if run.stop_cause is NavigationStopCause.SOURCE_INVALIDATED:
+                # ``_navigate_to`` has confirmed the child goal stopped
+                # because its exact raw-map proof is no longer current.  This
+                # is intentionally neither a successful traversal nor a
+                # retryable Nav2 failure: wait for the already asynchronous
+                # policy refresh and select only a newly proven candidate.
+                # Treating the resulting ``canceled`` action outcome as a
+                # generic system failure would turn every safe map replan into
+                # a terminal WE abort.
+                self._status_phase = 'we_replanning_after_source_invalidation'
+                self._status_message = (
+                    'WE-Ziel wurde nach geaenderter Rohkartenquelle sicher '
+                    'gestoppt; warte auf frisch belegten Zielkandidaten.')
+                self._publish_status('running')
+                time.sleep(self._replan_period_s)
+                continue
+
+            attempted_goals += 1
             disposition = run.disposition
             if portal_outcome is not None:
                 if portal_outcome.confirmed:

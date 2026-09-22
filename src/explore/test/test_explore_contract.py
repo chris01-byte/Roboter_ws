@@ -56,7 +56,10 @@ from explore.portal_traversal_runtime import (  # noqa: E402
 )
 from explore.exploration_child_goal import ExplorationGoalIntent  # noqa: E402
 from explore.frontier_goal_candidate import FrontierGoalCandidate  # noqa: E402
-from explore.exploration_nav_runtime import NavigationSourceState  # noqa: E402
+from explore.exploration_nav_runtime import (  # noqa: E402
+    NavigationSourceState,
+    NavigationStopCause,
+)
 from explore.exploration_policy import (  # noqa: E402
     PolicyAssessmentState,
     TaskAvailability,
@@ -1401,6 +1404,78 @@ def test_we_runtime_runs_gated_initial_scan_before_first_target(monkeypatch):
         ('running', 'we_initial_scan'),
         ('scan', 'we_initial_scan'),
     ]
+
+
+def test_we_runtime_replans_after_source_invalidated_child(monkeypatch):
+    """A safely canceled stale child must not abort the whole WE mission."""
+    context = PortalMapContext('session-replan', 'map-replan', 'map')
+    intent = SimpleNamespace(
+        context=context,
+        task_id='task-frontier_000001',
+        map_revision=7,
+    )
+    candidate = SimpleNamespace(
+        frame_id='map',
+        target_x_m=1.0,
+        target_y_m=2.0,
+        target_yaw_rad=0.0,
+    )
+    phases = []
+    runs = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = None
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
+    node._map = None
+    node._initial_scan_enabled = False
+    node._replan_period_s = 0.0
+    node._max_frontier_goals = 4
+    node._publish_status = lambda state: phases.append(
+        (state, node._status_phase))
+    node._observe_wohnungserkundung_completion = (
+        lambda session, snapshot: (None, None))
+    node._current_wohnungserkundung_navigation_target = lambda: (
+        intent, candidate)
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(to_msg=lambda: Time()))
+    node._finish_wohnungserkundung_completion = (
+        lambda _handle, completion, _reached: completion)
+    handle = SimpleNamespace(
+        is_cancel_requested=False,
+        publish_feedback=lambda _feedback: None,
+        succeed=lambda: None,
+        abort=lambda: None,
+        canceled=lambda: None,
+    )
+
+    def run_child(*args):
+        runs.append(args[1:3])
+        handle.is_cancel_requested = True
+        return (
+            SimpleNamespace(
+                stop_cause=NavigationStopCause.SOURCE_INVALIDATED,
+                navigation_status='canceled',
+                disposition=SimpleNamespace(
+                    state=SimpleNamespace(value='canceled'))),
+            None,
+        )
+
+    node._run_wohnungserkundung_child = run_child
+    monkeypatch.setattr(
+        explore_node_module, 'ExplorationNavigationSession',
+        lambda selected_context: SimpleNamespace(context=selected_context))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
+    monkeypatch.setattr(explore_node_module.time, 'sleep', lambda *_args: None)
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+
+    result = node._execute_wohnungserkundung_navigation(handle, 5.0)
+
+    assert runs == [(intent, candidate)]
+    assert result.state is ExplorationResultState.CANCELED
+    assert ('running', 'we_replanning_after_source_invalidation') in phases
 
 
 def test_we_runtime_applies_new_positive_frontier_resolution(monkeypatch):
