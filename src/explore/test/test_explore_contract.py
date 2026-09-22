@@ -1352,6 +1352,57 @@ def test_we_runtime_completes_before_requesting_another_navigation_target(
     assert node._coverage_complete is True
 
 
+def test_we_runtime_runs_gated_initial_scan_before_first_target(monkeypatch):
+    """The WE loop must not bypass the existing observation safety path."""
+    calls = []
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = SimpleNamespace(
+        passive=SimpleNamespace(source_ready=True))
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = None
+    node._map = None
+    node._initial_scan_enabled = True
+    node._replan_period_s = 0.0
+    node._publish_status = lambda state: calls.append(
+        (state, node._status_phase))
+    node._observe_wohnungserkundung_completion = (
+        lambda session, snapshot: (None, None))
+    node._finish_wohnungserkundung_completion = (
+        lambda _handle, completion, _reached: completion)
+    node._current_wohnungserkundung_navigation_target = lambda: (
+        (_ for _ in ()).throw(
+            AssertionError('Erstes Ziel darf erst nach dem Rundblick entstehen')))
+    handle = SimpleNamespace(
+        is_cancel_requested=False,
+        succeed=lambda: None,
+        abort=lambda: None,
+        canceled=lambda: None,
+    )
+
+    def scan(*, stop_requested):
+        assert stop_requested() is False
+        calls.append(('scan', node._status_phase))
+        handle.is_cancel_requested = True
+        return 'success', 2.0 * math.pi
+
+    node._scan_in_place = scan
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 10.0)
+    monkeypatch.setattr(explore_node_module.time, 'sleep', lambda *_args: None)
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+
+    result = node._execute_wohnungserkundung_navigation(handle, 5.0)
+
+    assert result.state is ExplorationResultState.CANCELED
+    assert calls == [
+        ('running', 'we_waiting_for_goal'),
+        ('running', 'we_initial_scan'),
+        ('scan', 'we_initial_scan'),
+    ]
+
+
 def test_we_runtime_applies_new_positive_frontier_resolution(monkeypatch):
     candidate = SimpleNamespace(
         map_revision=7,

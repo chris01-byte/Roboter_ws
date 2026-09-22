@@ -5666,6 +5666,15 @@ class ExploreNode(Node):
         completion_session = None
         reached_goals = 0
         attempted_goals = 0
+        # The WE action owns a separate frontier loop and therefore does not
+        # pass through the legacy loop below, where the controlled initial
+        # observation normally runs.  Do not select a translational frontier
+        # from the one-sided start map: once the exact WE sources are fresh,
+        # reuse the already gated, odometry-measured in-place scan before the
+        # first child target.  A missing or stale policy snapshot is never a
+        # reason to rotate.
+        initial_scan_pending = bool(getattr(
+            self, '_initial_scan_enabled', False))
 
         def overall_expired():
             return (
@@ -5717,6 +5726,35 @@ class ExploreNode(Node):
                             ExplorationResultState.COMPLETE_ACCESSIBLE)):
                     return self._finish_wohnungserkundung_completion(
                         goal_handle, completion, reached_goals)
+
+            if initial_scan_pending:
+                passive = getattr(policy_snapshot, 'passive', None)
+                if not getattr(passive, 'source_ready', False):
+                    time.sleep(0.05)
+                    continue
+                self._status_phase = 'we_initial_scan'
+                self._status_message = (
+                    'WE-Quellen sind frisch; kontrollierter 360-Grad-'
+                    'Rundblick vor der ersten Zielwahl laeuft.')
+                self._publish_status('running')
+                scan_status, _achieved = self._scan_in_place(
+                    stop_requested=lambda: (
+                        goal_handle.is_cancel_requested or overall_expired()))
+                if scan_status == 'success':
+                    initial_scan_pending = False
+                    time.sleep(self._replan_period_s)
+                    continue
+                if goal_handle.is_cancel_requested:
+                    return terminate(
+                        TerminationCause.USER_CANCELED,
+                        'user_canceled_during_initial_scan')
+                if overall_expired():
+                    return terminate(
+                        TerminationCause.BUDGET_EXHAUSTED,
+                        'overall_budget_during_initial_scan')
+                return terminate(
+                    TerminationCause.SYSTEM_FAILURE,
+                    f'initial_scan_{scan_status}')
 
             target = self._current_wohnungserkundung_navigation_target()
             if target is None:
