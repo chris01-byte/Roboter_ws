@@ -1,11 +1,72 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · Realversuche: SICHER GESTOPPT, Nahbereichs- und Scope-Gate · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-22**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · R9-Realversuch: SICHER BEENDET, Quellen-Replan korrigiert, lokaler Nahbereichsblocker offen · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-22**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## R9 – Live-Quellenkette, sicherer Replan und Nahbereichsstop, 2026-09-22
+
+Die Prüfung erfolgte in der isolierten Arbeitskopie
+`fix/we1-target-check-blockers`, ausgehend von PR #95 / `10e1858074e7` und den
+gestapelten WE-Korrekturen bis `be7de12`. Der Produktionslauf verwendete nur
+das lokale Overlay unter `~/.local/share/amadeus/releases/we1-r8-scope-overlay`
+über dem unveränderten Release `we1-10e1858074e7-r1`; reales Kartenmaterial,
+das lokale Zwei-Zimmer-/Flurprofil und der Bag bleiben außerhalb des
+Repositorys.
+
+Der erste R9-Vorlauf hielt korrekt bei `we_waiting_for_goal`: Im zunächst
+verwendeten Overlay fehlte der bereits im Quellstand vorhandene
+Kartenmanager-Fix `5f821b8`, der bei gleicher Geometrie die letzte frische
+Rohkartenbeobachtung erhält. Nach dem isolierten Build dieses Pakets bestanden
+seine direkten Kernprüfungen (53 Fälle). Der laufende Kartenmanager meldete
+anschließend frische `map_observed`-Ereignisse, und der Regionsgraph korrelierte
+46 Rohkartenbeobachtungen (`matched`) mit Quelle, Portalgedächtnis und Graph.
+Das ist ein Befund zur lokalen Release-Zusammensetzung, keine Änderung an
+Karten-, Portal- oder Sicherheitsverträgen.
+
+Nach aktivem Lifecycle-, TF-/Quellen-, Safety-, Encoder- und Bus-Preflight
+wurde genau ein produktiver Erkundungsauftrag über den Missionsmanager
+gesendet. Der verpflichtende Rundblick lief zunächst ohne Translation. Danach
+bildete die Produktionskette Frontieraufgaben und wählte nacheinander mehrere
+Ziele; die wachsende Rohkarte löste dabei revisionsgebundene Zielstopps aus.
+Ein echter retrybarer Nav2-Abbruch wurde als solcher gezählt. Für die sicheren
+Quellenstopps bestätigte das Kindziel dagegen `SOURCE_INVALIDATED` mit der
+Action-Rückmeldung `canceled`. Der Elternlauf behandelte dieses `canceled`
+bisher fälschlich als generischen Systemfehler statt auf eine frisch belegte
+Auswahl zu warten.
+
+Die eng begrenzte Korrektur behandelt ausschließlich diesen bestätigten Pfad:
+`SOURCE_INVALIDATED` veröffentlicht `we_replanning_after_source_invalidation`,
+wartet die vorhandene Replan-Periode ab und verbraucht weder Zielbudget noch
+einen Nav2-Fehlversuch. Danach ist weiterhin ausschließlich ein neu gegen die
+aktuelle Rohkarte belegter Kandidat zulässig. Der neue Vertragsfall sowie die
+vollständige Explorer-Suite bestanden mit **892 Tests**; das geänderte
+`explore`-Paket wurde im selben isolierten Overlay gebaut. Footprint,
+Frische-, Scope-, Collision-Monitor- und Safety-Schwellen wurden nicht
+verändert. Der Rückfall ist die vollständige Rücknahme dieses kleinen Commits;
+dann gilt wieder der dokumentierte Abbruchfehler und der Stand ist nicht als
+fahrender Kandidat zu verwenden.
+
+Der R9-Lauf ist trotzdem **kein erfolgreicher Wohnungsabschluss**: Zum Ende
+meldete der linke VL53-Nahbereich dauerhaft ein reales Objekt oder eine reale
+Begrenzung in etwa 0,236–0,243 m. Not-Aus war frei; Encoderfeedback und Modbus
+blieben fehlerfrei. Nach dem gezielten Einzel-PID-Stopp wurden Sollgeschwindigkeiten
+null, der Bag sauber geschlossen und weder `/dev/ttyUSB_BASE` noch
+`/dev/amadeus_lidar` offen gehalten. Der lokale Nachweis liegt unter
+`~/.local/share/amadeus/bags/we1-real-two-rooms-hall-r9-retry-20260922`.
+Die Beobachtung wird nicht durch Kartenlogik, eine Scope-Ausweitung oder
+gelockerte Kollisionsgrenzen überstimmt.
+
+**Nächster abgegrenzter Schritt:** Eine anwesende Person muss den linken
+Nahbereich an der Endpose sichtbar prüfen und die Begrenzung beseitigen oder
+den unbestromten Roboter in eine nachweislich freie, vermessene Ausgangspose
+setzen. Danach: frischer vollständiger Preflight, neue gültige Quellen und ein
+neuer ausdrücklicher Missionsauftrag. Erst dann darf der reale Mehrraumlauf
+mit diesem Replan-Fix wiederholt werden. Es gibt daraus weder eine
+Hardwareabnahme noch eine Freigabe für eine automatische Fortsetzung.
 
 ## R7 – Scope-Gate vor weiterer realer Erkundung, 2026-09-22
 
@@ -371,10 +432,10 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | WE-M0/B | Isolierter Jetson-Build, vollständige Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. Ein freigegebener Realversuch fuhr ca. 0,466 m ohne Safety-, Encoder- oder Busfehler und endete sicher. | Das ist nur ein Teilnachweis, keine vollständige Fahrabnahme. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
-| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Aktive Frontierziele werden auf jeder neueren Rohkarte am festen Ziel erneut geprüft; motorlos blieb ein Ziel über Revision 55 bis 119 stabil. | Der korrigierte Pfad ist noch nicht fahrend über mehrere Kartenrevisionen abgenommen. |
-| WE-M4 | Scope und Fahrt waren vor Ort freigegeben; der erste Realversuch lieferte einen sicheren Teilnachweis. Der zweite aktive Vorlauf sendete wegen null sicher erreichbarer Ziele bewusst keinen Auftrag. | Aktuelle Pose und lokaler Scope bilden keinen zusammenhängenden sicheren Pfad; Rückstellung oder neu vermessener Scope erforderlich. Keine Drei-Regionen-Abnahme. |
+| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Der bestätigte Live-Pfad `SOURCE_INVALIDATED` → sicherer Stop → frische Auswahl ist zusätzlich mit einem Vertragsfall und 892 Explorer-Tests geprüft. | Der Replan-Fix ist noch nicht fahrend über mehrere Kartenrevisionen abgenommen. |
+| WE-M4 | Der R9-Preflight, Rundblick, die reale Aufgaben-/Zielbildung und sichere Zielstopps sind nachgewiesen. | Aktuell blockiert ein persistenter linker Nahbereichsbefund an der Endpose. Erst physisch klären oder unbestromt auf eine vermessene freie Pose zurücksetzen; keine Mehrraumabnahme. |
 | WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im Mehrraum-Rückweg geprüft. Auf dem Jetson bestanden echter Kartenmanager-Save, gebundener WE-Save, Falschkartensperre und passives Laden derselben Karte ohne Ziel. | Reale Wiederaufnahme nach Lokalisierung und Portal-/Transit-ID-Nachweis mit echter Mehrraumkarte bleiben offen. |
-| WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Reale Mehrraumkette, Unterbrechung/Wiederaufnahme und wiederholbarer Abschluss bleiben offen. |
+| WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Reale Mehrraumkette, Unterbrechung/Wiederaufnahme und wiederholbarer Abschluss bleiben offen; der R9-Lauf endete vor diesem Nachweis sicher am Nahbereichsblocker. |
 | WE-M7 | Nicht begonnen; kein Kernblocker. | App-Transparenz/manuelle Benennung später, ohne Geometrie zu überschreiben. |
 
 ## 3. Gerätefreie Gesamtnachweise
@@ -417,22 +478,23 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
 Im vereinbarten **gerätefreien Software- und motorlosen Zielsystemumfang ist
-kein Blocker bekannt**. Der erste Realversuch hat darüber hinaus einen
-Softwareblocker der aktiven Frontierfortsetzung offengelegt; die eng begrenzte
-Korrektur ist motorlos auf dem Produktionspfad belegt. Für die nächste reale
-Fahrt besteht nun ein physischer Scope-Blocker, kein Anlass zu einer neuen
-WE-Architektur:
+nach der R9-Quellen-Replan-Korrektur kein weiterer Blocker bekannt**. Der reale
+R9-Lauf hat den Fix jedoch noch nicht bis zum Abschluss abgenommen und endete
+an einem konkreten physischen Nahbereichsbefund. Das ist kein Anlass zu einer
+neuen WE-Architektur:
 
 1. Den Branch reviewen und nach ausdrücklicher Freigabe nach `main` integrieren;
    kein automatischer Merge.
-2. Amadeus zur ursprünglichen markierten Startpose und Orientierung
-   zurückstellen oder den zusammenhängenden sicheren Scope ab der aktuellen
-   Pose neu vermessen; reale Geometrie bleibt außerhalb des Repositorys.
-3. Chassis-/Portalprofil, Kreis-/Polygon-Nahbereichsvertrag und
-   Kollisionsüberwachung bei der Fahrt weiter beobachten; Softwaretests sind
-   keine Hardwarefreigabe.
-4. Erst nach Auflösung dieses Scope-Blockers und erneuter Vorprüfung den bereits
-   freigegebenen Umfang fahren; anschließend WE-M6 einschließlich realer
+2. Den linken Nahbereich an der R9-Endpose sichtbar prüfen, die Begrenzung
+   entfernen oder Amadeus unbestromt auf eine nachweislich freie, vermessene
+   Ausgangspose zurücksetzen; reale Geometrie bleibt außerhalb des Repositorys.
+3. Nach frischem Lifecycle-, Quellen-, TF-, Encoder-, Bus- und Safety-Preflight
+   erst mit neuem ausdrücklichem Auftrag über den Missionsmanager fortsetzen.
+   Chassis-/Portalprofil, Polygon-Nahbereichsvertrag und
+   Kollisionsüberwachung bleiben unverändert; Softwaretests sind keine
+   Hardwarefreigabe.
+4. Erst nach Auflösung dieses physischen Blockers den bereits freigegebenen
+   Umfang fahren; anschließend WE-M6 einschließlich realer
    Unterbrechung/Wiederaufnahme wiederholt abnehmen.
 
 Automatische Regions-Split-/Merge-Entscheidungen bleiben absichtlich konservativ;
