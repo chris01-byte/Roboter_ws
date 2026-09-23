@@ -1,11 +1,142 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · Motorloser Zielsystemcheck: BESTANDEN · R9-Realversuch: SICHER BEENDET, Quellen-Replan korrigiert, lokaler Nahbereichsblocker offen · PR #95-R1 plus eng begrenzte Zielsystemkorrekturen · 2026-09-22**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · commit- und präfixgebundener Zielstand `5e3fe0a` · zwei motorlose Gesamtstarts/-stopps bestanden · R9-Nahbereichsbefund bleibt ausschließlich für eine spätere Fahrt offen · 2026-09-23**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 1 – eindeutiger motorloser Laufzeitstand, 2026-09-23
+
+Stufe 1 wurde ausschließlich als Laufzeitinventur und motorloser
+Integrationsnachweis ausgeführt. Es gab keine Fahrt, keinen Auftrag an Explorer
+oder Nav2, keine Änderung an Footprints, Collision-, Frische- oder
+Sensorgrenzen und keine Vorarbeit an einer folgenden Stufe.
+
+### Git-, PR- und Abstammungsstand
+
+Nach `git fetch --prune origin` war `origin/main` bei
+`05439c7a13d7a92e69b9eb4663e3a2a1b44626a1`. Die aktuelle gestapelte
+WE-Spitze ist PR #96, `fix/we1-target-check-blockers` gegen
+`docs/we1-target-check-20260921`, bei
+`5e3fe0a084b9b46809e25715d8bdca4c7bd408a4`; sie enthält dessen Basis
+`e8b048e59651bcdb37b5c5c19e752dd9b1decace` und den früheren vollständigen
+Release-Stand `10e1858074e738df739077aea27078d6bbef7156` als echte Vorfahren.
+Der Zielstand liegt 98 Commits vor `origin/main` und nicht auf einer
+abweichenden Seitenlinie. Die unmittelbar relevanten offenen PRs sind #94,
+#95 und #96 in dieser gestapelten Kette.
+
+Die Prüfung lief auf dem eigenen Branch `fix/we1-stufe1-runtimeinventur`, der
+direkt von PR #96 abzweigt. Die lokal geänderte Hauptarbeitskopie
+`/home/p/roboter_ws` blieb auf `feature/modulare-sensorfusion` bei `00f6e521`
+vollständig unangetastet. Ein Commit oder Branchname allein wurde nicht als
+Laufzeitnachweis verwendet.
+
+Alle bestätigten funktionalen Korrekturen `bbb5da8`, `5f821b8`, `f74007e`,
+`49e8067`, `6f9e8d1`, `ad3a04f`, `28780b1`, `402741d`, `27be777` sowie die
+Shutdownkorrektur `5e3fe0a` sind Vorfahren des geprüften Zielstands. Der
+Vergleich `10e1858..5e3fe0a` ändert unter `src/` genau die zehn unten
+aufgeführten Pakete; genau diese zehn wurden neu gebaut. Damit fehlt keine
+seit dem alten Vollrelease geänderte Paketversion im aktiven Overlay.
+
+### Tatsächliche Installations- und Overlaykette
+
+Der isolierte Merge-Install liegt unter
+`~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install`.
+Die Test-Shell sourcte in dieser Reihenfolge:
+
+1. `/opt/ros/humble/setup.bash`,
+2. `/home/p/amadeus_slam_toolbox_ws/install/setup.bash`,
+3. `~/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash`,
+4. `~/.local/share/amadeus/releases/we1-10e1858074e7-r1/install/local_setup.bash`,
+5. `~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install/local_setup.bash`.
+
+`ros2 pkg prefix` ordnete alle zehn geänderten Projektpakete dem neuen
+Stufe-1-Install zu. Unveränderte Abhängigkeiten wie `robot_interfaces`,
+`amadeus_map_identity` und `bt_orchestrator` kamen eindeutig aus dem
+Vollrelease `10e1858`. `slam_toolbox` kam aus dem externen, gepatchten Stand
+`51a99767`, der STL-27L-Treiber aus dem separaten Overlay mit Vendor-Commit
+`bf668a89` und dem bereits dokumentierten Close-after-join-Patch. Ein
+Dateivergleich zwischen Quellbaum und Install ergab für sämtliche
+Laufzeit-Python-, Launch-, Konfigurations- und Behavior-Dateien der zehn Pakete
+keine Abweichung. Nur die bewusst nicht installierte Entwicklerbeispieldatei
+`ch34x_dkms.conf.example` hat kein Install-Gegenstück.
+
+| Komponente | Quellbaum / letzter Paketcommit | Tatsächlich verwendeter Präfix | Maßgebliche Konfiguration |
+|---|---|---|---|
+| `explore` | `5e3fe0a` / `27be777` | Stufe-1-Install | `explore/config/explore_params.yaml` plus lokales WE-Profil |
+| `robot_map_manager` | `5e3fe0a` / `5f821b8` | Stufe-1-Install | `robot_map_manager/config/robot_map_manager.yaml` |
+| `mission_manager` | `5e3fe0a` / `5e3fe0a` | Stufe-1-Install | `mission_manager/config/mission_catalog.yaml` und `app_mapping.launch.py` |
+| `robot_navigation` | `5e3fe0a` / `bbb5da8` | Stufe-1-Install | `robot_navigation/config/nav2_params_real.yaml`, `nav_mapping.launch.py` |
+| `safety_monitor` | `5e3fe0a` / `5e3fe0a` | Stufe-1-Install | `safety_monitor/config/safety_monitor_params.yaml` |
+| VL53-Nahbereich | `5e3fe0a` / `5e3fe0a` | Stufe-1-Install | `vl53_params.yaml`, `collision_monitor_mapping_params.yaml` |
+| LiDAR-Bring-up | `5e3fe0a` / `5e3fe0a` | Stufe-1-Install | `stl27l.yaml`, `slam_toolbox_amadeus.yaml`, `slam_lidar.launch.py` |
+| STL-27L-Treiber | Vendor `bf668a89` plus Close-after-join-Patch | `we1-ldlidar-shutdown-overlay` | serieller Port `/dev/amadeus_lidar`, Parameter aus `stl27l.yaml` |
+| `base_hardware` | `5e3fe0a` / `5e3fe0a` | Stufe-1-Install | `base_hardware/config/base_hardware_params.yaml`; Start mit `active_drive:=false` |
+| gemeinsamer Start | `robot_bringup` bei `5e3fe0a` | Stufe-1-Install | `app_mapping.launch.py`, OAK und Web-GUI für diese Prüfung aus |
+
+Verwendet wurde ausschließlich das lokale Profil
+`~/.local/share/amadeus/profiles/we1-two-rooms-hall-r9-20260922.yaml` mit
+SHA-256 `e03495cebfc22dc7d9858cb8893660b83134cf4b6121db64ee49673d0688083f`.
+Seine reale Geometrie bleibt außerhalb des Repositorys. Das Profil war als
+WE-Profil aktiv, erzeugte im motorlosen Lauf aber keinen Auftrag. Die DDS-
+Prüfung lief in Domain 217 ausschließlich über die lokale Loopback-
+CycloneDDS-Konfiguration des Vollreleases.
+
+Der historische R9-Pfad `we1-r8-scope-overlay` ist ausdrücklich **nicht** der
+neue Teststand: Er war ein nicht commitmanifestierter Neun-Paket-Mischstand,
+ließ `robot_navigation` aus dem älteren Vollrelease auflösen und enthielt vor
+dem damaligen Nachbau den Kartenmanager-Fix `5f821b8` nicht. Genau diese
+Mehrdeutigkeit ist mit dem neuen Zehn-Paket-Overlay beseitigt.
+
+### Motorlose Abnahme
+
+Der Build der zehn geänderten Pakete bestand. `colcon test` registrierte in
+den Paketen mit registrierten Tests **1.002 bestandene Tests**; der direkte
+gemeinsame Pytest-Lauf über die vorhandenen Testverzeichnisse bestand mit
+**1.155 Tests**. Die abweichenden Zahlen überlappen und werden nicht addiert.
+
+Zwei vollständige Starts von `app_mapping.launch.py` mit
+`active_drive:=false`, aktiviertem WE-Profil und realen Sensoren ergaben
+reproduzierbar:
+
+- `collision_monitor`, Controller, Planner, Behavior Server, BT Navigator und
+  Velocity Smoother jeweils Lifecycle `active`;
+- vollständige TF-Ketten `map -> base_link`, `odom -> base_link`,
+  `base_link -> laser_frame` und beide VL53-Frames;
+- normierten LiDAR mit etwa 10 Hz, Rohkarte mit etwa 1 Hz und gültigem
+  Kartenmanagerstatus `ok=true`, Kartenalter praktisch null, Pose verfügbar;
+- beide VL53 mit etwa 3,6 bis 3,9 Hz; in der unbewegten freien Prüfsituation
+  publizierten beide frische, leere Punktwolken;
+- Safety frisch und durchgehend `false`, Explorer `idle`, Backend bereit,
+  Rohkartenquelle bereit und ohne veraltete Quellen;
+- `base_hardware` durchgehend `dry_run=true`, `allow_rs485=false`,
+  `rs485_ready=false`, Sollgeschwindigkeit und beide Motor-Sollwerte null;
+- in 15 s beziehungsweise 10 s Beobachtung null aktive Nav2-Ziele und auf
+  allen beobachteten Fahrkanälen null nichtnullige Befehle.
+
+Beide Gesamtstarts wurden jeweils mit genau einem SIGINT an den Elternprozess
+beendet. Sämtliche Kindprozesse endeten sauber; danach waren LiDAR, RS485 und
+beide sichtbaren I²C-Gerätepfade ohne Handle. Die vollständigen Zykluslogs
+enthalten weder Traceback, Prozessabbruch, SIGABRT noch Fehlermeldung. Zwei
+vorherige, nicht als Abnahme gezählte Vorläufe scheiterten noch vor der
+Node-Laufzeit an doppelter Loopback-Auswahl beziehungsweise einer für
+CycloneDDS zu hohen Domain-ID; beide Ursachen sind bestimmt, danach waren alle
+Handles frei, und die korrigierten Wiederholungen in Domain 217 bestanden.
+
+Die wiederholten Warnungen zu absichtlich nicht freigegebener Semantik und zum
+fehlenden softwareseitigen GPIO-Not-Aus sind bekannte Zustandsmeldungen; sie
+wurden nicht durch Abschwächung einer Grenze beseitigt. Die hardwired
+Not-Aus-Kette bleibt vor jeder späteren Fahrt Pflicht. Der frühere physische
+R9-Nahbereichsbefund bleibt ebenfalls für jede spätere Bewegung offen, ist
+aber kein fehlender Laufzeit- oder Frischenachweis dieser motorlosen Stufe.
+
+**Ergebnis Stufe 1:** Der geplante Stand ist eindeutig, alle geänderten Pakete
+sind ihrem tatsächlichen Install zugeordnet, sämtliche bestätigten Fixes sind
+aktiv, und der Stack startet und stoppt zweimal reproduzierbar ohne
+Fahrwirkung. Der nächste erlaubte Schritt ist ausschließlich Review dieses
+Themenbranches/PRs. Keine Stufe 2 und keine Fahrt wurden begonnen.
 
 ## R9 – Live-Quellenkette, sicherer Replan und Nahbereichsstop, 2026-09-22
 
@@ -429,7 +560,7 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | Stufe | Nachgewiesener Stand | Verbleibende Grenze |
 |---|---|---|
 | WE-D0 / WE-M0/A | Strategie, Basisvergleich und Schnittstellenreview abgeschlossen. | Keine Wiederholung ohne neuen Befund. |
-| WE-M0/B | Isolierter Jetson-Build, vollständige Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. Ein freigegebener Realversuch fuhr ca. 0,466 m ohne Safety-, Encoder- oder Busfehler und endete sicher. | Das ist nur ein Teilnachweis, keine vollständige Fahrabnahme. |
+| WE-M0/B | **Stufe 1 grün:** Zielstand `5e3fe0a`, alle zehn seit Vollrelease `10e1858` geänderten Pakete und die tatsächliche Overlaykette sind eindeutig inventarisiert. Build, 1.155 direkte Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. | Das ist ein motorloser Zielsystemnachweis, keine Fahr- oder Hardwareabnahme. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
 | WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Der bestätigte Live-Pfad `SOURCE_INVALIDATED` → sicherer Stop → frische Auswahl ist zusätzlich mit einem Vertragsfall und 892 Explorer-Tests geprüft. | Der Replan-Fix ist noch nicht fahrend über mehrere Kartenrevisionen abgenommen. |
@@ -477,14 +608,14 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-Im vereinbarten **gerätefreien Software- und motorlosen Zielsystemumfang ist
-nach der R9-Quellen-Replan-Korrektur kein weiterer Blocker bekannt**. Der reale
-R9-Lauf hat den Fix jedoch noch nicht bis zum Abschluss abgenommen und endete
-an einem konkreten physischen Nahbereichsbefund. Das ist kein Anlass zu einer
-neuen WE-Architektur:
+Im vereinbarten **gerätefreien Software- und motorlosen Stufe-1-Umfang ist nach
+der commit- und präfixgebundenen Inventur kein weiterer Blocker bekannt**. Der
+reale R9-Lauf hat den Fix jedoch noch nicht bis zum Abschluss abgenommen und
+endete an einem konkreten physischen Nahbereichsbefund. Das ist kein Anlass zu
+einer neuen WE-Architektur und kein Bestandteil dieser Stufe:
 
-1. Den Branch reviewen und nach ausdrücklicher Freigabe nach `main` integrieren;
-   kein automatischer Merge.
+1. Den Stufe-1-Themenbranch und seinen PR reviewen; kein automatischer Merge
+   und kein Beginn von Stufe 2 in diesem Auftrag.
 2. Den linken Nahbereich an der R9-Endpose sichtbar prüfen, die Begrenzung
    entfernen oder Amadeus unbestromt auf eine nachweislich freie, vermessene
    Ausgangspose zurücksetzen; reale Geometrie bleibt außerhalb des Repositorys.

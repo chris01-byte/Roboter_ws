@@ -1,5 +1,67 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 1: reproduzierbarer motorloser Zielstand (23.09.2026)
+
+**Geprüfter Runtime-Code:**
+`5e3fe0a084b9b46809e25715d8bdca4c7bd408a4` aus PR #96 auf dem
+Stufe-1-Themenbranch `fix/we1-stufe1-runtimeinventur`. Der neue isolierte
+Merge-Install liegt unter
+`~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install`.
+Weder `/home/p/roboter_ws/install` noch die dortige schmutzige Arbeitskopie
+wurden verändert oder als gleichwertig behauptet.
+
+Die geprüfte Shell-Reihenfolge ist:
+
+```bash
+source /opt/ros/humble/setup.bash
+source /home/p/amadeus_slam_toolbox_ws/install/setup.bash
+source ~/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash
+source ~/.local/share/amadeus/releases/we1-10e1858074e7-r1/install/local_setup.bash
+source ~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install/local_setup.bash
+```
+
+Danach lösen `amadeus_lidar_bringup`, `base_hardware`, `explore`,
+`mission_manager`, `robot_bringup`, `robot_map_manager`, `robot_navigation`,
+`safety_monitor`, `semantic_map_manager` und `vl53_near_field` aus dem neuen
+Stufe-1-Präfix auf. Das sind genau alle unter `src/` seit dem Vollrelease
+`10e1858` geänderten Pakete. Unveränderte Projektabhängigkeiten kommen aus dem
+commitgebundenen Vollrelease; der LiDAR-Treiber kommt aus dem gepatchten
+Close-after-join-Overlay, `slam_toolbox` aus seinem vorhandenen gepatchten
+Arbeitspräfix. Das alte `we1-r8-scope-overlay` nicht für Stufe 1 sourcen: Es ist
+ein historischer Mischstand und enthält insbesondere kein neu gebautes
+`robot_navigation`.
+
+Das verwendete lokale Profil ist
+`~/.local/share/amadeus/profiles/we1-two-rooms-hall-r9-20260922.yaml`, SHA-256
+`e03495cebfc22dc7d9858cb8893660b83134cf4b6121db64ee49673d0688083f`.
+Seine reale Geometrie bleibt lokal. Die beiden Abnahmezyklen wurden mit
+`active_drive:=false`, Domain 217 und der Loopback-CycloneDDS-Konfiguration des
+Vollreleases gestartet. Keine Missions- oder Navigationsaction wurde gesendet.
+
+Beide Zyklen bestätigten aktive Nav2- und Collision-Lifecycles, vollständige
+TF-Ketten, etwa 10 Hz LiDAR, 1 Hz frische Rohkarte, je etwa 4 Hz für beide
+VL53, frischen Kartenmanager- und Explorerstatus sowie Safety `false`.
+`base_hardware` meldete durchgehend `dry_run=true`, `allow_rs485=false`,
+`rs485_ready=false` und null Motorwerte. In den Beobachtungsfenstern gab es
+null Nav2-Ziele und null nichtnullige Fahrbefehle. Beide Einzel-SIGINT-Stopps
+beendeten alle Prozesse sauber; `/dev/amadeus_lidar`, `/dev/ttyUSB_BASE` und
+die sichtbaren I²C-Gerätepfade blieben danach ohne Handle. Die Zykluslogs
+enthalten keine Tracebacks oder Prozessabbrüche.
+
+**Keine Fahrfreigabe:** Der frühere reale R9-Befund links vor der Endpose ist
+durch diesen motorlosen Lauf weder widerlegt noch beseitigt. Vor jeder späteren
+Bewegung sind Sichtprüfung oder unbestromtes Zurücksetzen auf eine vermessene
+freie Pose, erreichbarer hardwired Not-Aus, kompletter neuer Preflight und eine
+neue ausdrückliche Freigabe erforderlich. Sicherheits- und Frischegrenzen
+bleiben unverändert. Nächster erlaubter Schritt ist nur Review des
+Stufe-1-PRs; Stufe 2 wurde nicht gestartet.
+
+**Rückfall:** Neue Shell öffnen und das Stufe-1-Präfix nicht sourcen. Es wurde
+nichts in die Standardinstallation deployt, daher ist keine Roboterdatei
+zurückzukopieren.
+
+---
+
 ## WE-1: erster Realversuch sicher beendet, Scope-Fortsetzung gesperrt (21.09.2026)
 
 Christopher bestätigte Not-Aus, freie Türen und zwei Zimmer plus Flur; Treppen,
