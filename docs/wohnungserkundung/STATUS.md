@@ -28,8 +28,9 @@ abweichenden Seitenlinie. Die unmittelbar relevanten offenen PRs sind #94,
 #95 und #96 in dieser gestapelten Kette.
 
 Die Prüfung lief auf dem eigenen Branch `fix/we1-stufe1-runtimeinventur`, der
-direkt von PR #96 abzweigt. Die lokal geänderte Hauptarbeitskopie
-`/home/p/roboter_ws` blieb auf `feature/modulare-sensorfusion` bei `00f6e521`
+direkt von PR #96 abzweigt und als PR #97 zur Review steht. Die lokal geänderte
+Hauptarbeitskopie `/home/p/roboter_ws` blieb auf
+`feature/modulare-sensorfusion` bei `00f6e521`
 vollständig unangetastet. Ein Commit oder Branchname allein wurde nicht als
 Laufzeitnachweis verwendet.
 

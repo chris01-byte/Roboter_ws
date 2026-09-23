@@ -4,7 +4,8 @@
 
 **Geprüfter Runtime-Code:**
 `5e3fe0a084b9b46809e25715d8bdca4c7bd408a4` aus PR #96 auf dem
-Stufe-1-Themenbranch `fix/we1-stufe1-runtimeinventur`. Der neue isolierte
+Stufe-1-Themenbranch `fix/we1-stufe1-runtimeinventur`; dessen Dokumentation
+steht als PR #97 zur Review. Der neue isolierte
 Merge-Install liegt unter
 `~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install`.
 Weder `/home/p/roboter_ws/install` noch die dortige schmutzige Arbeitskopie
