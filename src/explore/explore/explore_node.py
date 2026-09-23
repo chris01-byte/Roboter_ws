@@ -1357,6 +1357,8 @@ class ExploreNode(Node):
             self._wohnungserkundung_estop_received_at = None
             self._wohnungserkundung_vl53_received_at = {
                 'left': None, 'right': None}
+            self._wohnungserkundung_vl53_observed_at = {
+                'left': None, 'right': None}
             self._wohnungserkundung_vl53_measurement_valid = {
                 'left': None, 'right': None}
             self._wohnungserkundung_vl53_point_count = {
@@ -2744,12 +2746,14 @@ class ExploreNode(Node):
                     break
         stamp_ns = int(msg.header.stamp.sec) * 1_000_000_000 + int(
             msg.header.stamp.nanosec)
-        if well_formed and not (
-                0 <= self.get_clock().now().nanoseconds - stamp_ns <= 800_000_000):
-            measurement_valid = False
+        now = time.monotonic()
+        age_ns = (self.get_clock().now().nanoseconds - stamp_ns
+                  if well_formed else -1)
         with self._wohnungserkundung_runtime_lock:
             self._wohnungserkundung_vl53_received_at[side] = (
-                time.monotonic() if well_formed else None)
+                now if well_formed else None)
+            self._wohnungserkundung_vl53_observed_at[side] = (
+                now - age_ns / 1_000_000_000 if age_ns >= 0 else None)
             self._wohnungserkundung_vl53_measurement_valid[side] = measurement_valid
             self._wohnungserkundung_vl53_point_count[side] = count
 
@@ -2768,6 +2772,8 @@ class ExploreNode(Node):
             estop = self._wohnungserkundung_estop
             estop_at = self._wohnungserkundung_estop_received_at
             vl53_at = tuple(self._wohnungserkundung_vl53_received_at.values())
+            vl53_observed = tuple(
+                self._wohnungserkundung_vl53_observed_at.values())
             vl53_valid = tuple(
                 self._wohnungserkundung_vl53_measurement_valid.values())
         def fresh(received_at, limit):
@@ -2775,9 +2781,10 @@ class ExploreNode(Node):
                     and 0.0 <= now - received_at <= limit)
         if estop is not False or not fresh(estop_at, 1.0):
             return False
-        if (len(vl53_at) != 2 or len(vl53_valid) != 2
+        if (len(vl53_at) != 2 or len(vl53_valid) != 2 or len(vl53_observed) != 2
                 or not all(valid is True for valid in vl53_valid)
-                or not all(fresh(stamp, 0.8) for stamp in vl53_at)):
+                or not all(fresh(stamp, 0.8)
+                           for stamp in vl53_at + vl53_observed)):
             return False
         scan = self._door_lidar_scan_snapshot()
         if scan is None or not fresh(scan.get('received_at'), 0.8):

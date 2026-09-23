@@ -1716,6 +1716,7 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     node._wohnungserkundung_estop_received_at = now
     node._wohnungserkundung_vl53_received_at = {
         'left': now, 'right': now}
+    node._wohnungserkundung_vl53_observed_at = {'left': now, 'right': now}
     node._wohnungserkundung_vl53_measurement_valid = {
         'left': True, 'right': True}
     node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
@@ -1741,6 +1742,9 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     node._wohnungserkundung_vl53_received_at['right'] = now - 2.0
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
     node._wohnungserkundung_vl53_received_at['right'] = now
+    node._wohnungserkundung_vl53_observed_at['right'] = now - 0.81
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_observed_at['right'] = now
     node._motion_odom_snapshot = lambda: (
         (0.0, 0.0), 0.0, 0.02, 0.0, now)
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
@@ -1772,6 +1776,7 @@ def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
     node._wohnungserkundung_estop_received_at = now
     node._wohnungserkundung_vl53_received_at = {
         'left': now, 'right': now}
+    node._wohnungserkundung_vl53_observed_at = {'left': now, 'right': now}
     node._wohnungserkundung_vl53_measurement_valid = {
         'left': True, 'right': True}
     node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
@@ -1907,6 +1912,7 @@ def test_we_vl53_separates_fresh_transport_measurement_and_obstacle(points, expe
     node = ExploreNode.__new__(ExploreNode)
     node._wohnungserkundung_runtime_lock = threading.Lock()
     node._wohnungserkundung_vl53_received_at = {'left': None, 'right': None}
+    node._wohnungserkundung_vl53_observed_at = {'left': None, 'right': None}
     node._wohnungserkundung_vl53_measurement_valid = {'left': None, 'right': None}
     node._wohnungserkundung_vl53_point_count = {'left': 0, 'right': 0}
     node.get_clock = lambda: SimpleNamespace(now=lambda: SimpleNamespace(
@@ -1922,7 +1928,12 @@ def test_we_vl53_separates_fresh_transport_measurement_and_obstacle(points, expe
     assert node._wohnungserkundung_vl53_measurement_valid['left'] is True
     cloud.header.stamp.sec = 8
     node._on_wohnungserkundung_vl53('right', cloud)
-    assert node._wohnungserkundung_vl53_measurement_valid['right'] is False
+    assert node._wohnungserkundung_vl53_measurement_valid['right'] is expected
+    assert (time.monotonic()
+            - node._wohnungserkundung_vl53_observed_at['right']) >= 2.
+    cloud.header.stamp.sec = 11
+    node._on_wohnungserkundung_vl53('right', cloud)
+    assert node._wohnungserkundung_vl53_observed_at['right'] is None
 
 
 def test_real_vl53_producer_cannot_certify_health_from_an_empty_original_cloud():
