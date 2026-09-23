@@ -5329,9 +5329,18 @@ class ExploreNode(Node):
         with self._wohnungserkundung_runtime_lock:
             snapshot = self._wohnungserkundung_navigation_snapshot
             consumed = self._wohnungserkundung_consumed_intent_id
+            pending = getattr(
+                self, '_wohnungserkundung_pending_frontier_resolution', None)
         if snapshot is None or snapshot[0].intent_id == consumed:
             return None
         intent, candidate = snapshot
+        # A reached metric target is not new work while its frontier result
+        # still awaits a newer raw-map observation.  A new intent for exactly
+        # that same target must not repeat the just-finished child.  Another
+        # revalidated metric target of the same task remains eligible.
+        if pending is not None and self._wohnungserkundung_same_metric_goal(
+                pending[0], candidate):
+            return None
         # The grace interval is solely for a child that was already dispatched.
         # An unconsumed preview must remain exact and never become a new goal
         # merely because policy processing is temporarily behind a raw map.
