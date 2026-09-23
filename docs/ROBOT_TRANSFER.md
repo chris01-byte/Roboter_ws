@@ -1,5 +1,45 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
+
+**Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
+Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
+Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit
+`d6c6fa9` ändert nur Explorer-Code, sein Profil, Tests und den vorhandenen
+Prozessprüfer. Der produktive
+Roboterstand und die lokale Standardinstallation wurden nicht verändert.
+Der einzige neue Build ist das isolierte Präfix
+`~/.local/share/amadeus/releases/we1-stage3-candidate-20260923/install`;
+es wurde testweise **nach** dem Stage-2-Präfix gesourct.
+`ros2 pkg prefix explore`, Python-Import und Quell-/Install-Hash ordneten den
+Explorer diesem Präfix zu.
+
+Der Explorer stuft ein terminales Frontier-`ABORTED` nur bei frischer
+Costmap-Hindernisevidenz, gestoppter Odometrie, frischem map-TF, LiDAR, beiden
+VL53-Streams und freiem Not-Aus als `LOCAL_BLOCKED` ein. Andernfalls bleibt
+es ein Systemfehler. Eine blockierte Aufgabe wird begrenzt zurückgestellt;
+ein anderes geprüftes Ziel kann übernommen werden, das erste erst nach
+frischer, unprojiziert freier Costmap erneut. Nav2-/Collision-Monitor-
+Parameter, Footprint, Padding und Scope wurden nicht geändert; Spin und
+BackUp bleiben vom Fahrpfad getrennt.
+
+902 Explorer-Pytests und der achtteilige gerätefreie Gesamtprozessprüfer aus
+dem Quellbaum sowie gegen das isolierte Install bestanden. Der Prüfer mit
+Fake-Nav2 belegt Elternfortsetzung nach lokalem Kindabbruch und kontrolliertes
+Warten ohne Ausweg, **nicht** die
+sichere Bewegung des realen Controllers. Sein DDS-Bereich ist vom Roboterdomain
+getrennt; alle synthetischen Sensoren haben eigene Testtopics. Der R9-Befund
+links (~0,24 m) ist unverändert offen. Keine Motorfreigabe, kein Gerätezugriff,
+kein Fahrbefehl. Eine Stage-3-Installation darf bis zum fehlenden motorlosen
+Nav2-/Collision-Monitor-Nachweis und einer erneuten Vor-Ort-Freigabe nicht als
+Fahrprofil verwendet werden.
+
+**Rückfall:** Stufe-3-Präfix in einer neuen Shell auslassen; die bestätigte
+Stufe-1/2-Kette bleibt unverändert. Es ist nichts auf dem Jetson zu entfernen
+oder zurückzukopieren.
+
+---
+
 ## WE-1 Stufe 2: gerätefreie Frontierfortsetzung (23.09.2026)
 
 **Basis:** bestätigter Stufe-1-Stand `5e3fe0a` mit dessen unveränderter

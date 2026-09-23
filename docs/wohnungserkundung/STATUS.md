@@ -1,11 +1,103 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · Basis `5e3fe0a`, Explorer-Korrektur `6fd36d5` · keine Fahrfreigabe · 2026-09-23**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine Fahrfreigabe · 2026-09-23**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
+
+**Basis:** ausschließlich der bestätigte Stufe-2-Branch
+`feature/we1-stufe2-replan-fortsetzung` bei `3fa3ce6`, auf dem eigenen
+Themenbranch `feature/we1-stufe3-local-recovery` mit Produktionscommit
+`d6c6fa9`. Stufe 1/2 sowie alle
+Hardware-, Footprint-, Collision-, Scope- und Sensorgrenzen bleiben
+unverändert. Es wurde kein reales WE-Profil gestartet und keine Fahrt
+freigegeben.
+
+**Fehlerkette:** Die VL53-Punktwolken gehen unverändert in lokale/globale Nav2-
+Costmaps und den `collision_monitor`; dessen Ausgang bleibt die letzte
+reaktive Instanz vor `/cmd_vel`. Der Explorer verwendet bereits den bestehenden
+Nav2-Baum mit `IsPathValid`/`ComputePathToPose` (1 Hz) und `FollowPath`; Spin
+und BackUp sind absichtlich nicht an die Fahrkette angebunden. Bei
+`Controller patience exceeded` liefert Humble `NavigateToPose` nur den
+terminalen Zustand `ABORTED`, keinen Ursachencode. Bisher wurde daraus ein
+allgemeiner `RETRYABLE_FAILURE` mit Revisions-Retry; nach erschöpftem Ziel-,
+Retry- oder Gesamtbudget endet `ExploreArea` als Teilstand bzw. Fehler und
+der Missions-BT als Failure. Ein unsicherer Cancel-/Transportfehler bleibt
+sofortiger Systemabbruch. Ein einzelner Hindernisstopp beendet den Auftrag
+also **nicht zwangsläufig sofort**, kann ihn aber mangels eigener
+Lokalblockade-Entscheidung faktisch beenden.
+
+**Begrenzte Änderung:** Der terminale Abbruch eines Frontier-Kindziels wird
+nur bei frischem, positivem globalem Costmap-Hindernisbeleg, gültigem
+Stillstand aus Odometrie, frischem map-TF, LiDAR, beiden nichtleeren VL53-
+Wolken und frischem freiem Software-Not-Aus als `LOCAL_BLOCKED` eingestuft.
+Fehlt einer dieser Belege, wird der Abbruch als `SYSTEM_FAILURE` behandelt;
+`SOURCE_INVALIDATED` und `USER_CANCELED` behalten ihre eigenen Pfade.
+`LOCAL_BLOCKED` beendet erst das einzelne Nav2-Ziel, stellt die Aufgabe für
+mindestens zwei Kartenrevisionen zurück und lässt die bestehende Policy ein
+anderes zugelassenes Ziel wählen. Die bisher zulässige Projektion desselben
+Frontierziels auf eine benachbarte Costmap-Zelle bleibt nach dieser Blockade
+gesperrt, bis eine **neuere** Costmap den ursprünglichen Kandidaten wieder
+ohne Projektion freigibt. Das vorhandene Retrylimit, Zielbudget und
+Gesamtzeitbudget begrenzen die Versuche. Es wurden weder eigene Fahrbefehle
+noch Rückwärts- oder Dreh-Recovery ergänzt.
+
+**Gerätefreie Evidenz:** **902 Explorer-Pytests** bestanden; die
+Vertragstests prüfen auch fehlende/frische Sicherheitsbelege. Der bestehende
+Gesamtprozessprüfer prüft die begrenzte Zurückstellung, das Verbot paralleler
+Nav2-Kindziele und die Elternfortsetzung. Der neue Prozessfall zeigt
+synthetisch A-`ABORTED` bei Costmap-Blockade → B automatisch ausgewählt → B
+erfolgreich → B-Frontier auf neuer Rohkarte abgeschlossen → A nach freier
+neuer Costmap erneut auswählbar. Ein Fall ohne Alternative wartet kontrolliert
+bis zum Gesamtbudget, ohne zweites Ziel oder Fahrbefehl. Der Prüfer verwendet
+einen eigenen DDS-Bereich (`ROS_DOMAIN_ID=217` voreingestellt) und
+synthetische Topics. Beide neuen Szenarien bestanden isoliert aus dem
+Quellbaum und gegen das isolierte Stage-3-Install
+`~/.local/share/amadeus/releases/we1-stage3-candidate-20260923/install`,
+das in der Test-Shell **nach** dem Stage-2-`explore` gesourct wurde.
+`ros2 pkg prefix explore` und Python-Import zeigten auf dieses Präfix; die
+installierten Laufzeitdateien und das Profil waren bytegleich zur Quelle.
+Der Gesamtprozessprüfer bestand nach Prüferstabilisierung sowohl aus dem
+Quellbaum als auch gegen das tatsächliche Stage-3-Install mit **acht
+Szenarien** (Portal-Erfolg/-Fehler, Mehrraum, Wiederaufnahme,
+Karten-Replan, fehlende Folgequelle, lokale Blockade mit B-Fortsetzung und
+Blockade ohne Ausweg). Maximal ein Fake-Nav2-Kindziel war gleichzeitig aktiv;
+synthetische Fahrbefehlsthemen erhielten null Nachrichten. Frühere lange
+Läufe hatten zeitabhängige Fehler des älteren Portal-Positivfalls
+(`pose_step_exceeds_jump_limit`) und einmal ein Shutdown-Race des neu
+eingeführten Prüfer-Timers. Der Positivfall bestand isoliert; kleinere
+synthetische Pose-Schritte bei unverändertem Traversal-Limit und ein
+vor Knotenshutdown gestoppter, nur für neue Fälle aktiver Timer und länger
+frische synthetische Karten für das unveränderte Drei-Beobachtungen-Fenster
+beseitigten die beobachteten Prüferfehler in den beiden achtteiligen
+Wiederholungsläufen. Die früheren Flakes bleiben als Teststabilitätsrisiko
+dokumentiert, nicht als Produktnachweis umgedeutet.
+
+**Rest / Abnahme:** Diese Evidenz verwendet eine Fake-Nav2-Aktion; weder ein
+echter Controller-/Collision-Monitor-Stop noch eine sichere autonome
+Ausweichbewegung wurde demonstriert. Insbesondere sind Wiederanfahrt zum
+gleichen Ziel nach verschwindendem Hindernis und Umfahrung auf einem neuen
+realen Nav2-Pfad noch nicht als Gesamtprozess nachgewiesen. Ein lokaler
+Pfadstau bei weiterhin erreichbar erscheinendem Ziel wird derzeit
+konservativ als Systemfehler behandelt und noch nicht als `LOCAL_BLOCKED`.
+Nach vollständiger Erschöpfung des bestehenden Retrylimits erfolgt auch bei
+später freier Costmap noch keine gesonderte `TaskReactivation`; der geprüfte
+Reaktivierungsfall hatte einen lokalen Fehlversuch. Der aktive
+Sensorfehler-/Lokalisierungsverlust während eines laufenden Kindziels braucht
+eine eigene vollständige Fail-closed-Prozessprüfung. Der R9-Befund links
+~0,24 m bleibt physisch ungeklärt. **Stufe 3 ist nicht GRÜN; keine Stufe 4 und
+keine reale Fahrt.** Nächster erlaubter Schritt: Review dieses PRs, dann
+motorlose, isolierte Nav2-/Collision-Monitor-Prüfung mit Produktionsprofil;
+jede reale Fahrt benötigt danach neue ausdrückliche Vor-Ort-Freigabe.
+
+**Rückfall:** Stufe-3-Overlay nicht sourcen bzw. aus einer neuen Shell nur die
+bestätigte Stufe-1/2-Kette laden. Es wurden keine aktiven Roboterinstallationen
+oder Geräte verändert. Auf dem älteren Stufe-2-Stand ist lokale
+Hindernisfortsetzung weiterhin nicht abgenommen.
 
 ## Stufe 2 – Frontierfortsetzung bei Kartenänderungen, 2026-09-23
 

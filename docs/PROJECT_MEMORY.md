@@ -17,6 +17,48 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — WE-Stufe 3: lokalen Nav2-Abbruch nur mit positivem Beleg zurückstellen
+
+**Entscheidung:** Die vorhandene Explorer-/Nav2-/Task-Policy-Kette unterscheidet
+`LOCAL_BLOCKED` von `SOURCE_INVALIDATED`, Nutzerabbruch und Systemfehler.
+Nach terminalem Frontier-Abbruch wird nur mit frischer Costmap-Blockade,
+Stillstand und gesunden Sicherheitsquellen die Aufgabe revisionsbegrenzt
+zurückgestellt. Derselbe Frontier darf nicht durch eine Costmap-Projektion
+sofort wieder als neues Ziel erscheinen. Es gibt keine neue Fahrprimitive.
+
+**Grund / beobachtete Evidenz:** Humble `NavigateToPose.Result` besitzt keinen
+Fehlercode. Der R9-Lauf endete bei `Controller patience exceeded` nach
+LiDAR/VL53-Costmap-Hindernis; ein pauschales `ABORTED` kann daher weder
+ungeprüft als Hindernis noch als Freigabe zum Manöver dienen. Der neue
+gerätefreie Prozessfall deckte tatsächlich eine sofortige Wiederwahl von A
+über eine benachbarte Costmap-Projektion auf. Erst die Sperre bis zum neu
+unprojiziert belegten Originalziel ergab A-Abbruch → B-Erfolg → belegten
+Frontierfortschritt → spätere Reaktivierung von A.
+
+**Betroffene Dateien und Hardware:** `explore`-Runtime, Verträge, Profil und
+bestehender Gesamtprozessprüfer; keine Motor-, VL53-, Nav2- oder
+Collision-Monitor-Konfiguration geändert. Kein Gerät geöffnet, kein Motor
+freigegeben und kein Fahrbefehl publiziert.
+
+**Teststatus:** 902 Explorer-Pytests und acht gerätefreie Szenarien des
+bestehenden Gesamtprozessprüfers aus dem Quellbaum **und** gegen das isoliert
+installierte Stage-3-`explore` bestanden. Vor der Stabilisierung traten in
+langen Prüfläufen ein
+Pose-Sprung-Flake im älteren Portal-Positivfall und ein Timer-Shutdown-Race
+auf; beide sind im WE-Status offengelegt. Kein realer Recovery-Test.
+
+**Offene Risiken:** Der Prozessprüfer ersetzt Nav2 durch einen Fake-Action-
+Server und beweist keine physische Ausweichfahrt. Aktive harte Fehler während
+eines laufenden Kindes und echter gleicher-Ziel-/Umfahrungs-Replan brauchen
+weitere Produktionsnähe. Der R9-Nahbereichsbefund bleibt offen. Keine
+Stufe-3-Fahrfreigabe.
+
+**Rückfallweg:** Neues Shell-Environment ohne Stufe-3-Präfix; nur bestätigte
+Stufe-1/2-Installkette laden. Vor einer realen Fahrt erneut explizite
+Vor-Ort-Freigabe einholen.
+
+---
+
 ## 2026-09-23 — WE-Stufe 2: Frontier-Replan muss echte Fortsetzung belegen
 
 **Entscheidung:** Die vorhandene WE-Navigation behält ein sicher und
