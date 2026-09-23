@@ -37,6 +37,7 @@
 
 import json
 import math
+import struct
 import threading
 import time
 from pathlib import Path
@@ -122,7 +123,11 @@ from explore.exploration_policy import (
     score_task_utilities,
 )
 from explore.frontier_task_evidence import (
+    FrontierTaskEvidenceError,
     FrontierTaskEvidencePolicy,
+    _geodesic_distances,
+    _traversable_mask,
+    _validated_snapshot,
     build_frontier_task_evidence,
 )
 from explore.frontier_goal_candidate import (
@@ -1352,6 +1357,10 @@ class ExploreNode(Node):
             self._wohnungserkundung_estop_received_at = None
             self._wohnungserkundung_vl53_received_at = {
                 'left': None, 'right': None}
+            self._wohnungserkundung_vl53_measurement_valid = {
+                'left': None, 'right': None}
+            self._wohnungserkundung_vl53_point_count = {
+                'left': 0, 'right': 0}
             self._wohnungserkundung_local_blocked_tasks = {}
             self._wohnungserkundung_runtime_condition = threading.Condition(
                 self._wohnungserkundung_runtime_lock)
@@ -2698,14 +2707,51 @@ class ExploreNode(Node):
             self._wohnungserkundung_estop_received_at = time.monotonic()
 
     def _on_wohnungserkundung_vl53(self, side: str, msg: PointCloud2):
-        valid = (
+        # Receipt, well-formed transport and measurement validity are separate.
+        # The real producer emits an empty original cloud both for out-of-range
+        # returns and for entirely rejected measurements. Its current public
+        # status cannot distinguish those cases: empty is fresh but UNKNOWN,
+        # never an affirmative healthy/free-space certificate for recovery.
+        fields = {field.name: field for field in msg.fields}
+        well_formed = (
             bool(msg.header.frame_id.strip())
-            and msg.width > 0 and msg.height > 0
+            and msg.height > 0
             and msg.point_step >= 12
-            and len(msg.data) >= msg.width * msg.height * msg.point_step)
+            and msg.row_step >= msg.width * msg.point_step
+            and len(msg.data) == msg.height * msg.row_step
+            and all(name in fields and fields[name].datatype == 7
+                    and fields[name].count == 1
+                    and 0 <= fields[name].offset <= msg.point_step - 4
+                    for name in ('x', 'y', 'z')))
+        measurement_valid = None
+        count = msg.width * msg.height
+        if not well_formed:
+            measurement_valid = False
+        elif count:
+            measurement_valid = True
+            endian = '>' if msg.is_bigendian else '<'
+            for row in range(msg.height):
+                for col in range(msg.width):
+                    offset = row * msg.row_step + col * msg.point_step
+                    point = tuple(struct.unpack_from(
+                        endian + 'f', msg.data, offset + fields[name].offset)[0]
+                        for name in ('x', 'y', 'z'))
+                    if (not all(math.isfinite(value) for value in point)
+                            or sum(value * value for value in point) == 0.0):
+                        measurement_valid = False
+                        break
+                if not measurement_valid:
+                    break
+        stamp_ns = int(msg.header.stamp.sec) * 1_000_000_000 + int(
+            msg.header.stamp.nanosec)
+        if well_formed and not (
+                0 <= self.get_clock().now().nanoseconds - stamp_ns <= 800_000_000):
+            measurement_valid = False
         with self._wohnungserkundung_runtime_lock:
             self._wohnungserkundung_vl53_received_at[side] = (
-                time.monotonic() if valid else None)
+                time.monotonic() if well_formed else None)
+            self._wohnungserkundung_vl53_measurement_valid[side] = measurement_valid
+            self._wohnungserkundung_vl53_point_count[side] = count
 
     def _wohnungserkundung_local_blocked_after_abort(self, candidate) -> bool:
         """Require a stopped child and fresh, positive Nav2 obstacle proof.
@@ -2722,12 +2768,16 @@ class ExploreNode(Node):
             estop = self._wohnungserkundung_estop
             estop_at = self._wohnungserkundung_estop_received_at
             vl53_at = tuple(self._wohnungserkundung_vl53_received_at.values())
+            vl53_valid = tuple(
+                self._wohnungserkundung_vl53_measurement_valid.values())
         def fresh(received_at, limit):
             return (received_at is not None
                     and 0.0 <= now - received_at <= limit)
         if estop is not False or not fresh(estop_at, 1.0):
             return False
-        if not all(fresh(stamp, 0.8) for stamp in vl53_at):
+        if (len(vl53_at) != 2 or len(vl53_valid) != 2
+                or not all(valid is True for valid in vl53_valid)
+                or not all(fresh(stamp, 0.8) for stamp in vl53_at)):
             return False
         scan = self._door_lidar_scan_snapshot()
         if scan is None or not fresh(scan.get('received_at'), 0.8):
@@ -3640,8 +3690,8 @@ class ExploreNode(Node):
             if (local_blocked_since is not None
                     and not self._wohnungserkundung_local_blocked_rechecked(
                         local_blocked_since, staged, candidate,
-                        robot_pose)):
-                reason = 'nav2_local_blocked_until_fresh_clear_costmap'
+                        robot_pose, raw_map, correlation, scope)):
+                reason = 'nav2_local_blocked_until_fresh_admissible_route'
             elif staged is None:
                 reason = 'nav2_costmap_route_unavailable'
             elif math.hypot(
@@ -3664,16 +3714,68 @@ class ExploreNode(Node):
         return tuple(filtered)
 
     def _wohnungserkundung_local_blocked_rechecked(
-            self, blocked_since, staged, candidate, robot_pose) -> bool:
-        """Release a deferred task only after the *route* and goal clear."""
+            self, blocked_since, staged, candidate, robot_pose,
+            raw_map=None, correlation=None, scope=None) -> bool:
+        """Require one fresh route satisfying Costmap AND raw-map/scope.
+
+        A blocked straight corridor is evidence for classifying a terminal
+        child, not proof that every detour is blocked. Reuse the existing
+        geodesic evidence mask, intersected with NavFn's current traversable
+        cells. This emits no path/command and does not bypass Nav2's polygon
+        collision check. Different grids fail closed until StaticLayer has
+        caught up; neither a projected goal nor a projected start is accepted.
+        """
+        costmap = getattr(self, '_global_costmap', None)
+        received = self._global_costmap_received_at
         if (candidate is None or staged is None
                 or staged is not candidate
-                or self._global_costmap_received_at is None
-                or self._global_costmap_received_at <= blocked_since):
+                or raw_map is None or correlation is None or robot_pose is None
+                or costmap is None or received is None
+                or received <= blocked_since
+                or not 0.0 <= time.monotonic() - received <= self._map_timeout_s
+                or costmap.header.frame_id != raw_map.header.frame_id
+                or costmap.header.frame_id != self._global_frame
+                or candidate.map_revision != correlation.map_revision
+                or candidate.source_fingerprint != correlation.fingerprint
+                or candidate.source_stamp_ns != correlation.source_stamp_ns
+                or any(getattr(costmap.info, field) != getattr(raw_map.info, field)
+                       for field in ('width', 'height', 'resolution', 'origin'))):
             return False
-        return not self._costmap_near_route_obstacle(
-            (robot_pose[0], robot_pose[1]),
-            (candidate.target_x_m, candidate.target_y_m))
+        info = raw_map.info
+        origin = info.origin
+        try:
+            occupancy, resolution, clean_origin, yaw = _validated_snapshot(
+                correlation, width=info.width, height=info.height,
+                resolution=info.resolution, frame_id=raw_map.header.frame_id,
+                origin=(origin.position.x, origin.position.y, origin.position.z,
+                        origin.orientation.x, origin.orientation.y,
+                        origin.orientation.z, origin.orientation.w),
+                cells=raw_map.data,
+                source_stamp_ns=(int(raw_map.header.stamp.sec) * 1_000_000_000
+                                 + int(raw_map.header.stamp.nanosec)),
+                max_cells=self._wohnungserkundung_evidence_policy.max_cells)
+            route = _traversable_mask(
+                occupancy, resolution, correlation, clean_origin, yaw,
+                self._wohnungserkundung_evidence_policy, scope=scope,
+                scope_clearance_m=(None if scope is None else
+                                   self._wohnungserkundung_scope_clearance))
+            costs = np.asarray(costmap.data, dtype=np.int16).reshape(route.shape)
+        except (FrontierTaskEvidenceError, ValueError, TypeError):
+            return False
+        route &= (costs >= 0) & (costs < 99)
+        start_col, start_row = self._world_to_grid(
+            robot_pose[0], robot_pose[1], info)
+        goal_col, goal_row = self._world_to_grid(
+            candidate.target_x_m, candidate.target_y_m, info)
+        if any(not (0 <= row < info.height and 0 <= col < info.width
+                    and route[row, col])
+               for row, col in ((start_row, start_col), (goal_row, goal_col))):
+            return False
+        distance = float(_geodesic_distances(
+            route, (start_row, start_col))[goal_row, goal_col])
+        return (math.isfinite(distance)
+                and self._global_costmap is costmap
+                and self._global_costmap_received_at == received)
 
     def _forward_costmap_stage(
             self, robot_pose: Tuple[float, float, float]
