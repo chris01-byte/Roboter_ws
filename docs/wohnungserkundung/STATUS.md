@@ -12,7 +12,8 @@ unverändert. Der vorherige M3/U-Stand ist im
 **Basis:** ausschließlich der bestätigte Stufe-2-Branch
 `feature/we1-stufe2-replan-fortsetzung` bei `3fa3ce6`, auf dem eigenen
 Themenbranch `feature/we1-stufe3-local-recovery` mit Produktionscommit
-`d6c6fa9`. Stufe 1/2 sowie alle
+`d6c6fa9`; der gestapelte Review steht als PR #99 gegen den Stufe-2-Branch.
+Stufe 1/2 sowie alle
 Hardware-, Footprint-, Collision-, Scope- und Sensorgrenzen bleiben
 unverändert. Es wurde kein reales WE-Profil gestartet und keine Fahrt
 freigegeben.

@@ -5,8 +5,8 @@
 **Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
 Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
 Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit
-`d6c6fa9` ändert nur Explorer-Code, sein Profil, Tests und den vorhandenen
-Prozessprüfer. Der produktive
+`d6c6fa9` (Review-PR #99, nicht gemergt) ändert nur Explorer-Code, sein
+Profil, Tests und den vorhandenen Prozessprüfer. Der produktive
 Roboterstand und die lokale Standardinstallation wurden nicht verändert.
 Der einzige neue Build ist das isolierte Präfix
 `~/.local/share/amadeus/releases/we1-stage3-candidate-20260923/install`;
