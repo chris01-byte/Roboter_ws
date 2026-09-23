@@ -9,6 +9,37 @@ unverändert. Der vorherige M3/U-Stand ist im
 
 ## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
 
+**Neues linkes Testhindernis, ausschließlich motorlos (23.09. abends):** Die
+anwesende Person bestätigte einen unbelebten Gegenstand links vor dem Roboter,
+personen-/tierfreien Bereich und erreichbaren hardwired Not-Aus. Der Stack
+startete ohne Auftrag mit `active_drive:=false`, `enable_auto_explore:=false`;
+die Basis meldete `dry_run=true`, `allow_rs485=false`. Der linke VL53 meldete
+frisch und wiederholt etwa 0,24–0,25 m, der rechte keinen Nahpunkt. Im
+unveränderten WE-Mapping-Profil verwendet der Collision Monitor den
+bewegungsabhängigen `FootprintApproach` plus `SlowZone`, **keine** feste
+0,26-m-StopZone. Ein 2-s-Testwunsch von 0,08 m/s auf dessen Eingang ergab am
+Ausgang höchstens 0,024 m/s (30-%-SlowZone), nicht einen Vollstopp. Die
+Platzierung belegt damit Erkennung und Verlangsamung, **nicht** den verlangten
+Hindernisstopp oder autonome Fortsetzung. Das trockene Odometriesignal aus
+diesem Test darf nicht als reale Bewegung oder neue Karten-/Scope-Freigabe
+interpretiert werden. Es gab keine Motorbestromung und keine reale Fahrt.
+
+Beim einzigen SIGINT-Stop dieses Vorlaufs beendeten 23 Kinder sauber, aber
+`robot_map_manager` starb mit `RuntimeError: Unable to convert call argument
+to Python object` im ROS-2-Humble-`take_message()`-Pfad. Quell- und
+Install-Datei des vorhandenen Shutdown-Guards sind bytegleich; dieser Guard
+reicht für den beobachteten Race nicht aus. Danach liefen keine Roboterknoten
+mehr, und LiDAR-, Basis- und sichtbare I²C-Gerätepfade hatten keinen Handle.
+Der Shutdown zählt **nicht** als sauber; dieser Integrationsfehler bleibt vor
+einem weiteren Realversuch zu reproduzieren/klären. Keine Sicherheitsgrenze
+wurde verändert, kein Stage-3-Recovery-Nachweis erbracht.
+Ein zweiter vollständiger motorloser Start-/Stopp-Zyklus ohne synthetischen
+Fahrwunsch sah denselben linken Nahpunkt (~0,245 m), blieb bei
+`dry_run=true`/`allow_rs485=false` und beendete alle 24 Kinder mit einem
+Einzel-SIGINT sauber. Keine Tracebacks oder Gerätehandles blieben zurück.
+Der erste Shutdown-Race ist damit nicht reproduziert, aber nicht erklärt;
+der saubere Wiederholungslauf ersetzt ihn nicht rückwirkend.
+
 **Erneuter Vor-Ort-Vorlauf nach Nutzerfreigabe (23.09.):** Die anwesende Person
 bestätigte erreichbaren hardwired Not-Aus, personen-/tierfreien Bereich und
 physisch geklärten R9-Nahbereichsbefund. Auf dem Jetson wurde die unten

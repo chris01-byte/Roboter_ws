@@ -2,6 +2,28 @@
 
 ## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
 
+**Neues physisches Hindernis links (23.09. abends), nur motorlos:** Der linke
+VL53 erkannte wiederholt ~0,24–0,25 m, der rechte keinen Nahpunkt. Bei
+`dry_run=true`/`allow_rs485=false` ließ der bestehende WE-Collision-Monitor
+einen synthetischen Vorwärtswunsch von 0,08 m/s nur mit höchstens 0,024 m/s
+durch (SlowZone), nicht mit null. Das Mapping-Profil besitzt eine
+bewegungsabhängige Footprint-Approach-Zone; die ältere starre StopZone darf
+hier nicht unterstellt werden. Kein Motorstrom, keine reale Bewegung und kein
+Recovery-Nachweis. Den aus Dry-run resultierenden Odometrie-/Kartenstand nicht
+für eine Fahrt weiterverwenden.
+
+Der anschließende Einzel-SIGINT erzeugte bei `robot_map_manager` einen
+`take_message()`-RuntimeError und Exit 1; alle anderen Kinder stoppten sauber,
+alle Gerätehandles waren danach frei. Dieser Shutdown ist **nicht** als
+Stufe-1-artig sauber abzunehmen. Vor einer realen Fahrt den Race klären,
+frischen motorlosen Preflight mit überprüftem Fahrziel durchführen und das
+Hindernis nur in einer nachweislich sicheren Testanordnung verwenden. Keine
+Schwellen, Footprints oder Fahrtore abschwächen.
+Ein unmittelbar folgender motorloser Wiederholungslauf ohne synthetischen
+Fahrwunsch sah denselben linken Nahpunkt und stoppte alle 24 Kinder sauber,
+ohne Traceback oder offene Gerätehandles. Der erste Race bleibt ungeklärt;
+der zweite Lauf beweist nur, dass er nicht bei jedem Stopp auftritt.
+
 **Nachtrag nach Vor-Ort-Freigabe (23.09.):** Auf dem Jetson bestand ein erneuter
 passiver WE-Preflight mit Stufe-3-Explorer aus dem isolierten Präfix und allen
 anderen WE-Paketen aus der bestätigten Stufe-1/2-Kette. Der Stack lief mit

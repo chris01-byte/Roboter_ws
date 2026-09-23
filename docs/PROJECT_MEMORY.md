@@ -17,6 +17,41 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — WE-Stufe 3: linker Nahpunkt löst nur SlowZone aus; Shutdown-Race offen
+
+**Entscheidung:** Keine reale Fahrt aus dem neuen linken Hindernisaufbau
+freigeben. Ein Nahbereichs-Flag allein ist weder ein belegter Vollstopp noch
+ein sicherer Recovery-Pfad; der konkrete WE-Mapping-Monitor muss am Ausgang
+bewertet werden. Der unerwartete Kartenmanager-Exit beim Stop bleibt offen.
+
+**Grund / beobachtete Evidenz:** Der linke VL53 sah ~0,24–0,25 m, der rechte
+keinen Nahpunkt. Bei motorlosem synthetischem 0,08-m/s-Eingang gab der
+Collision Monitor höchstens 0,024 m/s aus, passend zur unveränderten
+30-%-SlowZone, nicht null. Der Test nutzte `dry_run=true` und
+`allow_rs485=false`; keine physische Bewegung. Beim Einzel-SIGINT starb
+`robot_map_manager` mit einem Humble-`take_message()`-RuntimeError; danach
+waren alle Prozesse und Gerätehandles frei. Der vorhandene RuntimeError-Guard
+in Quelle und Install ist bytegleich, deckte diesen Fall aber nicht ab.
+
+**Betroffene Dateien und Hardware:** Nur dokumentierter Testbefund; weder
+Sensor-, Collision-, Footprint-, Scope- noch Motorparameter geändert. Die
+lokale reale Geometrie und Sensordaten bleiben außerhalb des Repositorys.
+
+**Teststatus / offene Risiken:** Kein realer Stop-/Weiterfahrnachweis. Der
+Kartenmanager-Shutdown ist in diesem Vorlauf nicht sauber. Vor erneutem
+Realtest Race reproduzieren/klären und den vollständigen motorlosen Preflight
+in frischem SLAM-Kontext wiederholen.
+Ein unmittelbar folgender passiver Wiederholungszyklus mit gleichem linkem
+Nahpunkt und ohne synthetischen Fahrwunsch stoppte alle 24 Kinder sauber;
+Gerätehandles waren frei. Der erste Fehler ist damit intermittierend oder
+testablaufabhängig, nicht widerlegt.
+
+**Rückfallweg:** Stack aus und Stufe-3-Overlay in einer neuen Shell auslassen;
+der aktive Roboter-Install wurde nicht verändert. Das neue Hindernis vor einer
+anderen Testanordnung unbestromt entfernen oder repositionieren.
+
+---
+
 ## 2026-09-23 — WE-Stufe 3: lokalen Nav2-Abbruch nur mit positivem Beleg zurückstellen
 
 **Entscheidung:** Die vorhandene Explorer-/Nav2-/Task-Policy-Kette unterscheidet
