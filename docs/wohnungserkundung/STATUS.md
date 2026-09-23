@@ -9,6 +9,161 @@ unverändert. Der vorherige M3/U-Stand ist im
 
 ## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
 
+**Aktuelles Ergebnis des Umfahr-Folgeauftrags:** Frühzeitige Umfahrung einer
+dauerhaft stehenden, geometrisch umfahrbaren Barriere ist **gerätefrei mit
+echtem Nav2 und automatischer Explorerwahl nachgewiesen**. Anschließend wurde
+auch ein zweites automatisch gewähltes Ziel erfolgreich verarbeitet; derselbe
+Elternauftrag blieb aktiv. Der getrennte Fall „notwendiger Stopp und danach
+Befreiung“ scheitert weiterhin kontrolliert. **Stufe 3 insgesamt bleibt GELB.**
+Keine Hardware wurde geöffnet, kein realer Fahrversuch oder Deployment ausgeführt.
+
+**Codebefunde A/B, beide bestätigt:** Bei `a8710db` meldete die aktuelle
+Costmap eine alternative Verbindung zum Ziel, während der Nahkorridor ein
+Hindernis enthielt; `_wohnungserkundung_local_blocked_rechecked()` gab dennoch
+`false` zurück. Der neue Produktionsstand `90379d9` (Funktionsänderung
+`4a20dea`) verlangt eine frische, nach der Blockade empfangene Costmap mit
+derselben Rastergeometrie wie die exakt korrelierte Rohkarte. Die bestehende
+geodätische Evidenz wird auf der **Schnittmenge** aus Rohkarten-/Scope-Maske
+und nicht tödlichen, bekannten Costmap-Zellen berechnet. Start und Ziel dürfen
+nicht projiziert werden. Ein Umweg darf damit die Aufgabe freigeben, auch
+wenn der Direktkorridor weiterhin blockiert ist. Der Beleg liefert keine
+Fahrkommandos; Nav2 und seine Polygonprüfung bleiben verbindlich.
+
+Der reale VL53-Produzent erzeugt sowohl bei gültigen Fernmessungen außerhalb
+des 0,50-m-Nahfensters als auch bei vollständig ungültigen Messungen dieselbe
+leere Originalwolke. Das wurde mit seinen beiden reinen Produktionsmethoden
+ohne Treiberimport ausgeführt: Punktzahlen **0 / 0 / 64** für gültig fern /
+ungültig nah / gültig nah. Der alte Test-Nullpunkt verdeckte diese Mehrdeutigkeit.
+Empfangszeit, Sensorstempel, Punktzahl und Messgültigkeit sind jetzt getrennt:
+leer = frisch empfangen, Messgültigkeit **unbekannt**; Nullvektor/NaN/fehlerhaftes
+Layout = ungültig. Der unveränderte 0,8-s-Vertrag gilt bis zur Entscheidung
+auch für das tatsächliche Quellalter. Unbekannte, fehlende, zukünftige oder
+veraltete Quellen geben keine lokale Recovery frei. Leere Wolken sind kein
+Freiraum- oder Sensorgesundheitsbeleg.
+
+| Gezielter Nachweis | Ergebnis und Grenze |
+|---|---|
+| Festes Diagnoseziel, Barriere von Beginn an vorhanden | NavFn 119 Pfadpunkte, kein ungültiger Polygon-Sweep; unveränderter Controller erreicht das Ziel nach 2,69 m. Keine Aussage über autonome Auswahl. |
+| `explorer_bypass`, neues installiertes `explore` | Automatische Wahl `(3,475; 1,525)` → dauerhafte Barriere umfahren → A erfolgreich → neue Rohkarte bestätigt A-Aufgabe abgeschlossen → anderes Ziel automatisch gewählt **und erfolgreich** → Elternauftrag weiterhin aktiv. 3,253 m Gesamtweg, davon 0,453 m zum Folgeziel; maximal ein Kind, 0 m rückwärts. Alle geplanten und dicht abgetasteten gefahrenen Footprints kollisionsfrei/im Scope. Tatsächlicher gepaddeter Live-Footprint vor Fahrt abgeglichen. |
+| `stopped_bypass`, unveränderte Geometrie und Parameter | Neuer NavFn-Umweg vorhanden, dessen 111 Posen ohne Polygonverletzung; Controller verwirft später seine vorausberechnete Bewegung mit `detected collision ahead` und endet nach 1,5 s Fehlertoleranz. Raw-/Gate-/Smoother-/Monitor-Ausgang werden null; keine nachgeschaltete Sperre eines fortbestehenden Fahrwunsches. Linke Seite an der Endpose zwei Nahpunkte, rechte leer/unbekannt: Explorer bricht sicher ab. **Befreiung nicht bestanden.** |
+| `no_exit`, Barriere über gesamte Raumbreite | NavFn `ABORTED`, kein Pfad; Explorer sendet 0 Kindziele, 0 m Bewegung, Elternaktion endet am 10-s-Testbudget mit erklärtem Teilstand, nicht mit Vollabschluss. |
+| `blocked`, linke Blockade plus leere rechte Originalwolke | Genau ein terminales Kind, Elternabbruch statt ungeprüfter Recovery, 0 m weitere Bewegung nach dem Stopp. Der historische Nullpunkt-basierte „gesund“-Nachweis ist damit ausdrücklich ersetzt. |
+| Bestehender Prozessprüfer `local_blocked` / `local_no_exit`, Fake-Nav2 | A-Abbruch → B automatisch erfolgreich → B-Aufgabe durch Rohkarte abgeschlossen → A trotz **weiter belegtem Direktkorridor** über frische alternative Route wieder gewählt; maximal ein Kind. Ohne Alternative begrenzter Teilstand. Das ist Policy-, kein Fahrnachweis. |
+
+**Erstes Scheitern präzisiert:** Der beibehaltene `legacy_probe` reproduzierte
+den alten Controllerstopp bei synthetischer Pose `(1,126; 1,532)`, nur etwa
+0,09 m vor der gepaddeten Vorderkante zur Barriere. Das Ziel selbst hatte
+einen freien Footprint; im ersten Stoppfenster lag noch der ursprüngliche
+gerade Pfad vor. Der neue späte Stoppfall trennt dies weiter: Es gibt bereits
+einen zulässigen globalen Umweg, aber der Regler kann seine lokale Bewegung
+aus der erreichten Pose nicht kollisionsfrei ausführen. Die genaue nötige
+Reglerabstimmung ist damit **nicht** bewiesen; weder Lookahead noch Kollisions-
+oder Geduldsgrenzen wurden versuchsweise gelockert. Die frühe Umfahrung
+funktioniert mit der vorhandenen Nav2-Konfiguration.
+
+Zwei Fehler des erweiterten Prüfers wurden vor der Abnahme korrigiert:
+Plananfragen warten jetzt auf aktive Lifecycles statt bloße Serverexistenz;
+unveränderte Karten erhöhen nur `observed_maps`, nicht `accepted_maps`.
+Das erste zusätzliche Informationsfenster lag im alten Abschlussfenster;
+die endgültige Fixture besitzt von Anfang an zwei getrennte Fenster (unten).
+Hindernis, Footprint, Sicherheitsparameter und Erfolgskriterien wurden dabei
+nicht verändert. LiDAR und acht VL53-Strahlen verwenden dieselbe synthetische
+Wand-/Barrierengeometrie; die Nahsensorframes entsprechen der URDF.
+Ein Abschlusslauf meldete außerdem `cannot use Destroyable because destruction
+was requested`: Der Prüfer zerstörte seinen ROS-Knoten vor dem Ende des
+Executor-Threads. Im Prüfer wird der Executor jetzt vor der Knotenzerstörung
+beendet. Das behebt nicht den separat offenen Kartenmanager-Shutdown-Befund.
+Die anschließenden Läufe `fixed_bypass` und `no_exit` endeten ohne diese
+Ausnahme und ohne verbliebene eigene Nav2-/Explorerprozesse.
+
+**Build und Evidenzbindung:** 917 direkte Explorer-Tests und 917 registrierte
+`colcon test`-Tests bestanden, ebenso `git diff --check`; keine erneute
+Stufe-1/2-Gesamtprüfung. Produktionsquelle `90379d9`, finaler Prozessprüfer
+`d13a6c9`. Neues isoliertes Install:
+`/home/p/.local/share/amadeus/releases/we1-stage3-bypass-s8QMY8/install`.
+Kette: ROS Humble → bestätigte Stufe-1-Kette → Stufe 2 → dieses `explore`.
+Quelle/Install SHA-256 von `explore_node.py` jeweils
+`485435a0effe6c32efd74da4995a92584d6b01dff255f2010c6e003327fb8fe0`;
+Nav2- und Collision-Konfiguration bytegleich mit dem Stufe-1-Install.
+Der automatische Umfahrfall und die beiden gezielten bestehenden Prozessfälle
+bestanden auch gegen dieses Install. Lokale synthetische Evidenz:
+`/tmp/we-stage3-bypass-ywt3wj0n` (vollständiger automatischer Erfolg),
+`/tmp/we-stage3-bypass-yi9lljh7` (festes Ziel, finales Install/Prüfer),
+`/tmp/we-stage3-bypass-h5d1wnip` (unlösbarer Gegenfall, finales Install/Prüfer),
+`/tmp/we-stage3-bypass-3kjd16r6` (Stoppfehler inklusive Reglerbögen),
+`/tmp/we-stage3-nav2-itr_s561` (historische Diagnose),
+`/tmp/we-stage3-nav2-yehnnsum` (leere rechte Quelle).
+Rückfall: neues Präfix weglassen; vorhandene Installationen wurden nicht ersetzt.
+
+Reproduktion nur gerätefrei, aus diesem Themenworktree und ohne parallelen
+Prüfer in Domain 219 (jede Mode einzeln starten):
+
+```bash
+source /opt/ros/humble/setup.bash
+source /home/p/amadeus_slam_toolbox_ws/install/setup.bash
+source /home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash
+source /home/p/.local/share/amadeus/releases/we1-10e1858074e7-r1/install/local_setup.bash
+source /home/p/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923/install/local_setup.bash
+source /home/p/.local/share/amadeus/releases/we1-stage2-6fd36d5-20260923/install/local_setup.bash
+source /home/p/.local/share/amadeus/releases/we1-stage3-bypass-s8QMY8/install/local_setup.bash
+python3 tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py --mode fixed_bypass
+python3 tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py --mode explorer_bypass
+python3 tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py --mode no_exit
+# Erwarteter offener Abnahmefehler, kein Gruen-Nachweis:
+python3 tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py --mode stopped_bypass
+```
+
+**Noch nötige getrennte Arbeiten:** Für sichere Wiederfreigabe mit gesunder,
+aber leerer Originalwolke fehlt positive Produzentenevidenz. Betroffen wären
+`vl53_near_field_node.py`, sein öffentlicher Statusvertrag
+`robot_interfaces/msg/NearFieldStatus.msg` und die Verbraucher Explorer/Fahrtor.
+Die Gültigkeit müsste **vor** dem Nahbereichsfilter je Sensor mit demselben
+Messstempel ausgewiesen und für gültige Fernmessung, fehlende Messung und
+ungültige Qualität getrennt geprüft werden. Eine solche additive
+Sensorvertragserweiterung benötigt ein separat abgegrenztes und freigegebenes
+Schnittstellenpaket gemäß AGENTS; die heutigen Flags/-1-Distanzen belegen sie
+nicht. Der bestehende Fahrtor-Heartbeat allein belegt ebenfalls keine
+Messqualität. Für die Stoppbefreiung bleibt außerdem der vorhandene
+`robot_navigation`-Reglerpfad gezielt zu prüfen; keine zweite Navigation oder
+ungeprüfte Parameteränderung. Reale Abnahme bleibt bis Shutdownklärung,
+aktueller Platz-/Scope-Messung und neuem Vor-Ort-Auftrag gesperrt.
+
+**Folgeauftrag Umfahrung – vorab festgelegter Gerätefrei-Vergleich:** Basis
+PR #99 / `a8710db`, unverändert nach erneutem Fetch; eigener vorhandener
+Themenbranch, kein Hardwarezugriff. Die Diagnose verwendet den bestehenden
+Echt-Nav2-Prüfer in Domain 219. Synthetischer Freiraum:
+`x=0,15..4,85 m`, `y=0,25..2,75 m`; Scope `0..5 × 0..3 m`;
+Start `(0,85; 1,525; 0)`, festes **Diagnoseziel** `(3,30; 1,525; 0)`.
+Das unbewegliche Rechteck `x=2,00..2,30`, `y=1,325..1,725 m` bleibt
+während des gesamten Umfahrnachweises bestehen. Beidseits bleiben 1,075 m
+lichte Breite. Die reale gepaddete Kontur ist
+`x=-0,13..0,33`, `y=±0,25 m` (Umkreisradius 0,414 m); die Geometrie
+enthält damit Platz für einen Umweg und eine freie Drehkontur vor der Barriere.
+Die VL53-Testframes entsprechen der URDF-Montage `(0,290; ±0,095; 0,215)`.
+Nav2-, Footprint-, Collision- und Frischeparameter bleiben unverändert.
+
+Vorher festgelegte Abnahme: NavFn liefert einen Pfad um das bleibende
+Hindernis; jeder geplante und tatsächlich gefahrene Footprint bleibt im Scope
+und kollisionsfrei; der echte Controller führt über Fahrtor, Smoother und
+Collision Monitor zum Ziel (höchstens 120 s, 6 m Fahrweg, kein Rückwärtsgang).
+Pfad, Raw-/Gate-/Smoother-/Monitor-Ausgang und virtuelle Pose werden getrennt
+erfasst. Erst nach diesem isolierten Nachweis folgt automatische Explorerwahl
+mit demselben Hindernis und belegtem Fortschritt derselben Mission.
+Frühzeitige Umfahrung, notwendiger Stopp mit Befreiung und unlösbare Blockade
+sind getrennte Ergebnisse. Das feste Ziel belegt keine autonome Zielwahl.
+Der anschließende Explorerfall verwendet zwei von Beginn an vorhandene,
+getrennte unbekannte Informationsfenster bei `x=2,90..3,20` und
+`x=4,20..4,50`, jeweils `y=1,30..1,70 m`; nach dem ersten Ziel wird nur
+das erste Fenster beobachtet. Weder Zielposition noch Folgeaufgabe werden
+an den Explorer vorgegeben. Im separaten Stoppfall erscheint dieselbe
+Barriere bei `Basis-x >= 1,20 m`; sie bleibt danach dauerhaft stehen. Nach
+dem sensorisch ausgelösten Reglerstopp wird sie zusätzlich in der Rohkarte
+beobachtet. Für den unlösbaren Gegenfall versperrt dieselbe Wandstärke
+den gesamten Freiraum quer (`y=0,25..2,75`). Keine Parameteranpassung
+zwischen diesen Fällen.
+
+### Historische Ausgangsnachweise bis a8710db
+
 **Produktionsnaher, aber gerätefreier Nav2-Prozessprüfer (23.09.):** Der neue
 Prüfer `tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py` verwendet
 in der festen privaten DDS-Domain 219 den echten Stage-1/2/3-Explorer, den
@@ -53,7 +208,7 @@ Fall mit bleibendem Hindernis blieb die Basis nach insgesamt drei durch
 das Profil begrenzten Nav2-Kindzielen stehen und die Mission wartete auf
 eine sichere Alternative; maximal ein Kindziel war gleichzeitig aktiv.
 
-**Offen für GRÜN:** Der produktionsnahe `bypass`-Fall mit zwei unbelebten
+**Damals offen; frühe Umfahrung inzwischen oben geschlossen:** Der produktionsnahe `bypass`-Fall mit zwei unbelebten
 synthetischen Hindernispositionen stoppte sicher, fand aus der nahen Pose
 aber keinen ausführbaren Umweg zum ursprünglichen Ziel; der Controller
 meldete `Controller patience exceeded`. Deshalb sind Umfahrung bei dauerhaft
@@ -881,7 +1036,7 @@ wurde im isolierten Präfix erfolgreich gebaut und getestet.
 | WE-M0/B | **Stufe 1 grün:** Zielstand `5e3fe0a`, alle zehn seit Vollrelease `10e1858` geänderten Pakete und die tatsächliche Overlaykette sind eindeutig inventarisiert. Build, 1.155 direkte Tests, gemeinsame motorlose Zielsystemlast und zwei wiederholte saubere Gesamtstopps bestanden. | Das ist ein motorloser Zielsystemnachweis, keine Fahr- oder Hardwareabnahme. |
 | WE-M1 | Portalgedächtnis und In-Memory-Verträge softwaregeprüft. | Keine Hardwareaussage. |
 | WE-M2 | Automatische Rohkarten-, Portal-, Frontier-, Graph- und Aufgabenbildung softwaregeprüft. | Automatische Regionskorrektur bleibt konservativ; reale Karten offen. |
-| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und der Mehrraum-Rückweg sind gerätefrei geprüft. Der bestätigte Live-Pfad `SOURCE_INVALIDATED` → sicherer Stop → frische Auswahl ist zusätzlich mit einem Vertragsfall und 892 Explorer-Tests geprüft. | Der Replan-Fix ist noch nicht fahrend über mehrere Kartenrevisionen abgenommen. |
+| WE-M3 | Automatische Zielwahl, revisionssichere Kindziele, zweckgebundene Transite und Mehrraum-Rückweg sind gerätefrei geprüft. Der Stufe-3-Folgeauftrag belegt zusätzlich echte Nav2-Umfahrung einer bleibenden Barriere mit automatischem erfolgreichem Folgeauftrag und frische Umweg-Reaktivierung; 917 Explorer-Tests. | Befreiung aus notwendigem Stopp und eindeutige VL53-Messgültigkeit bei leerer Originalwolke fehlen; keine reale Stufe-3-Abnahme. |
 | WE-M4 | Der R9-Preflight, Rundblick, die reale Aufgaben-/Zielbildung und sichere Zielstopps sind nachgewiesen. | Aktuell blockiert ein persistenter linker Nahbereichsbefund an der Endpose. Erst physisch klären oder unbestromt auf eine vermessene freie Pose zurücksetzen; keine Mehrraumabnahme. |
 | WE-M5 | Versionsgebundener, atomarer WE-Metadatenspeicher und passive Wiederaufnahme über Kartenmanagerstatus sind im Mehrraum-Rückweg geprüft. Auf dem Jetson bestanden echter Kartenmanager-Save, gebundener WE-Save, Falschkartensperre und passives Laden derselben Karte ohne Ziel. | Reale Wiederaufnahme nach Lokalisierung und Portal-/Transit-ID-Nachweis mit echter Mehrraumkarte bleiben offen. |
 | WE-M6 | Der vereinbarte gerätefreie Mehrraum-/Unterbrechungs-/Fortsetzungsabschluss besteht einschließlich zweckgebundenem Rücktransit. | Reale Mehrraumkette, Unterbrechung/Wiederaufnahme und wiederholbarer Abschluss bleiben offen; der R9-Lauf endete vor diesem Nachweis sicher am Nahbereichsblocker. |
@@ -926,25 +1081,24 @@ gültiger Pose/Quelle und einem neuen ausdrücklichen `ExploreArea`-Auftrag.
 
 ## 5. Verbleibende konkrete Blocker und nächste Abnahme
 
-Im vereinbarten **gerätefreien Software- und motorlosen Stufe-1-Umfang ist nach
-der commit- und präfixgebundenen Inventur kein weiterer Blocker bekannt**. Der
-reale R9-Lauf hat den Fix jedoch noch nicht bis zum Abschluss abgenommen und
-endete an einem konkreten physischen Nahbereichsbefund. Das ist kein Anlass zu
-einer neuen WE-Architektur und kein Bestandteil dieser Stufe:
+Aktuell maßgeblich ist der Stufe-3-Umfahr-Folgeauftrag oben. Die historischen
+Stufe-1/2-Nachweise werden erhalten und nicht erneut vollständig durchlaufen.
 
-1. Den Stufe-1-Themenbranch und seinen PR reviewen; kein automatischer Merge
-   und kein Beginn von Stufe 2 in diesem Auftrag.
-2. Den linken Nahbereich an der R9-Endpose sichtbar prüfen, die Begrenzung
-   entfernen oder Amadeus unbestromt auf eine nachweislich freie, vermessene
-   Ausgangspose zurücksetzen; reale Geometrie bleibt außerhalb des Repositorys.
-3. Nach frischem Lifecycle-, Quellen-, TF-, Encoder-, Bus- und Safety-Preflight
-   erst mit neuem ausdrücklichem Auftrag über den Missionsmanager fortsetzen.
-   Chassis-/Portalprofil, Polygon-Nahbereichsvertrag und
-   Kollisionsüberwachung bleiben unverändert; Softwaretests sind keine
-   Hardwarefreigabe.
-4. Erst nach Auflösung dieses physischen Blockers den bereits freigegebenen
-   Umfang fahren; anschließend WE-M6 einschließlich realer
-   Unterbrechung/Wiederaufnahme wiederholt abnehmen.
+1. Den offenen PR #99 reviewen; kein automatischer Merge. Die frühe sichere
+   Umfahrung ist softwaregeprüft, der gesonderte Stopp-/Befreiungsfall nicht.
+2. Die fehlende positive Messgültigkeit bei leerer VL53-Originalwolke über
+   einen expliziten Produzenten-/Verbrauchervertrag schließen. Bis dahin
+   keine Recovery auf Grundlage eines Nullpunkts, Heartbeats oder `-1`-Abstands.
+3. Vor Hardwarezugriff den wieder aufgetretenen `robot_map_manager`-
+   `take_message()`-Shutdown-Race klären. Der aktuelle Auftrag erlaubt keinen
+   Gerätezugriff; ein sauberer gerätefreier Nav2-Stopp ersetzt diesen Befund nicht.
+4. Für eine spätere reale Abnahme fehlen Messwerte im aktuellen Kartenframe:
+   Startposition **und Orientierung**, Barrierenkontur, lichte Breite beider
+   Alternativkorridore, freier Footprint-Schwenkbereich und freier Auslauf sowie
+   ein daran gebundenes Scope-Polygon mit ausgeschlossenen Gefahrenbereichen.
+   Die synthetischen Koordinaten sind keine reale Scope-Freigabe. Erst nach
+   geeignetem motorlosem Aufbau und aktueller ausdrücklicher Vor-Ort-Freigabe
+   einen begrenzten Auftrag über den Missionsmanager ausführen. Keine Stufe 4.
 
 Automatische Regions-Split-/Merge-Entscheidungen bleiben absichtlich konservativ;
 ungeklärte Korrekturen dürfen keinen erfundenen Raumabschluss erzeugen. Manuelle

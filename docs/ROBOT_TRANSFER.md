@@ -1,5 +1,50 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: permanente Umfahrung softwaregeprüft, reale Übernahme offen (23.09.2026)
+
+Produktionsquellstand `90379d9`, Prozessprüfer `d13a6c9` auf
+`feature/we1-stufe3-local-recovery`, PR #99 weiterhin
+offen. Das neue **nur gerätefrei verwendete** Install liegt unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-bypass-s8QMY8/install`.
+Sourcereihenfolge: ROS Humble → bestätigte Stufe-1-Kette → Stufe 2 → dieses
+Präfix. `ros2 pkg prefix explore` und Dateivergleich belegen das neue Paket;
+Quell-/Install-SHA von `explore_node.py` jeweils
+`485435a0effe6c32efd74da4995a92584d6b01dff255f2010c6e003327fb8fe0`.
+Alle übrigen Pakete kommen aus den bisherigen Underlays; Nav2- und
+Collision-Monitor-Konfiguration wurden bytegleich mit Stufe 1 verglichen.
+Keine Roboterinstallation, kein reales Profil und kein Gerät wurden geändert.
+
+Die echte Nav2-Kette in DDS 219 umfuhr eine stehenbleibende synthetische
+Barriere mit automatisch gewähltem Explorerziel. Danach bestätigte eine neue
+Rohkarte den Frontierabschluss, ein anderer automatisch gewählter Auftrag
+wurde erfolgreich abgearbeitet und dieselbe Elternmission blieb aktiv.
+Live-Footprint, geplante/virtuell gefahrene Kontur, Ausgänge der Schutzkette,
+maximal ein Kindziel und 0 m Rückwärtsfahrt wurden überprüft. Das ist ein
+Softwarebeleg, keine physische Probefahrt. Der unlösbare Gegenfall blieb ohne
+Kindziel/Bewegung und endete mit erklärtem Teilstand.
+
+**Vor realer Übernahme weiterhin offen:**
+
+- Notwendiger Stopp mit anschließender Befreiung: frischer NavFn-Umweg
+  vorhanden, Regler stoppt aber wegen vorausberechneter Costmap-Kollision.
+  Keine Regler-/Sicherheitsgrenze versuchsweise ändern.
+- Leere VL53-Originalwolken belegen Empfang, aber keine Messgesundheit.
+  Gültige Fernmessung und ungültige Messung sind im heutigen Statusvertrag
+  ununterscheidbar. Der Explorer sperrt dann lokale Recovery. Ein eindeutiger
+  Sensorstempel-/Gültigkeitsvertrag mit den Verbrauchern ist gesondert nötig;
+  insbesondere ist der bisherige Fahrtor-Heartbeat kein Qualitätsnachweis.
+- Den bekannten Kartenmanager-SIGINT-Race klären und anschließend einen
+  geeigneten motorlosen Gesamtstart/-stopp nachweisen. Dieser Folgeauftrag
+  enthält keine Erlaubnis für Hardwarezugriff.
+- Aktuelle Startpose/Orientierung, Barrierenkontur, lichte Alternativbreiten,
+  freier Schwenkbereich und Auslauf vor Ort messen und an den aktuellen
+  Kartenframe/Scope binden. Keine synthetischen Maße als reale Freigabe nutzen.
+  Eine reale Fahrt braucht danach die aktuelle ausdrückliche Vor-Ort-Freigabe.
+
+Details, feste Diagnosegeometrie und konkrete Testgrenzen stehen ausschließlich
+im laufenden WE-STATUS. **Rückfall:** Neues Präfix weglassen; das vorherige
+isolierte Install und der aktive Roboterstand sind unverändert vorhanden.
+
 ## WE-1 Stufe 3: neues gerätefreies Nav2-Overlay, nicht auf Antrieb übernehmen (23.09.2026)
 
 Das zusätzliche Stage-3-`explore`-Install

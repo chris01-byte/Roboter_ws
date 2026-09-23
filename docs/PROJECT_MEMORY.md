@@ -17,6 +17,45 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — Stufe-3-Umweg belegt; Direktkorridor und VL53-Leere getrennt
+
+**Entscheidung:** Nach `a8710db` die Rückkehr einer blockierten Aufgabe an
+einen frischen geodätischen Weg auf der Schnittmenge von exakt gebundener
+Rohkarte/Scope und gleichgerasterter Nav2-Costmap binden. Der gerade
+Zielkorridor darf blockiert bleiben. Start-/Zielprojektion, fremde Raster,
+veraltete Daten und Wege außerhalb des Scopes geben die Aufgabe nicht frei.
+Der bestehende Nav2-Ausführungspfad bleibt unverändert.
+
+**Evidenz:** Die alte Wiederfreigabe lehnte einen belegten Umweg ab. Der
+gezielte Prozessfall wählt jetzt nach A-Abbruch und B-Fortschritt A erneut,
+obwohl sein Direktkorridor ein Hindernis behält. Separat umfuhr der echte
+Nav2-Controller eine dauerhaft stehende synthetische Barriere; automatische
+Explorerwahl, erster Frontierabschluss, erfolgreicher zweiter Auftrag und
+Fortsetzung desselben Elternauftrags sind gegen das neue Install belegt.
+Gesamtweg 3,253 m, Folgeziel 0,453 m, maximal ein Kind, keine Rückwärtsfahrt
+und keine geplante/gefahrene Polygonverletzung. Ein festes Diagnoseziel
+bestand zuvor separat. Nav2-/Collision-Parameter wurden nicht geändert.
+
+**Schnittstellengrenze:** Produktionsmethoden des VL53 erzeugen sowohl bei
+gültiger Fernmessung als auch bei ungültiger Messung null Originalpunkte.
+Die Test-Nullvektoren waren kein Gesundheitsbeleg. Der Explorer trennt
+Empfang, Quellalter, Messgültigkeit und Punktzahl; leere Wolken bleiben
+unbekannt und erlauben keine Recovery. Der echte Stoppfall findet einen
+geometrisch gültigen Umweg, scheitert aber an der lokalen Kollisionsprüfung
+des Reglers und anschließend an diesem fehlenden Sensorgültigkeitsbeleg.
+Die nötige Produzenten-/Statusvertragserweiterung und der Reglerbefund sind
+im maßgeblichen WE-Status konkret abgegrenzt; keine blinden Manöver ergänzen.
+
+**Dateien / Hardware / Tests:** Nur Explorer, zugehörige Tests und bestehende
+gerätefreie Prozessprüfer. 917 Pytests und 917 registrierte Colcon-Tests
+grün; gezielte Policy-/Umfahr-/Stillstandsprüfungen. Kein Hardwarezugriff,
+kein aktiver Installwechsel. Quelle `90379d9`, Prüfer `d13a6c9`, Präfix und Hash
+in `ROBOT_TRANSFER`. Stufe 3 bleibt wegen Stoppbefreiung, Sensorvertrag und
+fehlender realer Abnahme GELB. **Rückfall:** Neues Overlay nicht sourcen;
+der Ausgangsstand bleibt vorhanden, einschließlich seiner bekannten Fehler.
+
+---
+
 ## 2026-09-23 — WE-Stufe 3: Routenblockade nach echtem Nav2-Abbruch getrennt behandeln
 
 **Entscheidung:** Einen bereits terminalen Nav2-Abbruch auch dann als
