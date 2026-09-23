@@ -1796,6 +1796,30 @@ def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
 
 
+def test_we_route_blocked_task_waits_for_fresh_clear_costmap():
+    context = PortalMapContext('session-recheck', 'map-recheck', 'map')
+    _, candidate = _we_source_state_goal(context)
+    node = ExploreNode.__new__(ExploreNode)
+    node._global_costmap_received_at = 10.0
+    obstacle = {'present': True}
+    node._costmap_near_route_obstacle = (
+        lambda *_args: obstacle['present'])
+    pose = (0.85, 1.525, 0.0)
+
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        10.0, None, None, pose)
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        10.0, candidate, candidate, pose)
+    node._global_costmap_received_at = 11.0
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        10.0, replace(candidate, target_x_m=1.1), candidate, pose)
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        10.0, candidate, candidate, pose)
+    obstacle['present'] = False
+    assert node._wohnungserkundung_local_blocked_rechecked(
+        10.0, candidate, candidate, pose)
+
+
 def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')

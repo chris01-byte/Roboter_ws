@@ -3637,10 +3637,10 @@ class ExploreNode(Node):
                         ))
                 except FrontierGoalCandidateError:
                     staged = None
-            if local_blocked_since is not None and (
-                    staged is not candidate
-                    or self._global_costmap_received_at is None
-                    or self._global_costmap_received_at <= local_blocked_since):
+            if (local_blocked_since is not None
+                    and not self._wohnungserkundung_local_blocked_rechecked(
+                        local_blocked_since, staged, candidate,
+                        robot_pose)):
                 reason = 'nav2_local_blocked_until_fresh_clear_costmap'
             elif staged is None:
                 reason = 'nav2_costmap_route_unavailable'
@@ -3662,6 +3662,18 @@ class ExploreNode(Node):
                 recheck_condition='reassess_after_costmap_or_map_update',
             ))
         return tuple(filtered)
+
+    def _wohnungserkundung_local_blocked_rechecked(
+            self, blocked_since, staged, candidate, robot_pose) -> bool:
+        """Release a deferred task only after the *route* and goal clear."""
+        if (candidate is None or staged is None
+                or staged is not candidate
+                or self._global_costmap_received_at is None
+                or self._global_costmap_received_at <= blocked_since):
+            return False
+        return not self._costmap_near_route_obstacle(
+            (robot_pose[0], robot_pose[1]),
+            (candidate.target_x_m, candidate.target_y_m))
 
     def _forward_costmap_stage(
             self, robot_pose: Tuple[float, float, float]
