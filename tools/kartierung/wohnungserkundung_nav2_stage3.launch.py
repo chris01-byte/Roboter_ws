@@ -29,6 +29,12 @@ def generate_launch_description():
     ]
 
     return LaunchDescription([
+        *[Node(
+            package='tf2_ros', executable='static_transform_publisher',
+            name=f'we_stage3_vl53_{side}', output='screen',
+            arguments=['0.290', str(y), '0.215', '0', '0', '0',
+                       'base_link', f'vl53_{side}_link'])
+          for side, y in (('left', 0.095), ('right', -0.095))],
         Node(
             package='tf2_ros', executable='static_transform_publisher',
             name='we_stage3_map_odom', output='screen',

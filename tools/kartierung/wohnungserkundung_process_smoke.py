@@ -45,7 +45,8 @@ from rclpy.qos import (  # noqa: E402
     ReliabilityPolicy,
 )
 from sensor_msgs.msg import LaserScan, PointCloud2  # noqa: E402
-from std_msgs.msg import Bool, String  # noqa: E402
+from sensor_msgs_py.point_cloud2 import create_cloud_xyz32  # noqa: E402
+from std_msgs.msg import Bool, Header, String  # noqa: E402
 from tf2_ros import TransformBroadcaster  # noqa: E402
 
 from amadeus_map_identity import (  # noqa: E402
@@ -403,15 +404,11 @@ class SyntheticWorld(Node):
         self._odom_pub.publish(odom)
         self._estop_pub.publish(Bool(data=False))
         for pub in self._vl53_pubs.values():
-            cloud = PointCloud2()
-            cloud.header.stamp = stamp
-            cloud.header.frame_id = 'base_link'
-            cloud.height = 1
-            cloud.width = 1
-            cloud.point_step = 12
-            cloud.row_step = 12
-            cloud.data = bytes(12)
-            pub.publish(cloud)
+            # Explicit valid synthetic return, not the former zero-vector
+            # placeholder. Empty/invalid real measurements have separate tests.
+            pub.publish(create_cloud_xyz32(
+                Header(stamp=stamp, frame_id='base_link'),
+                [(0.45, 0.10, 0.05)]))
 
     def stop_telemetry(self):
         self.telemetry_pose = None
@@ -644,6 +641,14 @@ def _parameter_text(world):
         "wohnungserkundung_traversal_max_pose_interval_s": 0.5,
         "wohnungserkundung_traversal_max_scan_rejections": 4,
     }
+    if getattr(world, 'diagnostic_bypass', False):
+        # The large robot, not the small historical portal fixture. No Nav2
+        # or collision limit is overridden by this synthetic scenario.
+        parameters.update({
+            'wohnungserkundung_evidence_clearance_m': 0.28,
+            'wohnungserkundung_scope_clearance_m': 0.42,
+            'goal_timeout_s': 120.0,
+        })
     return json.dumps({"explore_node": {"ros__parameters": parameters}})
 
 
@@ -1678,9 +1683,12 @@ def _run_local_blocked_scenario(executor, log_directory):
         if first_history['retryable_failure_count'] != 1:
             raise AssertionError('Lokalblockade hat kein begrenztes Budget')
 
-        # After current Costmap evidence clears, the deferred A task may be
-        # reconsidered.  No externally requested ExploreArea goal is sent.
-        world.costmap_blocked_goal_xy = None
+        # A itself is free again, but a persistent obstacle still cuts the
+        # straight corridor from B toward A. The new Costmap has a detour;
+        # reactivation must use that route rather than demand a clear ray.
+        direction = 1.0 if first_target[0] > second_target[0] else -1.0
+        world.costmap_blocked_goal_xy = (
+            second_target[0] + direction * 0.55, second_target[1])
         for revision in range(21, 28):
             world.publish_revision(revision)
             if world.nav_goal_count >= 3:
@@ -1701,6 +1709,7 @@ def _run_local_blocked_scenario(executor, log_directory):
                 first_history['retryable_failure_count']),
             'second_task_state': 'completed',
             'reactivated_target': world.nav_targets[2],
+            'direct_corridor_obstacle_retained': True,
             'parent_continued_after_obstacle': not parent_result.done(),
             'command_message_count': world.command_count,
         }
