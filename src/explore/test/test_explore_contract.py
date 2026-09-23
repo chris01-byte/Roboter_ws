@@ -1612,6 +1612,35 @@ def test_exact_unconsumed_we_target_is_withheld_after_revision_change():
     assert node._current_wohnungserkundung_navigation_target() is None
 
 
+def test_reached_frontier_is_not_redispatched_while_map_resolution_pending():
+    context = PortalMapContext('session-pending', 'map-pending', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    intent.task_id = candidate.task_id
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=7,
+        fingerprint=candidate.source_fingerprint,
+        source_stamp_ns=candidate.source_stamp_ns)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = (intent, candidate)
+    node._wohnungserkundung_consumed_intent_id = None
+    node._wohnungserkundung_pending_frontier_resolution = (
+        candidate, SimpleNamespace())
+    node._wohnungserkundung_source_state = lambda *_args: SimpleNamespace(
+        current=True)
+
+    assert node._current_wohnungserkundung_navigation_target() is None
+    new_target = replace(candidate, target_x_m=1.2)
+    node._wohnungserkundung_navigation_snapshot = (intent, new_target)
+    assert node._current_wohnungserkundung_navigation_target() == (
+        intent, new_target)
+    node._wohnungserkundung_navigation_snapshot = (intent, candidate)
+    node._wohnungserkundung_pending_frontier_resolution = None
+    assert node._current_wohnungserkundung_navigation_target() == (
+        intent, candidate)
+
+
 def test_frontier_preview_uses_identical_fresh_raw_map_before_dispatch():
     context = PortalMapContext('session-m3n', 'map-m3n', 'map')
     intent, candidate = _we_source_state_goal(context)

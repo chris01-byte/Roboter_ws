@@ -1,5 +1,46 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 2: gerätefreie Frontierfortsetzung (23.09.2026)
+
+**Basis:** bestätigter Stufe-1-Stand `5e3fe0a` mit dessen unveränderter
+Overlaykette. Der Stufe-2-Branch `feature/we1-stufe2-replan-fortsetzung`
+ergänzt nur `explore` aus Produktionscommit `6fd36d5`. Isoliertes Install:
+`~/.local/share/amadeus/releases/we1-stage2-6fd36d5-20260923/install`.
+Es wird **nach** dem Stufe-1-Präfix gesourct; alle anderen Pakete bleiben auf
+ihrem in Stufe 1 bestimmten Präfix. `ros2 pkg prefix explore`, Python-Import
+und Dateihash bestätigten genau dieses neue Install. Weder die Standardkopie
+`/home/p/roboter_ws/install` noch ein aktiver Roboterdienst wurden ersetzt.
+
+Die neue gerätefreie Prozessprüfung hält Ziel A auf einer sicheren neuen
+Kartenrevision und auf einem reinen Zeitstempelduplikat aktiv. Wenn A durch
+eine echte belegte Zelle ungültig wird, folgt auf bestätigten Kindziel-Cancel
+automatisch Ziel B. B wird erfolgreich verarbeitet und seine Frontieraufgabe
+auf einer folgenden Karte abgeschlossen. Maximal ein Nav2-Kindziel war aktiv;
+`max_frontier_goals=1` im Test beweist, dass der A-Quellenstopp das
+Navigationsbudget nicht verbraucht. Ohne neue gültige Quelle erfolgt kein
+zweiter Versand und das Elternzeitbudget beendet den Auftrag kontrolliert.
+Der bestehende Sechs-Szenarien-Gesamtprozessprüfer bestand sowohl aus der
+Quelle als auch gegen das installierte Overlay; 893 Explorer-Pytests bestanden
+ebenfalls. Ein erster Install-Gesamtlauf hatte einen einmaligen Timeout im
+älteren Wiederaufnahmefall, der isoliert und im vollständigen Wiederholungslauf
+bestand. Die Ursache dieser Test-Zeitstreuung ist offen. Alle Prüfungen liefen
+ohne Gerätezugriff, Motorfreigabe oder Fahrbefehl.
+
+**Keine Fahrfreigabe:** Das ist kein realer Sensor-, Nav2- oder
+Hindernis-Recovery-Test. Der linke VL53-Nahbereichsbefund aus R9 bleibt
+ungeklärt. Vor einer neuen Fahrt sind Sichtprüfung oder unbestromtes
+Zurücksetzen auf eine vermessene freie Pose, erreichbarer hardwired Not-Aus,
+vollständiger neuer Preflight und eine neue ausdrückliche Freigabe nötig.
+Weder Scope noch Collision-, Footprint-, Frische- oder Sensorgrenzen wurden
+gelockert. Stufe 3 wurde nicht begonnen.
+
+**Rückfall:** Frische Shell öffnen und das Stufe-2-Präfix nicht sourcen.
+Stufe 1 bleibt unverändert; keine Geräte- oder Installationsdatei muss
+zurückkopiert werden. Den älteren Explorer wegen der dokumentierten
+Wiedervergabe eines erreichten Frontierziels nicht als Fahrkandidaten nutzen.
+
+---
+
 ## WE-1 Stufe 1: reproduzierbarer motorloser Zielstand (23.09.2026)
 
 **Geprüfter Runtime-Code:**
