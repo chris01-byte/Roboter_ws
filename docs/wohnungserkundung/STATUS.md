@@ -1,11 +1,75 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · commit- und präfixgebundener Zielstand `5e3fe0a` · zwei motorlose Gesamtstarts/-stopps bestanden · R9-Nahbereichsbefund bleibt ausschließlich für eine spätere Fahrt offen · 2026-09-23**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · Basis `5e3fe0a`, Explorer-Korrektur `6fd36d5` · keine Fahrfreigabe · 2026-09-23**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 2 – Frontierfortsetzung bei Kartenänderungen, 2026-09-23
+
+Die Stufe-2-Arbeit zweigt mit `feature/we1-stufe2-replan-fortsetzung` direkt
+vom bestätigten Stufe-1-Branch bei `93f8522` ab. Dessen produktiver
+Quellstand ist `5e3fe0a`; die einzige Produktionsänderung liegt in `explore`
+bei `6fd36d5`. Das zusätzliche isolierte Install
+`~/.local/share/amadeus/releases/we1-stage2-6fd36d5-20260923/install`
+enthält ausschließlich dieses neu gebaute Paket. Die Overlaykette ist die
+unten für Stufe 1 dokumentierte Reihenfolge mit diesem Stufe-2-Install **als
+letztem Präfix**. `ros2 pkg prefix explore` und der Python-Import lösen dort
+auf; Quell- und Install-Datei `explore_node.py` haben denselben SHA-256-Wert
+`b7d2853d3f56c53ec4d6cf2a4328fea5ea3658a75b76a2937e2ce3e8247d47ae`.
+Alle anderen Pakete, Profile und Sicherheitsparameter bleiben auf Stufe 1.
+
+Der bestehende M3/U-Gesamtprozessprüfer wurde um zwei gerätefreie
+Frontierfälle erweitert. Im Fortsetzungsfall hält Ziel A eine inhaltlich neue,
+aber sichere Kartenrevision und danach eine bytegleiche Karte mit neuem
+Zeitstempel ohne Cancel aus. Erst ein belegtes Hindernis am festen Ziel A
+bewirkt genau einen bestätigten Nav2-Cancel. Die vorhandene Policy wählt
+automatisch das andere Ziel B; B endet erfolgreich und wird erst durch eine
+nachfolgende Rohkarte als abgeschlossene Frontieraufgabe bestätigt. Der
+Elternauftrag bleibt danach aktiv. Der Fall begrenzt `max_frontier_goals` auf
+eins: B könnte nicht starten, wenn `SOURCE_INVALIDATED` dieses Zielbudget
+verbrauchen würde. Für A blieben `attempt_count=0` und
+`retryable_failure_count=0`. Zwei Kindziele waren nie gleichzeitig aktiv; die
+synthetischen Fahrbefehlsthemen blieben bei null Nachrichten.
+
+Ein zweiter Fall entzieht nach sicherem A-Cancel die gültige Kartenquelle.
+Es wird kein zweites Kindziel gesendet; die Quelle wird als unfrisch markiert
+und der Elternauftrag endet erst am Gesamtzeitbudget als Teilstand. Die
+Testfrist für diese absichtlich ausbleibende Quelle ist strenger als die
+Produktionsfrist; Produktionsfrische-, Scope-, Footprint- und
+Collision-Grenzen wurden nicht verändert. In der ersten Prozessprüfung wurde
+außerdem eine unnötige Wiedervergabe desselben *bereits erreichten*
+metrischen B-Ziels sichtbar. Der kleine Integrationsfix sperrt nur dieses
+identische Ziel, solange sein Frontierabschluss auf eine neue Rohkarte wartet;
+ein anders belegtes metrisches Ziel derselben Aufgabe bleibt zulässig.
+
+Die vollständige Explorer-Testsuite bestand mit **893 Tests**. Der erweiterte
+Gesamtprozessprüfer bestand aus dem Quellbaum und im Wiederholungslauf auch
+gegen den tatsächlich installierten Explorer mit **sechs Szenarien**:
+Portal-Erfolg, Portal-Fault, Mehrraum-/Rückweg, Wiederaufnahme, Frontier-Replan
+mit Fortschritt und fehlende Folgequelle mit Gesamtbudget. Ein erster
+Install-Gesamtlauf hatte im älteren Wiederaufnahmefall einmal einen Timeout
+beim Traversal-Status; der isolierte Wiederaufnahmefall und der komplette
+erneute Install-Gesamtlauf bestanden. Die Ursache dieser einmaligen
+Prüfer-Zeitstreuung ist nicht belegt; sie bleibt als Teststabilitätsrisiko
+dokumentiert, nicht als bestandene Wiederholung verschwiegen. Es wurde weder ein
+Roboter-Launchprofil gestartet noch ein Gerät geöffnet oder ein echter
+Fahrbefehl gesendet. Das lokale Wohnungsprofil und reale Karten/Bags wurden
+nicht verwendet; die frühere R9-Nahbereichsbeobachtung bleibt offen.
+
+**Ergebnis Stufe 2:** Die gerätefreie Softwareabnahme ist erfüllt. Der nächste
+erlaubte Schritt ist Review des gestapelten Stufe-2-PRs; keine Fahrt und keine
+Stufe 3 folgen daraus. Eine reale Fahrt erfordert eine neue ausdrückliche
+Freigabe der anwesenden Person und die zuvor dokumentierte physische
+Nahbereichs-/Scope-Prüfung.
+
+**Rückfall:** Neue Shell ohne das Stufe-2-Präfix öffnen. Das Stufe-1-Install
+und der bisherige Roboterstand bleiben unverändert. Nach Rückfall ist der
+erneute Versand eines bereits erreichten identischen Frontierziels wieder als
+offener Fehler zu behandeln; für eine spätere Fahrt keine WE-Navigation aus
+diesem alten Stand freigeben.
 
 ## Stufe 1 – eindeutiger motorloser Laufzeitstand, 2026-09-23
 

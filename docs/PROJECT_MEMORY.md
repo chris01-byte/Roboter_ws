@@ -17,6 +17,53 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — WE-Stufe 2: Frontier-Replan muss echte Fortsetzung belegen
+
+**Entscheidung:** Die vorhandene WE-Navigation behält ein sicher und
+erreichbar gebliebenes metrisches Ziel trotz Kartenrevision oder bloß neuem
+Zeitstempel. Nach echter Quelleninvalidierung stoppt sie das Kindziel und
+wartet auf eine neue Policywahl. Ein bereits erfolgreich erreichtes
+identisches Frontierziel wird bis zur neuen Rohkartenauflösung nicht erneut
+als Kindziel versendet; ein anders belegtes Ziel bleibt möglich.
+
+**Grund / beobachtete Evidenz:** Der bisherige `SOURCE_INVALIDATED`-Unit-Test
+bewies nur den Replan-Status vor einem Eltern-Cancel. Der erweiterte echte
+Explorer-Prozessprüfer zeigt mit synthetischer ROS-Karte und Fake-Nav2 die
+vollständige Kette A laufend → A sicher storniert → B automatisch gesendet → B
+erfolgreich → B-Aufgabe auf neuer Karte abgeschlossen, während der
+Elternauftrag aktiv bleibt. Mit `max_frontier_goals=1` belegt B zugleich, dass
+der Quellenstopp keinen Nav2-/Zielversuch verbraucht. Der erste neue Prüflauf
+zeigte eine unnötige erneute Vergabe desselben erreichten B-Ziels; die enge
+Integrationssperre beseitigte genau diesen Fall. Der Gegenfall ohne frische
+Folgequelle sendet kein B und endet am Gesamtzeitbudget.
+
+**Betroffene Dateien und Hardware:** Nur `explore_node.py`, dessen Vertragstest
+und der bestehende Prozessprüfer sind funktional betroffen. Der Code wurde
+als einzelnes `explore`-Paket in einem eigenen Overlay auf dem bestätigten
+Stufe-1-Präfix gebaut. Keine Hardware wurde geöffnet, keine Motorfreigabe
+veranlasst und kein reales Wohnungsprofil ins Repository übernommen. Scope-, Sensor-,
+Frische-, Footprint- und Collision-Konfigurationen bleiben unverändert.
+
+**Teststatus:** 893 Explorer-Pytests und der gesamte gerätefreie
+Sechs-Szenarien-Prozessprüfer aus dem Quellbaum und dem Stufe-2-Install
+bestanden. Der installierte Explorer löst aus dem neuen Präfix auf und ist
+bytegleich mit der Quelle. Ein erster Install-Gesamtlauf meldete einmal einen
+Timeout des älteren Wiederaufnahme-Traversal-Status; dessen isolierte
+Wiederholung und der zweite vollständige Install-Gesamtlauf bestanden.
+
+**Offene Risiken:** Die einmalige Zeitstreuung des älteren Prozessfalls hat
+keine bestimmte Ursache; bei erneuter Reproduktion ist sie gesondert zu
+untersuchen. Es gibt keine reale Fahrabnahme dieser Stufe. Der reale
+linke VL53-Nahbereichsbefund aus R9 ist vor jeder späteren Bewegung vor Ort
+zu klären; anschließend wären neuer Preflight und ausdrückliche Freigabe
+erforderlich. Mehrraumfahrt und Hindernis-Recovery gehören nicht zu Stufe 2.
+
+**Rückfallweg:** Neue Shell ohne das Stufe-2-Overlay öffnen und WE-Navigation
+des älteren Stands bis zur erneuten Prüfung nicht für eine Fahrt freigeben.
+Stufe-1-Install, lokale Arbeitskopie und Geräte bleiben unverändert.
+
+---
+
 ## 2026-09-23 — WE-Stufe 1 an Quellcommit und Laufzeitpräfix gebunden
 
 **Entscheidung:** Der reproduzierbare motorlose WE-Ausgangsstand ist der
