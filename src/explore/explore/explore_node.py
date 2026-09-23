@@ -2751,11 +2751,57 @@ class ExploreNode(Node):
             (candidate.target_x_m, candidate.target_y_m),
             (pose[0], pose[1]),
         )
-        if checked is None or checked[1]:
+        if (checked is None or checked[1]
+                or self._costmap_near_route_obstacle(
+                    (pose[0], pose[1]),
+                    (candidate.target_x_m, candidate.target_y_m))):
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_local_blocked_tasks[
                     candidate.task_id] = self._global_costmap_received_at
             return True
+        return False
+
+    def _costmap_near_route_obstacle(self, robot_xy, target_xy) -> bool:
+        """Prove a lethal near-field cell on the goalward corridor.
+
+        A controller can stop on an obstacle *along the route* while the
+        metric goal itself stays free. This predicate only classifies an
+        already-terminal Nav2 child; it never creates movement permission.
+        """
+        costmap = getattr(self, '_global_costmap', None)
+        if costmap is None or costmap.header.frame_id != self._global_frame:
+            return False
+        info = costmap.info
+        if (info.width <= 0 or info.height <= 0
+                or not math.isfinite(info.resolution)
+                or info.resolution <= 0.0):
+            return False
+        if len(costmap.data) != info.width * info.height:
+            return False
+        dx = target_xy[0] - robot_xy[0]
+        dy = target_xy[1] - robot_xy[1]
+        length = math.hypot(dx, dy)
+        if not math.isfinite(length) or length <= 0.0:
+            return False
+        forward_x, forward_y = dx / length, dy / length
+        robot_col, robot_row = self._world_to_grid(
+            robot_xy[0], robot_xy[1], info)
+        radius = int(math.ceil(0.75 / info.resolution)) + 1
+        for row in range(max(0, robot_row - radius),
+                         min(info.height, robot_row + radius + 1)):
+            offset = row * info.width
+            for col in range(max(0, robot_col - radius),
+                             min(info.width, robot_col + radius + 1)):
+                if costmap.data[offset + col] < 99:
+                    continue
+                cell_x, cell_y = self._grid_to_world(col, row, info)
+                relative_x = cell_x - robot_xy[0]
+                relative_y = cell_y - robot_xy[1]
+                along = relative_x * forward_x + relative_y * forward_y
+                lateral = abs(
+                    relative_x * forward_y - relative_y * forward_x)
+                if 0.15 <= along <= 0.75 and lateral <= 0.35:
+                    return True
         return False
 
     def _on_odom(self, msg: Odometry):

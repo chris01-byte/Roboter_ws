@@ -1752,6 +1752,50 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
 
 
+def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
+    context = PortalMapContext('session-route', 'map-route', 'map')
+    _, candidate = _we_source_state_goal(context)
+    candidate = replace(candidate, target_x_m=2.375, target_y_m=1.525)
+    node = ExploreNode.__new__(ExploreNode)
+    now = time.monotonic()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_local_blocked_tasks = {}
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_estop_received_at = now
+    node._wohnungserkundung_vl53_received_at = {
+        'left': now, 'right': now}
+    node._door_lidar_scan_snapshot = lambda: {
+        'received_at': now, 'ranges': np.ones(720)}
+    node._door_lidar_min_points = 200
+    node._robot_pose_sample = lambda: ((0.85, 1.525, 0.0), 0.1)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._global_costmap_received_at = now
+    node._map_timeout_s = 5.0
+    node._global_frame = 'map'
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
+    costmap = OccupancyGrid()
+    costmap.header.frame_id = 'map'
+    costmap.info.width = 100
+    costmap.info.height = 60
+    costmap.info.resolution = 0.05
+    costmap.info.origin.orientation.w = 1.0
+    cells = np.zeros((60, 100), dtype=np.int8)
+    cells[30, 24] = 100  # 0.375 m vor der Basis, in Zielrichtung.
+    costmap.data = cells.ravel().tolist()
+    node._global_costmap = costmap
+
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    cells[44, 24] = 100  # Nur seitlich: kein lokaler Beweis fuer dieses Ziel.
+    cells[30, 24] = 0
+    costmap.data = cells.ravel().tolist()
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    cells[30, 24] = 100
+    costmap.data = cells.ravel().tolist()
+    node._wohnungserkundung_estop = True
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+
+
 def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
