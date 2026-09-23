@@ -204,7 +204,7 @@ def _box_ranges(x_m, y_m, *, yaw_rad=0.0, count=720):
 
 
 class SyntheticWorld(Node):
-    def __init__(self, scenario, persistence_directory=None):
+    def __init__(self, scenario, persistence_directory=None, *, fake_nav=True):
         super().__init__(f"we_m3u_world_{scenario}")
         self.scenario = scenario
         self.multiroom = scenario == "multiroom"
@@ -227,7 +227,9 @@ class SyntheticWorld(Node):
         self.scan_topic = f"{prefix}/scan"
         self.scan_command_topic = f"{prefix}/scan_command"
         self.door_command_topic = f"{prefix}/door_command"
-        self.nav_action = f"{prefix}/navigate_to_pose"
+        self.nav_action = (
+            f"{prefix}/navigate_to_pose" if fake_nav else
+            "/navigate_to_pose")
         self.latest_shadow = None
         self.latest_explore = None
         self.command_count = 0
@@ -279,15 +281,17 @@ class SyntheticWorld(Node):
             Twist, self.scan_command_topic, self._on_command, 10)
         self.create_subscription(
             Twist, self.door_command_topic, self._on_command, 10)
-        self._nav_server = ActionServer(
-            self,
-            NavigateToPose,
-            self.nav_action,
-            execute_callback=self._execute_nav,
-            goal_callback=self._accept_nav,
-            cancel_callback=self._cancel_nav,
-            callback_group=ReentrantCallbackGroup(),
-        )
+        self._nav_server = None
+        if fake_nav:
+            self._nav_server = ActionServer(
+                self,
+                NavigateToPose,
+                self.nav_action,
+                execute_callback=self._execute_nav,
+                goal_callback=self._accept_nav,
+                cancel_callback=self._cancel_nav,
+                callback_group=ReentrantCallbackGroup(),
+            )
         self._explore_client = ActionClient(
             self,
             ExploreArea,
@@ -537,15 +541,22 @@ def _parameter_text(world):
         "src/explore/behavior_trees/navigate_to_pose_no_recovery.xml")
     parameters = {
         "map_topic": world.map_topic,
-        "global_costmap_topic": world.costmap_topic,
-        "odom_topic": f"/we_m3u/{world.scenario}/odom_unused",
+        "global_costmap_topic": (
+            "/global_costmap/costmap" if getattr(world, "real_nav", False)
+            else world.costmap_topic),
+        "odom_topic": (
+            "/odom" if getattr(world, "real_nav", False)
+            else f"/we_m3u/{world.scenario}/odom_unused"),
         "nav_action_name": world.nav_action,
         "wohnungserkundung_estop_topic": (
-            f'/we_m3u/{world.scenario}/estop'),
+            '/we_stage3/estop' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/estop'),
         "wohnungserkundung_vl53_left_topic": (
-            f'/we_m3u/{world.scenario}/near_field/left/points'),
+            '/near_field/left/points' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/left/points'),
         "wohnungserkundung_vl53_right_topic": (
-            f'/we_m3u/{world.scenario}/near_field/right/points'),
+            '/near_field/right/points' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/right/points'),
         "status_topic": world.explore_status_topic,
         "visualize": False,
         "behavior_tree": str(safe_bt),
@@ -553,8 +564,10 @@ def _parameter_text(world):
         "portal_crossing_enabled": False,
         "return_to_start": False,
         "replan_period_s": 0.05,
-        "goal_timeout_s": 10.0,
+        "goal_timeout_s": (
+            100.0 if getattr(world, "real_nav", False) else 10.0),
         "overall_timeout_s": (
+            180.0 if getattr(world, "real_nav", False) else
             60.0 if world.multiroom else
             45.0 if world.scenario == 'local_blocked' else 30.0),
         "nav_cancel_timeout_s": 1.5,
