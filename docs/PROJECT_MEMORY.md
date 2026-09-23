@@ -17,6 +17,53 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — WE-Stufe 1 an Quellcommit und Laufzeitpräfix gebunden
+
+**Entscheidung:** Der reproduzierbare motorlose WE-Ausgangsstand ist der
+Quellbaum `5e3fe0a084b9b46809e25715d8bdca4c7bd408a4` mit einem isolierten
+Zehn-Paket-Overlay über dem vollständigen Release `10e1858`, dem gepatchten
+STL-27L-Treiber und dem vorhandenen gepatchten `slam_toolbox`. Der historische
+R9-Neun-Paket-Mischstand wird nicht als Stufe-1-Ausgangsstand weiterverwendet.
+
+**Grund / beobachtete Evidenz:** R9 hatte gezeigt, dass der vorhandene
+Kartenmanager-Fix `5f821b8` im zunächst verwendeten Overlay fehlen konnte.
+Der neue Abgleich ergab, dass zwischen Vollrelease und Zielcommit genau zehn
+ROS-Pakete geändert wurden; exakt diese zehn lösen über `ros2 pkg prefix` aus
+dem neuen Install auf. Laufzeitdateien in Quelle und Install sind identisch.
+Alle bestätigten WE-Korrekturen sind Vorfahren des Zielcommits. Zwei
+vollständige motorlose Starts lieferten aktive Nav2-/Collision-Lifecycles,
+frische Karte, TF, LiDAR und beide VL53 sowie Explorer- und Safety-Status.
+RS485 blieb gesperrt, alle Motorwerte und nichtnulligen Fahrbefehle blieben
+null. Beide Einzel-SIGINT-Stopps endeten ohne Traceback oder hängen gebliebenen
+Gerätehandle.
+
+**Betroffene Dateien und Hardware:** Dokumentiert sind der isolierte Install
+`~/.local/share/amadeus/releases/we1-stage1-5e3fe0a-20260923`, die bestehende
+Overlaykette und das lokale WE-Profil nur über Pfad und Hash. Es wurden keine
+Produktionsinstallation, keine reale Geometrie und keine Sicherheitsgrenze
+geändert. LiDAR und VL53 wurden nur lesend betrieben; `base_hardware` lief im
+Dry-run mit `allow_rs485=false`.
+
+**Teststatus:** Zehn-Paket-Build bestanden; 1.002 registrierte Colcon-Tests in
+den Paketen mit Testregistrierung und 1.155 direkte Pytests bestanden. Zwei
+motorlose Gesamtzyklen bestanden mit etwa 10 Hz LiDAR, 1 Hz Karte und je etwa
+4 Hz VL53. Sämtliche Prozesse und LiDAR-, RS485- sowie I²C-Handles waren nach
+jedem Stopp frei. Zwei frühere, nicht gewertete Vorläufe mit fehlerhafter
+DDS-Testkonfiguration sind vollständig erklärt und wurden in der zulässigen
+Domain 217 erfolgreich wiederholt.
+
+**Offene Risiken:** Das ist keine Fahr- oder Hardwareabnahme. Der reale
+R9-Nahbereichsbefund an der Endpose bleibt vor jeder späteren Bewegung physisch
+zu klären; hardwired Not-Aus, freie Umgebung und neue ausdrückliche
+Fahrfreigabe bleiben Pflicht. Stufe 2 wurde nicht begonnen.
+
+**Rückfallweg:** Eine frische Shell verwenden und das Stufe-1-Overlay nicht
+sourcen. Vollrelease, alte Overlays, lokale Arbeitskopie, Karten und Profile
+blieben unverändert; es ist keine Datei zurückzukopieren und kein Gerät neu zu
+konfigurieren.
+
+---
+
 ## 2026-09-21 — Reale WE-Fortsetzung braucht festes Ziel und zusammenhängenden Scope
 
 **Entscheidung:** Ein einmal gesendetes Frontierziel bleibt bei neueren
