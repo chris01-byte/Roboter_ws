@@ -1216,6 +1216,26 @@ def _run_resume_scenario(executor, log_directory, persistence_directory):
             "nav_goal_count": world.nav_goal_count,
             "command_message_count": world.command_count,
         }
+    except Exception as error:
+        current = processes[-1]
+        current[1].flush()
+        try:
+            log_tail = Path(current[1].name).read_text(
+                encoding="utf-8", errors="replace")[-6000:]
+        except OSError:
+            log_tail = "<Log nicht lesbar>"
+        diagnostics = json.dumps({
+            "process_returncode": current[0].poll(),
+            "nav_goals": world.nav_goal_count,
+            "nav_cancels": world.nav_cancel_count,
+            "nav_terminal": world.nav_terminal,
+            "latest_shadow": world.latest_shadow,
+            "latest_explore": world.latest_explore,
+        }, sort_keys=True)
+        raise RuntimeError(
+            f"WE-Wiederaufnahme fehlgeschlagen: {error}\n"
+            f"--- Diagnosen ---\n{diagnostics}\n"
+            f"--- Explorer-Log ---\n{log_tail}") from error
     finally:
         for process, handle, parameter in processes:
             if process.poll() is None:
@@ -1328,6 +1348,13 @@ def _run_frontier_replan_scenario(executor, log_directory):
                 and task.get("state") == "completed"
                 for task in (world.latest_shadow or {}).get("tasks", [])),
             7.0, "belegter Frontierfortschritt nach Ziel B")
+        first_history = next(
+            entry for entry in (world.latest_explore or {}).get(
+                "wohnungserkundung", {}).get("history", [])
+            if entry.get("task_id") == first_task)
+        if (first_history["attempt_count"] != 0
+                or first_history["retryable_failure_count"] != 0):
+            raise AssertionError("Quellenstopp verbrauchte Nav2-Fehlerbudget")
         if world.nav_goal_count != 2 or world.nav_max_active_count != 1:
             raise AssertionError("Replan erzeugte eine Zielschleife")
         if world.command_count:
@@ -1341,6 +1368,9 @@ def _run_frontier_replan_scenario(executor, log_directory):
             "nav_cancel_count": world.nav_cancel_count,
             "nav_max_active_count": world.nav_max_active_count,
             "second_task_state": "completed",
+            "invalidated_task_attempt_count": first_history["attempt_count"],
+            "invalidated_task_retryable_failure_count": (
+                first_history["retryable_failure_count"]),
             "parent_continued_after_second_child": not parent_result.done(),
             "command_message_count": world.command_count,
         }
@@ -1420,7 +1450,10 @@ def _run_frontier_no_source_scenario(executor, log_directory):
         world.wait_for(parent_result.done, 10.0,
                        "Begrenzung durch Gesamtmissionsbudget")
         action_result = parent_result.result()
-        if action_result is None or action_result.status != 4:
+        if (
+                action_result is None
+                or action_result.status != 4
+                or "budget" not in action_result.result.message.lower()):
             raise AssertionError(
                 f"Kein kontrollierter Teilabschluss: {action_result}")
         if world.nav_goal_count != 1 or world.nav_cancel_count != 1:
@@ -1445,7 +1478,9 @@ def _run_frontier_no_source_scenario(executor, log_directory):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--scenario", choices=("all", "frontier_replan", "frontier_no_source"),
+        "--scenario", choices=(
+            "all", "positive", "fault", "multiroom", "resume",
+            "frontier_replan", "frontier_no_source"),
         default="all")
     args = parser.parse_args()
     rclpy.init()
@@ -1456,13 +1491,16 @@ def main():
         with tempfile.TemporaryDirectory(prefix="we-m3u-process-") as path:
             log_directory = Path(path)
             results = []
-            if args.scenario == "all":
+            if args.scenario in {"all", "positive", "fault"}:
                 results.extend(
                     _run_scenario(executor, scenario, log_directory)
-                    for scenario in ("positive", "fault"))
+                    for scenario in ("positive", "fault")
+                    if args.scenario in {"all", scenario})
+            if args.scenario in {"all", "multiroom"}:
                 results.append(_run_multiroom_scenario(
                     executor, log_directory,
                     log_directory / "we-multiroom-state"))
+            if args.scenario in {"all", "resume"}:
                 results.append(_run_resume_scenario(
                     executor, log_directory, log_directory / "we-state"))
             if args.scenario in {"all", "frontier_replan"}:
