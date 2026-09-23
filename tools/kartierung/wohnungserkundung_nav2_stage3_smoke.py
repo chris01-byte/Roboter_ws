@@ -333,17 +333,37 @@ def _run_case(world):
                     12.0, 'Alternative B automatisch gestartet')
                 world.wait_for(lambda: nav_failures() >= 2, 15.0,
                                'zweites Ziel bei weiter bestehender Blockade')
-                time.sleep(0.6)
-                if (parent_result.done() or world.nav_active_max > 1
-                        or world.travel_m - travel_before_clear > 0.025):
+                time.sleep(3.0)
+                nav_log.flush()
+                dispatched = (directory / 'nav2.log').read_text(
+                    encoding='utf-8', errors='replace').count(
+                        'Begin navigating from current location')
+                partial = False
+                if parent_result.done():
+                    action_result = parent_result.result()
+                    message = (
+                        action_result.result.message.lower()
+                        if action_result is not None else '')
+                    partial = 'budget' in message and 'hilfe' in message
+                if (world.nav_active_max > 1
+                        or world.travel_m - travel_before_clear > 0.025
+                        or dispatched > 3
+                        or (parent_result.done() and not partial)):
                     raise AssertionError(
-                        'Blockade beendete Mission, konkurrierte oder '
-                        'fuhr weiter')
+                        'Blockade fuehrte zu unsicherer Fahrt, '
+                        'Kindzielkonkurrenz oder Systemabbruch: '
+                        f'parent={parent_result.done()}, '
+                        f'max_active={world.nav_active_max}, '
+                        f'delta_m={world.travel_m - travel_before_clear:.3f}, '
+                        f'goals={dispatched}, '
+                        f'phase={(world.latest_explore or {}).get("phase")}')
                 print(json.dumps({
                     'obstacle_mode': 'blocked',
                     'nav_active_max': world.nav_active_max,
                     'nav_failures': nav_failures(),
+                    'nav_goal_count': dispatched,
                     'parent_done_after_second_failure': parent_result.done(),
+                    'controlled_partial': partial,
                     'latest_phase': (world.latest_explore or {}).get('phase'),
                     'travel_m': round(world.travel_m, 3),
                 }, sort_keys=True))
