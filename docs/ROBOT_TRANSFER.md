@@ -8,9 +8,17 @@ anderen WE-Paketen aus der bestätigten Stufe-1/2-Kette. Der Stack lief mit
 `active_drive:=false`, realen LiDAR-/VL53-Daten, aktivem Collision Monitor und
 Nav2, frischer Rohkarte/TF/Safety und Basiswerten durchgehend null. Ein
 einziger SIGINT beendete 24 Kinder sauber; Gerätehandles waren danach frei.
-Es wurde kein Fahrbefehl gesendet. Die konkret vorbereitete Startpose,
-unbelebte Barriere und sichere Auslauffläche sind noch nicht benannt; vor
-deren Festlegung und einem produktionsnahen Stopptest erfolgt keine Fahrt.
+Es wurde kein Fahrbefehl gesendet. Für einen Hindernisversuch sind Startpose,
+unbelebte Barriere und sicherer Auslauf noch nicht benannt. Eine gewünschte
+freie Kurzfahrt ohne Barriere ist nur ein Basis-/Fahrkettencheck, kein
+Stufe-3-Nachweis und braucht eine eigene enge Bewegungsgrenze.
+Für den später gewünschten freien Kurztest kam ein weiterer Blocker hinzu:
+Das lokale R9-WE-Profil untersagt selbst die Wiederverwendung seiner
+Scope-Koordinaten nach SLAM-Neustart. Der passive Vorlauf startete SLAM neu;
+Profil-Hashgleichheit ist daher keine gültige physische Scope-Bindung. Vor
+einer WE-Fahrt den begrenzten Raum im aktuellen Kartenframe neu messen und
+von der anwesenden Person bestätigen lassen. Bis dahin Motoren auslassen;
+keine Sicherheitsschwelle ändern oder das Fahrtor umgehen.
 
 **Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
 Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue

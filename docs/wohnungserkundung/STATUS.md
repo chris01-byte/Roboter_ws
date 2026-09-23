@@ -26,9 +26,23 @@ sichtbare I²C-Gerätepfade ohne Handle. Das Launchlog enthält keinen Traceback
 oder Prozessabbruch. **Es gab keinen Fahrbefehl und keine Motoraktivierung.**
 Dies ist nur ein erneuter passiver Preflight, noch kein produktionsnaher
 Hindernisstopp und kein Stufe-3-Abnahmenachweis. Für einen begrenzten
-Bewegungsversuch fehlen noch die konkrete freie Startpose, unbelebte Barriere
-und der sichere Auslauf; danach sind Stoppgrenze und Abbruchweg vor Fahrt
-festzulegen. Die Fahrfreigabe allein ersetzt diese Testdefinition nicht.
+Hindernisversuch fehlen noch die konkrete freie Startpose, unbelebte Barriere
+und der sichere Auslauf. Die anschließend gewünschte freie Kurzfahrt ohne
+Barriere benötigt stattdessen eine neue Scope-Bindung und enge Bewegungsgrenze;
+die Fahrfreigabe allein ersetzt diese Testdefinition nicht.
+
+**Zusätzliche Fahrblocksperre beim geplanten freien Kurztest:** Das verwendete
+lokale R9-Profil bindet seine physisch bestätigte Scope-Geometrie ausdrücklich
+nur an den damaligen R9-SLAM-Kontext und verbietet die Wiederverwendung nach
+einem weiteren SLAM-Neustart. Der passive Vorlauf oben startete SLAM neu.
+Deshalb ist diese Scope-Freigabe für eine jetzt startende reale WE-Mission
+ungültig, obwohl Profil-Hash und Paketversionen unverändert sind. Die
+anwesende Person bestätigte einen freien Raum, aber noch keine erneut an den
+aktuellen Kartenframe gebundene Fahrgrenze. Es erfolgte keine Motorbestromung
+und kein Fahrbefehl. Weder Scope- noch Sensor- oder Collision-Grenzen wurden
+gelockert; vor Bewegung muss ein eng begrenzter Fahrbereich im neuen
+Kartenframe gemessen und vor Ort bestätigt werden. Ein freier Kurztest ohne
+Hindernis kann Stufe 3 ohnehin nicht auf GRÜN setzen.
 
 **Basis:** ausschließlich der bestätigte Stufe-2-Branch
 `feature/we1-stufe2-replan-fortsetzung` bei `3fa3ce6`, auf dem eigenen
@@ -114,9 +128,10 @@ eine eigene vollständige Fail-closed-Prozessprüfung. Der frühere R9-Befund
 links ~0,24 m wurde von der anwesenden Person inzwischen als physisch geklärt
 bestätigt; der erneute passive Preflight ergab beidseits keinen Nahpunkt.
 **Stufe 3 ist nicht GRÜN; keine Stufe 4 und noch keine reale Fahrt.** Nächster
-erlaubter Schritt: begrenzten Hindernisversuch anhand konkreter Startpose,
-unbelebter Barriere, freiem Auslauf und Abbruchgrenze festlegen, zunächst
-motorlos mit Nav2/Collision Monitor prüfen und erst danach beaufsichtigt fahren.
+erlaubter Schritt: zuerst den gewünschten freien Kurztest nur nach neuer
+Scope-Bindung und enger Bewegungsgrenze motorlos prüfen, danach beaufsichtigt
+fahren. Für die spätere Stufe-3-Abnahme zusätzlich eine unbelebte Barriere,
+freien Auslauf und Abbruchgrenze festlegen und die komplette Fortsetzung prüfen.
 
 **Rückfall:** Stufe-3-Overlay nicht sourcen bzw. aus einer neuen Shell nur die
 bestätigte Stufe-1/2-Kette laden. Es wurden keine aktiven Roboterinstallationen
