@@ -23,6 +23,8 @@ Rückfallweg:
 begrenztes `LOCAL_BLOCKED` behandeln, wenn das metrische Ziel frei bleibt,
 aber eine frische globale Costmap eine tödlich belegte Zelle höchstens
 0,75 m vor der stillstehenden Basis im zielwärtigen 0,35-m-Korridor zeigt.
+Dieselbe Aufgabe wird erst nach neuer Costmap **und** freiem Zielkorridor
+wieder wählbar; ein weiterhin freier Zielpunkt allein reicht nicht.
 Alle bestehenden Not-Aus-, TF-, Odometrie-, LiDAR-, dualen VL53- und
 Costmap-Frischeprüfungen bleiben vorgeschaltet. Die Klassifikation gibt
 selbst keinen Fahrbefehl frei und verwendet dieselben Ziel-/Zeitbudgets.
@@ -45,10 +47,13 @@ Explorer-Vertragstest und ein isolierter Test-Launch/Prozessprüfer unter
 kein Motor aktiviert. Neues `explore`-Install in einem getrennten lokalen
 Stage-3-Präfix; aktiver Roboter-Install unverändert.
 
-**Teststatus / offene Risiken:** Explorer-Tests 903 grün, bestehender
+**Teststatus / offene Risiken:** Explorer-Tests 904 grün, bestehender
 Acht-Szenarien-Prozessprüfer grün; neuer echter Nav2-Prozessfall
 `disappear` zweimal grün. Ein dauerhafter synthetischer Umfahrfall stoppte
-an zwei Positionen sicher, erreichte A aber nicht. Reale Bewegung und
+an zwei Positionen sicher, erreichte A aber nicht. Nach drei durch das
+Testprofil begrenzten Kindzielen blieb der Roboter virtuell stehen und die
+Mission wartete auf eine sichere Alternative; keine konkurrierenden Ziele.
+Reale Bewegung und
 spätere sichere Weiterfahrt nach Zurückstellung fehlen. Das reale enge
 WE-Profil bot im letzten motorlosen Lauf kein Frontierziel, und der
 Kartenmanager-SIGINT-Race ist noch ungeklärt. Stufe 3 bleibt GELB.

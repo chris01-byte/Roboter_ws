@@ -7,7 +7,7 @@ Das zusätzliche Stage-3-`explore`-Install
 liegt **nur isoliert** vor und wurde nicht in den aktiven Roboterstart
 übernommen. Quell- und Installdatei `explore_node.py` wurden per SHA-256
 verglichen (beide
-`fcbe1601570d9ebb1ea486f0809e4b8b0be2550fe07e989d28a6b2769ee37834`).
+`be6c8f7da787fa51a57a9bebf87cf0ee1e440a049be57f3eef7af897b6c9c6ef`).
 Die Reihenfolge ist ROS Humble → bestätigte Stufe-1-Kette →
 Stufe 2 → dieses Stage-3-Overlay; die Nav2-/Collision-Konfiguration kommt
 unverändert aus Stufe 1. Der neue Prüfer in DDS-Domain 219 startet keinen
@@ -17,7 +17,10 @@ Sensorstrecke → weitere virtuelle Fahrt → Zielerfolg → Rohkartenfortschrit
 → nächstes Frontierziel. Bei dauerhaftem Hindernis verhinderte die neue
 enge Nahkorridor-Klassifikation den zuvor beobachteten sofortigen
 `SYSTEM_FAILURE` nach einem zweiten Nav2-Abbruch. Ein echter sicherer
-Umweg blieb in zwei synthetischen Positionen aus.
+Umweg blieb in zwei synthetischen Positionen aus. Eine zurückgestellte
+Aufgabe bleibt bei weiter belegtem Zielkorridor auch nach neuer Costmap
+gesperrt; der gerätefreie Gegenlauf blieb nach drei begrenzten Kindzielen
+ohne Bewegung stehen und wartete auf eine sichere Alternative.
 
 **Keine reale Fahrt daraus ableiten:** Der letzte motorlose reale WE-Vorlauf
 hatte kein gültiges Ziel im engen Scope; das links stehende Hindernis löste

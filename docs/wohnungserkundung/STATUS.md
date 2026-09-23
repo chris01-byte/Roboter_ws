@@ -46,6 +46,12 @@ blieb der Elternauftrag nach zwei echten Nav2-Abbrüchen
 aktiv, ohne weitere Bewegung oder konkurrierende Kindziele. Dieser Fix
 ändert nur die begrenzte Aufgabenentscheidung, nicht den Fahrpfad oder eine
 Sicherheitsgrenze.
+Eine als lokal blockiert zurückgestellte Aufgabe wird auch bei freiem
+metrischem Ziel erst wieder freigegeben, wenn eine **neuere** Costmap den
+nahen Zielkorridor ohne tödlich belegte Zelle zeigt. Im produktionsnahen
+Fall mit bleibendem Hindernis blieb die Basis nach insgesamt drei durch
+das Profil begrenzten Nav2-Kindzielen stehen und die Mission wartete auf
+eine sichere Alternative; maximal ein Kindziel war gleichzeitig aktiv.
 
 **Offen für GRÜN:** Der produktionsnahe `bypass`-Fall mit zwei unbelebten
 synthetischen Hindernispositionen stoppte sicher, fand aus der nahen Pose
@@ -62,8 +68,8 @@ Das neue Install löst nur `explore` auf; Kartenmanager, Mission Manager,
 Navigation, Safety, VL53, LiDAR und Basis kommen weiterhin aus der
 bestätigten Stufe-1-Kette, nach Stufe 2 gesourct. Quelle und neues
 `explore_node.py`-Install haben denselben SHA-256
-`fcbe1601570d9ebb1ea486f0809e4b8b0be2550fe07e989d28a6b2769ee37834`.
-`colcon test` bestand mit **903 Explorer-Tests**; der bestehende
+`be6c8f7da787fa51a57a9bebf87cf0ee1e440a049be57f3eef7af897b6c9c6ef`.
+`colcon test` bestand mit **904 Explorer-Tests**; der bestehende
 Gesamtprozessprüfer bestand mit **allen acht Szenarien** auch gegen dieses
 neue Install. Der offene PR #99 bleibt ungemergt. Rückfallweg: neues
 Stage-3-Präfix weglassen und zum vorigen isolierten Kandidaten zurückkehren;
