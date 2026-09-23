@@ -17,6 +17,49 @@ Rückfallweg:
 
 ---
 
+## 2026-09-23 — WE-Stufe 3: Routenblockade nach echtem Nav2-Abbruch getrennt behandeln
+
+**Entscheidung:** Einen bereits terminalen Nav2-Abbruch auch dann als
+begrenztes `LOCAL_BLOCKED` behandeln, wenn das metrische Ziel frei bleibt,
+aber eine frische globale Costmap eine tödlich belegte Zelle höchstens
+0,75 m vor der stillstehenden Basis im zielwärtigen 0,35-m-Korridor zeigt.
+Alle bestehenden Not-Aus-, TF-, Odometrie-, LiDAR-, dualen VL53- und
+Costmap-Frischeprüfungen bleiben vorgeschaltet. Die Klassifikation gibt
+selbst keinen Fahrbefehl frei und verwendet dieselben Ziel-/Zeitbudgets.
+
+**Grund / beobachtete Evidenz:** Ein gerätefreier Prozessprüfer mit echtem
+Nav2, WE-Collision-Monitor, Fahrtor, Smoother und virtueller Basis zeigte
+zweimal Hindernis → sicheren Reglerstopp (Poseänderung 2,2–2,5 mm) →
+Hindernis verschwindet → weitere 0,534–0,536 m virtuelle Fahrt → A erreicht
+→ neue Rohkarte markiert A abgeschlossen → anderes Ziel startet; maximal
+ein Kindziel. Bei dauerhaftem Hindernis wurde A als lokale Blockade
+zurückgestellt, aber B lag hinter demselben Hindernis. B selbst blieb als
+metrischer Punkt frei; der alte Code stufte seinen Controller-Abbruch als
+`SYSTEM_FAILURE` ein und beendete den Elternauftrag. Mit der neuen
+Korridorprüfung blieb der Auftrag nach zwei echten Nav2-Abbrüchen aktiv,
+ohne weiterzufahren oder parallele Kindziele zu starten.
+
+**Betroffene Dateien und Hardware:** `src/explore/explore/explore_node.py`,
+Explorer-Vertragstest und ein isolierter Test-Launch/Prozessprüfer unter
+`tools/kartierung/`. Kein Hardware- oder Sicherheitsparameter geändert,
+kein Motor aktiviert. Neues `explore`-Install in einem getrennten lokalen
+Stage-3-Präfix; aktiver Roboter-Install unverändert.
+
+**Teststatus / offene Risiken:** Explorer-Tests 903 grün, bestehender
+Acht-Szenarien-Prozessprüfer grün; neuer echter Nav2-Prozessfall
+`disappear` zweimal grün. Ein dauerhafter synthetischer Umfahrfall stoppte
+an zwei Positionen sicher, erreichte A aber nicht. Reale Bewegung und
+spätere sichere Weiterfahrt nach Zurückstellung fehlen. Das reale enge
+WE-Profil bot im letzten motorlosen Lauf kein Frontierziel, und der
+Kartenmanager-SIGINT-Race ist noch ungeklärt. Stufe 3 bleibt GELB.
+
+**Rückfallweg:** Das neue Overlay aus der Source-Reihenfolge entfernen und
+den vorherigen Stage-3-Kandidaten verwenden; kein automatischer Merge oder
+Deploy. Bei irgendeinem Safety-Ausfall bleibt der unveränderte
+`SYSTEM_FAILURE`-Pfad aktiv.
+
+---
+
 ## 2026-09-23 — WE-Stufe 3: linker Nahpunkt löst nur SlowZone aus; Shutdown-Race offen
 
 **Entscheidung:** Keine reale Fahrt aus dem neuen linken Hindernisaufbau

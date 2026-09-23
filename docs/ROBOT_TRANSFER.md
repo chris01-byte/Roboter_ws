@@ -1,5 +1,33 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: neues gerätefreies Nav2-Overlay, nicht auf Antrieb übernehmen (23.09.2026)
+
+Das zusätzliche Stage-3-`explore`-Install
+`/home/p/.local/share/amadeus/releases/we1-stage3-routeblock-20260923/install`
+liegt **nur isoliert** vor und wurde nicht in den aktiven Roboterstart
+übernommen. Quell- und Installdatei `explore_node.py` wurden per SHA-256
+verglichen (beide
+`fcbe1601570d9ebb1ea486f0809e4b8b0be2550fe07e989d28a6b2769ee37834`).
+Die Reihenfolge ist ROS Humble → bestätigte Stufe-1-Kette →
+Stufe 2 → dieses Stage-3-Overlay; die Nav2-/Collision-Konfiguration kommt
+unverändert aus Stufe 1. Der neue Prüfer in DDS-Domain 219 startet keinen
+Hardwaretreiber und sendet keine Motorregister. Er belegte zweimal mit
+echtem Nav2, Fahrtor und Collision Monitor: Hindernis → Stopp → freie
+Sensorstrecke → weitere virtuelle Fahrt → Zielerfolg → Rohkartenfortschritt
+→ nächstes Frontierziel. Bei dauerhaftem Hindernis verhinderte die neue
+enge Nahkorridor-Klassifikation den zuvor beobachteten sofortigen
+`SYSTEM_FAILURE` nach einem zweiten Nav2-Abbruch. Ein echter sicherer
+Umweg blieb in zwei synthetischen Positionen aus.
+
+**Keine reale Fahrt daraus ableiten:** Der letzte motorlose reale WE-Vorlauf
+hatte kein gültiges Ziel im engen Scope; das links stehende Hindernis löste
+nur Slowdown, keinen Stopp aus. Der einmal beobachtete Kartenmanager-
+Shutdown-Race ist weiterhin offen. Vor einem Fahrversuch müssen diese drei
+Punkte motorlos geklärt sein; das Fahrtor und die Sicherheitsgrenzen bleiben
+unverändert. Rückfallweg: neues Stage-3-Präfix nicht sourcen, stattdessen
+das vorherige isolierte Stage-3-Kandidatenpräfix verwenden; kein automatischer
+Merge oder Deploy.
+
 ## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
 
 **Neues physisches Hindernis links (23.09. abends), nur motorlos:** Der linke

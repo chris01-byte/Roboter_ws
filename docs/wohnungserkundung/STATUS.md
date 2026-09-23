@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine Fahrt durchgeführt · 2026-09-23**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine reale Fahrt durchgeführt · 2026-09-23**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -8,6 +8,66 @@ unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
 ## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
+
+**Produktionsnaher, aber gerätefreier Nav2-Prozessprüfer (23.09.):** Der neue
+Prüfer `tools/kartierung/wohnungserkundung_nav2_stage3_smoke.py` verwendet
+in der festen privaten DDS-Domain 219 den echten Stage-1/2/3-Explorer, den
+unveränderten realen Nav2-Controller/Planner/BT, das Missionsfahrtor, den
+Velocity Smoother und den unveränderten WE-Collision-Monitor. Nur Rohkarte,
+Kartenmanagerstatus, LiDAR/VL53, TF/Odometrie und die differentielle Basis
+sind synthetisch. Der Prüfer startet **keinen** Hardware- oder Sensortreiber.
+Der bestehende Acht-Szenarien-Prozessprüfer mit Fake-Nav2 bleibt als
+Missionsregression bestehen; er ist nicht der Beleg für reale Controllerfahrt.
+
+Im zweimal bestandenen vollständigen Fall `disappear` fuhr das virtuelle
+Ziel A zunächst an, ein eingespeistes VL53-/Costmap-Hindernis löste den
+echten Regler-Kollisionsstopp aus (nur 2,2–2,5 mm Posedifferenz im
+Beobachtungsfenster), und nach Freigabe der Sensorstrecke fuhr die virtuelle
+Basis weitere 0,534–0,536 m. Nav2 erreichte A; eine neue Rohkarte belegte
+den Abschluss der A-Frontier; ein **anderes** Frontierziel wurde automatisch
+gestartet, während der Elternauftrag weiterlief. Maximal ein Nav2-Kindziel
+war aktiv. Der vorhandene BT hatte keinen Spin-/BackUp-Fahrpfad. Dies erfüllt
+den gerätefreien A-Fall mit echter Navigationskette, ist aber **keine reale
+Probefahrt** und kein Nachweis einer dauerhaften Umfahrung.
+
+Der erste produktionsnahe Fall mit dauerhaftem Hindernis zeigte einen
+zusätzlichen Integrationsfehler: Nach A-Blockade wurde B gesendet, aber das
+Hindernis lag auf Bs Route, nicht auf dem metrischen Ziel B. Nav2 stoppte
+und brach auch B ab; die frühere Klassifikation deutete diesen terminalen
+Abbruch als `SYSTEM_FAILURE`, der Elternauftrag endete. Die Stage-3-Änderung
+klassifiziert einen solchen **bereits terminalen** Abbruch zusätzlich als
+`LOCAL_BLOCKED`, nur wenn eine frische globale Costmap eine tödlich belegte
+Zelle im nahen zielwärtigen Korridor nachweist, die Basis stillsteht und
+Not-Aus, LiDAR, beide VL53, TF und Odometrie frisch/gültig sind. Ohne diesen
+positiven Beleg bleibt es `SYSTEM_FAILURE`. Mit dem neuen isolierten
+`explore`-Install
+`/home/p/.local/share/amadeus/releases/we1-stage3-routeblock-20260923/install`
+blieb der Elternauftrag nach zwei echten Nav2-Abbrüchen
+aktiv, ohne weitere Bewegung oder konkurrierende Kindziele. Dieser Fix
+ändert nur die begrenzte Aufgabenentscheidung, nicht den Fahrpfad oder eine
+Sicherheitsgrenze.
+
+**Offen für GRÜN:** Der produktionsnahe `bypass`-Fall mit zwei unbelebten
+synthetischen Hindernispositionen stoppte sicher, fand aus der nahen Pose
+aber keinen ausführbaren Umweg zum ursprünglichen Ziel; der Controller
+meldete `Controller patience exceeded`. Deshalb sind Umfahrung bei dauerhaft
+vorhandenem, tatsächlich umfahrbarem Hindernis und spätere sichere Bewegung
+nach Zurückstellung weiterhin nicht nachgewiesen. Auf dem realen Roboter
+fand der letzte motorlose WE-Lauf zudem keinen gültigen Frontierkandidaten
+im bestätigten engen Scope; die aktuelle linke Barriere bewirkte nur 30-%-
+Verlangsamung. Der einmalige Humble-Shutdown-Race des Kartenmanagers ist
+weiter ungeklärt. Keine Motoren wurden für diese neuen Prüfungen aktiviert;
+kein Sicherheitsparameter oder WE-Profil wurde gelockert.
+Das neue Install löst nur `explore` auf; Kartenmanager, Mission Manager,
+Navigation, Safety, VL53, LiDAR und Basis kommen weiterhin aus der
+bestätigten Stufe-1-Kette, nach Stufe 2 gesourct. Quelle und neues
+`explore_node.py`-Install haben denselben SHA-256
+`fcbe1601570d9ebb1ea486f0809e4b8b0be2550fe07e989d28a6b2769ee37834`.
+`colcon test` bestand mit **903 Explorer-Tests**; der bestehende
+Gesamtprozessprüfer bestand mit **allen acht Szenarien** auch gegen dieses
+neue Install. Der offene PR #99 bleibt ungemergt. Rückfallweg: neues
+Stage-3-Präfix weglassen und zum vorigen isolierten Kandidaten zurückkehren;
+am aktiven Roboter-Install wurde nichts umgestellt.
 
 **Neues linkes Testhindernis, ausschließlich motorlos (23.09. abends):** Die
 anwesende Person bestätigte einen unbelebten Gegenstand links vor dem Roboter,
