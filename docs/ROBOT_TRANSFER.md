@@ -2,6 +2,16 @@
 
 ## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
 
+**Nachtrag nach Vor-Ort-Freigabe (23.09.):** Auf dem Jetson bestand ein erneuter
+passiver WE-Preflight mit Stufe-3-Explorer aus dem isolierten Präfix und allen
+anderen WE-Paketen aus der bestätigten Stufe-1/2-Kette. Der Stack lief mit
+`active_drive:=false`, realen LiDAR-/VL53-Daten, aktivem Collision Monitor und
+Nav2, frischer Rohkarte/TF/Safety und Basiswerten durchgehend null. Ein
+einziger SIGINT beendete 24 Kinder sauber; Gerätehandles waren danach frei.
+Es wurde kein Fahrbefehl gesendet. Die konkret vorbereitete Startpose,
+unbelebte Barriere und sichere Auslauffläche sind noch nicht benannt; vor
+deren Festlegung und einem produktionsnahen Stopptest erfolgt keine Fahrt.
+
 **Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
 Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
 Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit
@@ -28,11 +38,13 @@ dem Quellbaum sowie gegen das isolierte Install bestanden. Der Prüfer mit
 Fake-Nav2 belegt Elternfortsetzung nach lokalem Kindabbruch und kontrolliertes
 Warten ohne Ausweg, **nicht** die
 sichere Bewegung des realen Controllers. Sein DDS-Bereich ist vom Roboterdomain
-getrennt; alle synthetischen Sensoren haben eigene Testtopics. Der R9-Befund
-links (~0,24 m) ist unverändert offen. Keine Motorfreigabe, kein Gerätezugriff,
-kein Fahrbefehl. Eine Stage-3-Installation darf bis zum fehlenden motorlosen
-Nav2-/Collision-Monitor-Nachweis und einer erneuten Vor-Ort-Freigabe nicht als
-Fahrprofil verwendet werden.
+getrennt; alle synthetischen Sensoren haben eigene Testtopics. Beim damaligen
+Prüflauf war der R9-Befund links (~0,24 m) noch offen; eine Motorfreigabe,
+Gerätezugriff oder Fahrbefehl fand dabei nicht statt. Die inzwischen
+vorliegende Vor-Ort-Bestätigung und der passive Vorlauf oben ersetzen keinen
+produktionsnahen Hindernis-/Collision-Monitor-Nachweis. Bis der begrenzte
+Testaufbau festgelegt und motorlos überprüft ist, darf die Stage-3-Installation
+nicht als Fahrprofil verwendet werden.
 
 **Rückfall:** Stufe-3-Präfix in einer neuen Shell auslassen; die bestätigte
 Stufe-1/2-Kette bleibt unverändert. Es ist nichts auf dem Jetson zu entfernen

@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine Fahrfreigabe · 2026-09-23**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine Fahrt durchgeführt · 2026-09-23**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -8,6 +8,27 @@ unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
 ## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
+
+**Erneuter Vor-Ort-Vorlauf nach Nutzerfreigabe (23.09.):** Die anwesende Person
+bestätigte erreichbaren hardwired Not-Aus, personen-/tierfreien Bereich und
+physisch geklärten R9-Nahbereichsbefund. Auf dem Jetson wurde die unten
+festgelegte Stufe-1/2/3-Overlaykette mit dem unveränderten lokalen WE-Profil
+in der isolierten Domain 217 erneut geprüft. Der vollständige App-Stack lief
+mit `active_drive:=false`, `enable_auto_explore:=true` und ohne Auftrag.
+`explore` löste aus dem Stufe-3-Install auf, die übrigen WE-Pakete aus dem
+Stufe-1-Install. Collision Monitor und alle fünf Nav2-Lifecycle-Knoten waren
+aktiv; normierter LiDAR, Rohkarte und beide VL53 publizierten mit etwa 10, 1
+und je 3,9 Hz. TF zu Basis, LiDAR und beiden VL53 war verfügbar; Kartenmanager
+meldete `ok=true`, Safety `false`, Explorer `idle`, und die Basis blieb bei
+`dry_run=true`, `allow_rs485=false` und null Sollwerten. Der einzelne SIGINT
+beendete alle 24 Launch-Kinder sauber; danach waren LiDAR-, Basis- und
+sichtbare I²C-Gerätepfade ohne Handle. Das Launchlog enthält keinen Traceback
+oder Prozessabbruch. **Es gab keinen Fahrbefehl und keine Motoraktivierung.**
+Dies ist nur ein erneuter passiver Preflight, noch kein produktionsnaher
+Hindernisstopp und kein Stufe-3-Abnahmenachweis. Für einen begrenzten
+Bewegungsversuch fehlen noch die konkrete freie Startpose, unbelebte Barriere
+und der sichere Auslauf; danach sind Stoppgrenze und Abbruchweg vor Fahrt
+festzulegen. Die Fahrfreigabe allein ersetzt diese Testdefinition nicht.
 
 **Basis:** ausschließlich der bestätigte Stufe-2-Branch
 `feature/we1-stufe2-replan-fortsetzung` bei `3fa3ce6`, auf dem eigenen
@@ -89,11 +110,13 @@ Nach vollständiger Erschöpfung des bestehenden Retrylimits erfolgt auch bei
 später freier Costmap noch keine gesonderte `TaskReactivation`; der geprüfte
 Reaktivierungsfall hatte einen lokalen Fehlversuch. Der aktive
 Sensorfehler-/Lokalisierungsverlust während eines laufenden Kindziels braucht
-eine eigene vollständige Fail-closed-Prozessprüfung. Der R9-Befund links
-~0,24 m bleibt physisch ungeklärt. **Stufe 3 ist nicht GRÜN; keine Stufe 4 und
-keine reale Fahrt.** Nächster erlaubter Schritt: Review dieses PRs, dann
-motorlose, isolierte Nav2-/Collision-Monitor-Prüfung mit Produktionsprofil;
-jede reale Fahrt benötigt danach neue ausdrückliche Vor-Ort-Freigabe.
+eine eigene vollständige Fail-closed-Prozessprüfung. Der frühere R9-Befund
+links ~0,24 m wurde von der anwesenden Person inzwischen als physisch geklärt
+bestätigt; der erneute passive Preflight ergab beidseits keinen Nahpunkt.
+**Stufe 3 ist nicht GRÜN; keine Stufe 4 und noch keine reale Fahrt.** Nächster
+erlaubter Schritt: begrenzten Hindernisversuch anhand konkreter Startpose,
+unbelebter Barriere, freiem Auslauf und Abbruchgrenze festlegen, zunächst
+motorlos mit Nav2/Collision Monitor prüfen und erst danach beaufsichtigt fahren.
 
 **Rückfall:** Stufe-3-Overlay nicht sourcen bzw. aus einer neuen Shell nur die
 bestätigte Stufe-1/2-Kette laden. Es wurden keine aktiven Roboterinstallationen
