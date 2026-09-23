@@ -11,6 +11,7 @@ import numpy as np
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from nav_msgs.msg import OccupancyGrid
+from sensor_msgs.msg import PointCloud2
 import pytest
 from std_msgs.msg import String
 import yaml
@@ -330,6 +331,8 @@ def test_wohnungserkundung_filters_too_short_costmap_stage_before_selection(
     raw_map = _grid(width=20, height=20, resolution=0.05)
     node = ExploreNode.__new__(ExploreNode)
     node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_local_blocked_tasks = {}
     node._wohnungserkundung_scope_clearance = 0.28
     node._min_goal_dist_m = 0.30
 
@@ -1702,6 +1705,53 @@ def _we_source_state_goal(context):
     return intent, candidate
 
 
+def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
+    context = PortalMapContext('session-local', 'map-local', 'map')
+    _, candidate = _we_source_state_goal(context)
+    node = ExploreNode.__new__(ExploreNode)
+    now = time.monotonic()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_local_blocked_tasks = {}
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_estop_received_at = now
+    node._wohnungserkundung_vl53_received_at = {
+        'left': now, 'right': now}
+    node._door_lidar_scan_snapshot = lambda: {
+        'received_at': now, 'ranges': np.ones(720)}
+    node._door_lidar_min_points = 200
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._global_costmap_received_at = now
+    node._map_timeout_s = 5.0
+    route = {'blocked': True}
+    node._costmap_reachable_goal = lambda *_args: (
+        None if route['blocked'] else ((1.0, 2.0), False))
+
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    route['blocked'] = False
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    route['blocked'] = True
+    node._wohnungserkundung_estop = True
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_vl53_received_at['right'] = now - 2.0
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_received_at['right'] = now
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.02, 0.0, now)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 2.0)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    empty = PointCloud2()
+    empty.header.frame_id = 'base_link'
+    node._on_wohnungserkundung_vl53('right', empty)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+
+
 def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
@@ -2055,9 +2105,11 @@ def _portal_runtime_node(monkeypatch, outcome):
 
     class NavigationSession:
         def run(self, selected_intent, selected_candidate, navigate_child,
-                source_state, user_canceled, budget_exhausted):
+                source_state, user_canceled, budget_exhausted,
+                *, local_blocked):
             assert selected_intent is intent
             assert selected_candidate is candidate
+            assert callable(local_blocked)
             assert navigate_child(candidate, lambda: False) == 'success'
             return run
 
@@ -2152,7 +2204,7 @@ def test_frontier_runtime_records_terminal_attempt_on_revalidated_revision():
     )
 
     class NavigationSession:
-        def run(self, *_args):
+        def run(self, *_args, **_kwargs):
             node._wohnungserkundung_active_frontier_source = (
                 intent.intent_id,
                 NavigationSourceState(context, 23, True),

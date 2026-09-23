@@ -189,6 +189,75 @@ def test_dispatch_exception_is_terminal_abort_and_closes_child():
     assert session.child_status.state is ChildGoalState.IDLE
 
 
+def test_proven_local_obstruction_is_bounded_nonterminal_child_result():
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), lambda *_args: "aborted",
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        local_blocked=lambda candidate: candidate == _candidate(),
+    )
+    assert result.stop_cause is NavigationStopCause.LOCAL_BLOCKED
+    assert result.disposition.state is (
+        ChildResultDispositionState.TEMPORARILY_BLOCKED)
+    assert result.disposition.attempt.retry_not_before_revision == 9
+    assert result.disposition.terminates_exploration is False
+    assert session.child_status.state is ChildGoalState.IDLE
+
+
+@pytest.mark.parametrize("verdict", [False, None, RuntimeError("fault")])
+def test_unproven_abort_never_becomes_local_blockage(verdict):
+    def classify(_candidate):
+        if isinstance(verdict, Exception):
+            raise verdict
+        return verdict
+
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), lambda *_args: "aborted",
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        local_blocked=classify,
+    )
+    assert result.stop_cause is NavigationStopCause.SYSTEM_FAILURE
+    assert result.disposition.state is ChildResultDispositionState.ABORTED
+    assert result.disposition.attempt is None
+    assert session.child_status.state is ChildGoalState.IDLE
+
+
+def test_source_invalidation_never_records_local_failure():
+    live = {'state': NavigationSourceState(CONTEXT, 7, True)}
+    classified = []
+
+    def navigate(_candidate, _should_stop):
+        live['state'] = NavigationSourceState(CONTEXT, 8, False)
+        return 'aborted'
+
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), navigate, lambda: live['state'],
+        lambda: False, lambda: False,
+        local_blocked=lambda _candidate: classified.append(True) or True,
+    )
+    assert result.stop_cause is NavigationStopCause.SOURCE_INVALIDATED
+    assert result.disposition.state is ChildResultDispositionState.REEVALUATE
+    assert result.disposition.attempt is None
+    assert classified == []
+
+
+@pytest.mark.parametrize("status", ["rejected", "timeout"])
+def test_unproven_reject_or_timeout_is_hard_failure_in_we_runtime(status):
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), lambda *_args: status,
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        local_blocked=lambda _candidate: False,
+    )
+    assert result.stop_cause is NavigationStopCause.SYSTEM_FAILURE
+    assert result.disposition.state is ChildResultDispositionState.ABORTED
+
+
 def test_stale_initial_source_and_candidate_mismatch_never_dispatch():
     calls = []
     session = ExplorationNavigationSession(CONTEXT)

@@ -60,8 +60,8 @@ from rclpy.qos import (
 
 from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import PoseStamped, Point, Twist
-from sensor_msgs.msg import LaserScan
-from std_msgs.msg import String
+from sensor_msgs.msg import LaserScan, PointCloud2
+from std_msgs.msg import Bool, String
 from visualization_msgs.msg import Marker, MarkerArray
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action import NavigateToPose
@@ -876,6 +876,17 @@ class ExploreNode(Node):
         self._wohnungserkundung_navigation_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_navigation_enabled', False).value)
+        self._wohnungserkundung_estop_topic = str(self.declare_parameter(
+            'wohnungserkundung_estop_topic', '/safety/estop').value).strip()
+        self._wohnungserkundung_vl53_topics = {
+            side: str(self.declare_parameter(
+                f'wohnungserkundung_vl53_{side}_topic',
+                f'/near_field/{side}/points').value).strip()
+            for side in ('left', 'right')}
+        if self._wohnungserkundung_navigation_enabled and (
+                not self._wohnungserkundung_estop_topic
+                or not all(self._wohnungserkundung_vl53_topics.values())):
+            raise ValueError('WE-Lokalblockade braucht Safety- und VL53-Topics')
         self._wohnungserkundung_persistence_enabled = bool(
             self.declare_parameter(
                 'wohnungserkundung_persistence_enabled', False).value)
@@ -1337,6 +1348,11 @@ class ExploreNode(Node):
             self._wohnungserkundung_goal_cache_key = None
             self._wohnungserkundung_goal_cache = None
             self._wohnungserkundung_runtime_lock = threading.Lock()
+            self._wohnungserkundung_estop = None
+            self._wohnungserkundung_estop_received_at = None
+            self._wohnungserkundung_vl53_received_at = {
+                'left': None, 'right': None}
+            self._wohnungserkundung_local_blocked_tasks = {}
             self._wohnungserkundung_runtime_condition = threading.Condition(
                 self._wohnungserkundung_runtime_lock)
             self._wohnungserkundung_navigation_snapshot = None
@@ -1408,6 +1424,20 @@ class ExploreNode(Node):
         self.create_subscription(
             LaserScan, self._door_lidar_scan_topic, self._on_door_lidar_scan,
             qos_profile_sensor_data, callback_group=self._cb)
+        if self._wohnungserkundung_navigation_enabled:
+            # Read-only obstruction classification.  These subscriptions do
+            # not authorize or publish any movement; the existing gate and
+            # collision monitor retain sole motion authority.
+            self.create_subscription(
+                Bool, self._wohnungserkundung_estop_topic,
+                self._on_wohnungserkundung_estop,
+                10, callback_group=self._cb)
+            for side in ('left', 'right'):
+                self.create_subscription(
+                    PointCloud2, self._wohnungserkundung_vl53_topics[side],
+                    lambda msg, side=side: self._on_wohnungserkundung_vl53(
+                        side, msg),
+                    qos_profile_sensor_data, callback_group=self._cb)
         self._scan_cmd_pub = self.create_publisher(
             Twist, self._scan_cmd_topic, 10)
         self._door_cmd_pub = self.create_publisher(
@@ -2662,6 +2692,72 @@ class ExploreNode(Node):
         self._global_costmap = msg
         self._global_costmap_received_at = time.monotonic()
 
+    def _on_wohnungserkundung_estop(self, msg: Bool):
+        with self._wohnungserkundung_runtime_lock:
+            self._wohnungserkundung_estop = bool(msg.data)
+            self._wohnungserkundung_estop_received_at = time.monotonic()
+
+    def _on_wohnungserkundung_vl53(self, side: str, msg: PointCloud2):
+        valid = (
+            bool(msg.header.frame_id.strip())
+            and msg.width > 0 and msg.height > 0
+            and msg.point_step >= 12
+            and len(msg.data) >= msg.width * msg.height * msg.point_step)
+        with self._wohnungserkundung_runtime_lock:
+            self._wohnungserkundung_vl53_received_at[side] = (
+                time.monotonic() if valid else None)
+
+    def _wohnungserkundung_local_blocked_after_abort(self, candidate) -> bool:
+        """Require a stopped child and fresh, positive Nav2 obstacle proof.
+
+        Humble NavigateToPose reports only ABORTED, not its cause.  A stale
+        sensor, E-stop, missing TF or moving base must not be reinterpreted as
+        a normal obstacle.  Costmap projection is only evidence of blockage;
+        it never becomes a goal or permission to move here.
+        """
+        if not isinstance(candidate, FrontierGoalCandidate):
+            return False
+        now = time.monotonic()
+        with self._wohnungserkundung_runtime_lock:
+            estop = self._wohnungserkundung_estop
+            estop_at = self._wohnungserkundung_estop_received_at
+            vl53_at = tuple(self._wohnungserkundung_vl53_received_at.values())
+        def fresh(received_at, limit):
+            return (received_at is not None
+                    and 0.0 <= now - received_at <= limit)
+        if estop is not False or not fresh(estop_at, 1.0):
+            return False
+        if not all(fresh(stamp, 0.8) for stamp in vl53_at):
+            return False
+        scan = self._door_lidar_scan_snapshot()
+        if scan is None or not fresh(scan.get('received_at'), 0.8):
+            return False
+        ranges = scan.get('ranges')
+        if (ranges is None or np.count_nonzero(np.isfinite(ranges))
+                < self._door_lidar_min_points):
+            return False
+        pose, pose_age = self._robot_pose_sample()
+        if pose is None or pose_age is None or not 0.0 <= pose_age <= 0.8:
+            return False
+        _, _, linear, angular, odom_at = self._motion_odom_snapshot()
+        if (not fresh(odom_at, 0.8)
+                or linear is None or angular is None
+                or abs(linear) > 0.01 or abs(angular) > 0.03):
+            return False
+        if not fresh(self._global_costmap_received_at, self._map_timeout_s):
+            return False
+        checked = self._costmap_reachable_goal(
+            (candidate.target_x_m, candidate.target_y_m),
+            (candidate.target_x_m, candidate.target_y_m),
+            (pose[0], pose[1]),
+        )
+        if checked is None or checked[1]:
+            with self._wohnungserkundung_runtime_lock:
+                self._wohnungserkundung_local_blocked_tasks[
+                    candidate.task_id] = self._global_costmap_received_at
+            return True
+        return False
+
     def _on_odom(self, msg: Odometry):
         q = msg.pose.pose.orientation
         values = (
@@ -3437,6 +3533,11 @@ class ExploreNode(Node):
                 filtered.append(item)
                 continue
             task = tasks_by_id.get(item.task_id)
+            with self._wohnungserkundung_runtime_lock:
+                local_blocked_since = (
+                    self._wohnungserkundung_local_blocked_tasks.get(
+                        item.task_id))
+            candidate = None
             staged = None
             if task is not None:
                 intent = ExplorationGoalIntent(
@@ -3490,13 +3591,22 @@ class ExploreNode(Node):
                         ))
                 except FrontierGoalCandidateError:
                     staged = None
-            if staged is None:
+            if local_blocked_since is not None and (
+                    staged is not candidate
+                    or self._global_costmap_received_at is None
+                    or self._global_costmap_received_at <= local_blocked_since):
+                reason = 'nav2_local_blocked_until_fresh_clear_costmap'
+            elif staged is None:
                 reason = 'nav2_costmap_route_unavailable'
             elif math.hypot(
                     staged.target_x_m - robot_pose[0],
                     staged.target_y_m - robot_pose[1]) < self._min_goal_dist_m:
                 reason = 'nav2_costmap_stage_too_short'
             else:
+                if local_blocked_since is not None:
+                    with self._wohnungserkundung_runtime_lock:
+                        self._wohnungserkundung_local_blocked_tasks.pop(
+                            item.task_id, None)
                 filtered.append(item)
                 continue
             filtered.append(replace(
@@ -5505,6 +5615,8 @@ class ExploreNode(Node):
                     intent, candidate),
                 lambda: goal_handle.is_cancel_requested,
                 overall_expired,
+                local_blocked=(
+                    self._wohnungserkundung_local_blocked_after_abort),
             )
             portal_outcome = None
             if portal_monitor is not None:
@@ -5640,6 +5752,10 @@ class ExploreNode(Node):
                 'Zugaenglicher Erkundungsbereich durch mehrere frische '
                 'Kartenrevisionen abgeschlossen'),
             ExplorationResultState.PARTIAL: (
+                'Wohnungserkundungsbudget erreicht; kein sicherer Ausweg '
+                'aus lokaler Blockade, Roboter bleibt stehen, Hilfe '
+                'erforderlich' if completion.reason == (
+                    'local_blocked_no_safe_alternative_help_required') else
                 'Wohnungserkundungsbudget erreicht; belegter Teilstand, '
                 'kein Vollabschluss'),
             ExplorationResultState.ABORTED: (
@@ -5670,6 +5786,7 @@ class ExploreNode(Node):
         self._coverage_complete = False
         with self._wohnungserkundung_runtime_lock:
             self._wohnungserkundung_active_child = None
+            self._wohnungserkundung_local_blocked_tasks = {}
             self._wohnungserkundung_active_frontier_source = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_completion_assessment = None
@@ -5705,6 +5822,11 @@ class ExploreNode(Node):
                 and time.monotonic() - started >= overall_timeout)
 
         def terminate(cause, reason):
+            if cause is TerminationCause.BUDGET_EXHAUSTED:
+                with self._wohnungserkundung_runtime_lock:
+                    if self._wohnungserkundung_local_blocked_tasks:
+                        reason = (
+                            'local_blocked_no_safe_alternative_help_required')
             if completion_session is None:
                 completion = completion_from_termination(
                     cause,
@@ -5887,6 +6009,16 @@ class ExploreNode(Node):
                         'task_id': candidate.task_id,
                         'goal_map_revision': candidate.map_revision,
                     }
+                time.sleep(self._replan_period_s)
+                continue
+            if disposition.state.value == 'temporarily_blocked':
+                self._status_phase = 'we_local_blocked_waiting_alternative'
+                self._status_message = (
+                    f'WE-Ziel {intent.task_id} durch frische Costmap als '
+                    'lokal blockiert belegt; Kindziel terminal und Basis '
+                    'gestoppt. Aufgabe befristet zurueckgestellt; '
+                    'warte auf neue sichere Zielbewertung.')
+                self._publish_status('running')
                 time.sleep(self._replan_period_s)
                 continue
             if disposition.state.value in {'retry_scheduled', 'reevaluate'}:

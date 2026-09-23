@@ -8,7 +8,7 @@ imports, publishers, action clients, devices, or command topics here.
 from dataclasses import dataclass
 from enum import Enum
 import hashlib
-from typing import Callable
+from typing import Callable, Optional
 
 from .child_result_policy import (
     ChildResultDisposition,
@@ -33,6 +33,8 @@ class ExplorationNavigationRuntimeError(ValueError):
 class NavigationStopCause(str, Enum):
     NONE = "none"
     SOURCE_INVALIDATED = "source_invalidated"
+    LOCAL_BLOCKED = "local_blocked"
+    SYSTEM_FAILURE = "system_failure"
     BUDGET_EXHAUSTED = "budget_exhausted"
     USER_CANCELED = "user_canceled"
 
@@ -104,6 +106,7 @@ class ExplorationNavigationSession:
             source_state: Callable[[], NavigationSourceState],
             user_canceled: Callable[[], bool],
             budget_exhausted: Callable[[], bool],
+            local_blocked: Optional[Callable[[object], bool]] = None,
     ) -> NavigationChildRun:
         if not isinstance(intent, ExplorationGoalIntent):
             raise ExplorationNavigationRuntimeError(
@@ -128,6 +131,9 @@ class ExplorationNavigationSession:
             if not callable(callback):
                 raise ExplorationNavigationRuntimeError(
                     f"{name} muss aufrufbar sein")
+        if local_blocked is not None and not callable(local_blocked):
+            raise ExplorationNavigationRuntimeError(
+                "local_blocked muss aufrufbar sein")
 
         initial_source = source_state()
         self._validate_source(initial_source, intent)
@@ -166,6 +172,21 @@ class ExplorationNavigationSession:
         elif not self._current_source(final_source, intent):
             stop_cause = NavigationStopCause.SOURCE_INVALIDATED
             invalidates = True
+        elif (navigation_status in {"aborted", "timeout", "rejected"}
+              and local_blocked is not None):
+            # Humble NavigateToPose exposes no detailed abort code.  Only a
+            # caller with positive, fresh obstruction evidence may downgrade
+            # this terminal action to ordinary local blockage.  Missing or
+            # faulty evidence remains a system failure, never a recovery cue.
+            try:
+                obstruction_proven = (
+                    navigation_status != "rejected"
+                    and local_blocked(candidate) is True)
+            except Exception:
+                obstruction_proven = False
+            stop_cause = (
+                NavigationStopCause.LOCAL_BLOCKED if obstruction_proven
+                else NavigationStopCause.SYSTEM_FAILURE)
 
         if stop_cause is not NavigationStopCause.NONE:
             cancellation = ChildGoalCancellation(
@@ -192,6 +213,10 @@ class ExplorationNavigationSession:
                 NavigationStopCause.USER_CANCELED,
                 NavigationStopCause.BUDGET_EXHAUSTED}:
             outcome = ChildGoalOutcome.CANCELED
+        elif stop_cause is NavigationStopCause.LOCAL_BLOCKED:
+            outcome = ChildGoalOutcome.LOCAL_BLOCKED
+        elif stop_cause is NavigationStopCause.SYSTEM_FAILURE:
+            outcome = ChildGoalOutcome.ABORTED
         result = ChildGoalResult(
             result_id=_event_id("result", intent.intent_id),
             intent_id=intent.intent_id,
