@@ -20,6 +20,17 @@ einer WE-Fahrt den begrenzten Raum im aktuellen Kartenframe neu messen und
 von der anwesenden Person bestätigen lassen. Bis dahin Motoren auslassen;
 keine Sicherheitsschwelle ändern oder das Fahrtor umgehen.
 
+Nach Vor-Ort-Bestätigung des einzelnen Raums und geschlossener Ausgänge wurde
+ein neues lokales Einmalprofil für einen eng begrenzten, vorwärtsgerichteten
+Ein-Ziel-Test im neuen Kartenframe erstellt (Profilpfad und Hash stehen im
+WE-Status). Der echte WE-/Nav2-Gesamtprozess wurde damit **nur motorlos**
+gestartet: Karte/TF/LiDAR/VL53/Safety waren frisch, Basis `dry_run=true`,
+`allow_rs485=false`; der Explorer fand bis zum 75-s-Gesamtbudget kein gültiges
+Ziel. Kein Nav2-Fahrkommando, keine Odometriebewegung, danach sauberer Stopp
+und freie Gerätehandles. Der Versuch darf nicht scharf wiederholt werden, nur
+um ein Ziel zu erzwingen. Erst eine neu vor Ort vermessene Kurzroute und ihr
+motorloser Scope-/Nav2-Nachweis erlauben eine reale Probefahrt.
+
 **Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
 Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
 Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit

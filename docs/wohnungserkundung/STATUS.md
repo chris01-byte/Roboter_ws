@@ -44,6 +44,31 @@ gelockert; vor Bewegung muss ein eng begrenzter Fahrbereich im neuen
 Kartenframe gemessen und vor Ort bestätigt werden. Ein freier Kurztest ohne
 Hindernis kann Stufe 3 ohnehin nicht auf GRÜN setzen.
 
+**Enger freier Kurztest nur motorlos (23.09.):** Nach Bestätigung, dass nur der
+aktuelle freie Raum freigegeben und dessen Ausgänge geschlossen sind, wurde
+ein neues, ausschließlich lokales Einmalprofil
+`~/.local/share/amadeus/profiles/we1-stage3-free-short-20260923.yaml` angelegt
+(SHA-256 `8380e87b764693ae2965d7d890c5af4fd91da3b8ed2a7fb673c96b646feb9dfe`).
+Sein achtseitiger kleiner Scope wurde aus der *neuen* stationären LiDAR-/TF-
+Messung im aktuellen Kartenframe begrenzt; keine Wohnungsgeometrie wurde ins
+Repository übernommen. Das Profil begrenzt auf ein Frontierziel, einen Fehler,
+75 s Gesamtzeit und einen engen Vorwärtskegel; es deaktiviert Coverage,
+Portalbeobachtung, Persistenz und den initialen Rundblick, ohne Sensor-,
+Footprint-, Collision- oder Frischegrenzen zu verändern. Im erneuten
+motorlosen Gesamtstart lag die Kartenpose am erwarteten Ursprung, der kleinste
+gültige LiDAR-Abstand bei etwa 1,02 m, beide VL53 und Safety waren frei,
+Kartenmanager `ok=true`, Nav2/Collision aktiv und Basis `dry_run=true`,
+`allow_rs485=false`. Die echte Mission blieb während des Budgets bei
+`we_waiting_for_goal`: kein gültiger Frontierkandidat, kein Nav2-Fahrkommando,
+null Odometriebewegung. Sie endete mit Teilstand am Gesamtbudget, der
+Missions-BT mit Failure. Ein einzelner SIGINT beendete alle 24 Kinder sauber;
+Gerätehandles waren danach frei, im Launchlog kein Traceback oder Prozessabbruch.
+**Keine Motorbestromung und keine reale Probefahrt:** Ein scharfer Start aus
+demselben Profil hätte kein kontrolliertes Ziel. Nächster Schritt ist eine
+erneut physisch bestätigte, gemessene sichere Kurzroute innerhalb des Raums
+und ihr motorloser Nav2-/Scope-Nachweis; weder das alte R9-Profil noch ein
+größerer Scope dürfen bloß zur Erzeugung eines Ziels verwendet werden.
+
 **Basis:** ausschließlich der bestätigte Stufe-2-Branch
 `feature/we1-stufe2-replan-fortsetzung` bei `3fa3ce6`, auf dem eigenen
 Themenbranch `feature/we1-stufe3-local-recovery` mit Produktionscommit
