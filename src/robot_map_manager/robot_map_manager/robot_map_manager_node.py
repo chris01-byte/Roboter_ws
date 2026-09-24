@@ -5,14 +5,17 @@ from __future__ import annotations
 
 from pathlib import Path
 import math
+import signal
+import threading
 import time
 from typing import Any, Optional
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import OccupancyGrid
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 from rclpy.qos import (
     DurabilityPolicy,
     HistoryPolicy,
@@ -933,24 +936,40 @@ class RobotMapManager(Node):
 
 
 def main(args: Optional[list[str]] = None) -> None:
-    rclpy.init(args=args)
+    # Humble's global SIGINT handler can invalidate the ROS context while
+    # SingleThreadedExecutor.take_message() is converting a Python message.
+    # Request shutdown in our handler, let the active callback finish, and
+    # invalidate the context only after the executor has stopped.
+    stop = threading.Event()
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    def request_stop(_signum, _frame):
+        stop.set()
+    signal.signal(signal.SIGINT, request_stop)
+    signal.signal(signal.SIGTERM, request_stop)
     node: Optional[RobotMapManager] = None
+    executor: Optional[SingleThreadedExecutor] = None
     try:
+        rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
         node = RobotMapManager()
-        rclpy.spin(node)
+        executor = SingleThreadedExecutor()
+        executor.add_node(node)
+        while rclpy.ok() and not stop.is_set():
+            executor.spin_once(timeout_sec=0.1)
     except (KeyboardInterrupt, ExternalShutdownException):
-        pass
-    except RuntimeError:
-        # ROS 2 Humble kann beim globalen SIGINT waehrend take_message()
-        # anstelle von ExternalShutdownException einen RuntimeError werfen.
-        # Im weiterhin gueltigen Kontext bleiben echte Laufzeitfehler sichtbar.
-        if rclpy.ok():
+        if not stop.is_set():
             raise
     finally:
+        if executor is not None:
+            executor.shutdown(timeout_sec=5.0)
+            if node is not None:
+                executor.remove_node(node)
         if node is not None:
             node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
 
 if __name__ == "__main__":

@@ -440,18 +440,21 @@ class RuntimeGuardTests(unittest.TestCase):
         self.assertIn("self._publish_status(**replay)", replay_block)
         self.assertNotIn("self.status_publisher.publish", replay_block)
 
-    def test_node_tolerates_shutdown_context_race(self):
+    def test_node_ends_executor_before_context_and_node_destruction(self):
         node_source = (
             Path(__file__).parents[1]
             / "robot_map_manager"
             / "robot_map_manager_node.py"
         ).read_text(encoding="utf-8")
-        self.assertIn(
-            "except (KeyboardInterrupt, ExternalShutdownException):",
-            node_source,
-        )
-        self.assertIn("except RuntimeError:", node_source)
-        self.assertIn("if rclpy.ok():\n            raise", node_source)
+        self.assertIn("signal_handler_options=SignalHandlerOptions.NO", node_source)
+        self.assertIn("executor.spin_once(timeout_sec=0.1)", node_source)
+        self.assertLess(node_source.index("executor.shutdown(timeout_sec=5.0)"),
+                        node_source.index("node.destroy_node()", node_source.index("def main")))
+        self.assertLess(node_source.index("node.destroy_node()", node_source.index("def main")),
+                        node_source.index("rclpy.shutdown()", node_source.index("def main")))
+        shutdown_source = node_source[node_source.index("def main"):]
+        self.assertIn("if not stop.is_set():\n            raise", shutdown_source)
+        self.assertNotIn("except RuntimeError:", shutdown_source)
 
     def test_duplicate_geometry_retains_latest_validated_observation(self):
         node_source = (
