@@ -37,6 +37,7 @@
 
 import json
 import math
+import signal
 import struct
 import threading
 import time
@@ -49,11 +50,12 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 import rclpy
+from rclpy.signals import SignalHandlerOptions
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.qos import (
     DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy,
     qos_profile_sensor_data,
@@ -7159,20 +7161,41 @@ class ExploreNode(Node):
 
 
 def main(args=None):
-    rclpy.init(args=args)
-    node = ExploreNode()
-    # MultiThreadedExecutor: erlaubt, dass der blockierende Explore-Loop
-    # laeuft, waehrend Map-Callbacks und Nav-Ergebnisse parallel eintreffen.
-    executor = MultiThreadedExecutor()
-    executor.add_node(node)
+    # Humble's global signal handler can invalidate the context while the
+    # executor is rebuilding its wait set. Stop the executor first, then the
+    # node and ROS context; a signal never reaches all launch children twice.
+    stop = threading.Event()
+    previous_sigint = signal.getsignal(signal.SIGINT)
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    def request_stop(_signum, _frame):
+        stop.set()
+    signal.signal(signal.SIGINT, request_stop)
+    signal.signal(signal.SIGTERM, request_stop)
+    node = None
+    executor = None
     try:
-        executor.spin()
-    except KeyboardInterrupt:
-        pass
+        rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
+        node = ExploreNode()
+        # MultiThreadedExecutor permits map callbacks and Nav2 results while
+        # the exploration action is active.
+        executor = MultiThreadedExecutor()
+        executor.add_node(node)
+        while rclpy.ok() and not stop.is_set():
+            executor.spin_once(timeout_sec=0.1)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        if not stop.is_set():
+            raise
     finally:
-        node.destroy_node()
+        if executor is not None:
+            executor.shutdown(timeout_sec=5.0)
+            if node is not None:
+                executor.remove_node(node)
+        if node is not None:
+            node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
+        signal.signal(signal.SIGINT, previous_sigint)
+        signal.signal(signal.SIGTERM, previous_sigterm)
 
 
 if __name__ == '__main__':
