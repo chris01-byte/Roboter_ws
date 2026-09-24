@@ -11,6 +11,8 @@ import numpy as np
 from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from nav_msgs.msg import OccupancyGrid
+from sensor_msgs.msg import PointCloud2
+from robot_interfaces.msg import NearFieldStatus
 import pytest
 from std_msgs.msg import String
 import yaml
@@ -330,6 +332,8 @@ def test_wohnungserkundung_filters_too_short_costmap_stage_before_selection(
     raw_map = _grid(width=20, height=20, resolution=0.05)
     node = ExploreNode.__new__(ExploreNode)
     node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_local_blocked_tasks = {}
     node._wohnungserkundung_scope_clearance = 0.28
     node._min_goal_dist_m = 0.30
 
@@ -1702,6 +1706,341 @@ def _we_source_state_goal(context):
     return intent, candidate
 
 
+def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
+    context = PortalMapContext('session-local', 'map-local', 'map')
+    _, candidate = _we_source_state_goal(context)
+    node = ExploreNode.__new__(ExploreNode)
+    now = time.monotonic()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node.get_logger = lambda: SimpleNamespace(error=lambda _message: None)
+    node._wohnungserkundung_local_blocked_tasks = {}
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_estop_received_at = now
+    node._wohnungserkundung_vl53_received_at = {
+        'left': now, 'right': now}
+    node._wohnungserkundung_vl53_observed_at = {'left': now, 'right': now}
+    node._wohnungserkundung_vl53_measurement_valid = {
+        'left': True, 'right': True}
+    node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
+    status = NearFieldStatus()
+    status.header.frame_id = 'base_link'
+    status.header.stamp = Time(sec=10)
+    status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    status.left_observed_columns = status.right_observed_columns = 255
+    node._wohnungserkundung_vl53_status = status
+    node._wohnungserkundung_vl53_status_at = now
+    node._wohnungserkundung_vl53_status_observed_at = now
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
+    node._door_lidar_scan_snapshot = lambda: {
+        'received_at': now, 'ranges': np.ones(720)}
+    node._door_lidar_min_points = 200
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._global_costmap_received_at = now
+    node._map_timeout_s = 5.0
+    route = {'blocked': True}
+    node._costmap_reachable_goal = lambda *_args: (
+        None if route['blocked'] else ((1.0, 2.0), False))
+
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    assert not node._wohnungserkundung_active_safety_failure()
+    # A fresh odom callback can run after the safety check begins. Its
+    # monotonic receipt time is then newer than the earlier source snapshots.
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, time.monotonic())
+    assert not node._wohnungserkundung_active_safety_failure()
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    status.right_quality = NearFieldStatus.QUALITY_INVALID
+    assert node._wohnungserkundung_active_safety_failure()
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    # Status arrives before both clouds in the producer's publication order.
+    # A terminal Nav2 child in this window must await the bounded triplet,
+    # not turn a legitimate local blockage into SYSTEM_FAILURE.
+    status.header.stamp.sec = 11
+    def finish_triplet():
+        time.sleep(0.03)
+        with node._wohnungserkundung_runtime_lock:
+            node._wohnungserkundung_vl53_cloud_stamp_ns['left'] = 11_000_000_000
+        time.sleep(0.03)
+        with node._wohnungserkundung_runtime_lock:
+            node._wohnungserkundung_vl53_cloud_stamp_ns['right'] = 11_000_000_000
+    worker = threading.Thread(target=finish_triplet)
+    worker.start()
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    worker.join(timeout=1.0)
+    status.header.stamp.sec = 10
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
+    route['blocked'] = False
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    route['blocked'] = True
+    node._wohnungserkundung_estop = True
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_vl53_received_at['right'] = now - 2.0
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_received_at['right'] = now
+    node._wohnungserkundung_vl53_observed_at['right'] = now - 0.81
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_observed_at['right'] = now
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.02, 0.0, now)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 2.0)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    node._wohnungserkundung_vl53_measurement_valid['right'] = None
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_measurement_valid['right'] = False
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    node._wohnungserkundung_vl53_measurement_valid['right'] = True
+    empty = PointCloud2()
+    empty.header.frame_id = 'base_link'
+    node._on_wohnungserkundung_vl53('right', empty)
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    from sensor_msgs_py.point_cloud2 import create_cloud_xyz32
+    from std_msgs.msg import Header
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(nanoseconds=10_000_000_000))
+    node._on_wohnungserkundung_vl53(
+        'right', create_cloud_xyz32(
+            Header(stamp=Time(sec=10), frame_id='vl53_right_link'), []))
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    status.right_observed_columns = 127
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    status.right_observed_columns = 255
+    status.header.stamp.sec = 9
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+
+
+def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
+    context = PortalMapContext('session-route', 'map-route', 'map')
+    _, candidate = _we_source_state_goal(context)
+    candidate = replace(candidate, target_x_m=2.375, target_y_m=1.525)
+    node = ExploreNode.__new__(ExploreNode)
+    now = time.monotonic()
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_local_blocked_tasks = {}
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_estop_received_at = now
+    node._wohnungserkundung_vl53_received_at = {
+        'left': now, 'right': now}
+    node._wohnungserkundung_vl53_observed_at = {'left': now, 'right': now}
+    node._wohnungserkundung_vl53_measurement_valid = {
+        'left': True, 'right': True}
+    node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
+    status = NearFieldStatus()
+    status.header.frame_id = 'base_link'
+    status.header.stamp = Time(sec=10)
+    status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    status.left_observed_columns = status.right_observed_columns = 255
+    node._wohnungserkundung_vl53_status = status
+    node._wohnungserkundung_vl53_status_at = now
+    node._wohnungserkundung_vl53_status_observed_at = now
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
+    node._door_lidar_scan_snapshot = lambda: {
+        'received_at': now, 'ranges': np.ones(720)}
+    node._door_lidar_min_points = 200
+    node._robot_pose_sample = lambda: ((0.85, 1.525, 0.0), 0.1)
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    node._global_costmap_received_at = now
+    node._map_timeout_s = 5.0
+    node._global_frame = 'map'
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
+    costmap = OccupancyGrid()
+    costmap.header.frame_id = 'map'
+    costmap.info.width = 100
+    costmap.info.height = 60
+    costmap.info.resolution = 0.05
+    costmap.info.origin.orientation.w = 1.0
+    cells = np.zeros((60, 100), dtype=np.int8)
+    cells[30, 24] = 100  # 0.375 m vor der Basis, in Zielrichtung.
+    costmap.data = cells.ravel().tolist()
+    node._global_costmap = costmap
+
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    cells[44, 24] = 100  # Nur seitlich: kein lokaler Beweis fuer dieses Ziel.
+    cells[30, 24] = 0
+    costmap.data = cells.ravel().tolist()
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    cells[30, 24] = 100
+    costmap.data = cells.ravel().tolist()
+    node._wohnungserkundung_estop = True
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+
+
+def _we_route_recheck_fixture():
+    from copy import deepcopy
+    from explore.frontier_task_evidence import FrontierTaskEvidencePolicy
+    from explore.portal_source_adapter import (
+        PortalSourceCorrelation, raw_map_portal_source_from_values)
+
+    context = PortalMapContext('session-recheck', 'map-recheck', 'map')
+    _, candidate = _we_source_state_goal(context)
+    node = ExploreNode.__new__(ExploreNode)
+    node._global_frame = 'map'
+    node._map_timeout_s = 5.0
+    node._frontier_goal_max_cost = 50
+    node._wohnungserkundung_evidence_policy = FrontierTaskEvidencePolicy()
+    node._wohnungserkundung_scope_clearance = 0.28
+    raw = _grid(100, 60)
+    raw.header.stamp.sec = 1
+    cells = np.zeros((60, 100), dtype=np.int8)
+    cells[27:34, 24:28] = 100
+    raw.data = cells.ravel().tolist()
+    source = raw_map_portal_source_from_values(
+        width=100, height=60, resolution=raw.info.resolution,
+        frame_id='map', origin=(0., 0., 0., 0., 0., 0., 1.),
+        cells=raw.data, source_stamp_ns=1_000_000_000)
+    correlation = PortalSourceCorrelation(
+        context, 7, source.fingerprint, source.source_stamp_ns)
+    candidate = replace(
+        candidate, target_x_m=3.3, target_y_m=1.525,
+        source_fingerprint=source.fingerprint,
+        source_stamp_ns=source.source_stamp_ns)
+    node._global_costmap = deepcopy(raw)
+    safe = circular_clearance_mask(cells, 6)
+    node._global_costmap.data = np.where(safe, 0, 99).ravel().tolist()
+    # Preserve lethal evidence separately from inflated inscribed cells.
+    costs = np.asarray(node._global_costmap.data).reshape(cells.shape)
+    costs[cells == 100] = 100
+    node._global_costmap.data = costs.ravel().tolist()
+    node._global_costmap_received_at = time.monotonic()
+    scope = explore_node_module.AuthorizedExplorationScope(
+        'scope-recheck', context,
+        tuple(Point2D(x, y) for x, y in ((0., 0.), (5., 0.),
+                                       (5., 3.), (0., 3.))))
+    return node, candidate, raw, correlation, scope
+
+
+def test_we_route_recheck_accepts_fresh_detour_with_direct_obstacle_remaining():
+    node, candidate, raw, correlation, scope = _we_route_recheck_fixture()
+    pose = (0.85, 1.525, 0.0)
+    now = node._global_costmap_received_at
+    assert node._costmap_near_route_obstacle(pose[:2], (3.3, 1.525))
+    assert node._costmap_reachable_goal((3.3, 1.525), (3.3, 1.525), pose[:2])
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        now - 1, None, None, pose, raw, correlation, scope)
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        now, candidate, candidate, pose, raw, correlation, scope)
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        now - 1, replace(candidate, target_x_m=1.1), candidate, pose,
+        raw, correlation, scope)
+    assert node._wohnungserkundung_local_blocked_rechecked(
+        now - 1, candidate, candidate, pose, raw, correlation, scope)
+
+
+@pytest.mark.parametrize('fault', [
+    'stale', 'different_grid', 'wrong_raw_identity', 'no_route',
+    'unknown_route', 'outside_scope', 'blocked_start', 'blocked_goal'])
+def test_we_route_recheck_retains_source_scope_and_route_gates(fault):
+    node, candidate, raw, correlation, scope = _we_route_recheck_fixture()
+    blocked_since = node._global_costmap_received_at - 10.
+    if fault == 'stale':
+        node._global_costmap_received_at -= 8.
+    elif fault == 'different_grid':
+        node._global_costmap.info.origin.position.x = 0.1
+    elif fault == 'wrong_raw_identity':
+        raw.data[0] = 100
+    elif fault in ('no_route', 'unknown_route'):
+        costs = np.asarray(node._global_costmap.data).reshape((60, 100))
+        costs[:, 24:28] = 100 if fault == 'no_route' else -1
+        node._global_costmap.data = costs.ravel().tolist()
+    elif fault == 'outside_scope':
+        scope = replace(scope, vertices=tuple(Point2D(x, y) for x, y in (
+            (0., 1.1), (5., 1.1), (5., 1.9), (0., 1.9))))
+    elif fault == 'blocked_start':
+        node._global_costmap.data[30 * 100 + 17] = 100
+    else:
+        node._global_costmap.data[30 * 100 + 65] = 100
+        node._global_costmap.data[30 * 100 + 66] = 100
+    assert not node._wohnungserkundung_local_blocked_rechecked(
+        blocked_since, candidate, candidate, (0.85, 1.525, 0.),
+        raw, correlation, scope)
+
+
+@pytest.mark.parametrize('points,expected', [
+    ([], True), ([(0., 0., 0.)], False),
+    ([(float('nan'), 0., 0.)], False), ([(0.24, 0.03, 0.02)], True)])
+def test_we_vl53_separates_fresh_transport_measurement_and_obstacle(points, expected):
+    from sensor_msgs_py.point_cloud2 import create_cloud_xyz32
+    from std_msgs.msg import Header
+
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_vl53_received_at = {'left': None, 'right': None}
+    node._wohnungserkundung_vl53_observed_at = {'left': None, 'right': None}
+    node._wohnungserkundung_vl53_measurement_valid = {'left': None, 'right': None}
+    node._wohnungserkundung_vl53_point_count = {'left': 0, 'right': 0}
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': None, 'right': None}
+    node.get_clock = lambda: SimpleNamespace(now=lambda: SimpleNamespace(
+        nanoseconds=10_000_000_000))
+    header = Header(frame_id='vl53_right_link', stamp=Time(sec=10))
+    node._on_wohnungserkundung_vl53(
+        'left', create_cloud_xyz32(header, [(0.24, 0.02, 0.)]))
+    cloud = create_cloud_xyz32(header, points)
+    node._on_wohnungserkundung_vl53('right', cloud)
+    assert node._wohnungserkundung_vl53_received_at['right'] is not None
+    assert node._wohnungserkundung_vl53_measurement_valid['right'] is expected
+    assert node._wohnungserkundung_vl53_point_count['right'] == len(points)
+    assert node._wohnungserkundung_vl53_measurement_valid['left'] is True
+    cloud.header.stamp.sec = 8
+    node._on_wohnungserkundung_vl53('right', cloud)
+    assert node._wohnungserkundung_vl53_measurement_valid['right'] is expected
+    assert (time.monotonic()
+            - node._wohnungserkundung_vl53_observed_at['right']) >= 2.
+    cloud.header.stamp.sec = 11
+    node._on_wohnungserkundung_vl53('right', cloud)
+    assert node._wohnungserkundung_vl53_observed_at['right'] is None
+
+
+def test_real_vl53_producer_cannot_certify_health_from_an_empty_original_cloud():
+    """Execute the producer's two pure methods without importing I2C drivers."""
+    import ast
+    from sensor_msgs_py import point_cloud2
+    from std_msgs.msg import Header
+
+    source = PACKAGE_ROOT.parent / (
+        'vl53_near_field/vl53_near_field/vl53_near_field_node.py')
+    tree = ast.parse(source.read_text())
+    producer_class = next(item for item in tree.body
+                          if isinstance(item, ast.ClassDef)
+                          and item.name == 'Vl53NearField')
+    methods = [item for item in producer_class.body
+               if isinstance(item, ast.FunctionDef)
+               and item.name in ('_build_matrix', '_matrix_to_cloud')]
+    namespace = {'np': np, 'math': math, 'Header': Header,
+                 'point_cloud2': point_cloud2}
+    exec(compile(ast.Module(body=methods, type_ignores=[]), str(source), 'exec'),
+         namespace)
+    sensor = SimpleNamespace(
+        GR=8, GC=8, z_min=0.01, z_max=0.50, require_nb=True,
+        valid_statuses=[5], min_sps=0., max_sigma=50.,
+        row_el=np.linspace(-0.5, 0.5, 8), col_az=np.linspace(-0.5, 0.5, 8))
+    counts = []
+    for distance_mm, status in ((800, 5), (240, 255), (240, 5)):
+        raw = {'distance_mm': [distance_mm] * 64,
+               'nb_target_detected': [1] * 64,
+               'target_status': [status] * 64, 'sigma_mm': [5] * 64}
+        matrix = namespace['_build_matrix'](sensor, raw)
+        cloud = namespace['_matrix_to_cloud'](
+            sensor, matrix, 'vl53_left_link', Time(sec=10))
+        counts.append(cloud.width)
+    # Healthy far returns and wholly invalid returns have identical public
+    # original-cloud representation. The blocked side still has real points.
+    assert counts == [0, 0, 64]
+
+
 def test_we_grace_deadline_is_not_extended_by_faster_raw_map_updates(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
@@ -1769,6 +2108,37 @@ def test_we_duplicate_raw_map_keeps_active_frontier_current():
     assert source == NavigationSourceState(context, 8, True)
 
 
+def test_we_duplicate_of_newly_revalidated_map_keeps_active_child(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 8, True),
+        'fixed_goal_revalidated_fast')
+    node._wohnungserkundung_active_frontier_fingerprint = 'b' * 64
+    clock = {'now': 20.0}
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: clock['now'])
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=9, fingerprint='b' * 64,
+        source_stamp_ns=789)
+    node._region_graph_shadow_latest_correlation_received_at = 20.0
+    assert node._wohnungserkundung_source_state(intent, candidate) == (
+        NavigationSourceState(context, 9, True))
+    assert node._wohnungserkundung_unconfirmed_since is None
+    # A genuinely changed map still needs exact revalidation and may stop.
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=10, fingerprint='c' * 64,
+        source_stamp_ns=1011)
+    clock['now'] = 20.1
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 21.4
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+
+
 def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
@@ -1793,7 +2163,8 @@ def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
 def test_we_fast_raw_validation_commits_current_active_child(monkeypatch):
     context = PortalMapContext('session-fast', 'map-fast', 'map')
     intent, candidate = _we_source_state_goal(context)
-    correlation = SimpleNamespace(context=context, map_revision=8)
+    correlation = SimpleNamespace(
+        context=context, map_revision=8, fingerprint='b' * 64)
     raw_map = _grid(width=20, height=20, resolution=0.05)
     raw_map.header.stamp.sec = 3
     raw_map.header.stamp.nanosec = 4
@@ -1824,6 +2195,7 @@ def test_we_fast_raw_validation_commits_current_active_child(monkeypatch):
         NavigationSourceState(context, 8, True),
         'fixed_goal_revalidated_fast',
     )
+    assert node._wohnungserkundung_active_frontier_fingerprint == 'b' * 64
 
 
 def test_we_failed_current_raw_validation_invalidates_frontier_child(
@@ -2055,9 +2427,12 @@ def _portal_runtime_node(monkeypatch, outcome):
 
     class NavigationSession:
         def run(self, selected_intent, selected_candidate, navigate_child,
-                source_state, user_canceled, budget_exhausted):
+                source_state, user_canceled, budget_exhausted,
+                *, local_blocked, safety_failure):
             assert selected_intent is intent
             assert selected_candidate is candidate
+            assert callable(local_blocked)
+            assert callable(safety_failure)
             assert navigate_child(candidate, lambda: False) == 'success'
             return run
 
@@ -2152,7 +2527,7 @@ def test_frontier_runtime_records_terminal_attempt_on_revalidated_revision():
     )
 
     class NavigationSession:
-        def run(self, *_args):
+        def run(self, *_args, **_kwargs):
             node._wohnungserkundung_active_frontier_source = (
                 intent.intent_id,
                 NavigationSourceState(context, 23, True),

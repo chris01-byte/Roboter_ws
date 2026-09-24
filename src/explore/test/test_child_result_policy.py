@@ -165,6 +165,22 @@ def test_retryable_failure_records_bounded_revision_delay():
     assert eligible.selected_task_id == "task-frontier_000001"
 
 
+def test_local_blockage_defers_task_then_allows_fresh_reassessment():
+    task_policy = _policy_session()
+    disposition, history = apply_child_result_to_task_policy(
+        task_policy, _resolution(ChildGoalOutcome.LOCAL_BLOCKED))
+
+    assert disposition.state is (
+        ChildResultDispositionState.TEMPORARILY_BLOCKED)
+    assert disposition.terminates_exploration is False
+    assert disposition.attempt.retry_not_before_revision == 9
+    assert history.retryable_failure_count == 1
+    deferred = task_policy.assess(_source(8), (_availability(8),))
+    assert deferred.selected_task_id is None
+    restored = task_policy.assess(_source(9), (_availability(9),))
+    assert restored.selected_task_id == "task-frontier_000001"
+
+
 def test_invalidated_result_requests_reevaluation_without_attempt():
     task_policy = _policy_session()
     resolution = _resolution(

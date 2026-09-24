@@ -35,6 +35,7 @@ class ChildResultPolicyError(ValueError):
 class ChildResultDispositionState(str, Enum):
     PROGRESSED = "progressed"
     RETRY_SCHEDULED = "retry_scheduled"
+    TEMPORARILY_BLOCKED = "temporarily_blocked"
     REEVALUATE = "reevaluate"
     ABORTED = "aborted"
     CANCELED = "canceled"
@@ -100,6 +101,8 @@ def _validate_resolution(resolution: ChildGoalResolution) -> None:
         ChildGoalResolutionState.COMPLETED: ChildGoalOutcome.SUCCEEDED,
         ChildGoalResolutionState.RETRYABLE_FAILURE: (
             ChildGoalOutcome.RETRYABLE_FAILURE),
+        ChildGoalResolutionState.TEMPORARILY_BLOCKED: (
+            ChildGoalOutcome.LOCAL_BLOCKED),
         ChildGoalResolutionState.ABORTED: ChildGoalOutcome.ABORTED,
         ChildGoalResolutionState.CANCELED: ChildGoalOutcome.CANCELED,
     }
@@ -173,6 +176,20 @@ def disposition_from_child_result(
             retry_not_before_revision=(
                 resolution.intent_map_revision
                 + selected_policy.retry_delay_revisions),
+        )
+    elif resolution.state is ChildGoalResolutionState.TEMPORARILY_BLOCKED:
+        state = ChildResultDispositionState.TEMPORARILY_BLOCKED
+        reason = "child_goal_local_blocked"
+        attempt = TaskAttempt(
+            attempt_id=_attempt_id(resolution),
+            task_id=resolution.task_id,
+            context=resolution.context,
+            map_revision=resolution.intent_map_revision,
+            outcome=TaskAttemptOutcome.RETRYABLE_FAILURE,
+            reason=reason,
+            retry_not_before_revision=(
+                resolution.intent_map_revision
+                + max(2, selected_policy.retry_delay_revisions)),
         )
     elif resolution.state is ChildGoalResolutionState.INVALIDATED:
         state = ChildResultDispositionState.REEVALUATE

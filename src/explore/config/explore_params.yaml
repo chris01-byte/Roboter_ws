@@ -42,6 +42,11 @@ explore_node:
     # Erfordert einen explizit aktivierten Regionsgraph-Schatten.
     wohnungserkundung_policy_enabled: false
     wohnungserkundung_navigation_enabled: false
+    # Passive Sicherheitsbelege fuer die Einordnung eines terminalen
+    # Nav2-Abbruchs. Kein Fahrbefehl und keine geaenderte Sensorgrenze.
+    wohnungserkundung_estop_topic: "/safety/estop"
+    wohnungserkundung_vl53_left_topic: "/near_field/left/points"
+    wohnungserkundung_vl53_right_topic: "/near_field/right/points"
     # WE-M5: Speichert nur WE-Metadaten nach erfolgreichem Kartenmanager-Save.
     # Laden bleibt passiv; erst ein neuer ExploreArea-Auftrag darf fortsetzen.
     wohnungserkundung_persistence_enabled: false

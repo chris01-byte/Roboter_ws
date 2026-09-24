@@ -1,5 +1,280 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: motorloser Zielsystembefund, Fahrt gesperrt (24.09.2026)
+
+Nach ausdrücklicher Vor-Ort-Freigabe wurde der vorhandene Stufe-3-Kandidat
+mit realen Sensoren, aber `active_drive=false`, `enable_auto_explore=false`
+und physisch getrennter Motorversorgung gestartet. Die Stufe-3-Pakete lösten
+aus `we1-stage3-complete-1kI6en` auf, LiDAR-Bring-up und `robot_bringup` aus
+Stufe 1. Nach einem nachgewiesenen Explorer-SIGINT-Race wurde **nur** das
+separate `explore`-Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-explorer-shutdown-dnrGyH/install`
+zuletzt gesourct (Quellcommit `0fe9245`, gleiche Quell-/Install-SHA). Zwei
+vollständige Wiederholungsstarts endeten mit je 24/24 sauberen Kindern,
+ohne Restprozess oder Gerätehandle. Der aktive Robot-Install blieb unberührt.
+
+**Fahrblocker:** Beide realen VL53 sind zwar frisch (~3,6 Hz), aber im
+aktuellen freien Raum in sämtlichen Stichproben nur `QUALITY_PARTIAL` mit
+Spaltenmaske `0/255`. Der separate Rohdatenlauf ergab links 223/1280 und
+rechts 233/1280 gültige Zonen, beidseits 0/160 volle Spalten, vorwiegend
+Status 255/kein Ziel. Der 64/64-Vertrag und damit das Fahrtor sind nicht
+erfüllt; das ist keine Erlaubnis, ihn oder andere Sicherheitsgrenzen zu
+lockern. LiDAR, Karte, TF, Kartenmanager und Nav2 waren passiv frisch,
+Fahrkanäle und Motor-Sollwerte null. Das geladene R9-Profil trägt noch das
+alte `scope_verified=true`, hat aber keine neue physische Bindung an den
+aktuellen SLAM-Frame. Kein Realversuch und keine Fahrfreigabe. Für eine
+erneute Prüfung eine motorlose, vor Ort kontrollierte VL53-Szene mit
+nachgewiesenen Rückgaben beider 8×8-Raster sowie die aktuelle Startpose und
+Scope-Grenze im neuen Kartenframe messen; erst danach einen eng begrenzten
+Umfahr-/Stoppbefreiungsaufbau festlegen und gesondert zur Fahrt freigeben
+lassen. Keine reale Wohnungsgeometrie ins Repository übernehmen.
+
+**Rückfall:** Das neue `explore`-Overlay weglassen, aber das ältere
+Kandidatenpräfix wegen seines Egg-Links nicht als eingefrorenen Rollback
+ansehen. Der vor `0fe9245` geprüfte Quellstand hatte den dokumentierten
+Shutdown-Race; die reale Sensorqualität sperrt beide Varianten für Fahrten.
+
+## WE-1 Stufe 3: neuer isolierter Softwarekandidat, nicht deployt (24.09.2026)
+
+Ausgangsstand PR #99, Branch `feature/we1-stufe3-local-recovery`,
+`2914279`; Softwarecommits `785b825`, `e3d7352`, `aa699b0`.
+Der neu gebaute Kandidat liegt nur unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-complete-1kI6en/install`.
+Reihenfolge: `/opt/ros/humble` →
+`/home/p/amadeus_slam_toolbox_ws/install` →
+`we1-ldlidar-shutdown-overlay` → `we1-10e1858074e7-r1` →
+`we1-stage1-5e3fe0a-20260923` → `we1-stage2-6fd36d5-20260923` →
+`we1-stage3-bypass-s8QMY8` → diesen Kandidaten. Die neun Pakete
+`robot_interfaces`, `vl53_near_field`, `robot_navigation`, `explore`,
+`robot_map_manager`, `safety_monitor`, `mission_manager`, `bt_orchestrator`
+und `base_hardware` wurden neu gebaut und lösen aus diesem Präfix auf.
+Die Python-Pakete `explore` und `robot_navigation` sind in diesem isolierten
+Kandidaten per Egg-Link auf den zugehörigen Build gebunden; Source-/Build-
+Hashes stimmen überein. Dieses Entwicklungspräfix nicht blind als
+unabhängig kopierbares Deployment-Image behandeln.
+`bt_orchestrator` benötigte für den Build den vorhandenen separaten
+`behaviortree_cpp`-CMake-Underlay unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp`; der erste Lauf ohne
+diesen Pfad scheiterte. Das ist kein Robot-Deployment.
+
+**Jetson-Wirkung bei einer künftigen bewussten Übernahme:** Die additive
+`NearFieldStatus`-Schnittstelle verlangt kohärenten Neubau/Start von
+Produzent und sämtlichen Verbrauchern. Ein alter Publisher meldet Qualität
+0 und sperrt Fahrtor/Explorer; bei aktiviertem optionalem VL53-Safety-Notstopp
+bleibt auch dieser gesetzt. Gültige Fernmessung kann eine leere Originalwolke
+haben, aber nur mit gemessenem Status 5, Zielanzahl, Sigma, plausiblem
+Messwert, Vollabdeckung und gleichem Stempel. Die Costmap bekommt keine
+Räumstrahlen aus unbeobachteten Spalten. Safety-Timeout 0,8 s ist neu
+streng, nicht gelockert. Nav2 `nav2_params_real.yaml` verfolgt im Kandidaten
+0,40 m statt 0,80 m voraus und dreht ab 0,35 rad statt des RPP-Defaults;
+Footprint, Padding, Collision Monitor und Geschwindigkeiten sind unverändert.
+Das Fahrtor verlangt nun zusätzlich `/safety/estop=false` mit Empfangsalter
+höchstens 1,0 s und frisches Basis-/Karten-TF (0,2/0,8 s). Ein allein
+gestartetes `nav_real.launch.py` ohne Safety-Publisher bleibt daher bewusst
+gesperrt. Der normale `robot.launch.py`- und WE-Mapping-Start enthält den
+Safety-Monitor; trotzdem sind tatsächliche TF- und Statusfrequenzen motorlos
+zu messen, bevor dieser Kandidat die aktive Hardwarekette ersetzen dürfte.
+
+Der gerätefreie frühe **und** späte dauerhafte Umfahrfall A→B bestanden
+auf dem finalen Kandidaten mit echter Nav2-Kette, automatischer Explorerwahl,
+nachgewiesenem Kartenfortschritt und weiterlaufender Elternmission. Im
+späten Fall wurde ein notwendiger Controller-Stopp vor der unverändert
+stehenden Barriere gemessen; die frühere B-Stornierung wurde als Folge von
+Frische-/Karten-Duplikat-Races getrennt behoben. Sensor-, Software-Not-Aus-
+und TF-Ausfälle endeten gerätefrei hart ohne Wiederanfahrt. Ein Software-
+Not-Aus-Diagnoselauf überschritt die anfängliche 25-mm-Prüfergrenze mit
+26,3 mm; die nachgelagerte unveränderte Velocity-Smoother-Rampe erklärte
+den Restweg. Der korrigierte gerätefreie Prüfer misst Gate-/Ausgangs-
+Nullzeit und einen aus der bestehenden Verzögerung abgeleiteten 40-mm-
+Diagnoserahmen; er ist **kein** Hardware-Not-Aus- oder Bremswegbeleg.
+Die ungeprüfte
+reale Sensor-/TF-Verfügbarkeit hält Stufe 3 **insgesamt** offen. Zwei
+Einzel-PID-SIGINTs während eines Karten-Saves endeten sauber mit erhaltenen
+Dateien; der historische `take_message()`-Zeitpunkt wurde nicht gezielt
+getroffen. Kein Zielgerät, kein Gerät, kein Motor und keine echte Karte wurden
+hierfür berührt. Details/Evidenzpfade stehen im maßgeblichen WE-STATUS.
+
+**Vor Ort noch erforderlich:** Startpose und aktueller Kartenframe/Scope,
+Hinderniskontur, lichte Umfahrbreiten, freier Schwenkraum, Auslauf,
+Hardware-Not-Aus, passive VL53-Qualitätsverteilung beider Seiten,
+motorloser Gesamtstart/-stopp. Insbesondere die reale VL53-64/64-Qualität
+und die `map→odom`-/`odom→base_link`-Publikationsrate gegen die neuen
+Gate-Grenzen prüfen. Erst danach und mit neuer konkreter
+Vor-Ort-Freigabe ein begrenzter Realversuch. Der frühere enge Scope ohne
+Frontierziel darf nicht zum Umfahrtest erweitert oder geraten werden.
+
+**Rückfall:** Dieses Präfix in einer frischen Shell weglassen. Aktiver
+Jetson-Install, bisherige Overlays und Wohnungsdaten bleiben unverändert.
+
+## WE-1 Stufe 3: permanente Umfahrung softwaregeprüft, reale Übernahme offen (23.09.2026)
+
+Produktionsquellstand `90379d9`, Prozessprüfer `d13a6c9` auf
+`feature/we1-stufe3-local-recovery`, PR #99 weiterhin
+offen. Das neue **nur gerätefrei verwendete** Install liegt unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-bypass-s8QMY8/install`.
+Sourcereihenfolge: ROS Humble → bestätigte Stufe-1-Kette → Stufe 2 → dieses
+Präfix. `ros2 pkg prefix explore` und Dateivergleich belegen das neue Paket;
+Quell-/Install-SHA von `explore_node.py` jeweils
+`485435a0effe6c32efd74da4995a92584d6b01dff255f2010c6e003327fb8fe0`.
+Alle übrigen Pakete kommen aus den bisherigen Underlays; Nav2- und
+Collision-Monitor-Konfiguration wurden bytegleich mit Stufe 1 verglichen.
+Keine Roboterinstallation, kein reales Profil und kein Gerät wurden geändert.
+
+Die echte Nav2-Kette in DDS 219 umfuhr eine stehenbleibende synthetische
+Barriere mit automatisch gewähltem Explorerziel. Danach bestätigte eine neue
+Rohkarte den Frontierabschluss, ein anderer automatisch gewählter Auftrag
+wurde erfolgreich abgearbeitet und dieselbe Elternmission blieb aktiv.
+Live-Footprint, geplante/virtuell gefahrene Kontur, Ausgänge der Schutzkette,
+maximal ein Kindziel und 0 m Rückwärtsfahrt wurden überprüft. Das ist ein
+Softwarebeleg, keine physische Probefahrt. Der unlösbare Gegenfall blieb ohne
+Kindziel/Bewegung und endete mit erklärtem Teilstand.
+
+**Vor realer Übernahme weiterhin offen:**
+
+- Notwendiger Stopp mit anschließender Befreiung: frischer NavFn-Umweg
+  vorhanden, Regler stoppt aber wegen vorausberechneter Costmap-Kollision.
+  Keine Regler-/Sicherheitsgrenze versuchsweise ändern.
+- Leere VL53-Originalwolken belegen Empfang, aber keine Messgesundheit.
+  Gültige Fernmessung und ungültige Messung sind im heutigen Statusvertrag
+  ununterscheidbar. Der Explorer sperrt dann lokale Recovery. Ein eindeutiger
+  Sensorstempel-/Gültigkeitsvertrag mit den Verbrauchern ist gesondert nötig;
+  insbesondere ist der bisherige Fahrtor-Heartbeat kein Qualitätsnachweis.
+- Den bekannten Kartenmanager-SIGINT-Race klären und anschließend einen
+  geeigneten motorlosen Gesamtstart/-stopp nachweisen. Dieser Folgeauftrag
+  enthält keine Erlaubnis für Hardwarezugriff.
+- Aktuelle Startpose/Orientierung, Barrierenkontur, lichte Alternativbreiten,
+  freier Schwenkbereich und Auslauf vor Ort messen und an den aktuellen
+  Kartenframe/Scope binden. Keine synthetischen Maße als reale Freigabe nutzen.
+  Eine reale Fahrt braucht danach die aktuelle ausdrückliche Vor-Ort-Freigabe.
+
+Details, feste Diagnosegeometrie und konkrete Testgrenzen stehen ausschließlich
+im laufenden WE-STATUS. **Rückfall:** Neues Präfix weglassen; das vorherige
+isolierte Install und der aktive Roboterstand sind unverändert vorhanden.
+
+## WE-1 Stufe 3: neues gerätefreies Nav2-Overlay, nicht auf Antrieb übernehmen (23.09.2026)
+
+Das zusätzliche Stage-3-`explore`-Install
+`/home/p/.local/share/amadeus/releases/we1-stage3-routeblock-20260923/install`
+liegt **nur isoliert** vor und wurde nicht in den aktiven Roboterstart
+übernommen. Quell- und Installdatei `explore_node.py` wurden per SHA-256
+verglichen (beide
+`be6c8f7da787fa51a57a9bebf87cf0ee1e440a049be57f3eef7af897b6c9c6ef`).
+Die Reihenfolge ist ROS Humble → bestätigte Stufe-1-Kette →
+Stufe 2 → dieses Stage-3-Overlay; die Nav2-/Collision-Konfiguration kommt
+unverändert aus Stufe 1. Der neue Prüfer in DDS-Domain 219 startet keinen
+Hardwaretreiber und sendet keine Motorregister. Er belegte zweimal mit
+echtem Nav2, Fahrtor und Collision Monitor: Hindernis → Stopp → freie
+Sensorstrecke → weitere virtuelle Fahrt → Zielerfolg → Rohkartenfortschritt
+→ nächstes Frontierziel. Bei dauerhaftem Hindernis verhinderte die neue
+enge Nahkorridor-Klassifikation den zuvor beobachteten sofortigen
+`SYSTEM_FAILURE` nach einem zweiten Nav2-Abbruch. Ein echter sicherer
+Umweg blieb in zwei synthetischen Positionen aus. Eine zurückgestellte
+Aufgabe bleibt bei weiter belegtem Zielkorridor auch nach neuer Costmap
+gesperrt; der gerätefreie Gegenlauf blieb nach drei begrenzten Kindzielen
+ohne Bewegung stehen und wartete auf eine sichere Alternative.
+
+**Keine reale Fahrt daraus ableiten:** Der letzte motorlose reale WE-Vorlauf
+hatte kein gültiges Ziel im engen Scope; das links stehende Hindernis löste
+nur Slowdown, keinen Stopp aus. Der einmal beobachtete Kartenmanager-
+Shutdown-Race ist weiterhin offen. Vor einem Fahrversuch müssen diese drei
+Punkte motorlos geklärt sein; das Fahrtor und die Sicherheitsgrenzen bleiben
+unverändert. Rückfallweg: neues Stage-3-Präfix nicht sourcen, stattdessen
+das vorherige isolierte Stage-3-Kandidatenpräfix verwenden; kein automatischer
+Merge oder Deploy.
+
+## WE-1 Stufe 3: lokale Hindernisbehandlung nur teilweise belegt (23.09.2026)
+
+**Neues physisches Hindernis links (23.09. abends), nur motorlos:** Der linke
+VL53 erkannte wiederholt ~0,24–0,25 m, der rechte keinen Nahpunkt. Bei
+`dry_run=true`/`allow_rs485=false` ließ der bestehende WE-Collision-Monitor
+einen synthetischen Vorwärtswunsch von 0,08 m/s nur mit höchstens 0,024 m/s
+durch (SlowZone), nicht mit null. Das Mapping-Profil besitzt eine
+bewegungsabhängige Footprint-Approach-Zone; die ältere starre StopZone darf
+hier nicht unterstellt werden. Kein Motorstrom, keine reale Bewegung und kein
+Recovery-Nachweis. Den aus Dry-run resultierenden Odometrie-/Kartenstand nicht
+für eine Fahrt weiterverwenden.
+
+Der anschließende Einzel-SIGINT erzeugte bei `robot_map_manager` einen
+`take_message()`-RuntimeError und Exit 1; alle anderen Kinder stoppten sauber,
+alle Gerätehandles waren danach frei. Dieser Shutdown ist **nicht** als
+Stufe-1-artig sauber abzunehmen. Vor einer realen Fahrt den Race klären,
+frischen motorlosen Preflight mit überprüftem Fahrziel durchführen und das
+Hindernis nur in einer nachweislich sicheren Testanordnung verwenden. Keine
+Schwellen, Footprints oder Fahrtore abschwächen.
+Ein unmittelbar folgender motorloser Wiederholungslauf ohne synthetischen
+Fahrwunsch sah denselben linken Nahpunkt und stoppte alle 24 Kinder sauber,
+ohne Traceback oder offene Gerätehandles. Der erste Race bleibt ungeklärt;
+der zweite Lauf beweist nur, dass er nicht bei jedem Stopp auftritt.
+
+**Nachtrag nach Vor-Ort-Freigabe (23.09.):** Auf dem Jetson bestand ein erneuter
+passiver WE-Preflight mit Stufe-3-Explorer aus dem isolierten Präfix und allen
+anderen WE-Paketen aus der bestätigten Stufe-1/2-Kette. Der Stack lief mit
+`active_drive:=false`, realen LiDAR-/VL53-Daten, aktivem Collision Monitor und
+Nav2, frischer Rohkarte/TF/Safety und Basiswerten durchgehend null. Ein
+einziger SIGINT beendete 24 Kinder sauber; Gerätehandles waren danach frei.
+Es wurde kein Fahrbefehl gesendet. Für einen Hindernisversuch sind Startpose,
+unbelebte Barriere und sicherer Auslauf noch nicht benannt. Eine gewünschte
+freie Kurzfahrt ohne Barriere ist nur ein Basis-/Fahrkettencheck, kein
+Stufe-3-Nachweis und braucht eine eigene enge Bewegungsgrenze.
+Für den später gewünschten freien Kurztest kam ein weiterer Blocker hinzu:
+Das lokale R9-WE-Profil untersagt selbst die Wiederverwendung seiner
+Scope-Koordinaten nach SLAM-Neustart. Der passive Vorlauf startete SLAM neu;
+Profil-Hashgleichheit ist daher keine gültige physische Scope-Bindung. Vor
+einer WE-Fahrt den begrenzten Raum im aktuellen Kartenframe neu messen und
+von der anwesenden Person bestätigen lassen. Bis dahin Motoren auslassen;
+keine Sicherheitsschwelle ändern oder das Fahrtor umgehen.
+
+Nach Vor-Ort-Bestätigung des einzelnen Raums und geschlossener Ausgänge wurde
+ein neues lokales Einmalprofil für einen eng begrenzten, vorwärtsgerichteten
+Ein-Ziel-Test im neuen Kartenframe erstellt (Profilpfad und Hash stehen im
+WE-Status). Der echte WE-/Nav2-Gesamtprozess wurde damit **nur motorlos**
+gestartet: Karte/TF/LiDAR/VL53/Safety waren frisch, Basis `dry_run=true`,
+`allow_rs485=false`; der Explorer fand bis zum 75-s-Gesamtbudget kein gültiges
+Ziel. Kein Nav2-Fahrkommando, keine Odometriebewegung, danach sauberer Stopp
+und freie Gerätehandles. Der Versuch darf nicht scharf wiederholt werden, nur
+um ein Ziel zu erzwingen. Erst eine neu vor Ort vermessene Kurzroute und ihr
+motorloser Scope-/Nav2-Nachweis erlauben eine reale Probefahrt.
+
+**Ausgangsstand:** bestätigter Stufe-2-Branch bei `3fa3ce6` auf der
+Stufe-1-Overlaykette mit Stufe-2-`explore` als letztem Präfix. Der neue
+Themenbranch `feature/we1-stufe3-local-recovery` bei Produktionscommit
+`d6c6fa9` (Review-PR #99, nicht gemergt) ändert nur Explorer-Code, sein
+Profil, Tests und den vorhandenen Prozessprüfer. Der produktive
+Roboterstand und die lokale Standardinstallation wurden nicht verändert.
+Der einzige neue Build ist das isolierte Präfix
+`~/.local/share/amadeus/releases/we1-stage3-candidate-20260923/install`;
+es wurde testweise **nach** dem Stage-2-Präfix gesourct.
+`ros2 pkg prefix explore`, Python-Import und Quell-/Install-Hash ordneten den
+Explorer diesem Präfix zu.
+
+Der Explorer stuft ein terminales Frontier-`ABORTED` nur bei frischer
+Costmap-Hindernisevidenz, gestoppter Odometrie, frischem map-TF, LiDAR, beiden
+VL53-Streams und freiem Not-Aus als `LOCAL_BLOCKED` ein. Andernfalls bleibt
+es ein Systemfehler. Eine blockierte Aufgabe wird begrenzt zurückgestellt;
+ein anderes geprüftes Ziel kann übernommen werden, das erste erst nach
+frischer, unprojiziert freier Costmap erneut. Nav2-/Collision-Monitor-
+Parameter, Footprint, Padding und Scope wurden nicht geändert; Spin und
+BackUp bleiben vom Fahrpfad getrennt.
+
+902 Explorer-Pytests und der achtteilige gerätefreie Gesamtprozessprüfer aus
+dem Quellbaum sowie gegen das isolierte Install bestanden. Der Prüfer mit
+Fake-Nav2 belegt Elternfortsetzung nach lokalem Kindabbruch und kontrolliertes
+Warten ohne Ausweg, **nicht** die
+sichere Bewegung des realen Controllers. Sein DDS-Bereich ist vom Roboterdomain
+getrennt; alle synthetischen Sensoren haben eigene Testtopics. Beim damaligen
+Prüflauf war der R9-Befund links (~0,24 m) noch offen; eine Motorfreigabe,
+Gerätezugriff oder Fahrbefehl fand dabei nicht statt. Die inzwischen
+vorliegende Vor-Ort-Bestätigung und der passive Vorlauf oben ersetzen keinen
+produktionsnahen Hindernis-/Collision-Monitor-Nachweis. Bis der begrenzte
+Testaufbau festgelegt und motorlos überprüft ist, darf die Stage-3-Installation
+nicht als Fahrprofil verwendet werden.
+
+**Rückfall:** Stufe-3-Präfix in einer neuen Shell auslassen; die bestätigte
+Stufe-1/2-Kette bleibt unverändert. Es ist nichts auf dem Jetson zu entfernen
+oder zurückzukopieren.
+
+---
+
 ## WE-1 Stufe 2: gerätefreie Frontierfortsetzung (23.09.2026)
 
 **Basis:** bestätigter Stufe-1-Stand `5e3fe0a` mit dessen unveränderter

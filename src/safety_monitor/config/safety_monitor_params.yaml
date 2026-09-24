@@ -25,6 +25,7 @@ safety_monitor:
     use_near_field_estop: false
     near_field_status_topic: "/near_field/status"
     near_field_estop_dist_m: 0.08
+    near_field_timeout_s: 0.8
 
     # --- Hardware-Taster (GPIO) - PLATZHALTER, noch nicht implementiert ---
     # Erst aktivieren, wenn Jetson.GPIO angebunden ist. Bis dahin Not-Aus

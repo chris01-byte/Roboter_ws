@@ -17,6 +17,306 @@ Rückfallweg:
 
 ---
 
+## 2026-09-24 — Motorloser Stufe-3-Zielsystemvorlauf bleibt gesperrt
+
+**Entscheidung:** Keine reale Fahrt freigeben und keine VL53-/Collision-
+Grenze lockern. Den konkret beobachteten Explorer-SIGINT-Race getrennt
+beheben und nur als isoliertes Overlay über den vorhandenen Kandidaten legen.
+
+**Grund / beobachtete Evidenz:** Beide echten VL53 lieferten stempelgleiche,
+frische Frames, aber bei je 20 Rohframes nur 223/1280 (links) und 233/1280
+(rechts) gültige Zonen; keine der 160 Spalten je Seite war vollständig.
+Vorwiegend `target_status=255` und fehlendes Ziel verhinderten den
+64/64-Vertrag; leere Wolken sind kein Freiraumbeleg. Beim ersten Gesamt-SIGINT
+des ursprünglichen Kandidaten starb nur der Explorer mit invalidiertem
+Humble-Wait-Set. Der gezielte Executor-vor-Kontext-Fix `0fe9245` bestand 921
+Explorer-Tests und zwei motorlose Gesamtstarts/-stopps mit je 24 sauberen
+Kindern und freien Gerätehandles. TF, LiDAR, Rohkarte, Kartenmanager, Safety,
+Nav2 und Null-Fahrkanäle waren im 12-s-Fenster frisch; das R9-Scope ist nach
+dem letzten SLAM-Neustart nicht neu physisch gebunden. Details im WE-STATUS.
+
+**Betroffene Dateien und Hardware:** `explore_node.py`, zwei Shutdown-
+Vertragstests und ein neues isoliertes `explore`-Präfix; reale VL53, LiDAR
+und ROS-Prozesse nur motorlos gelesen. Motorversorgung physisch getrennt;
+kein aktiver Install/Profilwechsel. **Offene Risiken:** Sensor-64/64-Qualität,
+aktuelle Scope-Bindung und reale Umfahrung/Stoppbefreiung. **Rückfallweg:**
+Neues `explore`-Overlay weglassen; keine der isolierten Varianten ist zur
+Fahrt freigegeben.
+
+## 2026-09-24 — PR #99: Bring-up-Vertrag in passender CI-Umgebung
+
+**Entscheidung:** Den unveränderten Bring-up-Test des Workflows
+`semantic-map-offline.yml` in einem ROS-Humble/Jammy-Job mit deklariertem
+`python3-opencv` und `ros-humble-cv-bridge` ausführen. Der Mapmanager-Test
+erhält den fehlenden Python-Suchpfad zum bestehenden Paket
+`amadeus_map_identity`. Keine Robotiktests auslassen oder abschwächen.
+
+**Grund / beobachtete Evidenz:** Der frühere frische Python-Runner brach beim
+Import von `cv2` ab, bevor Tests oder der Mapmanager-Schritt laufen konnten.
+Lokal liefen sieben Bring-up- und 53 Mapmanager-Tests mit den benötigten
+Abhängigkeiten. Beide erneuten GitHub-Läufe für `e4376c4` bestanden
+vollständig ([36035275084](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035275084),
+[36035281883](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035281883)).
+
+**Betroffene Dateien und Hardware:** Nur CI-Workflow; kein Hardwarezugriff,
+kein aktiver Install, keine Motoren. **Offene Risiken:** Motorlose Prüfung des
+isolierten Stufe-3-Kandidaten, reale Sensorqualität und Fahrabnahme bleiben
+offen. **Rückfallweg:** CI-Commit zurücknehmen; der isolierte Kandidat und
+alle aktiven Roboterpräfixe bleiben unverändert.
+
+## 2026-09-24 — Stufe-3-Softwareablauf abgeschlossen; reale Abnahme offen
+
+**Entscheidung:** VL53-Qualität vor dem Nahfilter explizit je Sensor melden
+und mit beiden Originalwolken stempelgleich korrelieren. Nur vollständig
+gültige, plausible 8×8-Rückgaben dürfen als beobachtete Freiraumstrahlen
+in die Costmap gelangen. Explorer, Fahrtor und der optionale Safety-Nahstopp
+verlangen positive frische Evidenz; fehlende/ungültige Daten halten an.
+Der Kartenmanager verarbeitet SIGINT erst nach laufendem Callback, bevor
+Executor, Knoten und Kontext in dieser Reihenfolge schließen. Das Fahrtor
+benötigt zusätzlich ein frisches explizites Software-Not-Aus-Freigabesignal
+und frische `odom→base_link`-/`map→base_link`-TF, bevor es Missionsbewegung
+ausgibt; die Lokalisierungssuche bleibt getrennt begrenzt.
+
+**Grund / beobachtete Evidenz:** Der reale Treiber nennt das Sigmafeld
+`range_sigma_mm`; zuvor wurde es unter `sigma_mm` nicht geprüft. Eine
+gültige Fernrückgabe und Status 255/ungültig erzeugten identisch leere
+Originalwolken. Ein unabhängiger Review fand zusätzlich, dass der neue
+UNKNOWN-Status ohne Anpassung des `safety_monitor` einen gesetzten
+Nahstopp aufheben konnte; vor der Abnahme korrigiert. Tests decken gültig
+nah/fern, partielle/fehlende/malformed/negative/unplausibel große Werte,
+stempelgleiche Produktion, leere Fernwolke und ungültige Costmap-Strahlen ab.
+Zwei echte SIGINT-Läufe während eines laufenden Karten-Save-Callbacks
+bewahrten beide Saves und endeten ohne Traceback oder Restprozess. Der
+historische `take_message()`-Race ist strukturell durch den nicht mehr
+vorzeitig invalidierten ROS-Kontext adressiert; der exakte Zeitpunkt wurde
+im Smoke nicht deterministisch reproduziert.
+
+**Reglerbefund:** Bei altem 0,80-m-Lookahead schneidet RPP den vorhandenen
+NavFn-Umweg ab und stoppt korrekt vor einer tödlichen lokalen Costmap-Zelle.
+Eine 0,10-rad-Drehschwelle verletzte im gerätefreien späten Gegenversuch
+die unabhängige gepaddete Footprint-Geometrie und wurde verworfen. Der
+aktuelle 0,40-m-Lookahead/0,35-rad-Stand zeigte nach einem notwendigen
+Stopp sichere autonome Umfahrung bis Ziel A. Ein früher A→B-Lauf scheiterte
+an einem Odometrie-Snapshot-Race (`age_s=-0.029`) und ein weiterer an
+erneutem Cancel durch inhaltlich gleiche Kartenbeobachtung nach bereits
+positiver neuer Revalidation. Monotone Frische wird nun nach jeder Aufnahme
+gemessen; der letzte positiv revalidierte Kartenfingerprint überlebt
+identische Folgebeobachtungen. Echte neue Inhalte benötigen weiterhin
+Revalidation. Auf dem finalen gerätefreien Kandidaten gelangen der
+notwendige Stopp **und** frühe dauerhafte Umfahrung jeweils bis zu zwei
+erfolgreichen automatisch gewählten Zielen bei laufender Elternmission.
+Keine Rückwärtsfahrt oder konkurrierende Nav2-Ziele.
+
+**Weitere Sicherheitsbefunde:** Der echte Nav2-Prozessprüfer zeigte, dass
+ein Software-Not-Aus ohne Gate-Anbindung noch kurz Bewegung zuließ und ein
+TF-Ausfall sogar 0,172 m virtuellen Nachlauf bewirkte. Die explizite
+Not-Aus-Prüfung im Gate und getrennte TF-Frische (Basis 0,2 s, gesamte
+Kartenkette 0,8 s) reduzieren dies im gleichen Test auf 0,022 bzw.
+0,037 m und beenden Kind/Elternauftrag ohne Recovery. Ein Not-Aus-Lauf
+mit 0,0263 m verfehlte die anfängliche willkürliche 0,025-m-Diagnosegrenze;
+die Spur wies Gate-Null und Nachlauf allein durch den unveränderten
+Velocity-Smoother nach. Die neue 0,04-m-**Prüfergrenze** ist aus dessen
+0,30-m/s²-Verzögerung und Publikationsphasen hergeleitet und verlangt
+zusätzlich Gate-Null binnen 0,15 s und Ausgangs-Null binnen 0,45 s.
+Weder Produktgrenze noch Bremskonfiguration wurde gelockert. Die Gate-Suche vor
+Lokalisierungsfix behält ihren separaten bereits begrenzten Vertrag. Diese
+strengeren Prüfungen sind **kein** Ersatz für hardwired Not-Aus oder reale
+TF-/Sensor-Frequenzmessung vor Deployment.
+
+**Betroffene Dateien und Hardware:** Additive `NearFieldStatus`-Felder,
+VL53-Produzent, Explorer/Fahrtor/Safety-Verbraucher, bestehende Nav2-
+Konfiguration, Kartenmanager und gezielte Tests. Kein Hardwarezugriff,
+kein aktiver Roboterinstall, keine Motoren. Neun betroffene Pakete im
+isolierten Kandidaten gebaut; der C++-BT-Build benötigte den vorhandenen
+lokalen `behaviortree_cpp`-CMake-Underlay.
+
+**Teststatus / offene Risiken:** 1 018 Pytests der fünf betroffenen Pakete;
+echte Nav2-Prozessfälle `explorer_bypass`, `stopped_bypass`, `disappear`,
+`no_exit`, aktive VL53-/Not-Aus-/TF-Fehler; bestehende Prozessfälle
+`local_blocked`, `frontier_replan` und `frontier_no_source`;
+zweimaliger Save/SIGINT-Smoke
+bestanden. Der Prozessprüfer benötigte eine Korrektur seiner periodischen
+Telemetrie und seines asynchronen Cleanup; der erste Replan-Wiederholungslauf
+hatte eine `Destroyable`-Aufräummeldung, der danach saubere Lauf ist belegt.
+`frontier_no_source` benötigte ebenfalls den periodischen Prüfer-Timer; der
+erfolgreiche Wiederholungslauf endete erst am Missionsbudget, ohne zweite
+Navigation oder Fahrbefehl.
+Reale 64/64-VL53-Verfügbarkeit und TF-Rate, motorloser Zielstack und
+Realabnahme bleiben offen. Der exakte historische `take_message()`-SIGINT-
+Zeitpunkt ist nicht deterministisch injiziert. Details und lokale Fehlerbelege
+stehen im laufenden WE-STATUS.
+
+**Rückfallweg:** Kandidaten-Overlay nicht sourcen; die zuvor getesteten
+Präfixe und die aktive Roboter-Arbeitskopie bleiben unverändert. Die
+fehlgeschlagenen Versuche wurden nur in lokalen `/tmp`-Evidenzordnern
+aufgezeichnet, nicht als Wohnungsdaten committed.
+
+---
+
+## 2026-09-23 — Stufe-3-Umweg belegt; Direktkorridor und VL53-Leere getrennt
+
+**Entscheidung:** Nach `a8710db` die Rückkehr einer blockierten Aufgabe an
+einen frischen geodätischen Weg auf der Schnittmenge von exakt gebundener
+Rohkarte/Scope und gleichgerasterter Nav2-Costmap binden. Der gerade
+Zielkorridor darf blockiert bleiben. Start-/Zielprojektion, fremde Raster,
+veraltete Daten und Wege außerhalb des Scopes geben die Aufgabe nicht frei.
+Der bestehende Nav2-Ausführungspfad bleibt unverändert.
+
+**Evidenz:** Die alte Wiederfreigabe lehnte einen belegten Umweg ab. Der
+gezielte Prozessfall wählt jetzt nach A-Abbruch und B-Fortschritt A erneut,
+obwohl sein Direktkorridor ein Hindernis behält. Separat umfuhr der echte
+Nav2-Controller eine dauerhaft stehende synthetische Barriere; automatische
+Explorerwahl, erster Frontierabschluss, erfolgreicher zweiter Auftrag und
+Fortsetzung desselben Elternauftrags sind gegen das neue Install belegt.
+Gesamtweg 3,253 m, Folgeziel 0,453 m, maximal ein Kind, keine Rückwärtsfahrt
+und keine geplante/gefahrene Polygonverletzung. Ein festes Diagnoseziel
+bestand zuvor separat. Nav2-/Collision-Parameter wurden nicht geändert.
+
+**Schnittstellengrenze:** Produktionsmethoden des VL53 erzeugen sowohl bei
+gültiger Fernmessung als auch bei ungültiger Messung null Originalpunkte.
+Die Test-Nullvektoren waren kein Gesundheitsbeleg. Der Explorer trennt
+Empfang, Quellalter, Messgültigkeit und Punktzahl; leere Wolken bleiben
+unbekannt und erlauben keine Recovery. Der echte Stoppfall findet einen
+geometrisch gültigen Umweg, scheitert aber an der lokalen Kollisionsprüfung
+des Reglers und anschließend an diesem fehlenden Sensorgültigkeitsbeleg.
+Die nötige Produzenten-/Statusvertragserweiterung und der Reglerbefund sind
+im maßgeblichen WE-Status konkret abgegrenzt; keine blinden Manöver ergänzen.
+
+**Dateien / Hardware / Tests:** Nur Explorer, zugehörige Tests und bestehende
+gerätefreie Prozessprüfer. 917 Pytests und 917 registrierte Colcon-Tests
+grün; gezielte Policy-/Umfahr-/Stillstandsprüfungen. Kein Hardwarezugriff,
+kein aktiver Installwechsel. Quelle `90379d9`, Prüfer `d13a6c9`, Präfix und Hash
+in `ROBOT_TRANSFER`. Stufe 3 bleibt wegen Stoppbefreiung, Sensorvertrag und
+fehlender realer Abnahme GELB. **Rückfall:** Neues Overlay nicht sourcen;
+der Ausgangsstand bleibt vorhanden, einschließlich seiner bekannten Fehler.
+
+---
+
+## 2026-09-23 — WE-Stufe 3: Routenblockade nach echtem Nav2-Abbruch getrennt behandeln
+
+**Entscheidung:** Einen bereits terminalen Nav2-Abbruch auch dann als
+begrenztes `LOCAL_BLOCKED` behandeln, wenn das metrische Ziel frei bleibt,
+aber eine frische globale Costmap eine tödlich belegte Zelle höchstens
+0,75 m vor der stillstehenden Basis im zielwärtigen 0,35-m-Korridor zeigt.
+Dieselbe Aufgabe wird erst nach neuer Costmap **und** freiem Zielkorridor
+wieder wählbar; ein weiterhin freier Zielpunkt allein reicht nicht.
+Alle bestehenden Not-Aus-, TF-, Odometrie-, LiDAR-, dualen VL53- und
+Costmap-Frischeprüfungen bleiben vorgeschaltet. Die Klassifikation gibt
+selbst keinen Fahrbefehl frei und verwendet dieselben Ziel-/Zeitbudgets.
+
+**Grund / beobachtete Evidenz:** Ein gerätefreier Prozessprüfer mit echtem
+Nav2, WE-Collision-Monitor, Fahrtor, Smoother und virtueller Basis zeigte
+zweimal Hindernis → sicheren Reglerstopp (Poseänderung 2,2–2,5 mm) →
+Hindernis verschwindet → weitere 0,534–0,536 m virtuelle Fahrt → A erreicht
+→ neue Rohkarte markiert A abgeschlossen → anderes Ziel startet; maximal
+ein Kindziel. Bei dauerhaftem Hindernis wurde A als lokale Blockade
+zurückgestellt, aber B lag hinter demselben Hindernis. B selbst blieb als
+metrischer Punkt frei; der alte Code stufte seinen Controller-Abbruch als
+`SYSTEM_FAILURE` ein und beendete den Elternauftrag. Mit der neuen
+Korridorprüfung blieb der Auftrag nach zwei echten Nav2-Abbrüchen aktiv,
+ohne weiterzufahren oder parallele Kindziele zu starten.
+
+**Betroffene Dateien und Hardware:** `src/explore/explore/explore_node.py`,
+Explorer-Vertragstest und ein isolierter Test-Launch/Prozessprüfer unter
+`tools/kartierung/`. Kein Hardware- oder Sicherheitsparameter geändert,
+kein Motor aktiviert. Neues `explore`-Install in einem getrennten lokalen
+Stage-3-Präfix; aktiver Roboter-Install unverändert.
+
+**Teststatus / offene Risiken:** Explorer-Tests 904 grün, bestehender
+Acht-Szenarien-Prozessprüfer grün; neuer echter Nav2-Prozessfall
+`disappear` zweimal grün. Ein dauerhafter synthetischer Umfahrfall stoppte
+an zwei Positionen sicher, erreichte A aber nicht. Nach drei durch das
+Testprofil begrenzten Kindzielen blieb der Roboter virtuell stehen und die
+Mission wartete auf eine sichere Alternative; keine konkurrierenden Ziele.
+Reale Bewegung und
+spätere sichere Weiterfahrt nach Zurückstellung fehlen. Das reale enge
+WE-Profil bot im letzten motorlosen Lauf kein Frontierziel, und der
+Kartenmanager-SIGINT-Race ist noch ungeklärt. Stufe 3 bleibt GELB.
+
+**Rückfallweg:** Das neue Overlay aus der Source-Reihenfolge entfernen und
+den vorherigen Stage-3-Kandidaten verwenden; kein automatischer Merge oder
+Deploy. Bei irgendeinem Safety-Ausfall bleibt der unveränderte
+`SYSTEM_FAILURE`-Pfad aktiv.
+
+---
+
+## 2026-09-23 — WE-Stufe 3: linker Nahpunkt löst nur SlowZone aus; Shutdown-Race offen
+
+**Entscheidung:** Keine reale Fahrt aus dem neuen linken Hindernisaufbau
+freigeben. Ein Nahbereichs-Flag allein ist weder ein belegter Vollstopp noch
+ein sicherer Recovery-Pfad; der konkrete WE-Mapping-Monitor muss am Ausgang
+bewertet werden. Der unerwartete Kartenmanager-Exit beim Stop bleibt offen.
+
+**Grund / beobachtete Evidenz:** Der linke VL53 sah ~0,24–0,25 m, der rechte
+keinen Nahpunkt. Bei motorlosem synthetischem 0,08-m/s-Eingang gab der
+Collision Monitor höchstens 0,024 m/s aus, passend zur unveränderten
+30-%-SlowZone, nicht null. Der Test nutzte `dry_run=true` und
+`allow_rs485=false`; keine physische Bewegung. Beim Einzel-SIGINT starb
+`robot_map_manager` mit einem Humble-`take_message()`-RuntimeError; danach
+waren alle Prozesse und Gerätehandles frei. Der vorhandene RuntimeError-Guard
+in Quelle und Install ist bytegleich, deckte diesen Fall aber nicht ab.
+
+**Betroffene Dateien und Hardware:** Nur dokumentierter Testbefund; weder
+Sensor-, Collision-, Footprint-, Scope- noch Motorparameter geändert. Die
+lokale reale Geometrie und Sensordaten bleiben außerhalb des Repositorys.
+
+**Teststatus / offene Risiken:** Kein realer Stop-/Weiterfahrnachweis. Der
+Kartenmanager-Shutdown ist in diesem Vorlauf nicht sauber. Vor erneutem
+Realtest Race reproduzieren/klären und den vollständigen motorlosen Preflight
+in frischem SLAM-Kontext wiederholen.
+Ein unmittelbar folgender passiver Wiederholungszyklus mit gleichem linkem
+Nahpunkt und ohne synthetischen Fahrwunsch stoppte alle 24 Kinder sauber;
+Gerätehandles waren frei. Der erste Fehler ist damit intermittierend oder
+testablaufabhängig, nicht widerlegt.
+
+**Rückfallweg:** Stack aus und Stufe-3-Overlay in einer neuen Shell auslassen;
+der aktive Roboter-Install wurde nicht verändert. Das neue Hindernis vor einer
+anderen Testanordnung unbestromt entfernen oder repositionieren.
+
+---
+
+## 2026-09-23 — WE-Stufe 3: lokalen Nav2-Abbruch nur mit positivem Beleg zurückstellen
+
+**Entscheidung:** Die vorhandene Explorer-/Nav2-/Task-Policy-Kette unterscheidet
+`LOCAL_BLOCKED` von `SOURCE_INVALIDATED`, Nutzerabbruch und Systemfehler.
+Nach terminalem Frontier-Abbruch wird nur mit frischer Costmap-Blockade,
+Stillstand und gesunden Sicherheitsquellen die Aufgabe revisionsbegrenzt
+zurückgestellt. Derselbe Frontier darf nicht durch eine Costmap-Projektion
+sofort wieder als neues Ziel erscheinen. Es gibt keine neue Fahrprimitive.
+
+**Grund / beobachtete Evidenz:** Humble `NavigateToPose.Result` besitzt keinen
+Fehlercode. Der R9-Lauf endete bei `Controller patience exceeded` nach
+LiDAR/VL53-Costmap-Hindernis; ein pauschales `ABORTED` kann daher weder
+ungeprüft als Hindernis noch als Freigabe zum Manöver dienen. Der neue
+gerätefreie Prozessfall deckte tatsächlich eine sofortige Wiederwahl von A
+über eine benachbarte Costmap-Projektion auf. Erst die Sperre bis zum neu
+unprojiziert belegten Originalziel ergab A-Abbruch → B-Erfolg → belegten
+Frontierfortschritt → spätere Reaktivierung von A.
+
+**Betroffene Dateien und Hardware:** `explore`-Runtime, Verträge, Profil und
+bestehender Gesamtprozessprüfer; keine Motor-, VL53-, Nav2- oder
+Collision-Monitor-Konfiguration geändert. Kein Gerät geöffnet, kein Motor
+freigegeben und kein Fahrbefehl publiziert.
+
+**Teststatus:** 902 Explorer-Pytests und acht gerätefreie Szenarien des
+bestehenden Gesamtprozessprüfers aus dem Quellbaum **und** gegen das isoliert
+installierte Stage-3-`explore` bestanden. Vor der Stabilisierung traten in
+langen Prüfläufen ein
+Pose-Sprung-Flake im älteren Portal-Positivfall und ein Timer-Shutdown-Race
+auf; beide sind im WE-Status offengelegt. Kein realer Recovery-Test.
+
+**Offene Risiken:** Der Prozessprüfer ersetzt Nav2 durch einen Fake-Action-
+Server und beweist keine physische Ausweichfahrt. Aktive harte Fehler während
+eines laufenden Kindes und echter gleicher-Ziel-/Umfahrungs-Replan brauchen
+weitere Produktionsnähe. Der R9-Nahbereichsbefund bleibt offen. Keine
+Stufe-3-Fahrfreigabe.
+
+**Rückfallweg:** Neues Shell-Environment ohne Stufe-3-Präfix; nur bestätigte
+Stufe-1/2-Installkette laden. Vor einer realen Fahrt erneut explizite
+Vor-Ort-Freigabe einholen.
+
+---
+
 ## 2026-09-23 — WE-Stufe 2: Frontier-Replan muss echte Fortsetzung belegen
 
 **Entscheidung:** Die vorhandene WE-Navigation behält ein sicher und

@@ -15,3 +15,18 @@ bool middle
 float32 min_dist_left
 float32 min_dist_right
 float32 min_dist_middle
+
+# Messqualitaet vor dem 0,50-m-Nahbereichsfilter. Die beiden Punktwolken
+# derselben Messung tragen exakt header.stamp; ein Subscriber muss beides
+# korrelieren. Alte Publisher liefern hier 0 und werden fail-closed behandelt.
+uint8 QUALITY_UNKNOWN=0
+uint8 QUALITY_VALID_NEAR=1
+uint8 QUALITY_VALID_FAR=2
+uint8 QUALITY_PARTIAL=3
+uint8 QUALITY_INVALID=4
+uint8 left_quality
+uint8 right_quality
+# Bit c besagt: alle acht Hoehenzonen der horizontalen Spalte c sind gueltig.
+# Bei 8x8-Aufloesung bedeutet 255 vollstaendige beobachtete Abdeckung.
+uint8 left_observed_columns
+uint8 right_observed_columns

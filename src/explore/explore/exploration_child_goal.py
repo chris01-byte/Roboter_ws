@@ -38,6 +38,7 @@ class ChildGoalState(str, Enum):
 class ChildGoalOutcome(str, Enum):
     SUCCEEDED = "succeeded"
     RETRYABLE_FAILURE = "retryable_failure"
+    LOCAL_BLOCKED = "local_blocked"
     ABORTED = "aborted"
     CANCELED = "canceled"
 
@@ -45,6 +46,7 @@ class ChildGoalOutcome(str, Enum):
 class ChildGoalResolutionState(str, Enum):
     COMPLETED = "completed"
     RETRYABLE_FAILURE = "retryable_failure"
+    TEMPORARILY_BLOCKED = "temporarily_blocked"
     ABORTED = "aborted"
     CANCELED = "canceled"
     INVALIDATED = "invalidated"
@@ -375,6 +377,8 @@ class ExplorationChildGoalSession:
                     ChildGoalResolutionState.COMPLETED),
                 ChildGoalOutcome.RETRYABLE_FAILURE: (
                     ChildGoalResolutionState.RETRYABLE_FAILURE),
+                ChildGoalOutcome.LOCAL_BLOCKED: (
+                    ChildGoalResolutionState.TEMPORARILY_BLOCKED),
                 ChildGoalOutcome.ABORTED: ChildGoalResolutionState.ABORTED,
                 ChildGoalOutcome.CANCELED: ChildGoalResolutionState.CANCELED,
             }[result.outcome]

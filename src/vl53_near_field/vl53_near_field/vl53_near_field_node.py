@@ -36,6 +36,7 @@ from std_msgs.msg import Header
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 from robot_interfaces.msg import NearFieldStatus
+from vl53_near_field.measurement_quality import assess_frame
 
 from smbus2 import SMBus
 
@@ -245,8 +246,11 @@ class Vl53NearField(Node):
                         'nb_target_detected': getattr(d, 'nb_target_detected', None),
                         'target_status': getattr(d, 'target_status', None),
                         'signal_per_spad': getattr(d, 'signal_per_spad', None),
-                        'sigma_mm': getattr(d, 'sigma_mm', None),
+                        'sigma_mm': getattr(d, 'sigma_mm',
+                                            getattr(d, 'range_sigma_mm', None)),
                     }
+                elif 'sigma_mm' not in d:
+                    d['sigma_mm'] = d.get('range_sigma_mm')
             elif hasattr(s, 'get_data'):
                 if not s.get_data():
                     return None
@@ -321,19 +325,16 @@ class Vl53NearField(Node):
         header.frame_id = frame_id
         return point_cloud2.create_cloud_xyz32(header, pts)
 
-    def _matrix_to_costmap_cloud(self, M, frame_id, stamp):
-        # Fuer den Nav2-ObstacleLayer: pro SPALTE (Azimut) genau EIN horizontaler
-        # Punkt (z=0, Sensorhoehe) - wie ein 8-Strahl-Laserscan. Naechstes
-        # gueltiges Ziel der Spalte = Hindernis (wird markiert); keine gueltige
-        # Zelle = "frei" -> Punkt auf costmap_clear_range (> obstacle_max_range,
-        # < raytrace_max_range) -> raeumt den Strahl, wird NICHT markiert.
-        # So loescht der Layer jeden Frame korrekt (Gegenstueck zur sparsamen
-        # Original-Wolke, die keine Raeum-Strahlen liefert).
+    def _matrix_to_costmap_cloud(self, measured, valid, frame_id, stamp):
+        # Nur vollstaendig beobachtete Spalten duerfen raeumen. Ein gueltiges
+        # Fernziel bei 0,55 m belegt keinen Freiraum bis 0,60 m; daher endet
+        # der Strahl beim tatsaechlichen Ziel oder am konservativen Limit.
+        # Teilgueltige/ungueltige Spalten liefern keinen neuen Freiraumbeleg.
         pts = []
         for c in range(self.GC):
-            col = M[:, c]
-            finite = col[np.isfinite(col)]
-            dist = float(np.min(finite)) if finite.size > 0 else self.costmap_clear_range
+            if not np.all(valid[:, c]):
+                continue
+            dist = min(float(np.min(measured[:, c])), self.costmap_clear_range)
             az = self.col_az[c]
             pts.append((float(dist * math.cos(az)), float(dist * math.sin(az)), 0.0))
         header = Header()
@@ -354,15 +355,36 @@ class Vl53NearField(Node):
         dL = self._get_data_safe(self.sL, self.ch_left)
         dR = self._get_data_safe(self.sR, self.ch_right)
         if dL is None or dR is None:
+            st = NearFieldStatus()
+            st.header.stamp = self.get_clock().now().to_msg()
+            st.header.frame_id = 'base_link'
+            st.min_dist_left = st.min_dist_right = st.min_dist_middle = -1.0
+            self.pub_status.publish(st)  # quality UNKNOWN, no matching clouds
             return
+
+        quality_args = (self.GR, self.GC, self.valid_statuses,
+                        self.require_nb, self.min_sps, self.max_sigma,
+                        self.z_min, self.z_max)
+        observedL, validL, columnsL, qualityL = assess_frame(dL, *quality_args)
+        observedR, validR, columnsR, qualityR = assess_frame(dR, *quality_args)
 
         ML = self._build_matrix(dL)
         MR = self._build_matrix(dR)
+        ML[~validL] = np.nan
+        MR[~validR] = np.nan
         # FLIPX wie im getesteten Skript (Orientierung links/rechts korrekt).
         if self.flipx_left:
             ML = ML[:, ::-1]
+            observedL = observedL[:, ::-1]
+            validL = validL[:, ::-1]
+            columnsL = sum(1 << c for c in range(self.GC)
+                           if np.all(validL[:, c]))
         if self.flipx_right:
             MR = MR[:, ::-1]
+            observedR = observedR[:, ::-1]
+            validR = validR[:, ::-1]
+            columnsR = sum(1 << c for c in range(self.GC)
+                           if np.all(validR[:, c]))
 
         # Zonen-Logik exakt wie im Skript.
         n = self.inner
@@ -390,14 +412,20 @@ class Vl53NearField(Node):
         st.min_dist_right = float(mR) if np.isfinite(mR) else -1.0
         mmid = min(mML, mMR)
         st.min_dist_middle = float(mmid) if np.isfinite(mmid) else -1.0
+        st.left_quality = qualityL
+        st.right_quality = qualityR
+        st.left_observed_columns = columnsL
+        st.right_observed_columns = columnsR
         self.pub_status.publish(st)
 
         # --- Punktwolken publizieren (geflippte Matrizen -> Orientierung wie Status) ---
         self.pub_left.publish(self._matrix_to_cloud(ML, self.frame_left, stamp))
         self.pub_right.publish(self._matrix_to_cloud(MR, self.frame_right, stamp))
         if self.publish_costmap_cloud:
-            self.pub_left_cm.publish(self._matrix_to_costmap_cloud(ML, self.frame_left, stamp))
-            self.pub_right_cm.publish(self._matrix_to_costmap_cloud(MR, self.frame_right, stamp))
+            self.pub_left_cm.publish(self._matrix_to_costmap_cloud(
+                observedL, validL, self.frame_left, stamp))
+            self.pub_right_cm.publish(self._matrix_to_costmap_cloud(
+                observedR, validR, self.frame_right, stamp))
 
     # ======================= Aufraeumen =================================
     def destroy_node(self):

@@ -21,12 +21,14 @@ import time
 import numpy as np
 
 
-os.environ.setdefault("ROS_DOMAIN_ID", "195")
+# Never inherit the robot's active DDS domain: this checker publishes a
+# synthetic ExploreArea server and safety messages, even with motors off.
+os.environ["ROS_DOMAIN_ID"] = os.environ.get("WE_SMOKE_DOMAIN_ID", "217")
 
 import rclpy  # noqa: E402
 from geometry_msgs.msg import TransformStamped, Twist  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
-from nav_msgs.msg import OccupancyGrid  # noqa: E402
+from nav_msgs.msg import OccupancyGrid, Odometry  # noqa: E402
 from rclpy.action import (  # noqa: E402
     ActionClient,
     ActionServer,
@@ -42,8 +44,9 @@ from rclpy.qos import (  # noqa: E402
     QoSProfile,
     ReliabilityPolicy,
 )
-from sensor_msgs.msg import LaserScan  # noqa: E402
-from std_msgs.msg import String  # noqa: E402
+from sensor_msgs.msg import LaserScan, PointCloud2  # noqa: E402
+from sensor_msgs_py.point_cloud2 import create_cloud_xyz32  # noqa: E402
+from std_msgs.msg import Bool, Header, String  # noqa: E402
 from tf2_ros import TransformBroadcaster  # noqa: E402
 
 from amadeus_map_identity import (  # noqa: E402
@@ -51,6 +54,8 @@ from amadeus_map_identity import (  # noqa: E402
     map_snapshot_fingerprint,
 )
 from robot_interfaces.action import ExploreArea  # noqa: E402
+from robot_interfaces.msg import NearFieldStatus  # noqa: E402
+from vl53_near_field.measurement_quality import assess_frame  # noqa: E402
 
 
 WIDTH = 100
@@ -58,6 +63,7 @@ MULTIROOM_WIDTH = 155
 HEIGHT = 60
 RESOLUTION = 0.05
 ORIGIN = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+_DEFERRED_NODE_DESTRUCTION = []
 
 
 def _map_cells(revision, *, width=WIDTH, height=HEIGHT,
@@ -202,16 +208,20 @@ def _box_ranges(x_m, y_m, *, yaw_rad=0.0, count=720):
 
 
 class SyntheticWorld(Node):
-    def __init__(self, scenario, persistence_directory=None):
+    def __init__(self, scenario, persistence_directory=None, *, fake_nav=True):
         super().__init__(f"we_m3u_world_{scenario}")
         self.scenario = scenario
         self.multiroom = scenario == "multiroom"
         self.frontier_replan = scenario in {
-            "frontier_replan", "frontier_no_source"}
+            "frontier_replan", "frontier_no_source", "local_blocked",
+            "local_no_exit"}
         self.map_width = MULTIROOM_WIDTH if self.multiroom else WIDTH
         self.map_height = HEIGHT
-        self.frontier_stage = "both" if self.frontier_replan else "none"
+        self.frontier_stage = (
+            'first_only' if scenario == 'local_no_exit' else
+            "both" if self.frontier_replan else "none")
         self.blocked_goal_xy = None
+        self.costmap_blocked_goal_xy = None
         prefix = f"/we_m3u/{scenario}"
         self.map_topic = f"{prefix}/map"
         self.costmap_topic = f"{prefix}/costmap"
@@ -221,7 +231,9 @@ class SyntheticWorld(Node):
         self.scan_topic = f"{prefix}/scan"
         self.scan_command_topic = f"{prefix}/scan_command"
         self.door_command_topic = f"{prefix}/door_command"
-        self.nav_action = f"{prefix}/navigate_to_pose"
+        self.nav_action = (
+            f"{prefix}/navigate_to_pose" if fake_nav else
+            "/navigate_to_pose")
         self.latest_shadow = None
         self.latest_explore = None
         self.command_count = 0
@@ -234,6 +246,8 @@ class SyntheticWorld(Node):
         self._nav_lock = threading.Lock()
         self.nav_goal_received = threading.Event()
         self.nav_release = threading.Event()
+        self.nav_abort = threading.Event()
+        self.telemetry_pose = None
         self.persistence_directory = persistence_directory
         self.last_saved = None
         self.last_map_message = None
@@ -250,6 +264,21 @@ class SyntheticWorld(Node):
         self._map_status_pub = self.create_publisher(
             String, self.map_status_topic, self._qos)
         self._scan_pub = self.create_publisher(LaserScan, self.scan_topic, 10)
+        self._estop_pub = self.create_publisher(
+            Bool, f'{prefix}/estop', 10)
+        self._odom_pub = self.create_publisher(
+            Odometry, f'{prefix}/odom_unused', 10)
+        self._vl53_pubs = {
+            side: self.create_publisher(
+                PointCloud2, f'{prefix}/near_field/{side}/points', 10)
+            for side in ('left', 'right')}
+        self._vl53_status_pub = self.create_publisher(
+            NearFieldStatus, f'{prefix}/near_field/status', 10)
+        self._telemetry_timer = None
+        if scenario in {'local_blocked', 'local_no_exit',
+                        'frontier_replan', 'frontier_no_source'}:
+            self._telemetry_timer = self.create_timer(
+                0.1, self._publish_passive_telemetry)
         self._tf = TransformBroadcaster(self)
         self.create_subscription(
             String, self.shadow_status_topic, self._on_shadow, self._qos)
@@ -259,15 +288,17 @@ class SyntheticWorld(Node):
             Twist, self.scan_command_topic, self._on_command, 10)
         self.create_subscription(
             Twist, self.door_command_topic, self._on_command, 10)
-        self._nav_server = ActionServer(
-            self,
-            NavigateToPose,
-            self.nav_action,
-            execute_callback=self._execute_nav,
-            goal_callback=self._accept_nav,
-            cancel_callback=self._cancel_nav,
-            callback_group=ReentrantCallbackGroup(),
-        )
+        self._nav_server = None
+        if fake_nav:
+            self._nav_server = ActionServer(
+                self,
+                NavigateToPose,
+                self.nav_action,
+                execute_callback=self._execute_nav,
+                goal_callback=self._accept_nav,
+                cancel_callback=self._cancel_nav,
+                callback_group=ReentrantCallbackGroup(),
+            )
         self._explore_client = ActionClient(
             self,
             ExploreArea,
@@ -315,6 +346,11 @@ class SyntheticWorld(Node):
                     goal_handle.canceled()
                     self.nav_terminal.append("canceled")
                     return NavigateToPose.Result()
+                if self.nav_abort.is_set():
+                    self.nav_abort.clear()
+                    goal_handle.abort()
+                    self.nav_terminal.append("aborted")
+                    return NavigateToPose.Result()
                 if self.nav_release.wait(0.02):
                     goal_handle.succeed()
                     self.nav_terminal.append("succeeded")
@@ -333,12 +369,72 @@ class SyntheticWorld(Node):
             message, revision, saved=self.last_saved)))
         self._map_pub.publish(message)
         self._costmap_pub.publish(message)
+        if self.costmap_blocked_goal_xy is not None:
+            self.publish_costmap_block(self.costmap_blocked_goal_xy)
         # Exercise both arrival orders and allow the child executor to retain
         # the exact raw sample before the idempotent status replay.
         time.sleep(0.10)
         self._map_status_pub.publish(status)
         time.sleep(0.10)
         self._map_status_pub.publish(status)
+
+    def publish_costmap_block(self, goal_xy):
+        """Change only the synthetic Nav2 Costmap, not the raw-map source."""
+        if self.last_map_message is None:
+            raise RuntimeError('Costmap-Block braucht eine Ausgangskarte')
+        message = OccupancyGrid()
+        message.header = self.last_map_message.header
+        message.info = self.last_map_message.info
+        grid = np.asarray(self.last_map_message.data, dtype=np.int8).reshape(
+            (self.map_height, self.map_width)).copy()
+        col = int(goal_xy[0] / RESOLUTION)
+        row = int(goal_xy[1] / RESOLUTION)
+        grid[max(0, row - 4):min(self.map_height, row + 5),
+             max(0, col - 4):min(self.map_width, col + 5)] = 100
+        message.data = grid.ravel().tolist()
+        self._costmap_pub.publish(message)
+
+    def _publish_passive_telemetry(self):
+        if self.telemetry_pose is None:
+            return
+        x_m, y_m = self.telemetry_pose
+        self.publish_pose_scan(x_m, y_m=y_m)
+        stamp = self.get_clock().now().to_msg()
+        odom = Odometry()
+        odom.header.stamp = stamp
+        odom.header.frame_id = 'odom'
+        odom.child_frame_id = 'base_link'
+        odom.pose.pose.orientation.w = 1.0
+        odom.pose.pose.position.x = x_m
+        odom.pose.pose.position.y = y_m
+        self._odom_pub.publish(odom)
+        self._estop_pub.publish(Bool(data=False))
+        for pub in self._vl53_pubs.values():
+            # Explicit valid synthetic return, not the former zero-vector
+            # placeholder. Empty/invalid real measurements have separate tests.
+            pub.publish(create_cloud_xyz32(
+                Header(stamp=stamp, frame_id='base_link'),
+                [(0.45, 0.10, 0.05)]))
+        synthetic_frame = {
+            'distance_mm': [450] * 64,
+            'target_status': [5] * 64,
+            'nb_target_detected': [1] * 64,
+            'sigma_mm': [10] * 64,
+        }
+        _, _, coverage, quality = assess_frame(
+            synthetic_frame, 8, 8, [5], True, 0., 50., .01, .50)
+        status = NearFieldStatus()
+        status.header.stamp = stamp
+        status.header.frame_id = 'base_link'
+        status.left_quality = status.right_quality = quality
+        status.left_observed_columns = status.right_observed_columns = coverage
+        self._vl53_status_pub.publish(status)
+
+    def stop_telemetry(self):
+        self.telemetry_pose = None
+        if self._telemetry_timer is not None:
+            self._telemetry_timer.cancel()
+            time.sleep(0.2)
 
     def publish_identical_map_with_new_stamp(self, revision):
         """Publish unchanged occupancy with a new source stamp and status."""
@@ -462,9 +558,25 @@ def _parameter_text(world):
         "src/explore/behavior_trees/navigate_to_pose_no_recovery.xml")
     parameters = {
         "map_topic": world.map_topic,
-        "global_costmap_topic": world.costmap_topic,
-        "odom_topic": f"/we_m3u/{world.scenario}/odom_unused",
+        "global_costmap_topic": (
+            "/global_costmap/costmap" if getattr(world, "real_nav", False)
+            else world.costmap_topic),
+        "odom_topic": (
+            "/odom" if getattr(world, "real_nav", False)
+            else f"/we_m3u/{world.scenario}/odom_unused"),
         "nav_action_name": world.nav_action,
+        "wohnungserkundung_estop_topic": (
+            '/we_stage3/estop' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/estop'),
+        "wohnungserkundung_vl53_left_topic": (
+            '/near_field/left/points' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/left/points'),
+        "wohnungserkundung_vl53_right_topic": (
+            '/near_field/right/points' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/right/points'),
+        "wohnungserkundung_vl53_status_topic": (
+            '/near_field/status' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/status'),
         "status_topic": world.explore_status_topic,
         "visualize": False,
         "behavior_tree": str(safe_bt),
@@ -472,11 +584,18 @@ def _parameter_text(world):
         "portal_crossing_enabled": False,
         "return_to_start": False,
         "replan_period_s": 0.05,
-        "goal_timeout_s": 10.0,
-        "overall_timeout_s": 60.0 if world.multiroom else 30.0,
+        "goal_timeout_s": (
+            100.0 if getattr(world, "real_nav", False) else 10.0),
+        "overall_timeout_s": (
+            180.0 if getattr(world, "real_nav", False) else
+            60.0 if world.multiroom else
+            45.0 if world.scenario == 'local_blocked' else 30.0),
         "nav_cancel_timeout_s": 1.5,
         "max_frontier_goals": (
-            1 if world.frontier_replan else 8 if world.multiroom else 2),
+            1 if world.scenario in {
+                'frontier_replan', 'frontier_no_source'} else
+            3 if world.scenario == 'local_blocked' else
+            8 if world.multiroom else 2),
         "map_timeout_s": 2.0 if world.scenario == "frontier_no_source" else 30.0,
         "scan_command_topic": world.scan_command_topic,
         "door_command_topic": world.door_command_topic,
@@ -545,6 +664,14 @@ def _parameter_text(world):
         "wohnungserkundung_traversal_max_pose_interval_s": 0.5,
         "wohnungserkundung_traversal_max_scan_rejections": 4,
     }
+    if getattr(world, 'diagnostic_bypass', False):
+        # The large robot, not the small historical portal fixture. No Nav2
+        # or collision limit is overridden by this synthetic scenario.
+        parameters.update({
+            'wohnungserkundung_evidence_clearance_m': 0.28,
+            'wohnungserkundung_scope_clearance_m': 0.42,
+            'goal_timeout_s': 120.0,
+        })
     return json.dumps({"explore_node": {"ros__parameters": parameters}})
 
 
@@ -624,11 +751,13 @@ def _run_scenario(executor, scenario, log_directory):
         if scenario == "positive":
             end_x = min(4.7, target_x + 0.45)
             distance = end_x - start_x
-            steps = max(24, int(math.ceil(distance / 0.04)))
+            # Keep synthetic pose increments well below the *unchanged*
+            # traversal jump limit even if an executor sample is skipped.
+            steps = max(24, int(math.ceil(distance / 0.02)))
             for index in range(steps + 1):
                 x_m = start_x + distance * index / steps
                 world.publish_pose_scan(x_m)
-                time.sleep(0.055)
+                time.sleep(0.03)
             time.sleep(0.25)
             world.nav_release.set()
             world.wait_for(
@@ -651,7 +780,10 @@ def _run_scenario(executor, scenario, log_directory):
             )
             # A positive parent result must arise from the production
             # completion window, never from canceling the checker-owned goal.
-            for revision in (11, 12, 13, 14, 15, 16):
+            # The status timer may miss one synthetic revision under host
+            # load; keep supplying *fresh* maps until the unchanged three-
+            # observation production completion window can be evaluated.
+            for revision in range(11, 21):
                 world.publish_pose_scan(end_x)
                 world.publish_revision(revision)
                 if explore_result.done():
@@ -1179,10 +1311,10 @@ def _run_resume_scenario(executor, log_directory, persistence_directory):
         world.wait_for(world.nav_goal_received.is_set, 8.0, "fortgesetztes Kindziel")
         end_x = min(4.7, target_x + 0.45)
         distance = end_x - start_x
-        steps = max(24, int(math.ceil(distance / 0.04)))
+        steps = max(24, int(math.ceil(distance / 0.02)))
         for index in range(steps + 1):
             world.publish_pose_scan(start_x + distance * index / steps)
-            time.sleep(0.055)
+            time.sleep(0.03)
         world.nav_release.set()
         world.wait_for(
             lambda: (world.latest_explore or {}).get(
@@ -1247,6 +1379,7 @@ def _run_resume_scenario(executor, log_directory, persistence_directory):
 def _run_frontier_replan_scenario(executor, log_directory):
     """Prove that a stopped stale child is followed by real new work."""
     world = SyntheticWorld("frontier_replan")
+    world.telemetry_pose = (0.85, 1.525)
     executor.add_node(world)
     log_path = log_directory / "frontier_replan.log"
     process, log_handle, parameter_path = _start_explorer(world, log_path)
@@ -1333,6 +1466,7 @@ def _run_frontier_replan_scenario(executor, log_directory):
         if parent_result.done():
             raise AssertionError("Elternauftrag stoppte unmittelbar nach B")
         world.frontier_stage = "none"
+        world.telemetry_pose = second_target
         for revision in range(16, 23):
             world.publish_pose_scan(second_target[0], y_m=second_target[1])
             world.publish_revision(revision)
@@ -1405,13 +1539,20 @@ def _run_frontier_replan_scenario(executor, log_directory):
             f"--- Explorer-Log ---\n{log_tail}") from error
     finally:
         _stop_explorer(process, log_handle, parameter_path)
+        world.stop_telemetry()
         executor.remove_node(world)
-        world.destroy_node()
+        # The action client may still have a queued terminal future callback.
+        # Destroy only after the shared executor has drained at process exit.
+        _DEFERRED_NODE_DESTRUCTION.append(world)
 
 
 def _run_frontier_no_source_scenario(executor, log_directory):
     """An invalidated child waits fail-closed, bounded by mission time."""
     world = SyntheticWorld("frontier_no_source")
+    # Keep the independent safety telemetry healthy while deliberately
+    # withholding only the map source after A is invalidated. Otherwise the
+    # new active-child hard-fault check (correctly) rejects the fixture.
+    world.telemetry_pose = (0.85, 1.525)
     executor.add_node(world)
     log_path = log_directory / "frontier_no_source.log"
     process, log_handle, parameter_path = _start_explorer(world, log_path)
@@ -1471,6 +1612,227 @@ def _run_frontier_no_source_scenario(executor, log_directory):
         }
     finally:
         _stop_explorer(process, log_handle, parameter_path)
+        world.stop_telemetry()
+        executor.remove_node(world)
+        _DEFERRED_NODE_DESTRUCTION.append(world)
+
+
+def _run_local_blocked_scenario(executor, log_directory):
+    """Exercise terminal obstacle -> other task -> progress -> reactivation.
+
+    This is deliberately a process-level fake Nav2 server, not evidence that
+    the real controller or collision monitor has executed a safe maneuver.
+    """
+    world = SyntheticWorld('local_blocked')
+    executor.add_node(world)
+    log_path = log_directory / 'local_blocked.log'
+    process, log_handle, parameter_path = _start_explorer(world, log_path)
+    try:
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0, 'Explorer-Prozessstart bei lokaler Blockade')
+        world.telemetry_pose = (0.85, 1.525)
+        for revision in range(1, 7):
+            world.publish_revision(revision)
+            try:
+                first = world.wait_for_frontier_candidate(timeout=1.0)
+                break
+            except RuntimeError:
+                continue
+        else:
+            raise RuntimeError('Kein Frontierziel A')
+        first_task = first['task_id']
+        first_target = (
+            float(first['target']['x_m']), float(first['target']['y_m']))
+        handle, parent_result = world.send_explore_goal(timeout_s=40.0)
+        world.wait_for(lambda: world.nav_goal_count == 1, 8.0,
+                       'laufendes Frontierziel A')
+        if world.nav_targets[0] != first_target:
+            raise AssertionError('Ziel A stimmt nicht mit der Policy ueberein')
+
+        # One current Costmap makes the exact metric goal obstructed while
+        # the correlated raw map and mission scope stay unchanged.  The fake
+        # child then terminates ABORTED as Nav2 would after controller patience.
+        world.costmap_blocked_goal_xy = first_target
+        world.publish_costmap_block(first_target)
+        time.sleep(0.4)
+        world.publish_costmap_block(first_target)
+        time.sleep(0.4)
+        world.nav_abort.set()
+        world.wait_for(lambda: world.nav_terminal == ['aborted'], 5.0,
+                       'terminaler Nav2-Abbruch an Hindernis')
+        world.wait_for(
+            lambda: (world.latest_explore or {}).get('phase')
+            == 'we_local_blocked_waiting_alternative',
+            5.0, 'lokal blockiertes Ziel statt Systemabbruch')
+        if parent_result.done() or world.nav_active_count != 0:
+            raise AssertionError('Elternauftrag beendet oder Kind noch aktiv')
+
+        for revision in range(7, 13):
+            world.publish_revision(revision)
+            if world.nav_goal_count >= 2:
+                break
+            time.sleep(0.25)
+        world.wait_for(lambda: world.nav_goal_count == 2, 8.0,
+                       'anderes sicheres Frontierziel B')
+        second = world.wait_for_frontier_candidate(timeout=5.0)
+        if second['task_id'] == first_task:
+            raise AssertionError('Blockiertes Ziel A sofort wiedergewaehlt')
+        second_target = (
+            float(second['target']['x_m']), float(second['target']['y_m']))
+        if world.nav_targets[1] != second_target:
+            raise AssertionError('Ziel B weicht von der Policy ab')
+        if world.nav_max_active_count != 1 or parent_result.done():
+            raise AssertionError('Kindzielkonkurrenz oder Elternabbruch')
+        world.nav_release.set()
+        world.wait_for(lambda: world.nav_terminal == [
+            'aborted', 'succeeded'], 5.0, 'erfolgreiches Ziel B')
+        world.nav_release.clear()
+        if parent_result.done():
+            raise AssertionError('Mission endete unmittelbar nach B')
+
+        # New raw-map evidence marks B's pocket explored, but leaves A open.
+        world.frontier_stage = (
+            'first_only' if first_target[0] < 3.0 else 'second_only')
+        world.telemetry_pose = second_target
+        for revision in range(13, 21):
+            world.publish_revision(revision)
+            if any(
+                    task.get('task_id') == second['task_id']
+                    and task.get('state') == 'completed'
+                    for task in (world.latest_shadow or {}).get('tasks', [])):
+                break
+            time.sleep(0.35)
+        world.wait_for(
+            lambda: any(
+                task.get('task_id') == second['task_id']
+                and task.get('state') == 'completed'
+                for task in (world.latest_shadow or {}).get('tasks', [])),
+            6.0, 'belegter Erkundungsfortschritt nach B')
+        first_history = next(
+            entry for entry in (world.latest_explore or {}).get(
+                'wohnungserkundung', {}).get('history', [])
+            if entry.get('task_id') == first_task)
+        if first_history['retryable_failure_count'] != 1:
+            raise AssertionError('Lokalblockade hat kein begrenztes Budget')
+
+        # A itself is free again, but a persistent obstacle still cuts the
+        # straight corridor from B toward A. The new Costmap has a detour;
+        # reactivation must use that route rather than demand a clear ray.
+        direction = 1.0 if first_target[0] > second_target[0] else -1.0
+        world.costmap_blocked_goal_xy = (
+            second_target[0] + direction * 0.55, second_target[1])
+        for revision in range(21, 28):
+            world.publish_revision(revision)
+            if world.nav_goal_count >= 3:
+                break
+            time.sleep(0.25)
+        world.wait_for(lambda: world.nav_goal_count == 3, 8.0,
+                       'spaetere Reaktivierung von A')
+        if world.nav_max_active_count != 1 or world.command_count:
+            raise AssertionError('Kindzielkonkurrenz oder Fahrbefehl')
+        if parent_result.done():
+            raise AssertionError('Mission lief nach Hindernis nicht weiter')
+        result = {
+            'scenario': 'local_blocked',
+            'nav_terminal': list(world.nav_terminal),
+            'nav_goal_count': world.nav_goal_count,
+            'nav_max_active_count': world.nav_max_active_count,
+            'first_task_retryable_failures': (
+                first_history['retryable_failure_count']),
+            'second_task_state': 'completed',
+            'reactivated_target': world.nav_targets[2],
+            'direct_corridor_obstacle_retained': True,
+            'parent_continued_after_obstacle': not parent_result.done(),
+            'command_message_count': world.command_count,
+        }
+        canceled = handle.cancel_goal_async()
+        world.wait_for(canceled.done, 4.0, 'Pruefer-Abbruch nach Nachweis')
+        world.wait_for(parent_result.done, 5.0, 'beendeter Prueferauftrag')
+        return result
+    except Exception as error:
+        log_handle.flush()
+        diagnostics = json.dumps({
+            'process_returncode': process.poll(),
+            'nav_goals': world.nav_goal_count,
+            'nav_terminal': world.nav_terminal,
+            'nav_targets': world.nav_targets,
+            'latest_explore': world.latest_explore,
+            'latest_shadow_tasks': (world.latest_shadow or {}).get('tasks'),
+        }, sort_keys=True)
+        try:
+            log_tail = log_path.read_text(
+                encoding='utf-8', errors='replace')[-6000:]
+        except OSError:
+            log_tail = '<Log nicht lesbar>'
+        raise RuntimeError(
+            f'WE-Lokalblockade fehlgeschlagen: {error}\n{diagnostics}'
+            f'\n--- Explorer-Log ---\n{log_tail}') from error
+    finally:
+        world.stop_telemetry()
+        _stop_explorer(process, log_handle, parameter_path)
+        executor.remove_node(world)
+        world.destroy_node()
+
+
+def _run_local_no_exit_scenario(executor, log_directory):
+    """A proven local blockage with no alternative waits, never drives blind."""
+    world = SyntheticWorld('local_no_exit')
+    executor.add_node(world)
+    log_path = log_directory / 'local_no_exit.log'
+    process, log_handle, parameter_path = _start_explorer(world, log_path)
+    try:
+        world.wait_for(
+            lambda: world._explore_client.wait_for_server(timeout_sec=0.1),
+            8.0, 'Explorer-Prozessstart ohne Ausweg')
+        world.telemetry_pose = (0.85, 1.525)
+        for revision in range(1, 7):
+            world.publish_revision(revision)
+            try:
+                candidate = world.wait_for_frontier_candidate(timeout=1.0)
+                break
+            except RuntimeError:
+                continue
+        else:
+            raise RuntimeError('Kein initialer Frontierkandidat')
+        target = (
+            float(candidate['target']['x_m']),
+            float(candidate['target']['y_m']))
+        _handle, parent_result = world.send_explore_goal(timeout_s=8.0)
+        world.wait_for(lambda: world.nav_goal_count == 1, 8.0,
+                       'erstes Kindziel ohne Ausweg')
+        world.costmap_blocked_goal_xy = target
+        world.publish_costmap_block(target)
+        time.sleep(0.4)
+        world.publish_costmap_block(target)
+        time.sleep(0.4)
+        world.nav_abort.set()
+        world.wait_for(lambda: world.nav_terminal == ['aborted'], 5.0,
+                       'belegter Hindernisabbruch')
+        for revision in range(7, 11):
+            world.publish_revision(revision)
+            time.sleep(0.3)
+        world.wait_for(parent_result.done, 10.0,
+                       'Gesamtzeitbudget ohne sicheren Ausweg')
+        action_result = parent_result.result()
+        if (action_result is None or action_result.status != 4
+                or 'budget' not in action_result.result.message.lower()
+                or 'hilfe' not in action_result.result.message.lower()):
+            raise AssertionError('Kein kontrollierter Teilabschluss')
+        if world.nav_goal_count != 1 or world.command_count:
+            raise AssertionError('Unzulaessiges Zweitziel oder Fahrbefehl')
+        if world.nav_max_active_count != 1:
+            raise AssertionError('Konkurrierende Kindziele')
+        return {
+            'scenario': 'local_no_exit',
+            'nav_goal_count': world.nav_goal_count,
+            'nav_terminal': list(world.nav_terminal),
+            'parent_result': 'budget_bounded_partial',
+            'command_message_count': world.command_count,
+        }
+    finally:
+        world.stop_telemetry()
+        _stop_explorer(process, log_handle, parameter_path)
         executor.remove_node(world)
         world.destroy_node()
 
@@ -1480,7 +1842,8 @@ def main():
     parser.add_argument(
         "--scenario", choices=(
             "all", "positive", "fault", "multiroom", "resume",
-            "frontier_replan", "frontier_no_source"),
+            "frontier_replan", "frontier_no_source", "local_blocked",
+            "local_no_exit"),
         default="all")
     args = parser.parse_args()
     rclpy.init()
@@ -1509,15 +1872,23 @@ def main():
             if args.scenario in {"all", "frontier_no_source"}:
                 results.append(_run_frontier_no_source_scenario(
                     executor, log_directory))
+            if args.scenario in {"all", "local_blocked"}:
+                results.append(_run_local_blocked_scenario(
+                    executor, log_directory))
+            if args.scenario in {"all", "local_no_exit"}:
+                results.append(_run_local_no_exit_scenario(
+                    executor, log_directory))
         print(json.dumps({
             "ros_domain_id": os.environ["ROS_DOMAIN_ID"],
             "scenarios": results,
         }, sort_keys=True))
     finally:
         executor.shutdown(timeout_sec=3.0)
+        spin_thread.join(timeout=3.0)
+        for retired in _DEFERRED_NODE_DESTRUCTION:
+            retired.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
-        spin_thread.join(timeout=3.0)
 
 
 if __name__ == "__main__":
