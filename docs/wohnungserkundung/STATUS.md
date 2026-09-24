@@ -40,6 +40,46 @@ ausdrücklich verworfen. Der nächste A/B-Vergleich muss dieselben realen
 Rohframes verwenden und Frame-Health, einzelne Target-Returns, Hindernis
 und unbekannte Zonen getrennt ausweisen.
 
+**Fortsetzung auf `fix/we1-stage3-vl53-regression`:** Eine neue motorlose
+CH341-Direktstichprobe aus der freien Szene erfasste je 20 vollständige
+Rohframes; derselbe lokal gespeicherte Frame-Satz wurde mit dem Juli-Nahfilter
+und `assess_frame()` verglichen. Historisch: beidseits 0 Nahpunkte (erwartet
+bei freiem Nahbereich). Heute: links/rechts je 220 gültige Fern-Zonen, aber
+beidseits 0 vollständige Spalten; links 20× `PARTIAL`, rechts 19× `PARTIAL`
+und 1× `INVALID`. Der erste rechte `INVALID`-Frame hatte dennoch alle vier
+64er-Pflichtfelder; seine Target-Returns waren ungültig. Damit sind
+Frame-Empfang und Target-Return nachweislich verschiedene Eigenschaften.
+Gültige Zonen konzentrierten sich auf die unterste Sensorzeile (links
+160/160, rechts 152/160 mögliche Returns); die übrigen Höhenrichtungen
+bleiben überwiegend **unbekannt**, nicht frei. Beide Gerätehandles wurden
+geschlossen. Die Rohframes bleiben ausschließlich lokal unter `/tmp`.
+
+**Minimaler nachgewiesener Integrationsfix:** Die alte Originalwolke liefert
+gültige Nah-Hindernispunkte auch aus Teilframes. Die aktuelle separate
+Costmap-Wolke liefert ohne volle Spalte dagegen keinen Punkt; Nav2 sah solche
+Hindernisse nicht. Commit `3d30216` bindet deshalb die Originalwolken in
+lokale und globale ObstacleLayer zusätzlich **nur markierend** ein. Räumen
+bleibt ausschließlich vollständig beobachteten Costmap-Strahlen vorbehalten;
+unbekannte Richtungen werden nicht künstlich freigemacht. Das bisherige
+Fahrtor und alle Grenzen bleiben unverändert. 969 betroffene Vertragstests
+bestanden; der gerätefreie echte Nav2-Prozessprüfer bestand `fixed_bypass`,
+`explorer_bypass`, `stopped_bypass` und den fail-closed `blocked`-Fall mit
+isoliertem `robot_navigation`-Overlay. Die drei Erfolgsfälle behielten das
+Hindernis im Weg und zeigten jeweils die verlangte Umfahrung bzw. bei
+`stopped_bypass` Stopp/Befreiung und ein zweites erfolgreiches Missionsziel.
+Kein Hardware-Fahrversuch, keine Installation im aktiven Roboterstand.
+
+**Noch keine reale Testbereitschaft:** Die große unbelebte Fläche im Sichtfeld
+beider VL53 wurde noch nicht gemessen; der angeforderte A/B-Vergleich der
+Hindernisszene fehlt. Ein bewegungsrichtungsbezogener positiver Freiraumbeleg
+aus VL53/LiDAR/OAK/Costmap ist für die aktuelle Szene nicht erbracht. Die
+globale 64/64-Sperre ist historisch nicht real abgenommen und praktisch nicht
+erfüllt, darf aber erst durch einen belegten fail-closed Bewegungsvertrag
+ersetzt werden. Die alte 0,60-m-Freiraumannahme kommt ausdrücklich nicht
+zurück. Der veraltete R9-Scope ist weiterhin nicht an den aktuellen Karten-
+frame gebunden. Daher keine Fahrfreigabe; Rückfall für den Markierungsfix:
+isoliertes Overlay `we1-stage3-vl53-mark-bwVxEL` nicht sourcen.
+
 ## Stufe 3 – motorloser Zielsystemvorlauf (24.09.2026)
 
 **Ergebnis: nicht vollständig bestanden, keine Fahrfreigabe.** Die anwesende

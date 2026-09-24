@@ -1,5 +1,29 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: VL53-Regression, Teilframe-Markierung (24.09.2026)
+
+Der neue, ausschließlich motorlose Direktlauf las je 20 vollständige
+Rohframes aus beiden echten VL53. Derselbe lokale Frame-Satz ergab mit dem
+historischen Nahfilter 0 Hindernispunkte im freien Nahbereich; die heutige
+Qualitätsauswertung fand je 220 gültige Fern-Zonen, aber 0 volle Spalten.
+Eine komplette Rohdatennachricht ist somit nicht gleich 64 gültigen
+Target-Returns. Die überwiegend unbeobachteten Zonen dürfen nicht als frei
+gelten. Eine große, matte unbelebte Testfläche im Sichtfeld beider Sensoren
+wurde noch nicht vermessen; die Hindernis-A/B-Prüfung fehlt.
+
+Ein separater Kandidatenbranch ergänzt die bestehende VL53-Originalwolke
+als **marking-only**-Quelle in beiden Nav2-ObstacleLayern. Dadurch kann ein
+gültiger Nahpunkt aus einem Teilframe ein Hindernis markieren; er kann keine
+unbekannten Zellen räumen. `robot_navigation` liegt nur im isolierten Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-mark-bwVxEL/install`;
+der aktive Roboter-Install blieb unberührt. 969 Vertragstests und vier
+gerätefreie echte Nav2-Stage-3-Prozessfälle bestanden, darunter dauerhafte
+Umfahrung mit Explorer-Folgefortschritt und Stopp/Befreiung. Das Fahrtor
+bleibt wegen der nicht belegten Bewegungsraumabdeckung gesperrt. Rückfall:
+dieses letzte Overlay nicht sourcen. Keine reale Fahrt freigeben, bevor
+Sensorabdeckung, aktueller Scope und vollständiger motorloser Preflight
+positiv nachgewiesen sind.
+
 ## WE-1 Stufe 3: motorloser Zielsystembefund, Fahrt gesperrt (24.09.2026)
 
 Nach ausdrücklicher Vor-Ort-Freigabe wurde der vorhandene Stufe-3-Kandidat

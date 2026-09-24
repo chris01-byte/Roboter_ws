@@ -17,6 +17,43 @@ Rückfallweg:
 
 ---
 
+## 2026-09-24 — Teilframe-Hindernisse markieren, unbekannten Raum nicht räumen
+
+**Entscheidung:** Die real bewährte VL53-Zonenfilterung und Originalwolke
+bleiben Grundlage. Eine vollständige 8×8-Rohnachricht wird getrennt von
+gültigen Einzel-Target-Returns beurteilt. Nav2 erhält gültige Nahpunkte aus
+Teilframes zusätzlich als marking-only-Quelle. Weder die alte pauschale
+0,60-m-Freiräumung bei fehlendem Target noch eine bloße `PARTIAL`-Freigabe
+des Fahrtors wird übernommen.
+
+**Grund / beobachtete Evidenz:** Ein neuer motorloser A/B-Lauf auf denselben
+je 20 Rohframes fand historisch 0 Nahpunkte, heute je 220 gültige Fern-Zonen,
+aber 0 volle Spalten. Eine rechte vollständige Rohnachricht hatte gar keinen
+gültigen Target-Return. Der Stage-3-Vollspaltenfilter unterdrückte damit
+auch echte Nah-Hindernisse in der Nav2-Costmap, obwohl die Originalwolke sie
+dem Collision Monitor liefert. Der 64/64-Vertrag aus `785b825`/`e3d7352`
+hat keinen Realnachweis; die zuvor gemessenen 0/160 Vollspalten je Seite
+widerlegen seine praktische Verfügbarkeit in der freien Szene.
+
+**Betroffene Dateien und Hardware:** Nur `nav2_params_real.yaml`, der
+zugehörige Vertragstest und ein VL53-Punktwolken-Vertragstest wurden für den
+Markierungsfix geändert; beide echten VL53 wurden nur motorlos gelesen.
+Keine aktive Roboterinstallation oder Sicherheitsgrenze wurde geändert.
+
+**Teststatus:** 969 Vertragstests und die echten, aber gerätefreien
+Nav2-Prozessfälle `fixed_bypass`, `explorer_bypass`, `stopped_bypass`,
+`blocked` bestanden. Großflächen-Zielreturn, bewegungsspezifischer
+Freiraumbeleg, aktueller Karten-Scope und erneuter Gesamtpreflight fehlen;
+deshalb weiterhin **keine reale Fahrfreigabe**.
+
+**Offene Risiken / Rückfall:** 2D-Costmap, LiDAR-Höhe und in WE deaktivierte
+OAK belegen unbeobachtete VL53-Höhen nicht automatisch. Der Markierungsfix
+ist nur im isolierten Overlay `we1-stage3-vl53-mark-bwVxEL`; Rückfall durch
+Weglassen dieses Overlays. Das ältere 64/64-Tor bleibt bis zu einem
+positiv belegten Ersatz aktiv.
+
+---
+
 ## 2026-09-24 — Motorloser Stufe-3-Zielsystemvorlauf bleibt gesperrt
 
 **Entscheidung:** Keine reale Fahrt freigeben und keine VL53-/Collision-
