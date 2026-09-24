@@ -136,6 +136,13 @@ motorlos zu prüfen. Software-Not-Aus ersetzt den hardwired Not-Aus nicht.
 
 **Rest und Abnahmegrenzen:** Gerätefreie Softwareabnahme **BESTANDEN**;
 motorlose Zielsystemprüfung **OFFEN**, reale Stufe-3-Abnahme **OFFEN**.
+PR #99 meldet zusätzlich `python-contracts` **rot**: Der unveränderte
+Workflow `semantic-map-offline.yml` importiert im Bring-up-Vertrag
+`test_oak_rectifier.py` auf einem frischen Python-Runner ohne `cv2`
+(`ModuleNotFoundError`), noch bevor der Mapmanager-Schritt erreicht wird.
+Das ist kein bestandener PR-Gesamtcheck und wird nicht durch Abschwächung
+eines Robotiktests als grün umgedeutet; die Stage-3-spezifische lokale
+Testsuite bleibt davon getrennt.
 Weder ein aktiver Roboter-Install noch reale Sensorqualität/TF-Frequenz noch
 eine reale Fahrt sind mit diesem Kandidaten geprüft. Vor jeder Übernahme den
 Quell-/Install-Hash und die tatsächliche Overlaykette am Zielgerät messen,
