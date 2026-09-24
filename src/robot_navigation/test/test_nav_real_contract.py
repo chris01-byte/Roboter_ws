@@ -1,5 +1,7 @@
 from pathlib import Path
 import sys
+import time
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -9,6 +11,8 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PACKAGE_ROOT))
 
 from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
+    CmdVelMissionGate,
+    estop_motion_authorized,
     explore_direct_values_valid,
     explore_health_authorized,
     explore_motion_authorized,
@@ -17,7 +21,12 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
     localization_search_values_valid,
     localization_motion_authorized,
     room_motion_authorized,
+    transform_motion_authorized,
 )
+from robot_interfaces.msg import NearFieldStatus  # noqa: E402
+from sensor_msgs_py.point_cloud2 import create_cloud_xyz32  # noqa: E402
+from std_msgs.msg import Bool, Header  # noqa: E402
+from builtin_interfaces.msg import Time  # noqa: E402
 
 
 def test_real_command_chain_contains_smoother_before_collision_monitor():
@@ -174,6 +183,32 @@ def test_mission_gate_is_fail_closed():
     assert not room_motion_authorized(None)
 
 
+def test_estop_gate_needs_fresh_explicit_clear_and_stops_immediately():
+    now = time.monotonic()
+    assert estop_motion_authorized(True, now, now + .2, 1.0)
+    for clear, received in ((None, None), (False, now), (True, None),
+                            (True, now - 1.1), (True, now + .1)):
+        assert not estop_motion_authorized(clear, received, now, 1.0)
+    gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
+    published = []
+    gate._publisher = SimpleNamespace(publish=published.append)
+    gate._on_estop(Bool(data=True))
+    assert gate._estop_clear is False
+    assert len(published) == 1
+    gate._on_estop(Bool(data=False))
+    assert gate._estop_clear is True
+    assert len(published) == 1  # Freigabe startet keinen alten Befehl.
+
+
+def test_mission_gate_rejects_missing_future_or_stale_map_base_transform():
+    now = 10_000_000_000
+    assert transform_motion_authorized(now - 100_000_000, now, .2)
+    assert not transform_motion_authorized(None, now, .2)
+    assert not transform_motion_authorized(0, now, .2)
+    assert not transform_motion_authorized(now + 1, now, .2)
+    assert not transform_motion_authorized(now - 201_000_000, now, .2)
+
+
 def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
     running = {
         'state': 'running',
@@ -197,6 +232,40 @@ def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
         allow_stale_map_for_scan=True)
     assert not explore_health_authorized(
         True, 9.0, 9.8, None, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
+
+
+def test_gate_requires_matching_positive_vl53_quality_even_for_empty_cloud():
+    gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
+    gate._explore_sensor_timeout = .8
+    gate._near_clouds = {'left': {}, 'right': {}}
+    gate._near_statuses = {}
+    gate.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(nanoseconds=10_000_000_000))
+    stamp = Time(sec=10)
+    left = create_cloud_xyz32(
+        Header(stamp=stamp, frame_id='vl53_left_link'), [(0.24, .02, 0.)])
+    right = create_cloud_xyz32(
+        Header(stamp=stamp, frame_id='vl53_right_link'), [])
+    gate._on_explore_left(left)
+    gate._on_explore_right(right)
+    assert not gate._near_quality_authorized(time.monotonic())
+    def quality_status(second, right_quality):
+        status = NearFieldStatus()
+        status.header.stamp.sec = second
+        status.header.frame_id = 'base_link'
+        status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+        status.right_quality = right_quality
+        status.left_observed_columns = status.right_observed_columns = 255
+        return status
+
+    gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_VALID_FAR))
+    assert gate._near_quality_authorized(time.monotonic())
+    gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_PARTIAL))
+    assert not gate._near_quality_authorized(time.monotonic())
+    gate._on_near_status(quality_status(9, NearFieldStatus.QUALITY_VALID_FAR))
+    assert not gate._near_quality_authorized(time.monotonic())
+    gate._on_near_status(quality_status(11, NearFieldStatus.QUALITY_VALID_FAR))
+    assert not gate._near_quality_authorized(time.monotonic())
 
 
 def test_explore_scan_input_is_rotation_only_and_bounded():

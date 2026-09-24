@@ -54,6 +54,8 @@ from amadeus_map_identity import (  # noqa: E402
     map_snapshot_fingerprint,
 )
 from robot_interfaces.action import ExploreArea  # noqa: E402
+from robot_interfaces.msg import NearFieldStatus  # noqa: E402
+from vl53_near_field.measurement_quality import assess_frame  # noqa: E402
 
 
 WIDTH = 100
@@ -61,6 +63,7 @@ MULTIROOM_WIDTH = 155
 HEIGHT = 60
 RESOLUTION = 0.05
 ORIGIN = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+_DEFERRED_NODE_DESTRUCTION = []
 
 
 def _map_cells(revision, *, width=WIDTH, height=HEIGHT,
@@ -269,8 +272,11 @@ class SyntheticWorld(Node):
             side: self.create_publisher(
                 PointCloud2, f'{prefix}/near_field/{side}/points', 10)
             for side in ('left', 'right')}
+        self._vl53_status_pub = self.create_publisher(
+            NearFieldStatus, f'{prefix}/near_field/status', 10)
         self._telemetry_timer = None
-        if scenario in {'local_blocked', 'local_no_exit'}:
+        if scenario in {'local_blocked', 'local_no_exit',
+                        'frontier_replan', 'frontier_no_source'}:
             self._telemetry_timer = self.create_timer(
                 0.1, self._publish_passive_telemetry)
         self._tf = TransformBroadcaster(self)
@@ -409,6 +415,20 @@ class SyntheticWorld(Node):
             pub.publish(create_cloud_xyz32(
                 Header(stamp=stamp, frame_id='base_link'),
                 [(0.45, 0.10, 0.05)]))
+        synthetic_frame = {
+            'distance_mm': [450] * 64,
+            'target_status': [5] * 64,
+            'nb_target_detected': [1] * 64,
+            'sigma_mm': [10] * 64,
+        }
+        _, _, coverage, quality = assess_frame(
+            synthetic_frame, 8, 8, [5], True, 0., 50., .01, .50)
+        status = NearFieldStatus()
+        status.header.stamp = stamp
+        status.header.frame_id = 'base_link'
+        status.left_quality = status.right_quality = quality
+        status.left_observed_columns = status.right_observed_columns = coverage
+        self._vl53_status_pub.publish(status)
 
     def stop_telemetry(self):
         self.telemetry_pose = None
@@ -554,6 +574,9 @@ def _parameter_text(world):
         "wohnungserkundung_vl53_right_topic": (
             '/near_field/right/points' if getattr(world, "real_nav", False)
             else f'/we_m3u/{world.scenario}/near_field/right/points'),
+        "wohnungserkundung_vl53_status_topic": (
+            '/near_field/status' if getattr(world, "real_nav", False)
+            else f'/we_m3u/{world.scenario}/near_field/status'),
         "status_topic": world.explore_status_topic,
         "visualize": False,
         "behavior_tree": str(safe_bt),
@@ -1356,6 +1379,7 @@ def _run_resume_scenario(executor, log_directory, persistence_directory):
 def _run_frontier_replan_scenario(executor, log_directory):
     """Prove that a stopped stale child is followed by real new work."""
     world = SyntheticWorld("frontier_replan")
+    world.telemetry_pose = (0.85, 1.525)
     executor.add_node(world)
     log_path = log_directory / "frontier_replan.log"
     process, log_handle, parameter_path = _start_explorer(world, log_path)
@@ -1442,6 +1466,7 @@ def _run_frontier_replan_scenario(executor, log_directory):
         if parent_result.done():
             raise AssertionError("Elternauftrag stoppte unmittelbar nach B")
         world.frontier_stage = "none"
+        world.telemetry_pose = second_target
         for revision in range(16, 23):
             world.publish_pose_scan(second_target[0], y_m=second_target[1])
             world.publish_revision(revision)
@@ -1514,13 +1539,20 @@ def _run_frontier_replan_scenario(executor, log_directory):
             f"--- Explorer-Log ---\n{log_tail}") from error
     finally:
         _stop_explorer(process, log_handle, parameter_path)
+        world.stop_telemetry()
         executor.remove_node(world)
-        world.destroy_node()
+        # The action client may still have a queued terminal future callback.
+        # Destroy only after the shared executor has drained at process exit.
+        _DEFERRED_NODE_DESTRUCTION.append(world)
 
 
 def _run_frontier_no_source_scenario(executor, log_directory):
     """An invalidated child waits fail-closed, bounded by mission time."""
     world = SyntheticWorld("frontier_no_source")
+    # Keep the independent safety telemetry healthy while deliberately
+    # withholding only the map source after A is invalidated. Otherwise the
+    # new active-child hard-fault check (correctly) rejects the fixture.
+    world.telemetry_pose = (0.85, 1.525)
     executor.add_node(world)
     log_path = log_directory / "frontier_no_source.log"
     process, log_handle, parameter_path = _start_explorer(world, log_path)
@@ -1580,8 +1612,9 @@ def _run_frontier_no_source_scenario(executor, log_directory):
         }
     finally:
         _stop_explorer(process, log_handle, parameter_path)
+        world.stop_telemetry()
         executor.remove_node(world)
-        world.destroy_node()
+        _DEFERRED_NODE_DESTRUCTION.append(world)
 
 
 def _run_local_blocked_scenario(executor, log_directory):
@@ -1851,9 +1884,11 @@ def main():
         }, sort_keys=True))
     finally:
         executor.shutdown(timeout_sec=3.0)
+        spin_thread.join(timeout=3.0)
+        for retired in _DEFERRED_NODE_DESTRUCTION:
+            retired.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
-        spin_thread.join(timeout=3.0)
 
 
 if __name__ == "__main__":

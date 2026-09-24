@@ -67,6 +67,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from action_msgs.msg import GoalStatus
 from nav2_msgs.action import NavigateToPose
 from robot_interfaces.action import ExploreArea
+from robot_interfaces.msg import NearFieldStatus
 
 from explore.lidar_motion import (
     LidarReferenceMatcher,
@@ -883,6 +884,9 @@ class ExploreNode(Node):
                 'wohnungserkundung_navigation_enabled', False).value)
         self._wohnungserkundung_estop_topic = str(self.declare_parameter(
             'wohnungserkundung_estop_topic', '/safety/estop').value).strip()
+        self._wohnungserkundung_vl53_status_topic = str(
+            self.declare_parameter('wohnungserkundung_vl53_status_topic',
+                                   '/near_field/status').value).strip()
         self._wohnungserkundung_vl53_topics = {
             side: str(self.declare_parameter(
                 f'wohnungserkundung_vl53_{side}_topic',
@@ -890,6 +894,7 @@ class ExploreNode(Node):
             for side in ('left', 'right')}
         if self._wohnungserkundung_navigation_enabled and (
                 not self._wohnungserkundung_estop_topic
+                or not self._wohnungserkundung_vl53_status_topic
                 or not all(self._wohnungserkundung_vl53_topics.values())):
             raise ValueError('WE-Lokalblockade braucht Safety- und VL53-Topics')
         self._wohnungserkundung_persistence_enabled = bool(
@@ -1363,6 +1368,11 @@ class ExploreNode(Node):
                 'left': None, 'right': None}
             self._wohnungserkundung_vl53_point_count = {
                 'left': 0, 'right': 0}
+            self._wohnungserkundung_vl53_cloud_stamp_ns = {
+                'left': None, 'right': None}
+            self._wohnungserkundung_vl53_status = None
+            self._wohnungserkundung_vl53_status_at = None
+            self._wohnungserkundung_vl53_status_observed_at = None
             self._wohnungserkundung_local_blocked_tasks = {}
             self._wohnungserkundung_runtime_condition = threading.Condition(
                 self._wohnungserkundung_runtime_lock)
@@ -1375,6 +1385,7 @@ class ExploreNode(Node):
             self._wohnungserkundung_unconfirmed_since = None
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_active_frontier_source = None
+            self._wohnungserkundung_active_frontier_fingerprint = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_task_policy_session = None
             self._wohnungserkundung_stateful_assessment = None
@@ -1449,6 +1460,10 @@ class ExploreNode(Node):
                     lambda msg, side=side: self._on_wohnungserkundung_vl53(
                         side, msg),
                     qos_profile_sensor_data, callback_group=self._cb)
+            self.create_subscription(
+                NearFieldStatus, self._wohnungserkundung_vl53_status_topic,
+                self._on_wohnungserkundung_vl53_status, 10,
+                callback_group=self._cb)
         self._scan_cmd_pub = self.create_publisher(
             Twist, self._scan_cmd_topic, 10)
         self._door_cmd_pub = self.create_publisher(
@@ -2626,6 +2641,8 @@ class ExploreNode(Node):
                             == active_frontier_source[0]):
                         self._wohnungserkundung_active_frontier_source = (
                             active_frontier_source)
+                        self._wohnungserkundung_active_frontier_fingerprint = (
+                            correlation.fingerprint)
                     self._wohnungserkundung_navigation_snapshot = (
                         navigation_snapshot)
                     self._wohnungserkundung_policy_processed_revision = (
@@ -2709,11 +2726,8 @@ class ExploreNode(Node):
             self._wohnungserkundung_estop_received_at = time.monotonic()
 
     def _on_wohnungserkundung_vl53(self, side: str, msg: PointCloud2):
-        # Receipt, well-formed transport and measurement validity are separate.
-        # The real producer emits an empty original cloud both for out-of-range
-        # returns and for entirely rejected measurements. Its current public
-        # status cannot distinguish those cases: empty is fresh but UNKNOWN,
-        # never an affirmative healthy/free-space certificate for recovery.
+        # Cloud geometry is independent of producer quality. An empty cloud
+        # is well formed but cannot authorize recovery without matching status.
         fields = {field.name: field for field in msg.fields}
         well_formed = (
             bool(msg.header.frame_id.strip())
@@ -2725,7 +2739,7 @@ class ExploreNode(Node):
                     and fields[name].count == 1
                     and 0 <= fields[name].offset <= msg.point_step - 4
                     for name in ('x', 'y', 'z')))
-        measurement_valid = None
+        measurement_valid = True
         count = msg.width * msg.height
         if not well_formed:
             measurement_valid = False
@@ -2756,6 +2770,89 @@ class ExploreNode(Node):
                 now - age_ns / 1_000_000_000 if age_ns >= 0 else None)
             self._wohnungserkundung_vl53_measurement_valid[side] = measurement_valid
             self._wohnungserkundung_vl53_point_count[side] = count
+            self._wohnungserkundung_vl53_cloud_stamp_ns[side] = (
+                stamp_ns if well_formed and age_ns >= 0 else None)
+
+    def _on_wohnungserkundung_vl53_status(self, msg: NearFieldStatus):
+        stamp_ns = (int(msg.header.stamp.sec) * 1_000_000_000
+                    + int(msg.header.stamp.nanosec))
+        age_ns = self.get_clock().now().nanoseconds - stamp_ns
+        now = time.monotonic()
+        with self._wohnungserkundung_runtime_lock:
+            self._wohnungserkundung_vl53_status = msg
+            self._wohnungserkundung_vl53_status_at = now
+            self._wohnungserkundung_vl53_status_observed_at = (
+                now - age_ns / 1_000_000_000
+                if msg.header.frame_id == 'base_link' and age_ns >= 0
+                else None)
+
+    def _wohnungserkundung_active_safety_failure(self) -> bool:
+        """Cancel an active child on a hard source failure, never replan it.
+
+        The command gate reacts immediately. This separate bounded check
+        ends Nav2 ownership and the parent mission as SYSTEM_FAILURE instead
+        of leaving a stopped controller action alive until its goal timeout.
+        Status/cloud stamps may briefly differ during normal publication;
+        exact triplet matching remains the gate's movement authorization.
+        """
+        def fresh(value, limit):
+            # A subscription may update its monotonic receipt time between
+            # two snapshots below. Compare with time sampled *after* that
+            # value, otherwise a healthy new odom frame looks future-dated.
+            age = None if value is None else time.monotonic() - value
+            return age is not None and 0.0 <= age <= limit
+        def failed(reason):
+            if getattr(self, '_wohnungserkundung_last_safety_failure', None) != reason:
+                self._wohnungserkundung_last_safety_failure = reason
+                self.get_logger().error(
+                    f'WE-Kindziel: harte Quellenstoerung ({reason}); Nav2-Abbruch')
+            return True
+        with self._wohnungserkundung_runtime_lock:
+            estop = self._wohnungserkundung_estop
+            estop_at = self._wohnungserkundung_estop_received_at
+            status = self._wohnungserkundung_vl53_status
+            status_at = self._wohnungserkundung_vl53_status_at
+            status_observed = self._wohnungserkundung_vl53_status_observed_at
+            clouds_at = tuple(self._wohnungserkundung_vl53_received_at.values())
+            clouds_observed = tuple(
+                self._wohnungserkundung_vl53_observed_at.values())
+            clouds_valid = tuple(
+                self._wohnungserkundung_vl53_measurement_valid.values())
+        if estop is not False or not fresh(estop_at, 1.0):
+            return failed('estop_missing_stale_or_active')
+        if (status is None or not fresh(status_at, 0.8)
+                or not fresh(status_observed, 0.8)
+                or any(getattr(status, f'{side}_quality') not in (
+                    NearFieldStatus.QUALITY_VALID_NEAR,
+                    NearFieldStatus.QUALITY_VALID_FAR)
+                    or getattr(status, f'{side}_observed_columns') != 255
+                    for side in ('left', 'right'))):
+            return failed('vl53_status_missing_stale_or_invalid')
+        if (len(clouds_at) != 2 or not all(value is True for value in clouds_valid)
+                or not all(fresh(value, 0.8)
+                           for value in clouds_at + clouds_observed)):
+            return failed('vl53_cloud_missing_stale_or_invalid')
+        scan = self._door_lidar_scan_snapshot()
+        if (scan is None or not fresh(scan.get('received_at'), 0.8)
+                or scan.get('ranges') is None
+                or np.count_nonzero(np.isfinite(scan['ranges']))
+                < self._door_lidar_min_points):
+            return failed('lidar_missing_stale_or_invalid')
+        pose, pose_age = self._robot_pose_sample()
+        if pose is None or pose_age is None or not 0.0 <= pose_age <= 1.5:
+            return failed('localization_missing_or_stale')
+        _, _, linear, angular, odom_at = self._motion_odom_snapshot()
+        if (not fresh(odom_at, 0.8)
+                or linear is None or angular is None
+                or not math.isfinite(linear) or not math.isfinite(angular)):
+            age_text = ('missing' if odom_at is None else
+                        f'{time.monotonic() - odom_at:.3f}')
+            return failed(
+                'odometry_missing_stale_or_invalid '
+                f'age_s={age_text}'
+                f' linear={linear} angular={angular}')
+        self._wohnungserkundung_last_safety_failure = None
+        return False
 
     def _wohnungserkundung_local_blocked_after_abort(self, candidate) -> bool:
         """Require a stopped child and fresh, positive Nav2 obstacle proof.
@@ -2767,24 +2864,62 @@ class ExploreNode(Node):
         """
         if not isinstance(candidate, FrontierGoalCandidate):
             return False
-        now = time.monotonic()
-        with self._wohnungserkundung_runtime_lock:
-            estop = self._wohnungserkundung_estop
-            estop_at = self._wohnungserkundung_estop_received_at
-            vl53_at = tuple(self._wohnungserkundung_vl53_received_at.values())
-            vl53_observed = tuple(
-                self._wohnungserkundung_vl53_observed_at.values())
-            vl53_valid = tuple(
-                self._wohnungserkundung_vl53_measurement_valid.values())
+        # Producer publishes status, then both clouds with the same stamp.
+        # A terminal child may arrive in that short publication window. Wait
+        # at most one sensor interval for the *current* triplet; never use an
+        # unmatched or invalid report as movement/recovery authorization.
+        deadline = time.monotonic() + 0.2
+        while True:
+            with self._wohnungserkundung_runtime_lock:
+                estop = self._wohnungserkundung_estop
+                estop_at = self._wohnungserkundung_estop_received_at
+                vl53_at = tuple(self._wohnungserkundung_vl53_received_at.values())
+                vl53_observed = tuple(
+                    self._wohnungserkundung_vl53_observed_at.values())
+                vl53_valid = tuple(
+                    self._wohnungserkundung_vl53_measurement_valid.values())
+                vl53_stamps = dict(self._wohnungserkundung_vl53_cloud_stamp_ns)
+                vl53_status = self._wohnungserkundung_vl53_status
+                vl53_status_at = self._wohnungserkundung_vl53_status_at
+                vl53_status_observed = (
+                    self._wohnungserkundung_vl53_status_observed_at)
+            status_stamp = (
+                int(vl53_status.header.stamp.sec) * 1_000_000_000
+                + int(vl53_status.header.stamp.nanosec)
+                if vl53_status is not None else None)
+            if (vl53_status is None
+                    or any(getattr(vl53_status, f'{side}_quality') not in (
+                        NearFieldStatus.QUALITY_VALID_NEAR,
+                        NearFieldStatus.QUALITY_VALID_FAR)
+                        for side in ('left', 'right'))
+                    or all(vl53_stamps[side] == status_stamp
+                           for side in ('left', 'right'))
+                    or time.monotonic() >= deadline):
+                break
+            time.sleep(0.02)
         def fresh(received_at, limit):
-            return (received_at is not None
-                    and 0.0 <= now - received_at <= limit)
+            age = (None if received_at is None else
+                   time.monotonic() - received_at)
+            return age is not None and 0.0 <= age <= limit
         if estop is not False or not fresh(estop_at, 1.0):
             return False
         if (len(vl53_at) != 2 or len(vl53_valid) != 2 or len(vl53_observed) != 2
                 or not all(valid is True for valid in vl53_valid)
                 or not all(fresh(stamp, 0.8)
                            for stamp in vl53_at + vl53_observed)):
+            return False
+        if (not fresh(vl53_status_at, 0.8)
+                or not fresh(vl53_status_observed, 0.8)
+                or any(vl53_stamps[side] != status_stamp
+                       for side in ('left', 'right'))
+                or vl53_status.left_quality not in (
+                    NearFieldStatus.QUALITY_VALID_NEAR,
+                    NearFieldStatus.QUALITY_VALID_FAR)
+                or vl53_status.right_quality not in (
+                    NearFieldStatus.QUALITY_VALID_NEAR,
+                    NearFieldStatus.QUALITY_VALID_FAR)
+                or vl53_status.left_observed_columns != 255
+                or vl53_status.right_observed_columns != 255):
             return False
         scan = self._door_lidar_scan_snapshot()
         if scan is None or not fresh(scan.get('received_at'), 0.8):
@@ -3602,6 +3737,8 @@ class ExploreNode(Node):
         with self._wohnungserkundung_runtime_lock:
             if self._wohnungserkundung_active_child == active_child:
                 self._wohnungserkundung_active_frontier_source = source
+                self._wohnungserkundung_active_frontier_fingerprint = (
+                    correlation.fingerprint)
                 condition = getattr(
                     self, '_wohnungserkundung_runtime_condition', None)
                 if condition is not None:
@@ -5500,6 +5637,25 @@ class ExploreNode(Node):
             snapshot = self._wohnungserkundung_navigation_snapshot
             active_frontier_source = getattr(
                 self, '_wohnungserkundung_active_frontier_source', None)
+            active_frontier_fingerprint = getattr(
+                self, '_wohnungserkundung_active_frontier_fingerprint', None)
+        # After a changed map has been positively revalidated, further
+        # timestamp-only observations of that *new* geometry need no second
+        # policy round-trip. The old candidate fingerprint alone would not
+        # cover this case and a busy policy worker could exhaust the bounded
+        # grace despite an unchanged, already proven metric goal.
+        if (
+                isinstance(candidate, FrontierGoalCandidate)
+                and active_frontier_source is not None
+                and active_frontier_source[0] == intent.intent_id
+                and active_frontier_source[1].context == intent.context
+                and active_frontier_source[1].current
+                and active_frontier_fingerprint == correlation.fingerprint
+                and correlation.map_revision >=
+                active_frontier_source[1].map_revision):
+            self._clear_wohnungserkundung_unconfirmed_intent(intent)
+            return NavigationSourceState(
+                correlation.context, correlation.map_revision, True)
         if (
                 isinstance(candidate, FrontierGoalCandidate)
                 and active_frontier_source is not None
@@ -5764,6 +5920,8 @@ class ExploreNode(Node):
                         intent.context, intent.map_revision, True),
                     'initial_exact_source',
                 )
+                self._wohnungserkundung_active_frontier_fingerprint = (
+                    candidate.source_fingerprint)
         try:
             run = navigation_session.run(
                 intent,
@@ -5784,6 +5942,8 @@ class ExploreNode(Node):
                 overall_expired,
                 local_blocked=(
                     self._wohnungserkundung_local_blocked_after_abort),
+                safety_failure=(
+                    self._wohnungserkundung_active_safety_failure),
             )
             portal_outcome = None
             if portal_monitor is not None:
@@ -5868,6 +6028,7 @@ class ExploreNode(Node):
                         and self._wohnungserkundung_active_frontier_source[0]
                         == intent.intent_id):
                     self._wohnungserkundung_active_frontier_source = None
+                    self._wohnungserkundung_active_frontier_fingerprint = None
 
     def _store_wohnungserkundung_completion(self, completion):
         """Publish one immutable completion view beneath the existing status."""
@@ -5955,6 +6116,7 @@ class ExploreNode(Node):
             self._wohnungserkundung_active_child = None
             self._wohnungserkundung_local_blocked_tasks = {}
             self._wohnungserkundung_active_frontier_source = None
+            self._wohnungserkundung_active_frontier_fingerprint = None
             self._wohnungserkundung_consumed_intent_id = None
             self._wohnungserkundung_completion_assessment = None
             self._wohnungserkundung_pending_frontier_resolution = None

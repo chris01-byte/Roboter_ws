@@ -128,13 +128,22 @@ controller_server:
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.10        # REAL: konservativ fuer 2000-ms-Motorrampe
-      lookahead_dist: 0.8
-      min_lookahead_dist: 0.6
+      # Der NavFn-Umweg biegt im Stoppfall bereits 0.1 m nach der Pose nach
+      # Norden ab. Bei 0.8 m liegt das Carrot wieder diagonal hinter dem
+      # Hindernis (0.27 rad) und RPP schneidet die Ecke. Bei 0.4 m liegt es
+      # auf dem freien Nordsegment (~1.0 rad); unveraenderte lokale Polygon-
+      # Kollisionspruefung entscheidet weiterhin ueber jede Bewegung.
+      lookahead_dist: 0.4
+      min_lookahead_dist: 0.4
       max_lookahead_dist: 1.0
       use_velocity_scaled_lookahead_dist: false
       transform_tolerance: 0.2
       use_rotate_to_heading: true
       rotate_to_heading_angular_vel: 0.2
+      # 0.35 rad vermeidet das zu fruehe Vorwaertsfahren des RPP-Defaults
+      # (0.785 rad), ohne die im Gegenversuch geometrisch unsichere
+      # 0.10-rad-Variante zu verwenden.
+      rotate_to_heading_min_angle: 0.35
       # Nicht als zweite geschlossene Rampe gegen die gemessene Odometrie
       # wirken lassen: 0,3 begrenzte den Regler im motorlosen Pipeline-Test
       # auf 0,015 rad/s. Der nachgeschaltete velocity_smoother bleibt die

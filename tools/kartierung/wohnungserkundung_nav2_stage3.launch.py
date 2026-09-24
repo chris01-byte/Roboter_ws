@@ -46,6 +46,7 @@ def generate_launch_description():
                 'require_localization': False,
                 'allow_localization_search': False,
                 'allow_explore_mission': True,
+                'estop_topic': '/we_stage3/estop',
             }]),
         Node(
             package='nav2_controller', executable='controller_server',

@@ -12,6 +12,7 @@ from action_msgs.msg import GoalStatus
 from builtin_interfaces.msg import Time
 from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import PointCloud2
+from robot_interfaces.msg import NearFieldStatus
 import pytest
 from std_msgs.msg import String
 import yaml
@@ -1711,6 +1712,7 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     node = ExploreNode.__new__(ExploreNode)
     now = time.monotonic()
     node._wohnungserkundung_runtime_lock = threading.Lock()
+    node.get_logger = lambda: SimpleNamespace(error=lambda _message: None)
     node._wohnungserkundung_local_blocked_tasks = {}
     node._wohnungserkundung_estop = False
     node._wohnungserkundung_estop_received_at = now
@@ -1720,6 +1722,17 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     node._wohnungserkundung_vl53_measurement_valid = {
         'left': True, 'right': True}
     node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
+    status = NearFieldStatus()
+    status.header.frame_id = 'base_link'
+    status.header.stamp = Time(sec=10)
+    status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    status.left_observed_columns = status.right_observed_columns = 255
+    node._wohnungserkundung_vl53_status = status
+    node._wohnungserkundung_vl53_status_at = now
+    node._wohnungserkundung_vl53_status_observed_at = now
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
     node._door_lidar_scan_snapshot = lambda: {
         'received_at': now, 'ranges': np.ones(720)}
     node._door_lidar_min_points = 200
@@ -1733,6 +1746,35 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
         None if route['blocked'] else ((1.0, 2.0), False))
 
     assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    assert not node._wohnungserkundung_active_safety_failure()
+    # A fresh odom callback can run after the safety check begins. Its
+    # monotonic receipt time is then newer than the earlier source snapshots.
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, time.monotonic())
+    assert not node._wohnungserkundung_active_safety_failure()
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, 0.0, 0.0, now)
+    status.right_quality = NearFieldStatus.QUALITY_INVALID
+    assert node._wohnungserkundung_active_safety_failure()
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    # Status arrives before both clouds in the producer's publication order.
+    # A terminal Nav2 child in this window must await the bounded triplet,
+    # not turn a legitimate local blockage into SYSTEM_FAILURE.
+    status.header.stamp.sec = 11
+    def finish_triplet():
+        time.sleep(0.03)
+        with node._wohnungserkundung_runtime_lock:
+            node._wohnungserkundung_vl53_cloud_stamp_ns['left'] = 11_000_000_000
+        time.sleep(0.03)
+        with node._wohnungserkundung_runtime_lock:
+            node._wohnungserkundung_vl53_cloud_stamp_ns['right'] = 11_000_000_000
+    worker = threading.Thread(target=finish_triplet)
+    worker.start()
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    worker.join(timeout=1.0)
+    status.header.stamp.sec = 10
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
     route['blocked'] = False
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
     route['blocked'] = True
@@ -1762,6 +1804,19 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     empty.header.frame_id = 'base_link'
     node._on_wohnungserkundung_vl53('right', empty)
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    from sensor_msgs_py.point_cloud2 import create_cloud_xyz32
+    from std_msgs.msg import Header
+    node.get_clock = lambda: SimpleNamespace(
+        now=lambda: SimpleNamespace(nanoseconds=10_000_000_000))
+    node._on_wohnungserkundung_vl53(
+        'right', create_cloud_xyz32(
+            Header(stamp=Time(sec=10), frame_id='vl53_right_link'), []))
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    status.right_observed_columns = 127
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    status.right_observed_columns = 255
+    status.header.stamp.sec = 9
+    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
 
 
 def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
@@ -1780,6 +1835,17 @@ def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
     node._wohnungserkundung_vl53_measurement_valid = {
         'left': True, 'right': True}
     node._wohnungserkundung_vl53_point_count = {'left': 1, 'right': 1}
+    status = NearFieldStatus()
+    status.header.frame_id = 'base_link'
+    status.header.stamp = Time(sec=10)
+    status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
+    status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
+    status.left_observed_columns = status.right_observed_columns = 255
+    node._wohnungserkundung_vl53_status = status
+    node._wohnungserkundung_vl53_status_at = now
+    node._wohnungserkundung_vl53_status_observed_at = now
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': 10_000_000_000, 'right': 10_000_000_000}
     node._door_lidar_scan_snapshot = lambda: {
         'received_at': now, 'ranges': np.ones(720)}
     node._door_lidar_min_points = 200
@@ -1903,7 +1969,7 @@ def test_we_route_recheck_retains_source_scope_and_route_gates(fault):
 
 
 @pytest.mark.parametrize('points,expected', [
-    ([], None), ([(0., 0., 0.)], False),
+    ([], True), ([(0., 0., 0.)], False),
     ([(float('nan'), 0., 0.)], False), ([(0.24, 0.03, 0.02)], True)])
 def test_we_vl53_separates_fresh_transport_measurement_and_obstacle(points, expected):
     from sensor_msgs_py.point_cloud2 import create_cloud_xyz32
@@ -1915,6 +1981,8 @@ def test_we_vl53_separates_fresh_transport_measurement_and_obstacle(points, expe
     node._wohnungserkundung_vl53_observed_at = {'left': None, 'right': None}
     node._wohnungserkundung_vl53_measurement_valid = {'left': None, 'right': None}
     node._wohnungserkundung_vl53_point_count = {'left': 0, 'right': 0}
+    node._wohnungserkundung_vl53_cloud_stamp_ns = {
+        'left': None, 'right': None}
     node.get_clock = lambda: SimpleNamespace(now=lambda: SimpleNamespace(
         nanoseconds=10_000_000_000))
     header = Header(frame_id='vl53_right_link', stamp=Time(sec=10))
@@ -2040,6 +2108,37 @@ def test_we_duplicate_raw_map_keeps_active_frontier_current():
     assert source == NavigationSourceState(context, 8, True)
 
 
+def test_we_duplicate_of_newly_revalidated_map_keeps_active_child(
+        monkeypatch):
+    context = PortalMapContext('session-grace', 'map-grace', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 8, True),
+        'fixed_goal_revalidated_fast')
+    node._wohnungserkundung_active_frontier_fingerprint = 'b' * 64
+    clock = {'now': 20.0}
+    monkeypatch.setattr(
+        explore_node_module.time, 'monotonic', lambda: clock['now'])
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=9, fingerprint='b' * 64,
+        source_stamp_ns=789)
+    node._region_graph_shadow_latest_correlation_received_at = 20.0
+    assert node._wohnungserkundung_source_state(intent, candidate) == (
+        NavigationSourceState(context, 9, True))
+    assert node._wohnungserkundung_unconfirmed_since is None
+    # A genuinely changed map still needs exact revalidation and may stop.
+    node._region_graph_shadow_latest_correlation = SimpleNamespace(
+        context=context, map_revision=10, fingerprint='c' * 64,
+        source_stamp_ns=1011)
+    clock['now'] = 20.1
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 21.4
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+
+
 def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
         monkeypatch):
     context = PortalMapContext('session-grace', 'map-grace', 'map')
@@ -2064,7 +2163,8 @@ def test_we_fast_raw_validation_does_not_wait_for_full_policy_commit(
 def test_we_fast_raw_validation_commits_current_active_child(monkeypatch):
     context = PortalMapContext('session-fast', 'map-fast', 'map')
     intent, candidate = _we_source_state_goal(context)
-    correlation = SimpleNamespace(context=context, map_revision=8)
+    correlation = SimpleNamespace(
+        context=context, map_revision=8, fingerprint='b' * 64)
     raw_map = _grid(width=20, height=20, resolution=0.05)
     raw_map.header.stamp.sec = 3
     raw_map.header.stamp.nanosec = 4
@@ -2095,6 +2195,7 @@ def test_we_fast_raw_validation_commits_current_active_child(monkeypatch):
         NavigationSourceState(context, 8, True),
         'fixed_goal_revalidated_fast',
     )
+    assert node._wohnungserkundung_active_frontier_fingerprint == 'b' * 64
 
 
 def test_we_failed_current_raw_validation_invalidates_frontier_child(
@@ -2327,10 +2428,11 @@ def _portal_runtime_node(monkeypatch, outcome):
     class NavigationSession:
         def run(self, selected_intent, selected_candidate, navigate_child,
                 source_state, user_canceled, budget_exhausted,
-                *, local_blocked):
+                *, local_blocked, safety_failure):
             assert selected_intent is intent
             assert selected_candidate is candidate
             assert callable(local_blocked)
+            assert callable(safety_failure)
             assert navigate_child(candidate, lambda: False) == 'success'
             return run
 

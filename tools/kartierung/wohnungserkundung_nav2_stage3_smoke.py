@@ -4,8 +4,8 @@
 The only moving base is an in-process differential-drive model. No hardware
 or sensor driver is launched. The fixed private DDS domain is mandatory.
 ``fixed_bypass`` and ``explorer_bypass`` keep the obstacle in place throughout.
-``stopped_bypass`` separately probes late detection and remains a failing
-acceptance case until safe release from the stop is demonstrated. ``no_exit``
+``stopped_bypass`` separately probes late detection and requires safe release
+from the stop plus a second completed automatic goal. ``no_exit``
 requires a controlled partial result; ``blocked`` checks fail-closed recovery
 when the other sensor provides an ambiguous empty original cloud.
 """
@@ -35,10 +35,16 @@ from geometry_msgs.msg import (  # noqa: E402
 )
 from lifecycle_msgs.srv import GetState  # noqa: E402
 from nav2_msgs.action import ComputePathToPose, NavigateToPose  # noqa: E402
+from nav2_msgs.msg import Costmap  # noqa: E402
 from nav_msgs.msg import Odometry, OccupancyGrid, Path as NavPath  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.executors import MultiThreadedExecutor  # noqa: E402
+from rclpy.qos import (  # noqa: E402
+    QoSDurabilityPolicy, QoSProfile, QoSReliabilityPolicy,
+)
 from sensor_msgs.msg import LaserScan, PointCloud2, PointField  # noqa: E402
+from robot_interfaces.msg import NearFieldStatus  # noqa: E402
+from vl53_near_field.measurement_quality import assess_frame  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
 from tf2_ros import TransformBroadcaster  # noqa: E402
 
@@ -123,6 +129,10 @@ class RealNavWorld(SyntheticWorld):
         self.goal_a = None
         self.obstacle_center = None
         self.obstacle_active = False
+        self.fault_active = False
+        self.fault_activated_at = None
+        self.gate_zero_after_fault_at = None
+        self.output_zero_after_fault_at = None
         self.mission_active = False
         self.revision = 0
         self.observed_maps = 0
@@ -147,6 +157,8 @@ class RealNavWorld(SyntheticWorld):
         self.planned_geometry_violation = None
         self.reverse_travel_m = 0.0
         self.runtime_footprint = None
+        self.local_costmap = None
+        self.explore_history = []
         self.obstacle_in_map = self.diagnostic_bypass
         self.obstacle_bounds = (OBSTACLE if obstacle_mode != 'no_exit'
                                 else (2.0, 2.3, 0.25, 2.75))
@@ -159,8 +171,11 @@ class RealNavWorld(SyntheticWorld):
             LaserScan, '/scan_normiert', 10)
         self._mission_pub = self.create_publisher(
             String, '/mission_manager/status_json', 10)
+        estop_qos = QoSProfile(depth=1)
+        estop_qos.reliability = QoSReliabilityPolicy.RELIABLE
+        estop_qos.durability = QoSDurabilityPolicy.TRANSIENT_LOCAL
         self._real_estop_pub = self.create_publisher(
-            Bool, '/we_stage3/estop', 10)
+            Bool, '/we_stage3/estop', estop_qos)
         self._real_odom_pub = self.create_publisher(
             Odometry, '/odom', 10)
         self._real_vl53 = {
@@ -170,6 +185,8 @@ class RealNavWorld(SyntheticWorld):
                 self.create_publisher(
                     PointCloud2, f'/near_field/{side}/points_costmap', 10))
             for side in ('left', 'right')}
+        self._real_vl53_status = self.create_publisher(
+            NearFieldStatus, '/near_field/status', 10)
         self._real_tf = TransformBroadcaster(self)
         self._nav_client = ActionClient(self, NavigateToPose,
                                         '/navigate_to_pose')
@@ -181,7 +198,7 @@ class RealNavWorld(SyntheticWorld):
                             ('smooth', '/cmd_vel_smoothed')):
             self.create_subscription(
                 Twist, topic,
-                lambda msg, key=name: self.chain.__setitem__(key, msg), 10)
+                lambda msg, key=name: self._on_chain_cmd(key, msg), 10)
         self.create_subscription(NavPath, '/plan', self._on_plan, 10)
         self.create_subscription(
             NavPath, '/lookahead_collision_arc', self._on_collision_arc, 10)
@@ -189,9 +206,25 @@ class RealNavWorld(SyntheticWorld):
             PolygonStamped, '/local_costmap/published_footprint',
             lambda msg: setattr(self, 'runtime_footprint', msg), 10)
         self.create_subscription(
+            Costmap, '/local_costmap/costmap_raw',
+            lambda msg: setattr(self, 'local_costmap', msg), 10)
+        self.create_subscription(
             GoalStatusArray, '/navigate_to_pose/_action/status',
             self._on_nav_status, 10)
         self.create_timer(0.1, self._tick_real)
+
+    def _on_explore(self, message):
+        super()._on_explore(message)
+        status = self.latest_explore or {}
+        extension = status.get('wohnungserkundung', {})
+        self.explore_history.append({
+            't': time.monotonic(), 'phase': status.get('phase'),
+            'message': status.get('message'),
+            'source_revision': extension.get('source', {}).get('map_revision'),
+            'goal_candidate': extension.get('goal_candidate'),
+            'active_goal_validation': extension.get('active_goal_validation'),
+            'task_evidence': extension.get('task_evidence'),
+        })
 
     def _on_plan(self, message):
         if message.poses:
@@ -246,33 +279,52 @@ class RealNavWorld(SyntheticWorld):
         return message
 
     def _diagnostic_sensors(self, stamp, px, py):
-        """Eight horizontal rays in the real mounts; original may be empty.
-
-        No-hit is deliberately not a measurement-health certificate. This
-        fixture supplies visibility, not the missing real sensor validity API.
-        """
+        """Synthetic 8x8 returns evaluated by the producer's quality logic."""
+        status = NearFieldStatus()
+        status.header.stamp = stamp
+        status.header.frame_id = 'base_link'
         for side, lateral in (('left', 0.095), ('right', -0.095)):
             sx = px + 0.290 * math.cos(self.yaw) - lateral * math.sin(self.yaw)
             sy = py + 0.290 * math.sin(self.yaw) + lateral * math.cos(self.yaw)
             points, costmap = [], []
+            distances = []
             for angle in np.linspace(-math.pi / 6, math.pi / 6, 8):
                 distance = _ray_box_hit(
                     sx, sy, self.yaw + angle, (0.15, 4.85, 0.25, 2.75))
                 if self.obstacle_active:
                     distance = min(distance, _ray_box_hit(
                         sx, sy, self.yaw + angle, self.obstacle_bounds))
-                if 0.01 <= distance <= 0.50:
-                    point = (distance * math.cos(angle),
-                             distance * math.sin(angle), 0.0)
-                    points.append(point)
-                    costmap.append(point)
-                else:
-                    costmap.append((0.6 * math.cos(angle),
-                                    0.6 * math.sin(angle), 0.0))
+                distances.append(distance)
+            frame_data = {
+                'distance_mm': [1000.0 * value for value in distances] * 8,
+                'target_status': [5] * 64,
+                'nb_target_detected': [1] * 64,
+                'sigma_mm': [10] * 64,
+            }
+            measured, valid, coverage, quality = assess_frame(
+                frame_data, 8, 8, [5], True, 0., 50., .01, .50)
+            setattr(status, f'{side}_quality', quality)
+            setattr(status, f'{side}_observed_columns', coverage)
+            for col, angle in enumerate(np.linspace(-math.pi / 6,
+                                                   math.pi / 6, 8)):
+                distance = distances[col]
+                if np.all(valid[:, 7 - col]):
+                    clear_to = min(distance, 0.60)
+                    costmap.append((clear_to * math.cos(angle),
+                                    clear_to * math.sin(angle), 0.0))
+                if distance <= .50:
+                    for elevation in np.linspace(-math.pi / 6,
+                                                 math.pi / 6, 8):
+                        points.append((distance * math.cos(elevation)
+                                       * math.cos(angle),
+                                       distance * math.cos(elevation)
+                                       * math.sin(angle),
+                                       distance * math.sin(elevation)))
             original_pub, costmap_pub = self._real_vl53[side]
             frame = f'vl53_{side}_link'
             original_pub.publish(_cloud(stamp, points, frame))
             costmap_pub.publish(_cloud(stamp, costmap, frame))
+        self._real_vl53_status.publish(status)
 
     @property
     def map_pose(self):
@@ -285,8 +337,21 @@ class RealNavWorld(SyntheticWorld):
     def _on_real_cmd(self, message):
         self.cmd = message
         self.last_cmd_at = time.monotonic()
+        if (self.fault_activated_at is not None
+                and self.output_zero_after_fault_at is None
+                and abs(message.linear.x) < 0.001
+                and abs(message.angular.z) < 0.001):
+            self.output_zero_after_fault_at = self.last_cmd_at
         if abs(message.linear.x) > 0.001 or abs(message.angular.z) > 0.001:
             self.output_nonzero += 1
+
+    def _on_chain_cmd(self, key, message):
+        self.chain[key] = message
+        if (key == 'gate' and self.fault_activated_at is not None
+                and self.gate_zero_after_fault_at is None
+                and abs(message.linear.x) < 0.001
+                and abs(message.angular.z) < 0.001):
+            self.gate_zero_after_fault_at = time.monotonic()
 
     def _on_raw_cmd(self, message):
         if abs(message.linear.x) > 0.001 or abs(message.angular.z) > 0.001:
@@ -324,8 +389,8 @@ class RealNavWorld(SyntheticWorld):
         self.y += delta * math.sin(self.yaw)
         self.travel_m += abs(delta)
         self.reverse_travel_m += max(0.0, -delta)
+        px, py = self.map_pose
         if self.diagnostic_bypass:
-            px, py = self.map_pose
             for fraction in np.linspace(0.0, 1.0, 5):
                 sample = tuple(first + fraction * (last - first)
                                for first, last in zip(
@@ -334,11 +399,11 @@ class RealNavWorld(SyntheticWorld):
                         *sample, self.obstacle_bounds if self.obstacle_active
                         else None):
                     self.geometry_violation = sample
-            self.trace.append({
-                't': now, 'x': px, 'y': py, 'yaw': self.yaw,
-                'output': [linear, angular],
-                **{name: [msg.linear.x, msg.angular.z]
-                   for name, msg in self.chain.items()}})
+        self.trace.append({
+            't': now, 'x': px, 'y': py, 'yaw': self.yaw,
+            'output': [linear, angular],
+            **{name: [msg.linear.x, msg.angular.z]
+               for name, msg in self.chain.items()}})
 
         stamp = self.get_clock().now().to_msg()
         transform = TransformStamped()
@@ -349,7 +414,9 @@ class RealNavWorld(SyntheticWorld):
         transform.transform.translation.y = self.y
         transform.transform.rotation.z = math.sin(self.yaw / 2.0)
         transform.transform.rotation.w = math.cos(self.yaw / 2.0)
-        self._real_tf.sendTransform(transform)
+        if not (self.fault_active and
+                self.obstacle_mode == 'localization_loss'):
+            self._real_tf.sendTransform(transform)
 
         odom = Odometry()
         odom.header.stamp = stamp
@@ -362,7 +429,8 @@ class RealNavWorld(SyntheticWorld):
         odom.twist.twist.linear.x = linear
         odom.twist.twist.angular.z = angular
         self._real_odom_pub.publish(odom)
-        self._real_estop_pub.publish(Bool(data=False))
+        self._real_estop_pub.publish(Bool(data=(
+            self.fault_active and self.obstacle_mode == 'estop')))
         self._mission_pub.publish(String(data=json.dumps({
             'state': 'running' if self.mission_active else 'idle',
             'phase': 'Explore' if self.mission_active else 'idle',
@@ -417,10 +485,29 @@ class RealNavWorld(SyntheticWorld):
         if self.diagnostic_bypass:
             self._diagnostic_sensors(stamp, px, py)
         else:
+            right_failed = (self.obstacle_mode == 'blocked'
+                            and self.obstacle_active)
             for side, (original, costmap) in self._real_vl53.items():
                 original.publish(left if side == 'left' else clear)
-                costmap.publish(
-                    left_costmap if side == 'left' else clear_costmap)
+                costmap.publish(left_costmap if side == 'left' else (
+                    clear if right_failed else clear_costmap))
+            status = NearFieldStatus()
+            status.header.stamp = stamp
+            status.header.frame_id = 'base_link'
+            for side, distance in (('left', .24 if left_points else .8),
+                                   ('right', .8)):
+                frame_data = {
+                    'distance_mm': [distance * 1000] * 64,
+                    'target_status': ([255] * 64 if side == 'right'
+                                      and right_failed else [5] * 64),
+                    'nb_target_detected': [1] * 64,
+                    'sigma_mm': [10] * 64,
+                }
+                _, _, coverage, quality = assess_frame(
+                    frame_data, 8, 8, [5], True, 0., 50., .01, .50)
+                setattr(status, f'{side}_quality', quality)
+                setattr(status, f'{side}_observed_columns', coverage)
+            self._real_vl53_status.publish(status)
 
         if now - self.map_last_at >= 1.0:
             self.observed_maps += 1
@@ -619,7 +706,12 @@ def _run_diagnostic(world):
             if world.obstacle_mode != 'fixed_bypass' and world.nav_succeeded:
                 break
             if world.obstacle_mode == 'stopped_bypass':
-                if not world.obstacle_active and world.map_pose[0] >= 1.20:
+                # Separate late-appearance case: the fixed barrier begins at
+                # x=2.0 m. At x=1.50 m the straight padded front ends at
+                # x=1.83 m, leaving 0.17 m before contact. With the modeled
+                # <=0.03 m/s monitored approach this exceeds 5 s stopping
+                # room, while the in-place padded rotation still clears it.
+                if not world.obstacle_active and world.map_pose[0] >= 1.50:
                     world.obstacle_active = True
                     obstacle_at = time.monotonic()
                 nav_log.flush()
@@ -695,6 +787,17 @@ def _run_diagnostic(world):
         outcome['last_commands'] = world.trace[-1] if world.trace else None
         outcome['last_explore'] = world.latest_explore
         outcome['last_shadow'] = world.latest_shadow
+        if world.local_costmap is not None:
+            costmap = world.local_costmap
+            metadata = costmap.metadata
+            (directory / 'local_costmap.json').write_text(json.dumps({
+                'origin': [metadata.origin.position.x,
+                           metadata.origin.position.y],
+                'resolution': metadata.resolution,
+                'width': metadata.size_x,
+                'height': metadata.size_y,
+                'data': list(costmap.data),
+            }))
         print(log[-4500:], flush=True)
         raise
     finally:
@@ -711,6 +814,8 @@ def _run_diagnostic(world):
         (directory / 'plans.json').write_text(json.dumps(world.plans))
         (directory / 'collision_arcs.json').write_text(
             json.dumps(world.collision_arcs))
+        (directory / 'explore_history.json').write_text(
+            json.dumps(world.explore_history))
         (directory / 'result.json').write_text(json.dumps(outcome, indent=2))
         print(json.dumps({key: value for key, value in outcome.items()
                           if key not in ('last_explore', 'last_shadow')},
@@ -742,7 +847,8 @@ def _run_case(world):
                 float(first['target']['x_m']),
                 float(first['target']['y_m']))
             world.obstacle_center = (
-                world.goal_a if world.obstacle_mode in ('disappear', 'blocked')
+                world.goal_a if world.obstacle_mode in (
+                    'disappear', 'blocked', 'estop', 'localization_loss')
                 else (1.65, 1.55))
             world.mission_active = True
             handle, parent_result = world.send_explore_goal(timeout_s=170.0)
@@ -753,7 +859,91 @@ def _run_case(world):
                 lambda: math.dist(
                     world.map_pose, world.obstacle_center) < 0.55,
                 65.0, 'virtuelle Annaeherung an Hindernis')
-            world.obstacle_active = True
+            if world.obstacle_mode in ('estop', 'localization_loss'):
+                world.fault_activated_at = time.monotonic()
+                world.fault_active = True
+            else:
+                world.obstacle_active = True
+            if world.obstacle_mode in (
+                    'blocked', 'estop', 'localization_loss'):
+                travel_before_failure = world.travel_m
+                world.wait_for(parent_result.done, 12.0,
+                               'harter Abbruch bei aktiver Quellenstoerung')
+                world.wait_for(lambda: abs(world.cmd.linear.x) < 0.001
+                               and abs(world.cmd.angular.z) < 0.001,
+                               2.0, 'Fahrtor stoppt nach Sensorfehler')
+                nav_log.flush()
+                log = (directory / 'nav2.log').read_text(
+                    encoding='utf-8', errors='replace')
+                dispatched = log.count('Begin navigating from current location')
+                failure_evidence = {
+                    'obstacle_mode': world.obstacle_mode,
+                    'nav_active_max': world.nav_active_max,
+                    'nav_goal_count': dispatched,
+                    'parent_status': parent_result.result().status,
+                    'nav_child_canceled': 'Goal canceled' in log,
+                    'movement_after_failure_m': (
+                        world.travel_m - travel_before_failure),
+                    'gate_zero_latency_s': (
+                        world.gate_zero_after_fault_at
+                        - world.fault_activated_at
+                        if world.gate_zero_after_fault_at is not None
+                        else None),
+                    'output_zero_latency_s': (
+                        world.output_zero_after_fault_at
+                        - world.fault_activated_at
+                        if world.output_zero_after_fault_at is not None
+                        else None),
+                }
+                # TF loss is detected by the 0.2 s freshness deadline rather
+                # than an explicit fault bit. At 0.12 m/s that accounts for
+                # 0.024 m before detection; allow 0.026 m for the existing
+                # smoother's deceleration, still below the 0.28 m WE scope
+                # clearance. The E-stop gate outputs zero immediately, but
+                # Nav2's existing smoother then decelerates at 0.30 m/s^2:
+                # 0.10 m/s * 0.10 s publication phase + v^2/(2a) = 0.027 m,
+                # plus one 0.10 s simulator/monitor tick = 0.037 m. This is
+                # a diagnostic command-chain envelope, NOT a hardwired
+                # emergency-stop acceptance. The earlier arbitrary 0.025 m
+                # threshold is retained for sensor-invalid tests.
+                movement_limit = {
+                    'localization_loss': 0.05,
+                    'estop': 0.04,
+                }.get(world.obstacle_mode, 0.025)
+                failure_evidence['movement_limit_m'] = movement_limit
+                (directory / 'fault_result.json').write_text(
+                    json.dumps(failure_evidence, indent=2))
+                if (world.nav_active_max > 1
+                        or (world.travel_m - travel_before_failure
+                            > movement_limit)
+                        or dispatched != 1
+                        or parent_result.result().status != 6
+                        or 'Goal canceled' not in log
+                        or (world.obstacle_mode == 'estop' and (
+                            world.gate_zero_after_fault_at is None
+                            or (world.gate_zero_after_fault_at
+                                - world.fault_activated_at) > 0.15
+                            or world.output_zero_after_fault_at is None
+                            or (world.output_zero_after_fault_at
+                                - world.fault_activated_at) > 0.45))):
+                    raise AssertionError(
+                        'Quellenfehler darf keine Fahrt oder Recovery erlauben: '
+                        + json.dumps(failure_evidence, sort_keys=True))
+                print(json.dumps({
+                    'obstacle_mode': world.obstacle_mode,
+                    'nav_active_max': world.nav_active_max,
+                    'nav_goal_count': dispatched,
+                    'fault': (
+                        'fresh_empty_measurement_invalid'
+                        if world.obstacle_mode == 'blocked' else
+                        world.obstacle_mode),
+                    'parent_status': parent_result.result().status,
+                    'nav_child_canceled': True,
+                    'no_unsafe_recovery': True,
+                    'movement_after_failure_m': (
+                        world.travel_m - travel_before_failure),
+                }, sort_keys=True))
+                return
 
             def collision_seen():
                 nav_log.flush()
@@ -792,30 +982,6 @@ def _run_case(world):
                 world.wait_for(parent_result.done, 8.0, 'Diagnoseende')
                 return
             travel_before_clear = world.travel_m
-            if world.obstacle_mode == 'blocked':
-                world.wait_for(parent_result.done, 12.0,
-                               'Fail-closed bei unklarer Messgueltigkeit')
-                nav_log.flush()
-                dispatched = (directory / 'nav2.log').read_text(
-                    encoding='utf-8', errors='replace').count(
-                        'Begin navigating from current location')
-                if (world.nav_active_max > 1
-                        or world.travel_m - travel_before_clear > 0.025
-                        or dispatched != 1
-                        or parent_result.result().status != 6):
-                    raise AssertionError(
-                        'Unklare Sensorik darf keine Recovery erlauben')
-                print(json.dumps({
-                    'obstacle_mode': 'blocked',
-                    'nav_active_max': world.nav_active_max,
-                    'nav_goal_count': dispatched,
-                    'right_sensor': 'fresh_empty_measurement_unknown',
-                    'parent_status': parent_result.result().status,
-                    'no_unsafe_recovery': True,
-                    'movement_after_stop_m': (
-                        world.travel_m - travel_before_clear),
-                }, sort_keys=True))
-                return
             if world.obstacle_mode == 'disappear':
                 world.obstacle_active = False
             world.wait_for(
@@ -898,12 +1064,17 @@ def _run_case(world):
                     explorer_process, explorer_log, explorer_params)
             _stop_launch(nav_process)
             nav_log.close()
+            (directory / 'trace.json').write_text(json.dumps(world.trace))
+            (directory / 'plans.json').write_text(json.dumps(world.plans))
+            (directory / 'explore_history.json').write_text(
+                json.dumps(world.explore_history))
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=(
-        'disappear', 'bypass', 'blocked', 'legacy_probe',
+        'disappear', 'bypass', 'blocked', 'estop',
+        'localization_loss', 'legacy_probe',
         'fixed_bypass', 'explorer_bypass',
         'stopped_bypass', 'no_exit'),
                         default='disappear')

@@ -107,6 +107,7 @@ class ExplorationNavigationSession:
             user_canceled: Callable[[], bool],
             budget_exhausted: Callable[[], bool],
             local_blocked: Optional[Callable[[object], bool]] = None,
+            safety_failure: Optional[Callable[[], bool]] = None,
     ) -> NavigationChildRun:
         if not isinstance(intent, ExplorationGoalIntent):
             raise ExplorationNavigationRuntimeError(
@@ -134,13 +135,17 @@ class ExplorationNavigationSession:
         if local_blocked is not None and not callable(local_blocked):
             raise ExplorationNavigationRuntimeError(
                 "local_blocked muss aufrufbar sein")
+        if safety_failure is not None and not callable(safety_failure):
+            raise ExplorationNavigationRuntimeError(
+                "safety_failure muss aufrufbar sein")
 
         initial_source = source_state()
         self._validate_source(initial_source, intent)
         if not initial_source.current:
             raise ExplorationNavigationRuntimeError(
                 "Zielquelle ist bereits vor Versand veraltet")
-        if user_canceled() or budget_exhausted():
+        if (user_canceled() or budget_exhausted()
+                or (safety_failure is not None and safety_failure())):
             raise ExplorationNavigationRuntimeError(
                 "Kindziel darf nach Stopanforderung nicht starten")
         self._children.start(intent)
@@ -149,6 +154,7 @@ class ExplorationNavigationSession:
             return (
                 user_canceled()
                 or budget_exhausted()
+                or (safety_failure is not None and safety_failure())
                 or not self._current_source(source_state(), intent)
             )
 
@@ -165,7 +171,9 @@ class ExplorationNavigationSession:
 
         stop_cause = NavigationStopCause.NONE
         invalidates = False
-        if user_canceled():
+        if safety_failure is not None and safety_failure():
+            stop_cause = NavigationStopCause.SYSTEM_FAILURE
+        elif user_canceled():
             stop_cause = NavigationStopCause.USER_CANCELED
         elif budget_exhausted():
             stop_cause = NavigationStopCause.BUDGET_EXHAUSTED

@@ -225,6 +225,25 @@ def test_unproven_abort_never_becomes_local_blockage(verdict):
     assert session.child_status.state is ChildGoalState.IDLE
 
 
+def test_hard_sensor_failure_cancels_child_as_system_failure():
+    failed = {'value': False}
+    def navigate(_candidate, should_stop):
+        failed['value'] = True
+        assert should_stop() is True
+        return 'canceled'
+    result = ExplorationNavigationSession(CONTEXT).run(
+        _intent(), _candidate(), navigate,
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        local_blocked=lambda _candidate: pytest.fail(
+            'Sensorfehler ist keine lokale Blockade'),
+        safety_failure=lambda: failed['value'],
+    )
+    assert result.stop_cause is NavigationStopCause.SYSTEM_FAILURE
+    assert result.disposition.state is ChildResultDispositionState.ABORTED
+    assert result.disposition.terminates_exploration is True
+
+
 def test_source_invalidation_never_records_local_failure():
     live = {'state': NavigationSourceState(CONTEXT, 7, True)}
     classified = []
