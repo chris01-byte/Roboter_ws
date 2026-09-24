@@ -110,6 +110,26 @@ def test_real_planner_uses_measured_astar_configuration():
     assert planner['allow_unknown'] is False
 
 
+def test_partial_vl53_returns_mark_but_never_clear_unknown_costmap_space():
+    parameters = yaml.safe_load(
+        (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()
+    )
+    for costmap in ('local_costmap', 'global_costmap'):
+        layer = parameters[costmap][costmap]['ros__parameters'][
+            'obstacle_layer']
+        sources = layer['observation_sources'].split()
+        for side in ('left', 'right'):
+            mark = f'vl53_{side}_mark'
+            clear = f'vl53_{side}'
+            assert mark in sources and clear in sources
+            assert layer[mark]['topic'] == f'/near_field/{side}/points'
+            assert layer[mark]['marking'] is True
+            assert layer[mark]['clearing'] is False
+            assert layer[mark]['obstacle_max_range'] <= .55
+            assert layer[clear]['topic'] == f'/near_field/{side}/points_costmap'
+            assert layer[clear]['clearing'] is True
+
+
 def test_real_footprint_fits_doors_without_hiding_platform_length():
     parameters = yaml.safe_load(
         (PACKAGE_ROOT / 'config' / 'nav2_params_real.yaml').read_text()

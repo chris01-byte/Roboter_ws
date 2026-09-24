@@ -93,6 +93,28 @@ def test_costmap_does_not_clear_unobserved_column_or_past_far_return():
     assert max(point[0] for point in points) == pytest.approx(.6)
 
 
+def test_partial_frame_preserves_near_obstacle_in_original_cloud():
+    methods = _producer_methods('_build_matrix', '_matrix_to_cloud',
+                                '_matrix_to_costmap_cloud')
+    producer = SimpleNamespace(
+        GR=8, GC=8, z_min=.01, z_max=.50, require_nb=True,
+        valid_statuses=[5], min_sps=0., max_sigma=50.,
+        row_el=np.zeros(8), col_az=np.zeros(8), costmap_clear_range=.60)
+    sample = frame(800, 255)
+    sample['distance_mm'][0] = 240
+    sample['target_status'][0] = 5
+    _, valid, columns, quality = assess(sample)
+    assert quality == PARTIAL and columns == 0 and valid.sum() == 1
+    near = methods['_build_matrix'](producer, sample)
+    original = methods['_matrix_to_cloud'](
+        producer, near, 'vl53_left_link', Header().stamp)
+    clearing = methods['_matrix_to_costmap_cloud'](
+        producer, np.where(valid, .24, np.nan), valid,
+        'vl53_left_link', Header().stamp)
+    assert original.width == 1
+    assert clearing.width == 0
+
+
 def _producer_methods(*names):
     source = (PACKAGE_ROOT / 'vl53_near_field' /
               'vl53_near_field_node.py').read_text()
