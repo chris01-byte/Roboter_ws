@@ -33,6 +33,9 @@
 #  ALLE PARAMETER -> config/safety_monitor_params.yaml.
 # ============================================================================
 
+import math
+import time
+
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -58,6 +61,10 @@ class SafetyMonitor(Node):
         self._use_near_field  = bool(gp('use_near_field_estop', False))
         self._nf_status_topic = str(gp('near_field_status_topic', '/near_field/status'))
         self._nf_estop_dist   = float(gp('near_field_estop_dist_m', 0.08))
+        self._nf_timeout = float(gp('near_field_timeout_s', 0.8))
+        if (self._use_near_field and
+                (not math.isfinite(self._nf_timeout) or self._nf_timeout <= 0)):
+            raise ValueError('near_field_timeout_s muss endlich und positiv sein')
         # Hardware-Taster (Platzhalter, noch nicht implementiert).
         self._use_gpio        = bool(gp('use_gpio_estop', False))
         self._gpio_pin        = int(gp('gpio_estop_pin', 0))
@@ -66,7 +73,8 @@ class SafetyMonitor(Node):
         #  Zustand (ODER-Quellen)
         # -------------------------------------------------------------------
         self._request_estop = self._initial_estop   # Software-Anforderung
-        self._near_estop = False                     # Nahbereich
+        self._near_estop = self._use_near_field       # bis gueltige Messung vorliegt
+        self._near_last_valid_at = None
         self._last_published = None
 
         # -------------------------------------------------------------------
@@ -93,7 +101,7 @@ class SafetyMonitor(Node):
 
         # Sofort publizieren + periodisch nachpublizieren.
         self._publish()
-        self.create_timer(self._publish_period, self._publish)
+        self.create_timer(self._publish_period, self._tick)
 
         self.get_logger().info(
             f"safety_monitor bereit -> '{self._estop_topic}' "
@@ -114,16 +122,42 @@ class SafetyMonitor(Node):
             self._publish()
 
     def _on_near_field(self, msg: NearFieldStatus):
-        # Nur gueltige (>=0) Distanzen betrachten; -1.0 = Zone leer/ungueltig.
+        age = (self.get_clock().now().nanoseconds
+               - (int(msg.header.stamp.sec) * 1_000_000_000
+                  + int(msg.header.stamp.nanosec))) / 1_000_000_000
+        quality_ok = (
+            msg.header.frame_id == 'base_link'
+            and 0.0 <= age <= self._nf_timeout
+            and all(getattr(msg, f'{side}_quality') in (
+                NearFieldStatus.QUALITY_VALID_NEAR,
+                NearFieldStatus.QUALITY_VALID_FAR)
+                and getattr(msg, f'{side}_observed_columns') == 255
+                for side in ('left', 'right')))
+        if not quality_ok:
+            self._near_last_valid_at = None
+            self._set_near_estop(True)
+            return
+        self._near_last_valid_at = time.monotonic()
+        # Nur gueltige (>=0) Distanzen betrachten; -1.0 = gueltig fern.
         dists = [d for d in (msg.min_dist_left, msg.min_dist_right, msg.min_dist_middle)
-                 if d >= 0.0]
+                 if math.isfinite(d) and d >= 0.0]
         too_close = any(d < self._nf_estop_dist for d in dists)
+        self._set_near_estop(too_close)
+
+    def _set_near_estop(self, too_close):
         if too_close != self._near_estop:
             self._near_estop = too_close
             if too_close:
                 self.get_logger().warn(
-                    f"Nahbereich-Notbremse: Objekt naeher als {self._nf_estop_dist:.2f} m.")
+                    'Nahbereich-Notbremse: zu nah oder Messung ungueltig/veraltet.')
             self._publish()
+
+    def _tick(self):
+        if (self._use_near_field and
+                (self._near_last_valid_at is None or
+                 time.monotonic() - self._near_last_valid_at > self._nf_timeout)):
+            self._set_near_estop(True)
+        self._publish()
 
     # ======================= Ausgabe ====================================
     def _estop_active(self) -> bool:
