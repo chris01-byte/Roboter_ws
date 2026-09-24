@@ -29,9 +29,10 @@ Scope-Grenze im neuen Kartenframe messen; erst danach einen eng begrenzten
 Umfahr-/Stoppbefreiungsaufbau festlegen und gesondert zur Fahrt freigeben
 lassen. Keine reale Wohnungsgeometrie ins Repository übernehmen.
 
-**Rückfall:** Das neue `explore`-Overlay weglassen; der ursprüngliche
-Kandidat ist wegen des dokumentierten Shutdown-Races und der realen
-Sensorqualität ebenfalls nicht fahrfreigegeben.
+**Rückfall:** Das neue `explore`-Overlay weglassen, aber das ältere
+Kandidatenpräfix wegen seines Egg-Links nicht als eingefrorenen Rollback
+ansehen. Der vor `0fe9245` geprüfte Quellstand hatte den dokumentierten
+Shutdown-Race; die reale Sensorqualität sperrt beide Varianten für Fahrten.
 
 ## WE-1 Stufe 3: neuer isolierter Softwarekandidat, nicht deployt (24.09.2026)
 

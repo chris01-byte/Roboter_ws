@@ -73,8 +73,10 @@ Restprozess oder Handle auf LiDAR, RS485 und CH341-I²C. Lokale Logs:
 `/tmp/we-stage3-target-4a3XiA/cycle2.log` und `cycle3.log`; reale Karten-
 und Sensordaten bleiben lokal. Weder der aktive Roboter-Install noch ein
 Produktionsprofil wurde umgestellt. Rückfall: letztes Overlay nicht sourcen;
-der ursprüngliche Kandidat bleibt jedoch wegen des gemessenen Shutdown-Races
-und der unzureichenden VL53-Qualität nicht fahrfreigegeben.
+das ältere Kandidatenpräfix ist wegen seines Egg-Links auf den veränderlichen
+Quellbaum **kein eingefrorenes Rollback**. Der vor `0fe9245` tatsächlich
+geprüfte Quellstand zeigte den Shutdown-Race; unabhängig davon sperrt die
+reale VL53-Qualität jede Fahrt.
 
 ## Stufe 3 – Folgeprüfung Sensorvertrag, Stopp und Shutdown (24.09.2026)
 
