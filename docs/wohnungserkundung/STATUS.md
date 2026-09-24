@@ -1,11 +1,155 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · keine reale Fahrt durchgeführt · 2026-09-23**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · kein neuer realer Fahrversuch · 2026-09-24**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 3 – Folgeprüfung Sensorvertrag, Stopp und Shutdown (24.09.2026)
+
+**Gerätefreie Softwareabnahme bestanden; keine Freigabe zum Roboter-Install
+oder zur Fahrt.** Auf PR #99
+(`feature/we1-stufe3-local-recovery`, Ausgangs-HEAD `2914279`) wurde ein
+separates, gerätefreies Kandidatenpräfix
+`/home/p/.local/share/amadeus/releases/we1-stage3-complete-1kI6en/install`
+gebaut. Die Softwareänderungen liegen in `785b825` (Messvertrag),
+`e3d7352` (Navigation/Integration) und `aa699b0` (Shutdown); der
+anschließende Dokumentationscommit enthält nur Nachweise. Die Overlayfolge
+ist Humble → slam_toolbox → LiDAR-Shutdown →
+`we1-10e1858074e7-r1` → Stufe 1 → Stufe 2 → Stage-3-Bypass → Kandidat.
+`robot_interfaces`, `vl53_near_field`, `robot_navigation`, `explore`,
+`robot_map_manager`, `safety_monitor`, `mission_manager`, `bt_orchestrator`
+und `base_hardware` lösen alle aus diesem Kandidaten auf. Für den
+`bt_orchestrator`-Build war der vorhandene lokale `behaviortree_cpp`-CMake-
+Underlay nötig; die erste Buildrunde ohne ihn scheiterte sichtbar. Es wurde
+kein aktives Roboterpräfix überschrieben, kein Gerät geöffnet und kein Motor
+angesprochen. `explore` und `robot_navigation` sind in diesem Kandidaten
+als Egg-Link auf den isolierten Build eingebunden; Source- und Build-Dateien
+wurden per SHA-256 verglichen. Der Kandidat ist deshalb erst nach dem
+nachstehenden Commit als Quellstand eindeutig festgehalten, nicht als
+unabhängig kopiertes Produktions-Image zu betrachten.
+
+**Sensorursache softwareseitig geschlossen, reale Verfügbarkeit offen:** Die
+erweiterte `NearFieldStatus`-Nachricht unterscheidet je Seite unbekannt,
+gültig nah, gültig fern, teilgültig und ungültig. Der VL53-Produzent bewertet
+Status 5, Zielanzahl, Sigma, plausible Distanz und 8×8-Abdeckung **vor** dem
+0,50-m-Nahfilter; beide Originalwolken tragen denselben Stempel wie der
+Status. Eine leere Nahwolke mit positivem Fernstatus ist zulässig, ein leerer
+oder defekter Frame ohne ihn nicht. Der Costmap-Strahl endet am gemessenen
+Ziel (höchstens 0,60 m); unbeobachtete Spalten räumen nichts. Explorer und
+Fahrtor benötigen einen frischen passenden Status/Wolken-Verbund; ein kurzes
+Status-vor-Wolken-Interleaving wartet im Explorer begrenzt statt sofort den
+Elternauftrag als Systemfehler abzubrechen. Der optionale Safety-Nahstopp
+bleibt bei fehlender, ungültiger oder veralteter VL53-Quelle gesetzt. Alte
+Status-Publisher mit Qualitätswert 0 bleiben im Kandidaten fail-closed.
+Die vollständige 64/64-Zonen-Forderung ist sicherheitskonservativ; ob beide
+realen Sensoren sie im vorgesehenen Raum liefern, ist **nicht motorlos am
+Zielgerät gemessen** und kann die Verfügbarkeit begrenzen.
+
+**Controllerbefund:** Im alten `stopped_bypass` fand NavFn einen sicheren
+Polygon-Umweg, während RPP mit 0,80-m-Carrot trotz bereits abknickendem
+Pfad vorwärts in eine lokale tödliche Costmap-Zelle steuern wollte; der
+Controller stoppte korrekt. Ein Gegenversuch mit 0,10-rad-Drehschwelle ließ
+die virtuelle gepaddete Kontur in die feste Barriere schneiden und wurde
+**verworfen** (`/tmp/we-stage3-bypass-1vroikvh`). Der aktuelle Kandidat
+behält Footprint, Padding, Collision Monitor, Sensor-/Frischegrenzen und
+0,35-rad-Drehschwelle, verfolgt aber den nahen 0,40-m-Abschnitt des bereits
+vorhandenen NavFn-Pfads. Der getrennte späte Fall (gleiche Barriere,
+Einblendung bei Basis-x=1,50 m, gepaddete Geradeausfront x=1,83 m,
+Hindernis ab x=2,00 m) zeigte einen **notwendigen Controller-Stopp und
+anschließende sichere autonome Umfahrung bis Ziel A**. Ein früher Lauf
+erreichte A, brach B jedoch vor Erfolg ab (`/tmp/we-stage3-bypass-9hs81pya`).
+Die Diagnose fand zwei Races: Ein Odometrie-Callback aktualisierte seinen
+Empfangszeitpunkt **nach** der Uhrzeitaufnahme der Sicherheitsprüfung;
+die neue Nachricht wurde fälschlich als künftig verworfen (`age_s=-0.029`,
+`/tmp/we-stage3-bypass-5eo3h5ys`). Außerdem konnte nach positiver
+Revalidation einer geänderten Karte ein inhaltlich identisches Folgeupdate
+wegen ausstehendem Policy-Takt das Ziel stornieren
+(`/tmp/we-stage3-bypass-hkj066g9`). Der Zeitvergleich wird nun nach dem
+Quell-Snapshot vorgenommen; der Fingerprint der letzten positiv validierten
+Geometrie hält exakt identische Folgebeobachtungen aktuell. Wirklich neue
+Inhalte erfordern weiterhin volle Rohkarten-/Scope-Revalidation. Der finale
+späte Lauf bestand mit unveränderter Barriere: Controller-Stopp, sichere
+Wiederanfahrt, automatisch gewählte Ziele A und B erfolgreich, 0 m rückwärts,
+höchstens ein Nav2-Kind, kein Polygonverstoß, Elternmission weiter aktiv
+(`/tmp/we-stage3-bypass-z86sal9u`). Keine Ziel- oder Scope-Ausweitung.
+
+**Gerätefreie Gegenproben auf dem zuletzt gebauten Kandidaten:**
+`explorer_bypass` mit dauerhafter Barriere bestand mit automatisch gewählten
+Zielen A und B, 3,304 m Gesamtweg, 0,400 m zu B, 0 m rückwärts, höchstens
+einem Nav2-Kind und sicherem geplantem/gefahrenem Footprint
+(`/tmp/we-stage3-bypass-vwu6_1uk`). `disappear` belegte Stopp und sichere
+Fortsetzung nach Wegfall eines vorübergehenden Hindernisses
+(`/tmp/we-stage3-nav2-j0dmiqjx`). `local_blocked` belegte A-Abbruch → B
+erfolgreich → A nach neuer zulässiger Route wieder auswählbar, obwohl der
+Direktkorridor blockiert blieb. `no_exit` endete ohne Nav2-Kind/Bewegung
+mit erklärtem Teilstand (`/tmp/we-stage3-bypass-m693swi7`).
+`frontier_replan` belegte A-Cancel → B-Erfolg und weiterlaufende Elternmission,
+ohne A-Fehlerbudget. Der Prüfer liefert nun die für den aktiven
+Sicherheitsvertrag nötige periodische Sensor-/Odometrie-Telemetrie und
+zerstört seinen Action-Client erst nach Executor-Drain. Ein erster
+Wiederholungslauf war funktional korrekt, hatte aber eine asynchrone
+`Destroyable`-Aufräummeldung; die nächste Wiederholung war sauber.
+`frontier_no_source` scheiterte zunächst nur im Prüfer: Anders als
+`frontier_replan` startete dieses Szenario gar keinen periodischen
+Safety-Telemetrietimer, sodass schon A nicht laufen konnte. Nach dessen
+Ergänzung: genau ein Kind, ein Cancel, keine Fahrbefehle oder Wiederanfahrt,
+bounded Partial am Gesamtmissionsbudget (ROS-Domain 217).
+1 018 Python-Tests der fünf betroffenen Pakete bestanden. Der Kartenmanager
+beendet unter Einzel-PID-SIGINT zweimal einen laufenden Save-Callback ohne
+Traceback, verlorenen Save oder hängenden Prozess
+(`/tmp/we-mapmanager-shutdown-71iqo7b5`). Der Humble-Fehler entstand durch
+Kontextinvalidierung des globalen Signalhandlers während
+`SingleThreadedExecutor.take_message()`; jetzt setzt der eigene Handler nur
+ein Stop-Ereignis, der Executor wird vor Knoten und ROS-Kontext beendet.
+Unerwartete `RuntimeError` werden nicht mehr als Shutdown-Fall abgefangen.
+Der Smoke trifft den Save-Callback, nicht deterministisch exakt den
+historischen `take_message()`-Zeitpunkt.
+
+**Harte Fehler:** Ein gültig empfangenes, aber rechts ungültiges VL53-Telegramm
+führt während Fahrt zu Gate-Stopp und terminalem Kind ohne Recovery
+(`/tmp/we-stage3-nav2-v97h6vxb`). Das Software-Not-Aus wurde direkt im
+Fahrtor fail-closed angebunden. Ein Lauf mit 0,0263 m virtuellem Nachlauf
+überschritt die anfängliche, willkürliche 0,025-m-Prüfergrenze
+(`/tmp/we-stage3-nav2-9kf1y732`) und bleibt als Fehlversuch dokumentiert.
+Die Spur zeigte unverzügliche Nullausgabe des Gates und anschließendes
+Abbremsen im unveränderten Velocity-Smoother. Die gerätefreie
+Diagnosegrenze wurde deshalb **offen als Testkorrektur** auf 0,04 m aus
+0,10 m/s Anfahrt, 0,30 m/s² konfigurierter Verzögerung, 0,10-s-
+Publikationsphase und einem 0,10-s-Prüfertakt hergeleitet. Zusätzlich
+müssen Gate binnen 0,15 s und `/cmd_vel` binnen 0,45 s Null melden; die
+Grenze für ungültige Sensorik bleibt 0,025 m. Der Wiederholungslauf
+erreichte 0,0220 m / 0,108 s / 0,415 s
+(`/tmp/we-stage3-nav2-ll4ojc90`). Das ist ein Nachweis der **Software-
+Befehlskette**, nicht des hardwired Not-Aus oder einer realen Bremsstrecke.
+Unterbrochenes `odom→base_link`-TF ließ
+zuvor 0,172 m Nachlauf zu (`/tmp/we-stage3-nav2-0v9hl3d3`). Der neue
+Gate-Nachweis verlangt Basis-TF jünger als 0,2 s und zusammengesetztes
+`map→base_link` jünger als 0,8 s; danach betrug der virtuelle Nachlauf
+0,0366 m und die Mission brach hart ab (`/tmp/we-stage3-nav2-10icbsbf`).
+Die 5-cm-Diagnosegrenze für erst nach einem Timeout erkennbaren TF-Ausfall
+ist von den Grenzen für explizites Software-Not-Aus bzw. Sensorfehler
+getrennt; keine Produkt-Sicherheitsgrenze wurde gelockert. Reale TF-Raten sind
+motorlos zu prüfen. Software-Not-Aus ersetzt den hardwired Not-Aus nicht.
+
+**Rest und Abnahmegrenzen:** Gerätefreie Softwareabnahme **BESTANDEN**;
+motorlose Zielsystemprüfung **OFFEN**, reale Stufe-3-Abnahme **OFFEN**.
+Weder ein aktiver Roboter-Install noch reale Sensorqualität/TF-Frequenz noch
+eine reale Fahrt sind mit diesem Kandidaten geprüft. Vor jeder Übernahme den
+Quell-/Install-Hash und die tatsächliche Overlaykette am Zielgerät messen,
+dann motorlos Lifecycle, Sensorfrische, Karten-/TF-Quellen, Safety und
+zweimaligen kontrollierten Shutdown prüfen. Für die spätere getrennt
+freigegebene Realabnahme vor Ort messen: Startpose, feste
+Hinderniskontur, lichte Alternativbreiten, vollständigen Schwenkbereich,
+Auslauf, aktuellen Kartenframe/Scope sowie erreichbaren Hardware-Not-Aus.
+Die frühere linke VL53-Auffälligkeit und die fehlende Frontier im engen
+realen Scope dürfen nicht durch synthetische Daten überdeckt werden.
+Rückfall: Kandidatenpräfix nicht sourcen; vorhandene Installationen bleiben
+unverändert. Die folgenden Abschnitte dokumentieren den historischen
+Ausgangsstand und sind durch diesen neuen Softwarestand nur insoweit ersetzt,
+wie oben ausdrücklich belegt.
 
 ## Stufe 3 – begrenzte lokale Blockadebehandlung, 2026-09-23
 

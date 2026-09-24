@@ -17,6 +17,95 @@ Rückfallweg:
 
 ---
 
+## 2026-09-24 — Stufe-3-Softwareablauf abgeschlossen; reale Abnahme offen
+
+**Entscheidung:** VL53-Qualität vor dem Nahfilter explizit je Sensor melden
+und mit beiden Originalwolken stempelgleich korrelieren. Nur vollständig
+gültige, plausible 8×8-Rückgaben dürfen als beobachtete Freiraumstrahlen
+in die Costmap gelangen. Explorer, Fahrtor und der optionale Safety-Nahstopp
+verlangen positive frische Evidenz; fehlende/ungültige Daten halten an.
+Der Kartenmanager verarbeitet SIGINT erst nach laufendem Callback, bevor
+Executor, Knoten und Kontext in dieser Reihenfolge schließen. Das Fahrtor
+benötigt zusätzlich ein frisches explizites Software-Not-Aus-Freigabesignal
+und frische `odom→base_link`-/`map→base_link`-TF, bevor es Missionsbewegung
+ausgibt; die Lokalisierungssuche bleibt getrennt begrenzt.
+
+**Grund / beobachtete Evidenz:** Der reale Treiber nennt das Sigmafeld
+`range_sigma_mm`; zuvor wurde es unter `sigma_mm` nicht geprüft. Eine
+gültige Fernrückgabe und Status 255/ungültig erzeugten identisch leere
+Originalwolken. Ein unabhängiger Review fand zusätzlich, dass der neue
+UNKNOWN-Status ohne Anpassung des `safety_monitor` einen gesetzten
+Nahstopp aufheben konnte; vor der Abnahme korrigiert. Tests decken gültig
+nah/fern, partielle/fehlende/malformed/negative/unplausibel große Werte,
+stempelgleiche Produktion, leere Fernwolke und ungültige Costmap-Strahlen ab.
+Zwei echte SIGINT-Läufe während eines laufenden Karten-Save-Callbacks
+bewahrten beide Saves und endeten ohne Traceback oder Restprozess. Der
+historische `take_message()`-Race ist strukturell durch den nicht mehr
+vorzeitig invalidierten ROS-Kontext adressiert; der exakte Zeitpunkt wurde
+im Smoke nicht deterministisch reproduziert.
+
+**Reglerbefund:** Bei altem 0,80-m-Lookahead schneidet RPP den vorhandenen
+NavFn-Umweg ab und stoppt korrekt vor einer tödlichen lokalen Costmap-Zelle.
+Eine 0,10-rad-Drehschwelle verletzte im gerätefreien späten Gegenversuch
+die unabhängige gepaddete Footprint-Geometrie und wurde verworfen. Der
+aktuelle 0,40-m-Lookahead/0,35-rad-Stand zeigte nach einem notwendigen
+Stopp sichere autonome Umfahrung bis Ziel A. Ein früher A→B-Lauf scheiterte
+an einem Odometrie-Snapshot-Race (`age_s=-0.029`) und ein weiterer an
+erneutem Cancel durch inhaltlich gleiche Kartenbeobachtung nach bereits
+positiver neuer Revalidation. Monotone Frische wird nun nach jeder Aufnahme
+gemessen; der letzte positiv revalidierte Kartenfingerprint überlebt
+identische Folgebeobachtungen. Echte neue Inhalte benötigen weiterhin
+Revalidation. Auf dem finalen gerätefreien Kandidaten gelangen der
+notwendige Stopp **und** frühe dauerhafte Umfahrung jeweils bis zu zwei
+erfolgreichen automatisch gewählten Zielen bei laufender Elternmission.
+Keine Rückwärtsfahrt oder konkurrierende Nav2-Ziele.
+
+**Weitere Sicherheitsbefunde:** Der echte Nav2-Prozessprüfer zeigte, dass
+ein Software-Not-Aus ohne Gate-Anbindung noch kurz Bewegung zuließ und ein
+TF-Ausfall sogar 0,172 m virtuellen Nachlauf bewirkte. Die explizite
+Not-Aus-Prüfung im Gate und getrennte TF-Frische (Basis 0,2 s, gesamte
+Kartenkette 0,8 s) reduzieren dies im gleichen Test auf 0,022 bzw.
+0,037 m und beenden Kind/Elternauftrag ohne Recovery. Ein Not-Aus-Lauf
+mit 0,0263 m verfehlte die anfängliche willkürliche 0,025-m-Diagnosegrenze;
+die Spur wies Gate-Null und Nachlauf allein durch den unveränderten
+Velocity-Smoother nach. Die neue 0,04-m-**Prüfergrenze** ist aus dessen
+0,30-m/s²-Verzögerung und Publikationsphasen hergeleitet und verlangt
+zusätzlich Gate-Null binnen 0,15 s und Ausgangs-Null binnen 0,45 s.
+Weder Produktgrenze noch Bremskonfiguration wurde gelockert. Die Gate-Suche vor
+Lokalisierungsfix behält ihren separaten bereits begrenzten Vertrag. Diese
+strengeren Prüfungen sind **kein** Ersatz für hardwired Not-Aus oder reale
+TF-/Sensor-Frequenzmessung vor Deployment.
+
+**Betroffene Dateien und Hardware:** Additive `NearFieldStatus`-Felder,
+VL53-Produzent, Explorer/Fahrtor/Safety-Verbraucher, bestehende Nav2-
+Konfiguration, Kartenmanager und gezielte Tests. Kein Hardwarezugriff,
+kein aktiver Roboterinstall, keine Motoren. Neun betroffene Pakete im
+isolierten Kandidaten gebaut; der C++-BT-Build benötigte den vorhandenen
+lokalen `behaviortree_cpp`-CMake-Underlay.
+
+**Teststatus / offene Risiken:** 1 018 Pytests der fünf betroffenen Pakete;
+echte Nav2-Prozessfälle `explorer_bypass`, `stopped_bypass`, `disappear`,
+`no_exit`, aktive VL53-/Not-Aus-/TF-Fehler; bestehende Prozessfälle
+`local_blocked`, `frontier_replan` und `frontier_no_source`;
+zweimaliger Save/SIGINT-Smoke
+bestanden. Der Prozessprüfer benötigte eine Korrektur seiner periodischen
+Telemetrie und seines asynchronen Cleanup; der erste Replan-Wiederholungslauf
+hatte eine `Destroyable`-Aufräummeldung, der danach saubere Lauf ist belegt.
+`frontier_no_source` benötigte ebenfalls den periodischen Prüfer-Timer; der
+erfolgreiche Wiederholungslauf endete erst am Missionsbudget, ohne zweite
+Navigation oder Fahrbefehl.
+Reale 64/64-VL53-Verfügbarkeit und TF-Rate, motorloser Zielstack und
+Realabnahme bleiben offen. Der exakte historische `take_message()`-SIGINT-
+Zeitpunkt ist nicht deterministisch injiziert. Details und lokale Fehlerbelege
+stehen im laufenden WE-STATUS.
+
+**Rückfallweg:** Kandidaten-Overlay nicht sourcen; die zuvor getesteten
+Präfixe und die aktive Roboter-Arbeitskopie bleiben unverändert. Die
+fehlgeschlagenen Versuche wurden nur in lokalen `/tmp`-Evidenzordnern
+aufgezeichnet, nicht als Wohnungsdaten committed.
+
+---
+
 ## 2026-09-23 — Stufe-3-Umweg belegt; Direktkorridor und VL53-Leere getrennt
 
 **Entscheidung:** Nach `a8710db` die Rückkehr einer blockierten Aufgabe an

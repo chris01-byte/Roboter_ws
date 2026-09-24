@@ -1,5 +1,77 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: neuer isolierter Softwarekandidat, nicht deployt (24.09.2026)
+
+Ausgangsstand PR #99, Branch `feature/we1-stufe3-local-recovery`,
+`2914279`; Softwarecommits `785b825`, `e3d7352`, `aa699b0`.
+Der neu gebaute Kandidat liegt nur unter
+`/home/p/.local/share/amadeus/releases/we1-stage3-complete-1kI6en/install`.
+Reihenfolge: `/opt/ros/humble` →
+`/home/p/amadeus_slam_toolbox_ws/install` →
+`we1-ldlidar-shutdown-overlay` → `we1-10e1858074e7-r1` →
+`we1-stage1-5e3fe0a-20260923` → `we1-stage2-6fd36d5-20260923` →
+`we1-stage3-bypass-s8QMY8` → diesen Kandidaten. Die neun Pakete
+`robot_interfaces`, `vl53_near_field`, `robot_navigation`, `explore`,
+`robot_map_manager`, `safety_monitor`, `mission_manager`, `bt_orchestrator`
+und `base_hardware` wurden neu gebaut und lösen aus diesem Präfix auf.
+Die Python-Pakete `explore` und `robot_navigation` sind in diesem isolierten
+Kandidaten per Egg-Link auf den zugehörigen Build gebunden; Source-/Build-
+Hashes stimmen überein. Dieses Entwicklungspräfix nicht blind als
+unabhängig kopierbares Deployment-Image behandeln.
+`bt_orchestrator` benötigte für den Build den vorhandenen separaten
+`behaviortree_cpp`-CMake-Underlay unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp`; der erste Lauf ohne
+diesen Pfad scheiterte. Das ist kein Robot-Deployment.
+
+**Jetson-Wirkung bei einer künftigen bewussten Übernahme:** Die additive
+`NearFieldStatus`-Schnittstelle verlangt kohärenten Neubau/Start von
+Produzent und sämtlichen Verbrauchern. Ein alter Publisher meldet Qualität
+0 und sperrt Fahrtor/Explorer; bei aktiviertem optionalem VL53-Safety-Notstopp
+bleibt auch dieser gesetzt. Gültige Fernmessung kann eine leere Originalwolke
+haben, aber nur mit gemessenem Status 5, Zielanzahl, Sigma, plausiblem
+Messwert, Vollabdeckung und gleichem Stempel. Die Costmap bekommt keine
+Räumstrahlen aus unbeobachteten Spalten. Safety-Timeout 0,8 s ist neu
+streng, nicht gelockert. Nav2 `nav2_params_real.yaml` verfolgt im Kandidaten
+0,40 m statt 0,80 m voraus und dreht ab 0,35 rad statt des RPP-Defaults;
+Footprint, Padding, Collision Monitor und Geschwindigkeiten sind unverändert.
+Das Fahrtor verlangt nun zusätzlich `/safety/estop=false` mit Empfangsalter
+höchstens 1,0 s und frisches Basis-/Karten-TF (0,2/0,8 s). Ein allein
+gestartetes `nav_real.launch.py` ohne Safety-Publisher bleibt daher bewusst
+gesperrt. Der normale `robot.launch.py`- und WE-Mapping-Start enthält den
+Safety-Monitor; trotzdem sind tatsächliche TF- und Statusfrequenzen motorlos
+zu messen, bevor dieser Kandidat die aktive Hardwarekette ersetzen dürfte.
+
+Der gerätefreie frühe **und** späte dauerhafte Umfahrfall A→B bestanden
+auf dem finalen Kandidaten mit echter Nav2-Kette, automatischer Explorerwahl,
+nachgewiesenem Kartenfortschritt und weiterlaufender Elternmission. Im
+späten Fall wurde ein notwendiger Controller-Stopp vor der unverändert
+stehenden Barriere gemessen; die frühere B-Stornierung wurde als Folge von
+Frische-/Karten-Duplikat-Races getrennt behoben. Sensor-, Software-Not-Aus-
+und TF-Ausfälle endeten gerätefrei hart ohne Wiederanfahrt. Ein Software-
+Not-Aus-Diagnoselauf überschritt die anfängliche 25-mm-Prüfergrenze mit
+26,3 mm; die nachgelagerte unveränderte Velocity-Smoother-Rampe erklärte
+den Restweg. Der korrigierte gerätefreie Prüfer misst Gate-/Ausgangs-
+Nullzeit und einen aus der bestehenden Verzögerung abgeleiteten 40-mm-
+Diagnoserahmen; er ist **kein** Hardware-Not-Aus- oder Bremswegbeleg.
+Die ungeprüfte
+reale Sensor-/TF-Verfügbarkeit hält Stufe 3 **insgesamt** offen. Zwei
+Einzel-PID-SIGINTs während eines Karten-Saves endeten sauber mit erhaltenen
+Dateien; der historische `take_message()`-Zeitpunkt wurde nicht gezielt
+getroffen. Kein Zielgerät, kein Gerät, kein Motor und keine echte Karte wurden
+hierfür berührt. Details/Evidenzpfade stehen im maßgeblichen WE-STATUS.
+
+**Vor Ort noch erforderlich:** Startpose und aktueller Kartenframe/Scope,
+Hinderniskontur, lichte Umfahrbreiten, freier Schwenkraum, Auslauf,
+Hardware-Not-Aus, passive VL53-Qualitätsverteilung beider Seiten,
+motorloser Gesamtstart/-stopp. Insbesondere die reale VL53-64/64-Qualität
+und die `map→odom`-/`odom→base_link`-Publikationsrate gegen die neuen
+Gate-Grenzen prüfen. Erst danach und mit neuer konkreter
+Vor-Ort-Freigabe ein begrenzter Realversuch. Der frühere enge Scope ohne
+Frontierziel darf nicht zum Umfahrtest erweitert oder geraten werden.
+
+**Rückfall:** Dieses Präfix in einer frischen Shell weglassen. Aktiver
+Jetson-Install, bisherige Overlays und Wohnungsdaten bleiben unverändert.
+
 ## WE-1 Stufe 3: permanente Umfahrung softwaregeprüft, reale Übernahme offen (23.09.2026)
 
 Produktionsquellstand `90379d9`, Prozessprüfer `d13a6c9` auf
