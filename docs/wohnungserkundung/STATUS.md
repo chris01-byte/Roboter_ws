@@ -7,6 +7,39 @@ Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATE
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
+## Stufe 3 – VL53-Regression gegen real erprobten Juli-Stand (24.09.2026)
+
+**Bestandsaufnahme vor einer Codeänderung.** Vergleich der damaligen Dateien
+aus `6ee8c62` (echter aufgebockter Collision-Monitor-Test), `6a6b397`
+(reale Nav2/VL53-Costmap) und `675e018` (0,89-m-Bodenfahrt mit aktiver OAK)
+mit dem aktuellen Stufe-3-Kandidaten. „Real belegt“ meint nur den jeweiligen
+damaligen Pfad, nicht die heutige WE-Mission.
+
+| Teil | Früher real erprobt | Heute unverändert | Heute geändert und warum | Realnachweis der Änderung |
+|---|---|---|---|---|
+| Rohdatenaufnahme | CH341/MUX 0/1, `get_ranging_data()`, 64 Distanzen | I²C-Pfad, Frame-Länge, Fehler-Neustart | `range_sigma_mm` wird zusätzlich als `sigma_mm` gelesen; reales Treiberfeld war sonst nicht geprüft | Feld im motorlosen Rohdatenlauf vorhanden; keine Fahrt |
+| `target_status` | Status 5 pro Zone als gültiger Treffer | Filter `[5]` | Neue Frame-Qualität stuft bereits einzelne andere Status als `PARTIAL` ein | Nein; real 961/932 Zonen mit Status 255 je 20 Frames |
+| `nb_target_detected` | `>0` pro Zone; ohne Target kein Punkt | Filter aktiv | Fehlende Einzelreturns verhindern heute global `QUALITY_VALID_*` | Nein; 961/932 Zonen ohne Target |
+| Sigma | Pro Zone höchstens 50 mm, falls Feld unter `sigma_mm` vorhanden | Grenzwert 50 mm | Alias schließt den früher möglicherweise ungeprüften Fall | Rohfeld motorlos belegt; keine Fahrt |
+| Distanzfilter | Originalwolke nur 0,01–0,50 m, Hindernis bei 0,25 m | Nahgrenzen und Zonenauswahl | Neue Qualität betrachtet plausible Fernreturns bis 4 m vor dem Nahfilter | Keine reale Fahrabnahme |
+| 8×8-Matrix | `M[::-1,::-1]`, ungültige Zellen `NaN`; vollständiger Rohframe war nicht gleich 64 Targets | Matrixorientierung und Nahpunktbildung | Vollspalten-/Vollrasterbegriff verknüpft Target-Ausfall mit Sensor-Health | Nein; real 0/160 volle Spalten je Seite |
+| FLIPX | Links `true`, rechts `false` vor Zonen/Wolken | Kalibrierung | Gültigkeitsmaske wird zusätzlich mitgeflippt | Alte Kalibrierung ja, Maskenänderung nicht separat |
+| Originalpunktwolke | Nur gültige nahe Punkte; Collision Monitor stoppte/verlangsamte aufgebockt | Topics, Frames, Punktgeometrie | Neue Maske entfernt zusätzliche ungültige Punkte; leere Wolke braucht getrennte Health-Aussage | Frische leere Wolken real, neuer Vertrag nicht fahrabgenommen |
+| Costmap-Punktwolke | Nächster gültiger Nahpunkt pro Spalte; sonst angenommene 0,60-m-Freiräumung | Separates Topic | Heute nur volle Spalten und gemessene Strahlenden; verhindert blindes Löschen, unterdrückt aber reale Teilspalten-Hindernisse | Nein; real null Costmap-Strahlen |
+| `NearFieldStatus` | Bool links/rechts/mitte und Mindestdistanz | Alte Felder | `QUALITY_*`, Spaltenmaske und Stempelkorrelation trennen leer/gesund/defekt | Kein realer 64/64-Nachweis |
+| Collision Monitor | `base_shift_correction=false`, 3-s-Quelltimeout, Originalwolken; Stop/Slow aufgebockt | TF-Montage, Quellen, Kommandoverkettung | WE-Mapping nutzt `FootprintApproach` statt fixer StopZone | Keine reale WE-Umfahrung; linker Vorlauf zeigte 30-%-Slowdown |
+| Nav2-ObstacleLayer | Lokal/global separate VL53-Costmap-Wolken und OAK; Bodenfahrt mit aktiver OAK | Quellen, Reichweiten, 6×6-m-Lokalfenster | Heutige VL53-Wolke ist bei `PARTIAL` leer; WE-Mapping startet OAK nicht, Footprint wurde später vermessen | Juli-Fahrt ja, heutiger WE-Pfad nein |
+| Fahrtor und Explorer | Keine heutige WE-Missionsfreigabe in den Juli-Commits | Nav2/Collision bleiben nachgeschaltet | Stufe 3 verlangt für beide VL53 `QUALITY_VALID_NEAR/FAR` **und** Maske `255`, zusätzlich zu Frische, TF, Safety und Scope | Nein; gerätefrei geprüft, motorlos real gesperrt |
+
+`785b825` führte die 64/64-Forderung als Schutz gegen die vorher
+ununterscheidbaren leeren gesunden/defekten Wolken ein; `e3d7352` machte
+sie zum Gate-/Explorer-Tor. Vor dem Zielsystemlauf vom 24.09. gab es dafür
+keine reale Abnahme. Der Lauf widerlegte die Nutzbarkeit in der aktuellen
+freien Szene. Die alte Annahme „keine gültige Zone ⇒ frei bis 0,60 m“ bleibt
+ausdrücklich verworfen. Der nächste A/B-Vergleich muss dieselben realen
+Rohframes verwenden und Frame-Health, einzelne Target-Returns, Hindernis
+und unbekannte Zonen getrennt ausweisen.
+
 ## Stufe 3 – motorloser Zielsystemvorlauf (24.09.2026)
 
 **Ergebnis: nicht vollständig bestanden, keine Fahrfreigabe.** Die anwesende
