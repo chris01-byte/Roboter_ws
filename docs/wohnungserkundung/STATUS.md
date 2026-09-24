@@ -7,6 +7,75 @@ Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATE
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
+## Stufe 3 – motorloser Zielsystemvorlauf (24.09.2026)
+
+**Ergebnis: nicht vollständig bestanden, keine Fahrfreigabe.** Die anwesende
+Person gab ausschließlich Sensor-/ROS-Zugriff mit physisch getrennter
+Motorversorgung frei und bestätigte hardwired Not-Aus und keinen parallelen
+Stack. Der erste Start verwendete genau den vorhandenen Kandidaten
+`we1-stage3-complete-1kI6en`. Die unveränderte Kette war ROS Humble →
+slam_toolbox → LiDAR-Shutdown → `we1-10e1858074e7-r1` → Stufe 1 → Stufe 2 →
+Stage-3-Bypass → Kandidat. `ros2 pkg prefix` ordnete die neun Stufe-3-Pakete
+diesem Kandidaten zu; `robot_bringup` und `amadeus_lidar_bringup` kamen aus
+Stufe 1. `active_drive=false`, `enable_auto_explore=false`, `dry_run=true`,
+`allow_rs485=false`, `rs485_ready=false` und null Motor-/Fahr-Sollwerte
+blieben bestätigt. Es gab keine Mission, keinen Fahrbefehl, keine Motoraktivierung.
+
+**VL53-Ursache gemessen:** In zwei 12-s-Fenstern des ersten Starts waren 43
+beziehungsweise 44 Statusmeldungen je Seite frisch und stempelgleich mit
+jeweils leeren Originalwolken; beide Seiten meldeten durchgehend
+`QUALITY_PARTIAL`, Spaltenmaske `0` statt `255`. Ein separater Rohdatenlauf
+nach gestopptem Stack erfasste je 20 Frames: links 223/1280 gültige Zonen,
+rechts 233/1280, beidseits 0/160 vollständige Spalten. `target_status=255`
+trat links 961-mal, rechts 932-mal auf; genau diese Zonen meldeten auch
+`nb_target_detected=0`. Die übrigen Ausschlüsse (Status, Sigma, Distanz)
+überlappten sich. Damit sind Transport und Zeitstempel frisch, aber der
+geforderte reale 64/64-Freiraumbeleg **nicht vorhanden**. Der freie Raum
+darf nicht aus leeren Wolken als sicher interpretiert werden. Keine
+Sensor-, Footprint-, Collision- oder Frischegrenze wurde gelockert.
+
+**Weitere Quellen:** Im zweiten sauberen Lauf des nachfolgend beschriebenen
+Overlays wurden in 12 s 44 stempelgleiche VL53-Tripel, 118 normierte
+LiDAR-Scans, 12 Rohkarten und etwa 600 Odometrien gemessen. Maximales
+Nachrichtenalter: VL53 0,031 s, Scan 0,040 s, Rohkarte 0,126 s, Odometrie
+0,051 s. Maximales gemessenes TF-Alter `odom→base_link` 0,136 s,
+`map→base_link` 0,137 s; Kartenmanager `ok=true`, Kartenalter höchstens
+0,319 s und Pose-TF-Alter höchstens 0,036 s. Collision Monitor und alle fünf
+Nav2-Knoten waren `active`; Safety publizierte `false` (der optionale
+VL53-Safety-Notstopp ist im WE-Profil deaktiviert). Das Fahrtor verlangt
+unverändert für **beide** VL53 `QUALITY_VALID_NEAR/FAR` plus Maske `255` und
+war zusätzlich ohne Explore-Opt-in gesperrt. Alle beobachteten Nav-/Smoother-
+Kanäle und Motor-Sollwerte blieben null.
+
+**Scope-Bindung offen:** Der geladene lokale R9-Profilstand meldet weiterhin
+`wohnungserkundung_scope_id=we1-two-rooms-hall-r9-20260922` und
+`accessible_scope_verified=true`. Diese Kennzeichnung stammt aber aus dem
+früheren Karten-/SLAM-Kontext; nach dem dokumentierten Neustart ist keine
+erneute physische Bindung an den aktuellen Kartenframe nachgewiesen. Das
+Profil wurde hier nur passiv ohne Missions-Opt-in geladen. Im ersten
+Wiederholungsfenster meldete der Explorer zeitweise `portal_memory` und
+`region_graph` als veraltet, im zweiten keine veraltete Quelle. Eine
+aktuelle Scope- und Zielbindung bleibt vor jeder Fahrt separat nötig.
+
+**Shutdown-Integrationsfehler und Rückfall:** Der ursprüngliche Kandidat
+beendete beim ersten Einzel-PID-SIGINT den Explorer mit einem Humble-
+`RCLError` im `MultiThreadedExecutor`-Wait-Set, nachdem der globale Handler
+den ROS-Kontext bereits invalidiert hatte; der Kartenmanager war sauber.
+Commit `0fe9245` lässt den Explorer bei SIGINT/SIGTERM zuerst den Executor,
+dann Knoten und Kontext schließen und verschluckt unerwartete Fehler nicht.
+Der Fix wurde nur als letztes, isoliertes `explore`-Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-explorer-shutdown-dnrGyH/install`
+gebaut; Quell-/Install-SHA von `explore_node.py` stimmen überein. 921
+Explorer-Tests einschließlich zweier neuer Shutdown-Verträge bestanden.
+Zwei vollständige passive Starts dieses Overlays endeten nach je einem
+SIGINT an die Launch-PID mit 24/24 sauberen Kindprozessen, ohne Traceback,
+Restprozess oder Handle auf LiDAR, RS485 und CH341-I²C. Lokale Logs:
+`/tmp/we-stage3-target-4a3XiA/cycle2.log` und `cycle3.log`; reale Karten-
+und Sensordaten bleiben lokal. Weder der aktive Roboter-Install noch ein
+Produktionsprofil wurde umgestellt. Rückfall: letztes Overlay nicht sourcen;
+der ursprüngliche Kandidat bleibt jedoch wegen des gemessenen Shutdown-Races
+und der unzureichenden VL53-Qualität nicht fahrfreigegeben.
+
 ## Stufe 3 – Folgeprüfung Sensorvertrag, Stopp und Shutdown (24.09.2026)
 
 **Gerätefreie Softwareabnahme bestanden; keine Freigabe zum Roboter-Install

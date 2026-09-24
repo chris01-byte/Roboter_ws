@@ -17,6 +17,32 @@ Rückfallweg:
 
 ---
 
+## 2026-09-24 — Motorloser Stufe-3-Zielsystemvorlauf bleibt gesperrt
+
+**Entscheidung:** Keine reale Fahrt freigeben und keine VL53-/Collision-
+Grenze lockern. Den konkret beobachteten Explorer-SIGINT-Race getrennt
+beheben und nur als isoliertes Overlay über den vorhandenen Kandidaten legen.
+
+**Grund / beobachtete Evidenz:** Beide echten VL53 lieferten stempelgleiche,
+frische Frames, aber bei je 20 Rohframes nur 223/1280 (links) und 233/1280
+(rechts) gültige Zonen; keine der 160 Spalten je Seite war vollständig.
+Vorwiegend `target_status=255` und fehlendes Ziel verhinderten den
+64/64-Vertrag; leere Wolken sind kein Freiraumbeleg. Beim ersten Gesamt-SIGINT
+des ursprünglichen Kandidaten starb nur der Explorer mit invalidiertem
+Humble-Wait-Set. Der gezielte Executor-vor-Kontext-Fix `0fe9245` bestand 921
+Explorer-Tests und zwei motorlose Gesamtstarts/-stopps mit je 24 sauberen
+Kindern und freien Gerätehandles. TF, LiDAR, Rohkarte, Kartenmanager, Safety,
+Nav2 und Null-Fahrkanäle waren im 12-s-Fenster frisch; das R9-Scope ist nach
+dem letzten SLAM-Neustart nicht neu physisch gebunden. Details im WE-STATUS.
+
+**Betroffene Dateien und Hardware:** `explore_node.py`, zwei Shutdown-
+Vertragstests und ein neues isoliertes `explore`-Präfix; reale VL53, LiDAR
+und ROS-Prozesse nur motorlos gelesen. Motorversorgung physisch getrennt;
+kein aktiver Install/Profilwechsel. **Offene Risiken:** Sensor-64/64-Qualität,
+aktuelle Scope-Bindung und reale Umfahrung/Stoppbefreiung. **Rückfallweg:**
+Neues `explore`-Overlay weglassen; keine der isolierten Varianten ist zur
+Fahrt freigegeben.
+
 ## 2026-09-24 — PR #99: Bring-up-Vertrag in passender CI-Umgebung
 
 **Entscheidung:** Den unveränderten Bring-up-Test des Workflows

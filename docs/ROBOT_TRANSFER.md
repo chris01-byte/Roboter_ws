@@ -1,5 +1,38 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: motorloser Zielsystembefund, Fahrt gesperrt (24.09.2026)
+
+Nach ausdrücklicher Vor-Ort-Freigabe wurde der vorhandene Stufe-3-Kandidat
+mit realen Sensoren, aber `active_drive=false`, `enable_auto_explore=false`
+und physisch getrennter Motorversorgung gestartet. Die Stufe-3-Pakete lösten
+aus `we1-stage3-complete-1kI6en` auf, LiDAR-Bring-up und `robot_bringup` aus
+Stufe 1. Nach einem nachgewiesenen Explorer-SIGINT-Race wurde **nur** das
+separate `explore`-Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-explorer-shutdown-dnrGyH/install`
+zuletzt gesourct (Quellcommit `0fe9245`, gleiche Quell-/Install-SHA). Zwei
+vollständige Wiederholungsstarts endeten mit je 24/24 sauberen Kindern,
+ohne Restprozess oder Gerätehandle. Der aktive Robot-Install blieb unberührt.
+
+**Fahrblocker:** Beide realen VL53 sind zwar frisch (~3,6 Hz), aber im
+aktuellen freien Raum in sämtlichen Stichproben nur `QUALITY_PARTIAL` mit
+Spaltenmaske `0/255`. Der separate Rohdatenlauf ergab links 223/1280 und
+rechts 233/1280 gültige Zonen, beidseits 0/160 volle Spalten, vorwiegend
+Status 255/kein Ziel. Der 64/64-Vertrag und damit das Fahrtor sind nicht
+erfüllt; das ist keine Erlaubnis, ihn oder andere Sicherheitsgrenzen zu
+lockern. LiDAR, Karte, TF, Kartenmanager und Nav2 waren passiv frisch,
+Fahrkanäle und Motor-Sollwerte null. Das geladene R9-Profil trägt noch das
+alte `scope_verified=true`, hat aber keine neue physische Bindung an den
+aktuellen SLAM-Frame. Kein Realversuch und keine Fahrfreigabe. Für eine
+erneute Prüfung eine motorlose, vor Ort kontrollierte VL53-Szene mit
+nachgewiesenen Rückgaben beider 8×8-Raster sowie die aktuelle Startpose und
+Scope-Grenze im neuen Kartenframe messen; erst danach einen eng begrenzten
+Umfahr-/Stoppbefreiungsaufbau festlegen und gesondert zur Fahrt freigeben
+lassen. Keine reale Wohnungsgeometrie ins Repository übernehmen.
+
+**Rückfall:** Das neue `explore`-Overlay weglassen; der ursprüngliche
+Kandidat ist wegen des dokumentierten Shutdown-Races und der realen
+Sensorqualität ebenfalls nicht fahrfreigegeben.
+
 ## WE-1 Stufe 3: neuer isolierter Softwarekandidat, nicht deployt (24.09.2026)
 
 Ausgangsstand PR #99, Branch `feature/we1-stufe3-local-recovery`,
