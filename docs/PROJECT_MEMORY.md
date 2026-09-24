@@ -17,6 +17,27 @@ Rückfallweg:
 
 ---
 
+## 2026-09-24 — PR #99: Bring-up-Vertrag in passender CI-Umgebung
+
+**Entscheidung:** Den unveränderten Bring-up-Test des Workflows
+`semantic-map-offline.yml` in einem ROS-Humble/Jammy-Job mit deklariertem
+`python3-opencv` und `ros-humble-cv-bridge` ausführen. Der Mapmanager-Test
+erhält den fehlenden Python-Suchpfad zum bestehenden Paket
+`amadeus_map_identity`. Keine Robotiktests auslassen oder abschwächen.
+
+**Grund / beobachtete Evidenz:** Der frühere frische Python-Runner brach beim
+Import von `cv2` ab, bevor Tests oder der Mapmanager-Schritt laufen konnten.
+Lokal liefen sieben Bring-up- und 53 Mapmanager-Tests mit den benötigten
+Abhängigkeiten. Beide erneuten GitHub-Läufe für `e4376c4` bestanden
+vollständig ([36035275084](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035275084),
+[36035281883](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035281883)).
+
+**Betroffene Dateien und Hardware:** Nur CI-Workflow; kein Hardwarezugriff,
+kein aktiver Install, keine Motoren. **Offene Risiken:** Motorlose Prüfung des
+isolierten Stufe-3-Kandidaten, reale Sensorqualität und Fahrabnahme bleiben
+offen. **Rückfallweg:** CI-Commit zurücknehmen; der isolierte Kandidat und
+alle aktiven Roboterpräfixe bleiben unverändert.
+
 ## 2026-09-24 — Stufe-3-Softwareablauf abgeschlossen; reale Abnahme offen
 
 **Entscheidung:** VL53-Qualität vor dem Nahfilter explizit je Sensor melden

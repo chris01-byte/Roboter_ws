@@ -136,13 +136,17 @@ motorlos zu prüfen. Software-Not-Aus ersetzt den hardwired Not-Aus nicht.
 
 **Rest und Abnahmegrenzen:** Gerätefreie Softwareabnahme **BESTANDEN**;
 motorlose Zielsystemprüfung **OFFEN**, reale Stufe-3-Abnahme **OFFEN**.
-PR #99 meldet zusätzlich `python-contracts` **rot**: Der unveränderte
-Workflow `semantic-map-offline.yml` importiert im Bring-up-Vertrag
-`test_oak_rectifier.py` auf einem frischen Python-Runner ohne `cv2`
-(`ModuleNotFoundError`), noch bevor der Mapmanager-Schritt erreicht wird.
-Das ist kein bestandener PR-Gesamtcheck und wird nicht durch Abschwächung
-eines Robotiktests als grün umgedeutet; die Stage-3-spezifische lokale
-Testsuite bleibt davon getrennt.
+Der vorher rote `python-contracts`-Check von PR #99 war ein CI-Umgebungsfehler:
+`test_oak_rectifier.py` importierte auf dem frischen Python-Runner `cv2`,
+obwohl dort weder OpenCV noch ROS-`cv_bridge` bereitstanden. Commit `e4376c4`
+führt den **unveränderten** Bring-up-Vertrag in einem ROS-Humble/Jammy-Job mit
+`python3-opencv` und `ros-humble-cv-bridge` aus und ergänzt im bestehenden
+Mapmanager-Schritt nur den fehlenden `amadeus_map_identity`-Suchpfad. Beide
+erneuten Läufe des Workflows `Semantic map offline` für genau diesen Commit
+bestanden vollständig: [Run 36035275084](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035275084)
+und [Run 36035281883](https://github.com/chris01-byte/Roboter_ws/actions/runs/36035281883).
+Der Bring-up-Vertrag führte sieben Tests aus; kein Test wurde ausgelassen
+oder abgeschwächt. Diese CI-Reparatur ist kein Zielsystem- oder Fahrnachweis.
 Weder ein aktiver Roboter-Install noch reale Sensorqualität/TF-Frequenz noch
 eine reale Fahrt sind mit diesem Kandidaten geprüft. Vor jeder Übernahme den
 Quell-/Install-Hash und die tatsächliche Overlaykette am Zielgerät messen,
