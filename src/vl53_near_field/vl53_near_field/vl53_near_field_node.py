@@ -42,13 +42,15 @@ from smbus2 import SMBus
 
 # Treiber-Import exakt wie im getesteten Skript (vl53l5cx ODER vl53l7cx).
 try:
-    from vl53l5cx.vl53l5cx import VL53L5CX as DRV
+    from vl53l5cx.vl53l5cx import (
+        VL53L5CX as DRV, VL53L5CXException as SensorInitTimeout)
     # CH341A-USB-I2C uebertraegt nur ~32 Byte pro I2C-Transaktion. Sonst wird die
     # VL53-Firmware in einem 4096-Byte-Block geschrieben -> OSError(5)/EIO im init().
     import vl53l5cx.vl53l5cx as _vl53mod
     _vl53mod.VL53L5CX_COMMS_CHUNK_SIZE = 32
 except Exception:  # pragma: no cover
     from vl53l7cx import VL53L7CX as DRV
+    SensorInitTimeout = ()
 
 
 class Vl53NearField(Node):
@@ -121,8 +123,29 @@ class Vl53NearField(Node):
         self.bus = SMBus(self.bus_num)
         self.bad = {self.ch_left: 0, self.ch_right: 0}
         self.get_logger().info('Starte VL53-Sensoren (links/rechts) ...')
-        self.sL = self._sensor_start(self.ch_left)
-        self.sR = self._sensor_start(self.ch_right)
+        self.sL = self.sR = None
+        try:
+            self.sL = self._sensor_start(self.ch_left)
+            self.sR = self._sensor_start(self.ch_right)
+        except Exception:
+            # A partially initialized right sensor must not leave the left
+            # ranging or the mux/bus open after a failed startup.
+            for sensor, channel in ((self.sL, self.ch_left),
+                                    (self.sR, self.ch_right)):
+                if sensor is not None:
+                    try:
+                        self._stop_sensor(sensor, channel)
+                    except Exception:
+                        pass
+            try:
+                self._mux_disable_all()
+            except Exception:
+                pass
+            try:
+                self.bus.close()
+            finally:
+                super().destroy_node()
+            raise
 
         # -------------------------------------------------------------------
         #  Publisher
@@ -197,10 +220,33 @@ class Vl53NearField(Node):
                 continue
         if s is None:
             raise RuntimeError('VL53-Treiber liess sich nicht instanziieren')
-        if hasattr(s, 'init'):
-            s.init()
-        elif hasattr(s, 'begin') and not s.begin():
-            raise RuntimeError('begin() failed')
+        try:
+            if hasattr(s, 'init'):
+                try:
+                    s.init()
+                except SensorInitTimeout as error:
+                    # Real right channel: the driver's 2-s MCU boot poll
+                    # intermittently times out with status 0. Retry once;
+                    # no output or movement gate exists until both start.
+                    if error.args != (0,):
+                        raise
+                    self.get_logger().warn(
+                        f'ch{ch}: MCU-Bootantwort ausgeblieben; '
+                        'einmaliger erneuter Initialisierungsversuch.')
+                    self._mux_disable_all()
+                    time.sleep(0.1)
+                    self._mux_select(ch)
+                    s.init()
+            elif hasattr(s, 'begin') and not s.begin():
+                raise RuntimeError('begin() failed')
+        except Exception:
+            driver_bus = getattr(s, '_i2c_bus', None)
+            if driver_bus is not None and driver_bus is not self.bus:
+                try:
+                    driver_bus.close()
+                except Exception:
+                    pass
+            raise
         for fn, arg in (('set_resolution', self.GR * self.GC),
                         ('set_ranging_frequency_hz', int(self.rate_hz))):
             if hasattr(s, fn):
@@ -257,11 +303,26 @@ class Vl53NearField(Node):
             dist = d.get('distance_mm')
             if not dist or len(dist) != self.GR * self.GC:
                 raise RuntimeError('unvollstaendiges Frame')
+            required = ['target_status']
+            if self.require_nb:
+                required.append('nb_target_detected')
+            if self.max_sigma > 0:
+                required.append('sigma_mm')
+            if self.min_sps > 0:
+                required.append('signal_per_spad')
+            for name in required:
+                value = d.get(name)
+                if value is None or len(value) != self.GR * self.GC:
+                    raise RuntimeError(f'unvollstaendiges Frame: {name}')
             self.bad[ch] = 0
             return d
         except Exception as e:
             # Fehlerbehandlung wie im Skript: nach MAX_BAD_FRAMES neu starten.
             self.bad[ch] += 1
+            if self.bad[ch] == 1:
+                self.get_logger().warn(
+                    f'ch{ch}: {type(e).__name__}: {e} - kein neues Frame; '
+                    'Frischeueberwachung bleibt aktiv.')
             if self.bad[ch] >= self.max_bad:
                 self.get_logger().warn(f'ch{ch}: {e} - Ranging neu starten ...')
                 self._stop_sensor(s, ch)
@@ -352,11 +413,10 @@ class Vl53NearField(Node):
         dL = self._get_data_safe(self.sL, self.ch_left)
         dR = self._get_data_safe(self.sR, self.ch_right)
         if dL is None or dR is None:
-            st = NearFieldStatus()
-            st.header.stamp = self.get_clock().now().to_msg()
-            st.header.frame_id = 'base_link'
-            st.min_dist_left = st.min_dist_right = st.min_dist_middle = -1.0
-            self.pub_status.publish(st)  # quality UNKNOWN, no matching clouds
+            # Ein nicht geliefertes Frame hat keinen neuen Messzeitpunkt.
+            # Historisch bewaehrt: kein neues Tripel publizieren. Gate und
+            # Safety sperren nach ihren unveraenderten Frische-Timeouts;
+            # ungueltige *empfangene* Frames melden weiterhin UNKNOWN sofort.
             return
 
         quality_args = (self.GR, self.GC, self.valid_statuses,

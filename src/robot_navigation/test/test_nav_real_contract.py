@@ -281,6 +281,10 @@ def test_gate_requires_fresh_matching_frame_health_not_full_target_coverage():
 
     gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_VALID_FAR))
     assert gate._near_quality_authorized(time.monotonic())
+    # If the producer omits a failed read, no fresh triplet replaces this one.
+    # The existing freshness budget must still close the gate.
+    assert not gate._near_quality_authorized(
+        time.monotonic() + gate._explore_sensor_timeout + .1)
     partial = quality_status(10, NearFieldStatus.QUALITY_PARTIAL)
     partial.right_observed_columns = 0
     gate._on_near_status(partial)

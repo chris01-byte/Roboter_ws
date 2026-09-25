@@ -181,9 +181,9 @@ def test_real_producer_tick_pairs_quality_and_clouds_without_devices():
 
     producer.frames[1] = None
     producer._tick()
-    assert output['status'][-1].right_quality == UNKNOWN
-    assert not output['status'][-1].right_frame_healthy
+    assert len(output['status']) == 1
     assert len(output['right']) == 1 and len(output['right_cm']) == 1
+    assert len(output['left']) == 1 and len(output['left_cm']) == 1
 
     producer.frames[1] = frame(800)
     producer.frames[1]['sigma_mm'] = [99] * 64
@@ -223,7 +223,8 @@ def test_real_driver_range_sigma_field_is_used_for_quality():
             nb_target_detected=[1] * 64, range_sigma_mm=[10] * 64,
             signal_per_spad=[100] * 64))
     node = SimpleNamespace(_mux_select=lambda _channel: None,
-                           bad={0: 0}, GR=8, GC=8, max_bad=3)
+                           bad={0: 0}, GR=8, GC=8, max_bad=3,
+                           require_nb=True, max_sigma=50., min_sps=0.)
     data = get_data(node, sensor, 0)
     assert data['sigma_mm'] == [10] * 64
     assert assess(data)[3] == VALID_FAR
@@ -236,6 +237,102 @@ def test_driver_ready_error_cannot_be_hidden_by_subsequent_read():
     sensor = SimpleNamespace(check_data_ready=failed_ready,
                              get_ranging_data=lambda: frame())
     node = SimpleNamespace(_mux_select=lambda _channel: None,
-                           bad={0: 0}, GR=8, GC=8, max_bad=3)
+                           bad={0: 0}, GR=8, GC=8, max_bad=3,
+                           get_logger=lambda: SimpleNamespace(warn=lambda _message: None))
     assert get_data(node, sensor, 0) is None
     assert node.bad[0] == 1
+
+
+def test_real_driver_rejects_corrupted_quality_raster_without_fresh_status():
+    get_data = _producer_methods('_get_data_safe')['_get_data_safe']
+    sample = frame()
+    sample['nb_target_detected'] = [1] * 252
+    sensor = SimpleNamespace(check_data_ready=lambda: True,
+                             get_ranging_data=lambda: sample)
+    warnings = []
+    node = SimpleNamespace(
+        _mux_select=lambda _channel: None, bad={0: 0},
+        GR=8, GC=8, max_bad=3, require_nb=True,
+        max_sigma=50., min_sps=0.,
+        get_logger=lambda: SimpleNamespace(warn=warnings.append))
+    assert get_data(node, sensor, 0) is None
+    assert node.bad[0] == 1
+    assert 'nb_target_detected' in warnings[0]
+    sensor.get_ranging_data = frame
+    assert get_data(node, sensor, 0)['nb_target_detected'] == [1] * 64
+    assert node.bad[0] == 0
+
+
+def test_measured_mcu_boot_timeout_gets_one_bounded_init_retry():
+    methods = _producer_methods('_sensor_start')
+    class BootTimeout(Exception):
+        pass
+    methods['SensorInitTimeout'] = BootTimeout
+    methods['time'] = SimpleNamespace(sleep=lambda _seconds: None)
+    calls = []
+    class Sensor:
+        def init(self):
+            calls.append('init')
+            if calls.count('init') == 1:
+                raise BootTimeout(0)
+        def set_resolution(self, value):
+            calls.append(('resolution', value))
+        def start_ranging(self):
+            calls.append('start')
+    sensor = Sensor()
+    methods['DRV'] = lambda **_kwargs: sensor
+    node = SimpleNamespace(
+        _mux_select=lambda channel: calls.append(('select', channel)),
+        _mux_disable_all=lambda: calls.append('disable'),
+        bus=object(), bus_num=9, sensor_addr=0x29, GR=8, GC=8, rate_hz=4.,
+        get_logger=lambda: SimpleNamespace(warn=calls.append))
+
+    assert methods['_sensor_start'](node, 1) is sensor
+    assert calls.count('init') == 2
+    assert calls.count('disable') == 1
+    assert calls.count('start') == 1
+
+
+def test_repeated_boot_timeout_fails_closed_and_closes_driver_bus():
+    methods = _producer_methods('_sensor_start')
+    class BootTimeout(Exception):
+        pass
+    methods['SensorInitTimeout'] = BootTimeout
+    methods['time'] = SimpleNamespace(sleep=lambda _seconds: None)
+    calls = []
+    class Sensor:
+        _i2c_bus = SimpleNamespace(close=lambda: calls.append('close'))
+        def init(self):
+            calls.append('init')
+            raise BootTimeout(0)
+    methods['DRV'] = lambda **_kwargs: Sensor()
+    node = SimpleNamespace(
+        _mux_select=lambda _channel: None,
+        _mux_disable_all=lambda: None,
+        bus=object(), bus_num=9, sensor_addr=0x29, GR=8, GC=8, rate_hz=4.,
+        get_logger=lambda: SimpleNamespace(warn=lambda _message: None))
+
+    with pytest.raises(BootTimeout):
+        methods['_sensor_start'](node, 1)
+    assert calls == ['init', 'init', 'close']
+
+
+def test_other_sensor_init_error_is_not_retried():
+    methods = _producer_methods('_sensor_start')
+    class BootTimeout(Exception):
+        pass
+    methods['SensorInitTimeout'] = BootTimeout
+    calls = []
+    class Sensor:
+        _i2c_bus = SimpleNamespace(close=lambda: calls.append('close'))
+        def init(self):
+            calls.append('init')
+            raise BootTimeout(7)
+    methods['DRV'] = lambda **_kwargs: Sensor()
+    node = SimpleNamespace(
+        _mux_select=lambda _channel: None, bus=object(), bus_num=9,
+        sensor_addr=0x29, GR=8, GC=8, rate_hz=4.)
+
+    with pytest.raises(BootTimeout):
+        methods['_sensor_start'](node, 1)
+    assert calls == ['init', 'close']
