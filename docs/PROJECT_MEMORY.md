@@ -17,6 +17,47 @@ Rückfallweg:
 
 ---
 
+## 2026-09-25 — 64/64 real widerlegt, pauschale PARTIAL-Fahrfreigabe verworfen
+
+**Entscheidung:** Die Juli-Zonenfilterung, vollständige 8×8-Frameprüfung,
+gültige Hindernispunkte und die marking-only-Korrektur von PR #100 bleiben
+getrennte Grundlagen. Weder 64/64-Targets als globale Sensor-Health noch
+`PARTIAL` allein als Fahrfreigabe verwenden. Die experimentelle pauschale
+Verbraucheröffnung wurde vor Commit/Push zurückgenommen; das aktive
+Fahrtor bleibt fail-closed.
+
+**Grund / beobachtete Evidenz:** Bei derselben realen Sensorik lieferten
+je Seite 30/30 vollständige Frames vor einer matten Platte 64 gültige
+Targets, Status 5 und kleine Sigma-Werte; nach Entfernen der Platte nur
+2–6 Fernreturns je Frame, `QUALITY_PARTIAL`, keine volle Spalte. Hardware
+und Treiber sind grundsätzlich plausibel; die global verlangten 64/64
+Targets sind in der freien Szene physikalisch nicht verfügbar. Ein
+gerätefreier echter Nav2-Test mit pauschaler `PARTIAL`-Freigabe bestand
+Umfahrung und Explorer-Fortsetzung, belegte aber **nicht** die
+Beobachtung des niedrigen/seitlichen Realraums. LiDAR sitzt bei 0,66 m,
+OAK ist im WE-Mapping-Launch aus. Zwei motorlose Gesamtstarts mit diesem
+isolierten Testpräfix zeigten frische Quellen, null Fahrbefehle und jeweils
+24/24 saubere Shutdown-Kinder. Zwei zusätzliche Starts des strengen
+PR-#100-Kandidaten ohne dieses Testpräfix zeigten ebenfalls frische Quellen,
+null Fahr-/Motorwerte und je 24/24 saubere Kinder; der Scope war nicht
+gebunden.
+
+**Betroffene Dateien und Hardware:** Reale VL53 und ROS-Prozesse nur bei
+physisch getrennter Motorversorgung; Rohframes ausschließlich lokal unter
+`/home/p/.local/share/amadeus/tests/we-stage3-vl53-ab-20260925.json`.
+Kein aktiver Install, kein Produktionsprofil und keine Sicherheitsgrenze
+geändert. Dokumentation im maßgeblichen WE-STATUS und ROBOT_TRANSFER.
+
+**Teststatus / offenes Risiko / Rückfall:** A/B und passiver Stack-/Shutdown-
+Teil bestanden; vollständige Fahrbereitschaft **nicht**. Für reale Bewegung
+fehlen positiver bewegungsbezogener Beobachtungsbeleg, aktuelle Scope-/
+Startpose-Bindung und separate Fahrfreigabe. Das experimentelle
+`we1-stage3-vl53-partial-PiRlgn` niemals zur Fahrt sourcen; Weglassen des
+Overlays erhält das unveränderte fail-closed Tor. Die alte 0,60-m-Annahme
+bleibt verboten.
+
+---
+
 ## 2026-09-24 — Teilframe-Hindernisse markieren, unbekannten Raum nicht räumen
 
 **Entscheidung:** Die real bewährte VL53-Zonenfilterung und Originalwolke

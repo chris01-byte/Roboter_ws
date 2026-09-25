@@ -1,11 +1,116 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · kein neuer realer Fahrversuch · 2026-09-24**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · kein neuer realer Fahrversuch · 2026-09-25**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 3 – echter VL53-A/B-Vergleich und motorloser Wiederholungslauf (25.09.2026)
+
+**Ergebnis: Sensorhardware plausibel, Fahrvertrag weiter offen, keine
+Fahrfreigabe.** Auf PR #99 `e864b6e` basiert der separate Draft-PR #100
+`fix/we1-stage3-vl53-regression`. Die anwesende Person bestätigte hardwired
+Not-Aus, physisch getrennte Motorversorgung, keinen Parallelstack und die
+matte unbelebte Platte (~1 × 1 m, ~0,40 m vor beiden VL53). Danach wurde die
+Platte entfernt; die Motorversorgung blieb getrennt. Derselbe unveränderte
+CH341-/VL53-Install und dieselbe Konfiguration lieferten je Seite und Szene
+30 vollständige 8×8-Rohframes, ohne `not_ready`-Frame oder I²C-Fehler.
+Rohframes und Auswertung liegen **nur lokal** unter
+`/home/p/.local/share/amadeus/tests/we-stage3-vl53-ab-20260925.json`
+(SHA-256 `d27c448339f3969582999642daea75a42f7cce381c84bb709ac0aad6cac01eec`);
+keine Wohnungsdaten wurden eingecheckt.
+
+| Reale Szene | Links | Rechts |
+|---|---|---|
+| Matte Platte: gültige Targets | 64/64 in allen 30 Frames | 64/64 in allen 30 Frames |
+| Platte: Status / Targetzahl | 1.920× `target_status=5`, `nb_target_detected=1` | gleich |
+| Platte: Entfernung min/Median/max | 372/392/436 mm | 370/390/429 mm |
+| Platte: Sigma min/Median/max | 2,43/3,34/6,72 mm | 2,27/3,21/7,52 mm |
+| Platte: Qualität, volle Spalten, Wolken | 30× `VALID_NEAR`, Maske 255, Original 64 und Costmap 8 Punkte/Frame | gleich |
+| Freie Szene: gültige Targets | 105/1.920, je Frame 2–6 | 118/1.920, je Frame 2–6 |
+| Freie Szene: ungültig/kein Target | 1.765× Status 255 und Targetzahl 0 | 1.749× Status 255 und Targetzahl 0 |
+| Freie Szene: Qualität/volle Spalten/Wolken | 30× `PARTIAL`, Maske 0, beide Nahwolken leer | gleich |
+
+Die gültigen Fernreturns in der freien Szene lagen nur in der untersten
+orientierten Sensorzeile. Der Juli-Nahfilter lieferte dort ebenfalls keine
+Nahpunkte; bei der Platte lieferte er 64 je Frame. Die Sensoren **können**
+also das volle Raster mit guten Sigma-/Distanzwerten erfassen. Die spätere
+Forderung `QUALITY_VALID_NEAR/FAR` **und** `observed_columns==255` als
+globale Fahrfreigabe wurde nie real fahrabgenommen und ist für die freie
+Szene sachlich ungeeignet. Umgekehrt beweist `PARTIAL` nur einen empfangenen
+vollständigen Frame mit einzelnen gültigen Targets: Es beweist **nicht** die
+freie, für einen konkreten Fahr- oder Schwenkweg nötige Fläche. Die frühere
+0,60-m-Freiräumung unbeobachteter Spalten bleibt ausdrücklich verworfen.
+Der bereits in PR #100 isolierte marking-only-Nav2-Fix bleibt eine getrennte
+Hindernismarkierung, **keine** Lösung des Fahrfreigabeproblems.
+
+Eine experimentelle, nur isoliert gebaute Verbraucheränderung ließ
+`PARTIAL` im WE-Fahrtor/Explorer pauschal zu. Sie bestand 969 Vertragstests
+und die gerätefreien Nav2-Fälle `partial_free_bypass`, `stopped_bypass`,
+`blocked`, `estop`, `localization_loss` und `no_exit`; im partiellen Fall
+wurden 1.402 Teilframes, die dauerhafte Umfahrung und zwei erfolgreiche
+Explorer-Ziele beobachtet. **Diese Änderung wurde aus dem Quellbranch
+zurückgenommen und nicht gepusht:** Bei nur 2–6 Fernreturns je freiem Frame
+belegt sie den niedrigen/seitlichen Bewegungsraum nicht. Der STL-27L sieht
+auf 0,66 m Höhe; OAK ist im WE-Mapping-Launch deaktiviert. Weder frische
+2D-Karte noch leere Nahwolke dürfen unbekannte VL53-Höhen als frei ersetzen.
+Das isolierte Testpräfix `we1-stage3-vl53-partial-PiRlgn` ist damit
+**ausdrücklich nicht fahrgeeignet** und darf nicht zur Fahrvorbereitung
+gesourct werden. Der veröffentlichte PR #100 behält das strengere Fahrtor.
+
+**Zielsystemprüfung motorlos:** Ausschließlich mit dem isolierten Testpräfix
+wurden zwei komplette passive Starts von `app_mapping.launch.py` ausgeführt
+(`active_drive=false`, `enable_auto_explore=false`, Web-GUI aus). Auflösung:
+Humble → slam_toolbox → LiDAR-Shutdown → `we1-10e1858074e7-r1` → Stufe 1
+→ Stufe 2 → Stage-3-Bypass → `we1-stage3-complete-1kI6en` → Explorer-Shutdown
+→ PR-#100-Markierung → experimentelles Teilframe-Präfix. `robot_navigation`
+und `explore` kamen aus dem letzten Präfix, `robot_bringup`/LiDAR aus Stufe 1,
+die übrigen Stufe-3-Pakete aus `we1-stage3-complete-1kI6en`.
+Im 15-s-Fenster: 59 stempelgleiche VL53-Status-/Wolken-Tripel je Seite
+(durchgehend `PARTIAL`, Maske 0), 149 normierte Scans, 14 Rohkarten,
+749 Odometrien; maximale gemessene Nachrichtenalter 0,021/0,016/0,047/
+0,026 s für VL53/Scan/Karte/Odom. `map→base_link` und `odom→base_link`
+waren jeweils 0,017 s alt. Kartenmanager `ok=true`, Pose-TF 0,008 s alt;
+Collision Monitor und alle fünf Nav2-Lifecycle-Knoten `active`, Safety
+`estop=false`. Das Fahrtor hatte kein Explore-Opt-in; alle beobachteten
+Fahrkanäle und Motorsollwerte waren null, Basis `dry_run=true`, RS485
+`allow_rs485=false`/`rs485_ready=false`. Beide Starts endeten mit je **24/24
+sauberen Kindern**, ohne Traceback, Restprozess oder offenen CH341-/LiDAR-/
+RS485-Handle. Logs lokal unter `~/.ros/log/2026-09-25-14-00-23-069013-p-desktop-22598`
+und `~/.ros/log/2026-09-25-14-02-44-933636-p-desktop-24506`.
+
+Zur Kontrolle des **veröffentlichten strengen Kandidaten** folgten zwei
+weitere komplette passive Starts **ohne** das verworfene Teilframe-Präfix:
+`explore` löste aus `we1-stage3-explorer-shutdown-dnrGyH`, `robot_navigation`
+aus `we1-stage3-vl53-mark-bwVxEL` auf; die restliche Kette blieb gleich.
+Im ersten 12-s-Fenster erschienen 48 frische VL53-Status-/Originalwolken-
+Tripel je Seite, 120 Scans, 12 Karten, 603 Odometrien, Safety `false` und
+Kartenmanager `ok=true`. Beide VL53 blieben 48× `PARTIAL`/Maske 0; das
+unveränderte Fahrtor hatte kein Opt-in. Acht abonnierte Kommando-Themen
+einschließlich Raw-, Nav-, Direct-, Recovery-, Smoother- und `/cmd_vel`-
+Kanal zeigten **keinen Nichtnullwert**; Basis blieb Dry-run/RS485 aus mit
+null Motor-RPM. Im zweiten Start waren Collision Monitor und alle fünf
+Nav2-Lifecycle-Knoten erneut `active`, beide VL53 wieder `PARTIAL`/Maske 0,
+Basis `dry_run=true`, RS485 aus, Explore-Opt-in aus. **Beide strengen
+Kandidatenläufe endeten ebenfalls mit je 24/24 sauberen Kindern**, ohne
+Traceback, Restprozess oder offenes Gerätehandle. Logs lokal unter
+`~/.ros/log/2026-09-25-14-08-20-615745-p-desktop-28184` und
+`~/.ros/log/2026-09-25-14-09-26-559760-p-desktop-29222`.
+
+**Noch offen vor echter Fahrt:** Es wurde bewusst **kein** altes R9-Profil
+aktiviert: Es erklärt sich selbst nach SLAM-Neustart für ungültig. Der
+passive Explorer meldete `scope_verified=false` und leere Scope-ID. Nötig
+sind eine aktuelle physische Bindung von Startpose, begrenztem Fahrbereich
+und Hindernis-/Ausweichkorridor an den jetzigen Kartenframe sowie ein
+bewegungsbezogener positiver Beobachtungsbeleg für die niedrigen/seitlichen
+Bereiche. Mit dem unveränderten Tor blockiert die normale freie VL53-Szene;
+die pauschale Teilframe-Freigabe wäre kein fail-closed Ersatz. Deshalb ist
+der *passive Stack-/Shutdown-Teil* bestanden, der vollständige motorlose
+Fahrbereitschaftsnachweis **nicht**. Keine Motoraktivierung, keine Fahrt und
+keine Umstellung des aktiven Roboter-Installs. Rückfall: das experimentelle
+letzte Overlay nicht sourcen; PR #100 nur als Draft weiterführen.
 
 ## Stufe 3 – VL53-Regression gegen real erprobten Juli-Stand (24.09.2026)
 

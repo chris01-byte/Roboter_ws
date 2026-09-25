@@ -1,5 +1,50 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: realer VL53-A/B-Test, passive Zielsystemwiederholung (25.09.2026)
+
+Die echte matte Platte (~1 × 1 m, ~0,40 m vor beiden VL53) ergab links und
+rechts je 30/30 vollständige Rohframes mit 64/64 gültigen Targets,
+`target_status=5`, `nb_target_detected=1`, kleinen Sigma-Werten und je
+64 Original- sowie 8 Costmap-Punkten. Nach Entfernen der Platte lieferten
+dieselben Sensoren/Konfigurationen je 30 vollständige Frames, aber nur
+2–6 gültige Fernreturns pro Frame in der untersten Sensorzeile, 0 volle
+Spalten, `QUALITY_PARTIAL` und leere Nahwolken. Die Hardware ist damit
+plausibel; die neue globale 64/64-Forderung ist für freie Szenen nicht
+praktikabel und nicht real fahrabgenommen. Einzelne fehlende Targets
+bleiben **unbekannt**, niemals pauschal 0,60 m frei. Rohframes und
+Auswertung sind nur lokal unter
+`/home/p/.local/share/amadeus/tests/we-stage3-vl53-ab-20260925.json`.
+
+Das ausschließlich isolierte Präfix
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-partial-PiRlgn/install`
+enthält eine **verworfene** pauschale `PARTIAL`-Freigabe im Explorer/Fahrtor.
+Sie bestand gerätefreie Prozessfälle, besitzt aber keinen positiven
+Bewegungsraumbeleg; **nicht für Fahrt oder künftige Freigabe sourcen**.
+Der Quellbranch/PR #100 enthält diese Änderung nicht. Sein marking-only-
+ObstacleLayer-Fix ist davon unabhängig. Der aktive Roboter-Install und alle
+Fahr-/Sensorgrenzen blieben unangetastet.
+
+Mit physisch getrennter Motorversorgung wurden zwei vollständige passive
+Starts über das isolierte Präfix geprüft: beide VL53, LiDAR, TF, Rohkarte,
+Kartenmanager, Safety, Collision Monitor und Nav2 waren frisch/aktiv;
+`active_drive=false`, Explore-Opt-in aus, `dry_run=true`, RS485 aus,
+alle Fahr- und Motorsollwerte null. Je Start 24/24 saubere Kinder beim
+Einzel-PID-SIGINT, keine Tracebacks, Restprozesse oder Gerätehandles.
+Danach bestanden auch **zwei Starts ohne das verworfene Präfix** auf dem
+strengen PR-#100-Stand mit Explorer-Shutdown- und marking-only-Overlay:
+beide VL53 `PARTIAL`/Maske 0, Safety aus, Collision Monitor/Nav2 aktiv,
+acht Fahrbefehlskanäle ohne Nichtnullwert, Basis Dry-run/RS485 aus und
+jeweils 24/24 saubere Kinder ohne Rest-Handle. Der normale freie Raum
+bleibt mit diesem Stand am Fahrtor gesperrt, wie beabsichtigt.
+Der vorhandene R9-Scope ist nach SLAM-Neustart nicht mehr gültig und wurde
+deshalb nicht geladen; der Explorer meldete `scope_verified=false`.
+Der vollständige motorlose *Fahrbereitschafts*-Nachweis bleibt offen:
+Vor Fahrplanung sind aktueller Kartenframe/Startpose/enger Scope und ein
+positiver Beleg für den tatsächlich nötigen niedrigen und seitlichen
+Fahrraum erforderlich. LiDAR bei 0,66 m und im WE-Launch deaktivierte OAK
+ersetzen die unbekannten VL53-Zonen nicht. Keine reale Fahrt ohne gesonderte
+Vor-Ort-Fahrfreigabe. Rückfall für das Testpräfix: nicht sourcen.
+
 ## WE-1 Stufe 3: VL53-Regression, Teilframe-Markierung (24.09.2026)
 
 Der neue, ausschließlich motorlose Direktlauf las je 20 vollständige
