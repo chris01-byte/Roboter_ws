@@ -7,7 +7,7 @@ or sensor driver is launched. The fixed private DDS domain is mandatory.
 ``stopped_bypass`` separately probes late detection and requires safe release
 from the stop plus a second completed automatic goal. ``no_exit``
 requires a controlled partial result; ``blocked`` checks fail-closed recovery
-when the other sensor provides an ambiguous empty original cloud.
+when the other sensor has missing mandatory frame fields.
 """
 
 import argparse
@@ -119,7 +119,9 @@ class RealNavWorld(SyntheticWorld):
         super().__init__('local_blocked', fake_nav=False)
         self.obstacle_mode = obstacle_mode
         self.diagnostic_bypass = obstacle_mode in (
-            'fixed_bypass', 'explorer_bypass', 'stopped_bypass', 'no_exit')
+            'fixed_bypass', 'explorer_bypass', 'stopped_bypass', 'no_exit',
+            'partial_free_bypass', 'wall_escape', 'corner_escape')
+        self.partial_quality_frames = 0
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
@@ -158,10 +160,18 @@ class RealNavWorld(SyntheticWorld):
         self.reverse_travel_m = 0.0
         self.runtime_footprint = None
         self.local_costmap = None
+        self.costmap_history = []
         self.explore_history = []
         self.obstacle_in_map = self.diagnostic_bypass
         self.obstacle_bounds = (OBSTACLE if obstacle_mode != 'no_exit'
                                 else (2.0, 2.3, 0.25, 2.75))
+        # Fixed diagnostic geometry, before any planner/controller comparison.
+        # Front wall has a 1.075-m lower passage; corner joins the room wall.
+        # Start leaves > circumradius of the padded footprint on both sides.
+        if obstacle_mode in ('wall_escape', 'corner_escape'):
+            self.obstacle_bounds = (2.0, 2.3, 1.325, 2.75)
+            self.x = 0.65  # map x=1.50, wall 0.50 m ahead of axle
+            self.y = 0.625 if obstacle_mode == 'corner_escape' else 0.0
         self.plan_at = 0.0
         self._plan_client = ActionClient(
             self, ComputePathToPose, '/compute_path_to_pose')
@@ -207,11 +217,24 @@ class RealNavWorld(SyntheticWorld):
             lambda msg: setattr(self, 'runtime_footprint', msg), 10)
         self.create_subscription(
             Costmap, '/local_costmap/costmap_raw',
-            lambda msg: setattr(self, 'local_costmap', msg), 10)
+            self._on_costmap, 10)
         self.create_subscription(
             GoalStatusArray, '/navigate_to_pose/_action/status',
             self._on_nav_status, 10)
         self.create_timer(0.1, self._tick_real)
+
+    def _on_costmap(self, message):
+        self.local_costmap = message
+        if self.obstacle_mode == 'disappear':
+            meta = message.metadata
+            cells = np.asarray(message.data).reshape(meta.size_y, meta.size_x)
+            rows, cols = np.nonzero(cells == 254)
+            self.costmap_history.append({
+                't': time.monotonic(), 'obstacle_active': self.obstacle_active,
+                'frame': message.header.frame_id,
+                'lethal_points': [[meta.origin.position.x + (col + .5) * meta.resolution,
+                                  meta.origin.position.y + (row + .5) * meta.resolution]
+                                 for row, col in zip(rows.tolist(), cols.tolist())]})
 
     def _on_explore(self, message):
         super()._on_explore(message)
@@ -271,9 +294,9 @@ class RealNavWorld(SyntheticWorld):
                 cells[26:34, 58:64] = -1
             cells[26:34, 84:90] = -1
         if self.obstacle_in_map:
-            cells[26:35, 40:46] = 100
-            if self.obstacle_mode == 'no_exit':
-                cells[5:55, 40:46] = 100
+            x0, x1, y0, y1 = self.obstacle_bounds
+            cells[int(y0 / .05):math.ceil(y1 / .05),
+                  int(x0 / .05):math.ceil(x1 / .05)] = 100
         # New observation, stable geometry: no fake changing wall pixels.
         message.data = cells.ravel().tolist()
         return message
@@ -292,8 +315,12 @@ class RealNavWorld(SyntheticWorld):
                 distance = _ray_box_hit(
                     sx, sy, self.yaw + angle, (0.15, 4.85, 0.25, 2.75))
                 if self.obstacle_active:
+                    bounds = self.obstacle_bounds
+                    if not self.diagnostic_bypass:
+                        gx, gy = self.obstacle_center
+                        bounds = (gx - .1, gx + .1, gy - .1, gy + .1)
                     distance = min(distance, _ray_box_hit(
-                        sx, sy, self.yaw + angle, self.obstacle_bounds))
+                        sx, sy, self.yaw + angle, bounds))
                 distances.append(distance)
             frame_data = {
                 'distance_mm': [1000.0 * value for value in distances] * 8,
@@ -301,10 +328,31 @@ class RealNavWorld(SyntheticWorld):
                 'nb_target_detected': [1] * 64,
                 'sigma_mm': [10] * 64,
             }
+            if (self.obstacle_mode == 'blocked' and self.obstacle_active
+                    and side == 'right'):
+                del frame_data['sigma_mm']  # technical fault, not no-target
+            if self.obstacle_mode in (
+                    'partial_free_bypass', 'wall_escape', 'corner_escape'):
+                # Real A/B: sparse far floor targets, full near barrier. Unknown
+                # far zones contribute neither marking nor clearing points.
+                for row in range(7):
+                    for col, distance in enumerate(distances):
+                        if distance > .50:
+                            index = row * 8 + col
+                            frame_data['distance_mm'][index] = 0.0
+                            frame_data['target_status'][index] = 255
+                            frame_data['nb_target_detected'][index] = 0
+                for col, distance in enumerate(distances):
+                    if distance > .50:
+                        frame_data['distance_mm'][56 + col] = min(distance, .8) * 1000
             measured, valid, coverage, quality = assess_frame(
                 frame_data, 8, 8, [5], True, 0., 50., .01, .50)
+            if quality == NearFieldStatus.QUALITY_PARTIAL:
+                self.partial_quality_frames += 1
             setattr(status, f'{side}_quality', quality)
             setattr(status, f'{side}_observed_columns', coverage)
+            setattr(status, f'{side}_frame_healthy',
+                    quality != NearFieldStatus.QUALITY_UNKNOWN)
             for col, angle in enumerate(np.linspace(-math.pi / 6,
                                                    math.pi / 6, 8)):
                 distance = distances[col]
@@ -312,7 +360,7 @@ class RealNavWorld(SyntheticWorld):
                     clear_to = min(distance, 0.60)
                     costmap.append((clear_to * math.cos(angle),
                                     clear_to * math.sin(angle), 0.0))
-                if distance <= .50:
+                if distance <= .50 and quality != NearFieldStatus.QUALITY_UNKNOWN:
                     for elevation in np.linspace(-math.pi / 6,
                                                  math.pi / 6, 8):
                         points.append((distance * math.cos(elevation)
@@ -460,54 +508,11 @@ class RealNavWorld(SyntheticWorld):
         self._scan_pub.publish(scan)
         self._scan_nav_pub.publish(scan)
 
-        clear = _cloud(stamp, [])
-        # Match the real VL53 costmap stream: one range-clearing point for
-        # each horizontal column, not one central ray that leaves ghost cells.
-        clear_costmap = _cloud(stamp, [
-            (0.6, col * 0.025, 0.2) for col in range(-12, 13)])
-        left_points = []
-        if self.obstacle_active and self.obstacle_center is not None:
-            gx, gy = self.obstacle_center
-            for dx in (-0.10, 0.0, 0.10):
-                for dy in (-0.10, 0.0, 0.10):
-                    mx = gx + dx - px
-                    my = gy + dy - py
-                    bx = mx * math.cos(self.yaw) + my * math.sin(self.yaw)
-                    by = -mx * math.sin(self.yaw) + my * math.cos(self.yaw)
-                    if 0.03 < math.hypot(bx, by) <= 0.50:
-                        left_points.append((bx, by, 0.2))
-        if left_points:
-            left = _cloud(stamp, left_points)
-            left_costmap = left
-        else:
-            left = clear
-            left_costmap = clear_costmap
-        if self.diagnostic_bypass:
-            self._diagnostic_sensors(stamp, px, py)
-        else:
-            right_failed = (self.obstacle_mode == 'blocked'
-                            and self.obstacle_active)
-            for side, (original, costmap) in self._real_vl53.items():
-                original.publish(left if side == 'left' else clear)
-                costmap.publish(left_costmap if side == 'left' else (
-                    clear if right_failed else clear_costmap))
-            status = NearFieldStatus()
-            status.header.stamp = stamp
-            status.header.frame_id = 'base_link'
-            for side, distance in (('left', .24 if left_points else .8),
-                                   ('right', .8)):
-                frame_data = {
-                    'distance_mm': [distance * 1000] * 64,
-                    'target_status': ([255] * 64 if side == 'right'
-                                      and right_failed else [5] * 64),
-                    'nb_target_detected': [1] * 64,
-                    'sigma_mm': [10] * 64,
-                }
-                _, _, coverage, quality = assess_frame(
-                    frame_data, 8, 8, [5], True, 0., 50., .01, .50)
-                setattr(status, f'{side}_quality', quality)
-                setattr(status, f'{side}_observed_columns', coverage)
-            self._real_vl53_status.publish(status)
+        # Use the same physical sensor origins/columns for marking and clearing.
+        # The former arbitrary 3x3 base-frame obstacle and 25 unrelated clearing
+        # rays left a measured ghost cell for 22 s after removal (also with the
+        # old gate/explorer). Keep obstacle, stop duration and assertions intact.
+        self._diagnostic_sensors(stamp, px, py)
 
         if now - self.map_last_at >= 1.0:
             self.observed_maps += 1
@@ -594,7 +599,7 @@ def _run_diagnostic(world):
         world.wait_for(lambda: world.runtime_footprint is not None,
                        5.0, 'tatsaechlich gepaddeter Footprint')
         footprint = world.runtime_footprint
-        actual = sorted((point.x, point.y)
+        actual = sorted((point.x - world.x, point.y - world.y)
                         for point in footprint.polygon.points)
         if (footprint.header.frame_id != 'odom'
                 or len(actual) != 4
@@ -604,6 +609,14 @@ def _run_diagnostic(world):
             raise AssertionError(
                 'Pruefkontur entspricht nicht dem Live-Footprint')
         outcome['runtime_padded_footprint'] = actual
+        if world.obstacle_mode in ('wall_escape', 'corner_escape'):
+            outcome['start_pose'] = (*world.map_pose, world.yaw)
+            outcome['initial_full_rotation_sweep_safe'] = all(
+                _footprint_safe(*world.map_pose, angle, world.obstacle_bounds)
+                for angle in np.linspace(-math.pi, math.pi, 1441))
+            if not outcome['initial_full_rotation_sweep_safe']:
+                outcome['failure_layer'] = 'fixture_no_safe_turn'
+                raise AssertionError('Keine sichere Anfangsdrehung')
         world.wait_for(lambda: world._plan_client.wait_for_server(
             timeout_sec=0.1), 25.0, 'NavFn bereit')
         target_xy = FIXED_TARGET
@@ -764,6 +777,7 @@ def _run_diagnostic(world):
         outcome.update(
             passed=True, nav_active_max=world.nav_active_max,
             travel_m=world.travel_m,
+            partial_quality_frames=world.partial_quality_frames,
             actual_lateral_excursion_m=max(
                 abs(point['y'] - 1.525) for point in world.trace),
             final_pose=(*world.map_pose, world.yaw))
@@ -775,6 +789,10 @@ def _run_diagnostic(world):
         outcome['reverse_travel_m'] = world.reverse_travel_m
         if world.nav_active_max > 1:
             raise AssertionError('Konkurrierende Nav2-Ziele')
+        if (world.obstacle_mode in (
+                'partial_free_bypass', 'wall_escape', 'corner_escape')
+                and world.partial_quality_frames < 20):
+            raise AssertionError('Teilframes im Prozessfall nicht nachgewiesen')
     except Exception:
         outcome['passed'] = False
         nav_log.flush()
@@ -934,7 +952,7 @@ def _run_case(world):
                     'nav_active_max': world.nav_active_max,
                     'nav_goal_count': dispatched,
                     'fault': (
-                        'fresh_empty_measurement_invalid'
+                        'missing_mandatory_frame_field'
                         if world.obstacle_mode == 'blocked' else
                         world.obstacle_mode),
                     'parent_status': parent_result.result().status,
@@ -1068,6 +1086,8 @@ def _run_case(world):
             (directory / 'plans.json').write_text(json.dumps(world.plans))
             (directory / 'explore_history.json').write_text(
                 json.dumps(world.explore_history))
+            (directory / 'costmap_history.json').write_text(
+                json.dumps(world.costmap_history))
 
 
 def main():
@@ -1076,7 +1096,8 @@ def main():
         'disappear', 'bypass', 'blocked', 'estop',
         'localization_loss', 'legacy_probe',
         'fixed_bypass', 'explorer_bypass',
-        'stopped_bypass', 'no_exit'),
+        'stopped_bypass', 'no_exit', 'partial_free_bypass',
+        'wall_escape', 'corner_escape'),
                         default='disappear')
     args = parser.parse_args()
     rclpy.init()
