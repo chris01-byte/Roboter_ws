@@ -33,25 +33,36 @@ def _status(quality=NearFieldStatus.QUALITY_VALID_FAR, second=10):
     status.left_quality = quality
     status.right_quality = quality
     status.left_observed_columns = status.right_observed_columns = 255
+    status.left_frame_healthy = status.right_frame_healthy = (
+        quality != NearFieldStatus.QUALITY_UNKNOWN)
     status.min_dist_left = -1.0
     status.min_dist_right = -1.0
     status.min_dist_middle = -1.0
     return status
 
 
-def test_valid_empty_far_can_clear_but_unknown_and_partial_cannot():
+def test_partial_health_is_separate_from_target_coverage_and_transport_failure():
     node, output = _monitor()
     node._on_near_field(_status())
     assert node._near_estop is False and output[-1] is False
     node._on_near_field(_status(NearFieldStatus.QUALITY_UNKNOWN))
     assert node._near_estop is True and output[-1] is True
-    node._on_near_field(_status(NearFieldStatus.QUALITY_PARTIAL))
+    partial = _status(NearFieldStatus.QUALITY_PARTIAL)
+    partial.left_observed_columns = partial.right_observed_columns = 0
+    node._on_near_field(partial)
+    assert node._near_estop is False
+    partial.left_quality = partial.right_quality = NearFieldStatus.QUALITY_INVALID
+    node._on_near_field(partial)
+    assert node._near_estop is False
+    partial.left_frame_healthy = False
+    node._on_near_field(partial)
     assert node._near_estop is True
 
 
 def test_near_obstacle_and_stale_or_future_status_stay_stopped():
     node, output = _monitor()
-    near = _status(NearFieldStatus.QUALITY_VALID_NEAR)
+    near = _status(NearFieldStatus.QUALITY_PARTIAL)
+    near.left_observed_columns = 0
     near.min_dist_left = 0.05
     node._on_near_field(near)
     assert node._near_estop is True

@@ -149,14 +149,21 @@ class ExplorationNavigationSession:
             raise ExplorationNavigationRuntimeError(
                 "Kindziel darf nach Stopanforderung nicht starten")
         self._children.start(intent)
+        source_stop_observed = False
 
         def should_stop() -> bool:
-            return (
-                user_canceled()
-                or budget_exhausted()
-                or (safety_failure is not None and safety_failure())
-                or not self._current_source(source_state(), intent)
-            )
+            nonlocal source_stop_observed
+            if (user_canceled() or budget_exhausted()
+                    or (safety_failure is not None and safety_failure())):
+                return True
+            if not self._current_source(source_state(), intent):
+                # Nav2 cancellation is asynchronous. The source may recover
+                # before its terminal result arrives; retain what actually
+                # caused this child's stop instead of misclassifying it as an
+                # unsolicited CANCELED result (and aborting the parent).
+                source_stop_observed = True
+                return True
+            return False
 
         try:
             navigation_status = navigate(candidate, should_stop)
@@ -171,13 +178,17 @@ class ExplorationNavigationSession:
 
         stop_cause = NavigationStopCause.NONE
         invalidates = False
-        if safety_failure is not None and safety_failure():
+        if navigation_status in {"cancel_failed", "error"}:
+            # No confirmed terminal child means a new goal cannot be sent.
+            stop_cause = NavigationStopCause.SYSTEM_FAILURE
+        elif safety_failure is not None and safety_failure():
             stop_cause = NavigationStopCause.SYSTEM_FAILURE
         elif user_canceled():
             stop_cause = NavigationStopCause.USER_CANCELED
         elif budget_exhausted():
             stop_cause = NavigationStopCause.BUDGET_EXHAUSTED
-        elif not self._current_source(final_source, intent):
+        elif (source_stop_observed
+              or not self._current_source(final_source, intent)):
             stop_cause = NavigationStopCause.SOURCE_INVALIDATED
             invalidates = True
         elif (navigation_status in {"aborted", "timeout", "rejected"}

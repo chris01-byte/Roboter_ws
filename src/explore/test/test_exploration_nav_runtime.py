@@ -135,6 +135,41 @@ def test_map_revision_change_cancels_before_late_success_can_progress():
     assert result.disposition.attempt is None
 
 
+def test_source_stop_remains_latched_when_source_recovers_before_nav2_cancel():
+    live = {'state': NavigationSourceState(CONTEXT, 7, True)}
+
+    def navigate(_candidate_value, should_stop):
+        live['state'] = NavigationSourceState(CONTEXT, 8, False)
+        assert should_stop() is True
+        live['state'] = NavigationSourceState(CONTEXT, 9, True)
+        return 'canceled'
+
+    result = ExplorationNavigationSession(CONTEXT).run(
+        _intent(), _candidate(), navigate, lambda: live['state'],
+        lambda: False, lambda: False)
+
+    assert result.navigation_status == 'canceled'
+    assert result.stop_cause is NavigationStopCause.SOURCE_INVALIDATED
+    assert result.disposition.state is ChildResultDispositionState.REEVALUATE
+    assert result.disposition.attempt is None
+
+
+def test_unconfirmed_cancel_never_replans_even_after_source_stop():
+    live = {'state': NavigationSourceState(CONTEXT, 7, True)}
+
+    def navigate(_candidate_value, should_stop):
+        live['state'] = NavigationSourceState(CONTEXT, 8, False)
+        assert should_stop() is True
+        return 'cancel_failed'
+
+    result = ExplorationNavigationSession(CONTEXT).run(
+        _intent(), _candidate(), navigate, lambda: live['state'],
+        lambda: False, lambda: False)
+
+    assert result.stop_cause is NavigationStopCause.SYSTEM_FAILURE
+    assert result.disposition.state is ChildResultDispositionState.ABORTED
+
+
 def test_newer_exactly_revalidated_source_does_not_cancel_child():
     live = {"value": NavigationSourceState(CONTEXT, 7, True)}
     stop_values = []

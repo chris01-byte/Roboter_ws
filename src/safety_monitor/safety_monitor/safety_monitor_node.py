@@ -128,17 +128,14 @@ class SafetyMonitor(Node):
         quality_ok = (
             msg.header.frame_id == 'base_link'
             and 0.0 <= age <= self._nf_timeout
-            and all(getattr(msg, f'{side}_quality') in (
-                NearFieldStatus.QUALITY_VALID_NEAR,
-                NearFieldStatus.QUALITY_VALID_FAR)
-                and getattr(msg, f'{side}_observed_columns') == 255
+            and all(getattr(msg, f'{side}_frame_healthy')
                 for side in ('left', 'right')))
         if not quality_ok:
             self._near_last_valid_at = None
             self._set_near_estop(True)
             return
         self._near_last_valid_at = time.monotonic()
-        # Nur gueltige (>=0) Distanzen betrachten; -1.0 = gueltig fern.
+        # -1.0 bedeutet kein Nahreturn, niemals positiv belegter Freiraum.
         dists = [d for d in (msg.min_dist_left, msg.min_dist_right, msg.min_dist_middle)
                  if math.isfinite(d) and d >= 0.0]
         too_close = any(d < self._nf_estop_dist for d in dists)

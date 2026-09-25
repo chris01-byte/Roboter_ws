@@ -1,5 +1,248 @@
 # Übertragung auf den realen Roboter
 
+## Aktuell: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
+
+PR #100, Branch `fix/we1-stage3-vl53-regression`. Aktiver
+`~/roboter_ws/install` unveraendert. Fuer motorlose Verifikation:
+`/opt/ros/humble`, bestehende WE-Overlays,
+`we1-stage3-frame-gap-r2/install` (VL53),
+`we1-stage3-cancel-latch-r1/install` (Explorer); `robot_navigation`
+weiter aus `we1-stage3-health-CVhWvH/install`. Das lokale, nach dem letzten
+Odometrie-Endpunkt transformierte Scope-Profil ist
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`.
+Nicht als neue physische Bereichsfreigabe oder als produktiven Install
+uebernehmen.
+
+Veraendert wurden nur Frame-Read-/Raster-Plausibilitaet und die
+asynchrone Cancel-Ursachenbindung. 971 Tests bestanden; motorlos 44/44
+gesunde Sensortripel, TF maximal 0,053 s, null Fahrbefehle, danach
+korrekter Einzel-PID-Shutdown 24/24 sauber. Der vorangegangene
+Terminal-Gruppenabbruch hatte KeyboardInterrupt-Tracebacks und zaehlt
+nicht. Reale Testspur: sechs Quellen-Cancels, nur 0,1445 m Bewegung,
+kein Vorbeifahren an der Barriere. `child_navigation_canceled`-Race ist
+softwareseitig korrigiert, nicht real belegt. Bei `w=-0,12 rad/s` meldete
+die Encoder-Odometrie zeitweise nur `-0,005...-0,04 rad/s` trotz etwa 34
+Motor-rpm: Antrieb/Encoder/Schlupf vor weiterer Fahrt gezielt pruefen.
+Keine Kalibrier- oder Sicherheitswerte auf Verdacht aendern. Stack aus,
+keine offenen Geraetehandles. Evidenz im [WE-STATUS](wohnungserkundung/STATUS.md).
+Nach einem rein formatierenden Rebuild des Explorer-Overlays versagte ein
+weiterer voller motorloser Start durch VL53-Exit 1 vor ersten Topics;
+Ursache nicht gesichert. Zwei isolierte VL53-Starts und ein weiterer voller
+Start gelangen, aber kein vollstaendiger Preflight des letzten Builds.
+Der genaue Fehler wurde danach im vollen Stack erfasst: rechter
+VL53-MCU-Boot-Poll, `VL53L5CXException: 0`. Separates oberstes Overlay
+`we1-stage3-vl53-boot-r1/install` wiederholt ausschliesslich diesen
+Initialisierungsversuch einmalig und raeumt bei erneutem Fehlschlag auf.
+974 Tests; zwei vollstaendige motorlose Preflights des exakten neuen
+Installstands (58/58 und 57/57 gesunde Tripel, null Fahrbefehle) und je
+24/24 saubere Shutdowns. Die Retry-Verzweigung wurde real nicht getroffen.
+Finaler geraetefreier Prozesspruefer: `frontier_replan`, `local_blocked`,
+echter Nav2-`explorer_bypass` und `stopped_bypass` bestanden, mit
+fortgesetzter Elternmission und maximal einem aktiven Nav2-Kind.
+**Keine Fahrt**, bis die im vorherigen Realversuch gemessene deutliche
+Motor-RPM-/Encoder-Odometrie-Abweichung geklaert und die A/B-Geometrie
+erneut passend vorbereitet ist; die Startkorrektur allein ist kein
+Umfahrnachweis.
+
+## Aktuell: realer Rundblick wegen VL53-Frame-Health beendet (25.09.2026)
+
+Der Nutzer korrigierte die folgende historische Aussage und bestätigte
+Abschaltung und Prüfung vor Ort sowie die Fahrfreigabe. Diese Auskunft ist
+kein ferntechnischer Hardwarebeweis. Exakt derselbe isolierte Health-Install
+und dasselbe Scope-Profil wurden verwendet; kein aktiver Install und keine
+Produktparameter geändert (Repository `3913079`, PR #100).
+
+Vorlauf bestanden: 57 gesunde VL53-Tripel je Seite, TF frisch, alle sechs
+Lifecycles aktiv, gemessene RPM null. Ein autonomer Explorerauftrag startete.
+Nach 13,267 s im Rundblick beide `frame_healthy=false`, Fahrtor `blocked`,
+Wächter-Cancel. Bei 16,082 s gemessene RPM mindestens zwei Sekunden null;
+Shutdown 24/24 sauber. Keine Umfahrung und keine Tests C/D. Ursache des
+beidseitigen Health-Abfalls noch offen; nicht durch gelockerte Grenzwerte
+oder wiederholte Fahrversuche umgehen. Stack bleibt aus. Details/Evidenz:
+[WE-STATUS](wohnungserkundung/STATUS.md).
+
+## Historisch: Sicherheitsstopp nach gegenteiliger Nutzeraussage (25.09.2026)
+
+**Keine weitere reale Fahrt oder Motoraktivierung.** Der Nutzer erklärte
+nach dem unten dokumentierten Teilversuch, am Roboter existiere überhaupt
+kein hardwired Not-Aus und die Motorversorgung könne nicht ausgeschaltet
+werden. Die frühere Vor-Ort-Bestätigung eines erreichbaren Not-Aus ist
+damit widersprüchlich und darf nicht mehr als Sicherheitsnachweis gelten.
+Die 0,18-m-Kurzfahrt bleibt eine technische Beobachtung, **keine gültige
+reale Sicherheitsabnahme**. Software-Cancel und ROS-Shutdown sind kein
+Ersatz für eine unabhängige Abschaltmöglichkeit. Der Stack ist gestoppt;
+kein RS485-Handle ist offen.
+
+Nach dieser Offenlegung nur passive Starts mit `dry_run=true`, RS485 aus,
+null Motorsollwerten. Eine neue 0,75 m hohe, 0,55 m breite Barriere etwa
+0,55 m vor dem Roboter wurde vom LiDAR frontal ab ca. 0,81 m Achsabstand
+gesehen; Nav2 berechnete im geladenen Scope rechts einen Diagnosepfad mit
+106 Posen. 59 gesunde VL53-Teilframes je Seite im Preflight, frische
+TF-/Karten-/LiDAR-Daten und aktive Safety/Nav2. Das ist **keine** reale
+Umfahrung und kein autonomes Explorerziel. Beide Starts endeten mit
+24/24 sauberen Kindern. Keine Produkt-/Sicherheitsparameter und kein
+aktiver Install wurden geändert. Weitere Fahrt erst nach Herstellung
+und Vor-Ort-Nachweis einer unabhängig wirksamen Hardware-Not-Aus- oder
+Motorstromtrennung; neue ausdrückliche Freigabe erst danach relevant.
+Siehe [WE-STATUS](wohnungserkundung/STATUS.md).
+
+## WE-1 Stufe 3: reale Kurzfahrt A, B ohne Route beendet (25.09.2026)
+
+PR #100, Quellstand `a710fe3`, ausschließlich isolierter Install
+`we1-stage3-health-CVhWvH/install`; der aktive Install blieb unverändert.
+Vor Ort wurden Not-Aus, menschen-/tierfreier Bereich und Motorstrom
+bestätigt. Ein lokales Scope-Profil band die frische Startkarte
+(`map`-Pose `(0,0,0)`) an `x=[-0,5;2,6]`, `y=[-0,8;0,8]`. Der
+motorisierte Vorlauf hatte 59 frische gesunde VL53-Tripel je Seite,
+frische LiDAR-/Karten-/TF-/Odom-Quellen, Nav2 und Collision Monitor aktiv,
+Safety frei, RS485 bereit und vor Auftrag 0 Fahr-/Motorwerte.
+
+Test A: Nach autonomer Zielwahl fuhr der Roboter 0,18 m laut Odometrie;
+Test-Cancel, Mission `canceled`, beide Motor-RPM 0 für mindestens 2 s.
+Test B: 0 m Translation, kein Nav2-Pfad. Die Explorer-Policy hatte nach
+Rundblick 10 offene, aber 0 zulässige Aufgaben (`no_current_raw_map_route`
+oder auf aktueller Revision nicht beobachtet). Der separate Wächter
+meldete später `guard_lost`; der Einzelgrund ist nicht gemessen.
+Die reale Barriere war nur 0,40 m hoch und 0,38 m breit, etwa 1 m leicht
+links vor der Ausgangspose: unter der 0,66-m-LiDAR-Ebene und damit kein
+gültiger Aufbau für den vorgesehenen frühen LiDAR-/Nav2-Umfahrnachweis.
+Keine Umfahrung oder Missionsfortsetzung nach Hindernis behaupten.
+C/D nicht gestartet. Kein Produktparameter und keine Sicherheitsgrenze
+geändert, kein Merge. Logs/Wächterbericht lokal unter
+`~/.local/share/amadeus/tests/stage3-real-*`, Scope-Profil unter
+`~/.local/share/amadeus/profiles/stage3-real-20260925-scope.yaml`.
+
+Der Stack ist mit SIGINT **nur an Launch-PID** beendet: 24/24 Kinder
+sauber, kein Traceback, Prozessrest oder offener I²C-/LiDAR-/RS485-Handle.
+**Motorversorgung wird nicht softwareseitig getrennt; nach der späteren
+Nutzeraussage ist physisches Ausschalten derzeit nicht möglich.** Erst die
+oben genannte Hardware-Sicherheitslücke schließen; danach Route/Policy und Wächtergrund
+motorlos diagnostizieren sowie eine mindestens 0,80 m hohe matte
+bleibende Barriere mit gemessenen Passagen vorbereiten. Danach erneuter
+motorloser Check und separate aktuelle Fahrfreigabe; B vor C/D.
+Stufe 3 bleibt GELB. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+## WE-1 Stufe 3: finaler Health-Kandidat motorlos bestanden (25.09.2026)
+
+PR #100, Produktcommit `e18a267`, finaler Gerätefrei-Prüfstand `b692c28`.
+Die aktuelle Produktvorgabe trennt technische Framegesundheit von
+Target-/Spaltenabdeckung. Die unten beschriebenen früheren
+Fahrvertragsblocker sind Historie, nicht der aktuelle Health-Vertrag.
+Gesunde vollständige Teilframes sperren nicht global; unbekannte Zonen
+bleiben ohne Clearingstrahlen. Reale gültige Nahpunkte, Juli-Filter,
+FLIPX, Sensorfrische und sämtliche Fahr-/Kollisionsgrenzen unverändert.
+
+**Ausschließlich isolierter Install, kein aktiver Install überschrieben:**
+`/home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install`.
+Enthält gemeinsam neu gebaut `robot_interfaces`, `vl53_near_field`,
+`robot_navigation`, `explore`, `safety_monitor`; Quell-/Install-SHA und
+VL53-/Nav2-Konfiguration stimmen überein. Statusformat enthält nun
+`left_frame_healthy`/`right_frame_healthy`; keine alten Consumer mischen.
+Die reale Prozessauflösung bestätigte diese fünf Pakete, Stage-3-complete
+für Basis/Manager und Stufe 1 für Bring-up. Vollständige Overlaykette im
+maßgeblichen [WE-STATUS](wohnungserkundung/STATUS.md).
+
+Mit unverändert physisch getrennter Motorversorgung zweimal gestartet:
+
+```bash
+source /home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install/setup.bash
+export ROS_DOMAIN_ID=217
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///home/p/.local/share/amadeus/releases/we1-10e1858074e7-r1/cyclonedds-local.xml
+unset ROS_LOCALHOST_ONLY
+ros2 launch robot_bringup app_mapping.launch.py active_drive:=false enable_auto_explore:=false start_web_gui:=false
+```
+
+Keine Action gesendet, kein Nichtnull-Fahrbefehl. Je ca. 15 s: 59/56
+stempelgleiche frische VL53-Tripel, beide Health true/PARTIAL/Maske 0;
+installierte Health-Prüfung auf realen Daten positiv. Kartenmanager ok,
+LiDAR/Karte/Odom/TF frisch (maximales TF-Alter 0,034 s), alle fünf
+Nav2-Lifecycles und Collision Monitor active, Safety false. Basis
+`dry_run=true`, `allow_rs485=false`, `rs485_ready=false`, alle Sollwerte 0.
+Jeweils 24/24 Kinder sauber nach SIGINT **nur an Launch-PID**, kein
+Traceback/Restprozess/offener Gerätehandle. Prüfberichte nur lokal unter
+`~/.local/share/amadeus/tests/stage3-health-hardware-cycle{1,2}.{json,log}`.
+
+Dieser passive Test ließ Explore-Opt-in und Scope-Verifikation bewusst
+aus; der alte R9-Scope ist nach Kartenneustart nicht gültig. Vor Fahrt
+vermessenen markierten Bereich/Startpose an aktuelle Karte binden und
+gesonderte aktuelle Fahrfreigabe einholen. Konkreter Vorschlag im
+WE-STATUS: 4,70 × 2,50 m, hohe unbelebte bleibende Barriere, separate
+Stopp-/Wand-/Eckaufstellung, begrenzte Mission und klare Abbruchbedingungen.
+Noch **keine reale Umfahr-/Stoppbefreiungsabnahme**, Stufe 3 insgesamt GELB.
+Motorloser Check bestanden; weitere Softwareentwicklung hier beendet.
+Rückfall: komplettes neues Overlay nicht sourcen; vorheriger Stand sperrt
+weiter streng. Das verworfene `we1-stage3-vl53-partial-PiRlgn` nicht nutzen.
+
+## Historie: realer VL53-A/B-Test, passive Zielsystemwiederholung (25.09.2026)
+
+Die echte matte Platte (~1 × 1 m, ~0,40 m vor beiden VL53) ergab links und
+rechts je 30/30 vollständige Rohframes mit 64/64 gültigen Targets,
+`target_status=5`, `nb_target_detected=1`, kleinen Sigma-Werten und je
+64 Original- sowie 8 Costmap-Punkten. Nach Entfernen der Platte lieferten
+dieselben Sensoren/Konfigurationen je 30 vollständige Frames, aber nur
+2–6 gültige Fernreturns pro Frame in der untersten Sensorzeile, 0 volle
+Spalten, `QUALITY_PARTIAL` und leere Nahwolken. Die Hardware ist damit
+plausibel; die neue globale 64/64-Forderung ist für freie Szenen nicht
+praktikabel und nicht real fahrabgenommen. Einzelne fehlende Targets
+bleiben **unbekannt**, niemals pauschal 0,60 m frei. Rohframes und
+Auswertung sind nur lokal unter
+`/home/p/.local/share/amadeus/tests/we-stage3-vl53-ab-20260925.json`.
+
+Das ausschließlich isolierte Präfix
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-partial-PiRlgn/install`
+enthält eine **verworfene** pauschale `PARTIAL`-Freigabe im Explorer/Fahrtor.
+Sie bestand gerätefreie Prozessfälle, besitzt aber keinen positiven
+Bewegungsraumbeleg; **nicht für Fahrt oder künftige Freigabe sourcen**.
+Der Quellbranch/PR #100 enthält diese Änderung nicht. Sein marking-only-
+ObstacleLayer-Fix ist davon unabhängig. Der aktive Roboter-Install und alle
+Fahr-/Sensorgrenzen blieben unangetastet.
+
+Mit physisch getrennter Motorversorgung wurden zwei vollständige passive
+Starts über das isolierte Präfix geprüft: beide VL53, LiDAR, TF, Rohkarte,
+Kartenmanager, Safety, Collision Monitor und Nav2 waren frisch/aktiv;
+`active_drive=false`, Explore-Opt-in aus, `dry_run=true`, RS485 aus,
+alle Fahr- und Motorsollwerte null. Je Start 24/24 saubere Kinder beim
+Einzel-PID-SIGINT, keine Tracebacks, Restprozesse oder Gerätehandles.
+Danach bestanden auch **zwei Starts ohne das verworfene Präfix** auf dem
+strengen PR-#100-Stand mit Explorer-Shutdown- und marking-only-Overlay:
+beide VL53 `PARTIAL`/Maske 0, Safety aus, Collision Monitor/Nav2 aktiv,
+acht Fahrbefehlskanäle ohne Nichtnullwert, Basis Dry-run/RS485 aus und
+jeweils 24/24 saubere Kinder ohne Rest-Handle. Der normale freie Raum
+bleibt mit diesem Stand am Fahrtor gesperrt, wie beabsichtigt.
+Der vorhandene R9-Scope ist nach SLAM-Neustart nicht mehr gültig und wurde
+deshalb nicht geladen; der Explorer meldete `scope_verified=false`.
+Der vollständige motorlose *Fahrbereitschafts*-Nachweis bleibt offen:
+Vor Fahrplanung sind aktueller Kartenframe/Startpose/enger Scope und ein
+positiver Beleg für den tatsächlich nötigen niedrigen und seitlichen
+Fahrraum erforderlich. LiDAR bei 0,66 m und im WE-Launch deaktivierte OAK
+ersetzen die unbekannten VL53-Zonen nicht. Keine reale Fahrt ohne gesonderte
+Vor-Ort-Fahrfreigabe. Rückfall für das Testpräfix: nicht sourcen.
+
+## WE-1 Stufe 3: VL53-Regression, Teilframe-Markierung (24.09.2026)
+
+Der neue, ausschließlich motorlose Direktlauf las je 20 vollständige
+Rohframes aus beiden echten VL53. Derselbe lokale Frame-Satz ergab mit dem
+historischen Nahfilter 0 Hindernispunkte im freien Nahbereich; die heutige
+Qualitätsauswertung fand je 220 gültige Fern-Zonen, aber 0 volle Spalten.
+Eine komplette Rohdatennachricht ist somit nicht gleich 64 gültigen
+Target-Returns. Die überwiegend unbeobachteten Zonen dürfen nicht als frei
+gelten. Eine große, matte unbelebte Testfläche im Sichtfeld beider Sensoren
+wurde noch nicht vermessen; die Hindernis-A/B-Prüfung fehlt.
+
+Ein separater Kandidatenbranch ergänzt die bestehende VL53-Originalwolke
+als **marking-only**-Quelle in beiden Nav2-ObstacleLayern. Dadurch kann ein
+gültiger Nahpunkt aus einem Teilframe ein Hindernis markieren; er kann keine
+unbekannten Zellen räumen. `robot_navigation` liegt nur im isolierten Overlay
+`/home/p/.local/share/amadeus/releases/we1-stage3-vl53-mark-bwVxEL/install`;
+der aktive Roboter-Install blieb unberührt. 969 Vertragstests und vier
+gerätefreie echte Nav2-Stage-3-Prozessfälle bestanden, darunter dauerhafte
+Umfahrung mit Explorer-Folgefortschritt und Stopp/Befreiung. Das Fahrtor
+bleibt wegen der nicht belegten Bewegungsraumabdeckung gesperrt. Rückfall:
+dieses letzte Overlay nicht sourcen. Keine reale Fahrt freigeben, bevor
+Sensorabdeckung, aktueller Scope und vollständiger motorloser Preflight
+positiv nachgewiesen sind.
+
 ## WE-1 Stufe 3: motorloser Zielsystembefund, Fahrt gesperrt (24.09.2026)
 
 Nach ausdrücklicher Vor-Ort-Freigabe wurde der vorhandene Stufe-3-Kandidat

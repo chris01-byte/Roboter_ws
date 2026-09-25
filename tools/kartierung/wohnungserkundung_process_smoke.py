@@ -428,6 +428,8 @@ class SyntheticWorld(Node):
         status.header.frame_id = 'base_link'
         status.left_quality = status.right_quality = quality
         status.left_observed_columns = status.right_observed_columns = coverage
+        status.left_frame_healthy = status.right_frame_healthy = (
+            quality != NearFieldStatus.QUALITY_UNKNOWN)
         self._vl53_status_pub.publish(status)
 
     def stop_telemetry(self):
