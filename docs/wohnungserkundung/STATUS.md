@@ -59,6 +59,12 @@ Paketauflösung, Hashes, Unterlagen und Rückfall stehen im
 
 ### Neue gerätefreie Evidenz
 
+Der erste Encoder-CI-Lauf (36195661720) scheiterte konkret an fehlendem
+`yaml` und `pytest` im bisherigen reinen unittest-Workflow. Testabhängigkeiten
+sind nun deklariert/installiert; `pytest` führt sowohl die bisherigen
+unittest-Klassen als auch die übernommenen pytest-Fälle aus. Kein Test
+entfernt oder gelockert. Folge-PR **#101** ist Draft auf #100, nicht gemergt.
+
 - **1185 Tests bestanden**: State-Estimation, Basis, Navigation, Explorer,
   VL53, Bringup und Safety; `git diff --check` sauber.
 - Echter historischer Bias-Adapter + echter `robot_localization`-EKF mit

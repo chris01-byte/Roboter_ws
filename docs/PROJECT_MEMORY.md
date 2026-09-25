@@ -47,6 +47,11 @@ RPM-/Positionsodom-Differenz sind gemessen; Antrieb/Encoder/Chassis-Ursache
 weiter offen. Kein HWT in dieser alten Fahrt, keine erfundenen HWT-Messungen
 und keine pauschale Schlupferklärung. Tabelle im [WE-STATUS](wohnungserkundung/STATUS.md).
 
+**CI-Integration:** Folge-PR #101 auf #100. Erster Encoder-Workflow meldete
+fehlendes `yaml`/`pytest`; Testumgebung und deklarierte YAML-Testabhängigkeit
+gezielt ergänzt, Aufruf auf pytest umgestellt, damit auch die übernommenen
+Fälle wirklich laufen. Keine Testabschwächung und keine Laufzeitänderung.
+
 **Hardware / Risiko / Rückfall:** Kein aktueller Gerätezugriff, keine Fahrt,
 keine Umstellung des aktiven Installs; fremde lokale Arbeit erhalten.
 Motorlose HWT-Zielsystemprüfung und reale Bewegung OFFEN. FC03 erfordert
