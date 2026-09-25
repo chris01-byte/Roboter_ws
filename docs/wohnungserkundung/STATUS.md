@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: GELB · Realversuch wegen VL53-Frame-Health abgebrochen · 2026-09-25**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: GELB · autonomer Umfahrnachweis fehlt · 2026-09-25**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -8,6 +8,91 @@ unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
 ## Stufe 3 – begrenzter Realversuch am 25.09.2026 (PR #100)
+
+### Aktuell: Frame-Luecke und asynchrones Cancel korrigiert, reale Umfahrung offen
+
+Die Rohframe-Diagnose mit beiden echten Sensoren ergab sporadische
+`get_ranging_data()`-`IndexError` und einmal ein zurueckgegebenes Raster mit
+252 statt 64 `nb_target_detected`-Eintraegen. Die bisherige Veroeffentlichung
+eines frisch gestempelten, beidseitig ungesunden Status bei einem fehlenden
+Read wurde korrigiert: Ein fehlender Read erzeugt kein neues Tripel; das
+unveraenderte 0,8-s-Frischetor sperrt bei anhaltender Luecke. Ein empfangener,
+aber semantisch ungueltiger Frame bleibt sofort `UNKNOWN`. Alle konfiguriert
+benoetigten Rohfelder werden vor Publikation auf 64 Eintraege geprueft.
+Keine Sensor-, Collision-, Footprint- oder Frischegrenze wurde veraendert.
+
+Isolierte Installkette fuer den erneuten motorlosen Vorlauf: ROS Humble,
+bestehende WE-Overlays, `we1-stage3-frame-gap-r2/install` fuer VL53 und
+`we1-stage3-cancel-latch-r1/install` fuer Explorer. `robot_navigation`
+loest weiter aus `we1-stage3-health-CVhWvH/install` auf; der aktive
+`~/roboter_ws/install` blieb unangetastet. Geraetefrei 971 Tests bestanden.
+Motorlos mit realen Sensoren: 44/44 frische gesunde VL53-Tripel, 3115
+positive Fahrtor-Qualitaetsproben, TF maximal 0,053 s, Karte/LiDAR frisch,
+sechs Nav2-Lifecycles aktiv, keine Nichtnull-Fahrbefehle, `dry_run=true`.
+Das nach dem 0,14-m-Realversuch per Odometrie transformierte und nochmals
+verkleinerte lokale Scope-Profil liegt nur unter
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`.
+Ein read-only Nav2-Diagnosepfad lag darin; das ist kein Fahr- oder
+Frontiernachweis. Der erste motorlose Shutdown wurde versehentlich per
+Terminal-Gruppensignal ausgeloest und erzeugte KeyboardInterrupt-Tracebacks.
+Der korrekt wiederholte Zyklus per SIGINT nur an Launch-PID 94752 beendete
+24/24 Kinder sauber, ohne Traceback, Prozessrest oder offene Geraetehandles.
+
+Im vorherigen begrenzten Realversuch mit automatischem `explore`-Auftrag
+waehlte der Explorer `task-frontier_000008` hinter der bleibenden, im LiDAR
+sichtbaren Barriere. Nav2 erhielt ein Kindziel. Sechs sichere Cancels bei
+Kartenquellen-Replans, nur 0,1445 m Odometrie-Translation und **keine
+Umfahrung**; schliesslich wurde die Mission faelschlich als
+`child_navigation_canceled` terminal beendet. Der konkrete Race-Befund:
+`should_stop()` sah eine ungueltige Quelle, aber beim spaeteren asynchronen
+Nav2-Cancel war sie wieder aktuell. Diese Ursache wird jetzt pro Kindziel
+gelatcht. `cancel_failed` bleibt harter Systemfehler; nie zwei Kindziele.
+Die Korrektur ist getestet und motorlos gebaut, aber noch nicht real
+abgenommen. Telemetrie zeigte zudem bei Fahrwunsch `w=-0,12 rad/s` und
+Motor-Feedback um 34 rpm zeitweise nur `meas_w=-0,005...-0,04 rad/s`;
+auch Vorwaertsbewegung blieb weit unter Soll. Ob dies Antrieb, Encoder oder
+Schlupf ist, wurde nicht gemessen. Keine Kalibrierung auf Verdacht aendern.
+
+Private Evidenz: `/home/p/.local/share/amadeus/tests/stage3-frame-gap-r2-rotated-real-b-witness.jsonl`,
+`stage3-frame-gap-r2-rotated-real-b.log`, motorloser Launch-Log
+`/home/p/.ros/log/2026-09-25-22-08-02-864605-p-desktop-94752/launch.log`.
+**Rest fuer Stufe 3:** Antriebs-/Odometrie-Abweichung und wiederholte
+Quellen-Replans gezielt aufloesen; dann A vor B/C/D mit gemessener
+Passagenbreite, gleichem autonomen Auftrag und bleibender Barriere.
+Kein weiterer Fahrversuch nur zum Ueberdecken dieser Befunde; kein Merge.
+
+Nach dem abschliessenden, nur formatierenden Rebuild mit identischem
+Quell-/Install-Hash `715b2a4` scheiterte ein weiterer motorloser
+Gesamtstart: Der VL53-Prozess starb nach 26 s mit Exit 1, es erschienen
+keine Near-Field-Topics, und der Preflight hatte 0 positive Fahrtorproben.
+Das Produkt blieb fail-closed, alle Fahrbefehle null. Die konkrete
+Exception ging im damaligen Terminalmitschnitt verloren und wird nicht
+erraten. Zwei anschliessende **isolierte** VL53-Starts waren nach je etwa
+19 s Initialisierung stabil bei rund 4 Hz und endeten sauber. Ein weiterer
+voller motorloser Start brachte den VL53-Knoten wieder hoch und endete
+24/24 sauber, jedoch ohne erneuten vollstaendigen Preflight. Der aktuelle
+Kandidat ist daher **nicht reproduzierbar motorlos abgenommen**. Auch
+dieser Startausfall ist vor einer Fahrt gezielt zu erfassen und zu beheben.
+Die dokumentierte fruehere Softwareabnahme wird dadurch nicht umgedeutet.
+
+Die reproduzierte Exception lautet genauer: rechter Sensor, `s.init()` ->
+`_poll_for_answer(1, 0, 0x06, 0xff, 0x00)` ->
+`VL53L5CXException: 0` nach dem 2-s-MCU-Boot-Poll. **Nur fuer diese
+gemessene Antwort** wiederholt der Sensorknoten die Initialisierung
+einmalig; bleibt sie fehlerhaft, startet er nicht und die Bewegung bleibt
+gesperrt. Fehlerhafte Treiberhandles und ein schon gestarteter linker
+Sensor werden beim Abbruch geschlossen/gestoppt. Neuer oberster isolierter
+Install: `we1-stage3-vl53-boot-r1/install`, ueber Frame-Gap- und
+Cancel-Latch-Overlay. Geraetefrei 974 Tests bestanden. Genau dieser
+Quell-/Installstand bestand danach zwei volle motorlose Preflights:
+58/58 und 57/57 gesunde VL53-Tripel, 4054 bzw. 4065 positive
+Qualitaetsproben, TF maximal 0,046 s, Karte/LiDAR frisch, alle sechs
+Nav2-Lifecycles aktiv, `dry_run=true`, null Fahrbefehle. Beide
+Einzel-PID-Shutdowns: 24/24 sauber, kein Traceback, Prozessrest oder
+Geraetehandle. Die neue Initialisierungswiederholung wurde real nicht
+ausgeloest und ist daher nur durch die gezielte Regression belegt.
+Der motorlose Start-/Stopp-Nachweis ist wieder erbracht; reale
+Antriebs-/Odometrie-Abweichung und Umfahrung bleiben offen.
 
 ### Aktueller Nachtrag: Vor-Ort-Korrektur und gemessener Sensorabbruch
 

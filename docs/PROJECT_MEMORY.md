@@ -17,6 +17,49 @@ Rückfallweg:
 
 ---
 
+## 2026-09-25 — VL53-Frame-Luecke und Cancel-Race minimal korrigiert
+
+**Entscheidung:** Keine Sicherheitsgrenze lockern und den aktiven Install
+nicht umstellen. Ein fehlender VL53-Rohread publiziert kein frisch datiertes
+Status-Tripel; 64er-Laengen der konfiguriert benoetigten Qualitaetsraster
+werden geprueft. Ein von einer ungueltigen Kartenquelle ausgeloester
+Nav2-Cancel behaelt seine Ursache bis zum Kindresultat; unbestaetigter
+Cancel bleibt Systemfehler.
+
+**Evidenz:** Echte CH341/VL53-Reads warfen `IndexError`; ein zurueckgegebenes
+`nb_target_detected`-Raster hatte 252 Eintraege. Beim begrenzten Realversuch
+gab es sechs Source-Replans, 0,1445 m Translation und keinen Umfahrnachweis;
+der letzte asynchrone Cancel wurde nach Quellen-Erholung faelschlich zum
+terminalen `child_navigation_canceled`. Die Antriebsrueckmeldung zeigte
+zeitweise Soll `w=-0,12 rad/s` und rund 34 Motor-rpm, aber Encoder-Odometrie
+nur `-0,005...-0,04 rad/s`; Ursache offen.
+
+**Test / Hardware:** 971 gerätefreie Tests; isolierte VL53-/Explorer-Overlays,
+motorlos 44/44 gesunde Tripel, frische TF/Karte/LiDAR, sechs Lifecycles,
+null Fahrbefehle, korrekt wiederholter Shutdown 24/24 sauber. Der erste
+motorlose Shutdown per Terminal-Gruppensignal erzeugte Tracebacks und ist
+explizit kein Abnahmenachweis. Keine weitere reale Fahrt nach dem Befund.
+
+**Risiko / Rueckfall:** Nach einem nur formatierenden Rebuild starb der
+VL53-Knoten in einem weiteren vollen motorlosen Start nach 26 s (Exit 1,
+0 Near-Field-Topics/Qualitaetsproben); genaue Exception nicht gesichert.
+Zwei isolierte Sensorstarts und ein weiterer voller Start gelangen, also
+kein genereller Hardwareausfall, aber keine reproduzierbare motorlose
+Abnahme dieses exakten Builds. Wiederholte Quellen-Replans und
+Antriebs-/Odometrie-Abweichung sind ebenfalls offen. Isolierte Overlays
+nicht sourcen, bisherigen aktiven Install beibehalten. Stufe 3 GELB, kein
+Merge/keine Stufe 4. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+**Nachtrag:** Der Fehler wurde im vollen motorlosen Stack reproduziert:
+rechter VL53, `s.init()`/MCU-Boot-Poll, `VL53L5CXException: 0`.
+Ein genau einmaliger Retry nur fuer diesen Fehler und Cleanup bei erneutem
+Scheitern sind jetzt im separaten VL53-Overlay. 974 Tests, danach zwei
+volle motorlose Preflights mit 58/58 und 57/57 gesunden Tripeln,
+null Fahrbefehlen und je 24/24 sauberem Shutdown. Kein Fahrtest nach
+dieser Aenderung; Antriebsabweichung und Umfahrung weiterhin offen.
+
+---
+
 ## 2026-09-25 — Vor-Ort-Korrektur akzeptiert, Realtest durch Frame-Health gestoppt
 
 Der Nutzer bestätigte nach seiner gegenteiligen Aussage ausdrücklich, dass

@@ -1,5 +1,46 @@
 # Übertragung auf den realen Roboter
 
+## Aktuell: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
+
+PR #100, Branch `fix/we1-stage3-vl53-regression`. Aktiver
+`~/roboter_ws/install` unveraendert. Fuer motorlose Verifikation:
+`/opt/ros/humble`, bestehende WE-Overlays,
+`we1-stage3-frame-gap-r2/install` (VL53),
+`we1-stage3-cancel-latch-r1/install` (Explorer); `robot_navigation`
+weiter aus `we1-stage3-health-CVhWvH/install`. Das lokale, nach dem letzten
+Odometrie-Endpunkt transformierte Scope-Profil ist
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`.
+Nicht als neue physische Bereichsfreigabe oder als produktiven Install
+uebernehmen.
+
+Veraendert wurden nur Frame-Read-/Raster-Plausibilitaet und die
+asynchrone Cancel-Ursachenbindung. 971 Tests bestanden; motorlos 44/44
+gesunde Sensortripel, TF maximal 0,053 s, null Fahrbefehle, danach
+korrekter Einzel-PID-Shutdown 24/24 sauber. Der vorangegangene
+Terminal-Gruppenabbruch hatte KeyboardInterrupt-Tracebacks und zaehlt
+nicht. Reale Testspur: sechs Quellen-Cancels, nur 0,1445 m Bewegung,
+kein Vorbeifahren an der Barriere. `child_navigation_canceled`-Race ist
+softwareseitig korrigiert, nicht real belegt. Bei `w=-0,12 rad/s` meldete
+die Encoder-Odometrie zeitweise nur `-0,005...-0,04 rad/s` trotz etwa 34
+Motor-rpm: Antrieb/Encoder/Schlupf vor weiterer Fahrt gezielt pruefen.
+Keine Kalibrier- oder Sicherheitswerte auf Verdacht aendern. Stack aus,
+keine offenen Geraetehandles. Evidenz im [WE-STATUS](wohnungserkundung/STATUS.md).
+Nach einem rein formatierenden Rebuild des Explorer-Overlays versagte ein
+weiterer voller motorloser Start durch VL53-Exit 1 vor ersten Topics;
+Ursache nicht gesichert. Zwei isolierte VL53-Starts und ein weiterer voller
+Start gelangen, aber kein vollstaendiger Preflight des letzten Builds.
+Der genaue Fehler wurde danach im vollen Stack erfasst: rechter
+VL53-MCU-Boot-Poll, `VL53L5CXException: 0`. Separates oberstes Overlay
+`we1-stage3-vl53-boot-r1/install` wiederholt ausschliesslich diesen
+Initialisierungsversuch einmalig und raeumt bei erneutem Fehlschlag auf.
+974 Tests; zwei vollstaendige motorlose Preflights des exakten neuen
+Installstands (58/58 und 57/57 gesunde Tripel, null Fahrbefehle) und je
+24/24 saubere Shutdowns. Die Retry-Verzweigung wurde real nicht getroffen.
+**Keine Fahrt**, bis die im vorherigen Realversuch gemessene deutliche
+Motor-RPM-/Encoder-Odometrie-Abweichung geklaert und die A/B-Geometrie
+erneut passend vorbereitet ist; die Startkorrektur allein ist kein
+Umfahrnachweis.
+
 ## Aktuell: realer Rundblick wegen VL53-Frame-Health beendet (25.09.2026)
 
 Der Nutzer korrigierte die folgende historische Aussage und bestätigte
