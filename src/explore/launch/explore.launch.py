@@ -19,6 +19,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
@@ -29,6 +30,8 @@ def generate_launch_description():
         pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
+        DeclareLaunchArgument('require_hwt601_fusion', default_value='false'),
+        DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
         DeclareLaunchArgument(
             'explore_params_overlay', default_value=params,
             description='Optionales zweites Parameterprofil; Standard '
@@ -39,6 +42,12 @@ def generate_launch_description():
             name='explore_node',
             output='screen',
             parameters=[
-                params, params_overlay, {'behavior_tree': safe_bt}],
+                params, params_overlay, {
+                    'behavior_tree': safe_bt,
+                    'require_hwt601_fusion': ParameterValue(
+                        LaunchConfiguration('require_hwt601_fusion'), value_type=bool),
+                    'hwt601_active_drive': ParameterValue(
+                        LaunchConfiguration('hwt601_active_drive'), value_type=bool),
+                }],
         )
     ])

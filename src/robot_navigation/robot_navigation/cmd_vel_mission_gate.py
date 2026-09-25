@@ -209,6 +209,15 @@ def localization_search_values_valid(
 class CmdVelMissionGate(Node):
     def __init__(self):
         super().__init__('cmd_vel_mission_gate')
+        require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
+        hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
+        self._hwt_guard = None
+        self._hwt_status_pub = None
+        if require_hwt:
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
+            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive)
+            self._hwt_status_pub = self.create_publisher(
+                String, '/fusion/hwt601/status_json', 10)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
         self.declare_parameter('output_topic', '/cmd_vel_nav')
         self.declare_parameter(
@@ -710,10 +719,23 @@ class CmdVelMissionGate(Node):
 
     def _publish(self):
         now = time.monotonic()
+        guard = getattr(self, '_hwt_guard', None)
+        hwt_failure = guard.failure() if guard is not None else None
+        if guard is not None:
+            self._hwt_status_pub.publish(String(data=json.dumps({
+                'sources_ready': guard.health.source_failure() is None,
+                # Necessary HWT condition only, never a replacement for
+                # mission, TF, VL53, scope or Collision authorization.
+                'hwt_motion_ready': hwt_failure is None,
+                'reason': hwt_failure or 'raw_sources_ready',
+                'active_drive': guard.health.active_drive,
+                'latched_fault': guard.health.latched_fault,
+            })))
         estop_clear = estop_motion_authorized(
             self._estop_clear, self._estop_time, now, self._estop_timeout)
         mission_authorized = (
             estop_clear
+            and hwt_failure is None
             and self._motion_tf_authorized()
             and self._mission_authorized(self._status, now)
             and now - self._status_time <= self._status_timeout
@@ -726,6 +748,7 @@ class CmdVelMissionGate(Node):
         )
         command_fresh = now - self._command_time <= self._command_timeout
         search_authorized = (estop_clear and self._search_authorized(now)
+                             and hwt_failure is None
                              and self._near_quality_authorized(now))
         if search_authorized:
             command = self._search_command

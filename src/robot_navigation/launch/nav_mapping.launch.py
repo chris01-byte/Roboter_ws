@@ -8,6 +8,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, TimerAction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
@@ -29,6 +30,8 @@ def generate_launch_description():
         'explore_params.yaml')
 
     active_drive = LaunchConfiguration('active_drive')
+    use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
@@ -53,6 +56,9 @@ def generate_launch_description():
                 output='screen',
                 parameters=[{
                     'require_localization': False,
+                    'require_hwt601_fusion': ParameterValue(
+                        use_hwt601_odometry, value_type=bool),
+                    'hwt601_active_drive': ParameterValue(active_drive, value_type=bool),
                     'allow_localization_search': False,
                     'allow_explore_mission': ParameterValue(
                         enable_auto_explore, value_type=bool),
@@ -96,6 +102,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
+        DeclareLaunchArgument('use_hwt601_odometry', default_value='false'),
+        DeclareLaunchArgument('operator_stationary_confirmed', default_value='false'),
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
             description='Explizites zweites Opt-in fuer echte Explore-Missionen '
@@ -117,8 +125,20 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'amadeus_lidar_bringup', 'slam_lidar.launch.py')),
+            condition=UnlessCondition(use_hwt601_odometry),
             launch_arguments={
                 'active_drive': active_drive,
+                'normalize_scan': normalize_scan,
+                'crop': crop,
+            }.items()),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(_launch_file(
+                'amadeus_lidar_bringup', 'slam_lidar_hwt601.launch.py')),
+            condition=IfCondition(use_hwt601_odometry),
+            launch_arguments={
+                'active_drive': active_drive,
+                'operator_stationary_confirmed': operator_stationary_confirmed,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
             }.items()),
@@ -143,6 +163,8 @@ def generate_launch_description():
                 'explore', 'explore.launch.py')),
             launch_arguments={
                 'explore_params_overlay': explore_params_overlay,
+                'require_hwt601_fusion': use_hwt601_odometry,
+                'hwt601_active_drive': active_drive,
             }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(

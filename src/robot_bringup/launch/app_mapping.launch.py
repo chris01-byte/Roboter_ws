@@ -19,6 +19,8 @@ def _launch_file(package, filename):
 
 def generate_launch_description():
     active_drive = LaunchConfiguration('active_drive')
+    use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
@@ -32,6 +34,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
+        DeclareLaunchArgument('use_hwt601_odometry', default_value='false'),
+        DeclareLaunchArgument('operator_stationary_confirmed', default_value='false'),
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
             description='Zweites Opt-in fuer App-Erkundung und Fahrtor.'),
@@ -56,6 +60,8 @@ def generate_launch_description():
                 'robot_navigation', 'nav_mapping.launch.py')),
             launch_arguments={
                 'active_drive': active_drive,
+                'use_hwt601_odometry': use_hwt601_odometry,
+                'operator_stationary_confirmed': operator_stationary_confirmed,
                 'enable_auto_explore': enable_auto_explore,
                 'normalize_scan': normalize_scan,
                 'crop': crop,

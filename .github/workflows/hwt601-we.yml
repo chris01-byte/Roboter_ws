@@ -1,0 +1,54 @@
+name: HWT601 WE integration
+
+on:
+  pull_request:
+    paths:
+      - 'src/robot_state_estimation/**'
+      - 'src/base_hardware/**'
+      - 'src/robot_navigation/**'
+      - 'src/robot_bringup/launch/app_mapping.launch.py'
+      - 'src/amadeus_lidar_bringup/**'
+      - 'src/explore/**'
+      - 'tools/sensorfusion/we_hwt601_process_smoke.py'
+      - '.github/workflows/hwt601-we.yml'
+  push:
+    branches: ['codex/we1-hwt601-fusion']
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base-jammy
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install declared test and filter runtime
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-pytest python3-yaml \
+            python3-numpy python3-scipy python3-serial python3-pip \
+            ros-humble-robot-localization ros-humble-tf2-ros ros-humble-sensor-msgs-py
+          python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+      - name: Build interface and historical HWT package
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --packages-select robot_interfaces base_hardware robot_state_estimation
+      - name: Test real source contract and launch ownership without devices
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          export PYTHONPATH="${PWD}/src/robot_state_estimation:${PWD}/src/base_hardware:${PYTHONPATH}"
+          python3 -m pytest -q src/robot_state_estimation/test src/base_hardware/test \
+            src/robot_navigation/test/test_hwt601_gate_integration.py
+      - name: Real EKF prediction must not mask missing raw sources
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          python3 tools/sensorfusion/we_hwt601_process_smoke.py --drop raw
+          python3 tools/sensorfusion/we_hwt601_process_smoke.py --drop wheel
