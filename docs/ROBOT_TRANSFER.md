@@ -1,5 +1,30 @@
 # Übertragung auf den realen Roboter
 
+## Sicherheitsstopp: kein Hardware-Not-Aus laut aktueller Nutzeraussage (25.09.2026)
+
+**Keine weitere reale Fahrt oder Motoraktivierung.** Der Nutzer erklärte
+nach dem unten dokumentierten Teilversuch, am Roboter existiere überhaupt
+kein hardwired Not-Aus und die Motorversorgung könne nicht ausgeschaltet
+werden. Die frühere Vor-Ort-Bestätigung eines erreichbaren Not-Aus ist
+damit widersprüchlich und darf nicht mehr als Sicherheitsnachweis gelten.
+Die 0,18-m-Kurzfahrt bleibt eine technische Beobachtung, **keine gültige
+reale Sicherheitsabnahme**. Software-Cancel und ROS-Shutdown sind kein
+Ersatz für eine unabhängige Abschaltmöglichkeit. Der Stack ist gestoppt;
+kein RS485-Handle ist offen.
+
+Nach dieser Offenlegung nur passive Starts mit `dry_run=true`, RS485 aus,
+null Motorsollwerten. Eine neue 0,75 m hohe, 0,55 m breite Barriere etwa
+0,55 m vor dem Roboter wurde vom LiDAR frontal ab ca. 0,81 m Achsabstand
+gesehen; Nav2 berechnete im geladenen Scope rechts einen Diagnosepfad mit
+106 Posen. 59 gesunde VL53-Teilframes je Seite im Preflight, frische
+TF-/Karten-/LiDAR-Daten und aktive Safety/Nav2. Das ist **keine** reale
+Umfahrung und kein autonomes Explorerziel. Beide Starts endeten mit
+24/24 sauberen Kindern. Keine Produkt-/Sicherheitsparameter und kein
+aktiver Install wurden geändert. Weitere Fahrt erst nach Herstellung
+und Vor-Ort-Nachweis einer unabhängig wirksamen Hardware-Not-Aus- oder
+Motorstromtrennung; neue ausdrückliche Freigabe erst danach relevant.
+Siehe [WE-STATUS](wohnungserkundung/STATUS.md).
+
 ## WE-1 Stufe 3: reale Kurzfahrt A, B ohne Route beendet (25.09.2026)
 
 PR #100, Quellstand `a710fe3`, ausschließlich isolierter Install
@@ -28,8 +53,9 @@ geändert, kein Merge. Logs/Wächterbericht lokal unter
 
 Der Stack ist mit SIGINT **nur an Launch-PID** beendet: 24/24 Kinder
 sauber, kein Traceback, Prozessrest oder offener I²C-/LiDAR-/RS485-Handle.
-**Motorversorgung wird nicht softwareseitig getrennt; der anwesende Nutzer
-muss sie physisch ausschalten.** Erst Route/Policy und Wächtergrund
+**Motorversorgung wird nicht softwareseitig getrennt; nach der späteren
+Nutzeraussage ist physisches Ausschalten derzeit nicht möglich.** Erst die
+oben genannte Hardware-Sicherheitslücke schließen; danach Route/Policy und Wächtergrund
 motorlos diagnostizieren sowie eine mindestens 0,80 m hohe matte
 bleibende Barriere mit gemessenen Passagen vorbereiten. Danach erneuter
 motorloser Check und separate aktuelle Fahrfreigabe; B vor C/D.

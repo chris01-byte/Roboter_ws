@@ -17,6 +17,34 @@ Rückfallweg:
 
 ---
 
+## 2026-09-25 — Sicherheitsvoraussetzung für weitere reale Fahrt widerlegt
+
+**Entscheidung:** Keine weitere Motoraktivierung oder Fahrt. Nach dem
+begrenzten Realversuch erklärte der Nutzer, es gebe am selbstgebauten
+Roboter überhaupt keinen hardwired Not-Aus und die Motorversorgung könne
+nicht ausgeschaltet werden. Das widerspricht der vorherigen ausdrücklichen
+Bestätigung eines erreichbaren Hardware-Not-Aus. Die technisch beobachtete
+Kurzfahrt ist deshalb **keine gültige Sicherheitsabnahme**. Software-Cancel
+und ROS-Shutdown ersetzen keine unabhängig wirksame Abschaltmöglichkeit.
+
+**Beobachtete Evidenz:** Nach der Offenlegung nur passive Starts mit
+`dry_run=true`, `allow_rs485=false`, null Motorsollwerten. Neue bleibende
+Barriere: etwa 0,55 m vor dem Roboter, 0,55 m breit, 0,75 m hoch. LiDAR
+maß frontale Treffer ab etwa 0,81 m Achsabstand; im geladenen Scope
+berechnete Nav2 einen Diagnosepfad rechts (106 Posen). Beide VL53,
+Karte/TF/Safety/Nav2 waren frisch beziehungsweise aktiv; der Preflight
+hatte 59 gesunde Teilframes je Seite. Das beweist keine autonome
+Explorer-Umfahrung. Beide passiven Starts: je 24/24 saubere Kinder,
+kein RS485-Handle nach Shutdown. Der Stack ist aus.
+
+**Betroffen / Rückfall / Rest:** Keine Produktparameter und kein aktiver
+Install geändert; Belege im [WE-STATUS](wohnungserkundung/STATUS.md).
+Reale Fahrt erst nach Herstellung und Vor-Ort-Nachweis einer unabhängig
+wirksamen Hardware-Not-Aus-/Motorstromtrennung. Bis dahin Softwarestand
+isoliert lassen, keine Stufe 4 und kein Merge.
+
+---
+
 ## 2026-09-25 — erste reale Stufe-3-Kurzfahrt, Umfahrung noch nicht belegt
 
 **Entscheidung:** Stufe 3 bleibt GELB; nach Test A keinen Stopp-/Wandfall

@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · reale Kurzfahrt A bestanden, Umfahrung offen · 2026-09-25**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: BLOCKIERT FÜR REALE FAHRT · Hardware-Not-Aus fehlt laut aktueller Nutzeraussage · 2026-09-25**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -9,9 +9,32 @@ unverändert. Der vorherige M3/U-Stand ist im
 
 ## Stufe 3 – begrenzter Realversuch am 25.09.2026 (PR #100)
 
-Der anwesende Nutzer gab die Fahrt mit erreichbarem hardwired Not-Aus,
-menschen-/tierfreiem Bereich und eingeschalteter Motorversorgung ausdrücklich
-frei. Ausgangsstand war `a710fe3` auf `fix/we1-stage3-vl53-regression`,
+**Sicherheitskorrektur nach dem Versuch:** Zunächst wurde ein erreichbarer
+hardwired Not-Aus ausdrücklich bestätigt. Später erklärte der anwesende
+Nutzer, ein solcher existiere überhaupt nicht und die Motorversorgung könne
+nicht ausgeschaltet werden. Die frühere Bestätigung ist daher kein belastbarer
+Sicherheitsnachweis. Die technisch beobachtete Kurzfahrt A ist **keine
+gültige reale Sicherheitsabnahme**. Ab dieser Mitteilung: keine weitere
+Motoraktivierung oder Fahrt, bis eine unabhängig wirksame, vor Ort geprüfte
+Not-Aus-/Trennmöglichkeit vorhanden ist. Software-Cancel und ROS-Shutdown
+ersetzen sie nicht. Der Stack ist aus; am RS485 liegt kein Prozesshandle.
+
+Nach der früheren Teilfahrt wurde eine neue, bleibende Barriere gemeldet:
+Vorderkante ungefähr 0,55 m vor dem Roboter, 0,55 m breit, 0,75 m hoch.
+**Nur ohne Fahrbefehl** wurde dieser Aufbau mit demselben isolierten
+Kandidaten geprüft: LiDAR lieferte frontale Treffer ab etwa 0,81 m von
+der Roboterachse; beide VL53 lieferten 59/59 frische gesunde Teilframes
+im 15-s-Preflight, TF/Karte/Nav2/Safety waren frisch/aktiv. Nav2 berechnete
+im geladenen Scope einen Diagnosepfad rechts zu `(1,50;-0,35)` mit 106
+Posen. Das ist weder autonome Frontierwahl noch reale Umfahrung.
+`dry_run=true`, `allow_rs485=false`, sämtliche Motorwerte 0; beide
+passiven Starts endeten mit 24/24 sauberen Kindern und ohne offene
+Gerätehandles. Keine weitere reale Fahrt erfolgte nach der Offenlegung
+des fehlenden Hardware-Not-Aus.
+
+Vor dem Versuch gab der Nutzer die Fahrt unter der damaligen Angabe eines
+erreichbaren Not-Aus, menschen-/tierfreiem Bereich und eingeschalteter
+Motorversorgung ausdrücklich frei. Ausgangsstand war `a710fe3` auf `fix/we1-stage3-vl53-regression`,
 isolierter Health-Install wie unten; aktiver Roboter-Install unverändert.
 Bestätigt waren ungefähr 3 m freier Vorraum, je 1 m seitlich, mindestens
 0,5 m hinten und ein freier 0,42-m-Schwenkradius. Die unbelebte bleibende
@@ -37,7 +60,7 @@ Scope-Parameter korrekt, RS485 bereit, sämtliche Fahr- und Motorsollwerte 0.
 
 | Reihenfolge | Reales Ergebnis |
 |---|---|
-| A – kurze freie Fahrt/Stopp | Erster Wächter brach bereits nach 95 s Rundblick kontrolliert ab; 0 m Translation. Wiederholung mit ausschließlich längerem **Testwächter** (160 s, keine Produktparameteränderung): Explorer wählte selbst `(0,30;0,30)` im Kartenframe, Nav2 erhielt genau ein Ziel, Odometrie maß 0,18 m Translation, der Wächter cancelte, Mission `canceled`, beide Motor-RPM nach 2 s bestätigt 0. A bestanden. |
+| A – kurze freie Fahrt/Stopp | Erster Wächter brach bereits nach 95 s Rundblick kontrolliert ab; 0 m Translation. Wiederholung mit ausschließlich längerem **Testwächter** (160 s, keine Produktparameteränderung): Explorer wählte selbst `(0,30;0,30)` im Kartenframe, Nav2 erhielt genau ein Ziel, Odometrie maß 0,18 m Translation, der Wächter cancelte, Mission `canceled`, beide Motor-RPM nach 2 s bestätigt 0. Technischer Stopp beobachtet; wegen des später offenbarten fehlenden Hardware-Not-Aus **nicht als sichere Abnahme gültig**. |
 | B – bleibende Barriere/frühe Umfahrung | Nach erneutem Rundblick blieb die Mission in `we_initial_scan`/Aufgabenevidenz; Policy hatte bei Kartenrevision 700 zehn offene Aufgaben, aber **0 zulässige**: sechs `temporarily_blocked` mit `no_current_raw_map_route`, vier `unknown`/`frontier_not_observed_in_current_revision`. `goal_candidate` war `unavailable/withheld_by_current_policy`; kein Nav2-Pfad, kein Fahrbefehl in Translation und 0 m Odometrieverschiebung. VL53 meldeten während des Rundblicks zwar Punkte (maximal 36 links/39 rechts je Frame), deren Zuordnung zur niedrigen Barriere ist nicht belegt. Nach 128 s löste der separate Wächter zusätzlich `guard_lost` aus; welche seiner Frische-/Health-/Safety-Eingangsbedingungen genau abfiel, wurde in diesem Lauf nicht einzeln protokolliert und wird **nicht** als nachgewiesener Sensorfehler ausgegeben. Auftrag sicher gecancelt; 0 RPM. B nicht bestanden. |
 | C/D – Stoppbefreiung/Wand-Ecke | Nicht gestartet, da B und der dafür festgelegte LiDAR-sichtbare Aufbau nicht bestanden waren. |
 
@@ -47,13 +70,16 @@ blieben die Sollwerte 0. Bei B blieb der Antrieb nach dem Rundblick auf
 `TIMEOUT-STOP`. Beim Schluss wurde **nur** der Launch-PID signalisiert:
 24/24 Kinder sauber beendet, keine Tracebacks, Restprozesse oder offenen
 CH341-/LiDAR-/RS485-Handles. Motorstrom wurde durch Software nicht
-ausgeschaltet; die anwesende Person wurde aufgefordert, ihn physisch zu
-trennen. Logs und ausführliche Wächterberichte liegen ausschließlich lokal
+ausgeschaltet; die anwesende Person erklärte nach entsprechender
+Aufforderung, dass sie ihn nicht ausschalten könne. Logs und ausführliche
+Wächterberichte liegen ausschließlich lokal
 unter `~/.local/share/amadeus/tests/stage3-real-*` und enthalten keine
 eingecheckte Wohnungskarte.
 
-**Nächste Abnahme, kein grüner Status:** Erst einen mindestens 0,80 m hohen,
-matten, unbelebten und bleibenden Körper mit tatsächlich vermessener
+**Nächste Abnahme, kein grüner Status:** Zuerst unabhängig wirksamen
+Hardware-Not-Aus beziehungsweise sichere Motorstromtrennung herstellen
+und vor Ort nachweisen; vorher **keine reale Fahrt**. Dann einen
+nachweislich LiDAR-sichtbaren matten, unbelebten und bleibenden Körper mit tatsächlich vermessener
 Position/Umfahrbreite im aktuellen Kartenframe vorbereiten; davor die
 fehlende Route im engen verifizierten Scope und den konkret ausgefallenen
 Wächtereingang gerätefrei/motorlos diagnostizieren. Keine Scope- oder
