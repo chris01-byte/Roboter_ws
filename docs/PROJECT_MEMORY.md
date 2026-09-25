@@ -57,6 +57,11 @@ Scheitern sind jetzt im separaten VL53-Overlay. 974 Tests, danach zwei
 volle motorlose Preflights mit 58/58 und 57/57 gesunden Tripeln,
 null Fahrbefehlen und je 24/24 sauberem Shutdown. Kein Fahrtest nach
 dieser Aenderung; Antriebsabweichung und Umfahrung weiterhin offen.
+Die geraetefreien Gesamtprozessfaelle `frontier_replan`, `local_blocked`,
+echter Nav2-`explorer_bypass` und `stopped_bypass` wurden mit dem finalen
+Overlay erneut bestanden; die Barriere blieb in den Bypassfaellen stehen
+und die Elternmission setzte nach dem Kindziel fort. Reale Umfahrung ist
+dadurch nicht ersetzt.
 
 ---
 

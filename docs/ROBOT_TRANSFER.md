@@ -36,6 +36,9 @@ Initialisierungsversuch einmalig und raeumt bei erneutem Fehlschlag auf.
 974 Tests; zwei vollstaendige motorlose Preflights des exakten neuen
 Installstands (58/58 und 57/57 gesunde Tripel, null Fahrbefehle) und je
 24/24 saubere Shutdowns. Die Retry-Verzweigung wurde real nicht getroffen.
+Finaler geraetefreier Prozesspruefer: `frontier_replan`, `local_blocked`,
+echter Nav2-`explorer_bypass` und `stopped_bypass` bestanden, mit
+fortgesetzter Elternmission und maximal einem aktiven Nav2-Kind.
 **Keine Fahrt**, bis die im vorherigen Realversuch gemessene deutliche
 Motor-RPM-/Encoder-Odometrie-Abweichung geklaert und die A/B-Geometrie
 erneut passend vorbereitet ist; die Startkorrektur allein ist kein

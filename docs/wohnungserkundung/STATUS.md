@@ -93,6 +93,15 @@ Geraetehandle. Die neue Initialisierungswiederholung wurde real nicht
 ausgeloest und ist daher nur durch die gezielte Regression belegt.
 Der motorlose Start-/Stopp-Nachweis ist wieder erbracht; reale
 Antriebs-/Odometrie-Abweichung und Umfahrung bleiben offen.
+Mit genau dieser Overlaykette wurden die vorhandenen geraetefreien
+Gesamtprozesspruefer erneut ausgefuehrt: `frontier_replan` (Nav2-Kind A
+cancel, Kind B success, Elternmission laeuft weiter, maximal ein aktives
+Kind), `local_blocked` (anderes Ziel erfolgreich, blockierte Aufgabe
+spaeter wieder bewertet), echter Nav2-`explorer_bypass` (bleibende
+Barriere sicher umfahren, naechstes Ziel erfolgreich) und
+`stopped_bypass` (Controller-Stopp erkannt, danach autonome sichere
+Umfahrung und weiteres Ziel) bestanden. Das ist Softwareevidenz,
+**keine reale Stufe-3-Abnahme**.
 
 ### Aktueller Nachtrag: Vor-Ort-Korrektur und gemessener Sensorabbruch
 
