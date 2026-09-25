@@ -1,5 +1,40 @@
 # Übertragung auf den realen Roboter
 
+## WE-1 Stufe 3: reale Kurzfahrt A, B ohne Route beendet (25.09.2026)
+
+PR #100, Quellstand `a710fe3`, ausschließlich isolierter Install
+`we1-stage3-health-CVhWvH/install`; der aktive Install blieb unverändert.
+Vor Ort wurden Not-Aus, menschen-/tierfreier Bereich und Motorstrom
+bestätigt. Ein lokales Scope-Profil band die frische Startkarte
+(`map`-Pose `(0,0,0)`) an `x=[-0,5;2,6]`, `y=[-0,8;0,8]`. Der
+motorisierte Vorlauf hatte 59 frische gesunde VL53-Tripel je Seite,
+frische LiDAR-/Karten-/TF-/Odom-Quellen, Nav2 und Collision Monitor aktiv,
+Safety frei, RS485 bereit und vor Auftrag 0 Fahr-/Motorwerte.
+
+Test A: Nach autonomer Zielwahl fuhr der Roboter 0,18 m laut Odometrie;
+Test-Cancel, Mission `canceled`, beide Motor-RPM 0 für mindestens 2 s.
+Test B: 0 m Translation, kein Nav2-Pfad. Die Explorer-Policy hatte nach
+Rundblick 10 offene, aber 0 zulässige Aufgaben (`no_current_raw_map_route`
+oder auf aktueller Revision nicht beobachtet). Der separate Wächter
+meldete später `guard_lost`; der Einzelgrund ist nicht gemessen.
+Die reale Barriere war nur 0,40 m hoch und 0,38 m breit, etwa 1 m leicht
+links vor der Ausgangspose: unter der 0,66-m-LiDAR-Ebene und damit kein
+gültiger Aufbau für den vorgesehenen frühen LiDAR-/Nav2-Umfahrnachweis.
+Keine Umfahrung oder Missionsfortsetzung nach Hindernis behaupten.
+C/D nicht gestartet. Kein Produktparameter und keine Sicherheitsgrenze
+geändert, kein Merge. Logs/Wächterbericht lokal unter
+`~/.local/share/amadeus/tests/stage3-real-*`, Scope-Profil unter
+`~/.local/share/amadeus/profiles/stage3-real-20260925-scope.yaml`.
+
+Der Stack ist mit SIGINT **nur an Launch-PID** beendet: 24/24 Kinder
+sauber, kein Traceback, Prozessrest oder offener I²C-/LiDAR-/RS485-Handle.
+**Motorversorgung wird nicht softwareseitig getrennt; der anwesende Nutzer
+muss sie physisch ausschalten.** Erst Route/Policy und Wächtergrund
+motorlos diagnostizieren sowie eine mindestens 0,80 m hohe matte
+bleibende Barriere mit gemessenen Passagen vorbereiten. Danach erneuter
+motorloser Check und separate aktuelle Fahrfreigabe; B vor C/D.
+Stufe 3 bleibt GELB. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+
 ## WE-1 Stufe 3: finaler Health-Kandidat motorlos bestanden (25.09.2026)
 
 PR #100, Produktcommit `e18a267`, finaler Gerätefrei-Prüfstand `b692c28`.

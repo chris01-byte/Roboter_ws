@@ -17,6 +17,39 @@ Rückfallweg:
 
 ---
 
+## 2026-09-25 — erste reale Stufe-3-Kurzfahrt, Umfahrung noch nicht belegt
+
+**Entscheidung:** Stufe 3 bleibt GELB; nach Test A keinen Stopp-/Wandfall
+vorziehen. PR #100/`a710fe3`, isolierter Health-Install, nur ein Stack.
+
+**Beobachtete Evidenz:** Mit vor Ort freigegebenem hardwired Not-Aus und
+Motorstrom, 3 m Vorraum, je ca. 1 m seitlich und lokal gebundenem Scope
+`x=[-0,5;2,6]`, `y=[-0,8;0,8]` bestanden Sensor-/TF-/Safety-/Nav2-Preflight.
+Der autonom vom Explorer gewählte Nav2-Auftrag fuhr 0,18 m laut Odometrie;
+expliziter Test-Cancel stoppte beide Motoren mit 0 RPM. Das ist Test A,
+**keine** Hindernisumfahrung. Im anschließenden B-Rundblick entstanden
+10 offene Aufgaben, aber 0 zulässige: sechs `no_current_raw_map_route`,
+vier auf der aktuellen Revision nicht beobachtet; kein Nav2-Pfad und
+0 m Translation. Der separate Wächter cancelte nach 128 s zusätzlich mit
+`guard_lost`, ohne dass sein konkreter Einzelgrund aufgezeichnet wurde.
+Keine unbelegte Sensorursache behaupten. Die 0,40 m hohe, 0,38 m breite
+Barriere liegt unter der LiDAR-Höhe 0,66 m und ist kein gültiger Aufbau
+für den vorher definierten frühen LiDAR-/Nav2-Umfahrtest mit mindestens
+0,80 m Höhe. Sie wurde nicht entfernt. 24/24 Shutdown-Kinder sauber,
+keine Tracebacks oder offenen Gerätehandles.
+
+**Betroffene Dateien und Hardware / Rest / Rückfall:** Keine Produktdatei,
+kein aktiver Install und keine Sicherheitsgrenze geändert. Nur lokales
+Scope-Profil und lokale Wächterlogs unter `~/.local/share/amadeus/`.
+Motorversorgung muss der anwesende Nutzer wieder physisch trennen.
+Vor weiterer Fahrt Route/Policy im gemessenen Scope und den Wächtergrund
+motorlos aufklären, LiDAR-sichtbare matte Barriere und Passagen vermessen,
+erneut vor Ort freigeben; dann B vor C/D. Vollständige Evidenz im
+[WE-STATUS](wohnungserkundung/STATUS.md). Rückfall: isoliertes Overlay
+nicht sourcen, Stack ist bereits gestoppt. Kein Merge und keine Stufe 4.
+
+---
+
 ## 2026-09-25 — finaler VL53-Health-Vertrag, motorlos zweimal bestanden
 
 **Entscheidung:** Nach ausdrücklicher Präzisierung der Produktrolle VL53

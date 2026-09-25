@@ -1,19 +1,74 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · kein neuer realer Fahrversuch · 2026-09-25**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: TEILWEISE / NACHWEIS FEHLT · reale Kurzfahrt A bestanden, Umfahrung offen · 2026-09-25**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
+## Stufe 3 – begrenzter Realversuch am 25.09.2026 (PR #100)
+
+Der anwesende Nutzer gab die Fahrt mit erreichbarem hardwired Not-Aus,
+menschen-/tierfreiem Bereich und eingeschalteter Motorversorgung ausdrücklich
+frei. Ausgangsstand war `a710fe3` auf `fix/we1-stage3-vl53-regression`,
+isolierter Health-Install wie unten; aktiver Roboter-Install unverändert.
+Bestätigt waren ungefähr 3 m freier Vorraum, je 1 m seitlich, mindestens
+0,5 m hinten und ein freier 0,42-m-Schwenkradius. Die unbelebte bleibende
+Barriere stand etwa 1 m leicht links vor dem Roboter, 0,38 m breit und
+**nur 0,40 m hoch**. Das ist unter der LiDAR-Ebene von 0,66 m und erfüllt
+den unten festgelegten mindestens 0,80 m hohen Aufbau für eine eindeutige
+frühe LiDAR-/Nav2-Umfahrung **nicht**. Kein Hindernis wurde während des
+Versuchs entfernt oder umgesetzt.
+
+Die neue Karte startete bei `map`-Pose `(0,0,0)`; privates Scope-Polygon
+`x=[-0,5;2,6]`, `y=[-0,8;0,8]` mit ID
+`stage3-local-scope-20260925` blieb innerhalb der gemeldeten freien Maße.
+Profil nur lokal unter
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-scope.yaml`:
+maximal zwei Frontierziele, 540 s Gesamtbudget, Coverage aus; keine
+Sensor-, Footprint-, Collision-, Geschwindigkeits- oder Recoverygrenze
+geändert. Einzelner Start `app_mapping.launch.py active_drive:=true
+enable_auto_explore:=true start_web_gui:=false` über das isolierte
+Health-Präfix, Domain 217. Vor dem ersten Auftrag: 59 frische gesunde
+VL53-Tripel je Seite in 15 s, LiDAR/Karte/Odom/TF frisch, Kartenmanager
+`ok`, alle Nav2-Lifecycles und Collision Monitor aktiv, Safety frei,
+Scope-Parameter korrekt, RS485 bereit, sämtliche Fahr- und Motorsollwerte 0.
+
+| Reihenfolge | Reales Ergebnis |
+|---|---|
+| A – kurze freie Fahrt/Stopp | Erster Wächter brach bereits nach 95 s Rundblick kontrolliert ab; 0 m Translation. Wiederholung mit ausschließlich längerem **Testwächter** (160 s, keine Produktparameteränderung): Explorer wählte selbst `(0,30;0,30)` im Kartenframe, Nav2 erhielt genau ein Ziel, Odometrie maß 0,18 m Translation, der Wächter cancelte, Mission `canceled`, beide Motor-RPM nach 2 s bestätigt 0. A bestanden. |
+| B – bleibende Barriere/frühe Umfahrung | Nach erneutem Rundblick blieb die Mission in `we_initial_scan`/Aufgabenevidenz; Policy hatte bei Kartenrevision 700 zehn offene Aufgaben, aber **0 zulässige**: sechs `temporarily_blocked` mit `no_current_raw_map_route`, vier `unknown`/`frontier_not_observed_in_current_revision`. `goal_candidate` war `unavailable/withheld_by_current_policy`; kein Nav2-Pfad, kein Fahrbefehl in Translation und 0 m Odometrieverschiebung. VL53 meldeten während des Rundblicks zwar Punkte (maximal 36 links/39 rechts je Frame), deren Zuordnung zur niedrigen Barriere ist nicht belegt. Nach 128 s löste der separate Wächter zusätzlich `guard_lost` aus; welche seiner Frische-/Health-/Safety-Eingangsbedingungen genau abfiel, wurde in diesem Lauf nicht einzeln protokolliert und wird **nicht** als nachgewiesener Sensorfehler ausgegeben. Auftrag sicher gecancelt; 0 RPM. B nicht bestanden. |
+| C/D – Stoppbefreiung/Wand-Ecke | Nicht gestartet, da B und der dafür festgelegte LiDAR-sichtbare Aufbau nicht bestanden waren. |
+
+Der kurzzeitige Fahrtorwechsel auf `blocked` zwischen Rundblick und dem
+ersten Nav2-Ziel in A dauerte etwa 2 s und endete mit `mission`; dabei
+blieben die Sollwerte 0. Bei B blieb der Antrieb nach dem Rundblick auf
+`TIMEOUT-STOP`. Beim Schluss wurde **nur** der Launch-PID signalisiert:
+24/24 Kinder sauber beendet, keine Tracebacks, Restprozesse oder offenen
+CH341-/LiDAR-/RS485-Handles. Motorstrom wurde durch Software nicht
+ausgeschaltet; die anwesende Person wurde aufgefordert, ihn physisch zu
+trennen. Logs und ausführliche Wächterberichte liegen ausschließlich lokal
+unter `~/.local/share/amadeus/tests/stage3-real-*` und enthalten keine
+eingecheckte Wohnungskarte.
+
+**Nächste Abnahme, kein grüner Status:** Erst einen mindestens 0,80 m hohen,
+matten, unbelebten und bleibenden Körper mit tatsächlich vermessener
+Position/Umfahrbreite im aktuellen Kartenframe vorbereiten; davor die
+fehlende Route im engen verifizierten Scope und den konkret ausgefallenen
+Wächtereingang gerätefrei/motorlos diagnostizieren. Keine Scope- oder
+Sicherheitsgrenze bloß zum Bestehen erweitern. Dann neu motorlos prüfen,
+separat vor Ort freigeben und B vor C/D nachweisen. Keine Stufe 4, kein Merge.
+
 ## Stufe 3 – finaler Frame-Health-Vertrag und motorloser Zielsystemcheck (25.09.2026)
 
 **Motorloser Zielsystemcheck BESTANDEN; Softwareentwicklung dieses
 Abschlussauftrags beendet. Reale Abnahme weiterhin offen, Stufe 3 insgesamt
-GELB.** PR #100 auf `fix/we1-stage3-vl53-regression` ergänzt PR #99
+GELB.** Dieser Abschnitt beschreibt den Stand **vor** dem Realversuch oben.
+PR #100 auf `fix/we1-stage3-vl53-regression` ergänzt PR #99
 `e864b6e`: Produktänderung `e18a267`, finaler Prüfstand `b692c28`.
-Kein Merge, keine Fahrt, keine Umstellung des aktiven Roboter-Installs.
+Damals kein Merge und keine Fahrt; der aktive Roboter-Install blieb auch
+beim späteren Realversuch unverändert.
 
 ### Abschließende Produktentscheidung
 
@@ -134,7 +189,7 @@ Logs/JSON ausschließlich lokal unter `~/.local/share/amadeus/tests/`
 (`stage3-health-*`) und ROS-Logs `2026-09-25-16-32-59-471407-p-desktop-120726`
 bzw. `2026-09-25-16-34-37-015325-p-desktop-122209`.
 
-### Nächster erlaubter Schritt: separater realer Fahrtest
+### Vor dem ersten Realversuch vorgeschlagener Aufbau
 
 Der passive Check ließ Explore-Opt-in **aus** und Scope **ungebunden**
 (`accessible_scope_verified=false`, leere Scope-ID). Das bestätigt die
@@ -163,8 +218,8 @@ kontrolliert beenden. Abbruch bei Kontaktgefahr, unerwarteter Bewegung,
 Scope-/Footprintverletzung, Quellen-/TF-/Safety-Fehler, Personen/Tieren
 im Bereich oder unklarer Reaktion. Keine blinde Drehung/Rückwärtsfahrt.
 
-**Reale Fahrt erst nach separater aktueller ausdrücklicher Freigabe.**
-Bis dahin Motorversorgung getrennt. Die motorlosen/Software-Nachweise
+**Die erste reale Fahrt erfolgte später nach separater aktueller
+ausdrücklicher Freigabe; Ergebnis oben.** Die motorlosen/Software-Nachweise
 sind abgeschlossen, eine reale Umfahrung/Stoppbefreiung bleibt zu belegen.
 Rückfall: komplettes Health-Overlay einschließlich Interface weglassen;
 vorheriger strenger Stand bleibt gesperrt. Nicht alte Verbraucher mit
