@@ -1,11 +1,124 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: GELB · autonomer Umfahrnachweis fehlt · 2026-09-25**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: GELB · autonomer realer Umfahrnachweis fehlt · 2026-09-26**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
+
+## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
+
+**Softwareintegration BESTANDEN (lokal); motorlose Zielsystemprüfung OFFEN;
+reale Bewegungsprüfung OFFEN.** Keine Geräte geöffnet, Motoren aktiviert oder
+Mission auf dem Roboter gestartet. Der bisherige motorlose PR-#100-Nachweis
+bleibt erhalten, gilt aber nicht automatisch für die geänderte Odometriekette.
+Kein Gesamt-Grün und keine Stufe 4.
+
+Basis ist PR #100, `113014e0f574cab30022e8b735438b31ac3935a9`;
+separater Branch `codex/we1-hwt601-fusion`, Übernahme `b3b6370`, Integration
+`f61e3e7`. HWT-Referenz: `1d91229dc10ff4bb791938d49aae8e9808a5dfff`.
+Der erste `git fetch origin` scheiterte an einem beschädigten lokalen
+`refs/codex/turn-diffs/checkpoints/...`-Objekt. Keine fremden Referenzen
+gelöscht: Beide Remote-Branches und PR-#100-Head wurden stattdessen in einem
+isolierten Bare-Repository frisch abgefragt; keine neuere Revision vorhanden.
+Die fremden Änderungen in `~/roboter_ws` und der aktive Install blieben erhalten.
+
+### Übernahme und eindeutiger Besitz
+
+Wiederverwendet: read-only HWT-Treiber/Protokoll, gemessene Achsen
+`base=(sensor_y,-sensor_x,sensor_z)`, 15 s Beruhigung + 10 s Start-Bias mit
+mindestens 800 Samples, danach fester Bias, historischer Mapping-EKF und
+radunabhängiger LiDAR-Beobachter. Keine OAK-IMU, neue Kalibrierung oder
+Kovarianzänderung. Die vorhandene HWT-Installation im historischen Worktree
+war **nicht** Teil der PR-#100-Overlaykette und kein HWT-Prozess lief.
+
+| Signal / Besitz im expliziten HWT-Modus | Quelle |
+|---|---|
+| `/fusion/hwt601/wheel_odom_raw` | Motorlos ausschließlich historischer FC03-Encoderleser; mit später separat freigegebenem `active_drive=true` ausschließlich `base_hardware` |
+| `/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate` | Dedizierter HWT-Adapter, vorhandener Treiber und Bias-Adapter |
+| `/odom`, dynamisches `odom -> base_link` | Ausschließlich `hwt601_mapping_ekf`; Encoder **vx**, HWT **wz**, keine Encoder-Gier, `use_control=false` |
+| `/map`, `map -> odom` | Ausschließlich bestehender SLAM |
+| `/shadow/hwt601/lidar_odom` | Nur Vergleich, kein TF und kein EKF-Eingang |
+
+Opt-in erfolgt durch die bestehende `app_mapping -> nav_mapping`-Kette.
+Ohne explizite aktuelle Stillstandsbestätigung startet der HWT-Launch nicht.
+Motorlos werden echte FC03-Positionen statt Dry-run-Odometrie gelesen; kein
+zweiter Motorbusleser und keine Schreibfunktion. Fahrtor und Explorer prüfen
+Roh-HWT, korrigierte Drehrate, Encoder und ihre Statusmeldungen unabhängig
+vom weiter vorhersagenden EKF. Ausfall nach Bereitschaft bleibt bis zum
+gestoppten Neustart verriegelt; kein stiller Encoder-Gier-Fallback.
+Der FC03-Vorlauf autorisiert selbst bei gesunden Quellen keine Bewegung.
+
+VL53 einschließlich Boot-Retry/Frame-Gap, Interfaces, Nav-Runtime/Cancel-Latch,
+Navigation-Sicherheitsparameter und Basis-Kalibrierdatei sind gegenüber
+`113014e` unverändert. Isolierter Build aller 14 betroffenen WE-Pakete:
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/install`.
+Paketauflösung, Hashes, Unterlagen und Rückfall stehen im
+[ROBOT_TRANSFER](../ROBOT_TRANSFER.md); kein aktiver Install umgestellt.
+
+### Neue gerätefreie Evidenz
+
+- **1185 Tests bestanden**: State-Estimation, Basis, Navigation, Explorer,
+  VL53, Bringup und Safety; `git diff --check` sauber.
+- Echter historischer Bias-Adapter + echter `robot_localization`-EKF mit
+  ausdrücklich synthetischen Rohdaten: Encoder-vx etwa 0,04 m/s und HWT-wz
+  +0,06 rad/s übernommen; absichtlich abweichende Encoder-Gier -0,30 rad/s
+  ausgeschlossen. Genau ein Odom-/TF-Besitzer. Bei HWT-Rohdatenausfall bzw.
+  Encoderausfall blieben noch **14 bzw. 23 EKF-Ausgaben** sichtbar, während
+  die Rohquellenprüfung bereits dauerhaft sperrte. Rückkehr der Quelle
+  hebt die Sperre nicht auf. Beide Läufe beendeten beide Prozesse mit Exit 0,
+  ohne Traceback. Evidenz: `/tmp/we-hwt601-process-o1xv_wyv/result.json`,
+  `/tmp/we-hwt601-process-daesw2gq/result.json`.
+- Bestehender `frontier_replan`: Ziel A canceled, Ziel B succeeded,
+  Elternmission danach weiter, maximal ein Kindziel, kein Nav-Fehlerbudget
+  für Quelleninvalidierung. Bestehender echter Nav2-`stopped_bypass`:
+  notwendiger Stopp, autonome Wiederaufnahme, automatische Frontier erreicht,
+  danach weiteres Kindziel erfolgreich; Barriere **nicht entfernt**,
+  keine Footprint-Verletzung/Rückwärtsfahrt, maximal ein aktives Kindziel.
+  Evidenz: `/tmp/we-stage3-bypass-xdq407hs/result.json`.
+  Diese WE-Regressionsläufe erhalten den bisherigen Nachweis; sie sind
+  keine Fahrt und kein Gesamtprozessnachweis mit realen HWT-Eingängen.
+
+### Sechs Cancels: gemessene Zeitfolge, keine erfundene Ursache
+
+Quelle: privater `stage3-frame-gap-r2-rotated-real-b`-Log und 1-Hz-Witness
+vom 25.09. Die Tabelle nennt die Controller-Cancel-Zeit (ROS-Sekunden) und
+nahe Statusproben; diese sind kein lückenloser Ursachenmitschnitt.
+
+| Nr. | Cancel-Zeit | Nahe Kartenrevision / Beobachtung | Bewertung |
+|---|---|---|---|
+| 1 | 1790366121.336711 | 188, `we_replanning_after_source_invalidation`, Ziel wieder `current` | Exakte Quelle/Berechtigung nicht erhalten |
+| 2 | 1790366154.287454 | 221, Replan, `current` | Exakte Quelle/Berechtigung nicht erhalten |
+| 3 | 1790366164.274357 | 233, Replan, Validierung bereits leer | Exakte Quelle/Berechtigung nicht erhalten |
+| 4 | 1790366176.297010 | 244, Replan, `current` | Exakte Quelle/Berechtigung nicht erhalten |
+| 5 | 1790366183.100876 | 251, Replan, `current` | Exakte Quelle/Berechtigung nicht erhalten |
+| 6 | 1790366215.327461 | Letzte Vorprobe Revision 281 `current`, dann `child_navigation_canceled` | Bekannter asynchroner Ursachenverlust; Korrektur aus PR #100 erhalten, konkreter Quellenauslöser offen |
+
+`exact_raw_map_unavailable` ist bei Witness-Sekunde 70,782 / Revision 182
+und 154,384 / Revision 266 tatsächlich aufgezeichnet, jeweils etwa eine
+Sekunde später wieder `current`. Ohne auslösenden Predicate-Log darf daraus
+keine Ursache für die späteren Cancels abgeleitet werden. Alle erfassten
+VL53-Health-Proben waren gesund; kein protokollierter harter Quellenabbruch.
+Der Wächter-Cancel bei 1790366215.508979 kam **nach** dem sechsten Cancel.
+HWT war in dieser Fahrt nicht aktiv und kann sie nicht rückwirkend erklären.
+
+**Soll/Ist:** Bei Sekunde 70,782: Fahrwunsch w=-0,116308 rad/s,
+Motorsoll 34,218/34,218 rpm, gelesen 34/34 rpm, Encoder-w=-0,01716 rad/s.
+Bei 110,053: v=0,1 m/s, Motorsoll 183,104/-122,963 rpm,
+gelesen 183/-123 rpm, Encoder-v=0,008516 m/s. RPM aus Register 0x000C
+und Positionsdifferenzen sind verschiedene Rückmeldungen; RPM sind keine
+unabhängige Chassisreferenz. Vollständige Rohzähler/HWT fehlen im alten
+Witness. Befehlsunterbrechungen sind belegt, Ursache zwischen Antriebsantwort,
+Encoderinterpretation und Rad-/Chassisabweichung bleibt **offen**, nicht
+pauschal „Schlupf“. Keine Verdachtskalibrierung.
+
+**Nächster erlaubter Schritt:** Aktuelle gebündelte Geräte-/Stillstandsfreigabe
+für den motorlosen HWT-Kandidaten einholen, dann zwei vollständige reale
+Start-/Stopp-Vorläufe. Erst nach deren Bestehen kurze Geradeausfahrt und
+begrenzte Links-/Rechtsdrehung ohne Frontierwechsel separat freigeben lassen.
+Vorbereitung und Messkanäle im ROBOT_TRANSFER; anschließend zum bestehenden
+Stufe-3-Umfahrtest zurückkehren, nicht in eine neue Optimierungsrunde.
 
 ## Stufe 3 – begrenzter Realversuch am 25.09.2026 (PR #100)
 

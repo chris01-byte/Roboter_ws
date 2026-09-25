@@ -1,6 +1,145 @@
 # Übertragung auf den realen Roboter
 
-## Aktuell: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
+## Aktuell: isolierter HWT601-WE-Kandidat, Geräteprüfung noch offen (26.09.2026)
+
+**Softwareintegration lokal BESTANDEN; motorlose Prüfung OFFEN; reale
+Bewegungsprüfung OFFEN.** Dieser Auftrag hat keine Geräte angesprochen und
+keinen Roboter-Stack gestartet. Die alten Hardwarefreigaben werden nicht auf
+die neue Integration übertragen. Keine Umstellung von `~/roboter_ws/install`.
+
+### Exakter Quell- und Installstand
+
+Branch `codex/we1-hwt601-fusion`, Basis PR #100 / `113014e`, HWT-Referenz
+`1d91229`; Wiederverwendung `b3b6370`, funktionale Integration `f61e3e7`.
+Arbeitskopie `/home/p/roboter_worktrees/we1-hwt601-fusion`; fremde Änderungen
+in `/home/p/roboter_ws` nicht übernommen oder verändert. Nichtsymlink-Build:
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/{build,install,log}`.
+
+Alle folgenden Pakete lösen nach Sourcen dieses Isolats tatsächlich aus
+`we1-hwt601-IC2SLr/install/<paket>` auf:
+`robot_state_estimation`, `base_hardware`, `amadeus_lidar_bringup`,
+`robot_bringup`, `robot_navigation`, `explore`, `robot_map_manager`,
+`mission_manager`, `bt_orchestrator`, `safety_monitor`, `vl53_near_field`,
+`robot_interfaces`, `semantic_map_manager`, `amadeus_map_identity`.
+Nav2 und `robot_localization` kommen aus `/opt/ros/humble`, `slam_toolbox`
+aus `/home/p/amadeus_slam_toolbox_ws/install/slam_toolbox`, der korrigierte
+LiDAR-Treiber aus `we1-ldlidar-shutdown-overlay/install/ldlidar_stl_ros2`.
+
+Die gespeicherte Setup-Kette (unten nach oben; Release-Namen jeweils unter
+`/home/p/.local/share/amadeus/releases/`, jeweils mit `/install`) ist:
+
+```text
+/opt/ros/humble
+/home/p/amadeus_slam_toolbox_ws/install
+we1-ldlidar-shutdown-overlay
+we1-10e1858074e7-r1
+we1-stage1-5e3fe0a-20260923
+we1-stage2-6fd36d5-20260923
+we1-stage3-bypass-s8QMY8
+we1-stage3-complete-1kI6en
+we1-stage3-vl53-mark-bwVxEL
+we1-stage3-explorer-shutdown-dnrGyH
+we1-stage3-health-CVhWvH
+we1-stage3-frame-gap-r2
+we1-stage3-cancel-latch-r1
+we1-stage3-vl53-boot-r1
+we1-hwt601-IC2SLr
+```
+
+Nicht neu gebaute App-Pakete bleiben in den alten Unterlagen. Der neue
+Kandidat überlagert dagegen sämtliche oben genannten 14 WE-Pakete.
+Quelle/Install paarweise SHA-256-identisch: `hwt601_fusion_health.py`
+`9297699e...`, `hwt601_fusion_guard.py` `f144f6cc...`,
+`cmd_vel_mission_gate.py` `fa5a6b60...`, HWT-SLAM-Launch `d11b6418...`,
+VL53-Knoten `98d2b42e...`, Nav-Runtime `715b2a41...`.
+Letztere und VL53/Interfaces/Nav-Sicherheitskonfiguration/Basisparameter
+sind gegenüber PR #100 unverändert.
+
+Buildbesonderheit: Der systemweite BehaviorTree-CMake-Export sucht eine
+nicht vorhandene nicht-multiarch Bibliothek. Wie im bestehenden WE-Build
+wurde **nur beim Bauen** der vorhandene Export unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp/share/behaviortree_cpp/cmake`
+per `-Dbehaviortree_cpp_DIR` verwendet. Keine Systembibliothek verändert.
+Runtime löst `libbehaviortree_cpp.so` aus
+`/opt/ros/humble/lib/aarch64-linux-gnu/` auf; SHA-256
+`c87409e5c2853a723537bbfc3d05be055c649ce3823e8027962a477eb97a7b15`
+identisch zum vorhandenen Unterlagenartefakt. Keine fehlende Laufzeitbibliothek.
+
+### Motorloser nächster Vorlauf — vorbereitet, NICHT ausgeführt
+
+Vorher einmal gebündelt aktuell bestätigen lassen: Gerätezugriff auf HWT,
+FC03-Encoder, VL53/LiDAR und ROS; kein paralleler Stack; Roboter ab Start
+mindestens 30 s tatsächlich unbewegt; unabhängig deaktivierte Motorendstufe
+bei weiterhin FC03-antwortender Controllerelektronik; Hardware-Halt erreichbar.
+Bekannten dedizierten HWT-Adapter/Montage nur auf zwischenzeitliche Änderung
+prüfen, nicht neu kalibrieren. Falls die getrennte Versorgung nicht möglich
+ist, ist dieser FC03-Aufbau **nicht motorlos prüfbar**; keine Dry-run-Werte
+unterschieben und keine Motoren für den Vorlauf aktivieren.
+
+Danach in einer frischen Shell ausschließlich obigen Kandidaten sourcen.
+Bestehendes begrenzendes WE-Profil aus
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`
+vor Verwendung auf Kartenidentität und aktuelle Pose prüfen; nicht als
+erneute physische Bereichsfreigabe behandeln oder automatisch ausweiten.
+Bestehende `app_mapping.launch.py` mit `use_hwt601_odometry:=true`,
+`operator_stationary_confirmed:=true` **erst nach der Bestätigung**,
+`active_drive:=false`, `enable_auto_explore:=false`, `start_web_gui:=false`
+und genau diesem lokal verifizierten `explore_params_overlay` verwenden.
+
+In zwei getrennten Start-/Stopp-Zyklen protokollieren:
+
+1. Ausschließlich `hwt601_encoder_shadow_reader` am Motorbus, kein
+   `base_hardware`-Prozess; FC03-only, echte Zähler, kein Command-Abonnent.
+   HWT eigener `/dev/ttyUSB_HWT601`, keine Sensorregister-Schreibbefehle.
+2. Roh-HWT frisch, reale Stillstandswerte/Achsen plausibel, Bias nach
+   unverändertem 15+10-s-Fenster stabil/kalibriert/eingefroren; Encoder-vx
+   im tatsächlichen Stillstand plausibel. Kein künstliches Stillstandsflag
+   aus Encoder-Dry-run. Keine Grenzwertänderung bei Fehlschlag.
+3. Genau ein `/odom`-Publisher und dynamisches `odom->base_link` vom EKF,
+   genau ein `/map`/`map->odom` vom SLAM; TF-Frische und Rohquellen gesondert.
+4. Beide VL53 nach aktuellem Frame/Target/UNKNOWN-Vertrag, LiDAR,
+   Kartenmanager-Frische, Karten-/Scope-Bindung, Safety und Nav2 prüfen.
+   `/fusion/hwt601/status_json`: `sources_ready=true`, aber
+   `hwt_motion_ready=false` / `readonly_preflight_no_motion`.
+   Das ist keine vollständige Fahrtfreigabe; alle bisherigen Tore bleiben.
+   Keine Mission senden, keine Nichtnull-Fahrbefehle, keine Motoraktivierung.
+5. SIGINT nur an die protokollierte Launch-PID, nie an die Prozessgruppe.
+   Alle Kinder, Logs und Gerätehandles prüfen. Zwei saubere reale Shutdowns
+   erforderlich; gerätefreie Prozess-Shutdowns ersetzen diese nicht.
+
+### Danach separat freizugebende Bewegungsdiagnose
+
+Erst nach bestandenem Vorlauf: in nachgewiesen freiem, zum aktuellen Scope
+passendem Bereich eine kurze Geradeausstrecke (geplant 0,25 m) mit Stopp,
+danach begrenzte Links-/Rechtsdrehung (geplant je 15 Grad) einzeln freigeben.
+Gemessener freier Schwenkraum für den unveränderten gepaddeten Footprint,
+unabhängiger Hardware-Halt erreichbar, keine Personen/Tiere im Fahrbereich.
+Äußere Bodenmarken/Streckenmessung und Winkelreferenz vorbereiten. Keine
+wechselnden Explorer-Frontierziele in dieser Basisdiagnose, keinen Bypass
+auf `/cmd_vel`; nur den vorhandenen abgesicherten Diagnose-/Missionspfad.
+Geplante Grenzwerte sind Testumfang, keine Änderung der Produktparameter.
+
+Synchron und privat aufzeichnen: Fahrwunsch `/cmd_vel_nav_raw`, Ausgang
+Fahrtor `/cmd_vel_nav`, endgültiges `/cmd_vel`, `/base_hardware/state_json`
+(Soll-/gelesene Motor-rpm, rohe Positionszähler, Timing/Fehler),
+`/fusion/hwt601/wheel_odom_raw`, HWT-Roh- und korrigierte IMU samt Status,
+`/odom`, TF, LiDAR-Scan und `/shadow/hwt601/lidar_odom` samt Qualitätsstatus,
+Safety-/Missionsstatus und äußere Strecken-/Winkelreferenz.
+Dieselben Anfahr-/Fahr-/Stoppintervalle vergleichen: Befehlskette,
+Antriebsantwort, Encoderinterpretation, Rad-/Chassisbewegung getrennt.
+HWT und daraus fusionierter EKF sind keine unabhängigen Vergleichsquellen.
+Bei unerwarteter Bewegung, Kontaktgefahr oder TF-/Quellen-/Safety-/Scopefehler
+sofort abbrechen; erst gemessene Ursache klären. Keine weiteren Fahrversuche
+zum Überdecken eines Fehlers. Nach bestandener Basisdiagnose unmittelbar
+zum bestehenden Stufe-3-Umfahrtest mit eigener aktueller Fahrfreigabe zurück.
+
+**Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
+mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,
+`use_hwt601_odometry=false`. Vor Neustart genau einen Topic-/TF-Eigentümer
+sicherstellen. Kein Live-Umschalten, kein automatischer Merge. Softwaretests
+und offene Altbefunde sind im [WE-STATUS](wohnungserkundung/STATUS.md) belegt.
+
+## Historisch: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
 
 PR #100, Branch `fix/we1-stage3-vl53-regression`. Aktiver
 `~/roboter_ws/install` unveraendert. Fuer motorlose Verifikation:

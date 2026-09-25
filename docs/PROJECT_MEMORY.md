@@ -17,6 +17,45 @@ Rückfallweg:
 
 ---
 
+## 2026-09-26 — Bewährte HWT-Fusion explizit in WE integriert, noch keine Hardwareabnahme
+
+**Entscheidung:** PR #100 (`113014e`) bleibt Basis. Auf getrenntem Branch
+`codex/we1-hwt601-fusion` selektive Übernahme aus HWT-Referenz `1d91229`
+(`b3b6370`) und opt-in Integration (`f61e3e7`), kein Blind-Merge. Bestehenden
+read-only Treiber, Achsen, eingefrorenen Start-Bias, Encoder-vx/HWT-wz-EKF
+und unabhängigen LiDAR-Beobachter erhalten. Kein OAK, keine Kalibrieränderung.
+EKF besitzt allein `/odom`/`odom->base_link`, SLAM `/map`/`map->odom`.
+Motorlos ersetzt der echte FC03-only Leser die Basis exklusiv; synthetischer
+Dry-run gilt nicht als Stillstandsnachweis. HWT-Start braucht eine aktuelle
+explizite Stillstandsbestätigung. Alle bisherigen VL53-/Cancel-Fixes bleiben.
+
+**Evidenz:** HWT lag im historischen Install, aber nicht in der geladenen
+PR-#100-Kette; kein laufender HWT-Prozess. 14-Paket-Isolat gebaut,
+1185 Tests bestanden, Quelle/Install der neuen Absicherung hashgleich.
+Echter EKF mit synthetischen Eingängen fusioniert Encoder-vx/HWT-wz korrekt.
+Bei fehlendem Roh-HWT bzw. Encoder produziert er noch 14 bzw. 23 Odometrien:
+Deshalb sperren Fahrtor/Explorer anhand echter Eingänge und verriegeln einen
+Ausfall nach Bereitschaft, statt EKF-Frische als Sensorgesundheit zu werten.
+Kein stiller Rückfall auf Encoder-Gier. Zwei Prozessläufe sauber beendet.
+WE-Ziel-B-Fortsetzung und echter Nav2-Stopp/Umfahrung mit bleibender
+synthetischer Barriere und fortgesetzter Elternmission erneut bestanden.
+
+**Befundgrenze:** Sechs alte Cancels zeitlich rekonstruiert, ihre konkreten
+Quellenprädikate nicht lückenlos erhalten. Zwei kurz ungültige Raw-Map-Proben
+sind kein Beweis für spätere Cancels. Befehlsunterbrechungen und erhebliche
+RPM-/Positionsodom-Differenz sind gemessen; Antrieb/Encoder/Chassis-Ursache
+weiter offen. Kein HWT in dieser alten Fahrt, keine erfundenen HWT-Messungen
+und keine pauschale Schlupferklärung. Tabelle im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+**Hardware / Risiko / Rückfall:** Kein aktueller Gerätezugriff, keine Fahrt,
+keine Umstellung des aktiven Installs; fremde lokale Arbeit erhalten.
+Motorlose HWT-Zielsystemprüfung und reale Bewegung OFFEN. FC03 erfordert
+antwortende Controllerelektronik bei unabhängig gesperrter Motorendstufe.
+Aktuelle Freigabe dafür zuerst gebündelt einholen. Rückfall ausschließlich
+gestoppt mit frischer Shell/alter PR-#100-Kette und HWT-Opt-in aus; niemals
+Topic-/TF-Eigentümer während einer Mission umschalten. Details und konkreter
+Prüfablauf in [ROBOT_TRANSFER](ROBOT_TRANSFER.md). Stufe 3 bleibt GELB.
+
 ## 2026-09-25 — VL53-Frame-Luecke und Cancel-Race minimal korrigiert
 
 **Entscheidung:** Keine Sicherheitsgrenze lockern und den aktiven Install
