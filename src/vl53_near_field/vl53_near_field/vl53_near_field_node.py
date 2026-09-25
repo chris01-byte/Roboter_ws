@@ -227,15 +227,12 @@ class Vl53NearField(Node):
 
     # ======================= Daten lesen (faithful) =====================
     def _get_data_safe(self, s, ch):
-        self._mux_select(ch)
-        for fn in ('check_data_ready', 'data_ready'):
-            if hasattr(s, fn):
-                try:
+        try:
+            self._mux_select(ch)
+            for fn in ('check_data_ready', 'data_ready'):
+                if hasattr(s, fn):
                     if not getattr(s, fn)():
                         return None
-                except Exception:
-                    pass
-        try:
             if hasattr(s, 'get_ranging_data'):
                 d = s.get_ranging_data()
                 if d is None:
@@ -368,8 +365,23 @@ class Vl53NearField(Node):
         observedL, validL, columnsL, qualityL = assess_frame(dL, *quality_args)
         observedR, validR, columnsR, qualityR = assess_frame(dR, *quality_args)
 
-        ML = self._build_matrix(dL)
-        MR = self._build_matrix(dR)
+        # UNKNOWN means missing/malformed required fields, not a target miss.
+        # A complete frame with zero valid returns is technically healthy;
+        # its zones stay unknown and cannot create costmap clearing rays.
+        healthyL = (self.GR == self.GC == 8
+                    and qualityL != NearFieldStatus.QUALITY_UNKNOWN)
+        healthyR = (self.GR == self.GC == 8
+                    and qualityR != NearFieldStatus.QUALITY_UNKNOWN)
+        if not healthyL:
+            validL[:] = False
+            columnsL = 0
+        if not healthyR:
+            validR[:] = False
+            columnsR = 0
+        ML = (self._build_matrix(dL) if healthyL else
+              np.full((self.GR, self.GC), np.nan, dtype=np.float32))
+        MR = (self._build_matrix(dR) if healthyR else
+              np.full((self.GR, self.GC), np.nan, dtype=np.float32))
         ML[~validL] = np.nan
         MR[~validR] = np.nan
         # FLIPX wie im getesteten Skript (Orientierung links/rechts korrekt).
@@ -416,6 +428,8 @@ class Vl53NearField(Node):
         st.right_quality = qualityR
         st.left_observed_columns = columnsL
         st.right_observed_columns = columnsR
+        st.left_frame_healthy = healthyL
+        st.right_frame_healthy = healthyR
         self.pub_status.publish(st)
 
         # --- Punktwolken publizieren (geflippte Matrizen -> Orientierung wie Status) ---

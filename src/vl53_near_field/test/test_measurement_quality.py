@@ -173,6 +173,7 @@ def test_real_producer_tick_pairs_quality_and_clouds_without_devices():
     assert (status.left_quality, status.right_quality) == (
         VALID_NEAR, VALID_FAR)
     assert status.left_observed_columns == status.right_observed_columns == 255
+    assert status.left_frame_healthy and status.right_frame_healthy
     assert output['left'][-1].width == 64 and output['right'][-1].width == 0
     assert output['left_cm'][-1].width == output['right_cm'][-1].width == 8
     assert all(messages[-1].header.stamp == status.header.stamp
@@ -181,12 +182,35 @@ def test_real_producer_tick_pairs_quality_and_clouds_without_devices():
     producer.frames[1] = None
     producer._tick()
     assert output['status'][-1].right_quality == UNKNOWN
+    assert not output['status'][-1].right_frame_healthy
     assert len(output['right']) == 1 and len(output['right_cm']) == 1
 
     producer.frames[1] = frame(800)
     producer.frames[1]['sigma_mm'] = [99] * 64
     producer._tick()
     assert output['status'][-1].right_quality == INVALID
+    assert output['status'][-1].right_frame_healthy
+    assert output['right'][-1].width == output['right_cm'][-1].width == 0
+
+    # Same complete 8x8 transport, no targets: healthy sensor, UNKNOWN space.
+    producer.frames[1] = frame(0, 255)
+    producer.frames[1]['nb_target_detected'] = [0] * 64
+    producer._tick()
+    assert output['status'][-1].right_frame_healthy
+    assert output['status'][-1].right_observed_columns == 0
+    assert output['right'][-1].width == output['right_cm'][-1].width == 0
+    # An individual valid near return remains visible in the original cloud.
+    producer.frames[1]['distance_mm'][0] = 240
+    producer.frames[1]['target_status'][0] = 5
+    producer.frames[1]['nb_target_detected'][0] = 1
+    producer._tick()
+    assert output['status'][-1].right_frame_healthy
+    assert output['status'][-1].right_quality == PARTIAL
+    assert output['right'][-1].width == 1
+    assert output['right_cm'][-1].width == 0
+    del producer.frames[1]['sigma_mm']
+    producer._tick()
+    assert not output['status'][-1].right_frame_healthy
     assert output['right'][-1].width == output['right_cm'][-1].width == 0
 
 
@@ -203,3 +227,15 @@ def test_real_driver_range_sigma_field_is_used_for_quality():
     data = get_data(node, sensor, 0)
     assert data['sigma_mm'] == [10] * 64
     assert assess(data)[3] == VALID_FAR
+
+
+def test_driver_ready_error_cannot_be_hidden_by_subsequent_read():
+    get_data = _producer_methods('_get_data_safe')['_get_data_safe']
+    def failed_ready():
+        raise OSError('I2C read failed')
+    sensor = SimpleNamespace(check_data_ready=failed_ready,
+                             get_ranging_data=lambda: frame())
+    node = SimpleNamespace(_mux_select=lambda _channel: None,
+                           bad={0: 0}, GR=8, GC=8, max_bad=3)
+    assert get_data(node, sensor, 0) is None
+    assert node.bad[0] == 1

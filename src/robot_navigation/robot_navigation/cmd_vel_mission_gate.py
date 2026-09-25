@@ -604,22 +604,16 @@ class CmdVelMissionGate(Node):
         if (any(value is None or not 0 <= now - value <=
                 self._explore_sensor_timeout
                 for value in (latest_received, latest_observed))
-                or any(getattr(latest, f'{side}_quality') not in (
-                NearFieldStatus.QUALITY_VALID_NEAR,
-                NearFieldStatus.QUALITY_VALID_FAR)
-                or getattr(latest, f'{side}_observed_columns') != 255
-               for side in ('left', 'right'))):
+                or not all(getattr(latest, f'{side}_frame_healthy')
+                           for side in ('left', 'right'))):
             return False
         for stamp in sorted(self._near_statuses, reverse=True):
             status, received, observed = self._near_statuses[stamp]
             if (any(value is None or not 0 <= now - value <=
                     self._explore_sensor_timeout
                     for value in (received, observed))
-                    or any(getattr(status, f'{side}_quality') not in (
-                        NearFieldStatus.QUALITY_VALID_NEAR,
-                        NearFieldStatus.QUALITY_VALID_FAR)
-                        or getattr(status, f'{side}_observed_columns') != 255
-                        for side in ('left', 'right'))):
+                    or not all(getattr(status, f'{side}_frame_healthy')
+                               for side in ('left', 'right'))):
                 continue
             paired = True
             for side in ('left', 'right'):

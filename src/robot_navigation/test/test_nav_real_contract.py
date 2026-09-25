@@ -254,7 +254,7 @@ def test_explore_gate_requires_explicit_opt_in_phase_and_fresh_sensors():
         True, 9.0, 9.8, None, 9.8, 9.8, 10.0, 5.0, 0.8, 0.8)
 
 
-def test_gate_requires_matching_positive_vl53_quality_even_for_empty_cloud():
+def test_gate_requires_fresh_matching_frame_health_not_full_target_coverage():
     gate = CmdVelMissionGate.__new__(CmdVelMissionGate)
     gate._explore_sensor_timeout = .8
     gate._near_clouds = {'left': {}, 'right': {}}
@@ -276,11 +276,22 @@ def test_gate_requires_matching_positive_vl53_quality_even_for_empty_cloud():
         status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
         status.right_quality = right_quality
         status.left_observed_columns = status.right_observed_columns = 255
+        status.left_frame_healthy = status.right_frame_healthy = True
         return status
 
     gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_VALID_FAR))
     assert gate._near_quality_authorized(time.monotonic())
-    gate._on_near_status(quality_status(10, NearFieldStatus.QUALITY_PARTIAL))
+    partial = quality_status(10, NearFieldStatus.QUALITY_PARTIAL)
+    partial.right_observed_columns = 0
+    gate._on_near_status(partial)
+    assert gate._near_quality_authorized(time.monotonic())
+    # Even zero target returns do not imply a broken transport/frame. This
+    # authorizes the source, not free space; Nav2/Collision still own motion.
+    partial.right_quality = NearFieldStatus.QUALITY_INVALID
+    gate._on_near_status(partial)
+    assert gate._near_quality_authorized(time.monotonic())
+    partial.right_frame_healthy = False
+    gate._on_near_status(partial)
     assert not gate._near_quality_authorized(time.monotonic())
     gate._on_near_status(quality_status(9, NearFieldStatus.QUALITY_VALID_FAR))
     assert not gate._near_quality_authorized(time.monotonic())

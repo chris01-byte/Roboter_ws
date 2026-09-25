@@ -1728,6 +1728,7 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
     status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
     status.left_observed_columns = status.right_observed_columns = 255
+    status.left_frame_healthy = status.right_frame_healthy = True
     node._wohnungserkundung_vl53_status = status
     node._wohnungserkundung_vl53_status_at = now
     node._wohnungserkundung_vl53_status_observed_at = now
@@ -1755,7 +1756,10 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     node._motion_odom_snapshot = lambda: (
         (0.0, 0.0), 0.0, 0.0, 0.0, now)
     status.right_quality = NearFieldStatus.QUALITY_INVALID
+    assert not node._wohnungserkundung_active_safety_failure()
+    status.right_frame_healthy = False
     assert node._wohnungserkundung_active_safety_failure()
+    status.right_frame_healthy = True
     status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
     # Status arrives before both clouds in the producer's publication order.
     # A terminal Nav2 child in this window must await the bounded triplet,
@@ -1813,7 +1817,9 @@ def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
             Header(stamp=Time(sec=10), frame_id='vl53_right_link'), []))
     assert node._wohnungserkundung_local_blocked_after_abort(candidate)
     status.right_observed_columns = 127
-    assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
+    status.right_quality = NearFieldStatus.QUALITY_PARTIAL
+    assert node._wohnungserkundung_local_blocked_after_abort(candidate)
+    assert not node._wohnungserkundung_active_safety_failure()
     status.right_observed_columns = 255
     status.header.stamp.sec = 9
     assert not node._wohnungserkundung_local_blocked_after_abort(candidate)
@@ -1841,6 +1847,7 @@ def test_we_local_abort_accepts_proven_near_route_obstacle_not_just_goal():
     status.left_quality = NearFieldStatus.QUALITY_VALID_NEAR
     status.right_quality = NearFieldStatus.QUALITY_VALID_FAR
     status.left_observed_columns = status.right_observed_columns = 255
+    status.left_frame_healthy = status.right_frame_healthy = True
     node._wohnungserkundung_vl53_status = status
     node._wohnungserkundung_vl53_status_at = now
     node._wohnungserkundung_vl53_status_observed_at = now

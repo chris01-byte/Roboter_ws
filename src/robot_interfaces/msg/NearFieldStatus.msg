@@ -30,3 +30,11 @@ uint8 right_quality
 # Bei 8x8-Aufloesung bedeutet 255 vollstaendige beobachtete Abdeckung.
 uint8 left_observed_columns
 uint8 right_observed_columns
+
+# Technischer Framezustand, unabhaengig von Targetanzahl/Spaltenabdeckung.
+# true: aktueller Treiberabruf erfolgreich, vollstaendiges 8x8-Raster und
+# alle konfigurierten Qualitaetsfelder vorhanden/lesbar. QUALITY_INVALID
+# bedeutet nur: kein verwertbarer Target-Return; kein Freiraumbeleg.
+# Default false sperrt Verbraucher mit alten oder ausgefallenen Publishern.
+bool left_frame_healthy
+bool right_frame_healthy

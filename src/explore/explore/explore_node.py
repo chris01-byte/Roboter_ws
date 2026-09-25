@@ -2824,11 +2824,8 @@ class ExploreNode(Node):
             return failed('estop_missing_stale_or_active')
         if (status is None or not fresh(status_at, 0.8)
                 or not fresh(status_observed, 0.8)
-                or any(getattr(status, f'{side}_quality') not in (
-                    NearFieldStatus.QUALITY_VALID_NEAR,
-                    NearFieldStatus.QUALITY_VALID_FAR)
-                    or getattr(status, f'{side}_observed_columns') != 255
-                    for side in ('left', 'right'))):
+                or not all(getattr(status, f'{side}_frame_healthy')
+                           for side in ('left', 'right'))):
             return failed('vl53_status_missing_stale_or_invalid')
         if (len(clouds_at) != 2 or not all(value is True for value in clouds_valid)
                 or not all(fresh(value, 0.8)
@@ -2890,10 +2887,8 @@ class ExploreNode(Node):
                 + int(vl53_status.header.stamp.nanosec)
                 if vl53_status is not None else None)
             if (vl53_status is None
-                    or any(getattr(vl53_status, f'{side}_quality') not in (
-                        NearFieldStatus.QUALITY_VALID_NEAR,
-                        NearFieldStatus.QUALITY_VALID_FAR)
-                        for side in ('left', 'right'))
+                    or not all(getattr(vl53_status, f'{side}_frame_healthy')
+                               for side in ('left', 'right'))
                     or all(vl53_stamps[side] == status_stamp
                            for side in ('left', 'right'))
                     or time.monotonic() >= deadline):
@@ -2914,14 +2909,8 @@ class ExploreNode(Node):
                 or not fresh(vl53_status_observed, 0.8)
                 or any(vl53_stamps[side] != status_stamp
                        for side in ('left', 'right'))
-                or vl53_status.left_quality not in (
-                    NearFieldStatus.QUALITY_VALID_NEAR,
-                    NearFieldStatus.QUALITY_VALID_FAR)
-                or vl53_status.right_quality not in (
-                    NearFieldStatus.QUALITY_VALID_NEAR,
-                    NearFieldStatus.QUALITY_VALID_FAR)
-                or vl53_status.left_observed_columns != 255
-                or vl53_status.right_observed_columns != 255):
+                or not vl53_status.left_frame_healthy
+                or not vl53_status.right_frame_healthy):
             return False
         scan = self._door_lidar_scan_snapshot()
         if scan is None or not fresh(scan.get('received_at'), 0.8):
