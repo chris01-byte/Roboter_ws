@@ -316,6 +316,9 @@ class BaseHardware(Node):
         self.encoder_resolution_left = None
         self.encoder_resolution_right = None
         self.encoder_poll_left_first = True
+        self.encoder_last_pair_duration_s = None
+        self.encoder_maximum_pair_duration_s = None
+        self.encoder_last_pair_left_first = None
         self.encoder_connection_initialized = False
         self.encoder_new_measurement = False
         self.encoder_config_fault_latched = False
@@ -619,6 +622,9 @@ class BaseHardware(Node):
             'encoder_delta_left': self.encoder_last_update.left_delta_counts,
             'encoder_delta_right': self.encoder_last_update.right_delta_counts,
             'encoder_sample_dt_s': self.encoder_last_update.sample_dt_s,
+            'encoder_pair_read_duration_s': self.encoder_last_pair_duration_s,
+            'encoder_maximum_pair_read_duration_s': self.encoder_maximum_pair_duration_s,
+            'encoder_pair_left_first': self.encoder_last_pair_left_first,
             'encoder_last_reason': self.encoder_last_failure_reason,
             'encoder_consecutive_failures': self.encoder_consecutive_failures,
             'modbus_read_failures': self.modbus_read_failures,
@@ -982,8 +988,11 @@ class BaseHardware(Node):
             return False
 
         read_started = time.monotonic()
+        left_first = self.encoder_poll_left_first
         pair = self._read_encoder_pair()
-        sample_time = (read_started + time.monotonic()) / 2.0
+        read_finished = time.monotonic()
+        self._record_encoder_pair_timing(read_finished - read_started, left_first)
+        sample_time = (read_started + read_finished) / 2.0
         if pair is None:
             self._encoder_failure("baseline_nicht_lesbar")
             return False
@@ -1002,14 +1011,25 @@ class BaseHardware(Node):
         if read_started - self.encoder_last_poll < self.encoder_feedback_period_s:
             return
         self.encoder_last_poll = read_started
+        left_first = self.encoder_poll_left_first
         pair = self._read_encoder_pair()
-        sample_time = (read_started + time.monotonic()) / 2.0
+        read_finished = time.monotonic()
+        self._record_encoder_pair_timing(read_finished - read_started, left_first)
+        sample_time = (read_started + read_finished) / 2.0
         if pair is None:
             self._encoder_failure("encoderpaar_nicht_lesbar")
             return
         self._accept_encoder_pair(pair, sample_time)
         if self.encoder_feedback_ok:
             self.modbus_read_failures = 0
+
+    def _record_encoder_pair_timing(self, duration_s, left_first):
+        """Historical HWT diagnostic; no change to counts, polling or motion."""
+        self.encoder_last_pair_duration_s = float(duration_s)
+        self.encoder_last_pair_left_first = bool(left_first)
+        if (self.encoder_maximum_pair_duration_s is None
+                or duration_s > self.encoder_maximum_pair_duration_s):
+            self.encoder_maximum_pair_duration_s = float(duration_s)
 
     def _accept_encoder_pair(self, pair, timestamp):
         left, right = pair

@@ -1,0 +1,54 @@
+hwt601_encoder_shadow_reader:
+  ros__parameters:
+    use_sim_time: false
+
+    # Ausschliesslicher Shadow-Namensraum; keine Produktiv-Odometrie und kein TF.
+    odom_topic: /shadow/hwt601/wheel_odom_raw
+    status_topic: /shadow/hwt601/wheel_status_json
+    diagnostics_topic: /shadow/hwt601/wheel_diagnostics_json
+    odom_frame_id: odom
+    base_frame_id: base_link
+
+    # Der feste Alias ist Pflicht und muss vom HWT601-Alias verschieden sein.
+    port: /dev/ttyUSB_BASE
+    forbidden_port_alias: /dev/ttyUSB_HWT601
+    baudrate: 115200
+    left_motor_id: 1
+    right_motor_id: 2
+    modbus_timeout_s: 0.1
+    modbus_retries: 0
+    poll_rate_hz: 20.0
+    max_pair_read_duration_s: 0.05
+    max_sample_gap_s: 0.10
+
+    # Ausschliesslich read-only ESS-RS-Register (Modbus FC03).
+    position_register: 0x000A
+    segment_register: 0x0011
+    word_order_register: 0x0019
+    resolution_register: 0x0101
+    expected_segment: 1000
+    expected_word_order: 0
+    expected_resolution: 4000
+    counts_per_motor_revolution: 1000.0
+    rpm_scale: 1.0
+
+    # Am realen Amadeus gemessene Encoder-/Fahrwerksparameter.
+    wheel_radius_m: 0.0624
+    wheel_separation_m: 0.3845
+    gear_ratio: 10.0
+    invert_left: false
+    invert_right: true
+    max_motor_rpm: 700.0
+    max_delta_factor: 1.5
+
+    # Vorhandene konservative, noch nicht abschliessend kalibrierte Startwerte.
+    pose_xy_variance: 0.0025
+    yaw_variance: 0.0076
+    twist_linear_variance: 0.01
+    twist_angular_variance: 0.03
+
+    # Sicherheitsvertrag: Jede abweichende Ueberschreibung bricht den Start ab.
+    read_only: true
+    sensor_write_commands: false
+    actuator_output: false
+    publish_tf: false
