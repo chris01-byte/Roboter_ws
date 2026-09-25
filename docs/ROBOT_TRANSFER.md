@@ -1,6 +1,58 @@
 # Übertragung auf den realen Roboter
 
-## WE-1 Stufe 3: realer VL53-A/B-Test, passive Zielsystemwiederholung (25.09.2026)
+## WE-1 Stufe 3: finaler Health-Kandidat motorlos bestanden (25.09.2026)
+
+PR #100, Produktcommit `e18a267`, finaler Gerätefrei-Prüfstand `b692c28`.
+Die aktuelle Produktvorgabe trennt technische Framegesundheit von
+Target-/Spaltenabdeckung. Die unten beschriebenen früheren
+Fahrvertragsblocker sind Historie, nicht der aktuelle Health-Vertrag.
+Gesunde vollständige Teilframes sperren nicht global; unbekannte Zonen
+bleiben ohne Clearingstrahlen. Reale gültige Nahpunkte, Juli-Filter,
+FLIPX, Sensorfrische und sämtliche Fahr-/Kollisionsgrenzen unverändert.
+
+**Ausschließlich isolierter Install, kein aktiver Install überschrieben:**
+`/home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install`.
+Enthält gemeinsam neu gebaut `robot_interfaces`, `vl53_near_field`,
+`robot_navigation`, `explore`, `safety_monitor`; Quell-/Install-SHA und
+VL53-/Nav2-Konfiguration stimmen überein. Statusformat enthält nun
+`left_frame_healthy`/`right_frame_healthy`; keine alten Consumer mischen.
+Die reale Prozessauflösung bestätigte diese fünf Pakete, Stage-3-complete
+für Basis/Manager und Stufe 1 für Bring-up. Vollständige Overlaykette im
+maßgeblichen [WE-STATUS](wohnungserkundung/STATUS.md).
+
+Mit unverändert physisch getrennter Motorversorgung zweimal gestartet:
+
+```bash
+source /home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install/setup.bash
+export ROS_DOMAIN_ID=217
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///home/p/.local/share/amadeus/releases/we1-10e1858074e7-r1/cyclonedds-local.xml
+unset ROS_LOCALHOST_ONLY
+ros2 launch robot_bringup app_mapping.launch.py active_drive:=false enable_auto_explore:=false start_web_gui:=false
+```
+
+Keine Action gesendet, kein Nichtnull-Fahrbefehl. Je ca. 15 s: 59/56
+stempelgleiche frische VL53-Tripel, beide Health true/PARTIAL/Maske 0;
+installierte Health-Prüfung auf realen Daten positiv. Kartenmanager ok,
+LiDAR/Karte/Odom/TF frisch (maximales TF-Alter 0,034 s), alle fünf
+Nav2-Lifecycles und Collision Monitor active, Safety false. Basis
+`dry_run=true`, `allow_rs485=false`, `rs485_ready=false`, alle Sollwerte 0.
+Jeweils 24/24 Kinder sauber nach SIGINT **nur an Launch-PID**, kein
+Traceback/Restprozess/offener Gerätehandle. Prüfberichte nur lokal unter
+`~/.local/share/amadeus/tests/stage3-health-hardware-cycle{1,2}.{json,log}`.
+
+Dieser passive Test ließ Explore-Opt-in und Scope-Verifikation bewusst
+aus; der alte R9-Scope ist nach Kartenneustart nicht gültig. Vor Fahrt
+vermessenen markierten Bereich/Startpose an aktuelle Karte binden und
+gesonderte aktuelle Fahrfreigabe einholen. Konkreter Vorschlag im
+WE-STATUS: 4,70 × 2,50 m, hohe unbelebte bleibende Barriere, separate
+Stopp-/Wand-/Eckaufstellung, begrenzte Mission und klare Abbruchbedingungen.
+Noch **keine reale Umfahr-/Stoppbefreiungsabnahme**, Stufe 3 insgesamt GELB.
+Motorloser Check bestanden; weitere Softwareentwicklung hier beendet.
+Rückfall: komplettes neues Overlay nicht sourcen; vorheriger Stand sperrt
+weiter streng. Das verworfene `we1-stage3-vl53-partial-PiRlgn` nicht nutzen.
+
+## Historie: realer VL53-A/B-Test, passive Zielsystemwiederholung (25.09.2026)
 
 Die echte matte Platte (~1 × 1 m, ~0,40 m vor beiden VL53) ergab links und
 rechts je 30/30 vollständige Rohframes mit 64/64 gültigen Targets,

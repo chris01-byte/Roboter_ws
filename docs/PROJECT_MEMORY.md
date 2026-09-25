@@ -17,6 +17,44 @@ Rückfallweg:
 
 ---
 
+## 2026-09-25 — finaler VL53-Health-Vertrag, motorlos zweimal bestanden
+
+**Entscheidung:** Nach ausdrücklicher Präzisierung der Produktrolle VL53
+als Nahhindernis-/Reaktionssensor verwenden, nicht als globale
+64/64-Freiraumbescheinigung. `e18a267` ergänzt explizite Frame-Health-
+Felder; `b692c28` ist der finale Gerätefrei-Prüfstand auf PR #100.
+Health ersetzt im Fahrtor/Explorer/optionalen Nahhalt die komplette
+Targetabdeckung. Unbekannte Zonen bleiben unbekannt und räumen nicht;
+gültige Teilframe-Nahpunkte bleiben marking-only wirksam. Frische,
+Scope, Safety, Footprint, Padding und Geschwindigkeiten unverändert.
+
+**Beobachtete Evidenz:** Reale A/B-Aufnahmen (unten) belegen gesunde
+Sensoren mit nur 2–6 Fernreturns. 970 Vertragstests und bestehende
+Stufe-3-Prozessfälle bestanden; zusätzliche Teilframe-, Wand- und
+Eckfälle belegen bleibende Umfahrung, zwei erfolgreiche Explorerziele,
+keinen Rückwärtsweg und weiterlaufenden Elternauftrag. Ein im alten
+und neuen Stand gemessener `disappear`-Prüferfehler (22 s verbleibende
+Hinderniszelle durch ungleiche synthetische Markierungs-/Clearingstrahlen)
+wurde ausschließlich im vorhandenen Prüfer korrigiert. Danach bleibt A
+erhalten und die Mission arbeitet weiter; keine Testgrenze gelockert.
+
+**Zielsystem:** Neues isoliertes `we1-stage3-health-CVhWvH/install`,
+Quell-/Install-Hashvergleich und echte Prozessauflösung geprüft.
+Zwei passive Gesamtstarts: 59 bzw. 56 gesunde PARTIAL-Tripel je Seite,
+Health-Prüfung positiv, frische LiDAR/TF/Odom/Karte, Nav2/Collision Monitor
+aktiv, keine Nichtnull-Fahr-/Motorwerte, RS485 gesperrt, je 24/24 saubere
+Shutdown-Kinder ohne Traceback/Handle. Motorversorgung physisch getrennt.
+
+**Rest / Rückfall:** Softwareentwicklung dieses Abschlussauftrags beendet.
+Realen begrenzten Testaufbau zur separaten Freigabe vorgelegt; tatsächliche
+Maße und aktuelle Karten-/Scope-Bindung stehen vor Fahrt noch aus.
+OAK ist vorhandene, wiederverwendbare Nav2-Quelle, im aktuellen WE-Start
+aber nicht aktiviert; keine neue Pipeline. Vollständige Evidenz und
+Fahrtestvorschlag nur im [WE-STATUS](wohnungserkundung/STATUS.md).
+Aktiver Install unverändert, kein Merge. Rückfall: komplettes neues
+Interface-/Verbraucheroverlay weglassen; vorheriger strenger Stand sperrt.
+Die frühere pauschale 0,60-m-Freiraumannahme bleibt verboten.
+
 ## 2026-09-25 — 64/64 real widerlegt, pauschale PARTIAL-Fahrfreigabe verworfen
 
 **Entscheidung:** Die Juli-Zonenfilterung, vollständige 8×8-Frameprüfung,

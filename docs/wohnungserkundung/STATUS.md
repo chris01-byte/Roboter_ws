@@ -7,9 +7,172 @@ Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATE
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
-## Stufe 3 – echter VL53-A/B-Vergleich und motorloser Wiederholungslauf (25.09.2026)
+## Stufe 3 – finaler Frame-Health-Vertrag und motorloser Zielsystemcheck (25.09.2026)
 
-**Ergebnis: Sensorhardware plausibel, Fahrvertrag weiter offen, keine
+**Motorloser Zielsystemcheck BESTANDEN; Softwareentwicklung dieses
+Abschlussauftrags beendet. Reale Abnahme weiterhin offen, Stufe 3 insgesamt
+GELB.** PR #100 auf `fix/we1-stage3-vl53-regression` ergänzt PR #99
+`e864b6e`: Produktänderung `e18a267`, finaler Prüfstand `b692c28`.
+Kein Merge, keine Fahrt, keine Umstellung des aktiven Roboter-Installs.
+
+### Abschließende Produktentscheidung
+
+Der aktuelle Auftrag präzisiert die Sensorrolle: VL53 sind Nahbereichs-
+Hindernis-/Reaktionssensoren, keine globale 64/64-Freiraumbescheinigung.
+Die weiter unten dokumentierte Ablehnung einer pauschalen PARTIAL-Freigabe
+bleibt historische Evidenz, ist aber **nicht mehr der aktuelle Fahrvertrag**.
+Explizite `left_frame_healthy`/`right_frame_healthy` ersetzen in Fahrtor,
+Explorer und optionalem Safety-Nahhalt die Forderung
+`QUALITY_VALID_NEAR/FAR && observed_columns==255`.
+
+- Health: erfolgreicher aktueller Treiberabruf, vollständige 8×8-Arrays,
+  vorhandene/lesbare konfigurierte Qualitätsfelder. Ready-/Mux-I²C-Fehler
+  werden nicht mehr verschluckt. Fehlende/malformed Frames bleiben gesperrt.
+- Target: unveränderte Juli-Filter für Status, Targetanzahl, Sigma und
+  Distanz; unveränderte Matrixorientierung/FLIPX und Nahpunktprojektion.
+  Wenige oder keine gültigen Targets sind kein pauschaler Sensorausfall.
+- UNKNOWN: keine Hindernis-/Freiraumaussage für diese Zone. Gültige
+  Teilframe-Nahpunkte markieren weiterhin separat in beiden Costmaps;
+  unbekannte Spalten erzeugen **keine** künstlichen 0,60-m-Clearingstrahlen.
+- Frische, zeitliche Status-/Wolkenpaarung, Safety, Scope, Footprint,
+  Padding, Kollisionsgrenzen und Geschwindigkeiten bleiben unverändert.
+  Health allein autorisiert weder eine Mission noch einen Fahrweg.
+
+**OAK-Bestand geprüft:** `/oak/points` ist in der vorhandenen lokalen und
+globalen Nav2-ObstacleLayer vorgesehen; der historische `nav_real`-Pfad
+startet die vorhandene `oak.launch.py`. Der aktuelle WE-`nav_mapping`-Pfad
+startet OAK bewusst nicht. Dieser Auftrag hat OAK nicht neu aktiviert und
+keine Wahrnehmungspipeline ergänzt. Der geprüfte WE-Pfad verwendet frische
+LiDAR-/Karten-/Costmap- und TF/Odom-Quellen, Nav2-Footprintprüfung sowie
+VL53-Nahpunkte. Unbeobachtete VL53-Zonen werden dadurch nicht umetikettiert.
+Der reale Aufbau muss auch niedrige/seitliche Gefahren ausschließen;
+die Testbarriere wird so hoch gewählt, dass LiDAR sie tatsächlich sieht.
+
+### Gerätefreie Evidenz des finalen Vertrags
+
+970 Tests in `src/{explore,robot_navigation,safety_monitor,vl53_near_field}/test`
+bestanden; isolierter Build aller fünf Interface-/Verbraucherpakete und
+`git diff --check` bestanden. Die vorhandenen Prozessprüfer belegen:
+
+| Fall | Ergebnis |
+|---|---|
+| `partial_free_bypass` | 1.498 Teilframes, bleibendes Hindernis, Explorer A und B erfolgreich, nach B weiter aktive Mission |
+| `explorer_bypass`, `stopped_bypass` | bleibendes Hindernis umfahren; notwendiger Controller-Stopp separat belegt; jeweils A und B erfolgreich |
+| `wall_escape`, `corner_escape` | 1.912/1.865 Teilframes; vorab freier voller Footprint-Schwenkraum; sichere Drehung/Umfahrung, A und B erfolgreich |
+| `disappear` | notwendiger Stopp, dasselbe A erfolgreich ohne Ersatz, danach neue Aufgabe B; 0,996 m Bewegung nach Entfernen |
+| `local_blocked` | blockierte Aufgabe zurückgestellt, B erfolgreich, A später erneut zulässig; maximal ein Nav2-Kind |
+| `no_exit` | kein zulässiger Pfad, 0 m Bewegung, kontrollierter budgetierter Teilabschluss |
+| Pflichtfeld fehlt / `blocked` | harter Quellenabbruch, kein Recovery; Restweg 0,0165 m innerhalb unveränderter Prüfhülle |
+| `estop`, `localization_loss` | harter Abbruch, kein Recovery; Restwege 0,0221/0,0320 m innerhalb bestehender Prüfhüllen |
+| `frontier_replan` | A invalidiert/canceled, B erfolgreich und completed, Elternauftrag läuft; kein normales Fehlerbudget für Invalidierung |
+
+Bei den geometrischen Umfahrfällen: maximal ein Nav2-Kind, keine
+Footprintverletzung und kein Rückwärtsweg. Wand-/Eckgeometrie wurde **vor**
+dem Lauf festgelegt: Wand mit 1,075-m-Passage, Achsabstand zur Frontwand
+0,50 m, in der Ecke Seitenabstand 0,60 m; gepaddeter Footprint
+`x=[-0,13;0,33], y=[-0,25;0,25]`, vollständiger Anfangsschwenk geprüft.
+Das sind synthetische Testmaße, keine Vermessung der realen Wohnung.
+
+**Gemessener Prüferfehler, keine Produktionsparameterkorrektur:**
+`disappear` scheiterte zunächst auch mit altem Explorer/Fahrtor: Eine
+lethale Zelle blieb nach Entfernen etwa 22 s erhalten. Der alte Prüfer
+markierte ein beliebiges 3×3-Punktgitter und räumte mit 25 geometrisch
+anderen Strahlen. Er nutzt nun dieselben Sensorursprünge und Spalten für
+beide Wolken wie die vorhandenen Diagnosefälle. Hindernisposition,
+Stoppdauer, Zeitlimits und Erfolgsassertionen blieben unverändert.
+Danach keine verbleibende Hinderniszelle nach Entfernung, kein Ersatz
+von A. Der Sensorfehlerfall entfernt jetzt ein Pflichtfeld; Status 255
+ohne Target ist nach dem neuen Vertrag kein technischer Defekt.
+
+### Tatsächlicher motorloser Kandidat
+
+Isoliertes Präfix:
+`/home/p/.local/share/amadeus/releases/we1-stage3-health-CVhWvH/install`.
+Quell-/Install-SHA-256 der vier Python-Implementierungen und die
+VL53-/Nav2-Konfigurationen wurden vor dem Hardwarelauf verglichen;
+die laufenden Prozesspfade bestätigten die Auflösung. Kein Symlink-Build.
+
+| Paket | Tatsächlich verwendetes Präfix unter `~/.local/share/amadeus/releases/` |
+|---|---|
+| robot_interfaces, explore, robot_navigation, vl53_near_field, safety_monitor | `we1-stage3-health-CVhWvH/install/<paket>` |
+| base_hardware, mission_manager, robot_map_manager | `we1-stage3-complete-1kI6en/install/<paket>` |
+| robot_bringup, amadeus_lidar_bringup | `we1-stage1-5e3fe0a-20260923/install` |
+| ldlidar_stl_ros2 | `we1-ldlidar-shutdown-overlay/install/ldlidar_stl_ros2` |
+| slam_toolbox | `/home/p/amadeus_slam_toolbox_ws/install/slam_toolbox` |
+
+Overlayaufbau von unten nach oben: Humble → slam_toolbox → LiDAR-Shutdown
+→ `we1-10e1858074e7-r1` → Stufe 1 → Stufe 2 → Stage-3-Bypass
+→ Stage-3-complete → PR-#100-marking → Explorer-Shutdown → finaler Health-
+Install. Die letzten fünf Pakete überdecken die jeweiligen Altstände.
+Das verworfene `we1-stage3-vl53-partial-PiRlgn` ist **nicht** enthalten.
+
+Mit weiterhin physisch getrennter Motorversorgung, erreichbarem Not-Aus
+und ohne Parallelstack zweimal identisch gestartet:
+`app_mapping.launch.py active_drive:=false enable_auto_explore:=false
+start_web_gui:=false`, privater DDS-Bereich 217, bestehende lokale Cyclone-
+Konfiguration. Keine Action und kein Fahrkommando durch den Prüfer.
+
+| Messgröße, jeweils ca. 15 s | Start 1 | Start 2 |
+|---|---:|---:|
+| Frische stempelgleiche VL53-Status-/Wolken-Tripel je Seite | 59 | 56 |
+| Health beidseits true / PARTIAL / Spaltenmaske 0 | 59/59 | 56/56 |
+| Positive Auswertung des installierten VL53-Health-Tors auf Live-Daten | 4.084 | 3.867 |
+| Scans / Rohkarten / Odometrien | 149 / 15 / 754 | 150 / 15 / 754 |
+| Max. VL53-Wolkenalter | 0,0153 s | 0,0168 s |
+| Max. Scan-/Kartenalter | 0,0143 / 0,0789 s | 0,0160 / 0,0379 s |
+| Max. map→base / odom→base TF-Alter | 0,0316 / 0,0317 s | 0,0336 / 0,0337 s |
+| Nichtnull-Fahrwerte / unsichere Basiszustände | 0 / 0 | 0 / 0 |
+| Saubere Launch-Kinder beim Shutdown | 24/24 | 24/24 |
+
+Beide Male: Kartenmanager `ok=true`; alle fünf Nav2-Lifecycle-Knoten und
+Collision Monitor aktiv; Safety `estop=false`; Basis `dry_run=true`,
+`allow_rs485=false`, `rs485_ready=false`, alle Sollwerte null. Acht
+Fahrkanäle überwacht: nur Nav-Ausgang/Smoother publizierten Nullwerte,
+keiner einen Nichtnullwert. Kein Traceback, Prozessrest oder offener
+CH341-/LiDAR-/RS485-Handle. Einzel-PID-SIGINT, keine Gruppen-Signale.
+Logs/JSON ausschließlich lokal unter `~/.local/share/amadeus/tests/`
+(`stage3-health-*`) und ROS-Logs `2026-09-25-16-32-59-471407-p-desktop-120726`
+bzw. `2026-09-25-16-34-37-015325-p-desktop-122209`.
+
+### Nächster erlaubter Schritt: separater realer Fahrtest
+
+Der passive Check ließ Explore-Opt-in **aus** und Scope **ungebunden**
+(`accessible_scope_verified=false`, leere Scope-ID). Das bestätigt die
+Sperre ohne Freigabe, ersetzt aber nicht die Bindung des tatsächlichen
+Testbereichs an die aktuelle Karte. Der alte R9-Scope wird nicht übernommen.
+
+Vorgelegter Aufbau, noch durch die Person zu vermessen/bestätigen:
+4,70 × 2,50 m zusammenhängende markierte Fläche; relativ zur Startachse
+0,70 m hinten, 4,00 m vorne und je 1,25 m seitlich. Matte feste unbelebte
+Barriere ungefähr 0,30 m tief × 0,40 m breit × mindestens 0,80 m hoch,
+Vorderkante 1,15 m vor der Achse, mittig. Keine Personen/Tiere im Fahrraum.
+Nach Bestätigung frische Karte/Startpose und exakt diesen Bereich motorlos
+binden; kein Vergrößern des Scopes zum Bestehen.
+
+Getrennte begrenzte Versuche mit bestehendem 0,10-m/s-Controllerprofil
+(Smoothergrenze 0,12 m/s), unveränderten Kollisionsparametern:
+freie Fahrt; frühe Umfahrung der **stehenbleibenden** Barriere; eigener
+Start mit notwendigem Nahstopp und anschließendem Umfahren; Frontwand/
+lösbare Ecke bei vorab belegtem vollständigem Schwenkraum; jeweils
+Fortsetzung desselben Elternauftrags. Für den Stopp-/Wandstart sind
+0,50 m Achse–Frontfläche, für die Ecke zusätzlich mindestens 0,60 m
+Achsabstand seitlich Vorschlagswerte aus der geprüften Geometrie,
+keine pauschale Drehfreigabe. Umstellen nur bei stillgesetztem Antrieb.
+Je Versuch höchstens zwei erfolgreiche Explorerziele bzw. 170 s; danach
+kontrolliert beenden. Abbruch bei Kontaktgefahr, unerwarteter Bewegung,
+Scope-/Footprintverletzung, Quellen-/TF-/Safety-Fehler, Personen/Tieren
+im Bereich oder unklarer Reaktion. Keine blinde Drehung/Rückwärtsfahrt.
+
+**Reale Fahrt erst nach separater aktueller ausdrücklicher Freigabe.**
+Bis dahin Motorversorgung getrennt. Die motorlosen/Software-Nachweise
+sind abgeschlossen, eine reale Umfahrung/Stoppbefreiung bleibt zu belegen.
+Rückfall: komplettes Health-Overlay einschließlich Interface weglassen;
+vorheriger strenger Stand bleibt gesperrt. Nicht alte Verbraucher mit
+neuem Statusformat mischen; keine unbekannten Spalten freiräumen.
+
+## Historie: echter VL53-A/B-Vergleich und motorloser Wiederholungslauf (25.09.2026)
+
+**Damals: Sensorhardware plausibel, Fahrvertrag weiter offen, keine
 Fahrfreigabe.** Auf PR #99 `e864b6e` basiert der separate Draft-PR #100
 `fix/we1-stage3-vl53-regression`. Die anwesende Person bestätigte hardwired
 Not-Aus, physisch getrennte Motorversorgung, keinen Parallelstack und die
