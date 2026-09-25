@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: BLOCKIERT FÜR REALE FAHRT · Hardware-Not-Aus fehlt laut aktueller Nutzeraussage · 2026-09-25**
+**WE-1 · Amadeus / `chris01-byte/Roboter_ws` · STUFE 1: GRÜN BESTÄTIGT · STUFE 2: gerätefrei GRÜN BESTÄTIGT · STUFE 3: GELB · Realversuch wegen VL53-Frame-Health abgebrochen · 2026-09-25**
 
 Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md),
 [Meilensteine](MEILENSTEINE.md) und die Sicherheits-/Abnahmereihenfolge bleiben
@@ -8,6 +8,38 @@ unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
 ## Stufe 3 – begrenzter Realversuch am 25.09.2026 (PR #100)
+
+### Aktueller Nachtrag: Vor-Ort-Korrektur und gemessener Sensorabbruch
+
+Der Nutzer korrigierte seine zwischenzeitliche Aussage zum fehlenden Not-Aus:
+Die Abschaltung sei verbaut und vor Ort geprüft; die Fahrfreigabe wurde erneut
+ausdrücklich erteilt. Dies ist eine **Vor-Ort-Auskunft**, keine ferntechnisch
+verifizierte Hardwareprüfung. Die untenstehende gegenteilige Auskunft bleibt
+als historische Entscheidungsgrundlage erhalten, ist nicht der aktuelle
+Nutzerstand. Frühere Teilversuche werden dadurch nicht nachträglich abgenommen.
+
+Unveränderter Kandidat/isolierter Health-Install, Repository `3913079`, keine
+Produkt- oder Sicherheitsparameter geändert. Vorlauf: 57 frische gesunde
+VL53-Tripel je Seite in 15 s, alle sechs Lifecycles aktiv, TF-Alter maximal
+0,164 s, gemessene Raddrehzahlen null. Bleibende neue Barriere wie unten.
+Genau ein autonomer `explore`-Auftrag wurde gestartet, kein manuelles Fahrziel.
+Bei 13,267 s während `we_initial_scan` meldeten beide Sensorstatusfelder
+gleichzeitig `frame_healthy=false`; der Wächter protokollierte genau
+`frame_health:left=False,right=False` und cancelte. Auch das Produkt-Fahrtor
+wechselte auf `blocked`. Die Ursache innerhalb der Rohframe-/Treiberkette
+ist noch **nicht** gemessen; leere Punktwolken allein sind kein Fehlernachweis.
+Bei 16,082 s: Mission `canceled`, beide Sensoren wieder healthy, Soll- und
+gemessene Motor-RPM mindestens zwei Sekunden null. Kein Umfahrnachweis,
+keine Fortsetzung mit C/D. Shutdown: 24/24 Kinder sauber, kein Traceback.
+
+Private Evidenz unter `/home/p/.local/share/amadeus/tests/`:
+`stage3-new-barrier-real-r1-preflight.json`,
+`stage3-new-barrier-real-r1-witness.jsonl`, `stage3-new-barrier-real-r1.log`.
+Nächster Schritt: Ursache des beidseitigen Health-Abfalls anhand zeitlich
+korrelierter Rohframe-/Qualitäts-/Treiberdiagnostik bestimmen, ohne Grenzwerte
+zu lockern. Softwareabnahme bleibt erhalten; reale Pflichtfälle bleiben offen.
+
+### Historischer Stand vor dieser Korrektur
 
 **Sicherheitskorrektur nach dem Versuch:** Zunächst wurde ein erreichbarer
 hardwired Not-Aus ausdrücklich bestätigt. Später erklärte der anwesende

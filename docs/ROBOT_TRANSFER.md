@@ -1,6 +1,23 @@
 # Übertragung auf den realen Roboter
 
-## Sicherheitsstopp: kein Hardware-Not-Aus laut aktueller Nutzeraussage (25.09.2026)
+## Aktuell: realer Rundblick wegen VL53-Frame-Health beendet (25.09.2026)
+
+Der Nutzer korrigierte die folgende historische Aussage und bestätigte
+Abschaltung und Prüfung vor Ort sowie die Fahrfreigabe. Diese Auskunft ist
+kein ferntechnischer Hardwarebeweis. Exakt derselbe isolierte Health-Install
+und dasselbe Scope-Profil wurden verwendet; kein aktiver Install und keine
+Produktparameter geändert (Repository `3913079`, PR #100).
+
+Vorlauf bestanden: 57 gesunde VL53-Tripel je Seite, TF frisch, alle sechs
+Lifecycles aktiv, gemessene RPM null. Ein autonomer Explorerauftrag startete.
+Nach 13,267 s im Rundblick beide `frame_healthy=false`, Fahrtor `blocked`,
+Wächter-Cancel. Bei 16,082 s gemessene RPM mindestens zwei Sekunden null;
+Shutdown 24/24 sauber. Keine Umfahrung und keine Tests C/D. Ursache des
+beidseitigen Health-Abfalls noch offen; nicht durch gelockerte Grenzwerte
+oder wiederholte Fahrversuche umgehen. Stack bleibt aus. Details/Evidenz:
+[WE-STATUS](wohnungserkundung/STATUS.md).
+
+## Historisch: Sicherheitsstopp nach gegenteiliger Nutzeraussage (25.09.2026)
 
 **Keine weitere reale Fahrt oder Motoraktivierung.** Der Nutzer erklärte
 nach dem unten dokumentierten Teilversuch, am Roboter existiere überhaupt

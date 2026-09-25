@@ -17,7 +17,26 @@ Rückfallweg:
 
 ---
 
-## 2026-09-25 — Sicherheitsvoraussetzung für weitere reale Fahrt widerlegt
+## 2026-09-25 — Vor-Ort-Korrektur akzeptiert, Realtest durch Frame-Health gestoppt
+
+Der Nutzer bestätigte nach seiner gegenteiligen Aussage ausdrücklich, dass
+die Abschaltung verbaut und geprüft sei; diese Vor-Ort-Auskunft wurde als
+Korrektur akzeptiert, nicht als ferntechnischer Hardwarebeweis. Frühere
+Teilversuche sind dadurch nicht nachträglich abgenommen. Kandidat/Install
+und sämtliche Produktparameter blieben unverändert (`3913079`, PR #100).
+Nach bestandenem Vorlauf (57 gesunde Tripel pro VL53, frische TF, aktive
+Lifecycles, gemessene RPM null) startete ein automatischer Explorerauftrag.
+Nach 13,267 s Rundblick fielen beide `frame_healthy`-Flags ab; Fahrtor
+`blocked`, Wächter-Cancel. Bei 16,082 s waren zwei Sekunden gemessener
+Stillstand bestätigt, später 24/24 Launch-Kinder sauber beendet.
+
+**Entscheidung / Rest:** Kein weiterer Realtest nach diesem Fehler.
+Rohframe-/Treiberursache noch offen, keine Behauptung eines Hardwaredefekts
+und keine Grenzwertlockerung. Kein Umfahrnachweis und keine Stufe 4.
+Details und private Evidenz im [WE-STATUS](wohnungserkundung/STATUS.md).
+Rückfallweg: Stack gestoppt lassen; aktiven Install nicht umstellen.
+
+## 2026-09-25 — Historisch: Sicherheitsvoraussetzung für weitere reale Fahrt widerlegt
 
 **Entscheidung:** Keine weitere Motoraktivierung oder Fahrt. Nach dem
 begrenzten Realversuch erklärte der Nutzer, es gebe am selbstgebauten
