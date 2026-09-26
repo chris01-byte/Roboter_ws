@@ -97,14 +97,31 @@ Integrationsfehler: Der Prüfknoten abonnierte `/near_field/status` als
 auf den tatsächlichen Nachrichtentyp korrigiert und durch eine Regression
 abgesichert. Erneuter Testlauf: 46 Tests bestanden, isolierter Build von
 `robot_navigation` und `robot_bringup` erfolgreich, `git diff --check` sauber.
-Im fehlgeschlagenen Live-Aufruf wurde kein Bewegungsauftrag akzeptiert und
-keine Bewegung ausgelöst. Der Launcher erhielt SIGINT, alle Kinder beendeten
-sauber, serielle Handles wurden freigegeben und ROS-Domain 217 war danach leer.
-Der bestehende Install wurde nicht umgestellt. `use_gpio_estop=false` bleibt
-eine Statuswarnung über die fehlende GPIO-Rückmeldung; die manuelle
-Bestätigung des unabhängig verdrahteten Hardware-Halts steht separat im
-Diagnosestatus und ersetzt keine Software-Safety-Freigabe. Der autonome
-Bewegungs- und Umfahrnachweis fehlt; Stufe 3 bleibt GELB.
+Im korrigierten Live-Lauf nahm der Diagnosetrigger die feste Sequenz an und
+meldete `complete`: 0,25 m vorwärts, Stopp, +15°, Stopp, −15°, Endstopp.
+Maschinenlesbare Evidenz liegt lokal (nicht im Repository) unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+Scope-ID
+`stage3-local-scope-20260925-after-r2`, Session `stage3-20260925-after-r2`,
+Map-Fingerprint `4f17785f…`, Startpose `(0,0,−0,0053 rad)`. Die aufgezeichnete
+`/odom`-Translation endete bei 0,270 m; maximale gemessene Motor-RPM waren
+±122. HWT-Gyro, beide Encoder, Odom/TF, LiDAR, Safety und 140 VL53-Statusframes
+wurden protokolliert; während der Sequenz 0 Modbusfehler, 0 verworfene
+Encoderupdates und 0 Reconnects. Endstatus: Nullkommando/0 RPM.
+
+Anschließend wurde dieselbe Mission `explore` automatisch gestartet. Der erste
+Lauf wurde während des 360°-Initialscans kontrolliert storniert. Ein erneuter
+Lauf endete fail-closed mit `initial_scan_no_progress`; der Explorer meldete
+0/3 qualifizierende Beobachtungen, 0 Frontierziele und
+`navigation_dispatched=false`. Somit wurde kein Nav2-Ziel gesendet und die
+Barriere weder umfahren noch als Hindernisverhalten bewertet. Es gibt keinen
+realen Umfahr- oder Missionsfortschrittsnachweis. Beim SIGINT-Shutdown meldete
+der Diagnoseprozess zusätzlich einen `RuntimeError` in `rclpy` beim
+Nachrichten-Decoding; anschließend waren keine Roboterprozesse oder Handles
+auf `/dev/ttyUSB_BASE`, `/dev/ttyUSB_HWT601` und `/dev/amadeus_lidar` mehr
+offen. Der aktive Install wurde nicht umgestellt. Stufe 3 bleibt GELB.
+`use_gpio_estop=false` ist weiterhin nur die fehlende GPIO-Rückmeldung; die
+manuelle Haltbestätigung ersetzt keine Software-Safety-Freigabe.
 
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 

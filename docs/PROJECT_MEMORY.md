@@ -15,6 +15,31 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-26 — Begrenzte Bewegung gemessen, realer Umfahrnachweis weiter offen
+
+**Entscheidung:** Den einmaligen 0,25-m-/±15°-Diagnoselauf als erfolgreich
+protokollieren, aber Stufe 3 nicht grün setzen. Ein automatisch gestarteter
+Explore-Auftrag zählt erst mit Nav2-Ziel, Hindernisumfahrung und anschließendem
+Missionsfortschritt als Umfahrnachweis.
+
+**Evidenz:** Korrigierter Diagnosetrigger unter PR #101 meldete `complete` und
+bestätigte drei Stillstände. Aktuelle Scope-/SLAM-Bindung:
+`stage3-local-scope-20260925-after-r2`, Session
+`stage3-20260925-after-r2`, Map-Fingerprint
+`4f17785f9f20b0bf4ceaf284850d158983777912b7b704a7c0365ddf1ade7e91`;
+Startpose `(0,0,−0,0053 rad)`. `/odom` meldete 0,270 m, RPM maximal ±122;
+140 VL53-Statusframes; Modbusfehler, verworfene Encoderupdates und Reconnects
+jeweils 0. Lokale JSONL-Evidenz liegt außerhalb des Repositories unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+
+Die danach ausgelöste Explore-Mission brach mit `initial_scan_no_progress`
+fail-closed ab: 0/3 qualifizierende Beobachtungen, null Frontierziele und
+`navigation_dispatched=false`. Keine Barriere wurde umfahren. Der Stack endete
+mit Nullkommando/0 RPM; Gerätehandles waren danach frei. Beim Shutdown trat
+zusätzlich ein noch ungeklärter rclpy-Nachrichten-Decoding-`RuntimeError` im
+Diagnoseprozess auf. Vor einem weiteren Liveversuch Ursache ermitteln; keine
+Sicherheitsgrenzen lockern. PR #101 offen, kein Merge, Stufe 3 GELB.
+
 ## 2026-09-26 — Diagnose-Nahfeldsubscription korrigiert, kein Fahrbefehl ausgeführt
 
 **Entscheidung:** Der einmalige Stufe-3-Bewegungstest bleibt ausschließlich

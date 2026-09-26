@@ -195,13 +195,26 @@ near_status`. `ros2 node info` belegte, dass der Prüfknoten
 aktive `/vl53_near_field`-Knoten publiziert
 `robot_interfaces/msg/NearFieldStatus`. Die Subscription wurde im Kandidaten
 korrigiert und die Regression ergänzt. Erneut bestanden 46 Tests, isolierter
-Build und `git diff --check`. Der verweigerte Trigger gab keinen Auftrag frei
-und erzeugte keine Bewegung. SIGINT ging ausschließlich an die konkrete
-Launcher-PID; alle Kinder endeten sauber, HWT-/LiDAR-Handles wurden frei und
-ROS-Domain 217 war danach leer. Der aktive `~/roboter_ws/install` blieb
-unverändert. Beim nächsten Start sind aktuelle Kartenbindung, Startpose und
-Scope erneut zu verifizieren, bevor derselbe bereits freigegebene
-Sequenztrigger aufgerufen wird. Hindernisumfahrung bleibt separat offen;
+Build und `git diff --check`.
+
+Mit dem korrigierten Kandidaten wurde der gebundene Bewegungstest einmal
+vollständig ausgeführt. Ergebnis `complete`, mit drei bestätigten Stillständen;
+`/odom` meldete 0,270 m Translation, Motor-Ist-RPM erreichten maximal ±122,
+HWT-Gyro/Encoder/LiDAR/TF/Safety und 140 VL53-Statusframes wurden synchron
+aufgezeichnet. Modbusfehler, verworfene Encoderupdates und Reconnects: 0.
+Private Evidenz liegt unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+
+Direkt danach schlug die automatisch gestartete Explore-Mission während ihres
+Initialscans mit `initial_scan_no_progress` fehl. Status: 0/3 qualifizierende
+Beobachtungen, 0 Frontierziele, `navigation_dispatched=false`; daher kein
+Nav2-Ziel, keine Hindernisinteraktion und kein Umfahrnachweis. Ein vorheriger
+Versuch war während desselben Initialscans kontrolliert storniert worden.
+Stack wurde mit SIGINT am Launch-PID beendet; Motoren standen auf 0 RPM und
+keine Roboterprozesse/seriellen Handles blieben zurück. Der Diagnoseprozess
+warf beim Shutdown einen `RuntimeError` im rclpy-Nachrichten-Decoding. Dieser
+Shutdown-Befund ist ungeklärt und muss vor einem weiteren Hardwarelauf
+untersucht werden. Aktiver `~/roboter_ws/install` unverändert; kein Merge.
 Stufe 3 bleibt GELB.
 
 **Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
