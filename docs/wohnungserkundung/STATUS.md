@@ -88,18 +88,22 @@ ist standardmäßig falsch und hebt weder `/safety/estop` noch Collision Monitor
 oder Quellen-/TF-/Scope-Prüfungen auf.
 
 Die Softwaretests (46 Tests) und isolierter Build von `robot_navigation` und
-`robot_bringup` bestanden. Der temporäre Overlay-Build wurde einmal für einen
-Live-Stackstart gesourct; der Diagnoseknoten war deaktiviert und es wurde kein
-Missionsauftrag gesendet. `base_hardware` meldete nur 0-RPM/Nullsollwerte; es
-fand keine Bewegung statt. Der Safety-Monitor meldete beim Start
-`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“. Dieser Zustand
-ist nur fehlende GPIO-Rückmeldung; der Nutzer bestätigte anschließend den
-unabhängig verdrahteten und erreichbaren Hardware-Halt manuell. Beim ersten
-Start wurde aufgrund einer Fehlinterpretation kein Erkundungsauftrag
-ausgelöst. Die Launcher-PID wurde mit SIGINT beendet,
-alle Kinder beendeten sauber, HWT-/LiDAR-Handles wurden freigegeben und ROS-
-Domain 217 war danach leer. Der bestehende Install wurde nicht umgestellt.
-Der bisherige 180-s-Motorlosnachweis wird nicht wiederholt. Der autonome
+`robot_bringup` bestanden. Beim ersten explizit aktivierten Diagnoselauf
+verweigerte der Starttrigger vor jedem Fahrbefehl fail-closed mit
+`veraltete Quellen: near_status`. Laufzeitprüfung zeigte den konkreten
+Integrationsfehler: Der Prüfknoten abonnierte `/near_field/status` als
+`std_msgs/String`, obwohl der aktive VL53-Knoten
+`robot_interfaces/msg/NearFieldStatus` publiziert. Die Subscription ist nun
+auf den tatsächlichen Nachrichtentyp korrigiert und durch eine Regression
+abgesichert. Erneuter Testlauf: 46 Tests bestanden, isolierter Build von
+`robot_navigation` und `robot_bringup` erfolgreich, `git diff --check` sauber.
+Im fehlgeschlagenen Live-Aufruf wurde kein Bewegungsauftrag akzeptiert und
+keine Bewegung ausgelöst. Der Launcher erhielt SIGINT, alle Kinder beendeten
+sauber, serielle Handles wurden freigegeben und ROS-Domain 217 war danach leer.
+Der bestehende Install wurde nicht umgestellt. `use_gpio_estop=false` bleibt
+eine Statuswarnung über die fehlende GPIO-Rückmeldung; die manuelle
+Bestätigung des unabhängig verdrahteten Hardware-Halts steht separat im
+Diagnosestatus und ersetzt keine Software-Safety-Freigabe. Der autonome
 Bewegungs- und Umfahrnachweis fehlt; Stufe 3 bleibt GELB.
 
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)

@@ -189,14 +189,20 @@ Sensor-/Safety-Fehlers. Für den einmaligen Diagnoselauf ist jetzt
 `lab_external_hardware_halt_attested:=true` als standardmäßig falsches Opt-in
 implementiert und im Diagnosestatus sichtbar; `/safety/estop`, Collision Monitor, Quellen-, TF- und
 Scope-Prüfungen bleiben aktiv.
-SIGINT ging ausschließlich an Launch-PID 79158; alle ROS-Kinder endeten sauber,
-`/dev/ttyUSB_HWT601` und `/dev/amadeus_lidar` waren danach unbelegt, Domain 217
-leer. Der aktive `~/roboter_ws/install` blieb unverändert. Der Diagnosepfad
-wurde nicht ausgelöst. Der reale Bewegungstest ist noch nicht erfolgt; vor
-dem Trigger sind aktueller Map-Fingerprint, Scope-/Startpose-Bindung und der
-geplante Testkorridor im laufenden Stack zu prüfen. Danach kann die bereits
-erteilte Sequenzfreigabe genutzt werden. Hindernisumfahrung bleibt separat
-offen; Stufe 3 bleibt GELB.
+Der erste Triggerlauf scheiterte vor jeder Bewegung mit `veraltete Quellen:
+near_status`. `ros2 node info` belegte, dass der Prüfknoten
+`/near_field/status` fälschlich als `std_msgs/String` abonniert hatte; der
+aktive `/vl53_near_field`-Knoten publiziert
+`robot_interfaces/msg/NearFieldStatus`. Die Subscription wurde im Kandidaten
+korrigiert und die Regression ergänzt. Erneut bestanden 46 Tests, isolierter
+Build und `git diff --check`. Der verweigerte Trigger gab keinen Auftrag frei
+und erzeugte keine Bewegung. SIGINT ging ausschließlich an die konkrete
+Launcher-PID; alle Kinder endeten sauber, HWT-/LiDAR-Handles wurden frei und
+ROS-Domain 217 war danach leer. Der aktive `~/roboter_ws/install` blieb
+unverändert. Beim nächsten Start sind aktuelle Kartenbindung, Startpose und
+Scope erneut zu verifizieren, bevor derselbe bereits freigegebene
+Sequenztrigger aufgerufen wird. Hindernisumfahrung bleibt separat offen;
+Stufe 3 bleibt GELB.
 
 **Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
 mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,

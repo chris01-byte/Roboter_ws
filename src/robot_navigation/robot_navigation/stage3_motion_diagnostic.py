@@ -159,7 +159,7 @@ class Stage3MotionDiagnostic(Node):
                                  self._json_topic('hwt_raw'), 10)
         self.create_subscription(String, '/shadow/hwt601/status_json',
                                  self._json_topic('hwt_yaw_status'), 10)
-        self.create_subscription(String, '/near_field/status',
+        self.create_subscription(NearFieldStatus, '/near_field/status',
                                  self._near_status, 10)
         estop_qos = QoSProfile(depth=1)
         estop_qos.reliability = ReliabilityPolicy.RELIABLE

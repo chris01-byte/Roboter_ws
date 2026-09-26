@@ -15,6 +15,28 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-26 — Diagnose-Nahfeldsubscription korrigiert, kein Fahrbefehl ausgeführt
+
+**Entscheidung:** Der einmalige Stufe-3-Bewegungstest bleibt ausschließlich
+über den aktivierten Diagnoseauftrag vor dem bestehenden Fahrtor ausführbar.
+Der Diagnoseknoten muss `/near_field/status` mit dem tatsächlich publizierten
+Typ `robot_interfaces/msg/NearFieldStatus` abonnieren.
+
+**Evidenz:** Der Live-Starttrigger verweigerte fail-closed mit
+`veraltete Quellen: near_status`. `ros2 node info` zeigte eine
+`std_msgs/String`-Subscription im Diagnoseknoten, während der aktive VL53-
+Knoten `NearFieldStatus` publizierte. Die Subscription und eine
+Regressionassertion wurden korrigiert. 46 Tests, isolierter Build von
+`robot_navigation`/`robot_bringup` und `git diff --check` bestanden. Der
+Trigger gab keinen Auftrag frei; keine Bewegung. SIGINT am Launcher beendete
+alle Kinder sauber, Sensorhandles waren frei und Domain 217 leer.
+
+**Rückfall / Status:** Änderungen sind eng auf die Topic-Typbindung begrenzt;
+keine Sicherheitsparameter oder Fahrgrenzen verändert. Bei Regression auf
+den vorherigen PR-#101-Commit zurückgehen und Diagnosetrigger deaktiviert
+lassen. Reale Bewegungs- und Umfahrabnahme steht aus; PR #101 bleibt offen,
+Stufe 3 GELB.
+
 ---
 
 ## 2026-09-26 — `use_gpio_estop=false` als Laborhinweis eingeordnet

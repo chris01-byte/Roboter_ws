@@ -39,6 +39,7 @@ def test_stage3_test_is_opt_in_single_sequence_and_not_a_cmd_vel_publisher():
     assert 'IfCondition(enable_stage3_motion_diagnostic)' in launch
     assert "create_service(\n            Trigger, '/stage3_motion_test/start'" in source
     assert "'/cmd_vel_stage3_diagnostic_raw'" in source
+    assert "NearFieldStatus, '/near_field/status'" in source
     assert "create_publisher(\n            Twist, '/cmd_vel'" not in source
     assert PHASES == (
         'forward', 'stop_after_forward', 'turn_positive',
