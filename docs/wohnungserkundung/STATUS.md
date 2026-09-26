@@ -7,6 +7,66 @@ Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATE
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
+## Stufe 3 – aktueller motorloser HWT-Vorlauf am 26.09.2026: NICHT BESTANDEN
+
+Der Nutzer gab den motorlosen Test und die spätere kurze Bewegung frei und
+bestätigte aktuell unabhängig gesperrte Motor-Endstufen bei antwortender
+Controllerelektronik, mindestens 30 s Stillstand und erreichbaren Hardware-Halt.
+Der Kandidat aus PR #101 wurde isoliert gesourct; `active_drive=false`,
+`use_hwt601_odometry=true`, `operator_stationary_confirmed=true`,
+`enable_auto_explore=false`, lokales begrenzendes Profil. Kein anderer
+Roboter-Stack, kein `base_hardware`-Antrieb, keine Nichtnull-Fahrbefehle.
+Die physische Schaltstellung stammt aus der aktuellen Vor-Ort-Auskunft;
+ROS kann sie nicht unabhängig belegen.
+
+**Messbefund:** Beim ersten vollständigen Start lieferte der strikt lesende
+FC03-Encoder zunächst 19 Paare und verriegelte dann
+`encoderpaar_zeitfenster_ueberschritten`. Das letzte akzeptierte Maximum war
+47,79 ms; die verworfene Dauer wurde damals nicht mit ausgegeben.
+Beim zweiten Start wurde **102,890 ms** für schon das erste Paar gegen die
+unveränderte **50-ms-Grenze** gemessen. Reine Diagnosefelder wurden ergänzt,
+ohne Schwellen- oder Fahrverhalten zu verändern. Ein isolierter FC03-Lauf
+blieb über 1.275 Paare stabil (Maximum 31,56 ms). Mit HWT und LiDAR liefen
+1.015 Paare (Maximum 33,89 ms); beim Start des VL53-/Collision-Launches
+folgte ein Paar von **66,976 ms**, davon links 16,015 und rechts 46,805 ms.
+Nach vollständig gestartetem VL53 liefen erneut 785 Paare stabil
+(Maximum 30,82 ms). Eine ausschließlich für den motorlosen FC03-Leser
+erprobte 45-s-Startverzögerung beseitigte den Fehler im Gesamtstack **nicht**:
+Nach sieben gültigen Paaren dauerte das achte **53,823 ms**, davon ein
+einzelner Read 39,240 ms. Die Verzögerung wurde wieder entfernt. Die
+Messgrenze, Sensorfrische, Sicherheitskonfiguration und Motorparameter blieben
+unverändert. Korrelation mit Start-/Gesamtlast ist belegt; ob USB/Modbus-
+Antwort oder Host-Scheduling die Verzögerung verursacht, ist noch offen.
+
+Im ersten 15-s-Preflight waren HWT-Rohdaten (837 Nachrichten), kalibrierte
+Gier (834), beide VL53 (52 gesunde Status/Cloud-Tripel), LiDAR (155 Scans),
+Karte (15), Safety und alle sechs Nav2-Lifecycles aktiv. Das echte Start-Bias
+hatte 805 Samples und blieb stabil/eingefroren. `odom` hatte allein den EKF
+als Publisher, das Encoder-Topic allein den read-only FC03-Knoten. Die
+Kartenmanager-Quelle war frisch, Qualitätsprüfung 4.884-mal positiv, null
+Nichtnull-Fahrbefehle. **Aber:** Der Encoder hatte verriegelt,
+`sources_ready=false`; danach wurde auch `odom->base_link` bis 1,37 s alt.
+Das ist eine Folge des fehlenden Encoder-Eingangs, keine Frische-Abnahme.
+Der dritte vollständige Start zeigte erneut denselben Fehler; private
+Evidenz: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-preflight-cycle1.json`
+und ROS-Launch-Logs unter `/home/p/.ros/log/2026-09-26-09-{44,49,56}-*/`.
+Reale Karten-/Scope-Bindung für Bewegung blieb ungeprüft.
+
+Alle gestarteten Prozesse sind beendet; die seriellen Handles sind frei.
+Der Shutdown benötigte bei mehreren Kindern nach SIGINT an die jeweilige
+Launch-PID eine SIGTERM-Eskalation nach fünf Sekunden. Beim zweiten, bereits
+vor Nav2-Bereitschaft abgebrochenen Start endete `controller_server` mit
+Code -6. Auch der **saubere Shutdown** ist somit nicht reproduzierbar
+abgenommen. Keine Fahrt und kein 0,25-m-/15°-Test. Freigabe ersetzt die
+fehlenden technischen Kriterien nicht.
+
+**Nächster Schritt:** FC03-Paarlatenz im Gesamtstack und Shutdown gezielt
+auflösen, ohne 50-ms-/Frische-/Collision-Grenzen zu lockern; denselben
+Kandidaten zweimal vollständig motorlos bestehen lassen, aktuelle Karte
+und Scope binden. Erst dann die bereits freigegebene begrenzte
+Bewegungsdiagnose erneut technisch vorbereiten. Stufe 3 bleibt GELB; PR #101
+Draft, kein Merge und keine Stufe 4.
+
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 
 **Softwareintegration BESTANDEN (lokal); motorlose Zielsystemprüfung OFFEN;

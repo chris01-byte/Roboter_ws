@@ -1,5 +1,41 @@
 # Übertragung auf den realen Roboter
 
+## Motorloser HWT-Vorlauf 26.09.2026: FC03 sperrt, keine Fahrt
+
+Freigabe für motorlosen Test und begrenzte spätere Geradeaus-/Drehdiagnose
+lag vor. Der Nutzer bestätigte aktuell getrennte Motor-Endstufen bei
+versorgten Controllern, Stillstand und Hardware-Halt. Genau der isolierte
+PR-#101-Kandidat wurde in ROS-Domain 217 mit
+`active_drive=false`, HWT-Opt-in und ohne Explore-Auftrag gestartet;
+aktiver `~/roboter_ws/install` unverändert. Die physische Motortrennung kann
+ROS nicht selbst verifizieren. Kein `base_hardware`-Antrieb und kein
+Nichtnull-Fahrbefehl.
+
+**Nicht bestanden:** Der read-only FC03-Knoten verriegelte bei 50-ms-
+Paargrenze. Gemessen 102,890 ms beim ersten Paar eines Gesamtstarts und
+53,823 ms beim achten Paar eines späteren Vollstarts; beim separaten
+VL53-Start 66,976 ms. Isoliert oder nach Sensorinitialisierung liefen
+1.275 bzw. 785 Paare unter derselben Grenze. Damit scheitern
+Rohquellenfreigabe und später TF-Frische. HWT-Bias, VL53, LiDAR, Karte,
+Safety und sechs Nav2-Lifecycles waren im ersten Lauf für sich gesund.
+Die kurz erprobte Startverzögerung für den Reader wirkte nicht und wurde
+aus dem Quellstand entfernt. Nur Zeitdiagnose ist neu. Keine Limits geändert.
+
+Private Messung: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-preflight-cycle1.json`;
+Launch-Logs `/home/p/.ros/log/2026-09-26-09-{44,49,56}-*/`.
+SIGINT an die jeweilige Launch-PID beendete letztlich alle Kinder und gab
+LiDAR/HWT/RS485-Handles frei, brauchte aber teilweise SIGTERM nach fünf
+Sekunden; ein früh gestoppter Controller endete Code -6. Nicht als sauberen
+zweifachen Shutdown werten. Neue Karten-/Scope-Bindung für Bewegung ist
+ebenfalls noch offen. Keine Motorfahrt ausgeführt.
+
+**Übernahme/Rückfall:** Aktiven Install nicht wechseln, Stack gestoppt
+lassen. FC03-Latenz und Shutdown messen/gezielt beheben, ohne die 50-ms-
+Grenze oder Sicherheitstore zu lockern; anschließend zwei vollständige
+motorlose Zyklen und Karten-/Scope-Prüfung. Erst danach den bereits
+freigegebenen 0,25-m-Stopp sowie ±15° einzeln über den vorhandenen
+Fahrpfad prüfen. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+
 ## Aktuell: isolierter HWT601-WE-Kandidat, Geräteprüfung noch offen (26.09.2026)
 
 **Softwareintegration lokal BESTANDEN; motorlose Prüfung OFFEN; reale

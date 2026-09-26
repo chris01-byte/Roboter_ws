@@ -347,6 +347,12 @@ class EncoderShadowNode(Node):
         if self.core.fault_reason is not None:
             self._close_transport()
             self._publish_status_and_diagnostics(force_diagnostics=True)
+            duration = self.core.last_rejected_pair_duration_s
+            if duration is not None:
+                self.last_error_detail = (
+                    f'FC03-Paar {duration:.6f}s, Grenze '
+                    f'{self.max_pair_read_duration_s:.6f}s; '
+                    f'Einzelreads {self.reader.last_read_durations_s}')
             self.get_logger().error(
                 'Encoder-Shadow dauerhaft gesperrt: '
                 f'{self.core.fault_reason}; '
@@ -454,6 +460,9 @@ class EncoderShadowNode(Node):
             'poll_rate_hz': self.poll_rate_hz,
             'max_pair_read_duration_s': self.max_pair_read_duration_s,
             'max_sample_gap_s': self.max_sample_gap_s,
+            'last_read_order': self.reader.last_read_order if self.reader else [],
+            'last_read_durations_s': (
+                self.reader.last_read_durations_s if self.reader else {}),
         })
         self.status_pub.publish(String(
             data=json.dumps(payload, sort_keys=True)))

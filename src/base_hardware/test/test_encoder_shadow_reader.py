@@ -392,6 +392,11 @@ class TestPairReader:
         assert sample.left.speed_rpm == 10.0
         assert sample.right.position_u32 == 0xFFFFFFFE
         assert sample.right.speed_rpm == -10.0
+        assert reader.last_read_order == [1, 2]
+        assert set(reader.last_read_durations_s) == {1, 2}
+        assert all(value >= 0 for value in reader.last_read_durations_s.values())
+        reader.read_complete_pair()
+        assert reader.last_read_order == [2, 1]
         assert {address for _, address, _ in transport_stub.calls} == {
             0x000A, 0x0011, 0x0019, 0x0101}
 
@@ -446,6 +451,8 @@ class TestShadowCore:
         assert core.tracker.y_m == pytest.approx(0.0)
         assert core.tracker.yaw_rad == pytest.approx(0.0)
         assert core.maximum_pair_duration_s == pytest.approx(0.012)
+        assert core.maximum_attempted_pair_duration_s == pytest.approx(0.012)
+        assert core.last_rejected_pair_duration_s is None
 
     @pytest.mark.parametrize(
         'second_time,duration,expected_reason', [
@@ -466,6 +473,9 @@ class TestShadowCore:
         )
         assert not failed.publish
         assert core.fault_reason == expected_reason
+        if expected_reason == 'encoderpaar_zeitfenster_ueberschritten':
+            assert core.last_rejected_pair_duration_s == pytest.approx(duration)
+            assert core.maximum_attempted_pair_duration_s == pytest.approx(duration)
         later = core.accept_pair(
             pair(120, 180), sample_time_s=1.06, pair_read_duration_s=0.01)
         assert not later.publish
@@ -512,3 +522,5 @@ class TestShadowCore:
         assert status['fault_reason'] is None
         assert status['last_pair_duration_s'] == pytest.approx(0.01)
         assert status['maximum_pair_duration_s'] == pytest.approx(0.01)
+        assert status['maximum_attempted_pair_duration_s'] == pytest.approx(0.01)
+        assert status['last_rejected_pair_duration_s'] is None

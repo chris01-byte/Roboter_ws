@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -383,6 +384,8 @@ class EncoderPairReader:
         self.left_configuration: EncoderConfiguration | None = None
         self.right_configuration: EncoderConfiguration | None = None
         self._left_first = True
+        self.last_read_order: list[int] = []
+        self.last_read_durations_s: dict[int, float] = {}
 
     def read_and_validate_configuration(
         self,
@@ -444,9 +447,17 @@ class EncoderPairReader:
         self._left_first = not self._left_first
 
         samples: dict[int, MotorFeedback] = {}
+        self.last_read_order = []
+        self.last_read_durations_s = {}
         for motor_id, configuration in order:
-            words = self.transport.read_holding_registers(
-                motor_id, self.position_register, 3)
+            self.last_read_order.append(motor_id)
+            read_started = time.monotonic()
+            try:
+                words = self.transport.read_holding_registers(
+                    motor_id, self.position_register, 3)
+            finally:
+                self.last_read_durations_s[motor_id] = (
+                    time.monotonic() - read_started)
             try:
                 samples[motor_id] = MotorFeedback(
                     position_u32=decode_position_words(
@@ -487,6 +498,8 @@ class EncoderShadowCore:
         self.baseline_count = 0
         self.last_pair_duration_s: float | None = None
         self.maximum_pair_duration_s: float | None = None
+        self.last_rejected_pair_duration_s: float | None = None
+        self.maximum_attempted_pair_duration_s: float | None = None
         self.last_sample_time_s: float | None = None
         self.last_update = EncoderUpdate(False, False, 'noch_keine_probe')
         self.last_pair: EncoderPair | None = None
@@ -517,9 +530,16 @@ class EncoderShadowCore:
             self.latch_fault('ungueltiger_zeitstempel')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
+        if math.isfinite(pair_read_duration_s) and pair_read_duration_s >= 0.0:
+            if (self.maximum_attempted_pair_duration_s is None
+                    or pair_read_duration_s > self.maximum_attempted_pair_duration_s):
+                self.maximum_attempted_pair_duration_s = pair_read_duration_s
         if (not math.isfinite(pair_read_duration_s)
                 or pair_read_duration_s < 0.0
                 or pair_read_duration_s > self.max_pair_read_duration_s):
+            self.last_rejected_pair_duration_s = (
+                pair_read_duration_s if math.isfinite(pair_read_duration_s)
+                else None)
             self.latch_fault('encoderpaar_zeitfenster_ueberschritten')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
@@ -608,6 +628,8 @@ def shadow_status_payload(
         'yaw_rad': core.tracker.yaw_rad,
         'last_pair_duration_s': core.last_pair_duration_s,
         'maximum_pair_duration_s': core.maximum_pair_duration_s,
+        'last_rejected_pair_duration_s': core.last_rejected_pair_duration_s,
+        'maximum_attempted_pair_duration_s': core.maximum_attempted_pair_duration_s,
         'last_feedback_age_s': last_feedback_age_s,
         'max_feedback_age_s': max_feedback_age_s,
         'last_reason': core.last_update.reason,

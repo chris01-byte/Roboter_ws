@@ -17,6 +17,32 @@ Rückfallweg:
 
 ---
 
+## 2026-09-26 — HWT-Zielsystemvorlauf an realer FC03-Latenz gestoppt
+
+**Entscheidung:** Nutzerfreigabe für motorlosen Vorlauf und kurze spätere
+Bewegung liegt vor. Bewegung nicht gestartet: Die 50-ms-Grenze des echten
+Encoderpaares wurde im vollständigen Stack wiederholt überschritten; Roh-
+quellenwächter verriegelte korrekt. Nur tatsächliche Dauer beider FC03-Reads
+und abgewiesener Paare diagnostisch ergänzen. Erprobten 45-s-Startaufschub
+nach erneutem Fehlschlag zurücknehmen; keine Grenze oder Kalibrierung lockern.
+
+**Evidenz:** Isolierter Reader 1.275 Paare, maximal 31,56 ms; mit HWT/LiDAR
+1.015 Paare, maximal 33,89 ms. VL53-Start: 66,976 ms, davon rechter
+Read 46,805 ms. Vollstack: erstes Paar einmal 102,890 ms; auch nach
+45-s-Aufschub achtes Paar 53,823 ms, davon ein Read 39,240 ms.
+HWT-Bias stabil (805 Samples), beide VL53 gesund, Karte/LiDAR/Safety/Nav2
+im ersten Vorlauf frisch, aber FC03 verriegelt und TF anschließend alt.
+Null Nichtnull-Fahrbefehle. Aktuelle Vor-Ort-Auskunft: Endstufen unabhängig
+gesperrt, Controller lesbar, Hardware-Halt erreichbar. Keine Motoraktivierung.
+
+**Risiko / Rückfall:** Ursache USB/Modbus vs. Scheduling noch unklar;
+Startaufschub wirkte nicht. SIGINT nur an Launch-PID hinterließ wiederholt
+5-s-SIGTERM-Eskalationen; einmal Nav2-Controller Code -6 beim frühen
+Abbruch. Alle Prozesse/Handles danach geschlossen, aber kein sauberer
+Shutdown-Nachweis. Aktiven Install nicht umstellen, keine reale Fahrt.
+Isolierten PR-#101-Kandidaten gestoppt lassen. Weitere Messwerte und
+erforderlicher nächster Schritt im [WE-STATUS](wohnungserkundung/STATUS.md).
+
 ## 2026-09-26 — Bewährte HWT-Fusion explizit in WE integriert, noch keine Hardwareabnahme
 
 **Entscheidung:** PR #100 (`113014e`) bleibt Basis. Auf getrenntem Branch
