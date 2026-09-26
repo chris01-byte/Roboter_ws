@@ -38,14 +38,17 @@ Ende der +15°-Phase gemessen.
 **Test / Rückfall:** 46 `robot_navigation`-Tests bestanden; `robot_navigation`
 und `robot_bringup` erfolgreich in einen isolierten temporären Build unter
 `/tmp/amadeus-stage3-motion-build.N6Ninf` gebaut. Der vorige motorlose
-180-s-Nachweis wurde nicht wiederholt. Der neue Build wurde nicht auf dem
-Roboter installiert oder ausgeführt; keine reale Bewegung. Standard bleibt
-deaktiviert. Rückfall ist vorherigen PR-#101-Commit `80ab168` verwenden und
-Launchargument weglassen; kein Wechsel des aktiven Installationspräfixes.
-Nächster erforderlicher Nachweis: Kandidat isoliert auf dem Zielsystem
-auflösen, aktuelle Karte/Scope/Startpose prüfen und erst anschließend den
-einmaligen begrenzten Bewegungstest ausführen. WE-Stufe 3 bleibt GELB bis
-realer Bewegungs- und autonomer Umfahrnachweis.
+180-s-Nachweis wurde nicht wiederholt. Der Build wurde transient als Overlay
+für einen Live-Stackstart gesourct; Diagnosemodus aus, kein Missionsauftrag.
+Base-Hardware blieb bei Nullsollwerten/0 RPM. Live meldete `safety_monitor`
+`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“; daher kein
+Fahrversuch. Launch-PID 79158 erhielt SIGINT, alle Kinder endeten sauber,
+HWT-/LiDAR-Handles waren frei und Domain 217 danach leer. Der aktive Install
+blieb unverändert. Standard bleibt deaktiviert. Rückfall: vorherigen PR-#101-
+Commit `80ab168` verwenden und Launchargument weglassen. Weiterfahrt erst,
+wenn die unabhängige Hardware-Haltekette vorhanden und live bestätigt ist;
+dann aktuelle Karte/Scope/Startpose prüfen. WE-Stufe 3 bleibt GELB bis realer
+Bewegungs- und autonomer Umfahrnachweis.
 
 ## 2026-09-26 — Motorloser HWT/Encoder-Vorlauf zweimal bestanden
 

@@ -176,14 +176,19 @@ Diagnose-Active folgen bei Ende oder Abbruch.
 Gerätefreie Verifikation: alle 46 Tests aus `robot_navigation` bestanden;
 `robot_navigation` und `robot_bringup` erfolgreich in einen separaten
 temporären Build/Install unter `/tmp/amadeus-stage3-motion-build.N6Ninf`
-gebaut. Der frühere 180-s-Motorlosnachweis wurde nicht wiederholt. **Dieser
-Build wurde weder auf den Roboter installiert noch dort ausgeführt; es fand
-keine Bewegung statt.** Keine Änderung am aktiven `~/roboter_ws/install`.
-Nächster Schritt bleibt: nach isolierter Bereitstellung genau dieses Kandidaten
-auf dem Zielsystem aktuelle Startpose, Map-Fingerprint, Scope-ID und freien
-Testbereich prüfen; danach den begrenzten Diagnose-Trigger auslösen. Reale
-Barrieren-Umfahrung und Stoppbefreiung bleiben separate spätere Tests und
-Stufe 3 insgesamt bleibt GELB.
+gebaut. Der frühere 180-s-Motorlosnachweis wurde nicht wiederholt. Der
+temporäre Overlay-Build wurde einmal für einen Live-Stackstart gesourct; der
+Diagnosemodus blieb aus, es wurde kein Missionsauftrag gesendet. `base_hardware`
+meldete währenddessen nur Nullsollwerte und 0 RPM; keine Bewegung. Der
+Safety-Monitor meldete `use_gpio_estop=false` und „Kein Hardware-Not-Aus
+angebunden“, woraufhin der Lauf ohne Navigation/Mission abgebrochen wurde.
+SIGINT ging ausschließlich an Launch-PID 79158; alle ROS-Kinder endeten sauber,
+`/dev/ttyUSB_HWT601` und `/dev/amadeus_lidar` waren danach unbelegt, Domain 217
+leer. Der aktive `~/roboter_ws/install` blieb unverändert. Der Diagnosepfad
+wurde nicht ausgelöst. Weiterer realer Fahrtest ist blockiert, bis die
+unabhängige Hardware-Haltekette vorhanden und live bestätigt ist; aktueller
+Map-/Scope-/Startpose-Nachweis und Hindernisumfahrung sind noch offen. Stufe 3
+bleibt GELB.
 
 **Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
 mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,

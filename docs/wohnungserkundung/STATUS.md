@@ -79,12 +79,16 @@ verifizierten Scope liegen. Zeitgestempelte Ketten-, RPM-, Encoder-, Odom-,
 HWT-, LiDAR-, TF- und Statusdaten werden privat als JSONL protokolliert.
 
 Die Softwaretests (46 Tests) und isolierter Build von `robot_navigation` und
-`robot_bringup` bestanden. **Der Diagnosepfad wurde noch nicht auf dem Roboter
-installiert oder ausgeführt; es fand keine Bewegung statt.** Der bisherige
-180-s-Motorlosnachweis wird nicht wiederholt. Vor dem nächsten Bewegungstest
-muss der neue Kandidat isoliert auf dem Zielsystem aufgelöst und die aktuelle
-Karten-/Scope-/Startpose-Bindung geprüft werden; bis dahin keine Fahrt und
-kein Gesamt-Grün.
+`robot_bringup` bestanden. Der temporäre Overlay-Build wurde einmal für einen
+Live-Stackstart gesourct; der Diagnoseknoten war deaktiviert und es wurde kein
+Missionsauftrag gesendet. `base_hardware` meldete nur 0-RPM/Nullsollwerte; es
+fand keine Bewegung statt. Der Safety-Monitor meldete beim Start
+`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“; deshalb wurde
+keine Erkundungsmission ausgelöst. Die Launcher-PID wurde mit SIGINT beendet,
+alle Kinder beendeten sauber, HWT-/LiDAR-Handles wurden freigegeben und ROS-
+Domain 217 war danach leer. Der bestehende Install wurde nicht umgestellt.
+Der bisherige 180-s-Motorlosnachweis wird nicht wiederholt. Der autonome
+Umfahrnachweis fehlt; Stufe 3 bleibt GELB.
 
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 
