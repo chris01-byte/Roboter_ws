@@ -34,6 +34,11 @@ Nach vollständig gestartetem VL53 liefen erneut 785 Paare stabil
 erprobte 45-s-Startverzögerung beseitigte den Fehler im Gesamtstack **nicht**:
 Nach sieben gültigen Paaren dauerte das achte **53,823 ms**, davon ein
 einzelner Read 39,240 ms. Die Verzögerung wurde wieder entfernt. Die
+zusätzliche motorlose Gegenprobe band nur den FC03-Leser an CPU 3 (Affinität
+am Prozess verifiziert): Schon das erste Paar dauerte **77,245 ms**
+(links 48,993, rechts 27,977 ms) und verriegelte. Auch diese Änderung wurde
+aus Quelle und isoliertem Install entfernt. Privater Bericht:
+`/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-affinity-a.json`.
 Messgrenze, Sensorfrische, Sicherheitskonfiguration und Motorparameter blieben
 unverändert. Korrelation mit Start-/Gesamtlast ist belegt; ob USB/Modbus-
 Antwort oder Host-Scheduling die Verzögerung verursacht, ist noch offen.

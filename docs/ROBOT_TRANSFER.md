@@ -19,9 +19,13 @@ VL53-Start 66,976 ms. Isoliert oder nach Sensorinitialisierung liefen
 Rohquellenfreigabe und später TF-Frische. HWT-Bias, VL53, LiDAR, Karte,
 Safety und sechs Nav2-Lifecycles waren im ersten Lauf für sich gesund.
 Die kurz erprobte Startverzögerung für den Reader wirkte nicht und wurde
-aus dem Quellstand entfernt. Nur Zeitdiagnose ist neu. Keine Limits geändert.
+aus dem Quellstand entfernt. Eine CPU-3-Bindung half ebenfalls nicht:
+erstes Paar 77,245 ms (48,993/27,977 ms Einzelreads), ebenfalls verriegelt;
+die Bindung ist wieder entfernt und Quelle/Install stimmen überein. Nur
+Zeitdiagnose ist neu. Keine Limits geändert.
 
 Private Messung: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-preflight-cycle1.json`;
+CPU-Gegenprobe: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-affinity-a.json`;
 Launch-Logs `/home/p/.ros/log/2026-09-26-09-{44,49,56}-*/`.
 SIGINT an die jeweilige Launch-PID beendete letztlich alle Kinder und gab
 LiDAR/HWT/RS485-Handles frei, brauchte aber teilweise SIGTERM nach fünf

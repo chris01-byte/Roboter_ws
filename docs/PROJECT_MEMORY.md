@@ -30,6 +30,9 @@ nach erneutem Fehlschlag zurücknehmen; keine Grenze oder Kalibrierung lockern.
 1.015 Paare, maximal 33,89 ms. VL53-Start: 66,976 ms, davon rechter
 Read 46,805 ms. Vollstack: erstes Paar einmal 102,890 ms; auch nach
 45-s-Aufschub achtes Paar 53,823 ms, davon ein Read 39,240 ms.
+Eine CPU-3-Bindung nur des Lesers half ebenfalls nicht: erstes Vollstack-Paar
+77,245 ms (Einzelreads 48,993/27,977 ms), Schutz verriegelte. Affinität
+anschließend vollständig zurückgenommen; keine Fahr- oder Grenzänderung.
 HWT-Bias stabil (805 Samples), beide VL53 gesund, Karte/LiDAR/Safety/Nav2
 im ersten Vorlauf frisch, aber FC03 verriegelt und TF anschließend alt.
 Null Nichtnull-Fahrbefehle. Aktuelle Vor-Ort-Auskunft: Endstufen unabhängig
