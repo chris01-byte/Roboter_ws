@@ -1,6 +1,229 @@
 # Übertragung auf den realen Roboter
 
-## Aktuell: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
+## Motorloser HWT/Encoder-Preflight 26.09.2026: zweimal bestanden
+
+Der Nutzer gab zwei motorlose Vollstack-Zyklen frei und bestätigte unabhängig
+gesperrte Motor-Endstufen. Isolierter Kandidat aus PR #101 in ROS-Domain 217,
+`active_drive=false`, HWT-Opt-in und ohne automatische Erkundungsmission;
+der aktive `~/roboter_ws/install` blieb unverändert. Motorbusbesitzer war
+ausschließlich der read-only FC03-Shadow-Knoten. Kein Nichtnull-Fahrwert.
+
+Im Shadow-Profil sind Paar- und Sample-Grenze 0,12/0,18 s. Ein einzelnes
+verspätetes, aber gültiges Paar vor der Baseline wird verworfen und neu
+gelesen. Eine zweite aufeinanderfolgende Überschreitung und jede nach der
+Baseline verriegeln; Antwort- und Konfigurationsfehler bleiben sofort
+fail-closed. Aktive Base-Hardware-Encodergrenze 0,30 s, Motorparameter,
+Modbus-Timeout, HWT/VL53/LiDAR, Scope, Footprint, Collision Monitor und
+Navigation wurden nicht geändert.
+
+Je 180 s nach Biasphase: 3.604 akzeptierte Paare und keine Fehler oder
+Reconnects pro Fenster. Zyklus 1 Paarzeiten min/Median/p95/max
+9,95/13,57/20,26/44,66 ms; Zyklus 2 10,08/13,77/20,74/45,32 ms.
+Einzelread-Statistik pro Motor und Quellenalter stehen in
+`/home/p/.local/share/amadeus/tests/stage3-hwt-cycle{1,2}.json`. HWT-Bias,
+Fusion, VL53, LiDAR, Map/TF und sechs Nav2-Lifecycles waren frisch. Im zweiten
+SIGINT-Shutdown wurde eine laufende Probe mit 124,547 ms fail-closed verworfen
+und nicht publiziert. Alle Kinder beendeten sauber mit Exit 0, sämtliche
+seriellen Handles wurden frei; keine SIGTERM-Eskalation.
+
+Für die anschließende Freigabevorlage ist das lokale Profil
+`stage3-real-20260925-after-r2-scope.yaml` mit Scope-ID
+`stage3-local-scope-20260925-after-r2` und Session
+`stage3-20260925-after-r2` bestimmt. Aktuelle Live-Karte in Frame `map`:
+Fingerprint beginnt `c6c949`; beim Neustart erzeugt der bestehende
+Map-Status-Korrelator eine neue Bindung zum aktuellen Fingerprint. Vor einer
+Fahrt müssen aktuelle Startpose und Scope sichtbar abgeglichen werden. Es gab
+keine Fahrt. Der begrenzte 0,25-m-/±15°-Test wird separat zur ausdrücklichen
+Fahrfreigabe vorgelegt; Stufe 3 insgesamt bleibt bis zum Umfahrnachweis GELB.
+
+## Aktuell: isolierter HWT601-WE-Kandidat, Geräteprüfung noch offen (26.09.2026)
+
+**Softwareintegration lokal BESTANDEN; motorlose Prüfung OFFEN; reale
+Bewegungsprüfung OFFEN.** Dieser Auftrag hat keine Geräte angesprochen und
+keinen Roboter-Stack gestartet. Die alten Hardwarefreigaben werden nicht auf
+die neue Integration übertragen. Keine Umstellung von `~/roboter_ws/install`.
+
+### Exakter Quell- und Installstand
+
+Branch `codex/we1-hwt601-fusion`, Basis PR #100 / `113014e`, HWT-Referenz
+`1d91229`; Wiederverwendung `b3b6370`, funktionale Integration `f61e3e7`.
+Arbeitskopie `/home/p/roboter_worktrees/we1-hwt601-fusion`; fremde Änderungen
+in `/home/p/roboter_ws` nicht übernommen oder verändert. Nichtsymlink-Build:
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/{build,install,log}`.
+
+Alle folgenden Pakete lösen nach Sourcen dieses Isolats tatsächlich aus
+`we1-hwt601-IC2SLr/install/<paket>` auf:
+`robot_state_estimation`, `base_hardware`, `amadeus_lidar_bringup`,
+`robot_bringup`, `robot_navigation`, `explore`, `robot_map_manager`,
+`mission_manager`, `bt_orchestrator`, `safety_monitor`, `vl53_near_field`,
+`robot_interfaces`, `semantic_map_manager`, `amadeus_map_identity`.
+Nav2 und `robot_localization` kommen aus `/opt/ros/humble`, `slam_toolbox`
+aus `/home/p/amadeus_slam_toolbox_ws/install/slam_toolbox`, der korrigierte
+LiDAR-Treiber aus `we1-ldlidar-shutdown-overlay/install/ldlidar_stl_ros2`.
+
+Die gespeicherte Setup-Kette (unten nach oben; Release-Namen jeweils unter
+`/home/p/.local/share/amadeus/releases/`, jeweils mit `/install`) ist:
+
+```text
+/opt/ros/humble
+/home/p/amadeus_slam_toolbox_ws/install
+we1-ldlidar-shutdown-overlay
+we1-10e1858074e7-r1
+we1-stage1-5e3fe0a-20260923
+we1-stage2-6fd36d5-20260923
+we1-stage3-bypass-s8QMY8
+we1-stage3-complete-1kI6en
+we1-stage3-vl53-mark-bwVxEL
+we1-stage3-explorer-shutdown-dnrGyH
+we1-stage3-health-CVhWvH
+we1-stage3-frame-gap-r2
+we1-stage3-cancel-latch-r1
+we1-stage3-vl53-boot-r1
+we1-hwt601-IC2SLr
+```
+
+Nicht neu gebaute App-Pakete bleiben in den alten Unterlagen. Der neue
+Kandidat überlagert dagegen sämtliche oben genannten 14 WE-Pakete.
+Quelle/Install paarweise SHA-256-identisch: `hwt601_fusion_health.py`
+`9297699e...`, `hwt601_fusion_guard.py` `f144f6cc...`,
+`cmd_vel_mission_gate.py` `fa5a6b60...`, HWT-SLAM-Launch `d11b6418...`,
+VL53-Knoten `98d2b42e...`, Nav-Runtime `715b2a41...`.
+Letztere und VL53/Interfaces/Nav-Sicherheitskonfiguration/Basisparameter
+sind gegenüber PR #100 unverändert.
+
+Buildbesonderheit: Der systemweite BehaviorTree-CMake-Export sucht eine
+nicht vorhandene nicht-multiarch Bibliothek. Wie im bestehenden WE-Build
+wurde **nur beim Bauen** der vorhandene Export unter
+`we1-10e1858074e7-r1/underlay/behaviortree_cpp/share/behaviortree_cpp/cmake`
+per `-Dbehaviortree_cpp_DIR` verwendet. Keine Systembibliothek verändert.
+Runtime löst `libbehaviortree_cpp.so` aus
+`/opt/ros/humble/lib/aarch64-linux-gnu/` auf; SHA-256
+`c87409e5c2853a723537bbfc3d05be055c649ce3823e8027962a477eb97a7b15`
+identisch zum vorhandenen Unterlagenartefakt. Keine fehlende Laufzeitbibliothek.
+
+### Motorloser nächster Vorlauf — vorbereitet, NICHT ausgeführt
+
+Vorher einmal gebündelt aktuell bestätigen lassen: Gerätezugriff auf HWT,
+FC03-Encoder, VL53/LiDAR und ROS; kein paralleler Stack; Roboter ab Start
+mindestens 30 s tatsächlich unbewegt; unabhängig deaktivierte Motorendstufe
+bei weiterhin FC03-antwortender Controllerelektronik; Hardware-Halt erreichbar.
+Bekannten dedizierten HWT-Adapter/Montage nur auf zwischenzeitliche Änderung
+prüfen, nicht neu kalibrieren. Falls die getrennte Versorgung nicht möglich
+ist, ist dieser FC03-Aufbau **nicht motorlos prüfbar**; keine Dry-run-Werte
+unterschieben und keine Motoren für den Vorlauf aktivieren.
+
+Danach in einer frischen Shell ausschließlich obigen Kandidaten sourcen.
+Bestehendes begrenzendes WE-Profil aus
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`
+vor Verwendung auf Kartenidentität und aktuelle Pose prüfen; nicht als
+erneute physische Bereichsfreigabe behandeln oder automatisch ausweiten.
+Bestehende `app_mapping.launch.py` mit `use_hwt601_odometry:=true`,
+`operator_stationary_confirmed:=true` **erst nach der Bestätigung**,
+`active_drive:=false`, `enable_auto_explore:=false`, `start_web_gui:=false`
+und genau diesem lokal verifizierten `explore_params_overlay` verwenden.
+
+In zwei getrennten Start-/Stopp-Zyklen protokollieren:
+
+1. Ausschließlich `hwt601_encoder_shadow_reader` am Motorbus, kein
+   `base_hardware`-Prozess; FC03-only, echte Zähler, kein Command-Abonnent.
+   HWT eigener `/dev/ttyUSB_HWT601`, keine Sensorregister-Schreibbefehle.
+2. Roh-HWT frisch, reale Stillstandswerte/Achsen plausibel, Bias nach
+   unverändertem 15+10-s-Fenster stabil/kalibriert/eingefroren; Encoder-vx
+   im tatsächlichen Stillstand plausibel. Kein künstliches Stillstandsflag
+   aus Encoder-Dry-run. Keine Grenzwertänderung bei Fehlschlag.
+3. Genau ein `/odom`-Publisher und dynamisches `odom->base_link` vom EKF,
+   genau ein `/map`/`map->odom` vom SLAM; TF-Frische und Rohquellen gesondert.
+4. Beide VL53 nach aktuellem Frame/Target/UNKNOWN-Vertrag, LiDAR,
+   Kartenmanager-Frische, Karten-/Scope-Bindung, Safety und Nav2 prüfen.
+   `/fusion/hwt601/status_json`: `sources_ready=true`, aber
+   `hwt_motion_ready=false` / `readonly_preflight_no_motion`.
+   Das ist keine vollständige Fahrtfreigabe; alle bisherigen Tore bleiben.
+   Keine Mission senden, keine Nichtnull-Fahrbefehle, keine Motoraktivierung.
+5. SIGINT nur an die protokollierte Launch-PID, nie an die Prozessgruppe.
+   Alle Kinder, Logs und Gerätehandles prüfen. Zwei saubere reale Shutdowns
+   erforderlich; gerätefreie Prozess-Shutdowns ersetzen diese nicht.
+
+### Danach separat freizugebende Bewegungsdiagnose
+
+#### Diagnosepfad lokal implementiert, Zielsystem noch nicht aktualisiert
+
+Auf Branch `codex/we1-hwt601-fusion` ist der Diagnosemodus jetzt standardmäßig
+deaktiviert (`enable_stage3_motion_diagnostic:=false`). Bei explizitem Opt-in
+startet ein einzelner `/stage3_motion_test/start`-Trigger genau diese Sequenz:
+0,25 m vorwärts, bestätigter Stillstand, +15°, Stillstand, −15° relativ zur
+gemessenen Pose nach der positiven Drehung, Endstillstand. Es gibt keine
+anderen Ziele, keine Wiederholung, Rückwärtsfahrt oder Recovery. Der
+Diagnoseknoten publiziert ausschließlich `/cmd_vel_stage3_diagnostic_raw`;
+`cmd_vel_mission_gate` gibt nur bei frischen normalen Sicherheitsquellen,
+aktivem Diagnose-Opt-in, nicht laufender Mission, E-Stop-Freigabe, HWT und TF
+nach `/cmd_vel_nav` frei. Danach bleiben Velocity Smoother, Collision Monitor,
+`/cmd_vel` und `base_hardware` die vorhandene Kette. Produktgrenzen und
+Parameter sind unverändert. Gate-Ausgang, Smoother, Collision Monitor,
+Basis-Soll-/Ist-RPM und Encoderzähler, Encoder-/HWT-/fusions-Odom, LiDAR,
+TF, Safety und beide VL53 werden mit Empfangs- und Nachrichtenzeit privat als
+JSONL protokolliert.
+
+Vor Triggern verlangt der Knoten das bereits bestimmte Scope-Profil und die
+exakte Scope-ID `stage3-local-scope-20260925-after-r2`, einen frischen
+Map-Fingerprint im bestehenden SLAM-Session-Kontext, Map-Frame-Pose und den
+unveränderten gepaddeten Footprint vollständig innerhalb des Polygons. Die
+Startkarte wird gebunden; nachfolgende Kartenrevisionen derselben SLAM-Session
+werden toleriert, aber veraltete oder verlorene Bindung stoppt den Lauf. Jeder
+Phasentick stoppt fail-closed bei fehlender/veralteter HWT-/Encoder-, VL53-,
+LiDAR-, TF-, Karten-, Scope- oder Safety-Quelle. Nullkommando und deaktiviertes
+Diagnose-Active folgen bei Ende oder Abbruch.
+
+Gerätefreie Verifikation: alle 46 Tests aus `robot_navigation` bestanden;
+`robot_navigation` und `robot_bringup` erfolgreich in einen separaten
+temporären Build/Install unter `/tmp/amadeus-stage3-motion-build.N6Ninf`
+gebaut. Der frühere 180-s-Motorlosnachweis wurde nicht wiederholt. Der
+temporäre Overlay-Build wurde einmal für einen Live-Stackstart gesourct; der
+Diagnosemodus blieb aus, es wurde kein Missionsauftrag gesendet. `base_hardware`
+meldete währenddessen nur Nullsollwerte und 0 RPM; keine Bewegung. Der
+Safety-Monitor meldete `use_gpio_estop=false` und „Kein Hardware-Not-Aus
+angebunden“. Der Nutzer hat klargestellt und manuell bestätigt, dass der
+unabhängige Hardware-Halt außerhalb GPIO/ROS verdrahtet und erreichbar ist;
+diese Warnung ist nur die fehlende Jetson-GPIO-Rückmeldung. Der erste Lauf
+wurde wegen einer Fehlinterpretation beendet, nicht wegen eines gemessenen
+Sensor-/Safety-Fehlers. Für den einmaligen Diagnoselauf ist jetzt
+`lab_external_hardware_halt_attested:=true` als standardmäßig falsches Opt-in
+implementiert und im Diagnosestatus sichtbar; `/safety/estop`, Collision Monitor, Quellen-, TF- und
+Scope-Prüfungen bleiben aktiv.
+Der erste Triggerlauf scheiterte vor jeder Bewegung mit `veraltete Quellen:
+near_status`. `ros2 node info` belegte, dass der Prüfknoten
+`/near_field/status` fälschlich als `std_msgs/String` abonniert hatte; der
+aktive `/vl53_near_field`-Knoten publiziert
+`robot_interfaces/msg/NearFieldStatus`. Die Subscription wurde im Kandidaten
+korrigiert und die Regression ergänzt. Erneut bestanden 46 Tests, isolierter
+Build und `git diff --check`.
+
+Mit dem korrigierten Kandidaten wurde der gebundene Bewegungstest einmal
+vollständig ausgeführt. Ergebnis `complete`, mit drei bestätigten Stillständen;
+`/odom` meldete 0,270 m Translation, Motor-Ist-RPM erreichten maximal ±122,
+HWT-Gyro/Encoder/LiDAR/TF/Safety und 140 VL53-Statusframes wurden synchron
+aufgezeichnet. Modbusfehler, verworfene Encoderupdates und Reconnects: 0.
+Private Evidenz liegt unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+
+Direkt danach schlug die automatisch gestartete Explore-Mission während ihres
+Initialscans mit `initial_scan_no_progress` fehl. Status: 0/3 qualifizierende
+Beobachtungen, 0 Frontierziele, `navigation_dispatched=false`; daher kein
+Nav2-Ziel, keine Hindernisinteraktion und kein Umfahrnachweis. Ein vorheriger
+Versuch war während desselben Initialscans kontrolliert storniert worden.
+Stack wurde mit SIGINT am Launch-PID beendet; Motoren standen auf 0 RPM und
+keine Roboterprozesse/seriellen Handles blieben zurück. Der Diagnoseprozess
+warf beim Shutdown einen `RuntimeError` im rclpy-Nachrichten-Decoding. Dieser
+Shutdown-Befund ist ungeklärt und muss vor einem weiteren Hardwarelauf
+untersucht werden. Aktiver `~/roboter_ws/install` unverändert; kein Merge.
+Stufe 3 bleibt GELB.
+
+**Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
+mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,
+`use_hwt601_odometry=false`. Vor Neustart genau einen Topic-/TF-Eigentümer
+sicherstellen. Kein Live-Umschalten, kein automatischer Merge. Softwaretests
+und offene Altbefunde sind im [WE-STATUS](wohnungserkundung/STATUS.md) belegt.
+
+## Historisch: isolierter Korrekturstand, reale Umfahrung noch offen (25.09.2026)
 
 PR #100, Branch `fix/we1-stage3-vl53-regression`. Aktiver
 `~/roboter_ws/install` unveraendert. Fuer motorlose Verifikation:

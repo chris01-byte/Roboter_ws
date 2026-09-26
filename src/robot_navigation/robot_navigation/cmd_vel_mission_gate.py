@@ -131,6 +131,27 @@ def localization_motion_authorized(
     )
 
 
+def stage3_diagnostic_authorized(
+        enabled, active, active_at, command_at, mission_status,
+        mission_status_at, now, timeout_s, health_ready, estop_clear,
+        hwt_ready, tf_ready):
+    """Require the explicit one-shot mode and every normal motion interlock."""
+    times = (active_at, command_at, mission_status_at, now, timeout_s)
+    if not all(value is not None and math.isfinite(value) for value in times):
+        return False
+    return (
+        enabled is True and active is True
+        and timeout_s > 0.0
+        and all(0.0 <= now - value <= timeout_s
+                for value in (active_at, command_at, mission_status_at))
+        and isinstance(mission_status, dict)
+        and mission_status.get('state') != 'running'
+        and not mission_status.get('active_command')
+        and health_ready is True and estop_clear is True
+        and hwt_ready is True and tf_ready is True
+    )
+
+
 def estop_motion_authorized(clear, received_at, now, timeout_s):
     """Require a fresh explicit clear signal for every gate output."""
     return (
@@ -209,6 +230,15 @@ def localization_search_values_valid(
 class CmdVelMissionGate(Node):
     def __init__(self):
         super().__init__('cmd_vel_mission_gate')
+        require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
+        hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
+        self._hwt_guard = None
+        self._hwt_status_pub = None
+        if require_hwt:
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
+            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive)
+            self._hwt_status_pub = self.create_publisher(
+                String, '/fusion/hwt601/status_json', 10)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
         self.declare_parameter('output_topic', '/cmd_vel_nav')
         self.declare_parameter(
@@ -250,6 +280,13 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('localization_search_odom_topic', '/odom')
         self.declare_parameter('localization_search_odom_timeout_s', 0.5)
         self.declare_parameter('publish_rate_hz', 20.0)
+        self.declare_parameter('allow_stage3_motion_diagnostic', False)
+        self.declare_parameter(
+            'stage3_diagnostic_command_topic',
+            '/cmd_vel_stage3_diagnostic_raw')
+        self.declare_parameter(
+            'stage3_diagnostic_active_topic',
+            '/stage3_motion_test/active')
         self.declare_parameter('estop_topic', '/safety/estop')
         self.declare_parameter('estop_timeout_s', 1.0)
         self.declare_parameter('global_frame', 'map')
@@ -279,6 +316,8 @@ class CmdVelMissionGate(Node):
             self.get_parameter('explore_direct_max_angular').value)
         self._allow_localization_search = bool(
             self.get_parameter('allow_localization_search').value)
+        self._allow_stage3_diagnostic = bool(
+            self.get_parameter('allow_stage3_motion_diagnostic').value)
         rate_hz = float(self.get_parameter('publish_rate_hz').value)
         if not math.isfinite(rate_hz) or rate_hz <= 0.0:
             raise ValueError('publish_rate_hz muss endlich und > 0 sein')
@@ -364,6 +403,10 @@ class CmdVelMissionGate(Node):
         self._estop_clear = None
         self._estop_time = None
         self._mode = 'blocked'
+        self._stage3_command = Twist()
+        self._stage3_command_time = None
+        self._stage3_active = False
+        self._stage3_active_time = None
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
         self._tf_buffer = Buffer()
@@ -384,6 +427,16 @@ class CmdVelMissionGate(Node):
             Bool, localization_topic, self._on_localization, 10)
         self.create_subscription(
             Twist, search_topic, self._on_search_command, 10)
+        self.create_subscription(
+            Twist,
+            self.get_parameter('stage3_diagnostic_command_topic').value,
+            self._on_stage3_diagnostic_command,
+            10)
+        self.create_subscription(
+            Bool,
+            self.get_parameter('stage3_diagnostic_active_topic').value,
+            self._on_stage3_diagnostic_active,
+            10)
         self.create_subscription(
             Odometry, search_odom_topic, self._on_odom, 20)
         self.create_subscription(
@@ -526,6 +579,31 @@ class CmdVelMissionGate(Node):
             if self._search_distance > self._search_max_distance:
                 self._publisher.publish(Twist())
 
+    def _on_stage3_diagnostic_command(self, message):
+        values = (message.linear.x, message.linear.y, message.linear.z,
+                  message.angular.x, message.angular.y, message.angular.z)
+        if not explore_direct_values_valid(
+                values, self._explore_direct_max_linear,
+                self._explore_direct_max_angular):
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._publisher.publish(Twist())
+            self.get_logger().error(
+                'Stage-3-Diagnosebefehl verworfen: nur vorwaerts oder '
+                'Drehung auf der Stelle innerhalb der bestehenden '
+                'Explore-Bewegungsgrenzen ist erlaubt.')
+            return
+        self._stage3_command = message
+        self._stage3_command_time = time.monotonic()
+
+    def _on_stage3_diagnostic_active(self, message):
+        self._stage3_active = bool(message.data)
+        self._stage3_active_time = time.monotonic()
+        if not self._stage3_active:
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._publisher.publish(Twist())
+
     def _on_explore_map(self, _message):
         self._explore_map_time = time.monotonic()
 
@@ -642,6 +720,19 @@ class CmdVelMissionGate(Node):
             allow_stale_map_for_scan=(
                 self._command_source == 'explore_scan'))
 
+    def _stage3_diagnostic_health_authorized(self, now):
+        return self._near_quality_authorized(now) and explore_health_authorized(
+            True,
+            self._explore_map_time,
+            self._explore_scan_time,
+            self._explore_left_time,
+            self._explore_right_time,
+            self._odom_time,
+            now,
+            self._explore_map_timeout,
+            self._explore_sensor_timeout,
+            self._explore_odom_timeout)
+
     def _mission_authorized(self, status, now):
         return (
             (room_motion_authorized(status)
@@ -710,10 +801,23 @@ class CmdVelMissionGate(Node):
 
     def _publish(self):
         now = time.monotonic()
+        guard = getattr(self, '_hwt_guard', None)
+        hwt_failure = guard.failure() if guard is not None else None
+        if guard is not None:
+            self._hwt_status_pub.publish(String(data=json.dumps({
+                'sources_ready': guard.health.source_failure() is None,
+                # Necessary HWT condition only, never a replacement for
+                # mission, TF, VL53, scope or Collision authorization.
+                'hwt_motion_ready': hwt_failure is None,
+                'reason': hwt_failure or 'raw_sources_ready',
+                'active_drive': guard.health.active_drive,
+                'latched_fault': guard.health.latched_fault,
+            })))
         estop_clear = estop_motion_authorized(
             self._estop_clear, self._estop_time, now, self._estop_timeout)
         mission_authorized = (
             estop_clear
+            and hwt_failure is None
             and self._motion_tf_authorized()
             and self._mission_authorized(self._status, now)
             and now - self._status_time <= self._status_timeout
@@ -723,13 +827,33 @@ class CmdVelMissionGate(Node):
                 self._localization_time,
                 now,
                 self._localization_timeout)
-        )
+            )
+        diagnostic_active = False
+        if getattr(self, '_allow_stage3_diagnostic', False):
+            diagnostic_active = stage3_diagnostic_authorized(
+                True,
+                self._stage3_active,
+                self._stage3_active_time,
+                self._stage3_command_time,
+                self._status,
+                self._status_time,
+                now,
+                self._status_timeout,
+                self._stage3_diagnostic_health_authorized(now),
+                estop_clear,
+                hwt_failure is None,
+                self._motion_tf_authorized(),
+            )
         command_fresh = now - self._command_time <= self._command_timeout
         search_authorized = (estop_clear and self._search_authorized(now)
+                             and hwt_failure is None
                              and self._near_quality_authorized(now))
         if search_authorized:
             command = self._search_command
             mode = 'localization_search'
+        elif diagnostic_active:
+            command = self._stage3_command
+            mode = 'stage3_diagnostic'
         elif mission_authorized and command_fresh:
             command = self._command
             mode = 'mission'

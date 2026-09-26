@@ -26,6 +26,8 @@ setup(
         'console_scripts': [
             'cmd_vel_mission_gate = '
             'robot_navigation.cmd_vel_mission_gate:main',
+            'stage3_motion_diagnostic = '
+            'robot_navigation.stage3_motion_diagnostic:main',
             'localization_guard = '
             'robot_navigation.localization_guard:main',
             'global_scan_localizer = '

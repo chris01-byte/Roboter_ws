@@ -1425,6 +1425,12 @@ class ExploreNode(Node):
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
         # auf Nav-Ergebnisse, waehrend weiter Karten hereinkommen muessen).
         self._cb = ReentrantCallbackGroup()
+        self._hwt_guard = None
+        require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
+        hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
+        if require_hwt:
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
+            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive, self._cb)
 
         # Ohne explizite Aktivierung existieren weder Schattenzustand noch
         # zusaetzliche ROS-Schnittstellen. Der bestehende Explorerpfad bleibt
@@ -2788,6 +2794,10 @@ class ExploreNode(Node):
                 if msg.header.frame_id == 'base_link' and age_ns >= 0
                 else None)
 
+    def _hwt601_failure(self):
+        guard = getattr(self, '_hwt_guard', None)
+        return guard.failure() if guard is not None else None
+
     def _wohnungserkundung_active_safety_failure(self) -> bool:
         """Cancel an active child on a hard source failure, never replan it.
 
@@ -2809,6 +2819,9 @@ class ExploreNode(Node):
                 self.get_logger().error(
                     f'WE-Kindziel: harte Quellenstoerung ({reason}); Nav2-Abbruch')
             return True
+        hwt_failure = self._hwt601_failure()
+        if hwt_failure is not None:
+            return failed('hwt601_' + hwt_failure)
         with self._wohnungserkundung_runtime_lock:
             estop = self._wohnungserkundung_estop
             estop_at = self._wohnungserkundung_estop_received_at
@@ -6168,6 +6181,10 @@ class ExploreNode(Node):
                 return terminate(
                     TerminationCause.USER_CANCELED,
                     'user_canceled_without_active_child')
+            hwt_failure = self._hwt601_failure()
+            if hwt_failure is not None:
+                return terminate(
+                    TerminationCause.SYSTEM_FAILURE, 'hwt601_' + hwt_failure)
             if overall_expired():
                 return terminate(
                     TerminationCause.BUDGET_EXHAUSTED,
@@ -6193,7 +6210,8 @@ class ExploreNode(Node):
                 self._publish_status('running')
                 scan_status, _achieved = self._scan_in_place(
                     stop_requested=lambda: (
-                        goal_handle.is_cancel_requested or overall_expired()))
+                        goal_handle.is_cancel_requested or overall_expired()
+                        or self._hwt601_failure() is not None))
                 if scan_status == 'success':
                     if getattr(
                             self,

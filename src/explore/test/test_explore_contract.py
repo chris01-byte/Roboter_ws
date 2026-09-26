@@ -1706,6 +1706,19 @@ def _we_source_state_goal(context):
     return intent, candidate
 
 
+def test_hwt_raw_source_loss_is_hard_failure_not_local_blockage():
+    node = ExploreNode.__new__(ExploreNode)
+    errors = []
+    node.get_logger = lambda: SimpleNamespace(error=errors.append)
+    node._hwt_guard = SimpleNamespace(failure=lambda: 'raw_missing_stale_or_invalid')
+    # Must fail before consulting a still-current fused pose or local obstacles.
+    assert node._wohnungserkundung_active_safety_failure()
+    assert node._wohnungserkundung_last_safety_failure == 'hwt601_raw_missing_stale_or_invalid'
+    assert len(errors) == 1
+    assert node._wohnungserkundung_active_safety_failure()
+    assert len(errors) == 1
+
+
 def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     context = PortalMapContext('session-local', 'map-local', 'map')
     _, candidate = _we_source_state_goal(context)

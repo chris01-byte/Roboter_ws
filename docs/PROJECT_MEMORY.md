@@ -15,7 +15,225 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-26 — Begrenzte Bewegung gemessen, realer Umfahrnachweis weiter offen
+
+**Entscheidung:** Den einmaligen 0,25-m-/±15°-Diagnoselauf als erfolgreich
+protokollieren, aber Stufe 3 nicht grün setzen. Ein automatisch gestarteter
+Explore-Auftrag zählt erst mit Nav2-Ziel, Hindernisumfahrung und anschließendem
+Missionsfortschritt als Umfahrnachweis.
+
+**Evidenz:** Korrigierter Diagnosetrigger unter PR #101 meldete `complete` und
+bestätigte drei Stillstände. Aktuelle Scope-/SLAM-Bindung:
+`stage3-local-scope-20260925-after-r2`, Session
+`stage3-20260925-after-r2`, Map-Fingerprint
+`4f17785f9f20b0bf4ceaf284850d158983777912b7b704a7c0365ddf1ade7e91`;
+Startpose `(0,0,−0,0053 rad)`. `/odom` meldete 0,270 m, RPM maximal ±122;
+140 VL53-Statusframes; Modbusfehler, verworfene Encoderupdates und Reconnects
+jeweils 0. Lokale JSONL-Evidenz liegt außerhalb des Repositories unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt601-motion-20260926T105410Z.jsonl`.
+
+Die danach ausgelöste Explore-Mission brach mit `initial_scan_no_progress`
+fail-closed ab: 0/3 qualifizierende Beobachtungen, null Frontierziele und
+`navigation_dispatched=false`. Keine Barriere wurde umfahren. Der Stack endete
+mit Nullkommando/0 RPM; Gerätehandles waren danach frei. Beim Shutdown trat
+zusätzlich ein noch ungeklärter rclpy-Nachrichten-Decoding-`RuntimeError` im
+Diagnoseprozess auf. Vor einem weiteren Liveversuch Ursache ermitteln; keine
+Sicherheitsgrenzen lockern. PR #101 offen, kein Merge, Stufe 3 GELB.
+
+## 2026-09-26 — Diagnose-Nahfeldsubscription korrigiert, kein Fahrbefehl ausgeführt
+
+**Entscheidung:** Der einmalige Stufe-3-Bewegungstest bleibt ausschließlich
+über den aktivierten Diagnoseauftrag vor dem bestehenden Fahrtor ausführbar.
+Der Diagnoseknoten muss `/near_field/status` mit dem tatsächlich publizierten
+Typ `robot_interfaces/msg/NearFieldStatus` abonnieren.
+
+**Evidenz:** Der Live-Starttrigger verweigerte fail-closed mit
+`veraltete Quellen: near_status`. `ros2 node info` zeigte eine
+`std_msgs/String`-Subscription im Diagnoseknoten, während der aktive VL53-
+Knoten `NearFieldStatus` publizierte. Die Subscription und eine
+Regressionassertion wurden korrigiert. 46 Tests, isolierter Build von
+`robot_navigation`/`robot_bringup` und `git diff --check` bestanden. Der
+Trigger gab keinen Auftrag frei; keine Bewegung. SIGINT am Launcher beendete
+alle Kinder sauber, Sensorhandles waren frei und Domain 217 leer.
+
+**Rückfall / Status:** Änderungen sind eng auf die Topic-Typbindung begrenzt;
+keine Sicherheitsparameter oder Fahrgrenzen verändert. Bei Regression auf
+den vorherigen PR-#101-Commit zurückgehen und Diagnosetrigger deaktiviert
+lassen. Reale Bewegungs- und Umfahrabnahme steht aus; PR #101 bleibt offen,
+Stufe 3 GELB.
+
 ---
+
+## 2026-09-26 — `use_gpio_estop=false` als Laborhinweis eingeordnet
+
+**Entscheidung:** Die Safety-Monitor-Warnung `use_gpio_estop=false` bedeutet,
+dass der unabhängige Hardware-Halt nicht zusätzlich als Jetson-GPIO-Eingang
+in ROS erscheint. Der Nutzer hat die separate Verdrahtung und Erreichbarkeit
+manuell bestätigt. Im expliziten Einzeltest-Labormodus bleibt `/safety/estop`
+weiterhin erforderlich; Collision Monitor, VL53, HWT/Encoder, TF/Odom, Scope,
+Footprint und Watchdog bleiben unverändert aktiv. Keine Änderung an
+`safety_monitor` oder Sicherheitsparametern.
+
+**Evidenz:** Beim ersten Live-Start blieb `base_hardware` bei 0 RPM und
+Nullsollwerten; es wurde keine Mission ausgelöst. Die Warnung führte zunächst
+zu einem übervorsichtigen Abbruch. Der Launcher wurde sauber beendet und
+Gerätehandles freigegeben. Das Labormodus-Opt-in
+`lab_external_hardware_halt_attested` ist standardmäßig `false`, wird für die
+einmalige Testsequenz zusätzlich zur Diagnoseaktivierung verlangt und im
+Diagnosestatus angezeigt. Es schaltet weder die Software-Safety noch eine
+Motion-Grenze aus.
+
+**Teststatus / Rückfall:** Noch kein Fahrbefehl und keine Umfahrung erfolgt.
+Der begrenzte Bewegungstest kann nach erneutem Stackstart mit Live-Prüfung von
+Map-Fingerprint, Scope, Startpose und Fahrkorridor ausgeführt werden. Ohne
+manuelle Lab-Attestierung verweigert der Einmal-Trigger den Start. PR #101
+bleibt offen; Stufe 3 GELB.
+
+## 2026-09-26 — Einmaliger HWT-Bewegungsdiagnosepfad vorbereitet
+
+**Entscheidung:** Für die begrenzte Basisdiagnose einen standardmäßig
+deaktivierten und explizit einmal auslösbaren Auftrag vor dem bestehenden
+`cmd_vel_mission_gate` verwenden. Einzige Sequenz: 0,25 m vorwärts mit
+Stillstand, +15° mit Stillstand, −15° relativ zur gemessenen Zwischenpose mit
+Endstillstand. Ausgänge bleiben Fahrtor → Smoother → Collision Monitor →
+`/cmd_vel` → `base_hardware`. Keine Parameter oder Grenzen geändert.
+
+**Evidenz:** Die frühere Pfadprüfung identifizierte direkte `/cmd_vel`-
+Testskripte als nicht autorisiert. Neu ergänzt wurden Opt-in-Launchargument,
+Gate-Eingang und Einmal-Prüfknoten mit Scope-/Map-/Pose-/Footprint-Bindung,
+laufender HWT/Encoder-, VL53-, LiDAR-, Safety- und TF-Frischeprüfung,
+fail-closed Nullstopp sowie privates zeitgestempeltes JSONL der ganzen
+Befehlskette und Messquellen. Kartenrevisionen derselben gebundenen
+SLAM-Session dürfen fortschreiten. Die −15°-Phase wird relativ zur Pose am
+Ende der +15°-Phase gemessen.
+
+**Test / Rückfall:** 46 `robot_navigation`-Tests bestanden; `robot_navigation`
+und `robot_bringup` erfolgreich in einen isolierten temporären Build unter
+`/tmp/amadeus-stage3-motion-build.N6Ninf` gebaut. Der vorige motorlose
+180-s-Nachweis wurde nicht wiederholt. Der Build wurde transient als Overlay
+für einen Live-Stackstart gesourct; Diagnosemodus aus, kein Missionsauftrag.
+Base-Hardware blieb bei Nullsollwerten/0 RPM. Live meldete `safety_monitor`
+`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“; daher kein
+Fahrversuch. Launch-PID 79158 erhielt SIGINT, alle Kinder endeten sauber,
+HWT-/LiDAR-Handles waren frei und Domain 217 danach leer. Der aktive Install
+blieb unverändert. Standard bleibt deaktiviert. Rückfall: vorherigen PR-#101-
+Commit `80ab168` verwenden und Launchargument weglassen. Weiterfahrt erst,
+wenn die unabhängige Hardware-Haltekette vorhanden und live bestätigt ist;
+dann aktuelle Karte/Scope/Startpose prüfen. WE-Stufe 3 bleibt GELB bis realer
+Bewegungs- und autonomer Umfahrnachweis.
+
+## 2026-09-26 — Motorloser HWT/Encoder-Vorlauf zweimal bestanden
+
+**Entscheidung:** Nur das read-only Encoder-Shadow-Profil verwendet jetzt
+0,12 s Paarzeit und 0,18 s Frische-/Sample-Grenze. Die früher gemessenen
+Vollstack-Paare von 102,890 ms und 53,823 ms begründen den 120-ms-Rahmen;
+180 ms entsprechen knapp vier 20-Hz-Abständen und bleiben eine harte
+Frischegrenze. Ein erster gültiger, aber verspäteter Paarwert vor der
+Encoder-Baseline wird verworfen und einmal neu gelesen. Er aktualisiert weder
+Baseline, Odometrie, Zeitstempel noch Frische. Ein zweiter aufeinanderfolgender
+Ausreißer, jeder Ausreißer nach Baseline sowie fehlende/fehlerhafte FC03-Daten
+verriegeln weiterhin fail-closed. `base_hardware`-Fahrparameter und dessen
+300-ms-Encoderüberwachung sind unverändert; Modbus-Timeout 100 ms, 20-Hz-
+Polling, Collision-Monitor, Sensor-, Scope- und Navigationswerte sind
+unverändert.
+
+**Evidenz:** Zwei reale motorlose Gesamtläufe mit aktivem Nav2/Explorer und
+ohne Nichtnull-Fahrwerte, je 180 s nach Ende der HWT-Biasphase. Beide
+lieferten je 3.604 Encoderpaare, 0 Fehler und 0 Reconnects. Paarzeit Zyklus 1
+min/Median/p95/max 9,95/13,57/20,26/44,66 ms; Zyklus 2
+10,08/13,77/20,74/45,32 ms. HWT-Bias stabil/eingefroren, `sources_ready`,
+VL53, LiDAR, Karte, TF, Safety und sechs Nav2-Lifecycles frisch. Beide
+SIGINT-Starts beendeten alle Prozesse sauber und ließen alle seriellen Handles
+frei. Im zweiten Shutdown wurde eine bereits laufende Probe nach SIGINT mit
+124,547 ms gemessen und fail-closed verworfen, ohne sie zu publizieren. Das
+lag außerhalb des Messfensters; kein Nutzwert wurde als gesund verwendet.
+
+**Test / Rückfall:** 202 Tests der Pakete `base_hardware` und
+`robot_state_estimation` bestanden; isolierter Kandidat
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/install` wurde
+verwendet. Das motorlose Profil kann auf die strikten 0,05/0,10 s
+zurückgesetzt werden; der read-only Startup-Retry kann separat entfernt
+werden. Es gab keine Fahrt. Scope-Vorbereitung: Profil
+`stage3-real-20260925-after-r2-scope.yaml`, Session
+`stage3-20260925-after-r2`, Scope
+`stage3-local-scope-20260925-after-r2`, Map-Frame `map`. Der aktuelle
+Map-Manager-Fingerprint beginnt mit `c6c949`; der Map-Status-Korrelator
+erzeugt den map-gebundenen Kontext neu je Start. Vor der kurzen Bewegung
+bleiben Startpose und sichtbare aktuelle Scope-Bindung abzugleichen. Stufe 3
+bleibt bis zum realen Umfahrnachweis GELB.
+
+## 2026-09-26 — HWT-Zielsystemvorlauf an realer FC03-Latenz gestoppt
+
+**Entscheidung:** Nutzerfreigabe für motorlosen Vorlauf und kurze spätere
+Bewegung liegt vor. Bewegung nicht gestartet: Die 50-ms-Grenze des echten
+Encoderpaares wurde im vollständigen Stack wiederholt überschritten; Roh-
+quellenwächter verriegelte korrekt. Nur tatsächliche Dauer beider FC03-Reads
+und abgewiesener Paare diagnostisch ergänzen. Erprobten 45-s-Startaufschub
+nach erneutem Fehlschlag zurücknehmen; keine Grenze oder Kalibrierung lockern.
+
+**Evidenz:** Isolierter Reader 1.275 Paare, maximal 31,56 ms; mit HWT/LiDAR
+1.015 Paare, maximal 33,89 ms. VL53-Start: 66,976 ms, davon rechter
+Read 46,805 ms. Vollstack: erstes Paar einmal 102,890 ms; auch nach
+45-s-Aufschub achtes Paar 53,823 ms, davon ein Read 39,240 ms.
+Eine CPU-3-Bindung nur des Lesers half ebenfalls nicht: erstes Vollstack-Paar
+77,245 ms (Einzelreads 48,993/27,977 ms), Schutz verriegelte. Affinität
+anschließend vollständig zurückgenommen; keine Fahr- oder Grenzänderung.
+HWT-Bias stabil (805 Samples), beide VL53 gesund, Karte/LiDAR/Safety/Nav2
+im ersten Vorlauf frisch, aber FC03 verriegelt und TF anschließend alt.
+Null Nichtnull-Fahrbefehle. Aktuelle Vor-Ort-Auskunft: Endstufen unabhängig
+gesperrt, Controller lesbar, Hardware-Halt erreichbar. Keine Motoraktivierung.
+
+**Risiko / Rückfall:** Ursache USB/Modbus vs. Scheduling noch unklar;
+Startaufschub wirkte nicht. SIGINT nur an Launch-PID hinterließ wiederholt
+5-s-SIGTERM-Eskalationen; einmal Nav2-Controller Code -6 beim frühen
+Abbruch. Alle Prozesse/Handles danach geschlossen, aber kein sauberer
+Shutdown-Nachweis. Aktiven Install nicht umstellen, keine reale Fahrt.
+Isolierten PR-#101-Kandidaten gestoppt lassen. Weitere Messwerte und
+erforderlicher nächster Schritt im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+## 2026-09-26 — Bewährte HWT-Fusion explizit in WE integriert, noch keine Hardwareabnahme
+
+**Entscheidung:** PR #100 (`113014e`) bleibt Basis. Auf getrenntem Branch
+`codex/we1-hwt601-fusion` selektive Übernahme aus HWT-Referenz `1d91229`
+(`b3b6370`) und opt-in Integration (`f61e3e7`), kein Blind-Merge. Bestehenden
+read-only Treiber, Achsen, eingefrorenen Start-Bias, Encoder-vx/HWT-wz-EKF
+und unabhängigen LiDAR-Beobachter erhalten. Kein OAK, keine Kalibrieränderung.
+EKF besitzt allein `/odom`/`odom->base_link`, SLAM `/map`/`map->odom`.
+Motorlos ersetzt der echte FC03-only Leser die Basis exklusiv; synthetischer
+Dry-run gilt nicht als Stillstandsnachweis. HWT-Start braucht eine aktuelle
+explizite Stillstandsbestätigung. Alle bisherigen VL53-/Cancel-Fixes bleiben.
+
+**Evidenz:** HWT lag im historischen Install, aber nicht in der geladenen
+PR-#100-Kette; kein laufender HWT-Prozess. 14-Paket-Isolat gebaut,
+1185 Tests bestanden, Quelle/Install der neuen Absicherung hashgleich.
+Echter EKF mit synthetischen Eingängen fusioniert Encoder-vx/HWT-wz korrekt.
+Bei fehlendem Roh-HWT bzw. Encoder produziert er noch 14 bzw. 23 Odometrien:
+Deshalb sperren Fahrtor/Explorer anhand echter Eingänge und verriegeln einen
+Ausfall nach Bereitschaft, statt EKF-Frische als Sensorgesundheit zu werten.
+Kein stiller Rückfall auf Encoder-Gier. Zwei Prozessläufe sauber beendet.
+WE-Ziel-B-Fortsetzung und echter Nav2-Stopp/Umfahrung mit bleibender
+synthetischer Barriere und fortgesetzter Elternmission erneut bestanden.
+
+**Befundgrenze:** Sechs alte Cancels zeitlich rekonstruiert, ihre konkreten
+Quellenprädikate nicht lückenlos erhalten. Zwei kurz ungültige Raw-Map-Proben
+sind kein Beweis für spätere Cancels. Befehlsunterbrechungen und erhebliche
+RPM-/Positionsodom-Differenz sind gemessen; Antrieb/Encoder/Chassis-Ursache
+weiter offen. Kein HWT in dieser alten Fahrt, keine erfundenen HWT-Messungen
+und keine pauschale Schlupferklärung. Tabelle im [WE-STATUS](wohnungserkundung/STATUS.md).
+
+**CI-Integration:** Folge-PR #101 auf #100. Erster Encoder-Workflow meldete
+fehlendes `yaml`/`pytest`; Testumgebung und deklarierte YAML-Testabhängigkeit
+gezielt ergänzt, Aufruf auf pytest umgestellt, damit auch die übernommenen
+Fälle wirklich laufen. Keine Testabschwächung und keine Laufzeitänderung.
+
+**Hardware / Risiko / Rückfall:** Kein aktueller Gerätezugriff, keine Fahrt,
+keine Umstellung des aktiven Installs; fremde lokale Arbeit erhalten.
+Motorlose HWT-Zielsystemprüfung und reale Bewegung OFFEN. FC03 erfordert
+antwortende Controllerelektronik bei unabhängig gesperrter Motorendstufe.
+Aktuelle Freigabe dafür zuerst gebündelt einholen. Rückfall ausschließlich
+gestoppt mit frischer Shell/alter PR-#100-Kette und HWT-Opt-in aus; niemals
+Topic-/TF-Eigentümer während einer Mission umschalten. Details und konkreter
+Prüfablauf in [ROBOT_TRANSFER](ROBOT_TRANSFER.md). Stufe 3 bleibt GELB.
 
 ## 2026-09-25 — VL53-Frame-Luecke und Cancel-Race minimal korrigiert
 
