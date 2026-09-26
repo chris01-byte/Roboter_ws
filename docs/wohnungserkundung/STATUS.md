@@ -7,70 +7,64 @@ Dies ist der einzige laufende WE-Status. [Strategie](../WOHNUNGSERKUNDUNG_STRATE
 unverändert. Der vorherige M3/U-Stand ist im
 [Archiv](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_WE-M3U_0474551.md) erhalten.
 
-## Stufe 3 – aktueller motorloser HWT-Vorlauf am 26.09.2026: NICHT BESTANDEN
+## Stufe 3 – motorloser HWT/Encoder-Vorlauf 26.09.2026: BESTANDEN
 
-Der Nutzer gab den motorlosen Test und die spätere kurze Bewegung frei und
-bestätigte aktuell unabhängig gesperrte Motor-Endstufen bei antwortender
-Controllerelektronik, mindestens 30 s Stillstand und erreichbaren Hardware-Halt.
-Der Kandidat aus PR #101 wurde isoliert gesourct; `active_drive=false`,
-`use_hwt601_odometry=true`, `operator_stationary_confirmed=true`,
-`enable_auto_explore=false`, lokales begrenzendes Profil. Kein anderer
-Roboter-Stack, kein `base_hardware`-Antrieb, keine Nichtnull-Fahrbefehle.
-Die physische Schaltstellung stammt aus der aktuellen Vor-Ort-Auskunft;
-ROS kann sie nicht unabhängig belegen.
+Der Schattenpfad nutzt jetzt im ausdrücklich geladenen Read-only-Profil
+`max_pair_read_duration_s=0.12` und `max_sample_gap_s=0.18`. Die zuvor
+gemessenen Vollstack-Paare von 102,890 ms und 53,823 ms begründen den 120-ms-
+Rahmen; 180 ms entsprechen knapp vier 20-Hz-Abständen und bleiben eine harte
+Frischegrenze. Ein einzelner gültiger, aber verspäteter Paarwert vor der
+Encoder-Baseline wird verworfen und einmal neu gelesen. Er aktualisiert weder
+Baseline, Odometrie, Zeitstempel noch Frische. Ein zweiter aufeinanderfolgender
+Ausreißer, jeder Ausreißer nach Baseline sowie fehlende/fehlerhafte FC03-Daten
+verriegeln weiterhin fail-closed. `base_hardware`-Fahrparameter und dessen
+300-ms-Encoderüberwachung sind unverändert; Modbus-Timeout 100 ms, 20-Hz-
+Polling, Collision-Monitor, Sensor-, Scope- und Navigationswerte sind
+unverändert. Für das Shadow-Modul allein geltende striktere Code-Defaults
+0,05/0,10 s bleiben bestehen, falls das explizite Profil fehlt.
 
-**Messbefund:** Beim ersten vollständigen Start lieferte der strikt lesende
-FC03-Encoder zunächst 19 Paare und verriegelte dann
-`encoderpaar_zeitfenster_ueberschritten`. Das letzte akzeptierte Maximum war
-47,79 ms; die verworfene Dauer wurde damals nicht mit ausgegeben.
-Beim zweiten Start wurde **102,890 ms** für schon das erste Paar gegen die
-unveränderte **50-ms-Grenze** gemessen. Reine Diagnosefelder wurden ergänzt,
-ohne Schwellen- oder Fahrverhalten zu verändern. Ein isolierter FC03-Lauf
-blieb über 1.275 Paare stabil (Maximum 31,56 ms). Mit HWT und LiDAR liefen
-1.015 Paare (Maximum 33,89 ms); beim Start des VL53-/Collision-Launches
-folgte ein Paar von **66,976 ms**, davon links 16,015 und rechts 46,805 ms.
-Nach vollständig gestartetem VL53 liefen erneut 785 Paare stabil
-(Maximum 30,82 ms). Eine ausschließlich für den motorlosen FC03-Leser
-erprobte 45-s-Startverzögerung beseitigte den Fehler im Gesamtstack **nicht**:
-Nach sieben gültigen Paaren dauerte das achte **53,823 ms**, davon ein
-einzelner Read 39,240 ms. Die Verzögerung wurde wieder entfernt. Die
-zusätzliche motorlose Gegenprobe band nur den FC03-Leser an CPU 3 (Affinität
-am Prozess verifiziert): Schon das erste Paar dauerte **77,245 ms**
-(links 48,993, rechts 27,977 ms) und verriegelte. Auch diese Änderung wurde
-aus Quelle und isoliertem Install entfernt. Privater Bericht:
-`/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-affinity-a.json`.
-Messgrenze, Sensorfrische, Sicherheitskonfiguration und Motorparameter blieben
-unverändert. Korrelation mit Start-/Gesamtlast ist belegt; ob USB/Modbus-
-Antwort oder Host-Scheduling die Verzögerung verursacht, ist noch offen.
+Zwei vollständige reale, motorlose WE/HWT-Starts liefen je 180 s nach Ende der
+HWT-Biasphase mit `active_drive=false`, echtem FC03, `enable_auto_explore=false`
+und dem vorhandenen Profil
+`/home/p/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`.
+Motor-Endstufen blieben nach aktueller Vor-Ort-Bestätigung gesperrt; kein
+Nichtnull-Fahrwert wurde beobachtet. Je Lauf: 3.604 gültige Encoderpaare,
+keine verworfenen Paare, keine FC03-Paarfehler, kein Reconnect. Zyklus 1:
+Paarzeit Minimum/Median/p95/Maximum **9,95/13,57/20,26/44,66 ms**; linker
+Einzelread **4,82/6,72/11,66/37,66 ms**, rechter **4,75/6,28/9,84/32,78 ms**.
+Zyklus 2: Paarzeit **10,08/13,77/20,74/45,32 ms**; linker Einzelread
+**4,78/6,44/10,68/30,89 ms**, rechter **4,70/6,59/11,57/28,91 ms**.
+HWT-Bias war nach 10,89 bzw. 14,10 s gültig, stabil und eingefroren (986 bzw.
+964 Samples). Beide VL53 meldeten gesunde Frames/Qualität 3. Im zweiten Lauf
+waren VL53-Wolken höchstens 64 ms, LiDAR 59 ms, Karte 176 ms und `odom` 49 ms
+alt; dynamisches TF blieb frisch (höchstens 55 ms). Kartenmanager war frisch,
+`sources_ready=true`, alle sechs Nav2-Lifecycles aktiv, Safety ohne E-Stop.
+Die vollständig maschinenlesbaren Messungen liegen lokal unter
+`/home/p/.local/share/amadeus/tests/stage3-hwt-cycle{1,2}.json`.
 
-Im ersten 15-s-Preflight waren HWT-Rohdaten (837 Nachrichten), kalibrierte
-Gier (834), beide VL53 (52 gesunde Status/Cloud-Tripel), LiDAR (155 Scans),
-Karte (15), Safety und alle sechs Nav2-Lifecycles aktiv. Das echte Start-Bias
-hatte 805 Samples und blieb stabil/eingefroren. `odom` hatte allein den EKF
-als Publisher, das Encoder-Topic allein den read-only FC03-Knoten. Die
-Kartenmanager-Quelle war frisch, Qualitätsprüfung 4.884-mal positiv, null
-Nichtnull-Fahrbefehle. **Aber:** Der Encoder hatte verriegelt,
-`sources_ready=false`; danach wurde auch `odom->base_link` bis 1,37 s alt.
-Das ist eine Folge des fehlenden Encoder-Eingangs, keine Frische-Abnahme.
-Der dritte vollständige Start zeigte erneut denselben Fehler; private
-Evidenz: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-preflight-cycle1.json`
-und ROS-Launch-Logs unter `/home/p/.ros/log/2026-09-26-09-{44,49,56}-*/`.
-Reale Karten-/Scope-Bindung für Bewegung blieb ungeprüft.
+Beim zweiten SIGINT-Shutdown wurde eine bereits laufende letzte FC03-Probe
+mit **124,547 ms** gemessen und fail-closed als `encoderpaar_zeitfenster_
+ueberschritten` protokolliert. Sie lag nach dem Stoppsignal, außerhalb des
+180-s-Messfensters; kein verspäteter Wert wurde publiziert. Der Launch beendete
+alle Kinder mit Exit 0, alle seriellen Handles wurden frei, kein SIGTERM-
+Eskalieren und kein Traceback. Das ist der Maximalwert aller Versuche inklusive
+Teardown; der größte gültige Messwert im laufenden Vorlauf war 45,32 ms.
 
-Alle gestarteten Prozesse sind beendet; die seriellen Handles sind frei.
-Der Shutdown benötigte bei mehreren Kindern nach SIGINT an die jeweilige
-Launch-PID eine SIGTERM-Eskalation nach fünf Sekunden. Beim zweiten, bereits
-vor Nav2-Bereitschaft abgebrochenen Start endete `controller_server` mit
-Code -6. Auch der **saubere Shutdown** ist somit nicht reproduzierbar
-abgenommen. Keine Fahrt und kein 0,25-m-/15°-Test. Freigabe ersetzt die
-fehlenden technischen Kriterien nicht.
+Für den folgenden kurzen Bewegungstest ist das Profil und die Scope-ID
+`stage3-local-scope-20260925-after-r2` vorbereitet. Beide Läufe verwendeten
+Map-Frame `map` und einen frischen Kartenmanager. Im zweiten Lauf war der
+Map-Fingerprint `c6c949…`; das vorhandene Map-Status-Modul bindet die Scope-
+Session an den Fingerprint der aktuellen Karte. Der Fingerprint wechselt bei
+einem neuen SLAM-Start; vor einer Fahrt werden deshalb aktuelle Startpose,
+Scope-Polygon und die neue Laufzeitbindung gemeinsam geprüft. Es fand keine
+Fahrt statt. Stufe 3 als Gesamtziel bleibt GELB bis zum realen, separat
+freizugebenden Bewegungs- und Umfahrnachweis; PR #101 bleibt Draft, kein Merge
+und keine Stufe 4.
 
-**Nächster Schritt:** FC03-Paarlatenz im Gesamtstack und Shutdown gezielt
-auflösen, ohne 50-ms-/Frische-/Collision-Grenzen zu lockern; denselben
-Kandidaten zweimal vollständig motorlos bestehen lassen, aktuelle Karte
-und Scope binden. Erst dann die bereits freigegebene begrenzte
-Bewegungsdiagnose erneut technisch vorbereiten. Stufe 3 bleibt GELB; PR #101
-Draft, kein Merge und keine Stufe 4.
+**Nächster Schritt zur separaten Fahrfreigabe:** im aktuellen `map`-Frame die
+Startpose und den Scope nochmals sichtbar abgleichen, dann 0,25 m geradeaus,
+kontrollierter Stopp, +15° Drehung mit Stopp und −15° Drehung mit Stopp über
+den bestehenden Fahrpfad. Danach Odom/TF, Schutzquellen und Stillstand prüfen.
 
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 

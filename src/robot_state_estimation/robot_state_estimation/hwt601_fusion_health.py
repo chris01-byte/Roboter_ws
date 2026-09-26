@@ -19,8 +19,9 @@ class Hwt601FusionHealth:
     """Check real inputs; once ready, source loss requires a stopped restart.
 
     Limits are from hwt601_shadow.yaml (raw .20, corrected .35),
-    base_hardware_params.yaml (.30), encoder_shadow.yaml (.10), and the
-    historical 1 s status heartbeat contract. EKF output is NOT an input.
+    base_hardware_params.yaml (.30), the read-only encoder shadow profile
+    (.18), and the historical 1 s status heartbeat contract. EKF output is
+    NOT an input.
     """
 
     def __init__(self, active_drive):
@@ -43,7 +44,7 @@ class Hwt601FusionHealth:
             self.statuses[name] = (payload if isinstance(payload, dict) else {}, received)
 
     def _failure(self, now):
-        wheel_limit = 0.30 if self.active_drive else 0.10
+        wheel_limit = 0.30 if self.active_drive else 0.18
         for name, limit in (('raw', 0.20), ('yaw', 0.35), ('wheel', wheel_limit)):
             sample = self.samples.get(name)
             if (sample is None or not sample[3]

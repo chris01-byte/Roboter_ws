@@ -18,8 +18,12 @@ hwt601_encoder_shadow_reader:
     modbus_timeout_s: 0.1
     modbus_retries: 0
     poll_rate_hz: 20.0
-    max_pair_read_duration_s: 0.05
-    max_sample_gap_s: 0.10
+    # Motorloser FC03-Preflight: reale Vollstack-Proben lagen wiederholt bei
+    # 0.053..0.103 s; 0.12 s fängt diese Latenz mit begrenztem Puffer ab.
+    max_pair_read_duration_s: 0.12
+    # Drei 20-Hz-Ticks erlauben eine Einzelverzögerung, ohne stale Daten
+    # freizugeben; darüber bleibt Quelle und Fusion gesperrt.
+    max_sample_gap_s: 0.18
 
     # Ausschliesslich read-only ESS-RS-Register (Modbus FC03).
     position_register: 0x000A

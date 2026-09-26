@@ -1,44 +1,40 @@
 # Übertragung auf den realen Roboter
 
-## Motorloser HWT-Vorlauf 26.09.2026: FC03 sperrt, keine Fahrt
+## Motorloser HWT/Encoder-Preflight 26.09.2026: zweimal bestanden
 
-Freigabe für motorlosen Test und begrenzte spätere Geradeaus-/Drehdiagnose
-lag vor. Der Nutzer bestätigte aktuell getrennte Motor-Endstufen bei
-versorgten Controllern, Stillstand und Hardware-Halt. Genau der isolierte
-PR-#101-Kandidat wurde in ROS-Domain 217 mit
-`active_drive=false`, HWT-Opt-in und ohne Explore-Auftrag gestartet;
-aktiver `~/roboter_ws/install` unverändert. Die physische Motortrennung kann
-ROS nicht selbst verifizieren. Kein `base_hardware`-Antrieb und kein
-Nichtnull-Fahrbefehl.
+Der Nutzer gab zwei motorlose Vollstack-Zyklen frei und bestätigte unabhängig
+gesperrte Motor-Endstufen. Isolierter Kandidat aus PR #101 in ROS-Domain 217,
+`active_drive=false`, HWT-Opt-in und ohne automatische Erkundungsmission;
+der aktive `~/roboter_ws/install` blieb unverändert. Motorbusbesitzer war
+ausschließlich der read-only FC03-Shadow-Knoten. Kein Nichtnull-Fahrwert.
 
-**Nicht bestanden:** Der read-only FC03-Knoten verriegelte bei 50-ms-
-Paargrenze. Gemessen 102,890 ms beim ersten Paar eines Gesamtstarts und
-53,823 ms beim achten Paar eines späteren Vollstarts; beim separaten
-VL53-Start 66,976 ms. Isoliert oder nach Sensorinitialisierung liefen
-1.275 bzw. 785 Paare unter derselben Grenze. Damit scheitern
-Rohquellenfreigabe und später TF-Frische. HWT-Bias, VL53, LiDAR, Karte,
-Safety und sechs Nav2-Lifecycles waren im ersten Lauf für sich gesund.
-Die kurz erprobte Startverzögerung für den Reader wirkte nicht und wurde
-aus dem Quellstand entfernt. Eine CPU-3-Bindung half ebenfalls nicht:
-erstes Paar 77,245 ms (48,993/27,977 ms Einzelreads), ebenfalls verriegelt;
-die Bindung ist wieder entfernt und Quelle/Install stimmen überein. Nur
-Zeitdiagnose ist neu. Keine Limits geändert.
+Im Shadow-Profil sind Paar- und Sample-Grenze 0,12/0,18 s. Ein einzelnes
+verspätetes, aber gültiges Paar vor der Baseline wird verworfen und neu
+gelesen. Eine zweite aufeinanderfolgende Überschreitung und jede nach der
+Baseline verriegeln; Antwort- und Konfigurationsfehler bleiben sofort
+fail-closed. Aktive Base-Hardware-Encodergrenze 0,30 s, Motorparameter,
+Modbus-Timeout, HWT/VL53/LiDAR, Scope, Footprint, Collision Monitor und
+Navigation wurden nicht geändert.
 
-Private Messung: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-preflight-cycle1.json`;
-CPU-Gegenprobe: `/home/p/.local/share/amadeus/tests/stage3-hwt-motorless-affinity-a.json`;
-Launch-Logs `/home/p/.ros/log/2026-09-26-09-{44,49,56}-*/`.
-SIGINT an die jeweilige Launch-PID beendete letztlich alle Kinder und gab
-LiDAR/HWT/RS485-Handles frei, brauchte aber teilweise SIGTERM nach fünf
-Sekunden; ein früh gestoppter Controller endete Code -6. Nicht als sauberen
-zweifachen Shutdown werten. Neue Karten-/Scope-Bindung für Bewegung ist
-ebenfalls noch offen. Keine Motorfahrt ausgeführt.
+Je 180 s nach Biasphase: 3.604 akzeptierte Paare und keine Fehler oder
+Reconnects pro Fenster. Zyklus 1 Paarzeiten min/Median/p95/max
+9,95/13,57/20,26/44,66 ms; Zyklus 2 10,08/13,77/20,74/45,32 ms.
+Einzelread-Statistik pro Motor und Quellenalter stehen in
+`/home/p/.local/share/amadeus/tests/stage3-hwt-cycle{1,2}.json`. HWT-Bias,
+Fusion, VL53, LiDAR, Map/TF und sechs Nav2-Lifecycles waren frisch. Im zweiten
+SIGINT-Shutdown wurde eine laufende Probe mit 124,547 ms fail-closed verworfen
+und nicht publiziert. Alle Kinder beendeten sauber mit Exit 0, sämtliche
+seriellen Handles wurden frei; keine SIGTERM-Eskalation.
 
-**Übernahme/Rückfall:** Aktiven Install nicht wechseln, Stack gestoppt
-lassen. FC03-Latenz und Shutdown messen/gezielt beheben, ohne die 50-ms-
-Grenze oder Sicherheitstore zu lockern; anschließend zwei vollständige
-motorlose Zyklen und Karten-/Scope-Prüfung. Erst danach den bereits
-freigegebenen 0,25-m-Stopp sowie ±15° einzeln über den vorhandenen
-Fahrpfad prüfen. Details im [WE-STATUS](wohnungserkundung/STATUS.md).
+Für die anschließende Freigabevorlage ist das lokale Profil
+`stage3-real-20260925-after-r2-scope.yaml` mit Scope-ID
+`stage3-local-scope-20260925-after-r2` und Session
+`stage3-20260925-after-r2` bestimmt. Aktuelle Live-Karte in Frame `map`:
+Fingerprint beginnt `c6c949`; beim Neustart erzeugt der bestehende
+Map-Status-Korrelator eine neue Bindung zum aktuellen Fingerprint. Vor einer
+Fahrt müssen aktuelle Startpose und Scope sichtbar abgeglichen werden. Es gab
+keine Fahrt. Der begrenzte 0,25-m-/±15°-Test wird separat zur ausdrücklichen
+Fahrfreigabe vorgelegt; Stufe 3 insgesamt bleibt bis zum Umfahrnachweis GELB.
 
 ## Aktuell: isolierter HWT601-WE-Kandidat, Geräteprüfung noch offen (26.09.2026)
 

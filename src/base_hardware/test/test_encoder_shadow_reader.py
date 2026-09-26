@@ -20,6 +20,7 @@ from base_hardware.encoder_shadow_reader import (  # noqa: E402
     EncoderShadowCore,
     EncoderShadowError,
     ReadOnlyModbusTransport,
+    STARTUP_OVERRUN_RETRY_REASON,
     shadow_status_payload,
     validate_base_alias,
 )
@@ -435,6 +436,42 @@ class TestPairReader:
 
 class TestShadowCore:
 
+    def test_one_late_pair_before_baseline_is_discarded_and_retried(self):
+        core = EncoderShadowCore(tracker(), max_pair_read_duration_s=0.05)
+        late = core.accept_pair(
+            pair(100, 200), sample_time_s=1.0, pair_read_duration_s=0.08)
+        assert not late.publish
+        assert late.reason == STARTUP_OVERRUN_RETRY_REASON
+        assert core.fault_reason is None
+        assert core.complete_pair_count == 0
+        assert core.last_sample_time_s is None
+        assert core.last_pair is None
+        assert core.startup_overrun_retries == 1
+
+        baseline = core.accept_pair(
+            pair(100, 200), sample_time_s=1.05, pair_read_duration_s=0.01)
+        assert baseline.reason == 'baseline_initialisiert'
+        assert core.ready
+
+    def test_second_consecutive_startup_overrun_latches(self):
+        core = EncoderShadowCore(tracker(), max_pair_read_duration_s=0.05)
+        first = core.accept_pair(
+            pair(100, 200), sample_time_s=1.0, pair_read_duration_s=0.08)
+        second = core.accept_pair(
+            pair(100, 200), sample_time_s=1.05, pair_read_duration_s=0.09)
+        assert first.reason == STARTUP_OVERRUN_RETRY_REASON
+        assert not second.publish
+        assert core.fault_reason == 'encoderpaar_zeitfenster_ueberschritten'
+
+    def test_one_late_pair_after_baseline_still_latches(self):
+        core = EncoderShadowCore(tracker(), max_pair_read_duration_s=0.05)
+        core.accept_pair(
+            pair(100, 200), sample_time_s=1.0, pair_read_duration_s=0.01)
+        late = core.accept_pair(
+            pair(110, 190), sample_time_s=1.05, pair_read_duration_s=0.08)
+        assert not late.publish
+        assert core.fault_reason == 'encoderpaar_zeitfenster_ueberschritten'
+
     def test_baseline_then_complete_pair_publishes_real_encoder_odometry(self):
         core = EncoderShadowCore(tracker(), max_pair_read_duration_s=0.05)
         baseline = core.accept_pair(
@@ -523,4 +560,5 @@ class TestShadowCore:
         assert status['last_pair_duration_s'] == pytest.approx(0.01)
         assert status['maximum_pair_duration_s'] == pytest.approx(0.01)
         assert status['maximum_attempted_pair_duration_s'] == pytest.approx(0.01)
+        assert status['startup_overrun_retries'] == 0
         assert status['last_rejected_pair_duration_s'] is None

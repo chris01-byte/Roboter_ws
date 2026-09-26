@@ -35,6 +35,7 @@ FC03_READ_WHITELIST = frozenset({
     (0x0019, 1),  # 32-Bit-Wortfolge
     (0x0101, 1),  # Encoderaufloesung
 })
+STARTUP_OVERRUN_RETRY_REASON = 'verspaetete_startprobe_wiederholen'
 
 
 class EncoderShadowError(RuntimeError):
@@ -494,12 +495,15 @@ class EncoderShadowCore:
         self.max_pair_read_duration_s = float(max_pair_read_duration_s)
         self.fault_reason: str | None = None
         self.complete_pair_count = 0
+        self.rejected_pair_count = 0
         self.published_count = 0
         self.baseline_count = 0
         self.last_pair_duration_s: float | None = None
         self.maximum_pair_duration_s: float | None = None
         self.last_rejected_pair_duration_s: float | None = None
         self.maximum_attempted_pair_duration_s: float | None = None
+        self.startup_overrun_retries = 0
+        self._consecutive_startup_overruns = 0
         self.last_sample_time_s: float | None = None
         self.last_update = EncoderUpdate(False, False, 'noch_keine_probe')
         self.last_pair: EncoderPair | None = None
@@ -523,11 +527,19 @@ class EncoderShadowCore:
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
         if pair is None:
+            self.rejected_pair_count += 1
             self.latch_fault('encoderpaar_unvollstaendig')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
         if not math.isfinite(sample_time_s):
+            self.rejected_pair_count += 1
             self.latch_fault('ungueltiger_zeitstempel')
+            return EncoderShadowResult(
+                False, self.fault_reason, self.last_update)
+        if (self.last_sample_time_s is not None
+                and sample_time_s <= self.last_sample_time_s):
+            self.rejected_pair_count += 1
+            self.latch_fault('nicht_monotoner_zeitstempel')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
         if math.isfinite(pair_read_duration_s) and pair_read_duration_s >= 0.0:
@@ -540,21 +552,25 @@ class EncoderShadowCore:
             self.last_rejected_pair_duration_s = (
                 pair_read_duration_s if math.isfinite(pair_read_duration_s)
                 else None)
+            self.rejected_pair_count += 1
+            if (math.isfinite(pair_read_duration_s)
+                    and pair_read_duration_s > self.max_pair_read_duration_s
+                    and not self.tracker.initialized
+                    and self._consecutive_startup_overruns == 0):
+                self._consecutive_startup_overruns = 1
+                self.startup_overrun_retries += 1
+                return EncoderShadowResult(
+                    False, STARTUP_OVERRUN_RETRY_REASON, self.last_update)
             self.latch_fault('encoderpaar_zeitfenster_ueberschritten')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
-        if (self.last_sample_time_s is not None
-                and sample_time_s <= self.last_sample_time_s):
-            self.latch_fault('nicht_monotoner_zeitstempel')
-            return EncoderShadowResult(
-                False, self.fault_reason, self.last_update)
-
         update = self.tracker.update(
             pair.left.position_u32,
             pair.right.position_u32,
             sample_time_s,
         )
         self.last_pair_duration_s = pair_read_duration_s
+        self._consecutive_startup_overruns = 0
         if (self.maximum_pair_duration_s is None
                 or pair_read_duration_s > self.maximum_pair_duration_s):
             self.maximum_pair_duration_s = pair_read_duration_s
@@ -586,6 +602,7 @@ def shadow_status_payload(
     max_feedback_age_s: float,
     successful_connections: int = 0,
     reconnects: int = 0,
+    fc03_pair_error_count: int = 0,
 ) -> dict[str, Any]:
     """Erzeugt den stabilen Sicherheits-/Diagnosevertrag des Shadow-Nodes."""
     ready = bool(
@@ -617,11 +634,13 @@ def shadow_status_payload(
         'left_motor_id': int(left_motor_id),
         'right_motor_id': int(right_motor_id),
         'complete_pair_count': core.complete_pair_count,
+        'rejected_pair_count': core.rejected_pair_count,
         'published_count': core.published_count,
         'baseline_count': core.baseline_count,
         'rejected': core.tracker.rejected_update_count,
         'successful_connections': int(successful_connections),
         'reconnects': int(reconnects),
+        'fc03_pair_error_count': int(fc03_pair_error_count),
         'rebases': core.tracker.rebase_count,
         'x_m': core.tracker.x_m,
         'y_m': core.tracker.y_m,
@@ -630,6 +649,7 @@ def shadow_status_payload(
         'maximum_pair_duration_s': core.maximum_pair_duration_s,
         'last_rejected_pair_duration_s': core.last_rejected_pair_duration_s,
         'maximum_attempted_pair_duration_s': core.maximum_attempted_pair_duration_s,
+        'startup_overrun_retries': core.startup_overrun_retries,
         'last_feedback_age_s': last_feedback_age_s,
         'max_feedback_age_s': max_feedback_age_s,
         'last_reason': core.last_update.reason,

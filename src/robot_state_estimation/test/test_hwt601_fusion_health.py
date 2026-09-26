@@ -40,6 +40,26 @@ def test_actual_inputs_ready_and_readonly_never_authorizes_motion():
     assert readonly.motion_failure(10.05) == 'readonly_preflight_no_motion'
 
 
+def test_readonly_freshness_allows_only_the_profiled_180ms_window():
+    health = ready_health(False)
+    health.statuses['wheel'][0]['last_feedback_age_s'] = 0.18
+    assert health.source_failure(10.17) is None
+
+    too_old = ready_health(False)
+    too_old.statuses['wheel'][0]['last_feedback_age_s'] = 0.181
+    assert too_old.source_failure(10.17) == 'wheel_not_real_or_not_ready'
+
+
+def test_active_drive_encoder_freshness_remains_300ms():
+    healthy = ready_health(True)
+    healthy.statuses['wheel'][0]['encoder_feedback_age_s'] = 0.30
+    assert healthy.source_failure(10.0) is None
+
+    stale = ready_health(True)
+    stale.statuses['wheel'][0]['encoder_feedback_age_s'] = 0.301
+    assert stale.source_failure(10.0) == 'wheel_not_real_or_not_ready'
+
+
 @pytest.mark.parametrize('missing', ['raw', 'yaw', 'wheel'])
 def test_prediction_cannot_mask_missing_raw_input(missing):
     health = ready_health()

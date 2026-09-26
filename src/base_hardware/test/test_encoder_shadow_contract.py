@@ -72,8 +72,8 @@ def test_config_uses_measured_geometry_and_strict_shadow_contract():
     assert params['wheel_radius_m'] == 0.0624
     assert params['wheel_separation_m'] == 0.3845
     assert params['gear_ratio'] == 10.0
-    assert params['max_pair_read_duration_s'] == 0.05
-    assert params['max_sample_gap_s'] == 0.10
+    assert params['max_pair_read_duration_s'] == 0.12
+    assert params['max_sample_gap_s'] == 0.18
     assert params['read_only'] is True
     assert params['sensor_write_commands'] is False
     assert params['actuator_output'] is False

@@ -17,6 +17,46 @@ Rückfallweg:
 
 ---
 
+## 2026-09-26 — Motorloser HWT/Encoder-Vorlauf zweimal bestanden
+
+**Entscheidung:** Nur das read-only Encoder-Shadow-Profil verwendet jetzt
+0,12 s Paarzeit und 0,18 s Frische-/Sample-Grenze. Die früher gemessenen
+Vollstack-Paare von 102,890 ms und 53,823 ms begründen den 120-ms-Rahmen;
+180 ms entsprechen knapp vier 20-Hz-Abständen und bleiben eine harte
+Frischegrenze. Ein erster gültiger, aber verspäteter Paarwert vor der
+Encoder-Baseline wird verworfen und einmal neu gelesen. Er aktualisiert weder
+Baseline, Odometrie, Zeitstempel noch Frische. Ein zweiter aufeinanderfolgender
+Ausreißer, jeder Ausreißer nach Baseline sowie fehlende/fehlerhafte FC03-Daten
+verriegeln weiterhin fail-closed. `base_hardware`-Fahrparameter und dessen
+300-ms-Encoderüberwachung sind unverändert; Modbus-Timeout 100 ms, 20-Hz-
+Polling, Collision-Monitor, Sensor-, Scope- und Navigationswerte sind
+unverändert.
+
+**Evidenz:** Zwei reale motorlose Gesamtläufe mit aktivem Nav2/Explorer und
+ohne Nichtnull-Fahrwerte, je 180 s nach Ende der HWT-Biasphase. Beide
+lieferten je 3.604 Encoderpaare, 0 Fehler und 0 Reconnects. Paarzeit Zyklus 1
+min/Median/p95/max 9,95/13,57/20,26/44,66 ms; Zyklus 2
+10,08/13,77/20,74/45,32 ms. HWT-Bias stabil/eingefroren, `sources_ready`,
+VL53, LiDAR, Karte, TF, Safety und sechs Nav2-Lifecycles frisch. Beide
+SIGINT-Starts beendeten alle Prozesse sauber und ließen alle seriellen Handles
+frei. Im zweiten Shutdown wurde eine bereits laufende Probe nach SIGINT mit
+124,547 ms gemessen und fail-closed verworfen, ohne sie zu publizieren. Das
+lag außerhalb des Messfensters; kein Nutzwert wurde als gesund verwendet.
+
+**Test / Rückfall:** 202 Tests der Pakete `base_hardware` und
+`robot_state_estimation` bestanden; isolierter Kandidat
+`/home/p/.local/share/amadeus/releases/we1-hwt601-IC2SLr/install` wurde
+verwendet. Das motorlose Profil kann auf die strikten 0,05/0,10 s
+zurückgesetzt werden; der read-only Startup-Retry kann separat entfernt
+werden. Es gab keine Fahrt. Scope-Vorbereitung: Profil
+`stage3-real-20260925-after-r2-scope.yaml`, Session
+`stage3-20260925-after-r2`, Scope
+`stage3-local-scope-20260925-after-r2`, Map-Frame `map`. Der aktuelle
+Map-Manager-Fingerprint beginnt mit `c6c949`; der Map-Status-Korrelator
+erzeugt den map-gebundenen Kontext neu je Start. Vor der kurzen Bewegung
+bleiben Startpose und sichtbare aktuelle Scope-Bindung abzugleichen. Stufe 3
+bleibt bis zum realen Umfahrnachweis GELB.
+
 ## 2026-09-26 — HWT-Zielsystemvorlauf an realer FC03-Latenz gestoppt
 
 **Entscheidung:** Nutzerfreigabe für motorlosen Vorlauf und kurze spätere

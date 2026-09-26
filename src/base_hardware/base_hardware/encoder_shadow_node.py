@@ -20,6 +20,7 @@ from .encoder_odometry import EncoderOdometry
 from .encoder_shadow_reader import (
     BASE_ALIAS,
     HWT601_ALIAS,
+    STARTUP_OVERRUN_RETRY_REASON,
     EncoderPairReader,
     EncoderShadowCore,
     EncoderShadowError,
@@ -185,6 +186,7 @@ class EncoderShadowNode(Node):
         self.last_feedback_monotonic: float | None = None
         self.last_ros_stamp_ns: int | None = None
         self.last_error_detail: str | None = None
+        self.fc03_pair_error_count = 0
         self.last_diagnostics_publish = 0.0
 
         self.odom_pub = self.create_publisher(
@@ -319,6 +321,8 @@ class EncoderShadowNode(Node):
                 pair_read_duration_s=read_finished - read_started,
             )
         except EncoderShadowError as exc:
+            if self.configuration_valid:
+                self.fc03_pair_error_count += 1
             self.last_error_detail = str(exc)
             read_finished = time.monotonic()
             read_started = locals().get('read_started', read_finished)
@@ -359,6 +363,16 @@ class EncoderShadowNode(Node):
                 f'Detail: {self.last_error_detail or result.reason}')
             return
 
+        if result.reason == STARTUP_OVERRUN_RETRY_REASON:
+            self.last_error_detail = (
+                f'Verspätetes Startpaar verworfen: '
+                f'{self.core.last_rejected_pair_duration_s:.6f}s; '
+                f'nächste echte FC03-Probe folgt; bisherige '
+                f'Wiederholungen={self.core.startup_overrun_retries}')
+            self._publish_status_and_diagnostics(force_diagnostics=True)
+            return
+
+        self.last_error_detail = None
         self.last_feedback_monotonic = sample_time
         if ros_read_finished.nanoseconds <= ros_read_started.nanoseconds:
             self.core.latch_fault('ros_zeit_im_encoderpaar_nicht_monoton')
@@ -437,6 +451,7 @@ class EncoderShadowNode(Node):
                 self.transport.successful_connections
                 if self.transport else 0),
             reconnects=self.transport.reconnects if self.transport else 0,
+            fc03_pair_error_count=self.fc03_pair_error_count,
         )
         payload.update({
             'topic': self.odom_topic,
