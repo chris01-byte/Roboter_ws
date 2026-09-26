@@ -66,6 +66,26 @@ Startpose und den Scope nochmals sichtbar abgleichen, dann 0,25 m geradeaus,
 kontrollierter Stopp, +15° Drehung mit Stopp und −15° Drehung mit Stopp über
 den bestehenden Fahrpfad. Danach Odom/TF, Schutzquellen und Stillstand prüfen.
 
+**Diagnosepfad vorbereitet (26.09.2026, lokal):** PR #101 ergänzt einen
+standardmäßig deaktivierten, einmalig auslösbaren Bewegungsprüfer. Er speist
+0,25 m vorwärts, bestätigten Stopp, +15°, bestätigten Stopp, −15° relativ
+zur gemessenen Zwischenpose und bestätigten Endstopp ausschließlich vor dem
+bestehenden Fahrtor ein. Gate, Smoother, Collision Monitor und
+`base_hardware` bleiben die Ausgabekette; es gibt keinen `/cmd_vel`-Publisher,
+keine freie Ziel-/Geschwindigkeitswahl und keine Parameterlockerung. Jede
+Phase verlangt frische HWT/Encoder-, VL53-, LiDAR-, Safety-, TF-, Karten- und
+Scope-Quellen; der gepaddete Footprint und das Geradeaussegment müssen im
+verifizierten Scope liegen. Zeitgestempelte Ketten-, RPM-, Encoder-, Odom-,
+HWT-, LiDAR-, TF- und Statusdaten werden privat als JSONL protokolliert.
+
+Die Softwaretests (46 Tests) und isolierter Build von `robot_navigation` und
+`robot_bringup` bestanden. **Der Diagnosepfad wurde noch nicht auf dem Roboter
+installiert oder ausgeführt; es fand keine Bewegung statt.** Der bisherige
+180-s-Motorlosnachweis wird nicht wiederholt. Vor dem nächsten Bewegungstest
+muss der neue Kandidat isoliert auf dem Zielsystem aufgelöst und die aktuelle
+Karten-/Scope-/Startpose-Bindung geprüft werden; bis dahin keine Fahrt und
+kein Gesamt-Grün.
+
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 
 **Softwareintegration BESTANDEN (lokal); motorlose Zielsystemprüfung OFFEN;

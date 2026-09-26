@@ -22,6 +22,8 @@ def generate_launch_description():
     use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
     operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
+    enable_stage3_motion_diagnostic = LaunchConfiguration(
+        'enable_stage3_motion_diagnostic')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     start_web_gui = LaunchConfiguration('start_web_gui')
@@ -39,6 +41,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
             description='Zweites Opt-in fuer App-Erkundung und Fahrtor.'),
+        DeclareLaunchArgument(
+            'enable_stage3_motion_diagnostic', default_value='false',
+            description='Zusaetzlicher Opt-in fuer den festen HWT601-'
+                        'Bewegungsdiagnoselauf.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='STL-27L auf 2160 Strahlen normalisieren.'),
@@ -63,6 +69,8 @@ def generate_launch_description():
                 'use_hwt601_odometry': use_hwt601_odometry,
                 'operator_stationary_confirmed': operator_stationary_confirmed,
                 'enable_auto_explore': enable_auto_explore,
+                'enable_stage3_motion_diagnostic':
+                    enable_stage3_motion_diagnostic,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
                 'explore_params_overlay': explore_params_overlay,

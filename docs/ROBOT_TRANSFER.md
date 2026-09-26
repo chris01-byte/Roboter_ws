@@ -145,29 +145,45 @@ In zwei getrennten Start-/Stopp-Zyklen protokollieren:
 
 ### Danach separat freizugebende Bewegungsdiagnose
 
-Erst nach bestandenem Vorlauf: in nachgewiesen freiem, zum aktuellen Scope
-passendem Bereich eine kurze Geradeausstrecke (geplant 0,25 m) mit Stopp,
-danach begrenzte Links-/Rechtsdrehung (geplant je 15 Grad) einzeln freigeben.
-Gemessener freier Schwenkraum für den unveränderten gepaddeten Footprint,
-unabhängiger Hardware-Halt erreichbar, keine Personen/Tiere im Fahrbereich.
-Äußere Bodenmarken/Streckenmessung und Winkelreferenz vorbereiten. Keine
-wechselnden Explorer-Frontierziele in dieser Basisdiagnose, keinen Bypass
-auf `/cmd_vel`; nur den vorhandenen abgesicherten Diagnose-/Missionspfad.
-Geplante Grenzwerte sind Testumfang, keine Änderung der Produktparameter.
+#### Diagnosepfad lokal implementiert, Zielsystem noch nicht aktualisiert
 
-Synchron und privat aufzeichnen: Fahrwunsch `/cmd_vel_nav_raw`, Ausgang
-Fahrtor `/cmd_vel_nav`, endgültiges `/cmd_vel`, `/base_hardware/state_json`
-(Soll-/gelesene Motor-rpm, rohe Positionszähler, Timing/Fehler),
-`/fusion/hwt601/wheel_odom_raw`, HWT-Roh- und korrigierte IMU samt Status,
-`/odom`, TF, LiDAR-Scan und `/shadow/hwt601/lidar_odom` samt Qualitätsstatus,
-Safety-/Missionsstatus und äußere Strecken-/Winkelreferenz.
-Dieselben Anfahr-/Fahr-/Stoppintervalle vergleichen: Befehlskette,
-Antriebsantwort, Encoderinterpretation, Rad-/Chassisbewegung getrennt.
-HWT und daraus fusionierter EKF sind keine unabhängigen Vergleichsquellen.
-Bei unerwarteter Bewegung, Kontaktgefahr oder TF-/Quellen-/Safety-/Scopefehler
-sofort abbrechen; erst gemessene Ursache klären. Keine weiteren Fahrversuche
-zum Überdecken eines Fehlers. Nach bestandener Basisdiagnose unmittelbar
-zum bestehenden Stufe-3-Umfahrtest mit eigener aktueller Fahrfreigabe zurück.
+Auf Branch `codex/we1-hwt601-fusion` ist der Diagnosemodus jetzt standardmäßig
+deaktiviert (`enable_stage3_motion_diagnostic:=false`). Bei explizitem Opt-in
+startet ein einzelner `/stage3_motion_test/start`-Trigger genau diese Sequenz:
+0,25 m vorwärts, bestätigter Stillstand, +15°, Stillstand, −15° relativ zur
+gemessenen Pose nach der positiven Drehung, Endstillstand. Es gibt keine
+anderen Ziele, keine Wiederholung, Rückwärtsfahrt oder Recovery. Der
+Diagnoseknoten publiziert ausschließlich `/cmd_vel_stage3_diagnostic_raw`;
+`cmd_vel_mission_gate` gibt nur bei frischen normalen Sicherheitsquellen,
+aktivem Diagnose-Opt-in, nicht laufender Mission, E-Stop-Freigabe, HWT und TF
+nach `/cmd_vel_nav` frei. Danach bleiben Velocity Smoother, Collision Monitor,
+`/cmd_vel` und `base_hardware` die vorhandene Kette. Produktgrenzen und
+Parameter sind unverändert. Gate-Ausgang, Smoother, Collision Monitor,
+Basis-Soll-/Ist-RPM und Encoderzähler, Encoder-/HWT-/fusions-Odom, LiDAR,
+TF, Safety und beide VL53 werden mit Empfangs- und Nachrichtenzeit privat als
+JSONL protokolliert.
+
+Vor Triggern verlangt der Knoten das bereits bestimmte Scope-Profil und die
+exakte Scope-ID `stage3-local-scope-20260925-after-r2`, einen frischen
+Map-Fingerprint im bestehenden SLAM-Session-Kontext, Map-Frame-Pose und den
+unveränderten gepaddeten Footprint vollständig innerhalb des Polygons. Die
+Startkarte wird gebunden; nachfolgende Kartenrevisionen derselben SLAM-Session
+werden toleriert, aber veraltete oder verlorene Bindung stoppt den Lauf. Jeder
+Phasentick stoppt fail-closed bei fehlender/veralteter HWT-/Encoder-, VL53-,
+LiDAR-, TF-, Karten-, Scope- oder Safety-Quelle. Nullkommando und deaktiviertes
+Diagnose-Active folgen bei Ende oder Abbruch.
+
+Gerätefreie Verifikation: alle 46 Tests aus `robot_navigation` bestanden;
+`robot_navigation` und `robot_bringup` erfolgreich in einen separaten
+temporären Build/Install unter `/tmp/amadeus-stage3-motion-build.N6Ninf`
+gebaut. Der frühere 180-s-Motorlosnachweis wurde nicht wiederholt. **Dieser
+Build wurde weder auf den Roboter installiert noch dort ausgeführt; es fand
+keine Bewegung statt.** Keine Änderung am aktiven `~/roboter_ws/install`.
+Nächster Schritt bleibt: nach isolierter Bereitstellung genau dieses Kandidaten
+auf dem Zielsystem aktuelle Startpose, Map-Fingerprint, Scope-ID und freien
+Testbereich prüfen; danach den begrenzten Diagnose-Trigger auslösen. Reale
+Barrieren-Umfahrung und Stoppbefreiung bleiben separate spätere Tests und
+Stufe 3 insgesamt bleibt GELB.
 
 **Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
 mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,

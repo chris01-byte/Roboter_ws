@@ -21,6 +21,7 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
     localization_search_values_valid,
     localization_motion_authorized,
     room_motion_authorized,
+    stage3_diagnostic_authorized,
     transform_motion_authorized,
 )
 from robot_interfaces.msg import NearFieldStatus  # noqa: E402
@@ -218,6 +219,25 @@ def test_estop_gate_needs_fresh_explicit_clear_and_stops_immediately():
     gate._on_estop(Bool(data=False))
     assert gate._estop_clear is True
     assert len(published) == 1  # Freigabe startet keinen alten Befehl.
+
+
+def test_stage3_diagnostic_gate_is_opt_in_one_shot_and_fails_closed():
+    now = 10.0
+    values = dict(
+        enabled=True, active=True, active_at=9.9, command_at=9.9,
+        mission_status={'state': 'idle', 'active_command': None},
+        mission_status_at=9.9, now=now, timeout_s=1.0,
+        health_ready=True, estop_clear=True, hwt_ready=True, tf_ready=True,
+    )
+    assert stage3_diagnostic_authorized(**values)
+    for changes in (
+            {'enabled': False}, {'active': False}, {'command_at': 8.9},
+            {'mission_status': {'state': 'running', 'active_command': None}},
+            {'mission_status': {'state': 'idle',
+                                'active_command': {'type': 'explore'}}},
+            {'health_ready': False}, {'estop_clear': False},
+            {'hwt_ready': False}, {'tf_ready': False}):
+        assert not stage3_diagnostic_authorized(**(values | changes))
 
 
 def test_mission_gate_rejects_missing_future_or_stale_map_base_transform():

@@ -33,6 +33,8 @@ def generate_launch_description():
     use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
     operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
+    enable_stage3_motion_diagnostic = LaunchConfiguration(
+        'enable_stage3_motion_diagnostic')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
@@ -62,7 +64,22 @@ def generate_launch_description():
                     'allow_localization_search': False,
                     'allow_explore_mission': ParameterValue(
                         enable_auto_explore, value_type=bool),
+                    'allow_stage3_motion_diagnostic': ParameterValue(
+                        enable_stage3_motion_diagnostic, value_type=bool),
                 }],
+            ),
+            Node(
+                package='robot_navigation',
+                executable='stage3_motion_diagnostic',
+                name='stage3_motion_diagnostic',
+                output='screen',
+                parameters=[{
+                    'enabled': ParameterValue(
+                        enable_stage3_motion_diagnostic, value_type=bool),
+                    'scope_profile_path': explore_params_overlay,
+                    'required_scope_id': 'stage3-local-scope-20260925-after-r2',
+                }],
+                condition=IfCondition(enable_stage3_motion_diagnostic),
             ),
             Node(
                 package='nav2_controller', executable='controller_server',
@@ -108,6 +125,10 @@ def generate_launch_description():
             'enable_auto_explore', default_value='false',
             description='Explizites zweites Opt-in fuer echte Explore-Missionen '
                         'und das cmd_vel-Fahrtor.'),
+        DeclareLaunchArgument(
+            'enable_stage3_motion_diagnostic', default_value='false',
+            description='Zusatzopt-in fuer genau einen festen 0,25-m-/15-Grad-'
+                        'HWT601-Diagnoselauf; Start ueber /stage3_motion_test/start.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='STL-27L zwingend auf 2160 Strahlen normalisieren.'),

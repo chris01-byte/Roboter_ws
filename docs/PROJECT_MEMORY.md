@@ -17,6 +17,36 @@ Rückfallweg:
 
 ---
 
+## 2026-09-26 — Einmaliger HWT-Bewegungsdiagnosepfad vorbereitet
+
+**Entscheidung:** Für die begrenzte Basisdiagnose einen standardmäßig
+deaktivierten und explizit einmal auslösbaren Auftrag vor dem bestehenden
+`cmd_vel_mission_gate` verwenden. Einzige Sequenz: 0,25 m vorwärts mit
+Stillstand, +15° mit Stillstand, −15° relativ zur gemessenen Zwischenpose mit
+Endstillstand. Ausgänge bleiben Fahrtor → Smoother → Collision Monitor →
+`/cmd_vel` → `base_hardware`. Keine Parameter oder Grenzen geändert.
+
+**Evidenz:** Die frühere Pfadprüfung identifizierte direkte `/cmd_vel`-
+Testskripte als nicht autorisiert. Neu ergänzt wurden Opt-in-Launchargument,
+Gate-Eingang und Einmal-Prüfknoten mit Scope-/Map-/Pose-/Footprint-Bindung,
+laufender HWT/Encoder-, VL53-, LiDAR-, Safety- und TF-Frischeprüfung,
+fail-closed Nullstopp sowie privates zeitgestempeltes JSONL der ganzen
+Befehlskette und Messquellen. Kartenrevisionen derselben gebundenen
+SLAM-Session dürfen fortschreiten. Die −15°-Phase wird relativ zur Pose am
+Ende der +15°-Phase gemessen.
+
+**Test / Rückfall:** 46 `robot_navigation`-Tests bestanden; `robot_navigation`
+und `robot_bringup` erfolgreich in einen isolierten temporären Build unter
+`/tmp/amadeus-stage3-motion-build.N6Ninf` gebaut. Der vorige motorlose
+180-s-Nachweis wurde nicht wiederholt. Der neue Build wurde nicht auf dem
+Roboter installiert oder ausgeführt; keine reale Bewegung. Standard bleibt
+deaktiviert. Rückfall ist vorherigen PR-#101-Commit `80ab168` verwenden und
+Launchargument weglassen; kein Wechsel des aktiven Installationspräfixes.
+Nächster erforderlicher Nachweis: Kandidat isoliert auf dem Zielsystem
+auflösen, aktuelle Karte/Scope/Startpose prüfen und erst anschließend den
+einmaligen begrenzten Bewegungstest ausführen. WE-Stufe 3 bleibt GELB bis
+realer Bewegungs- und autonomer Umfahrnachweis.
+
 ## 2026-09-26 — Motorloser HWT/Encoder-Vorlauf zweimal bestanden
 
 **Entscheidung:** Nur das read-only Encoder-Shadow-Profil verwendet jetzt
