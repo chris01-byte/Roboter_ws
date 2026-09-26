@@ -35,6 +35,8 @@ def generate_launch_description():
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
+    lab_external_hardware_halt_attested = LaunchConfiguration(
+        'lab_external_hardware_halt_attested')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
@@ -78,6 +80,8 @@ def generate_launch_description():
                         enable_stage3_motion_diagnostic, value_type=bool),
                     'scope_profile_path': explore_params_overlay,
                     'required_scope_id': 'stage3-local-scope-20260925-after-r2',
+                    'lab_external_hardware_halt_attested': ParameterValue(
+                        lab_external_hardware_halt_attested, value_type=bool),
                 }],
                 condition=IfCondition(enable_stage3_motion_diagnostic),
             ),
@@ -129,6 +133,10 @@ def generate_launch_description():
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusatzopt-in fuer genau einen festen 0,25-m-/15-Grad-'
                         'HWT601-Diagnoselauf; Start ueber /stage3_motion_test/start.'),
+        DeclareLaunchArgument(
+            'lab_external_hardware_halt_attested', default_value='false',
+            description='Manuelle Vor-Ort-Bestaetigung des unabhaengigen '
+                        'Hardware-Halts; hebt keine ROS-Safety-Pruefung auf.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='STL-27L zwingend auf 2160 Strahlen normalisieren.'),

@@ -24,6 +24,8 @@ def generate_launch_description():
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
+    lab_external_hardware_halt_attested = LaunchConfiguration(
+        'lab_external_hardware_halt_attested')
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     start_web_gui = LaunchConfiguration('start_web_gui')
@@ -45,6 +47,10 @@ def generate_launch_description():
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusaetzlicher Opt-in fuer den festen HWT601-'
                         'Bewegungsdiagnoselauf.'),
+        DeclareLaunchArgument(
+            'lab_external_hardware_halt_attested', default_value='false',
+            description='Manuelle Vor-Ort-Bestaetigung des unabhaengigen '
+                        'Hardware-Halts; kein ROS-Safety-Bypass.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true',
             description='STL-27L auf 2160 Strahlen normalisieren.'),
@@ -71,6 +77,8 @@ def generate_launch_description():
                 'enable_auto_explore': enable_auto_explore,
                 'enable_stage3_motion_diagnostic':
                     enable_stage3_motion_diagnostic,
+                'lab_external_hardware_halt_attested':
+                    lab_external_hardware_halt_attested,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
                 'explore_params_overlay': explore_params_overlay,

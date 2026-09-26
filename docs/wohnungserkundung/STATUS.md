@@ -66,7 +66,7 @@ Startpose und den Scope nochmals sichtbar abgleichen, dann 0,25 m geradeaus,
 kontrollierter Stopp, +15° Drehung mit Stopp und −15° Drehung mit Stopp über
 den bestehenden Fahrpfad. Danach Odom/TF, Schutzquellen und Stillstand prüfen.
 
-**Diagnosepfad vorbereitet (26.09.2026, lokal):** PR #101 ergänzt einen
+**Diagnosepfad vorbereitet (26.09.2026):** PR #101 ergänzt einen
 standardmäßig deaktivierten, einmalig auslösbaren Bewegungsprüfer. Er speist
 0,25 m vorwärts, bestätigten Stopp, +15°, bestätigten Stopp, −15° relativ
 zur gemessenen Zwischenpose und bestätigten Endstopp ausschließlich vor dem
@@ -76,19 +76,31 @@ keine freie Ziel-/Geschwindigkeitswahl und keine Parameterlockerung. Jede
 Phase verlangt frische HWT/Encoder-, VL53-, LiDAR-, Safety-, TF-, Karten- und
 Scope-Quellen; der gepaddete Footprint und das Geradeaussegment müssen im
 verifizierten Scope liegen. Zeitgestempelte Ketten-, RPM-, Encoder-, Odom-,
-HWT-, LiDAR-, TF- und Statusdaten werden privat als JSONL protokolliert.
+HWT-, LiDAR-, TF- und Statusdaten werden privat als JSONL protokolliert. Das
+zweite, standardmäßig falsche Opt-in `lab_external_hardware_halt_attested`
+kennzeichnet die manuelle Bestätigung des unabhängigen Hardware-Halts im
+Status; es ändert keine ROS-Safety-Freigabe.
+
+Das Diagnose-Opt-in kennzeichnet den Lauf als
+`stage3_bounded_motion_test` und verlangt zusätzlich die explizite manuelle
+Vor-Ort-Bestätigung `lab_external_hardware_halt_attested:=true`. Dieser Wert
+ist standardmäßig falsch und hebt weder `/safety/estop` noch Collision Monitor
+oder Quellen-/TF-/Scope-Prüfungen auf.
 
 Die Softwaretests (46 Tests) und isolierter Build von `robot_navigation` und
 `robot_bringup` bestanden. Der temporäre Overlay-Build wurde einmal für einen
 Live-Stackstart gesourct; der Diagnoseknoten war deaktiviert und es wurde kein
 Missionsauftrag gesendet. `base_hardware` meldete nur 0-RPM/Nullsollwerte; es
 fand keine Bewegung statt. Der Safety-Monitor meldete beim Start
-`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“; deshalb wurde
-keine Erkundungsmission ausgelöst. Die Launcher-PID wurde mit SIGINT beendet,
+`use_gpio_estop=false` und „Kein Hardware-Not-Aus angebunden“. Dieser Zustand
+ist nur fehlende GPIO-Rückmeldung; der Nutzer bestätigte anschließend den
+unabhängig verdrahteten und erreichbaren Hardware-Halt manuell. Beim ersten
+Start wurde aufgrund einer Fehlinterpretation kein Erkundungsauftrag
+ausgelöst. Die Launcher-PID wurde mit SIGINT beendet,
 alle Kinder beendeten sauber, HWT-/LiDAR-Handles wurden freigegeben und ROS-
 Domain 217 war danach leer. Der bestehende Install wurde nicht umgestellt.
 Der bisherige 180-s-Motorlosnachweis wird nicht wiederholt. Der autonome
-Umfahrnachweis fehlt; Stufe 3 bleibt GELB.
+Bewegungs- und Umfahrnachweis fehlt; Stufe 3 bleibt GELB.
 
 ## Stufe 3 – HWT601-Integration, gerätefrei geprüft (26.09.2026)
 

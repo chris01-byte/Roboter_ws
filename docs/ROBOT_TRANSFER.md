@@ -181,14 +181,22 @@ temporäre Overlay-Build wurde einmal für einen Live-Stackstart gesourct; der
 Diagnosemodus blieb aus, es wurde kein Missionsauftrag gesendet. `base_hardware`
 meldete währenddessen nur Nullsollwerte und 0 RPM; keine Bewegung. Der
 Safety-Monitor meldete `use_gpio_estop=false` und „Kein Hardware-Not-Aus
-angebunden“, woraufhin der Lauf ohne Navigation/Mission abgebrochen wurde.
+angebunden“. Der Nutzer hat klargestellt und manuell bestätigt, dass der
+unabhängige Hardware-Halt außerhalb GPIO/ROS verdrahtet und erreichbar ist;
+diese Warnung ist nur die fehlende Jetson-GPIO-Rückmeldung. Der erste Lauf
+wurde wegen einer Fehlinterpretation beendet, nicht wegen eines gemessenen
+Sensor-/Safety-Fehlers. Für den einmaligen Diagnoselauf ist jetzt
+`lab_external_hardware_halt_attested:=true` als standardmäßig falsches Opt-in
+implementiert und im Diagnosestatus sichtbar; `/safety/estop`, Collision Monitor, Quellen-, TF- und
+Scope-Prüfungen bleiben aktiv.
 SIGINT ging ausschließlich an Launch-PID 79158; alle ROS-Kinder endeten sauber,
 `/dev/ttyUSB_HWT601` und `/dev/amadeus_lidar` waren danach unbelegt, Domain 217
 leer. Der aktive `~/roboter_ws/install` blieb unverändert. Der Diagnosepfad
-wurde nicht ausgelöst. Weiterer realer Fahrtest ist blockiert, bis die
-unabhängige Hardware-Haltekette vorhanden und live bestätigt ist; aktueller
-Map-/Scope-/Startpose-Nachweis und Hindernisumfahrung sind noch offen. Stufe 3
-bleibt GELB.
+wurde nicht ausgelöst. Der reale Bewegungstest ist noch nicht erfolgt; vor
+dem Trigger sind aktueller Map-Fingerprint, Scope-/Startpose-Bindung und der
+geplante Testkorridor im laufenden Stack zu prüfen. Danach kann die bereits
+erteilte Sequenzfreigabe genutzt werden. Hindernisumfahrung bleibt separat
+offen; Stufe 3 bleibt GELB.
 
 **Rückfall:** Vollständig stoppen, Shutdown/Handles bestätigen, neue Shell
 mit bisheriger PR-#100-Installkette bis `we1-stage3-vl53-boot-r1`,

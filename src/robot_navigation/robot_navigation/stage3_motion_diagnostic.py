@@ -28,6 +28,7 @@ from tf2_ros import Buffer, TransformException, TransformListener
 
 PHASES = ('forward', 'stop_after_forward', 'turn_positive',
           'stop_after_positive', 'turn_negative', 'stop_final')
+LAB_MODE = 'stage3_bounded_motion_test'
 LINEAR_MPS = 0.08  # existing Explore-direct gate limit; no product limit change
 ANGULAR_RADPS = 0.10  # existing Explore-direct gate limit; no product limit change
 TEST_DISTANCE_M = 0.25
@@ -87,8 +88,11 @@ class Stage3MotionDiagnostic(Node):
         self.declare_parameter('scope_profile_path', '')
         self.declare_parameter(
             'required_scope_id', 'stage3-local-scope-20260925-after-r2')
+        self.declare_parameter('lab_external_hardware_halt_attested', False)
         if not bool(self.get_parameter('enabled').value):
             raise RuntimeError('Stage-3-Diagnosemodus ist nicht aktiviert')
+        self.external_hardware_halt_attested = bool(
+            self.get_parameter('lab_external_hardware_halt_attested').value)
 
         profile_path = Path(str(
             self.get_parameter('scope_profile_path').value)).expanduser()
@@ -188,7 +192,9 @@ class Stage3MotionDiagnostic(Node):
         self.create_subscription(TFMessage, '/tf', self._tf_event, sensor_qos)
         self.create_timer(0.05, self._tick)
         self.get_logger().warning(
-            f'Opt-in Stage-3-Diagnosepfad bereit; Scope {self.scope_id}; '
+            f'LABORMODUS {LAB_MODE} aktiv (explizites Diagnose-Opt-in); '
+            f'externer Hardware-Halt manuell bestaetigt='
+            f'{self.external_hardware_halt_attested}; Scope {self.scope_id}; '
             'ein einziger Trigger erlaubt nur 0,25 m / +15 Grad / -15 Grad.')
 
     def _record(self, topic, payload, stamp_ns=None):
@@ -424,6 +430,12 @@ class Stage3MotionDiagnostic(Node):
             response.success = False
             response.message = 'Dieser Prozess erlaubt genau einen Diagnoselauf.'
             return response
+        if not self.external_hardware_halt_attested:
+            response.success = False
+            response.message = (
+                'Labormodus gesperrt: unabhaengigen Hardware-Halt vor Ort '
+                'manuell bestaetigen.')
+            return response
         failure = self._health_failure()
         if failure:
             response.success = False
@@ -495,6 +507,9 @@ class Stage3MotionDiagnostic(Node):
         self._result_message = message
         self._status_pub.publish(String(data=json.dumps({
             'state': state, 'phase': state, 'scope_id': self.scope_id,
+            'lab_mode': LAB_MODE,
+            'external_hardware_halt_attested': (
+                self.external_hardware_halt_attested),
             'session_id': self._bound_session,
             'map_fingerprint': self._bound_fingerprint,
             'message': message,
@@ -613,6 +628,9 @@ class Stage3MotionDiagnostic(Node):
                 self._publish_command(0.0, -ANGULAR_RADPS)
         self._status_pub.publish(String(data=json.dumps({
             'state': self._state,
+            'lab_mode': LAB_MODE,
+            'external_hardware_halt_attested': (
+                self.external_hardware_halt_attested),
             'scope_id': self.scope_id,
             'session_id': self._bound_session,
             'map_fingerprint': self._bound_fingerprint,

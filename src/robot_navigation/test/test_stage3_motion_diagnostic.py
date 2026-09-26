@@ -15,6 +15,7 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
 from robot_navigation.stage3_motion_diagnostic import (  # noqa: E402
     ANGULAR_RADPS,
     FOOTPRINT_RADIUS_M,
+    LAB_MODE,
     LINEAR_MPS,
     PHASES,
     TEST_DISTANCE_M,
@@ -34,6 +35,7 @@ def test_stage3_test_is_opt_in_single_sequence_and_not_a_cmd_vel_publisher():
               'stage3_motion_diagnostic.py').read_text()
 
     assert "'enable_stage3_motion_diagnostic', default_value='false'" in launch
+    assert "'lab_external_hardware_halt_attested', default_value='false'" in launch
     assert 'IfCondition(enable_stage3_motion_diagnostic)' in launch
     assert "create_service(\n            Trigger, '/stage3_motion_test/start'" in source
     assert "'/cmd_vel_stage3_diagnostic_raw'" in source
@@ -45,6 +47,10 @@ def test_stage3_test_is_opt_in_single_sequence_and_not_a_cmd_vel_publisher():
     assert TEST_TURN_RAD > 0.2617 and TEST_TURN_RAD < 0.2619
     assert LINEAR_MPS == 0.08
     assert ANGULAR_RADPS == 0.10
+    assert LAB_MODE == 'stage3_bounded_motion_test'
+    assert "'lab_mode': LAB_MODE" in source
+    assert 'if not self.external_hardware_halt_attested:' in source
+    assert "'external_hardware_halt_attested': (" in source
 
 
 def test_scope_contains_padded_footprint_and_rejects_edge_crossing():

@@ -17,6 +17,31 @@ Rückfallweg:
 
 ---
 
+## 2026-09-26 — `use_gpio_estop=false` als Laborhinweis eingeordnet
+
+**Entscheidung:** Die Safety-Monitor-Warnung `use_gpio_estop=false` bedeutet,
+dass der unabhängige Hardware-Halt nicht zusätzlich als Jetson-GPIO-Eingang
+in ROS erscheint. Der Nutzer hat die separate Verdrahtung und Erreichbarkeit
+manuell bestätigt. Im expliziten Einzeltest-Labormodus bleibt `/safety/estop`
+weiterhin erforderlich; Collision Monitor, VL53, HWT/Encoder, TF/Odom, Scope,
+Footprint und Watchdog bleiben unverändert aktiv. Keine Änderung an
+`safety_monitor` oder Sicherheitsparametern.
+
+**Evidenz:** Beim ersten Live-Start blieb `base_hardware` bei 0 RPM und
+Nullsollwerten; es wurde keine Mission ausgelöst. Die Warnung führte zunächst
+zu einem übervorsichtigen Abbruch. Der Launcher wurde sauber beendet und
+Gerätehandles freigegeben. Das Labormodus-Opt-in
+`lab_external_hardware_halt_attested` ist standardmäßig `false`, wird für die
+einmalige Testsequenz zusätzlich zur Diagnoseaktivierung verlangt und im
+Diagnosestatus angezeigt. Es schaltet weder die Software-Safety noch eine
+Motion-Grenze aus.
+
+**Teststatus / Rückfall:** Noch kein Fahrbefehl und keine Umfahrung erfolgt.
+Der begrenzte Bewegungstest kann nach erneutem Stackstart mit Live-Prüfung von
+Map-Fingerprint, Scope, Startpose und Fahrkorridor ausgeführt werden. Ohne
+manuelle Lab-Attestierung verweigert der Einmal-Trigger den Start. PR #101
+bleibt offen; Stufe 3 GELB.
+
 ## 2026-09-26 — Einmaliger HWT-Bewegungsdiagnosepfad vorbereitet
 
 **Entscheidung:** Für die begrenzte Basisdiagnose einen standardmäßig
