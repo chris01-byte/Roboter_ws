@@ -15,6 +15,139 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — VL53-Recovery geprüft; Parity-Realtest durch HWT-Rohstatus gestoppt
+
+**Entscheidung:** Die VL53-Runtime-Recovery nur im isolierten Parity-Kandidaten
+umsetzen und den korrekt gestarteten Parity-Realtest als gescheitert werten.
+Keine HWT- oder Fahrparameter während des Versuchs ändern.
+
+**Evidenz:** Das vollständige VL53-Knotenlog des Vorlaufs zeigte zuerst einen
+einzelnen `ch1`-IndexError, dann 21 `ch0`-Warnungen über 9,42 s. Die gepaarte
+Publikation hatte dabei eine 9,93-s-Lücke; ein unabhängiger Gesundheitsbeleg
+des rechten Kanals während dieser Lücke fehlt. Die neue kanalgetrennte
+Recovery verwirft Einzelproben, startet nach drei Fehlern Ranging neu,
+initialisiert bei erneutem Fehler höchstens zweimal nur den betroffenen
+Treiber und verlangt danach zwei vollständige Rohframes. Der gesunde Kanal
+wird weiter gelesen; Bewegung verlangt weiterhin das vollständige Paar.
+
+989 VL53-, Navigations- und Explorer-Tests bestanden. Im motorlosen Echtlauf
+waren beide VL53 über 125,1 s bei 508 Statusmeldungen gesund (größte
+Cloud-Lücke 0,28 s). Der anschließende aktive Lauf wurde über
+Mission-Manager/BT korrekt gestartet und schloss den Rundblick bei 361,7°
+ab. Um 1790492567,566 wechselte der HWT-Schutzstatus dauerhaft auf
+`raw_driver_not_ready`; das Fahrtor sperrte. Drei Frontier-Vorausrichtungen
+scheiterten, danach endete die Mission mit BT FAILURE. Kein Portal und kein
+Raumwechsel. LiDAR und VL53 blieben frisch. Eine nachträgliche read-only-Abfrage des
+lokalen Bags bestätigte den Übergang von `raw_sources_ready` zu
+`raw_driver_not_ready` bei 1790492567,5659919. Im Bag sind nur
+`/fusion/hwt601/status_json`, `/fusion/hwt601/wheel_odom_raw`,
+`/shadow/hwt601/imu/yaw_rate` und `/shadow/hwt601/status_json` enthalten;
+`/shadow/hwt601/raw_status_json` fehlt. Der Sammelgrund ist bestätigt, aber
+welches der sechs Raw-Statusfelder ihn auslöste und dessen Originalwert fehlen.
+Das lokale Bag liegt unter
+`~/.local/share/amadeus/tests/parity-real-20260927-vl53-recovery`. Der
+bekannte STL-27L-Overflow trat nur beim abschließenden SIGINT auf.
+
+**Betroffene Dateien und Hardware:** Nur `src/vl53_near_field/` sowie
+Parity-Dokumentation; beide VL53 am CH341A-Mux, HWT601 und reale Antriebe
+beim Test. Keine Änderung an HWT, Nav2, Explorer, Gates, Footprint oder
+Sicherheitsgrenzen.
+
+**Teststatus:** VL53-Softwaretests, Paketbuild und motorloser Echtlauf
+bestanden. Parity-Realtest gescheitert, weil die HWT-Schutzkette nach dem
+Rundblick verriegelte. Stack und Bag-Recorder wurden im Stillstand beendet.
+
+**Offene Risiken:** Der HWT-Rohstatusfehler muss separat anhand vollständig
+erfasster Rohstatusfelder geklärt werden. Die neue VL53-Reinitialisierung
+wurde gerätefrei simuliert, trat im realen Lauf mangels VL53-Fehler nicht ein.
+
+**Rückfallweg:** Die zwei VL53-Dateiänderungen im isolierten Parity-Branch
+zurücknehmen und das Paket neu bauen. Keine neue Fahrt, bevor der HWT-Fehler
+getrennt geklärt und ein neuer Realtest autorisiert ist.
+
+---
+
+## 2026-09-26 — Parity-Realtest im Produktpfad am VL53-Schutzdatenfehler gestoppt
+
+**Entscheidung:** Den Parity-Lauf als gescheitert protokollieren und nach dem
+ersten sicherheitsrelevanten Sensordatenfehler beenden. Keine Parameter- oder
+Softwareänderung vornehmen.
+
+**Evidenz:** Der aktive Lauf wurde mit dem freigegebenen Kandidaten und
+`active_drive=true`, `use_hwt601_odometry=true`,
+`enable_auto_explore=true` gestartet. HWT601-Bias war stabil, HWT/Encoder/EKF,
+LiDAR, Karte/TF, Nav2, beide VL53-Frames und Collision Monitor waren vor der
+Mission bereit; 0 RPM vor Missionsbeginn. Der Auftrag `{"type":"explore"}`
+ging über `/mission_manager/command_json`. Der Manager meldete
+`state=running`, `active_command.type=explore`, `phase=Explore`; der
+BT-Orchestrator startete `explore.xml`. Das Fahrtor wechselte vor dem ersten
+Bewegungskommando auf `mission`. Der Explorer führte autonom den 0,08-rad/s-
+Rundblick aus; bis zum Abbruch wurden etwa 2,45 rad Gierbewegung gemessen.
+
+Der erste sicherheitsrelevante Fehler war wiederholtes
+`VL53 ch0: IndexError: list assignment index out of range` mit Ranging-Neustart.
+Danach verwarf der Collision Monitor `vl53_left` und `vl53_right` wegen mehr
+als 3 s Zeitstempelabweichung. Mission-Manager-Cancel stoppte die Mission.
+Der Rundblick blieb unvollständig; es gab kein Frontierziel, kein Portal und
+keinen Raumwechsel. Das Bag liegt lokal unter
+`/home/p/.local/share/amadeus/tests/parity-real-20260926T153200Z-product`.
+Nach Mission-Abbruch und Stack-Shutdown waren keine Amadeus-Knoten aktiv;
+FC03 zeigte beide Motoren bei 0 RPM und stabile Encoderpositionen. Der
+bekannte STL-27L-`buffer overflow detected`-/Exit-`-6`-Fehler trat separat
+erst beim abschließenden SIGINT auf.
+
+**Betroffene Dateien und Hardware:** Nur diese Dokumentation. Keine Software-,
+Parameter- oder LiDAR-Änderung. HWT601, Encoder, STL-27L, beide VL53,
+Collision Monitor und Antrieb.
+
+**Teststatus:** Mission-Manager/BT/Fahrtor korrekt; autonomer Rundblick begann.
+Parity-Realtest gescheitert wegen wiederholtem VL53-`IndexError` und
+veralteten Nahbereichsquellen im Collision Monitor. Kein Türdurchgang oder
+Raumwechsel.
+
+**Offene Risiken:** VL53-Treiberfehler und Ursache der veralteten Quellen
+bleiben ungeklärt. Vor einem neuen Lauf ist eine separate Freigabe nötig;
+diese Aufzeichnung ändert keine Software.
+
+**Rückfallweg:** Bis zur Klärung keine weitere autonome Fahrt mit diesem
+Fehlerbild; bei ausschließlich nachgelagertem STL-SIGINT-Fehler diesen
+weiterhin als separaten Shutdown-Defekt behandeln.
+
+Datum: 2026-09-26
+Entscheidung: Den aktiven Parity-Realtest als **nicht ausgeführt** korrigieren;
+den bestandenen motorlosen Vorstart beibehalten und den bekannten
+STL-27L-Shutdownfehler separat führen.
+Grund / beobachtete Evidenz: Im aktiven Stack waren die Laufzeitbedingungen
+bereit: 0 RPM vor Auftrag, frische Encoder/EKF/HWT-Daten mit eingefrorenem
+Bias, kontinuierliche LiDAR-Scans, gesunde VL53-Frames, aktuelle Karte/TF,
+Nav2 und Collision Monitor aktiv. Karte, Startpose und begrenzter Scope sind
+lokal an `/home/p/.local/share/amadeus/tests/parity-real-20260926T143000-run2`
+gebunden. Der ExploreArea-Aufruf wurde direkt an `/explore_area` gesendet und
+umging damit Mission-Manager/BT. Das Fahrtor erlaubt reale Explore-Bewegung
+nur bei aktivem Mission-Manager-Auftrag vom Typ `explore`; es hielt deshalb
+die nachgelagerte Kommandokette auf null. Der Explorer veröffentlichte 293
+Rundblickkommandos bis 0,08 rad/s auf `/cmd_vel_explore_scan_raw`, während
+`/cmd_vel_smoothed`, `/cmd_vel_nav` und `/cmd_vel` null blieben. Der
+Initialscan endete nach 0,0 Grad mit `no_progress`; Pose und Motoren blieben
+still. Es gab kein Frontierziel, keine Türdurchfahrt und keinen Raumwechsel.
+Der Lauf belegt daher keinen Fahrtest und keinen Hardwarefehler; Status ist
+**PARITY-REALTEST NICHT AUSGEFÜHRT**. Beim abschließenden SIGINT trat danach
+der bekannte STL-27L-`buffer overflow detected`-/Exit-`-6`-Shutdownfehler auf.
+Nach Stackende waren die Handles frei, und FC03 bestätigte 0 RPM sowie
+unveränderte Encoderpositionen.
+Betroffene Dateien und Hardware: Nur diese Dokumentation; keine Software-,
+Parameter- oder LiDAR-Änderung. Aktiver RS485-Stack, HWT601, STL-27L, VL53,
+Nav2 und Collision Monitor. Wohnungsdaten und Bag bleiben lokal.
+Teststatus: Motorloser Vorstart bestanden; echter Parity-Fahr-/Türtest nicht
+ausgeführt. Kein erneuter Stackstart in diesem Auftrag.
+Offene Risiken: Der nächste reale Auftrag muss über den freigegebenen
+Mission-Manager/Behavior-Tree-Pfad ausgelöst werden, damit das bestehende
+Fahrtor die Explore-Mission autorisiert. Keine manuelle Nav2-Pose verwenden.
+Rückfallweg: Vor Bewegung Mission-Manager-Status und Null-RPM prüfen; wenn das
+Fahrtor nicht freigibt oder die Kette nicht reagiert, stoppen und den ersten
+Fehlerpunkt dokumentieren. Den bekannten LiDAR-Shutdownfehler getrennt
+behandeln.
+
 ## 2026-09-26 — Begrenzte Bewegung gemessen, realer Umfahrnachweis weiter offen
 
 **Entscheidung:** Den einmaligen 0,25-m-/±15°-Diagnoselauf als erfolgreich
@@ -3412,3 +3545,38 @@ jedem Timeout nötig.
 - Die **VL53-Sensoren decken flache Bodenobjekte nicht ab**: Sie sitzen auf
   0,305 m und schauen waagerecht; ihr Kegel trifft den Boden erst bei ~0,53 m,
   jenseits ihrer Reichweite. Kabel und Schwellen sieht kein Sensor.
+
+---
+
+## 2026-09-26 — WE-Paritätsreset vorbereitet, noch nicht auf Hardware gefahren
+
+**Entscheidung:** Im isolierten Branch `feature/parity-reset` auf PR-#101-Head
+`40b5b49c9a92600484a0dc85c466930bc1680c60` den Initialscan und den verbundenen
+Mehrraum-Pfad aus dem real bewährten `1d91229` wiederherstellen. Bestehende
+HWT601-, Encoder-, VL53-, Nav2- und Sicherheitsfixes des PR-Heads bleiben
+unverändert. Die neue WE-Navigation bleibt im Profil deaktiviert und wird bei
+Start-Opt-in fail-closed abgewiesen; Shadow-Beobachtung bleibt passiv.
+
+**Grund / Evidenz:** Der lokale Bag vom 11.09. enthält 8 × 45° bei 0,08 rad/s,
+reale HWT-/Encoder-Drehung, Frontierfahrt, einen erkannten verbundenen
+Türübergang und weitere Frontiers. Der Bag vom 26.09. endet dagegen beim
+0,12-rad/s-Scan ohne Odom-/Gyro-Drehung und ohne Fortschritt. Die historische
+verbundene Portal-Erkennung fand im Replay genau eine Brücke (0,514 m Lücke,
+0,421 m² Zielregion). Die vollständige Paritätstabelle und Grenzen stehen in
+`docs/WE_PARITY_RESET.md`.
+
+**Teststatus:** Explore-Build und 925 Explore-Tests bestanden. Ausgewählte
+Regressionstests: base_hardware 103, robot_state_estimation 99,
+amadeus_lidar_bringup 7, robot_navigation 46, direkte VL53-/safety_monitor-
+Tests 17; insgesamt 1.197. Kein geänderter Stand auf Hardware gefahren.
+
+**Offen:** Der zusätzliche Build bis `robot_bringup` ist an fehlender lokaler
+`behaviortree_ros2`-CMake-Konfiguration gescheitert. Der Kandidat ist damit ein
+Software-/Replay-vorbereiteter beaufsichtigter Realtest-Kandidat, keine
+Hardwareabnahme. Für jeden Lauf gelten die Stillstandsprüfungen,
+Not-Aus-/Umgebungsprüfung und eine ausdrückliche Freigabe der anwesenden Person.
+
+**Rückfallweg:** Zurück auf den bisherigen PR-#101-Head
+`40b5b49c9a92600484a0dc85c466930bc1680c60`; `1d91229` nicht vollständig
+zurücksetzen, weil spätere HWT-/Sensor-/Sicherheitskorrekturen erhalten bleiben
+müssen. Kein Commit oder Merge ausgeführt.

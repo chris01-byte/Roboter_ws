@@ -1,9 +1,10 @@
 # Inventar
 
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
-**Softwaredelta:** 17.08.2026 · Branch
-`feature/hybrid-erkundung-app`; dreistufige App-Erkundung real bis 88,30 %
-abgenommen, erfolgreich bediente Frontier-Umfelder gegen Wiederholung gesperrt
+**Softwaredelta:** 27.09.2026 · `feature/parity-reset` enthält den real
+bewährten Mehrraum-Scan-/Portalpfad und kanalgetrennte VL53-Recovery; ein
+Realversuch erreichte den Rundblick, stoppte danach am gelatchten HWT-Rohstatus
+(Details: `docs/WE_PARITY_RESET.md`, aktueller WE-Stand: `docs/wohnungserkundung/STATUS.md`)
 
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
@@ -43,7 +44,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `llm_planner` | Sprachgestützte Auftragsplanung | **erprobt** (Qwen/Ollama→validiertes Missions-JSON live; Ausführung bleibt onboard gegated) |
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
-| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |
+| `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im historischen Test); Parity-Realversuch am 27.09. erreichte 361,7° Rundblick, danach HWT-Sperre vor Frontierziel; kein neuer Mehrraumnachweis |
 | `handeye_calibration` | Kamera-Arm-Kalibrierung | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |

@@ -43,88 +43,70 @@ Bereiche freigeben, keine alten Daten frisch stempeln, kein direkter ungegateter
 Motorbefehl. Die Detailregeln stehen im Masterplan; sie sind noch kein Nachweis
 bereits implementierter Recovery.
 
-## 3. Aktueller Folgeauftrag: Integrationsbasis und Auditbestand konsolidieren
+## 3. Abgeschlossen: Integrationsbasis und Auditbestand konsolidieren
 
-Erst nach ausdrücklicher Übergabe dieses Auftrags ausführen. Keine alten
-Fahrtest-Prompts zusätzlich oder automatisch ausführen.
+Der Auftrag aus der Referenz `26360001f65e05a5b88a58581771c241291fa0e5`
+wurde auf Themenbranch `docs/we1-integrationsbasis-audit` bearbeitet. Ergebnis,
+Quellzuordnung, frischer Teilbuild, Tests, fehlgeschlagener Vollbuild,
+Abort-/Latch-Inventur und abgegrenztes Recoverypaket stehen ausschließlich im
+[STATUS.md](STATUS.md). Die Arbeitskopie `~/roboter_ws` wurde nicht umgeschaltet;
+keine Runtime aktiviert, kein Merge und keine Fahrt.
+
+Der letzte HWT-Fehler ist im lokalen Bag auf den Wechsel
+`raw_sources_ready` → `raw_driver_not_ready` bei `1790492567.5659919`
+eingegrenzt. Das Bag enthält keinen `/shadow/hwt601/raw_status_json`-Topic;
+die verletzte Einzelbedingung und ihr Originalwert fehlen. Der Vollbuild ist
+wegen des `behaviortree_cpp`-CMake-Exportpfads blockiert; Teilbuild und
+gerätefreie Tests sind getrennt im STATUS bewertet.
+
+## 4. Aktueller Folgeauftrag: HWT-Rohstatus-Erstfehler sichtbar machen
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: docs/wohnungserkundung/MASTERPLAN.md, Version 1.0 vom 27.09.2026
-AUFTRAG: AKTUELLEN INTEGRATIONSSTAND SICHERN UND AUDITBESTAND KONSOLIDIEREN
+BASIS: STATUS.md, Integrationslinie docs/we1-integrationsbasis-audit
+ERGEBNIS: Den konkreten HWT-Rohstatus-Prädikatfehler ohne Änderung der
+Bewegungs-/Schutzwirkung diagnostisch sichtbar machen.
 
-ZIEL
-Eine nachvollziehbare, reproduzierbare WE-/Parity-Basis herstellen und
-exakt das erste begrenzte Recovery-Änderungspaket daraus ableiten.
-Kein Neustart des gesamten Projekts und keine neue Roadmap.
+UMFANG
+- Bestehende HWT-Statusquelle, Hwt601FusionHealth und Statusveröffentlichung
+  im Mission-Gate nachvollziehen.
+- Für die sechs bestehenden Rohstatusbedingungen (`ready`, `raw_data_ready`,
+  Port, Sensor-Schreibmodus, `consecutive_errors`, `age_s`) maschinenlesbare
+  Fehlernamen und die tatsächlich empfangenen Werte additiv ausgeben.
+- Den bisherigen Sammelgrund `raw_driver_not_ready`, die Grenzwerte, das
+  fail-closed Latch und die Nullausgabe des Gates unverändert lassen.
+- Gerätefreie Tests für jedes Einzelprädikat, mehrere gleichzeitige Fehler,
+  fehlende Statusnachricht und den unveränderten Gate-Stopp ausführen.
 
-A. BESTAND SICHERN
-Lies Pflichtkontext und aktuellen STATUS. Prüfe nach git fetch origin
-Remote-Refs, Arbeitsbaum, lokale Änderungen, Worktrees und bekannte Builds.
-Sichere die zuletzt tatsächlich verwendete Parity-/VL53-Recovery-Arbeit.
-Nicht aus PR #101 oder dessen Beschreibung auf den lokalen Install schließen.
+NICHT-ZIELE
+- Keine Frische-/Timeout-Änderung, kein Auto-Reconnect/Restart und keine
+  Wiederanfahrt.
+- Keine neue Navigation, kein Supervisor, kein Auftragserhalt-Umbau.
+- Keine aktive Installation, kein Roboterstart, keine Fahrt. Ein späterer
+  motorloser HWT-Quelllauf zur Feldwertaufnahme ist ein eigener Schritt und
+  wird nicht automatisch aus diesem Codeauftrag abgeleitet.
 
-Erhalte historische Referenzen und bereits bestandene Nachweise.
-Keine laufende Roboter-Arbeitskopie umschalten, kein reset --hard,
-kein Force-Push, kein Löschen fremder Branches und kein Blind-Merge.
-Fehlenden lokalen Zugriff ausdrücklich nennen; keine Runtime erfinden.
+ERFOLG / GEGENFÄLLE
+- Jede einzeln verletzte Bedingung ist im Status eindeutig; Originalwerte und
+  Quellenalter sind lesbar, ohne Rohdaten anderer Sensoren auszugeben.
+- Gate bleibt bei jedem ungültigen oder stale HWT-Status blockiert.
+- Fehlender, zukünftiger, nicht endlicher oder widersprüchlicher Wert bleibt
+  fail-closed. Mehrfachfehler dürfen keinen Fehlergrund verschleiern.
 
-B. EINEN KANDIDATEN FESTLEGEN
-Ordne Code, externe Treiber/Submodule, Versionen, Kalibrierungen, Profile,
-Overlay-Reihenfolge und tatsächlich aufgelöste Pakete einander zu.
-Vergleiche nur relevante Unterschiede mit dem historisch bewährten
-HWT601-/Türpfad bei 1d91229; nicht pauschal auf diesen zurücksetzen.
-
-Stelle die bereits beabsichtigte Zusammensetzung in einer isolierten
-Integrationslinie reproduzierbar zusammen. Erhalte heutige nachgewiesene
-VL53-/HWT-/Antriebs-/Cancel-/Shutdown-Korrekturen. Keine funktionale
-Neuentwicklung oder Sicherheitslockerung als Teil des Zusammenbaus.
-Ungeklärte Integrationsentscheidungen sichtbar zur Entscheidung vorlegen.
-
-Nutze einen frischen isolierten Build und weise Abhängigkeiten/Paketauflösung
-nach. Ein Besitzer je Motorbus, produktivem TF und Navigationskind;
-kein neuer aktiver WE-Navigator neben der bestehenden Ausführung.
-Gerätefreie Tests in isolierter Umgebung. Kein aktiver Installwechsel.
-
-C. AUDITBESTAND ZUSAMMENFÜHREN
-Suche vorhandene Abort-/Latch-Audits auch in der gesicherten lokalen Arbeit.
-Vorhandenes fortschreiben, nicht dieselbe Inventur erneut erfinden.
-Erfasse im real relevanten Pfad Trigger, Datenquelle, Grenzwert, aktuelle
-Stop-/Cancel-/Abort-/Latch-Wirkung, Verantwortlichen, Recovery und Evidenz.
-Unterscheide vorübergehenden Halt, eingeschränkten Betrieb, terminalen
-Hilfebedarf, echten Schutzstopp und Shutdownbefund. Keine Klassifikation
-allein aus einem Sammelfehler oder aufgrund des Wunsches, weiterzufahren.
-
-Beim letzten HWT-Abbruch zuerst die tatsächliche Einzelbedingung und den
-Originalwert aus bestehenden Logs/Code bestimmen. Falls nicht vorhanden:
-als Nachweislücke ausweisen und eng begrenzte Erstfehler-Diagnose vorschlagen.
-Keine erfundene HWT-Ursache und keine Timeout-Erhöhung auf Verdacht.
-
-D. ERGEBNIS LIEFERN
-Liefergegenstand ist die konsolidierte Basis mit Build-/Testnachweisen,
-aktualisierter Audit-Inventur und einem ersten begrenzten Umsetzungspaket:
-Halt -> Auftrag bleibt erhalten -> betroffene Funktion wiederherstellen ->
-Quellen/Pose/Pfad neu prüfen -> denselben Auftrag fortsetzen.
-
-Benenne dafür die vorhandenen Komponenten, exakt nötigen Änderungen,
-Erfolgs-/Gegenfälle und Rückfall. Noch nicht alle Latches umbauen und keinen
-zusätzlichen großen Supervisor schreiben. Keine automatische Rechnerreboot-
-Kette und kein Start von WE-M4/M5/M6.
-
-STATUS aktualisieren: exakte Basis, echte Nachweise, verbliebene Konflikte
-und genau ein nächster Auftrag. Reale Karten, Koordinaten, Bags und
-Zugangsdaten bleiben lokal. Eigene Änderung auf Themenbranch veröffentlichen;
-kein automatischer Merge, keine Geräteaktivierung, kein Deployment und
-keine Fahrt in diesem Auftrag.
+RÜCKFALL
+- Diagnostische Felder entfernen; altes Statusschema und das unveränderte
+  fail-closed Verhalten bleiben als Referenz erhalten.
 
 ABSCHLUSS
-Getrennt ausweisen: Runtime identifiziert / Build reproduziert /
-Auditbestand vollständig / erstes Recoverypaket entscheidungsreif.
-DOKUMENTIERT, BESTANDEN, OFFEN oder BLOCKIERT nur für den jeweiligen Umfang.
-Ein grüner Build ist weder eine neue Fahrfreigabe noch Stufe 3 grün.
+- Ursache des alten Laufs bleibt offen, bis ein vollständiger HWT-Rohstatus
+  tatsächlich erfasst ist. Keine einzelne Ursache aus einem synthetischen Test
+  ableiten. STATUS danach mit Ergebnis und genau einem nächsten Auftrag
+  fortschreiben.
 ```
 
-## 4. Übergabe und Fortschreibung
+## 5. Übergabe und Fortschreibung
+
 
 Geprüfte Basis und Ergebnis-SHA, betroffene Dateien, wirklich ausgeführte Tests,
 Evidenzpfade, Grenzen, Restbefunde und Rückfall nennen. Build, Modulprüfung,

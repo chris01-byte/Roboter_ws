@@ -79,6 +79,7 @@ from explore.lidar_motion import (
 from explore.portal_planning import (
     CorridorCheck,
     PortalBridge,
+    find_connected_clearance_portals,
     find_portal_bridges,
     front_lidar_corridor_check,
 )
@@ -202,6 +203,7 @@ class PortalPlan:
     target_xy: Tuple[float, float]
     target_center_xy: Tuple[float, float]
     midpoint_xy: Tuple[float, float]
+    connected_traversable: bool = False
 
 
 def circular_clearance_mask(
@@ -684,15 +686,19 @@ class ExploreNode(Node):
         self._initial_scan_angle = float(self.declare_parameter(
             'initial_scan_angle_rad', 2.0 * math.pi).value)
         self._initial_scan_speed = float(self.declare_parameter(
-            'initial_scan_angular_speed_radps', 0.12).value)
+            'initial_scan_angular_speed_radps', 0.08).value)
+        self._initial_scan_segment_angle = float(self.declare_parameter(
+            'initial_scan_segment_angle_rad', math.pi / 4.0).value)
+        self._initial_scan_segment_pause = float(self.declare_parameter(
+            'initial_scan_segment_pause_s', 1.0).value)
         self._initial_scan_timeout = float(self.declare_parameter(
-            'initial_scan_timeout_s', 210.0).value)
+            'initial_scan_timeout_s', 280.0).value)
         self._scan_odom_timeout = float(self.declare_parameter(
             'scan_odom_timeout_s', 0.8).value)
         self._scan_odom_recovery_timeout = float(self.declare_parameter(
             'scan_odom_recovery_timeout_s', 5.0).value)
         self._scan_no_progress_timeout = float(self.declare_parameter(
-            'scan_no_progress_timeout_s', 8.0).value)
+            'scan_no_progress_timeout_s', 15.0).value)
         self._scan_progress_window = float(self.declare_parameter(
             'scan_progress_window_rad', 0.03).value)
         self._scan_rate_check_after = float(self.declare_parameter(
@@ -793,6 +799,12 @@ class ExploreNode(Node):
             'prealign_min_improvement_rad', 0.04).value)
         self._portal_enabled = bool(self.declare_parameter(
             'portal_crossing_enabled', True).value)
+        self._portal_priority_when_available = bool(
+            self.declare_parameter(
+                'portal_priority_when_available', False).value)
+        self._connected_portal_analysis_clearance = float(
+            self.declare_parameter(
+                'connected_portal_analysis_clearance_m', 0.0).value)
         self._portal_min_component_area = float(self.declare_parameter(
             'portal_min_component_area_m2', 0.40).value)
         self._portal_min_gap = float(self.declare_parameter(
@@ -817,6 +829,10 @@ class ExploreNode(Node):
             'portal_lidar_min_far_points', 12).value)
         self._portal_max_crossings = int(self.declare_parameter(
             'portal_max_crossings', 8).value)
+        self._portal_max_staging_goals = int(self.declare_parameter(
+            'portal_max_staging_goals', 3).value)
+        self._portal_connected_max_goals = int(self.declare_parameter(
+            'portal_connected_max_goals', 2).value)
         self._portal_stop_after_crossing = bool(self.declare_parameter(
             'portal_stop_after_crossing', False).value)
         self._portal_revisit_radius = float(self.declare_parameter(
@@ -1081,6 +1097,8 @@ class ExploreNode(Node):
                 or self._frontier_stage_min_progress_m <= 0.0
                 or self._initial_scan_angle <= 0.0
                 or not 0.0 < self._initial_scan_speed <= 0.15
+                or self._initial_scan_segment_angle < 0.0
+                or self._initial_scan_segment_pause < 0.0
                 or self._initial_scan_timeout <= 0.0
                 or self._scan_odom_timeout <= 0.0
                 or self._scan_odom_recovery_timeout
@@ -1166,6 +1184,13 @@ class ExploreNode(Node):
                 or self._portal_front_overhang < 0.33
                 or self._portal_lidar_min_far_points <= 0
                 or self._portal_max_crossings <= 0
+                or not 1 <= self._portal_max_staging_goals <= 3
+                or not 1 <= self._portal_connected_max_goals <= 3
+                or self._connected_portal_analysis_clearance < 0.0
+                or (
+                    self._connected_portal_analysis_clearance > 0.0
+                    and self._connected_portal_analysis_clearance
+                    <= self._goal_clearance_m)
                 or self._portal_revisit_radius <= 0.0
                 or not 0.0 < self._coverage_target_ratio <= 1.0
                 or self._coverage_visit_radius_m <= 0.0
@@ -1241,6 +1266,10 @@ class ExploreNode(Node):
                 self._wohnungserkundung_navigation_enabled,
             )
         )
+        if self._wohnungserkundung_navigation_enabled:
+            raise ValueError(
+                'Parity-Kandidat erlaubt ausschliesslich passive WE-'
+                'Beobachtung; hierarchische WE-Navigation ist gesperrt')
         # A controlled initial scan intentionally changes the raw-map
         # frontier topology.  Do not turn those incomplete, in-place
         # observations into persistent tasks before the scan has ended: doing
@@ -4002,7 +4031,14 @@ class ExploreNode(Node):
     def _portal_plans(
             self, robot_pose: Tuple[float, float, float]
             ) -> List[PortalPlan]:
-        """Find unvisited, bounded transitions in the live global Costmap."""
+        """Find unvisited bounded transitions in Costmap and measured map.
+
+        The established detector handles components which Nav2 still sees as
+        disconnected.  An opt-in second pass recognises a narrow doorway
+        inside one already traversable component by applying a larger
+        clearance to analysis only.  Every such endpoint is rechecked against
+        the unchanged live Nav2 component before it can become a plan.
+        """
         if not self._portal_enabled:
             return []
         costmap = self._global_costmap
@@ -4013,16 +4049,18 @@ class ExploreNode(Node):
                 <= self._map_timeout_s
                 or costmap.header.frame_id != self._global_frame):
             return []
-        info = costmap.info
-        if info.width <= 0 or info.height <= 0 or info.resolution <= 0.0:
+        costmap_info = costmap.info
+        if (
+                costmap_info.width <= 0 or costmap_info.height <= 0
+                or costmap_info.resolution <= 0.0):
             return []
         robot_col, robot_row = self._world_to_grid(
-            robot_pose[0], robot_pose[1], info)
+            robot_pose[0], robot_pose[1], costmap_info)
         costs = np.asarray(costmap.data, dtype=np.int16).reshape(
-            (info.height, info.width))
+            (costmap_info.height, costmap_info.width))
         bridges = find_portal_bridges(
             costs, (robot_row, robot_col),
-            resolution_m=info.resolution,
+            resolution_m=costmap_info.resolution,
             goal_max_cost=self._frontier_goal_max_cost,
             min_target_area_m2=self._portal_min_component_area,
             min_gap_m=self._portal_min_gap,
@@ -4032,11 +4070,12 @@ class ExploreNode(Node):
         plans = []
         for bridge in bridges:
             staging_xy = self._grid_to_world(
-                bridge.staging_col, bridge.staging_row, info)
+                bridge.staging_col, bridge.staging_row, costmap_info)
             target_xy = self._grid_to_world(
-                bridge.target_col, bridge.target_row, info)
+                bridge.target_col, bridge.target_row, costmap_info)
             target_center_xy = self._grid_to_world(
-                bridge.target_center_col, bridge.target_center_row, info)
+                bridge.target_center_col, bridge.target_center_row,
+                costmap_info)
             midpoint_xy = (
                 0.5 * (staging_xy[0] + target_xy[0]),
                 0.5 * (staging_xy[1] + target_xy[1]),
@@ -4046,7 +4085,96 @@ class ExploreNode(Node):
             plans.append(PortalPlan(
                 bridge, staging_xy, target_xy,
                 target_center_xy, midpoint_xy))
+
+        if self._connected_portal_analysis_clearance <= 0.0:
+            return plans
+        grid = self._map
+        map_received_at = self._map_received_at
+        if (
+                grid is None or map_received_at is None
+                or not 0.0 <= time.monotonic() - map_received_at
+                <= self._map_timeout_s
+                or grid.header.frame_id not in ('', self._global_frame)
+                or grid.info.width <= 0 or grid.info.height <= 0
+                or grid.info.resolution <= 0.0):
+            return plans
+
+        traversable = (costs >= 0) & (costs < 99)
+        costmap_seed = nearest_mask_cell(
+            traversable, robot_row, robot_col,
+            max(1, int(math.ceil(0.25 / costmap_info.resolution))))
+        if costmap_seed is None:
+            return plans
+        costmap_reachable = connected_mask(traversable, costmap_seed)
+        map_info = grid.info
+        map_robot_col, map_robot_row = self._world_to_grid(
+            robot_pose[0], robot_pose[1], map_info)
+        map_data = np.asarray(grid.data, dtype=np.int16).reshape(
+            (map_info.height, map_info.width))
+        # Search from one map cell beyond the real goal clearance up to the
+        # configured analysis maximum.  The first split is the least-eroded,
+        # best-supported doorway geometry; later, more artificial splits are
+        # deliberately ignored.
+        analysis_clearances = []
+        clearance = self._goal_clearance_m + map_info.resolution
+        while (
+                clearance
+                < self._connected_portal_analysis_clearance
+                - 0.5 * map_info.resolution):
+            analysis_clearances.append(clearance)
+            clearance += map_info.resolution
+        analysis_clearances.append(
+            self._connected_portal_analysis_clearance)
+        connected_bridges = []
+        for analysis_clearance in analysis_clearances:
+            connected_bridges = find_connected_clearance_portals(
+                map_data, (map_robot_row, map_robot_col),
+                resolution_m=map_info.resolution,
+                analysis_clearance_m=analysis_clearance,
+                min_target_area_m2=self._portal_min_component_area,
+                min_gap_m=self._portal_min_gap,
+                max_gap_m=self._portal_max_gap,
+                exit_margin_m=self._portal_exit_margin,
+                max_traverse_distance_m=self._portal_max_traverse_distance)
+            if connected_bridges:
+                break
+        for bridge in connected_bridges:
+            staging_xy = self._grid_to_world(
+                bridge.staging_col, bridge.staging_row, map_info)
+            target_xy = self._grid_to_world(
+                bridge.target_col, bridge.target_row, map_info)
+            target_center_xy = self._grid_to_world(
+                bridge.target_center_col, bridge.target_center_row, map_info)
+            endpoint_cells = []
+            for endpoint_x, endpoint_y in (staging_xy, target_xy):
+                endpoint_col, endpoint_row = self._world_to_grid(
+                    endpoint_x, endpoint_y, costmap_info)
+                endpoint_cells.append((endpoint_row, endpoint_col))
+            if any(
+                    row < 0 or row >= costmap_info.height
+                    or col < 0 or col >= costmap_info.width
+                    or not costmap_reachable[row, col]
+                    or costs[row, col] > self._frontier_goal_max_cost
+                    for row, col in endpoint_cells):
+                continue
+            midpoint_xy = (
+                0.5 * (staging_xy[0] + target_xy[0]),
+                0.5 * (staging_xy[1] + target_xy[1]),
+            )
+            if self._is_visited_portal(*midpoint_xy):
+                continue
+            plans.append(PortalPlan(
+                bridge, staging_xy, target_xy, target_center_xy, midpoint_xy,
+                connected_traversable=True))
         return plans
+
+    def _portal_precedes_frontiers(
+            self, portal_plans: List[PortalPlan],
+            unprojected_candidates: List[Frontier]) -> bool:
+        """Apply the opt-in transition priority without changing defaults."""
+        return bool(portal_plans) and (
+            self._portal_priority_when_available
+            or not unprojected_candidates)
 
     def _is_visited_portal(self, x: float, y: float) -> bool:
         return any(
@@ -5124,19 +5252,58 @@ class ExploreNode(Node):
         finally:
             self._publish_scan_stop()
 
-        achieved = 0.0 if accumulator is None else accumulator.progress
         stop_status = self._stop_scan_and_confirm()
+        # Braking is physical rotation too.  Sample again only after the
+        # confirmed stop, so each segmented interval accounts for coast-down
+        # before the next segment begins.
+        if accumulator is not None:
+            final_yaw, _angular_speed, _received_at = self._odom_snapshot()
+            if final_yaw is not None:
+                accumulator.update(final_yaw)
+        achieved = 0.0 if accumulator is None else accumulator.progress
         if stop_status != 'success':
             return stop_status, achieved
         return status, achieved
 
     def _scan_in_place(self, stop_requested=lambda: False) -> Tuple[str, float]:
-        """Perform one odometry-measured, bounded, counter-clockwise scan."""
-        return self._rotate_in_place(
-            self._initial_scan_angle,
-            self._initial_scan_speed,
-            self._initial_scan_timeout,
-            stop_requested=stop_requested)
+        """Perform the measured full scan, stopping between short segments."""
+        if self._initial_scan_segment_angle <= 0.0:
+            return self._rotate_in_place(
+                self._initial_scan_angle,
+                self._initial_scan_speed,
+                self._initial_scan_timeout,
+                stop_requested=stop_requested)
+
+        deadline = time.monotonic() + self._initial_scan_timeout
+        achieved_total = 0.0
+        while achieved_total + 1e-9 < self._initial_scan_angle:
+            if stop_requested():
+                return 'interrupted', achieved_total
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0.0:
+                return 'timeout', achieved_total
+            segment_angle = min(
+                self._initial_scan_segment_angle,
+                self._initial_scan_angle - achieved_total)
+            status, achieved = self._rotate_in_place(
+                segment_angle,
+                self._initial_scan_speed,
+                remaining_time,
+                stop_requested=stop_requested)
+            achieved_total += achieved
+            if status != 'success':
+                return status, achieved_total
+
+            pause_deadline = min(
+                deadline,
+                time.monotonic() + self._initial_scan_segment_pause)
+            while time.monotonic() < pause_deadline:
+                if stop_requested():
+                    return 'interrupted', achieved_total
+                self._publish_scan_stop()
+                time.sleep(min(0.05, pause_deadline - time.monotonic()))
+
+        return 'success', achieved_total
 
     def _prealign_to_goal(
             self, goal_x: float, goal_y: float,
@@ -5220,23 +5387,67 @@ class ExploreNode(Node):
             self, reference: PortalPlan,
             robot_pose: Tuple[float, float, float]
             ) -> Optional[PortalPlan]:
-        """Refresh one portal after motion without switching to another gap."""
+        """Refresh one portal after motion without switching to another gap.
+
+        The target component centroid is deliberately not part of the
+        identity.  It can move by metres while SLAM reveals more of the same
+        room.  The local gap geometry is stable: near-side endpoint, far-side
+        endpoint and their midpoint must all remain close, and the crossing
+        direction must not flip.
+        """
         plans = self._portal_plans(robot_pose)
         if not plans:
             return None
-        match = min(plans, key=lambda plan: math.hypot(
-            plan.target_center_xy[0] - reference.target_center_xy[0],
-            plan.target_center_xy[1] - reference.target_center_xy[1]))
-        if math.hypot(
-                match.target_center_xy[0] - reference.target_center_xy[0],
-                match.target_center_xy[1] - reference.target_center_xy[1]
-                ) > self._portal_revisit_radius:
+        matches = []
+        reference_direction = (
+            reference.target_xy[0] - reference.staging_xy[0],
+            reference.target_xy[1] - reference.staging_xy[1])
+        reference_norm = math.hypot(*reference_direction)
+        if reference_norm <= 1e-9:
             return None
-        return match
+        for plan in plans:
+            if (
+                    plan.connected_traversable
+                    != reference.connected_traversable):
+                continue
+            midpoint_distance = math.hypot(
+                plan.midpoint_xy[0] - reference.midpoint_xy[0],
+                plan.midpoint_xy[1] - reference.midpoint_xy[1])
+            staging_distance = math.hypot(
+                plan.staging_xy[0] - reference.staging_xy[0],
+                plan.staging_xy[1] - reference.staging_xy[1])
+            target_distance = math.hypot(
+                plan.target_xy[0] - reference.target_xy[0],
+                plan.target_xy[1] - reference.target_xy[1])
+            if max(
+                    midpoint_distance, staging_distance, target_distance
+                    ) > self._portal_revisit_radius:
+                continue
+            direction = (
+                plan.target_xy[0] - plan.staging_xy[0],
+                plan.target_xy[1] - plan.staging_xy[1])
+            direction_norm = math.hypot(*direction)
+            if direction_norm <= 1e-9:
+                continue
+            direction_cosine = (
+                reference_direction[0] * direction[0]
+                + reference_direction[1] * direction[1]
+            ) / (reference_norm * direction_norm)
+            if direction_cosine < math.cos(math.pi / 4.0):
+                continue
+            matches.append((
+                midpoint_distance + 0.5 * (
+                    staging_distance + target_distance),
+                plan,
+            ))
+        if not matches:
+            return None
+        return min(matches, key=lambda candidate: candidate[0])[1]
 
     def _connected_portal_exit_goal(
             self, reference: PortalPlan,
-            robot_pose: Tuple[float, float, float]
+            robot_pose: Tuple[float, float, float],
+            desired_exit_progress_m: Optional[float] = None,
             ) -> Optional[Tuple[float, float]]:
         """Return a Nav2 goal beyond a portal that became connected.
 
@@ -5248,6 +5459,17 @@ class ExploreNode(Node):
         at least half the configured exit margin beyond that far-side point;
         otherwise a projection back to the near side would look like success.
         """
+        desired_exit_progress = (
+            self._portal_exit_margin
+            if desired_exit_progress_m is None
+            else float(desired_exit_progress_m))
+        if (
+                not math.isfinite(desired_exit_progress)
+                or desired_exit_progress <= 0.0
+                or desired_exit_progress
+                > self._portal_max_traverse_distance):
+            return None
+
         costmap = self._global_costmap
         received_at = self._global_costmap_received_at
         if (
@@ -5290,10 +5512,10 @@ class ExploreNode(Node):
         direction_y /= direction_norm
         desired_x = (
             reference.target_xy[0]
-            + self._portal_exit_margin * direction_x)
+            + desired_exit_progress * direction_x)
         desired_y = (
             reference.target_xy[1]
-            + self._portal_exit_margin * direction_y)
+            + desired_exit_progress * direction_y)
 
         safe_reachable = reachable & (
             data <= self._frontier_goal_max_cost)
@@ -5310,7 +5532,20 @@ class ExploreNode(Node):
         exit_progress = (
             (goal_x - reference.target_xy[0]) * direction_x
             + (goal_y - reference.target_xy[1]) * direction_y)
-        if exit_progress < 0.5 * self._portal_exit_margin:
+        minimum_goal_progress = 0.5 * self._portal_exit_margin
+        if desired_exit_progress > self._portal_exit_margin:
+            # A retry compensates a measured early Nav2 stop.  It must not be
+            # projected back to almost the same first goal, otherwise NavFn's
+            # planner tolerance and the controller goal tolerance can combine
+            # into another apparent success without physical progress.
+            minimum_goal_progress = max(
+                minimum_goal_progress,
+                desired_exit_progress - info.resolution)
+        if exit_progress < minimum_goal_progress:
+            return None
+        if math.hypot(
+                goal_x - robot_pose[0], goal_y - robot_pose[1]
+                ) > self._portal_max_traverse_distance + 0.5 * info.resolution:
             return None
         return goal_x, goal_y
 
@@ -5319,22 +5554,6 @@ class ExploreNode(Node):
             robot_pose: Tuple[float, float, float],
             stop_requested=lambda: False) -> Optional[str]:
         """Use normal Nav2 after fresh mapping has connected both rooms."""
-        goal = self._connected_portal_exit_goal(reference, robot_pose)
-        if goal is None:
-            return None
-        self.get_logger().info(
-            'Portal ist durch neue Kartenevidenz regulaer verbunden; '
-            'Nav2 uebernimmt die Fahrt bis zum Auslaufpunkt '
-            f'({goal[0]:.2f}, {goal[1]:.2f}) m.')
-        nav_status = self._navigate_to(
-            goal[0], goal[1], self._goal_timeout_s,
-            stop_requested=stop_requested)
-        if nav_status != 'success':
-            return f'portal_connected_{nav_status}'
-
-        final_pose = self._robot_pose()
-        if final_pose is None:
-            return 'portal_connected_pose_missing'
         direction_x = reference.target_xy[0] - reference.staging_xy[0]
         direction_y = reference.target_xy[1] - reference.staging_xy[1]
         direction_norm = math.hypot(direction_x, direction_y)
@@ -5342,12 +5561,54 @@ class ExploreNode(Node):
             return 'portal_connected_direction_invalid'
         direction_x /= direction_norm
         direction_y /= direction_norm
-        measured_exit = (
-            (final_pose[0] - reference.target_xy[0]) * direction_x
-            + (final_pose[1] - reference.target_xy[1]) * direction_y)
-        if measured_exit < 0.5 * self._portal_exit_margin:
-            return 'portal_connected_exit_not_reached'
-        return 'connected_success'
+        required_exit = 0.5 * self._portal_exit_margin
+        desired_exit = self._portal_exit_margin
+
+        for goal_number in range(1, self._portal_connected_max_goals + 1):
+            goal = self._connected_portal_exit_goal(
+                reference, robot_pose, desired_exit)
+            if goal is None:
+                return (
+                    None if goal_number == 1
+                    else 'portal_connected_exit_goal_unavailable')
+            self.get_logger().info(
+                'Portal ist durch neue Kartenevidenz regulaer verbunden; '
+                f'Nav2-Auslaufziel {goal_number}/'
+                f'{self._portal_connected_max_goals} liegt bei '
+                f'({goal[0]:.2f}, {goal[1]:.2f}) m.')
+            nav_status = self._navigate_to(
+                goal[0], goal[1], self._goal_timeout_s,
+                stop_requested=stop_requested)
+            if nav_status != 'success':
+                return f'portal_connected_{nav_status}'
+
+            final_pose = self._robot_pose()
+            if final_pose is None:
+                return 'portal_connected_pose_missing'
+            measured_exit = (
+                (final_pose[0] - reference.target_xy[0]) * direction_x
+                + (final_pose[1] - reference.target_xy[1]) * direction_y)
+            if measured_exit >= required_exit:
+                return 'connected_success'
+            if goal_number >= self._portal_connected_max_goals:
+                return 'portal_connected_exit_not_reached'
+
+            goal_exit = (
+                (goal[0] - reference.target_xy[0]) * direction_x
+                + (goal[1] - reference.target_xy[1]) * direction_y)
+            unrealized_progress = max(0.0, goal_exit - measured_exit)
+            resolution = float(self._global_costmap.info.resolution)
+            retry_reserve = max(0.02, 2.0 * resolution)
+            desired_exit = (
+                required_exit + unrealized_progress + retry_reserve)
+            self.get_logger().info(
+                'Nav2 meldete Zielerfolg vor dem Pflichtauslauf: gemessen '
+                f'{measured_exit:+.2f} m, gefordert {required_exit:.2f} m. '
+                'Eine frische, weiter vorgeschobene Nav2-Etappe folgt; '
+                'direkte Blindfahrt bleibt gesperrt.')
+            robot_pose = final_pose
+
+        return 'portal_connected_exit_not_reached'
 
     def _execute_portal_plan(
             self, plan: PortalPlan, stop_requested=lambda: False
@@ -5359,78 +5620,121 @@ class ExploreNode(Node):
         smoother and collision monitor, and completed by frozen-scan LiDAR
         motion rather than wheel odometry.
         """
-        pose = self._robot_pose()
-        if pose is None:
-            return 'portal_pose_missing', plan.midpoint_xy
-        staging_distance = math.hypot(
-            plan.staging_xy[0] - pose[0], plan.staging_xy[1] - pose[1])
-        if staging_distance >= self._min_goal_dist_m:
-            turn_status, _turned, _error, _residual = self._prealign_to_goal(
-                plan.staging_xy[0], plan.staging_xy[1], pose,
-                stop_requested=stop_requested)
-            if turn_status not in ('success', 'skipped'):
-                return f'portal_stage_prealign_{turn_status}', plan.midpoint_xy
+        original_midpoint = plan.midpoint_xy
+        staging_goals = 0
+        while True:
             pose = self._robot_pose()
             if pose is None:
-                return 'portal_pose_missing', plan.midpoint_xy
+                return 'portal_pose_missing', original_midpoint
             refreshed = self._matching_portal_plan(plan, pose)
             if refreshed is None:
                 connected_status = self._navigate_connected_portal_exit(
                     plan, pose, stop_requested=stop_requested)
                 if connected_status is not None:
-                    return connected_status, plan.midpoint_xy
-                return 'portal_geometry_changed', plan.midpoint_xy
+                    return connected_status, original_midpoint
+                return 'portal_geometry_changed', original_midpoint
             plan = refreshed
-            verify_status, _turned, _error, _residual = self._prealign_to_goal(
-                plan.staging_xy[0], plan.staging_xy[1], pose,
-                stop_requested=stop_requested)
-            if verify_status not in ('success', 'skipped'):
+
+            staging_distance = math.hypot(
+                plan.staging_xy[0] - pose[0],
+                plan.staging_xy[1] - pose[1])
+            if staging_distance >= self._min_goal_dist_m:
+                if staging_goals >= self._portal_max_staging_goals:
+                    return 'portal_staging_limit', original_midpoint
+                turn_status, _turned, _error, _residual = (
+                    self._prealign_to_goal(
+                        plan.staging_xy[0], plan.staging_xy[1], pose,
+                        stop_requested=stop_requested))
+                if turn_status not in ('success', 'skipped'):
+                    return (
+                        f'portal_stage_prealign_{turn_status}',
+                        original_midpoint)
+                pose = self._robot_pose()
+                if pose is None:
+                    return 'portal_pose_missing', original_midpoint
+                refreshed = self._matching_portal_plan(plan, pose)
+                if refreshed is None:
+                    connected_status = self._navigate_connected_portal_exit(
+                        plan, pose, stop_requested=stop_requested)
+                    if connected_status is not None:
+                        return connected_status, original_midpoint
+                    return 'portal_geometry_changed', original_midpoint
+                plan = refreshed
+                verify_status, _turned, _error, _residual = (
+                    self._prealign_to_goal(
+                        plan.staging_xy[0], plan.staging_xy[1], pose,
+                        stop_requested=stop_requested))
+                if verify_status not in ('success', 'skipped'):
+                    return (
+                        f'portal_stage_verify_{verify_status}',
+                        original_midpoint)
+                nav_status = self._navigate_to(
+                    plan.staging_xy[0], plan.staging_xy[1],
+                    self._goal_timeout_s, stop_requested=stop_requested)
+                if nav_status != 'success':
+                    return f'portal_stage_{nav_status}', original_midpoint
+                staging_goals += 1
+                # Neue Kartenevidenz kann den sicheren Vorpunkt waehrend der
+                # Anfahrt verschieben. Vor der direkten Bruecke deshalb stets
+                # mit frischer Costmap neu pruefen und bei Bedarf ausschliesslich
+                # per Nav2 nochmals nachruecken.
+                continue
+
+            if plan.connected_traversable:
+                # The larger clearance was used for recognition only.  Both
+                # sides are already in the real Nav2 component, so the
+                # transition must remain an ordinary planned/collision-
+                # monitored Nav2 move rather than a direct bridge command.
+                connected_status = self._navigate_connected_portal_exit(
+                    plan, pose, stop_requested=stop_requested)
                 return (
-                    f'portal_stage_verify_{verify_status}',
-                    plan.midpoint_xy)
-            nav_status = self._navigate_to(
-                plan.staging_xy[0], plan.staging_xy[1],
-                self._goal_timeout_s, stop_requested=stop_requested)
-            if nav_status != 'success':
-                return f'portal_stage_{nav_status}', plan.midpoint_xy
+                    connected_status
+                    if connected_status is not None
+                    else 'portal_connected_exit_goal_unavailable',
+                    original_midpoint)
 
-        pose = self._robot_pose()
-        if pose is None:
-            return 'portal_pose_missing', plan.midpoint_xy
-        refreshed = self._matching_portal_plan(plan, pose)
-        if refreshed is None:
-            connected_status = self._navigate_connected_portal_exit(
-                plan, pose, stop_requested=stop_requested)
-            if connected_status is not None:
-                return connected_status, plan.midpoint_xy
-            return 'portal_geometry_changed', plan.midpoint_xy
-        plan = refreshed
-        turn_status, _turned, _error, residual = self._prealign_to_goal(
-            plan.target_xy[0], plan.target_xy[1], pose,
-            stop_requested=stop_requested)
-        if turn_status not in ('success', 'skipped'):
-            return f'portal_crossing_prealign_{turn_status}', plan.midpoint_xy
-        if abs(residual) > self._prealign_handoff_tolerance:
-            return 'portal_crossing_alignment_failed', plan.midpoint_xy
+            turn_status, _turned, _error, residual = self._prealign_to_goal(
+                plan.target_xy[0], plan.target_xy[1], pose,
+                stop_requested=stop_requested)
+            if turn_status not in ('success', 'skipped'):
+                return (
+                    f'portal_crossing_prealign_{turn_status}',
+                    original_midpoint)
+            if abs(residual) > self._prealign_handoff_tolerance:
+                return 'portal_crossing_alignment_failed', original_midpoint
 
-        pose = self._robot_pose()
-        if pose is None:
-            return 'portal_pose_missing', plan.midpoint_xy
-        refreshed = self._matching_portal_plan(plan, pose)
-        if refreshed is None:
-            connected_status = self._navigate_connected_portal_exit(
-                plan, pose, stop_requested=stop_requested)
-            if connected_status is not None:
-                return connected_status, plan.midpoint_xy
-            return 'portal_geometry_changed', plan.midpoint_xy
-        plan = refreshed
-        traverse_distance = (
-            math.hypot(
-                plan.target_xy[0] - pose[0],
-                plan.target_xy[1] - pose[1])
-            + self._portal_exit_margin)
-        if not 0.0 < traverse_distance <= self._portal_max_traverse_distance:
-            return 'portal_traverse_out_of_bounds', plan.midpoint_xy
+            pose = self._robot_pose()
+            if pose is None:
+                return 'portal_pose_missing', original_midpoint
+            refreshed = self._matching_portal_plan(plan, pose)
+            if refreshed is None:
+                connected_status = self._navigate_connected_portal_exit(
+                    plan, pose, stop_requested=stop_requested)
+                if connected_status is not None:
+                    return connected_status, original_midpoint
+                return 'portal_geometry_changed', original_midpoint
+            plan = refreshed
+            traverse_distance = (
+                math.hypot(
+                    plan.target_xy[0] - pose[0],
+                    plan.target_xy[1] - pose[1])
+                + self._portal_exit_margin)
+            if not 0.0 < traverse_distance <= self._portal_max_traverse_distance:
+                shifted_staging_distance = math.hypot(
+                    plan.staging_xy[0] - pose[0],
+                    plan.staging_xy[1] - pose[1])
+                if (
+                        traverse_distance > self._portal_max_traverse_distance
+                        and shifted_staging_distance >= self._min_goal_dist_m
+                        and staging_goals < self._portal_max_staging_goals):
+                    self.get_logger().info(
+                        'Portal-Vorpunkt hat sich durch neue Kartenevidenz '
+                        f'um {shifted_staging_distance:.2f} m entfernt; '
+                        'Nav2 rueckt vor der begrenzten LiDAR-Bruecke '
+                        'nochmals nach.')
+                    continue
+                return 'portal_traverse_out_of_bounds', original_midpoint
+            break
         corridor_status, corridor = self._fresh_front_lidar_corridor(
             traverse_distance)
         if corridor is not None:
@@ -5441,14 +5745,14 @@ class ExploreNode(Node):
                 f'Endpunkt={corridor.nearest_obstacle_m:.2f} m, '
                 f'Fernstuetzung={corridor.far_support_points}.')
         if corridor_status != 'success':
-            return f'portal_{corridor_status}', plan.midpoint_xy
+            return f'portal_{corridor_status}', original_midpoint
 
         wheel_budget = min(
             self._portal_max_encoder_budget,
             traverse_distance * self._portal_encoder_budget_factor
             + self._portal_encoder_budget_margin)
         if wheel_budget <= traverse_distance:
-            return 'portal_wheel_budget_invalid', plan.midpoint_xy
+            return 'portal_wheel_budget_invalid', original_midpoint
         self.get_logger().info(
             'Portaluebergang startet: LiDAR-Zielweg '
             f'{traverse_distance:.2f} m, Encoder-Radbudget '
@@ -5473,7 +5777,7 @@ class ExploreNode(Node):
         return (
             'success' if drive_status == 'success'
             else f'portal_drive_{drive_status}',
-            plan.midpoint_xy)
+            original_midpoint)
 
     # ======================= Action-Server ==============================
     def _goal_cb(self, goal_request) -> GoalResponse:
@@ -6664,12 +6968,11 @@ class ExploreNode(Node):
                 + (1 if forward_stage is not None else 0))
             self._frontiers_visited_status = frontiers_visited
 
-            # Ordinary Nav2-reachable frontiers remain the primary strategy.
-            # A portal bridge is selected only when every remaining candidate
-            # would otherwise be projected back into the current Costmap
-            # component.  This is the exact multi-room deadlock measured at
-            # the real doorway, not a generic replacement for navigation.
-            if portal_plans and not unprojected_candidates:
+            # Keep the legacy priority contract: ordinary frontiers lead by
+            # default; a bounded real-world parity profile may prioritize a
+            # measured portal so local frontiers cannot postpone the doorway.
+            if self._portal_precedes_frontiers(
+                    portal_plans, unprojected_candidates):
                 if self._portal_crossings >= self._portal_max_crossings:
                     goal_handle.abort()
                     result.success = False
@@ -6680,11 +6983,19 @@ class ExploreNode(Node):
                     return self._finish_result(result, frontiers_visited)
                 portal = portal_plans[0]
                 self._status_phase = 'portal_crossing'
-                self._status_message = (
-                    f'Uebergang {self._portal_crossings + 1} in einen '
-                    f'{portal.bridge.target_area_m2:.1f} m2 grossen '
-                    'Kartenbereich: Nav2-Anfahrt, LiDAR-Korridorpruefung '
-                    'und begrenzte Schlupfbruecke.')
+                if portal.connected_traversable:
+                    self._status_message = (
+                        f'Verbundener Raumuebergang '
+                        f'{self._portal_crossings + 1} in einen '
+                        f'{portal.bridge.target_area_m2:.1f} m2 grossen '
+                        'Kartenbereich: Tuer erkannt; Auslauf wird regulaer '
+                        'mit Nav2 gefahren.')
+                else:
+                    self._status_message = (
+                        f'Uebergang {self._portal_crossings + 1} in einen '
+                        f'{portal.bridge.target_area_m2:.1f} m2 grossen '
+                        'Kartenbereich: Nav2-Anfahrt, LiDAR-Korridorpruefung '
+                        'und begrenzte Schlupfbruecke.')
                 self._publish_status('running')
                 fb = ExploreArea.Feedback()
                 fb.explored_percent = 100.0 * self._coverage_ratio

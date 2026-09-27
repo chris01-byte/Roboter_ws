@@ -1,5 +1,25 @@
 # Übertragung auf den realen Roboter
 
+## Parity-Kandidat: VL53-Recovery und Realtest 27.09.2026
+
+Nur das isolierte Overlay `~/roboter_ws-parity-reset/install_parity_real`
+enthält die neue kanalgetrennte, begrenzte VL53-Runtime-Recovery. Das aktive
+`~/roboter_ws/install` blieb unverändert. Der motorlose VL53-Lauf war über
+125,1 s mit 508 beidseitig gesunden Statusmeldungen stabil; 989 betroffene
+Softwaretests und der Paketbuild bestanden. Rückfall: die Änderungen in den
+beiden Dateien unter `src/vl53_near_field/` im isolierten Branch zurücknehmen
+und das VL53-Paket neu bauen.
+
+Der einmalig aktive Parity-Lauf startete über Mission-Manager/BT und erreichte
+einen autonomen Rundblick von 361,7°. Danach verriegelte die HWT-Rohquellen-
+Prüfung `raw_driver_not_ready` (1790492567,566); das Fahrtor stoppte und die
+Frontier-Vorausrichtungen scheiterten. Keine Türdurchfahrt. Beide VL53 und
+LiDAR blieben frisch. Das Bag liegt ausschließlich lokal unter
+`~/.local/share/amadeus/tests/parity-real-20260927-vl53-recovery`.
+Der konkrete HWT-Rohstatuswert hinter der Verriegelung wurde nicht
+aufgezeichnet. Vor weiterer Fahrt muss dieser Fehler getrennt geklärt werden.
+Der STL-27L-Overflow trat nur nach SIGINT beim Shutdown auf.
+
 ## Motorloser HWT/Encoder-Preflight 26.09.2026: zweimal bestanden
 
 Der Nutzer gab zwei motorlose Vollstack-Zyklen frei und bestätigte unabhängig
@@ -2134,3 +2154,25 @@ ros2 pkg prefix slam_toolbox
 
 Das Präfix muss wieder `/opt/ros/humble` sein. Der Overlay-Ordner bleibt zur
 Analyse erhalten; keine Datenlöschung ist erforderlich.
+
+## 2026-09-26 — Parity-Reset / WE-Realtest-Kandidat
+
+Auf dem Jetson wurde in dieser Arbeit nichts gestartet und kein Aktor bestromt.
+Es erfolgte kein Wohnungserkundungslauf. Die vorbereitete Software liegt in der
+separaten Arbeitskopie `/home/p/roboter_ws-parity-reset`, Branch
+`feature/parity-reset`; sie ist nicht automatisch der maßgebliche Baum
+`~/roboter_ws` und wurde nicht übertragen.
+
+Vor einem beaufsichtigten Test den vollständigen Diff und den tatsächlich
+freigegebenen Arbeitsbaum prüfen. Danach die bestehenden Live-Prüfungen dieses
+Protokolls ausführen: keine Altprozesse, Start bei 0 rpm, HWT-/Encoder- und
+beide VL53-Daten frisch, Karten-/Scope-Bindung korrekt, Collision-Monitor-
+Kette aktiv, Türbereich frei und Not-Aus erreichbar. Bewegung nur nach
+separater ausdrücklicher Freigabe der anwesenden Person. Der Kandidat begrenzt
+auf 900 s, höchstens einen Portalwechsel und sechs Abdeckungsziele; die aktive
+WE-Ziel-/Cancel-/Fahrhierarchie bleibt gesperrt.
+
+Rückfall: den vorherigen PR-#101-Head
+`40b5b49c9a92600484a0dc85c466930bc1680c60` wiederherstellen. Nicht pauschal auf
+`1d91229` zurückgehen, da dadurch spätere Hardware- und Sicherheitskorrekturen
+verloren gehen könnten. Siehe `docs/WE_PARITY_RESET.md`.

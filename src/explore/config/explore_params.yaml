@@ -123,23 +123,29 @@ explore_node:
     scan_command_topic: "/cmd_vel_explore_scan_raw"
     initial_scan_enabled: true
     initial_scan_angle_rad: 6.283185307179586
-    initial_scan_angular_speed_radps: 0.12
-    # Der collision_monitor darf die 0,12-rad/s-Drehung in seiner SlowZone
-    # auf 30 % reduzieren. Eine volle Drehung dauert dann real rund 175 s.
-    initial_scan_timeout_s: 210.0
+    # Der HWT601-Mehrraumlauf vom 11.09.2026 nutzte acht gemessene
+    # Viertel-Scans bei 0,08 rad/s und 1 s Stillstand zwischen Abschnitten.
+    initial_scan_angular_speed_radps: 0.08
+    initial_scan_segment_angle_rad: 0.7853981633974483
+    initial_scan_segment_pause_s: 1.0
+    # Der erfolgreiche Rundblick dauerte im lokalen Bag rund 178 s; 280 s ist
+    # die alte fail-closed Obergrenze mit Zeitreserve fuer Quellenpausen.
+    initial_scan_timeout_s: 280.0
     scan_odom_timeout_s: 0.8
     # Ab 0.8 s sofort Nullkommando. Der reale Tuerlauf am 18.08.2026 zeigte
     # bei weiterhin gesunden Encodern eine lokale Callback-Luecke > 2.0 s.
     # Nur wenn Encoder-Odometrie binnen 5.0 s wieder frisch eintrifft, darf die
     # Drehung mit nachgetragenem Winkel fortsetzen; andernfalls Abbruch.
     scan_odom_recovery_timeout_s: 5.0
-    scan_no_progress_timeout_s: 8.0
+    # 15 s tolerieren den real beobachteten 10,9-s-VL53-Aussetzer waehrend
+    # des Rundblicks. Odometrie bleibt waehrenddessen frischheitsbegrenzt.
+    scan_no_progress_timeout_s: 15.0
     scan_progress_window_rad: 0.03
     # Realtest 16.08.2026: Sanfte 2-s-Motorrampe plus aktive SlowZone ergaben
     # beim Anlauf 0,167 rad Fortschritt, bevor die alte 0,03-rad/s-Grenze
     # faelschlich abbrach. Wie bei der Vorausrichtung tolerieren wir deshalb
-    # langsame, aber gemessene Bewegung. Blockade (8 s ohne 0,03 rad) und der
-    # harte 210-s-Gesamttimeout bleiben unveraendert fail-closed aktiv.
+    # langsame, aber gemessene Bewegung. Blockade (15 s ohne 0,03 rad) und der
+    # harte 280-s-Gesamttimeout bleiben fail-closed aktiv.
     scan_rate_check_after_s: 15.0
     scan_min_average_rate_radps: 0.01
     scan_reverse_limit_rad: 0.08
@@ -245,6 +251,11 @@ explore_node:
     portal_front_overhang_m: 0.33
     portal_lidar_min_far_points: 12
     portal_max_crossings: 8
+    portal_priority_when_available: false
+    # 0 deaktiviert verbundene Portale ausserhalb des Parity-Profils.
+    connected_portal_analysis_clearance_m: 0.0
+    portal_max_staging_goals: 3
+    portal_connected_max_goals: 2
     # Nur fuer eine beaufsichtigte Einzelabnahme per Parameter-Overlay. Im
     # normalen Wohnungsprofil wird nach jedem Uebergang weiter erkundet.
     portal_stop_after_crossing: false

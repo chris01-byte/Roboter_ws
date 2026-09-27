@@ -131,6 +131,119 @@ def _producer_methods(*names):
     return scope
 
 
+def _recovery_node(sensor_left, sensor_right):
+    calls = []
+    warnings = []
+    methods = _producer_methods('_get_data_safe', '_tick')
+    node = SimpleNamespace(
+        ch_left=0, ch_right=1, sL=sensor_left, sR=sensor_right,
+        bad={0: 0, 1: 0}, recovery_stage={0: 0, 1: 0},
+        recovery_good={0: 0, 1: 0}, final_fault={0: False, 1: False},
+        recovery_stats={ch: dict(read_errors=0, healthy_frames=0,
+                                 ranging_restarts=0, full_reinits=0,
+                                 successful_recoveries=0, final_faults=0)
+                        for ch in (0, 1)},
+        GR=8, GC=8, max_bad=3, require_nb=True, max_sigma=50., min_sps=0.,
+        bus=object(),
+        _mux_select=lambda ch: calls.append(('select', ch)),
+        _stop_sensor=lambda _sensor, ch: calls.append(('stop', ch)),
+        _sensor_start=lambda ch: calls.append(('reinit', ch)) or
+        (sensor_left if ch == 0 else sensor_right),
+        get_logger=lambda: SimpleNamespace(warn=warnings.append,
+                                            error=warnings.append,
+                                            info=warnings.append))
+    return node, methods['_get_data_safe'], calls, warnings
+
+
+def test_single_index_error_discards_only_one_sample():
+    samples = iter((IndexError('list assignment index out of range'), frame()))
+    def read():
+        value = next(samples)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    sensor = SimpleNamespace(check_data_ready=lambda: True,
+                             get_ranging_data=read)
+    node, get_data, calls, _ = _recovery_node(sensor, sensor)
+    assert get_data(node, sensor, 0) is None
+    assert node.bad[0] == 1
+    assert get_data(node, sensor, 0) == frame()
+    assert node.bad[0] == 0
+    assert node.recovery_stats[0]['read_errors'] == 1
+    assert not any(item[0] in ('stop', 'reinit') for item in calls)
+
+
+def test_persistent_index_error_restarts_then_reinits_only_bad_channel():
+    def failing():
+        raise IndexError('list assignment index out of range')
+    left = SimpleNamespace(check_data_ready=lambda: True,
+                           get_ranging_data=failing,
+                           start_ranging=lambda: None)
+    right = SimpleNamespace(check_data_ready=lambda: True,
+                            get_ranging_data=frame)
+    node, get_data, calls, _ = _recovery_node(left, right)
+    for _ in range(3):
+        assert get_data(node, node.sL, 0) is None
+    assert node.recovery_stats[0]['ranging_restarts'] == 1
+    assert node.bad[0] == 3  # A restart is not a healthy frame.
+    assert get_data(node, node.sR, 1) == frame()
+    assert get_data(node, node.sL, 0) is None
+    assert node.recovery_stats[0]['full_reinits'] == 1
+    assert ('reinit', 0) in calls and ('reinit', 1) not in calls
+    assert node.recovery_stats[1]['healthy_frames'] == 1
+    assert node.recovery_stats[0]['healthy_frames'] == 0
+    assert get_data(node, node.sL, 0) is None
+    assert node.recovery_stats[0]['full_reinits'] == 2
+    assert get_data(node, node.sL, 0) is None
+    assert node.final_fault[0]
+    assert node.recovery_stats[0]['final_faults'] == 1
+    assert get_data(node, node.sR, 1) == frame()
+    assert get_data(node, node.sL, 0) is None
+    assert node.recovery_stats[0]['read_errors'] == 6
+
+
+def test_reinit_requires_two_complete_frames_before_recovery():
+    bad = {'active': True}
+    def read():
+        if bad['active']:
+            raise IndexError('list assignment index out of range')
+        return frame()
+    sensor = SimpleNamespace(check_data_ready=lambda: True,
+                             get_ranging_data=read,
+                             start_ranging=lambda: None)
+    node, get_data, _, _ = _recovery_node(sensor, sensor)
+    for _ in range(4):
+        assert get_data(node, node.sL, 0) is None
+    assert node.recovery_stats[0]['full_reinits'] == 1
+    bad['active'] = False
+    assert get_data(node, node.sL, 0) is None
+    assert node.bad[0] == 4
+    assert get_data(node, node.sL, 0) == frame()
+    assert node.bad[0] == 0
+    assert node.recovery_stats[0]['successful_recoveries'] == 1
+    assert get_data(node, node.sL, 0) == frame()
+
+
+def test_bad_left_keeps_reading_right_without_publishing_false_fresh_pair():
+    def failing():
+        raise IndexError('list assignment index out of range')
+    left = SimpleNamespace(check_data_ready=lambda: True,
+                           get_ranging_data=failing,
+                           start_ranging=lambda: None)
+    right = SimpleNamespace(check_data_ready=lambda: True,
+                            get_ranging_data=frame)
+    node, get_data, _, _ = _recovery_node(left, right)
+    published = []
+    node._get_data_safe = lambda sensor, channel: get_data(node, sensor, channel)
+    node.pub_status = SimpleNamespace(publish=published.append)
+    tick = _producer_methods('_tick')['_tick']
+    for _ in range(6):
+        tick(node)
+    assert node.final_fault[0]
+    assert node.recovery_stats[1]['healthy_frames'] == 6
+    assert published == []
+
+
 def test_real_producer_tick_pairs_quality_and_clouds_without_devices():
     methods = _producer_methods(
         '_tick', '_build_matrix', '_matrix_to_cloud',
@@ -225,6 +338,10 @@ def test_real_driver_range_sigma_field_is_used_for_quality():
     node = SimpleNamespace(_mux_select=lambda _channel: None,
                            bad={0: 0}, GR=8, GC=8, max_bad=3,
                            require_nb=True, max_sigma=50., min_sps=0.)
+    node.recovery_stage = {0: 0}
+    node.recovery_good = {0: 0}
+    node.final_fault = {0: False}
+    node.recovery_stats = {0: dict(read_errors=0, healthy_frames=0)}
     data = get_data(node, sensor, 0)
     assert data['sigma_mm'] == [10] * 64
     assert assess(data)[3] == VALID_FAR
@@ -239,6 +356,10 @@ def test_driver_ready_error_cannot_be_hidden_by_subsequent_read():
     node = SimpleNamespace(_mux_select=lambda _channel: None,
                            bad={0: 0}, GR=8, GC=8, max_bad=3,
                            get_logger=lambda: SimpleNamespace(warn=lambda _message: None))
+    node.recovery_stage = {0: 0}
+    node.recovery_good = {0: 0}
+    node.final_fault = {0: False}
+    node.recovery_stats = {0: dict(read_errors=0, healthy_frames=0)}
     assert get_data(node, sensor, 0) is None
     assert node.bad[0] == 1
 
@@ -255,6 +376,10 @@ def test_real_driver_rejects_corrupted_quality_raster_without_fresh_status():
         GR=8, GC=8, max_bad=3, require_nb=True,
         max_sigma=50., min_sps=0.,
         get_logger=lambda: SimpleNamespace(warn=warnings.append))
+    node.recovery_stage = {0: 0}
+    node.recovery_good = {0: 0}
+    node.final_fault = {0: False}
+    node.recovery_stats = {0: dict(read_errors=0, healthy_frames=0)}
     assert get_data(node, sensor, 0) is None
     assert node.bad[0] == 1
     assert 'nb_target_detected' in warnings[0]

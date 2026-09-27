@@ -122,6 +122,13 @@ class Vl53NearField(Node):
         # -------------------------------------------------------------------
         self.bus = SMBus(self.bus_num)
         self.bad = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_stage = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_good = {self.ch_left: 0, self.ch_right: 0}
+        self.recovery_stats = {
+            ch: dict(read_errors=0, healthy_frames=0, ranging_restarts=0,
+                     full_reinits=0, successful_recoveries=0, final_faults=0)
+            for ch in (self.ch_left, self.ch_right)}
+        self.final_fault = {self.ch_left: False, self.ch_right: False}
         self.get_logger().info('Starte VL53-Sensoren (links/rechts) ...')
         self.sL = self.sR = None
         try:
@@ -273,7 +280,11 @@ class Vl53NearField(Node):
 
     # ======================= Daten lesen (faithful) =====================
     def _get_data_safe(self, s, ch):
+        if self.final_fault.get(ch, False):
+            return None
         try:
+            if s is None:
+                raise RuntimeError('Sensor nicht initialisiert')
             self._mux_select(ch)
             for fn in ('check_data_ready', 'data_ready'):
                 if hasattr(s, fn):
@@ -314,27 +325,79 @@ class Vl53NearField(Node):
                 value = d.get(name)
                 if value is None or len(value) != self.GR * self.GC:
                     raise RuntimeError(f'unvollstaendiges Frame: {name}')
+            self.recovery_stats[ch]['healthy_frames'] += 1
+            if self.recovery_stage[ch]:
+                self.recovery_good[ch] += 1
+                if self.recovery_good[ch] < 2:
+                    # One valid frame does not yet certify recovered ranging.
+                    return None
+                self.recovery_stats[ch]['successful_recoveries'] += 1
+                self.get_logger().info(
+                    f'ch{ch}: Recovery erfolgreich; {self.recovery_stats[ch]}')
+                self.recovery_stage[ch] = 0
             self.bad[ch] = 0
+            self.recovery_good[ch] = 0
             return d
         except Exception as e:
-            # Fehlerbehandlung wie im Skript: nach MAX_BAD_FRAMES neu starten.
             self.bad[ch] += 1
+            self.recovery_good[ch] = 0
+            self.recovery_stats[ch]['read_errors'] += 1
             if self.bad[ch] == 1:
                 self.get_logger().warn(
                     f'ch{ch}: {type(e).__name__}: {e} - kein neues Frame; '
                     'Frischeueberwachung bleibt aktiv.')
-            if self.bad[ch] >= self.max_bad:
-                self.get_logger().warn(f'ch{ch}: {e} - Ranging neu starten ...')
-                self._stop_sensor(s, ch)
-                time.sleep(0.03)
-                self._mux_select(ch)
-                for fn in ('start_ranging', 'start'):
-                    if hasattr(s, fn):
-                        try:
-                            getattr(s, fn)()
-                        except Exception:
-                            pass
-                self.bad[ch] = 0
+            stage = self.recovery_stage[ch]
+            if stage == 0 and self.bad[ch] < self.max_bad:
+                return None
+            try:
+                if stage == 0:
+                    self.get_logger().warn(f'ch{ch}: {e} - Ranging neu starten ...')
+                    self._stop_sensor(s, ch)
+                    time.sleep(0.03)
+                    self._mux_select(ch)
+                    start = (getattr(s, 'start_ranging', None)
+                             or getattr(s, 'start', None))
+                    if start is None:
+                        raise RuntimeError('kein Ranging-Start verfuegbar')
+                    start()
+                    self.recovery_stats[ch]['ranging_restarts'] += 1
+                    self.recovery_stage[ch] = 1
+                elif stage <= 2:
+                    # The same channel still fails after restart/reinit.
+                    # Recreate its driver with an explicit mux selection.
+                    self.get_logger().warn(f'ch{ch}: {e} - Sensor neu initialisieren ...')
+                    if s is not None:
+                        self._stop_sensor(s, ch)
+                        driver_bus = getattr(s, '_i2c_bus', None)
+                        if driver_bus is not None and driver_bus is not self.bus:
+                            driver_bus.close()
+                    if ch == self.ch_left:
+                        self.sL = None
+                    else:
+                        self.sR = None
+                    replacement = self._sensor_start(ch)
+                    if ch == self.ch_left:
+                        self.sL = replacement
+                    else:
+                        self.sR = replacement
+                    self.recovery_stats[ch]['full_reinits'] += 1
+                    self.recovery_stage[ch] = stage + 1
+                else:
+                    self.final_fault[ch] = True
+                    self.recovery_stats[ch]['final_faults'] += 1
+                    self.get_logger().error(
+                        f'ch{ch}: endgueltiger Sensorfehler; {self.recovery_stats[ch]}')
+            except Exception as recovery_error:
+                self.get_logger().error(
+                    f'ch{ch}: Recovery fehlgeschlagen: {recovery_error}')
+                if stage == 0:
+                    self.recovery_stage[ch] = 1
+                elif stage < 3:
+                    self.recovery_stats[ch]['full_reinits'] += 1
+                    self.recovery_stage[ch] = stage + 1
+                else:
+                    self.final_fault[ch] = True
+                    self.recovery_stats[ch]['final_faults'] += 1
             return None
 
     # ======================= Matrix bauen (faithful) ====================

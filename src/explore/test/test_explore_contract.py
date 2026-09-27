@@ -43,6 +43,7 @@ from explore.explore_node import (  # noqa: E402
     validated_we_completion_configuration,
     validated_we_navigation_enabled,
 )
+from explore import explore_node as explore_node_module  # noqa: E402
 from explore.portal_planning import CorridorCheck, PortalBridge  # noqa: E402
 from explore.portal_memory import (  # noqa: E402
     Point2D,
@@ -848,6 +849,8 @@ def _portal_execution_node(plan):
     node._goal_timeout_s = 150.0
     node._portal_exit_margin = 0.25
     node._portal_max_traverse_distance = 1.0
+    node._portal_max_staging_goals = 3
+    node._portal_connected_max_goals = 2
     node._prealign_handoff_tolerance = 0.17
     node._portal_max_encoder_budget = 2.0
     node._portal_encoder_budget_factor = 2.2
@@ -913,13 +916,14 @@ def _portal_connectivity_node(costs):
     node._global_frame = 'map'
     node._frontier_goal_max_cost = 90
     node._portal_exit_margin = 0.25
+    node._portal_max_traverse_distance = 1.0
     return node
 
 
 def test_portal_merge_selects_reachable_goal_beyond_original_target():
     costs = np.zeros((40, 80), dtype=np.int16)
     node = _portal_connectivity_node(costs)
-    plan = _portal_plan()
+    plan = _portal_plan(staging_x=0.20, target_x=0.60)
 
     goal = node._connected_portal_exit_goal(plan, (0.10, 0.10, 0.0))
 
@@ -1007,9 +1011,13 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'frontier_revisit_radius_m: 0.60' in config
     assert 'max_frontier_goals: 20' in config
     assert 'initial_scan_enabled: true' in config
-    assert 'initial_scan_angular_speed_radps: 0.12' in config
-    assert 'scan_no_progress_timeout_s: 8.0' in config
-    assert 'initial_scan_timeout_s: 210.0' in config
+    assert 'initial_scan_angular_speed_radps: 0.08' in config
+    assert 'initial_scan_segment_angle_rad: 0.7853981633974483' in config
+    assert 'initial_scan_segment_pause_s: 1.0' in config
+    assert 'scan_no_progress_timeout_s: 15.0' in config
+    assert 'initial_scan_timeout_s: 280.0' in config
+    assert 'portal_priority_when_available: false' in config
+    assert 'connected_portal_analysis_clearance_m: 0.0' in config
     assert 'scan_rate_check_after_s: 15.0' in config
     assert 'scan_min_average_rate_radps: 0.01' in config
     assert 'prealign_enabled: true' in config
@@ -1042,7 +1050,53 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'goal.behavior_tree = self._behavior_tree' in source
     assert 'RotationProgress' in source
     assert 'self._stop_scan_and_confirm()' in source
+    assert 'if self._initial_scan_segment_angle <= 0.0:' in source
+    assert 'self._initial_scan_segment_pause' in source
+    assert 'Parity-Kandidat erlaubt ausschliesslich passive WE-' in source
     assert 'self._prealign_to_goal(' in source
+
+
+def test_parity_profile_keeps_we_shadow_passive_and_uses_real_scan_contract(
+        monkeypatch):
+    profile = yaml.safe_load((
+        PACKAGE_ROOT / 'config' / 'hwt601_parity_params.yaml').read_text()
+    )['explore_node']['ros__parameters']
+    assert profile['initial_scan_angular_speed_radps'] == pytest.approx(0.08)
+    assert profile['initial_scan_segment_angle_rad'] == pytest.approx(
+        math.pi / 4.0)
+    assert profile['initial_scan_segment_pause_s'] == pytest.approx(1.0)
+    assert profile['portal_priority_when_available'] is True
+    assert profile['connected_portal_analysis_clearance_m'] == pytest.approx(
+        0.40)
+    assert profile['portal_max_crossings'] == 1
+    assert profile['wohnungserkundung_navigation_enabled'] is False
+
+    now = [0.0]
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(
+        explore_node_module.time, 'sleep', lambda seconds: now.__setitem__(
+            0, now[0] + seconds))
+    rotations = []
+    stop_commands = []
+    node = SimpleNamespace(
+        _initial_scan_segment_angle=math.pi / 4.0,
+        _initial_scan_angle=2.0 * math.pi,
+        _initial_scan_speed=0.08,
+        _initial_scan_timeout=280.0,
+        _initial_scan_segment_pause=1.0,
+        _publish_scan_stop=lambda: stop_commands.append(now[0]),
+        _rotate_in_place=lambda angle, speed, timeout, stop_requested: (
+            rotations.append((angle, speed, timeout)) or ('success', angle)),
+    )
+
+    status, achieved = ExploreNode._scan_in_place(node)
+
+    assert status == 'success'
+    assert achieved == pytest.approx(2.0 * math.pi)
+    assert len(rotations) == 8
+    assert all(angle == pytest.approx(math.pi / 4.0) for angle, _, _ in rotations)
+    assert all(speed == pytest.approx(0.08) for _, speed, _ in rotations)
+    assert len(stop_commands) >= 8
 
 
 def test_door_profile_uses_lidar_truth_and_encoder_only_as_budget():
