@@ -76,72 +76,43 @@ nicht vollständig protokolliert. Diese historischen Werte bleiben offen;
 ein neuer Lauf beweist die alte Ursache nicht rückwirkend. TOR 2 ist **nicht**
 zur funktionalen Umsetzung freigegeben.
 
-## 5. Aktueller Folgeauftrag: einen begrenzten motorlosen HWT-Lauf wiederholen
+## 5. Aktueller Folgeauftrag: HWT-Fahrabbruch und Stillstandsfenster vergleichen
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.0 und aktueller STATUS
-BASIS: PR #103, Diagnosecommit f1f6b74a5e5aea1ba43c50beb75f5f954218fb78;
-unvollständiger motorloser Lauf auf fc6ac5e56f78898666d7c9e8b3785bdab74ab0f2.
-ERGEBNIS: Nach gerätefrei bestandener Recorderprüfung genau einen begrenzten
-motorlosen HWT-Lauf mit demselben Softwarekandidaten erfassen. Einen neuen
-Erstfehler mit Originalwert belegen oder bei vollständigem Fenster als nicht
-reproduziert melden.
+BASIS: Alter Fahrabbruch mit `raw_driver_not_ready` bei 1790492567.5659919;
+vollständig aufgezeichneter motorloser Lauf vom 27.09.2026 auf
+`c4295fcdacf817b33b53f17e38ac106bf01ae9e2`, Ergebnis B im STATUS.
+ERGEBNIS: Aus ausschließlich vorhandenen Belegen die Betriebsunterschiede
+und Zeitfolgen so eng vergleichen, dass genau eine priorisierte noch zu
+messende Auslösebedingung benannt werden kann. Reichen die Daten dafür nicht,
+die verbleibende Nachweislücke konkret feststellen.
 
-VOR DEM GERÄTELAUF
-- Die gerätefreie Prüfung von `tools/kartierung/hwt_diagnose_record.py` ist im
-  STATUS dokumentiert; bei unverändertem Werkzeug nicht grundlos wiederholen.
-  Nur eine Writerinstanz verwenden und die laufende Bag-Datenbank nicht öffnen.
-- Kein Code-, Parameter-, Profil- oder Installwechsel aus diesem Auftrag.
-- Das Werkzeug vor dem Stack auf ein neues lokales Bag-Verzeichnis starten:
-  `python3 tools/kartierung/hwt_diagnose_record.py --output <lokaler-Pfad> \
-  --warmup-limit-s 120 --window-s 120`. Es begrenzt den Vorlauf ohne
-  Readiness und das Fenster nach Bias-Readiness. Ein Vorlauf-Timeout ist
-  unvollständig, kein negativer HWT-Befund.
+EINGÄNGE
+- Altes lokales Fahr-Bag und vorhandene zugehörige Logs unter
+  `~/.local/share/amadeus/tests/parity-real-20260927-vl53-recovery`;
+  dokumentierte Grenzen im STATUS beachten.
+- Neues lokales Bag, Manifest, Bedingungen und Auswertung unter
+  `~/.local/share/amadeus/tests/hwt-tor1-20260927-run-nDR2Re/`.
 
-VORBEDINGUNG
-- Neue aktuelle Freigabe der anwesenden Person für den konkreten motorlosen
-  Geräte-/Sensorlauf; unabhängige Motorsperre und Stillstand bestätigen.
-- Genau einen HWT-Leser und einen Roboterstack sicherstellen. Keine
-  parallelen Altprozesse oder zweiten Leser auf dem HWT-/Motorport.
-- Die echte Startkalibrierung und Stationärbestätigung vor Ort durchführen;
-  niemals simulieren. Keine Explore-Mission und kein aktiver Antrieb.
-- Exakt die im STATUS dokumentierte Setup-Reihenfolge einschließlich des
-  externen `ldlidar_stl_ros2`-Underlays nutzen und mit dem vorhandenen
-  Manifestwerkzeug Paketpfade, installierte Hashes, Profil und Launchargumente
-  vor dem Start erneut lokal sichern.
+VERGLEICH
+- Zeitachsen und die belegten HWT-/Encoder-/Wächterzustände unmittelbar vor
+  und nach dem alten Latch mit dem neuen 120-s-Fenster nach Bias-Readiness
+  vergleichen. Messalter, Status-Empfangsalter und `age_s` getrennt halten.
+- Last- und Betriebsbedingungen nur aus tatsächlich belegten Startargumenten,
+  Paketständen, Logs und Topics zuordnen. Das historische Bag enthält keinen
+  HWT-Rohstatus; seinen Originalwert nicht aus gesunden neuen Meldungen
+  ableiten. Keine zweite allgemeine Inventur und keine neue Hypothesenliste.
+- Genau einen nächsten Nachweisfall oder die Unentscheidbarkeit aus den
+  vorhandenen Daten in STATUS festhalten; AGENTENAUFTRAG entsprechend
+  fortschreiben.
 
-AUFZEICHNUNG
-- Tatsächlich gesourcte Setups, Paketpräfixe und installierte Modul-/
-  Executable-Hashes mit `tools/kartierung/hwt_diagnose_manifest.py` lokal
-  festhalten. Effektive Profile und Launchargumente sowie Treiberversionen
-  dem Bag zuordnen.
-- Ausschließlich die sieben im Werkzeug festgelegten HWT-/Encoder-/Wächterthemen
-  gemeinsam aufzeichnen. Keine Karten, Bilder oder Wohnungsdaten im Repository
-  speichern. Das Werkzeug überwacht Readiness über ROS-Status, öffnet keine
-  laufende Bag-Datenbank und prüft Metadaten, Themenliste und Statuszähler
-  nach Recorderende. Ein Nullzähler bei einer Messquelle ist als möglicher
-  Sensorbefund zu bewerten, nicht automatisch als Recorderfehler.
-- Bei Ergebnis `incomplete` oder Recorderfehler Stack geordnet beenden und
-  keinen weiteren Geräteversuch anschließen.
-- Beim ersten Fehler `first_fault` gegen die Rohstatusfolge und deren
-  Zeitwerte prüfen. Messalter, Status-Empfangsalter und `age_s` getrennt
-  ausweisen. Spätere gesunde Meldungen nicht als Ersatz für den Erstwert
-  verwenden.
-
-ABSCHLUSS
-- Verletzte Bedingung und Originalwert des NEUEN Laufs nennen, falls
-  beobachtet; bei vollständigem Fenster ohne Fehler Dauer, Lastbedingungen
-  und „nicht reproduziert“ melden. Ein erneut unvollständiges Fenster
-  ausdrücklich als solches kennzeichnen.
-- Historische Ursache weiter als unbelegt kennzeichnen. Kein endloser
-  Wiederholungsversuch, keine Fahrt und keine automatische Recovery.
-- STATUS mit Ergebnis und genau einem Folgeentscheid fortschreiben.
-  TOR 2 erst anhand dieses Befunds konkret festlegen.
-
-RÜCKFALL
-- Recorder und Stack sauber im Stillstand beenden; kein Installwechsel.
-  Bei unerwarteter Schutzwirkung bestehende fail-closed Sperre erhalten.
+GRENZEN
+- Nur lokale Dateien lesen und Dokumente fortschreiben. Kein Roboterprozess,
+  Portzugriff, Aktor, Fahrtest, Parameter- oder Softwareänderung.
+- TOR 2, Latch-Reset und automatische Recovery nicht beginnen. Eine spätere
+  Geräteaktion erfordert einen eigenen abgegrenzten Auftrag und Freigabe.
 ```
 
 ## 6. Übergabe und Fortschreibung

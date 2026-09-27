@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## HWT-TOR-1-Diagnosekandidat — motorloser Lauf unvollständig
+## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf
 
 Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
 die additive Erstfehlerdiagnose. Sie wurde nur in
@@ -33,10 +33,30 @@ Themen über ein begrenztes Fenster, sauberes Recorderende und lesbare Metadaten
 ohne Readiness endet es begrenzt als unvollständig. Das Werkzeug verwendet
 rosbag2 `--storage-preset-profile resilient` (SQLite-WAL) und liest die aktive
 SQLite-Datei nicht. Ein dritter Laborlauf mit parallel offenem SQLite-Leser
-endete ebenfalls vollständig. Es wurde kein neuer HWT-Gerätelauf gestartet. Die
+endete ebenfalls vollständig. In dieser Laborphase wurde kein HWT-Gerät
+gestartet. Die
 konkrete Ursache der früheren SQLite-Sperre ist nicht belegt.
 
-Ein weiterer Lauf braucht eine neue aktuelle Freigabe der anwesenden Person.
+**Erneuter Lauf am 27.09.2026: Ergebnis B.** Nach ausdrücklicher Bestätigung
+von unabhängiger Motorsperre, Stillstand und genau diesem motorlosen Lauf
+startete der reparierte Recorder vor dem Stack. Quellstand
+`c4295fcdacf817b33b53f17e38ac106bf01ae9e2`, Diagnosepakete aus
+`/tmp/we1-hwt-f1f6b74-install` über dem dokumentierten Vollbuild, externes
+LiDAR-Overlay und ROS Humble. Das lokale Manifest unter
+`~/.local/share/amadeus/tests/hwt-tor1-20260927-run-nDR2Re/` belegt
+Setup-Reihenfolge, Paketpräfixe, Modul-/Executable-Hashes, Profil-SHA und
+Launchargumente. `active_drive=false`, `enable_auto_explore=false`, keine
+Mission, kein Antriebsknoten; nur der FC03-Encoderleser am Motorbus.
+Bias-Readiness um 14:24:09,788 UTC, danach 120 s vollständig mit sieben
+Themen aufgezeichnet. Roh-HWT, Yaw, Encoder und Wächter blieben bereit,
+`first_fault=null`, kein Latch; 0 RPM und keine Aktorausgabe. Der Recorder
+endete mit Exit 0 und gültigen Metadaten, der Stack danach per einmaligem
+SIGINT; alle Kinder endeten sauber und beide Ports sind frei. **Unter diesen
+Bedingungen nicht reproduziert.** Der alte Fahrfehler bleibt ohne
+Rohstatus-Originalwert; kein TOR 2 oder Fahrnachweis. Der aktive Install
+blieb unverändert. Einzelheiten und Themenzähler stehen im STATUS.
+
+Jeder weitere Lauf braucht eine neue aktuelle Freigabe der anwesenden Person.
 Vor Ort unabhängige Motorsperre und Stillstand erneut bestätigen, vorhandene
 Prozesse und Portbesitzer prüfen, dann genau einen Stack verwenden. Keine
 zweite HWT- oder Motorbusverbindung öffnen. Die echte Stationärbestätigung
@@ -61,7 +81,8 @@ HWT-Serial-/VL53-/DKMS-Versionen, Profil-SHA und die effektive
 den abgeglichenen Startbefehl und beweist allein keinen laufenden Knoten.
 
 Die gerätefreie Recorderprüfung ist für den unveränderten Werkzeugstand
-erledigt. Vor dem Stackstart das Werkzeug auf ein **neues** lokales
+erledigt. Für einen später gesondert beauftragten Lauf vor dem Stackstart
+das Werkzeug auf ein **neues** lokales
 Bag-Verzeichnis unter `~/.local/share/amadeus/tests/` starten, mit
 `--warmup-limit-s 120 --window-s 120`; es erfasst nur diese Topics:
 `/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate`,

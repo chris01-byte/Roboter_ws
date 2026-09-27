@@ -15,6 +15,32 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT im vollständigen motorlosen Fenster ohne Fehler
+
+**Entscheidung:** Der reparierte Recorderpfad und der Diagnosekandidat sind
+für einen 120-s-Stillstandslauf belegt. Ergebnis B lautet **unter diesen
+Bedingungen nicht reproduziert**. TOR 2 bleibt gesperrt. Nächster Auftrag
+ist nur der gezielte Offline-Vergleich mit dem alten Fahrabbruch.
+
+**Grund / beobachtete Evidenz:** Bias-Readiness 14:24:09,788 UTC; danach
+120 s mit sieben Themen, 2 400/2 400 Wächterstatus `sources_ready=true`,
+ohne `first_fault` oder Latch. Rohstatus und Encoder blieben bereit;
+0 RPM, keine Aktorausgabe. Der alte Fahr-Bag enthält weiterhin keinen
+HWT-Rohstatus-Originalwert. Lokale Belege unter
+`~/.local/share/amadeus/tests/hwt-tor1-20260927-run-nDR2Re/`.
+
+**Betroffene Dateien und Hardware:** Nur Dokumentation. Ein freigegebener
+motorloser Geräte-/Sensorlauf; kein aktiver Installwechsel, keine Mission
+oder Motoraktivierung.
+
+**Teststatus / Risiken:** Vollständiges motorloses Messfenster bestanden;
+kein Nachweis der alten Einzelursache, Recoverbarkeit oder Fahrtauglichkeit.
+
+**Rückfallweg:** Stack und Recorder sind beendet, serielle Ports frei;
+vorherige aktive Installation und fail-closed Schutzwirkung unverändert.
+
+---
+
 ## 2026-09-27 — HWT-Bag-Aufzeichnung vor Gerätewiederholung begrenzt
 
 **Entscheidung:** `tools/kartierung/hwt_diagnose_record.py` führt künftig den
