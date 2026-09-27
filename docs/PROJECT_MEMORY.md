@@ -15,6 +15,34 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT-Erfassung wegen Recorderabbruch nicht als Negativnachweis werten
+
+**Entscheidung:** Der freigegebene motorlose Lauf auf `fc6ac5e…` ist ein
+begrenzter Teilnachweis. TOR 2 bleibt offen; als genau nächster Schritt wird
+die Recorderfunktion gerätefrei abgesichert und ein einzelner neuer
+motorloser Lauf nur nach erneuter aktueller Freigabe vorgesehen.
+
+**Grund / beobachtete Evidenz:** Das Bag enthält 23,9 s frische HWT-Rohdaten
+und read-only Encoderstatus, endet aber während `gyro_bias_warmup` nach
+`SQLite error (5): database is locked`. Korrigierte Drehrate und `first_fault`
+fehlen; spätere Stackmeldungen sind nicht gemeinsam aufgezeichnet. Eine
+Aussage „HWT-Fehler nicht reproduziert“ oder über den alten Fahrfehler wäre
+unbelegt. Ursache der SQLite-Sperre ist nicht gesichert.
+
+**Betroffene Dateien und Hardware:** Nur Status, aktueller Auftrag und
+Betriebsübergabe; lokale Bag-/Manifestbelege unter
+`~/.local/share/amadeus/tests/hwt-tor1-20260927-M97XodUP/`. Kein
+Installwechsel und keine Motoraktivierung.
+
+**Teststatus / Risiken:** Sensorlauf nach SIGINT sauber beendet; Recorder
+abgebrochen. Keine HWT-Erstfehlerursache, keine Recovery- oder Fahrfreigabe.
+
+**Rückfallweg:** Vor erneutem Gerätezugriff Recorder ohne Geräte prüfen;
+bei erneuter Aufzeichnungspanne den Lauf beenden und keinen weiteren
+Geräteversuch anschließen. Bestehende fail-closed Sperren erhalten.
+
+---
+
 ## 2026-09-27 — HWT-Erstfehleraufnahme vor Recovery umgesetzt
 
 **Entscheidung:** Auf derselben Integrationslinie PR #103 wurde mit

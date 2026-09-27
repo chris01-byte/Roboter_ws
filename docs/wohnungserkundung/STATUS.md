@@ -9,11 +9,14 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Genau einen begrenzten **motorlosen HWT-Erfassungslauf**
-mit dem Diagnosekandidaten aus Abschnitt 3 nach aktueller Gerätefreigabe
-durchführen und auswerten. TOR 1 ist softwareseitig umgesetzt; TOR 2 bleibt
-gesperrt. Ein neuer Lauf kann nur heutiges Verhalten erklären und die fehlende
-Einzelursache des alten Fahr-Bags nicht rückwirkend beweisen.
+**Nächster Auftrag:** Die Aufzeichnung des motorlosen HWT-Laufs gegen den
+beobachteten SQLite-Sperrfehler absichern und **einmal** mit dem unveränderten
+Diagnosekandidaten in einem vorab begrenzten Fenster wiederholen. Der Lauf vom
+27.09. wurde vor der Bias-Readiness nur 23,9 s aufgezeichnet und liefert
+keinen HWT-Erstfehlerbefund. Eine erneute aktuelle Gerätefreigabe ist für
+den nächsten Lauf erforderlich. TOR 1 ist softwareseitig umgesetzt; TOR 2
+bleibt gesperrt. Auch ein neuer Lauf beweist die Einzelursache des alten
+Fahr-Bags nicht rückwirkend.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -133,7 +136,7 @@ ist auf `f33863f…` gepinnt, seine installierte DKMS-Version nicht geprüft.
 | Profile / Startvertrag | Beabsichtigter motorloser Pfad: `robot_bringup/app_mapping.launch.py`, `active_drive=false`, `use_hwt601_odometry=true`, `enable_auto_explore=false`, `start_web_gui=false`, `explore_params_overlay=src/explore/config/hwt601_parity_params.yaml`. `operator_stationary_confirmed=true` erst nach tatsächlicher Bestätigung vor Ort. Dies ist vorbereitet und wurde **nicht gestartet**. |
 | Treiber / BT | Host: `pyserial 3.5` für den HWT-Serialtransport, `vl53l5cx 1.0.1`, `smbus2 0.6.1`, `numpy 1.21.5`; `ch34x-mphsi/1.0` für Kernel `5.15.199-tegra` via DKMS installiert; Quellpin `f33863f…`. `ros-humble-behaviortree-cpp` `4.9.1-1jammy.20260725.161519`; der BT-Orchestrator löst `libbehaviortree_cpp.so` tatsächlich nach `/opt/ros/humble/lib/aarch64-linux-gnu/` auf. Versions- und Linkbelege stammen vom Buildhost, nicht vom alten Fahrprozess. |
 | Tests | 76 fokussierte HWT-/Gate-Tests direkt bestanden. Frischer 2-Paket-Build und `colcon test-result`: 177 Tests, 0 Fehler/Fehlschläge; diese Läufe überschneiden sich und werden nicht addiert. Manifestwerkzeug rein lesend unter `/tmp/we1-hwt-f1f6b74-manifest.json` ausgeführt; Quellcommit, saubere Arbeitskopie, installierte Dateihashes, Paketpräfixe, BT-Link und Treiberversionen geprüft. Kein ROS-Knoten, Port oder Aktor gestartet. |
-| Motorlose Erfassung | **OFFEN / aktuelle Gerätefreigabe erforderlich.** Das neue `first_fault` enthält deshalb noch keinen real gemessenen Einzelwert. Keine Wiederholung der alten Fahrt und keine Annahme eines bestimmten HWT-Defekts. |
+| Motorlose Erfassung | **UNVOLLSTÄNDIG.** Der freigegebene Lauf vom 27.09. auf `fc6ac5e…` verwendete die im lokalen `runtime-manifest-v2.json` belegten Präfixe einschließlich des externen LiDAR-Underlays. Der Recorder brach nach 23,9 s mit `SQLite error (5): database is locked` ab, vor HWT-Bias-Readiness und vor Beginn des geplanten 120-s-Messfensters. Kein neuer `first_fault` und keine Aussage „nicht reproduziert“. Details in Abschnitt 3a. |
 
 Das Manifestwerkzeug `tools/kartierung/hwt_diagnose_manifest.py` schreibt erst
 bei ausdrücklich übergebenem lokalem Ausgabepfad eine neue JSON-Datei außerhalb
@@ -142,6 +145,58 @@ Messung werden die tatsächlich gesourcten Setup-Dateien, das Profil mit SHA256,
 Launchargumente, `AMENT_PREFIX_PATH`, Paketpräfixe und installierte Modul- und
 Executable-Hashes **vor Ort erneut** erfasst. Der `/tmp`-Probeausdruck ist
 kein Nachweis eines Roboterstarts.
+
+### Motorloser HWT-Lauf vom 27.09.2026: begrenzter Teilnachweis
+
+Die anwesende Person bestätigte für **diesen** Lauf die unabhängige
+Motorsperre, Stillstand und Freigabe eines motorlosen Geräte-/Sensorlaufs.
+Vor dem Start waren HWT-/Motorport frei und kein zweiter Stack aktiv. Das
+Messfenster war vorab auf höchstens **120 s nach HWT-Bias-Readiness** gesetzt.
+Eine erste Launchprobe endete vor Sensorstart wegen des fehlenden externen
+Pakets `ldlidar_stl_ros2`; ihr Bag enthält null Nachrichten. Der anschließend
+gestartete, unveränderte Diagnosekandidat nutzte in dieser Reihenfolge
+`/opt/ros/humble`, das bekannte LiDAR-Overlay
+`we1-ldlidar-shutdown-overlay/install`, `/tmp/we1-full-shim-install` und
+`/tmp/we1-hwt-f1f6b74-install`. Quell-HEAD war `fc6ac5e56f78898666d7c9e8b3785bdab74ab0f2`
+(sauber); das Parity-Profil hatte SHA256 `6097dae5aaee6bb6964d78b474f13768e70af298915fd986920c20a6cf2e3506`.
+Das Manifest enthält die effektiv aufgelösten Paketpräfixe, installierten
+Modul-/Executable-Hashes, Treiberversionen und alle Launchargumente.
+Der Start erfolgte mit `active_drive=false`, `use_hwt601_odometry=true`,
+`operator_stationary_confirmed=true`, `enable_auto_explore=false`,
+`enable_stage3_motion_diagnostic=false`, `start_web_gui=false`, `normalize_scan=true`
+und `crop=true`, ROS-Domain 217 über eine reine Loopback-DDS-Konfiguration.
+Keine Mission wurde gesendet. Es lief nur der lesende
+`encoder_shadow_reader` am Motorbus, kein `base_hardware`-Antriebsknoten.
+
+Der gestartete Stack lief vom Sensorstart um 13:09:54 UTC bis zum geordneten
+SIGINT um etwa 13:12:40 UTC. Der Recorder speicherte jedoch nur
+13:09:54,988–13:10:18,898 UTC, **23,91 s Roh-IMU**; dann endete er mit
+`rosbag2_storage_plugins::SqliteException`, `SQLite error (5): database is locked`.
+Die konkrete Ursache der Dateisperre ist nicht belegt. Das geschlossene Bag
+ist lesbar, aber ohne Metadatendatei. Aufgezeichnet wurden 2328 Roh-IMU,
+48 Rohstatus, 48 Bias-/Yawstatus, 469 Encoder-Odometrien, 470 Encoderstatus
+und 392 Wächterstatus. Die korrigierte Drehrate hatte null Nachrichten.
+Im erfassten Zeitraum war der Rohstatus stets `ready=true`,
+`raw_data_ready=true`, `consecutive_errors=0`, `reconnects=0` und
+`age_s=0,00017–0,00146 s`; der Encoderstatus war stets `ready=true`,
+`read_only=true`, ohne Latch oder FC03-Paarfehler. Beide Statusquellen meldeten
+`actuator_output=false` und keine Sensor-Schreibbefehle; die gemessenen
+Radgeschwindigkeiten waren 0 RPM. Der letzte Biasstatus hatte 883 Samples,
+`calibrated=false`, `stable=false`, Grund `gyro_bias_warmup`; der Wächter
+meldete durchgehend `yaw_missing_stale_or_invalid`, `sources_ready=false`,
+`latched_fault=null`, `first_fault=null`. Diese Zustände während der
+Startkalibrierung sind **kein** nachgewiesener HWT-Fehler nach Readiness.
+Messalter, Status-Empfangsalter und `age_s` eines Erstfehlers sind mangels
+Erstfehler nicht verfügbar. Eine spätere natürliche Erholung oder Störung
+innerhalb der nicht aufgezeichneten Zeit ist nicht beurteilbar.
+
+Die lokalen, nicht ins Repository übernommenen Belege liegen unter
+`~/.local/share/amadeus/tests/hwt-tor1-20260927-M97XodUP/`:
+`runtime-manifest-v2.json`, `runtime-addendum.json`, `run-conditions.json`,
+`capture-analysis.json`, `hwt-bag-v2/`, `recorder-v2.log` und `launch-v2.log`.
+Alle Launch-Kinder endeten nach SIGINT sauber. Kein aktiver Install wurde
+gewechselt. Der historische HWT-Rohwert des alten Fahr-Bags bleibt offen;
+TOR 2 und jede Fahrfreigabe bleiben aus.
 
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
@@ -266,13 +321,14 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Nachweis: den in `AGENTENAUFTRAG.md` beschriebenen,
-zeitlich begrenzten **motorlosen HWT-Erfassungslauf** mit dem eindeutig
-gesourcten Diagnosekandidaten nach aktueller Vor-Ort-Freigabe ausführen.
-Roh-IMU, korrigierte Drehrate, Rohstatus, Biasstatus und Wächterstatus zusammen
-aufzeichnen. Tritt kein Fehler auf, Dauer und Lastbedingungen mit Ergebnis
-„nicht reproduziert“ festhalten und nicht unbegrenzt wiederholen. Erst nach
-Auswertung wird TOR 2 ursachenspezifisch entschieden; keine Fahrfreigabe.
+Genau ein nächster Nachweis: den Recorder vorab ohne Gerätezugriff auf
+störungsfreie, alleinige Aufzeichnung prüfen, danach den in
+`AGENTENAUFTRAG.md` begrenzten motorlosen HWT-Lauf **einmal** mit neuer
+aktueller Vor-Ort-Freigabe wiederholen. Das Bag während des Schreibens nicht
+direkt mit SQLite öffnen; Readiness und Fensterende über ROS-Status/Prozesslog
+beobachten. Erst nach sauberem Recorderabschluss auswerten. Bei erneutem
+Aufzeichnungsfehler keinen weiteren Geräteversuch anschließen. TOR 2 erst
+nach belastbarem Einzelbefund entscheiden; keine Fahrfreigabe.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

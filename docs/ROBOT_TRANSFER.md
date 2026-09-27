@@ -1,6 +1,6 @@
 # Übertragung auf den realen Roboter
 
-## HWT-TOR-1-Diagnosekandidat — motorloser Lauf noch freizugeben
+## HWT-TOR-1-Diagnosekandidat — motorloser Lauf unvollständig
 
 Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
 die additive Erstfehlerdiagnose. Sie wurde nur in
@@ -13,29 +13,43 @@ BT-Orchestrators löst nach
 Der komplette Kandidaten- und Testnachweis steht im aktuellen
 `docs/wohnungserkundung/STATUS.md`.
 
-**Vorbereitet, nicht ausgeführt:** Einmaliger motorloser Lauf nach neuer
-Freigabe einer anwesenden Person. Vor Ort unabhängige Motorsperre und
-Stillstand bestätigen, vorhandene Prozesse und Portbesitzer prüfen, dann
-genau einen Stack verwenden. Keine zweite HWT- oder Motorbusverbindung öffnen.
-Die echte Stationärbestätigung für die HWT-Biasphase darf erst danach als
-Launchargument gesetzt werden. Keine Explore-Mission, kein `active_drive=true`.
+**Ausgeführt am 27.09.2026, aber nicht vollständig aufgezeichnet:** Die
+anwesende Person bestätigte unabhängige Motorsperre, Stillstand und den
+konkreten motorlosen Lauf. Quell-HEAD `fc6ac5e56f78898666d7c9e8b3785bdab74ab0f2`,
+ein HWT-Leser, ein passiver Encoderleser, `active_drive=false`, keine
+Explore-Mission und kein `base_hardware`-Antriebsknoten. Das vorab bestimmte
+120-s-Fenster nach Bias-Readiness wurde nicht erreicht: `ros2 bag record`
+brach nach 23,9 s wegen `SQLite error (5): database is locked` ab. Die
+gespeicherten Daten enden während `gyro_bias_warmup`; kein `first_fault`.
+Nach SIGINT endeten alle Launch-Kinder sauber. Der aktive Install blieb
+unverändert. Einzelheiten und lokale Evidenzpfade stehen im aktuellen STATUS.
+
+Ein weiterer Lauf braucht eine neue aktuelle Freigabe der anwesenden Person.
+Vor Ort unabhängige Motorsperre und Stillstand erneut bestätigen, vorhandene
+Prozesse und Portbesitzer prüfen, dann genau einen Stack verwenden. Keine
+zweite HWT- oder Motorbusverbindung öffnen. Die echte Stationärbestätigung
+für die HWT-Biasphase darf erst danach als Launchargument gesetzt werden.
+Keine Explore-Mission, kein `active_drive=true`.
 Sind die `/tmp`-Präfixe nicht mehr vorhanden, zuerst aus dem festgelegten
 Quellcommit isoliert neu bauen und ihre Auflösung prüfen; keine ältere
 Installation stillschweigend substituieren.
 
 Für den späteren Lauf das **tatsächlich gesourcte** Setup in jeder beteiligten
 Shell in dieser Reihenfolge festhalten: `/opt/ros/humble/setup.bash`,
+`/home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install/local_setup.bash`,
 `/tmp/we1-full-shim-install/local_setup.bash`,
 `/tmp/we1-hwt-f1f6b74-install/local_setup.bash`. Das rein lesende Werkzeug
 `tools/kartierung/hwt_diagnose_manifest.py` vor dem Start mit lokalem
 `--output`, `--profile src/explore/config/hwt601_parity_params.yaml`,
 `--launch-file robot_bringup/app_mapping.launch.py`, den tatsächlich
-gewählten `--launch-arg KEY=VALUE` und den drei `--sourced-setup`-Argumenten
+gewählten `--launch-arg KEY=VALUE` und den vier `--sourced-setup`-Argumenten
 aufrufen. Es hält Paketpräfixe, installierte Dateihashes, BT-Linkpfad,
 HWT-Serial-/VL53-/DKMS-Versionen, Profil-SHA und die effektive
 `AMENT_PREFIX_PATH`-Reihenfolge lokal fest. Das Manifest ist kein Ersatz für
 den abgeglichenen Startbefehl und beweist allein keinen laufenden Knoten.
 
+Vor einem weiteren Gerätezugriff die Recorderfunktion gerätefrei prüfen und
+die fertige Bag-Datei erst nach sauberem Abschluss mit SQLite auswerten.
 Vor dem Stackstart den Recorder auf ein neues lokales Verzeichnis unter
 `~/.local/share/amadeus/tests/` begrenzen; nur diese Topics erfassen:
 `/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate`,
