@@ -76,43 +76,40 @@ nicht vollständig protokolliert. Diese historischen Werte bleiben offen;
 ein neuer Lauf beweist die alte Ursache nicht rückwirkend. TOR 2 ist **nicht**
 zur funktionalen Umsetzung freigegeben.
 
-## 5. Aktueller Folgeauftrag: HWT-Fahrabbruch und Stillstandsfenster vergleichen
+## 5. Aktueller Folgeauftrag: einen Erstfehler-Nachweis gerätefrei spezifizieren
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.0 und aktueller STATUS
-BASIS: Alter Fahrabbruch mit `raw_driver_not_ready` bei 1790492567.5659919;
-vollständig aufgezeichneter motorloser Lauf vom 27.09.2026 auf
-`c4295fcdacf817b33b53f17e38ac106bf01ae9e2`, Ergebnis B im STATUS.
-ERGEBNIS: Aus ausschließlich vorhandenen Belegen die Betriebsunterschiede
-und Zeitfolgen so eng vergleichen, dass genau eine priorisierte noch zu
-messende Auslösebedingung benannt werden kann. Reichen die Daten dafür nicht,
-die verbleibende Nachweislücke konkret feststellen.
+BASIS: Der Offline-Vergleich im STATUS endete mit Ergebnis B: Das alte Bag
+zeigt `raw_driver_not_ready` bei 1790492567.5659919 ohne Rohstatus-Snapshot;
+der neue motorlose 120-s-Lauf blieb stabil. Keine Auslösebedingung ist
+aus vorhandenen Daten eindeutig priorisierbar.
+ERGEBNIS: Ein einziges, minimal erforderliches synchrones Messprotokoll für
+einen später gesondert freizugebenden HWT-Erstfehler-Nachweis festlegen.
+Dieses Protokoll wird in diesem Auftrag ausschließlich beschrieben.
 
-EINGÄNGE
-- Altes lokales Fahr-Bag und vorhandene zugehörige Logs unter
-  `~/.local/share/amadeus/tests/parity-real-20260927-vl53-recovery`;
-  dokumentierte Grenzen im STATUS beachten.
-- Neues lokales Bag, Manifest, Bedingungen und Auswertung unter
-  `~/.local/share/amadeus/tests/hwt-tor1-20260927-run-nDR2Re/`.
-
-VERGLEICH
-- Zeitachsen und die belegten HWT-/Encoder-/Wächterzustände unmittelbar vor
-  und nach dem alten Latch mit dem neuen 120-s-Fenster nach Bias-Readiness
-  vergleichen. Messalter, Status-Empfangsalter und `age_s` getrennt halten.
-- Last- und Betriebsbedingungen nur aus tatsächlich belegten Startargumenten,
-  Paketständen, Logs und Topics zuordnen. Das historische Bag enthält keinen
-  HWT-Rohstatus; seinen Originalwert nicht aus gesunden neuen Meldungen
-  ableiten. Keine zweite allgemeine Inventur und keine neue Hypothesenliste.
-- Genau einen nächsten Nachweisfall oder die Unentscheidbarkeit aus den
-  vorhandenen Daten in STATUS festhalten; AGENTENAUFTRAG entsprechend
-  fortschreiben.
+INHALT
+- Den vorhandenen Diagnosekandidaten, seine Paket-/Overlayauflösung und das
+  bestehende `first_fault`-Feld verwenden. Die sechs HWT-Rohstatusprädikate
+  mit Originalwert, Typ, Grenzwert, Empfangszeit und `age_s` zum ersten
+  Fehler müssen gemeinsam mit Roh-IMU, korrigierter Gierrate,
+  Encoder-/Motorstatus, Wächterstatus und Missions-/Fahrphase erfasst werden.
+- Messalter, Status-Empfangsalter und internes `age_s` getrennt zuordnen.
+  Vorab begrenztes Fenster, Abbruch- und Stoppregel, keine parallelen
+  Portleser und unveränderte Schutzgrenzen festlegen. Die fehlende
+  historische Einzelbedingung nicht als bekannt voraussetzen.
+- Genau einen späteren Nachweisfall und seine Voraussetzungen als
+  prüfbare Vorlage in STATUS und AGENTENAUFTRAG aufnehmen. Falls dafür
+  Bewegung nötig wäre, eine neue ausdrückliche Freigabe einschließlich
+  unabhängiger Sicherheitssperre verlangen; sie liegt mit diesem Auftrag
+  nicht vor.
 
 GRENZEN
-- Nur lokale Dateien lesen und Dokumente fortschreiben. Kein Roboterprozess,
-  Portzugriff, Aktor, Fahrtest, Parameter- oder Softwareänderung.
-- TOR 2, Latch-Reset und automatische Recovery nicht beginnen. Eine spätere
-  Geräteaktion erfordert einen eigenen abgegrenzten Auftrag und Freigabe.
+- Nur vorhandene Dateien lesen und Dokumente bearbeiten. Kein Geräte- oder
+  ROS-Prozess, Aktor, Fahrtest, Parameter-, HWT- oder Recorder-Codeänderung.
+- TOR 2, Latch-Reset und Recovery nicht beginnen. Keine automatische
+  Ausführung des spezifizierten Messfalls.
 ```
 
 ## 6. Übergabe und Fortschreibung

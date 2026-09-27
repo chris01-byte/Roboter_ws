@@ -9,12 +9,12 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Die Bedingungen des historischen HWT-Fahrabbruchs
-gezielt gerätefrei gegen den vollständigen motorlosen Lauf vom 27.09.
-vergleichen und genau die noch zu messende Auslösebedingung benennen. Der
-120-s-Lauf nach Bias-Readiness war unter Stillstandsbedingungen fehlerfrei:
-**unter diesen Bedingungen nicht reproduziert**. Der alte Rohstatus-Originalwert
-bleibt unbekannt. TOR 2 bleibt gesperrt; aus dem neuen Lauf folgt keine Fahrt.
+**Nächster Auftrag:** Das kleinste synchrone Erstfehler-Messprotokoll für einen
+später gesondert freizugebenden HWT-Nachweis gerätefrei festlegen; noch keinen
+Lauf ausführen. Der Offline-Vergleich ergibt **keine eindeutig priorisierbare
+Auslösebedingung**: Der alte Rohstatus-Originalwert fehlt, während der
+120-s-Stillstandslauf fehlerfrei blieb. TOR 2 bleibt gesperrt; daraus folgt
+keine Fahrt.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -279,6 +279,76 @@ Lokale Belege (keine Bags im Repository):
 `capture-analysis.json`, Recorder- und Launchlogs. Das Bag hat SHA256
 `d15868030208421599626477ce473fa27f23ec130949f52cb117c1242b09aee9`.
 
+### Offline-Vergleich: Fahrabbruch gegen stabiles Stillstandsfenster
+
+**🟡 OFFLINE-VERGLEICH ABGESCHLOSSEN – MIT VORHANDENEN DATEN NICHT
+ENTSCHEIDBAR.** Nur das alte lokale Fahr-Bag
+`parity-real-20260927-vl53-recovery`, sein ROS-Launchlog vom 27.09. um
+08:57:59 Ortszeit, vorhandene HWT-/Gate-Knotenlogs, der Parity-Bericht und
+das neue lokale Bag samt Manifest wurden gelesen. Keine ROS-Runtime und
+keine Geräte wurden gestartet.
+
+**Engste alte Zeitfolge:** Der fusionierte Wächter meldete um
+`1790492567.5165083` noch `raw_sources_ready`, `sources_ready=true`,
+`hwt_motion_ready=true`. Um `1790492567.5659919` wechselte er auf
+`raw_driver_not_ready`, `sources_ready=false` und den gleichnamigen Latch.
+Das Mission Gate protokollierte `blocked` um `1790492567.5672408`; `/cmd_vel`
+war spätestens um `1790492567.5942700` null. Die korrigierte Gierrate lag
+im Bag unmittelbar vor/nach dem Latch bei `1790492567.565142` und
+`1790492567.572654` mit etwa `0,0623 rad/s`; in den nächsten fünf Sekunden
+folgten 500 weitere Nachrichten ohne Lücke über 0,019 s. Der letzte
+Yawstatus vor dem Latch traf um `1790492567.540613` ein, meldete
+`ready=true`, kalibrierten stabilen Bias und **internes** `age_s=0,000838 s`.
+Sein Bag-Empfang lag 0,025379 s vor dem Latch; der nächste Yawstatus um
+`1790492568.035000` war ebenfalls bereit. Bag-Empfangsabstand, internes
+`age_s` und Guard-Empfangszeit sind verschiedene Größen. Die Header-Zeiten
+der korrigierten Gierrate waren `1790492567.560314` und
+`1790492567.570187`; aus Bag- und Header-Zeit allein folgt kein exaktes
+HWT-Rohmessalter im Wächter.
+
+Unmittelbar vor dem Latch meldete `base_hardware/state_json` um
+`1790492567.558667` frisches Encoderfeedback
+(`encoder_feedback_age_s=0,046478 s`, `encoder_feedback_ok=true`,
+`encoder_stale=false`, keine Modbus-Lesefehler) und je `-24 RPM` gemessene
+Motordrehzahl. Nach dem Latch lag um `1790492567.585372` weiterhin
+Encoderfeedback vor, nun `-15 RPM`. Mission Manager und Explorer waren in
+`Explore`/`initial_scan`. LiDAR und VL53 liefen laut Bag und vorhandenem
+Bericht weiter. Das alte Bag hat **keinen**
+`/shadow/hwt601/raw_status_json`-Topic; Rohstatus-Empfangszeit,
+`consecutive_errors`, `reconnects` und internes `age_s` am ersten Fehler
+sind historisch nicht vorhanden. Das HWT-Knotenlog enthält Verbindung und
+Start, keinen Rohstatuswert zum Übergang. Im dokumentierten
+`Hwt601FusionHealth`-Prüfpfad folgt `raw_driver_not_ready` erst nach den
+Sample-/Statusfrischeprüfungen und umfasst sechs Rohstatusprädikate; die
+exakte installierte Modul-SHA des alten Prozesses wurde nicht erfasst.
+
+**Neuer Vergleichsausschnitt:** Um die Mitte des stabilen Fensters
+(`1790519109.788339`) war der letzte aufgezeichnete Rohstatus 0,381508 s
+alt, mit eigenem `age_s=0,005302 s`, `ready=true`,
+`raw_data_ready=true`, `consecutive_errors=0`, `reconnects=0`; der nächste
+Rohstatus folgte 0,117938 s später. Yawstatus war bereit mit eigenem
+`age_s=0,004908 s`, Encoderfeedback `0,007348 s` alt, Wächter
+`sources_ready=true`, `first_fault=null`, `latched_fault=null`.
+Im ganzen 120-s-Fenster waren 2 400/2 400 Wächterstatus quellenbereit.
+Der neue Lauf hatte `active_drive=false`, keinen Explore-Auftrag und 0 RPM.
+
+| Unterschied | Bewertung aus den vorhandenen Daten |
+|---|---|
+| Aktiver `base_hardware`-Antrieb und tatsächliche Drehung alt; nur `encoder_shadow_reader`, gesperrte Motoren/0 RPM neu | **Möglich, aber unbelegt** als Bedingung des Rohstatusfehlers. Schon in den 60 s vor dem Latch zeigten 2 763 von 2 997 Basisstatusmeldungen Bewegung, während der Wächter zuvor bereit blieb. Bewegung allein ist kein deterministischer Auslöser. |
+| Explore-/BT-Auftrag und Initialscan alt; kein Auftrag neu | **Möglich, aber unbelegt.** Alt war `active_command.type=explore`, Nav2/Controller liefen; neu waren Nav2/Controller ebenfalls gestartet, aber keine Mission wurde gesendet. Ein Zusammenhang mit einem der sechs Rohstatusprädikate ist nicht aufgezeichnet. |
+| Längerer Betrieb bis zum Fehler und andere Paket-/Overlayauflösung | **Nicht bewertbar** als Ursache. Alt lag der Latch etwa 288 s nach Launch, neu endete das Messfenster etwa 149 s nach Launch. Alt ist `install_parity_real` nur teilweise dokumentiert; die ausgeführten HWT-Paket-SHAs und vollständige Präfixreihenfolge fehlen. Neu sind sie im Manifest erfasst. |
+| HWT, Encoder, LiDAR, VL53, SLAM und Nav2 als gestartete Komponenten | Ein unterschiedlicher gestarteter **Sensorsatz ist durch Daten ausgeschlossen**: beide Launchlogs enthalten HWT, LiDAR und VL53. Alt starteten 25, neu 28 Prozesse; die zusätzliche neue Karten-/Semantik-/Rosbridge-Gruppe und fehlende Mission machen Prozesszahlen zu keinem CPU-/I/O-Lastmaß. CPU-, Speicher- und Buslast um den alten Latch sind **nicht bewertbar**. |
+| Längerer Ausfall der korrigierten Gierrate, Yaw-Bias oder Encoderfeedback als unmittelbare Erklärung | **Durch Daten ausgeschlossen** für den beobachteten Übergang: Gierrate publizierte ohne relevante Lücke weiter, Yawstatus blieb bereit und Encoderfeedback frisch. Ein kurzer Fehler in einem anderen Rohstatusprädikat ist dadurch nicht ausgeschlossen. |
+
+**Entscheidung:** Keine der belegten Betriebsdifferenzen bestimmt, welches
+der sechs Rohstatusprädikate zuerst scheiterte. Aktiver Motorbetrieb,
+Missionslast, längere Laufzeit und nicht vollständig belegte alte Runtime
+lassen sich aus einem einzigen Fehlerereignis nicht gegeneinander priorisieren.
+Die **eine fehlende Information** ist der vollständige HWT-Rohstatus-Snapshot
+zum ersten alten Latch, einschließlich Originalfeldwerten und Empfangszeit.
+Er ist aus den vorhandenen Artefakten nicht rekonstruierbar. Daher wird
+**keine einzelne Auslösebedingung priorisiert** und TOR 2 nicht begonnen.
+
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
 | Auslöser / Datenquelle / Grenze | Gegenwärtige Wirkung und Besitzer | Wiederherstellung / Einordnung | Evidenz |
@@ -402,14 +472,15 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: die vorhandenen Logs und Bags des alten
-`raw_driver_not_ready`-Fahrabbruchs gezielt gegen das neue, vollständige
-motorlose Stillstandsfenster vergleichen. Zeitfolge, Quellenalter,
-Statuswechsel und Last-/Betriebsbedingungen getrennt belegen; das fehlende
-historische Rohstatusfeld ausdrücklich offen lassen. Ergebnis ist genau eine
-priorisierte, noch zu messende Auslösebedingung oder die Feststellung, dass
-die vorhandenen Daten dafür nicht ausreichen. Keine neue Geräteaktion,
-Parameteränderung oder TOR-2-Umsetzung aus diesem Vergleich ableiten.
+Genau ein nächster Auftrag: **gerätefrei** das kleinste synchrone
+Erstfehler-Messprotokoll für einen später gesondert freizugebenden HWT-Lauf
+festlegen. Es muss den vollständigen HWT-Rohstatus zum ersten Latch mit
+Originalwerten und Empfangszeit sowie Mess- und Statusalter, korrigierte
+Gierrate, Encoder-/Motorzustand und aktuellen Auftrag zusammen erhalten.
+Für den alten Fehler ist der Rohstatus nicht nachträglich herstellbar;
+keine Auslösebedingung wird vorab als Ursache gesetzt. Das Protokoll in
+AGENTENAUFTRAG konkretisieren, aber keinen Geräteversuch, keine Fahrt,
+Parameteränderung oder TOR-2-Umsetzung beginnen.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)
