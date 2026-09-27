@@ -15,6 +15,40 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT-Erstfehleraufnahme vor Recovery umgesetzt
+
+**Entscheidung:** Auf derselben Integrationslinie PR #103 wurde mit
+`f1f6b74a5e5aea1ba43c50beb75f5f954218fb78` nur TOR 1 umgesetzt:
+`Hwt601FusionHealth` speichert den ersten Fehler nach Readiness samt allen
+Rohstatus-Einzelbedingungen, Originalwerten, Typen, Grenzwerten, Quellzeiten
+und vorhandenen Treiberzählern. Das Mission Gate veröffentlicht den Befund
+additiv im bisherigen HWT-Status. TOR 2 und automatische Recovery bleiben
+unverändert aus.
+
+**Grund / beobachtete Evidenz:** Das alte Fahr-Bag enthält keinen
+`/shadow/hwt601/raw_status_json` und die tatsächlich gesourcten Install-
+Präfixe des alten Laufs sind unvollständig. Der historische Einzelwert ist
+nicht rekonstruierbar. Ein neuer motorloser Lauf kann nur den heutigen
+Kandidaten erklären. Die Diagnose erhält deshalb den ersten Übergang
+unveränderlich und trennt IMU-Messalter, Status-Empfangsalter und `age_s`.
+
+**Betroffene Dateien und Hardware:** Nur HWT-Health/Guard, additive
+Gate-Statusausgabe, gerätefreie Tests und ein rein lesendes Runtime-
+Manifestwerkzeug. Keine Parameter, Geräte, Aktoren oder aktive Installation.
+
+**Teststatus / Risiken:** Zwei Pakete auf dem gesicherten Vollbuild in einem
+neuen `/tmp`-Overlay gebaut; 177 registrierte Tests ohne Fehler, 76 fokussierte
+HWT-/Gate-Tests bestanden (überlappende Testmengen). Präfix- und
+Bibliotheksauflösung im Manifest geprüft. Ein neuer Rohstatus-Originalwert und
+eine physische Fehlerreproduktion fehlen bis zum gesondert freigegebenen
+motorlosen Erfassungslauf. Kein Gesamt-Grün für Stufe 3.
+
+**Rückfallweg:** Codecommit getrennt revertieren und die beiden Pakete im
+isolierten Overlay neu bauen. Bisherige fail-closed Entscheidung und aktiver
+Roboter-Install bleiben unverändert.
+
+---
+
 ## 2026-09-27 — Integrationsbasis gesichert, HWT-Recovery an Einzelbeleg gebunden
 
 **Entscheidung:** Die uncommitteten Parity-Quellen aus

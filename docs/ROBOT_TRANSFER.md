@@ -1,5 +1,57 @@
 # Übertragung auf den realen Roboter
 
+## HWT-TOR-1-Diagnosekandidat — motorloser Lauf noch freizugeben
+
+Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
+die additive Erstfehlerdiagnose. Sie wurde nur in
+`/tmp/we1-hwt-f1f6b74-install` gebaut, mit dem gesicherten Vollbuild
+`/tmp/we1-full-shim-install` als Underlay. Der aktive Roboter-Install wurde
+**nicht** gewechselt. Der Standard-BT-Build brauchte auf diesem Host den rein
+temporären Pfad `/tmp/we1-btcpp-compat`; die Laufzeitbibliothek des gebauten
+BT-Orchestrators löst nach
+`/opt/ros/humble/lib/aarch64-linux-gnu/libbehaviortree_cpp.so` auf.
+Der komplette Kandidaten- und Testnachweis steht im aktuellen
+`docs/wohnungserkundung/STATUS.md`.
+
+**Vorbereitet, nicht ausgeführt:** Einmaliger motorloser Lauf nach neuer
+Freigabe einer anwesenden Person. Vor Ort unabhängige Motorsperre und
+Stillstand bestätigen, vorhandene Prozesse und Portbesitzer prüfen, dann
+genau einen Stack verwenden. Keine zweite HWT- oder Motorbusverbindung öffnen.
+Die echte Stationärbestätigung für die HWT-Biasphase darf erst danach als
+Launchargument gesetzt werden. Keine Explore-Mission, kein `active_drive=true`.
+Sind die `/tmp`-Präfixe nicht mehr vorhanden, zuerst aus dem festgelegten
+Quellcommit isoliert neu bauen und ihre Auflösung prüfen; keine ältere
+Installation stillschweigend substituieren.
+
+Für den späteren Lauf das **tatsächlich gesourcte** Setup in jeder beteiligten
+Shell in dieser Reihenfolge festhalten: `/opt/ros/humble/setup.bash`,
+`/tmp/we1-full-shim-install/local_setup.bash`,
+`/tmp/we1-hwt-f1f6b74-install/local_setup.bash`. Das rein lesende Werkzeug
+`tools/kartierung/hwt_diagnose_manifest.py` vor dem Start mit lokalem
+`--output`, `--profile src/explore/config/hwt601_parity_params.yaml`,
+`--launch-file robot_bringup/app_mapping.launch.py`, den tatsächlich
+gewählten `--launch-arg KEY=VALUE` und den drei `--sourced-setup`-Argumenten
+aufrufen. Es hält Paketpräfixe, installierte Dateihashes, BT-Linkpfad,
+HWT-Serial-/VL53-/DKMS-Versionen, Profil-SHA und die effektive
+`AMENT_PREFIX_PATH`-Reihenfolge lokal fest. Das Manifest ist kein Ersatz für
+den abgeglichenen Startbefehl und beweist allein keinen laufenden Knoten.
+
+Vor dem Stackstart den Recorder auf ein neues lokales Verzeichnis unter
+`~/.local/share/amadeus/tests/` begrenzen; nur diese Topics erfassen:
+`/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate`,
+`/shadow/hwt601/raw_status_json`, `/shadow/hwt601/status_json`,
+`/fusion/hwt601/wheel_odom_raw`, `/shadow/hwt601/wheel_status_json` und
+`/fusion/hwt601/status_json`. Nach kalibrierter Readiness höchstens 120 s
+beobachten und den Recorder mit einem einzelnen SIGINT sauber beenden.
+Startprofil: `active_drive:=false`, `use_hwt601_odometry:=true`,
+`enable_auto_explore:=false`, `start_web_gui:=false`,
+`explore_params_overlay:=<absoluter Pfad zum Parity-Profil>`;
+`operator_stationary_confirmed:=true` nur nach echter Bestätigung.
+Ergebnis einschließlich Lastbedingungen, Laufdauer, Nullbewegung und
+`first_fault` oder „nicht reproduziert“ im STATUS berichten. Die alte
+Fahrtursache wird dadurch nicht rückwirkend festgestellt. Kein Tor 2,
+kein Deployment und keine Fahrt aus diesem Erfassungslauf ableiten.
+
 ## Integrationsbasis 27.09.2026 — keine Aktivierung
 
 Der dokumentierte WE-Integrationsbranch `docs/we1-integrationsbasis-audit`

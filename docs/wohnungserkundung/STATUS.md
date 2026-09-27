@@ -9,18 +9,18 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Das eine unten abgegrenzte HWT-Recoverypaket bearbeiten.
-Sein zwingendes erstes Tor ist die diagnostische Einzelauflösung von
-`raw_driver_not_ready`: Die vorhandenen Logs und das Bag enthalten keinen
-HWT-Rohstatus. Ohne nachgewiesenen transienten Fehler und Originalwert endet
-der Folgeauftrag nach der Diagnose; eine Wiederanfahrlogik ist dann nicht
-entscheidbar. Grenzwerte bleiben unverändert.
+**Nächster Auftrag:** Genau einen begrenzten **motorlosen HWT-Erfassungslauf**
+mit dem Diagnosekandidaten aus Abschnitt 3 nach aktueller Gerätefreigabe
+durchführen und auswerten. TOR 1 ist softwareseitig umgesetzt; TOR 2 bleibt
+gesperrt. Ein neuer Lauf kann nur heutiges Verhalten erklären und die fehlende
+Einzelursache des alten Fahr-Bags nicht rückwirkend beweisen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
 automatischer Merge und kein aktiver Installwechsel. Die vorhandene
 HWT-/VL53-Schutzwirkung bleibt fail-closed. Erst nach identifizierter und als
-recoverbar belegter Einzelbedingung darf das Paket funktional umgesetzt werden.
+recoverbar belegter Einzelbedingung darf über eine funktionale Recoveryänderung
+entschieden werden.
 
 ## 2. Konsolidierte Quell- und Buildbasis
 
@@ -122,6 +122,27 @@ gesourcten Präfixe des 27.09.-Laufs. Python-Abhängigkeiten auf dem Buildhost:
 `numpy 1.21.5`, `smbus2 0.6.1`, `vl53l5cx 1.0.1`; der externe CH341A-Treiber
 ist auf `f33863f…` gepinnt, seine installierte DKMS-Version nicht geprüft.
 
+### TOR-1-Diagnosekandidat auf dieser Integrationslinie
+
+| Zuordnung | Nachweis und Grenze |
+|---|---|
+| Ausgang / Quellstand | PR #103, `docs/we1-integrationsbasis-audit` bei `3ed63f278b668fe9be64ce02568911e1b99f7fe8`; darauf Codecommit `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`. Die zuvor uncommitteten Parity-Änderungen sind bereits im Integrationscommit `21ff064…` gesichert; keine neue lokale Quellmischung. |
+| Diagnoseänderung | `Hwt601FusionHealth` hält nach erster Readiness genau den ersten latched Fehler mit Wächtername, Sammelgrund, allen sechs Rohstatusprädikaten samt Wert/Typ/Grenze, vollständigem Rohstatus, Quell- und Statuszeiten, letzter gültiger Rohmessung und vorhandenen Treiberzählern im Speicher fest. Das bestehende `/fusion/hwt601/status_json` enthält additiv `first_fault`; gesunde spätere Meldungen überschreiben ihn nicht. Keine Dateioperation im Schutzpfad. |
+| Frischer isolierter Build | ROS-Humble-Underlay `/opt/ros/humble` → gesicherter Vollbuild `/tmp/we1-full-shim-install/local_setup.bash` → nur zwei neu gebaute Python-Pakete `/tmp/we1-hwt-f1f6b74-install/local_setup.bash`. Build-/Logpfade `/tmp/we1-hwt-f1f6b74-build` und `/tmp/we1-hwt-f1f6b74-log`; `robot_state_estimation` und `robot_navigation` 2/2 gebaut. Bestehender BT-CMake-Symlinkpfad `/tmp/we1-btcpp-compat` war für den Vollbuild nötig, wurde nicht ins Zielsystem übernommen. |
+| Effektive Paketauflösung | `robot_state_estimation` und `robot_navigation` aus `/tmp/we1-hwt-f1f6b74-install`; `vl53_near_field`, `base_hardware`, `explore`, `mission_manager`, `bt_orchestrator`, `robot_bringup` aus `/tmp/we1-full-shim-install`; `behaviortree_cpp`, `robot_localization`, `slam_toolbox` auf diesem Buildhost aus `/opt/ros/humble`. Die spätere Zielsystemauflösung wird vor einem Start neu erfasst. |
+| Profile / Startvertrag | Beabsichtigter motorloser Pfad: `robot_bringup/app_mapping.launch.py`, `active_drive=false`, `use_hwt601_odometry=true`, `enable_auto_explore=false`, `start_web_gui=false`, `explore_params_overlay=src/explore/config/hwt601_parity_params.yaml`. `operator_stationary_confirmed=true` erst nach tatsächlicher Bestätigung vor Ort. Dies ist vorbereitet und wurde **nicht gestartet**. |
+| Treiber / BT | Host: `pyserial 3.5` für den HWT-Serialtransport, `vl53l5cx 1.0.1`, `smbus2 0.6.1`, `numpy 1.21.5`; `ch34x-mphsi/1.0` für Kernel `5.15.199-tegra` via DKMS installiert; Quellpin `f33863f…`. `ros-humble-behaviortree-cpp` `4.9.1-1jammy.20260725.161519`; der BT-Orchestrator löst `libbehaviortree_cpp.so` tatsächlich nach `/opt/ros/humble/lib/aarch64-linux-gnu/` auf. Versions- und Linkbelege stammen vom Buildhost, nicht vom alten Fahrprozess. |
+| Tests | 76 fokussierte HWT-/Gate-Tests direkt bestanden. Frischer 2-Paket-Build und `colcon test-result`: 177 Tests, 0 Fehler/Fehlschläge; diese Läufe überschneiden sich und werden nicht addiert. Manifestwerkzeug rein lesend unter `/tmp/we1-hwt-f1f6b74-manifest.json` ausgeführt; Quellcommit, saubere Arbeitskopie, installierte Dateihashes, Paketpräfixe, BT-Link und Treiberversionen geprüft. Kein ROS-Knoten, Port oder Aktor gestartet. |
+| Motorlose Erfassung | **OFFEN / aktuelle Gerätefreigabe erforderlich.** Das neue `first_fault` enthält deshalb noch keinen real gemessenen Einzelwert. Keine Wiederholung der alten Fahrt und keine Annahme eines bestimmten HWT-Defekts. |
+
+Das Manifestwerkzeug `tools/kartierung/hwt_diagnose_manifest.py` schreibt erst
+bei ausdrücklich übergebenem lokalem Ausgabepfad eine neue JSON-Datei außerhalb
+des Repositories. Es startet keine Geräte oder ROS-Prozesse. Für eine spätere
+Messung werden die tatsächlich gesourcten Setup-Dateien, das Profil mit SHA256,
+Launchargumente, `AMENT_PREFIX_PATH`, Paketpräfixe und installierte Modul- und
+Executable-Hashes **vor Ort erneut** erfasst. Der `/tmp`-Probeausdruck ist
+kein Nachweis eines Roboterstarts.
+
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
 | Auslöser / Datenquelle / Grenze | Gegenwärtige Wirkung und Besitzer | Wiederherstellung / Einordnung | Evidenz |
@@ -167,6 +188,14 @@ gezählt.
 Rohstatusprüfungen ist daher **nicht vorhanden**. Keine Einzelursache
 behaupten. LiDAR und VL53 blieben frisch; es gab kein Frontierziel und keinen
 Portal-/Raumwechsel.
+
+**Historische Nachweislücke abgeschlossen gekennzeichnet:** Weder dieses
+Fahr-Bag noch die vorhandenen Logs enthalten das verletzte Rohstatusfeld mit
+Originalwert. Auch die damalige vollständige `source`-Reihenfolge und die
+Paket-SHAs des ausgeführten Install wurden nicht aufgezeichnet. Diese Werte
+sind aus den vorhandenen Artefakten nicht rekonstruierbar; erneute Suche in
+denselben Logs ersetzt keinen Messbeleg. Der neue Diagnosekandidat darf
+ausschließlich einen **neuen** motorlosen Lauf erklären.
 
 ## 5. Erstes begrenztes Recoverypaket
 
@@ -214,8 +243,9 @@ Das bestehende Mission Gate bleibt fail-closed; `enable_auto_explore` oder
 Vor physischer Fortsetzung ist eine neue ausdrückliche Freigabe nötig.
 
 Das Paket ist hinsichtlich Komponenten und Gegenfällen abgegrenzt; seine
-Wiederherstellungsfunktion ist **OFFEN**, bis Originalfeld und tatsächlich
-recoverbare Ursache belegt sind.
+Wiederherstellungsfunktion ist **OFFEN**, bis für den neuen Kandidaten
+Originalfeld und tatsächlich recoverbare Ursache belegt sind. TOR 2 wurde
+in diesem Auftrag nicht umgesetzt oder freigegeben.
 
 ## 6. Erhaltene Nachweise und Roadmapgrenzen
 
@@ -236,11 +266,13 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: das in Abschnitt 5 beschriebene begrenzte
-HWT-Recoverypaket mit verpflichtender Einzelwert-Diagnose als erstem Tor.
-Ohne Beleg eines transienten, gezielt wiederherstellbaren Fehlers endet der
-Auftrag nach diesem Tor mit dokumentierter Nachweislücke. Gerätezugriff nur
-mit gesonderter Freigabe; keine Fahrfreigabe aus diesem Dokument.
+Genau ein nächster Nachweis: den in `AGENTENAUFTRAG.md` beschriebenen,
+zeitlich begrenzten **motorlosen HWT-Erfassungslauf** mit dem eindeutig
+gesourcten Diagnosekandidaten nach aktueller Vor-Ort-Freigabe ausführen.
+Roh-IMU, korrigierte Drehrate, Rohstatus, Biasstatus und Wächterstatus zusammen
+aufzeichnen. Tritt kein Fehler auf, Dauer und Lastbedingungen mit Ergebnis
+„nicht reproduziert“ festhalten und nicht unbegrenzt wiederholen. Erst nach
+Auswertung wird TOR 2 ursachenspezifisch entschieden; keine Fahrfreigabe.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

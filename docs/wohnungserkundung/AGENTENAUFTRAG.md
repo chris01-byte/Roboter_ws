@@ -60,78 +60,68 @@ ist wegen des `behaviortree_cpp`-CMake-Exportpfads blockiert; mit einem
 temporären externen Bibliothekspfad wurden 24 Pakete isoliert gebaut.
 Gerätefreie Tests und Grenzen sind getrennt im STATUS bewertet.
 
-## 4. Aktueller Folgeauftrag: ein begrenztes HWT-Recoverypaket
+## 4. TOR 1 softwareseitig abgeschlossen: HWT-Erstfehlerdiagnose
+
+Auf PR #103, Basis `3ed63f278b668fe9be64ce02568911e1b99f7fe8`,
+implementiert Commit `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
+die einmalige Erstfehleraufnahme im `Hwt601FusionHealth`. Der Gate-Status
+veröffentlicht sie additiv. Die vorhandene Fehlerentscheidung, Fristen,
+Kalibrierung, Latches und Bewegungsblockierung wurden nicht geändert.
+Zwei Pakete wurden auf dem bestehenden isolierten Vollbuild neu gebaut;
+177 registrierte Tests bestanden. Der genaue Kandidat steht im STATUS.
+
+Die alte Bag-Aufzeichnung enthält weder das verletzte HWT-Rohstatusfeld noch
+dessen Originalwert. Ihre ausgeführte Paket-/Präfixreihenfolge ist ebenfalls
+nicht vollständig protokolliert. Diese historischen Werte bleiben offen;
+ein neuer Lauf beweist die alte Ursache nicht rückwirkend. TOR 2 ist **nicht**
+zur funktionalen Umsetzung freigegeben.
+
+## 5. Aktueller Folgeauftrag: ein motorloser HWT-Erfassungslauf
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
-REFERENZ: docs/wohnungserkundung/MASTERPLAN.md, Version 1.0 vom 27.09.2026
-BASIS: STATUS.md, Integrationslinie docs/we1-integrationsbasis-audit
-ERGEBNIS: Für einen nachgewiesenen transienten HWT-Rohstatusfehler den
-Bewegungshalt, Erhalt desselben Explore-Auftrags, begrenzte
-Quellwiederherstellung und geprüfte Wiederaufnahme als EIN Paket umsetzen.
-Das erste Tor ist die Einzelursachen-Diagnose. Ist die Ursache nicht
-recoverbar belegt, endet dieser Auftrag mit dem Diagnosebefund und ohne
-funktionale Recoveryänderung.
+REFERENZ: MASTERPLAN v1.0 und aktueller STATUS
+BASIS: PR #103 mit Diagnosecommit f1f6b74a5e5aea1ba43c50beb75f5f954218fb78
+ERGEBNIS: Heutigen ersten HWT-Fehler am eindeutig zugeordneten
+Softwarekandidaten in genau einem begrenzten motorlosen Lauf erfassen
+oder unter dokumentierter Last und Dauer als nicht reproduziert melden.
 
-TOR 1: URSACHE UND ORIGINALWERT
-- Bestehende HWT-Statusquelle, Hwt601FusionHealth und Statusveröffentlichung
-  im Mission-Gate nachvollziehen.
-- Für die sechs bestehenden Rohstatusbedingungen (`ready`, `raw_data_ready`,
-  Port, Sensor-Schreibmodus, `consecutive_errors`, `age_s`) maschinenlesbare
-  Fehlernamen und die tatsächlich empfangenen Werte additiv ausgeben.
-- Den bisherigen Sammelgrund `raw_driver_not_ready`, die Grenzwerte, das
-  fail-closed Latch und die Nullausgabe des Gates unverändert lassen.
-- Gerätefreie Tests für jedes Einzelprädikat, mehrere gleichzeitige Fehler,
-  fehlende Statusnachricht und den unveränderten Gate-Stopp ausführen.
-- Nur nach gesonderter Freigabe für Gerätezugriff die Rohstatusfolge bei
-  motorlosem Vorlauf vollständig und ohne Wohnungsdaten erfassen. Den ersten
-  verletzten Einzelwert und die Quellzeit mit dem Gate-Latch korrelieren.
-  Ein synthetischer Test ersetzt diesen Beleg nicht.
+VORBEDINGUNG
+- Aktuelle Freigabe der anwesenden Person für den konkreten motorlosen
+  Geräte-/Sensorlauf; unabhängige Motorsperre und Stillstand bestätigen.
+- Genau einen HWT-Leser und einen Roboterstack sicherstellen. Keine
+  parallelen Altprozesse oder zweiten Leser auf dem HWT-/Motorport.
+- Die echte Startkalibrierung und Stationärbestätigung vor Ort durchführen;
+  niemals simulieren. Keine Explore-Mission und kein aktiver Antrieb.
 
-TOR 2: BEGRENZTE FUNKTIONALE ÄNDERUNG NUR BEI TRANSIENTER URSACHE
-- Die tatsächlich betroffene HWT-Lesefunktion/Verbindung in der vorhandenen
-  Komponente begrenzt wiederherstellen; Anzahl und Frist der Versuche aus
-  dem belegten Fehlerbild festlegen, nicht aus vermuteten Timeouts.
-- Währenddessen im bestehenden Mission Manager/BT/Explorer den identischen
-  Explore-Auftrag samt Goal-ID erhalten. Bewegungstor geschlossen halten,
-  das einzige Nav2-Kind terminal canceln und verspätete Antworten abweisen.
-- Vor Fortsetzung Roh-/Yaw-/Encoderstatus, VL53-Paar, Scan, TF/Pose,
-  Kartenbindung und aktuellen freien Weg neu belegen. Erst danach genau
-  ein Kindziel für denselben Auftrag zulassen. Keine alte Geschwindigkeits-
-  nachricht und kein altes Nav2-Goal wiederverwenden.
-
-NICHT-ZIELE
-- Keine pauschale Frische-/Timeout-Lockerung und keine gleichzeitige
-  Überarbeitung weiterer Latches. Kein neuer Supervisor, Rechnerreboot,
-  zweiter Navigator oder neues Missionsmodell.
-- Keine aktive Installation oder Fahrt aus diesem Auftrag. Ein motorloser
-  Quelllauf erfordert getrennte Gerätefreigabe.
-
-ERFOLG / GEGENFÄLLE
-- Jede einzeln verletzte Bedingung ist mit Originalwert und Quellenalter
-  eindeutig; fehlende, zukünftige, nicht endliche und widersprüchliche Werte
-  bleiben fail-closed. Mehrfachfehler werden nicht verschleiert.
-- Der bestätigte Einzelfehler stoppt sofort; die Auftrags-ID bleibt gleich;
-  Wiederherstellung ist begrenzt; erst frische Quellen, Pose und aktueller
-  Weg erlauben ein einziges neues Nav2-Kind.
-- Dauerhafter Ausfall, falscher Port/Schreibmodus, fehlerhafte Kalibrierung,
-  Nutzerabbruch und Not-Aus führen zu sicherem terminalem Zustand oder
-  manueller Freigabe, niemals zu automatischer Wiederanfahrt.
-- Gerätefreie Einzelfehler-, Stale-/Race-, Cancel- und Gegenfalltests sowie
-  isolierter Build; reale Fortsetzung bleibt einer späteren Abnahme vorbehalten.
-
-RÜCKFALL
-- Diagnostik und die begrenzte Recovery-/Missionserhaltänderung getrennt
-  revertierbar halten. Das heutige fail-closed Gate bleibt der Rückfall.
+AUFZEICHNUNG
+- Tatsächlich gesourcte Setups, Paketpräfixe und installierte Modul-/
+  Executable-Hashes mit `tools/kartierung/hwt_diagnose_manifest.py` lokal
+  festhalten. Effektive Profile und Launchargumente sowie Treiberversionen
+  dem Bag zuordnen.
+- Ausschließlich HWT-Roh-IMU, korrigierte Gierrate, Rohstatus,
+  Bias-/Yawstatus, Encoderstatus und `/fusion/hwt601/status_json` gemeinsam
+  für ein vorab begrenztes Fenster aufzeichnen. Keine Karten, Bilder oder
+  Wohnungsdaten im Repository speichern.
+- Beim ersten Fehler `first_fault` gegen die Rohstatusfolge und deren
+  Zeitwerte prüfen. Messalter, Status-Empfangsalter und `age_s` getrennt
+  ausweisen. Spätere gesunde Meldungen nicht als Ersatz für den Erstwert
+  verwenden.
 
 ABSCHLUSS
-- Ursache des alten Laufs bleibt offen, bis der vollständige Rohstatus
-  tatsächlich erfasst ist. Ohne Transienzbeleg kein Tor 2; den konkreten
-  Nachweisfehlbetrag dokumentieren. Danach STATUS mit Ergebnis und genau
-  einem nächsten Auftrag fortschreiben.
+- Verletzte Bedingung und Originalwert des NEUEN Laufs nennen, falls
+  beobachtet; andernfalls Dauer, Lastbedingungen und „nicht reproduziert“.
+- Historische Ursache weiter als unbelegt kennzeichnen. Kein endloser
+  Wiederholungsversuch, keine Fahrt und keine automatische Recovery.
+- STATUS mit Ergebnis und genau einem Folgeentscheid fortschreiben.
+  TOR 2 erst anhand dieses Befunds konkret festlegen.
+
+RÜCKFALL
+- Recorder und Stack sauber im Stillstand beenden; kein Installwechsel.
+  Bei unerwarteter Schutzwirkung bestehende fail-closed Sperre erhalten.
 ```
 
-## 5. Übergabe und Fortschreibung
+## 6. Übergabe und Fortschreibung
 
 
 Geprüfte Basis und Ergebnis-SHA, betroffene Dateien, wirklich ausgeführte Tests,
