@@ -15,6 +15,41 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — Integrationsbasis gesichert, HWT-Recovery an Einzelbeleg gebunden
+
+**Entscheidung:** Die uncommitteten Parity-Quellen aus
+`/home/p/roboter_ws-parity-reset` wurden auf der Masterplan-Referenz
+`2636000…` im separaten Branch `docs/we1-integrationsbasis-audit` gesichert.
+Der reale HWT-Abbruch darf nur als `raw_driver_not_ready` klassifiziert werden;
+die Einzelursache bleibt offen. Genau ein HWT-Recoverypaket ist mit
+verpflichtender Erstfehlerdiagnose und Transienzprüfung vorbereitet.
+
+**Grund / beobachtete Evidenz:** Der letzte Parity-Lauf wurde laut lokalen
+Quellen und Bericht mit einem eigenen Overlay vorbereitet. Dessen tatsächlich
+gesourcte Paket-SHAs sind nicht aufgezeichnet. Das Bag zeigt bei
+`1790492567.5659919` den Gate-Latch, enthält aber den zugehörigen
+`/shadow/hwt601/raw_status_json`-Topic nicht. Ein frischer isolierter Teilbuild
+und gerätefreie Regressionen bestanden. Der Standard-Vollbuild trifft auf
+einen ROS-`behaviortree_cpp`-Exportpfadfehler; mit einem temporären Symlink-
+Präfix für den installierten Export und die Bibliothek wurden alle 24 Pakete
+isoliert gebaut. Auf diesem Build bestanden 259 registrierte Vertragstests;
+die 45 nicht registrierten Mission-Manager-Tests bestanden direkt.
+Details und weitere Befunde stehen nur
+im aktuellen `docs/wohnungserkundung/STATUS.md`.
+
+**Betroffene Dateien und Hardware:** Konsolidierte Quell- und
+Dokumentationslinie, kein aktiver Installwechsel und keine Geräteänderung.
+
+**Teststatus / Risiken:** Softwarebelege im STATUS. Der genaue Runtime-Overlay-
+Stack des Realtests, das fehlerhafte HWT-Rohstatusfeld und ein echter
+Missionsfortsetzungsbeleg fehlen. Kein Gesamt-Grün für Stufe 3.
+
+**Rückfallweg:** Integrationsbranch nicht sourcen oder deployen; aktive
+Arbeitskopie und Install bleiben unverändert. Spätere HWT-Änderungen getrennt
+revertierbar halten, bestehendes Gate bleibt fail-closed.
+
+---
+
 ## 2026-09-27 — VL53-Recovery geprüft; Parity-Realtest durch HWT-Rohstatus gestoppt
 
 **Entscheidung:** Die VL53-Runtime-Recovery nur im isolierten Parity-Kandidaten

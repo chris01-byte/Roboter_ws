@@ -9,18 +9,18 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Die konkrete Rohstatus-Prüfung hinter
-`raw_driver_not_ready` im HWT-Readinesspfad sichtbar machen. Die vorhandenen
-Logs und das Bag enthalten nur den zusammengefassten Fehler, keinen
-HWT-Rohstatus. Deshalb zuerst eng begrenzte, rein diagnostische
-Feldbeobachtung und einen motorlosen Vorlauf vorbereiten; keine
-HWT-Wiederanfahrlogik implementieren, keine Frischegrenze ändern.
+**Nächster Auftrag:** Das eine unten abgegrenzte HWT-Recoverypaket bearbeiten.
+Sein zwingendes erstes Tor ist die diagnostische Einzelauflösung von
+`raw_driver_not_ready`: Die vorhandenen Logs und das Bag enthalten keinen
+HWT-Rohstatus. Ohne nachgewiesenen transienten Fehler und Originalwert endet
+der Folgeauftrag nach der Diagnose; eine Wiederanfahrlogik ist dann nicht
+entscheidbar. Grenzwerte bleiben unverändert.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
 automatischer Merge und kein aktiver Installwechsel. Die vorhandene
-HWT-/VL53-Schutzwirkung bleibt fail-closed. Erst nach identifizierter
-Einzelbedingung wird das erste Recoverypaket umgesetzt.
+HWT-/VL53-Schutzwirkung bleibt fail-closed. Erst nach identifizierter und als
+recoverbar belegter Einzelbedingung darf das Paket funktional umgesetzt werden.
 
 ## 2. Konsolidierte Quell- und Buildbasis
 
@@ -28,7 +28,7 @@ Einzelbedingung wird das erste Recoverypaket umgesetzt.
 |---|---|---|
 | Verbindliche Dokumentreferenz | `docs/we1-masterplan-20260927`, Commit `26360001f65e05a5b88a58581771c241291fa0e5`; separat in einem Bare-Repository geholt | Der Root-Checkout blieb auf `main` (`23928d92…`); `git fetch` darin scheiterte an einer defekten lokalen Checkpoint-Ref. Der Dokumentbranch ist keine Roboter-Runtime. |
 | Historischer HWT-/Türvergleich | `1d91229dc10ff4bb791938d49aae8e9808a5dfff` | Vergleichsbeleg und Rückfallreferenz, kein pauschaler Rollback. |
-| Letzter veröffentlichter WE-Quellstand | PR #101 / `codex/we1-hwt601-fusion` bei `40b5b49c9a92600484a0dc85c466930bc1680c60` | Kein Beleg für ausgeführte Pakete oder lokalen Install. Der Masterplan-Commit hat dieselbe Quellbasis; sein Diff zu `40b5b49` betrifft nur Dokumentation. |
+| Letzter vor der Integration veröffentlichter WE-Quellstand | PR #101 / `codex/we1-hwt601-fusion` bei `40b5b49c9a92600484a0dc85c466930bc1680c60` | Kein Beleg für ausgeführte Pakete oder lokalen Install. Der Masterplan-Commit hat dieselbe Quellbasis; sein Diff zu `40b5b49` betrifft nur Dokumentation. |
 | Zuletzt verwendeter lokaler Parity-Bestand | `/home/p/roboter_ws-parity-reset`, Branch `feature/parity-reset`, HEAD `40b5b49…`; sieben veränderte getrackte Dateien plus `docs/WE_PARITY_RESET.md` und `src/explore/config/hwt601_parity_params.yaml` | Änderungen und Buildartefakte blieben unangetastet. Die Quelländerungen wurden in den neuen Integrationsworktree übernommen; im Ursprungsworktree waren sie uncommittet. |
 | Neue Integrationslinie | `docs/we1-integrationsbasis-audit`, Worktree `/home/p/roboter_worktrees/we1-integrationsbasis-audit`, Start-Commit `2636000…`; Quelländerungen aus dem Parity-Worktree | Dokumentationsbasis plus festgehaltene lokale Kandidatenänderungen. Kein Deployment und keine Aussage, dass dieser Baum bereits auf dem Roboter lief. |
 | Letzter dokumentierter Installkandidat | `~/roboter_ws-parity-reset/install_parity_real`; projektseitig als separates Overlay des 27.09.-Laufs beschrieben | Die gespeicherte Buildauswahl vom 27.09. 08:53 enthält nur `vl53_near_field`. Die tatsächlich gesourcte Präfixreihenfolge und Package-SHAs des aktiven Laufs sind nicht unabhängig protokolliert. `/home/p/roboter_ws/install` blieb laut Übergabe unverändert. |
@@ -36,7 +36,7 @@ Einzelbedingung wird das erste Recoverypaket umgesetzt.
 | BT-Submodul | Gitlink `6c6aa078ee7bc52fec98984bed4964556abf5beb`; im neuen Worktree genau auf diesen SHA ausgecheckt | Im ursprünglichen Parity-Worktree war das Submodul nicht initialisiert. |
 | Externer CH341A-Treiber | `vendor_ch34x_mphsi.repos` pinnt `f33863fbbf322a85f960b1701e7148db0b7b2d85` | Quell-/DKMS-Installationsstand auf dem Robotersystem wurde nicht geprüft. |
 | Parity-Profil | `explore/config/hwt601_parity_params.yaml`; laut Kandidatenbericht 900 s, höchstens ein Portal und sechs Abdeckungsziele; aktive WE-Navigation bleibt aus | Profil-/Launchzuordnung des Realtests ist nicht im Bag enthalten; sie bleibt durch die Übergabedokumentation berichtet. |
-| Motorbus / TF / Auftrag | Bestehender Bringup startet `base_hardware` einmal. Im Mappingprofil publiziert EKF `odom→base_link`, SLAM `map→odom`; Mission Manager/BT besitzen den äußeren Auftrag, Explorer sendet Nav2-Unterziele. | Quell-/Launchvertrag gelesen, aber Live-Knoten, TF-Publisher und Ziel-Handles wurden nicht gezählt. Keine zweite aktive WE-Navigation ergänzt. |
+| Motorbus / TF / Auftrag | Der HWT-Mappingpfad in `slam_lidar_hwt601.launch.py` wählt bei `active_drive=true` genau `base_hardware`, sonst ausschließlich den lesenden `encoder_shadow_reader`; nie beide. EKF publiziert `odom→base_link`, `slam_toolbox` `map→odom`. `nav_mapping.launch.py` wählt genau einen SLAM-Include, einen Explorer und eine Mission-Manager/BT-Kette; der Explorer sendet Nav2-Unterziele. | Statische Launch-Zuordnung, keine Live-Zählung von Knoten, TF-Publishern oder Ziel-Handles. Paralleler Fremdstart bleibt möglich und wurde nicht geprüft. Keine zweite aktive WE-Navigation ergänzt. |
 
 Außerhalb dieser Linie waren der Root-Checkout `main` sauber, der lokale
 Parity-Worktree mit den oben genannten uncommitteten Quell-/Dokumentenänderungen
@@ -63,18 +63,64 @@ Arbeitskopie-Installpräfixes unter `/tmp/we1-*`.
 
 | Prüfung | Ergebnis | Evidenz / Grenze |
 |---|---|---|
-| Vollständiger frischer Colcon-Build, Standardumgebung | **BLOCKIERT** | `behaviortree_ros2` bricht im `behaviortree_cpp`-CMake-Export ab: das ROS-Paket sucht `libbehaviortree_cpp.so` unter `/opt/ros/humble/lib`, die installierte Datei liegt unter `/opt/ros/humble/lib/aarch64-linux-gnu/`. Ein explizites `CMAKE_LIBRARY_PATH` ändert den hardcodierten `NO_DEFAULT_PATH`-Suchpfad nicht. Folgepakete wurden nicht gebaut. Das ist ein Umgebungs-/Exportkonflikt, kein erfolgreicher Vollbuild. |
+| Vollständiger frischer Colcon-Build, Standardumgebung | **BLOCKIERT** | `behaviortree_ros2` bricht im `behaviortree_cpp`-CMake-Export ab: das ROS-Paket sucht `libbehaviortree_cpp.so` unter `/opt/ros/humble/lib`, die installierte Datei liegt unter `/opt/ros/humble/lib/aarch64-linux-gnu/`. `CMAKE_LIBRARY_PATH` greift wegen `NO_DEFAULT_PATH` nicht. |
+| Vollständiger isolierter Build mit temporärem BT-CMake-Pfad | **BESTANDEN** | 24/24 Pakete in 2 min 41 s; `/tmp/we1-full-shim-build`, `/tmp/we1-full-shim-install`, `/tmp/we1-full-shim-log2`. Nur im temporären Präfix liegt ein Symlink zum unveränderten ROS-CMake-Export und zur bereits installierten Bibliothek. Keine Quell- oder Systempaketänderung; der Shim ist lediglich eine Buildvoraussetzung dieses Hosts. |
 | Frischer isolierter Teilbuild | **BESTANDEN** | `colcon build --packages-up-to explore vl53_near_field`; sechs Pakete einschließlich `robot_interfaces`, `base_hardware`, `robot_state_estimation`, `vl53_near_field` und `explore`; Präfixe unter `/tmp/we1-target-install`. Kein lokales Install gesourct. |
 | `explore`-Tests | **BESTANDEN** | 925/925; `/tmp/we1-target-build/explore/pytest.xml`. |
 | Direkte gerätefreie Vertragstests | **BESTANDEN** | 86 Tests aus VL53, HWT-Health, Mission-Gate/Nav-Vertrag und Safety Monitor bestanden. Direkter Aufruf mit ROS-Humble-Python, getrennt vom Colcon-Testlauf. |
+| Regressionen auf dem vollständigen isolierten Build | **BESTANDEN** | `colcon test` für `base_hardware`, `robot_state_estimation`, `robot_navigation`, `mission_manager`, `bt_orchestrator`, `robot_bringup`; `colcon test-result`: 259 Tests, 0 Fehler, 0 Fehlschläge. `mission_manager` registriert dabei 0 Tests; seine 45 Quelltests bestanden zusätzlich direkt mit `python3 -m pytest -q src/mission_manager/test`. |
 | Colcon-Testregistrierung `vl53_near_field` | **KEIN NACHWEIS** | `colcon test` meldete 0 Tests in diesem Paket. Die 86 obigen direkten Tests sind der Softwarebeleg für den ausgewählten Umfang. |
-| Gesamtprozess, Bringup-/BT-Auflösung | **OFFEN** | Vollbuild stoppte vor Bringup. Kein isolierter Vollstackstart oder integrierter Missionsablauf ausgeführt. |
+| Paketauflösung im frischen Overlay | **BESTANDEN** | Nach `/opt/ros/humble/setup.bash` plus `/tmp/we1-full-shim-install/local_setup.bash` zeigen `ros2 pkg prefix` für `behaviortree_ros2`, `bt_orchestrator`, `robot_bringup`, `robot_navigation`, `mission_manager`, `explore`, `vl53_near_field`, `base_hardware`, `robot_state_estimation` ausschließlich auf `/tmp/we1-full-shim-install/<Paket>`. BT-Submodul `6c6aa078…`, ROS `behaviortree_cpp` 4.9.1, Nav2 1.1.20 und RTAB-Map ROS 0.23.7. |
+| Gesamtprozess und Runtime-Auflösung des Realtests | **OFFEN** | Kein isolierter Vollstackstart oder integrierter Missionsablauf ausgeführt. Quell- und Buildauflösung sind belegt, die tatsächlich gesourcte Präfixreihenfolge des alten Realtests nicht. |
 | Aktive Installation, Zielsystem und Hardware | **NICHT GEPRÜFT** | Neuer Installpräfix nicht aktiviert. Keine Roboterknoten, Aktoren, Geräte, Deployment- oder Fahrtests gestartet. |
 
-Buildlogs: `/tmp/we1-integrationsbasis-log` (Vollbuild),
-`/tmp/we1-target-log` und `/tmp/we1-target-test-log`; erfolgreiches
-Teilbuildpräfix `/tmp/we1-target-install`. Diese temporären Artefakte sind keine
-Runtime-Abhängigkeit.
+Buildlogs: `/tmp/we1-integrationsbasis-log` (erster Vollbuild),
+`/tmp/we1-full-shim-log2` (erfolgreicher Vollbuild), `/tmp/we1-target-log` und
+`/tmp/we1-target-test-log`; Präfixe `/tmp/we1-full-shim-install` und
+`/tmp/we1-target-install`. Diese Artefakte sind keine Roboter-Runtime.
+
+Der Vollbuild ist reproduzierbar mit ROS Humble als einzigem Underlay und
+dem gepinnten BT-Submodul. Vor `colcon build` wird außerhalb des Repositories
+ein temporäres Präfix mit `share/behaviortree_cpp/cmake` als Symlink auf
+`/opt/ros/humble/share/behaviortree_cpp/cmake`, `include` auf
+`/opt/ros/humble/include`, `lib/aarch64-linux-gnu` auf
+`/opt/ros/humble/lib/aarch64-linux-gnu` und
+`lib/libbehaviortree_cpp.so` auf die installierte gleichnamige Bibliothek
+angelegt. Der Buildaufruf nutzt
+`--cmake-args -Dbehaviortree_cpp_DIR=/tmp/we1-btcpp-compat/share/behaviortree_cpp/cmake`
+und getrennte `--build-base`, `--install-base`, `--log-base` unter `/tmp`.
+Der temporäre Pfad gleicht nur die falsche Bibliothekssuche im ROS-Export aus;
+er ist **kein** zusätzliches Roboter-Underlay.
+
+Auf diesem Host verwendeter gerätefreier Buildweg (neue temporäre Zielpfade
+für einen erneuten Lauf wählen, falls Artefakte erhalten bleiben sollen):
+
+```bash
+mkdir -p /tmp/we1-btcpp-compat/share/behaviortree_cpp /tmp/we1-btcpp-compat/lib
+ln -sfn /opt/ros/humble/share/behaviortree_cpp/cmake /tmp/we1-btcpp-compat/share/behaviortree_cpp/cmake
+ln -sfn /opt/ros/humble/include /tmp/we1-btcpp-compat/include
+ln -sfn /opt/ros/humble/lib/aarch64-linux-gnu /tmp/we1-btcpp-compat/lib/aarch64-linux-gnu
+ln -sfn /opt/ros/humble/lib/aarch64-linux-gnu/libbehaviortree_cpp.so /tmp/we1-btcpp-compat/lib/libbehaviortree_cpp.so
+source /opt/ros/humble/setup.bash
+colcon --log-base /tmp/we1-full-shim-log2 build --base-paths src \
+  --build-base /tmp/we1-full-shim-build --install-base /tmp/we1-full-shim-install \
+  --parallel-workers 4 --event-handlers log+ \
+  --cmake-args -Dbehaviortree_cpp_DIR=/tmp/we1-btcpp-compat/share/behaviortree_cpp/cmake
+```
+
+Quell- und Betriebszuordnung: Der dokumentierte Startpfad des letzten
+Parity-Laufs ist `robot_bringup app_mapping.launch.py` →
+`robot_navigation nav_mapping.launch.py` mit `active_drive`,
+`use_hwt601_odometry`, `operator_stationary_confirmed`,
+`enable_auto_explore` und `explore_params_overlay` als ausdrücklichen
+Launch-Argumenten; der Explore-Auftrag kam danach als
+`{"type":"explore"}` über `/mission_manager/command_json`.
+`hwt601_parity_params.yaml` ist der beabsichtigte Overlay-Pfad und bleibt
+standardmäßig **nicht** aktiv. Dies ist eine Zuordnung aus Launchcode und
+Testbericht, kein erneuter Start oder unabhängiger Nachweis der tatsächlich
+gesourcten Präfixe des 27.09.-Laufs. Python-Abhängigkeiten auf dem Buildhost:
+`numpy 1.21.5`, `smbus2 0.6.1`, `vl53l5cx 1.0.1`; der externe CH341A-Treiber
+ist auf `f33863f…` gepinnt, seine installierte DKMS-Version nicht geprüft.
 
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
@@ -88,6 +134,21 @@ Runtime-Abhängigkeit.
 | Stale Map/TF/Sensorstatus oder ungültige Lokalisierung | Mission Gate, Localization Guard und Nav2 sperren/stoppen die Anfahrt. | Aktuelle Quellen, konsistente `map→odom→base_link`-Pose, Kartenbindung und freier Pfad neu prüfen; kein altes Goal reaktivieren. | `cmd_vel_mission_gate.py`, `localization_guard.py`, Tests und Profil-YAML. |
 | E-Stop-Anforderung oder gefährliche Nahdistanz | `/safety/estop=true` ist Schutzstopp. Softwareanforderung ist eigener Eingang; Nahbereichs-E-Stop standardmäßig aus; GPIO ist Platzhalter. | Expliziter Not-Aus/Nutzerabbruch erfordert Ursache und lokale Wiederfreigabe. Softwaretopic ist kein Ersatz für Hardware-Not-Aus. | `safety_monitor_node.py`, 0,2-s-Publishzyklus, Near-Field-Tests und dokumentierte GPIO-Grenze. |
 | STL-27L-`buffer overflow` / Exit `-6` nach SIGINT | Shutdown-/Cleanup-Fehler nach Missionsende; nicht mit vorherigem Fahrtorfehler zusammenlegen oder pauschal als harmlos einstufen. | Eigenständiger Shutdownfall. Im 27.09.-Bericht trat er erst beim SIGINT nach beendetem Lauf auf; keine Aussage über andere Phasen. | Lokaler Bericht, Bag und `ROBOT_TRANSFER.md`. |
+
+**Konkrete Zuordnung im konsolidierten Quellbaum:**
+
+| Schutzentscheidung | Code / wirksame Konfiguration | Auftrag und Nachweisgrenze |
+|---|---|---|
+| HWT-Rohstatus, Statusherz und Latch | `src/robot_state_estimation/robot_state_estimation/hwt601_fusion_health.py:46–65,98–115`; `config/hwt601_shadow.yaml:5–20,39–58`; Eingang `/shadow/hwt601/raw_status_json` in `hwt601_fusion_guard.py:28`; Veröffentlichung des Sammelgrunds in `src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py:804–814` | Das Gate prüft `hwt_failure` in `cmd_vel_mission_gate.py:816–849`. Der erste Fehler nach `was_ready` bleibt verriegelt; weder Auftragserhalt noch Neustart folgen daraus. Bag belegt nur den Sammelgrund. |
+| VL53-Paar und Bewegungstor | `src/vl53_near_field/vl53_near_field/vl53_near_field_node.py:328–405,492–555`; `src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py:268,683–733`; `src/vl53_near_field/config/collision_monitor_mapping_params.yaml:31` | Kanal-Recovery ist begrenzt; Paarfrische 0,8 s am Gate. Der Collision-Monitor-Quelltimeout 3 s ist allein keine Stoppgarantie. Tests sind gerätefrei, keine Störung im jüngsten Realtest. |
+| Rundblick und Kindziel | `src/explore/config/explore_params.yaml:102,133–143`; `src/explore/explore/explore_node.py:675,694–703,4404–4410`; `src/mission_manager/mission_manager/mission_manager_node.py:442–535,656–710` | Explorer verwaltet den Rundblick und seine Nav2-Kinder; der Mission Manager meldet terminale Resultate. Nach terminalem Fehler ist Fortsetzen desselben äußeren Auftrags nicht belegt. |
+| Not-Aus und Lokalisierung | `src/safety_monitor/config/safety_monitor_params.yaml:15–34`; `src/safety_monitor/safety_monitor/safety_monitor_node.py:118–168`; `src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py:781–849`; `src/mission_manager/mission_manager/mission_manager_node.py:917–986` | Software-E-Stop und Lokalisierungsverlust sind getrennte Quellen. Gate-Stopp, Kindziel-Cancel und terminaler Missionszustand sind unterschiedliche Wirkungen; ein automatisches Zurücksetzen ist nicht nachgewiesen. |
+
+Die Einordnung nach Masterplan lautet: Quellverlust verlangt zunächst einen
+Bewegungshalt; ein terminaler Kindzielabbruch ist nicht automatisch ein
+Missionsabbruch. Auftragserhalt und Wiederaufnahme fehlen beim HWT-Latch als
+getesteter Produktpfad. Dauerhafte Quell- und Konfigurationsfehler, Nutzerabbruch
+und Not-Aus bleiben terminal bzw. manuell freizugeben.
 
 `docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md` ist ein älterer,
 nicht umgesetzter Vorschlag. Seine zusätzlichen Health-Zustände und Supervisor-
@@ -175,10 +236,11 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Schritt: die sechs HWT-Rohstatusprüfungen diagnostisch
-einzeln sichtbar machen und vorhandene Tests dafür vorbereiten. Kein aktiver
-Motorlauf und keine Wohnungsfahrt in diesem Diagnoseauftrag. Erst nach dem
-Ergebnis wird über ursachenspezifische Recovery entschieden.
+Genau ein nächster Auftrag: das in Abschnitt 5 beschriebene begrenzte
+HWT-Recoverypaket mit verpflichtender Einzelwert-Diagnose als erstem Tor.
+Ohne Beleg eines transienten, gezielt wiederherstellbaren Fehlers endet der
+Auftrag nach diesem Tor mit dokumentierter Nachweislücke. Gerätezugriff nur
+mit gesonderter Freigabe; keine Fahrfreigabe aus diesem Dokument.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

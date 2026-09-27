@@ -47,7 +47,7 @@ bereits implementierter Recovery.
 
 Der Auftrag aus der Referenz `26360001f65e05a5b88a58581771c241291fa0e5`
 wurde auf Themenbranch `docs/we1-integrationsbasis-audit` bearbeitet. Ergebnis,
-Quellzuordnung, frischer Teilbuild, Tests, fehlgeschlagener Vollbuild,
+Quellzuordnung, frischer Voll- und Teilbuild, Tests, ROS-Exportpfadgrenze,
 Abort-/Latch-Inventur und abgegrenztes Recoverypaket stehen ausschließlich im
 [STATUS.md](STATUS.md). Die Arbeitskopie `~/roboter_ws` wurde nicht umgeschaltet;
 keine Runtime aktiviert, kein Merge und keine Fahrt.
@@ -55,20 +55,25 @@ keine Runtime aktiviert, kein Merge und keine Fahrt.
 Der letzte HWT-Fehler ist im lokalen Bag auf den Wechsel
 `raw_sources_ready` → `raw_driver_not_ready` bei `1790492567.5659919`
 eingegrenzt. Das Bag enthält keinen `/shadow/hwt601/raw_status_json`-Topic;
-die verletzte Einzelbedingung und ihr Originalwert fehlen. Der Vollbuild ist
-wegen des `behaviortree_cpp`-CMake-Exportpfads blockiert; Teilbuild und
-gerätefreie Tests sind getrennt im STATUS bewertet.
+die verletzte Einzelbedingung und ihr Originalwert fehlen. Der Standard-Vollbuild
+ist wegen des `behaviortree_cpp`-CMake-Exportpfads blockiert; mit einem
+temporären externen Bibliothekspfad wurden 24 Pakete isoliert gebaut.
+Gerätefreie Tests und Grenzen sind getrennt im STATUS bewertet.
 
-## 4. Aktueller Folgeauftrag: HWT-Rohstatus-Erstfehler sichtbar machen
+## 4. Aktueller Folgeauftrag: ein begrenztes HWT-Recoverypaket
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: docs/wohnungserkundung/MASTERPLAN.md, Version 1.0 vom 27.09.2026
 BASIS: STATUS.md, Integrationslinie docs/we1-integrationsbasis-audit
-ERGEBNIS: Den konkreten HWT-Rohstatus-Prädikatfehler ohne Änderung der
-Bewegungs-/Schutzwirkung diagnostisch sichtbar machen.
+ERGEBNIS: Für einen nachgewiesenen transienten HWT-Rohstatusfehler den
+Bewegungshalt, Erhalt desselben Explore-Auftrags, begrenzte
+Quellwiederherstellung und geprüfte Wiederaufnahme als EIN Paket umsetzen.
+Das erste Tor ist die Einzelursachen-Diagnose. Ist die Ursache nicht
+recoverbar belegt, endet dieser Auftrag mit dem Diagnosebefund und ohne
+funktionale Recoveryänderung.
 
-UMFANG
+TOR 1: URSACHE UND ORIGINALWERT
 - Bestehende HWT-Statusquelle, Hwt601FusionHealth und Statusveröffentlichung
   im Mission-Gate nachvollziehen.
 - Für die sechs bestehenden Rohstatusbedingungen (`ready`, `raw_data_ready`,
@@ -78,31 +83,52 @@ UMFANG
   fail-closed Latch und die Nullausgabe des Gates unverändert lassen.
 - Gerätefreie Tests für jedes Einzelprädikat, mehrere gleichzeitige Fehler,
   fehlende Statusnachricht und den unveränderten Gate-Stopp ausführen.
+- Nur nach gesonderter Freigabe für Gerätezugriff die Rohstatusfolge bei
+  motorlosem Vorlauf vollständig und ohne Wohnungsdaten erfassen. Den ersten
+  verletzten Einzelwert und die Quellzeit mit dem Gate-Latch korrelieren.
+  Ein synthetischer Test ersetzt diesen Beleg nicht.
+
+TOR 2: BEGRENZTE FUNKTIONALE ÄNDERUNG NUR BEI TRANSIENTER URSACHE
+- Die tatsächlich betroffene HWT-Lesefunktion/Verbindung in der vorhandenen
+  Komponente begrenzt wiederherstellen; Anzahl und Frist der Versuche aus
+  dem belegten Fehlerbild festlegen, nicht aus vermuteten Timeouts.
+- Währenddessen im bestehenden Mission Manager/BT/Explorer den identischen
+  Explore-Auftrag samt Goal-ID erhalten. Bewegungstor geschlossen halten,
+  das einzige Nav2-Kind terminal canceln und verspätete Antworten abweisen.
+- Vor Fortsetzung Roh-/Yaw-/Encoderstatus, VL53-Paar, Scan, TF/Pose,
+  Kartenbindung und aktuellen freien Weg neu belegen. Erst danach genau
+  ein Kindziel für denselben Auftrag zulassen. Keine alte Geschwindigkeits-
+  nachricht und kein altes Nav2-Goal wiederverwenden.
 
 NICHT-ZIELE
-- Keine Frische-/Timeout-Änderung, kein Auto-Reconnect/Restart und keine
-  Wiederanfahrt.
-- Keine neue Navigation, kein Supervisor, kein Auftragserhalt-Umbau.
-- Keine aktive Installation, kein Roboterstart, keine Fahrt. Ein späterer
-  motorloser HWT-Quelllauf zur Feldwertaufnahme ist ein eigener Schritt und
-  wird nicht automatisch aus diesem Codeauftrag abgeleitet.
+- Keine pauschale Frische-/Timeout-Lockerung und keine gleichzeitige
+  Überarbeitung weiterer Latches. Kein neuer Supervisor, Rechnerreboot,
+  zweiter Navigator oder neues Missionsmodell.
+- Keine aktive Installation oder Fahrt aus diesem Auftrag. Ein motorloser
+  Quelllauf erfordert getrennte Gerätefreigabe.
 
 ERFOLG / GEGENFÄLLE
-- Jede einzeln verletzte Bedingung ist im Status eindeutig; Originalwerte und
-  Quellenalter sind lesbar, ohne Rohdaten anderer Sensoren auszugeben.
-- Gate bleibt bei jedem ungültigen oder stale HWT-Status blockiert.
-- Fehlender, zukünftiger, nicht endlicher oder widersprüchlicher Wert bleibt
-  fail-closed. Mehrfachfehler dürfen keinen Fehlergrund verschleiern.
+- Jede einzeln verletzte Bedingung ist mit Originalwert und Quellenalter
+  eindeutig; fehlende, zukünftige, nicht endliche und widersprüchliche Werte
+  bleiben fail-closed. Mehrfachfehler werden nicht verschleiert.
+- Der bestätigte Einzelfehler stoppt sofort; die Auftrags-ID bleibt gleich;
+  Wiederherstellung ist begrenzt; erst frische Quellen, Pose und aktueller
+  Weg erlauben ein einziges neues Nav2-Kind.
+- Dauerhafter Ausfall, falscher Port/Schreibmodus, fehlerhafte Kalibrierung,
+  Nutzerabbruch und Not-Aus führen zu sicherem terminalem Zustand oder
+  manueller Freigabe, niemals zu automatischer Wiederanfahrt.
+- Gerätefreie Einzelfehler-, Stale-/Race-, Cancel- und Gegenfalltests sowie
+  isolierter Build; reale Fortsetzung bleibt einer späteren Abnahme vorbehalten.
 
 RÜCKFALL
-- Diagnostische Felder entfernen; altes Statusschema und das unveränderte
-  fail-closed Verhalten bleiben als Referenz erhalten.
+- Diagnostik und die begrenzte Recovery-/Missionserhaltänderung getrennt
+  revertierbar halten. Das heutige fail-closed Gate bleibt der Rückfall.
 
 ABSCHLUSS
-- Ursache des alten Laufs bleibt offen, bis ein vollständiger HWT-Rohstatus
-  tatsächlich erfasst ist. Keine einzelne Ursache aus einem synthetischen Test
-  ableiten. STATUS danach mit Ergebnis und genau einem nächsten Auftrag
-  fortschreiben.
+- Ursache des alten Laufs bleibt offen, bis der vollständige Rohstatus
+  tatsächlich erfasst ist. Ohne Transienzbeleg kein Tor 2; den konkreten
+  Nachweisfehlbetrag dokumentieren. Danach STATUS mit Ergebnis und genau
+  einem nächsten Auftrag fortschreiben.
 ```
 
 ## 5. Übergabe und Fortschreibung

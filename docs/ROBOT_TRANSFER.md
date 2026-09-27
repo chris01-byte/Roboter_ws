@@ -1,5 +1,20 @@
 # Übertragung auf den realen Roboter
 
+## Integrationsbasis 27.09.2026 — keine Aktivierung
+
+Der dokumentierte WE-Integrationsbranch `docs/we1-integrationsbasis-audit`
+enthält die aus dem letzten lokalen Parity-Kandidaten gesicherten
+Quelländerungen, das Profil `src/explore/config/hwt601_parity_params.yaml`
+und die Dokumentation auf Masterplan v1.0. Ein neuer isolierter Build liegt
+ausschließlich unter `/tmp/we1-*`; er wurde weder als Underlay noch als
+Overlay des Roboterprozesses aktiviert. Der zuletzt berichtete Realtest nutzte
+`~/roboter_ws-parity-reset/install_parity_real`; seine vollständige
+Paket-SHA-/Präfixauflösung ist nicht protokolliert. Die Integrationsbasis ist
+daher eine reproduzierbare Softwarezusammenstellung, noch kein bestätigter
+aktiver Roboter-Install. Startparameter, Rückfall und Nachweise stehen im
+aktuellen `docs/wohnungserkundung/STATUS.md`. Keine weitere Fahrt aus dieser
+Zuordnung ableiten.
+
 ## Parity-Kandidat: VL53-Recovery und Realtest 27.09.2026
 
 Nur das isolierte Overlay `~/roboter_ws-parity-reset/install_parity_real`
