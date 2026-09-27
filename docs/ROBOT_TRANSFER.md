@@ -1,5 +1,36 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Recovery-Realversuch — HOLD ja, RESUME nein
+
+Am 27.09.2026 lief genau ein von der anwesenden Person freigegebener,
+begrenzter Initialscan auf dem isolierten Recovery-Overlay (Quell-HEAD
+`25ac0481ad8c79ffcaa34d22ee4082fa5d39a45b`, PR #105). Der Recorder
+startete vor dem Stack. Runtime-Manifest, Bag und Logs bleiben lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Profil, Hash und Underlay-Reihenfolge entsprechen dem folgenden motorlosen
+Abschnitt; `active_drive=true`, `enable_auto_explore=true`,
+`use_hwt601_odometry=true`. Der Motorbus hatte nur `base_hardware` als
+Besitzer, der HWT-Port nur den HWT-Leser. Der aktive Install blieb unverändert.
+
+Eine einmalige 0,251-s-Pause des HWT-Lesers löste eine 0,261-s-Rohdatenlücke
+aus. Das Gate erkannte `raw_missing_stale_or_invalid` bei 0,220622 s
+Rohmessalter gegen 0,20 s, sperrte die Bewegung und der Explore-Auftrag
+blieb zunächst im HOLD. Der Yaw-Schatten verriegelte dieselbe Lücke wegen
+seiner bestehenden 0,10-s-Grenze als `imu_datenluecke_neustart_noetig`;
+danach folgte `yaw_missing_stale_or_invalid` als terminaler Fusion-Fehler.
+**Kein RESUME:** Der Testcontroller cancelte die Mission; das frische
+Encoderfeedback meldete danach 0/0 Motor-RPM. Die gemessene Drehung war
+höchstens 0,081 rad, ohne Translation. Die separate Bestätigung des
+Beobachters über physischen Halt und wieder wirksame Motorsperre ist noch
+offen. Der Stack und Recorder sind aus, HWT-/Motorports frei. Beim
+SIGINT-Shutdown starb `slam_toolbox` mit Exit -6; kein Zusammenhang mit
+dem HWT-Fehler ist belegt. Keine Wiederholung und keine Fahrfreigabe.
+
+Rückfall: Das Recovery-Overlay nicht als bestanden übernehmen; der
+gesicherte PR-#104-Kandidat behält den fail-closed Latch. Der nächste
+Auftrag ist ausschließlich die gerätefreie Klärung der Roh-/Yaw-
+Vertragskollision in AGENTENAUFTRAG Abschnitt 5.
+
 ## HWT-HOLD-/Recovery-Branch — motorloser Zielsystemcheck
 
 `feature/hwt-hold-recovery-resume` baut die vier Pakete
@@ -20,9 +51,8 @@ Reihenfolge gesourct. Das installierte Abnahmeprofil hatte SHA256
 Der motorlose Stack ist sauber beendet, HWT-/Motorports sind frei. Lokale
 Manifeste und Beobachtungen liegen unter
 `~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
-**Keine reale Recovery und keine Fahrt wurde dadurch freigegeben oder
-abgenommen.** Vor Bewegung gelten der konkrete Fahrumfang und die neue
-Fahrfreigabe aus AGENTENAUFTRAG Abschnitt 5.
+Dieser motorlose Teilnachweis erteilte keine Fahrfreigabe; der später
+gesondert freigegebene begrenzte Realversuch steht oben.
 
 
 ## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf

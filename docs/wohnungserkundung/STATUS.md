@@ -9,13 +9,12 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Den synthetisch definierten HWT-Rohdaten-Kurzfehler in
-**genau einem begrenzten, gesondert freizugebenden WE-Initialscan** real
-abnehmen. Der gerätefreie Produktpfad ist einschließlich Mission Manager,
-echtem BT, Explorer, Gate und Nav2-Testgegenstelle geprüft. Die Karten-Task-
-Auswahl blieb dabei ein synthetischer Testadapter; die Realabnahme beweist
-nur den tatsächlich gefahrenen Rundblickfall. Die historische Ursache des
-`raw_driver_not_ready`-Fahrabbruchs bleibt unbekannt. Stufe 3 bleibt offen.
+**Nächster Auftrag:** Die im einmaligen begrenzten Realversuch nachgewiesene
+Vertragskollision zwischen kurz stale HWT-Rohmessung und dauerhaftem
+Yaw-Schatten-Latch gezielt softwareseitig klären und gerätefrei absichern.
+Der Rundblickversuch hat Bewegungshalt, aber **keine Wiederaufnahme** gezeigt.
+Die historische Ursache des `raw_driver_not_ready`-Fahrabbruchs bleibt
+unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -603,7 +602,67 @@ Frontier-Fahrfreigabe. Der Stack wurde per SIGINT an genau den
 Launch-Prozess sauber beendet; die beiden seriellen Ports sind frei.
 Manifeste, Logs und motorlose Beobachtungen liegen nur lokal unter
 `~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
-**Ein realer Recovery- oder Fahrnachweis liegt damit noch nicht vor.**
+Dieser motorlose Teilnachweis allein ist kein Recovery- oder Fahrnachweis.
+
+**Einziger begrenzter Realversuch am 27.09.2026 (PR #105, Quell-HEAD
+`25ac0481ad8c79ffcaa34d22ee4082fa5d39a45b`):** Für genau den
+40-s-/3-rad-Rundblick bestätigte die anwesende Person freien Schwenkraum,
+Beobachtung, erreichbaren unabhängigen Halt/Not-Aus, Stillstand und die
+bewusst gelöste Motorsperre. Vor dem Stack startete ein Recorder für 26
+Topics. Das Runtime-Manifest liegt lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/runtime-manifest-drive-25ac048.json`;
+es belegt das explizite installierte Profil
+`/tmp/we1-hwt-recovery-install/share/explore/config/hwt601_recovery_acceptance_params.yaml`
+(SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`)
+und die Setup-Reihenfolge ROS Humble, `amadeus_slam_toolbox_ws`,
+`we1-ldlidar-shutdown-overlay`, `we1-full-shim-install`,
+`we1-hwt-recovery-install`. `active_drive=true`,
+`enable_auto_explore=true`, `use_hwt601_odometry=true`; Scope-Verifikation
+blieb falsch und die Scope-ID leer. `base_hardware` besaß allein den Motorbus,
+der HWT-Leser allein seinen Port. Das Manifestwerkzeug trägt im Feld
+`purpose` noch den älteren Text „motorless HWT first-fault diagnosis“;
+maßgeblich für diesen Lauf sind seine expliziten `launch_arguments` und der
+aufgezeichnete aktive Preflight. Der aktive Install wurde nicht gewechselt.
+
+Nach gesundem motorlosen/aktiven Preflight ging genau ein Explore-Auftrag über
+Mission Manager und BT in `we_initial_scan`. Der gemessene Encoderwert zeigte
+vor der Störung etwa 0,0202 rad/s, kein lineares Kommando. Der HWT-Leser wurde
+einmal von 1790536677,855 bis 1790536678,106 (0,251 s) pausiert und per
+unabhängigem Watchdog gegen Hängenbleiben abgesichert. Das Bag zeigt eine
+Roh-IMU-Publikationslücke von 0,261 s. Der **erste Fehler** um
+1790536678,0736856 war `raw_missing_stale_or_invalid`: Alter der letzten
+gültigen Rohmessung **0,220622 s > 0,20 s**. Rohstatus und sein eigenes
+`age_s=0,000645 s` waren dagegen gültig; dessen Empfangsalter betrug
+0,577996 s < 1,0 s, `reconnects=0`, `consecutive_errors=0`. Das ist nicht
+der historische `raw_driver_not_ready`-Fall.
+
+Das Gate setzte `/cmd_vel_nav` um 1790536678,0766 auf null, der Explorer
+ging um 1790536678,0918 auf `we_hwt_hold`; der übergeordnete Explore-Auftrag
+blieb dabei `running`/`HWT_HOLD`. Das nachgeschaltete `/cmd_vel` erreichte
+nach Smoother-Abbremsung um 1790536678,1883 null. Der Rohleser lieferte ab
+1790536678,1145 wieder Daten. **Danach scheiterte die Wiederaufnahme:** Der
+Yaw-Schatten veröffentlichte zuletzt um 1790536677,8561 korrigierte Drehrate
+und meldete um 1790536678,232 `ready=false`,
+`latched_fault=imu_datenluecke_neustart_noetig`, `age_s=0,373865 s`.
+Sein vorhandener Code verriegelt eine kalibrierte IMU nach einer
+Samplelücke >0,10 s; die gemessene Roh-Lücke war 0,261 s. Gate/Fusion gingen
+um 1790536678,2254 erneut auf HOLD und um 1790536678,2758 auf
+`TERMINAL_FAULT: yaw_missing_stale_or_invalid`. Die erreichte
+`RECOVERY_VALIDATION` um 1790536678,1279 führte zu keinem RESUME.
+Der Testcontroller forderte deshalb um 1790536678,2797 Cancel an; Mission
+und Explorer waren bis 1790536678,6365 `canceled`. Ab etwa
+1790536679,13 meldete das frische Encoderfeedback 0,0/0,0 Motor-RPM und
+0 m/s sowie 0 rad/s; die gemessene Drehung betrug höchstens 0,081 rad.
+Ein Beobachterbericht über den physischen Halt und das erneute Setzen der
+unabhängigen Motorsperre ist noch offen. Kein zweiter Versuch, keine
+Frontierfahrt, keine Parametrierung und kein RESUME.
+
+Bag, Controller-Zeitfolge und Stack-/Recorderlogs bleiben lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Mission, Launch und Recorder wurden beendet; beide seriellen Ports sind frei.
+Beim SIGINT-Shutdown starb allein `slam_toolbox` mit `RCLError`/Exit -6;
+das liegt nach dem Versuch und ist getrennt vom HWT-Fehler. Dieser Versuch
+belegt den fail-closed Halt, **nicht** eine bestandene Real-Recovery.
 
 **Rückfall:** Den funktionalen Branch nicht in den aktiven Install übernehmen;
 bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
@@ -630,20 +689,11 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: **ein einzelner beaufsichtigter WE-Initialscan
-zur realen HWT-Recovery-Abnahme** auf dem expliziten installierten
-`hwt601_recovery_acceptance_params.yaml`. Vorab auf dem Zielsystem mit dem
-vorhandenen Manifestwerkzeug Quell-Commit, Paketpräfixe, Hashes,
-Underlays, Profil und Startargumente sichern; danach motorloser
-Schutzketten-Preflight mit unabhängiger Motorsperre. Vor Bewegung
-Testumfang, freien Raum, externen Halt, Beobachter und **neue konkrete
-Fahrfreigabe** klären. Eine einzige zeitlich begrenzte und auch bei Abbruch
-garantiert aufgehobene Pause des bestehenden HWT-Leseprozesses soll eine
-kurz stale Rohmessung **ohne Disconnect/Reconnect** auslösen. Nullausgabe,
-reale Haltwirkung, erhaltenen Auftrag, Stillstand, gesunde Quellen und
-Rundblick-Fortsetzung gemeinsam messen. Ein Initialscan belegt keinen
-Nav2-Kind-Cancel, Türpfad oder Stufe-3-Gesamtstand. Aus diesem
-Softwareauftrag folgt weder ein Installwechsel noch ein Fahrstart.
+Genau ein nächster Auftrag: **die nachgewiesene Kollision des
+HWT-Rohdaten-Kurzfehlers mit dem 0,10-s-Yaw-Schatten-Latch eingrenzen und
+einen sicheren, gerätefrei integrierten Umgang damit nachweisen** (konkreter
+Arbeitsvertrag in AGENTENAUFTRAG Abschnitt 5). Bis dahin keine weitere
+Real-Recovery-Abnahme, kein Installwechsel und keine Fahrfreigabe.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

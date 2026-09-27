@@ -80,77 +80,50 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: ersten HWT-Recoveryfall begrenzt real abnehmen
+## 5. Aktueller Folgeauftrag: HWT-Roh-/Yaw-Vertragskollision gerätefrei klären
 
-Der motorlose Zielsystemcheck auf `91bc6bf` wurde mit echten Quellen
-durchgeführt und danach sauber beendet (Details und lokaler Manifestpfad in
-STATUS Abschnitt 5). Die wirksame Setup-Kette braucht den dokumentierten
-LiDAR-Underlay und `amadeus_slam_toolbox_ws`. Das Abnahmeprofil bleibt mit
-`wohnungserkundung_accessible_scope_verified=false` und leerem Scope-ID;
-keine Scope-Freigabe setzen. **Die Fahrphase ist ein eigener, aktuell
-freizugebender Teil desselben Auftrags.** Der dafür vorgelegte Einzelumfang
-ist höchstens 40 s ab Explore-Start, höchstens 3 rad gemessene Drehung,
-Soll-Drehrate 0,08 rad/s, keine Translation, eine etwa 0,25-s-Pause nur des
-HWT-Lesers mit unabhängig abgesicherter Fortsetzung. Danach den bestehenden
-Mission-Manager-Cancel vor Ende des 360°-Initialscans auslösen; bei
-unerwartetem Zustand früher abbrechen. So darf aus diesem Versuch keine
-Frontierfahrt entstehen.
+Der **einzige** freigegebene Realversuch auf PR #105 ist beendet. Der
+synthetisch ausgelöste Rohmessungs-Kurzfehler führte zum wirksamen HOLD,
+aber der kalibrierte Yaw-Schatten verriegelte die dabei entstandene
+0,261-s-IMU-Lücke dauerhaft als `imu_datenluecke_neustart_noetig`
+(aktuelle Grenze 0,10 s). Dadurch entstand `yaw_missing_stale_or_invalid`
+als `TERMINAL_FAULT`; es gab kein RESUME. Einzelwerte, Runtime-Manifest und
+lokales Bag stehen in STATUS Abschnitt 5. Der alte Fahrfehler bleibt davon
+unabhängig und unbekannt.
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
-REFERENZ: MASTERPLAN v1.1 und aktueller STATUS, Schritt 2.
-BASIS: PR #105 / feature/hwt-hold-recovery-resume mit dem in STATUS
-beschriebenen gerätefreien ROS-Graph-Nachweis.
-ZIEL: Genau einen definierten kurz stale HWT-Rohmessungsfall während eines
-begrenzten WE-Initialscans real prüfen. Der historische
-raw_driver_not_ready-Originalwert bleibt unbekannt.
+REFERENZ: MASTERPLAN v1.1, STATUS Abschnitt 5, Schritt 2.
+BASIS: PR #105 / feature/hwt-hold-recovery-resume, Realversuch auf 25ac048.
+ZIEL: Genau die nachgewiesene Kollision zwischen Rohdaten-Kurzfehler,
+kalibriertem Yaw-Schatten-Latch und HWT-HOLD/RESUME gerätefrei klären.
 
-VOR JEDEM GERÄTESTART
-- Eine für genau diesen Lauf geltende lokale Bestätigung einholen:
-  Roboter still, unabhängige Motorsperre wirksam, anwesende Person,
-  Not-Aus in Reichweite und motorloser Sensorlauf freigegeben.
-- Den tatsächlich verwendeten Quell-Commit, Paketpräfixe, Modul-/Profil-
-  Hashes, Underlays, Treiber, Konfiguration und Startargumente mit
-  tools/kartierung/hwt_diagnose_manifest.py auf dem Zielsystem erfassen.
-  hwt601_recovery_acceptance_params.yaml muss als installiertes
-  explore_params_overlay aufgelöst werden;
-  hwt601_parity_params.yaml erreicht die WE-Recovery nicht. Keinen
-  aktiven Install ungeprüft wechseln und keinen zweiten Motor-/Portbesitzer
-  starten. Rückfall ist der gesicherte PR-#104-Latchkandidat.
-- Motorlos bei active_drive=false, enable_auto_explore=false und
-  use_hwt601_odometry=true Roh-IMU, Gierrate, Bias, Encoder, Wächter,
-  Gate-Nullausgabe, TF/Pose, VL53, LiDAR und Not-Aus prüfen. Bei
-  Widerspruch beenden; keine Parameteränderung und keine Fahrt.
-
-FAHRTEIL NUR NACH NEUER KONKRETER FREIGABE
-- Einen einzigen langsamen Initialscan, freien begrenzten Bewegungsraum,
-  unabhängigen Halt, Beobachter, Messfenster und Abbruchregel vorab
-  festlegen. Nur einen Stack mit active_drive=true,
-  enable_auto_explore=true, use_hwt601_odometry=true und dem expliziten
-  Recovery-Abnahmeprofil starten; der Motorbus hat einen Besitzer.
-- Während der laufenden Explore-Action den bestehenden HWT-Leseprozess
-  genau einmal etwa 0,25 s pausieren und auch bei Abbruch garantiert
-  wieder fortsetzen. Nur eine kurz stale Rohmessung des weiterhin
-  identischen Treibers zählt als geplanter Fehler. Disconnect/Reconnect,
-  falscher Port oder Biasverlust sind kein Ersatz und verlangen Abbruch.
-- Roh-IMU, korrigierte Gierrate, Roh-/Bias-/Encoder-/Wächterstatus,
-  Gate-Ein-/Ausgabe, Odometriegeschwindigkeit, TF/Pose, Karten-/Wegstand,
-  Mission-/Task-ID und Kindzielstatus synchron mit Originalzeiten erfassen.
-  Messalter, Statusempfangsalter und internes age_s getrennt halten.
-- Erfolg nur bei belegtem realem Bewegungshalt, erhaltenem Explore-Auftrag,
-  bestätigtem Encoder-Stillstand, stabilen Quellen, aktueller Pose und
-  gültigem Wegbeleg sowie Fortsetzung des Rundblicks. Ein Initialscan
-  belegt keinen Nav2-Kind-Cancel, keine Türfahrt und keine vollständige
-  Wohnungserkundung. Bleibt der definierte Fehler aus, als nicht
-  reproduziert melden.
-- Bei dauerhaftem Quellenfehler, Not-Aus, Nutzerabbruch, fehlendem
-  Stillstand, ungültigem TF/Pfad oder anderer Fehlerklasse sicher beenden;
-  keine automatische Wiederanfahrt. Rückfall und manuellen Halt bereithalten.
+- Bag, Erstfehler, Yaw-Status und Codevertrag des einmaligen Realversuchs
+  gemeinsam auswerten. Die 0,10-s-Lücke des Yaw-Schattens, die 0,20-s-
+  Rohmessungsfrische und die 0,35-s-Yaw-Frische getrennt behandeln.
+- Für diese eine Fehlerklasse entscheiden, ob Bias/Yaw nach der Lücke ohne
+  unerkannte Drehung und ohne neue Stillstandskalibrierung sicher wieder
+  gültig werden können. Bei fehlendem Beweis bleibt der terminale Latch
+  bestehen; dann diesen Pause-Trigger ausdrücklich als nicht recoverbar
+  einordnen und einen anderen belegbar recoverbaren Testfehler festlegen.
+- Nur falls die Sicherheitsbedingung belegbar ist: kleinste Änderung an der
+  bestehenden HWT-Schatten-/Recovery-Kette. Keine pauschale Latch- oder
+  Timeoutlockerung. Fail-closed Stop, Auftragserhalt, tatsächlicher
+  Stillstand, frische Quellen, aktuelle Pose/Wegprüfung und Gate-ACK bleiben
+  notwendig.
+- Den vorgesehenen Produktstart über Mission Manager, BT, Explorer und Gate
+  mit synthetischen Sensoren gerätefrei auf HOLD und entweder begründeten
+  RESUME oder terminalen Ausgang prüfen. Dauerfehler, ungültige IMU,
+  Nutzerabbruch und Not-Aus dürfen keine Wiederanfahrt auslösen.
+- STATUS, PROJECT_MEMORY bei einer übergreifenden Entscheidung und
+  ROBOT_TRANSFER bei einer späteren Installwirkung fortschreiben. Build,
+  Tests und Rückfall auf PR #104 dokumentieren.
 
 GRENZEN
-- Dieser Dokumentauftrag ist keine Geräte-, Install- oder Fahrfreigabe.
-- Kein automatischer Merge, keine Grenzlockerung, kein Stufe-3-Gesamtgrün
-  und keine Arbeit an WE-M4/M5/M6.
+- Kein weiterer Geräte- oder Fahrversuch, keine Aktoren, kein aktiver
+  Installwechsel, keine neue Recoveryarchitektur, kein automatischer Merge.
+- Keine Frischegrenze auf Verdacht erhöhen, keine historische Ursache
+  behaupten, TOR 2 oder Stufe 3 nicht pauschal grün setzen.
 ```
 
 ## 6. Übergabe und Fortschreibung

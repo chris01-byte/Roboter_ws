@@ -15,6 +15,37 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT-Kurzpause nicht als reale Recovery abgenommen
+
+**Entscheidung:** PR #105 und das isolierte Recovery-Overlay bleiben ohne
+Realabnahme. Nach genau einem begrenzten Initialscan folgt als einziger
+Auftrag die gerätefreie Klärung des vorhandenen Yaw-Schatten-Latches; kein
+zweiter Geräteversuch und keine Grenzlockerung auf Verdacht.
+
+**Grund / beobachtete Evidenz:** Die einmalige 0,251-s-Leserpause erzeugte
+0,261 s Roh-IMU-Lücke. Das Gate hielt bei 0,220622 s Rohmessalter gegen
+0,20 s an, während die Mission zunächst erhalten blieb. Der kalibrierte
+Yaw-Schatten verriegelte die Lücke wegen seiner bestehenden 0,10-s-Grenze
+als `imu_datenluecke_neustart_noetig`; die Fusion ging anschließend in
+`TERMINAL_FAULT: yaw_missing_stale_or_invalid`. Kein RESUME. Nach
+Testcontroller-Cancel meldete das Encoderfeedback 0/0 Motor-RPM. Der
+historische `raw_driver_not_ready`-Wert bleibt unbekannt.
+
+**Betroffene Dateien und Hardware:** Nur Ergebnisdokumentation;
+Realversuch auf Quell-HEAD `25ac0481ad8c79ffcaa34d22ee4082fa5d39a45b`.
+Aktiver Install unverändert; Bag und Manifest liegen lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+
+**Teststatus / Risiken:** Einziger Realversuch ergab fail-closed HOLD und
+terminalen Yaw-Fehler. Die getrennte Bestätigung des Beobachters über
+physischen Halt und wieder wirksame Motorsperre ist noch offen. Keine
+Wiederaufnahme, Kindziel- oder Stufe-3-Abnahme.
+
+**Rückfallweg:** Recovery-Overlay nicht ausrollen; gesicherten PR-#104-
+Latchkandidaten beibehalten. Die bestehende Stopkette bleibt wirksam.
+
+---
+
 ## 2026-09-27 — synthetischen HWT-Kurzfehler gerätefrei wiederaufnehmen
 
 **Entscheidung:** Masterplan v1.1 erlaubt die Entwicklung eines eindeutig
