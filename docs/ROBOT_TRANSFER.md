@@ -1,5 +1,30 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Roh-/Yaw-Recovery — ein begrenzter neuer Real-Teilnachweis
+
+Am 27.09.2026 wurde der PR-#105-Stand `6b666d97d7e11326c9f75dccbc4253112e99b578`
+einmal im ausdrücklich freigegebenen 40-s-/3-rad-Initialscan geprüft.
+Das Manifest unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`
+belegt das unveränderte Abnahmeprofil `hwt601_recovery_acceptance_params.yaml`
+(SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`),
+die Overlay-Reihenfolge und `robot_state_estimation` aus
+`/tmp/we1-hwt-yaw-install`. Schattennode, Core und Health sind bytegleich
+mit den Quellen. Der aktive Install wurde nicht gewechselt.
+
+Nach bestandenem motorlosem Preflight lief der Recorder vor dem aktiven
+Stack. Eine einmalige 0,251-s-Leserpause erzeugte 0,260533 s Rohdatenlücke.
+Gate-HOLD sperrte die Fahrt; das Encoderfeedback meldete während HOLD
+0/0 gemessene Motor-RPM. Der eingefrorene Bias blieb unverändert, frische
+Yaw-Daten kehrten zurück, Health/Gate bestätigten Sequenz 1, und derselbe
+Explore-Auftrag setzte den Rundblick fort. Der Controller cancelte nach
+14,928 s und 0,136 rad; es gab keine Translation und kein Nav2-Kindziel.
+Stack und Recorder wurden geordnet beendet; HWT- und Motorport sind frei.
+Bag, Zeitfolge und Analyse liegen ausschließlich lokal. Der Beobachterbericht
+zum physischen Halt und zur danach wieder wirksamen unabhängigen Motorsperre
+des **neuen** Versuchs steht noch aus. Keine neue Fahrt aus diesem Befund;
+Stufe 3 bleibt offen.
+
 ## HWT-Roh-/Yaw-Korrektur — ausschließlich isolierter Softwarestand
 
 Auf demselben PR-#105-Branch wurde nur `robot_state_estimation` für die
@@ -45,8 +70,9 @@ danach folgte `yaw_missing_stale_or_invalid` als terminaler Fusion-Fehler.
 **Kein RESUME:** Der Testcontroller cancelte die Mission; das frische
 Encoderfeedback meldete danach 0/0 Motor-RPM. Die gemessene Drehung war
 höchstens 0,081 rad, ohne Translation. Die separate Bestätigung des
-Beobachters über physischen Halt und wieder wirksame Motorsperre ist noch
-offen. Der Stack und Recorder sind aus, HWT-/Motorports frei. Beim
+Beobachters über physischen Halt und wieder wirksame Motorsperre wurde
+inzwischen für **diesen früheren** Versuch erteilt. Der Stack und Recorder
+sind aus, HWT-/Motorports frei. Beim
 SIGINT-Shutdown starb `slam_toolbox` mit Exit -6; kein Zusammenhang mit
 dem HWT-Fehler ist belegt. Keine Wiederholung und keine Fahrfreigabe.
 

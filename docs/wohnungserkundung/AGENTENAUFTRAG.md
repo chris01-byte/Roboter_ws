@@ -80,68 +80,37 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: denselben begrenzten Realtest zur Freigabe vorlegen
+## 5. Aktueller Folgeauftrag: Beobachterbericht abschließen
 
-Der auf PR #105 ergänzte gerätefreie Produktgraph enthält nun die echte
-HWT-Yaw-Schattenverarbeitung einschließlich Bias-Schätzer. Vor der Korrektur
-reproduzierte er den terminalen Latch, danach bestand er mit 0,260675 s
-Rohdatenlücke, erneutem HOLD, Stillstands-/Pose-/Wegprüfung und Gate-ACK
-(STATUS Abschnitt 5). Dies ist **kein** realer Recovery-Nachweis. Der erste
-Realversuch auf `25ac048` blieb ohne RESUME; der historische
-`raw_driver_not_ready`-Originalwert bleibt unbekannt. Sein ausstehender
-Beobachterbericht über physischen Halt und wieder wirksame Motorsperre ist
-separat einzuholen und nicht aus Encoderwerten abzuleiten.
+Der auf PR #105, Commit `6b666d97d7e11326c9f75dccbc4253112e99b578`,
+gerätefrei geprüfte Roh-/Yaw-Recoverypfad wurde am 27.09.2026 genau einmal
+mit dem realen HWT-Leser in einem begrenzten Rundblick ausgelöst. Der
+motorlose Preflight bestand. Für den Fahrteil lag eine eigene konkrete
+Freigabe vor. Der Recorder lief vor dem Stack; das Runtime-Manifest und
+alle Nachweise liegen lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`.
+STATUS Abschnitt 5 enthält die Messwerte und Zeitfolge. Insbesondere
+wurden 0,260533 s Rohdatenlücke, Gate-HOLD, Encoder-Stillstand,
+unveränderter Bias, neue gültige Yaw-Daten, Gate-ACK und Fortsetzung
+desselben Initialscan-Auftrags beobachtet. Nach 14,928 s und 0,136 rad
+forderte der Controller Cancel an. Stack und Recorder wurden geordnet
+beendet, beide Ports freigegeben. Keine Translation und kein Nav2-Kindziel.
 
-```text
-PROJEKT: Amadeus / chris01-byte/Roboter_ws
-REFERENZ: MASTERPLAN v1.1, STATUS Abschnitt 5, Schritt 2.
-BASIS: PR #105 / feature/hwt-hold-recovery-resume nach dem dokumentierten
-      gerätefreien Roh-/Yaw-Nachweis.
-ZIEL: Genau den bereits definierten WE-Initialscan als nächsten begrenzten
-      HWT-Recovery-Realtest zur gesonderten Entscheidung vorlegen.
+**Genau nächster Auftrag:** Den bereits angefragten Bericht der anwesenden
+Person für **diesen neuen Lauf** zu tatsächlichem physischen Halt beim HOLD,
+aktuellem Stillstand nach dem Versuch und erneut wirksamer unabhängiger
+Motorsperre entgegennehmen. Den Bericht getrennt von Bag-/Encoderwerten
+im STATUS dokumentieren und erst dann den begrenzten Rundblick als
+`HWT-RECOVERY IM BEGRENZTEN RUNDBLICK – REAL BESTANDEN` oder als
+`TEILNACHWEIS / NICHT BESTANDEN` einstufen. Ein unbeobachtetes Detail
+bleibt unbekannt. Der bestätigte Beobachterbericht des *früheren* Versuchs
+ersetzt diese Bestätigung nicht.
 
-VORLAGE, NOCH KEIN START
-- Den neuen Branch-HEAD, die auf dem Zielsystem tatsächlich gesourcten
-  Paketpräfixe und Modul-/Profil-Hashes mit dem bestehenden Manifestwerkzeug
-  sichern. Nach ROS, Slam-/LiDAR-Underlays, Vollbuild und Recovery-Overlay
-  muss das isolierte Yaw-Overlay mit dem geänderten
-  robot_state_estimation-Paket tatsächlich Vorrang haben. Der aktive Install
-  bleibt unverändert. Das Profil bleibt
-  hwt601_recovery_acceptance_params.yaml; Parity-Profil erreicht den
-  Recoverypfad nicht. Scope-Verifikation bleibt falsch/leer.
-- Den exakt gleichen Einzelumfang vorlegen: höchstens 40 s ab Explore-Start,
-  höchstens 3 rad gemessene Drehung, Soll-Drehrate 0,08 rad/s, keine
-  Translation, eine etwa 0,25-s-Pause ausschließlich des bestehenden
-  HWT-Lesers mit garantiertem SIGCONT-Watchdog. Mission-Manager-Cancel vor
-  Ende des Initialscans, bei Abweichung sofort. Keine Frontierfahrt.
-- Vor Gerätezugriff die aktuelle Bestätigung für unabhängige Motorsperre,
-  Stillstand, anwesende Person, erreichbaren Not-Aus und motorlosen
-  Sensorlauf einholen. Motorlos Roh-/Yaw-/Biasstatus, Encoder, Wächter,
-  Gate-Nullausgabe, Pose/TF, Scan/VL53 und Portbesitzer prüfen. Vor Bewegung
-  freien Schwenkraum, Beobachter, unabhängigen Halt und eigene konkrete
-  Fahrfreigabe für genau diesen Umfang klären; alte Freigaben gelten nicht.
-- Recorder vor dem Stack starten. Roh-IMU, korrigierte Gierrate, Roh-/Yaw-/
-  Encoder-/Wächterstatus, Gate-Ein-/Ausgabe, gemessene Bewegung, Pose/TF,
-  Karten-/Wegstand, Mission-/Task-ID und Kindzielstatus gemeinsam mit
-  Originalzeiten sichern. Rohmessalter, Statusalter und internes age_s
-  getrennt berichten.
-- Erfolg nur bei realem Bewegungshalt mit Beobachterbeleg, erhaltenem
-  Auftrag, frischem Encoder-Stillstand, unverändertem Bias, neuen gültigen
-  Yaw-Daten, stabilen Quellen, aktueller Pose/Kartenbindung, Gate-ACK und
-  Fortsetzung desselben Rundblickauftrags ohne altes Kommando. Der
-  Initialscan belegt keinen Nav2-Kind-Cancel oder Türpfad.
-- Dauerfehler, Reconnect, falsche Sensoridentität, ungültige IMU, Zeitfehler,
-  Not-Aus, Nutzerabbruch oder fehlende Pose/Stillstand verlangen Abbruch
-  ohne automatische Wiederanfahrt. Danach Stack und Recorder sauber beenden,
-  Ports freigeben und Rückfall auf den gesicherten PR-#104-Latchkandidaten
-  bereithalten.
-
-GRENZEN
-- Diese Vorlage ist keine Geräte- oder Fahrfreigabe. Keinen Realtest,
-  Installwechsel, Merge oder neue Wohnungsfahrt automatisch ausführen.
-- Keine Parameterlockerung, kein Gesamtgrün für Stufe 3 und keine Arbeit an
-  WE-M4/M5/M6.
-```
+Aus diesem Dokument folgt weder ein weiterer Geräte- oder Fahrstart noch
+ein Installwechsel, Merge, TOR 2 oder eine Wohnungserkundung. Der
+Initialscan belegt keine Nav2-Kindziel-, Tür- oder Frontier-Recovery.
+Stufe 3 bleibt offen. Rückfall bleibt der fail-closed PR-#104-Kandidat;
+keine Schutzgrenzen wurden verändert.
 
 ## 6. Übergabe und Fortschreibung
 

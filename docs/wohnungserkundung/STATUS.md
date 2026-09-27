@@ -9,12 +9,13 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Den gleichen begrenzten HWT-Rundblicktest mit dem
-softwaregeprüften Roh-/Yaw-Recoverykandidaten zur **gesonderten Realfreigabe
-vorlegen**. Die echte Yaw-Verarbeitung ist jetzt gerätefrei in der
-Produktkette geprüft; der frühere Realversuch ohne RESUME bleibt als
-Fehlbefund erhalten. Der historische `raw_driver_not_ready`-Auslöser bleibt
-unbekannt. Stufe 3 bleibt offen.
+**Nächster Auftrag:** Den noch ausstehenden Beobachterbericht zum genau einen
+begrenzten HWT-Roh-/Yaw-Recovery-Realversuch einholen und dessen Ergebnis
+abschließend einstufen. Die Messkette zeigt HOLD und RESUME desselben
+Rundblickauftrags; der physische Halt und die erneut wirksame unabhängige
+Motorsperre des *neuen* Laufs sind noch nicht vom Beobachter bestätigt.
+Der historische `raw_driver_not_ready`-Auslöser bleibt unbekannt. Stufe 3
+bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -653,8 +654,9 @@ Der Testcontroller forderte deshalb um 1790536678,2797 Cancel an; Mission
 und Explorer waren bis 1790536678,6365 `canceled`. Ab etwa
 1790536679,13 meldete das frische Encoderfeedback 0,0/0,0 Motor-RPM und
 0 m/s sowie 0 rad/s; die gemessene Drehung betrug höchstens 0,081 rad.
-Ein Beobachterbericht über den physischen Halt und das erneute Setzen der
-unabhängigen Motorsperre ist noch offen. Kein zweiter Versuch, keine
+Der Beobachter hat den physischen Halt und die danach wieder wirksame
+unabhängige Motorsperre dieses **früheren** Versuchs inzwischen bestätigt;
+das ist kein Nachweis für den neuen Lauf. Kein zweiter Versuch, keine
 Frontierfahrt, keine Parametrierung und kein RESUME.
 
 Bag, Controller-Zeitfolge und Stack-/Recorderlogs bleiben lokal unter
@@ -740,6 +742,82 @@ bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
 zurückkehren. Das bisherige fail-closed Latch bleibt dort erhalten. Vor
 einem Realtest sind Runtime-Manifest, unabhängige Motorsperre, Stillstand,
 anwesende Person und ein eigener begrenzter Fahrfreigabeentscheid nötig.
+
+### Ein begrenzter Roh-/Yaw-Recovery-Realversuch auf `6b666d9`
+
+Der Nutzer bestätigte vor dem motorlosen Start Stillstand, unabhängige
+Motorsperre, Beobachter, erreichbaren Not-Aus und Sensorlauf. Der neue lokale
+Lauf liegt unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`.
+`runtime_manifest.json` hält den sauberen Quell-HEAD
+`6b666d97d7e11326c9f75dccbc4253112e99b578`, die expliziten Launch-Argumente
+und das Abnahmeprofil mit SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`
+fest. Die Setup-Reihenfolge endet nach ROS, Slam-, LiDAR-, Vollbuild- und
+Recovery-Overlay beim isolierten Yaw-Overlay. `module_resolution.json` belegt,
+dass `hwt601_shadow_node.py`, `hwt601_shadow_core.py` und
+`hwt601_fusion_health.py` aus
+`/tmp/we1-hwt-yaw-install/robot_state_estimation` geladen werden und bytegleich
+mit den Quellen sind. Im echten Prozess starteten HWT-Leser und Yaw-Schatten
+aus genau diesem Präfix. Der aktive Install blieb unverändert.
+
+Der motorlose App-Mapping-Preflight auf demselben Profil (`active_drive=false`,
+`enable_auto_explore=false`) zeigte 786 Roh-IMU- und 788 korrigierte
+Yaw-Nachrichten in 8 s, kalibrierten stabilen Bias, `reconnects=0`,
+Encoder-Stillstand, `sources_ready=true`, `first_fault=null` und 217
+Gate-Nullkommandos. Scan, beide gesunden VL53-Frames und frisches
+`map→odom→base_link` waren vorhanden; Mission und Explorer blieben `idle`.
+Der Stack wurde sauber beendet und beide seriellen Ports waren frei. Danach
+gab der Nutzer **genau einen** beaufsichtigten 40-s-/3-rad-Rundblick mit
+0,08 rad/s, ohne Translation und mit einer etwa 0,25-s-Pause ausschließlich
+des HWT-Lesers ausdrücklich frei. Der Recorder lief vor dem aktiven Stack;
+alle 26 vorgesehenen Topics wurden synchron erfasst. Motorbus und HWT-Port
+hatten je einen Besitzer. Scope-Verifikation blieb falsch und die ID leer.
+
+Der Explore-Auftrag begann um `1790541890,927`. Der HWT-Leser wurde einmal
+von `1790541897,798` bis `1790541898,048` (0,251 s) angehalten und mit
+unabhängigem SIGCONT-Watchdog abgesichert. Das Bag misst eine Roh-IMU-Lücke
+von **0,260533 s**. `first_fault` um `1790541898,017` lautet
+`raw_missing_stale_or_invalid`: die letzte gültige Rohmessung war
+**0,221942 s** alt bei **0,20 s** Grenze. Rohstatus-Empfangsalter
+`0,609694 s < 1,0 s` und internes `age_s=0,000326 s` sind andere Größen;
+`ready=true`, `raw_data_ready=true`, `reconnects=0`,
+`consecutive_errors=0`. Dies ist kein rückwirkender Beweis für den
+historischen `raw_driver_not_ready`-Fall.
+
+Das Gate wechselte um `1790541898,022` auf HOLD und setzte
+`/cmd_vel_nav` auf null. Explorer-HOLD folgte um `1790541898,042` bei
+unverändert `running` bleibendem Explore-Elternauftrag. Das nachgeschaltete
+`/cmd_vel` war um `1790541898,169` null; das reale Encoderfeedback zeigte
+spätestens um `1790541898,623` beide gemessenen Motor-RPM null. Die
+HWT-Health erreichte `RECOVERY_VALIDATION` um `1790541898,071` und
+`HEALTHY` mit `resume_sequence=1` um `1790541899,076`. Der Yaw-Schatten
+lieferte wieder aktuelle Werte ohne Latch. Alle 18 im Ereignisfenster
+aufgezeichneten Yaw-Statusmeldungen trugen denselben eingefrorenen Bias
+`[0,0015726155, 0,0055953393, 0,0000581250]` rad/s.
+
+Während der Validierung kamen frische Karte, Costmap, Scan, beide gesunden
+VL53-Status und beide dynamischen TF-Strecken an. Der Produktpfad prüfte
+frische Quellen, Kartenpose und stabilen Encoder-Stillstand von mindestens
+0,5 s vor Wiederaufnahme; für den Initialscan gab es **kein** Nav2-Kindziel
+und keine Zielroute zu prüfen. Der Explorer meldete `we_hwt_resumed` um
+`1790541900,379`, ging um `1790541900,483` in **denselben** Initialscan
+zurück, und das Gate gab erst danach wieder Drehkommandos bis höchstens
+0,08 rad/s aus. Der Controller beobachtete erneute gemessene Drehung und
+forderte um `1790541905,855` Cancel an, 14,928 s nach Explore-Start;
+die Gesamtdrehung aus `/odom` war 0,136 rad und jedes lineare Kommando
+null. Manager und Explorer waren bis `1790541906,720` beziehungsweise
+`1790541906,707` `canceled`; Encoder-Stillstand nach Cancel ist um
+`1790541907,228` protokolliert. Kein Frontierziel und keine Translation.
+Stack und Recorder endeten geordnet; beide Ports sind frei. `real-bag/`,
+`control-events.jsonl`, `run-analysis.json` und Logs bleiben lokal.
+
+**Einstufung derzeit: software- und sensorisch bestandener Real-Teilnachweis;
+physische Abnahme noch offen.** Die nachträgliche Beobachterbestätigung für
+den tatsächlichen Bewegungshalt und die wieder wirksame unabhängige
+Motorsperre dieses neuen Laufs steht aus. Bis dahin keine Kennzeichnung
+„HWT-RECOVERY IM BEGRENZTEN RUNDBLICK – REAL BESTANDEN“. Ein bestandener
+Initialscan würde weder Nav2-Kind-Cancel noch Tür- oder Frontierpfad
+abnehmen; Stufe 3 bleibt offen und TOR 2 beginnt nicht automatisch.
 
 ## 6. Erhaltene Nachweise und Roadmapgrenzen
 
