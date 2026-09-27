@@ -1,0 +1,56 @@
+# Explizites WE-Navigationsprofil fuer die begrenzte HWT-Recovery-Abnahme.
+# Vom Parity-Profil abgeleitet; keine Hardware-, Smoother- oder Safety-Aenderung.
+# Nur mit gesonderter Fahrfreigabe und Runtime-Manifest verwenden.
+explore_node:
+  ros__parameters:
+    overall_timeout_s: 900.0
+    goal_timeout_s: 120.0
+    max_failed_goals: 3
+    max_frontier_goals: 10
+
+    # Gemessener Rundblick: acht odometrisch bestaetigte Viertel-Abschnitte.
+    initial_scan_enabled: true
+    initial_scan_angle_rad: 6.283185307179586
+    initial_scan_angular_speed_radps: 0.08
+    initial_scan_segment_angle_rad: 0.7853981633974483
+    initial_scan_segment_pause_s: 1.0
+    initial_scan_timeout_s: 280.0
+    scan_no_progress_timeout_s: 15.0
+
+    # Ein enger Einzel-Mehrraumtest. Nach dem ersten Portal bleibt die
+    # Frontier-Erkundung aktiv; ein zweites Portal ist gesperrt.
+    portal_crossing_enabled: true
+    portal_priority_when_available: true
+    connected_portal_analysis_clearance_m: 0.40
+    portal_max_crossings: 1
+    portal_max_staging_goals: 3
+    portal_connected_max_goals: 2
+    portal_stop_after_crossing: false
+    portal_max_traverse_distance_m: 1.00
+    portal_max_encoder_budget_m: 2.00
+    door_supervised_wheel_budget_mode: false
+    door_lidar_motion_mode: false
+    door_traverse_distance_m: 0.0
+    door_encoder_wheel_budget_m: 0.0
+
+    coverage_enabled: true
+    coverage_target_ratio: 0.70
+    coverage_max_goals: 6
+    return_to_start: false
+
+    # Die neue WE-Hierarchie und ihre Fahrfreigabe bleiben Shadow-only.
+    region_graph_shadow_enabled: true
+    region_graph_shadow_raw_map_enabled: true
+    # Der 11.09.-Bag hatte hoechstens 58.280 Rasterzellen; 100.000 erlaubt
+    # Reserve, bleibt aber eine harte Speichergrenze fuer den Beobachter.
+    region_graph_shadow_raw_map_capacity: 100000
+    region_graph_shadow_connected_portals_enabled: true
+    region_graph_shadow_frontiers_enabled: true
+    region_graph_shadow_session_id: "hwt601-parity-20260926"
+    region_graph_shadow_start_observation_id: "start-room"
+    wohnungserkundung_policy_enabled: true
+    wohnungserkundung_navigation_enabled: true
+    wohnungserkundung_persistence_enabled: false
+    wohnungserkundung_portal_monitor_enabled: false
+    wohnungserkundung_accessible_scope_verified: false
+    wohnungserkundung_scope_id: ""

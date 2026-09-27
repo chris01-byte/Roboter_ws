@@ -80,53 +80,63 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: ersten HWT-Recoveryfall real abnehmen
+## 5. Aktueller Folgeauftrag: ersten HWT-Recoveryfall begrenzt real abnehmen
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.1 und aktueller STATUS, Schritt 2.
-BASIS: Der gerätefrei integrierte Branch feature/hwt-hold-recovery-resume.
-Der historische raw_driver_not_ready-Originalwert bleibt unbekannt.
-ZIEL: Einen synthetisch definierten, kurz stale HWT-Rohmessungsfall im
-kontrollierten WE-Initialscan real prüfen: Halt, Auftragserhalt, stabile
-Quellenheilung, Neuprüfung und Fortsetzung desselben Explore-Auftrags.
+BASIS: PR #105 / feature/hwt-hold-recovery-resume mit dem in STATUS
+beschriebenen gerätefreien ROS-Graph-Nachweis.
+ZIEL: Genau einen definierten kurz stale HWT-Rohmessungsfall während eines
+begrenzten WE-Initialscans real prüfen. Der historische
+raw_driver_not_ready-Originalwert bleibt unbekannt.
 
-VOR EINEM GERÄTESTART
-- Eine neue, genau für diesen Lauf geltende Bestätigung einholen:
-  anwesende Person, unabhängige Motorsperre für den motorlosen Preflight,
-  Stillstand, Not-Aus in Reichweite und Freigabe des Sensorlaufs.
-- Den aktiven Install NICHT ungeprüft wechseln. Quell-Commit, Paketpfade,
-  Hashes, Underlays, Profile und einzigen HWT-/Motorbusbesitzer mit dem
-  vorhandenen Runtime-Manifest erfassen. Den Recoverykandidaten isoliert
-  bereitstellen und Rückfall zum PR-#104-Latchkandidaten festhalten.
-- Motorlos zuerst Roh-IMU, Gierrate, Bias, Encoder, Wächter, Gate,
-  TF/Pose, VL53, LiDAR, Not-Aus und Nullkommando prüfen. Bei Widerspruch
-  beenden. Kein zweiter Portleser.
+VOR JEDEM GERÄTESTART
+- Eine für genau diesen Lauf geltende lokale Bestätigung einholen:
+  Roboter still, unabhängige Motorsperre wirksam, anwesende Person,
+  Not-Aus in Reichweite und motorloser Sensorlauf freigegeben.
+- Den tatsächlich verwendeten Quell-Commit, Paketpräfixe, Modul-/Profil-
+  Hashes, Underlays, Treiber, Konfiguration und Startargumente mit
+  tools/kartierung/hwt_diagnose_manifest.py auf dem Zielsystem erfassen.
+  hwt601_recovery_acceptance_params.yaml muss als installiertes
+  explore_params_overlay aufgelöst werden;
+  hwt601_parity_params.yaml erreicht die WE-Recovery nicht. Keinen
+  aktiven Install ungeprüft wechseln und keinen zweiten Motor-/Portbesitzer
+  starten. Rückfall ist der gesicherte PR-#104-Latchkandidat.
+- Motorlos bei active_drive=false, enable_auto_explore=false und
+  use_hwt601_odometry=true Roh-IMU, Gierrate, Bias, Encoder, Wächter,
+  Gate-Nullausgabe, TF/Pose, VL53, LiDAR und Not-Aus prüfen. Bei
+  Widerspruch beenden; keine Parameteränderung und keine Fahrt.
 
-FAHRTEIL NUR NACH SEPARATER KONKRETER FREIGABE
-- Vorab einen einzelnen langsamen Initialscan in freier, begrenzter Fläche,
-  Messfenster, Stop-/Abbruchregel und Beobachter festlegen. Während des
-  laufenden Explore-Auftrags den bestehenden HWT-Leseprozess genau einmal
-  für etwa 0,25 s pausieren und sicher wieder fortsetzen; die Fortsetzung
-  muss auch bei Abbruch garantiert sein. Keine Sensor-Schreibbefehle.
-- Rohstatus, Roh-IMU, korrigierte Gierrate, Encoder-/Motorstatus, Wächter,
-  Gate, cmd_vel, TF/Pose, Karten-/Pfadstand, Nav2-Kind und Missions-ID
-  synchron aufzeichnen. Empfangs-, Mess- und internes age_s trennen.
-- Erfolg nur bei tatsächlich gemessenem Halt, erhaltenem Auftrag,
-  terminalem alten Kind, stabilem HWT, frischen übrigen Quellen und
-  nachgewiesener Neuplanung/Fortsetzung desselben Tasks. Wenn der Fehler
-  nicht ausgelöst wird, als nicht reproduziert melden; keinen anderen
-  Fehler stillschweigend als Erfolg werten.
-- Bei dauerhaftem Fehler, Not-Aus, Nutzerabbruch, unbestätigtem Cancel,
-  ungültigem TF/Pfad oder zweitem Kind sofort sicher beenden; keine
-  automatische Wiederanfahrt. Vor dem Test die manuelle Rückfallhandlung
-  und den maximalen Bewegungsraum festlegen.
+FAHRTEIL NUR NACH NEUER KONKRETER FREIGABE
+- Einen einzigen langsamen Initialscan, freien begrenzten Bewegungsraum,
+  unabhängigen Halt, Beobachter, Messfenster und Abbruchregel vorab
+  festlegen. Nur einen Stack mit active_drive=true,
+  enable_auto_explore=true, use_hwt601_odometry=true und dem expliziten
+  Recovery-Abnahmeprofil starten; der Motorbus hat einen Besitzer.
+- Während der laufenden Explore-Action den bestehenden HWT-Leseprozess
+  genau einmal etwa 0,25 s pausieren und auch bei Abbruch garantiert
+  wieder fortsetzen. Nur eine kurz stale Rohmessung des weiterhin
+  identischen Treibers zählt als geplanter Fehler. Disconnect/Reconnect,
+  falscher Port oder Biasverlust sind kein Ersatz und verlangen Abbruch.
+- Roh-IMU, korrigierte Gierrate, Roh-/Bias-/Encoder-/Wächterstatus,
+  Gate-Ein-/Ausgabe, Odometriegeschwindigkeit, TF/Pose, Karten-/Wegstand,
+  Mission-/Task-ID und Kindzielstatus synchron mit Originalzeiten erfassen.
+  Messalter, Statusempfangsalter und internes age_s getrennt halten.
+- Erfolg nur bei belegtem realem Bewegungshalt, erhaltenem Explore-Auftrag,
+  bestätigtem Encoder-Stillstand, stabilen Quellen, aktueller Pose und
+  gültigem Wegbeleg sowie Fortsetzung des Rundblicks. Ein Initialscan
+  belegt keinen Nav2-Kind-Cancel, keine Türfahrt und keine vollständige
+  Wohnungserkundung. Bleibt der definierte Fehler aus, als nicht
+  reproduziert melden.
+- Bei dauerhaftem Quellenfehler, Not-Aus, Nutzerabbruch, fehlendem
+  Stillstand, ungültigem TF/Pfad oder anderer Fehlerklasse sicher beenden;
+  keine automatische Wiederanfahrt. Rückfall und manuellen Halt bereithalten.
 
 GRENZEN
-- Dieser Dokumentauftrag autorisiert keinen Gerätezugriff, Installwechsel
-  oder Fahrtest. Keine Wohnungserkundungsfahrt und kein Stufe-3-Gesamtgrün.
-- Keine Parameterlockerung, kein automatischer Merge und keine Arbeit an
-  WE-M4/M5/M6.
+- Dieser Dokumentauftrag ist keine Geräte-, Install- oder Fahrfreigabe.
+- Kein automatischer Merge, keine Grenzlockerung, kein Stufe-3-Gesamtgrün
+  und keine Arbeit an WE-M4/M5/M6.
 ```
 
 ## 6. Übergabe und Fortschreibung

@@ -3766,3 +3766,27 @@ Not-Aus-/Umgebungsprüfung und eine ausdrückliche Freigabe der anwesenden Perso
 `40b5b49c9a92600484a0dc85c466930bc1680c60`; `1d91229` nicht vollständig
 zurücksetzen, weil spätere HWT-/Sensor-/Sicherheitskorrekturen erhalten bleiben
 müssen. Kein Commit oder Merge ausgeführt.
+
+## 2026-09-27 — HWT-Recovery-Profil und Stillstand vor Resume
+
+**Entscheidung:** Das bewährte `hwt601_parity_params.yaml` bleibt passiv.
+Der WE-Recovery-Zweig wird nur mit dem ausdrücklich gewählten
+`hwt601_recovery_acceptance_params.yaml` erreicht. Sein einziges geändertes
+Parity-Opt-in ist `wohnungserkundung_navigation_enabled=true`; die
+bestehenden WE-Quellvoraussetzungen bleiben erforderlich. Im WE-Resume-Pfad
+ist nun zusätzlich eine frische Encoder-Rückmeldung unter den bereits
+vorhandenen Linear-/Drehratenschwellen für mindestens 0,5 s und mit einer
+neueren Odometrieprobe Pflicht. Nullkommando und Kindziel-Cancel allein
+belegen keinen physischen Stillstand.
+
+**Evidenz und Grenze:** Isolierter Build und 1127 registrierte Tests plus
+47 direkte Mission-Manager-Tests bestanden. Ein isolierter ROS-Graph-Lauf
+über echten Mission Manager, BT, Explorer und Gate belegte bei synthetischer
+HWT-Lücke bestätigten Nav2-Kind-Cancel, Gate-Halt, Auftragserhalt,
+Encoder-Stillstand, frische TF-Pose, blockierte und danach freie Costmap-
+Route, Gate-ACK und ein neues Kind für denselben Task. Der getrennte
+Initialscanpfad nahm ohne Kindziel nach HOLD wieder auf; Not-Aus beendete ihn
+ohne Neustart. Das Testziel stammt aus einem synthetischen Karten-Task-
+Adapter, nicht aus einer realen WE-Karte. Es gab keine Hardware, keinen
+Installwechsel und keinen Fahrtest. Nächster Schritt ist ausschließlich
+die gesondert freizugebende begrenzte Realabnahme des Initialscanfalls.

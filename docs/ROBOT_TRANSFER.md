@@ -2306,3 +2306,23 @@ Rückfall: den vorherigen PR-#101-Head
 `40b5b49c9a92600484a0dc85c466930bc1680c60` wiederherstellen. Nicht pauschal auf
 `1d91229` zurückgehen, da dadurch spätere Hardware- und Sicherheitskorrekturen
 verloren gehen könnten. Siehe `docs/WE_PARITY_RESET.md`.
+
+## 2026-09-27 — Recovery-Abnahmeprofil nur im isolierten Software-Overlay
+
+`hwt601_recovery_acceptance_params.yaml` liegt derzeit allein im temporären
+Overlay `/tmp/we1-hwt-recovery-install/share/explore/config/`. Das aktive
+Jetson-Install wurde nicht gewechselt. `hwt601_parity_params.yaml` bleibt
+WE-Navigation-aus; erst das explizite Abnahmeprofil erreicht den neuen
+HWT-HOLD-/Recovery-/Resume-Zweig. Ein isolierter Softwarestart über Mission
+Manager, echten BT und Explorer gelang; dabei wurde weder ein Motor- noch
+ein Hardware-Sensorprozess gestartet. Anschließend bestand ein isolierter
+ROS-Graph-Test mit synthetischen Sensoren, TF, Costmap und Nav2-Gegenstelle:
+HWT-HOLD, terminales Kind, Stillstand, Gate-ACK und neues Kind für denselben
+Test-Task sowie getrennter Rundblick-HOLD ohne Kind. Die Karten-Task-Auswahl
+war ein Testadapter; die gesonderte reale Abnahme fehlt. Keine Fahr- oder
+Deploymentfreigabe.
+
+Vor einem späteren Realtest Quell-Commit, installierte Paketpräfixe,
+Profilpfad/Hash, Underlay-Reihenfolge und einzigen Hardwarebesitzer mit dem
+Runtime-Manifest festhalten. Rückfall bleibt der fail-closed PR-#104-Kandidat;
+kein aktiver Installwechsel folgt aus dieser Übergabe.

@@ -1268,10 +1268,8 @@ class ExploreNode(Node):
                 self._wohnungserkundung_navigation_enabled,
             )
         )
-        if self._wohnungserkundung_navigation_enabled:
-            raise ValueError(
-                'Parity-Kandidat erlaubt ausschliesslich passive WE-'
-                'Beobachtung; hierarchische WE-Navigation ist gesperrt')
+        # The parity profile keeps this opt-in false. A separately selected
+        # acceptance profile may enter the existing WE navigation branch.
         # A controlled initial scan intentionally changes the raw-map
         # frontier topology.  Do not turn those incomplete, in-place
         # observations into persistent tasks before the scan has ended: doing
@@ -1460,6 +1458,8 @@ class ExploreNode(Node):
         self._hwt_recovery_sequence = 0
         self._hwt_hold_announced = False
         self._hwt_hold_deadline = None
+        self._hwt_stop_stable_since = None
+        self._hwt_stop_first_odom_at = None
         self._hwt_interrupted_task_id = None
         self._hwt_gate_resume_ack_sequence = -1
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
@@ -2863,6 +2863,8 @@ class ExploreNode(Node):
                 self._hwt_hold_deadline = (
                     time.monotonic() + guard.health.recovery_budget_s)
                 self._hwt_hold_announced = True
+                self._hwt_stop_stable_since = None
+                self._hwt_stop_first_odom_at = None
             self._status_phase = 'we_hwt_hold'
             self._status_message = (
                 'HWT-Quelle ungueltig; Kindziel wird beendet, '
@@ -2887,12 +2889,36 @@ class ExploreNode(Node):
             return False
         if not self._wohnungserkundung_source_state(intent, candidate).current:
             return False
-        pose = self._robot_pose()
-        if pose is None:
+        pose, pose_age = self._robot_pose_sample()
+        if (pose is None or pose_age is None
+                or not 0.0 <= pose_age <= self._door_pose_timeout):
             return False
         goal = (candidate.target_x_m, candidate.target_y_m)
         checked = self._costmap_reachable_goal(goal, goal, pose[:2])
         return checked is not None and checked[1] is False
+
+    def _wohnungserkundung_hwt_standstill_confirmed(self) -> bool:
+        """Require fresh encoder odometry at rest for the existing 0.5 s window."""
+        _, yaw, linear, angular, received_at = self._motion_odom_snapshot()
+        now = time.monotonic()
+        valid = (
+            yaw is not None and math.isfinite(yaw)
+            and linear is not None and math.isfinite(linear)
+            and angular is not None and math.isfinite(angular)
+            and received_at is not None
+            and 0.0 <= now - received_at <= self._scan_odom_timeout
+            and abs(linear) <= self._door_stop_linear_tolerance
+            and abs(angular) <= self._scan_stop_tolerance)
+        if not valid:
+            self._hwt_stop_stable_since = None
+            self._hwt_stop_first_odom_at = None
+            return False
+        if self._hwt_stop_stable_since is None:
+            self._hwt_stop_stable_since = now
+            self._hwt_stop_first_odom_at = received_at
+            return False
+        return (now - self._hwt_stop_stable_since >= 0.5
+                and received_at > self._hwt_stop_first_odom_at)
 
     def _wohnungserkundung_wait_for_hwt_resume(
             self, goal_handle, overall_expired, require_target):
@@ -2918,6 +2944,7 @@ class ExploreNode(Node):
             validated = (
                 guard.health.recovery_state == 'HEALTHY'
                 and not self._wohnungserkundung_active_safety_failure()
+                and self._wohnungserkundung_hwt_standstill_confirmed()
                 and (not require_target
                      or self._wohnungserkundung_resume_path_ready()))
             if not validated:
@@ -2939,6 +2966,8 @@ class ExploreNode(Node):
                             self._wohnungserkundung_consumed_intent_id = None
                     self._hwt_hold_announced = False
                     self._hwt_hold_deadline = None
+                    self._hwt_stop_stable_since = None
+                    self._hwt_stop_first_odom_at = None
                     return 'resumed'
             time.sleep(0.05)
         return 'terminal'

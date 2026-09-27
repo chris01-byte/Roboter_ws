@@ -1052,7 +1052,7 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'self._stop_scan_and_confirm()' in source
     assert 'if self._initial_scan_segment_angle <= 0.0:' in source
     assert 'self._initial_scan_segment_pause' in source
-    assert 'Parity-Kandidat erlaubt ausschliesslich passive WE-' in source
+    assert 'self._wohnungserkundung_navigation_enabled' in source
     assert 'self._prealign_to_goal(' in source
 
 
@@ -1070,6 +1070,18 @@ def test_parity_profile_keeps_we_shadow_passive_and_uses_real_scan_contract(
         0.40)
     assert profile['portal_max_crossings'] == 1
     assert profile['wohnungserkundung_navigation_enabled'] is False
+
+    acceptance = yaml.safe_load((
+        PACKAGE_ROOT / 'config' / 'hwt601_recovery_acceptance_params.yaml'
+    ).read_text())['explore_node']['ros__parameters']
+    assert acceptance == {
+        **profile, 'wohnungserkundung_navigation_enabled': True}
+    assert validated_we_navigation_enabled(
+        acceptance['region_graph_shadow_enabled'],
+        acceptance['region_graph_shadow_raw_map_enabled'],
+        acceptance['region_graph_shadow_frontiers_enabled'],
+        acceptance['wohnungserkundung_policy_enabled'],
+        acceptance['wohnungserkundung_navigation_enabled']) is True
 
     now = [0.0]
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: now[0])
@@ -1783,18 +1795,21 @@ def test_hwt_resume_requires_current_target_pose_and_unprojected_path():
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_latest_correlation_received_at = time.monotonic()
     node._map_timeout_s = 5.0
+    node._door_pose_timeout = 0.8
     node._wohnungserkundung_source_state = (
         lambda *_args: SimpleNamespace(current=True))
-    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
     node._costmap_reachable_goal = lambda *_args: None
     assert node._wohnungserkundung_resume_path_ready() is False
     node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), True)
     assert node._wohnungserkundung_resume_path_ready() is False
     node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
     assert node._wohnungserkundung_resume_path_ready() is True
-    node._robot_pose = lambda: None
+    node._robot_pose_sample = lambda: (None, None)
     assert node._wohnungserkundung_resume_path_ready() is False
-    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.9)
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
     node._hwt_interrupted_task_id = 'different-task'
     assert node._wohnungserkundung_resume_path_ready() is False
     node._hwt_interrupted_task_id = 'task-1'
@@ -1821,6 +1836,7 @@ def test_hwt_parent_hold_keeps_action_until_safety_and_route_revalidated(monkeyp
     node._publish_status = lambda state: published.append(
         (state, node._status_phase))
     node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: True
     node._wohnungserkundung_resume_path_ready = lambda: True
     result = node._wohnungserkundung_wait_for_hwt_resume(
         SimpleNamespace(is_cancel_requested=False),
@@ -1848,6 +1864,54 @@ def test_hwt_gate_ack_requires_healthy_motion_ready_and_sequence():
     assert node._hwt_gate_resume_ack_sequence == 1
 
 
+def test_hwt_resume_needs_confirmed_fresh_encoder_standstill(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock[0])
+    node = ExploreNode.__new__(ExploreNode)
+    node._scan_odom_timeout = 0.8
+    node._door_stop_linear_tolerance = 0.01
+    node._scan_stop_tolerance = 0.02
+    node._hwt_stop_stable_since = None
+    node._hwt_stop_first_odom_at = None
+    odom = [0.03, 0.0, 100.0]
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, *odom)
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[:] = [0.0, 0.0, 100.1]
+    clock[0] = 100.1
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    clock[0] = 100.65
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[2] = 100.65
+    assert node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[0] = 0.02
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    assert node._hwt_stop_stable_since is None
+
+
+def test_hwt_healthy_terminal_child_but_moving_never_resumes(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 0.02
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = 1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    phases = []
+    node._publish_status = lambda _state: phases.append(node._status_phase)
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: False
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    assert phases and all(p == 'we_hwt_recovery_validation' for p in phases)
+
+
 def test_hwt_resume_stays_stopped_without_path_or_on_estop(monkeypatch):
     monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
     node = ExploreNode.__new__(ExploreNode)
@@ -1862,6 +1926,7 @@ def test_hwt_resume_stays_stopped_without_path_or_on_estop(monkeypatch):
     node._wohnungserkundung_active_child = None
     node._publish_status = lambda _state: None
     node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: True
     node._wohnungserkundung_resume_path_ready = lambda: False
     assert node._wohnungserkundung_wait_for_hwt_resume(
         SimpleNamespace(is_cancel_requested=False),

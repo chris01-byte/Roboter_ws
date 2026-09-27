@@ -9,10 +9,12 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Den implementierten HWT-HOLD-/Recovery-/Resume-Fall
-kontrolliert real abnehmen, nach gesonderter konkreter Geräte- und
-Fahrfreigabe. Der synthetische gerätefreie Nachweis ersetzt weder die
-physische Haltwirkung noch die Realabnahme. Die historische Ursache des
+**Nächster Auftrag:** Den synthetisch definierten HWT-Rohdaten-Kurzfehler in
+**genau einem begrenzten, gesondert freizugebenden WE-Initialscan** real
+abnehmen. Der gerätefreie Produktpfad ist einschließlich Mission Manager,
+echtem BT, Explorer, Gate und Nav2-Testgegenstelle geprüft. Die Karten-Task-
+Auswahl blieb dabei ein synthetischer Testadapter; die Realabnahme beweist
+nur den tatsächlich gefahrenen Rundblickfall. Die historische Ursache des
 `raw_driver_not_ready`-Fahrabbruchs bleibt unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
@@ -474,11 +476,102 @@ Ein-Kind-Semantik, Nutzerabbruch, Not-Aus sowie Sperre bei ungültigem
 TF-/Karten-/Pfadbeleg. Diese Tests belegen die Softwareverträge, keine
 physische Haltstrecke, reale Transienzrate oder Fahrtauglichkeit.
 
-Die vier installierten Hauptmodule sind bytegleich mit den Quellen des
-Branches: SHA256 `0336686e…` (`hwt601_fusion_health.py`), `f964f170…`
+Auf Stand `f426a12` waren die vier installierten Hauptmodule bytegleich mit
+den Quellen: SHA256 `0336686e…` (`hwt601_fusion_health.py`), `f964f170…`
 (`cmd_vel_mission_gate.py`), `b668a0c0…` (`explore_node.py`) und
-`9e12a6a0…` (`mission_manager_node.py`). ROS-Paketauflösung wurde im
-temporären Overlay geprüft; diese Pfade sind **kein aktiver Roboter-Install**.
+`9e12a6a0…` (`mission_manager_node.py`). Der nachfolgende isolierte Neubuild
+in diesem Abschnitt hat für den geänderten Explorer-Code `11c63dc3…` und
+für das neue installierte Profil `ee3b42ee…` ergeben, jeweils bytegleich zur
+Quelle. ROS-Paketauflösung wurde im temporären Overlay geprüft; diese Pfade
+sind **kein aktiver Roboter-Install**.
+
+### Produktpfad und zusätzliche Absicherung auf PR #105
+
+Das bisherige `hwt601_parity_params.yaml` bleibt mit
+`wohnungserkundung_navigation_enabled=false` unverändert. Damit erreicht es
+die neue Recovery im WE-Loop **nicht**. Für die Abnahme existiert das explizite
+`hwt601_recovery_acceptance_params.yaml`; es übernimmt die Parity-Werte und
+setzt ausschließlich dieses WE-Navigations-Opt-in auf `true`. Der bisherige
+pauschale Startabbruch bei aktivem WE-Zweig wurde entfernt; alle bestehenden
+Voraussetzungen für Schatten, Rohkarte, Frontierfeed, Policy und Safety
+bleiben aktiv. Ein Start ohne explizit gewähltes Abnahmeprofil bleibt auf dem
+Legacy-/Parity-Pfad.
+
+Vorgesehener Startvertrag ist `robot_bringup/app_mapping.launch.py` mit
+`use_hwt601_odometry=true`, `enable_auto_explore=true`,
+`explore_params_overlay` auf dem **installierten** Abnahmeprofil und dem
+gesondert freizugebenden `active_drive`. `app_mapping` bindet
+`robot_navigation/nav_mapping.launch.py` ein; dieser startet den einzigen
+Explorer, das `cmd_vel_mission_gate`, `bt_orchestrator` und `mission_manager`.
+Ein `explore`-Kommando läuft als `RunMission` über den echten BT-Baum
+`explore.xml` zur `/explore_area`-Action. `ExploreNode._execute_reserved`
+verzweigt bei diesem Profil in `_execute_wohnungserkundung_navigation`;
+dort führen `_wohnungserkundung_hwt_hold` und
+`_wohnungserkundung_wait_for_hwt_resume` HOLD, Auftragserhalt, Neuprüfung und
+Resume aus. Initialscan und aktives Nav2-Kind sind getrennte Fälle.
+
+Vor `we_hwt_resumed` verlangt der WE-Loop jetzt **tatsächlichen Stillstand**
+aus frischer Encoder-Odometrie: Betrag der linearen Geschwindigkeit höchstens
+`door_stop_linear_tolerance_mps=0,01`, Betrag der Drehrate höchstens
+`scan_stop_angular_tolerance_radps=0,02`, mindestens 0,5 s stabil und eine
+neuere Odometrieprobe innerhalb dieses Fensters. Die vorhandene
+`scan_odom_timeout_s=0,8` bleibt maßgeblich. Bei Bewegung oder veralteter
+Rückmeldung bleibt das Gate im HOLD; fällt eine bereits signalisierte
+Validierung erneut zurück, schließt das Gate wieder und fordert eine neue
+Resume-Nachricht plus frischen Befehl. Nullkommando und terminales Kind allein
+reichen nicht. Die Route verlangt zusätzlich einen frischen TF-Pose-Stempel
+innerhalb der bereits vorhandenen `door_localization_timeout_s=0,8` und eine
+aktuelle, unprojizierte Costmap-Verbindung. Der neu gebaute Gate-Code ist mit
+der Quelle bytegleich (SHA256 `58712ff5…`).
+
+Isolierter Neubuild der vier Recovery-Pakete bestand; das neue Profil wurde
+unter `/tmp/we1-hwt-recovery-install/share/explore/config/` installiert.
+`colcon test-result`: **1127 Tests, 0 Fehler, 0 Fehlschläge, 0 Skips**;
+`mission_manager` separat **47 pytest-Tests bestanden**. Der neue verbundene
+Prozess-Test injiziert eine Rohdatenlücke während eines synthetischen
+Kindziels, prüft Gate-Nullausgabe, erhaltene Auftrag-/Action-Identität,
+terminales altes Kind, bewegte Odometrie als Resume-Sperre, stabile
+Stillstandsfolge, aktuelle Task-/Karten-/Routenprüfung, Gate-Sequenzbestätigung,
+neuen Befehl und genau ein neues Kind für denselben Task. Dies ist ein
+verbundener Prozess-Test; der nachfolgende ROS-Graph-Test ist der maßgebliche
+gerätefreie Integrationsnachweis. Separate Paket-Gegenfälle decken
+Dauerfehler, verspäteten Cancel, falschen Port, Schreibmodus, ungültigen Bias,
+Nutzerabbruch und ungültigen TF-/Pfadbeleg ab.
+
+**Zusammenhängender ROS-Graph-Nachweis:**
+`tools/sensorfusion/hwt_recovery_product_graph.py` lief in isolierter,
+localhost-begrenzter ROS-Domain mit dem installierten Abnahmeprofil. Echte
+Mission-Manager- und BT-Prozesse führten `explore` über `RunMission` und
+`explore.xml` zur realen Explorer-Action. Explorer, HWT-Guard und Gate liefen
+aus dem Recovery-Overlay; HWT-/Encoder-, VL53-, LiDAR-, TF- und Costmap-
+Nachrichten sowie ein Nav2-Action-Server waren synthetische ROS-Gegenstellen.
+Die WE-Karten-/Task-Policy erhielt einen Testadapter mit genau einem offenen
+Task; dies ist **keine** reale Karten-, Frontier- oder Türabnahme.
+
+Nach einer Rohmessungslücke jenseits der unveränderten 0,20-s-Grenze
+beobachtete der Lauf `we_hwt_hold`, Gate-Nullausgabe und einen bestätigten
+terminalen Cancel von Kind 1. Der Mission-Manager-Auftrag blieb `explore`.
+Obwohl HWT wieder gesund war, blieb bei 0,03 m/s Encoder-Rückmeldung
+`we_hwt_recovery_validation` aktiv. Nach stabiler Nullbewegung blieb die
+synthetisch blockierte Costmap-Route zunächst gesperrt; erst mit frischem TF,
+freien Costmap-Zellen und passenden Gate-ACK folgte `we_hwt_resumed` und ein
+**neues** Kind 2 für denselben Task. Höchstens ein Kind war aktiv; alte
+Bewegungsbefehle passierten vor dem neuen Ziel nicht. Nutzerabbruch cancelte
+Kind 2 und beendete den Auftrag. Im getrennten Rundblickfall entstand kein
+Nav2-Kind; HOLD und erneuter Eintritt in `we_initial_scan` wurden beobachtet.
+Ein danach gesetzter synthetischer Not-Aus stoppte die Gate-Ausgabe und
+beendete den Auftrag ohne automatischen Neustart. Der Rundblick wurde im
+Test **nicht** zu 360° vollendet; verspätete Action-Antworten und der
+dauerhafte HWT-Ausfall sind separat in Pakettests geprüft.
+
+Der reproduzierbare Skriptlauf meldete `PASS` mit `max_active_children=1`,
+`new_child_count=1`, `gate_ack_sequence=2` und
+`scan_nav2_child_count=0`; Graph-, BT- und Manager-Logs sowie die
+synthetischen Laufbedingungen und Dateihashes liegen lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-product-graph-20260927-run-226/`.
+Kein Motor- oder Hardware-Sensorprozess und
+kein aktiver Roboter-Install wurde gestartet oder geändert. Physischer Halt,
+reale Transienzrate und Fortsetzung auf echter Karte sind **nicht** belegt.
 
 **Rückfall:** Den funktionalen Branch nicht in den aktiven Install übernehmen;
 bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
@@ -505,17 +598,20 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: **kontrollierte reale Abnahme des synthetisch
-definierten kurzen HWT-Rohdatenverlusts im WE-Initialscan** auf einem vorab
-per Runtime-Manifest identifizierten Kandidaten. Zuerst motorloser
-Schutzketten-Preflight, dann nur nach neuer konkreter Fahrfreigabe ein
-begrenzter, beaufsichtigter Scan mit einer einzigen zeitlich begrenzten
-Pause des bestehenden HWT-Leseprozesses; dessen Fortsetzung muss auch beim
-Abbruch garantiert sein. Roh- und Statuswerte, reale Nullkommando-/Haltwirkung,
-Auftragserhalt, Kindzielstatus, Quellen-/Pose-/Pfadneuprüfung und Resume
-gemeinsam nachweisen. Das ist keine Wohnungserkundungs- oder Stufe-3-Freigabe;
-Gegenfälle und Abbruchregel vor dem Start verbindlich festlegen. Details im
-AGENTENAUFTRAG. Keine Fahrt oder Installation aus diesem Dokument ableiten.
+Genau ein nächster Auftrag: **ein einzelner beaufsichtigter WE-Initialscan
+zur realen HWT-Recovery-Abnahme** auf dem expliziten installierten
+`hwt601_recovery_acceptance_params.yaml`. Vorab auf dem Zielsystem mit dem
+vorhandenen Manifestwerkzeug Quell-Commit, Paketpräfixe, Hashes,
+Underlays, Profil und Startargumente sichern; danach motorloser
+Schutzketten-Preflight mit unabhängiger Motorsperre. Vor Bewegung
+Testumfang, freien Raum, externen Halt, Beobachter und **neue konkrete
+Fahrfreigabe** klären. Eine einzige zeitlich begrenzte und auch bei Abbruch
+garantiert aufgehobene Pause des bestehenden HWT-Leseprozesses soll eine
+kurz stale Rohmessung **ohne Disconnect/Reconnect** auslösen. Nullausgabe,
+reale Haltwirkung, erhaltenen Auftrag, Stillstand, gesunde Quellen und
+Rundblick-Fortsetzung gemeinsam messen. Ein Initialscan belegt keinen
+Nav2-Kind-Cancel, Türpfad oder Stufe-3-Gesamtstand. Aus diesem
+Softwareauftrag folgt weder ein Installwechsel noch ein Fahrstart.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

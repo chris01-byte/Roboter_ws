@@ -563,13 +563,16 @@ class CmdVelMissionGate(Node):
                 and self._hwt_guard.health.recovery_state in
                 ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
             self._hwt_resume_pending = True
-        if not self._hwt_resume_pending:
-            self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
-            return
         if (phase in ('we_hwt_hold', 'we_hwt_recovery_validation')
                 and sequence >= self._hwt_seen_sequence):
+            # Validation can become false again after an earlier resume
+            # signal. Close immediately; the next release needs a new cmd.
+            self._hwt_resume_pending = True
             self._hwt_hold_sequence = sequence
             self._hwt_seen_sequence = sequence
+            return
+        if not self._hwt_resume_pending:
+            self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
             return
         if (phase != 'we_hwt_resumed'
                 or self._hwt_hold_sequence != sequence
