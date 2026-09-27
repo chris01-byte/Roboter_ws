@@ -15,7 +15,7 @@ from .hwt601_fusion_health import Hwt601FusionHealth
 class Hwt601FusionGuard:
     def __init__(self, node, active_drive, callback_group=None):
         self.node = node
-        self.health = Hwt601FusionHealth(active_drive)
+        self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
         self.subscriptions = []
         for name, topic, msg_type in (
                 ('raw', '/shadow/hwt601/imu/data_raw', Imu),

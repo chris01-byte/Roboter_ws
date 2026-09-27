@@ -1,4 +1,5 @@
 import copy
+import json
 import math
 
 import pytest
@@ -137,3 +138,159 @@ def test_fresh_wrong_driver_or_invalid_json_does_not_authorize():
     h.status('yaw', [], 10.0)
     h.statuses['raw'][0]['port'] = '/dev/ttyUSB_HWT601'
     assert h.motion_failure(10.0) == 'yaw_uncalibrated_or_faulted'
+
+
+@pytest.mark.parametrize('field,value', [
+    ('ready', False), ('raw_data_ready', False),
+    ('port', '/dev/ttyUSB_BASE'), ('sensor_write_commands', True),
+    ('consecutive_errors', 1), ('age_s', 0.201),
+])
+def test_first_fault_records_each_raw_predicate_without_changing_latch(field, value):
+    h = ready_health(now=10.0)
+    assert h.motion_failure(10.0) is None
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw.update(accepted=12, rejected=3, successful_connections=2,
+               reconnects=1, last_error='read_timeout')
+    raw[field] = value
+    h.status('raw', raw, 10.04)
+    assert h.motion_failure(10.05) == 'raw_driver_not_ready'
+    finding = h.first_fault_snapshot()
+    assert finding['component'] == 'Hwt601FusionHealth'
+    assert finding['aggregate_reason'] == 'raw_driver_not_ready'
+    assert finding['violations'] == [field]
+    entry = next(item for item in finding['raw_conditions']
+                 if item['field'] == field)
+    assert entry['actual'] == value
+    assert entry['actual_type'] == type(value).__name__
+    assert entry['passed'] is False
+    assert finding['raw_status'] == raw
+    assert finding['driver_counters']['rejected']['actual'] == 3
+    assert finding['raw_status_receive_age_s'] == pytest.approx(0.01)
+    assert finding['last_valid_raw_measurement']['stamp_s'] == 10.0
+    assert finding['last_valid_raw_measurement']['age_at_fault_s'] == pytest.approx(0.05)
+
+
+def test_first_fault_keeps_all_violations_and_original_snapshot_after_recovery():
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    faulty = copy.deepcopy(h.statuses['raw'][0])
+    faulty.update(ready=False, port='/wrong', consecutive_errors=4,
+                  age_s=0.19)
+    h.status('raw', faulty, 10.02)
+    assert h.source_failure(10.03) == 'raw_driver_not_ready'
+    original = h.first_fault_snapshot()
+    assert original['violations'] == ['ready', 'port', 'consecutive_errors']
+    h.status('raw', ready_health().statuses['raw'][0], 10.04)
+    h.sample('raw', 10.04, 10.04, 10.04)
+    assert h.source_failure(10.05) == 'raw_driver_not_ready'
+    h.statuses['raw'][0]['ready'] = False
+    h.statuses['raw'][0]['age_s'] = 5.0
+    assert h.source_failure(10.06) == 'raw_driver_not_ready'
+    changed_copy = h.first_fault_snapshot()
+    changed_copy['raw_status']['port'] = 'tampered'
+    assert h.first_fault_snapshot() == original
+
+
+@pytest.mark.parametrize('field,value', [
+    ('ready', None), ('raw_data_ready', 'true'), ('port', 123),
+    ('sensor_write_commands', 0), ('consecutive_errors', '0'),
+    ('age_s', '0.1'), ('age_s', math.nan), ('age_s', math.inf),
+    ('age_s', -0.01),
+])
+def test_missing_or_wrong_type_and_nonfinite_raw_values_are_explained(field, value):
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw[field] = value
+    h.status('raw', raw, 10.01)
+    assert h.source_failure(10.02) == 'raw_driver_not_ready'
+    finding = h.first_fault_snapshot()
+    assert field in finding['violations']
+    assert next(item for item in finding['raw_conditions']
+                if item['field'] == field)['actual_type'] == type(value).__name__
+    json.dumps(finding, allow_nan=False)
+
+
+@pytest.mark.parametrize('field', [
+    'ready', 'raw_data_ready', 'port', 'sensor_write_commands',
+    'consecutive_errors', 'age_s',
+])
+def test_missing_raw_field_is_explicit(field):
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    del raw[field]
+    h.status('raw', raw, 10.01)
+    assert h.source_failure(10.02) == 'raw_driver_not_ready'
+    entry = next(item for item in h.first_fault_snapshot()['raw_conditions']
+                 if item['field'] == field)
+    assert entry['present'] is False
+    assert entry['actual_type'] == 'missing'
+
+
+def test_status_age_measurement_age_and_driver_age_remain_distinct():
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw['age_s'] = 0.15
+    raw['ready'] = False
+    h.status('raw', raw, 10.08)
+    assert h.source_failure(10.10) == 'raw_driver_not_ready'
+    finding = h.first_fault_snapshot()
+    assert finding['raw_status_receive_age_s'] == pytest.approx(0.02)
+    assert finding['last_valid_raw_measurement']['age_at_fault_s'] == pytest.approx(0.10)
+    assert finding['raw_status_age_field_s'] == pytest.approx(0.15)
+
+
+@pytest.mark.parametrize('received', [9.0, 11.0, math.nan, 'invalid'])
+def test_bad_status_receive_time_remains_fail_closed_and_serializable(received):
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    h.status('raw', copy.deepcopy(h.statuses['raw'][0]), received)
+    assert h.source_failure(10.05) == 'raw_status_missing_or_stale'
+    finding = h.first_fault_snapshot()
+    assert 'raw_status_missing_or_stale' in finding['violations']
+    assert finding['raw_status_age_field_s'] == 0.0
+    json.dumps(finding, allow_nan=False)
+
+
+def test_type_anomaly_is_visible_without_changing_existing_predicate():
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw['consecutive_errors'] = False  # Existing Python equality accepts this.
+    raw['port'] = '/wrong'
+    h.status('raw', raw, 10.01)
+    assert h.source_failure(10.02) == 'raw_driver_not_ready'
+    entry = next(item for item in h.first_fault_snapshot()['raw_conditions']
+                 if item['field'] == 'consecutive_errors')
+    assert entry['passed'] is True
+    assert entry['type_matches_expected'] is False
+
+
+def test_sample_fault_snapshots_last_valid_measurement_and_status_heartbeat():
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    h.sample('raw', 10.01, 10.01, 11.0)
+    assert h.source_failure(10.02) == 'raw_missing_stale_or_invalid'
+    finding = h.first_fault_snapshot()
+    assert 'raw_sample_missing_stale_or_invalid' in finding['violations']
+    assert finding['last_valid_raw_measurement']['stamp_s'] == 10.0
+    assert finding['source_checks'][0]['sample_age_s'] == pytest.approx(-0.98)
+    json.dumps(finding, allow_nan=False)
+
+
+def test_diagnostic_exception_never_changes_existing_fail_closed_decision():
+    h = ready_health(now=10.0)
+    assert h.source_failure(10.0) is None
+    h.statuses['raw'][0]['ready'] = False
+    h._capture_first_fault = lambda now, reason: 1 / 0
+    assert h.motion_failure(10.01) == 'raw_driver_not_ready'
+    assert h.latched_fault == 'raw_driver_not_ready'
+    assert h.first_fault_snapshot()['capture_error'] == 'ZeroDivisionError'
+
+
+def test_startup_failure_is_not_mistaken_for_first_post_ready_fault():
+    h = Hwt601FusionHealth(True)
+    assert h.source_failure(1.0) == 'raw_missing_stale_or_invalid'
+    assert h.first_fault_snapshot() is None

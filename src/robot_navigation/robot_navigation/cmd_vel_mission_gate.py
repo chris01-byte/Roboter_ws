@@ -812,6 +812,7 @@ class CmdVelMissionGate(Node):
                 'reason': hwt_failure or 'raw_sources_ready',
                 'active_drive': guard.health.active_drive,
                 'latched_fault': guard.health.latched_fault,
+                'first_fault': guard.health.first_fault_snapshot(),
             })))
         estop_clear = estop_motion_authorized(
             self._estop_clear, self._estop_time, now, self._estop_timeout)
