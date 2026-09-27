@@ -9,14 +9,13 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Die Aufzeichnung des motorlosen HWT-Laufs gegen den
-beobachteten SQLite-Sperrfehler absichern und **einmal** mit dem unveränderten
-Diagnosekandidaten in einem vorab begrenzten Fenster wiederholen. Der Lauf vom
-27.09. wurde vor der Bias-Readiness nur 23,9 s aufgezeichnet und liefert
-keinen HWT-Erstfehlerbefund. Eine erneute aktuelle Gerätefreigabe ist für
-den nächsten Lauf erforderlich. TOR 1 ist softwareseitig umgesetzt; TOR 2
-bleibt gesperrt. Auch ein neuer Lauf beweist die Einzelursache des alten
-Fahr-Bags nicht rückwirkend.
+**Nächster Auftrag:** Den unveränderten Diagnosekandidaten **einmal** mit der
+gerätefrei geprüften Aufzeichnungshilfe in einem vorab begrenzten motorlosen
+Fenster erfassen. Der Lauf vom 27.09. wurde vor Bias-Readiness nur 23,9 s
+aufgezeichnet und liefert keinen HWT-Erstfehlerbefund. Eine neue aktuelle
+Gerätefreigabe ist für den nächsten Lauf erforderlich. TOR 1 ist
+softwareseitig umgesetzt; TOR 2 bleibt gesperrt. Auch ein neuer Lauf beweist
+die Einzelursache des alten Fahr-Bags nicht rückwirkend.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -198,6 +197,35 @@ Alle Launch-Kinder endeten nach SIGINT sauber. Kein aktiver Install wurde
 gewechselt. Der historische HWT-Rohwert des alten Fahr-Bags bleibt offen;
 TOR 2 und jede Fahrfreigabe bleiben aus.
 
+**Recorder-Reparatur im Labor:** Eine unveränderte Kopie der abgestürzten
+SQLite-Datei wurde unter `recovered-copy/` mit `ros2 bag reindex` um Metadaten
+ergänzt; `ros2 bag info` bestätigt 3755 Nachrichten über 23,91 s. Dies fügt
+keine späteren Messwerte hinzu. Das neue Werkzeug
+`tools/kartierung/hwt_diagnose_record.py` startet nur einen Recorder und
+beobachtet Bias-Readiness über ROS-Status, ohne die laufende SQLite-Datei zu
+öffnen. Es verwendet das installierte rosbag2-SQLite-Profil `resilient`
+(WAL-Journal statt des optimierten MEMORY-Journals), begrenzt Vorlaufzeit
+und Fenster nach Readiness, signalisiert nur den eigenen Recorderprozess mit
+SIGINT und prüft Metadaten, die Liste
+aller sieben Themen, Statuszähler sowie `ros2 bag info` erst nach dessen Ende.
+Ein gerätefreier Probelauf auf ROS-Domain 219 mit sieben künstlichen Publishern
+lieferte 31–32
+Nachrichten je Thema, Recorder-Exit 0 und Ergebnis `complete` nach einem
+3-s-Fenster. Ohne Publisher auf Domain 220 endete ein 2-s-Vorlauf mit Ergebnis
+`incomplete` und Exit 2. Ein weiterer gerätefreier Lauf auf Domain 221 hielt
+parallel eine SQLite-Lesetransaktion 2 s offen; der WAL-Recorder endete nach
+4 s mit Exit 0 und 41 Nachrichten je Thema. Das abgeschlossene Bag meldet
+`journal_mode=wal`. Ein vierter Laborlauf auf Domain 222 hielt die korrigierte
+Gierrate bei 0 Nachrichten und beendete dennoch die vollständige
+Aufzeichnung: Ein fehlender Messwert wird nicht als Recorderabbruch verdeckt.
+Belege: `/tmp/hwt-recorder-preflight-20260927-1*`,
+`/tmp/hwt-recorder-preflight-20260927-timeout*` und
+`/tmp/hwt-recorder-preflight-20260927-wal*` sowie
+`/tmp/hwt-recorder-preflight-20260927-zero-yaw*`. Diese Laborprüfung
+belegt den Aufzeichnungspfad, keinen erneuten HWT-Gerätelauf. Die konkrete
+Ursache der vorherigen SQLite-Sperre bleibt unbewiesen; während eines neuen
+Laufs darf kein anderer Prozess die Bag-Datenbank öffnen.
+
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
 | Auslöser / Datenquelle / Grenze | Gegenwärtige Wirkung und Besitzer | Wiederherstellung / Einordnung | Evidenz |
@@ -321,12 +349,10 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Nachweis: den Recorder vorab ohne Gerätezugriff auf
-störungsfreie, alleinige Aufzeichnung prüfen, danach den in
-`AGENTENAUFTRAG.md` begrenzten motorlosen HWT-Lauf **einmal** mit neuer
-aktueller Vor-Ort-Freigabe wiederholen. Das Bag während des Schreibens nicht
-direkt mit SQLite öffnen; Readiness und Fensterende über ROS-Status/Prozesslog
-beobachten. Erst nach sauberem Recorderabschluss auswerten. Bei erneutem
+Genau ein nächster Nachweis: den in `AGENTENAUFTRAG.md` begrenzten motorlosen
+HWT-Lauf **einmal** mit neuer aktueller Vor-Ort-Freigabe und
+`hwt_diagnose_record.py` aufzeichnen. Die gerätefreie Recorderprüfung ist
+erledigt und muss ohne Änderung nicht wiederholt werden. Bei erneutem
 Aufzeichnungsfehler keinen weiteren Geräteversuch anschließen. TOR 2 erst
 nach belastbarem Einzelbefund entscheiden; keine Fahrfreigabe.
 

@@ -76,28 +76,28 @@ nicht vollständig protokolliert. Diese historischen Werte bleiben offen;
 ein neuer Lauf beweist die alte Ursache nicht rückwirkend. TOR 2 ist **nicht**
 zur funktionalen Umsetzung freigegeben.
 
-## 5. Aktueller Folgeauftrag: Aufzeichnung absichern, einen HWT-Lauf wiederholen
+## 5. Aktueller Folgeauftrag: einen begrenzten motorlosen HWT-Lauf wiederholen
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.0 und aktueller STATUS
 BASIS: PR #103, Diagnosecommit f1f6b74a5e5aea1ba43c50beb75f5f954218fb78;
 unvollständiger motorloser Lauf auf fc6ac5e56f78898666d7c9e8b3785bdab74ab0f2.
-ERGEBNIS: Die durch SQLite-Sperrfehler abgebrochene Aufzeichnung vorab
-gerätefrei absichern und anschließend genau einen begrenzten motorlosen
-HWT-Lauf mit demselben Softwarekandidaten erfassen. Einen neuen Erstfehler
-mit Originalwert belegen oder bei vollständigem Fenster als nicht
+ERGEBNIS: Nach gerätefrei bestandener Recorderprüfung genau einen begrenzten
+motorlosen HWT-Lauf mit demselben Softwarekandidaten erfassen. Einen neuen
+Erstfehler mit Originalwert belegen oder bei vollständigem Fenster als nicht
 reproduziert melden.
 
 VOR DEM GERÄTELAUF
-- Die sieben ROS-Topics in eine neue lokale Bag-Datei probeweise aus
-  gerätefreien Test-Publishern aufzeichnen und den Recorder sauber beenden.
-  Nur eine Writerinstanz verwenden, die Bag-Datenbank während des Schreibens
-  nicht mit SQLite öffnen, den fertigen Baginhalt und seine Metadaten prüfen.
+- Die gerätefreie Prüfung von `tools/kartierung/hwt_diagnose_record.py` ist im
+  STATUS dokumentiert; bei unverändertem Werkzeug nicht grundlos wiederholen.
+  Nur eine Writerinstanz verwenden und die laufende Bag-Datenbank nicht öffnen.
 - Kein Code-, Parameter-, Profil- oder Installwechsel aus diesem Auftrag.
-- Den geplanten Messbeginn nach Bias-Readiness und höchstens 120 s Messfenster
-  vor dem Start festlegen; ohne Readiness den Startversuch ebenfalls zeitlich
-  begrenzen und als unvollständig ausweisen.
+- Das Werkzeug vor dem Stack auf ein neues lokales Bag-Verzeichnis starten:
+  `python3 tools/kartierung/hwt_diagnose_record.py --output <lokaler-Pfad> \
+  --warmup-limit-s 120 --window-s 120`. Es begrenzt den Vorlauf ohne
+  Readiness und das Fenster nach Bias-Readiness. Ein Vorlauf-Timeout ist
+  unvollständig, kein negativer HWT-Befund.
 
 VORBEDINGUNG
 - Neue aktuelle Freigabe der anwesenden Person für den konkreten motorlosen
@@ -116,13 +116,14 @@ AUFZEICHNUNG
   Executable-Hashes mit `tools/kartierung/hwt_diagnose_manifest.py` lokal
   festhalten. Effektive Profile und Launchargumente sowie Treiberversionen
   dem Bag zuordnen.
-- Ausschließlich HWT-Roh-IMU, korrigierte Gierrate, Rohstatus,
-  Bias-/Yawstatus, Encoderstatus und `/fusion/hwt601/status_json` gemeinsam
-  für ein vorab begrenztes Fenster aufzeichnen. Keine Karten, Bilder oder
-  Wohnungsdaten im Repository speichern.
-- Readiness und Fensterende über ROS-Status oder Prozesslog beobachten;
-  die laufende Bag-Datenbank nicht öffnen. Bei Recorderfehler Stack und
-  Recorder geordnet beenden und keinen weiteren Geräteversuch anschließen.
+- Ausschließlich die sieben im Werkzeug festgelegten HWT-/Encoder-/Wächterthemen
+  gemeinsam aufzeichnen. Keine Karten, Bilder oder Wohnungsdaten im Repository
+  speichern. Das Werkzeug überwacht Readiness über ROS-Status, öffnet keine
+  laufende Bag-Datenbank und prüft Metadaten, Themenliste und Statuszähler
+  nach Recorderende. Ein Nullzähler bei einer Messquelle ist als möglicher
+  Sensorbefund zu bewerten, nicht automatisch als Recorderfehler.
+- Bei Ergebnis `incomplete` oder Recorderfehler Stack geordnet beenden und
+  keinen weiteren Geräteversuch anschließen.
 - Beim ersten Fehler `first_fault` gegen die Rohstatusfolge und deren
   Zeitwerte prüfen. Messalter, Status-Empfangsalter und `age_s` getrennt
   ausweisen. Spätere gesunde Meldungen nicht als Ersatz für den Erstwert

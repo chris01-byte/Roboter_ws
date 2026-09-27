@@ -15,6 +15,36 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT-Bag-Aufzeichnung vor Gerätewiederholung begrenzt
+
+**Entscheidung:** `tools/kartierung/hwt_diagnose_record.py` führt künftig den
+einzelnen HWT-Recorder mit dem vorhandenen rosbag2-Profil `resilient`
+(SQLite-WAL). Es ermittelt Bias-Readiness über ROS-Status, begrenzt
+Vorlauf und Messfenster und öffnet die SQLite-Datei erst nach Recorderende.
+Keine Änderung am HWT-Schutzpfad oder aktiven Install.
+
+**Grund / beobachtete Evidenz:** Das erste Bag brach vor Readiness mit
+`database is locked` ab. Die konkrete Dateisperrenursache ist nicht belegt.
+Das Bag konnte nur bis zu seinen vorhandenen 23,91 s gerätefrei reindiziert
+werden. Ein synthetischer ROS-Lauf lieferte alle sieben Topics mit
+Recorder-Exit 0 und Metadaten; ohne Publisher endete der Vorlauf begrenzt mit
+`incomplete`. Ein weiterer Laborlauf mit parallel offener SQLite-Lesetransaktion
+endete unter WAL mit Exit 0 und vollständigen sieben Themen.
+Ein vierter synthetischer Lauf mit 0 Nachrichten auf der korrigierten
+Gierrate blieb als Recorderfenster vollständig und weist den Nullzähler aus.
+
+**Betroffene Dateien und Hardware:** Recorderwerkzeug und bestehende
+Übergabedokumente. Kein Gerätezugriff, keine Motoren, keine Mission.
+
+**Teststatus / Risiken:** Vier gerätefreie Laborfälle; keine Aussage zu einem
+neuen HWT-Fehler oder zur Ursache der alten Fahrt. Der nächste motorlose
+Gerätelauf benötigt neue aktuelle Freigabe.
+
+**Rückfallweg:** Werkzeug nicht verwenden; das ursprüngliche manuelle
+Recorderverfahren bleibt verfügbar. Keine aktive Installation betroffen.
+
+---
+
 ## 2026-09-27 — HWT-Erfassung wegen Recorderabbruch nicht als Negativnachweis werten
 
 **Entscheidung:** Der freigegebene motorlose Lauf auf `fc6ac5e…` ist ein

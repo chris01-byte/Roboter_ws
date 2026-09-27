@@ -23,6 +23,18 @@ brach nach 23,9 s wegen `SQLite error (5): database is locked` ab. Die
 gespeicherten Daten enden während `gyro_bias_warmup`; kein `first_fault`.
 Nach SIGINT endeten alle Launch-Kinder sauber. Der aktive Install blieb
 unverändert. Einzelheiten und lokale Evidenzpfade stehen im aktuellen STATUS.
+Eine Kopie des abgebrochenen Bags unter dem lokalen `recovered-copy/` wurde
+nach Recorderende mit `ros2 bag reindex` um Metadaten ergänzt; sie enthält
+weiterhin nur 23,91 s und 3755 Nachrichten.
+
+`tools/kartierung/hwt_diagnose_record.py` wurde anschließend ohne Geräte auf
+separaten ROS-Domains mit künstlichen Publishern geprüft: vollständige sieben
+Themen über ein begrenztes Fenster, sauberes Recorderende und lesbare Metadaten;
+ohne Readiness endet es begrenzt als unvollständig. Das Werkzeug verwendet
+rosbag2 `--storage-preset-profile resilient` (SQLite-WAL) und liest die aktive
+SQLite-Datei nicht. Ein dritter Laborlauf mit parallel offenem SQLite-Leser
+endete ebenfalls vollständig. Es wurde kein neuer HWT-Gerätelauf gestartet. Die
+konkrete Ursache der früheren SQLite-Sperre ist nicht belegt.
 
 Ein weiterer Lauf braucht eine neue aktuelle Freigabe der anwesenden Person.
 Vor Ort unabhängige Motorsperre und Stillstand erneut bestätigen, vorhandene
@@ -48,15 +60,18 @@ HWT-Serial-/VL53-/DKMS-Versionen, Profil-SHA und die effektive
 `AMENT_PREFIX_PATH`-Reihenfolge lokal fest. Das Manifest ist kein Ersatz für
 den abgeglichenen Startbefehl und beweist allein keinen laufenden Knoten.
 
-Vor einem weiteren Gerätezugriff die Recorderfunktion gerätefrei prüfen und
-die fertige Bag-Datei erst nach sauberem Abschluss mit SQLite auswerten.
-Vor dem Stackstart den Recorder auf ein neues lokales Verzeichnis unter
-`~/.local/share/amadeus/tests/` begrenzen; nur diese Topics erfassen:
+Die gerätefreie Recorderprüfung ist für den unveränderten Werkzeugstand
+erledigt. Vor dem Stackstart das Werkzeug auf ein **neues** lokales
+Bag-Verzeichnis unter `~/.local/share/amadeus/tests/` starten, mit
+`--warmup-limit-s 120 --window-s 120`; es erfasst nur diese Topics:
 `/shadow/hwt601/imu/data_raw`, `/shadow/hwt601/imu/yaw_rate`,
 `/shadow/hwt601/raw_status_json`, `/shadow/hwt601/status_json`,
 `/fusion/hwt601/wheel_odom_raw`, `/shadow/hwt601/wheel_status_json` und
-`/fusion/hwt601/status_json`. Nach kalibrierter Readiness höchstens 120 s
-beobachten und den Recorder mit einem einzelnen SIGINT sauber beenden.
+`/fusion/hwt601/status_json`. Es wartet höchstens 120 s auf kalibrierte
+Readiness, zeichnet danach höchstens 120 s auf und beendet nur seinen eigenen
+Recorderprozess mit SIGINT. Die laufende SQLite-Datei nicht anderweitig
+öffnen; `*-summary.json`, Metadaten und `*-info.txt` erst nach Recorderende
+auswerten. Bei `incomplete` den Stack sauber beenden und nicht erneut starten.
 Startprofil: `active_drive:=false`, `use_hwt601_odometry:=true`,
 `enable_auto_explore:=false`, `start_web_gui:=false`,
 `explore_params_overlay:=<absoluter Pfad zum Parity-Profil>`;
