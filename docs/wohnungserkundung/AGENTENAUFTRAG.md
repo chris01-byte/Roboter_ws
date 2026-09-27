@@ -82,6 +82,20 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag: ersten HWT-Recoveryfall begrenzt real abnehmen
 
+Der motorlose Zielsystemcheck auf `91bc6bf` wurde mit echten Quellen
+durchgeführt und danach sauber beendet (Details und lokaler Manifestpfad in
+STATUS Abschnitt 5). Die wirksame Setup-Kette braucht den dokumentierten
+LiDAR-Underlay und `amadeus_slam_toolbox_ws`. Das Abnahmeprofil bleibt mit
+`wohnungserkundung_accessible_scope_verified=false` und leerem Scope-ID;
+keine Scope-Freigabe setzen. **Die Fahrphase ist ein eigener, aktuell
+freizugebender Teil desselben Auftrags.** Der dafür vorgelegte Einzelumfang
+ist höchstens 40 s ab Explore-Start, höchstens 3 rad gemessene Drehung,
+Soll-Drehrate 0,08 rad/s, keine Translation, eine etwa 0,25-s-Pause nur des
+HWT-Lesers mit unabhängig abgesicherter Fortsetzung. Danach den bestehenden
+Mission-Manager-Cancel vor Ende des 360°-Initialscans auslösen; bei
+unerwartetem Zustand früher abbrechen. So darf aus diesem Versuch keine
+Frontierfahrt entstehen.
+
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.1 und aktueller STATUS, Schritt 2.

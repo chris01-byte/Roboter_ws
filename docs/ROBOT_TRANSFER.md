@@ -1,16 +1,28 @@
 # Übertragung auf den realen Roboter
 
-## HWT-HOLD-/Recovery-Branch — ausschließlich gerätefrei
+## HWT-HOLD-/Recovery-Branch — motorloser Zielsystemcheck
 
 `feature/hwt-hold-recovery-resume` baut die vier Pakete
 `robot_state_estimation`, `robot_navigation`, `explore` und `mission_manager`
 isoliert in `/tmp/we1-hwt-recovery-install` über
-`/tmp/we1-full-shim-install`. Dieser Build wurde **nicht** als Roboter-Install
-aktiviert und nicht mit Motoren oder Sensoren gestartet. Der alte aktive
-Install und der PR-#104-Kandidat bleiben unberührt. Vor einem späteren
-Geräte- oder Fahrtest Paketpfade, Hashes, Profile, einzigen Busbesitzer und
-Rückfall neu per Runtime-Manifest prüfen; STATUS Abschnitt 5 enthält die
-Softwarebelege und AGENTENAUFTRAG Abschnitt 5 den einzigen Folgeauftrag.
+`/tmp/we1-full-shim-install`. Der aktive Roboter-Install und der
+PR-#104-Kandidat blieben unberührt. Am 27.09.2026 wurde dieser Kandidat nach
+aktueller motorloser Bestätigung **mit echten Sensoren, ohne Motoren und ohne
+Mission** gestartet: HWT-Bias/Rohdaten/Gierrate, read-only Encoder, LiDAR,
+VL53, TF und Gate-Nullausgabe wurden geprüft. Der erste Launch brach vor
+Knotenstart ab, weil der externe LiDAR-Underlay fehlte. Für den erfolgreichen
+Lauf wurden `/opt/ros/humble`,
+`/home/p/amadeus_slam_toolbox_ws/install`,
+`/home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install`,
+`/tmp/we1-full-shim-install` und `/tmp/we1-hwt-recovery-install` in dieser
+Reihenfolge gesourct. Das installierte Abnahmeprofil hatte SHA256
+`ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`.
+Der motorlose Stack ist sauber beendet, HWT-/Motorports sind frei. Lokale
+Manifeste und Beobachtungen liegen unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+**Keine reale Recovery und keine Fahrt wurde dadurch freigegeben oder
+abgenommen.** Vor Bewegung gelten der konkrete Fahrumfang und die neue
+Fahrfreigabe aus AGENTENAUFTRAG Abschnitt 5.
 
 
 ## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf

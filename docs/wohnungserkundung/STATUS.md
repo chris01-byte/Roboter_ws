@@ -573,6 +573,38 @@ Kein Motor- oder Hardware-Sensorprozess und
 kein aktiver Roboter-Install wurde gestartet oder geändert. Physischer Halt,
 reale Transienzrate und Fortsetzung auf echter Karte sind **nicht** belegt.
 
+**Motorloser Zielsystemcheck am 27.09.2026 (PR #105, `91bc6bf`):**
+Die anwesende Person bestätigte für diesen Lauf Stillstand, unabhängige
+Motorsperre und motorlosen Sensorzugriff. Das auf dem Jetson mit
+`hwt_diagnose_manifest.py` erfasste, saubere Quell-HEAD ist
+`91bc6bf64e29110d72773d20ebcf6be77c333e72`; das installierte
+`hwt601_recovery_acceptance_params.yaml` hat SHA256 `ee3b42ee…`. Der erste
+Launch brach vor jedem Knoten ab, weil der isolierten Setup-Kette der externe
+`ldlidar_stl_ros2`-Treiber fehlte. Der dokumentierte korrigierte Treiber aus
+`we1-ldlidar-shutdown-overlay/install`, das bestehende
+`amadeus_slam_toolbox_ws/install`, `/tmp/we1-full-shim-install` und das
+Recovery-Overlay wurden daraufhin in dieser Reihenfolge gesourct; kein
+Paket und kein aktiver Install wurden verändert. Das zweite Manifest belegt
+die wirksame Präfixreihenfolge und das Motorlos-Profil
+(`active_drive=false`, `enable_auto_explore=false`,
+`use_hwt601_odometry=true`, `operator_stationary_confirmed=true`).
+
+Im echten, motorlosen App-Mapping-Stack waren HWT-Roh- und korrigierte
+IMU mit je etwa 100 Hz frisch, Bias kalibriert/stabil, Rohstatus bereit mit
+`reconnects=0` und `consecutive_errors=0`, Encoder-Status bereit mit
+0 m/s und 0 rad/s, Fusion `sources_ready=true` ohne `first_fault`.
+LiDAR-Scan kam mit etwa 10 Hz; beide VL53-Frames meldeten Gesundheit,
+ohne Hindernispunkte in diesem Stillstandsausschnitt. `map→odom` und
+`odom→base_link` waren frisch, Not-Aus-Topic war frei. Das Gate publizierte
+167 Nullkommandos auf `/cmd_vel_nav` in 6 s; Mission und Explorer blieben
+`idle`. Die Scope-Felder des Profils blieben ausdrücklich
+`accessible_scope_verified=false` und leer; daraus folgt keine
+Frontier-Fahrfreigabe. Der Stack wurde per SIGINT an genau den
+Launch-Prozess sauber beendet; die beiden seriellen Ports sind frei.
+Manifeste, Logs und motorlose Beobachtungen liegen nur lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+**Ein realer Recovery- oder Fahrnachweis liegt damit noch nicht vor.**
+
 **Rückfall:** Den funktionalen Branch nicht in den aktiven Install übernehmen;
 bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
 zurückkehren. Das bisherige fail-closed Latch bleibt dort erhalten. Vor
