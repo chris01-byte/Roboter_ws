@@ -4,6 +4,13 @@ Dieses Dokument gilt für jeden KI-Agenten und jede Person, die an **Amadeus**
 arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
+**Für Wohnungserkundung zusätzlich zuerst:**
+[MASTERPLAN v1.0](docs/wohnungserkundung/MASTERPLAN.md),
+[aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
+[aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
+Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
+Aufträge sind keine zweite aktuelle Roadmap. Details in Abschnitt 7.
+
 ---
 
 ## 1. Was Amadeus ist
@@ -127,25 +134,40 @@ gemessene Evidenz mit Zahlen.
 
 ---
 
-## 7. Wohnungserkundung: verbindlicher Zusatzkontext (WE-1, 14.09.2026)
+## 7. Wohnungserkundung: verbindlicher Arbeitsrahmen (WE-1, 27.09.2026)
 
-Bei Arbeiten an Mehrraum-Erkundung, Portal-/Raumgedächtnis, Rückwegen oder dem
-Erkundungsabschluss zusätzlich **vor jeder Änderung** lesen:
+Bei Arbeiten an Wohnungserkundung, Sensor-/Fahrintegration, Recovery,
+Portal-/Raumgedächtnis oder Erkundungsabschluss vor jeder Änderung lesen:
 
-1. [Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
-2. [Laufender Status und Entscheidungen](docs/wohnungserkundung/STATUS.md)
-3. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md)
-4. [Meilensteine und Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
+1. [Masterplan: Konsolidierung und robuste Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
+2. [Einziger aktueller WE-Iststand](docs/wohnungserkundung/STATUS.md)
+3. [Aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
+4. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md) und betroffene
+   [Meilensteine/Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
 
-Die fachliche Fortschritts- und Entscheidungsführung für WE-1 liegt zentral in
-`docs/wohnungserkundung/STATUS.md`. Für diese fachlichen Einträge ergänzt sie die
-obige Projektgedächtnis-Checkliste; übergreifende Entscheidungen werden weiterhin
-mit Verweis in `docs/PROJECT_MEMORY.md` ergänzt. Keine parallelen aktuellen
-Statuskopien führen. Bestehende Sicherheitsregeln bleiben uneingeschränkt gültig.
+Verbindliche Grundentscheidung: **konsolidieren statt komplett neu schreiben**.
+Bestehende Fähigkeiten erhalten, einen reproduzierbaren Kandidaten führen,
+Fehler- und Wiederaufnahmeverantwortung gezielt ordnen, dann reale Kernabnahme
+und WE-M4/M5/M6. Keine parallele P1–P5-Roadmap, keine neue Navigation und kein
+pauschaler Rücksprung auf alte Branches. Ein Integrationsverantwortlicher,
+ein aktiver Kandidat und genau ein aktueller Auftrag.
 
-Der Plan beschreibt das Soll, nicht einen bereits implementierten Wohnungsmodus.
-Pro Auftrag nur einen abgegrenzten Schritt bearbeiten. Main, HWT-Referenzbranch und
-tatsächlichen Jetson-Stand unterscheiden; bei abweichenden Angaben Profil und
-Evidenz prüfen. Insbesondere sind allgemeine/historische Komponentenübersichten
-keine Freigabe des aktuell gestarteten SLAM- oder Antriebspfads. Dokumentation,
-Commit, Push oder Merge autorisieren keine Motoraktivierung oder Fahrt.
+Planversion, WE-Bezug, tatsächliche Istbasis, erwartetes Ergebnis, Nicht-Ziele,
+Tests und Rückfall vor jedem Auftrag benennen. Abweichungen nicht stillschweigend
+umsetzen. Nach jedem Auftrag Nachweise und genau einen nächsten Schritt im
+STATUS fortschreiben. Historische Erfolge bleiben erhalten; sie autorisieren
+keinen ungeprüften neuen Install. Neue Grundentscheidungen im Masterplan
+versionieren, nicht durch weitere konkurrierende Chat-Prompts ersetzen.
+
+Fachliche WE-Entscheidungen liegen in `docs/wohnungserkundung/STATUS.md`;
+übergreifende Projektentscheidungen zusätzlich im PROJECT_MEMORY, tatsächliche
+Jetson-Wirkung im ROBOT_TRANSFER. Keine parallelen aktuellen Statuskopien.
+Main, HWT-Referenz, lokale Arbeit und ausgeführte Paketpräfixe unterscheiden.
+Allgemeine/historische Übersichten oben und im Inventar bestimmen nicht den
+aktuell gestarteten SLAM-/Antriebspfad.
+
+Sicher stoppen und einen recoverbaren Auftrag erhalten sind verschiedene
+Aufgaben. Recovery nicht durch Weglassen von Schutzprüfungen ersetzen.
+Bestehende Sicherheitsregeln bleiben gültig. Dokumentation, Commit, Push und
+Merge autorisieren weder Geräteaktivierung noch Fahrt. Auch der Masterplan
+ist eine Zielentscheidung, keine Behauptung eines fertigen Kundenprodukts.

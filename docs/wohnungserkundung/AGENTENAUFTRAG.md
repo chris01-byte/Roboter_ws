@@ -1,195 +1,143 @@
 # Agentenauftrag – Wohnungserkundung Amadeus
 
-**WE-1 · Version 2026-09-15 · Repository `chris01-byte/Roboter_ws`**
+**WE-1 · Version 27.09.2026 · Repository `chris01-byte/Roboter_ws`**
 
-Die [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) bleibt unverändert.
-Dieses Vorhaben betrifft Amadeus, nicht HomeMy. Bereits erprobte Raumerkundung und
-Türdurchfahrt sind Ausgangsbasis, nicht erneut zu entwickelnde Funktionen.
-Aktuelle Priorität ist der zusammenhängende Softwareabschluss vor der erweiterten
-Probefahrt. Dokumentation, Commit und Merge sind keine Geräte- oder Fahrfreigabe.
+Verbindlicher Einstieg ist [MASTERPLAN.md v1.0](MASTERPLAN.md).
+Der laufende Iststand und der nächste Auftrag stehen in [STATUS.md](STATUS.md).
+Die [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und die
+[WE-Meilensteine](MEILENSTEINE.md) bleiben erhalten. Kein paralleler P1–P5-Plan.
+Dieser Text ist eine Arbeitsreferenz, keine automatische Geräte-/Fahrfreigabe.
 
-## 1. Pflichtkontext und Quellenrang
+## 1. Pflichtkontext vor jeder Bearbeitung
 
-Vor Änderungen alle geltenden [AGENTS.md](../../AGENTS.md),
-[Projektstatus](../../PROJEKT_STATUS.md), [Inventar](../INVENTORY.md) und einschlägige
-Einträge im [Projektgedächtnis](../PROJECT_MEMORY.md) lesen. Dann den aktuellen
-[WE-Status](STATUS.md), den betroffenen [Meilenstein](MEILENSTEINE.md), die Strategie
-und den relevanten Code einschließlich Tests lesen. Bei Kartierung außerdem das
-[Betriebswissen](../../tools/kartierung/README.md), vor freigegebenem Gerätezugriff
-die passende [Hardwareübergabe](../ROBOT_TRANSFER.md) des tatsächlichen Git-Stands.
+Alle geltenden [AGENTS.md](../../AGENTS.md), dann MASTERPLAN, STATUS und diesen
+Auftrag lesen. Betroffene Meilensteine, [Inventar](../INVENTORY.md), einschlägige
+[Projektgedächtnis-Einträge](../PROJECT_MEMORY.md) und vorhandenen Code samt Tests
+gezielt hinzunehmen. Vor Gerätezugriff den tatsächlichen Stand in
+[ROBOT_TRANSFER.md](../ROBOT_TRANSFER.md), bei Kartierung das
+[Betriebswissen](../../tools/kartierung/README.md) prüfen.
 
-Strategie/Meilensteine definieren das Soll. Commitgebundener Code und datierte
-Nachweise belegen das Ist. Der kompakte STATUS ist der laufende Einstieg; historische
-Logs nur gezielt zu einem Befund nachladen. Bei Widersprüchen Datum, Commit,
-Profil und Testart vergleichen und den Konflikt sichtbar zuordnen, nicht die
-bequemere Aussage auswählen. Kein erneuter Start bei WE-M0/A, wenn sein Ergebnis
-bereits belegt ist. Fehlende aktuelle Hardwareabnahme löscht keinen historischen
-Fahrerfolg, gibt aber auch keinen geänderten Stand frei.
+Nicht aus historischen Hardwareübersichten, Branch-Namen oder einem PR-Text
+auf aktuelle Runtime schließen. Bei Konflikten Datum, Commit, Profil und Art
+des Nachweises nennen. Abgeschlossene Arbeiten nicht grundlos wieder beginnen.
 
-## 2. Git-Basis und Reviewgate
+## 2. Arbeitsvertrag für alle folgenden Aufträge
 
-Der bei diesem Abgleich jüngste funktionale Stand ist M3/U, PR #91, Commit
-`047455134894f700a115f6cea422479b99c702f6` auf
-`feature/we-m3u-process-runtime-evidence`. Die ursprüngliche Dokumentation bei
-`96cebee` ist nur die Planhistorie. Fortschritt nicht vom ursprünglichen
-Dokumentationsbranch oder einem veralteten Main-Snapshot ableiten.
+Ein Auftrag liefert genau ein abgegrenztes funktionales Ergebnis. Vor Änderungen
+kurz benennen: Planversion, WE-Bezug, Istbasis, Ergebnis, erlaubte Dateien/
+Komponenten, Nicht-Ziele, Nachweise und Rückfall. Einen Integrationsverantwortlichen
+und einen aktiven Kandidaten führen; Parallelagenten nicht unkoordiniert an
+Launchprofilen, Runtime oder Hardware schreiben lassen.
 
-Nach `git fetch origin` Remote-Refs, HEAD, Arbeitsbaum und Worktrees prüfen.
-Neuere Arbeit nicht überschreiben und bereits erledigte Schritte nicht wiederholen.
-Der neueste PR allein bestimmt nicht die freigegebene Entwicklungsbasis;
-Abstammung und vorhandene Zustimmung müssen passen. `main` bleibt reguläres
-Integrationsziel. Die gestapelte WE-Basis wird für den explizit übergebenen
-Folgeauftrag isoliert geprüft; sie ist weder Main noch Produktionsinstallation.
+Bestehende Implementierungen verwenden. Keine neue Navigation, vorsorgliche
+Supervisor-Neuentwicklung, neue OAK-Pipeline, Arm-, GUI- oder Komfortbaustelle.
+Sicherheits- oder Akzeptanzgrenzen nicht allein für einen grünen Test ändern.
+Nötige Umfangsänderungen mit konkretem Befund als ein Paket vorlegen.
 
-Vor weiterer funktionaler WE-Arbeit die bis M3/U vorhandene Kette reviewen,
-relevante Prüfungen reproduzieren und den geprüften SHA samt Restbefunden benennen.
-Gerätefreie Weiterarbeit darf auf dieser geprüften, isolierten Basis erfolgen,
-wenn sie vom übergebenen Auftrag umfasst ist; dazu ist kein pauschaler Merge nötig.
-Ungeklärte funktionskritische Reviewbefunde sperren die betroffene Weiterarbeit.
-Main-Zusammenführung und zusätzliche funktionale HWT-Übernahmen bleiben gesondert
-abzustimmen. Kein automatischer Merge, Force-Push, blindes Pull, `reset --hard`,
-Löschen fremder Branches oder Wechsel einer laufenden Roboter-Arbeitskopie.
+Bewegung bei notwendigem Halt rechtzeitig stoppen. Auftragserhalt, begrenzte
+Wiederherstellung und sichere Wiederaufnahme getrennt betrachten. Nicht jeden
+Kommunikationsausreißer als permanenten Hardwaredefekt klassifizieren; aber auch
+nicht ohne sichere Fortsetzbarkeit auf den Nachweis eines Kabelbruchs warten.
+Not-Aus/Nutzerabbruch nicht automatisch zurücksetzen. Keine unbeobachteten
+Bereiche freigeben, keine alten Daten frisch stempeln, kein direkter ungegateter
+Motorbefehl. Die Detailregeln stehen im Masterplan; sie sind noch kein Nachweis
+bereits implementierter Recovery.
 
-Die divergente HWT-Referenz `1d91229dc10ff4bb791938d49aae8e9808a5dfff` und der
-lokal veränderte Jetson-Bestand werden nicht stillschweigend zur neuen Basis.
-Installationspfade und Overlay-Reihenfolge müssen vor Zielsystembehauptungen
-nachgewiesen werden; `git fetch` ist kein Installationsnachweis.
+## 3. Aktueller Folgeauftrag: Integrationsbasis und Auditbestand konsolidieren
 
-## 3. Ein abgegrenzter Auftrag ist ein funktionales Ergebnis
-
-Bündele notwendige Schritte bis zu nutzbarem Verhalten statt bis zu einer einzelnen
-Hilfsfunktion. Kleine Commits und gezielte Tests bleiben möglich. Vor dem Eingriff
-Scope, vorhandene Anforderungen, Eingangs-SHA, betroffene Komponenten, erwartetes
-Verhalten, Prüfplan und Rückfall kurz benennen. Keine neue Parallelroadmap.
-
-Datenzuführung → automatische Ereignisse → Raum-/Aufgabenverwaltung → Zielwahl/
-Abschluss → Speicherung/Wiederaufnahme sind die vorhandene Kette. Erledigte
-Abschnitte wiederverwenden. Neue Module, Szenarien und Refaktorierungen benötigen
-einen konkreten offenen Vertrag oder Fehlerbefund und einen benannten Verbraucher.
-Kein ungenutztes Hilfsmodul als Abschluss einer Laufzeitintegration ausgeben.
-
-Kein Nebenauftrag für Kalibrierung, Treiber, Motorregelung, OAK, Netzwerke, Arm,
-KI-Raumnamen oder Komfortoberflächen. Keine neue Navigation und kein umfangreiches
-zusätzliches Simulationsframework. Erweiterungen des genehmigten Umfangs einmal
-als konkretes Paket abstimmen, nicht unbemerkt anwachsen lassen.
-
-## 4. Sicherheits- und Integrationsregeln
-
-WE-01 bis WE-12 sowie die bestehenden hardwired/softwareseitigen Schutzketten
-gelten unverändert. Reine Berechnung, passive ROS-Anbindung und potenziell
-bewegungswirksame Integration getrennt prüfen. Neue aktive Funktionen bleiben
-standardmäßig deaktiviert oder benötigen ein explizites gültiges Profil.
-
-Keine Geräteaktivierung, kein Deployment und keine Fahrt ohne gesonderte
-Freigabe der anwesenden Person. Alte Fahrfreigaben nicht übertragen. Vor einem
-„motorlosen“ Start Nodes und Gerätepfade prüfen; `dry_run` allein beweist nichts.
-Gerätefreie ROS-Tests verwenden isolierte Domains und synthetische Gegenstellen;
-keine reale Motor-/Sensorverbindung und keine Commands in die Produktionsdomain.
-
-Tests nicht durch Abschalten von VL53, `collision_monitor`, Frische-/Lokalisierungs-
-prüfung, Footprint-Padding oder Missions-Gates grün machen. Keine zusätzliche
-Motorbusöffnung. Synthetische Geometrie-/Zeitwerte sind keine Hardwareparameter.
-Nötige sicherheitsrelevante Änderungen separat begründen, freigeben und testen.
-
-Bei Bewegung geht sicherer Stopp vor Logging/Speichern. Bestehende kontrollierte
-Shutdown-Prozeduren verwenden, keine Prozessgruppen-Signale, endlosen Retries
-oder blind wiederholten Navigationsziele. Dieser Dokumentationsauftrag selbst
-startet weder Softwaretests mit Geräten noch irgendeine Bewegung.
-
-## 5. Fertigkriterien und Statuspflege
-
-„Softwareseitig fertig“ heißt: der vereinbarte Produktionspfad erzeugt seine
-Entscheidungen aus den Eingabedaten und besteht die gerätefreie Gesamtkette.
-Eine Testfixture darf Sensoren, Umgebung, Kartenmanager und Nav2 simulieren.
-Sie darf aber nicht die gerade geprüfte Portalbestätigung, Durchfahrt,
-Regionskorrektur oder Abschlussentscheidung als fertige Wahrheit einschleusen.
-Solche Modultests bleiben gültig, sind jedoch kein Ersatz für den Gesamtnachweis.
-
-Unterscheide Quell-/Modultest, integrierten Gerätefreitest, Zielsystemprüfung und
-physische Abnahme. Null Commands im Fake-Nav2-Aufbau beweisen keine reale
-Kollisions- oder Not-Aus-Funktion. Überlappende Testzahlen nicht addieren.
-`MERGEABLE/CLEAN` ist kein funktionaler Review- oder Abnahmenachweis.
-
-Aktualisiere STATUS-Kopf, Meilensteintabelle und Restliste gemeinsam. Überholte
-Blocker datiert abschließen oder als historische Befunde kennzeichnen. Umfangreiche
-abgeschlossene Logs bei Bedarf unverändert archivieren, mit klarer Geltungswarnung
-und Quellenbezug. Keine zweite „aktuelle“ Statusdatei. Fachliche WE-Entscheidungen
-bleiben im STATUS-Log, übergreifende Änderungen zusätzlich im PROJECT_MEMORY und
-tatsächliche Jetson-Wirkung zusätzlich im ROBOT_TRANSFER.
-
-## 6. Commit, Push und Übergabe
-
-Vor Commit den eigenen Diff/Dateisatz prüfen, passende Tests und `git diff --check`
-ausführen. Keine Tokens, Schlüssel, Zugangsdaten, echten Wohnungsgeometrien, Karten,
-Bags, Kamerabilder, Build- oder Installationsartefakte einchecken.
-Commitmuster: `typ: Grund der Änderung`; Hardwaregrenze und Rückfall dokumentieren.
-Eigenen Themenbranch pushen, Remote-HEAD prüfen und PR gegen die passende
-Reviewbasis erstellen. Keine funktionalen PRs automatisch mergen oder fremde
-Änderungen löschen. Veröffentlichung ist kein Deployment.
-
-Übergabe: geprüfte Basis/Scope; neu nutzbares Verhalten; geänderte Dateien;
-tatsächlich ausgeführte und nicht ausführbare Tests getrennt; verbleibende
-Blocker/Nachweise; Rückfall; Commit/Branch/PR; nächstes funktionales Ergebnis.
-Fehlende Umgebung offen nennen. Kein grüner Softwaretest startet automatisch
-Hardware und kein historisches Ergebnis wird nachträglich hochgestuft.
-
-## 7. Folgeauftrag: Softwareabschluss ohne Geräte
-
-Der folgende Auftrag wird erst nach ausdrücklicher Nutzerübergabe ausgeführt.
-Er ersetzt alte Startaufforderungen zu WE-M0/A, aber keine Sicherheitsgrenzen.
+Erst nach ausdrücklicher Übergabe dieses Auftrags ausführen. Keine alten
+Fahrtest-Prompts zusätzlich oder automatisch ausführen.
 
 ```text
-Projekt Amadeus / chris01-byte/Roboter_ws. Gesamtstrategie WE-1 unverändert.
-Arbeite auf den zusammenhängenden gerätefreien Softwareabschluss hin,
-nicht auf eine vorgezogene Probefahrt. Kein Neustart bei früheren Meilensteinen.
+PROJEKT: Amadeus / chris01-byte/Roboter_ws
+REFERENZ: docs/wohnungserkundung/MASTERPLAN.md, Version 1.0 vom 27.09.2026
+AUFTRAG: AKTUELLEN INTEGRATIONSSTAND SICHERN UND AUDITBESTAND KONSOLIDIEREN
 
-Lies die geltenden AGENTS.md, den aktuellen WE-STATUS, AGENTENAUFTRAG,
-Strategie und betroffene Meilensteine. Prüfe nach git fetch origin die
-abgestimmte neueste WE-Basis. Ausgangsreferenz dieses Auftrags ist M3/U,
-PR #91, 047455134894f700a115f6cea422479b99c702f6, mit dem aktualisierten
-Dokumentationsnachtrag. Neueren belegten Fortschritt erhalten.
+ZIEL
+Eine nachvollziehbare, reproduzierbare WE-/Parity-Basis herstellen und
+exakt das erste begrenzte Recovery-Änderungspaket daraus ableiten.
+Kein Neustart des gesamten Projekts und keine neue Roadmap.
 
-A. Reviewgate vor funktionaler Weiterarbeit:
-Prüfe die gestapelte WE-Kette, nicht nur den letzten PR. Reproduziere die
-relevanten Pakettests und den vorhandenen echten Explorer-Prozessprüfer
-in einem isolierten temporären Aufbau. Ordne bekannte Altbefunde gezielt
-zu und benenne eine geprüfte commitgebundene Softwarebasis. Kein pauschaler
-HWT-/Main-Merge, kein Löschen und keine Änderung der Roboterinstallation.
-Bei funktionskritischen Reviewblockern erst diese begrenzt beheben oder
-zur notwendigen Freigabe vorlegen. Keine weitere allgemeine Planungsrunde.
+A. BESTAND SICHERN
+Lies Pflichtkontext und aktuellen STATUS. Prüfe nach git fetch origin
+Remote-Refs, Arbeitsbaum, lokale Änderungen, Worktrees und bekannte Builds.
+Sichere die zuletzt tatsächlich verwendete Parity-/VL53-Recovery-Arbeit.
+Nicht aus PR #101 oder dessen Beschreibung auf den lokalen Install schließen.
 
-B. Danach innerhalb derselben geprüften WE-Linie das bestehende
-Mehrraum-/Persistenzpaket schließen (WE-M3-Restnachweise, WE-M5 offline):
-Verwende die vorhandene Produktionskette und vorhandenen Prüfer. Weise
-Startraum -> Flur -> weiteres Zimmer -> derselbe Flur mit sich entwickelnder
-Karte, Frontieraufgaben, automatischer Zielwahl und natürlichem erklärtem
-Abschluss nach. Fortlaufende Kartenrevisionen während aktiver Ziele dürfen
-nicht bloß eine endlose Cancel-/Retry-Schleife erzeugen. Sicherheits- und
-Frischeprüfungen nicht zum Bestehen abschwächen.
+Erhalte historische Referenzen und bereits bestandene Nachweise.
+Keine laufende Roboter-Arbeitskopie umschalten, kein reset --hard,
+kein Force-Push, kein Löschen fremder Branches und kein Blind-Merge.
+Fehlenden lokalen Zugriff ausdrücklich nennen; keine Runtime erfinden.
 
-Implementiere den minimalen WE-M5-Speicher-/Wiederaufnahmepfad über die
-bestehenden Kartenmanager-Verträge: validiertes Schema, eindeutige
-Kartenbindung, atomare Ablage, erhaltene Portal-/Regions-IDs und Restaufgaben.
-Manuelle Raumdaten erhalten. Keine konkurrierende Kartenablage. Teste alle
-bestehenden WE-M5-Pflichtfälle einschließlich beschädigter Daten, falscher
-Karte, abgebrochenem Schreiben, Neustart ohne gültige Pose und doppelten Events.
-Laden allein darf weder Navigationsziel noch Bewegung starten; nach erneut
-gültigen Quellen benötigt Fortsetzung einen neuen expliziten Auftrag.
+B. EINEN KANDIDATEN FESTLEGEN
+Ordne Code, externe Treiber/Submodule, Versionen, Kalibrierungen, Profile,
+Overlay-Reihenfolge und tatsächlich aufgelöste Pakete einander zu.
+Vergleiche nur relevante Unterschiede mit dem historisch bewährten
+HWT601-/Türpfad bei 1d91229; nicht pauschal auf diesen zurücksetzen.
 
-Verbinde Mehrraumtest und WE-M5 zu einem gerätefreien Gesamttest mit
-Unterbrechung, Speichern, Neustart und expliziter Fortsetzung. Simulierte
-Sensoren und Fake-Nav2 sind erlaubt; fertige Portal-/Durchfahrts-/Mergeurteile
-als Ersatz der zu prüfenden Produktionsentscheidung nicht. Plane keine Route
-heimlich für den Explorer vor. Füge Blockade, Datenfehler und Teilabschluss
-gezielt hinzu, statt weitere beliebige Szenarien zu erfinden.
+Stelle die bereits beabsichtigte Zusammensetzung in einer isolierten
+Integrationslinie reproduzierbar zusammen. Erhalte heutige nachgewiesene
+VL53-/HWT-/Antriebs-/Cancel-/Shutdown-Korrekturen. Keine funktionale
+Neuentwicklung oder Sicherheitslockerung als Teil des Zusammenbaus.
+Ungeklärte Integrationsentscheidungen sichtbar zur Entscheidung vorlegen.
 
-Kleine Commits sind möglich, Liefergegenstand bleibt das funktionierende Paket.
-Neue Hilfsmodule nur bei benanntem Bedarf. Keine neue Navigation, KI-Modelle,
-GUI-Erweiterung oder großes Simulationsframework. Notwendige zusätzliche
-HWT-Übernahmen und sicherheitsrelevante Änderungen paketweise abstimmen.
+Nutze einen frischen isolierten Build und weise Abhängigkeiten/Paketauflösung
+nach. Ein Besitzer je Motorbus, produktivem TF und Navigationskind;
+kein neuer aktiver WE-Navigator neben der bestehenden Ausführung.
+Gerätefreie Tests in isolierter Umgebung. Kein aktiver Installwechsel.
 
-Pflege STATUS-Kopf, Tabelle und Restliste konsistent. Berichte genau, welche
-Gesamtkette selbständig bestanden hat und welche Zielsystem-/Hardwaregates
-offen bleiben. Eigene Änderungen committen/pushen und zur Review stellen;
-keine automatischen Merges, Geräteaktivierung, Deployments oder Fahrten.
+C. AUDITBESTAND ZUSAMMENFÜHREN
+Suche vorhandene Abort-/Latch-Audits auch in der gesicherten lokalen Arbeit.
+Vorhandenes fortschreiben, nicht dieselbe Inventur erneut erfinden.
+Erfasse im real relevanten Pfad Trigger, Datenquelle, Grenzwert, aktuelle
+Stop-/Cancel-/Abort-/Latch-Wirkung, Verantwortlichen, Recovery und Evidenz.
+Unterscheide vorübergehenden Halt, eingeschränkten Betrieb, terminalen
+Hilfebedarf, echten Schutzstopp und Shutdownbefund. Keine Klassifikation
+allein aus einem Sammelfehler oder aufgrund des Wunsches, weiterzufahren.
+
+Beim letzten HWT-Abbruch zuerst die tatsächliche Einzelbedingung und den
+Originalwert aus bestehenden Logs/Code bestimmen. Falls nicht vorhanden:
+als Nachweislücke ausweisen und eng begrenzte Erstfehler-Diagnose vorschlagen.
+Keine erfundene HWT-Ursache und keine Timeout-Erhöhung auf Verdacht.
+
+D. ERGEBNIS LIEFERN
+Liefergegenstand ist die konsolidierte Basis mit Build-/Testnachweisen,
+aktualisierter Audit-Inventur und einem ersten begrenzten Umsetzungspaket:
+Halt -> Auftrag bleibt erhalten -> betroffene Funktion wiederherstellen ->
+Quellen/Pose/Pfad neu prüfen -> denselben Auftrag fortsetzen.
+
+Benenne dafür die vorhandenen Komponenten, exakt nötigen Änderungen,
+Erfolgs-/Gegenfälle und Rückfall. Noch nicht alle Latches umbauen und keinen
+zusätzlichen großen Supervisor schreiben. Keine automatische Rechnerreboot-
+Kette und kein Start von WE-M4/M5/M6.
+
+STATUS aktualisieren: exakte Basis, echte Nachweise, verbliebene Konflikte
+und genau ein nächster Auftrag. Reale Karten, Koordinaten, Bags und
+Zugangsdaten bleiben lokal. Eigene Änderung auf Themenbranch veröffentlichen;
+kein automatischer Merge, keine Geräteaktivierung, kein Deployment und
+keine Fahrt in diesem Auftrag.
+
+ABSCHLUSS
+Getrennt ausweisen: Runtime identifiziert / Build reproduziert /
+Auditbestand vollständig / erstes Recoverypaket entscheidungsreif.
+DOKUMENTIERT, BESTANDEN, OFFEN oder BLOCKIERT nur für den jeweiligen Umfang.
+Ein grüner Build ist weder eine neue Fahrfreigabe noch Stufe 3 grün.
 ```
+
+## 4. Übergabe und Fortschreibung
+
+Geprüfte Basis und Ergebnis-SHA, betroffene Dateien, wirklich ausgeführte Tests,
+Evidenzpfade, Grenzen, Restbefunde und Rückfall nennen. Build, Modulprüfung,
+gerätefreier Gesamtprozess, Zielsystem und physische Abnahme getrennt halten.
+Doppelte Testzählungen und `mergeable` nicht als Funktionsnachweis verwenden.
+
+STATUS ist der aktuelle fachliche Bericht. PROJECT_MEMORY enthält übergreifende
+Entscheidungen; ROBOT_TRANSFER wird bei tatsächlicher Betriebs-/Installationswirkung
+fortgeschrieben. Masterplan nur mit expliziter Grundentscheidung versionieren.
+Keine weitere parallele aktuelle Statusdatei und keine grüne Gesamtstufe ohne
+vollständigen vereinbarten Nachweis.
+
+Der Vorgängerauftrag zu M3/U ist
+[byteidentisch archiviert](../archive/2026-09/WOHNUNGSERKUNDUNG_AGENTENAUFTRAG_40b5b49.md).
+Seine damalige Basis PR #91 und sein Abschnitt 7 sind **kein aktueller Auftrag**.
+Historische fachliche Nachweise bleiben erhalten; Archive nicht automatisch ausführen.

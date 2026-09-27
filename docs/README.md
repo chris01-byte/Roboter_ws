@@ -9,7 +9,14 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 3. Die fachliche Dokumentation zum gerade bearbeiteten System.
 4. Vor Hardwarebetrieb die zugehoerige aktuelle Inbetriebnahme- oder Abnahmeanweisung.
 
-`main` ist die aktuelle Entwicklungsbasis. Neue, kurzlebige Themenbranches beginnen von `main` und erhalten genau einen klaren Zweck.
+**Für WE-1 vor jeder Bearbeitung:**
+[MASTERPLAN](wohnungserkundung/MASTERPLAN.md) ->
+[STATUS](wohnungserkundung/STATUS.md) ->
+[AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md).
+`main` bleibt reguläres Integrationsziel. Die ausdrücklich abgestimmte WE-Basis
+kann auf einem noch nicht integrierten Themenbranch liegen; aktuelle Remote-,
+lokale Quell- und Installationsstände nicht gleichsetzen. Kein automatischer
+Branchwechsel der laufenden Roboter-Arbeitskopie.
 
 ## Aktive Dokumentation
 
@@ -19,8 +26,9 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 | Hardware- und Betriebsuebergabe | [`ROBOT_TRANSFER.md`](ROBOT_TRANSFER.md) | Wiederholbare Jetson-/Hardwareuebergabe und Rueckfallwege. |
 | Fahrbasis / Encoder | [`ENCODER_ODOMETRIE_FIX.md`](ENCODER_ODOMETRIE_FIX.md) | Bestaetigte ESS23-Encoderregeln und Abnahmeschritte. |
 | LiDAR-SLAM | [`SLAM_TOOLBOX_ROTATION_FIX.md`](SLAM_TOOLBOX_ROTATION_FIX.md) | Humble-Overlay, reine Drehung und Inbetriebnahmegrenzen. |
+| Wohnungserkundung: Masterplan | [`wohnungserkundung/MASTERPLAN.md`](wohnungserkundung/MASTERPLAN.md) | Verbindlicher Arbeitsrahmen: konsolidieren, gezielt recovern, Kern abnehmen, dann bestehende WE-Meilensteine. |
 | Wohnungserkundung: Gesamtplan | [`WOHNUNGSERKUNDUNG_STRATEGIE.md`](WOHNUNGSERKUNDUNG_STRATEGIE.md) | WE-1: Frontier-, Raum-/Portalgedächtnis, Rückwege und Abschlussvertrag. |
-| Wohnungserkundung: Agentenauftrag | [`wohnungserkundung/AGENTENAUFTRAG.md`](wohnungserkundung/AGENTENAUFTRAG.md) | Pflichtkontext, Arbeitsumfang und sichere Übergabe. |
+| Wohnungserkundung: Agentenauftrag | [`wohnungserkundung/AGENTENAUFTRAG.md`](wohnungserkundung/AGENTENAUFTRAG.md) | Pflichtkontext, Arbeitsumfang und genau ein aktueller Folgeauftrag. |
 | Wohnungserkundung: Meilensteine | [`wohnungserkundung/MEILENSTEINE.md`](wohnungserkundung/MEILENSTEINE.md) | WE-M0 bis WE-M7 mit Tests, Abnahmegrenzen und Rückfallwegen. |
 | Wohnungserkundung: Status | [`wohnungserkundung/STATUS.md`](wohnungserkundung/STATUS.md) | Einziger laufender WE-1-Status mit fachlichem Entscheidungslog. |
 | Zielkarte und Lokalisierung | [`ZIEL_KARTE_UND_LOKALISIERUNG.md`](ZIEL_KARTE_UND_LOKALISIERUNG.md) | Karten-/Lokalisierungsvertrag und Fail-closed Regeln. |
@@ -44,6 +52,7 @@ Aktuelle Dokumentation beschreibt den vorgesehenen oder nachweislich laufenden Z
 Für WE-1 stehen fachliche Entscheidungen und Fortschritt in
 [`wohnungserkundung/STATUS.md`](wohnungserkundung/STATUS.md). Übergreifende
 Projektentscheidungen werden zusätzlich im Projektgedächtnis verlinkt.
+Der MASTERPLAN enthält stabile Grundentscheidungen, keine zweite Iststandsliste.
 
 ### Archiv
 
@@ -53,6 +62,9 @@ Der vorherige Wohnungserkundungsplan bleibt als
 [Strategiestand vom 18.08.2026](archive/2026-08/WOHNUNGSERKUNDUNG_STRATEGIE_2026-08-18.md)
 erhalten. Die aktuelle Zielarchitektur steht unter dem bisherigen Strategiepfad;
 der historische Plan ist keine konkurrierende aktuelle Arbeitsanweisung.
+Die vor der Konsolidierung gültigen STATUS-/Agentenauftrag-Fassungen bei
+`40b5b49` sind byteidentisch unter [September-Archiv](archive/2026-09/README.md)
+erhalten. Frühere Folgeaufträge darin werden nicht automatisch weiter ausgeführt.
 
 ## Legacy-Pruefpfad
 
