@@ -16,6 +16,7 @@ class Hwt601FusionGuard:
     def __init__(self, node, active_drive, callback_group=None):
         self.node = node
         self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
+        self._logged_recovery_events = 0
         self.subscriptions = []
         for name, topic, msg_type in (
                 ('raw', '/shadow/hwt601/imu/data_raw', Imu),
@@ -60,4 +61,15 @@ class Hwt601FusionGuard:
                            valid and all(math.isfinite(v) for v in values))
 
     def failure(self):
-        return self.health.motion_failure()
+        failure = self.health.motion_failure()
+        events = self.health.recovery_events
+        for event in events[self._logged_recovery_events:]:
+            try:
+                self.node.get_logger().warn(
+                    'HWT-Recovery %s: %s (monotonic %.6f)' % (
+                        event['state'], event['reason'], event['monotonic_s']))
+            except Exception:
+                # A logging failure must not interfere with the stop signal.
+                pass
+        self._logged_recovery_events = len(events)
+        return failure

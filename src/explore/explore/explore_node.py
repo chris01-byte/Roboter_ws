@@ -145,7 +145,9 @@ from explore.frontier_task_resolution import (
     build_frontier_task_resolution_evidence,
 )
 from explore.exploration_nav_runtime import (
+    ExplorationNavigationHold,
     ExplorationNavigationSession,
+    NavigationChildRun,
     NavigationSourceState,
     NavigationStopCause,
 )
@@ -1455,11 +1457,19 @@ class ExploreNode(Node):
         # auf Nav-Ergebnisse, waehrend weiter Karten hereinkommen muessen).
         self._cb = ReentrantCallbackGroup()
         self._hwt_guard = None
+        self._hwt_recovery_sequence = 0
+        self._hwt_hold_announced = False
+        self._hwt_hold_deadline = None
+        self._hwt_interrupted_task_id = None
+        self._hwt_gate_resume_ack_sequence = -1
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         if require_hwt:
             from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
             self._hwt_guard = Hwt601FusionGuard(self, hwt_drive, self._cb)
+            self.create_subscription(
+                String, '/fusion/hwt601/status_json',
+                self._on_hwt_gate_status, 10, callback_group=self._cb)
 
         # Ohne explizite Aktivierung existieren weder Schattenzustand noch
         # zusaetzliche ROS-Schnittstellen. Der bestehende Explorerpfad bleibt
@@ -2827,6 +2837,112 @@ class ExploreNode(Node):
         guard = getattr(self, '_hwt_guard', None)
         return guard.failure() if guard is not None else None
 
+    def _on_hwt_gate_status(self, message):
+        try:
+            status = json.loads(message.data)
+        except (ValueError, TypeError):
+            return
+        if not isinstance(status, dict):
+            return
+        sequence = status.get('resume_sequence')
+        if (status.get('hwt_motion_ready') is True
+                and status.get('recovery_state') == 'HEALTHY'
+                and type(sequence) is int and sequence >= 0):
+            self._hwt_gate_resume_ack_sequence = max(
+                self._hwt_gate_resume_ack_sequence, sequence)
+
+    def _wohnungserkundung_hwt_hold(self) -> bool:
+        guard = getattr(self, '_hwt_guard', None)
+        if guard is None:
+            return False
+        guard.failure()
+        state = guard.health.recovery_state
+        if state in ('HOLD', 'RECOVERY_VALIDATION'):
+            if not self._hwt_hold_announced:
+                self._hwt_recovery_sequence += 1
+                self._hwt_hold_deadline = (
+                    time.monotonic() + guard.health.recovery_budget_s)
+                self._hwt_hold_announced = True
+            self._status_phase = 'we_hwt_hold'
+            self._status_message = (
+                'HWT-Quelle ungueltig; Kindziel wird beendet, '
+                'Explore-Auftrag bleibt erhalten.')
+            self._publish_status('running')
+            return True
+        return self._hwt_hold_announced
+
+    def _wohnungserkundung_resume_path_ready(self) -> bool:
+        with self._wohnungserkundung_runtime_lock:
+            target = self._wohnungserkundung_navigation_snapshot
+        if target is None:
+            return False
+        intent, candidate = target
+        interrupted = self._hwt_interrupted_task_id
+        if interrupted is not None and intent.task_id != interrupted:
+            return False
+        with self._region_graph_shadow_lock:
+            map_at = self._region_graph_shadow_latest_correlation_received_at
+        if (map_at is None or not 0.0 <= time.monotonic() - map_at
+                <= self._map_timeout_s):
+            return False
+        if not self._wohnungserkundung_source_state(intent, candidate).current:
+            return False
+        pose = self._robot_pose()
+        if pose is None:
+            return False
+        goal = (candidate.target_x_m, candidate.target_y_m)
+        checked = self._costmap_reachable_goal(goal, goal, pose[:2])
+        return checked is not None and checked[1] is False
+
+    def _wohnungserkundung_wait_for_hwt_resume(
+            self, goal_handle, overall_expired, require_target):
+        """Keep the parent action while the old Nav2 child is terminal."""
+        if self._hwt_hold_deadline is None:
+            return 'terminal'
+        while rclpy.ok():
+            if goal_handle.is_cancel_requested:
+                return 'user_canceled'
+            if overall_expired():
+                return 'budget_exhausted'
+            guard = self._hwt_guard
+            guard.failure()
+            if guard.health.recovery_state == 'TERMINAL_FAULT':
+                return 'terminal'
+            with self._wohnungserkundung_runtime_lock:
+                estop = self._wohnungserkundung_estop
+                child = self._wohnungserkundung_active_child
+            if estop is not False or child is not None:
+                return 'terminal'
+            if time.monotonic() >= self._hwt_hold_deadline:
+                return 'terminal'
+            validated = (
+                guard.health.recovery_state == 'HEALTHY'
+                and not self._wohnungserkundung_active_safety_failure()
+                and (not require_target
+                     or self._wohnungserkundung_resume_path_ready()))
+            if not validated:
+                self._status_phase = 'we_hwt_recovery_validation'
+                self._status_message = (
+                    'HWT-Recovery: Stillstand, frische Quellen, Pose und '
+                    'aktuellen Weg pruefen.')
+                self._publish_status('running')
+            else:
+                self._status_phase = 'we_hwt_resumed'
+                self._status_message = (
+                    'HWT und aktuelle Route erneut geprueft; '
+                    'warte auf Fahrtorbestaetigung.')
+                self._publish_status('running')
+                if (self._hwt_gate_resume_ack_sequence
+                        >= self._hwt_recovery_sequence):
+                    if require_target:
+                        with self._wohnungserkundung_runtime_lock:
+                            self._wohnungserkundung_consumed_intent_id = None
+                    self._hwt_hold_announced = False
+                    self._hwt_hold_deadline = None
+                    return 'resumed'
+            time.sleep(0.05)
+        return 'terminal'
+
     def _wohnungserkundung_active_safety_failure(self) -> bool:
         """Cancel an active child on a hard source failure, never replan it.
 
@@ -2849,7 +2965,13 @@ class ExploreNode(Node):
                     f'WE-Kindziel: harte Quellenstoerung ({reason}); Nav2-Abbruch')
             return True
         hwt_failure = self._hwt601_failure()
-        if hwt_failure is not None:
+        guard = getattr(self, '_hwt_guard', None)
+        health = getattr(guard, 'health', None)
+        hwt_in_hold = (health is not None and health.recovery_state in
+                       ('HOLD', 'RECOVERY_VALIDATION'))
+        if (hwt_failure is not None and guard is not None
+                and (health is None
+                     or health.recovery_state == 'TERMINAL_FAULT')):
             return failed('hwt601_' + hwt_failure)
         with self._wohnungserkundung_runtime_lock:
             estop = self._wohnungserkundung_estop
@@ -2879,6 +3001,10 @@ class ExploreNode(Node):
                 or np.count_nonzero(np.isfinite(scan['ranges']))
                 < self._door_lidar_min_points):
             return failed('lidar_missing_stale_or_invalid')
+        if hwt_in_hold:
+            # The HWT outage itself can make fused pose/odom invalid. Check
+            # them during RECOVERY_VALIDATION, after the source is healthy.
+            return False
         pose, pose_age = self._robot_pose_sample()
         if pose is None or pose_age is None or not 0.0 <= pose_age <= 1.5:
             return failed('localization_missing_or_stale')
@@ -3400,6 +3526,9 @@ class ExploreNode(Node):
                 state == 'success' and self._coverage_complete),
             'time': time.time(),
         }
+        if getattr(self, '_hwt_guard', None) is not None:
+            payload['hwt_recovery_sequence'] = getattr(
+                self, '_hwt_recovery_sequence', 0)
         if getattr(self, '_wohnungserkundung_policy_enabled', False):
             payload['wohnungserkundung'] = (
                 self._wohnungserkundung_status_extension)
@@ -4420,6 +4549,13 @@ class ExploreNode(Node):
             except Exception:
                 return 'error'
         if stop_reason is not None:
+            if stop_reason == 'canceled':
+                if holder['status'] == GoalStatus.STATUS_SUCCEEDED:
+                    return 'success'
+                if holder['status'] == GoalStatus.STATUS_ABORTED:
+                    return 'aborted'
+                if holder['status'] != GoalStatus.STATUS_CANCELED:
+                    return 'error'
             return stop_reason
         if holder['status'] == GoalStatus.STATUS_SUCCEEDED:
             return 'success'
@@ -6231,28 +6367,41 @@ class ExploreNode(Node):
                 self._wohnungserkundung_active_frontier_fingerprint = (
                     candidate.source_fingerprint)
         try:
-            run = navigation_session.run(
-                intent,
-                candidate,
-                lambda selected, stop_requested: self._navigate_to(
-                    selected.target_x_m,
-                    selected.target_y_m,
-                    self._goal_timeout_s,
-                    stop_requested=stop_requested,
-                    goal_yaw=selected.target_yaw_rad,
-                    progress_observer=(
-                        None if portal_monitor is None
-                        else portal_monitor.observe),
-                ),
-                lambda: self._wohnungserkundung_source_state(
-                    intent, candidate),
-                lambda: goal_handle.is_cancel_requested,
-                overall_expired,
-                local_blocked=(
-                    self._wohnungserkundung_local_blocked_after_abort),
-                safety_failure=(
-                    self._wohnungserkundung_active_safety_failure),
-            )
+            try:
+                run = navigation_session.run(
+                    intent,
+                    candidate,
+                    lambda selected, stop_requested: self._navigate_to(
+                        selected.target_x_m,
+                        selected.target_y_m,
+                        self._goal_timeout_s,
+                        stop_requested=stop_requested,
+                        goal_yaw=selected.target_yaw_rad,
+                        progress_observer=(
+                            None if portal_monitor is None
+                            else portal_monitor.observe),
+                    ),
+                    lambda: self._wohnungserkundung_source_state(
+                        intent, candidate),
+                    lambda: goal_handle.is_cancel_requested,
+                    overall_expired,
+                    local_blocked=(
+                        self._wohnungserkundung_local_blocked_after_abort),
+                    safety_failure=(
+                        self._wohnungserkundung_active_safety_failure),
+                    recoverable_hold=self._wohnungserkundung_hwt_hold,
+                )
+            except ExplorationNavigationHold:
+                run = NavigationChildRun(
+                    navigation_status='canceled',
+                    stop_cause=NavigationStopCause.HWT_RECOVERY_HOLD,
+                    disposition=None)
+            if getattr(run, 'stop_cause', None) is (
+                    NavigationStopCause.HWT_RECOVERY_HOLD):
+                with self._wohnungserkundung_runtime_lock:
+                    self._wohnungserkundung_consumed_intent_id = intent.intent_id
+                self._hwt_interrupted_task_id = intent.task_id
+                return run, None
             portal_outcome = None
             if portal_monitor is not None:
                 portal_outcome = portal_monitor.finish(
@@ -6485,6 +6634,26 @@ class ExploreNode(Node):
                 return terminate(
                     TerminationCause.USER_CANCELED,
                     'user_canceled_without_active_child')
+            if self._wohnungserkundung_hwt_hold():
+                resume = self._wohnungserkundung_wait_for_hwt_resume(
+                    goal_handle, overall_expired,
+                    require_target=not initial_scan_pending)
+                if resume == 'resumed':
+                    # The canceled session owns the old intent/result history.
+                    # Dispatch a new Nav2 goal only after the fresh route check.
+                    navigation_session = None
+                    continue
+                if resume == 'user_canceled':
+                    return terminate(
+                        TerminationCause.USER_CANCELED,
+                        'user_canceled_during_hwt_hold')
+                if resume == 'budget_exhausted':
+                    return terminate(
+                        TerminationCause.BUDGET_EXHAUSTED,
+                        'overall_budget_during_hwt_hold')
+                return terminate(
+                    TerminationCause.SYSTEM_FAILURE,
+                    'hwt_recovery_terminal_help_required')
             hwt_failure = self._hwt601_failure()
             if hwt_failure is not None:
                 return terminate(
@@ -6515,6 +6684,7 @@ class ExploreNode(Node):
                 scan_status, _achieved = self._scan_in_place(
                     stop_requested=lambda: (
                         goal_handle.is_cancel_requested or overall_expired()
+                        or self._wohnungserkundung_hwt_hold()
                         or self._hwt601_failure() is not None))
                 if scan_status == 'success':
                     if getattr(
@@ -6540,6 +6710,8 @@ class ExploreNode(Node):
                     return terminate(
                         TerminationCause.BUDGET_EXHAUSTED,
                         'overall_budget_during_initial_scan')
+                if self._hwt_hold_announced:
+                    continue
                 return terminate(
                     TerminationCause.SYSTEM_FAILURE,
                     f'initial_scan_{scan_status}')
@@ -6565,6 +6737,14 @@ class ExploreNode(Node):
                 time.sleep(0.05)
                 continue
             intent, candidate = target
+            interrupted_task = getattr(
+                self, '_hwt_interrupted_task_id', None)
+            if interrupted_task is not None:
+                if intent.task_id != interrupted_task:
+                    return terminate(
+                        TerminationCause.SYSTEM_FAILURE,
+                        'hwt_resume_task_identity_changed')
+                self._hwt_interrupted_task_id = None
             if navigation_session is None:
                 navigation_session = ExplorationNavigationSession(
                     intent.context)
@@ -6627,6 +6807,10 @@ class ExploreNode(Node):
                     'gestoppt; warte auf frisch belegten Zielkandidaten.')
                 self._publish_status('running')
                 time.sleep(self._replan_period_s)
+                continue
+            if run.stop_cause is NavigationStopCause.HWT_RECOVERY_HOLD:
+                # _navigate_to returned only after the old child became
+                # terminal. The parent Explore action and task remain live.
                 continue
 
             attempted_goals += 1

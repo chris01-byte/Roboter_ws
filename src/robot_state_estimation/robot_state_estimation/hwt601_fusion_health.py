@@ -63,7 +63,7 @@ def age_valid(value, limit):
 
 
 class Hwt601FusionHealth:
-    """Check real inputs; once ready, source loss requires a stopped restart.
+    """Check real inputs and bound post-readiness recovery without motion.
 
     Limits are from hwt601_shadow.yaml (raw .20, corrected .35),
     base_hardware_params.yaml (.30), the read-only encoder shadow profile
@@ -80,6 +80,25 @@ class Hwt601FusionHealth:
         self.latched_fault = None
         self._first_fault = None
         self._last_valid_raw_sample = None
+        self.recovery_state = 'STARTUP'
+        self._hold_since = None
+        self._healthy_since = None
+        self._hold_reason = None
+        self._raw_samples_since_hold = 0
+        self._raw_statuses_since_hold = 0
+        self._last_healthy_reconnects = None
+        self.recovery_events = []
+        self.recovery_attempts = 0
+        # The driver reconnects after its third consecutive read error.
+        # This profile permits at most two completed/started transient holds
+        # per Health lifetime; a third requires stopped human inspection.
+        self.recovery_attempt_limit = 2
+        # 100 Hz raw source, 2 Hz status and 1 s status-heartbeat contract:
+        # require >=20 new raw samples, >=2 new status frames and 1 s healthy.
+        # The 5 s total includes the existing 3 s Nav2 cancel bound plus two
+        # status-heartbeat intervals; it never relaxes motion freshness.
+        self.recovery_window_s = 1.0
+        self.recovery_budget_s = 5.0
         self.lock = threading.RLock()
 
     def sample(self, name, stamp, received, observed, valid=True):
@@ -88,6 +107,8 @@ class Hwt601FusionHealth:
             valid = (valid and math.isfinite(stamp) and stamp > 0
                      and (previous is None or stamp > previous[0]))
             self.samples[name] = (stamp, received, observed, valid)
+            if name == 'raw' and self._hold_since is not None and valid:
+                self._raw_samples_since_hold += 1
             if (name == 'raw' and valid
                     and type(received) in (int, float)
                     and type(observed) in (int, float)
@@ -97,6 +118,104 @@ class Hwt601FusionHealth:
     def status(self, name, payload, received):
         with self.lock:
             self.statuses[name] = (payload if isinstance(payload, dict) else {}, received)
+            if name == 'raw' and self._hold_since is not None:
+                self._raw_statuses_since_hold += 1
+
+    def _raw_identity_intact(self):
+        entry = self.statuses.get('raw')
+        if entry is None:
+            return False
+        raw = entry[0]
+        reconnects = raw.get('reconnects')
+        return (raw.get('port') == '/dev/ttyUSB_HWT601'
+                and raw.get('sensor_write_commands') is False
+                and (raw.get('ready') is True
+                     or (raw.get('ready') is False
+                         and raw.get('state') == 'degradiert'))
+                and type(raw.get('raw_data_ready')) is bool
+                and raw['ready'] is raw['raw_data_ready']
+                and type(raw.get('consecutive_errors')) is int
+                and 0 <= raw['consecutive_errors'] < 3
+                and type(reconnects) is int
+                and reconnects == self._last_healthy_reconnects
+                and type(raw.get('age_s')) in (int, float)
+                and math.isfinite(raw['age_s'])
+                and raw['age_s'] >= 0.0)
+
+    def _hard_status_failure(self):
+        """Check hard invariants even if _failure found a stale sample first."""
+        if not self._raw_identity_intact():
+            return 'raw_identity_or_configuration_fault'
+        yaw_entry = self.statuses.get('yaw')
+        wheel_entry = self.statuses.get('wheel')
+        if yaw_entry is None or wheel_entry is None:
+            return 'required_status_missing'
+        yaw = yaw_entry[0]
+        bias = yaw.get('bias')
+        if not (yaw.get('ready') is True
+                and yaw.get('operator_stationary_confirmed') is True
+                and yaw.get('bias_frozen_after_startup') is True
+                and 'latched_fault' in yaw and yaw['latched_fault'] is None
+                and isinstance(bias, dict)
+                and bias.get('calibrated') is True
+                and bias.get('stable') is True
+                and bias.get('adaptation_samples') == 0
+                and type(yaw.get('age_s')) in (int, float)
+                and math.isfinite(yaw['age_s']) and yaw['age_s'] >= 0.0):
+            return 'yaw_calibration_or_identity_fault'
+        wheel = wheel_entry[0]
+        if self.active_drive:
+            valid = (wheel.get('dry_run') is False
+                     and wheel.get('allow_rs485') is True
+                     and wheel.get('rs485_ready') is True
+                     and wheel.get('odometry_source') == 'encoder_position'
+                     and wheel.get('encoder_feedback_ok') is True
+                     and wheel.get('encoder_stale') is False
+                     and wheel.get('encoder_config_fault_latched') is False
+                     and type(wheel.get('encoder_feedback_age_s')) in (int, float)
+                     and math.isfinite(wheel['encoder_feedback_age_s'])
+                     and wheel['encoder_feedback_age_s'] >= 0.0)
+        else:
+            valid = (wheel.get('ready') is True
+                     and wheel.get('source') == 'ess23_absolute_fc03'
+                     and wheel.get('synthetic') is False
+                     and wheel.get('command_derived') is False
+                     and wheel.get('read_only') is True
+                     and wheel.get('actuator_output') is False
+                     and wheel.get('fault_latched') is False
+                     and type(wheel.get('last_feedback_age_s')) in (int, float)
+                     and math.isfinite(wheel['last_feedback_age_s'])
+                     and wheel['last_feedback_age_s'] >= 0.0)
+        return None if valid else 'wheel_identity_or_configuration_fault'
+
+    def _recoverable(self, reason, now):
+        if self._hard_status_failure() is not None:
+            return False
+        if reason in ('raw_missing_stale_or_invalid',
+                      'yaw_missing_stale_or_invalid'):
+            name = reason.split('_', 1)[0]
+            sample = self.samples.get(name)
+            return (sample is None or
+                    (sample[3] and all(
+                        type(value) in (int, float) and math.isfinite(value)
+                        for value in sample[:3])
+                     and now >= sample[1] >= sample[2]))
+        if reason == 'raw_driver_not_ready':
+            raw = self.statuses['raw'][0]
+            return (raw['raw_data_ready'] is False
+                    or 0 < raw['consecutive_errors'] < 3
+                    or raw['age_s'] > 0.20)
+        return False
+
+    def _event(self, now, state, reason):
+        self.recovery_events.append({
+            'state': state, 'reason': reason, 'monotonic_s': now})
+
+    def _terminal(self, now, reason):
+        self.recovery_state = 'TERMINAL_FAULT'
+        self.latched_fault = reason
+        self._event(now, self.recovery_state, reason)
+        return reason
 
     def _failure(self, now):
         wheel_limit = 0.30 if self.active_drive else 0.18
@@ -244,22 +363,68 @@ class Hwt601FusionHealth:
             if self.latched_fault is not None:
                 return self.latched_fault
             reason = self._failure(now)
-            if reason is None:
+            if reason is None and not self.was_ready:
                 self.was_ready = True
-            elif self.was_ready:
-                self.latched_fault = reason
-                if self._first_fault is None:
-                    try:
-                        self._first_fault = self._capture_first_fault(now, reason)
-                    except Exception as exc:
-                        # The existing fail-closed decision must survive a
-                        # diagnostic formatting defect.
-                        self._first_fault = {
-                            'component': 'Hwt601FusionHealth',
-                            'aggregate_reason': reason,
-                            'capture_error': type(exc).__name__,
-                        }
-            return reason
+                self.recovery_state = 'HEALTHY'
+                reconnects = self.statuses['raw'][0].get('reconnects')
+                self._last_healthy_reconnects = (
+                    reconnects if type(reconnects) is int else None)
+                return None
+            if not self.was_ready:
+                return reason
+            hard = self._hard_status_failure()
+            observed_reason = reason or hard
+            if observed_reason is not None and self._first_fault is None:
+                try:
+                    self._first_fault = self._capture_first_fault(
+                        now, observed_reason)
+                except Exception as exc:
+                    # Diagnostic formatting must never affect the stop.
+                    self._first_fault = {
+                        'component': 'Hwt601FusionHealth',
+                        'aggregate_reason': observed_reason,
+                        'capture_error': type(exc).__name__,
+                    }
+            if hard is not None:
+                return self._terminal(now, observed_reason)
+            if self.recovery_state == 'HEALTHY':
+                if reason is None:
+                    return None
+                if not self._recoverable(reason, now):
+                    return self._terminal(now, reason)
+                if self.recovery_attempts >= self.recovery_attempt_limit:
+                    return self._terminal(now, 'hwt_recovery_attempt_limit')
+                self.recovery_attempts += 1
+                self.recovery_state = 'HOLD'
+                self._hold_since = now
+                self._hold_reason = reason
+                self._raw_samples_since_hold = 0
+                self._raw_statuses_since_hold = 0
+                self._event(now, 'HOLD', reason)
+                return reason
+            if now - self._hold_since >= self.recovery_budget_s:
+                return self._terminal(now, 'hwt_recovery_budget_exhausted')
+            if reason is not None:
+                if not self._recoverable(reason, now):
+                    return self._terminal(now, reason)
+                if self.recovery_state == 'RECOVERY_VALIDATION':
+                    self.recovery_state = 'HOLD'
+                    self._healthy_since = None
+                    self._event(now, 'HOLD', reason)
+                return self._hold_reason
+            if self.recovery_state == 'HOLD':
+                self.recovery_state = 'RECOVERY_VALIDATION'
+                self._healthy_since = now
+                self._event(now, 'RECOVERY_VALIDATION', self._hold_reason)
+            if (now - self._healthy_since >= self.recovery_window_s
+                    and self._raw_samples_since_hold >= 20
+                    and self._raw_statuses_since_hold >= 2):
+                self.recovery_state = 'HEALTHY'
+                self._hold_since = None
+                self._healthy_since = None
+                self._event(now, 'HEALTHY', 'recovered')
+                return None
+            return self._hold_reason
 
     def motion_failure(self, now=None):
         return self.source_failure(now) or (

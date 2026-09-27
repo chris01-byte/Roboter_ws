@@ -1,5 +1,18 @@
 # Übertragung auf den realen Roboter
 
+## HWT-HOLD-/Recovery-Branch — ausschließlich gerätefrei
+
+`feature/hwt-hold-recovery-resume` baut die vier Pakete
+`robot_state_estimation`, `robot_navigation`, `explore` und `mission_manager`
+isoliert in `/tmp/we1-hwt-recovery-install` über
+`/tmp/we1-full-shim-install`. Dieser Build wurde **nicht** als Roboter-Install
+aktiviert und nicht mit Motoren oder Sensoren gestartet. Der alte aktive
+Install und der PR-#104-Kandidat bleiben unberührt. Vor einem späteren
+Geräte- oder Fahrtest Paketpfade, Hashes, Profile, einzigen Busbesitzer und
+Rückfall neu per Runtime-Manifest prüfen; STATUS Abschnitt 5 enthält die
+Softwarebelege und AGENTENAUFTRAG Abschnitt 5 den einzigen Folgeauftrag.
+
+
 ## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf
 
 Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`

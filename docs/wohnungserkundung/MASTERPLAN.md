@@ -1,6 +1,13 @@
 # WE-1 – verbindlicher Masterplan für Konsolidierung und robuste Wohnungserkundung
 
-**Version 1.0 · 27.09.2026 · Amadeus / `chris01-byte/Roboter_ws`**
+**Version 1.1 · 27.09.2026 · Amadeus / `chris01-byte/Roboter_ws`**
+
+**Änderung gegenüber v1.0:** Der historische Einzelwert des
+`raw_driver_not_ready`-Abbruchs wurde nicht aufgezeichnet und ist nicht
+rekonstruierbar. Seine Ermittlung ist deshalb keine Voraussetzung mehr für
+die Entwicklung eines ausdrücklich klassifizierten, synthetisch injizierbaren
+transienten HWT-Recoveryfalls. Die konkrete historische Ursache bleibt
+unbekannt. Alle Bewegungs-, Frische- und Realabnahmegrenzen gelten weiter.
 
 **Entscheidungsgrundlage:** Im Projektgespräch mit Christopher abgestimmter
 Masterplan; zur dauerhaften Referenz für alle beteiligten Agenten abgelegt.
@@ -97,8 +104,10 @@ Wiederanlaufbedingung und Evidenz. Nicht nur Fehlertexte sammeln.
 Danach zuerst **einen vollständigen vertikalen Fall** umsetzen:
 Störung -> sicherer Halt -> Auftrag bleibt erhalten -> betroffene Funktion
 wiederherstellen -> aktuelle Quellen/Pose/Pfad prüfen -> denselben Auftrag
-fortsetzen. Der berichtete HWT-Rohstatusabbruch ist der erste Kandidat;
-seine tatsächliche Einzelursache muss vorher belegt werden.
+fortsetzen. Der berichtete HWT-Rohstatusabbruch ist der erste Kandidat.
+Für einen synthetisch injizierten, eindeutig definierten transienten Fall ist
+der unbekannte historische Rohstatuswert keine Umsetzungsvoraussetzung;
+eine reale Ursache darf daraus nicht behauptet werden.
 
 Vorhandene VL53-Recovery und sonstige lokale Arbeit zunächst lesen und zuordnen.
 Nicht parallel dieselbe Funktion neu bauen. Weitere passende Fehler übernehmen

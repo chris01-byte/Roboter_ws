@@ -1773,6 +1773,138 @@ def test_hwt_raw_source_loss_is_hard_failure_not_local_blockage():
     assert len(errors) == 1
 
 
+def test_hwt_resume_requires_current_target_pose_and_unprojected_path():
+    node = ExploreNode.__new__(ExploreNode)
+    target = SimpleNamespace(target_x_m=1.0, target_y_m=2.0)
+    intent = SimpleNamespace(task_id='task-1')
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = (intent, target)
+    node._hwt_interrupted_task_id = 'task-1'
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation_received_at = time.monotonic()
+    node._map_timeout_s = 5.0
+    node._wohnungserkundung_source_state = (
+        lambda *_args: SimpleNamespace(current=True))
+    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._costmap_reachable_goal = lambda *_args: None
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), True)
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
+    assert node._wohnungserkundung_resume_path_ready() is True
+    node._robot_pose = lambda: None
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._hwt_interrupted_task_id = 'different-task'
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._hwt_interrupted_task_id = 'task-1'
+    node._region_graph_shadow_latest_correlation_received_at -= 6.0
+    assert node._wohnungserkundung_resume_path_ready() is False
+
+
+def test_hwt_parent_hold_keeps_action_until_safety_and_route_revalidated(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 1.0
+    node._hwt_hold_announced = True
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = 1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = 'old-intent'
+    node._hwt_interrupted_task_id = 'old-task'
+    published = []
+    node._publish_status = lambda state: published.append(
+        (state, node._status_phase))
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    result = node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True)
+    assert result == 'resumed'
+    assert published[-1] == ('running', 'we_hwt_resumed')
+    assert node._hwt_hold_announced is False
+    assert node._wohnungserkundung_active_child is None
+    assert node._wohnungserkundung_consumed_intent_id is None
+    assert node._hwt_interrupted_task_id == 'old-task'
+
+
+def test_hwt_gate_ack_requires_healthy_motion_ready_and_sequence():
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_gate_resume_ack_sequence = -1
+    for ready, state, sequence in (
+            (False, 'HEALTHY', 1), (True, 'HOLD', 1)):
+        node._on_hwt_gate_status(String(data=json.dumps({
+            'hwt_motion_ready': ready, 'recovery_state': state,
+            'resume_sequence': sequence})))
+        assert node._hwt_gate_resume_ack_sequence == -1
+    node._on_hwt_gate_status(String(data=json.dumps({
+        'hwt_motion_ready': True, 'recovery_state': 'HEALTHY',
+        'resume_sequence': 1})))
+    assert node._hwt_gate_resume_ack_sequence == 1
+
+
+def test_hwt_resume_stays_stopped_without_path_or_on_estop(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 0.01
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = -1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    node._publish_status = lambda _state: None
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_resume_path_ready = lambda: False
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._hwt_hold_deadline = time.monotonic() + 0.01
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._hwt_hold_deadline = time.monotonic() + 1.0
+    node._wohnungserkundung_estop = True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._wohnungserkundung_estop = False
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=True),
+        lambda: False, require_target=True) == 'user_canceled'
+
+
+def test_hwt_hold_before_nav_dispatch_preserves_task_without_child():
+    from explore.exploration_nav_runtime import ExplorationNavigationHold
+    context = PortalMapContext('session-hold', 'map-hold', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    intent.task_id = candidate.task_id
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_active_frontier_source = None
+    node._wohnungserkundung_active_frontier_fingerprint = None
+    class Session:
+        def run(self, *_args, **_kwargs):
+            raise ExplorationNavigationHold('before dispatch')
+    run, portal = node._run_wohnungserkundung_child(
+        Session(), intent, candidate,
+        SimpleNamespace(is_cancel_requested=False), lambda: False)
+    assert portal is None
+    assert run.stop_cause is NavigationStopCause.HWT_RECOVERY_HOLD
+    assert node._wohnungserkundung_active_child is None
+    assert node._hwt_interrupted_task_id == intent.task_id
+    assert node._wohnungserkundung_consumed_intent_id == intent.intent_id
+
+
 def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
     context = PortalMapContext('session-local', 'map-local', 'map')
     _, candidate = _we_source_state_goal(context)
@@ -2502,11 +2634,12 @@ def _portal_runtime_node(monkeypatch, outcome):
     class NavigationSession:
         def run(self, selected_intent, selected_candidate, navigate_child,
                 source_state, user_canceled, budget_exhausted,
-                *, local_blocked, safety_failure):
+                *, local_blocked, safety_failure, recoverable_hold):
             assert selected_intent is intent
             assert selected_candidate is candidate
             assert callable(local_blocked)
             assert callable(safety_failure)
+            assert callable(recoverable_hold)
             assert navigate_child(candidate, lambda: False) == 'success'
             return run
 

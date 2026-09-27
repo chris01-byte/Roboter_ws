@@ -2,7 +2,7 @@
 
 **WE-1 · Version 27.09.2026 · Repository `chris01-byte/Roboter_ws`**
 
-Verbindlicher Einstieg ist [MASTERPLAN.md v1.0](MASTERPLAN.md).
+Verbindlicher Einstieg ist [MASTERPLAN.md v1.1](MASTERPLAN.md).
 Der laufende Iststand und der nächste Auftrag stehen in [STATUS.md](STATUS.md).
 Die [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und die
 [WE-Meilensteine](MEILENSTEINE.md) bleiben erhalten. Kein paralleler P1–P5-Plan.
@@ -62,6 +62,9 @@ Gerätefreie Tests und Grenzen sind getrennt im STATUS bewertet.
 
 ## 4. TOR 1 softwareseitig abgeschlossen: HWT-Erstfehlerdiagnose
 
+Dieser Abschnitt beschreibt den damaligen TOR-1-Stand; die aktuelle
+Recovery-Implementierung und ihre Grenzen stehen in STATUS Abschnitt 5.
+
 Auf PR #103, Basis `3ed63f278b668fe9be64ce02568911e1b99f7fe8`,
 implementiert Commit `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
 die einmalige Erstfehleraufnahme im `Hwt601FusionHealth`. Der Gate-Status
@@ -73,43 +76,57 @@ Zwei Pakete wurden auf dem bestehenden isolierten Vollbuild neu gebaut;
 Die alte Bag-Aufzeichnung enthält weder das verletzte HWT-Rohstatusfeld noch
 dessen Originalwert. Ihre ausgeführte Paket-/Präfixreihenfolge ist ebenfalls
 nicht vollständig protokolliert. Diese historischen Werte bleiben offen;
-ein neuer Lauf beweist die alte Ursache nicht rückwirkend. TOR 2 ist **nicht**
-zur funktionalen Umsetzung freigegeben.
+ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
+TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
+Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: einen Erstfehler-Nachweis gerätefrei spezifizieren
+## 5. Aktueller Folgeauftrag: ersten HWT-Recoveryfall real abnehmen
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
-REFERENZ: MASTERPLAN v1.0 und aktueller STATUS
-BASIS: Der Offline-Vergleich im STATUS endete mit Ergebnis B: Das alte Bag
-zeigt `raw_driver_not_ready` bei 1790492567.5659919 ohne Rohstatus-Snapshot;
-der neue motorlose 120-s-Lauf blieb stabil. Keine Auslösebedingung ist
-aus vorhandenen Daten eindeutig priorisierbar.
-ERGEBNIS: Ein einziges, minimal erforderliches synchrones Messprotokoll für
-einen später gesondert freizugebenden HWT-Erstfehler-Nachweis festlegen.
-Dieses Protokoll wird in diesem Auftrag ausschließlich beschrieben.
+REFERENZ: MASTERPLAN v1.1 und aktueller STATUS, Schritt 2.
+BASIS: Der gerätefrei integrierte Branch feature/hwt-hold-recovery-resume.
+Der historische raw_driver_not_ready-Originalwert bleibt unbekannt.
+ZIEL: Einen synthetisch definierten, kurz stale HWT-Rohmessungsfall im
+kontrollierten WE-Initialscan real prüfen: Halt, Auftragserhalt, stabile
+Quellenheilung, Neuprüfung und Fortsetzung desselben Explore-Auftrags.
 
-INHALT
-- Den vorhandenen Diagnosekandidaten, seine Paket-/Overlayauflösung und das
-  bestehende `first_fault`-Feld verwenden. Die sechs HWT-Rohstatusprädikate
-  mit Originalwert, Typ, Grenzwert, Empfangszeit und `age_s` zum ersten
-  Fehler müssen gemeinsam mit Roh-IMU, korrigierter Gierrate,
-  Encoder-/Motorstatus, Wächterstatus und Missions-/Fahrphase erfasst werden.
-- Messalter, Status-Empfangsalter und internes `age_s` getrennt zuordnen.
-  Vorab begrenztes Fenster, Abbruch- und Stoppregel, keine parallelen
-  Portleser und unveränderte Schutzgrenzen festlegen. Die fehlende
-  historische Einzelbedingung nicht als bekannt voraussetzen.
-- Genau einen späteren Nachweisfall und seine Voraussetzungen als
-  prüfbare Vorlage in STATUS und AGENTENAUFTRAG aufnehmen. Falls dafür
-  Bewegung nötig wäre, eine neue ausdrückliche Freigabe einschließlich
-  unabhängiger Sicherheitssperre verlangen; sie liegt mit diesem Auftrag
-  nicht vor.
+VOR EINEM GERÄTESTART
+- Eine neue, genau für diesen Lauf geltende Bestätigung einholen:
+  anwesende Person, unabhängige Motorsperre für den motorlosen Preflight,
+  Stillstand, Not-Aus in Reichweite und Freigabe des Sensorlaufs.
+- Den aktiven Install NICHT ungeprüft wechseln. Quell-Commit, Paketpfade,
+  Hashes, Underlays, Profile und einzigen HWT-/Motorbusbesitzer mit dem
+  vorhandenen Runtime-Manifest erfassen. Den Recoverykandidaten isoliert
+  bereitstellen und Rückfall zum PR-#104-Latchkandidaten festhalten.
+- Motorlos zuerst Roh-IMU, Gierrate, Bias, Encoder, Wächter, Gate,
+  TF/Pose, VL53, LiDAR, Not-Aus und Nullkommando prüfen. Bei Widerspruch
+  beenden. Kein zweiter Portleser.
+
+FAHRTEIL NUR NACH SEPARATER KONKRETER FREIGABE
+- Vorab einen einzelnen langsamen Initialscan in freier, begrenzter Fläche,
+  Messfenster, Stop-/Abbruchregel und Beobachter festlegen. Während des
+  laufenden Explore-Auftrags den bestehenden HWT-Leseprozess genau einmal
+  für etwa 0,25 s pausieren und sicher wieder fortsetzen; die Fortsetzung
+  muss auch bei Abbruch garantiert sein. Keine Sensor-Schreibbefehle.
+- Rohstatus, Roh-IMU, korrigierte Gierrate, Encoder-/Motorstatus, Wächter,
+  Gate, cmd_vel, TF/Pose, Karten-/Pfadstand, Nav2-Kind und Missions-ID
+  synchron aufzeichnen. Empfangs-, Mess- und internes age_s trennen.
+- Erfolg nur bei tatsächlich gemessenem Halt, erhaltenem Auftrag,
+  terminalem alten Kind, stabilem HWT, frischen übrigen Quellen und
+  nachgewiesener Neuplanung/Fortsetzung desselben Tasks. Wenn der Fehler
+  nicht ausgelöst wird, als nicht reproduziert melden; keinen anderen
+  Fehler stillschweigend als Erfolg werten.
+- Bei dauerhaftem Fehler, Not-Aus, Nutzerabbruch, unbestätigtem Cancel,
+  ungültigem TF/Pfad oder zweitem Kind sofort sicher beenden; keine
+  automatische Wiederanfahrt. Vor dem Test die manuelle Rückfallhandlung
+  und den maximalen Bewegungsraum festlegen.
 
 GRENZEN
-- Nur vorhandene Dateien lesen und Dokumente bearbeiten. Kein Geräte- oder
-  ROS-Prozess, Aktor, Fahrtest, Parameter-, HWT- oder Recorder-Codeänderung.
-- TOR 2, Latch-Reset und Recovery nicht beginnen. Keine automatische
-  Ausführung des spezifizierten Messfalls.
+- Dieser Dokumentauftrag autorisiert keinen Gerätezugriff, Installwechsel
+  oder Fahrtest. Keine Wohnungserkundungsfahrt und kein Stufe-3-Gesamtgrün.
+- Keine Parameterlockerung, kein automatischer Merge und keine Arbeit an
+  WE-M4/M5/M6.
 ```
 
 ## 6. Übergabe und Fortschreibung

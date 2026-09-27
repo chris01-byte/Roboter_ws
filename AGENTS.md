@@ -5,7 +5,7 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
 **Für Wohnungserkundung zusätzlich zuerst:**
-[MASTERPLAN v1.0](docs/wohnungserkundung/MASTERPLAN.md),
+[MASTERPLAN v1.1](docs/wohnungserkundung/MASTERPLAN.md),
 [aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
 [aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte

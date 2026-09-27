@@ -15,6 +15,39 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — synthetischen HWT-Kurzfehler gerätefrei wiederaufnehmen
+
+**Entscheidung:** Masterplan v1.1 erlaubt die Entwicklung eines eindeutig
+synthetisch definierten transienten HWT-Falls ohne den nicht rekonstruierbaren
+Originalwert des historischen `raw_driver_not_ready`. Die reale Ursache
+bleibt unbekannt. Frische- und Kollisionsgrenzen bleiben bestehen.
+
+**Grund / beobachtete Evidenz:** Das alte Fahr-Bag enthält keinen HWT-Rohstatus;
+der vollständige motorlose 120-s-Lauf war fehlerfrei. Der bestehende
+100-Hz-HWT-Leser, 2-Hz-Rohstatus, 1-s-Statusherz und 3-s-Nav2-Cancelvertrag
+begründen eine 1-s-Gesundphase mit mindestens 20 neuen Rohmessungen und
+zwei Statusmeldungen sowie ein 5-s-Budget pro HOLD und höchstens zwei
+transiente HOLDs pro Health-Lauf (Treibergrenze: dritter Lesefehler). Das Gate
+bleibt bis zu einer neuen Explorer-HOLD→RESUME-Folge und einem neuen
+Fahrbefehl geschlossen. Mission Manager/BT behalten den Explore-Action-Auftrag;
+der Explorer cancelt das Kind und prüft Quellen, Pose und Weg neu.
+
+**Betroffene Dateien und Hardware:** `robot_state_estimation`,
+`robot_navigation`, `explore` und WE-Dokumente. Kein aktiver Installwechsel,
+kein Gerätezugriff und keine Fahrt.
+
+**Teststatus / Risiken:** Isolierter Vier-Paket-Build, 1 124 registrierte
+Pakettests und 47 direkte Mission-Manager-Tests ohne Fehler/Fehlschlag.
+Reale Haltwirkung, genaue Zeitfolge und
+zuverlässige Wiederaufnahme sind nicht abgenommen; ein synthetischer Fall
+erklärt den alten Fahrabbruch nicht.
+
+**Rückfallweg:** Recovery-Overlay nicht aktivieren; gesicherten PR-#104-
+Kandidaten mit dauerhaftem HWT-Latch beibehalten. Ein späterer Install- oder
+Fahrtest erfordert eigene Freigabe und Runtime-Manifest.
+
+---
+
 ## 2026-09-27 — HWT im vollständigen motorlosen Fenster ohne Fehler
 
 **Entscheidung:** Der reparierte Recorderpfad und der Diagnosekandidat sind

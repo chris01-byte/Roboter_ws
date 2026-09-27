@@ -3,25 +3,22 @@
 **WE-1 · Amadeus · Stand 27.09.2026 · Stufe 3 weiterhin OFFEN/GELB**
 
 **Aktuelle Entscheidung:** Konsolidierung statt Komplettneubau. Maßgeblich sind
-[MASTERPLAN.md v1.0](MASTERPLAN.md), die unveränderte
+[MASTERPLAN.md v1.1](MASTERPLAN.md), die unveränderte
 [WE-Strategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und
 [MEILENSTEINE.md](MEILENSTEINE.md). Dies ist der einzige laufende WE-Iststand.
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Das kleinste synchrone Erstfehler-Messprotokoll für einen
-später gesondert freizugebenden HWT-Nachweis gerätefrei festlegen; noch keinen
-Lauf ausführen. Der Offline-Vergleich ergibt **keine eindeutig priorisierbare
-Auslösebedingung**: Der alte Rohstatus-Originalwert fehlt, während der
-120-s-Stillstandslauf fehlerfrei blieb. TOR 2 bleibt gesperrt; daraus folgt
-keine Fahrt.
+**Nächster Auftrag:** Den implementierten HWT-HOLD-/Recovery-/Resume-Fall
+kontrolliert real abnehmen, nach gesonderter konkreter Geräte- und
+Fahrfreigabe. Der synthetische gerätefreie Nachweis ersetzt weder die
+physische Haltwirkung noch die Realabnahme. Die historische Ursache des
+`raw_driver_not_ready`-Fahrabbruchs bleibt unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
 automatischer Merge und kein aktiver Installwechsel. Die vorhandene
-HWT-/VL53-Schutzwirkung bleibt fail-closed. Erst nach identifizierter und als
-recoverbar belegter Einzelbedingung darf über eine funktionale Recoveryänderung
-entschieden werden.
+HWT-/VL53-Schutzwirkung bleibt fail-closed. Die Frischegrenzen sind unverändert.
 
 ## 2. Konsolidierte Quell- und Buildbasis
 
@@ -351,6 +348,11 @@ Er ist aus den vorhandenen Artefakten nicht rekonstruierbar. Daher wird
 
 ## 4. Abort-, Stop- und Latch-Inventur des Bewegungspfads
 
+Die folgende Inventur hält den konsolidierten **Vorgängerstand vor dem
+Recovery-Branch** und den alten Fahrprozess fest. Nur die HWT-Zeilen werden
+durch den gerätefreien Implementierungsstand in Abschnitt 5 ergänzt; reale
+Schutzwirkung und aktiver Install sind damit nicht umgestellt.
+
 | Auslöser / Datenquelle / Grenze | Gegenwärtige Wirkung und Besitzer | Wiederherstellung / Einordnung | Evidenz |
 |---|---|---|---|
 | HWT-Rohdatenstatus: `ready`, `raw_data_ready`, Port `/dev/ttyUSB_HWT601`, keine Sensor-Schreibbefehle, `consecutive_errors == 0`, `age_s` 0–0,20 s; korrigierter HWT-Status max. 0,35 s; Encoderfeedback im Fahrmodus max. 0,30 s; Statusherzen max. 1,0 s | `Hwt601FusionHealth` macht nach erster Readiness den ersten Quellenfehler dauerhaft zum `latched_fault`. `cmd_vel_mission_gate` sperrt Bewegung. Ein frischer EKF-Ausgabestempel hebt die Rohquellenprüfung nicht auf. | Kein automatisches Entlatchen im selben Health-Objekt. Die äußere Explore-/BT-Mission endet bei terminalem Fehler; eine neu gesendete Mission wäre keine nachgewiesene Fortsetzung. | `hwt601_fusion_health.py`, Gate-Tests und lokales Bag; der Rohstatus-Topic fehlt im Bag. |
@@ -373,8 +375,8 @@ Er ist aus den vorhandenen Artefakten nicht rekonstruierbar. Daher wird
 
 Die Einordnung nach Masterplan lautet: Quellverlust verlangt zunächst einen
 Bewegungshalt; ein terminaler Kindzielabbruch ist nicht automatisch ein
-Missionsabbruch. Auftragserhalt und Wiederaufnahme fehlen beim HWT-Latch als
-getesteter Produktpfad. Dauerhafte Quell- und Konfigurationsfehler, Nutzerabbruch
+Missionsabbruch. Auftragserhalt und Wiederaufnahme fehlten beim HWT-Latch im
+Vorgängerstand. Dauerhafte Quell- und Konfigurationsfehler, Nutzerabbruch
 und Not-Aus bleiben terminal bzw. manuell freizugeben.
 
 `docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md` ist ein älterer,
@@ -405,53 +407,84 @@ ausschließlich einen **neuen** motorlosen Lauf erklären.
 
 ## 5. Erstes begrenztes Recoverypaket
 
-**Zielbild:** Die Schutzkette stoppt; derselbe Explore-Auftrag bleibt erhalten;
-ausschließlich die identifizierte Funktion wird begrenzt wiederhergestellt;
-HWT-/Encoder-/VL53-/Scanquellen, TF/Pose und aktueller freier Pfad werden neu
-bewertet; genau das ursprüngliche Goal wird fortgesetzt. Höchstens ein aktives
-Nav2-Kind. Keine alte `cmd_vel`-Nachricht, kein altes Goal und kein frischer
-EKF-Stempel allein dürfen eine Wiederanfahrt autorisieren.
+**Gerätefreier Ergebnisstand:** Auf Branch `feature/hwt-hold-recovery-resume`
+wird ein ausdrücklich synthetischer transienter HWT-Fall in der bestehenden
+Kette behandelt. Die alte reale Ursache ist weiterhin **unbekannt**. Es gab
+keinen Gerätezugriff, keinen Roboterprozess, keinen Installwechsel und keine
+Fahrt. Die unveränderten Bewegungsfristen sind Rohmessung 0,20 s,
+korrigierte Gierrate 0,35 s, Encoder 0,30 s im Fahrprofil und 0,18 s im
+Lesemodus sowie 1,0 s Statusherz. VL53-, TF- und Kollisionsgrenzen wurden
+nicht gelockert.
 
-**Komponenten und Grenze:**
+**Klassifikation:** `Hwt601FusionHealth` behandelt eine einzelne fehlende
+oder kurz stale Roh- beziehungsweise Yaw-Messung sowie
+`raw_data_ready=false`/`ready=false` im weiterhin verbundenen Zustand
+`degradiert` und ein bis zwei Lesefehler ohne Reconnect als transient.
+Gleicher Port, unveränderter Reconnectzähler, deaktivierte Sensor-Schreibbefehle,
+endliche konsistente Zeitwerte und gültiger Bias/Encoder bleiben nötig.
+Falscher Port, Schreibmodus, Disconnect/Reconnect, drei Lesefehler,
+ungültige Kalibrierung, Encoder-/Konfigurationsfehler, widersprüchliche oder
+nicht endliche Werte und unbekannte Statuslage sind Hard Faults. Ein Fehler
+nach erster Readiness behält seinen unveränderlichen `first_fault`-Snapshot;
+HOLD-/Recovery-Ereignisse werden zusätzlich protokolliert. Ein Hard Fault
+bleibt gelatcht.
 
-1. Zuerst in `robot_state_estimation` den HWT-Rohstatus so beobachtbar machen,
-   dass jedes bestehende Prädikat mit Originalfeldwert, Quellalter und Zeit
-   markiert wird. Keine Grenzwerte lockern. Den Befund mit den sechs
-   Bedingungen und dem latching `Hwt601FusionHealth` korrelieren.
-2. Erst nach bestätigter transienter Ursache die konkrete vorhandene
-   HWT-Funktion begrenzt wiederherstellen. Derzeit ist nicht entschieden, ob
-   Datenlesen, Serialtransport, Treiberbereitschaft oder Konfiguration die
-   Ursache war; Reopen-/Restart-Mechanismus bleibt offen.
-3. In der bestehenden Kette `mission_manager` / BT / `explore` den Auftrag
-   während eines recoverbaren Halts erhalten, `cmd_vel_mission_gate`
-   geschlossen halten und nach terminalem Cancel des einzigen Nav2-Kindes
-   aktuelle Quellen, Pose, Kartenbindung, Pfad und Goal-ID prüfen. Kein neuer
-   Supervisor und keine neue Navigation.
+**HOLD und Resume:** `motion_failure` bleibt während `HOLD` und
+`RECOVERY_VALIDATION` ungleich `None`; das bestehende
+`cmd_vel_mission_gate` sendet Null und hält eine eigene Resume-Sperre. Der
+Explore-Action- und Mission-Manager-Auftrag bleiben aktiv. Ein laufendes
+Nav2-Kind wird über den vorhandenen Client gecancelt; nur ein bestätigter
+terminaler Kindzustand lässt die Kindziel-Session frei. Ein nicht bestätigter
+Cancel endet im terminalen Hilfebedarf. Nach HWT-Heilung verlangt die
+Quellwache mindestens 1,0 s durchgehend gültige Werte, 20 neue
+Rohmessungen und zwei neue Rohstatusmeldungen. Der gesamte HWT-Recoveryversuch
+ist auf 5,0 s ab Erstfehler begrenzt. Diese Werte leiten sich aus 100 Hz
+Rohdaten, 2 Hz Rohstatus, 1 s Statusherz und der bestehenden 3-s-Nav2-Cancelfrist
+ab; eine einzelne gute Meldung reicht nicht. Wiederholter Fehler setzt das
+Zeitbudget nicht zurück. Zusätzlich sind höchstens zwei transiente HOLDs pro
+Health-Lauf erlaubt; beim dritten wird wie beim dritten aufeinanderfolgenden
+Treiber-Lesefehler ein terminaler Hilfebedarf gesetzt, statt endlos zu
+stoppen und wieder anzufahren.
 
-**Erfolgskriterien:** Ein gerätefreier Einzelfehler der später bestätigten
-transienten Bedingung stoppt unmittelbar; der Auftrag bleibt identisch; nur
-die betroffene Funktion wird begrenzt wiederhergestellt; frische gültige
-Eingänge erfüllen bestehende Quellverträge; TF/Pose, Kartenbindung und Pfad
-stimmen; das vorige Goal ist terminal; genau dasselbe Goal wird einmal
-fortgesetzt; verspätete oder widersprüchliche Daten und Befehle bleiben
-gesperrt.
+Erst nach terminalem Kind und erneuter Prüfung von Not-Aus, HWT/Encoder,
+VL53, LiDAR, aktueller TF/Pose, Kartenquelle und unprojiziert erreichbarem
+Weg signalisiert der Explorer `we_hwt_resumed`. Das Gate verlangt die neue
+HOLD→RESUME-Folge und einen **nach** dieser Freigabe empfangenen Befehl.
+Der Explorer wartet auf die passende `resume_sequence`-Bestätigung des
+Gates, bevor er ein neues Kindziel versendet.
+Der vorherige Nav2-Goal-Handle wird nicht wiederverwendet; eine neue
+Kindziel-Session plant denselben noch offenen Task vom aktuellen Zustand.
+Ein anderer Task, stale Quelle, fehlender Pfad oder zweites Kind autorisiert
+keine Wiederanfahrt. Not-Aus und Nutzerabbruch setzen sich nicht selbst
+zurück; dauerhafter Fehler endet stehend im terminalen Hilfebedarf mit
+erhaltenem Auftrag/Teilstand.
 
-**Gegenfälle:** Rohdaten dauerhaft nicht bereit, falscher Port oder
-Schreibmodus, wiederholter HWT-/Encoderfehler, stale oder widersprüchliche
-Quellen, Bias-/Kalibrierfehler, Sensor-/TF-Ausfall, blockierter Pfad,
-fehlendes/stales Goal, zweites aktives Nav2-Kind, Nutzerabbruch, expliziter
-E-Stop und kritischer Aktuatorfehler. Sie bleiben gesperrt und eskalieren in
-terminalen Hilfebedarf oder manuellen Reset; keine automatische Wiederanfahrt.
+**Nachweise:** Frischer isolierter Build von `robot_state_estimation`,
+`robot_navigation`, `explore` und `mission_manager` unter
+`/tmp/we1-hwt-recovery-install` über dem gesicherten
+`/tmp/we1-full-shim-install`; Paketpräfixe der vier neuen Pakete zeigen auf
+das Recovery-Overlay, BT, Motor und VL53 auf das Underlay.
+`colcon test-result` meldet für HWT, Gate und Explorer 1 124 Tests ohne
+Fehler/Fehlschlag; die vom Mission-Manager-Paketsetup nicht registrierten
+47 direkten `pytest`-Tests bestanden separat. Synthetisch geprüft sind Rohdatenlücke, degradiertes
+`raw_data_ready`, kurzer Lesefehler, bleibender/wiederholter Fehler,
+Port-/Schreibmodus-/Reconnect-/Zeit-/Bias-Hard-Fault, Gate-Halt und
+Resume-Handschlag einschließlich Gate-Bestätigung, bestätigter/fehlgeschlagener Kindziel-Cancel,
+Ein-Kind-Semantik, Nutzerabbruch, Not-Aus sowie Sperre bei ungültigem
+TF-/Karten-/Pfadbeleg. Diese Tests belegen die Softwareverträge, keine
+physische Haltstrecke, reale Transienzrate oder Fahrtauglichkeit.
 
-**Rückfall:** HWT-Wiederherstellung und Missionserhalt einzeln revertieren.
-Das bestehende Mission Gate bleibt fail-closed; `enable_auto_explore` oder
-`active_drive` bleiben aus. Keine Erhöhung von Frische-/Kollisionsgrenzen.
-Vor physischer Fortsetzung ist eine neue ausdrückliche Freigabe nötig.
+Die vier installierten Hauptmodule sind bytegleich mit den Quellen des
+Branches: SHA256 `0336686e…` (`hwt601_fusion_health.py`), `f964f170…`
+(`cmd_vel_mission_gate.py`), `b668a0c0…` (`explore_node.py`) und
+`9e12a6a0…` (`mission_manager_node.py`). ROS-Paketauflösung wurde im
+temporären Overlay geprüft; diese Pfade sind **kein aktiver Roboter-Install**.
 
-Das Paket ist hinsichtlich Komponenten und Gegenfällen abgegrenzt; seine
-Wiederherstellungsfunktion ist **OFFEN**, bis für den neuen Kandidaten
-Originalfeld und tatsächlich recoverbare Ursache belegt sind. TOR 2 wurde
-in diesem Auftrag nicht umgesetzt oder freigegeben.
+**Rückfall:** Den funktionalen Branch nicht in den aktiven Install übernehmen;
+bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
+zurückkehren. Das bisherige fail-closed Latch bleibt dort erhalten. Vor
+einem Realtest sind Runtime-Manifest, unabhängige Motorsperre, Stillstand,
+anwesende Person und ein eigener begrenzter Fahrfreigabeentscheid nötig.
 
 ## 6. Erhaltene Nachweise und Roadmapgrenzen
 
@@ -472,15 +505,17 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: **gerätefrei** das kleinste synchrone
-Erstfehler-Messprotokoll für einen später gesondert freizugebenden HWT-Lauf
-festlegen. Es muss den vollständigen HWT-Rohstatus zum ersten Latch mit
-Originalwerten und Empfangszeit sowie Mess- und Statusalter, korrigierte
-Gierrate, Encoder-/Motorzustand und aktuellen Auftrag zusammen erhalten.
-Für den alten Fehler ist der Rohstatus nicht nachträglich herstellbar;
-keine Auslösebedingung wird vorab als Ursache gesetzt. Das Protokoll in
-AGENTENAUFTRAG konkretisieren, aber keinen Geräteversuch, keine Fahrt,
-Parameteränderung oder TOR-2-Umsetzung beginnen.
+Genau ein nächster Auftrag: **kontrollierte reale Abnahme des synthetisch
+definierten kurzen HWT-Rohdatenverlusts im WE-Initialscan** auf einem vorab
+per Runtime-Manifest identifizierten Kandidaten. Zuerst motorloser
+Schutzketten-Preflight, dann nur nach neuer konkreter Fahrfreigabe ein
+begrenzter, beaufsichtigter Scan mit einer einzigen zeitlich begrenzten
+Pause des bestehenden HWT-Leseprozesses; dessen Fortsetzung muss auch beim
+Abbruch garantiert sein. Roh- und Statuswerte, reale Nullkommando-/Haltwirkung,
+Auftragserhalt, Kindzielstatus, Quellen-/Pose-/Pfadneuprüfung und Resume
+gemeinsam nachweisen. Das ist keine Wohnungserkundungs- oder Stufe-3-Freigabe;
+Gegenfälle und Abbruchregel vor dem Start verbindlich festlegen. Details im
+AGENTENAUFTRAG. Keine Fahrt oder Installation aus diesem Dokument ableiten.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

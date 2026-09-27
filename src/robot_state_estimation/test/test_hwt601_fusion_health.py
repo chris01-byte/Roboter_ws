@@ -14,6 +14,7 @@ def ready_health(active=True, now=10.0):
     health.status('raw', {
         'ready': True, 'raw_data_ready': True, 'port': '/dev/ttyUSB_HWT601',
         'sensor_write_commands': False, 'consecutive_errors': 0, 'age_s': 0.0,
+        'state': 'bereit', 'reconnects': 0,
     }, now)
     health.status('yaw', {
         'ready': True, 'operator_stationary_confirmed': True,
@@ -294,3 +295,131 @@ def test_startup_failure_is_not_mistaken_for_first_post_ready_fault():
     h = Hwt601FusionHealth(True)
     assert h.source_failure(1.0) == 'raw_missing_stale_or_invalid'
     assert h.first_fault_snapshot() is None
+
+
+def _recovery_samples(health, start, end, *, faulty_raw=None):
+    """Synthetic 100 Hz HWT / 2 Hz status, with no ROS or serial device."""
+    step = int(round(start * 100))
+    last = int(round(end * 100))
+    for index in range(step, last + 1):
+        now = index / 100.0
+        for name in ('raw', 'yaw', 'wheel'):
+            health.sample(name, now, now, now)
+        if index % 50 == 0:
+            raw = copy.deepcopy(health.statuses['raw'][0])
+            raw.update(ready=True, raw_data_ready=True, state='bereit',
+                       consecutive_errors=0, age_s=0.0)
+            if faulty_raw is not None:
+                raw.update(faulty_raw(index))
+            health.status('raw', raw, now)
+            for name in ('yaw', 'wheel'):
+                health.status(name, copy.deepcopy(health.statuses[name][0]), now)
+        health.source_failure(now)
+
+
+@pytest.mark.parametrize('fault', ['raw_gap', 'raw_not_ready', 'read_error'])
+def test_transient_fault_holds_then_resumes_after_stable_new_sources(fault):
+    h = ready_health(now=10.0)
+    assert h.motion_failure(10.0) is None
+    if fault == 'raw_gap':
+        h.sample('yaw', 10.21, 10.21, 10.21)
+        h.sample('wheel', 10.21, 10.21, 10.21)
+        assert h.motion_failure(10.21) == 'raw_missing_stale_or_invalid'
+    else:
+        raw = copy.deepcopy(h.statuses['raw'][0])
+        raw.update(ready=False, raw_data_ready=False, state='degradiert')
+        if fault == 'read_error':
+            raw['consecutive_errors'] = 1
+        h.status('raw', raw, 10.01)
+        assert h.motion_failure(10.01) == 'raw_driver_not_ready'
+    assert h.recovery_state == 'HOLD'
+    first = h.first_fault_snapshot()
+    assert h.latched_fault is None
+    _recovery_samples(h, 10.22, 11.8)
+    assert h.recovery_state == 'HEALTHY'
+    assert h.motion_failure(11.8) is None
+    assert h.first_fault_snapshot() == first
+    assert [event['state'] for event in h.recovery_events] == [
+        'HOLD', 'RECOVERY_VALIDATION', 'HEALTHY']
+
+
+def test_single_good_sample_cannot_release_motion_or_erase_first_fault():
+    h = ready_health(now=10.0)
+    h.source_failure(10.0)
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw.update(ready=False, raw_data_ready=False, state='degradiert')
+    h.status('raw', raw, 10.01)
+    assert h.motion_failure(10.01) == 'raw_driver_not_ready'
+    h.sample('raw', 10.02, 10.02, 10.02)
+    h.status('raw', ready_health().statuses['raw'][0], 10.02)
+    assert h.motion_failure(10.02) == 'raw_driver_not_ready'
+    assert h.recovery_state == 'RECOVERY_VALIDATION'
+    assert h.first_fault_snapshot() is not None
+
+
+def test_persistent_or_repeated_fault_exhausts_one_bounded_budget():
+    h = ready_health(now=10.0)
+    h.source_failure(10.0)
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw.update(ready=False, raw_data_ready=False, state='degradiert')
+    h.status('raw', raw, 10.01)
+    assert h.motion_failure(10.01) == 'raw_driver_not_ready'
+    h.status('raw', ready_health().statuses['raw'][0], 10.02)
+    _recovery_samples(h, 10.02, 10.45)
+    assert h.recovery_state == 'RECOVERY_VALIDATION'
+    h.status('raw', raw, 10.46)
+    assert h.motion_failure(10.46) == 'raw_driver_not_ready'
+    assert h.recovery_state == 'HOLD'
+    h.status('raw', ready_health().statuses['raw'][0], 10.47)
+    _recovery_samples(h, 10.47, 10.70)
+    assert h.recovery_state == 'RECOVERY_VALIDATION'
+    # A second good interval does not reset the original deadline.
+    assert h.motion_failure(15.01) == 'hwt_recovery_budget_exhausted'
+    assert h.recovery_state == 'TERMINAL_FAULT'
+    assert h.latched_fault == 'hwt_recovery_budget_exhausted'
+
+
+@pytest.mark.parametrize('field,value', [
+    ('port', '/dev/ttyUSB_BASE'),
+    ('sensor_write_commands', True),
+    ('reconnects', 1),
+    ('age_s', math.nan),
+])
+def test_hard_raw_fault_never_auto_resumes(field, value):
+    h = ready_health(now=10.0)
+    h.source_failure(10.0)
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw[field] = value
+    h.status('raw', raw, 10.01)
+    assert h.motion_failure(10.01) is not None
+    assert h.recovery_state == 'TERMINAL_FAULT'
+    _recovery_samples(h, 10.02, 11.8)
+    assert h.motion_failure(11.8) == h.latched_fault
+
+
+def test_bias_loss_remains_terminal_even_with_recovered_raw_data():
+    h = ready_health(now=10.0)
+    h.source_failure(10.0)
+    yaw = copy.deepcopy(h.statuses['yaw'][0])
+    yaw['bias']['stable'] = False
+    h.status('yaw', yaw, 10.01)
+    assert h.motion_failure(10.01) == 'yaw_uncalibrated_or_faulted'
+    assert h.recovery_state == 'TERMINAL_FAULT'
+
+
+def test_repeated_separate_transient_holds_have_no_endless_retry():
+    h = ready_health(now=10.0)
+    h.source_failure(10.0)
+    for fault_at, recovered_at in ((10.01, 11.8), (11.81, 13.5)):
+        raw = copy.deepcopy(h.statuses['raw'][0])
+        raw.update(ready=False, raw_data_ready=False, state='degradiert')
+        h.status('raw', raw, fault_at)
+        assert h.motion_failure(fault_at) == 'raw_driver_not_ready'
+        _recovery_samples(h, fault_at + 0.01, recovered_at)
+        assert h.recovery_state == 'HEALTHY'
+    assert h.recovery_attempts == 2
+    raw = copy.deepcopy(h.statuses['raw'][0])
+    raw.update(ready=False, raw_data_ready=False, state='degradiert')
+    h.status('raw', raw, 13.51)
+    assert h.motion_failure(13.51) == 'hwt_recovery_attempt_limit'
+    assert h.recovery_state == 'TERMINAL_FAULT'
