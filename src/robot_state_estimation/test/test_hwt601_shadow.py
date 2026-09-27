@@ -133,17 +133,43 @@ def test_raw_hwt_register_scale_reaches_shadow_without_factor_two():
             math.degrees(integrated_rad), target_deg, abs_tol=1e-9)
 
 
-def test_post_calibration_gap_latches_until_fresh_startup():
+def test_post_calibration_gap_rejects_boundary_then_resumes_with_frozen_bias():
     core, bias, stamp = _calibrated_core()
+    initial_bias = core.bias.bias_radps
 
     gap = core.update(stamp + 0.20, bias)
-    still_blocked = core.update(stamp + 0.21, bias)
+    resumed = core.update(stamp + 0.21, bias)
 
     assert not gap.publish
-    assert gap.reason == 'imu_datenluecke_neustart_noetig'
-    assert not still_blocked.publish
-    assert still_blocked.reason == gap.reason
-    assert core.fault_reason == gap.reason
+    assert gap.reason == 'imu_datenluecke'
+    assert resumed.publish
+    assert core.fault_reason is None
+    assert not core.gap_pending
+    assert core.bias.bias_radps == initial_bias
+    assert core.bias.adaptation_samples == 0
+
+
+def test_repeated_gap_never_interpolates_missing_yaw():
+    core, bias, stamp = _calibrated_core()
+    first = core.update(stamp + 0.20, bias)
+    second = core.update(stamp + 0.40, bias)
+    assert not first.publish
+    assert not second.publish
+    assert core.gap_pending
+    assert core.update(stamp + 0.41, bias).publish
+
+
+def test_invalid_or_backward_sample_after_gap_remains_terminal():
+    for bad in ('invalid', 'backward'):
+        core, bias, stamp = _calibrated_core()
+        assert not core.update(stamp + 0.20, bias).publish
+        if bad == 'invalid':
+            reason = core.reject_invalid_message()
+        else:
+            reason = core.update(stamp + 0.19, bias).reason
+        assert reason.endswith('_neustart_noetig')
+        assert not core.update(stamp + 0.21, bias).publish
+        assert core.fault_reason == reason
 
 
 def test_post_calibration_non_monotonic_stamp_latches():

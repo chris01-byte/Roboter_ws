@@ -9,11 +9,11 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Die im einmaligen begrenzten Realversuch nachgewiesene
-Vertragskollision zwischen kurz stale HWT-Rohmessung und dauerhaftem
-Yaw-Schatten-Latch gezielt softwareseitig klären und gerätefrei absichern.
-Der Rundblickversuch hat Bewegungshalt, aber **keine Wiederaufnahme** gezeigt.
-Die historische Ursache des `raw_driver_not_ready`-Fahrabbruchs bleibt
+**Nächster Auftrag:** Den gleichen begrenzten HWT-Rundblicktest mit dem
+softwaregeprüften Roh-/Yaw-Recoverykandidaten zur **gesonderten Realfreigabe
+vorlegen**. Die echte Yaw-Verarbeitung ist jetzt gerätefrei in der
+Produktkette geprüft; der frühere Realversuch ohne RESUME bleibt als
+Fehlbefund erhalten. Der historische `raw_driver_not_ready`-Auslöser bleibt
 unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
@@ -664,6 +664,77 @@ Beim SIGINT-Shutdown starb allein `slam_toolbox` mit `RCLError`/Exit -6;
 das liegt nach dem Versuch und ist getrennt vom HWT-Fehler. Dieser Versuch
 belegt den fail-closed Halt, **nicht** eine bestandene Real-Recovery.
 
+### Roh-/Yaw-Lücke auf demselben Branch gerätefrei geschlossen
+
+Die bisherige ROS-Graphprobe erzeugte `/shadow/hwt601/imu/yaw_rate` und
+`/shadow/hwt601/status_json` unabhängig von der Roh-IMU dauerhaft gesund.
+Dadurch konnte sie den real beobachteten Yaw-Latch nicht erkennen. Nach
+Anbindung des echten `Hwt601ShadowNode` mit Bias-Schätzer und installiertem
+`hwt601_shadow.yaml` reproduzierte der **Vorher-Lauf** denselben Ablauf:
+kalibriert → etwa 0,261 s Rohdatenlücke → HOLD/Kindziel-Cancel →
+`imu_datenluecke_neustart_noetig` → `yaw_missing_stale_or_invalid` als
+`TERMINAL_FAULT`, Manager/BT-Failure; die Probe endete erwartungsgemäß mit
+`source not recovered`. Kein Rohstatuswert des historischen Fahrfehlers
+wurde ergänzt oder behauptet.
+
+Die kleinste Änderung behandelt nur eine reine Samplelücke nach gültiger
+Startkalibrierung: Der Yaw-Schatten verwirft den ersten zurückkehrenden
+Messwert als Kontinuitätsgrenze, behält den eingefrorenen Bias und gibt erst
+ab einem neuen zeitlich zusammenhängenden, gültigen Messwert wieder eine
+**aktuelle** korrigierte Gierrate aus. Es wird weder ein Zwischenwert noch
+eine rückwirkende Orientierung für die Lücke erzeugt. Ein Status
+`data_continuity_pending` trennt vorübergehend gesperrte Yaw-Ausgabe von
+echtem Bias-/Identitätsfehler. Health darf diesen engen Zustand nur während
+HOLD/Validierung annehmen; ungültige IMU, rückläufiger Zeitstempel,
+Kalibrierfehler, andere Yaw-Latches sowie falscher Port oder Reconnect
+bleiben terminal. Nach einer erneuten Lücke in der Validierung beginnen
+Rohmessungs- und Rohstatuszähler erneut bei null. Die Grenzen 0,10 s
+(Kontinuität), 0,20 s (Rohfrische) und 0,35 s (Yaw-Frische) blieben
+unverändert; die 5-s-/Zwei-Versuche-Grenzen ebenfalls. Bewegungsfreigabe
+bleibt separat bei Health, Gate und Explorer.
+
+**Nachher-Lauf:** Derselbe isolierte Produktgraph mit synthetischer Roh-IMU,
+echtem Yaw-Schatten, beiden echten HWT-Guards, Gate, Explorer,
+Mission Manager, BT und Nav2-Testgegenstelle bestand mit **0,260675 s
+tatsächlicher Rohdatenlücke**. Der gespeicherte Bias
+`[0,001, -0,002, 0,0001]` rad/s und `adaptation_samples=0` blieben
+unverändert. Gate-HOLD sperrte alte Kommandos, das alte Kind wurde terminal,
+der Elternauftrag blieb erhalten. Eine zweite Lücke während der Validierung
+kehrte zu HOLD zurück. Trotz später gesunder Quellen wurde bei gemeldeter
+Restbewegung, blockierter Route und anschließend absichtlich veralteter
+Kartenpose kein Kind freigegeben. Erst nach Encoder-Stillstand, frischer
+Kartenpose, freier Route und Gate-ACK startete **ein** neues Kind für
+`task-1`; höchstens ein Kind war gleichzeitig aktiv. Getrennter Rundblick
+ohne Kind hielt ebenfalls und setzte fort; Not-Aus beendete ihn ohne
+automatischen Neustart. Die Karten-Task-Auswahl blieb wie zuvor ein
+Testadapter. Der echte Roboter und seine Lokalisierungsqualität nach einer
+realen Lücke sind damit noch nicht abgenommen.
+
+**Gegenfälle und Build:** Direkte HWT-/Gate-/Explorer-/Manager-Tests
+`109 passed`; isolierter Neubuild nur von `robot_state_estimation` nach
+`/tmp/we1-hwt-yaw-install` und `colcon test-result` dafür
+`149 tests, 0 errors/failures/skips`. Die Läufe überlappen und werden
+nicht addiert. Dauerlücke blieb nach späterem Yaw-Wiederempfang terminal;
+ungültige Daten und rückläufige Zeitstempel blieben verriegelt.
+Bestehende Health-Tests decken Port-/Reconnect-/Biasfehler und begrenztes
+Budget; der Produktgraph deckt erneute Lücke, Not-Aus und Nutzer-Cancel.
+Ein Zwischenlauf der Probe scheiterte vor der Injektion an kurz stale
+synthetischem Encoderfeed (`wheel_missing_stale_or_invalid`) und zählt
+nicht als HWT-Erfolg. Der letzte vollständige Nachher-Lauf steht unter
+`/tmp/we1-hwt-yaw-final3-graph.log`.
+
+Die tatsächlich aufgelösten Präfixe waren
+`robot_state_estimation=/tmp/we1-hwt-yaw-install/robot_state_estimation`,
+`explore`, `robot_navigation`, `mission_manager` aus
+`/tmp/we1-hwt-recovery-install` und `bt_orchestrator` aus
+`/tmp/we1-full-shim-install/bt_orchestrator`; das Abnahmeprofil blieb
+SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`.
+Die drei installierten geänderten Pythonmodule sind bytegleich mit den
+Quellen (SHA256 `907aba5f…`, `d9d824fd…`, `884a5ed9…`). Weder
+Produktprofil noch aktiver Install wurden gewechselt. Dieser Stand ist ein
+**bestandener gerätefreier Recovery-Nachweis**, kein Real-Rundblicknachweis,
+keine Tür-/Nav2-Realabnahme und kein Stufe-3-Gesamtgrün.
+
 **Rückfall:** Den funktionalen Branch nicht in den aktiven Install übernehmen;
 bei einer späteren Regression auf den gesicherten PR-#104-Kandidaten
 zurückkehren. Das bisherige fail-closed Latch bleibt dort erhalten. Vor
@@ -689,11 +760,11 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: **die nachgewiesene Kollision des
-HWT-Rohdaten-Kurzfehlers mit dem 0,10-s-Yaw-Schatten-Latch eingrenzen und
-einen sicheren, gerätefrei integrierten Umgang damit nachweisen** (konkreter
-Arbeitsvertrag in AGENTENAUFTRAG Abschnitt 5). Bis dahin keine weitere
-Real-Recovery-Abnahme, kein Installwechsel und keine Fahrfreigabe.
+Genau ein nächster Auftrag: **denselben auf höchstens 40 s und 3 rad
+begrenzten HWT-Rundblicktest mit dem neuen, manifestierten Kandidaten
+zur gesonderten Freigabe vorlegen** (AGENTENAUFTRAG Abschnitt 5). Die
+Beobachterbestätigung zum alten Lauf ist weiterhin offen. Es folgt weder
+ein Geräte- noch Fahrstart aus diesem Softwareauftrag.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)

@@ -5,6 +5,8 @@ import math
 import pytest
 
 from robot_state_estimation.hwt601_fusion_health import Hwt601FusionHealth
+from robot_state_estimation.hwt601_shadow_core import Hwt601YawShadowCore
+from robot_state_estimation.quality_core import GyroBiasConfig
 
 
 def ready_health(active=True, now=10.0):
@@ -107,6 +109,85 @@ def test_calibration_and_fault_contract_not_replaceable_by_fresh_yaw(field, valu
     payload[field] = value
     h.status('yaw', payload, 10.0)
     assert h.motion_failure(10.0) == 'yaw_uncalibrated_or_faulted'
+
+
+def test_yaw_continuity_pending_is_a_bounded_hold_not_a_hard_latch():
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    yaw = copy.deepcopy(h.statuses['yaw'][0])
+    yaw.update(ready=False, data_continuity_pending=True)
+    h.status('yaw', yaw, 10.21)
+    for key in ('raw', 'wheel'):
+        h.sample(key, 10.21, 10.21, 10.21)
+    assert h.motion_failure(10.21) == 'yaw_data_continuity_pending'
+    assert h.recovery_state == 'HOLD'
+    assert h.latched_fault is None
+    for key in ('raw', 'wheel'):
+        h.sample(key, 10.36, 10.36, 10.36)
+    assert h.motion_failure(10.36) == 'yaw_data_continuity_pending'
+    assert h.recovery_state == 'HOLD'
+    h.sample('yaw', 10.37, 10.37, 10.37)
+    assert h.motion_failure(10.37) == 'yaw_data_continuity_pending'
+    yaw.update(ready=True, data_continuity_pending=False)
+    h.status('yaw', yaw, 10.38)
+    _recovery_samples(h, 10.38, 11.8)
+    assert h.recovery_state == 'HEALTHY'
+
+
+def test_yaw_pending_flag_cannot_hide_real_bias_or_latch_fault():
+    for change in ({'latched_fault': 'imu_zeitfehler_neustart_noetig'},
+                   {'bias': {'calibrated': False, 'stable': True,
+                             'adaptation_samples': 0}}):
+        h = ready_health()
+        assert h.motion_failure(10.0) is None
+        yaw = copy.deepcopy(h.statuses['yaw'][0])
+        yaw.update(ready=False, data_continuity_pending=True, **change)
+        h.status('yaw', yaw, 10.01)
+        assert h.motion_failure(10.01) == 'yaw_uncalibrated_or_faulted'
+        assert h.recovery_state == 'TERMINAL_FAULT'
+
+
+@pytest.mark.parametrize('pending', [True, 'true', 1])
+def test_yaw_ready_cannot_contradict_continuity_pending(pending):
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    yaw = copy.deepcopy(h.statuses['yaw'][0])
+    yaw['data_continuity_pending'] = pending
+    h.status('yaw', yaw, 10.01)
+    assert h.motion_failure(10.01) == 'yaw_calibration_or_identity_fault'
+    assert h.recovery_state == 'TERMINAL_FAULT'
+
+
+def test_prolonged_raw_gap_remains_terminal_after_real_yaw_output_returns():
+    core = Hwt601YawShadowCore(GyroBiasConfig(
+        calibration_duration_s=0.02, minimum_samples=3,
+        maximum_stddev_radps=0.005, maximum_sample_magnitude_radps=0.03,
+        maximum_sample_gap_s=0.10,
+        stationary_adaptation_time_constant_s=0.0), True)
+    bias = (0.001, -0.002, 0.0001)
+    for stamp in (9.97, 9.98, 9.99, 10.0):
+        result = core.update(stamp, bias)
+    assert result.publish
+    h = ready_health(now=10.0)
+    assert h.motion_failure(10.0) is None
+    h.sample('wheel', 10.21, 10.21, 10.21)
+    assert h.motion_failure(10.21) == 'raw_missing_stale_or_invalid'
+    # The real shadow has no corrected sample during a prolonged outage.
+    # Once its 0.35-s output freshness expires, its status becomes unready.
+    yaw = copy.deepcopy(h.statuses['yaw'][0])
+    yaw.update(ready=False, age_s=0.50, data_continuity_pending=False)
+    h.status('yaw', yaw, 10.50)
+    h.sample('wheel', 10.50, 10.50, 10.50)
+    terminal_reason = h.motion_failure(10.50)
+    assert terminal_reason == 'raw_missing_stale_or_invalid'
+    assert h.recovery_state == 'TERMINAL_FAULT'
+    assert not core.update(10.51, bias).publish
+    assert core.update(10.52, bias).publish
+    for key in ('raw', 'yaw', 'wheel'):
+        h.sample(key, 10.52, 10.52, 10.52)
+    yaw.update(ready=True, age_s=0.0, data_continuity_pending=False)
+    h.status('yaw', yaw, 10.52)
+    assert h.motion_failure(10.52) == terminal_reason
 
 
 @pytest.mark.parametrize('field,value', [
@@ -370,6 +451,8 @@ def test_persistent_or_repeated_fault_exhausts_one_bounded_budget():
     h.status('raw', raw, 10.46)
     assert h.motion_failure(10.46) == 'raw_driver_not_ready'
     assert h.recovery_state == 'HOLD'
+    assert h._raw_samples_since_hold == 0
+    assert h._raw_statuses_since_hold == 0
     h.status('raw', ready_health().statuses['raw'][0], 10.47)
     _recovery_samples(h, 10.47, 10.70)
     assert h.recovery_state == 'RECOVERY_VALIDATION'

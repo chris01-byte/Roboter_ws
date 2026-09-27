@@ -1,5 +1,29 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Roh-/Yaw-Korrektur — ausschließlich isolierter Softwarestand
+
+Auf demselben PR-#105-Branch wurde nur `robot_state_estimation` für die
+reine postkalibrierte Rohdatenlücke geändert und isoliert unter
+`/tmp/we1-hwt-yaw-install` über dem bisherigen Recovery-Overlay gebaut.
+Das installierte Abnahmeprofil bleibt SHA256 `ee3b42eef…`. Der
+gerätefreie Produktgraph verwendete den echten Yaw-Schatten und bestand
+mit 0,260675 s gemessener Rohdatenlücke; Bias unverändert, HOLD und
+Fortsetzung nach Stillstands-/Pose-/Wegprüfung und Gate-ACK. Keine
+produktive Roboter-Runtime, kein Gerät oder Aktor wurde dafür gestartet;
+der aktive Install blieb unverändert. Details und Gegenfälle stehen in
+STATUS Abschnitt 5.
+
+Für einen später gesondert freizugebenden Einzeltest die Setup-Kette
+`/opt/ros/humble`, `amadeus_slam_toolbox_ws`,
+`we1-ldlidar-shutdown-overlay`, `we1-full-shim-install`,
+`we1-hwt-recovery-install` und **danach**
+`/tmp/we1-hwt-yaw-install` in einem frischen Prozess auflösen und mit dem
+Runtime-Manifest tatsächlich nachweisen. Der aktuelle Roboter-Install
+enthält diese Änderung nicht. Rückfall bleibt der gesicherte
+PR-#104-Latchkandidat. Der nächste Schritt ist nur die begrenzte
+Realtestvorlage in AGENTENAUFTRAG Abschnitt 5; keine Fahrt aus dieser
+Übergabe.
+
 ## HWT-Recovery-Realversuch — HOLD ja, RESUME nein
 
 Am 27.09.2026 lief genau ein von der anwesenden Person freigegebener,
@@ -26,10 +50,10 @@ offen. Der Stack und Recorder sind aus, HWT-/Motorports frei. Beim
 SIGINT-Shutdown starb `slam_toolbox` mit Exit -6; kein Zusammenhang mit
 dem HWT-Fehler ist belegt. Keine Wiederholung und keine Fahrfreigabe.
 
-Rückfall: Das Recovery-Overlay nicht als bestanden übernehmen; der
-gesicherte PR-#104-Kandidat behält den fail-closed Latch. Der nächste
-Auftrag ist ausschließlich die gerätefreie Klärung der Roh-/Yaw-
-Vertragskollision in AGENTENAUFTRAG Abschnitt 5.
+Rückfall: Das damals gefahrene Recovery-Overlay nicht als bestanden
+übernehmen; der gesicherte PR-#104-Kandidat behält den fail-closed
+Latch. Die spätere gerätefreie Korrektur steht oben und ersetzt keinen
+zweiten Realnachweis.
 
 ## HWT-HOLD-/Recovery-Branch — motorloser Zielsystemcheck
 

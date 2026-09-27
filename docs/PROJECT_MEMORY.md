@@ -15,6 +15,42 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-27 — HWT-Yaw nach reiner Datenlücke nur mit neuer Validierung
+
+**Entscheidung:** Die 0,10-s-Abstandsprüfung bleibt als Kontinuitätsprüfung;
+eine reine postkalibrierte Rohdatenlücke verriegelt den Yaw-Schatten nicht
+mehr allein. Der erste zurückkehrende Messwert wird verworfen. Nur neue
+zusammenhängende gültige Gierraten werden mit unverändertem Startbias
+veröffentlicht. Die Bewegungsfreigabe ist davon getrennt und verlangt den
+bisherigen begrenzten Health-/Gate-/Explorer-Nachweis.
+
+**Grund / beobachtete Evidenz:** Der vorherige reale 0,261-s-Ausfall wurde
+im erweiterten Produktgraph mit echter Yaw-Verarbeitung samt Bias-Schätzer
+als terminaler Latch reproduziert. Nach der engen Änderung bestand
+derselbe Graph bei 0,260675 s gemessener Lücke einschließlich Mission
+Manager, BT, Explorer, Gate, Nav2-Testgegenstelle, wiederholtem HOLD,
+Stillstand, aktueller Kartenpose, Weg und Gate-ACK. Bias
+`[0,001, -0,002, 0,0001]` rad/s und `adaptation_samples=0` blieben
+unverändert. Fehlende Orientierung während der Lücke wurde nicht
+rekonstruiert. Ungültige Daten/Zeitfehler bleiben gelatcht; Dauerlücke
+endet terminal.
+
+**Betroffene Dateien und Hardware:** Nur `robot_state_estimation`,
+bestehende Graphprobe und WE-Dokumente. Isolierter Build unter
+`/tmp/we1-hwt-yaw-install`; kein Gerätezugriff oder aktiver Installwechsel.
+
+**Teststatus / Risiken:** 149 registrierte Pakettests ohne Fehler und
+109 fokussierte direkte Tests (überlappend), gerätefreier Produktgraph
+bestanden. Die reale Posequalität und Wiederaufnahme nach der echten
+Rohdatenlücke sind noch nicht belegt. Der Beobachterbericht zum alten
+Versuch bleibt offen.
+
+**Rückfallweg:** Yaw-Overlay nicht verwenden; den gesicherten PR-#104-
+Latchkandidaten beibehalten. Ein neuer begrenzter Realtest braucht
+gesonderte aktuelle Freigabe und ein neues Runtime-Manifest.
+
+---
+
 ## 2026-09-27 — HWT-Kurzpause nicht als reale Recovery abgenommen
 
 **Entscheidung:** PR #105 und das isolierte Recovery-Overlay bleiben ohne

@@ -80,50 +80,67 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: HWT-Roh-/Yaw-Vertragskollision gerätefrei klären
+## 5. Aktueller Folgeauftrag: denselben begrenzten Realtest zur Freigabe vorlegen
 
-Der **einzige** freigegebene Realversuch auf PR #105 ist beendet. Der
-synthetisch ausgelöste Rohmessungs-Kurzfehler führte zum wirksamen HOLD,
-aber der kalibrierte Yaw-Schatten verriegelte die dabei entstandene
-0,261-s-IMU-Lücke dauerhaft als `imu_datenluecke_neustart_noetig`
-(aktuelle Grenze 0,10 s). Dadurch entstand `yaw_missing_stale_or_invalid`
-als `TERMINAL_FAULT`; es gab kein RESUME. Einzelwerte, Runtime-Manifest und
-lokales Bag stehen in STATUS Abschnitt 5. Der alte Fahrfehler bleibt davon
-unabhängig und unbekannt.
+Der auf PR #105 ergänzte gerätefreie Produktgraph enthält nun die echte
+HWT-Yaw-Schattenverarbeitung einschließlich Bias-Schätzer. Vor der Korrektur
+reproduzierte er den terminalen Latch, danach bestand er mit 0,260675 s
+Rohdatenlücke, erneutem HOLD, Stillstands-/Pose-/Wegprüfung und Gate-ACK
+(STATUS Abschnitt 5). Dies ist **kein** realer Recovery-Nachweis. Der erste
+Realversuch auf `25ac048` blieb ohne RESUME; der historische
+`raw_driver_not_ready`-Originalwert bleibt unbekannt. Sein ausstehender
+Beobachterbericht über physischen Halt und wieder wirksame Motorsperre ist
+separat einzuholen und nicht aus Encoderwerten abzuleiten.
 
 ```text
 PROJEKT: Amadeus / chris01-byte/Roboter_ws
 REFERENZ: MASTERPLAN v1.1, STATUS Abschnitt 5, Schritt 2.
-BASIS: PR #105 / feature/hwt-hold-recovery-resume, Realversuch auf 25ac048.
-ZIEL: Genau die nachgewiesene Kollision zwischen Rohdaten-Kurzfehler,
-kalibriertem Yaw-Schatten-Latch und HWT-HOLD/RESUME gerätefrei klären.
+BASIS: PR #105 / feature/hwt-hold-recovery-resume nach dem dokumentierten
+      gerätefreien Roh-/Yaw-Nachweis.
+ZIEL: Genau den bereits definierten WE-Initialscan als nächsten begrenzten
+      HWT-Recovery-Realtest zur gesonderten Entscheidung vorlegen.
 
-- Bag, Erstfehler, Yaw-Status und Codevertrag des einmaligen Realversuchs
-  gemeinsam auswerten. Die 0,10-s-Lücke des Yaw-Schattens, die 0,20-s-
-  Rohmessungsfrische und die 0,35-s-Yaw-Frische getrennt behandeln.
-- Für diese eine Fehlerklasse entscheiden, ob Bias/Yaw nach der Lücke ohne
-  unerkannte Drehung und ohne neue Stillstandskalibrierung sicher wieder
-  gültig werden können. Bei fehlendem Beweis bleibt der terminale Latch
-  bestehen; dann diesen Pause-Trigger ausdrücklich als nicht recoverbar
-  einordnen und einen anderen belegbar recoverbaren Testfehler festlegen.
-- Nur falls die Sicherheitsbedingung belegbar ist: kleinste Änderung an der
-  bestehenden HWT-Schatten-/Recovery-Kette. Keine pauschale Latch- oder
-  Timeoutlockerung. Fail-closed Stop, Auftragserhalt, tatsächlicher
-  Stillstand, frische Quellen, aktuelle Pose/Wegprüfung und Gate-ACK bleiben
-  notwendig.
-- Den vorgesehenen Produktstart über Mission Manager, BT, Explorer und Gate
-  mit synthetischen Sensoren gerätefrei auf HOLD und entweder begründeten
-  RESUME oder terminalen Ausgang prüfen. Dauerfehler, ungültige IMU,
-  Nutzerabbruch und Not-Aus dürfen keine Wiederanfahrt auslösen.
-- STATUS, PROJECT_MEMORY bei einer übergreifenden Entscheidung und
-  ROBOT_TRANSFER bei einer späteren Installwirkung fortschreiben. Build,
-  Tests und Rückfall auf PR #104 dokumentieren.
+VORLAGE, NOCH KEIN START
+- Den neuen Branch-HEAD, die auf dem Zielsystem tatsächlich gesourcten
+  Paketpräfixe und Modul-/Profil-Hashes mit dem bestehenden Manifestwerkzeug
+  sichern. Nach ROS, Slam-/LiDAR-Underlays, Vollbuild und Recovery-Overlay
+  muss das isolierte Yaw-Overlay mit dem geänderten
+  robot_state_estimation-Paket tatsächlich Vorrang haben. Der aktive Install
+  bleibt unverändert. Das Profil bleibt
+  hwt601_recovery_acceptance_params.yaml; Parity-Profil erreicht den
+  Recoverypfad nicht. Scope-Verifikation bleibt falsch/leer.
+- Den exakt gleichen Einzelumfang vorlegen: höchstens 40 s ab Explore-Start,
+  höchstens 3 rad gemessene Drehung, Soll-Drehrate 0,08 rad/s, keine
+  Translation, eine etwa 0,25-s-Pause ausschließlich des bestehenden
+  HWT-Lesers mit garantiertem SIGCONT-Watchdog. Mission-Manager-Cancel vor
+  Ende des Initialscans, bei Abweichung sofort. Keine Frontierfahrt.
+- Vor Gerätezugriff die aktuelle Bestätigung für unabhängige Motorsperre,
+  Stillstand, anwesende Person, erreichbaren Not-Aus und motorlosen
+  Sensorlauf einholen. Motorlos Roh-/Yaw-/Biasstatus, Encoder, Wächter,
+  Gate-Nullausgabe, Pose/TF, Scan/VL53 und Portbesitzer prüfen. Vor Bewegung
+  freien Schwenkraum, Beobachter, unabhängigen Halt und eigene konkrete
+  Fahrfreigabe für genau diesen Umfang klären; alte Freigaben gelten nicht.
+- Recorder vor dem Stack starten. Roh-IMU, korrigierte Gierrate, Roh-/Yaw-/
+  Encoder-/Wächterstatus, Gate-Ein-/Ausgabe, gemessene Bewegung, Pose/TF,
+  Karten-/Wegstand, Mission-/Task-ID und Kindzielstatus gemeinsam mit
+  Originalzeiten sichern. Rohmessalter, Statusalter und internes age_s
+  getrennt berichten.
+- Erfolg nur bei realem Bewegungshalt mit Beobachterbeleg, erhaltenem
+  Auftrag, frischem Encoder-Stillstand, unverändertem Bias, neuen gültigen
+  Yaw-Daten, stabilen Quellen, aktueller Pose/Kartenbindung, Gate-ACK und
+  Fortsetzung desselben Rundblickauftrags ohne altes Kommando. Der
+  Initialscan belegt keinen Nav2-Kind-Cancel oder Türpfad.
+- Dauerfehler, Reconnect, falsche Sensoridentität, ungültige IMU, Zeitfehler,
+  Not-Aus, Nutzerabbruch oder fehlende Pose/Stillstand verlangen Abbruch
+  ohne automatische Wiederanfahrt. Danach Stack und Recorder sauber beenden,
+  Ports freigeben und Rückfall auf den gesicherten PR-#104-Latchkandidaten
+  bereithalten.
 
 GRENZEN
-- Kein weiterer Geräte- oder Fahrversuch, keine Aktoren, kein aktiver
-  Installwechsel, keine neue Recoveryarchitektur, kein automatischer Merge.
-- Keine Frischegrenze auf Verdacht erhöhen, keine historische Ursache
-  behaupten, TOR 2 oder Stufe 3 nicht pauschal grün setzen.
+- Diese Vorlage ist keine Geräte- oder Fahrfreigabe. Keinen Realtest,
+  Installwechsel, Merge oder neue Wohnungsfahrt automatisch ausführen.
+- Keine Parameterlockerung, kein Gesamtgrün für Stufe 3 und keine Arbeit an
+  WE-M4/M5/M6.
 ```
 
 ## 6. Übergabe und Fortschreibung

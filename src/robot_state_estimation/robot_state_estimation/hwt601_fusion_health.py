@@ -152,7 +152,11 @@ class Hwt601FusionHealth:
             return 'required_status_missing'
         yaw = yaw_entry[0]
         bias = yaw.get('bias')
-        if not (yaw.get('ready') is True
+        pending = yaw.get('data_continuity_pending', False)
+        yaw_ready_or_gap = (
+            (yaw.get('ready') is True and pending is False)
+            or (yaw.get('ready') is False and pending is True))
+        if not (type(pending) is bool and yaw_ready_or_gap
                 and yaw.get('operator_stationary_confirmed') is True
                 and yaw.get('bias_frozen_after_startup') is True
                 and 'latched_fault' in yaw and yaw['latched_fault'] is None
@@ -205,6 +209,10 @@ class Hwt601FusionHealth:
             return (raw['raw_data_ready'] is False
                     or 0 < raw['consecutive_errors'] < 3
                     or raw['age_s'] > 0.20)
+        if reason == 'yaw_data_continuity_pending':
+            yaw = self.statuses['yaw'][0]
+            return (yaw.get('ready') is False
+                    and yaw.get('data_continuity_pending') is True)
         return False
 
     def _event(self, now, state, reason):
@@ -239,6 +247,14 @@ class Hwt601FusionHealth:
             return 'raw_driver_not_ready'
         yaw = self.statuses['yaw'][0]
         bias = yaw.get('bias')
+        if (yaw.get('ready') is False
+                and yaw.get('data_continuity_pending') is True
+                and yaw.get('latched_fault') is None
+                and isinstance(bias, dict)
+                and bias.get('calibrated') is True
+                and bias.get('stable') is True
+                and bias.get('adaptation_samples') == 0):
+            return 'yaw_data_continuity_pending'
         if not (yaw.get('ready') is True
                 and yaw.get('operator_stationary_confirmed') is True
                 and yaw.get('bias_frozen_after_startup') is True
@@ -410,6 +426,8 @@ class Hwt601FusionHealth:
                 if self.recovery_state == 'RECOVERY_VALIDATION':
                     self.recovery_state = 'HOLD'
                     self._healthy_since = None
+                    self._raw_samples_since_hold = 0
+                    self._raw_statuses_since_hold = 0
                     self._event(now, 'HOLD', reason)
                 return self._hold_reason
             if self.recovery_state == 'HOLD':

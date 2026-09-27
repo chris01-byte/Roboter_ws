@@ -215,6 +215,7 @@ class Hwt601ShadowNode(Node):
             fresh
             and bias.calibrated
             and bias.stable
+            and not self.core.gap_pending
             and self.core.fault_reason is None)
         if ready:
             reason = 'shadow_yaw_bereit'
@@ -222,6 +223,8 @@ class Hwt601ShadowNode(Node):
             reason = 'operator_stillstand_nicht_bestaetigt'
         elif self.core.fault_reason is not None:
             reason = self.core.fault_reason
+        elif self.core.gap_pending:
+            reason = 'shadow_yaw_wartet_auf_datenkontinuitaet'
         elif self._last_output_at is not None and not fresh:
             reason = 'shadow_yaw_daten_alt'
         else:
@@ -238,6 +241,7 @@ class Hwt601ShadowNode(Node):
                 self.operator_stationary_confirmed),
             'stationary_source': 'operator_declared_startup_only',
             'bias_frozen_after_startup': True,
+            'data_continuity_pending': self.core.gap_pending,
             'latched_fault': self.core.fault_reason,
             'scale_validation': 'external_180_observer_confirmed',
             'sensor_to_base_axes': 'x_b=y_s,y_b=-x_s,z_b=z_s',
