@@ -1,5 +1,18 @@
 # Projektgedächtnis
 
+## 28.09.2026 – Einmaltest: 1,50 m Zielroute, weiterhin 0,60 m Fahrt
+
+Der Nutzer trennt ausdrücklich die autonome vollständige Zielroute (≤ 1,50 m)
+von der kumulierten realen Translation einschließlich Nachlauf (≤ 0,60 m).
+Das verlängert weder Fahrbudget noch Scope und ändert keine Produktparameter.
+Lokaler Controller prüft vor Missionsstart einen übertragbaren realen
+Stoppnachweis und stoppt um dessen Reserve vor Distanz-/Zeitgrenzen; 15
+Softwaretests bestanden. Der vorhandene reale Diagnose-Nachlauf bei etwa
+0,03013 m/s ist kein Beleg für den aktuellen Nav2-Cancel-Pfad bis 0,12 m/s.
+Deshalb kein neuer Realversuch und keine erfundene Reserve. Genau nächster
+Nachweis und Grenzen stehen in STATUS Abschnitt 7 / AGENTENAUFTRAG Abschnitt 5.
+
+
 ## 28.09.2026 – Portalfeed und konsistente Explorer-HWT-Entscheidung
 
 Der aktive No-Scan-Versuch auf PR #105 hatte den Portalfeed lokal abgeschaltet,

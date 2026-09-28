@@ -9,13 +9,15 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Das in AGENTENAUFTRAG Abschnitt 5 festgelegte
-Kindziel-Abnahmetor mit aktuellem Karten-/Scope-/Kurzstreckenbeleg und
-erneut manifestierter isolierter Runtime **motorlos** vorbereiten. Die
-Abnahmevorlage ist entscheidungsfähig, der unmittelbare Fahrentscheid
-lautet NO-GO. Der reale Roh-/Yaw-Rundblick ist nur für seinen
-Initialscan-Umfang bestanden; der historische `raw_driver_not_ready`-
-Auslöser bleibt unbekannt. Stufe 3 bleibt offen.
+**Aktueller Testentscheid vom 28.09.2026:** Für genau einen
+Kindziel-Recoverytest gilt vollständige autonome Route ≤ 1,50 m, tatsächliche
+kumulierte Translation einschließlich Nachlauf weiterhin ≤ 0,60 m. Der bisherige
+0,45-m-Routenfilter ist für diesen Versuch ersetzt. Softwarestand `e5b221b`
+und seine bisherigen Nachweise werden übernommen. Der Realstart bleibt wegen
+des fehlenden übertragbaren Nachlaufbelegs für die aktuelle Cancel-Kette
+**BLOCKIERT**; Einzelbefund und nächster Auftrag stehen in Abschnitt 7.
+Der bestandene reale Rundblick und historische nicht ausgelöste Versuche bleiben
+unverändert bewertet, Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -840,7 +842,75 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-### Aktuell: gezielte Portal-/Explorer-Reparatur vom 28.09.2026
+### Testentscheid 28.09.2026: Zielroute und gefahrenes Budget getrennt
+
+**Nutzerentscheid vor einem neuen Versuch:** Vollständige autonom erzeugte
+Route höchstens **1,50 m** statt 0,45 m; tatsächlich gefahrene Translation
+weiterhin höchstens **0,60 m kumuliert einschließlich Reaktions-/Bremsnachlauf**.
+Route vollständig im aktuell bestätigten, live gebundenen Scope, einschließlich
+Footprint, Kurven und Abständen; kein unbekannter Bereich wird als frei behandelt.
+Keine Scope-Ausweitung. Kein Budgetreset bei HOLD, Resume oder neuem Kind.
+Nach beobachteter kurzer Wiederaufnahme beenden, nicht das Frontierziels erreichen.
+35 s ab erstem aktiven Kind und 340 s Gesamtzeit bleiben einschließlich Beendigung
+bestehen; Geschwindigkeiten/Schutzgrenzen bleiben unverändert. Initialscan,
+Portalquerung, Coverage, Rückfahrt und manuelle/synthetische Zielvorgabe bleiben aus.
+Genau eine abgesicherte HWT-Leserpause erst bei autonomem aktivem Kind, erfasster
+Task-ID/UUID und gemessener Vorwärtsfahrt. Keine zusätzlichen Fahrversuche.
+
+**Umgesetzt, ausschließlich lokal:** Vorhandener Testcontroller und
+SIGCONT-/Cancel-Verfahren unter `hwt-child-route150-20260928/` wiederverwendet.
+`test-limits.json` trennt 1,50 m Routenobergrenze, 0,60 m Bewegungsobergrenze und
+35/340 s Zeitobergrenzen. Die unveränderte Produktprofilkopie enthält keine
+Lockerung von Sensor-, HWT-, Collision- oder Geschwindigkeitsparametern.
+Der Controller fordert vor ROS-/Missionsstart einen belegten, an Kandidat und
+Geschwindigkeit gebundenen Stoppnachweis. Daraus werden Distanz- und Zeitreserve
+vor den harten Grenzen abgezogen. Der bisherige Cancel erst bei 0,60 m wäre zu
+spät und wird nicht verwendet. Wegmessung läuft während HOLD, nach neuem Kind
+und während der Stopbestätigung weiter; große Odometrieschritte werden nicht
+mehr aus der Wegsumme herausgelassen. Kein realer Reservewert erfunden:
+`stopping_evidence=null` sperrt den Start. Eine neue Live-Scopebindung ist noch
+nicht aktiviert; der bisherige statische Scope ist keine aktuelle Fahrfreigabe.
+
+**Gerätefreier Nachweis:** `budget-tests.log`: **15 bestanden**. Getestet sind
+weit entfernte Ziele bis 1,50 m bei gleichbleibender früher Distanzschwelle,
+HOLD/Resume/UUID-Wechsel ohne Wegreset, Mitrechnung nach Cancel, reservierte
+Beendigungszeit und Sperre bei fehlenden/ungültigen/nicht passenden Nachweisen.
+Synthetische Reserven in den Tests dienen ausschließlich der Softwareprüfung
+und werden vom Realstart explizit abgewiesen. Kein neuer Produktbuild nötig:
+`runtime-resolution.json` und `module-match.json` bestätigen die fünf
+aufgelösten Explore-/HWT-Module bytegleich mit dem isolierten `e5b221b`-Kandidaten.
+Die übernommenen 1.187 Regressionen und der Produktgraph wurden nicht wiederholt.
+
+**Konkrete Grenze: Realtest nicht gestartet.** Die vorhandene reale
+Bewegungsdiagnose `stage3-hwt601-motion-20260926T105410Z.jsonl` ergibt beim
+Vorwärtsstopp 0,0212497 m Odometrieweg vom letzten Sample vor Stoppbeginn bis
+zur folgenden Phase; Geschwindigkeit vor dem Stopp etwa 0,0301300 m/s.
+Sie verwendete ein Diagnose-Nullkommando (Soll 0,08 m/s), nicht die aktuelle
+Mission-Manager → BT → Nav2-Cancel-Kette bis zum erlaubten Ausgang 0,12 m/s.
+Die bisherigen Parity-Bags enthalten keine entsprechende translatorische
+Fahrt mit diesem Stoppnachweis. Die dokumentierten Nav2-Nachlaufwerte
+0,022/0,037 m sind virtuelle Prozessnachweise, keine physische Bremsmessung.
+Daraus lässt sich keine belastbare aktuelle Reserve ableiten.
+Lokale Auswertung: `historical-stop-evidence.json`,
+`available-motion-evidence.json`, SHA256-Verzeichnis der Prüfarbeitsdateien.
+Keine neue HWT-Ursachenanalyse; kein Gerät, Stack oder Aktor gestartet und
+keine Mission/Injektion/Fahrt. Vorhandene Laborfreigabe wird nicht erneut
+abgefragt; es fehlt ein Nachweis, keine identische Zustimmung.
+
+**Genau nächster Auftrag:** Einen separat freigegebenen, begrenzten realen
+Nachlaufnachweis der aktuellen Stop-/Cancel-Kette bei den vorgesehenen
+Geschwindigkeiten erbringen oder einen tatsächlich übertragbaren vorhandenen
+Nachweis bereitstellen. Daraus die Stoppreserve für denselben einzelnen
+Kindziel-Recoverytest festlegen. Erst danach aktueller motorloser Quellen-/
+Karten-/Scope-/Routenvorlauf und der bereits beauftragte Test. Kein zusätzlicher
+Fahrversuch aus diesem Dokument gestartet, keine Produktreparatur oder
+Grenzlockerung. Ergebnis bleibt ein Software-Teilnachweis, **keine reale
+Kindziel-Recovery-Abnahme**, Zielerreichung/Wohnungserkundung separat offen.
+
+### Historischer Abschluss vor der Änderung der Routengrenze
+
+
+### Übernommener Teilnachweis: gezielte Portal-/Explorer-Reparatur vom 28.09.2026
 
 Arbeitsbasis `7e27082a8074a1ad2e5abd69778ea9725cf7c3f4`, gleicher
 Branch `feature/hwt-hold-recovery-resume` / PR #105, Masterplan v1.1 Schritt 2.
@@ -958,7 +1028,7 @@ mit aufgezeichnet. Launch geordnet nur über den Elternprozess beendet,
 `result.json` enthält Zählwerte und beide Profilhashes. Die beendete
 SLAM-Session ist keine weiterhin gültige Live-Bindung.
 
-**Genau nächster Auftrag:** Den fehlenden realen Ausgangspunkt für genau
+**Damals nächster Auftrag (abgelöst):** Den fehlenden realen Ausgangspunkt für genau
 denselben begrenzten Kindzieltest herstellen: Im bestätigten freien Bereich
 muss der unveränderte Produktpfad selbst ein gültiges Ziel mit Route ≤ 0,45 m
 liefern. Nach tatsächlicher Vor-Ort-Zuordnung und erneuter Live-Scopebindung

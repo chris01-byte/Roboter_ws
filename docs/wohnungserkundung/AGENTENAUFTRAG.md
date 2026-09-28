@@ -82,41 +82,41 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
-**Aktuell, 28.09.:** Die gezielte Portalfeed-/Explorer-Reparatur auf PR #105
-ist umgesetzt; tatsächliche Belege und Restpunkte stehen in STATUS Abschnitt 7.
-Die WE-Navigation verlangt den echten Portalfeed auch bei ausgeschalteter
-Portalquerung. Grund/Zustand des HWT-Wächters werden konsistent ausgewertet,
-der Explorer-Erstsnapshot wird mit aufgezeichnet. Keine weiteren Subsysteme
-oder Schutzgrenzen ändern; den bestandenen Rundblick nicht wiederholen.
+**Datierter Testentscheid vom 28.09.2026, vor erneutem Realversuch:**
+Software `e5b221be5e9e54296319c96640efbdef6cb63969`, dokumentierter vorheriger
+Abschluss `e5821f2`, gleicher PR #105. Softwaretests und bestandenes
+Rundblick-Recovery werden übernommen. Keine erneute Ursachenanalyse.
 
-**Ergebnis:** Reparaturcommit `e5b221be5e9e54296319c96640efbdef6cb63969`,
-1.187 bestandene Regressionen, isolierter Zweipaketbuild und gerätefreier
-Produktgraph mit echter Aufgabenwahl und HWT-Kindziel-Recovery. Reale Quellen
-und Karte wurden danach motorlos geprüft; die Portalblockade ist behoben.
-Alle 195 autonomen Vorschauen lagen aber bei 0,959–1,462 m Route statt ≤ 0,45 m.
-Deshalb **TESTFALL NICHT AUSGELÖST**: keine Mission, keine Fahrt, keine Injektion.
-Stack/Recorder beendet, 28/28 Kinder sauber und Ports frei. Die neue lokale
-Scopevorlage wurde dokumentiert, aber nicht aktiviert; Live-Bindung nach
-Shutdown nicht mehr gültig. Details und Hashes ausschließlich im STATUS und
-lokalen Testverzeichnis.
+Für genau den einen Kindzieltest wird die vollständige autonome Routengrenze
+von 0,45 m auf **1,50 m** ersetzt. Die tatsächliche Translation bleibt
+**≤ 0,60 m kumuliert einschließlich Nachlauf**, ohne Reset bei HOLD, Resume
+oder neuem Kind. 35 s ab erstem Kind / 340 s insgesamt, vorhandene
+Geschwindigkeits- und Schutzgrenzen unverändert. Beendigung nach kurzer
+nachgewiesener Wiederaufnahme; Zielerreichung ist kein Testziel.
+Ganze Route, Kurven und Footprint müssen im aktuellen Live-Scope freigegeben
+sein. Keine Scope-Ausweitung oder unbekannten Flächen. Produktpfad ausschließlich
+Mission Manager → BT → WE-Explorer → Nav2, autonomes Ziel, keine direkte
+Explore-Action. Kein Initialscan, Portal, Coverage, Rückfahrt oder Ersatzweg.
+Eine abgesicherte HWT-Leserpause von ungefähr 0,25 s erst nach aktivem Kind,
+Task-ID/UUID und Vorwärtsbewegung. Keine zusätzlichen Fahrversuche.
 
-**Genau nächster Auftrag:** Den passenden realen Ausgangspunkt innerhalb
-des bestätigten freien Bereichs für denselben Einzeltest herstellen und
-motorlos neu zuordnen. Voraussetzung ist ein vom unveränderten Produktpfad
-selbst gewähltes Frontierziel mit gültiger Scopebindung und Route ≤ 0,45 m.
-Keine manuelle Zielvorgabe und keine synthetische Aufgabe. Sobald diese reale
-Voraussetzung und die aktuellen Vor-Ort-Bedingungen erfüllt sind, ausschließlich
-den bereits beschriebenen einzelnen Kindziel-Recoverytest ausführen.
-Keine neue HWT-Ursachenanalyse, kein Initialscan und keine weitere vorsorgliche
-Softwareänderung. Motorsperre/Stillstand/FC03 wurden für den abgeschlossenen
-motorlosen Vorlauf bestätigt; eine aktuell gesperrte Endstufe nicht als gelöst
-annehmen. Vor dem aktiven Start die tatsächliche kontrollierte Freigabe klären.
+**Aktueller Ausführungsstand:** Lokaler Controller trennt die Grenzen und
+zieht belegte Stoppreserven von Distanz- und Zeitlimits ab. 15 gerätefreie
+Prüfungen bestanden. Ohne an den aktuellen Pfad gebundenen realen Nachlaufbeleg
+sperrt er vor ROS-/Missionsstart. Der vorhandene Messwert 0,02125 m stammt aus
+einem Diagnose-Nullkommando bei etwa 0,03013 m/s; er belegt die aktuelle
+Cancel-Kette bis 0,12 m/s nicht. Keine tatsächliche Reserve daraus erfunden.
+Keine Geräte/Prozesse/Mission/Injektion gestartet. Neue Live-Scopebindung und
+motorloser Vorlauf noch ausstehend; keine bisherige Karte als aktuell ausgegeben.
 
-Grenzen bleiben: Route ≤ 0,45 m, Translation kumuliert ≤ 0,60 m, ≤ 35 s ab
-erstem aktiven Kind, 340 s insgesamt / 300 s ohne Kind, unveränderte
-Geschwindigkeiten, keine Rückwärtsfahrt, Portalquerung oder Scope-Ausweitung.
-Genau eine abgesicherte Pause nur des HWT-Lesers nach aktivem Kind und gemessener
-Vorwärtsfahrt. Keine weiteren Versuche automatisch anhängen.
+**Genau nächster Auftrag:** Einen separat freigegebenen begrenzten realen
+Nachlaufnachweis der aktuellen Stop-/Cancel-Kette bei den vorgesehenen
+Geschwindigkeiten erbringen oder einen übertragbaren bestehenden Nachweis
+bereitstellen. Daraus die Reserve festlegen, dann denselben Kindzieltest nach
+aktuellem motorlosen Quellen-/Pose-/Scope-/Routencheck durchführen. Bestehende
+Laborfreigabe für technische Zwischenschritte beibehalten; keine identischen
+Freigabefragen. Keine Nachlaufannahmen, keine automatische zusätzliche Fahrt
+und keine vorsorgliche Produktreparatur. Verbindliche Belege: STATUS Abschnitt 7.
 
 **Die nachfolgenden Berichte sind historisch; ihre damaligen Folgeaufträge
 sind durch den vorstehenden aktuellen Umfang abgelöst.**
