@@ -82,7 +82,25 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
 
-**Aktueller Torstand vom 28.09.: motorloser Scope-Vorlauf fehlgeschlagen,
+**Aktueller Torstand vom 28.09., zweiter passiver Vorlauf:** Der Nutzer
+bestätigte FC03-erreichbare Controller bei weiterhin unabhängig gesperrter
+Motorendstufe, Stillstand und Beobachtung. Der unveränderte Produktstand
+wurde isoliert neu gebaut und manifestiert; FC03, HWT/Yaw, Fusion-Quellen,
+Karte/TF und VL53-Framezustand waren motorlos gesund. Das neue lokale
+Einmal-Scope ist an die Live-Karte des Vorlaufs gebunden, ohne altes
+Polygon. Ein 0,45-m-gerader Zielkorridor liegt mit Footprint im Scope.
+Die manuelle **Planungsprobe** ergab allerdings 0,494 m Pfad und zählt
+weder als zulässiges ≤0,45-m-Ziel noch als autonomes Kind. Der passiv
+gestartete Stack ist bereits sauber beendet; seine Scope-Bindung darf
+nicht ungeprüft auf einen neuen SLAM-Start übertragen werden. Vor allem
+fehlt noch die aktuelle Bestätigung des freien Bereichs **hinter** dem
+Roboter für den im Produktprofil aktiven 360°-Initialscan. Bis dahin
+**keine Fahrt**. **Einziger nächster Schritt:** Rückwärtigen Schwenkraum
+vor Ort bestätigen, dann die bereits festgelegte Einzelabnahme nur mit
+erneut gebundener Live-Karte und einem wirklich autonomen Kindziel nach
+den unveränderten Grenzen durchführen.
+
+**Historischer erster Torstand vom 28.09.: motorloser Scope-Vorlauf fehlgeschlagen,
 Fahrt gesperrt.** Das isolierte PR-#105-Produktpräfix wurde neu gebaut und
 manifestiert. Ein frischer Map-/TF-Kontext und ein neues Polygon wurden aus
 der bestätigten freien Geradeausfläche nur lokal erfasst; das Einmalprofil
@@ -92,7 +110,7 @@ Vorwärtskorridor noch unbekannte Zellen. Der Beobachter bestätigte, dass
 die unabhängige Motorsperre hier auch die Controllerelektronik trennt;
 FC03 unter dieser Sperre ist damit derzeit unmöglich. Die fehlende Antwort
 beweist allein keinen Encoderdefekt. Details und lokale Artefaktpfade
-stehen in STATUS Abschnitt 7. **Einziger nächster Schritt:** Eine
+stehen in STATUS Abschnitt 7. **Damals einziger nächster Schritt:** Eine
 vor Ort überprüfbare Trennung von gesperrter Motorendstufe und erreichbarer
 Controllerelektronik herstellen, danach den Karten-/Scope-/Routennachweis
 auf einer neuen Live-Kartenbindung wiederholen.

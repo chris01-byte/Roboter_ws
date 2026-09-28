@@ -840,7 +840,52 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-**Aktueller passiver Scope-Vorlauf am 28.09.: nicht bestanden, keine Fahrt.**
+**Neuer motorloser Vorlauf am 28.09.: Quellen BESTANDEN, Scope lokal
+gebunden, Fahrtest NICHT gestartet.** Nach aktueller Bestätigung, dass die
+Controller für FC03 erreichbar und die Motorendstufe weiterhin unabhängig
+gesperrt ist, wurde derselbe unveränderte PR-#105-Quellstand isoliert in
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+neu gebaut (24 Pakete, keine Produktdatei geändert). Das lokale
+`runtime-manifest-passive.json` zeigt das Recovery-Profil bytegleich zum
+früheren Realstand und die korrigierten HWT-/Gate-Module mit denselben
+Hashes. `active_drive=false`, `enable_auto_explore=false`, keine Mission:
+FC03-Encoder bereit und ohne Latch, HWT-Rohdaten/Yaw bereit,
+Fusion `sources_ready=true` bei `readonly_preflight_no_motion`, Karte/TF
+frisch, beide VL53-Frames technisch gesund, Safety-E-Stop false.
+
+Ein **neues**, nur lokal gespeichertes Einmalprofil
+`hwt-child-scope-map-52d498d9.yaml` (SHA256 `f26c1e67…`) verwendet
+Scope-ID `we1-hwt-child-20260928-retry-52d498d90043` und die aktuelle
+Map-Identität `52d498d9…`. Pose und Polygonkoordinaten bleiben in
+`scope-binding.json` lokal; das alte Polygon wurde nicht verwendet. Die
+bestätigte Geradeausfläche wurde konservativ relativ zum Start mit
+Vorwärtsgrenze 2,0 m, rechter Grenze 0,9 m, linker Grenze 0,7 m und
+gepadderter hinterer Footprintkante −0,13 m abgebildet; 0,5 m Auslauf
+bleiben außerhalb des Fahr-Scope reserviert. Der gerade 0,45-m-Korridor
+liegt geometrisch vollständig mit gepaddertem Footprint im Polygon.
+Eine **nur planende** Nav2-`ComputePathToPose`-Probe erzeugte 30 Posen
+innerhalb des Scope, aber 0,494 m Pfadlänge und damit mehr als die
+festgelegten 0,45 m; sie ist kein autonomes Frontier-Kind und kein
+zulässiges Testziel. In der aktuellen Rohkarte waren nahe der Startpose
+noch unbekannte Zellen, ab etwa 0,30 m die gerade Rasterspur frei.
+
+Die Produktparameter verlangen vor einem autonomen Kind einen 360°-
+Initialscan. Die bisherige Vor-Ort-Freigabe beschreibt Vorwärts- und
+Seitenraum, nicht den für den dabei geschwenkten Footprint nötigen freien
+Bereich hinter der Startpose. Dafür wurde eine aktuelle Bestätigung
+angefragt, aber noch nicht erhalten. Deshalb kein Fahrstart und keine
+HWT-Injektion. Das Profil war im passiven Stack nicht aktiv; nach dessen
+Stopp ist die Kartenbindung historisch und muss in einer künftigen
+Runtime vor Bewegung neu geprüft werden. Der Shutdown endete mit 28/28
+Kindern sauber; Ports frei, aktiver Install unverändert.
+
+**Genau nächster Auftrag:** Den rückwärtigen freien Schwenkraum für den
+vorgesehenen Initialscan vor Ort bestätigen. Danach denselben begrenzten
+Kindzielversuch erst bei frischer Karten-/Scope-Bindung und einem vom
+Produktpfad selbst erzeugten Ziel mit höchstens 0,45 m Route ausführen;
+sonst ohne Störung beenden.
+
+**Historischer erster passiver Scope-Vorlauf am 28.09.: nicht bestanden, keine Fahrt.**
 Auf Quellstand `247ed49` wurden 24 Pakete isoliert unter
 `/tmp/we1-pr105-20260928-install` gebaut; das festgelegte BT-Submodul und
 das unveränderte Recovery-Abnahmeprofil wurden aufgelöst. Das lokale
@@ -869,7 +914,7 @@ protokollierten Kinder und seriellen Handles sind frei; aktiver Install
 unverändert. Ein erneuter Stackstart erzeugt eine neue Kartenbindung, daher
 ist dieses Einmalprofil dafür nicht unverändert verwendbar.
 
-**Genau nächster Auftrag:** Eine vor Ort überprüfbare Trennung von
+**Damals nächster Auftrag:** Eine vor Ort überprüfbare Trennung von
 gesperrter Motorendstufe und erreichbarer Controllerelektronik für den
 FC03-Encoder-Vorlauf herstellen. Erst damit
 den neuen motorlosen Karten-/Scope-/Routennachweis auf einer frischen

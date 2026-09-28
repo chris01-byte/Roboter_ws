@@ -1,5 +1,27 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Kindziel-Abnahme — zweiter motorloser Vorlauf, keine Fahrt (28.09.2026)
+
+Der Nutzer bestätigte nach dem ersten fehlgeschlagenen Vorlauf nun eine
+FC03-erreichbare Controllerelektronik bei weiterhin unabhängig gesperrter
+Motorendstufe, Stillstand und Beobachtung vor Ort. Der funktional unveränderte
+PR-#105-Stand wurde isoliert unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+neu gebaut und über das lokale `runtime-manifest-passive.json` aufgelöst.
+`app_mapping.launch.py` lief ausschließlich mit `active_drive=false`,
+`enable_auto_explore=false`; kein Motorprozess, keine Mission und kein
+Fahrkommando. FC03-Paare trafen ohne Latch ein, HWT-Roh-/Yaw und Fusion-
+Quellen waren gesund, Karte/TF frisch. Das neue lokale Einmal-Scope samt
+Fingerprint, Startpose, Polygon und Profilhash liegt nur im Testverzeichnis;
+das historische Scope wurde nicht verwendet. Eine motorlose Nav2-
+Planungsprobe blieb im Polygon, überschritt mit 0,494 m aber die für den
+späteren Test festgelegte 0,45-m-Routenobergrenze und ist kein autonomes
+Frontier-Kind. Der nötige rückwärtige Schwenkraum für den 360°-Initialscan
+ist vor Ort noch nicht bestätigt. Daher keine Fahrt oder HWT-Injektion.
+Der passive Stack endete mit 28/28 sauberen Kindern und freien Ports.
+Der aktive Install blieb unverändert; das Profil aus der beendeten
+SLAM-Session darf ohne erneute Kartenbindung nicht gefahren werden.
+
 ## HWT-Roh-/Yaw-Recovery — ein begrenzter neuer Real-Teilnachweis
 
 Am 27.09.2026 wurde der PR-#105-Stand `6b666d97d7e11326c9f75dccbc4253112e99b578`
