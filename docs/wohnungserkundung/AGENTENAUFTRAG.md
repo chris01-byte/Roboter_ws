@@ -80,37 +80,40 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: Beobachterbericht abschließen
+## 5. Aktueller Folgeauftrag: begrenzten Kindziel-Nachweis vorlegen
 
-Der auf PR #105, Commit `6b666d97d7e11326c9f75dccbc4253112e99b578`,
+Der auf PR #105, Quellcommit `6b666d97d7e11326c9f75dccbc4253112e99b578`,
 gerätefrei geprüfte Roh-/Yaw-Recoverypfad wurde am 27.09.2026 genau einmal
-mit dem realen HWT-Leser in einem begrenzten Rundblick ausgelöst. Der
-motorlose Preflight bestand. Für den Fahrteil lag eine eigene konkrete
-Freigabe vor. Der Recorder lief vor dem Stack; das Runtime-Manifest und
-alle Nachweise liegen lokal unter
-`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`.
-STATUS Abschnitt 5 enthält die Messwerte und Zeitfolge. Insbesondere
-wurden 0,260533 s Rohdatenlücke, Gate-HOLD, Encoder-Stillstand,
-unveränderter Bias, neue gültige Yaw-Daten, Gate-ACK und Fortsetzung
-desselben Initialscan-Auftrags beobachtet. Nach 14,928 s und 0,136 rad
-forderte der Controller Cancel an. Stack und Recorder wurden geordnet
-beendet, beide Ports freigegeben. Keine Translation und kein Nav2-Kindziel.
+mit dem realen HWT-Leser im freigegebenen Initialscan ausgelöst. Die
+Messkette belegt 0,260533 s Rohdatenlücke, HOLD mit Bewegungshalt,
+erhaltenen Explore-Elternauftrag, unveränderten Bias, neue gültige
+Yaw-Daten, Encoder-Stillstand, Gate-ACK und Fortsetzung desselben
+Rundblicks. Der Controller cancelte nach 14,928 s und 0,136 rad;
+Stack und Recorder sind beendet, Ports frei, aktiver Install unverändert.
+Die anwesende Person bestätigte am 28.09.2026 nachträglich für **diesen**
+Lauf den physischen Halt beim HOLD, Stillstand nach Cancel und danach
+wieder wirksame unabhängige Motorsperre. STATUS Abschnitt 5 trennt
+Messdaten und Außenbeobachtung. Ergebnis: **HWT-RECOVERY IM BEGRENZTEN
+RUNDBLICK – REAL BESTANDEN**. Kein zweiter Versuch wurde gefahren.
 
-**Genau nächster Auftrag:** Den bereits angefragten Bericht der anwesenden
-Person für **diesen neuen Lauf** zu tatsächlichem physischen Halt beim HOLD,
-aktuellem Stillstand nach dem Versuch und erneut wirksamer unabhängiger
-Motorsperre entgegennehmen. Den Bericht getrennt von Bag-/Encoderwerten
-im STATUS dokumentieren und erst dann den begrenzten Rundblick als
-`HWT-RECOVERY IM BEGRENZTEN RUNDBLICK – REAL BESTANDEN` oder als
-`TEILNACHWEIS / NICHT BESTANDEN` einstufen. Ein unbeobachtetes Detail
-bleibt unbekannt. Der bestätigte Beobachterbericht des *früheren* Versuchs
-ersetzt diese Bestätigung nicht.
+**Genau nächster Auftrag:** Einen einzelnen, begrenzten HWT-Recovery-
+Realnachweis mit **aktivem Nav2-Kindziel** als gesonderten Freigabeentscheid
+vorbereiten. Der Initialscan hatte kein Kindziel und beweist daher weder
+dessen terminalen Cancel noch die Prüfung einer aktuellen Zielroute und
+Neuplanung für dieselbe offene Aufgabe. Die Vorlage muss vor jeder neuen
+Fahrt den tatsächlichen Software-/Profilstand, freie Strecke, unabhängigen
+Halt, Beobachter, harte Zeit-/Weggrenzen, definierte transiente HWT-Klasse,
+Aufzeichnung von Auftrag und Kindzielidentität sowie Abbruch- und
+Rückfallbedingungen konkret festlegen. Bestehende Produktkomponenten und
+das bewährte Manifest-/Recorderverfahren verwenden. Keine erneute Inventur,
+keine vorsorgliche Softwareänderung und keine Testwiederholung allein für
+mehr grüne Zähler.
 
-Aus diesem Dokument folgt weder ein weiterer Geräte- oder Fahrstart noch
-ein Installwechsel, Merge, TOR 2 oder eine Wohnungserkundung. Der
-Initialscan belegt keine Nav2-Kindziel-, Tür- oder Frontier-Recovery.
-Stufe 3 bleibt offen. Rückfall bleibt der fail-closed PR-#104-Kandidat;
-keine Schutzgrenzen wurden verändert.
+Dieser Folgeauftrag ist **keine** Geräte- oder Fahrfreigabe. Kein
+Nav2-Kindziel, TOR 2, Installwechsel, Merge oder Wohnungserkundungslauf
+automatisch starten. Stufe 3 bleibt offen. Der historische
+`raw_driver_not_ready`-Originalwert bleibt unbekannt; der neue definierte
+Rohfrischefall erklärt ihn nicht rückwirkend.
 
 ## 6. Übergabe und Fortschreibung
 

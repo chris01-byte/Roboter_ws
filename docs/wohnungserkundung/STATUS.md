@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus · Stand 27.09.2026 · Stufe 3 weiterhin OFFEN/GELB**
+**WE-1 · Amadeus · Stand 28.09.2026 · Stufe 3 weiterhin OFFEN/GELB**
 
 **Aktuelle Entscheidung:** Konsolidierung statt Komplettneubau. Maßgeblich sind
 [MASTERPLAN.md v1.1](MASTERPLAN.md), die unveränderte
@@ -9,13 +9,12 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Den noch ausstehenden Beobachterbericht zum genau einen
-begrenzten HWT-Roh-/Yaw-Recovery-Realversuch einholen und dessen Ergebnis
-abschließend einstufen. Die Messkette zeigt HOLD und RESUME desselben
-Rundblickauftrags; der physische Halt und die erneut wirksame unabhängige
-Motorsperre des *neuen* Laufs sind noch nicht vom Beobachter bestätigt.
-Der historische `raw_driver_not_ready`-Auslöser bleibt unbekannt. Stufe 3
-bleibt offen.
+**Nächster Auftrag:** Einen separat begrenzten HWT-Recovery-Realnachweis
+mit **aktivem Nav2-Kindziel** zur eigenen Freigabeentscheidung vorbereiten.
+Der genau eine Roh-/Yaw-Rundblickversuch ist für seinen Initialscan-Umfang
+real bestanden; er enthält kein Kindziel und belegt dessen Cancel- und
+Neuplanungsfolge nicht. Der historische `raw_driver_not_ready`-Auslöser
+bleibt unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -811,13 +810,15 @@ null. Manager und Explorer waren bis `1790541906,720` beziehungsweise
 Stack und Recorder endeten geordnet; beide Ports sind frei. `real-bag/`,
 `control-events.jsonl`, `run-analysis.json` und Logs bleiben lokal.
 
-**Einstufung derzeit: software- und sensorisch bestandener Real-Teilnachweis;
-physische Abnahme noch offen.** Die nachträgliche Beobachterbestätigung für
-den tatsächlichen Bewegungshalt und die wieder wirksame unabhängige
-Motorsperre dieses neuen Laufs steht aus. Bis dahin keine Kennzeichnung
-„HWT-RECOVERY IM BEGRENZTEN RUNDBLICK – REAL BESTANDEN“. Ein bestandener
-Initialscan würde weder Nav2-Kind-Cancel noch Tür- oder Frontierpfad
-abnehmen; Stufe 3 bleibt offen und TOR 2 beginnt nicht automatisch.
+**HWT-RECOVERY IM BEGRENZTEN RUNDBLICK – REAL BESTANDEN.** Der anwesende
+Beobachter bestätigte am 28.09.2026 für **diesen neuen Lauf** ausdrücklich:
+Der Roboter hielt beim HOLD tatsächlich physisch an, stand nach Cancel
+still und die unabhängige Motorsperre war danach wieder wirksam. Diese
+nachträgliche Außenbeobachtung ist getrennt von Bag und Encoderbeleg; sie
+ändert deren Messwerte nicht. Eine Wiederholung zur Erzielung einer grünen
+Wertung wurde nicht durchgeführt. Der Initialscan belegt weder
+Nav2-Kind-Cancel noch Tür- oder Frontier-Recovery; Stufe 3 bleibt offen.
+Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 
 ## 6. Erhaltene Nachweise und Roadmapgrenzen
 

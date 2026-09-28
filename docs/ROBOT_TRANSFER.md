@@ -20,9 +20,13 @@ Yaw-Daten kehrten zurück, Health/Gate bestätigten Sequenz 1, und derselbe
 Explore-Auftrag setzte den Rundblick fort. Der Controller cancelte nach
 14,928 s und 0,136 rad; es gab keine Translation und kein Nav2-Kindziel.
 Stack und Recorder wurden geordnet beendet; HWT- und Motorport sind frei.
-Bag, Zeitfolge und Analyse liegen ausschließlich lokal. Der Beobachterbericht
-zum physischen Halt und zur danach wieder wirksamen unabhängigen Motorsperre
-des **neuen** Versuchs steht noch aus. Keine neue Fahrt aus diesem Befund;
+Bag, Zeitfolge und Analyse liegen ausschließlich lokal. Die anwesende Person
+bestätigte am 28.09.2026 für **diesen neuen Versuch** nachträglich den
+tatsächlichen physischen Halt beim HOLD, Stillstand nach Cancel und die
+danach wieder wirksame unabhängige Motorsperre. Damit ist der begrenzte
+Rundblick-Umfang real bestanden; es wurde kein zweiter Versuch gefahren.
+Ein aktives Nav2-Kindziel, eine Zielroute, Tür- oder Frontier-Recovery waren
+nicht Gegenstand dieses Laufs. Keine neue Fahrt aus diesem Befund;
 Stufe 3 bleibt offen.
 
 ## HWT-Roh-/Yaw-Korrektur — ausschließlich isolierter Softwarestand
