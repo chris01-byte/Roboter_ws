@@ -840,7 +840,24 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-**Aktuell: motorloser Kindziel-Vorlauf ohne Initialscan am 28.09. —
+**Aktueller Einzelauftrag vom 28.09.: begrenzter aktiver HWT-Kindziel-
+Recoverytest.** Der erwartete motorlose Read-only-Stopp schließt den
+Vorlauf ab. Ein aktives Nav2-Kind wird erst im regulären aktiven Produktpfad
+erwartet und ist Bedingung vor der einmaligen HWT-Injektion. Das lokale
+Profil, der isolierte Build und die motorlosen Quellenbelege bleiben die
+Basis. Nach aktivem Stackstart werden Nullsollwerte, reale Quellen,
+Stillstand, Schutzkette sowie Live-Karte/Pose/Scope ohne Mission erneut
+geprüft. Recorder und unabhängiger Abbruchwächter sind vor dem einzigen
+Mission-Manager-Auftrag wirksam. Harte Grenzen: Route ≤0,45 m,
+Translation ≤0,60 m, 35 s ab erstem aktivem Kind, 340 s gesamt und
+kein Kind bis 300 s. Nur ein autonomes Kind mit Task-ID, Goal-UUID,
+zulässiger Route und gemessener Vorwärtsbewegung erlaubt die eine
+HWT-Leserpause. Fehlt es im aktiven Lauf, kontrollierter Cancel ohne
+Injektion. Die unabhängige Motorsperre darf nur nach konkreter
+Vor-Ort-Bedienbestätigung gelöst werden. Produkt- und Sicherheitscode
+bleiben unverändert. Das reale Ergebnis dieses Auftrags ist noch offen.
+
+**Historisch: motorloser Kindziel-Vorlauf ohne Initialscan am 28.09. —
 TESTFALL NICHT AUSGELÖST.** Der bereits real bestandene HWT-Initialscan
 wurde nicht wiederholt. Ausschließlich lokal liegt unter
 `~/.local/share/amadeus/tests/hwt-child-noscan-20260928/` das vom
@@ -878,13 +895,11 @@ Recorder und Stack wurden beendet, der zweite Start mit 28/28
 sauber abgeschlossenen Kindern, Geräteports frei; aktiver Install
 unverändert. Die Kartenbindung ist nach Shutdown nicht mehr live.
 
-**Genau nächster Entscheid:** Für den Kindzielnachweis ist die Forderung
-„aktives autonomes Kind bereits im motorlosen `active_drive=false`-Vorlauf“
-mit dem unveränderten HWT-Produktgate nicht erfüllbar. Vor einem weiteren
-Versuch muss der freigegebene Ablauf ausdrücklich festlegen, wie die
-Kindzielentstehung erst nach überprüfter Karten-/Scope-/Quellenlage bei
-wirksamem unabhängigem Halt beobachtet werden darf. Bis dahin keine
-Fahrt und keine Fault Injection; keine Umgehung des Read-only-Gates.
+**Historischer Folgeschluss:** Die Forderung „aktives autonomes Kind bereits
+im motorlosen `active_drive=false`-Vorlauf“ ist mit dem unveränderten
+HWT-Produktgate nicht erfüllbar. Der neue Auftrag korrigiert genau diese
+Reihenfolge. Der Read-only-Stopp ist kein HWT-Fehler und wird nicht durch
+eine weitere identische motorlose Explore-Mission wiederholt.
 
 **Historischer zweiter motorloser Vorlauf am 28.09.: Quellen BESTANDEN, Scope lokal
 gebunden, Fahrtest NICHT gestartet.** Nach aktueller Bestätigung, dass die

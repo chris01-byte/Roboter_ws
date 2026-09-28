@@ -82,7 +82,20 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
 
-**Aktuelles Ergebnis vom 28.09.: TESTFALL NICHT AUSGELÖST.** Das
+**Aktueller Auftrag vom 28.09.: genau ein begrenzter aktiver
+Kindziel-Recoveryversuch.** Der motorlose Vorlauf ist abgeschlossen.
+`hwt601_readonly_preflight_no_motion` ist bei `active_drive=false` die
+erwartete Produktsperre. Ein aktives Nav2-Kind gehört erst in den
+vorbereiteten aktiven Lauf und ist Bedingung **vor** der HWT-Injektion,
+nicht vor dem Ende des motorlosen Preflights. Keine weitere identische
+motorlose Explore-Mission. Der aktive Stack wird zunächst ohne Mission auf
+Nullsollwerte, reale Quellen, Stillstand, Schutzkette und nach SLAM-Neustart
+erneut gebundene Live-Karte geprüft. Recorder und unabhängige
+Abbruchüberwachung laufen vor dem Mission-Manager-Auftrag. Eine erforderliche
+Bedienhandlung an der unabhängigen Motorsperre wird vor Ort bestätigt.
+HWT-, Gate-, Recovery- und Sicherheitscode bleiben unverändert.
+
+**Historisches Ergebnis des motorlosen Vorlaufs vom 28.09.: TESTFALL NICHT AUSGELÖST.** Das
 Einmalprofil ohne Initialscan wurde ausschließlich lokal erstellt und
 im zweiten motorlosen Produktstart tatsächlich geladen (SHA256
 `a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`).
@@ -94,13 +107,17 @@ Explorer trotz offener Frontier-Aufgaben kein Nav2-Kind frei. Bag:
 null Action-Status/Feedback, null Nichtnull-Fahrbefehl. Kein manuelles
 Nav2-Ziel, keine Fault Injection und keine Fahrt. Der Stack ist beendet.
 
-**Einziger nächster Entscheid:** Die verlangte Bestätigung eines aktiven
-Kindes schon unter `active_drive=false` ist im unveränderten Produktpfad
-gesperrt. Ein weiterer Versuch braucht eine ausdrücklich festgelegte
-Reihenfolge von Karten-/Scope-/Quellenprüfung, unabhängigem Halt und
-Kindzielbeobachtung, bevor eine Bewegung oder HWT-Störung zugelassen
-werden kann. Keine Read-only-Sperre umgehen und nicht aus den offenen
-Frontier-Aufgaben allein ein gültiges Kindziel ableiten.
+**Korrigierte Reihenfolge:** Der Produktstart für den Einzelversuch verwendet
+`active_drive=true`, `use_hwt601_odometry=true` und das gehashte lokale
+Einmalprofil ohne Initialscan. Nach dem aktiven Nullkommando-Preflight startet
+Explore ausschließlich via Mission Manager → BT → WE-Explorer. Die vorhandenen
+Produktprüfungen begrenzen Scope, Footprint und Route vor Bewegung. Erst ein
+belegtes aktives autonomes Nav2-Kind mit Task-ID, Goal-UUID, Route ≤0,45 m
+im Scope und gemessener Vorwärtsfahrt erlaubt **eine** vorbereitete HWT-
+Leserpause. Ohne solches Ziel: kontrollierter Cancel ohne Injektion und
+`TESTFALL NICHT AUSGELÖST`. Gesamtlimit 340 s, kein Kind nach 300 s,
+35 s ab erstem aktivem Kind und 0,60 m kumulierte Translation bleiben harte
+Grenzen. Keine direkte Explorer-Action und kein manuelles Nav2-Ziel.
 
 **Historischer Torstand vom 28.09., zweiter passiver Vorlauf:** Der Nutzer
 bestätigte FC03-erreichbare Controller bei weiterhin unabhängig gesperrter
@@ -141,10 +158,10 @@ Der reale Roh-/Yaw-Rundblick auf PR #105 ist **für den Initialscan bestanden**
 (STATUS Abschnitt 5). Er hatte kein Nav2-Kind und belegt keine Kindziel-
 Fortsetzung. Der nächste Test verwendet dieselbe definierte transiente
 Rohfrischeklasse, keine neue HWT-Hypothese und keine manuelle Zielvorgabe.
-Diese Vorlage ist der konkrete **Freigabeentscheid: derzeit NO-GO**. Sie
-ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
+Die frühere Vorlage endete mit dem **damaligen NO-GO** wegen der inzwischen
+korrigierten Reihenfolge. Sie ist kein neuer Freigabeentscheid.
 
-### Kandidat und derzeitige Sperren
+### Historische Kandidaten- und Sperrenlage vor dem neuen motorlosen Vorlauf
 
 - Quellbasis: funktionaler Commit
   `6b666d97d7e11326c9f75dccbc4253112e99b578` auf
@@ -205,8 +222,8 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
    Dieses nur lokal gespeicherte Einmalprofil ist vor dem Start zu hashen
    und mit dem installierten Explorer zuzuordnen. Kein Produktprofil im
    Repository wird beiläufig geändert.
-3. **Autonomes Kind:** Der unveränderte Produktpfad muss nach seinem
-   vollständigen Initialscan selbst eine offene Frontieraufgabe und einen
+3. **Autonomes Kind:** Der unveränderte Produktpfad muss im aktiven Lauf
+   ohne erneuten Initialscan selbst eine offene Frontieraufgabe und einen
    aktuellen, eindeutigen Zielkandidaten aus Karte, Policy und Costmap
    erzeugen. Vor der Fault Injection müssen Task-ID, Karten-/Scope-Kontext,
    aktuell freie Route und die aktive Nav2-Goal-UUID im Recorder vorliegen.
@@ -217,10 +234,11 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
    Explore-Start kein solches Kind aktiv ist, ebenfalls Cancel ohne
    Injektion; keine verlängerte Zielsuche.
 4. **Harte Einzelgrenzen:** Maximal **340 s ab Explore-Start** einschließlich
-   Initialscan, HOLD und RESUME; höchstens **35 s ab erster aktiver
+   HOLD und RESUME; höchstens **35 s ab erster aktiver
    Kindziel-UUID**; höchstens **0,60 m kumulierte gemessene Translation**.
-   Zuerst erreichte Grenze löst Mission-Manager-Cancel aus. Scan-Sollwert
-   bleibt 0,08 rad/s und dessen 280-s-Produkttimeout unverändert. Im
+   Zuerst erreichte Grenze löst Mission-Manager-Cancel aus. Der Scan-Sollwert
+   und sein Produkttimeout bleiben unverändert; der Initialscan ist im
+   lokalen Einmalprofil für diesen Versuch abgeschaltet. Im
    Kindzielteil gelten die vorhandenen Realprofilgrenzen
    `desired_linear_vel=0,10 m/s`, Smoother-Maxima 0,12 m/s und
    0,25 rad/s; Überschreitung, Rückwärtsfahrt oder Verlassen von Scope/
@@ -255,18 +273,19 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
    unabhängige Motorsperre wieder wirksam bestätigen. Ein sicherer Abbruch
    ist Schutzbeleg, kein bestandener Kindziel-Recovery-Nachweis.
 
-**Damals nächster einzelner Schritt:** Den freien Geradeauskorridor ab aktueller
+**Historisch vorgesehener nächster Schritt:** Den freien Geradeauskorridor ab aktueller
 Startpose mit Endpunkt und seitlicher Begrenzung im dann laufenden Kartenframe
 vor Ort markieren/bestätigen und lokal neu binden. Danach das
 Karten-/Scope-/Runtime-Tor anhand des isoliert wiederhergestellten
 Produktkandidaten schließen und motorlos prüfen. Erst dann kann eine
 gesonderte Freigabe für den gesamten begrenzten Einzelversuch eingeholt
-werden. Das autonome Kindziel darf erst **im freigegebenen Produktlauf nach
+werden. Das autonome Kindziel sollte erst **im freigegebenen Produktlauf nach
 dem echten Initialscan** entstehen; es ist eine harte Bedingung **vor**
 Fault Injection und vor jeder Kindziel-Fortsetzung. Fehlt es, Cancel ohne
 Injektion und Ergebnis `TESTFALL NICHT AUSGELÖST`. Die konkrete
-Fahrfreigabe lautet derzeit **NEIN**. Keine Geräte oder Fahrt aus dieser
-Vorlage, kein Merge, kein TOR 2 und kein Stufe-3-Gesamtgrün.
+Fahrfreigabe lautete damals **NEIN**. Der aktuelle Auftrag ersetzt diese
+Reihenfolge und nutzt das lokale Profil ohne Initialscan. Kein Merge,
+kein TOR 2 und kein Stufe-3-Gesamtgrün.
 
 ## 6. Übergabe und Fortschreibung
 

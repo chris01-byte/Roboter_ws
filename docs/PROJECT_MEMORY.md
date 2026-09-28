@@ -15,6 +15,38 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-28 — Aktives Nav2-Kind erst im aktiven Produktlauf verlangen
+
+**Entscheidung:** Für den begrenzten HWT-Kindziel-Nachweis schließt der
+motorlose Quellen-/Karten-/Scope-Vorlauf ohne aktives Kind ab. Der reguläre
+Produktpfad mit `active_drive=true` wird zuerst ohne Mission auf Stillstand,
+Nullsollwerte und Schutzkette geprüft. Erst danach darf Mission Manager über
+BT/WE-Explorer ein autonomes Nav2-Kind erzeugen; dessen Task-ID, Goal-UUID,
+Scope und Route sind Bedingungen vor der einmaligen HWT-Injektion.
+
+**Grund / beobachtete Evidenz:** Der lokale Produktlauf ohne Initialscan
+erreichte bei `active_drive=false` erwartungsgemäß
+`hwt601_readonly_preflight_no_motion`, ohne Kindziel oder Fahrkommando.
+Die vorherige Forderung nach einem aktiven Kind schon in diesem Vorlauf war
+mit dem wirksamen Produktgate unvereinbar. Die gesondert real bestandene
+HWT-Initialscan-Recovery bleibt erhalten und wird nicht wiederholt.
+
+**Betroffene Dateien und Hardware:** Nur Ablaufdokumentation in STATUS und
+AGENTENAUFTRAG; keine HWT-/Gate-/Sicherheitscodeänderung und kein aktiver
+Installwechsel. Der aktive Einzelversuch erfordert die konkrete
+Vor-Ort-Bedienbestätigung der unabhängigen Motorsperre.
+
+**Teststatus / Risiken:** Vorbereitete isolierte Runtime und lokales
+Einmalprofil; das aktive Kindziel und die reale Kindziel-Recovery sind noch
+nicht nachgewiesen. Die Karte/Scopebindung muss nach SLAM-Start erneut
+gemessen werden.
+
+**Rückfallweg:** Ohne aktuelle Quellen, Scopebindung, sicheren Stillstand
+oder zulässiges autonomes Ziel keine HWT-Injektion; Mission-Manager-Cancel,
+geordnetes Beenden und unabhängigen Halt vor Ort prüfen.
+
+---
+
 ## 2026-09-27 — HWT-Yaw nach reiner Datenlücke nur mit neuer Validierung
 
 **Entscheidung:** Die 0,10-s-Abstandsprüfung bleibt als Kontinuitätsprüfung;
