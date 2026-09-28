@@ -13,6 +13,15 @@ bestätigt; damit ist die unten noch historisch offene Sperrenrückmeldung gekl�
 Die reale Karten-/Scopebindung muss im motorlosen Vorlauf neu gemessen werden.
 Aktueller verbindlicher Nachweisstand: STATUS Abschnitt 7.
 
+Der anschließende passive Start auf `e5b221b` ist beendet: Quellen, Karte/TF,
+VL53 und Stillstand waren gültig. Die echte Policy lieferte autonome Ziele,
+aber alle beobachteten Routen überschritten 0,45 m (Minimum 0,959117 m).
+Daher kein aktiver Start und keine Mission/Injektion. Neues Scope lokal aus
+Live-Pose erzeugt und dokumentiert, noch nicht als neues Laufprofil geladen.
+28/28 Launch-Kinder sauber beendet, Recorder beendet und Ports frei. Lokale
+Belege: `hwt-portal-repair-20260928/result.json`, Runtime-Manifest, Bag und
+Scopebindung. Nach Shutdown Bindung nicht mehr live; aktiver Install unverändert.
+
 
 ## HWT-Kindziel, aktiver Einzelversuch ohne Ziel — 28.09.2026
 

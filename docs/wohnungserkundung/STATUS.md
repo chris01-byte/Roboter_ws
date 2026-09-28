@@ -914,13 +914,59 @@ sie werden nicht als erfolgreicher gezielter Nachweis gezählt.
 Controllerelektronik für FC03 erreichbar. Dies schließt die zuvor offene
 Sperrenrückmeldung. Daraus wird kein bereits gelöster Motorhalt abgeleitet.
 
-**Genau nächster Schritt:** Nach Abschluss der getrennten Gegenfälle den
-korrigierten Kandidaten manifestieren und den bereits bestätigten motorlosen
-Karten-/Quellen-/Scope-Vorlauf ausführen. Anschließend ausschließlich der
-bestehende einzelne begrenzte Kindziel-Recoverytest unter seinen unveränderten
-Grenzen; eine tatsächlich noch wirksame Motorsperre muss vor Bewegung vor Ort
-kontrolliert gelöst werden. Kein weiterer Rundblick, keine Wohnungserkundung,
-keine Stufe-3-Freigabe.
+**Realer motorloser Vorlauf auf Ergebniscommit
+`e5b221be5e9e54296319c96640efbdef6cb63969`: TESTFALL NICHT AUSGELÖST.**
+Recorder mit vollständigem Interface-Overlay vor dem passiven
+`app_mapping.launch.py` gestartet (`active_drive=false`,
+`enable_auto_explore=false`). Das Manifest und `loaded-modules.json` belegen
+Explore, HWT-Schattennode, Schattenkern, Health und Guard aus dem neuen
+isolierten Kandidaten; alle fünf aufgelösten Module sind bytegleich mit den
+Quellen. Das tatsächlich geladene lokale Profil hat SHA256
+`89d966b79d79699a3d53c73ab2c75752c67a57b1158b23caf90c7ca9ec6efd07`;
+`passive-launch-profile.yaml` erhält diese unveränderten Startbytes.
+
+Reale HWT-/Encoderquellen gesund, FC03 ausschließlich lesend, beide VL53-Frames
+gesund, frische Karte und `map→base_link`, gemessener Stillstand. Der erste
+lokale Prüfskriptlauf lief wegen fälschlich erwarteter aktiver Encoderfeldnamen
+aus; mit dem tatsächlichen Read-only-Schema bestand dieselbe laufende passive
+Session. Keine Produktänderung oder Stackwiederholung dafür.
+
+Die neue lokale Scopevorlage wurde aus der gemessenen Startpose und dem
+bestätigten Geradeauskorridor erzeugt und an die Live-Karte gebunden;
+Koordinaten/Fingerprint bleiben ausschließlich in `passive-live-binding.json`.
+Profil-SHA256 danach
+`9c55a328ff50671662f4ba4f5d42d9735f999c83bc08e575fc325207d7651f41`.
+Diese neue Profilfassung wurde **nicht** im laufenden Node nachgeladen oder
+aktiv gestartet. Der Quellen-/Kartencheck ist bestanden; eine vollständig
+aktivierte Abnahme mit dieser neuen Scopefassung wird nicht behauptet.
+
+Die Portalblockade ist im realen passiven Produktpfad behoben:
+`ready_with_tasks`, keine stale Quellen und autonome Frontierauswahl.
+Alle **195** aufgezeichneten aktuellen Kandidaten hatten jedoch
+**0,959117–1,461838 m** Routenlänge. Die letzten vier Vorschauen lagen bei
+1,176396 / 1,461838 / 1,176396 / 1,176396 m. Damit fehlt konkret ein autonom
+gewähltes Produktziel innerhalb der unveränderten **0,45-m-Routengrenze**.
+Die vorhandene Freigabe wurde weder erweitert noch durch ein manuelles Ziel
+ersetzt. Kein aktiver Start, keine Mission, keine HWT-Pause und keine Fahrt.
+
+`passive-bag` umfasst 203,65 s; alle aufgezeichneten `/cmd_vel_nav`,
+`/cmd_vel_smoothed` und `/cmd_vel` sind null, Odometrieweg 0,000 m,
+keine Nav2-UUID und kein laufender Explore-Auftrag. Vor der letzten
+Kandidatenerfassung kein Fusion-Erstfehler. `/near_field/status` ist diesmal
+mit aufgezeichnet. Launch geordnet nur über den Elternprozess beendet,
+28/28 Kinder sauber, anschließend Recorder beendet, Ports frei.
+`result.json` enthält Zählwerte und beide Profilhashes. Die beendete
+SLAM-Session ist keine weiterhin gültige Live-Bindung.
+
+**Genau nächster Auftrag:** Den fehlenden realen Ausgangspunkt für genau
+denselben begrenzten Kindzieltest herstellen: Im bestätigten freien Bereich
+muss der unveränderte Produktpfad selbst ein gültiges Ziel mit Route ≤ 0,45 m
+liefern. Nach tatsächlicher Vor-Ort-Zuordnung und erneuter Live-Scopebindung
+nur diesen einen Test mit den bereits festgelegten Grenzen durchführen.
+Keine manuelle Zielvorgabe, Scope-Ausweitung, neue HWT-Untersuchung oder
+vorsorgliche Softwareänderung. Ein gelöster Motorhalt ist vor dem aktiven
+Start weiterhin tatsächlich vor Ort zu bestätigen. Kein automatischer
+Folgeversuch, kein Gesamt-Grün für Stufe 3.
 
 ### Historisch: aktiver Einzelversuch vor dieser Reparatur
 

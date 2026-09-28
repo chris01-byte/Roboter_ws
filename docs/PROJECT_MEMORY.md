@@ -11,6 +11,11 @@ Der WE-HWT-Pfad entscheidet einmal atomar über Grund/Zustand und veröffentlich
 den eigenen Erstfehler. Policy-Timer werden untereinander serialisiert; ein
 Kartenkontextfehler sperrt alte Kandidaten und aktive Quellenfreigaben. Alle
 Schutzfristen bleiben erhalten. Belege und nächster Auftrag: STATUS Abschnitt 7.
+Der reale motorlose Vorlauf bestätigt die behobene Portalblockade, aber kein
+autonomer Kandidat hält die 0,45-m-Testgrenze ein (195 Vorschauen, Minimum
+0,959117 m). Diese fehlende reale Voraussetzung wird ausdrücklich ausgewiesen;
+keine Fahrfreigabe erweitert, kein Ziel manuell eingesetzt und kein HWT-Test
+wiederholt. Stack und Recorder sind sauber beendet.
 Rückfall: diesen isolierten Kandidaten verwerfen und den vorherigen Build
 verwenden; mit dessen bekanntem No-Scan-Blocker keinen Kindzieltest starten.
 

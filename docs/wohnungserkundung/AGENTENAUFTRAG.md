@@ -89,19 +89,34 @@ Portalquerung. Grund/Zustand des HWT-Wächters werden konsistent ausgewertet,
 der Explorer-Erstsnapshot wird mit aufgezeichnet. Keine weiteren Subsysteme
 oder Schutzgrenzen ändern; den bestandenen Rundblick nicht wiederholen.
 
-**Einziger laufender Folgeumfang:** Korrigierten isolierten Kandidaten nach
-den getrennten gerätefreien Gegenfällen manifestieren, motorlos reale Quellen,
-Karte/TF und ein neu an die Live-Karte gebundenes Einmal-Scope prüfen. Dann
-genau den unten festgelegten einzelnen autonomen Nav2-Kindziel-Recoverytest
-unter der bestehenden begrenzten Laborfreigabe durchführen, sofern die
-aktuellen Vor-Ort-Bedingungen gelten. Motorsperre/Stillstand/FC03 sind aktuell
-bestätigt; eine noch gesperrte Endstufe nicht als freigegebenen Motorstrom deuten.
-Kein manuelles Ziel, keine direkte Explore-Action, kein Initialscan, keine
-Scope-Ausweitung. Route ≤ 0,45 m, kumulierte Translation ≤ 0,60 m, ≤ 35 s ab
-erstem aktiven Kind, 340 s insgesamt / 300 s ohne Kind; unveränderte Geschwindigkeiten.
+**Ergebnis:** Reparaturcommit `e5b221be5e9e54296319c96640efbdef6cb63969`,
+1.187 bestandene Regressionen, isolierter Zweipaketbuild und gerätefreier
+Produktgraph mit echter Aufgabenwahl und HWT-Kindziel-Recovery. Reale Quellen
+und Karte wurden danach motorlos geprüft; die Portalblockade ist behoben.
+Alle 195 autonomen Vorschauen lagen aber bei 0,959–1,462 m Route statt ≤ 0,45 m.
+Deshalb **TESTFALL NICHT AUSGELÖST**: keine Mission, keine Fahrt, keine Injektion.
+Stack/Recorder beendet, 28/28 Kinder sauber und Ports frei. Die neue lokale
+Scopevorlage wurde dokumentiert, aber nicht aktiviert; Live-Bindung nach
+Shutdown nicht mehr gültig. Details und Hashes ausschließlich im STATUS und
+lokalen Testverzeichnis.
+
+**Genau nächster Auftrag:** Den passenden realen Ausgangspunkt innerhalb
+des bestätigten freien Bereichs für denselben Einzeltest herstellen und
+motorlos neu zuordnen. Voraussetzung ist ein vom unveränderten Produktpfad
+selbst gewähltes Frontierziel mit gültiger Scopebindung und Route ≤ 0,45 m.
+Keine manuelle Zielvorgabe und keine synthetische Aufgabe. Sobald diese reale
+Voraussetzung und die aktuellen Vor-Ort-Bedingungen erfüllt sind, ausschließlich
+den bereits beschriebenen einzelnen Kindziel-Recoverytest ausführen.
+Keine neue HWT-Ursachenanalyse, kein Initialscan und keine weitere vorsorgliche
+Softwareänderung. Motorsperre/Stillstand/FC03 wurden für den abgeschlossenen
+motorlosen Vorlauf bestätigt; eine aktuell gesperrte Endstufe nicht als gelöst
+annehmen. Vor dem aktiven Start die tatsächliche kontrollierte Freigabe klären.
+
+Grenzen bleiben: Route ≤ 0,45 m, Translation kumuliert ≤ 0,60 m, ≤ 35 s ab
+erstem aktiven Kind, 340 s insgesamt / 300 s ohne Kind, unveränderte
+Geschwindigkeiten, keine Rückwärtsfahrt, Portalquerung oder Scope-Ausweitung.
 Genau eine abgesicherte Pause nur des HWT-Lesers nach aktivem Kind und gemessener
-Vorwärtsfahrt. Bei fehlender realer Voraussetzung diese konkret berichten.
-Keine weiteren Versuche automatisch anhängen.
+Vorwärtsfahrt. Keine weiteren Versuche automatisch anhängen.
 
 **Die nachfolgenden Berichte sind historisch; ihre damaligen Folgeaufträge
 sind durch den vorstehenden aktuellen Umfang abgelöst.**
