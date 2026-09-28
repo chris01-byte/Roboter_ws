@@ -3957,3 +3957,21 @@ ohne Neustart. Das Testziel stammt aus einem synthetischen Karten-Task-
 Adapter, nicht aus einer realen WE-Karte. Es gab keine Hardware, keinen
 Installwechsel und keinen Fahrtest. Nächster Schritt ist ausschließlich
 die gesondert freizugebende begrenzte Realabnahme des Initialscanfalls.
+
+
+## 28.09.2026 – Begrenzter Kindzieltest: Real-Opt-in und Richtungsbindung
+
+`6429bd6` auf PR #105 bindet die vorhandene optionale Vorwärtsbegrenzung vor
+WE-Frontier-Dispatch an den gestagten metrischen Kandidaten; Standard 0 bleibt
+unverändert, keine Task-/Ziel-/Routenmanipulation. Anlass war ein wirklich
+angenommenes autonomes Nav2-Kind mit seitlicher Anfangsroute außerhalb des
+begrenzten Testumfangs. 1.199 Regressionen bestanden, Explore isoliert gebaut.
+Der lokale Teststart muss `enable_auto_explore=true` verwenden und
+`explore_execution=bt_explicit_opt_in` prüfen; das zuvor übernommene false erzeugte
+nur Simulations-success. Keine Umwertung zum Realnachweis. Der Nutzer erlaubte
+zusätzlich 5 cm bestätigten Freiraum hinter der Roboterkante als lokale
+Startreserve; Rückwärtsfahrt bleibt verboten. Ein separat erfasster FC03-
+Paarzeitüberlauf (0,121539587 s bei 0,12 s) bleibt offener Einzelbefund,
+kein Grenzwert erhöht. Ein späterer sauberer motorloser Start beweist keine
+Ursachenbehebung. Aktueller fachlicher Stand und genau ein Folgeauftrag nur im
+WE-STATUS, Abschnitt 7; kein Fahr-/Recovery-Grün aus dieser Vorbereitung.

@@ -2521,3 +2521,21 @@ Vor einem späteren Realtest Quell-Commit, installierte Paketpräfixe,
 Profilpfad/Hash, Underlay-Reihenfolge und einzigen Hardwarebesitzer mit dem
 Runtime-Manifest festhalten. Rückfall bleibt der fail-closed PR-#104-Kandidat;
 kein aktiver Installwechsel folgt aus dieser Übergabe.
+
+
+## 28.09.2026 – PR #105: lokaler WE-Vorwärtskandidat und beendete Vorläufe
+
+Software `6429bd6`: ausschließlich Explore zusätzlich unter
+`~/.local/share/amadeus/tests/hwt-child-route150-20260928/forward-install/`
+gebaut. Temporäre Shellreihenfolge: bisheriges `hwt-portal-repair-20260928/`
+`runtime-env.sh`, danach dieses `forward-install/local_setup.bash`.
+Kein dauerhaftes Setup oder aktiver Install gewechselt. HWT-Schatten/Core/Health/
+Guard weiter aus dem korrigierten `hwt-portal-repair-20260928/install`.
+`forward-loaded-modules.json` und die Laufmanifeste dokumentieren Auflösung/Hashes.
+Für den aktiven MM→BT→WE-Pfad sind `active_drive=true` UND
+`enable_auto_explore=true` erforderlich; letzteres startet noch keine Mission.
+Der motorlose Sensorpfad verwendet `active_drive=false`. Lokale Scope-/Profil-
+Daten und alle Bags bleiben unter dem Testverzeichnis. Das Repo-Produktprofil
+ist unverändert. Letzte motorlose Vorläufe nach separater Bestätigung gesperrter
+Motorendstufe bei erreichbaren FC03-Encodern; aktueller Ergebnisstand und offene
+Bedingungen stehen ausschließlich in WE-STATUS Abschnitt 7.

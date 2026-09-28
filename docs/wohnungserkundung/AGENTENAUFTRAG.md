@@ -82,6 +82,42 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
+### Aktueller Auftrag nach dem Ergebnis vom 28.09.2026
+
+**Basis:** `6429bd6`, gleicher PR #105 / `feature/hwt-hold-recovery-resume`,
+Masterplan v1.1 unverändert. Aktueller vollständiger Befund ausschließlich
+[STATUS Abschnitt 7](STATUS.md#7-nächster-schritt-und-historie).
+
+Real-Opt-in und lokale Scope-Prüfung sind korrigiert; die vorhandene optionale
+Vorwärtsbegrenzung wirkt nun auch im WE-Pfad, ohne Ziel-/Task-/Routenänderung.
+1.199 Regressionen und isolierter Explore-Build bestanden. Ein autonomes
+Nav2-Kind wurde vor Bewegung wegen der unzulässigen Schwenkroute terminal
+gecancelt. Kein realer Brems-/Recoverynachweis, keine HWT-Injektion. Der spätere
+motorlose Vorlauf bestand; angebotene Kandidaten lagen außerhalb der aus dem
+bestätigten Korridor abgeleiteten lokalen Richtungsbegrenzung. Ein einmaliger
+FC03-Paarzeitüberlauf bleibt dokumentiert; kein Grenzwert wurde erhöht.
+
+**Genau nächster Schritt:** Den realen Startaufbau vor Ort so ausrichten,
+dass eine echte autonome Frontieraufgabe im erneut bestätigten begrenzten
+Vorwärtskorridor erreichbar ist. Dann aktuellen Quellen-/Pose-/Kartenbezug
+prüfen, neues lokales Scope binden und denselben vorbereiteten begrenzten
+Stopp-/Kindzielnachweis fortsetzen. Kein manuelles Nav2-Ziel und keine
+synthetische Aufgabe. Fehlenden Kandidaten nicht durch weitere beliebige
+Fahrversuche ersetzen. Die allgemeine Laborfreigabe bleibt übernommen;
+aktuelle Hardwarestellung nicht aus einer Softwarefreigabe ableiten.
+
+Route ≤1,50 m, Translation ≤0,60 m kumuliert einschließlich Nachlauf, 35/340 s
+und Produkt-Schutzgrenzen bleiben unverändert. Die zusätzlich bestätigten
+5 cm hinter der Roboterkante sind nur eine Startreserve, keine Rückwärtsfreigabe.
+Der Stoppmessmodus verwendet keinen HWT-Eingriff. Erst mit übertragbarem realem
+Nachlaufbeleg und gültigem vollständigem autonomem Plan darf der bestehende
+Recovery-Einzelfall folgen. Aktuell `stopping_evidence=null`; reale Stoppreserve
+nicht erfinden. Keine weitere vorsorgliche Produktreparatur, kein Merge,
+kein dauerhafter Installwechsel, keine Wohnungsfahrt und kein Stufe-3-Grün.
+
+**Folgende frühere Berichte bleiben historisch erhalten; ihre damaligen
+Folgeaufträge sind durch den vorstehenden Ergebnisstand abgelöst.**
+
 **Datierter Testentscheid vom 28.09.2026, vor erneutem Realversuch:**
 Software `e5b221be5e9e54296319c96640efbdef6cb63969`, dokumentierter vorheriger
 Abschluss `e5821f2`, gleicher PR #105. Softwaretests und bestandenes

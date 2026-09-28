@@ -9,15 +9,14 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Aktueller Testentscheid vom 28.09.2026:** Für genau einen
-Kindziel-Recoverytest gilt vollständige autonome Route ≤ 1,50 m, tatsächliche
-kumulierte Translation einschließlich Nachlauf weiterhin ≤ 0,60 m. Der bisherige
-0,45-m-Routenfilter ist für diesen Versuch ersetzt. Softwarestand `e5b221b`
-und seine bisherigen Nachweise werden übernommen. Der Realstart bleibt wegen
-des fehlenden übertragbaren Nachlaufbelegs für die aktuelle Cancel-Kette
-**BLOCKIERT**; Einzelbefund und nächster Auftrag stehen in Abschnitt 7.
-Der bestandene reale Rundblick und historische nicht ausgelöste Versuche bleiben
-unverändert bewertet, Stufe 3 bleibt offen.
+**Aktueller Stand vom 28.09.2026:** Software `6429bd6` korrigiert die optionale
+Vorwärtsbegrenzung im tatsächlichen WE-Pfad; der lokale aktive Start ist auf
+Mission Manager/BT statt Simulation berichtigt. 1.199 Regressionen und isolierter
+Build bestanden. Ein echtes autonomes Kind wurde ohne Bewegung sicher gecancelt.
+Der Fahr-/Recoveryfall bleibt **nicht ausgelöst**: Im letzten motorlosen Fenster
+fehlte ein passender autonomer Vorwärtskandidat, der reale Nachlauf bleibt offen.
+Route ≤1,50 m / Translation ≤0,60 m unverändert. Details und genau ein nächster
+Schritt in Abschnitt 7. Rundblicknachweis erhalten; Stufe 3 OFFEN/GELB.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -841,6 +840,115 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
+
+### Aktueller Ergebnisstand 28.09.2026: Produktpfad korrigiert, Fahrfall offen
+
+**Software `6429bd6` im selben PR #105; kein Merge, kein aktiver Installwechsel.**
+Der Nutzer hat die begrenzte Laborsitzung bis zum erfolgreichen Missionsnachweis
+freigegeben. Die festgelegten Grenzen (autonome Route ≤1,50 m, kumulierte
+Translation ≤0,60 m einschließlich Nachlauf, 35/340 s, unveränderte HWT-/Encoder-/
+Collision-/Geschwindigkeitsgrenzen) werden dadurch nicht aufgehoben.
+
+**Tatsächlich behoben:**
+
+- Der lokale aktive Teststart hatte `enable_auto_explore=false` aus dem passiven
+  Aufruf übernommen. Damit war `explore_execution=simulation_only_no_navigation`;
+  ein gemeldetes `success` war nur Simulation. Korrigierter Realaufruf:
+  `active_drive=true`, `enable_auto_explore=true`, Mission ausschließlich per
+  Mission Manager → BT → WE → Nav2. Beide lokalen Preflights verlangen nun
+  `bt_explicit_opt_in`; der Opt-in allein sendet keinen Missionsauftrag.
+- Der wiederverwendete aktive Prüfhelfer verwies noch auf eine historische
+  Profil-Datei. Er prüft jetzt die konkrete lokale Profilkopie am eigenen Pfad.
+  Geladene Scope-ID und Polygon wurden zusätzlich über ROS-Parameter gelesen.
+- Die Startgrenze lag exakt auf dem gepolsterten hinteren Footprint. Die
+  tatsächliche kleine Poseabweichung verursachte 0,114 mm Überschreitung und
+  sofortigen Cancel ohne Kind/Bewegung. Der Nutzer bestätigte danach **5 cm
+  freien Raum hinter der hintersten Roboterkante** und ausdrücklich dessen
+  Aufnahme als Startreserve. Nur diese Reserve wurde lokal ergänzt; kein
+  Rückwärtsfahren. Die Start-Footprint-Prüfung liegt nun vor dem Missionskommando.
+- Der lokale Controller prüft den gepolsterten Footprint entlang des Plans und
+  bei Schwenkbewegungen im konvexen Scope, nicht nur Punkte in dessen Boundingbox.
+  Eine neu angenommene, noch planende Action darf bei Stillstand auf ihren Plan
+  warten; Bewegung ohne aktuellen Plan wird abgebrochen. Produktprüfungen für
+  Belegung, Pose und tatsächliche Nachführung bleiben erforderlich.
+- Der bestehende optionale `frontier_forward_cone_half_angle_rad` wirkte nur
+  im älteren Explorerpfad. `6429bd6` bindet ihn vor WE-Frontier-Dispatch an den
+  tatsächlich gestagten metrischen Kandidaten. Seitliche Kandidaten werden mit
+  `frontier_outside_forward_cone` zurückgehalten; Ziel, Task und Route werden
+  nicht erzeugt, verschoben oder abgeschnitten. **Produktstandard 0 bleibt
+  unverändert**, alle übrigen Schutz- und Recoveryprüfungen bleiben erhalten.
+
+**Begrenzte Ergebnisse, ohne Fahr- oder Recovery-Grün:**
+
+1. Motorloser Ausgangsvorlauf: Quellen/Karte/TF/Stillstand bereit, 100,272 s
+   Aufzeichnung, kein Nichtnullkommando, 0,000 m Translation, kein HWT-first_fault.
+2. Erster Stoppmess-Anlauf: Start-Footprint-Grenze, Cancel ohne Nav2-Kind und
+   ohne Bewegung. Zweiter Anlauf: Simulation statt Realpfad, ebenfalls keine
+   Bewegung. Beide bleiben ausdrücklich **nicht ausgelöst**, keine Stoppbelege.
+3. Nach korrigiertem Real-Opt-in entstand ein echtes autonomes Nav2-Kind mit
+   aufgezeichneter Goal-UUID und einem **0,449705 m** langen Plan. Die erste
+   Planrichtung lag etwa **93,8° rechts**; der geplante gepolsterte Schwenk passte
+   nicht in das Scope. Der lokale Controller cancelte ohne Fahrkommando; das
+   Kind erreichte Status 5 (`CANCELED`), Mission canceled und Encoder-Stillstand.
+   **0,000 m Translation, keine HWT-Injektion.** Das belegt Dispatch/Cancel im
+   Produktpfad, aber weder physisches Bremsen noch Kindziel-Recovery.
+4. Software: **1.199 gerätefreie Regressionen bestanden** (Explore,
+   robot_state_estimation, robot_navigation, Mission Manager). Der echte
+   WE-Statuscallback wurde mit deaktivierter Begrenzung, seitlichem blockiertem
+   und vorderem freigegebenem Kandidaten geprüft. **30 lokale Controllerprüfungen**
+   bestehen; sie ersetzen keinen vollständigen Realnachweis. Explore wurde
+   isoliert neu gebaut; HWT-Yaw/Core/Health/Guard bleiben aus dem bisherigen
+   korrigierten Overlay. Kein erneuter Build anderer Produktpakete.
+5. Neue Software motorlos: Quellen und Scopebindung zunächst bestanden. Eine
+   lokale Probe mit 0,17 rad war unnötig an die Vororientierung gekoppelt; sie
+   bleibt als konservativer Zwischenstand erhalten. Die aktuelle lokale
+   Kandidatenbegrenzung beträgt **0,2529368168 rad (14,49°)**, rein aus dem
+   bestätigten seitlichen Freiraum, gepolstertem Footprint und 1,50 m maximaler
+   Route hergeleitet: `(L + front) sin(theta) + halfwidth cos(theta) ≤ min(left,right)`.
+   Das ist nur eine Richtungs-Vorauswahl; die vollständige echte Route, Kurven,
+   Belegung und der Scope müssen weiterhin unabhängig bestehen.
+6. Ein motorloser Start verriegelte den Encoderleser mit
+   `encoderpaar_zeitfenster_ueberschritten`: **0,121539587 s > 0,120000000 s**.
+   Kein Grenzwert geändert, kein Live-Reset, keine HWT-Ursache daraus abgeleitet.
+   Der Stack wurde geordnet beendet; ein weiterer unveränderter motorloser
+   Start ohne parallele Softwaretests bestand den Quellen-/Pose-/Scopecheck.
+   Das beweist keine behobene Ursache des einmaligen FC03-Zeitüberlaufs.
+7. Im anschließenden begrenzten 15-s-Beobachtungsfenster lagen die tatsächlich
+   angebotenen Kandidaten rund **17,4° bis 38,4° rechts**, Routen 0,712 bis 1,165 m.
+   Sie wurden korrekt zurückgehalten; weitere Statusbilder meldeten
+   `withheld_by_current_policy`. Kein aktueller passender autonomer
+   Vorwärtskandidat belegt. Keine weitere aktive Mission angehängt.
+
+**Aktueller Abschluss:** TESTFALL NICHT AUSGELÖST / TEILNACHWEIS.
+Die allgemeine Laborfreigabe liegt vor; es fehlt aktuell ein autonomer Kandidat,
+welcher die begrenzten räumlichen Testbedingungen erfüllt. Ein manuelles Ziel,
+eine synthetische Aufgabe, zufälliges Wiederholen oder Lockerung von Schutzwerten
+wird daraus nicht abgeleitet. Der reale Nachlauf der Cancel-Kette ist weiterhin
+unbelegt; `stopping_evidence=null` sperrt die Recoveryausführung. Eine Simulation
+oder ein Cancel bei 0 m/s erfüllt diese Voraussetzung nicht. Der zuvor bestandene
+Rundblick bleibt erhalten, Stufe 3 bleibt OFFEN/GELB.
+
+**Genau nächster Schritt:** Den realen Startaufbau so vor Ort ausrichten, dass
+innerhalb des erneut bestätigten Geradeauskorridors eine echte autonome
+Frontieraufgabe in zulässiger Richtung erreichbar ist; danach neue Live-
+Scopebindung und Quellen prüfen und denselben vorbereiteten begrenzten
+Stopp-/Kindzielnachweis fortsetzen. Keine künstliche Zielbereitstellung und
+keine automatische Fahrt allein aus dieser Dokumentation. Die Stellung der
+Motorsperre wurde zuletzt vor dem korrigierten motorlosen Vorlauf als wirksam
+bei erreichbaren Encodern und Stillstand bestätigt.
+
+**Lokale Belege, keine Wohnungsdaten im Repository:**
+`~/.local/share/amadeus/tests/hwt-child-route150-20260928/` enthält Manifeste,
+Profilstände/Hashes, `stop-attempt-01/`, `stop-attempt-02/`, `control-events.jsonl`,
+`stop-03-plans.json`, `forward-cone-regression.log`, `forward-build-log/`,
+`forward-loaded-modules.json`, die unverändert erhaltenen Einzelbags,
+`geometric-passive-encoder-fault.json`, `geometric-passive-02-candidates.json`,
+`forward-cone-geometric-decision.json` und `run-summary.json`. Karten-/Scope-
+Fingerprints, Koordinaten und Bags bleiben lokal. Nach Stackende sind diese
+Bindungen historische Laufbelege und keine laufende Karte.
+
+**Die nachfolgenden früheren Testentscheide/Berichte bleiben historisch erhalten;
+der vorstehende Ergebnisstand bestimmt den aktuellen nächsten Schritt.**
 
 ### Testentscheid 28.09.2026: Zielroute und gefahrenes Budget getrennt
 
