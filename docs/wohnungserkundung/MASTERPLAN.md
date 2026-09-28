@@ -2,6 +2,11 @@
 
 **Version 1.1 · 27.09.2026 · Amadeus / `chris01-byte/Roboter_ws`**
 
+**Versionierte Arbeitsregel-Ergänzung:** [LAB-1 v1.0 vom 28.09.2026](../LABORMODUS.md).
+Die fachliche WE-Reihenfolge und ihre Abnahmen bleiben unverändert; die
+Laborfreigabe und das Vermeiden wiederholter Standardfragen sind in Abschnitt 5
+und LAB-1 verbindlich geregelt.
+
 **Änderung gegenüber v1.0:** Der historische Einzelwert des
 `raw_driver_not_ready`-Abbruchs wurde nicht aufgezeichnet und ist nicht
 rekonstruierbar. Seine Ermittlung ist deshalb keine Voraussetzung mehr für
@@ -13,6 +18,7 @@ unbekannt. Alle Bewegungs-, Frische- und Realabnahmegrenzen gelten weiter.
 Masterplan; zur dauerhaften Referenz für alle beteiligten Agenten abgelegt.
 Dies ist eine Ziel- und Arbeitsentscheidung, keine behauptete Implementierung,
 Hardwareabnahme, Auslieferungsfreigabe oder Erlaubnis zum Start einer Fahrt.
+Die gesondert hinterlegte Laborfreigabe LAB-1 ist davon zu unterscheiden.
 
 > Vorhandene Fähigkeiten erhalten. Einen reproduzierbaren Betriebsstand
 > konsolidieren. Fehlerbehandlung gezielt ordnen. Danach denselben Kandidaten
@@ -28,6 +34,7 @@ Es entsteht keine zweite Roadmap und kein WE-M8.
 | Dokument | Verbindliche Rolle |
 |---|---|
 | [AGENTS.md](../../AGENTS.md) und einschlägige Unteranweisungen | Allgemeine Arbeits-, Sicherheits- und Repositoryregeln |
+| [LABORMODUS.md](../LABORMODUS.md) | Versionierte Laborfreigabe und Arbeitsregel gegen wiederholte Standardfragen; keine zweite Roadmap |
 | `MASTERPLAN.md` | Stabile Entscheidungen, Arbeitsreihenfolge und Änderungsgrenzen |
 | [STATUS.md](STATUS.md) | Einziger aktueller WE-Iststand: geprüfte Basis, Nachweise, offene Punkte und nächster Auftrag |
 | [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md) | Arbeitsvertrag und ausführbarer, begrenzter Folgeauftrag |
@@ -223,10 +230,18 @@ Ziel, Architektur, Reihenfolge, Akzeptanz- oder Sicherheitsgrenzen erfordern ein
 explizite Nutzerentscheidung und einen versionierten Planeintrag. Nebenbefunde
 priorisieren und im STATUS parken statt sofort neue Arbeitspakete zu starten.
 
-Ein gültiger begrenzter Sitzungsspielraum vermeidet wiederholte identische
-Rückfragen; er ersetzt keine aktuellen Betriebsbedingungen. Nach Not-Aus,
-relevantem Umbau, unklarem Zustand oder Umfangswechsel Freigabe neu klären.
-Dokumentation/Commit/Push/Merge allein sind niemals Geräte- oder Fahrfreigabe.
+**Laborarbeitsregel LAB-1 v1.0, Nutzerentscheidung vom 28.09.2026:**
+Die erklärte Laborfreigabe gilt auftragsbezogen und agentenübergreifend.
+[LABORMODUS.md](../LABORMODUS.md) regelt verbindlich das selbstständige
+Durcharbeiten ohne wiederholte identische Fragen zu Not-Aus-Erreichbarkeit,
+Platz, Preflight, Stack/Recorder oder bereits beauftragtem Fahrversuch.
+Technische Prüfungen selbst ausführen; reale Hardwarestellungen nicht erfinden.
+Nötige physische Bedienhandlungen konkret benennen, statt allgemeine
+Freigaberunden zu wiederholen. Bei konkretem Widerspruch, Not-Aus, Widerruf
+oder Umfangsänderung die betroffene Ausführung sicher anhalten und nur den
+fehlenden Sachverhalt klären. Dokumentation/Commit/Push/Merge allein erteilen
+keine neue Freigabe; LAB-1 dokumentiert die bereits erklärte Nutzerfreigabe.
+Schutzgrenzen und fachliche Abnahmekriterien werden dadurch nicht geändert.
 
 ## 6. Nachweise und Abschluss eines Auftrags
 
@@ -247,11 +262,19 @@ fortschreiben; MASTERPLAN nur bei einer geänderten Grundentscheidung versionier
 Den aktuellen ausführbaren Auftrag in AGENTENAUFTRAG aktualisieren, überholte
 Aufträge eindeutig historisch kennzeichnen. Archive behalten ihre Originalbytes.
 
-**Jetzt:** Schritt 1 und die zugehörige Audit-Bestandsaufnahme gemäß
-[AGENTENAUFTRAG.md](AGENTENAUFTRAG.md). Keine weitere Wohnungsfahrt und kein
-vollständiger Rewrite aus diesem Dokument ableiten.
+**Jetzt:** Den aktuellen Auftrag aus [STATUS.md](STATUS.md) und
+[AGENTENAUFTRAG.md](AGENTENAUFTRAG.md) verwenden, im Labor unter LAB-1.
+Die ursprüngliche Einstiegsempfehlung zu Schritt 1 ist kein Auftrag, bereits
+abgeschlossene Konsolidierung erneut zu beginnen. Keine neue Wohnungsfahrt und
+keinen vollständigen Rewrite allein aus diesem Referenzdokument ableiten.
 
 **Änderungsprotokoll:** 27.09.2026 – v1.0: Konsolidierung statt Komplettneubau;
 ein dokumentierter Kandidat, begrenzter Recovery-Umbau, reale Kernabnahme,
 danach WE-M4/M5/M6 und separate Produktreifeprüfung. Frühere Parallelpläne
 werden nicht als zusätzliche Roadmap fortgeführt.
+
+28.09.2026 – versionierte Arbeitsregel-Ergänzung LAB-1 v1.0:
+Durchgängige Laborfreigabe ohne wiederholte Standardfragen gemäß ausdrücklicher
+Nutzerentscheidung; technische Schutzprüfungen, fachliche Reihenfolge und
+Abnahmen des Masterplans v1.1 unverändert. Der aktuelle Auftrag wird weiterhin
+nur in STATUS/AGENTENAUFTRAG geführt.

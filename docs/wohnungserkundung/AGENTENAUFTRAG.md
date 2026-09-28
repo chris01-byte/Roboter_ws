@@ -1,12 +1,15 @@
 # Agentenauftrag – Wohnungserkundung Amadeus
 
-**WE-1 · Version 27.09.2026 · Repository `chris01-byte/Roboter_ws`**
+**WE-1 · Arbeitsregelstand 28.09.2026 · Repository `chris01-byte/Roboter_ws`**
 
-Verbindlicher Einstieg ist [MASTERPLAN.md v1.1](MASTERPLAN.md).
+Verbindlicher Einstieg ist [MASTERPLAN.md v1.1](MASTERPLAN.md) mit der
+[Arbeitsregel LAB-1 v1.0](../LABORMODUS.md).
 Der laufende Iststand und der nächste Auftrag stehen in [STATUS.md](STATUS.md).
 Die [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und die
 [WE-Meilensteine](MEILENSTEINE.md) bleiben erhalten. Kein paralleler P1–P5-Plan.
-Dieser Text ist eine Arbeitsreferenz, keine automatische Geräte-/Fahrfreigabe.
+Dieser Text ist eine Arbeitsreferenz; die ausdrücklich hinterlegte Laborfreigabe
+LAB-1 gilt innerhalb des beauftragten Laborumfangs, nicht als pauschale
+Freigabe neuer Bewegungen oder ungeprüfter Hardwarezustände.
 
 ## 1. Pflichtkontext vor jeder Bearbeitung
 
@@ -42,6 +45,30 @@ Not-Aus/Nutzerabbruch nicht automatisch zurücksetzen. Keine unbeobachteten
 Bereiche freigeben, keine alten Daten frisch stempeln, kein direkter ungegateter
 Motorbefehl. Die Detailregeln stehen im Masterplan; sie sind noch kein Nachweis
 bereits implementierter Recovery.
+
+### 2a. Laborumfang ohne erneute Standardfreigaben durcharbeiten
+
+Die [Laborfreigabe LAB-1](../LABORMODUS.md) vom 28.09.2026 gilt auch für einen
+neuen Agenten. Die beauftragte Kette aus Analyse, isoliertem Build, technischen
+Preflights, Recorder/Stack, Karten-/Scope-Abgleich, begrenztem Produktlauf und
+Auswertung ohne wiederholte identische Erlaubnisfragen bearbeiten.
+
+Stale Topics, fehlende Ziele, Profile, Builds oder Scope-Neubindung sind
+technische Aufgaben: innerhalb des Auftrags selbst lösen, nicht den Benutzer
+erneut nach sämtlichen Laborbedingungen fragen. Notwendige Bewegungssperren
+und reale Fehlermeldungen bleiben bestehen. Aktive Kindziele erst im regulären
+aktiven Produktmodus erwarten, nicht im Read-only-Preflight.
+
+Keine physische Motorsperre oder Bedienhandlung aus der Laborfreigabe ableiten.
+Vorhandene verlässliche Zustandsinformationen verwenden; nur tatsächlich nötige,
+nicht selbst ausführbare Bedienhandlungen konkret anfordern. Ein konkreter
+Widerspruch, Not-Aus/Widerruf oder eine Umfangsänderung wird gezielt geklärt.
+Kein automatisches Zurücksetzen echter Stopps und keine unbegrenzten Wiederholungen.
+
+LAB-1 ersetzt ältere Forderungen nach einer neuen Zustimmung für jeden bereits
+beauftragten unveränderten Teilschritt. Es verändert keine fachlichen Testgrenzen,
+Messnachweise oder hier dokumentierten Ergebnisse. Die folgende Historie ist
+keine Quelle für neue pauschale Freigabeschleifen.
 
 ## 3. Abgeschlossen: Integrationsbasis und Auditbestand konsolidieren
 
@@ -85,7 +112,8 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 ### Aktueller Auftrag nach dem Ergebnis vom 28.09.2026
 
 **Basis:** `6429bd6`, gleicher PR #105 / `feature/hwt-hold-recovery-resume`,
-Masterplan v1.1 unverändert. Aktueller vollständiger Befund ausschließlich
+fachlicher Masterplan v1.1 unverändert; Laborarbeitsregel LAB-1 v1.0 gilt.
+Aktueller vollständiger Befund ausschließlich
 [STATUS Abschnitt 7](STATUS.md#7-nächster-schritt-und-historie).
 
 Real-Opt-in und lokale Scope-Prüfung sind korrigiert; die vorhandene optionale
@@ -213,7 +241,7 @@ belegtes aktives autonomes Nav2-Kind mit Task-ID, Goal-UUID, Route ≤0,45 m
 im Scope und gemessener Vorwärtsfahrt erlaubt **eine** vorbereitete HWT-
 Leserpause. Ohne solches Ziel: kontrollierter Cancel ohne Injektion und
 `TESTFALL NICHT AUSGELÖST`. Gesamtlimit 340 s, kein Kind nach 300 s,
-35 s ab erstem aktivem Kind und 0,60 m kumulierte Translation bleiben harte
+35 s ab erstem Kind und 0,60 m kumulierte Translation bleiben harte
 Grenzen. Keine direkte Explorer-Action und kein manuelles Nav2-Ziel.
 
 **Historischer Torstand vom 28.09., zweiter passiver Vorlauf:** Der Nutzer
