@@ -127,7 +127,8 @@ def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
 
     node = ExploreNode.__new__(ExploreNode)
     node._hwt_guard = SimpleNamespace(
-        health=health, failure=health.motion_failure)
+        health=health, failure=health.motion_failure,
+        decision=lambda: (health.motion_failure(), health.recovery_state))
     node._hwt_hold_deadline = None
     node._hwt_hold_announced = False
     node._hwt_recovery_sequence = 0

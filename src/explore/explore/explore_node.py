@@ -54,7 +54,7 @@ from rclpy.signals import SignalHandlerOptions
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
-from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.qos import (
     DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy,
@@ -556,7 +556,7 @@ def validated_passive_policy_enabled(
 def validated_we_navigation_enabled(
         shadow_enabled: bool, raw_map_enabled: bool,
         frontier_feed_enabled: bool, policy_enabled: bool,
-        navigation_enabled: bool) -> bool:
+        navigation_enabled: bool, *, portal_feed_enabled: bool = True) -> bool:
     """Require the complete passive chain before active WE opt-in."""
     flags = (
         shadow_enabled, raw_map_enabled, frontier_feed_enabled,
@@ -566,6 +566,11 @@ def validated_we_navigation_enabled(
     if navigation_enabled and not all(flags[:-1]):
         raise ValueError(
             'WE-Navigation braucht Schatten, Rohkarte, Frontierfeed und Policy')
+    if not isinstance(portal_feed_enabled, bool):
+        raise ValueError('Portalfeed-Opt-in muss bool sein')
+    if navigation_enabled and not portal_feed_enabled:
+        raise ValueError(
+            'WE-Navigation braucht Portalfeed auch ohne Portalquerung')
     return navigation_enabled
 
 
@@ -1266,6 +1271,7 @@ class ExploreNode(Node):
                 self._region_graph_shadow_frontier_task_feed,
                 self._wohnungserkundung_policy_enabled,
                 self._wohnungserkundung_navigation_enabled,
+                portal_feed_enabled=self._region_graph_shadow_connected_portal_feed,
             )
         )
         # The parity profile keeps this opt-in false. A separately selected
@@ -1586,10 +1592,13 @@ class ExploreNode(Node):
             shadow_qos,
             callback_group=self._cb,
         )
+        # Serialize expensive policy passes; a late pass must not overwrite
+        # the assessment of a newer map revision. Sensor callbacks stay live.
+        self._region_graph_shadow_policy_group = MutuallyExclusiveCallbackGroup()
         self._region_graph_shadow_timer = self.create_timer(
             1.0,
             self._publish_region_graph_shadow_status,
-            callback_group=self._cb,
+            callback_group=self._region_graph_shadow_policy_group,
         )
 
     def _fault_region_graph_shadow(self, operation, error):
@@ -2851,12 +2860,18 @@ class ExploreNode(Node):
             self._hwt_gate_resume_ack_sequence = max(
                 self._hwt_gate_resume_ack_sequence, sequence)
 
-    def _wohnungserkundung_hwt_hold(self) -> bool:
+    def _hwt601_decision(self):
+        """One health evaluation and its state under the existing health lock."""
+        guard = getattr(self, '_hwt_guard', None)
+        if guard is None:
+            return None, 'HEALTHY'
+        return guard.decision()
+
+    def _wohnungserkundung_hwt_hold(self, decision=None) -> bool:
         guard = getattr(self, '_hwt_guard', None)
         if guard is None:
             return False
-        guard.failure()
-        state = guard.health.recovery_state
+        _, state = self._hwt601_decision() if decision is None else decision
         if state in ('HOLD', 'RECOVERY_VALIDATION'):
             if not self._hwt_hold_announced:
                 self._hwt_recovery_sequence += 1
@@ -3558,6 +3573,8 @@ class ExploreNode(Node):
         if getattr(self, '_hwt_guard', None) is not None:
             payload['hwt_recovery_sequence'] = getattr(
                 self, '_hwt_recovery_sequence', 0)
+            payload['hwt_first_fault'] = self._hwt_guard.health.first_fault_snapshot()
+            payload['hwt_recovery_state'] = self._hwt_guard.health.recovery_state
         if getattr(self, '_wohnungserkundung_policy_enabled', False):
             payload['wohnungserkundung'] = (
                 self._wohnungserkundung_status_extension)
@@ -6065,6 +6082,9 @@ class ExploreNode(Node):
         Any changed or withheld source evidence invalidates immediately.
         """
         with self._region_graph_shadow_lock:
+            if getattr(self, '_region_graph_shadow_fault', None) is not None:
+                return NavigationSourceState(
+                    intent.context, intent.map_revision, False)
             correlation = self._region_graph_shadow_latest_correlation
             received_at = getattr(
                 self, '_region_graph_shadow_latest_correlation_received_at',
@@ -6232,6 +6252,9 @@ class ExploreNode(Node):
 
     def _current_wohnungserkundung_navigation_target(self):
         """Return one atomic unconsumed preview only while its source matches."""
+        with self._region_graph_shadow_lock:
+            if getattr(self, '_region_graph_shadow_fault', None) is not None:
+                return None
         with self._wohnungserkundung_runtime_lock:
             snapshot = self._wohnungserkundung_navigation_snapshot
             consumed = self._wohnungserkundung_consumed_intent_id
@@ -6663,7 +6686,9 @@ class ExploreNode(Node):
                 return terminate(
                     TerminationCause.USER_CANCELED,
                     'user_canceled_without_active_child')
-            if self._wohnungserkundung_hwt_hold():
+            hwt_decision = self._hwt601_decision()
+            hwt_failure, _ = hwt_decision
+            if self._wohnungserkundung_hwt_hold(hwt_decision):
                 resume = self._wohnungserkundung_wait_for_hwt_resume(
                     goal_handle, overall_expired,
                     require_target=not initial_scan_pending)
@@ -6683,7 +6708,6 @@ class ExploreNode(Node):
                 return terminate(
                     TerminationCause.SYSTEM_FAILURE,
                     'hwt_recovery_terminal_help_required')
-            hwt_failure = self._hwt601_failure()
             if hwt_failure is not None:
                 return terminate(
                     TerminationCause.SYSTEM_FAILURE, 'hwt601_' + hwt_failure)

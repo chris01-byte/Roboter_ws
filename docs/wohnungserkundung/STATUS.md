@@ -840,7 +840,92 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-**Aktueller aktiver Einzelversuch vom 28.09.: TESTFALL NICHT AUSGELÖST.**
+### Aktuell: gezielte Portal-/Explorer-Reparatur vom 28.09.2026
+
+Arbeitsbasis `7e27082a8074a1ad2e5abd69778ea9725cf7c3f4`, gleicher
+Branch `feature/hwt-hold-recovery-resume` / PR #105, Masterplan v1.1 Schritt 2.
+Der reale Rundblicknachweis bleibt bestanden; der reale Kindzielnachweis ist
+weiter offen. Kein Merge, kein Wechsel des aktiven Installs.
+
+**Konkrete Portalursache:** Im tatsächlich aufgelösten lokalen No-Scan-Profil
+war `region_graph_shadow_connected_portals_enabled=false`. Deshalb kehrte
+`_try_observe_connected_raw_map_portals` vor jeder Verarbeitung zurück;
+es gab keinen ausgewerteten Bestand, auch keinen nachgewiesen leeren.
+Die unveränderte Aufgabenpolicy sperrte folgerichtig `portal_memory`.
+Das lokale korrigierte Profil aktiviert ausschließlich diesen benötigten Feed;
+Portalquerung bleibt aus. Die WE-Startvalidierung weist die widersprüchliche
+Konfiguration jetzt sofort zurück, statt minutenlang auf sie zu warten.
+
+**Unveränderte Karte:** Der reale Kartenmanager zählt validierte Beobachtungen
+in `observed_maps`, auch bei unverändertem Fingerprint. Der Exaktjoin führt
+jede neue Beobachtung durch den echten Portal-/Frontierdetektor. Ein erfolgreich
+leerer Bestand erhält dadurch eine belegte Revision und Verarbeitungszeit.
+Bloße identische Replays erneuern weiterhin keine Frische; fehlende Verarbeitung,
+überalterte Quellen und fremde Karten bleiben gesperrt. Keine Portale erfunden,
+keine Revision künstlich erhöht und keine Policy-Frische entfernt.
+
+**Explorer/HWT:** Eine Guard-Entscheidung liefert Fehlergrund und Zustand unter
+dem vorhandenen Health-Lock gemeinsam. Die WE-Schleife benutzt dieses eine
+Ergebnis für HOLD bzw. terminalen Abbruch. Der Regressionstest reproduzierte
+zuvor gesund → recoverbarer Fehler bei der zweiten Prüfung → Sofort-Abbruch;
+danach erreicht er HOLD mit erhaltenem Auftrag. Der Explorer veröffentlicht
+seinen eigenen `hwt_first_fault` und `hwt_recovery_state` im bestehenden
+`/explore/status_json`; der Guard protokolliert den Originalsnapshot einmal.
+Die Ursache des historischen Explorer-Abbruchs wird dadurch nicht nachträglich
+bewiesen. Klassifikation, Fristen, Recoverybudget und Latches bleiben unverändert.
+
+**Zwei im geforderten Integrationsnachweis reproduzierte Übergabefehler:**
+Überlappende Policy-Timer konnten einen älteren Snapshot nach einer neueren
+Revision abschließen. Nur dieser Timer nutzt jetzt eine eigene gegenseitig
+ausschließende Callbackgruppe; Sensorempfang bleibt parallel. Bei einem vom
+Kartenadapter abgewiesenen fremden Frame blieb außerdem ein alter Kandidat
+abrufbar. Der vorhandene Schattenfehler sperrt jetzt sowohl Kandidatenabruf
+als auch Quellenfreigabe eines laufenden Kindes. Der Fremdkarten-Gegenfall
+scheiterte vorher an genau dieser Abrufbarkeit und besteht danach.
+
+**Gerätefreie Belege:** 1.187 Tests aus Explore, State Estimation, Navigation
+und Mission Manager bestanden. Zwei geänderte Pakete wurden isoliert gebaut.
+Lokale Logs/Build/Profil unter
+`~/.local/share/amadeus/tests/hwt-portal-repair-20260928/`.
+Der erweiterte bestehende Graph verwendet echte Yaw-/Biasverarbeitung,
+Kartenmanager, Exaktkorrelation, Portal-/Frontierfeed, Aufgabenpolicy, Explorer,
+Mission Manager, BT und Gate. Nur Sensoren und Nav2-Gegenstelle sind synthetisch;
+keine eingesetzte Aufgabe, kein fest eingesetzter Kandidat, kein Frischestempel-
+Adapter. Testkarte: 40 × 30 Zellen à 0,10 m, 1 Hz; kein Lastabnahmenachweis.
+`graph-recovery-final.log`: autonome Aufgabe `task-frontier_000001`, gemessene
+Rohdatenlücke 0,270301 s, HOLD, altes Kind terminal, Bias unverändert,
+Bewegung/ungültige Route/fehlende Pose sperren, Stillstand und Quellen-/Routenprüfung,
+Gate-ACK 1, genau ein neues Kind und neue Bewegungsausgabe. Maximal ein aktives
+Kind; Nutzerabbruch beendet das neue Kind. Fehlender Portalfeed und ungültige
+Route sperren die echte Zielauswahl; unveränderte Kartenbeobachtungen blockieren
+sie nicht. Separater Fremdkarten-Nachweis: `graph-foreign-after.log`.
+Getrennte Läufe `graph-permanent-final.log` und `graph-estop-final.log`
+beenden das aktive Kind und die Mission ohne Neustart. Im Not-Aus-Lauf erfolgte
+der belegte Cancel wegen `estop_missing_stale_or_active`; 0,89 s später trat
+zusätzlich eine synthetische Encoder-Frischeverletzung auf. Der frühere saubere
+Not-Aus-Lauf `graph-estop-2.log` enthält diese Zusatzstörung nicht. Der
+Fremdkartenlauf belegt den gesperrten Kandidaten direkt vor Missionsstart;
+eine später zusätzliche Yaw-Störung ist kein Karten-Nachweis.
+Fehlgeschlagene Vorläufe bleiben lokal erhalten, einschließlich einer
+zusätzlichen synthetischen Encoder-Frischeverletzung im ersten Not-Aus-Lauf;
+sie werden nicht als erfolgreicher gezielter Nachweis gezählt.
+
+**Vor Ort bestätigt:** unabhängige Motorsperre wirksam, Roboter steht still,
+Controllerelektronik für FC03 erreichbar. Dies schließt die zuvor offene
+Sperrenrückmeldung. Daraus wird kein bereits gelöster Motorhalt abgeleitet.
+
+**Genau nächster Schritt:** Nach Abschluss der getrennten Gegenfälle den
+korrigierten Kandidaten manifestieren und den bereits bestätigten motorlosen
+Karten-/Quellen-/Scope-Vorlauf ausführen. Anschließend ausschließlich der
+bestehende einzelne begrenzte Kindziel-Recoverytest unter seinen unveränderten
+Grenzen; eine tatsächlich noch wirksame Motorsperre muss vor Bewegung vor Ort
+kontrolliert gelöst werden. Kein weiterer Rundblick, keine Wohnungserkundung,
+keine Stufe-3-Freigabe.
+
+### Historisch: aktiver Einzelversuch vor dieser Reparatur
+
+
+**Historischer aktiver Einzelversuch vom 28.09.: TESTFALL NICHT AUSGELÖST.**
 Der korrigierte Ablauf wurde **einmal** über
 `app_mapping.launch.py` mit `active_drive=true`, HWT-Odometrie,
 `enable_auto_explore=true` und dem lokalen Profil ohne Initialscan

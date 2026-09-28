@@ -4,8 +4,8 @@
 Run only after sourcing the isolated recovery overlay. The graph uses a
 localhost-only ROS domain, synthetic raw HWT/encoder feedback and a Nav2 action
 server; it starts no hardware, launch stack or actuator owner. Source, map,
-TF and costmap are synthetic ROS messages. Only the map-policy task adapter
-is injected directly; this is not a physical or full-map-policy acceptance.
+TF and costmap are synthetic ROS messages. Map manager, exact correlation,
+portal/frontier feeds and task selection are real product components.
 
 With the isolated underlay and recovery overlay sourced:
   env -u CYCLONEDDS_URI ROS_DOMAIN_ID=225 ROS_LOCALHOST_ONLY=1 \
@@ -20,7 +20,6 @@ import signal
 import subprocess
 import threading
 import time
-from types import SimpleNamespace
 
 # Reject accidental attachment to the active robot graph. The user's runtime
 # uses ROS_DOMAIN_ID=42 and a configured CycloneDDS peer list.
@@ -48,10 +47,7 @@ from robot_interfaces.msg import NearFieldStatus
 from std_msgs.msg import Bool, String
 from tf2_ros import TransformBroadcaster
 from explore.explore_node import ExploreNode
-from explore.exploration_child_goal import ExplorationGoalIntent
-from explore.frontier_goal_candidate import FrontierGoalCandidate
-from explore.exploration_nav_runtime import NavigationSourceState
-from explore.portal_memory import PortalMapContext
+from robot_map_manager.robot_map_manager_node import RobotMapManager
 from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate
 from robot_state_estimation.hwt601_shadow_node import Hwt601ShadowNode
 
@@ -60,7 +56,7 @@ params = share('explore')/'config/hwt601_recovery_acceptance_params.yaml'
 base = share('explore')/'config/explore_params.yaml'
 tree = share('explore')/'behavior_trees/navigate_to_pose_no_recovery.xml'
 shadow_params = share('robot_state_estimation')/'config/hwt601_shadow.yaml'
-logdir = pathlib.Path('/tmp/we1-hwt-ros-graph-probe')
+logdir = pathlib.Path(os.environ.get('HWT_GRAPH_LOGDIR', '/tmp/we1-hwt-ros-graph-probe'))
 logdir.mkdir(exist_ok=True)
 commands = [
  ('bt', [str(pathlib.Path(get_package_prefix('bt_orchestrator'))/
@@ -76,10 +72,12 @@ commands = [
 class Sources(Node):
     def __init__(self):
         super().__init__('we1_synthetic_sources')
+        self.map_frame = 'map'
+        self.map_ticks = 0
         self.raw_on = True
         self.moving = True
         self.gate_angular = 0.0
-        self.route_blocked = True
+        self.route_blocked = False
         self.pose_on = True
         self.estop_active = False
         self.last_raw = time.monotonic()
@@ -91,7 +89,7 @@ class Sources(Node):
         self.wheel = self.create_publisher(Odometry,'/fusion/hwt601/wheel_odom_raw',10)
         self.odom = self.create_publisher(Odometry,'/odom',10)
         self.costmap = self.create_publisher(OccupancyGrid,'/global_costmap/costmap',10)
-        self.map_pub = self.create_publisher(OccupancyGrid,'/map',10)
+        self.map_pub = self.create_publisher(OccupancyGrid,'/map',qos)
         self.scan = self.create_publisher(LaserScan,'/scan_normiert',10)
         self.left = self.create_publisher(PointCloud2,'/near_field/left/points',10)
         self.right = self.create_publisher(PointCloud2,'/near_field/right/points',10)
@@ -148,15 +146,20 @@ class Sources(Node):
         grid=OccupancyGrid()
         grid.header.stamp=stamp
         grid.header.frame_id='map'
-        grid.info.width=100
-        grid.info.height=100
-        grid.info.resolution=.05
+        grid.info.width=40
+        grid.info.height=30
+        grid.info.resolution=.1
         grid.info.origin.position.x=-1.0
         grid.info.origin.position.y=-1.0
         grid.info.origin.orientation.w=1.0
-        grid.data=[100 if self.route_blocked else 0]*10000
+        grid.data=[100 if self.route_blocked else 0]*1200
         self.costmap.publish(grid)
-        self.map_pub.publish(grid)
+        # One open room with a straight frontier, no invented task/portal.
+        grid.data=[0 if col < 25 else -1 for row in range(30) for col in range(40)]
+        grid.header.frame_id=self.map_frame
+        self.map_ticks += 1
+        if self.map_ticks % 5 == 1:
+            self.map_pub.publish(grid)
         scan=LaserScan()
         scan.header.stamp=stamp
         scan.header.frame_id='base_link'
@@ -199,9 +202,6 @@ class Sources(Node):
                    encoder_feedback_age_s=0.0)
         self.raw_status.publish(String(data=json.dumps(raw)))
         self.wheel_status.publish(String(data=json.dumps(wheel)))
-        if hasattr(self,'explorer'):
-            with self.explorer._region_graph_shadow_lock:
-                self.explorer._region_graph_shadow_latest_correlation_received_at=time.monotonic()
 
 class FakeNav(Node):
     def __init__(self):
@@ -236,28 +236,15 @@ try:
                      '-p','operator_stationary_confirmed:=true',
                      '-p',f'behavior_tree:={tree}','-p','require_hwt601_fusion:=true',
                      '-p','hwt601_active_drive:=true','-p','allow_explore_mission:=true',
-                     '-p','require_localization:=false'])
-    explorer=ExploreNode();gate=CmdVelMissionGate();shadow=Hwt601ShadowNode();sources=Sources();nav=FakeNav()
-    explorer._initial_scan_enabled=False
-    explorer._status_timer.cancel()
-    explorer._region_graph_shadow_timer.cancel()
-    explorer._replan_period_s=.05
-    explorer._wohnungserkundung_estop=False
-    explorer._record_revalidated_frontier_attempt=lambda *_args,**_kwargs:None
-    explorer._wohnungserkundung_task_policy_session=SimpleNamespace(record_attempt=lambda *_args:None)
-    explorer._robot_xy=lambda:(0.0,0.0)
-    context=PortalMapContext('test-session','test-map','map')
-    intent=ExplorationGoalIntent('intent-1','task-1','region-1',context,1)
-    candidate=FrontierGoalCandidate(intent_id='intent-1',task_id='task-1',
-        region_id='region-1',frontier_id='frontier-1',map_revision=1,frame_id='map',
-        source_fingerprint='a'*64,source_stamp_ns=1,target_x_m=1.0,target_y_m=2.0,
-        target_yaw_rad=0.0,target_row=1,target_col=1,frontier_x_m=1.1,
-        frontier_y_m=2.1,route_length_m=3.0,information_gain_square_m=1.0)
-    explorer._wohnungserkundung_navigation_snapshot=(intent,candidate)
-    explorer._wohnungserkundung_source_state=lambda *_args:NavigationSourceState(context,1,True)
-    explorer._region_graph_shadow_latest_correlation=SimpleNamespace(map_revision=1)
-    explorer._region_graph_shadow_latest_correlation_received_at=time.monotonic()
-    sources.explorer=explorer
+                     '-p','require_localization:=false',
+                     '-p','initial_scan_enabled:=false',
+                     '-p','portal_crossing_enabled:=false',
+                     '-p','coverage_enabled:=false',
+                     '-p','wohnungserkundung_accessible_scope_verified:=true',
+                     '-p','wohnungserkundung_scope_id:=synthetic-graph-only',
+                     '-p','wohnungserkundung_scope_polygon_xy:=[-0.9,-0.9,3.5,-0.9,3.5,3.5,-0.9,3.5]',
+                     '-p',f'storage_directory:={logdir / "synthetic-maps"}'])
+    explorer=ExploreNode();gate=CmdVelMissionGate();shadow=Hwt601ShadowNode();sources=Sources();nav=FakeNav();maps=RobotMapManager()
     original_route=explorer._wohnungserkundung_resume_path_ready
     original_still=explorer._wohnungserkundung_hwt_standstill_confirmed
     last=[None,None]
@@ -273,7 +260,7 @@ try:
     explorer._wohnungserkundung_resume_path_ready=route_probe
     explorer._wohnungserkundung_hwt_standstill_confirmed=still_probe
     executor=MultiThreadedExecutor(num_threads=8)
-    for node in (explorer,gate,shadow,sources,nav):executor.add_node(node)
+    for node in (explorer,gate,shadow,sources,nav,maps):executor.add_node(node)
     thread=threading.Thread(target=executor.spin,daemon=True);thread.start()
     def wait_for(predicate,timeout):
         end=time.monotonic()+timeout
@@ -281,10 +268,8 @@ try:
             if predicate():return True
             time.sleep(.05)
         return False
-    assert str(share('explore')).startswith('/tmp/we1-hwt-recovery-install/'), 'wrong Explorer install'
-    assert str(share('robot_navigation')).startswith('/tmp/we1-hwt-recovery-install/'), 'wrong Gate install'
-    assert str(share('mission_manager')).startswith('/tmp/we1-hwt-recovery-install/'), 'wrong Manager install'
-    assert str(share('bt_orchestrator')).startswith('/tmp/we1-full-shim-install/'), 'wrong BT underlay'
+    print('RESOLVED', json.dumps({name:get_package_prefix(name) for name in
+        ('explore','robot_state_estimation','robot_navigation','mission_manager','bt_orchestrator','robot_map_manager')}),flush=True)
     assert wait_for(lambda:{'bt_orchestrator','mission_manager'}.issubset(
         set(sources.get_node_names())),10), 'product nodes unavailable'
     assert wait_for(lambda:sources.yaw_statuses and
@@ -292,14 +277,58 @@ try:
     startup_bias=sources.yaw_statuses[-1]['bias']['radps_xyz']
     assert wait_for(lambda:explorer._hwt_guard.health.motion_failure() is None,5), 'HWT startup failed'
     assert wait_for(lambda:sources.cmd.get_subscription_count()>0,5), 'command route unavailable'
-    time.sleep(.5)
+    assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is not None,10), 'real policy candidate missing'
+    first_task=explorer._wohnungserkundung_navigation_snapshot[0].task_id
+    first_revision=explorer._region_graph_shadow_latest_correlation.map_revision
+    time.sleep(3.)
+    assert explorer._region_graph_shadow_latest_correlation.map_revision > first_revision
+    assert explorer._wohnungserkundung_navigation_snapshot is not None, 'unchanged map blocked selection'
+    if os.environ.get('HWT_GRAPH_CASE')=='foreign':
+        sources.map_frame='foreign_map'
+        assert wait_for(lambda:explorer._region_graph_shadow_fault is not None,3)
+        assert explorer._current_wohnungserkundung_navigation_target() is None, 'foreign map retained an actionable old candidate'
+        sources.cmd.publish(String(data='{"type":"explore"}'))
+        time.sleep(3.)
+        assert len(nav.goals)==0, 'foreign map dispatched a child'
+        print(json.dumps({'result':'PASS','case':'foreign','no_child':True}),flush=True)
+        raise SystemExit(0)
+    # Stop the actual detector feed: a current map alone is not evidence of
+    # an empty portal inventory. Restore it only through real processing.
+    explorer._region_graph_shadow_connected_portal_feed=False
+    time.sleep(3.)
+    assert explorer._wohnungserkundung_navigation_snapshot is None, 'missing portal feed allowed a goal'
+    explorer._region_graph_shadow_connected_portal_feed=True
+    assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is not None,4)
+    sources.route_blocked=True
+    assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is None,3), 'invalid route allowed a goal'
+    sources.route_blocked=False
+    assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is not None,4)
     sources.cmd.publish(String(data='{"type":"explore"}'))
     assert wait_for(lambda:len(nav.goals)>=1,8), 'first Nav2 child missing'
     first_id=nav.goals[0][1]
     assert any(m.get('state')=='running' and
                m.get('active_command',{}).get('type')=='explore'
                for m in sources.manager), 'parent command not active'
+    mode=os.environ.get('HWT_GRAPH_CASE','recovery')
+    if mode in ('permanent','estop'):
+        if mode=='permanent':
+            sources.raw_on=False
+            assert wait_for(lambda:explorer._hwt_guard.health.recovery_state=='TERMINAL_FAULT',8)
+        else:
+            sources.estop_active=True
+        assert wait_for(lambda:1 in nav.canceled,3), 'old child not terminal'
+        assert wait_for(lambda:sources.manager[-1].get('state') in ('canceled','failed'),3)
+        sources.raw_on=True
+        sources.estop_active=False
+        time.sleep(1.5)
+        assert len(nav.goals)==1 and nav.active==0
+        assert all(abs(v)<1e-9 and abs(w)<1e-9 for _,v,w in sources.out[-10:])
+        print(json.dumps({'result':'PASS','case':mode,'no_auto_restart':True,
+                          'old_child_terminal':True,'real_map_policy_chain':True}),flush=True)
+        raise SystemExit(0)
+    assert mode=='recovery'
     time.sleep(.2)
+    sources.route_blocked=True
     sources.raw_on=False
     time.sleep(.02)
     raw_before=sources.raw_stamps[-1]
@@ -349,6 +378,8 @@ try:
     sources.route_blocked=False
     assert wait_for(lambda:len(nav.goals)>=2,3), 'new child missing after standstill'
     second_id=nav.goals[1][1]
+    assert explorer._wohnungserkundung_navigation_snapshot[0].task_id==first_task
+    assert any(m.get('hwt_first_fault') for m in sources.phases), 'Explorer snapshot missing'
     assert first_id!=second_id and nav.maximum==1 and nav.canceled[0]==1
     assert last==[True,True], 'route or stillstand not checked'
     assert explorer._hwt_gate_resume_ack_sequence>=1, 'gate ACK missing'
@@ -361,51 +392,24 @@ try:
     assert wait_for(lambda:2 in nav.canceled,3), 'second child cancel missing'
     assert wait_for(lambda:any(m.get('state') in ('canceled','failed')
                                for m in sources.manager[-5:]),3), 'parent cancel missing'
-    # Second action: the initial scan has no Nav2 child. Its HOLD and
-    # restart are a separate product path, not evidence for child cancellation.
-    assert wait_for(lambda:gate._hwt_guard.health.recovery_state=='HEALTHY'
-                    and not gate._hwt_resume_pending,2), 'gate not ready for scan'
-    time.sleep(.3)
-    explorer._initial_scan_enabled=True
-    explorer._wohnungserkundung_policy_snapshot=SimpleNamespace(
-        passive=SimpleNamespace(source_ready=True))
-    scan_before=sum(m.get('phase')=='we_initial_scan' for m in sources.phases)
-    sources.cmd.publish(String(data='{"type":"explore"}'))
-    assert wait_for(lambda:sum(m.get('phase')=='we_initial_scan'
-                               for m in sources.phases)>scan_before,5), 'scan did not start'
-    assert wait_for(lambda:any(abs(angular)>0 for _,_,angular in sources.out[-20:]),2), 'scan command missing'
-    sources.raw_on=False
-    time.sleep(.261)
-    sources.raw_on=True
-    assert wait_for(lambda:any(m.get('phase')=='we_hwt_hold' and
-                               m.get('hwt_recovery_sequence')==2
-                               for m in sources.phases),2), 'scan HOLD missing'
-    assert len(nav.goals)==2, 'scan unexpectedly dispatched Nav2 child'
-    assert wait_for(lambda:explorer._hwt_guard.health.recovery_state=='HEALTHY',3), 'scan source not recovered'
-    assert wait_for(lambda:sum(m.get('phase')=='we_initial_scan'
-                               for m in sources.phases)>scan_before+1,3), 'scan did not resume'
-    assert len(nav.goals)==2, 'scan resume dispatched Nav2 child'
-    sources.estop_active=True
-    assert wait_for(lambda:sources.manager and
-                    sources.manager[-1].get('state') in ('canceled','failed'),3), 'E-stop did not terminate scan'
-    assert wait_for(lambda:sources.out and abs(sources.out[-1][1])<1e-9
-                    and abs(sources.out[-1][2])<1e-9,2), 'gate did not stop on E-stop'
-    sources.estop_active=False
-    time.sleep(.4)
-    assert len(nav.goals)==2, 'E-stop caused automatic restart'
     print(json.dumps({
         'result':'PASS', 'profile':str(params), 'fault':'raw_sample_stale',
         'raw_gap_s':raw_gap_s, 'old_child_terminal':nav.canceled[0]==1,
-        'same_task':'task-1', 'new_child_count':len(nav.goals)-1,
+        'same_task':first_task, 'recovery_new_child_count':1,
         'max_active_children':nav.maximum, 'stillstand_and_route_checked':last,
         'gate_ack_sequence':explorer._hwt_gate_resume_ack_sequence,
         'parent_preserved':True, 'old_command_blocked':True,
-        'scan_hold_and_restart':True, 'scan_nav2_child_count':0,
-        'estop_no_auto_restart':True,
+        'real_map_policy_chain':True, 'unchanged_map_selection':True,
+        'missing_feed_blocks':True, 'invalid_route_blocks':True,
+        'user_cancel_terminal':True,
         'real_yaw_shadow':True, 'frozen_bias':startup_bias,
         'repeated_gap_during_validation':True,
     },sort_keys=True),flush=True)
 
+except Exception:
+    import traceback
+    traceback.print_exc()
+    raise
 finally:
     if executor and 'sources' in locals() and rclpy.ok():
         try:

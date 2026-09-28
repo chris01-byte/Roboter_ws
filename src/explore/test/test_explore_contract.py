@@ -3050,7 +3050,10 @@ def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
     assert subscription_qos is publisher_qos
     assert interface_calls[1][2]['callback_group'] is node._cb
     assert interface_calls[2][1][0] == 1.0
-    assert interface_calls[2][2]['callback_group'] is node._cb
+    group = interface_calls[2][2]['callback_group']
+    assert group is node._region_graph_shadow_policy_group
+    assert isinstance(group, explore_node_module.MutuallyExclusiveCallbackGroup)
+    assert group is not node._cb
     assert isinstance(node._region_graph_shadow_lock, type(threading.Lock()))
     assert node._region_graph_shadow_fault is None
 
@@ -4250,3 +4253,60 @@ def test_cache_change_during_detection_discards_candidates(monkeypatch):
     assert correlation.map_revision == 7
     assert inventories == []
     assert node._region_graph_shadow_processed_correlation is None
+
+
+def test_we_navigation_rejects_disabled_required_portal_feed():
+    # Last real no-scan profile disabled this feed, while policy required it.
+    with pytest.raises(ValueError, match='Portalfeed'):
+        validated_we_navigation_enabled(
+            True, True, True, True, True, portal_feed_enabled=False)
+    assert validated_we_navigation_enabled(
+        True, True, True, True, True, portal_feed_enabled=True)
+
+
+def test_we_runtime_transition_between_checks_preserves_parent(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._region_graph_shadow_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = None
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._map = None
+    node._wohnungserkundung_navigation_snapshot = None
+    node._hwt_hold_announced = False
+    node._hwt_recovery_sequence = 0
+    node._publish_status = lambda state: None
+    health = SimpleNamespace(lock=threading.RLock(), recovery_state='HEALTHY',
+                             recovery_budget_s=10.)
+    calls = []
+    def failure():
+        calls.append('evaluate')
+        if len(calls) == 1:
+            return None
+        health.recovery_state = 'HOLD'
+        return 'raw_missing_stale_or_invalid'
+    node._hwt_guard = SimpleNamespace(health=health, failure=failure,
+        decision=lambda: (failure(), health.recovery_state))
+    class ReachedHold(Exception):
+        pass
+    def wait(*args, **kwargs):
+        raise ReachedHold()
+    node._wohnungserkundung_wait_for_hwt_resume = wait
+    node._finish_wohnungserkundung_completion = lambda *args: 'ABORT'
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    monkeypatch.setattr(explore_node_module.time, 'sleep', lambda _: None)
+    with pytest.raises(ReachedHold):
+        node._execute_wohnungserkundung_navigation(
+            SimpleNamespace(is_cancel_requested=False), 10.)
+    assert node._hwt_hold_announced
+    assert node._hwt_recovery_sequence == 1
+
+
+def test_faulted_map_context_cannot_reuse_an_old_candidate():
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = 'Kartenstatus: MapEpochChangeRequired'
+    # No runtime snapshot access is needed after the exact-map owner failed.
+    assert node._current_wohnungserkundung_navigation_target() is None
+    intent = SimpleNamespace(context=PortalMapContext('session', 'map', 'map'), map_revision=1)
+    assert not node._wohnungserkundung_source_state(intent, object()).current

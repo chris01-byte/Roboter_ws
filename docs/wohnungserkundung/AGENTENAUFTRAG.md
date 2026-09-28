@@ -82,7 +82,32 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
-**Aktueller Ergebnisstand vom 28.09.: aktiver Kindziel-Testfall nicht
+**Aktuell, 28.09.:** Die gezielte Portalfeed-/Explorer-Reparatur auf PR #105
+ist umgesetzt; tatsächliche Belege und Restpunkte stehen in STATUS Abschnitt 7.
+Die WE-Navigation verlangt den echten Portalfeed auch bei ausgeschalteter
+Portalquerung. Grund/Zustand des HWT-Wächters werden konsistent ausgewertet,
+der Explorer-Erstsnapshot wird mit aufgezeichnet. Keine weiteren Subsysteme
+oder Schutzgrenzen ändern; den bestandenen Rundblick nicht wiederholen.
+
+**Einziger laufender Folgeumfang:** Korrigierten isolierten Kandidaten nach
+den getrennten gerätefreien Gegenfällen manifestieren, motorlos reale Quellen,
+Karte/TF und ein neu an die Live-Karte gebundenes Einmal-Scope prüfen. Dann
+genau den unten festgelegten einzelnen autonomen Nav2-Kindziel-Recoverytest
+unter der bestehenden begrenzten Laborfreigabe durchführen, sofern die
+aktuellen Vor-Ort-Bedingungen gelten. Motorsperre/Stillstand/FC03 sind aktuell
+bestätigt; eine noch gesperrte Endstufe nicht als freigegebenen Motorstrom deuten.
+Kein manuelles Ziel, keine direkte Explore-Action, kein Initialscan, keine
+Scope-Ausweitung. Route ≤ 0,45 m, kumulierte Translation ≤ 0,60 m, ≤ 35 s ab
+erstem aktiven Kind, 340 s insgesamt / 300 s ohne Kind; unveränderte Geschwindigkeiten.
+Genau eine abgesicherte Pause nur des HWT-Lesers nach aktivem Kind und gemessener
+Vorwärtsfahrt. Bei fehlender realer Voraussetzung diese konkret berichten.
+Keine weiteren Versuche automatisch anhängen.
+
+**Die nachfolgenden Berichte sind historisch; ihre damaligen Folgeaufträge
+sind durch den vorstehenden aktuellen Umfang abgelöst.**
+
+
+**Historischer Ergebnisstand vom 28.09.: aktiver Kindziel-Testfall nicht
 ausgelöst.** Der korrigierte Ablauf wurde im bestehenden PR-#105-Produktpfad
 einmal aktiv gestartet. Das lokale Profil ohne Initialscan und die neu
 gemessene Scopebindung waren geladen, reale HWT-/Encoderquellen und Stillstand
@@ -97,7 +122,7 @@ unabhängige Fusion-Status und die gespeicherten Rohdaten belegen den
 Explorer-internen Erstwert nicht. Der Produktlauf wurde beendet, 28/28
 Kinder sauber, Ports frei. Details und lokale Belege: STATUS Abschnitt 7.
 
-**Genau nächster Auftrag:** Ausschließlich gerätefrei den vorhandenen Bag,
+**Historischer Folgeauftrag (abgelöst):** Ausschließlich gerätefrei den vorhandenen Bag,
 die Statusfolge und die konkreten Quell-/Policy-Stellen des aktiven No-Scan-
 Pfads abgleichen: Warum bleibt `portal_memory` durchgehend stale, und was
 ist für den Explorer-eigenen terminalen HWT-Befund tatsächlich belegt?

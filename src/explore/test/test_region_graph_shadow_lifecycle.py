@@ -1092,3 +1092,30 @@ def test_update_is_immutable_and_owner_has_no_privileged_or_reset_api():
     assert not hasattr(owner, "record_traversal")
     assert hasattr(owner, "observe_frontier_inventory")
     assert not hasattr(owner, "create_goal")
+
+
+def test_unchanged_geometry_new_observation_revalidates_empty_inventory():
+    owner = lifecycle()
+    accept_status(owner, at=100.)
+    owner.observe_portal_inventory(portal_inventory(owner), observed_monotonic_seconds=100.1)
+    # Real map manager leaves accepted_maps/fingerprint unchanged and advances
+    # observed_maps only after validating another raw grid observation.
+    update = json.loads(status_json(time=1800000005., source_stamp_ns=1800000004500000000))
+    update['counters']['observed_maps'] = 4
+    accept_status(owner, json.dumps(update), at=105.)
+    before = owner.build_status(now_monotonic_seconds=105.1).source
+    assert 'portal_memory' in assess_exploration_policy(before, ()).stale_sources
+    owner.observe_portal_inventory(portal_inventory(owner), observed_monotonic_seconds=105.2)
+    after = owner.build_status(now_monotonic_seconds=105.3).source
+    assert after.portals == ()
+    assert after.portal_memory_revision == after.source_map_revision == 4
+    assert after.portal_memory_age_seconds == pytest.approx(.1)
+    assert 'portal_memory' not in assess_exploration_policy(after, ()).stale_sources
+
+
+def test_missing_portal_processing_is_not_an_empty_inventory():
+    owner = lifecycle()
+    accept_status(owner)
+    source = owner.build_status(now_monotonic_seconds=100.1).source
+    assert source.portal_memory_revision is None
+    assert 'portal_memory' in assess_exploration_policy(source, ()).stale_sources

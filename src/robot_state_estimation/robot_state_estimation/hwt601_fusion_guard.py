@@ -17,6 +17,7 @@ class Hwt601FusionGuard:
         self.node = node
         self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
         self._logged_recovery_events = 0
+        self._logged_first_fault = False
         self.subscriptions = []
         for name, topic, msg_type in (
                 ('raw', '/shadow/hwt601/imu/data_raw', Imu),
@@ -61,7 +62,21 @@ class Hwt601FusionGuard:
                            valid and all(math.isfinite(v) for v in values))
 
     def failure(self):
-        failure = self.health.motion_failure()
+        return self.decision()[0]
+
+    def decision(self):
+        """Return one atomic reason/state pair; log outside the sample lock."""
+        with self.health.lock:
+            failure = self.health.motion_failure()
+            state = self.health.recovery_state
+        snapshot = self.health.first_fault_snapshot()
+        if snapshot is not None and not self._logged_first_fault:
+            try:
+                self.node.get_logger().warn(
+                    'HWT first_fault: ' + json.dumps(snapshot, sort_keys=True))
+                self._logged_first_fault = True
+            except Exception:
+                pass  # Diagnostics must never suppress the stop decision.
         events = self.health.recovery_events
         for event in events[self._logged_recovery_events:]:
             try:
@@ -72,4 +87,4 @@ class Hwt601FusionGuard:
                 # A logging failure must not interfere with the stop signal.
                 pass
         self._logged_recovery_events = len(events)
-        return failure
+        return failure, state

@@ -1,5 +1,20 @@
 # Projektgedächtnis
 
+## 28.09.2026 – Portalfeed und konsistente Explorer-HWT-Entscheidung
+
+Der aktive No-Scan-Versuch auf PR #105 hatte den Portalfeed lokal abgeschaltet,
+obwohl die WE-Policy ihn benötigt. Portalquerung aus bedeutet nicht Portalfeed
+aus. Die Startvalidierung lehnt diese Kombination jetzt ab; das lokale
+Einmalprofil schaltet den Feed wieder ein. Frische entsteht weiterhin nur aus
+wirklicher, exakt zugeordneter Kartenverarbeitung. Identische Replays bleiben alt.
+Der WE-HWT-Pfad entscheidet einmal atomar über Grund/Zustand und veröffentlicht
+den eigenen Erstfehler. Policy-Timer werden untereinander serialisiert; ein
+Kartenkontextfehler sperrt alte Kandidaten und aktive Quellenfreigaben. Alle
+Schutzfristen bleiben erhalten. Belege und nächster Auftrag: STATUS Abschnitt 7.
+Rückfall: diesen isolierten Kandidaten verwerfen und den vorherigen Build
+verwenden; mit dessen bekanntem No-Scan-Blocker keinen Kindzieltest starten.
+
+
 Fortlaufendes Protokoll getroffener Entscheidungen. Jeder Eintrag nennt die
 **beobachtete Evidenz**, nicht nur die Entscheidung. Neue Einträge oben anfügen.
 

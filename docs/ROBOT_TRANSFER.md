@@ -1,5 +1,19 @@
 # Übertragung auf den realen Roboter
 
+## 28.09.2026 – gezielte Portal-/Explorer-Reparatur, noch keine neue Fahrt
+
+Explore und robot_state_estimation wurden unter
+`~/.local/share/amadeus/tests/hwt-portal-repair-20260928/install` isoliert gebaut.
+Underlay bleibt der vollständige `hwt-child-scope-20260928-retry/install` mit
+den dokumentierten SLAM-/LiDAR-Overlays. Aktiver Install und Hauptarbeitskopie
+bleiben unverändert. Das neue lokale No-Scan-Profil aktiviert den erforderlichen
+Portalfeed; Portalquerung, Initialscan, Coverage und Rückkehr bleiben aus.
+Vor Ort wurden Motorsperre, Stillstand und FC03-Erreichbarkeit ausdrücklich
+bestätigt; damit ist die unten noch historisch offene Sperrenrückmeldung geklärt.
+Die reale Karten-/Scopebindung muss im motorlosen Vorlauf neu gemessen werden.
+Aktueller verbindlicher Nachweisstand: STATUS Abschnitt 7.
+
+
 ## HWT-Kindziel, aktiver Einzelversuch ohne Ziel — 28.09.2026
 
 Der unveränderte PR-#105-Build unter
