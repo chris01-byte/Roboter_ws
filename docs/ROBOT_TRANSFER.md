@@ -1,5 +1,39 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Kindziel, aktiver Einzelversuch ohne Ziel — 28.09.2026
+
+Der unveränderte PR-#105-Build unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+wurde über `app_mapping.launch.py` mit `active_drive=true`,
+`use_hwt601_odometry=true`, `enable_auto_explore=true` und dem lokalen
+Einmalprofil ohne Initialscan (SHA256 `a5e6b1d0…`) gestartet. Das lokale
+`runtime-manifest-active-v2.json` unter
+`~/.local/share/amadeus/tests/hwt-child-active-20260928-once/` hält die
+aufgelösten Paketpfade fest; ein dauerhafter Installwechsel fand nicht statt.
+Nach SLAM-Neustart wurde Scope-ID `we1-hwt-child-noscan-20260928-once` an
+die neue Live-Karte `fb26a819…` und die Startpose gebunden (maximal
+0,0009 m Eckenversatz). Bei stillstehender Basis waren HWT-Fusion,
+Encoderfeedback und Sicherheitsstatus gesund. `base_hardware` besaß
+`/dev/ttyUSB_BASE` allein, der HWT-Leser `/dev/ttyUSB_HWT601` allein;
+kein paralleler Encoderleser. Die Vor-Ort-Bestätigung bezog sich auf den
+kontrolliert gelösten unabhängigen Motorhalt, anwesenden Beobachter und
+weiterhin freien Korridor.
+
+Recorder und 340-s-Cancel-Wächter liefen vor dem einzigen Explore-Auftrag
+über Mission Manager → BT → Explorer. In 247,97 s erzeugte der aktive
+Produktpfad kein Kindziel: 249/249 Statusbilder meldeten
+`stale_source:portal_memory`, kein Zielkandidat, keine Nav2-UUID und
+kein Plan. Der Explorer endete vor der 300-s-Suchgrenze unerwartet mit
+`hwt601_raw_missing_stale_or_invalid`. Es gab keine geplante HWT-Pause,
+keinen HOLD und keine Nichtnull-Fahrkommandos; `/odom` maß 0,000 m Weg.
+Der exakte Explorer-interne Erstwert ist nicht belegt; der getrennte
+Fusion-Wächter blieb um den Abbruch gesund. Der Recorder erfasste
+`/near_field/status` wegen fehlendem `robot_interfaces`-Overlay nicht.
+Stack und Bag sind sauber beendet, 28/28 Launch-Kinder beendet, Ports frei.
+Vor-Ort-Rückmeldung zur nach dem Lauf wieder wirksamen Motorsperre steht
+noch aus. Kein zweiter Versuch, keine Produktänderung und keine
+Kindziel-Recovery-Abnahme aus diesem Lauf.
+
 ## HWT-Kindziel ohne erneuten Initialscan — motorlos nicht ausgelöst (28.09.2026)
 
 Das lokale Einmalprofil `hwt-child-no-initial-scan.yaml` unter

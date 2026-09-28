@@ -840,22 +840,67 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-**Aktueller Einzelauftrag vom 28.09.: begrenzter aktiver HWT-Kindziel-
-Recoverytest.** Der erwartete motorlose Read-only-Stopp schließt den
-Vorlauf ab. Ein aktives Nav2-Kind wird erst im regulären aktiven Produktpfad
-erwartet und ist Bedingung vor der einmaligen HWT-Injektion. Das lokale
-Profil, der isolierte Build und die motorlosen Quellenbelege bleiben die
-Basis. Nach aktivem Stackstart werden Nullsollwerte, reale Quellen,
-Stillstand, Schutzkette sowie Live-Karte/Pose/Scope ohne Mission erneut
-geprüft. Recorder und unabhängiger Abbruchwächter sind vor dem einzigen
-Mission-Manager-Auftrag wirksam. Harte Grenzen: Route ≤0,45 m,
-Translation ≤0,60 m, 35 s ab erstem aktivem Kind, 340 s gesamt und
-kein Kind bis 300 s. Nur ein autonomes Kind mit Task-ID, Goal-UUID,
-zulässiger Route und gemessener Vorwärtsbewegung erlaubt die eine
-HWT-Leserpause. Fehlt es im aktiven Lauf, kontrollierter Cancel ohne
-Injektion. Die unabhängige Motorsperre darf nur nach konkreter
-Vor-Ort-Bedienbestätigung gelöst werden. Produkt- und Sicherheitscode
-bleiben unverändert. Das reale Ergebnis dieses Auftrags ist noch offen.
+**Aktueller aktiver Einzelversuch vom 28.09.: TESTFALL NICHT AUSGELÖST.**
+Der korrigierte Ablauf wurde **einmal** über
+`app_mapping.launch.py` mit `active_drive=true`, HWT-Odometrie,
+`enable_auto_explore=true` und dem lokalen Profil ohne Initialscan
+(SHA256 `a5e6b1d0…`) gestartet. Manifest
+`~/.local/share/amadeus/tests/hwt-child-active-20260928-once/runtime-manifest-active-v2.json`
+ordnet die installierten Pakete dem isolierten PR-#105-Build und
+Quell-HEAD `b870c969…` zu. Das Profil war in `/explore_node` tatsächlich
+aufgelöst: WE-Navigation und Scope an, Initialscan/Portal/Coverage/Rückkehr
+aus, 340/35 s und je ein Frontier-/Fehlziel. Nach SLAM-Neustart wurde
+Scope-ID `we1-hwt-child-noscan-20260928-once` an die neue Live-Karte
+`fb26a819…` und aktuelle Pose gebunden; der maximale Polygon-Eckenversatz
+zum bestätigten Geradeauskorridor betrug 0,0009 m. Ohne Mission waren HWT-
+Fusion, Encoderfeedback, `map`/TF, Not-Aus-Status und Nullsollwerte gesund;
+`base_hardware` war alleiniger Motorbusbesitzer, der HWT-Leser allein auf
+seinem Port. Der Nutzer bestätigte den kontrolliert gelösten unabhängigen
+Halt und den weiterhin beaufsichtigten freien Korridor vor dem aktiven Start.
+
+Recorder und unabhängiger 340-s-Cancel-Wächter liefen vor dem **einzigen**
+Mission-Manager→BT→WE-Explorer-Auftrag. Während der 247,97 s bis zum
+terminalen Produktfehler blieben alle 249 auswertbaren Explorer-Statusbilder
+in `waiting_for_fresh_sources` mit genau `stale_source:portal_memory`.
+Zuletzt waren 22 Aufgaben offen und fünf als geeignet geführt, aber
+`selection.task_id=null`, `goal_candidate=unavailable` und
+`navigation_dispatched=false`. Der Bag enthält null Nav2-Action-Status,
+null Feedback und null `/plan`. Ohne Kindziel und Vorwärtsfahrt wurde
+**keine** HWT-Leserpause ausgelöst. Alle 8841 `/cmd_vel_nav`-, 7820
+`/cmd_vel_smoothed`- und 41 `/cmd_vel`-Nachrichten waren null; `/odom`
+weist 0,000 m Translation aus. Der aktive Produktlauf ist damit kein
+Kindziel-Recovery-Nachweis und keine Stufe-3-Freigabe.
+
+Um `1790618944,0016` protokollierte der Explorer unerwartet
+`HWT-Recovery TERMINAL_FAULT: raw_missing_stale_or_invalid` und endete
+mit entsprechendem Missionsfehler, **ohne** vorherigen HOLD und ohne
+Fault Injection. Der unabhängige Fusion-Status blieb um dieses Ereignis
+`HEALTHY`, `first_fault=null`; aufgezeichnete Roh-IMU-Empfangsabstände
+erreichten zwischen `1790618939` und `1790618945` höchstens 0,043 s,
+und die 2-Hz-Rohstatusbilder vor/
+nach dem Ereignis waren `ready=true`, `reconnects=0`. Diese Bagdaten
+belegen nicht den exakten internen Erstwert des Explorer-eigenen HWT-
+Wächters; aus ihnen wird keine neue HWT-Ursache erfunden. Der Controller
+forderte nach terminalem Missionsstatus Cancel an und protokollierte
+Encoder-Stillstand. Stack und Recorder wurden geordnet beendet, 28/28
+Launch-Kinder sauber, beide seriellen Ports frei. Die vor Ort erbetene
+Bestätigung der physischen Ruhe und wieder wirksamen unabhängigen
+Motorsperre wird getrennt nachgetragen. Recorder-Einschränkung:
+`/near_field/status` fehlt im Bag, weil der Recorder ohne
+`robot_interfaces`-Overlay gestartet wurde; es gab keinen aktiven
+Kindzielteil, für den dieser Topic einen Fahrnachweis liefern müsste.
+Lokale Belege: `active-bag/`, `control-events.jsonl`,
+`active-live-binding.json`, `resolved-explore-params.yaml` und
+`run-analysis.json` im genannten Testverzeichnis.
+
+**Genau nächster Auftrag:** Gerätefrei und eng begrenzt den aktiven
+No-Scan-Produktpfad aus diesem einen Bag darauf prüfen, warum
+`portal_memory` in allen 249 Statusbildern stale bleibt, und den
+gleichzeitigen Explorer-eigenen HWT-Terminalbefund gegen die vorhandenen
+Roh-/Fusion-Zeitreihen abgrenzen. Erst nach einer nachweisbaren Auflösung
+beider Startblocker einen erneuten begrenzten Kindzielversuch entscheiden;
+aus diesem Lauf keine automatische Wiederholung. Keine neue allgemeine
+Inventur und keine Änderung von Frische- oder Sicherheitsgrenzen.
 
 **Historisch: motorloser Kindziel-Vorlauf ohne Initialscan am 28.09. —
 TESTFALL NICHT AUSGELÖST.** Der bereits real bestandene HWT-Initialscan

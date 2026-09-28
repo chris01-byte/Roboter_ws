@@ -80,20 +80,38 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
+## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
-**Aktueller Auftrag vom 28.09.: genau ein begrenzter aktiver
-Kindziel-Recoveryversuch.** Der motorlose Vorlauf ist abgeschlossen.
-`hwt601_readonly_preflight_no_motion` ist bei `active_drive=false` die
-erwartete Produktsperre. Ein aktives Nav2-Kind gehört erst in den
-vorbereiteten aktiven Lauf und ist Bedingung **vor** der HWT-Injektion,
-nicht vor dem Ende des motorlosen Preflights. Keine weitere identische
-motorlose Explore-Mission. Der aktive Stack wird zunächst ohne Mission auf
-Nullsollwerte, reale Quellen, Stillstand, Schutzkette und nach SLAM-Neustart
-erneut gebundene Live-Karte geprüft. Recorder und unabhängige
-Abbruchüberwachung laufen vor dem Mission-Manager-Auftrag. Eine erforderliche
-Bedienhandlung an der unabhängigen Motorsperre wird vor Ort bestätigt.
-HWT-, Gate-, Recovery- und Sicherheitscode bleiben unverändert.
+**Aktueller Ergebnisstand vom 28.09.: aktiver Kindziel-Testfall nicht
+ausgelöst.** Der korrigierte Ablauf wurde im bestehenden PR-#105-Produktpfad
+einmal aktiv gestartet. Das lokale Profil ohne Initialscan und die neu
+gemessene Scopebindung waren geladen, reale HWT-/Encoderquellen und Stillstand
+vor Mission gesund. Recorder und unabhängiger Cancel-Wächter liefen vor dem
+Mission-Manager-Auftrag. In 247,97 s entstand kein Nav2-Kind: alle 249
+Explorer-Statusbilder nannten `stale_source:portal_memory`, trotz zuletzt
+fünf geeigneter Frontier-Aufgaben. Es gab keine Goal-UUID, keinen Nav2-Plan,
+keine HWT-Injektion und keinen Nichtnull-Fahrbefehl; `/odom` blieb bei
+0,000 m Translation. Danach meldete der Explorer ohne vorherigen HOLD den
+ungeplanten terminalen Grund `hwt601_raw_missing_stale_or_invalid`. Der
+unabhängige Fusion-Status und die gespeicherten Rohdaten belegen den
+Explorer-internen Erstwert nicht. Der Produktlauf wurde beendet, 28/28
+Kinder sauber, Ports frei. Details und lokale Belege: STATUS Abschnitt 7.
+
+**Genau nächster Auftrag:** Ausschließlich gerätefrei den vorhandenen Bag,
+die Statusfolge und die konkreten Quell-/Policy-Stellen des aktiven No-Scan-
+Pfads abgleichen: Warum bleibt `portal_memory` durchgehend stale, und was
+ist für den Explorer-eigenen terminalen HWT-Befund tatsächlich belegt?
+Eine eng begrenzte Korrektur oder ein neuer Realversuch wird erst aus diesem
+Befund entschieden; keine erneute allgemeine Inventur, keine vorsorgliche
+Parameteränderung und kein automatisch angehängter Geräteversuch. Der real
+bestandene HWT-Initialscan bleibt erhalten. Die unabhängige Motorsperre
+und Vor-Ort-Beobachtung werden getrennt bestätigt.
+
+**Historische Testreihenfolge, nun korrekt eingeordnet:** Der motorlose
+Vorlauf endete erwartungsgemäß an `hwt601_readonly_preflight_no_motion`.
+Ein aktives Kind gehört erst in den aktiven Produktlauf und ist Bedingung
+vor der HWT-Injektion, nicht vor dem Ende des motorlosen Preflights.
+HWT-, Gate-, Recovery- und Sicherheitscode blieben unverändert.
 
 **Historisches Ergebnis des motorlosen Vorlaufs vom 28.09.: TESTFALL NICHT AUSGELÖST.** Das
 Einmalprofil ohne Initialscan wurde ausschließlich lokal erstellt und
@@ -107,7 +125,7 @@ Explorer trotz offener Frontier-Aufgaben kein Nav2-Kind frei. Bag:
 null Action-Status/Feedback, null Nichtnull-Fahrbefehl. Kein manuelles
 Nav2-Ziel, keine Fault Injection und keine Fahrt. Der Stack ist beendet.
 
-**Korrigierte Reihenfolge:** Der Produktstart für den Einzelversuch verwendet
+**Historisch ausgeführte korrigierte Reihenfolge:** Der Produktstart für den Einzelversuch verwendet
 `active_drive=true`, `use_hwt601_odometry=true` und das gehashte lokale
 Einmalprofil ohne Initialscan. Nach dem aktiven Nullkommando-Preflight startet
 Explore ausschließlich via Mission Manager → BT → WE-Explorer. Die vorhandenen
@@ -199,7 +217,7 @@ korrigierten Reihenfolge. Sie ist kein neuer Freigabeentscheid.
   Karte. Die vor Ort bestätigte Geradeausstrecke ersetzt diese technische
   Zuordnung nicht; keine Wohnungskoordinaten ins Repository übernehmen.
 
-### Feste Annahmebedingungen für genau einen künftigen Versuch
+### Historische Annahmebedingungen des ausgeführten Einzelversuchs
 
 1. **Zielsystem:** Den unveränderten funktionalen Stand isoliert wieder
    aufbauen; in einer frischen Shell mit `hwt_diagnose_manifest.py` Quell-SHA,
@@ -283,8 +301,9 @@ werden. Das autonome Kindziel sollte erst **im freigegebenen Produktlauf nach
 dem echten Initialscan** entstehen; es ist eine harte Bedingung **vor**
 Fault Injection und vor jeder Kindziel-Fortsetzung. Fehlt es, Cancel ohne
 Injektion und Ergebnis `TESTFALL NICHT AUSGELÖST`. Die konkrete
-Fahrfreigabe lautete damals **NEIN**. Der aktuelle Auftrag ersetzt diese
-Reihenfolge und nutzt das lokale Profil ohne Initialscan. Kein Merge,
+Fahrfreigabe lautete damals **NEIN**. Der inzwischen ausgeführte Einzelauftrag
+ersetzte diese Reihenfolge und nutzte das lokale Profil ohne Initialscan.
+Der nun aktuelle Folgeauftrag ist ausschließlich gerätefrei. Kein Merge,
 kein TOR 2 und kein Stufe-3-Gesamtgrün.
 
 ## 6. Übergabe und Fortschreibung

@@ -15,6 +15,41 @@ Offene Risiken:
 Rückfallweg:
 ```
 
+## 2026-09-28 — Aktiven HWT-Kindzielversuch ohne Ziel beendet
+
+**Entscheidung:** Der eine aktive No-Scan-Kindzielversuch zählt als
+`TESTFALL NICHT AUSGELÖST`. Ohne autonomes Nav2-Kind wurde keine
+HWT-Leserpause ausgelöst; es folgt kein automatischer zweiter Versuch.
+Der nächste Auftrag klärt die konkrete No-Scan-Quellblockade und den
+separaten Explorer-HWT-Terminalbefund gerätefrei aus den vorhandenen Daten.
+
+**Grund / beobachtete Evidenz:** Auf isoliertem PR-#105-Install waren
+`active_drive=true`, HWT-Odometrie, das gehashte Einmalprofil und ein
+nach SLAM-Neustart gebundenes Scope aktiv. Vor Mission waren Quellen und
+Encoder-Stillstand gesund. Alle 249 Statusbilder der 247,97-s-Mission
+meldeten `stale_source:portal_memory`; kein Goal-UUID, Plan oder
+Nichtnull-Fahrkommando. `/odom` maß 0,000 m. Der Explorer endete ohne
+HOLD mit `hwt601_raw_missing_stale_or_invalid`, während der getrennte
+Fusion-Status gesund blieb; der exakte Explorer-interne Erstwert wurde
+nicht aufgezeichnet. Kein Rückschluss auf den historischen Abbruch.
+
+**Betroffene Dateien und Hardware:** Nur Status-/Übergabedokumente und
+lokale Testartefakte unter
+`~/.local/share/amadeus/tests/hwt-child-active-20260928-once/`;
+keine Produktcodeänderung, kein Installwechsel. `base_hardware` war
+alleiniger Motorbusbesitzer. Stack/Recorder sind beendet, Ports frei.
+
+**Teststatus / Risiken:** Kindziel-Recovery real weiter offen; physische
+Vor-Ort-Rückmeldung zur wieder wirksamen unabhängigen Motorsperre wird
+separat eingeholt. `/near_field/status` fehlte im Bag wegen einer
+Recorder-Overlaylücke; keine Fahrt fand statt.
+
+**Rückfallweg:** Die beendete aktive Runtime nicht weiterverwenden;
+keine HWT-Injektion oder Bewegung ohne neuen, vollständig begrenzten
+Einzelentscheid. Historisch bestandener Initialscan bleibt erhalten.
+
+---
+
 ## 2026-09-28 — Aktives Nav2-Kind erst im aktiven Produktlauf verlangen
 
 **Entscheidung:** Für den begrenzten HWT-Kindziel-Nachweis schließt der
