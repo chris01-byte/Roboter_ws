@@ -389,6 +389,28 @@ def normalize_angle(angle: float) -> float:
     return (angle + math.pi) % (2.0 * math.pi) - math.pi
 
 
+def frontier_within_forward_cone(candidate, robot_pose, half_angle: float) -> bool:
+    """Apply the existing optional heading constraint to a WE metric goal.
+
+    This only withholds dispatch. It never moves a goal, creates a task,
+    shortens a route, or replaces the current map/costmap/scope checks.
+    """
+    if not math.isfinite(half_angle) or not 0.0 <= half_angle <= math.pi:
+        return False
+    if half_angle == 0.0:
+        return True
+    if robot_pose is None:
+        return False
+    values = (*robot_pose, candidate.target_x_m, candidate.target_y_m)
+    if not all(math.isfinite(value) for value in values):
+        return False
+    dx = candidate.target_x_m - robot_pose[0]
+    dy = candidate.target_y_m - robot_pose[1]
+    if math.hypot(dx, dy) <= 1e-9:
+        return False
+    return abs(normalize_angle(math.atan2(dy, dx) - robot_pose[2])) <= half_angle
+
+
 def relative_planar_motion(
         start_xy: Tuple[float, float], start_yaw: float,
         current_xy: Tuple[float, float], current_yaw: float
@@ -2508,6 +2530,13 @@ class ExploreNode(Node):
                                 if costmap_blocked:
                                     goal_status['dispatch_blocked_reason'] = (
                                         'nav2_costmap_route_unavailable')
+                                elif not frontier_within_forward_cone(
+                                        candidate, robot_pose,
+                                        getattr(self,
+                                            '_frontier_forward_cone_half_angle',
+                                            0.0)):
+                                    goal_status['dispatch_blocked_reason'] = (
+                                        'frontier_outside_forward_cone')
                                 else:
                                     navigation_snapshot = (intent, candidate)
                             else:

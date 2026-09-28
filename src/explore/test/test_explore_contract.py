@@ -3494,8 +3494,13 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     assert publications[0].data == '{"shadow":true}'
 
 
+@pytest.mark.parametrize('cone,goal_xy,blocked', [
+    (0.0, (1.0, 1.0), False),
+    (0.17, (1.0, 1.0), True),
+    (0.17, (2.0, 2.0), False),
+])
 def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
-        monkeypatch):
+        monkeypatch, cone, goal_xy, blocked):
     raw_map = SimpleNamespace(
         info=SimpleNamespace(
             width=2,
@@ -3660,9 +3665,16 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         lambda value: {'state': 'current'} if value is candidate else None)
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
 
+    node._frontier_forward_cone_half_angle = cone
+    candidate = SimpleNamespace(target_x_m=goal_xy[0], target_y_m=goal_xy[1])
     node._publish_region_graph_shadow_status()
     node._publish_region_graph_shadow_status()
 
+    expected_goal = {'state': 'current'}
+    if blocked:
+        expected_goal['dispatch_blocked_reason'] = 'frontier_outside_forward_cone'
+    assert node._wohnungserkundung_navigation_snapshot == (
+        None if blocked else (intent, candidate))
     assert node._wohnungserkundung_status_extension == {
         'schema_version': 1,
         'task_evidence_source': {
@@ -3673,9 +3685,7 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
             'availability_count': 1,
             'utility_count': 1,
         },
-        'goal_candidate': {
-            'state': 'current',
-        },
+        'goal_candidate': expected_goal,
     }
     assert len(evidence_builds) == 1
     assert len(goal_builds) == 1
@@ -4310,3 +4320,23 @@ def test_faulted_map_context_cannot_reuse_an_old_candidate():
     assert node._current_wohnungserkundung_navigation_target() is None
     intent = SimpleNamespace(context=PortalMapContext('session', 'map', 'map'), map_revision=1)
     assert not node._wohnungserkundung_source_state(intent, object()).current
+
+
+@pytest.mark.parametrize('pose,goal,cone,allowed', [
+    ((0., 0., 0.), (.135, -.417), .17, False),
+    ((0., 0., 0.), (1., 0.), .17, True),
+    ((0., 0., math.pi - .01), (-1., -.01), .17, True),
+    ((0., 0., 0.), (-1., 0.), .17, False),
+    (None, (1., 0.), .17, False),
+    ((0., 0., float('nan')), (1., 0.), .17, False),
+    ((0., 0., 0.), (float('nan'), 0.), .17, False),
+    ((0., 0., 0.), (0., 0.), .17, False),
+    ((0., 0., 0.), (1., 0.), float('nan'), False),
+    ((0., 0., 0.), (.135, -.417), 0., True),
+])
+def test_we_forward_constraint_preserves_metric_goal(pose, goal, cone, allowed):
+    candidate = SimpleNamespace(target_x_m=goal[0], target_y_m=goal[1])
+    before = candidate.__dict__.copy()
+    assert explore_node_module.frontier_within_forward_cone(
+        candidate, pose, cone) is allowed
+    assert candidate.__dict__ == before
