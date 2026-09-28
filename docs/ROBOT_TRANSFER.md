@@ -2539,3 +2539,10 @@ Daten und alle Bags bleiben unter dem Testverzeichnis. Das Repo-Produktprofil
 ist unverändert. Letzte motorlose Vorläufe nach separater Bestätigung gesperrter
 Motorendstufe bei erreichbaren FC03-Encodern; aktueller Ergebnisstand und offene
 Bedingungen stehen ausschließlich in WE-STATUS Abschnitt 7.
+
+Recorder-Zusatz: `ros2 bag record --include-hidden-topics` ist für die explizit
+aufgelisteten Nav2-Action-Themen notwendig (isolierte Gegenprobe 0 vs 73
+Statusnachrichten). Vergangene Goal-UUID/Terminalfolge liegt im Controllerlog,
+nicht im Real-Bag. Abschaltfaults und tatsächlichen Vorlauf-FC03-Zeitüberlauf
+getrennt behandeln, siehe WE-STATUS. Zum Abschluss keine Roboterknoten oder
+Portbesitzer mehr; alle sieben Aufzeichnungen ohne Fahrkommando/Translation.

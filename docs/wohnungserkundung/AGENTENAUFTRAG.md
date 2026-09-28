@@ -109,7 +109,10 @@ aktuelle Hardwarestellung nicht aus einer Softwarefreigabe ableiten.
 Route ≤1,50 m, Translation ≤0,60 m kumuliert einschließlich Nachlauf, 35/340 s
 und Produkt-Schutzgrenzen bleiben unverändert. Die zusätzlich bestätigten
 5 cm hinter der Roboterkante sind nur eine Startreserve, keine Rückwärtsfreigabe.
-Der Stoppmessmodus verwendet keinen HWT-Eingriff. Erst mit übertragbarem realem
+Der vorhandene Recorder muss mit `--include-hidden-topics` laufen; die
+gerätefreie Gegenprobe dieser Option ist bestanden. Vergangene Action-Statusfolge
+liegt nur im Controllerlog, nicht vollständig im Bag. Der Stoppmessmodus
+verwendet keinen HWT-Eingriff. Erst mit übertragbarem realem
 Nachlaufbeleg und gültigem vollständigem autonomem Plan darf der bestehende
 Recovery-Einzelfall folgen. Aktuell `stopping_evidence=null`; reale Stoppreserve
 nicht erfinden. Keine weitere vorsorgliche Produktreparatur, kein Merge,

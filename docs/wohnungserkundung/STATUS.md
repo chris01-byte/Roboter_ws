@@ -919,6 +919,29 @@ Collision-/Geschwindigkeitsgrenzen) werden dadurch nicht aufgehoben.
    `withheld_by_current_policy`. Kein aktueller passender autonomer
    Vorwärtskandidat belegt. Keine weitere aktive Mission angehängt.
 
+**Nach vollständiger Bag-Auswertung ergänzte Grenzen:**
+Die Goal-UUID und Statusfolge des echten Kindes sind im zeitgestempelten
+`control-events.jsonl` enthalten, **nicht im Bag**. Der verwendete native Recorder
+hat versteckte Action-Themen trotz expliziter Topicliste ohne
+`--include-hidden-topics` nicht aufgenommen. Isolierte gerätefreie Gegenprobe
+(Domain 225, ausschließlich ein Test-Statuspublisher, keine Roboterthemen):
+ohne Option 0, mit Option **73 Statusnachrichten**. Der nächste vorhandene
+Recorderaufruf muss diese Option enthalten; keine neue Recorderarchitektur.
+`recorder-command-contract.json` und `recorder-hidden-probe-result.json`
+sichern die Korrektur. Keine rückwirkend vollständige synchrone Action-Aufzeichnung
+für den vergangenen Lauf behaupten.
+
+Die Bag-Gesamtsummen enthalten zusätzliche Meldungen **nach** eingeleitetem
+SIGINT: im Simulationsanlauf Rohmessalter 0,211282 s > 0,20 s, im ersten
+Forward-Vorlauf FC03-Paar 0,132546 s und im letzten Vorlauf zunächst
+Wheel-Messalter 0,181569 s > 0,18 s, dann FC03-Paar 0,126837 s. Diese
+Abschaltbefunde bleiben erhalten (`late-fault-analysis.json`) und werden weder
+als störungsfreier Gesamtbag noch als Fehler während des freigegebenen Fensters
+ausgegeben. Der FC03-Befund 0,121539587 s im fehlgeschlagenen Vorlauf lag dagegen
+**vor** dem Shutdown und bleibt offen. Alle sieben Bags belegen 0 Nichtnull-
+Fahrkommandos und 0,000 m Translation. Alle Stacks/Recorder sind geordnet beendet,
+Roboterknotenprüfung leer und beide seriellen Ports ohne Besitzer.
+
 **Aktueller Abschluss:** TESTFALL NICHT AUSGELÖST / TEILNACHWEIS.
 Die allgemeine Laborfreigabe liegt vor; es fehlt aktuell ein autonomer Kandidat,
 welcher die begrenzten räumlichen Testbedingungen erfüllt. Ein manuelles Ziel,
