@@ -859,10 +859,24 @@ Das letzte Abnahmeprofil (SHA256 `ee3b42ee…`) hat
 `accessible_scope_verified=false` und eine leere Scope-ID. Damit entsteht
 im Frontierpfad `scope=None`; die unveränderte Produktlogik kann dennoch
 einen Kandidaten bilden. Das ist **kein** Beleg für eine autorisierte
-Fahrstrecke. Der Nutzer bestätigte am 28.09. mündlich eine dokumentierte,
-aktuell freie Geradeausstrecke, nannte auf die Nachfrage aber keinen
-Dateipfad, Kartenbezug, Polygon- oder Profilnachweis. Diese Zuordnung ist
-deshalb weiterhin offen; die Aussage wird nicht in Koordinaten umgedeutet.
+Fahrstrecke. Der Nutzer bestätigte am 28.09. eine aktuell freie
+Geradeausstrecke, kennt aber deren Dokumentpfad nicht. Die lokale Suche
+fand als jüngsten passenden historischen Scope das Profil
+`~/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`
+(SHA256 `74c14c2d5a37a7ebc6f7e84206deba2ff6d7197135a4ab31b4772530917451a5`),
+Scope-ID `stage3-local-scope-20260925-after-r2`, Session
+`stage3-20260925-after-r2`, vier Polygonecken und
+`accessible_scope_verified=true`. Der Diagnoselauf
+`stage3-hwt601-motion-20260926T105410Z.jsonl` band ihn an den
+Map-Fingerprint `4f17785f…`. Der jüngere HWT-Lauf
+`hwt-recovery-real-20260927-fxU0To/motorless-observation.json` (27.09.,
+22:42 Uhr) meldet dagegen Session `hwt601-parity-20260926` und Map-ID
+`map-90b3fcce…`; sein installiertes Abnahmeprofil hat Scope-Verifikation
+aus und eine leere ID. Das alte Profil enthält selbst keinen Map-Fingerprint.
+Somit ist der historische Polygonbeleg vorhanden, aber seine Bindung an die
+aktuelle Karte und die bestätigte Geradeausstrecke fehlt. Weder Profil-Hash
+noch Aussage über freie Vorwärtsfahrt übertragen die alten Koordinaten in
+den heutigen Kartenframe. Reale Koordinaten bleiben lokal.
 
 Auch die beim bestandenen Rundblick tatsächlich aufgelösten temporären
 Präfixe `/tmp/we1-full-shim-install`, `/tmp/we1-hwt-recovery-install` und
@@ -876,8 +890,10 @@ Karten-/Scope-/Zielbindung und erneut aufgelöste Runtime — verhindern
 eine positive Freigabe. Ein früherer Rundblick oder ein manuell gesetztes
 Nav2-Ziel ersetzt sie nicht.
 
-**Genau nächster Auftrag:** Das vorhandene Kurzstrecken-/Scope-Dokument
-dem aktuellen Kartenframe zuordnen, den PR-#105-Kandidaten isoliert erneut
+**Genau nächster Auftrag:** Die aktuell freie Geradeausstrecke ab der
+aktuellen Startpose mit Endpunkt und seitlicher Begrenzung im beim Versuch
+laufenden Kartenframe vor Ort markieren/bestätigen und als neues lokales,
+kartenidentitätsgebundenes Einmalprofil dokumentieren; den PR-#105-Kandidaten isoliert erneut
 manifestieren und das Profil mit Sicherheitsquellen motorlos prüfen. Erst
 danach den in Abschnitt 5 bereits festgelegten Einzelversuch separat zur
 konkreten Fahrfreigabe vorlegen. Ein autonomes Kindziel kann nach dem

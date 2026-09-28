@@ -114,9 +114,17 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
   dem vollständigen Initialscan mit `open_tasks=0`,
   `goal_candidate=unavailable`, `navigation_dispatched=false`. Ein gültiges
   autonomes Kindziel im aktuellen Kartenframe ist **nicht belegt**. Der
-  Nutzer bestätigte eine dokumentierte, aktuell freie Geradeausstrecke,
-  nannte aber auf Nachfrage keinen lokalen Dokument-/Profilpfad und keine
-  Kartenidentität. Die vor Ort behauptete Freigabe ersetzt diese technische
+  Nutzer bestätigte eine aktuell freie Geradeausstrecke, kennt deren
+  Dokumentpfad jedoch nicht. Die lokale Suche fand als jüngsten passenden
+  historischen Scope
+  `~/.local/share/amadeus/profiles/stage3-real-20260925-after-r2-scope.yaml`
+  (SHA256 `74c14c2d5a37a7ebc6f7e84206deba2ff6d7197135a4ab31b4772530917451a5`),
+  Scope-ID `stage3-local-scope-20260925-after-r2`, Session
+  `stage3-20260925-after-r2`. Dessen gebundener Diagnoselauf hatte den
+  Map-Fingerprint `4f17785f…`; der jüngere HWT-Lauf vom 27.09. meldet
+  Session `hwt601-parity-20260926`, Map-ID `map-90b3fcce…`. Das alte
+  Polygon hat keine belegte Transformation/physische Bindung zur aktuellen
+  Karte. Die vor Ort bestätigte Geradeausstrecke ersetzt diese technische
   Zuordnung nicht; keine Wohnungskoordinaten ins Repository übernehmen.
 
 ### Feste Annahmebedingungen für genau einen künftigen Versuch
@@ -192,8 +200,10 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
    unabhängige Motorsperre wieder wirksam bestätigen. Ein sicherer Abbruch
    ist Schutzbeleg, kein bestandener Kindziel-Recovery-Nachweis.
 
-**Nächster einzelner Schritt:** Das Karten-/Scope-/Runtime-Tor anhand des
-vor Ort dokumentierten Streckenbelegs und des isoliert wiederhergestellten
+**Nächster einzelner Schritt:** Den freien Geradeauskorridor ab aktueller
+Startpose mit Endpunkt und seitlicher Begrenzung im dann laufenden Kartenframe
+vor Ort markieren/bestätigen und lokal neu binden. Danach das
+Karten-/Scope-/Runtime-Tor anhand des isoliert wiederhergestellten
 Produktkandidaten schließen und motorlos prüfen. Erst dann kann eine
 gesonderte Freigabe für den gesamten begrenzten Einzelversuch eingeholt
 werden. Das autonome Kindziel darf erst **im freigegebenen Produktlauf nach
