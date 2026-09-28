@@ -80,40 +80,128 @@ ein neuer Lauf beweist die alte Ursache nicht rückwirkend. Zum damaligen
 TOR-1-Abschluss war TOR 2 noch nicht zur Umsetzung freigegeben; die spätere
 Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
-## 5. Aktueller Folgeauftrag: begrenzten Kindziel-Nachweis vorlegen
+## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
 
-Der auf PR #105, Quellcommit `6b666d97d7e11326c9f75dccbc4253112e99b578`,
-gerätefrei geprüfte Roh-/Yaw-Recoverypfad wurde am 27.09.2026 genau einmal
-mit dem realen HWT-Leser im freigegebenen Initialscan ausgelöst. Die
-Messkette belegt 0,260533 s Rohdatenlücke, HOLD mit Bewegungshalt,
-erhaltenen Explore-Elternauftrag, unveränderten Bias, neue gültige
-Yaw-Daten, Encoder-Stillstand, Gate-ACK und Fortsetzung desselben
-Rundblicks. Der Controller cancelte nach 14,928 s und 0,136 rad;
-Stack und Recorder sind beendet, Ports frei, aktiver Install unverändert.
-Die anwesende Person bestätigte am 28.09.2026 nachträglich für **diesen**
-Lauf den physischen Halt beim HOLD, Stillstand nach Cancel und danach
-wieder wirksame unabhängige Motorsperre. STATUS Abschnitt 5 trennt
-Messdaten und Außenbeobachtung. Ergebnis: **HWT-RECOVERY IM BEGRENZTEN
-RUNDBLICK – REAL BESTANDEN**. Kein zweiter Versuch wurde gefahren.
+Der reale Roh-/Yaw-Rundblick auf PR #105 ist **für den Initialscan bestanden**
+(STATUS Abschnitt 5). Er hatte kein Nav2-Kind und belegt keine Kindziel-
+Fortsetzung. Der nächste Test verwendet dieselbe definierte transiente
+Rohfrischeklasse, keine neue HWT-Hypothese und keine manuelle Zielvorgabe.
+Diese Vorlage ist der konkrete **Freigabeentscheid: derzeit NO-GO**. Sie
+ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
 
-**Genau nächster Auftrag:** Einen einzelnen, begrenzten HWT-Recovery-
-Realnachweis mit **aktivem Nav2-Kindziel** als gesonderten Freigabeentscheid
-vorbereiten. Der Initialscan hatte kein Kindziel und beweist daher weder
-dessen terminalen Cancel noch die Prüfung einer aktuellen Zielroute und
-Neuplanung für dieselbe offene Aufgabe. Die Vorlage muss vor jeder neuen
-Fahrt den tatsächlichen Software-/Profilstand, freie Strecke, unabhängigen
-Halt, Beobachter, harte Zeit-/Weggrenzen, definierte transiente HWT-Klasse,
-Aufzeichnung von Auftrag und Kindzielidentität sowie Abbruch- und
-Rückfallbedingungen konkret festlegen. Bestehende Produktkomponenten und
-das bewährte Manifest-/Recorderverfahren verwenden. Keine erneute Inventur,
-keine vorsorgliche Softwareänderung und keine Testwiederholung allein für
-mehr grüne Zähler.
+### Kandidat und derzeitige Sperren
 
-Dieser Folgeauftrag ist **keine** Geräte- oder Fahrfreigabe. Kein
-Nav2-Kindziel, TOR 2, Installwechsel, Merge oder Wohnungserkundungslauf
-automatisch starten. Stufe 3 bleibt offen. Der historische
-`raw_driver_not_ready`-Originalwert bleibt unbekannt; der neue definierte
-Rohfrischefall erklärt ihn nicht rückwirkend.
+- Quellbasis: funktionaler Commit
+  `6b666d97d7e11326c9f75dccbc4253112e99b578` auf
+  `feature/hwt-hold-recovery-resume`; spätere Commits bis zum dokumentierten
+  `31358a980aaf6d237fcc7bf78c03e96f96e69d25` änderten nur Dokumente.
+  Der bewiesene Produktstart ist `robot_bringup/app_mapping.launch.py` über
+  Mission Manager → BT → WE-Explorer → Nav2 `NavigateToPose`.
+- Letztmals **ausgeführt**: Profil
+  `hwt601_recovery_acceptance_params.yaml`, SHA256
+  `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`;
+  ROS Humble → Slam- → LiDAR- → Vollbuild- → Recovery- → Yaw-Overlay.
+  Das Manifest `~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/runtime_manifest.json`
+  und `module_resolution.json` beweisen diese frühere Laufzeit. Die
+  temporären `/tmp/we1-full-shim-install`, `/tmp/we1-hwt-recovery-install`
+  und `/tmp/we1-hwt-yaw-install` existieren am 28.09. **nicht mehr**.
+  Damit ist heute weder ein installiertes Abnahmeprofil noch der korrigierte
+  HWT-/WE-Paketpfad erneut auflösbar. Kein aktiver Install wurde gewechselt.
+- Das damalige Profil hat `wohnungserkundung_accessible_scope_verified=false`
+  und eine leere Scope-ID. Im Frontierpfad wird damit `scope=None` erzeugt;
+  ein Frontierkandidat kann trotzdem entstehen. Dieses Profil allein
+  begrenzt also keine reale Fahrstrecke. Der bisherige Real-Bag endete vor
+  dem vollständigen Initialscan mit `open_tasks=0`,
+  `goal_candidate=unavailable`, `navigation_dispatched=false`. Ein gültiges
+  autonomes Kindziel im aktuellen Kartenframe ist **nicht belegt**. Der
+  Nutzer bestätigte eine dokumentierte, aktuell freie Geradeausstrecke,
+  nannte aber auf Nachfrage keinen lokalen Dokument-/Profilpfad und keine
+  Kartenidentität. Die vor Ort behauptete Freigabe ersetzt diese technische
+  Zuordnung nicht; keine Wohnungskoordinaten ins Repository übernehmen.
+
+### Feste Annahmebedingungen für genau einen künftigen Versuch
+
+1. **Zielsystem:** Den unveränderten funktionalen Stand isoliert wieder
+   aufbauen; in einer frischen Shell mit `hwt_diagnose_manifest.py` Quell-SHA,
+   sämtliche tatsächlich aufgelösten Paketpräfixe, Yaw-Node/Core/Health-
+   Hashes, Nav2-Realprofil, exaktes lokales Testprofil samt SHA und Launch-
+   Argumente vor dem Start sichern. Keine Testadapter, synthetischen
+   Sensorpublisher oder Änderung am aktiven Install. Bei fehlender
+   Bytegleichheit: NO-GO.
+2. **Karte und Scope:** Die anwesende Person muss eine kurze freie Strecke
+   einschließlich Footprint, Auslauf und unabhängigem Halt **im aktuellen
+   Kartenframe** vor Ort bestätigen. Das lokale Einmalprofil muss eine
+   nichtleere Scope-ID, ein an diese Kartenidentität gebundenes Polygon und
+   `wohnungserkundung_accessible_scope_verified=true` enthalten. Reale
+   Koordinaten und Karten bleiben lokal. Ein altes Polygon nach SLAM-Neustart,
+   ein bloßer Profil-Hash oder `scope=None` sind NO-GO. Portalquerung,
+   Coverage und Rückfahrt sind im Einmalprofil aus
+   (`portal_crossing_enabled=false`, `coverage_enabled=false`,
+   `return_to_start=false`); `max_frontier_goals=1`,
+   `max_failed_goals=1`, `overall_timeout_s=340`, `goal_timeout_s=35`.
+   Dieses nur lokal gespeicherte Einmalprofil ist vor dem Start zu hashen
+   und mit dem installierten Explorer zuzuordnen. Kein Produktprofil im
+   Repository wird beiläufig geändert.
+3. **Autonomes Kind:** Der unveränderte Produktpfad muss nach seinem
+   vollständigen Initialscan selbst eine offene Frontieraufgabe und einen
+   aktuellen, eindeutigen Zielkandidaten aus Karte, Policy und Costmap
+   erzeugen. Vor der Fault Injection müssen Task-ID, Karten-/Scope-Kontext,
+   aktuell freie Route und die aktive Nav2-Goal-UUID im Recorder vorliegen.
+   Die Route darf höchstens 0,45 m lang sein und muss vollständig in der
+   bestätigten freien Strecke liegen; `min_goal_distance_m=0,30` bleibt
+   unverändert. Kein gültiges Ziel oder nur ein manuelles/synthetisches Ziel:
+   **TESTFALL NICHT AUSGELÖST**, Cancel ohne HWT-Pause. Wenn bis 300 s nach
+   Explore-Start kein solches Kind aktiv ist, ebenfalls Cancel ohne
+   Injektion; keine verlängerte Zielsuche.
+4. **Harte Einzelgrenzen:** Maximal **340 s ab Explore-Start** einschließlich
+   Initialscan, HOLD und RESUME; höchstens **35 s ab erster aktiver
+   Kindziel-UUID**; höchstens **0,60 m kumulierte gemessene Translation**.
+   Zuerst erreichte Grenze löst Mission-Manager-Cancel aus. Scan-Sollwert
+   bleibt 0,08 rad/s und dessen 280-s-Produkttimeout unverändert. Im
+   Kindzielteil gelten die vorhandenen Realprofilgrenzen
+   `desired_linear_vel=0,10 m/s`, Smoother-Maxima 0,12 m/s und
+   0,25 rad/s; Überschreitung, Rückwärtsfahrt oder Verlassen von Scope/
+   freier Strecke: sofortiger Abbruch. Ein unabhängiger zeitlicher
+   Cancel-Watchdog und der physische Halt bleiben verfügbar. Diese
+   Versuchslimits sind **keine** Lockerung von Produkt- oder Frischegrenzen.
+5. **Ein Eingriff:** Erst bei tatsächlich aktivem autonomem Kind und
+   gemessener Vorwärtsfahrt genau eine etwa 0,25-s-SIGSTOP-Pause ausschließlich
+   des identifizierten HWT-Lesers, mit unabhängigem SIGCONT-Watchdog.
+   Erwartete Klasse `raw_missing_stale_or_invalid` wegen Rohmessalter
+   >0,20 s ohne Disconnect/Reconnect. Kein Kabelzug, kein Motor-/Safety-
+   Prozessstopp, kein zweiter Fehlerreiz. Andere Fehlerklasse oder nicht
+   ausgelöste Lücke: Cancel, keine Nachinjektion.
+6. **Gemeinsamer Nachweis:** Den bestehenden Recorder **vor dem Stack**
+   starten und seine Roh-/Yaw-/Bias-, Encoder-, Wächter-, Gate-, cmd_vel-,
+   Odom-, TF-, Karten-, Costmap-, VL53-, Mission- und Explorer-Themen um
+   `/navigate_to_pose/_action/status`, Action-Feedback und geplante Route
+   ergänzen. Originalzeiten und die in der echten Action-Statusfolge
+   enthaltenen Goal-UUIDs bewahren. Erfolg nur bei beobachtetem physischem
+   Halt und gemessenem Encoder-Stillstand; terminalem alten Kind;
+   unveränderter Explore-Elternaktion und derselben offenen Task-ID;
+   stabilem Bias und neuen gültigen Yaw-Daten; frischen Quellen, aktueller
+   Kartenpose/Scopebindung und erneut freier Route; Gate-ACK; **höchstens
+   einem neuen Kind** mit neuer UUID für denselben Task; und tatsächlicher
+   begrenzter Fahrt nach RESUME ohne alte Kommandos. Späte Antworten des
+   alten Kindes dürfen nichts erneut aktivieren.
+7. **Gegenfälle und Abschluss:** Dauer-/Hard-Fault, fehlendes terminales
+   altes Kind, veraltete/gesprungene Pose, unsichere Route, fehlender
+   Stillstand, Not-Aus oder Nutzerabbruch beenden ohne automatische
+   Wiederanfahrt. Bei jeder Abweichung Mission-Manager-Cancel, Stillstand
+   vor Ort bestätigen, Stack/Recorder geordnet beenden, Ports prüfen und
+   unabhängige Motorsperre wieder wirksam bestätigen. Ein sicherer Abbruch
+   ist Schutzbeleg, kein bestandener Kindziel-Recovery-Nachweis.
+
+**Nächster einzelner Schritt:** Das Karten-/Scope-/Runtime-Tor anhand des
+vor Ort dokumentierten Streckenbelegs und des isoliert wiederhergestellten
+Produktkandidaten schließen und motorlos prüfen. Erst dann kann eine
+gesonderte Freigabe für den gesamten begrenzten Einzelversuch eingeholt
+werden. Das autonome Kindziel darf erst **im freigegebenen Produktlauf nach
+dem echten Initialscan** entstehen; es ist eine harte Bedingung **vor**
+Fault Injection und vor jeder Kindziel-Fortsetzung. Fehlt es, Cancel ohne
+Injektion und Ergebnis `TESTFALL NICHT AUSGELÖST`. Die konkrete
+Fahrfreigabe lautet derzeit **NEIN**. Keine Geräte oder Fahrt aus dieser
+Vorlage, kein Merge, kein TOR 2 und kein Stufe-3-Gesamtgrün.
 
 ## 6. Übergabe und Fortschreibung
 

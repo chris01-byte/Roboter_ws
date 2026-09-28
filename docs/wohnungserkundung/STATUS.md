@@ -9,12 +9,13 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Nächster Auftrag:** Einen separat begrenzten HWT-Recovery-Realnachweis
-mit **aktivem Nav2-Kindziel** zur eigenen Freigabeentscheidung vorbereiten.
-Der genau eine Roh-/Yaw-Rundblickversuch ist für seinen Initialscan-Umfang
-real bestanden; er enthält kein Kindziel und belegt dessen Cancel- und
-Neuplanungsfolge nicht. Der historische `raw_driver_not_ready`-Auslöser
-bleibt unbekannt. Stufe 3 bleibt offen.
+**Nächster Auftrag:** Das in AGENTENAUFTRAG Abschnitt 5 festgelegte
+Kindziel-Abnahmetor mit aktuellem Karten-/Scope-/Kurzstreckenbeleg und
+erneut manifestierter isolierter Runtime **motorlos** vorbereiten. Die
+Abnahmevorlage ist entscheidungsfähig, der unmittelbare Fahrentscheid
+lautet NO-GO. Der reale Roh-/Yaw-Rundblick ist nur für seinen
+Initialscan-Umfang bestanden; der historische `raw_driver_not_ready`-
+Auslöser bleibt unbekannt. Stufe 3 bleibt offen.
 Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
 
 Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
@@ -828,7 +829,7 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 | Bisherige „Stufe 2“ | Historisch gerätefrei GRÜN; keine Abnahme der späteren Runtime |
 | HWT-/Encoder-Preflight vom 26.09. | Zwei bestandene motorlose Zyklen im Vorgängerstatus berichtet |
 | Begrenzter Bewegungstest | `complete` und 0,270 m aus `/odom` berichtet; kein unabhängiger metrischer Gesamtfahrnachweis |
-| Rundblick 27.09. | 361,7° und korrektes Missions-/BT-/Gate-Startverhalten berichtet; kein Frontierziel erreicht |
+| Historischer Rundblick 27.09. vor PR #105 | 361,7° und korrektes Missions-/BT-/Gate-Startverhalten berichtet; kein Frontierziel erreicht |
 | VL53-Recovery | Im Kandidaten softwaregeprüft; im Realtest nicht ausgelöst, da keine neue VL53-Störung auftrat |
 | Aktuelle HWT-Störung | Sammelursache und Latch-Zeitpunkt belegt; verletztes Rohstatusfeld fehlt im Bag |
 | Raumwechsel, Hindernisbewältigung und Missionsfortsetzung | Auf konsolidiertem Gesamtkandidaten nicht vollständig real nachgewiesen |
@@ -839,11 +840,50 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-Genau ein nächster Auftrag: **denselben auf höchstens 40 s und 3 rad
-begrenzten HWT-Rundblicktest mit dem neuen, manifestierten Kandidaten
-zur gesonderten Freigabe vorlegen** (AGENTENAUFTRAG Abschnitt 5). Die
-Beobachterbestätigung zum alten Lauf ist weiterhin offen. Es folgt weder
-ein Geräte- noch Fahrstart aus diesem Softwareauftrag.
+**Entscheidungsfähige Kindziel-Abnahmevorlage:** AGENTENAUFTRAG Abschnitt 5
+legt Produktpfad, Zielidentität, genau eine 0,25-s-HWT-Leserpause,
+Aufzeichnung, Erfolg und Gegenfälle sowie 340 s Gesamtdauer, 35 s ab
+aktivem Kind, 0,60 m gemessene Translation und die vorhandenen
+0,10-/0,12-m/s- und 0,25-rad/s-Geschwindigkeitsgrenzen fest. Kein
+manuelles Nav2-Ziel und kein synthetischer Task zählen. Nach vollständigem
+Initialscan muss die Produktpolicy ein **eigenes** offenes Frontier-Task,
+einen aktuellen Zielkandidaten und eine Route von höchstens 0,45 m in der
+bestätigten freien Kurzstrecke liefern. Altes Kind terminal, Elternauftrag
+und Task erhalten, Quellen/Stillstand/Pose/Route erneut geprüft, Gate-ACK
+und höchstens ein neues Kind sind die Erfolgskriterien.
+
+**Freigabeentscheid am 28.09.: NO-GO für einen sofortigen Fahrstart.**
+Der bisherige Lauf endete vor dem vollständigen Initialscan:
+`open_tasks=0`, `goal_candidate=unavailable`, `navigation_dispatched=false`.
+Das letzte Abnahmeprofil (SHA256 `ee3b42ee…`) hat
+`accessible_scope_verified=false` und eine leere Scope-ID. Damit entsteht
+im Frontierpfad `scope=None`; die unveränderte Produktlogik kann dennoch
+einen Kandidaten bilden. Das ist **kein** Beleg für eine autorisierte
+Fahrstrecke. Der Nutzer bestätigte am 28.09. mündlich eine dokumentierte,
+aktuell freie Geradeausstrecke, nannte auf die Nachfrage aber keinen
+Dateipfad, Kartenbezug, Polygon- oder Profilnachweis. Diese Zuordnung ist
+deshalb weiterhin offen; die Aussage wird nicht in Koordinaten umgedeutet.
+
+Auch die beim bestandenen Rundblick tatsächlich aufgelösten temporären
+Präfixe `/tmp/we1-full-shim-install`, `/tmp/we1-hwt-recovery-install` und
+`/tmp/we1-hwt-yaw-install` existieren aktuell nicht mehr. Der damals
+installierte Profilpfad ist heute nicht vorhanden. Die Quellbasis
+`6b666d97…` bleibt nachvollziehbar (seitdem nur Dokumentänderungen),
+aber ein **heute installierter** Kindziel-Testkandidat ist nicht
+manifestiert. Weder Root-Arbeitskopie noch aktiver Install wurden
+umgeschaltet. Diese beiden konkret fehlenden Belege — aktuelle
+Karten-/Scope-/Zielbindung und erneut aufgelöste Runtime — verhindern
+eine positive Freigabe. Ein früherer Rundblick oder ein manuell gesetztes
+Nav2-Ziel ersetzt sie nicht.
+
+**Genau nächster Auftrag:** Das vorhandene Kurzstrecken-/Scope-Dokument
+dem aktuellen Kartenframe zuordnen, den PR-#105-Kandidaten isoliert erneut
+manifestieren und das Profil mit Sicherheitsquellen motorlos prüfen. Erst
+danach den in Abschnitt 5 bereits festgelegten Einzelversuch separat zur
+konkreten Fahrfreigabe vorlegen. Ein autonomes Kindziel kann nach dem
+echten Initialscan **im später freigegebenen Lauf** entstehen; ohne ein
+gültiges Ziel wird vor der Injektion abgebrochen. Dieser Dokumentationsauftrag
+startet weder Geräte noch Fahrt, TOR 2, Merge oder Installwechsel.
 
 Der vollständige Vorgängerstatus ist byteidentisch unter
 [STATUS-Snapshot bei 40b5b49](../archive/2026-09/WOHNUNGSERKUNDUNG_STATUS_40b5b49.md)
