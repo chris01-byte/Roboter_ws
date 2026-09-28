@@ -82,7 +82,27 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
 
-**Aktueller Torstand vom 28.09., zweiter passiver Vorlauf:** Der Nutzer
+**Aktuelles Ergebnis vom 28.09.: TESTFALL NICHT AUSGELÖST.** Das
+Einmalprofil ohne Initialscan wurde ausschließlich lokal erstellt und
+im zweiten motorlosen Produktstart tatsächlich geladen (SHA256
+`a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`).
+Die neue Live-Karte und Pose wurden mit dem Scope verglichen; FC03,
+HWT/Yaw, Fusion-Quellen und VL53-Frames waren gesund. Ein echter
+Mission-Manager-Auftrag erreichte BT/Explorer. Wegen
+`hwt601_readonly_preflight_no_motion` bei `active_drive=false` gab der
+Explorer trotz offener Frontier-Aufgaben kein Nav2-Kind frei. Bag:
+null Action-Status/Feedback, null Nichtnull-Fahrbefehl. Kein manuelles
+Nav2-Ziel, keine Fault Injection und keine Fahrt. Der Stack ist beendet.
+
+**Einziger nächster Entscheid:** Die verlangte Bestätigung eines aktiven
+Kindes schon unter `active_drive=false` ist im unveränderten Produktpfad
+gesperrt. Ein weiterer Versuch braucht eine ausdrücklich festgelegte
+Reihenfolge von Karten-/Scope-/Quellenprüfung, unabhängigem Halt und
+Kindzielbeobachtung, bevor eine Bewegung oder HWT-Störung zugelassen
+werden kann. Keine Read-only-Sperre umgehen und nicht aus den offenen
+Frontier-Aufgaben allein ein gültiges Kindziel ableiten.
+
+**Historischer Torstand vom 28.09., zweiter passiver Vorlauf:** Der Nutzer
 bestätigte FC03-erreichbare Controller bei weiterhin unabhängig gesperrter
 Motorendstufe, Stillstand und Beobachtung. Der unveränderte Produktstand
 wurde isoliert neu gebaut und manifestiert; FC03, HWT/Yaw, Fusion-Quellen,
@@ -95,7 +115,7 @@ gestartete Stack ist bereits sauber beendet; seine Scope-Bindung darf
 nicht ungeprüft auf einen neuen SLAM-Start übertragen werden. Vor allem
 fehlt noch die aktuelle Bestätigung des freien Bereichs **hinter** dem
 Roboter für den im Produktprofil aktiven 360°-Initialscan. Bis dahin
-**keine Fahrt**. **Einziger nächster Schritt:** Rückwärtigen Schwenkraum
+**keine Fahrt**. **Damals einziger nächster Schritt:** Rückwärtigen Schwenkraum
 vor Ort bestätigen, dann die bereits festgelegte Einzelabnahme nur mit
 erneut gebundener Live-Karte und einem wirklich autonomen Kindziel nach
 den unveränderten Grenzen durchführen.

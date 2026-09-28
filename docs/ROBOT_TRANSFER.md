@@ -1,5 +1,25 @@
 # Übertragung auf den realen Roboter
 
+## HWT-Kindziel ohne erneuten Initialscan — motorlos nicht ausgelöst (28.09.2026)
+
+Das lokale Einmalprofil `hwt-child-no-initial-scan.yaml` unter
+`~/.local/share/amadeus/tests/hwt-child-noscan-20260928/` hat SHA256
+`a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`.
+Es schaltet nur den bereits real bestandenen Initialscan aus, hält
+WE-Navigation an und begrenzt den Versuch auf ein Frontier-/Fehlziel ohne
+Portalquerung, Coverage oder Rückkehr. Produktcode und aktiver Install
+blieben unangetastet. Der korrigierte motorlose Start verwendete dieses
+Profil tatsächlich; FC03, HWT/Yaw, Karte/TF und VL53-Frames waren gesund.
+Der echte Mission-Manager-/BT-Auftrag scheiterte vor Kindziel-Dispatch an
+`hwt601_readonly_preflight_no_motion` (`active_drive=false`). 20 offene,
+zuletzt 5 geeignete Frontier-Aufgaben sind kein Nav2-Kind; Action-Status
+und -Feedback blieben leer. Kein Fahrkommando, keine Fahrt und keine
+HWT-Pause. Lokale Bag-/Statusnachweise unter demselben Testverzeichnis.
+Recorder und Stack sind beendet, 28/28 Kinder im zweiten Start sauber,
+Ports frei. Eine künftige Fahrt ist aus diesem Read-only-Ergebnis nicht
+freigegeben; die Reihenfolge zur Beobachtung eines echten Kindes muss
+ausdrücklich geklärt werden, ohne die Schutzsperre zu umgehen.
+
 ## HWT-Kindziel-Abnahme — zweiter motorloser Vorlauf, keine Fahrt (28.09.2026)
 
 Der Nutzer bestätigte nach dem ersten fehlgeschlagenen Vorlauf nun eine

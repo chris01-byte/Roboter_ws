@@ -840,7 +840,53 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-**Neuer motorloser Vorlauf am 28.09.: Quellen BESTANDEN, Scope lokal
+**Aktuell: motorloser Kindziel-Vorlauf ohne Initialscan am 28.09. —
+TESTFALL NICHT AUSGELÖST.** Der bereits real bestandene HWT-Initialscan
+wurde nicht wiederholt. Ausschließlich lokal liegt unter
+`~/.local/share/amadeus/tests/hwt-child-noscan-20260928/` das vom
+unveränderten Recovery-Profil abgeleitete Einmalprofil
+`hwt-child-no-initial-scan.yaml` (SHA256
+`a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`).
+Tatsächlich geladene Parameter: `initial_scan_enabled=false`,
+`wohnungserkundung_navigation_enabled=true`, Portal/Coverage/Rückkehr
+aus, `max_frontier_goals=1`, `max_failed_goals=1`; HWT-, Encoder-, TF-,
+VL53-, Collision-, Geschwindigkeits-, Stillstands- und Recoveryparameter
+unverändert. Das erste lokale Profil setzte einen inaktiven Portalzähler
+auf null; der Explorer lehnte diesen Wert schon beim Start als nicht
+positiv ab. Nur im lokalen Profil wurde der ursprüngliche positive
+Zähler wiederhergestellt, Portalquerung blieb deaktiviert. Kein
+Produktcode und kein Repository-Profil geändert.
+
+Beim korrigierten zweiten Start über `app_mapping.launch.py` mit
+`active_drive=false`, `enable_auto_explore=true` waren FC03, HWT/Yaw,
+Fusion-Quellen, Karte/TF und beide VL53-Frames motorlos gesund. Das
+Scope war in der Runtime aktiv; sein lokaler Bindungsbeleg
+`live-binding-v2.json` nennt Map-Fingerprint `c36de5da…` und aktuelle
+Startpose. Der maximale Abstand der vier Profil-Ecken vom aus dieser
+Live-Pose erneut berechneten Bereich betrug 0,0028 m. Der Produktauftrag
+ging durch Mission Manager und BT, aber der Explorer endete in rund
+1,3 s sicher mit `hwt601_readonly_preflight_no_motion`. Die Policy
+meldete zuletzt 20 offene und 5 geeignete Frontier-Aufgaben, jedoch
+`goal_candidate=unavailable` / `navigation_dispatched=false`. Das Bag
+`motorless-product-bag-v2` enthält null Nav2-Status-/Feedbacknachrichten,
+null Nichtnull-`/cmd_vel_nav` und keine `/cmd_vel`-Nachricht. Damit
+ist **nicht** belegt, dass der Produktpfad ohne Initialscan kein Ziel
+finden könnte; die frühere Read-only-Bewegungssperre verhinderte bereits
+die Kindziel-Freigabe. Kein manuelles Ziel, keine HWT-Injektion, keine
+Fahrt. `verification-summary.json` hält den Befund lokal fest.
+Recorder und Stack wurden beendet, der zweite Start mit 28/28
+sauber abgeschlossenen Kindern, Geräteports frei; aktiver Install
+unverändert. Die Kartenbindung ist nach Shutdown nicht mehr live.
+
+**Genau nächster Entscheid:** Für den Kindzielnachweis ist die Forderung
+„aktives autonomes Kind bereits im motorlosen `active_drive=false`-Vorlauf“
+mit dem unveränderten HWT-Produktgate nicht erfüllbar. Vor einem weiteren
+Versuch muss der freigegebene Ablauf ausdrücklich festlegen, wie die
+Kindzielentstehung erst nach überprüfter Karten-/Scope-/Quellenlage bei
+wirksamem unabhängigem Halt beobachtet werden darf. Bis dahin keine
+Fahrt und keine Fault Injection; keine Umgehung des Read-only-Gates.
+
+**Historischer zweiter motorloser Vorlauf am 28.09.: Quellen BESTANDEN, Scope lokal
 gebunden, Fahrtest NICHT gestartet.** Nach aktueller Bestätigung, dass die
 Controller für FC03 erreichbar und die Motorendstufe weiterhin unabhängig
 gesperrt ist, wurde derselbe unveränderte PR-#105-Quellstand isoliert in
@@ -879,7 +925,7 @@ Stopp ist die Kartenbindung historisch und muss in einer künftigen
 Runtime vor Bewegung neu geprüft werden. Der Shutdown endete mit 28/28
 Kindern sauber; Ports frei, aktiver Install unverändert.
 
-**Genau nächster Auftrag:** Den rückwärtigen freien Schwenkraum für den
+**Damals nächster Auftrag:** Den rückwärtigen freien Schwenkraum für den
 vorgesehenen Initialscan vor Ort bestätigen. Danach denselben begrenzten
 Kindzielversuch erst bei frischer Karten-/Scope-Bindung und einem vom
 Produktpfad selbst erzeugten Ziel mit höchstens 0,45 m Route ausführen;
