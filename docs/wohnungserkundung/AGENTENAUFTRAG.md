@@ -82,6 +82,23 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Abnahmevorlage: ein HWT-Fall mit aktivem Nav2-Kindziel
 
+**Aktueller Torstand vom 28.09.: motorloser Scope-Vorlauf fehlgeschlagen,
+Fahrt gesperrt.** Das isolierte PR-#105-Produktpräfix wurde neu gebaut und
+manifestiert. Ein frischer Map-/TF-Kontext und ein neues Polygon wurden aus
+der bestätigten freien Geradeausfläche nur lokal erfasst; das Einmalprofil
+bleibt `accessible_scope_verified=false`. Die FC03-Encoderquelle verriegelte
+nach ausbleibender Antwort, und die digitale Karte enthält im kurzen
+Vorwärtskorridor noch unbekannte Zellen. Der Beobachter bestätigte, dass
+die unabhängige Motorsperre hier auch die Controllerelektronik trennt;
+FC03 unter dieser Sperre ist damit derzeit unmöglich. Die fehlende Antwort
+beweist allein keinen Encoderdefekt. Details und lokale Artefaktpfade
+stehen in STATUS Abschnitt 7. **Einziger nächster Schritt:** Eine
+vor Ort überprüfbare Trennung von gesperrter Motorendstufe und erreichbarer
+Controllerelektronik herstellen, danach den Karten-/Scope-/Routennachweis
+auf einer neuen Live-Kartenbindung wiederholen.
+Vorher kein aktiver Kindzielversuch; die vorab erteilte Fahrfreigabe ist
+nicht durch einen bestandenen Preflight wirksam geworden.
+
 Der reale Roh-/Yaw-Rundblick auf PR #105 ist **für den Initialscan bestanden**
 (STATUS Abschnitt 5). Er hatte kein Nav2-Kind und belegt keine Kindziel-
 Fortsetzung. Der nächste Test verwendet dieselbe definierte transiente
@@ -200,7 +217,7 @@ ist kein Auftrag, eine weitere Vorlage zu schreiben oder Geräte zu starten.
    unabhängige Motorsperre wieder wirksam bestätigen. Ein sicherer Abbruch
    ist Schutzbeleg, kein bestandener Kindziel-Recovery-Nachweis.
 
-**Nächster einzelner Schritt:** Den freien Geradeauskorridor ab aktueller
+**Damals nächster einzelner Schritt:** Den freien Geradeauskorridor ab aktueller
 Startpose mit Endpunkt und seitlicher Begrenzung im dann laufenden Kartenframe
 vor Ort markieren/bestätigen und lokal neu binden. Danach das
 Karten-/Scope-/Runtime-Tor anhand des isoliert wiederhergestellten

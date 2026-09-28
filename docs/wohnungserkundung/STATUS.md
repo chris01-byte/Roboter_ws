@@ -840,6 +840,42 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
+**Aktueller passiver Scope-Vorlauf am 28.09.: nicht bestanden, keine Fahrt.**
+Auf Quellstand `247ed49` wurden 24 Pakete isoliert unter
+`/tmp/we1-pr105-20260928-install` gebaut; das festgelegte BT-Submodul und
+das unveränderte Recovery-Abnahmeprofil wurden aufgelöst. Das lokale
+Runtime-Manifest liegt unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928/runtime-manifest-passive.json`.
+Motorendstufe unabhängig gesperrt, Stillstand und Beobachter waren vor dem
+Start bestätigt. Der Produktstack lief ausschließlich mit
+`active_drive=false`, `enable_auto_explore=false`, ohne Mission oder
+Motorbefehl. Karte und `map→base_link` erschienen frisch; lokaler
+Map-Fingerprint `a363c30a…`, Startpose und neues, allein aus der aktuellen
+Vor-Ort-Freigabe abgeleitetes Polygon stehen **nur lokal** in
+`scope-geometry-candidate.json`. Das Profil
+`hwt-child-scope-pending.yaml` verwendet eine neue Scope-ID und kein altes
+Polygon, bleibt aber `accessible_scope_verified=false`: Der FC03-Encoderleser
+verriegelte `encoderkonfiguration_ungueltig` nach ausbleibender Antwort,
+Fusion meldete `wheel_missing_stale_or_invalid` / `sources_ready=false`.
+Der Beobachter bestätigte anschließend, dass die unabhängige Motorsperre
+hier auch die Controllerelektronik trennt; eine FC03-Prüfung unter dieser
+Sperre ist im aktuellen Aufbau daher nicht möglich. Die fehlende Antwort
+ist damit vereinbar, beweist aber allein keinen Software- oder
+Encoderdefekt. Zudem waren im ersten 0,45-m-Vorwärtskorridor 32 von 272 geprüften
+Kartenpunkten unbekannt; eine vollständig freie digitale Route ist nicht
+belegt. Das ist kein bestandener motorloser Fahr-Preflight und aktiviert
+die vorab genannte Fahrfreigabe nicht. Der Stack ist beendet, alle
+protokollierten Kinder und seriellen Handles sind frei; aktiver Install
+unverändert. Ein erneuter Stackstart erzeugt eine neue Kartenbindung, daher
+ist dieses Einmalprofil dafür nicht unverändert verwendbar.
+
+**Genau nächster Auftrag:** Eine vor Ort überprüfbare Trennung von
+gesperrter Motorendstufe und erreichbarer Controllerelektronik für den
+FC03-Encoder-Vorlauf herstellen. Erst damit
+den neuen motorlosen Karten-/Scope-/Routennachweis auf einer frischen
+Kartenbindung ausführen. Keine Fahrt, solange diese Voraussetzung und
+der digital freie Zielkorridor fehlen.
+
 **Entscheidungsfähige Kindziel-Abnahmevorlage:** AGENTENAUFTRAG Abschnitt 5
 legt Produktpfad, Zielidentität, genau eine 0,25-s-HWT-Leserpause,
 Aufzeichnung, Erfolg und Gegenfälle sowie 340 s Gesamtdauer, 35 s ab
@@ -852,7 +888,8 @@ bestätigten freien Kurzstrecke liefern. Altes Kind terminal, Elternauftrag
 und Task erhalten, Quellen/Stillstand/Pose/Route erneut geprüft, Gate-ACK
 und höchstens ein neues Kind sind die Erfolgskriterien.
 
-**Freigabeentscheid am 28.09.: NO-GO für einen sofortigen Fahrstart.**
+**Historischer Freigabeentscheid vor dem passiven Vorlauf am 28.09.:
+NO-GO für einen sofortigen Fahrstart.**
 Der bisherige Lauf endete vor dem vollständigen Initialscan:
 `open_tasks=0`, `goal_candidate=unavailable`, `navigation_dispatched=false`.
 Das letzte Abnahmeprofil (SHA256 `ee3b42ee…`) hat
@@ -890,7 +927,7 @@ Karten-/Scope-/Zielbindung und erneut aufgelöste Runtime — verhindern
 eine positive Freigabe. Ein früherer Rundblick oder ein manuell gesetztes
 Nav2-Ziel ersetzt sie nicht.
 
-**Genau nächster Auftrag:** Die aktuell freie Geradeausstrecke ab der
+**Damals nächster Auftrag:** Die aktuell freie Geradeausstrecke ab der
 aktuellen Startpose mit Endpunkt und seitlicher Begrenzung im beim Versuch
 laufenden Kartenframe vor Ort markieren/bestätigen und als neues lokales,
 kartenidentitätsgebundenes Einmalprofil dokumentieren; den PR-#105-Kandidaten isoliert erneut
