@@ -96,6 +96,46 @@ def test_received_packet_is_not_necessarily_a_fresh_valid_measurement(key, mode)
     assert h.motion_failure(10.02) == key + '_missing_stale_or_invalid'
 
 
+@pytest.mark.parametrize('key', ['raw', 'yaw', 'wheel'])
+def test_overtaken_callback_cannot_replace_newer_valid_sample(key):
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    h.sample(key, 10.03, 10.03, 10.03)
+    # The older callback entered before the newer one but reached Health last.
+    h.sample(key, 10.01, 10.01, 10.01)
+    assert h.samples[key] == (10.03, 10.03, 10.03, True)
+    assert h.motion_failure(10.04) is None
+    assert h.first_fault_snapshot() is None
+
+
+@pytest.mark.parametrize('key', ['raw', 'yaw', 'wheel'])
+def test_timestamp_regression_after_newer_callback_remains_hard_fault(key):
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    h.sample(key, 10.03, 10.03, 10.03)
+    h.sample(key, 10.01, 10.04, 10.01)
+    assert h.motion_failure(10.05) == key + '_missing_stale_or_invalid'
+    assert h.recovery_state == 'TERMINAL_FAULT'
+
+
+def test_overtaken_raw_callback_does_not_extend_measurement_freshness():
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    h.sample('raw', 10.03, 10.03, 10.03)
+    h.sample('raw', 10.01, 10.01, 10.01)
+    h.sample('yaw', 10.24, 10.24, 10.24)
+    h.sample('wheel', 10.24, 10.24, 10.24)
+    assert h.motion_failure(10.24) == 'raw_missing_stale_or_invalid'
+
+
+def test_overtaken_invalid_raw_callback_is_not_silently_discarded():
+    h = ready_health()
+    assert h.motion_failure(10.0) is None
+    h.sample('raw', 10.03, 10.03, 10.03)
+    h.sample('raw', 10.01, 10.01, 10.01, valid=False)
+    assert h.motion_failure(10.04) == 'raw_missing_stale_or_invalid'
+
+
 @pytest.mark.parametrize('field,value', [
     ('operator_stationary_confirmed', False), ('bias_frozen_after_startup', False),
     ('latched_fault', 'imu_datenluecke_neustart_noetig'), ('ready', False),

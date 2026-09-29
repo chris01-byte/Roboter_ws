@@ -104,6 +104,17 @@ class Hwt601FusionHealth:
     def sample(self, name, stamp, received, observed, valid=True):
         with self.lock:
             previous = self.samples.get(name)
+            # Reentrant ROS callbacks can enter in sensor order but reach this
+            # lock in reverse order. An older callback must not overwrite an
+            # already accepted, newer measurement. A timestamp regression in
+            # callback entry order remains invalid and fail-closed.
+            if (previous is not None and previous[3] and valid
+                    and type(stamp) in (int, float) and math.isfinite(stamp)
+                    and type(received) in (int, float) and math.isfinite(received)
+                    and type(observed) in (int, float) and math.isfinite(observed)
+                    and stamp < previous[0] and received < previous[1]
+                    and observed < previous[2]):
+                return
             valid = (valid and math.isfinite(stamp) and stamp > 0
                      and (previous is None or stamp > previous[0]))
             self.samples[name] = (stamp, received, observed, valid)
