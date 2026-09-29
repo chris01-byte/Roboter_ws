@@ -2629,3 +2629,13 @@ Neues temporäres Overlay lokal unter
 Kein Wechsel von `~/roboter_ws/install`; Rückfall durch Weglassen dieses
 letzten Overlays. Reale Quellen-, Profil- und Scopebindung vor Fahrt erforderlich.
 Laufender Ergebnisstand ausschließlich im WE-STATUS Abschnitt 7.
+
+
+29.09.2026, tatsächlicher Folgelauf `492ef20`: temporäres `join-install`
+als letztes Overlay, aktive Installation unverändert. Quellen-/Profilmanifest
+und geladene Modulhashes unter `stage3-map-handoff-20260929/real-repeat`.
+Ein autonomes Kind ohne Kartenquellen-/HWT-Abbruch, aber Zieltimeout bei
+belegter SlowZone-Verlangsamung. Kein Raumübergang. Abschließend RPM null,
+Odometrie still, Kind terminal, alle Prozesse und seriellen Ports frei.
+SLAM-Shutdown Exit -6 gesondert dokumentiert, Bag vollständig. Nächster
+begrenzter Befundabgleich in WE-STATUS §7; keine weitere Fahrt gestartet.

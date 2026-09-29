@@ -22,13 +22,15 @@ B (Hindernis/Befreiung bei erhaltener Mission), C (vollständiger Portalübergan
 und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
 Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
 Details und laufender Ergebnisstand in Abschnitt 7. Bisherige A1–A4-Belege
-bleiben erhalten. Aktueller Softwarekandidat `fb4608a`; sieben autonome Kinder
-im jüngsten regulären Lauf, aber keine abgeschlossene Aufgabe. Wiederholte
-`SOURCE_INVALIDATED`-Cancels verhindern den A-Nachweis. HWT blieb im jüngsten
-Lauf gesund. Die gezielte Kartenübergabekorrektur ist gerätefrei vor/nach bestätigt.
-Aktuell folgt der lesende Preflight und begrenzte reale Produktlauf zur Tür
-und in den angrenzenden Laborraum (Abschnitt 7).
-Zielerreichung und A/B/C-Kernabnahme bleiben offen.
+bleiben erhalten. Aktueller Softwarekandidat `492ef20` (funktionaler Joinfix
+`871cc2e`, vorher `fe75576`). Die zwei gezielten Kartenübergabefehler sind
+softwareseitig und im jüngsten Realtest abgesichert: ein autonomes Nav2-Kind
+bleibt 120 s aktiv, kein SOURCE_INVALIDATED und kein HWT-first_fault.
+Die Zielanfahrt endet jedoch am bestehenden Kindlimit: SlowZone-verlangsamter
+Vortrieb, Ziel nicht erreicht, keine Türquerung. Nächster Schritt ist genau
+der Abgleich der belegten VL53-SlowZone-Punkte mit dem realen Gegenstand vor
+dem Roboter; Vor-Ort-Antwort steht aus. Keine unveränderte weitere Fahrt und
+keine Lockerung von SlowZone oder Zeitlimits. A/B/C bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
 Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
@@ -853,6 +855,49 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
+
+### Aktuellster Realstand 29.09.2026 – Kartenübergabe hält, Zieltimeout
+
+Kandidat `492ef20`, bytegleiches Explore-Modul aus isoliertem `join-install`;
+245 gezielte Tests und bestehender realer MM/BT/WE/Gate/Yaw-Produktgraph
+bestanden. Quellen-/Profilmanifest, effektive Parameter und neu gebundenes
+Live-Scope unter `stage3-map-handoff-20260929/real-repeat/` nur lokal.
+Lesender Vorlauf ohne Aktorbesitzer bestanden, danach aktive Quellenprüfung
+bei gemessenem Stillstand. Keine Parameterlockerung oder manuelle Zielvorgabe.
+
+Reguläre Mission: Initialscan abgeschlossen, genau ein autonomes Kind
+`task-frontier_000011`, etwa 120 s aktiv bis `child_navigation_timeout`.
+Kein SOURCE_INVALIDATED, kein HWT-first_fault, kein Ersatzkind, null
+abgeschlossene Aufgaben. Die ursprüngliche Karten-Worker-/Join-Blockade ist
+in diesem Lauf überwunden; das ist noch kein erfolgreicher A-Nachweis.
+1,276988 m kumulierte Odometrie einschließlich Scan-Drift; maximal 0,10 m/s
+Fahrbefehl, letzte Zielabweichung etwa 0,37 m. Keine Portalquerung, kein
+Regionwechsel und kein Erreichen des nächsten Raums. B/C nicht durchgeführt.
+
+Ab 1790716830.880535 bestätigt das Collision-Monitor-Log `SlowZone`,
+30 % Ausgabe. Fenster 1790716865–1790716885: medianer Nav2-Befehl etwa
+0,0441 m/s, nach Smoother/Collision etwa 0,0131 m/s, Encoder-Vortrieb etwa
+0,00378 m/s. Im 50-s-Fenster 1790716835–1790716885 sind alle 187 linken
+VL53-Frames mit mindestens zwei Punkten innerhalb der bestehenden SlowZone
+und Höhenfilter belegt; median nächster x-Wert 0,661 m in base_link.
+Das ist ein Sensor-/Schutzbeleg, kein Beweis der Identität eines physischen
+Gegenstands oder einer Fehlmessung. Nutzer nach genau diesem Gegenstand
+gefragt; aktuelle Beobachterantwort noch offen. Kein Hindernis als frei erklärt.
+
+Recorder blieb bis nach dem Stopp aktiv; Bag reicht bis 1790716944.345331,
+keine erneute SQLite-Lücke. Testzeitwächter überwachte Recorderprozess und
+900-s-Gesamtgrenze. Keine aktive DB-Abfrage während dieses Laufs. RPM null,
+frische Odometrie still, einziges Kind CANCELED; alle Geräteprozesse beendet
+und serielle Ports frei. `slam_toolbox` meldete beim SIGINT-Shutdown Exit -6;
+der Prozess blieb nicht aktiv, Bag wurde vollständig geschlossen. Das ist
+kein vollständig fehlerfreier Shutdownbeleg und wird separat erhalten.
+
+**Genau nächster Auftrag:** Die belegte SlowZone-/Zielanfahrt anhand dieses
+vollständigen Bags und der noch fehlenden konkreten Vor-Ort-Objektzuordnung
+abgleichen. Nur einen daraus belegten Fehler korrigieren und gerätefrei
+prüfen; erst danach einen neuen begrenzten Produktlauf im bestehenden LAB-1-
+Rahmen. Keine weitere unveränderte Wiederholung, keine Frist-/SlowZone-
+Lockerung und kein Stufe-3-Gesamtgrün.
 
 ### Nachtrag 29.09.2026 – Realfahrt `fe75576`, zweiter Join-Gegenfall
 

@@ -126,14 +126,30 @@ Freigaberunde. A verlangt Aufgabenfortschritt, B getrennte Pflichtfälle
 Heckpassage und Fortsetzung derselben Mission im angrenzenden Bereich. Aktuelle
 Vorbereitungsbefunde und der konkrete Blocker stehen im STATUS Abschnitt 7.
 
-**Aktuellster Stand nach realer Fortsetzung:** `fb4608a` ist gebaut, mit
+**Aktuellster Ergebnisstand:** `492ef20`, 245 gezielte Tests, isolierter Build
+und bestehender Karten-Produktgraph bestanden. Im vollständigen realen
+Folgelauf ein autonomes Kind bis 120 s erhalten, keine Kartenquellen-Cancels
+und kein HWT-first_fault. Zieltimeout bei belegter SlowZone-Verlangsamung;
+kein Ziel-/Tür-/Raumerfolg. Alle Geräteprozesse beendet, Ports frei.
+
+**Genau nächster Auftrag:** Gemessene SlowZone-Punkte mit dem tatsächlichen
+Gegenstand vor dem Roboter abgleichen (konkrete Vor-Ort-Antwort angefragt,
+noch offen). Den belegten Restfehler eingrenzen; keinen Timeout und keine
+Kollisionsgrenze für einen Erfolg lockern. Keine unveränderte weitere Fahrt.
+Originale, Schutzbelege und Aufzeichnungslücke des ersten Laufs in STATUS §7;
+aktuelle Konkretisierung am Dokumentende. Laborfreigabe bleibt übernommen.
+
+<details>
+<summary>Historie vor der aktuellen SlowZone-Auswertung</summary>
+
+**Historischer Stand vor den beiden Join-Korrekturen:** `fb4608a` ist gebaut, mit
 221 Tests und dem wiederholten echten gerätefreien Produktgraph geprüft.
 Realer Folgelauf: vollständiger Scan und sieben autonome Kinder, keine
 abgeschlossene Aufgabe; sechs `SOURCE_INVALIDATED`-Cancels, abschließend
 bewusster Missionscancel. Kein HWT-first_fault. A nicht bestanden, B/C nicht
 erreicht; alle Prozesse beendet. Originalwerte und Nachweisgrenzen: STATUS §7.
 
-**Laufender Auftrag nach erneuter ausdrücklicher Laborfreigabe:** Die
+**Historischer Arbeitsauftrag zur Kartenkorrektur (ausgeführt):** Die
 nachgewiesene Warteabhängigkeit der aktiven Einzelzielprüfung von der
 Gesamtpolicy korrigieren. Derselbe Zielpunkt ist im lokalen Bag-Replay auf
 allen 26 Karten vor/nach dem ersten Cancel gültig. Exakten Join unmittelbar
@@ -145,6 +161,8 @@ kein synthetischer Task, kein Merge oder dauerhafter Installwechsel.
 900-s-Gesamt-/120-s-Kindbudget und vorhandene Portal-/Bewegungsgrenzen bleiben.
 B-Teilfälle nur als bestanden melden, wenn tatsächlich beobachtet; ein
 Raumübergang allein ersetzt keine vollständige A/B/C-Abnahme.
+
+</details>
 
 **Historischer Zwischenstand nach A4:** Kandidat `872f6a8`.
 Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,
@@ -538,14 +556,23 @@ Seine damalige Basis PR #91 und sein Abschnitt 7 sind **kein aktueller Auftrag**
 Historische fachliche Nachweise bleiben erhalten; Archive nicht automatisch ausführen.
 
 
-### Laufende Konkretisierung 29.09.2026: exakter Kartenjoin
+### Laufende Konkretisierung 29.09.2026: belegte SlowZone-Zielanfahrt
 
-Realer Versuch `fe75576` blieb ohne Ziel-/Türerfolg. Zweiten belegten
-Übergabegegenfall korrigiert: verarbeitete Policy ohne exakten Rohkartenjoin
-darf die bestehende 1,25-s-Frist nicht vorzeitig beenden. 245 Tests, isolierter
-`join-install` und bestehender Karten-Produktgraph bestanden. Genau nächste
-Ausführung ist der reguläre begrenzte Laborlauf nach lesendem Quellencheck
-und neuer Live-Scopebindung, 900 s gesamt / 120 s je Kind unverändert.
-Vorhandener Testwächter stoppt zusätzlich bei Recorderprozessverlust. Keine
-SQLite-Abfragen auf dem aktiven Recorder. Nach Ablauf/Fault geordnet stoppen;
-HWT-Quellheilung bei fehlendem Weg der ursprünglichen Aufgabe nicht freigeben.
+Stand `492ef20`: 245 Tests, isolierter Join-Build und Karten-Produktgraph
+bestanden. Realer regulärer Lauf: genau ein autonomes Kind bleibt bis zum
+120-s-Kindlimit erhalten, kein SOURCE_INVALIDATED und kein HWT-first_fault.
+Ziel dennoch nicht erreicht, keine Türquerung. Schutzverlangsamung durch
+SlowZone im vollständigen Bag belegt; Stand und Detailwerte in STATUS §7.
+
+Genau nächster Auftrag ist der Abgleich der gemessenen SlowZone-Punkte mit
+dem tatsächlichen Gegenstand vor dem Roboter. Diese konkrete Vor-Ort-Antwort
+ist angefragt und fehlt noch. Danach ausschließlich einen belegten Fehler
+behandeln; keine Vermutung als Kalibrierkorrektur, kein höheres Zeitbudget,
+keine Umgehung von Collision Monitor oder Nahbereichsquellen. Keine weitere
+unveränderte Fahrt. Die Tür-/Raummission bleibt offen, LAB-1-Freigabe bleibt
+übernommen; keine neue allgemeine Freigabecheckliste.
+
+Evidenz lokal: `~/.local/share/amadeus/tests/stage3-map-handoff-20260929/real-repeat`.
+Alle Geräteprozesse beendet, Ports frei, Stillstand/RPM null und terminales
+Kind dokumentiert. Recorder-Bags nur nach Stopp auswerten; der erste Lauf
+`real-run` ist nach dem dokumentierten SQLite-Lesefehler unvollständig.
