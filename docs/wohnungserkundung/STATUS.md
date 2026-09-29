@@ -21,13 +21,13 @@ Eine durchgängige beobachtete Folge A (autonomes Ziel und reale Navigation),
 B (Hindernis/Befreiung bei erhaltener Mission), C (vollständiger Portalübergang
 und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
 Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
-Details und laufender Ergebnisstand in Abschnitt 7. Aktuell: zwei
-reproduzierte Softwarefehler korrigiert (`872f6a8`, 161 gezielte Tests und
-isolierter Build bestanden). A3 endete geschützt an
-`initial_scan_too_slow`; A4 absolvierte den vollständigen Scan und erzeugte ein
-autonomes Nav2-Kind, das für den Beobachtungsvergleich bewusst gecancelt wurde.
-Die frühere Rad-/IMU-Abweichung ist im A4-Vergleichsfenster nicht reproduziert;
-Vor-Ort-Bericht: keine Auffälligkeiten beobachtet. Zielerreichung und A/B/C-Kernabnahme bleiben offen.
+Details und laufender Ergebnisstand in Abschnitt 7. Die früheren A1–A4-Belege
+bleiben erhalten. Der fortgesetzte reguläre Lauf nach A4 schloss den Scan ab,
+erzeugte mehrere autonome Nav2-Kinder und zeigte Vorwärtsfahrt, endete aber an
+einem neuen HWT-Health-Erstfehler vor bestätigter Zielerreichung. Der konkrete
+Callback-Überholer ist mit `513af02` eng korrigiert; 157 Pakettests und ein
+isolierter Paketbuild bestanden. Der betroffene reale Folgelauf steht noch aus.
+Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
 Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
@@ -1060,6 +1060,56 @@ autonomer Zielanfahrt und Zielerreichung bzw. sinnvoller Neuplanung. Kein
 weiterer Schlupf-Sondertest oder vorsorglicher Reparatureingriff daraus. Die
 aktuelle physische Motorsperrenstellung vor neuer Bewegung beachten. Stufe 3
 bleibt offen.
+
+### Fortgesetzter A-Lauf nach Neustart: neuer HWT-Callback-Überholer
+
+Am 29.09.2026 meldete der Nutzer die Motorsperre vor dem Lauf aktuell
+„kontrolliert frei“. Passiver und aktiver Quellen-/Stillstands-/Karten-/TF-
+Preflight bestanden; Recorder und Manifest liefen vor dem Stack. Das unveränderte
+Produktprofil (SHA `ee3b42ee…`) startete Mission Manager → BT → WE → Nav2 ohne
+Fehlerinjektion. Der Initialscan endete regulär. WE wählte autonome Frontiers,
+Nav2 nahm drei Kinder an; das erste und zweite endeten CANCELED, auch das dritte
+endete nach Quellenabbruch CANCELED. Kumulierte Odometrie-Translation vom Start
+bis zum Stopp ca. 0,2171 m einschließlich Scandrift; nach Scanbeginn der
+Kindzielphase stieg sie von ca. 0,1288 auf 0,2171 m. Das belegt Bewegung und
+Neuplanung, aber weder endgültige Zielerreichung noch Phase A als Ganzes.
+Mission terminal `child_navigation_canceled`; B und C wurden nicht erreicht.
+
+Erster konkret aufgezeichneter Produktfehler um Unix `1790705431,73933`:
+`Hwt601FusionHealth` im Explorer meldete
+`raw_missing_stale_or_invalid`, Einzelverletzung
+`raw_sample_missing_stale_or_invalid`. Die im Health-Zustand zuletzt gespeicherte
+Rohprobe trug Stempel `1790705431,6909916`, Callback-Eintritt monotonic
+`900,856838748`, Messalter `0,048230462 s` bei `0,20 s` Grenze und
+`sample_valid=false`. Gleichzeitig lag der letzte gültige Rohwert **später**:
+Stempel `1790705431,7039337`, Eintritt `900,874226647`, beobachtet
+`900,839313346`; der ältere Callback war 17,388 ms früher eingetreten, kam
+aber erst nach dem neueren an die Health-Sperre. Rohstatus war bereit,
+Empfangsalter `0,102818336 s`, internes `age_s=0,000274764 s`, Fehlerzähler 0,
+Reconnects 0. Drei Bag-Rohproben um den Befund hatten gültigen Frame, positive
+Kovarianz und endliche Werte. Das belegt einen Callback-Verarbeitungsüberholer;
+es belegt keinen historischen `raw_driver_not_ready`-Auslöser. Der Health-Code
+überschrieb den neueren gültigen Zustand mit dem überholten Stempel, markierte
+ihn ungültig und verriegelte terminal. HWT-Schutz stoppte Bewegung und Nav2-
+Kinder. Endkommando null, gemessener Stillstand, danach Stack und Recorder
+geordnet beendet; keine Roboterprozesse blieben.
+
+**Gezielte Reparatur `513af02` auf PR #105:** Nur wenn ein *gültiger* Callback
+nachweislich vor dem bereits akzeptierten neueren Callback eingetreten ist
+(`stamp`, `received` und `observed` jeweils kleiner), darf er dessen gültige
+Probe nicht überschreiben. Echte spätere Zeitrückläufe, ungültige Messwerte und
+Frischeausfälle bleiben fail-closed; keine Schwelle geändert. Vorher/Nachher-
+Regression reproduzierte den falschen Latch; nachher 157/157 Tests des Pakets
+bestanden. `robot_state_estimation` isoliert unter
+`stage3-core-20260929/hwt-callback-order-install/` gebaut; installierter
+Health-Code ist zur Quelle bytegleich (SHA-256 `8055fa44…`). Aktiver Install
+und Root-Arbeitskopie blieben unangetastet. Artefakte des Fehlerlaufs:
+`~/.local/share/amadeus/tests/stage3-core-20260929/autonomous-goal-run-resumed/`;
+lokale Erstfehlerauswertung und Folgevorbereitung:
+`autonomous-goal-after-callback-fix/`. Motorloser Folgelauf wartet auf die
+aktuelle physische Sperrstellung. **Genau nächster Schritt:** nach wirksamer
+unabhängiger Motorsperre den korrigierten Paketstand motorlos prüfen und dann
+den betroffenen regulären A-Produktlauf gezielt fortsetzen. Kein Stufe-3-Grün.
 
 ### Historische Kindziel-Sondertests bis 28.09.2026
 

@@ -111,7 +111,20 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
-**Aktuell nach beobachteter Wiederholung A4:** Unveränderter Kandidat `872f6a8`.
+**Aktuellster Stand nach Fortsetzung:** Commit `513af02` auf PR #105 korrigiert
+einen im neuen realen A-Lauf konkret nachgewiesenen HWT-Callback-Überholer.
+Scan, autonome Nav2-Kinder, Vorwärtsfahrt und Neuplanung waren zu sehen; vor
+Zielerreichung verriegelte der Explorer fälschlich die frisch eingetroffene
+Rohprobe als ungültig, worauf das Kind terminal gecancelt wurde. Die echten
+Erstwerte und die Grenze stehen im STATUS Abschnitt 7. Gerätefreie Vorher/
+Nachher-Regression, 157 Pakettests und isolierter `robot_state_estimation`-
+Build bestanden; der reparierte Realfall ist noch offen. **Genau nächster
+Schritt:** Nach bestätigter physischer Motorsperre motorloser Vorlauf mit
+diesem Overlay, anschließend reguläre autonome A-Zielanfahrt in demselben
+LAB-1-Umfang. Nur bei A-Nachweis B und C fortsetzen; keine künstliche HWT-
+Störung, keine Grenzlockerung und keine Wiederholung des A4-Schlupfvergleichs.
+
+**Historischer Zwischenstand nach A4:** Kandidat `872f6a8`.
 Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,
 angenommen und bewusst via Mission Manager terminal gecancelt. Keine lineare
 Endkommandierung im Kindfenster, keine Zielerreichungsabnahme. Rad-/Roh-IMU-/Yaw-/

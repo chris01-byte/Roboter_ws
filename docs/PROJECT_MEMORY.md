@@ -3997,3 +3997,18 @@ kann bei konkurrierendem Callback negatives Alter erzeugen. Ausschließlich
 im betroffenen Drehpfad Snapshot vor Zeitmessung verlegt; Fristen und echte
 Zeitfehlerprüfung unverändert. Interner Originalwert des Realabbruchs fehlt;
 Race-Nachweis und historische Ursachenzuordnung nicht gleichsetzen.
+
+
+## 29.09.2026 – HWT-Callback-Reihenfolge im fortgesetzten A-Produktlauf
+
+Der fortgesetzte reale A-Lauf erreichte nach regulärem Scan autonome Nav2-
+Kinder und Vorwärtsfahrt, endete aber vor Zielerreichung an einem neuen
+`raw_missing_stale_or_invalid`-Erstfehler. Die als ungültig gespeicherte Rohprobe
+war nur 0,04823 s alt (Grenze 0,20 s) und ihr Callback war 17,388 ms **vor**
+dem bereits akzeptierten neueren gültigen Callback eingetreten. Die
+`ReentrantCallbackGroup` kann diese Reihenfolge an der Health-Sperre umkehren.
+Nur den nachweislich überholten, sonst gültigen Callback verwerfen; echte
+spätere Stempelrückläufe, ungültige Daten und Frischefehler bleiben gesperrt.
+`513af02` auf PR #105, 157 Pakettests und isolierter Build; Produktgrenzen
+unverändert. Kein Beleg für die alte historische `raw_driver_not_ready`-Ursache.
+Der reale Folgelauf und A/B/C bleiben offen; aktueller Auftrag im WE-STATUS.

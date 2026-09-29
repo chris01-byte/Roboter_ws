@@ -2574,3 +2574,28 @@ an `initial_scan_too_slow`, kein Nav2-Kind; alle Prozesse beendet. Letzte
 explizite Motorsperrenstellung vor den Fahrten: vom Nutzer kontrolliert gelöst
 („erledigt“). Erneutes Sperren nach A3 angefordert, noch unbestätigt. Keine
 Stellung aus Software-Nullkommando ableiten. Nächster Auftrag im WE-STATUS.
+
+
+## 29.09.2026 – A-Produktlauf und temporäres HWT-Callback-Overlay
+
+Nach bestätigter aktueller Motorsperrenstellung „kontrolliert frei“ bestanden
+passiver und aktiver Preflight mit realen Quellen, Karte/TF und Stillstand.
+Produktstart über Mission Manager → BT → WE → Nav2: Initialscan fertig,
+autonome Kindziele angenommen, ca. 0,088 m zusätzliche kumulierte Odometrie-
+Translation in der Kindzielphase. Vor Zielerreichung trat ein terminaler
+HWT-Health-Erstfehler auf; Originalwerte und Auswertung im WE-STATUS Abschnitt 7
+und lokal unter `stage3-core-20260929/autonomous-goal-run-resumed/`.
+Nav2-Kinder wurden gecancelt, Endkommando null; Stack und Recorder beendet,
+keine Roboterknoten mehr. A/B/C noch offen.
+
+Fix `513af02`: überholten gültigen Callback nicht über eine bereits neuere
+gültige Roh-/Yaw-/Radprobe schreiben. Später eintretende Zeitrückläufe und
+ungültige Proben bleiben terminal. Keine Frische-, HWT-, Motor- oder
+Kollisionsgrenzen verändert. 157 Pakettests bestanden; isolierter Install
+`~/.local/share/amadeus/tests/stage3-core-20260929/hwt-callback-order-install/`
+enthält den zur Quelle bytegleichen Health-Code, SHA-256 `8055fa44…`.
+Für einen späteren Test nur als letztes Overlay nach
+`autonomous-goal-run-resumed/runtime-env.sh` sourcen; aktiver Install nicht
+gewechselt. Nach Codeänderung zuerst mit unabhängiger Motorsperre motorlos
+prüfen. Die aktuelle Schalterstellung nach diesem Lauf wurde eigens angefragt
+und darf nicht aus dem Endkommando abgeleitet werden.
