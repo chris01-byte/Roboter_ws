@@ -1,5 +1,15 @@
 # Projektgedächtnis
 
+## 29.09.2026 – Aktives Ziel unabhängig von Gesamtbewertung revalidieren
+
+Ein exakter fester Zielnachweis darf nicht hinter der Bewertung aller offenen
+Aufgaben warten. Dieselbe bestehende Rohkarten-/Scopeprüfung wird beim exakten
+Join ausgeführt; Frischefristen und Fehlersperren bleiben unverändert. Alte
+Prüfergebnisse dürfen neuere Ablehnungen nicht überschreiben. Keine zusätzlichen
+Navigationsziele oder Kommandowege. Rückfall: isoliertes Map-Handoff-Explore-
+Overlay weglassen; bekannte Abbrüche des Vorgängers bleiben dann offen.
+
+
 ## 29.09.2026 – Aufgabenidentität über HWT-HOLD erhalten
 
 Nach terminalem Kind-Cancel bleibt die unterbrochene Aufgabe für die Policy

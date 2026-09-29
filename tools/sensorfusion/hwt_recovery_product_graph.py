@@ -18,6 +18,7 @@ import pathlib
 import struct
 import signal
 import subprocess
+import sys
 import threading
 import time
 
@@ -34,7 +35,7 @@ if (os.environ.get('ROS_LOCALHOST_ONLY') != '1'
 import rclpy
 from rclpy.action import ActionServer, CancelResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy
 from ament_index_python.packages import (
@@ -74,6 +75,7 @@ class Sources(Node):
         super().__init__('we1_synthetic_sources')
         self.map_frame = 'map'
         self.map_ticks = 0
+        self.map_variant = False
         self.raw_on = True
         self.moving = True
         self.gate_angular = 0.0
@@ -104,7 +106,8 @@ class Sources(Node):
             lambda m:self.yaw_samples.append(
                 m.header.stamp.sec+m.header.stamp.nanosec*1e-9),10)
         self.wheel_status = self.create_publisher(String,'/base_hardware/state_json',10)
-        self.create_timer(.01,self.samples)
+        self.sample_stop=threading.Event()
+        self.sample_thread=threading.Thread(target=self.sample_loop,daemon=True)
         self.create_timer(.2,self.statuses)
         self.create_timer(.1,lambda:self.estop.publish(Bool(data=self.estop_active)))
         self.create_timer(.2,self.publish_pose_and_costmap)
@@ -116,6 +119,17 @@ class Sources(Node):
     def on_gate_output(self,m):
         self.gate_angular=m.angular.z
         self.out.append((time.monotonic(),m.linear.x,m.angular.z))
+    def sample_loop(self):
+        # Publication must not queue behind this observer's ROS subscriptions.
+        # Each real-time tick creates a new stamp; missed ticks remain gaps.
+        deadline=time.monotonic()
+        while not self.sample_stop.is_set():
+            self.samples()
+            deadline+=.01
+            now=time.monotonic()
+            if deadline<=now:
+                deadline=now+.01
+            self.sample_stop.wait(deadline-now)
     def samples(self):
         stamp=self.get_clock().now().to_msg()
         if self.raw_on:
@@ -156,6 +170,8 @@ class Sources(Node):
         self.costmap.publish(grid)
         # One open room with a straight frontier, no invented task/portal.
         grid.data=[0 if col < 25 else -1 for row in range(30) for col in range(40)]
+        if self.map_variant:
+            grid.data[-int(self.map_variant)]=100  # Remote cell, fixed route stays free.
         grid.header.frame_id=self.map_frame
         self.map_ticks += 1
         if self.map_ticks % 5 == 1:
@@ -226,8 +242,14 @@ class FakeNav(Node):
             goal.abort();return NavigateToPose.Result()
         finally:self.active-=1
 
-ps=[];executor=None;thread=None
+ps=[];executor=None;thread=None;source_executor=None;source_thread=None
+gate_executor=None;gate_thread=None
+shadow_executor=None;shadow_thread=None
+previous_switch_interval=sys.getswitchinterval()
 try:
+    # Several real product nodes share one interpreter only in this probe.
+    # Give their sensor callbacks a short GIL turn; product deadlines stay exact.
+    sys.setswitchinterval(.001)
     for name,command in commands:
         log=open(logdir/f'{name}.log','w')
         ps.append((name,subprocess.Popen(command,stdout=log,stderr=subprocess.STDOUT,env=os.environ.copy()),log))
@@ -259,9 +281,27 @@ try:
         return value
     explorer._wohnungserkundung_resume_path_ready=route_probe
     explorer._wohnungserkundung_hwt_standstill_confirmed=still_probe
-    executor=MultiThreadedExecutor(num_threads=8)
-    for node in (explorer,gate,shadow,sources,nav,maps):executor.add_node(node)
+    executor=MultiThreadedExecutor(num_threads=4)
+    for node in (explorer,nav,maps):executor.add_node(node)
+    # Real sensors run independently of the task-policy worker. Keep that
+    # scheduling property in this process probe too; never restamp old data
+    # or weaken source freshness to hide an overloaded synthetic publisher.
+    source_executor=SingleThreadedExecutor()
+    source_executor.add_node(sources)
+    source_thread=threading.Thread(target=source_executor.spin,daemon=True)
+    source_thread.start()
+    # The real gate uses rclpy.spin (single-threaded), not a shared pool of
+    # mutually-exclusive callbacks competing with the Explorer action.
+    gate_executor=SingleThreadedExecutor()
+    gate_executor.add_node(gate)
+    gate_thread=threading.Thread(target=gate_executor.spin,daemon=True)
+    gate_thread.start()
     thread=threading.Thread(target=executor.spin,daemon=True);thread.start()
+    shadow_executor=SingleThreadedExecutor()
+    shadow_executor.add_node(shadow)
+    shadow_thread=threading.Thread(target=shadow_executor.spin,daemon=True)
+    shadow_thread.start()
+    sources.sample_thread.start()
     def wait_for(predicate,timeout):
         end=time.monotonic()+timeout
         while time.monotonic()<end:
@@ -276,6 +316,7 @@ try:
                     sources.yaw_statuses[-1].get('ready') is True,40), 'real yaw bias startup failed'
     startup_bias=sources.yaw_statuses[-1]['bias']['radps_xyz']
     assert wait_for(lambda:explorer._hwt_guard.health.motion_failure() is None,5), 'HWT startup failed'
+    assert wait_for(lambda:gate._hwt_guard.health.motion_failure() is None,5), 'gate HWT startup failed'
     assert wait_for(lambda:sources.cmd.get_subscription_count()>0,5), 'command route unavailable'
     assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is not None,10), 'real policy candidate missing'
     first_task=explorer._wohnungserkundung_navigation_snapshot[0].task_id
@@ -303,6 +344,7 @@ try:
     assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is None,3), 'invalid route allowed a goal'
     sources.route_blocked=False
     assert wait_for(lambda:explorer._wohnungserkundung_navigation_snapshot is not None,4)
+    assert gate._hwt_guard.health.motion_failure() is None, 'gate fault before mission'
     sources.cmd.publish(String(data='{"type":"explore"}'))
     assert wait_for(lambda:len(nav.goals)>=1,8), 'first Nav2 child missing'
     first_id=nav.goals[0][1]
@@ -310,6 +352,39 @@ try:
                m.get('active_command',{}).get('type')=='explore'
                for m in sources.manager), 'parent command not active'
     mode=os.environ.get('HWT_GRAPH_CASE','recovery')
+    if mode=='map_handoff':
+        entered=threading.Event();release=threading.Event()
+        original_filter=explorer._wohnungserkundung_costmap_filter_frontier_availability
+        def delayed_policy(*args,**kwargs):
+            entered.set()
+            release.wait(6.)
+            return original_filter(*args,**kwargs)
+        explorer._wohnungserkundung_costmap_filter_frontier_availability=delayed_policy
+        sources.map_variant=1
+        try:
+            assert wait_for(entered.is_set,3), 'policy delay not entered'
+            sources.map_variant=2  # A second change while the worker is blocked.
+            time.sleep(3.)  # One map period plus the unchanged 1.25-s bound.
+            (logdir/'map-handoff-observation.json').write_text(json.dumps({
+                'goals':nav.goals,'canceled':nav.canceled,'active':nav.active,
+                'explorer':sources.phases[-10:],
+                'manager':sources.manager[-5:],
+                'hwt':sources.gate_status[-5:],
+            },indent=2,default=str))
+            assert not nav.canceled and nav.active==1, 'valid child lost while policy busy'
+            assert len(nav.goals)==1, 'replacement child dispatched'
+            assert gate._hwt_guard.health.motion_failure() is None, 'unexpected source fault'
+            assert explorer._wohnungserkundung_source_state(
+                *explorer._wohnungserkundung_active_child).current
+        finally:
+            release.set()
+            explorer._wohnungserkundung_costmap_filter_frontier_availability=original_filter
+        sources.cmd.publish(String(data='{"type":"cancel"}'))
+        assert wait_for(lambda:1 in nav.canceled,3)
+        print(json.dumps({'result':'PASS','case':mode,'real_map_policy_chain':True,
+                          'busy_policy_s':3.,'same_child_kept':True,
+                          'user_cancel_terminal':True}),flush=True)
+        raise SystemExit(0)
     if mode in ('permanent','estop'):
         if mode=='permanent':
             sources.raw_on=False
@@ -408,6 +483,14 @@ try:
 
 except Exception:
     import traceback
+    if 'sources' in locals():
+        (logdir/'failure-sources.json').write_text(json.dumps({
+            'yaw_status': sources.yaw_statuses[-5:],
+            'gate_status': sources.gate_status[-5:],
+            'raw_samples':len(sources.raw_stamps),
+            'maximum_raw_gap_s':max((b-a for a,b in zip(
+                sources.raw_stamps,sources.raw_stamps[1:])),default=None),
+        },indent=2))
     traceback.print_exc()
     raise
 finally:
@@ -417,9 +500,19 @@ finally:
             time.sleep(.3)
         except Exception:
             pass
+    if 'sources' in locals():
+        sources.sample_stop.set()
+        if sources.sample_thread.is_alive():sources.sample_thread.join(timeout=2)
+    if source_executor:source_executor.shutdown(timeout_sec=2)
+    if source_thread:source_thread.join(timeout=2)
+    if gate_executor:gate_executor.shutdown(timeout_sec=2)
+    if gate_thread:gate_thread.join(timeout=2)
+    if shadow_executor:shadow_executor.shutdown(timeout_sec=2)
+    if shadow_thread:shadow_thread.join(timeout=2)
     if executor:executor.shutdown(timeout_sec=2)
     if thread:thread.join(timeout=2)
     if rclpy.ok():rclpy.shutdown()
+    sys.setswitchinterval(previous_switch_interval)
     for name,p,log in ps:
         if p.poll() is None:p.send_signal(signal.SIGINT)
     for name,p,log in ps:

@@ -2616,3 +2616,16 @@ Für einen späteren Test nur als letztes Overlay nach
 gewechselt. Nach Codeänderung zuerst mit unabhängiger Motorsperre motorlos
 prüfen. Die aktuelle Schalterstellung nach diesem Lauf wurde eigens angefragt
 und darf nicht aus dem Endkommando abgeleitet werden.
+
+
+### 29.09.2026 – gezielte aktive Kartenübergabe
+
+PR #105: aktiver fester Frontierpunkt wird nach exaktem Rohkarten-/Statusjoin
+unabhängig vom mehrsekündigen Aufgabenworker erneut geprüft. Fristen und
+Schutzparameter unverändert. Vor/nach-Produktgraph bestätigt Bestandserhalt
+des einen autonomen Kindes; 244 gezielte Tests und isolierter Explore-Build.
+Neues temporäres Overlay lokal unter
+`~/.local/share/amadeus/tests/stage3-map-handoff-20260929/install`.
+Kein Wechsel von `~/roboter_ws/install`; Rückfall durch Weglassen dieses
+letzten Overlays. Reale Quellen-, Profil- und Scopebindung vor Fahrt erforderlich.
+Laufender Ergebnisstand ausschließlich im WE-STATUS Abschnitt 7.

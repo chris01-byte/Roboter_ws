@@ -4427,3 +4427,85 @@ def test_prealign_settle_deadline_can_pass_between_clock_reads(monkeypatch):
         get_logger=lambda: SimpleNamespace(info=lambda *_: None))
     assert ExploreNode._prealign_to_goal(node,0.,-1.,(0.,0.,0.))[0]=='success'
     assert sleeps == [0.0]
+
+
+@pytest.mark.parametrize('callback', ['raw', 'status'])
+@pytest.mark.parametrize('route_valid', [True, False])
+def test_active_raw_proof_does_not_wait_for_busy_task_policy(
+        monkeypatch, callback, route_valid):
+    context = PortalMapContext('session-fast-callback', 'map-fast-callback', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=3_000_000_004)
+    correlation = node._region_graph_shadow_latest_correlation
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    raw_map.header.stamp.sec = 3
+    raw_map.header.stamp.nanosec = 4
+    source = SimpleNamespace(fingerprint='b' * 64,
+                             source_stamp_ns=3_000_000_004, frame_id='map')
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_raw_event_feed = True
+    node._region_graph_shadow_latest_raw_map = raw_map
+    node._region_graph_shadow_latest_raw_source = source
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_active_child = (intent, candidate)
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_id = ''
+    node._wohnungserkundung_scope_clearance = 0.28
+    node._wohnungserkundung_policy_processed_revision = 7
+    node._wohnungserkundung_unconfirmed_intent_id = intent.intent_id
+    node._wohnungserkundung_unconfirmed_since = 10.0
+    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._region_graph_shadow = SimpleNamespace(
+        accept_raw_map_source=lambda *a, **k: SimpleNamespace(raw_map_correlation=correlation),
+        accept_map_status_json=lambda *a, **k: SimpleNamespace(raw_map_correlation=correlation))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 12.0)
+    monkeypatch.setattr(explore_node_module, 'raw_map_portal_source_from_values',
+                        lambda **k: source)
+    def validate(*a, **k):
+        if not route_valid:
+            raise explore_node_module.FrontierGoalCandidateError('blocked route')
+        return 0.5
+    monkeypatch.setattr(explore_node_module,
+                        'revalidate_active_frontier_goal_candidate', validate)
+    # No policy progress for longer than the unchanged 1.25-s grace.
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+    if callback == 'raw':
+        node._on_map(raw_map)
+    else:
+        node._on_region_graph_map_status(SimpleNamespace(data='{}'))
+    assert node._wohnungserkundung_policy_processed_revision == 7
+    assert node._wohnungserkundung_source_state(intent, candidate).current is route_valid
+
+
+@pytest.mark.parametrize('new_revision', [8, 9])
+def test_late_active_validation_cannot_overwrite_newer_rejection(
+        monkeypatch, new_revision):
+    context = PortalMapContext('session-order', 'map-order', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context)
+    node._wohnungserkundung_active_child = (intent, candidate)
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_clearance = 0.28
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    first = SimpleNamespace(context=context, map_revision=8, fingerprint='b' * 64)
+    newer = SimpleNamespace(context=context, map_revision=new_revision, fingerprint='c' * 64)
+    clock = iter((10.0, 11.0))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    calls = []
+    def validate(*a, **k):
+        calls.append(True)
+        if len(calls) == 1:
+            node._wohnungserkundung_refresh_active_frontier_source(
+                raw_map, newer, (0.0, 0.0, 0.0), None)
+            return 0.5
+        raise explore_node_module.FrontierGoalCandidateError('new obstacle')
+    monkeypatch.setattr(explore_node_module,
+                        'revalidate_active_frontier_goal_candidate', validate)
+    node._wohnungserkundung_refresh_active_frontier_source(
+        raw_map, first, (0.0, 0.0, 0.0), None)
+    proof = node._wohnungserkundung_active_frontier_source
+    assert proof[1].map_revision == new_revision
+    assert not proof[1].current
+    assert node._wohnungserkundung_active_frontier_fingerprint == 'c' * 64

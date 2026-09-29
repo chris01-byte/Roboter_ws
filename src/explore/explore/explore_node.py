@@ -1998,6 +1998,7 @@ class ExploreNode(Node):
                         self._wohnungserkundung_persistence_state = 'saved'
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Kartenstatus', error)
+        self._wohnungserkundung_refresh_joined_active_source()
 
     def _publish_region_graph_shadow_status(self):
         """Publish at most once per timer tick after a complete map status."""
@@ -2726,7 +2727,14 @@ class ExploreNode(Node):
                             active_frontier_source is not None
                             and active_child is not None
                             and active_child[0].intent_id
-                            == active_frontier_source[0]):
+                            == active_frontier_source[0]
+                            and (
+                                self._wohnungserkundung_active_frontier_source
+                                is None
+                                or self._wohnungserkundung_active_frontier_source[0]
+                                != active_frontier_source[0]
+                                or self._wohnungserkundung_active_frontier_source[1].map_revision
+                                < active_frontier_source[1].map_revision)):
                         self._wohnungserkundung_active_frontier_source = (
                             active_frontier_source)
                         self._wohnungserkundung_active_frontier_fingerprint = (
@@ -2803,6 +2811,7 @@ class ExploreNode(Node):
                 self._remember_shadow_raw_map_correlation(update, received_at)
             except Exception as error:  # isolated telemetry must not escape
                 self._fault_region_graph_shadow('Rohkarte', error)
+        self._wohnungserkundung_refresh_joined_active_source()
 
     def _on_global_costmap(self, msg: OccupancyGrid):
         self._global_costmap = msg
@@ -3912,6 +3921,43 @@ class ExploreNode(Node):
             return None
         return replace(staged, route_length_m=route_length_m)
 
+    def _wohnungserkundung_refresh_joined_active_source(self):
+        """Validate the active target at the exact join, outside task scoring.
+
+        A busy policy worker must not starve this existing fixed-goal proof.
+        Both arrival orders are supported; mismatched snapshots stay pending
+        under the unchanged source deadline, never get freshened or accepted.
+        """
+        if not getattr(self, '_wohnungserkundung_policy_enabled', False):
+            return
+        with self._wohnungserkundung_runtime_lock:
+            child = self._wohnungserkundung_active_child
+        if child is None or not isinstance(child[1], FrontierGoalCandidate):
+            return
+        with self._region_graph_shadow_lock:
+            if self._region_graph_shadow_fault is not None:
+                return
+            raw_map = self._region_graph_shadow_latest_raw_map
+            source = self._region_graph_shadow_latest_raw_source
+            correlation = self._region_graph_shadow_latest_correlation
+            if (raw_map is None or source is None or correlation is None
+                    or not self._shadow_source_matches_correlation(
+                        source, correlation)):
+                return
+        with self._wohnungserkundung_runtime_lock:
+            previous = self._wohnungserkundung_active_frontier_source
+            if (previous is not None and previous[0] == child[0].intent_id
+                    and previous[1].map_revision >= correlation.map_revision):
+                return
+        scope = None
+        if self._wohnungserkundung_scope_id:
+            scope = AuthorizedExplorationScope(
+                scope_id=self._wohnungserkundung_scope_id,
+                context=correlation.context,
+                vertices=self._wohnungserkundung_scope_vertices)
+        self._wohnungserkundung_refresh_active_frontier_source(
+            raw_map, correlation, self._robot_pose(), scope)
+
     def _wohnungserkundung_refresh_active_frontier_source(
             self, raw_map, correlation, robot_pose, scope):
         """Commit fixed-goal validity before the full policy recomputation.
@@ -3922,6 +3968,7 @@ class ExploreNode(Node):
         prevents a valid child from timing out while unrelated candidates are
         being rescored.
         """
+        validation_started_at = time.monotonic()
         with self._wohnungserkundung_runtime_lock:
             active_child = self._wohnungserkundung_active_child
         if (
@@ -3975,8 +4022,16 @@ class ExploreNode(Node):
             reason,
         )
         with self._wohnungserkundung_runtime_lock:
+            previous = self._wohnungserkundung_active_frontier_source
+            if (previous is not None and previous[0] == intent.intent_id
+                    and (previous[1].map_revision > correlation.map_revision
+                         or (previous[1].map_revision == correlation.map_revision
+                             and getattr(self, '_wohnungserkundung_validation_started_at',
+                                         float('-inf')) > validation_started_at))):
+                return
             if self._wohnungserkundung_active_child == active_child:
                 self._wohnungserkundung_active_frontier_source = source
+                self._wohnungserkundung_validation_started_at = validation_started_at
                 self._wohnungserkundung_active_frontier_fingerprint = (
                     correlation.fingerprint)
                 condition = getattr(

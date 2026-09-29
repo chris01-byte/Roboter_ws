@@ -25,8 +25,9 @@ Details und laufender Ergebnisstand in Abschnitt 7. Bisherige A1–A4-Belege
 bleiben erhalten. Aktueller Softwarekandidat `fb4608a`; sieben autonome Kinder
 im jüngsten regulären Lauf, aber keine abgeschlossene Aufgabe. Wiederholte
 `SOURCE_INVALIDATED`-Cancels verhindern den A-Nachweis. HWT blieb im jüngsten
-Lauf gesund. Genau nächster Auftrag ist die gezielte gerätefreie Eingrenzung
-des ersten Kartenquellennachweis-Abbruchs; keine unveränderte weitere Fahrt.
+Lauf gesund. Die gezielte Kartenübergabekorrektur ist gerätefrei vor/nach bestätigt.
+Aktuell folgt der lesende Preflight und begrenzte reale Produktlauf zur Tür
+und in den angrenzenden Laborraum (Abschnitt 7).
 Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
@@ -852,6 +853,54 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
+
+### Auftrag 29.09.2026: Kartenübergabe korrigieren, real bis in nächsten Raum
+
+Erneute ausdrückliche Laborfreigabe und Auftrag zur autonomen Türsuche sowie
+Raumdurchfahrt übernommen. Gleicher PR-#105-Branch, Basis `26ec219`/`fb4608a`.
+Keine manuelle Zielvorgabe oder Änderung von Frische-/Kollisionsgrenzen.
+
+Offline-Replay des ersten aktiven Ziels aus dem vorhandenen Bag: auf allen
+26 aufgezeichneten Rohkarten bis einschließlich unmittelbar nach dem Cancel
+bleibt der feste Zielpunkt unter den tatsächlich verwendeten Evidenz- und
+Scopeparametern gültig; Einzelprüfung jeweils etwa 19–25 ms. Die öffentliche
+Regionsgraphfolge startet den vollständigen Policy-Pass für Revision 311 bei
+1790712345.703076, erst bei 1790712349.186988 den nächsten für 315. Neue
+Karten treffen weiter im Sekundenabstand ein. Die bisherige Einzelprüfung des
+aktiven Ziels liegt in diesem serialisierten, mehrsekündigen Worker; sie kann
+deshalb das unveränderte 1,25-s-Übergabefenster verfehlen. Die historische
+interne Abzweigung bleibt mangels Originalsnapshot nicht rückwirkend behauptet.
+Der Warteschlangenfehler ist gerätefrei vor/nach reproduziert.
+
+Enger Eingriff im Explorer: dieselbe Einzelprüfung zusätzlich unmittelbar nach
+exaktem Rohkarten-/Statusjoin ausführen, außerhalb des Shadowlocks und unabhängig
+von der Aufgabenbewertung. Kein Timer, Supervisor, neues Ziel oder längeres
+Grace-Fenster. Nicht passende Karten bleiben gesperrt; spätere alte Ergebnisse
+dürfen neuere Ablehnungen nicht überschreiben. Vorher: beide gültigen
+Callback-Reihenfolgen scheitern; nachher bestanden. 244 gezielte Tests und
+isolierter Explore-Build unter `stage3-map-handoff-20260929/install` bestanden.
+Die zusätzlichen bestehenden HWT-Produktgraphproben bestanden heute nicht:
+synthetische Quellen verloren Frische, eine Probe die Bias-Readiness; eine
+weitere kam trotz geheilter Quellen nicht vor dem Recoverybudget zum Resume.
+Diese Versuche sind keine bestandenen HWT-Regressionsbelege. Zeitweise erprobte
+Überlappung der Gegenfälle wurde nicht übernommen; ursprüngliche HWT-Prüffolge
+und Produktfristen bleiben bestehen. Sämtliche Fehlversuche und die lokale
+experimentelle Probe sind bewahrt.
+
+Die vorhandene Graphprobe erhält einen gezielten Fall `map_handoff`: reale
+MM/BT/WE/Gate/Yaw-Kette, autonomes Kind, blockierter vollständiger Policyworker,
+zweite Kartenänderung während der Blockade und weiterhin gültiger fester Weg.
+Synthetische Messwertveröffentlichung und Gate laufen getrennt vom Aufgaben-
+Executor; vor Mission wird Gate-Gesundheit verlangt und Fehlerstatus gesichert.
+Das entspricht der Trennung der realen Prozesse, ohne alte Daten frisch zu
+stempeln oder Schutzfristen zu lockern. Vergleich `map-before-cadence.log` / `map-after-cadence.log`: alter Kandidat
+verliert das Kind während der Blockade; neuer Kandidat BESTANDEN, ein Kind
+bleibt aktiv und quellenvalidiert, HWT gesund, Nutzer-Cancel danach terminal.
+Echte Bias-Kalibrierung durchlaufen; Yaw-Schatten ebenfalls mit eigenem Executor,
+synthetische Publikation nach absolutem 10-ms-Takt ohne Nachholstempel.
+Das ist ein Kartenübergabenachweis, kein neuer HWT-Recoverynachweis.
+Realnachweis folgt separat; bisher keine Hardware dieses Korrekturstands bewegt.
+
 
 ### Aktuellster Realbefund 29.09.2026: sieben Kinder, A weiterhin offen
 

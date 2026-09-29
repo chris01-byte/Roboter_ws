@@ -133,14 +133,18 @@ abgeschlossene Aufgabe; sechs `SOURCE_INVALIDATED`-Cancels, abschließend
 bewusster Missionscancel. Kein HWT-first_fault. A nicht bestanden, B/C nicht
 erreicht; alle Prozesse beendet. Originalwerte und Nachweisgrenzen: STATUS §7.
 
-**Genau nächster Auftrag:** Ersten Kartenquellennachweis-Abbruch im bestehenden
-Bag bei 1790712351.0938768 gerätefrei auf die konkrete interne Nachweisübergabe
-eingrenzen. Die letzte veröffentlichte aktive Zielprüfung war `current` auf
-Revision 311; das beweist keinen weiterhin aktuellen internen Quellzustand.
-Nur die reproduzierte Ursache minimal korrigieren und gezielt prüfen, danach
-reguläres A fortsetzen. Keine Frischegrenze erhöhen, keine historischen HWT-
-Audits, keine künstliche Störung, kein manuelles Ziel und keine unveränderte
-Blindwiederholung. LAB-1 bleibt gültig; keine neue Standardfreigaberunde.
+**Laufender Auftrag nach erneuter ausdrücklicher Laborfreigabe:** Die
+nachgewiesene Warteabhängigkeit der aktiven Einzelzielprüfung von der
+Gesamtpolicy korrigieren. Derselbe Zielpunkt ist im lokalen Bag-Replay auf
+allen 26 Karten vor/nach dem ersten Cancel gültig. Exakten Join unmittelbar
+prüfen, verspätete alte Ergebnisse nicht übernehmen; Grenzen unverändert.
+Nach gerätefreier Regression/Produktgraph und lesendem Hardware-Vorlauf den
+regulären autonomen Produktlauf fortsetzen: Tür selbst erkennen, vollständig
+queren und im angrenzenden Raum weitererkunden. Keine manuelle Zielvorgabe,
+kein synthetischer Task, kein Merge oder dauerhafter Installwechsel.
+900-s-Gesamt-/120-s-Kindbudget und vorhandene Portal-/Bewegungsgrenzen bleiben.
+B-Teilfälle nur als bestanden melden, wenn tatsächlich beobachtet; ein
+Raumübergang allein ersetzt keine vollständige A/B/C-Abnahme.
 
 **Historischer Zwischenstand nach A4:** Kandidat `872f6a8`.
 Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,
