@@ -5515,7 +5515,7 @@ class ExploreNode(Node):
                 if stop_requested():
                     return 'interrupted', achieved_total
                 self._publish_scan_stop()
-                time.sleep(min(0.05, pause_deadline - time.monotonic()))
+                time.sleep(max(0.0, min(0.05, pause_deadline - time.monotonic())))
 
         return 'success', achieved_total
 
@@ -5565,7 +5565,7 @@ class ExploreNode(Node):
                     return (
                         'interrupted', total_achieved,
                         initial_error, current_error)
-                time.sleep(min(0.05, settle_deadline - time.monotonic()))
+                time.sleep(max(0.0, min(0.05, settle_deadline - time.monotonic())))
 
             measured_pose = self._robot_pose()
             if measured_pose is None:

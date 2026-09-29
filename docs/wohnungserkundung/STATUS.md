@@ -913,6 +913,26 @@ Lokale Belege: `stage3-core-20260929/active-bag/`, `active-stack.log`,
 `odom-install/`. Nächster Schritt innerhalb desselben Auftrags: motorloser
 Vorlauf und erneuter regulärer A/B/C-Lauf mit genau dieser Korrektur.
 
+### Lauf A2: Scan vollständig, Wartezeitfehler am Abschluss
+
+Kandidat `f746b1c`, neuer motorloser und aktiver Quellen-Preflight bestanden.
+Die reale Wiederholung erreichte etwa 6,32 rad, ohne erneutes `odom_stale` und
+ohne HWT-first_fault. Bei 1790659641,135 endet `_scan_in_place` mit
+`ValueError: sleep length must be non-negative`; Traceback benennt exakt die
+Pause nach dem Scansegment. Kein Nav2-Kind, kein A/B/C-Erfolg. Mission terminal,
+Nullkommando/Stillstand gemessen, Stack/Recorder beendet.
+
+Ursache eindeutig: Die Frist kann zwischen Schleifenprüfung und dem zweiten
+Uhrabruf überschritten werden. Derselbe Ausdruck existiert in der unmittelbar
+anschließenden Prealignment-Beruhigungszeit. Zwei gerätefreie Gegenproben
+scheitern vor der Korrektur; Restwartezeit wird nun an beiden Stellen auf
+mindestens null begrenzt. Keine Fristverlängerung, kein Parameter geändert.
+161 gezielte Tests und isolierter Explore-Build bestanden. Lokale Belege:
+`after-odom-fix/active-bag`, `active-stack.log`, `pause-before.log`,
+`pause-after.log`, `pause-build.log`, unter demselben Haupt-Testverzeichnis.
+Nächster Schritt bleibt der betroffene reguläre Produktlauf nach motorlosem
+Vorlauf, ohne HWT-Injektion und ohne neue Freigaberunde.
+
 ### Historische Kindziel-Sondertests bis 28.09.2026
 
 Die folgenden Befunde bleiben erhalten. Ihre damaligen Folgeaufträge und

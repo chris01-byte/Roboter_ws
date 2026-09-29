@@ -4386,3 +4386,42 @@ def test_rotation_samples_clock_after_odom_snapshot(monkeypatch, sample_mode, ex
     status, _ = ExploreNode._rotate_in_place(node, 0.08, 0.08, 20.0)
     assert status == expected
     assert bool(commands) == (sample_mode == 'callback_between_reads')
+
+
+def test_scan_pause_deadline_can_pass_between_clock_reads(monkeypatch):
+    clock = iter([0.0, 0.0, 0.0, 0.01, 0.06, 0.07])
+    sleeps = []
+    def sleep(seconds):
+        assert seconds >= 0.0
+        sleeps.append(seconds)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(explore_node_module.time, 'sleep', sleep)
+    node = SimpleNamespace(
+        _initial_scan_segment_angle=0.5, _initial_scan_angle=0.5,
+        _initial_scan_speed=0.08, _initial_scan_timeout=280.0,
+        _initial_scan_segment_pause=0.05,
+        _rotate_in_place=lambda *args, **kwargs: ('success', 0.5),
+        _publish_scan_stop=lambda: None)
+    assert ExploreNode._scan_in_place(node) == ('success', 0.5)
+    assert sleeps == [0.0]
+
+
+def test_prealign_settle_deadline_can_pass_between_clock_reads(monkeypatch):
+    clock = iter([0.0, 0.01, 0.06, 0.07])
+    sleeps = []
+    def sleep(seconds):
+        assert seconds >= 0.0
+        sleeps.append(seconds)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(explore_node_module.time, 'sleep', sleep)
+    node = SimpleNamespace(
+        _prealign_enabled=True, _prealign_handoff_tolerance=0.17,
+        _prealign_stop_margin=0.10, _prealign_speed=0.12,
+        _prealign_timeout=180.0, _prealign_rate_check_after=15.0,
+        _prealign_min_average_rate=0.01, _prealign_settle_s=0.05,
+        _prealign_max_passes=3, _prealign_min_improvement=0.04,
+        _rotate_in_place=lambda angle,*args,**kwargs: ('success',abs(angle)),
+        _robot_pose=lambda: (0.0,0.0,-math.pi/2),
+        get_logger=lambda: SimpleNamespace(info=lambda *_: None))
+    assert ExploreNode._prealign_to_goal(node,0.,-1.,(0.,0.,0.))[0]=='success'
+    assert sleeps == [0.0]
