@@ -976,6 +976,29 @@ mit der gesicherten Rad-/IMU-Zeitfolge abgleichen und den konkreten Befund
 beheben; danach den regulären Kernablauf unter LAB-1 fortsetzen. Keine weitere
 Fahrt bei ungeklärtem physischem Bewegungsbefund, keine neue allgemeine Analyse.
 
+### Nutzerauftrag: beobachtete Wiederholung vorbereitet, noch nicht gestartet
+
+Nach A3 fordert der Nutzer eine erneute Vorbereitung, damit er gezielt Schlupf
+beobachten und anschließend mit neuen Messwerten vergleichen kann. Diese
+Beobachtungsvorbereitung ersetzt das Warten auf eine nachträgliche Beschreibung
+als unmittelbaren nächsten Schritt; die alte physische Ursache bleibt offen.
+
+Unveränderter Kandidat `872f6a8`, bytegleicher geladener Explore-Code,
+unverändertes Produktprofil SHA `ee3b42ee…`. Eigener lokaler Artefaktordner
+`stage3-core-20260929/observed-slip-repeat/` mit vorbereitetem Manifest,
+Modulhash, Themenliste, bestehendem Quellenprüfer und Beobachtungsprotokoll.
+Roh-Radodometrie/Encoderpositionen, Roh-IMU, korrigierte Gierrate, Bias und
+fusionierte Odometrie werden gemeinsam mit Commands/Schutz-/Missionsstatus
+aufgezeichnet. Keine neuen Produktänderungen oder Parametereingriffe.
+
+**Nur vorbereitet:** Kein Stack, Recorder oder Explore-Auftrag gestartet;
+kein aktueller Live-Preflight behauptet. Vor tatsächlichem Start Quellen/Pose/
+Stillstand frisch prüfen. 0,08 rad/s Scan-Sollwert, 280-s-Scanfrist und
+900-s-Gesamtfrist unverändert. **Genau nächster Schritt:** Wenn der Beobachter
+bereit ist, dieselbe begrenzte Produktwiederholung starten und zeitlich
+zugeordnete Vor-Ort-Beobachtung mit den neuen synchronen Messwerten abgleichen.
+Die tatsächliche Motorsperrenstellung vor Start bleibt getrennt von LAB-1.
+
 ### Historische Kindziel-Sondertests bis 28.09.2026
 
 Die folgenden Befunde bleiben erhalten. Ihre damaligen Folgeaufträge und

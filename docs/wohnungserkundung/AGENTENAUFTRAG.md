@@ -111,6 +111,15 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
+**Neuester Nutzerentscheid nach A3:** Beobachtete Wiederholung ist unter
+`stage3-core-20260929/observed-slip-repeat/` vorbereitet. Noch keine Mission
+starten: zunächst dem Nutzer Bereitschaft melden, damit er gezielt möglichen
+Schlupf/Kontakt beobachten kann. Danach denselben unveränderten Produktlauf mit
+frischem Quellencheck, synchronem Recorder und zeitlich zugeordneter
+Vor-Ort-Beobachtung ausführen. Keine neue Softwareänderung und keine Lockerung.
+Dieser Folgeentscheid ersetzt die rein rückblickende Beobachtungsanfrage unten.
+
+
 **Laufender Ergebnisstand:** Software `872f6a8` behebt die reproduzierte
 Odometrie-Lesereihenfolge-Race und negative Restwartezeiten; 161 gezielte Tests,
 isolierter Build und motorlose Vorläufe bestanden. Drei reale Starts: A1
