@@ -117,6 +117,8 @@ angenommen und bewusst via Mission Manager terminal gecancelt. Keine lineare
 Endkommandierung im Kindfenster, keine Zielerreichungsabnahme. Rad-/Roh-IMU-/Yaw-/
 EKF-Raten stimmen im Vergleichsfenster 5,0–5,7 rad weitgehend überein; die alte
 Abweichung wurde dort nicht reproduziert. Stack/Recorder/Wächter beendet.
+**Pausenstand 29.09.2026:** Nutzer setzt später fort. A4 ist abgeschlossen; Stack und Recorder sind aus. Beim Fortsetzen mit der regulären autonomen Zielanfahrt weitermachen, ohne den Schlupf-Sondertest zu wiederholen. Motorsperre zuletzt vor A4 als „frei“ gemeldet; danach angefordertes erneutes Sperren blieb unbestätigt und muss vor Bewegung aktuell geprüft werden.
+
 **Beobachterabgleich abgeschlossen:** Der Nutzer meldet „alles inordnung
 nichts auffälliged“; das passt zu den neuen Rad-/IMU-Messwerten. Keine
 rückwirkende Ursachenbehauptung für A3. **Genau nächster Schritt:** Offene

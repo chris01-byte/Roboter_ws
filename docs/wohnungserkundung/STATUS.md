@@ -1044,6 +1044,15 @@ Artefakte lokal: `stage3-core-20260929/observed-slip-repeat/`, insbesondere
 `comparison.json`, `nav2-transition-summary.json`, `active-stop.json`.
 Gemessener Stillstand vor Stack-SIGINT; Recorder, Stack und eigener Wächter
 beendet, keine Roboterknoten mehr. Keine weitere Fahrt angehängt.
+**Pausenstand auf Nutzerwunsch (29.09.2026):** Die beobachtete Wiederholung
+A4 ist abgeschlossen, alle Prozesse sind beendet. Der Nutzer setzt die Arbeit
+später fort und bat um Herunterfahren des Jetson. Letzter fachlicher Stand und
+Messvergleich bleiben unverändert. Bei Fortsetzung als nächstes die reguläre
+autonome Zielanfahrt der offenen Phase A prüfen; A/B/C bleibt offen. Die letzte
+explizite Motorsperrenmeldung war vor A4 „frei“; ein erneutes Sperren nach Ende
+wurde angefordert, aber nicht bestätigt. Vor einer späteren Bewegung aktuellen
+Hardwarezustand frisch feststellen.
+
 **Abgleich abgeschlossen:** Vor-Ort-Bericht und neue Messwerte sind konsistent;
 die vorherige Auffälligkeit wurde in A4 nicht reproduziert. **Genau nächster
 Schritt:** Die offene reguläre A/B/C-Kernabnahme fortsetzen, beginnend mit
