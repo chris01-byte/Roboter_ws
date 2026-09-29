@@ -9,7 +9,12 @@ geordnet beendet. Neues Explore-Paket separat unter
 Der Vollunderlay bleibt `hwt-child-scope-20260928-retry/install`. Kein
 dauerhafter Installwechsel. Gerätefreier Graph läuft ausschließlich localhost
 in Domain 200–230; reale Domain 42 übernimmt keine Testpublisher.
-Runtime und neuer realer Nachweis sind gesondert im STATUS zu bewerten.
+Real aufgelöst und bytegleich geprüft im lokalen Lauf
+`stage3-core-20260929/autonomous-goal-after-hold-task-fix/`: aktiver Start,
+vollständiger Scan, sieben autonome Kinder, aber keine abgeschlossene Aufgabe.
+Nach 459,860 s kontrolliert beendet; alle Roboterprozesse und seriellen Handles
+frei. Kein HWT-first_fault, neuer Kartenquellennachweis-Blocker. Einzelwerte,
+Grenzen und genau nächster Auftrag ausschließlich im STATUS §7.
 
 
 ## 28.09.2026 – gezielte Portal-/Explorer-Reparatur, noch keine neue Fahrt

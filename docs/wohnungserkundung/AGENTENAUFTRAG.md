@@ -126,16 +126,21 @@ Freigaberunde. A verlangt Aufgabenfortschritt, B getrennte Pflichtfälle
 Heckpassage und Fortsetzung derselben Mission im angrenzenden Bereich. Aktuelle
 Vorbereitungsbefunde und der konkrete Blocker stehen im STATUS Abschnitt 7.
 
-**Aktuellster Stand nach Fortsetzung:** Nach Startgate-Korrektur `08127c8`
-startete die reguläre Mission und erzeugte autonome Kinder. Ein natürlicher
-HWT-Lesetimeout heilte, aber die Policy verlor nach Kind-Cancel die Präferenz
-für die unterbrochene Aufgabe. Konkrete Erstwerte und Ablauf: STATUS Abschnitt 7.
-Die eng begrenzte Präferenzkorrektur im Explorer ist mit 221 Tests, isoliertem
-Build und wiederholtem Produktgraph geprüft (erster Graphversuch separat als
-fehlgeschlagen erhalten). Jetzt lesender Vorlauf und betroffener regulärer Lauf.
-A verlangt reale Aufgabenfortschritte; B/C erst anschließend. LAB-1 gilt,
-read-only Vorlauf ohne Aktorbesitzer, keine routinemäßige Motorsperrenfrage.
-Keine künstliche HWT-Störung, Grenzlockerung oder Wiederholung alter Sondertests.
+**Aktuellster Stand nach realer Fortsetzung:** `fb4608a` ist gebaut, mit
+221 Tests und dem wiederholten echten gerätefreien Produktgraph geprüft.
+Realer Folgelauf: vollständiger Scan und sieben autonome Kinder, keine
+abgeschlossene Aufgabe; sechs `SOURCE_INVALIDATED`-Cancels, abschließend
+bewusster Missionscancel. Kein HWT-first_fault. A nicht bestanden, B/C nicht
+erreicht; alle Prozesse beendet. Originalwerte und Nachweisgrenzen: STATUS §7.
+
+**Genau nächster Auftrag:** Ersten Kartenquellennachweis-Abbruch im bestehenden
+Bag bei 1790712351.0938768 gerätefrei auf die konkrete interne Nachweisübergabe
+eingrenzen. Die letzte veröffentlichte aktive Zielprüfung war `current` auf
+Revision 311; das beweist keinen weiterhin aktuellen internen Quellzustand.
+Nur die reproduzierte Ursache minimal korrigieren und gezielt prüfen, danach
+reguläres A fortsetzen. Keine Frischegrenze erhöhen, keine historischen HWT-
+Audits, keine künstliche Störung, kein manuelles Ziel und keine unveränderte
+Blindwiederholung. LAB-1 bleibt gültig; keine neue Standardfreigaberunde.
 
 **Historischer Zwischenstand nach A4:** Kandidat `872f6a8`.
 Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,

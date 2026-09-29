@@ -21,12 +21,12 @@ Eine durchgängige beobachtete Folge A (autonomes Ziel und reale Navigation),
 B (Hindernis/Befreiung bei erhaltener Mission), C (vollständiger Portalübergang
 und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
 Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
-Details und laufender Ergebnisstand in Abschnitt 7. Die früheren A1–A4-Belege
-bleiben erhalten. Der fortgesetzte reguläre Lauf nach A4 schloss den Scan ab,
-erzeugte mehrere autonome Nav2-Kinder und zeigte Vorwärtsfahrt, endete aber an
-einem neuen HWT-Health-Erstfehler vor bestätigter Zielerreichung. Der konkrete
-Callback-Überholer ist mit `513af02` eng korrigiert; 157 Pakettests und ein
-isolierter Paketbuild bestanden. Der folgende reale Lauf und dessen neue konkrete Auftragserhalt-Lücke stehen in Abschnitt 7.
+Details und laufender Ergebnisstand in Abschnitt 7. Bisherige A1–A4-Belege
+bleiben erhalten. Aktueller Softwarekandidat `fb4608a`; sieben autonome Kinder
+im jüngsten regulären Lauf, aber keine abgeschlossene Aufgabe. Wiederholte
+`SOURCE_INVALIDATED`-Cancels verhindern den A-Nachweis. HWT blieb im jüngsten
+Lauf gesund. Genau nächster Auftrag ist die gezielte gerätefreie Eingrenzung
+des ersten Kartenquellennachweis-Abbruchs; keine unveränderte weitere Fahrt.
 Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
@@ -852,6 +852,56 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
+
+### Aktuellster Realbefund 29.09.2026: sieben Kinder, A weiterhin offen
+
+Kandidat `fb4608a`, isoliertes Explore-Overlay `hold-task-install` über dem
+HWT- und Startgate-Fix. Bytegleichheit der kritischen Module, Runtime-Manifest,
+wirkliche Produktparameter und neue Live-Scopebindung lokal gesichert unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/autonomous-goal-after-hold-task-fix/`.
+Lesender Vorlauf ohne Aktorbesitzer bestanden, danach aktiver Quellencheck
+bestanden. Bei der lokalen Vorbereitung verweigerte der Portalmonitor zunächst
+den Start ohne Scope; das aktuelle Polygon wurde deshalb vor Missionsstart
+gebunden und der noch untätige Explorer neu geladen. Keine Produktgrenze geändert.
+
+Reguläre MM→BT→WE-Mission ab 1790712126.817052, kontrolliert gecancelt nach
+459,860 s (Grenzen weiterhin 900 s gesamt / 120 s pro Kind). Initialscan
+abgeschlossen; sieben autonom erzeugte Nav2-Kinder, alle terminal CANCELED.
+Sechs vorherige Abbrüche waren `SOURCE_INVALIDATED`, das letzte Kind endete
+mit dem bewussten Missionscancel. Maximal ausgegebenes lineares Kommando
+0,10 m/s; 203 Nichtnull-Linear-Kommandos aufgezeichnet. Kumulierte
+Odometrie-Translation 0,227094 m **einschließlich Rundblickdrift**, daher kein
+Nachweis entsprechend großer gezielter Vorwärtsfahrt. Keine abgeschlossene
+Aufgabe und keine Portalquerung. **A nicht bestanden, B/C nicht erreicht.**
+
+Keine HWT-first_fault in 9255 Gate-Status- und 478 Explorer-Statusnachrichten.
+Der natürliche HWT-Fehler trat hier nicht erneut auf; dieser Lauf beweist die
+neue HOLD-Aufgabenpräferenz deshalb nicht real. Der gerätefreie Nachweis bleibt
+getrennt bestehen. Der frühere bestandene HWT-Rundblicknachweis bleibt erhalten.
+
+Konkreter neuer Blocker: wiederholte Invalidierung des exakten aktiven
+Kartenquellennachweises und fehlende frische Zielkandidaten. Erster Cancel bei
+1790712351.0938768; zuletzt publizierte aktive Zielprüfung noch `current`,
+Revision 311. Zuvor bei 1790712348.739325: Revision 310,
+`exact_raw_map_unavailable`, Quelle `portal_memory` veraltet. Die veröffentlichte
+Statusfolge belegt die wechselnde Nachweislage, **nicht** die im Cancelmoment
+intern zuerst verletzte Einzelprüfung. Insgesamt 174 Statusmeldungen mit
+veraltetem `portal_memory`, 50 mit veraltetem `region_graph`; keine pauschale
+Ursachenzuordnung aller Cancels daraus. Originalfenster und Aktionen in
+`source-invalidation-windows.json` / `run-analysis.json` und dem Bag bewahrt.
+
+Mission/Explorer terminal canceled, alle sieben Kinder terminal, RPM beidseits
+0, Odometrie-v nahe 0 und w 0,000172 rad/s. Stack, separat neu geladener Explorer,
+Recorder und Zeitwächter beendet; keine verbleibenden Roboterprozesse oder
+seriellen Handles. Physischer Beobachterbericht separat angefragt, bisher offen.
+Keine weitere unveränderte Fahrt, kein Merge und kein dauerhafter Installwechsel.
+
+**Genau nächster Auftrag:** Den ersten `SOURCE_INVALIDATED` anhand dieses Bags
+und der bestehenden Rohkarten-Revalidierung gerätefrei auf die konkrete
+Nachweisübergabe eingrenzen; nur eine tatsächlich reproduzierte Ursache minimal
+korrigieren und gezielt prüfen. Anschließend regulären A-Lauf fortsetzen,
+B/C erst nach echtem Aufgabenfortschritt. Keine Frischegrenze lockern, keine
+weitere historische HWT-Ursachensuche und keinen manuellen Zielersatz einsetzen.
 
 ### Fortsetzung 29.09.2026: natürliches HWT-HOLD im autonomen Kind
 
