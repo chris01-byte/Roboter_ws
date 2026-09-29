@@ -1111,6 +1111,45 @@ aktuelle physische Sperrstellung. **Genau nächster Schritt:** nach wirksamer
 unabhängiger Motorsperre den korrigierten Paketstand motorlos prüfen und dann
 den betroffenen regulären A-Produktlauf gezielt fortsetzen. Kein Stufe-3-Grün.
 
+### Fortsetzung: Runtime bestätigt, physischer Vorlauf noch blockiert
+
+Der ergänzte Nutzerauftrag hält A → B → C und LAB-1 aufrecht. A erfordert
+nachweisbaren Aufgabenfortschritt; wenige Zentimeter oder wiederholtes
+Cancel/Replan genügen nicht. B umfasst getrennt frühe Umfahrung,
+Nahbereichshalt/Wiederaufnahme und einen lösbaren Wand-/Eckfall. C umfasst
+vollständige Heckpassage, bestätigten Bereichswechsel und weitere Erkundung
+derselben Mission. Für diese Fortsetzung wurden A/B/C noch nicht ausgeführt.
+
+Der vorbereitete Manifestlauf auf `07f0b4b` löst Health und Yaw-Schatten aus
+`hwt-callback-order-install/robot_state_estimation` auf; beide geladenen Module
+sind bytegleich zur Quelle (`Health: 8055fa44…`, `Shadow: 907aba5f…`). Kein
+erneuter Build oder HWT-Test erforderlich. Lokaler Nachweis:
+`autonomous-goal-after-callback-fix/prepared-runtime-manifest.json`.
+Dies ist Paketauflösung, noch kein Live-Preflight.
+
+Der Portalmonitor verlangt zusätzlich zum Aktivierungsparameter einen
+verifizierten Scope und `door_lidar_motion_mode=true`. Das bisherige Profil
+erfüllt diese Bedingungen nicht. Vorhandene Produktionswerte für Kontur und
+Durchfahrtsüberwachung wurden im lokalen Profil
+`~/.local/share/amadeus/profiles/we1-two-rooms-hall-r9-20260922.yaml` gefunden;
+keine synthetischen Smoke-Testwerte übernehmen. Dessen Betreiberbeleg umfasst
+zwei Zimmer plus verbindenden Flur, schließt Treppen/Außenflächen aus und ist
+auch im ROBOT_TRANSFER dokumentiert. Die dortigen Koordinaten sind ausdrücklich
+an den damaligen R9-SLAM-Kontext gebunden. Daher keine neue allgemeine
+Bereichsfreigabe verlangen, aber die aktuelle Kartenzuordnung vor C tatsächlich
+nachweisen. Altes Polygon und altes 420-s-Kindlimit nicht übernehmen;
+aktuell bleiben 900/120 s maßgeblich.
+
+**Konkreter aktueller Blocker:** Die angeforderte physische Motorsperre für
+den Vorlauf nach `513af02` ist noch nicht als gesetzt gemeldet. Letzter
+verlässlicher Zustand war „kontrolliert frei“. Keine fernbedienbare,
+verifizierte unabhängige Sperrschnittstelle vorhanden; keine Stellung aus
+Nullkommandos ableiten. Kein Stack oder Recorder gestartet, keine Roboterknoten
+gefunden. **Genau nächster Schritt:** nach Meldung „gesperrt“ Encoder und
+Stillstand selbst motorlos prüfen, Live-Karte/Scope/Portalprofil zuordnen und
+den regulären A→B→C-Auftrag innerhalb LAB-1 fortsetzen. Keine neue Vorlage,
+kein Stufe-3-Grün und keine HWT-Injektion.
+
 ### Historische Kindziel-Sondertests bis 28.09.2026
 
 Die folgenden Befunde bleiben erhalten. Ihre damaligen Folgeaufträge und

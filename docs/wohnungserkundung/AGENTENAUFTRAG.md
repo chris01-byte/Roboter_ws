@@ -111,6 +111,20 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
+**Ergänzter ausführbarer Auftrag:** Regulären A→B→C-Produktlauf bis zur
+vollständigen Türdurchfahrt und Weitererkundung im angrenzenden Bereich führen.
+HWT-Fix `513af02` ist im bestehenden Overlay bytegleich aufgelöst; keine
+erneute Implementierung. Für den motorlosen Vorlauf bleibt ausschließlich die
+bereits angeforderte physische Bedienhandlung „Motorsperre setzen“ offen;
+Encoder-Erreichbarkeit und Stillstand danach selbst prüfen. Der Betreiberbeleg
+für zwei Zimmer plus Flur ist im lokalen R9-Profil und ROBOT_TRANSFER vorhanden.
+Seine alte SLAM-Geometrie nicht wiederverwenden; aktuellen Kartenbezug und
+benötigte Portalmonitorparameter vor Fahrt tatsächlich binden. Keine allgemeine
+Freigaberunde. A verlangt Aufgabenfortschritt, B getrennte Pflichtfälle
+(Umfahrung, Nahbereichshalt/Wiederaufnahme, lösbare Wand/Ecke), C vollständige
+Heckpassage und Fortsetzung derselben Mission im angrenzenden Bereich. Aktuelle
+Vorbereitungsbefunde und der konkrete Blocker stehen im STATUS Abschnitt 7.
+
 **Aktuellster Stand nach Fortsetzung:** Commit `513af02` auf PR #105 korrigiert
 einen im neuen realen A-Lauf konkret nachgewiesenen HWT-Callback-Überholer.
 Scan, autonome Nav2-Kinder, Vorwärtsfahrt und Neuplanung waren zu sehen; vor
