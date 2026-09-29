@@ -4509,3 +4509,28 @@ def test_late_active_validation_cannot_overwrite_newer_rejection(
     assert proof[1].map_revision == new_revision
     assert not proof[1].current
     assert node._wohnungserkundung_active_frontier_fingerprint == 'c' * 64
+
+
+def test_completed_policy_without_exact_raw_join_keeps_bounded_handoff(monkeypatch):
+    """Real revision 321 was processed with exact_raw_map_unavailable."""
+    context = PortalMapContext('session-join', 'map-join', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 7, True),
+        'fixed_goal_revalidated_fast')
+    clock = {'now': 10.0}
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock['now'])
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 11.24
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 11.26
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+    # An exact negative proof must close immediately, even within the window.
+    clock['now'] = 10.1
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 8, False),
+        'fixed_goal_invalid:FrontierGoalCandidateError')
+    assert not node._wohnungserkundung_source_state(intent, candidate).current

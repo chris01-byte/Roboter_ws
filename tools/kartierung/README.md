@@ -346,3 +346,12 @@ Wahrheit steht in der Datenbank:
 ```bash
 rtabmap-info ~/.local/share/amadeus/rtabmap.db | sed -n '/^Info:/,$p'
 ```
+
+
+### Laufenden SQLite-Bag nicht direkt auswerten (29.09.2026)
+
+Auch eine `mode=ro`-Verbindung kann bei einer langen Abfrage den SQLite-Writer
+blockieren. Im realen Lauf `fe75576` endete rosbag2 mit `database is locked`;
+der Schlussabschnitt fehlte. Erst Recorder geordnet stoppen, dann auswerten.
+Livebeobachtung über vorhandene Topics/Beobachterprotokolle, nicht über den
+aktiven DB-Dateipfad. Ausfall des Recorders beendet einen Nachweislauf.

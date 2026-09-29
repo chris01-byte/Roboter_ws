@@ -4043,3 +4043,12 @@ Aktor-Schreibzugriff; erreichbare Encoder und gemessenen Stillstand selbst
 prüfen. Die vorher offene Sperr-Rückmeldung blockiert diesen passiven Pfad
 nicht mehr. Not-Aus, produktive Schutzgates und Fehlerstopps bleiben wirksam.
 Verbindlich in LAB-1 §3 und AGENTS §2 aufgenommen.
+
+
+29.09.2026, zweiter Kartenjoin-Gegenfall: Policy `processed_revision` ohne
+`candidate_inputs` beweist weder einen exakten Rohkartenjoin noch eine negative
+Zielprüfung. Das bestehende 1,25-s-Handoff bleibt bis zur echten Einzelprüfung
+oder Fristablauf erhalten; kein Neustart des Timers. Reales HWT-Terminal mit
+gesunden Sensoren, aber `no_current_raw_map_route` der unterbrochenen Aufgabe
+bleibt gesperrt. Recorder-Bag niemals während Aufzeichnung direkt per SQLite
+lesen; der heutige Auswertungszugriff verursachte eine dokumentierte Baglücke.

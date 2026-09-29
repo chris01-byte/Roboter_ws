@@ -6249,8 +6249,14 @@ class ExploreNode(Node):
             if active_frontier_source[1].current:
                 self._clear_wohnungserkundung_unconfirmed_intent(intent)
             return active_frontier_source[1]
-        if processed_revision is None or processed_revision < (
-                correlation.map_revision):
+        # A processed policy revision can still lack its exact raw-map join.
+        # It is not a negative fixed-goal proof. Keep the existing bounded
+        # handoff until the joined callback proves or rejects that goal.
+        # Exact negative proofs above close immediately; the deadline never
+        # resets on later map/status arrivals.
+        if (isinstance(candidate, FrontierGoalCandidate)
+                or processed_revision is None
+                or processed_revision < correlation.map_revision):
             pending = self._wohnungserkundung_unconfirmed_within_grace(
                 intent, received_at)
             return NavigationSourceState(

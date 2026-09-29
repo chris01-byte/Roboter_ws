@@ -854,6 +854,51 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
+### Nachtrag 29.09.2026 – Realfahrt `fe75576`, zweiter Join-Gegenfall
+
+Passiver/aktiver Quellencheck, Runtime-Manifest, geladene Profilparameter und
+Bytegleichheit des Explore-Moduls bestanden. Live-Scope neu gebunden, keine
+manuellen Ziele. Vollständiger Initialscan; danach zwei autonome Nav2-Kinder.
+Erstes Kind rund 61 s aktiv, dann `SOURCE_INVALIDATED`; keine Aufgabe erreicht.
+Auf allen 70 aufgezeichneten Rohkarten des ersten Kindfensters ist der feste
+Zielpunkt im Replay gültig. Unmittelbar beim Cancel meldet die Policy für
+Revision 321 `active_goal_validation=invalid`, `exact_raw_map_unavailable`.
+
+Gerätefreier zusätzlicher Gegenfall: verarbeitete Policyrevision ohne exakten
+Rohkartenjoin beendet bisher die 1,25-s-Übergabe sofort. Korrektur hält genau
+die bereits bestehende, nicht verlängerbare Frist auch in dieser Reihenfolge;
+exakte negative Zielprüfung sperrt weiterhin sofort. Test vorher fehlgeschlagen,
+nachher 245 Tests bestanden; separater `join-install`-Build bestanden.
+
+Zweites reales Kind bei natürlichem HWT-Lesetimeout gestoppt. Erstfehler
+1790715982.0392425 (Explorer): `ready=false`, `raw_data_ready=false`,
+`consecutive_errors=1`, `Zeitueberschreitung nach 0/3 Bytes`, kein Reconnect.
+Sensorhealth nach etwa 1,55 s wieder gesund, aber keine Missionsfreigabe:
+unterbrochene Aufgabe `task-frontier_000009` in Revisionen 406/408/410
+`temporarily_blocked/no_current_raw_map_route`. Andere ausgewählte Aufgaben
+ersetzen diese Wiederaufnahmebedingung nicht. Nach unverändertem Recoverybudget
+terminal. Das ist kein bestandener Recovery-/Türnachweis; Sperre bleibt korrekt.
+
+**Aufzeichnungslücke durch Auswertungsfehler:** Ein lesender SQLite-Replayzugriff
+auf den laufenden Bag blockierte den Recorder (`database is locked`). Bag endet
+1790715961.2698238, vor dem HWT-Ereignis. Seine Summen sind ausdrücklich nur
+Teilsummen. Das unabhängige Beobachterprotokoll und Explorerlog enthalten
+First-fault, HOLD/HEALTHY/terminal, beide terminalen Kinder und abschließenden
+Stillstand; Observer-Odometriesumme 0,698318 m inklusive Scan-Drift, keine
+Türquerung. Keine physische Beobachterantwort eingegangen. Kein Wohnungsdatum
+ins Repository übernommen. Lokale Evidenz: `stage3-map-handoff-20260929/real-run`.
+RPM null, frische Odometrie still, beide Kinder terminal; alle Geräteprozesse und
+Ports nach Stopp frei. Der passive Shutdown hatte eine rclpy-Exception im
+Yaw-Prozess; kein laufender Besitzer blieb übrig.
+
+Bestehender Produktgraph auf dem Join-Kandidaten BESTANDEN
+(`join-map-product.log`): gleiches Kind während blockierter Policy erhalten,
+Nutzer-Cancel terminal. Nächster Schritt im selben Auftrag: eine begrenzte
+reguläre Wiederholung mit neuem Live-Scope. Bestehender Testzeitwächter überwacht zusätzlich Recorderprozessverlust;
+vier gerätefreie Entscheidungsfälle bestanden. Keine direkte SQLite-Auswertung
+eines laufenden Recorders mehr. Keine Fristlockerung, kein HWT-Reset während
+Mission und keine pauschale Wiederanfahrt aus dem terminalen Lauf.
+
 ### Auftrag 29.09.2026: Kartenübergabe korrigieren, real bis in nächsten Raum
 
 Erneute ausdrückliche Laborfreigabe und Auftrag zur autonomen Türsuche sowie

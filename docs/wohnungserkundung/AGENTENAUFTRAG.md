@@ -536,3 +536,16 @@ Der Vorgängerauftrag zu M3/U ist
 [byteidentisch archiviert](../archive/2026-09/WOHNUNGSERKUNDUNG_AGENTENAUFTRAG_40b5b49.md).
 Seine damalige Basis PR #91 und sein Abschnitt 7 sind **kein aktueller Auftrag**.
 Historische fachliche Nachweise bleiben erhalten; Archive nicht automatisch ausführen.
+
+
+### Laufende Konkretisierung 29.09.2026: exakter Kartenjoin
+
+Realer Versuch `fe75576` blieb ohne Ziel-/Türerfolg. Zweiten belegten
+Übergabegegenfall korrigiert: verarbeitete Policy ohne exakten Rohkartenjoin
+darf die bestehende 1,25-s-Frist nicht vorzeitig beenden. 245 Tests, isolierter
+`join-install` und bestehender Karten-Produktgraph bestanden. Genau nächste
+Ausführung ist der reguläre begrenzte Laborlauf nach lesendem Quellencheck
+und neuer Live-Scopebindung, 900 s gesamt / 120 s je Kind unverändert.
+Vorhandener Testwächter stoppt zusätzlich bei Recorderprozessverlust. Keine
+SQLite-Abfragen auf dem aktiven Recorder. Nach Ablauf/Fault geordnet stoppen;
+HWT-Quellheilung bei fehlendem Weg der ursprünglichen Aufgabe nicht freigeben.
