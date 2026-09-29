@@ -85,6 +85,7 @@ def test_gate_needs_new_explorer_hold_resume_and_new_velocity_command():
         'active_command': {'type': 'explore'}}
     CmdVelMissionGate._publish(gate)
     assert output[-1].linear.x > 0.0
+
     del health.samples['raw']
     CmdVelMissionGate._publish(gate)
     assert output[-1].linear.x == 0.0
@@ -120,3 +121,66 @@ def test_gate_needs_new_explorer_hold_resume_and_new_velocity_command():
     gate._command_time = time.monotonic()
     CmdVelMissionGate._publish(gate)
     assert output[-1].linear.x > 0.0
+
+
+def startup_idle_gate():
+    gate, health, output, status = gate_with_ready_sources()
+    gate._hwt_mission_seen = False
+    gate._allow_localization_search = False
+    gate._allow_stage3_diagnostic = False
+    gate._hwt_resume_pending = True
+    gate._status = {'state': 'idle', 'active_command': None}
+    gate._command = Twist()
+    gate._mission_authorized = lambda status, now: False
+    health.motion_failure()
+    return gate, health, output, status
+
+
+def test_recovered_pre_mission_gap_does_not_wait_for_nonexistent_resume():
+    gate, health, output, status = startup_idle_gate()
+    CmdVelMissionGate._on_explore_status(gate, String(data=json.dumps({
+        'state': 'idle', 'phase': 'idle', 'hwt_recovery_sequence': 0})))
+    assert gate._hwt_resume_pending is False
+    CmdVelMissionGate._publish(gate)
+    assert json.loads(status[-1].data)['hwt_motion_ready'] is True
+    assert output[-1].linear.x == 0.0
+    assert gate._mode == 'blocked'  # an actual mission is still required
+
+
+@pytest.mark.parametrize('countercase', [
+    'previous_mission', 'stale_manager', 'active_command', 'nonzero_command',
+    'localization_search', 'diagnostic', 'hold', 'hard_fault', 'hold_sequence',
+])
+def test_idle_status_cannot_release_a_mission_hold_or_unhealthy_source(countercase):
+    gate, health, output, status = startup_idle_gate()
+    if countercase == 'previous_mission':
+        gate._hwt_mission_seen = True
+    elif countercase == 'stale_manager':
+        gate._status_time -= 2.0
+    elif countercase == 'active_command':
+        gate._status['active_command'] = {'type': 'explore'}
+    elif countercase == 'nonzero_command':
+        gate._command.linear.x = .05
+    elif countercase == 'localization_search':
+        gate._allow_localization_search = True
+    elif countercase == 'diagnostic':
+        gate._allow_stage3_diagnostic = True
+    elif countercase == 'hold':
+        health.recovery_state = 'HOLD'
+    elif countercase == 'hard_fault':
+        health.recovery_state = 'TERMINAL_FAULT'
+        health.latched_fault = 'invalid_raw'
+    elif countercase == 'hold_sequence':
+        gate._hwt_hold_sequence = 1
+    CmdVelMissionGate._on_explore_status(gate, String(data=json.dumps({
+        'state': 'idle', 'phase': 'idle', 'hwt_recovery_sequence': 0})))
+    assert gate._hwt_resume_pending is True
+
+
+def test_mission_seen_is_not_forgotten_after_idle():
+    gate, health, output, status = startup_idle_gate()
+    CmdVelMissionGate._on_status(gate, String(data=json.dumps({
+        'state': 'running', 'active_command': {'type': 'explore'}})))
+    CmdVelMissionGate._on_status(gate, String(data=json.dumps({
+        'state': 'idle', 'active_command': None})))
+    assert gate._hwt_mission_seen is True

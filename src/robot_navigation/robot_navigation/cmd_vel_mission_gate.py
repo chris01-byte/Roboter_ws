@@ -411,6 +411,7 @@ class CmdVelMissionGate(Node):
         self._hwt_hold_sequence = None
         self._hwt_seen_sequence = 0
         self._hwt_resume_at = None
+        self._hwt_mission_seen = False
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
         self._tf_buffer = Buffer()
@@ -542,6 +543,10 @@ class CmdVelMissionGate(Node):
             return
         self._status = status
         self._status_time = time.monotonic()
+        if (isinstance(status, dict)
+                and (status.get('state') != 'idle'
+                     or status.get('active_command') is not None)):
+            self._hwt_mission_seen = True
         if not self._mission_authorized(status, time.monotonic()):
             # Nicht erst auf den naechsten Timer-Tick warten.
             if not self._search_authorized(time.monotonic()):
@@ -573,6 +578,28 @@ class CmdVelMissionGate(Node):
             return
         if not self._hwt_resume_pending:
             self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
+            return
+        # A recovered source gap before the first mission has no interrupted
+        # Explorer task that could send RESUME. Accept fresh idle observers
+        # only; after any mission, the existing HOLD/RESUME handshake applies.
+        now = time.monotonic()
+        if (not getattr(self, '_hwt_mission_seen', True)
+                and status.get('state') == 'idle' and phase == 'idle'
+                and sequence == 0 and self._hwt_hold_sequence is None
+                and isinstance(self._status, dict)
+                and self._status.get('state') == 'idle'
+                and self._status.get('active_command') is None
+                and 0.0 <= now - self._status_time <= self._status_timeout
+                and not getattr(self, '_allow_localization_search', True)
+                and not getattr(self, '_allow_stage3_diagnostic', True)
+                and self._hwt_guard.health.recovery_state == 'HEALTHY'
+                and self._hwt_guard.health.source_failure() is None
+                and all(value == 0.0 for value in (
+                    self._command.linear.x, self._command.linear.y,
+                    self._command.linear.z, self._command.angular.x,
+                    self._command.angular.y, self._command.angular.z))):
+            self._hwt_resume_pending = False
+            self._hwt_resume_at = now
             return
         if (phase != 'we_hwt_resumed'
                 or self._hwt_hold_sequence != sequence
