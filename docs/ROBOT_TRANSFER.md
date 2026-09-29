@@ -2546,3 +2546,16 @@ Statusnachrichten). Vergangene Goal-UUID/Terminalfolge liegt im Controllerlog,
 nicht im Real-Bag. Abschaltfaults und tatsächlichen Vorlauf-FC03-Zeitüberlauf
 getrennt behandeln, siehe WE-STATUS. Zum Abschluss keine Roboterknoten oder
 Portbesitzer mehr; alle sieben Aufzeichnungen ohne Fahrkommando/Translation.
+
+
+## 29.09.2026 – Schritt-3-Produktprofil motorlos geprüft
+
+Aktueller Auftrag gemäß WE-STATUS: normale A/B/C-Kernabnahme, keine
+HWT-Fault-Injection und keine lokalen Kindziel-Sonderlimits. Dieselbe temporäre
+Overlayreihenfolge wie am 28.09.; kein Installwechsel. Byteidentische lokale
+Kopie des Repository-Recoveryprofils, SHA `ee3b42ee…`; Quellen-/Karten-/TF-
+Vorlauf mit `active_drive=false` bestanden. Belege unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/`. Alle Prozesse danach
+geordnet beendet; kein Fahrbefehl. Aktuelle Fahrt noch nicht durchgeführt.
+Das Profil aktiviert WE und Portalwahl, aber nicht den separaten WE-
+Portalmonitor; dessen Zuordnung und Live-Scope müssen für Phase C belegt sein.

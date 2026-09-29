@@ -3975,3 +3975,15 @@ Paarzeitüberlauf (0,121539587 s bei 0,12 s) bleibt offener Einzelbefund,
 kein Grenzwert erhöht. Ein späterer sauberer motorloser Start beweist keine
 Ursachenbehebung. Aktueller fachlicher Stand und genau ein Folgeauftrag nur im
 WE-STATUS, Abschnitt 7; kein Fahr-/Recovery-Grün aus dieser Vorbereitung.
+
+
+## 29.09.2026 – Nutzerentscheid: Schritt 2 abgeschlossen, reale Kernabnahme
+
+PR #105 / `5c6ff0e`: Der erste HWT-Wiederaufnahmefall ist aus gerätefreiem
+aktivem Kind-Recoveryvertrag und realer Initialscan-Recovery angenommen. Die
+reale HWT-Kindinjektion bleibt späterer Robustheitsnachweis, kein Stufe-3-Gate
+und kein fehlgeschlagener Produktnachweis. Keine weitere HWT-Injektion im
+aktuellen Auftrag. Die lokalen Sonderrouten-/Translations-/Vorwärtsgrenzen
+werden nicht als Produktregeln weitergeführt. Produktive Schutzgrenzen bleiben.
+Nächster Auftrag: reale A/B/C-Kernabnahme über MM/BT/WE/Nav2 im beaufsichtigten
+Labor; Masterplan v1.1 unverändert. Kein Stufe-3-Grün ohne reale Gesamtbelege.

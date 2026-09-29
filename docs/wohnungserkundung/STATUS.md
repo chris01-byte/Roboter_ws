@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und Restumfang
 
-**WE-1 · Amadeus · Stand 28.09.2026 · Stufe 3 weiterhin OFFEN/GELB**
+**WE-1 · Amadeus · Stand 29.09.2026 · Stufe 3 weiterhin OFFEN/GELB**
 
 **Aktuelle Entscheidung:** Konsolidierung statt Komplettneubau. Maßgeblich sind
 [MASTERPLAN.md v1.1](MASTERPLAN.md), die unveränderte
@@ -9,19 +9,25 @@
 
 ## 1. Sofortiger Arbeitsfokus
 
-**Aktueller Stand vom 28.09.2026:** Software `6429bd6` korrigiert die optionale
-Vorwärtsbegrenzung im tatsächlichen WE-Pfad; der lokale aktive Start ist auf
-Mission Manager/BT statt Simulation berichtigt. 1.199 Regressionen und isolierter
-Build bestanden. Ein echtes autonomes Kind wurde ohne Bewegung sicher gecancelt.
-Der Fahr-/Recoveryfall bleibt **nicht ausgelöst**: Im letzten motorlosen Fenster
-fehlte ein passender autonomer Vorwärtskandidat, der reale Nachlauf bleibt offen.
-Route ≤1,50 m / Translation ≤0,60 m unverändert. Details und genau ein nächster
-Schritt in Abschnitt 7. Rundblicknachweis erhalten; Stufe 3 OFFEN/GELB.
-Arbeitsvertrag: [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md).
+**Entscheidung vom 29.09.2026, Basis PR #105 / `5c6ff0e`:**
+Masterplan Schritt 2 ist für den ersten HWT-Wiederaufnahmefall abgeschlossen:
+gerätefreier aktiver Nav2-Kind-Recoveryvertrag bestanden; realer HWT-Halt,
+Recovery und Fortsetzung desselben Initialscans bestanden. Die reale
+HWT-Injektion bei aktivem Nav2-Kind bleibt ein späterer Robustheitsnachweis,
+ist kein aktuelles Gate und kein fehlgeschlagener Produktnachweis.
 
-Keine neue Wohnungsfahrt, kein kompletter Rewrite, kein OS-Neuaufbau, kein
-automatischer Merge und kein aktiver Installwechsel. Die vorhandene
-HWT-/VL53-Schutzwirkung bleibt fail-closed. Die Frischegrenzen sind unverändert.
+Aktueller Auftrag ist **Schritt 3: konsolidierten Kern real abnehmen**.
+Eine durchgängige beobachtete Folge A (autonomes Ziel und reale Navigation),
+B (Hindernis/Befreiung bei erhaltener Mission), C (vollständiger Portalübergang
+und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
+Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
+Details und laufender Ergebnisstand in Abschnitt 7.
+
+Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
+Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
+Auftrag aufgehoben. Produktive Footprint-, Costmap-, Kollisions-, VL53-,
+Frische-, Pose-/TF- und Geschwindigkeitsgrenzen bleiben unverändert.
+Kein Merge, kein dauerhafter Installwechsel, keine vorsorgliche Produktänderung.
 
 ## 2. Konsolidierte Quell- und Buildbasis
 
@@ -840,6 +846,50 @@ Kein TOR 2, Merge, Installwechsel oder weiterer Fahrtest folgt automatisch.
 und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
+
+### Aktueller Auftrag vom 29.09.2026: reale Kernabnahme A → B → C
+
+Verbindlicher Nutzerentscheid auf `5c6ff0e`: Schritt 2 wie in Abschnitt 1
+abgeschlossen; reale HWT-Kindinjektion geparkt. Keine Fault Injection hier.
+Kandidat bleibt Software `6429bd6` mit korrigiertem HWT-/Portalpfad `e5b221b`.
+Das Repositoryprofil `hwt601_recovery_acceptance_params.yaml` ist die Basis:
+WE-Navigation, Initialscan, Portal und Coverage aktiv; Rückfahrt aus.
+Die speziellen lokalen Kindziel-Testprofile und Controllergrenzen gelten nicht.
+Vorhandene 900-s-Gesamtfrist, 120-s-Kindfrist und produktive Schutzgrenzen bleiben.
+
+Reihenfolge: motorloser Quellen-/Karten-/TF-Vorlauf mit tatsächlichem Manifest,
+danach reguläre Mission ausschließlich über Mission Manager → BT → WE-Explorer
+→ Nav2 → Schutzkette → Basis. Recorder vor Stack, Action-Themen mit
+`--include-hidden-topics`. Kein manuelles Ziel, kein synthetischer Task.
+Nach A direkt B, dann C im selben beaufsichtigten Laborauftrag. Eine geeignete
+reale Hindernis-/Türsituation muss tatsächlich beobachtet werden; fehlende
+Belege werden nicht durch Simulation oder bloße Sensorbereitschaft ersetzt.
+
+Aktueller Ausführungsstand: **motorloser Quellen-/Karten-/TF-Vorlauf bestanden**.
+Lokale Belege unter `~/.local/share/amadeus/tests/stage3-core-20260929/`:
+`passive-manifest.json`, `passive-source-preflight.json`, `passive-summary.json`,
+`passive-bag/`. Produktprofil SHA256
+`ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`.
+60,244 s Aufzeichnung, null Nichtnull-Kommandos auf `/cmd_vel`. Reale Quellen,
+Bias-Readiness, Encoder-FC03, VL53-Frames, Stillstand, Karte und Map-TF geprüft;
+Mission/Explorer idle. Recorder vor Stack; beide sauber beendet.
+Noch keine neue Mission oder Fahrt gestartet. Der Portalmonitor ist im
+Recoveryprofil noch aus; für C fehlen dessen explizite Profilzuordnung und
+eine aktuelle verifizierte Labor-Scopebindung. Alte Polygone werden nicht
+übernommen. Quellen-Preflight allein ist keine A/B/C-Abnahme.
+Die unabhängige Motorsperre ist zuletzt als geschlossen bei erreichbaren
+Encodern bestätigt. Die Labor-Sitzungsfreigabe gilt; eine notwendige tatsächliche
+Schalterstellung ist von erneuter Freigabe zu unterscheiden.
+Konkrete Softwarefehler werden gemessen, minimal korrigiert und gezielt erneut
+geprüft. Hard-Faults beenden den Lauf; Shutdownbefunde getrennt ausweisen.
+**Genau nächster Auftrag:** Diese reale A/B/C-Kernabnahme durchführen; erst bei
+vollständigem Erfolg WE-M4 vorbereiten. Masterplan v1.1 bleibt unverändert.
+
+### Historische Kindziel-Sondertests bis 28.09.2026
+
+Die folgenden Befunde bleiben erhalten. Ihre damaligen Folgeaufträge und
+künstlichen HWT-Testgrenzen sind durch den vorstehenden Nutzerentscheid abgelöst.
+
 
 ### Aktueller Ergebnisstand 28.09.2026: Produktpfad korrigiert, Fahrfall offen
 

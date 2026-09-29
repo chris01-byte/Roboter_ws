@@ -109,7 +109,44 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
-### Aktueller Auftrag nach dem Ergebnis vom 28.09.2026
+### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
+
+Basis PR #105 / `5c6ff0e`, funktionaler Kandidat `6429bd6`; Masterplan v1.1
+unverändert. Schritt 2 ist für den ersten HWT-Fall abgeschlossen: gerätefreier
+Nav2-Kind-Recoveryvertrag und reale Initialscan-Recovery bestanden. Reale
+Kindziel-HWT-Injektion bleibt geparkter Robustheitsrest, kein Gate, kein
+fehlgeschlagener Produktnachweis.
+
+Genau ein durchgängiger Auftrag: **A → B → C** gemäß STATUS Abschnitt 7.
+A: gesunde Quellen, aktuelle Karte/TF, regulärer Explore-Auftrag, autonomes
+Frontierziel, akzeptiertes Nav2-Kind, reale Bewegung und Zielerreichung oder
+sinnvolle Neuplanung bei aktiver Mission. B: realer Hindernis-/lösbarer
+Wand-/Eckfall, Schutzwirkung, zulässiger Alternativweg/Befreiung und Fortsetzung
+desselben Auftrags. C: autonom erkanntes Portal, vollständige Durchfahrt,
+Roboter im nächsten Bereich und dort weitere Karten-/Frontierarbeit derselben
+Mission. Ein bekannter Durchgang bleibt Transitweg.
+
+Das Recovery-Produktprofil mit Initialscan, WE-Navigation, Portal und Coverage
+verwenden; keine lokalen HWT-Sondergrenzen (.45/1.50-m-Route, .60-m-Translation,
+Vorwärtskegel, enger erzwungener Korridor), keine HWT-Leserpause. Alle produktiven
+Schutz-, Footprint-, Costmap-, VL53-, Frische-, TF-/Pose- und Geschwindigkeitsregeln
+unverändert. 900 s Gesamtfrist und 120 s Kindfrist des Profils beibehalten.
+
+Motorloser Vorlauf nach Änderungen; vorhandenen Build, Manifest und synchronen
+Recorder einschließlich versteckter Action-Themen verwenden. Mission nur über
+Mission Manager → BT → WE-Explorer → Nav2. Keine manuellen Ziele oder Testtasks.
+Bestehende Laborfreigabe gilt durchgängig für technische Zwischenschritte,
+Mission und A→B→C; keine wiederholten Freigabefragen. Tatsächliche
+Hardwarestellungen/Beobachtungen nicht erfinden. Konkrete Softwarefehler minimal
+korrigieren, gezielte Regression, betroffenen Fall erneut prüfen und fortsetzen.
+Bei Hard-Fault sicher beenden; Shutdownbefunde separat. Kein Merge oder
+permanenter Installwechsel, keine allgemeine Optimierungsrunde.
+
+Erfolg erst bei realem A/B/C-Nachweis, danach WE-M4 vorbereiten. Ansonsten genau
+den konkreten Produktblocker mit Originalbeleg dokumentieren und beheben.
+
+### Historischer Auftrag nach dem Ergebnis vom 28.09.2026 (abgelöst)
+
 
 **Basis:** `6429bd6`, gleicher PR #105 / `feature/hwt-hold-recovery-resume`,
 fachlicher Masterplan v1.1 unverändert; Laborarbeitsregel LAB-1 v1.0 gilt.
