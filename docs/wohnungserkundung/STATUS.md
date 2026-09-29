@@ -26,7 +26,7 @@ bleiben erhalten. Der fortgesetzte reguläre Lauf nach A4 schloss den Scan ab,
 erzeugte mehrere autonome Nav2-Kinder und zeigte Vorwärtsfahrt, endete aber an
 einem neuen HWT-Health-Erstfehler vor bestätigter Zielerreichung. Der konkrete
 Callback-Überholer ist mit `513af02` eng korrigiert; 157 Pakettests und ein
-isolierter Paketbuild bestanden. Der betroffene reale Folgelauf steht noch aus.
+isolierter Paketbuild bestanden. Der folgende reale Lauf und dessen neue konkrete Auftragserhalt-Lücke stehen in Abschnitt 7.
 Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
@@ -853,7 +853,49 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-### Aktueller Auftrag vom 29.09.2026: reale Kernabnahme A → B → C
+### Fortsetzung 29.09.2026: natürliches HWT-HOLD im autonomen Kind
+
+Vorbereitungsfehler im noch missionslosen Stack: Eine natürliche 0,133061647-s-
+Rohdatenlücke führte zu vorübergehendem Yaw-HOLD. Nach Quellenheilung wartete das
+Gate auf ein Explorer-RESUME, obwohl noch keine Mission existierte. `08127c8`
+beseitigt ausschließlich diesen Startfall: frische explizite Idle-Meldungen
+beider Komponenten, noch nie gesehene Mission, gesunde Quellen und Nullkommando.
+Nach einer Mission bleibt der vollständige RESUME/ACK-Vertrag erforderlich.
+59 Navigationstests und isolierter Build bestanden.
+
+Danach regulärer Produktlauf mit Recorder, Manifest und lokal neu gebundenem
+Laborscope (`autonomous-goal-after-idle-fix/` unter dem lokalen Stage3-Testordner):
+Initialscan abgeschlossen, fünf autonome Kinder, rund 0,210 m kumulierte
+Odometrie-Translation einschließlich Scandrift; keine abgeschlossene Aufgabe.
+Natürliches Erstereignis bei 1790711268.4036198: `raw_driver_not_ready`,
+`ready=false`, `raw_data_ready=false` (je erwartet true), `consecutive_errors=1`
+(erwartet 0), Originalfehler `Zeitueberschreitung nach 0/3 Bytes`, Reconnects 0.
+Rohmessalter 0,0251950956 s, Status-Empfangsalter 0,028229087 s und internes
+Treiberaltersfeld 0,033392565 s sind getrennte Werte. Das neue Ereignis erklärt
+nicht rückwirkend den historischen Lauf ohne Rohstatus.
+
+Quellen erholten sich nach rund 1,45 s, das alte Kind war terminal. Während der
+Validierung wechselte die Policy aber von der unterbrochenen `task-frontier_000008`
+auf 010 und 011 (`starvation_prevention`). RESUME verlangte weiterhin Aufgabe 008;
+das unveränderte 5-s-Budget endete mit `hwt_recovery_terminal_help_required`.
+A nicht bestanden, B/C nicht erreicht. Nullkommando, RPM 0 und Odometrie-Stillstand
+aufgezeichnet; Stack/Recorder geordnet beendet. Der angefragte physische
+Beobachterbericht fehlt bisher und wird nicht aus Messwerten abgeleitet.
+
+Gezielte Korrektur: Ohne aktives Kind die gespeicherte unterbrochene HWT-Aufgabe
+als vorhandene Policy-Präferenz weiterführen, solange sie auswählbar ist.
+Keine Wiederbelebung unzulässiger Aufgaben und keine Änderung von Recoverybudget,
+Stillstand, Pose-/Routenprüfung oder Gate-ACK. 221 Policy-/Explorer-Vertragstests
+und isolierter Explore-Build bestanden. Bestehender gerätefreier Produktgraph:
+erster Versuch durch synthetische Encoderfrische-Verletzung vor dem geplanten
+Reiz nicht bestanden; unveränderte Wiederholung bestanden. Echte Yaw-Kette,
+0,270897150-s-Rohdatenlücke, erneute Lücke während Validierung, alter Kind-Cancel,
+gleiche Aufgabe, Stillstand/Pose/Route, ACK und genau ein neues Kind nachgewiesen.
+Kein Nachweis einer realen Heilung aus dieser Simulation. Genau nächster Schritt:
+lesender Hardware-Vorlauf und betroffener regulärer Produktlauf; nur bei
+A-Nachweis B/C fortsetzen.
+
+### Historischer Auftragseinstieg vom 29.09.2026: reale Kernabnahme A → B → C
 
 Verbindlicher Nutzerentscheid auf `5c6ff0e`: Schritt 2 wie in Abschnitt 1
 abgeschlossen; reale HWT-Kindinjektion geparkt. Keine Fault Injection hier.

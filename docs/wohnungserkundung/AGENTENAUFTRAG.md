@@ -126,18 +126,16 @@ Freigaberunde. A verlangt Aufgabenfortschritt, B getrennte Pflichtfälle
 Heckpassage und Fortsetzung derselben Mission im angrenzenden Bereich. Aktuelle
 Vorbereitungsbefunde und der konkrete Blocker stehen im STATUS Abschnitt 7.
 
-**Aktuellster Stand nach Fortsetzung:** Commit `513af02` auf PR #105 korrigiert
-einen im neuen realen A-Lauf konkret nachgewiesenen HWT-Callback-Überholer.
-Scan, autonome Nav2-Kinder, Vorwärtsfahrt und Neuplanung waren zu sehen; vor
-Zielerreichung verriegelte der Explorer fälschlich die frisch eingetroffene
-Rohprobe als ungültig, worauf das Kind terminal gecancelt wurde. Die echten
-Erstwerte und die Grenze stehen im STATUS Abschnitt 7. Gerätefreie Vorher/
-Nachher-Regression, 157 Pakettests und isolierter `robot_state_estimation`-
-Build bestanden; der reparierte Realfall ist noch offen. **Genau nächster
-Schritt:** Nach bestätigter physischer Motorsperre motorloser Vorlauf mit
-diesem Overlay, anschließend reguläre autonome A-Zielanfahrt in demselben
-LAB-1-Umfang. Nur bei A-Nachweis B und C fortsetzen; keine künstliche HWT-
-Störung, keine Grenzlockerung und keine Wiederholung des A4-Schlupfvergleichs.
+**Aktuellster Stand nach Fortsetzung:** Nach Startgate-Korrektur `08127c8`
+startete die reguläre Mission und erzeugte autonome Kinder. Ein natürlicher
+HWT-Lesetimeout heilte, aber die Policy verlor nach Kind-Cancel die Präferenz
+für die unterbrochene Aufgabe. Konkrete Erstwerte und Ablauf: STATUS Abschnitt 7.
+Die eng begrenzte Präferenzkorrektur im Explorer ist mit 221 Tests, isoliertem
+Build und wiederholtem Produktgraph geprüft (erster Graphversuch separat als
+fehlgeschlagen erhalten). Jetzt lesender Vorlauf und betroffener regulärer Lauf.
+A verlangt reale Aufgabenfortschritte; B/C erst anschließend. LAB-1 gilt,
+read-only Vorlauf ohne Aktorbesitzer, keine routinemäßige Motorsperrenfrage.
+Keine künstliche HWT-Störung, Grenzlockerung oder Wiederholung alter Sondertests.
 
 **Historischer Zwischenstand nach A4:** Kandidat `872f6a8`.
 Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,

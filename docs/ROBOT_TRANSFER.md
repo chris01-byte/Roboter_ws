@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## 29.09.2026 – isolierter HOLD-Auftragserhalt-Kandidat
+
+Der aktive Produktlauf mit `08127c8` ist nach terminalem Recoveryabbruch
+geordnet beendet. Neues Explore-Paket separat unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/hold-task-install`, nach
+`idle-gate-install` (Navigation) und `hwt-callback-order-install` (HWT) sourcen.
+Der Vollunderlay bleibt `hwt-child-scope-20260928-retry/install`. Kein
+dauerhafter Installwechsel. Gerätefreier Graph läuft ausschließlich localhost
+in Domain 200–230; reale Domain 42 übernimmt keine Testpublisher.
+Runtime und neuer realer Nachweis sind gesondert im STATUS zu bewerten.
+
+
 ## 28.09.2026 – gezielte Portal-/Explorer-Reparatur, noch keine neue Fahrt
 
 Explore und robot_state_estimation wurden unter

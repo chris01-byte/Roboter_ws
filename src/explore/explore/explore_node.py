@@ -2365,8 +2365,11 @@ class ExploreNode(Node):
                             utility_evidence if assessment.state is (
                                 PolicyAssessmentState.READY_WITH_TASKS)
                             else (),
+                            # HOLD has a terminal child, but still owns its task.
+                            # The policy retains it only while it is selectable.
                             preferred_task_id=(
-                                None if active_child is None else
+                                getattr(self, '_hwt_interrupted_task_id', None)
+                                if active_child is None else
                                 active_child[0].task_id),
                         )
                         self._wohnungserkundung_stateful_assessment = stateful
@@ -6484,7 +6487,7 @@ class ExploreNode(Node):
                     NavigationStopCause.HWT_RECOVERY_HOLD):
                 with self._wohnungserkundung_runtime_lock:
                     self._wohnungserkundung_consumed_intent_id = intent.intent_id
-                self._hwt_interrupted_task_id = intent.task_id
+                    self._hwt_interrupted_task_id = intent.task_id
                 return run, None
             portal_outcome = None
             if portal_monitor is not None:

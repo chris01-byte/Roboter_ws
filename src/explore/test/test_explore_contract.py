@@ -3424,8 +3424,9 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
     assert publications[0].data == '{}'
 
 
+@pytest.mark.parametrize('interrupted_task_id', [None, 'held-task'])
 def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
-        monkeypatch):
+        monkeypatch, interrupted_task_id):
     assessment = SimpleNamespace(
         eligible_task_ids=(),
         state=PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES,
@@ -3439,6 +3440,7 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     publications = []
     assessed = []
     node = ExploreNode.__new__(ExploreNode)
+    node._hwt_interrupted_task_id = interrupted_task_id
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
     node._region_graph_shadow = SimpleNamespace(
@@ -3460,7 +3462,7 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
                 selected_source is source
                 and selected_availability == ()
                 and selected_utilities == ()
-                and preferred_task_id is None
+                and preferred_task_id == interrupted_task_id
             ) else None,
     )
 

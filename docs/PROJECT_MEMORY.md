@@ -1,5 +1,16 @@
 # Projektgedächtnis
 
+## 29.09.2026 – Aufgabenidentität über HWT-HOLD erhalten
+
+Nach terminalem Kind-Cancel bleibt die unterbrochene Aufgabe für die Policy
+bevorzugt. Die vorhandene Auswahlprüfung darf diese Präferenz nur für weiterhin
+zulässige Aufgaben anwenden. Sensorheilung allein genügt nicht: stabiler
+Stillstand, aktuelle Pose/Route und Gate-ACK bleiben erforderlich. Der reale
+Befund und Tests stehen ausschließlich im STATUS. Rückfall: isoliertes neues
+Explore-Overlay weglassen; der alte Kandidat besitzt die dokumentierte
+Recovery-Blockade und darf nicht als bestanden gelten.
+
+
 ## 28.09.2026 – Einmaltest: 1,50 m Zielroute, weiterhin 0,60 m Fahrt
 
 Der Nutzer trennt ausdrücklich die autonome vollständige Zielroute (≤ 1,50 m)
