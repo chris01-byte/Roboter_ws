@@ -4012,3 +4012,13 @@ spätere Stempelrückläufe, ungültige Daten und Frischefehler bleiben gesperrt
 `513af02` auf PR #105, 157 Pakettests und isolierter Build; Produktgrenzen
 unverändert. Kein Beleg für die alte historische `raw_driver_not_ready`-Ursache.
 Der reale Folgelauf und A/B/C bleiben offen; aktueller Auftrag im WE-STATUS.
+
+## 29.09.2026 – Laborvorlauf ohne pauschale manuelle Motorsperre
+
+Christopher präzisiert ausdrücklich: Im freigegebenen Laboraufbau keine
+manuelle Motorsperre als Standardvoraussetzung verlangen. Vorlauf über den
+rein lesenden Sensor-/Encoderpfad, technisch ohne Motorsteuerungsprozess und
+Aktor-Schreibzugriff; erreichbare Encoder und gemessenen Stillstand selbst
+prüfen. Die vorher offene Sperr-Rückmeldung blockiert diesen passiven Pfad
+nicht mehr. Not-Aus, produktive Schutzgates und Fehlerstopps bleiben wirksam.
+Verbindlich in LAB-1 §3 und AGENTS §2 aufgenommen.

@@ -1140,7 +1140,7 @@ Bereichsfreigabe verlangen, aber die aktuelle Kartenzuordnung vor C tatsächlich
 nachweisen. Altes Polygon und altes 420-s-Kindlimit nicht übernehmen;
 aktuell bleiben 900/120 s maßgeblich.
 
-**Konkreter aktueller Blocker:** Die angeforderte physische Motorsperre für
+**Historischer Blocker, durch Nutzerpräzisierung unten aufgehoben:** Die angeforderte physische Motorsperre für
 den Vorlauf nach `513af02` ist noch nicht als gesetzt gemeldet. Letzter
 verlässlicher Zustand war „kontrolliert frei“. Keine fernbedienbare,
 verifizierte unabhängige Sperrschnittstelle vorhanden; keine Stellung aus
@@ -1149,6 +1149,14 @@ gefunden. **Genau nächster Schritt:** nach Meldung „gesperrt“ Encoder und
 Stillstand selbst motorlos prüfen, Live-Karte/Scope/Portalprofil zuordnen und
 den regulären A→B→C-Auftrag innerhalb LAB-1 fortsetzen. Keine neue Vorlage,
 kein Stufe-3-Grün und keine HWT-Injektion.
+
+**Aktuelle Nutzerpräzisierung 29.09.2026:** Für den freigegebenen Laboraufbau
+keine pauschale manuelle Motorsperre verlangen (LAB-1 §3 aktualisiert).
+Die ausstehende Schalterrückmeldung blockiert den rein lesenden Vorlauf nicht.
+Nächster Schritt ist dessen technische Ausführung mit `active_drive=false`,
+nach Prüfung auf fehlende Motorsteuerungs-/Aktor-Schreibprozesse. Encoder,
+Stillstand, Quellen und aktuelle Kartenbindung selbst messen. Noch kein neuer
+Realnachweis; Schutzgates und Not-Aus bleiben wirksam.
 
 ### Historische Kindziel-Sondertests bis 28.09.2026
 

@@ -114,9 +114,10 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 **Ergänzter ausführbarer Auftrag:** Regulären A→B→C-Produktlauf bis zur
 vollständigen Türdurchfahrt und Weitererkundung im angrenzenden Bereich führen.
 HWT-Fix `513af02` ist im bestehenden Overlay bytegleich aufgelöst; keine
-erneute Implementierung. Für den motorlosen Vorlauf bleibt ausschließlich die
-bereits angeforderte physische Bedienhandlung „Motorsperre setzen“ offen;
-Encoder-Erreichbarkeit und Stillstand danach selbst prüfen. Der Betreiberbeleg
+erneute Implementierung. Gemäß Nutzerpräzisierung vom 29.09.2026 und LAB-1 §3
+keine manuelle Motorsperre als Standardvoraussetzung verlangen: rein lesenden
+Vorlauf ohne Motorsteuerungs-/Aktor-Schreibprozess technisch prüfen und starten;
+Encoder-Erreichbarkeit und Stillstand selbst messen. Der Betreiberbeleg
 für zwei Zimmer plus Flur ist im lokalen R9-Profil und ROBOT_TRANSFER vorhanden.
 Seine alte SLAM-Geometrie nicht wiederverwenden; aktuellen Kartenbezug und
 benötigte Portalmonitorparameter vor Fahrt tatsächlich binden. Keine allgemeine

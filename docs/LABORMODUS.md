@@ -52,6 +52,16 @@ Fehlversuche nicht aneinanderreihen.
 
 ## 3. Freigabe und tatsächlicher Hardwarezustand getrennt halten
 
+**Nutzerpräzisierung vom 29.09.2026:** Im freigegebenen Labor ist eine
+manuell gesetzte Motorsperre keine pauschale Voraussetzung jedes Vorlaufs.
+Dafür den rein lesenden `active_drive=false`-Pfad verwenden und technisch
+prüfen, dass kein Motorsteuerungsprozess oder anderer Aktor-Schreibpfad läuft.
+Encoder-Elektronik erreichbar lassen und Stillstand aus realen Rückmeldungen
+prüfen. Keine erneute Aufforderung zum Sperren allein wegen eines Builds,
+einer Codeänderung oder eines passiven Stackstarts. Diese Präzisierung hebt
+weder Not-Aus noch produktive Schutzgates oder konkrete Fehlerstopps auf;
+sie behauptet auch keine elektrische Motorstromfreiheit.
+
 Eine dauerhafte Erlaubnis bedeutet weder „Motoren sind immer gesperrt“ noch
 „Motoren sind immer freigegeben“. Den zuletzt verlässlich bekannten Zustand,
 vorhandene Rückmeldungen und tatsächlich ausgeführte Bedienhandlungen verwenden.

@@ -43,7 +43,9 @@ Repository kann physische Wirkung haben.**
    Teilschritt. Außerhalb dieses Umfangs bleibt eine eigene Freigabe erforderlich.
 2. **Erst Stillstand, dann Bewegung.** Vor geänderter Bewegungswirkung zuerst
    ohne mögliche Aktorbewegung prüfen (Topics, TF, Logs), danach begrenzt fahren.
-   Lesbare Controllerelektronik und unabhängig gesperrte Motorendstufe unterscheiden.
+   Im Labor genügt der nachweislich rein lesende Vorlauf ohne Motorsteuerungs-
+   oder Aktor-Schreibprozess gemäß LAB-1 §3; keine pauschale manuelle
+   Motorsperre verlangen. Elektrische Sperrstellung dabei nicht behaupten.
    Der Agent führt diese technische Prüfung im Laborauftrag selbstständig aus.
 3. **Not-Aus in Reichweite**, bevor irgendetwas fährt. Die erklärte Erreichbarkeit
    im kontrollierten Labor nicht routinemäßig erneut abfragen. Der tatsächliche
