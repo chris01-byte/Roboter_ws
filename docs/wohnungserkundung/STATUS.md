@@ -856,6 +856,21 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
+### Gesicherter Pausenstand 29.09.2026, 23:30 MESZ
+
+Nutzer fordert Speichern, Commit und anschließendes Herunterfahren.
+Ergebnisstand `d480243` ist remote bestätigt, Arbeitsbaum war sauber.
+Roboter-/Recorder-/Testwächterprozesse und serielle Besitzer erneut geprüft:
+keine aktiv. Lokale Messartefakte bleiben erhalten. Betriebssystem-Shutdown
+wird nach Commit/Push dieser Übergabe angefordert; sein abgeschlossener
+Zustand ist von diesem laufenden Prozess aus nicht nachweisbar.
+
+Beim nächsten Einstieg keine Mission automatisch starten. Genau die offene
+SlowZone-/Vor-Ort-Objektzuordnung aus dem folgenden Ergebnis abgleichen;
+Tür-/Raumerfolg bleibt offen. Letzte physische Motorsperrenstellung nicht
+als durch das Herunterfahren geändert behaupten. LAB-1 bleibt maßgeblich.
+
+
 ### Aktuellster Realstand 29.09.2026 – Kartenübergabe hält, Zieltimeout
 
 Kandidat `492ef20`, bytegleiches Explore-Modul aus isoliertem `join-install`;

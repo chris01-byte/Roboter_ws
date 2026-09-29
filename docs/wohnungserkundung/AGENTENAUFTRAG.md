@@ -576,3 +576,10 @@ Evidenz lokal: `~/.local/share/amadeus/tests/stage3-map-handoff-20260929/real-re
 Alle Geräteprozesse beendet, Ports frei, Stillstand/RPM null und terminales
 Kind dokumentiert. Recorder-Bags nur nach Stopp auswerten; der erste Lauf
 `real-run` ist nach dem dokumentierten SQLite-Lesefehler unvollständig.
+
+
+**Gesicherte Pause 29.09.2026, 23:30 MESZ:** Nutzer beauftragt Speichern und
+Herunterfahren. Ergebnis `d480243` remote gesichert, Roboterprozesse und
+serielle Besitzer erneut frei. Nach Neustart zuerst den offenen
+SlowZone-/Objektabgleich fortsetzen; keine Fahrt automatisch starten.
+Shutdown ist angefordert, kein Beleg einer geänderten Motorsperrenstellung.
