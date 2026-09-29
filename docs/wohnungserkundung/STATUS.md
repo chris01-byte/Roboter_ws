@@ -27,7 +27,7 @@ isolierter Build bestanden). A3 endete geschützt an
 `initial_scan_too_slow`; A4 absolvierte den vollständigen Scan und erzeugte ein
 autonomes Nav2-Kind, das für den Beobachtungsvergleich bewusst gecancelt wurde.
 Die frühere Rad-/IMU-Abweichung ist im A4-Vergleichsfenster nicht reproduziert;
-Vor-Ort-Bericht ausstehend. Zielerreichung und A/B/C-Kernabnahme bleiben offen.
+Vor-Ort-Bericht: keine Auffälligkeiten beobachtet. Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
 Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
@@ -1033,18 +1033,24 @@ Die damalige Abweichung ist in diesem Vergleichsfenster **nicht reproduziert**.
 Das beweist weder rückwirkend Schlupf noch dessen Abwesenheit im alten Lauf.
 Je Lauf blieb der beim Start geschätzte Bias konstant; zwischen den Starts
 wurden unterschiedliche neue Biaswerte ermittelt (A3 z=0,000078821,
-A4 z=0,000031850 rad/s). Kein Yaw-Latch vor Shutdown. Der angefragte
-Vor-Ort-Bericht zu Schlupf/Kontakt und die erneut angeforderte Motorsperre
-liegen zum Dokumentationszeitpunkt noch nicht vor; nicht als bestätigt werten.
+A4 z=0,000031850 rad/s). Kein Yaw-Latch vor Shutdown. Der Nutzer berichtete anschließend wörtlich: „alles inordnung nichts
+auffälliged“. Damit sind für A4 keine Auffälligkeiten vor Ort berichtet; dies
+passt zum Messvergleich, ist aber kein rückwirkender Ursachenbeweis für A3.
+Die erneut angeforderte Motorsperrenstellung wurde in dieser Antwort nicht
+ausdrücklich bestätigt und bleibt offen.
 
 Artefakte lokal: `stage3-core-20260929/observed-slip-repeat/`, insbesondere
 `active-bag/`, `runtime-manifest.json`, `observer-events.jsonl`,
 `comparison.json`, `nav2-transition-summary.json`, `active-stop.json`.
 Gemessener Stillstand vor Stack-SIGINT; Recorder, Stack und eigener Wächter
 beendet, keine Roboterknoten mehr. Keine weitere Fahrt angehängt.
-**Genau nächster Schritt:** Den tatsächlichen Vor-Ort-Bericht mit diesen neuen
-Messwerten abgleichen; erst daraus Fortsetzung der offenen A/B/C-Kernabnahme
-ableiten. Keine weitere vorsorgliche Reparatur. Stufe 3 bleibt offen.
+**Abgleich abgeschlossen:** Vor-Ort-Bericht und neue Messwerte sind konsistent;
+die vorherige Auffälligkeit wurde in A4 nicht reproduziert. **Genau nächster
+Schritt:** Die offene reguläre A/B/C-Kernabnahme fortsetzen, beginnend mit
+autonomer Zielanfahrt und Zielerreichung bzw. sinnvoller Neuplanung. Kein
+weiterer Schlupf-Sondertest oder vorsorglicher Reparatureingriff daraus. Die
+aktuelle physische Motorsperrenstellung vor neuer Bewegung beachten. Stufe 3
+bleibt offen.
 
 ### Historische Kindziel-Sondertests bis 28.09.2026
 

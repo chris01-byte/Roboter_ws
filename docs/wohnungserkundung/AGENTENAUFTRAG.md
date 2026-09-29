@@ -117,9 +117,12 @@ angenommen und bewusst via Mission Manager terminal gecancelt. Keine lineare
 Endkommandierung im Kindfenster, keine Zielerreichungsabnahme. Rad-/Roh-IMU-/Yaw-/
 EKF-Raten stimmen im Vergleichsfenster 5,0–5,7 rad weitgehend überein; die alte
 Abweichung wurde dort nicht reproduziert. Stack/Recorder/Wächter beendet.
-**Genau nächster Schritt:** Angefragten tatsächlichen Vor-Ort-Bericht über
-Schlupf/Kontakt mit den neuen Messwerten abgleichen, dann die offene A/B/C-
-Kernabnahme fortsetzen. Keine weitere vorsorgliche Softwareänderung. Die erneut
+**Beobachterabgleich abgeschlossen:** Der Nutzer meldet „alles inordnung
+nichts auffälliged“; das passt zu den neuen Rad-/IMU-Messwerten. Keine
+rückwirkende Ursachenbehauptung für A3. **Genau nächster Schritt:** Offene
+reguläre A/B/C-Kernabnahme fortsetzen, zunächst autonome Zielanfahrt und
+Zielerreichung bzw. sinnvolle Neuplanung. Keine weitere Schlupf-Sonderprüfung
+oder vorsorgliche Softwareänderung. Die erneut
 angeforderte Motorsperre ist noch unbestätigt. Details und Originalzeiten im
 STATUS; keine historische physische Ursache aus dem neuen Lauf erfinden.
 
