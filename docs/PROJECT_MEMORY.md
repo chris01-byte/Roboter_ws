@@ -3987,3 +3987,13 @@ aktuellen Auftrag. Die lokalen Sonderrouten-/Translations-/Vorwärtsgrenzen
 werden nicht als Produktregeln weitergeführt. Produktive Schutzgrenzen bleiben.
 Nächster Auftrag: reale A/B/C-Kernabnahme über MM/BT/WE/Nav2 im beaufsichtigten
 Labor; Masterplan v1.1 unverändert. Kein Stufe-3-Grün ohne reale Gesamtbelege.
+
+
+## 29.09.2026 – Odometrie-Lesereihenfolge im realen Initialscan
+
+A1 brach mit `initial_scan_odom_stale` ab, obwohl der Bag kontinuierliche
+endliche Odometrie enthält. Gerätefrei reproduziert: Snapshot nach Prüfzeit
+kann bei konkurrierendem Callback negatives Alter erzeugen. Ausschließlich
+im betroffenen Drehpfad Snapshot vor Zeitmessung verlegt; Fristen und echte
+Zeitfehlerprüfung unverändert. Interner Originalwert des Realabbruchs fehlt;
+Race-Nachweis und historische Ursachenzuordnung nicht gleichsetzen.

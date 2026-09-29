@@ -4340,3 +4340,49 @@ def test_we_forward_constraint_preserves_metric_goal(pose, goal, cone, allowed):
     assert explore_node_module.frontier_within_forward_cone(
         candidate, pose, cone) is allowed
     assert candidate.__dict__ == before
+
+
+@pytest.mark.parametrize('sample_mode,expected', [
+    ('callback_between_reads', 'success'),
+    ('stale', 'odom_stale'),
+    ('future', 'odom_stale'),
+    ('invalid', 'odom_stale'),
+])
+def test_rotation_samples_clock_after_odom_snapshot(monkeypatch, sample_mode, expected):
+    """A callback after loop-time capture must not look like time regression."""
+    clock = [100.0]
+    count = [0]
+    commands = []
+
+    def snapshot():
+        # Deterministically represent callback scheduling before snapshot return.
+        clock[0] += 0.01
+        count[0] += 1
+        received = clock[0]
+        yaw = min(count[0] - 1, 2) * 0.05
+        if sample_mode == 'stale':
+            received -= 6.0
+        elif sample_mode == 'future':
+            received += 1.0
+        elif sample_mode == 'invalid':
+            yaw = None
+        return yaw, 0.0, received
+
+    node = SimpleNamespace(
+        _scan_rate_check_after=15.0, _scan_min_average_rate=0.01,
+        _scan_command_rate=20.0, _scan_odom_timeout=0.8,
+        _scan_odom_recovery_timeout=5.0, _scan_reverse_limit=0.1,
+        _scan_progress_window=0.01, _scan_no_progress_timeout=15.0,
+        _odom_snapshot=snapshot,
+        _scan_cmd_pub=SimpleNamespace(publish=commands.append),
+        _publish_scan_stop=lambda: None,
+        _stop_scan_and_confirm=lambda: 'success',
+        get_logger=lambda: SimpleNamespace(warn=lambda *_: None, info=lambda *_: None),
+    )
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(explore_node_module.time, 'sleep',
+                        lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    status, _ = ExploreNode._rotate_in_place(node, 0.08, 0.08, 20.0)
+    assert status == expected
+    assert bool(commands) == (sample_mode == 'callback_between_reads')

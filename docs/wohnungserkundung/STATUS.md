@@ -885,6 +885,34 @@ geprüft. Hard-Faults beenden den Lauf; Shutdownbefunde getrennt ausweisen.
 **Genau nächster Auftrag:** Diese reale A/B/C-Kernabnahme durchführen; erst bei
 vollständigem Erfolg WE-M4 vorbereiten. Masterplan v1.1 bleibt unverändert.
 
+### Lauf A1 vom 29.09.2026 und gezielte Odometrie-Korrektur
+
+Nach bestätigter physischer Freigabe der Motorsperre startete die echte Mission
+über MM/BT/WE. Regulärer Initialscan mit 0,08 rad/s und Segmentstopps; nach
+etwa 2,674 rad gemessener Drehung terminal `initial_scan_odom_stale` bei
+1790659080,5. Kein Nav2-Kind erreicht, A/B/C nicht bestanden. Quellenwächter
+weiter bereit, kein HWT-first_fault. Nullkommando und gemessener Stillstand,
+danach Stack/Recorder geordnet beendet. Vor-Ort-Haltbericht separat angefragt.
+
+Enges Bagfenster 1790659078–1790659081: 90 endliche `/odom`-Nachrichten,
+maximale Bag-Empfangslücke 0,042278 s, maximale Header-Stempellücke 0,054935 s.
+Das beweist keine Explorer-interne Callback-Empfangszeit. Deren ursprünglicher
+Alterswert wurde nicht aufgezeichnet. Codeprüfung ergab eine reproduzierbare
+Race Condition: `_rotate_in_place` las `now` vor dem Odometrie-Snapshot;
+ein dazwischen ausgeführter Callback erzeugt negatives Alter und sofortiges
+`expired`. Der gerätefreie Vorhertest reproduziert `odom_stale` trotz frischer
+Daten (1 Fehler/3 bestandene Gegenfälle). Eine Änderung der Lesereihenfolge
+(Snapshot vor Prüfzeit) behebt genau diese Race; keine Timeoutlockerung.
+159 gezielte Explore-Vertrags-/HWT-Integrationstests danach bestanden;
+isolierter Explore-Build bestanden. Echte veraltete, ungültige und zukünftige
+Werte bleiben gesperrt. Die Race ist sicher nachgewiesen, als konkrete Ursache
+des Realabbruchs mangels internem Originalwert noch nicht abschließend bewiesen.
+
+Lokale Belege: `stage3-core-20260929/active-bag/`, `active-stack.log`,
+`odom-fault-window.json`, `odom-race-before.log`, `odom-race-after.log`,
+`odom-install/`. Nächster Schritt innerhalb desselben Auftrags: motorloser
+Vorlauf und erneuter regulärer A/B/C-Lauf mit genau dieser Korrektur.
+
 ### Historische Kindziel-Sondertests bis 28.09.2026
 
 Die folgenden Befunde bleiben erhalten. Ihre damaligen Folgeaufträge und

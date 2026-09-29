@@ -5397,6 +5397,10 @@ class ExploreNode(Node):
 
         try:
             while rclpy.ok():
+                # Snapshot first: a concurrent odom callback can timestamp a
+                # sample after an earlier clock read. Keep future-time errors
+                # fail-closed without misclassifying that scheduling race.
+                yaw, _angular_speed, received_at = self._odom_snapshot()
                 now = time.monotonic()
                 if stop_requested():
                     status = 'interrupted'
@@ -5405,7 +5409,6 @@ class ExploreNode(Node):
                     status = 'timeout'
                     break
 
-                yaw, _angular_speed, received_at = self._odom_snapshot()
                 odom_state = odom_freshness_state(
                     now, received_at, started,
                     self._scan_odom_timeout,
