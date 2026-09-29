@@ -111,14 +111,19 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
-**Neuester Nutzerentscheid nach A3:** Beobachtete Wiederholung ist unter
-`stage3-core-20260929/observed-slip-repeat/` vorbereitet. Noch keine Mission
-starten: zunächst dem Nutzer Bereitschaft melden, damit er gezielt möglichen
-Schlupf/Kontakt beobachten kann. Danach denselben unveränderten Produktlauf mit
-frischem Quellencheck, synchronem Recorder und zeitlich zugeordneter
-Vor-Ort-Beobachtung ausführen. Keine neue Softwareänderung und keine Lockerung.
-Dieser Folgeentscheid ersetzt die rein rückblickende Beobachtungsanfrage unten.
+**Aktuell nach beobachteter Wiederholung A4:** Unveränderter Kandidat `872f6a8`.
+Vollständiger Scan ohne erneuten Fehler; autonomes Frontier-Kind erzeugt,
+angenommen und bewusst via Mission Manager terminal gecancelt. Keine lineare
+Endkommandierung im Kindfenster, keine Zielerreichungsabnahme. Rad-/Roh-IMU-/Yaw-/
+EKF-Raten stimmen im Vergleichsfenster 5,0–5,7 rad weitgehend überein; die alte
+Abweichung wurde dort nicht reproduziert. Stack/Recorder/Wächter beendet.
+**Genau nächster Schritt:** Angefragten tatsächlichen Vor-Ort-Bericht über
+Schlupf/Kontakt mit den neuen Messwerten abgleichen, dann die offene A/B/C-
+Kernabnahme fortsetzen. Keine weitere vorsorgliche Softwareänderung. Die erneut
+angeforderte Motorsperre ist noch unbestätigt. Details und Originalzeiten im
+STATUS; keine historische physische Ursache aus dem neuen Lauf erfinden.
 
+**Historische Zwischenstände A1–A3 (durch A4 ergänzt):**
 
 **Laufender Ergebnisstand:** Software `872f6a8` behebt die reproduzierte
 Odometrie-Lesereihenfolge-Race und negative Restwartezeiten; 161 gezielte Tests,

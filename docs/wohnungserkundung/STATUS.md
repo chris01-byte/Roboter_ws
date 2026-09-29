@@ -23,9 +23,11 @@ und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
 Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
 Details und laufender Ergebnisstand in Abschnitt 7. Aktuell: zwei
 reproduzierte Softwarefehler korrigiert (`872f6a8`, 161 gezielte Tests und
-isolierter Build bestanden). Letzter Realversuch endet geschützt an
-`initial_scan_too_slow`; Vor-Ort-Beobachtung zur Rad-/IMU-Abweichung ausstehend.
-Noch kein Nav2-Kind in diesen drei Kernabnahmeversuchen.
+isolierter Build bestanden). A3 endete geschützt an
+`initial_scan_too_slow`; A4 absolvierte den vollständigen Scan und erzeugte ein
+autonomes Nav2-Kind, das für den Beobachtungsvergleich bewusst gecancelt wurde.
+Die frühere Rad-/IMU-Abweichung ist im A4-Vergleichsfenster nicht reproduziert;
+Vor-Ort-Bericht ausstehend. Zielerreichung und A/B/C-Kernabnahme bleiben offen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
 Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
@@ -998,6 +1000,51 @@ Stillstand frisch prüfen. 0,08 rad/s Scan-Sollwert, 280-s-Scanfrist und
 bereit ist, dieselbe begrenzte Produktwiederholung starten und zeitlich
 zugeordnete Vor-Ort-Beobachtung mit den neuen synchronen Messwerten abgleichen.
 Die tatsächliche Motorsperrenstellung vor Start bleibt getrennt von LAB-1.
+
+### Beobachtete Wiederholung A4: Scan beendet, Abweichung nicht reproduziert
+
+Der Nutzer meldete „bereit“ und bestätigte die physische Motorsperre mit „frei“.
+Unveränderter Kandidat `872f6a8`, identisches Profil; Recorder vor Stack,
+aktuelle Quellen-/Bias-/Pose-/Stillstandsprüfung bestanden. Regulärer Start
+über Mission Manager → BT → WE. Keine Parameteränderung und keine Injektion.
+
+Der vollständige Scan gelang ohne `initial_scan_too_slow`, `odom_stale` oder
+negative Wartezeit. Übergang zu `we_frontier_navigation` bei Statusbeobachtung
+1790691333,6023. Die Beobachtungswiederholung wurde anschließend bewusst via
+Mission Manager gecancelt; das ist kein autonomes Missionsende und kein Fehler.
+Ein autonom erzeugtes Kind für `task-frontier_000002` ist im Bag nachgewiesen:
+UUID `d3f00c61a69241ae88a7e7288b27f761`, Status EXECUTING bei
+1790691331,9102 → CANCELING 1790691335,9726 → CANCELED 1790691336,0019.
+Im Kindfenster kein linearer Endbefehl (Maximum 0 m/s), maximal 0,10621 rad/s
+Drehbefehl und ca. 0,00110 m kumulierte Odometrie-Translation. Das belegt
+Zielerzeugung/Annahme/Cancel, keine Zielerreichung oder vollständige Phase A.
+
+Vergleich bei **5,0–5,7 rad kumulierter Drehung**, nicht als Behauptung gleicher
+physischer Position in beiden Läufen:
+
+| Median-Drehrate | Voriger A3-Lauf | Beobachtete Wiederholung A4 |
+|---|---:|---:|
+| Radodometrie | 0,068477 rad/s | 0,041811 rad/s |
+| Roh-IMU | 0,022584 rad/s | 0,042184 rad/s |
+| Korrigierte HWT-Gierrate | 0,022505 rad/s | 0,042153 rad/s |
+| Fusionierte Odometrie | 0,022505 rad/s | 0,042152 rad/s |
+
+Die damalige Abweichung ist in diesem Vergleichsfenster **nicht reproduziert**.
+Das beweist weder rückwirkend Schlupf noch dessen Abwesenheit im alten Lauf.
+Je Lauf blieb der beim Start geschätzte Bias konstant; zwischen den Starts
+wurden unterschiedliche neue Biaswerte ermittelt (A3 z=0,000078821,
+A4 z=0,000031850 rad/s). Kein Yaw-Latch vor Shutdown. Der angefragte
+Vor-Ort-Bericht zu Schlupf/Kontakt und die erneut angeforderte Motorsperre
+liegen zum Dokumentationszeitpunkt noch nicht vor; nicht als bestätigt werten.
+
+Artefakte lokal: `stage3-core-20260929/observed-slip-repeat/`, insbesondere
+`active-bag/`, `runtime-manifest.json`, `observer-events.jsonl`,
+`comparison.json`, `nav2-transition-summary.json`, `active-stop.json`.
+Gemessener Stillstand vor Stack-SIGINT; Recorder, Stack und eigener Wächter
+beendet, keine Roboterknoten mehr. Keine weitere Fahrt angehängt.
+**Genau nächster Schritt:** Den tatsächlichen Vor-Ort-Bericht mit diesen neuen
+Messwerten abgleichen; erst daraus Fortsetzung der offenen A/B/C-Kernabnahme
+ableiten. Keine weitere vorsorgliche Reparatur. Stufe 3 bleibt offen.
 
 ### Historische Kindziel-Sondertests bis 28.09.2026
 
