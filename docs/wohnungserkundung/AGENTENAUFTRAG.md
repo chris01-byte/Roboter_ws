@@ -111,6 +111,20 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
+**Laufender Ergebnisstand:** Software `872f6a8` behebt die reproduzierte
+Odometrie-Lesereihenfolge-Race und negative Restwartezeiten; 161 gezielte Tests,
+isolierter Build und motorlose Vorläufe bestanden. Drei reale Starts: A1
+`initial_scan_odom_stale`, A2 vollständige Drehung, dann negative Wartezeit,
+A3 `initial_scan_too_slow` ohne Wiederkehr beider Softwarefehler. A/B/C noch
+nicht bestanden. Radbasierte Rate war höher als die übereinstimmenden Roh-IMU-,
+Yaw- und EKF-Raten. Keine physische Ursache erfinden; kein Parameterlockern.
+**Unmittelbar nächster Schritt:** Angefragte Vor-Ort-Beobachtung zu
+Kontakt/Schlupf/Bewegung und Motorsperre mit den A3-Messdaten abgleichen,
+konkreten Befund beheben und den regulären Kernablauf fortsetzen. Keine blinde
+weitere Wiederholung bei ungeklärtem Bewegungsbefund. STATUS Abschnitt 7 enthält
+die Originalzeiten, rekonstruierten Werte und Grenzen.
+
+
 Basis PR #105 / `5c6ff0e`, funktionaler Kandidat `6429bd6`; Masterplan v1.1
 unverändert. Schritt 2 ist für den ersten HWT-Fall abgeschlossen: gerätefreier
 Nav2-Kind-Recoveryvertrag und reale Initialscan-Recovery bestanden. Reale

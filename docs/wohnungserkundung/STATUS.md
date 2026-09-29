@@ -21,7 +21,11 @@ Eine durchgängige beobachtete Folge A (autonomes Ziel und reale Navigation),
 B (Hindernis/Befreiung bei erhaltener Mission), C (vollständiger Portalübergang
 und Weitererkundung) wird geprüft. Das ist eine erste Kernabnahme, kein
 Wiederholungs- oder Zuverlässigkeitsnachweis. Noch kein Stufe-3-Gesamtgrün.
-Details und laufender Ergebnisstand in Abschnitt 7.
+Details und laufender Ergebnisstand in Abschnitt 7. Aktuell: zwei
+reproduzierte Softwarefehler korrigiert (`872f6a8`, 161 gezielte Tests und
+isolierter Build bestanden). Letzter Realversuch endet geschützt an
+`initial_scan_too_slow`; Vor-Ort-Beobachtung zur Rad-/IMU-Abweichung ausstehend.
+Noch kein Nav2-Kind in diesen drei Kernabnahmeversuchen.
 
 Die früheren HWT-Sonderlimits 0,45/1,50 m Zielroute, 0,60 m Translation,
 Vorwärtskegel, enger erzwungener Testkorridor und HWT-Leserpause sind für diesen
@@ -932,6 +936,45 @@ mindestens null begrenzt. Keine Fristverlängerung, kein Parameter geändert.
 `pause-after.log`, `pause-build.log`, unter demselben Haupt-Testverzeichnis.
 Nächster Schritt bleibt der betroffene reguläre Produktlauf nach motorlosem
 Vorlauf, ohne HWT-Injektion und ohne neue Freigaberunde.
+
+### Aktueller Ergebnisstand A3: `initial_scan_too_slow`, Ursachenklärung offen
+
+Software `872f6a8` (beide gezielten Korrekturen), isolierter Explore-Install
+`stage3-core-20260929/pause-install`. Geladene Datei bytegleich mit Quelle;
+Manifest und Modulhash im Unterverzeichnis `after-pause-fix/`. Erneuter
+motorloser und aktiver Quellen-/Karten-/TF-Preflight bestanden. Regulärer
+MM→BT→WE-Lauf gestartet, keine Fault Injection, keine Sonder-Fahrgrenzen.
+
+Bei Bag-Empfangszeit **1790660141,3211398** terminaler Grund
+`initial_scan_too_slow`. Rund 5,866 rad kumulierte Odometrie-Drehung; noch kein
+Nav2-Kind. Letztes Segment ab erstem Nichtnullkommando 1790660125,7718306:
+Bag-Rekonstruktion 0,153934 rad in 15,500237 s = **0,009931 rad/s**.
+Produktprüfung: nach 15 s mindestens **0,01 rad/s**. Die Bag-Rekonstruktion
+enthält die terminale Stopplatenz und ist nicht der unaufgezeichnete interne
+Originalwert. Beide vorherigen Softwarefehler traten nicht erneut auf.
+
+Im Fenster 1790660100–1790660120 lag die mediane radbasierte Drehrate bei
+0,073245 rad/s, Roh-IMU bei 0,021731, korrigierte HWT-Rate bei 0,021653 und
+fusionierte Rate bei 0,021653 rad/s. Bias unverändert 0,000078821 rad/s,
+keine Adaptation und kein HWT-first_fault vor dem Ende. Damit ist die niedrige
+Rate nicht erst im Yaw-Schatten oder EKF entstanden. Kontakt, Schlupf oder
+andere physische Ursache sind ohne Vor-Ort-Beobachtung **nicht bewiesen**.
+Keine Geschwindigkeit erhöht, keine Fortschritts-/Frischegrenze gelockert.
+
+Lokale Belege: `after-pause-fix/active-bag/`, `active-stack.log`,
+`product-observations.jsonl`, `slow-rotation-comparison.json`,
+`slow-final-segment.json`. Nullkommando und Encoder-Stillstand vor Shutdown
+belegt; Stack/Recorder und eigener 900-s-Wächter geordnet beendet. Keine
+Roboterknoten mehr. Vor-Ort-Bericht zu Halt/Kontakt/Schlupf und erneuter
+physischer Motorsperre angefragt, bislang **nicht bestätigt**.
+
+**Phase A offen; B/C nicht erreicht. Kein Stufe-3-Grün.** Genau aktueller
+Blocker: Der Initialscan unterschreitet im letzten Segment die vorhandene
+Mindestfortschrittsrate. Die Ursache darf nicht als Softwarefehler erfunden
+werden. **Genau nächster Schritt:** Die bereits angefragte Vor-Ort-Beobachtung
+mit der gesicherten Rad-/IMU-Zeitfolge abgleichen und den konkreten Befund
+beheben; danach den regulären Kernablauf unter LAB-1 fortsetzen. Keine weitere
+Fahrt bei ungeklärtem physischem Bewegungsbefund, keine neue allgemeine Analyse.
 
 ### Historische Kindziel-Sondertests bis 28.09.2026
 

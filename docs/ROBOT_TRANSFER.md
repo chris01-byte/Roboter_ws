@@ -2559,3 +2559,18 @@ Vorlauf mit `active_drive=false` bestanden. Belege unter
 geordnet beendet; kein Fahrbefehl. Aktuelle Fahrt noch nicht durchgeführt.
 Das Profil aktiviert WE und Portalwahl, aber nicht den separaten WE-
 Portalmonitor; dessen Zuordnung und Live-Scope müssen für Phase C belegt sein.
+
+
+## 29.09.2026 – reale Starts A1–A3 und temporärer korrigierter Explore-Install
+
+Aktueller funktionaler Commit `872f6a8`: im betroffenen Drehpfad zuerst
+Odometrie-Snapshot, dann Prüfzeit; abgelaufene Scan-/Prealignment-Pausen
+auf null Restwartezeit begrenzt. Keine Parameter- oder Schutzlockerung.
+Temporäre Shell: bisheriges `stage3-core-20260929/runtime-env.sh`, danach
+`stage3-core-20260929/pause-install/local_setup.bash`. Bytegleichheit
+Quelle/geladenes Modul und Runtime-Manifest geprüft. Kein aktiver Installwechsel.
+161 gezielte Tests, Build und motorlose Vorläufe bestanden. A3 endete sicher
+an `initial_scan_too_slow`, kein Nav2-Kind; alle Prozesse beendet. Letzte
+explizite Motorsperrenstellung vor den Fahrten: vom Nutzer kontrolliert gelöst
+(„erledigt“). Erneutes Sperren nach A3 angefordert, noch unbestätigt. Keine
+Stellung aus Software-Nullkommando ableiten. Nächster Auftrag im WE-STATUS.
