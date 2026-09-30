@@ -5,7 +5,7 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
 **Für Wohnungserkundung zusätzlich zuerst:**
-[MASTERPLAN v1.1](docs/wohnungserkundung/MASTERPLAN.md),
+[MASTERPLAN v1.2](docs/wohnungserkundung/MASTERPLAN.md),
 [aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
 [aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
@@ -156,6 +156,8 @@ gemessene Evidenz mit Zahlen.
 
 1. `docs/INVENTORY.md` lesen — Komponenten, Startbefehle, Reifegrad.
 2. `docs/PROJECT_MEMORY.md` lesen — getroffene Entscheidungen und ihre Gründe.
+   Die dort verlinkte bytegleiche Historie für betroffene ältere Entscheidungen
+   hinzunehmen; ihre früheren Folgeaufträge nicht als aktuellen Auftrag ausführen.
 3. `tools/kartierung/README.md` lesen, falls es um Karten oder Lokalisierung
    geht. Dort stehen drei Fallen, die real Zeit gekostet haben.
 4. Bestand technisch prüfen, bevor etwas verändert wird: laufende Prozesse,
@@ -164,23 +166,31 @@ gemessene Evidenz mit Zahlen.
 
 ---
 
-## 7. Wohnungserkundung: verbindlicher Arbeitsrahmen (WE-1, 27.09.2026)
+## 7. Wohnungserkundung: verbindlicher Arbeitsrahmen (WE-1, 30.09.2026)
 
 Bei Arbeiten an Wohnungserkundung, Sensor-/Fahrintegration, Recovery,
 Portal-/Raumgedächtnis oder Erkundungsabschluss vor jeder Änderung lesen:
 
-1. [Masterplan: Konsolidierung und robuste Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
+1. [Masterplan v1.2: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
 2. [Einziger aktueller WE-Iststand](docs/wohnungserkundung/STATUS.md)
 3. [Aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
 4. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md) und betroffene
    [Meilensteine/Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
 
-Verbindliche Grundentscheidung: **konsolidieren statt komplett neu schreiben**.
-Bestehende Fähigkeiten erhalten, einen reproduzierbaren Kandidaten führen,
-Fehler- und Wiederaufnahmeverantwortung gezielt ordnen, dann reale Kernabnahme
-und WE-M4/M5/M6. Keine parallele P1–P5-Roadmap, keine neue Navigation und kein
-pauschaler Rücksprung auf alte Branches. Ein Integrationsverantwortlicher,
-ein aktiver Kandidat und genau ein aktueller Auftrag.
+Verbindliche Grundentscheidung: **wiederverwenden und gezielt entkoppeln statt
+komplett neu schreiben**. MASTERPLAN v1.2 erlaubt einen schlanken metrischen
+Erkundungskern im vorhandenen Explorer ohne verpflichtende Portal-/Regionsdaten.
+Tür-/Raumsemantik ergänzt; gültige metrische Karte/Pose, Scope, tatsächliche
+Durchfahrtsgeometrie und Schutzkette bleiben notwendig. Keine Dummy-Portale oder
+künstlich gesunden Shadowzustände. Der neue Modus ist erst beauftragt, nicht durch
+diese Dokumentation implementiert oder real abgenommen.
+
+Bestehende Fähigkeiten und belegte Sensor-/Cancel-/HOLD-Korrekturen erhalten.
+Ein Integrationsverantwortlicher, ein aktiver Kandidat, ein Navigationsbesitzer
+und genau ein aktueller Auftrag. Keine dritte Gesamtsoftware, kein zusätzlicher
+Navigator/Supervisor und kein pauschaler Rücksprung auf alte Branches. Die
+metrischen und semantischen Anteile der vorhandenen WE-Meilensteine getrennt
+führen; keine parallele P1–P5-Roadmap und kein rückwirkendes Gesamt-Grün.
 
 Planversion, WE-Bezug, tatsächliche Istbasis, erwartetes Ergebnis, Nicht-Ziele,
 Tests und Rückfall vor jedem Auftrag benennen. Abweichungen nicht stillschweigend
