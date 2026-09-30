@@ -494,7 +494,7 @@ class TestShadowCore:
     @pytest.mark.parametrize(
         'second_time,duration,expected_reason', [
             (1.0, 0.01, 'nicht_monotoner_zeitstempel'),
-            (1.11, 0.01, 'luecke_zu_lang_rebaseline'),
+            (1.11, 0.01, 'encoder_luecke_nicht_ueberbrueckbar'),
             (1.05, 0.051, 'encoderpaar_zeitfenster_ueberschritten'),
         ])
     def test_time_and_gap_faults_latch_until_restart(

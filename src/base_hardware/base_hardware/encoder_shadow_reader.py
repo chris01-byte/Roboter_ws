@@ -591,6 +591,7 @@ class EncoderShadowCore:
         self.startup_overrun_retries = 0
         self._consecutive_startup_overruns = 0
         self.last_sample_time_s: float | None = None
+        self.last_attempt_gap_s: float | None = None
         self.last_update = EncoderUpdate(False, False, 'noch_keine_probe')
         self.last_pair: EncoderPair | None = None
 
@@ -623,6 +624,8 @@ class EncoderShadowCore:
             self.latch_fault('ungueltiger_zeitstempel')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
+        self.last_attempt_gap_s = (None if self.last_sample_time_s is None
+                                   else sample_time_s-self.last_sample_time_s)
         if (self.last_sample_time_s is not None
                 and sample_time_s <= self.last_sample_time_s):
             self.rejected_pair_count += 1
@@ -681,7 +684,11 @@ class EncoderShadowCore:
         trial = copy.copy(self.tracker)
         update = trial.update(pair.left.position_u32, pair.right.position_u32, sample_time_s)
         if self.tracker.initialized and not update.accepted:
-            self.latch_fault(update.reason)
+            self.rejected_pair_count += 1
+            self.last_update = update
+            self.latch_fault('encoder_luecke_nicht_ueberbrueckbar'
+                             if update.reason == 'luecke_zu_lang_rebaseline'
+                             else update.reason)
             return EncoderShadowResult(False, self.fault_reason, update)
         if self.timing_recovery_pending:
             if (self._recovery_last_sample_time_s is None
@@ -781,6 +788,7 @@ def shadow_status_payload(
         'x_m': core.tracker.x_m,
         'y_m': core.tracker.y_m,
         'yaw_rad': core.tracker.yaw_rad,
+        'last_attempt_gap_s': core.last_attempt_gap_s,
         'last_pair_duration_s': core.last_pair_duration_s,
         'maximum_pair_duration_s': core.maximum_pair_duration_s,
         'last_rejected_pair_duration_s': core.last_rejected_pair_duration_s,
