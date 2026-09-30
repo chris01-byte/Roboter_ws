@@ -19,7 +19,7 @@ Normale Erkundung wird metrisch organisiert: beobachten → erreichbare Frontier
 | Historischer Funktionsvergleich | `1d91229dc10ff4bb791938d49aae8e9808a5dfff`; [WE_PARITY_RESET](../WE_PARITY_RESET.md) dokumentiert Frontierfahrten, verbundenen Türübergang und weitere Frontiers danach |
 | Erster HWT-Recoveryfall | Gerätefreier aktiver Kindzielvertrag und reale Rundblick-HOLD/Recovery/Fortsetzung im dokumentierten Umfang akzeptiert; kein umfassender Robustheitsnachweis |
 | Aktueller Erkundungserfolg | Kein bestandener zusammenhängender A/B/C-/Mehrraumlauf; kein Ziel- oder Türerfolg des letzten Laufs |
-| Neues metrisches Backend | Isolierter Build, Regression und synthetischer Produktgraph bestanden; realer lesender Vorlauf auf `deb075e` blockiert, kein Fahrnachweis |
+| Neues metrisches Backend | Software und Mast-/Encoderkorrekturen auf `8be0709` regressiert; gemeinsamer realer Vorlauf weiter negativ, kein Fahrnachweis |
 
 Aktuelle und historische Modul-/Installpräfixe aus ROBOT_TRANSFER und den erhaltenen Manifesten ermitteln, nicht aus Branch-Namen ableiten. Bestehende Builds und unbekannte lokale Änderungen nicht überschreiben. Die Abnahme eines neu kombinierten Kandidaten wird nicht aus historischen Einzeltests zusammengesetzt.
 
@@ -87,6 +87,142 @@ Kein regulärer aktiver Wechsel, weil Vorlauf nicht bestanden; kein zweiter Fahr
 Private Belege ausschließlich `~/.local/share/amadeus/tests/metric-frontier-real-20260930/`: Runtime-Manifest mit Präfixen/Profil-/Modulhashes, Liveparameter/-status, Quellen-/Geometriesnapshots, lokale Darstellung, geschlossene Bag-Auswertung, FC03-Endmessung und Shutdownprüfung. Keine privaten Karten/Bags/Berichts-Vorfahren veröffentlicht. Softwareerfolg bleibt erhalten; kein Stufe-3-Gesamtgrün.
 
 **Genau nächster Schritt:** ein gezielter Vorlauf-Korrekturauftrag für die belegten Startkarten-/Kontur- und FC03-Paarzeitblocker, mit getrennten Nachweisen und unveränderten Schutzgrenzen; keine automatische neue Fahrt.
+
+### 01.10.2026 – Mast-/Eigenkörpervertrag und Encoderzeitpfad getrennt korrigiert
+
+Auftrag vom 30.09. auf veröffentlichtem `0efb7e4`, funktionaler Abschluss
+`8be0709` in derselben PR-#105-Linie. **Softwarekorrekturen regressiert;
+gemeinsamer realer Vorlauf negativ. Keine Mission und kein Fahrnachweis.**
+
+**Mast:** Betreiberzuordnung OAK-Kameramast verbindlich übernommen. Vorhandene
+native Maske 236–304°, NaN-Ausgabe und ROS-CCW bleiben unverändert. Im letzten
+Vorlauf: 2.325 Rohscans / 2.287 normierte Scans; im robusten Sektorinneren
+57–123° sind sämtliche 924.632 / 905.652 Bins NaN. Die 1° Randreserve dient
+nur dieser Auswertung unterschiedlich diskretisierter Scans, verändert keinen
+Filter. Tatsächlicher statischer TF aus der Bag: x 0,245, y 0, z 0,660 m,
+yaw +1,5708. Manifest belegt Crop=true und tatsächlich gestartete Parameterdatei.
+Der native Treiber beantwortete den Parameterdump nicht; deshalb kein erfundener
+Live-Parameterbeleg. `/scan` → vorhandene Vereinheitlichung → `/scan_normiert`
+→ SLAM/Explorer/HWT-Beobachter/Gate; Costmaps nutzen Rohkarte und ihre vorhandenen
+VL53/OAK-Quellen. SLAM-Präfix `~/amadeus_slam_toolbox_ws/install/slam_toolbox`,
+Patchparameter live true; installierte `libtoolbox_common.so` enthält den Patch.
+Keine neue Drehfahrt oder Kalibrierung daraus ableiten.
+
+**Startkorrektur:** `metric_self_body_enabled` erlaubt privat nur ganze unbekannte
+Zellen im ungepaddeten gemessenen Körper x −0,11..0,31 / y ±0,23 m, einschließlich
+Zellenecken und Scopeprüfung. Erste korrelierte Pose und Rohkarten-Fingerprint
+fixieren den Beleg; er folgt keiner Bewegung und erlischt bei geändertem
+Fingerprint. Frische Pose/Scan und passender planarer Montage-TF bleiben Pflicht.
+Belegte Zellen, Costmap-Unknown, Außenkeil, Padding und Rasterreserve werden nicht
+freigegeben. Rohkarte bleibt bytegleich; volle Kontur x −0,13..0,33 / y ±0,25 m
+und ihr Bewegungs-/Drehsweep bleiben geprüft. Keine Garantie für einen Rundblick
+allein aus belegtem Eigenkörper.
+
+Der alte Startsnapshot bleibt reproduziert: unbekannte Startzelle, unzulässige
+Kontur und 25 `no_known_free_route`. Bei 325 berührten Zellen: 88 ganz im Körper
+liegende unbekannte Zellen, 4 Randzellen mit Körperüberschneidung, 16 im Padding,
+18 in Rasterreserve; 0 Rohkartenhindernisse. Alte Costmap: 1 unbekannte Zelle in
+Rasterreserve, 143 Inflationszellen, 0 Zellen mit Wert ≥100. Rasterkosten beweisen
+keine bestimmte physische Objektidentität. Der neue Startsnapshot zeigt 78 ganze
+Körperzellen, 16 Körperrand-, 16 Padding- und 18 Reservezellen weiter unbekannt;
+Costmap 2 unbekannte Reservezellen, keine Kosten >0 in der berührten Kontur.
+Die ganzen Körperzellen werden korrekt getrennt; der unzulässige Außenanteil
+bleibt wirksam. Startzentrum nach Clearanceprüfung false, volle Roh-/Costkontur
+false, bereits erste Scanorientierung false. 15 reale Cluster, 15
+`no_known_free_route`, 0 akzeptiert. Keine freie 360°-Drehung nachgewiesen.
+
+**Encoderkorrektur:** gemeinsame FC03-Blöcke Position/RPM erhalten. Instrumentiert
+sind Alias/USB vor/nach Zugriff, Modbus, Antwortprüfung, Paar, Motorversatz,
+Pollstart und Publikationsalter. Nur USB-Attributpfadsuche gespeichert; tatsächliche
+Identität/tty-Gerätegeneration, Alias und Exklusivität vor/nach jeder Probe sowie
+CRC/Antwortprüfung bleiben aktiv. Paarzeit 120 ms und Datenlücke 180 ms unverändert.
+Nach ≥20 gesunden Paaren darf ein einzelnes vollständiges Timingpaar bei belegter
+Kontinuität verworfen werden: Quelle unbereit, Transport weiter lesend, zwei neue
+vollständige plausible Paare. Erstes gültiges Paar integriert sämtliche Zähler
+und publiziert weiter unbereit; zweites stellt Readerbereitschaft wieder her.
+Passives HWT geht dabei in den vorhandenen HOLD/Validierungsvertrag. Keine
+Faultflag-Löschung, Pose-/Baseline-Nullung oder unterschlagene Bewegung.
+Anhaltende Verzögerung, lange Lücke, unvollständige Antwort, Portwechsel/-verlust,
+unplausible Zähler, Zeitrücklauf und harte Schutzfälle bleiben gesperrt.
+
+Erster Vollstackstart vor der dritten Probe: Pollstart 197,695 ms, Paarzeit
+97,920 ms. Terminal, `rebases=0`; keine automatische Heilung einer langen Lücke.
+Passiver Readerstart nun 15 s nach den übrigen Starts; vor echten Proben bleibt
+Fusion unbereit. Nur Startstaffelung, keine Messzeit-/Grenzverschiebung. Spätere
+Verbraucherbeobachtung: frische aufgezeichnete Radprobe vorhanden, während Gate
+189,800 ms alte Probe auswertete. Passive HWT-Quellen erhalten aktuelle DDS-Proben
+und im Gate eine eigene serielle Callbackgruppe/zweiten Thread; gewöhnliche
+Gate-/Not-Aus-/Befehlscallbacks bleiben seriell. Aktiver Basistreiber und aktiver
+Gate-Quellenpfad unverändert und separat regressiert.
+
+**Zeitmessung, Millisekunden (Median / p95 / p99 / Maximum):**
+
+| Größe | Allein, 1.200 Paare | Letzter Vollstack, 4.284 Paare |
+|---|---:|---:|
+| Paar | 13,361 / 15,172 / 16,143 / 18,277 | 18,488 / 37,703 / 52,857 / 87,120 |
+| Motorzeitversatz | 6,646 / 7,510 / 8,028 / 9,113 | 9,151 / 18,769 / 25,753 / 43,865 |
+| USB/Alias vor Zugriff, je Motor | 0,719 / 1,463 / 1,858 / 4,276 | 1,093 / 4,133 / 10,838 / 33,057 |
+| USB/Alias nach Zugriff, je Motor | 0,737 / 1,166 / 1,420 / 3,209 | 1,129 / 4,519 / 10,273 / 45,216 |
+| Modbus, je Motor | 4,820 / 5,371 / 5,743 / 9,018 | 6,103 / 13,849 / 20,972 / 36,871 |
+| Antwortprüfung, je Motor | 0,019 / 0,034 / 0,046 / 0,365 | 0,035 / 0,047 / 0,203 / 12,365 |
+| Pollstartabstand | Standalone-Steuerintervall 50 ms, kein ROS-Publikationsbeleg | 50,000 / 57,173 / 72,622 / 132,552 |
+| Publikationsalter ab echtem Paarmittelpunkt | Standalone publiziert nicht | 12,501 / 28,419 / 38,209 / 61,293 |
+
+Je-Motor-Verteilungen haben n=2.400 bzw. 8.568. Null Paarüberschreitungen >120 ms
+in beiden Reihen; im letzten Reader null Mittelpunktlücken oder beobachtete
+Publikationsalter >180 ms. Keine kausale Last-/Kabelbehauptung aus diesen Maxima.
+Voroptimierung ebenfalls 1.200 Alleinpaare: Median 14,020 / p95 16,027 / p99
+17,868 / max 21,798 ms. Kein kontrollierter alleiniger Ursachenbeweis.
+Zwei erhaltene ältere Vollstackreihen: 12.003 bzw. 3.360 Paare, ebenfalls keine
+120-ms-Überschreitung; ihre Gateverriegelungen sind keine Reader-Paarfehler.
+
+**Regression/Build:** acht Projektpakete isoliert, zwei betroffene Pakete nach
+Gatekorrektur erneut gebaut; Quelle/Install bytegleich, kein Hauptinstallwechsel.
+1.340 abschließende pytest-Tests bestanden, einschließlich aktivem Basistreiber,
+passivem Kontinuitäts-/Recoveryvertrag, Not-Aus/Bewegungs-/HOLD-Gegenfällen und
+Launch-Besitzprüfung einschließlich verzögertem Reader. Neue echte DDS-Regression
+blockiert normalen Callback 350 ms: frische Quellen laufen weiter; tatsächlich
+fehlende Radquelle >180 ms bleibt terminal. Ohne eigene Quellengruppe scheitert
+die positive Gegenkontrolle erwartungsgemäß an unverändertem Radstempel.
+Versetzter LiDAR/Mast, zulässiger Start und Nachbarhindernis/unbekannter
+Schwenkraum/falscher TF/ungültige Pose getrennt regressiert. Verbundener
+`mast_start`: drei synthetische Aufgaben erreicht, viertes Kind terminal
+gecancelt, maximal ein Kind. Das ersetzt keinen realen Bewegungsbeleg.
+
+**Gemeinsames reales Ergebnis:** erster korrigierter Quellenvorlauf 20 s gesund,
+später Gate terminal an Radquellenalter; nächste Messung ohne Rendering ebenfalls
+nicht durchgängig gesund. Nach gezielter passiver Callbackkorrektur im letzten
+Vorlauf reale HWT-Kurzstörung → HOLD → Validierung → HEALTHY, danach weiterhin
+terminal `wheel_missing_stale_or_invalid`. Reader selbst bis Ende ready,
+4.284 vollständige Paare, keine FC03-Fehler/Reconnects/Recoveryausreißer/Rebases.
+Der erste Fehler-Snapshot bleibt die frühere HWT-Störung; er ist kein numerischer
+Snapshot der späteren terminalen Radentscheidung. Deren exaktes Verbraucher-
+alter/Ursache wird nicht aus dem Bag oder späteren guten Paaren erfunden.
+Die Callbackkorrektur behebt den gezielt regressierten seriellen Stau, beweist
+aber **keine vollständige Beseitigung realer Verbraucherfrischefehler**.
+Geometrie unabhängig davon weiterhin unzulässig. Deshalb kein aktiver Wechsel,
+0 Missionen/0 Nav2-Kinder; A/B/C unverändert offen. Budgets 900/150 s, 6/3 live
+belegt, nicht als ausgeführte Missionsabnahme gewertet. Alle vier Befehlsströme
+null; Encoderpositionen/RPM unverändert null, Odom-v null. Alle manifestierten
+Prozesse und Gerätebesitzer beendet; anschließend 12 frische Paare beider Motoren
+mit 0 rpm/Position 0. Bootstrap-Scope-Exit getrennt, keine Shutdownfehler.
+
+**Genau eine Voraussetzung für den bereits begrenzten Realauftrag:** ein
+**gleichzeitig gültiger gemeinsamer Startnachweis**: vollständige gepaddete
+Start-/Schwenkgeometrie samt zulässigem Rasterweg sensorisch belegt und tatsächliche
+Quellen bis zum Verbraucher innerhalb ihrer unveränderten Frischegrenzen, ohne
+terminale Verriegelung. Dieser eine Startvertrag ist aktuell an beiden getrennt
+benannten Prädikaten ungültig; die Befunde dürfen nicht zu einem einzigen
+angeblich behobenen Fehler zusammengezogen werden. Keine identische Wiederholung
+oder erzwungene Bewegung ohne neue Geometrie-/Zeitbezugsevidenz.
+
+Private Messungen/Scans/Karten/Bags/Manifeste ausschließlich unter
+`~/.local/share/amadeus/tests/metric-start-encoder-20260930/`, Abschluss in
+`common-gatefix/`. Keine Raumdaten oder private Berichts-Vorfahren veröffentlicht.
+Rückfall: ohne Mission geordnet beenden, temporäres letztes Overlay weglassen;
+Eigenkörperoption abwählen. Bei Kontinuitätsverlust neue belegte stationäre
+Initialisierung mit neuem Karten-/Odometriebezug, kein Latch-Reset. Kein Merge,
+kein permanenter Installwechsel und kein Stufe-3-Gesamtgrün.
 
 ## 5. Erhaltener Umfang und nächste Meilensteine
 

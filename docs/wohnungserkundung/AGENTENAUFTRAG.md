@@ -2,7 +2,7 @@
 
 **WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Softwarepaket abgeschlossen, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Der beauftragte Realnachweis aus Abschnitt 7 wurde bis zum rein lesenden Vorlauf ausgeführt und blieb dort blockiert; keine aktive Mission. Ergebnis und genau nächster Schritt stehen im STATUS.
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Ergebnis und genau eine Voraussetzung für den begrenzten Realauftrag stehen im STATUS.
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -113,3 +113,37 @@ Die [vorige Auftragsdatei](archive/20260930-v1.1/AGENTENAUFTRAG.md) ist vollstä
 **Nachweis:** lokale Aufzeichnung von Rohkarte, Costmap, Pose, Nav2-UUID/Terminalzustand, Explorer-Kette/Snapshots, Encoder-/HWT-/VL53-/Gate-Status und Ausgangsbefehlen. Aktuelle Entscheidung erst zulässiger Weg, dann Rangfolge; nach unerreichter Aufgabe terminales Kind, bestätigter Stillstand und gesunde Quellen, dann anderes wirklich rasterberechnetes Ziel. Beobachter ordnet reale Hindernissituation und Verbindung zu; keine Ursache aus Timeout allein ableiten. Drei erreichte Beobachtungsaufgaben im selben Elternauftrag, neue Kartenmessungen, mindestens eine tatsächlich geometrisch zulässige Passage mit anschließender neuer Aufgabe sind das positive Ziel; Hindernisfortsetzung nur bei sicherem aktuellen Weg. Bei fehlender zulässiger Alternative/Passage als konkrete Nachweislücke enden, keine Geometrie durch direkte Befehle umgehen.
 
 **Ende:** spätestens bei einer Versuchsgrenze, hartem Quellen-/Aktuator-/Posefehler, unbestätigtem Cancel oder Nutzerabbruch kontrolliert stoppen. Keine automatische Wiederanfahrt bei diesen Gegenfällen. Launch-Kinder nach Kartierungs-README geordnet einzeln beenden, keine Prozessgruppe signalisieren. Ausgang null, Encoderstillstand, terminale Kinder und freie Gerätehandles dokumentieren. Ergebnis als Teilstand/Nachweis mit Grenzen; keine automatische Speicherfreigabe oder Stufe-3-Gesamtgrün. Kein automatischer zweiter Realversuch aus diesem Dokument.
+
+
+## 8. Abschluss des Mast-/Encoder-Korrekturauftrags (01.10.2026)
+
+Nutzerauftrag vom 30.09., Basis `0efb7e4`, funktionaler Stand `8be0709`.
+Zwei getrennte Korrekturen im bestehenden Explorer/passiven Reader samt
+betroffenen Fusion-/Gate-Verbrauchern; keine neue Mastmaske oder neuer Explorer.
+Operatorzuordnung OAK-Kameramast übernommen. Ganze unbekannte Eigenkörperzellen
+privat begrenzt; Außen-/Padding-/Schwenkraum bleibt unbekannt und gesperrt.
+Isolierter Timing-Ausreißer hat belegte Kontinuität und zwei neue echte Paare
+statt Latch-Löschung. Harte Lücke/Portverlust/ungültige Daten bleiben terminal.
+Startstaffelung und passive Quellencallbacks gezielt nach Messung korrigiert.
+
+1.340 Regressionen, isolierter Achtpaketbuild und verbundener positiver
+`mast_start` bestanden. Passiver realer Vollstack gemessen: 4.284 Paarproben,
+keine 120-ms-Paarüberschreitung; kurzer HWT-HOLD erfolgreich wiederhergestellt,
+später Gate-Radquellen-Frische terminal. Start-/Drehkontur zugleich unzulässig,
+15 reale Cluster ohne zulässige Route. Keine reale Mission, keine Fahrt;
+A/B/C nicht abgenommen. Original-/Zwischenläufe und Messgrenzen im STATUS,
+keine rückwirkende Gesamtfreigabe.
+
+**Einzige Voraussetzung vor dem bereits beauftragten begrenzten Realnachweis:**
+ein gleichzeitig gültiger gemeinsamer Startnachweis mit sensorisch belegter
+voller gepaddeter Start-/Schwenkgeometrie und zulässigem Rasterweg sowie tatsächlicher
+Quellenfrische bis zum Verbraucher ohne terminale Verriegelung. Die beiden
+Ablehnungsprädikate bleiben ausdrücklich getrennt; kein identischer Wiederholungs-
+lauf ohne neue Evidenz und keine Bewegung zur Umgehung des Startvertrags.
+
+Der verbleibende Produktpfad bleibt Mission Manager → BT → metric_frontier → Nav2,
+900 s gesamt / 150 s je Aufgabe / höchstens 6 Aufgabenversuche und 3 Fehlversuche,
+bestehender LAB-1-Scope. Kein automatischer weiterer Fahrversuch, keine HWT-Injektion,
+Sonderbrücke, neuen Räume, Merge oder permanenter Install. Prozesse beendet,
+Befehle und FC03-Endwerte null. Dieser Abschnitt ist Abschluss und Voraussetzung,
+kein neues Masterplanprojekt.

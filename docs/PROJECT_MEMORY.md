@@ -41,3 +41,38 @@ Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MA
 **Offline-Grenze:** je drei lokal gespeicherte historische/aktuelle Snapshots nur lesend verglichen. Alte/neue Kandidaten historisch 15/7/11 gegenüber 0/4/11, aktueller Fehllauf 10/13/12 gegenüber 0/0/0. Rastergrenzen-Scope nur zur Analyse, keine Live-Gesundheit oder reale Fahrabnahme. Unzulässige Rohkarten-/Footprint-/Routenlage bleibt ein Blocker; keine Kartenverbesserung oder behobene historische Ursache behauptet.
 
 **Git, Runtime und Rückfall:** unabhängiger Checkout auf veröffentlichtem `1dbbdaa` in derselben PR-#105-Linie; laufendes `~/roboter_ws` unverändert, keine privaten Berichts-Vorfahren, keine Rohdaten in Git, kein Merge oder permanenter Installwechsel. Rückfall: metrisches Overlay abwählen, geordnet ohne Mission mit `existing` starten; sichere Betriebsgrenze weiterhin `active_drive=false`, `enable_auto_explore=false`. Genau ein begrenzter Realnachweis vorbereitet in AGENTENAUFTRAG §7, nicht gestartet. Stufe 3 bleibt offen.
+
+
+## 01.10.2026 – Mast-Eigenkörpervertrag und begrenzte passive Encoderheilung
+
+**Betreiberinformation:** Der rückwärtige graue Keil ist der OAK-Kameramast.
+Die vorhandene native 236–304°-NaN-Maske, ROS-CCW und gemessener +90°-TF werden
+weiterverwendet; aktuelles Install, Scanverbraucher und Laufdaten geprüft.
+Keine neue Maskierung oder Außenraumfreigabe.
+
+**Entscheidung:** Nur ganze unbekannte Zellen im ungepaddeten gemessenen Körper
+werden privat auf erste korrelierte Pose/Fingerprint begrenzt behandelt.
+Dieser Beleg folgt nicht der Bewegung und erlischt bei Fingerprintänderung.
+Belegte Zellen, unbekannter Außenraum, Padding und Rasterreserve bleiben gesperrt;
+voller Fahrzeug-/Drehsweep auf Rohkarte und Costmap erhalten. Positive Regression
+mit versetztem LiDAR und tatsächlich belegtem Außenraum; die reale aktuelle
+Geometrie bleibt trotz korrekter Eigenkörpertrennung unzulässig.
+
+**Encodervertrag:** vorhandene gemeinsame FC03-Blöcke erhalten. USB-Pfadsuche
+vermeiden, tatsächliche Identität/Exklusivität/CRC und Messzeitbezug erhalten.
+Nach ≥20 gesunden Paaren ein isolierter vollständiger Timing-Ausreißer bei
+belegter 180-ms-Kontinuität: ungültiges Paar zurückhalten, unbereit/HOLD,
+zwei neue plausible vollständige Paare, alle Zähleränderungen erhalten.
+120-/180-ms-Grenzen unverändert; harte Fehler erfordern neue belegte stationäre
+Initialisierung und Karten-/Odometriezuordnung, kein Faultflag-Reset.
+Passiver Readerstart 15 s staffeln. Passive Gate-Quellencallbacks unabhängig
+vom normalen seriellen Callback verarbeiten; aktiven Pfad separat erhalten.
+
+**Grenze/Nachweis:** 1.340 Regressionen und synthetischer `mast_start` bestanden;
+Achtpaketinstall temporär. Letzter realer Reader 4.284 gültige Paare, keine
+120-ms-Überschreitung; Gate nach echter HWT-Kurzstörung zunächst recovered,
+später Radfrische terminal. Die Softwarekorrektur beweist keine vollständige
+reale Verbraucherrobustheit. Keine Mission/Fahrt, A/B/C offen. Zahlen, Zellklassen,
+Zeitverteilungen und einziger gemeinsamer Startnachweis im WE-STATUS; technische
+Jetson-Wirkung im ROBOT_TRANSFER. Kein Masterplanwechsel, keine privaten Daten
+oder Berichts-Vorfahren veröffentlicht, kein Merge/Hauptinstallwechsel.

@@ -2729,3 +2729,45 @@ belegter SlowZone-Verlangsamung. Kein Raumübergang. Abschließend RPM null,
 Odometrie still, Kind terminal, alle Prozesse und seriellen Ports frei.
 SLAM-Shutdown Exit -6 gesondert dokumentiert, Bag vollständig. Nächster
 begrenzter Befundabgleich in WE-STATUS §7; keine weitere Fahrt gestartet.
+
+
+## 01.10.2026 – temporärer Mast-/Encoder-Kandidat, gemeinsamer Vorlauf negativ
+
+Unabhängiger Checkout `~/roboter_worktrees/metric-exploration-20260930`, bestehender
+Branch/PR #105. Funktionaler Kandidat `8be0709`; Hauptkopie `~/roboter_ws`
+unverändert sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Kein dauerhafter Install-/Autostartwechsel. Privates temporäres Achtpaketpräfix:
+`~/.local/share/amadeus/tests/metric-start-encoder-20260930/install`.
+Runtime sourced ausschließlich über dortiges `runtime-env.sh`: dokumentierte
+bisherige HWT-/Nav-/SLAM-/LiDAR-Unterlage, danach dieses lokale Overlay.
+Module und tatsächliche Parameter-/Launchdateien gehasht und bytegleich geprüft.
+Aktiver Basistreiber/Encoderodometrie unverändert zur Unterlage; kein aktiver
+Busbesitzer im Vorlauf. Passiver Reader allein auf Basisbus; native Mastmaske
+und Montage-TF erhalten. Reader startet im passiven HWT-Launch 15 s später,
+Gate verarbeitet passive Quellen in eigener Callbackgruppe mit zweitem Thread.
+
+Letzter Launch: `app_mapping.launch.py active_drive:=false
+use_hwt601_odometry:=true operator_stationary_confirmed:=true
+enable_auto_explore:=false start_web_gui:=false` mit zunächst ungebundenem
+metrischem Bootstrapprofil. Nach aktueller LAB-1-Karten-/Posebindung eigener
+metrischer Explorer, keine Mission. Kein elektrischer Motorstromzustand aus
+Software behauptet. Reale Scans/TF belegen bestehende Mastmaske; tatsächlicher
+SLAM-Präfix gepatchtes `~/amadeus_slam_toolbox_ws/install/slam_toolbox`,
+`check_min_dist_and_heading_precisely=true` live. Historische Buildanweisungen
+wurden nicht zur Installation ausgeführt.
+
+Gemeinsamer Vorlauf weiterhin negativ: rohe/gepaddete Start-/Drehkontur
+unzulässig und Gate später `wheel_missing_stale_or_invalid` terminal, obwohl
+Reader ready/fehlerfrei. Keine Grenzlockerung oder Fault-Löschung. 0 Missionen,
+0 Nav2-Kinder, Befehle null. Alle manifestierten Prozesse geordnet durch
+SIGINT ausschließlich an Launchwurzeln beendet; Gerätebesitzer frei,
+anschließend 12 frische FC03-Paare je 0 rpm / Position 0. Keine Shutdownfehler;
+Bootstrap-Scope-Exit separat. Privat: `metric-start-encoder-20260930/common-gatefix`
+mit geschlossener Bag, Manifest/Modulhashes/Scan- und Zellklassennachweis,
+Zeitverteilungen und Shutdownprüfung. Originalfehlerläufe bleiben erhalten.
+
+Rückfall: ohne Mission geordnet stoppen und letztes temporäres Overlay weglassen;
+`active_drive=false`, `enable_auto_explore=false`. Bei langer Kontinuitätslücke
+neue belegte stationäre Initialisierung mit neuem Karten-/Odometriebezug statt
+Latch-Reset. Reale Erkundung erst nach gleichzeitig gültigem gemeinsamen
+Startnachweis laut einzigem WE-STATUS, keine automatische Wiederanfahrt.
