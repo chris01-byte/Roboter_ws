@@ -263,3 +263,81 @@ def test_active_route_also_revalidates_the_original_nav2_goal_orientation():
     assert n._metric_route(inputs,(.05,.05),math.pi) is not None
     assert n._metric_route(inputs,(.05,.05),0.) is None
     assert n._metric_last_route_rejection=='goal_orientation_invalid'
+
+
+def mast_start_scene():
+    """Offset lidar; native crop 236..304 -> CCW 56..124 -> base rear.
+
+    Prior genuine observations cover the padding. The remaining mast shadow
+    in the body is unknown; a farther unobserved rear sector stays unknown.
+    No max-range ray is supplied for any masked angle.
+    """
+    from explore.metric_frontier import self_body_unknown_mask
+    g=grid();g.info.width=200;g.info.height=160;g.info.resolution=.02
+    g.info.origin.position.x=-2.;g.info.origin.position.y=-1.6
+    a=np.zeros((160,200),dtype=np.int16)
+    rr,cc=np.indices(a.shape);x=-2+(cc+.5)*.02;y=-1.6+(rr+.5)*.02
+    angle=(np.arctan2(y,x-.245)-math.pi/2)%(2*math.pi)
+    masked=(angle>=math.radians(56))&(angle<=math.radians(124))
+    physical=(x>=-.11)&(x<=.31)&(abs(y)<=.23)
+    a[masked & ((physical & (x>-.08)&(abs(y)<.20)) | (x<-.8))]=-1
+    g.data=a.ravel().tolist()
+    body=self_body_unknown_mask(g,a,(0.,0.,0.),(.245,0.,math.pi/2))
+    return g,a,body
+
+
+def test_mast_self_body_starts_without_clearing_outside_or_editing_map():
+    from explore.metric_frontier import self_body_unknown_mask
+    g,a,body=mast_start_scene();context=PortalMapContext('metric','map-test','map')
+    scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in ((-2.,-1.6),(2.,-1.6),(2.,1.6),(-2.,1.6))))
+    c=PortalSourceCorrelation(context,1,'a'*64,1)
+    raw=g.data[:]
+    known,safe=known_safe_mask(a,scope,c,(-2.,-1.6),0.,.02,.28,body)
+    col,row=ExploreNode._world_to_grid(0.,0.,g.info)
+    assert a[row,col]==-1 and safe[row,col]
+    assert not np.any(known[(a<0)&~body])
+    check=lambda x,y,yaw,g,k:footprint_clear(x,y,yaw,g,k,ExploreNode._world_to_grid,ExploreNode._grid_to_world)
+    assert footprint_route_clear(((0.,0.),(.6,0.)),0.,((g,known),),check)
+    assert g.data==raw  # no mutation of published raw evidence
+    assert np.any(a<0)
+
+
+def test_self_body_does_not_exempt_padding_obstacles_or_unknown_swing():
+    from explore.metric_frontier import self_body_unknown_mask
+    g,a,body=mast_start_scene();known=(a==0)|body
+    check=lambda yaw:footprint_clear(0.,0.,yaw,g,known,ExploreNode._world_to_grid,ExploreNode._grid_to_world)
+    assert check(0.)
+    # A real obstacle next to the chassis survives even if an unsafe caller
+    # passes an oversized exemption mask to known_safe_mask.
+    col,row=ExploreNode._world_to_grid(.25,.26,g.info);known[row,col]=False
+    assert not check(0.)
+    known=(a==0)|body
+    col,row=ExploreNode._world_to_grid(0.,.34,g.info);known[row,col]=False
+    assert check(0.) and not check(math.pi/2)
+    a[row,col]=-1
+    assert not self_body_unknown_mask(g,a,(0.,0.,0.),(.245,0.,math.pi/2))[row,col]
+    col,row=ExploreNode._world_to_grid(-.13,0.,g.info);a[row,col]=-1
+    assert not self_body_unknown_mask(g,a,(0.,0.,0.),(.245,0.,math.pi/2))[row,col]
+
+
+@pytest.mark.parametrize('pose,mount',[
+    ((math.nan,0.,0.),(.245,0.,math.pi/2)),
+    ((0.,0.,0.),(.245,0.,-math.pi/2)),
+    ((0.,0.,0.),(0.,0.,math.pi/2)),
+    ((0.,0.,0.),(.245,.02,math.pi/2)),
+])
+def test_self_body_rejects_invalid_pose_and_wrong_mount(pose,mount):
+    from explore.metric_frontier import self_body_unknown_mask
+    g,a,_=mast_start_scene()
+    with pytest.raises(ValueError):self_body_unknown_mask(g,a,pose,mount)
+
+
+def test_occupied_body_and_out_of_scope_pose_never_become_free():
+    from explore.metric_frontier import self_body_unknown_mask
+    g,a,_=mast_start_scene();col,row=ExploreNode._world_to_grid(0.,0.,g.info);a[row,col]=100
+    body=self_body_unknown_mask(g,a,(0.,0.,0.),(.245,0.,math.pi/2))
+    assert not body[row,col]
+    context=PortalMapContext('metric','map-test','map');c=PortalSourceCorrelation(context,1,'a'*64,1)
+    scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in ((.5,-1.),(1.5,-1.),(1.5,1.),(.5,1.))))
+    known,safe=known_safe_mask(a,scope,c,(-2.,-1.6),0.,.02,.28,body)
+    assert not known[row,col] and not safe[row,col]

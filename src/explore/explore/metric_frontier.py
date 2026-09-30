@@ -113,13 +113,52 @@ def route_cells(mask, start, target):
     return tuple(reversed(route))
 
 
-def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clearance):
+def self_body_unknown_mask(grid, occupancy, pose, lidar_mount):
+    """Only whole unknown cells inside the measured UNPADDED chassis.
+
+    This is a private validity mask, never a raw-map edit or a ray return.
+    Mast shadow outside the existing body, padding and occupied cells are
+    excluded. The deployed scan handedness requires the measured +90deg TF.
+    """
+    if (len(pose) != 3 or len(lidar_mount) != 3
+            or not all(math.isfinite(v) for v in (*pose, *lidar_mount))):
+        raise ValueError('self_body_pose_or_tf_invalid')
+    expected = (.245, 0., math.pi/2)
+    if (abs(lidar_mount[0]-expected[0]) > .001
+            or abs(lidar_mount[1]) > .001
+            or abs(math.atan2(math.sin(lidar_mount[2]-expected[2]),
+                              math.cos(lidar_mount[2]-expected[2]))) > .001):
+        raise ValueError('self_body_lidar_tf_mismatch')
+    if occupancy.shape != (grid.info.height, grid.info.width):
+        raise ValueError('self_body_grid_mismatch')
+    if not math.isfinite(grid.info.resolution) or grid.info.resolution <= 0:
+        raise ValueError('self_body_resolution_invalid')
+    rows, cols = np.indices(occupancy.shape)
+    q=grid.info.origin.orientation
+    yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+    res=grid.info.resolution
+    lx,ly=(cols+.5)*res,(rows+.5)*res
+    dx=grid.info.origin.position.x+math.cos(yaw)*lx-math.sin(yaw)*ly-pose[0]
+    dy=grid.info.origin.position.y+math.sin(yaw)*lx+math.cos(yaw)*ly-pose[1]
+    x,y=math.cos(pose[2])*dx+math.sin(pose[2])*dy,-math.sin(pose[2])*dx+math.cos(pose[2])*dy
+    # Cell half diagonal encloses every corner at every grid/body angle.
+    reserve=res/math.sqrt(2)
+    return ((occupancy < 0) & (-.11+reserve <= x) & (x <= .31-reserve)
+            & (abs(y) <= .23-reserve))
+
+
+def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clearance, self_body=None):
     inside = rasterize_scope(
         scope, context=correlation.context, width=occupancy.shape[1],
         height=occupancy.shape[0], resolution_m=resolution,
         origin_x_m=origin[0], origin_y_m=origin[1], origin_yaw_rad=yaw,
         maximum_cells=1000000)
     known = (occupancy == 0) & inside
+    if self_body is not None:
+        if self_body.shape != known.shape or self_body.dtype != bool:
+            raise ValueError('self_body_mask_invalid')
+        # A true obstacle can NEVER be exempted, even inside the body.
+        known |= self_body & (occupancy < 0) & inside
     distance = distance_transform_edt(np.pad(known, 1))[1:-1, 1:-1]
     # Include cell-size uncertainty; never seed across an unknown gap.
     safe = known & (distance * resolution >= clearance + resolution / 2)

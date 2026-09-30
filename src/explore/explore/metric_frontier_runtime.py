@@ -24,7 +24,7 @@ from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
-    footprint_clear, footprint_route_clear)
+    footprint_clear, footprint_route_clear, self_body_unknown_mask)
 
 
 class MetricFrontierRuntime:
@@ -66,6 +66,9 @@ class MetricFrontierRuntime:
         if (len(footprint) < 6 or len(footprint) % 2
                 or not all(math.isfinite(v) for v in footprint)):
             raise ValueError('metric footprint invalid')
+        self._metric_self_body_enabled = self.declare_parameter(
+            'metric_self_body_enabled', False).value
+        self._metric_body_anchor = None
         self._metric_bounds = (min(footprint[::2]), max(footprint[::2]),
                                min(footprint[1::2]), max(footprint[1::2]))
         if any((self._metric_bounds[0] > -.13, self._metric_bounds[1] < .33,
@@ -206,7 +209,25 @@ class MetricFrontierRuntime:
         cost_age = (self.get_clock().now().nanoseconds-identity.source_stamp_ns)/1e9
         if not 0 <= cost_age <= self._map_timeout_s:
             raise ValueError('costmap_stamp_stale')
-        known, safe = known_safe_mask(occupancy, scope, correlation, origin, yaw, res, self._goal_clearance_m)
+        body = None
+        if self._metric_self_body_enabled:
+            scan = self._door_lidar_scan_snapshot()
+            if (scan is None or not 0 <= now-scan['received_at'] <= self._door_lidar_scan_timeout):
+                raise ValueError('self_body_scan_stale')
+            mount = self._door_lidar_mount(scan['frame_id'])
+            if mount is None:
+                raise ValueError('self_body_lidar_tf_missing')
+            # Validate TF even after this bounded first-map exemption expires.
+            body = self_body_unknown_mask(grid, occupancy, pose, mount)
+            if self._metric_body_anchor is None:
+                self._metric_body_anchor = (source.fingerprint, pose)
+            fingerprint, anchor = self._metric_body_anchor
+            # Freeze the exemption at the first joined pose/map. It never
+            # follows the vehicle into newly swept unknown space or a new map.
+            body = (self_body_unknown_mask(grid, occupancy, anchor, mount)
+                    if fingerprint == source.fingerprint else None)
+        known, safe = known_safe_mask(occupancy, scope, correlation, origin, yaw, res,
+                                     self._goal_clearance_m, body)
         # Costmap values already include Nav2 inflation; also check full chassis
         # against actual occupied/unknown cells rather than treating unknown free.
         cost_known = (costs >= 0) & (costs < 100)
