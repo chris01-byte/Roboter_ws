@@ -203,3 +203,15 @@ Beginn, keine Messzeitstempel oder Frischegrenzen. Bis echte Daten vorliegen,
 bleibt Fusion unbereit; der aktive Basistreiber ist von dieser Startstaffelung
 nicht betroffen. Bereits entstandene unüberbrückbare Lücken werden damit
 nicht geheilt oder gelöscht: neue stationäre Initialisierung, kein Flagreset.
+
+Der nachgeordnete passive HWT-Verbraucher verarbeitet die neuesten tatsächlichen
+Quellenproben (Sensordaten depth 1, Radodometrie reliable depth 1). Im passiven
+Missionsgate laufen ausschließlich diese Quellencallbacks in einer eigenen
+seriellen Callbackgruppe mit zweitem Executor-Thread. Befehle, Not-Aus und
+Gate-Timer bleiben untereinander seriell; die bestehende Health-Sperre schützt
+den gemeinsamen Zustand. Anlass waren frisch aufgezeichnete Radproben, während
+das Gate noch eine 189,8 ms alte Probe bewertete. Gerätefreie DDS-Regression
+blockiert den gewöhnlichen Callback 350 ms: Quellen bleiben aktuell, ein
+tatsächlicher Radquellenausfall bleibt über 180 ms terminal. Aktiver Gate-Pfad
+und seine bisherige QoS/Callbackgruppe bleiben erhalten. Keine Stempel werden
+verjüngt und keine alte Verriegelung wird durch diese Korrektur gelöscht.

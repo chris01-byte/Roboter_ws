@@ -8,10 +8,12 @@ import time
 
 import rclpy
 from rclpy.time import Time
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy._rclpy_pybind11 import RCLError
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import (
+    ExternalShutdownException, MultiThreadedExecutor, SingleThreadedExecutor)
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 from sensor_msgs.msg import LaserScan, PointCloud2
@@ -233,10 +235,18 @@ class CmdVelMissionGate(Node):
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         self._hwt_guard = None
+        self._hwt_source_cb = None
         self._hwt_status_pub = None
         if require_hwt:
             from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
-            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive)
+            # The passive fullstack recorded fresh wheel messages while this
+            # single executor still evaluated an older sample. Keep only the
+            # source callbacks independent; command/estop/timer callbacks stay
+            # serialized in the default group. Health owns its existing lock.
+            if not hwt_drive:
+                self._hwt_source_cb = MutuallyExclusiveCallbackGroup()
+            self._hwt_guard = Hwt601FusionGuard(
+                self, hwt_drive, self._hwt_source_cb)
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
@@ -959,8 +969,11 @@ class CmdVelMissionGate(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelMissionGate()
+    executor = (MultiThreadedExecutor(num_threads=2)
+                if node._hwt_source_cb is not None else SingleThreadedExecutor())
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     except RuntimeError:
@@ -970,6 +983,7 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        executor.shutdown()
         if rclpy.ok():
             try:
                 node._publisher.publish(Twist())

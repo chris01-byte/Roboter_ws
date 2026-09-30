@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 from launch import LaunchContext
-from launch.actions import IncludeLaunchDescription, OpaqueFunction
+from launch.actions import IncludeLaunchDescription, OpaqueFunction, TimerAction
 from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 
@@ -32,8 +32,15 @@ def test_hwt_has_exactly_one_bus_and_local_tf_owner(active):
     module = load_launch('src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py')
     ctx = context(active_drive=active, normalize_scan='true', crop='true',
                   operator_stationary_confirmed='true')
-    nodes = [e for e in module.generate_launch_description().entities
-             if isinstance(e, Node) and (e.condition is None or e.condition.evaluate(ctx))]
+    def enabled_nodes(entities):
+        for entity in entities:
+            if entity.condition is not None and not entity.condition.evaluate(ctx):
+                continue
+            if isinstance(entity, Node):
+                yield entity
+            elif isinstance(entity, TimerAction):
+                yield from enabled_nodes(entity.actions)
+    nodes = list(enabled_nodes(module.generate_launch_description().entities))
     executables = [n.node_executable if isinstance(n.node_executable, str)
                    else perform_substitutions(ctx, n.node_executable) for n in nodes]
     assert executables.count('ekf_node') == 1
@@ -51,7 +58,8 @@ def test_no_default_or_inferred_stillness_opens_hwt_devices():
     module = load_launch('src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py')
     entities = module.generate_launch_description().entities
     gate_index = next(i for i, e in enumerate(entities) if isinstance(e, OpaqueFunction))
-    assert all(not isinstance(e, (Node, IncludeLaunchDescription)) for e in entities[:gate_index])
+    assert all(not isinstance(e, (Node, IncludeLaunchDescription, TimerAction))
+               for e in entities[:gate_index])
     with pytest.raises(RuntimeError, match='Stillstand'):
         module._require_stationary_confirmation(context(operator_stationary_confirmed='false'))
 

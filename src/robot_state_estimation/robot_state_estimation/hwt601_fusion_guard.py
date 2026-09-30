@@ -5,7 +5,7 @@ import math
 import time
 
 from nav_msgs.msg import Odometry
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
 
@@ -19,13 +19,19 @@ class Hwt601FusionGuard:
         self._logged_recovery_events = 0
         self._logged_first_fault = False
         self.subscriptions = []
+        # Passive readiness needs the newest actual measurement, not a queue
+        # of old sensor frames. No restamping or extra freshness is permitted.
+        latest_sensor = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+        latest_wheel = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
         for name, topic, msg_type in (
                 ('raw', '/shadow/hwt601/imu/data_raw', Imu),
                 ('yaw', '/shadow/hwt601/imu/yaw_rate', Imu),
                 ('wheel', '/fusion/hwt601/wheel_odom_raw', Odometry)):
             self.subscriptions.append(node.create_subscription(
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
-                qos_profile_sensor_data, callback_group=callback_group))
+                (qos_profile_sensor_data if active_drive else
+                 latest_wheel if name == 'wheel' else latest_sensor),
+                callback_group=callback_group))
         for name, topic in (
                 ('raw', '/shadow/hwt601/raw_status_json'),
                 ('yaw', '/shadow/hwt601/status_json'),
