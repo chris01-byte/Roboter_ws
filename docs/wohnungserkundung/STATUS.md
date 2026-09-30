@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status und nächster Auftrag
 
-**WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Stufe 3 weiterhin OFFEN**
+**WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Stufe 3 weiterhin OFFEN**
 
 Maßgeblich: [MASTERPLAN](MASTERPLAN.md), [AGENTENAUFTRAG](AGENTENAUFTRAG.md), [LAB-1](../LABORMODUS.md), [MEILENSTEINE](MEILENSTEINE.md). Dies ist der einzige aktuelle WE-Iststand. Die ausführliche bisherige Statusdatei ist [bytegleich archiviert](archive/20260930-v1.1/STATUS.md); alte Abschnittsnummern und „nächste Schritte“ dort sind historische Referenzen.
 
@@ -86,7 +86,7 @@ Kein regulärer aktiver Wechsel, weil Vorlauf nicht bestanden; kein zweiter Fahr
 
 Private Belege ausschließlich `~/.local/share/amadeus/tests/metric-frontier-real-20260930/`: Runtime-Manifest mit Präfixen/Profil-/Modulhashes, Liveparameter/-status, Quellen-/Geometriesnapshots, lokale Darstellung, geschlossene Bag-Auswertung, FC03-Endmessung und Shutdownprüfung. Keine privaten Karten/Bags/Berichts-Vorfahren veröffentlicht. Softwareerfolg bleibt erhalten; kein Stufe-3-Gesamtgrün.
 
-**Genau nächster Schritt:** ein gezielter Vorlauf-Korrekturauftrag für die belegten Startkarten-/Kontur- und FC03-Paarzeitblocker, mit getrennten Nachweisen und unveränderten Schutzgrenzen; keine automatische neue Fahrt.
+**Damals nächster Schritt, im folgenden Abschnitt ausgeführt:** gezielter Vorlauf-Korrekturauftrag für Startkarten-/Kontur- und FC03-Paarzeitblocker mit getrennten Nachweisen und unveränderten Schutzgrenzen. Aktuelle Voraussetzung ausschließlich im Abschluss vom 01.10.2026.
 
 ### 01.10.2026 – Mast-/Eigenkörpervertrag und Encoderzeitpfad getrennt korrigiert
 

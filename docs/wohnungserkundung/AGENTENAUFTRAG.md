@@ -1,6 +1,6 @@
 # Agentenauftrag – metrische Frontiererkundung ohne Portalpflicht
 
-**WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Softwarepaket abgeschlossen, reale Stufe 3 OFFEN**
+**WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
 
 **METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Ergebnis und genau eine Voraussetzung für den begrenzten Realauftrag stehen im STATUS.
 
