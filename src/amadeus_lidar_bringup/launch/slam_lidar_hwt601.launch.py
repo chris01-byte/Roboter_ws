@@ -5,7 +5,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
@@ -60,6 +60,9 @@ def generate_launch_description():
             'normalize_scan', default_value='true'),
         DeclareLaunchArgument(
             'crop', default_value='true'),
+        DeclareLaunchArgument(
+            'encoder_shadow_start_delay_s', default_value='15.0',
+            description='Passive FC03 starts after the measured import/start burst; no data is restamped.'),
 
         OpaqueFunction(function=_require_stationary_confirmation),
 
@@ -92,13 +95,18 @@ def generate_launch_description():
         # Motorlos: echte FC03-Encoder statt synthetischer Dry-run-Odometrie.
         # Exklusiver Ersatz, nie zweiter Leser neben base_hardware. Kein
         # Command-Abonnent, keine Schreibfunktion, kein eigener TF.
-        Node(
+        # Measured full-stack startup produced a 197.7ms poll-start gap
+        # before the third pair. Start the passive reader after that import
+        # burst, rather than establishing then silently rebasing a baseline.
+        # Fusion remains unready until real pairs arrive. Active owner unchanged.
+        TimerAction(period=LaunchConfiguration('encoder_shadow_start_delay_s'),
+                    condition=UnlessCondition(active_drive), actions=[Node(
             package='base_hardware', executable='encoder_shadow_reader',
             name='hwt601_encoder_shadow_reader', output='screen',
             condition=UnlessCondition(active_drive),
             parameters=[encoder_params],
             remappings=[('/shadow/hwt601/wheel_odom_raw',
-                         '/fusion/hwt601/wheel_odom_raw')]),
+                         '/fusion/hwt601/wheel_odom_raw')])]),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(os.path.join(

@@ -190,3 +190,16 @@ Diese Korrektur betrifft den **passiven** Reader. Der aktive Basistreiber hat
 einen eigenen Encoder-/Watchdogvertrag und wird getrennt regressiert;
 seine Frischegrenzen und Fahrparameter bleiben unverändert. Niemals beide
 Prozesse gleichzeitig auf dem Basisbus starten.
+
+
+Der erste gemeinsame Vollstackstart zeigte vor der dritten Probe eine echte
+Datenlücke: Pollstartabstand 197,695 ms, Paarzeit noch unter 120 ms. Der Core
+blieb korrekt terminal und behielt Baseline/Pose (`rebases=0`). Gemessene
+Alias-/USB-Anteile waren während dieses Starts deutlich länger; daraus wird
+kein alleiniger CPU- oder Kabelauslöser behauptet. Der vorhandene passive
+HWT-Launch startet den Reader nun erst 15 s nach Beginn der übrigen Starts
+(`encoder_shadow_start_delay_s`). Dies verschiebt den ersten Lese-/Baseline-
+Beginn, keine Messzeitstempel oder Frischegrenzen. Bis echte Daten vorliegen,
+bleibt Fusion unbereit; der aktive Basistreiber ist von dieser Startstaffelung
+nicht betroffen. Bereits entstandene unüberbrückbare Lücken werden damit
+nicht geheilt oder gelöscht: neue stationäre Initialisierung, kein Flagreset.
