@@ -109,7 +109,56 @@ Nutzerentscheidung ist in Masterplan v1.1 und STATUS Abschnitt 5 festgehalten.
 
 ## 5. Aktueller Folgeauftrag und historische Kindziel-Abnahmevorlage
 
-### Aktueller Auftrag vom 29.09.2026: Schritt 3 real abnehmen
+### Aktueller Folgeauftrag 30.09.2026: Timeoutentscheidung gezielt belegen
+
+Der ausschließliche Offlineauftrag am vollständigen zweiten Lauf ist
+abgeschlossen; [STATUS Abschnitt 7](STATUS.md#7-nächster-schritt-und-historie)
+ist der aktuelle Befund. Kandidat `492ef20`, Ergebnisbericht `d480243`;
+kein Geräte-/ROS-Node-Start und keine Produktänderung in der Auswertung.
+
+Software-Portalbestand durchgehend leer trotz aktiviertem frischem Feed,
+296 Detektorgegenproben ebenfalls leer: nach wirksamer Analyseerosion keine
+weitere Komponente >=0,4 m². Konkrete Operator-Tür und deren Bezug
+zum autonomen `task-frontier_000011` nicht feststellbar. Keine Portalaufgabe,
+kein Übergang in einen neuen Raum. SlowZone-Punkte liegen auch in beiden
+Costmaps; kein belegter Verlust. Neue Pläne existierten, danach blieb ein auf
+den gespeicherten Rastern nicht lethaler Restpfad. Die Ausgabe blieb auf 30 %.
+Die kleinen TF-Bewegungen genügen im Checker-Replay weiter dessen Bedingungen;
+kein eigener Befreiungszweig im verwendeten Nav2-Baum, Recoveries=0.
+
+**Genau ein nächstes Paket:** Im bestehenden Timeout-Klassifikationspfad einen
+strukturierten Erstentscheidungsbeleg ergänzen, ohne Produktverhalten zu ändern.
+Die eine fehlende Messung ist der tatsächliche interne Ablehnungs-/Exceptiongrund
+bei `navigation_timeout -> SYSTEM_FAILURE` samt verwendeten Sensor-, Stillstands-,
+Pose-/Costmapwerten und getrennten Empfangs-/Messzeitstempeln. Bestehendes
+`LOCAL_BLOCKED` und die vorhandene alternative Aufgabenwahl erhalten.
+
+Grund: reale Mission endete mit `child_navigation_timeout`, während die echte
+bestehende Blockadeprüfung in drei Offline-Terminalsnapshots positiv ausfällt.
+Sechs Bewegungs-/Not-Aus-Gegenfälle bleiben negativ. Replay ist kein Ersatz für
+den damaligen Explorer-Callbackzustand; keinen bestimmten fehlgeschlagenen
+Gate-/Sensorwert und keine mechanische Ursache erfinden.
+
+**Gezielte Regression des Folgepakets:** Dieselben historischen positiven
+Timeout-Snapshots liefern positive Blockadeklassifikation; Bewegung, Not-Aus,
+stale/inkonsistente Quellen bleiben gesperrt. Erstes negatives Prädikat und
+abgefangene Exception müssen unterscheidbar und dem verwendeten Snapshot
+zugeordnet sein. Kein neuer allgemeiner Recorder oder Audit. Diese Diagnose
+ist hier vorbereitet, nicht implementiert; keine weitere Aktion automatisch.
+
+Produktparameter, Fristen, Kollisionskontur und Recoveryverhalten unverändert.
+Kein erneuter HWT-Nachweis, keine Fahrt, kein Merge/Installwechsel, kein Stufe-3-
+Grün. Masterplan v1.1 bleibt: Hindernis bewältigen und Mission fortsetzen,
+anschließend vollständig durch die Tür und dahinter weiterarbeiten.
+
+Lokaler vollständiger Bericht und Abbildungen:
+`~/.local/share/amadeus/tests/stage3-door-obstacle-offline-20260930/`.
+Alte Realberichte und Betreiber-/Schutzbelege bleiben historische Teilnachweise.
+
+<details>
+<summary>Historie vor der aktuellen SlowZone-Auswertung</summary>
+
+### Historischer Auftrag vom 29.09.2026: Schritt 3 real abnehmen
 
 **Ergänzter ausführbarer Auftrag:** Regulären A→B→C-Produktlauf bis zur
 vollständigen Türdurchfahrt und Weitererkundung im angrenzenden Bereich führen.
@@ -132,15 +181,13 @@ Folgelauf ein autonomes Kind bis 120 s erhalten, keine Kartenquellen-Cancels
 und kein HWT-first_fault. Zieltimeout bei belegter SlowZone-Verlangsamung;
 kein Ziel-/Tür-/Raumerfolg. Alle Geräteprozesse beendet, Ports frei.
 
-**Genau nächster Auftrag:** Gemessene SlowZone-Punkte mit dem tatsächlichen
+**Damals vorgesehener Folgeauftrag:** Gemessene SlowZone-Punkte mit dem tatsächlichen
 Gegenstand vor dem Roboter abgleichen (konkrete Vor-Ort-Antwort angefragt,
 noch offen). Den belegten Restfehler eingrenzen; keinen Timeout und keine
 Kollisionsgrenze für einen Erfolg lockern. Keine unveränderte weitere Fahrt.
 Originale, Schutzbelege und Aufzeichnungslücke des ersten Laufs in STATUS §7;
 aktuelle Konkretisierung am Dokumentende. Laborfreigabe bleibt übernommen.
 
-<details>
-<summary>Historie vor der aktuellen SlowZone-Auswertung</summary>
 
 **Historischer Stand vor den beiden Join-Korrekturen:** `fb4608a` ist gebaut, mit
 221 Tests und dem wiederholten echten gerätefreien Produktgraph geprüft.
@@ -556,7 +603,7 @@ Seine damalige Basis PR #91 und sein Abschnitt 7 sind **kein aktueller Auftrag**
 Historische fachliche Nachweise bleiben erhalten; Archive nicht automatisch ausführen.
 
 
-### Laufende Konkretisierung 29.09.2026: belegte SlowZone-Zielanfahrt
+### Historische Konkretisierung 29.09.2026: belegte SlowZone-Zielanfahrt
 
 Stand `492ef20`: 245 Tests, isolierter Join-Build und Karten-Produktgraph
 bestanden. Realer regulärer Lauf: genau ein autonomes Kind bleibt bis zum
@@ -564,7 +611,8 @@ bestanden. Realer regulärer Lauf: genau ein autonomes Kind bleibt bis zum
 Ziel dennoch nicht erreicht, keine Türquerung. Schutzverlangsamung durch
 SlowZone im vollständigen Bag belegt; Stand und Detailwerte in STATUS §7.
 
-Genau nächster Auftrag ist der Abgleich der gemessenen SlowZone-Punkte mit
+Historischer Folgeauftrag, ersetzt durch den Offlineabschluss 30.09.2026:
+Damals vorgesehen war der Abgleich der gemessenen SlowZone-Punkte mit
 dem tatsächlichen Gegenstand vor dem Roboter. Diese konkrete Vor-Ort-Antwort
 ist angefragt und fehlt noch. Danach ausschließlich einen belegten Fehler
 behandeln; keine Vermutung als Kalibrierkorrektur, kein höheres Zeitbudget,
@@ -580,6 +628,7 @@ Kind dokumentiert. Recorder-Bags nur nach Stopp auswerten; der erste Lauf
 
 **Gesicherte Pause 29.09.2026, 23:30 MESZ:** Nutzer beauftragt Speichern und
 Herunterfahren. Ergebnis `d480243` remote gesichert, Roboterprozesse und
-serielle Besitzer erneut frei. Nach Neustart zuerst den offenen
+serielle Besitzer erneut frei. Historische Übergabe, durch Auftrag 30.09.2026
+ersetzt: nach Neustart den offenen
 SlowZone-/Objektabgleich fortsetzen; keine Fahrt automatisch starten.
 Shutdown ist angefordert, kein Beleg einer geänderten Motorsperrenstellung.

@@ -856,7 +856,117 @@ und WE-M0 bis WE-M7; keine neue Meilensteinfolge.
 
 ## 7. Nächster Schritt und Historie
 
-### Gesicherter Pausenstand 29.09.2026, 23:30 MESZ
+### Aktueller Offline-Abschluss 30.09.2026: Türzuordnung und Timeoutentscheidung
+
+MASTERPLAN v1.1, Schritt 3; ausschließlich vollständiger zweiter Real-Bag
+`stage3-map-handoff-20260929/real-repeat`, Kandidat `492ef20`, Dokumentation
+`d480243`. Der erste unvollständige Bag wurde nicht beigemischt. Kein Geräte-/
+ROS-Node-Start, keine Produkt-/Parameteränderung, kein Installwechsel.
+
+**Tür erkannt: NICHT FESTSTELLBAR für die konkrete Operator-Tür.** Im
+aufgezeichneten Softwarebestand dagegen kein Portal: 327 Regionsgraphnachrichten,
+Portalanzahl/Bestätigung durchgehend null, keine Portal-ID und keine Portalaufgabe.
+Feed aktiviert, Karten korreliert und Portalgedächtnis frisch. Gegenprobe des
+unveränderten verbundenen Detektors auf 296 aufgezeichneten Missionskarten mit
+wirksamen Analyseparametern ebenfalls leer. Zusätzliche TF2-geführte Geometriegegenprobe: auf allen 296
+Karten nach dieser Erosion keine andere Komponente >=0,4 m². Das ist die
+konkrete fehlende Detektorvoraussetzung, kein Beleg der physischen Türidentität.
+Analyseclearance dieses Shadowfeeds
+0,20 m, nicht die separate ältere 0,40-m-Analyse. Kein Portalauftrag ausgewählt,
+keine Portalquerung und keine Arbeit in neuer Region. Eine konkrete physische
+Öffnung ist ohne räumlichen Betreiber-/Bildbeleg nicht zugeordnet.
+
+**Auf diese Tür zugesteuert: NICHT FESTSTELLBAR.** Belegt sind autonome Auswahl
+`task-frontier_000011`, Revision 251, `current_region`, eine Nav2-UUID und drei
+publizierte Wege. WE-Rohroute 1,878822 m, erster Nav2-Weg 1,448167 m. Lokale
+Abbildung enthält Originalziel, Wege, Kontur, Punkte und Kartenpose; mangels
+Portal-ID/physischer Türzuordnung keine geometrische Gleichsetzung mit der Tür.
+Die Policy bewertete später andere Frontiers, dispatchte aber kein weiteres Kind.
+
+**Fortschritt:** ab 1790716830.880535 `SlowZone`, 30 % Ausgabe. Bei Snapshot
+1790716840 lagen 12 linke SlowZone-Punkte räumlich auch in lokalen/globalen
+Costmaps: 11 Zellen Kosten 100, eine 99. Kein konkret belegter Punktverlust;
+isolierter Quellenbeitrag SLAM/OAK/VL53 mangels Layertrace nicht bestimmbar.
+Sensor-Euklidabstand mindestens 0,409250 m, Sensor-x mindestens 0,366965 m,
+base_link-x mindestens 0,656965 m; projektierte Reserve zur Modellfront
+(+0,33 m einschließlich Padding) mindestens 0,326965 m. Minima können
+verschiedene Punkte betreffen; kein Beweis physischer Objektidentität.
+Die bereits gestellte Gegenstandsfrage bleibt offen und wurde nicht wiederholt.
+
+Zwei neue Pläne bei 1790716830.218663 / 6831.262971; spätere verbleibende
+Pfadstützpunkte auf den gespeicherten globalen Costmaps maximal Kosten 91,
+keine 99/100. SlowZone ist eine zusätzliche Ausgabeverlangsamung, kein eigener
+WE-Befreiungseingang. IsPathValid/Planaktualisierung und SlowZone haben
+unterschiedliche Bedingungen. Ein sicherer physischer Ausweg samt kontinuierlicher
+Konturprüfung ist dadurch nicht nachgewiesen. Kartenunbekannt bleibt unbekannt.
+
+Gegenprobe des PoseProgressChecker (0,10 m **oder** 0,05 rad in 30 s), anhand
+historischer odom->base_link TF: 23 Baselines, davon 14 Winkel-, 8 Translations-
+resets und eine initiale, maximal 29,400928 s zwischen Resets; kein negativer Check.
+Dies unterstützt die Hypothese kleiner ausreichender Bewegungen trotz fehlender
+Zielerreichung; keine intern aufgezeichneten Checker-Events. Offizieller Nav2-
+Algorithmus 1.1.20 geprüft. Heute installierte Apt-Version/Header passen zum
+historischen Pluginstart; historische Nav2-Apt-Version und separater Nav2-
+Parameter-Service-Dump fehlen. Parameterweg aus erhaltenem Install/Launch
+rekonstruiert, nicht aus Kommentaren. Neue Pfade resetten dort den Goalchecker,
+nicht den laufenden Progresschecker.
+
+Vor SlowZone 0,756168 m Odomweg / 0,755666 m Karten-Nettofortschritt;
+danach 0,388848 m Odomweg mit 0,850007 rad absoluter Drehung / 0,214453 m
+Karten-Netto. Originalzielabstand zuletzt 0,375730 m; Nav2-Restweg 0,243640 m
+bezieht sich auf den letzten versetzten Planendpunkt. Fenster 6865–6885:
+0,073727 m Odomweg gegenüber 0,017370 m Karten-Netto. Zeitverlauf aller vier
+Befehlstufen, Base-Soll/FC03-Ist und Positionencoder ausgewertet.
+Nach SlowZone-Eintritt enthält bereits der ursprüngliche Nav2-Befehl 22,797 s
+Nulltranslation mit nichtnull Drehbefehl; am Ausgang 21,644 s. Diese Abschnitte
+sind nicht allein Gate-Sperren. Befehlssummen im selben 63,581-s-Fenster:
+Smoother v-Integral 2,183670 m, Collision-Ausgang 0,655184 m (30 %).
+Das sind integrierte Sollwerte, keine gefahrene Strecke. Das positive w-Integral
+am Ausgang (1,544442 rad) und die überwiegend negative Yawänderung der
+Rückmeldung unterscheiden sich; ihre Ursache ist nicht belegt. RPM-Registernähe
+ist kein Beleg der Chassisgeschwindigkeit; transiente Differenzen vorhanden.
+SLAM-Kartenpose nutzt Odometrie, ist keine unabhängige externe Vermessung.
+Keine Schlupf-, Kontakt-, Rampen- oder Motorschadenursache daraus behauptet.
+
+**Befreiung:** geladener `navigate_to_pose_no_recovery.xml` enthält keine
+Befreiungsmanöver; Nav2-Feedback `number_of_recoveries=0`. 120-s-Kindlimit,
+Cancel 1790716894.462110/.463998, Explorer terminal 1790716894.519409:
+`aborted`, `child_navigation_timeout`. Die vorhandene lokale Blockadeprüfung
+kann Timeout bereits zu `LOCAL_BLOCKED` und befristeter Aufgabenrückstellung
+machen. Ohne positiven Nachweis/vorrangiger harter Klassifikation führt der
+Nav-Runtime-Pfad zu `SYSTEM_FAILURE/ABORTED` und beendet die Mission.
+
+**Eine entscheidende Nachweislücke:** tatsächlicher interner Ablehnungs- oder
+Exceptiongrund dieser Timeoutklassifikation samt verwendetem Snapshot.
+Recorder-Empfangszeiten ersetzen keine Explorer-Callback-Zeitpunkte. Drei reine
+Offline-Aufrufe der echten Methode mit Originalkandidat und gespeicherten
+Terminal-Sensorsnapshots ergeben jeweils positiven Blockadebefund; v=0,02 m/s
+und Not-Aus werden jeweils abgewiesen (6 Gegenfälle). Historisches TF2-BufferCore-
+Replay liefert Posealter 0,0233/0,0433/0,0232 s; nicht mit einzelnem map->odom-
+Stamp/Empfangsalter vermischt. Dieser positive Replay ist ausdrücklich kein
+Nachweis des damaligen internen Entscheiderzustands.
+
+**Genau nächster Auftrag:** Einen begrenzten strukturierten Entscheidungsbeleg
+am bestehenden Übergang `navigation_timeout -> SYSTEM_FAILURE` ergänzen:
+erstes negatives Prädikat beziehungsweise Exception, verwendete Empfangs-/
+Messstamps, Stillstands-, Pose- und Costmapbefund. Regression mit denselben
+positiven Timeout-Snapshots, bewegter Basis, Not-Aus sowie stale/inkonsistenten
+Quellen und Exception: Ergebnis und Erstgrund müssen konsistent bleiben.
+Keine Verhaltensänderung, kein höheres Zeitbudget und keine Fahrt aus diesem
+Befund ableiten; die konkrete Verhaltenskorrektur hängt von dieser Messung ab.
+
+**Nachweise lokal:**
+`~/.local/share/amadeus/tests/stage3-door-obstacle-offline-20260930/BEFUND.md`,
+Skripte, Inputhashes, Integritätsprüfung, 296 Portalgegenproben, drei positive
+Blockadegegenproben + sechs Abweisungen, TF-Common-Time, Pfadkosten und
+Bewegungsfenster; `map-costmap.png`, `timeline.png`. Karten, Koordinaten und
+Rohdaten bleiben lokal. quick_check OK, vollständiger Bag bis 1790716944.345331.
+Produktmodule gegen Quellcommit/Manifest bytegleich geprüft. Build entfällt bei
+reiner Auswertung/Dokumentation; bisherige 245 Softwaretests bleiben Teilnachweis.
+A/B/C, vollständige Türpassage und Weitererkundung weiterhin offen.
+
+
+### Historischer Pausenstand 29.09.2026, 23:30 MESZ
 
 Nutzer fordert Speichern, Commit und anschließendes Herunterfahren.
 Ergebnisstand `d480243` ist remote bestätigt, Arbeitsbaum war sauber.
@@ -865,13 +975,14 @@ keine aktiv. Lokale Messartefakte bleiben erhalten. Betriebssystem-Shutdown
 wird nach Commit/Push dieser Übergabe angefordert; sein abgeschlossener
 Zustand ist von diesem laufenden Prozess aus nicht nachweisbar.
 
-Beim nächsten Einstieg keine Mission automatisch starten. Genau die offene
+Historische Übergabe (durch Offline-Auftrag 30.09.2026 ersetzt): keine Mission
+automatisch starten. Damals war genau die offene
 SlowZone-/Vor-Ort-Objektzuordnung aus dem folgenden Ergebnis abgleichen;
 Tür-/Raumerfolg bleibt offen. Letzte physische Motorsperrenstellung nicht
 als durch das Herunterfahren geändert behaupten. LAB-1 bleibt maßgeblich.
 
 
-### Aktuellster Realstand 29.09.2026 – Kartenübergabe hält, Zieltimeout
+### Historischer Realstand 29.09.2026 – Kartenübergabe hält, Zieltimeout
 
 Kandidat `492ef20`, bytegleiches Explore-Modul aus isoliertem `join-install`;
 245 gezielte Tests und bestehender realer MM/BT/WE/Gate/Yaw-Produktgraph
@@ -907,7 +1018,8 @@ und serielle Ports frei. `slam_toolbox` meldete beim SIGINT-Shutdown Exit -6;
 der Prozess blieb nicht aktiv, Bag wurde vollständig geschlossen. Das ist
 kein vollständig fehlerfreier Shutdownbeleg und wird separat erhalten.
 
-**Genau nächster Auftrag:** Die belegte SlowZone-/Zielanfahrt anhand dieses
+**Damals vorgesehener Folgeauftrag (ersetzt durch Abschluss 30.09.2026):**
+Die belegte SlowZone-/Zielanfahrt anhand dieses
 vollständigen Bags und der noch fehlenden konkreten Vor-Ort-Objektzuordnung
 abgleichen. Nur einen daraus belegten Fehler korrigieren und gerätefrei
 prüfen; erst danach einen neuen begrenzten Produktlauf im bestehenden LAB-1-

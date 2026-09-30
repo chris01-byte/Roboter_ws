@@ -1,5 +1,22 @@
 # Projektgedächtnis
 
+## 30.09.2026 – SlowZone, Pfadgültigkeit und Timeoutentscheidung trennen
+
+Der vollständige zweite Lauf auf `492ef20` enthält keine Portalhypothese und
+keine räumliche Identifizierung der Operator-Tür. Frontierziel nicht als Türziel
+etikettieren. VL53-SlowZone-Punkte sind räumlich in den Costmaps vorhanden,
+verbleibende Pfadstützpunkte nicht lethal; Schutzverlangsamung ist kein eigener
+Befreiungseingang. Kleine Winkel-/Translationsbewegungen genügen im Offline-
+Checker-Replay weiter dessen Kriterien. Keine Frist-/Schutzlockerung daraus.
+Die reale Timeoutmission wurde terminal, echte lokale Blockadeprüfung mit drei
+aufgezeichneten Terminal-Snapshots dagegen positiv (sechs Bewegungs-/Not-Aus-
+Abweisungen). Recorderzeiten sind keine Explorer-Callbackzeiten; interner
+Ablehnungs-/Exceptiongrund fehlt. Genau nächster Schritt ist ein begrenzter
+Erstentscheidungsbeleg in diesem vorhandenen Pfad, keine Verhaltenskorrektur
+auf Verdacht. Lokale Evidenz und Grenzen: STATUS §7 / Agentenauftrag §5.
+Nur Offlineauswertung/Dokumentation, kein Hardwarezugriff, Masterplan unverändert.
+
+
 ## 29.09.2026 – Aktives Ziel unabhängig von Gesamtbewertung revalidieren
 
 Ein exakter fester Zielnachweis darf nicht hinter der Bewertung aller offenen
