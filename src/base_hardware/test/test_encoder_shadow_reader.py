@@ -562,3 +562,95 @@ class TestShadowCore:
         assert status['maximum_attempted_pair_duration_s'] == pytest.approx(0.01)
         assert status['startup_overrun_retries'] == 0
         assert status['last_rejected_pair_duration_s'] is None
+
+
+def healthy_core():
+    core=EncoderShadowCore(tracker(.18),max_pair_read_duration_s=.12)
+    for i in range(21):
+        core.accept_pair(pair(100,200),sample_time_s=1+i*.02,pair_read_duration_s=.014)
+    assert core.ready
+    return core
+
+
+def test_isolated_timing_outlier_heals_without_losing_counts_or_rebasing():
+    from base_hardware.encoder_shadow_reader import TIMING_RECOVERY_REASON
+    c=healthy_core();old_time=c.last_sample_time_s
+    late=c.accept_pair(pair(110,190),sample_time_s=old_time+.065,pair_read_duration_s=.125)
+    assert late.reason==TIMING_RECOVERY_REASON and not late.publish
+    assert not c.ready and c.fault_reason is None
+    assert c.last_pair==pair(100,200) and c.last_sample_time_s==old_time
+    first=c.accept_pair(pair(120,180),sample_time_s=old_time+.15,pair_read_duration_s=.014)
+    # This is a VALID fresh pair, preserving all counts while readiness stays
+    # false. Only the original invalid timing pair is withheld.
+    assert first.publish and not c.ready and first.update.left_delta_counts==20
+    assert c.tracker.rebase_count==0
+    second=c.accept_pair(pair(130,170),sample_time_s=old_time+.20,pair_read_duration_s=.014)
+    assert second.publish and c.ready
+    assert second.update.left_delta_counts==10
+    assert c.tracker.x_m==pytest.approx(30*2*math.pi*.0624/10000)
+    assert c.timing_recovered_count==1 and c.baseline_count==1
+    assert c.tracker.rebase_count==0
+
+
+@pytest.mark.parametrize('case',['delay','gap','incomplete','jump','clock','rpm','repeat'])
+def test_timing_recovery_hard_cases_preserve_last_accepted_pose_and_baseline(case):
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    assert c.timing_recovery_pending
+    before=c.tracker.__dict__.copy()
+    value,stamp,duration=pair(100,200),t+.15,.014
+    if case=='delay':duration=.13
+    if case=='gap':stamp=t+.181
+    if case=='incomplete':value=None
+    if case=='jump':value=pair(100000,200)
+    if case=='clock':stamp=t+.04
+    if case=='rpm':value=pair(100,200,1000,0)
+    if case=='repeat':stamp=t+.065
+    result=c.accept_pair(value,sample_time_s=stamp,pair_read_duration_s=duration)
+    assert not result.publish and c.fault_reason is not None and not c.ready
+    assert c.tracker.__dict__==before
+    assert not c.accept_pair(pair(100,200),sample_time_s=t+.17,pair_read_duration_s=.014).publish
+
+
+def test_another_timing_overrun_requires_twenty_new_healthy_pairs():
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    c.accept_pair(pair(100,200),sample_time_s=t+.15,pair_read_duration_s=.014)
+    c.accept_pair(pair(100,200),sample_time_s=t+.20,pair_read_duration_s=.014)
+    assert c.ready
+    r=c.accept_pair(pair(100,200),sample_time_s=t+.265,pair_read_duration_s=.125)
+    assert not r.publish and c.fault_reason=='encoderpaar_zeitfenster_ueberschritten'
+
+
+def test_transport_phase_diagnostics_retain_real_read_boundaries():
+    t=transport();t.connect();t.read_holding_registers(1,10,3)
+    assert all(t.last_timing[k]>=0 for k in ['alias_usb_s','modbus_s','response_s','total_s'])
+    assert t.last_timing['total_s']>=sum(t.last_timing[k] for k in ['alias_usb_s','modbus_s','response_s'])
+
+
+def test_cached_sysfs_search_checks_values_and_device_generation_each_read(tmp_path):
+    from base_hardware.encoder_shadow_reader import CheckedUsbIdentity
+    usb=tmp_path/'devices'/'usb1';interface=usb/'usb1:1';interface.mkdir(parents=True)
+    for name,value in [('idVendor','0403'),('idProduct','6001'),('serial','BG03R8RZ')]:
+        (usb/name).write_text(value)
+    tty=tmp_path/'tty'/'ttyUSB0';tty.mkdir(parents=True);link=tty/'device';link.symlink_to(interface)
+    validate=CheckedUsbIdentity(str(tmp_path/'tty'));validate('/dev/ttyUSB0')
+    (usb/'serial').write_text('WRONG')
+    with pytest.raises(EncoderShadowError,match='abgenommene FTDI'):validate('/dev/ttyUSB0')
+    (usb/'serial').write_text('BG03R8RZ')
+    replacement=usb/'replacement';replacement.mkdir();link.unlink();link.symlink_to(replacement)
+    with pytest.raises(EncoderShadowError,match='generation'):validate('/dev/ttyUSB0')
+    link.unlink()
+    with pytest.raises(EncoderShadowError,match='nicht lesbar'):validate('/dev/ttyUSB0')
+
+
+def test_alias_change_during_modbus_call_discards_the_complete_answer():
+    factory=FakeFactory();t=transport(factory=factory);t.connect()
+    client=factory.instances[0];call=client.read_holding_registers
+    def switch(*args,**kwargs):
+        answer=call(*args,**kwargs)
+        t._realpath=lambda path:'/dev/ttyUSB2' if path==BASE_ALIAS else '/dev/ttyUSB1'
+        t._exists=lambda path:True
+        return answer
+    client.read_holding_registers=switch
+    with pytest.raises(EncoderShadowError,match='wechselte'):t.read_holding_registers(1,10,3)

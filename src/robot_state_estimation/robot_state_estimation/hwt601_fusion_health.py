@@ -153,6 +153,29 @@ class Hwt601FusionHealth:
                 and math.isfinite(raw['age_s'])
                 and raw['age_s'] >= 0.0)
 
+    def _wheel_timing_pending(self):
+        """Only the passive FC03 owner's bounded continuity validation.
+
+        Freshness of the actual wheel sample is still checked independently;
+        a stale sample, lost port, changed config or latched fault is hard.
+        """
+        if self.active_drive or 'wheel' not in self.statuses:
+            return False
+        w = self.statuses['wheel'][0]
+        return (w.get('ready') is False and w.get('timing_recovery_pending') is True
+                and w.get('state') == 'timing_recovery'
+                and w.get('source') == 'ess23_absolute_fc03'
+                and w.get('synthetic') is False and w.get('command_derived') is False
+                and w.get('read_only') is True and w.get('actuator_output') is False
+                and w.get('fault_latched') is False
+                and w.get('connected') is True and w.get('configuration_valid') is True
+                and w.get('port') == '/dev/ttyUSB_BASE'
+                and type(w.get('continuity_max_gap_s')) in (int, float)
+                and 0 < w['continuity_max_gap_s'] <= .18
+                and type(w.get('timing_recovery_valid_pairs')) is int
+                and 0 <= w['timing_recovery_valid_pairs'] < 2
+                and age_valid(w.get('last_feedback_age_s'), .18))
+
     def _hard_status_failure(self):
         """Check hard invariants even if _failure found a stale sample first."""
         if not self._raw_identity_intact():
@@ -201,7 +224,7 @@ class Hwt601FusionHealth:
                      and type(wheel.get('last_feedback_age_s')) in (int, float)
                      and math.isfinite(wheel['last_feedback_age_s'])
                      and wheel['last_feedback_age_s'] >= 0.0)
-        return None if valid else 'wheel_identity_or_configuration_fault'
+        return None if valid or self._wheel_timing_pending() else 'wheel_identity_or_configuration_fault'
 
     def _recoverable(self, reason, now):
         if self._hard_status_failure() is not None:
@@ -220,6 +243,8 @@ class Hwt601FusionHealth:
             return (raw['raw_data_ready'] is False
                     or 0 < raw['consecutive_errors'] < 3
                     or raw['age_s'] > 0.20)
+        if reason == 'wheel_timing_recovery_pending':
+            return self._wheel_timing_pending()
         if reason == 'yaw_data_continuity_pending':
             yaw = self.statuses['yaw'][0]
             return (yaw.get('ready') is False
@@ -276,6 +301,8 @@ class Hwt601FusionHealth:
                 and age_valid(yaw.get('age_s'), 0.35)):
             return 'yaw_uncalibrated_or_faulted'
         wheel = self.statuses['wheel'][0]
+        if self._wheel_timing_pending():
+            return 'wheel_timing_recovery_pending'
         if self.active_drive:
             valid = (wheel.get('dry_run') is False
                      and wheel.get('allow_rs485') is True

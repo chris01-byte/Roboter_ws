@@ -24,6 +24,10 @@ hwt601_encoder_shadow_reader:
     # Drei 20-Hz-Ticks erlauben eine Einzelverzögerung, ohne stale Daten
     # freizugeben; darüber bleibt Quelle und Fusion gesperrt.
     max_sample_gap_s: 0.18
+    # One isolated overrun after >=20 accepted pairs; two complete new pairs
+    # within the SAME .18 s continuity window, otherwise terminal. No reset.
+    timing_recovery_good_pairs: 2
+    timing_recovery_min_healthy_pairs: 20
 
     # Ausschliesslich read-only ESS-RS-Register (Modbus FC03).
     position_register: 0x000A

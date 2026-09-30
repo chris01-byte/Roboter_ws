@@ -21,6 +21,7 @@ from .encoder_shadow_reader import (
     BASE_ALIAS,
     HWT601_ALIAS,
     STARTUP_OVERRUN_RETRY_REASON,
+    TIMING_RECOVERY_REASON,
     EncoderPairReader,
     EncoderShadowCore,
     EncoderShadowError,
@@ -63,6 +64,8 @@ class EncoderShadowNode(Node):
         self.declare_parameter('poll_rate_hz', 20.0)
         self.declare_parameter('max_pair_read_duration_s', 0.05)
         self.declare_parameter('max_sample_gap_s', 0.10)
+        self.declare_parameter('timing_recovery_good_pairs', 2)
+        self.declare_parameter('timing_recovery_min_healthy_pairs', 20)
 
         self.declare_parameter('position_register', 0x000A)
         self.declare_parameter('segment_register', 0x0011)
@@ -156,6 +159,8 @@ class EncoderShadowNode(Node):
         self.core = EncoderShadowCore(
             tracker,
             max_pair_read_duration_s=self.max_pair_read_duration_s,
+            timing_recovery_good_pairs=int(gp('timing_recovery_good_pairs').value),
+            timing_recovery_min_healthy_pairs=int(gp('timing_recovery_min_healthy_pairs').value),
         )
         self.transport: ReadOnlyModbusTransport | None = None
         self.reader: EncoderPairReader | None = None
@@ -188,6 +193,9 @@ class EncoderShadowNode(Node):
         self.last_error_detail: str | None = None
         self.fc03_pair_error_count = 0
         self.last_diagnostics_publish = 0.0
+        self.last_poll_started_s = None
+        self.last_poll_gap_s = None
+        self.last_publish_age_s = None
 
         self.odom_pub = self.create_publisher(
             Odometry, self.odom_topic, 10)
@@ -310,6 +318,9 @@ class EncoderShadowNode(Node):
                 self.configuration_valid = True
 
             read_started = time.monotonic()
+            self.last_poll_gap_s = (None if self.last_poll_started_s is None
+                                   else read_started-self.last_poll_started_s)
+            self.last_poll_started_s = read_started
             ros_read_started = self.get_clock().now()
             pair = self.reader.read_complete_pair()
             read_finished = time.monotonic()
@@ -361,6 +372,11 @@ class EncoderShadowNode(Node):
                 'Encoder-Shadow dauerhaft gesperrt: '
                 f'{self.core.fault_reason}; '
                 f'Detail: {self.last_error_detail or result.reason}')
+            return
+
+        if result.reason == TIMING_RECOVERY_REASON:
+            self.last_error_detail = 'Timing pair withheld; two fresh complete pairs within unchanged gap required'
+            self._publish_status_and_diagnostics(force_diagnostics=True)
             return
 
         if result.reason == STARTUP_OVERRUN_RETRY_REASON:
@@ -475,6 +491,10 @@ class EncoderShadowNode(Node):
             'poll_rate_hz': self.poll_rate_hz,
             'max_pair_read_duration_s': self.max_pair_read_duration_s,
             'max_sample_gap_s': self.max_sample_gap_s,
+            'poll_start_gap_s': self.last_poll_gap_s,
+            'publication_age_s': self._feedback_age(),
+            'transport_timing_s': self.reader.last_transport_timings if self.reader else {},
+            'motor_sample_skew_s': (abs(self.reader.last_motor_midpoints_s.get(self.left_motor_id, 0.)-self.reader.last_motor_midpoints_s.get(self.right_motor_id, 0.)) if self.reader else None),
             'last_read_order': self.reader.last_read_order if self.reader else [],
             'last_read_durations_s': (
                 self.reader.last_read_durations_s if self.reader else {}),

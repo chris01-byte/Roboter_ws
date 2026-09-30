@@ -546,3 +546,49 @@ def test_repeated_separate_transient_holds_have_no_endless_retry():
     h.status('raw', raw, 13.51)
     assert h.motion_failure(13.51) == 'hwt_recovery_attempt_limit'
     assert h.recovery_state == 'TERMINAL_FAULT'
+
+
+def pending_wheel(h,now=10.):
+    w=h.statuses['wheel'][0]
+    w.update(ready=False,state='timing_recovery',timing_recovery_pending=True,
+             connected=True,configuration_valid=True,port='/dev/ttyUSB_BASE',
+             continuity_max_gap_s=.18,timing_recovery_valid_pairs=0)
+    h.status('wheel',w,now)
+
+
+def test_passive_timing_validation_uses_hold_without_a_second_latch():
+    h=ready_health(False);assert h.source_failure(10.) is None
+    pending_wheel(h)
+    assert h.source_failure(10.05)=='wheel_timing_recovery_pending'
+    assert h.recovery_state=='HOLD' and h.latched_fault is None
+    w=h.statuses['wheel'][0];w.update(ready=True,state='ready',timing_recovery_pending=False)
+    for i in range(1,90):
+        now=10.05+i*.02
+        for key in ['raw','yaw','wheel']:
+            h.sample(key,now,now,now);h.status(key,h.statuses[key][0],now)
+        h.source_failure(now)
+    assert h.recovery_state=='HEALTHY' and h.latched_fault is None
+    assert h.motion_failure(now)=='readonly_preflight_no_motion'
+
+
+@pytest.mark.parametrize('change',['stale','port','fault','connection','config','motion','bound'])
+def test_pending_wheel_cannot_mask_hard_faults(change):
+    h=ready_health(False);assert h.source_failure(10.) is None
+    pending_wheel(h);w=h.statuses['wheel'][0];now=10.05
+    if change=='stale':now=10.19
+    if change=='port':w['port']='/dev/ttyUSB_HWT601'
+    if change=='fault':w['fault_latched']=True
+    if change=='connection':w['connected']=False
+    if change=='config':w['configuration_valid']=False
+    if change=='motion':w['actuator_output']=True
+    if change=='bound':w['continuity_max_gap_s']=.181
+    assert h.source_failure(now) is not None
+    assert h.recovery_state=='TERMINAL_FAULT'
+
+
+def test_passive_timing_recovery_status_never_relaxes_active_driver_contract():
+    h=ready_health(True);assert h.source_failure(10.) is None
+    pending_wheel(h)
+    h.statuses['wheel'][0]['encoder_feedback_ok']=False
+    assert h.source_failure(10.05)=='wheel_not_real_or_not_ready'
+    assert h.recovery_state=='TERMINAL_FAULT'

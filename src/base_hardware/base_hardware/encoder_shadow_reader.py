@@ -9,6 +9,7 @@ diese Schnittstelle nicht beschrieben werden.
 from __future__ import annotations
 
 import math
+import copy
 import os
 import time
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ FC03_READ_WHITELIST = frozenset({
     (0x0019, 1),  # 32-Bit-Wortfolge
     (0x0101, 1),  # Encoderaufloesung
 })
+TIMING_RECOVERY_REASON = 'encoder_timing_recovery_pending'
 STARTUP_OVERRUN_RETRY_REASON = 'verspaetete_startprobe_wiederholen'
 
 
@@ -154,6 +156,44 @@ def validate_base_usb_identity(
             'Basisalias ist nicht der abgenommene FTDI-Adapter')
 
 
+class CheckedUsbIdentity:
+    """Cache only the sysfs search, never the USB identity values.
+
+    Each read still checks the current tty-device generation and reads all
+    three identity attributes. A changed generation is a lost connection,
+    even if udev reuses the old tty name for the same physical adapter.
+    """
+    def __init__(self, sysfs_tty_root='/sys/class/tty'):
+        self.sysfs_tty_root = sysfs_tty_root
+        self.generation = None
+        self.attributes = None
+
+    def __call__(self, port):
+        device = Path(self.sysfs_tty_root) / Path(port).name / 'device'
+        try:
+            stat = device.stat()
+            generation = (stat.st_dev, stat.st_ino)
+            if self.generation is not None and generation != self.generation:
+                raise EncoderShadowError('Basis-USB-Geraetegeneration wechselte')
+            if self.attributes is None:
+                validate_base_usb_identity(port, sysfs_tty_root=self.sysfs_tty_root)
+                path = device.resolve(strict=True)
+                for parent in (path, *path.parents):
+                    if (parent/'idVendor').is_file() and (parent/'idProduct').is_file():
+                        self.attributes = tuple(parent/name for name in ('idVendor','idProduct','serial'))
+                        break
+                if self.attributes is None:
+                    raise EncoderShadowError('Basis-USB-Identitaet fehlt')
+                self.generation = generation
+            values = tuple(p.read_text(encoding='ascii').strip() for p in self.attributes)
+            if values != (BASE_USB_VENDOR_ID,BASE_USB_PRODUCT_ID,BASE_USB_SERIAL):
+                raise EncoderShadowError('Basisalias ist nicht der abgenommene FTDI-Adapter')
+            if (device.stat().st_dev, device.stat().st_ino) != generation:
+                raise EncoderShadowError('Basis-USB-Geraetegeneration wechselte beim Lesen')
+        except OSError as exc:
+            raise EncoderShadowError(f'Basis-USB-Identitaet nicht lesbar: {exc}') from exc
+
+
 class ReadOnlyModbusTransport:
     """Exklusiver serieller Transport mit ausschliesslich FC03-Lesezugriff.
 
@@ -187,7 +227,9 @@ class ReadOnlyModbusTransport:
         self.forbidden_alias = forbidden_alias
         self._exists = exists
         self._realpath = realpath
-        self._identity_validator = identity_validator
+        self._identity_validator = (CheckedUsbIdentity()
+                                    if identity_validator is validate_base_usb_identity
+                                    else identity_validator)
         self._client: Any | None = None
         self.resolved_port: str | None = None
         self.successful_connections = 0
@@ -283,9 +325,21 @@ class ReadOnlyModbusTransport:
     def read_holding_registers(
         self, motor_id: int, address: int, count: int,
     ) -> tuple[int, ...]:
+        """Measure identity, actual Modbus call and response checks separately."""
+        started = time.monotonic()
+        self.last_timing = {'started_monotonic_s': started}
+        try:
+            return self._read_holding_registers(motor_id, address, count)
+        finally:
+            self.last_timing['total_s'] = time.monotonic() - started
+
+    def _read_holding_registers(
+        self, motor_id: int, address: int, count: int,
+    ) -> tuple[int, ...]:
         """Liest exakt ``count`` Holding-Register mit Modbus FC03."""
         if not self.connected:
             raise EncoderShadowError('Modbus-Transport ist nicht verbunden')
+        identity_started = time.monotonic()
         current_port = validate_base_alias(
             self.port,
             required_alias=self.required_alias,
@@ -297,6 +351,7 @@ class ReadOnlyModbusTransport:
             raise EncoderShadowError(
                 'Basisalias wechselte nach dem Verbindungsaufbau')
         self._identity_validator(current_port)
+        self.last_timing['alias_usb_s'] = time.monotonic() - identity_started
         if isinstance(motor_id, bool) or not 1 <= int(motor_id) <= 247:
             raise EncoderShadowError('Motor-ID muss im Bereich 1..247 liegen')
         if isinstance(address, bool) or not 0 <= int(address) <= 0xFFFF:
@@ -317,6 +372,7 @@ class ReadOnlyModbusTransport:
             if not self.connected:
                 raise EncoderShadowError(
                     'Basisverbindung vor FC03-Lesezugriff verloren')
+            modbus_started = time.monotonic()
             for keyword in ('device_id', 'slave', 'unit'):
                 try:
                     response = self._client.read_holding_registers(
@@ -335,6 +391,8 @@ class ReadOnlyModbusTransport:
         except Exception as exc:
             raise EncoderShadowError(f'FC03-Leseexception: {exc}') from exc
 
+        self.last_timing['modbus_s'] = time.monotonic() - modbus_started
+        response_started = time.monotonic()
         if not self.connected:
             raise EncoderShadowError(
                 'Basisverbindung waehrend FC03-Lesezugriff verloren')
@@ -356,6 +414,15 @@ class ReadOnlyModbusTransport:
             for word in words
         ):
             raise EncoderShadowError('Ungueltiges uint16 in FC03-Antwort')
+        self.last_timing['response_s'] = time.monotonic() - response_started
+        identity_after_started = time.monotonic()
+        after = validate_base_alias(self.port, required_alias=self.required_alias,
+                                   forbidden_alias=self.forbidden_alias,
+                                   exists=self._exists, realpath=self._realpath)
+        if after != self.resolved_port:
+            raise EncoderShadowError('Basisalias wechselte waehrend FC03-Lesezugriff')
+        self._identity_validator(after)
+        self.last_timing['alias_usb_after_s'] = time.monotonic()-identity_after_started
         return words
 
 
@@ -387,6 +454,8 @@ class EncoderPairReader:
         self._left_first = True
         self.last_read_order: list[int] = []
         self.last_read_durations_s: dict[int, float] = {}
+        self.last_transport_timings: dict[int, dict] = {}
+        self.last_motor_midpoints_s: dict[int, float] = {}
 
     def read_and_validate_configuration(
         self,
@@ -450,6 +519,8 @@ class EncoderPairReader:
         samples: dict[int, MotorFeedback] = {}
         self.last_read_order = []
         self.last_read_durations_s = {}
+        self.last_transport_timings = {}
+        self.last_motor_midpoints_s = {}
         for motor_id, configuration in order:
             self.last_read_order.append(motor_id)
             read_started = time.monotonic()
@@ -457,8 +528,11 @@ class EncoderPairReader:
                 words = self.transport.read_holding_registers(
                     motor_id, self.position_register, 3)
             finally:
-                self.last_read_durations_s[motor_id] = (
-                    time.monotonic() - read_started)
+                read_finished = time.monotonic()
+                self.last_read_durations_s[motor_id] = read_finished - read_started
+                self.last_motor_midpoints_s[motor_id] = (read_started + read_finished)/2
+                self.last_transport_timings[motor_id] = dict(
+                    getattr(self.transport, 'last_timing', {}))
             try:
                 samples[motor_id] = MotorFeedback(
                     position_u32=decode_position_words(
@@ -486,11 +560,23 @@ class EncoderShadowCore:
         tracker: EncoderOdometry,
         *,
         max_pair_read_duration_s: float,
+        timing_recovery_good_pairs: int = 2,
+        timing_recovery_min_healthy_pairs: int = 20,
     ) -> None:
         if (not math.isfinite(max_pair_read_duration_s)
                 or max_pair_read_duration_s <= 0.0):
             raise ValueError(
                 'max_pair_read_duration_s muss endlich und > 0 sein')
+        if timing_recovery_good_pairs != 2 or timing_recovery_min_healthy_pairs < 20:
+            raise ValueError('Timing recovery needs two pairs and >=20 healthy pairs')
+        self.timing_recovery_good_pairs = timing_recovery_good_pairs
+        self.timing_recovery_min_healthy_pairs = timing_recovery_min_healthy_pairs
+        self.timing_recovery_pending = False
+        self.timing_recovery_count = 0
+        self.timing_recovered_count = 0
+        self._healthy_pairs = 0
+        self._recovery_pairs = 0
+        self._recovery_last_sample_time_s = None
         self.tracker = tracker
         self.max_pair_read_duration_s = float(max_pair_read_duration_s)
         self.fault_reason: str | None = None
@@ -510,7 +596,8 @@ class EncoderShadowCore:
 
     @property
     def ready(self) -> bool:
-        return self.fault_reason is None and self.tracker.initialized
+        return (self.fault_reason is None and self.tracker.initialized
+                and not self.timing_recovery_pending)
 
     def latch_fault(self, reason: str) -> None:
         if self.fault_reason is None:
@@ -561,14 +648,57 @@ class EncoderShadowCore:
                 self.startup_overrun_retries += 1
                 return EncoderShadowResult(
                     False, STARTUP_OVERRUN_RETRY_REASON, self.last_update)
+            if (math.isfinite(pair_read_duration_s)
+                    and pair_read_duration_s > self.max_pair_read_duration_s
+                    and not self.timing_recovery_pending
+                    and self._healthy_pairs >= self.timing_recovery_min_healthy_pairs
+                    and self.last_sample_time_s is not None
+                    and 0 < sample_time_s + pair_read_duration_s/2 - self.last_sample_time_s
+                        <= self.tracker.max_recovery_gap_s):
+                trial = copy.copy(self.tracker)
+                valid = trial.update(pair.left.position_u32, pair.right.position_u32, sample_time_s)
+                if (not valid.accepted or any(not math.isfinite(m.speed_rpm)
+                        or abs(m.speed_rpm)>self.tracker.max_motor_rpm
+                        for m in (pair.left, pair.right))):
+                    self.latch_fault('encoder_timing_continuity_unproven')
+                    return EncoderShadowResult(False, self.fault_reason, self.last_update)
+                self.timing_recovery_pending = True
+                self.timing_recovery_count += 1
+                self._recovery_pairs = 0
+                self._recovery_last_sample_time_s = sample_time_s
+                self._healthy_pairs = 0
+                return EncoderShadowResult(False, TIMING_RECOVERY_REASON, self.last_update)
             self.latch_fault('encoderpaar_zeitfenster_ueberschritten')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
-        update = self.tracker.update(
-            pair.left.position_u32,
-            pair.right.position_u32,
-            sample_time_s,
-        )
+        # Validate on a copy: the tracker deliberately rebases on invalid
+        # deltas/gaps for its other users. Shadow recovery MUST preserve the
+        # last accepted baseline/pose on every failed continuity check.
+        if any(not math.isfinite(m.speed_rpm) or abs(m.speed_rpm)>self.tracker.max_motor_rpm
+               for m in (pair.left, pair.right)):
+            self.latch_fault('encoder_drehzahl_unplausibel')
+            return EncoderShadowResult(False, self.fault_reason, self.last_update)
+        trial = copy.copy(self.tracker)
+        update = trial.update(pair.left.position_u32, pair.right.position_u32, sample_time_s)
+        if self.tracker.initialized and not update.accepted:
+            self.latch_fault(update.reason)
+            return EncoderShadowResult(False, self.fault_reason, update)
+        if self.timing_recovery_pending:
+            if (self._recovery_last_sample_time_s is None
+                    or sample_time_s <= self._recovery_last_sample_time_s
+                    or sample_time_s+pair_read_duration_s/2-self.last_sample_time_s
+                        > self.tracker.max_recovery_gap_s):
+                self.latch_fault('encoder_timing_continuity_unproven')
+                return EncoderShadowResult(False, self.fault_reason, self.last_update)
+            self._recovery_last_sample_time_s = sample_time_s
+            self._recovery_pairs += 1
+            if self._recovery_pairs >= self.timing_recovery_good_pairs:
+                self.timing_recovery_pending = False
+                self.timing_recovered_count += 1
+        # Commit all accumulated counts only after continuity is proved. No
+        # intermediate zero odometry, reset or silently discarded movement.
+        self.tracker.__dict__.update(trial.__dict__)
+        self._healthy_pairs += int(update.accepted)
         self.last_pair_duration_s = pair_read_duration_s
         self._consecutive_startup_overruns = 0
         if (self.maximum_pair_duration_s is None
@@ -612,8 +742,14 @@ def shadow_status_payload(
     )
     return {
         'state': 'fault_latched' if core.fault_reason else (
+            'timing_recovery' if core.timing_recovery_pending else
             'ready' if ready else 'initializing'),
         'ready': ready,
+        'timing_recovery_pending': core.timing_recovery_pending,
+        'timing_recovery_count': core.timing_recovery_count,
+        'timing_recovered_count': core.timing_recovered_count,
+        'timing_recovery_valid_pairs': core._recovery_pairs,
+        'continuity_max_gap_s': core.tracker.max_recovery_gap_s,
         'source': 'ess23_absolute_fc03',
         'synthetic': False,
         'command_derived': False,
