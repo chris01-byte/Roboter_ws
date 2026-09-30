@@ -2,7 +2,7 @@
 
 **WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Softwarepaket abgeschlossen, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Genau ein vorbereiteter nächster Realnachweis folgt in Abschnitt 7 und wurde nicht ausgeführt.
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Der beauftragte Realnachweis aus Abschnitt 7 wurde bis zum rein lesenden Vorlauf ausgeführt und blieb dort blockiert; keine aktive Mission. Ergebnis und genau nächster Schritt stehen im STATUS.
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -100,7 +100,9 @@ Genau nächster Schritt nach Softwareerfolg: begrenzter Realnachweis derselben m
 
 Die [vorige Auftragsdatei](archive/20260930-v1.1/AGENTENAUFTRAG.md) ist vollständig erhalten, aber kein paralleler aktueller Auftrag.
 
-## 7. Genau ein vorbereiteter Realnachweis – nicht ausgeführt
+## 7. Beauftragter Realnachweis – im lesenden Vorlauf blockiert
+
+**Auswertung 30.09.2026:** Kandidat `deb075e`, Live-Strategie `metric_frontier`, alte WE-Owner false. Vorlauf blockiert durch reale FC03-Paarzeitüberschreitung (125,870 ms > 120 ms) und unzulässige Startkontur/Route (Startzelle unbekannt, 25/25 Frontiercluster `no_known_free_route`). Kein aktiver Modus, keine Mission, kein zweiter Fahrversuch; A/C nicht bestanden, B nicht aufgetreten. Prozessende und frischer FC03-Stillstand bestätigt. Details und lokale Nachweise: [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise), ROBOT_TRANSFER. Abschnitte 1–6 bleiben abgeschlossene Softwarehistorie. Die folgenden Grenzen beschreiben den beauftragten, nicht gefahrenen Realnachweis und autorisieren keine automatische Wiederholung.
 
 **Umfang:** eine begrenzte metrische Beobachtungs-/Fortsetzungsschleife im bereits freigegebenen LAB-1-Bereich. Keine reale HWT-Injektion, Sonderbrücke, neue Umgebung oder zusätzliche Testreihe. Ziel: aufeinanderfolgende autonome Beobachtungspositionen, begrenzte Alternative nach unerreichter Aufgabe bei gesundem Betriebszustand, danach Weitererkundung über eine tatsächlich zulässige offene Verbindung. Keine Pflicht-Portal-/Raum-ID. Das ist noch keine vollständige Wohnungsabnahme.
 

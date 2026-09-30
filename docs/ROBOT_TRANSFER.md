@@ -1,5 +1,53 @@
 # Übertragung auf den realen Roboter
 
+## 30.09.2026 – metrischer Realnachweis: lesender Vorlauf blockiert
+
+Exakter Softwarekandidat `deb075e3f1a51a46bc00c2235a3068cfbe45d769`,
+Branch `feature/hwt-hold-recovery-resume` / PR #105, LAB-1. Reale Domain 42.
+Isoliertes Sechspaketpräfix `metric-frontier-20260930/software-final/install`
+über vorhandener Runtime-Kette/Vollunderlay `hwt-child-scope-20260928-retry/install`;
+LD-LiDAR-Shutdownoverlay und vorhandener SLAM-Toolbox-Install aufgelöst.
+Tatsächliche Prozess-/Profil-/Modulhashes im privaten Runtime-Manifest.
+`~/roboter_ws` bleibt auf `23928d9`, kein dauerhafter Installwechsel/Merge.
+
+Passiver regulärer `app_mapping`-Start: `active_drive=false`, HWT-Odometrie,
+`enable_auto_explore=false`; kein Aktorschreibprozess. Anfänglich ungebundener
+Explorer erwartungsgemäß fail-closed; anschließend reale Karte/Pose und
+LAB-1-Scope lokal gebunden und alleiniger Explorer über bestehenden Overlay-
+Launch gestartet. Parameter und 324 Statusmeldungen: `metric_frontier`,
+alte WE-Policy/Navigation false. Keine Pflicht-Portale/Regionen.
+
+Erster Quellenblocker: Radsample 189,166 ms > passive 180-ms-Grenze.
+Einmaliger passiver Gate-Neustart nach Quellenstart; kurze Rohquellen-HOLD/
+Recovery separat. Später Encoderreader terminal: FC03-Paar 125,870 ms >
+120 ms, Einzelreads 91,760/33,809 ms. Keine Grenze gelockert; konkrete
+zeitliche Ursache nicht bewiesen, kein Hardwaredefekt behauptet.
+Unabhängiger Geometriesnapshot: Startzelle unbekannt, volle gepaddete Kontur
+in Rohkarte/Costmap unzulässig; Scan bereits erste Orientierung ungültig.
+25 Frontiercluster, 25 `no_known_free_route`, kein zulässiger Kandidat.
+
+Kein aktiver Wechsel und keine Mission/Fahrt; Realnachweis damit nicht
+erreicht. A/C nicht bestanden, B nicht aufgetreten, Stufe 3 weiterhin offen.
+Grenzen im Liveprofil 900 s/150 s/6 Versuche/3 Fehler, Scan 280 s/0,08 rad/s;
+keine Mission begann diese Budgets. Keine direkten Explore-/Nav2-Ziele.
+
+Recorder bis zum geordneten Ende aktiv; Datenbank erst nach Recorderende
+analysiert. Keine running-Mission/kein Nav2-Statuseintrag; alle erfassten
+Ausgangsbefehle null. Einzelne Launchwurzeln SIGINT, keine Prozessgruppe.
+Alle manifestierten Prozesse beendet, ttyUSB-Handles frei, keine Shutdown-
+fehler im Abschlusslog. Zwölf frische FC03-Paare nach Stackende: unveränderte
+Motorpositionen, 0 rpm. Keine elektrische Sperrstellung behauptet.
+
+Private Belege `~/.local/share/amadeus/tests/metric-frontier-real-20260930/`:
+`REPORT.md`, Manifest, Liveparameter/-status, Rohkarten-/Costmapsnapshot,
+Konturdarstellung, geschlossene Bag-Auswertung, FC03-Start/Endmessungen und
+Shutdownprüfung. Nur datensparsame Dokumentation veröffentlicht.
+Rückfall bereits wirksam: gestartete Prozesse beendet, keine Mission,
+permanenter Install unverändert. MASTERPLAN v1.2 unverändert.
+Genau nächster Schritt steht im STATUS: gezielter Vorlauf-Korrekturauftrag
+für Startkarten-/Kontur- und FC03-Paarzeitblocker mit getrennten Nachweisen,
+keine automatische neue Fahrt.
+
 ## 30.09.2026 – metrischer Softwarekandidat, keine Roboterübertragung
 
 Separater Checkout: `/home/p/roboter_worktrees/metric-exploration-20260930`,
