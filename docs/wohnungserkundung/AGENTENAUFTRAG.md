@@ -1,6 +1,8 @@
 # Agentenauftrag – metrische Frontiererkundung ohne Portalpflicht
 
-**WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Schritt 3, Softwarepaket**
+**WE-1 · 30.09.2026 · MASTERPLAN v1.2 · Softwarepaket abgeschlossen, reale Stufe 3 OFFEN**
+
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Genau ein vorbereiteter nächster Realnachweis folgt in Abschnitt 7 und wurde nicht ausgeführt.
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -97,3 +99,15 @@ Falls nicht erfüllt: konkrete erste fehlgeschlagene Funktion, Originalbeleg und
 Genau nächster Schritt nach Softwareerfolg: begrenzter Realnachweis derselben metrischen Beobachtungsschleife im vorhandenen LAB-1-Bereich mit tatsächlicher Hindernisfortsetzung und geometrisch zulässigem Durchgang. Bestehende Profile/Budgets als Ausgangspunkt verwenden, Umfang vor Fahrt konkret festlegen, nicht automatisch aus diesem Softwareauftrag starten.
 
 Die [vorige Auftragsdatei](archive/20260930-v1.1/AGENTENAUFTRAG.md) ist vollständig erhalten, aber kein paralleler aktueller Auftrag.
+
+## 7. Genau ein vorbereiteter Realnachweis – nicht ausgeführt
+
+**Umfang:** eine begrenzte metrische Beobachtungs-/Fortsetzungsschleife im bereits freigegebenen LAB-1-Bereich. Keine reale HWT-Injektion, Sonderbrücke, neue Umgebung oder zusätzliche Testreihe. Ziel: aufeinanderfolgende autonome Beobachtungspositionen, begrenzte Alternative nach unerreichter Aufgabe bei gesundem Betriebszustand, danach Weitererkundung über eine tatsächlich zulässige offene Verbindung. Keine Pflicht-Portal-/Raum-ID. Das ist noch keine vollständige Wohnungsabnahme.
+
+**Vorlauf innerhalb dieses einen Versuchs:** vorhandene Runtime-Präfixe und Quellen aus ROBOT_TRANSFER auflösen; Kandidat separat bauen und bytegleich prüfen, nicht permanent installieren. Bekannte LAB-1-Erklärung weiterverwenden. Bestehenden `active_drive=false`-Pfad zuerst technisch prüfen; keinen Aktorschreibprozess starten. Tatsächliche neue Startkarte/Pose, Scopepolygon, Kartenmanager-Fingerprint und Sitzung lokal binden. Noch keine Wohnungskoordinaten in einem Repositoryprofil speichern. Aktuelle Rohkarte/Costmap müssen den vollen Footprint und die beabsichtigten Routen tragen; andernfalls kein aktiver Beginn. Die Offlinebilder haben diese Voraussetzung häufig **nicht** erfüllt und geben keine Fahrfreigabe.
+
+**Profil:** vorhandenes Produktbasisprofil plus explizites metrisches Overlay und lokal gemessene Scopebindung. Initialscan und Vorausrichtung wie im bestehenden Profil (Rundblick maximal 280 s, 0,08 rad/s), keine direkten Brücken/Coverage/Rückkehr. Aufgabenfrist bleibt höchstens vorhandene 150 s; für diesen einzelnen Realnachweis Gesamtfrist 900 s, höchstens sechs Aufgabenversuche und drei Fehlversuche. Diese engeren Versuchsgrenzen sind kein neuer allgemeiner Produktstandard. Technische Frische-, HOLD-, Kollisions- und Geschwindigkeitsgrenzen bleiben bestehen. Elternauftrag nur über Mission Manager/BT; keine einzeln injizierten Nav2-Ziele.
+
+**Nachweis:** lokale Aufzeichnung von Rohkarte, Costmap, Pose, Nav2-UUID/Terminalzustand, Explorer-Kette/Snapshots, Encoder-/HWT-/VL53-/Gate-Status und Ausgangsbefehlen. Aktuelle Entscheidung erst zulässiger Weg, dann Rangfolge; nach unerreichter Aufgabe terminales Kind, bestätigter Stillstand und gesunde Quellen, dann anderes wirklich rasterberechnetes Ziel. Beobachter ordnet reale Hindernissituation und Verbindung zu; keine Ursache aus Timeout allein ableiten. Drei erreichte Beobachtungsaufgaben im selben Elternauftrag, neue Kartenmessungen, mindestens eine tatsächlich geometrisch zulässige Passage mit anschließender neuer Aufgabe sind das positive Ziel; Hindernisfortsetzung nur bei sicherem aktuellen Weg. Bei fehlender zulässiger Alternative/Passage als konkrete Nachweislücke enden, keine Geometrie durch direkte Befehle umgehen.
+
+**Ende:** spätestens bei einer Versuchsgrenze, hartem Quellen-/Aktuator-/Posefehler, unbestätigtem Cancel oder Nutzerabbruch kontrolliert stoppen. Keine automatische Wiederanfahrt bei diesen Gegenfällen. Launch-Kinder nach Kartierungs-README geordnet einzeln beenden, keine Prozessgruppe signalisieren. Ausgang null, Encoderstillstand, terminale Kinder und freie Gerätehandles dokumentieren. Ergebnis als Teilstand/Nachweis mit Grenzen; keine automatische Speicherfreigabe oder Stufe-3-Gesamtgrün. Kein automatischer zweiter Realversuch aus diesem Dokument.

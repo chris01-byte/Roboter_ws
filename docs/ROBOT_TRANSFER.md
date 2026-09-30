@@ -1,5 +1,47 @@
 # Übertragung auf den realen Roboter
 
+## 30.09.2026 – metrischer Softwarekandidat, keine Roboterübertragung
+
+Separater Checkout: `/home/p/roboter_worktrees/metric-exploration-20260930`,
+Basis `1dbbdaacc18550f1c1912a9a36a765bda397b19f`, vereinbarter Branch
+`feature/hwt-hold-recovery-resume` / PR #105. Die laufende Arbeitskopie
+`~/roboter_ws` bleibt auf ihrem bisherigen Stand; kein dauerhafter Install,
+kein Merge, keine Hardware-/Sensorprozesse und keine reale Fahrt.
+
+Sechs Pakete gerätefrei gebaut unter
+`~/.local/share/amadeus/tests/metric-frontier-20260930/software-final/install`:
+explore, robot_navigation, robot_state_estimation, mission_manager,
+robot_map_manager, amadeus_map_identity. Source-Reihenfolge der Tests:
+ROS Humble → `hwt-child-scope-20260928-retry/install` → Kandidatenpräfix.
+BT stammt weiterhin aus dem Vollunderlay, kein neuer BT-Stack. Paketpfade
+stehen in jedem Graphlog; diese Auflösung ist ein lokaler Softwarebeleg,
+kein Jetson-Laufmanifest. Nach Umgebungsneustart verloren gegangene `/tmp`-
+Zwischenbuilds nicht als verwendbaren Install voraussetzen.
+
+Neuer Modus ausschließlich `exploration_strategy=metric_frontier` mit
+`src/explore/config/metric_frontier_params.yaml`, nach dem Basisprofil und
+vor Missionstart. Ausgeliefertes Overlay ist nicht fahrfertig: aktuelle
+Session, gemessener Startkarten-Fingerprint und explizit verifiziertes
+Scopepolygon fehlen absichtlich. Default bleibt `existing`. Metrischer
+Modus hat denselben Nav2-Client/Gate; keine Pflicht-Portal-/Regionsdaten.
+Keine Geschwindigkeits-, Hardware-, Sensorframe-, EKF- oder Collision-
+Monitor-Konfiguration geändert. Bei bewusstem späterem Einsatz können
+mehrere normale Nav2-Aufgaben aus aktuellen Rastern folgen; physische
+Wirkung daher erst nach realem technischen Vorlauf bewerten.
+
+Gerätefrei: 1.342 pytest-Regressionen, registrierte colcon-Tests und verbundene
+synthetische Produktfälle laut STATUS §4. localhost/Domain 224 bzw. 226,
+keine konfigurierten DDS-Peers und kein Gerätebus. Reale Domain 42 hat keine
+Testpublisher erhalten. Ergebnisse/Karten/Bags bleiben lokal außerhalb Git.
+
+Rückfall: Overlay nicht laden und ohne Mission geordnet `existing` starten;
+Betriebsrückfall `active_drive=false`, `enable_auto_explore=false`. Ein
+nicht nachgewiesen terminales Nav2-Kind sperrt auch neue Elternaufträge;
+bei unklarem Cancel kein Neustart zur ungeprüften Wiederanfahrt.
+Genau ein begrenzter Realnachweis ist in AGENTENAUFTRAG §7 vorbereitet,
+noch nicht ausgeführt. Stufe 3 und reale Durchfahrt bleiben offen.
+
+
 ## 29.09.2026 – isolierter HOLD-Auftragserhalt-Kandidat
 
 Der aktive Produktlauf mit `08127c8` ist nach terminalem Recoveryabbruch

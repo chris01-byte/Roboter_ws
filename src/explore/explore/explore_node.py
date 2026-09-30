@@ -152,6 +152,7 @@ from explore.exploration_nav_runtime import (
     NavigationStopCause,
 )
 from explore.portal_source_adapter import raw_map_portal_source_from_values
+from explore.metric_frontier_runtime import MetricFrontierRuntime
 from explore.exploration_scope import AuthorizedExplorationScope
 from explore.portal_memory import Point2D as PortalPoint2D
 from explore.portal_task_evidence import (
@@ -662,9 +663,10 @@ class Frontier:
         self.forward_staging = False     # begrenzte direkte Etappe im Tuerprofil
 
 
-class ExploreNode(Node):
+class ExploreNode(MetricFrontierRuntime, Node):
     def __init__(self):
         super().__init__('explore_node')
+        self._declare_metric_strategy()
 
         # -------------------------------------------------------------------
         #  Parameter (Defaults; per explore_params.yaml ueberschreibbar)
@@ -1499,9 +1501,14 @@ class ExploreNode(Node):
                 String, '/fusion/hwt601/status_json',
                 self._on_hwt_gate_status, 10, callback_group=self._cb)
 
+        if self._metric_enabled and self._hwt_guard is not None:
+            self._metric_health_timer = self.create_timer(
+                0.05, self._metric_health_tick, callback_group=self._cb)
+
         # Ohne explizite Aktivierung existieren weder Schattenzustand noch
         # zusaetzliche ROS-Schnittstellen. Der bestehende Explorerpfad bleibt
         # damit unveraendert.
+        self._initialize_metric_strategy()
         self._initialize_region_graph_shadow()
 
         # -------------------------------------------------------------------
@@ -1521,7 +1528,7 @@ class ExploreNode(Node):
         self.create_subscription(
             LaserScan, self._door_lidar_scan_topic, self._on_door_lidar_scan,
             qos_profile_sensor_data, callback_group=self._cb)
-        if self._wohnungserkundung_navigation_enabled:
+        if self._wohnungserkundung_navigation_enabled or self._metric_enabled:
             # Read-only obstruction classification.  These subscriptions do
             # not authorize or publish any movement; the existing gate and
             # collision monitor retain sole motion authority.
@@ -2755,6 +2762,8 @@ class ExploreNode(Node):
 
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
+        if getattr(self, "_metric_enabled", False):
+            self._on_metric_map(msg)
         self._map = msg
         self._map_received_at = time.monotonic()
         if not getattr(self, '_region_graph_shadow_raw_map_enabled', False):
@@ -2814,6 +2823,11 @@ class ExploreNode(Node):
         self._wohnungserkundung_refresh_joined_active_source()
 
     def _on_global_costmap(self, msg: OccupancyGrid):
+        if getattr(self, '_metric_enabled', False) and self._global_costmap is not None:
+            old = self._global_costmap.header.stamp
+            new = msg.header.stamp
+            if (new.sec, new.nanosec) < (old.sec, old.nanosec):
+                return
         self._global_costmap = msg
         self._global_costmap_received_at = time.monotonic()
 
@@ -2909,6 +2923,12 @@ class ExploreNode(Node):
         return guard.decision()
 
     def _wohnungserkundung_hwt_hold(self, decision=None) -> bool:
+        if getattr(self, '_metric_enabled', False):
+            with self._metric_hold_lock:
+                return self._update_wohnungserkundung_hwt_hold(decision)
+        return self._update_wohnungserkundung_hwt_hold(decision)
+
+    def _update_wohnungserkundung_hwt_hold(self, decision=None) -> bool:
         guard = getattr(self, '_hwt_guard', None)
         if guard is None:
             return False
@@ -2930,6 +2950,8 @@ class ExploreNode(Node):
         return self._hwt_hold_announced
 
     def _wohnungserkundung_resume_path_ready(self) -> bool:
+        if getattr(self, "_metric_enabled", False):
+            return self._metric_resume_path_ready()
         with self._wohnungserkundung_runtime_lock:
             target = self._wohnungserkundung_navigation_snapshot
         if target is None:
@@ -3593,7 +3615,9 @@ class ExploreNode(Node):
             'state': state,
             'phase': self._status_phase,
             'message': self._status_message,
-            'strategy': 'frontier_portal_then_adaptive_coverage',
+            'strategy': (
+                'metric_frontier' if getattr(self, '_metric_enabled', False)
+                else 'frontier_portal_then_adaptive_coverage'),
             'coverage_ratio': self._coverage_ratio,
             'coverage_percent': 100.0 * self._coverage_ratio,
             'target_coverage_percent': 100.0 * self._coverage_target_ratio,
@@ -3611,11 +3635,18 @@ class ExploreNode(Node):
                 state == 'success' and self._coverage_complete),
             'time': time.time(),
         }
+        if getattr(self, '_metric_enabled', False):
+            payload['metric_exploration'] = dict(
+                self._metric_status, scope_bound=self._metric_scope is not None,
+                source_fault=self._metric_fault,
+                child_terminal=not getattr(self, '_nav_child_uncertain', False))
+            payload['map_ready_to_save'] = False
         if getattr(self, '_hwt_guard', None) is not None:
             payload['hwt_recovery_sequence'] = getattr(
                 self, '_hwt_recovery_sequence', 0)
             payload['hwt_first_fault'] = self._hwt_guard.health.first_fault_snapshot()
             payload['hwt_recovery_state'] = self._hwt_guard.health.recovery_state
+            payload['hwt_hold_deadline_monotonic'] = self._hwt_hold_deadline
         if getattr(self, '_wohnungserkundung_policy_enabled', False):
             payload['wohnungserkundung'] = (
                 self._wohnungserkundung_status_extension)
@@ -4582,6 +4613,8 @@ class ExploreNode(Node):
         if not self._nav_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error("Nav2-Action 'navigate_to_pose' nicht erreichbar")
             return 'rejected'
+        if stop_requested():
+            return 'canceled'
         if progress_observer is not None:
             if not callable(progress_observer):
                 return 'error'
@@ -4610,13 +4643,22 @@ class ExploreNode(Node):
         goal.behavior_tree = self._behavior_tree
 
         done = threading.Event()
-        holder = {'status': None, 'handle': None}
+        holder = {'status': None, 'handle': None, 'cancel_future': None}
+        stop_pending = threading.Event()
+        self._nav_child_uncertain = True
+
+        def cancel_child():
+            if holder['handle'] is not None and holder['cancel_future'] is None:
+                holder['cancel_future'] = holder['handle'].cancel_goal_async()
 
         def _on_result(fut):
             try:
                 holder['status'] = fut.result().status
             except Exception:
                 holder['status'] = 'error'
+            self._nav_child_uncertain = holder['status'] not in (
+                GoalStatus.STATUS_SUCCEEDED, GoalStatus.STATUS_CANCELED,
+                GoalStatus.STATUS_ABORTED)
             done.set()
 
         def _on_goal(fut):
@@ -4627,11 +4669,14 @@ class ExploreNode(Node):
                 done.set()
                 return
             if not gh.accepted:
+                self._nav_child_uncertain = False
                 holder['status'] = 'rejected'
                 done.set()
                 return
             holder['handle'] = gh
             gh.get_result_async().add_done_callback(_on_result)
+            if stop_pending.is_set():
+                cancel_child()  # late acceptance must never create an orphan
 
         self._nav_client.send_goal_async(goal).add_done_callback(_on_goal)
 
@@ -4661,18 +4706,24 @@ class ExploreNode(Node):
                 and now - started >= timeout_s):
                 stop_reason = 'timeout'
                 stop_reason_started = now
+            if stop_reason is not None:
+                stop_pending.set()
             if (
                     stop_reason is not None and holder['handle'] is None
                     and now - stop_reason_started >= self._cancel_timeout_s):
                 return 'cancel_failed'
             if stop_reason is not None and holder['handle'] is not None:
                 if cancel_started is None:
-                    holder['handle'].cancel_goal_async()
+                    cancel_child()
                     cancel_started = now
                 elif now - cancel_started >= self._cancel_timeout_s:
                     return 'cancel_failed'
 
+        if holder['status'] == 'error':
+            return 'error'
         if not done.is_set():
+            stop_pending.set()
+            cancel_child()
             return 'cancel_failed' if stop_reason is not None else 'aborted'
         self._record_coverage_pose(self._robot_xy())
         if stop_reason is None and progress_observer is not None:
@@ -6054,7 +6105,7 @@ class ExploreNode(Node):
     # ======================= Action-Server ==============================
     def _goal_cb(self, goal_request) -> GoalResponse:
         with self._active_goal_lock:
-            if self._active_goal:
+            if self._active_goal or getattr(self, '_nav_child_uncertain', False):
                 self.get_logger().warn(
                     'Explorationsziel abgelehnt: bereits eine Erkundung aktiv.')
                 return GoalResponse.REJECT
@@ -6076,7 +6127,10 @@ class ExploreNode(Node):
                             self,
                             '_wohnungserkundung_completion_assessment',
                             None))
-            if completion is not None:
+            if getattr(self, '_metric_enabled', False):
+                state = self._metric_status['state']
+                self._status_phase = state
+            elif completion is not None:
                 projection = project_completion_for_legacy(completion)
                 state = projection.legacy_status_state
                 self._status_phase = {
@@ -7019,6 +7073,16 @@ class ExploreNode(Node):
             req.min_frontier_size_m
             if req.min_frontier_size_m > 0 else self._min_frontier_m)
         return_to_start = req.return_to_start or self._return_to_start_p
+
+        if getattr(self, '_metric_enabled', False):
+            if return_to_start:
+                result = ExploreArea.Result()
+                result.message = 'metric_frontier:unsupported_return_request'
+                self._metric_status.update(state='failed',reason='unsupported_return_request')
+                goal_handle.abort()
+                return result
+            return self._execute_metric_frontier(
+                goal_handle, overall_timeout, min_frontier_m)
 
         if getattr(self, '_wohnungserkundung_navigation_enabled', False):
             return self._execute_wohnungserkundung_navigation(
