@@ -901,6 +901,7 @@ class CmdVelMissionGate(Node):
         hwt_failure = None
         health_status = None
         if guard is not None:
+            guard.refresh_passive_wheel()
             with guard.health.lock:
                 hwt_failure = guard.failure()
                 # One source decision supplies both authorization and status.

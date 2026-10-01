@@ -33,3 +33,47 @@ def test_callback_work_before_clock_read_has_one_age_and_true_stale_still_stops(
     assert h.source_failure(now)==('wheel_missing_stale_or_invalid' if stale else None)
     if stale:
         assert h.recovery_state=='TERMINAL_FAULT'
+
+
+def test_receive_exception_preserves_original_sample_and_stops():
+    guard = Hwt601FusionGuard.__new__(Hwt601FusionGuard)
+    guard.active_drive = False
+    guard.health = ready_health(False)
+    assert guard.health.source_failure(10.) is None
+    original = guard.health.samples['wheel']
+    guard.health.sample_details['wheel'] = {'stamp_sec': 10, 'stamp_nanosec': 0}
+    ended = []
+    def broken_take(*_):
+        raise RuntimeError('DDS receive failure')
+    class BrokenHandle:
+        def __enter__(self):
+            return self
+        def __exit__(self, *_):
+            return False
+        take_message = staticmethod(broken_take)
+    handle = BrokenHandle()
+    guard.wheel_subscription = SimpleNamespace(
+        callback_group=SimpleNamespace(beginning_execution=lambda _: True,
+                                       ending_execution=lambda _: ended.append(True)),
+        handle=handle, msg_type=Odometry, raw=False)
+    guard.refresh_passive_wheel()
+    assert ended == [True]
+    assert guard.health.samples['wheel'][:3] == original[:3]
+    assert guard.health.sample_details['wheel']['stamp_sec'] == 10
+    assert guard.health.sample_details['wheel']['receive_exception'] == 'RuntimeError'
+    assert guard.health.source_failure(10.01) == 'wheel_missing_stale_or_invalid'
+    assert guard.health.last_fault['source_checks'][2]['original_message_and_clock_pair']['receive_exception'] == 'RuntimeError'
+
+
+@pytest.mark.parametrize('active', [False, True])
+def test_predecision_take_never_waits_for_an_owned_group_or_touches_active_source(active):
+    guard = Hwt601FusionGuard.__new__(Hwt601FusionGuard)
+    guard.active_drive = active
+    guard.health = ready_health(active)
+    touched = []
+    guard.wheel_subscription = SimpleNamespace(
+        callback_group=SimpleNamespace(beginning_execution=lambda _: touched.append(True) or False))
+    original = dict(guard.health.samples)
+    guard.refresh_passive_wheel()
+    assert touched == ([] if active else [True])
+    assert guard.health.samples == original

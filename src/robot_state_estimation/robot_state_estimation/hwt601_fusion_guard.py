@@ -18,6 +18,8 @@ class Hwt601FusionGuard:
         self.node = node
         self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
         self.subscriptions = []
+        self.active_drive = bool(active_drive)
+        self.wheel_subscription = None
         # Passive readiness needs the newest actual measurement, not a queue
         # of old sensor frames. No restamping or extra freshness is permitted.
         latest_sensor = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
@@ -33,6 +35,7 @@ class Hwt601FusionGuard:
                 callback_group=(wheel_callback_group if name == 'wheel'
                                 and wheel_callback_group is not None
                                 else callback_group)))
+        self.wheel_subscription = self.subscriptions[2]
         for name, topic in (
                 ('raw', '/shadow/hwt601/raw_status_json'),
                 ('yaw', '/shadow/hwt601/status_json'),
@@ -42,6 +45,48 @@ class Hwt601FusionGuard:
                 String, topic, lambda msg, key=name: self._status(key, msg),
                 10, callback_group=callback_group))
 
+    def refresh_passive_wheel(self):
+        """Nonblocking receive from the same depth-one DDS subscription.
+
+        The passive executor can schedule the decision timer before a waiting
+        wheel callback even with separate groups. Use rclpy's existing take
+        operation under that subscription's group: no second subscriber,
+        publisher, clock change or wait. An already executing callback owns
+        the group and is left alone; the decision still checks actual age.
+        """
+        if self.active_drive:
+            return
+        sub = self.wheel_subscription
+        group = sub.callback_group
+        if not group.beginning_execution(sub):
+            return
+        try:
+            before = time.monotonic()
+            with sub.handle:
+                info = sub.handle.take_message(sub.msg_type, sub.raw)
+            after = time.monotonic()
+            if info is not None:
+                self._sample('wheel', info[0], delivery={
+                    'delivery_path': 'gate_predecision_dds_take',
+                    'take_before_monotonic_s': before,
+                    'take_after_monotonic_s': after})
+        except Exception as exc:
+            # A receive exception must never keep a previously healthy wheel
+            # sample eligible. Preserve its original times/message for diagnosis.
+            with self.health.lock:
+                previous = self.health.samples.get('wheel')
+                if previous is not None:
+                    self.health.samples['wheel'] = (*previous[:3], False)
+                    self.health.sample_validation['wheel'] = {
+                        **self.health.sample_validation.get('wheel', {}),
+                        'content_valid': False, 'receive_exception': type(exc).__name__}
+                self.health.sample_details['wheel'] = {
+                    **self.health.sample_details.get('wheel', {}),
+                    'delivery_path': 'gate_predecision_dds_take',
+                    'receive_exception': type(exc).__name__}
+        finally:
+            group.ending_execution(sub)
+
     def _status(self, name, msg):
         received = time.monotonic()
         try:
@@ -50,7 +95,7 @@ class Hwt601FusionGuard:
             payload = {}
         self.health.status(name, payload, received)
 
-    def _sample(self, name, msg):
+    def _sample(self, name, msg, delivery=None):
         received = time.monotonic()
         stamp = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
         clock_before = time.monotonic()
@@ -61,7 +106,9 @@ class Hwt601FusionGuard:
         details = {'stamp_sec': msg.header.stamp.sec,
                    'stamp_nanosec': msg.header.stamp.nanosec,
                    'frame_id': msg.header.frame_id,
-                   'callback_entry_monotonic_s': received,
+                   'callback_entry_monotonic_s': received if delivery is None else None,
+                   'consumer_entry_monotonic_s': received,
+                   'delivery_path': 'executor_callback',
                    'ros_clock_ns': clock_ros_ns,
                    'clock_read_before_monotonic_s': clock_before,
                    'clock_read_after_monotonic_s': clock_after,
@@ -69,6 +116,8 @@ class Hwt601FusionGuard:
                    'conversion_reference': 'clock_read_before_monotonic_s',
                    'conversion_uncertainty_s': clock_after-clock_before,
                    'ros_clock_type': str(self.node.get_clock().clock_type)}
+        if delivery is not None:
+            details.update(delivery)
         if name == 'wheel':
             twist = msg.twist.twist
             values = (twist.linear.x, twist.linear.y, twist.linear.z,

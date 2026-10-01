@@ -25,7 +25,8 @@ def gate_with_ready_sources():
     command = Twist()
     command.linear.x = 0.05
     gate = SimpleNamespace(
-        _hwt_guard=SimpleNamespace(health=health, failure=health.motion_failure),
+        _hwt_guard=SimpleNamespace(health=health, failure=health.motion_failure,
+                                   refresh_passive_wheel=lambda: None),
         _hwt_status_pub=SimpleNamespace(publish=status.append),
         _estop_clear=True, _estop_time=now, _estop_timeout=1.0,
         _motion_tf_authorized=lambda: True,
