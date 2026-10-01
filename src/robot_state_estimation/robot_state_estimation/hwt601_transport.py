@@ -151,7 +151,6 @@ class Hwt601SerialTransport:
         if not self.is_open:
             raise Hwt601TransportError(
                 'serielle Schnittstelle ist geschlossen')
-        check_not_motor_port(self.port)
         if self._identity() != self._bound_identity:
             raise Hwt601TransportError('HWT-Portidentitaet hat sich geaendert')
         request = build_read_holding_registers(
@@ -189,6 +188,8 @@ class Hwt601SerialTransport:
                 raise Hwt601TransportError('Unerwartete Modbus-Nutzdatenlaenge')
             frame = header + self._read_exactly(header[2] + 2, deadline)
         received = time.monotonic()
+        if self._identity() != self._bound_identity:
+            raise Hwt601TransportError('HWT-Portidentitaet waehrend Antwort geaendert')
         self.last_reply_received_monotonic_s = received
         registers = parse_read_holding_response(
             frame, self.device_address, MOTION_REGISTER_COUNT)

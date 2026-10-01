@@ -192,3 +192,16 @@ def test_alias_generation_change_is_hard_not_another_timeout(link,monkeypatch):
     monkeypatch.setattr(link,'_identity',lambda:('/dev/replaced',(1,2)))
     with pytest.raises(Hwt601TransportError) as e:link.read_motion_registers()
     assert e.value.hard_fault
+
+
+def test_device_generation_change_during_complete_reply_is_hard(link, monkeypatch):
+    identity=link._bound_identity
+    calls=[0]
+    def observed_identity():
+        calls[0]+=1
+        return identity if calls[0]==1 else ('different-device',None)
+    monkeypatch.setattr(link,'_identity',observed_identity)
+    with pytest.raises(Hwt601TransportError,match='waehrend Antwort') as error:
+        link.read_motion_registers()
+    assert error.value.hard_fault
+    assert link.last_reply_received_monotonic_s is None
