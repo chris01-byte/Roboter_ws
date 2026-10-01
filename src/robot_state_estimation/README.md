@@ -49,3 +49,10 @@ rollenden 60-s-Fensters zulässig. Jeder Recoveryvorgang behält seine absolute
 Protokoll-/Identitätsfehler, ungültige Daten und Zeitbruch bleiben terminal.
 Das Encoderprofil und dessen 120/180-ms-Grenzen bleiben unverändert.
 Die Werte sind ein dokumentierter Entwicklungsvertrag, keine Serienfreigabe.
+
+Nach einer Eingabelücke verwirft der Yaw-Kern weiterhin die Grenzmessung.
+Im Entwicklungsvertrag darf der letzte unveränderte korrigierte Originalwert
+innerhalb seiner bestehenden 350-ms-Frische weiter genutzt werden, wenn
+gleichzeitig gültige Rohoriginale innerhalb 300 ms vorliegen. Eingefrorene,
+stabile Kalibrierung und alle Fehlerprüfungen bleiben Pflicht; die Lücke wird
+nicht integriert. Die 100-ms-Kalibrierungsgrenze wird nicht geändert.

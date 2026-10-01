@@ -473,9 +473,18 @@ class Hwt601FusionHealth:
                 and isinstance(bias, dict)
                 and bias.get('calibrated') is True
                 and bias.get('stable') is True
-                and bias.get('adaptation_samples') == 0):
+                and bias.get('adaptation_samples') == 0
+                and not self.development_contract):
             return 'yaw_data_continuity_pending'
-        if not (yaw.get('ready') is True
+        # A boundary sample is intentionally not published by the yaw core.
+        # In the explicit development contract the preceding ORIGINAL yaw
+        # sample is still usable within .35 s, while raw is valid within .30.
+        # Both actual sample ages were checked above; no gap is integrated,
+        # timestamp changed, or frozen calibration weakened here.
+        usable_yaw=(yaw.get('ready') is True or (
+            self.development_contract and yaw.get('ready') is False
+            and yaw.get('data_continuity_pending') is True))
+        if not (usable_yaw
                 and yaw.get('operator_stationary_confirmed') is True
                 and yaw.get('bias_frozen_after_startup') is True
                 and 'latched_fault' in yaw and yaw['latched_fault'] is None

@@ -739,3 +739,26 @@ def test_development_hard_identity_data_protocol_contract_failure_never_recovers
     assert h.recovery_state=='TERMINAL_FAULT'
     h.statuses['raw'][0].update(data_valid=True,identity_intact=True,terminal_fault=None)
     assert h.source_failure(10.02) is not None
+
+
+def test_development_yaw_boundary_preserves_still_fresh_original_sample():
+    health=development_health();assert health.source_failure(10.) is None
+    # A 200-ms input gap: the core discards its boundary sample. Its last
+    # ORIGINAL corrected measurement is still inside the existing 350 ms.
+    health.sample('raw',10.2,10.2,10.2);health.sample('wheel',10.2,10.2,10.2)
+    health.statuses['yaw'][0].update(ready=False,data_continuity_pending=True,age_s=.2)
+    original=health.samples['yaw']
+    assert health.source_failure(10.2) is None
+    assert health.recovery_attempts==0 and health.samples['yaw']==original
+    health.sample('wheel',10.511,10.511,10.511)
+    assert health.source_failure(10.511)=='raw_missing_stale_or_invalid'
+    assert health.recovery_state=='HOLD' and health.recovery_attempts==1
+
+
+def test_development_yaw_boundary_does_not_hide_invalid_or_unfrozen_original():
+    for field,value in [('bias_frozen_after_startup',False),('latched_fault','imu_zeitfehler')]:
+        health=development_health();assert health.source_failure(10.) is None
+        health.statuses['yaw'][0].update(ready=False,data_continuity_pending=True,age_s=.02)
+        health.statuses['yaw'][0][field]=value
+        assert health.source_failure(10.02) is not None
+        assert health.recovery_state=='TERMINAL_FAULT'
