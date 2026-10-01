@@ -344,6 +344,7 @@ class FakeNav(Node):
             if isinstance(value,bool):p.type=1;p.bool_value=value
             elif isinstance(value,(int,float)):p.type=3;p.double_value=float(value)
             elif isinstance(value,list):p.type=9;p.string_array_value=value
+            elif isinstance(value,str):p.type=4;p.string_value=value
             response.values.append(p)
         return response
 
