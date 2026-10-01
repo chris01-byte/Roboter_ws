@@ -10,9 +10,14 @@ import threading
 import time
 
 import numpy as np
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Path
+from nav2_msgs.action import ComputePathToPose
+from rclpy.action import ActionClient
 import rclpy
 from .exploration_scope import rasterize_scope
 from rcl_interfaces.msg import ParameterDescriptor
+from rcl_interfaces.srv import GetParameters
 from std_msgs.msg import String
 from robot_interfaces.action import ExploreArea
 
@@ -24,7 +29,8 @@ from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
-    footprint_clear, footprint_route_clear, self_body_unknown_mask)
+    footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
+    lookahead_point)
 
 
 class MetricFrontierRuntime:
@@ -47,6 +53,11 @@ class MetricFrontierRuntime:
             raise ValueError('metric_frontier needs an explicitly verified polygon scope')
         if self._portal_enabled or self._door_distance > 0 or self._coverage_enabled or self._return_to_start_p:
             raise ValueError('metric_frontier excludes direct bridges, coverage and return execution')
+        self._metric_start_strategy = self.declare_parameter(
+            'metric_start_strategy', 'adaptive', ParameterDescriptor(read_only=True,
+                description='adaptive or configured_scan; fixed for this process/mission.')).value
+        if self._metric_start_strategy not in ('adaptive', 'configured_scan'):
+            raise ValueError('Unknown metric_start_strategy')
         self._metric_lock = threading.RLock()
         self._metric_hold_lock = threading.RLock()
         self._metric_correlator = MapManagerStatusCorrelator(
@@ -69,11 +80,24 @@ class MetricFrontierRuntime:
         self._metric_self_body_enabled = self.declare_parameter(
             'metric_self_body_enabled', False).value
         self._metric_body_anchor = None
+        self._metric_body_grid_identity = None
+        self._metric_body_frame_reference = None
+        self._metric_body_cells = None
+        self._metric_body_anchor_expired = False
         self._metric_bounds = (min(footprint[::2]), max(footprint[::2]),
                                min(footprint[1::2]), max(footprint[1::2]))
         if any((self._metric_bounds[0] > -.13, self._metric_bounds[1] < .33,
                 self._metric_bounds[2] > -.25, self._metric_bounds[3] < .25)):
             raise ValueError('metric footprint cannot shrink the measured padded chassis')
+        self._metric_controller_params = self.create_client(
+            GetParameters, '/controller_server/get_parameters', callback_group=self._cb)
+        self._metric_planner = ActionClient(self, ComputePathToPose,
+            '/compute_path_to_pose', callback_group=self._cb)
+        self._metric_nav_path = None
+        self._metric_nav_path_at = None
+        self._metric_plan_after_ns = None
+        self._metric_plan_subscription = self.create_subscription(
+            Path, '/plan', self._on_metric_nav_plan, 10, callback_group=self._cb)
         self._metric_raw = None
         self._metric_correlation = None
         self._metric_status_at = None
@@ -174,6 +198,22 @@ class MetricFrontierRuntime:
             self._metric_wheel = status
             self._metric_wheel_at = time.monotonic()
 
+    def _metric_body_reference(self):
+        # Bind first-body space to the actual mapping/odometry relation.
+        # Normal odometry travel does not move the mask; a changed reference
+        # cannot reuse the old start proof. No TF is created or modified.
+        if not hasattr(self, '_tf_buffer'):
+            return None
+        transform = self._tf_buffer.lookup_transform(self._global_frame,'odom',rclpy.time.Time())
+        age=(self.get_clock().now().nanoseconds-
+             (transform.header.stamp.sec*10**9+transform.header.stamp.nanosec))/1e9
+        t,q=transform.transform.translation,transform.transform.rotation
+        values=(t.x,t.y,t.z,q.x,q.y,q.z,q.w)
+        if (not 0<=age<=self._door_pose_timeout or not all(math.isfinite(v) for v in values)
+                or abs(q.x)+abs(q.y)>1e-6 or abs(sum(v*v for v in values[3:])-1)>1e-6):
+            raise ValueError('self_body_anchor_reference_invalid')
+        return t.x,t.y,math.atan2(2*q.w*q.z,1-2*q.z*q.z)
+
     def _metric_inputs(self, active=False):
         with self._metric_lock:
             fault = self._metric_fault
@@ -223,13 +263,41 @@ class MetricFrontierRuntime:
                 raise ValueError('self_body_lidar_tf_missing')
             # Validate TF even after this bounded first-map exemption expires.
             body = self_body_unknown_mask(grid, occupancy, pose, mount)
+            identity = (c.context, grid.info.width, grid.info.height,
+                        grid.info.resolution, tuple(origin), yaw)
+            reference = self._metric_body_reference()
             if self._metric_body_anchor is None:
                 self._metric_body_anchor = (source.fingerprint, pose)
-            fingerprint, anchor = self._metric_body_anchor
-            # Freeze the exemption at the first joined pose/map. It never
-            # follows the vehicle into newly swept unknown space or a new map.
-            body = (self_body_unknown_mask(grid, occupancy, anchor, mount)
-                    if fingerprint == source.fingerprint else None)
+                self._metric_body_grid_identity = identity
+                self._metric_body_frame_reference = reference
+                self._metric_body_cells = body.copy()
+                self._metric_body_anchor_expired = False
+            _, anchor = self._metric_body_anchor
+            first_reference = getattr(self, '_metric_body_frame_reference', None)
+            projected_anchor = anchor
+            invalid_reference = False
+            if first_reference is not None and reference is not None:
+                dx,dy=anchor[0]-first_reference[0],anchor[1]-first_reference[1]
+                ax=math.cos(first_reference[2])*dx+math.sin(first_reference[2])*dy
+                ay=-math.sin(first_reference[2])*dx+math.cos(first_reference[2])*dy
+                projected_anchor=(reference[0]+math.cos(reference[2])*ax-math.sin(reference[2])*ay,
+                    reference[1]+math.sin(reference[2])*ax+math.cos(reference[2])*ay,
+                    anchor[2]+reference[2]-first_reference[2])
+                invalid_reference=(math.dist(projected_anchor[:2],anchor[:2])>.001
+                    or abs(projected_anchor[2]-anchor[2])>.001)
+            else:
+                invalid_reference=(reference != first_reference or math.dist(pose[:2],anchor[:2])>.001
+                    or abs(math.atan2(math.sin(pose[2]-anchor[2]),math.cos(pose[2]-anchor[2])))>.001)
+            if identity != self._metric_body_grid_identity or invalid_reference:
+                self._metric_body_anchor_expired = True
+            # Fixed INITIAL cells only. Reproject/revalidate the first physical
+            # space and intersect monotonically: no moving bubble, no regrowth
+            # after observation/obstacle/reference change, never re-anchor.
+            if self._metric_body_anchor_expired:
+                body = None
+            else:
+                self._metric_body_cells &= self_body_unknown_mask(grid,occupancy,projected_anchor,mount)
+                body = self._metric_body_cells
         known, safe = known_safe_mask(occupancy, scope, correlation, origin, yaw, res,
                                      self._goal_clearance_m, body)
         # Costmap values already include Nav2 inflation; also check full chassis
@@ -283,24 +351,258 @@ class MetricFrontierRuntime:
             simplified.append(route[end])
             index=end
         route=tuple(simplified)
+        return self._metric_waypoints_clear(inputs, route, target_yaw)
+
+    def _metric_waypoints_clear(self, inputs, route, target_yaw=None):
+        grid, _, pose, known, _, costmap, cost_known = inputs
+        target = route[-1]
         def check(x, y, yaw, g, allowed):
+            # RPP may correct heading before/during translation (real profile
+            # threshold .35 rad). Validate the entire bounded correction
+            # envelope rather than assuming a forward goal never rotates.
             return footprint_clear(x,y,yaw,g,allowed,self._world_to_grid,
-                                   self._grid_to_world,self._metric_bounds)
+                                   self._grid_to_world,self._metric_bounds,
+                                   heading_half_angle=.35,
+                                   # Pure pursuit circle through a <=.4-m
+                                   # carrot, heading error <=.35 rad: maximum
+                                   # sagitta L/2*tan(error/2). Its tangent stays
+                                   # inside the same heading envelope. Preserve
+                                   # all existing raster/braking reserves.
+                                   center_deviation_m=.4/2*math.tan(.35/2))
         if not footprint_route_clear(route, pose[2], ((grid,known),(costmap,cost_known)),check):
             self._metric_last_route_rejection='footprint_sweep_invalid'
             return None
-        if target_yaw is not None:
-            arrival_yaw = pose[2] if len(route)==1 else math.atan2(
-                route[-1][1]-route[-2][1],route[-1][0]-route[-2][0])
-            delta = math.atan2(math.sin(target_yaw-arrival_yaw),math.cos(target_yaw-arrival_yaw))
-            steps = max(1,math.ceil(abs(delta)/.05))
-            if not all(check(*target,arrival_yaw+delta*k/steps,g,allowed)
-                       for k in range(steps+1)
-                       for g,allowed in ((grid,known),(costmap,cost_known))):
-                self._metric_last_route_rejection='goal_orientation_invalid'
-                return None
+        for index in range(1,len(route)-1):
+            before, corner = route[index-1:index+1]
+            length = math.dist(before,corner)
+            if length <= 1e-6:
+                continue
+            incoming = math.atan2(corner[1]-before[1],corner[0]-before[0])
+            distance = min(.4,length)  # actual fixed RPP lookahead
+            steps = max(1,math.ceil(2*distance/min(grid.info.resolution,costmap.info.resolution)))
+            for step in range(steps+1):
+                back = distance*(1-step/steps)
+                point = (corner[0]-math.cos(incoming)*back,corner[1]-math.sin(incoming)*back)
+                carrot = lookahead_point(point,route[index:],.4)
+                if math.dist(point,carrot) > 1e-6 and not footprint_route_clear(
+                        (point,carrot),incoming,((grid,known),(costmap,cost_known)),check):
+                    self._metric_last_route_rejection='controller_lookahead_sweep_invalid'
+                    return None
+        # RPP may rotate anywhere inside the actual goal-position tolerance.
+        arrival_yaw = pose[2] if len(route)==1 else math.atan2(
+            route[-1][1]-route[-2][1],route[-1][0]-route[-2][0])
+        final_yaw = arrival_yaw if target_yaw is None else target_yaw
+        delta = math.atan2(math.sin(final_yaw-arrival_yaw),math.cos(final_yaw-arrival_yaw))
+        steps = max(1,math.ceil(abs(delta)/.05))
+        if not all(footprint_clear(*target,arrival_yaw+delta*k/steps,g,allowed,
+                   self._world_to_grid,self._grid_to_world,self._metric_bounds,
+                   heading_half_angle=.4,center_deviation_m=.15)
+                   for k in range(steps+1)
+                   for g,allowed in ((grid,known),(costmap,cost_known))):
+            self._metric_last_route_rejection='goal_orientation_invalid'
+            return None
         self._metric_last_route_rejection=None
         return route
+
+    def _on_metric_nav_plan(self, path):
+        active = self._metric_active
+        if active is None or not path.poses or path.header.frame_id != self._global_frame:
+            return
+        stamp_ns = path.header.stamp.sec*10**9+path.header.stamp.nanosec
+        end = path.poses[-1].pose.position
+        if (self._metric_plan_after_ns is None or stamp_ns < self._metric_plan_after_ns
+                or math.dist((end.x, end.y), (active.x, active.y)) > .05):
+            return
+        self._metric_nav_path = path
+        self._metric_nav_path_at = time.monotonic()
+
+    def _metric_validate_nav_plan(self, inputs, path, target):
+        if not path.poses or path.header.frame_id != self._global_frame:
+            self._metric_last_route_rejection = 'nav2_plan_missing_or_wrong_frame'
+            return None
+        points = [(p.pose.position.x, p.pose.position.y) for p in path.poses]
+        orientation = path.poses[-1].pose.orientation
+        q = (orientation.x, orientation.y, orientation.z, orientation.w)
+        if (any(p.header.frame_id not in ('', self._global_frame) for p in path.poses)
+                or not all(math.isfinite(v) for v in q)
+                or abs(sum(v*v for v in q)-1.) > .01):
+            self._metric_last_route_rejection = 'nav2_plan_orientation_or_frames_invalid'
+            return None
+        end_yaw = math.atan2(2*(q[3]*q[2]+q[0]*q[1]),1-2*(q[1]**2+q[2]**2))
+        if abs(math.atan2(math.sin(end_yaw-target.yaw),math.cos(end_yaw-target.yaw))) > .01:
+            self._metric_last_route_rejection = 'nav2_plan_goal_orientation_invalid'
+            return None
+        if (not all(math.isfinite(v) for p in points for v in p)
+                or math.dist(points[-1], (target.x, target.y)) > .05):
+            self._metric_last_route_rejection = 'nav2_plan_goal_or_values_invalid'
+            return None
+        # Follow remaining actual Nav2 waypoints, never a guessed forward chord.
+        pose = inputs[2]
+        if min(math.dist(pose[:2],point) for point in points) > .4:
+            self._metric_last_route_rejection='nav2_plan_controller_carrot_unbounded'
+            return None
+        projections = []
+        for i, (a,b) in enumerate(zip(points,points[1:])):
+            dx,dy=b[0]-a[0],b[1]-a[1]
+            squared=dx*dx+dy*dy
+            if squared <= 1e-12:
+                continue
+            fraction=max(0.,min(1.,((pose[0]-a[0])*dx+(pose[1]-a[1])*dy)/squared))
+            projected=(a[0]+fraction*dx,a[1]+fraction*dy)
+            projections.append((math.dist(pose[:2],projected),i))
+        if not projections or min(projections)[0] > .30:
+            self._metric_last_route_rejection = 'nav2_plan_pose_disconnected'
+            return None
+        # Trim at the containing SEGMENT, not nearest sparse waypoint. Keeping
+        # an old start waypoint behind the robot invents an unsafe 180° turn.
+        nearest = min(projections)[1]+1
+        route = [pose[:2]]
+        for point in points[nearest:]:
+            if math.dist(point, route[-1]) <= 1e-6:
+                continue
+            if len(route) >= 2:
+                a,b = route[-2:]
+                cross = (b[0]-a[0])*(point[1]-b[1])-(b[1]-a[1])*(point[0]-b[0])
+                dot = (b[0]-a[0])*(point[0]-b[0])+(b[1]-a[1])*(point[1]-b[1])
+                if abs(cross) < 1e-10 and dot > 0:
+                    route.pop()  # only EXACT collinear same-direction points
+            route.append(point)
+        return self._metric_waypoints_clear(inputs, tuple(route), target.yaw)
+
+    def _metric_controller_contract(self, stop_requested):
+        expected = {'FollowPath.use_rotate_to_heading':True,
+            'FollowPath.rotate_to_heading_min_angle':.35,'FollowPath.lookahead_dist':.4,
+            'FollowPath.use_velocity_scaled_lookahead_dist':False,
+            'FollowPath.allow_reversing':False,'FollowPath.use_collision_detection':True,
+            'FollowPath.use_interpolation':True,'general_goal_checker.xy_goal_tolerance':.15,
+            'general_goal_checker.yaw_goal_tolerance':.4,
+            'goal_checker_plugins':('general_goal_checker',),'controller_plugins':('FollowPath',),
+            'FollowPath.plugin':'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController',
+            'general_goal_checker.plugin':'nav2_controller::SimpleGoalChecker'}
+        client = self._metric_controller_params
+        if not client.wait_for_service(timeout_sec=1.0):
+            return False
+        request = GetParameters.Request()
+        request.names = list(expected)
+        future = client.call_async(request)
+        deadline = time.monotonic()+1.0
+        while rclpy.ok() and not future.done() and time.monotonic()<deadline:
+            if stop_requested():
+                return False
+            time.sleep(.02)
+        if not future.done():
+            return False
+        try:
+            values = future.result().values
+            if len(values) != len(expected):
+                return False
+            for value, target in zip(values, expected.values()):
+                if isinstance(target, bool):
+                    if value.type != 1 or value.bool_value is not target:
+                        return False
+                elif isinstance(target,str):
+                    if value.type != 4 or value.string_value != target:
+                        return False
+                elif isinstance(target,tuple):
+                    if value.type != 9 or tuple(value.string_array_value) != target:
+                        return False
+                elif (value.type != 3 or not math.isfinite(value.double_value)
+                      or abs(value.double_value-target)>1e-9):
+                    return False
+            self._metric_status['controller_geometry_contract'] = expected
+            return True
+        except Exception:
+            return False
+
+    def _metric_request_nav_plan(self, target, stop_requested):
+        # Bind the correction envelope to actual RPP parameters before motion.
+        if not self._metric_controller_contract(stop_requested):
+            return None, 'nav2_controller_geometry_contract_invalid'
+        # Planner action reads geometry; only existing NavigateToPose owns motion.
+        if not self._metric_planner.wait_for_server(timeout_sec=2.0):
+            return None, 'nav2_planner_unavailable'
+        request = ComputePathToPose.Goal()
+        request.goal = PoseStamped()
+        request.goal.header.frame_id = self._global_frame
+        request.goal.header.stamp = self.get_clock().now().to_msg()
+        self._metric_plan_after_ns = self.get_clock().now().nanoseconds
+        self._metric_nav_path = None
+        request.goal.pose.position.x, request.goal.pose.position.y = target.x, target.y
+        request.goal.pose.orientation.z = math.sin(target.yaw/2)
+        request.goal.pose.orientation.w = math.cos(target.yaw/2)
+        request.planner_id = 'GridBased'
+        future = self._metric_planner.send_goal_async(request)
+        deadline = time.monotonic()+2.0
+        handle = None
+        while rclpy.ok() and time.monotonic() < deadline:
+            if stop_requested():
+                break
+            if future.done():
+                handle = future.result()
+                break
+            time.sleep(.02)
+        if handle is None:
+            # A late planner acceptance is cancelled; it has no actuator output.
+            def cancel_late(f):
+                try:
+                    h=f.result()
+                    if h.accepted:h.cancel_goal_async()
+                except Exception:
+                    pass
+            future.add_done_callback(cancel_late)
+            return None, 'nav2_plan_timeout_or_stop'
+        if not handle.accepted:
+            return None, 'nav2_plan_rejected'
+        result = handle.get_result_async()
+        while rclpy.ok() and time.monotonic() < deadline and not result.done():
+            if stop_requested():
+                break
+            time.sleep(.02)
+        if not result.done():
+            handle.cancel_goal_async()
+            return None, 'nav2_plan_timeout_or_stop'
+        try:
+            response = result.result()
+            if response.status != 4:
+                return None, 'nav2_plan_failed'
+            return response.result.path, None
+        except Exception:
+            return None, 'nav2_plan_failed'
+
+    def _metric_start_decision(self, inputs, policy, min_frontier, scan_pending):
+        grid, _, pose, known, _, costmap, cost_known = inputs
+        grids = ((grid, known), (costmap, cost_known))
+        missing = {}
+        for label, (g, mask) in zip(('raw', 'costmap'), grids):
+            rr, cc = footprint_cells(*pose, g, self._world_to_grid, self._metric_bounds)
+            inside = (rr >= 0) & (rr < mask.shape[0]) & (cc >= 0) & (cc < mask.shape[1])
+            missing[label] = int(np.count_nonzero(~inside)) + int(
+                np.count_nonzero(~mask[rr[inside], cc[inside]]))
+        contour_clear = not any(missing.values())
+        sweep_clear = contour_clear and all(
+            footprint_clear(*pose[:2], pose[2]+math.pi, g, mask,
+                self._world_to_grid, self._grid_to_world, self._metric_bounds,
+                heading_half_angle=math.pi, heading_samples=127) for g, mask in grids)
+        candidates = self._metric_select(inputs, policy, min_frontier) if contour_clear else []
+        # Utility is the existing frontier observation gain, not a fixed move.
+        q=grid.info.origin.orientation
+        inside=rasterize_scope(self._metric_scope,context=inputs[1].context,
+            width=grid.info.width,height=grid.info.height,resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x,origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        unknown_in_scope=int(np.count_nonzero((np.asarray(grid.data).reshape(known.shape)<0)&inside&~known))
+        useful = bool(unknown_in_scope and getattr(self, '_frontiers_remaining', 0))
+        scan = bool(scan_pending and sweep_clear and useful)
+        decision = dict(strategy=self._metric_start_strategy,
+            selected_motion='full_scan' if scan else 'observation_goal' if candidates else 'wait',
+            scan_admissible=bool(sweep_clear), scan_useful=useful,
+            unobserved_cells_in_scope=unknown_in_scope,
+            initial_contour_missing_cells=missing,
+            first_rejecting_predicate=('initial_contour_unknown_or_occupied' if not contour_clear else
+                'no_eligible_observation_route' if not candidates and not scan else None),
+            scan_rejection=None if sweep_clear else 'initial_scan_footprint_invalid')
+        return decision, candidates
 
     def _metric_select(self, inputs, policy, min_frontier):
         grid, correlation, pose, *_ = inputs
@@ -318,9 +620,9 @@ class MetricFrontierRuntime:
                 dx,dy = goal[0]-f.cx,goal[1]-f.cy
                 length = math.hypot(dx,dy)
                 if length > 1e-9:
-                    steps = int(math.floor(self._goal_search_m/grid.info.resolution))
+                    steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
                     for step in range(1,steps+1):
-                        distance = step*grid.info.resolution
+                        distance = min(step*grid.info.resolution,self._goal_search_m)
                         alternative = (goal[0]+distance*dx/length,goal[1]+distance*dy/length)
                         alternative_route = self._metric_route(inputs,alternative)
                         if alternative_route is not None:
@@ -430,6 +732,8 @@ class MetricFrontierRuntime:
         pending = None
         task_started = None
         scan_pending = self._initial_scan_enabled
+        scan_task_started = None
+        initial_stop_confirmed = False
         chain = []
         stable_empty = set()
         def expired():
@@ -468,6 +772,12 @@ class MetricFrontierRuntime:
                     time.sleep(.02)
                     continue
                 return finish('failed',snapshot['first_rejecting_predicate'])
+            if not initial_stop_confirmed:
+                if not self._metric_confirm_stop(goal_handle,expired):
+                    if self._wohnungserkundung_hwt_hold():
+                        continue
+                    return finish('failed','initial_standstill_unconfirmed')
+                initial_stop_confirmed = True
             try:
                 inputs = self._metric_inputs(active=pending is not None)
             except Exception as error:
@@ -478,16 +788,29 @@ class MetricFrontierRuntime:
                     time.sleep(.05)
                     continue
                 return finish('failed',reason)
-            if scan_pending:
+            adaptive_candidates = None
+            use_scan = scan_pending
+            if self._metric_start_strategy == 'adaptive' and pending is None:
+                decision, adaptive_candidates = self._metric_start_decision(
+                    inputs, policy, min_frontier, scan_pending)
+                self._metric_status['start_decision'] = decision
+                use_scan = decision['selected_motion'] == 'full_scan'
+            if use_scan:
+                if scan_task_started is None:
+                    scan_task_started = time.monotonic()
+                    attempts += 1
                 grid, _, pose, known, _, costmap, cost_known = inputs
-                if not all(footprint_clear(*pose[:2], pose[2]+angle,g,allowed,
-                           self._world_to_grid,self._grid_to_world,self._metric_bounds)
-                           for angle in np.linspace(0.,2*math.pi,127)
+                if not all(footprint_clear(*pose[:2], pose[2]+math.pi,g,allowed,
+                           self._world_to_grid,self._grid_to_world,self._metric_bounds,
+                           heading_half_angle=math.pi,heading_samples=127)
                            for g,allowed in ((grid,known),(costmap,cost_known))):
                     return finish('failed','initial_scan_footprint_invalid')
                 self._status_phase='we_initial_scan'
                 last_scan_check = [0.]
                 def scan_stop():
+                    if time.monotonic()-scan_task_started >= self._goal_timeout_s:
+                        self._metric_status['first_rejecting_predicate'] = 'scan_task_budget_exhausted'
+                        return True
                     if goal_handle.is_cancel_requested or expired() or self._wohnungserkundung_hwt_hold():
                         return True
                     snapshot = self._metric_operating_snapshot()
@@ -501,9 +824,9 @@ class MetricFrontierRuntime:
                     try:
                         live = self._metric_inputs(active=True)
                         g, _, p, allowed, _, cg, ca = live
-                        clear = all(footprint_clear(*p[:2],p[2]+angle,grid,mask,
-                                    self._world_to_grid,self._grid_to_world,self._metric_bounds)
-                                    for angle in np.linspace(0.,2*math.pi,127)
+                        clear = all(footprint_clear(*p[:2],p[2]+math.pi,grid,mask,
+                                    self._world_to_grid,self._grid_to_world,self._metric_bounds,
+                                    heading_half_angle=math.pi,heading_samples=127)
                                     for grid,mask in ((g,allowed),(cg,ca)))
                         if not clear:
                             self._metric_status['first_rejecting_predicate'] = 'scan_footprint_invalid'
@@ -515,11 +838,23 @@ class MetricFrontierRuntime:
                 if self._hwt_hold_announced:
                     continue
                 if status != 'success':
-                    return finish('failed',f'initial_scan_{status}')
-                scan_pending=False
+                    if (self._metric_start_strategy != 'adaptive'
+                            or goal_handle.is_cancel_requested or expired()):
+                        return finish('failed',f'initial_scan_{status}')
+                    # Optional scan is one bounded observation attempt, never
+                    # a prerequisite silently relocated to another gate. Its
+                    # terminal zero command, fresh sources and confirmed stop
+                    # are required before choosing a separately validated goal.
+                    if not self._metric_confirm_stop(goal_handle, expired):
+                        return finish('failed','optional_scan_stop_or_sources_unconfirmed')
+                    self._metric_status['deferred_initial_scan'] = dict(
+                        result=status,completed=False,attempts=1,
+                        reason=self._metric_status.get('first_rejecting_predicate'))
+                scan_pending=False  # at most ONE scan attempt; HOLD retains it
                 continue
             if pending is None:
-                candidates = self._metric_select(inputs,policy,min_frontier)
+                candidates = (adaptive_candidates if adaptive_candidates is not None else
+                              self._metric_select(inputs,policy,min_frontier))
                 self._metric_status.update(candidates=len(candidates),ranking=self._frontier_rank_stats)
                 if not candidates:
                     grid,c,_,known,*_=inputs
@@ -544,11 +879,14 @@ class MetricFrontierRuntime:
                     else:
                         stable_empty.clear()
                     self._status_phase='metric_waiting_tasks'
-                    self._status_message='No eligible task; remaining unknown/deferred work is not completion.'
+                    self._status_message=self._metric_status.get('start_decision', {}).get(
+                        'first_rejecting_predicate') or 'No eligible task; remaining unknown/deferred work is not completion.'
                     self._metric_status['state']='waiting'
                     time.sleep(min(.25,self._replan_period_s))
                     continue
                 pending = candidates[0]
+                self._metric_nav_path = None
+                self._metric_plan_after_ns = None
                 task_started = time.monotonic()
                 attempts += 1
             self._metric_active = pending
@@ -580,6 +918,10 @@ class MetricFrontierRuntime:
                             last_pose[:] = [current[2],now]
                             if self._metric_route(current,(pending.x,pending.y),pending.yaw) is None:
                                 stop_reason[0]='route_invalidated'
+                            if (self._metric_nav_path is not None and
+                                    self._metric_validate_nav_plan(current,self._metric_nav_path,pending) is None):
+                                self._metric_status['nav2_plan_rejection']=self._metric_last_route_rejection
+                                stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)
                 return stop_reason[0] is not None
@@ -587,10 +929,30 @@ class MetricFrontierRuntime:
             if stop():
                 status='canceled'
             else:
-                # Align to first route leg, never through an unvalidated chord.
-                leg=pending.route[min(2,len(pending.route)-1)]
-                align,*_=self._prealign_to_goal(*leg,inputs[2],stop_requested=stop)
-                status = None if align in ('success','skipped') else 'alignment_failed'
+                planned, plan_error = self._metric_request_nav_plan(pending, stop)
+                if planned is None:
+                    status = 'planning_failed'
+                    stop_reason[0] = plan_error
+                else:
+                    try:
+                        inputs = self._metric_inputs(active=True)
+                        planned_route = self._metric_validate_nav_plan(inputs, planned, pending)
+                        plan_error = 'nav2_plan_' + str(self._metric_last_route_rejection)
+                    except Exception as error:
+                        planned_route, plan_error = None, str(error)
+                    if planned_route is None:
+                        status = 'planning_failed'
+                        self._metric_status['nav2_plan_rejection'] = plan_error
+                        stop_reason[0] = ('route_invalidated' if plan_error in (
+                            'nav2_plan_footprint_sweep_invalid','nav2_plan_goal_orientation_invalid',
+                            'nav2_plan_controller_lookahead_sweep_invalid')
+                            else plan_error)
+                    else:
+                        self._metric_nav_path = planned
+                        # Align to the first ACTUAL Nav2 route leg.
+                        leg=planned_route[min(1,len(planned_route)-1)]
+                        align,*_=self._prealign_to_goal(*leg,inputs[2],stop_requested=stop)
+                        status = None if align in ('success','skipped') else 'alignment_failed'
             if status is None and not stop():
                 self._status_phase='metric_navigation'
                 feedback=ExploreArea.Feedback()

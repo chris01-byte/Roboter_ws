@@ -355,3 +355,57 @@ blockieren. Im realen Lauf `fe75576` endete rosbag2 mit `database is locked`;
 der Schlussabschnitt fehlte. Erst Recorder geordnet stoppen, dann auswerten.
 Livebeobachtung über vorhandene Topics/Beobachterprotokolle, nicht über den
 aktiven DB-Dateipfad. Ausfall des Recorders beendet einen Nachweislauf.
+
+### Adaptiver metrischer Start und Timing-HOLD (01.10.2026)
+
+`exploration_strategy` bleibt standardmäßig `existing`; das explizite
+`metric_frontier_params.yaml` wählt `metric_frontier` mit
+`metric_start_strategy: adaptive` (auch dessen Deklarationsdefault).
+`configured_scan` erhält den bisherigen Scanablauf für Regressionen.
+Die Strategie ist beim Start unveränderlich; ein Parameterwechsel im laufenden
+Auftrag wird abgelehnt. `initial_scan_enabled` bedeutet im adaptiven Modus
+Verfügbarkeit, keine Pflichtrotation. Ein zulässiger nützlicher voller Sweep,
+sonst ein aus aktuellen Frontierdaten berechnetes erreichbares Beobachtungsziel,
+sonst ein begründeter Warte-/Teilstand wird gewählt. Ein erfolgloser optionaler
+Scan darf erst nach Quellenprüfung und bestätigtem Stillstand zurückgestellt
+werden; er zählt als ein Aufgabenversuch, HOLD setzt seine Frist nicht zurück.
+
+Geometrie prüft Rohkarte und tatsächliche Costmap einschließlich Ausgangskontur,
+aller Vorausrichtungen, vollständiger Route und Zielorientierung. Vor Bewegung
+liest derselbe Explorer `ComputePathToPose`; die bestehende NavigateToPose-
+Action bleibt alleiniger Fahrbesitzer. Tatsächliche `/plan`-Änderungen werden
+nachgeprüft. Die Prüfung ist an live gelesene RPP-Parameter gebunden:
+`use_rotate_to_heading=true`, `rotate_to_heading_min_angle=0.35`,
+`lookahead_dist=0.4`, `use_velocity_scaled_lookahead_dist=false`,
+`allow_reversing=false`, `use_collision_detection=true`,
+`use_interpolation=true`, einziger `general_goal_checker` mit XY-Toleranz 0,15 m
+und Yaw-Toleranz 0,40 rad. Genau ein FollowPath-Controller mit RPP-Klasse
+und ein SimpleGoalChecker sind erforderlich. Der Kreisbogen liegt innerhalb der Sehnenhülle plus
+`0.4/2*tan(0.35/2)` = 0,03536 m Mittelpunktreserve; der Lookahead-Punkt folgt
+der euklidischen 0,4-m-Kreis-/Pfadschnittstelle. Zielrotation benötigt den
+gesamten Positions-Toleranzbereich. Das wird bereits bei der Annäherungsauswahl
+geprüft, damit ein gültiges Ziel nicht erst in der Ausführung abgewiesen wird.
+Herleitung am [installierten RPP 1.1.20](https://github.com/ros-navigation/navigation2/blob/1.1.20/nav2_regulated_pure_pursuit_controller/src/regulated_pure_pursuit_controller.cpp). Ein Pfad ohne Wegpunkt innerhalb des Lookahead-Radius wird als
+`nav2_plan_controller_carrot_unbounded` gesperrt; dadurch kann ein grober
+Plan keine weiter entfernte erste Controllerposition verstecken.
+Abweichungen sperren;
+Headingkorrekturen und Lookahead-Ecken werden mit geprüft. Die 127 Winkel des
+Vollsweeps werden gemeinsam gegen denselben reservierten Zellumfang gerechnet.
+
+Privater Eigenkörperbeleg betrifft nur ganze anfangs unbekannte Zellen innerhalb
+der gemessenen ungepaddeten Kontur. Er bleibt an der ersten physischen Fläche,
+wächst nicht mit dem Roboter und wird durch neue Belegung/Beobachtung nur kleiner.
+Änderung des Karten-/Odometriebezugs oder Raster-/Sitzungskontexts lässt ihn
+permanent erlöschen; keine Neuverankerung. Unbekanntes Padding, Rasterreserve
+und Außenraum bleiben gesperrt. Mast-NaN und Montage-TF bleiben erhalten.
+`metric_start_geometrie_pruefen.py` wertet gespeicherte lokale Raster mit derselben
+adaptiven Auswahl aus; Zellkoordinaten/Flächenberichte ausschließlich außerhalb
+Git. Manuelles Umsetzen oder Vorkartieren gilt nicht als autonomer Kaltstart.
+
+Encodervertrag und wirksame passive/aktive HWT-Auflösung stehen in
+[ENCODER_ODOMETRIE_FIX](../../docs/ENCODER_ODOMETRIE_FIX.md).
+Reader-Diagnosefrist 2 s / zwei Versuche und Fusion-HOLD 5 s / zwei Versuche je
+Quelle verlängern weder 120-ms-Paargrenze noch 180-ms-Frische/Kontinuität.
+Ungültige Diagnosepaare werden nicht publiziert; echte >180-ms-Lücke heilt
+nicht durch zwei spätere Nullgeschwindigkeitspaare. Gesamt-/Aufgabenbudgets
+bleiben über Kindwechsel, Bootstrap und HOLD erhalten.

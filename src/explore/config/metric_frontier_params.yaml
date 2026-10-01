@@ -4,6 +4,8 @@
 explore_node:
   ros__parameters:
     exploration_strategy: metric_frontier
+    metric_start_strategy: adaptive
+    # initial_scan_enabled is scan availability, never a mandatory start gate.
     # Whole unknown cells in the measured body only; no mast-shadow clearing.
     metric_self_body_enabled: true
     wohnungserkundung_policy_enabled: false

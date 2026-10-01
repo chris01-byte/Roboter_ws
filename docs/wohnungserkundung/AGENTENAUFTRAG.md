@@ -2,7 +2,7 @@
 
 **WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Einziger aktueller Auftrag ist Abschnitt 9: reale Radentscheidung und tatsächliche Anfangsgeometrie gezielt schließen.**
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Abschnitt 9 ist abgeschlossen und bleibt historisch. Einziger aktueller Auftrag ist Abschnitt 10: adaptiver metrischer Start und begrenzte Encoder-Recovery.**
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -205,3 +205,37 @@ Vorlauf-/Fahrserie. Originale, Grenzen der vollständigen synthetischen Rundblic
 probe und tatsächliche Endwerte im STATUS-Abschluss. Prozesse und Gerätehandles
 frei, frische FC03-Endwerte null. Temporäre Runtime, Hauptkopie unverändert;
 Rückfall beide neuen Overlays weglassen. Kein Stufe-3-Gesamtgrün.
+
+
+## 10. Aktueller Auftrag – Präzisierung 01.10.2026
+
+Ausgang `d9894d2`, letzte reale Funktionsprüfung `8f5eeb4`, bestehender Branch/PR #105.
+Adaptiven Start innerhalb `metric_frontier` implementieren: zulässiger nützlicher
+Rundblick, sonst echte autonome Beobachtungsposition aus Frontier-/Annäherungskern,
+sonst begründeter Warte-/Teilstand. Keine Pflichtrotation vor anderem gültigen Ziel,
+kein zweiter Navigator, keine vorgegebenen Ziele, kein manueller Bootstrap.
+Startkontur, nötige Controllerdrehungen, volle Route und Zielorientierung prüfen.
+Körperbeleg darf unbekanntes Padding/Reserve oder neue Hindernisse nicht entfernen.
+
+Encoder-Messwertgültigkeit (120 ms), Bewegungsfrische und Odometriekontinuität
+(180 ms) von begrenztem Auftragserhalt trennen. Intakte Verbindung darf bounded
+weitergelesen werden; Diagnosewerte sind keine gültige Odometrie. Exakten alten
+120,874265-ms-/212,127149-ms-Fall anhand Originaldiagnose reproduzieren. Zwei gute
+Paare, spätere 0 rpm oder ein Reset beweisen keine Lückenkontinuität. Unbelegte
+Kontinuität bleibt Hilfebedarf; harte Identitäts-/Zähler-/Zeit-/Aktuatorfehler bleiben
+hart. Derselbe absolute Eltern-/Aufgaben-/Recoveryzähler bleibt erhalten.
+
+Verbundene Softwarefälle A–H: adaptive Folgeziele und später zulässiger Rundblick;
+keine Bewegung bei unbekannter Reserve/ungültiger Ausrichtung; Timing-HOLD mit
+belegter Kontinuität; echte >180-ms-Lücke; getrennte HWT-/Radereignisse;
+Budget/Stillstand/Kindterminal/ESTOP/Cancel; harmlose und ungültige Kartenupdates.
+Negativer synthetischer voller 2π-Dauerlauf bleibt dokumentiert.
+
+Isoliert bauen, aufgelöste Bytes/Profile prüfen. Ein gemeinsames reales Read-only-
+Fenster **720 s** einschließlich spätem Betrieb. Nur bei gültigen Quellen am echten
+Verbraucher UND zulässiger zuerst gewählter Bewegung geordnet auf aktiv wechseln
+und neu prüfen: maximal eine Mission **900 s / 150 s je Aufgabe / 6 Versuche /
+3 Fehlschläge**, inklusive Bootstrap/HOLD, ohne Budgetreset. Keine Injektion,
+Bus-Doppelbesitzer, Fremdziele, private Daten/Vorfahren, Merge oder permanenter
+Installwechsel. Abschluss getrennt nach Software, realem Preflight und Mission.
+**System diesmal eingeschaltet lassen**, vorherige Shutdownanweisung aufgehoben.

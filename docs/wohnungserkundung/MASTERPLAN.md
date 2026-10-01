@@ -10,6 +10,20 @@
 
 Die v1.1-Regel zum nicht rekonstruierbaren historischen HWT-Erstwert gilt weiter: Definierte Recoveryverträge dürfen implementiert und getestet werden, ohne eine unbekannte alte Einzelursache zu behaupten. Frühere Dokumente sind [bytegleich archiviert](archive/20260930-v1.1/README.md).
 
+**Präzisierung 01.10.2026 (Schritt 3):** `metric_frontier` startet adaptiv:
+voller Rundblick nur bei belegter Geometrie und Beobachtungsnutzen, sonst ein
+autonom berechnetes zulässiges Beobachtungsziel, sonst begründetes Warten/Teilstand.
+Der unbenutzte 360°-Sweep ist kein allgemeines Startgate. Die konkrete Bewegung
+mit Startkontur, Controllerdrehung, Route und Zielorientierung bleibt vollständig
+zu prüfen; unbekanntes Padding bleibt gesperrt. `existing` bleibt unverändert.
+Encoder: 120-ms-Messgrenze und 180-ms-Kontinuität bleiben unverändert. Begrenzte
+Timing-Recovery erhält den Auftrag im bewegungsgesperrten HOLD, benötigt vor
+Wiederanfahrt echte gültige Paare, belegte Kontinuität, Stillstand, aktuelle
+Lokalisierung/Route und terminales Kind/Gate-ACK. Unbelegte Lücke bedeutet
+Hilfebedarf/Teilstand, niemals Rebaseline oder Faultflag-Reset. Manuelles Umsetzen
+oder Vorkartieren zählt nicht als autonomer Bootstrap. Historische Fehlversuche
+bleiben erhalten.
+
 ## 1. Geltung und Dokumentzuständigkeit
 
 Der Masterplan konkretisiert WE-1. Das Produktziel bleibt die autonome Erkundung der freigegebenen, aktuell zugänglichen und sensorisch erschließbaren Umgebung, konsistenter Teil-/Gesamtabschluss und später belastbare Wiederaufnahme. Geschlossene unbekannte Räume oder unbeobachtete Gefahren dürfen nicht als erkundet gelten.

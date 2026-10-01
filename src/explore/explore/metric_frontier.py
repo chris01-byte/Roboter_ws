@@ -168,7 +168,7 @@ def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clea
     return known, safe
 
 
-def footprint_cells(x, y, yaw, grid, world_to_grid, bounds=(-.13, .33, -.25, .25)):
+def footprint_cells(x, y, yaw, grid, world_to_grid, bounds=(-.13, .33, -.25, .25), heading_half_angle=0., heading_samples=None, center_deviation_m=0.):
     """Conservative cell-intersection test of the padded measured rectangle.
 
     Bounds enclose the actual configured footprint. Cell half diagonals and
@@ -176,11 +176,16 @@ def footprint_cells(x, y, yaw, grid, world_to_grid, bounds=(-.13, .33, -.25, .25
     """
     left, right, bottom, top = bounds
     res = grid.info.resolution
-    radius = math.hypot(max(abs(left), abs(right)), max(abs(bottom), abs(top)))
+    if not math.isfinite(center_deviation_m) or center_deviation_m < 0:
+        raise ValueError("controller_center_deviation_invalid")
+    reserve = res / math.sqrt(2) + .01 + center_deviation_m
+    radius = math.hypot(max(abs(left), abs(right))+reserve, max(abs(bottom), abs(top))+reserve)
     c0, r0 = world_to_grid(x, y, grid.info)
     n = int(math.ceil(radius / res)) + 2
-    cosine, sine = math.cos(yaw), math.sin(yaw)
-    reserve = res / math.sqrt(2) + .01
+    angles = yaw + np.linspace(-heading_half_angle, heading_half_angle,
+                               heading_samples if heading_samples is not None else
+                               1 if heading_half_angle == 0 else 15)
+    cosine, sine = np.cos(angles)[:, None, None], np.sin(angles)[:, None, None]
     rows, cols = np.mgrid[r0-n:r0+n+1, c0-n:c0+n+1]
     q = grid.info.origin.orientation
     map_yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
@@ -190,17 +195,38 @@ def footprint_cells(x, y, yaw, grid, world_to_grid, bounds=(-.13, .33, -.25, .25
     lx, ly = cosine*dx+sine*dy, -sine*dx+cosine*dy
     touched = ((left-reserve<=lx)&(lx<=right+reserve)&
                (bottom-reserve<=ly)&(ly<=top+reserve))
+    touched = np.any(touched, axis=0)
     return rows[touched], cols[touched]
 
 
 def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
-                    bounds=(-.13, .33, -.25, .25)):
+                    bounds=(-.13, .33, -.25, .25), heading_half_angle=0., heading_samples=None, center_deviation_m=0.):
     """Use the identical reserved cell set for motion and diagnosis."""
-    r, c = footprint_cells(x, y, yaw, grid, world_to_grid, bounds)
+    r, c = footprint_cells(x, y, yaw, grid, world_to_grid, bounds, heading_half_angle, heading_samples, center_deviation_m)
     if np.any((r<0)|(r>=allowed.shape[0])|(c<0)|(c>=allowed.shape[1])):
         return False
     return bool(np.all(allowed[r,c]))
 
+
+
+def lookahead_point(point, remaining_route, distance_m):
+    """RPP carrot: first polyline intersection with the Euclidean radius.
+
+    Fixed lookahead is a circle radius, not remaining arclength at a corner.
+    A route wholly inside the circle uses its actual final point.
+    """
+    previous=point
+    for endpoint in remaining_route:
+        if math.dist(point,endpoint)>=distance_m:
+            dx,dy=endpoint[0]-previous[0],endpoint[1]-previous[1]
+            px,py=previous[0]-point[0],previous[1]-point[1]
+            a=dx*dx+dy*dy
+            b=2*(px*dx+py*dy)
+            c=px*px+py*py-distance_m*distance_m
+            fraction=(-b+math.sqrt(max(0.,b*b-4*a*c)))/(2*a)
+            return previous[0]+fraction*dx,previous[1]+fraction*dy
+        previous=endpoint
+    return previous
 
 
 def footprint_route_clear(route, initial_yaw, grids, check):

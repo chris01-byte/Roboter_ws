@@ -75,6 +75,26 @@ Kartenpruefung. Gedrehte Karten-Origin wird beruecksichtigt.
 
 ## Explizite metrische Strategie (MASTERPLAN v1.2)
 
+**Startpräzisierung 01.10.2026:** `metric_start_strategy` ist beim Start
+unveränderlich, Default und metrisches Profil wählen `adaptive`.
+`initial_scan_enabled` stellt den Rundblick bereit; seine unbenutzte 360°-Fläche
+ist keine Voraussetzung einer anderen ersten Bewegung. Die Auswahl prüft
+Startkontur, Beobachtungsnutzen und tatsächliche Bewegungsgeometrie: zulässiger
+nützlicher voller Scan, sonst autonomes Frontier-/Beobachtungsziel, sonst
+konkreter Warte-/Teilstand. `configured_scan` erhält den bisherigen Scanablauf.
+`existing` und dessen Defaultauswahl bleiben erhalten. Anfangs bestätigter
+Encoderstillstand, aktuelle Quellen und Scope gelten für beide Bewegungsarten.
+
+Der vorhandene Explorer liest vor Bewegung den tatsächlichen Nav2-Pfad über
+`ComputePathToPose`; `NavigateToPose` bleibt alleiniger Fahrbesitzer. Aktuelle
+`/plan`-Änderungen, Vorausrichtung, RPP-Headingkorrekturen/Lookahead und
+Zielorientierung werden auf beiden Rastern geprüft. Die live abgefragten Controller-/Goalcheckerparameter sowie Geometrie-/Körperbelegdetails stehen im
+[Kartierungs-README](../../tools/kartierung/README.md#adaptiver-metrischer-start-und-timing-hold-01102026).
+Ein abgebrochener optionaler Scan ist ein begrenzter fehlgeschlagener Versuch,
+kein erfüllter Vollrundblick; erst bestätigter Stillstand und gültige Quellen
+erlauben eine andere geprüfte Beobachtungsposition. Gesamt-/Aufgabenfristen
+werden dabei nicht neu gestartet.
+
 `exploration_strategy` hat den unveränderten Default `existing`. Für das neue
 Backend nach dem Basisprofil ein bewusst ausgewähltes, lokal vervollständigtes
 `config/metric_frontier_params.yaml` über `explore_params_overlay` laden. Das

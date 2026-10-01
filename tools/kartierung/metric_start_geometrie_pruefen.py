@@ -105,17 +105,20 @@ def analyze(directory):
     q=raw.info.origin.orientation;angle=math.atan2(2*q.w*q.z,1-2*q.z*q.z)
     known,safe=known_safe_mask(occupancy,scope,correlation,(raw.info.origin.position.x,raw.info.origin.position.y),angle,raw.info.resolution,.28,body)
     n=ExploreNode.__new__(ExploreNode)
+    n._metric_scope=scope;n._wohnungserkundung_evidence_max_cells=1000000
     # Offline evaluation context, not sensor restamping or a live readiness claim.
     for key,value in dict(_global_costmap=cost,_global_costmap_received_at=time.monotonic(),
         _map_timeout_s=5.,_global_frame='map',_frontier_goal_max_cost=90,
         _goal_clearance_m=.28,_goal_search_m=.3,_approach_dist_m=.45,
-        _metric_bounds=(-.13,.33,-.25,.25),_min_goal_dist_m=.3,
+        _metric_bounds=(-.13,.33,-.25,.25),_metric_start_strategy='adaptive',_min_goal_dist_m=.3,
         _frontier_forward_cone_half_angle=0.,_potential_scale=3.,_gain_scale=1.,_heading_scale=.75,_visualize=False).items():setattr(n,key,value)
     for row,col in zip(*np.nonzero(safe)):
         xy=n._grid_to_world(col,row,raw.info);cx,cy=n._world_to_grid(*xy,cost.info)
         if not(0<=cy<costs.shape[0] and 0<=cx<costs.shape[1] and 0<=costs[cy,cx]<=90):safe[row,col]=False
     cost_known=(costs>=0)&(costs<100)
     candidates=n._metric_select((raw,correlation,pose,known,safe,cost,cost_known),MetricTaskPolicy(.6,30.,2),.3)
+    start_decision, adaptive_candidates=n._metric_start_decision(
+        (raw,correlation,pose,known,safe,cost,cost_known),MetricTaskPolicy(.6,30.,2),.3,True)
     col,row=n._world_to_grid(*pose[:2],raw.info)
     raw_trace=classify(raw,occupancy,known,pose);cost_trace=classify(cost,costs,cost_known,pose)
     return dict(offline_only=True,source_binding_wall_s=binding['wall_s'],
@@ -127,9 +130,10 @@ def analyze(directory):
         private_body_cells=int(body.sum()),safe_start=bool(safe[row,col]),
         start_clearance_m=float(distance_transform_edt(np.pad(known,1))[row+1,col+1]*raw.info.resolution),
         required_clearance_m=.28+raw.info.resolution/2,
-        first_product_rejection='initial_scan_footprint_invalid' if not(raw_trace['initial_scan']['clear'] and cost_trace['initial_scan']['clear']) else None,
+        first_product_rejection=start_decision['first_rejecting_predicate'],
+        adaptive_start_decision=start_decision,adaptive_candidates=len(adaptive_candidates),
         raw=raw_trace,costmap=cost_trace,candidates=len(candidates),selection=n._frontier_rank_stats,
-        observation='Static offset LiDAR rear mast sector is NaN. Existing OAK/VL53 forward views do not establish the entire rear swing. Observe this raster area with the same LiDAR from another stationary, independently placed pose and valid map/pose correspondence before restarting this product sequence.')
+        observation='No full-spin requirement for an observation goal. The original reserved START contour must nevertheless be known. Missing exterior/padding cells cannot be cleared by whole-body proof, later zero RPM, manual repositioning or premapping counted as autonomous bootstrap. Static NaN rays remain NaN.')
 
 
 def main():

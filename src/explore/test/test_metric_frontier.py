@@ -245,7 +245,7 @@ def test_rotated_approach_refinement_stays_bounded_and_checks_full_route():
     initial=[n._frontier_approach_goal(f,(.05,.05),g) for f in frontiers]
     assert len(initial)==2 and all(n._metric_route(inputs,goal) is None for goal in initial)
     candidates=n._metric_select(inputs,MetricTaskPolicy(.6,30.,2),.3)
-    assert len(candidates)==2
+    assert candidates==[]  # neither bounded refinement covers actual controller/goal tolerance
     for c in candidates:
         assert min(math.dist((c.x,c.y),goal) for goal in initial)<=n._goal_search_m
         assert n._metric_route(inputs,(c.x,c.y)) is not None
@@ -378,8 +378,7 @@ def test_whole_body_cells_are_exact_at_grid_angles_and_product_scan_route(grid_a
     assert not all(check(0.,0.,yaw,g,known) for yaw in np.linspace(0.,2*math.pi,127))
 
 
-@pytest.mark.parametrize('scan_received,accepted', [(10.01,True),(9.49,False),(10.03,False),(None,False)])
-def test_scan_selected_after_map_work_uses_its_own_evaluation_time(monkeypatch,scan_received,accepted):
+def body_input_fixture(monkeypatch,scan_received):
     import explore.metric_frontier_runtime as module
     from explore.portal_source_adapter import raw_map_portal_source_from_values
     n=ExploreNode.__new__(ExploreNode);g=grid()
@@ -400,7 +399,242 @@ def test_scan_selected_after_map_work_uses_its_own_evaluation_time(monkeypatch,s
         clock[0]=10.02
         return None if scan_received is None else dict(received_at=scan_received,frame_id='laser_frame')
     n._door_lidar_scan_snapshot=snapshot;n._door_lidar_mount=lambda _:(.245,0.,math.pi/2)
+    return n
+
+
+@pytest.mark.parametrize('scan_received,accepted', [(10.01,True),(9.49,False),(10.03,False),(None,False)])
+def test_scan_selected_after_map_work_uses_its_own_evaluation_time(monkeypatch,scan_received,accepted):
+    n=body_input_fixture(monkeypatch,scan_received)
     if accepted:
         assert len(n._metric_inputs())==7
     else:
         with pytest.raises(ValueError,match='self_body_scan_stale'):n._metric_inputs()
+
+
+def adaptive_fixture():
+    from explore.metric_frontier_runtime import MetricFrontierRuntime
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    n=ExploreNode.__new__(ExploreNode);g=grid()
+    a=np.zeros((40,80),int);a[:,25:]=-1
+    a[(0,39),:]=100;a[:,(0,79)]=100
+    g.data=a.ravel().tolist();cost=grid();cost.data=np.maximum(a,0).ravel().tolist()
+    context=PortalMapContext('metric','test-map','map')
+    src=raw_map_portal_source_from_values(**MetricFrontierRuntime._metric_grid_values(g))
+    correlation=PortalSourceCorrelation(context,1,src.fingerprint,src.source_stamp_ns)
+    scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in
+        ((-.8,-1.8),(6.8,-1.8),(6.8,1.8),(-.8,1.8))))
+    n._metric_scope=scope;n._wohnungserkundung_evidence_max_cells=1000000
+    for key,value in dict(_metric_start_strategy='adaptive',_metric_bounds=(-.13,.33,-.25,.25),
+        _global_frame='map',_goal_clearance_m=.28,_global_costmap=cost,
+        _global_costmap_received_at=__import__('time').monotonic(),_map_timeout_s=5.,
+        _frontier_goal_max_cost=90,_goal_search_m=.3,_approach_dist_m=.45,
+        _min_goal_dist_m=.3,_frontier_forward_cone_half_angle=0.,
+        _potential_scale=3.,_gain_scale=1.,_heading_scale=.75,_visualize=False).items():setattr(n,key,value)
+    known,safe=known_safe_mask(a,scope,correlation,(-1.,-2.),0.,.1,.28)
+    return n,[g,correlation,(.05,.05,0.),known,safe,cost,np.asarray(cost.data).reshape(40,80)<100]
+
+
+def test_adaptive_shadow_rejects_only_unused_sweep_and_observations_enable_later_scan():
+    n,inputs=adaptive_fixture()
+    # Rear exterior within rotated front swing, outside forward correction envelope.
+    inputs[3][20,6]=False;inputs[6][20,6]=False
+    d,c=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert not d['scan_admissible'] and d['selected_motion']=='observation_goal'
+    assert c and n._metric_route(inputs,(c[0].x,c[0].y),c[0].yaw)
+    inputs[3][20,6]=True;inputs[6][20,6]=True
+    d,c=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert d['scan_admissible'] and d['selected_motion']=='full_scan'
+
+
+def test_adaptive_unknown_initial_padding_is_wait_with_exact_missing_cells():
+    n,inputs=adaptive_fixture();inputs[3][20,13]=False
+    d,c=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert d['selected_motion']=='wait' and not c
+    assert d['initial_contour_missing_cells']==dict(raw=1,costmap=0)
+    assert d['first_rejecting_predicate']=='initial_contour_unknown_or_occupied'
+
+
+def test_actual_nav2_plan_is_checked_before_alignment_and_unexpected_curve_rejected():
+    from nav_msgs.msg import Path
+    from geometry_msgs.msg import PoseStamped
+    n,inputs=adaptive_fixture();target=candidate(xy=(.75,.05))
+    def path(points):
+        p=Path();p.header.frame_id='map'
+        for x,y in points:
+            pose=PoseStamped();pose.pose.position.x=x;pose.pose.position.y=y;pose.pose.orientation.w=1.;p.poses.append(pose)
+        return p
+    assert n._metric_validate_nav_plan(inputs,path(((.05,.05),(.5,.05),(.75,.05))),target)
+    inputs[3][15:20,10:15]=False
+    assert n._metric_validate_nav_plan(inputs,path(((.05,.05),(.05,-.6),(.75,.05))),target) is None
+    assert n._metric_validate_nav_plan(inputs,path(((.05,.05),(2.,.05))),target) is None
+
+
+def test_whole_body_proof_revalidated_on_harmless_content_but_expires_after_pose_change(monkeypatch):
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
+    def refresh():
+        source=raw_map_portal_source_from_values(**n._metric_grid_values(g))
+        n._metric_raw=(g,source,10.)
+        n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
+    g.data[20*80+10]=-1;refresh()
+    assert n._metric_inputs()[3][20,10]
+    g.data[38*80+78]=100;refresh()
+    assert n._metric_inputs()[3][20,10]  # content revision never blindly invalidates whole body
+    n._robot_pose_sample=lambda:((.07,.05,0.),0.)
+    assert not n._metric_inputs()[3][20,10]
+    n._robot_pose_sample=lambda:((.05,.05,0.),0.)
+    assert not n._metric_inputs()[3][20,10]  # no re-anchoring on return
+
+
+def test_whole_body_never_whitens_a_new_occupied_cell(monkeypatch):
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
+    g.data[20*80+10]=-1
+    source=raw_map_portal_source_from_values(**n._metric_grid_values(g));n._metric_raw=(g,source,10.)
+    n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
+    assert n._metric_inputs()[3][20,10]
+    g.data[20*80+10]=100
+    source=raw_map_portal_source_from_values(**n._metric_grid_values(g));n._metric_raw=(g,source,10.)
+    n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
+    assert not n._metric_inputs()[3][20,10]
+
+
+def test_controller_geometry_contract_reads_actual_types_and_rejects_wider_turn():
+    from rcl_interfaces.msg import ParameterValue
+    n=ExploreNode.__new__(ExploreNode);n._metric_status={}
+    values=[ParameterValue(type=1,bool_value=True),ParameterValue(type=3,double_value=.35),
+            ParameterValue(type=3,double_value=.4),ParameterValue(type=1,bool_value=False),
+            ParameterValue(type=1,bool_value=False),ParameterValue(type=1,bool_value=True),
+            ParameterValue(type=1,bool_value=True),ParameterValue(type=3,double_value=.15),
+            ParameterValue(type=3,double_value=.4),
+            ParameterValue(type=9,string_array_value=['general_goal_checker']),
+            ParameterValue(type=9,string_array_value=['FollowPath']),
+            ParameterValue(type=4,string_value='nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController'),
+            ParameterValue(type=4,string_value='nav2_controller::SimpleGoalChecker')]
+    future=SimpleNamespace(done=lambda:True,result=lambda:SimpleNamespace(values=values))
+    n._metric_controller_params=SimpleNamespace(wait_for_service=lambda **_:True,
+                                               call_async=lambda _:future)
+    assert n._metric_controller_contract(lambda:False)
+    values[1].double_value=.785
+    assert not n._metric_controller_contract(lambda:False)
+    values[1].double_value=.35;values[5].bool_value=False
+    assert not n._metric_controller_contract(lambda:False)
+    values[5].bool_value=True;values[6].bool_value=False
+    assert not n._metric_controller_contract(lambda:False)
+    values[6].bool_value=True;values[7].double_value=.25
+    assert not n._metric_controller_contract(lambda:False)
+
+
+def test_sparse_plan_progress_never_invents_a_return_to_old_start_waypoint():
+    from nav_msgs.msg import Path
+    from geometry_msgs.msg import PoseStamped
+    n,inputs=adaptive_fixture();target=candidate(xy=(.75,.05))
+    plan=Path();plan.header.frame_id='map'
+    for x in (.05,.75):
+        p=PoseStamped();p.pose.position.x=x;p.pose.position.y=.05;p.pose.orientation.w=1.;plan.poses.append(p)
+    inputs[3][20,6]=False;inputs[6][20,6]=False
+    inputs[2]=(.4,.05,0.)
+    route=n._metric_validate_nav_plan(inputs,plan,target)
+    assert route==((.4,.05),(.75,.05))
+
+
+def test_first_body_space_is_fixed_through_measured_travel_but_not_mapping_shift(monkeypatch):
+    from geometry_msgs.msg import TransformStamped
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
+    transform=TransformStamped();transform.header.stamp.sec=100
+    transform.transform.rotation.w=1.
+    n._tf_buffer=SimpleNamespace(lookup_transform=lambda *_:transform)
+    def refresh():
+        source=raw_map_portal_source_from_values(**n._metric_grid_values(g))
+        n._metric_raw=(g,source,10.)
+        n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
+    g.data[20*80+10]=-1;refresh()
+    assert n._metric_inputs()[3][20,10]
+    # Ordinary odometry travel preserves the measured FIRST physical space.
+    # Newly occupied robot space does not become a new private clearing mask.
+    n._robot_pose_sample=lambda:((.25,.05,0.),0.)
+    g.data[20*80+13]=-1;refresh()
+    known=n._metric_inputs()[3]
+    assert known[20,10] and not known[20,13]
+    transform.transform.translation.x=.02
+    assert not n._metric_inputs()[3][20,10]
+    transform.transform.translation.x=0.
+    assert not n._metric_inputs()[3][20,10]  # reference invalidation is permanent
+
+@pytest.mark.parametrize('resolution,yaw',[(.1,0.),(.03,.53),(.05,-1.1)])
+def test_batched_full_sweep_keeps_exact_original_127_reserved_cell_union(resolution,yaw):
+    from explore.metric_frontier import footprint_cells
+    g=grid();g.info.resolution=resolution
+    g.info.origin.orientation.z=math.sin(.23/2);g.info.origin.orientation.w=math.cos(.23/2)
+    original=set()
+    for angle in np.linspace(0.,2*math.pi,127):
+        rr,cc=footprint_cells(.013,-.027,yaw+angle,g,ExploreNode._world_to_grid)
+        original.update(zip(rr,cc))
+    rr,cc=footprint_cells(.013,-.027,yaw+math.pi,g,ExploreNode._world_to_grid,
+        heading_half_angle=math.pi,heading_samples=127)
+    assert set(zip(rr,cc))==original
+
+
+def test_rpp_corner_carrot_uses_circle_distance_and_actual_path():
+    from explore.metric_frontier import lookahead_point
+    point=(-.2,0.)
+    carrot=lookahead_point(point,((0.,0.),(0.,1.)),.4)
+    assert carrot==pytest.approx((0.,math.sqrt(.4**2-.2**2)))
+    assert math.dist(point,carrot)==pytest.approx(.4)
+    assert lookahead_point(point,((0.,0.),(0.,.1)),.4)==(0.,.1)
+
+
+def test_rpp_arc_body_is_contained_by_reserved_chord_envelope():
+    from explore.metric_frontier import footprint_cells
+    g=grid();g.info.resolution=.03
+    delta=.35;length=.4;radius=length/(2*math.sin(delta))
+    center=(length/2,-radius*math.cos(delta))
+    allowed=set()
+    for x in np.linspace(0.,length,29):
+        rr,cc=footprint_cells(x,0.,0.,g,ExploreNode._world_to_grid,
+            heading_half_angle=delta,center_deviation_m=length/2*math.tan(delta/2))
+        allowed.update(zip(rr,cc))
+    for angle in np.linspace(delta,-delta,29):
+        x=center[0]-radius*math.sin(angle)
+        y=center[1]+radius*math.cos(angle)
+        rr,cc=footprint_cells(x,y,angle,g,ExploreNode._world_to_grid)
+        assert set(zip(rr,cc))<=allowed
+
+
+def test_goal_rotation_needs_area_at_actual_xy_tolerance_before_selection():
+    n,inputs=adaptive_fixture()
+    inputs[3][20,23]=False;inputs[6][20,23]=False
+    assert footprint_clear(.75,.05,0.,inputs[0],inputs[3],n._world_to_grid,n._grid_to_world,
+        heading_half_angle=.35,center_deviation_m=.2*math.tan(.35/2))
+    assert n._metric_route(inputs,(.75,.05),0.) is None
+    assert n._metric_last_route_rejection=='goal_orientation_invalid'
+
+
+def test_nav_plan_with_no_nearby_waypoint_cannot_pretend_bounded_carrot():
+    from nav_msgs.msg import Path
+    from geometry_msgs.msg import PoseStamped
+    n,inputs=adaptive_fixture();inputs[2]=(1.4,.05,0.)
+    plan=Path();plan.header.frame_id='map'
+    for x in (.05,2.75):
+        p=PoseStamped();p.pose.position.x=x;p.pose.position.y=.05;p.pose.orientation.w=1.;plan.poses.append(p)
+    assert n._metric_validate_nav_plan(inputs,plan,candidate(xy=(2.75,.05))) is None
+    assert n._metric_last_route_rejection=='nav2_plan_controller_carrot_unbounded'
+
+
+def test_float32_raster_keeps_last_bounded_refinement_when_controller_goal_needs_it():
+    n,inputs=adaptive_fixture();g=inputs[0];g.info.resolution=float(np.float32(.1))
+    occupancy=np.zeros((40,80),int);occupancy[:,40:]=-1
+    occupancy[(0,39),:]=100;occupancy[:,(0,79)]=100
+    for col in (30,31):occupancy[:12,col]=100;occupancy[28:,col]=100
+    g.data=occupancy.ravel().tolist();inputs[5].info.resolution=g.info.resolution
+    inputs[5].data=np.maximum(occupancy,0).ravel().tolist()
+    known,safe=known_safe_mask(occupancy,n._metric_scope,inputs[1],(-1.,-2.),0.,g.info.resolution,.28)
+    inputs=(g,inputs[1],(.8515444522474284,.07480697783487446,0.),known,safe,inputs[5],np.asarray(inputs[5].data).reshape(40,80)<100)
+    frontier=n._detect_frontiers(g,.3)[0]
+    original=n._frontier_approach_goal(frontier,inputs[2][:2],g)
+    candidates=n._metric_select(inputs,MetricTaskPolicy(.6,30.,2),.3)
+    assert candidates
+    chosen=candidates[0]
+    assert math.dist(original,(chosen.x,chosen.y))==pytest.approx(.3)
+    assert n._metric_route(inputs,(chosen.x,chosen.y),chosen.yaw)
