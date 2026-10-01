@@ -922,6 +922,7 @@ class CmdVelMissionGate(Node):
                     'recovery_attempt_limit_per_source': guard.health.recovery_attempt_limit,
                     'recovery_budget_s': guard.health.recovery_budget_s,
                     'recovery_events_tail': list(guard.health.recovery_events[-16:]),
+                    'source_contract': guard.health.contract_diagnostics(time.monotonic()),
                 }
         if (health_status is not None and health_status['recovery_state'] in
                 ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):

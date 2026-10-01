@@ -36,6 +36,7 @@ class Hwt601ImuNode(Node):
         self.declare_parameter('reconnect_interval_s', 1.0)
         self.declare_parameter('errors_before_reconnect', 3)
         self.declare_parameter('sensor_timeout_s', 0.20)
+        self.declare_parameter('development_contract', False)
         self.declare_parameter('frame_id', 'hwt601_link')
         self.declare_parameter('imu_topic', '/hwt601/imu/data_raw')
         self.declare_parameter('status_topic', '/hwt601/status_json')
@@ -55,6 +56,7 @@ class Hwt601ImuNode(Node):
         self.reconnect_interval_s = float(gp('reconnect_interval_s').value)
         self.errors_before_reconnect = int(gp('errors_before_reconnect').value)
         self.sensor_timeout_s = float(gp('sensor_timeout_s').value)
+        self.development_contract = gp('development_contract').value is True
         self.frame_id = str(gp('frame_id').value)
         self.imu_topic = str(gp('imu_topic').value)
         self.status_topic = str(gp('status_topic').value)
@@ -85,6 +87,9 @@ class Hwt601ImuNode(Node):
         self._successful_connections = 0
         self._consecutive_errors = 0
         self._last_error = 'noch_keine_daten'
+        self._terminal_fault = None
+        self._last_measurement_stamp_ns = None
+        self._last_transport_diagnostic = {}
         self._sample_times = deque(
             maxlen=max(20, int(self.poll_rate_hz * 2.0)))
 
@@ -95,6 +100,9 @@ class Hwt601ImuNode(Node):
             f'Adresse {self.device_address}; nur Modbus-Lesefunktion 0x03')
 
     def _validate_parameters(self) -> None:
+        if (self.development_contract and
+                (self.response_timeout_s != .05 or self.sensor_timeout_s != .30)):
+            raise ValueError('Entwicklungsvertrag braucht 0.05 s Antwort/0.30 s Daten')
         motor_port = '/dev/ttyUSB_BASE'
         same_as_motor_port = (
             os.path.exists(motor_port)
@@ -166,15 +174,37 @@ class Hwt601ImuNode(Node):
         self._rejected += 1
         self._consecutive_errors += 1
         self._last_error = str(error)
+        if self.development_contract:
+            self._last_transport_diagnostic = dict(getattr(error, 'diagnostic', {}))
+            if not isinstance(error, Hwt601TransportError) or error.hard_fault:
+                self._terminal_fault = str(error)
+                self._disconnect()
+            # A deadline alone does not invalidate the last real sample or
+            # change device generation. Continue reading the intact link;
+            # freshness/Health bounds, not poll count, decide HOLD.
+            self._publish_status()
+            return
         if self._consecutive_errors >= self.errors_before_reconnect:
             self._disconnect()
 
     def _poll(self) -> None:
+        if self._terminal_fault is not None:
+            return
         now = time.monotonic()
         if self._transport is None and not self._connect(now):
             return
         try:
             registers = self._transport.read_motion_registers()
+            clock_ns = self.get_clock().now().nanoseconds
+            bracket = time.monotonic()
+            received_at = getattr(self._transport, 'last_reply_received_monotonic_s', None)
+            if received_at is None:
+                received_at = bracket
+            stamp_ns = clock_ns - round((bracket - received_at) * 1e9)
+            if (stamp_ns <= 0 or received_at > bracket
+                    or (self._last_measurement_stamp_ns is not None
+                        and stamp_ns <= self._last_measurement_stamp_ns)):
+                raise Hwt601ProtocolError('HWT-Messzeit nicht monoton')
             sample = decode_motion_registers(
                 registers,
                 acceleration_full_scale_g=self.acceleration_full_scale_g,
@@ -184,12 +214,20 @@ class Hwt601ImuNode(Node):
             if sample.saturated(self.saturation_margin_counts):
                 raise Hwt601ProtocolError(
                     'Messwert ist am Rohdatenlimit gesaettigt')
+            diagnostic = getattr(self._transport, 'last_transaction', {})
+            deadline = diagnostic.get('deadline_monotonic_s')
+            finished = time.monotonic()
+            if deadline is not None and finished > deadline:
+                raise Hwt601TransportError('Messwertverarbeitung nach Gesamtfrist',
+                    kind='response_deadline', diagnostic=dict(diagnostic,
+                        classification='processing_after_deadline', finished_monotonic_s=finished))
         except (Hwt601TransportError, Hwt601ProtocolError, OSError) as error:
             self._record_error(error)
             return
 
         message = Imu()
-        message.header.stamp = self.get_clock().now().to_msg()
+        message.header.stamp.sec = stamp_ns // 10**9
+        message.header.stamp.nanosec = stamp_ns % 10**9
         message.header.frame_id = self.frame_id
         message.orientation.w = 1.0
         message.orientation_covariance[0] = -1.0
@@ -206,12 +244,16 @@ class Hwt601ImuNode(Node):
                 self.linear_acceleration_variance)
         self.imu_pub.publish(message)
 
-        received_at = time.monotonic()
         self._last_received_at = received_at
+        self._last_measurement_stamp_ns = stamp_ns
+        was_degraded = self._consecutive_errors > 0
         self._sample_times.append(received_at)
         self._accepted += 1
         self._consecutive_errors = 0
         self._last_error = ''
+        self._last_transport_diagnostic = dict(getattr(self._transport, 'last_transaction', {}))
+        if self.development_contract and was_degraded:
+            self._publish_status()
 
     def _observed_rate_hz(self) -> Optional[float]:
         if len(self._sample_times) < 2:
@@ -229,10 +271,13 @@ class Hwt601ImuNode(Node):
         connected = bool(
             self._transport is not None and self._transport.is_open)
         fresh = age_s is not None and age_s <= self.sensor_timeout_s
-        ready = connected and fresh and self._consecutive_errors == 0
+        data_valid = self._last_received_at is not None and self._terminal_fault is None
+        data_ready = connected and fresh and data_valid
+        transport_ok = connected and self._consecutive_errors == 0 and self._terminal_fault is None
+        ready = data_ready and (self.development_contract or transport_ok)
         if ready:
-            state = 'bereit'
-            reason = 'gueltige_rohdaten'
+            state = 'transport_degraded' if not transport_ok else 'bereit'
+            reason = self._last_error if not transport_ok else 'gueltige_rohdaten'
         elif not connected:
             state = 'getrennt'
             reason = self._last_error or 'serielle_verbindung_fehlt'
@@ -263,6 +308,20 @@ class Hwt601ImuNode(Node):
             'last_error': self._last_error,
             'host_receive_timestamp': True,
             'scale_validation_pending': True,
+            'contract': 'metric_development_v1' if self.development_contract else 'legacy',
+            'transport_ok': transport_ok,
+            'transport_degraded': connected and not transport_ok,
+            'identity_intact': connected and self._terminal_fault is None,
+            'data_fresh': fresh,
+            'data_valid': data_valid,
+            'hold_required': not data_ready,
+            'recovery_pending': False,
+            'terminal_fault': self._terminal_fault,
+            'response_timeout_s': self.response_timeout_s,
+            'sensor_timeout_s': self.sensor_timeout_s,
+            'last_measurement_stamp_ns': self._last_measurement_stamp_ns,
+            'last_reply_received_monotonic_s': self._last_received_at,
+            'last_transport_diagnostic': self._last_transport_diagnostic,
         }
         self.status_pub.publish(String(
             data=json.dumps(payload, allow_nan=False)))
@@ -271,7 +330,8 @@ class Hwt601ImuNode(Node):
         diagnostic.name = 'robot_state_estimation/hwt601_imu'
         diagnostic.hardware_id = f'hwt601_modbus_{self.device_address}'
         diagnostic.level = (
-            DiagnosticStatus.OK if ready else DiagnosticStatus.WARN)
+            DiagnosticStatus.ERROR if self._terminal_fault is not None else
+            DiagnosticStatus.OK if ready and transport_ok else DiagnosticStatus.WARN)
         diagnostic.message = reason
         diagnostic.values = [
             KeyValue(key='connected', value=str(connected).lower()),

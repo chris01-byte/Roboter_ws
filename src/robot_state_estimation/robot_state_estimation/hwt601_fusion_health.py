@@ -1,6 +1,7 @@
 """Raw-input contract for the existing HWT mapping profile, not an EKF health proxy."""
 
 import copy
+from collections import deque
 import math
 import threading
 import time
@@ -71,8 +72,12 @@ class Hwt601FusionHealth:
     NOT an input.
     """
 
-    def __init__(self, active_drive, observer='unspecified'):
+    def __init__(self, active_drive, observer='unspecified', development_contract=False):
         self.active_drive = active_drive is True
+        self.development_contract = development_contract is True
+        self.raw_max_age_s = .30 if self.development_contract else .20
+        self.hwt_recovery_interval_s = 60.0 if self.development_contract else None
+        self.hwt_hold_times = deque()
         self.observer = str(observer)
         self.samples = {}
         self.sample_details = {}
@@ -140,7 +145,7 @@ class Hwt601FusionHealth:
             if (name == 'raw' and valid
                     and type(received) in (int, float)
                     and type(observed) in (int, float)
-                    and fresh(received, observed, 0.20)):
+                    and fresh(received, observed, self.raw_max_age_s)):
                 self._last_valid_raw_sample = (stamp, received, observed)
 
     def status(self, name, payload, received):
@@ -159,6 +164,8 @@ class Hwt601FusionHealth:
             return False
         raw = entry[0]
         reconnects = raw.get('reconnects')
+        if self.development_contract:
+            return self._development_raw_contract(raw) and reconnects == self._last_healthy_reconnects
         return (raw.get('port') == '/dev/ttyUSB_HWT601'
                 and raw.get('sensor_write_commands') is False
                 and (raw.get('ready') is True
@@ -173,6 +180,52 @@ class Hwt601FusionHealth:
                 and type(raw.get('age_s')) in (int, float)
                 and math.isfinite(raw['age_s'])
                 and raw['age_s'] >= 0.0)
+
+    def _development_raw_contract(self, raw):
+        return (raw.get('contract') == 'metric_development_v1'
+                and raw.get('port') == '/dev/ttyUSB_HWT601'
+                and raw.get('sensor_write_commands') is False
+                and raw.get('identity_intact') is True
+                and raw.get('terminal_fault') is None
+                and raw.get('data_valid') is True
+                and type(raw.get('data_fresh')) is bool
+                and type(raw.get('ready')) is bool
+                and raw.get('ready') is raw.get('raw_data_ready')
+                and type(raw.get('transport_ok')) is bool
+                and type(raw.get('transport_degraded')) is bool
+                and raw['transport_ok'] is not raw['transport_degraded']
+                and type(raw.get('consecutive_errors')) is int
+                and raw['consecutive_errors'] >= 0
+                and type(raw.get('reconnects')) is int
+                and raw['reconnects'] >= 0
+                and raw.get('response_timeout_s') == .05
+                and raw.get('sensor_timeout_s') == .30
+                and age_valid(raw.get('age_s'), float('inf')))
+
+    def hwt_attempts_in_window(self, now):
+        if not self.development_contract:
+            return self.recovery_attempts
+        while self.hwt_hold_times and now - self.hwt_hold_times[0] > self.hwt_recovery_interval_s:
+            self.hwt_hold_times.popleft()
+        return len(self.hwt_hold_times)
+
+    def contract_diagnostics(self, now):
+        with self.lock:
+            raw = self.statuses.get('raw', ({}, None))[0]
+            sample = self.samples.get('raw')
+            valid = sample is not None and sample[3]
+            current = valid and fresh(now, sample[2], self.raw_max_age_s)
+            return dict(contract='metric_development_v1' if self.development_contract else 'legacy',
+                transport_ok=raw.get('transport_ok'),
+                transport_degraded=raw.get('transport_degraded'),
+                data_valid=bool(valid), data_fresh=bool(current),
+                raw_max_age_s=self.raw_max_age_s,
+                hold_required=self.recovery_state != 'HEALTHY' or not current,
+                recovery_pending=self.recovery_state in ('HOLD', 'RECOVERY_VALIDATION'),
+                terminal_fault=self.latched_fault,
+                hwt_recovery_interval_s=self.hwt_recovery_interval_s,
+                hwt_attempts_in_window=self.hwt_attempts_in_window(now),
+                hwt_lifetime_attempts=self.recovery_attempts)
 
     def _wheel_timing_pending(self):
         """Verified bounded diagnosis; stale wheel still blocks motion.
@@ -249,7 +302,9 @@ class Hwt601FusionHealth:
         pending = yaw.get('data_continuity_pending', False)
         yaw_ready_or_gap = (
             (yaw.get('ready') is True and pending is False)
-            or (yaw.get('ready') is False and pending is True))
+            or (yaw.get('ready') is False and (pending is True or
+                (self.development_contract and type(yaw.get('age_s')) in (int, float)
+                 and yaw['age_s'] > .35))))
         if not (type(pending) is bool and yaw_ready_or_gap
                 and yaw.get('operator_stationary_confirmed') is True
                 and yaw.get('bias_frozen_after_startup') is True
@@ -308,7 +363,7 @@ class Hwt601FusionHealth:
             raw = self.statuses['raw'][0]
             return (raw['raw_data_ready'] is False
                     or 0 < raw['consecutive_errors'] < 3
-                    or raw['age_s'] > 0.20)
+                    or raw['age_s'] > self.raw_max_age_s)
         if reason in ('wheel_timing_recovery_pending', 'wheel_missing_stale_or_invalid',
                       'wheel_not_real_or_not_ready'):
             entry = self.statuses.get('wheel')
@@ -384,7 +439,7 @@ class Hwt601FusionHealth:
 
     def _failure(self, now):
         wheel_limit = self._wheel_limit()
-        for name, limit in (('raw', 0.20), ('yaw', 0.35), ('wheel', wheel_limit)):
+        for name, limit in (('raw', self.raw_max_age_s), ('yaw', 0.35), ('wheel', wheel_limit)):
             sample = self.samples.get(name)
             if (sample is None or not sample[3]
                     or not fresh(now, sample[1], limit)
@@ -396,14 +451,22 @@ class Hwt601FusionHealth:
                 return name + '_status_missing_or_stale'
 
         raw = self.statuses['raw'][0]
-        if not (raw.get('ready') is True and raw.get('raw_data_ready') is True
+        if self.development_contract:
+            if not (self._development_raw_contract(raw)
+                    and raw['ready'] is True and raw['data_fresh'] is True
+                    and age_valid(raw.get('age_s'), self.raw_max_age_s)):
+                return 'raw_driver_not_ready'
+        elif not (raw.get('ready') is True and raw.get('raw_data_ready') is True
                 and raw.get('port') == '/dev/ttyUSB_HWT601'
                 and raw.get('sensor_write_commands') is False
                 and raw.get('consecutive_errors') == 0
-                and age_valid(raw.get('age_s'), 0.20)):
+                and age_valid(raw.get('age_s'), self.raw_max_age_s)):
             return 'raw_driver_not_ready'
         yaw = self.statuses['yaw'][0]
         bias = yaw.get('bias')
+        if (self.development_contract and yaw.get('ready') is False
+                and age_valid(yaw.get('age_s'), float('inf')) and yaw['age_s'] > .35):
+            return 'yaw_missing_stale_or_invalid'
         if (yaw.get('ready') is False
                 and yaw.get('data_continuity_pending') is True
                 and yaw.get('latched_fault') is None
@@ -454,7 +517,11 @@ class Hwt601FusionHealth:
             'port': (str,), 'sensor_write_commands': (bool,),
             'consecutive_errors': (int,), 'age_s': (int, float),
         }
-        for name, expected, check in _RAW_EXPECTATIONS:
+        expectations = list(_RAW_EXPECTATIONS)
+        if self.development_contract:
+            expectations[4] = ('consecutive_errors', 'diagnostic only; nonnegative integer', lambda v: type(v) is int and v >= 0)
+            expectations[5] = ('age_s', 'finite number in [0.0, 0.30] s', lambda v: age_valid(v, self.raw_max_age_s))
+        for name, expected, check in expectations:
             value = raw.get(name)
             conditions.append(_typed_field(
                 raw, name, expected, name in raw and check(value),
@@ -462,7 +529,7 @@ class Hwt601FusionHealth:
         violations = [entry['field'] for entry in conditions
                       if not entry['passed']]
         source_checks = []
-        for name, limit in (('raw', 0.20), ('yaw', 0.35),
+        for name, limit in (('raw', self.raw_max_age_s), ('yaw', 0.35),
                             ('wheel', self._wheel_limit())):
             sample = self.samples.get(name)
             status = self.statuses.get(name)
@@ -550,6 +617,10 @@ class Hwt601FusionHealth:
                 now = time.monotonic()
             if self.latched_fault is not None:
                 return self.latched_fault
+            if self.development_contract:
+                raw = self.statuses.get('raw', ({}, None))[0]
+                if raw.get('terminal_fault') is not None:
+                    return self._terminal(now, 'raw_terminal_fault')
             reason = self._failure(now)
             if reason is None and not self.was_ready:
                 self.was_ready = True
@@ -585,7 +656,7 @@ class Hwt601FusionHealth:
                 if not self._recoverable(reason, now):
                     return self._terminal(now, reason)
                 wheel_hold = reason.startswith('wheel_')
-                count = self.wheel_recovery_attempts if wheel_hold else self.recovery_attempts
+                count = self.wheel_recovery_attempts if wheel_hold else self.hwt_attempts_in_window(now)
                 if count >= self.recovery_attempt_limit:
                     return self._terminal(now, 'wheel_recovery_attempt_limit' if wheel_hold
                                           else 'hwt_recovery_attempt_limit')
@@ -593,6 +664,8 @@ class Hwt601FusionHealth:
                     self.wheel_recovery_attempts += 1
                 else:
                     self.recovery_attempts += 1
+                    if self.development_contract:
+                        self.hwt_hold_times.append(now)
                 self.recovery_state = 'HOLD'
                 self._hold_since = now
                 self._hold_reason = reason

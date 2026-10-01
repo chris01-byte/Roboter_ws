@@ -31,6 +31,7 @@ def generate_launch_description():
 
     active_drive = LaunchConfiguration('active_drive')
     use_hwt601_odometry = LaunchConfiguration('use_hwt601_odometry')
+    hwt_development_contract = LaunchConfiguration('hwt_development_contract')
     operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
@@ -63,6 +64,7 @@ def generate_launch_description():
                     'require_hwt601_fusion': ParameterValue(
                         use_hwt601_odometry, value_type=bool),
                     'hwt601_active_drive': ParameterValue(active_drive, value_type=bool),
+                    'hwt_development_contract': ParameterValue(hwt_development_contract, value_type=bool),
                     'allow_localization_search': False,
                     'allow_explore_mission': ParameterValue(
                         enable_auto_explore, value_type=bool),
@@ -124,6 +126,8 @@ def generate_launch_description():
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
         DeclareLaunchArgument('use_hwt601_odometry', default_value='false'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false',
+            description='Explicit metric LAB-1 contract: .05 s poll/.30 s data, 2 holds/60 s.'),
         DeclareLaunchArgument('operator_stationary_confirmed', default_value='false'),
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
@@ -168,6 +172,7 @@ def generate_launch_description():
             launch_arguments={
                 'active_drive': active_drive,
                 'operator_stationary_confirmed': operator_stationary_confirmed,
+                'hwt_development_contract': hwt_development_contract,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
             }.items()),
@@ -194,6 +199,7 @@ def generate_launch_description():
                 'explore_params_overlay': explore_params_overlay,
                 'require_hwt601_fusion': use_hwt601_odometry,
                 'hwt601_active_drive': active_drive,
+                'hwt_development_contract': hwt_development_contract,
             }.items()),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(

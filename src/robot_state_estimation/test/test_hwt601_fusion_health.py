@@ -9,8 +9,8 @@ from robot_state_estimation.hwt601_shadow_core import Hwt601YawShadowCore
 from robot_state_estimation.quality_core import GyroBiasConfig
 
 
-def ready_health(active=True, now=10.0):
-    health = Hwt601FusionHealth(active)
+def ready_health(active=True, now=10.0, development=False):
+    health = Hwt601FusionHealth(active, development_contract=development)
     for key in ('raw', 'yaw', 'wheel'):
         health.sample(key, now, now, now)
     health.status('raw', {
@@ -656,3 +656,86 @@ def test_read_in_flight_heartbeat_can_hold_before_pair_deadline_result_arrives()
     assert h.recovery_state=='HOLD' and h.samples['wheel'][2]==10.
     w['fault_latched']=True;h.status('wheel',w,10.19)
     assert h.source_failure(10.19) is not None and h.recovery_state=='TERMINAL_FAULT'
+
+
+def development_health(now=10.):
+    h=ready_health(now=now,development=True)
+    h.statuses['raw'][0].update(contract='metric_development_v1',identity_intact=True,
+        terminal_fault=None,data_valid=True,data_fresh=True,transport_ok=True,
+        transport_degraded=False,response_timeout_s=.05,sensor_timeout_s=.30)
+    assert h.source_failure(now) is None
+    return h
+
+
+def development_raw_gap(h,now):
+    for source in ('yaw','wheel'):
+        h.sample(source,now,now,now)
+        h.status(source,copy.deepcopy(h.statuses[source][0]),now)
+    raw=copy.deepcopy(h.statuses['raw'][0]);raw.update(ready=False,raw_data_ready=False,
+        data_fresh=False,transport_ok=False,transport_degraded=True,
+        consecutive_errors=7,age_s=.31,state='degradiert')
+    h.status('raw',raw,now)
+    assert h.source_failure(now)=='raw_missing_stale_or_invalid'
+    assert h.recovery_state=='HOLD'
+    h.statuses['raw'][0].update(transport_ok=True,transport_degraded=False,data_fresh=True)
+    _recovery_samples(h,now+.01,now+1.6)
+    assert h.recovery_state=='HEALTHY'
+
+
+def test_development_poll_timeout_with_fresh_data_does_not_spend_hold_budget():
+    h=development_health();raw=h.statuses['raw'][0]
+    raw.update(consecutive_errors=1,state='transport_degraded',transport_ok=False,
+        transport_degraded=True,age_s=.037327,last_error='Zeitueberschreitung nach 0/14 Bytes')
+    assert h.source_failure(10.037327) is None
+    assert h.recovery_attempts==0 and not h.hwt_hold_times
+    assert h.contract_diagnostics(10.037327)['transport_degraded'] is True
+    # Do not restamp the old raw message when the transport errors continue.
+    for source in ('yaw','wheel'):h.sample(source,10.29,10.29,10.29)
+    raw.update(consecutive_errors=5,age_s=.29)
+    assert h.source_failure(10.29) is None
+    for source in ('yaw','wheel'):h.sample(source,10.301,10.301,10.301)
+    assert h.source_failure(10.301)=='raw_missing_stale_or_invalid'
+    assert h.recovery_state=='HOLD' and h.recovery_attempts==1
+
+
+def test_development_three_recovered_holds_minutes_apart_are_not_lifetime_terminal():
+    h=development_health()
+    previous = 10.0
+    for now in (10.31,172.718,411.729):
+        _recovery_samples(h, previous + .01, now - .31)
+        development_raw_gap(h,now)
+        previous = now + 1.6
+    assert h.recovery_attempts==3 and h.hwt_attempts_in_window(413.4)==1
+    assert h.latched_fault is None
+
+
+def test_development_third_hold_in_sliding_60_seconds_is_terminal():
+    h=development_health()
+    development_raw_gap(h,10.31);development_raw_gap(h,20.31)
+    for source in ('yaw','wheel'):h.sample(source,30.31,30.31,30.31)
+    h.status('raw',copy.deepcopy(h.statuses['raw'][0]),30.31)
+    assert h.source_failure(30.31)=='hwt_recovery_attempt_limit'
+    assert h.recovery_state=='TERMINAL_FAULT'
+
+
+def test_development_recovery_remains_absolute_five_seconds():
+    h=development_health()
+    for source in ('yaw','wheel'):h.sample(source,10.31,10.31,10.31)
+    assert h.source_failure(10.31)=='raw_missing_stale_or_invalid'
+    for step in range(1,502):
+        now=10.31+step*.01
+        for source in ('yaw','wheel'):h.sample(source,now,now,now)
+        for source in ('raw','yaw','wheel'):h.status(source,copy.deepcopy(h.statuses[source][0]),now)
+        h.source_failure(now)
+    assert h.latched_fault=='hwt_recovery_budget_exhausted'
+
+
+@pytest.mark.parametrize('change',[{'port':'/dev/ttyUSB_BASE'}, {'identity_intact':False},
+    {'terminal_fault':'CRC'}, {'data_valid':False}, {'sensor_timeout_s':.31},
+    {'contract':'legacy'}, {'response_timeout_s':.06}])
+def test_development_hard_identity_data_protocol_contract_failure_never_recovers(change):
+    h=development_health();h.statuses['raw'][0].update(change)
+    assert h.source_failure(10.01) is not None
+    assert h.recovery_state=='TERMINAL_FAULT'
+    h.statuses['raw'][0].update(data_valid=True,identity_intact=True,terminal_fault=None)
+    assert h.source_failure(10.02) is not None

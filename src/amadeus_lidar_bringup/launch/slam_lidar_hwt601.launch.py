@@ -56,6 +56,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'operator_stationary_confirmed', default_value='false',
             description='Muss fuer die HWT-Startkalibrierung explizit true sein.'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true'),
         DeclareLaunchArgument(
@@ -117,6 +118,7 @@ def generate_launch_description():
             launch_arguments={
                 'operator_stationary_confirmed': LaunchConfiguration(
                     'operator_stationary_confirmed'),
+                'hwt_development_contract': LaunchConfiguration('hwt_development_contract'),
             }.items()),
 
         Node(

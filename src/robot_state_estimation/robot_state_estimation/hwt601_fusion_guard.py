@@ -5,6 +5,7 @@ import math
 import time
 
 from nav_msgs.msg import Odometry
+from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
@@ -16,7 +17,10 @@ class Hwt601FusionGuard:
     def __init__(self, node, active_drive, callback_group=None,
                  wheel_callback_group=None):
         self.node = node
-        self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
+        development = node.declare_parameter('hwt_development_contract', False,
+            ParameterDescriptor(read_only=True)).value
+        self.health = Hwt601FusionHealth(active_drive, observer=node.get_name(),
+            development_contract=development)
         self.subscriptions = []
         self.active_drive = bool(active_drive)
         self.wheel_subscription = None
