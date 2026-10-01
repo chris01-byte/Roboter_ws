@@ -22,13 +22,14 @@ from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate
 
 
 @pytest.mark.parametrize('stop_wheel', [False, True])
-def test_passive_sources_continue_during_busy_default_callback(stop_wheel):
+@pytest.mark.parametrize('busy_group', ['default', 'imu_status'])
+def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
     assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
     assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
     rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true'])
     gate = CmdVelMissionGate()
     probe = Node('gate_source_callback_test_inputs')
-    executor = MultiThreadedExecutor(num_threads=2)
+    executor = MultiThreadedExecutor(num_threads=3)
     executor.add_node(gate)
     thread = threading.Thread(target=executor.spin, daemon=True)
     entered, exited = threading.Event(), threading.Event()
@@ -36,7 +37,9 @@ def test_passive_sources_continue_during_busy_default_callback(stop_wheel):
         entered.set()
         time.sleep(.35)
         exited.set()
-    gate.create_subscription(String, '/test/gate_busy_callback', busy, 10)
+    gate.create_subscription(String, '/test/gate_busy_callback', busy, 10,
+                             callback_group=(gate._hwt_source_cb
+                                             if busy_group == 'imu_status' else None))
     trigger = probe.create_publisher(String, '/test/gate_busy_callback', 10)
     raw = probe.create_publisher(Imu, '/shadow/hwt601/imu/data_raw', 10)
     yaw = probe.create_publisher(Imu, '/shadow/hwt601/imu/yaw_rate', 10)
@@ -85,12 +88,16 @@ def test_passive_sources_continue_during_busy_default_callback(stop_wheel):
             after = gate._hwt_guard.health.samples['wheel'][0]
             if not stop_wheel:
                 assert after > before
-                assert gate._hwt_guard.health.source_failure() is None
+                assert time.monotonic()-gate._hwt_guard.health.samples['wheel'][2] < .18
+                if busy_group == 'default':
+                    assert gate._hwt_guard.health.source_failure() is None
+                else:
+                    assert gate._hwt_guard.health.recovery_state == 'HOLD'
         end = time.monotonic()+1
         while not exited.is_set() and time.monotonic()<end:
             publish(not stop_wheel)
         assert exited.is_set()
-        end = time.monotonic()+.15
+        end = time.monotonic()+(1.3 if busy_group == 'imu_status' else .15)
         while time.monotonic()<end:
             publish(not stop_wheel)
         if stop_wheel:
@@ -113,6 +120,7 @@ def test_active_gate_keeps_its_existing_serial_source_group():
     gate = CmdVelMissionGate()
     try:
         assert gate._hwt_source_cb is None
+        assert gate._hwt_wheel_cb is None
         assert all(s.callback_group is gate.default_callback_group
                    for s in gate._hwt_guard.subscriptions)
         wheel = gate._hwt_guard.subscriptions[2]

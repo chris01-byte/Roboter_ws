@@ -236,20 +236,23 @@ class CmdVelMissionGate(Node):
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         self._hwt_guard = None
         self._hwt_source_cb = None
+        self._hwt_wheel_cb = None
         self._hwt_status_pub = None
         self._hwt_status_worker = None
         self._hwt_diagnostic_next = 0.0
         self._hwt_diagnostic_event = -1
         if require_hwt:
             from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard, DeferredJsonPublisher
-            # The passive fullstack recorded fresh wheel messages while this
-            # single executor still evaluated an older sample. Keep only the
-            # source callbacks independent; command/estop/timer callbacks stay
-            # serialized in the default group. Health owns its existing lock.
+            # In the passive fullstack newer wheel messages reached the
+            # recorder while IMU/status callbacks shared the wheel group and
+            # the gate still selected an older wheel sample. Give wheel data
+            # its own group; command/estop/timers stay serialized. Health owns
+            # its existing lock. Active-drive scheduling remains unchanged.
             if not hwt_drive:
                 self._hwt_source_cb = MutuallyExclusiveCallbackGroup()
+                self._hwt_wheel_cb = MutuallyExclusiveCallbackGroup()
             self._hwt_guard = Hwt601FusionGuard(
-                self, hwt_drive, self._hwt_source_cb)
+                self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb)
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
             self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
@@ -997,7 +1000,7 @@ class CmdVelMissionGate(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelMissionGate()
-    executor = (MultiThreadedExecutor(num_threads=2)
+    executor = (MultiThreadedExecutor(num_threads=3)
                 if node._hwt_source_cb is not None else SingleThreadedExecutor())
     executor.add_node(node)
     try:

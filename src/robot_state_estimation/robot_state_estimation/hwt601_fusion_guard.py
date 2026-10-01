@@ -13,7 +13,8 @@ from .hwt601_fusion_health import Hwt601FusionHealth
 
 
 class Hwt601FusionGuard:
-    def __init__(self, node, active_drive, callback_group=None):
+    def __init__(self, node, active_drive, callback_group=None,
+                 wheel_callback_group=None):
         self.node = node
         self.health = Hwt601FusionHealth(active_drive, observer=node.get_name())
         self.subscriptions = []
@@ -29,7 +30,9 @@ class Hwt601FusionGuard:
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
                 (qos_profile_sensor_data if active_drive else
                  latest_wheel if name == 'wheel' else latest_sensor),
-                callback_group=callback_group))
+                callback_group=(wheel_callback_group if name == 'wheel'
+                                and wheel_callback_group is not None
+                                else callback_group)))
         for name, topic in (
                 ('raw', '/shadow/hwt601/raw_status_json'),
                 ('yaw', '/shadow/hwt601/status_json'),
