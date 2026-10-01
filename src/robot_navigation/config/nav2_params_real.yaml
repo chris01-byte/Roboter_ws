@@ -133,6 +133,7 @@ controller_server:
       # Hindernis (0.27 rad) und RPP schneidet die Ecke. Bei 0.4 m liegt es
       # auf dem freien Nordsegment (~1.0 rad); unveraenderte lokale Polygon-
       # Kollisionspruefung entscheidet weiterhin ueber jede Bewegung.
+      use_interpolation: true  # existing RPP 1.1.20 default, now explicit for geometry
       lookahead_dist: 0.4
       min_lookahead_dist: 0.4
       max_lookahead_dist: 1.0

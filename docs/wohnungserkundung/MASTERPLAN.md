@@ -1,248 +1,171 @@
-# WE-1 – verbindlicher Masterplan für Konsolidierung und robuste Wohnungserkundung
+# WE-1 – verbindlicher Masterplan für robuste metrische Wohnungserkundung
 
-**Version 1.0 · 27.09.2026 · Amadeus / `chris01-byte/Roboter_ws`**
+**Version 1.2 · 30.09.2026 · Amadeus / `chris01-byte/Roboter_ws`**
 
-**Entscheidungsgrundlage:** Im Projektgespräch mit Christopher abgestimmter
-Masterplan; zur dauerhaften Referenz für alle beteiligten Agenten abgelegt.
-Dies ist eine Ziel- und Arbeitsentscheidung, keine behauptete Implementierung,
-Hardwareabnahme, Auslieferungsfreigabe oder Erlaubnis zum Start einer Fahrt.
+**Nutzerentscheidung:** Christopher beauftragt die Ausrichtung auf eine schlanke metrische Erkundungsschleife unter Wiederverwendung der beiden vorhandenen Entwicklungsstände. Dies ist eine ausdrücklich beschlossene Architekturpräzisierung, keine bereits implementierte Funktion, Realabnahme oder Auslieferungsfreigabe. [LAB-1](../LABORMODUS.md) bleibt unverändert gültig.
 
-> Vorhandene Fähigkeiten erhalten. Einen reproduzierbaren Betriebsstand
-> konsolidieren. Fehlerbehandlung gezielt ordnen. Danach denselben Kandidaten
-> schrittweise bis zur zugänglichen Wohnung abnehmen.
+> Beobachtete Umgebung erfassen → erreichbare, nützliche Beobachtungsposition wählen → über Nav2 anfahren → neue Messungen einarbeiten → Ergebnis bewerten und erneut entscheiden.
 
-## 1. Geltung und eindeutige Dokumentzuständigkeit
+**Änderung gegenüber v1.1:** Normale metrisch zulässige Erkundungsziele benötigen keine bestätigte Portal-ID, Raum-ID oder verpflichtend laufende Portal-/Regionsgraph-Auswertung. Tür-/Raumverständnis wird ergänzend geführt. Die geometrische Durchfahrtsprüfung, gültige Karte/Pose, Schutzkette und Auftragsgrenzen bleiben notwendig. Keine dritte vollständige Robotersoftware und kein pauschaler Rücksprung auf einen alten Branch.
 
-Dieser Masterplan konkretisiert das Vorgehen **innerhalb von WE-1**. Er ersetzt
-weder das Produktziel der [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md)
-noch die fachlichen Abnahmen in [MEILENSTEINE.md](MEILENSTEINE.md).
-Es entsteht keine zweite Roadmap und kein WE-M8.
+Die v1.1-Regel zum nicht rekonstruierbaren historischen HWT-Erstwert gilt weiter: Definierte Recoveryverträge dürfen implementiert und getestet werden, ohne eine unbekannte alte Einzelursache zu behaupten. Frühere Dokumente sind [bytegleich archiviert](archive/20260930-v1.1/README.md).
+
+**Präzisierung 01.10.2026 (Schritt 3):** `metric_frontier` startet adaptiv:
+voller Rundblick nur bei belegter Geometrie und Beobachtungsnutzen, sonst ein
+autonom berechnetes zulässiges Beobachtungsziel, sonst begründetes Warten/Teilstand.
+Der unbenutzte 360°-Sweep ist kein allgemeines Startgate. Die konkrete Bewegung
+mit Startkontur, Controllerdrehung, Route und Zielorientierung bleibt vollständig
+zu prüfen; unbekanntes Padding bleibt gesperrt. `existing` bleibt unverändert.
+Encoder: 120-ms-Messgrenze und 180-ms-Kontinuität bleiben unverändert. Begrenzte
+Timing-Recovery erhält den Auftrag im bewegungsgesperrten HOLD, benötigt vor
+Wiederanfahrt echte gültige Paare, belegte Kontinuität, Stillstand, aktuelle
+Lokalisierung/Route und terminales Kind/Gate-ACK. Unbelegte Lücke bedeutet
+Hilfebedarf/Teilstand, niemals Rebaseline oder Faultflag-Reset. Manuelles Umsetzen
+oder Vorkartieren zählt nicht als autonomer Bootstrap. Historische Fehlversuche
+bleiben erhalten.
+
+**Folgepräzisierung 01.10.2026 (Schritt 3, LAB-1):** Expliziter metrischer
+Entwicklungsvertrag `hwt_development_contract`: Antwortfrist 0,05 s,
+Rohdatenfrische 0,30 s; einzelner Pollfehler bei gültigen frischen Originaldaten
+ist Transportdegradation und kein eigener HOLD. Höchstens zwei echte HWT-HOLDs
+im gleitenden 60-s-Fenster, jeder weiterhin höchstens 5 s; harte Identitäts-,
+Protokoll-, Zeit-/Datenfehler bleiben terminal. Alte Legacy-Grenzen bleiben
+außerhalb dieses Opt-ins erhalten, Encoder 120/180 ms unverändert.
+Bewegungsgebundener Start-Egress darf unbekannten bereits bestehenden
+Ausgangsbestand nur beim belegten Wegführen ohne Annäherung, Wiederbetreten
+oder zusätzliche unbekannte Sweepfläche tolerieren. Neue Fläche, echte
+Hindernisse, Controllerdrehungen/-kurve und Zielbereich bleiben streng geprüft;
+keine allgemeine Freiraumblase oder Kartenmanipulation. Nach Softwareprüfung
+kurzer normaler Startnachweis (30–60 s), anschließend technisch zulässige
+begrenzte Produktfahrt; kein weiterer obligatorischer 720-s-Passivlauf.
+
+## 1. Geltung und Dokumentzuständigkeit
+
+Der Masterplan konkretisiert WE-1. Das Produktziel bleibt die autonome Erkundung der freigegebenen, aktuell zugänglichen und sensorisch erschließbaren Umgebung, konsistenter Teil-/Gesamtabschluss und später belastbare Wiederaufnahme. Geschlossene unbekannte Räume oder unbeobachtete Gefahren dürfen nicht als erkundet gelten.
 
 | Dokument | Verbindliche Rolle |
 |---|---|
-| [AGENTS.md](../../AGENTS.md) und einschlägige Unteranweisungen | Allgemeine Arbeits-, Sicherheits- und Repositoryregeln |
-| `MASTERPLAN.md` | Stabile Entscheidungen, Arbeitsreihenfolge und Änderungsgrenzen |
-| [STATUS.md](STATUS.md) | Einziger aktueller WE-Iststand: geprüfte Basis, Nachweise, offene Punkte und nächster Auftrag |
-| [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md) | Arbeitsvertrag und ausführbarer, begrenzter Folgeauftrag |
-| [MEILENSTEINE.md](MEILENSTEINE.md) | Bestehende WE-D0/WE-M0 bis WE-M7 und ihre Abnahmen |
-| [PROJECT_MEMORY.md](../PROJECT_MEMORY.md) | Datiertes Projektgedächtnis, nicht automatisch heutiger Arbeitsauftrag |
-| [ROBOT_TRANSFER.md](../ROBOT_TRANSFER.md) | Tatsächliche Installations-/Betriebsübergabe und Rückfallweg |
+| [AGENTS.md](../../AGENTS.md), [LABORMODUS.md](../LABORMODUS.md) | Allgemeine Arbeits- und Schutzregeln; durchgängiger begrenzter Laborumfang |
+| MASTERPLAN.md | Stabile Entscheidungen, Reihenfolge und Änderungsgrenzen |
+| [STATUS.md](STATUS.md) | Einziger aktueller Iststand, offene Punkte und genau ein nächstes Paket |
+| [AGENTENAUFTRAG.md](AGENTENAUFTRAG.md) | Ausführbarer aktueller Softwareauftrag |
+| [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md), [MEILENSTEINE.md](MEILENSTEINE.md) | Produktumfang und präzisierte bestehende WE-D0/WE-M0–WE-M7-Abnahmen |
+| [PROJECT_MEMORY.md](../PROJECT_MEMORY.md) | Datiertes Entscheidungsjournal mit vollständiger historischer Referenz |
+| [ROBOT_TRANSFER.md](../ROBOT_TRANSFER.md) | Tatsächliche Installation, Betrieb und Rückfall; kein Sollstand |
 
-Frühere P1–P5-Prompts sind historische Arbeitspakete, keine parallele aktuelle
-Meilensteinfolge. Frühere Einzelaufforderungen zu weiteren Fahrversuchen oder
-pauschalem Zurückspielen werden durch den aktuellen Auftrag eingeordnet.
-Keine ältere Chatantwort oder Archivdatei ohne Standprüfung ausführen.
-Bei Widersprüchen den konkreten Konflikt benennen; keine bequemere Aussage wählen.
-Sicherheitsregeln werden durch diesen Plan nicht außer Kraft gesetzt.
+Die expliziten v1.2-Änderungen haben Vorrang vor alten verpflichtenden Portal-/Regionsabhängigkeiten der metrischen Erkundung. Nicht betroffene Schutz- und Nachweisbedingungen bleiben bestehen. Keine Parallelroadmap, keine neuen WE-Meilenstein-IDs, keine Ausführung alter Archivaufträge.
 
-## 2. Entscheidungen, die nicht bei jedem Fehler neu verhandelt werden
+## 2. Architekturentscheidung und Wiederverwendung
 
-- **Kein Komplettneubau der Software, keine pauschale Neuinstallation des Jetson.**
-  Eine defekte Umgebung rechtfertigt nur den nachgewiesenermaßen nötigen Eingriff.
-- **Kein blinder Rücksprung auf einen historischen Branch.** Historisch erprobte
-  Tür-/Frontier-/Rundblickfunktionen sind Vergleichsreferenz und werden gezielt
-  wiederverwendet; neuere belegte Korrekturen bleiben erhalten.
-- **Eine Integrationslinie, ein aktiver Kandidat, ein aktueller Arbeitsauftrag.**
-  Alte Builds bleiben als Rückfall erhalten, nicht als undokumentierte Laufzeitmischung.
-- **Keine neue Navigation und kein vorsorglicher zusätzlicher Supervisor.**
-  Bestehenden Mission Manager, Behavior Tree, Explorer, Nav2 und vorhandene
-  Prozess-/Lifecycle-Funktionen zuerst verwenden. Fehlende Verantwortung explizit
-  zuordnen, nicht einen zweiten Befehlsgeber hinzufügen.
-- **Keine vollständige Audit-Inventur bei jedem Einzelbefund wiederholen.**
-  Den einmaligen Audit fortschreiben; danach begrenzte Änderungspakete bearbeiten.
+### 2.1 Ein Erkundungskern, ein Ausführungspfad
 
-Behalten werden die vorhandenen Sensor-/Antriebspfade, Encoder plus HWT601,
-SLAM, Nav2, VL53-Nahbereichserkennung, Portalgedächtnis und Kartenverwaltung,
-soweit für den jeweiligen Kandidaten nachgewiesen. Eine aktuelle Einbindung
-oder Abnahme darf nicht allein aus der Existenz einer Datei abgeleitet werden.
-Amadeus und HomeMy bleiben getrennte Projekte.
+Mission Manager → bestehender BT → ein Explorer mit metrischer Aufgabenwahl → ein Nav2-Kind → bestehende Gate-/Glättungs-/Kollisionskette → Basis.
+
+SLAM kartiert fortlaufend, auch während der Bewegung. Es ist nicht nach jeder Fahrt neu zu starten. Der Explorer wählt erreichbare Positionen im bekannten zulässigen Freiraum, von denen weitere Beobachtung sinnvoll ist. Sicherheit wird vor Nutzen geprüft; Informationsgewinn rechtfertigt keine unsichere Fahrt.
+
+Der Kern betrachtet erreichbare Frontiers im gesamten aktuellen Auftragsscope, nicht nur in einer zuvor benannten Region. Die Wiederverwendung bekannter Wege ist erlaubt. Kein vollständiges Abfahren des Startraums als Voraussetzung für einen offenen Durchgang. Kartierungsfortschritt ist nicht mit Reinigung/Fahrspurabdeckung gleichzusetzen.
+
+### 2.2 Notwendige Eingänge und optionale Semantik trennen
+
+**Notwendig:** aktuelle konsistente Karte samt Sitzung/Frame, Pose/TF, Hinderniskarten und Beobachtungen, tatsächlicher Fahrzeugumriss, gültiger Auftragsscope, Betriebsbereitschaft, Budgets und Schutzbedingungen.
+
+**Nicht notwendig für normale metrische Ziele:** Portalbestand, semantische Raumzuordnung, topologische Aufgabenhierarchie, kamerabasiertes Türlabel. Leere, fehlende oder veraltete optionale Semantik darf den metrischen Kern nicht sperren. Dagegen bleiben fehlende sicherheitsrelevante Quellen oder unzureichende Lokalisierung bewegungssperrend.
+
+Diese Trennung ist im Daten-/Auftragsvertrag herzustellen. Keine erfundenen Portal-/Raum-IDs, kein künstlich frischer Shadowstatus und keine allgemeine Deaktivierung von Validierungen. Ein bestehender Regionsgraph kann passiv mitlaufen, aber weder einen zweiten Navigationsauftrag senden noch metrische Ziele verdeckt filtern. Sein Ausfall darf auch über gemeinsame Ressourcen oder Startbedingungen nicht unbeabsichtigt zum Pflicht-Gate werden.
+
+### 2.3 Wiederverwenden statt zurückrollen
+
+| Herkunft | Zu übernehmen bzw. gezielt zu prüfen |
+|---|---|
+| Historischer Explorer um `1d91229` | Frontierbildung und Rangfolge, sichere Annäherungsziele, Rundblick/Vorausrichtung, besuchte/fehlgeschlagene Ziele und Folgeauswahl; Referenzdatensatz vom 11.09. |
+| Aktuelle Integration | Sensor-/Treiberkorrekturen, HWT601 plus Encoder/EKF, Mission Manager/BT, bestätigter Kind-Cancel, Auftragserhalt, begrenzte Recovery, metrische Karten-/Pose-/Routenprüfung |
+| Vorhandene Infrastruktur | Nav2, Gate, VL53/Collision Monitor, Kartenmanager, Recorder, isolierte Builds, Manifeste und passende Regressionen |
+| Portal-/Regionsentwicklung | Erhalten als optionale Erweiterung und historische Vergleichsreferenz; keine Pflichtabhängigkeit des metrischen Kerns |
+
+Existenz eines Moduls oder historischer Test ist kein heutiger Integrationsnachweis. Kein Austausch von Treibern, SLAM oder Motorsteuerung allein wegen dieser Richtungsentscheidung. Keine neue OAK-/YOLO-Pipeline und kein zusätzlicher globaler Supervisor. Veröffentlichter Frontiercode kann gezielt als Offline-Vergleich dienen; ein vollständiger Fremdstack ist nicht beauftragt.
+
+### 2.4 Durchfahrt ohne Türlabel bedeutet nicht Durchfahrt ohne Geometrie
+
+Offene, mit realem Fahrzeugumriss und aktueller Beobachtung zulässige Verbindungen dürfen normale Nav2-Wege sein, auch ohne Portal-ID. Physische Passage inklusive Heck und Weiterarbeit dahinter bleiben nachzuweisen.
+
+Eine durch unbekannte, kollidierende oder nicht sicher befahrbare Geometrie getrennte Karte wird nicht durch direkte Motorbefehle überbrückt. Vorhandene besondere LiDAR-geprüfte Engstellenmanöver bleiben separat erhalten und abgesichert; der erste metrische Kern aktiviert sie nicht automatisch. Ein nicht nachweisbar passierbarer Durchgang bleibt eine sichtbare Restaufgabe, kein verdeckter Vollabschluss.
 
 ## 3. Arbeitsreihenfolge innerhalb der bestehenden Roadmap
 
-Die folgenden Schritte sind Arbeitspakete, **keine neuen Meilenstein-IDs**.
-Erledigte WE-Nachweise werden wiederverwendet und nur bei betroffener Regression
-gezielt erneut geprüft. Die umgangssprachliche „Stufe 3“ ist nicht mit jedem
-Detail des ursprünglichen WE-M3 gleichzusetzen; STATUS ordnet beide Begriffe zu.
+### Schritt 1 – konsolidierte Betriebsbasis erhalten
 
-### Schritt 1 – aktuellen Integrationsstand sichern und reproduzierbar bauen
+Vorhandene Quell-/Profil-/Buildzuordnung und Rückfallstände nutzen. Nur betroffene Auflösung erneut prüfen, keine neue Gesamtinventur. Ein Besitzer je Motorbus, produktivem Odometrie-TF und Navigationsauftrag. Keine laufende Roboter-Arbeitskopie umschalten; unbekannte lokale Änderungen sichern.
 
-**Zuordnung:** Aktualisierung der Betriebsbasis aus WE-M0/A, kein Neustart aller
-früheren WE-M0-Arbeiten.
+**Ergebnis:** Reproduzierbarer abgegrenzter Kandidat. Bisherige Fortschritte nicht durch die neue Planung zurücksetzen. Aktueller Belegumfang steht im STATUS.
 
-Den tatsächlich zuletzt verwendeten lokalen Parity-/WE-Kandidaten erfassen:
-Quell-SHAs, lokale Änderungen, externe Treiber/Submodule, Versionen, Profile,
-Buildpräfixe und Paketauflösung. Remote-PR, lokaler Quellstand und ausgeführtes
-Install getrennt dokumentieren. Lokale Änderungen sichern, nicht überschreiben.
+### Schritt 2 – akzeptierten ersten Recoveryfall erhalten
 
-Eine eindeutige Integrationsbasis und einen wiederholbaren Build/Startweg
-herstellen. Maschinenbezogene Dateien und private Karten bleiben lokal;
-Versionen, Hashes und datensparsame Nachweise ins Repository. Fachlich passende
-heutige Korrekturen erhalten. Der alte HWT-Türstand ist Referenz, nicht Default.
+Gerätefreier HWT-Kindzielvertrag und realer Rundblick-HOLD/Recovery/Fortsetzung bleiben im dokumentierten Umfang erhalten. Nach betroffenen Integrationsänderungen gezielt regressieren, nicht die historische Ursachenjagd neu beginnen. Die zusätzliche reale HWT-Injektion während eines Nav2-Kindes bleibt geparkter Robustheitsrest, kein neues Gate vor metrischer Erkundung.
 
-**Ergebnis:** Ein frischer isolierter Build erzeugt die festgelegte Zusammenstellung.
-Genau ein Besitzer je Motorbus, produktivem Odometrie-TF und Navigationsauftrag;
-keine versteckte Abhängigkeit von zufällig gesourcten Alt-Overlays.
-Quellstand, Abhängigkeiten, Konfiguration, Startweg, Nachweise und Restfehler
-sind eindeutig zugeordnet. Noch keine neue Wohnungsfahrt.
+### Schritt 3 – metrischen Kern softwareseitig schließen und real abnehmen
 
-### Schritt 2 – Audit abschließen und einen Wiederaufnahmefall durchgängig schließen
+**Jetzt zuerst ein zusammenhängendes Softwarepaket:** echte Frontier-/Zielwahl von zwingender Portal-/Regionsevidenz entkoppeln; Zielausführung und nachfolgende Aufgabenentscheidung über bestehende Mission/BT/Nav2 verbinden. Ein lokaler Misserfolg darf bei nachgewiesener sicherer Fortsetzbarkeit eine andere zulässige Aufgabe ermöglichen. Der bekannte Timeout-/Kriechfall ist gezielte Regression, kein unendlicher Diagnose-Nebenauftrag.
 
-**Zuordnung:** Robustheits-/Integrationsrest der bestehenden WE-Kette,
-insbesondere WE-M3 und der aktuellen Stufe-3-Arbeit.
+Der Gerätefrei-Nachweis umfasst wechselnde Karten, mindestens mehrere aufeinanderfolgende Zielentscheidungen, eine blockierte Aufgabe mit Alternative, fehlende optionale Semantik, begrenzte Wiederaufnahme und harte Gegenfälle. Keine stets gesunden Attrappen für die zu prüfende Policy, keine fest eingesetzten Zielkandidaten statt echter Frontierberechnung.
 
-Alle tatsächlich bewegungswirksamen Stop-/Abort-/Latch-Bedingungen einmal
-inventarisieren: Auslöser, Datenquelle, Grenzwert, Reaktion, Verantwortlicher,
-Wiederanlaufbedingung und Evidenz. Nicht nur Fehlertexte sammeln.
+**Danach begrenzter Realnachweis auf demselben Kandidaten:** regulärer Start und Beobachtung, mehrere autonome Beobachtungspositionen, erkennbare neue Kartenevidenz, frühe Umfahrung, notwendiger Nahbereichshalt mit zulässiger Fortsetzung, geometrisch lösbare Wand-/Ecksituation, physische Durchfahrt und Weitererkundung. Fälle dürfen getrennt aufgebaut werden. Hindernisbewältigung ist Teil der Zielbearbeitung, keine Funktion, auf die erst nach einer perfekten Phase A gewartet wird.
 
-Danach zuerst **einen vollständigen vertikalen Fall** umsetzen:
-Störung -> sicherer Halt -> Auftrag bleibt erhalten -> betroffene Funktion
-wiederherstellen -> aktuelle Quellen/Pose/Pfad prüfen -> denselben Auftrag
-fortsetzen. Der berichtete HWT-Rohstatusabbruch ist der erste Kandidat;
-seine tatsächliche Einzelursache muss vorher belegt werden.
+Karte, Ziele, Begründungen, echte Fahrspur und verbleibende Aufgaben sichtbar aus vorhandenen Werkzeugen nachweisen. Neue Kartenmeldungen, freie Zellzahl, kurze Drehungen oder Nav2-SUCCESS allein sind kein Gesamterfolg. Kartenkorrektur/Drift von Beobachtungsgewinn trennen. Kriterien und Wiederholungen vor der Abnahme festlegen; keine erfundene Erfolgsquote.
 
-Vorhandene VL53-Recovery und sonstige lokale Arbeit zunächst lesen und zuordnen.
-Nicht parallel dieselbe Funktion neu bauen. Weitere passende Fehler übernehmen
-danach dasselbe begründete Muster in kleinen, überprüfbaren Änderungen.
+**Ergebnis:** Stufe 3 nur für tatsächlich erfüllte metrische Kern- und Schutz-/Fortsetzungsfälle grün. Automatische Portal-/Regionsidentität ist dabei nicht mehr Voraussetzung, bleibt jedoch als eigener semantischer Rest sichtbar. Danach keine allgemeine Optimierungsrunde.
 
-**Ergebnis:** Gerätefreier integrierter Nachweis von Wiederaufnahme und
-Gegenfällen; echte Schutzfehler verhindern weiterhin die Wiederanfahrt.
-Keine pauschale Erhöhung von Frische-/Kollisionsgrenzen.
+### Schritt 4 – WE-M4, WE-M5 und WE-M6 mit getrennten Nachweisen
 
-### Schritt 3 – konsolidierten Kern real abnehmen
+| Meilenstein | Metrischer Nachweis | Ergänzender semantischer Nachweis |
+|---|---|---|
+| WE-M4 | Zimmer → Flur → weiteres Zimmer → zurück in denselben Flur; wirkliche Passage und weiterer Fortschritt | Stabile Portal-/Regionsidentität, Seitenumkehr und Wiedererkennung bleiben separat offen, bis geprüft |
+| WE-M5 | Konsistente Karte plus metrische Aufgaben/Teilstand speichern; gültige Wiederlokalisierung und kontrollierte Fortsetzung | Portal-/Regionsevidenz und manuelle Namen korrekt zuordnen; optionaler Datenteil darf metrische Wiederaufnahme nicht erzwingen |
+| WE-M6 | Zugänglichen vereinbarten Umfang wiederholt erschließen; Restaufgaben und Teilabschluss korrekt ausweisen | Semantische Vollständigkeit nur aus geprüften Identitäten ableiten, nicht aus physischer Durchfahrt allein |
 
-**Zuordnung:** Betroffene WE-M0/B-/WE-M3-Zielsystemnachweise und vollständiger
-realer Abschluss der aktuell offenen Stufe 3.
+Metrische Teile dürfen ohne Abschluss der semantischen Teile fortgeführt werden. Ein gesamter historischer Meilenstein wird dadurch nicht rückwirkend grün. Präzisierungen und fortgeltende Detailkriterien stehen in MEILENSTEINE.md. WE-M1/M2 bleiben erhaltene passive Semantikarbeit; WE-M7 ist weiterhin nachgelagerte App-Transparenz, keine Voraussetzung des geometrischen Kerns.
 
-Auf demselben festgehaltenen Kandidaten die bestehenden Pflichtfälle prüfen:
-autonomer Start, Rundblick, selbst gewähltes Ziel, frühe Umfahrung, notwendiger
-Nahbereichsstopp mit sicherer Befreiung, geometrisch lösbare Wand-/Ecksituation,
-Mission fortsetzen sowie Tür vollständig passieren und dahinter weiterarbeiten.
-Die Fälle dürfen in getrennten begrenzten Aufbauten stattfinden.
+### Schritt 5 – Kundentauglichkeit gesondert prüfen
 
-Zusätzlich einen definierten vorübergehenden Fehler erst gerätefrei, dann im
-kontrollierten Realaufbau prüfen: Halt, erfolgreiche Wiederherstellung und
-Fortsetzung desselben Auftrags. Dauerhafte und gefährliche Gegenfälle prüfen.
-Kein manuelles Nav2-Ziel oder Entfernen der Barriere als Autonomieerfolg.
+Längere Einsätze, wechselnde Aufbauten/Startpositionen, Ressourcen, Wiederanläufe und kontrollierte Ausfälle separat abnehmen. Zielgrößen für Eingriffe, Missionsabschluss, Recoverydauer/-häufigkeit und sichere Fehlerreaktion vorab festlegen. Häufiges Neustarten ist keine Zuverlässigkeit. Offene Bewegungswidersprüche und Shutdown-/Speicherfehler nicht verschwinden lassen. Eine gute Wohnungsfahrt ist keine Auslieferungs- oder Zertifizierungsfreigabe.
 
-Kriterien und Zahl der Wiederholungen **vor** der Abnahme festlegen. Drei
-vollständige Wiederholungen sind ein vorgeschlagener Einstieg, kein schon
-beschlossener Zuverlässigkeits- oder Auslieferungsnachweis. Rohdaten und
-äußere Beobachtung von bloßen Sollbefehlen/Odometrieanzeigen unterscheiden.
+## 4. Fehler-, Fortschritts- und Abschlussvertrag
 
-**Ergebnis:** Aktuelle reale Kernabnahme einschließlich Schutz- und
-Fortsetzungsfällen. Ein bestandener Rundblick allein macht Stufe 3 nicht grün.
-Danach unmittelbar WE-M4, keine erneute allgemeine Optimierungsrunde.
+Schutzkette entscheidet über momentane Bewegung; vorhandene Subsysteme über begrenzte Wiederherstellung; Missionssteuerung über Auftragserhalt, Neuplanung und Hilfebedarf.
 
-### Schritt 4 – bestehende WE-M4, WE-M5 und WE-M6 abarbeiten
+- **Aufgabe unerledigt:** Timeout oder Nichterreichbarkeit nicht automatisch als Hardwaredefekt bewerten. Kind terminal beenden, Stillstand und aktuelle Betriebs-/Pose-/Routenlage prüfen. Bei nachgewiesener Fortsetzbarkeit Aufgabe begrenzt zurückstellen und andere zulässige Arbeit wählen. Keine Hindernisursache erfinden, nur um LOCAL_BLOCKED zu erzwingen.
+- **Unzureichender Fortschritt:** kleine Drehungen oder Odometriesummen dürfen kein unbegrenztes Festhalten rechtfertigen. Aufgabenfortschritt von lokalem Bewegungsfortschritt trennen; geometrisch nötige Drehung/Transit nicht pauschal als Fehler behandeln. Begrenzte Neuplanung und Versuche, kein Stop-and-go-Flattern.
+- **Recoverbare Quellenlücke:** notwendiger Halt, Auftrag halten, begrenzt wiederherstellen; stabile neue Messungen, Kalibrierung, Stillstand und aktuelle Situation vor Fortsetzung prüfen. Kein altes Goal/Command wiederbeleben.
+- **Ungeklärte notwendige Quellen/Pose, nicht terminales altes Kind, kritischer Aktuatorfehler:** keine Wiederanfahrt aus bloßer Aufgabenpräferenz. Sicherer Teilstand und konkreter Hilfebedarf sind zulässig, auch ohne bewiesenen Kabelbruch.
+- **Not-Aus oder Nutzerabbruch:** keine automatische Rücksetzung oder Fortsetzung.
 
-| Meilenstein | Ergebnis nach bestehender Roadmap |
-|---|---|
-| WE-M4 | Arbeitszimmer -> Flur -> weiteres Zimmer -> zurück in denselben Flur; stabile Portal-/Regionsidentität und real bestätigte Durchfahrten |
-| WE-M5 | Karte und Erkundungswissen konsistent speichern; Neustart, gültige Wiederlokalisierung und kontrollierte Fortsetzung offener Aufgaben |
-| WE-M6 | Zugängliche Wohnung wiederholt erkunden; vollständigen Abschluss von blockiertem Teilstand unterscheiden |
+Genau ein aktives Kind. Verspätete Antworten und alte Kartenarbeit dürfen neuere Zustände nicht überschreiben. Gültige Ziele bei normalen Kartenupdates revalidieren statt allein wegen neuer Revision/neu berechneter Rangfolge fortwährend canceln. Echte Kontextwechsel, unzulässige Wege und ungültige notwendige Quellen bleiben sperrend. Keine alten Daten frisch stempeln.
 
-Bereits vorhandene M1/M2-/Mehrraum-/Persistenzsoftware prüfen und integrieren,
-nicht neu erfinden. Bekannte Türen bleiben zulässige Rückwege; eine besuchte Tür
-ist nicht für Transit gesperrt. Kein falscher Vollabschluss bei unerreichbaren
-Restaufgaben oder mangels Sensordaten. WE-M7 bleibt nachgelagerte App-Transparenz.
+Gesamtzeit-, Versuchs-, Weg- und Energiebudgets werden bei HOLD, Kindwechsel oder neuem Kandidaten nicht zurückgesetzt. Konkrete Werte vor Tests dokumentieren; heutige Schutz-/Frische-/Geschwindigkeitsgrenzen nicht pauschal erhöhen. Kein automatischer Rechner-/Stack-Reboot als Lösung.
 
-### Schritt 5 – Kundentauglichkeit gesondert nachweisen
+**Abschluss:** Keine erreichbare relevante Frontier über ein definiertes gültiges Beobachtungsfenster und keine ungeklärten relevanten Restaufgaben ist ein begründeter metrischer Abschlusskandidat. Fehlende Daten, leere Auswahl durch Filter/Blacklist, blockierte Übergänge oder erschöpfte Budgets bedeuten nicht vollständig erkundet. Erreichbares erkundet, vorläufig blockiert, unbekannt/ungeklärt und ausgeschlossen getrennt ausweisen. Keine absolute Vollständigkeit hinter unbekannten geschlossenen Türen behaupten. Speicherfreigabe, metrischer Abschluss, Flächenabdeckung und semantischer Abschluss sind getrennte Aussagen.
 
-Keine Auslieferung allein aufgrund einer erfolgreichen Wohnungsfahrt erklären.
-Längere Einsätze, wechselnde Umgebungen/Startpositionen, Wiederanläufe und
-kontrollierte Sensor-/Prozess-/Kommunikationsausfälle gesondert abnehmen.
-Vorab Zielgrößen für Missionsabschluss ohne Eingriff, Eingriffshäufigkeit,
-Recoverydauer/-häufigkeit und sichere Fehlerreaktion festlegen.
+## 5. Regeln gegen Verzetteln und Laborarbeit
 
-Häufiges erfolgreiches Neustarten ist noch keine Zuverlässigkeit. Offene
-Speicherfehler wie `buffer overflow` müssen eingegrenzt und vor Produktfreigabe
-bewertet/behandelt sein. Testfortschritt und Produktsicherheitsnachweis getrennt
-führen. Kein erfundenes WE-M8 und keine Produktzertifizierung behaupten.
+Ein Integrationsverantwortlicher, ein Kandidat, ein aktueller Auftrag. Nur betroffene Funktionen ändern; keine pauschale Neuinstallation, neue Navigation oder gleichzeitige OAK-/Arm-/GUI-Baustelle. Neue reine Policy-/Datenadapter innerhalb des vorhandenen Explorers sind für diese Entkopplung erlaubt, kein konkurrierender Navigator.
 
-## 4. Verbindliches Fehler- und Wiederaufnahmeprinzip
+LAB-1 gilt auftragsbezogen und agentenübergreifend. Unveränderte Not-Aus-/Platz-/Preflight-/Recorder-/Fahrt-Erlaubnisfragen nicht wiederholen. Technische Zustände selbst prüfen, keine physische Stellung erfinden. Nur tatsächlich notwendige, nicht selbst ausführbare Bedienhandlung oder geänderten Umfang konkret klären. Rein lesender Vorlauf ohne Aktor-Schreibprozess bleibt gemäß LAB-1 möglich. Diese Dokumentationsänderung startet keine Hardware; der nächste Softwareauftrag ist ausdrücklich gerätefrei.
 
-> Bewegung bei Gefahr oder unzureichendem Zustandsnachweis rechtzeitig stoppen;
-> eine sicher wiederherstellbare Störung darf nicht unnötig den Auftrag vernichten.
+Reale Karten/Bilder/Bags lokal halten. Vor Commit/Push auch die ausgehende Historie prüfen: private lokale Berichtscommits nicht als Vorfahren veröffentlichen. Nicht unkoordiniert pullen/mergen, keinen Force-Push oder Datenverlust erzwingen. Eine neue Planversion darf keine ungeprüfte Runtime aktivieren.
 
-Drei Zuständigkeiten: **Schutzkette** entscheidet über momentane Bewegung;
-**Subsystemverantwortlicher** über dessen begrenzte Wiederherstellung;
-**bestehende Missionssteuerung** über Auftragserhalt, Neuplanung und Hilfebedarf.
+## 6. Nachweise und Abschluss eines Pakets
 
-| Situation | Zielverhalten; Umsetzung und Freigabe müssen nachgewiesen werden |
-|---|---|
-| Recoverbare Daten-/Statuslücke | Bewegung soweit erforderlich sperren, Mission halten, begrenzt wiederherstellen und neu prüfen |
-| Teilweise eingeschränkte Wahrnehmung | Nur nachgewiesen sichere eingeschränkte Bewegung zulassen; sonst Halt. Unbekannt ist nicht frei |
-| Hindernis oder unzugängliches Ziel | Gefährliche Bewegung verhindern, sicheren Alternativweg/andere Aufgabe prüfen; Tür und Aufgabe nicht vergessen |
-| Nicht wiederherstellbarer Zustand | Sicherer Stillstand, Teilstand/Auftrag sichern und klaren Hilfebedarf melden; auch bei Software- oder Lokalisierungsfehlern möglich |
-| Expliziter Not-Aus, Nutzerabbruch, kritischer Aktuatorfehler | Keine automatische Rücksetzung oder Wiederanfahrt; Ursache und ausdrückliche Wiederfreigabe erforderlich |
-| Ausschließlich beim Shutdown beobachteter Fehler | Vom Fahrergebnis getrennt dokumentieren; nicht allein wegen des Auftretens nach SIGINT als harmlos einstufen |
+Getrennt führen: dokumentiert, software_geprüft, zielsystem_geprüft, physisch_abgenommen sowie offen/blockiert. Synthetische Daten, Replay und reale Fahrt unterscheiden. Erfolg gilt nur für den genannten Umfang; keine unbelegten Prozentsätze oder Zusage „nur noch ein Fix“.
 
-Sofortige Stoppschwelle, Warte-/Recoverybudget und terminale Eskalation sind
-getrennte Entscheidungen. Keine willkürlichen Universalzeiten, keine
-Endlos-Restartschleifen. Sicheren Stillstand nicht durch bloßes Nullkommando
-behaupten. Safety-Reaktion hat Vorrang vor Protokollierung und Speicherung.
-
-Wiederaufnahme verlangt neue gültige Messungen, geeignete stabile Beobachtungsfolge,
-notwendige Kalibrierung, konsistente Pose/TF/Kartenbindung, freien aktuellen Pfad
-und weiterhin gültigen Auftrag. Alte Goals/Commands dürfen nicht wieder aufleben;
-maximal ein aktives Navigationskind. Ein neuer EKF-Ausgabestempel ersetzt keine
-frischen Eingänge. HWT-Bias nicht während Bewegung neu kalibrieren.
-
-Ein einzelnes verworfenes Sample ist nicht automatisch ein Hardwaredefekt.
-Umgekehrt darf ohne sichere Fortsetzbarkeit nicht bis zum Nachweis eines
-Kabelbruchs weitergefahren werden. Hardware-/Software-Not-Aus nicht umgehen,
-keine Freiraumbehauptung aus fehlenden VL53-Daten, keine blinde Dreh-/Rückfahrt.
-
-Automatische Stack-/Rechnerneustarts sind **kein aktueller Implementierungsauftrag**.
-Sie benötigen vorher eigene Nachweise für Persistenz, Wiederlokalisierung und
-unabhängige Antriebssperre. Laden gespeicherter Daten allein startet keine Fahrt.
-
-## 5. Regeln gegen Verzetteln und unbemerkte Regressionen
-
-Ein Integrationsverantwortlicher führt den Kandidaten. Weitere Agenten dürfen
-parallel analysieren/reviewen/testen, aber nicht gleichzeitig unkoordiniert
-Betriebsprofile, Quellstände oder aktive Hardware verändern.
-
-Vor jedem Auftrag knapp festhalten: Planversion, WE-Bezug, Istbasis, genau ein
-Ergebnis, erlaubte Änderungen, bewusst ausgeschlossene Themen, Tests und Rückfall.
-Nur den in STATUS aktuellen Auftrag ausführen; kein automatisches Weiterlaufen
-aller Schritte dieses Dokuments. Bereits belegte Ergebnisse nicht grundlos neu
-öffnen. Betroffene Integration nach Änderungen trotzdem gezielt prüfen.
-
-Jede Abweichung braucht Fehlerbeleg oder vereinbarte Anforderung. Änderungen an
-Ziel, Architektur, Reihenfolge, Akzeptanz- oder Sicherheitsgrenzen erfordern eine
-explizite Nutzerentscheidung und einen versionierten Planeintrag. Nebenbefunde
-priorisieren und im STATUS parken statt sofort neue Arbeitspakete zu starten.
-
-Ein gültiger begrenzter Sitzungsspielraum vermeidet wiederholte identische
-Rückfragen; er ersetzt keine aktuellen Betriebsbedingungen. Nach Not-Aus,
-relevantem Umbau, unklarem Zustand oder Umfangswechsel Freigabe neu klären.
-Dokumentation/Commit/Push/Merge allein sind niemals Geräte- oder Fahrfreigabe.
-
-## 6. Nachweise und Abschluss eines Auftrags
-
-Getrennt führen: `dokumentiert`, `software_geprüft`, `zielsystem_geprüft`,
-`physisch_abgenommen`; daneben `offen`, `blockiert` oder begründet nicht nötig.
-„Nicht ausgeführt“ ist weder bestanden noch der Nachweis eines Fahrfehlers.
-Tests mit synthetischen Eingängen und echte Fahrten nicht gleichsetzen.
-
-Jeder Abschluss nennt Ausgangs-/Ergebnis-SHA, Profil-/Abhängigkeitsbezug,
-wirklich ausgeführte Tests, Evidenzpfade, unveränderte Grenzen, Restfehler und
-**genau den nächsten Schritt**. Keine unbelegten Prozentsätze oder Zusage
-„nur noch dieser letzte Fix“. Grün gilt nur für den ausdrücklich geprüften Umfang.
+Jeder Abschluss: Ausgangs-/Ergebnis-SHA, tatsächliche Profil-/Paketauflösung, betroffene Komponenten, Tests mit Ergebnissen, Evidenzpfade, unveränderte Grenzen, Rückfall und genau ein nächster Schritt. Bei einer neuen Implementierung muss das Ergebnis Code plus verbundener Funktionsnachweis sein, nicht allein ein weiterer Messplan.
 
 ## 7. Pflege und sofortiger Einstieg
 
-Nur STATUS enthält den laufenden Iststand. Bei neuem Befund zuerst diesen
-fortschreiben; MASTERPLAN nur bei einer geänderten Grundentscheidung versionieren.
-Den aktuellen ausführbaren Auftrag in AGENTENAUFTRAG aktualisieren, überholte
-Aufträge eindeutig historisch kennzeichnen. Archive behalten ihre Originalbytes.
+Aktuellen Auftrag in STATUS und AGENTENAUFTRAG führen. Frühere Originale sind unverändert im Archiv verlinkt. Historische Ursachenlücken bleiben offen; sie verhindern keine ausdrücklich beschlossene, separat nachweisbare Funktionsverbesserung.
 
-**Jetzt:** Schritt 1 und die zugehörige Audit-Bestandsaufnahme gemäß
-[AGENTENAUFTRAG.md](AGENTENAUFTRAG.md). Keine weitere Wohnungsfahrt und kein
-vollständiger Rewrite aus diesem Dokument ableiten.
+**Jetzt:** Aktuellen Abschluss in AGENTENAUFTRAG §11/STATUS beachten. HWT-Entwicklungsvertrag und Start-Egress sind softwareseitig umgesetzt; reale Stufe 3 bleibt wegen harter Messzeitprüfung und fehlender zulässiger Starttrajektorie offen. Kein automatischer weiterer Start, Merge oder dauerhafter Installwechsel.
 
-**Änderungsprotokoll:** 27.09.2026 – v1.0: Konsolidierung statt Komplettneubau;
-ein dokumentierter Kandidat, begrenzter Recovery-Umbau, reale Kernabnahme,
-danach WE-M4/M5/M6 und separate Produktreifeprüfung. Frühere Parallelpläne
-werden nicht als zusätzliche Roadmap fortgeführt.
+**Änderungsprotokoll:**
+- 27.09.2026: v1.0 Konsolidierung, geordnete Recovery, Kernabnahme, WE-M4/M5/M6 und getrennte Produktreife.
+- 27.09.2026: v1.1 unbekannter historischer HWT-Erstwert kein Gate für definierten Recoveryfall.
+- 28.09.2026: LAB-1 als Arbeitsregel ergänzt.
+- 30.09.2026: v1.2 metrischer Erkundungskern vor verpflichtender Semantik; bewährte Bausteine wiederverwenden; Taskfortsetzung und getrennter metrischer/semantischer Abschluss; alter Diagnoseauftrag durch begrenztes Softwarepaket ersetzt. Nur Dokumentation, keine neue Funktionsabnahme.

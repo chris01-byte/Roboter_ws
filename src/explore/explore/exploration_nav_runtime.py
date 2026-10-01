@@ -30,6 +30,10 @@ class ExplorationNavigationRuntimeError(ValueError):
     """The child navigation request or live source state is inconsistent."""
 
 
+class ExplorationNavigationHold(ExplorationNavigationRuntimeError):
+    """A recoverable source hold arrived before a child was dispatched."""
+
+
 class NavigationStopCause(str, Enum):
     NONE = "none"
     SOURCE_INVALIDATED = "source_invalidated"
@@ -37,6 +41,7 @@ class NavigationStopCause(str, Enum):
     SYSTEM_FAILURE = "system_failure"
     BUDGET_EXHAUSTED = "budget_exhausted"
     USER_CANCELED = "user_canceled"
+    HWT_RECOVERY_HOLD = "hwt_recovery_hold"
 
 
 @dataclass(frozen=True)
@@ -64,7 +69,7 @@ class NavigationSourceState:
 class NavigationChildRun:
     navigation_status: str
     stop_cause: NavigationStopCause
-    disposition: ChildResultDisposition
+    disposition: Optional[ChildResultDisposition]
 
 
 def _event_id(prefix: str, intent_id: str) -> str:
@@ -108,6 +113,7 @@ class ExplorationNavigationSession:
             budget_exhausted: Callable[[], bool],
             local_blocked: Optional[Callable[[object], bool]] = None,
             safety_failure: Optional[Callable[[], bool]] = None,
+            recoverable_hold: Optional[Callable[[], bool]] = None,
     ) -> NavigationChildRun:
         if not isinstance(intent, ExplorationGoalIntent):
             raise ExplorationNavigationRuntimeError(
@@ -138,6 +144,9 @@ class ExplorationNavigationSession:
         if safety_failure is not None and not callable(safety_failure):
             raise ExplorationNavigationRuntimeError(
                 "safety_failure muss aufrufbar sein")
+        if recoverable_hold is not None and not callable(recoverable_hold):
+            raise ExplorationNavigationRuntimeError(
+                "recoverable_hold muss aufrufbar sein")
 
         initial_source = source_state()
         self._validate_source(initial_source, intent)
@@ -148,13 +157,20 @@ class ExplorationNavigationSession:
                 or (safety_failure is not None and safety_failure())):
             raise ExplorationNavigationRuntimeError(
                 "Kindziel darf nach Stopanforderung nicht starten")
+        if recoverable_hold is not None and recoverable_hold():
+            raise ExplorationNavigationHold(
+                "HWT-HOLD vor dem Versand; kein Nav2-Kind gestartet")
         self._children.start(intent)
         source_stop_observed = False
+        hold_observed = False
 
         def should_stop() -> bool:
-            nonlocal source_stop_observed
+            nonlocal source_stop_observed, hold_observed
             if (user_canceled() or budget_exhausted()
                     or (safety_failure is not None and safety_failure())):
+                return True
+            if recoverable_hold is not None and recoverable_hold():
+                hold_observed = True
                 return True
             if not self._current_source(source_state(), intent):
                 # Nav2 cancellation is asynchronous. The source may recover
@@ -187,6 +203,10 @@ class ExplorationNavigationSession:
             stop_cause = NavigationStopCause.USER_CANCELED
         elif budget_exhausted():
             stop_cause = NavigationStopCause.BUDGET_EXHAUSTED
+        elif (hold_observed or (recoverable_hold is not None
+                                and recoverable_hold())):
+            stop_cause = NavigationStopCause.HWT_RECOVERY_HOLD
+            invalidates = True
         elif (source_stop_observed
               or not self._current_source(final_source, intent)):
             stop_cause = NavigationStopCause.SOURCE_INVALIDATED

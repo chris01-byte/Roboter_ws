@@ -61,6 +61,7 @@ class Hwt601YawShadowCore:
         self.maximum_sample_gap_s = bias_config.maximum_sample_gap_s
         self._last_stamp_s: Optional[float] = None
         self._fault_reason: Optional[str] = None
+        self._gap_pending = False
 
     @property
     def bias(self) -> GyroBiasResult:
@@ -68,8 +69,13 @@ class Hwt601YawShadowCore:
 
     @property
     def fault_reason(self) -> Optional[str]:
-        """A post-calibration data-contract fault requires a fresh startup."""
+        """Invalid samples and time reversal require a fresh startup."""
         return self._fault_reason
+
+    @property
+    def gap_pending(self) -> bool:
+        """No corrected output until continuity resumes after a sample gap."""
+        return self._gap_pending
 
     def reject_invalid_message(self) -> str:
         """Latch a complete-message contract violation after calibration."""
@@ -125,11 +131,14 @@ class Hwt601YawShadowCore:
                 bias,
             )
         if gap_s is not None and gap_s > self.maximum_sample_gap_s:
-            if was_calibrated:
-                self._fault_reason = 'imu_datenluecke_neustart_noetig'
+            # A missing interval contains no angular measurement. Reject its
+            # first following sample as a continuity boundary, but retain the
+            # frozen startup bias. Motion remains blocked by HWT Health until
+            # fresh raw/yaw streams, identity and status have been validated.
+            self._gap_pending = was_calibrated
             return Hwt601YawShadowResult(
                 False,
-                self._fault_reason or 'imu_datenluecke',
+                'imu_datenluecke',
                 0.0,
                 bias,
             )
@@ -139,6 +148,8 @@ class Hwt601YawShadowCore:
         if not bias.calibrated or not bias.stable:
             return Hwt601YawShadowResult(
                 False, bias.reason, 0.0, bias)
+
+        self._gap_pending = False
 
         corrected_sensor = self.bias_estimator.correct(
             angular_velocity_radps)

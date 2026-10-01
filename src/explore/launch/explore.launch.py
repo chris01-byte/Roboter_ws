@@ -32,6 +32,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('require_hwt601_fusion', default_value='false'),
         DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
+        DeclareLaunchArgument('hwt_development_contract', default_value='false'),
         DeclareLaunchArgument(
             'explore_params_overlay', default_value=params,
             description='Optionales zweites Parameterprofil; Standard '
@@ -48,6 +49,8 @@ def generate_launch_description():
                         LaunchConfiguration('require_hwt601_fusion'), value_type=bool),
                     'hwt601_active_drive': ParameterValue(
                         LaunchConfiguration('hwt601_active_drive'), value_type=bool),
+                    'hwt_development_contract': ParameterValue(
+                        LaunchConfiguration('hwt_development_contract'), value_type=bool),
                 }],
         )
     ])

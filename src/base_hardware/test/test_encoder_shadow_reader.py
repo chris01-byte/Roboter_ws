@@ -494,7 +494,7 @@ class TestShadowCore:
     @pytest.mark.parametrize(
         'second_time,duration,expected_reason', [
             (1.0, 0.01, 'nicht_monotoner_zeitstempel'),
-            (1.11, 0.01, 'luecke_zu_lang_rebaseline'),
+            (1.11, 0.01, 'encoder_luecke_nicht_ueberbrueckbar'),
             (1.05, 0.051, 'encoderpaar_zeitfenster_ueberschritten'),
         ])
     def test_time_and_gap_faults_latch_until_restart(
@@ -562,3 +562,190 @@ class TestShadowCore:
         assert status['maximum_attempted_pair_duration_s'] == pytest.approx(0.01)
         assert status['startup_overrun_retries'] == 0
         assert status['last_rejected_pair_duration_s'] is None
+
+
+def healthy_core():
+    core=EncoderShadowCore(tracker(.18),max_pair_read_duration_s=.12)
+    for i in range(21):
+        core.accept_pair(pair(100,200),sample_time_s=1+i*.02,pair_read_duration_s=.014)
+    assert core.ready
+    return core
+
+
+def test_isolated_timing_outlier_heals_without_losing_counts_or_rebasing():
+    from base_hardware.encoder_shadow_reader import TIMING_RECOVERY_REASON
+    c=healthy_core();old_time=c.last_sample_time_s
+    late=c.accept_pair(pair(110,190),sample_time_s=old_time+.065,pair_read_duration_s=.125)
+    assert late.reason==TIMING_RECOVERY_REASON and not late.publish
+    assert not c.ready and c.fault_reason is None
+    assert c.last_pair==pair(100,200) and c.last_sample_time_s==old_time
+    first=c.accept_pair(pair(120,180),sample_time_s=old_time+.15,pair_read_duration_s=.014)
+    # This is a VALID fresh pair, preserving all counts while readiness stays
+    # false. Only the original invalid timing pair is withheld.
+    assert first.publish and not c.ready and first.update.left_delta_counts==20
+    assert c.tracker.rebase_count==0
+    second=c.accept_pair(pair(130,170),sample_time_s=old_time+.20,pair_read_duration_s=.014)
+    assert second.publish and c.ready
+    assert second.update.left_delta_counts==10
+    assert c.tracker.x_m==pytest.approx(30*2*math.pi*.0624/10000)
+    assert c.timing_recovered_count==1 and c.baseline_count==1
+    assert c.tracker.rebase_count==0
+
+
+@pytest.mark.parametrize('case',['delay','incomplete','jump','clock','rpm','repeat'])
+def test_timing_recovery_hard_cases_preserve_last_accepted_pose_and_baseline(case):
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    assert c.timing_recovery_pending
+    before=c.tracker.__dict__.copy()
+    value,stamp,duration=pair(100,200),t+.15,.014
+    if case=='delay':duration=.13
+    if case=='gap':stamp=t+.181
+    if case=='incomplete':value=None
+    if case=='jump':value=pair(100000,200)
+    if case=='clock':stamp=t+.04
+    if case=='rpm':value=pair(100,200,1000,0)
+    if case=='repeat':stamp=t+.065
+    result=c.accept_pair(value,sample_time_s=stamp,pair_read_duration_s=duration)
+    assert not result.publish and c.fault_reason is not None and not c.ready
+    assert c.tracker.__dict__==before
+    assert not c.accept_pair(pair(100,200),sample_time_s=t+.17,pair_read_duration_s=.014).publish
+
+
+def test_another_timing_overrun_requires_twenty_new_healthy_pairs():
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    c.accept_pair(pair(100,200),sample_time_s=t+.15,pair_read_duration_s=.014)
+    c.accept_pair(pair(100,200),sample_time_s=t+.20,pair_read_duration_s=.014)
+    assert c.ready
+    r=c.accept_pair(pair(100,200),sample_time_s=t+.265,pair_read_duration_s=.125)
+    assert not r.publish and c.fault_reason=='encoderpaar_zeitfenster_ueberschritten'
+
+
+def test_transport_phase_diagnostics_retain_real_read_boundaries():
+    t=transport();t.connect();t.read_holding_registers(1,10,3)
+    assert all(t.last_timing[k]>=0 for k in ['alias_usb_s','modbus_s','response_s','total_s'])
+    assert t.last_timing['total_s']>=sum(t.last_timing[k] for k in ['alias_usb_s','modbus_s','response_s'])
+
+
+def test_cached_sysfs_search_checks_values_and_device_generation_each_read(tmp_path):
+    from base_hardware.encoder_shadow_reader import CheckedUsbIdentity
+    usb=tmp_path/'devices'/'usb1';interface=usb/'usb1:1';interface.mkdir(parents=True)
+    for name,value in [('idVendor','0403'),('idProduct','6001'),('serial','BG03R8RZ')]:
+        (usb/name).write_text(value)
+    tty=tmp_path/'tty'/'ttyUSB0';tty.mkdir(parents=True);link=tty/'device';link.symlink_to(interface)
+    validate=CheckedUsbIdentity(str(tmp_path/'tty'));validate('/dev/ttyUSB0')
+    (usb/'serial').write_text('WRONG')
+    with pytest.raises(EncoderShadowError,match='abgenommene FTDI'):validate('/dev/ttyUSB0')
+    (usb/'serial').write_text('BG03R8RZ')
+    replacement=usb/'replacement';replacement.mkdir();link.unlink();link.symlink_to(replacement)
+    with pytest.raises(EncoderShadowError,match='generation'):validate('/dev/ttyUSB0')
+    link.unlink()
+    with pytest.raises(EncoderShadowError,match='nicht lesbar'):validate('/dev/ttyUSB0')
+
+
+def test_alias_change_during_modbus_call_discards_the_complete_answer():
+    factory=FakeFactory();t=transport(factory=factory);t.connect()
+    client=factory.instances[0];call=client.read_holding_registers
+    def switch(*args,**kwargs):
+        answer=call(*args,**kwargs)
+        t._realpath=lambda path:'/dev/ttyUSB2' if path==BASE_ALIAS else '/dev/ttyUSB1'
+        t._exists=lambda path:True
+        return answer
+    client.read_holding_registers=switch
+    with pytest.raises(EncoderShadowError,match='wechselte'):t.read_holding_registers(1,10,3)
+
+
+def test_hot_alias_checks_detect_link_replacement_and_device_reuse(monkeypatch):
+    from types import SimpleNamespace
+    import base_hardware.encoder_shadow_reader as module
+    links = {BASE_ALIAS: 'ttyUSB0', HWT601_ALIAS: 'ttyUSB1'}
+    generations = {BASE_ALIAS: (1, 10, 100), HWT601_ALIAS: (1, 11, 101)}
+    def readlink(alias):
+        if alias not in links: raise FileNotFoundError(alias)
+        return links[alias]
+    monkeypatch.setattr(module.os, 'readlink', readlink)
+    monkeypatch.setattr(module.os, 'stat', lambda alias: SimpleNamespace(
+        **dict(zip(('st_dev', 'st_ino', 'st_rdev'), generations[alias]))))
+    calls = []
+    monkeypatch.setattr(module, 'validate_base_alias',
+                        lambda *a, **kw: calls.append(True) or '/dev/ttyUSB0')
+    check = module.CheckedBaseAliases(BASE_ALIAS, HWT601_ALIAS)
+    for _ in range(5):
+        assert check(BASE_ALIAS) == '/dev/ttyUSB0'
+    assert len(calls) == 1  # Full path walk once; actual links/stat each call.
+    generations[BASE_ALIAS] = (1, 12, 100)
+    with pytest.raises(EncoderShadowError, match='generation'): check(BASE_ALIAS)
+    generations[BASE_ALIAS] = (1, 10, 100)
+    links[BASE_ALIAS] = 'ttyUSB1'
+    with pytest.raises(EncoderShadowError, match='Aliasbindung'): check(BASE_ALIAS)
+    links[BASE_ALIAS] = 'ttyUSB0'
+    del links[HWT601_ALIAS]
+    with pytest.raises(EncoderShadowError, match='nicht lesbar'): check(BASE_ALIAS)
+
+
+def test_true_gap_keeps_diagnosis_bounded_never_recovers_from_good_zero_pairs():
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.1294033375015715,
+                  pair_read_duration_s=.12087426500147558)
+    assert c.first_timing_rejection['reason']=='encoderpaar_zeitfenster_ueberschritten'
+    assert c.first_timing_rejection['read_end_age_s']==pytest.approx(.1898404700023093)
+    assert c.timing_recovery_pending and c.fault_reason is None
+    original=c.tracker.__dict__.copy()
+    for dt in (.212127149,.27,.32):
+        outcome=c.accept_pair(pair(100,200),sample_time_s=t+dt,pair_read_duration_s=.014)
+        assert not outcome.publish and not c.ready
+        assert c.tracker.__dict__==original
+    assert c.odometry_continuity_valid is False and c.diagnostic_pair_count==3
+    outcome=c.accept_pair(pair(100,200),sample_time_s=c.timing_recovery_deadline_s,
+                          pair_read_duration_s=.014)
+    assert outcome.reason=='encoder_timing_continuity_unproven'
+    assert c.tracker.__dict__==original and c.baseline_count==1
+
+
+def test_recovery_event_count_does_not_reset_after_twenty_new_healthy_pairs():
+    c=healthy_core()
+    for event in range(2):
+        t=c.last_sample_time_s
+        assert not c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125).publish
+        for i in range(22):
+            c.accept_pair(pair(100,200),sample_time_s=t+.15+i*.02,pair_read_duration_s=.014)
+        assert c.ready
+    t=c.last_sample_time_s
+    out=c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    assert not out.publish and c.fault_reason=='encoderpaar_zeitfenster_ueberschritten'
+    assert c.timing_recovery_count==2
+
+
+def test_valid_timing_pair_after_true_poll_gap_is_diagnosis_not_odometry():
+    c=healthy_core();t=c.last_sample_time_s;before=c.tracker.__dict__.copy()
+    r=c.accept_pair(pair(100,200),sample_time_s=t+.201,pair_read_duration_s=.014)
+    assert not r.publish and c.timing_recovery_pending and not c.odometry_continuity_valid
+    assert c.last_timing_rejection['reason']=='encoder_luecke_nicht_ueberbrueckbar'
+    for dt in (.23,.25,.27):
+        assert not c.accept_pair(pair(100,200),sample_time_s=t+dt,pair_read_duration_s=.014).publish
+        assert c.tracker.__dict__==before
+    c.accept_pair(pair(100,200),sample_time_s=c.timing_recovery_deadline_s,pair_read_duration_s=.014)
+    assert c.fault_reason=='encoder_timing_continuity_unproven' and c.tracker.__dict__==before
+
+
+def test_ros_clock_rollback_is_hard_even_in_a_rejected_timing_pair(monkeypatch):
+    pytest.importorskip('rclpy', reason='reader ROS clock contract requires ROS 2')
+    from types import SimpleNamespace
+    from rclpy.time import Time
+    from base_hardware.encoder_shadow_node import EncoderShadowNode
+    import base_hardware.encoder_shadow_node as module
+    n=EncoderShadowNode.__new__(EncoderShadowNode);n.core=healthy_core()
+    n.configuration_valid=True;n.last_poll_started_s=None;n.last_ros_attempt_ns=None
+    n.last_error_detail=None
+    n.transport=SimpleNamespace(connected=True)
+    n.reader=SimpleNamespace(read_complete_pair=lambda:pair(100,200),last_read_durations_s={})
+    clock=iter([Time(seconds=2),Time(seconds=1)])
+    n.get_clock=lambda:SimpleNamespace(now=lambda:next(clock))
+    n.get_logger=lambda:SimpleNamespace(error=lambda _:None)
+    n._publish_status_and_diagnostics=lambda **_:None
+    n.closed=False;n._close_transport=lambda:setattr(n,'closed',True)
+    native=iter([10.,10.125]);monkeypatch.setattr(module.time,'monotonic',lambda:next(native))
+    n._poll()
+    assert n.closed and n.core.fault_reason=='ros_zeit_im_encoderpaar_nicht_monoton'
+    assert n.core.timing_recovery_count==0 and not n.core.ready

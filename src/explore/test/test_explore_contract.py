@@ -1052,7 +1052,7 @@ def test_real_defaults_are_bounded_and_navigation_has_no_recovery():
     assert 'self._stop_scan_and_confirm()' in source
     assert 'if self._initial_scan_segment_angle <= 0.0:' in source
     assert 'self._initial_scan_segment_pause' in source
-    assert 'Parity-Kandidat erlaubt ausschliesslich passive WE-' in source
+    assert 'self._wohnungserkundung_navigation_enabled' in source
     assert 'self._prealign_to_goal(' in source
 
 
@@ -1070,6 +1070,18 @@ def test_parity_profile_keeps_we_shadow_passive_and_uses_real_scan_contract(
         0.40)
     assert profile['portal_max_crossings'] == 1
     assert profile['wohnungserkundung_navigation_enabled'] is False
+
+    acceptance = yaml.safe_load((
+        PACKAGE_ROOT / 'config' / 'hwt601_recovery_acceptance_params.yaml'
+    ).read_text())['explore_node']['ros__parameters']
+    assert acceptance == {
+        **profile, 'wohnungserkundung_navigation_enabled': True}
+    assert validated_we_navigation_enabled(
+        acceptance['region_graph_shadow_enabled'],
+        acceptance['region_graph_shadow_raw_map_enabled'],
+        acceptance['region_graph_shadow_frontiers_enabled'],
+        acceptance['wohnungserkundung_policy_enabled'],
+        acceptance['wohnungserkundung_navigation_enabled']) is True
 
     now = [0.0]
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: now[0])
@@ -1771,6 +1783,191 @@ def test_hwt_raw_source_loss_is_hard_failure_not_local_blockage():
     assert len(errors) == 1
     assert node._wohnungserkundung_active_safety_failure()
     assert len(errors) == 1
+
+
+def test_hwt_resume_requires_current_target_pose_and_unprojected_path():
+    node = ExploreNode.__new__(ExploreNode)
+    target = SimpleNamespace(target_x_m=1.0, target_y_m=2.0)
+    intent = SimpleNamespace(task_id='task-1')
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_navigation_snapshot = (intent, target)
+    node._hwt_interrupted_task_id = 'task-1'
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_latest_correlation_received_at = time.monotonic()
+    node._map_timeout_s = 5.0
+    node._door_pose_timeout = 0.8
+    node._wohnungserkundung_source_state = (
+        lambda *_args: SimpleNamespace(current=True))
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    node._costmap_reachable_goal = lambda *_args: None
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), True)
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
+    assert node._wohnungserkundung_resume_path_ready() is True
+    node._robot_pose_sample = lambda: (None, None)
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.9)
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
+    node._hwt_interrupted_task_id = 'different-task'
+    assert node._wohnungserkundung_resume_path_ready() is False
+    node._hwt_interrupted_task_id = 'task-1'
+    node._region_graph_shadow_latest_correlation_received_at -= 6.0
+    assert node._wohnungserkundung_resume_path_ready() is False
+
+
+def test_hwt_parent_hold_keeps_action_until_safety_and_route_revalidated(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 1.0
+    node._hwt_hold_announced = True
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = 1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_consumed_intent_id = 'old-intent'
+    node._hwt_interrupted_task_id = 'old-task'
+    published = []
+    node._publish_status = lambda state: published.append(
+        (state, node._status_phase))
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: True
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    result = node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True)
+    assert result == 'resumed'
+    assert published[-1] == ('running', 'we_hwt_resumed')
+    assert node._hwt_hold_announced is False
+    assert node._wohnungserkundung_active_child is None
+    assert node._wohnungserkundung_consumed_intent_id is None
+    assert node._hwt_interrupted_task_id == 'old-task'
+
+
+def test_hwt_gate_ack_requires_healthy_motion_ready_and_sequence():
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_gate_resume_ack_sequence = -1
+    for ready, state, sequence in (
+            (False, 'HEALTHY', 1), (True, 'HOLD', 1)):
+        node._on_hwt_gate_status(String(data=json.dumps({
+            'hwt_motion_ready': ready, 'recovery_state': state,
+            'resume_sequence': sequence})))
+        assert node._hwt_gate_resume_ack_sequence == -1
+    node._on_hwt_gate_status(String(data=json.dumps({
+        'hwt_motion_ready': True, 'recovery_state': 'HEALTHY',
+        'resume_sequence': 1})))
+    assert node._hwt_gate_resume_ack_sequence == 1
+
+
+def test_hwt_resume_needs_confirmed_fresh_encoder_standstill(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock[0])
+    node = ExploreNode.__new__(ExploreNode)
+    node._scan_odom_timeout = 0.8
+    node._door_stop_linear_tolerance = 0.01
+    node._scan_stop_tolerance = 0.02
+    node._hwt_stop_stable_since = None
+    node._hwt_stop_first_odom_at = None
+    odom = [0.03, 0.0, 100.0]
+    node._motion_odom_snapshot = lambda: (
+        (0.0, 0.0), 0.0, *odom)
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[:] = [0.0, 0.0, 100.1]
+    clock[0] = 100.1
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    clock[0] = 100.65
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[2] = 100.65
+    assert node._wohnungserkundung_hwt_standstill_confirmed()
+    odom[0] = 0.02
+    assert not node._wohnungserkundung_hwt_standstill_confirmed()
+    assert node._hwt_stop_stable_since is None
+
+
+def test_hwt_healthy_terminal_child_but_moving_never_resumes(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 0.02
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = 1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    phases = []
+    node._publish_status = lambda _state: phases.append(node._status_phase)
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: False
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    assert phases and all(p == 'we_hwt_recovery_validation' for p in phases)
+
+
+def test_hwt_resume_stays_stopped_without_path_or_on_estop(monkeypatch):
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    node = ExploreNode.__new__(ExploreNode)
+    node._hwt_guard = SimpleNamespace(
+        health=SimpleNamespace(recovery_state='HEALTHY'),
+        failure=lambda: None)
+    node._hwt_hold_deadline = time.monotonic() + 0.01
+    node._hwt_recovery_sequence = 1
+    node._hwt_gate_resume_ack_sequence = -1
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_estop = False
+    node._wohnungserkundung_active_child = None
+    node._publish_status = lambda _state: None
+    node._wohnungserkundung_active_safety_failure = lambda: False
+    node._wohnungserkundung_hwt_standstill_confirmed = lambda: True
+    node._wohnungserkundung_resume_path_ready = lambda: False
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._hwt_hold_deadline = time.monotonic() + 0.01
+    node._wohnungserkundung_resume_path_ready = lambda: True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._hwt_hold_deadline = time.monotonic() + 1.0
+    node._wohnungserkundung_estop = True
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=False),
+        lambda: False, require_target=True) == 'terminal'
+    node._wohnungserkundung_estop = False
+    assert node._wohnungserkundung_wait_for_hwt_resume(
+        SimpleNamespace(is_cancel_requested=True),
+        lambda: False, require_target=True) == 'user_canceled'
+
+
+def test_hwt_hold_before_nav_dispatch_preserves_task_without_child():
+    from explore.exploration_nav_runtime import ExplorationNavigationHold
+    context = PortalMapContext('session-hold', 'map-hold', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    intent.task_id = candidate.task_id
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._wohnungserkundung_active_child = None
+    node._wohnungserkundung_active_frontier_source = None
+    node._wohnungserkundung_active_frontier_fingerprint = None
+    class Session:
+        def run(self, *_args, **_kwargs):
+            raise ExplorationNavigationHold('before dispatch')
+    run, portal = node._run_wohnungserkundung_child(
+        Session(), intent, candidate,
+        SimpleNamespace(is_cancel_requested=False), lambda: False)
+    assert portal is None
+    assert run.stop_cause is NavigationStopCause.HWT_RECOVERY_HOLD
+    assert node._wohnungserkundung_active_child is None
+    assert node._hwt_interrupted_task_id == intent.task_id
+    assert node._wohnungserkundung_consumed_intent_id == intent.intent_id
 
 
 def test_we_local_abort_needs_stopped_base_and_fresh_obstacle_proof():
@@ -2502,11 +2699,12 @@ def _portal_runtime_node(monkeypatch, outcome):
     class NavigationSession:
         def run(self, selected_intent, selected_candidate, navigate_child,
                 source_state, user_canceled, budget_exhausted,
-                *, local_blocked, safety_failure):
+                *, local_blocked, safety_failure, recoverable_hold):
             assert selected_intent is intent
             assert selected_candidate is candidate
             assert callable(local_blocked)
             assert callable(safety_failure)
+            assert callable(recoverable_hold)
             assert navigate_child(candidate, lambda: False) == 'success'
             return run
 
@@ -2852,7 +3050,10 @@ def test_enabled_region_graph_shadow_owns_exact_ros_interfaces(monkeypatch):
     assert subscription_qos is publisher_qos
     assert interface_calls[1][2]['callback_group'] is node._cb
     assert interface_calls[2][1][0] == 1.0
-    assert interface_calls[2][2]['callback_group'] is node._cb
+    group = interface_calls[2][2]['callback_group']
+    assert group is node._region_graph_shadow_policy_group
+    assert isinstance(group, explore_node_module.MutuallyExclusiveCallbackGroup)
+    assert group is not node._cb
     assert isinstance(node._region_graph_shadow_lock, type(threading.Lock()))
     assert node._region_graph_shadow_fault is None
 
@@ -3223,8 +3424,9 @@ def test_region_graph_status_publishes_one_string_per_tick(monkeypatch):
     assert publications[0].data == '{}'
 
 
+@pytest.mark.parametrize('interrupted_task_id', [None, 'held-task'])
 def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
-        monkeypatch):
+        monkeypatch, interrupted_task_id):
     assessment = SimpleNamespace(
         eligible_task_ids=(),
         state=PolicyAssessmentState.WAITING_FOR_FRESH_SOURCES,
@@ -3238,6 +3440,7 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     publications = []
     assessed = []
     node = ExploreNode.__new__(ExploreNode)
+    node._hwt_interrupted_task_id = interrupted_task_id
     node._region_graph_shadow_lock = threading.Lock()
     node._region_graph_shadow_fault = None
     node._region_graph_shadow = SimpleNamespace(
@@ -3259,7 +3462,7 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
                 selected_source is source
                 and selected_availability == ()
                 and selected_utilities == ()
-                and preferred_task_id is None
+                and preferred_task_id == interrupted_task_id
             ) else None,
     )
 
@@ -3293,8 +3496,13 @@ def test_passive_policy_assesses_snapshot_without_changing_shadow_output(
     assert publications[0].data == '{"shadow":true}'
 
 
+@pytest.mark.parametrize('cone,goal_xy,blocked', [
+    (0.0, (1.0, 1.0), False),
+    (0.17, (1.0, 1.0), True),
+    (0.17, (2.0, 2.0), False),
+])
 def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
-        monkeypatch):
+        monkeypatch, cone, goal_xy, blocked):
     raw_map = SimpleNamespace(
         info=SimpleNamespace(
             width=2,
@@ -3459,9 +3667,16 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
         lambda value: {'state': 'current'} if value is candidate else None)
     monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 11.0)
 
+    node._frontier_forward_cone_half_angle = cone
+    candidate = SimpleNamespace(target_x_m=goal_xy[0], target_y_m=goal_xy[1])
     node._publish_region_graph_shadow_status()
     node._publish_region_graph_shadow_status()
 
+    expected_goal = {'state': 'current'}
+    if blocked:
+        expected_goal['dispatch_blocked_reason'] = 'frontier_outside_forward_cone'
+    assert node._wohnungserkundung_navigation_snapshot == (
+        None if blocked else (intent, candidate))
     assert node._wohnungserkundung_status_extension == {
         'schema_version': 1,
         'task_evidence_source': {
@@ -3472,9 +3687,7 @@ def test_passive_runtime_builds_frontier_evidence_outside_shadow_lock(
             'availability_count': 1,
             'utility_count': 1,
         },
-        'goal_candidate': {
-            'state': 'current',
-        },
+        'goal_candidate': expected_goal,
     }
     assert len(evidence_builds) == 1
     assert len(goal_builds) == 1
@@ -4052,3 +4265,272 @@ def test_cache_change_during_detection_discards_candidates(monkeypatch):
     assert correlation.map_revision == 7
     assert inventories == []
     assert node._region_graph_shadow_processed_correlation is None
+
+
+def test_we_navigation_rejects_disabled_required_portal_feed():
+    # Last real no-scan profile disabled this feed, while policy required it.
+    with pytest.raises(ValueError, match='Portalfeed'):
+        validated_we_navigation_enabled(
+            True, True, True, True, True, portal_feed_enabled=False)
+    assert validated_we_navigation_enabled(
+        True, True, True, True, True, portal_feed_enabled=True)
+
+
+def test_we_runtime_transition_between_checks_preserves_parent(monkeypatch):
+    node = ExploreNode.__new__(ExploreNode)
+    node._wohnungserkundung_runtime_lock = threading.Lock()
+    node._region_graph_shadow_lock = threading.Lock()
+    node._wohnungserkundung_status_extension = {'schema_version': 1}
+    node._wohnungserkundung_policy_snapshot = None
+    node._wohnungserkundung_completion_policy = CompletionPolicy()
+    node._map = None
+    node._wohnungserkundung_navigation_snapshot = None
+    node._hwt_hold_announced = False
+    node._hwt_recovery_sequence = 0
+    node._publish_status = lambda state: None
+    health = SimpleNamespace(lock=threading.RLock(), recovery_state='HEALTHY',
+                             recovery_budget_s=10.)
+    calls = []
+    def failure():
+        calls.append('evaluate')
+        if len(calls) == 1:
+            return None
+        health.recovery_state = 'HOLD'
+        return 'raw_missing_stale_or_invalid'
+    node._hwt_guard = SimpleNamespace(health=health, failure=failure,
+        decision=lambda: (failure(), health.recovery_state))
+    class ReachedHold(Exception):
+        pass
+    def wait(*args, **kwargs):
+        raise ReachedHold()
+    node._wohnungserkundung_wait_for_hwt_resume = wait
+    node._finish_wohnungserkundung_completion = lambda *args: 'ABORT'
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    monkeypatch.setattr(explore_node_module.time, 'sleep', lambda _: None)
+    with pytest.raises(ReachedHold):
+        node._execute_wohnungserkundung_navigation(
+            SimpleNamespace(is_cancel_requested=False), 10.)
+    assert node._hwt_hold_announced
+    assert node._hwt_recovery_sequence == 1
+
+
+def test_faulted_map_context_cannot_reuse_an_old_candidate():
+    node = ExploreNode.__new__(ExploreNode)
+    node._region_graph_shadow_lock = threading.Lock()
+    node._region_graph_shadow_fault = 'Kartenstatus: MapEpochChangeRequired'
+    # No runtime snapshot access is needed after the exact-map owner failed.
+    assert node._current_wohnungserkundung_navigation_target() is None
+    intent = SimpleNamespace(context=PortalMapContext('session', 'map', 'map'), map_revision=1)
+    assert not node._wohnungserkundung_source_state(intent, object()).current
+
+
+@pytest.mark.parametrize('pose,goal,cone,allowed', [
+    ((0., 0., 0.), (.135, -.417), .17, False),
+    ((0., 0., 0.), (1., 0.), .17, True),
+    ((0., 0., math.pi - .01), (-1., -.01), .17, True),
+    ((0., 0., 0.), (-1., 0.), .17, False),
+    (None, (1., 0.), .17, False),
+    ((0., 0., float('nan')), (1., 0.), .17, False),
+    ((0., 0., 0.), (float('nan'), 0.), .17, False),
+    ((0., 0., 0.), (0., 0.), .17, False),
+    ((0., 0., 0.), (1., 0.), float('nan'), False),
+    ((0., 0., 0.), (.135, -.417), 0., True),
+])
+def test_we_forward_constraint_preserves_metric_goal(pose, goal, cone, allowed):
+    candidate = SimpleNamespace(target_x_m=goal[0], target_y_m=goal[1])
+    before = candidate.__dict__.copy()
+    assert explore_node_module.frontier_within_forward_cone(
+        candidate, pose, cone) is allowed
+    assert candidate.__dict__ == before
+
+
+@pytest.mark.parametrize('sample_mode,expected', [
+    ('callback_between_reads', 'success'),
+    ('stale', 'odom_stale'),
+    ('future', 'odom_stale'),
+    ('invalid', 'odom_stale'),
+])
+def test_rotation_samples_clock_after_odom_snapshot(monkeypatch, sample_mode, expected):
+    """A callback after loop-time capture must not look like time regression."""
+    clock = [100.0]
+    count = [0]
+    commands = []
+
+    def snapshot():
+        # Deterministically represent callback scheduling before snapshot return.
+        clock[0] += 0.01
+        count[0] += 1
+        received = clock[0]
+        yaw = min(count[0] - 1, 2) * 0.05
+        if sample_mode == 'stale':
+            received -= 6.0
+        elif sample_mode == 'future':
+            received += 1.0
+        elif sample_mode == 'invalid':
+            yaw = None
+        return yaw, 0.0, received
+
+    node = SimpleNamespace(
+        _scan_rate_check_after=15.0, _scan_min_average_rate=0.01,
+        _scan_command_rate=20.0, _scan_odom_timeout=0.8,
+        _scan_odom_recovery_timeout=5.0, _scan_reverse_limit=0.1,
+        _scan_progress_window=0.01, _scan_no_progress_timeout=15.0,
+        _odom_snapshot=snapshot,
+        _scan_cmd_pub=SimpleNamespace(publish=commands.append),
+        _publish_scan_stop=lambda: None,
+        _stop_scan_and_confirm=lambda: 'success',
+        get_logger=lambda: SimpleNamespace(warn=lambda *_: None, info=lambda *_: None),
+    )
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock[0])
+    monkeypatch.setattr(explore_node_module.time, 'sleep',
+                        lambda seconds: clock.__setitem__(0, clock[0] + seconds))
+    monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
+    status, _ = ExploreNode._rotate_in_place(node, 0.08, 0.08, 20.0)
+    assert status == expected
+    assert bool(commands) == (sample_mode == 'callback_between_reads')
+
+
+def test_scan_pause_deadline_can_pass_between_clock_reads(monkeypatch):
+    clock = iter([0.0, 0.0, 0.0, 0.01, 0.06, 0.07])
+    sleeps = []
+    def sleep(seconds):
+        assert seconds >= 0.0
+        sleeps.append(seconds)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(explore_node_module.time, 'sleep', sleep)
+    node = SimpleNamespace(
+        _initial_scan_segment_angle=0.5, _initial_scan_angle=0.5,
+        _initial_scan_speed=0.08, _initial_scan_timeout=280.0,
+        _initial_scan_segment_pause=0.05,
+        _rotate_in_place=lambda *args, **kwargs: ('success', 0.5),
+        _publish_scan_stop=lambda: None)
+    assert ExploreNode._scan_in_place(node) == ('success', 0.5)
+    assert sleeps == [0.0]
+
+
+def test_prealign_settle_deadline_can_pass_between_clock_reads(monkeypatch):
+    clock = iter([0.0, 0.01, 0.06, 0.07])
+    sleeps = []
+    def sleep(seconds):
+        assert seconds >= 0.0
+        sleeps.append(seconds)
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    monkeypatch.setattr(explore_node_module.time, 'sleep', sleep)
+    node = SimpleNamespace(
+        _prealign_enabled=True, _prealign_handoff_tolerance=0.17,
+        _prealign_stop_margin=0.10, _prealign_speed=0.12,
+        _prealign_timeout=180.0, _prealign_rate_check_after=15.0,
+        _prealign_min_average_rate=0.01, _prealign_settle_s=0.05,
+        _prealign_max_passes=3, _prealign_min_improvement=0.04,
+        _rotate_in_place=lambda angle,*args,**kwargs: ('success',abs(angle)),
+        _robot_pose=lambda: (0.0,0.0,-math.pi/2),
+        get_logger=lambda: SimpleNamespace(info=lambda *_: None))
+    assert ExploreNode._prealign_to_goal(node,0.,-1.,(0.,0.,0.))[0]=='success'
+    assert sleeps == [0.0]
+
+
+@pytest.mark.parametrize('callback', ['raw', 'status'])
+@pytest.mark.parametrize('route_valid', [True, False])
+def test_active_raw_proof_does_not_wait_for_busy_task_policy(
+        monkeypatch, callback, route_valid):
+    context = PortalMapContext('session-fast-callback', 'map-fast-callback', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=3_000_000_004)
+    correlation = node._region_graph_shadow_latest_correlation
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    raw_map.header.stamp.sec = 3
+    raw_map.header.stamp.nanosec = 4
+    source = SimpleNamespace(fingerprint='b' * 64,
+                             source_stamp_ns=3_000_000_004, frame_id='map')
+    node._region_graph_shadow_fault = None
+    node._region_graph_shadow_raw_map_enabled = True
+    node._region_graph_shadow_raw_event_feed = True
+    node._region_graph_shadow_latest_raw_map = raw_map
+    node._region_graph_shadow_latest_raw_source = source
+    node._wohnungserkundung_policy_enabled = True
+    node._wohnungserkundung_active_child = (intent, candidate)
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_id = ''
+    node._wohnungserkundung_scope_clearance = 0.28
+    node._wohnungserkundung_policy_processed_revision = 7
+    node._wohnungserkundung_unconfirmed_intent_id = intent.intent_id
+    node._wohnungserkundung_unconfirmed_since = 10.0
+    node._robot_pose = lambda: (0.0, 0.0, 0.0)
+    node._region_graph_shadow = SimpleNamespace(
+        accept_raw_map_source=lambda *a, **k: SimpleNamespace(raw_map_correlation=correlation),
+        accept_map_status_json=lambda *a, **k: SimpleNamespace(raw_map_correlation=correlation))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: 12.0)
+    monkeypatch.setattr(explore_node_module, 'raw_map_portal_source_from_values',
+                        lambda **k: source)
+    def validate(*a, **k):
+        if not route_valid:
+            raise explore_node_module.FrontierGoalCandidateError('blocked route')
+        return 0.5
+    monkeypatch.setattr(explore_node_module,
+                        'revalidate_active_frontier_goal_candidate', validate)
+    # No policy progress for longer than the unchanged 1.25-s grace.
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+    if callback == 'raw':
+        node._on_map(raw_map)
+    else:
+        node._on_region_graph_map_status(SimpleNamespace(data='{}'))
+    assert node._wohnungserkundung_policy_processed_revision == 7
+    assert node._wohnungserkundung_source_state(intent, candidate).current is route_valid
+
+
+@pytest.mark.parametrize('new_revision', [8, 9])
+def test_late_active_validation_cannot_overwrite_newer_rejection(
+        monkeypatch, new_revision):
+    context = PortalMapContext('session-order', 'map-order', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context)
+    node._wohnungserkundung_active_child = (intent, candidate)
+    node._wohnungserkundung_evidence_policy = object()
+    node._wohnungserkundung_scope_clearance = 0.28
+    raw_map = _grid(width=20, height=20, resolution=0.05)
+    first = SimpleNamespace(context=context, map_revision=8, fingerprint='b' * 64)
+    newer = SimpleNamespace(context=context, map_revision=new_revision, fingerprint='c' * 64)
+    clock = iter((10.0, 11.0))
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: next(clock))
+    calls = []
+    def validate(*a, **k):
+        calls.append(True)
+        if len(calls) == 1:
+            node._wohnungserkundung_refresh_active_frontier_source(
+                raw_map, newer, (0.0, 0.0, 0.0), None)
+            return 0.5
+        raise explore_node_module.FrontierGoalCandidateError('new obstacle')
+    monkeypatch.setattr(explore_node_module,
+                        'revalidate_active_frontier_goal_candidate', validate)
+    node._wohnungserkundung_refresh_active_frontier_source(
+        raw_map, first, (0.0, 0.0, 0.0), None)
+    proof = node._wohnungserkundung_active_frontier_source
+    assert proof[1].map_revision == new_revision
+    assert not proof[1].current
+    assert node._wohnungserkundung_active_frontier_fingerprint == 'c' * 64
+
+
+def test_completed_policy_without_exact_raw_join_keeps_bounded_handoff(monkeypatch):
+    """Real revision 321 was processed with exact_raw_map_unavailable."""
+    context = PortalMapContext('session-join', 'map-join', 'map')
+    intent, candidate = _we_source_state_goal(context)
+    node = _we_source_state_node(context, revision=8, fingerprint='b' * 64,
+                                 source_stamp_ns=456)
+    node._wohnungserkundung_policy_processed_revision = 8
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 7, True),
+        'fixed_goal_revalidated_fast')
+    clock = {'now': 10.0}
+    monkeypatch.setattr(explore_node_module.time, 'monotonic', lambda: clock['now'])
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 11.24
+    assert node._wohnungserkundung_source_state(intent, candidate).current
+    clock['now'] = 11.26
+    assert not node._wohnungserkundung_source_state(intent, candidate).current
+    # An exact negative proof must close immediately, even within the window.
+    clock['now'] = 10.1
+    node._wohnungserkundung_active_frontier_source = (
+        intent.intent_id, NavigationSourceState(context, 8, False),
+        'fixed_goal_invalid:FrontierGoalCandidateError')
+    assert not node._wohnungserkundung_source_state(intent, candidate).current

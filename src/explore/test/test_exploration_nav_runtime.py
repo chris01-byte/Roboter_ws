@@ -17,6 +17,7 @@ from explore.exploration_child_goal import (  # noqa: E402
     ExplorationGoalIntent,
 )
 from explore.exploration_nav_runtime import (  # noqa: E402
+    ExplorationNavigationHold,
     ExplorationNavigationRuntimeError,
     ExplorationNavigationSession,
     NavigationSourceState,
@@ -152,6 +153,65 @@ def test_source_stop_remains_latched_when_source_recovers_before_nav2_cancel():
     assert result.stop_cause is NavigationStopCause.SOURCE_INVALIDATED
     assert result.disposition.state is ChildResultDispositionState.REEVALUATE
     assert result.disposition.attempt is None
+
+
+def test_hwt_hold_cancels_one_child_and_preserves_parent_task_for_new_intent():
+    hold = {'active': False}
+    def navigate(_candidate_value, should_stop):
+        hold['active'] = True
+        assert should_stop() is True
+        hold['active'] = False  # sensor healed before Nav2 terminal result
+        return 'canceled'
+
+    session = ExplorationNavigationSession(CONTEXT)
+    result = session.run(
+        _intent(), _candidate(), navigate,
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        safety_failure=lambda: False,
+        recoverable_hold=lambda: hold['active'])
+    assert result.stop_cause is NavigationStopCause.HWT_RECOVERY_HOLD
+    assert result.disposition.state is ChildResultDispositionState.REEVALUATE
+    assert result.disposition.attempt is None
+    assert result.disposition.terminates_exploration is False
+    assert session.child_status.state is ChildGoalState.IDLE
+    # A new, revalidated intent can start only after the old one ended.
+    second = session.run(
+        _intent(8), _candidate(8),
+        lambda _candidate_value, should_stop: (
+            'success' if not should_stop() else 'error'),
+        lambda: NavigationSourceState(CONTEXT, 8, True),
+        lambda: False, lambda: False,
+        recoverable_hold=lambda: False)
+    assert second.disposition.state is ChildResultDispositionState.PROGRESSED
+
+
+@pytest.mark.parametrize('status', ['cancel_failed', 'error'])
+def test_hwt_hold_without_terminal_child_never_replans(status):
+    hold = {'active': False}
+    def navigate(_candidate_value, should_stop):
+        hold['active'] = True
+        return status if should_stop() else 'success'
+    result = ExplorationNavigationSession(CONTEXT).run(
+        _intent(), _candidate(),
+        navigate,
+        lambda: NavigationSourceState(CONTEXT, 7, True),
+        lambda: False, lambda: False,
+        recoverable_hold=lambda: hold['active'])
+    assert result.stop_cause is NavigationStopCause.SYSTEM_FAILURE
+    assert result.disposition.terminates_exploration is True
+
+
+def test_hwt_hold_before_dispatch_starts_no_nav2_child():
+    calls = []
+    with pytest.raises(ExplorationNavigationHold):
+        ExplorationNavigationSession(CONTEXT).run(
+            _intent(), _candidate(),
+            lambda *_args: calls.append(True) or 'success',
+            lambda: NavigationSourceState(CONTEXT, 7, True),
+            lambda: False, lambda: False,
+            recoverable_hold=lambda: True)
+    assert calls == []
 
 
 def test_unconfirmed_cancel_never_replans_even_after_source_stop():

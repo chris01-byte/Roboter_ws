@@ -1,5 +1,320 @@
 # Übertragung auf den realen Roboter
 
+## 30.09.2026 – metrischer Realnachweis: lesender Vorlauf blockiert
+
+Exakter Softwarekandidat `deb075e3f1a51a46bc00c2235a3068cfbe45d769`,
+Branch `feature/hwt-hold-recovery-resume` / PR #105, LAB-1. Reale Domain 42.
+Isoliertes Sechspaketpräfix `metric-frontier-20260930/software-final/install`
+über vorhandener Runtime-Kette/Vollunderlay `hwt-child-scope-20260928-retry/install`;
+LD-LiDAR-Shutdownoverlay und vorhandener SLAM-Toolbox-Install aufgelöst.
+Tatsächliche Prozess-/Profil-/Modulhashes im privaten Runtime-Manifest.
+`~/roboter_ws` bleibt auf `23928d9`, kein dauerhafter Installwechsel/Merge.
+
+Passiver regulärer `app_mapping`-Start: `active_drive=false`, HWT-Odometrie,
+`enable_auto_explore=false`; kein Aktorschreibprozess. Anfänglich ungebundener
+Explorer erwartungsgemäß fail-closed; anschließend reale Karte/Pose und
+LAB-1-Scope lokal gebunden und alleiniger Explorer über bestehenden Overlay-
+Launch gestartet. Parameter und 324 Statusmeldungen: `metric_frontier`,
+alte WE-Policy/Navigation false. Keine Pflicht-Portale/Regionen.
+
+Erster Quellenblocker: Radsample 189,166 ms > passive 180-ms-Grenze.
+Einmaliger passiver Gate-Neustart nach Quellenstart; kurze Rohquellen-HOLD/
+Recovery separat. Später Encoderreader terminal: FC03-Paar 125,870 ms >
+120 ms, Einzelreads 91,760/33,809 ms. Keine Grenze gelockert; konkrete
+zeitliche Ursache nicht bewiesen, kein Hardwaredefekt behauptet.
+Unabhängiger Geometriesnapshot: Startzelle unbekannt, volle gepaddete Kontur
+in Rohkarte/Costmap unzulässig; Scan bereits erste Orientierung ungültig.
+25 Frontiercluster, 25 `no_known_free_route`, kein zulässiger Kandidat.
+
+Kein aktiver Wechsel und keine Mission/Fahrt; Realnachweis damit nicht
+erreicht. A/C nicht bestanden, B nicht aufgetreten, Stufe 3 weiterhin offen.
+Grenzen im Liveprofil 900 s/150 s/6 Versuche/3 Fehler, Scan 280 s/0,08 rad/s;
+keine Mission begann diese Budgets. Keine direkten Explore-/Nav2-Ziele.
+
+Recorder bis zum geordneten Ende aktiv; Datenbank erst nach Recorderende
+analysiert. Keine running-Mission/kein Nav2-Statuseintrag; alle erfassten
+Ausgangsbefehle null. Einzelne Launchwurzeln SIGINT, keine Prozessgruppe.
+Alle manifestierten Prozesse beendet, ttyUSB-Handles frei, keine Shutdown-
+fehler im Abschlusslog. Zwölf frische FC03-Paare nach Stackende: unveränderte
+Motorpositionen, 0 rpm. Keine elektrische Sperrstellung behauptet.
+
+Private Belege `~/.local/share/amadeus/tests/metric-frontier-real-20260930/`:
+`REPORT.md`, Manifest, Liveparameter/-status, Rohkarten-/Costmapsnapshot,
+Konturdarstellung, geschlossene Bag-Auswertung, FC03-Start/Endmessungen und
+Shutdownprüfung. Nur datensparsame Dokumentation veröffentlicht.
+Rückfall bereits wirksam: gestartete Prozesse beendet, keine Mission,
+permanenter Install unverändert. MASTERPLAN v1.2 unverändert.
+Genau nächster Schritt steht im STATUS: gezielter Vorlauf-Korrekturauftrag
+für Startkarten-/Kontur- und FC03-Paarzeitblocker mit getrennten Nachweisen,
+keine automatische neue Fahrt.
+
+## 30.09.2026 – metrischer Softwarekandidat, keine Roboterübertragung
+
+Separater Checkout: `/home/p/roboter_worktrees/metric-exploration-20260930`,
+Basis `1dbbdaacc18550f1c1912a9a36a765bda397b19f`, vereinbarter Branch
+`feature/hwt-hold-recovery-resume` / PR #105. Die laufende Arbeitskopie
+`~/roboter_ws` bleibt auf ihrem bisherigen Stand; kein dauerhafter Install,
+kein Merge, keine Hardware-/Sensorprozesse und keine reale Fahrt.
+
+Sechs Pakete gerätefrei gebaut unter
+`~/.local/share/amadeus/tests/metric-frontier-20260930/software-final/install`:
+explore, robot_navigation, robot_state_estimation, mission_manager,
+robot_map_manager, amadeus_map_identity. Source-Reihenfolge der Tests:
+ROS Humble → `hwt-child-scope-20260928-retry/install` → Kandidatenpräfix.
+BT stammt weiterhin aus dem Vollunderlay, kein neuer BT-Stack. Paketpfade
+stehen in jedem Graphlog; diese Auflösung ist ein lokaler Softwarebeleg,
+kein Jetson-Laufmanifest. Nach Umgebungsneustart verloren gegangene `/tmp`-
+Zwischenbuilds nicht als verwendbaren Install voraussetzen.
+
+Neuer Modus ausschließlich `exploration_strategy=metric_frontier` mit
+`src/explore/config/metric_frontier_params.yaml`, nach dem Basisprofil und
+vor Missionstart. Ausgeliefertes Overlay ist nicht fahrfertig: aktuelle
+Session, gemessener Startkarten-Fingerprint und explizit verifiziertes
+Scopepolygon fehlen absichtlich. Default bleibt `existing`. Metrischer
+Modus hat denselben Nav2-Client/Gate; keine Pflicht-Portal-/Regionsdaten.
+Keine Geschwindigkeits-, Hardware-, Sensorframe-, EKF- oder Collision-
+Monitor-Konfiguration geändert. Bei bewusstem späterem Einsatz können
+mehrere normale Nav2-Aufgaben aus aktuellen Rastern folgen; physische
+Wirkung daher erst nach realem technischen Vorlauf bewerten.
+
+Gerätefrei: 1.342 pytest-Regressionen, registrierte colcon-Tests und verbundene
+synthetische Produktfälle laut STATUS §4. localhost/Domain 224 bzw. 226,
+keine konfigurierten DDS-Peers und kein Gerätebus. Reale Domain 42 hat keine
+Testpublisher erhalten. Ergebnisse/Karten/Bags bleiben lokal außerhalb Git.
+
+Rückfall: Overlay nicht laden und ohne Mission geordnet `existing` starten;
+Betriebsrückfall `active_drive=false`, `enable_auto_explore=false`. Ein
+nicht nachgewiesen terminales Nav2-Kind sperrt auch neue Elternaufträge;
+bei unklarem Cancel kein Neustart zur ungeprüften Wiederanfahrt.
+Genau ein begrenzter Realnachweis ist in AGENTENAUFTRAG §7 vorbereitet,
+noch nicht ausgeführt. Stufe 3 und reale Durchfahrt bleiben offen.
+
+
+## 29.09.2026 – isolierter HOLD-Auftragserhalt-Kandidat
+
+Der aktive Produktlauf mit `08127c8` ist nach terminalem Recoveryabbruch
+geordnet beendet. Neues Explore-Paket separat unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/hold-task-install`, nach
+`idle-gate-install` (Navigation) und `hwt-callback-order-install` (HWT) sourcen.
+Der Vollunderlay bleibt `hwt-child-scope-20260928-retry/install`. Kein
+dauerhafter Installwechsel. Gerätefreier Graph läuft ausschließlich localhost
+in Domain 200–230; reale Domain 42 übernimmt keine Testpublisher.
+Real aufgelöst und bytegleich geprüft im lokalen Lauf
+`stage3-core-20260929/autonomous-goal-after-hold-task-fix/`: aktiver Start,
+vollständiger Scan, sieben autonome Kinder, aber keine abgeschlossene Aufgabe.
+Nach 459,860 s kontrolliert beendet; alle Roboterprozesse und seriellen Handles
+frei. Kein HWT-first_fault, neuer Kartenquellennachweis-Blocker. Einzelwerte,
+Grenzen und genau nächster Auftrag ausschließlich im STATUS §7.
+
+
+## 28.09.2026 – gezielte Portal-/Explorer-Reparatur, noch keine neue Fahrt
+
+Explore und robot_state_estimation wurden unter
+`~/.local/share/amadeus/tests/hwt-portal-repair-20260928/install` isoliert gebaut.
+Underlay bleibt der vollständige `hwt-child-scope-20260928-retry/install` mit
+den dokumentierten SLAM-/LiDAR-Overlays. Aktiver Install und Hauptarbeitskopie
+bleiben unverändert. Das neue lokale No-Scan-Profil aktiviert den erforderlichen
+Portalfeed; Portalquerung, Initialscan, Coverage und Rückkehr bleiben aus.
+Vor Ort wurden Motorsperre, Stillstand und FC03-Erreichbarkeit ausdrücklich
+bestätigt; damit ist die unten noch historisch offene Sperrenrückmeldung geklärt.
+Die reale Karten-/Scopebindung muss im motorlosen Vorlauf neu gemessen werden.
+Aktueller verbindlicher Nachweisstand: STATUS Abschnitt 7.
+
+Der anschließende passive Start auf `e5b221b` ist beendet: Quellen, Karte/TF,
+VL53 und Stillstand waren gültig. Die echte Policy lieferte autonome Ziele,
+aber alle beobachteten Routen überschritten 0,45 m (Minimum 0,959117 m).
+Daher kein aktiver Start und keine Mission/Injektion. Neues Scope lokal aus
+Live-Pose erzeugt und dokumentiert, noch nicht als neues Laufprofil geladen.
+28/28 Launch-Kinder sauber beendet, Recorder beendet und Ports frei. Lokale
+Belege: `hwt-portal-repair-20260928/result.json`, Runtime-Manifest, Bag und
+Scopebindung. Nach Shutdown Bindung nicht mehr live; aktiver Install unverändert.
+
+
+## HWT-Kindziel, aktiver Einzelversuch ohne Ziel — 28.09.2026
+
+Der unveränderte PR-#105-Build unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+wurde über `app_mapping.launch.py` mit `active_drive=true`,
+`use_hwt601_odometry=true`, `enable_auto_explore=true` und dem lokalen
+Einmalprofil ohne Initialscan (SHA256 `a5e6b1d0…`) gestartet. Das lokale
+`runtime-manifest-active-v2.json` unter
+`~/.local/share/amadeus/tests/hwt-child-active-20260928-once/` hält die
+aufgelösten Paketpfade fest; ein dauerhafter Installwechsel fand nicht statt.
+Nach SLAM-Neustart wurde Scope-ID `we1-hwt-child-noscan-20260928-once` an
+die neue Live-Karte `fb26a819…` und die Startpose gebunden (maximal
+0,0009 m Eckenversatz). Bei stillstehender Basis waren HWT-Fusion,
+Encoderfeedback und Sicherheitsstatus gesund. `base_hardware` besaß
+`/dev/ttyUSB_BASE` allein, der HWT-Leser `/dev/ttyUSB_HWT601` allein;
+kein paralleler Encoderleser. Die Vor-Ort-Bestätigung bezog sich auf den
+kontrolliert gelösten unabhängigen Motorhalt, anwesenden Beobachter und
+weiterhin freien Korridor.
+
+Recorder und 340-s-Cancel-Wächter liefen vor dem einzigen Explore-Auftrag
+über Mission Manager → BT → Explorer. In 247,97 s erzeugte der aktive
+Produktpfad kein Kindziel: 249/249 Statusbilder meldeten
+`stale_source:portal_memory`, kein Zielkandidat, keine Nav2-UUID und
+kein Plan. Der Explorer endete vor der 300-s-Suchgrenze unerwartet mit
+`hwt601_raw_missing_stale_or_invalid`. Es gab keine geplante HWT-Pause,
+keinen HOLD und keine Nichtnull-Fahrkommandos; `/odom` maß 0,000 m Weg.
+Der exakte Explorer-interne Erstwert ist nicht belegt; der getrennte
+Fusion-Wächter blieb um den Abbruch gesund. Der Recorder erfasste
+`/near_field/status` wegen fehlendem `robot_interfaces`-Overlay nicht.
+Stack und Bag sind sauber beendet, 28/28 Launch-Kinder beendet, Ports frei.
+Vor-Ort-Rückmeldung zur nach dem Lauf wieder wirksamen Motorsperre steht
+noch aus. Kein zweiter Versuch, keine Produktänderung und keine
+Kindziel-Recovery-Abnahme aus diesem Lauf.
+
+## HWT-Kindziel ohne erneuten Initialscan — motorlos nicht ausgelöst (28.09.2026)
+
+Das lokale Einmalprofil `hwt-child-no-initial-scan.yaml` unter
+`~/.local/share/amadeus/tests/hwt-child-noscan-20260928/` hat SHA256
+`a5e6b1d08041b3f63bb1fcd2b7730b709194fbe210426770f1ff759d2e70dcd6`.
+Es schaltet nur den bereits real bestandenen Initialscan aus, hält
+WE-Navigation an und begrenzt den Versuch auf ein Frontier-/Fehlziel ohne
+Portalquerung, Coverage oder Rückkehr. Produktcode und aktiver Install
+blieben unangetastet. Der korrigierte motorlose Start verwendete dieses
+Profil tatsächlich; FC03, HWT/Yaw, Karte/TF und VL53-Frames waren gesund.
+Der echte Mission-Manager-/BT-Auftrag scheiterte vor Kindziel-Dispatch an
+`hwt601_readonly_preflight_no_motion` (`active_drive=false`). 20 offene,
+zuletzt 5 geeignete Frontier-Aufgaben sind kein Nav2-Kind; Action-Status
+und -Feedback blieben leer. Kein Fahrkommando, keine Fahrt und keine
+HWT-Pause. Lokale Bag-/Statusnachweise unter demselben Testverzeichnis.
+Recorder und Stack sind beendet, 28/28 Kinder im zweiten Start sauber,
+Ports frei. Eine künftige Fahrt ist aus diesem Read-only-Ergebnis nicht
+freigegeben; die Reihenfolge zur Beobachtung eines echten Kindes muss
+ausdrücklich geklärt werden, ohne die Schutzsperre zu umgehen.
+
+## HWT-Kindziel-Abnahme — zweiter motorloser Vorlauf, keine Fahrt (28.09.2026)
+
+Der Nutzer bestätigte nach dem ersten fehlgeschlagenen Vorlauf nun eine
+FC03-erreichbare Controllerelektronik bei weiterhin unabhängig gesperrter
+Motorendstufe, Stillstand und Beobachtung vor Ort. Der funktional unveränderte
+PR-#105-Stand wurde isoliert unter
+`~/.local/share/amadeus/tests/hwt-child-scope-20260928-retry/install`
+neu gebaut und über das lokale `runtime-manifest-passive.json` aufgelöst.
+`app_mapping.launch.py` lief ausschließlich mit `active_drive=false`,
+`enable_auto_explore=false`; kein Motorprozess, keine Mission und kein
+Fahrkommando. FC03-Paare trafen ohne Latch ein, HWT-Roh-/Yaw und Fusion-
+Quellen waren gesund, Karte/TF frisch. Das neue lokale Einmal-Scope samt
+Fingerprint, Startpose, Polygon und Profilhash liegt nur im Testverzeichnis;
+das historische Scope wurde nicht verwendet. Eine motorlose Nav2-
+Planungsprobe blieb im Polygon, überschritt mit 0,494 m aber die für den
+späteren Test festgelegte 0,45-m-Routenobergrenze und ist kein autonomes
+Frontier-Kind. Der nötige rückwärtige Schwenkraum für den 360°-Initialscan
+ist vor Ort noch nicht bestätigt. Daher keine Fahrt oder HWT-Injektion.
+Der passive Stack endete mit 28/28 sauberen Kindern und freien Ports.
+Der aktive Install blieb unverändert; das Profil aus der beendeten
+SLAM-Session darf ohne erneute Kartenbindung nicht gefahren werden.
+
+## HWT-Roh-/Yaw-Recovery — ein begrenzter neuer Real-Teilnachweis
+
+Am 27.09.2026 wurde der PR-#105-Stand `6b666d97d7e11326c9f75dccbc4253112e99b578`
+einmal im ausdrücklich freigegebenen 40-s-/3-rad-Initialscan geprüft.
+Das Manifest unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-fxU0To/`
+belegt das unveränderte Abnahmeprofil `hwt601_recovery_acceptance_params.yaml`
+(SHA256 `ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`),
+die Overlay-Reihenfolge und `robot_state_estimation` aus
+`/tmp/we1-hwt-yaw-install`. Schattennode, Core und Health sind bytegleich
+mit den Quellen. Der aktive Install wurde nicht gewechselt.
+
+Nach bestandenem motorlosem Preflight lief der Recorder vor dem aktiven
+Stack. Eine einmalige 0,251-s-Leserpause erzeugte 0,260533 s Rohdatenlücke.
+Gate-HOLD sperrte die Fahrt; das Encoderfeedback meldete während HOLD
+0/0 gemessene Motor-RPM. Der eingefrorene Bias blieb unverändert, frische
+Yaw-Daten kehrten zurück, Health/Gate bestätigten Sequenz 1, und derselbe
+Explore-Auftrag setzte den Rundblick fort. Der Controller cancelte nach
+14,928 s und 0,136 rad; es gab keine Translation und kein Nav2-Kindziel.
+Stack und Recorder wurden geordnet beendet; HWT- und Motorport sind frei.
+Bag, Zeitfolge und Analyse liegen ausschließlich lokal. Die anwesende Person
+bestätigte am 28.09.2026 für **diesen neuen Versuch** nachträglich den
+tatsächlichen physischen Halt beim HOLD, Stillstand nach Cancel und die
+danach wieder wirksame unabhängige Motorsperre. Damit ist der begrenzte
+Rundblick-Umfang real bestanden; es wurde kein zweiter Versuch gefahren.
+Ein aktives Nav2-Kindziel, eine Zielroute, Tür- oder Frontier-Recovery waren
+nicht Gegenstand dieses Laufs. Keine neue Fahrt aus diesem Befund;
+Stufe 3 bleibt offen.
+
+## HWT-Roh-/Yaw-Korrektur — ausschließlich isolierter Softwarestand
+
+Auf demselben PR-#105-Branch wurde nur `robot_state_estimation` für die
+reine postkalibrierte Rohdatenlücke geändert und isoliert unter
+`/tmp/we1-hwt-yaw-install` über dem bisherigen Recovery-Overlay gebaut.
+Das installierte Abnahmeprofil bleibt SHA256 `ee3b42eef…`. Der
+gerätefreie Produktgraph verwendete den echten Yaw-Schatten und bestand
+mit 0,260675 s gemessener Rohdatenlücke; Bias unverändert, HOLD und
+Fortsetzung nach Stillstands-/Pose-/Wegprüfung und Gate-ACK. Keine
+produktive Roboter-Runtime, kein Gerät oder Aktor wurde dafür gestartet;
+der aktive Install blieb unverändert. Details und Gegenfälle stehen in
+STATUS Abschnitt 5.
+
+Für einen später gesondert freizugebenden Einzeltest die Setup-Kette
+`/opt/ros/humble`, `amadeus_slam_toolbox_ws`,
+`we1-ldlidar-shutdown-overlay`, `we1-full-shim-install`,
+`we1-hwt-recovery-install` und **danach**
+`/tmp/we1-hwt-yaw-install` in einem frischen Prozess auflösen und mit dem
+Runtime-Manifest tatsächlich nachweisen. Der aktuelle Roboter-Install
+enthält diese Änderung nicht. Rückfall bleibt der gesicherte
+PR-#104-Latchkandidat. Der nächste Schritt ist nur die begrenzte
+Realtestvorlage in AGENTENAUFTRAG Abschnitt 5; keine Fahrt aus dieser
+Übergabe.
+
+## HWT-Recovery-Realversuch — HOLD ja, RESUME nein
+
+Am 27.09.2026 lief genau ein von der anwesenden Person freigegebener,
+begrenzter Initialscan auf dem isolierten Recovery-Overlay (Quell-HEAD
+`25ac0481ad8c79ffcaa34d22ee4082fa5d39a45b`, PR #105). Der Recorder
+startete vor dem Stack. Runtime-Manifest, Bag und Logs bleiben lokal unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Profil, Hash und Underlay-Reihenfolge entsprechen dem folgenden motorlosen
+Abschnitt; `active_drive=true`, `enable_auto_explore=true`,
+`use_hwt601_odometry=true`. Der Motorbus hatte nur `base_hardware` als
+Besitzer, der HWT-Port nur den HWT-Leser. Der aktive Install blieb unverändert.
+
+Eine einmalige 0,251-s-Pause des HWT-Lesers löste eine 0,261-s-Rohdatenlücke
+aus. Das Gate erkannte `raw_missing_stale_or_invalid` bei 0,220622 s
+Rohmessalter gegen 0,20 s, sperrte die Bewegung und der Explore-Auftrag
+blieb zunächst im HOLD. Der Yaw-Schatten verriegelte dieselbe Lücke wegen
+seiner bestehenden 0,10-s-Grenze als `imu_datenluecke_neustart_noetig`;
+danach folgte `yaw_missing_stale_or_invalid` als terminaler Fusion-Fehler.
+**Kein RESUME:** Der Testcontroller cancelte die Mission; das frische
+Encoderfeedback meldete danach 0/0 Motor-RPM. Die gemessene Drehung war
+höchstens 0,081 rad, ohne Translation. Die separate Bestätigung des
+Beobachters über physischen Halt und wieder wirksame Motorsperre wurde
+inzwischen für **diesen früheren** Versuch erteilt. Der Stack und Recorder
+sind aus, HWT-/Motorports frei. Beim
+SIGINT-Shutdown starb `slam_toolbox` mit Exit -6; kein Zusammenhang mit
+dem HWT-Fehler ist belegt. Keine Wiederholung und keine Fahrfreigabe.
+
+Rückfall: Das damals gefahrene Recovery-Overlay nicht als bestanden
+übernehmen; der gesicherte PR-#104-Kandidat behält den fail-closed
+Latch. Die spätere gerätefreie Korrektur steht oben und ersetzt keinen
+zweiten Realnachweis.
+
+## HWT-HOLD-/Recovery-Branch — motorloser Zielsystemcheck
+
+`feature/hwt-hold-recovery-resume` baut die vier Pakete
+`robot_state_estimation`, `robot_navigation`, `explore` und `mission_manager`
+isoliert in `/tmp/we1-hwt-recovery-install` über
+`/tmp/we1-full-shim-install`. Der aktive Roboter-Install und der
+PR-#104-Kandidat blieben unberührt. Am 27.09.2026 wurde dieser Kandidat nach
+aktueller motorloser Bestätigung **mit echten Sensoren, ohne Motoren und ohne
+Mission** gestartet: HWT-Bias/Rohdaten/Gierrate, read-only Encoder, LiDAR,
+VL53, TF und Gate-Nullausgabe wurden geprüft. Der erste Launch brach vor
+Knotenstart ab, weil der externe LiDAR-Underlay fehlte. Für den erfolgreichen
+Lauf wurden `/opt/ros/humble`,
+`/home/p/amadeus_slam_toolbox_ws/install`,
+`/home/p/.local/share/amadeus/releases/we1-ldlidar-shutdown-overlay/install`,
+`/tmp/we1-full-shim-install` und `/tmp/we1-hwt-recovery-install` in dieser
+Reihenfolge gesourct. Das installierte Abnahmeprofil hatte SHA256
+`ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4`.
+Der motorlose Stack ist sauber beendet, HWT-/Motorports sind frei. Lokale
+Manifeste und Beobachtungen liegen unter
+`~/.local/share/amadeus/tests/hwt-recovery-real-20260927-3wLELq/`.
+Dieser motorlose Teilnachweis erteilte keine Fahrfreigabe; der später
+gesondert freigegebene begrenzte Realversuch steht oben.
+
+
 ## HWT-TOR-1-Diagnosekandidat — vollständiger motorloser Lauf
 
 Auf der Integrationslinie PR #103 enthält `f1f6b74a5e5aea1ba43c50beb75f5f954218fb78`
@@ -2293,3 +2608,329 @@ Rückfall: den vorherigen PR-#101-Head
 `40b5b49c9a92600484a0dc85c466930bc1680c60` wiederherstellen. Nicht pauschal auf
 `1d91229` zurückgehen, da dadurch spätere Hardware- und Sicherheitskorrekturen
 verloren gehen könnten. Siehe `docs/WE_PARITY_RESET.md`.
+
+## 2026-09-27 — Recovery-Abnahmeprofil nur im isolierten Software-Overlay
+
+`hwt601_recovery_acceptance_params.yaml` liegt derzeit allein im temporären
+Overlay `/tmp/we1-hwt-recovery-install/share/explore/config/`. Das aktive
+Jetson-Install wurde nicht gewechselt. `hwt601_parity_params.yaml` bleibt
+WE-Navigation-aus; erst das explizite Abnahmeprofil erreicht den neuen
+HWT-HOLD-/Recovery-/Resume-Zweig. Ein isolierter Softwarestart über Mission
+Manager, echten BT und Explorer gelang; dabei wurde weder ein Motor- noch
+ein Hardware-Sensorprozess gestartet. Anschließend bestand ein isolierter
+ROS-Graph-Test mit synthetischen Sensoren, TF, Costmap und Nav2-Gegenstelle:
+HWT-HOLD, terminales Kind, Stillstand, Gate-ACK und neues Kind für denselben
+Test-Task sowie getrennter Rundblick-HOLD ohne Kind. Die Karten-Task-Auswahl
+war ein Testadapter; die gesonderte reale Abnahme fehlt. Keine Fahr- oder
+Deploymentfreigabe.
+
+Vor einem späteren Realtest Quell-Commit, installierte Paketpräfixe,
+Profilpfad/Hash, Underlay-Reihenfolge und einzigen Hardwarebesitzer mit dem
+Runtime-Manifest festhalten. Rückfall bleibt der fail-closed PR-#104-Kandidat;
+kein aktiver Installwechsel folgt aus dieser Übergabe.
+
+
+## 28.09.2026 – PR #105: lokaler WE-Vorwärtskandidat und beendete Vorläufe
+
+Software `6429bd6`: ausschließlich Explore zusätzlich unter
+`~/.local/share/amadeus/tests/hwt-child-route150-20260928/forward-install/`
+gebaut. Temporäre Shellreihenfolge: bisheriges `hwt-portal-repair-20260928/`
+`runtime-env.sh`, danach dieses `forward-install/local_setup.bash`.
+Kein dauerhaftes Setup oder aktiver Install gewechselt. HWT-Schatten/Core/Health/
+Guard weiter aus dem korrigierten `hwt-portal-repair-20260928/install`.
+`forward-loaded-modules.json` und die Laufmanifeste dokumentieren Auflösung/Hashes.
+Für den aktiven MM→BT→WE-Pfad sind `active_drive=true` UND
+`enable_auto_explore=true` erforderlich; letzteres startet noch keine Mission.
+Der motorlose Sensorpfad verwendet `active_drive=false`. Lokale Scope-/Profil-
+Daten und alle Bags bleiben unter dem Testverzeichnis. Das Repo-Produktprofil
+ist unverändert. Letzte motorlose Vorläufe nach separater Bestätigung gesperrter
+Motorendstufe bei erreichbaren FC03-Encodern; aktueller Ergebnisstand und offene
+Bedingungen stehen ausschließlich in WE-STATUS Abschnitt 7.
+
+Recorder-Zusatz: `ros2 bag record --include-hidden-topics` ist für die explizit
+aufgelisteten Nav2-Action-Themen notwendig (isolierte Gegenprobe 0 vs 73
+Statusnachrichten). Vergangene Goal-UUID/Terminalfolge liegt im Controllerlog,
+nicht im Real-Bag. Abschaltfaults und tatsächlichen Vorlauf-FC03-Zeitüberlauf
+getrennt behandeln, siehe WE-STATUS. Zum Abschluss keine Roboterknoten oder
+Portbesitzer mehr; alle sieben Aufzeichnungen ohne Fahrkommando/Translation.
+
+
+## 29.09.2026 – Schritt-3-Produktprofil motorlos geprüft
+
+Aktueller Auftrag gemäß WE-STATUS: normale A/B/C-Kernabnahme, keine
+HWT-Fault-Injection und keine lokalen Kindziel-Sonderlimits. Dieselbe temporäre
+Overlayreihenfolge wie am 28.09.; kein Installwechsel. Byteidentische lokale
+Kopie des Repository-Recoveryprofils, SHA `ee3b42ee…`; Quellen-/Karten-/TF-
+Vorlauf mit `active_drive=false` bestanden. Belege unter
+`~/.local/share/amadeus/tests/stage3-core-20260929/`. Alle Prozesse danach
+geordnet beendet; kein Fahrbefehl. Aktuelle Fahrt noch nicht durchgeführt.
+Das Profil aktiviert WE und Portalwahl, aber nicht den separaten WE-
+Portalmonitor; dessen Zuordnung und Live-Scope müssen für Phase C belegt sein.
+
+
+## 29.09.2026 – reale Starts A1–A3 und temporärer korrigierter Explore-Install
+
+Aktueller funktionaler Commit `872f6a8`: im betroffenen Drehpfad zuerst
+Odometrie-Snapshot, dann Prüfzeit; abgelaufene Scan-/Prealignment-Pausen
+auf null Restwartezeit begrenzt. Keine Parameter- oder Schutzlockerung.
+Temporäre Shell: bisheriges `stage3-core-20260929/runtime-env.sh`, danach
+`stage3-core-20260929/pause-install/local_setup.bash`. Bytegleichheit
+Quelle/geladenes Modul und Runtime-Manifest geprüft. Kein aktiver Installwechsel.
+161 gezielte Tests, Build und motorlose Vorläufe bestanden. A3 endete sicher
+an `initial_scan_too_slow`, kein Nav2-Kind; alle Prozesse beendet. Letzte
+explizite Motorsperrenstellung vor den Fahrten: vom Nutzer kontrolliert gelöst
+(„erledigt“). Erneutes Sperren nach A3 angefordert, noch unbestätigt. Keine
+Stellung aus Software-Nullkommando ableiten. Nächster Auftrag im WE-STATUS.
+
+
+## 29.09.2026 – A-Produktlauf und temporäres HWT-Callback-Overlay
+
+Nach bestätigter aktueller Motorsperrenstellung „kontrolliert frei“ bestanden
+passiver und aktiver Preflight mit realen Quellen, Karte/TF und Stillstand.
+Produktstart über Mission Manager → BT → WE → Nav2: Initialscan fertig,
+autonome Kindziele angenommen, ca. 0,088 m zusätzliche kumulierte Odometrie-
+Translation in der Kindzielphase. Vor Zielerreichung trat ein terminaler
+HWT-Health-Erstfehler auf; Originalwerte und Auswertung im WE-STATUS Abschnitt 7
+und lokal unter `stage3-core-20260929/autonomous-goal-run-resumed/`.
+Nav2-Kinder wurden gecancelt, Endkommando null; Stack und Recorder beendet,
+keine Roboterknoten mehr. A/B/C noch offen.
+
+Fix `513af02`: überholten gültigen Callback nicht über eine bereits neuere
+gültige Roh-/Yaw-/Radprobe schreiben. Später eintretende Zeitrückläufe und
+ungültige Proben bleiben terminal. Keine Frische-, HWT-, Motor- oder
+Kollisionsgrenzen verändert. 157 Pakettests bestanden; isolierter Install
+`~/.local/share/amadeus/tests/stage3-core-20260929/hwt-callback-order-install/`
+enthält den zur Quelle bytegleichen Health-Code, SHA-256 `8055fa44…`.
+Für einen späteren Test nur als letztes Overlay nach
+`autonomous-goal-run-resumed/runtime-env.sh` sourcen; aktiver Install nicht
+gewechselt. Nach Codeänderung zuerst mit unabhängiger Motorsperre motorlos
+prüfen. Die aktuelle Schalterstellung nach diesem Lauf wurde eigens angefragt
+und darf nicht aus dem Endkommando abgeleitet werden.
+
+
+### 29.09.2026 – gezielte aktive Kartenübergabe
+
+PR #105: aktiver fester Frontierpunkt wird nach exaktem Rohkarten-/Statusjoin
+unabhängig vom mehrsekündigen Aufgabenworker erneut geprüft. Fristen und
+Schutzparameter unverändert. Vor/nach-Produktgraph bestätigt Bestandserhalt
+des einen autonomen Kindes; 244 gezielte Tests und isolierter Explore-Build.
+Neues temporäres Overlay lokal unter
+`~/.local/share/amadeus/tests/stage3-map-handoff-20260929/install`.
+Kein Wechsel von `~/roboter_ws/install`; Rückfall durch Weglassen dieses
+letzten Overlays. Reale Quellen-, Profil- und Scopebindung vor Fahrt erforderlich.
+Laufender Ergebnisstand ausschließlich im WE-STATUS Abschnitt 7.
+
+
+29.09.2026, tatsächlicher Folgelauf `492ef20`: temporäres `join-install`
+als letztes Overlay, aktive Installation unverändert. Quellen-/Profilmanifest
+und geladene Modulhashes unter `stage3-map-handoff-20260929/real-repeat`.
+Ein autonomes Kind ohne Kartenquellen-/HWT-Abbruch, aber Zieltimeout bei
+belegter SlowZone-Verlangsamung. Kein Raumübergang. Abschließend RPM null,
+Odometrie still, Kind terminal, alle Prozesse und seriellen Ports frei.
+SLAM-Shutdown Exit -6 gesondert dokumentiert, Bag vollständig. Nächster
+begrenzter Befundabgleich in WE-STATUS §7; keine weitere Fahrt gestartet.
+
+
+## 01.10.2026 – temporärer Mast-/Encoder-Kandidat, gemeinsamer Vorlauf negativ
+
+Unabhängiger Checkout `~/roboter_worktrees/metric-exploration-20260930`, bestehender
+Branch/PR #105. Funktionaler Kandidat `8be0709`; Hauptkopie `~/roboter_ws`
+unverändert sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Kein dauerhafter Install-/Autostartwechsel. Privates temporäres Achtpaketpräfix:
+`~/.local/share/amadeus/tests/metric-start-encoder-20260930/install`.
+Runtime sourced ausschließlich über dortiges `runtime-env.sh`: dokumentierte
+bisherige HWT-/Nav-/SLAM-/LiDAR-Unterlage, danach dieses lokale Overlay.
+Module und tatsächliche Parameter-/Launchdateien gehasht und bytegleich geprüft.
+Aktiver Basistreiber/Encoderodometrie unverändert zur Unterlage; kein aktiver
+Busbesitzer im Vorlauf. Passiver Reader allein auf Basisbus; native Mastmaske
+und Montage-TF erhalten. Reader startet im passiven HWT-Launch 15 s später,
+Gate verarbeitet passive Quellen in eigener Callbackgruppe mit zweitem Thread.
+
+Letzter Launch: `app_mapping.launch.py active_drive:=false
+use_hwt601_odometry:=true operator_stationary_confirmed:=true
+enable_auto_explore:=false start_web_gui:=false` mit zunächst ungebundenem
+metrischem Bootstrapprofil. Nach aktueller LAB-1-Karten-/Posebindung eigener
+metrischer Explorer, keine Mission. Kein elektrischer Motorstromzustand aus
+Software behauptet. Reale Scans/TF belegen bestehende Mastmaske; tatsächlicher
+SLAM-Präfix gepatchtes `~/amadeus_slam_toolbox_ws/install/slam_toolbox`,
+`check_min_dist_and_heading_precisely=true` live. Historische Buildanweisungen
+wurden nicht zur Installation ausgeführt.
+
+Gemeinsamer Vorlauf weiterhin negativ: rohe/gepaddete Start-/Drehkontur
+unzulässig und Gate später `wheel_missing_stale_or_invalid` terminal, obwohl
+Reader ready/fehlerfrei. Keine Grenzlockerung oder Fault-Löschung. 0 Missionen,
+0 Nav2-Kinder, Befehle null. Alle manifestierten Prozesse geordnet durch
+SIGINT ausschließlich an Launchwurzeln beendet; Gerätebesitzer frei,
+anschließend 12 frische FC03-Paare je 0 rpm / Position 0. Keine Shutdownfehler;
+Bootstrap-Scope-Exit separat. Privat: `metric-start-encoder-20260930/common-gatefix`
+mit geschlossener Bag, Manifest/Modulhashes/Scan- und Zellklassennachweis,
+Zeitverteilungen und Shutdownprüfung. Originalfehlerläufe bleiben erhalten.
+
+Rückfall: ohne Mission geordnet stoppen und letztes temporäres Overlay weglassen;
+`active_drive=false`, `enable_auto_explore=false`. Bei langer Kontinuitätslücke
+neue belegte stationäre Initialisierung mit neuem Karten-/Odometriebezug statt
+Latch-Reset. Reale Erkundung erst nach gleichzeitig gültigem gemeinsamen
+Startnachweis laut einzigem WE-STATUS, keine automatische Wiederanfahrt.
+
+
+## 01.10.2026 – temporärer Entscheider-/Startgeometriekandidat, keine reale Mission
+
+Funktionsstand `8f5eeb4`, unabhängiger Checkout im bestehenden Branch/PR #105.
+`~/roboter_ws` sauber/unverändert `23928d92f411473ed2644692a04aebdff0ffe803`.
+Exakte finale Runtime über
+`~/.local/share/amadeus/tests/metric-gate-start-20261001/final-runtime-env.sh`:
+dokumentierte vorherige Unterlage, Vierpaketpräfix dort `install/`, danach
+Zweipaketpräfix `decision-take-overlay/install/` nur für robot_navigation und
+robot_state_estimation. Explore/base_hardware aus Vierpaketpräfix;
+mission_manager/robot_map_manager/amadeus_lidar_bringup aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Aufgelöste Präfixe, geladene
+Parameterdateien, Prozesse und Modulhashes im finalen `decision-take-common/`.
+Alle geänderten Modulbytes mit tatsächlich aufgelöster Installation abgeglichen.
+Kein permanenter Install-/Autostartwechsel, keine Montage-/Kalibrierungsänderung.
+
+Real nur `app_mapping.launch.py active_drive=false use_hwt601_odometry=true
+operator_stationary_confirmed=true enable_auto_explore=false start_web_gui=false`
+mit metrischem Bootstrapprofil; im selben Start neue lokale LAB-1-Kartenbindung,
+vorhandene `explore.launch.py` mit metrischem Produktprofil und passivem HWT.
+Ein passiver Reader am Basisbus, kein aktiver Basistreiber, keine Mission.
+Passive Quelle eigene Radgruppe/dritter Thread und geschützter echter DDS-Take
+vor Entscheidung; Befehl/ESTOP seriell, aktive Quellenscheduling unverändert.
+120-ms-Paar-/180-ms-Lückengrenze und Mast-NaN/CCW/TF erhalten; SLAM-Patch live true.
+
+Finales 720-s-Fenster negativ: zwei echte HWT-Recoveries, dann echte
+120,874-ms-Paarverletzung, Gate 212,127 ms alte letzte zulässige Radprobe.
+Echte Stale-Sperre erhalten. Gleichzeitig voller initialerSweep 211 unbekannte
+Zellen / 0,188420 m² außerhalb Körper, Costmap 139 Zellen vollständig darin. Keine
+künstliche Freigabe, keine weiteren Starts/Fahrten. Software: 1.469 Regressionen
+bestanden; voller synthetischer2π-Dauerlauf separat negativ, keine Abnahme.
+Ende: alle manifestierten Wurzeln einzeln SIGINT, keine Prozessgruppensignale;
+Gerätehandles frei,12 frische FC03-Endpaare je 0 rpm / Position 0. Elektrischen
+Motorstromzustand nicht aus Software behaupten. Private ClosedBag-/Timing- und
+Endzustandsnachweise lokal, keine privaten Berichts-Vorfahren veröffentlicht.
+
+Rückfall: geordnet ohne Mission stoppen und Zweipaket-/Vierpaketoverlay weglassen,
+`active_drive=false`, `enable_auto_explore=false`. Echter Kontinuitätsverlust
+benötigt neue belegte stationäre Initialisierung/Karte-Posezuordnung, kein
+Latch-Reset. Reale Startfähigkeit nicht vollständig geschlossen: vorhandenen
+FC03-Pfad innerhalb 120/180 ms absichern und exakt fehlende Außenfläche durch
+separat hergestellte stationäre LiDAR-Sicht belegen; notwendiges manuelles
+Umsetzen bei deaktivierten Antrieben liegt außerhalb Softwarepakets. Kein Merge
+oder automatische Weiterfahrt, Stufe 3 offen.
+
+## 01.10.2026 – adaptiver/Encoder-Kandidat isoliert geprüft, System bleibt an
+
+Ausgang `d9894d2`, funktional `fd883fd`, bestehende PR #105. Kein permanenter
+Install-, Autostart- oder Kalibrierungswechsel. Hauptkopie sauber/unverändert
+`23928d92f411473ed2644692a04aebdff0ffe803`. Gemeinsame Encoderlogik betrifft
+passiven FC03-Reader und aktive Basis ausschließlich im HWT-Pfad; dessen
+unveränderlicher Startparameter `encoder_timing_recovery_enabled=true`,
+Stale-/Kontinuitätsgrenze 180 ms. Außerhalb HWT bleibt dieser Parameter false.
+Messwertgrenze 120 ms, Readerdiagnose 2 s / zwei Versuche, Consumer-HOLD 5 s /
+zwei Recoveries je Quellenklasse. Hardfault/ESTOP/Cancel unverändert hart.
+Aktiven Basisadapter gerätefrei geprüft; im jetzigen Realfenster lief er nicht.
+
+Finale temporäre Runtime:
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/runtime-env.sh`
+sourct bisheriges `metric-gate-start-20261001/final-runtime-env.sh`, dann
+neuen kopierten Fünfpaketinstall `metric-adaptive-start-20261001/install/`:
+base_hardware, explore, robot_navigation, robot_state_estimation,
+amadeus_lidar_bringup. Mission-/Kartenpakete weiterhin aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Zehn geänderte Laufzeitartefakte
+bytegleich zu den tatsächlichen aufgelösten Präfixen (`build-identity.json`).
+1.493 Regressionen und Fünfpaketbuild erfolgreich; vollständige synthetische
+2π-Dauerprobe separat negativ, nicht aus positiven kurzen Fällen abgenommen.
+Nachträglich ausschließlich Testsammlung für Offline-CI ohne ROS korrigiert:
+118 Offlinefälle/63 Subtests und zwölf Werkzeugtests bestanden, zwei echte
+ROS-Abhängigkeitsskips; drei betroffene Fälle unter ROS erneut bestanden.
+Keine Produktbytes nach dem Realfenster geändert, kein erneuter Stackstart.
+
+Realer Start ausschließlich `app_mapping.launch.py active_drive=false
+use_hwt601_odometry=true operator_stationary_confirmed=true
+enable_auto_explore=false start_web_gui=false` mit privatem metrischem
+Bootstrapprofil; Scope-/Sessionbindung aus aktueller LAB-1-Karte/Pose, dann
+alleiniger gebundener Explorer über vorhandenes `explore.launch.py` im selben
+Stack. Produktprofil live `metric_frontier`/`adaptive`, Scan true, 900/150 s,
+6 Versuche/3 Fehler. Nav2-RPP genau FollowPath mit Rotation 0,35 rad, festem
+Lookahead 0,40 m, Interpolation/Kollisionsprüfung true und ohne Rückwärtsfahrt;
+SimpleGoalChecker 0,15 m / 0,40 rad. Insgesamt 13 Typ-/Wert-/Pluginparameter
+bestätigt. Native Bibliothek/aufgelöste Module/geladene Paramfiles und Prozesse
+in `common/` manifestiert. Montage-TF/Mast-NaN unverändert, SLAM-Patch live true.
+
+720,016-s-Messfenster negativ: zwei echte HWT-Recoveries, dritte Rawstörung
+bei 583,261 s `hwt_recovery_attempt_limit`; Readerfehlertext
+`Zeitueberschreitung nach 0/14 Bytes`, kein bewiesener Geräte-/Kabeldefekt.
+Encoderreader zum Fensterende 13.921 gültige Paare, keine Timing-Recovery,
+größtes Paar 108,118 ms, Baseline eins/Rebase null. Unabhängig davon 33
+unbekannte Startkonturzellen / 0,021089 m² Außenanteil, null zulässige adaptive
+Kandidaten. Keine unbenutzte Vollsweepfläche als Bewegungsbedingung und keine
+manuelle Vorbereitung als Bootstrap. **Keine Mission/kein aktiver Buswechsel.**
+
+Messprobe stoppt bei 720 s; rein lesende Sensorprozesse liefen für abschließenden
+Snapshot/geordneten Stopp 185,994 s weiter. Kein zweiter Start; dieser Nachlauf
+gehört nicht zum 720-s-Erfolgsnachweis. Geschlossene Bag erst nach Recorderende
+analysiert: keine running-Mission, keine Navigate-Statuseinträge, alle Befehle
+null. Wurzeln einzeln SIGINT, keine Prozessgruppe; sämtliche manifestierten
+Kinder beendet, `/dev/ttyUSB_BASE` und `/dev/ttyUSB_HWT601` ohne Besitzer.
+Anschließend zwölf frische FC03-Paare Position 0 / 0 RPM; elektrische
+Motorstromstellung nicht aus diesen Werten behauptet. `end-state-proof.json`
+mit Originalsourcen/Endzustand und `end-encoder.json` (JSONL) privat.
+
+Rückfall: ohne Mission geordnet stoppen und neues Fünfpaketoverlay weglassen;
+voriger Kandidat hat seine dokumentierten Quellen-/Geometriegrenzen weiterhin.
+Sicherer Betriebsstart `active_drive=false`, `enable_auto_explore=false`.
+Kein Latch-Reset/automatischer Rebase bei echter Kontinuitätslücke; neue echte
+stationäre Initialisierung/Karte-Posezuordnung nötig. Keine weitere Startserie,
+kein Merge/Force-Push/private Daten oder private Berichts-Vorfahren. Details
+im einzigen aktuellen WE-STATUS und AGENTENAUFTRAG §10. **Stufe 3 offen;
+System eingeschaltet, keine geplante Abschaltung.**
+
+## 01.10.2026 – isolierter HWT-Entwicklungsvertrag/Start-Egress, Realstart blockiert
+
+Ausgang `2a0e19d`, Funktionsstand `a6f31bf`, PR #105/LAB-1. Isolierter
+Sechspaket-Copybuild `metric-egress-hwt-20261001/install` außerhalb Git,
+kein permanenter Install-/Autostartwechsel. Letzter state/explore-Build 8,58 s;
+100 Quell-/Install-Dateien identisch. Reale Domain 42, eigene Prozesswurzeln/
+Argumente/temporäre Parameterdateien/Präfixe und Modulhashes aufgezeichnet.
+MM/MapManager/BT, native SLAM-Toolbox und LD-LiDAR-Shutdownunderlay unverändert
+aufgelöst. Live Rawreader Entwicklungsvertrag true, 50/300 ms; Encoder
+FC03-only, 120/180 ms; 13 native Controller-/Goalcheckerparameter gelesen.
+Live-Explorer-Parameterabfrage während verzögerter Initialisierung nicht
+verfügbar; tatsächlicher Launchprofilhash und vier metric_frontier-Statuses
+belegt. Keine vollständige Parameterantwort behaupten.
+
+Passiv regulär app_mapping mit HWT-Odometrie, `active_drive=false`,
+`enable_auto_explore=false`; aktuelle Karte/Pose/LAB-Scope gebunden und
+alleiniger Explorer über vorhandenen Launch gestartet. Keine Aktorschreib-
+prozesse und keine reale Mission. Schlussfenster 60,008 s: HEALTHY bei
+36,379 s, harte hostseitige Messzeitprüfung bei 54,880 s. Zwei Pollfehler
+davor nur TRANSPORT_DEGRADED, null HWT-Recoveryversuche. Kein Sensor-/USB-
+Hardwaredefekt daraus abgeleitet. Initialer kurzer Entwicklungsstart vor
+Portprüfungsoptimierung separat unkalibriert; keine weitere Startserie.
+
+Aktuelle Geometrie offline unverändert: 42 unbekannte Roh-Startkonturzellen,
+zwei Costmap-Konturzellen, 22 autonome Kandidaten sämtlich unzulässig.
+Kein manuelles Ziel/Bootstrap und kein künstliches Gesundsetzen. Kein
+realer Zielerfolg/Kartierungsfortschritt/Passagen-/HOLD-Resume-Nachweis.
+Softwaregraph mit drei erreichten Zielen und separatem HOLD/Resume bestanden.
+
+Messfenster von kompletter Orchestrierung 83,709 s/Bag-Spanne 76,646 s
+unterscheiden. Encoder 824 Paare am Fensterende, 1.133 im Gesamtdatensatz,
+maximal 114,879 ms, keine Reject/Recovery/Rebase/Reconnect. Geschlossene
+Bag mit erfolgreicher Integritätsprüfung, keine laufende Mission/Nav2-Statuseinträge, vier Befehlsströme
+ausschließlich null. Eigene Launchwurzeln einzeln SIGINT, Recorder danach;
+manifestierte Prozesse und beide Gerätehandles frei. Zwölf neue FC03-Paare
+Position 0/0 RPM; keine elektrische Motorstromstellung behauptet.
+
+Private Karten/Bags/Plots/Profile/Zellkoordinaten unter
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`, insbesondere
+`runtime-byte-manifest-release.json`, `short-final/`, `end-state-proof.json`,
+`end-encoder.json`. Hauptkopie sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Rückfall: dieses temporäre Overlay weglassen oder Entwicklungs-/Egress-Opt-ins
+beim gestoppten Neustart deaktivieren; `active_drive=false`,
+`enable_auto_explore=false`. Kein Merge/Force-Push/private Vorfahren.
+Stufe 3 offen, konkrete Quellenzeit-/Trajektoriegrenzen siehe STATUS §4.
+**ROS beendet; Rechner laut Nutzerklärung eingeschaltet lassen.**

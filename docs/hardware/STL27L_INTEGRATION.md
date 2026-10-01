@@ -234,3 +234,25 @@ Betrieb nicht, solange es nicht gesourct wird.
 **Projektspezifisch:** Am Jetson hängt bereits ein FTDI auf `/dev/ttyUSB0`
 (Motor-RS485). Deshalb ist der udev-Alias Pflicht — ein vertauschter Port
 ließe den LiDAR-Treiber auf den Motorbus sprechen.
+
+
+## 30.09.2026 – Mastmaske und metrischer Startvertrag
+
+Betreiberzuordnung: Der rückwärtige graue Sichtkeil stammt vom OAK-Kameramast,
+kein neu zu identifizierendes Hindernis. Die vorhandene native Maske 236–304°
+bleibt NaN; bei ROS-CCW-Ausgabe und bestätigtem +90°-Montage-TF liegt sie hinten.
+Keine neue Maskierung, keine erfundenen Maximalreichweiten oder Rohkartenänderung.
+
+`metric_self_body_enabled` behandelt ausschließlich ganze unbekannte Rasterzellen
+innerhalb des gemessenen **ungepaddeten** Körpers (x −0,11..0,31 m, y ±0,23 m).
+Die Zellen müssen einschließlich aller Ecken innen liegen. Belegte Zellen werden
+niemals ausgenommen. TF/aktuelle Pose/Scan und Scope bleiben notwendig; falscher
+Montage-TF sperrt. Der private Gültigkeitsmaskenbeleg wird auf die erste korrelierte
+Karte/Pose fixiert und folgt weder der Bewegung noch einer neuen Kartenidentität.
+Die gepaddete Kontur, Rasterreserve, unbekannter Außenraum und Dreh-/Fahrraumsweep
+bleiben vollständig geprüft. Eine vorhandene Körperpose beweist keinen Rundblick.
+
+Gerätefreie positive Regression mit versetztem LiDAR, NaN-Mastsektor und tatsächlich
+bekanntem Außen-/Paddingraum; Gegenfälle für Nachbarhindernis, unbekannten Schwenkraum,
+falschen TF und ungültige Pose. Verbundener `mast_start`-Produktgraph erreicht drei
+synthetische Folgeaufgaben. Das sind keine reale Start-/Durchfahrtsabnahme.

@@ -1,0 +1,27 @@
+# Explicit opt-in; load AFTER explore_params.yaml. No default runtime switch.
+# Supply measured metric_session_id, scope fingerprint and verified polygon
+# from the same current map/session before accepting a mission.
+explore_node:
+  ros__parameters:
+    exploration_strategy: metric_frontier
+    metric_start_strategy: adaptive
+    # initial_scan_enabled is scan availability, never a mandatory start gate.
+    # Whole unknown cells in the measured body only; no mast-shadow clearing.
+    metric_self_body_enabled: true
+    # Fixed original unknown inventory; candidate-specific shrinking sweep.
+    metric_start_egress_enabled: true
+    wohnungserkundung_policy_enabled: false
+    wohnungserkundung_navigation_enabled: false
+    wohnungserkundung_persistence_enabled: false
+    portal_crossing_enabled: false
+    door_traverse_distance_m: 0.0
+    coverage_enabled: false
+    return_to_start: false
+    metric_session_id: ""
+    metric_scope_map_fingerprint: ""
+    wohnungserkundung_accessible_scope_verified: false
+    wohnungserkundung_scope_id: ""
+    wohnungserkundung_scope_polygon_xy: []
+    metric_footprint_xy: [-0.13, -0.25, 0.33, -0.25, 0.33, 0.25, -0.13, 0.25]
+    metric_retry_cooldown_s: 30.0
+    metric_task_retry_limit: 2

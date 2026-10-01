@@ -143,3 +143,65 @@ def test_known_motor_serial_is_blocked_even_without_alias(tmp_path, monkeypatch)
         tmp_path if value == '/sys/class/tty' else Path(value)))
     with pytest.raises(Hwt601TransportError, match='Seriennummer'):
         module.check_not_motor_port('/dev/ttyUSB9')
+
+
+@pytest.mark.parametrize('response,classification,phase,received',[
+    (b'', 'header_missing','header',0),
+    (b'\x50\x03\x0c', 'payload_missing','payload',0),
+    (b'\x50\x03\x0c\x00\x00', 'partial_response','payload',2),
+])
+def test_timeout_diagnostic_distinguishes_actual_phase_bytes(link,response,classification,phase,received):
+    link._serial.response=bytearray(response)
+    with pytest.raises(Hwt601TransportError) as e:link.read_motion_registers()
+    assert not e.value.hard_fault
+    d=e.value.diagnostic
+    assert d['classification']==classification and d['phase']==phase
+    assert d['phase_received_bytes']==received
+    assert d['header_received_bytes']==(0 if phase=='header' else 3)
+
+
+def test_complete_payload_returned_late_is_not_parsed_or_restamped(link,monkeypatch):
+    from robot_state_estimation import hwt601_transport as module
+    now=[100.];monkeypatch.setattr(module.time,'monotonic',lambda:now[0])
+    read=link._serial.read
+    def late(length):
+        b=read(length)
+        if length==14:now[0]=100.04
+        return b
+    link._serial.read=late
+    with pytest.raises(Hwt601TransportError) as e:link.read_motion_registers()
+    assert e.value.diagnostic['classification']=='complete_response_after_deadline'
+    assert e.value.diagnostic['phase_received_bytes']==14
+    assert link.last_reply_received_monotonic_s is None
+
+
+def test_on_time_frame_with_late_processing_is_a_separate_deadline_case(link,monkeypatch):
+    from robot_state_estimation import hwt601_transport as module
+    now=[100.];monkeypatch.setattr(module.time,'monotonic',lambda:now[0])
+    parse=module.parse_read_holding_response
+    def slow(*args):
+        result=parse(*args);now[0]=100.04;return result
+    monkeypatch.setattr(module,'parse_read_holding_response',slow)
+    with pytest.raises(Hwt601TransportError) as e:link.read_motion_registers()
+    assert e.value.diagnostic['classification']=='processing_after_deadline'
+    assert e.value.diagnostic['frame_bytes']==17
+    assert e.value.diagnostic['reply_received_monotonic_s']==100.
+
+
+def test_alias_generation_change_is_hard_not_another_timeout(link,monkeypatch):
+    monkeypatch.setattr(link,'_identity',lambda:('/dev/replaced',(1,2)))
+    with pytest.raises(Hwt601TransportError) as e:link.read_motion_registers()
+    assert e.value.hard_fault
+
+
+def test_device_generation_change_during_complete_reply_is_hard(link, monkeypatch):
+    identity=link._bound_identity
+    calls=[0]
+    def observed_identity():
+        calls[0]+=1
+        return identity if calls[0]==1 else ('different-device',None)
+    monkeypatch.setattr(link,'_identity',observed_identity)
+    with pytest.raises(Hwt601TransportError,match='waehrend Antwort') as error:
+        link.read_motion_registers()
+    assert error.value.hard_fault
+    assert link.last_reply_received_monotonic_s is None

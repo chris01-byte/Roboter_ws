@@ -74,7 +74,8 @@ class Fixture(Node):
         self.raw.publish(msg)
         self.raw_status.publish(String(data=json.dumps({
             'ready': True, 'raw_data_ready': True, 'port': '/dev/ttyUSB_HWT601',
-            'sensor_write_commands': False, 'consecutive_errors': 0, 'age_s': 0.0,
+            'sensor_write_commands': False, 'consecutive_errors': 0,
+            'reconnects': 0, 'age_s': 0.0,
         })))
 
     def publish_wheel(self):

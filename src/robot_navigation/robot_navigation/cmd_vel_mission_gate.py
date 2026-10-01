@@ -8,10 +8,12 @@ import time
 
 import rclpy
 from rclpy.time import Time
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import OccupancyGrid, Odometry
 from rclpy._rclpy_pybind11 import RCLError
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import (
+    ExternalShutdownException, MultiThreadedExecutor, SingleThreadedExecutor)
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
 from sensor_msgs.msg import LaserScan, PointCloud2
@@ -233,12 +235,27 @@ class CmdVelMissionGate(Node):
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         self._hwt_guard = None
+        self._hwt_source_cb = None
+        self._hwt_wheel_cb = None
         self._hwt_status_pub = None
+        self._hwt_status_worker = None
+        self._hwt_diagnostic_next = 0.0
+        self._hwt_diagnostic_event = -1
         if require_hwt:
-            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
-            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive)
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard, DeferredJsonPublisher
+            # In the passive fullstack newer wheel messages reached the
+            # recorder while IMU/status callbacks shared the wheel group and
+            # the gate still selected an older wheel sample. Give wheel data
+            # its own group; command/estop/timers stay serialized. Health owns
+            # its existing lock. Active-drive scheduling remains unchanged.
+            if not hwt_drive:
+                self._hwt_source_cb = MutuallyExclusiveCallbackGroup()
+                self._hwt_wheel_cb = MutuallyExclusiveCallbackGroup()
+            self._hwt_guard = Hwt601FusionGuard(
+                self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb)
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
+            self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
         self.declare_parameter('output_topic', '/cmd_vel_nav')
         self.declare_parameter(
@@ -407,6 +424,11 @@ class CmdVelMissionGate(Node):
         self._stage3_command_time = None
         self._stage3_active = False
         self._stage3_active_time = None
+        self._hwt_resume_pending = False
+        self._hwt_hold_sequence = None
+        self._hwt_seen_sequence = 0
+        self._hwt_resume_at = None
+        self._hwt_mission_seen = False
 
         self._publisher = self.create_publisher(Twist, output_topic, 10)
         self._tf_buffer = Buffer()
@@ -423,6 +445,9 @@ class CmdVelMissionGate(Node):
             self._on_explore_direct_command,
             10)
         self.create_subscription(String, status_topic, self._on_status, 10)
+        if self._hwt_guard is not None:
+            self.create_subscription(
+                String, '/explore/status_json', self._on_explore_status, 10)
         self.create_subscription(
             Bool, localization_topic, self._on_localization, 10)
         self.create_subscription(
@@ -535,10 +560,75 @@ class CmdVelMissionGate(Node):
             return
         self._status = status
         self._status_time = time.monotonic()
+        if (isinstance(status, dict)
+                and (status.get('state') != 'idle'
+                     or status.get('active_command') is not None)):
+            self._hwt_mission_seen = True
         if not self._mission_authorized(status, time.monotonic()):
             # Nicht erst auf den naechsten Timer-Tick warten.
             if not self._search_authorized(time.monotonic()):
                 self._publisher.publish(Twist())
+
+    def _on_explore_status(self, message):
+        """Only a new HOLD then RESUME from the existing Explorer opens a hold."""
+        try:
+            status = json.loads(message.data)
+        except (ValueError, TypeError):
+            return
+        if not isinstance(status, dict):
+            return
+        sequence = status.get('hwt_recovery_sequence')
+        if type(sequence) is not int or sequence < 0:
+            return
+        phase = status.get('phase')
+        if (self._hwt_guard is not None
+                and self._hwt_guard.health.recovery_state in
+                ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
+            self._hwt_resume_pending = True
+        if (phase in ('we_hwt_hold', 'we_hwt_recovery_validation')
+                and sequence >= self._hwt_seen_sequence):
+            # Validation can become false again after an earlier resume
+            # signal. Close immediately; the next release needs a new cmd.
+            self._hwt_resume_pending = True
+            self._hwt_hold_sequence = sequence
+            self._hwt_seen_sequence = sequence
+            return
+        if not self._hwt_resume_pending:
+            self._hwt_seen_sequence = max(self._hwt_seen_sequence, sequence)
+            return
+        # A recovered source gap before the first mission has no interrupted
+        # Explorer task that could send RESUME. Accept fresh idle observers
+        # only; after any mission, the existing HOLD/RESUME handshake applies.
+        now = time.monotonic()
+        if (not getattr(self, '_hwt_mission_seen', True)
+                and status.get('state') == 'idle' and phase == 'idle'
+                and sequence == 0 and self._hwt_hold_sequence is None
+                and isinstance(self._status, dict)
+                and self._status.get('state') == 'idle'
+                and self._status.get('active_command') is None
+                and 0.0 <= now - self._status_time <= self._status_timeout
+                and not getattr(self, '_allow_localization_search', True)
+                and not getattr(self, '_allow_stage3_diagnostic', True)
+                and self._hwt_guard.health.recovery_state == 'HEALTHY'
+                and self._hwt_guard.health.source_failure() is None
+                and all(value == 0.0 for value in (
+                    self._command.linear.x, self._command.linear.y,
+                    self._command.linear.z, self._command.angular.x,
+                    self._command.angular.y, self._command.angular.z))):
+            self._hwt_resume_pending = False
+            self._hwt_resume_at = now
+            return
+        if (phase != 'we_hwt_resumed'
+                or self._hwt_hold_sequence != sequence
+                or self._hwt_guard.health.recovery_state != 'HEALTHY'
+                or not self._allow_explore
+                or not isinstance(self._status, dict)
+                or self._status.get('state') != 'running'
+                or not isinstance(self._status.get('active_command'), dict)
+                or self._status['active_command'].get('type') != 'explore'):
+            return
+        self._hwt_resume_pending = False
+        self._hwt_resume_at = time.monotonic()
 
     def _on_search_command(self, message):
         values = (message.linear.x, message.linear.y, message.linear.z,
@@ -799,26 +889,69 @@ class CmdVelMissionGate(Node):
                 self._motion_base_tf_timeout)
         )
 
+    def destroy_node(self):
+        worker = getattr(self, '_hwt_status_worker', None)
+        if worker is not None:
+            worker.close()
+        return super().destroy_node()
+
     def _publish(self):
         now = time.monotonic()
         guard = getattr(self, '_hwt_guard', None)
-        hwt_failure = guard.failure() if guard is not None else None
+        hwt_failure = None
+        health_status = None
         if guard is not None:
-            self._hwt_status_pub.publish(String(data=json.dumps({
-                'sources_ready': guard.health.source_failure() is None,
-                # Necessary HWT condition only, never a replacement for
-                # mission, TF, VL53, scope or Collision authorization.
-                'hwt_motion_ready': hwt_failure is None,
-                'reason': hwt_failure or 'raw_sources_ready',
-                'active_drive': guard.health.active_drive,
-                'latched_fault': guard.health.latched_fault,
-                'first_fault': guard.health.first_fault_snapshot(),
-            })))
+            guard.refresh_passive_wheel()
+            with guard.health.lock:
+                hwt_failure = guard.failure()
+                # One source decision supplies both authorization and status.
+                # A second evaluation while formatting could select another
+                # sample and report a different state from the command check.
+                health_status = {
+                    'sources_ready': guard.health.last_source_failure is None,
+                    'active_drive': guard.health.active_drive,
+                    'latched_fault': guard.health.latched_fault,
+                    # Event snapshots are immutable after capture. The queue
+                    # owns this new view/list; no repeated deep copy under the
+                    # source lock and no JSON or publisher I/O here.
+                    'first_fault': guard.health._first_fault,
+                    'last_fault': guard.health.last_fault,
+                    'recovery_state': guard.health.recovery_state,
+                    'hwt_recovery_attempts': guard.health.recovery_attempts,
+                    'wheel_recovery_attempts': guard.health.wheel_recovery_attempts,
+                    'recovery_attempt_limit_per_source': guard.health.recovery_attempt_limit,
+                    'recovery_budget_s': guard.health.recovery_budget_s,
+                    'recovery_events_tail': list(guard.health.recovery_events[-16:]),
+                    'source_contract': guard.health.contract_diagnostics(time.monotonic()),
+                }
+        if (health_status is not None and health_status['recovery_state'] in
+                ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
+            if not getattr(self, '_hwt_resume_pending', False):
+                self._hwt_hold_sequence = None
+            self._hwt_resume_pending = True
+        hwt_motion_ready = (
+            hwt_failure is None
+            and not getattr(self, '_hwt_resume_pending', False))
+        if health_status is not None:
+            health_status.update(
+                hwt_motion_ready=hwt_motion_ready,
+                reason=(hwt_failure or ('awaiting_explore_resume' if not hwt_motion_ready
+                                       else 'raw_sources_ready')),
+                resume_sequence=self._hwt_hold_sequence)
+            worker = getattr(self, '_hwt_status_worker', None)
+            if worker is None:
+                # Object-only unit fixtures; live HWT nodes always have worker.
+                self._hwt_status_pub.publish(String(data=json.dumps(health_status)))
+            elif (now >= self._hwt_diagnostic_next
+                  or self._hwt_diagnostic_event != guard.health._event_sequence):
+                self._hwt_diagnostic_next = now+.2
+                self._hwt_diagnostic_event = guard.health._event_sequence
+                worker.submit(health_status)
         estop_clear = estop_motion_authorized(
             self._estop_clear, self._estop_time, now, self._estop_timeout)
         mission_authorized = (
             estop_clear
-            and hwt_failure is None
+            and hwt_motion_ready
             and self._motion_tf_authorized()
             and self._mission_authorized(self._status, now)
             and now - self._status_time <= self._status_timeout
@@ -842,12 +975,15 @@ class CmdVelMissionGate(Node):
                 self._status_timeout,
                 self._stage3_diagnostic_health_authorized(now),
                 estop_clear,
-                hwt_failure is None,
+                hwt_motion_ready,
                 self._motion_tf_authorized(),
             )
-        command_fresh = now - self._command_time <= self._command_timeout
+        command_fresh = (
+            now - self._command_time <= self._command_timeout
+            and (getattr(self, '_hwt_resume_at', None) is None
+                 or self._command_time > self._hwt_resume_at))
         search_authorized = (estop_clear and self._search_authorized(now)
-                             and hwt_failure is None
+                             and hwt_motion_ready
                              and self._near_quality_authorized(now))
         if search_authorized:
             command = self._search_command
@@ -870,8 +1006,11 @@ class CmdVelMissionGate(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelMissionGate()
+    executor = (MultiThreadedExecutor(num_threads=3)
+                if node._hwt_source_cb is not None else SingleThreadedExecutor())
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     except RuntimeError:
@@ -881,6 +1020,7 @@ def main(args=None):
         if rclpy.ok():
             raise
     finally:
+        executor.shutdown()
         if rclpy.ok():
             try:
                 node._publisher.publish(Twist())

@@ -5,11 +5,16 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
 **Für Wohnungserkundung zusätzlich zuerst:**
-[MASTERPLAN v1.0](docs/wohnungserkundung/MASTERPLAN.md),
+[MASTERPLAN v1.2](docs/wohnungserkundung/MASTERPLAN.md),
 [aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
 [aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
 Aufträge sind keine zweite aktuelle Roadmap. Details in Abschnitt 7.
+
+**Laborbetrieb: [LAB-1 v1.0](docs/LABORMODUS.md) ist Pflichtlektüre.**
+Die am 28.09.2026 ausdrücklich hinterlegte Laborfreigabe gilt auch für neue
+Agenten innerhalb des beauftragten Umfangs. Keine wiederholten Standardfragen
+zu unveränderten Laborbedingungen; technische Schutzprüfungen bleiben aktiv.
 
 ---
 
@@ -32,13 +37,20 @@ Repository kann physische Wirkung haben.**
 
 ## 2. Sicherheitsregeln — nicht verhandelbar
 
-1. **Keine Aktoren ohne ausdrückliche Freigabe.** Motoren, Hubmechanik und
-   sonstige Antriebe werden nur nach Zustimmung der anwesenden Person bestromt.
-2. **Erst Stillstand, dann Bewegung.** Nach jeder Änderung zuerst ohne
-   Motorstrom prüfen (Topics, TF, Logs), erst danach ein begrenzter Fahrtest.
-3. **Not-Aus in Reichweite**, bevor irgendetwas fährt. Der Motor-Halt am
-   Roboter ist die letzte Rückfallebene — bei aktivem Halt antworten die
-   Antriebe nicht auf das Kommandoregister, das sieht wie ein Modbus-Fehler aus.
+1. **Keine Aktoren ohne ausdrückliche Freigabe.** Im beschriebenen Laborumfang
+   erfüllt die hinterlegte [Laborfreigabe LAB-1](docs/LABORMODUS.md) diese
+   Anforderung für den ganzen Auftrag, nicht erst eine erneute Zustimmung je
+   Teilschritt. Außerhalb dieses Umfangs bleibt eine eigene Freigabe erforderlich.
+2. **Erst Stillstand, dann Bewegung.** Vor geänderter Bewegungswirkung zuerst
+   ohne mögliche Aktorbewegung prüfen (Topics, TF, Logs), danach begrenzt fahren.
+   Im Labor genügt der nachweislich rein lesende Vorlauf ohne Motorsteuerungs-
+   oder Aktor-Schreibprozess gemäß LAB-1 §3; keine pauschale manuelle
+   Motorsperre verlangen. Elektrische Sperrstellung dabei nicht behaupten.
+   Der Agent führt diese technische Prüfung im Laborauftrag selbstständig aus.
+3. **Not-Aus in Reichweite**, bevor irgendetwas fährt. Die erklärte Erreichbarkeit
+   im kontrollierten Labor nicht routinemäßig erneut abfragen. Der tatsächliche
+   Zustand der Haltkette bleibt maßgeblich; die Wirkung einer Motorsperre auf die
+   Controllerkommunikation anhand des konkreten Aufbaus prüfen, nicht unterstellen.
 4. **Keine Geheimnisse ins Repository.** Keine Tokens, Schlüssel, `.env`,
    WLAN-Zugangsdaten. Das gilt auch für Chatverläufe und Commit-Nachrichten.
 5. **Keine realen Wohnungsdaten ins Repository.** Karten echter Räume,
@@ -49,6 +61,22 @@ Repository kann physische Wirkung haben.**
 7. **Sicherheitsrelevante Bereiche** — Kalibrierung, Sensor-Frames,
    Motorsteuerung, `collision_monitor`, Netzwerk — werden separat geändert und
    separat getestet.
+
+### 2a. Durchgängiger Labormodus statt Freigabeschleifen
+
+Maßgeblich ist [LAB-1](docs/LABORMODUS.md), nicht eine neue Erlaubnisfrage nach
+jedem Build, Preflight, Recorderstart, Scope-Abgleich oder Stack-Neustart.
+Der Agent arbeitet den begrenzten Auftrag samt beauftragten Korrekturen,
+Regressionen und zulässigen Wiederholungen selbstständig ab. Bereits erklärte
+unveränderte Laborbedingungen nicht erneut durch Christopher bestätigen lassen.
+
+Softwarefreigabe und Hardwarestellung trennen: Motorsperre, Stillstand und
+Quellenzustand aus vorhandenen verlässlichen Informationen ermitteln. Ist eine
+nicht fernbedienbare physische Umschaltung nötig, nur diese konkrete Handlung
+anfordern. Keine Stellung und keine Beobachtung erfinden. Ein technischer
+Fehler kann Bewegung sperren, ohne eine neue allgemeine Freigaberunde auszulösen.
+Bei konkreter Gefahr, Widerruf, Not-Aus oder Umfangsänderung sicher stoppen und
+nur den konkreten Befund klären. Schutzlogik und Prüfpflichten nicht entfernen.
 
 ---
 
@@ -106,7 +134,7 @@ gemessene Evidenz mit Zahlen.
 - [ ] `docs/ROBOT_TRANSFER.md` bei Jetson-Wirkung ergänzt
 - [ ] Hardwarewirkung beschrieben
 - [ ] Rückfallweg beschrieben
-- [ ] Keine Aktoren ohne Freigabe aktiviert
+- [ ] Keine Aktoren außerhalb einer gültigen Freigabe, im Labor gemäß LAB-1, aktiviert
 
 ---
 
@@ -115,9 +143,10 @@ gemessene Evidenz mit Zahlen.
 | Pfad | Inhalt |
 |---|---|
 | `src/` | 17 ROS-2-Pakete (siehe `docs/INVENTORY.md`) |
-| `src/robot_bringup/launch/` | Startdateien: `robot`, `slam`, `oak`, `teleop_joy`, `server` |
 | `tools/kartierung/` | Kartierung, Lokalisierungstests, Kartenauswertung — **mit Fallenbeschreibung im README** |
+| `src/robot_bringup/launch/` | Startdateien: `robot`, `slam`, `oak`, `teleop_joy`, `server` |
 | `docs/` | Dokumentation, udev-Regeln |
+| `docs/LABORMODUS.md` | Dauerhafte Laborarbeitsregel LAB-1; keine wiederholten Standardfreigaben |
 | `ios/` | Xcode-Projekt der App |
 | `integration/` | Übergabeprotokolle und Release-Werkzeuge |
 
@@ -127,30 +156,41 @@ gemessene Evidenz mit Zahlen.
 
 1. `docs/INVENTORY.md` lesen — Komponenten, Startbefehle, Reifegrad.
 2. `docs/PROJECT_MEMORY.md` lesen — getroffene Entscheidungen und ihre Gründe.
+   Die dort verlinkte bytegleiche Historie für betroffene ältere Entscheidungen
+   hinzunehmen; ihre früheren Folgeaufträge nicht als aktuellen Auftrag ausführen.
 3. `tools/kartierung/README.md` lesen, falls es um Karten oder Lokalisierung
    geht. Dort stehen drei Fallen, die real Zeit gekostet haben.
-4. Bestand prüfen, bevor etwas verändert wird: Läuft schon etwas? Sind die
-   Motoren bestromt? Steht der Roboter frei?
+4. Bestand technisch prüfen, bevor etwas verändert wird: laufende Prozesse,
+   Gerätebesitzer, bekannte Motorstellung und aktuelle Daten. Im Labor LAB-1
+   verwenden; daraus keine routinemäßige Benutzer-Fragerunde machen.
 
 ---
 
-## 7. Wohnungserkundung: verbindlicher Arbeitsrahmen (WE-1, 27.09.2026)
+## 7. Wohnungserkundung: verbindlicher Arbeitsrahmen (WE-1, 30.09.2026)
 
 Bei Arbeiten an Wohnungserkundung, Sensor-/Fahrintegration, Recovery,
 Portal-/Raumgedächtnis oder Erkundungsabschluss vor jeder Änderung lesen:
 
-1. [Masterplan: Konsolidierung und robuste Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
+1. [Masterplan v1.2: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
 2. [Einziger aktueller WE-Iststand](docs/wohnungserkundung/STATUS.md)
 3. [Aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
 4. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md) und betroffene
    [Meilensteine/Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
 
-Verbindliche Grundentscheidung: **konsolidieren statt komplett neu schreiben**.
-Bestehende Fähigkeiten erhalten, einen reproduzierbaren Kandidaten führen,
-Fehler- und Wiederaufnahmeverantwortung gezielt ordnen, dann reale Kernabnahme
-und WE-M4/M5/M6. Keine parallele P1–P5-Roadmap, keine neue Navigation und kein
-pauschaler Rücksprung auf alte Branches. Ein Integrationsverantwortlicher,
-ein aktiver Kandidat und genau ein aktueller Auftrag.
+Verbindliche Grundentscheidung: **wiederverwenden und gezielt entkoppeln statt
+komplett neu schreiben**. MASTERPLAN v1.2 erlaubt einen schlanken metrischen
+Erkundungskern im vorhandenen Explorer ohne verpflichtende Portal-/Regionsdaten.
+Tür-/Raumsemantik ergänzt; gültige metrische Karte/Pose, Scope, tatsächliche
+Durchfahrtsgeometrie und Schutzkette bleiben notwendig. Keine Dummy-Portale oder
+künstlich gesunden Shadowzustände. Der neue Modus ist erst beauftragt, nicht durch
+diese Dokumentation implementiert oder real abgenommen.
+
+Bestehende Fähigkeiten und belegte Sensor-/Cancel-/HOLD-Korrekturen erhalten.
+Ein Integrationsverantwortlicher, ein aktiver Kandidat, ein Navigationsbesitzer
+und genau ein aktueller Auftrag. Keine dritte Gesamtsoftware, kein zusätzlicher
+Navigator/Supervisor und kein pauschaler Rücksprung auf alte Branches. Die
+metrischen und semantischen Anteile der vorhandenen WE-Meilensteine getrennt
+führen; keine parallele P1–P5-Roadmap und kein rückwirkendes Gesamt-Grün.
 
 Planversion, WE-Bezug, tatsächliche Istbasis, erwartetes Ergebnis, Nicht-Ziele,
 Tests und Rückfall vor jedem Auftrag benennen. Abweichungen nicht stillschweigend
@@ -169,5 +209,6 @@ aktuell gestarteten SLAM-/Antriebspfad.
 Sicher stoppen und einen recoverbaren Auftrag erhalten sind verschiedene
 Aufgaben. Recovery nicht durch Weglassen von Schutzprüfungen ersetzen.
 Bestehende Sicherheitsregeln bleiben gültig. Dokumentation, Commit, Push und
-Merge autorisieren weder Geräteaktivierung noch Fahrt. Auch der Masterplan
-ist eine Zielentscheidung, keine Behauptung eines fertigen Kundenprodukts.
+Merge allein sind keine Geräte- oder Fahrfreigabe; die ausdrücklich hinterlegte
+Nutzerfreigabe LAB-1 gilt dagegen im dort beschriebenen Laborumfang.
+Auch der Masterplan ist keine Behauptung eines fertigen Kundenprodukts.
