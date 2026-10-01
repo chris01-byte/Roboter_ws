@@ -190,6 +190,7 @@ class EncoderShadowNode(Node):
         self.configuration_valid = False
         self.last_feedback_monotonic: float | None = None
         self.last_ros_stamp_ns: int | None = None
+        self.last_ros_attempt_ns: int | None = None
         self.last_error_detail: str | None = None
         self.fc03_pair_error_count = 0
         self.last_diagnostics_publish = 0.0
@@ -326,6 +327,12 @@ class EncoderShadowNode(Node):
             read_finished = time.monotonic()
             ros_read_finished = self.get_clock().now()
             sample_time = (read_started + read_finished) / 2.0
+            attempt_ns = (ros_read_started.nanoseconds+ros_read_finished.nanoseconds)//2
+            if (ros_read_finished.nanoseconds <= ros_read_started.nanoseconds
+                    or (self.last_ros_attempt_ns is not None
+                        and attempt_ns <= self.last_ros_attempt_ns)):
+                self.core.latch_fault('ros_zeit_im_encoderpaar_nicht_monoton')
+            self.last_ros_attempt_ns = attempt_ns
             result = self.core.accept_pair(
                 pair,
                 sample_time_s=sample_time,

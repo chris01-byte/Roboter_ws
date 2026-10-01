@@ -586,13 +586,23 @@ class EncoderShadowCore:
         timing_recovery_min_healthy_pairs: int = 20,
     ) -> None:
         if (not math.isfinite(max_pair_read_duration_s)
-                or max_pair_read_duration_s <= 0.0):
+                or not 0.0 < max_pair_read_duration_s <= .12):
             raise ValueError(
                 'max_pair_read_duration_s muss endlich und > 0 sein')
         if timing_recovery_good_pairs != 2 or timing_recovery_min_healthy_pairs < 20:
             raise ValueError('Timing recovery needs two pairs and >=20 healthy pairs')
+        if not 0 < tracker.max_recovery_gap_s <= .18:
+            raise ValueError('Encoder timing contract requires <=180 ms integration gap')
         self.timing_recovery_good_pairs = timing_recovery_good_pairs
         self.timing_recovery_min_healthy_pairs = timing_recovery_min_healthy_pairs
+        # Diagnosis budget never extends measurement/integration validity.
+        self.timing_recovery_budget_s = 2.0
+        self.timing_recovery_attempt_limit = 2
+        self.timing_recovery_deadline_s = None
+        self.odometry_continuity_valid = True
+        self.first_timing_rejection = None
+        self.last_timing_rejection = None
+        self.diagnostic_pair_count = 0
         self.timing_recovery_pending = False
         self.timing_recovery_count = 0
         self.timing_recovered_count = 0
@@ -636,6 +646,13 @@ class EncoderShadowCore:
         if self.fault_reason is not None:
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
+        read_end = sample_time_s + pair_read_duration_s / 2
+        if (self.timing_recovery_pending and math.isfinite(read_end)
+                and read_end >= self.timing_recovery_deadline_s):
+            self.latch_fault('encoder_timing_recovery_budget_exhausted'
+                             if self.odometry_continuity_valid else
+                             'encoder_timing_continuity_unproven')
+            return EncoderShadowResult(False, self.fault_reason, self.last_update)
         if pair is None:
             self.rejected_pair_count += 1
             self.latch_fault('encoderpaar_unvollstaendig')
@@ -676,23 +693,27 @@ class EncoderShadowCore:
             if (math.isfinite(pair_read_duration_s)
                     and pair_read_duration_s > self.max_pair_read_duration_s
                     and not self.timing_recovery_pending
+                    and self.timing_recovery_count < self.timing_recovery_attempt_limit
                     and self._healthy_pairs >= self.timing_recovery_min_healthy_pairs
-                    and self.last_sample_time_s is not None
-                    and 0 < sample_time_s + pair_read_duration_s/2 - self.last_sample_time_s
-                        <= self.tracker.max_recovery_gap_s):
+                    and self.last_sample_time_s is not None):
                 trial = copy.copy(self.tracker)
                 valid = trial.update(pair.left.position_u32, pair.right.position_u32, sample_time_s)
-                if (not valid.accepted or any(not math.isfinite(m.speed_rpm)
+                if (any(not math.isfinite(m.speed_rpm)
                         or abs(m.speed_rpm)>self.tracker.max_motor_rpm
-                        for m in (pair.left, pair.right))):
+                        for m in (pair.left, pair.right))
+                        or (not valid.accepted and valid.reason != 'luecke_zu_lang_rebaseline')):
                     self.latch_fault('encoder_timing_continuity_unproven')
                     return EncoderShadowResult(False, self.fault_reason, self.last_update)
-                self.timing_recovery_pending = True
-                self.timing_recovery_count += 1
-                self._recovery_pairs = 0
-                self._recovery_last_sample_time_s = sample_time_s
-                self._healthy_pairs = 0
-                return EncoderShadowResult(False, TIMING_RECOVERY_REASON, self.last_update)
+                if not valid.accepted:
+                    diagnostic = copy.copy(self.tracker)
+                    diagnostic.max_recovery_gap_s = math.inf
+                    plausible = diagnostic.update(pair.left.position_u32,
+                        pair.right.position_u32,sample_time_s)
+                    if not plausible.accepted:
+                        self.latch_fault(plausible.reason)
+                        return EncoderShadowResult(False,self.fault_reason,self.last_update)
+                return self._begin_timing_recovery(sample_time_s,pair_read_duration_s,
+                    'encoderpaar_zeitfenster_ueberschritten',bool(valid.accepted))
             self.latch_fault('encoderpaar_zeitfenster_ueberschritten')
             return EncoderShadowResult(
                 False, self.fault_reason, self.last_update)
@@ -705,8 +726,46 @@ class EncoderShadowCore:
             return EncoderShadowResult(False, self.fault_reason, self.last_update)
         trial = copy.copy(self.tracker)
         update = trial.update(pair.left.position_u32, pair.right.position_u32, sample_time_s)
+        if self.timing_recovery_pending:
+            if sample_time_s <= self._recovery_last_sample_time_s:
+                self.latch_fault('nicht_monotoner_zeitstempel')
+                return EncoderShadowResult(False, self.fault_reason, self.last_update)
+            if not update.accepted and update.reason != 'luecke_zu_lang_rebaseline':
+                self.latch_fault(update.reason)
+                return EncoderShadowResult(False, self.fault_reason, self.last_update)
+            if not update.accepted or not self.odometry_continuity_valid:
+                diagnostic = copy.copy(self.tracker)
+                # ONLY plausibility on a disposable copy; never integrate or
+                # publish across this gap and never change the live limit.
+                diagnostic.max_recovery_gap_s = math.inf
+                plausibility = diagnostic.update(pair.left.position_u32,
+                    pair.right.position_u32, sample_time_s)
+                if not plausibility.accepted:
+                    self.latch_fault(plausibility.reason)
+                    return EncoderShadowResult(False, self.fault_reason, self.last_update)
+                # A true gap cannot be repaired by later zero RPM/good pairs.
+                # Keep reading diagnosis for the fixed budget, without changing
+                # the original odometry baseline, pose or accepted timestamp.
+                self.odometry_continuity_valid = False
+                self._recovery_last_sample_time_s = sample_time_s
+                self.diagnostic_pair_count += 1
+                self.rejected_pair_count += 1
+                return EncoderShadowResult(False, TIMING_RECOVERY_REASON, self.last_update)
         if self.tracker.initialized and not update.accepted:
             self.rejected_pair_count += 1
+            if (update.reason == 'luecke_zu_lang_rebaseline'
+                    and self._healthy_pairs >= self.timing_recovery_min_healthy_pairs
+                    and self.timing_recovery_count < self.timing_recovery_attempt_limit):
+                diagnostic = copy.copy(self.tracker)
+                diagnostic.max_recovery_gap_s = math.inf
+                plausible = diagnostic.update(pair.left.position_u32,
+                    pair.right.position_u32,sample_time_s)
+                if not plausible.accepted:
+                    self.latch_fault(plausible.reason)
+                    return EncoderShadowResult(False,self.fault_reason,self.last_update)
+                self.diagnostic_pair_count += 1
+                return self._begin_timing_recovery(sample_time_s,pair_read_duration_s,
+                    'encoder_luecke_nicht_ueberbrueckbar',False)
             self.last_update = update
             self.latch_fault('encoder_luecke_nicht_ueberbrueckbar'
                              if update.reason == 'luecke_zu_lang_rebaseline'
@@ -715,7 +774,7 @@ class EncoderShadowCore:
         if self.timing_recovery_pending:
             if (self._recovery_last_sample_time_s is None
                     or sample_time_s <= self._recovery_last_sample_time_s
-                    or sample_time_s+pair_read_duration_s/2-self.last_sample_time_s
+                    or sample_time_s-self.last_sample_time_s
                         > self.tracker.max_recovery_gap_s):
                 self.latch_fault('encoder_timing_continuity_unproven')
                 return EncoderShadowResult(False, self.fault_reason, self.last_update)
@@ -747,6 +806,21 @@ class EncoderShadowCore:
         self.published_count += 1
         return EncoderShadowResult(True, 'ok', update)
 
+    def _begin_timing_recovery(self, sample_time_s, duration_s, reason, continuity):
+        self.odometry_continuity_valid = continuity
+        self.last_timing_rejection = dict(reason=reason,pair_duration_s=duration_s,
+            sample_gap_s=sample_time_s-self.last_sample_time_s,
+            read_end_age_s=sample_time_s+duration_s/2-self.last_sample_time_s)
+        if self.first_timing_rejection is None:
+            self.first_timing_rejection = self.last_timing_rejection
+        self.timing_recovery_pending = True
+        self.timing_recovery_count += 1
+        self.timing_recovery_deadline_s = sample_time_s+duration_s/2+self.timing_recovery_budget_s
+        self._recovery_pairs = 0
+        self._recovery_last_sample_time_s = sample_time_s
+        self._healthy_pairs = 0
+        return EncoderShadowResult(False,TIMING_RECOVERY_REASON,self.last_update)
+
 
 def shadow_status_payload(
     core: EncoderShadowCore,
@@ -776,6 +850,15 @@ def shadow_status_payload(
         'ready': ready,
         'timing_recovery_pending': core.timing_recovery_pending,
         'timing_recovery_count': core.timing_recovery_count,
+        'timing_recovery_budget_s': core.timing_recovery_budget_s,
+        'timing_recovery_attempt_limit': core.timing_recovery_attempt_limit,
+        'timing_recovery_deadline_s': core.timing_recovery_deadline_s,
+        'odometry_continuity_valid': core.odometry_continuity_valid,
+        'first_timing_rejection': core.first_timing_rejection,
+        'last_timing_rejection': core.last_timing_rejection,
+        'current_reason': core.fault_reason or (TIMING_RECOVERY_REASON
+                            if core.timing_recovery_pending else core.last_update.reason),
+        'diagnostic_pair_count': core.diagnostic_pair_count,
         'timing_recovered_count': core.timing_recovered_count,
         'timing_recovery_valid_pairs': core._recovery_pairs,
         'continuity_max_gap_s': core.tracker.max_recovery_gap_s,

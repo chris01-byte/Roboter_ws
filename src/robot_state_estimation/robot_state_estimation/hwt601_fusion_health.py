@@ -98,6 +98,7 @@ class Hwt601FusionHealth:
         self._last_healthy_reconnects = None
         self.recovery_events = []
         self.recovery_attempts = 0
+        self.wheel_recovery_attempts = 0
         # The driver reconnects after its third consecutive read error.
         # This profile permits at most two completed/started transient holds
         # per Health lifetime; a third requires stopped human inspection.
@@ -174,29 +175,68 @@ class Hwt601FusionHealth:
                 and raw['age_s'] >= 0.0)
 
     def _wheel_timing_pending(self):
-        """Only the passive FC03 owner's bounded continuity validation.
+        """Verified bounded diagnosis; stale wheel still blocks motion.
 
-        Freshness of the actual wheel sample is still checked independently;
-        a stale sample, lost port, changed config or latched fault is hard.
+        A pending diagnosis is permission to HOLD, never permission to use
+        stale odometry. The fixed reader deadline (2 s) and Health's absolute
+        5 s cancel/validation budget cannot extend the 180 ms integration gap.
         """
-        if self.active_drive or 'wheel' not in self.statuses:
+        entry = self.statuses.get('wheel')
+        if entry is None:
             return False
-        w = self.statuses['wheel'][0]
-        return (w.get('ready') is False and w.get('timing_recovery_pending') is True
+        outer = entry[0]
+        w = outer.get('encoder_timing_recovery', {}) if self.active_drive else outer
+        owner = (outer.get('dry_run') is False and outer.get('allow_rs485') is True
+                 and outer.get('rs485_ready') is True
+                 and outer.get('odometry_source') == 'encoder_position'
+                 and outer.get('encoder_config_fault_latched') is False
+                 and w.get('read_only') is False and w.get('actuator_output') is True
+                 if self.active_drive else
+                 w.get('read_only') is True and w.get('actuator_output') is False)
+        return (owner and w.get('ready') is False and w.get('timing_recovery_pending') is True
                 and w.get('state') == 'timing_recovery'
                 and w.get('source') == 'ess23_absolute_fc03'
                 and w.get('synthetic') is False and w.get('command_derived') is False
-                and w.get('read_only') is True and w.get('actuator_output') is False
                 and w.get('fault_latched') is False
                 and w.get('connected') is True and w.get('configuration_valid') is True
                 and w.get('port') == '/dev/ttyUSB_BASE'
+                and type(w.get('odometry_continuity_valid')) is bool
+                and w.get('timing_recovery_budget_s') == 2.0
+                and w.get('timing_recovery_attempt_limit') == 2
+                and type(w.get('timing_recovery_count')) is int
+                and 1 <= w['timing_recovery_count'] <= 2
+                and type(w.get('timing_recovery_deadline_s')) in (int, float)
+                and math.isfinite(w['timing_recovery_deadline_s'])
                 and type(w.get('continuity_max_gap_s')) in (int, float)
                 and 0 < w['continuity_max_gap_s'] <= .18
                 and type(w.get('timing_recovery_valid_pairs')) is int
-                and 0 <= w['timing_recovery_valid_pairs'] < 2
-                and age_valid(w.get('last_feedback_age_s'), .18))
+                and 0 <= w['timing_recovery_valid_pairs'] < 2)
 
-    def _hard_status_failure(self):
+    def _wheel_read_in_flight(self):
+        entry = self.statuses.get('wheel')
+        if entry is None:
+            return False
+        outer = entry[0]
+        w = outer.get('encoder_timing_recovery', {}) if self.active_drive else outer
+        owner = (outer.get('dry_run') is False and outer.get('allow_rs485') is True
+                 and outer.get('rs485_ready') is True
+                 and outer.get('odometry_source') == 'encoder_position'
+                 and outer.get('encoder_config_fault_latched') is False
+                 and w.get('read_only') is False and w.get('actuator_output') is True
+                 if self.active_drive else
+                 w.get('read_only') is True and w.get('actuator_output') is False)
+        return (owner and w.get('source') == 'ess23_absolute_fc03'
+                and w.get('synthetic') is False and w.get('command_derived') is False
+                and w.get('port') == '/dev/ttyUSB_BASE'
+                and w.get('timing_recovery_budget_s') == 2.0
+                and w.get('timing_recovery_attempt_limit') == 2
+                and w.get('odometry_continuity_valid') is True
+                and w.get('connected') is True and w.get('configuration_valid') is True
+                and w.get('fault_latched') is False and w.get('baseline_count') == 1
+                and type(w.get('complete_pair_count')) is int
+                and w['complete_pair_count'] >= 20)
+
+    def _hard_status_failure(self, now=None):
         """Check hard invariants even if _failure found a stale sample first."""
         if not self._raw_identity_intact():
             return 'raw_identity_or_configuration_fault'
@@ -222,6 +262,12 @@ class Hwt601FusionHealth:
                 and math.isfinite(yaw['age_s']) and yaw['age_s'] >= 0.0):
             return 'yaw_calibration_or_identity_fault'
         wheel = wheel_entry[0]
+        contract = wheel.get('encoder_timing_recovery', {}) if self.active_drive else wheel
+        if now is not None and (self._wheel_timing_pending() or self._wheel_read_in_flight()):
+            if not fresh(now, wheel_entry[1], 1.0):
+                return 'wheel_status_missing_or_stale'
+            if self._wheel_timing_pending() and now >= contract['timing_recovery_deadline_s']:
+                return 'wheel_recovery_deadline_expired'
         if self.active_drive:
             valid = (wheel.get('dry_run') is False
                      and wheel.get('allow_rs485') is True
@@ -244,10 +290,10 @@ class Hwt601FusionHealth:
                      and type(wheel.get('last_feedback_age_s')) in (int, float)
                      and math.isfinite(wheel['last_feedback_age_s'])
                      and wheel['last_feedback_age_s'] >= 0.0)
-        return None if valid or self._wheel_timing_pending() else 'wheel_identity_or_configuration_fault'
+        return None if valid or self._wheel_timing_pending() or self._wheel_read_in_flight() else 'wheel_identity_or_configuration_fault'
 
     def _recoverable(self, reason, now):
-        if self._hard_status_failure() is not None:
+        if self._hard_status_failure(now) is not None:
             return False
         if reason in ('raw_missing_stale_or_invalid',
                       'yaw_missing_stale_or_invalid'):
@@ -263,8 +309,17 @@ class Hwt601FusionHealth:
             return (raw['raw_data_ready'] is False
                     or 0 < raw['consecutive_errors'] < 3
                     or raw['age_s'] > 0.20)
-        if reason == 'wheel_timing_recovery_pending':
-            return self._wheel_timing_pending()
+        if reason in ('wheel_timing_recovery_pending', 'wheel_missing_stale_or_invalid',
+                      'wheel_not_real_or_not_ready'):
+            entry = self.statuses.get('wheel')
+            sample = self.samples.get('wheel')
+            w = (entry[0].get('encoder_timing_recovery', {}) if self.active_drive
+                 else entry[0]) if entry is not None else {}
+            in_flight = self._wheel_read_in_flight()
+            return ((self._wheel_timing_pending() or in_flight) and entry is not None
+                    and fresh(now, entry[1], 1.0)
+                    and sample is not None and sample[3]
+                    and now >= sample[1] >= sample[2])
         if reason == 'yaw_data_continuity_pending':
             yaw = self.statuses['yaw'][0]
             return (yaw.get('ready') is False
@@ -323,8 +378,12 @@ class Hwt601FusionHealth:
         self._event(now, self.recovery_state, reason)
         return reason
 
+    def _wheel_limit(self):
+        wheel = self.statuses.get('wheel', ({}, None))[0]
+        return .18 if not self.active_drive or 'encoder_timing_recovery' in wheel else .30
+
     def _failure(self, now):
-        wheel_limit = 0.30 if self.active_drive else 0.18
+        wheel_limit = self._wheel_limit()
         for name, limit in (('raw', 0.20), ('yaw', 0.35), ('wheel', wheel_limit)):
             sample = self.samples.get(name)
             if (sample is None or not sample[3]
@@ -404,7 +463,7 @@ class Hwt601FusionHealth:
                       if not entry['passed']]
         source_checks = []
         for name, limit in (('raw', 0.20), ('yaw', 0.35),
-                            ('wheel', 0.30 if self.active_drive else 0.18)):
+                            ('wheel', self._wheel_limit())):
             sample = self.samples.get(name)
             status = self.statuses.get(name)
             sample_ok = (sample is not None and sample[3]
@@ -505,7 +564,7 @@ class Hwt601FusionHealth:
                     self._startup_reason = reason
                     self._event(now, 'STARTUP', reason)
                 return reason
-            hard = self._hard_status_failure()
+            hard = self._hard_status_failure(now)
             observed_reason = reason or hard
             if observed_reason is not None and self._first_fault is None:
                 try:
@@ -525,9 +584,15 @@ class Hwt601FusionHealth:
                     return None
                 if not self._recoverable(reason, now):
                     return self._terminal(now, reason)
-                if self.recovery_attempts >= self.recovery_attempt_limit:
-                    return self._terminal(now, 'hwt_recovery_attempt_limit')
-                self.recovery_attempts += 1
+                wheel_hold = reason.startswith('wheel_')
+                count = self.wheel_recovery_attempts if wheel_hold else self.recovery_attempts
+                if count >= self.recovery_attempt_limit:
+                    return self._terminal(now, 'wheel_recovery_attempt_limit' if wheel_hold
+                                          else 'hwt_recovery_attempt_limit')
+                if wheel_hold:
+                    self.wheel_recovery_attempts += 1
+                else:
+                    self.recovery_attempts += 1
                 self.recovery_state = 'HOLD'
                 self._hold_since = now
                 self._hold_reason = reason

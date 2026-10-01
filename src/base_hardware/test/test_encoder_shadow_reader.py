@@ -592,7 +592,7 @@ def test_isolated_timing_outlier_heals_without_losing_counts_or_rebasing():
     assert c.tracker.rebase_count==0
 
 
-@pytest.mark.parametrize('case',['delay','gap','incomplete','jump','clock','rpm','repeat'])
+@pytest.mark.parametrize('case',['delay','incomplete','jump','clock','rpm','repeat'])
 def test_timing_recovery_hard_cases_preserve_last_accepted_pose_and_baseline(case):
     c=healthy_core();t=c.last_sample_time_s
     c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
@@ -682,3 +682,69 @@ def test_hot_alias_checks_detect_link_replacement_and_device_reuse(monkeypatch):
     links[BASE_ALIAS] = 'ttyUSB0'
     del links[HWT601_ALIAS]
     with pytest.raises(EncoderShadowError, match='nicht lesbar'): check(BASE_ALIAS)
+
+
+def test_true_gap_keeps_diagnosis_bounded_never_recovers_from_good_zero_pairs():
+    c=healthy_core();t=c.last_sample_time_s
+    c.accept_pair(pair(100,200),sample_time_s=t+.1294033375015715,
+                  pair_read_duration_s=.12087426500147558)
+    assert c.first_timing_rejection['reason']=='encoderpaar_zeitfenster_ueberschritten'
+    assert c.first_timing_rejection['read_end_age_s']==pytest.approx(.1898404700023093)
+    assert c.timing_recovery_pending and c.fault_reason is None
+    original=c.tracker.__dict__.copy()
+    for dt in (.212127149,.27,.32):
+        outcome=c.accept_pair(pair(100,200),sample_time_s=t+dt,pair_read_duration_s=.014)
+        assert not outcome.publish and not c.ready
+        assert c.tracker.__dict__==original
+    assert c.odometry_continuity_valid is False and c.diagnostic_pair_count==3
+    outcome=c.accept_pair(pair(100,200),sample_time_s=c.timing_recovery_deadline_s,
+                          pair_read_duration_s=.014)
+    assert outcome.reason=='encoder_timing_continuity_unproven'
+    assert c.tracker.__dict__==original and c.baseline_count==1
+
+
+def test_recovery_event_count_does_not_reset_after_twenty_new_healthy_pairs():
+    c=healthy_core()
+    for event in range(2):
+        t=c.last_sample_time_s
+        assert not c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125).publish
+        for i in range(22):
+            c.accept_pair(pair(100,200),sample_time_s=t+.15+i*.02,pair_read_duration_s=.014)
+        assert c.ready
+    t=c.last_sample_time_s
+    out=c.accept_pair(pair(100,200),sample_time_s=t+.065,pair_read_duration_s=.125)
+    assert not out.publish and c.fault_reason=='encoderpaar_zeitfenster_ueberschritten'
+    assert c.timing_recovery_count==2
+
+
+def test_valid_timing_pair_after_true_poll_gap_is_diagnosis_not_odometry():
+    c=healthy_core();t=c.last_sample_time_s;before=c.tracker.__dict__.copy()
+    r=c.accept_pair(pair(100,200),sample_time_s=t+.201,pair_read_duration_s=.014)
+    assert not r.publish and c.timing_recovery_pending and not c.odometry_continuity_valid
+    assert c.last_timing_rejection['reason']=='encoder_luecke_nicht_ueberbrueckbar'
+    for dt in (.23,.25,.27):
+        assert not c.accept_pair(pair(100,200),sample_time_s=t+dt,pair_read_duration_s=.014).publish
+        assert c.tracker.__dict__==before
+    c.accept_pair(pair(100,200),sample_time_s=c.timing_recovery_deadline_s,pair_read_duration_s=.014)
+    assert c.fault_reason=='encoder_timing_continuity_unproven' and c.tracker.__dict__==before
+
+
+def test_ros_clock_rollback_is_hard_even_in_a_rejected_timing_pair(monkeypatch):
+    from types import SimpleNamespace
+    from rclpy.time import Time
+    from base_hardware.encoder_shadow_node import EncoderShadowNode
+    import base_hardware.encoder_shadow_node as module
+    n=EncoderShadowNode.__new__(EncoderShadowNode);n.core=healthy_core()
+    n.configuration_valid=True;n.last_poll_started_s=None;n.last_ros_attempt_ns=None
+    n.last_error_detail=None
+    n.transport=SimpleNamespace(connected=True)
+    n.reader=SimpleNamespace(read_complete_pair=lambda:pair(100,200),last_read_durations_s={})
+    clock=iter([Time(seconds=2),Time(seconds=1)])
+    n.get_clock=lambda:SimpleNamespace(now=lambda:next(clock))
+    n.get_logger=lambda:SimpleNamespace(error=lambda _:None)
+    n._publish_status_and_diagnostics=lambda **_:None
+    n.closed=False;n._close_transport=lambda:setattr(n,'closed',True)
+    native=iter([10.,10.125]);monkeypatch.setattr(module.time,'monotonic',lambda:next(native))
+    n._poll()
+    assert n.closed and n.core.fault_reason=='ros_zeit_im_encoderpaar_nicht_monoton'
+    assert n.core.timing_recovery_count==0 and not n.core.ready

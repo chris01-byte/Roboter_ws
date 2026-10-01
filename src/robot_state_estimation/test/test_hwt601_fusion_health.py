@@ -565,7 +565,10 @@ def pending_wheel(h,now=10.):
     w=h.statuses['wheel'][0]
     w.update(ready=False,state='timing_recovery',timing_recovery_pending=True,
              connected=True,configuration_valid=True,port='/dev/ttyUSB_BASE',
-             continuity_max_gap_s=.18,timing_recovery_valid_pairs=0)
+             continuity_max_gap_s=.18,timing_recovery_valid_pairs=0,
+             odometry_continuity_valid=True,timing_recovery_budget_s=2.,
+             timing_recovery_attempt_limit=2,timing_recovery_count=1,
+             timing_recovery_deadline_s=now+2.)
     h.status('wheel',w,now)
 
 
@@ -588,7 +591,7 @@ def test_passive_timing_validation_uses_hold_without_a_second_latch():
 def test_pending_wheel_cannot_mask_hard_faults(change):
     h=ready_health(False);assert h.source_failure(10.) is None
     pending_wheel(h);w=h.statuses['wheel'][0];now=10.05
-    if change=='stale':now=10.19
+    if change=='stale':now=12.01
     if change=='port':w['port']='/dev/ttyUSB_HWT601'
     if change=='fault':w['fault_latched']=True
     if change=='connection':w['connected']=False
@@ -605,3 +608,51 @@ def test_passive_timing_recovery_status_never_relaxes_active_driver_contract():
     h.statuses['wheel'][0]['encoder_feedback_ok']=False
     assert h.source_failure(10.05)=='wheel_not_real_or_not_ready'
     assert h.recovery_state=='TERMINAL_FAULT'
+
+
+def test_stale_wheel_with_verified_pending_read_blocks_motion_but_preserves_parent():
+    h=ready_health(False);assert h.source_failure(10.) is None
+    pending_wheel(h,10.19)
+    # Raw/yaw remain current while the original wheel ages beyond 180 ms.
+    for name in ('raw','yaw'):
+        h.sample(name,10.19,10.19,10.19);h.status(name,h.statuses[name][0],10.19)
+    reason=h.motion_failure(10.19)
+    assert reason=='wheel_missing_stale_or_invalid'
+    assert h.recovery_state=='HOLD' and h.latched_fault is None
+    assert h.samples['wheel'][2]==10.  # original measurement unchanged
+    assert h.wheel_recovery_attempts==1
+
+
+def test_hwt_recovery_then_wheel_hold_has_separate_original_event_and_budget():
+    h=ready_health(False);assert h.source_failure(10.) is None
+    for key in ('yaw','wheel'):
+        h.sample(key,10.21,10.21,10.21);h.status(key,h.statuses[key][0],10.21)
+    assert h.source_failure(10.21)=='raw_missing_stale_or_invalid'
+    for i in range(1,90):
+        now=10.21+i*.02
+        for key in ('raw','yaw','wheel'):
+            h.sample(key,now,now,now);h.status(key,h.statuses[key][0],now)
+        h.source_failure(now)
+    assert h.recovery_state=='HEALTHY' and h.recovery_attempts==1
+    pending_wheel(h,now)
+    assert h.source_failure(now)=='wheel_timing_recovery_pending'
+    assert h.wheel_recovery_attempts==1 and h.recovery_attempts==1
+    assert h.last_fault['aggregate_reason']=='wheel_timing_recovery_pending'
+    assert h.fault_snapshot()['aggregate_reason']=='wheel_timing_recovery_pending'
+    assert h.first_fault_snapshot()['aggregate_reason']=='raw_missing_stale_or_invalid'
+
+
+def test_read_in_flight_heartbeat_can_hold_before_pair_deadline_result_arrives():
+    h=ready_health(False);assert h.source_failure(10.) is None
+    w=h.statuses['wheel'][0]
+    w.update(ready=False,state='initializing',connected=True,configuration_valid=True,
+             port='/dev/ttyUSB_BASE',baseline_count=1,complete_pair_count=20,
+             odometry_continuity_valid=True,timing_recovery_budget_s=2.,
+             timing_recovery_attempt_limit=2,last_feedback_age_s=.181)
+    h.status('wheel',w,10.181)
+    for key in ('raw','yaw'):
+        h.sample(key,10.181,10.181,10.181);h.status(key,h.statuses[key][0],10.181)
+    assert h.motion_failure(10.181)=='wheel_missing_stale_or_invalid'
+    assert h.recovery_state=='HOLD' and h.samples['wheel'][2]==10.
+    w['fault_latched']=True;h.status('wheel',w,10.19)
+    assert h.source_failure(10.19) is not None and h.recovery_state=='TERMINAL_FAULT'

@@ -90,6 +90,9 @@ def generate_launch_description():
                 'publish_tf': False,
                 'dry_run': dry_run,
                 'allow_rs485': allow_rs485,
+                'encoder_timing_recovery_enabled': True,
+                'encoder_stale_timeout_s': .18,
+                'encoder_max_recovery_gap_s': .18,
             }]),
 
         # Motorlos: echte FC03-Encoder statt synthetischer Dry-run-Odometrie.

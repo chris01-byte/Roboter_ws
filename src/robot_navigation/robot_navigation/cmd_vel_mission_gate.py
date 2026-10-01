@@ -917,6 +917,10 @@ class CmdVelMissionGate(Node):
                     'first_fault': guard.health._first_fault,
                     'last_fault': guard.health.last_fault,
                     'recovery_state': guard.health.recovery_state,
+                    'hwt_recovery_attempts': guard.health.recovery_attempts,
+                    'wheel_recovery_attempts': guard.health.wheel_recovery_attempts,
+                    'recovery_attempt_limit_per_source': guard.health.recovery_attempt_limit,
+                    'recovery_budget_s': guard.health.recovery_budget_s,
                     'recovery_events_tail': list(guard.health.recovery_events[-16:]),
                 }
         if (health_status is not None and health_status['recovery_state'] in
