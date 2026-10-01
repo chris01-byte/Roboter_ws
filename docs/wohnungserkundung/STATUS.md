@@ -17,6 +17,11 @@ mit Originalwerten und konsistenten Uhrbezügen; belegte minimale Korrekturen,
 getrennte Regressionen und gemeinsamer 720-s-Lesevorlauf ab Launchwurzel.
 Reale Anfangsgeometrie bis Rundblick/Vorausrichtung/Route zellgenau untersuchen.
 Bisherige Vorläufe bleiben historische negative Belege, kein aktuelles Ergebnis.
+Der zweite aktuelle Vorlauf reproduzierte nach etwa 554 s einen gültig
+ausgelösten Radfrische-Stopp: 215,95 ms Messalter, obwohl drei neuere
+Originalmessungen bereits im Recorder eingetroffen waren. Reader ohne Fehler.
+Passiven Radcallback separat bedienen und danach ein drittes begrenztes
+720-s-Fenster messen; aktive Quellen und harte Grenzen bleiben unverändert.
 
 ## 2. Belegter Ausgangspunkt
 

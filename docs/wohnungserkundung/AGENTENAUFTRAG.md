@@ -170,8 +170,11 @@ Regressionen A–D aus Nutzerauftrag: beide Fehler nach Recovery, DDS/Last und
 harte Quellengegenfälle, realistischer Produktanfang/Rasterränder, bestehende
 Not-Aus/HOLD/Stillstands-/Einzelbesitzverträge. Danach ein gemeinsamer rein
 lesender Vollstacklauf mit **720 s ab Launchwurzel** einschließlich Startlast
-und früher späten Gateverriegelungen. Bei belegter Korrektur höchstens ein
-weiteres solches Fenster; keine identische Neustartserie. Kartenbindung und
+und früher späten Gateverriegelungen. Der zweite Lauf reproduzierte einen neuen
+konkreten Empfangsfehler: drei neuere Radmessungen im Recorder vor dem
+Gateentscheid, aber noch die ältere Probe im Gate (215,95 ms Messalter).
+Nach Trennung des passiven Radcallbacks genau ein drittes 720-s-Fenster;
+keine identische Neustartserie. Kartenbindung und
 Quellen im selben Start prüfen.
 
 Nur bei technisch gültigem gemeinsamem Zustand genau eine bestehende Mission
