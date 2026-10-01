@@ -1,4 +1,10 @@
 """Active HWT adapter uses production Core; no ROS executor or serial access."""
+import pytest
+
+# The offline encoder workflow intentionally has no ROS runtime. HWT CI and
+# target-system regressions execute this adapter test with actual ROS imports.
+pytest.importorskip('rclpy', reason='active base adapter requires ROS 2')
+
 from base_hardware.base_hardware_node import BaseHardware
 from base_hardware.encoder_odometry import EncoderOdometry, MotorFeedback
 from base_hardware.encoder_shadow_reader import EncoderShadowCore, EncoderPair

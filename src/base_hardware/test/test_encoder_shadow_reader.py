@@ -730,6 +730,7 @@ def test_valid_timing_pair_after_true_poll_gap_is_diagnosis_not_odometry():
 
 
 def test_ros_clock_rollback_is_hard_even_in_a_rejected_timing_pair(monkeypatch):
+    pytest.importorskip('rclpy', reason='reader ROS clock contract requires ROS 2')
     from types import SimpleNamespace
     from rclpy.time import Time
     from base_hardware.encoder_shadow_node import EncoderShadowNode

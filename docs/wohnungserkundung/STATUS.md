@@ -445,6 +445,14 @@ Budgetfall. Lokales Nachweisregister `metric-adaptive-start-20261001/` mit
 `regressions-publish-final.log`, `graph-controller-final-summary.json`,
 `graph-suite-summary.json` und einzelnen `result.json`/Prozesslogs.
 
+Nach Veröffentlichung erkannte Offline-CI einen ROS-Import im neuen aktiven
+Adaptertest. Nur dessen Sammlung und die ROS-Uhrprüfung bei fehlendem `rclpy`
+ausnehmen; vollständige Coretests bleiben offline aktiv. Nachweis in isolierter
+Umgebung ohne ROS: 118 bestanden, zwei ROS-Abhängigkeitsskips, 63 Subtests;
+zwölf Inbetriebnahmewerkzeugtests bestanden. Dieselben drei ROS-abhängigen
+Adapter-/Uhrfälle mit echter ROS-Installation erneut bestanden. Produktbytes
+des real geprüften Kandidaten bleiben unverändert, kein neuer Realstart.
+
 **Volle Dauerprobe bleibt negativ:** historische 2π-Probe erhalten. Auch neuer
 `graph-adaptive_start-final` nach 259,27 s negativ: Vollscan erst nach tatsächlich
 erledigter erster Beobachtung zugelassen, dann Quellenpausen (größte rohe

@@ -2843,6 +2843,10 @@ SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
 bytegleich zu den tatsächlichen aufgelösten Präfixen (`build-identity.json`).
 1.493 Regressionen und Fünfpaketbuild erfolgreich; vollständige synthetische
 2π-Dauerprobe separat negativ, nicht aus positiven kurzen Fällen abgenommen.
+Nachträglich ausschließlich Testsammlung für Offline-CI ohne ROS korrigiert:
+118 Offlinefälle/63 Subtests und zwölf Werkzeugtests bestanden, zwei echte
+ROS-Abhängigkeitsskips; drei betroffene Fälle unter ROS erneut bestanden.
+Keine Produktbytes nach dem Realfenster geändert, kein erneuter Stackstart.
 
 Realer Start ausschließlich `app_mapping.launch.py active_drive=false
 use_hwt601_odometry=true operator_stationary_confirmed=true
