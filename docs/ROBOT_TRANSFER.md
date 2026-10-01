@@ -2818,3 +2818,68 @@ FC03-Pfad innerhalb 120/180 ms absichern und exakt fehlende Außenfläche durch
 separat hergestellte stationäre LiDAR-Sicht belegen; notwendiges manuelles
 Umsetzen bei deaktivierten Antrieben liegt außerhalb Softwarepakets. Kein Merge
 oder automatische Weiterfahrt, Stufe 3 offen.
+
+## 01.10.2026 – adaptiver/Encoder-Kandidat isoliert geprüft, System bleibt an
+
+Ausgang `d9894d2`, funktional `fd883fd`, bestehende PR #105. Kein permanenter
+Install-, Autostart- oder Kalibrierungswechsel. Hauptkopie sauber/unverändert
+`23928d92f411473ed2644692a04aebdff0ffe803`. Gemeinsame Encoderlogik betrifft
+passiven FC03-Reader und aktive Basis ausschließlich im HWT-Pfad; dessen
+unveränderlicher Startparameter `encoder_timing_recovery_enabled=true`,
+Stale-/Kontinuitätsgrenze 180 ms. Außerhalb HWT bleibt dieser Parameter false.
+Messwertgrenze 120 ms, Readerdiagnose 2 s / zwei Versuche, Consumer-HOLD 5 s /
+zwei Recoveries je Quellenklasse. Hardfault/ESTOP/Cancel unverändert hart.
+Aktiven Basisadapter gerätefrei geprüft; im jetzigen Realfenster lief er nicht.
+
+Finale temporäre Runtime:
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/runtime-env.sh`
+sourct bisheriges `metric-gate-start-20261001/final-runtime-env.sh`, dann
+neuen kopierten Fünfpaketinstall `metric-adaptive-start-20261001/install/`:
+base_hardware, explore, robot_navigation, robot_state_estimation,
+amadeus_lidar_bringup. Mission-/Kartenpakete weiterhin aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Zehn geänderte Laufzeitartefakte
+bytegleich zu den tatsächlichen aufgelösten Präfixen (`build-identity.json`).
+1.493 Regressionen und Fünfpaketbuild erfolgreich; vollständige synthetische
+2π-Dauerprobe separat negativ, nicht aus positiven kurzen Fällen abgenommen.
+
+Realer Start ausschließlich `app_mapping.launch.py active_drive=false
+use_hwt601_odometry=true operator_stationary_confirmed=true
+enable_auto_explore=false start_web_gui=false` mit privatem metrischem
+Bootstrapprofil; Scope-/Sessionbindung aus aktueller LAB-1-Karte/Pose, dann
+alleiniger gebundener Explorer über vorhandenes `explore.launch.py` im selben
+Stack. Produktprofil live `metric_frontier`/`adaptive`, Scan true, 900/150 s,
+6 Versuche/3 Fehler. Nav2-RPP genau FollowPath mit Rotation 0,35 rad, festem
+Lookahead 0,40 m, Interpolation/Kollisionsprüfung true und ohne Rückwärtsfahrt;
+SimpleGoalChecker 0,15 m / 0,40 rad. Insgesamt 13 Typ-/Wert-/Pluginparameter
+bestätigt. Native Bibliothek/aufgelöste Module/geladene Paramfiles und Prozesse
+in `common/` manifestiert. Montage-TF/Mast-NaN unverändert, SLAM-Patch live true.
+
+720,016-s-Messfenster negativ: zwei echte HWT-Recoveries, dritte Rawstörung
+bei 583,261 s `hwt_recovery_attempt_limit`; Readerfehlertext
+`Zeitueberschreitung nach 0/14 Bytes`, kein bewiesener Geräte-/Kabeldefekt.
+Encoderreader zum Fensterende 13.921 gültige Paare, keine Timing-Recovery,
+größtes Paar 108,118 ms, Baseline eins/Rebase null. Unabhängig davon 33
+unbekannte Startkonturzellen / 0,021089 m² Außenanteil, null zulässige adaptive
+Kandidaten. Keine unbenutzte Vollsweepfläche als Bewegungsbedingung und keine
+manuelle Vorbereitung als Bootstrap. **Keine Mission/kein aktiver Buswechsel.**
+
+Messprobe stoppt bei 720 s; rein lesende Sensorprozesse liefen für abschließenden
+Snapshot/geordneten Stopp 185,994 s weiter. Kein zweiter Start; dieser Nachlauf
+gehört nicht zum 720-s-Erfolgsnachweis. Geschlossene Bag erst nach Recorderende
+analysiert: keine running-Mission, keine Navigate-Statuseinträge, alle Befehle
+null. Wurzeln einzeln SIGINT, keine Prozessgruppe; sämtliche manifestierten
+Kinder beendet, `/dev/ttyUSB_BASE` und `/dev/ttyUSB_HWT601` ohne Besitzer.
+Anschließend zwölf frische FC03-Paare Position 0 / 0 RPM; elektrische
+Motorstromstellung nicht aus diesen Werten behauptet. `end-state-proof.json`
+mit Originalsourcen/Endzustand und `end-encoder.json` (JSONL) privat.
+
+Rückfall: ohne Mission geordnet stoppen und neues Fünfpaketoverlay weglassen;
+voriger Kandidat hat seine dokumentierten Quellen-/Geometriegrenzen weiterhin.
+Sicherer Betriebsstart `active_drive=false`, `enable_auto_explore=false`.
+Kein Latch-Reset/automatischer Rebase bei echter Kontinuitätslücke; neue echte
+stationäre Initialisierung/Karte-Posezuordnung nötig. Keine weitere Startserie,
+kein Merge/Force-Push/private Daten oder private Berichts-Vorfahren. Details
+im einzigen aktuellen WE-STATUS und AGENTENAUFTRAG §10. **Stufe 3 offen;
+System eingeschaltet, keine geplante Abschaltung.**

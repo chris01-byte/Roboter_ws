@@ -4,13 +4,20 @@
 
 Maßgeblich: [MASTERPLAN](MASTERPLAN.md), [AGENTENAUFTRAG](AGENTENAUFTRAG.md), [LAB-1](../LABORMODUS.md), [MEILENSTEINE](MEILENSTEINE.md). Dies ist der einzige aktuelle WE-Iststand. Die ausführliche bisherige Statusdatei ist [bytegleich archiviert](archive/20260930-v1.1/STATUS.md); alte Abschnittsnummern und „nächste Schritte“ dort sind historische Referenzen.
 
+**Aktueller Abschluss 01.10.2026:** Adaptiver metrischer Bootstrap und begrenzte
+Encoder-Timing-Recovery auf `fd883fd` softwareseitig geprüft. Gemeinsamer realer
+Vorlauf negativ: dritte HWT-Störung erschöpft das Budget; unabhängig davon 33
+unbekannte Startkonturzellen / 0,021089 m² Außenanteil, kein zulässiger Startkandidat.
+Keine reale Mission. Einzelbelege, voller negativer Dauertest und Grenzen im
+neuen Abschluss unter §4 sowie AGENTENAUFTRAG §10. **System bleibt eingeschaltet.**
+
 ## 1. Aktuelle Nutzerentscheidung
 
 Normale Erkundung wird metrisch organisiert: beobachten → erreichbare Frontier-/Beobachtungsposition wählen → navigieren → neue Beobachtung und Ergebnis bewerten → nächste Aufgabe. Portal-/Raumsemantik ist keine Pflicht für normale metrisch sichere Ziele. Geometrie, Karte/Pose, Scope, Sensor-/Antriebsgesundheit und Schutzkette bleiben verbindlich.
 
 **GRÜN: METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementiert als explizites `metric_frontier`-Backend im bestehenden Explorer. Default bleibt `existing`. Beim anschließend beauftragten Realnachweis wurden reale Sensor-/ROS-Prozesse im rein lesenden Vorlauf gestartet; dieser blieb blockiert, keine aktive Fahrt oder Mission, kein dauerhafter Installwechsel. Stufe 3 bleibt **OFFEN**. Konservative Geometrieprüfung bleibt verbindlich; reale Zielerreichung, Türpassage und Robustheit sind nicht aus den Softwaretests abgeleitet.
 
-**Abschluss des begrenzten Pakets (01.10.2026):** Ausgang `cf55cea`,
+**Historischer Abschluss des vorigen Pakets (01.10.2026):** Ausgang `cf55cea`,
 Funktionskandidat `8f5eeb4`, bestehender Branch/PR #105. 1.469 Regressionen
 bestanden; Radübernahme, Uhrzuordnung und ganze Eigenkörperzellen gezielt
 korrigiert. **Realer 720-s-Gesamtvorlauf negativ, keine Mission/Fahrt.**
@@ -19,7 +26,8 @@ Encoderpaar, anschließend 212,127 ms alte letzte zulässige Radprobe am Gate.
 Unveränderte 120-/180-ms-Grenzen sperren richtig. Geometrie unabhängig davon:
 211 unbekannte Rundblickzellen, 0,188420 m² Außenanteil; bereits Anfangskontur
 unzulässig. Genaues Ergebnis und Restumfang im aktuellen Abschluss unter §4,
-Auftragsabschluss in AGENTENAUFTRAG §9. Kein weiterer automatischer Vorlauf.
+Auftragsabschluss in AGENTENAUFTRAG §9. Der folgende adaptive Auftrag hat diesen
+Restumfang gezielt ersetzt; alte Messungen bleiben unverändert erhalten.
 
 ## 2. Belegter Ausgangspunkt
 
@@ -330,7 +338,7 @@ Der spätere Status `ready=false` bleibt erhalten. Gesamtes Fenster negativ,
 geometrisch zugleich unzulässig. Kein aktiver Buswechsel, 0 Missionen,
 0 Nav2-Kinder; 900/150 s und 6/3 live geladen, keine Budgets gestartet/reset.
 
-**Konkreter Restumfang:** Der aktuelle FC03-Pfad muss unter echter Vollstacklast
+**Damals konkreter Restumfang (durch den folgenden Auftrag präzisiert):** Der aktuelle FC03-Pfad muss unter echter Vollstacklast
 wieder zulässige Paare innerhalb 120 ms und lückenlos innerhalb 180 ms liefern.
 Im letzten Paar sind 71,797 ms Alias/USB-Nachprüfung und 46,840 ms Modbus
 beobachtet; aus diesen wall-clock-Phasen allein keine Kabel-/Encoder-/Kernel-
@@ -358,6 +366,172 @@ finaler Lauf `decision-take-common/`, Runtime `final-runtime-env.sh`,
 Berichts-Vorfahren, Merge, Force-Push oder permanenter Installwechsel.
 Rückfall: ohne Mission geordnet stoppen, beide temporären Overlays weglassen,
 `active_drive=false`, `enable_auto_explore=false`. **Stufe 3 bleibt offen.**
+
+### Aktueller Abschluss: adaptiver Start und begrenzte Encoder-Recovery (01.10.2026)
+
+Ausgang `d9894d268262f7f8e965f2f92aef72021df3245e`, Funktionskandidat
+`fd883fdf35e004dff6b209fffff9118c71161cd3`, derselbe Branch/PR #105.
+Getrennte Funktionscommits: `a8aa3f3` Encoder/aktive Basis/Fusion/Gate,
+`b36d412` adaptiver Start/Controllergeometrie, `fd883fd` typgerechte
+Controllerklassen in der Graphfixture. Keine privaten Berichts-Vorfahren.
+
+**Wirksamer Produktvertrag:** `exploration_strategy` bleibt standardmäßig
+`existing`; metrisches Profil explizit `metric_frontier`, dessen unveränderlicher
+Startparameter `metric_start_strategy=adaptive`. `initial_scan_enabled=true`
+bleibt geladen. Ein zulässiger nützlicher Vollrundblick bleibt verfügbar; fehlt
+seine Fläche, wird ein echtes Frontier-/Annäherungsziel gesucht. Fehlt schon
+die sichere Anfangskontur oder jedes Ziel, folgt ein begründeter Teilstand.
+Kein Pflichtscan für eine andere Bewegung, kein festes Fahrziel, kein neuer
+Goal-Sender oder Supervisor. Bootstrap/HOLD zählen in 900/150 s und 6/3 hinein.
+
+Vor vorhandener Nav2-Ausführung tatsächlichen `ComputePathToPose`-Plan und
+13 Liveparameter von RPP/Goalchecker prüfen: genau `FollowPath`/RPP und
+`general_goal_checker`/SimpleGoalChecker; Rotation true, Winkel 0,35 rad,
+Lookahead 0,40 m, Geschwindigkeitsskalierung/Rückwärtsfahrt false,
+Kollisionsprüfung/Interpolation true, XY-Toleranz 0,15 m/Yaw 0,40 rad.
+Vorausrichtung, Controllerkorrektur, interpolierter Carrot/Kurvenraum, gesamte
+Route und Zielrotation einschließlich XY-Toleranzdisk reservieren. Ungedeckter
+weiter Carrot aus zu dünnem Plan wird verworfen; vorhandene Reserven bleiben.
+Die zusätzliche Kurvenreserve ist abgeleitet, kein verkleinerter Footprint.
+Startkörperbeleg bleibt im ursprünglichen Raum; harmlose Rasterupdates können
+ihn nur verkleinern. Änderungen von Kontext/Raster/Karten-Odometriebezug lassen
+ihn verfallen. Keine mitfahrende Freiraumblase, kein Überschreiben von Hindernissen.
+Mastmaske, NaN-Semantik und Montage-TF erhalten.
+
+**Encodervertrag:** gemeinsamer Core für passiven Reader und aktive HWT-Basis;
+120 ms Paarvalidität und 180 ms Bewegungsfrische/Kontinuität unverändert.
+Nach gesundem Vorlauf darf bei intakter Identität begrenzt diagnostisch weiter-
+gelesen werden: maximal 2 s / zwei Versuche je Readerlebensdauer. Verworfenes
+Paar bleibt unveröffentlicht, Stillstand/HOLD sofort. Neue gültige Paare können
+nur bei belegter Kontinuität alle Zählerdifferenzen erhalten; keine Rebase,
+Pose-Nullung oder Reconnect-Reparatur. Echte >180-ms-Lücke bleibt unbewiesen,
+auch bei späteren 0 RPM/zwei guten Paaren. Verbraucher zusätzlich höchstens
+5 s / zwei Wiederherstellungen je Quellenklasse HWT bzw. Rad, ohne Reset durch
+Kindwechsel. Gültige Originalstempel, Stillstand, Fusion/Karte/Route, terminales
+altes Kind und Gate-ACK vor Resume. Port/Identität/Zähler/Zeit/ESTOP/Cancel
+und Aktuatorfehler bleiben hart. Details: [Encodervertrag](../ENCODER_ODOMETRIE_FIX.md)
+und [Explore-README](../../src/explore/README.md).
+
+**Alter echter Fehler exakt reproduziert:** native Paardauer 120,874265 ms,
+letzte zulässige Radprobe am Gate 212,127149 ms. Erstgrund im ursprünglichen
+Reader `encoderpaar_zeitfenster_ueberschritten`; keine wartende zulässige Probe.
+Neuer Reader verwirft das Paar; danach >180 ms macht Kontinuität unbewiesen,
+2-s-Endgrund `encoder_timing_continuity_unproven`. Historisch nicht aufgezeichnete
+verworfene Zähler wurden im Replay mit null gegengetestet: sogar das heilt die
+Zeitlücke nicht, beweist aber keinen historischen Stillstand. Kein rückwirkendes
+Umdeuten der damaligen Sperre.
+
+**Software und verbundene Nachweise:** 1.493 Regressionen bestanden, isolierter
+Fünfpaketbuild erfolgreich. Zehn geänderte Laufzeitartefakte bytegleich mit dem
+tatsächlich aufgelösten Install. MM, BT, Explorer, Kartenmanager, HWT-Shadow und
+Gate tatsächlich ausgeführt; synthetisch sind Sensor-/Rastereingänge und
+Nav2-Gegenstelle. Keine erfundenen Ziele/Gesundheitsadapter. Reale Zeitlücken
+bleiben Zeitlücken, kein Fresh-Restamping. Unterschiedliche Graphfälle nicht
+zu einer bestandenen durchgehenden Vollrundblickfahrt zusammensetzen.
+
+| Pflichtfall | Ergebnis und Grenze |
+|---|---|
+| A adaptive Beobachtungsschleife | `adaptive_loop`: drei selbst berechnete Ziele, neue Rasterevidenz, offene Verbindung/weitere Ziele, 60,38 s im selben Elternauftrag, maximal ein Kind. Scanverfügbarkeit in diesem Loop-Test explizit false. Separater Fall unten prüft den tatsächlich eingeschalteten Scan. |
+| A/B Scan optional, später zulässig | `adaptive_admission` mit `initial_scan_enabled=true` und voller 2π-Anforderung: rückwärtiger Schatten sperrt Scan; anderes berechnetes Ziel wird ausgeführt; erst neue Karte erlaubt Scan. Danach bewusster Testabbruch, **kein bestandener Vollscan**. Nach letzter Parametertypkorrektur erneut bestanden. |
+| C keine sichere Erstbewegung | `adaptive_wait`: null Kinder und ausschließlich Nullbefehle bei unbekannter Startreserve; Vorausrichtung/seitliches Hindernis/Controller-/Zieltoleranz zusätzlich regressiert. |
+| D/F Timing-HOLD und HWT davor | `encoder_hold`: tatsächlicher Core verwirft 120,874-ms-Paar bei noch belegter kurzer Kontinuität; HWT-Recovery zuvor separat; neuer gültiger Stillstand/Fusion/ACK, höchstens ein Kind; getrennte Originalereignisse am Explorer und Gate. |
+| E echte Lücke | `encoder_gap` und Readerregression: >180 ms, spätere gute Paare/0 RPM ohne Rebase oder Weiterfahrt; begrenzte Diagnose endet gesperrt. |
+| G harte Gegenfälle/Budget | `encoder_persistent`, `encoder_no_stop`, `encoder_estop`, `encoder_cancel`, `encoder_budget`, `cancel_failed`, `estop`: keine unerlaubte Fortsetzung; dritter Radfehler nach zwei Recoveries terminal. Aktiver Basisadapter/Identität/Uhrrücklauf/Zähler separat regressiert. |
+| H Karten-/Körperbeleg | `route`, `mast_start`, `chain` sowie Körper-/Kontextregression: gültige Updates erhalten Aufgaben; neues Hindernis stoppt; alter Körperbeleg kann weder wandern noch neue Sperren freigeben. |
+
+Sechs geometrie-/Controllerbetroffene Graphfälle nach finaler Kurven- und
+Zielreserve erneut bestanden, zusätzlich typgerechte 13-Parameterprüfung und
+Budgetfall. Lokales Nachweisregister `metric-adaptive-start-20261001/` mit
+`regressions-publish-final.log`, `graph-controller-final-summary.json`,
+`graph-suite-summary.json` und einzelnen `result.json`/Prozesslogs.
+
+**Volle Dauerprobe bleibt negativ:** historische 2π-Probe erhalten. Auch neuer
+`graph-adaptive_start-final` nach 259,27 s negativ: Vollscan erst nach tatsächlich
+erledigter erster Beobachtung zugelassen, dann Quellenpausen (größte rohe
+Publikationslücke 515,70 ms), zwei HWT-Recoveries, absolute 150-s-Scanfrist
+erschöpft; anschließend `post_child_state_or_standstill_unconfirmed` mit
+`hwt_recovery_attempt_limit`. Gemessene synthetische Gesamt-Yaw 11,825 rad über
+Unterbrechungen ist kein belegter abgeschlossener 2π-Scan. Diese Probe entstand
+vor der zusätzlichen Kurven-/Zielreserve; die späteren positiven Kurzfälle
+ersetzen ihre Laufzeit-/Quellengrenze nicht. Frühere negative Fixture-/Last-/
+Geometrieversuche ebenfalls erhalten. Kein Vollrundblick-/Robustheitsgrün.
+
+**Ein gemeinsamer realer Vorlauf:** derselbe isoliert kopiert gebaute Kandidat,
+reale Domain 42, `active_drive=false`, passiver FC03-Reader als einziger
+Basisbusbesitzer. Vorab FC03-Nullposition/-RPM und freie Handles geprüft.
+Ungebundener Bootstrap endet erwartungsgemäß am Scope; im selben Stackfenster
+Session/LAB-1-Scope an tatsächliche Karte/Pose gebunden und einziger gebundener
+Explorer idle. Laufzeitpräfixe, Prozessbaum, geladene Parameterdateien, Modul-
+und native RPP-Bibliothekshashes sowie alle 13 Controllerparameter manifestiert.
+Tatsächliches metrisches/adaptives Profil, Scan weiterhin true, 900/150 s und
+6/3 live; SLAM `check_min_dist_and_heading_precisely=true`.
+
+Vorab festgelegtes Messfenster **720 s ab Launchwurzel**, gemessen 720,016 s.
+Erstmals alle Vorlaufbedingungen außer Bewegungsgeometrie nach 35,858 s.
+Am tatsächlichen Gate: HWT-HOLD nach 162,718 s → HEALTHY nach 164,263 s;
+zweiter HOLD 401,729 s → HEALTHY 403,212 s. Dritte HWT-Störung nach 583,261 s
+terminal `hwt_recovery_attempt_limit`. Eigener Originalzustand: Rawdriver
+`ready=false`, `raw_data_ready=false`, `consecutive_errors=1`,
+`Zeitueberschreitung nach 0/14 Bytes`; Rawalter dabei erst 37,327 ms.
+Also echter Readiness-/Budgetgegenfall, keine erfundene stale-Wheelursache.
+First-Fault und zweite erfolgreiche Recovery im späteren Fehler erhalten.
+Keine bewiesene Hardware-/Kabel-/Kernelursache daraus ableiten.
+
+Encoder am 720-s-Ende: **13.921 vollständige Paare**, null Timing-Recovery/
+Rejects/Rebases/Reconnects, ursprünglicher Baselinezähler eins, Kontinuität
+gültig. Größte diagnostizierte Paardauer 108,118 ms, unter 120 ms. Der aktuelle
+Realfall ist **kein realer Encoder-Recovery-Nachweis**; dieser ist softwareseitig
+verbunden geprüft. Gesundes Rad heilt keine terminale HWT-/Fusionquelle.
+
+Aktuelle frühe und späte Geometrie unabhängig von Quellen negativ:
+**33 unbekannte Startkonturzellen**, davon 16 teilweise Körperzellen und
+17 Paddingzellen. Ganze Körperzellen privat 79; Außenanteil spät **0,021089 m²**
+(früh 0,021069 m²). Eine unbekannte Costmap-Paddingzelle vollständig in dieser
+Rohmenge; Flächen nicht addieren. Erster Produktgrund
+`initial_contour_unknown_or_occupied`, **null adaptive Kandidaten**. Kein
+unbenutzter Vollsweep als Gate: dennoch bleibt die beanspruchte Anfangskontur
+unbelegt. Vollsweep nur Diagnose: 220 unbekannte Zellen / 0,189389 m²,
+134 Costmap-Zellen vollständig darin. Letzter historischer Referenzfall bleibt
+separat 36 Start-/211 Sweepzellen; weder manuelles Umsetzen noch Vorkartieren
+wurde als positiver Bootstrap verwendet. Spätaufnahme nutzt aktuelle Daten
+im selben laufenden Sensorstack, keine neue Karten-/Quellenfreigabe.
+
+**Reale Mission nicht ausgeführt:** kein aktiver Buswechsel, kein MM-Auftrag,
+kein Nav2-Kind. Quellenbudget UND Anfangskontur blockieren technisch; keine
+fehlende allgemeine Nutzerfreigabe. Kein weiterer Vorlauf oder Fahrversuch.
+Der 720-s-Probe endete automatisch; für abschließenden Snapshot und geordneten
+Stopp liefen die rein lesenden Sensorprozesse anschließend noch **185,994 s**.
+Dies ist Abschlussnachlauf außerhalb des Messfensters, kein zweites Fenster
+und keine 900-s-Mission; eine exakte 720-s-Prozesslaufzeit wird nicht behauptet.
+Geschlossene Bag erst nach Recorderende: 0 running-Missionen, 0 Navigate-
+Statuseinträge, sämtliche vier aufgezeichneten Befehlsströme null. Radpositionen
+durchgehend null; kleine gefilterte IMU-Winkelgeschwindigkeit ist kein Fahrbeleg.
+Geschlossener Gesamtdatensatz einschließlich Nachlauf: 17.559 Readerpaare,
+keine 120-ms-Verletzung, maximaler Messabstand 124,198 ms. Diese Statistik
+nicht mit einem durchgehend gesunden Verbraucherzustand gleichsetzen.
+Mast-NaN im robusten Sektorinneren 57–123° vollständig erhalten; Montage-TF
+unverändert. Einzelne Raster-/Pose-/Zellbelege bleiben privat.
+
+**Endzustand:** alle manifestierten Prozesse nach einzelnem SIGINT an ihren
+Launchwurzeln beendet, beide Gerätealiases ohne Besitzer; anschließend zwölf
+frische FC03-Paare je Position 0 / 0 RPM, keine elektrische Sperrstellung
+behauptet. Hauptkopie sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`,
+kein dauerhafter Install-/Autostartwechsel. System eingeschaltet, kein geplanter
+Shutdown. Private Belege ausschließlich
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/`, insbesondere
+`common/passive-window-final.json`, `common/closed-preflight-analysis.json`,
+`common/late-geometry-report.json`, `common/fullstack-timing.json`,
+`common/scan-mask-proof.json`, `end-state-proof.json` und `end-encoder.json`.
+
+**Belegte Restgrenze:** autonome reale Erkundung erst mit gleichzeitig gültigen
+Quellen am Verbraucher innerhalb des unveränderten Recoverybudgets und
+sensorisch belegter Anfangskontur/einer zulässigen berechneten Erstbewegung.
+Der optionale Rundblick löst weder drei HWT-Störungen noch die 33 Startzellen.
+Kein manueller Bootstrap als Ersatz. Weitere gezielte Quellen-/Beobachtungs-
+arbeit braucht einen neuen begrenzten Auftrag, keine automatische Neustartserie.
+Rückfall: ohne Mission geordnet stoppen und dieses temporäre Fünfpaketoverlay
+weglassen; sichere Betriebsparameter `active_drive=false`,
+`enable_auto_explore=false`. **Stufe 3 offen.**
 
 ## 5. Erhaltener Umfang und nächste Meilensteine
 

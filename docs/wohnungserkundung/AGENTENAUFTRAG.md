@@ -2,7 +2,7 @@
 
 **WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Abschnitt 9 ist abgeschlossen und bleibt historisch. Einziger aktueller Auftrag ist Abschnitt 10: adaptiver metrischer Start und begrenzte Encoder-Recovery.**
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Abschnitt 10 dokumentiert den aktuellen abgeschlossenen Teilstand: adaptiver metrischer Start und begrenzte Encoder-Recovery. Kein automatischer weiterer Realversuch.**
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -239,3 +239,29 @@ und neu prüfen: maximal eine Mission **900 s / 150 s je Aufgabe / 6 Versuche /
 Bus-Doppelbesitzer, Fremdziele, private Daten/Vorfahren, Merge oder permanenter
 Installwechsel. Abschluss getrennt nach Software, realem Preflight und Mission.
 **System diesmal eingeschaltet lassen**, vorherige Shutdownanweisung aufgehoben.
+
+**Abschluss dieses Pakets:** Funktionskandidat `fd883fd`, 1.493 Regressionen,
+isolierter Fünfpaketbuild und verbundene adaptive Start-/Encoder-HOLD-Fälle
+einschließlich harter Gegenfälle bestanden. Im eingeschalteten Scanprofil
+erste berechnete Beobachtung und spätere Vollscan-Zulassung belegt; volle
+2π-Dauerprobe weiter negativ, keine Vollscanabnahme. Readerdiagnose 2 s / zwei
+Versuche, Verbraucher-Recovery 5 s / zwei je Quellenklasse, 120/180 ms erhalten.
+Originalfall exakt reproduziert und echte >180-ms-Lücke weiterhin gesperrt.
+
+Ein tatsächlicher 720,016-s-Vorlauf: zwei HWT-Recoveries, dritte Störung nach
+583,261 s `hwt_recovery_attempt_limit`; Radreader bis Fensterende 13.921 Paare
+ohne Timingfehler/Rebase. Unabhängig davon Anfangskontur 33 unbekannte Zellen,
+0,021089 m² Außenanteil, kein zulässiger autonomer Startkandidat. **Keine reale
+Mission und kein aktiver Buswechsel.** Rein lesender Abschlussnachlauf für
+Snapshot/geordneten Stopp 185,994 s getrennt vom 720-s-Messfenster; keine zweite
+Startserie. Quellenbudget und Bewegungsgeometrie sind die technischen Blocker,
+keine ausstehende allgemeine Freigabe. Ein weiterer Versuch wird nicht gestartet.
+
+Prozesse beendet, echte Gerätehandles frei, zwölf frische FC03-Endpaare
+Position/RPM null. Hauptkopie sauber/unverändert, keine dauerhafte Installation,
+private Daten nur lokal. Rückfall temporäres Fünfpaketoverlay weglassen, ohne
+Mission `active_drive=false` / `enable_auto_explore=false`. Der historische
+Restumfang aus §9 (211 Sweepzellen/manuelle Beobachtungsposition) ist keine
+aktuelle Bootstrapanforderung. Vollständiges Ergebnis und Einzelgrenzen im
+[aktuellen STATUS-Abschluss](STATUS.md#aktueller-abschluss-adaptiver-start-und-begrenzte-encoder-recovery-01102026).
+Stufe 3 offen, **System bleibt eingeschaltet**.

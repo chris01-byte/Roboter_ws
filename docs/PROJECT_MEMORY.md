@@ -114,3 +114,51 @@ Transport-/Runtime-Latenzabsicherung separat begrenzen; keine automatische
 Neustartserie.0 Missionen / 0 Nav2-Kinder, FC03-Endwerte null, Prozesse und Handles frei.
 Private Einzelzellen/Bags/Manifeste lokal, Hauptkopie unverändert, kein Merge/
 permanenter Installwechsel; Rückfall temporäre neue Overlays abwählen. Stufe 3 offen.
+
+## 01.10.2026 – adaptiver Bootstrap und begrenzter Auftragserhalt bei Encoder-Timing
+
+Nutzerpräzisierung im MASTERPLAN v1.2/AGENTENAUFTRAG §10; Ausgang `d9894d2`,
+Funktionskandidat `fd883fd`, bestehender Branch/PR #105. `metric_frontier`
+startet mit unveränderlichem `metric_start_strategy=adaptive`: zulässiger
+nützlicher Rundblick, sonst berechnete Beobachtungsfahrt, sonst begründeter
+Teilstand. `existing` bleibt Default; Scan bleibt verfügbar/eingeschaltet.
+Kein manuelles Vorkartieren/Umsetzen als autonomer Nachweis. Unbenutzte 360°-
+Fläche darf keine andere sichere Bewegung sperren; die tatsächlich beanspruchte
+Anfangskontur, Vorausrichtung, Controllerkurve, Route und Zielrotation dagegen
+vollständig prüfen. Tatsächlicher Nav2-Plan/13 RPP-/Goalcheckerparameter sind
+Voraussetzung. Ein unbekanntes Padding wird nicht zum Eigenkörper erklärt.
+Körperbeleg ist an Anfangsraum/Karten-Odometriebezug gebunden: normale Raster-
+inhaltsupdates verkleinern ihn nur; neuer Kontext/Raster/Bezug lässt ihn
+verfallen, niemals mitwandernde Blase. Dies präzisiert ältere pauschale
+Fingerprint-/Vollrundblickanforderungen; historische Messungen bleiben erhalten.
+
+Messvalidität 120 ms, Frische/Integration 180 ms und begrenzter Auftragserhalt
+sind getrennt. Gemeinsamer Core in passivem Reader/aktiver HWT-Basis: 2 s
+Diagnosefrist, zwei Versuche je Readerlebensdauer, keine verworfenen Odomdaten,
+Rebase oder verlorenen Zählerdeltas. Verbraucher maximal 5 s / zwei Recoveries
+je HWT-/Radquelle. Resume nur mit belegter Kontinuität, Originalstempeln,
+Stillstand/Fusion/Route/Kindterminal/Gate-ACK. Alte 120,874265-ms-Paarverletzung
+mit 212,127149-ms-alter Gateprobe exakt reproduziert: Erstgrund Readerzeitfenster,
+danach Kontinuität unbewiesen. Spätere gute Paare/0 RPM heilen das nicht.
+
+1.493 Regressionen, isolierter Fünfpaketbuild und verbundene A–H-Fälle im
+dokumentierten Umfang bestanden. Mehrere autonome synthetische Folgeziele,
+später nach neuer Karte zulässiger Scan, Timing-HOLD und getrennte HWT-/Rad-
+ereignisse. Historische und neue vollständige 2π-Dauerprobe bleiben negativ:
+neuer 259,27-s-Versuch mit bis 515,70 ms Rohquellenlücke/Budgeterschöpfung;
+kurze positive Zulassungstests beweisen keinen abgeschlossenen Vollscan.
+
+Genau ein neues reales 720-s-Messfenster mit gleichem installierten Kandidaten:
+HWT-Recoveries bei 162,718/401,729 s, dritte Rawdriverstörung nach 583,261 s
+terminal `hwt_recovery_attempt_limit` (`Zeitueberschreitung nach 0/14 Bytes`).
+Radreader am Fensterende 13.921 Paare ohne Timingfehler, größtes Paar 108,118 ms;
+kein realer Encoder-Recoveryfall. Geometrie separat negativ: 33 unbekannte
+Startkonturzellen / 0,021089 m² Außenanteil, kein berechneter Startkandidat.
+Die optionale Rundblickentscheidung löst diese beiden Grenzen nicht.
+Kein aktiver Wechsel, 0 Missionen/Nav2-Kinder, ausschließlich Nullbefehle.
+Messprobe beendet bei 720,016 s; rein lesender Abschluss-/Stoppnachlauf noch
+185,994 s offen ausgewiesen. Danach alle manifestierten Prozesse/Handles frei,
+zwölf frische FC03-Paare Position/RPM null. Kein weiterer Neustart/Fahrversuch,
+keine unbewiesene Hardwareursache. Private Belege in
+`~/.local/share/amadeus/tests/metric-adaptive-start-20261001/`, Hauptkopie
+unverändert, Stufe 3 offen, **System eingeschaltet lassen**.
