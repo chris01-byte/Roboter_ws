@@ -2771,3 +2771,50 @@ Rückfall: ohne Mission geordnet stoppen und letztes temporäres Overlay weglass
 neue belegte stationäre Initialisierung mit neuem Karten-/Odometriebezug statt
 Latch-Reset. Reale Erkundung erst nach gleichzeitig gültigem gemeinsamen
 Startnachweis laut einzigem WE-STATUS, keine automatische Wiederanfahrt.
+
+
+## 01.10.2026 – temporärer Entscheider-/Startgeometriekandidat, keine reale Mission
+
+Funktionsstand `8f5eeb4`, unabhängiger Checkout im bestehenden Branch/PR #105.
+`~/roboter_ws` sauber/unverändert `23928d92f411473ed2644692a04aebdff0ffe803`.
+Exakte finale Runtime über
+`~/.local/share/amadeus/tests/metric-gate-start-20261001/final-runtime-env.sh`:
+dokumentierte vorherige Unterlage, Vierpaketpräfix dort `install/`, danach
+Zweipaketpräfix `decision-take-overlay/install/` nur für robot_navigation und
+robot_state_estimation. Explore/base_hardware aus Vierpaketpräfix;
+mission_manager/robot_map_manager/amadeus_lidar_bringup aus
+`metric-start-encoder-20260930/install`, BT aus `hwt-child-scope-20260928-retry`,
+SLAM aus `~/amadeus_slam_toolbox_ws/install/slam_toolbox`, LiDAR aus
+`releases/we1-ldlidar-shutdown-overlay/install`. Aufgelöste Präfixe, geladene
+Parameterdateien, Prozesse und Modulhashes im finalen `decision-take-common/`.
+Alle geänderten Modulbytes mit tatsächlich aufgelöster Installation abgeglichen.
+Kein permanenter Install-/Autostartwechsel, keine Montage-/Kalibrierungsänderung.
+
+Real nur `app_mapping.launch.py active_drive=false use_hwt601_odometry=true
+operator_stationary_confirmed=true enable_auto_explore=false start_web_gui=false`
+mit metrischem Bootstrapprofil; im selben Start neue lokale LAB-1-Kartenbindung,
+vorhandene `explore.launch.py` mit metrischem Produktprofil und passivem HWT.
+Ein passiver Reader am Basisbus, kein aktiver Basistreiber, keine Mission.
+Passive Quelle eigene Radgruppe/dritter Thread und geschützter echter DDS-Take
+vor Entscheidung; Befehl/ESTOP seriell, aktive Quellenscheduling unverändert.
+120-ms-Paar-/180-ms-Lückengrenze und Mast-NaN/CCW/TF erhalten; SLAM-Patch live true.
+
+Finales 720-s-Fenster negativ: zwei echte HWT-Recoveries, dann echte
+120,874-ms-Paarverletzung, Gate 212,127 ms alte letzte zulässige Radprobe.
+Echte Stale-Sperre erhalten. Gleichzeitig voller initialerSweep 211 unbekannte
+Zellen / 0,188420 m² außerhalb Körper, Costmap 139 Zellen vollständig darin. Keine
+künstliche Freigabe, keine weiteren Starts/Fahrten. Software: 1.469 Regressionen
+bestanden; voller synthetischer2π-Dauerlauf separat negativ, keine Abnahme.
+Ende: alle manifestierten Wurzeln einzeln SIGINT, keine Prozessgruppensignale;
+Gerätehandles frei,12 frische FC03-Endpaare je 0 rpm / Position 0. Elektrischen
+Motorstromzustand nicht aus Software behaupten. Private ClosedBag-/Timing- und
+Endzustandsnachweise lokal, keine privaten Berichts-Vorfahren veröffentlicht.
+
+Rückfall: geordnet ohne Mission stoppen und Zweipaket-/Vierpaketoverlay weglassen,
+`active_drive=false`, `enable_auto_explore=false`. Echter Kontinuitätsverlust
+benötigt neue belegte stationäre Initialisierung/Karte-Posezuordnung, kein
+Latch-Reset. Reale Startfähigkeit nicht vollständig geschlossen: vorhandenen
+FC03-Pfad innerhalb 120/180 ms absichern und exakt fehlende Außenfläche durch
+separat hergestellte stationäre LiDAR-Sicht belegen; notwendiges manuelles
+Umsetzen bei deaktivierten Antrieben liegt außerhalb Softwarepakets. Kein Merge
+oder automatische Weiterfahrt, Stufe 3 offen.

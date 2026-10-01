@@ -10,21 +10,16 @@ Normale Erkundung wird metrisch organisiert: beobachten → erreichbare Frontier
 
 **GRÜN: METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementiert als explizites `metric_frontier`-Backend im bestehenden Explorer. Default bleibt `existing`. Beim anschließend beauftragten Realnachweis wurden reale Sensor-/ROS-Prozesse im rein lesenden Vorlauf gestartet; dieser blieb blockiert, keine aktive Fahrt oder Mission, kein dauerhafter Installwechsel. Stufe 3 bleibt **OFFEN**. Konservative Geometrieprüfung bleibt verbindlich; reale Zielerreichung, Türpassage und Robustheit sind nicht aus den Softwaretests abgeleitet.
 
-**Aktuell beauftragt (01.10.2026):** gezielte Umsetzung der realen
-Radquellenentscheidung bis zum Gate und der zulässigen Anfangsgeometrie,
-Ausgangsstand `cf55cea`, AGENTENAUFTRAG §9. Eigene Fehlerübergangssnapshots
-mit Originalwerten und konsistenten Uhrbezügen; belegte minimale Korrekturen,
-getrennte Regressionen und gemeinsamer 720-s-Lesevorlauf ab Launchwurzel.
-Reale Anfangsgeometrie bis Rundblick/Vorausrichtung/Route zellgenau untersuchen.
-Bisherige Vorläufe bleiben historische negative Belege, kein aktuelles Ergebnis.
-Der zweite aktuelle Vorlauf reproduzierte nach etwa 554 s einen gültig
-ausgelösten Radfrische-Stopp: 215,95 ms Messalter, obwohl drei neuere
-Originalmessungen bereits im Recorder eingetroffen waren. Reader ohne Fehler.
-Passiven Radcallback separat bedienen und danach ein drittes begrenztes
-720-s-Fenster messen; aktive Quellen und harte Grenzen bleiben unverändert.
-Dieses dritte Fenster ist ebenfalls negativ: 186,34 ms Messalter trotz eigener
-Radgruppe. Als gezielte nächste Korrektur die wirkliche wartende DDS-Probe am
-Entscheider übernehmen; ein abschließendes viertes Fenster, keine Neustartlösung.
+**Abschluss des begrenzten Pakets (01.10.2026):** Ausgang `cf55cea`,
+Funktionskandidat `8f5eeb4`, bestehender Branch/PR #105. 1.469 Regressionen
+bestanden; Radübernahme, Uhrzuordnung und ganze Eigenkörperzellen gezielt
+korrigiert. **Realer 720-s-Gesamtvorlauf negativ, keine Mission/Fahrt.**
+Letzter Fehler nach zwei echten HWT-Recoveries: 120,874 ms verworfenes
+Encoderpaar, anschließend 212,127 ms alte letzte zulässige Radprobe am Gate.
+Unveränderte 120-/180-ms-Grenzen sperren richtig. Geometrie unabhängig davon:
+211 unbekannte Rundblickzellen, 0,188420 m² Außenanteil; bereits Anfangskontur
+unzulässig. Genaues Ergebnis und Restumfang im aktuellen Abschluss unter §4,
+Auftragsabschluss in AGENTENAUFTRAG §9. Kein weiterer automatischer Vorlauf.
 
 ## 2. Belegter Ausgangspunkt
 
@@ -104,7 +99,7 @@ Private Belege ausschließlich `~/.local/share/amadeus/tests/metric-frontier-rea
 
 **Damals nächster Schritt, im folgenden Abschnitt ausgeführt:** gezielter Vorlauf-Korrekturauftrag für Startkarten-/Kontur- und FC03-Paarzeitblocker mit getrennten Nachweisen und unveränderten Schutzgrenzen. Aktuelle Voraussetzung ausschließlich im Abschluss vom 01.10.2026.
 
-### 01.10.2026 – Mast-/Eigenkörpervertrag und Encoderzeitpfad getrennt korrigiert
+### Historisch bis cf55cea: Mast-/Eigenkörpervertrag und Encoderzeitpfad
 
 Auftrag vom 30.09. auf veröffentlichtem `0efb7e4`, funktionaler Abschluss
 `8be0709` in derselben PR-#105-Linie. **Softwarekorrekturen regressiert;
@@ -223,7 +218,7 @@ null; Encoderpositionen/RPM unverändert null, Odom-v null. Alle manifestierten
 Prozesse und Gerätebesitzer beendet; anschließend 12 frische Paare beider Motoren
 mit 0 rpm/Position 0. Bootstrap-Scope-Exit getrennt, keine Shutdownfehler.
 
-**Genau eine Voraussetzung für den bereits begrenzten Realauftrag:** ein
+**Historische Voraussetzung bis cf55cea; durch den folgenden Abschluss konkretisiert:** ein
 **gleichzeitig gültiger gemeinsamer Startnachweis**: vollständige gepaddete
 Start-/Schwenkgeometrie samt zulässigem Rasterweg sensorisch belegt und tatsächliche
 Quellen bis zum Verbraucher innerhalb ihrer unveränderten Frischegrenzen, ohne
@@ -239,6 +234,130 @@ Rückfall: ohne Mission geordnet beenden, temporäres letztes Overlay weglassen;
 Eigenkörperoption abwählen. Bei Kontinuitätsverlust neue belegte stationäre
 Initialisierung mit neuem Karten-/Odometriebezug, kein Latch-Reset. Kein Merge,
 kein permanenter Installwechsel und kein Stufe-3-Gesamtgrün.
+
+### 01.10.2026 – Entscheider und reale Anfangsgeometrie, begrenztes Paket beendet
+
+**Radpfad:** Eigener atomarer Snapshot je STARTUP-/HOLD-/Terminalübergang mit
+Ereigniskennung, Zustand vorher/nachher, Originalnachricht (Header sec/ns,
+Frames, Pose/Quaternion, Twist und beide Kovarianzen), tatsächlichem
+Consumer-/Callbackeintritt, ROS-/Monotonic-Bracket, Mess-/Empfangsalter,
+Grenze, erstem Prädikat und vorheriger erfolgreicher Recovery. Historisches
+`first_fault` bleibt erhalten. Fehlend, ungültig und stale getrennt;
+ältere Callbackübernahme ersetzt keine neuere Probe. Gate entscheidet einmal
+unter dem bestehenden Quellenlock; bounded/latest Diagnose-JSON und DDS-Ausgabe
+laufen separat, Stopptimer weiterhin 20 Hz. Ein vor der ROS-Uhrabfrage
+präemptierter Callback wird nicht zusätzlich als Messalter gezählt;
+Integer-ns-Differenz und konservativer gepaarter Monotonic-Bezug statt alter
+Eintrittszeit. Dieser kontrollierte Uhrtest ist kein rückwirkender Beweis
+für sämtliche historischen Radfehler.
+
+Zweiter aktueller Realvorlauf: gültige Probe, 215,948 ms Messalter >180 ms,
+162,131 ms seit Callback, drei neuere Originalmessungen vor Entscheidung im
+Recorder. Reader fehlerfrei, Paarmaximum 93,291 ms. Recorderempfang ist kein
+Gatecallback. Separate passive Radgruppe/dritter Thread allein reicht real
+nicht: dritter Vorlauf 186,344 ms, neuere Probe mit 69,822 ms Messalter bereits
+21,973 ms vorher im Recorder. Danach zusätzlich echte 170,104-ms-Paarverletzung.
+Die nachgewiesene Empfangs-/Schedulinglücke wird am vorhandenen Gate geschlossen:
+vor passiver Entscheidung nichtblockierender Take aus derselben zuverlässigen
+Depth-1-DDS-Subscription unter ihrem Callbackgruppenschutz. Kein zweiter
+Subscriber, Quellenpublisher oder Busbesitzer; Originalstempel unverändert.
+Eine bereits laufende Subscription wird nicht verdrängt. Receive-Exception
+macht die alte Probe ungültig, statt sie gesund weiterzuverwenden. Normaler
+Befehl/Not-Aus bleibt seriell; aktive Quellen weiterhin bestehender serieller
+Executor/QoS und separat regressiert.
+
+**Reader:** Im ersten aktuellen Start war eine reale 129,184-ms-Paarverletzung
+überwiegend in Alias-/USB-Prüfung gemessen (106,350 ms). Voller `/dev`-Pfadwalk
+nun nur zur Bindung; beide Aliaslinks, tatsächliche Gerätegenerationen und
+alle USB-Identitätswerte weiter vor/nach jeder FC03-Probe prüfen. Weder
+120-ms-Paargrenze noch 180-ms-Kontinuität oder Recoverybedingungen gelockert.
+1.200 korrigierte Alleinpaare: Median 13,895 / p95 16,593 / p99 19,135 /
+Maximum 23,420 ms. Unterschiedliche Lastbedingungen sind kein alleiniger
+Kausalvergleich. Die Optimierung garantiert keine reale Echtzeitdeadline.
+
+**Geometrie:** Zellprojektion auf den tatsächlichen Körper durch
+res/2·(|cos Δyaw|+|sin Δyaw|) statt immer res/√2. Bei einem erhaltenen aktuellen
+Start 78→92 ganze Körperzellen; alle vier Ecken der 14 zusätzlich zugelassenen
+Zellen wirklich innerhalb des unveränderten ungepaddeten Körpers. Erste
+Anfangsablehnung 50→36 und volle Rundblickablehnung 231→217; körperfremder
+Flächenanteil unverändert. Vorheriger C3-Start 78→78, keine rückwirkende Heilung.
+Kein Rohkartenwechsel, keine partielle Zellenfreigabe, kein mitbewegter Beleg.
+Frischer Scan, der während Kartenarbeit ankommt, wird gegen danach erfasste
+Zeit geprüft; echtes Stale/Future/fehlender Scan weiter abgewiesen.
+
+Finale Karte/Pose im selben letzten Vollstack gebunden: 92 unbekannte ganze
+Körperzellen privat korrekt behandelt. Anfangskontur weiterhin 36 unbekannte
+Zellen: 18 teilweise Körperrand, 1 Padding, 17 Reserve; Außenanteil
+0,030920 m². Voller 360°-Sweep: 211 abgewiesene Zellen (18 Rand, 1 Padding,
+192 Reserve/zusätzlicher Schwenkraum), Außenanteil **0,188420 m²**.
+Dies ist die konservativ benötigte Rasterbeobachtung abzüglich exakter
+Körperüberlappung, nicht eine vermeintlich exakte feste Fahrzeug-Sweepfläche.
+Costmap: Anfang 2 unbekannte Zellen; volle Drehung 139 unbekannte Zellen /
+0,125100 m², vollständig in obiger Rohkartenzellmenge. Flächen nicht addieren.
+Keine Rohhindernisse oder Inflationskosten in diesem Beleg. Zentrum nach
+Clearance 0,120 m < erforderlichen 0,295 m unzulässig, 0 sichere Kandidaten;
+erstes Produktprädikat `initial_scan_footprint_invalid`. Ganze 360°-Kontur,
+Vorausrichtungs-/Routenwahl und Costmap werden nicht durch eine freigegebene
+Mittelpunktzelle ersetzt. Volle reale Kontur/Padding/Reserve unverändert.
+
+**Regressionen und Grenzen:** Isolierter ursprünglicher Vierpaketbuild plus
+abschließendes Zweipaketoverlay bestanden und Quelldateien bytegleich geprüft.
+1.469 pytest inklusive A–D, aktiv/passiv, Reihenfolge, wartende echte DDS-Probe,
+Receive-Exception, Not-Aus/HOLD/Stillstand/Einzelkind. Gerätefreier verbundener
+`mast_start_scan` besteht: versetzter LiDAR/Mast-NaN, volle 360°-Konturzulassung,
+bestehender 0,3-rad-Testscan, Vorausrichtung, drei autonome Beobachtungen,
+viertes Kind gecancelt, maximal ein Kind. Kein voller physischer Rundblick
+behauptet. Zusätzliche vollständige 2π-Dauerprobe nicht bestanden:
+`initial_scan_no_progress`, gemessene synthetische Quellengaps bis 460,796 ms.
+Diese erhaltene negative Probe wird nicht in die positiven Softwarebelege
+umbenannt. Keine entsprechende reale Bewegungsprobe ausgeführt.
+
+**Gemeinsamer Realvorlauf:** Vier klar begrenzte, jeweils nach neuer Evidenz
+korrigierte Fenster, jeweils 720 s ab Launchwurzel, kein Gate-/Reader-Neustart
+oder Latch-Reset innerhalb eines Fensters. Letzter Kandidat `8f5eeb4`, Sources
+zuerst nach 33,328 s bereit; zwei reale HWT-HOLDs mit erfolgreicher Validierung.
+Danach etwa 197,9 s: Wheelmessalter 212,127 ms, tatsächlicher Consumerabstand
+165,445 ms, gültiger Inhalt, `measurement_age_out_of_bounds`. Historische erste
+HWT-Störung und letzte Wheelentscheidung haben eigene Originalsnapshots;
+vorherige erfolgreiche Recovery steht im Wheelereignis. Beim Reader:
+3.552 akzeptierte Paare (Maximum 99,431 ms); letztes 64,649 ms,
+folgendes verworfenes Paar **120,874 ms**,
+kein Rebase/Reconnect, keine aktuelle zulässige Ersatzprobe. Geschlossener Bag:
+keine neuere Radnachricht um den Entscheid; erster verriegelter Readerstatus
+bereits 7,975 ms vor dessen gepaartem ROS-Zeitbezug im Recorder. Das ist ein neuer
+echter Transport-/Deadlinegegenfall; keine alte Probe frisch bewerten.
+Der spätere Status `ready=false` bleibt erhalten. Gesamtes Fenster negativ,
+geometrisch zugleich unzulässig. Kein aktiver Buswechsel, 0 Missionen,
+0 Nav2-Kinder; 900/150 s und 6/3 live geladen, keine Budgets gestartet/reset.
+
+**Konkreter Restumfang:** Der aktuelle FC03-Pfad muss unter echter Vollstacklast
+wieder zulässige Paare innerhalb 120 ms und lückenlos innerhalb 180 ms liefern.
+Im letzten Paar sind 71,797 ms Alias/USB-Nachprüfung und 46,840 ms Modbus
+beobachtet; aus diesen wall-clock-Phasen allein keine Kabel-/Encoder-/Kernel-
+Ursache erfinden. Weitergehende Transport-/Runtime-Latenzabsicherung ist ein
+separat zu begrenzender Umsetzungsschritt; dieses Paket startet keine weitere
+Reparatur-/Vorlaufserie. Geometrisch genau eine notwendige äußere Handlung:
+die private Liste der 211 Außen-/Schwenkzellen mit dem vorhandenen LiDAR von
+einer separat hergestellten stationären Beobachtungsposition aufnehmen und
+Karte/Pose neu gültig zuordnen. Dafür nötiges manuelles Umsetzen bei deaktivierten
+Antrieben durch die anwesende Person liegt außerhalb dieses Softwarepakets.
+Stationärer Mast-NaN-Blick und vorhandene OAK/VL53-Vorwärtssicht belegen diesen
+gesamten rückwärtigen Bereich nicht. Keine allgemeine Platzfrage, Karten-
+freigabe oder autonome Bewegung zur Umgehung.
+
+Alle zugehörigen Wurzeln geordnet einzeln per SIGINT beendet, Gerätehandles frei,
+abschließend 12 frische FC03-Paare beider Motoren: Position/RPM null. Elektrische
+Motorstromfreiheit wurde daraus nicht behauptet. Befehlsströme und Shutdown-
+Details im geschlossenen lokalen Bericht. Ungebundener Bootstrap-Explorer
+beendet sich erwartungsgemäß mit Scope-/Sitzungsfehler (Exit 1); anschließend
+gebundener Explorer regulär, kein Fehler beim geordneten Shutdown.
+Private Messdaten, Zellkoordinaten,
+Karten, Bags und Manifeste unter `~/.local/share/amadeus/tests/metric-gate-start-20261001/`,
+finaler Lauf `decision-take-common/`, Runtime `final-runtime-env.sh`,
+`final-build-identity.json` und `end-state-proof.json`. Keine privaten
+Berichts-Vorfahren, Merge, Force-Push oder permanenter Installwechsel.
+Rückfall: ohne Mission geordnet stoppen, beide temporären Overlays weglassen,
+`active_drive=false`, `enable_auto_explore=false`. **Stufe 3 bleibt offen.**
 
 ## 5. Erhaltener Umfang und nächste Meilensteine
 

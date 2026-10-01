@@ -148,7 +148,7 @@ Sonderbrücke, neuen Räume, Merge oder permanenter Install. Prozesse beendet,
 Befehle und FC03-Endwerte null. Dieser Abschnitt ist Abschluss und Voraussetzung,
 kein neues Masterplanprojekt.
 
-## 9. Aktuell: reale Startfähigkeit bis zum Entscheider (01.10.2026)
+## 9. Abschluss: reale Startfähigkeit bis zum Entscheider (01.10.2026)
 
 Nutzerauftrag auf Ausgangsstand `cf55cea6d03f513ca062479daef3b2303d0041d9`,
 bestehender Branch/PR #105, MASTERPLAN v1.2 und LAB-1 unverändert.
@@ -187,3 +187,21 @@ Busbesitzer. Andernfalls präzise belegte verbleibende Voraussetzung ausweisen.
 Temporärer isolierter Install, Hauptkopie unverändert; committen/pushen ohne
 private Raumdaten oder private Vorfahren, Merge oder dauerhaften Installwechsel.
 Rückfall: geordnet ohne Mission stoppen und dieses temporäre Overlay weglassen.
+
+**Auswertung:** Begrenztes Paket beendet, Funktionskandidat `8f5eeb4`.
+1.469 Regressionen bestanden; tatsächliche wartende Radübernahme am bestehenden
+Gate, konsistenter Uhr-/Ereignisbeleg und ganze Körperzellen korrigiert.
+Vier 720-s-Fenster nach jeweils neuer Evidenz, keine identische Neustartserie.
+Letzter gemeinsamer Vorlauf negativ: nach zwei realen HWT-Recoveries echte
+120,874-ms-Paarverletzung und 212,127-ms-alte letzte zulässige Probe; volle
+Start-/Rundblickgeometrie zugleich 211 unbekannte Zellen / 0,188420 m² Außenanteil.
+Keine Mission, kein aktiver Buswechsel. Aktueller konkreter Rest: bestehender
+FC03-Quellenpfad muss seine unveränderten 120-/180-ms-Deadlines real einhalten;
+weitergehende Latenzabsicherung separat begrenzen. Geometrisch die konkrete
+Zellmenge aus separat hergestellter stationärer LiDAR-Sicht belegen; hierfür
+nötiges manuelles Umsetzen bei deaktivierten Antrieben liegt außerhalb Pakets.
+Keine allgemeine Platzfrage, keine künstliche Freigabe, keine weitere automatische
+Vorlauf-/Fahrserie. Originale, Grenzen der vollständigen synthetischen Rundblick-
+probe und tatsächliche Endwerte im STATUS-Abschluss. Prozesse und Gerätehandles
+frei, frische FC03-Endwerte null. Temporäre Runtime, Hauptkopie unverändert;
+Rückfall beide neuen Overlays weglassen. Kein Stufe-3-Gesamtgrün.

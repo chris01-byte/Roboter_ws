@@ -76,3 +76,41 @@ reale Verbraucherrobustheit. Keine Mission/Fahrt, A/B/C offen. Zahlen, Zellklass
 Zeitverteilungen und einziger gemeinsamer Startnachweis im WE-STATUS; technische
 Jetson-Wirkung im ROBOT_TRANSFER. Kein Masterplanwechsel, keine privaten Daten
 oder Berichts-Vorfahren veröffentlicht, kein Merge/Hauptinstallwechsel.
+
+
+## 01.10.2026 – Radentscheidung atomar, DDS-Übernahme und reale Geometrie präzisiert
+
+Ausgang `cf55cea`, Funktionskandidat `8f5eeb4`, bestehende PR #105.
+Jeder neue Fehlerübergang erhält seinen eigenen Originalzustand; first_fault
+bleibt historische erste Störung, letzte Wheelentscheidung enthält vorherige
+Recovery. Diagnose-JSON/DDS bounded außerhalb Stopptimer. Uhrbezug am tatsächlichen
+ROS-/Monotonic-Bracket statt Callbackeintritt vermeidet doppeltes Präemptionsalter.
+
+Zwei aktuelle Consumerfehler exakt reproduziert: 215,948 bzw. 186,344 ms alte
+Wheelprobe trotz neueren Recorderreceipts. Recorderzeit nicht mit Gatecallback
+gleichsetzen. Passive eigene Radgruppe allein reicht nicht. Nichtblockierender
+Take derselben tatsächlichen Depth-1-Subscription direkt vor Gateentscheidung,
+Callbackgruppenschutz, ursprüngliche Stempel und harte Gegenfälle erhalten.
+Aktiver Basispfad bleibt seriell und separat regressiert; keine neue Quelle.
+Aliaslinks/Gerätegenerationen und echte USB-Attribute weiterhin pro FC03 prüfen,
+nur voller Pfadwalk an Bindung. 120-/180-ms-Verträge bleiben unverändert.
+
+Ganze Körperzellen über exakte Projektion statt pauschalen Zellendiagonalradius:
+bei erhaltenem aktuellem Start 14 echte Fehlablehnungen entfernt. Keine teilweise
+überlappende Zelle, kein Außen-/Padding-/Reserveraum freigegeben. Scan während
+Kartenarbeit gegen danach erfasste Zeit prüfen. Finale Geometrie 211 unbekannte
+Rundblickzellen  / 0,188420 m² Außenanteil ; 139 Costmap-Zellen darin, keine Addition.
+Das beweist erforderliche zusätzliche stationäre LiDAR-Außenbeobachtung, keinen
+hardwarefreien Softwareweg zur Freigabe. Manuelles Umsetzen bei deaktivierten
+Antrieben ist eine getrennte äußere Bedienhandlung.
+
+1.469 Regressionen und isolierte Builds bestanden. Gerätefreier kurzer Scan/
+Vorausrichtung / drei Folgeziele positiv, volle 2π-Dauerprobe mit Quellenpausen negativ
+und erhalten. Vier begrenzte 720-s-Realfenster nach konkreten Korrekturen;
+letztes nach zwei echten HWT-Recoveries erneut negativ, jetzt echte
+120,874-ms-Readerpaarverletzung, Gate 212,127 ms stale, keine zulässige neue Probe.
+Keine unbewiesene Encoder-/Kabel-/Kernelursache aus Phasenzeiten. Weitere
+Transport-/Runtime-Latenzabsicherung separat begrenzen; keine automatische
+Neustartserie.0 Missionen / 0 Nav2-Kinder, FC03-Endwerte null, Prozesse und Handles frei.
+Private Einzelzellen/Bags/Manifeste lokal, Hauptkopie unverändert, kein Merge/
+permanenter Installwechsel; Rückfall temporäre neue Overlays abwählen. Stufe 3 offen.
