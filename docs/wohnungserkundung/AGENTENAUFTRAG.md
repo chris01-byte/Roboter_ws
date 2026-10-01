@@ -2,7 +2,7 @@
 
 **WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Ergebnis und genau eine Voraussetzung für den begrenzten Realauftrag stehen im STATUS.
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Einziger aktueller Auftrag ist Abschnitt 9: reale Radentscheidung und tatsächliche Anfangsgeometrie gezielt schließen.**
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -147,3 +147,37 @@ bestehender LAB-1-Scope. Kein automatischer weiterer Fahrversuch, keine HWT-Inje
 Sonderbrücke, neuen Räume, Merge oder permanenter Install. Prozesse beendet,
 Befehle und FC03-Endwerte null. Dieser Abschnitt ist Abschluss und Voraussetzung,
 kein neues Masterplanprojekt.
+
+## 9. Aktuell: reale Startfähigkeit bis zum Entscheider (01.10.2026)
+
+Nutzerauftrag auf Ausgangsstand `cf55cea6d03f513ca062479daef3b2303d0041d9`,
+bestehender Branch/PR #105, MASTERPLAN v1.2 und LAB-1 unverändert.
+Eigener atomarer Beleg für jeden Fehlerübergang, historisches `first_fault`
+erhalten; Originalradnachricht, Callback- und Uhrbezug, konkretes Prädikat und
+vorherige Recovery erfassen. Diagnose ohne blockierende Ausgabe am Entscheider.
+Reproduzieren und nur belegte Verzögerung/Zuordnung minimal korrigieren;
+120-ms-Paar-/180-ms-Lückengrenzen, echtes Stale-Stoppen und getrennte aktive/
+passive Quellenverträge erhalten. Keine Neustart-/Latch-Reset-Lösung.
+
+Gespeicherte reale Starts durch private Körpermaske, Clearance/Erreichbarkeit,
+volle gepaddete Kontur, Costmap und tatsächlichen Anfang (Rundblick,
+Vorausrichtung, Route) verfolgen. Ganze/teilweise Körperzellen, Padding/Reserve,
+unbeobachteten Außenraum, Hindernisse/Inflation getrennt belegen. Nur bewiesene
+Darstellungsfehler korrigieren. Andernfalls genau fehlende Fläche und vorhandene
+Beobachtungsmöglichkeit benennen; keine künstliche Außenraumfreigabe.
+
+Regressionen A–D aus Nutzerauftrag: beide Fehler nach Recovery, DDS/Last und
+harte Quellengegenfälle, realistischer Produktanfang/Rasterränder, bestehende
+Not-Aus/HOLD/Stillstands-/Einzelbesitzverträge. Danach ein gemeinsamer rein
+lesender Vollstacklauf mit **720 s ab Launchwurzel** einschließlich Startlast
+und früher späten Gateverriegelungen. Bei belegter Korrektur höchstens ein
+weiteres solches Fenster; keine identische Neustartserie. Kartenbindung und
+Quellen im selben Start prüfen.
+
+Nur bei technisch gültigem gemeinsamem Zustand genau eine bestehende Mission
+MM → BT → metric_frontier → Nav2 → Schutzkette → Basis: 900 s insgesamt,
+150 s/Aufgabe, 6 Versuche/3 Fehlschläge, keine Budgetresets oder konkurrierenden
+Busbesitzer. Andernfalls präzise belegte verbleibende Voraussetzung ausweisen.
+Temporärer isolierter Install, Hauptkopie unverändert; committen/pushen ohne
+private Raumdaten oder private Vorfahren, Merge oder dauerhaften Installwechsel.
+Rückfall: geordnet ohne Mission stoppen und dieses temporäre Overlay weglassen.

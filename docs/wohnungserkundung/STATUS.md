@@ -10,6 +10,14 @@ Normale Erkundung wird metrisch organisiert: beobachten → erreichbare Frontier
 
 **GRÜN: METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementiert als explizites `metric_frontier`-Backend im bestehenden Explorer. Default bleibt `existing`. Beim anschließend beauftragten Realnachweis wurden reale Sensor-/ROS-Prozesse im rein lesenden Vorlauf gestartet; dieser blieb blockiert, keine aktive Fahrt oder Mission, kein dauerhafter Installwechsel. Stufe 3 bleibt **OFFEN**. Konservative Geometrieprüfung bleibt verbindlich; reale Zielerreichung, Türpassage und Robustheit sind nicht aus den Softwaretests abgeleitet.
 
+**Aktuell beauftragt (01.10.2026):** gezielte Umsetzung der realen
+Radquellenentscheidung bis zum Gate und der zulässigen Anfangsgeometrie,
+Ausgangsstand `cf55cea`, AGENTENAUFTRAG §9. Eigene Fehlerübergangssnapshots
+mit Originalwerten und konsistenten Uhrbezügen; belegte minimale Korrekturen,
+getrennte Regressionen und gemeinsamer 720-s-Lesevorlauf ab Launchwurzel.
+Reale Anfangsgeometrie bis Rundblick/Vorausrichtung/Route zellgenau untersuchen.
+Bisherige Vorläufe bleiben historische negative Belege, kein aktuelles Ergebnis.
+
 ## 2. Belegter Ausgangspunkt
 
 | Stand | Beleg / Grenze |
