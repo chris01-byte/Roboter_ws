@@ -22,6 +22,9 @@ ausgelösten Radfrische-Stopp: 215,95 ms Messalter, obwohl drei neuere
 Originalmessungen bereits im Recorder eingetroffen waren. Reader ohne Fehler.
 Passiven Radcallback separat bedienen und danach ein drittes begrenztes
 720-s-Fenster messen; aktive Quellen und harte Grenzen bleiben unverändert.
+Dieses dritte Fenster ist ebenfalls negativ: 186,34 ms Messalter trotz eigener
+Radgruppe. Als gezielte nächste Korrektur die wirkliche wartende DDS-Probe am
+Entscheider übernehmen; ein abschließendes viertes Fenster, keine Neustartlösung.
 
 ## 2. Belegter Ausgangspunkt
 

@@ -173,7 +173,10 @@ lesender Vollstacklauf mit **720 s ab Launchwurzel** einschließlich Startlast
 und früher späten Gateverriegelungen. Der zweite Lauf reproduzierte einen neuen
 konkreten Empfangsfehler: drei neuere Radmessungen im Recorder vor dem
 Gateentscheid, aber noch die ältere Probe im Gate (215,95 ms Messalter).
-Nach Trennung des passiven Radcallbacks genau ein drittes 720-s-Fenster;
+Das dritte Fenster verriegelte trotz getrennter Radgruppe erneut (186,34 ms).
+Jetzt die tatsächlich wartende DDS-Radprobe geschützt und ohne Warten direkt
+vor der Gateentscheidung übernehmen; ein abschließendes viertes 720-s-Fenster.
+Danach keine weitere automatische Vorlaufserie in diesem Paket;
 keine identische Neustartserie. Kartenbindung und
 Quellen im selben Start prüfen.
 
