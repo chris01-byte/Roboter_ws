@@ -143,7 +143,8 @@ def test_late_goal_acceptance_is_canceled_after_parent_timeout(monkeypatch):
 @pytest.mark.parametrize('change,reason',[
     ('scope_verified','verified polygon'),('scope_fingerprint','initial map'),
     ('footprint','cannot shrink'),('semantic_owner','excludes the semantic'),
-    ('portal','excludes direct'),('coverage','excludes direct'),('budget','positive budgets')])
+    ('portal','excludes direct'),('coverage','excludes direct'),('budget','positive budgets'),
+    ('egress_anchor','fixed lidar/body/map-odom anchor')])
 def test_real_node_configuration_fails_closed(change,reason):
     require_isolated_ros()
     import rclpy
@@ -166,6 +167,7 @@ def test_real_node_configuration_fails_closed(change,reason):
     if change=='portal':values['portal_crossing_enabled']=True
     if change=='coverage':values['coverage_enabled']=True
     if change=='budget':values['overall_timeout_s']=0.
+    if change=='egress_anchor':values.update(metric_start_egress_enabled=True,metric_self_body_enabled=False)
     import json
     rclpy.init(args=['--ros-args',*[x for k,v in values.items() for x in ('-p',k+':='+json.dumps(v))]])
     try:
@@ -638,3 +640,118 @@ def test_float32_raster_keeps_last_bounded_refinement_when_controller_goal_needs
     chosen=candidates[0]
     assert math.dist(original,(chosen.x,chosen.y))==pytest.approx(.3)
     assert n._metric_route(inputs,(chosen.x,chosen.y),chosen.yaw)
+
+
+def egress_fixture():
+    n,inputs=adaptive_fixture()
+    n._metric_start_egress_enabled=True
+    n._metric_egress=None;n._metric_egress_expired=False
+    n._metric_body_anchor_expired=False
+    g=inputs[0];a=np.asarray(g.data).reshape(40,80).copy()
+    a[18:23,8]=-1;g.data=a.ravel().tolist()
+    inputs[3][18:23,8]=False
+    inputs[4][:]=known_safe_mask(a,n._metric_scope,inputs[1],(-1.,-2.),0.,.1,.28)[1]
+    n._metric_prepare_egress(inputs)
+    return n,inputs
+
+
+def test_egress_rear_unknown_admits_autonomous_frontier_and_leaves_map_intact():
+    n,inputs=egress_fixture();original=list(inputs[0].data)
+    decision,candidates=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert decision['initial_contour_missing_cells']['raw']==5
+    assert not decision['scan_admissible']
+    assert decision['selected_motion']=='observation_goal' and candidates
+    assert candidates[0].x>inputs[2][0]
+    assert list(inputs[0].data)==original and not inputs[3][20,8]
+    assert n._metric_route(inputs,(candidates[0].x,candidates[0].y),candidates[0].yaw)
+
+
+def test_egress_turn_towards_unknown_and_new_obstacle_rejected():
+    n,inputs=egress_fixture()
+    assert n._metric_waypoints_clear(inputs,((.05,.05),(-.7,.05))) is None
+    assert n._metric_last_route_rejection=='start_egress_in_place_turn'
+    a=np.asarray(inputs[0].data).reshape(40,80).copy();a[:,25:30]=0;a[20,15]=100
+    inputs[3][:,25:30]=True
+    inputs[0].data=a.ravel().tolist();inputs[3][20,15]=False
+    assert n._metric_waypoints_clear(inputs,((.05,.05),(1.2,.05))) is None
+    assert n._metric_last_route_rejection=='start_egress_new_unknown_or_obstacle'
+
+
+def test_egress_fixed_inventory_rejects_new_unknown_and_reentry():
+    n,inputs=egress_fixture()
+    a=np.asarray(inputs[0].data).reshape(40,80).copy();a[:,25:30]=0;a[20,15]=-1
+    inputs[3][:,25:30]=True
+    inputs[0].data=a.ravel().tolist();inputs[3][20,15]=False
+    assert n._metric_waypoints_clear(inputs,((.05,.05),(1.2,.05))) is None
+    assert n._metric_last_route_rejection=='start_egress_new_unknown_or_obstacle'
+    n,inputs=egress_fixture();inputs[2]=(.15,.05,0.)
+    n._metric_prepare_egress(inputs)
+    inputs[2]=(.05,.05,0.);n._metric_prepare_egress(inputs)
+    assert not n._metric_egress[0].valid
+    assert n._metric_egress[0].reason=='start_egress_reentry_or_added_cell_area'
+
+
+def test_egress_observation_removes_exception_and_enables_normal_rotation():
+    n,inputs=egress_fixture()
+    a=np.asarray(inputs[0].data).reshape(40,80).copy();a[18:23,8]=0
+    inputs[0].data=a.ravel().tolist();inputs[3][18:23,8]=True
+    n._metric_prepare_egress(inputs)
+    assert not n._metric_egress[0].unknown.any()
+    decision,_=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert decision['scan_admissible']
+    # Later unknown regrowth is not another initial exemption.
+    a[20,8]=-1;inputs[0].data=a.ravel().tolist();inputs[3][20,8]=False
+    n._metric_prepare_egress(inputs)
+    assert not n._metric_egress[0].valid
+
+
+def test_egress_context_raster_or_reference_change_never_reanchors():
+    n,inputs=egress_fixture();inventory=n._metric_egress[0].unknown.copy()
+    n._metric_body_anchor_expired=True;n._metric_prepare_egress(inputs)
+    assert n._metric_egress_expired
+    assert np.array_equal(inventory,n._metric_egress[0].unknown)
+    assert n._metric_waypoints_clear(inputs,((.05,.05),(1.,.05))) is None
+    assert n._metric_last_route_rejection=='start_egress_reference_expired'
+
+
+def test_egress_batch_geometry_preserves_exact_rotated_cell_intersections():
+    from explore.metric_frontier import (_cell_intersections,_cell_distances,
+        _clip_cell,_polygon_area,_polygon_distance)
+    cells=np.asarray([(r,c) for r in range(-3,4) for c in range(-3,4)])
+    for angle in (0.,.37,1.2):
+        polygon=[(math.cos(angle)*x-math.sin(angle)*y+.13,
+                  math.sin(angle)*x+math.cos(angle)*y-.21)
+                 for x,y in ((-.7,-.8),(1.1,-.8),(1.1,.8),(-.7,.8))]
+        areas,_,_=_cell_intersections(polygon,cells)
+        expected=np.asarray([_polygon_area(_clip_cell(polygon,r,c)) for r,c in cells])
+        assert np.allclose(areas,expected,atol=1e-12)
+        distances=_cell_distances(polygon,cells)
+        for index,(r,c) in enumerate(cells):
+            if areas[index]<1e-12:
+                square=[(c,r),(c+1,r),(c+1,r+1),(c,r+1)]
+                assert distances[index]==pytest.approx(_polygon_distance(polygon,square),abs=1e-12)
+
+
+def test_egress_continues_past_nominal_exit_until_initial_turn_space_is_left():
+    from explore.metric_frontier import footprint_cells
+    n,inputs=egress_fixture();inputs[2]=(.15,.05,.01)
+    n._metric_prepare_egress(inputs)
+    r,c=footprint_cells(*inputs[2],inputs[0],n._world_to_grid,n._metric_bounds)
+    assert not np.any(n._metric_egress[0].unknown[r,c])
+    # A millimetre projection onto the real plan is not an in-place turn.
+    route=(inputs[2][:2],(.15,.051),(.75,.05))
+    assert n._metric_waypoints_clear(inputs,route,0.) is not None
+    decision,_=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert not decision['scan_admissible']
+
+
+def test_rpp_interpolation_bounds_reserved_corner_travel_near_goal():
+    from explore.metric_frontier import rpp_trajectory
+    bounds=(-.18,.4,-.3,.3)
+    trajectory=rpp_trajectory(((0.,0.),(.6,.04)),(0.,0.,0.),.03,bounds=bounds)
+    reserve=.03/math.sqrt(2)+.01
+    radius=math.hypot(.4+reserve,.3+reserve)
+    for a,b in zip(trajectory,trajectory[1:]):
+        turn=abs(math.atan2(math.sin(b[2]-a[2]),math.cos(b[2]-a[2])))
+        assert math.dist(a[:2],b[:2])+radius*turn<=.004+1e-10
+    assert math.dist(trajectory[-1][:2],(.6,.04))<=.15

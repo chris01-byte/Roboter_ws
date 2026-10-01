@@ -3647,6 +3647,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
             payload['hwt_first_fault'] = self._hwt_guard.health.first_fault_snapshot()
             payload['hwt_last_fault'] = self._hwt_guard.health.fault_snapshot()
             payload['hwt_recovery_state'] = self._hwt_guard.health.recovery_state
+            payload['hwt_source_contract'] = self._hwt_guard.health.contract_diagnostics(time.monotonic())
             payload['hwt_hold_deadline_monotonic'] = self._hwt_hold_deadline
         if getattr(self, '_wohnungserkundung_policy_enabled', False):
             payload['wohnungserkundung'] = (
@@ -3741,7 +3742,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
 
     def _frontier_approach_goal(
             self, frontier: Frontier, robot_xy: Tuple[float, float],
-            grid: OccupancyGrid) -> Optional[Tuple[float, float]]:
+            grid: OccupancyGrid, *, search_mask=None) -> Optional[Tuple[float, float]]:
         """Pick a goal in the robot's connected, safely clear free space."""
         dx = robot_xy[0] - frontier.cx
         dy = robot_xy[1] - frontier.cy
@@ -3758,6 +3759,10 @@ class ExploreNode(MetricFrontierRuntime, Node):
         clearance_cells = int(math.ceil(
             self._goal_clearance_m / info.resolution))
         safe_goal_cells = circular_clearance_mask(data, clearance_cells)
+        if search_mask is not None:
+            if search_mask.shape != data.shape or search_mask.dtype != bool:
+                raise ValueError('frontier_search_mask_invalid')
+            safe_goal_cells = search_mask
         robot_col, robot_row = self._world_to_grid(
             robot_xy[0], robot_xy[1], info)
         seed_radius = max(1, int(math.ceil(

@@ -108,9 +108,11 @@ def analyze(directory):
     n._metric_scope=scope;n._wohnungserkundung_evidence_max_cells=1000000
     # Offline evaluation context, not sensor restamping or a live readiness claim.
     for key,value in dict(_global_costmap=cost,_global_costmap_received_at=time.monotonic(),
-        _map_timeout_s=5.,_global_frame='map',_frontier_goal_max_cost=90,
+        _map_timeout_s=1e6,_global_frame='map',_frontier_goal_max_cost=90,
         _goal_clearance_m=.28,_goal_search_m=.3,_approach_dist_m=.45,
-        _metric_bounds=(-.13,.33,-.25,.25),_metric_start_strategy='adaptive',_min_goal_dist_m=.3,
+        _metric_bounds=(-.13,.33,-.25,.25),_metric_start_strategy='adaptive',
+        _metric_start_egress_enabled=True,_metric_egress=None,_metric_egress_expired=False,
+        _metric_body_anchor_expired=False,_min_goal_dist_m=.3,
         _frontier_forward_cone_half_angle=0.,_potential_scale=3.,_gain_scale=1.,_heading_scale=.75,_visualize=False).items():setattr(n,key,value)
     for row,col in zip(*np.nonzero(safe)):
         xy=n._grid_to_world(col,row,raw.info);cx,cy=n._world_to_grid(*xy,cost.info)
@@ -133,7 +135,7 @@ def analyze(directory):
         first_product_rejection=start_decision['first_rejecting_predicate'],
         adaptive_start_decision=start_decision,adaptive_candidates=len(adaptive_candidates),
         raw=raw_trace,costmap=cost_trace,candidates=len(candidates),selection=n._frontier_rank_stats,
-        observation='No full-spin requirement for an observation goal. The original reserved START contour must nevertheless be known. Missing exterior/padding cells cannot be cleared by whole-body proof, later zero RPM, manual repositioning or premapping counted as autonomous bootstrap. Static NaN rays remain NaN.')
+        observation='Offline replay only: fixed initial unknown inventory, shrinking movement-specific overlap, no added unknown area or approach/reentry. Full-spin and goal tolerance checks remain strict; real ComputePath and current sources are separately required. Static NaN rays remain NaN.')
 
 
 def main():

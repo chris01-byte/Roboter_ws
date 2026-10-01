@@ -85,6 +85,19 @@ konkreter Warte-/Teilstand. `configured_scan` erhält den bisherigen Scanablauf.
 `existing` und dessen Defaultauswahl bleiben erhalten. Anfangs bestätigter
 Encoderstillstand, aktuelle Quellen und Scope gelten für beide Bewegungsarten.
 
+`metric_start_egress_enabled` ist im metrischen Profil ausdrücklich aktiviert
+(Node-Default false) und erfordert `metric_self_body_enabled`. Bei gültigem
+festem Körper-/Sensoranker wird der unbekannte Startbestand getrennt für
+Rohkarte und Costmap eingefroren. Eine konkrete Fahrt darf diesen Bestand
+nur verlassen: keine neue Fläche, zunehmende Überlappung, Annäherung oder
+Wiederbetretung; belegte Hindernisse bleiben gesperrt. Körper, Padding,
+Rasterreserve und gesamte RPP-Trajektorie werden geprüft. Die gekoppelten
+Prüfungen bleiben auch nach nominalem Verlassen aktiv, solange eine Drehung
+den alten Bestand noch berühren könnte. Ziel-/Orientierungstoleranzen bleiben
+vollständig im beobachteten freien Bereich. Die Suchmaske erteilt keine
+Fahrfreigabe. Kontext-, Raster- oder Ankerwechsel entziehen die Ausnahme;
+derselbe Lauf kann sie nicht an einer neuen Pose wieder einrichten.
+
 Der vorhandene Explorer liest vor Bewegung den tatsächlichen Nav2-Pfad über
 `ComputePathToPose`; `NavigateToPose` bleibt alleiniger Fahrbesitzer. Aktuelle
 `/plan`-Änderungen, Vorausrichtung, RPP-Headingkorrekturen/Lookahead und

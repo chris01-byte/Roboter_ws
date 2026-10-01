@@ -79,6 +79,7 @@ commands = [
 ]
 
 CASE=os.environ.get('METRIC_GRAPH_CASE','chain')
+DEVELOPMENT=os.environ.get('METRIC_GRAPH_DEVELOPMENT')=='1'
 if CASE not in ('chain','blocked','hold','route','estop','sensor','actuator','pose',
                 'map','late','cancel_failed','budget','empty','filtered','scan','scan_route','mast_start','mast_start_scan','mast_start_full_scan','adaptive_start','adaptive_loop','adaptive_admission','adaptive_wait','encoder_hold','encoder_gap','encoder_persistent','encoder_no_stop','encoder_estop','encoder_cancel','encoder_budget'):
     raise SystemExit('Unknown METRIC_GRAPH_CASE')
@@ -90,6 +91,7 @@ class Sources(Node):
         self.map_ticks = 0
         self.map_variant = False
         self.raw_on = True
+        self.transport_degraded = False
         self.moving = False
         self.x = .05
         self.y = .05
@@ -100,6 +102,8 @@ class Sources(Node):
         self.sensor_on = True
         self.actuator_fault = False
         self.gate_angular = 0.0
+        self.gate_linear = 0.0
+        self.motion_enabled = False
         self.route_blocked = False
         self.pose_on = True
         self.estop_active = False
@@ -149,6 +153,7 @@ class Sources(Node):
         self.create_subscription(Twist,'/cmd_vel_nav',self.on_gate_output,10)
     def on_gate_output(self,m):
         self.gate_angular=m.angular.z
+        self.gate_linear=m.linear.x
         self.out.append((time.monotonic(),m.linear.x,m.angular.z))
     def sample_loop(self):
         # Publication must not queue behind this observer's ROS subscriptions.
@@ -166,7 +171,16 @@ class Sources(Node):
         sample_at=time.monotonic()
         sample_dt=sample_at-self.last_sample_at
         self.last_sample_at=sample_at
-        if CASE in ('scan','scan_route','mast_start_scan','mast_start_full_scan','adaptive_start','adaptive_loop','adaptive_admission'):
+        if DEVELOPMENT and CASE=='chain' and self.motion_enabled:
+            v,w=self.gate_linear,self.gate_angular
+            next_yaw=self.yaw+w*sample_dt
+            if abs(w)<1e-9:
+                self.x+=v*math.cos(self.yaw)*sample_dt;self.y+=v*math.sin(self.yaw)*sample_dt
+            else:
+                self.x+=v/w*(math.sin(next_yaw)-math.sin(self.yaw))
+                self.y-=v/w*(math.cos(next_yaw)-math.cos(self.yaw))
+            self.yaw=next_yaw
+        elif CASE in ('scan','scan_route','mast_start_scan','mast_start_full_scan','adaptive_start','adaptive_loop','adaptive_admission'):
             self.yaw+=self.gate_angular*sample_dt
         if self.raw_on:
             raw=Imu();raw.header.stamp=stamp;raw.header.frame_id='hwt601_link'
@@ -204,7 +218,7 @@ class Sources(Node):
         wheel.pose.pose.position.y=self.y
         wheel.pose.pose.orientation.z=math.sin(self.yaw/2)
         wheel.pose.pose.orientation.w=math.cos(self.yaw/2)
-        wheel.twist.covariance[0]=.01;wheel.twist.twist.linear.x=.03 if self.moving else 0.0
+        wheel.twist.covariance[0]=.01;wheel.twist.twist.linear.x=.03 if self.moving else self.gate_linear if self.motion_enabled else 0.0
         wheel.twist.twist.angular.z=self.gate_angular
         self.wheel.publish(wheel);self.odom.publish(wheel)
     def publish_pose_and_costmap(self):
@@ -234,13 +248,13 @@ class Sources(Node):
             return
         scan=LaserScan()
         scan.header.stamp=stamp
-        scan.header.frame_id='laser_frame' if CASE in ('mast_start','mast_start_scan','mast_start_full_scan') else 'base_link'
+        scan.header.frame_id='laser_frame' if DEVELOPMENT or CASE in ('mast_start','mast_start_scan','mast_start_full_scan') else 'base_link'
         scan.angle_min=-3.14159
         scan.angle_increment=6.28318/720
         scan.range_min=.05
         scan.range_max=10.0
         scan.ranges=[3.0]*720
-        if CASE in ('mast_start','mast_start_scan','mast_start_full_scan'):
+        if DEVELOPMENT or CASE in ('mast_start','mast_start_scan','mast_start_full_scan'):
             t=TransformStamped();t.header.stamp=stamp;t.header.frame_id='base_link';t.child_frame_id='laser_frame'
             t.transform.translation.x=.245;t.transform.translation.z=.660
             t.transform.rotation.z=math.sin(math.pi/4);t.transform.rotation.w=math.cos(math.pi/4)
@@ -275,6 +289,14 @@ class Sources(Node):
         raw=dict(ready=True,raw_data_ready=True,port='/dev/ttyUSB_HWT601',
                  sensor_write_commands=False,consecutive_errors=0,age_s=0.0,
                  state='bereit',reconnects=0)
+        if DEVELOPMENT:
+            age=time.monotonic()-self.last_raw;fresh=age<=.30
+            raw.update(contract='metric_development_v1',response_timeout_s=.05,
+                sensor_timeout_s=.30,identity_intact=True,terminal_fault=None,
+                data_valid=True,data_fresh=fresh,ready=fresh,raw_data_ready=fresh,
+                age_s=age,transport_ok=not self.transport_degraded,
+                transport_degraded=self.transport_degraded,
+                consecutive_errors=int(self.transport_degraded),hold_required=not fresh)
         wheel=dict(dry_run=False,allow_rs485=True,rs485_ready=True,
                    odometry_source='encoder_position',encoder_feedback_ok=not self.actuator_fault,
                    encoder_stale=False,encoder_config_fault_latched=False,
@@ -309,6 +331,7 @@ class Sources(Node):
                     value=-1  # unknown rear mast ray strictly inside initial measured body
                 if CASE in ('adaptive_start','adaptive_loop','adaptive_admission') and self.stage==0 and col==6 and row==20:value=-1
                 if CASE=='adaptive_wait' and col==13 and row==20:value=-1
+                if DEVELOPMENT and self.stage==0 and not costmap and col==8 and 18<=row<=22:value=-1
                 if self.route_blocked:value=100
                 if self.blocked_task and 18<=col<=25 and row<19:value=100
                 cells.append(value)
@@ -387,11 +410,22 @@ class FakeNav(Node):
                     print('NAV_CANCELED',index,flush=True)
                     return NavigateToPose.Result()
                 cmd=Twist();cmd.linear.x=.05
+                if DEVELOPMENT and CASE=='chain' and self.release:
+                    self.sources.motion_enabled=True
+                    dx,dy=target[0]-self.sources.x,target[1]-self.sources.y
+                    distance=math.hypot(dx,dy)
+                    error=math.atan2(math.sin(math.atan2(dy,dx)-self.sources.yaw),
+                        math.cos(math.atan2(dy,dx)-self.sources.yaw))
+                    cmd.angular.z=.05*2*math.sin(error)/max(.05,min(.4,distance))
                 if CASE=='budget':
                     cmd.linear.x=0.;cmd.angular.z=.03
                     self.sources.yaw+=self.sources.gate_angular*.05
                 self.pub.publish(cmd)
                 if CASE in ('chain','mast_start','mast_start_scan','mast_start_full_scan','adaptive_start','adaptive_loop','adaptive_admission') and self.release:
+                    if DEVELOPMENT and CASE=='chain':
+                        if math.dist((self.sources.x,self.sources.y),target)<=.15:
+                            self.sources.stage+=1;goal.succeed();return NavigateToPose.Result()
+                        time.sleep(.05);continue
                     if moving_since is None:moving_since=time.monotonic()
                     fraction=min(1.,(time.monotonic()-moving_since)/3.)
                     self.sources.x=initial[0]+(target[0]-initial[0])*fraction
@@ -403,6 +437,7 @@ class FakeNav(Node):
                 time.sleep(.05)
             goal.abort();return NavigateToPose.Result()
         finally:
+            self.sources.motion_enabled=False
             self.pub.publish(Twist())
             self.active-=1
 
@@ -432,9 +467,11 @@ def run():
         # mast_start_full_scan also exercises a full-duration 2*pi revolution.
         explorer_args=['--ros-args','--params-file',str(base),'--params-file',str(params),
             '--params-file',str(shadow_params),'-p','operator_stationary_confirmed:=true',
-            '-p',f'metric_start_strategy:={"adaptive" if CASE.startswith("adaptive_") or CASE.startswith("encoder_") else "configured_scan"}',
+            '-p',f'metric_start_strategy:={"adaptive" if DEVELOPMENT or CASE.startswith("adaptive_") or CASE.startswith("encoder_") else "configured_scan"}',
             '-p',f'behavior_tree:={tree}','-p','require_hwt601_fusion:=true',
-            '-p',f'metric_self_body_enabled:={str(CASE in ("mast_start","mast_start_scan","mast_start_full_scan")).lower()}',
+            '-p',f'hwt_development_contract:={str(DEVELOPMENT).lower()}',
+            '-p',f'metric_start_egress_enabled:={str(DEVELOPMENT).lower()}',
+            '-p',f'metric_self_body_enabled:={str(DEVELOPMENT or CASE in ("mast_start","mast_start_scan","mast_start_full_scan")).lower()}',
             '-p','hwt601_active_drive:=true','-p','allow_explore_mission:=true',
             '-p','require_localization:=false','-p',f'initial_scan_enabled:={"true" if CASE in ("scan","scan_route","mast_start_scan","mast_start_full_scan","adaptive_start","adaptive_admission","adaptive_wait") else "false"}',
             '-p',f'initial_scan_angle_rad:={2*math.pi if CASE in ("mast_start_full_scan","adaptive_start","adaptive_admission") else .3}',
@@ -445,11 +482,11 @@ def run():
             '-p','wohnungserkundung_accessible_scope_verified:=true',
             '-p','wohnungserkundung_scope_id:=synthetic-metric-scope',
             '-p','wohnungserkundung_scope_polygon_xy:=[-0.8,-1.8,6.8,-1.8,6.8,1.8,-0.8,1.8]',
-            '-p',f'goal_timeout_s:={150. if CASE in ("adaptive_start","mast_start_full_scan","encoder_budget") else 12.}','-p',f'overall_timeout_s:={4.0 if CASE in ("empty","filtered","adaptive_wait") else 900.0 if CASE=="adaptive_start" else 240.0 if CASE=="mast_start_full_scan" else 60.0}',
+            '-p',f'goal_timeout_s:={150. if DEVELOPMENT or CASE in ("adaptive_start","mast_start_full_scan","encoder_budget") else 12.}','-p',f'overall_timeout_s:={4.0 if CASE in ("empty","filtered","adaptive_wait") else 900.0 if DEVELOPMENT or CASE=="adaptive_start" else 240.0 if CASE=="mast_start_full_scan" else 60.0}',
             '-p',f'min_frontier_size_m:={1000.0 if CASE=="filtered" else .3}',
             '-p','replan_period_s:=0.2','-p',f'storage_directory:={logdir / "synthetic-maps"}']
         log=open(logdir/'explorer.log','w')
-        ps.append((subprocess.Popen([sys.executable,'-c','from explore.explore_node import main; main()',*explorer_args],stdout=log,stderr=subprocess.STDOUT),log))
+        ps.append((subprocess.Popen([sys.executable,'-c',('import faulthandler; faulthandler.dump_traceback_later(8, repeat=True); ' if os.environ.get('METRIC_GRAPH_STACK_TRACE')=='1' else '')+'from explore.explore_node import main; main()',*explorer_args],stdout=log,stderr=subprocess.STDOUT),log))
         rclpy.init(args=explorer_args)
         # Match the product's separate process scheduling. Sharing this
         # fixture's Python GIL with gate diagnostics and gyro processing caused
@@ -535,8 +572,8 @@ def run():
                 # Intentional USER CANCEL after admission. This verifies the
                 # actual default-enabled first goal and B; never a full-spin pass.
             else:
-                assert wait(lambda:len(nav.goals)>=3 or metric().get('state') in ('failed','partial','canceled'),330 if CASE=='adaptive_start' else 30) and len(nav.goals)>=3,'three map-derived children missing'
-                assert wait(lambda:sources.phases[-1].get('frontiers_visited',0)>=3,8),'three observations not reached'
+                assert wait(lambda:len(nav.goals)>=3 or metric().get('state') in ('failed','partial','canceled'),330 if CASE=='adaptive_start' else 120 if DEVELOPMENT else 30) and len(nav.goals)>=3,'three map-derived children missing'
+                assert wait(lambda:sources.phases[-1].get('frontiers_visited',0)>=3,45 if DEVELOPMENT else 8),'three observations not reached'
                 assert len({tuple(g['target']) for g in nav.goals[:3]})==3
                 assert nav.goals[1]['target'][0]>2.1,'open connection not crossed'
             if CASE=='adaptive_start':
@@ -617,7 +654,16 @@ def run():
                     assert core.tracker.rebase_count==0 and core.timing_recovered_count==0
                     assert core.first_timing_rejection['read_end_age_s']>.18
         elif CASE=='hold':
-            sources.raw_on=False;time.sleep(.261);sources.raw_on=True
+            if DEVELOPMENT:
+                sources.transport_degraded=True
+                assert wait(lambda:sources.gate_status[-1].get('source_contract',{}).get('transport_degraded') is True,2)
+                assert sources.gate_status[-1]['source_contract']['hwt_attempts_in_window']==0
+                assert not nav.canceled and len(nav.goals)==1
+                sources.transport_degraded=False
+                sources.raw_on=False;time.sleep(.151);sources.raw_on=True
+                time.sleep(.2)
+                assert not nav.canceled and sources.gate_status[-1]['hwt_recovery_attempts']==0
+            sources.raw_on=False;time.sleep(.331 if DEVELOPMENT else .261);sources.raw_on=True
             assert wait(lambda:nav.canceled),'HOLD child not terminal'
             assert wait(lambda:any(m.get('phase')=='we_hwt_hold' for m in sources.phases))
             # Repeated fault and moving odometry must retain the original deadline.
@@ -626,11 +672,16 @@ def run():
             recovered_after=time.time()+.4
             assert wait(lambda:sources.yaw_samples and sources.yaw_samples[-1]>=recovered_after
                         and 0<=time.time()-sources.yaw_samples[-1]<.12,5),'first gap did not restore fresh yaw'
-            sources.raw_on=False;time.sleep(.261);sources.raw_on=True
+            sources.raw_on=False;time.sleep(.331 if DEVELOPMENT else .261);sources.raw_on=True
             time.sleep(1.4)
             assert len(nav.goals)==1 and sources.phases[-1].get('hwt_hold_deadline_monotonic')==deadline
             sources.moving=False
-            assert wait(lambda:len(nav.goals)>=2,5),'HWT resume child missing'
+            assert wait(lambda:len(nav.goals)>=2,10 if DEVELOPMENT else 5),'HWT resume child missing'
+            if DEVELOPMENT:
+                events=sources.gate_status[-1]['recovery_events_tail']
+                held=min(e['monotonic_s'] for e in events if e['state_after']=='HOLD')
+                healed=max(e['monotonic_s'] for e in events if e['state_after']=='HEALTHY')
+                assert healed-held<5.,'absolute HWT recovery deadline exceeded'
             assert nav.goals[0]['target']==nav.goals[1]['target']
             assert sources.gate_status[-1].get('resume_sequence',0)>=1
         sources.cmd.publish(String(data='{"type":"cancel"}'))
@@ -646,7 +697,7 @@ def run():
             running=[m for m in sources.manager if m.get('state')=='running']
             assert len({m.get('active_command',{}).get('request_id') for m in running})==1,'parent mission changed'
         assert all(m.get('map_ready_to_save') is False for m in sources.phases)
-        summary=dict(result='PASS',case=CASE,goals=nav.goals,canceled=nav.canceled,
+        summary=dict(result='PASS',development_contract=DEVELOPMENT,case=CASE,goals=nav.goals,canceled=nav.canceled,
                      maximum_active_children=nav.maximum,metric=metric(),
                      gate_first_fault=sources.gate_status[-1].get('first_fault'),
                      gate_last_fault=sources.gate_status[-1].get('last_fault'),

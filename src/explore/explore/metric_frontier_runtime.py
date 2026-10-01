@@ -30,7 +30,7 @@ from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
-    lookahead_point)
+    lookahead_point, StartEgressEvidence, rpp_trajectory)
 
 
 class MetricFrontierRuntime:
@@ -79,6 +79,14 @@ class MetricFrontierRuntime:
             raise ValueError('metric footprint invalid')
         self._metric_self_body_enabled = self.declare_parameter(
             'metric_self_body_enabled', False).value
+        self._metric_start_egress_enabled = self.declare_parameter(
+            'metric_start_egress_enabled', False,
+            ParameterDescriptor(read_only=True)).value
+        if self._metric_start_egress_enabled and not self._metric_self_body_enabled:
+            raise ValueError('start_egress needs the fixed lidar/body/map-odom anchor')
+        self._metric_egress = None
+        self._metric_egress_identity = None
+        self._metric_egress_expired = False
         self._metric_body_anchor = None
         self._metric_body_grid_identity = None
         self._metric_body_frame_reference = None
@@ -316,7 +324,60 @@ class MetricFrontierRuntime:
         allowed=np.zeros(valid.shape,dtype=bool)
         allowed[valid]=(costs[cy[valid],cx[valid]]>=0)&(costs[cy[valid],cx[valid]]<=self._frontier_goal_max_cost)
         safe[rr[~allowed],cc[~allowed]]=False
-        return grid, correlation, pose, known, safe, costmap, cost_known
+        inputs = grid, correlation, pose, known, safe, costmap, cost_known
+        self._metric_prepare_egress(inputs)
+        return inputs
+
+    def _metric_prepare_egress(self, inputs):
+        if not getattr(self, '_metric_start_egress_enabled', False):
+            return
+        grid, correlation, pose, known, _, costmap, cost_known = inputs
+        grids = ((grid, known), (costmap, cost_known))
+        identity = (correlation.context, tuple((g.info.width,g.info.height,
+            g.info.resolution,tuple(self._metric_grid_values(g)['origin'])) for g,_ in grids))
+        if getattr(self, '_metric_egress', None) is None:
+            evidence = []
+            for g, mask in grids:
+                values=self._metric_grid_values(g);o=values['origin']
+                inside=rasterize_scope(self._metric_scope,context=correlation.context,
+                    width=g.info.width,height=g.info.height,resolution_m=g.info.resolution,
+                    origin_x_m=o[0],origin_y_m=o[1],origin_yaw_rad=math.atan2(
+                        2*o[6]*o[5],1-2*o[5]**2),maximum_cells=self._wohnungserkundung_evidence_max_cells)
+                evidence.append(StartEgressEvidence.capture(g,
+                    np.asarray(g.data).reshape(mask.shape),mask,inside,pose,
+                    self._metric_bounds,self._world_to_grid))
+            self._metric_egress=tuple(evidence)
+            self._metric_egress_identity=identity
+        if (identity != self._metric_egress_identity
+                or getattr(self,'_metric_body_anchor_expired',False)):
+            self._metric_egress_expired=True
+        for evidence,(g,mask) in zip(self._metric_egress,grids):
+            occupancy=np.asarray(g.data).reshape(mask.shape)
+            # Observed cells never regain their original unknown exemption.
+            evidence.unknown &= occupancy < 0
+            if not self._metric_egress_expired:
+                valid,reason=evidence.check_trajectory([pose],occupancy,mask,
+                    self._world_to_grid,commit=True)
+                if not valid:
+                    evidence.valid=False;evidence.reason=reason
+
+    def _metric_seed_mask(self, inputs):
+        grid,_,pose,known,safe,costmap,_=inputs
+        if (not getattr(self,'_metric_start_egress_enabled',False)
+                or getattr(self,'_metric_egress_expired',True)
+                or not all(e.valid for e in self._metric_egress)):
+            return safe
+        from scipy.ndimage import distance_transform_edt
+        # Search seed only; never a footprint authority or map publication.
+        seed=known | self._metric_egress[0].unknown
+        search=seed & (distance_transform_edt(np.pad(seed,1))[1:-1,1:-1]
+            *grid.info.resolution >= self._goal_clearance_m+grid.info.resolution/2)
+        costs=np.asarray(costmap.data).reshape(costmap.info.height,costmap.info.width)
+        for r,c in zip(*np.nonzero(search)):
+            x,y=self._grid_to_world(c,r,grid.info);cc,rr=self._world_to_grid(x,y,costmap.info)
+            if not (0<=rr<costs.shape[0] and 0<=cc<costs.shape[1]
+                    and 0<=costs[rr,cc]<=self._frontier_goal_max_cost):search[r,c]=False
+        return search
 
     @staticmethod
     def _metric_grid_line_clear(mask,start,end):
@@ -326,9 +387,37 @@ class MetricFrontierRuntime:
 
     def _metric_route(self, inputs, target, target_yaw=None):
         grid, _, pose, known, safe, costmap, cost_known = inputs
+        self._metric_prepare_egress(inputs)
+        safe=self._metric_seed_mask(inputs)
+        # At the start, a centre-clearance circle can route around the very
+        # rear inventory being abandoned and invent an immediate turn. Try
+        # the concrete forward connector using the FULL reserved chassis and
+        # controller curve first. This is still only a proposal: the real
+        # ComputePath plan must independently pass before any prealignment.
+        if (getattr(self,'_metric_start_egress_enabled',False)
+                and not self._metric_egress_expired
+                and math.dist(pose[:2],target)>1e-6):
+            direct=self._metric_waypoints_clear(inputs,(pose[:2],tuple(target)),target_yaw)
+            if direct is not None:
+                return direct
         sc, sr = self._world_to_grid(*pose[:2], grid.info)
         tc, tr = self._world_to_grid(*target, grid.info)
-        cells = route_cells(safe, (sr, sc), (tr, tc))
+        start=(sr,sc)
+        if (0<=sr<safe.shape[0] and 0<=sc<safe.shape[1] and not safe[sr,sc]
+                and getattr(self,'_metric_start_egress_enabled',False)
+                and not self._metric_egress_expired):
+            seed=known | self._metric_egress[0].unknown
+            choices=[]
+            for r,c in zip(*np.nonzero(safe)):
+                xy=self._grid_to_world(c,r,grid.info);distance=math.dist(pose[:2],xy)
+                error=abs(math.atan2(math.sin(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2]),
+                    math.cos(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2])))
+                if (distance<=self._goal_clearance_m+.25 and error<=.17
+                        and self._metric_grid_line_clear(seed,(sr,sc),(r,c))):
+                    choices.append((error,math.dist(xy,target),r,c))
+            if choices:
+                _,_,r,c=min(choices);start=(r,c)
+        cells = route_cells(safe, start, (tr, tc))
         if cells is None:
             self._metric_last_route_rejection='no_known_free_route'
             return None
@@ -354,6 +443,57 @@ class MetricFrontierRuntime:
         return self._metric_waypoints_clear(inputs, route, target_yaw)
 
     def _metric_waypoints_clear(self, inputs, route, target_yaw=None):
+        grid, _, pose, known, _, costmap, cost_known = inputs
+        if getattr(self,'_metric_start_egress_enabled',False):
+            self._metric_prepare_egress(inputs)
+            if self._metric_egress_expired:
+                result=self._metric_standard_waypoints_clear(inputs,route,target_yaw)
+                if result is None:self._metric_last_route_rejection='start_egress_reference_expired'
+                return result
+            touched=False
+            for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
+                # Continue the coupled escape proof until even a possible
+                # subsequent chassis rotation has left the initial inventory.
+                # This selects the proof mode; it never admits a full scan.
+                r,c=footprint_cells(*pose,g,self._world_to_grid,self._metric_bounds,
+                    heading_half_angle=math.pi,heading_samples=127)
+                inside=(r>=0)&(r<allowed.shape[0])&(c>=0)&(c<allowed.shape[1])
+                touched |= bool(np.any(evidence.unknown[r[inside],c[inside]]))
+            if touched:
+                if self._metric_egress_expired:
+                    self._metric_last_route_rejection='start_egress_reference_expired'
+                    return None
+                bearing=math.atan2(route[-1][1]-pose[1],route[-1][0]-pose[0])
+                error=abs(math.atan2(math.sin(bearing-pose[2]),math.cos(bearing-pose[2])))
+                if error>getattr(self,'_prealign_handoff_tolerance',.17):
+                    self._metric_last_route_rejection='start_egress_in_place_turn'
+                    return None
+                carrot=lookahead_point(pose[:2],route[1:],.4)
+                bearing=math.atan2(carrot[1]-pose[1],carrot[0]-pose[0])
+                error=abs(math.atan2(math.sin(bearing-pose[2]),math.cos(bearing-pose[2])))
+                if error>.35:
+                    self._metric_last_route_rejection='start_egress_in_place_turn'
+                    return None
+                if self._metric_standard_waypoints_clear(inputs,(route[-1],),target_yaw) is None:
+                    return None
+                try:
+                    trajectory=rpp_trajectory(route,pose,min(grid.info.resolution,
+                        costmap.info.resolution),getattr(self,'_prealign_handoff_tolerance',.17),
+                        self._metric_bounds)
+                except ValueError as error:
+                    self._metric_last_route_rejection=str(error);return None
+                for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
+                    valid,reason=evidence.check_trajectory(trajectory,
+                        np.asarray(g.data).reshape(allowed.shape),allowed,self._world_to_grid)
+                    if not valid:
+                        self._metric_last_route_rejection=reason;return None
+                # The goal tolerance disk and all subsequent motion retain
+                # the ordinary full RPP envelope, without any exemption.
+                self._metric_last_route_rejection=None
+                return route
+        return self._metric_standard_waypoints_clear(inputs,route,target_yaw)
+
+    def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
         def check(x, y, yaw, g, allowed):
@@ -583,7 +723,8 @@ class MetricFrontierRuntime:
             footprint_clear(*pose[:2], pose[2]+math.pi, g, mask,
                 self._world_to_grid, self._grid_to_world, self._metric_bounds,
                 heading_half_angle=math.pi, heading_samples=127) for g, mask in grids)
-        candidates = self._metric_select(inputs, policy, min_frontier) if contour_clear else []
+        candidates = self._metric_select(inputs, policy, min_frontier) if (
+            contour_clear or getattr(self,'_metric_start_egress_enabled',False)) else []
         # Utility is the existing frontier observation gain, not a fixed move.
         q=grid.info.origin.orientation
         inside=rasterize_scope(self._metric_scope,context=inputs[1].context,
@@ -599,7 +740,10 @@ class MetricFrontierRuntime:
             scan_admissible=bool(sweep_clear), scan_useful=useful,
             unobserved_cells_in_scope=unknown_in_scope,
             initial_contour_missing_cells=missing,
-            first_rejecting_predicate=('initial_contour_unknown_or_occupied' if not contour_clear else
+            start_egress_enabled=getattr(self,'_metric_start_egress_enabled',False),
+            first_rejecting_predicate=(None if candidates or scan else
+                'start_egress_no_admissible_motion' if getattr(self,'_metric_start_egress_enabled',False) else
+                'initial_contour_unknown_or_occupied' if not contour_clear else
                 'no_eligible_observation_route' if not candidates and not scan else None),
             scan_rejection=None if sweep_clear else 'initial_scan_footprint_invalid')
         return decision, candidates
@@ -609,8 +753,12 @@ class MetricFrontierRuntime:
         frontiers = self._detect_frontiers(grid, min_frontier)
         candidates = []
         stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
         for f in frontiers:
-            goal = self._frontier_approach_goal(f, pose[:2], grid)
+            goal = (self._frontier_approach_goal(f,pose[:2],grid,search_mask=search_mask)
+                if getattr(self,'_metric_start_egress_enabled',False) else
+                self._frontier_approach_goal(f, pose[:2], grid))
             route = None if goal is None else self._metric_route(inputs, goal)
             if goal is not None and route is None:
                 # The historic circular clearance may admit the base centre
@@ -917,6 +1065,7 @@ class MetricFrontierRuntime:
                                 stop_reason[0]='pose_discontinuity'
                             last_pose[:] = [current[2],now]
                             if self._metric_route(current,(pending.x,pending.y),pending.yaw) is None:
+                                self._metric_status['route_rejection']=self._metric_last_route_rejection
                                 stop_reason[0]='route_invalidated'
                             if (self._metric_nav_path is not None and
                                     self._metric_validate_nav_plan(current,self._metric_nav_path,pending) is None):

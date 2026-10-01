@@ -8,6 +8,8 @@ explore_node:
     # initial_scan_enabled is scan availability, never a mandatory start gate.
     # Whole unknown cells in the measured body only; no mast-shadow clearing.
     metric_self_body_enabled: true
+    # Fixed original unknown inventory; candidate-specific shrinking sweep.
+    metric_start_egress_enabled: true
     wohnungserkundung_policy_enabled: false
     wohnungserkundung_navigation_enabled: false
     wohnungserkundung_persistence_enabled: false
