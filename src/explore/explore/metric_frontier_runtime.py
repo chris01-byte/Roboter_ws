@@ -212,7 +212,11 @@ class MetricFrontierRuntime:
         body = None
         if self._metric_self_body_enabled:
             scan = self._door_lidar_scan_snapshot()
-            if (scan is None or not 0 <= now-scan['received_at'] <= self._door_lidar_scan_timeout):
+            # A scan callback can arrive during the map calculations above.
+            # Evaluate after selecting its immutable snapshot, not against
+            # the older map-evaluation start time (which makes it 'future').
+            scan_now = time.monotonic()
+            if (scan is None or not 0 <= scan_now-scan['received_at'] <= self._door_lidar_scan_timeout):
                 raise ValueError('self_body_scan_stale')
             mount = self._door_lidar_mount(scan['frame_id'])
             if mount is None:

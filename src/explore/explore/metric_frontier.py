@@ -141,8 +141,11 @@ def self_body_unknown_mask(grid, occupancy, pose, lidar_mount):
     dx=grid.info.origin.position.x+math.cos(yaw)*lx-math.sin(yaw)*ly-pose[0]
     dy=grid.info.origin.position.y+math.sin(yaw)*lx+math.cos(yaw)*ly-pose[1]
     x,y=math.cos(pose[2])*dx+math.sin(pose[2])*dy,-math.sin(pose[2])*dx+math.cos(pose[2])*dy
-    # Cell half diagonal encloses every corner at every grid/body angle.
-    reserve=res/math.sqrt(2)
+    # Exact projection of the square cell onto body axes. The old half
+    # diagonal over-shrank parallel grids and rejected wholly enclosed cells.
+    # Every corner must still be inside the physical, unpadded chassis.
+    relative = yaw-pose[2]
+    reserve=res/2*(abs(math.cos(relative))+abs(math.sin(relative)))
     return ((occupancy < 0) & (-.11+reserve <= x) & (x <= .31-reserve)
             & (abs(y) <= .23-reserve))
 
@@ -165,8 +168,7 @@ def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clea
     return known, safe
 
 
-def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
-                    bounds=(-.13, .33, -.25, .25)):
+def footprint_cells(x, y, yaw, grid, world_to_grid, bounds=(-.13, .33, -.25, .25)):
     """Conservative cell-intersection test of the padded measured rectangle.
 
     Bounds enclose the actual configured footprint. Cell half diagonals and
@@ -188,7 +190,13 @@ def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
     lx, ly = cosine*dx+sine*dy, -sine*dx+cosine*dy
     touched = ((left-reserve<=lx)&(lx<=right+reserve)&
                (bottom-reserve<=ly)&(ly<=top+reserve))
-    r, c = rows[touched], cols[touched]
+    return rows[touched], cols[touched]
+
+
+def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
+                    bounds=(-.13, .33, -.25, .25)):
+    """Use the identical reserved cell set for motion and diagnosis."""
+    r, c = footprint_cells(x, y, yaw, grid, world_to_grid, bounds)
     if np.any((r<0)|(r>=allowed.shape[0])|(c<0)|(c>=allowed.shape[1])):
         return False
     return bool(np.all(allowed[r,c]))

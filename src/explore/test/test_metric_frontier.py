@@ -341,3 +341,66 @@ def test_occupied_body_and_out_of_scope_pose_never_become_free():
     scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in ((.5,-1.),(1.5,-1.),(1.5,1.),(.5,1.))))
     known,safe=known_safe_mask(a,scope,c,(-2.,-1.6),0.,.02,.28,body)
     assert not known[row,col] and not safe[row,col]
+
+
+@pytest.mark.parametrize('grid_angle', [0., .17, math.pi/4, math.pi/2])
+def test_whole_body_cells_are_exact_at_grid_angles_and_product_scan_route(grid_angle):
+    from explore.metric_frontier import self_body_unknown_mask
+    g,a,_=mast_start_scene();q=g.info.origin.orientation
+    q.z=math.sin(grid_angle/2);q.w=math.cos(grid_angle/2)
+    # Keep start near the interior of this rotated raster, not the map edge.
+    ox,oy=-2.,-1.6
+    g.info.origin.position.x=math.cos(grid_angle)*ox-math.sin(grid_angle)*oy
+    g.info.origin.position.y=math.sin(grid_angle)*ox+math.cos(grid_angle)*oy
+    rr,cc=np.indices(a.shape);res=g.info.resolution
+    wx=g.info.origin.position.x+math.cos(grid_angle)*(cc+.5)*res-math.sin(grid_angle)*(rr+.5)*res
+    wy=g.info.origin.position.y+math.sin(grid_angle)*(cc+.5)*res+math.cos(grid_angle)*(rr+.5)*res
+    # Actual mast sector only inside physical body; outside sweep is genuinely
+    # observed free. Never manufacture this outside evidence in a real map.
+    mask=(wx>=-.11)&(wx<=.31)&(abs(wy)<=.23)&(wx<.245)
+    a[:]=0;a[mask]=-1
+    whole=self_body_unknown_mask(g,a,(0.,0.,0.),(.245,0.,math.pi/2))
+    exact=np.ones(a.shape,bool)
+    for dc,dr in [(-.5,-.5),(.5,-.5),(.5,.5),(-.5,.5)]:
+        x=wx+res*(math.cos(grid_angle)*dc-math.sin(grid_angle)*dr)
+        y=wy+res*(math.sin(grid_angle)*dc+math.cos(grid_angle)*dr)
+        exact &= (-.11<=x)&(x<=.31)&(abs(y)<=.23)
+    assert np.array_equal(whole,(a<0)&exact)
+    assert not np.any(whole&~exact)  # Partially overlapping cells remain unknown.
+    # Cells straddling the physical boundary need real observations too.
+    a[(a<0)&~whole]=0
+    known=(a==0)|whole;cost=np.ones_like(known)
+    check=lambda x,y,yaw,g,k:footprint_clear(x,y,yaw,g,k,ExploreNode._world_to_grid,ExploreNode._grid_to_world)
+    assert all(check(0.,0.,yaw,g,known) and check(0.,0.,yaw,g,cost)
+               for yaw in np.linspace(0.,2*math.pi,127))
+    assert footprint_route_clear(((0.,0.),(.4,.15),(.7,.15)),0.,((g,known),(g,cost)),check)
+    col,row=ExploreNode._world_to_grid(0.,.34,g.info);known[row,col]=False
+    assert not all(check(0.,0.,yaw,g,known) for yaw in np.linspace(0.,2*math.pi,127))
+
+
+@pytest.mark.parametrize('scan_received,accepted', [(10.01,True),(9.49,False),(10.03,False),(None,False)])
+def test_scan_selected_after_map_work_uses_its_own_evaluation_time(monkeypatch,scan_received,accepted):
+    import explore.metric_frontier_runtime as module
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    n=ExploreNode.__new__(ExploreNode);g=grid()
+    source=raw_map_portal_source_from_values(**n._metric_grid_values(g))
+    context=PortalMapContext('metric','map-test','map')
+    correlation=PortalSourceCorrelation(context,1,source.fingerprint,source.source_stamp_ns)
+    scope=AuthorizedExplorationScope('scope',context,tuple(Point2D(x,y) for x,y in ((-.8,-1.8),(6.8,-1.8),(6.8,1.8),(-.8,1.8))))
+    n._metric_lock=threading.RLock();n._metric_fault=None;n._metric_raw=(g,source,10.)
+    n._metric_correlation=correlation;n._metric_scope=scope;n._metric_status_at=10.;n._metric_pending_since=None
+    n._map_timeout_s=5.;n._wohnungserkundung_evidence_max_cells=1000000
+    n._door_pose_timeout=.8;n._robot_pose_sample=lambda:((.05,.05,0.),0.)
+    n._global_costmap=g;n._global_costmap_received_at=10.;n._metric_self_body_enabled=True
+    n._door_lidar_scan_timeout=.5;n._metric_body_anchor=None;n._goal_clearance_m=.28
+    n._frontier_goal_max_cost=90;n._global_frame='map';n._metric_matches_status=lambda _:True
+    n.get_clock=lambda:SimpleNamespace(now=lambda:SimpleNamespace(nanoseconds=100000000000))
+    clock=[10.];monkeypatch.setattr(module.time,'monotonic',lambda:clock[0])
+    def snapshot():
+        clock[0]=10.02
+        return None if scan_received is None else dict(received_at=scan_received,frame_id='laser_frame')
+    n._door_lidar_scan_snapshot=snapshot;n._door_lidar_mount=lambda _:(.245,0.,math.pi/2)
+    if accepted:
+        assert len(n._metric_inputs())==7
+    else:
+        with pytest.raises(ValueError,match='self_body_scan_stale'):n._metric_inputs()

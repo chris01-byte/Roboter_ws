@@ -10,7 +10,7 @@ After sourcing the isolated build:
   env -u CYCLONEDDS_URI ROS_DOMAIN_ID=224 ROS_LOCALHOST_ONLY=1 \
       METRIC_GRAPH_CASE=chain python3 tools/sensorfusion/metric_frontier_product_graph.py
 Cases: chain, blocked, hold, route, estop, sensor, actuator, pose, map, late,
-cancel_failed, budget, empty, filtered, scan, scan_route, mast_start. Logs/results remain local under HWT_GRAPH_LOGDIR.
+cancel_failed, budget, empty, filtered, scan, scan_route, mast_start, mast_start_scan, mast_start_full_scan. Logs/results remain local under HWT_GRAPH_LOGDIR.
 """
 
 import json
@@ -74,7 +74,7 @@ commands = [
 
 CASE=os.environ.get('METRIC_GRAPH_CASE','chain')
 if CASE not in ('chain','blocked','hold','route','estop','sensor','actuator','pose',
-                'map','late','cancel_failed','budget','empty','filtered','scan','scan_route','mast_start'):
+                'map','late','cancel_failed','budget','empty','filtered','scan','scan_route','mast_start','mast_start_scan','mast_start_full_scan'):
     raise SystemExit('Unknown METRIC_GRAPH_CASE')
 
 class Sources(Node):
@@ -151,7 +151,7 @@ class Sources(Node):
         sample_at=time.monotonic()
         sample_dt=sample_at-self.last_sample_at
         self.last_sample_at=sample_at
-        if CASE in ('scan','scan_route'):
+        if CASE in ('scan','scan_route','mast_start_scan','mast_start_full_scan'):
             self.yaw+=self.gate_angular*sample_dt
         if self.raw_on:
             raw=Imu();raw.header.stamp=stamp;raw.header.frame_id='hwt601_link'
@@ -196,13 +196,13 @@ class Sources(Node):
             return
         scan=LaserScan()
         scan.header.stamp=stamp
-        scan.header.frame_id='laser_frame' if CASE=='mast_start' else 'base_link'
+        scan.header.frame_id='laser_frame' if CASE in ('mast_start','mast_start_scan','mast_start_full_scan') else 'base_link'
         scan.angle_min=-3.14159
         scan.angle_increment=6.28318/720
         scan.range_min=.05
         scan.range_max=10.0
         scan.ranges=[3.0]*720
-        if CASE=='mast_start':
+        if CASE in ('mast_start','mast_start_scan','mast_start_full_scan'):
             t=TransformStamped();t.header.stamp=stamp;t.header.frame_id='base_link';t.child_frame_id='laser_frame'
             t.transform.translation.x=.245;t.transform.translation.z=.660
             t.transform.rotation.z=math.sin(math.pi/4);t.transform.rotation.w=math.cos(math.pi/4)
@@ -258,7 +258,7 @@ class Sources(Node):
                 # A real raster wall with an open 1.6-m connection, no door label.
                 if col in (30,31) and not 12<=row<28:value=100
                 if CASE in ('blocked','budget') and row in (19,20) and col>=18:value=100
-                if CASE=='mast_start' and not costmap and self.stage==0 and col==10 and row in (19,20):
+                if CASE in ('mast_start','mast_start_scan','mast_start_full_scan') and not costmap and self.stage==0 and col==10 and row in (19,20):
                     value=-1  # unknown rear mast ray strictly inside initial measured body
                 if self.route_blocked:value=100
                 if self.blocked_task and 18<=col<=25 and row<19:value=100
@@ -309,7 +309,7 @@ class FakeNav(Node):
                     cmd.linear.x=0.;cmd.angular.z=.03
                     self.sources.yaw+=self.sources.gate_angular*.05
                 self.pub.publish(cmd)
-                if CASE in ('chain','mast_start') and self.release:
+                if CASE in ('chain','mast_start','mast_start_scan','mast_start_full_scan') and self.release:
                     if moving_since is None:moving_since=time.monotonic()
                     fraction=min(1.,(time.monotonic()-moving_since)/3.)
                     self.sources.x=initial[0]+(target[0]-initial[0])*fraction
@@ -345,20 +345,24 @@ def run():
         initial=deserialize_message(serialize_message(initial),OccupancyGrid)
         binding=raw_map_portal_source_from_values(**MetricFrontierRuntime._metric_grid_values(initial)).fingerprint
         probe.destroy_node();rclpy.shutdown()
+        # mast_start_scan uses the existing 0.3-rad software fixture sweep.
+        # Full 360-degree footprint admission is unchanged in the runtime.
+        # mast_start_full_scan also exercises a full-duration 2*pi revolution.
         explorer_args=['--ros-args','--params-file',str(base),'--params-file',str(params),
             '--params-file',str(shadow_params),'-p','operator_stationary_confirmed:=true',
             '-p',f'behavior_tree:={tree}','-p','require_hwt601_fusion:=true',
-            '-p',f'metric_self_body_enabled:={str(CASE=="mast_start").lower()}',
+            '-p',f'metric_self_body_enabled:={str(CASE in ("mast_start","mast_start_scan","mast_start_full_scan")).lower()}',
             '-p','hwt601_active_drive:=true','-p','allow_explore_mission:=true',
-            '-p','require_localization:=false','-p',f'initial_scan_enabled:={"true" if CASE in ("scan","scan_route") else "false"}',
-            '-p','initial_scan_angle_rad:=0.3','-p','initial_scan_timeout_s:=28.0',
-            '-p',f'prealign_enabled:={"true" if CASE in ("scan","scan_route") else "false"}','-p','region_graph_shadow_enabled:=false',
+            '-p','require_localization:=false','-p',f'initial_scan_enabled:={"true" if CASE in ("scan","scan_route","mast_start_scan","mast_start_full_scan") else "false"}',
+            '-p',f'initial_scan_angle_rad:={2*math.pi if CASE=="mast_start_full_scan" else .3}',
+            '-p',f'initial_scan_timeout_s:={210.0 if CASE=="mast_start_full_scan" else 28.0}',
+            '-p',f'prealign_enabled:={"true" if CASE in ("scan","scan_route","mast_start_scan","mast_start_full_scan") else "false"}','-p','region_graph_shadow_enabled:=false',
             '-p','metric_session_id:=synthetic-metric-20260930',
             '-p',f'metric_scope_map_fingerprint:={binding}',
             '-p','wohnungserkundung_accessible_scope_verified:=true',
             '-p','wohnungserkundung_scope_id:=synthetic-metric-scope',
             '-p','wohnungserkundung_scope_polygon_xy:=[-0.8,-1.8,6.8,-1.8,6.8,1.8,-0.8,1.8]',
-            '-p','goal_timeout_s:=12.0','-p',f'overall_timeout_s:={4.0 if CASE in ("empty","filtered") else 60.0}',
+            '-p','goal_timeout_s:=12.0','-p',f'overall_timeout_s:={4.0 if CASE in ("empty","filtered") else 240.0 if CASE=="mast_start_full_scan" else 60.0}',
             '-p',f'min_frontier_size_m:={1000.0 if CASE=="filtered" else .3}',
             '-p','replan_period_s:=0.2','-p',f'storage_directory:={logdir / "synthetic-maps"}']
         log=open(logdir/'explorer.log','w')
@@ -406,11 +410,13 @@ def run():
             assert not nav.goals,'filtered/empty map dispatched a child'
             assert metric().get('metric_completion_candidate',False)==(CASE=='empty')
         else:
-            assert wait(lambda:len(nav.goals)>=1,44 if CASE in ('scan','scan_route') else 10),('first autonomous child missing',sources.phases[-2:])
-        if CASE=='scan':
+            assert wait(lambda:len(nav.goals)>=1,220 if CASE=='mast_start_full_scan' else 44 if CASE in ('scan','scan_route','mast_start_scan') else 10),('first autonomous child missing',sources.phases[-2:])
+        if CASE in ('scan','mast_start_scan','mast_start_full_scan'):
             assert any(m.get('phase')=='we_initial_scan' for m in sources.phases),'initial scan not exercised'
-            assert abs(sources.yaw)<.15,'prealignment did not restore approach heading'
-        if CASE in ('chain','mast_start'):
+            assert abs(math.atan2(math.sin(sources.yaw),math.cos(sources.yaw)))<.15,'prealignment did not restore approach heading'
+            if CASE=='mast_start_full_scan':
+                assert sources.yaw>6.,'full initial product revolution missing'
+        if CASE in ('chain','mast_start','mast_start_scan','mast_start_full_scan'):
             optional=sources.create_publisher(String,'/explore/region_graph/status_json',10)
             optional.publish(String(data='{"current_region":"foreign","ready":false}'))
             if CASE=='chain':sources.map_variant=1
@@ -466,7 +472,7 @@ def run():
             assert wait(lambda:nav.active==0,6),'final child not terminal'
         assert nav.maximum==(0 if CASE in ('empty','filtered','scan_route') else 1),'simultaneous children'
         assert wait(lambda:all(abs(v)<1e-9 and abs(w)<1e-9 for _,v,w in sources.out[-8:]),3),'gate did not stop'
-        if CASE in ('chain','blocked','hold','budget','mast_start'):
+        if CASE in ('chain','blocked','hold','budget','mast_start','mast_start_scan','mast_start_full_scan'):
             running=[m for m in sources.manager if m.get('state')=='running']
             assert len({m.get('active_command',{}).get('request_id') for m in running})==1,'parent mission changed'
         assert all(m.get('map_ready_to_save') is False for m in sources.phases)
@@ -479,8 +485,10 @@ def run():
         print(json.dumps(summary,default=str),flush=True)
     except Exception:
         if 'sources' in locals():
+            failure_metric = metric() if 'metric' in locals() else (sources.phases[-1].get('metric_exploration',{}) if sources.phases else {})
             (logdir/'failure.json').write_text(json.dumps(dict(explorer=sources.phases[-8:],
-                manager=sources.manager[-8:],metric=metric(),map_fault=metric().get('source_fault'),
+                manager=sources.manager[-8:],metric=failure_metric,map_fault=failure_metric.get('source_fault'),
+                yaw_status_tail=sources.yaw_statuses[-4:],gate_status_tail=sources.gate_status[-2:],
                 source_observation=dict(yaw=sources.yaw,raw_samples=len(sources.raw_stamps),
                     maximum_raw_gap_s=max((b-a for a,b in zip(sources.raw_stamps,sources.raw_stamps[1:])),default=0.))),indent=2,default=str))
         raise
