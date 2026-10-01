@@ -654,3 +654,31 @@ def test_alias_change_during_modbus_call_discards_the_complete_answer():
         return answer
     client.read_holding_registers=switch
     with pytest.raises(EncoderShadowError,match='wechselte'):t.read_holding_registers(1,10,3)
+
+
+def test_hot_alias_checks_detect_link_replacement_and_device_reuse(monkeypatch):
+    from types import SimpleNamespace
+    import base_hardware.encoder_shadow_reader as module
+    links = {BASE_ALIAS: 'ttyUSB0', HWT601_ALIAS: 'ttyUSB1'}
+    generations = {BASE_ALIAS: (1, 10, 100), HWT601_ALIAS: (1, 11, 101)}
+    def readlink(alias):
+        if alias not in links: raise FileNotFoundError(alias)
+        return links[alias]
+    monkeypatch.setattr(module.os, 'readlink', readlink)
+    monkeypatch.setattr(module.os, 'stat', lambda alias: SimpleNamespace(
+        **dict(zip(('st_dev', 'st_ino', 'st_rdev'), generations[alias]))))
+    calls = []
+    monkeypatch.setattr(module, 'validate_base_alias',
+                        lambda *a, **kw: calls.append(True) or '/dev/ttyUSB0')
+    check = module.CheckedBaseAliases(BASE_ALIAS, HWT601_ALIAS)
+    for _ in range(5):
+        assert check(BASE_ALIAS) == '/dev/ttyUSB0'
+    assert len(calls) == 1  # Full path walk once; actual links/stat each call.
+    generations[BASE_ALIAS] = (1, 12, 100)
+    with pytest.raises(EncoderShadowError, match='generation'): check(BASE_ALIAS)
+    generations[BASE_ALIAS] = (1, 10, 100)
+    links[BASE_ALIAS] = 'ttyUSB1'
+    with pytest.raises(EncoderShadowError, match='Aliasbindung'): check(BASE_ALIAS)
+    links[BASE_ALIAS] = 'ttyUSB0'
+    del links[HWT601_ALIAS]
+    with pytest.raises(EncoderShadowError, match='nicht lesbar'): check(BASE_ALIAS)

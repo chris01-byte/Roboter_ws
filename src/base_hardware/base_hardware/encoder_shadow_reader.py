@@ -188,10 +188,42 @@ class CheckedUsbIdentity:
             values = tuple(p.read_text(encoding='ascii').strip() for p in self.attributes)
             if values != (BASE_USB_VENDOR_ID,BASE_USB_PRODUCT_ID,BASE_USB_SERIAL):
                 raise EncoderShadowError('Basisalias ist nicht der abgenommene FTDI-Adapter')
-            if (device.stat().st_dev, device.stat().st_ino) != generation:
+            after = device.stat()
+            if (after.st_dev, after.st_ino) != generation:
                 raise EncoderShadowError('Basis-USB-Geraetegeneration wechselte beim Lesen')
         except OSError as exc:
             raise EncoderShadowError(f'Basis-USB-Identitaet nicht lesbar: {exc}') from exc
+
+
+class CheckedBaseAliases:
+    """Keep exact alias links and device generations checked without walking /dev.
+
+    The full alias validation establishes the paths at connect. On every
+    subsequent boundary, read both symlinks and stat both target devices;
+    renumbering, replacement, disappearance and bus collision remain hard.
+    """
+    def __init__(self, required_alias, forbidden_alias):
+        self.aliases = (required_alias, forbidden_alias)
+        self.links = None
+        self.generations = None
+        self.resolved = None
+
+    def __call__(self, port):
+        if port != self.aliases[0]:
+            raise EncoderShadowError('Nur der feste Basisalias ist zulaessig')
+        try:
+            links = tuple(os.readlink(alias) for alias in self.aliases)
+            stats = tuple(os.stat(alias) for alias in self.aliases)
+            generations = tuple((v.st_dev, v.st_ino, v.st_rdev) for v in stats)
+            if self.links is None:
+                resolved = validate_base_alias(port, required_alias=self.aliases[0],
+                                               forbidden_alias=self.aliases[1])
+                self.links, self.generations, self.resolved = links, generations, resolved
+            if links != self.links or generations != self.generations:
+                raise EncoderShadowError('Basis-/HWT-Aliasbindung oder Geraetegeneration wechselte')
+            return self.resolved
+        except OSError as exc:
+            raise EncoderShadowError(f'Basis-/HWT-Alias nicht lesbar: {exc}') from exc
 
 
 class ReadOnlyModbusTransport:
@@ -227,6 +259,9 @@ class ReadOnlyModbusTransport:
         self.forbidden_alias = forbidden_alias
         self._exists = exists
         self._realpath = realpath
+        self._checked_aliases = (CheckedBaseAliases(required_alias, forbidden_alias)
+                                 if exists is os.path.exists and realpath is os.path.realpath
+                                 else None)
         self._identity_validator = (CheckedUsbIdentity()
                                     if identity_validator is validate_base_usb_identity
                                     else identity_validator)
@@ -234,6 +269,13 @@ class ReadOnlyModbusTransport:
         self.resolved_port: str | None = None
         self.successful_connections = 0
         self.reconnects = 0
+
+    def _validate_alias(self):
+        if self._checked_aliases is not None:
+            return self._checked_aliases(self.port)
+        return validate_base_alias(self.port, required_alias=self.required_alias,
+                                   forbidden_alias=self.forbidden_alias,
+                                   exists=self._exists, realpath=self._realpath)
 
     @property
     def connected(self) -> bool:
@@ -256,13 +298,7 @@ class ReadOnlyModbusTransport:
             raise EncoderShadowError(
                 'Bestehende Basisverbindung ist nicht mehr sicher offen')
 
-        before = validate_base_alias(
-            self.port,
-            required_alias=self.required_alias,
-            forbidden_alias=self.forbidden_alias,
-            exists=self._exists,
-            realpath=self._realpath,
-        )
+        before = self._validate_alias()
         self._identity_validator(before)
         client = None
         try:
@@ -284,13 +320,7 @@ class ReadOnlyModbusTransport:
                     or getattr(serial_socket, 'exclusive', None) is not True):
                 raise EncoderShadowError(
                     'Basisport wurde nicht nachweislich exklusiv geoeffnet')
-            after = validate_base_alias(
-                self.port,
-                required_alias=self.required_alias,
-                forbidden_alias=self.forbidden_alias,
-                exists=self._exists,
-                realpath=self._realpath,
-            )
+            after = self._validate_alias()
             self._identity_validator(after)
             if after != before:
                 raise EncoderShadowError(
@@ -340,13 +370,7 @@ class ReadOnlyModbusTransport:
         if not self.connected:
             raise EncoderShadowError('Modbus-Transport ist nicht verbunden')
         identity_started = time.monotonic()
-        current_port = validate_base_alias(
-            self.port,
-            required_alias=self.required_alias,
-            forbidden_alias=self.forbidden_alias,
-            exists=self._exists,
-            realpath=self._realpath,
-        )
+        current_port = self._validate_alias()
         if current_port != self.resolved_port:
             raise EncoderShadowError(
                 'Basisalias wechselte nach dem Verbindungsaufbau')
@@ -416,9 +440,7 @@ class ReadOnlyModbusTransport:
             raise EncoderShadowError('Ungueltiges uint16 in FC03-Antwort')
         self.last_timing['response_s'] = time.monotonic() - response_started
         identity_after_started = time.monotonic()
-        after = validate_base_alias(self.port, required_alias=self.required_alias,
-                                   forbidden_alias=self.forbidden_alias,
-                                   exists=self._exists, realpath=self._realpath)
+        after = self._validate_alias()
         if after != self.resolved_port:
             raise EncoderShadowError('Basisalias wechselte waehrend FC03-Lesezugriff')
         self._identity_validator(after)
