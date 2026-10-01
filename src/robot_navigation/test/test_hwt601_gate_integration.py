@@ -184,3 +184,27 @@ def test_mission_seen_is_not_forgotten_after_idle():
     CmdVelMissionGate._on_status(gate, String(data=json.dumps({
         'state': 'idle', 'active_command': None})))
     assert gate._hwt_mission_seen is True
+
+
+def test_blocked_diagnostic_publisher_cannot_delay_stop_decision():
+    import threading
+    from robot_state_estimation.hwt601_fusion_guard import DeferredJsonPublisher
+    gate,health,output,status=gate_with_ready_sources()
+    entered,release=threading.Event(),threading.Event()
+    class BlockedOutput:
+        def publish(self,message):
+            entered.set();release.wait(2.);status.append(message)
+    worker=DeferredJsonPublisher(BlockedOutput())
+    gate._hwt_status_worker=worker;gate._hwt_diagnostic_next=0.;gate._hwt_diagnostic_event=-1
+    try:
+        CmdVelMissionGate._publish(gate)
+        assert entered.wait(1.) and output[-1].linear.x==.05
+        del health.samples['wheel']
+        # The diagnostic publisher remains blocked. The existing command
+        # decision still returns and publishes STOP synchronously.
+        CmdVelMissionGate._publish(gate)
+        assert not release.is_set()
+        assert output[-1].linear.x==0. and health.recovery_state=='TERMINAL_FAULT'
+        assert health.fault_snapshot()['source_checks'][2]['first_rejecting_predicate']=='missing_message'
+    finally:
+        release.set();worker.close()

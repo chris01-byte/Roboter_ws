@@ -128,12 +128,15 @@ def test_overtaken_raw_callback_does_not_extend_measurement_freshness():
     assert h.motion_failure(10.24) == 'raw_missing_stale_or_invalid'
 
 
-def test_overtaken_invalid_raw_callback_is_not_silently_discarded():
+def test_overtaken_invalid_raw_callback_cannot_overwrite_newer_measurement():
     h = ready_health()
     assert h.motion_failure(10.0) is None
     h.sample('raw', 10.03, 10.03, 10.03)
     h.sample('raw', 10.01, 10.01, 10.01, valid=False)
-    assert h.motion_failure(10.04) == 'raw_missing_stale_or_invalid'
+    assert h.motion_failure(10.04) is None
+    assert h.ignored_older_callbacks['raw']==1
+    h.sample('raw', 10.04, 10.04, 10.04, valid=False)
+    assert h.motion_failure(10.05) == 'raw_missing_stale_or_invalid'
 
 
 @pytest.mark.parametrize('field,value', [
@@ -369,7 +372,17 @@ def test_bad_status_receive_time_remains_fail_closed_and_serializable(received):
     h = ready_health(now=10.0)
     assert h.source_failure(10.0) is None
     h.status('raw', copy.deepcopy(h.statuses['raw'][0]), received)
-    assert h.source_failure(10.05) == 'raw_status_missing_or_stale'
+    now = 10.05
+    if received == 9.0:
+        # Old callback is ignored. The genuinely aged last selected status
+        # still stops once its actual heartbeat expires.
+        now = 11.05
+        for key in ('raw','yaw','wheel'):
+            h.sample(key,now,now,now)
+        for key in ('yaw','wheel'):
+            h.status(key,h.statuses[key][0],now)
+        assert h.statuses['raw'][1] == 10.0
+    assert h.source_failure(now) == 'raw_status_missing_or_stale'
     finding = h.first_fault_snapshot()
     assert 'raw_status_missing_or_stale' in finding['violations']
     assert finding['raw_status_age_field_s'] == 0.0

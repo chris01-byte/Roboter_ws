@@ -3645,6 +3645,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
             payload['hwt_recovery_sequence'] = getattr(
                 self, '_hwt_recovery_sequence', 0)
             payload['hwt_first_fault'] = self._hwt_guard.health.first_fault_snapshot()
+            payload['hwt_last_fault'] = self._hwt_guard.health.fault_snapshot()
             payload['hwt_recovery_state'] = self._hwt_guard.health.recovery_state
             payload['hwt_hold_deadline_monotonic'] = self._hwt_hold_deadline
         if getattr(self, '_wohnungserkundung_policy_enabled', False):

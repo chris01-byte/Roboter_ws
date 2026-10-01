@@ -237,8 +237,11 @@ class CmdVelMissionGate(Node):
         self._hwt_guard = None
         self._hwt_source_cb = None
         self._hwt_status_pub = None
+        self._hwt_status_worker = None
+        self._hwt_diagnostic_next = 0.0
+        self._hwt_diagnostic_event = -1
         if require_hwt:
-            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
+            from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard, DeferredJsonPublisher
             # The passive fullstack recorded fresh wheel messages while this
             # single executor still evaluated an older sample. Keep only the
             # source callbacks independent; command/estop/timer callbacks stay
@@ -249,6 +252,7 @@ class CmdVelMissionGate(Node):
                 self, hwt_drive, self._hwt_source_cb)
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
+            self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
         self.declare_parameter('input_topic', '/cmd_vel_nav_raw')
         self.declare_parameter('output_topic', '/cmd_vel_nav')
         self.declare_parameter(
@@ -882,11 +886,36 @@ class CmdVelMissionGate(Node):
                 self._motion_base_tf_timeout)
         )
 
+    def destroy_node(self):
+        worker = getattr(self, '_hwt_status_worker', None)
+        if worker is not None:
+            worker.close()
+        return super().destroy_node()
+
     def _publish(self):
         now = time.monotonic()
         guard = getattr(self, '_hwt_guard', None)
-        hwt_failure = guard.failure() if guard is not None else None
-        if (guard is not None and guard.health.recovery_state in
+        hwt_failure = None
+        health_status = None
+        if guard is not None:
+            with guard.health.lock:
+                hwt_failure = guard.failure()
+                # One source decision supplies both authorization and status.
+                # A second evaluation while formatting could select another
+                # sample and report a different state from the command check.
+                health_status = {
+                    'sources_ready': guard.health.last_source_failure is None,
+                    'active_drive': guard.health.active_drive,
+                    'latched_fault': guard.health.latched_fault,
+                    # Event snapshots are immutable after capture. The queue
+                    # owns this new view/list; no repeated deep copy under the
+                    # source lock and no JSON or publisher I/O here.
+                    'first_fault': guard.health._first_fault,
+                    'last_fault': guard.health.last_fault,
+                    'recovery_state': guard.health.recovery_state,
+                    'recovery_events_tail': list(guard.health.recovery_events[-16:]),
+                }
+        if (health_status is not None and health_status['recovery_state'] in
                 ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')):
             if not getattr(self, '_hwt_resume_pending', False):
                 self._hwt_hold_sequence = None
@@ -894,22 +923,21 @@ class CmdVelMissionGate(Node):
         hwt_motion_ready = (
             hwt_failure is None
             and not getattr(self, '_hwt_resume_pending', False))
-        if guard is not None:
-            self._hwt_status_pub.publish(String(data=json.dumps({
-                'sources_ready': guard.health.source_failure() is None,
-                # Necessary HWT condition only, never a replacement for
-                # mission, TF, VL53, scope or Collision authorization.
-                'hwt_motion_ready': hwt_motion_ready,
-                'reason': (hwt_failure or
-                           ('awaiting_explore_resume' if not hwt_motion_ready
-                            else 'raw_sources_ready')),
-                'active_drive': guard.health.active_drive,
-                'latched_fault': guard.health.latched_fault,
-                'first_fault': guard.health.first_fault_snapshot(),
-                'recovery_state': guard.health.recovery_state,
-                'recovery_events_tail': guard.health.recovery_events[-16:],
-                'resume_sequence': self._hwt_hold_sequence,
-            })))
+        if health_status is not None:
+            health_status.update(
+                hwt_motion_ready=hwt_motion_ready,
+                reason=(hwt_failure or ('awaiting_explore_resume' if not hwt_motion_ready
+                                       else 'raw_sources_ready')),
+                resume_sequence=self._hwt_hold_sequence)
+            worker = getattr(self, '_hwt_status_worker', None)
+            if worker is None:
+                # Object-only unit fixtures; live HWT nodes always have worker.
+                self._hwt_status_pub.publish(String(data=json.dumps(health_status)))
+            elif (now >= self._hwt_diagnostic_next
+                  or self._hwt_diagnostic_event != guard.health._event_sequence):
+                self._hwt_diagnostic_next = now+.2
+                self._hwt_diagnostic_event = guard.health._event_sequence
+                worker.submit(health_status)
         estop_clear = estop_motion_authorized(
             self._estop_clear, self._estop_time, now, self._estop_timeout)
         mission_authorized = (

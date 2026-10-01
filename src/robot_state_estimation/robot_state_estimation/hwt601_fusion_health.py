@@ -75,6 +75,15 @@ class Hwt601FusionHealth:
         self.active_drive = active_drive is True
         self.observer = str(observer)
         self.samples = {}
+        self.sample_details = {}
+        self.sample_validation = {}
+        self.ignored_older_callbacks = {}
+        self._event_sequence = 0
+        self._last_event_state = 'STARTUP'
+        self.last_successful_recovery = None
+        self.last_fault = None
+        self._startup_reason = None
+        self.last_source_failure = 'startup_not_evaluated'
         self.statuses = {}
         self.was_ready = False
         self.latched_fault = None
@@ -101,23 +110,30 @@ class Hwt601FusionHealth:
         self.recovery_budget_s = 5.0
         self.lock = threading.RLock()
 
-    def sample(self, name, stamp, received, observed, valid=True):
+    def sample(self, name, stamp, received, observed, valid=True, details=None):
         with self.lock:
             previous = self.samples.get(name)
             # Reentrant ROS callbacks can enter in sensor order but reach this
             # lock in reverse order. An older callback must not overwrite an
             # already accepted, newer measurement. A timestamp regression in
             # callback entry order remains invalid and fail-closed.
-            if (previous is not None and previous[3] and valid
+            if (previous is not None
                     and type(stamp) in (int, float) and math.isfinite(stamp)
                     and type(received) in (int, float) and math.isfinite(received)
                     and type(observed) in (int, float) and math.isfinite(observed)
-                    and stamp < previous[0] and received < previous[1]
-                    and observed < previous[2]):
+                    and stamp < previous[0] and received < previous[1]):
+                self.ignored_older_callbacks[name] = self.ignored_older_callbacks.get(name, 0)+1
                 return
+            self.sample_validation[name] = {
+                'content_valid': bool(valid),
+                'stamp_finite_positive': bool(math.isfinite(stamp) and stamp > 0),
+                'previous_stamp_s': _json_value(previous[0]) if previous else None,
+                'strictly_newer_stamp': previous is None or stamp > previous[0],
+            }
             valid = (valid and math.isfinite(stamp) and stamp > 0
                      and (previous is None or stamp > previous[0]))
             self.samples[name] = (stamp, received, observed, valid)
+            self.sample_details[name] = _json_value(details or {})
             if name == 'raw' and self._hold_since is not None and valid:
                 self._raw_samples_since_hold += 1
             if (name == 'raw' and valid
@@ -128,6 +144,10 @@ class Hwt601FusionHealth:
 
     def status(self, name, payload, received):
         with self.lock:
+            previous = self.statuses.get(name)
+            if (previous is not None and type(received) in (int,float)
+                    and type(previous[1]) in (int,float) and received < previous[1]):
+                return
             self.statuses[name] = (payload if isinstance(payload, dict) else {}, received)
             if name == 'raw' and self._hold_since is not None:
                 self._raw_statuses_since_hold += 1
@@ -251,9 +271,51 @@ class Hwt601FusionHealth:
                     and yaw.get('data_continuity_pending') is True)
         return False
 
+    def _sample_rejection(self, name, now, limit):
+        sample = self.samples.get(name)
+        if sample is None:
+            return 'missing_message'
+        if not sample[3]:
+            return 'invalid_content_or_measurement_order'
+        if not fresh(now, sample[1], limit):
+            return 'callback_receive_age_out_of_bounds'
+        if not fresh(now, sample[2], limit):
+            return 'measurement_age_out_of_bounds'
+        return None
+
     def _event(self, now, state, reason):
-        self.recovery_events.append({
-            'state': state, 'reason': reason, 'monotonic_s': now})
+        # Called while holding the decision lock: sample, status and recovery
+        # belong to this exact transition. No logger or I/O on this path.
+        self._event_sequence += 1
+        event = {'event_id': self._event_sequence,
+                 'component': 'Hwt601FusionHealth', 'observer': self.observer,
+                 'state_before': self._last_event_state, 'state_after': state,
+                 'state': state, 'reason': reason, 'monotonic_s': now}
+        if state in ('STARTUP', 'HOLD', 'TERMINAL_FAULT'):
+            try:
+                snapshot = self._capture_first_fault(now, reason)
+                snapshot.update(event)
+                snapshot['previous_successful_recovery'] = copy.deepcopy(
+                    self.last_successful_recovery)
+                event['decision_snapshot'] = snapshot
+                self.last_fault = snapshot
+            except Exception as exc:
+                event['decision_snapshot'] = dict(event, capture_error=type(exc).__name__)
+                self.last_fault = event['decision_snapshot']
+        if state == 'HEALTHY' and reason == 'recovered':
+            self.last_successful_recovery = dict(event)
+        if (self._first_fault is not None and 'event_id' not in self._first_fault
+                and self._first_fault.get('evaluation_monotonic_s') == now):
+            self._first_fault.update({key: value for key, value in event.items()
+                                      if key != 'decision_snapshot'})
+        self._last_event_state = state
+        self.recovery_events.append(event)
+        # Bounded lifetime journal; first_fault is kept separately forever.
+        del self.recovery_events[:-16]
+
+    def fault_snapshot(self):
+        with self.lock:
+            return copy.deepcopy(self.last_fault)
 
     def _terminal(self, now, reason):
         self.recovery_state = 'TERMINAL_FAULT'
@@ -324,7 +386,7 @@ class Hwt601FusionHealth:
         return None if valid else 'wheel_not_real_or_not_ready'
 
     def _capture_first_fault(self, now, reason):
-        """Snapshot only the first post-readiness fault; never drive a decision."""
+        """Capture current decision inputs; assignment preserves first and later faults."""
         raw_status = self.statuses.get('raw')
         raw = raw_status[0] if raw_status is not None else {}
         conditions = []
@@ -360,8 +422,14 @@ class Hwt601FusionHealth:
                 'sample_age_s':
                     _elapsed(now, sample[2]) if sample is not None else None,
                 'sample_valid': bool(sample[3]) if sample is not None else None,
+                'sample_validation': copy.deepcopy(self.sample_validation.get(name)),
                 'sample_fresh_and_valid': bool(sample_ok),
                 'sample_limit_s': limit,
+                'first_rejecting_predicate': self._sample_rejection(name, now, limit),
+                'ignored_older_callbacks': self.ignored_older_callbacks.get(name, 0),
+                'original_message_and_clock_pair': copy.deepcopy(self.sample_details.get(name)),
+                'callback_receive_age_s':
+                    _elapsed(now, sample[1]) if sample is not None else None,
                 'status_received_monotonic_s':
                     _json_value(status[1]) if status is not None else None,
                 'status_receive_age_s':
@@ -397,6 +465,8 @@ class Hwt601FusionHealth:
             'violations': violations,
             'source_checks': source_checks,
             'raw_status': _json_value(raw),
+            'wheel_status': _json_value(self.statuses.get('wheel', ({}, None))[0]),
+            'clock_basis': 'monotonic evaluation; ROS measurement stamp converted at callback',
             'driver_counters': {
                 key: _typed_field(raw, key, 'observed only', key in raw)
                 for key in ('accepted', 'rejected', 'successful_connections',
@@ -410,6 +480,11 @@ class Hwt601FusionHealth:
 
     def source_failure(self, now=None):
         with self.lock:
+            self.last_source_failure = self._source_failure(now)
+            return self.last_source_failure
+
+    def _source_failure(self, now=None):
+        with self.lock:
             # Snapshot time after acquiring the same lock as callbacks.
             # A concurrently received sample must not appear future-dated.
             if now is None:
@@ -420,11 +495,15 @@ class Hwt601FusionHealth:
             if reason is None and not self.was_ready:
                 self.was_ready = True
                 self.recovery_state = 'HEALTHY'
+                self._last_event_state = 'HEALTHY'
                 reconnects = self.statuses['raw'][0].get('reconnects')
                 self._last_healthy_reconnects = (
                     reconnects if type(reconnects) is int else None)
                 return None
             if not self.was_ready:
+                if reason != self._startup_reason:
+                    self._startup_reason = reason
+                    self._event(now, 'STARTUP', reason)
                 return reason
             hard = self._hard_status_failure()
             observed_reason = reason or hard
