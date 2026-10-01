@@ -2887,3 +2887,50 @@ stationäre Initialisierung/Karte-Posezuordnung nötig. Keine weitere Startserie
 kein Merge/Force-Push/private Daten oder private Berichts-Vorfahren. Details
 im einzigen aktuellen WE-STATUS und AGENTENAUFTRAG §10. **Stufe 3 offen;
 System eingeschaltet, keine geplante Abschaltung.**
+
+## 01.10.2026 – isolierter HWT-Entwicklungsvertrag/Start-Egress, Realstart blockiert
+
+Ausgang `2a0e19d`, Funktionsstand `a6f31bf`, PR #105/LAB-1. Isolierter
+Sechspaket-Copybuild `metric-egress-hwt-20261001/install` außerhalb Git,
+kein permanenter Install-/Autostartwechsel. Letzter state/explore-Build 8,58 s;
+100 Quell-/Install-Dateien identisch. Reale Domain 42, eigene Prozesswurzeln/
+Argumente/temporäre Parameterdateien/Präfixe und Modulhashes aufgezeichnet.
+MM/MapManager/BT, native SLAM-Toolbox und LD-LiDAR-Shutdownunderlay unverändert
+aufgelöst. Live Rawreader Entwicklungsvertrag true, 50/300 ms; Encoder
+FC03-only, 120/180 ms; 13 native Controller-/Goalcheckerparameter gelesen.
+Live-Explorer-Parameterabfrage während verzögerter Initialisierung nicht
+verfügbar; tatsächlicher Launchprofilhash und vier metric_frontier-Statuses
+belegt. Keine vollständige Parameterantwort behaupten.
+
+Passiv regulär app_mapping mit HWT-Odometrie, `active_drive=false`,
+`enable_auto_explore=false`; aktuelle Karte/Pose/LAB-Scope gebunden und
+alleiniger Explorer über vorhandenen Launch gestartet. Keine Aktorschreib-
+prozesse und keine reale Mission. Schlussfenster 60,008 s: HEALTHY bei
+36,379 s, harte hostseitige Messzeitprüfung bei 54,880 s. Zwei Pollfehler
+davor nur TRANSPORT_DEGRADED, null HWT-Recoveryversuche. Kein Sensor-/USB-
+Hardwaredefekt daraus abgeleitet. Initialer kurzer Entwicklungsstart vor
+Portprüfungsoptimierung separat unkalibriert; keine weitere Startserie.
+
+Aktuelle Geometrie offline unverändert: 42 unbekannte Roh-Startkonturzellen,
+zwei Costmap-Konturzellen, 22 autonome Kandidaten sämtlich unzulässig.
+Kein manuelles Ziel/Bootstrap und kein künstliches Gesundsetzen. Kein
+realer Zielerfolg/Kartierungsfortschritt/Passagen-/HOLD-Resume-Nachweis.
+Softwaregraph mit drei erreichten Zielen und separatem HOLD/Resume bestanden.
+
+Messfenster von kompletter Orchestrierung 83,709 s/Bag-Spanne 76,646 s
+unterscheiden. Encoder 824 Paare am Fensterende, 1.133 im Gesamtdatensatz,
+maximal 114,879 ms, keine Reject/Recovery/Rebase/Reconnect. Geschlossene
+Bag mit erfolgreicher Integritätsprüfung, keine laufende Mission/Nav2-Statuseinträge, vier Befehlsströme
+ausschließlich null. Eigene Launchwurzeln einzeln SIGINT, Recorder danach;
+manifestierte Prozesse und beide Gerätehandles frei. Zwölf neue FC03-Paare
+Position 0/0 RPM; keine elektrische Motorstromstellung behauptet.
+
+Private Karten/Bags/Plots/Profile/Zellkoordinaten unter
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`, insbesondere
+`runtime-byte-manifest-release.json`, `short-final/`, `end-state-proof.json`,
+`end-encoder.json`. Hauptkopie sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`.
+Rückfall: dieses temporäre Overlay weglassen oder Entwicklungs-/Egress-Opt-ins
+beim gestoppten Neustart deaktivieren; `active_drive=false`,
+`enable_auto_explore=false`. Kein Merge/Force-Push/private Vorfahren.
+Stufe 3 offen, konkrete Quellenzeit-/Trajektoriegrenzen siehe STATUS §4.
+**ROS beendet; Rechner laut Nutzerklärung eingeschaltet lassen.**

@@ -2,7 +2,7 @@
 
 **WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–6 erhalten den erledigten Softwareauftrag; sie sind kein Wiederholungsauftrag. Die Vorläufe aus Abschnitt 7 und der anschließende Mast-/Encoder-Korrekturauftrag (Abschnitt 8) sind ausgeführt. Software regressiert, gemeinsamer realer Startvertrag weiter ungültig; keine aktive Mission. Diese abgeschlossenen Aufträge bleiben historisch. **Abschnitt 10 dokumentiert den aktuellen abgeschlossenen Teilstand: adaptiver metrischer Start und begrenzte Encoder-Recovery. Kein automatischer weiterer Realversuch.**
+**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–10 sind historische, erledigte Pakete. **Abschnitt 11 ist der aktuelle Abschluss:** HWT-Entwicklungsvertrag/Start-Egress implementiert, 1.564 Regressionen und Drei-Ziel-/HOLD-Produktgraph bestanden. Kurzer Realstart endet mit harter Messzeitprüfung; unabhängig davon keine zulässige Starttrajektorie. Keine reale Mission, kein automatischer weiterer Start. ROS beendet, Rechner eingeschaltet.
 
 ## 1. Auftrag und verbindlicher Einstieg
 
@@ -263,5 +263,55 @@ private Daten nur lokal. Rückfall temporäres Fünfpaketoverlay weglassen, ohne
 Mission `active_drive=false` / `enable_auto_explore=false`. Der historische
 Restumfang aus §9 (211 Sweepzellen/manuelle Beobachtungsposition) ist keine
 aktuelle Bootstrapanforderung. Vollständiges Ergebnis und Einzelgrenzen im
-[aktuellen STATUS-Abschluss](STATUS.md#aktueller-abschluss-adaptiver-start-und-begrenzte-encoder-recovery-01102026).
+[aktuellen STATUS-Abschluss](STATUS.md#historischer-abschluss-adaptiver-start-und-begrenzte-encoder-recovery-01102026).
 Stufe 3 offen, **System bleibt eingeschaltet**.
+
+## 11. Aktueller Abschluss – HWT-Entwicklungsvertrag und Start-Egress
+
+Ausgang `2a0e19d`, gleiche PR #105/Branch, MASTERPLAN v1.2/LAB-1.
+HWT-Polltransport von tatsächlicher Datenvalidität und Bewegung unterscheiden;
+explizites Opt-in mit 50-ms-Antwortfrist/300-ms-Rohdatenfrische. Einzelner
+fehlgeschlagener Poll mit noch gültigen frischen Originaldaten verbraucht
+keinen HOLD. Diagnose Header/Nutzdaten/Teilantwort/verspätete vollständige
+Antwort/Verarbeitung nach Frist anhand tatsächlicher Bytes/Zeiten. Maximal
+zwei echte HWT-HOLDs innerhalb 60 s statt Lebensdauerlimit, jedes höchstens
+5 s; keine Rücksetzung durch Task-/Kind-IDs. Legacy und Encoder 120/180 ms
+erhalten. Ganze HWT-Health/Gate/Explorer-Kette konsistent anpassen; Hard Fault,
+ESTOP/Cancel, unbestätigtes Kind und unbelegte Kontinuität bleiben gesperrt.
+
+Start-Egress im vorhandenen Explorer: konkrete autonome Kandidaten anhand
+Startkörper, Padding, Reserve und kontinuierlichem tatsächlichem Sweep prüfen.
+Unbekannter Startbestand nur beim Wegführen ohne zusätzliche Beanspruchung,
+Annäherung oder Wiederbetreten tolerieren; keine globale Freigabeliste.
+ComputePathToPose/RPP, Vorausrichtung, gesamte Route, Zielorientierung und
+Goal-Toleranz erhalten. Softwarefälle A–J und bestehende Schutzverträge prüfen.
+Kein manueller Bootstrap/Goal-Sender oder neue Health-/Navigationsarchitektur.
+
+Nach isoliertem Build/Manifest genau kurzer normaler Startnachweis 30–60 s,
+kein neuer 720-s-Passivtest. Bei gültigen Quellen/Scope/Pose/Karte/konkretem
+Egress regulär aktiver Einzelbusbesitzer und reale MM→BT→metric_frontier→Nav2→
+Schutzkette-Mission: 900 s gesamt, 150 s je Aufgabe, 6 Versuche/3 Fehler,
+bestehende Geschwindigkeiten/Collision Monitor/VL53, keine Fehlerinjektion.
+Autonome erreichte Folgeziele/Kartenevidenz, natürlicher HOLD, Zielmisserfolg/
+Alternative und erreichbare Passage getrennt nachweisen; Goal-Annahme allein
+ist kein Erfolg. Nach Ende ROS-Wurzeln einzeln stoppen/FC03-Endzustand sichern,
+**Rechner laut Nutzerantwort eingeschaltet lassen**. Im bestehenden PR
+veröffentlichen; private Daten/Vorfahren lokal, kein Merge/Force-Push/Installwechsel.
+
+**Ergebnis dieses Auftrags:** Funktionsstand `a6f31bf`, Ausgang `2a0e19d`.
+Softwarefälle A–J und Schutzregressionen bestanden; gerätefrei drei erreichte
+autonome Ziele mit Beobachtungen sowie begrenztes HOLD/ACK/Resume desselben
+Ziels. Reale Schlussmessung 60,008 s: HEALTHY nach 36,379 s, terminale
+hostseitige Messzeitprüfung nach 54,880 s. Unabhängig davon 22 aktuelle autonome
+Startkandidaten, alle geometrisch abgelehnt. Kein aktiver Buswechsel/Goal/
+Mission, keine reale Ziel-/Passagen-/Recoveryabnahme. Kein Ersatz durch
+Vorlaufserie oder manuelles Ziel. Erster kurzer Entwicklungsstart mit anderer
+Portprüfungsimplementierung wegen fehlender Kalibrierung separat negativ.
+Runtime 100 Dateien bytegleich, Raw 50/300 ms und 13 native Controllerparameter
+gelesen; Live-Explorer-Parameterabfrage während Initialisierung nicht verfügbar.
+Gesamtorchestrierung einschließlich Stopp 83,709 s getrennt vom Messfenster.
+ROS-Wurzeln einzeln beendet, Gerätehandles frei, zwölf FC03-Endpaare null;
+Hauptkopie unverändert, Rechner eingeschaltet. Vollständige Ergebnisse A–F,
+private Evidenzpfade und Rückfall im [aktuellen Abschluss](STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+**Stufe 3 offen:** monotone originale Zeitzuordnung und tatsächliche erste
+zulässige Trajektorie sind konkrete technische Restgrenzen.

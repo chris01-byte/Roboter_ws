@@ -4,7 +4,14 @@
 
 Maßgeblich: [MASTERPLAN](MASTERPLAN.md), [AGENTENAUFTRAG](AGENTENAUFTRAG.md), [LAB-1](../LABORMODUS.md), [MEILENSTEINE](MEILENSTEINE.md). Dies ist der einzige aktuelle WE-Iststand. Die ausführliche bisherige Statusdatei ist [bytegleich archiviert](archive/20260930-v1.1/STATUS.md); alte Abschnittsnummern und „nächste Schritte“ dort sind historische Referenzen.
 
-**Aktueller Abschluss 01.10.2026:** Adaptiver metrischer Bootstrap und begrenzte
+**Aktueller Abschluss:** HWT-Entwicklungsvertrag und Start-Egress auf `a6f31bf`
+implementiert; 1.564 Regressionen, gerätefreier Drei-Ziel- und HOLD-Produktgraph
+bestanden. Kurzer Realstart: HEALTHY nach 36,379 s, terminale Messzeitprüfung
+bei 54,880 s; aktuelle Geometrie verwirft alle 22 Kandidaten. Keine reale
+Mission. Quellenzeit und konkrete Bewegungsgeometrie blockieren unabhängig.
+ROS beendet, Rechner eingeschaltet; Einzelgrenzen im neuen Abschluss unter §4.
+
+**Abschluss des vorigen Pakets 01.10.2026:** Adaptiver metrischer Bootstrap und begrenzte
 Encoder-Timing-Recovery auf `fd883fd` softwareseitig geprüft. Gemeinsamer realer
 Vorlauf negativ: dritte HWT-Störung erschöpft das Budget; unabhängig davon 33
 unbekannte Startkonturzellen / 0,021089 m² Außenanteil, kein zulässiger Startkandidat.
@@ -367,7 +374,7 @@ Berichts-Vorfahren, Merge, Force-Push oder permanenter Installwechsel.
 Rückfall: ohne Mission geordnet stoppen, beide temporären Overlays weglassen,
 `active_drive=false`, `enable_auto_explore=false`. **Stufe 3 bleibt offen.**
 
-### Aktueller Abschluss: adaptiver Start und begrenzte Encoder-Recovery (01.10.2026)
+### Historischer Abschluss: adaptiver Start und begrenzte Encoder-Recovery (01.10.2026)
 
 Ausgang `d9894d268262f7f8e965f2f92aef72021df3245e`, Funktionskandidat
 `fd883fdf35e004dff6b209fffff9118c71161cd3`, derselbe Branch/PR #105.
@@ -540,6 +547,110 @@ arbeit braucht einen neuen begrenzten Auftrag, keine automatische Neustartserie.
 Rückfall: ohne Mission geordnet stoppen und dieses temporäre Fünfpaketoverlay
 weglassen; sichere Betriebsparameter `active_drive=false`,
 `enable_auto_explore=false`. **Stufe 3 offen.**
+
+### Aktueller Abschluss: HWT-Entwicklungsvertrag und Start-Egress (01.10.2026)
+
+Ausgang `2a0e19d`, bestehender Branch/PR #105. Getrennte Funktionscommits:
+`689cba3` (HWT-Vertrag), `acdfbeb` (gebundene Portgeneration), `577013d`
+(weiter frisches korrigiertes Original nach verworfener Grenzmessung),
+`a6f31bf` (bewegungsgerichteter Egress). Explizites Entwicklungsopt-in:
+Antwortfrist 50 ms, Rohoriginalfrische 300 ms, maximal zwei echte HWT-HOLDs
+im rollenden 60-s-Fenster. Einzel-Recovery weiterhin absolut 5 s; keine
+Rücksetzung durch Aufgaben-/Kind-IDs. Legacy 30/200 ms und Encoder 120/180 ms
+erhalten. Kein Restempeln, keine verspätete Antwort nachträglich nutzbar.
+
+**Software:** 1.462 Pflichtregressionen in sieben betroffenen Paketen bestanden
+(28,97 s), zusätzlich 102 unveränderte Mission-/BT-/Kartenprüfungen (5,00 s):
+zusammen 1.564 Tests in getrennten, nicht überlappenden Testsammlungen.
+Pflichtfälle A–F: Polltimeout ohne Budgetverbrauch, wirkliche Rohdatenlücke,
+begrenztes Heilen/ACK/Resume, drittes HOLD innerhalb 60 s, drei zeitlich
+verteilte Recoveries und harte Port-/Protokoll-/Zeitfehler. G–J: autonome
+Vorwärtsausfahrt aus unbekanntem Startbestand, unzulässige Drehung, neues
+Hindernis und spätere normale Entscheidung nach echter Beobachtung.
+Zusätzlich Wiederbetreten/Annäherung, Kontextentzug und verbleibende
+Drehkopplung nach nominalem Verlassen, sowie Not-Aus/Cancel/Einzelkind/
+Encoder/Kartenprovenienz regressiert. Verbundener gerätefreier Produktgraph:
+drei autonome erreichte Ziele mit neuen Kartenbeobachtungen und Weiterarbeit
+über die synthetische Verbindung; maximal ein Nav2-Kind. Separater HOLD-Graph:
+150-ms-Lücke ohne HOLD, echte >300-ms-Lücke, Stop/Validierung/ACK innerhalb
+5 s und Wiederaufnahme desselben Ziels. Keine reale Recovery daraus ableiten.
+Historische negative vollständige 2π-Dauerprobe bleibt unverändert negativ.
+
+**Runtime:** Sechspaket-Copybuild außerhalb Git erfolgreich, letzter Build
+von state/explore 8,58 s. 100 Quell-/Install-Dateien bytegleich. Tatsächliche
+Prozessargumente, Parameterdateien, Präfixe und Modulhashes privat gesichert;
+live Rawreader 50/300 ms, Encoder 120/180 ms und 13 native Controller-/
+Goalcheckerparameter gelesen. Die einzelne Live-Explorer-Parameterabfrage
+war während dessen verzögerter Initialisierung nicht verfügbar; gebundenes
+Launchprofil und vier spätere `metric_frontier`-Statusmeldungen sind erhalten.
+Keine vollständige Live-Parameterantwort dieses Nodes behaupten.
+
+**A. Start-Egress:** Fester Ausgangsbestand in beiden Rastern, nur monoton
+wegführender voller reservierter RPP-Sweep; Suchmaske ist keine Freigabe.
+Aktueller Real-Snapshot: 42 unbekannte Roh-Startkonturzellen (16 teilweise
+Körperrand-, 17 Padding-, 9 Reservezellen), 79 ganze Körperzellen privat;
+Außenanteil 0,026895 m². Costmap zwei unbekannte Konturzellen. Das ist ein
+neuer Snapshot, kein Ersatz des historischen 33-Zellen-Befunds. 22 autonome
+Kandidaten, keiner zulässig: zehn nötige Anfangsdrehungen, sieben fehlende
+freie Routen, eine ungültige Zielorientierung, vier ungültige Footprint-
+Sweeps. Produktgrund `start_egress_no_admissible_motion`; optionaler Vollscan
+ebenfalls unzulässig. Alle Zell-/Pose-/Kartenbelege und gerenderte Grafik
+privat. Frühere virtuelle Hindernisdiagnose nicht als aktuelle Fahrt ausgeben.
+
+**B. Reale autonome Ziele:** Null; kein aktiver Buswechsel, keine MM-Mission,
+kein Nav2-Kind. Keine fehlende allgemeine Nutzerfreigabe: der harte Zeitfehler
+und der fehlende zulässige Startkandidat verhindern den konditionierten Start.
+
+**C. Karte:** Aktuelle reale Karte/Pose/Scope gebunden und unverändert
+ausgewertet. Kein durch Fahrt erzielter Kartierungsfortschritt und kein
+Abdeckungs-/Wohnungsabschluss. Drei neue Beobachtungen nur im Softwaregraph.
+
+**D. HWT:** Erster kurzer Start vor der gemessenen Portprüfung-Optimierung
+verbleibt STARTUP: wiederholte >100-ms-Lücken unterbrechen die unveränderte
+800-Sample-Kalibrierung. Optimierung gemessen: voller USB-Abgleich im Mittel
+1,065 ms, gebundene Geräteprüfung 0,031 ms; voller Ausschluss vor exklusivem
+Öffnen, danach Gerätegeneration vor und nach Antwort. Finaler kurzer Start:
+60,008-s-Messfenster, HEALTHY bei 36,379 s, terminal bei 54,880 s wegen
+`HWT-Messzeit nicht monoton`. Dies betrifft die hostseitige Zuordnung des
+Empfangs zu ROS-Zeit; keine bewiesene Sensor-/USB-/Kernelursache. Davor
+zwei tatsächliche verworfene Transaktionen: Header 3 Bytes erst nach Frist,
+Payload 0; anschließend Header 3/Payload 14 rechtzeitig empfangen, Verarbeitung
+nach Frist. Rawdriver meldet dabei `transport_degraded`, letzte gültige
+Messung 75,693 bzw. 71,024 ms alt, kein HWT-HOLD. Harte Zeitprüfung umgeht das
+Recoverybudget nicht: unmittelbare Sperre, null Recoveryversuche. Keine
+natürliche reale HOLD→Resume-Folge in diesem Lauf. Frozen Bias mit 800 Samples
+belegt, keine Grenze dafür gelockert. Recorder 3.280 Rohframes gegenüber
+Driverzähler 3.287; nicht als verlustfreie Aufzeichnung darstellen.
+
+Encoder am Messfensterende 824 Paare, im geschlossenen Gesamtdatensatz 1.133;
+maximal 114,879 ms, null Reject/Timing-Recovery/Rebase/Reconnect, Baseline eins.
+Er ist auch hier kein nachgewiesener Blocker. Messfenster und Prozessdauer
+getrennt: gesamte Orchestrierung einschließlich Bindung/Manifest/geordnetem
+Stopp 83,709 s, Bag-Spanne 76,646 s. Kein 720-s-Vorlauf oder 900-s-Fahrversuch.
+
+**E. Zielmisserfolg/Folgeaufgabe:** Kein reales Ziel gesendet, daher kein
+reales Misserfolgs-/Alternativzielereignis. Bestehender Softwarevertrag bleibt
+regressiert; die Drei-Ziel-Folge meldet drei `success/observed`, null Fehler.
+
+**F. Passage/Weitererkundung:** Nur synthetisch im Produktgraph belegt;
+keine reale Durchfahrt, keine Portal-ID als Voraussetzung eingeführt.
+
+**Endzustand/Rückfall:** Geschlossene Bag mit Integritätsprüfung, null laufende
+Missionen/Nav2-Statuseinträge und alle vier Befehlsströme null. Eigene
+Launchwurzeln einzeln SIGINT, Recorder danach; sämtliche manifestierten
+Prozesse beendet, beide Gerätealiases ohne Handles. Zwölf frische FC03-Paare
+Position/RPM null; keine elektrische Motorstromstellung daraus behauptet.
+Hauptkopie sauber auf `23928d92f411473ed2644692a04aebdff0ffe803`, kein permanenter
+Install-/Autostartwechsel. Rückfall: isoliertes Overlay weglassen oder beide
+Opt-ins beim gestoppten Neustart deaktivieren; ohne Mission
+`active_drive=false`, `enable_auto_explore=false`. Private Nachweise ausschließlich
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`, insbesondere
+`runtime-byte-manifest-release.json`, `short-final/geometry-report.json`,
+`short-final/passive-window-final.json`, `short-final/timing-analysis.json`,
+`short-final/closed-preflight-analysis.json`, `end-state-proof.json` und
+`end-encoder.json`. Kein automatischer weiterer Start. Konkrete offene
+Grenzen: monotone originale Zeitzuordnung und eine tatsächlich zulässige
+autonome erste Trajektorie. **Stufe 3 offen, ROS beendet, Rechner eingeschaltet.**
 
 ## 5. Erhaltener Umfang und nächste Meilensteine
 

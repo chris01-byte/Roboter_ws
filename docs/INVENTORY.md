@@ -6,6 +6,13 @@ bewährten Mehrraum-Scan-/Portalpfad und kanalgetrennte VL53-Recovery; ein
 Realversuch erreichte den Rundblick, stoppte danach am gelatchten HWT-Rohstatus
 (Details: `docs/WE_PARITY_RESET.md`, aktueller WE-Stand: `docs/wohnungserkundung/STATUS.md`)
 
+**Softwaredelta 01.10.2026 / PR #105:** HWT-Entwicklungsopt-in ergänzt
+kompatible Transport-/Daten-/HOLD-Diagnose an bestehenden Status-Topics;
+50/300 ms und zwei echte HOLDs je 60 s ausdrücklich profilgebunden.
+Metrisches Start-Egress benötigt festen Körperanker und tatsächlichen
+reservierten RPP-Sweep. Software geprüft, reale Stufe 3 weiter offen.
+[Nachweise und Rückfall](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

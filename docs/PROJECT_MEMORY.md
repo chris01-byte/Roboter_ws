@@ -162,3 +162,39 @@ zwölf frische FC03-Paare Position/RPM null. Kein weiterer Neustart/Fahrversuch,
 keine unbewiesene Hardwareursache. Private Belege in
 `~/.local/share/amadeus/tests/metric-adaptive-start-20261001/`, Hauptkopie
 unverändert, Stufe 3 offen, **System eingeschaltet lassen**.
+
+## 01.10.2026 – HWT-Pollzustand und feste Start-Egress-Geometrie getrennt
+
+Nutzerauftrag auf `2a0e19d`, Funktionsstand `a6f31bf` im bestehenden PR #105.
+Explizites Entwicklungsopt-in setzt 50-ms-Antwortfrist/300-ms-Rohfrische.
+Frischer Originalwert bleibt bei transientem Pollfehler nutzbar; verspätete
+Antwort verworfen, kein Restempeln. Zwei echte HWT-HOLDs im rollenden 60-s-
+Fenster, jeder absolut 5 s; keine Task-ID-Rücksetzung. Noch frischer korrigierter
+Originalwert kann nach verworfener Grenzmessung erhalten bleiben; kein
+Integrieren der Lücke, keine Änderung der 100-ms-/800-Sample-Kalibrierung.
+Legacy 30/200 ms, Encoder 120/180 ms und harte Fehler bleiben erhalten.
+
+Start-Egress im bestehenden Explorer: fester unbekannter Ausgangsbestand
+beider Raster, keine neue Beanspruchung/Annäherung/Wiederbetretung; ganzer
+reservierter Körper entlang tatsächlicher RPP-Kurve und strenge Zieltoleranzen.
+Anker-/Raster-/Kontextwechsel entzieht die Ausnahme endgültig. Nach nominalem
+Verlassen bleibt der Bewegungsbeleg gekoppelt, solange eine Drehung noch den
+Bestand berühren könnte. Keine globale 33-Zellen-Liste oder fahrende Blase.
+
+1.564 Regressionen sowie gerätefreier Drei-Ziel- und HOLD/ACK/Resume-Graph
+bestanden. Reale kurze Schlussmessung nach gemessener Portprüfungsoptimierung:
+HEALTHY 36,379 s, terminale hostseitige Messzeitprüfung 54,880 s innerhalb
+60,008-s-Fenster. Zwei vorherige Pollfehler nur degraded, null echte HOLDs.
+Keine bewiesene Hardwareursache. Aktuelle Karte unabhängig: 22 Kandidaten
+alle unzulässig; keine reale Mission oder Ziel-/Passagenabnahme. Historischer
+720-s-/33-Zellen-/2π-Negativbefund bleibt separat erhalten.
+
+Isolierter Build, 100 Bytevergleiche und native Parameter gesichert;
+Live-Explorer-Abfrage während Initialisierung nicht verfügbar. Endzustand
+ROS beendet, Gerätehandles frei, zwölf FC03-Paare Position/RPM null,
+Hauptkopie unverändert. Private Daten ausschließlich lokal unter
+`~/.local/share/amadeus/tests/metric-egress-hwt-20261001/`. Rückfall Overlay
+weglassen/Opt-ins beim gestoppten Start deaktivieren; kein Installwechsel
+oder automatischer weiterer Realversuch. Nutzerklärung ausdrücklich:
+**ROS-Stack beenden, Rechner eingeschaltet lassen.** Details im aktuellen
+[STATUS-Abschluss](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).

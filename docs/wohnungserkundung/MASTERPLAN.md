@@ -24,6 +24,21 @@ Hilfebedarf/Teilstand, niemals Rebaseline oder Faultflag-Reset. Manuelles Umsetz
 oder Vorkartieren zählt nicht als autonomer Bootstrap. Historische Fehlversuche
 bleiben erhalten.
 
+**Folgepräzisierung 01.10.2026 (Schritt 3, LAB-1):** Expliziter metrischer
+Entwicklungsvertrag `hwt_development_contract`: Antwortfrist 0,05 s,
+Rohdatenfrische 0,30 s; einzelner Pollfehler bei gültigen frischen Originaldaten
+ist Transportdegradation und kein eigener HOLD. Höchstens zwei echte HWT-HOLDs
+im gleitenden 60-s-Fenster, jeder weiterhin höchstens 5 s; harte Identitäts-,
+Protokoll-, Zeit-/Datenfehler bleiben terminal. Alte Legacy-Grenzen bleiben
+außerhalb dieses Opt-ins erhalten, Encoder 120/180 ms unverändert.
+Bewegungsgebundener Start-Egress darf unbekannten bereits bestehenden
+Ausgangsbestand nur beim belegten Wegführen ohne Annäherung, Wiederbetreten
+oder zusätzliche unbekannte Sweepfläche tolerieren. Neue Fläche, echte
+Hindernisse, Controllerdrehungen/-kurve und Zielbereich bleiben streng geprüft;
+keine allgemeine Freiraumblase oder Kartenmanipulation. Nach Softwareprüfung
+kurzer normaler Startnachweis (30–60 s), anschließend technisch zulässige
+begrenzte Produktfahrt; kein weiterer obligatorischer 720-s-Passivlauf.
+
 ## 1. Geltung und Dokumentzuständigkeit
 
 Der Masterplan konkretisiert WE-1. Das Produktziel bleibt die autonome Erkundung der freigegebenen, aktuell zugänglichen und sensorisch erschließbaren Umgebung, konsistenter Teil-/Gesamtabschluss und später belastbare Wiederaufnahme. Geschlossene unbekannte Räume oder unbeobachtete Gefahren dürfen nicht als erkundet gelten.
@@ -147,7 +162,7 @@ Jeder Abschluss: Ausgangs-/Ergebnis-SHA, tatsächliche Profil-/Paketauflösung, 
 
 Aktuellen Auftrag in STATUS und AGENTENAUFTRAG führen. Frühere Originale sind unverändert im Archiv verlinkt. Historische Ursachenlücken bleiben offen; sie verhindern keine ausdrücklich beschlossene, separat nachweisbare Funktionsverbesserung.
 
-**Jetzt:** Das gerätefreie Umsetzungspaket „Metrische Frontiererkundung ohne Portalpflicht“ aus AGENTENAUFTRAG ausführen. Noch keine neue Fahrt, kein Merge und kein dauerhafter Installwechsel aus diesem Plan ableiten.
+**Jetzt:** Aktuellen Abschluss in AGENTENAUFTRAG §11/STATUS beachten. HWT-Entwicklungsvertrag und Start-Egress sind softwareseitig umgesetzt; reale Stufe 3 bleibt wegen harter Messzeitprüfung und fehlender zulässiger Starttrajektorie offen. Kein automatischer weiterer Start, Merge oder dauerhafter Installwechsel.
 
 **Änderungsprotokoll:**
 - 27.09.2026: v1.0 Konsolidierung, geordnete Recovery, Kernabnahme, WE-M4/M5/M6 und getrennte Produktreife.
