@@ -26,6 +26,8 @@ Metrische Anteile von M4/M5/M6 dürfen nach ihren jeweiligen technischen Vorbedi
 
 Die Reihenfolge ist AP-01 → AP-02 → AP-03 → AP-04 → AP-05 → AP-06 gemäß MASTERPLAN v1.3. AP-01 prüft die HWT-Zeitkorrelation unter WE-M0 und erhält M3-Recovery; AP-02 Kartenlebenszyklus, gemeinsame Quellenbudgets und verspätete Arbeit unter WE-M0/betroffenem metrischem WE-M3; AP-03 Planung/Bootstrap; AP-04 den begrenzten externen Frontier-Kern; AP-05 Fortschritt/Abschluss; AP-06 die geschlossene Kette und reale Abnahmen. Softwarefortschritt verlangt keine vorgezogene Wohnungsfahrt; reale Sensor-/Start-/Geometrieabnahme bleibt offen. AP-04 darf geprüften Fremdcode integrieren, ohne zweiten Navigator. Historischer Kern ist Vergleichsreferenz, keine vorweggenommene Auswahl.
 
+AP-04-Kandidaten-/Adapteranteil von WE-M3 ist software_geprüft; die begründete Eigenkorrektur nach Fremdkernvergleich, Grenzen und Originalbelege stehen ausschließlich im [STATUS](STATUS.md). WE-M3-Gesamterledigung/Wiederbeobachtung (AP-05), geschlossene Kette und reale Abnahmen (AP-06) bleiben offen.
+
 ## WE-D0 / WE-M0 – Plan und Basis
 
 Originalregeln für Quellenzuordnung, isolierten Build, vorhandene Betriebsdaten, Rückfall, Scope und physische Schutzwirkung bleiben bestehen. Bereits konsolidierte Basis nicht neu auditieren. Nach Änderungen nur betroffene Integration erneut prüfen. LAB-1 ersetzt erneute identische Standardzustimmungen, nicht technische Nachweise oder neuen Umfang.

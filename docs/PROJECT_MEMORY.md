@@ -6,6 +6,14 @@ Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe
 
 Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
 
+## 03.10.2026 – AP-04: tatsächliche Randpunkte und begründete Kernwahl
+
+**Nutzerentscheidung:** AP-04 ausdrücklich „gut dann mach mit 04 weiter“. Saubere AP-03-Basis `495b538`, Branch `feature/frontier-candidate-core`, Software `5ee313b`. MASTERPLAN v1.3 unverändert; AP-03-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Exakten `mertgulerx/frontier_exploration_ros2`-Pin unverändert bauen/vergleichen, ohne dessen Missions-/Dispatchschicht. Gleiche Eingaben, endliche Sicht, Geometrie, Planer und Budgets. Seine einzelne Ringroute scheitert, langer Rand bleibt mit einer Sichtposition unzureichend erschlossen. Gemäß ausdrücklich erlaubter Planalternative die eigene Gewinnung begrenzt korrigieren: echte freie Randzellen in räumlichen Teilbereichen, bekannte Annäherungsseite, gültige reale Scan-/Montage-/Masken-/Reichweitensicht. Keine externe Runtimebibliothek, keine dritte Software; historische Schwerpunktquelle als read-only Prozessstart-Rückfall erhalten.
+
+**Evidenz/Grenzen:** Alle sieben Pflichtfälle und elf Kartenstände; native volle Pfadprüfung belegt Ringalternativen und 5,9 m gegenüber 1,9 m sichtbaren Rasterrand. 27 neue Fälle, 1.636 betroffene / 165 installierte / 1.604 colcon-Tests (Überlappung), frische aktuelle/native Builds und bytegleiche Installation. Unzulässige native Zielgeometrien sowie korrigierte Prüferfehler sichtbar. Lizenz/Pin, Originalnachweise und exakter Umfang im [STATUS](wohnungserkundung/STATUS.md). Sichtmöglichkeit ist kein gemessener Fortschritt; missionseigene Erledigung/Wiederbeobachtung ausdrücklich AP-05. Keine Frist-/Kontur-/Unknown-Lockerung, Hardware, Deployment, Push/Merge oder Jetson-Installwechsel. AP-05 nur vorbereitet; physische und vollständige Kettenabnahme AP-06. Rückfall gezielt eigene AP-04-Commits revertieren, AP-01–03 und fremde Arbeit erhalten.
+
 ## 03.10.2026 – AP-03: tatsächlicher Bewegungspfad und autonomer Bootstrap
 
 **Nutzerentscheidung:** AP-03 nach AP-02 ausdrücklich beauftragt; Basis `875c7c4`, Branch `fix/nav2-bootstrap-geometry`, Software `c3115ff`. MASTERPLAN v1.3 unverändert, abgeschlossener AP-02-Auftrag bytegleich archiviert.

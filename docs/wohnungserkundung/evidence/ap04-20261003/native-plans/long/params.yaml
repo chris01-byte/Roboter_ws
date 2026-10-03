@@ -1,0 +1,81 @@
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      always_send_full_costmap: true
+      footprint_padding: 0.0
+      global_frame: map
+      inflation_layer:
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.45
+        plugin: nav2_costmap_2d::InflationLayer
+      obstacle_layer:
+        enabled: true
+        oak:
+          clearing: true
+          data_type: PointCloud2
+          marking: true
+          max_obstacle_height: 1.5
+          min_obstacle_height: -0.04
+          obstacle_max_range: 4.0
+          raytrace_max_range: 5.0
+          topic: /oak/points
+        observation_sources: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+        plugin: nav2_costmap_2d::ObstacleLayer
+        vl53_left:
+          clearing: true
+          data_type: PointCloud2
+          marking: true
+          max_obstacle_height: 0.5
+          min_obstacle_height: 0.05
+          obstacle_max_range: 0.55
+          raytrace_max_range: 0.7
+          topic: /near_field/left/points_costmap
+        vl53_left_mark:
+          clearing: false
+          data_type: PointCloud2
+          marking: true
+          max_obstacle_height: 0.5
+          min_obstacle_height: 0.05
+          obstacle_max_range: 0.55
+          topic: /near_field/left/points
+        vl53_right:
+          clearing: true
+          data_type: PointCloud2
+          marking: true
+          max_obstacle_height: 0.5
+          min_obstacle_height: 0.05
+          obstacle_max_range: 0.55
+          raytrace_max_range: 0.7
+          topic: /near_field/right/points_costmap
+        vl53_right_mark:
+          clearing: false
+          data_type: PointCloud2
+          marking: true
+          max_obstacle_height: 0.5
+          min_obstacle_height: 0.05
+          obstacle_max_range: 0.55
+          topic: /near_field/right/points
+      plugins:
+      - static_layer
+      - inflation_layer
+      publish_frequency: 10.0
+      resolution: 0.1
+      robot_base_frame: base_link
+      robot_radius: 0.28
+      rolling_window: false
+      static_layer:
+        map_subscribe_transient_local: true
+        plugin: nav2_costmap_2d::StaticLayer
+        subscribe_to_updates: false
+      track_unknown_space: true
+      update_frequency: 20.0
+planner_server:
+  ros__parameters:
+    GridBased:
+      allow_unknown: false
+      plugin: nav2_navfn_planner/NavfnPlanner
+      tolerance: 0.3
+      use_astar: true
+    expected_planner_frequency: 5.0
+    planner_plugins:
+    - GridBased

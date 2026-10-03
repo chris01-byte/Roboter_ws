@@ -1,23 +1,21 @@
-# Aktueller Agentenauftrag: AP-03
+# Aktueller Agentenauftrag: AP-04
 
-Am 03.10.2026 ausdrücklich durch Nutzer „Gut, wenn soweit alles io. ist begeinne mit AP-03“ beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M3. [AP-02 ist bytegleich archiviert](archive/20261003-ap02/AGENTENAUFTRAG.md).
+Am 03.10.2026 ausdrücklich durch Nutzer „gut dann mach mit 04 weiter“ beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M3. [AP-03 bytegleich archiviert](archive/20261003-ap03/README.md).
 
-## Basis und Ziel
+## Basis und Ergebnis
 
-Sauberer AP-02-Abschluss `875c7c4`, eigener Branch `fix/nav2-bootstrap-geometry`, Worktree `/workspace/Roboter_ws-ap03`. AP-01-Zeitvertrag und AP-02-Kartenlebenszyklus erhalten. Ausschließlich AP-03: Bewegung und autonomen Start zusammenführen, gezielte vorhandene Explorer-/Nav2-Geometriekorrekturen, Regressionen, echter isolierter Build und nachvollziehbare gerätefreie Ergebnisse.
+Sauberer AP-03-Abschluss `495b538`, Branch `feature/frontier-candidate-core`, Worktree `/workspace/Roboter_ws-ap04`. Ausschließlich AP-04: unveränderten eigenen Kern mit `mertgulerx/frontier_exploration_ros2` Pin `418e9717564a895214275e088ea7075b8ac88f64` bei identischen Eingaben, Sensorinformationen, Planung, Geometrie und Budgets vergleichen. Begründete Kandidatenintegration im vorhandenen Explorer, Regressionen, isolierter echter Humble-Build und Originalnachweise.
 
-## Umsetzung und Abnahme
+## Abnahme und Entscheidung
 
-Vorhandene echte Nav2-Planer und Controller mit asymmetrischem Chassis, Achsbezug, Rasterreserve, Drehen, Rückwärtsanteil und gemessener Trackingabweichung gemeinsam prüfen. Ein einzelner ungeeigneter kürzester Eigenpfad darf ein über längeren Weg zulässiges Ziel nicht dauerhaft ausschließen. Keine bloße Reserveentfernung.
+Ringfrontier, konkave Grenze, langer Rand mit mehreren nützlichen Beobachtungspositionen, blockierter bester Kandidat mit Alternative, Kartenwachstum, neue Beobachtung an besuchter Stelle und fehlende optionale Semantik prüfen. Kandidaten müssen an der Beobachtungsgrenze liegen, volle Kartenidentität/-geometrie, Ursprungrotation, Scope, echte Sensorreichweite/Sicht und Frische berücksichtigen. Gemeinsame vorhandene Footprint-/Nav2-Prüfungen erhalten. Mehrere Kartenstände erzeugen geeignete planbare Folgeentscheidungen; Zahl der Punkte allein genügt nicht.
 
-Geschlossene synthetische Pflichtfälle: Hindernis mit längerer Umfahrung; gerade 68-cm- und 80-cm-Durchfahrt; unzulässiges Drehen im engen Durchgang; freier Zielbereich hinter der Tür; beobachteter und unbekannter Außenraum. Positive schmale Durchfahrt mit echtem Nav2-Planer und Controller ausführen; Trackingabweichung, Footprintabstände und erreichte beobachtete Fläche messen. Vorbestimmte Ziele sind nur Komponententests, keine autonome Erkundung. Simulationsmodell ist kein Nachweis für reale Hardware.
-
-Bootstrap trennt eigenen bekannten Körper und unbeobachteten Außenraum. Erste Beobachtungsbewegung nachweisen oder konkret fehlende Beobachtung benennen. Vollrotation nur bei zulässiger Geometrie. Fehlende Sensorabdeckung mit begründetem separatem Sensorpositions-/Abdeckungspaket vorbereiten; keine identischen Startwiederholungen.
+Externen Kern übernehmen, wenn alle Pflichtfälle und mindestens ein belegter Vorteil bestehen, ohne zweiten Navigations-/Missionsapparat. Andernfalls gemäß MASTERPLAN den konkreten Blocker oder die eigene Kandidatengewinnung begrenzt korrigieren und erneut vergleichen. Lizenz und Pin/Änderungen nachvollziehbar dokumentieren.
 
 ## Grenzen und Rückfall
 
-Keine Hardware, Roboternetzverbindung, Deployment, Push oder Merge. Kein automatischer AP-04-Übergang, kein neuer Navigator/Supervisor, kein neuer Frontier-Kern. Physische Tür-/Startabnahme bleibt offen. Rückfall ausschließlich eigene AP-03-Commits revertieren; AP-01/AP-02 und fremde Arbeit erhalten. Tatsächliche Blocker konkret dokumentieren und unabhängige Schritte weiterführen.
+Keine Hardware, Roboternetzverbindung, Deployment, Push/Merge oder automatischer AP-05-Übergang. Missionseigene Erledigungs-/Wiederbeobachtungspolitik und Gesamterfolg bleiben AP-05; geschlossene vollständige Missionskette und Realqualifikation AP-06. Keine neuen Freiraumannahmen, gelockerten Reserven oder Quellenfristen. Rückfall nur eigene AP-04-Commits revertieren; AP-01–03 und fremde Arbeit erhalten. Tatsächliche Blocker konkret benennen und unabhängige Schritte weiterführen.
 
 ## Softwareabschluss
 
-AP-03 software_geprüft im Softwarecommit `c3115ff`; Umfang, Originalbelege, beobachtete Timinggrenzen, reale offene Abnahmen und Rückfall ausschließlich im [STATUS](STATUS.md) und der [AP-03-Evidenz](evidence/ap03-20261003/README.md). 22 neue Fälle; 1.609 betroffene, 138 installierte und 1.577 colcon-Tests bestanden; echte Zehnpaket-/native Nav2-Builds und Achtfallmatrix. Simulationsprofil nicht für Hardware qualifiziert oder aktiviert. Kein automatischer AP-04-Übergang.
+AP-04 software_geprüft im Softwarecommit `5ee313b`. Der gepinnte Fremdkern wurde unverändert gebaut und verglichen; wegen belegter Ring-/Langrandgrenzen wurde die im Masterplan erlaubte begrenzte Eigenkorrektur gewählt. Alle sieben Pflichtfälle, elf Kartenstände, echte Nav2-Planung, 27 neue Regressionen und frische Builds sind belegt. Ergebnis, Originalbelege, Plattform-/Sensor-/Hardwaregrenzen und Rückfall ausschließlich im [STATUS](STATUS.md) und der [AP-04-Evidenz](evidence/ap04-20261003/README.md). Keine Hardwarewirkung oder automatische AP-05-Implementierung.

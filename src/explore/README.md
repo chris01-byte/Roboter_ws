@@ -204,3 +204,35 @@ bleiben unter `HWT_GRAPH_LOGDIR` lokal. Die Softwarebelege sind keine reale
 Durchfahrt oder Stufe-3-Gesamtabnahme. Rückfall: Overlay nicht wählen,
 `exploration_strategy: existing` beim nächsten geordneten Start; sicherster
 Betriebsrückfall bleibt `enable_auto_explore:=false`, `active_drive:=false`.
+
+
+## AP-04: metrische Kandidatenquelle
+
+Im expliziten `metric_frontier`-Modus liefert `metric_candidate_source:
+boundary_samples` echte freie Randzellen statt eines möglicherweise innen
+liegenden Clusterschwerpunkts. Lange/konkave Komponenten werden in 0,8-m-
+Rasterbereiche aufgeteilt, deren tatsächliche Randpunkte zur bekannten Seite
+angefahren werden. Der vollständige bestehende Rohkarten-/Costmap-/Chassis-/
+Controller-/Nav2-Vertrag bleibt vorgeschaltet. `existing` bleibt Gesamtdefault;
+`legacy_centroid` ist die beim Prozessstart wählbare Vergleichs-/Rückfallquelle.
+Die Quelle ist read-only. Ein Kandidat ist keine Bewegungsfreigabe.
+
+Nutzen verlangt potenzielle Sicht auf nahe unbekannte Randzellen aus der
+Beobachtungspose: aktuelle echte LaserScan-Geometrie, gültige Winkelbins, deren
+NaN-/Mastmaskierung, TF-Montage und Reichweite (maximal vorhandenes
+`door_lidar_max_range_m`, Default 4 m). Veralteter Empfang/Quellstempel,
+fehlende TF, vollständig ungültige Strahlen und überschrittene Kapazitäten
+werden ausdrücklich abgelehnt. Sicht endet an Wänden, erster unbekannter
+Zelle oder Scopegrenze; keine Sicht hinter Ecken oder durch unbekannten Raum.
+Eine unbekannte Sensorursprungszelle wird nicht zu Sichtgewinn umgedeutet.
+Dies ist eine Beobachtungsmöglichkeit, kein bereits gemessener Fortschritt.
+
+Die Kandidatenebene ist zustandslos und liefert bei neuer Karte erneut
+Vorschläge. Missionseigene Erledigung/Retry/Wiederbeobachtung bleibt getrennt
+und wird erst in AP-05 konsolidiert. Maximal 128 Randvorschläge, 4.096 Strahlen,
+8.192 radiale Schritte/2 Mio. Strahlrasterpositionen und das vorhandene
+Kartenzeitbudget begrenzen die Rechnung. Überschreitung ist ein konkreter
+Blocker und kein leerer erfolgreicher Abschluss.
+
+Vergleich, gepinnter Fremdkern, Lizenz, echte Nav2-Pläne, Regressionen und
+Hardwaregrenzen: [AP-04-Evidenz](../../docs/wohnungserkundung/evidence/ap04-20261003/README.md).

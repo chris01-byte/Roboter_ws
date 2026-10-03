@@ -20,6 +20,13 @@ Komponentenfälle und autonome erste Beobachtung synthetisch geprüft;
 kein neuer Hardware-Reifegrad, keine Jetson-Aktivierung. Einzige aktuelle
 WE-Abnahme/Grenzen: [STATUS](wohnungserkundung/STATUS.md).
 
+**Softwaredelta 03.10.2026 / AP-04:** Im vorhandenen Explorer echte metrische
+Randproben und endliche aktuelle LiDAR-Sicht; gepinnter Fremdkern geprüft und
+nach belegten Gegenfällen die ausdrücklich erlaubte Eigenkorrektur gewählt.
+Kandidaten-/Adaptersoftware und echte Nav2-Planbarkeit geprüft, keine neue
+Hardware-/Wohnungsreife oder Jetson-Aktivierung. Missionserledigung bleibt
+AP-05; aktuelle Nachweise/Grenzen ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
