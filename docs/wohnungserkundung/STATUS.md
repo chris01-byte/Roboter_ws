@@ -1,12 +1,85 @@
 # Wohnungserkundung – aktueller Status
 
+## 03.10.2026 – MASTERPLAN v1.3 / AP-02 software_geprüft
+
+**AP-02 software_geprüft.** Nutzer hat AP-02 nach AP-01 ausdrücklich beauftragt.
+Keine Hardware, kein Deployment/Push/Merge und kein automatischer AP-03-Übergang.
+MASTERPLAN v1.3 bleibt bytegleich; sein ursprünglicher AP-01-Einstieg ist durch
+AP-01-Abschluss und den ausdrücklichen Folgeauftrag abgearbeitet.
+
+**Basis/Lieferung:** AP-01-Abschluss `45f268a` auf der bestätigten Integrationsbasis
+`08a4b9a`; sauberer eigener Worktree `/workspace/Roboter_ws-ap02`, Branch
+`fix/map-lifecycle-source-contract`. Softwarecommit
+`96bbd4d8ed6d0b7a3ca6816d7c5fae14c27f45d4`. Originalcheckout und AP-01-Worktree
+unverändert. [Aktueller abgeschlossener Auftrag](AGENTENAUFTRAG.md),
+[bytegleich archivierter AP-01-Auftrag](archive/20261003-ap01/README.md).
+
+**Konkrete Reparatur:** Raster-/Ursprungs-/Quaternionwechsel verwerfen alte
+Egress-/betroffene Body-Evidenz vor Arrayoperationen, ohne Re-Ankern. Normale
+passend korrelierte Folgeupdates erhalten neu geprüfte Weltziele. Exakte
+Rohkarten-/Statusjoins ersetzen den aktiven Ersatzjoin mit alter Revision;
+identischer Inhalt darf eng begrenzt den letzten exakten Snapshot innerhalb
+seiner ursprünglichen Fristen erhalten. Verspätete Rohkarten überschreiben
+auch den generischen Explorerstand nicht. Sitzungs-/Frame-/Auflösungs- und
+beobachtete Rückwechsel sperren alte Arbeit und verspätete Plan-/Kindresultate.
+Quellen-, Pose- und Scanfrische wird nach Verarbeitung erneut geprüft.
+Der echte Kartenmanager erhält konsistente Beobachtungsrevisionen bei
+Duplikaten und verwirft alte positive Stempel ohne Frische-/Revisionserneuerung.
+
+**Gemeinsamer Vertrag:** [Karten-/Quellenbudget](QUELLENVERTRAG.md) ordnet HWT,
+Encoder, TF, Gate und Explorer über Empfang, IO, Verarbeitung, DDS, Frische
+und Kontinuität zu. Aktiver/passiver Pfad getrennt; bestehende Fristen,
+Timingkern und AP-01-Clockvertrag erhalten. Kein allgemeiner Health-/Executor-
+Umbau und keine vorgezogene AP-03-/AP-04-Geometrie-/Controller-/Frontierintegration.
+
+**Abnahme:** 55 neue echte Lifecycle-/Produzenten-/Elternschleifenfälle:
+100×100 → 100×101, Wachstum mit verschobenem Ursprung, Rohkarte/Costmap,
+Auflösungs-/Sitzungs-/Frame-/Quaternionwechsel und Rückwechsel, verspätete
+Arbeit, notwendige Quellen verloren, gültige Folgeupdates. Keine Arrayausnahme,
+keine falsch gültige alte Maske und keine neue Freiraumannahme. Nav2-`success`
+nach Quellenausfall/Kontextwechsel zählt keinen Besuch; gültiges Ziel bei
+harmlosem Wachstum bleibt ausführbar.
+
+**Ausgeführte Prüfung:** 1.587 betroffene Pytesttests bestanden, 116 gezielte
+Tests gegen das neue Installationspräfix bestanden (einschließlich 55 neuer
+Fälle), 1.555 registrierte colcon-Tests ohne Fehler/Fehlschläge/Skipped.
+Mengen überlappen. Zehn Pakete mit echten Humble-/Nav2-/robot_interfaces-
+Bindungen gebaut; Modul-/Paketauflösung und installierter Code geprüft.
+Der Kartenmanager registriert nun tatsächlich seine 53 Map-Core-Tests für
+colcon. Gegenprobe auf unverändertem AP-01-Stand: 30 erwartete Fehlschläge,
+1 bestandener Fall, 24 abgewählte Fälle. Passende bestehende CI-Trigger und
+Pytestauswahl ergänzt; GitHub-Actions nicht gestartet.
+
+**Originalbelege/Reproduktion:** [AP-02-Evidenz](evidence/ap02-20261003/README.md)
+mit Build-, Import-, Codehash-, Test-, Baselineausgaben, exaktem Skript,
+Umgebung und SHA-256-Manifest. Der anfängliche Voll-`src`-Discoverybuild
+scheiterte an nicht gebauten transitiven Launchpaketen; der explizite betroffene
+Zehnpaketausschnitt wurde anschließend vollständig gebaut, ohne Dummy-Präfixe.
+Dies belegt keinen kompletten Nav2-/BT-/Hardwarelaunch. Der bekannte
+Python-3.12-JSON-Baselinefehler aus AP-01 bleibt unverändert außerhalb der
+Humble/Python-3.10-Abnahme. Keine pauschale Gesamt-Grünbehauptung.
+
+**Grenzen/Rückfall:** WE-M0 und betroffener metrischer WE-M3-Softwareanteil;
+keine vollständige Meilenstein-, Zielsystem-, Start-/Geometrie-, Semantik- oder
+Hardwareabnahme. Belastbare aktive Jetson-/Vollstackzeit bleibt AP-06.
+Keine Runtimeänderung auf Jetson, deshalb kein neuer ROBOT_TRANSFER-Eintrag.
+Nur eigene AP-02-Software-/Dokumentcommits gezielt revertieren; AP-01 erhalten,
+keine fremde Arbeit oder pauschalen Altbranch zurücksetzen.
+
+**Genau nächster Schritt:** AP-03 „Bewegung und autonomer Start zusammenführen“ gemäß MASTERPLAN als
+separaten Auftrag mit echtem Nav2-Planer-/Controllerpfad und geschlossenem
+synthetischem Bootstrap-/Geometrieprüfstand vorbereiten. Hier nicht ausgeführt
+oder automatisch aktiviert; keine weitere Code- oder Hardwarearbeit aus AP-02.
+
+## Historie
+
 ## 03.10.2026 – MASTERPLAN v1.3 / AP-01 software_geprüft
 
 **AP-01 software_geprüft; Zielsystem, reale Sensor-/Start-/Geometrieabnahme und Wohnungserkundung weiterhin offen.** Kein Hardwarezugriff, Deployment, Push oder Merge. AP-02 ist ausschließlich als Übergabe vorbereitet.
 
 **Basis und Lieferung:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9ac0b7a128ced2199f20976f3aa92ea55fe` bestätigt. Ursprünglicher lokaler Checkout `work`/main `05439c7` sauber und unverändert belassen; isolierter Worktree `/workspace/Roboter_ws-ap01`, Branch `fix/hwt-clock-correlation`. Keine unbekannten lokalen Änderungen auf der Integrationsbasis. Dokumentübernahme `84abfc6`, geprüfter Softwarecommit `c797442b37994f774df40b6b27d54c27efa3bdc3`. Keine aus einem Branch abgeleitete Jetson-Installationsbehauptung. WE-D0/WE-M0 und betroffener WE-M3-Recoveryanteil.
 
-Kanonisch: [MASTERPLAN v1.3](MASTERPLAN.md), [abgeschlossener AP-01-Auftrag](AGENTENAUFTRAG.md), [Meilensteine](MEILENSTEINE.md), [LAB-1](../LABORMODUS.md). Die vier Vorgängerdateien sind mit Commit-/Blob-/SHA-256-Beleg [bytegleich archiviert](archive/20261002-v1.2/README.md); MASTERPLAN entspricht dem Anhang bytegleich. AGENTS/Meilensteine/Gesamtstrategie und PROJECT_MEMORY gezielt synchronisiert, begrenzte AP-04-Erlaubnis ausdrücklich übernommen. ROBOT_TRANSFER unverändert.
+Kanonisch: [MASTERPLAN v1.3](MASTERPLAN.md), [abgeschlossener AP-01-Auftrag](archive/20261003-ap01/AGENTENAUFTRAG.md), [Meilensteine](MEILENSTEINE.md), [LAB-1](../LABORMODUS.md). Die vier Vorgängerdateien sind mit Commit-/Blob-/SHA-256-Beleg [bytegleich archiviert](archive/20261002-v1.2/README.md); MASTERPLAN entspricht dem Anhang bytegleich. AGENTS/Meilensteine/Gesamtstrategie und PROJECT_MEMORY gezielt synchronisiert, begrenzte AP-04-Erlaubnis ausdrücklich übernommen. ROBOT_TRANSFER unverändert.
 
 ### Reparatur und Zeitvertrag
 

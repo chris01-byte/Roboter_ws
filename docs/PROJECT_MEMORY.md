@@ -6,6 +6,30 @@ Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe
 
 Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
 
+## 03.10.2026 – AP-02: Kartenarbeit und Quellenvertrag
+
+**Nutzerentscheidung:** Nach abgeschlossenem AP-01 ausdrücklich AP-02 beauftragt.
+Saubere Basis `45f268a`, Branch `fix/map-lifecycle-source-contract`, Software
+`96bbd4d`. MASTERPLAN v1.3 bytegleich; früheren Auftrag bytegleich archiviert.
+
+**Entscheidung:** Räumliche Startausnahmen an beobachtete Rasteridentität binden
+und dauerhaft vor inkompatiblen Arrayoperationen invalidieren. Genau verbundene
+Rohkarte/Status verwenden; Inhaltsrevision allein beendet gültige, erneut
+geprüfte Weltziele nicht. Beobachtete Kontext-/Auflösungswechsel und Rückwechsel
+machen alte Arbeit unwirksam. Produzent zählt exakte Duplikate nicht als neue
+Beobachtung und ignoriert alte positive Quellstempel ohne Frischeerneuerung.
+Verarbeitungszeit gehört in bestehende Frischebudgets.
+
+**Evidenz/Grenzen:** Gemeinsame aktive/passive HWT-/Encoder-/TF-/Gate-/Explorer-
+Budgetzuordnung [hier](wohnungserkundung/QUELLENVERTRAG.md), Softwareprüfung und
+Originalbelege ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
+55 neue Fälle; 1.587 betroffene, 116 installierte und 1.555 colcon-Tests
+bestanden (Überlappung); echte Zehnpaketauflösung. Keine Fristlockerung oder
+neue Freiraumannahme. Keine Hardware, Jetson-Runtimeänderung, Deployment oder
+Push/Merge. AP-03 getrennt vorbereiten, nicht automatisch implementieren;
+aktive Jetsonlast bleibt AP-06. Rückfall nur eigene AP-02-Commits revertieren,
+AP-01 und fremde Arbeit erhalten.
+
 ## 03.10.2026 – MASTERPLAN v1.3 und begrenzter AP-01-Softwareauftrag
 
 **Entscheidung:** Nutzer hat die angehängten MASTERPLAN v1.3 und AGENTENAUFTRAG ausdrücklich beauftragt. Plan kanonisch übernommen; bisherige vier WE-Dateien bytegleich mit Commit-/Blobbeleg archiviert. AP-01 ausschließlich gerätefrei bis Softwareprüfung, keine Ausführung historischer Fahrt-/Deploymentaufträge. AP-04 hebt die reine Offline-Fremdcodegrenze gezielt für einen geprüften Frontier-Kandidatenkern auf; kein neuer Gesamtstack. Historischer Schwerpunktkern bleibt Vergleichsreferenz.

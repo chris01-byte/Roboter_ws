@@ -1,0 +1,133 @@
+Starting >>> base_hardware
+Starting >>> amadeus_map_identity
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /evidence/ap02-build/amadeus_map_identity/.pytest_cache
+rootdir: /repo/src/amadeus_map_identity
+plugins: ament-xmllint-0.12.15, launch-testing-ros-0.19.14, ament-pep257-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, ament-lint-0.12.15, ament-copyright-0.12.15, colcon-core-0.21.3
+collected 36 items
+
+test/test_fingerprint.py ....................................            [100%]
+
+--- generated xml file: /evidence/ap02-build/amadeus_map_identity/pytest.xml ---
+============================== 36 passed in 0.03s ==============================
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /evidence/ap02-build/base_hardware/.pytest_cache
+rootdir: /repo/src/base_hardware
+plugins: ament-xmllint-0.12.15, launch-testing-ros-0.19.14, ament-pep257-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, ament-lint-0.12.15, ament-copyright-0.12.15, colcon-core-0.21.3
+collected 121 items
+
+Finished <<< amadeus_map_identity [0.56s]
+test/test_base_hardware_node_contract.py ............................... [ 25%]
+......                                                                   [ 30%]
+test/test_encoder_active_recovery.py ..                                  [ 32%]
+test/test_encoder_odometry.py ..........................                 [ 53%]
+test/test_encoder_shadow_contract.py ........                            [ 60%]
+test/test_encoder_shadow_reader.py ..................................... [ 90%]
+...........                                                              [100%]
+
+------ generated xml file: /evidence/ap02-build/base_hardware/pytest.xml -------
+============================= 121 passed in 1.13s ==============================
+Finished <<< base_hardware [1.56s]
+Starting >>> robot_state_estimation
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /evidence/ap02-build/robot_state_estimation/.pytest_cache
+rootdir: /repo/src/robot_state_estimation
+plugins: ament-xmllint-0.12.15, launch-testing-ros-0.19.14, ament-pep257-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, ament-lint-0.12.15, ament-copyright-0.12.15, colcon-core-0.21.3
+collected 260 items
+
+test/test_hwt601_decision_events.py ......                               [  2%]
+test/test_hwt601_fusion_health.py ...................................... [ 16%]
+........................................................................ [ 44%]
+............                                                             [ 49%]
+test/test_hwt601_guard_clock.py .......                                  [ 51%]
+test/test_hwt601_mount.py ...........                                    [ 56%]
+test/test_hwt601_protocol.py .....                                       [ 58%]
+test/test_hwt601_raw_development.py ......                               [ 60%]
+test/test_hwt601_shadow.py ...........                                   [ 64%]
+test/test_hwt601_time_correlation.py ................................... [ 78%]
+.................                                                        [ 84%]
+test/test_hwt601_transport.py ......................                     [ 93%]
+test/test_hwt601_we_launch.py .....                                      [ 95%]
+test/test_planar_scan_matcher.py ....                                    [ 96%]
+test/test_quality_core.py .........                                      [100%]
+
+-- generated xml file: /evidence/ap02-build/robot_state_estimation/pytest.xml --
+============================= 260 passed in 1.22s ==============================
+Finished <<< robot_state_estimation [1.71s]
+Starting >>> explore
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /evidence/ap02-build/explore/.pytest_cache
+rootdir: /repo/src/explore
+plugins: ament-xmllint-0.12.15, launch-testing-ros-0.19.14, ament-pep257-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, ament-lint-0.12.15, ament-copyright-0.12.15, colcon-core-0.21.3
+collected 1085 items
+
+test/test_child_result_policy.py .............                           [  1%]
+test/test_exploration_child_goal.py ...............                      [  2%]
+test/test_exploration_migration.py ......................                [  4%]
+test/test_exploration_nav_runtime.py ............................        [  7%]
+test/test_exploration_persistence.py ......                              [  7%]
+test/test_exploration_policy.py ........................................ [ 11%]
+.....................                                                    [ 13%]
+test/test_exploration_scope.py ........                                  [ 14%]
+test/test_explore_contract.py .......................................... [ 17%]
+........................................................................ [ 24%]
+.....................................................                    [ 29%]
+test/test_frontier_goal_candidate.py .................                   [ 31%]
+test/test_frontier_task_evidence.py ................                     [ 32%]
+test/test_frontier_task_feed.py .........                                [ 33%]
+test/test_frontier_task_resolution.py ........                           [ 34%]
+test/test_hwt601_recovery_integration.py ..                              [ 34%]
+test/test_lidar_motion.py .....                                          [ 34%]
+test/test_map_status_adapter.py ........................................ [ 38%]
+....................................................                     [ 43%]
+test/test_metric_frontier.py ........................................... [ 47%]
+..................                                                       [ 48%]
+test/test_metric_map_lifecycle.py ...................................... [ 52%]
+.................                                                        [ 53%]
+test/test_portal_exploration_pipeline.py .                               [ 54%]
+test/test_portal_frozen_scan_runtime.py ........                         [ 54%]
+test/test_portal_memory.py ............................................. [ 58%]
+.......                                                                  [ 59%]
+test/test_portal_plan_adapter.py .......................                 [ 61%]
+test/test_portal_planning.py ............                                [ 62%]
+test/test_portal_source_adapter.py ..................................... [ 66%]
+.....................                                                    [ 68%]
+test/test_portal_task_evidence.py ........................               [ 70%]
+test/test_portal_traversal_evidence.py ....................              [ 72%]
+test/test_portal_traversal_runtime.py .........                          [ 72%]
+test/test_raw_map_portal_adapter.py ....................                 [ 74%]
+test/test_region_graph.py .............................................. [ 79%]
+..............................................                           [ 83%]
+test/test_region_graph_shadow.py ....................................... [ 86%]
+...                                                                      [ 87%]
+test/test_region_graph_shadow_lifecycle.py ............................. [ 89%]
+...............................................                          [ 94%]
+test/test_region_graph_status.py ....................................... [ 97%]
+...........                                                              [ 98%]
+test/test_region_scenarios.py .....                                      [ 99%]
+test/test_shutdown_contract.py ..                                        [ 99%]
+test/test_we_multiroom_resume.py ......                                  [100%]
+
+--------- generated xml file: /evidence/ap02-build/explore/pytest.xml ----------
+============================= 1085 passed in 5.44s =============================
+Finished <<< explore [6.07s]
+Starting >>> robot_map_manager
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+cachedir: /evidence/ap02-build/robot_map_manager/.pytest_cache
+rootdir: /repo/src/robot_map_manager
+plugins: ament-xmllint-0.12.15, launch-testing-ros-0.19.14, ament-pep257-0.12.15, ament-flake8-0.12.15, launch-testing-1.0.15, ament-lint-0.12.15, ament-copyright-0.12.15, colcon-core-0.21.3
+collected 53 items
+
+test/test_map_core.py .................................................. [ 94%]
+...                                                                      [100%]
+
+---- generated xml file: /evidence/ap02-build/robot_map_manager/pytest.xml -----
+============================== 53 passed in 1.02s ==============================
+Finished <<< robot_map_manager [1.45s]
+
+Summary: 5 packages finished [11.0s]

@@ -24,7 +24,7 @@ Weiterhin getrennt: dokumentiert, geplant, in_arbeit, software_geprüft, zielsys
 
 Metrische Anteile von M4/M5/M6 dürfen nach ihren jeweiligen technischen Vorbedingungen fortfahren, ohne auf vollständige M1/M2-/ID-Abnahmen zu warten. „M4 metrisch bestanden; Semantik offen“ ist ein zulässiger Teilstatus, nicht „M4 insgesamt bestanden“. Keine bloße Umbenennung alter Fehlversuche.
 
-Die Reihenfolge ist AP-01 → AP-02 → AP-03 → AP-04 → AP-05 → AP-06 gemäß MASTERPLAN v1.3. AP-01 prüft die HWT-Zeitkorrelation unter WE-M0 und erhält M3-Recovery; AP-02 Karten/Quellen; AP-03 Planung/Bootstrap; AP-04 den begrenzten externen Frontier-Kern; AP-05 Fortschritt/Abschluss; AP-06 die geschlossene Kette und reale Abnahmen. Softwarefortschritt verlangt keine vorgezogene Wohnungsfahrt; reale Sensor-/Start-/Geometrieabnahme bleibt offen. AP-04 darf geprüften Fremdcode integrieren, ohne zweiten Navigator. Historischer Kern ist Vergleichsreferenz, keine vorweggenommene Auswahl.
+Die Reihenfolge ist AP-01 → AP-02 → AP-03 → AP-04 → AP-05 → AP-06 gemäß MASTERPLAN v1.3. AP-01 prüft die HWT-Zeitkorrelation unter WE-M0 und erhält M3-Recovery; AP-02 Kartenlebenszyklus, gemeinsame Quellenbudgets und verspätete Arbeit unter WE-M0/betroffenem metrischem WE-M3; AP-03 Planung/Bootstrap; AP-04 den begrenzten externen Frontier-Kern; AP-05 Fortschritt/Abschluss; AP-06 die geschlossene Kette und reale Abnahmen. Softwarefortschritt verlangt keine vorgezogene Wohnungsfahrt; reale Sensor-/Start-/Geometrieabnahme bleibt offen. AP-04 darf geprüften Fremdcode integrieren, ohne zweiten Navigator. Historischer Kern ist Vergleichsreferenz, keine vorweggenommene Auswahl.
 
 ## WE-D0 / WE-M0 – Plan und Basis
 

@@ -290,6 +290,7 @@ Nach Build und Start des fahrbewegungsfreien Smoke-Launches:
    Derselbe bereits beantwortete `request_id` muss dagegen sofort bytegleich
    aus dem Cache kommen und darf
    `artifact_verification_bytes_reserved` nicht erneut erhöhen.
+
 ## AP-02: Beobachtungsrevision und verspätete Karten
 
 `observed_maps` zählt neue validierte Stempel-/Inhaltsbeobachtungen. Ein exakt
