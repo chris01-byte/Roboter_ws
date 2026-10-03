@@ -1,21 +1,15 @@
-# Aktueller Agentenauftrag: AP-04
+# Aktueller Agentenauftrag: AP-05
 
-Am 03.10.2026 ausdrücklich durch Nutzer „gut dann mach mit 04 weiter“ beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M3. [AP-03 bytegleich archiviert](archive/20261003-ap03/README.md).
+Am 03.10.2026 nach der AP-05-Übergabe ausdrücklich durch Nutzer „gut mache weiter“ beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und metrische Anteile WE-M3/M5/M6/M7. [AP-04 bytegleich archiviert](archive/20261003-ap04/README.md).
 
 ## Basis und Ergebnis
 
-Sauberer AP-03-Abschluss `495b538`, Branch `feature/frontier-candidate-core`, Worktree `/workspace/Roboter_ws-ap04`. Ausschließlich AP-04: unveränderten eigenen Kern mit `mertgulerx/frontier_exploration_ros2` Pin `418e9717564a895214275e088ea7075b8ac88f64` bei identischen Eingaben, Sensorinformationen, Planung, Geometrie und Budgets vergleichen. Begründete Kandidatenintegration im vorhandenen Explorer, Regressionen, isolierter echter Humble-Build und Originalnachweise.
+Sauberer AP-04-Abschluss `2532f1b`, Branch `feature/metric-observation-persistence`, Worktree `/workspace/Roboter_ws-ap05`. Ausschließlich AP-05: Ankunft, tatsächliche Beobachtung und Erledigung trennen; begrenzte Wiederbeobachtung ohne neue-ID-/Budgetreset; ehrliche metrische Ergebniszustände und vorhandene Persistenz/Verbraucher schließen. Konkrete Implementierung, Regressionen, isolierter echter Humble-Build und Originalnachweise bis überprüfbarem Softwareabschluss.
 
-## Abnahme und Entscheidung
+## Abnahme
 
-Ringfrontier, konkave Grenze, langer Rand mit mehreren nützlichen Beobachtungspositionen, blockierter bester Kandidat mit Alternative, Kartenwachstum, neue Beobachtung an besuchter Stelle und fehlende optionale Semantik prüfen. Kandidaten müssen an der Beobachtungsgrenze liegen, volle Kartenidentität/-geometrie, Ursprungrotation, Scope, echte Sensorreichweite/Sicht und Frische berücksichtigen. Gemeinsame vorhandene Footprint-/Nav2-Prüfungen erhalten. Mehrere Kartenstände erzeugen geeignete planbare Folgeentscheidungen; Zahl der Punkte allein genügt nicht.
-
-Externen Kern übernehmen, wenn alle Pflichtfälle und mindestens ein belegter Vorteil bestehen, ohne zweiten Navigations-/Missionsapparat. Andernfalls gemäß MASTERPLAN den konkreten Blocker oder die eigene Kandidatengewinnung begrenzt korrigieren und erneut vergleichen. Lizenz und Pin/Änderungen nachvollziehbar dokumentieren.
+Positiver tatsächlicher metrischer Erfolgszweig mit passendem Actionzustand und vorab festem gültigem Beobachtungsfenster; negative Quellen-/Blockade-/Filter-/Versuchs-/Budgetfälle. Unbekannt hinter Wänden verhindert nicht pauschal Erfolg. Ankunft ohne Sichtgewinn, spätere sinnvolle Wiederbeobachtung, terminaler Cancel und verspätete Antworten. Gesicherte Karte/Identität/Sitzung/Aufgaben/Versuche/Gesamtbudget; Laden ohne Fahrt; beschädigte/fremde/unsupported Daten, fehlende Pose und unterbrochene Speicherung einschließlich Map-ID-Fehler/letzte gültige Sicherung. Korrekte bestehende Ergebnisverbraucher und Teilkartenspeicherung. Native iOS-Laufzeit bei fehlender Plattform separat WE-M7 offen; ROS-Vertragstests sind keine App-Laufzeitabnahme.
 
 ## Grenzen und Rückfall
 
-Keine Hardware, Roboternetzverbindung, Deployment, Push/Merge oder automatischer AP-05-Übergang. Missionseigene Erledigungs-/Wiederbeobachtungspolitik und Gesamterfolg bleiben AP-05; geschlossene vollständige Missionskette und Realqualifikation AP-06. Keine neuen Freiraumannahmen, gelockerten Reserven oder Quellenfristen. Rückfall nur eigene AP-04-Commits revertieren; AP-01–03 und fremde Arbeit erhalten. Tatsächliche Blocker konkret benennen und unabhängige Schritte weiterführen.
-
-## Softwareabschluss
-
-AP-04 software_geprüft im Softwarecommit `5ee313b`. Der gepinnte Fremdkern wurde unverändert gebaut und verglichen; wegen belegter Ring-/Langrandgrenzen wurde die im Masterplan erlaubte begrenzte Eigenkorrektur gewählt. Alle sieben Pflichtfälle, elf Kartenstände, echte Nav2-Planung, 27 neue Regressionen und frische Builds sind belegt. Ergebnis, Originalbelege, Plattform-/Sensor-/Hardwaregrenzen und Rückfall ausschließlich im [STATUS](STATUS.md) und der [AP-04-Evidenz](evidence/ap04-20261003/README.md). Keine Hardwarewirkung oder automatische AP-05-Implementierung.
+Keine Hardware, Roboternetzverbindung, Deployment, Push/Merge oder automatischer AP-06-Übergang. Vollständige geschlossene Gesamtmissions- und reale Qualifikation bleibt AP-06. Rohkarte, Beobachtungsgewinn, Fahrspur und Semantik getrennt. Keine neuen Freiraumannahmen, Reserven- oder Fristlockerung. Vorhandenen Kartenmanager/Speichermechanismus weiterverwenden, keinen neuen Missionsmanager. Nur eigene AP-05-Commits gezielt revertieren; AP-01–04 und fremde Arbeit erhalten. Tatsächliche Blocker konkret benennen und unabhängige Schritte weiterführen.

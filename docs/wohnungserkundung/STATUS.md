@@ -1,5 +1,12 @@
 # Wohnungserkundung – aktueller Status
 
+## 03.10.2026 – MASTERPLAN v1.3 / AP-05 in_arbeit
+
+Nutzer „gut mache weiter“ beauftragt AP-05 nach dessen konkreter Übergabe. Saubere Basis `2532f1b`, Branch `feature/metric-observation-persistence`, Worktree `/workspace/Roboter_ws-ap05`. Ankunft/Beobachtung/Erledigung, metrischer Abschluss, bestehende Persistenz und Verbraucher werden gerätefrei umgesetzt. MASTERPLAN unverändert; [AP-04-Auftrag bytegleich archiviert](archive/20261003-ap04/README.md). Keine Hardware, Deployment, Push/Merge oder automatische AP-06-Arbeit. Native iOS-Laufzeit bleibt bei fehlender Plattform unter WE-M7 separat offen.
+
+## Erhaltene Paketabschlüsse
+
+
 ## 03.10.2026 – MASTERPLAN v1.3 / AP-04 software_geprüft
 
 **AP-04 software_geprüft auf Kandidaten-/Adapterebene.** Nutzer ausdrücklich „gut dann mach mit 04 weiter“. Saubere Basis `495b538`, Branch `feature/frontier-candidate-core`, Worktree `/workspace/Roboter_ws-ap04`; Softwarecommit **`5ee313b47ea2ef7c98554e42a9cae224a8a7d0ca`**. Originalcheckout und AP-01–03 sauber/unverändert. MASTERPLAN v1.3 bytegleich. Keine Hardware, Deployment, Push/Merge oder automatische AP-05-Arbeit. [AP-03-Auftrag bytegleich archiviert](archive/20261003-ap03/README.md).
