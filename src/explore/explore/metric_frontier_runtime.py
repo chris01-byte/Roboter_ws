@@ -1679,7 +1679,13 @@ class MetricFrontierRuntime:
                 planned, plan_error = self._metric_request_nav_plan(pending, stop)
                 if planned is None:
                     status = 'planning_failed'
-                    stop_reason[0] = plan_error
+                    self._metric_status.update(nav2_plan_rejection=plan_error,
+                        planning_stop_reason=stop_reason[0],
+                        planning_route_rejection=self._metric_last_route_rejection)
+                    # The wait may end because the real stop callback already
+                    # observed HOLD/source loss/invalid route. Its cause owns
+                    # recovery and result handling even if a source heals.
+                    stop_reason[0] = stop_reason[0] or plan_error
                 else:
                     try:
                         inputs = self._metric_inputs(active=True)
@@ -1696,7 +1702,7 @@ class MetricFrontierRuntime:
                             else plan_error)
                     else:
                         self._metric_nav_path = planned
-                        # Align to the first ACTUAL Nav2 route leg.
+                        # Align to the ACTUAL controller carrot on this Nav2 path.
                         leg=route_departure_point(planned_route, inputs[2],
                             min(inputs[0].info.resolution, inputs[5].info.resolution))
                         align,*_=self._prealign_to_goal(*leg,inputs[2],stop_requested=stop)

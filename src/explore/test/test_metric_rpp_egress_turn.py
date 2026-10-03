@@ -28,3 +28,13 @@ def test_turn_before_abandoning_rear_inventory_remains_rejected():
     route = (inputs[2][:2], (.15, .05), (.15, .75))
     assert node._metric_waypoints_clear(inputs, route, math.pi/2) is None
     assert node._metric_last_route_rejection == 'start_egress_in_place_turn'
+
+
+def test_raster_join_does_not_command_turn_away_from_rpp_carrot():
+    node, inputs = fixture()
+    x, y = inputs[2][:2]
+    # NavFn starts at a cell centre. This connector exceeds half of this
+    # fixture's .1-m cell, yet the interpolated .4-m RPP carrot is straight.
+    route = ((x, y), (x+.055, y-.005), (1.3, y-.005), (2., .75))
+    assert node._metric_waypoints_clear(inputs, route, math.pi/4) is not None
+    assert not inputs[3][20, 8]

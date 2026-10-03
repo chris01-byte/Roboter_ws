@@ -35,7 +35,7 @@ from tf2_ros import TransformBroadcaster
 from scipy.spatial import cKDTree
 
 from explore.explore_node import ExploreNode
-from explore.metric_frontier import MetricCandidate, MetricTaskPolicy, known_safe_mask, rpp_trajectory
+from explore.metric_frontier import MetricCandidate, MetricTaskPolicy, known_safe_mask, rpp_trajectory, route_departure_point
 from explore.exploration_scope import AuthorizedExplorationScope
 from explore.portal_memory import Point2D, PortalMapContext
 from explore.portal_source_adapter import PortalSourceCorrelation, raw_map_portal_source_from_values
@@ -263,7 +263,7 @@ def run(case,args):
             return ('success' if abs(achieved)>=abs(angle) else 'timeout'),achieved
         n._rotate_in_place=rotate;n._robot_pose=lambda:tuple(world.pose);n.get_logger=world.get_logger
         world.moving=True
-        alignment=n._prealign_to_goal(*route[1],tuple(world.pose))
+        alignment=n._prealign_to_goal(*route_departure_point(route,tuple(world.pose),.02),tuple(world.pose))
         assert alignment[0] in ('success','skipped'),alignment
         result['alignment']=alignment
         if world.trace:np.savetxt(out/'alignment.csv',np.asarray(world.trace),delimiter=',')

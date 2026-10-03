@@ -263,9 +263,14 @@ def route_arrival_yaw(route, initial_yaw, resolution):
 
 
 def route_departure_point(route, pose, resolution):
-    """A sub-half-cell projection is a raster join, not a heading command."""
-    return next((point for point in route[1:]
-                 if math.dist(pose[:2], point) >= max(1e-6, resolution/2)), route[-1])
+    """Align to the installed RPP's interpolated .4-m departure carrot.
+
+    A cell-centre connector is not the controller's heading command. The
+    same fixed lookahead is checked against live controller parameters by
+    the runtime before any navigation; early corners remain in this carrot.
+    ``resolution`` is retained for existing callers of this geometry helper.
+    """
+    return lookahead_point(pose[:2], route[1:], .4)
 
 
 def _clip_cell(polygon, row, col):
@@ -489,7 +494,7 @@ def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
         max(abs(bounds[2]),abs(bounds[3]))+reserve)
     turn_step=min(.01,.004/radius)
     if len(route)<2:return out
-    # The metric owner aligns to the first actual Nav2 leg. Preserve the
+    # The metric owner aligns to the actual RPP departure carrot. Preserve the
     # historical goal-bearing rollout for callers using its original mode.
     leg=route_departure_point(route,pose,resolution) if prealign_to_first_leg else route[-1]
     initial=math.atan2(leg[1]-y,leg[0]-x)
