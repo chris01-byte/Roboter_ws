@@ -1,0 +1,9 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_real_candidate_parent_separates_arrival_observation_and_cancel[gain_after_deadline] _
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:336: in test_real_candidate_parent_separates_arrival_observation_and_cancel
+    assert n._metric_status['observations']==0
+E   assert 1 == 0
+=========================== short test summary info ============================
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_real_candidate_parent_separates_arrival_observation_and_cancel[gain_after_deadline]
+1 failed in 0.65s

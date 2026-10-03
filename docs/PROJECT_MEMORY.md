@@ -6,6 +6,14 @@ Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe
 
 Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
 
+## 03.10.2026 – AP-05: belegter Beobachtungsfortschritt und konsistente Wiederaufnahme
+
+**Nutzerentscheidung:** Nach AP-05-Übergabe ausdrücklich „gut mache weiter“. Saubere AP-04-Basis `2532f1b`, Branch `feature/metric-observation-persistence`, Software `090762d`; MASTERPLAN v1.3 unverändert, AP-04-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Im vorhandenen Explorer Ankunft, tatsächliche neue lokale Beobachtung und Erledigung trennen. Neue lokale Evidenz kann dieselbe räumliche Aufgaben-ID begrenzt wieder öffnen; keine Neustart-/Kartenstempel-/ID-Budgetresets. Gesamterfolg über vorab festes gültiges Restfreiheitsfenster, raw-erreichbare Aufgaben vor Filter/Blacklist. Vorhandenen Kartenmanager/Sidecar weiterverwenden, keinen neuen Speicher-/Missionsbesitzer. Resume verlangt zusätzlich zum expliziten neuen Auftrag die aktuelle vorhandene verifizierte Lokalisierungsfreigabe der gespeicherten Karte; TF allein beweist keine Relokalisierung. Additiver versionierter Ergebnisstatus, Action-Wire unverändert, vorhandene App konsistent angepasst.
+
+**Nachweis und Grenzen:** Kern/Persistenz/ROS-Verträge software_geprüft; 65 neue Vertragsfälle, 225 installierte / 1.751 betroffene / 1.664 colcon-Tests bestanden (Überlappung), echter Zehnpaketbuild plus finaler Explorer-Neubuild. Rote Original-Ankunfts- und verspätete Beobachtungsverarbeitungs-Gegenproben, Source-/Installidentität und Originalbelege ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Native iOS-Build/Laufzeit mangels Apple-Werkzeugen unter WE-M7 separat offen, wie MASTERPLAN ausdrücklich erlaubt. Keine Hardware, Deployment, Push/Merge, Jetson-Wirkung oder vollständige AP-06-Gesamtkette behauptet. Keine Reserve-/Fristlockerung. Eigene AP-05-Commits gezielt revertierbar; AP-01–04 und fremde Arbeit erhalten. AP-06 nur vorbereitet, nicht ausgeführt.
+
 ## 03.10.2026 – AP-04: tatsächliche Randpunkte und begründete Kernwahl
 
 **Nutzerentscheidung:** AP-04 ausdrücklich „gut dann mach mit 04 weiter“. Saubere AP-03-Basis `495b538`, Branch `feature/frontier-candidate-core`, Software `5ee313b`. MASTERPLAN v1.3 unverändert; AP-03-Auftrag bytegleich archiviert.

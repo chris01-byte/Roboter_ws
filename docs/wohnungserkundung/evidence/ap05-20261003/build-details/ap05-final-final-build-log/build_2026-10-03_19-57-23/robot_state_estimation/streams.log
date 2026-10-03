@@ -1,0 +1,82 @@
+[0.347s] Invoking command in '/evidence/ap05-repo/src/robot_state_estimation': AMENT_PREFIX_PATH=/evidence/ap05-final-install/base_hardware:${AMENT_PREFIX_PATH} PYTHONPATH=/evidence/ap05-final-build/robot_state_estimation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/robot_state_estimation build --build-base /evidence/ap05-final-build/robot_state_estimation/build install --record /evidence/ap05-final-build/robot_state_estimation/install.log --install-scripts $base/lib/robot_state_estimation --single-version-externally-managed install_data
+[0.466s] running egg_info
+[0.466s] creating ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info
+[0.466s] writing ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/PKG-INFO
+[0.466s] writing dependency_links to ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/dependency_links.txt
+[0.466s] writing entry points to ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/entry_points.txt
+[0.467s] writing requirements to ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/requires.txt
+[0.467s] writing top-level names to ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/top_level.txt
+[0.467s] writing manifest file '../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/SOURCES.txt'
+[0.470s] reading manifest file '../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/SOURCES.txt'
+[0.470s] writing manifest file '../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info/SOURCES.txt'
+[0.470s] running build
+[0.470s] running build_py
+[0.470s] creating /evidence/ap05-final-build/robot_state_estimation/build
+[0.470s] creating /evidence/ap05-final-build/robot_state_estimation/build/lib
+[0.470s] creating /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/hwt601_shadow_node.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/hwt601_mount.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/hwt601_transport.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/_hwt601_clock.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/planar_scan_matcher.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/hwt601_fusion_guard.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/lidar_odometry_node.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.470s] copying robot_state_estimation/hwt601_fusion_health.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] copying robot_state_estimation/hwt601_imu_node.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] copying robot_state_estimation/hwt601_shadow_core.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] copying robot_state_estimation/__init__.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] copying robot_state_estimation/quality_core.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] copying robot_state_estimation/hwt601_protocol.py -> /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation
+[0.471s] running install
+[0.471s] running install_lib
+[0.471s] creating /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_shadow_node.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_mount.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_transport.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/_hwt601_clock.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/planar_scan_matcher.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_fusion_guard.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/lidar_odometry_node.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_fusion_health.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_imu_node.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.471s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_shadow_core.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.472s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/__init__.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.472s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/quality_core.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.472s] copying /evidence/ap05-final-build/robot_state_estimation/build/lib/robot_state_estimation/hwt601_protocol.py -> /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation
+[0.472s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_node.py to hwt601_shadow_node.cpython-310.pyc
+[0.474s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_mount.py to hwt601_mount.cpython-310.pyc
+[0.475s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_transport.py to hwt601_transport.cpython-310.pyc
+[0.476s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py to _hwt601_clock.cpython-310.pyc
+[0.476s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/planar_scan_matcher.py to planar_scan_matcher.cpython-310.pyc
+[0.478s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py to hwt601_fusion_guard.cpython-310.pyc
+[0.482s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/lidar_odometry_node.py to lidar_odometry_node.cpython-310.pyc
+[0.482s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_health.py to hwt601_fusion_health.cpython-310.pyc
+[0.484s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py to hwt601_imu_node.cpython-310.pyc
+[0.486s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_core.py to hwt601_shadow_core.cpython-310.pyc
+[0.490s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/__init__.py to __init__.cpython-310.pyc
+[0.490s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/quality_core.py to quality_core.cpython-310.pyc
+[0.490s] byte-compiling /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_protocol.py to hwt601_protocol.cpython-310.pyc
+[0.490s] running install_data
+[0.490s] creating /evidence/ap05-final-install/robot_state_estimation/share/ament_index
+[0.490s] creating /evidence/ap05-final-install/robot_state_estimation/share/ament_index/resource_index
+[0.490s] creating /evidence/ap05-final-install/robot_state_estimation/share/ament_index/resource_index/packages
+[0.490s] copying resource/robot_state_estimation -> /evidence/ap05-final-install/robot_state_estimation/share/ament_index/resource_index/packages
+[0.490s] copying package.xml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation
+[0.490s] copying README.md -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation
+[0.490s] creating /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.490s] copying config/hwt601_shadow.yaml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.490s] copying config/hwt601_mount.yaml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.490s] copying config/amadeus_hwt601.yaml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.490s] copying config/hwt601_metric_development.yaml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.490s] copying config/ekf_hwt601_mapping.yaml -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/config
+[0.491s] creating /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/launch
+[0.491s] copying launch/hwt601_shadow.launch.py -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/launch
+[0.491s] copying launch/hwt601_mount.launch.py -> /evidence/ap05-final-install/robot_state_estimation/share/robot_state_estimation/launch
+[0.491s] running install_egg_info
+[0.492s] Copying ../../../ap05-final-build/robot_state_estimation/robot_state_estimation.egg-info to /evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation-0.1.0-py3.10.egg-info
+[0.493s] running install_scripts
+[0.507s] Installing hwt601_imu script to /evidence/ap05-final-install/robot_state_estimation/lib/robot_state_estimation
+[0.507s] Installing hwt601_shadow script to /evidence/ap05-final-install/robot_state_estimation/lib/robot_state_estimation
+[0.507s] Installing lidar_odometry script to /evidence/ap05-final-install/robot_state_estimation/lib/robot_state_estimation
+[0.508s] writing list of installed files to '/evidence/ap05-final-build/robot_state_estimation/install.log'
+[0.530s] Invoked command in '/evidence/ap05-repo/src/robot_state_estimation' returned '0': AMENT_PREFIX_PATH=/evidence/ap05-final-install/base_hardware:${AMENT_PREFIX_PATH} PYTHONPATH=/evidence/ap05-final-build/robot_state_estimation/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/robot_state_estimation build --build-base /evidence/ap05-final-build/robot_state_estimation/build install --record /evidence/ap05-final-build/robot_state_estimation/install.log --install-scripts $base/lib/robot_state_estimation --single-version-externally-managed install_data

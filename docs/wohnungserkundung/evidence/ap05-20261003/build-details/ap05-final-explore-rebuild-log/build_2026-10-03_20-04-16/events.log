@@ -1,0 +1,44 @@
+[0.000000] (-) TimerEvent: {}
+[0.000539] (-) JobUnselected: {'identifier': 'amadeus_map_identity'}
+[0.000568] (-) JobUnselected: {'identifier': 'base_hardware'}
+[0.000586] (-) JobUnselected: {'identifier': 'mission_manager'}
+[0.000600] (-) JobUnselected: {'identifier': 'nav2_common'}
+[0.000613] (-) JobUnselected: {'identifier': 'nav2_msgs'}
+[0.000628] (-) JobUnselected: {'identifier': 'robot_interfaces'}
+[0.000640] (-) JobUnselected: {'identifier': 'robot_map_manager'}
+[0.000652] (-) JobUnselected: {'identifier': 'robot_navigation'}
+[0.000665] (-) JobUnselected: {'identifier': 'robot_state_estimation'}
+[0.000679] (explore) JobQueued: {'identifier': 'explore', 'dependencies': OrderedDict([('amadeus_map_identity', '/evidence/ap05-final-install/amadeus_map_identity'), ('base_hardware', '/evidence/ap05-final-install/base_hardware'), ('nav2_common', '/evidence/ap05-final-install/nav2_common'), ('robot_interfaces', '/evidence/ap05-final-install/robot_interfaces'), ('nav2_msgs', '/evidence/ap05-final-install/nav2_msgs'), ('robot_state_estimation', '/evidence/ap05-final-install/robot_state_estimation')])}
+[0.000699] (explore) JobStarted: {'identifier': 'explore'}
+[0.099851] (-) TimerEvent: {}
+[0.200130] (-) TimerEvent: {}
+[0.300439] (-) TimerEvent: {}
+[0.366870] (explore) Command: {'cmd': ['/usr/bin/python3', '-W', 'ignore:setup.py install is deprecated', '-W', 'ignore:easy_install command is deprecated', 'setup.py', 'egg_info', '--egg-base', '../../../ap05-final-build/explore', 'build', '--build-base', '/evidence/ap05-final-build/explore/build', 'install', '--record', '/evidence/ap05-final-build/explore/install.log', '--install-scripts', '$base/lib/explore', '--single-version-externally-managed', 'install_data'], 'cwd': '/evidence/ap05-repo/src/explore', 'env': OrderedDict([('HTTPS_PROXY', 'http://172.31.5.205:8080'), ('no_proxy', 'localhost,127.0.0.1,::1'), ('HOSTNAME', 'b76691f97cd6'), ('SHLVL', '1'), ('LD_LIBRARY_PATH', '/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib'), ('HOME', '/root'), ('OLDPWD', '/'), ('NO_PROXY', 'localhost,127.0.0.1,::1'), ('ROS_PYTHON_VERSION', '3'), ('SSL_CERT_FILE', '/run/ca-bundle.crt'), ('https_proxy', 'http://172.31.5.205:8080'), ('COLCON_PREFIX_PATH', '/evidence/ap05-final-install'), ('ROS_DISTRO', 'humble'), ('http_proxy', 'http://172.31.5.205:8080'), ('_', '/usr/bin/colcon'), ('ROS_VERSION', '2'), ('ROS_LOCALHOST_ONLY', '1'), ('PATH', '/opt/ros/humble/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'), ('REQUESTS_CA_BUNDLE', '/run/ca-bundle.crt'), ('LANG', 'C.UTF-8'), ('ROS_DOMAIN_ID', '230'), ('AMENT_PREFIX_PATH', '/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:/evidence/ap05-final-install/robot_map_manager:/evidence/ap05-final-install/robot_navigation:/evidence/ap05-final-install/explore:/evidence/ap05-final-install/mission_manager:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/nav2_common:/opt/ros/humble'), ('PWD', '/evidence/ap05-final-build/explore'), ('LC_ALL', 'C.UTF-8'), ('PYTHONPATH', '/evidence/ap05-final-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_map_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_navigation/lib/python3.10/site-packages:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/mission_manager/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages'), ('HTTP_PROXY', 'http://172.31.5.205:8080'), ('COLCON', '1'), ('CMAKE_PREFIX_PATH', '/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common'), ('PIP_CERT', '/run/ca-bundle.crt')]), 'shell': False}
+[0.400592] (-) TimerEvent: {}
+[0.492393] (explore) StdoutLine: {'line': b'running egg_info\n'}
+[0.492712] (explore) StdoutLine: {'line': b'writing ../../../ap05-final-build/explore/explore.egg-info/PKG-INFO\n'}
+[0.492887] (explore) StdoutLine: {'line': b'writing dependency_links to ../../../ap05-final-build/explore/explore.egg-info/dependency_links.txt\n'}
+[0.493053] (explore) StdoutLine: {'line': b'writing entry points to ../../../ap05-final-build/explore/explore.egg-info/entry_points.txt\n'}
+[0.493583] (explore) StdoutLine: {'line': b'writing requirements to ../../../ap05-final-build/explore/explore.egg-info/requires.txt\n'}
+[0.493673] (explore) StdoutLine: {'line': b'writing top-level names to ../../../ap05-final-build/explore/explore.egg-info/top_level.txt\n'}
+[0.495008] (explore) StdoutLine: {'line': b"reading manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'\n"}
+[0.496294] (explore) StdoutLine: {'line': b"writing manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'\n"}
+[0.496472] (explore) StdoutLine: {'line': b'running build\n'}
+[0.496533] (explore) StdoutLine: {'line': b'running build_py\n'}
+[0.497628] (explore) StdoutLine: {'line': b'copying explore/metric_frontier_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore\n'}
+[0.498733] (explore) StdoutLine: {'line': b'running install\n'}
+[0.499003] (explore) StdoutLine: {'line': b'running install_lib\n'}
+[0.499627] (explore) StdoutLine: {'line': b'copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore\n'}
+[0.500698] (explore) StdoutLine: {'line': b'byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py to metric_frontier_runtime.cpython-310.pyc\n'}
+[0.500778] (-) TimerEvent: {}
+[0.513568] (explore) StdoutLine: {'line': b'running install_data\n'}
+[0.513782] (explore) StdoutLine: {'line': b'copying README.md -> /evidence/ap05-final-install/explore/share/explore\n'}
+[0.513989] (explore) StdoutLine: {'line': b'running install_egg_info\n'}
+[0.515271] (explore) StdoutLine: {'line': b"removing '/evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info' (and everything under it)\n"}
+[0.515515] (explore) StdoutLine: {'line': b'Copying ../../../ap05-final-build/explore/explore.egg-info to /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info\n'}
+[0.516126] (explore) StdoutLine: {'line': b'running install_scripts\n'}
+[0.531199] (explore) StdoutLine: {'line': b'Installing explore script to /evidence/ap05-final-install/explore/lib/explore\n'}
+[0.531824] (explore) StdoutLine: {'line': b"writing list of installed files to '/evidence/ap05-final-build/explore/install.log'\n"}
+[0.548861] (explore) CommandEnded: {'returncode': 0}
+[0.557289] (explore) JobEnded: {'identifier': 'explore', 'rc': 0}
+[0.557716] (-) EventReactorShutdown: {}

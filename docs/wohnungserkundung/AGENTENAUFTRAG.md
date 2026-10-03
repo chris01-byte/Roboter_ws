@@ -13,3 +13,7 @@ Positiver tatsächlicher metrischer Erfolgszweig mit passendem Actionzustand und
 ## Grenzen und Rückfall
 
 Keine Hardware, Roboternetzverbindung, Deployment, Push/Merge oder automatischer AP-06-Übergang. Vollständige geschlossene Gesamtmissions- und reale Qualifikation bleibt AP-06. Rohkarte, Beobachtungsgewinn, Fahrspur und Semantik getrennt. Keine neuen Freiraumannahmen, Reserven- oder Fristlockerung. Vorhandenen Kartenmanager/Speichermechanismus weiterverwenden, keinen neuen Missionsmanager. Nur eigene AP-05-Commits gezielt revertieren; AP-01–04 und fremde Arbeit erhalten. Tatsächliche Blocker konkret benennen und unabhängige Schritte weiterführen.
+
+## Softwareabschluss und Auftragsgrenze
+
+AP-05-Kern/Persistenz/ROS-Verträge auf `090762d` software_geprüft; Originalnachweise, Limits und einziger aktueller Status im [STATUS](STATUS.md). Native iOS-Prüfung unter WE-M7 mangels Apple-Plattform separat offen. Kein offener unabhängiger Kernblocker. Dieser Auftrag ist abgearbeitet und aktiviert keine AP-06-Implementierung oder Hardware. Genau nächster vorbereiteter Schritt steht im STATUS; kein zweiter aktiver Auftrag.

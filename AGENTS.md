@@ -181,7 +181,9 @@ Verbindliche Grundentscheidung: **wiederverwenden und gezielt entkoppeln statt
 komplett neu schreiben**. MASTERPLAN v1.3 ordnet AP-01 → AP-06 innerhalb der bestehenden WE-Meilensteine.
 AP-04 erlaubt den begrenzten Vergleich und die geprüfte Integration eines externen
 Frontier-Kerns als Kandidatenlieferant; ein kompletter Fremdstack bleibt ausgeschlossen.
-Der aktuelle AP-05-Auftrag ist ausschließlich gerätefrei, ohne Deployment/Fahrt.
+AP-05 wurde ausschließlich gerätefrei bearbeitet; dessen Softwareabschluss und
+separat offene Abnahmen stehen im STATUS. Der Abschluss aktiviert keinen AP-06-Auftrag
+und keine Deployment-/Fahrtarbeit.
 Der Plan erhält einen schlanken metrischen
 Erkundungskern im vorhandenen Explorer ohne verpflichtende Portal-/Regionsdaten.
 Tür-/Raumsemantik ergänzt; gültige metrische Karte/Pose, Scope, tatsächliche

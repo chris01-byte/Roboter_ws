@@ -1,0 +1,107 @@
+{
+  "software_commit": "090762d93dd4c270478cb31c01c05d07c1da0459",
+  "base_commit": "2532f1b6c374dec110300fd1e1a9e8a289fd27c8",
+  "masterplan_sha256": "030782dc0cce24d23ef730783703f91cac6957ceb4b7305a224342fba74a8a10",
+  "action_wire_fields_unchanged": true,
+  "changed_sources": [
+    {
+      "path": ".github/workflows/hwt601-we.yml",
+      "sha256": "5a9eb5544119d1dac4e0f9404098c9b50a68ca06d8867dda13feceb0cf32821c",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "ios/Robotersteuerung/Robotersteuerung/Models/RobotModels.swift",
+      "sha256": "ee0a2c664092ecc811ce47a433ebfc4d0660eb57d56f691b2677840ea24af451",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "ios/Robotersteuerung/Robotersteuerung/Services/RobotController.swift",
+      "sha256": "f8807906102503a17c68c057fe388f4a41f234afce8653622e4eec019beac5b3",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "ios/Robotersteuerung/Robotersteuerung/Views/DashboardView.swift",
+      "sha256": "31404db45e9c15ff1d37170fbfb500b5ca440129ae5f3d7d7f68d230dbaff5db",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "ios/Robotersteuerung/RobotersteuerungTests/RosbridgeProtocolTests.swift",
+      "sha256": "1bd5e05d212645f91345ccc7e2fccba3fa7b6b32cf3afd2e78df729a55775764",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/README.md",
+      "sha256": "cb189723a1655a9d8f5a4ff8c30517c3bbf8d823daed3dd6082f7b365eab7624"
+    },
+    {
+      "path": "src/explore/config/metric_frontier_params.yaml",
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/exploration_persistence.py",
+      "sha256": "62f11a33998766fe5fac65b08f3b624f531198a1314b0df2eb191336fd173adc",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/explore_node.py",
+      "sha256": "cd138f377ec50ecde7dc061beaed41c1c3547b85cdf8ff965da633ae85b9afaa",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/metric_checkpoint.py",
+      "sha256": "8e8611c027756aca3e112f744c7dc1b526e494b631b00ab3411a716f7080b8dd",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/metric_frontier.py",
+      "sha256": "3c7092b02dd786cfda269d93e344329eec32d35b230091f8ee4212442f4d72f7",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/metric_frontier_runtime.py",
+      "sha256": "3bd260079afcb63f28bd1965091e88d079fcc92c49bc7ae5fbe4bc1cec4b967c",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/explore/metric_progress.py",
+      "sha256": "9b3ae4ed53f0dd4f37ebee7d49ef77ce2c1195d4b3e83e86e9d5e7de160bdb2d",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/test/test_metric_map_lifecycle.py",
+      "sha256": "b16726a0e029ae58794eb0a366a83eb37a31a153fc5a959a2ff2df02ad98b3be",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/test/test_metric_progress.py",
+      "sha256": "1cfc711ef7df0800b3dfff70baaee2a5adbe4b10939d091a931bc26b69f3b328",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/explore/test/test_metric_result_action.py",
+      "sha256": "f6c5c28a69522c1c57a49d93c915eb4881a9a2f8ef4d2dd084e122b244326b83",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/mission_manager/mission_manager/mission_manager_node.py",
+      "sha256": "7e002b3d19daeb2706e9267eefb20b85b8386133f46de76a86af4d546ea921ba",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/mission_manager/test/test_metric_exploration_result.py",
+      "sha256": "8032eb1fc1c85bd6d11262a7d84f932350e67c0462c02cfb249927004b17f8be",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "src/robot_interfaces/action/ExploreArea.action",
+      "sha256": "a3e320a4392adf02628be223987407914df35c15365c4de3f4d7e5269f595cd3",
+      "tested_copy_matches": true
+    },
+    {
+      "path": "tools/sensorfusion/metric_frontier_product_graph.py",
+      "sha256": "b091e63eb2d943cd249558ebe2bae1b903ebf83542e82878618294e31b1ac33b",
+      "tested_copy_matches": true
+    }
+  ]
+}

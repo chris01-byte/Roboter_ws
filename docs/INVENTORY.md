@@ -27,6 +27,15 @@ Kandidaten-/Adaptersoftware und echte Nav2-Planbarkeit geprüft, keine neue
 Hardware-/Wohnungsreife oder Jetson-Aktivierung. Missionserledigung bleibt
 AP-05; aktuelle Nachweise/Grenzen ausschließlich im [STATUS](wohnungserkundung/STATUS.md).
 
+**Softwaredelta 03.10.2026 / AP-05:** Vorhandener Explorer ergänzt belegten
+metrischen Beobachtungsfortschritt, begrenzte Wiederbeobachtung und ehrlichen
+Abschluss/Teilstand. Bestehende Map-/Sidecar-Persistenz hält Aufgaben und Budgets;
+Resume nur mit explizitem Auftrag und aktueller verifizierter Lokalisierung.
+ROS-Verbraucherverträge software_geprüft; native App-Quellen angepasst,
+Apple-Build/Laufzeit unter WE-M7 offen. Kein neuer Hardware-Reifegrad oder
+Jetson-Installwechsel; aktuelle Nachweise/Grenzen ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md).
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

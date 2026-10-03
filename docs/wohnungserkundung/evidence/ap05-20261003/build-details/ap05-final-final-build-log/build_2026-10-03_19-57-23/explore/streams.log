@@ -1,0 +1,145 @@
+[0.497s] Invoking command in '/evidence/ap05-repo/src/explore': AMENT_PREFIX_PATH=/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common LD_LIBRARY_PATH=/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap05-final-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/explore build --build-base /evidence/ap05-final-build/explore/build install --record /evidence/ap05-final-build/explore/install.log --install-scripts $base/lib/explore --single-version-externally-managed install_data
+[0.620s] running egg_info
+[0.620s] creating ../../../ap05-final-build/explore/explore.egg-info
+[0.620s] writing ../../../ap05-final-build/explore/explore.egg-info/PKG-INFO
+[0.620s] writing dependency_links to ../../../ap05-final-build/explore/explore.egg-info/dependency_links.txt
+[0.620s] writing entry points to ../../../ap05-final-build/explore/explore.egg-info/entry_points.txt
+[0.621s] writing requirements to ../../../ap05-final-build/explore/explore.egg-info/requires.txt
+[0.621s] writing top-level names to ../../../ap05-final-build/explore/explore.egg-info/top_level.txt
+[0.621s] writing manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'
+[0.622s] reading manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'
+[0.623s] writing manifest file '../../../ap05-final-build/explore/explore.egg-info/SOURCES.txt'
+[0.623s] running build
+[0.623s] running build_py
+[0.623s] creating /evidence/ap05-final-build/explore/build
+[0.623s] creating /evidence/ap05-final-build/explore/build/lib
+[0.624s] creating /evidence/ap05-final-build/explore/build/lib/explore
+[0.624s] copying explore/region_graph_status.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.624s] copying explore/metric_frontier_candidates.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.624s] copying explore/portal_task_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.624s] copying explore/lidar_motion.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.624s] copying explore/metric_frontier_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/region_graph.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/metric_progress.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/portal_frozen_scan_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/child_result_policy.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/exploration_migration.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/exploration_nav_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.625s] copying explore/metric_frontier.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/portal_traversal_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/frontier_task_feed.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/metric_checkpoint.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/portal_traversal_runtime.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/region_graph_shadow_lifecycle.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/portal_plan_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/raw_map_portal_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/exploration_policy.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.626s] copying explore/exploration_completion.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.627s] copying explore/frontier_task_evidence.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.627s] copying explore/map_status_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.627s] copying explore/portal_memory.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.627s] copying explore/portal_planning.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.627s] copying explore/explore_node.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.628s] copying explore/frontier_task_resolution.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.628s] copying explore/exploration_scope.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.628s] copying explore/frontier_goal_candidate.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.628s] copying explore/__init__.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.628s] copying explore/exploration_persistence.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.629s] copying explore/region_graph_shadow.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.629s] copying explore/exploration_child_goal.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.629s] copying explore/portal_source_adapter.py -> /evidence/ap05-final-build/explore/build/lib/explore
+[0.629s] running install
+[0.629s] running install_lib
+[0.630s] creating /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_status.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier_candidates.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_task_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/lidar_motion.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/metric_progress.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_frozen_scan_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.631s] copying /evidence/ap05-final-build/explore/build/lib/explore/child_result_policy.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_migration.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_nav_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/metric_frontier.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_traversal_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_feed.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/metric_checkpoint.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_traversal_runtime.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_shadow_lifecycle.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_plan_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/raw_map_portal_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_policy.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.632s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_completion.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_evidence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/map_status_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_memory.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_planning.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/explore_node.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_task_resolution.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_scope.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/frontier_goal_candidate.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/__init__.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_persistence.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/region_graph_shadow.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.633s] copying /evidence/ap05-final-build/explore/build/lib/explore/exploration_child_goal.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.634s] copying /evidence/ap05-final-build/explore/build/lib/explore/portal_source_adapter.py -> /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore
+[0.634s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_status.py to region_graph_status.cpython-310.pyc
+[0.637s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py to metric_frontier_candidates.cpython-310.pyc
+[0.638s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_task_evidence.py to portal_task_evidence.cpython-310.pyc
+[0.641s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/lidar_motion.py to lidar_motion.cpython-310.pyc
+[0.642s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py to metric_frontier_runtime.cpython-310.pyc
+[0.654s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph.py to region_graph.cpython-310.pyc
+[0.658s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_progress.py to metric_progress.cpython-310.pyc
+[0.659s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_frozen_scan_runtime.py to portal_frozen_scan_runtime.cpython-310.pyc
+[0.660s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/child_result_policy.py to child_result_policy.cpython-310.pyc
+[0.661s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_migration.py to exploration_migration.cpython-310.pyc
+[0.662s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_nav_runtime.py to exploration_nav_runtime.cpython-310.pyc
+[0.664s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py to metric_frontier.cpython-310.pyc
+[0.669s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_traversal_evidence.py to portal_traversal_evidence.cpython-310.pyc
+[0.669s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_feed.py to frontier_task_feed.cpython-310.pyc
+[0.670s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py to metric_checkpoint.cpython-310.pyc
+[0.671s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_traversal_runtime.py to portal_traversal_runtime.cpython-310.pyc
+[0.672s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow_lifecycle.py to region_graph_shadow_lifecycle.cpython-310.pyc
+[0.674s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_plan_adapter.py to portal_plan_adapter.cpython-310.pyc
+[0.674s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/raw_map_portal_adapter.py to raw_map_portal_adapter.cpython-310.pyc
+[0.676s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_policy.py to exploration_policy.cpython-310.pyc
+[0.680s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_completion.py to exploration_completion.cpython-310.pyc
+[0.681s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py to frontier_task_evidence.cpython-310.pyc
+[0.683s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py to map_status_adapter.cpython-310.pyc
+[0.684s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_memory.py to portal_memory.cpython-310.pyc
+[0.687s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_planning.py to portal_planning.cpython-310.pyc
+[0.689s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/explore_node.py to explore_node.cpython-310.pyc
+[0.718s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_task_resolution.py to frontier_task_resolution.cpython-310.pyc
+[0.719s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py to exploration_scope.cpython-310.pyc
+[0.720s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/frontier_goal_candidate.py to frontier_goal_candidate.cpython-310.pyc
+[0.722s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/__init__.py to __init__.cpython-310.pyc
+[0.722s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_persistence.py to exploration_persistence.cpython-310.pyc
+[0.724s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow.py to region_graph_shadow.cpython-310.pyc
+[0.726s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/exploration_child_goal.py to exploration_child_goal.cpython-310.pyc
+[0.728s] byte-compiling /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py to portal_source_adapter.cpython-310.pyc
+[0.729s] running install_data
+[0.730s] creating /evidence/ap05-final-install/explore/share/ament_index
+[0.730s] creating /evidence/ap05-final-install/explore/share/ament_index/resource_index
+[0.730s] creating /evidence/ap05-final-install/explore/share/ament_index/resource_index/packages
+[0.730s] copying resource/explore -> /evidence/ap05-final-install/explore/share/ament_index/resource_index/packages
+[0.730s] copying package.xml -> /evidence/ap05-final-install/explore/share/explore
+[0.730s] copying README.md -> /evidence/ap05-final-install/explore/share/explore
+[0.730s] creating /evidence/ap05-final-install/explore/share/explore/launch
+[0.730s] copying launch/explore.launch.py -> /evidence/ap05-final-install/explore/share/explore/launch
+[0.730s] creating /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/explore_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/hwt601_recovery_acceptance_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/metric_frontier_simulation_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/hwt601_parity_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/door_test_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] copying config/metric_frontier_params.yaml -> /evidence/ap05-final-install/explore/share/explore/config
+[0.730s] creating /evidence/ap05-final-install/explore/share/explore/behavior_trees
+[0.731s] copying behavior_trees/navigate_to_pose_no_recovery.xml -> /evidence/ap05-final-install/explore/share/explore/behavior_trees
+[0.731s] running install_egg_info
+[0.732s] Copying ../../../ap05-final-build/explore/explore.egg-info to /evidence/ap05-final-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info
+[0.733s] running install_scripts
+[0.748s] Installing explore script to /evidence/ap05-final-install/explore/lib/explore
+[0.748s] writing list of installed files to '/evidence/ap05-final-build/explore/install.log'
+[0.766s] Invoked command in '/evidence/ap05-repo/src/explore' returned '0': AMENT_PREFIX_PATH=/evidence/ap05-final-install/robot_state_estimation:/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common:/evidence/ap05-final-install/base_hardware:/evidence/ap05-final-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap05-final-install/nav2_msgs:/evidence/ap05-final-install/robot_interfaces:/evidence/ap05-final-install/nav2_common LD_LIBRARY_PATH=/evidence/ap05-final-install/nav2_msgs/lib:/evidence/ap05-final-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap05-final-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap05-final-install/explore/lib/python3.10/site-packages:/evidence/ap05-final-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap05-final-install/nav2_msgs/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/nav2_common/local/lib/python3.10/dist-packages:/evidence/ap05-final-install/base_hardware/lib/python3.10/site-packages:/evidence/ap05-final-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap05-final-build/explore build --build-base /evidence/ap05-final-build/explore/build install --record /evidence/ap05-final-build/explore/install.log --install-scripts $base/lib/explore --single-version-externally-managed install_data

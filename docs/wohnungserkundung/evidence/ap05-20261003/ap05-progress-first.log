@@ -1,0 +1,79 @@
+................FFFF....F.......F.                                       [100%]
+=================================== FAILURES ===================================
+__ test_actual_parent_positive_success_including_unknown_behind_walls[known] ___
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:148: in test_actual_parent_positive_success_including_unknown_behind_walls
+    result=n._execute_metric_frontier(parent,10.,.3)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1408: in _execute_metric_frontier
+    self._metric_select(inputs,policy,min_frontier))
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1134: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1129: in _metric_candidates
+    if self._visualize:
+E   AttributeError: 'ExploreNode' object has no attribute '_visualize'
+___ test_actual_parent_positive_success_including_unknown_behind_walls[wall] ___
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:148: in test_actual_parent_positive_success_including_unknown_behind_walls
+    result=n._execute_metric_frontier(parent,10.,.3)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1408: in _execute_metric_frontier
+    self._metric_select(inputs,policy,min_frontier))
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1134: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1129: in _metric_candidates
+    if self._visualize:
+E   AttributeError: 'ExploreNode' object has no attribute '_visualize'
+___________ test_actual_parent_negative_endings_never_success[tiny] ____________
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:167: in test_actual_parent_negative_endings_never_success
+    result=n._execute_metric_frontier(parent,10.,20. if fault=='filtered' else .3)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1408: in _execute_metric_frontier
+    self._metric_select(inputs,policy,min_frontier))
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1134: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1064: in _metric_candidates
+    goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+evidence/ap05-repo/src/explore/explore/explore_node.py:3778: in _frontier_approach_goal
+    desired_x = frontier.cx + self._approach_dist_m * dx / norm
+E   AttributeError: 'ExploreNode' object has no attribute '_approach_dist_m'
+_________ test_actual_parent_negative_endings_never_success[filtered] __________
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:167: in test_actual_parent_negative_endings_never_success
+    result=n._execute_metric_frontier(parent,10.,20. if fault=='filtered' else .3)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1408: in _execute_metric_frontier
+    self._metric_select(inputs,policy,min_frontier))
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1134: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1129: in _metric_candidates
+    if self._visualize:
+E   AttributeError: 'ExploreNode' object has no attribute '_visualize'
+________ test_actual_parent_negative_endings_never_success[scan_stale] _________
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:167: in test_actual_parent_negative_endings_never_success
+    result=n._execute_metric_frontier(parent,10.,20. if fault=='filtered' else .3)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1408: in _execute_metric_frontier
+    self._metric_select(inputs,policy,min_frontier))
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1134: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1047: in _metric_candidates
+    view = self._metric_observation_view()
+evidence/ap05-repo/src/explore/explore/metric_frontier_runtime.py:1014: in _metric_observation_view
+    view = lidar_view(scan, mount, time.monotonic(), self._door_lidar_scan_timeout,
+evidence/ap05-repo/src/explore/explore/metric_frontier_candidates.py:89: in lidar_view
+    raise ValueError('candidate_lidar_missing_stale_or_tf_missing')
+E   ValueError: candidate_lidar_missing_stale_or_tf_missing
+__ test_atomic_checkpoint_keeps_last_valid_on_unsupported_or_interrupted_save __
+evidence/ap05-repo/src/explore/test/test_metric_progress.py:216: in test_atomic_checkpoint_keeps_last_valid_on_unsupported_or_interrupted_save
+    assert repository.load(binding,validate_state=validate_checkpoint).state==valid
+E   AssertionError: assert {'arrivals': ...ures': 1, ...} == {'arrivals': ...ures': 1, ...}
+E     Omitting 15 identical items, use -vv to show
+E     Differing items:
+E     {'policy': {'cooldown_s': 30.0, 'next_id': 1, 'radius': 0.6, 'retry_limit': 2, ...}} != {'policy': {'cooldown_s': 30.0, 'next_id': 1, 'radius': 0.6, 'retry_limit': 2, ...}}
+E     Full diff:
+E       {
+E        'arrivals': 1,
+E        'attempts': 1,...
+E     
+E     ...Full output truncated (37 lines hidden), use '-vv' to show
+=========================== short test summary info ============================
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_actual_parent_positive_success_including_unknown_behind_walls[known]
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_actual_parent_positive_success_including_unknown_behind_walls[wall]
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_actual_parent_negative_endings_never_success[tiny]
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_actual_parent_negative_endings_never_success[filtered]
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_actual_parent_negative_endings_never_success[scan_stale]
+FAILED evidence/ap05-repo/src/explore/test/test_metric_progress.py::test_atomic_checkpoint_keeps_last_valid_on_unsupported_or_interrupted_save
+6 failed, 28 passed in 0.92s
