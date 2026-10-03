@@ -186,7 +186,9 @@ local_costmap:
         vl53_left:
           topic: /near_field/left/points_costmap
           data_type: "PointCloud2"
-          marking: True
+          # Clipped clearing endpoints are not measured obstacle returns.
+          # The separate *_mark source retains all genuine measurements.
+          marking: False
           clearing: True
           min_obstacle_height: 0.05
           max_obstacle_height: 0.50
@@ -195,7 +197,9 @@ local_costmap:
         vl53_right:
           topic: /near_field/right/points_costmap
           data_type: "PointCloud2"
-          marking: True
+          # Clipped clearing endpoints are not measured obstacle returns.
+          # The separate *_mark source retains all genuine measurements.
+          marking: False
           clearing: True
           min_obstacle_height: 0.05
           max_obstacle_height: 0.50
@@ -264,7 +268,9 @@ global_costmap:
         vl53_left:
           topic: /near_field/left/points_costmap
           data_type: "PointCloud2"
-          marking: True
+          # Clipped clearing endpoints are not measured obstacle returns.
+          # The separate *_mark source retains all genuine measurements.
+          marking: False
           clearing: True
           min_obstacle_height: 0.05
           max_obstacle_height: 0.50
@@ -273,7 +279,9 @@ global_costmap:
         vl53_right:
           topic: /near_field/right/points_costmap
           data_type: "PointCloud2"
-          marking: True
+          # Clipped clearing endpoints are not measured obstacle returns.
+          # The separate *_mark source retains all genuine measurements.
+          marking: False
           clearing: True
           min_obstacle_height: 0.05
           max_obstacle_height: 0.50
