@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.8)
+project(ap04_frontier_probe)
+find_package(ament_cmake REQUIRED)
+find_package(frontier_exploration_ros2 REQUIRED)
+add_executable(ap04_frontier_probe probe.cpp)
+target_compile_features(ap04_frontier_probe PRIVATE cxx_std_17)
+target_link_libraries(ap04_frontier_probe frontier_exploration_ros2::frontier_exploration_ros2_core)
+ament_target_dependencies(ap04_frontier_probe geometry_msgs nav_msgs)

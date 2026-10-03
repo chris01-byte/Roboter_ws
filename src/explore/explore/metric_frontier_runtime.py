@@ -4,6 +4,7 @@ Only ExploreNode's existing Nav2 client and gated scan path execute motion.
 Map/status identity is shared product code; semantic feeds never enter this
 adapter. The measured footprint is checked on both actual input rasters.
 """
+from dataclasses import replace
 import json
 import math
 import threading
@@ -27,6 +28,7 @@ from .map_status_adapter import (
 from .portal_source_adapter import raw_map_portal_source_from_values, PortalSourceCorrelation
 from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
+from .metric_frontier_candidates import boundary_samples, lidar_view, visible_boundary_cells
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
@@ -58,6 +60,10 @@ class MetricFrontierRuntime:
                 description='adaptive or configured_scan; fixed for this process/mission.')).value
         if self._metric_start_strategy not in ('adaptive', 'configured_scan'):
             raise ValueError('Unknown metric_start_strategy')
+        self._metric_candidate_source = self.declare_parameter(
+            'metric_candidate_source', 'boundary_samples', ParameterDescriptor(read_only=True)).value
+        if self._metric_candidate_source not in ('boundary_samples', 'legacy_centroid'):
+            raise ValueError('Unknown metric_candidate_source')
         self._metric_path_validation = self.declare_parameter(
             'metric_path_validation', 'conservative', ParameterDescriptor(read_only=True)).value
         if self._metric_path_validation not in ('conservative', 'rpp_rollout'):
@@ -893,17 +899,60 @@ class MetricFrontierRuntime:
             scan_rejection=None if sweep_clear else 'initial_scan_footprint_invalid')
         return decision, candidates
 
-    def _metric_select(self, inputs, policy, min_frontier):
+    def _metric_observation_view(self):
+        scan = self._door_lidar_scan_snapshot()
+        mount = None if scan is None else self._door_lidar_mount(scan['frame_id'])
+        view = lidar_view(scan, mount, time.monotonic(), self._door_lidar_scan_timeout,
+                          self._door_lidar_max_range)
+        stamp_ns = scan['key'][0]*10**9 + scan['key'][1]
+        age = (self.get_clock().now().nanoseconds-stamp_ns)/1e9
+        if not 0 <= age <= self._door_lidar_scan_timeout:
+            raise ValueError('candidate_lidar_stamp_stale')
+        return view
+
+    def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
         grid, correlation, pose, *_ = inputs
-        frontiers = self._detect_frontiers(grid, min_frontier)
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
         candidates = []
         stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
         self._metric_prepare_egress(inputs)
         search_mask=self._metric_seed_mask(inputs)
         for f in frontiers:
-            goal = (self._frontier_approach_goal(f,pose[:2],grid,search_mask=search_mask)
-                if getattr(self,'_metric_start_egress_enabled',False) else
-                self._frontier_approach_goal(f, pose[:2], grid))
+            if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+                raise ValueError('frontier_candidate_processing_budget_exhausted')
+            kwargs = {}
+            if getattr(self, '_metric_start_egress_enabled', False):
+                kwargs['search_mask'] = search_mask
+            direction = getattr(f, 'approach_direction', None)
+            if direction is not None:
+                kwargs['approach_direction'] = direction
+            goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
             route = None if goal is None else self._metric_route(inputs, goal)
             proposal = False
             if goal is not None and route is None:
@@ -941,22 +990,46 @@ class MetricFrontierRuntime:
             if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
                 stats['unsafe'] += 1
                 continue
-            key = policy.identify((f.cx,f.cy))
-            if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint):
-                stats['deferred_or_served'] += 1
-                continue
             length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
             cost = self._potential_scale*length-self._gain_scale*f.size*grid.info.resolution+self._heading_scale*error
             target_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
-            candidates.append(MetricCandidate(key,*goal,target_yaw,(f.cx,f.cy),route,length,cost,
+            if view is not None:
+                if live_view:
+                    view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask, (*goal, target_yaw), view)
+                # This anchor must have a visible nearby boundary; unrelated
+                # unknown cells on the other side of a wall grant no utility.
+                local_hits = [cell for cell in visible if math.dist(
+                    self._grid_to_world(cell[1], cell[0], grid.info), (f.cx, f.cy)) <= .8]
+                if not local_hits:
+                    stats['unsafe'] += 1
+                    counts = stats['route_rejections']
+                    counts['no_visible_frontier'] = counts.get('no_visible_frontier', 0)+1
+                    continue
+                cost = self._potential_scale*length-self._gain_scale*len(local_hits)*grid.info.resolution+self._heading_scale*error
+            candidates.append(MetricCandidate('',*goal,target_yaw,(f.cx,f.cy),route,length,cost,
                                               correlation.fingerprint,correlation.map_revision,proposal))
-        candidates.sort(key=lambda candidate:(candidate.cost,candidate.task_id))
+        if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+            raise ValueError('frontier_candidate_processing_budget_exhausted')
+        candidates.sort(key=lambda candidate:(candidate.cost,candidate.frontier_xy))
         stats['accepted'] = len(candidates)
         self._frontier_rank_stats = stats
         self._frontiers_remaining = len(frontiers)
         if self._visualize:
             self._publish_markers(frontiers, grid.header.frame_id)
         return candidates
+
+    def _metric_select(self, inputs, policy, min_frontier):
+        candidates = self._metric_candidates(inputs, min_frontier)
+        selected = []
+        for candidate in candidates:
+            key = policy.identify(candidate.frontier_xy)
+            if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint):
+                selected.append(replace(candidate, task_id=key))
+            else:
+                self._frontier_rank_stats['deferred_or_served'] += 1
+        self._frontier_rank_stats['accepted'] = len(selected)
+        return selected
 
     def _metric_operating_snapshot(self, require_stop=False):
         reason = None

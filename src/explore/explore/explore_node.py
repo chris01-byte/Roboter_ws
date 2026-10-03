@@ -3759,10 +3759,13 @@ class ExploreNode(MetricFrontierRuntime, Node):
 
     def _frontier_approach_goal(
             self, frontier: Frontier, robot_xy: Tuple[float, float],
-            grid: OccupancyGrid, *, search_mask=None) -> Optional[Tuple[float, float]]:
+            grid: OccupancyGrid, *, search_mask=None,
+            approach_direction=None) -> Optional[Tuple[float, float]]:
         """Pick a goal in the robot's connected, safely clear free space."""
         dx = robot_xy[0] - frontier.cx
         dy = robot_xy[1] - frontier.cy
+        if approach_direction is not None:
+            dx, dy = approach_direction
         norm = math.hypot(dx, dy)
         if norm <= 1e-9:
             return None

@@ -15,6 +15,7 @@ on:
       - 'src/mission_manager/**'
       - 'tools/sensorfusion/we_hwt601_process_smoke.py'
       - 'tools/simulation/ap03_nav2_closed_loop.py'
+      - 'tools/analysis/frontier_comparison/**'
       - '.github/workflows/hwt601-we.yml'
   push:
     branches: ['codex/we1-hwt601-fusion']
@@ -61,6 +62,7 @@ jobs:
           export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=227
           python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
             src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
+            src/explore/test/test_metric_frontier_candidates.py \
             src/explore/test/test_map_status_adapter.py \
             src/explore/test/test_raw_map_portal_adapter.py \
             src/amadeus_map_identity/test src/robot_map_manager/test
