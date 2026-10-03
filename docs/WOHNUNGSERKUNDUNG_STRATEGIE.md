@@ -1,6 +1,6 @@
 # Wohnungserkundung – verbindliche Gesamtstrategie
 
-**WE-1 · Architekturpräzisierung 30.09.2026 · MASTERPLAN v1.2 · Amadeus**
+**WE-1 · Architekturpräzisierung 03.10.2026 · MASTERPLAN v1.3 · Amadeus**
 
 Dies ist die vom Nutzer beschlossene Zielausrichtung, kein Implementierungs- oder Fahrnachweis. [Masterplan](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md), [Agentenauftrag](wohnungserkundung/AGENTENAUFTRAG.md) und [Meilensteine](wohnungserkundung/MEILENSTEINE.md) bilden die einzige aktuelle Roadmap.
 
@@ -46,4 +46,4 @@ Früheren Frontier-/Annäherungskern um `1d91229` als Referenz nutzen; moderne S
 
 Bestehende Kartenmanager-/Semantikschnittstellen verwenden. Metrischer Teilstand, erfolgreiche Erkundung, Fahrspurabdeckung und semantische Vollständigkeit sind unterschiedliche Ergebnisse. Keine Speicher-/App-Freigabe aus einem lediglich leeren Portalbestand ableiten. Kartenwechsel und Neustart benötigen gültige Bindung/Relokalisierung; keine Fahrt allein durch Laden.
 
-Reale Daten lokal halten. Historische Erfolge nicht erneut verlieren, aber nicht als Beleg einer neuen Kombination ausgeben. Reihenfolge und nächste Arbeit ausschließlich aus Masterplan/STATUS. WE-M0–M7 bleiben erhalten, metrische und semantische Nachweise werden ausdrücklich getrennt. Nur die benannte Änderung an den Abhängigkeiten ist beschlossen; keine pauschale Lockerung anderer Abnahmekriterien.
+Reale Daten lokal halten. Historische Erfolge nicht erneut verlieren, aber nicht als Beleg einer neuen Kombination ausgeben. Reihenfolge und nächste Arbeit ausschließlich aus Masterplan/STATUS. WE-M0–M7 bleiben erhalten, metrische und semantische Nachweise werden ausdrücklich getrennt. MASTERPLAN v1.3 legt AP-01 → AP-06 fest: Zeitbasis, Karten/Quellen, Planung/Bootstrap, Frontiervergleich, Fortschritt/Abschluss, geschlossene Gesamtprüfung und reale Abnahmen. AP-04 erlaubt ausdrücklich die geprüfte Integration eines gepinnten externen Frontier-Kerns als Kandidatenlieferant; die frühere Offline-Beschränkung ist hierfür aufgehoben. Kein kompletter Fremdstack oder zweiter Navigator. Geometrie- und Abschlussvertrag werden nach konkreten Gegenfällen konsolidiert, Schutzwirkung und gültige Daten bleiben Pflicht. Der historische Frontierkern bleibt Vergleichsreferenz; seine Übernahme ist nicht vorentschieden. Aktuell wird ausschließlich AP-01 gerätefrei bearbeitet; keine pauschale Lockerung anderer Abnahmekriterien.

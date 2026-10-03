@@ -1,6 +1,6 @@
 # Meilensteine – metrischer Kern und ergänzende Raumsemantik
 
-**WE-1 · Präzisierung 30.09.2026 · MASTERPLAN v1.2**
+**WE-1 · Präzisierung 03.10.2026 · MASTERPLAN v1.3**
 
 [Masterplan](MASTERPLAN.md), [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und [STATUS](STATUS.md) sind maßgeblich. Dies sind Entwicklungs-/Abnahmekriterien, keine bestandenen Ergebnisse. Keine neuen Meilenstein-IDs.
 
@@ -12,7 +12,7 @@ Weiterhin getrennt: dokumentiert, geplant, in_arbeit, software_geprüft, zielsys
 
 | Bestehender Meilenstein | Ergebnis / präzisierte Voraussetzung |
 |---|---|
-| WE-D0 | v1.2-Entscheidung, aktuelle Referenzen und einzelner Folgeauftrag dokumentiert; kein Softwareabschluss |
+| WE-D0 | v1.3-Entscheidung, aktuelle Referenzen und einzelner Folgeauftrag dokumentiert; kein Softwareabschluss |
 | WE-M0 | Reproduzierbare aktuelle Basis und geprüfte technische Bewegungs-/Stopppfade; bisherige passende Belege erhalten |
 | WE-M1 | Stabile Portalidentität und getrennte Durchfahrts-/Erreichbarkeitszustände als passive Semantik; kein Pflicht-Gate vor metrischem WE-M3 |
 | WE-M2 | Vorläufiger Regionsgraph mit ehrlichen Zuständen; keine Navigations-/Schutzwirkung als Voraussetzung des metrischen Kerns |
@@ -23,6 +23,8 @@ Weiterhin getrennt: dokumentiert, geplant, in_arbeit, software_geprüft, zielsys
 | WE-M7 | Bestehende App zeigt tatsächlichen Modus, Aufgaben, Blockaden und Ergebnisse; Raumbenennung optional, keine Voraussetzung für Kartierung |
 
 Metrische Anteile von M4/M5/M6 dürfen nach ihren jeweiligen technischen Vorbedingungen fortfahren, ohne auf vollständige M1/M2-/ID-Abnahmen zu warten. „M4 metrisch bestanden; Semantik offen“ ist ein zulässiger Teilstatus, nicht „M4 insgesamt bestanden“. Keine bloße Umbenennung alter Fehlversuche.
+
+Die Reihenfolge ist AP-01 → AP-02 → AP-03 → AP-04 → AP-05 → AP-06 gemäß MASTERPLAN v1.3. AP-01 prüft die HWT-Zeitkorrelation unter WE-M0 und erhält M3-Recovery; AP-02 Karten/Quellen; AP-03 Planung/Bootstrap; AP-04 den begrenzten externen Frontier-Kern; AP-05 Fortschritt/Abschluss; AP-06 die geschlossene Kette und reale Abnahmen. Softwarefortschritt verlangt keine vorgezogene Wohnungsfahrt; reale Sensor-/Start-/Geometrieabnahme bleibt offen. AP-04 darf geprüften Fremdcode integrieren, ohne zweiten Navigator. Historischer Kern ist Vergleichsreferenz, keine vorweggenommene Auswahl.
 
 ## WE-D0 / WE-M0 – Plan und Basis
 

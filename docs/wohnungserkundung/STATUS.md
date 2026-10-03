@@ -1,3 +1,19 @@
+# Wohnungserkundung – aktueller Status
+
+## 03.10.2026 – MASTERPLAN v1.3 / AP-01 in_arbeit
+
+**AP-01 in_arbeit; reale Sensor-/Start-/Geometrieabnahme und Stufe 3 weiterhin offen.**
+
+Basis: `08a4b9ac0b7a128ced2199f20976f3aa92ea55fe`, Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 unverändert bestätigt. Ursprünglicher lokaler Checkout `work`/main `05439c7` sauber; für diesen Auftrag ungeeignet und unverändert belassen. Isolierter Worktree `/workspace/Roboter_ws-ap01`, Branch `fix/hwt-clock-correlation`. Keine unbekannten lokalen Änderungen auf der Integrationsbasis. Keine Aussage über aktuelle Jetson-Installation.
+
+Kanonisch: [MASTERPLAN v1.3](MASTERPLAN.md), [AP-01-Auftrag](AGENTENAUFTRAG.md), [Meilensteine](MEILENSTEINE.md), [LAB-1](../LABORMODUS.md). Zulässig sind ausschließlich HWT-Zeitkorrelation, notwendige Regressionen und Dokumentübernahme; 50/300 ms Entwicklung, 30/200 ms Legacy, Encoder 120/180 ms sowie HOLD-/Recoverygrenzen bleiben erhalten. Kein Gerätezugriff, Deployment, Push oder Merge.
+
+Nächster Schritt innerhalb AP-01: Originalgegenbeispiel mit echten Poll-/Fehlermethoden reproduzieren, reparieren, Regressionen und isolierten Paketbuild prüfen. AP-02 bleibt unimplementiert. Historische Robotermessungen erklären die tatsächliche Schedulerfolge nicht abschließend.
+
+Die vier bisherigen WE-Dokumente sind mit Herkunftscommit/Blob [bytegleich archiviert](archive/20261002-v1.2/README.md). Der folgende vollständige STATUS ist Historie bis `08a4b9a`; dortige „aktuelle“ Überschriften, Aufträge und Runtimeangaben gelten ausschließlich für ihren damaligen Stand.
+
+---
+
 # Wohnungserkundung – aktueller Status und nächster Auftrag
 
 **WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Stufe 3 weiterhin OFFEN**

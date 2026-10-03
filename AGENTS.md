@@ -5,7 +5,7 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
 **Für Wohnungserkundung zusätzlich zuerst:**
-[MASTERPLAN v1.2](docs/wohnungserkundung/MASTERPLAN.md),
+[MASTERPLAN v1.3](docs/wohnungserkundung/MASTERPLAN.md),
 [aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
 [aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
@@ -171,14 +171,18 @@ gemessene Evidenz mit Zahlen.
 Bei Arbeiten an Wohnungserkundung, Sensor-/Fahrintegration, Recovery,
 Portal-/Raumgedächtnis oder Erkundungsabschluss vor jeder Änderung lesen:
 
-1. [Masterplan v1.2: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
+1. [Masterplan v1.3: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
 2. [Einziger aktueller WE-Iststand](docs/wohnungserkundung/STATUS.md)
 3. [Aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
 4. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md) und betroffene
    [Meilensteine/Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
 
 Verbindliche Grundentscheidung: **wiederverwenden und gezielt entkoppeln statt
-komplett neu schreiben**. MASTERPLAN v1.2 erlaubt einen schlanken metrischen
+komplett neu schreiben**. MASTERPLAN v1.3 ordnet AP-01 → AP-06 innerhalb der bestehenden WE-Meilensteine.
+AP-04 erlaubt den begrenzten Vergleich und die geprüfte Integration eines externen
+Frontier-Kerns als Kandidatenlieferant; ein kompletter Fremdstack bleibt ausgeschlossen.
+Der aktuelle AP-01-Auftrag ist ausschließlich gerätefrei, ohne Deployment/Fahrt.
+Der Plan erhält einen schlanken metrischen
 Erkundungskern im vorhandenen Explorer ohne verpflichtende Portal-/Regionsdaten.
 Tür-/Raumsemantik ergänzt; gültige metrische Karte/Pose, Scope, tatsächliche
 Durchfahrtsgeometrie und Schutzkette bleiben notwendig. Keine Dummy-Portale oder

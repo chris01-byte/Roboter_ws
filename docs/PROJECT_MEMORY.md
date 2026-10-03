@@ -6,6 +6,16 @@ Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe
 
 Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
 
+## 03.10.2026 – MASTERPLAN v1.3 und begrenzter AP-01-Softwareauftrag
+
+**Entscheidung:** Nutzer hat die angehängten MASTERPLAN v1.3 und AGENTENAUFTRAG ausdrücklich beauftragt. Plan kanonisch übernommen; bisherige vier WE-Dateien bytegleich mit Commit-/Blobbeleg archiviert. AP-01 ausschließlich gerätefrei bis Softwareprüfung, keine Ausführung historischer Fahrt-/Deploymentaufträge. AP-04 hebt die reine Offline-Fremdcodegrenze gezielt für einen geprüften Frontier-Kandidatenkern auf; kein neuer Gesamtstack. Historischer Schwerpunktkern bleibt Vergleichsreferenz.
+
+**Evidenz/Basis:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9a` bestätigt; sauberer isolierter Worktree/Branch `fix/hwt-clock-correlation`. Älteres main `05439c7` wird nicht als Implementierungsbasis verwendet. Zeitkorrelationsfehler aus Gegenprüfung zu reproduzieren; historischer Roboterabbruch damit noch nicht abschließend erklärt.
+
+**Betroffene Dateien/Hardware:** WE-Dokumente, AGENTS und Gesamtstrategie; danach ausschließlich HWT-Rawpfad, Tests und notwendiger Clockvertrag. Keine Hardware/Roboternetzverbindung/Runtimeänderung; ROBOT_TRANSFER nicht fortgeschrieben. Teststatus/Ergebnis ausschließlich im aktuellen STATUS.
+
+**Grenzen/Rückfall:** Sensor-/Start-/Geometrieabnahme offen, keine Fristlockerung. Eigene getrennte Dokument-/Softwarecommits gezielt revertieren, keine Rücksetzung unbekannter Arbeit. AP-02 erst als Übergabe vorbereiten und nicht automatisch ausführen.
+
 ## 30.09.2026 – Metrische Erkundung vor verpflichtender Portal-/Raumsemantik
 
 **Nutzerentscheidung:** Christopher beauftragt Masterplan v1.2 und den nächsten Softwareauftrag. Ziel ist die fortlaufende Schleife aus Beobachtung, erreichbarem Frontier-/Beobachtungsziel, realer Navigation, neuen Messungen und erneuter Aufgabenwahl. Keine dritte vollständige Robotersoftware.

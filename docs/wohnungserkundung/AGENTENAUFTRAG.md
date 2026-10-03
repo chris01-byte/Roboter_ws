@@ -1,317 +1,96 @@
-# Agentenauftrag – metrische Frontiererkundung ohne Portalpflicht
+# Erster Software-Agentenauftrag: AP-01 – HWT-Zeitkorrelation
 
-**WE-1 · Stand 01.10.2026 · MASTERPLAN v1.2 · Software regressiert, reale Stufe 3 OFFEN**
+**Verbindlich: MASTERPLAN v1.3 vom 02.10.2026 · WE-D0/WE-M0 und betroffener Recoveryanteil WE-M3.**
 
-**METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Implementierung, Pflichtfallzuordnung, Testzahlen, Grenzen und Rückfall stehen im [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise). Abschnitte 1–10 sind historische, erledigte Pakete. **Abschnitt 11 ist der aktuelle Abschluss:** HWT-Entwicklungsvertrag/Start-Egress implementiert, 1.564 Regressionen und Drei-Ziel-/HOLD-Produktgraph bestanden. Kurzer Realstart endet mit harter Messzeitprüfung; unabhängig davon keine zulässige Starttrajektorie. Keine reale Mission, kein automatischer weiterer Start. ROS beendet, Rechner eingeschaltet.
+Du arbeitest am GitHub-Projekt `chris01-byte/Roboter_ws` für den Roboter Amadeus. Setze den beigefügten MASTERPLAN v1.3 als kanonischen Plan ein und bearbeite ausschließlich AP-01 bis zu einem geprüften Softwareabschluss. Erwartet werden eine konkrete Codekorrektur, aussagekräftige Regressionen und eine saubere Übergabe. Ein weiterer Diagnosebericht allein erfüllt den Auftrag nicht.
 
-## 1. Auftrag und verbindlicher Einstieg
+Der Nutzer hat diesen schrittweisen Integrationsweg auf Grundlage einer unabhängigen Repositoryanalyse beauftragt. Die Architekturentscheidung lautet: bestehende Hardware-/ROS-Basis erhalten, Erkundung vereinfachen und später einen abgegrenzten externen Frontier-Kern vergleichen und integrieren. Dieser erste Auftrag repariert eine gemeinsame Voraussetzung dafür.
 
-Implementiere im bestehenden Amadeus-Produktpfad die Schleife:
-**beobachten → erreichbare nützliche Position wählen → Nav2-Auftrag bearbeiten → Messungen/Ergebnis bewerten → nächste Aufgabe.**
+## 1. Umfang und Arbeitsregeln
 
-Lies AGENTS.md, [LAB-1](../LABORMODUS.md), [MASTERPLAN v1.2](MASTERPLAN.md), [STATUS](STATUS.md) und [Meilensteine](MEILENSTEINE.md). Inventar, Projektgedächtnis, ROBOT_TRANSFER und betroffenen Code gezielt hinzunehmen. Keine Gesamtinventur oder neue Planungsvorlage.
+Arbeite selbstständig innerhalb dieses begrenzten Softwareauftrags. Keine erneuten allgemeinen Bestätigungsfragen für Lesen, isolierten Branch/Build, Implementierung und Tests. Kläre nur eine tatsächlich fehlende Information oder einen echten Umfangskonflikt; bearbeite unabhängige Teile weiter.
 
-Basis ist der aktuelle veröffentlichte Stand von PR #105 / feature/hwt-hold-recovery-resume. Vor der v1.2-Dokumentation: `99d21c012dfe4c28d8263f7cd5e16505b07736d6`; letzter ausgewerteter funktionaler Kandidat `492ef20`. Historischer Frontier-/Türvergleich `1d91229dc10ff4bb791938d49aae8e9808a5dfff`, zugeordnet in WE_PARITY_RESET. Neuere abgestimmte Korrekturen erhalten, nicht blind zurückrollen.
+Dieser Auftrag ist ausschließlich gerätefrei: keine Roboternetzverbindung, keine seriellen Geräte, keine Motor-/Aktorprozesse, keine Fahrt, kein Deployment, kein dauerhafter Installwechsel. Lokale ROS-Tests dürfen nur isoliert und ohne Gerätezugriff laufen. Die allgemeine LAB-1-Regel bleibt für spätere konkret beauftragte Laborarbeit bestehen; historische Fahrtaufträge werden hier nicht wieder aufgenommen.
 
-**Dieser Auftrag ist gerätefreie Implementierung plus integrierter Softwarebeleg.** Keine Hardware-/Sensorprozesse, reale Fahrt, automatische Installation oder Merge. LAB-1 gilt für selbstständiges Durcharbeiten; keine allgemeinen Laborfragen für reine Softwarearbeit.
+Zulässige Produktänderungen: HWT-Rawdriver, gegebenenfalls ein kleiner privater Zeitkorrelationshelfer und unmittelbar erforderliche Diagnosefelder. Den Transport nur anfassen, falls dessen bestehender Empfangszeitbeleg technisch erforderlich ergänzt werden muss. Tests und notwendige Vertrags-/Planübernahme-Dokumentation gehören dazu.
 
-## 2. Lieferumfang und Nicht-Ziele
+Nicht Teil dieses Auftrags: Frontierimport, Kartenmasken-/Geometrieumbau, Nav2-/Controllerwechsel, neue Recovery-State-Machine, Gate-/DDS-/Executorumbau, Encoder-/EKF-/Biasänderung, neue Sensorkonfiguration, App-Umbau oder pauschale Lockerung von Fristen. Entdeckte unabhängige Fehler mit Beleg in den STATUS aufnehmen.
 
-Genau ein funktionales Paket: metrische Zielwahl ohne Portal-/Regionspflicht, gekoppelt an die vorhandene Einzelkind-/Mission-/HOLD-Steuerung einschließlich begrenzter Weiterarbeit nach nicht erreichtem Ziel.
+## 2. Tatsächliche Basis ermitteln und Plan übernehmen
 
-Erlaubt sind begrenzte Änderungen in explore, dessen Profilen/Tests und zwingend betroffenen vorhandenen Mission-/BT-/Status-/Launch-Adaptern. Modulgrenze und Migration knapp vor Implementierung benennen. Pure Helfer oder ein klar abgegrenztes Strategiebackend im vorhandenen Paket sind zulässig; kein zweiter Navigator/Goal-Sender und kein Komplettneubau.
+Lies zuerst `AGENTS.md`, `docs/PROJECT_MEMORY.md`, `docs/INVENTORY.md`, `docs/LABORMODUS.md` und die aktuellen WE-Dokumente. Alte Aufträge sind Quellen, keine zusätzlichen Arbeitsaufträge. Lies bei betroffenen Karten-/Prozessfragen zusätzlich `tools/kartierung/README.md`.
 
-Nicht beauftragt: neue SLAM-/OAK-/YOLO-/Arm-/GUI-Pipeline, Austausch von Hardware oder Treibern, pauschale Timeout-/Frische-/Kollisionslockerung, neuer Supervisor, reale HWT-Injektion, automatisches Drehen/Rückwärtsfahren als universelle Befreiung. Portal-/Regionscode nicht löschen. Keine Selbstbefreiung als fertig ausgeben, nur weil ein anderes Ziel auswählbar ist.
+Die Gegenprüfung bezog sich auf `feature/hwt-hold-recovery-resume` bei `08a4b9ac0b7a128ced2199f20976f3aa92ea55fe`. Das untersuchte ältere main `05439c7a13d7a92e69b9eb4663e3a2a1b44626a1` ist keine geeignete Ersatzbasis. Prüfe den tatsächlich vorhandenen Branch, HEAD, Remote-Stand und lokale Änderungen. Wenn die Integrationslinie inzwischen weitergelaufen ist, prüfe gezielt den Diff in betroffenen Pfaden und arbeite auf ihrem geeigneten Nachfolger. Kein blindes Zurücksetzen und kein Überschreiben unbekannter Arbeit. Wenn die Linie nicht eindeutig ermittelbar ist, benenne genau diese Basisfrage.
 
-## 3. Implementierung
+Verwende einen isolierten Arbeitsbranch, beispielsweise `fix/hwt-clock-correlation`, auf der geprüften Integrationsbasis. Keine laufende Roboter-Arbeitskopie umschalten. Lokale Build-/Install-/Testpräfixe getrennt halten. Dokumentiere, aus welchen Präfixen die tatsächlich importierten ROS-Nachrichten und Produktmodule stammen; alte main-Bindungen dürfen keinen aktuellen Test vortäuschen.
 
-### 3.1 Wiederverwendung und expliziter Modus
+Übernimm den beigefügten MASTERPLAN v1.3 nach `docs/wohnungserkundung/MASTERPLAN.md`. Archiviere zuvor die bestehenden Fassungen von MASTERPLAN, STATUS, AGENTENAUFTRAG und MEILENSTEINE bytegleich unter `docs/wohnungserkundung/archive/20261002-v1.2/`, mit Herkunftscommit/Blob und einem README. Falls dort schon ein Archiv existiert, verifiziere es; nicht überschreiben. Bestehende lokale Abweichungen separat erhalten und kennzeichnen.
 
-Ordne nur die tatsächlich nötigen Bausteine zu: historische Frontiercluster, Bewertung und sichere Annäherungsziele; aktueller Karten-/Scopevertrag; Einzelkind, Cancel, Mission, HWT-HOLD und Schutzkette. Verwende passende vorhandene Helfer, keine Kopie des gesamten alten explore_node.py.
+Setze diesen Text als einzigen aktuellen `docs/wohnungserkundung/AGENTENAUFTRAG.md` ein. Füge dem STATUS vorn einen eindeutig datierten aktuellen Abschnitt hinzu: Plan v1.3, tatsächliche Basis, AP-01 in Arbeit, weiterhin offene reale Sensor-/Start-/Geometrieabnahme. Historische Nachweise bleiben erhalten und als historische Stände erkennbar. Erfinde keine aktuell installierte Jetson-Version aus einem Branch-Namen.
 
-Führe die metrische Strategie explizit und isoliert ein, sinngemäß `metric_frontier`; tatsächlichen Parameternamen und Default dokumentieren. Bestehendes laufendes Produktprofil nicht stillschweigend umschalten. Moduswechsel ausschließlich ohne aktive Mission, gegenseitiger Ausschluss der alten und neuen Aufgabensteuerung.
+Synchronisiere gezielt Verweise und widersprüchliche aktuelle Aussagen in AGENTS, MEILENSTEINE und `docs/WOHNUNGSERKUNDUNG_STRATEGIE.md`; keine globale Umbenennung historischer v1.2-Belege. Die bisherige Einschränkung „Fremdcode nur Offline-Vergleich“ wird ausdrücklich durch die begrenzte AP-04-Erlaubnis ersetzt. Ergänze die Entscheidung im PROJECT_MEMORY. ROBOT_TRANSFER nicht als neues Deployment fortschreiben: Es findet keines statt. Dokumentübernahme und Codekorrektur sollen als getrennte, nachvollziehbare Diffs beziehungsweise lokale Commits prüfbar sein.
 
-Normale Ziele benötigen gültige metrische Karte/Sitzung/Frame, aktuelle Pose, Scope, Hinderniskarten, Sensor-/Antriebsgesundheit und Budget. **Keine Portal-ID, Pflicht-Raum-ID, graph.current_region oder frische PortalMemory als zusätzliche Voraussetzung.** Alte Datenklassen bei Bedarf gezielt neutralisieren/entkoppeln; keine Dummy-Portale, künstlichen Regionen oder „immer gesund“-Publisher bauen.
+## 3. Nachgewiesener Fehler
 
-Optionale Semantik darf passiv beobachten, aber nicht versteckt filtern, freigeben, abbrechen oder ein zweites Ziel erzeugen. Notwendige Bewegungs- und Quellenprüfungen werden nicht mit entfernt. Dokumentiere die wirksame Abhängigkeitsgrenze, nicht nur einen ausgeschalteten Parameter.
+Prüfe `src/robot_state_estimation/robot_state_estimation/hwt601_imu_node.py`, insbesondere `_poll()` und `_record_error()`, sowie den Zeitbeleg in `hwt601_transport.py` und die zugehörigen bestehenden Tests.
 
-### 3.2 Echte Frontierziele und laufende Karte
+Im analysierten Stand liest `_poll()` zuerst ROS-Zeit, danach monotonic. Die Berechnung lautet sinngemäß `stamp_ns = clock_ns - round((bracket - received_at) * 1e9)`. Dabei werden zeitversetzte Uhrabfragen wie gleichzeitig behandelt.
 
-Frontiers aus echten Eingangsrastern berechnen. Sichere erreichbare Annäherungspositionen im bekannten freien Scope bilden; unbekannte Zellen nicht als Fahrweg deklarieren. Keine harte Bindung an eine semantisch aktuelle Region. Erst Zulässigkeit/Erreichbarkeit, dann nachvollziehbarer Nutzen, Weglänge, Anfahrgeometrie und bisherige Fehlversuche. Bestehende Bewertung zuerst wiederverwenden; kein neues Optimierungsforschungsprojekt.
+Deterministisches Gegenbeispiel: Beide Uhren laufen vorwärts; ROS entspricht monotonic plus 1.000 s. Erster echter Antwortempfang bei monotonic 10,000 s ergibt ROS 1010,000 s. Zweiter Empfang erfolgt bei 10,010 s. Nach der zweiten ROS-Uhrabfrage, aber vor der zugeordneten monotonic-Abfrage wird eine Schedulingpause von 20 ms eingefügt. Der bisherige Code berechnet 1009,990 s und meldet `HWT-Messzeit nicht monoton`. Im Entwicklungsvertrag wird der Transport geschlossen; ein späterer gesunder Poll findet nicht mehr statt. Der Fehler ist mit den tatsächlichen Methoden reproduziert, nicht nur mathematisch vermutet.
 
-SLAM-Updates werden fortlaufend verarbeitet. Ein gültiges aktives Ziel bleibt bei kleinen Karten-/Rankingänderungen stabil, wird jedoch auf aktuellen metrischen Daten revalidiert. Veraltete Ergebnisse dürfen neue Ablehnungen nicht überschreiben. Kartenwechsel, inkompatible Pose oder unzulässiger Weg sperren. Nicht für jeden unveränderten Weg eine neue semantische Beweiskette verlangen; Quellenfristen und korrekte Kartenprovenienz bleiben wirksam.
+Reproduziere dies zunächst mit synthetischen Uhren/Transport und den echten Produktmethoden. Testobjekte dürfen den Geräteaufbau ersetzen. Die zu prüfende Poll-/Zeit-/Fehlerlogik darf nicht im Test nachgebaut oder ersetzt werden. Die alte Implementierung muss am neuen gewünschten Verhalten scheitern; die reparierte muss bestehen. Keine Hardware und keine Änderung der Systemuhr.
 
-Nach Zielerreichung oder sinnvoll beendeter Beobachtungsaufgabe neue Messungen bewerten und das nächste autonome Ziel wählen. Kein Stop nach Scan oder erstem Goal. Keine vollständige Bodenabdeckung des ersten Raums vor erlaubter Weitererkundung voraussetzen.
+## 4. Geforderter Zeitvertrag
 
-### 3.3 Ergebnis-, Blockade- und Recoveryvertrag
+Der maßgebliche Zeitpunkt ist der vom Transport erfasste vollständige Hostempfang `last_reply_received_monotonic_s`. Er ist kein belegter interner Sensorabtastzeitpunkt. Bewahre den Empfangsbezug auch bei verzögerter Verarbeitung.
 
-Übergeordneten Explore-Auftrag von einem einzelnen Nav2-Ergebnis trennen. Genau ein aktives Kind; vor Ersatz muss altes Kind terminal sein, alte Callbacks/Commands bleiben unwirksam.
+Getrennte Uhrenabfragen haben eine Unsicherheit. Wähle eine kleine nachvollziehbare Lösung, die diese erfasst und akzeptierte Stempel aus einer konsistent gültigen Korrelation ableitet. Beispielsweise kann die ROS-Abfrage durch monotonic davor/danach eingerahmt und eine Offsetspanne geprüft werden. Dies ist eine mögliche Lösung, keine vorgeschriebene neue Architektur. Ein wechselnder Mittelpunkt großer Abfrageintervalle allein beseitigt den Fehler nicht zuverlässig.
 
-Nicht erreichtes Ziel bei nachgewiesen gesundem Betriebszustand: kontrolliert stoppen, Stillstand und aktuelle Lage prüfen, den Versuch mit konkretem Grund bewerten und bei sicherer Fortsetzbarkeit Aufgabe befristet zurückstellen. Danach andere tatsächlich erreichbare Aufgabe zulassen. Eine spätere erneute Prüfung benötigt nachvollziehbare Bedingung; keine endlose Neuerzeugung desselben Ziels mit neuer ID.
+Dokumentiere Unsicherheitsgrenze, Begründung, Clockquellenvertrag und Behandlung erkannter Sprünge. Erkennung beliebig kleiner Sprünge unterhalb der Messunsicherheit ist keine erfüllbare Forderung; benenne diese Grenze. Eine bereits erkannte tatsächliche Änderung der Zeitbasis darf nicht durch stilles Neubasieren verschwinden. Falls simulierte ROS-Zeit nicht unterstützt wird, muss deren Aktivierung/Quellenwechsel ausdrücklich entsprechend behandelt werden.
 
-Kein pauschales `timeout -> LOCAL_BLOCKED` und keine erfundene Hindernisursache. Aufgabenmisserfolg, fehlender Nachweis und echter System-/Aktuatorfehler unterscheiden. Not-Aus, Nutzerabbruch, nicht terminales Kind, ungültige notwendige Quellen oder unsichere Pose dürfen keine automatische Wiederanfahrt erzeugen.
+Eine ungenaue Zeitpaarung darf innerhalb der unveränderten Gesamtablaufzeit begrenzt erneut erfasst werden. Bleibt sie ungeeignet, veröffentliche diese Probe nicht und ändere weder letzten gültigen Empfang noch letzten gültigen Stempel. Der Unsicherheitsfall muss diagnostisch von einem erkannten harten Zeitbasisfehler unterscheidbar sein. Das erlaubt eine lokale Behandlung im Rawdriver; es beauftragt keinen umfassenden Health-/Recoveryumbau.
 
-Den bekannten `navigation_timeout -> SYSTEM_FAILURE`-Befund und positive/negative Replays gezielt als Regression verwenden. Fehlenden damaligen Callbackzustand nicht erfinden. Falls für die neue Entscheidung nötig, einen konsistenten Snapshot mit erstem ablehnendem Prädikat/Exception erfassen. Das ist Bestandteil der Implementierung, kein separater Auftrag, der die Entwicklung wieder bis zum Wiederauftreten des historischen Fehlers anhält.
+Kein `max(last+1, candidate)`, keine monotonisierende Korrektur falscher Messzeiten, keine Veröffentlichung als „jetzt“, kein künstliches Auffrischen alter Daten und kein Abschalten der Zeitprüfung. Fehlende/ungültige Empfangsbelege dürfen nicht ungeprüft durch Veröffentlichungszeit ersetzt werden. Ein bewusst geänderter bisheriger Fallback ist eng zu dokumentieren und im tatsächlichen Produkt-Transportcode mit synthetischer serieller Gegenstelle zu prüfen; kein Gerätezugriff.
 
-Aufgabenfortschritt von kleinen Drehungen und Odometriesummen unterscheiden. Der neue Kern darf nicht unbegrenzt im SlowZone-Kriechen an derselben Aufgabe festhalten; vorhandene begrenzte Fortschritts-/Versuchsbudgets verwenden und phasenabhängig auswerten. Nötige Drehung/Transit nicht fälschlich als Stillstand werten. Keine realen Grenzwerte auf Verdacht ändern. Gesamtbudgets bleiben über Kindwechsel und HOLD erhalten.
+Nach einer verworfenen unsicheren Probe muss eine spätere echte gültige Probe wieder verarbeitbar sein, soweit die bestehenden Verträge dies zulassen. Bei wiederholtem Verwerfen altern die letzten gültigen Daten; bestehende Frische-/Health-Regeln bleiben wirksam. Keine Baseline-, Bias-, Faultflag- oder Budgetresets zur Verschleierung.
 
-Bestehenden HWT-HOLD-Vertrag erhalten: nach tatsächlicher Wiederherstellung neue Quellen, stabiler Stillstand, aktuelle Pose/Route und nötiges Gate-ACK; dann Fortsetzung derselben noch gültigen Aufgabe oder ausdrücklich begründete Aufgabenentscheidung. Kein Reboot und keine alte Goal-Wiederbelebung.
+Unverändert bleiben: Entwicklungsprofil 50 ms Antwort-/Gesamtablaufprüfung und 300 ms Rohdatenfrische, Legacy 30/200 ms, Encoder 120/180 ms sowie vorhandene HOLD-/Recoverygrenzen. Erkannte harte Zeit-/Identitäts-/Protokoll-/Datenfehler bleiben im Entwicklungsvertrag terminal. Die abweichende bestehende Legacy-Fehlerbehandlung wird nicht nebenbei vereinheitlicht.
 
-### 3.4 Engstellen, Abschluss und Ausgabe
+## 5. Pflichtprüfungen
 
-Normale Nav2-Durchfahrt durch geometrisch zulässige offene Verbindung ohne Türlabel erlauben. Keine direkte Fahrt durch eine für das reale Fahrzeug unzulässige Costmap-Lücke; besondere Portalbrücken in diesem ersten Modus nicht automatisch aktivieren.
+Implementiere deterministische Tests für die folgenden Verhaltensklassen. Nutze Parametrisierung, wo sie sinnvoll ist; keine Tests nur zur Erhöhung der Anzahl.
 
-Leere Auswahl durch stale Quellen, Filter, Blockaden oder Budgetende darf nicht als vollständige Wohnungserkundung gelten. Metrischer Abschlusskandidat, Teilstand, Warten, Fehler und Nutzerabbruch getrennt ausweisen. Vorhandene ExploreArea-/Status-/Speicherverbraucher prüfen: keinen semantischen Gesamtabschluss oder `map_ready_to_save` durch leer gewordene Pflichtdaten vortäuschen. Erforderliche neue Modus-/Ergebnisfelder explizit kompatibel oder versioniert anlegen.
+| Fall | Gefordertes Ergebnis |
+|---|---|
+| Präzise konstante Uhrenbeziehung, zwei Empfänge +10 ms | Korrekter Empfangsbezug und steigende veröffentlichte Stempel |
+| Kleine wechselnde, nicht null breite Uhrbrackets unterhalb der begründeten Unsicherheitsgrenze | Kontinuierlicher gültiger Probenstrom; pauschales Verwerfen erfüllt den Auftrag nicht |
+| Originalgegenbeispiel: +10 ms, danach 20-ms-Abfragepause | Kein falscher terminaler Rücklauf; korrekte Veröffentlichung nach zulässiger Paarung oder begründet verworfene unsichere Probe |
+| Verzögerung vor, innerhalb und nach Uhrpaarung; wechselnder und konstant großer Versatz | Richtige Unsicherheit/Zuordnung oder Verwerfen, kein bloß monotoner aber falsch datierter Strom |
+| Unbrauchbare Paarung, danach präzise Paarung | Nächste echte gültige Probe verarbeitet; kein erfundener Zwischenwert und keine terminale Schedulingfehlklassifikation |
+| Wiederholt unbrauchbare Paarungen | Keine Auffrischung; vorhandene Frischeprüfung wird nach Ablauf unbereit |
+| Überschrittene Transaktions-/Verarbeitungsfrist | Keine Veröffentlichung trotz eventuell gültiger Zeitkorrelation |
+| Fehlender, nichtendlicher, zukünftiger oder rückläufiger Empfangsbeleg | Keine gültige Veröffentlichung mit erfundenem Ersatzzeitpunkt |
+| Monotonic steigt, ROS springt separat zurück oder vor | Erkannter Sprung außerhalb Unsicherheit bleibt harter Zeitfehler |
+| ROS-Rücksprung kleiner als Probenabstand, aber größer als Unsicherheit | Nicht übersehen, nur weil Nachrichtenstempel insgesamt noch steigen |
+| Wechsel der Clockquelle bzw. ROS-Time-Aktivierung/Deaktivierung | Dokumentierter konservativer Quellenvertrag, kein stiller Epochenwechsel |
+| Vorhandene CRC-/Portidentitäts-/Sättigungs-/Timeoutfälle | Bisherige Schutzwirkung bleibt erhalten |
 
-Vorhandene Marker/Statusausgabe nutzen: aktives Ziel und Auswahlgrund, aktueller Versuch, Wartungs-/Blockadegrund, echte Aufgabenerledigung und verbleibende Kandidaten. Kartenwachstum nicht aus Meldungsanzahl oder Fahrbefehlintegral behaupten. Keine neue App bauen.
+Die zentralen neuen Fälle führen echte `_poll()`-/Fehlerbehandlung aus. Der synthetische Transport führt realistische Start-/Deadlinebelege in `last_transaction`, damit zusätzliche Uhrpaarungsversuche die 30-/50-ms-Gesamtfrist nicht durch leere Testdiagnostik umgehen. Zusätzlich mindestens ein gerätefreier Test mit echter `rclpy.clock.ROSClock`-/TimeSource-Funktionalität oder dokumentiert gleichwertiger tatsächlicher Clock-API für unabhängige Zeitänderung. Der vorhandene Test, der monotonic und ROS gemeinsam verstellt, ersetzt diesen Nachweis nicht.
 
-## 4. Gerätefreie Pflichtnachweise
+Zeige außerdem verbundene Verbraucherfälle: Frische korrekt erzeugte Header bestehen die echte bestehende Guard-/Health-Zeitprüfung auch bei kurzer Zustellverzögerung; eine leicht zukünftige Marke darf nicht unbemerkt zum nächsten Terminalfehler führen. Wiederholt verworfene unsichere Proben werden dagegen nicht als frisch behandelt; die echte bestehende Guard-/Health-Logik reagiert auf das Alter der letzten gültigen Probe. Eine lokale direkte Kopplung echter Komponenten mit sonst gültigen Eingängen genügt; kein kompletter Robotergraf und keine vollständige Biasstart-Kalibrierung für diesen Zeitvertragsnachweis erforderlich.
 
-Nutze vorhandene Unit-/Integrationswerkzeuge. ROS-Graph nur isoliert ohne Geräte-/Motorzugriff; synthetische Sensorszenen und Nav2-Gegenstelle sind erlaubt. Die zu prüfende Karten-/Frontier-/Policy-/Kind-/Gate-Logik muss echt laufen. Keine fest eingesetzten Zielkandidaten oder immer gesunden Portal-/Task-Adapter als Integrationsbeleg.
+Führe die unmittelbar betroffenen bestehenden Raw-/Transport-/Clock-/Health-Regressionen aus; passende HWT-/HOLD-/Kind-/Gate-Regressionen soweit durch den Diff betroffen. Bei lokalen DDS-Tests localhost und die vom jeweiligen Test geforderte isolierte ROS-Domain verwenden. Baue das geänderte Paket und erforderliche echte Abhängigkeiten in einem separaten Präfix. Ein Test mit alten Produktimporten ist ungültig.
 
-1. **Ohne Semantik:** gültige wachsende Karte und aktuelle technische Quellen, keine Portal-/Regionspublisher; autonomes Ziel entsteht. Auch leerer, verspäteter oder widersprüchlicher optionaler Semantikstatus erzeugt keine metrische Fahrentscheidung.
-2. **Beobachtungsschleife:** drei nacheinander aus veränderten Karten abgeleitete Beobachtungsaufgaben im selben Elternauftrag; neue Sicht führt zu erneuter Auswahl, bekannte erledigte Aufgaben werden nicht endlos wiederholt. Eine synthetische offene Verbindung funktioniert ohne Türlabel.
-3. **Blockiertes Ziel:** erste reale Policywahl endet erfolglos, altes Kind terminal, erforderlicher Stillstand/Quellen-/Posecheck, begrenzte Zurückstellung, anderes selbst berechnetes zulässiges Ziel. Tür-/Graph-Attrappen bleiben aus.
-4. **Kriechen/Progress:** kleine Drehbewegungen ohne Aufgabenfortschritt führen nicht zu endlosen Budgetresets; notwendige Vorausrichtung und sinnvoller Transit bleiben zulässig. Timeout-Entscheidungsgrund und verwendeter Snapshot sind nachvollziehbar.
-5. **Kartenübergabe:** häufige harmlose Updates behalten ein weiter gültiges Kind; tatsächliche Hindernis-/Kontextänderung wird wirksam; verspätete alte Arbeit überschreibt keinen neueren Stand.
-6. **HOLD/Cancel:** betroffene HWT-, Gate- und Kindverträge einschließlich verspäteter Actionantwort, erneuter Störung, fehlendem Stillstand und zweitem Kind prüfen. Alte reale Belege bleiben historische Teilnachweise, keine aktuelle Simulationserfolgsmeldung.
-7. **Harte Gegenfälle:** Not-Aus, Nutzerabbruch, fehlende notwendige Sensor-/TF-/Kartenquelle, unzulässiger Scope/Footprint, erfolgloser Cancel, Aktuatorfehler und ausgeschöpftes Budget verhindern unzulässige Weiterfahrt.
-8. **Abschluss/Migration:** nur blockierte oder gefilterte Frontiers, fehlende Daten und unbekannte Restbereiche ergeben keinen Vollabschluss. Bestehende Status-/Speicherkonsumenten verwechseln metrische und semantische Ergebnisse nicht. Alte Strategie bleibt im nicht gewählten Modus unverändert.
+Prüfe, ob die entscheidenden neuen Tests durch die vorhandene CI tatsächlich ausgeführt werden. Falls nötig, ergänze eng den passenden Aufruf/Trigger. Keine allgemeine CI-Neugestaltung. Ein unabhängiger bekannter Baselinefehler wird mit Vorher-/Nachherbeleg separat ausgewiesen; er darf nicht gelöscht, verdeckt übersprungen oder als bestanden gezählt werden.
 
-Zusätzlich vorhandenen historischen Erfolgsdatensatz und aktuellen Fehllauf für Offline-Kandidaten-/Entscheidungsvergleich nutzen, soweit lokal verfügbar. Ein gespeicherter Bag reagiert nicht auf neue Fahrentscheidungen: Replay ist keine geschlossene physische Erkundungsabnahme. Fehlende private Daten nicht als Zwangsvoraussetzung für synthetische Vertragstests behandeln.
+## 6. Abnahme und Lieferung
 
-## 5. Arbeiten und veröffentlichen
+AP-01 ist softwareseitig bestanden, wenn der reproduzierte Projektionsfehler im aktuellen Rawdriver beseitigt ist, Unsicherheit und erkannte echte Zeitbasisfehler getrennt behandelt werden, nach bloßer Unsicherheitsverwerfung gültige Folgeproben wieder verarbeitet werden und bestehende Schutzfristen unverändert wirksam bleiben. Ein bereits nach bestehendem Vertrag terminaler harter Fehler wird dadurch nicht aufgehoben. Betroffene Regressionen und Paketbuild müssen bestehen. Die neue Testabdeckung muss im normalen Projektprüfpfad erreichbar sein.
 
-Ohne Zwischenfreigaben Softwarepaket durcharbeiten. Kleine begründete Reparatur plus gezielte Regression direkt im Paket, keine neue Audit-/Branchkette für jeden Untertest. Bei einem echten Umfangskonflikt genau diesen benennen.
+Liefere den konkreten Code-/Testdiff, kurze Erklärung der Zeitkorrelation und Unsicherheitsgrenze, Vorher-/Nachherbeleg des Gegenbeispiels, tatsächliche Test-/Buildbefehle und Ergebnisse, Quell-/Import-/Profilauflösung sowie Grenzen und Rückfall. Wenn eine Entwicklungsumgebung einen Nachweis verhindert, arbeite alle unabhängigen Teile ab und kennzeichne die verbleibende Abnahme offen; kein erfundenes BESTANDEN.
 
-Keine laufende Roboter-Arbeitskopie wechseln, kein dauerhafter Install und keine Fahrt. Ein separates Build-/Testpräfix ist zulässig. Vor ausgehendem Commit/Push lokale Historie prüfen: gemeldete private Berichtscommits nicht als Vorfahren veröffentlichen. Lokale Daten und Änderungen sichern; kein Force-Push oder destruktiver Reset. Remote-Dokumentstand gezielt übernehmen statt unkontrolliert private lokale Historie zu mergen.
+Erstelle auf dem Arbeitsbranch lokal überprüfbare Commits, soweit die Repositoryumgebung dies erlaubt. Prüfe vor jeder später autorisierten Veröffentlichung die ausgehende Historie auf private Daten. Dieser Auftrag enthält keinen Push, Merge oder Deployment; ein sauberer lokaler Diff mit Commit-IDs genügt als Lieferung. Kein destruktiver Reset.
 
-In derselben vereinbarten Integrationslinie veröffentlichen. MASTERPLAN nicht erneut umschreiben, sofern keine neue Nutzerentscheidung nötig ist. STATUS, AGENTENAUFTRAG und einschlägiges Projektgedächtnis auf tatsächlich erreichten Stand setzen. Inventar/Topicvertrag nur bei realer Änderung ergänzen.
+Aktualisiere STATUS und diesen kanonischen Auftrag am Ende mit Ergebnis und Verweisen. Bewahre den Auftrag als abgeschlossenen Text; überschreibe ihn nicht mit unklaren neuen Imperativen. Kennzeichne ausschließlich den tatsächlich erreichten Status, beispielsweise **AP-01 software_geprüft; Zielsystem und reale Erkundung weiterhin offen**. Behaupte nicht, den historischen Roboterabbruch abschließend erklärt oder die Wohnungserkundung repariert zu haben.
 
-## 6. Paketabschluss
-
-Liefern: geänderte Dateien und Wiederverwendung, tatsächlicher Modus/Profilpfad, isolierter Build, ausgeführte Tests mit Grenzen, Beispiel der verbundenen Ziel-/Blockade-/Folgezielkette, notwendige Rückfalloption und Commit/PR.
-
-Erfolg: **METRISCHER ERKUNDUNGSKERN – GERÄTEFREI INTEGRIERT BESTANDEN.** Das ist kein Stufe-3-Gesamtgrün und kein physischer Raumwechsel.
-
-Falls nicht erfüllt: konkrete erste fehlgeschlagene Funktion, Originalbeleg und verbleibender Implementierungsschritt; kein Sammelbericht „mehr Diagnose nötig“ ohne Zuordnung.
-
-Genau nächster Schritt nach Softwareerfolg: begrenzter Realnachweis derselben metrischen Beobachtungsschleife im vorhandenen LAB-1-Bereich mit tatsächlicher Hindernisfortsetzung und geometrisch zulässigem Durchgang. Bestehende Profile/Budgets als Ausgangspunkt verwenden, Umfang vor Fahrt konkret festlegen, nicht automatisch aus diesem Softwareauftrag starten.
-
-Die [vorige Auftragsdatei](archive/20260930-v1.1/AGENTENAUFTRAG.md) ist vollständig erhalten, aber kein paralleler aktueller Auftrag.
-
-## 7. Beauftragter Realnachweis – im lesenden Vorlauf blockiert
-
-**Auswertung 30.09.2026:** Kandidat `deb075e`, Live-Strategie `metric_frontier`, alte WE-Owner false. Vorlauf blockiert durch reale FC03-Paarzeitüberschreitung (125,870 ms > 120 ms) und unzulässige Startkontur/Route (Startzelle unbekannt, 25/25 Frontiercluster `no_known_free_route`). Kein aktiver Modus, keine Mission, kein zweiter Fahrversuch; A/C nicht bestanden, B nicht aufgetreten. Prozessende und frischer FC03-Stillstand bestätigt. Details und lokale Nachweise: [STATUS §4](STATUS.md#4-softwareabschluss-und-nachweise), ROBOT_TRANSFER. Abschnitte 1–6 bleiben abgeschlossene Softwarehistorie. Die folgenden Grenzen beschreiben den beauftragten, nicht gefahrenen Realnachweis und autorisieren keine automatische Wiederholung.
-
-**Umfang:** eine begrenzte metrische Beobachtungs-/Fortsetzungsschleife im bereits freigegebenen LAB-1-Bereich. Keine reale HWT-Injektion, Sonderbrücke, neue Umgebung oder zusätzliche Testreihe. Ziel: aufeinanderfolgende autonome Beobachtungspositionen, begrenzte Alternative nach unerreichter Aufgabe bei gesundem Betriebszustand, danach Weitererkundung über eine tatsächlich zulässige offene Verbindung. Keine Pflicht-Portal-/Raum-ID. Das ist noch keine vollständige Wohnungsabnahme.
-
-**Vorlauf innerhalb dieses einen Versuchs:** vorhandene Runtime-Präfixe und Quellen aus ROBOT_TRANSFER auflösen; Kandidat separat bauen und bytegleich prüfen, nicht permanent installieren. Bekannte LAB-1-Erklärung weiterverwenden. Bestehenden `active_drive=false`-Pfad zuerst technisch prüfen; keinen Aktorschreibprozess starten. Tatsächliche neue Startkarte/Pose, Scopepolygon, Kartenmanager-Fingerprint und Sitzung lokal binden. Noch keine Wohnungskoordinaten in einem Repositoryprofil speichern. Aktuelle Rohkarte/Costmap müssen den vollen Footprint und die beabsichtigten Routen tragen; andernfalls kein aktiver Beginn. Die Offlinebilder haben diese Voraussetzung häufig **nicht** erfüllt und geben keine Fahrfreigabe.
-
-**Profil:** vorhandenes Produktbasisprofil plus explizites metrisches Overlay und lokal gemessene Scopebindung. Initialscan und Vorausrichtung wie im bestehenden Profil (Rundblick maximal 280 s, 0,08 rad/s), keine direkten Brücken/Coverage/Rückkehr. Aufgabenfrist bleibt höchstens vorhandene 150 s; für diesen einzelnen Realnachweis Gesamtfrist 900 s, höchstens sechs Aufgabenversuche und drei Fehlversuche. Diese engeren Versuchsgrenzen sind kein neuer allgemeiner Produktstandard. Technische Frische-, HOLD-, Kollisions- und Geschwindigkeitsgrenzen bleiben bestehen. Elternauftrag nur über Mission Manager/BT; keine einzeln injizierten Nav2-Ziele.
-
-**Nachweis:** lokale Aufzeichnung von Rohkarte, Costmap, Pose, Nav2-UUID/Terminalzustand, Explorer-Kette/Snapshots, Encoder-/HWT-/VL53-/Gate-Status und Ausgangsbefehlen. Aktuelle Entscheidung erst zulässiger Weg, dann Rangfolge; nach unerreichter Aufgabe terminales Kind, bestätigter Stillstand und gesunde Quellen, dann anderes wirklich rasterberechnetes Ziel. Beobachter ordnet reale Hindernissituation und Verbindung zu; keine Ursache aus Timeout allein ableiten. Drei erreichte Beobachtungsaufgaben im selben Elternauftrag, neue Kartenmessungen, mindestens eine tatsächlich geometrisch zulässige Passage mit anschließender neuer Aufgabe sind das positive Ziel; Hindernisfortsetzung nur bei sicherem aktuellen Weg. Bei fehlender zulässiger Alternative/Passage als konkrete Nachweislücke enden, keine Geometrie durch direkte Befehle umgehen.
-
-**Ende:** spätestens bei einer Versuchsgrenze, hartem Quellen-/Aktuator-/Posefehler, unbestätigtem Cancel oder Nutzerabbruch kontrolliert stoppen. Keine automatische Wiederanfahrt bei diesen Gegenfällen. Launch-Kinder nach Kartierungs-README geordnet einzeln beenden, keine Prozessgruppe signalisieren. Ausgang null, Encoderstillstand, terminale Kinder und freie Gerätehandles dokumentieren. Ergebnis als Teilstand/Nachweis mit Grenzen; keine automatische Speicherfreigabe oder Stufe-3-Gesamtgrün. Kein automatischer zweiter Realversuch aus diesem Dokument.
-
-
-## 8. Abschluss des Mast-/Encoder-Korrekturauftrags (01.10.2026)
-
-Nutzerauftrag vom 30.09., Basis `0efb7e4`, funktionaler Stand `8be0709`.
-Zwei getrennte Korrekturen im bestehenden Explorer/passiven Reader samt
-betroffenen Fusion-/Gate-Verbrauchern; keine neue Mastmaske oder neuer Explorer.
-Operatorzuordnung OAK-Kameramast übernommen. Ganze unbekannte Eigenkörperzellen
-privat begrenzt; Außen-/Padding-/Schwenkraum bleibt unbekannt und gesperrt.
-Isolierter Timing-Ausreißer hat belegte Kontinuität und zwei neue echte Paare
-statt Latch-Löschung. Harte Lücke/Portverlust/ungültige Daten bleiben terminal.
-Startstaffelung und passive Quellencallbacks gezielt nach Messung korrigiert.
-
-1.340 Regressionen, isolierter Achtpaketbuild und verbundener positiver
-`mast_start` bestanden. Passiver realer Vollstack gemessen: 4.284 Paarproben,
-keine 120-ms-Paarüberschreitung; kurzer HWT-HOLD erfolgreich wiederhergestellt,
-später Gate-Radquellen-Frische terminal. Start-/Drehkontur zugleich unzulässig,
-15 reale Cluster ohne zulässige Route. Keine reale Mission, keine Fahrt;
-A/B/C nicht abgenommen. Original-/Zwischenläufe und Messgrenzen im STATUS,
-keine rückwirkende Gesamtfreigabe.
-
-**Einzige Voraussetzung vor dem bereits beauftragten begrenzten Realnachweis:**
-ein gleichzeitig gültiger gemeinsamer Startnachweis mit sensorisch belegter
-voller gepaddeter Start-/Schwenkgeometrie und zulässigem Rasterweg sowie tatsächlicher
-Quellenfrische bis zum Verbraucher ohne terminale Verriegelung. Die beiden
-Ablehnungsprädikate bleiben ausdrücklich getrennt; kein identischer Wiederholungs-
-lauf ohne neue Evidenz und keine Bewegung zur Umgehung des Startvertrags.
-
-Der verbleibende Produktpfad bleibt Mission Manager → BT → metric_frontier → Nav2,
-900 s gesamt / 150 s je Aufgabe / höchstens 6 Aufgabenversuche und 3 Fehlversuche,
-bestehender LAB-1-Scope. Kein automatischer weiterer Fahrversuch, keine HWT-Injektion,
-Sonderbrücke, neuen Räume, Merge oder permanenter Install. Prozesse beendet,
-Befehle und FC03-Endwerte null. Dieser Abschnitt ist Abschluss und Voraussetzung,
-kein neues Masterplanprojekt.
-
-## 9. Abschluss: reale Startfähigkeit bis zum Entscheider (01.10.2026)
-
-Nutzerauftrag auf Ausgangsstand `cf55cea6d03f513ca062479daef3b2303d0041d9`,
-bestehender Branch/PR #105, MASTERPLAN v1.2 und LAB-1 unverändert.
-Eigener atomarer Beleg für jeden Fehlerübergang, historisches `first_fault`
-erhalten; Originalradnachricht, Callback- und Uhrbezug, konkretes Prädikat und
-vorherige Recovery erfassen. Diagnose ohne blockierende Ausgabe am Entscheider.
-Reproduzieren und nur belegte Verzögerung/Zuordnung minimal korrigieren;
-120-ms-Paar-/180-ms-Lückengrenzen, echtes Stale-Stoppen und getrennte aktive/
-passive Quellenverträge erhalten. Keine Neustart-/Latch-Reset-Lösung.
-
-Gespeicherte reale Starts durch private Körpermaske, Clearance/Erreichbarkeit,
-volle gepaddete Kontur, Costmap und tatsächlichen Anfang (Rundblick,
-Vorausrichtung, Route) verfolgen. Ganze/teilweise Körperzellen, Padding/Reserve,
-unbeobachteten Außenraum, Hindernisse/Inflation getrennt belegen. Nur bewiesene
-Darstellungsfehler korrigieren. Andernfalls genau fehlende Fläche und vorhandene
-Beobachtungsmöglichkeit benennen; keine künstliche Außenraumfreigabe.
-
-Regressionen A–D aus Nutzerauftrag: beide Fehler nach Recovery, DDS/Last und
-harte Quellengegenfälle, realistischer Produktanfang/Rasterränder, bestehende
-Not-Aus/HOLD/Stillstands-/Einzelbesitzverträge. Danach ein gemeinsamer rein
-lesender Vollstacklauf mit **720 s ab Launchwurzel** einschließlich Startlast
-und früher späten Gateverriegelungen. Der zweite Lauf reproduzierte einen neuen
-konkreten Empfangsfehler: drei neuere Radmessungen im Recorder vor dem
-Gateentscheid, aber noch die ältere Probe im Gate (215,95 ms Messalter).
-Das dritte Fenster verriegelte trotz getrennter Radgruppe erneut (186,34 ms).
-Jetzt die tatsächlich wartende DDS-Radprobe geschützt und ohne Warten direkt
-vor der Gateentscheidung übernehmen; ein abschließendes viertes 720-s-Fenster.
-Danach keine weitere automatische Vorlaufserie in diesem Paket;
-keine identische Neustartserie. Kartenbindung und
-Quellen im selben Start prüfen.
-
-Nur bei technisch gültigem gemeinsamem Zustand genau eine bestehende Mission
-MM → BT → metric_frontier → Nav2 → Schutzkette → Basis: 900 s insgesamt,
-150 s/Aufgabe, 6 Versuche/3 Fehlschläge, keine Budgetresets oder konkurrierenden
-Busbesitzer. Andernfalls präzise belegte verbleibende Voraussetzung ausweisen.
-Temporärer isolierter Install, Hauptkopie unverändert; committen/pushen ohne
-private Raumdaten oder private Vorfahren, Merge oder dauerhaften Installwechsel.
-Rückfall: geordnet ohne Mission stoppen und dieses temporäre Overlay weglassen.
-
-**Auswertung:** Begrenztes Paket beendet, Funktionskandidat `8f5eeb4`.
-1.469 Regressionen bestanden; tatsächliche wartende Radübernahme am bestehenden
-Gate, konsistenter Uhr-/Ereignisbeleg und ganze Körperzellen korrigiert.
-Vier 720-s-Fenster nach jeweils neuer Evidenz, keine identische Neustartserie.
-Letzter gemeinsamer Vorlauf negativ: nach zwei realen HWT-Recoveries echte
-120,874-ms-Paarverletzung und 212,127-ms-alte letzte zulässige Probe; volle
-Start-/Rundblickgeometrie zugleich 211 unbekannte Zellen / 0,188420 m² Außenanteil.
-Keine Mission, kein aktiver Buswechsel. Aktueller konkreter Rest: bestehender
-FC03-Quellenpfad muss seine unveränderten 120-/180-ms-Deadlines real einhalten;
-weitergehende Latenzabsicherung separat begrenzen. Geometrisch die konkrete
-Zellmenge aus separat hergestellter stationärer LiDAR-Sicht belegen; hierfür
-nötiges manuelles Umsetzen bei deaktivierten Antrieben liegt außerhalb Pakets.
-Keine allgemeine Platzfrage, keine künstliche Freigabe, keine weitere automatische
-Vorlauf-/Fahrserie. Originale, Grenzen der vollständigen synthetischen Rundblick-
-probe und tatsächliche Endwerte im STATUS-Abschluss. Prozesse und Gerätehandles
-frei, frische FC03-Endwerte null. Temporäre Runtime, Hauptkopie unverändert;
-Rückfall beide neuen Overlays weglassen. Kein Stufe-3-Gesamtgrün.
-
-
-## 10. Aktueller Auftrag – Präzisierung 01.10.2026
-
-Ausgang `d9894d2`, letzte reale Funktionsprüfung `8f5eeb4`, bestehender Branch/PR #105.
-Adaptiven Start innerhalb `metric_frontier` implementieren: zulässiger nützlicher
-Rundblick, sonst echte autonome Beobachtungsposition aus Frontier-/Annäherungskern,
-sonst begründeter Warte-/Teilstand. Keine Pflichtrotation vor anderem gültigen Ziel,
-kein zweiter Navigator, keine vorgegebenen Ziele, kein manueller Bootstrap.
-Startkontur, nötige Controllerdrehungen, volle Route und Zielorientierung prüfen.
-Körperbeleg darf unbekanntes Padding/Reserve oder neue Hindernisse nicht entfernen.
-
-Encoder-Messwertgültigkeit (120 ms), Bewegungsfrische und Odometriekontinuität
-(180 ms) von begrenztem Auftragserhalt trennen. Intakte Verbindung darf bounded
-weitergelesen werden; Diagnosewerte sind keine gültige Odometrie. Exakten alten
-120,874265-ms-/212,127149-ms-Fall anhand Originaldiagnose reproduzieren. Zwei gute
-Paare, spätere 0 rpm oder ein Reset beweisen keine Lückenkontinuität. Unbelegte
-Kontinuität bleibt Hilfebedarf; harte Identitäts-/Zähler-/Zeit-/Aktuatorfehler bleiben
-hart. Derselbe absolute Eltern-/Aufgaben-/Recoveryzähler bleibt erhalten.
-
-Verbundene Softwarefälle A–H: adaptive Folgeziele und später zulässiger Rundblick;
-keine Bewegung bei unbekannter Reserve/ungültiger Ausrichtung; Timing-HOLD mit
-belegter Kontinuität; echte >180-ms-Lücke; getrennte HWT-/Radereignisse;
-Budget/Stillstand/Kindterminal/ESTOP/Cancel; harmlose und ungültige Kartenupdates.
-Negativer synthetischer voller 2π-Dauerlauf bleibt dokumentiert.
-
-Isoliert bauen, aufgelöste Bytes/Profile prüfen. Ein gemeinsames reales Read-only-
-Fenster **720 s** einschließlich spätem Betrieb. Nur bei gültigen Quellen am echten
-Verbraucher UND zulässiger zuerst gewählter Bewegung geordnet auf aktiv wechseln
-und neu prüfen: maximal eine Mission **900 s / 150 s je Aufgabe / 6 Versuche /
-3 Fehlschläge**, inklusive Bootstrap/HOLD, ohne Budgetreset. Keine Injektion,
-Bus-Doppelbesitzer, Fremdziele, private Daten/Vorfahren, Merge oder permanenter
-Installwechsel. Abschluss getrennt nach Software, realem Preflight und Mission.
-**System diesmal eingeschaltet lassen**, vorherige Shutdownanweisung aufgehoben.
-
-**Abschluss dieses Pakets:** Funktionskandidat `fd883fd`, 1.493 Regressionen,
-isolierter Fünfpaketbuild und verbundene adaptive Start-/Encoder-HOLD-Fälle
-einschließlich harter Gegenfälle bestanden. Im eingeschalteten Scanprofil
-erste berechnete Beobachtung und spätere Vollscan-Zulassung belegt; volle
-2π-Dauerprobe weiter negativ, keine Vollscanabnahme. Readerdiagnose 2 s / zwei
-Versuche, Verbraucher-Recovery 5 s / zwei je Quellenklasse, 120/180 ms erhalten.
-Originalfall exakt reproduziert und echte >180-ms-Lücke weiterhin gesperrt.
-
-Ein tatsächlicher 720,016-s-Vorlauf: zwei HWT-Recoveries, dritte Störung nach
-583,261 s `hwt_recovery_attempt_limit`; Radreader bis Fensterende 13.921 Paare
-ohne Timingfehler/Rebase. Unabhängig davon Anfangskontur 33 unbekannte Zellen,
-0,021089 m² Außenanteil, kein zulässiger autonomer Startkandidat. **Keine reale
-Mission und kein aktiver Buswechsel.** Rein lesender Abschlussnachlauf für
-Snapshot/geordneten Stopp 185,994 s getrennt vom 720-s-Messfenster; keine zweite
-Startserie. Quellenbudget und Bewegungsgeometrie sind die technischen Blocker,
-keine ausstehende allgemeine Freigabe. Ein weiterer Versuch wird nicht gestartet.
-
-Prozesse beendet, echte Gerätehandles frei, zwölf frische FC03-Endpaare
-Position/RPM null. Hauptkopie sauber/unverändert, keine dauerhafte Installation,
-private Daten nur lokal. Rückfall temporäres Fünfpaketoverlay weglassen, ohne
-Mission `active_drive=false` / `enable_auto_explore=false`. Der historische
-Restumfang aus §9 (211 Sweepzellen/manuelle Beobachtungsposition) ist keine
-aktuelle Bootstrapanforderung. Vollständiges Ergebnis und Einzelgrenzen im
-[aktuellen STATUS-Abschluss](STATUS.md#historischer-abschluss-adaptiver-start-und-begrenzte-encoder-recovery-01102026).
-Stufe 3 offen, **System bleibt eingeschaltet**.
-
-## 11. Aktueller Abschluss – HWT-Entwicklungsvertrag und Start-Egress
-
-Ausgang `2a0e19d`, gleiche PR #105/Branch, MASTERPLAN v1.2/LAB-1.
-HWT-Polltransport von tatsächlicher Datenvalidität und Bewegung unterscheiden;
-explizites Opt-in mit 50-ms-Antwortfrist/300-ms-Rohdatenfrische. Einzelner
-fehlgeschlagener Poll mit noch gültigen frischen Originaldaten verbraucht
-keinen HOLD. Diagnose Header/Nutzdaten/Teilantwort/verspätete vollständige
-Antwort/Verarbeitung nach Frist anhand tatsächlicher Bytes/Zeiten. Maximal
-zwei echte HWT-HOLDs innerhalb 60 s statt Lebensdauerlimit, jedes höchstens
-5 s; keine Rücksetzung durch Task-/Kind-IDs. Legacy und Encoder 120/180 ms
-erhalten. Ganze HWT-Health/Gate/Explorer-Kette konsistent anpassen; Hard Fault,
-ESTOP/Cancel, unbestätigtes Kind und unbelegte Kontinuität bleiben gesperrt.
-
-Start-Egress im vorhandenen Explorer: konkrete autonome Kandidaten anhand
-Startkörper, Padding, Reserve und kontinuierlichem tatsächlichem Sweep prüfen.
-Unbekannter Startbestand nur beim Wegführen ohne zusätzliche Beanspruchung,
-Annäherung oder Wiederbetreten tolerieren; keine globale Freigabeliste.
-ComputePathToPose/RPP, Vorausrichtung, gesamte Route, Zielorientierung und
-Goal-Toleranz erhalten. Softwarefälle A–J und bestehende Schutzverträge prüfen.
-Kein manueller Bootstrap/Goal-Sender oder neue Health-/Navigationsarchitektur.
-
-Nach isoliertem Build/Manifest genau kurzer normaler Startnachweis 30–60 s,
-kein neuer 720-s-Passivtest. Bei gültigen Quellen/Scope/Pose/Karte/konkretem
-Egress regulär aktiver Einzelbusbesitzer und reale MM→BT→metric_frontier→Nav2→
-Schutzkette-Mission: 900 s gesamt, 150 s je Aufgabe, 6 Versuche/3 Fehler,
-bestehende Geschwindigkeiten/Collision Monitor/VL53, keine Fehlerinjektion.
-Autonome erreichte Folgeziele/Kartenevidenz, natürlicher HOLD, Zielmisserfolg/
-Alternative und erreichbare Passage getrennt nachweisen; Goal-Annahme allein
-ist kein Erfolg. Nach Ende ROS-Wurzeln einzeln stoppen/FC03-Endzustand sichern,
-**Rechner laut Nutzerantwort eingeschaltet lassen**. Im bestehenden PR
-veröffentlichen; private Daten/Vorfahren lokal, kein Merge/Force-Push/Installwechsel.
-
-**Ergebnis dieses Auftrags:** Funktionsstand `a6f31bf`, Ausgang `2a0e19d`.
-Softwarefälle A–J und Schutzregressionen bestanden; gerätefrei drei erreichte
-autonome Ziele mit Beobachtungen sowie begrenztes HOLD/ACK/Resume desselben
-Ziels. Reale Schlussmessung 60,008 s: HEALTHY nach 36,379 s, terminale
-hostseitige Messzeitprüfung nach 54,880 s. Unabhängig davon 22 aktuelle autonome
-Startkandidaten, alle geometrisch abgelehnt. Kein aktiver Buswechsel/Goal/
-Mission, keine reale Ziel-/Passagen-/Recoveryabnahme. Kein Ersatz durch
-Vorlaufserie oder manuelles Ziel. Erster kurzer Entwicklungsstart mit anderer
-Portprüfungsimplementierung wegen fehlender Kalibrierung separat negativ.
-Runtime 100 Dateien bytegleich, Raw 50/300 ms und 13 native Controllerparameter
-gelesen; Live-Explorer-Parameterabfrage während Initialisierung nicht verfügbar.
-Gesamtorchestrierung einschließlich Stopp 83,709 s getrennt vom Messfenster.
-ROS-Wurzeln einzeln beendet, Gerätehandles frei, zwölf FC03-Endpaare null;
-Hauptkopie unverändert, Rechner eingeschaltet. Vollständige Ergebnisse A–F,
-private Evidenzpfade und Rückfall im [aktuellen Abschluss](STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
-**Stufe 3 offen:** monotone originale Zeitzuordnung und tatsächliche erste
-zulässige Trajektorie sind konkrete technische Restgrenzen.
+**Genau nächster Schritt nach Erfolg:** AP-02 als begrenzten Folgeauftrag gemäß MASTERPLAN vorbereiten, mit konkreten betroffenen Pfaden und Abnahmekriterien für Kartenlebenszyklus und Quellenvertrag. Die Vorbereitung ist Übergabe, keine automatische Ausführung von AP-02. Bei Nichtbestehen stattdessen den kleinsten nötigen AP-01-Rest benennen. Keine Fahrt aus diesem Auftrag ableiten.
