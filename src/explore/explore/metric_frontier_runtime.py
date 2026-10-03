@@ -30,7 +30,7 @@ from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
-    lookahead_point, StartEgressEvidence, rpp_trajectory)
+    lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw)
 
 
 class MetricFrontierRuntime:
@@ -58,6 +58,13 @@ class MetricFrontierRuntime:
                 description='adaptive or configured_scan; fixed for this process/mission.')).value
         if self._metric_start_strategy not in ('adaptive', 'configured_scan'):
             raise ValueError('Unknown metric_start_strategy')
+        self._metric_path_validation = self.declare_parameter(
+            'metric_path_validation', 'conservative', ParameterDescriptor(read_only=True)).value
+        if self._metric_path_validation not in ('conservative', 'rpp_rollout'):
+            raise ValueError('Unknown metric_path_validation')
+        if self._metric_path_validation == 'rpp_rollout' and (
+                not self._prealign_enabled or not 0. < self._prealign_handoff_tolerance <= .02):
+            raise ValueError('rpp_rollout needs enabled prealignment within 0.02 rad')
         self._metric_lock = threading.RLock()
         self._metric_hold_lock = threading.RLock()
         self._metric_correlator = MapManagerStatusCorrelator(
@@ -566,6 +573,26 @@ class MetricFrontierRuntime:
     def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
+        rollout = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+        if rollout:
+            # The opt-in closed-loop model retains the measured padded body,
+            # half-cell diagonal and 10-mm interpolation reserve. Its extra
+            # 20-mm/0.05-rad tracking band is qualified only for the documented
+            # synthetic plant; AP-06 must qualify real hardware separately.
+            try:
+                trajectory = rpp_trajectory(route, pose,
+                    min(grid.info.resolution, costmap.info.resolution),
+                    getattr(self, '_prealign_handoff_tolerance', .17),
+                    self._metric_bounds, prealign_to_first_leg=True)
+            except ValueError as error:
+                self._metric_last_route_rejection = str(error)
+                return None
+            if not all(footprint_clear(*p, g, allowed, self._world_to_grid,
+                    self._grid_to_world, self._metric_bounds,
+                    heading_half_angle=.05, center_deviation_m=.02)
+                    for p in trajectory for g, allowed in ((grid, known), (costmap, cost_known))):
+                self._metric_last_route_rejection = 'footprint_sweep_invalid'
+                return None
         def check(x, y, yaw, g, allowed):
             # RPP may correct heading before/during translation (real profile
             # threshold .35 rad). Validate the entire bounded correction
@@ -579,10 +606,10 @@ class MetricFrontierRuntime:
                                    # inside the same heading envelope. Preserve
                                    # all existing raster/braking reserves.
                                    center_deviation_m=.4/2*math.tan(.35/2))
-        if not footprint_route_clear(route, pose[2], ((grid,known),(costmap,cost_known)),check):
+        if not rollout and not footprint_route_clear(route, pose[2], ((grid,known),(costmap,cost_known)),check):
             self._metric_last_route_rejection='footprint_sweep_invalid'
             return None
-        for index in range(1,len(route)-1):
+        for index in range(1, 1 if rollout else len(route)-1):
             before, corner = route[index-1:index+1]
             length = math.dist(before,corner)
             if length <= 1e-6:
@@ -599,8 +626,7 @@ class MetricFrontierRuntime:
                     self._metric_last_route_rejection='controller_lookahead_sweep_invalid'
                     return None
         # RPP may rotate anywhere inside the actual goal-position tolerance.
-        arrival_yaw = pose[2] if len(route)==1 else math.atan2(
-            route[-1][1]-route[-2][1],route[-1][0]-route[-2][0])
+        arrival_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
         final_yaw = arrival_yaw if target_yaw is None else target_yaw
         delta = math.atan2(math.sin(final_yaw-arrival_yaw),math.cos(final_yaw-arrival_yaw))
         steps = max(1,math.ceil(abs(delta)/.05))
@@ -612,6 +638,27 @@ class MetricFrontierRuntime:
             self._metric_last_route_rejection='goal_orientation_invalid'
             return None
         self._metric_last_route_rejection=None
+        return route
+
+    def _metric_nav2_proposal(self, inputs, target, target_yaw=None):
+        """Known-space reachability/goal test only, never movement authority.
+
+        Nav2 can choose a longer inflated-cost route than our shortest raster
+        path. Do not ban its target because that single proposal cannot turn.
+        Unknown exterior and unsafe goal tolerance remain hard exclusions.
+        """
+        grid, _, pose, known, _, _, _ = inputs
+        sc, sr = self._world_to_grid(*pose[:2], grid.info)
+        tc, tr = self._world_to_grid(*target, grid.info)
+        cells = route_cells(known, (sr, sc), (tr, tc))
+        if cells is None:
+            return None
+        route = (pose[:2],) + tuple(self._grid_to_world(c, r, grid.info) for r, c in cells) + (target,)
+        arrival = route_arrival_yaw(route, pose[2], grid.info.resolution)
+        # Goal proof without pretending to validate the rejected connection.
+        goal_inputs = (grid, inputs[1], (*target, arrival), *inputs[3:])
+        if self._metric_standard_waypoints_clear(goal_inputs, (target,), target_yaw) is None:
+            return None
         return route
 
     def _metric_work_context(self):
@@ -708,6 +755,11 @@ class MetricFrontierRuntime:
             'goal_checker_plugins':('general_goal_checker',),'controller_plugins':('FollowPath',),
             'FollowPath.plugin':'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController',
             'general_goal_checker.plugin':'nav2_controller::SimpleGoalChecker'}
+        if getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout':
+            # The measured synthetic tracking band also depends on sampling
+            # and response limits, not only on the geometric carrot law.
+            expected.update({'controller_frequency':20.,'FollowPath.desired_linear_vel':.10,
+                'FollowPath.rotate_to_heading_angular_vel':.2,'FollowPath.max_angular_accel':2.})
         client = self._metric_controller_params
         if not client.wait_for_service(timeout_sec=1.0):
             return False
@@ -853,6 +905,7 @@ class MetricFrontierRuntime:
                 if getattr(self,'_metric_start_egress_enabled',False) else
                 self._frontier_approach_goal(f, pose[:2], grid))
             route = None if goal is None else self._metric_route(inputs, goal)
+            proposal = False
             if goal is not None and route is None:
                 # The historic circular clearance may admit the base centre
                 # while the rotated asymmetric front touches unknown. Search
@@ -866,9 +919,17 @@ class MetricFrontierRuntime:
                         distance = min(step*grid.info.resolution,self._goal_search_m)
                         alternative = (goal[0]+distance*dx/length,goal[1]+distance*dy/length)
                         alternative_route = self._metric_route(inputs,alternative)
+                        if (alternative_route is None
+                                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                            alternative_route = self._metric_nav2_proposal(inputs, alternative)
+                            proposal = alternative_route is not None
                         if alternative_route is not None:
                             goal,route = alternative,alternative_route
                             break
+            if (goal is not None and route is None
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                route = self._metric_nav2_proposal(inputs, goal)
+                proposal = route is not None
             if route is None or math.dist(goal, pose[:2]) < self._min_goal_dist_m:
                 stats['unsafe'] += 1
                 reason=('approach_unavailable' if goal is None else
@@ -886,9 +947,9 @@ class MetricFrontierRuntime:
                 continue
             length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
             cost = self._potential_scale*length-self._gain_scale*f.size*grid.info.resolution+self._heading_scale*error
-            target_yaw = math.atan2(route[-1][1]-route[-2][1],route[-1][0]-route[-2][0])
+            target_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
             candidates.append(MetricCandidate(key,*goal,target_yaw,(f.cx,f.cy),route,length,cost,
-                                              correlation.fingerprint,correlation.map_revision))
+                                              correlation.fingerprint,correlation.map_revision,proposal))
         candidates.sort(key=lambda candidate:(candidate.cost,candidate.task_id))
         stats['accepted'] = len(candidates)
         self._frontier_rank_stats = stats
@@ -956,10 +1017,19 @@ class MetricFrontierRuntime:
         if self._metric_active is None:
             return False
         try:
-            return self._metric_route(self._metric_inputs(active=True),
-                                      (self._metric_active.x,self._metric_active.y),self._metric_active.yaw) is not None
+            return self._metric_navigation_geometry_ready(
+                self._metric_inputs(active=True), self._metric_active)
         except Exception:
             return False
+
+    def _metric_navigation_geometry_ready(self, inputs, target):
+        # Once a real path exists, that path is authoritative. Rechecking an
+        # unrelated shortest eigenroute would cancel a valid longer detour.
+        if self._metric_nav_path is not None:
+            return self._metric_validate_nav_plan(inputs, self._metric_nav_path, target) is not None
+        if target.requires_nav2_plan:
+            return self._metric_nav2_proposal(inputs, (target.x, target.y), target.yaw) is not None
+        return self._metric_route(inputs, (target.x, target.y), target.yaw) is not None
 
     def _execute_metric_frontier(self, goal_handle, overall_timeout, min_frontier):
         result = ExploreArea.Result()
@@ -1165,12 +1235,8 @@ class MetricFrontierRuntime:
                             if math.dist(current[2][:2],last_pose[0][:2]) > .35+.2*(now-last_pose[1]):
                                 stop_reason[0]='pose_discontinuity'
                             last_pose[:] = [current[2],now]
-                            if self._metric_route(current,(pending.x,pending.y),pending.yaw) is None:
+                            if not self._metric_navigation_geometry_ready(current, pending):
                                 self._metric_status['route_rejection']=self._metric_last_route_rejection
-                                stop_reason[0]='route_invalidated'
-                            if (self._metric_nav_path is not None and
-                                    self._metric_validate_nav_plan(current,self._metric_nav_path,pending) is None):
-                                self._metric_status['nav2_plan_rejection']=self._metric_last_route_rejection
                                 stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)

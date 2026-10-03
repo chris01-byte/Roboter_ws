@@ -14,6 +14,7 @@ on:
       - 'src/robot_interfaces/**'
       - 'src/mission_manager/**'
       - 'tools/sensorfusion/we_hwt601_process_smoke.py'
+      - 'tools/simulation/ap03_nav2_closed_loop.py'
       - '.github/workflows/hwt601-we.yml'
   push:
     branches: ['codex/we1-hwt601-fusion']
@@ -59,7 +60,8 @@ jobs:
           source install/setup.bash
           export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=227
           python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
-            src/explore/test/test_metric_frontier.py src/explore/test/test_map_status_adapter.py \
+            src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
+            src/explore/test/test_map_status_adapter.py \
             src/explore/test/test_raw_map_portal_adapter.py \
             src/amadeus_map_identity/test src/robot_map_manager/test
       - name: Real EKF prediction must not mask missing raw sources
@@ -69,3 +71,36 @@ jobs:
           source install/setup.bash
           python3 tools/sensorfusion/we_hwt601_process_smoke.py --drop raw
           python3 tools/sensorfusion/we_hwt601_process_smoke.py --drop wheel
+
+  ap03_closed_loop:
+    runs-on: ubuntu-22.04
+    container:
+      image: ros:humble-ros-base-jammy
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install real Nav2 plugins and simulation dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3-numpy python3-scipy \
+            python3-yaml python3-pytest python3-serial python3-pip \
+            ros-humble-nav2-planner ros-humble-nav2-navfn-planner \
+            ros-humble-nav2-controller ros-humble-nav2-regulated-pure-pursuit-controller \
+            ros-humble-tf2-geometry-msgs ros-humble-sensor-msgs-py
+          python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+      - name: Build current product and run isolated closed synthetic world
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --base-paths src/robot_interfaces src/base_hardware \
+            src/robot_state_estimation src/amadeus_map_identity src/robot_map_manager \
+            src/explore src/robot_navigation src/mission_manager
+          source install/setup.bash
+          export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=228
+          python3 tools/simulation/ap03_nav2_closed_loop.py --repo "$PWD" --output /tmp/ap03-world
+      - name: Preserve action logs, paths and independent measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ap03-closed-loop
+          path: /tmp/ap03-world

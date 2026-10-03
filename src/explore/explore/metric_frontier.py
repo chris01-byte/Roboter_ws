@@ -25,6 +25,9 @@ class MetricCandidate:
     cost: float
     fingerprint: str
     revision: int
+    # Reachability proposal only; Nav2's actual path must pass the chassis
+    # and controller proof before prealignment or any child movement.
+    requires_nav2_plan: bool = False
 
 
 @dataclass
@@ -227,6 +230,19 @@ def lookahead_point(point, remaining_route, distance_m):
             return previous[0]+fraction*dx,previous[1]+fraction*dy
         previous=endpoint
     return previous
+
+
+def route_arrival_yaw(route, initial_yaw, resolution):
+    """Ignore sub-half-cell raster/continuous joins when choosing goal yaw.
+
+    A tiny connector from the last cell centre to the continuous endpoint
+    describes discretization, not a new 90/180-degree arrival manoeuvre.
+    """
+    target=route[-1]
+    for point in reversed(route[:-1]):
+        if math.dist(point,target)>=max(1e-6,resolution/2):
+            return math.atan2(target[1]-point[1],target[0]-point[0])
+    return initial_yaw
 
 
 def _clip_cell(polygon, row, col):
@@ -436,7 +452,7 @@ class StartEgressEvidence:
 
 
 def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
-                   bounds=(-.13,.33,-.25,.25)):
+                   bounds=(-.13,.33,-.25,.25), *, prealign_to_first_leg=False):
     """Roll out installed RPP's forward geometric law, with original reserves.
 
     A real plan is mandatory before execution. Fixed .4 m interpolated carrot,
@@ -450,8 +466,10 @@ def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
         max(abs(bounds[2]),abs(bounds[3]))+reserve)
     turn_step=min(.01,.004/radius)
     if len(route)<2:return out
-    # Explorer's real prealignment points at the goal, before RPP takes over.
-    initial=math.atan2(route[-1][1]-y,route[-1][0]-x)
+    # The metric owner aligns to the first actual Nav2 leg. Preserve the
+    # historical goal-bearing rollout for callers using its original mode.
+    leg=route[1] if prealign_to_first_leg else route[-1]
+    initial=math.atan2(leg[1]-y,leg[0]-x)
     error=math.atan2(math.sin(initial-yaw),math.cos(initial-yaw))
     if abs(error)>prealign_tolerance:
         n=max(1,math.ceil(abs(error)/turn_step))
