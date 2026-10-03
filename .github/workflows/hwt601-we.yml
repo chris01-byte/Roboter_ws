@@ -14,6 +14,7 @@ on:
       - 'src/robot_interfaces/**'
       - 'src/mission_manager/**'
       - 'src/bt_orchestrator/**'
+      - 'src/vl53_near_field/**'
       - 'tools/sensorfusion/we_hwt601_process_smoke.py'
       - 'tools/simulation/ap03_nav2_closed_loop.py'
       - 'tools/simulation/ap06*'
@@ -48,7 +49,7 @@ jobs:
           source /opt/ros/humble/setup.bash
           colcon build --base-paths src/robot_interfaces src/base_hardware \
             src/robot_state_estimation src/amadeus_map_identity src/robot_map_manager \
-            src/explore src/robot_navigation src/mission_manager
+            src/explore src/robot_navigation src/mission_manager src/vl53_near_field
       - name: Test real source contract and launch ownership without devices
         shell: bash
         run: |
@@ -70,12 +71,13 @@ jobs:
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \
+            src/explore/test/test_metric_planning_stop_reason.py \
             tools/simulation/test_ap06_world.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \
             src/explore/test/test_raw_map_portal_adapter.py \
-            src/amadeus_map_identity/test src/robot_map_manager/test
+            src/amadeus_map_identity/test src/robot_map_manager/test src/vl53_near_field/test
       - name: Real EKF prediction must not mask missing raw sources
         shell: bash
         run: |
