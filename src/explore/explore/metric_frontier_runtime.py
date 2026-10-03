@@ -38,7 +38,8 @@ from .metric_checkpoint import validate_checkpoint, policy_state, restore_policy
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
-    lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw)
+    lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw,
+    route_departure_point)
 
 
 class MetricFrontierRuntime:
@@ -693,14 +694,22 @@ class MetricFrontierRuntime:
                 and getattr(self,'_metric_start_egress_enabled',False)
                 and not self._metric_egress_expired):
             seed=known | self._metric_egress[0].unknown
-            choices=[]
-            for r,c in zip(*np.nonzero(safe)):
-                xy=self._grid_to_world(c,r,grid.info);distance=math.dist(pose[:2],xy)
-                error=abs(math.atan2(math.sin(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2]),
-                    math.cos(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2])))
-                if (distance<=self._goal_clearance_m+.25 and error<=.17
-                        and self._metric_grid_line_clear(seed,(sr,sc),(r,c))):
-                    choices.append((error,math.dist(xy,target),r,c))
+            memo, key = self._metric_selection_memo(inputs)
+            eligible = memo.get('route_seeds') if memo is not None and memo.get('route_seeds_key') == key else None
+            if eligible is None:
+                eligible=[]
+                for r,c in zip(*np.nonzero(safe)):
+                    xy=self._grid_to_world(c,r,grid.info);distance=math.dist(pose[:2],xy)
+                    error=abs(math.atan2(math.sin(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2]),
+                        math.cos(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2])))
+                    if (distance<=self._goal_clearance_m+.25 and error<=.17
+                            and self._metric_grid_line_clear(seed,(sr,sc),(r,c))):
+                        eligible.append((error,xy,r,c))
+                if memo is not None:
+                    memo.update(route_seeds_key=key, route_seeds=eligible)
+            # Connectivity/heading are invariant within this evidence-bound
+            # selection pass. Target distance and the full route proof are not.
+            choices=[(error,math.dist(xy,target),r,c) for error,xy,r,c in eligible]
             if choices:
                 _,_,r,c=min(choices);start=(r,c)
         cells = route_cells(safe, start, (tr, tc))
@@ -752,7 +761,9 @@ class MetricFrontierRuntime:
                 if self._metric_egress_expired:
                     self._metric_last_route_rejection='start_egress_reference_expired'
                     return None
-                bearing=math.atan2(route[-1][1]-pose[1],route[-1][0]-pose[0])
+                first_leg = route_departure_point(route, pose,
+                    min(grid.info.resolution, costmap.info.resolution))
+                bearing=math.atan2(first_leg[1]-pose[1],first_leg[0]-pose[0])
                 error=abs(math.atan2(math.sin(bearing-pose[2]),math.cos(bearing-pose[2])))
                 if error>getattr(self,'_prealign_handoff_tolerance',.17):
                     self._metric_last_route_rejection='start_egress_in_place_turn'
@@ -763,12 +774,14 @@ class MetricFrontierRuntime:
                 if error>.35:
                     self._metric_last_route_rejection='start_egress_in_place_turn'
                     return None
-                if self._metric_standard_waypoints_clear(inputs,(route[-1],),target_yaw) is None:
+                arrival = route_arrival_yaw(route, pose[2], grid.info.resolution)
+                goal_inputs = (grid, inputs[1], (*route[-1], arrival), *inputs[3:])
+                if self._metric_standard_waypoints_clear(goal_inputs,(route[-1],),target_yaw) is None:
                     return None
                 try:
                     trajectory=rpp_trajectory(route,pose,min(grid.info.resolution,
                         costmap.info.resolution),getattr(self,'_prealign_handoff_tolerance',.17),
-                        self._metric_bounds)
+                        self._metric_bounds, prealign_to_first_leg=True)
                 except ValueError as error:
                     self._metric_last_route_rejection=str(error);return None
                 for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
@@ -786,7 +799,10 @@ class MetricFrontierRuntime:
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
         rollout = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
-        if rollout:
+        if rollout and len(route) > 1:
+            # A one-point route is the endpoint-only check used by the
+            # coupled start-escape proof. It must not replay the start pose;
+            # the goal tolerance/rotation envelope below still applies.
             # The opt-in closed-loop model retains the measured padded body,
             # half-cell diagonal and 10-mm interpolation reserve. Its extra
             # 20-mm/0.05-rad tracking band is qualified only for the documented
@@ -1681,7 +1697,8 @@ class MetricFrontierRuntime:
                     else:
                         self._metric_nav_path = planned
                         # Align to the first ACTUAL Nav2 route leg.
-                        leg=planned_route[min(1,len(planned_route)-1)]
+                        leg=route_departure_point(planned_route, inputs[2],
+                            min(inputs[0].info.resolution, inputs[5].info.resolution))
                         align,*_=self._prealign_to_goal(*leg,inputs[2],stop_requested=stop)
                         status = None if align in ('success','skipped') else 'alignment_failed'
             if status is None and not stop():

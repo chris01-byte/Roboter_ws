@@ -262,6 +262,12 @@ def route_arrival_yaw(route, initial_yaw, resolution):
     return initial_yaw
 
 
+def route_departure_point(route, pose, resolution):
+    """A sub-half-cell projection is a raster join, not a heading command."""
+    return next((point for point in route[1:]
+                 if math.dist(pose[:2], point) >= max(1e-6, resolution/2)), route[-1])
+
+
 def _clip_cell(polygon, row, col):
     vertices = list(polygon)
     for axis, bound, sign in ((0,col,1),(0,col+1,-1),(1,row,1),(1,row+1,-1)):
@@ -485,7 +491,7 @@ def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
     if len(route)<2:return out
     # The metric owner aligns to the first actual Nav2 leg. Preserve the
     # historical goal-bearing rollout for callers using its original mode.
-    leg=route[1] if prealign_to_first_leg else route[-1]
+    leg=route_departure_point(route,pose,resolution) if prealign_to_first_leg else route[-1]
     initial=math.atan2(leg[1]-y,leg[0]-x)
     error=math.atan2(math.sin(initial-yaw),math.cos(initial-yaw))
     if abs(error)>prealign_tolerance:
