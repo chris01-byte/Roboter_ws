@@ -9,6 +9,7 @@ from typing import Optional
 
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
 import rclpy
+from rclpy.clock import ClockType, JumpThreshold
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -21,6 +22,9 @@ from .hwt601_protocol import (
     decode_motion_registers,
 )
 from .hwt601_transport import Hwt601SerialTransport, Hwt601TransportError
+from ._hwt601_clock import (
+    ClockPairUncertain, MAX_PAIR_ATTEMPTS, ReceiptClockCorrelation,
+)
 
 
 class Hwt601ImuNode(Node):
@@ -92,6 +96,7 @@ class Hwt601ImuNode(Node):
         self._last_transport_diagnostic = {}
         self._sample_times = deque(
             maxlen=max(20, int(self.poll_rate_hz * 2.0)))
+        self._init_clock_correlation()
 
         self.create_timer(1.0 / self.poll_rate_hz, self._poll)
         self.create_timer(0.5, self._publish_status)
@@ -174,6 +179,11 @@ class Hwt601ImuNode(Node):
         self._rejected += 1
         self._consecutive_errors += 1
         self._last_error = str(error)
+        if isinstance(error, ClockPairUncertain):
+            # No reconnect/epoch reset for scheduling uncertainty, in either
+            # profile. Last real data still ages under the existing contract.
+            self._publish_status()
+            return
         if self.development_contract:
             self._last_transport_diagnostic = dict(getattr(error, 'diagnostic', {}))
             if not isinstance(error, Hwt601TransportError) or error.hard_fault:
@@ -187,21 +197,83 @@ class Hwt601ImuNode(Node):
         if self._consecutive_errors >= self.errors_before_reconnect:
             self._disconnect()
 
+    def _init_clock_correlation(self) -> None:
+        self._receipt_clock = ReceiptClockCorrelation()
+        self._correlation_clock = self.get_clock()
+        self._clock_source_fault = None
+        self._clock_jump_handle = self._correlation_clock.create_jump_callback(
+            JumpThreshold(min_forward=None, min_backward=None, on_clock_change=True),
+            pre_callback=self._clock_source_changed)
+
+    def _clock_source_changed(self) -> None:
+        # Latch even activation/deactivation between polls. Do no ROS I/O from
+        # the clock callback. Poll handles it under the existing error contract.
+        self._clock_source_fault = 'HWT-Clockquelle hat sich geaendert'
+
+    def _check_clock_source(self):
+        clock = self.get_clock()
+        if self._clock_source_fault is not None:
+            raise Hwt601ProtocolError(self._clock_source_fault)
+        if (clock is not self._correlation_clock
+                or clock.clock_type not in (ClockType.SYSTEM_TIME, ClockType.ROS_TIME)
+                or getattr(clock, 'ros_time_is_active', False)):
+            self._clock_source_fault = 'HWT braucht unveraenderte Hostzeit ohne ROS-Time-Override'
+            raise Hwt601ProtocolError(self._clock_source_fault)
+        return clock
+
+    def _receipt_stamp(self, received_at, diagnostic):
+        for attempt in range(1, MAX_PAIR_ATTEMPTS + 1):
+            clock = self._check_clock_source()
+            before = time.monotonic()
+            if (not isinstance(received_at, (int, float))
+                    or not math.isfinite(received_at) or received_at > before
+                    or (self._last_received_at is not None
+                        and received_at <= self._last_received_at)):
+                raise Hwt601ProtocolError('HWT-Empfangszeit fehlt/ungueltig/nicht monoton')
+            clock_ns = clock.now().nanoseconds
+            after = time.monotonic()
+            self._check_clock_source()
+            try:
+                stamp_ns = self._receipt_clock.project(received_at, before, clock_ns, after)
+            except ClockPairUncertain:
+                self._receipt_clock.diagnostic['attempts'] = attempt
+                self._check_processing_deadline(diagnostic, after)
+                if attempt == MAX_PAIR_ATTEMPTS:
+                    raise
+            else:
+                self._receipt_clock.diagnostic['attempts'] = attempt
+                self._check_processing_deadline(diagnostic, after)
+                return stamp_ns
+
+    def _check_processing_deadline(self, diagnostic, finished):
+        if finished > diagnostic['deadline_monotonic_s']:
+            raise Hwt601TransportError('Messwertverarbeitung nach Gesamtfrist',
+                kind='response_deadline', diagnostic=dict(diagnostic,
+                    classification='processing_after_deadline', finished_monotonic_s=finished))
+
     def _poll(self) -> None:
         if self._terminal_fault is not None:
+            return
+        try:
+            self._check_clock_source()
+        except Hwt601ProtocolError as error:
+            self._record_error(error)
             return
         now = time.monotonic()
         if self._transport is None and not self._connect(now):
             return
         try:
             registers = self._transport.read_motion_registers()
-            clock_ns = self.get_clock().now().nanoseconds
-            bracket = time.monotonic()
             received_at = getattr(self._transport, 'last_reply_received_monotonic_s', None)
-            if received_at is None:
-                received_at = bracket
-            stamp_ns = clock_ns - round((bracket - received_at) * 1e9)
-            if (stamp_ns <= 0 or received_at > bracket
+            diagnostic = getattr(self._transport, 'last_transaction', {})
+            started = diagnostic.get('started_monotonic_s')
+            deadline = diagnostic.get('deadline_monotonic_s')
+            if (not all(isinstance(v, (int, float)) and math.isfinite(v)
+                        for v in (received_at, started, deadline))
+                    or not started <= received_at <= deadline):
+                raise Hwt601ProtocolError('HWT-Empfangs-/Transaktionsbeleg ungueltig')
+            stamp_ns = self._receipt_stamp(received_at, diagnostic)
+            if (stamp_ns <= 0
                     or (self._last_measurement_stamp_ns is not None
                         and stamp_ns <= self._last_measurement_stamp_ns)):
                 raise Hwt601ProtocolError('HWT-Messzeit nicht monoton')
@@ -214,13 +286,8 @@ class Hwt601ImuNode(Node):
             if sample.saturated(self.saturation_margin_counts):
                 raise Hwt601ProtocolError(
                     'Messwert ist am Rohdatenlimit gesaettigt')
-            diagnostic = getattr(self._transport, 'last_transaction', {})
-            deadline = diagnostic.get('deadline_monotonic_s')
             finished = time.monotonic()
-            if deadline is not None and finished > deadline:
-                raise Hwt601TransportError('Messwertverarbeitung nach Gesamtfrist',
-                    kind='response_deadline', diagnostic=dict(diagnostic,
-                        classification='processing_after_deadline', finished_monotonic_s=finished))
+            self._check_processing_deadline(diagnostic, finished)
         except (Hwt601TransportError, Hwt601ProtocolError, OSError) as error:
             self._record_error(error)
             return
@@ -242,6 +309,12 @@ class Hwt601ImuNode(Node):
                 self.angular_velocity_variance)
             message.linear_acceleration_covariance[index] = (
                 self.linear_acceleration_variance)
+        try:
+            self._check_clock_source()
+            self._check_processing_deadline(diagnostic, time.monotonic())
+        except (Hwt601ProtocolError, Hwt601TransportError) as error:
+            self._record_error(error)
+            return
         self.imu_pub.publish(message)
 
         self._last_received_at = received_at
@@ -322,6 +395,8 @@ class Hwt601ImuNode(Node):
             'last_measurement_stamp_ns': self._last_measurement_stamp_ns,
             'last_reply_received_monotonic_s': self._last_received_at,
             'last_transport_diagnostic': self._last_transport_diagnostic,
+            'clock_correlation': self._receipt_clock.diagnostic,
+            'clock_source_fault': self._clock_source_fault,
         }
         self.status_pub.publish(String(
             data=json.dumps(payload, allow_nan=False)))
@@ -349,6 +424,7 @@ class Hwt601ImuNode(Node):
         self.diagnostics_pub.publish(array)
 
     def destroy_node(self):
+        self._clock_jump_handle.unregister()
         self._disconnect()
         return super().destroy_node()
 

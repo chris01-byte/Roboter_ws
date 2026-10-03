@@ -56,3 +56,55 @@ innerhalb seiner bestehenden 350-ms-Frische weiter genutzt werden, wenn
 gleichzeitig gültige Rohoriginale innerhalb 300 ms vorliegen. Eingefrorene,
 stabile Kalibrierung und alle Fehlerprüfungen bleiben Pflicht; die Lücke wird
 nicht integriert. Die 100-ms-Kalibrierungsgrenze wird nicht geändert.
+
+## AP-01: Hostempfang und Clockvertrag (MASTERPLAN v1.3)
+
+Der Rawheader bezeichnet ausschließlich den vollständigen hostseitigen Empfang
+`last_reply_received_monotonic_s` des echten Transports, keine interne
+Sensorabtastzeit. Empfang, Transaktionsstart und Deadline müssen endlich und
+konsistent sein; der frühere Fallback auf Verarbeitungszeit entfällt. Gerätefreie
+Regressionen koppeln den echten Transport mit einer synthetischen seriellen
+Gegenstelle an den echten `_poll()` und verzögern danach die Verarbeitung.
+
+Die ROS-Abfrage wird mit `time.monotonic()` davor/danach eingerahmt. Unter dem
+Hostzeitvertrag (gleiche laufende Taktrate, keine Epochenänderung) liegt der
+ROS-minus-monotonic-Offset in `[ROS − nachher, ROS − vorher]`. Die Schnittmenge
+aller präzisen Belege bleibt erhalten. Der untere Rand dieser gültigen Spanne
+projiziert den Empfang konservativ: höchstens **1 ms plus 2 ns Rundungsreserve
+zu früh**, niemals durch einen positiven Mittelpunktfehler in die Zukunft.
+Kein Klemmen an den vorherigen Stempel und kein Umstempeln auf jetzt.
+
+Ein Bracket darf höchstens **1 ms** breit sein: 1/10 des nominellen 100-Hz-
+Probenabstands und 1/100 der unveränderten 100-ms-Biaskontinuitätsgrenze. Dies
+ist eine Unsicherheitsgrenze, keine zusätzliche Frische- oder Antwortfrist.
+Bis zu **drei** sofortige Paarungsversuche sind erlaubt, ausschließlich innerhalb
+der tatsächlichen 30-/50-ms-Transaktionsdeadline; danach wird die Probe verworfen.
+Große Brackets dürfen die Offsetspanne weder begründen noch verbreitern.
+Wiederholtes Verwerfen lässt die letzte gültige Empfangszeit, den Header und
+die Samplehistorie unverändert altern. `clock_correlation.classification`
+unterscheidet `clock_pair_valid`, `clock_pair_uncertain` und `clock_basis_changed`.
+Die Unsicherheitsbehandlung reconnectet in keinem Profil; Entwicklung behält
+bei noch frischen Originaldaten den bestehenden degradierten Datenvertrag,
+Legacy meldet nach seinem bestehenden Fehler-/Bereitschaftsvertrag unbereit.
+
+Disjunkte Offsetbelege erkennen Zeitbasisänderung auch bei weiter steigenden
+Headern. Ein erkanntes Ereignis wird nicht durch Neubasieren geheilt;
+Entwicklung verriegelt nach dem bisherigen harten Fehlervertrag, Legacy behält
+seine vorhandene Reconnect-Schwelle. Beliebig kleine Sprünge innerhalb der
+Messunsicherheit sind nicht zuverlässig erkennbar. Langfristiger Offsetdrift,
+Suspend oder Wallclockänderung außerhalb der gemeinsamen Spanne machen den
+Hostzeitvertrag ebenfalls ungültig. Linux CLOCK_MONOTONIC und Hostwallzeit
+müssen denselben laufenden Taktbezug liefern.
+
+Unterstützt werden das unveränderte `SYSTEM_TIME`-Clockobjekt und eine inaktive
+`ROSClock` mit Hostzeit. **`use_sim_time`/ROS-Time-Override ist für den realen
+Rawdriver nicht unterstützt.** Aktivierung/Deaktivierung wird per echtem rclpy-
+Jumpcallback dauerhaft vorgemerkt (auch zwischen Polls); aktiver Override,
+Objekt-/Clocktypwechsel sperren vor einem weiteren seriellen Read. Rückkehr zur
+alten Quelle hebt den Fehler nicht auf. Reale `ROSClock`-/`TimeSource`-Tests
+prüfen Quellenwechsel und unabhängige ROS-Änderungen ohne Systemuhränderung.
+
+Die echten Guard-/Health-Verbrauchertests prüfen kurze Zustellverzögerungen,
+Future-Gegenfall und HOLD durch tatsächlich gealterte Originaldaten. Alle
+50/300-ms-, Legacy-30/200-ms-, Encoder-120/180-ms-, HOLD-, Bias- und
+Recoverygrenzen bleiben unverändert. Kein Hardware- oder Deploymentnachweis.

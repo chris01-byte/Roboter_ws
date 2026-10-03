@@ -6,6 +6,7 @@ import pytest
 
 pytest.importorskip('rclpy')
 from rclpy.time import Time
+from rclpy.clock import Clock, ClockType
 from robot_state_estimation.hwt601_imu_node import Hwt601ImuNode
 from robot_state_estimation.hwt601_transport import Hwt601TransportError
 from robot_state_estimation.hwt601_protocol import Hwt601ProtocolError
@@ -29,11 +30,16 @@ def reader(monkeypatch):
         _consecutive_errors=0,_last_error='',_sample_times=deque([9.99,10.]),
         errors_before_reconnect=3,acceleration_full_scale_g=4.,angular_velocity_full_scale_dps=400.,
         saturation_margin_counts=8,angular_velocity_variance=.02,linear_acceleration_variance=.25)
-    n.get_clock=lambda:SimpleNamespace(now=lambda:Time(nanoseconds=round(now[0]*1e9)))
+    clock=Clock(clock_type=ClockType.SYSTEM_TIME)
+    synthetic=SimpleNamespace(now=lambda:Time(nanoseconds=round(now[0]*1e9)),
+        clock_type=ClockType.SYSTEM_TIME,create_jump_callback=clock.create_jump_callback)
+    n.get_clock=lambda:synthetic
+    n._init_clock_correlation()
     n.status_pub=Sink();n.imu_pub=Sink();n.diagnostics_pub=Sink()
     n._transport=SimpleNamespace(is_open=True,close=lambda:None,
         read_motion_registers=lambda:(0,0,0,0,0,0),
-        last_reply_received_monotonic_s=10.048,last_transaction={})
+        last_reply_received_monotonic_s=10.048,last_transaction={
+            'started_monotonic_s':10.045,'deadline_monotonic_s':10.095,'timeout_s':.05})
     return n,now
 
 
