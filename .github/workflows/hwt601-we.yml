@@ -13,8 +13,11 @@ on:
       - 'src/robot_map_manager/**'
       - 'src/robot_interfaces/**'
       - 'src/mission_manager/**'
+      - 'src/bt_orchestrator/**'
       - 'tools/sensorfusion/we_hwt601_process_smoke.py'
       - 'tools/simulation/ap03_nav2_closed_loop.py'
+      - 'tools/simulation/ap06*'
+      - 'tools/simulation/test_ap06_world.py'
       - 'tools/analysis/frontier_comparison/**'
       - '.github/workflows/hwt601-we.yml'
   push:
@@ -63,6 +66,9 @@ jobs:
           python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
             src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
             src/explore/test/test_metric_frontier_candidates.py \
+            src/explore/test/test_metric_body_reference_tf.py \
+            src/explore/test/test_metric_selection_pass.py \
+            tools/simulation/test_ap06_world.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \

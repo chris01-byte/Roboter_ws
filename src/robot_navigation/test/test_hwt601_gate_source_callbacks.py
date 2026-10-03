@@ -33,9 +33,13 @@ def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
     executor.add_node(gate)
     thread = threading.Thread(target=executor.spin, daemon=True)
     entered, exited = threading.Event(), threading.Event()
+    release = threading.Event()
     def busy(_msg):
         entered.set()
-        time.sleep(.35)
+        # Explicit barrier keeps the intended callback busy while the probe
+        # evaluates source freshness. Scheduling delay before acquiring the
+        # health lock must not accidentally end the simulated blocking work.
+        release.wait(timeout=2.)
         exited.set()
     gate.create_subscription(String, '/test/gate_busy_callback', busy, 10,
                              callback_group=(gate._hwt_source_cb
@@ -93,6 +97,7 @@ def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
                     assert gate._hwt_guard.health.source_failure() is None
                 else:
                     assert gate._hwt_guard.health.recovery_state == 'HOLD'
+        release.set()
         end = time.monotonic()+1
         while not exited.is_set() and time.monotonic()<end:
             publish(not stop_wheel)
@@ -107,6 +112,7 @@ def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
             assert gate._hwt_guard.health.source_failure() is None
         assert gate._mode == 'blocked'  # no mission, even with healthy inputs
     finally:
+        release.set()
         executor.shutdown(timeout_sec=2)
         thread.join(timeout=2)
         gate.destroy_node(); probe.destroy_node(); rclpy.shutdown()

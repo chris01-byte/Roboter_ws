@@ -78,6 +78,7 @@ class MetricFrontierRuntime:
                 not self._prealign_enabled or not 0. < self._prealign_handoff_tolerance <= .02):
             raise ValueError('rpp_rollout needs enabled prealignment within 0.02 rad')
         self._metric_lock = threading.RLock()
+        self._metric_selection_cache = threading.local()
         self._metric_hold_lock = threading.RLock()
         self._metric_correlator = MapManagerStatusCorrelator(
             self.declare_parameter('metric_session_id', '').value, self._global_frame)
@@ -414,7 +415,13 @@ class MetricFrontierRuntime:
         # cannot reuse the old start proof. No TF is created or modified.
         if not hasattr(self, '_tf_buffer'):
             return None
-        transform = self._tf_buffer.lookup_transform(self._global_frame,'odom',rclpy.time.Time())
+        # slam_toolbox publishes map->odom with its configured future offset.
+        # Request the relation at the actual current ROS time, interpolated
+        # by TF2 from available samples. Latest (Time(0)) selects the future
+        # endpoint and falsely rejects a healthy mapping graph. No sample is
+        # restamped, and missing coverage/future-only data still fail in TF2.
+        transform = self._tf_buffer.lookup_transform(
+            self._global_frame, 'odom', self.get_clock().now())
         age=(self.get_clock().now().nanoseconds-
              (transform.header.stamp.sec*10**9+transform.header.stamp.nanosec))/1e9
         t,q=transform.transform.translation,transform.transform.rotation
@@ -564,8 +571,38 @@ class MetricFrontierRuntime:
         self._metric_prepare_egress(inputs)
         return inputs
 
+    def _metric_selection_memo(self, inputs):
+        """Exact geometry/evidence key, valid only in this thread's selection.
+
+        No time/health result, route or movement authority is cached. Capture
+        array contents too: mutable evidence or a changed raster invalidates
+        the memo even when the containing Python object stays the same.
+        """
+        memo = getattr(getattr(self, '_metric_selection_cache', None), 'memo', None)
+        if memo is None or memo['inputs'] is not inputs:
+            return None, None
+        grids = []
+        for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+            try:
+                content = memoryview(grid.data).tobytes()
+            except TypeError:
+                content = np.asarray(grid.data, dtype=np.int8).tobytes()
+            grids.append((self._metric_grid_geometry(grid), content, allowed.tobytes()))
+        evidence = tuple((e.valid, e.reason, e.pose, e.bounds, e.initial_polygon,
+                          e.unknown.tobytes(), e.scope_mask.tobytes(),
+                          tuple(sorted(e.remaining_area.items())), tuple(sorted(e.departed_distance.items())))
+                         for e in (getattr(self, '_metric_egress', None) or ()))
+        key = (tuple(inputs[2]), tuple(grids), inputs[4].tobytes(), evidence,
+               getattr(self, '_metric_body_anchor_expired', False),
+               getattr(self, '_metric_egress_expired', False),
+               getattr(self, '_metric_egress_identity', None))
+        return memo, key
+
     def _metric_prepare_egress(self, inputs):
         if not getattr(self, '_metric_start_egress_enabled', False):
+            return
+        memo, key = self._metric_selection_memo(inputs)
+        if memo is not None and memo.get('prepared') == key:
             return
         grid, correlation, pose, known, _, costmap, cost_known = inputs
         grids = ((grid, known), (costmap, cost_known))
@@ -602,6 +639,8 @@ class MetricFrontierRuntime:
                     self._world_to_grid,commit=True)
                 if not valid:
                     evidence.valid=False;evidence.reason=reason
+        if memo is not None:
+            memo['prepared'] = self._metric_selection_memo(inputs)[1]
 
     def _metric_seed_mask(self, inputs):
         grid,_,pose,known,safe,costmap,_=inputs
@@ -609,6 +648,9 @@ class MetricFrontierRuntime:
                 or getattr(self,'_metric_egress_expired',True)
                 or not all(e.valid for e in self._metric_egress)):
             return safe
+        memo, key = self._metric_selection_memo(inputs)
+        if memo is not None and memo.get('seed_key') == key:
+            return memo['seed']
         from scipy.ndimage import distance_transform_edt
         # Search seed only; never a footprint authority or map publication.
         seed=known | self._metric_egress[0].unknown
@@ -619,6 +661,8 @@ class MetricFrontierRuntime:
             x,y=self._grid_to_world(c,r,grid.info);cc,rr=self._world_to_grid(x,y,costmap.info)
             if not (0<=rr<costs.shape[0] and 0<=cc<costs.shape[1]
                     and 0<=costs[rr,cc]<=self._frontier_goal_max_cost):search[r,c]=False
+        if memo is not None:
+            memo.update(seed_key=key, seed=search)
         return search
 
     @staticmethod
@@ -692,15 +736,18 @@ class MetricFrontierRuntime:
                 result=self._metric_standard_waypoints_clear(inputs,route,target_yaw)
                 if result is None:self._metric_last_route_rejection='start_egress_reference_expired'
                 return result
-            touched=False
-            for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
-                # Continue the coupled escape proof until even a possible
-                # subsequent chassis rotation has left the initial inventory.
-                # This selects the proof mode; it never admits a full scan.
-                r,c=footprint_cells(*pose,g,self._world_to_grid,self._metric_bounds,
-                    heading_half_angle=math.pi,heading_samples=127)
-                inside=(r>=0)&(r<allowed.shape[0])&(c>=0)&(c<allowed.shape[1])
-                touched |= bool(np.any(evidence.unknown[r[inside],c[inside]]))
+            memo, key = self._metric_selection_memo(inputs)
+            touched = memo.get('touched') if memo is not None and memo.get('touched_key') == key else None
+            if touched is None:
+                touched=False
+                for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
+                    # This selects the coupled escape proof, never a scan permit.
+                    r,c=footprint_cells(*pose,g,self._world_to_grid,self._metric_bounds,
+                        heading_half_angle=math.pi,heading_samples=127)
+                    inside=(r>=0)&(r<allowed.shape[0])&(c>=0)&(c<allowed.shape[1])
+                    touched |= bool(np.any(evidence.unknown[r[inside],c[inside]]))
+                if memo is not None:
+                    memo.update(touched_key=key, touched=touched)
             if touched:
                 if self._metric_egress_expired:
                     self._metric_last_route_rejection='start_egress_reference_expired'
@@ -1070,6 +1117,17 @@ class MetricFrontierRuntime:
         return view
 
     def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
+        cache = getattr(self, '_metric_selection_cache', None)
+        if cache is None:
+            cache = self._metric_selection_cache = threading.local()
+        previous = getattr(cache, 'memo', None)
+        cache.memo = {'inputs': inputs}
+        try:
+            return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+        finally:
+            cache.memo = previous
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
         """Stateless candidate/adapter level; mission history is applied separately.
 
         Explicit frontiers/view allow the AP-04 comparison to use exactly the
@@ -1100,8 +1158,10 @@ class MetricFrontierRuntime:
                 frontiers = self._detect_frontiers(grid, min_frontier)
         candidates = []
         stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
         self._metric_prepare_egress(inputs)
         search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
         for f in frontiers:
             if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
                 raise ValueError('frontier_candidate_processing_budget_exhausted')
@@ -1172,6 +1232,8 @@ class MetricFrontierRuntime:
                                               correlation.fingerprint,correlation.map_revision,proposal,points))
         if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
             raise ValueError('frontier_candidate_processing_budget_exhausted')
+        if self._metric_selection_memo(inputs)[1] != initial_evidence:
+            raise ValueError('frontier_evidence_changed_during_processing')
         candidates.sort(key=lambda candidate:(candidate.cost,candidate.frontier_xy))
         stats['accepted'] = len(candidates)
         self._frontier_rank_stats = stats
