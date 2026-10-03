@@ -1,0 +1,143 @@
+{
+  "schema": 1,
+  "platform": "Ubuntu 22.04 / ROS 2 Humble / amd64 / Python 3.10",
+  "sources": [
+    {
+      "name": "behaviortree_cpp",
+      "repository": "BehaviorTree/BehaviorTree.CPP",
+      "ref": "4.6.2",
+      "url": "https://codeload.github.com/BehaviorTree/BehaviorTree.CPP/tar.gz/4.6.2",
+      "archive": "behaviortree_cpp-4.6.2.tar.gz",
+      "sha256": "b0e7e53b27feae894e2df3f3faadfdd49f2108ebccfb1bd7cc0d405ffc56cecd",
+      "packages": [
+        "."
+      ]
+    },
+    {
+      "name": "behaviortree_ros2",
+      "repository": "BehaviorTree/BehaviorTree.ROS2",
+      "ref": "6c6aa078ee7bc52fec98984bed4964556abf5beb",
+      "url": "https://codeload.github.com/BehaviorTree/BehaviorTree.ROS2/tar.gz/6c6aa078ee7bc52fec98984bed4964556abf5beb",
+      "archive": "behaviortree_ros2-6c6aa078.tar.gz",
+      "sha256": "a2f2abd20ce07a7cdab25e6dc4ceea937aeaabe117e7bf81e849142f5fb998a9",
+      "packages": [
+        "btcpp_ros2_interfaces",
+        "behaviortree_ros2"
+      ]
+    },
+    {
+      "name": "slam_toolbox",
+      "repository": "SteveMacenski/slam_toolbox",
+      "ref": "51a99767b3e2ed4076ae5763ff14b69343ffd884",
+      "url": "https://codeload.github.com/SteveMacenski/slam_toolbox/tar.gz/51a99767b3e2ed4076ae5763ff14b69343ffd884",
+      "archive": "slam_toolbox-51a99767.tar.gz",
+      "sha256": "de1f9feb3c4d57d5d5dc259000a5ce38b20faf6d6eab102ac8012580d8554095",
+      "packages": [
+        "."
+      ]
+    },
+    {
+      "name": "control_msgs",
+      "repository": "ros-controls/control_msgs",
+      "ref": "4.8.0",
+      "url": "https://codeload.github.com/ros-controls/control_msgs/tar.gz/4.8.0",
+      "archive": "control_msgs-4.8.0.tar.gz",
+      "sha256": "e97b45c67b5ec42502182d4034f79535468af87ddeb109dc6cf601eff3cf302b",
+      "packages": [
+        "control_msgs"
+      ]
+    },
+    {
+      "name": "generate_parameter_library",
+      "repository": "PickNikRobotics/generate_parameter_library",
+      "ref": "0.4.0",
+      "url": "https://codeload.github.com/PickNikRobotics/generate_parameter_library/tar.gz/0.4.0",
+      "archive": "generate_parameter_library-0.4.0.tar.gz",
+      "sha256": "a873bc6f02804d42f139e7bfb4f943177e032dbf190709e9b8dccc7a060ea9a8",
+      "packages": [
+        "parameter_traits",
+        "generate_parameter_library_py",
+        "generate_parameter_library"
+      ]
+    },
+    {
+      "name": "robot_localization",
+      "repository": "cra-ros-pkg/robot_localization",
+      "ref": "3.5.3",
+      "url": "https://codeload.github.com/cra-ros-pkg/robot_localization/tar.gz/3.5.3",
+      "archive": "robot_localization-3.5.3.tar.gz",
+      "sha256": "b965dd9d12490b4816d7d8cfaf4830a82849de89540edf5c9c6fdbef6bff762b",
+      "packages": [
+        "."
+      ]
+    },
+    {
+      "name": "geographic_info",
+      "repository": "ros-geographic-info/geographic_info",
+      "ref": "f70b81a438172cd7a066dc1b18314d70e0eb6389",
+      "url": "https://codeload.github.com/ros-geographic-info/geographic_info/tar.gz/f70b81a438172cd7a066dc1b18314d70e0eb6389",
+      "archive": "geographic_info-f70b81a4.tar.gz",
+      "sha256": "c767d25e40cfa844eac3187557b17be7b27a0eeb85c2503c2045a47c6744f4c1",
+      "packages": [
+        "geographic_msgs"
+      ]
+    },
+    {
+      "name": "rsl",
+      "repository": "PickNikRobotics/RSL",
+      "ref": "36c183bc11cac80d4c5803e7ae77af2df4ac2aee",
+      "url": "https://codeload.github.com/PickNikRobotics/RSL/tar.gz/36c183bc11cac80d4c5803e7ae77af2df4ac2aee",
+      "archive": "rsl-36c183bc.tar.gz",
+      "sha256": "f633c22dde3eb78410f53b94b075c8d8e071308a531814b8f3e7f11c09d10d41",
+      "packages": [
+        "."
+      ]
+    },
+    {
+      "name": "cpp_polyfills",
+      "repository": "PickNikRobotics/cpp_polyfills",
+      "ref": "2122ee5317aa5c5bf276b4995be5274e3e624c92",
+      "url": "https://codeload.github.com/PickNikRobotics/cpp_polyfills/tar.gz/2122ee5317aa5c5bf276b4995be5274e3e624c92",
+      "archive": "cpp_polyfills-2122ee53.tar.gz",
+      "sha256": "ba0aa8e57bb8426bf81a5b25e8b3d3d3d5002dc08a5c89ad163217208f19ace0",
+      "packages": [
+        "tcb_span",
+        "tl_expected"
+      ]
+    },
+    {
+      "name": "navigation2",
+      "repository": "ros-navigation/navigation2",
+      "ref": "3c3db59d6969d8ecee8e68468693d006397f4a0c",
+      "url": "https://codeload.github.com/ros-navigation/navigation2/tar.gz/3c3db59d6969d8ecee8e68468693d006397f4a0c",
+      "archive": "navigation2-3c3db59d.tar.gz",
+      "sha256": "d74cdf3a46bf5ddb3a4f460621685da6fbb018ff5b838a2c6e87ed74338ff41a",
+      "packages": [
+        "nav2_common",
+        "nav2_msgs",
+        "nav_2d_msgs",
+        "nav2_voxel_grid",
+        "nav2_util",
+        "nav_2d_utils",
+        "nav2_core",
+        "nav2_costmap_2d",
+        "nav2_lifecycle_manager",
+        "nav2_map_server",
+        "nav2_navfn_planner",
+        "nav2_planner",
+        "nav2_regulated_pure_pursuit_controller",
+        "nav2_controller",
+        "nav2_behavior_tree",
+        "nav2_bt_navigator",
+        "nav2_velocity_smoother",
+        "nav2_collision_monitor"
+      ]
+    }
+  ],
+  "python_requirements": [
+    "Jinja2==3.1.6",
+    "MarkupSafe==2.1.5",
+    "typeguard==2.13.3"
+  ],
+  "slam_patch": "patches/slam_toolbox_humble_pure_rotation.patch"
+}

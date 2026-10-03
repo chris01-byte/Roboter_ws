@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.8)
+project(ap06_tf_ownership_probe)
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(tf2_msgs REQUIRED)
+add_executable(tf_ownership_probe tf_ownership_probe.cpp)
+ament_target_dependencies(tf_ownership_probe rclcpp tf2_msgs)
+target_compile_features(tf_ownership_probe PRIVATE cxx_std_17)
