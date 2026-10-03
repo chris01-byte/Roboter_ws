@@ -327,6 +327,15 @@ class RobotMapManager(Node):
                 ),
                 source_stamp_ns=stamp_ns,
             )
+            previous = self._latest_map
+            if (previous is not None and snapshot.source_stamp_ns > 0
+                    and previous.source_stamp_ns > 0):
+                if snapshot.source_stamp_ns < previous.source_stamp_ns:
+                    self._last_operation = "map_delayed"
+                    return  # no revision or freshness from delayed producer work
+                if (snapshot.source_stamp_ns == previous.source_stamp_ns
+                        and snapshot.fingerprint != previous.fingerprint):
+                    raise MapValidationError("Widerspruechlicher Karteninhalt bei gleichem Quellstempel")
         except (MapValidationError, TypeError, ValueError, OverflowError) as error:
             self._rejected_maps += 1
             self._last_validation_error = f"Ungültige Karte verworfen: {error}"
@@ -349,7 +358,10 @@ class RobotMapManager(Node):
         self._last_map_received_wall = now
         self._last_map_received_iso = self._iso_time(now)
         self._last_error = None
-        self._observed_maps += 1
+        if (self._latest_map is None
+                or snapshot.source_stamp_ns != self._latest_map.source_stamp_ns
+                or snapshot.fingerprint != self._latest_fingerprint):
+            self._observed_maps += 1
         if snapshot.fingerprint == self._latest_fingerprint:
             # Keep the geometry revision stable, but retain the identity of
             # the newest validated observation.  Consumers that correlate an

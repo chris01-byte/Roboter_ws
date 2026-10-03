@@ -192,6 +192,7 @@ def test_strategy_is_immutable_and_existing_is_default():
 
 def test_old_costmap_cannot_overwrite_new_obstacle_rejection():
     n=ExploreNode.__new__(ExploreNode);n._metric_enabled=True
+    n._metric_lock=threading.RLock()
     blocked=grid();blocked.header.stamp.sec=101;blocked.data=[100]*3200
     n._global_costmap=None
     n._on_global_costmap(blocked)

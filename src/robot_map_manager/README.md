@@ -290,3 +290,15 @@ Nach Build und Start des fahrbewegungsfreien Smoke-Launches:
    Derselbe bereits beantwortete `request_id` muss dagegen sofort bytegleich
    aus dem Cache kommen und darf
    `artifact_verification_bytes_reserved` nicht erneut erhöhen.
+## AP-02: Beobachtungsrevision und verspätete Karten
+
+`observed_maps` zählt neue validierte Stempel-/Inhaltsbeobachtungen. Ein exakt
+identischer Snapshot erhöht den Zähler auch nach Ablauf des frühen
+Duplikatfensters nicht. Neuer Stempel bei gleichem Inhalt erhöht nur
+`observed_maps`; neuer Inhalt mit neuem Stempel erhöht zusätzlich `accepted_maps`.
+Ältere positive Quellstempel überschreiben keinen aktuellen Snapshot und
+erneuern weder Frische noch Revision. Verschiedene Inhalte bei gleichem
+positivem Stempel werden verworfen. Stempel-null-Kompatibilität anderer Modi
+bleibt erhalten; sie ist keine dynamische metrische Gültigkeitsannahme.
+Verbraucher-/Sessionbindung und Budgetzuordnung im
+[Karten-/Quellenvertrag](../../docs/wohnungserkundung/QUELLENVERTRAG.md).

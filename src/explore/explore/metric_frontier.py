@@ -361,6 +361,11 @@ class StartEgressEvidence:
             for a,b in zip(p,p[1:]+p[:1]) for v in vertices)
 
     def check_trajectory(self, poses, occupancy, allowed, world_to_grid, commit=False):
+        if (occupancy.shape != self.unknown.shape or allowed.shape != self.unknown.shape
+                or self.scope_mask.shape != self.unknown.shape):
+            self.valid = False
+            self.reason = 'start_egress_raster_mismatch'
+            return False, self.reason
         if not self.valid:return False,self.reason
         poses=np.asarray(poses,dtype=float)
         if poses.ndim!=2 or poses.shape[1]!=3 or not np.all(np.isfinite(poses)):

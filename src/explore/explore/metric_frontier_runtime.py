@@ -107,6 +107,7 @@ class MetricFrontierRuntime:
         self._metric_plan_subscription = self.create_subscription(
             Path, '/plan', self._on_metric_nav_plan, 10, callback_group=self._cb)
         self._metric_raw = None
+        self._metric_joined = None
         self._metric_correlation = None
         self._metric_status_at = None
         self._metric_pending_since = None
@@ -115,6 +116,8 @@ class MetricFrontierRuntime:
         self._metric_wheel = None
         self._metric_wheel_at = None
         self._metric_active = None
+        self._metric_active_context = None
+        self._metric_context_generation = 0
         self._metric_status = {'state': 'idle', 'full_apartment_complete': False,
                                'semantic_complete': False, 'floor_coverage_verified': False}
         # Shared source observers and single-child/HOLD lock, without policy.
@@ -155,21 +158,49 @@ class MetricFrontierRuntime:
             with self._metric_lock:
                 previous = self._metric_raw
                 if previous is not None and source.source_stamp_ns < previous[1].source_stamp_ns:
-                    return  # delayed old callback cannot replace the current raw raster
+                    return False  # delayed callback cannot replace either map view
+                if (previous is not None and source.source_stamp_ns == previous[1].source_stamp_ns
+                        and source.fingerprint != previous[1].fingerprint):
+                    raise ValueError('map_conflicting_same_stamp')
+                if previous is not None:
+                    self._metric_raster_transition(previous[0], grid, raw=True)
                 self._metric_raw = (grid, source, time.monotonic())
                 if not self._metric_matches_status(source) and self._metric_pending_since is None:
                     self._metric_pending_since = time.monotonic()
                 elif self._metric_matches_status(source):
                     self._metric_pending_since = None
+                    self._metric_joined = (self._metric_raw, self._metric_correlation,
+                                           self._metric_status_at)
+                return True
         except Exception as error:
             with self._metric_lock:
                 self._metric_fault = f'raw_map_{type(error).__name__}:{error}'
+            return False
 
     def _metric_matches_status(self, source):
         c = self._metric_correlation
         return (c is not None and c.fingerprint == source.fingerprint
                 and c.source_stamp_ns == source.source_stamp_ns
                 and c.context.frame_id == source.frame_id)
+
+    def _metric_grid_geometry(self, grid):
+        return (grid.header.frame_id, grid.info.width, grid.info.height,
+                grid.info.resolution, self._metric_grid_values(grid)['origin'])
+
+    def _metric_raster_transition(self, previous, current, *, raw=False):
+        """Invalidate on observation, even if geometry returns before evaluation."""
+        if self._metric_grid_geometry(previous) == self._metric_grid_geometry(current):
+            return
+        if raw and getattr(self, '_metric_body_anchor', None) is not None:
+            self._metric_body_anchor_expired = True
+        if getattr(self, '_metric_egress', None) is not None:
+            self._metric_egress_expired = True
+            for evidence in self._metric_egress:
+                evidence.valid = False
+                evidence.reason = 'start_egress_reference_expired'
+        if ((previous.header.frame_id, previous.info.resolution)
+                != (current.header.frame_id, current.info.resolution)):
+            self._metric_context_generation = getattr(self, '_metric_context_generation', 0) + 1
 
     def _on_metric_map_status(self, msg):
         try:
@@ -189,6 +220,9 @@ class MetricFrontierRuntime:
                 self._metric_status_at = time.monotonic() - sample.received_age_seconds
                 if self._metric_raw and self._metric_matches_status(self._metric_raw[1]):
                     self._metric_pending_since = None
+                    self._metric_joined = (self._metric_raw, status, self._metric_status_at)
+                elif self._metric_pending_since is None:
+                    self._metric_pending_since = time.monotonic()
         except MapStatusUnavailableError:
             pass  # before first map only; no invented map/session
         except Exception as error:
@@ -223,6 +257,13 @@ class MetricFrontierRuntime:
         return t.x,t.y,math.atan2(2*q.w*q.z,1-2*q.z*q.z)
 
     def _metric_inputs(self, active=False):
+        # Serialize map/status/costmap selection and evidence mutation. A DDS
+        # callback cannot replace a raster halfway through committing its masks.
+        # Gate/HWT observers have their own locks; no ROS service is awaited here.
+        with self._metric_lock:
+            return self._metric_inputs_locked(active)
+
+    def _metric_inputs_locked(self, active=False):
         with self._metric_lock:
             fault = self._metric_fault
             raw, c, scope = self._metric_raw, self._metric_correlation, self._metric_scope
@@ -232,18 +273,26 @@ class MetricFrontierRuntime:
             raise ValueError(fault)
         if raw is None or c is None or scope is None:
             raise ValueError('map_scope_not_joined')
+        if not self._metric_matches_status(raw[1]):
+            joined = getattr(self, '_metric_joined', None)
+            if (not active or pending is None or now-pending > 1.25 or joined is None
+                    or raw[1].fingerprint != joined[0][1].fingerprint
+                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+                raise ValueError('map_status_join_pending')
+            # Identical-content observation only: retain the exact old join,
+            # including its timestamps. Never assign an old revision to new cells.
+            raw, c, at = joined
         grid, source, received = raw
         if not 0 <= now-received <= self._map_timeout_s or at is None or not 0 <= now-at <= self._map_timeout_s:
             raise ValueError('map_or_status_stale')
         age = (self.get_clock().now().nanoseconds-source.source_stamp_ns)/1e9
         if not 0 <= age <= self._map_timeout_s:
             raise ValueError('raw_map_stamp_stale')
-        if not self._metric_matches_status(source):
-            if not active or pending is None or now-pending > 1.25:
-                raise ValueError('map_status_join_pending')
         correlation = PortalSourceCorrelation(c.context, c.map_revision, source.fingerprint, source.source_stamp_ns)
+        status_at = at
         occupancy, res, origin, yaw = _validated_snapshot(
             correlation, **self._metric_grid_values(grid), max_cells=self._wohnungserkundung_evidence_max_cells)
+        pose_checked = time.monotonic()
         pose, age = self._robot_pose_sample()
         if pose is None or age is None or not 0 <= age <= self._door_pose_timeout:
             raise ValueError('pose_missing_stale_or_invalid')
@@ -251,10 +300,10 @@ class MetricFrontierRuntime:
         if costmap is None or at is None or not 0 <= time.monotonic()-at <= self._map_timeout_s:
             raise ValueError('costmap_missing_or_stale')
         values = self._metric_grid_values(costmap)
-        identity = raw_map_portal_source_from_values(**values)
-        cost_c = PortalSourceCorrelation(c.context, c.map_revision, identity.fingerprint, identity.source_stamp_ns)
+        cost_source = raw_map_portal_source_from_values(**values)
+        cost_c = PortalSourceCorrelation(c.context, c.map_revision, cost_source.fingerprint, cost_source.source_stamp_ns)
         costs, _, _, _ = _validated_snapshot(cost_c, **values, max_cells=self._wohnungserkundung_evidence_max_cells)
-        cost_age = (self.get_clock().now().nanoseconds-identity.source_stamp_ns)/1e9
+        cost_age = (self.get_clock().now().nanoseconds-cost_source.source_stamp_ns)/1e9
         if not 0 <= cost_age <= self._map_timeout_s:
             raise ValueError('costmap_stamp_stale')
         body = None
@@ -325,6 +374,21 @@ class MetricFrontierRuntime:
         allowed[valid]=(costs[cy[valid],cx[valid]]>=0)&(costs[cy[valid],cx[valid]]<=self._frontier_goal_max_cost)
         safe[rr[~allowed],cc[~allowed]]=False
         inputs = grid, correlation, pose, known, safe, costmap, cost_known
+        # Processing/DDS delay consumes the original freshness window too.
+        completed_ros = self.get_clock().now().nanoseconds
+        completed = time.monotonic()
+        if (not 0 <= completed-received <= self._map_timeout_s
+                or not 0 <= completed-self._global_costmap_received_at <= self._map_timeout_s
+                or not 0 <= completed-status_at <= self._map_timeout_s):
+            raise ValueError('map_or_status_stale_after_processing')
+        if (not 0 <= (completed_ros-source.source_stamp_ns)/1e9 <= self._map_timeout_s
+                or not 0 <= (completed_ros-cost_source.source_stamp_ns)/1e9 <= self._map_timeout_s):
+            raise ValueError('map_stamp_stale_after_processing')
+        if not 0 <= age + completed-pose_checked <= self._door_pose_timeout:
+            raise ValueError('pose_stale_after_processing')
+        if (self._metric_self_body_enabled
+                and not 0 <= completed-scan['received_at'] <= self._door_lidar_scan_timeout):
+            raise ValueError('self_body_scan_stale_after_processing')
         self._metric_prepare_egress(inputs)
         return inputs
 
@@ -333,8 +397,17 @@ class MetricFrontierRuntime:
             return
         grid, correlation, pose, known, _, costmap, cost_known = inputs
         grids = ((grid, known), (costmap, cost_known))
-        identity = (correlation.context, tuple((g.info.width,g.info.height,
-            g.info.resolution,tuple(self._metric_grid_values(g)['origin'])) for g,_ in grids))
+        identity = (correlation.context, tuple(self._metric_grid_geometry(g) for g,_ in grids))
+        if getattr(self, '_metric_egress_expired', False):
+            return
+        if (getattr(self, '_metric_body_anchor_expired', False)
+                or (getattr(self, '_metric_egress', None) is not None
+                    and identity != self._metric_egress_identity)):
+            self._metric_egress_expired = True
+            for evidence in self._metric_egress or ():
+                evidence.valid = False
+                evidence.reason = 'start_egress_reference_expired'
+            return  # before combining arrays with a different spatial identity
         if getattr(self, '_metric_egress', None) is None:
             evidence = []
             for g, mask in grids:
@@ -348,9 +421,6 @@ class MetricFrontierRuntime:
                     self._metric_bounds,self._world_to_grid))
             self._metric_egress=tuple(evidence)
             self._metric_egress_identity=identity
-        if (identity != self._metric_egress_identity
-                or getattr(self,'_metric_body_anchor_expired',False)):
-            self._metric_egress_expired=True
         for evidence,(g,mask) in zip(self._metric_egress,grids):
             occupancy=np.asarray(g.data).reshape(mask.shape)
             # Observed cells never regain their original unknown exemption.
@@ -544,7 +614,26 @@ class MetricFrontierRuntime:
         self._metric_last_route_rejection=None
         return route
 
+    def _metric_work_context(self):
+        """Epoch/frame/resolution bind work; growth/revisions require revalidation."""
+        c, raw, costmap = self._metric_correlation, self._metric_raw, self._global_costmap
+        if self._metric_fault or c is None or raw is None or costmap is None:
+            return None
+        return (getattr(self, '_metric_context_generation', 0),
+                c.context, raw[0].header.frame_id, raw[0].info.resolution,
+                costmap.header.frame_id, costmap.info.resolution)
+
+    def _metric_work_is_current(self, context):
+        with self._metric_lock:
+            return context is not None and context == self._metric_work_context()
+
     def _on_metric_nav_plan(self, path):
+        with self._metric_lock:
+            if not self._metric_work_is_current(self._metric_active_context):
+                return
+            self._accept_metric_nav_plan(path)
+
+    def _accept_metric_nav_plan(self, path):
         active = self._metric_active
         if active is None or not path.poses or path.header.frame_id != self._global_frame:
             return
@@ -655,8 +744,12 @@ class MetricFrontierRuntime:
             return False
 
     def _metric_request_nav_plan(self, target, stop_requested):
+        with self._metric_lock:
+            context = self._metric_work_context()
+        def stopped():
+            return stop_requested() or not self._metric_work_is_current(context)
         # Bind the correction envelope to actual RPP parameters before motion.
-        if not self._metric_controller_contract(stop_requested):
+        if not self._metric_controller_contract(stopped):
             return None, 'nav2_controller_geometry_contract_invalid'
         # Planner action reads geometry; only existing NavigateToPose owns motion.
         if not self._metric_planner.wait_for_server(timeout_sec=2.0):
@@ -675,7 +768,7 @@ class MetricFrontierRuntime:
         deadline = time.monotonic()+2.0
         handle = None
         while rclpy.ok() and time.monotonic() < deadline:
-            if stop_requested():
+            if stopped():
                 break
             if future.done():
                 handle = future.result()
@@ -695,10 +788,10 @@ class MetricFrontierRuntime:
             return None, 'nav2_plan_rejected'
         result = handle.get_result_async()
         while rclpy.ok() and time.monotonic() < deadline and not result.done():
-            if stop_requested():
+            if stopped():
                 break
             time.sleep(.02)
-        if not result.done():
+        if stopped() or not result.done():
             handle.cancel_goal_async()
             return None, 'nav2_plan_timeout_or_stop'
         try:
@@ -898,6 +991,7 @@ class MetricFrontierRuntime:
             else:
                 goal_handle.abort()
             self._metric_active = None
+            self._metric_active_context = None
             return self._finish_result(result,self._frontiers_visited_status)
         self._metric_status = dict(state='running', full_apartment_complete=False,
                                   semantic_complete=False,floor_coverage_verified=False,chain=chain)
@@ -1033,6 +1127,11 @@ class MetricFrontierRuntime:
                     time.sleep(min(.25,self._replan_period_s))
                     continue
                 pending = candidates[0]
+                # Bind to the context actually used to select the candidate,
+                # even if a callback arrives immediately after that calculation.
+                self._metric_active_context = (getattr(self, '_metric_context_generation', 0), inputs[1].context,
+                    inputs[0].header.frame_id, inputs[0].info.resolution,
+                    inputs[5].header.frame_id, inputs[5].info.resolution)
                 self._metric_nav_path = None
                 self._metric_plan_after_ns = None
                 task_started = time.monotonic()
@@ -1050,6 +1149,8 @@ class MetricFrontierRuntime:
                     stop_reason[0]='budget_exhausted'
                 elif self._wohnungserkundung_hwt_hold():
                     stop_reason[0]='hwt_hold'
+                elif not self._metric_work_is_current(self._metric_active_context):
+                    stop_reason[0]='map_work_context_changed'
                 else:
                     s = self._metric_operating_snapshot()
                     # Triplet publication window is movement-gated by the real gate.
@@ -1139,6 +1240,8 @@ class MetricFrontierRuntime:
             except Exception as error:
                 return finish('failed',str(error))
             hard = stop_reason[0]
+            if not self._metric_work_is_current(self._metric_active_context):
+                return finish('failed','map_work_context_changed')
             if hard and hard not in ('route_invalidated','task_budget_exhausted'):
                 return finish('failed',hard)
             # Nav2 SUCCESS alone is not a measured arrival/observation.
@@ -1156,6 +1259,7 @@ class MetricFrontierRuntime:
                 failures += 1
             pending=None
             self._metric_active=None
+            self._metric_active_context=None
             self._metric_status['state']='waiting_new_observation'
             self._status_phase='metric_replanning'
             time.sleep(min(.25,self._replan_period_s))

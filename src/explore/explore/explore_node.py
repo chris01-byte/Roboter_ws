@@ -2763,7 +2763,12 @@ class ExploreNode(MetricFrontierRuntime, Node):
     # ======================= Karten-Eingang =============================
     def _on_map(self, msg: OccupancyGrid):
         if getattr(self, "_metric_enabled", False):
-            self._on_metric_map(msg)
+            with self._metric_lock:
+                if not self._on_metric_map(msg):
+                    return
+                self._map = msg
+                self._map_received_at = time.monotonic()
+            return
         self._map = msg
         self._map_received_at = time.monotonic()
         if not getattr(self, '_region_graph_shadow_raw_map_enabled', False):
@@ -2823,11 +2828,23 @@ class ExploreNode(MetricFrontierRuntime, Node):
         self._wohnungserkundung_refresh_joined_active_source()
 
     def _on_global_costmap(self, msg: OccupancyGrid):
-        if getattr(self, '_metric_enabled', False) and self._global_costmap is not None:
-            old = self._global_costmap.header.stamp
-            new = msg.header.stamp
-            if (new.sec, new.nanosec) < (old.sec, old.nanosec):
-                return
+        if getattr(self, '_metric_enabled', False):
+            with self._metric_lock:
+                if self._global_costmap is not None:
+                    old = self._global_costmap.header.stamp
+                    new = msg.header.stamp
+                    if (new.sec, new.nanosec) < (old.sec, old.nanosec):
+                        return
+                    if ((new.sec, new.nanosec) == (old.sec, old.nanosec)
+                            and (msg.data != self._global_costmap.data
+                                 or self._metric_grid_geometry(msg) !=
+                                 self._metric_grid_geometry(self._global_costmap))):
+                        self._metric_fault = 'costmap_conflicting_same_stamp'
+                        return
+                    self._metric_raster_transition(self._global_costmap, msg)
+                self._global_costmap = msg
+                self._global_costmap_received_at = time.monotonic()
+            return
         self._global_costmap = msg
         self._global_costmap_received_at = time.monotonic()
 

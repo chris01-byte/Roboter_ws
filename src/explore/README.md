@@ -10,6 +10,14 @@ Ziele als ein kleiner.
 
 **CPU-only, kein CUDA/LLM nötig.**
 
+Der explizite Modus `metric_frontier` folgt dem
+[Karten-/Quellenvertrag](../../docs/wohnungserkundung/QUELLENVERTRAG.md).
+Rohkarte und Kartenmanagerstatus müssen exakt verbunden sein; Rasterwechsel
+verwerfen räumliche Startausnahmen vor Arrayoperationen. Gültige Weltziele
+werden auf Folgeupdates neu geprüft, alte Kontext-/Planerresultate ignoriert.
+Der aktuelle Software-/Gerätenachweis steht ausschließlich im
+[WE-Status](../../docs/wohnungserkundung/STATUS.md).
+
 ## Einordnung (Schichten-Architektur)
 
 ```

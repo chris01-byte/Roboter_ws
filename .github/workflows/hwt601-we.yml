@@ -9,6 +9,10 @@ on:
       - 'src/robot_bringup/launch/app_mapping.launch.py'
       - 'src/amadeus_lidar_bringup/**'
       - 'src/explore/**'
+      - 'src/amadeus_map_identity/**'
+      - 'src/robot_map_manager/**'
+      - 'src/robot_interfaces/**'
+      - 'src/mission_manager/**'
       - 'tools/sensorfusion/we_hwt601_process_smoke.py'
       - '.github/workflows/hwt601-we.yml'
   push:
@@ -30,13 +34,16 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends python3-pytest python3-yaml \
             python3-numpy python3-scipy python3-serial python3-pip \
-            ros-humble-robot-localization ros-humble-tf2-ros ros-humble-sensor-msgs-py
+            ros-humble-robot-localization ros-humble-tf2-ros ros-humble-sensor-msgs-py \
+            ros-humble-nav2-msgs ros-humble-tf2-geometry-msgs
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
-      - name: Build interface and historical HWT package
+      - name: Build interfaces and affected HWT and map packages
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
-          colcon build --packages-select robot_interfaces base_hardware robot_state_estimation
+          colcon build --base-paths src/robot_interfaces src/base_hardware \
+            src/robot_state_estimation src/amadeus_map_identity src/robot_map_manager \
+            src/explore src/robot_navigation src/mission_manager
       - name: Test real source contract and launch ownership without devices
         shell: bash
         run: |
@@ -45,6 +52,16 @@ jobs:
           export PYTHONPATH="${PWD}/src/robot_state_estimation:${PWD}/src/base_hardware:${PYTHONPATH}"
           python3 -m pytest -q src/robot_state_estimation/test src/base_hardware/test \
             src/robot_navigation/test/test_hwt601_gate_integration.py
+      - name: Installed map lifecycle and source contracts
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=227
+          python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
+            src/explore/test/test_metric_frontier.py src/explore/test/test_map_status_adapter.py \
+            src/explore/test/test_raw_map_portal_adapter.py \
+            src/amadeus_map_identity/test src/robot_map_manager/test
       - name: Real EKF prediction must not mask missing raw sources
         shell: bash
         run: |
