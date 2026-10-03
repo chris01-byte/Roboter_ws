@@ -2,7 +2,7 @@
   "schema": 1,
   "qualification": "software_only",
   "plant": {"integration_hz": 100, "response_tau_s": 0.05, "command_watchdog_s": 0.25},
-  "sensor": {"lidar_hz": 10, "lidar_beams": 720, "range_max_m": 10.0, "mast_mask_deg": [236, 304], "encoder_hz": 20, "gyro_hz": 100},
+  "sensor": {"lidar_hz": 10, "lidar_beams": 720, "range_max_m": 10.0, "native_clockwise_mast_mask_deg": [236, 304], "ros_normalized_mast_mask_deg": [56, 124], "encoder_hz": 20, "gyro_hz": 100},
   "budgets": {"startup_s": 60, "mission_s": 900, "goal_s": 150, "cancel_s": 3, "stop_s": 1},
   "positive": [
     {"id": "door68_start_a", "door_m": 0.68, "start": [-1.9, -0.45, 0.0]},
