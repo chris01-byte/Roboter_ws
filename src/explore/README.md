@@ -166,10 +166,8 @@ als Hardwarefehler oder bewiesenes Hindernis auszugeben. `route_invalidated` wir
 nur bei tatsächlich ungültiger Route verwendet; sonst
 `task_unreached_cause_unproven`. Das nächste Ziel entsteht erneut aus den
 Rastern. Wiederholung benötigt Ablauf von `metric_retry_cooldown_s` (30 s),
-geänderte Kartenevidenz und verbleibende Versuche
-(`metric_task_retry_limit`: 2); räumliche Zuordnung verhindert neue IDs als
-Retry-Umgehung. Erfolgreich bediente Umfelder bleiben für dieselbe Mission
-gesperrt. Die Historie ist auf 512 Aufgaben begrenzt.
+geänderte **lokale** Kartenevidenz und verbleibende Versuche
+(`metric_task_retry_limit`: 2 Fehlversuche, höchstens 3 Gesamtversuche je räumlicher Aufgabe). Neue IDs, entfernte Änderungen und neue Quellstempel allein öffnen kein bedientes Umfeld. Nach brauchbarem Sichtgewinn kann neue lokale Evidenz einen begrenzten weiteren Beobachtungsversuch erlauben. Die Historie ist auf 512 Aufgaben begrenzt.
 
 `goal_timeout_s` ist das absolute Aufgabenbudget einschließlich Vorausrichtung,
 Kindwechsel und HOLD. Kleine Drehungen oder Odometriesummen setzen es nicht
@@ -179,23 +177,73 @@ von Routenarbeit alle 50 ms und verwendet weiterhin Stillstand, aktuellen Weg
 und Gate-ACK zur Fortsetzung. Ein nicht nachgewiesen terminales Nav2-Kind
 verhindert neue Elternaufträge; spät angenommene alte Goals werden storniert.
 
-Der unveränderte Schema-1-Status ergänzt `strategy: metric_frontier` und
-`metric_exploration` mit aktivem Ziel, Kosten/Route, Versuch, Filtergründen,
-Entscheidungssnapshot und begrenzter Ziel-Ergebnis-Folgezielkette. Feedback zeigt
-das aktive Ziel. Drei bestätigte leere Beobachtungen **ohne** unbekannte
-Scopezellen oder unerledigte Fehlversuche ergeben höchstens
-`metric_completion_candidate`, Zustand `partial`. Filter, Blockaden und
-fehlende Daten ergeben keinen Abschluss; Budgetende bleibt `partial`, harte
-Fehler `failed`, Nutzerabbruch `canceled`. ExploreArea meldet keinen
-Gesamterfolg; der bisherige boolesche Actionvertrag führt einen metrischen
-Teilstand im Mission Manager/BT daher als fehlgeschlagen, während der neue
-Explorerstatus ausdrücklich `partial` meldet. `map_ready_to_save` bleibt false,
-Semantik- und Bodenabdeckung
-bleiben ausdrücklich ungeprüft. Bestehende App-/Speicherkonsumenten erhalten
-somit keine unberechtigte Speicherfreigabe. Manuelles Speichern einer geprüften
-Teilkarte über den bestehenden Kartenmanager bleibt eine eigene Handlung.
+Der unveränderte äußere Schema-1-Status ergänzt die versionierte
+`metric_exploration`-Erweiterung (Schema 1). Ankunft verlangt gemessene
+XY-/Yaw-Toleranz nach terminalem Kind und bestätigtem Stillstand. Eine
+Beobachtungsaufgabe gilt erst mit vorher unbekannten, anschließend tatsächlich
+beobachteten lokalen Weltzellen als bedient: neuere exakt korrelierte Rohkarte,
+neuere gültige endliche LiDAR-Strahlen, aktuelle Pose/Montage, echte Reichweite
+und unverdeckter Rasterweg. Bruchteiliger Rasterversatz, fernes Kartenwachstum,
+Goal-SUCCESS, Mast-NaN oder eine globale Freizellenzunahme beweisen das nicht.
+Bis 2 s stationäre Beobachtung innerhalb der ursprünglichen Aufgaben- und
+Gesamtfrist; ohne Beleg `arrival_without_observation`, Aufgabe bleibt offen.
 
-Gerätefreier verbundener Nachweis:
+Metrischer Abschluss verlangt mindestens 3 s kontinuierlich gültige Quellen,
+Pose und neue aktuelle Scans (mindestens drei), vollständige Rasterprojektion
+des vereinbarten Scopes und keinen relevanten Rand des rohkartenfreien, von der
+aktuellen Pose erreichbaren Bereichs. Alle solchen Ränder zählen **vor** Größen-,
+History- oder Geometriefiltern. Unbekannt hinter belegten Wänden ist kein
+pauschaler Blocker; ungeklärte zugängliche Verbindungen bleiben offen.
+Unterbrechung >0,5 s, Kontextwechsel oder Restarbeit setzt das Fenster zurück.
+
+`outcome` unterscheidet `metric_complete`, `usable_partial`,
+`blocked_help_required`, `error`, `user_canceled` und `in_progress`.
+Nur metrischer Abschluss setzt ExploreArea `success=true` und Action SUCCEEDED.
+Teilstand/Blockade/Fehler abortieren, Nutzerabbruch ist CANCELED. Äußerer
+Legacyzustand bei Blockade bleibt `partial`; BT und Mission Manager verwenden
+weiter den maßgeblichen Actionzustand plus bool, neue Telemetrie entsperrt sie
+nicht. `map_ready_to_save` gilt nur für metrischen Abschluss;
+`partial_map_ready_to_save` kennzeichnet separat eine speicherbare Teilkarte.
+`arrivals`, `observations` und kumulativer `observed_area_m2` beziehen sich auf
+Frontieraufgaben, nicht auf Initialscan, rohe Kartenfläche oder Fahrspur.
+Semantik- und Bodenabdeckung bleiben ausdrücklich ungeprüft. Die vorhandene
+App zeigt diese Unterschiede ohne erfundene Abdeckungsprozente.
+
+## AP-05: vorhandene Persistenz und ausdrückliche Wiederaufnahme
+
+`metric_persistence_enabled=true` verwendet vorhandene
+`ExplorationStateRepository` unter `wohnungserkundung_persistence_directory`
+(Default `~/.local/share/amadeus/exploration_states`). Ein erfolgreicher Save
+über den bestehenden Kartenmanager löst ausschließlich für den exakt gleichen
+validierten Kartenfingerprint einen atomaren Zustands-Sidecar aus. Er sichert
+Sitzung/Kartenepoche/Scope, Aufgaben und lokale Evidenz, Versuche, Ankünfte,
+Beobachtungen, Ergebnis, absolute Restzeit und Versuchslimits. Laufende
+Aufgaben sind bereits reserviert; Wiederaufnahme behandelt sie als ungeklärt.
+Eine Save-Antwort ohne dazu passenden vollständigen Entscheidungssnapshot
+meldet `metric_checkpoint_exact_saved_snapshot_unavailable`; sie bindet keine
+alte Aufgabenhistorie an eine andere Karte. Speicherung erneut nach aktueller
+Entscheidung/terminalem Zustand auslösen. Rohkarte bleibt unverändert.
+
+Karte und Sidecar sind zwei vorhandene atomare Speicherverträge: erst die
+unveränderliche Kartenversion, dann deren exakt gebundener Sidecar. Abbruch
+dazwischen ergibt eine gültige Rohkarte ohne wiederaufnehmbaren Aufgabenstand,
+keinen vollständigen Backup-Erfolg. Letztes gültiges Paar bleibt erhalten.
+Innerhalb derselben Kartenversion fällt der Loader bei beschädigtem oder
+unsupported neuerem Zustand auf die letzte gültige Revision zurück. Er lädt
+keine fremde Kartenversion automatisch, weil die aktuelle Lokalisierung dazu
+nicht passen würde. Manuelle Raumdaten werden nicht überschrieben.
+
+Laden ist passiv. Wiederaufnahme benötigt zusätzlich den bewussten
+read-only Prozessstartparameter `metric_resume_saved_state=true`, den gespeicherten
+`context.map_id` in `metric_resume_origin_map_id`, dieselbe konfigurierte Sitzung
+und Scopegeometrie sowie einen **neuen gültigen Explore-Auftrag**. Aktuelle
+Karte/Fingerprint, Pose und notwendige Quellen werden vor jeder Bewegung regulär geprüft. Zusätzlich muss `/localization/status_json` frisch (Empfang **und** Statuszeit innerhalb der vorhandenen 0,8-s-Posefrist), `ready=true`/`localized` und ein abgeschlossener, verifizierter globaler Scanmatch mit derselben gespeicherten Kartenidentität vorliegen. Ein frischer TF oder ein nacktes Ready-Bool allein genügt nicht. Auch nach Resume bleibt diese bestehende Lokalisierungsfreigabe aktuell erforderlich; ihr Verlust sperrt die Bewegung. Keine Fahrt aus einem Ladeereignis. Ausfallzeit wird
+von der gespeicherten Gesamtfrist abgezogen; Uhr-Rücklauf sperrt Resume.
+Gespeicherte Goal-/Fehler-/Aufgabenlimits werden nicht erhöht, neue IDs oder
+Neustart setzen keinen Versuch zurück. Fehlgeschlagener Resume überschreibt
+keine gültige Sicherung. [Originalnachweise und Grenzen](../../docs/wohnungserkundung/evidence/ap05-20261003/README.md).
+
+Historischer gerätefreier verbundener Prüfstand (AP-05-Ergebnisassertionen angepasst; neue vollständige Ausführung erst AP-06):
 `tools/sensorfusion/metric_frontier_product_graph.py` nach Sourcen des
 isolierten Builds ausführen; das Skript erzwingt localhost und Domain 200–230.
 Synthetische Quellen/Nav2 ersetzen ausschließlich Sensoren und Gegenstelle,
@@ -229,7 +277,7 @@ Dies ist eine Beobachtungsmöglichkeit, kein bereits gemessener Fortschritt.
 
 Die Kandidatenebene ist zustandslos und liefert bei neuer Karte erneut
 Vorschläge. Missionseigene Erledigung/Retry/Wiederbeobachtung bleibt getrennt
-und wird erst in AP-05 konsolidiert. Maximal 128 Randvorschläge, 4.096 Strahlen,
+und ist in AP-05 einschließlich gemessenem Fortschritt/Wiederbeobachtung konsolidiert. Maximal 128 Randvorschläge, 4.096 Strahlen,
 8.192 radiale Schritte/2 Mio. Strahlrasterpositionen und das vorhandene
 Kartenzeitbudget begrenzen die Rechnung. Überschreitung ist ein konkreter
 Blocker und kein leerer erfolgreicher Abschluss.

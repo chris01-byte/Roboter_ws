@@ -577,6 +577,8 @@ class MissionManager(Node):
         self.state = 'running'
         self._hwt_hold_active = False
         self._hwt_session_floor = self._hwt_seen_sequence
+        self._metric_exploration_result = None
+        self._explore_started_wall = time.time()
         self.mode = 'real'
         self.active_command = dict(cmd)
         self.phase = 'gestartet'
@@ -668,6 +670,20 @@ class MissionManager(Node):
             return
         if not isinstance(status, dict):
             return
+        metric = status.get('metric_exploration')
+        if (isinstance(metric, dict) and metric.get('schema_version') == 1
+                and metric.get('outcome') in ('in_progress','metric_complete','usable_partial',
+                                              'blocked_help_required','error','user_canceled')
+                and self.state == 'running' and self.mode == 'real'
+                and self.active_command.get('type') == 'explore' and not self._cancel_requested):
+            stamp, started = status.get('time'), metric.get('started_wall_time')
+            if (type(stamp) in (int,float) and type(started) in (int,float)
+                    and 0 <= time.time()-stamp <= 2.
+                    and started >= getattr(self, '_explore_started_wall', float('inf'))):
+                self._metric_exploration_result = dict(metric)
+                # Telemetry enriches the result; only the owned BT Action can
+                # complete this mission. A delayed status never unlocks it.
+                self._publish_status()
         sequence = status.get('hwt_recovery_sequence')
         if type(sequence) is not int or sequence < 0:
             return
@@ -1154,6 +1170,7 @@ class MissionManager(Node):
                 'bt_explicit_opt_in'
                 if self.enable_real_explore
                 else 'simulation_only_no_navigation'),
+            'metric_exploration_result': getattr(self, '_metric_exploration_result', None),
             'time': time.time(),
         }
         self.status_pub.publish(String(data=json.dumps(payload, ensure_ascii=False)))

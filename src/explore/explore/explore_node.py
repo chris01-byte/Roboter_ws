@@ -3657,7 +3657,13 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 self._metric_status, scope_bound=self._metric_scope is not None,
                 source_fault=self._metric_fault,
                 child_terminal=not getattr(self, '_nav_child_uncertain', False))
-            payload['map_ready_to_save'] = False
+            payload['map_ready_to_save'] = self._metric_status.get('outcome') == 'metric_complete'
+            payload['metric_exploration']['partial_map_ready_to_save'] = (
+                getattr(self, '_metric_checkpoint', None) is not None and
+                not getattr(self, '_nav_child_uncertain', False) and
+                self._metric_status.get('state') in ('success', 'partial', 'blocked', 'failed', 'canceled'))
+            payload['metric_exploration']['persistence'] = getattr(
+                self, '_metric_persistence_status', {'state': 'disabled'})
         if getattr(self, '_hwt_guard', None) is not None:
             payload['hwt_recovery_sequence'] = getattr(
                 self, '_hwt_recovery_sequence', 0)
@@ -6155,6 +6161,8 @@ class ExploreNode(MetricFrontierRuntime, Node):
                             None))
             if getattr(self, '_metric_enabled', False):
                 state = self._metric_status['state']
+                if state == 'blocked':
+                    state = 'partial'  # compatible schema-1 outer status
                 self._status_phase = state
             elif completion is not None:
                 projection = project_completion_for_legacy(completion)
@@ -6185,6 +6193,14 @@ class ExploreNode(MetricFrontierRuntime, Node):
         except Exception as exc:
             self._status_phase = 'failed'
             self._status_message = f'Interner Explorer-Fehler: {exc}'
+            if getattr(self, '_metric_enabled', False):
+                self._metric_status.update(state='failed', outcome='error', reason=str(exc))
+                result = ExploreArea.Result()
+                result.message = f'metric_frontier:failed:{exc}'
+                goal_handle.abort()
+                self._metric_active = self._metric_active_context = None
+                self._publish_status('failed')
+                return self._finish_result(result, self._frontiers_visited_status)
             self._publish_status('failed')
             raise
         finally:
@@ -7104,7 +7120,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
             if return_to_start:
                 result = ExploreArea.Result()
                 result.message = 'metric_frontier:unsupported_return_request'
-                self._metric_status.update(state='failed',reason='unsupported_return_request')
+                self._metric_status.update(state='failed',outcome='error',reason='unsupported_return_request')
                 goal_handle.abort()
                 return result
             return self._execute_metric_frontier(

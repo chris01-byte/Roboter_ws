@@ -144,6 +144,46 @@ struct MissionStatus: Decodable, Equatable {
     }
 }
 
+struct MetricExplorationStatus: Decodable, Equatable {
+    let schemaVersion: Int?
+    let outcome: String?
+    let arrivals: Int?
+    let observations: Int?
+    let observedAreaM2: Double?
+    let partialMapReadyToSave: Bool?
+    let semanticComplete: Bool?
+    let floorCoverageVerified: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version", outcome, arrivals, observations
+        case observedAreaM2 = "observed_area_m2"
+        case partialMapReadyToSave = "partial_map_ready_to_save"
+        case semanticComplete = "semantic_complete"
+        case floorCoverageVerified = "floor_coverage_verified"
+    }
+
+    var isValid: Bool {
+        guard schemaVersion == 1, let outcome,
+              ["in_progress", "metric_complete", "usable_partial", "blocked_help_required",
+               "error", "user_canceled"].contains(outcome),
+              let arrivals, let observations, let observedAreaM2 else { return false }
+        return arrivals >= 0 && observations >= 0 && observations <= arrivals &&
+            observedAreaM2.isFinite && observedAreaM2 >= 0 &&
+            semanticComplete == false && floorCoverageVerified == false
+    }
+
+    var resultLabel: String {
+        switch outcome {
+        case "metric_complete": return "Metrisch abgeschlossen"
+        case "usable_partial": return "Nutzbarer Teilstand"
+        case "blocked_help_required": return "Vorläufig blockiert – Hilfe erforderlich"
+        case "error": return "Erkundungsfehler"
+        case "user_canceled": return "Vom Nutzer abgebrochen"
+        default: return "Metrische Erkundung läuft"
+        }
+    }
+}
+
 struct ExploreStatus: Decodable, Equatable {
     private static let knownStates = Set([
         "idle",
@@ -160,6 +200,7 @@ struct ExploreStatus: Decodable, Equatable {
     let phase: String?
     let message: String?
     let strategy: String?
+    let metricExploration: MetricExplorationStatus?
     let coverageRatio: Double?
     let coveragePercent: Double?
     let targetCoveragePercent: Double?
@@ -178,6 +219,7 @@ struct ExploreStatus: Decodable, Equatable {
         case phase
         case message
         case strategy
+        case metricExploration = "metric_exploration"
         case coverageRatio = "coverage_ratio"
         case coveragePercent = "coverage_percent"
         case targetCoveragePercent = "target_coverage_percent"
@@ -221,6 +263,11 @@ struct ExploreStatus: Decodable, Equatable {
             time.isFinite
         else {
             return false
+        }
+        if strategy == "metric_frontier" {
+            guard let metricExploration, metricExploration.isValid,
+                  (state == "success") == (metricExploration.outcome == "metric_complete"),
+                  mapReadyToSave == (metricExploration.outcome == "metric_complete") else { return false }
         }
         return coverageRatio >= 0 && coverageRatio <= 1 &&
             coveragePercent >= 0 && coveragePercent <= 100 &&

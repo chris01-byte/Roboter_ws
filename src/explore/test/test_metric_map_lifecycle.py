@@ -500,7 +500,8 @@ def test_real_parent_loop_revalidates_child_and_ignores_late_success(monkeypatch
     assert stopped == [update != 'growth']
     assert n._frontiers_visited_status == (1 if update == 'growth' else 0)
     if update == 'growth':
-        assert n._metric_status['chain'][0]['decision'] == 'observed'
+        assert n._metric_status['chain'][0]['decision'] == 'arrival_without_observation'
+        assert n._metric_status['chain'][0]['observed_cells'] == 0
     else:
         assert not n._metric_status['chain']
         assert 'failed' in result.message

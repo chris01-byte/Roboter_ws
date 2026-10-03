@@ -29,6 +29,12 @@ from .portal_source_adapter import raw_map_portal_source_from_values, PortalSour
 from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier_candidates import boundary_samples, lidar_view, visible_boundary_cells
+from .metric_progress import (local_evidence, reachable_remainder, CompletionWindow,
+                              ObservationBaseline, measured_gain)
+from .exploration_persistence import (ExplorationStateRepository, ExplorationPersistenceError,
+                                     binding_from_map_manager_status)
+from pathlib import Path as FilePath
+from .metric_checkpoint import validate_checkpoint, policy_state, restore_policy
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
@@ -81,6 +87,27 @@ class MetricFrontierRuntime:
             raise ValueError('metric scope needs the observed initial map fingerprint')
         self._metric_retry_s = float(self.declare_parameter('metric_retry_cooldown_s', 30.).value)
         self._metric_retry_limit = int(self.declare_parameter('metric_task_retry_limit', 2).value)
+        self._metric_completion_window_s = float(self.declare_parameter(
+            'metric_completion_window_s', 3., ParameterDescriptor(read_only=True)).value)
+        self._metric_observation_wait_s = float(self.declare_parameter(
+            'metric_observation_wait_s', 2., ParameterDescriptor(read_only=True)).value)
+        if (not math.isfinite(self._metric_completion_window_s) or self._metric_completion_window_s < 3.
+                or not math.isfinite(self._metric_observation_wait_s) or not 0 < self._metric_observation_wait_s <= 2.):
+            raise ValueError('metric observation windows invalid')
+        self._metric_resume_saved = self.declare_parameter(
+            'metric_resume_saved_state', False, ParameterDescriptor(read_only=True)).value
+        self._metric_resume_origin_map_id = self.declare_parameter(
+            'metric_resume_origin_map_id', '', ParameterDescriptor(read_only=True)).value
+        if self._metric_resume_saved and not self._metric_resume_origin_map_id:
+            raise ValueError('metric resume requires the saved original map epoch ID')
+        self._metric_repository = (ExplorationStateRepository(FilePath(
+            self._wohnungserkundung_persistence_directory).expanduser())
+            if self.declare_parameter('metric_persistence_enabled', True,
+                                     ParameterDescriptor(read_only=True)).value else None)
+        self._metric_checkpoint = None
+        self._metric_restored = None
+        self._metric_localization_status = None
+        self._metric_persistence_status = {'state': 'waiting_for_saved_map' if self._metric_repository else 'disabled'}
         # The existing per-child budget is absolute, across HOLD and alignment.
         if (not all(math.isfinite(v) and v > 0 for v in (self._goal_timeout_s,
                 self._overall_timeout_s,self._metric_retry_s)) or self._metric_retry_limit < 1):
@@ -131,7 +158,9 @@ class MetricFrontierRuntime:
         self._metric_active = None
         self._metric_active_context = None
         self._metric_context_generation = 0
-        self._metric_status = {'state': 'idle', 'full_apartment_complete': False,
+        self._metric_status = {'schema_version': 1, 'state': 'idle', 'outcome': 'in_progress',
+                               'arrivals': 0, 'observations': 0, 'observed_area_m2': 0.,
+                               'full_apartment_complete': False,
                                'semantic_complete': False, 'floor_coverage_verified': False}
         # Shared source observers and single-child/HOLD lock, without policy.
         self._wohnungserkundung_runtime_lock = threading.Lock()
@@ -150,6 +179,8 @@ class MetricFrontierRuntime:
                                  self._on_metric_map_status, 10, callback_group=self._cb)
         self.create_subscription(String, '/base_hardware/state_json',
                                  self._on_metric_wheel_status, 10, callback_group=self._cb)
+        self.create_subscription(String, '/localization/status_json',
+                                 self._on_metric_localization_status, 10, callback_group=self._cb)
 
     @staticmethod
     def _metric_grid_values(grid):
@@ -236,6 +267,7 @@ class MetricFrontierRuntime:
                     self._metric_joined = (self._metric_raw, status, self._metric_status_at)
                 elif self._metric_pending_since is None:
                     self._metric_pending_since = time.monotonic()
+                self._metric_persist_map_status(msg.data)
         except MapStatusUnavailableError:
             pass  # before first map only; no invented map/session
         except Exception as error:
@@ -252,6 +284,129 @@ class MetricFrontierRuntime:
         with self._metric_lock:
             self._metric_wheel = status
             self._metric_wheel_at = time.monotonic()
+
+    def _on_metric_localization_status(self, msg):
+        try:
+            value = json.loads(msg.data) if len(msg.data) <= 65536 else None
+            if not isinstance(value, dict) or type(value.get('schema_version')) is not int or value.get('schema_version') != 1:
+                value = None
+        except (ValueError, TypeError, RecursionError):
+            value = None
+        with self._metric_lock:
+            self._metric_localization_status = (value, time.monotonic())
+
+    def _metric_resume_localization_ready(self):
+        """Reuse the existing localized/full-scan guard's map-bound verdict."""
+        if not getattr(self, '_metric_resume_saved', False):
+            return True
+        stored = getattr(self, '_metric_restored', None)
+        sample = getattr(self, '_metric_localization_status', None)
+        if stored is None or sample is None or sample[0] is None:
+            return False
+        value, received_at = sample
+        stamp = value.get('time')
+        matching = value.get('global_scan_match')
+        return (0 <= time.monotonic()-received_at <= self._door_pose_timeout and
+            type(stamp) in (int,float) and 0 <= time.time()-stamp <= self._door_pose_timeout and
+            value.get('ready') is True and value.get('state') == 'localized' and
+            value.get('global_initialization') == 'completed' and
+            value.get('map_fingerprint') == stored['fingerprint'] and
+            value.get('global_initialization_fingerprint') == stored['fingerprint'] and
+            type(value.get('global_initialization_generation')) is int and value['global_initialization_generation'] > 0 and
+            isinstance(value.get('global_initialization_id'),str) and
+            len(value['global_initialization_id']) == 32 and
+            all(c in '0123456789abcdef' for c in value['global_initialization_id']) and
+            isinstance(matching,dict) and matching.get('required') is True and matching.get('verified') is True)
+
+    def _metric_persist_map_status(self, serialized):
+        """An exact saved map may gain an atomic sidecar; loading is passive."""
+        repository = getattr(self, '_metric_repository', None)
+        if repository is None:
+            return
+        try:
+            root = json.loads(serialized)
+            saving = root.get('event') == 'save_result' and root.get('ok') is True
+            binding = binding_from_map_manager_status(serialized, require_successful_save_event=saving)
+        except ExplorationPersistenceError:
+            return  # no saved version / map save not successful
+        try:
+            checkpoint = self._metric_checkpoint
+            if saving:
+                if checkpoint is None or checkpoint['fingerprint'] != binding.fingerprint:
+                    raise ValueError('metric_checkpoint_exact_saved_snapshot_unavailable')
+                state = dict(checkpoint)
+                # Account for all time since the decision snapshot, including IO.
+                elapsed = time.time()-state['saved_wall_time']
+                if elapsed < 0:
+                    raise ValueError('metric_checkpoint_clock_regressed')
+                state['remaining_s'] = max(0., state['remaining_s']-elapsed)
+                state['saved_wall_time'] = time.time()
+                validate_checkpoint(state)
+                path = repository.save(binding, state)
+                self._metric_persistence_status = dict(state='saved', path=str(path),
+                    map_id=state['saved_map_id'], version=binding.version, outcome=state['outcome'])
+            elif checkpoint is None and self._metric_restored is None:
+                loaded = repository.load(binding, validate_state=validate_checkpoint)
+                if loaded.state['fingerprint'] != binding.fingerprint:
+                    raise ValueError('metric_checkpoint_saved_map_mismatch')
+                self._metric_restored = loaded.state
+                self._metric_persistence_status = dict(state='loaded_passively', version=binding.version,
+                    map_id=loaded.state['saved_map_id'], motion_authorized=False)
+        except (ValueError, TypeError, KeyError, OSError) as error:
+            self._metric_persistence_status = dict(state='unavailable', reason=str(error), motion_authorized=False)
+
+    def _metric_update_checkpoint(self, inputs, policy, *, remaining, attempts, failures,
+                                  arrivals, observations, observed_area, outcome):
+        if not hasattr(self, '_metric_lock') or not getattr(self, '_metric_scope', None):
+            return
+        if getattr(self, '_metric_resume_saved', False) and not getattr(self, '_metric_resume_validated', False):
+            return  # rejected resume must never erase the saved history/budget
+        c = inputs[1]
+        state = dict(schema_version=1, strategy='metric_frontier', resume_authorizes_motion=False,
+            context=dict(session_id=c.context.session_id, map_id=c.context.map_id, frame_id=c.context.frame_id),
+            saved_map_id='map-'+c.fingerprint, fingerprint=c.fingerprint,
+            scope=dict(scope_id=self._metric_scope.scope_id,
+                       vertices=[[v.x,v.y] for v in self._metric_scope.vertices]),
+            remaining_s=max(0., remaining), saved_wall_time=time.time(), attempts=attempts,
+            failures=failures, arrivals=arrivals, observations=observations,
+            observed_area_m2=observed_area, outcome=outcome, policy=policy_state(policy, time.monotonic()))
+        state['budget_limits'] = dict(max_frontier_goals=self._max_frontier_goals,
+            max_failed_goals=self._max_failed_goals,goal_timeout_s=self._goal_timeout_s,
+            completion_window_s=getattr(self, '_metric_completion_window_s', 3.))
+        with self._metric_lock:
+            self._metric_checkpoint = state
+
+    def _metric_observation_baseline(self, inputs, candidate):
+        grid, c, *_ = inputs
+        scan = self._door_lidar_scan_snapshot()
+        q = grid.info.origin.orientation
+        points = candidate.observation_points
+        if scan is None or 'key' not in scan:
+            return ObservationBaseline(c.context, c.source_stamp_ns, 0,
+                grid.info.resolution, 0., ())  # no evidence, never completion
+        if not points:  # compatible legacy candidate source still needs real sight
+            self._metric_observation_view()
+            mask = self._metric_scope_mask(inputs)
+            points = tuple(self._grid_to_world(col, row, grid.info) for row, col in
+                visible_boundary_cells(grid, mask, (candidate.x, candidate.y, candidate.yaw),
+                                       self._metric_observation_view()))
+        return ObservationBaseline(c.context, c.source_stamp_ns,
+            scan['key'][0]*10**9+scan['key'][1], grid.info.resolution,
+            math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)), points)
+
+    def _metric_scope_mask(self, inputs):
+        grid, c, *_ = inputs
+        q = grid.info.origin.orientation
+        return rasterize_scope(self._metric_scope, context=c.context,
+            width=grid.info.width,height=grid.info.height,resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+
+    def _metric_scope_is_covered(self, grid):
+        return all(0 <= self._world_to_grid(v.x,v.y,grid.info)[0] < grid.info.width and
+                   0 <= self._world_to_grid(v.x,v.y,grid.info)[1] < grid.info.height
+                   for v in self._metric_scope.vertices)
 
     def _metric_body_reference(self):
         # Bind first-body space to the actual mapping/odometry relation.
@@ -286,6 +441,8 @@ class MetricFrontierRuntime:
             raise ValueError(fault)
         if raw is None or c is None or scope is None:
             raise ValueError('map_scope_not_joined')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed')
         if not self._metric_matches_status(raw[1]):
             joined = getattr(self, '_metric_joined', None)
             if (not active or pending is None or now-pending > 1.25 or joined is None
@@ -399,6 +556,8 @@ class MetricFrontierRuntime:
             raise ValueError('map_stamp_stale_after_processing')
         if not 0 <= age + completed-pose_checked <= self._door_pose_timeout:
             raise ValueError('pose_stale_after_processing')
+        if not self._metric_resume_localization_ready():
+            raise ValueError('resume_localization_unconfirmed_after_processing')
         if (self._metric_self_body_enabled
                 and not 0 <= completed-scan['received_at'] <= self._door_lidar_scan_timeout):
             raise ValueError('self_body_scan_stale_after_processing')
@@ -993,6 +1152,7 @@ class MetricFrontierRuntime:
             length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
             cost = self._potential_scale*length-self._gain_scale*f.size*grid.info.resolution+self._heading_scale*error
             target_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
+            points = ()
             if view is not None:
                 if live_view:
                     view = self._metric_observation_view()
@@ -1007,8 +1167,9 @@ class MetricFrontierRuntime:
                     counts['no_visible_frontier'] = counts.get('no_visible_frontier', 0)+1
                     continue
                 cost = self._potential_scale*length-self._gain_scale*len(local_hits)*grid.info.resolution+self._heading_scale*error
+                points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(local_hits))
             candidates.append(MetricCandidate('',*goal,target_yaw,(f.cx,f.cy),route,length,cost,
-                                              correlation.fingerprint,correlation.map_revision,proposal))
+                                              correlation.fingerprint,correlation.map_revision,proposal,points))
         if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
             raise ValueError('frontier_candidate_processing_budget_exhausted')
         candidates.sort(key=lambda candidate:(candidate.cost,candidate.frontier_xy))
@@ -1023,16 +1184,17 @@ class MetricFrontierRuntime:
         candidates = self._metric_candidates(inputs, min_frontier)
         selected = []
         for candidate in candidates:
-            key = policy.identify(candidate.frontier_xy)
-            if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint):
-                selected.append(replace(candidate, task_id=key))
+            key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y))
+            evidence = local_evidence(inputs[0], policy.attempts[key].frontier_xy, self._grid_to_world)
+            if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint, evidence):
+                selected.append(replace(candidate, task_id=key, evidence_key=evidence))
             else:
                 self._frontier_rank_stats['deferred_or_served'] += 1
         self._frontier_rank_stats['accepted'] = len(selected)
         return selected
 
     def _metric_operating_snapshot(self, require_stop=False):
-        reason = None
+        reason = None if self._metric_resume_localization_ready() else 'resume_localization_unconfirmed'
         if self._wohnungserkundung_active_safety_failure():
             reason = self._wohnungserkundung_last_safety_failure
         with self._metric_lock:
@@ -1119,31 +1281,57 @@ class MetricFrontierRuntime:
         scan_task_started = None
         initial_stop_confirmed = False
         chain = []
-        stable_empty = set()
+        completion_window = CompletionWindow(getattr(self, '_metric_completion_window_s', 3.))
+        arrivals = observations = 0
+        observed_area = 0.
+        last_inputs = None
+        baseline = None
+        resume_checked = False
+        self._metric_resume_validated = False
+        def checkpoint(outcome='in_progress'):
+            if last_inputs is not None:
+                self._metric_update_checkpoint(last_inputs, policy,
+                    remaining=overall_timeout-(time.monotonic()-started), attempts=attempts,
+                    failures=failures, arrivals=arrivals, observations=observations,
+                    observed_area=observed_area, outcome=outcome)
         def expired():
             return time.monotonic()-started >= overall_timeout
         def finish(state, reason):
+            if goal_handle.is_cancel_requested and not getattr(self, '_nav_child_uncertain', False):
+                state, reason = 'canceled', 'user_canceled'
+            outcome = dict(success='metric_complete',partial='usable_partial',blocked='blocked_help_required',
+                           failed='error',canceled='user_canceled')[state]
+            checkpoint(outcome)
             self._metric_status.update(state=state,reason=reason,chain=chain[-40:],
-                                       attempts=attempts,failures=failures)
+                                       attempts=attempts,failures=failures, outcome=outcome,
+                                       arrivals=arrivals,observations=observations,observed_area_m2=observed_area,
+                                       observation_window_s=completion_window.duration_s)
             self._status_message = reason
             self._status_phase = state
-            result.success = False  # no semantic/full-coverage result is proven here
+            self._status_state = 'partial' if state == 'blocked' else state
+            result.success = state == 'success'
             result.message = f'metric_frontier:{state}:{reason}'
             if state == 'canceled':
                 goal_handle.canceled()
+            elif state == 'success':
+                goal_handle.succeed()
             else:
                 goal_handle.abort()
             self._metric_active = None
             self._metric_active_context = None
             return self._finish_result(result,self._frontiers_visited_status)
-        self._metric_status = dict(state='running', full_apartment_complete=False,
+        self._metric_status = dict(schema_version=1, state='running', outcome='in_progress',
+                                  started_wall_time=time.time(),arrivals=0,observations=0,observed_area_m2=0.,full_apartment_complete=False,
                                   semantic_complete=False,floor_coverage_verified=False,chain=chain)
+        self._status_state = 'running'
         self._blacklist.clear()
         self._visited_frontier_goals.clear()
         while rclpy.ok():
             if goal_handle.is_cancel_requested:
                 return finish('canceled','user_canceled')
-            if expired() or attempts >= self._max_frontier_goals or failures >= self._max_failed_goals:
+            if failures >= self._max_failed_goals:
+                return finish('blocked','failure_budget_exhausted')
+            if expired() or attempts >= self._max_frontier_goals:
                 return finish('partial','budget_exhausted')
             if self._wohnungserkundung_hwt_hold():
                 resume = self._wohnungserkundung_wait_for_hwt_resume(goal_handle,expired,require_target=pending is not None)
@@ -1173,11 +1361,56 @@ class MetricFrontierRuntime:
                     time.sleep(.05)
                     continue
                 return finish('failed',reason)
+            last_inputs = inputs
+            if not resume_checked:
+                resume_checked = True
+                if getattr(self, '_metric_resume_saved', False):
+                    saved = getattr(self, '_metric_restored', None)
+                    if saved is None:
+                        return finish('failed', 'metric_resume_saved_checkpoint_unavailable')
+                    expected = dict(scope_id=self._metric_scope.scope_id,
+                        vertices=[[v.x,v.y] for v in self._metric_scope.vertices])
+                    if (saved['fingerprint'] != inputs[1].fingerprint or saved['scope'] != expected or
+                            saved['context']['session_id'] != inputs[1].context.session_id or
+                            saved['context']['frame_id'] != inputs[1].context.frame_id or
+                            saved['context']['map_id'] != self._metric_resume_origin_map_id or
+                            saved['policy']['radius'] != policy.radius or
+                            saved['policy']['cooldown_s'] != policy.cooldown_s or
+                            saved['policy']['retry_limit'] != policy.retry_limit):
+                        return finish('failed', 'metric_resume_binding_mismatch')
+                    try:
+                        policy, remaining = restore_policy(saved, time.monotonic(), time.time())
+                    except ValueError as error:
+                        return finish('failed', str(error))
+                    overall_timeout = min(overall_timeout, remaining)
+                    self._max_frontier_goals = min(self._max_frontier_goals, saved['budget_limits']['max_frontier_goals'])
+                    self._max_failed_goals = min(self._max_failed_goals, saved['budget_limits']['max_failed_goals'])
+                    self._goal_timeout_s = min(self._goal_timeout_s, saved['budget_limits']['goal_timeout_s'])
+                    self._metric_completion_window_s = max(completion_window.duration_s,
+                        saved['budget_limits']['completion_window_s'])
+                    completion_window.duration_s = self._metric_completion_window_s
+                    started = time.monotonic()
+                    attempts, failures = saved['attempts'], saved['failures']
+                    arrivals, observations = saved['arrivals'], saved['observations']
+                    observed_area = saved['observed_area_m2']
+                    self._metric_resume_validated = True
+                    for task in policy.attempts.values():
+                        if task.reason == 'pending':
+                            task.reason = 'interrupted_unresolved'
+                            task.failures += 1
+                            failures += 1
+                    self._frontiers_visited_status = arrivals
+                    if expired() or attempts >= self._max_frontier_goals or failures >= self._max_failed_goals:
+                        return finish('partial', 'budget_exhausted')
+            checkpoint()
             adaptive_candidates = None
             use_scan = scan_pending
             if self._metric_start_strategy == 'adaptive' and pending is None:
-                decision, adaptive_candidates = self._metric_start_decision(
-                    inputs, policy, min_frontier, scan_pending)
+                try:
+                    decision, adaptive_candidates = self._metric_start_decision(
+                        inputs, policy, min_frontier, scan_pending)
+                except Exception as error:
+                    return finish('failed', str(error))
                 self._metric_status['start_decision'] = decision
                 use_scan = decision['selected_motion'] == 'full_scan'
             if use_scan:
@@ -1238,8 +1471,11 @@ class MetricFrontierRuntime:
                 scan_pending=False  # at most ONE scan attempt; HOLD retains it
                 continue
             if pending is None:
-                candidates = (adaptive_candidates if adaptive_candidates is not None else
-                              self._metric_select(inputs,policy,min_frontier))
+                try:
+                    candidates = (adaptive_candidates if adaptive_candidates is not None else
+                                  self._metric_select(inputs,policy,min_frontier))
+                except Exception as error:
+                    return finish('failed', str(error))
                 self._metric_status.update(candidates=len(candidates),ranking=self._frontier_rank_stats)
                 if not candidates:
                     grid,c,_,known,*_=inputs
@@ -1250,19 +1486,58 @@ class MetricFrontierRuntime:
                         origin_x_m=origin[0],origin_y_m=origin[1],origin_yaw_rad=math.atan2(
                             2*origin[6]*origin[5],1-2*origin[5]**2),maximum_cells=self._wohnungserkundung_evidence_max_cells)
                     unknown=int(np.count_nonzero((occupancy<0)&inside))
-                    scope_inside=all(0<=self._world_to_grid(v.x,v.y,grid.info)[0]<grid.info.width
-                        and 0<=self._world_to_grid(v.x,v.y,grid.info)[1]<grid.info.height
-                        for v in self._metric_scope.vertices)
-                    unresolved=any(a.failures and not a.completed for a in policy.attempts.values())
+                    scope_inside=self._metric_scope_is_covered(grid)
+                    try:
+                        remainder = reachable_remainder(grid, inside, inputs[2], self._world_to_grid)
+                    except ValueError as error:
+                        return finish('blocked', str(error))
+                    unresolved=any(a.tries and not a.completed for a in policy.attempts.values())
                     self._metric_status.update(unknown_cells_in_scope=unknown,
                         deferred_tasks=sum(a.failures>0 and not a.completed for a in policy.attempts.values()))
-                    if (not self._frontiers_remaining and not unknown and scope_inside and not unresolved):
-                        stable_empty.add((c.fingerprint,c.source_stamp_ns))
-                        if len(stable_empty)>=3:
-                            self._metric_status['metric_completion_candidate']=True
-                            return finish('partial','metric_exhausted_candidate_requires_review')
-                    else:
-                        stable_empty.clear()
+                    # A real finite scan is mandatory even on a fully known map.
+                    try:
+                        self._metric_observation_view()
+                        scan = self._door_lidar_scan_snapshot()
+                    except Exception as error:
+                        return finish('failed', str(error))
+                    clear = not remainder and scope_inside and not unresolved
+                    self._metric_status.update(reachable_boundary_cells=remainder,
+                        completion_observations=completion_window.samples,
+                        completion_blocker=(None if clear else 'accessible_or_unresolved_work'))
+                    if completion_window.observe(now=time.monotonic(),
+                            scan_stamp=scan['key'][0]*10**9+scan['key'][1],
+                            context=(c.context,getattr(self,'_metric_context_generation',0),grid.info.resolution,
+                                     origin[3:]), clear=clear):
+                        # Processing/callback races cannot turn an old empty
+                        # snapshot into success after new accessible work.
+                        try:
+                            final = self._metric_inputs()
+                            final_inside = self._metric_scope_mask(final)
+                            self._metric_observation_view()
+                            final_clear = (final[1].context == c.context and self._metric_scope_is_covered(final[0]) and
+                                final[0].info.resolution == grid.info.resolution and
+                                self._metric_grid_values(final[0])['origin'][3:] == origin[3:] and
+                                not reachable_remainder(final[0], final_inside, final[2], self._world_to_grid) and
+                                self._metric_operating_snapshot(require_stop=True)['safe'])
+                        except Exception as error:
+                            return finish('failed', str(error))
+                        with self._metric_lock:
+                            current = self._metric_correlation
+                            raw = self._metric_raw
+                            current_snapshot = (not self._metric_fault and current is not None and raw is not None and
+                                current.context == final[1].context and current.fingerprint == final[1].fingerprint and
+                                current.source_stamp_ns == final[1].source_stamp_ns and
+                                self._metric_matches_status(raw[1]))
+                            if final_clear and current_snapshot:
+                                last_inputs = final
+                                return finish('success','reachable_metric_scope_observed')
+                        completion_window.observe(now=time.monotonic(),scan_stamp=0,context=c.context,clear=False)
+                    if remainder and (not self._frontiers_remaining or
+                            (self._frontier_rank_stats.get('raw', 0) and not self._frontier_rank_stats.get('deferred_or_served', 0))):
+                        return finish('blocked', 'accessible_frontier_filtered_or_blocked')
+                    if unresolved and all(a.failures >= policy.retry_limit or a.tries >= policy.retry_limit+1
+                            for a in policy.attempts.values() if a.tries and not a.completed):
+                        return finish('blocked', 'task_attempts_exhausted')
                     self._status_phase='metric_waiting_tasks'
                     self._status_message=self._metric_status.get('start_decision', {}).get(
                         'first_rejecting_predicate') or 'No eligible task; remaining unknown/deferred work is not completion.'
@@ -1270,6 +1545,9 @@ class MetricFrontierRuntime:
                     time.sleep(min(.25,self._replan_period_s))
                     continue
                 pending = candidates[0]
+                completion_window.observe(now=time.monotonic(), scan_stamp=0,
+                    context=inputs[1].context, clear=False)
+                baseline = self._metric_observation_baseline(inputs, pending)
                 # Bind to the context actually used to select the candidate,
                 # even if a callback arrives immediately after that calculation.
                 self._metric_active_context = (getattr(self, '_metric_context_generation', 0), inputs[1].context,
@@ -1279,6 +1557,8 @@ class MetricFrontierRuntime:
                 self._metric_plan_after_ns = None
                 task_started = time.monotonic()
                 attempts += 1
+                policy.record(pending, 'pending', time.monotonic(), pending.fingerprint)
+                checkpoint()
             self._metric_active = pending
             self._metric_status.update(state='running',active_goal=dict(
                 task_id=pending.task_id,x=pending.x,y=pending.y,route_length_m=pending.route_length_m,
@@ -1387,15 +1667,73 @@ class MetricFrontierRuntime:
             yaw_error=math.atan2(math.sin(after[2][2]-pending.yaw),math.cos(after[2][2]-pending.yaw))
             reached = (status=='success' and math.dist(after[2][:2],(pending.x,pending.y)) <= .15
                        and abs(yaw_error) <= .4)
-            outcome='observed' if reached else ('route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
-            policy.record(pending,outcome,time.monotonic(),after[1].fingerprint)
+            gained = frozenset()
+            if reached:
+                arrivals += 1
+                # Stationary bounded observation wait, within BOTH original budgets.
+                until = min(time.monotonic()+getattr(self, '_metric_observation_wait_s', 2.),
+                            task_started+self._goal_timeout_s)
+                while baseline.points and time.monotonic() < until:
+                    if goal_handle.is_cancel_requested:
+                        return finish('canceled', 'user_canceled')
+                    if expired():
+                        return finish('partial', 'budget_exhausted')
+                    if self._wohnungserkundung_hwt_hold():
+                        # Child is already terminal and the base stopped. Use
+                        # the existing HOLD/ACK contract without a new Nav2 leg
+                        # or resetting either observation/task deadline.
+                        resume = self._wohnungserkundung_wait_for_hwt_resume(
+                            goal_handle, expired, require_target=False)
+                        if resume != 'resumed':
+                            return finish('canceled' if resume=='user_canceled' else 'failed', f'hwt_{resume}')
+                        continue
+                    if not self._metric_operating_snapshot(require_stop=True)['safe']:
+                        return finish('failed', 'observation_sources_or_stop_invalid')
+                    try:
+                        after = self._metric_inputs(active=True)
+                        if not self._metric_work_is_current(self._metric_active_context):
+                            return finish('failed', 'map_work_context_changed')
+                        self._metric_observation_view()
+                        scan = self._door_lidar_scan_snapshot()
+                        gained = measured_gain(baseline, after[0], after[1], after[2], scan,
+                            self._door_lidar_mount(scan['frame_id']), self._world_to_grid, self._grid_to_world,
+                            self._door_lidar_max_range)
+                        final = self._metric_inputs(active=True)
+                        stamp_ns = scan['key'][0]*10**9+scan['key'][1]
+                        if (final[1].fingerprint != after[1].fingerprint or
+                                time.monotonic() >= until or expired() or
+                                not self._metric_work_is_current(self._metric_active_context) or
+                                not 0 <= time.monotonic()-scan['received_at'] <= self._door_lidar_scan_timeout or
+                                not 0 <= (self.get_clock().now().nanoseconds-stamp_ns)/1e9 <= self._door_lidar_scan_timeout or
+                                not self._metric_operating_snapshot(require_stop=True)['safe']):
+                            gained = frozenset()
+                        after = final
+                    except Exception as error:
+                        return finish('failed', str(error))
+                    if gained:
+                        break
+                    time.sleep(.05)
+            if goal_handle.is_cancel_requested:
+                return finish('canceled', 'user_canceled')
+            outcome=('observed' if gained else 'arrival_without_observation') if reached else (
+                'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
+            evidence = local_evidence(after[0], policy.attempts[pending.task_id].frontier_xy, self._grid_to_world)
+            policy.record(pending,outcome,time.monotonic(),after[1].fingerprint,evidence,count_try=False)
+            last_inputs = after
+            if gained:
+                observations += 1
+                observed_area += len(gained)*after[0].info.resolution**2
             chain.append(dict(task=pending.task_id,target=[pending.x,pending.y],result=status,
                               decision=outcome,terminal_child=True,stop_reason=hard,
-                              snapshot=self._metric_status['decision_snapshot']))
+                              snapshot=self._metric_status['decision_snapshot'],
+                              arrived=reached, observed_cells=len(gained)))
             if reached:
                 self._frontiers_visited_status += 1
-            else:
+            if not gained:
                 failures += 1
+            checkpoint()
+            self._metric_status.update(arrivals=arrivals, observations=observations,
+                                       observed_area_m2=observed_area,attempts=attempts,failures=failures)
             pending=None
             self._metric_active=None
             self._metric_active_context=None

@@ -174,10 +174,12 @@ class ExplorationStateRepository:
         if map_directory.is_symlink():
             raise ExplorationPersistenceError(
                 "WE-Kartenverzeichnis darf kein Symlink sein")
+        self._fsync_directory(self.root)
         directory.mkdir(exist_ok=True, mode=0o700)
         if directory.is_symlink():
             raise ExplorationPersistenceError(
                 "WE-Versionsverzeichnis darf kein Symlink sein")
+        self._fsync_directory(map_directory)
         existing = self._state_files(directory)
         if existing:
             try:
@@ -232,7 +234,7 @@ class ExplorationStateRepository:
                 pass
         return target
 
-    def load(self, binding: MapVersionBinding) -> LoadedExplorationState:
+    def load(self, binding: MapVersionBinding, *, validate_state=None) -> LoadedExplorationState:
         if not isinstance(binding, MapVersionBinding):
             raise ExplorationPersistenceError(
                 "binding muss MapVersionBinding sein")
@@ -241,7 +243,9 @@ class ExplorationStateRepository:
         for sequence, path in reversed(self._state_files(directory)):
             try:
                 loaded = self._load_file(path, binding, sequence)
-            except ExplorationPersistenceError as error:
+                if validate_state is not None:
+                    validate_state(loaded.state)
+            except (ExplorationPersistenceError, ValueError, TypeError, KeyError) as error:
                 errors.append(str(error))
                 continue
             return loaded

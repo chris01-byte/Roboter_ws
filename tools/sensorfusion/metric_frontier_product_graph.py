@@ -536,9 +536,10 @@ def run():
             assert metric().get('first_rejecting_predicate')=='scan_footprint_invalid'
             assert not nav.goals,'unsafe scan dispatched child'
         elif CASE in ('empty','filtered','adaptive_wait'):
-            assert wait(lambda:metric().get('state')=='partial',7),'empty selection not classified'
+            expected = 'success' if CASE == 'empty' else 'blocked'
+            assert wait(lambda:metric().get('state')==expected,7),'empty selection not classified'
             assert not nav.goals,'filtered/empty map dispatched a child'
-            assert metric().get('metric_completion_candidate',False)==(CASE=='empty')
+            assert (metric().get('outcome')=='metric_complete')==(CASE=='empty')
             if CASE=='adaptive_wait':
                 assert metric()['start_decision']['first_rejecting_predicate']=='initial_contour_unknown_or_occupied'
         else:
@@ -684,9 +685,13 @@ def run():
                 assert healed-held<5.,'absolute HWT recovery deadline exceeded'
             assert nav.goals[0]['target']==nav.goals[1]['target']
             assert sources.gate_status[-1].get('resume_sequence',0)>=1
-        sources.cmd.publish(String(data='{"type":"cancel"}'))
-        assert wait(lambda:sources.manager[-1].get('state') in ('canceled','failed'),6),'parent not terminal'
-        assert wait(lambda:sources.phases[-1].get('state') in ('canceled','failed','partial'),4),'explorer not terminal'
+        if CASE == 'empty':
+            assert wait(lambda:sources.manager[-1].get('state')=='success',6),'metric success not consumed by BT/manager'
+            assert sources.phases[-1].get('state')=='success'
+        else:
+            sources.cmd.publish(String(data='{"type":"cancel"}'))
+            assert wait(lambda:sources.manager[-1].get('state') in ('canceled','failed'),6),'parent not terminal'
+            assert wait(lambda:sources.phases[-1].get('state') in ('canceled','failed','partial'),4),'explorer not terminal'
         if CASE!='cancel_failed':
             assert wait(lambda:nav.active==0,6),'final child not terminal'
         assert nav.maximum==(0 if CASE in ('empty','filtered','scan_route','adaptive_wait') else 1),'simultaneous children'
@@ -696,7 +701,8 @@ def run():
         if CASE in ('chain','blocked','hold','budget','mast_start','mast_start_scan','mast_start_full_scan','adaptive_start','adaptive_loop','adaptive_admission','encoder_hold'):
             running=[m for m in sources.manager if m.get('state')=='running']
             assert len({m.get('active_command',{}).get('request_id') for m in running})==1,'parent mission changed'
-        assert all(m.get('map_ready_to_save') is False for m in sources.phases)
+        assert all((m.get('map_ready_to_save') is True)==
+                   (m.get('metric_exploration',{}).get('outcome')=='metric_complete') for m in sources.phases)
         summary=dict(result='PASS',development_contract=DEVELOPMENT,case=CASE,goals=nav.goals,canceled=nav.canceled,
                      maximum_active_children=nav.maximum,metric=metric(),
                      gate_first_fault=sources.gate_status[-1].get('first_fault'),
@@ -705,7 +711,7 @@ def run():
                      explorer_last_fault=sources.phases[-1].get('hwt_last_fault'),
                      source_observation=dict(yaw=sources.yaw,raw_samples=len(sources.raw_stamps),
                         maximum_raw_gap_s=max((b-a for a,b in zip(sources.raw_stamps,sources.raw_stamps[1:])),default=0.)),
-                     no_semantic_task_owner=True,save_permission=False)
+                     no_semantic_task_owner=True,save_permission=sources.phases[-1].get('map_ready_to_save') is True)
         (logdir/'result.json').write_text(json.dumps(summary,indent=2,default=str))
         print(json.dumps(summary,default=str),flush=True)
     except Exception:

@@ -26,3 +26,9 @@ explore_node:
     metric_footprint_xy: [-0.13, -0.25, 0.33, -0.25, 0.33, 0.25, -0.13, 0.25]
     metric_retry_cooldown_s: 30.0
     metric_task_retry_limit: 2
+    metric_completion_window_s: 3.0
+    metric_observation_wait_s: 2.0
+    # Existing exact saved-map sidecar storage; loading never starts motion.
+    metric_persistence_enabled: true
+    metric_resume_saved_state: false
+    metric_resume_origin_map_id: ""

@@ -28,6 +28,8 @@ class MetricCandidate:
     # Reachability proposal only; Nav2's actual path must pass the chassis
     # and controller proof before prealignment or any child movement.
     requires_nav2_plan: bool = False
+    observation_points: tuple = ()
+    evidence_key: str = ''
 
 
 @dataclass
@@ -39,6 +41,8 @@ class MetricAttempt:
     fingerprint: str = ''
     completed: bool = False
     reason: str = ''
+    tries: int = 0
+    evidence_key: str = ''
 
 
 @dataclass
@@ -50,10 +54,11 @@ class MetricTaskPolicy:
     attempts: dict = field(default_factory=dict)
     next_id: int = 0
 
-    def identify(self, frontier_xy):
+    def identify(self, frontier_xy, target_xy=None):
         matches = [(math.dist(a.frontier_xy, frontier_xy), key)
                    for key, a in self.attempts.items()
-                   if math.dist(a.frontier_xy, frontier_xy) < self.radius]
+                   if math.dist(a.frontier_xy, frontier_xy) < self.radius or
+                   (target_xy is not None and a.tries and math.dist(a.target_xy, target_xy) < self.radius)]
         if matches:
             return min(matches)[1]
         if len(self.attempts) >= 512:
@@ -63,27 +68,39 @@ class MetricTaskPolicy:
         self.attempts[key] = MetricAttempt(frontier_xy, frontier_xy)
         return key
 
-    def eligible(self, task_id, target_xy, now, fingerprint):
+    def eligible(self, task_id, target_xy, now, fingerprint, evidence_key=''):
         attempt = self.attempts[task_id]
-        # Successful observation neighbourhoods remain served for this mission.
-        if any(a.completed and math.dist(a.target_xy, target_xy) < self.radius
-               for a in self.attempts.values()):
+        neighbours = [a for a in self.attempts.values()
+                      if math.dist(a.target_xy, target_xy) < self.radius and a.tries]
+        # A new ID or distant map edit cannot reopen a served neighbourhood.
+        if any(a.completed and (not evidence_key or evidence_key == a.evidence_key)
+               for a in neighbours):
             return False
+        if evidence_key:
+            if any(a is not attempt and a.completed for a in neighbours):
+                return False
+            return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
+                        and now >= a.retry_after and evidence_key != a.evidence_key
+                        for a in neighbours)
+                    and attempt.tries < self.retry_limit+1 and attempt.failures < self.retry_limit)
         return (not attempt.completed and attempt.failures < self.retry_limit
                 and (attempt.failures == 0 or
                      (now >= attempt.retry_after and
                       fingerprint != attempt.fingerprint)))
 
-    def record(self, candidate, outcome, now, fingerprint):
+    def record(self, candidate, outcome, now, fingerprint, evidence_key=None, *, count_try=True):
         attempt = self.attempts[candidate.task_id]
         attempt.target_xy = (candidate.x, candidate.y)
         attempt.fingerprint = fingerprint
         attempt.reason = outcome
+        attempt.tries += int(count_try)
+        attempt.evidence_key = candidate.evidence_key if evidence_key is None else evidence_key
+        attempt.retry_after = now + self.cooldown_s
+        attempt.completed = outcome == 'observed'
         if outcome == 'observed':
             attempt.completed = True
-        else:
+        elif outcome != 'pending':
             attempt.failures += 1
-            attempt.retry_after = now + self.cooldown_s
 
 
 def route_cells(mask, start, target):

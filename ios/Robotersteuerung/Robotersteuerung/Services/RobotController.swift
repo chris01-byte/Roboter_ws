@@ -95,7 +95,10 @@ final class RobotController: NSObject, ObservableObject {
     }
 
     var explorationMessage: String {
-        exploreStatus?.message ?? "Warte auf den Explorer."
+        if let metric = exploreStatus?.metricExploration {
+            return metric.resultLabel + ": " + (exploreStatus?.message ?? "")
+        }
+        return exploreStatus?.message ?? "Warte auf den Explorer."
     }
 
     var explorationBackendReady: Bool {

@@ -63,6 +63,8 @@ jobs:
           python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
             src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
             src/explore/test/test_metric_frontier_candidates.py \
+            src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
+            src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \
             src/explore/test/test_raw_map_portal_adapter.py \
             src/amadeus_map_identity/test src/robot_map_manager/test
