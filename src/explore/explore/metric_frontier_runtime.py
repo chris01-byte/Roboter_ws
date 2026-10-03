@@ -1278,6 +1278,10 @@ class MetricFrontierRuntime:
                     cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
                     forward.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
                         correlation.fingerprint,correlation.map_revision,False,points))
+                if forward:
+                    # A proved useful departure suffices. Do not spend the
+                    # fixed candidate deadline searching farther positions.
+                    break
             if forward:
                 # Prefer a completely proved start departure over a proposal
                 # whose route is still absent; ordinary detour policy is intact.
