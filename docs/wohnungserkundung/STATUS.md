@@ -1,5 +1,9 @@
 # Wohnungserkundung – aktueller Status
 
+## 03.10.2026 – MASTERPLAN v1.3 / AP-06 in_arbeit
+
+Nutzer „gut dann mache ap-6 fertig“ beauftragt AP-06. Saubere Basis `6a4a7df`, Branch `feature/ap06-closed-product-validation`, Worktree `/workspace/Roboter_ws-ap06`; [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md). Vollständige bewegungsabhängige Mission/BT/Explorer/Nav2/SLAM-Simulation und anschließend Zielsystem-/Realabnahme gemäß MASTERPLAN/LAB-1. Echte aktuelle Cloud-Zugangsgrenze: revision 39, VPN false, TCP-Domains/IP-Bereiche leer, keine bereitgestellten Roboterauthentisierungsmittel; Zielsystemzugang konkret angefragt. Native Apple-Werkzeuge fehlen weiterhin. Unabhängige Softwarearbeit läuft weiter; kein physisches Gesamtgrün, Push/Merge oder dauerhafter Installwechsel aus Dokumentation ableiten. MASTERPLAN unverändert.
+
 ## 03.10.2026 – MASTERPLAN v1.3 / AP-05 software_geprüft; WE-M7 nativ offen
 
 **AP-05-Kern, Persistenz und ROS-Verbraucherverträge software_geprüft.** Nutzer „gut mache weiter“ beauftragt AP-05 nach dessen konkreter Übergabe. Saubere Basis `2532f1b`, Branch `feature/metric-observation-persistence`, Worktree `/workspace/Roboter_ws-ap05`; Softwarecommit **`090762d93dd4c270478cb31c01c05d07c1da0459`**, Auftragscommit `4a370c0`. MASTERPLAN v1.3 bytegleich; [AP-04-Auftrag archiviert](archive/20261003-ap04/README.md). Keine Hardware, Roboternetzverbindung, Deployment, Push/Merge oder automatische AP-06-Arbeit. Originalcheckout und AP-01–04 bleiben unverändert.
