@@ -1246,6 +1246,43 @@ class MetricFrontierRuntime:
                 points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(local_hits))
             candidates.append(MetricCandidate('',*goal,target_yaw,(f.cx,f.cy),route,length,cost,
                                               correlation.fingerprint,correlation.map_revision,proposal,points))
+        # A boundary approach can be far beyond the first safe observation
+        # pocket. During the fixed start escape, also consider bounded forward
+        # observation positions derived from CURRENT pose/map/sight. They are
+        # not waypoints: full own geometry AND the later actual Nav2 plan are
+        # mandatory, and only real nearby frontier sight grants utility.
+        if (live_view and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and not any(not c.requires_nav2_plan for c in candidates)
+                and not self._metric_egress_expired
+                and self._metric_egress and all(e.valid for e in self._metric_egress)
+                and any(e.unknown.any() for e in self._metric_egress)):
+            forward = []
+            steps = int(math.floor(self._goal_search_m/grid.info.resolution))
+            for step in range(steps+1):
+                if time.monotonic()-selection_started > self._map_timeout_s:
+                    raise ValueError('frontier_candidate_processing_budget_exhausted')
+                distance = self._min_goal_dist_m+step*grid.info.resolution
+                goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                route = self._metric_route(inputs, goal, pose[2])
+                if route is None:
+                    continue
+                view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
+                for f in frontiers:
+                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= .8)
+                    if not points:
+                        continue
+                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
+                    forward.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
+                        correlation.fingerprint,correlation.map_revision,False,points))
+            if forward:
+                # Prefer a completely proved start departure over a proposal
+                # whose route is still absent; ordinary detour policy is intact.
+                candidates = [min(forward,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
+                stats['bounded_start_observation'] = True
         if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
             raise ValueError('frontier_candidate_processing_budget_exhausted')
         if self._metric_selection_memo(inputs)[1] != initial_evidence:

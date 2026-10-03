@@ -1,0 +1,26 @@
+{
+  "source_run": "product-c-05",
+  "product_commit": "37c9a2e",
+  "raw_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2000001493076282,
+      -1.4000001328655747
+    ],
+    "frame": "map"
+  },
+  "cost_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2000001493076282,
+      -1.4000001328655747
+    ],
+    "frame": "map"
+  },
+  "pose": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "qualification": "measured synthetic native SLAM/costmap; first known mask from prior stationary identical-raw diagnostic; sensor reconstructed from same declared stationary model; no hardware proof"
+}

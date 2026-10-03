@@ -73,6 +73,7 @@ jobs:
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \
             src/explore/test/test_metric_planning_stop_reason.py \
+            src/explore/test/test_metric_start_observation.py \
             tools/simulation/test_ap06_world.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
