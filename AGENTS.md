@@ -186,8 +186,8 @@ Der Plan erhält einen schlanken metrischen
 Erkundungskern im vorhandenen Explorer ohne verpflichtende Portal-/Regionsdaten.
 Tür-/Raumsemantik ergänzt; gültige metrische Karte/Pose, Scope, tatsächliche
 Durchfahrtsgeometrie und Schutzkette bleiben notwendig. Keine Dummy-Portale oder
-künstlich gesunden Shadowzustände. Der neue Modus ist erst beauftragt, nicht durch
-diese Dokumentation implementiert oder real abgenommen.
+künstlich gesunden Shadowzustände. Die Planübernahme allein belegt keine Software- oder Realabnahme; der aktuelle
+Nachweisumfang steht im STATUS.
 
 Bestehende Fähigkeiten und belegte Sensor-/Cancel-/HOLD-Korrekturen erhalten.
 Ein Integrationsverantwortlicher, ein aktiver Kandidat, ein Navigationsbesitzer

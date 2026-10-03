@@ -10,11 +10,11 @@ Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MA
 
 **Entscheidung:** Nutzer hat die angehängten MASTERPLAN v1.3 und AGENTENAUFTRAG ausdrücklich beauftragt. Plan kanonisch übernommen; bisherige vier WE-Dateien bytegleich mit Commit-/Blobbeleg archiviert. AP-01 ausschließlich gerätefrei bis Softwareprüfung, keine Ausführung historischer Fahrt-/Deploymentaufträge. AP-04 hebt die reine Offline-Fremdcodegrenze gezielt für einen geprüften Frontier-Kandidatenkern auf; kein neuer Gesamtstack. Historischer Schwerpunktkern bleibt Vergleichsreferenz.
 
-**Evidenz/Basis:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9a` bestätigt; sauberer isolierter Worktree/Branch `fix/hwt-clock-correlation`. Älteres main `05439c7` wird nicht als Implementierungsbasis verwendet. Zeitkorrelationsfehler aus Gegenprüfung zu reproduzieren; historischer Roboterabbruch damit noch nicht abschließend erklärt.
+**Evidenz/Basis:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9a` bestätigt; sauberer isolierter Worktree/Branch `fix/hwt-clock-correlation`. Älteres main `05439c7` wird nicht als Implementierungsbasis verwendet. Zeitkorrelationsfehler aus Gegenprüfung an Originalmethoden reproduziert und repariert; historischer Roboterabbruch damit nicht abschließend erklärt.
 
-**Betroffene Dateien/Hardware:** WE-Dokumente, AGENTS und Gesamtstrategie; danach ausschließlich HWT-Rawpfad, Tests und notwendiger Clockvertrag. Keine Hardware/Roboternetzverbindung/Runtimeänderung; ROBOT_TRANSFER nicht fortgeschrieben. Teststatus/Ergebnis ausschließlich im aktuellen STATUS.
+**Betroffene Dateien/Hardware:** WE-Dokumente, AGENTS und Gesamtstrategie; danach ausschließlich HWT-Rawpfad, Tests und notwendiger Clockvertrag. Keine Hardware/Roboternetzverbindung/Runtimeänderung; ROBOT_TRANSFER nicht fortgeschrieben. **Softwareabschluss:** `c797442` repariert den an Originalmethoden belegten Projektionsfehler durch ≤1-ms-Offsetspannen; unsichere Proben altern ohne Reconnect, erkannte Quellen-/Zeitbasisänderungen bleiben hart. 443 betroffene Regressionen, 58 Installimporttests und 381 registrierte colcon-Tests bestanden; Achtpaketbuild. Mengen überlappen. Originalbelege, Clockvertrag und Python-3.12-JSON-Baselinefehler ausschließlich im aktuellen STATUS. AP-01 software_geprüft, reale Abnahmen offen; AP-02 nur vorbereitet.
 
-**Grenzen/Rückfall:** Sensor-/Start-/Geometrieabnahme offen, keine Fristlockerung. Eigene getrennte Dokument-/Softwarecommits gezielt revertieren, keine Rücksetzung unbekannter Arbeit. AP-02 erst als Übergabe vorbereiten und nicht automatisch ausführen.
+**Grenzen/Rückfall:** Sensor-/Start-/Geometrieabnahme offen, keine Fristlockerung. Eigene getrennte Dokument-/Softwarecommits gezielt revertieren, keine Rücksetzung unbekannter Arbeit. AP-02-Übergabe vorbereitet, nicht automatisch ausgeführt.
 
 ## 30.09.2026 – Metrische Erkundung vor verpflichtender Portal-/Raumsemantik
 

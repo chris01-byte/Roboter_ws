@@ -94,3 +94,28 @@ Erstelle auf dem Arbeitsbranch lokal überprüfbare Commits, soweit die Reposito
 Aktualisiere STATUS und diesen kanonischen Auftrag am Ende mit Ergebnis und Verweisen. Bewahre den Auftrag als abgeschlossenen Text; überschreibe ihn nicht mit unklaren neuen Imperativen. Kennzeichne ausschließlich den tatsächlich erreichten Status, beispielsweise **AP-01 software_geprüft; Zielsystem und reale Erkundung weiterhin offen**. Behaupte nicht, den historischen Roboterabbruch abschließend erklärt oder die Wohnungserkundung repariert zu haben.
 
 **Genau nächster Schritt nach Erfolg:** AP-02 als begrenzten Folgeauftrag gemäß MASTERPLAN vorbereiten, mit konkreten betroffenen Pfaden und Abnahmekriterien für Kartenlebenszyklus und Quellenvertrag. Die Vorbereitung ist Übergabe, keine automatische Ausführung von AP-02. Bei Nichtbestehen stattdessen den kleinsten nötigen AP-01-Rest benennen. Keine Fahrt aus diesem Auftrag ableiten.
+
+## 7. Abschluss am 03.10.2026 – AP-01 software_geprüft
+
+Dieser AP-01-Auftrag ist abgeschlossen; der Originalauftrag oben bleibt erhalten und ist kein erneut auszuführender Auftrag. MASTERPLAN v1.3 bytegleich übernommen, vier WE-Vorgänger bytegleich mit Herkunfts-SHA archiviert. Verifizierte Basis `08a4b9a`, Dokumentcommit `84abfc6`, Softwarecommit `c797442b37994f774df40b6b27d54c27efa3bdc3`, Branch `fix/hwt-clock-correlation`, isolierter Worktree `/workspace/Roboter_ws-ap01`.
+
+Ergebnis: HWT-Empfangszeit wird aus konsistenter Offsetspanne (≤1 ms, drei Versuche innerhalb echter 30/50-ms-Gesamtfrist) konservativ projiziert. Unsichere Proben werden ohne Reconnect/Frischeauffrischung verworfen, tatsächliche harte Zeit-/Quellenfehler bleiben hart. Originalgegenbeispiel vorher terminal `1009,990 s`, nachher korrekter Header `1010,010 s` und gültige Folgeprobe. 52 neue Fälle, 58 Installimporttests, 443 betroffene Regressionen, 381 registrierte colcon-Tests ohne Fehler/Skips; Achtpaketbuild erfolgreich. Zahlen überlappen. Details, Originalbefehle/Logs, Clockquellenvertrag, Plattform/Baselinefehler und Rückfall ausschließlich im [aktuellen STATUS](STATUS.md#03102026--masterplan-v13--ap-01-software_geprüft) und [Evidenzregister](evidence/ap01-20261003/README.md).
+
+Keine Geräte, Roboternetzverbindung, Fahrt, Deployment, Push oder Merge. Zielsystem und reale Sensor-/Start-/Geometrieabnahme bleiben offen; historischer Roboterabbruch nicht abschließend erklärt. Python-3.12-JSON-Tiefenfehler unverändert separat nachgewiesen. ROBOT_TRANSFER unverändert.
+
+### AP-02-Übergabe – vorbereitet, nicht ausgeführt
+
+Genau nächstes begrenztes Paket gemäß MASTERPLAN v1.3/WE-M0 und WE-M3: konsistente Übergänge für Kartenidentität/Sitzung/Frame/Geometrie/Revision sowie gemeinsamen Quellenzeitvertrag. Diese Vorbereitung aktiviert keine Umsetzung und ersetzt den abgeschlossenen AP-01-Auftrag nicht durch neue Imperative.
+
+**Betroffene Pfade für den Folgeauftrag:**
+
+- `src/explore/explore/metric_frontier_runtime.py`: `_on_metric_map`, `_on_metric_map_status`, `_metric_inputs`, `_metric_prepare_egress`; Rasterwechsel vor allen Kombinationen von gespeicherten Masken und neuer Belegung behandeln. Im aktuellen Code läuft `evidence.unknown &= occupancy < 0` auch nach erkannter Geometrieänderung – alte/neue Form darf nicht kombiniert werden.
+- `src/explore/explore/metric_frontier.py`: `StartEgressEvidence` und Geometrie-/Quellenbindungen; gespeicherte Evidenz bei normalen Updates korrekt revalidieren, bei tatsächlichem Kontextwechsel invalidieren.
+- `src/explore/explore/explore_node.py`: `_on_map`, `_on_global_costmap`, ausstehende Kartenarbeit/Kindbindung. Harmlose Revision nicht allein als Cancelgrund verwenden; verspätete Arbeit darf aktuellen Stand nicht überschreiben.
+- `src/amadeus_map_identity/amadeus_map_identity/fingerprint.py` und `src/robot_map_manager/robot_map_manager/`: bestehende Fingerprint-/Session-/Geometrieverträge prüfen und nur bei nötiger Konsistenzkorrektur ändern.
+- Für die getrennte Quellenbudgetzuordnung: `src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py`, `hwt601_fusion_health.py`, `src/base_hardware/base_hardware/encoder_odometry.py`, aktiver `base_hardware_node.py`, passive `src/base_hardware/base_hardware/encoder_shadow_reader.py`/`encoder_shadow_node.py`, `src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py` und bestehende TF-/Gate-/Explorerquellenadapter. AP-01-Headervertrag erhalten, kein allgemeiner Health-/DDS-/Executorumbau.
+- Zugehörige Tests in explore/state/base/navigation/map-identity/map-manager und passende bestehende CI-Aufrufe/Trigger; nur betroffene Auswahl ergänzen. Paketauflösung vor Folgeänderung nochmals prüfen.
+
+**Abnahme des begrenzten Folgeauftrags:** 100×100 → 100×101 und Wachstum mit verschobenem Ursprung ohne Arrayausnahme/alte falsch gültige Egress-Maske; Auflösungs-/Sitzungs-/Framewechsel invalidieren betroffene Evidenz; normale inhaltliche Updates erhalten noch gültige Ziele; verspätete Kartenarbeit bleibt unwirksam; Verlust notwendiger Quelle stoppt, tatsächlich gültige Folgeupdates werden verarbeitet. Keine neue Freiraumannahme oder mitwandernde Ausnahme.
+
+Zeit-/Gültigkeitsbudget aus bestehenden Verträgen für HWT, Encoder, TF, Gate und Explorer offenlegen: Empfang, IO, Verarbeitung, DDS-Verbrauch, Frische, Kontinuität; aktiven/passiven Pfad unterscheiden. Gerätefreie verbundene Gegenfälle, echte aktuelle Nachrichtenbindungen, isolierter Paket-/Overlaybuild und betroffene Regressionen. Fristen/HOLD-/Kontinuitätsbudgets unverändert, keine Timeouterhöhung als Reparatur. Belastbare aktive Jetsonlast bleibt ausdrücklich AP-06-Nachweis. Keine Sensor-/Geometrie-/Planer-/Frontierintegration aus AP-03/AP-04 vorziehen. Keine Hardware/Fahrt aus dieser Übergabe.

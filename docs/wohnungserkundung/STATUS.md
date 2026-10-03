@@ -1,16 +1,67 @@
 # Wohnungserkundung – aktueller Status
 
-## 03.10.2026 – MASTERPLAN v1.3 / AP-01 in_arbeit
+## 03.10.2026 – MASTERPLAN v1.3 / AP-01 software_geprüft
 
-**AP-01 in_arbeit; reale Sensor-/Start-/Geometrieabnahme und Stufe 3 weiterhin offen.**
+**AP-01 software_geprüft; Zielsystem, reale Sensor-/Start-/Geometrieabnahme und Wohnungserkundung weiterhin offen.** Kein Hardwarezugriff, Deployment, Push oder Merge. AP-02 ist ausschließlich als Übergabe vorbereitet.
 
-Basis: `08a4b9ac0b7a128ced2199f20976f3aa92ea55fe`, Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 unverändert bestätigt. Ursprünglicher lokaler Checkout `work`/main `05439c7` sauber; für diesen Auftrag ungeeignet und unverändert belassen. Isolierter Worktree `/workspace/Roboter_ws-ap01`, Branch `fix/hwt-clock-correlation`. Keine unbekannten lokalen Änderungen auf der Integrationsbasis. Keine Aussage über aktuelle Jetson-Installation.
+**Basis und Lieferung:** Remote `feature/hwt-hold-recovery-resume` am 03.10.2026 auf `08a4b9ac0b7a128ced2199f20976f3aa92ea55fe` bestätigt. Ursprünglicher lokaler Checkout `work`/main `05439c7` sauber und unverändert belassen; isolierter Worktree `/workspace/Roboter_ws-ap01`, Branch `fix/hwt-clock-correlation`. Keine unbekannten lokalen Änderungen auf der Integrationsbasis. Dokumentübernahme `84abfc6`, geprüfter Softwarecommit `c797442b37994f774df40b6b27d54c27efa3bdc3`. Keine aus einem Branch abgeleitete Jetson-Installationsbehauptung. WE-D0/WE-M0 und betroffener WE-M3-Recoveryanteil.
 
-Kanonisch: [MASTERPLAN v1.3](MASTERPLAN.md), [AP-01-Auftrag](AGENTENAUFTRAG.md), [Meilensteine](MEILENSTEINE.md), [LAB-1](../LABORMODUS.md). Zulässig sind ausschließlich HWT-Zeitkorrelation, notwendige Regressionen und Dokumentübernahme; 50/300 ms Entwicklung, 30/200 ms Legacy, Encoder 120/180 ms sowie HOLD-/Recoverygrenzen bleiben erhalten. Kein Gerätezugriff, Deployment, Push oder Merge.
+Kanonisch: [MASTERPLAN v1.3](MASTERPLAN.md), [abgeschlossener AP-01-Auftrag](AGENTENAUFTRAG.md), [Meilensteine](MEILENSTEINE.md), [LAB-1](../LABORMODUS.md). Die vier Vorgängerdateien sind mit Commit-/Blob-/SHA-256-Beleg [bytegleich archiviert](archive/20261002-v1.2/README.md); MASTERPLAN entspricht dem Anhang bytegleich. AGENTS/Meilensteine/Gesamtstrategie und PROJECT_MEMORY gezielt synchronisiert, begrenzte AP-04-Erlaubnis ausdrücklich übernommen. ROBOT_TRANSFER unverändert.
 
-Nächster Schritt innerhalb AP-01: Originalgegenbeispiel mit echten Poll-/Fehlermethoden reproduzieren, reparieren, Regressionen und isolierten Paketbuild prüfen. AP-02 bleibt unimplementiert. Historische Robotermessungen erklären die tatsächliche Schedulerfolge nicht abschließend.
+### Reparatur und Zeitvertrag
 
-Die vier bisherigen WE-Dokumente sind mit Herkunftscommit/Blob [bytegleich archiviert](archive/20261002-v1.2/README.md). Der folgende vollständige STATUS ist Historie bis `08a4b9a`; dortige „aktuelle“ Überschriften, Aufträge und Runtimeangaben gelten ausschließlich für ihren damaligen Stand.
+Produktänderungen nur in `hwt601_imu_node.py` und dem privaten `_hwt601_clock.py`. Transport, Guard/Health, Encoder, EKF, Bias, Profile, Mission/Explorer und Recoverycode unverändert. Der echte Transport bleibt vollständiger Hostempfangsbeleg, nicht interner Sensorabtastzeitpunkt. Fehlender/ungültiger Empfangs- oder Transaktionsbeleg wird jetzt hart zurückgewiesen; kein Fallback auf Verarbeitung/Veröffentlichung.
+
+Monotonic rahmt die ROS-Abfrage ein. Präzise Offsetspannen werden geschnitten; ein Bracket von höchstens **1 ms** und höchstens **drei** sofortige Versuche innerhalb derselben echten Transaktionsfrist. Unterer Offsetrand gibt konservativ höchstens 1 ms + 2 ns früheren Empfangsheader; kein Futurefehler durch wechselnden Mittelpunkt. Die Grenze entspricht 1/10 des nominellen Probenabstands und 1/100 der unveränderten Biaskontinuitätsgrenze. Größere Brackets werden verworfen, ohne letzten gültigen Empfang/Header/Samplehistorie zu ändern oder den Transport zu schließen. `clock_correlation` unterscheidet Unsicherheit und Zeitbasisänderung.
+
+Disjunkte Belege bleiben harte Zeitfehler, auch wenn Header noch steigen; keine Neubasierung. Aktive ROS-Time/`use_sim_time`, Clockobjekt-/Typwechsel sowie zwischen Polls aktivierte/deaktivierte ROS-Time werden konservativ gesperrt. Unterstützt: unveränderte Host-SYSTEM_TIME oder inaktive ROSClock mit Hostzeit. Sprünge unter Messunsicherheit sind nicht garantiert erkennbar; der Hostvertrag verlangt denselben laufenden Taktbezug. Siehe [ausführlichen Clockvertrag](../../src/robot_state_estimation/README.md#ap-01-hostempfang-und-clockvertrag-masterplan-v13). Entwicklung bleibt bei harten Fehlern terminal; Legacy-Hard-/Reconnectbehandlung bleibt erhalten.
+
+Unverändert: Entwicklung 50 ms Antwort/Gesamtablauf und 300 ms Rohfrische; Legacy 30/200 ms; Encoder 120/180 ms; Bias-/HOLD-/Recoverygrenzen. Messagebau/Paarungsversuche werden ebenfalls vor Veröffentlichung gegen die Gesamtdeadline geprüft. Wiederholte Unsicherheit führt durch das Alter der letzten echten Probe zur bestehenden Health-HOLD-Reaktion.
+
+### Vorher/Nachher und Pflichtfälle
+
+[Originalmethoden vor Reparatur](evidence/ap01-20261003/ap01-original-method-proof.json): erster Header `1010,000 s`, zweiter echter Empfang `1010,010 s`, nach ROS-Abfrage 20 ms Pause → berechnet `1009,990 s`, terminal `HWT-Messzeit nicht monoton`, Transport geschlossen, nur ein veröffentlichter Wert. [Gewünschter Regressionstest rot](evidence/ap01-20261003/ap01-before.log).
+
+[Reparierte Methoden aus dem Install](evidence/ap01-20261003/ap01-repaired-method-proof.json): zweite Paarung bei monotonic `10,030 s` gültig, Header bleibt exakt Empfang `1010,010 s`; spätere Probe `1010,040 s` ebenfalls veröffentlicht. Drei akzeptierte Werte, null verworfene Werte, kein Terminalfehler, Transport offen. Keine Testnachbildung der Poll-/Fehlerentscheidung.
+
+| Pflichtklasse | Tatsächlicher Nachweis in `test_hwt601_time_correlation.py` |
+|---|---|
+| Präzise +10 ms, wechselnde kleine Brackets | exakter Empfangsbezug; kontinuierlicher gültiger Strom, zwei konstante Offsets, Fehler ≤1 ms |
+| Originalpause, Verzögerung vor/in/nach Paarung, konstant/wechselnd groß | korrekt datiert; erneute präzise Paarung statt Mittelpunktprojektion |
+| Unbrauchbar → präzise, wiederholt unbrauchbar | kein Zwischenwert/Reset; letzte gültige Daten altern, nächste echte Probe verarbeitet |
+| Transaktions-/Verarbeitungsfrist | 30-/50-ms-Gegenfälle für Verarbeitung, Retry, Dekodierung und Messagebau; keine Publikation |
+| Fehlend/NaN/Inf/zukünftig/rückläufig/wiederholt | echte Poll-/Fehlerlogik weist Beleg zurück, kein Ersatzzeitpunkt |
+| Unabhängige ROS-Sprünge, kleiner als Probenabstand | ±2/±20 ms bei steigender monotonic erkannt; selbst bei weiter steigenden Headern terminal |
+| Tatsächliche Clock-API/Quellenwechsel | echte ROSClock/TimeSource und unabhängige Overrideänderung; Aktivierung/Deaktivierung auch zwischen Polls erkannt |
+| Verbundene Verbraucher | echte Guard-/Health-Zeitprüfung akzeptiert erzeugte Header bei 0/0,05/2 ms Zustellung; Future-Gegenfall bleibt hart; echte Alterung bewirkt HOLD |
+| Transport/Schutzwirkung | echter serieller Produkttransport + synthetische Gegenstelle, ganz/fragmentiert und verzögerte Dekodierung; CRC/Identität/Timeout bestehend, Sättigung zusätzlich |
+
+### Befehle, Ergebnisse und Auflösung
+
+Vollständige Aufrufe: [ap01-run-final.sh](evidence/ap01-20261003/ap01-run-final.sh). Plattform und Präfixmapping: [Evidenzregister](evidence/ap01-20261003/README.md). Ubuntu 22.04/x86_64, echtes ROS Humble, Python 3.10.12; localhost/Domain 226 für DDS-Tests. Keine Geräte eingebunden.
+
+| Ausführung | Ergebnis | Originalbeleg |
+|---|---|---|
+| `colcon build --packages-select nav2_common nav2_msgs amadeus_map_identity explore mission_manager robot_state_estimation robot_interfaces base_hardware`, getrennte Build-/Installpräfixe | 8 Pakete bestanden | [Buildlog](evidence/ap01-20261003/ap01-verified-build.log) |
+| `pytest` neue Clock-/Rawtests, nur Testpfad plus frisches Install | 58 bestanden, davon 52 neue AP-01-Fälle | [Installtests](evidence/ap01-20261003/ap01-regressions-installed.log) |
+| `pytest` vollständige state/base-Tests, Gate-Integration/pending-wheel/source-callbacks, HWT-Recovery/Kindpolitik/Kindvertrag, Mission-HWT und JSON | **443 bestanden** | [Regressionen](evidence/ap01-20261003/ap01-regressions-final.log) |
+| `colcon test` state/base und `colcon test-result --verbose` | **381 Tests, 0 Fehler/Failures/Skips** | [Registrierte Ergebnisse](evidence/ap01-20261003/ap01-colcon-results.log) |
+
+Mengen überlappen; nicht addiert. Neue Tests laufen bereits in `.github/workflows/hwt601-we.yml`: PR-Pfadtrigger `src/robot_state_estimation/**` und `python3 -m pytest -q src/robot_state_estimation/test ...`. Kein unzureichender unittest-only-Aufruf; keine CI-Neugestaltung nötig. Colcon hat die neuen 52 Fälle tatsächlich gesammelt. Hosted CI wurde mangels Push nicht neu ausgelöst.
+
+[Importauflösung](evidence/ap01-20261003/ap01-imports-installed.log): Raw/Clockhelper aus `/evidence/ap01-install/robot_state_estimation/lib/python3.10/site-packages`; `robot_interfaces` aus neu gebautem `/evidence/ap01-install/robot_interfaces/local/lib/python3.10/dist-packages`; Standardnachrichten/rclpy aus `/opt/ros/humble`. Weitere Verbraucherprüfungen nutzen aktuellen Worktreecode und diese echten Nachrichtenbindungen. Fünf relevante Quell-/Installmodule [bytegleich mit SHA-256 geprüft](evidence/ap01-20261003/ap01-byte-manifest.json). Container `/evidence` entspricht Host `/workspace/scratch`, `/repo` dem isolierten Worktree; kein alter main-Import. Entwicklungs-/Legacyparameter sind explizit in den Fixtures gesetzt; kein behauptetes geladenes Jetsonprofil.
+
+**Unabhängiger Baselinefehler:** Python 3.12.14 / Missionmanager-JSON-Tiefentest nimmt 2.000 verschachtelte Arrays an. [Vorher](evidence/ap01-20261003/ap01-json-before-python312.log) und [nachher](evidence/ap01-20261003/ap01-json-after-python312.log): je 4 Tests / 1 Fehler, Produkt-/Testbytes unverändert. Unter Humble/Python 3.10 besteht derselbe Test in den 443. Nicht behoben, nicht gelöscht/übersprungen oder als Python-3.12-Erfolg gezählt; außerhalb AP-01 und kein Blocker dieses geprüften Zeitpfads.
+
+### Grenzen, Rückfall und genau ein nächster Schritt
+
+Keine Zielsystem-, aktive Last-, Sensor-/Start-/Geometrie- oder Fahrabnahme. Der historische Roboterabbruch ist nicht abschließend erklärt; nur das konkrete Projektionsgegenbeispiel ist behoben. Keine vollständige EKF-/Robotergrafabnahme behauptet; direkte echte Verbraucherkomponenten erfüllen den begrenzten Zeitvertrag. Keine private Wohnungsevidenz übernommen.
+
+Rückfall: eigenen Softwarecommit `c797442` gezielt revertieren und Paket im getrennten Präfix neu bauen; der dokumentierte Originalfehler kehrt dabei zurück. Keine pauschale Branch-/Installrücksetzung. Dokumentübernahme ist unabhängig prüfbar. Laufende Roboterkopie und ROBOT_TRANSFER unverändert.
+
+**Genau nächster Schritt:** den vorbereiteten begrenzten **AP-02-Auftrag** zu Kartenlebenszyklus/Quellenvertrag gemäß MASTERPLAN v1.3 beauftragen. Konkrete betroffene Pfade und Akzeptanzfälle stehen in der [AP-02-Übergabe am abgeschlossenen Auftrag](AGENTENAUFTRAG.md#ap-02-übergabe-vorbereitet-nicht-ausgeführt). Keine automatische Implementierung oder Fahrt.
+
+Der folgende vollständige STATUS ist ausschließlich Historie bis `08a4b9a`; dortige „aktuelle“ Überschriften, Aufträge und Runtimeangaben gelten für den damaligen Stand.
 
 ---
 
