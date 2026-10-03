@@ -1,0 +1,37 @@
+........................................................................ [  4%]
+........................................................................ [  8%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 49%]
+........................................................................ [ 53%]
+........................................................................ [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 67%]
+........................................................................ [ 71%]
+........................................................................ [ 76%]
+........................................................................ [ 80%]
+........................................................................ [ 85%]
+........................................................................ [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 98%]
+..............F..........                                                [100%]
+=================================== FAILURES ===================================
+_______ test_passive_wheel_continues_during_busy_callback[default-False] _______
+src/robot_navigation/test/test_hwt601_gate_source_callbacks.py:107: in test_passive_wheel_continues_during_busy_callback
+    assert gate._hwt_guard.health.source_failure() is None
+E   AssertionError: assert 'raw_missing_stale_or_invalid' is None
+E    +  where 'raw_missing_stale_or_invalid' = <bound method Hwt601FusionHealth.source_failure of <robot_state_estimation.hwt601_fusion_health.Hwt601FusionHealth object at 0x7fb1a3390b80>>()
+E    +    where <bound method Hwt601FusionHealth.source_failure of <robot_state_estimation.hwt601_fusion_health.Hwt601FusionHealth object at 0x7fb1a3390b80>> = <robot_state_estimation.hwt601_fusion_health.Hwt601FusionHealth object at 0x7fb1a3390b80>.source_failure
+E    +      where <robot_state_estimation.hwt601_fusion_health.Hwt601FusionHealth object at 0x7fb1a3390b80> = <robot_state_estimation.hwt601_fusion_guard.Hwt601FusionGuard object at 0x7fb1a3550f10>.health
+E    +        where <robot_state_estimation.hwt601_fusion_guard.Hwt601FusionGuard object at 0x7fb1a3550f10> = <robot_navigation.cmd_vel_mission_gate.CmdVelMissionGate object at 0x7fb1a2765270>._hwt_guard
+----------------------------- Captured stderr call -----------------------------
+[WARN] [1791043836.159349601] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission und belastbarer Lokalisierung.
+=========================== short test summary info ============================
+FAILED src/robot_navigation/test/test_hwt601_gate_source_callbacks.py::test_passive_wheel_continues_during_busy_callback[default-False]
+1 failed, 1608 passed in 17.91s

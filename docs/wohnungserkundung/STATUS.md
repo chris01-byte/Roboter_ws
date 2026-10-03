@@ -1,5 +1,29 @@
 # Wohnungserkundung – aktueller Status
 
+## 03.10.2026 – MASTERPLAN v1.3 / AP-03 software_geprüft
+
+**AP-03 software_geprüft für die geschlossene synthetische Komponenten-/Bootstrapprüfung.** Nutzer hat AP-03 ausdrücklich beauftragt. Basis `875c7c4`, Branch `fix/nav2-bootstrap-geometry`, Worktree `/workspace/Roboter_ws-ap03`; Softwarecommit `c3115ff8ecb28b0828e1de8b8e062c6f0866f55e`. Originalcheckout, AP-01-/AP-02-Worktree sauber und unverändert. MASTERPLAN v1.3 bytegleich. Keine Hardware, kein Deployment/Push/Merge oder automatischer AP-04-Übergang. [AP-02-Auftrag bytegleich archiviert](archive/20261003-ap02/README.md).
+
+**Umsetzung:** Ein ungültiger kürzester Eigenpfad schließt ein verbundenes bekanntes Ziel im neuen Opt-in-Profil nicht mehr dauerhaft aus. Er bleibt gekennzeichneter Nav2-Planungsvorschlag; vor jeder Vorausrichtung/Fahrt ist der tatsächliche Nav2-Pfad vollständig zu prüfen. Live/HOLD-Prüfung verwendet diesen tatsächlichen Pfad statt ihn durch eine andere Eigenroute zu verwerfen. Vorhandene NavFn-A*/RPP-Kombination nach Messung erhalten; kein weiterer Navigator oder Frontier-Kern. Numerische Sub-Halbzell-Endstücke erfinden keine Enddrehung.
+
+**Geometrie:** Asymmetrischer Achsbezug, vollständiges Chassis x=−0,11…+0,31/y=±0,23 m und 0,02-m-Padding unverändert; halbe Zelldiagonale, 0,01-m-Interpolationsreserve sowie 0,15-m/±0,40-rad-Goalhülle bleiben geprüft. Neues schreibgeschütztes `rpp_rollout`-Simulationsprofil prüft tatsächliche berechnete Bewegungen einschließlich Drehen mit zusätzlich 0,02-m/±0,05-rad-Trackingband und erfordert aktivierte Vorausrichtung auf das erste tatsächliche Pfadstück innerhalb 0,02 rad. 17 echte Controllerparameter müssen passen. Bestehendes konservatives Profil bleibt Default. [Gemeinsamer Bewegungsvertrag](BEWEGUNGSVERTRAG.md).
+
+**Geschlossene echte Nav2-Abnahme:** Acht Fälle bestanden. 68-/80-cm-Durchfahrt jeweils beide echte Actions erfolgreich, maximal rund 2 mm Tracking und mindestens 80/140 mm Abstand des gepolsterten Footprints. Längere 3,682-m-Umfahrung trotz verworfener Eigenroute erfolgreich, maximal 3,485 mm Positions-/0,005011 rad Headingabweichung und 201 mm Abstand. Vorbestimmte Tür-/Umfahrungsziele sind Komponententests, keine autonome Wohnungserkundung. Unzulässige 56-cm-Durchfahrt und Rotation im 68-cm-Spalt trotz NavFn-Punktpfad vor FollowPath verworfen; unbekannter Außenraum vom tatsächlichen Planer abgelehnt. Keine Nichtnullkommandos in diesen Negativfällen. Rückwärtsanteil sämtlicher positiver Fälle null.
+
+**Autonomer Bootstrap:** Tatsächlicher bestehender Frontierdetektor/Approach/Policy wählt selbst einen ersten Beobachtungspunkt; Vollscan bei unbeobachtetem hinterem Außenraum gesperrt. Echte Nav2-Regelbewegung gewinnt im endlichen verdeckungsgeprüften synthetischen Sichtmodell 0,454 m² neue beobachtete Fläche. Fehlende initiale Kontur ergibt `wait` mit 168 fehlenden Zellen je Quelle, keine identischen Start-/Scanwiederholungen. Eigenkörper-/Egress-Ausnahmen und AP-02-Invalidierung bleiben erhalten. Separates begründetes reales Sensorpositions-/Abdeckungspaket im Bewegungsvertrag nur vorbereitet.
+
+**Tests/Build:** 22 neue aussagekräftige Regressionen; Gegenprobe auf Original-AP-02: 18 erwartete Fehlschläge, 4 negative Fälle bestanden. Aktuelle AP-02-basierte Humble-Laufzeit: 138 Installtests, **1.609 betroffene Tests** einschließlich aller fünf echten DDS-Callbackfälle und **1.577 colcon-Tests** fehlerfrei; echter Zehnpaketbuild mit neuen Repo-/Nav2-Aktionsbindings und geprüfter Install-/Quellenidentität. Zusätzlich echte native Nav2-Planer-/Controller-/Pluginbuilds (14 Pakete) und acht Repo-Pakete in getrennter Installation. Mengen überlappen. CI-Auswahl und echter Nav2-Prüfjob ergänzt; kein GitHub-Lauf. [Vollständige Originalbelege und Reproduktion](evidence/ap03-20261003/README.md).
+
+**Beobachtete Grenze:** Zwei Sammelläufe und ein erster Einzelversuch eines unveränderten engen DDS-Timingtests schwankten im älteren Nav2-Prüfimage (u.a. rclpy 3.3.17). Vier spätere Einzelprozesse dort sowie alle fünf Fälle und der vollständige Abschlusslauf auf AP-02-Laufzeit (rclpy 3.3.22) bestanden. Fehllogs erhalten; keine Ursachengarantie, kein allgemeines Last-Grün und keine Frist-/Schutzlockerung. Aktive Jetson-/Worst-Case-Abnahme bleibt AP-06.
+
+**Offen:** Physische Türen/Startabdeckung und echte Motor-/Tracking-/Stopplast. Simulationsantwort 50 ms und 25-ms-Schrittkappe sind kein Nachweis für die reale 2000-ms-Antriebsrampe, Smoother, Schlupf und Sensor-/TF-Latenzen. Gesamte ExploreArea-/BT-/Mission-/Sensor-/Gatekette und Wohnungsvollständigkeit nicht als abgenommen ausweisen. Das Simulationsprofil ist nicht am Jetson aktiviert.
+
+**Rückfall:** Nur eigene AP-03-Software `c3115ff` und zugehörige Dokumentation gezielt revertieren; AP-01/AP-02, Main/Jetson und fremde Arbeit erhalten.
+
+**Genau nächster Schritt:** AP-04 gemäß MASTERPLAN v1.3 als eigenen begrenzten Softwareauftrag beauftragen. Keine automatische Frontier-Integration, Profilaktivierung oder Fahrt aus diesem Abschluss.
+
+---
+
 ## 03.10.2026 – MASTERPLAN v1.3 / AP-02 software_geprüft
 
 **AP-02 software_geprüft.** Nutzer hat AP-02 nach AP-01 ausdrücklich beauftragt.

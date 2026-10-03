@@ -1,0 +1,30 @@
+Starting >>> nav2_common
+Starting >>> nav_2d_msgs
+Finished <<< nav2_common [0.31s]
+Starting >>> nav2_msgs
+Finished <<< nav_2d_msgs [0.34s]
+Starting >>> nav2_voxel_grid
+Finished <<< nav2_voxel_grid [0.11s]
+Finished <<< nav2_msgs [0.37s]
+Starting >>> nav2_util
+Finished <<< nav2_util [0.12s]
+Starting >>> nav2_lifecycle_manager
+Starting >>> nav2_map_server
+Finished <<< nav2_lifecycle_manager [0.12s]
+Starting >>> nav_2d_utils
+Finished <<< nav2_map_server [0.15s]
+Starting >>> nav2_costmap_2d
+Finished <<< nav_2d_utils [0.12s]
+Finished <<< nav2_costmap_2d [0.18s]
+Starting >>> nav2_core
+Finished <<< nav2_core [0.07s]
+Starting >>> nav2_controller
+Starting >>> nav2_navfn_planner
+Finished <<< nav2_navfn_planner [0.10s]
+Starting >>> nav2_planner
+Finished <<< nav2_controller [0.16s]
+Starting >>> nav2_regulated_pure_pursuit_controller
+Finished <<< nav2_planner [0.13s]
+Finished <<< nav2_regulated_pure_pursuit_controller [0.11s]
+
+Summary: 14 packages finished [1.75s]

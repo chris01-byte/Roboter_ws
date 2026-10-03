@@ -6,6 +6,14 @@ Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe
 
 Aktuelle Wohnungserkundung ausschließlich aus [MASTERPLAN](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md) und [AGENTENAUFTRAG](wohnungserkundung/AGENTENAUFTRAG.md) ableiten. Ältere „nächste Schritte“ sind keine parallelen Aufträge. Inventar und tatsächliche ROBOT_TRANSFER-Historie bleiben erhalten; dieser Eintrag ändert keine Runtime.
 
+## 03.10.2026 – AP-03: tatsächlicher Bewegungspfad und autonomer Bootstrap
+
+**Nutzerentscheidung:** AP-03 nach AP-02 ausdrücklich beauftragt; Basis `875c7c4`, Branch `fix/nav2-bootstrap-geometry`, Software `c3115ff`. MASTERPLAN v1.3 unverändert, abgeschlossener AP-02-Auftrag bytegleich archiviert.
+
+**Entscheidung:** Ein verworfener kürzester Eigenpfad darf einen zulässigen längeren tatsächlichen Nav2-Pfad nicht blockieren. Vorschlag und Bewegungsfreigabe trennen, im vorhandenen Explorer bleiben und NavFn A*/RPP anhand echter geschlossener Messungen weiterverwenden. Rollout-Profil ausdrücklich simulationsqualifiziert, schreibgeschützt und mit enger geprüfter Vorausrichtungsübergabe; konservativer Default und sämtliche gemessenen Chassis-/Raster-/Goalreserven erhalten. Gemeinsamer [Bewegungsvertrag](wohnungserkundung/BEWEGUNGSVERTRAG.md); konkrete Sensorabdeckung separat nur vorbereitet.
+
+**Evidenz/Grenzen:** Acht echte Nav2-Fälle einschließlich 68/80 cm, Umfahrung, autonomer erster Frontier-Beobachtung und sicher gesperrten Negativfällen. 22 neue Regressionen; aktuelle AP-02-Laufzeit besteht 1.609 betroffene, 138 installierte und 1.577 colcon-Tests (Überlappung), echte isolierte Builds. Ein enger unveränderter DDS-Test schwankte im älteren Nav2-Prüfimage; Originalfehler und Gegenproben erhalten. Ergebnis, Bedingungen und Rückfall ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Keine Fristlockerung, Hardwarewirkung, Deployment oder Push/Merge. Reale Motor-/Sensor-/Stopplast bleibt offen; AP-04 nur durch eigenen nächsten Auftrag.
+
 ## 03.10.2026 – AP-02: Kartenarbeit und Quellenvertrag
 
 **Nutzerentscheidung:** Nach abgeschlossenem AP-01 ausdrücklich AP-02 beauftragt.

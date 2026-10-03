@@ -1,0 +1,48 @@
+# AP-03 – Bewegung und Bootstrap, Softwarevertrag
+
+Verbindlich bleibt MASTERPLAN v1.3. Der [STATUS](STATUS.md) enthält den einzigen aktuellen Abschluss; die [Originalbelege](evidence/ap03-20261003/README.md) begrenzen diesen Vertrag auf das geprüfte synthetische Modell. Keine Fahrfreigabe, kein Deployment und keine Übertragung der Trackingreserve auf reale Motoren.
+
+## Gemeinsame Geometrie
+
+`base_link` liegt an der mittigen Antriebsachse. Gemessene Hardwarehülle einschließlich vorderer Sensorhalter: x = −0,11 … +0,31 m, y = ±0,23 m. Nav2 verwendet dieses asymmetrische Rechteck mit 0,02 m Padding; Explorer prüft dessen effektive Hülle x = −0,13 … +0,33 m, y = ±0,25 m. Keine symmetrische Zentrierung und keine Verkleinerung des Chassis. Arm-Transportpose bleibt reale Voraussetzung.
+
+Der 0,28-m-Kreis des vorhandenen globalen NavFn-Planers ist eine Suchgeometrie. Er beweist weder Drehen noch Durchfahrt des Rechtecks. Rohkarte, Scope und tatsächliche Costmap müssen den ganzen reservierten Footprint zulassen. Unbekannter Außenraum ist niemals Freiraum. Eigenkörpermasken und monotone Start-Egress-Inventare bleiben private, an die AP-02-Raster-/Sitzungsidentität gebundene Evidenz; keine Kartenumschreibung.
+
+Bei jeder Rasterprüfung bleiben halbe Zelldiagonale und 0,01 m Interpolationsreserve erhalten. Der RPP-Rollout verwendet höchstens Viertelzellen/5 mm Translation und begrenzt den reservierten Eckweg pro Schritt auf 4 mm. Die Goal-Prüfung behält den gesamten realen 0,15-m-Positionskreis und ±0,40 rad Orientierung einschließlich nötiger Enddrehung bei. Ein Ziel liegt deshalb im freien Bereich hinter der Tür, nicht im engen Türspalt.
+
+## Pfadvorschlag und Bewegungsfreigabe
+
+Der kürzeste eigene Rasterpfad kann am Drehen oder RPP-Carrot scheitern, obwohl Nav2 eine längere Umfahrung findet. Im ausdrücklichen Rollout-Profil bleibt ein verbundenes bekanntes Ziel mit vollständigem Goal-Footprint als `requires_nav2_plan`-Vorschlag erhalten. Diese Erreichbarkeit erteilt keine Bewegungsfreigabe und erfindet keinen alternativen Fahrpfad.
+
+Vor Vorausrichtung und Navigation ist ein tatsächlich erfolgreicher `ComputePathToPose`-Pfad mit passendem Frame, gültigem Endpunkt und Orientierung sowie vollständiger unabhängiger Chassis-/Controllerprüfung notwendig. Live-Validierung und HOLD-Wiederaufnahme prüfen anschließend diesen tatsächlichen Nav2-Pfad; ein anderer kürzester Eigenpfad darf ihn nicht wieder verwerfen. Ungültiger tatsächlicher Pfad bleibt gesperrt. Der vorhandene NavigateToPose-/Explorer-Besitzer, der einzelne Child, Cancel/HOLD und alle Quellenbudgets bleiben erhalten.
+
+Sub-Halbzell-Verbindungen vom letzten Rasterzentrum zum kontinuierlichen Ziel bestimmen keine neue Endorientierung. Sonst würde ein numerischer 0,3-mm-Anschluss eine unnötige Vierteldrehung erzeugen. Die tatsächliche Endorientierung wird weiterhin von Nav2 und dem Goal-Footprint geprüft.
+
+## Planer und Controller nach Nachweis
+
+Die vorhandene Kombination **NavFn A\* + Regulated Pure Pursuit** bleibt erhalten. Kein weiterer Navigator und kein neuer Frontier-Kern. Grund ist der ausgeführte Nachweis: echte 68-/80-cm-Durchfahrten und eine 3,68-m-Umfahrung, die der eigene kürzeste Pfad ablehnt, bestehen mit positivem unabhängig gemessenem Footprintabstand. NavFn selbst akzeptiert auch den unzulässigen 56-cm- und Drehfall: gerade deshalb bleibt die zusätzliche rechteckige Prüfung vor dem Child unverzichtbar.
+
+Geprüfte RPP-Werte: fester interpolierter 0,40-m-Carrot, Rotate-to-heading ab 0,35 rad, Kollisionsprüfung an, kein Rückwärtsfahren, gewünschte Translation 0,10 m/s, Drehgeschwindigkeit 0,20 rad/s, maximale Winkelbeschleunigung 2,0 rad/s², Controller 20 Hz und SimpleGoalChecker mit obigen Toleranzen. Das Rollout-Profil liest alle 17 relevanten Parameter/Typen am tatsächlichen Controller und verweigert abweichende Werte. Gemessener Rückwärtsanteil in sämtlichen positiven Fällen: null.
+
+Der bestehende konservative Modus bleibt Node-Standard. `metric_frontier_simulation_params.yaml` lädt nach dem bestehenden metrischen Opt-in-Profil `metric_path_validation: rpp_rollout`. Es ist schreibgeschützt und erfordert aktivierte Vorausrichtung mit höchstens 0,02 rad Übergabefehler, 0,01 rad Stopmargin und 0,005 rad Mindestverbesserung. Die vorhandene Explorer-Vorausrichtung richtet auf das erste tatsächliche Nav2-Teilstück; kein Zielchord durch ein Hindernis.
+
+Der Rollout ersetzt die pauschale ±0,35-rad-Hülle auf jedem geraden Wegpunkt durch die tatsächliche berechnete RPP-Translation und nötige Rotation, zusätzlich mit **0,02 m Positions- und ±0,05 rad Headingband**. Sämtliche oben genannten Chassis-, Padding-, Raster-, Interpolations- und Goal-Reserven bleiben bestehen. Diese neue Bandwahl ist durch Messung begründet und ausschließlich für das dokumentierte Modell qualifiziert; sie ist keine allgemeine Garantie für beliebige Anlagen oder Karten.
+
+## Geschlossene Simulation und Grenzen
+
+Echte aus Humble-Commit `3c3db59d6969d8ecee8e68468693d006397f4a0c` gebaute Nav2-Planer-/Controllerprozesse, reale Actions und GetParameters. Welt und Antrieb sind synthetisch: Wand-/Türgeometrie, 2-cm-Raster, Wandzeit, unicycle-Integration mit 100-Hz-Zielrate/25-ms-Schrittkappe und 50-ms-Antriebsantwort. Die wirkliche 2000-ms-Hardware-Rampe, Smoother, Schlupf, Sensorlatenzen, TF-/HWT-/Gate-/Stoppschutzkette werden hier nicht simulativ gesund gemeldet und nicht als integriert abgenommen.
+
+Die tatsächliche Explorer-Vorausrichtungsberechnung wird als Komponente gegen gemessene simulierte Pose ausgeführt; ihr Drehtransport ist eine Welt-Testanbindung. Die unabhängige Weltprüfung verwendet Polygon-Trennachsen und exakte Kantenabstände statt der Produkt-Footprintfunktion. Tracking ist der Abstand zur berechneten SE(2)-Rollout-Röhre; Goal-Drehung wird gesondert innerhalb der vollständigen Goal-Prüfung berücksichtigt. Rohpfade, Alignments und echte Regelbewegungen sind archiviert.
+
+Tür-/Umfahrungsziele sind vorbestimmte Komponentenziele und belegen keine autonome Wohnungserkundung. Nur der Bootstrap-Fall nimmt sein erstes Ziel aus dem tatsächlichen bestehenden Explorer-Frontierdetektor, Approach, Ranking und Policy. Seine Beobachtungen ändern sich ausschließlich durch die erreichte simulierte Pose und eine ausdrücklich modellierte endliche Vorwärtssicht mit Wandverdeckung; keine unsichtbaren Groundtruth-Zellen fließen in Explorer oder Planer. Vollrotation bei unbeobachtetem hinterem Außenraum wird verworfen. Fehlende initiale Außenkontur ergibt `wait` mit konkreten fehlenden Zellen und ohne Scan-/Fahrtwiederholung.
+
+Die physische Tür-/Startgeometrie und dieses künstliche Sichtmodell sind weiterhin offen. Reale Deckung und eine Tracking-/Stoppqualifikation sind erforderlich, bevor das Rollout-Profil am Roboter verwendet werden kann. Daraus folgt keine AP-04- oder Hardwareaktivierung.
+
+## Separat vorbereitetes Sensorabdeckungspaket
+
+Bei unverändert unbekannter initialer Außenkontur ist der nächste konstruktive Schritt Beobachtung, nicht Reserveabbau oder wiederholtes Starten. Das Paket ist hier nur vorbereitet, nicht beauftragt oder umgesetzt:
+
+- Festgehaltene tatsächliche Startpose, Kartenraster, LiDAR-TF (+0,245 m, 0 m, +90°), OAK-/VL53-TFs und Arm-Transporthülle gemeinsam prüfen. Eigenkörperzellen und äußeren Mastschatten räumlich getrennt darstellen; keine unbekannte äußere Zelle als Körper klassifizieren.
+- Für die volle Startrotation äußere Swing-Hülle des asymmetrischen gepolsterten Rechtecks samt Raster-/Trackingreserve beobachten. Falls nur eine gerade erste Beobachtung gewünscht ist, genau deren kontinuierliche Front-, Seiten- und Rear-Egress-Hülle nachweisen. Die LiDAR-Eigenabschattung, seitliche/rückwärtige Sicht und niedrige Hindernisse sind konkrete fehlende Daten, nicht pauschal „mehr Sensoren“.
+- Mit dem bestehenden gerätefreien Start-Geometriediagnostikwerkzeug fehlende Zellgruppen und Bewegungsvarianten protokollieren; keine privaten Wohnungskoordinaten in Git. Erst danach eine belegte Montage-/Blickwinkelkorrektur oder einen abgegrenzten zusätzlichen Beobachter vorschlagen. Reichweite allein beseitigt Eigenabschattung nicht.
+- Abnahme dieses separaten Pakets: echte äußere Beobachtungen decken die nötige Hülle bei gültigen Fristen; Eigenkörper-/Egress-Ausnahmen bleiben privat und monoton; unbekannte Richtungen löschen keine Hindernisse. Reale Montage, Aktoren und Deployment benötigen einen eigenen ausdrücklichen Auftrag und die einschlägige Hardwareabnahme.

@@ -1,52 +1,23 @@
-# Aktueller Agentenauftrag: AP-02
+# Aktueller Agentenauftrag: AP-03
 
-Am 03.10.2026 ausdrücklich durch Nutzer „okay erledige AP-02“ beauftragt.
-Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS,
-LAB-1 und die betroffenen WE-Meilensteine. Der abgeschlossene AP-01-Auftrag
-samt Übergabe ist [bytegleich archiviert](archive/20261003-ap01/AGENTENAUFTRAG.md).
+Am 03.10.2026 ausdrücklich durch Nutzer „Gut, wenn soweit alles io. ist begeinne mit AP-03“ beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M3. [AP-02 ist bytegleich archiviert](archive/20261003-ap02/AGENTENAUFTRAG.md).
 
 ## Basis und Ziel
 
-Sauberer AP-01-Abschluss `45f268a` auf `08a4b9a`, eigener Branch
-`fix/map-lifecycle-source-contract`, Worktree `/workspace/Roboter_ws-ap02`.
-WE-D0/WE-M0; betroffene Quellen-, Recovery- und metrische Anteile von WE-M3.
-Softwareabschluss ausschließlich AP-02: expliziter Kartenlebenszyklus und
-konsistenter Quellenvertrag, echte Regressionen, isolierter ROS-Humble-Build,
-aktuelle Paket-/Interfaceauflösung und nachvollziehbare Ergebnisse.
+Sauberer AP-02-Abschluss `875c7c4`, eigener Branch `fix/nav2-bootstrap-geometry`, Worktree `/workspace/Roboter_ws-ap03`. AP-01-Zeitvertrag und AP-02-Kartenlebenszyklus erhalten. Ausschließlich AP-03: Bewegung und autonomen Start zusammenführen, gezielte vorhandene Explorer-/Nav2-Geometriekorrekturen, Regressionen, echter isolierter Build und nachvollziehbare gerätefreie Ergebnisse.
 
-## Begrenzte Umsetzung
+## Umsetzung und Abnahme
 
-Bestehende Explorer-Callbacks, MetricFrontierRuntime und StartEgressEvidence
-gezielt reparieren. Kartenidentität/Sitzung/Frame/Geometrie/Revision und
-verspätete Karten-/Planerarbeit prüfen. Fingerprint und Kartenmanager
-wiederverwenden; nur notwendige Korrekturen dort. Vor Arrayoperationen räumliche
-Evidenz invalidieren; niemals eine neue Startausnahme oder Freiraum erfinden.
-Normale passend korrelierte Updates erhalten gültige Ziele mit erneuter Prüfung.
+Vorhandene echte Nav2-Planer und Controller mit asymmetrischem Chassis, Achsbezug, Rasterreserve, Drehen, Rückwärtsanteil und gemessener Trackingabweichung gemeinsam prüfen. Ein einzelner ungeeigneter kürzester Eigenpfad darf ein über längeren Weg zulässiges Ziel nicht dauerhaft ausschließen. Keine bloße Reserveentfernung.
 
-Vorhandene HWT-/Encoder-/TF-/Gate-/Explorerbudgets für Empfang, IO,
-Verarbeitung, DDS-Verbrauch, Frische und Kontinuität erfassen. Aktiver und
-passiver Pfad getrennt; AP-01-Stempelvertrag erhalten. Keine Fristlockerung,
-kein allgemeiner Health-, DDS- oder Executorumbau. Betroffene CI-Auswahl
-und Trigger bei Bedarf ergänzen.
+Geschlossene synthetische Pflichtfälle: Hindernis mit längerer Umfahrung; gerade 68-cm- und 80-cm-Durchfahrt; unzulässiges Drehen im engen Durchgang; freier Zielbereich hinter der Tür; beobachteter und unbekannter Außenraum. Positive schmale Durchfahrt mit echtem Nav2-Planer und Controller ausführen; Trackingabweichung, Footprintabstände und erreichte beobachtete Fläche messen. Vorbestimmte Ziele sind nur Komponententests, keine autonome Erkundung. Simulationsmodell ist kein Nachweis für reale Hardware.
 
-## Abnahme und Grenzen
+Bootstrap trennt eigenen bekannten Körper und unbeobachteten Außenraum. Erste Beobachtungsbewegung nachweisen oder konkret fehlende Beobachtung benennen. Vollrotation nur bei zulässiger Geometrie. Fehlende Sensorabdeckung mit begründetem separatem Sensorpositions-/Abdeckungspaket vorbereiten; keine identischen Startwiederholungen.
 
-100×100 → 100×101 sowie Wachstum mit verschobenem Ursprung;
-Auflösungs-/Sitzungs-/Framewechsel; verspätete Arbeit; Verlust notwendiger
-Quelle und gültige Folgeupdates. Keine Arrayausnahme, keine falsch gültige
-alte Egress-Maske und keine neue Freiraumannahme. Betroffene Tests und Build
-mit echten Nachrichtenbindungen; Ergebnis und Rückfall im STATUS dokumentieren.
+## Grenzen und Rückfall
 
-Keine Hardware, Aktoren, Roboternetzverbindung, Deployment, Push oder Merge.
-Keine automatische AP-03-Ausführung und keine vorgezogene AP-03-/AP-04-
-Geometrie-/Controller-/Frontierentwicklung. Belastbare aktive Jetson-
-Zeitmessung bleibt AP-06. Rückfall: ausschließlich eigene AP-02-Commits
-gezielt revertieren, AP-01 erhalten, fremde Arbeit nicht zurücksetzen.
+Keine Hardware, Roboternetzverbindung, Deployment, Push oder Merge. Kein automatischer AP-04-Übergang, kein neuer Navigator/Supervisor, kein neuer Frontier-Kern. Physische Tür-/Startabnahme bleibt offen. Rückfall ausschließlich eigene AP-03-Commits revertieren; AP-01/AP-02 und fremde Arbeit erhalten. Tatsächliche Blocker konkret dokumentieren und unabhängige Schritte weiterführen.
 
 ## Softwareabschluss
 
-AP-02 software_geprüft im Softwarecommit `96bbd4d`. Vollständiger Ergebnis-/
-Grenz-/Rückfallnachweis ausschließlich im [STATUS](STATUS.md) und dessen
-[Originalevidenz](evidence/ap02-20261003/README.md). 55 neue Fälle, 1.587
-betroffene Tests, 116 Installtests, 1.555 colcon-Tests und Zehnpaketbuild
-bestanden; Mengen überlappen. AP-03 ist nicht automatisch aktiviert.
+AP-03 software_geprüft im Softwarecommit `c3115ff`; Umfang, Originalbelege, beobachtete Timinggrenzen, reale offene Abnahmen und Rückfall ausschließlich im [STATUS](STATUS.md) und der [AP-03-Evidenz](evidence/ap03-20261003/README.md). 22 neue Fälle; 1.609 betroffene, 138 installierte und 1.577 colcon-Tests bestanden; echte Zehnpaket-/native Nav2-Builds und Achtfallmatrix. Simulationsprofil nicht für Hardware qualifiziert oder aktiviert. Kein automatischer AP-04-Übergang.

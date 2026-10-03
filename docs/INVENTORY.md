@@ -13,6 +13,13 @@ Metrisches Start-Egress benötigt festen Körperanker und tatsächlichen
 reservierten RPP-Sweep. Software geprüft, reale Stufe 3 weiter offen.
 [Nachweise und Rückfall](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
 
+**Softwaredelta 03.10.2026 / AP-03:** Gerätefreier echter Nav2-Prüfstand
+`tools/simulation/ap03_nav2_closed_loop.py` und getrenntes metrisches
+Simulationsprofil ergänzen vorhandene Bewegung/Startprüfung. 68-/80-cm-
+Komponentenfälle und autonome erste Beobachtung synthetisch geprüft;
+kein neuer Hardware-Reifegrad, keine Jetson-Aktivierung. Einzige aktuelle
+WE-Abnahme/Grenzen: [STATUS](wohnungserkundung/STATUS.md).
+
 Reifegrade: **produktiv** = am echten Roboter getestet · **erprobt** = läuft,
 aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 

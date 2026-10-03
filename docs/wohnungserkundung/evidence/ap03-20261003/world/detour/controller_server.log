@@ -1,0 +1,45 @@
+[INFO] [1791043834.476385802] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791043834.477827210] [controller_server]: Creating controller server
+[INFO] [1791043834.483779301] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791043834.484356153] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791043834.751896691] [controller_server]: Configuring controller interface
+[INFO] [1791043834.752111689] [controller_server]: getting goal checker plugins..
+[INFO] [1791043834.752177696] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791043834.752215693] [local_costmap.local_costmap]: Configuring
+[INFO] [1791043834.756448494] [local_costmap.local_costmap]: Using plugin "static_layer"
+[INFO] [1791043834.760488551] [local_costmap.local_costmap]: Subscribing to the map topic (/map) with transient local durability
+[INFO] [1791043834.761757285] [local_costmap.local_costmap]: Initialized plugin "static_layer"
+[INFO] [1791043834.761777655] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791043834.762443388] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791043834.769888934] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791043834.770550291] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791043834.770955349] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791043834.771875258] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043834.773839148] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791043834.775168542] [local_costmap.local_costmap]: StaticLayer: Resizing costmap to 200 X 200 at 0.020000 m/pix
+[INFO] [1791043834.786888932] [controller_server]: Activating
+[INFO] [1791043834.786923393] [local_costmap.local_costmap]: Activating
+[INFO] [1791043834.786932556] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791043834.787011613] [local_costmap.local_costmap]: start
+[INFO] [1791043834.837149802] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043834.837207407] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791043851.495978372] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791043894.196375003] [controller_server]: Reached the goal!
+[INFO] [1791043894.645012510] [rclcpp]: signal_handler(signum=15)
+[INFO] [1791043894.645352717] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791043894.645412195] [controller_server]: Deactivating
+[INFO] [1791043894.645433166] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043894.645453917] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791043894.687230045] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791043894.697468286] [controller_server]: Cleaning up
+[INFO] [1791043894.697506943] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791043894.697546601] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791043894.701415776] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791043894.702838708] [local_costmap.local_costmap]: Destroying
+[INFO] [1791043894.704185577] [controller_server]: Destroying
