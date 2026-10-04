@@ -1,0 +1,29 @@
+Starting >>> amadeus_map_identity
+Finished <<< amadeus_map_identity [0.44s]
+Starting >>> base_hardware
+Finished <<< base_hardware [1.71s]
+Starting >>> robot_interfaces
+Finished <<< robot_interfaces [0.02s]
+Starting >>> bt_orchestrator
+Finished <<< bt_orchestrator [0.33s]
+Starting >>> mission_manager
+--- stderr: mission_manager
+
+----------------------------------------------------------------------
+Ran 0 tests in 0.000s
+
+OK
+---
+Finished <<< mission_manager [0.20s]
+Starting >>> robot_state_estimation
+Finished <<< robot_state_estimation [1.78s]
+Starting >>> explore
+Finished <<< explore [30.4s]
+Starting >>> robot_navigation
+Finished <<< robot_navigation [6.15s]	[ with test failures ]
+Starting >>> robot_map_manager
+Finished <<< robot_map_manager [1.36s]
+
+Summary: 9 packages finished [42.6s]
+  1 package had stderr output: mission_manager
+  1 package had test failures: robot_navigation

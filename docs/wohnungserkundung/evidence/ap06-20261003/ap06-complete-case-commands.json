@@ -1,0 +1,62 @@
+[
+  {
+    "label": "complete-a",
+    "exit_code": 1,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=191 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door68_start_a --output /evidence/ap06-runs/complete-a --save-partial"
+    ]
+  },
+  {
+    "label": "complete-b",
+    "exit_code": 1,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=192 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door68_start_b --output /evidence/ap06-runs/complete-b --save-partial"
+    ]
+  },
+  {
+    "label": "complete-c",
+    "exit_code": 1,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=193 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case door80_start_c --output /evidence/ap06-runs/complete-c --save-partial"
+    ]
+  },
+  {
+    "label": "complete-cancel",
+    "exit_code": 0,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=194 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case cancel --output /evidence/ap06-runs/complete-cancel --save-partial"
+    ]
+  },
+  {
+    "label": "complete-gyro-hold",
+    "exit_code": 0,
+    "command": [
+      "docker",
+      "exec",
+      "ap03-nav2",
+      "bash",
+      "-c",
+      "source /opt/ros/humble/setup.bash && source /evidence/ap03-nav2-install/setup.bash && source /evidence/ap06-support-install/setup.bash && source /evidence/ap06-product-install/setup.bash && export AP06_SIMULATION=1 ROS_DOMAIN_ID=195 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && python3 /evidence/ap06-repo/tools/simulation/ap06_closed_product.py --repo /evidence/ap06-repo --tf-probe /evidence/ap06-tf-probe-build/tf_ownership_probe --case gyro_hold --output /evidence/ap06-runs/complete-gyro-hold --save-partial"
+    ]
+  }
+]

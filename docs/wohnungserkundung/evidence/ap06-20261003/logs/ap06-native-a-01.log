@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 469, in <module>
+    sys.exit(run(parser.parse_args()))
+  File "/evidence/ap06-repo/tools/simulation/ap06_closed_product.py", line 257, in run
+    processes, streams, nodes, executors, threads = [], [], [], [], [], []
+ValueError: too many values to unpack (expected 5)

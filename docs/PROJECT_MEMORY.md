@@ -256,3 +256,11 @@ weglassen/Opt-ins beim gestoppten Start deaktivieren; kein Installwechsel
 oder automatischer weiterer Realversuch. Nutzerklärung ausdrücklich:
 **ROS-Stack beenden, Rechner eingeschaltet lassen.** Details im aktuellen
 [STATUS-Abschluss](wohnungserkundung/STATUS.md#aktueller-abschluss-hwt-entwicklungsvertrag-und-start-egress-01102026).
+
+## 04.10.2026 – AP-06 native Integration und ehrliche Gesamtgrenze
+
+MASTERPLAN v1.3 beibehalten. Originaler Mission-/C++-BT-/Explorer-/Nav2-/SLAM-/EKF-Pfad mit realen Scan-/Safety-Knoten auf einem ausdrücklich gerätefreien Modell geprüft. Gezielte Integrationskorrekturen: aktuelle statt zukünftiger SLAM-TF, passweise identische Geometrieprüfung, Ziel-/Startbeweis getrennt und Vororientierung am tatsächlichen RPP-Carrot, ursprünglicher Planabbruchgrund erhalten. Begrenzte VL53-Räumendpunkte markieren keine Hindernisse; unveränderte getrennte Messwolken behalten diese Rolle. Eine bloße numerische Reichweitenlücke war wegen nativer Rasterrundung kein sicherer Rollentrenner. Native Rot/Grün-Gegenprobe bewahrt nahe Hindernisse.
+
+Bestehender Startadapter darf unter unverändertem Egress-/RPP-/Scope-/Sichtbeweis die erste nützliche nahe Vorwärtsposition prüfen, innerhalb vorhandener Suche/Frist und anschließend mit wirklichem Nav2-Plan. Keine feste Wegpunktliste, bewegte Weißblase oder neue Navigation. Die tatsächliche erste SLAM-Aktualisierung entzieht danach noch die feste Referenz; kein stilles Re-Ankern zur grünen Abnahme. Vollständiger Zustand und genau nächster AP-06-Schritt ausschließlich im [STATUS](wohnungserkundung/STATUS.md). Build/Regressionen sind grün, drei vollständige Gesamtmissionen negativ; Dokumentation/Komponentenprüfung bedeuten keine Realabnahme.
+
+App-Projekt auf lokalem Jetson und tatsächlich erreichbarer Ausführungsbackend sind getrennt: diese Werkzeuge bleiben in x86-Cloud ohne Roboterzugang. Keine neue LAB-1-Standardfreigabe nötig, technische Voraussetzungen weiter maßgeblich. Keine Jetson-/Install-/Autostartwirkung, ROBOT_TRANSFER unverändert; AP-01–05/Main/fremde Arbeit erhalten.

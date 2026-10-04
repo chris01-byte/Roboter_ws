@@ -1,0 +1,35 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_ test_parent_keeps_observed_source_stop_instead_of_planner_timeout[actuator_or_encoder_state_invalid] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb6f85ed540>
+predicate = 'actuator_or_encoder_state_invalid'
+
+    @pytest.mark.parametrize('predicate', ('actuator_or_encoder_state_invalid', None))
+    def test_parent_keeps_observed_source_stop_instead_of_planner_timeout(monkeypatch, predicate):
+        node, _, _, parent, terminal = parent_fixture(monkeypatch, 'open')
+        signal = [None]
+        # Only absent source/action peers are doubled; the parent and its stop
+        # callback, map inputs, candidate selection and result decision are real.
+        node._metric_operating_snapshot = lambda **_: dict(
+            safe=signal[0] is None, first_rejecting_predicate=signal[0])
+        requests = []
+        def planner(target, stopped):
+            requests.append(target)
+            if predicate:
+                signal[0] = predicate
+                assert stopped()
+                signal[0] = None  # healed arrival cannot erase the observed stop
+            return None, 'nav2_plan_timeout_or_stop'
+        node._metric_request_nav_plan = planner
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert requests and not result.success and terminal == ['abort']
+>       assert node._metric_status['reason'] == (predicate or 'nav2_plan_timeout_or_stop')
+E       AssertionError: assert 'nav2_plan_timeout_or_stop' == 'actuator_or_...state_invalid'
+E         - actuator_or_encoder_state_invalid
+E         + nav2_plan_timeout_or_stop
+
+evidence/ap06-repo/src/explore/test/test_metric_planning_stop_reason.py:25: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_planning_stop_reason.py::test_parent_keeps_observed_source_stop_instead_of_planner_timeout[actuator_or_encoder_state_invalid]
+1 failed, 1 passed in 0.94s
