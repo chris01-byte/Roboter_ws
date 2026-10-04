@@ -4,7 +4,8 @@
 Explorer-Kette, echtes Nav2 NavigateToPose mit NavFn/RPP, Fahrtor, nativen
 Velocity Smoother und Collision Monitor. Ein echter `robot_localization`-EKF
 besitzt `odom→base_link`, der gepinnte/gepatchte `slam_toolbox` `map→odom`.
-Der native DDS-Prüfer protokolliert die GIDs je TF-Kante. Kein Wahrheits-TF,
+Originale Scan-Normalisierung und Safety-Monitor verarbeiten die
+modellierten Eingänge selbst. Der native DDS-Prüfer protokolliert die GIDs je TF-Kante. Kein Wahrheits-TF,
 Wahrheitskarten-Publisher oder manuell gesendetes Navigationsziel.
 
 **Diese Prüfung ersetzt keine Jetson- oder physische Abnahme.** Die tatsächliche
@@ -80,7 +81,7 @@ Der Quellbaum erhält den bestehenden Pure-Rotation-Patch; es wird kein Git-HEAD
 für extrahierte Archive erfunden. Lizenzen bleiben in den Quellarchiven erhalten.
 
 Die zugehörigen System-/ROS-Entwicklungsabhängigkeiten vor dem Build mit
-`rosdep` für genau die in `prepared.json` aufgeführten Paketpfade und die zehn
+`rosdep` für genau die in `prepared.json` aufgeführten Paketpfade und die zwölf
 Produktpakete auflösen. Dazu gehören BehaviorTree.CPP v3 für Nav2, Boost, Qt,
 Ceres/SuiteSparse, GeographicLib, SQLite, ZeroMQ/Fmt, TF-/Nachrichtenpakete
 und die deklarierten Python-Pins. `rosdep --ignore-src` muss auch alle vorbereiteten
@@ -101,6 +102,7 @@ colcon --log-base /tmp/ap06/product-log build --executor sequential \
   --base-paths src/amadeus_map_identity src/base_hardware src/robot_interfaces \
   src/bt_orchestrator src/mission_manager src/robot_state_estimation src/explore \
   src/robot_navigation src/robot_map_manager src/vl53_near_field \
+  src/safety_monitor src/amadeus_lidar_bringup \
   --build-base /tmp/ap06/product-build --install-base /tmp/ap06/product-install \
   --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 source /tmp/ap06/product-install/setup.bash

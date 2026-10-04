@@ -156,7 +156,7 @@ class Sensors(Node):
         self.last = time.monotonic()
         self.tick_gaps = []
         self.trace = (out/'plant.jsonl').open('w')
-        self.scan_pub = self.create_publisher(LaserScan, '/scan_normiert', qos_profile_sensor_data)
+        self.scan_pub = self.create_publisher(LaserScan, '/scan', qos_profile_sensor_data)
         self.left = self.create_publisher(PointCloud2, '/near_field/left/points', 10)
         self.right = self.create_publisher(PointCloud2, '/near_field/right/points', 10)
         self.status = self.create_publisher(NearFieldStatus, '/near_field/status', 10)
@@ -166,7 +166,9 @@ class Sensors(Node):
         self.vl53 = vl53_producer(self, world, dict(pub_left=self.left, pub_right=self.right,
             pub_left_cm=self.left_costmap, pub_right_cm=self.right_costmap, pub_status=self.status))
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
-        self.estop = self.create_publisher(Bool, '/safety/estop', qos)
+        # Only the model switch endpoint; the genuine SafetyMonitor owns the
+        # BT/gate /safety/estop decision and heartbeat.
+        self.estop = self.create_publisher(Bool, '/safety/estop_request', qos)
         self.static_tf = StaticTransformBroadcaster(self)
         tf = TransformStamped()
         tf.header.stamp = self.get_clock().now().to_msg()
@@ -399,8 +401,12 @@ def run(args):
             'explore', 'mission_manager', 'bt_orchestrator', 'robot_navigation', 'robot_state_estimation',
             'base_hardware', 'robot_map_manager', 'robot_localization', 'slam_toolbox',
             'nav2_bt_navigator', 'nav2_controller', 'nav2_planner', 'nav2_velocity_smoother',
-            'nav2_collision_monitor', 'vl53_near_field')}
+            'nav2_collision_monitor', 'vl53_near_field', 'safety_monitor', 'amadeus_lidar_bringup')}
         start('tf_probe', [str(args.tf_probe)])
+        start('scan_normalizer', py('amadeus_lidar_bringup.scan_vereinheitlichen')+[
+            '--ros-args', '-p', 'strahlen:='+str(result['actual_lidar_beams'])])
+        start('safety', py('safety_monitor.safety_monitor_node')+['--ros-args',
+            '--params-file', str(args.repo/'src/safety_monitor/config/safety_monitor_params.yaml')])
         start('shadow', py('robot_state_estimation.hwt601_shadow_node')+['--ros-args',
             '--params-file', str(args.repo/'src/robot_state_estimation/config/hwt601_shadow.yaml'),
             '-p', 'operator_stationary_confirmed:=true'])
