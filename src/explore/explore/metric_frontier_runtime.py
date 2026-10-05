@@ -1467,6 +1467,56 @@ class MetricFrontierRuntime:
             raise ValueError('candidate_lidar_stamp_stale')
         return view
 
+    def _metric_robot_side_observation(self, inputs, frontier, policy, scope_mask, started):
+        """Try the existing local approach search on the current robot side.
+
+        A boundary-normal target can already lie in a narrow entrance. A
+        useful observation before that entrance still needs a whole route,
+        finite nearby frontier sight and the unchanged spatial retry policy.
+        The owning parent subsequently checks the actual native plan.
+        """
+        grid, correlation, pose, _, safe, _, _ = inputs
+        now = time.monotonic()
+        # Optional better geometry must not consume an already eligible
+        # native query's remaining original selection deadline.
+        until = min(now+.5, started+self._map_timeout_s-.25)
+        if until-now < .25:
+            return None
+        direction = (pose[0]-frontier.cx, pose[1]-frontier.cy)
+        choices = self._frontier_approach_goal(frontier, pose[:2], grid,
+            search_mask=safe, approach_direction=direction, return_choices=True) or ()
+        for goal in choices:
+            if time.monotonic() >= until:
+                return None
+            if math.dist(goal, pose[:2]) < self._min_goal_dist_m:
+                continue
+            key = policy.identify((frontier.cx, frontier.cy), goal)
+            local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+            if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
+                continue
+            bearing = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
+            error = abs(math.atan2(math.sin(bearing-pose[2]), math.cos(bearing-pose[2])))
+            if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
+                continue
+            facing = math.atan2(frontier.cy-goal[1], frontier.cx-goal[0])
+            for yaw in (facing, facing+math.pi/2, facing-math.pi/2):
+                if time.monotonic() >= until:
+                    return None
+                view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw), view)
+                points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
+                    if math.dist(self._grid_to_world(c, r, grid.info), (frontier.cx, frontier.cy)) <= .8)
+                if not points:
+                    continue
+                route = self._metric_route(inputs, goal, yaw)
+                if route is None:
+                    continue
+                length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
+                cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
+                return MetricCandidate('', *goal, yaw, (frontier.cx, frontier.cy), route,
+                    length, cost, correlation.fingerprint, correlation.map_revision, False, points)
+        return None
+
     def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
         cache = getattr(self, '_metric_selection_cache', None)
         if cache is None:
@@ -1602,6 +1652,17 @@ class MetricFrontierRuntime:
                         self._metric_last_route_rejection if route is None else 'goal_too_near')
                 counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
                 continue
+            if (proposal and policy is not None and live_view
+                    and all(footprint_clear(*pose, g, allowed, self._world_to_grid,
+                        self._grid_to_world, self._metric_bounds,
+                        heading_half_angle=.05, center_deviation_m=.02)
+                        for g, allowed in ((grid, inputs[3]), (inputs[5], inputs[6])))):
+                side = self._metric_robot_side_observation(
+                    inputs, f, policy, scope_mask, selection_started)
+                if side is not None:
+                    candidates = [side]
+                    stats['robot_side_observation'] = True
+                    break
             if (policy is not None and live_view and not proposal
                     and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
                 # Prefer a publicly known turning pocket inside the SAME
@@ -1697,6 +1758,7 @@ class MetricFrontierRuntime:
             stats['deferred_or_served'] += len(candidates)
             candidates = []
             for f in frontiers:
+                side_checked = False
                 direction = getattr(f, 'approach_direction', None)
                 alternatives = self._frontier_approach_goal(f,pose[:2],grid,
                     search_mask=search_mask,approach_direction=direction,return_choices=True) or ()
@@ -1721,6 +1783,14 @@ class MetricFrontierRuntime:
                         route=self._metric_nav2_proposal(inputs,goal,yaw)
                         if route is None:
                             continue
+                        if not side_checked:
+                            side_checked = True
+                            side = self._metric_robot_side_observation(
+                                inputs, f, policy, scope_mask, selection_started)
+                            if side is not None:
+                                candidates.append(side)
+                                stats['robot_side_observation'] = True
+                                break
                         view=self._metric_observation_view()
                         visible=visible_boundary_cells(grid,scope_mask,(*goal,yaw),view)
                         points=tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
