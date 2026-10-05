@@ -139,5 +139,6 @@
     "MarkupSafe==2.1.5",
     "typeguard==2.13.3"
   ],
-  "slam_patch": "patches/slam_toolbox_humble_pure_rotation.patch"
+  "slam_patch": "patches/slam_toolbox_humble_pure_rotation.patch",
+  "slam_grid_patch": "patches/slam_toolbox_humble_stable_grid.patch"
 }

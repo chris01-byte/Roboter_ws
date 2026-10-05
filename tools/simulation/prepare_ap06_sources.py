@@ -46,7 +46,7 @@ def prepare(args):
                 raise RuntimeError('unexpected source archive layout')
             roots[0].rename(target)
         if source['name'] == 'slam_toolbox':
-            subprocess.run(['git', 'apply', '--unidiff-zero', str(repo/lock['slam_patch'])],
+            subprocess.run(['git', 'apply', '--unidiff-zero', str(repo/lock['slam_patch']), str(repo/lock['slam_grid_patch'])],
                            cwd=target, check=True)
         packages.extend(str(target/relative) for relative in source['packages'])
     if not args.verify_only:

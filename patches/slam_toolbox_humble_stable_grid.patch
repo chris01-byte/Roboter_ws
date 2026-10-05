@@ -1,0 +1,37 @@
+--- a/lib/karto_sdk/include/karto_sdk/Karto.h
++++ b/lib/karto_sdk/include/karto_sdk/Karto.h
+@@ -5954,6 +5954,9 @@
+ 
+     kt_int32s width, height;
+     Vector2<kt_double> offset;
++    // ROS OccupancyGrid transmits resolution as float32. Use that exact
++    // spacing for ray rasterization and origins as well as its wire metadata.
++    resolution = static_cast<kt_double>(static_cast<float>(resolution));
+     ComputeDimensions(rScans, resolution, width, height, offset);
+     OccupancyGrid * pOccupancyGrid = new OccupancyGrid(width, height, offset, resolution);
+     pOccupancyGrid->SetMinPassThrough(min_pass_through); 
+@@ -6105,12 +6108,18 @@
+       boundingBox.Add((*iter)->GetBoundingBox());
+     }
+ 
+-    kt_double scale = 1.0 / resolution;
+-    Size2<kt_double> size = boundingBox.GetSize();
+-
+-    rWidth = static_cast<kt_int32s>(math::Round(size.GetWidth() * scale));
+-    rHeight = static_cast<kt_int32s>(math::Round(size.GetHeight() * scale));
+-    rOffset = boundingBox.GetMinimum();
++    // A growing scan bounding box must not move the physical cell lattice.
++    // Rasterize the original rays on a map-frame lattice of this resolution;
++    // do not resample values or infer free cells in the additional border.
++    const Vector2<kt_double> minimum = boundingBox.GetMinimum();
++    const Vector2<kt_double> maximum = boundingBox.GetMaximum();
++    const kt_double x0 = floor(minimum.GetX() / resolution);
++    const kt_double y0 = floor(minimum.GetY() / resolution);
++    const kt_double x1 = ceil(maximum.GetX() / resolution);
++    const kt_double y1 = ceil(maximum.GetY() / resolution);
++    rOffset = Vector2<kt_double>(x0 * resolution, y0 * resolution);
++    rWidth = static_cast<kt_int32s>(x1 - x0 + 1);
++    rHeight = static_cast<kt_int32s>(y1 - y0 + 1);
+   }
+ 
+   /**
