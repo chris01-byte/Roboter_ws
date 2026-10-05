@@ -15,7 +15,7 @@ from .hwt601_fusion_health import Hwt601FusionHealth
 
 class Hwt601FusionGuard:
     def __init__(self, node, active_drive, callback_group=None,
-                 wheel_callback_group=None):
+                 wheel_callback_group=None, *, prefer_latest_wheel=False):
         self.node = node
         development = node.declare_parameter('hwt_development_contract', False,
             ParameterDescriptor(read_only=True)).value
@@ -24,6 +24,10 @@ class Hwt601FusionGuard:
         self.subscriptions = []
         self.active_drive = bool(active_drive)
         self.wheel_subscription = None
+        self.prefer_latest_wheel = bool(prefer_latest_wheel)
+        if self.prefer_latest_wheel and wheel_callback_group is None:
+            from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+            wheel_callback_group = MutuallyExclusiveCallbackGroup()
         # Passive readiness needs the newest actual measurement, not a queue
         # of old sensor frames. No restamping or extra freshness is permitted.
         latest_sensor = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
@@ -34,7 +38,9 @@ class Hwt601FusionGuard:
                 ('wheel', '/fusion/hwt601/wheel_odom_raw', Odometry)):
             self.subscriptions.append(node.create_subscription(
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
-                (qos_profile_sensor_data if active_drive else
+                (QoSProfile(depth=1,reliability=ReliabilityPolicy.BEST_EFFORT)
+                 if active_drive and name == 'wheel' and self.prefer_latest_wheel else
+                 qos_profile_sensor_data if active_drive else
                  latest_wheel if name == 'wheel' else latest_sensor),
                 callback_group=(wheel_callback_group if name == 'wheel'
                                 and wheel_callback_group is not None
@@ -60,6 +66,14 @@ class Hwt601FusionGuard:
         """
         if self.active_drive:
             return
+        self._receive_current_wheel('gate_predecision_dds_take')
+
+    def refresh_current_wheel(self):
+        if getattr(self,'prefer_latest_wheel',False):
+            observer = 'gate' if self.node.get_name() == 'cmd_vel_mission_gate' else 'explorer'
+            self._receive_current_wheel(f'{observer}_predecision_dds_take')
+
+    def _receive_current_wheel(self, delivery_path):
         sub = self.wheel_subscription
         group = sub.callback_group
         if not group.beginning_execution(sub):
@@ -71,7 +85,7 @@ class Hwt601FusionGuard:
             after = time.monotonic()
             if info is not None:
                 self._sample('wheel', info[0], delivery={
-                    'delivery_path': 'gate_predecision_dds_take',
+                    'delivery_path': delivery_path,
                     'take_before_monotonic_s': before,
                     'take_after_monotonic_s': after})
         except Exception as exc:
@@ -86,7 +100,7 @@ class Hwt601FusionGuard:
                         'content_valid': False, 'receive_exception': type(exc).__name__}
                 self.health.sample_details['wheel'] = {
                     **self.health.sample_details.get('wheel', {}),
-                    'delivery_path': 'gate_predecision_dds_take',
+                    'delivery_path': delivery_path,
                     'receive_exception': type(exc).__name__}
         finally:
             group.ending_execution(sub)
@@ -153,6 +167,7 @@ class Hwt601FusionGuard:
 
     def decision(self):
         """Return one atomic reason/state pair; log outside the sample lock."""
+        self.refresh_current_wheel()
         with self.health.lock:
             failure = self.health.motion_failure()
             state = self.health.recovery_state

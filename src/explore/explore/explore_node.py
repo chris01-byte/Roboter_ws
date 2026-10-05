@@ -1500,7 +1500,8 @@ class ExploreNode(MetricFrontierRuntime, Node):
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         if require_hwt:
             from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
-            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive, self._cb)
+            self._hwt_guard = Hwt601FusionGuard(self, hwt_drive, self._cb,
+                prefer_latest_wheel=self._metric_enabled)
             self.create_subscription(
                 String, '/fusion/hwt601/status_json',
                 self._on_hwt_gate_status, 10, callback_group=self._cb)
@@ -2929,6 +2930,14 @@ class ExploreNode(MetricFrontierRuntime, Node):
             return
         if not isinstance(status, dict):
             return
+        # The gate is an independent source observer. Its HOLD must cancel
+        # our child even when our own DDS reader has remained healthy.
+        if (getattr(self, '_metric_enabled', False)
+                and status.get('active_drive') is True
+                and status.get('recovery_state') in
+                ('HEALTHY', 'HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')
+                and type(status.get('hwt_motion_ready')) is bool):
+            self._hwt_gate_health_status = (status, time.monotonic())
         sequence = status.get('resume_sequence')
         if (status.get('hwt_motion_ready') is True
                 and status.get('recovery_state') == 'HEALTHY'
@@ -2954,7 +2963,14 @@ class ExploreNode(MetricFrontierRuntime, Node):
         if guard is None:
             return False
         _, state = self._hwt601_decision() if decision is None else decision
-        if state in ('HOLD', 'RECOVERY_VALIDATION'):
+        gate_status, gate_at = getattr(self, '_hwt_gate_health_status', ({}, None))
+        gate_hold = (gate_at is not None
+                     and 0.0 <= time.monotonic() - gate_at <= 1.0
+                     and gate_status.get('hwt_motion_ready') is False
+                     and (gate_status.get('recovery_state') in
+                          ('HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')
+                          or gate_status.get('reason') == 'awaiting_explore_resume'))
+        if state in ('HOLD', 'RECOVERY_VALIDATION') or gate_hold:
             if not self._hwt_hold_announced:
                 self._hwt_recovery_sequence += 1
                 self._hwt_hold_deadline = (
@@ -3031,8 +3047,15 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 return 'budget_exhausted'
             guard = self._hwt_guard
             guard.failure()
-            if guard.health.recovery_state == 'TERMINAL_FAULT':
+            gate_status, gate_at = getattr(self, '_hwt_gate_health_status', ({}, None))
+            if (guard.health.recovery_state == 'TERMINAL_FAULT'
+                    or gate_status.get('recovery_state') == 'TERMINAL_FAULT'):
                 return 'terminal'
+            gate_validated = (gate_at is None or (
+                0.0 <= time.monotonic() - gate_at <= 1.0
+                and gate_status.get('recovery_state') == 'HEALTHY'
+                and gate_status.get('sources_ready') is True
+                and gate_status.get('latched_fault') is None))
             with self._wohnungserkundung_runtime_lock:
                 estop = self._wohnungserkundung_estop
                 child = self._wohnungserkundung_active_child
@@ -3042,6 +3065,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 return 'terminal'
             validated = (
                 guard.health.recovery_state == 'HEALTHY'
+                and gate_validated
                 and not self._wohnungserkundung_active_safety_failure()
                 and self._wohnungserkundung_hwt_standstill_confirmed()
                 and (not require_target

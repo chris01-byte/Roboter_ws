@@ -1456,8 +1456,7 @@ class MetricFrontierRuntime:
         # The existing HOLD announcement remains latched until validated ACK.
         if getattr(self, '_active_goal', False) and self._hwt_guard is not None:
             decision = self._hwt601_decision()
-            if decision[1] in ('HOLD','RECOVERY_VALIDATION'):
-                self._wohnungserkundung_hwt_hold(decision)
+            self._wohnungserkundung_hwt_hold(decision)
 
     def _metric_resume_path_ready(self):
         if self._metric_active is None:

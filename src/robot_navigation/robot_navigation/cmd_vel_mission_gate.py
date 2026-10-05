@@ -234,6 +234,7 @@ class CmdVelMissionGate(Node):
         super().__init__('cmd_vel_mission_gate')
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
+        mapping = self.declare_parameter('allow_explore_mission', False).value
         self._hwt_guard = None
         self._hwt_source_cb = None
         self._hwt_wheel_cb = None
@@ -252,7 +253,8 @@ class CmdVelMissionGate(Node):
                 self._hwt_source_cb = MutuallyExclusiveCallbackGroup()
                 self._hwt_wheel_cb = MutuallyExclusiveCallbackGroup()
             self._hwt_guard = Hwt601FusionGuard(
-                self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb)
+                self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb,
+                prefer_latest_wheel=bool(mapping))
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
             self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
@@ -263,7 +265,6 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('status_timeout_s', 1.0)
         self.declare_parameter('command_timeout_s', 0.25)
         self.declare_parameter('require_localization', True)
-        self.declare_parameter('allow_explore_mission', False)
         self.declare_parameter(
             'explore_scan_command_topic', '/cmd_vel_explore_scan_raw')
         self.declare_parameter('explore_scan_max_angular', 0.15)

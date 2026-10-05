@@ -19,10 +19,13 @@ from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate
 
 
 @pytest.mark.parametrize('sample_kind', ['fresh', 'stale', 'invalid', 'missing'])
-def test_decision_takes_real_waiting_wheel_without_executor_callback(sample_kind):
+@pytest.mark.parametrize('active_mapping', [False, True])
+def test_decision_takes_real_waiting_wheel_without_executor_callback(sample_kind, active_mapping):
     assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
     assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
-    rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true'])
+    rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true',
+        '-p', f'hwt601_active_drive:={str(active_mapping).lower()}',
+        '-p', f'allow_explore_mission:={str(active_mapping).lower()}'])
     gate = CmdVelMissionGate()
     probe = Node('gate_pending_wheel_inputs')
     pub = probe.create_publisher(Odometry, '/fusion/hwt601/wheel_odom_raw', 10)
@@ -32,7 +35,7 @@ def test_decision_takes_real_waiting_wheel_without_executor_callback(sample_kind
             time.sleep(.01)
         assert pub.get_subscription_count() == 1
         now = time.monotonic()
-        health = ready_health(False, now=now)
+        health = ready_health(active_mapping, now=now)
         assert health.source_failure(now) is None
         old_stamp = probe.get_clock().now().nanoseconds*1e-9-.5
         health.samples['wheel'] = (old_stamp, now-.5, now-.5, True)

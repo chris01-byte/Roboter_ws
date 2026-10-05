@@ -3,6 +3,7 @@ import json
 import sys
 import threading
 import time
+import pytest
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -106,8 +107,9 @@ def test_synthetic_hwt_gap_holds_parent_then_new_child_command_can_pass():
     assert output[-1].linear.x > 0.0
 
 
+@pytest.mark.parametrize('independent_observers', [False, True])
 def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
-        monkeypatch):
+        monkeypatch, independent_observers):
     """Connect the real Health, Gate, Manager and WE resume methods."""
     monkeypatch.setattr(explore_node_module.rclpy, 'ok', lambda: True)
     gate, health, output, gate_status = gate_with_ready_sources()
@@ -126,9 +128,11 @@ def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
     assert output[-1].linear.x > 0
 
     node = ExploreNode.__new__(ExploreNode)
+    own_health = ready_health(now=time.monotonic()) if independent_observers else health
+    node._metric_enabled = independent_observers
     node._hwt_guard = SimpleNamespace(
-        health=health, failure=health.motion_failure,
-        decision=lambda: (health.motion_failure(), health.recovery_state))
+        health=own_health, failure=own_health.motion_failure,
+        decision=lambda: (own_health.motion_failure(), own_health.recovery_state))
     node._hwt_hold_deadline = None
     node._hwt_hold_announced = False
     node._hwt_recovery_sequence = 0
@@ -152,6 +156,7 @@ def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
         lambda *_args: SimpleNamespace(current=True))
     node._robot_pose_sample = lambda: ((0.0, 0.0, 0.0), 0.1)
     node._costmap_reachable_goal = lambda *_args: ((1.0, 2.0), False)
+    node._metric_resume_path_ready = lambda: node._costmap_reachable_goal()[1] is False
     node._wohnungserkundung_active_safety_failure = lambda: False
     motion = {'moving': True}
     node._motion_odom_snapshot = lambda: (
@@ -194,15 +199,24 @@ def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
         del health.samples['raw']
         CmdVelMissionGate._publish(gate)
         assert output[-1].linear.x == 0.0
-        assert ExploreNode._wohnungserkundung_hwt_hold(node)
+        ExploreNode._on_hwt_gate_status(node, gate_status[-1])
+        if independent_observers:
+            assert own_health.motion_failure() is None
+            assert own_health.recovery_state == 'HEALTHY'
+        assert ExploreNode._update_wohnungserkundung_hwt_hold(node)
         assert stop_requested()
         active_children[0] -= 1
         return 'canceled'
+    def checked_cancel(selected, stop_requested):
+        try:
+            return cancel_old(selected, stop_requested)
+        except Exception as error:
+            pytest.fail(repr(error))
     old_run = old_session.run(
-        intent, candidate, cancel_old,
+        intent, candidate, checked_cancel,
         lambda: NavigationSourceState(context, 1, True),
         lambda: False, lambda: False,
-        recoverable_hold=lambda: health.recovery_state == 'HOLD')
+        recoverable_hold=lambda: node._hwt_hold_announced)
     assert old_run.stop_cause is NavigationStopCause.HWT_RECOVERY_HOLD
     assert active_children[0] == 0
     assert manager.active_command is command
@@ -224,9 +238,10 @@ def test_we_hwt_resume_chain_keeps_gate_closed_until_encoder_standstill(
     def publish_fresh_sources():
         while not stop_samples.is_set():
             stamp = time.monotonic()
-            for name in ('raw', 'yaw', 'wheel'):
-                health.sample(name, stamp, stamp, stamp)
-                health.status(name, health.statuses[name][0], stamp)
+            for observer in ((health, own_health) if independent_observers else (health,)):
+                for name in ('raw', 'yaw', 'wheel'):
+                    observer.sample(name, stamp, stamp, stamp)
+                    observer.status(name, observer.statuses[name][0], stamp)
             time.sleep(0.01)
     source_thread = threading.Thread(target=publish_fresh_sources, daemon=True)
     source_thread.start()
