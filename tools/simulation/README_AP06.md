@@ -172,3 +172,17 @@ Die vorhandenen Geräte-, Frische-, HOLD-, Cancel- und Konturgrenzen werden nich
 gelockert. Bei Prozess-/Quellenfehler oder geometrischer Kollision endet der Lauf.
 Direkte Kinder werden einzeln beendet, nie ihre Prozessgruppe. Testausgaben sind
 rein synthetisch; reale Raumdaten gehören weiterhin ausschließlich außerhalb Git.
+
+## AP-06-Referenzregression, 05.10.2026
+
+`test_metric_egress_reference.py` prüft echte Produktmethoden mit der gesicherten
+synthetischen C-Startkarte: gemeinsame TF-Zeit, verschobene/gedrehte Raster,
+Wachstum, feste monotone Abfahrt, Wiederbetretung, neue Unknown-/Obstaclezellen,
+beobachtet→unbekannt, fehlender Bezug und Kontextwechsel. Der ursprüngliche
+Gegenfall ist vor der Änderung rot. Der Beleg wird einmal erfasst und in der
+ersten Odometriefläche erhalten; aktuelle unbekannte Rasterzellen brauchen
+vollständige Deckung durch den Restbestand und frischen ganzen Fahrzeugbeweis.
+Bei subzelliger Rasterung verfällt Autorität konservativ, statt Teilzellen
+durch Kopieren oder Interpolation freizugeben. Geometrische Memoisierung enthält
+keine Quellenentscheidung, Frist oder Bewegungsfreigabe. Die bestehenden fünf
+Manifestfälle werden unverändert wiederholt; Restfehler zählen weiter negativ.

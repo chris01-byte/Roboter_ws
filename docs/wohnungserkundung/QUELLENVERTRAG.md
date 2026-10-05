@@ -22,16 +22,20 @@ allein erzeugt keine neue Sitzung oder neues Aufgabengedächtnis.
 | Neuer Inhalt mit neuem Stempel | Beide Zähler steigen; gültige Ziele behalten und auf aktuellen Rastern erneut prüfen |
 | Rohkarte/Status noch nicht passend | Neue Aufgaben warten. Aktive Arbeit darf höchstens im bisherigen 1,25-s-Fenster den letzten **exakten** Join nutzen, wenn beide aktuellen Inhalte identisch zu ihm sind; dessen ursprüngliche Zeitstempel/Fristen bleiben maßgeblich |
 | Neue Zellen oder Geometrie ohne passenden Status | Kein aktiver Ersatzjoin mit alter Revision; notwendige Quelle fehlt, laufendes Kind stoppen |
-| Rasterwachstum, Ursprungs-/Quaternion-/Frame-/Auflösungswechsel | Alte Egress-Evidenz bereits beim Callback vor jeder Arrayverknüpfung dauerhaft invalidieren; bei Rohkartenwechsel auch vorhandenen Body-Anker invalidieren |
+| Rasterwachstum, Ursprungs-/Quaternionwechsel | Alten Rasterbeweis vor jeder Arrayverknüpfung entziehen; vorhandenen Body-Anker invalidieren. Ohne TF-Bindung Egress dauerhaft invalidieren. AP-06 mit gemeinsamer TF-Zeit: ersten physischen Bestand erhalten, exakte begrenzte Projektion und frischen ganzen Fahrzeugbeweis auf beiden aktuellen Rastern verlangen |
+| Frame-/Auflösungswechsel | Auch TF-gebundenen Egress dauerhaft invalidieren; kein Wachstum-/Korrektur-Ersatzpfad |
 | Frame-/Auflösungswechsel eines Rasters | Arbeitsgeneration erhöhen; auch ein zwischen zwei Auswertungen beobachteter Wechsel und Rückwechsel macht alte Arbeit ungültig |
 | Neuer Session-/Mapkontext, Zähler-/Zeitreset oder verschwundener initialisierter Kartenstatus | Bestehender Adapter verweigert implizite Neubindung; Explorerfehler bleibt hart, Kind stoppen, alte Plan-/Erfolgsresultate unwirksam. Neuer Kontext erfordert ausdrücklich neue Sitzung und passende Scope-Bindung |
 | Verspätete ältere Rohkarte/Costmap/Status | Nicht überschreiben, kein neuer Empfangszeitpunkt; Produzent verwirft ältere positive Quellstempel ohne neue Revision/Frische |
 | Widersprüchliche Inhalte bei gleichem positivem Stempel | Kartenmanager verwirft; metrischer Verbraucher sperrt hart. Kein Reihenfolge-Raten |
 
-Normales Wachstum invalidiert räumliche **Ausnahmen**, nicht automatisch ein
-noch gültiges Weltziel. Ohne die alte Ausnahme muss die vollständige bestehende
-Routen-/Konturprüfung weiterhin bestehen. Unbekannte neue Zellen bleiben
-unbekannt; kein Re-Ankern, keine verschobene Maske und keine freie Startschneise.
+Normales Wachstum entzieht den alten **Rasterbeweis**, nicht automatisch ein
+noch gültiges Weltziel. Die AP-06-Präzisierung vom 05.10.2026 bindet den einmaligen
+Bestand an die erste Odometriefläche und projiziert ausschließlich vollständig
+gedeckte aktuelle unbekannte Zellen; ursprüngliches Polygon, Flächen-/Abstands-
+historie und Budgets bleiben erhalten. Neue Routen-/Konturprüfung auf beiden
+aktuellen Rastern ist nötig. Unbekannte neue Zellen bleiben unbekannt;
+kein Re-Ankern, keine mitfahrende Maske und keine freie Startschneise.
 Der direkte `StartEgressEvidence.check_trajectory` schützt zusätzlich gegen
 inkompatible Arrayformen. Bestehende monoton schrumpfende Inventare bleiben
 bei passenden Geometrien erhalten; beobachtete Zellen werden nicht erneut exempt.

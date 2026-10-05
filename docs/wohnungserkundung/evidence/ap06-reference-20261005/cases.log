@@ -1,0 +1,4 @@
+{"label": "reference-a", "exit_code": 1, "passed": false, "error": "AP06 acceptance not met: post_child_state_or_standstill_unconfirmed", "travel_m": 0.19559530811498707, "arrivals": 0, "observations": 0}
+{"label": "reference-b", "exit_code": 1, "passed": false, "error": "AP06 acceptance not met: post_child_state_or_standstill_unconfirmed", "travel_m": 0.18230325682779666, "arrivals": 0, "observations": 0}
+{"label": "reference-cancel", "exit_code": 0, "passed": true, "error": null, "travel_m": 0.03423495193822756, "arrivals": 0, "observations": 0}
+{"label": "reference-gyro-hold", "exit_code": 0, "passed": true, "error": null, "travel_m": 0.05191738464054768, "arrivals": 0, "observations": 0}
