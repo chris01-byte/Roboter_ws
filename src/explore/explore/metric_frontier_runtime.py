@@ -1273,6 +1273,10 @@ class MetricFrontierRuntime:
             return None, 'nav2_plan_timeout_or_stop'
         try:
             response = result.result()
+            if response.status == 6:
+                # A terminal read-only planner abort rejects this proposal.
+                # Cancellation/transport failure remain distinct hard causes.
+                return None, 'nav2_plan_aborted'
             if response.status != 4:
                 return None, 'nav2_plan_failed'
             return response.result.path, None
@@ -2227,7 +2231,8 @@ class MetricFrontierRuntime:
                     # The wait may end because the real stop callback already
                     # observed HOLD/source loss/invalid route. Its cause owns
                     # recovery and result handling even if a source heals.
-                    stop_reason[0] = stop_reason[0] or plan_error
+                    stop_reason[0] = stop_reason[0] or (
+                        'route_invalidated' if plan_error == 'nav2_plan_aborted' else plan_error)
                 else:
                     try:
                         inputs = self._metric_inputs(active=True)
