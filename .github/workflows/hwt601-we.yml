@@ -101,6 +101,7 @@ jobs:
             src/explore/test/test_metric_query_selection_budget.py \
             src/explore/test/test_metric_visibility_blocks.py \
             src/explore/test/test_metric_robot_side_observation.py \
+            src/explore/test/test_metric_observation_neighbourhood.py \
             src/explore/test/test_metric_snapshot_replan.py \
             src/explore/test/test_metric_start_observation.py \
             src/explore/test/test_metric_join_replan.py \

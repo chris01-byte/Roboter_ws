@@ -40,7 +40,7 @@ from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_poses_clear, footprint_route_clear, self_body_unknown_mask,
     lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw,
-    route_departure_point)
+    route_departure_point, MAX_LOCAL_OBSERVATION_RADIUS_M)
 
 
 class MetricInputs(tuple):
@@ -1492,7 +1492,8 @@ class MetricFrontierRuntime:
                 continue
             key = policy.identify((frontier.cx, frontier.cy), goal)
             local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
-            if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
+            if (policy.attempts[key].tries >= policy.retry_limit+1
+                    or policy.attempts[key].failures >= policy.retry_limit):
                 continue
             bearing = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
             error = abs(math.atan2(math.sin(bearing-pose[2]), math.cos(bearing-pose[2])))
@@ -1505,8 +1506,11 @@ class MetricFrontierRuntime:
                 view = self._metric_observation_view()
                 visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw), view)
                 points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
-                    if math.dist(self._grid_to_world(c, r, grid.info), (frontier.cx, frontier.cy)) <= .8)
+                    if math.dist(self._grid_to_world(c, r, grid.info), (frontier.cx, frontier.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                 if not points:
+                    continue
+                if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local,
+                                       observation_points=points):
                     continue
                 route = self._metric_route(inputs, goal, yaw)
                 if route is None:
@@ -1588,7 +1592,7 @@ class MetricFrontierRuntime:
                 visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
                 for f in frontiers:
                     points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
-                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= .8)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                     if not points:
                         continue
                     key = policy.identify((f.cx,f.cy), goal)
@@ -1709,7 +1713,7 @@ class MetricFrontierRuntime:
                 # This anchor must have a visible nearby boundary; unrelated
                 # unknown cells on the other side of a wall grant no utility.
                 local_hits = [cell for cell in visible if math.dist(
-                    self._grid_to_world(cell[1], cell[0], grid.info), (f.cx, f.cy)) <= .8]
+                    self._grid_to_world(cell[1], cell[0], grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M]
                 if not local_hits:
                     stats['unsafe'] += 1
                     counts = stats['route_rejections']
@@ -1731,7 +1735,8 @@ class MetricFrontierRuntime:
                     and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy), goal)
                 local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
-                if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
+                if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local,
+                                   observation_points=candidates[-1].observation_points):
                     if proposal:
                         stats['proposal_search_stopped_on_eligible_task'] = True
                         candidates = [candidates[-1]]
@@ -1747,7 +1752,7 @@ class MetricFrontierRuntime:
             key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y))
             local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
             return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
-                candidate.fingerprint,local)
+                candidate.fingerprint,local,observation_points=candidate.observation_points)
         if (policy is not None and live_view
                 and not any(eligible_original(candidate) for candidate in candidates)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
@@ -1794,7 +1799,7 @@ class MetricFrontierRuntime:
                         view=self._metric_observation_view()
                         visible=visible_boundary_cells(grid,scope_mask,(*goal,yaw),view)
                         points=tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
-                            if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= .8)
+                            if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                         if not points:
                             continue
                         length=sum(math.dist(a,b) for a,b in zip(route,route[1:]))
@@ -1831,7 +1836,7 @@ class MetricFrontierRuntime:
                 visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
                 for f in frontiers:
                     points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
-                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= .8)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                     if not points:
                         continue
                     length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
@@ -1873,7 +1878,8 @@ class MetricFrontierRuntime:
         for candidate in candidates:
             key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y))
             evidence = local_evidence(inputs[0], policy.attempts[key].frontier_xy, self._grid_to_world)
-            if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint, evidence):
+            if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint, evidence,
+                               observation_points=candidate.observation_points):
                 selected.append(replace(candidate, task_id=key, evidence_key=evidence))
             else:
                 self._frontier_rank_stats['deferred_or_served'] += 1

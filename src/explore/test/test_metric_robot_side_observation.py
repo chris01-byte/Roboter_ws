@@ -17,9 +17,9 @@ from explore.metric_checkpoint import restore_policy
 from test_metric_departure import fixture as recorded_fixture, path
 
 
-def fixture():
-    node, inputs, metadata = recorded_fixture('ap06_a47_selection')
-    arrays = np.load(Path(__file__).parent/'data/ap06_a47_selection.npz')
+def fixture(name='ap06_a47_selection'):
+    node, inputs, metadata = recorded_fixture(name)
+    arrays = np.load(Path(__file__).parent/'data'/(name+'.npz'))
     node._metric_observation_view = lambda: LidarView(
         (.245, 0., math.pi/2), arrays['angles'], 4., .05)
     node._metric_candidate_source = 'boundary_samples'

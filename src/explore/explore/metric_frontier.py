@@ -13,6 +13,9 @@ from .exploration_scope import rasterize_scope
 from .frontier_task_evidence import _geodesic_distances
 
 
+MAX_LOCAL_OBSERVATION_RADIUS_M = .8
+
+
 @dataclass(frozen=True)
 class MetricCandidate:
     task_id: str
@@ -68,16 +71,29 @@ class MetricTaskPolicy:
         self.attempts[key] = MetricAttempt(frontier_xy, frontier_xy)
         return key
 
-    def eligible(self, task_id, target_xy, now, fingerprint, evidence_key=''):
+    def eligible(self, task_id, target_xy, now, fingerprint, evidence_key='', *, observation_points=()):
         attempt = self.attempts[task_id]
         neighbours = [a for a in self.attempts.values()
                       if math.dist(a.target_xy, target_xy) < self.radius and a.tries]
+        try:
+            points = tuple(observation_points)
+            valid_view = bool(evidence_key) and bool(points) and all(len(p) == 2 and all(math.isfinite(v) for v in p) for p in points)
+        except (TypeError, ValueError):
+            points, valid_view = (), False
+        # Completion belongs to the observed boundary, not every future view
+        # from a nearby observer position. The caller supplies actual finite
+        # current unknown frontier points. Keep a full revisit-radius margin
+        # outside the old bounded observation area; missing view proof retains
+        # the old alias protection. No potential view completes a task.
+        serving_neighbours = [a for a in neighbours if not (a.completed and valid_view
+            and all(math.dist(p, a.frontier_xy) > MAX_LOCAL_OBSERVATION_RADIUS_M+self.radius
+                    for p in points))]
         # A new ID or distant map edit cannot reopen a served neighbourhood.
         if any(a.completed and (not evidence_key or evidence_key == a.evidence_key)
-               for a in neighbours):
+               for a in serving_neighbours):
             return False
         if evidence_key:
-            if any(a is not attempt and a.completed for a in neighbours):
+            if any(a is not attempt and a.completed for a in serving_neighbours):
                 return False
             # A read-only rejected planner pose is not a failed observation
             # at every other pose in its neighbourhood. After the SAME
