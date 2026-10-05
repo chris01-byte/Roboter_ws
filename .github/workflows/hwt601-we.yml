@@ -20,6 +20,10 @@ on:
       - 'tools/simulation/ap03_nav2_closed_loop.py'
       - 'tools/simulation/ap06*'
       - 'tools/simulation/test_ap06_world.py'
+      - 'tools/simulation/slam_grid_regression.cpp'
+      - 'tools/simulation/prepare_ap06_sources.py'
+      - 'patches/slam_toolbox_humble*.patch'
+      - 'tools/kartierung/build_slam_toolbox_humble_overlay.sh'
       - 'tools/analysis/frontier_comparison/**'
       - '.github/workflows/hwt601-we.yml'
   push:
@@ -72,6 +76,8 @@ jobs:
             src/explore/test/test_metric_frontier_candidates.py \
             src/explore/test/test_metric_body_reference_tf.py \
             src/explore/test/test_metric_egress_reference.py \
+            src/explore/test/test_metric_source_delivery.py \
+            src/explore/test/test_metric_sweep_batch.py \
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \
@@ -106,8 +112,23 @@ jobs:
             python3-yaml python3-pytest python3-serial python3-pip \
             ros-humble-nav2-planner ros-humble-nav2-navfn-planner \
             ros-humble-nav2-controller ros-humble-nav2-regulated-pure-pursuit-controller \
-            ros-humble-tf2-geometry-msgs ros-humble-sensor-msgs-py
+            ros-humble-tf2-geometry-msgs ros-humble-sensor-msgs-py \
+            libeigen3-dev libtbb-dev libboost-system-dev libboost-serialization-dev \
+            libboost-filesystem-dev libboost-thread-dev
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+      - name: Test pinned native SLAM raster growth without changing guard authority
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          python3 tools/simulation/prepare_ap06_sources.py --only slam_toolbox \
+            --cache /tmp/ap06-cache --destination /tmp/ap06-native
+          cmake -S /tmp/ap06-native/slam_toolbox/lib/karto_sdk -B /tmp/ap06-karto
+          cmake --build /tmp/ap06-karto -j2
+          g++ -std=c++17 tools/simulation/slam_grid_regression.cpp \
+            -I/tmp/ap06-native/slam_toolbox/lib/karto_sdk/include \
+            -L/tmp/ap06-karto -lkartoSlamToolbox -lboost_serialization \
+            -Wl,-rpath,/tmp/ap06-karto -o /tmp/ap06-grid-regression
+          /tmp/ap06-grid-regression | tee /tmp/ap06-grid-regression.log
       - name: Build current product and run isolated closed synthetic world
         shell: bash
         run: |
@@ -129,3 +150,4 @@ jobs:
           path: |
             /tmp/ap03-world
             /tmp/ap06-costmap
+            /tmp/ap06-grid-regression.log

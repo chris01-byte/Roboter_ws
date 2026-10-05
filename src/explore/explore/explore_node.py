@@ -1484,6 +1484,10 @@ class ExploreNode(MetricFrontierRuntime, Node):
         # sich NICHT gegenseitig blockieren (der Explore-Loop wartet blockierend
         # auf Nav-Ergebnisse, waehrend weiter Karten hereinkommen muessen).
         self._cb = ReentrantCallbackGroup()
+        # At most one map-lock waiter may occupy an executor worker. Source,
+        # stop and action callbacks must remain deliverable during geometry.
+        self._metric_source_cb = (MutuallyExclusiveCallbackGroup()
+                                  if self._metric_enabled else self._cb)
         self._hwt_guard = None
         self._hwt_recovery_sequence = 0
         self._hwt_hold_announced = False
@@ -1518,10 +1522,10 @@ class ExploreNode(MetricFrontierRuntime, Node):
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
         self.create_subscription(
-            OccupancyGrid, self._map_topic, self._on_map, 1, callback_group=self._cb)
+            OccupancyGrid, self._map_topic, self._on_map, 1, callback_group=self._metric_source_cb)
         self.create_subscription(
             OccupancyGrid, self._global_costmap_topic,
-            self._on_global_costmap, 1, callback_group=self._cb)
+            self._on_global_costmap, 1, callback_group=self._metric_source_cb)
         self.create_subscription(
             Odometry, self._odom_topic, self._on_odom, 20,
             callback_group=self._cb)

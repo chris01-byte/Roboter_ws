@@ -38,7 +38,7 @@ from .metric_checkpoint import validate_checkpoint, policy_state, restore_policy
 from .metric_egress_reference import ReferencedStartEgress
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
-    footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
+    footprint_cells, footprint_clear, footprint_poses_clear, footprint_route_clear, self_body_unknown_mask,
     lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw,
     route_departure_point)
 
@@ -187,11 +187,11 @@ class MetricFrontierRuntime:
         self._wohnungserkundung_vl53_status_at = None
         self._wohnungserkundung_vl53_status_observed_at = None
         self.create_subscription(String, '/robot_map_manager/status_json',
-                                 self._on_metric_map_status, 10, callback_group=self._cb)
+                                 self._on_metric_map_status, 10, callback_group=self._metric_source_cb)
         self.create_subscription(String, '/base_hardware/state_json',
-                                 self._on_metric_wheel_status, 10, callback_group=self._cb)
+                                 self._on_metric_wheel_status, 10, callback_group=self._metric_source_cb)
         self.create_subscription(String, '/localization/status_json',
-                                 self._on_metric_localization_status, 10, callback_group=self._cb)
+                                 self._on_metric_localization_status, 10, callback_group=self._metric_source_cb)
 
     @staticmethod
     def _metric_grid_values(grid):
@@ -861,6 +861,20 @@ class MetricFrontierRuntime:
     def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
+        # Reject an unsafe endpoint before spending the same fixed budget
+        # on a rollout that cannot make that endpoint admissible.
+        # RPP may rotate anywhere inside the actual goal-position tolerance.
+        arrival_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
+        final_yaw = arrival_yaw if target_yaw is None else target_yaw
+        delta = math.atan2(math.sin(final_yaw-arrival_yaw),math.cos(final_yaw-arrival_yaw))
+        steps = max(1,math.ceil(abs(delta)/.05))
+        if not all(footprint_clear(*target,arrival_yaw+delta*k/steps,g,allowed,
+                   self._world_to_grid,self._grid_to_world,self._metric_bounds,
+                   heading_half_angle=.4,center_deviation_m=.15)
+                   for k in range(steps+1)
+                   for g,allowed in ((grid,known),(costmap,cost_known))):
+            self._metric_last_route_rejection='goal_orientation_invalid'
+            return None
         rollout = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
         if rollout and len(route) > 1:
             # A one-point route is the endpoint-only check used by the
@@ -878,10 +892,9 @@ class MetricFrontierRuntime:
             except ValueError as error:
                 self._metric_last_route_rejection = str(error)
                 return None
-            if not all(footprint_clear(*p, g, allowed, self._world_to_grid,
-                    self._grid_to_world, self._metric_bounds,
-                    heading_half_angle=.05, center_deviation_m=.02)
-                    for p in trajectory for g, allowed in ((grid, known), (costmap, cost_known))):
+            if not all(footprint_poses_clear(trajectory, g, allowed, self._world_to_grid,
+                    self._metric_bounds, heading_half_angle=.05, center_deviation_m=.02)
+                    for g, allowed in ((grid, known), (costmap, cost_known))):
                 self._metric_last_route_rejection = 'footprint_sweep_invalid'
                 return None
         def check(x, y, yaw, g, allowed):
@@ -916,18 +929,6 @@ class MetricFrontierRuntime:
                         (point,carrot),incoming,((grid,known),(costmap,cost_known)),check):
                     self._metric_last_route_rejection='controller_lookahead_sweep_invalid'
                     return None
-        # RPP may rotate anywhere inside the actual goal-position tolerance.
-        arrival_yaw = route_arrival_yaw(route, pose[2], grid.info.resolution)
-        final_yaw = arrival_yaw if target_yaw is None else target_yaw
-        delta = math.atan2(math.sin(final_yaw-arrival_yaw),math.cos(final_yaw-arrival_yaw))
-        steps = max(1,math.ceil(abs(delta)/.05))
-        if not all(footprint_clear(*target,arrival_yaw+delta*k/steps,g,allowed,
-                   self._world_to_grid,self._grid_to_world,self._metric_bounds,
-                   heading_half_angle=.4,center_deviation_m=.15)
-                   for k in range(steps+1)
-                   for g,allowed in ((grid,known),(costmap,cost_known))):
-            self._metric_last_route_rejection='goal_orientation_invalid'
-            return None
         self._metric_last_route_rejection=None
         return route
 

@@ -76,14 +76,21 @@ def test_slam_correction_does_not_erase_departure_or_allow_physical_reentry():
 def test_new_unknown_or_occupied_departure_cell_is_never_added_after_correction(value):
     node, inputs = referenced_fixture()
     updated = shift(node, inputs, .002)
-    row, col = 20, 15
+    # A fully observed endpoint makes this a departure-sweep regression,
+    # independent of which order the endpoint and route guards run in.
     a = np.asarray(updated[0].data).reshape(updated[3].shape).copy()
+    a[:,25:30] = 0
+    updated[0].data = a.ravel().tolist()
+    updated[3][:,25:30] = True
+    route = (updated[2][:2], (1.202,.05))
+    assert node._metric_waypoints_clear(updated,route) is not None
+    row, col = 20, 15
     a[row,col] = value
     updated[0].data = a.ravel().tolist()
     updated[3][row,col] = False
-    assert node._metric_waypoints_clear(updated,(updated[2][:2],(.752,.05))) is None
+    assert node._metric_waypoints_clear(updated,route) is None
     assert not node._metric_egress_expired
-    assert node._metric_last_route_rejection in ('start_egress_new_unknown_or_obstacle', 'footprint_sweep_invalid')
+    assert node._metric_last_route_rejection == 'start_egress_new_unknown_or_obstacle'
 
 
 def test_observation_cannot_regrow_as_unknown_on_a_later_slam_raster():

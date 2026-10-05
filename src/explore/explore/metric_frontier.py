@@ -229,6 +229,52 @@ def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
 
 
 
+def footprint_poses_clear(poses, grid, allowed, world_to_grid,
+        bounds=(-.13,.33,-.25,.25), heading_half_angle=0., center_deviation_m=0.):
+    """Batch the identical reserved cell-centre test used by footprint_clear.
+
+    No swept samples, angles, padding, tracking or raster reserve are removed.
+    Small bounded batches release the GIL and avoid per-pose grid allocations.
+    """
+    poses = np.asarray(poses,dtype=float)
+    if poses.ndim != 2 or poses.shape[1] != 3 or not np.all(np.isfinite(poses)):
+        return False
+    if not math.isfinite(center_deviation_m) or center_deviation_m < 0:
+        raise ValueError('controller_center_deviation_invalid')
+    left,right,bottom,top = bounds
+    res = grid.info.resolution
+    reserve = res/math.sqrt(2)+.01+center_deviation_m
+    radius = math.hypot(max(abs(left),abs(right))+reserve,
+                        max(abs(bottom),abs(top))+reserve)
+    n = int(math.ceil(radius/res))+2
+    dr,dc = np.mgrid[-n:n+1,-n:n+1]
+    headings = np.linspace(-heading_half_angle,heading_half_angle,
+                            1 if heading_half_angle==0 else 15)
+    batch = max(1,min(32,262144//(len(headings)*dr.size)))
+    q = grid.info.origin.orientation
+    angle = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+    for begin in range(0,len(poses),batch):
+        chunk = poses[begin:begin+batch]
+        centers = np.asarray([world_to_grid(x,y,grid.info) for x,y,_ in chunk])
+        rows,cols = centers[:,1,None,None]+dr,centers[:,0,None,None]+dc
+        valid = ((rows>=0)&(rows<allowed.shape[0])&(cols>=0)&(cols<allowed.shape[1]))
+        known = np.zeros(valid.shape,dtype=bool)
+        known[valid] = allowed[rows[valid],cols[valid]]
+        local_x,local_y = (cols+.5)*res,(rows+.5)*res
+        dx = (grid.info.origin.position.x+math.cos(angle)*local_x
+              -math.sin(angle)*local_y-chunk[:,0,None,None])[:,None,:,:]
+        dy = (grid.info.origin.position.y+math.sin(angle)*local_x
+              +math.cos(angle)*local_y-chunk[:,1,None,None])[:,None,:,:]
+        angles = chunk[:,2,None]+headings
+        cosine,sine = np.cos(angles)[:,:,None,None],np.sin(angles)[:,:,None,None]
+        lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
+        touched = np.any((left-reserve<=lx)&(lx<=right+reserve)
+                         &(bottom-reserve<=ly)&(ly<=top+reserve),axis=1)
+        if np.any(touched & ~known):
+            return False
+    return True
+
+
 def lookahead_point(point, remaining_route, distance_m):
     """RPP carrot: first polyline intersection with the Euclidean radius.
 

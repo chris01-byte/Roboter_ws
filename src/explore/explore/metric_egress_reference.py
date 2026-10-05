@@ -54,6 +54,38 @@ def intersecting_cells(polygon, shape):
     return cells[areas > 1e-9]
 
 
+def batch_intersections(polygons, shape):
+    """Exact polygon/cell pairs, clipping all small squares in one batch.
+
+    Return polygon indices, intersecting cells and fully-in-grid flags.
+    No nearest-neighbour projection, cell rounding or extra allowance.
+    """
+    polygons = np.asarray(polygons, dtype=float)
+    if not len(polygons):
+        return np.empty(0, dtype=int), np.empty((0, 2), dtype=int), np.empty(0, dtype=bool)
+    low = np.floor(polygons.min(axis=1)+1e-9).astype(int)
+    high = np.ceil(polygons.max(axis=1)-1e-9).astype(int)
+    covered = ((low >= 0).all(axis=1)
+        & (high <= (shape[1], shape[0])).all(axis=1))
+    extent = high-low
+    dr, dc = np.mgrid[:extent[:,1].max(), :extent[:,0].max()]
+    offsets = np.column_stack((dc.ravel(), dr.ravel()))
+    candidates = low[:,None,:]+offsets[None,:,:]
+    present = ((candidates < high[:,None,:]).all(axis=2)
+        & (candidates >= 0).all(axis=2)
+        & (candidates < (shape[1],shape[0])).all(axis=2))
+    owners, columns = np.nonzero(present)
+    cells = candidates[owners,columns,::-1]
+    areas = _cell_intersections(polygons[owners], cells)[0]
+    positive = areas > 1e-9
+    return owners[positive], cells[positive], covered
+
+
+def squares(cells):
+    corners = np.asarray(((0,0),(1,0),(1,1),(0,1)))
+    return cells[:,None,::-1]+corners[None,:,:]
+
+
 def square(row, col):
     return ((col, row), (col+1, row), (col+1, row+1), (col, row+1))
 
@@ -143,14 +175,19 @@ class ReferencedStartEgress:
             self.generation += 1
             self._projection_key = (*key[:-1], remaining.tobytes())
             return
-        # Any newly observed part retires the entire old cell. This is a
-        # conservative loss of authority, never a fresh unknown-space claim.
-        for row, col in zip(*np.nonzero(retained)):
-            polygon = grid_points(square(row, col), self.fixed.grid, self.reference,
-                                  grid, self.current_reference)
-            cells = intersecting_cells(polygon, occupancy.shape)
-            if cells is None or not len(cells) or np.any(occupancy[cells[:, 0], cells[:, 1]] >= 0):
-                retained[row, col] = False
+        # Keep the same conservative authority as the scalar implementation:
+        # any observed part retires its entire original cell. Batch clipping
+        # avoids hundreds of Python/numpy calls while holding the map lock.
+        original_cells = np.column_stack(np.nonzero(retained))
+        polygons = grid_points(squares(original_cells).reshape(-1,2),
+            self.fixed.grid, self.reference, grid, self.current_reference).reshape(-1,4,2)
+        owners, cells, covered = batch_intersections(polygons, occupancy.shape)
+        counts = np.bincount(owners, minlength=len(original_cells))
+        observed = np.bincount(owners, weights=(occupancy[cells[:,0],cells[:,1]]>=0),
+                               minlength=len(original_cells))
+        retired = ~covered | (counts==0) | (observed>0)
+        retired_cells = original_cells[retired]
+        retained[retired_cells[:,0],retired_cells[:,1]] = False
         projected = np.zeros(occupancy.shape, dtype=bool)
         rr, cc = np.nonzero(retained)
         if len(rr):
@@ -160,15 +197,19 @@ class ReferencedStartEgress:
             low = np.maximum(0, np.floor(envelope.min(axis=0)).astype(int))
             high = np.minimum((occupancy.shape[1], occupancy.shape[0]),
                               np.ceil(envelope.max(axis=0)).astype(int))
-            for row in range(low[1], high[1]):
-                for col in range(low[0], high[0]):
-                    if occupancy[row, col] >= 0 or not inside[row, col]:
-                        continue
-                    polygon = grid_points(square(row, col), grid, self.current_reference,
-                                          self.fixed.grid, self.reference)
-                    cells = intersecting_cells(polygon, retained.shape)
-                    if cells is not None and len(cells) and np.all(retained[cells[:, 0], cells[:, 1]]):
-                        projected[row, col] = True
+            rows, cols = np.mgrid[low[1]:high[1], low[0]:high[0]]
+            candidates = np.column_stack((rows.ravel(),cols.ravel()))
+            candidates = candidates[(occupancy[candidates[:,0],candidates[:,1]]<0)
+                                    & inside[candidates[:,0],candidates[:,1]]]
+            polygons = grid_points(squares(candidates).reshape(-1,2), grid,
+                self.current_reference, self.fixed.grid, self.reference).reshape(-1,4,2)
+            owners, cells, covered = batch_intersections(polygons, retained.shape)
+            counts = np.bincount(owners,minlength=len(candidates))
+            forbidden = np.bincount(owners,weights=~retained[cells[:,0],cells[:,1]],
+                                    minlength=len(candidates))
+            valid = covered & (counts>0) & (forbidden==0)
+            candidates = candidates[valid]
+            projected[candidates[:,0],candidates[:,1]] = True
         self.unknown = projected
         self.generation += 1
         self._projection_key = (*key[:-1], retained.tobytes())
