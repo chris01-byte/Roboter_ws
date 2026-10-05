@@ -42,6 +42,7 @@ def fixture(name):
     node._metric_path_validation = 'rpp_rollout'
     node._metric_status = {}
     node._metric_active = object(); node._metric_nav_path = object()
+    node._metric_plan_after_ns = 42
     node.get_clock = lambda: SimpleNamespace(now=lambda: SimpleNamespace(nanoseconds=123))
     # Forecast geometry must never touch or retire actual first-body facts.
     node._metric_prepare_egress = lambda *_: pytest.fail('forecast changed private egress')
@@ -59,7 +60,8 @@ def path(record):
 
 
 @pytest.mark.parametrize('name,index,expected', (
-    ('ap06_dead_end', 0, False), ('ap06_dead_end', 2, True),
+    ('ap06_dead_end', 0, False), ('ap06_dead_end', 2, False),
+    ('ap06_dead_end', 4, True),
     ('ap06_corridor_departure', 0, True)))
 def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
     node, inputs, meta = fixture(name)
@@ -68,8 +70,10 @@ def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name
         (), 1., 0., inputs[1].fingerprint, 1)
     route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
     assert route is not None
+    if name == 'ap06_corridor_departure':
+        node._metric_status['ranking'] = dict(bounded_start_observation=True)
     before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
-    active = node._metric_active; calls = []
+    active = node._metric_active; original_path = node._metric_nav_path; calls = []
     def planner(candidate, stopped, *, start_pose):
         assert node._metric_active is None
         assert not stopped()
@@ -80,8 +84,9 @@ def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name
         return path(record), record['error']
     node._metric_request_nav_plan = planner
     assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
-    assert node._metric_active is active and node._metric_nav_path is None
-    assert node._metric_plan_after_ns == 123
+    assert node._metric_active is active
+    assert node._metric_nav_path is (None if calls else original_path)
+    assert node._metric_plan_after_ns == (123 if calls else 42)
     assert [bytes(np.asarray(inputs[i].data,dtype=np.int8)) for i in (0,5)] == before
     if not expected:
         assert node._metric_status['departure_plan_rejection'] == 'footprint_sweep_invalid'

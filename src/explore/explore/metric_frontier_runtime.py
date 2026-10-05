@@ -1293,6 +1293,11 @@ class MetricFrontierRuntime:
         self._metric_status.pop('departure_plan_rejection', None)
         if stop_requested():
             return False
+        if self._metric_status.get('ranking',{}).get('bounded_start_observation'):
+            # The existing bounded first observations leave the initial
+            # corridor using its original full path/egress proof. They do not
+            # require a turning refuge already visible before that observation.
+            return True
         pose = inputs[2]
         grids = ((inputs[0], inputs[3]), (inputs[5], inputs[6]))
         if not all(footprint_clear(*pose, grid, mask, self._world_to_grid,
@@ -1303,7 +1308,13 @@ class MetricFrontierRuntime:
         trajectory = rpp_trajectory(route, pose, resolution,
             getattr(self, '_prealign_handoff_tolerance', .17), self._metric_bounds,
             prealign_to_first_leg=True, external_prealignment=False)
-        projected = (*trajectory[-1][:2], target.yaw)
+        stop_yaw = trajectory[-1][2]
+        turn = math.atan2(math.sin(target.yaw-stop_yaw),math.cos(target.yaw-stop_yaw))
+        # RPP does not turn to the ideal heading if its real checker already
+        # accepts the rollout heading. Otherwise it stops upon entering the
+        # unchanged .4-rad window, rather than magically reaching target yaw.
+        terminal_yaw = stop_yaw+math.copysign(max(0.,abs(turn)-.4),turn)
+        projected = (*trajectory[-1][:2], terminal_yaw)
         forecast = (inputs[0], inputs[1], projected, *inputs[3:])
         if self._metric_scan_geometry_ready(forecast):
             return not stop_requested()
@@ -1329,35 +1340,43 @@ class MetricFrontierRuntime:
             # known turning refuge. Search only a controller/body-sized
             # horizon; these queries are never additional motion goals.
             horizon = .4+max(abs(v) for v in self._metric_bounds[:2])+.15
-            for step in range(1+int((horizon-self._min_goal_dist_m)/resolution)):
-                if stopped():
-                    return False
-                distance = self._min_goal_dist_m+step*resolution
-                xy = (projected[0]+distance*math.cos(projected[2]),
-                      projected[1]+distance*math.sin(projected[2]))
-                escape = replace(target,x=xy[0],y=xy[1],yaw=projected[2],
-                    observation_points=(),requires_nav2_plan=True)
-                chord = (projected[:2],xy)
-                if self._metric_standard_waypoints_clear(forecast,chord,escape.yaw) is None:
-                    continue
-                end = rpp_trajectory(chord,projected,resolution,
-                    getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                    prealign_to_first_leg=True,external_prealignment=False)[-1]
-                refuge = (inputs[0],inputs[1],end,*inputs[3:])
-                if not self._metric_scan_geometry_ready(refuge):
-                    continue
-                path,error = self._metric_request_nav_plan(escape,stopped,start_pose=projected)
-                route = None if path is None else self._metric_validate_nav_plan(
-                    forecast,path,escape,public_only=True)
-                if route is None:
-                    continue
-                end = rpp_trajectory(route,projected,resolution,
-                    getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                    prealign_to_first_leg=True,external_prealignment=False)[-1]
-                if (not stopped() and self._metric_scan_geometry_ready(
-                        (inputs[0],inputs[1],end,*inputs[3:]))):
-                    self._metric_status.pop('departure_plan_rejection',None)
-                    return True
+            for offset in (0.,-.35/2,.35/2):
+                bearing = projected[2]+offset
+                for step in range(1+int((horizon-self._min_goal_dist_m)/resolution)):
+                    if stopped():
+                        return False
+                    distance = self._min_goal_dist_m+step*resolution
+                    xy = (projected[0]+distance*math.cos(bearing),
+                          projected[1]+distance*math.sin(bearing))
+                    escape = replace(target,x=xy[0],y=xy[1],yaw=bearing,
+                        observation_points=(),requires_nav2_plan=True)
+                    chord = (projected[:2],xy)
+                    if self._metric_standard_waypoints_clear(forecast,chord,escape.yaw) is None:
+                        continue
+                    end = rpp_trajectory(chord,projected,resolution,
+                        getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
+                        prealign_to_first_leg=True,external_prealignment=False)[-1]
+                    refuge = (inputs[0],inputs[1],end,*inputs[3:])
+                    return_target = replace(back,yaw=math.atan2(pose[1]-end[1],pose[0]-end[0]))
+                    if self._metric_standard_waypoints_clear(
+                            refuge,(end[:2],pose[:2]),return_target.yaw) is None:
+                        continue
+                    path,error = self._metric_request_nav_plan(escape,stopped,start_pose=projected)
+                    route = None if path is None else self._metric_validate_nav_plan(
+                        forecast,path,escape,public_only=True)
+                    if route is None:
+                        continue
+                    end = rpp_trajectory(route,projected,resolution,
+                        getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
+                        prealign_to_first_leg=True,external_prealignment=False)[-1]
+                    return_target = replace(back,yaw=math.atan2(pose[1]-end[1],pose[0]-end[0]))
+                    retreat,error = self._metric_request_nav_plan(return_target,stopped,start_pose=end)
+                    if (retreat is not None and not stopped() and
+                            self._metric_validate_nav_plan(
+                                (inputs[0],inputs[1],end,*inputs[3:]),retreat,
+                                return_target,public_only=True) is not None):
+                        self._metric_status.pop('departure_plan_rejection',None)
+                        return True
             return False
         finally:
             self._metric_active = old_active
@@ -1395,7 +1414,7 @@ class MetricFrontierRuntime:
             maximum_cells=self._wohnungserkundung_evidence_max_cells)
         unknown_in_scope=int(np.count_nonzero((np.asarray(grid.data).reshape(known.shape)<0)&inside&~known))
         useful = bool(unknown_in_scope and getattr(self, '_frontiers_remaining', 0))
-        scan = bool(scan_pending and sweep_clear and useful)
+        scan = bool(scan_pending and sweep_clear and useful and not candidates)
         decision = dict(strategy=self._metric_start_strategy,
             selected_motion='full_scan' if scan else 'observation_goal' if candidates else 'wait',
             scan_admissible=bool(sweep_clear), scan_useful=useful,
@@ -1555,6 +1574,36 @@ class MetricFrontierRuntime:
                         self._metric_last_route_rejection if route is None else 'goal_too_near')
                 counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
                 continue
+            if (policy is not None and live_view and not proposal
+                    and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
+                # Prefer a publicly known turning pocket inside the SAME
+                # original .3-m approach backoff. An admissible observation
+                # pose near a wall need not be a useful forward-only arrival.
+                # Keep the original if this local search cannot prove another;
+                # the native departure query still owns the final decision.
+                trajectory=rpp_trajectory(route,pose,min(grid.info.resolution,costmap.info.resolution),
+                    getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
+                    prealign_to_first_leg=True,external_prealignment=False)
+                refuge=(grid,correlation,trajectory[-1],*inputs[3:])
+                dx,dy=goal[0]-f.cx,goal[1]-f.cy
+                offset=math.hypot(dx,dy)
+                if offset>1e-9 and not self._metric_scan_geometry_ready(refuge):
+                    for step in range(1,1+int(self._goal_search_m/grid.info.resolution)):
+                        if time.monotonic()-selection_started > self._map_timeout_s:
+                            raise ValueError('frontier_candidate_processing_budget_exhausted')
+                        extra=step*grid.info.resolution
+                        alternative=(goal[0]+extra*dx/offset,goal[1]+extra*dy/offset)
+                        alternative_route=self._metric_route(inputs,alternative)
+                        if alternative_route is None:
+                            continue
+                        trajectory=rpp_trajectory(alternative_route,pose,
+                            min(grid.info.resolution,costmap.info.resolution),
+                            getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
+                            prealign_to_first_leg=True,external_prealignment=False)
+                        if self._metric_scan_geometry_ready((grid,correlation,trajectory[-1],*inputs[3:])):
+                            goal,route=alternative,alternative_route
+                            stats['known_turn_refuge_approach']=True
+                            break
             heading = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
             error = abs(math.atan2(math.sin(heading-pose[2]), math.cos(heading-pose[2])))
             if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
@@ -2037,7 +2086,9 @@ class MetricFrontierRuntime:
                         remainder = reachable_remainder(grid, inside, inputs[2], self._world_to_grid)
                     except ValueError as error:
                         return finish('blocked', str(error))
-                    unresolved=any(a.tries and not a.completed for a in policy.attempts.values())
+                    unresolved=any(a.tries and not a.completed and
+                        (a.reason != 'proposal_rejected' or a.failures)
+                        for a in policy.attempts.values())
                     self._metric_status.update(unknown_cells_in_scope=unknown,
                         deferred_tasks=sum(a.failures>0 and not a.completed for a in policy.attempts.values()))
                     # A real finite scan is mandatory even on a fully known map.
@@ -2145,6 +2196,7 @@ class MetricFrontierRuntime:
                             stop_reason[0]=str(error)
                 return stop_reason[0] is not None
             self._status_phase='metric_prealign'
+            child_dispatched = False
             if stop():
                 status='canceled'
             else:
@@ -2201,6 +2253,7 @@ class MetricFrontierRuntime:
                         return finish('failed','second_child_forbidden')
                     self._wohnungserkundung_active_child=pending
                 try:
+                    child_dispatched = True
                     status=self._navigate_to(pending.x,pending.y,
                         max(.001,self._goal_timeout_s-(time.monotonic()-task_started)),
                         stop_requested=stop,goal_yaw=pending.yaw)
@@ -2331,20 +2384,27 @@ class MetricFrontierRuntime:
                 return finish('canceled', 'user_canceled')
             outcome=('observed' if gained else 'arrival_without_observation') if reached else (
                 'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
+            proposal_rejected = (not child_dispatched and status == 'planning_failed'
+                                 and hard == 'route_invalidated')
+            if proposal_rejected:
+                outcome = 'proposal_rejected'
             evidence = local_evidence(after[0], policy.attempts[pending.task_id].frontier_xy, self._grid_to_world)
             policy.record(pending,outcome,time.monotonic(),after[1].fingerprint,evidence,
-                          count_try=False,arrival_xy=arrival_xy)
+                          count_try=False,arrival_xy=arrival_xy,count_failure=not proposal_rejected)
             last_inputs = after
             if gained:
                 observations += 1
                 observed_area += len(gained)*after[0].info.resolution**2
             chain.append(dict(task=pending.task_id,target=[pending.x,pending.y],result=status,
                               decision=outcome,terminal_child=True,stop_reason=hard,
+                              child_dispatched=child_dispatched,
+                              planning_rejection=(self._metric_status.get('nav2_plan_rejection')
+                                                  if not child_dispatched else None),
                               snapshot=self._metric_status['decision_snapshot'],
                               arrived=reached, observed_cells=len(gained)))
             if reached:
                 self._frontiers_visited_status += 1
-            if not gained:
+            if not gained and not proposal_rejected:
                 failures += 1
             checkpoint()
             self._metric_status.update(arrivals=arrivals, observations=observations,

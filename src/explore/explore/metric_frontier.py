@@ -88,7 +88,8 @@ class MetricTaskPolicy:
                      (now >= attempt.retry_after and
                       fingerprint != attempt.fingerprint)))
 
-    def record(self, candidate, outcome, now, fingerprint, evidence_key=None, *, count_try=True, arrival_xy=None):
+    def record(self, candidate, outcome, now, fingerprint, evidence_key=None, *,
+               count_try=True, arrival_xy=None, count_failure=True):
         attempt = self.attempts[candidate.task_id]
         visited = (candidate.x, candidate.y)
         if outcome == 'observed' and arrival_xy is not None:
@@ -105,7 +106,7 @@ class MetricTaskPolicy:
         attempt.completed = outcome == 'observed'
         if outcome == 'observed':
             attempt.completed = True
-        elif outcome != 'pending':
+        elif outcome != 'pending' and count_failure:
             attempt.failures += 1
 
 

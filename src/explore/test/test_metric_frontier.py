@@ -437,7 +437,7 @@ def adaptive_fixture():
     return n,[g,correlation,(.05,.05,0.),known,safe,cost,np.asarray(cost.data).reshape(40,80)<100]
 
 
-def test_adaptive_shadow_rejects_only_unused_sweep_and_observations_enable_later_scan():
+def test_adaptive_shadow_keeps_scan_fallback_and_prefers_observation_tasks():
     n,inputs=adaptive_fixture()
     # Rear exterior within rotated front swing, outside forward correction envelope.
     inputs[3][20,6]=False;inputs[6][20,6]=False
@@ -445,8 +445,13 @@ def test_adaptive_shadow_rejects_only_unused_sweep_and_observations_enable_later
     assert not d['scan_admissible'] and d['selected_motion']=='observation_goal'
     assert c and n._metric_route(inputs,(c[0].x,c[0].y),c[0].yaw)
     inputs[3][20,6]=True;inputs[6][20,6]=True
-    d,c=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
-    assert d['scan_admissible'] and d['selected_motion']=='full_scan'
+    policy=MetricTaskPolicy(.6,30.,2)
+    d,c=n._metric_start_decision(inputs,policy,.3,True)
+    assert d['scan_admissible'] and d['selected_motion']=='observation_goal' and c
+    for candidate in c:
+        policy.record(candidate,'observed',1.,candidate.fingerprint)
+    d,c=n._metric_start_decision(inputs,policy,.3,True)
+    assert d['scan_admissible'] and d['selected_motion']=='full_scan' and not c
 
 
 def test_adaptive_unknown_initial_padding_is_wait_with_exact_missing_cells():
