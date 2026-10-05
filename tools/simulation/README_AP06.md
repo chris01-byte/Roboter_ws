@@ -77,7 +77,7 @@ python3 tools/simulation/prepare_ap06_sources.py \
 ```
 
 Für Offlineprüfung vorhandener Archive zusätzlich `--offline --verify-only`.
-Der Quellbaum erhält den bestehenden Pure-Rotation-Patch; es wird kein Git-HEAD
+Der Quellbaum erhält den bestehenden Pure-Rotation-Patch und den deklarierten festen Karto-Rasterpatch; es wird kein Git-HEAD
 für extrahierte Archive erfunden. Lizenzen bleiben in den Quellarchiven erhalten.
 
 Die zugehörigen System-/ROS-Entwicklungsabhängigkeiten vor dem Build mit
@@ -89,6 +89,7 @@ Quellpakete sehen; kein Fremdprodukt als Navigator verwenden.
 
 ```bash
 source /opt/ros/humble/setup.bash
+python3 -m pip install -r src/explore/requirements-geometry.txt
 mapfile -t AP06_NATIVE_PATHS < <(python3 -c \
   'import json; print("\n".join(json.load(open("/tmp/ap06/sources/prepared.json"))["base_paths"]))')
 export MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
@@ -125,6 +126,10 @@ Jeder Lauf benötigt ein neues Ausgabeverzeichnis. Weitere Manifestfälle
 `door68_start_b`, `door80_start_c`, `cancel`, `gyro_hold` einzeln starten.
 `--profile-selection` bewahrt Originalentscheidungen/Budgets, erzeugt zusätzlich
 `selection-*.prof` und gilt wegen Messaufwand nur als Diagnose.
+`--capture-geometry` sichert höchstens 16 tatsächliche Start-/Fehlerinputs
+einschließlich Raster, TF-Bezug und privatem Bestand. Es ändert keine Entscheidung,
+gilt wegen Messaufwand ebenfalls nur als Diagnose und setzt
+`manifest_compatible=false`. Solche Läufe zählen nicht als Gesamtpositive.
 `--diagnostic-beams` weicht ausdrücklich vom geladenen Manifest ab und ist
 ebenfalls keine Manifestabnahme. `--save-partial` prüft nach dem terminalen
 Missionsresultat das echte Speichern der synthetischen SLAM-Karte und meldet
@@ -163,9 +168,12 @@ und eindeutig beobachtete TF-Besitzer. Gestoppte/partielle/abgelehnte Läufe
 bleiben negativ; sie erfüllen keinen Positivfall.
 
 Der korrigierte Startadapter prüft im bestehenden RPP-/Boundary-/Egress-Opt-in
-zusätzlich aktuelle Vorwärtspositionen bis Mindestzielabstand plus vorhandenem
-lokalem Suchradius. Nur volle Geometrie und Sicht tatsächlicher Frontieranker
-ergeben einen Vorschlag; vor Fahrt bleibt der wirkliche Nav2-Plan verbindlich.
+zusätzlich aktuelle Vorwärtspositionen. Ihr Mindestabstand berücksichtigt die
+unveränderte besuchte Nachbarschaft, die 15-cm-Ankunftstoleranz und eine Rasterzelle;
+der vorhandene lokale Suchradius begrenzt die zusätzlichen Offsets. Erledigte
+Aufgaben werden an die frisch gemessene Ankunft gebunden. Nur volle Geometrie
+und Sicht tatsächlicher Frontieranker ergeben einen Vorschlag; vor Fahrt bleibt
+der wirkliche Nav2-Plan verbindlich.
 Auch diese Suche verbraucht das unveränderte 5-s-Kandidatenbudget.
 
 Die vorhandenen Geräte-, Frische-, HOLD-, Cancel- und Konturgrenzen werden nicht
@@ -186,3 +194,53 @@ Bei subzelliger Rasterung verfällt Autorität konservativ, statt Teilzellen
 durch Kopieren oder Interpolation freizugeben. Geometrische Memoisierung enthält
 keine Quellenentscheidung, Frist oder Bewegungsfreigabe. Die bestehenden fünf
 Manifestfälle werden unverändert wiederholt; Restfehler zählen weiter negativ.
+
+## Zusätzliche Reparaturnachweise, 05.10.2026
+
+`slam_grid_regression.cpp` prüft die tatsächlich gepatchten Karto-Funktionen
+bei Wachstum, negativen Grenzen und exakten Endpunkten. GEOS/Shapely 2.0.7
+ist für die exakte dauerhafte Teilflächenentnahme gepinnt; keine Pufferung oder
+Aufweitung der privaten Zellautorität. `test_metric_partial_reference.py` und
+die gesicherten Originalraster prüfen Lokalisierungskorrektur ohne neue
+Beobachtung, wirkliche Zellbeobachtung/Regrowth und ganzzahliges Body-Wachstum.
+`test_metric_join_replan.py` prüft den echten Elternpfad einschließlich
+Kindcancellation, unveränderter Aufgaben-ID/Budgets und erneutem exakten Join.
+
+Physische Welt und originale simulierte Encoder-/HWT-/Nahbereichsquellen
+laufen in einem separat gestarteten Prozess. Prüfsteuerung und passive
+Beobachter sind davon getrennt. Kein verlorenes Sensorsample wird nachgebaut.
+`test_ap06_device_isolation.py` hält den Interpreter der Prüfsteuerung tatsächlich
+400 ms in einem nativen Aufruf fest; die ursprünglichen Messungsstempel und
+Encoderprüfungen im anderen Prozess müssen innerhalb 180 ms fortlaufen.
+`device_result.json` und die Originalstatusmeldungen enthalten echte Probezeiten.
+`test_ap06_lifecycle.py` verwirft gezielt nur eine Antwort der tatsächlich
+ausgeführten Lifecycle-Transition; der Prüfleiter muss den Originalserverzustand
+lesen und darf den nicht-idempotenten Zustandswechsel nicht erneut senden.
+
+Die gesicherte native Abfahrtskurve `ap06_native_departure_path.json` und
+`test_metric_start_observation.py` zeigen den Unterschied zwischen zusätzlicher
+Drehung im Stand und tatsächlicher RPP-Kurvenfahrt. Nur der simulativ
+qualifizierte Rollout-Modus überlässt diese bewiesene Abfahrt dem ursprünglichen
+Controller. Die bisherigen 17 Controllerparameter und das zusätzliche
+`general_goal_checker.stateful=false`, die 0,35-rad-Drehschwelle, vollständige
+Kontur und 20-mm-/0,05-rad-Trackingreserve bleiben verbindlich. Vor dem nativen
+Plan wird der ausgewählte Vorschlag frisch geprüft; danach zählt ausschließlich
+der volle Beweis des tatsächlich zurückgegebenen Nav2-Pfads.
+
+Der Prüfleiter weist bei mindestens vier verfügbaren CPUs einer CPU nur den
+Geräteprozess und bis zu drei weiteren CPUs dem ROS-Graph zu. Diese begrenzte
+Zuordnung trennt die Quellausführung von bis zu drei Graph-CPUs in der
+Prüfumgebung mit übergeordneter Vier-CPU-Quote. Sie
+ändert weder Frequenzen noch Fristen und ist keine Echtzeitgarantie.
+`cpu_allocation`, `device_result.actual_cpu_affinity` und
+`device_executor_latency.jsonl` halten die tatsächliche Zuordnung und
+Executorlaufzeiten fest. Messlücken bleiben unverändert harte Gegenfälle.
+
+Der Quellprozess importiert keine unbenutzte Explorer-/Geometrie-Runtime.
+Latenzdiagnosen halten Wand-, Prozess- und Thread-CPU-Zeit getrennt fest;
+eine Wandzeitlücke allein beweist weder CPU-Drosselung noch Garbage Collection.
+Der metrische Guard und das Mapping-Fahrtor empfangen vor ihrer Entscheidung
+die aktuell vorhandene originale Wheel-DDS-Probe ohne neuen Stempel. Der
+gesonderte HOLD-Test verwendet auch getrennte Gesundheitsobjekte: ein nur vom
+Tor beobachteter Ausfall muss das Kind beenden und den bestehenden validierten
+HOLD-/RESUME-Ablauf auslösen. Die Gesamtmission erhält keinen gesunden Ersatz.

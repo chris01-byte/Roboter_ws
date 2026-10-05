@@ -7,9 +7,12 @@ they do not qualify USB, transport latency, real stopping or physical coverage.
 No truth occupancy publisher, truth TF or NavigateToPose goal sender exists.
 """
 import argparse
+from collections import deque
 import functools
+import gc
 import json
 import math
+import multiprocessing
 import os
 from pathlib import Path
 import signal
@@ -26,9 +29,10 @@ import yaml
 import rclpy
 from rclpy.executors import SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.serialization import serialize_message
 from rclpy.qos import DurabilityPolicy, QoSProfile, qos_profile_sensor_data
 from geometry_msgs.msg import TransformStamped, Twist
-from lifecycle_msgs.srv import ChangeState
+from lifecycle_msgs.srv import ChangeState, GetState
 from action_msgs.msg import GoalStatusArray
 from nav_msgs.msg import OccupancyGrid, Path as NavPath
 from sensor_msgs.msg import LaserScan, PointCloud2, PointField
@@ -41,7 +45,6 @@ from ament_index_python.packages import get_package_prefix
 
 from ap06_world import World
 from explore.portal_source_adapter import raw_map_portal_source_from_values
-from explore.metric_frontier_runtime import MetricFrontierRuntime
 from ap06_sensors import vl53_producer, oak_cloud
 
 
@@ -155,7 +158,7 @@ class Sensors(Node):
         self.world, self.bus, self.masked, self.beams = world, bus, masked, beams
         self.last = time.monotonic()
         self.tick_gaps = []
-        self.trace = (out/'plant.jsonl').open('w')
+        self.trace = (out/'plant.jsonl').open('w', buffering=1)
         self.scan_pub = self.create_publisher(LaserScan, '/scan', qos_profile_sensor_data)
         self.left = self.create_publisher(PointCloud2, '/near_field/left/points', 10)
         self.right = self.create_publisher(PointCloud2, '/near_field/right/points', 10)
@@ -214,12 +217,176 @@ class Sensors(Node):
         self.estop.publish(Bool(data=self.world.collision))
 
 
+class FaultWindow:
+    def __init__(self, value):
+        self.value = value
+
+    def __getitem__(self, key):
+        if key != 'until':
+            raise KeyError(key)
+        return self.value.value
+
+    def __setitem__(self, key, value):
+        if key != 'until':
+            raise KeyError(key)
+        self.value.value = value
+
+
+class DeviceMirror:
+    """Read-only oracle telemetry, never supplied to any product callback."""
+    def __init__(self, geometry, telemetry):
+        self.geometry, self.telemetry = geometry, telemetry
+
+    def snapshot(self):
+        return list(self.telemetry[:])
+
+    @property
+    def velocity(self):
+        return np.array(self.snapshot()[3:5])
+
+    @property
+    def collision(self):
+        return bool(self.snapshot()[7])
+
+    @property
+    def travel(self):
+        return self.snapshot()[5]
+
+    @property
+    def minimum_clearance(self):
+        return self.snapshot()[6]
+
+    @property
+    def rear_cleared(self):
+        return bool(self.snapshot()[8])
+
+    @property
+    def writes(self):
+        return int(self.snapshot()[9])
+
+    def local(self, points):
+        return self.geometry.local(points)
+
+    def map_oracle(self, *args):
+        return self.geometry.map_oracle(*args)
+
+
+def device_process(case, out, device_file, masked, beams, fault_value, telemetry, ready, halt, source_cpu=None):
+    """Own physical plant and original sources in a separate Python process.
+
+    ROS graph construction/service serialization in the mission supervisor
+    must not hold the encoder/gyro producers' interpreter lock. Source periods,
+    clocks, deadlines, frames, plant integration and checks remain original.
+    Shared memory carries only passive oracle telemetry and fault injection.
+    """
+    require_isolation()
+    if source_cpu is not None:
+        os.sched_setaffinity(0, {source_cpu})
+    model = World(case['door_m'], case['start'])
+    fault = FaultWindow(fault_value)
+    from base_hardware import base_hardware_node as base_module
+    from robot_state_estimation import hwt601_imu_node as raw_module
+    from robot_state_estimation.hwt601_transport import Hwt601SerialTransport
+    bus = MemoryESS(model)
+    base_module.ModbusSerialClient = lambda **kw: bus
+    class SimulatedBase(base_module.BaseHardware):
+        def _connect_modbus(self):
+            def aliases(port):
+                if port != '/dev/ttyUSB_BASE':
+                    raise RuntimeError('wrong memory bus alias')
+                return 'memory://ap06/base'
+            def identity(port):
+                if port != 'memory://ap06/base':
+                    raise RuntimeError('wrong memory bus identity')
+            self.encoder_owner_aliases, self.encoder_owner_usb = aliases, identity
+            super()._connect_modbus()
+    raw_module.Hwt601SerialTransport = functools.partial(Hwt601SerialTransport,
+        serial_factory=lambda **kw: MemoryHWT(model, bus, fault, **kw))
+    stopped = threading.Event()
+    threads, executors, nodes = [], [], []
+    latency_log = (out/'device_executor_latency.jsonl').open('w',buffering=1)
+    gc_begin = {}
+    def gc_timing(phase, info):
+        generation = info['generation']
+        if phase == 'start':
+            gc_begin[generation] = time.monotonic()
+        elif generation in gc_begin:
+            ended = time.monotonic(); began = gc_begin.pop(generation)
+            if ended-began > .05:
+                latency_log.write(json.dumps(dict(node='python_gc',begin=began,end=ended,
+                    duration_s=ended-began,generation=generation,collected=info['collected']))+'\n')
+    gc.callbacks.append(gc_timing)
+    def interrupt(_signum, _frame):
+        halt.set()
+    signal.signal(signal.SIGINT, interrupt)
+    signal.signal(signal.SIGTERM, interrupt)
+    rclpy.init(args=['--ros-args', '--params-file', str(device_file)])
+    try:
+        class RecordedSensors(Sensors):
+            def tick(self):
+                super().tick()
+                telemetry[:] = [*model.pose.tolist(), *model.velocity.tolist(), model.travel,
+                                model.minimum_clearance, float(model.collision),
+                                float(model.rear_cleared), float(bus.writes)]
+        sensors = RecordedSensors(model, bus, out, masked, beams)
+        raw_node = raw_module.Hwt601ImuNode()
+        base_node = SimulatedBase()
+        nodes = [sensors, raw_node, base_node]
+        for node in nodes:
+            ex = SingleThreadedExecutor(); ex.add_node(node); executors.append(ex)
+            def loop(ex=ex, name=node.get_name()):
+                try:
+                    while not stopped.is_set():
+                        began = time.monotonic(); process_began=time.process_time(); thread_began=time.thread_time()
+                        ex.spin_once(timeout_sec=.05)
+                        ended = time.monotonic()
+                        if ended-began > .1:
+                            latency_log.write(json.dumps(dict(node=name,begin=began,end=ended,
+                                duration_s=ended-began,process_cpu_s=time.process_time()-process_began,
+                                thread_cpu_s=time.thread_time()-thread_began))+'\n')
+                except Exception:
+                    traceback.print_exc(); halt.set()
+            thread = threading.Thread(target=loop, daemon=True)
+            threads.append(thread); thread.start()
+        ready.set()
+        while not halt.wait(.05):
+            pass
+    finally:
+        if 'base_node' in locals():
+            base_node._stop_both_motors(force=True)
+            deadline = time.monotonic()+1.
+            while max(abs(model.velocity)) >= .005 and time.monotonic() < deadline:
+                time.sleep(.01)
+        stopped.set()
+        for thread in threads:
+            thread.join(2.)
+        for ex in executors:
+            ex.shutdown(timeout_sec=1.)
+        for node in reversed(nodes):
+            node.destroy_node()
+        gc.callbacks.remove(gc_timing)
+        latency_log.close()
+        if 'sensors' in locals():
+            sensors.trace.close()
+            (out/'device_result.json').write_text(json.dumps(dict(
+                plant_tick_gaps=sensors.tick_gaps, simulated_register_writes=bus.writes,
+                source_periods_unchanged=True, separate_source_process=True,
+                actual_cpu_affinity=sorted(os.sched_getaffinity(0))), indent=2)+'\n')
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
 class Observer(Node):
     def __init__(self, out):
         super().__init__('ap06_independent_observer')
         self.map = None
         self.costmap = None
-        self.phases, self.manager, self.fusion = [], [], []
+        self.last_scan = None
+        self.create_subscription(LaserScan, '/scan_normiert',
+            lambda msg: setattr(self, 'last_scan', msg), qos_profile_sensor_data)
+        # Full payloads remain in events.jsonl. Acceptance only needs latest
+        # status views; retaining every diagnostic object grows through 900 s.
+        self.phases, self.manager, self.fusion = (deque(maxlen=8) for _ in range(3))
         self.fusion_at = []
         self.action_active, self.action_maximum, self.command_values = {}, {}, {}
         self.tf_children = set()
@@ -244,10 +411,16 @@ class Observer(Node):
                 data = json.loads(msg.data)
                 dest.append(data)
                 if dest is self.fusion:
-                    self.fusion_at.append((time.monotonic(), data))
+                    self.fusion_at.append((time.monotonic(),
+                        {'recovery_state': data.get('recovery_state')}))
                 self.events.write(json.dumps({'at': time.monotonic(), 'topic': topic, 'data': data})+'\n')
                 self.events.flush()
             self.create_subscription(String, topic, callback, qos if dest is self.manager else 10)
+        def base_state(msg):
+            self.events.write(json.dumps({'at':time.monotonic(),
+                'topic':'/base_hardware/state_json','data':json.loads(msg.data)})+'\n')
+            self.events.flush()
+        self.create_subscription(String,'/base_hardware/state_json',base_state,10)
         self.create_subscription(TFMessage, '/tf', self.on_tf, 100)
         for topic in ('/navigate_to_pose/_action/status', '/explore_area/_action/status'):
             def status_callback(msg, topic=topic):
@@ -286,6 +459,44 @@ class Observer(Node):
         return self.phases[-1].get('metric_exploration', {}) if self.phases else {}
 
 
+def transition_lifecycle(change_client, state_client, transition, timeout=30.):
+    """Send one transition and prove its actual state within one original budget.
+
+    Fast DDS service discovery can precede response-reader matching. A lost
+    acknowledgement must not cause a duplicate non-idempotent transition.
+    GetState is a read-only original server query, never an inferred state.
+    """
+    deadline = time.monotonic()+timeout
+    def state():
+        future = state_client.call_async(GetState.Request())
+        until = min(deadline, time.monotonic()+1.)
+        while not future.done() and time.monotonic() < until:
+            time.sleep(.02)
+        if not future.done():
+            state_client.remove_pending_request(future)
+            return None
+        return future.result().current_state.id
+    expected_before, expected_after = (1, 2) if transition == 1 else (2, 3)
+    current = None
+    while current is None and time.monotonic() < deadline:
+        current = state()
+    if current != expected_before:
+        raise RuntimeError(f'lifecycle precondition {current}, expected {expected_before}')
+    request = ChangeState.Request(); request.transition.id = transition
+    future = change_client.call_async(request)
+    while time.monotonic() < deadline:
+        if future.done() and not future.result().success:
+            raise RuntimeError('actual lifecycle transition rejected')
+        current = state()
+        if current == expected_after:
+            acknowledged = future.done() and future.result().success
+            if not future.done():
+                change_client.remove_pending_request(future)
+            return dict(transition=transition, actual_state=current, acknowledgement_received=bool(acknowledged))
+        time.sleep(.02)
+    raise TimeoutError('actual lifecycle transition state not confirmed')
+
+
 def params(repo, out):
     p = yaml.safe_load((repo/'src/robot_navigation/config/nav2_params_real.yaml').read_text())
     tree = str(repo/'src/explore/behavior_trees/navigate_to_pose_no_recovery.xml')
@@ -305,6 +516,8 @@ def params(repo, out):
 
 def run(args):
     require_isolation()
+    # Heavy geometry belongs to the supervisor, not spawned device sources.
+    from explore.metric_frontier_runtime import MetricFrontierRuntime
     manifest_path = args.manifest
     manifest = json.loads(manifest_path.read_text())
     cases = manifest['positive']+manifest['negative']
@@ -313,13 +526,18 @@ def run(args):
     out.mkdir(parents=True, exist_ok=False)
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
     result = {'case': case, 'passed': False, 'hardware_qualified': False,
-              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.diagnostic_beams),
+              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_geometry or args.diagnostic_beams),
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
               'sensor_profile': 'native_mast_mask' if not args.ideal_lidar else 'ideal_full_360',
               'reference_geometry_provided_to_product': False, 'truth_map_publisher': False,
               'truth_tf_publisher': False, 'manual_navigation_goals': 0}
     processes, streams, nodes, executors, threads = [], [], [], [], []
     stop = threading.Event()
+    original_affinity = os.sched_getaffinity(0)
+    allowed_cpus = sorted(original_affinity)
+    source_cpu = allowed_cpus[-1] if len(allowed_cpus) >= 4 else None
+    graph_cpus = allowed_cpus[:3] if source_cpu is not None else allowed_cpus
+    result['cpu_allocation'] = dict(available=allowed_cpus, graph=graph_cpus, source=source_cpu)
     def start(name, command):
         with (out/'commands.jsonl').open('a') as commands:
             commands.write(json.dumps({'name': name, 'argv': command})+'\n')
@@ -361,25 +579,7 @@ def run(args):
     try:
         sys.setswitchinterval(.001)
         # Transport injection only: production nodes calculate their own health.
-        from base_hardware import base_hardware_node as base_module
-        from robot_state_estimation import hwt601_imu_node as raw_module
-        from robot_state_estimation.hwt601_transport import Hwt601SerialTransport
-        bus = MemoryESS(model)
-        base_module.ModbusSerialClient = lambda **kw: bus
-        class SimulatedBase(base_module.BaseHardware):
-            def _connect_modbus(self):
-                def aliases(port):
-                    if port != '/dev/ttyUSB_BASE':
-                        raise RuntimeError('wrong memory bus alias')
-                    return 'memory://ap06/base'
-                def identity(port):
-                    if port != 'memory://ap06/base':
-                        raise RuntimeError('wrong memory bus identity')
-                self.encoder_owner_aliases, self.encoder_owner_usb = aliases, identity
-                super()._connect_modbus()
-        raw_module.Hwt601SerialTransport = functools.partial(Hwt601SerialTransport,
-            serial_factory=lambda **kw: MemoryHWT(model, bus, fault, **kw))
-        # Actual constructors read their own keyed parameters in one context.
+        # Construct supervisor independently of the plant/source interpreter.
         common = {
             'base_hardware': yaml.safe_load((args.repo/'src/base_hardware/config/base_hardware_params.yaml').read_text())['base_hardware'],
             'hwt601_imu': yaml.safe_load((args.repo/'src/robot_state_estimation/config/hwt601_shadow.yaml').read_text())['hwt601_shadow_reader']}
@@ -390,13 +590,30 @@ def run(args):
             development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
         device_file = out/'device_params.yaml'
         device_file.write_text(yaml.safe_dump(common))
+        context = multiprocessing.get_context('spawn')
+        telemetry = context.Array('d', [*case['start'], 0., 0., 0., math.inf, 0., 0., 0.])
+        fault_value = context.Value('d', 0.)
+        fault = FaultWindow(fault_value)
+        device_ready, device_halt = context.Event(), context.Event()
+        devices = context.Process(target=device_process, args=(case, out, device_file,
+            not args.ideal_lidar, result['actual_lidar_beams'], fault_value, telemetry,
+            device_ready, device_halt, source_cpu), name='ap06-original-devices')
+        if source_cpu is not None:
+            os.sched_setaffinity(0, graph_cpus)
+        devices.start()
+        wait(device_ready.is_set, manifest['budgets']['startup_s'], 'independent original device process')
+        model = DeviceMirror(model, telemetry)
+        bus = model
         rclpy.init(args=['--ros-args', '--params-file', str(device_file)])
         observer = Observer(out)
+        lifecycle_clients = {name:observer.create_client(ChangeState,'/'+name+'/change_state')
+            for name in ('planner_server','controller_server','bt_navigator',
+                         'velocity_smoother','collision_monitor')}
+        lifecycle_states = {name:observer.create_client(GetState,'/'+name+'/get_state')
+            for name in lifecycle_clients}
+        save_client = observer.create_client(Trigger,'/robot_map_manager/save_map')
         spin(observer)
-        sensors = Sensors(model, bus, out, not args.ideal_lidar, result['actual_lidar_beams'])
-        spin(sensors)
-        spin(SimulatedBase())
-        spin(raw_module.Hwt601ImuNode())
+        result['source_initialization_order'] = 'independent_spawned_device_process'
         result['prefixes'] = {p: get_package_prefix(p) for p in (
             'explore', 'mission_manager', 'bt_orchestrator', 'robot_navigation', 'robot_state_estimation',
             'base_hardware', 'robot_map_manager', 'robot_localization', 'slam_toolbox',
@@ -430,15 +647,15 @@ def run(args):
             start(name, [str(Path(get_package_prefix(package))/'lib'/package/executable),
                          '--ros-args', '--params-file', str(native), *remaps])
         for name in ('planner_server', 'controller_server', 'bt_navigator', 'velocity_smoother', 'collision_monitor'):
-            client = observer.create_client(ChangeState, '/'+name+'/change_state')
+            client = lifecycle_clients[name]
             if not client.wait_for_service(timeout_sec=20.):
                 raise TimeoutError(name+' lifecycle service')
+            state_client = lifecycle_states[name]
+            if not state_client.wait_for_service(timeout_sec=20.):
+                raise TimeoutError(name+' actual lifecycle state service')
             for state in (1, 3):
-                req = ChangeState.Request(); req.transition.id = state
-                future = client.call_async(req)
-                wait(future.done, 30., name+' lifecycle '+str(state))
-                if not future.result().success:
-                    raise RuntimeError(name+' lifecycle rejected '+str(state))
+                proof = transition_lifecycle(client, state_client, state, 30.)
+                result.setdefault('lifecycle_states', {}).setdefault(name, []).append(proof)
         explorer = ['--ros-args', '--params-file', str(args.repo/'src/explore/config/explore_params.yaml'),
             '--params-file', str(args.repo/'src/explore/config/metric_frontier_params.yaml'),
             '--params-file', str(args.repo/'src/explore/config/metric_frontier_simulation_params.yaml'),
@@ -478,6 +695,35 @@ def run(args):
                 f'  open({str(out)!r}+"/selection-state.json","w").write(json.dumps(state,default=str,indent=2))\n'
                 'R._metric_candidates=profiled\nfrom explore.explore_node import main; main()')
             explorer_command = [sys.executable, '-c', code]
+        if args.capture_geometry:
+            # Passive diagnostic snapshots; never a manifest acceptance run.
+            code = (
+                'import json,numpy as np; from explore.metric_frontier_runtime import MetricFrontierRuntime as R; '
+                'original=R._metric_prepare_egress; seen=set()\n'
+                'def captured(self,inputs):\n'
+                ' result=original(self,inputs)\n'
+                ' evidence=getattr(self,"_metric_egress",None) or ()\n'
+                ' reasons=tuple(e.reason for e in evidence if not e.valid)\n'
+                ' key=reasons or ("initial",)\n'
+                ' if key not in seen and len(seen)<16:\n'
+                '  seen.add(key); name="geometry-"+str(len(seen))\n'
+                '  arrays=dict(raw=np.asarray(inputs[0].data).reshape(inputs[3].shape),known=inputs[3],safe=inputs[4],'
+                'cost=np.asarray(inputs[5].data).reshape(inputs[6].shape),cost_known=inputs[6],pose=inputs[2])\n'
+                '  for i,e in enumerate(evidence):\n'
+                '   arrays["original_"+str(i)]=np.asarray(e.fixed.grid.data).reshape(e.fixed.unknown.shape)\n'
+                '   arrays["retained_"+str(i)]=e.fixed.unknown;arrays["projected_"+str(i)]=e.unknown\n'
+                f'  np.savez_compressed({str(out)!r}+"/"+name+".npz",**arrays)\n'
+                '  geometry=lambda g:dict(resolution=g.info.resolution,origin=[g.info.origin.position.x,g.info.origin.position.y],'
+                'shape=[g.info.height,g.info.width])\n'
+                '  state=dict(reasons=reasons,reference=getattr(inputs,"map_odom_reference",None),'
+                'current=[geometry(inputs[i]) for i in (0,5)],'
+                'initial=[geometry(e.fixed.grid) for e in evidence],'
+                'commits=[getattr(e.fixed,"last_commit_pose",None) for e in evidence],'
+                'details=[getattr(e.fixed,"last_monotone_failure",None) for e in evidence])\n'
+                f'  open({str(out)!r}+"/"+name+".json","w").write(json.dumps(state,indent=2))\n'
+                ' return result\n'
+                'R._metric_prepare_egress=captured\nfrom explore.explore_node import main; main()')
+            explorer_command = [sys.executable, '-c', code]
         start('explorer', explorer_command+explorer)
         start('bt', [str(Path(get_package_prefix('bt_orchestrator'))/'lib/bt_orchestrator/bt_orchestrator'), '--ros-args',
             '--params-file', str(args.repo/'src/bt_orchestrator/config/bt_params.yaml'),
@@ -495,8 +741,8 @@ def run(args):
         while time.monotonic() < until:
             if model.collision:
                 raise RuntimeError('independent padded chassis collision')
-            if stop.is_set():
-                raise RuntimeError('executor stopped')
+            if stop.is_set() or not devices.is_alive():
+                raise RuntimeError('executor or source process stopped')
             failed = [(name, proc.poll()) for name, proc in processes if proc.poll() is not None]
             if failed:
                 raise RuntimeError('runtime process failure '+str(failed))
@@ -526,7 +772,7 @@ def run(args):
         result['action_active_at_terminal'] = observer.action_active
         result['command_values_at_terminal'] = observer.command_values
         if args.save_partial:
-            client = observer.create_client(Trigger, '/robot_map_manager/save_map')
+            client = save_client
             if not client.wait_for_service(timeout_sec=5.):
                 raise TimeoutError('actual Map Manager save service')
             future = client.call_async(Trigger.Request())
@@ -540,6 +786,13 @@ def run(args):
                  5., 'Explorer exact saved-map checkpoint result')
             result['checkpoint_after_save'] = observer.metric().get('persistence')
         grid = observer.map
+        # Passive original messages for offline diagnosis. These are the last
+        # independently received samples, not a simultaneous failure snapshot
+        # and never an input to the product or an observation receipt.
+        for label, message in (('raw_map', grid), ('costmap', observer.costmap),
+                               ('scan', observer.last_scan)):
+            if message is not None:
+                (out/('final_'+label+'.cdr')).write_bytes(serialize_message(message))
         actual_map = np.array(grid.data).reshape(grid.info.height, grid.info.width)
         np.save(out/'final_slam_map.npy', actual_map)
         (out/'final_slam_map_geometry.json').write_text(json.dumps({
@@ -556,14 +809,13 @@ def run(args):
         oracle = model.map_oracle(actual_map, grid.info.resolution,
                                  (grid.info.origin.position.x, grid.info.origin.position.y))
         owners = observer.owners()
+        plant_samples = [json.loads(line) for line in (out/'plant.jsonl').read_text().splitlines()]
         result.update(metric=observer.metric(), manager=observer.manager[-1], map_oracle=oracle, tf_owners=owners,
                       travel_m=model.travel, minimum_padded_clearance_m=model.minimum_clearance,
-                      rear_cleared=model.rear_cleared, plant_tick_gaps=sensors.tick_gaps,
+                      rear_cleared=model.rear_cleared, plant_tick_gaps=[b[0]-a[0] for a,b in zip(plant_samples,plant_samples[1:]) if b[0]-a[0] > .03],
                       map_growth=bool(len(observer.map.data) != len(initial_cells) or
                           not np.array_equal(np.array(observer.map.data), initial_cells)), simulated_register_writes=bus.writes)
         if case.get('inject'):
-            sensors.trace.flush()
-            plant_samples = [json.loads(line) for line in (out/'plant.jsonl').read_text().splitlines()]
             def standstill_after(at):
                 return next((row[0]-at for row in plant_samples
                              if row[0] >= at and max(abs(row[4]), abs(row[5])) < .005), None)
@@ -631,12 +883,19 @@ def run(args):
             node.destroy_node()
         if 'observer' in locals():
             observer.events.close()
-        if 'sensors' in locals():
-            sensors.trace.close()
+        if 'devices' in locals():
+            device_halt.set()
+            devices.join(5.)
+            if devices.is_alive():
+                devices.terminate(); devices.join(2.)
+                if devices.is_alive():
+                    devices.kill(); devices.join()
+            result['device_process_exitcode'] = devices.exitcode
         if rclpy.ok():
             rclpy.shutdown()
         for stream in streams:
             stream.close()
+        os.sched_setaffinity(0, original_affinity)
         (out/'result.json').write_text(json.dumps(result, indent=2, allow_nan=False)+'\n')
     print(json.dumps({k: result[k] for k in ('case', 'passed', 'error', 'travel_m', 'map_oracle') if k in result}, allow_nan=False), flush=True)
     return 0 if result['passed'] else 1
@@ -650,6 +909,7 @@ if __name__ == '__main__':
     parser.add_argument('--tf-probe', type=Path, required=True)
     parser.add_argument('--manifest', type=Path,
                         default=Path(__file__).with_name('ap06_product_scenarios.json'))
+    parser.add_argument('--capture-geometry',action='store_true',help='diagnostic actual proof snapshots; no manifest acceptance')
     parser.add_argument('--profile-selection', action='store_true', help='diagnostic overhead; not a qualification run')
     parser.add_argument('--ideal-lidar', action='store_true', help='separate ideal sensor diagnostic, not native-mask qualification')
     parser.add_argument('--diagnostic-beams', type=int, choices=(720, 2160),

@@ -265,14 +265,14 @@ def run(case,args):
             return ('success' if abs(achieved)>=abs(angle) else 'timeout'),achieved
         n._rotate_in_place=rotate;n._robot_pose=lambda:tuple(world.pose);n.get_logger=world.get_logger
         world.moving=True
-        alignment=n._prealign_to_goal(*route_departure_point(route,tuple(world.pose),.02),tuple(world.pose))
-        assert alignment[0] in ('success','skipped'),alignment
+        alignment=n._metric_align_nav_departure(route,tuple(world.pose),lambda:False)
+        assert alignment[0] in ('success','skipped','controller_owned'),alignment
         result['alignment']=alignment
         if world.trace:np.savetxt(out/'alignment.csv',np.asarray(world.trace),delimiter=',')
         world.trace=[]
-        expected=np.asarray(rpp_trajectory(route,tuple(world.pose),.02,.02,prealign_to_first_leg=True))
+        expected=np.asarray(rpp_trajectory(route,tuple(world.pose),.02,.02,prealign_to_first_leg=True,external_prealignment=False))
         # RPP switches to goal yaw once inside the actual 0.15-m disk. The
-        # independent product goal proof covers that entire disk separately.
+        # independent product proof checks the qualified actual stop and turn.
         delta=math.atan2(math.sin(yaw-expected[-1,2]),math.cos(yaw-expected[-1,2]))
         expected=np.vstack((expected,[(expected[-1,0],expected[-1,1],expected[-1,2]+a)
             for a in np.linspace(0.,delta,max(2,math.ceil(abs(delta)/.01)))]))
