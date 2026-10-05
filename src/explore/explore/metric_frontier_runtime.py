@@ -1873,6 +1873,7 @@ class MetricFrontierRuntime:
         started = time.monotonic()
         attempts = failures = 0
         pending = None
+        task_motion_dispatched = False
         map_join_retry = False
         task_started = None
         scan_pending = self._initial_scan_enabled
@@ -2142,6 +2143,7 @@ class MetricFrontierRuntime:
                     time.sleep(min(.25,self._replan_period_s))
                     continue
                 pending = candidates[0]
+                task_motion_dispatched = False
                 completion_window.observe(now=time.monotonic(), scan_stamp=0,
                     context=inputs[1].context, clear=False)
                 baseline = self._metric_observation_baseline(inputs, pending)
@@ -2254,6 +2256,7 @@ class MetricFrontierRuntime:
                     self._wohnungserkundung_active_child=pending
                 try:
                     child_dispatched = True
+                    task_motion_dispatched = True
                     status=self._navigate_to(pending.x,pending.y,
                         max(.001,self._goal_timeout_s-(time.monotonic()-task_started)),
                         stop_requested=stop,goal_yaw=pending.yaw)
@@ -2384,7 +2387,7 @@ class MetricFrontierRuntime:
                 return finish('canceled', 'user_canceled')
             outcome=('observed' if gained else 'arrival_without_observation') if reached else (
                 'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
-            proposal_rejected = (not child_dispatched and status == 'planning_failed'
+            proposal_rejected = (not task_motion_dispatched and status == 'planning_failed'
                                  and hard == 'route_invalidated')
             if proposal_rejected:
                 outcome = 'proposal_rejected'

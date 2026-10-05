@@ -442,7 +442,11 @@ class StartEgressEvidence:
             valid=bool(np.all(inside[r,c]&(~bad|(occupancy[r,c]<0))))
             reason='start_egress_obstacle_or_scope'
             if valid:
-                original=bad & (occupancy[r,c]<0) & inside[r,c]
+                # Initial self-body cells are virtual placement evidence,
+                # not measured free raster. Retain their original UNKNOWN
+                # state in the one-shot escape inventory as well: withdrawing
+                # the stationary body mask must not discard those fixed facts.
+                original=(occupancy[r,c]<0) & inside[r,c]
                 unknown[r[original],c[original]]=True
         result=cls(grid,pose,bounds,unknown,(),bool(valid),'' if valid else reason)
         result.scope_mask=inside.copy()

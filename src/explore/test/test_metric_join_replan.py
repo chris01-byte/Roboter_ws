@@ -7,11 +7,12 @@ from test_metric_progress import parent_fixture
 from test_metric_map_lifecycle import status
 
 
-@pytest.mark.parametrize('fault',['none','epoch','retry_budget','deferred_scan'])
+@pytest.mark.parametrize('fault',['none','epoch','retry_budget','deferred_scan','planning_after_join'])
 def test_raw_first_drive_stop_replans_same_task_without_reset(monkeypatch,fault):
     n,g,clock,parent,terminal=parent_fixture(monkeypatch,'open')
     n._max_frontier_goals=2 if fault!='retry_budget' else 5
     if fault=='retry_budget':n._metric_retry_limit=1
+    if fault=='planning_after_join':n._max_failed_goals=1
     if fault == 'deferred_scan':
         n._initial_scan_enabled = True; n._metric_start_strategy = 'adaptive'
         g = copy.deepcopy(g)
@@ -23,7 +24,10 @@ def test_raw_first_drive_stop_replans_same_task_without_reset(monkeypatch,fault)
     def planner(target,*_):
         planned.append(target)
         path=Path();path.header.frame_id='map';path.header.stamp.sec=100
-        for x,y in target.route:
+        route = target.route
+        if fault == 'planning_after_join' and len(planned) > 1:
+            route = (target.route[0], (3., .05), (target.x, target.y))
+        for x,y in route:
             p=PoseStamped();p.pose.position.x=x;p.pose.position.y=y;p.pose.orientation.w=1.
             path.poses.append(p)
         return path,None
@@ -60,6 +64,15 @@ def test_raw_first_drive_stop_replans_same_task_without_reset(monkeypatch,fault)
         assert n._metric_status['chain'][0]['decision']=='map_join_revalidate'
         assert n._metric_status['chain'][1]['decision']=='observed'
         assert n._metric_checkpoint['policy']['tasks'][planned[0].task_id]['tries']==2
+    elif fault=='planning_after_join':
+        assert stops == [True] and len(planned) == 2
+        assert planned[0].task_id == planned[1].task_id
+        assert n._metric_status['reason'] == 'failure_budget_exhausted'
+        assert n._metric_status['failures'] == 1
+        assert n._metric_status['chain'][-1]['decision'] == 'route_invalidated'
+        task = n._metric_checkpoint['policy']['tasks'][planned[0].task_id]
+        assert task['tries'] == 2 and task['failures'] == 1
+        assert not task['completed']
     elif fault=='epoch':
         assert len(planned)==1 and n._metric_status['reason']=='map_epoch_changed'
         assert n._metric_status['observations']==0

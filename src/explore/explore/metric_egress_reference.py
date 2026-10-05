@@ -152,16 +152,11 @@ class ReferencedStartEgress:
         if not self.valid:
             self.unknown = np.zeros_like(inside)
             return
-        # A compatible integer lattice is the same fixed global map frame.
-        # map->odom refines current localization; it does not move its cells.
-        # Keep the physical odometry relation separately for departure history.
-        neutral = (0.,0.,0.)
-        map_axes = grid_points(((0.,0.),(1.,0.),(0.,1.)),grid,neutral,self.fixed.grid,neutral)
-        map_offset = np.rint(map_axes[0])
-        stable_map = (np.max(np.abs(map_axes[0]-map_offset)) <= 1e-9
-            and np.max(np.abs(map_axes[1:]-map_axes[0]-np.eye(2))) <= 1e-9)
-        source_reference = neutral if stable_map else self.current_reference
-        target_reference = neutral if stable_map else self.reference
+        # Raster deltas stay in the stable map frame; the first-body inventory
+        # is physical odometry space. A compatible lattice does not cancel its
+        # actual current map->odom relation.
+        source_reference = self.current_reference
+        target_reference = self.reference
         o = grid.info.origin
         key = (grid.header.frame_id, grid.info.resolution, occupancy.shape,
             o.position.x, o.position.y, o.orientation.z, o.orientation.w,
@@ -197,7 +192,9 @@ class ReferencedStartEgress:
         offset = np.rint(axes[0]).astype(int)
         aligned = (np.max(np.abs(axes[0]-offset)) <= 1e-9
             and np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) <= 1e-9)
-        if aligned and self._whole_cells:
+        previous_reference = getattr(self, '_previous_reference', self.reference)
+        if (aligned and self._whole_cells and self.current_reference == self.reference
+                and previous_reference == self.reference):
             # Exact physical lattice: integer index translation, not nearest
             # neighbour resampling. Width/origin growth does not move cells.
             dc, dr = offset
@@ -218,6 +215,7 @@ class ReferencedStartEgress:
             self.unknown = projected
             self._previous_grid = copy.deepcopy(grid)
             self._previous_occupancy = occupancy.copy()
+            self._previous_reference = self.current_reference
             self.generation += 1
             self._projection_key = (*key[:-1], remaining.tobytes())
             return
@@ -272,6 +270,7 @@ class ReferencedStartEgress:
         self.unknown = projected
         self._previous_grid = copy.deepcopy(grid)
         self._previous_occupancy = occupancy.copy()
+        self._previous_reference = self.current_reference
         self.generation += 1
         self._projection_key = (*key[:-1], retained.tobytes())
 
