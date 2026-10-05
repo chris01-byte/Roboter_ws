@@ -1504,6 +1504,11 @@ class MetricFrontierRuntime:
             for yaw in (facing, facing+math.pi/2, facing-math.pi/2):
                 if time.monotonic() >= until:
                     return None
+                # A rejected full route cannot become admissible through ray
+                # utility. Avoid expensive sight work for those geometries.
+                route = self._metric_route(inputs, goal, yaw)
+                if route is None:
+                    continue
                 view = self._metric_observation_view()
                 visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw), view)
                 points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
@@ -1512,9 +1517,6 @@ class MetricFrontierRuntime:
                     continue
                 if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local,
                                        observation_points=points):
-                    continue
-                route = self._metric_route(inputs, goal, yaw)
-                if route is None:
                     continue
                 length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
                 cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error

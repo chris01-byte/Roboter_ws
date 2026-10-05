@@ -43,10 +43,11 @@ def test_recorded_exhausted_a51_history_stays_exhausted():
     assert before == [(key, a.tries, a.failures, a.completed) for key, a in policy.attempts.items()]
 
 
-def test_actual_native_side_arrival_and_departure_paths_remain_proved():
+@pytest.mark.parametrize('name', ['ap06_a51_selection', 'ap06_a52_selection'])
+def test_actual_native_side_arrival_and_departure_paths_remain_proved(name):
     from explore.metric_frontier import MetricCandidate
     from test_metric_departure import path
-    node, inputs, metadata = fixture('ap06_a51_selection')
+    node, inputs, metadata = fixture(name)
     records = metadata['plans']; first = records[0]
     target = MetricCandidate('component', *first['goal'], tuple(first['goal'][:2]),
         (), 1., 0., inputs[1].fingerprint, 1)
