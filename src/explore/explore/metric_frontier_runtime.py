@@ -584,6 +584,7 @@ class MetricFrontierRuntime:
         safe[rr[~allowed],cc[~allowed]]=False
         inputs = MetricInputs((grid, correlation, pose, known, safe, costmap, cost_known),
                               self._metric_input_reference)
+        self._metric_prepare_egress(inputs)
         # Processing/DDS delay consumes the original freshness window too.
         completed_ros = self.get_clock().now().nanoseconds
         completed = time.monotonic()
@@ -601,7 +602,6 @@ class MetricFrontierRuntime:
         if (self._metric_self_body_enabled
                 and not 0 <= completed-scan['received_at'] <= self._door_lidar_scan_timeout):
             raise ValueError('self_body_scan_stale_after_processing')
-        self._metric_prepare_egress(inputs)
         return inputs
 
     def _metric_selection_memo(self, inputs):
@@ -654,7 +654,8 @@ class MetricFrontierRuntime:
                     for e, (g, _) in zip(existing, grids)))
         if getattr(self, '_metric_egress_expired', False):
             return
-        if ((referenced and reference is None) or (not compatible and (getattr(self, '_metric_body_anchor_expired', False)
+        if ((referenced and reference is None) or (existing is not None and not referenced and reference is not None)
+                or (not compatible and (getattr(self, '_metric_body_anchor_expired', False)
                 or (getattr(self, '_metric_egress', None) is not None
                     and identity != self._metric_egress_identity)))):
             self._metric_egress_expired = True

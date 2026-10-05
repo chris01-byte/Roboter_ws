@@ -8,7 +8,7 @@ import copy
 import math
 import numpy as np
 
-from .metric_frontier import StartEgressEvidence, _cell_intersections, footprint_cells
+from .metric_frontier import StartEgressEvidence, _cell_intersections
 
 
 def transform_poses(poses, source, target):
@@ -69,6 +69,7 @@ class ReferencedStartEgress:
         self.unknown = evidence.unknown.copy()
         self.scope_mask = evidence.scope_mask.copy()
         self.generation = 0
+        self._projection_key = None
 
     @property
     def valid(self):
@@ -107,11 +108,41 @@ class ReferencedStartEgress:
         return self.fixed.departed_distance
 
     def refresh(self, grid, occupancy, inside, reference):
-        if not self.valid:
-            return
         self.grid, self.current_reference = grid, tuple(reference)
         self.scope_mask = inside.copy()
+        if not self.valid:
+            self.unknown = np.zeros_like(inside)
+            return
+        o = grid.info.origin
+        key = (grid.header.frame_id, grid.info.resolution, occupancy.shape,
+            o.position.x, o.position.y, o.orientation.z, o.orientation.w,
+            tuple(reference), occupancy.tobytes(), inside.tobytes(), self.fixed.unknown.tobytes())
+        if key == self._projection_key:
+            return  # geometry only; pose/health/monotone commit are still checked
         retained = self.fixed.unknown
+        axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid, self.current_reference,
+                           self.fixed.grid, self.reference)
+        offset = np.rint(axes[0]).astype(int)
+        aligned = (np.max(np.abs(axes[0]-offset)) <= 1e-9
+            and np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) <= 1e-9)
+        if aligned:
+            # Exact physical lattice: integer index translation, not nearest
+            # neighbour resampling. Width/origin growth does not move cells.
+            dc, dr = offset
+            r0, c0 = max(0,-dr), max(0,-dc)
+            r1, c1 = min(occupancy.shape[0],retained.shape[0]-dr), min(occupancy.shape[1],retained.shape[1]-dc)
+            projected = np.zeros_like(inside)
+            remaining = np.zeros_like(retained)
+            if r1 > r0 and c1 > c0:
+                source = (slice(r0+dr,r1+dr),slice(c0+dc,c1+dc))
+                target = (slice(r0,r1),slice(c0,c1))
+                remaining[source] = retained[source] & (occupancy[target] < 0)
+                projected[target] = remaining[source] & inside[target]
+            self.fixed.unknown = remaining
+            self.unknown = projected
+            self.generation += 1
+            self._projection_key = (*key[:-1], remaining.tobytes())
+            return
         # Any newly observed part retires the entire old cell. This is a
         # conservative loss of authority, never a fresh unknown-space claim.
         for row, col in zip(*np.nonzero(retained)):
@@ -140,6 +171,7 @@ class ReferencedStartEgress:
                         projected[row, col] = True
         self.unknown = projected
         self.generation += 1
+        self._projection_key = (*key[:-1], retained.tobytes())
 
     def check_trajectory(self, poses, occupancy, allowed, world_to_grid, commit=False):
         if not self.valid:
@@ -153,13 +185,12 @@ class ReferencedStartEgress:
             return False, 'start_egress_pose_invalid'
         # Fresh complete contour on both actual rasters. Only the exact
         # projection above can excuse a current unknown cell, never occupancy.
-        for pose in poses:
-            r, c = footprint_cells(*pose, self.grid, world_to_grid, self.bounds)
-            if np.any((r < 0) | (r >= allowed.shape[0]) | (c < 0) | (c >= allowed.shape[1])):
-                return False, 'start_egress_outside_grid'
-            permitted = self.scope_mask[r, c] & (allowed[r, c] | (self.unknown[r, c] & (occupancy[r, c] < 0)))
-            if not np.all(permitted):
-                return False, 'start_egress_new_unknown_or_obstacle'
+        fresh = StartEgressEvidence(self.grid, self.pose, self.bounds,
+            np.zeros_like(self.unknown), (), True, scope_mask=self.scope_mask)
+        valid, reason = fresh.check_trajectory(poses, occupancy,
+            allowed | (self.unknown & (occupancy < 0)), world_to_grid)
+        if not valid:
+            return False, reason
         # Areas/distances retain their original keys, polygon, reserves and
         # committed values. A SLAM correction is not physical reverse travel.
         fixed_poses = transform_poses(poses, self.current_reference, self.reference)

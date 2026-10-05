@@ -146,3 +146,32 @@ def test_another_input_read_cannot_replace_the_pose_correlated_reference():
     node._metric_prepare_egress(frozen)
     assert all(e.valid for e in node._metric_egress)
     assert node._metric_egress[0].current_reference == (0.,0.,0.)
+
+
+def test_reference_projection_work_does_not_extend_original_source_freshness(monkeypatch):
+    import explore.metric_frontier_runtime as module
+    from test_metric_map_lifecycle import runtime
+    node, _ = runtime(monkeypatch)
+    clock = [10.02]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: clock[0])
+    prepare = node._metric_prepare_egress
+    def delayed(inputs):
+        prepare(inputs)
+        clock[0] = 15.01
+    node._metric_prepare_egress = delayed
+    with pytest.raises(ValueError, match='stale_after_processing'):
+        node._metric_inputs()
+
+
+def test_invalid_departure_history_stays_invalid_when_raster_later_grows():
+    node, inputs = referenced_fixture()
+    inputs[2] = (.15,.05,0.)
+    node._metric_prepare_egress(inputs)
+    inputs[2] = (.05,.05,0.)
+    node._metric_prepare_egress(inputs)
+    assert not node._metric_egress[0].valid
+    updated = shift(node, inputs, .002, travel=0., growth=True)
+    assert not node._metric_egress[0].valid
+    assert node._metric_egress[0].unknown.shape == updated[3].shape
+    assert not node._metric_egress[0].unknown.any()
+    assert np.array_equal(node._metric_seed_mask(updated), updated[4])
