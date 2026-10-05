@@ -71,6 +71,7 @@ jobs:
             src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
             src/explore/test/test_metric_frontier_candidates.py \
             src/explore/test/test_metric_body_reference_tf.py \
+            src/explore/test/test_metric_egress_reference.py \
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \

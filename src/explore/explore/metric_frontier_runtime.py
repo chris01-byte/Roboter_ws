@@ -35,11 +35,20 @@ from .exploration_persistence import (ExplorationStateRepository, ExplorationPer
                                      binding_from_map_manager_status)
 from pathlib import Path as FilePath
 from .metric_checkpoint import validate_checkpoint, policy_state, restore_policy
+from .metric_egress_reference import ReferencedStartEgress
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_route_clear, self_body_unknown_mask,
     lookahead_point, StartEgressEvidence, rpp_trajectory, route_arrival_yaw,
     route_departure_point)
+
+
+class MetricInputs(tuple):
+    """Seven existing inputs plus their immutable common-time TF relation."""
+    def __new__(cls, values, map_odom_reference):
+        result = super().__new__(cls, values)
+        result.map_odom_reference = map_odom_reference
+        return result
 
 
 class MetricFrontierRuntime:
@@ -239,7 +248,11 @@ class MetricFrontierRuntime:
             return
         if raw and getattr(self, '_metric_body_anchor', None) is not None:
             self._metric_body_anchor_expired = True
-        if getattr(self, '_metric_egress', None) is not None:
+        compatible = ((previous.header.frame_id, previous.info.resolution)
+                      == (current.header.frame_id, current.info.resolution))
+        referenced = all(isinstance(e, ReferencedStartEgress)
+                         for e in (getattr(self, '_metric_egress', None) or ()))
+        if getattr(self, '_metric_egress', None) is not None and not (compatible and referenced):
             self._metric_egress_expired = True
             for evidence in self._metric_egress:
                 evidence.valid = False
@@ -410,7 +423,7 @@ class MetricFrontierRuntime:
                    0 <= self._world_to_grid(v.x,v.y,grid.info)[1] < grid.info.height
                    for v in self._metric_scope.vertices)
 
-    def _metric_body_reference(self):
+    def _metric_body_reference(self, stamp=None):
         # Bind first-body space to the actual mapping/odometry relation.
         # Normal odometry travel does not move the mask; a changed reference
         # cannot reuse the old start proof. No TF is created or modified.
@@ -422,7 +435,7 @@ class MetricFrontierRuntime:
         # endpoint and falsely rejects a healthy mapping graph. No sample is
         # restamped, and missing coverage/future-only data still fail in TF2.
         transform = self._tf_buffer.lookup_transform(
-            self._global_frame, 'odom', self.get_clock().now())
+            self._global_frame, 'odom', self.get_clock().now() if stamp is None else stamp)
         age=(self.get_clock().now().nanoseconds-
              (transform.header.stamp.sec*10**9+transform.header.stamp.nanosec))/1e9
         t,q=transform.transform.translation,transform.transform.rotation
@@ -431,6 +444,20 @@ class MetricFrontierRuntime:
                 or abs(q.x)+abs(q.y)>1e-6 or abs(sum(v*v for v in values[3:])-1)>1e-6):
             raise ValueError('self_body_anchor_reference_invalid')
         return t.x,t.y,math.atan2(2*q.w*q.z,1-2*q.z*q.z)
+
+    def _metric_pose_and_reference(self):
+        """Pose and map/odom correction at one actual common TF timestamp."""
+        t = self._tf_buffer.lookup_transform(
+            self._global_frame, self._robot_base_frame, rclpy.time.Time())
+        stamp = rclpy.time.Time.from_msg(t.header.stamp)
+        reference = self._metric_body_reference(stamp)
+        q = t.transform.rotation
+        pose = (t.transform.translation.x, t.transform.translation.y,
+                math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z)))
+        age = (self.get_clock().now().nanoseconds-stamp.nanoseconds)/1e9
+        if stamp.nanoseconds <= 0 or not all(math.isfinite(v) for v in pose):
+            raise ValueError('self_body_anchor_reference_invalid')
+        return pose, age, reference
 
     def _metric_inputs(self, active=False):
         # Serialize map/status/costmap selection and evidence mutation. A DDS
@@ -472,6 +499,9 @@ class MetricFrontierRuntime:
             correlation, **self._metric_grid_values(grid), max_cells=self._wohnungserkundung_evidence_max_cells)
         pose_checked = time.monotonic()
         pose, age = self._robot_pose_sample()
+        self._metric_input_reference = None
+        if getattr(self, '_metric_start_egress_enabled', False) and hasattr(self, '_tf_buffer'):
+            pose, age, self._metric_input_reference = self._metric_pose_and_reference()
         if pose is None or age is None or not 0 <= age <= self._door_pose_timeout:
             raise ValueError('pose_missing_stale_or_invalid')
         costmap, at = self._global_costmap, self._global_costmap_received_at
@@ -500,7 +530,8 @@ class MetricFrontierRuntime:
             body = self_body_unknown_mask(grid, occupancy, pose, mount)
             identity = (c.context, grid.info.width, grid.info.height,
                         grid.info.resolution, tuple(origin), yaw)
-            reference = self._metric_body_reference()
+            reference = (self._metric_input_reference if self._metric_input_reference is not None
+                         else self._metric_body_reference())
             if self._metric_body_anchor is None:
                 self._metric_body_anchor = (source.fingerprint, pose)
                 self._metric_body_grid_identity = identity
@@ -551,7 +582,8 @@ class MetricFrontierRuntime:
         allowed=np.zeros(valid.shape,dtype=bool)
         allowed[valid]=(costs[cy[valid],cx[valid]]>=0)&(costs[cy[valid],cx[valid]]<=self._frontier_goal_max_cost)
         safe[rr[~allowed],cc[~allowed]]=False
-        inputs = grid, correlation, pose, known, safe, costmap, cost_known
+        inputs = MetricInputs((grid, correlation, pose, known, safe, costmap, cost_known),
+                              self._metric_input_reference)
         # Processing/DDS delay consumes the original freshness window too.
         completed_ros = self.get_clock().now().nanoseconds
         completed = time.monotonic()
@@ -591,9 +623,11 @@ class MetricFrontierRuntime:
             grids.append((self._metric_grid_geometry(grid), content, allowed.tobytes()))
         evidence = tuple((e.valid, e.reason, e.pose, e.bounds, e.initial_polygon,
                           e.unknown.tobytes(), e.scope_mask.tobytes(),
+                          getattr(e, 'current_reference', None), getattr(e, 'generation', 0),
                           tuple(sorted(e.remaining_area.items())), tuple(sorted(e.departed_distance.items())))
                          for e in (getattr(self, '_metric_egress', None) or ()))
         key = (tuple(inputs[2]), tuple(grids), inputs[4].tobytes(), evidence,
+               getattr(inputs, 'map_odom_reference', getattr(self, '_metric_input_reference', None)),
                getattr(self, '_metric_body_anchor_expired', False),
                getattr(self, '_metric_egress_expired', False),
                getattr(self, '_metric_egress_identity', None))
@@ -608,11 +642,21 @@ class MetricFrontierRuntime:
         grid, correlation, pose, known, _, costmap, cost_known = inputs
         grids = ((grid, known), (costmap, cost_known))
         identity = (correlation.context, tuple(self._metric_grid_geometry(g) for g,_ in grids))
+        reference = getattr(inputs, 'map_odom_reference', getattr(self, '_metric_input_reference', None))
+        if reference is None:
+            reference = self._metric_body_reference()
+        existing = getattr(self, '_metric_egress', None)
+        referenced = existing is not None and all(isinstance(e, ReferencedStartEgress) for e in existing)
+        compatible = (referenced and reference is not None
+            and correlation.context == self._metric_egress_identity[0]
+            and all((g.header.frame_id, g.info.resolution) ==
+                    (e.fixed.grid.header.frame_id, e.fixed.grid.info.resolution)
+                    for e, (g, _) in zip(existing, grids)))
         if getattr(self, '_metric_egress_expired', False):
             return
-        if (getattr(self, '_metric_body_anchor_expired', False)
+        if ((referenced and reference is None) or (not compatible and (getattr(self, '_metric_body_anchor_expired', False)
                 or (getattr(self, '_metric_egress', None) is not None
-                    and identity != self._metric_egress_identity)):
+                    and identity != self._metric_egress_identity)))):
             self._metric_egress_expired = True
             for evidence in self._metric_egress or ():
                 evidence.valid = False
@@ -626,20 +670,38 @@ class MetricFrontierRuntime:
                     width=g.info.width,height=g.info.height,resolution_m=g.info.resolution,
                     origin_x_m=o[0],origin_y_m=o[1],origin_yaw_rad=math.atan2(
                         2*o[6]*o[5],1-2*o[5]**2),maximum_cells=self._wohnungserkundung_evidence_max_cells)
-                evidence.append(StartEgressEvidence.capture(g,
+                captured = StartEgressEvidence.capture(g,
                     np.asarray(g.data).reshape(mask.shape),mask,inside,pose,
-                    self._metric_bounds,self._world_to_grid))
+                    self._metric_bounds,self._world_to_grid)
+                evidence.append(ReferencedStartEgress(captured, reference)
+                                if reference is not None else captured)
             self._metric_egress=tuple(evidence)
             self._metric_egress_identity=identity
         for evidence,(g,mask) in zip(self._metric_egress,grids):
             occupancy=np.asarray(g.data).reshape(mask.shape)
             # Observed cells never regain their original unknown exemption.
-            evidence.unknown &= occupancy < 0
+            if isinstance(evidence, ReferencedStartEgress):
+                o=g.info.origin; q=o.orientation
+                inside=rasterize_scope(self._metric_scope,context=correlation.context,
+                    width=g.info.width,height=g.info.height,resolution_m=g.info.resolution,
+                    origin_x_m=o.position.x,origin_y_m=o.position.y,
+                    origin_yaw_rad=math.atan2(2*q.w*q.z,1-2*q.z*q.z),
+                    maximum_cells=self._wohnungserkundung_evidence_max_cells)
+                evidence.refresh(g, occupancy, inside, reference)
+            else:
+                evidence.unknown &= occupancy < 0
             if not self._metric_egress_expired:
                 valid,reason=evidence.check_trajectory([pose],occupancy,mask,
                     self._world_to_grid,commit=True)
                 if not valid:
                     evidence.valid=False;evidence.reason=reason
+        if reference is not None and hasattr(self, '_metric_status'):
+            self._metric_status['start_reference'] = dict(
+                current=list(reference), initial=list(self._metric_egress[0].reference),
+                retained=[int(e.fixed.unknown.sum()) for e in self._metric_egress],
+                projected=[int(e.unknown.sum()) for e in self._metric_egress],
+                valid=[e.valid for e in self._metric_egress],
+                reasons=[e.reason for e in self._metric_egress])
         if memo is not None:
             memo['prepared'] = self._metric_selection_memo(inputs)[1]
 

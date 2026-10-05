@@ -53,3 +53,21 @@ def test_current_nonplanar_relation_remains_rejected(anchor):
     relation(buffer, 100_200_000_000, roll_component=.1)
     with pytest.raises(ValueError, match='self_body_anchor_reference_invalid'):
         MetricFrontierRuntime._metric_body_reference(runtime)
+
+
+def test_pose_and_reference_use_same_actual_common_tf_time(anchor):
+    runtime, buffer = anchor
+    relation(buffer, 100_000_000_000, x=.01)
+    relation(buffer, 100_200_000_000, x=.03)
+    base = TransformStamped()
+    base.header.stamp = Time(nanoseconds=100_050_000_000).to_msg()
+    base.header.frame_id, base.child_frame_id = 'odom', 'base_link'
+    base.transform.translation.x = .5
+    base.transform.rotation.w = 1.
+    buffer.set_transform(base, 'actual_ekf')
+    runtime._robot_base_frame = 'base_link'
+    runtime._metric_body_reference = lambda stamp: MetricFrontierRuntime._metric_body_reference(runtime, stamp)
+    pose, age, reference = MetricFrontierRuntime._metric_pose_and_reference(runtime)
+    assert pose == pytest.approx((.515,0.,0.))
+    assert reference == pytest.approx((.015,0.,0.))
+    assert age == pytest.approx(.05)
