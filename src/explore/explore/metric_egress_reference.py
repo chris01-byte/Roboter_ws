@@ -275,7 +275,7 @@ class ReferencedStartEgress:
         self.generation += 1
         self._projection_key = (*key[:-1], retained.tobytes())
 
-    def check_trajectory(self, poses, occupancy, allowed, world_to_grid, commit=False):
+    def check_trajectory(self, poses, occupancy, allowed, world_to_grid, commit=False, *, motion_pose=None):
         if not self.valid:
             return False, self.reason
         if occupancy.shape != self.unknown.shape or allowed.shape != self.unknown.shape:
@@ -296,6 +296,12 @@ class ReferencedStartEgress:
         # Areas/distances retain their original keys, polygon, reserves and
         # committed values. A SLAM correction is not physical reverse travel.
         fixed_poses = transform_poses(poses, self.current_reference, self.reference)
+        if motion_pose is not None:
+            # Qualified raw encoder pose is the measured physical start. Keep
+            # the proved relative controller curve; EKF prediction corrections
+            # at rest must not be recorded as physical reverse motion.
+            physical = transform_poses([motion_pose],(0.,0.,0.),self.reference)[0]
+            fixed_poses = transform_poses(poses,poses[0],physical)
         virtual = np.where(self.fixed.unknown, -1, 0)
         return self.fixed.check_trajectory(fixed_poses, virtual, ~self.fixed.unknown,
                                           world_to_grid, commit=commit)

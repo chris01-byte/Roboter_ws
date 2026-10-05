@@ -193,3 +193,81 @@ def test_reachable_rpp_stopping_pose_must_be_free_before_ideal_target():
     assert node._metric_waypoints_clear(inputs,route,0.) is not None
     assert node._metric_waypoints_clear(inputs,route,math.pi/2) is None
     assert node._metric_last_route_rejection == 'goal_stop_rotation_invalid'
+
+
+def test_native_terminal_raster_kink_cannot_invent_unvisited_goal_rotation():
+    node, inputs = door_inputs(.8, .03)
+    grid = inputs[0]; rr,cc = np.indices(inputs[3].shape)
+    y = -2+(rr+.5)*grid.info.resolution
+    data = np.where(abs(y)>=.4,100,0).astype(np.int8)
+    data[[0,-1],:]=100;data[:,[0,-1]]=100
+    grid.data=data.ravel().tolist();inputs[3]=inputs[4]=inputs[6]=data==0
+    inputs[2] = (0.,0.,0.)
+    # Actual native terminal pattern recorded in mission-c-v20, translated
+    # inside this component corridor. RPP stops before its terminal kink.
+    route = ((0.,0.),(.85,-.00593),(.88,0.),(.91,.03),(.92330459,.02987770))
+    arrival = motion.route_arrival_yaw(route,0.,grid.info.resolution)
+    assert arrival>.6
+    assert not motion.footprint_clear(*route[-1],arrival,grid,inputs[3],node._world_to_grid,
+        node._grid_to_world,node._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+    actual = motion.rpp_trajectory(route,inputs[2],grid.info.resolution,.02,
+        node._metric_bounds,prealign_to_first_leg=True,external_prealignment=False)
+    assert math.dist(actual[-1][:2],route[-1]) <= .15
+    assert abs(actual[-1][2])<.2
+    assert node._metric_waypoints_clear(inputs,route,0.) is not None
+    assert node._metric_waypoints_clear(inputs,route,math.pi/2) is None
+
+
+def test_waiting_native_plan_keeps_goal_and_defers_route_authority_to_actual_plan():
+    node, inputs = door_inputs()
+    grid = inputs[0]; rr,cc = np.indices(inputs[3].shape)
+    x = -2+(cc+.5)*grid.info.resolution; y = -2+(rr+.5)*grid.info.resolution
+    data = np.zeros(inputs[3].shape,np.int8)
+    data[(abs(x)<.1)&(abs(y)<.5)] = 100
+    data[[0,-1],:]=100;data[:,[0,-1]]=100
+    grid.data=data.ravel().tolist();inputs[3]=inputs[4]=inputs[6]=data==0
+    route = ((-.9,0.),(-.9,-1.),(.9,-1.),(.9,0.))
+    target = MetricCandidate('proved',.9,0.,0.,(.9,0.),route,4.,1.,'a'*64,1,False)
+    node._metric_nav_path = None
+    assert node._metric_route(inputs,(.9,0.),0.) is None
+    assert node._metric_navigation_geometry_ready(inputs,target)
+    native = Path();native.header.frame_id='map';native.header.stamp.sec=1
+    for x,y in route:
+        point=PoseStamped();point.pose.position.x=x;point.pose.position.y=y
+        point.pose.orientation.w=1.;native.poses.append(point)
+    node._metric_plan_after_ns=0;node._metric_nav_path=native
+    assert node._metric_navigation_geometry_ready(inputs,target)
+    node._metric_nav_path=None
+    col,row = node._world_to_grid(-.9,-.7,grid.info)
+    data[row,col] = 100;grid.data=data.ravel().tolist()
+    inputs[3]=inputs[4]=inputs[6]=data==0
+    # The old route became unsafe while no child exists. Actual Nav2 may
+    # still find another route; the fresh goal/connectivity remain valid.
+    assert node._metric_waypoints_clear(inputs,route,target.yaw) is None
+    assert node._metric_navigation_geometry_ready(inputs,target)
+    node._metric_nav_path=native
+    assert not node._metric_navigation_geometry_ready(inputs,target)
+    node._metric_nav_path=None
+    col,row=node._world_to_grid(target.x,target.y,grid.info)
+    data[row,col]=100;grid.data=data.ravel().tolist()
+    inputs[3]=inputs[4]=inputs[6]=data==0
+    assert not node._metric_navigation_geometry_ready(inputs,target)
+
+
+@pytest.mark.parametrize('width,qualified_scan',[(.90,False),(1.20,True)])
+def test_full_scan_retains_qualified_rpp_position_reserve(width,qualified_scan):
+    node,inputs=door_inputs();g=inputs[0]
+    rr,cc=np.indices(inputs[3].shape);res=g.info.resolution
+    x=-2+(cc+.5)*res;y=-2+(rr+.5)*res
+    data=np.zeros(x.shape,np.int8);data[abs(y)>=width/2]=100
+    data[(x>1.4)&(abs(y)<width/2)]=-1
+    g.data=data.ravel().tolist();inputs[2]=(0.,0.,0.)
+    inputs[3]=inputs[4]=inputs[6]=data==0
+    node._metric_select=lambda *_:[];node._frontiers_remaining=1
+    node._metric_path_validation='conservative'
+    legacy,_=node._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert legacy['scan_admissible'] and legacy['selected_motion']=='full_scan'
+    node._metric_path_validation='rpp_rollout'
+    decision,_=node._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
+    assert decision['scan_admissible'] is qualified_scan
+    assert (decision['selected_motion']=='full_scan') is qualified_scan

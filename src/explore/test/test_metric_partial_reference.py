@@ -103,3 +103,71 @@ def test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement(monkeypat
     runtime._metric_raw=(grid,source,10.)
     runtime._metric_correlation=replace(runtime._metric_correlation,fingerprint=source.fingerprint)
     assert not runtime._metric_inputs()[3][row,col]
+
+
+def test_fixed_body_survives_integer_growth_without_regrowth_or_moving_bubble(monkeypatch):
+    from dataclasses import replace
+    from types import SimpleNamespace
+    from geometry_msgs.msg import TransformStamped
+    from test_metric_frontier import body_input_fixture
+    from explore.portal_source_adapter import raw_map_portal_source_from_values
+    runtime = body_input_fixture(monkeypatch, 10.01)
+    grid = runtime._metric_raw[0]
+    transform = TransformStamped(); transform.header.stamp.sec = 100
+    transform.transform.rotation.w = 1.
+    runtime._tf_buffer = SimpleNamespace(lookup_transform=lambda *_: transform)
+    grid.data[20*80+10] = -1
+    def refresh():
+        source = raw_map_portal_source_from_values(**runtime._metric_grid_values(grid))
+        runtime._metric_raw = (grid, source, 10.)
+        runtime._metric_correlation = replace(runtime._metric_correlation, fingerprint=source.fingerprint)
+    refresh(); first = runtime._metric_inputs()[3]
+    assert first[20, 10]
+    # An actual observation retires one original fact permanently.
+    grid.data[20*80+10] = 0; refresh(); runtime._metric_inputs()
+    old = np.asarray(grid.data).reshape(40, 80)
+    grown = np.pad(old, ((1, 0), (1, 1)), constant_values=-1)
+    grown[21, 11] = -1  # observed original cell becomes unknown again
+    grid.info.width, grid.info.height = 82, 41
+    grid.info.origin.position.x -= grid.info.resolution
+    grid.info.origin.position.y -= grid.info.resolution
+    grid.data = grown.ravel().tolist(); refresh()
+    runtime._robot_pose_sample = lambda: ((.07, .05, 0.), 0.)
+    current = runtime._metric_inputs()[3]
+    assert not runtime._metric_body_anchor_expired
+    assert not current[21, 11]
+    retained = runtime._metric_body_cells.copy()
+    assert retained.sum() <= np.count_nonzero(first & (old < 0))
+    # New body coordinates and newly added border cells cannot grant facts.
+    assert not retained[0].any() and not retained[:, 0].any() and not retained[:, -1].any()
+    grid.info.origin.position.x += .001; refresh(); runtime._metric_inputs()
+    assert runtime._metric_body_anchor_expired
+
+
+def test_measured_encoder_progress_does_not_turn_filter_correction_into_reverse():
+    from explore.metric_egress_reference import transform_poses
+    node,evidence,grid,a,m,inside=snapshot()
+    evidence.refresh(grid,a['current_0'],inside,m['reference'])
+    measured=tuple(transform_poses([m['pose']],m['reference'],(0.,0.,0.))[0])
+    valid,reason=evidence.check_trajectory([m['pose']],a['current_0'],a['known_0'],
+        node._world_to_grid,commit=True,motion_pose=measured)
+    assert valid,reason
+    # Magnitude and unchanged heading recorded by the native mission-c-v23.
+    corrected=(m['pose'][0]-.000075,m['pose'][1],m['pose'][2])
+    valid,reason=evidence.check_trajectory([corrected],a['current_0'],a['known_0'],
+        node._world_to_grid,commit=True)
+    assert not valid and reason in ('start_egress_approaches_unknown','start_egress_reentry_or_added_cell_area')
+    valid,reason=evidence.check_trajectory([corrected],a['current_0'],a['known_0'],
+        node._world_to_grid,commit=True,motion_pose=measured)
+    assert valid,reason
+    reverse=(measured[0]-.005,measured[1],measured[2])
+    valid,reason=evidence.check_trajectory([corrected],a['current_0'],a['known_0'],
+        node._world_to_grid,motion_pose=reverse)
+    assert not valid and reason in ('start_egress_approaches_unknown','start_egress_reentry_or_added_cell_area')
+    # A measured encoder does not excuse new unknown space at the real pose.
+    occupancy=a['current_0'].copy();known=a['known_0'].copy()
+    col,row=node._world_to_grid(corrected[0]+.15,corrected[1],grid.info)
+    assert not evidence.unknown[row,col]
+    occupancy[row,col]=-1;known[row,col]=False
+    valid,reason=evidence.check_trajectory([corrected],occupancy,known,node._world_to_grid,motion_pose=measured)
+    assert not valid and reason=='start_egress_new_unknown_or_obstacle'

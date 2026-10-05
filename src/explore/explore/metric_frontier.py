@@ -88,9 +88,15 @@ class MetricTaskPolicy:
                      (now >= attempt.retry_after and
                       fingerprint != attempt.fingerprint)))
 
-    def record(self, candidate, outcome, now, fingerprint, evidence_key=None, *, count_try=True):
+    def record(self, candidate, outcome, now, fingerprint, evidence_key=None, *, count_try=True, arrival_xy=None):
         attempt = self.attempts[candidate.task_id]
-        attempt.target_xy = (candidate.x, candidate.y)
+        visited = (candidate.x, candidate.y)
+        if outcome == 'observed' and arrival_xy is not None:
+            if (len(arrival_xy) != 2 or not all(math.isfinite(v) for v in arrival_xy)
+                    or math.dist(arrival_xy, visited) > .15+1e-12):
+                raise ValueError('metric_observed_arrival_invalid')
+            visited = tuple(arrival_xy)  # genuinely served pose, not an unvisited ideal endpoint
+        attempt.target_xy = visited
         attempt.fingerprint = fingerprint
         attempt.reason = outcome
         attempt.tries += int(count_try)
@@ -103,13 +109,18 @@ class MetricTaskPolicy:
             attempt.failures += 1
 
 
-def route_cells(mask, start, target):
+def route_cells(mask, start, target, distance_cache=None):
     """Existing no-corner-cutting distance field, with a descending path."""
     h, w = mask.shape
     if any(not (0 <= r < h and 0 <= c < w) or not mask[r, c]
            for r, c in (start, target)):
         return None
-    distances = _geodesic_distances(mask, start)
+    key = (mask.shape, start, mask.tobytes())
+    distances = None if distance_cache is None else distance_cache.get(key)
+    if distances is None:
+        distances = _geodesic_distances(mask, start)
+        if distance_cache is not None and len(distance_cache) < 8:
+            distance_cache[key] = distances  # bounded, only this selection pass
     if not np.isfinite(distances[target]):
         return None
     route = [target]
@@ -260,17 +271,24 @@ def footprint_poses_clear(poses, grid, allowed, world_to_grid,
         valid = ((rows>=0)&(rows<allowed.shape[0])&(cols>=0)&(cols<allowed.shape[1]))
         known = np.zeros(valid.shape,dtype=bool)
         known[valid] = allowed[rows[valid],cols[valid]]
-        local_x,local_y = (cols+.5)*res,(rows+.5)*res
+        # Only forbidden centres can invalidate the same reserved rectangle.
+        # Keep exactly the scalar candidate cells (including outside-grid),
+        # all headings and all poses; omit trigonometry for observed free cells.
+        owners,rr,cc = np.nonzero(~known)
+        if not len(owners):
+            continue
+        bad_rows,bad_cols = rows[owners,rr,cc],cols[owners,rr,cc]
+        local_x,local_y = (bad_cols+.5)*res,(bad_rows+.5)*res
         dx = (grid.info.origin.position.x+math.cos(angle)*local_x
-              -math.sin(angle)*local_y-chunk[:,0,None,None])[:,None,:,:]
+              -math.sin(angle)*local_y-chunk[owners,0])[:,None]
         dy = (grid.info.origin.position.y+math.sin(angle)*local_x
-              +math.cos(angle)*local_y-chunk[:,1,None,None])[:,None,:,:]
-        angles = chunk[:,2,None]+headings
-        cosine,sine = np.cos(angles)[:,:,None,None],np.sin(angles)[:,:,None,None]
+              +math.cos(angle)*local_y-chunk[owners,1])[:,None]
+        angles = chunk[owners,2,None]+headings
+        cosine,sine = np.cos(angles),np.sin(angles)
         lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
-        touched = np.any((left-reserve<=lx)&(lx<=right+reserve)
-                         &(bottom-reserve<=ly)&(ly<=top+reserve),axis=1)
-        if np.any(touched & ~known):
+        touched = ((left-reserve<=lx)&(lx<=right+reserve)
+                   &(bottom-reserve<=ly)&(ly<=top+reserve))
+        if np.any(touched):
             return False
     return True
 
@@ -423,7 +441,7 @@ class StartEgressEvidence:
             valid=bool(np.all(inside[r,c]&(~bad|(occupancy[r,c]<0))))
             reason='start_egress_obstacle_or_scope'
             if valid:
-                original=(occupancy[r,c]<0)&inside[r,c]
+                original=bad & (occupancy[r,c]<0) & inside[r,c]
                 unknown[r[original],c[original]]=True
         result=cls(grid,pose,bounds,unknown,(),bool(valid),'' if valid else reason)
         result.scope_mask=inside.copy()
@@ -511,26 +529,39 @@ class StartEgressEvidence:
                 areas=areas.reshape(len(chunk),len(cells))
                 difference=areas-np.vstack((previous_area,areas[:-1]))
                 if np.any(difference>1e-8) or not np.all(subset):
+                    i,j = np.unravel_index(np.argmax(difference), difference.shape)
+                    self.last_monotone_failure = dict(reason='area_increase',pose=chunk[i].tolist(),
+                        cell=cells[j].tolist(),previous_area=float(areas[i,j]-difference[i,j]),
+                        current_area=float(areas[i,j]),subset_valid=bool(np.all(subset)),
+                        last_commit=getattr(self,'last_commit_pose',None))
                     return False,'start_egress_reentry_or_added_cell_area'
                 distances=np.where(areas.ravel()>1e-10,0.,
                     _cell_distances(tiled_polygons,tiled_cells)).reshape(areas.shape)
                 difference=distances-np.vstack((previous_distance,distances[:-1]))
                 if np.any(difference < -1e-8):
+                    i,j = np.unravel_index(np.argmin(difference), difference.shape)
+                    self.last_monotone_failure = dict(reason='distance_decrease',pose=chunk[i].tolist(),
+                        cell=cells[j].tolist(),previous_distance=float(distances[i,j]-difference[i,j]),
+                        current_distance=float(distances[i,j]),last_commit=getattr(self,'last_commit_pose',None))
                     return False,'start_egress_approaches_unknown'
                 previous_area=areas[-1];previous_distance=distances[-1]
             last=chunk[-1]
         if commit:
             self.remaining_area=dict(zip(keys,previous_area))
             self.departed_distance=dict(zip(keys,previous_distance))
+            self.last_commit_pose=poses[-1].tolist()
         return True,None
 
 
 def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
-                   bounds=(-.13,.33,-.25,.25), *, prealign_to_first_leg=False):
+                   bounds=(-.13,.33,-.25,.25), *, prealign_to_first_leg=False,
+                   external_prealignment=True):
     """Roll out installed RPP's forward geometric law, with original reserves.
 
     A real plan is mandatory before execution. Fixed .4 m interpolated carrot,
     .35 rad rotate threshold, .15 m goal position tolerance; no reverse motion.
+    external_prealignment=False models native RPP alone: below its .35-rad
+    threshold it starts with a curve instead of an added standstill turn.
     Quarter-cell/<=5-mm translations and <=.01-rad turns bound the continuous
     inter-sample sweep inside the existing .01-m interpolation reserve.
     """
@@ -545,7 +576,7 @@ def rpp_trajectory(route, pose, resolution, prealign_tolerance=.17,
     leg=route_departure_point(route,pose,resolution) if prealign_to_first_leg else route[-1]
     initial=math.atan2(leg[1]-y,leg[0]-x)
     error=math.atan2(math.sin(initial-yaw),math.cos(initial-yaw))
-    if abs(error)>prealign_tolerance:
+    if external_prealignment and abs(error)>prealign_tolerance:
         n=max(1,math.ceil(abs(error)/turn_step))
         out.extend((x,y,yaw+error*i/n) for i in range(1,n+1));yaw=initial
     length=sum(math.dist(a,b) for a,b in zip(route,route[1:]));index=0

@@ -3794,7 +3794,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
     def _frontier_approach_goal(
             self, frontier: Frontier, robot_xy: Tuple[float, float],
             grid: OccupancyGrid, *, search_mask=None,
-            approach_direction=None) -> Optional[Tuple[float, float]]:
+            approach_direction=None, return_choices=False):
         """Pick a goal in the robot's connected, safely clear free space."""
         dx = robot_xy[0] - frontier.cx
         dy = robot_xy[1] - frontier.cy
@@ -3849,6 +3849,8 @@ class ExploreNode(MetricFrontierRuntime, Node):
                     continue
                 wx, wy = self._grid_to_world(col, row, info)
                 choices.append((math.hypot(wx - desired_x, wy - desired_y), wx, wy))
+        if return_choices and not choices:
+            return ()  # alternative pose search retains the original local bound
         frontier.goal_projected = not bool(choices)
         if not choices:
             # Eine Frontier kann hinter einer erst als schmaler Sichtschlitz
@@ -3863,6 +3865,10 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 wx, wy = self._grid_to_world(col, row, info)
                 choices.append((
                     math.hypot(wx - desired_x, wy - desired_y), wx, wy))
+        if return_choices:
+            # Same connected cells and original local search, for metric pose
+            # alternatives. Each still needs actual costmap/whole-body proof.
+            return tuple((wx, wy) for _, wx, wy in sorted(choices))
         _, goal_x, goal_y = min(choices)
         costmap_goal = self._costmap_reachable_goal(
             (goal_x, goal_y), (desired_x, desired_y), robot_xy)

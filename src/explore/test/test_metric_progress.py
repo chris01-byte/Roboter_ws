@@ -460,3 +460,18 @@ def test_new_accessible_work_during_last_completion_check_prevents_stale_success
     result=n._execute_metric_frontier(parent,10.,20.)
     assert changed and not result.success and terminal==['abort']
     assert n._metric_status['outcome']=='blocked_help_required'
+
+
+def test_observed_history_tracks_actual_early_arrival_and_rejects_unproved_pose():
+    policy = MetricTaskPolicy(.6, 30., 2)
+    key = policy.identify((1.5, 0.))
+    goal = replace(candidate(key), x=.6, y=0., evidence_key='a'*64)
+    policy.record(goal, 'observed', 10., 'b'*64, arrival_xy=(.45, 0.))
+    assert policy.attempts[key].target_xy == (.45, 0.)
+    assert not policy.eligible(key, (.9, 0.), 50., 'b'*64, 'a'*64)
+    assert policy.eligible(key, (1.08, 0.), 50., 'b'*64, 'a'*64)
+    saved = policy_state(policy, 10.)
+    assert saved['tasks'][key]['target_xy'] == (.45, 0.)
+    with pytest.raises(ValueError, match='metric_observed_arrival_invalid'):
+        policy.record(goal, 'observed', 11., 'b'*64, arrival_xy=(.4, 0.))
+    assert policy.attempts[key].tries == 1

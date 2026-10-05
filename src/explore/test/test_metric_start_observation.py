@@ -83,3 +83,133 @@ def test_missing_sensor_sight_cannot_create_start_observation():
     node,inputs,scan = fixture(); scan['ranges'][:] = np.nan
     with pytest.raises(ValueError,match='candidate_lidar_no_valid_rays'):
         node._metric_candidates(inputs,.3)
+
+
+def ordinary_departure_fixture():
+    """Actual second-selection rasters; no raw/cost unknown cells are changed."""
+    node, inputs, scan = fixture()
+    data = Path(__file__).parent/'data'
+    arrays = np.load(data/'ap06_ordinary_departure.npz')
+    metadata = json.loads((data/'ap06_ordinary_departure.json').read_text())
+    geometries = metadata['geometry']
+    for index, field, geometry in ((0, 'raw', geometries[0]), (5, 'cost', geometries[1])):
+        grid = inputs[index]
+        grid.info.height, grid.info.width = arrays[field].shape
+        grid.info.resolution = geometry['resolution']
+        grid.info.origin.position.x, grid.info.origin.position.y = geometry['origin']
+        grid.data = arrays[field].ravel().tolist()
+    source = raw_map_portal_source_from_values(**node._metric_grid_values(inputs[0]))
+    inputs[1] = replace(inputs[1], fingerprint=source.fingerprint)
+    inputs[2] = tuple(arrays['pose'])
+    inputs[3], inputs[4], inputs[6] = (arrays[k].copy() for k in ('known', 'safe', 'cost_known'))
+    # Apply the retained FIRST-body facts through the production integer
+    # translation helper. The captured pre-fix input had dropped them solely
+    # because its width grew by one column. Never recapture the current body.
+    first = np.load(data/'ap06_ordinary_departure_initial.npz')
+    node._metric_body_cells = (first['raw'] < 0) & first['known']
+    g = inputs[0]; origin = (g.info.origin.position.x, g.info.origin.position.y, 0., 0., 0., 0., 1.)
+    node._metric_body_grid_identity = (inputs[1].context, first['raw'].shape[1],
+        first['raw'].shape[0], g.info.resolution, origin, 0.)
+    identity = (inputs[1].context, g.info.width, g.info.height, g.info.resolution, origin, 0.)
+    assert node._metric_rebase_first_body(identity)
+    node._metric_body_cells &= arrays['raw'] < 0
+    inputs[3], inputs[4] = known_safe_mask(arrays['raw'], node._metric_scope, inputs[1],
+        origin[:2], 0., g.info.resolution, node._goal_clearance_m, node._metric_body_cells)
+    cost_safe = np.zeros_like(inputs[4]); cost_safe[:, :arrays['cost'].shape[1]] = (
+        arrays['cost'] >= 0) & (arrays['cost'] <= node._frontier_goal_max_cost)
+    inputs[4] &= cost_safe
+    node._metric_prepare_egress(inputs)
+    # Restore the captured private history state. It grants no movement
+    # authority; the original fixed-body facts are separately retained.
+    for evidence, history in zip(node._metric_egress, metadata['history']):
+        assert history['unknown_cells'] == 0
+        evidence.unknown[:] = False  # original inventory retired; never recapture at current pose
+        evidence.valid = history['valid']
+        evidence.reason = history['reason']
+    return node, inputs, scan
+
+
+def test_retired_private_history_does_not_block_fully_ordinary_forward_observation():
+    node, inputs, _ = ordinary_departure_fixture()
+    # Exhaustive stateless geometry regression, without live task selection.
+    # The separate live-selection test and product retain their 5-s deadline.
+    node._map_timeout_s = 30.
+    before = [copy.deepcopy(inputs[i].data) for i in (0, 5)]
+    candidates = node._metric_candidates(inputs, .3)
+    proved = [c for c in candidates if not c.requires_nav2_plan]
+    assert proved, node._frontier_rank_stats
+    assert all(c.route_length_m >= node._min_goal_dist_m for c in proved)
+    for c in proved:
+        assert c.observation_points
+        assert node._metric_standard_waypoints_clear(inputs, c.route, c.yaw) is not None
+    assert [inputs[i].data for i in (0, 5)] == before
+    assert all(not e.valid and not e.unknown.any() for e in node._metric_egress)
+
+
+def test_retired_private_history_grants_no_obstacle_bypass_to_forward_fallback():
+    node, inputs, _ = ordinary_departure_fixture()
+    col, row = node._world_to_grid(inputs[2][0]+.2, inputs[2][1], inputs[0].info)
+    inputs[0].data[row*inputs[0].info.width+col] = 100
+    inputs[3][row, col] = inputs[4][row, col] = False
+    candidates = node._metric_candidates(inputs, .3)
+    assert not any(not c.requires_nav2_plan for c in candidates)
+
+
+def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
+    from explore.metric_frontier import MetricTaskPolicy
+    node, inputs, _ = ordinary_departure_fixture()
+    policy = MetricTaskPolicy(.6, 30., 2)
+    first = node._metric_select(inputs, policy, .3)
+    assert first and not first[0].requires_nav2_plan
+    assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
+            or node._frontier_rank_stats.get('bounded_start_observation'))
+    assert node._metric_standard_waypoints_clear(inputs, first[0].route, first[0].yaw)
+    policy.record(first[0], 'observed', time.monotonic(), first[0].fingerprint)
+    second = node._metric_select(inputs, policy, .3)
+    assert second, node._frontier_rank_stats
+    assert all(c.task_id != first[0].task_id for c in second)
+    assert all(node._metric_standard_waypoints_clear(inputs, c.route, c.yaw) for c in second)
+
+
+def test_fixed_body_facts_are_not_counted_as_private_unobserved_egress():
+    from explore.metric_frontier import StartEgressEvidence
+    node, inputs, _ = fixture()
+    raw = np.asarray(inputs[0].data).reshape(inputs[3].shape)
+    body = (raw < 0) & inputs[3]
+    assert body.any()
+    evidence = StartEgressEvidence.capture(inputs[0], raw, inputs[3],
+        np.ones_like(body), inputs[2], node._metric_bounds, node._world_to_grid)
+    assert evidence.valid
+    assert not (evidence.unknown & body).any()
+    # Losing an ordinary body fact cannot recreate an escape permission.
+    allowed = inputs[3].copy(); allowed[body] = False
+    valid, reason = evidence.check_trajectory([inputs[2]], raw, allowed, node._world_to_grid)
+    assert not valid and reason == 'start_egress_new_unknown_or_obstacle'
+
+
+def test_real_native_start_curve_uses_proved_rpp_departure_without_extra_turn():
+    from explore.metric_frontier import rpp_trajectory, route_departure_point
+    node, inputs, _ = fixture()
+    data = Path(__file__).parent/'data'
+    first = np.load(data/'ap06_ordinary_departure_initial.npz')
+    meta = json.loads((data/'ap06_ordinary_departure.json').read_text())
+    for index, key, geom in ((0,'raw',meta['geometry'][0]),(5,'cost',meta['geometry'][1])):
+        grid = inputs[index]; grid.info.height, grid.info.width = first[key].shape
+        grid.info.origin.position.x, grid.info.origin.position.y = geom['origin']
+        grid.info.resolution = geom['resolution'];grid.data = first[key].ravel().tolist()
+    inputs[2] = tuple(first['pose'])
+    inputs[3], inputs[4], inputs[6] = (first[k].copy() for k in ('known','safe','cost_known'))
+    route = tuple(tuple(p) for p in json.loads((data/'ap06_native_departure_path.json').read_text())['points'])
+    node._metric_prepare_egress(inputs)
+    before = [copy.deepcopy(inputs[i].data) for i in (0,5)]
+    # The additional standstill alignment expands the private intersection.
+    turned = rpp_trajectory(route,inputs[2],inputs[0].info.resolution,.02,
+                           node._metric_bounds,prealign_to_first_leg=True)
+    rejected = [e.check_trajectory(turned,np.asarray(g.data).reshape(mask.shape),mask,node._world_to_grid)
+                for e,(g,mask) in zip(node._metric_egress,((inputs[0],inputs[3]),(inputs[5],inputs[6])))]
+    assert any(not valid for valid,_ in rejected)
+    assert node._metric_waypoints_clear(inputs,route,0.) is not None, node._metric_last_route_rejection
+    node._prealign_to_goal = lambda *a,**k: pytest.fail('an unproved additional turn must not be emitted')
+    assert node._metric_align_nav_departure(route,inputs[2],lambda:False)[0] == 'controller_owned'
+    assert node._metric_align_nav_departure(route,inputs[2],lambda:True)[0] == 'interrupted'
+    assert [inputs[i].data for i in (0,5)] == before

@@ -7,7 +7,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Imu
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Path
 from std_msgs.msg import String
 from explore.explore_node import ExploreNode
 from test_metric_frontier import require_isolated_ros
@@ -31,6 +31,7 @@ def test_geometry_lock_waiters_cannot_starve_original_hwt_samples():
     costs=producer.create_publisher(OccupancyGrid,node._global_costmap_topic,1)
     wheel=producer.create_publisher(String,'/base_hardware/state_json',10)
     localization=producer.create_publisher(String,'/localization/status_json',10)
+    plans=producer.create_publisher(Path,'/plan',10)
     stop=threading.Event()
     def publish():
         while not stop.is_set():
@@ -51,6 +52,7 @@ def test_geometry_lock_waiters_cannot_starve_original_hwt_samples():
                 maps.publish(grid);costs.publish(grid)
                 wheel.publish(String(data='{}'))
                 localization.publish(String(data='{"schema_version":1}'))
+                plan=Path();plan.header.frame_id='map';plans.publish(plan)
                 time.sleep(.04)
             time.sleep(.15)
             with node._hwt_guard.health.lock:
