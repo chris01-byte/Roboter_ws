@@ -1078,7 +1078,8 @@ class MetricFrontierRuntime:
         if getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout':
             # The measured synthetic tracking band also depends on sampling
             # and response limits, not only on the geometric carrot law.
-            expected.update({'controller_frequency':20.,'FollowPath.desired_linear_vel':.10,
+            expected.update({'general_goal_checker.stateful':False,
+                'controller_frequency':20.,'FollowPath.desired_linear_vel':.10,
                 'FollowPath.rotate_to_heading_angular_vel':.2,'FollowPath.max_angular_accel':2.})
         client = self._metric_controller_params
         if not client.wait_for_service(timeout_sec=1.0):

@@ -149,6 +149,7 @@ def test_rollout_real_node_rejects_unqualified_prealignment(enabled,tolerance):
 
 
 @pytest.mark.parametrize('name,value', [
+    ('general_goal_checker.stateful',True),
     ('controller_frequency',10.),('FollowPath.desired_linear_vel',.2),
     ('FollowPath.rotate_to_heading_angular_vel',.4),('FollowPath.max_angular_accel',4.)])
 def test_simulation_tracking_contract_rejects_different_actual_response_limits(name,value):

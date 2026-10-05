@@ -20,7 +20,10 @@ on:
       - 'tools/simulation/ap03_nav2_closed_loop.py'
       - 'tools/simulation/ap06*'
       - 'tools/simulation/test_ap06_world.py'
+      - 'tools/simulation/test_ap06_device_isolation.py'
+      - 'tools/simulation/test_ap06_lifecycle.py'
       - 'tools/simulation/slam_grid_regression.cpp'
+      - 'tools/simulation/goal_checker_regression/**'
       - 'tools/simulation/prepare_ap06_sources.py'
       - 'patches/slam_toolbox_humble*.patch'
       - 'tools/kartierung/build_slam_toolbox_humble_overlay.sh'
@@ -78,14 +81,20 @@ jobs:
             src/explore/test/test_metric_body_reference_tf.py \
             src/explore/test/test_metric_egress_reference.py \
             src/explore/test/test_metric_partial_reference.py \
+            src/explore/test/test_metric_measured_motion.py \
+            src/explore/test/test_hwt601_recovery_integration.py \
+            src/robot_navigation/test/test_hwt601_gate_pending_wheel.py \
             src/explore/test/test_metric_source_delivery.py \
             src/explore/test/test_metric_sweep_batch.py \
+            src/explore/test/test_metric_route_distances.py \
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \
             src/explore/test/test_metric_planning_stop_reason.py \
             src/explore/test/test_metric_start_observation.py \
+            src/explore/test/test_metric_join_replan.py \
             tools/simulation/test_ap06_world.py \
+            tools/simulation/test_ap06_device_isolation.py tools/simulation/test_ap06_lifecycle.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \
@@ -132,6 +141,19 @@ jobs:
             -L/tmp/ap06-karto -lkartoSlamToolbox -lboost_serialization \
             -Wl,-rpath,/tmp/ap06-karto -o /tmp/ap06-grid-regression
           /tmp/ap06-grid-regression | tee /tmp/ap06-grid-regression.log
+      - name: Native goal checker must recheck position during final rotation
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          cmake -S tools/simulation/goal_checker_regression -B /tmp/ap06-goal-checker
+          cmake --build /tmp/ap06-goal-checker -j2
+          python3 - <<'PY'
+          import subprocess, yaml
+          from pathlib import Path
+          params = yaml.safe_load(Path('src/robot_navigation/config/nav2_params_real.yaml').read_text())
+          stateful = params['controller_server']['ros__parameters']['general_goal_checker']['stateful']
+          subprocess.run(['/tmp/ap06-goal-checker/goal_checker_regression', str(stateful).lower()], check=True)
+          PY
       - name: Build current product and run isolated closed synthetic world
         shell: bash
         run: |

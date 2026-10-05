@@ -122,7 +122,9 @@ controller_server:
       movement_time_allowance: 30.0
     general_goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      stateful: True
+      # Recheck position while reaching the final heading: a map/pose
+      # correction must not produce SUCCEEDED outside the 15-cm window.
+      stateful: False
       xy_goal_tolerance: 0.15
       yaw_goal_tolerance: 0.40
     FollowPath:
