@@ -1321,6 +1321,24 @@ class MetricFrontierRuntime:
         deadline = time.monotonic()+self._map_timeout_s
         def stopped():
             return time.monotonic() >= deadline or stop_requested()
+        def forecast_route(at, path, candidate):
+            # A <=.05-rad qualified heading deviation can cross RPP's pi
+            # branch cut and reverse its initial turn. An inflated contour
+            # around one nominal rollout does not prove that other rollout.
+            # Reuse the actual NavFn path at both band edges; each entire
+            # controller sweep must pass the public-only product checker.
+            nominal = None
+            for offset in (0., -.05, .05):
+                if stopped():
+                    return None
+                varied = (at[0], at[1], (*at[2][:2], at[2][2]+offset), *at[3:])
+                route = self._metric_validate_nav_plan(varied, path, candidate,
+                                                       public_only=True)
+                if route is None:
+                    return None
+                if offset == 0.:
+                    nominal = route
+            return nominal
         back = replace(target, x=pose[0], y=pose[1], yaw=pose[2],
             observation_points=(), requires_nav2_plan=True)
         old_active = self._metric_active
@@ -1330,8 +1348,7 @@ class MetricFrontierRuntime:
                                                         start_pose=projected)
             if path is None:
                 self._metric_status['departure_plan_rejection'] = error
-            valid = None if path is None else self._metric_validate_nav_plan(
-                forecast, path, back, public_only=True)
+            valid = None if path is None else forecast_route(forecast, path, back)
             if path is not None and valid is None:
                 self._metric_status['departure_plan_rejection'] = self._metric_last_route_rejection
             if valid is not None and not stopped():
@@ -1362,8 +1379,7 @@ class MetricFrontierRuntime:
                             refuge,(end[:2],pose[:2]),return_target.yaw) is None:
                         continue
                     path,error = self._metric_request_nav_plan(escape,stopped,start_pose=projected)
-                    route = None if path is None else self._metric_validate_nav_plan(
-                        forecast,path,escape,public_only=True)
+                    route = None if path is None else forecast_route(forecast,path,escape)
                     if route is None:
                         continue
                     end = rpp_trajectory(route,projected,resolution,
@@ -1372,9 +1388,8 @@ class MetricFrontierRuntime:
                     return_target = replace(back,yaw=math.atan2(pose[1]-end[1],pose[0]-end[0]))
                     retreat,error = self._metric_request_nav_plan(return_target,stopped,start_pose=end)
                     if (retreat is not None and not stopped() and
-                            self._metric_validate_nav_plan(
-                                (inputs[0],inputs[1],end,*inputs[3:]),retreat,
-                                return_target,public_only=True) is not None):
+                            forecast_route((inputs[0],inputs[1],end,*inputs[3:]),
+                                           retreat,return_target) is not None):
                         self._metric_status.pop('departure_plan_rejection',None)
                         return True
             return False
@@ -1630,20 +1645,25 @@ class MetricFrontierRuntime:
                 points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(local_hits))
             candidates.append(MetricCandidate('',*goal,target_yaw,(f.cx,f.cy),route,length,cost,
                                               correlation.fingerprint,correlation.map_revision,proposal,points))
-            # A live qualified pass needs one actionable, fully proved task.
+            # A live qualified pass needs one eligible task or planner query.
             # Exhaustive proof of all alternatives can consume its fixed
             # deadline before any task starts. Do not stop on a served or
-            # deferred neighbourhood, or on an unproved planner proposal.
+            # deferred neighbourhood. A proposal still needs the mandatory
+            # actual native plan/whole-controller proof before any dispatch.
             memo, _ = self._metric_selection_memo(inputs)
             policy = None if memo is None else memo.get('policy')
-            if (policy is not None and live_view and not proposal
+            if (policy is not None and live_view
                     and getattr(self, '_metric_start_egress_enabled', False)
                     and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy), goal)
                 local = local_evidence(grid, policy.attempts[key].frontier_xy, self._grid_to_world)
                 if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
-                    stats['proof_search_stopped_on_eligible_task'] = True
-                    candidates = [c for c in candidates if not c.requires_nav2_plan]
+                    if proposal:
+                        stats['proposal_search_stopped_on_eligible_task'] = True
+                        candidates = [candidates[-1]]
+                    else:
+                        stats['proof_search_stopped_on_eligible_task'] = True
+                        candidates = [c for c in candidates if not c.requires_nav2_plan]
                     break
         # The nearest centre with its shortest-raster arrival heading may be
         # unsafe while another pose in the SAME approach search is usable.

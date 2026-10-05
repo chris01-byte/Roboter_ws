@@ -1,0 +1,44 @@
+{
+  "kind": "C36 later final synthetic rasters and last recorded stopped pose, component selection only, not exact failure inputs",
+  "pose": [
+    3.303863145957869,
+    -0.7778715678483592,
+    0.8417792326674945
+  ],
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "vertices": [
+      [
+        -1.1999999999999997,
+        -1.4
+      ],
+      [
+        4.4,
+        -1.4
+      ],
+      [
+        4.4,
+        1.4
+      ],
+      [
+        -1.1999999999999997,
+        1.4
+      ]
+    ]
+  },
+  "raw_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2299999725073576,
+      -1.4399999678134918
+    ]
+  },
+  "cost_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -1.2299999725073576,
+      -1.4399999678134918
+    ]
+  },
+  "finite_angular_coverage_source": "C38 actual normalized synthetic scan angles, geometry input only; not a contemporaneous C36 observation receipt"
+}

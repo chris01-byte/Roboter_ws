@@ -62,6 +62,7 @@ def path(record):
 @pytest.mark.parametrize('name,index,expected', (
     ('ap06_dead_end', 0, False), ('ap06_dead_end', 2, False),
     ('ap06_dead_end', 4, True),
+    ('ap06_c38_departure', 0, False),
     ('ap06_corridor_departure', 0, True)))
 def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
     node, inputs, meta = fixture(name)

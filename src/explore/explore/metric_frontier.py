@@ -79,8 +79,17 @@ class MetricTaskPolicy:
         if evidence_key:
             if any(a is not attempt and a.completed for a in neighbours):
                 return False
+            # A read-only rejected planner pose is not a failed observation
+            # at every other pose in its neighbourhood. After the SAME
+            # cooldown, a position outside its .15-m acceptance disk supplies
+            # a distinct bounded geometry query. Real motion failures still
+            # require new local measured evidence; no tries/limits are reset.
+            def new_input(a):
+                return (evidence_key != a.evidence_key or
+                    (a.reason == 'proposal_rejected' and
+                     math.dist(a.target_xy, target_xy) > .15+1e-12))
             return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
-                        and now >= a.retry_after and evidence_key != a.evidence_key
+                        and now >= a.retry_after and new_input(a)
                         for a in neighbours)
                     and attempt.tries < self.retry_limit+1 and attempt.failures < self.retry_limit)
         return (not attempt.completed and attempt.failures < self.retry_limit
