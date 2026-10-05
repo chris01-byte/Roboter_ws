@@ -1,6 +1,7 @@
 """Actual DDS callbacks: a busy ordinary gate callback must not age sources."""
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -24,6 +25,18 @@ from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate
 @pytest.mark.parametrize('stop_wheel', [False, True])
 @pytest.mark.parametrize('busy_group', ['default', 'imu_status'])
 def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
+    # A real gate starts in its own process. Reusing rclpy's global context
+    # after other DDS tests left Humble executor wait-set threads racing the
+    # next context (including a NoneType.handle teardown exception). Keep the
+    # original real subscriptions, executor and freshness assertions inside
+    # a fresh process, rather than forgiving a delayed measurement.
+    result = subprocess.run([sys.executable, str(Path(__file__).resolve()),
+        busy_group, 'stop' if stop_wheel else 'continue'],
+        capture_output=True, text=True, timeout=20.)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _passive_wheel_case(stop_wheel, busy_group):
     assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
     assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
     rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true'])
@@ -133,3 +146,9 @@ def test_active_gate_keeps_its_existing_serial_source_group():
         assert wheel.qos_profile.depth == 5
     finally:
         gate.destroy_node(); rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    assert len(sys.argv) == 3 and sys.argv[1] in ('default', 'imu_status')
+    assert sys.argv[2] in ('stop', 'continue')
+    _passive_wheel_case(sys.argv[2] == 'stop', sys.argv[1])
