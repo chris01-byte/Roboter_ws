@@ -50,11 +50,15 @@ def test_useful_proved_robot_side_pose_precedes_unsafe_passage_query(prior_rejec
     assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
     candidate = candidates[0]
     assert candidate.task_id == key and candidate.observation_points
-    assert node._frontier_rank_stats['robot_side_observation']
+    assert (node._frontier_rank_stats.get('robot_side_observation')
+            or node._frontier_rank_stats.get('bounded_public_observation'))
     assert node._metric_waypoints_clear(inputs, candidate.route, candidate.yaw) is not None
     distance = math.dist(inputs[2][:2], anchor)
     desired = tuple(anchor[i]+node._approach_dist_m*(inputs[2][i]-anchor[i])/distance for i in (0, 1))
-    assert max(abs(candidate.x-desired[0]), abs(candidate.y-desired[1])) <= node._goal_search_m+inputs[0].info.resolution
+    if node._frontier_rank_stats.get('bounded_public_observation'):
+        assert node._min_goal_dist_m-1e-12 <= math.dist(inputs[2][:2], (candidate.x, candidate.y)) <= node._min_goal_dist_m+node._goal_search_m+1e-12
+    else:
+        assert max(abs(candidate.x-desired[0]), abs(candidate.y-desired[1])) <= node._goal_search_m+inputs[0].info.resolution
     assert policy.attempts[key].tries == int(prior_rejection)
     assert policy.attempts[key].failures == 0
     assert [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)] == before
@@ -91,7 +95,9 @@ def test_robot_side_choice_keeps_an_earlier_served_neighbourhood():
     candidate = candidates[0]
     served = policy.attempts['metric-task-5']
     assert served.completed
-    assert math.dist((candidate.x, candidate.y), served.target_xy) >= policy.radius
+    assert (math.dist((candidate.x, candidate.y), served.target_xy) >= policy.radius
+            or all(math.dist(p, served.frontier_xy) > .8+policy.radius
+                   for p in candidate.observation_points))
     assert candidate.observation_points
     assert node._metric_waypoints_clear(inputs, candidate.route, candidate.yaw) is not None
     assert policy.attempts['metric-task-2'].tries == 1

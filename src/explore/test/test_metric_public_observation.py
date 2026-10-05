@@ -37,7 +37,7 @@ def test_actual_exhausted_history_keeps_a_different_proved_current_view():
     assert math.dist(inputs[2][:2], (candidate.x, candidate.y)) <= node._min_goal_dist_m+node._goal_search_m+1e-12
 
 
-@pytest.mark.parametrize('fault', ['body', 'sight', 'tries', 'deadline', 'cone'])
+@pytest.mark.parametrize('fault', ['body', 'sight', 'tries', 'completed', 'deadline', 'cone'])
 def test_public_observation_keeps_original_body_sight_history_and_budget(fault):
     node, inputs, policy = recorded()
     scope = node._metric_scope_mask(inputs)
@@ -47,9 +47,11 @@ def test_public_observation_keeps_original_body_sight_history_and_budget(fault):
         inputs[3][r, c] = False
     if fault == 'sight':
         node._metric_observation_view = lambda: LidarView((.245, 0., math.pi/2), np.array([]), 4., .05)
-    if fault == 'tries':
+    if fault in ('tries', 'completed'):
         for f in frontiers: policy.identify((f.cx, f.cy))
-        for task in policy.attempts.values(): task.tries = 3
+        for task in policy.attempts.values():
+            if fault == 'tries': task.tries = 3
+            else: task.completed = True
     if fault == 'cone':
         node._frontier_forward_cone_half_angle = .001
     node._metric_selection_cache = threading.local()
@@ -57,5 +59,21 @@ def test_public_observation_keeps_original_body_sight_history_and_budget(fault):
     before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
     started = time.monotonic()-(5. if fault == 'deadline' else 0.)
     assert node._metric_public_observation(inputs, frontiers, policy, scope, started) is None
+    assert before == {k: (a.tries, a.failures, a.completed)
+                      for k, a in policy.attempts.items() if k in before}
+
+
+def test_actual_a54_short_view_precedes_unproved_distant_approach_work():
+    node, inputs, metadata = fixture('ap06_a54_selection')
+    state = metadata['checkpoint']
+    policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+    before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+    def unavailable(*_, **__):
+        pytest.fail('Bounded proved public view must precede distant unproved approach work')
+    node._frontier_approach_goal = unavailable
+    candidates = node._metric_select(inputs, policy, .3)
+    assert candidates and not candidates[0].requires_nav2_plan
+    assert candidates[0].observation_points
+    assert node._metric_waypoints_clear(inputs, candidates[0].route, candidates[0].yaw) is not None
     assert before == {k: (a.tries, a.failures, a.completed)
                       for k, a in policy.attempts.items() if k in before}

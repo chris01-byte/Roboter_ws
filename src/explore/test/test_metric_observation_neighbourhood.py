@@ -85,7 +85,9 @@ def test_actual_a48_served_boundaries_keep_a_bounded_different_observation():
     candidates = node._metric_select(inputs, policy, .3)
     assert candidates and not candidates[0].requires_nav2_plan
     selected = candidates[0]
-    assert selected.observation_points and node._frontier_rank_stats['robot_side_observation']
+    assert selected.observation_points
+    assert (node._frontier_rank_stats.get('robot_side_observation')
+            or node._frontier_rank_stats.get('bounded_public_observation'))
     assert node._metric_waypoints_clear(inputs, selected.route, selected.yaw) is not None
     assert math.dist((selected.x, selected.y), policy.attempts['metric-task-4'].target_xy) < policy.radius
     assert policy.attempts['metric-task-4'].tries == 1

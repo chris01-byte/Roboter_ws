@@ -1554,7 +1554,8 @@ class MetricFrontierRuntime:
                             pose[1]+distance*math.sin(heading))
                     key = policy.identify((f.cx, f.cy), goal)
                     attempt = policy.attempts[key]
-                    if attempt.tries >= policy.retry_limit+1 or attempt.failures >= policy.retry_limit:
+                    if (attempt.completed or attempt.tries >= policy.retry_limit+1
+                            or attempt.failures >= policy.retry_limit):
                         continue
                     facing = math.atan2(f.cy-goal[1], f.cx-goal[0])
                     for yaw in (facing, facing+math.pi/2, facing-math.pi/2):
@@ -1663,6 +1664,18 @@ class MetricFrontierRuntime:
                     candidates = [min(candidates,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
                     stats['bounded_start_observation'] = True
                     break
+        # A fully public short view must not wait behind expensive unproved
+        # distant approaches. Its same 0.5-s search shares the original 5 s.
+        if (policy is not None and live_view
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and self._metric_egress_expired
+                and not any(not c.requires_nav2_plan for c in candidates)):
+            observed = self._metric_public_observation(
+                inputs, frontiers, policy, scope_mask, selection_started)
+            if observed is not None:
+                candidates = [observed]
+                stats['bounded_public_observation'] = True
         for f in (() if candidates else frontiers):
             if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
                 raise ValueError('frontier_candidate_processing_budget_exhausted')
@@ -1872,16 +1885,6 @@ class MetricFrontierRuntime:
                         break
                 if candidates:
                     break
-        if (policy is not None and live_view
-                and getattr(self, '_metric_start_egress_enabled', False)
-                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
-                and self._metric_egress_expired
-                and not any(not c.requires_nav2_plan for c in candidates)):
-            observed = self._metric_public_observation(
-                inputs, frontiers, policy, scope_mask, selection_started)
-            if observed is not None:
-                candidates = [observed]
-                stats['bounded_public_observation'] = True
         # A boundary approach can be far beyond the first safe observation
         # pocket. Also consider bounded forward observation positions from
         # CURRENT pose/map/sight. A retired escape proof does not prohibit a
