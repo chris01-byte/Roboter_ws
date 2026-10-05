@@ -4,6 +4,41 @@ import threading
 import numpy as np
 from explore.metric_frontier import StartEgressEvidence
 from test_metric_frontier import egress_fixture
+from explore.metric_progress import local_evidence
+
+
+@pytest.mark.parametrize('change', ['raw', 'origin', 'mask', 'new_pass'])
+def test_local_policy_evidence_reuse_requires_unchanged_current_selection(monkeypatch, change):
+    node, inputs = egress_fixture()
+    node._metric_selection_cache = threading.local()
+    node._metric_selection_cache.memo = {'inputs': inputs}
+    anchor = inputs[2][:2]
+    reads = []
+    def measured(*args):
+        reads.append(True)
+        return local_evidence(*args)
+    monkeypatch.setattr('explore.metric_frontier_runtime.local_evidence', measured)
+    original = node._metric_local_evidence(inputs, anchor)
+    assert original == node._metric_local_evidence(inputs, anchor)
+    assert len(reads) == 1
+    if change == 'raw':
+        col, row = node._world_to_grid(*anchor, inputs[0].info)
+        inputs[0].data[row*inputs[0].info.width+col] = 100
+    elif change == 'origin':
+        inputs[0].info.origin.position.x += .01
+    elif change == 'mask':
+        inputs[3][0, 0] = not inputs[3][0, 0]
+    else:
+        node._metric_selection_cache.memo = {'inputs': inputs}
+    current = node._metric_local_evidence(inputs, anchor)
+    assert current == local_evidence(inputs[0], anchor, node._grid_to_world)
+    assert len(reads) == 2
+    if change in ('raw', 'origin'):
+        assert current != original
+    # Outside a selection pass, no receipt/health or digest survives.
+    node._metric_selection_cache.memo = None
+    assert node._metric_local_evidence(inputs, anchor) == current
+    assert len(reads) == 3
 
 
 def test_many_candidate_routes_commit_same_stationary_inventory_once_per_pass(monkeypatch):

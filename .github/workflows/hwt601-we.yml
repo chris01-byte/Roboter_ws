@@ -91,6 +91,16 @@ jobs:
             src/explore/test/test_metric_rpp_egress_goal.py \
             src/explore/test/test_metric_rpp_egress_turn.py \
             src/explore/test/test_metric_planning_stop_reason.py \
+            src/explore/test/test_metric_alternative_pose.py \
+            src/explore/test/test_metric_departure.py \
+            src/explore/test/test_metric_initial_body_inventory.py \
+            src/explore/test/test_metric_observation_sources.py \
+            src/explore/test/test_metric_planner_abort.py \
+            src/explore/test/test_metric_proposal_accounting.py \
+            src/explore/test/test_metric_proposal_alternatives.py \
+            src/explore/test/test_metric_query_selection_budget.py \
+            src/explore/test/test_metric_visibility_blocks.py \
+            src/explore/test/test_metric_snapshot_replan.py \
             src/explore/test/test_metric_start_observation.py \
             src/explore/test/test_metric_join_replan.py \
             tools/simulation/test_ap06_world.py \

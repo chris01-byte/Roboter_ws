@@ -706,6 +706,20 @@ class MetricFrontierRuntime:
                getattr(inputs,'physical_motion',None))
         return memo, key
 
+    def _metric_local_evidence(self, inputs, anchor):
+        """Reuse content digests only in the exact current geometry pass."""
+        memo, key = self._metric_selection_memo(inputs)
+        if memo is None:
+            return local_evidence(inputs[0], anchor, self._grid_to_world)
+        entry = memo.get('local_evidence')
+        if entry is None or entry[0] != key:
+            entry = (key, {})
+            memo['local_evidence'] = entry
+        anchor = tuple(anchor)
+        if anchor not in entry[1]:
+            entry[1][anchor] = local_evidence(inputs[0], anchor, self._grid_to_world)
+        return entry[1][anchor]
+
     def _metric_prepare_egress(self, inputs):
         if not getattr(self, '_metric_start_egress_enabled', False):
             return
@@ -1528,7 +1542,7 @@ class MetricFrontierRuntime:
                     if not points:
                         continue
                     key = policy.identify((f.cx,f.cy), goal)
-                    local = local_evidence(grid, policy.attempts[key].frontier_xy, self._grid_to_world)
+                    local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                     if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
                         continue
                     length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
@@ -1552,7 +1566,7 @@ class MetricFrontierRuntime:
             if (goal is not None and policy is not None and live_view
                     and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy),goal)
-                local = local_evidence(grid,policy.attempts[key].frontier_xy,self._grid_to_world)
+                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                 if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
                     stats['deferred_or_served'] += 1
                     continue
@@ -1655,7 +1669,7 @@ class MetricFrontierRuntime:
                     and getattr(self, '_metric_start_egress_enabled', False)
                     and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy), goal)
-                local = local_evidence(grid, policy.attempts[key].frontier_xy, self._grid_to_world)
+                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                 if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
                     if proposal:
                         stats['proposal_search_stopped_on_eligible_task'] = True
@@ -1670,7 +1684,7 @@ class MetricFrontierRuntime:
         # it still grants no movement before its actual full path is proved.
         def eligible_original(candidate):
             key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y))
-            local=local_evidence(grid,policy.attempts[key].frontier_xy,self._grid_to_world)
+            local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
             return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
                 candidate.fingerprint,local)
         if (policy is not None and live_view
@@ -1692,7 +1706,7 @@ class MetricFrontierRuntime:
                     if math.dist(goal,pose[:2]) < self._min_goal_dist_m:
                         continue
                     key=policy.identify((f.cx,f.cy),goal)
-                    local=local_evidence(grid,policy.attempts[key].frontier_xy,self._grid_to_world)
+                    local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                     if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
                         continue
                     bearing=math.atan2(goal[1]-pose[1],goal[0]-pose[0])

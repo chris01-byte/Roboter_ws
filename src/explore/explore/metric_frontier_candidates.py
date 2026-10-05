@@ -126,26 +126,37 @@ def visible_boundary_cells(grid, scope_mask, pose, view):
         raise ValueError('candidate_visibility_capacity_exhausted')
     distances = np.arange(0, view.range_m+1e-9, info.resolution/2)
     angles = view.angles+pose[2]+view.mount[2]-origin_yaw
-    cols = np.floor((x+np.cos(angles[:, None])*distances)/info.resolution).astype(int)
-    rows = np.floor((y+np.sin(angles[:, None])*distances)/info.resolution).astype(int)
-    inside = (rows >= 0) & (rows < info.height) & (cols >= 0) & (cols < info.width)
-    rr, cc = np.clip(rows, 0, info.height-1), np.clip(cols, 0, info.width-1)
-    permitted = inside & scope_mask[rr, cc]
-    costs = data[rr, cc]
-    stopped = ~permitted | (costs != 0)
-    # A diagonal cell transition crosses both side cells; either blocked side
-    # ends sight. Include unknown sides conservatively as a stop, without gain.
-    diagonal = (rows[:, 1:] != rows[:, :-1]) & (cols[:, 1:] != cols[:, :-1])
-    side_clear = ((data[rr[:, :-1], cc[:, 1:]] == 0)
-                  & (data[rr[:, 1:], cc[:, :-1]] == 0)
-                  & scope_mask[rr[:, :-1], cc[:, 1:]]
-                  & scope_mask[rr[:, 1:], cc[:, :-1]])
-    stopped[:, 1:] |= diagonal & ~side_clear
-    first = np.argmax(stopped, axis=1)
-    rays = np.arange(len(angles))
-    hits = (np.any(stopped, axis=1) & permitted[rays, first] & (costs[rays, first] < 0)
-            & (costs[:, 0] == 0) & (distances[first] >= view.minimum_range_m))
-    # Side-cell occlusion has no visible diagonal unknown endpoint.
-    hits &= ~(np.pad(diagonal & ~side_clear, ((0, 0), (1, 0)))[rays, first])
-    return frozenset(zip(rows[rays[hits], first[hits]].tolist(),
+    cosine, sine = np.cos(angles), np.sin(angles)
+    active = np.arange(len(angles))
+    found = set()
+    # Preserve every original half-cell sample, but stop computing a ray
+    # after its first occluder. Carry one preceding sample across blocks so
+    # their diagonal side-cell checks remain identical to the full matrix.
+    for offset in range(0, len(distances), 32):
+        if not len(active):
+            break
+        part = distances[max(0, offset-1):offset+32]
+        cols = np.floor((x+cosine[active, None]*part)/info.resolution).astype(int)
+        rows = np.floor((y+sine[active, None]*part)/info.resolution).astype(int)
+        inside = (rows >= 0) & (rows < info.height) & (cols >= 0) & (cols < info.width)
+        rr, cc = np.clip(rows, 0, info.height-1), np.clip(cols, 0, info.width-1)
+        permitted = inside & scope_mask[rr, cc]
+        costs = data[rr, cc]
+        stopped = ~permitted | (costs != 0)
+        # Either blocked side ends a diagonal transition without gain.
+        diagonal = (rows[:, 1:] != rows[:, :-1]) & (cols[:, 1:] != cols[:, :-1])
+        side_clear = ((data[rr[:, :-1], cc[:, 1:]] == 0)
+                      & (data[rr[:, 1:], cc[:, :-1]] == 0)
+                      & scope_mask[rr[:, :-1], cc[:, 1:]]
+                      & scope_mask[rr[:, 1:], cc[:, :-1]])
+        stopped[:, 1:] |= diagonal & ~side_clear
+        first = np.argmax(stopped, axis=1)
+        rays = np.arange(len(active))
+        terminated = np.any(stopped, axis=1)
+        hits = (terminated & permitted[rays, first] & (costs[rays, first] < 0)
+                & (costs[:, 0] == 0) & (part[first] >= view.minimum_range_m))
+        hits &= ~(np.pad(diagonal & ~side_clear, ((0, 0), (1, 0)))[rays, first])
+        found.update(zip(rows[rays[hits], first[hits]].tolist(),
                          cols[rays[hits], first[hits]].tolist()))
+        active = active[~terminated]
+    return frozenset(found)
