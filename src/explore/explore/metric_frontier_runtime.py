@@ -1618,16 +1618,16 @@ class MetricFrontierRuntime:
             if direction is not None:
                 kwargs['approach_direction'] = direction
             goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+            normal_deferred = False
             if (goal is not None and policy is not None and live_view
                     and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy),goal)
                 local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                 if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
-                    stats['deferred_or_served'] += 1
-                    continue
-            route = None if goal is None else self._metric_route(inputs, goal)
+                    normal_deferred = True
+            route = None if goal is None or normal_deferred else self._metric_route(inputs, goal)
             proposal = False
-            if goal is not None and route is None:
+            if goal is not None and route is None and not normal_deferred:
                 # The historic circular clearance may admit the base centre
                 # while the rotated asymmetric front touches unknown. Search
                 # back from that real approach, within the existing local
@@ -1647,17 +1647,12 @@ class MetricFrontierRuntime:
                         if alternative_route is not None:
                             goal,route = alternative,alternative_route
                             break
-            if (goal is not None and route is None
+            if (goal is not None and route is None and not normal_deferred
                     and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
                 route = self._metric_nav2_proposal(inputs, goal)
                 proposal = route is not None
-            if route is None or math.dist(goal, pose[:2]) < self._min_goal_dist_m:
-                stats['unsafe'] += 1
-                reason=('approach_unavailable' if goal is None else
-                        self._metric_last_route_rejection if route is None else 'goal_too_near')
-                counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
-                continue
-            if (proposal and policy is not None and live_view
+            if ((route is None or proposal) and policy is not None and live_view
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                     and all(footprint_clear(*pose, g, allowed, self._world_to_grid,
                         self._grid_to_world, self._metric_bounds,
                         heading_half_angle=.05, center_deviation_m=.02)
@@ -1668,6 +1663,15 @@ class MetricFrontierRuntime:
                     candidates = [side]
                     stats['robot_side_observation'] = True
                     break
+            if normal_deferred:
+                stats['deferred_or_served'] += 1
+                continue
+            if route is None or math.dist(goal, pose[:2]) < self._min_goal_dist_m:
+                stats['unsafe'] += 1
+                reason=('approach_unavailable' if goal is None else
+                        self._metric_last_route_rejection if route is None else 'goal_too_near')
+                counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
+                continue
             if (policy is not None and live_view and not proposal
                     and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
                 # Prefer a publicly known turning pocket inside the SAME

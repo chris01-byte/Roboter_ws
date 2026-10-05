@@ -1,0 +1,482 @@
+{
+  "kind": "Actual later A51 idle raw/cost/finite scan messages, independent TF pose and saved policy; component inputs only, not exact failure inputs or whole acceptance",
+  "pose": [
+    0.6953009000826628,
+    -0.008472600539803796,
+    -1.3914814953615362
+  ],
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "vertices": [
+      [
+        -0.8999999999999999,
+        -0.95
+      ],
+      [
+        4.699999999999999,
+        -0.95
+      ],
+      [
+        4.699999999999999,
+        1.8499999999999999
+      ],
+      [
+        -0.8999999999999999,
+        1.8499999999999999
+      ]
+    ]
+  },
+  "checkpoint": {
+    "arrivals": 1,
+    "attempts": 13,
+    "budget_limits": {
+      "completion_window_s": 3.0,
+      "goal_timeout_s": 150.0,
+      "max_failed_goals": 3,
+      "max_frontier_goals": 20
+    },
+    "context": {
+      "frame_id": "map",
+      "map_id": "map-11bc995f287b59dda08a91075dc557b8e87e3085a88ca7a56d5275c6799304b1",
+      "session_id": "ap06-door68_start_a"
+    },
+    "failures": 1,
+    "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+    "observations": 1,
+    "observed_area_m2": 0.007199999678134922,
+    "outcome": "in_progress",
+    "policy": {
+      "cooldown_s": 30.0,
+      "next_id": 11,
+      "radius": 0.6,
+      "retry_limit": 2,
+      "tasks": {
+        "metric-task-1": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            -0.7349999835714698,
+            0.704999984242022
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            -0.7349999835714698,
+            0.704999984242022
+          ],
+          "tries": 0
+        },
+        "metric-task-10": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            4.304999903775752,
+            0.9749999782070518
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            4.304999903775752,
+            0.9749999782070518
+          ],
+          "tries": 0
+        },
+        "metric-task-11": {
+          "completed": false,
+          "evidence_key": "e3e4fa47832eb487541bda8bf8feee72f62d9296136055592346a0c36d76e235",
+          "failures": 0,
+          "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+          "frontier_xy": [
+            2.744999938644469,
+            0.9149999795481563
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 29.739870632998645,
+          "target_xy": [
+            3.074999931268394,
+            0.6149999862536788
+          ],
+          "tries": 3
+        },
+        "metric-task-2": {
+          "completed": false,
+          "evidence_key": "f5f7561ca2d1dbe98f1a1d06e1b6dd6831eff12248293810ba160088d3e02f89",
+          "failures": 0,
+          "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+          "frontier_xy": [
+            1.304999970830977,
+            0.13499999698251486
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.304999970830977,
+            0.46499998960644007
+          ],
+          "tries": 3
+        },
+        "metric-task-3": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            1.184999973513186,
+            1.784999960102141
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            1.184999973513186,
+            1.784999960102141
+          ],
+          "tries": 0
+        },
+        "metric-task-4": {
+          "completed": true,
+          "evidence_key": "8b247b8f027d570e1cca89dee923bab2980d84fce3153afee3e97e27dcc69e88",
+          "failures": 0,
+          "fingerprint": "e30e0c594d23d979e966f9a9202cf38ded2f3127ec173b5f7e4111b1f7d2e9d4",
+          "frontier_xy": [
+            -0.7349999835714698,
+            1.6949999621137977
+          ],
+          "reason": "observed",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            0.6942821822488909,
+            -0.005345715906568647
+          ],
+          "tries": 1
+        },
+        "metric-task-5": {
+          "completed": false,
+          "evidence_key": "00552d2cd9c3951a5f225835c970a40d81f6196c8932032232cc0373af95d7c3",
+          "failures": 1,
+          "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+          "frontier_xy": [
+            -0.5249999882653356,
+            -0.5249999882653356
+          ],
+          "reason": "route_invalidated",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            0.2849999936297536,
+            -0.5249999882653356
+          ],
+          "tries": 1
+        },
+        "metric-task-6": {
+          "completed": false,
+          "evidence_key": "7ff70ca58d42bb35cf7707143ecb425eef747bb967f4e149fe075d338c545cac",
+          "failures": 0,
+          "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+          "frontier_xy": [
+            2.4449999453499913,
+            0.04499999899417162
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            2.4149999460205436,
+            0.4949999889358878
+          ],
+          "tries": 3
+        },
+        "metric-task-7": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            3.4949999218806624,
+            0.1649999963119626
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.4949999218806624,
+            0.1649999963119626
+          ],
+          "tries": 0
+        },
+        "metric-task-8": {
+          "completed": false,
+          "evidence_key": "",
+          "failures": 0,
+          "fingerprint": "",
+          "frontier_xy": [
+            4.274999904446304,
+            0.1649999963119626
+          ],
+          "reason": "",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            4.274999904446304,
+            0.1649999963119626
+          ],
+          "tries": 0
+        },
+        "metric-task-9": {
+          "completed": false,
+          "evidence_key": "d8712acd0897068d7e5662f451fa243d634e4c04f55b6295d4cb53cb7a09c8be",
+          "failures": 0,
+          "fingerprint": "b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+          "frontier_xy": [
+            3.554999920539558,
+            0.7949999822303653
+          ],
+          "reason": "proposal_rejected",
+          "retry_remaining_s": 0.0,
+          "target_xy": [
+            3.0944116955403898,
+            0.6326470446827657
+          ],
+          "tries": 1
+        }
+      }
+    },
+    "remaining_s": 691.1446449898067,
+    "resume_authorizes_motion": false,
+    "saved_map_id": "map-b2ec845e2d765bb7f727555f480c5dbe13f17cf14ace9b880f286c93b7bd73a9",
+    "saved_wall_time": 1791240544.8891807,
+    "schema_version": 1,
+    "scope": {
+      "scope_id": "ap06-two-rooms",
+      "vertices": [
+        [
+          -0.8999999999999999,
+          -0.95
+        ],
+        [
+          4.699999999999999,
+          -0.95
+        ],
+        [
+          4.699999999999999,
+          1.8499999999999999
+        ],
+        [
+          -0.8999999999999999,
+          1.8499999999999999
+        ]
+      ]
+    },
+    "strategy": "metric_frontier"
+  },
+  "raw_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -0.9299999792128801,
+      -0.9899999778717756
+    ]
+  },
+  "cost_geometry": {
+    "resolution": 0.029999999329447746,
+    "origin": [
+      -0.9299999792128801,
+      -0.9899999778717756
+    ]
+  },
+  "plans": [
+    {
+      "start_pose": null,
+      "goal": [
+        0.8549999808892608,
+        0.25499999430030584,
+        1.2490457723982544
+      ],
+      "error": null,
+      "points": [
+        [
+          0.6899999845772982,
+          0.0
+        ],
+        [
+          0.6862611998708275,
+          0.019079360535457113
+        ],
+        [
+          0.6908807218622997,
+          0.033350371569014214
+        ],
+        [
+          0.6953312146217101,
+          0.04767494095098357
+        ],
+        [
+          0.6991723095065581,
+          0.06217471937444685
+        ],
+        [
+          0.7031894145193078,
+          0.07662677593618383
+        ],
+        [
+          0.7048769602579554,
+          0.09153156075928592
+        ],
+        [
+          0.707797492419239,
+          0.10624454260815952
+        ],
+        [
+          0.7129576332951117,
+          0.12032901494959702
+        ],
+        [
+          0.7188184958960449,
+          0.1341366547166558
+        ],
+        [
+          0.7214925223255335,
+          0.148896328459017
+        ],
+        [
+          0.7243713979936075,
+          0.1636175500538002
+        ],
+        [
+          0.7271674184389241,
+          0.17835456449491005
+        ],
+        [
+          0.7297054890609047,
+          0.19313827082950752
+        ],
+        [
+          0.7323433521611236,
+          0.20790458214496255
+        ],
+        [
+          0.73502092625899,
+          0.2226636836827467
+        ],
+        [
+          0.7380926348695311,
+          0.23734576648445938
+        ],
+        [
+          0.7405859590935862,
+          0.25213714036038937
+        ],
+        [
+          0.7526607345194947,
+          0.2610365237063945
+        ],
+        [
+          0.7563432142955833,
+          0.2755775008594057
+        ],
+        [
+          0.7604345914624346,
+          0.2900087291745379
+        ],
+        [
+          0.7651330776855403,
+          0.30425387656121217
+        ],
+        [
+          0.7801258675725933,
+          0.30379061973562926
+        ],
+        [
+          0.7950883306170624,
+          0.3027290658042787
+        ],
+        [
+          0.8100758562220065,
+          0.3021174935523234
+        ],
+        [
+          0.8250466734533006,
+          0.30118285459616345
+        ],
+        [
+          0.8399999812245369,
+          0.29999999329447746
+        ],
+        [
+          0.8699999805539846,
+          0.2699999939650297
+        ],
+        [
+          0.8549999808892608,
+          0.25499999430030584
+        ]
+      ]
+    },
+    {
+      "start_pose": [
+        0.8023269482424412,
+        0.11623429477987597,
+        1.0436827283379686
+      ],
+      "goal": [
+        0.6953009000826628,
+        -0.008472600539803796,
+        -1.3914814953615362
+      ],
+      "error": null,
+      "points": [
+        [
+          0.8099999818950891,
+          0.11999999731779099
+        ],
+        [
+          0.7949209035578164,
+          0.12701785757352724
+        ],
+        [
+          0.780307141982604,
+          0.12363578520039198
+        ],
+        [
+          0.7659952755422452,
+          0.11914455147509528
+        ],
+        [
+          0.7527726577347664,
+          0.11206214654306734
+        ],
+        [
+          0.7433173204216956,
+          0.10041755451818801
+        ],
+        [
+          0.7379317309424636,
+          0.0864177684541545
+        ],
+        [
+          0.7349143817667425,
+          0.07172435600181615
+        ],
+        [
+          0.7333568409080016,
+          0.05680538050520312
+        ],
+        [
+          0.7274617604733606,
+          0.04301238917531691
+        ],
+        [
+          0.7199999839067459,
+          0.029999999329447746
+        ],
+        [
+          0.6899999845772982,
+          0.0
+        ],
+        [
+          0.6953009000826628,
+          -0.008472600539803796
+        ]
+      ]
+    }
+  ],
+  "native_plan_kind": "Separate read-only native queries on these later rasters and constant recorded pose, not a whole mission or contemporaneous failure capture"
+}
