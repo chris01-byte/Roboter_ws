@@ -788,6 +788,7 @@ class MetricFrontierRuntime:
         if reference is not None and hasattr(self, '_metric_status'):
             self._metric_status['start_reference'] = dict(
                 current=list(reference), initial=list(self._metric_egress[0].reference),
+                private_epoch_expired=self._metric_egress_expired,
                 retained=[int(e.fixed.unknown.sum()) for e in self._metric_egress],
                 retained_area_m2=[e.retained_region.area*e.fixed.grid.info.resolution**2
                                   for e in self._metric_egress],
@@ -1669,7 +1670,6 @@ class MetricFrontierRuntime:
         if (policy is not None and live_view
                 and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
-                and self._metric_egress_expired
                 and not any(not c.requires_nav2_plan for c in candidates)):
             observed = self._metric_public_observation(
                 inputs, frontiers, policy, scope_mask, selection_started)

@@ -39,6 +39,15 @@ def fixture(name):
     inputs[3], inputs[4] = known_safe_mask(arrays['raw'], node._metric_scope, inputs[1],
         tuple(meta['raw_geometry']['origin']), 0., inputs[0].info.resolution, .28)
     inputs[6] = (arrays['cost'] >= 0) & (arrays['cost'] < 100)
+    # The production centre-search mask also intersects the actual cost cap.
+    # A body geometry proof still uses the separate <100 whole-body mask.
+    for row, col in zip(*np.nonzero(inputs[4])):
+        xy = node._grid_to_world(int(col), int(row), inputs[0].info)
+        cc, rr = node._world_to_grid(*xy, inputs[5].info)
+        cost = arrays['cost']
+        if not (0 <= rr < cost.shape[0] and 0 <= cc < cost.shape[1]
+                and 0 <= cost[rr, cc] <= node._frontier_goal_max_cost):
+            inputs[4][row, col] = False
     node._metric_path_validation = 'rpp_rollout'
     node._metric_status = {}
     node._metric_active = object(); node._metric_nav_path = object()

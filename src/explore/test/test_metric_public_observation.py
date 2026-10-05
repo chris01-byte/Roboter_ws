@@ -77,3 +77,38 @@ def test_actual_a54_short_view_precedes_unproved_distant_approach_work():
     assert node._metric_waypoints_clear(inputs, candidates[0].route, candidates[0].yaw) is not None
     assert before == {k: (a.tries, a.failures, a.completed)
                       for k, a in policy.attempts.items() if k in before}
+
+
+@pytest.mark.parametrize('name', ['ap06_a53_selection', 'ap06_a54_selection', 'ap06_a55_selection'])
+def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
+    from explore.metric_frontier import StartEgressEvidence
+    node, inputs, metadata = fixture(name)
+    state = metadata['checkpoint']
+    policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+    # Public current body, invalid private ledger with no current exemptions:
+    # this is the actual A53-55 state boundary, not a reconstruction of the
+    # historical first inventory. Failure of the private monotone permission
+    # does not mean the map/session identity itself has expired.
+    node._metric_egress_expired = False
+    node._metric_body_anchor_expired = False
+    evidence = []
+    for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+        item = StartEgressEvidence.capture(grid,
+            np.asarray(grid.data).reshape(allowed.shape), allowed,
+            np.ones_like(allowed), inputs[2], node._metric_bounds, node._world_to_grid)
+        assert not item.unknown.any()
+        item.valid = False; item.reason = 'start_egress_approaches_unknown'
+        evidence.append(item)
+    node._metric_egress = tuple(evidence)
+    node._metric_egress_identity = (inputs[1].context,
+        tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
+    before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+    candidates = node._metric_select(inputs, policy, .3)
+    assert node._frontier_rank_stats.get('bounded_public_observation')
+    assert candidates and not candidates[0].requires_nav2_plan
+    assert candidates[0].observation_points
+    assert not node._metric_egress_expired
+    assert all(not e.valid and not e.unknown.any() for e in evidence)
+    assert before == {k: (a.tries, a.failures, a.completed)
+                      for k, a in policy.attempts.items() if k in before}
+    assert node._metric_waypoints_clear(inputs, candidates[0].route, candidates[0].yaw) is not None
