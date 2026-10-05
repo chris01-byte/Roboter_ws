@@ -2532,6 +2532,25 @@ class MetricFrontierRuntime:
                 map_odom_reference=getattr(after,'map_odom_reference',None))
             reached = (status=='success' and position_error <= .15
                        and abs(yaw_error) <= .4)
+            if (status == 'success' and not reached and hard is None
+                    and attempts < self._max_frontier_goals
+                    and policy.attempts[pending.task_id].tries < policy.retry_limit+1
+                    and time.monotonic()-task_started < self._goal_timeout_s
+                    and self._metric_operating_snapshot(require_stop=True)['safe']):
+                # A fresh localization correction can leave terminal Nav2
+                # SUCCESS just outside the exact arrival disk. Revalidate the
+                # SAME job through the existing owner; no receipt, new task,
+                # reset deadline or enlarged acceptance tolerance.
+                chain.append(dict(task=pending.task_id,result=status,
+                    decision='arrival_revalidate',terminal_child=True,
+                    arrived=False,observed_cells=0,position_error_m=position_error,
+                    yaw_error_rad=yaw_error,pose=list(after[2])))
+                last_inputs = after
+                inputs = after
+                self._metric_nav_path = None
+                self._metric_plan_after_ns = None
+                map_join_retry = True  # next actual attempt counts; original start retained
+                continue
             arrival_xy = after[2][:2] if reached else None
             gained = frozenset()
             if reached:
