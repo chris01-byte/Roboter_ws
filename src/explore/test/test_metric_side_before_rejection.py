@@ -43,7 +43,7 @@ def test_recorded_exhausted_a51_history_stays_exhausted():
     assert before == [(key, a.tries, a.failures, a.completed) for key, a in policy.attempts.items()]
 
 
-@pytest.mark.parametrize('name', ['ap06_a51_selection', 'ap06_a52_selection'])
+@pytest.mark.parametrize('name', ['ap06_a51_selection', 'ap06_a52_selection', 'ap06_a53_selection'])
 def test_actual_native_side_arrival_and_departure_paths_remain_proved(name):
     from explore.metric_frontier import MetricCandidate
     from test_metric_departure import path

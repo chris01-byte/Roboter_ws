@@ -1524,6 +1524,59 @@ class MetricFrontierRuntime:
                     length, cost, correlation.fingerprint, correlation.map_revision, False, points)
         return None
 
+    def _metric_public_observation(self, inputs, frontiers, policy, scope_mask, started):
+        """Observe before a distant approach, using only current public space.
+
+        Same local distance budget, real frontier sight and whole route. This
+        is a candidate for the existing native owner, never an egress exemption
+        or a substitute for its mandatory arrival/departure plan checks.
+        """
+        grid, correlation, pose, _, _, costmap, _ = inputs
+        now = time.monotonic()
+        until = min(now+.5, started+self._map_timeout_s-.25)
+        if until-now < .25 or not all(footprint_clear(*pose, g, allowed,
+                self._world_to_grid, self._grid_to_world, self._metric_bounds,
+                heading_half_angle=.05, center_deviation_m=.02)
+                for g, allowed in ((grid, inputs[3]), (costmap, inputs[6]))):
+            return None
+        for f in sorted(frontiers, key=lambda f: math.dist(pose[:2], (f.cx, f.cy))):
+            bearing = math.atan2(f.cy-pose[1], f.cx-pose[0])
+            for offset in (0., math.pi/4, -math.pi/4):
+                heading = bearing+offset
+                error = abs(math.atan2(math.sin(heading-pose[2]), math.cos(heading-pose[2])))
+                if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
+                    continue
+                for fraction in (1., .5, 0.):
+                    if time.monotonic() >= until:
+                        return None
+                    distance = self._min_goal_dist_m+fraction*self._goal_search_m
+                    goal = (pose[0]+distance*math.cos(heading),
+                            pose[1]+distance*math.sin(heading))
+                    key = policy.identify((f.cx, f.cy), goal)
+                    attempt = policy.attempts[key]
+                    if attempt.tries >= policy.retry_limit+1 or attempt.failures >= policy.retry_limit:
+                        continue
+                    facing = math.atan2(f.cy-goal[1], f.cx-goal[0])
+                    for yaw in (facing, facing+math.pi/2, facing-math.pi/2):
+                        if time.monotonic() >= until:
+                            return None
+                        route = self._metric_route(inputs, goal, yaw)
+                        if route is None:
+                            continue
+                        visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw),
+                                                         self._metric_observation_view())
+                        points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
+                            if math.dist(self._grid_to_world(c, r, grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
+                        local = self._metric_local_evidence(inputs, attempt.frontier_xy)
+                        if not points or not policy.eligible(key, goal, time.monotonic(),
+                                correlation.fingerprint, local, observation_points=points):
+                            continue
+                        length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
+                        cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
+                        return MetricCandidate('', *goal, yaw, (f.cx, f.cy), route, length,
+                            cost, correlation.fingerprint, correlation.map_revision, False, points)
+        return None
+
     def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
         cache = getattr(self, '_metric_selection_cache', None)
         if cache is None:
@@ -1819,6 +1872,16 @@ class MetricFrontierRuntime:
                         break
                 if candidates:
                     break
+        if (policy is not None and live_view
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and self._metric_egress_expired
+                and not any(not c.requires_nav2_plan for c in candidates)):
+            observed = self._metric_public_observation(
+                inputs, frontiers, policy, scope_mask, selection_started)
+            if observed is not None:
+                candidates = [observed]
+                stats['bounded_public_observation'] = True
         # A boundary approach can be far beyond the first safe observation
         # pocket. Also consider bounded forward observation positions from
         # CURRENT pose/map/sight. A retired escape proof does not prohibit a

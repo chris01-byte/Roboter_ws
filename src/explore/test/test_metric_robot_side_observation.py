@@ -65,7 +65,16 @@ def test_original_exhausted_a47_policy_stays_exhausted():
     state = metadata['checkpoint']
     policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
     assert policy.attempts['metric-task-2'].tries == 3
-    assert node._metric_select(inputs, policy, .3) == []
+    before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+    candidates = node._metric_select(inputs, policy, .3)
+    # A cap belongs to the original task, not every other finite observation.
+    for candidate in candidates:
+        assert candidate.task_id != 'metric-task-2'
+        assert policy.attempts[candidate.task_id].tries < 3
+        assert candidate.observation_points and not candidate.requires_nav2_plan
+        assert node._metric_waypoints_clear(inputs, candidate.route, candidate.yaw) is not None
+    assert before == {k: (a.tries, a.failures, a.completed)
+                      for k, a in policy.attempts.items() if k in before}
     assert policy.attempts['metric-task-2'].tries == 3
     assert not policy.attempts['metric-task-2'].completed
 

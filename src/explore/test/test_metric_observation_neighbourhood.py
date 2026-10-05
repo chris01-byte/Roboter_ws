@@ -70,7 +70,15 @@ def test_actual_a48_served_boundaries_keep_a_bounded_different_observation():
     assert policy.attempts['metric-task-4'].completed
     assert policy.attempts['metric-task-5'].completed
     assert policy.attempts['metric-task-2'].tries == 3
-    assert node._metric_select(inputs, policy, .3) == []  # original actual cap
+    before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+    actual_candidates = node._metric_select(inputs, policy, .3)
+    for selected in actual_candidates:
+        assert selected.task_id != 'metric-task-2'
+        assert policy.attempts[selected.task_id].tries < 3
+        assert selected.observation_points and not selected.requires_nav2_plan
+        assert node._metric_waypoints_clear(inputs, selected.route, selected.yaw) is not None
+    assert before == {k: (a.tries, a.failures, a.completed)
+                      for k, a in policy.attempts.items() if k in before}
     # Counter variant models the earlier first rejection. All actual later
     # maps, finite scan angles and the other served histories remain intact.
     policy.attempts['metric-task-2'].tries = 1
