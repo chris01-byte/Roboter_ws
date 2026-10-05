@@ -38,6 +38,45 @@ def test_encoder_measures_ramp_and_tail_after_zero_command():
         world.integrate([.1, 0.], .04)
 
 
+def test_fixed_pose_with_nonzero_denormal_tail_does_not_repeat_collision_work(monkeypatch):
+    world = module.World(.68, [-1.519861, -.861076, -2.142694])
+    world.integrate([0., 0.], .01)
+    before = (world.pose.copy(), world.motor_positions.copy(), world.minimum_clearance,
+              world.travel, world.collision, world.rear_cleared)
+    world.velocity[:] = 1e-323
+    calls = []
+    actual = module.chassis_clearance
+    def measured(*args):
+        calls.append(1)
+        return actual(*args)
+    monkeypatch.setattr(module, 'chassis_clearance', measured)
+    for _ in range(100):
+        world.integrate([0., 0.], .01)
+    assert np.array_equal(world.pose, before[0])
+    assert np.array_equal(world.motor_positions, before[1])
+    assert (world.minimum_clearance, world.travel, world.collision, world.rear_cleared) == before[2:]
+    assert np.all(world.velocity > 0)  # no artificial rounding/zero velocity
+    assert calls == []
+
+
+def test_even_tiny_pose_change_and_external_placement_recheck_full_collision(monkeypatch):
+    world = module.World(.68, [-1.9, -.45, 0.])
+    world.integrate([0., 0.], .01)
+    actual = module.chassis_clearance; calls = []
+    def measured(*args):
+        calls.append(tuple(args[0]))
+        return actual(*args)
+    monkeypatch.setattr(module, 'chassis_clearance', measured)
+    world.velocity[:] = [1e-6, 0.]
+    before = world.motor_positions.copy()
+    world.integrate([0., 0.], .01)
+    assert len(calls) == 1 and np.any(world.motor_positions != before)
+    assert not world.collision
+    world.pose[0] = -2.7  # declared wall overlaps padded rear, same small tail
+    world.integrate([0., 0.], .01)
+    assert len(calls) == 2 and world.collision and world.minimum_clearance == 0.
+
+
 @pytest.mark.parametrize('beams', (720, 2160))
 def test_native_mast_mask_is_nan_in_sensor_frame(beams):
     world = module.World(.8, [-1.9, -.45, 0.])

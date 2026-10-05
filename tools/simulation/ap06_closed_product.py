@@ -65,11 +65,15 @@ class MemoryESS:
         self.writes = 0
         self.lock = threading.RLock()
         self.advanced_at = time.monotonic()
+        self.last_slow_advance = None
 
     def advance(self):
+        began = time.monotonic()
         with self.lock:
             now = time.monotonic()
             remaining, self.advanced_at = now-self.advanced_at, now
+            elapsed = remaining
+            steps = 0
             command = self.command()
             # Integrate known, unchanged input over real elapsed time. This
             # never fills missed sensor samples or rewrites their timestamps.
@@ -77,6 +81,13 @@ class MemoryESS:
                 step = min(.01, remaining)
                 self.world.integrate(command, step)
                 remaining -= step
+                steps += 1
+            ended = time.monotonic()
+            if ended-began > .02:
+                self.last_slow_advance = dict(begin=began, end=ended,
+                    thread_id=threading.get_native_id(), lock_wait_s=now-began,
+                    elapsed_s=elapsed, steps=steps, pose=self.world.pose.tolist(),
+                    velocity=self.world.velocity.tolist())
 
     def connect(self):
         self.connected = True
@@ -421,7 +432,8 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
                         if ended-began > .1:
                             latency_log.write(json.dumps(dict(node=name,begin=began,end=ended,
                                 duration_s=ended-began,process_cpu_s=time.process_time()-process_began,
-                                thread_cpu_s=time.thread_time()-thread_began))+'\n')
+                                thread_cpu_s=time.thread_time()-thread_began,
+                                last_slow_advance=bus.last_slow_advance))+'\n')
                 except Exception:
                     traceback.print_exc(); halt.set()
             thread = threading.Thread(target=loop, daemon=True)

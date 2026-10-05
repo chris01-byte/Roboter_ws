@@ -104,11 +104,15 @@ class World:
         self.travel += abs(v)*dt
         # Integer counters represent measured plant rotation, including ramp/tail.
         self.motor_positions += np.array([v-w*.3845/2, -(v+w*.3845/2)])*dt/(2*math.pi*.0624)*10000
-        self.minimum_clearance = min(self.minimum_clearance,
-            chassis_clearance(self.pose, self.obstacles))
-        self.collision |= self.minimum_clearance <= 0.
-        self.rear_cleared |= bool(chassis(self.pose)[:, 0].min() > .64)
-        self.checked_pose = tuple(self.pose)
+        # The declared obstacles are static. Reuse only an exactly identical
+        # pose's geometry; still integrate every nonzero velocity/counter tail.
+        pose = tuple(self.pose)
+        if pose != self.checked_pose:
+            self.minimum_clearance = min(self.minimum_clearance,
+                chassis_clearance(self.pose, self.obstacles))
+            self.collision |= self.minimum_clearance <= 0.
+            self.rear_cleared |= bool(chassis(self.pose)[:, 0].min() > .64)
+            self.checked_pose = pose
 
     def raycast(self, origin, angles, maximum=10.):
         """First finite return; occupied edges occlude all further geometry."""
