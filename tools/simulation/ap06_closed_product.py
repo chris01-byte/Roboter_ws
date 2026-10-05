@@ -480,6 +480,7 @@ class Observer(Node):
         self.action_active, self.action_maximum, self.command_values = {}, {}, {}
         self.tf_children = set()
         self.transforms = {}
+        self.tf_recorded_at = {}
         self.out = out
         self.command = self.create_publisher(String, '/mission_manager/command_json', 10)
         self.events = (out/'events.jsonl').open('w')
@@ -487,12 +488,16 @@ class Observer(Node):
         self.create_subscription(OccupancyGrid, '/map', lambda msg: setattr(self, 'map', msg), qos)
         self.create_subscription(OccupancyGrid, '/global_costmap/costmap',
                                  lambda msg: setattr(self, 'costmap', msg), qos)
-        def plan_callback(msg):
-            self.events.write(json.dumps({'at': time.monotonic(), 'topic': '/plan',
+        def plan_callback(msg, topic='/plan'):
+            self.events.write(json.dumps({'at': time.monotonic(), 'topic': topic,
                 'frame': msg.header.frame_id,
+                'stamp': [msg.header.stamp.sec, msg.header.stamp.nanosec],
+                'latest_tf': [self.tf_values(t) for t in self.transforms.values()],
                 'points': [[p.pose.position.x, p.pose.position.y] for p in msg.poses]})+'\n')
             self.events.flush()
         self.create_subscription(NavPath, '/plan', plan_callback, 10)
+        self.create_subscription(NavPath, '/received_global_plan',
+                                 functools.partial(plan_callback, topic='/received_global_plan'), 10)
         for topic, dest in (('/explore/status_json', self.phases),
                             ('/mission_manager/status_json', self.manager),
                             ('/fusion/hwt601/status_json', self.fusion)):
@@ -525,11 +530,28 @@ class Observer(Node):
                 self.command_values[topic] = (msg.linear.x, msg.angular.z)
             self.create_subscription(Twist, topic, velocity_callback, 100)
 
+    @staticmethod
+    def tf_values(transform):
+        return dict(parent=transform.header.frame_id, child=transform.child_frame_id,
+                    stamp=[transform.header.stamp.sec, transform.header.stamp.nanosec],
+                    translation=[transform.transform.translation.x,
+                                 transform.transform.translation.y,
+                                 transform.transform.translation.z],
+                    rotation=[transform.transform.rotation.x,
+                              transform.transform.rotation.y,
+                              transform.transform.rotation.z,
+                              transform.transform.rotation.w])
+
     def on_tf(self, msg):
+        now = time.monotonic()
         for transform in msg.transforms:
             pair = (transform.header.frame_id, transform.child_frame_id)
             self.tf_children.add(pair)
             self.transforms[pair] = transform
+            if now-self.tf_recorded_at.get(pair, 0.) >= 1.:
+                self.events.write(json.dumps(dict(at=now, topic='/tf',
+                    transform=self.tf_values(transform)))+'\n')
+                self.tf_recorded_at[pair] = now
 
     def owners(self):
         endpoints = {tuple(int(v) for v in e.endpoint_gid): e.node_name
