@@ -14,7 +14,7 @@ import pytest
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path as NavPath
 
-from explore.metric_frontier import MetricCandidate, known_safe_mask
+from explore.metric_frontier import MetricCandidate, known_safe_mask, rpp_trajectory
 from explore.portal_memory import Point2D
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from test_metric_frontier import adaptive_fixture
@@ -60,9 +60,11 @@ def path(record):
 
 
 @pytest.mark.parametrize('name,index,expected', (
-    ('ap06_dead_end', 0, False), ('ap06_dead_end', 2, False),
+    ('ap06_dead_end', 0, False),
+    ('ap06_c33_native_detour', 0, True),
     ('ap06_dead_end', 4, True),
     ('ap06_c38_departure', 0, False),
+    ('ap06_c40_native_detour', 0, True),
     ('ap06_corridor_departure', 0, True)))
 def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
     node, inputs, meta = fixture(name)
@@ -89,6 +91,20 @@ def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name
     assert node._metric_nav_path is (None if calls else original_path)
     assert node._metric_plan_after_ns == (123 if calls else 42)
     assert [bytes(np.asarray(inputs[i].data,dtype=np.int8)) for i in (0,5)] == before
+    if name in ('ap06_c33_native_detour', 'ap06_c40_native_detour'):
+        assert len(calls) == 3  # actual return, forward refuge and detour return
+        projected = tuple(records[1]['start_pose'])
+        escape = records[2]['goal']
+        chord = (projected[:2], tuple(escape[:2]))
+        end = rpp_trajectory(chord, projected, inputs[0].info.resolution,
+            getattr(node, '_prealign_handoff_tolerance', .17), node._metric_bounds,
+            prealign_to_first_leg=True, external_prealignment=False)[-1]
+        return_yaw = math.atan2(inputs[2][1]-end[1], inputs[2][0]-end[0])
+        # This cheap chord is invalid; the actual three native plans above
+        # still prove every forward/return sweep including the heading band.
+        assert node._metric_standard_waypoints_clear(
+            (inputs[0], inputs[1], end, *inputs[3:]),
+            (end[:2], inputs[2][:2]), return_yaw) is None
     if not expected:
         assert node._metric_status['departure_plan_rejection'] == 'footprint_sweep_invalid'
     else:

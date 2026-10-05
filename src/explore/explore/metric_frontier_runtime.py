@@ -1370,14 +1370,9 @@ class MetricFrontierRuntime:
                     chord = (projected[:2],xy)
                     if self._metric_standard_waypoints_clear(forecast,chord,escape.yaw) is None:
                         continue
-                    end = rpp_trajectory(chord,projected,resolution,
-                        getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                        prealign_to_first_leg=True,external_prealignment=False)[-1]
-                    refuge = (inputs[0],inputs[1],end,*inputs[3:])
-                    return_target = replace(back,yaw=math.atan2(pose[1]-end[1],pose[0]-end[0]))
-                    if self._metric_standard_waypoints_clear(
-                            refuge,(end[:2],pose[:2]),return_target.yaw) is None:
-                        continue
+                    # A direct return chord can cross an observed obstacle
+                    # even when NavFn has a safe detour. Only the actual
+                    # forward and return paths below prove this refuge.
                     path,error = self._metric_request_nav_plan(escape,stopped,start_pose=projected)
                     route = None if path is None else forecast_route(forecast,path,escape)
                     if route is None:
