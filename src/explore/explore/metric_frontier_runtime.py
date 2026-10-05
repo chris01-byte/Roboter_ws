@@ -1442,7 +1442,8 @@ class MetricFrontierRuntime:
             maximum_cells=self._wohnungserkundung_evidence_max_cells)
         unknown_in_scope=int(np.count_nonzero((np.asarray(grid.data).reshape(known.shape)<0)&inside&~known))
         useful = bool(unknown_in_scope and getattr(self, '_frontiers_remaining', 0))
-        scan = bool(scan_pending and sweep_clear and useful and not candidates)
+        scan = bool(scan_pending and sweep_clear and useful
+                    and (not candidates or all(c.requires_nav2_plan for c in candidates)))
         decision = dict(strategy=self._metric_start_strategy,
             selected_motion='full_scan' if scan else 'observation_goal' if candidates else 'wait',
             scan_admissible=bool(sweep_clear), scan_useful=useful,
