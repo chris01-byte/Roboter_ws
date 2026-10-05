@@ -1004,6 +1004,18 @@ class CmdVelMissionGate(Node):
             self._mode = mode
 
 
+def spin_passive_gate(executor, stop_requested=lambda: False):
+    """Give independent source workers a bounded scheduling opportunity.
+
+    Older Humble MultiThreadedExecutor.spin() can busy-poll a blocked default
+    callback group and starve its own ready source workers. This yield changes
+    no message time or health deadline; a delayed real source still fails.
+    """
+    while executor.context.ok() and not stop_requested():
+        executor.spin_once(timeout_sec=.02)
+        time.sleep(.001)
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelMissionGate()
@@ -1011,7 +1023,10 @@ def main(args=None):
                 if node._hwt_source_cb is not None else SingleThreadedExecutor())
     executor.add_node(node)
     try:
-        executor.spin()
+        if node._hwt_source_cb is not None:
+            spin_passive_gate(executor)
+        else:
+            executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     except RuntimeError:

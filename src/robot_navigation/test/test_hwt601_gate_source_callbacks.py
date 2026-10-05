@@ -1,5 +1,6 @@
 """Actual DDS callbacks: a busy ordinary gate callback must not age sources."""
 import json
+import multiprocessing
 import os
 import subprocess
 import sys
@@ -19,7 +20,37 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'robot_state_estimation' / 'test'))
 sys.path.insert(0, str(ROOT / 'robot_navigation'))
 from test_hwt601_fusion_health import ready_health
-from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate
+from robot_navigation.cmd_vel_mission_gate import CmdVelMissionGate, spin_passive_gate
+
+
+def _source_process(stopped, wheel_enabled, ready):
+    """Actual fresh DDS messages from a separate producer, like base/HWT."""
+    rclpy.init(args=[])
+    node = Node('gate_source_callback_test_inputs')
+    raw = node.create_publisher(Imu, '/shadow/hwt601/imu/data_raw', 10)
+    yaw = node.create_publisher(Imu, '/shadow/hwt601/imu/yaw_rate', 10)
+    wheel = node.create_publisher(Odometry, '/fusion/hwt601/wheel_odom_raw', 10)
+    template = ready_health(False, now=time.monotonic())
+    statuses = {key: node.create_publisher(String, topic, 10) for key, topic in [
+        ('raw', '/shadow/hwt601/raw_status_json'),
+        ('yaw', '/shadow/hwt601/status_json'),
+        ('wheel', '/shadow/hwt601/wheel_status_json')]}
+    try:
+        ready.set()
+        while not stopped.is_set():
+            stamp = node.get_clock().now().to_msg()
+            for pub, frame in [(raw, 'hwt601_link'), (yaw, 'base_link')]:
+                m = Imu(); m.header.stamp = stamp; m.header.frame_id = frame
+                m.angular_velocity_covariance[8] = .01; pub.publish(m)
+            if wheel_enabled.is_set():
+                m = Odometry(); m.header.stamp = stamp; m.header.frame_id = 'odom'
+                m.child_frame_id = 'base_link'; m.twist.covariance[0] = .01
+                wheel.publish(m)
+            for key, pub in statuses.items():
+                pub.publish(String(data=json.dumps(template.statuses[key][0])))
+            stopped.wait(.01)
+    finally:
+        node.destroy_node(); rclpy.shutdown()
 
 
 @pytest.mark.parametrize('stop_wheel', [False, True])
@@ -41,10 +72,12 @@ def _passive_wheel_case(stop_wheel, busy_group):
     assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
     rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true'])
     gate = CmdVelMissionGate()
-    probe = Node('gate_source_callback_test_inputs')
+    probe = Node('gate_source_callback_test_control')
     executor = MultiThreadedExecutor(num_threads=3)
     executor.add_node(gate)
-    thread = threading.Thread(target=executor.spin, daemon=True)
+    executor_stop = threading.Event()
+    thread = threading.Thread(target=spin_passive_gate,
+        args=(executor, executor_stop.is_set), daemon=True)
     entered, exited = threading.Event(), threading.Event()
     release = threading.Event()
     def busy(_msg):
@@ -58,28 +91,19 @@ def _passive_wheel_case(stop_wheel, busy_group):
                              callback_group=(gate._hwt_source_cb
                                              if busy_group == 'imu_status' else None))
     trigger = probe.create_publisher(String, '/test/gate_busy_callback', 10)
-    raw = probe.create_publisher(Imu, '/shadow/hwt601/imu/data_raw', 10)
-    yaw = probe.create_publisher(Imu, '/shadow/hwt601/imu/yaw_rate', 10)
-    wheel = probe.create_publisher(Odometry, '/fusion/hwt601/wheel_odom_raw', 10)
-    template = ready_health(False, now=time.monotonic())
-    statuses = {
-        key: probe.create_publisher(String, topic, 10)
-        for key, topic in [('raw', '/shadow/hwt601/raw_status_json'),
-                           ('yaw', '/shadow/hwt601/status_json'),
-                           ('wheel', '/shadow/hwt601/wheel_status_json')]}
+    context = multiprocessing.get_context('spawn')
+    source_stop, wheel_enabled, source_ready = (context.Event() for _ in range(3))
+    wheel_enabled.set()
+    sources = context.Process(target=_source_process,
+        args=(source_stop, wheel_enabled, source_ready))
     def publish(include_wheel=True):
-        stamp = probe.get_clock().now().to_msg()
-        for pub, frame in [(raw, 'hwt601_link'), (yaw, 'base_link')]:
-            m = Imu(); m.header.stamp = stamp; m.header.frame_id = frame
-            m.angular_velocity_covariance[8] = .01; pub.publish(m)
-        if include_wheel:
-            m = Odometry(); m.header.stamp = stamp; m.header.frame_id = 'odom'
-            m.child_frame_id = 'base_link'; m.twist.covariance[0] = .01
-            wheel.publish(m)
-        for key, pub in statuses.items():
-            pub.publish(String(data=json.dumps(template.statuses[key][0])))
+        # Only control the independent producer. A busy gate's Python GIL
+        # must not prevent the test from PRODUCING fresh wheel measurements.
+        (wheel_enabled.set if include_wheel else wheel_enabled.clear)()
         time.sleep(.01)
     try:
+        sources.start()
+        assert source_ready.wait(3.)
         thread.start()
         end = time.monotonic()+3
         while time.monotonic()<end:
@@ -126,6 +150,10 @@ def _passive_wheel_case(stop_wheel, busy_group):
         assert gate._mode == 'blocked'  # no mission, even with healthy inputs
     finally:
         release.set()
+        source_stop.set(); sources.join(timeout=3.)
+        if sources.is_alive():
+            sources.terminate(); sources.join(timeout=2.)
+        executor_stop.set(); thread.join(timeout=2.)
         executor.shutdown(timeout_sec=2)
         thread.join(timeout=2)
         gate.destroy_node(); probe.destroy_node(); rclpy.shutdown()
