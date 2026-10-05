@@ -5654,18 +5654,21 @@ class ExploreNode(MetricFrontierRuntime, Node):
             return stop_status, achieved
         return status, achieved
 
-    def _scan_in_place(self, stop_requested=lambda: False) -> Tuple[str, float]:
+    def _scan_in_place(self, stop_requested=lambda: False, *, angle_rad=None) -> Tuple[str, float]:
         """Perform the measured full scan, stopping between short segments."""
+        angle = self._initial_scan_angle if angle_rad is None else angle_rad
+        if not math.isfinite(angle) or not 0. < angle <= self._initial_scan_angle:
+            raise ValueError('scan_remaining_angle_invalid')
         if self._initial_scan_segment_angle <= 0.0:
             return self._rotate_in_place(
-                self._initial_scan_angle,
+                angle,
                 self._initial_scan_speed,
                 self._initial_scan_timeout,
                 stop_requested=stop_requested)
 
         deadline = time.monotonic() + self._initial_scan_timeout
         achieved_total = 0.0
-        while achieved_total + 1e-9 < self._initial_scan_angle:
+        while achieved_total + 1e-9 < angle:
             if stop_requested():
                 return 'interrupted', achieved_total
             remaining_time = deadline - time.monotonic()
@@ -5673,7 +5676,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 return 'timeout', achieved_total
             segment_angle = min(
                 self._initial_scan_segment_angle,
-                self._initial_scan_angle - achieved_total)
+                angle - achieved_total)
             status, achieved = self._rotate_in_place(
                 segment_angle,
                 self._initial_scan_speed,

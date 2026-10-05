@@ -1988,6 +1988,8 @@ class MetricFrontierRuntime:
         task_started = None
         scan_pending = self._initial_scan_enabled
         scan_task_started = None
+        scan_progress = 0.
+        scan_resume_pending = False
         initial_stop_confirmed = False
         chain = []
         completion_window = CompletionWindow(getattr(self, '_metric_completion_window_s', 3.))
@@ -2118,7 +2120,8 @@ class MetricFrontierRuntime:
             checkpoint()
             adaptive_candidates = None
             use_scan = scan_pending and pending is None
-            if self._metric_start_strategy == 'adaptive' and pending is None:
+            if (self._metric_start_strategy == 'adaptive' and pending is None
+                    and not scan_resume_pending):
                 try:
                     decision, adaptive_candidates = self._metric_start_decision(
                         inputs, policy, min_frontier, scan_pending)
@@ -2159,7 +2162,14 @@ class MetricFrontierRuntime:
                     except Exception as error:
                         self._metric_status['first_rejecting_predicate'] = str(error)
                         return True
-                status, _ = self._scan_in_place(stop_requested=scan_stop)
+                if scan_resume_pending:
+                    status, achieved = self._scan_in_place(stop_requested=scan_stop,
+                        angle_rad=self._initial_scan_angle-scan_progress)
+                else:
+                    status, achieved = self._scan_in_place(stop_requested=scan_stop)
+                scan_progress += achieved
+                scan_resume_pending = False
+                self._metric_status['scan_progress_rad'] = scan_progress
                 if self._hwt_hold_announced:
                     continue
                 if status != 'success':
@@ -2172,6 +2182,15 @@ class MetricFrontierRuntime:
                     # are required before choosing a separately validated goal.
                     if not self._metric_confirm_stop(goal_handle, expired):
                         return finish('failed','optional_scan_stop_or_sources_unconfirmed')
+                    if (self._metric_status.get('first_rejecting_predicate') == 'map_status_join_pending'
+                            and scan_progress+1e-9 < self._initial_scan_angle
+                            and time.monotonic()-scan_task_started < self._goal_timeout_s):
+                        # Same observation attempt, measured angle and original
+                        # deadline. The next loop requires a genuinely fresh
+                        # exact pair and full rotation geometry before motion.
+                        scan_resume_pending = True
+                        self._metric_status['scan_join_revalidate'] = True
+                        continue
                     self._metric_status['deferred_initial_scan'] = dict(
                         result=status,completed=False,attempts=1,
                         reason=self._metric_status.get('first_rejecting_predicate'))
