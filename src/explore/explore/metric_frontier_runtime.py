@@ -1970,7 +1970,8 @@ class MetricFrontierRuntime:
             except Exception as error:
                 reason = str(error)
                 if (pending is None and reason in ('map_scope_not_joined','map_status_join_pending')
-                        or (pending is not None and reason=='map_status_join_pending'
+                        or (pending is not None and reason in (
+                            'map_status_join_pending','start_motion_wheel_stale_after_processing')
                             and time.monotonic()-task_started < self._goal_timeout_s
                             and self._metric_operating_snapshot(require_stop=True)['safe'])):
                     self._status_phase='metric_waiting_sources'
@@ -2297,7 +2298,8 @@ class MetricFrontierRuntime:
                     after=self._metric_inputs(active=True)
                     break
                 except Exception as error:
-                    if str(error) != 'map_status_join_pending' or time.monotonic() >= until:
+                    if str(error) not in ('map_status_join_pending',
+                            'start_motion_wheel_stale_after_processing') or time.monotonic() >= until:
                         return finish('failed',str(error))
                     if goal_handle.is_cancel_requested:
                         return finish('canceled','user_canceled')
@@ -2310,19 +2312,21 @@ class MetricFrontierRuntime:
                             time.sleep(.02)
                             continue  # terminal child; unchanged exact-join/observation deadline
                         return finish('failed','observation_sources_or_stop_invalid')
-                    time.sleep(.05)  # child terminal; wait for the actual exact join
+                    time.sleep(.05)  # terminal and stopped; discard expired input, never refresh its stamps
             hard = stop_reason[0]
             if not self._metric_work_is_current(self._metric_active_context):
                 return finish('failed','map_work_context_changed')
-            if hard == 'map_status_join_pending':
+            if hard in ('map_status_join_pending','start_motion_wheel_stale_after_processing'):
                 if status == 'success':
                     hard = None  # real terminal success, exact current pair now revalidated
                 else:
                     attempt = policy.attempts[pending.task_id]
                     if attempt.tries >= policy.retry_limit+1:
-                        return finish('blocked','map_status_join_retry_budget_exhausted')
+                        return finish('blocked',('map_status_join_retry_budget_exhausted'
+                            if hard=='map_status_join_pending' else 'geometry_snapshot_retry_budget_exhausted'))
                     chain.append(dict(task=pending.task_id,result=status,
-                        decision='map_join_revalidate',terminal_child=True,
+                        decision=('map_join_revalidate' if hard=='map_status_join_pending'
+                                  else 'geometry_snapshot_revalidate'),terminal_child=True,
                         stop_reason=hard,arrived=False,observed_cells=0))
                     last_inputs = after
                     inputs = after
