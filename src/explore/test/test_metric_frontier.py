@@ -541,7 +541,7 @@ def test_sparse_plan_progress_never_invents_a_return_to_old_start_waypoint():
     assert route==((.4,.05),(.75,.05))
 
 
-def test_first_body_space_is_fixed_through_measured_travel_but_not_mapping_shift(monkeypatch):
+def test_first_body_space_stays_fixed_in_map_through_travel_and_localization_refinement(monkeypatch):
     from geometry_msgs.msg import TransformStamped
     from explore.portal_source_adapter import raw_map_portal_source_from_values
     n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
@@ -561,7 +561,13 @@ def test_first_body_space_is_fixed_through_measured_travel_but_not_mapping_shift
     known=n._metric_inputs()[3]
     assert known[20,10] and not known[20,13]
     transform.transform.translation.x=.02
-    assert not n._metric_inputs()[3][20,10]
+    # map->odom is current localization refinement, not a relocation of the
+    # fixed first map-frame chassis. No newly occupied body space is added.
+    known=n._metric_inputs()[3]
+    assert known[20,10] and not known[20,13]
+    g.info.origin.position.x += .001
+    refresh()
+    assert not n._metric_inputs()[3][20,10]  # actual raster geometry still expires
     transform.transform.translation.x=0.
     assert not n._metric_inputs()[3][20,10]  # reference invalidation is permanent
 

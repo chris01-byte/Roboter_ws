@@ -61,7 +61,9 @@ def test_native_start_has_autonomous_proved_local_observation_without_whitening(
     candidates = node._metric_candidates(inputs,.3)
     proved = [c for c in candidates if not c.requires_nav2_plan]
     assert proved, node._frontier_rank_stats
-    assert all(.3<=c.x<=.6 and abs(c.y)<1e-6 and c.observation_points for c in proved)
+    assert all(c.route_length_m >= node._min_goal_dist_m and c.observation_points for c in proved)
+    # Native RPP can stop safely in a narrow observed connection; proposals
+    # must still pass the whole actual rollout, with no map changes.
     assert all(node._metric_waypoints_clear(inputs,c.route,c.yaw) for c in proved)
     assert inputs[0].data == before and not inputs[3].all()
 

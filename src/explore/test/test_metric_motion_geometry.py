@@ -172,3 +172,23 @@ def test_simulation_tracking_contract_rejects_different_actual_response_limits(n
         plugin,key=name.split('.');data[plugin][key]=value
     else:data[name]=value
     assert not n._metric_controller_contract(lambda:False)
+
+
+@pytest.mark.parametrize('width',[.68,.8])
+def test_rpp_stop_inside_connection_keeps_tracking_and_rejects_actual_final_turn(width):
+    node,inputs=door_inputs(width)
+    route=((-0.9,0.),(0.,0.))
+    assert node._metric_waypoints_clear(inputs,route,0.) is not None
+    assert node._metric_waypoints_clear(inputs,route,math.pi/2) is None
+    node._metric_path_validation='conservative'
+    assert node._metric_waypoints_clear(inputs,route,0.) is None
+
+
+def test_reachable_rpp_stopping_pose_must_be_free_before_ideal_target():
+    node,inputs=door_inputs()
+    # Ideal endpoint is in a wide free room; the actual early stopping pose
+    # remains in the narrow passage and cannot perform the requested turn.
+    route=((-0.9,0.),(.45,0.))
+    assert node._metric_waypoints_clear(inputs,route,0.) is not None
+    assert node._metric_waypoints_clear(inputs,route,math.pi/2) is None
+    assert node._metric_last_route_rejection == 'goal_stop_rotation_invalid'

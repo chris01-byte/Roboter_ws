@@ -48,6 +48,7 @@ jobs:
             ros-humble-robot-localization ros-humble-tf2-ros ros-humble-sensor-msgs-py \
             ros-humble-nav2-msgs ros-humble-tf2-geometry-msgs
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+          python3 -m pip install -r src/explore/requirements-geometry.txt
       - name: Build interfaces and affected HWT and map packages
         shell: bash
         run: |
@@ -76,6 +77,7 @@ jobs:
             src/explore/test/test_metric_frontier_candidates.py \
             src/explore/test/test_metric_body_reference_tf.py \
             src/explore/test/test_metric_egress_reference.py \
+            src/explore/test/test_metric_partial_reference.py \
             src/explore/test/test_metric_source_delivery.py \
             src/explore/test/test_metric_sweep_batch.py \
             src/explore/test/test_metric_selection_pass.py \
@@ -116,6 +118,7 @@ jobs:
             libeigen3-dev libtbb-dev libboost-system-dev libboost-serialization-dev \
             libboost-filesystem-dev libboost-thread-dev
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
+          python3 -m pip install -r src/explore/requirements-geometry.txt
       - name: Test pinned native SLAM raster growth without changing guard authority
         shell: bash
         run: |

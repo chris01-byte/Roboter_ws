@@ -277,7 +277,7 @@ def test_actual_map_repository_and_sidecar_keep_last_pair_after_interrupted_new_
     assert (first.path/'occupancy.bin').exists()
 
 
-@pytest.mark.parametrize('gain',['new_visible_cells','arrival_only','cancel_wait','late_cancel','gain_after_deadline','hwt_wait'])
+@pytest.mark.parametrize('gain',['new_visible_cells','arrival_only','cancel_wait','late_cancel','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'])
 def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypatch,gain):
     from geometry_msgs.msg import PoseStamped
     from nav_msgs.msg import Path
@@ -296,12 +296,14 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
     def navigate(*_,**__):
         target=chosen[-1];clock[0]+=.1
         n._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
-        if gain in ('new_visible_cells','gain_after_deadline','hwt_wait'):
+        if gain in ('new_visible_cells','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'):
             newer=copy.deepcopy(g)
             for xy in target.observation_points:
                 col,row=n._world_to_grid(*xy,newer.info);newer.data[row*newer.info.width+col]=0
             newer.header.stamp.nanosec=100_000_000
-            n._on_map(newer);n._on_metric_map_status(status(newer,accepted=3,observed=3,when=100.1))
+            n._on_map(newer)
+            if not gain.startswith('join_'):
+                n._on_metric_map_status(status(newer,accepted=3,observed=3,when=100.1))
         if gain=='late_cancel':parent.is_cancel_requested=True
         return 'success'
     n._navigate_to=navigate
@@ -332,15 +334,33 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
             clock[0]+=max(.05,delay)
             if chosen:parent.is_cancel_requested=True
         monkeypatch.setattr(module.time,'sleep',tick)
+    if gain.startswith('join_'):
+        import explore.metric_frontier_runtime as module
+        def tick(delay):
+            clock[0]+=max(.05,delay)
+            if chosen and n._metric_pending_since is not None:
+                if gain=='join_lag':
+                    latest=n._metric_raw[0]
+                    n._on_metric_map_status(status(latest,accepted=3,observed=3,when=100.1))
+                elif gain=='join_cancel':
+                    parent.is_cancel_requested=True
+                elif gain=='join_source_loss':
+                    n._metric_raw=(*n._metric_raw[:2],4.)
+                    n._on_metric_map_status(status(n._metric_raw[0],accepted=3,observed=3,when=100.1))
+        monkeypatch.setattr(module.time,'sleep',tick)
     result=n._execute_metric_frontier(parent,10.,.3)
     assert chosen and chosen[0].observation_points
     if 'cancel' in gain:
         assert terminal==['cancel'] and n._metric_status['outcome']=='user_canceled'
         assert n._metric_status['observations']==0
+    elif gain in ('join_timeout','join_source_loss'):
+        assert terminal==['abort'] and not result.success
+        assert n._metric_status['observations']==0
+        assert n._metric_status['reason']==('map_status_join_pending' if gain=='join_timeout' else 'map_or_status_stale')
     else:
         assert terminal==['abort'] and not result.success
         assert n._metric_status['arrivals']==1
-        if gain in ('new_visible_cells','hwt_wait'):
+        if gain in ('new_visible_cells','hwt_wait','join_lag'):
             assert n._metric_status['observations']==1 and n._metric_status['observed_area_m2']>0
             assert n._metric_status['chain'][0]['decision']=='observed'
             if gain=='hwt_wait':

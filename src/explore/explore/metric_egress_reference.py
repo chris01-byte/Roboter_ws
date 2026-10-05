@@ -2,11 +2,13 @@
 
 The capture raster is immutable in odometry space. Current unknown cells must
 be wholly covered by its retained cells. Observations retire intersecting
-capture cells conservatively, so resampling cannot resurrect an exemption.
+physical area exactly, so resampling cannot resurrect an exemption.
 """
 import copy
 import math
 import numpy as np
+from shapely.geometry import Polygon, box
+from shapely.ops import unary_union
 
 from .metric_frontier import StartEgressEvidence, _cell_intersections
 
@@ -102,6 +104,11 @@ class ReferencedStartEgress:
         self.scope_mask = evidence.scope_mask.copy()
         self.generation = 0
         self._projection_key = None
+        self.retained_region = unary_union([box(col,row,col+1,row+1)
+            for row,col in zip(*np.nonzero(self.fixed.unknown))])
+        self._whole_cells = True
+        self._previous_grid = copy.deepcopy(evidence.grid)
+        self._previous_occupancy = np.asarray(evidence.grid.data).reshape(evidence.unknown.shape).copy()
 
     @property
     def valid(self):
@@ -145,19 +152,52 @@ class ReferencedStartEgress:
         if not self.valid:
             self.unknown = np.zeros_like(inside)
             return
+        # A compatible integer lattice is the same fixed global map frame.
+        # map->odom refines current localization; it does not move its cells.
+        # Keep the physical odometry relation separately for departure history.
+        neutral = (0.,0.,0.)
+        map_axes = grid_points(((0.,0.),(1.,0.),(0.,1.)),grid,neutral,self.fixed.grid,neutral)
+        map_offset = np.rint(map_axes[0])
+        stable_map = (np.max(np.abs(map_axes[0]-map_offset)) <= 1e-9
+            and np.max(np.abs(map_axes[1:]-map_axes[0]-np.eye(2))) <= 1e-9)
+        source_reference = neutral if stable_map else self.current_reference
+        target_reference = neutral if stable_map else self.reference
         o = grid.info.origin
         key = (grid.header.frame_id, grid.info.resolution, occupancy.shape,
             o.position.x, o.position.y, o.orientation.z, o.orientation.w,
-            tuple(reference), occupancy.tobytes(), inside.tobytes(), self.fixed.unknown.tobytes())
+            (source_reference,target_reference), occupancy.tobytes(), inside.tobytes(), self.fixed.unknown.tobytes())
         if key == self._projection_key:
             return  # geometry only; pose/health/monotone commit are still checked
+        # TF refinement is not a new observation. Compare raster evidence in
+        # its declared map frame before withdrawing physical unknown authority.
+        previous = self._previous_occupancy
+        def newly_observed_parts(candidates):
+            if not len(candidates):
+                return []
+            polys = grid_points(squares(candidates).reshape(-1,2), grid,
+                (0.,0.,0.), self._previous_grid, (0.,0.,0.)).reshape(-1,4,2)
+            owners, cells, _ = batch_intersections(polys, previous.shape)
+            changed = previous[cells[:,0],cells[:,1]] < 0
+            parts = []
+            for owner, (row,col) in zip(owners[changed],cells[changed]):
+                part = Polygon(polys[owner]).intersection(box(col,row,col+1,row+1))
+                if part.area <= 1e-9:
+                    continue
+                # Convert measured delta, not the whole current known cell.
+                if part.geom_type != 'Polygon':
+                    continue
+                corners = np.asarray(part.exterior.coords)[:-1]
+                mapped = grid_points(corners,self._previous_grid,
+                    source_reference,self.fixed.grid,target_reference)
+                parts.append(Polygon(mapped))
+            return parts
         retained = self.fixed.unknown
-        axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid, self.current_reference,
-                           self.fixed.grid, self.reference)
+        axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid, source_reference,
+                           self.fixed.grid, target_reference)
         offset = np.rint(axes[0]).astype(int)
         aligned = (np.max(np.abs(axes[0]-offset)) <= 1e-9
             and np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) <= 1e-9)
-        if aligned:
+        if aligned and self._whole_cells:
             # Exact physical lattice: integer index translation, not nearest
             # neighbour resampling. Width/origin growth does not move cells.
             dc, dr = offset
@@ -170,47 +210,68 @@ class ReferencedStartEgress:
                 target = (slice(r0,r1),slice(c0,c1))
                 remaining[source] = retained[source] & (occupancy[target] < 0)
                 projected[target] = remaining[source] & inside[target]
+            removed = retained & ~remaining
+            if np.any(removed):
+                self.retained_region = self.retained_region.difference(unary_union([
+                    box(col,row,col+1,row+1) for row,col in zip(*np.nonzero(removed))]))
             self.fixed.unknown = remaining
             self.unknown = projected
+            self._previous_grid = copy.deepcopy(grid)
+            self._previous_occupancy = occupancy.copy()
             self.generation += 1
             self._projection_key = (*key[:-1], remaining.tobytes())
             return
-        # Keep the same conservative authority as the scalar implementation:
-        # any observed part retires its entire original cell. Batch clipping
-        # avoids hundreds of Python/numpy calls while holding the map lock.
+        # Subcell/rotated updates retire observed physical PARTS, not their
+        # entire old cell. GEOS Boolean subtraction cannot add authority.
+        # Current unknown cells still need complete coverage by the remainder.
         original_cells = np.column_stack(np.nonzero(retained))
         polygons = grid_points(squares(original_cells).reshape(-1,2),
-            self.fixed.grid, self.reference, grid, self.current_reference).reshape(-1,4,2)
-        owners, cells, covered = batch_intersections(polygons, occupancy.shape)
-        counts = np.bincount(owners, minlength=len(original_cells))
-        observed = np.bincount(owners, weights=(occupancy[cells[:,0],cells[:,1]]>=0),
-                               minlength=len(original_cells))
-        retired = ~covered | (counts==0) | (observed>0)
-        retired_cells = original_cells[retired]
-        retained[retired_cells[:,0],retired_cells[:,1]] = False
-        projected = np.zeros(occupancy.shape, dtype=bool)
-        rr, cc = np.nonzero(retained)
+            self.fixed.grid, target_reference, grid, source_reference).reshape(-1,4,2)
+        owners, cells, _ = batch_intersections(polygons, occupancy.shape)
+        observed = cells[(occupancy[cells[:,0],cells[:,1]]>=0) | ~inside[cells[:,0],cells[:,1]]]
+        observed = np.unique(observed,axis=0)
+        extent = grid_points(((0,0),(grid.info.width,0),
+            (grid.info.width,grid.info.height),(0,grid.info.height)), grid,
+            source_reference,self.fixed.grid,target_reference)
+        region = self.retained_region.intersection(Polygon(extent))
+        parts = newly_observed_parts(observed)
+        if parts:
+            region = region.difference(unary_union(parts))
+        # Scope withdrawal is unconditional, independent of observations.
+        outside = cells[~inside[cells[:,0],cells[:,1]]]
+        if len(outside):
+            polygons = grid_points(squares(np.unique(outside,axis=0)).reshape(-1,2),grid,
+                source_reference,self.fixed.grid,target_reference).reshape(-1,4,2)
+            region = region.difference(unary_union([Polygon(p) for p in polygons]))
+        self.retained_region = region
+        # Original cell keys and departure histories stay fixed. A cell with
+        # any retained part remains subject to the original stricter monotone
+        # proof; its observed part can never become an unknown exception again.
+        for row,col in original_cells:
+            retained[row,col] = region.intersection(box(col,row,col+1,row+1)).area > 1e-9
+        self._whole_cells = abs(region.area-int(retained.sum())) <= 1e-9
+        projected = np.zeros(occupancy.shape,dtype=bool)
+        rr,cc = np.nonzero(retained)
         if len(rr):
-            envelope = grid_points(((cc.min(), rr.min()), (cc.max()+1, rr.min()),
-                (cc.max()+1, rr.max()+1), (cc.min(), rr.max()+1)), self.fixed.grid,
-                self.reference, grid, self.current_reference)
-            low = np.maximum(0, np.floor(envelope.min(axis=0)).astype(int))
-            high = np.minimum((occupancy.shape[1], occupancy.shape[0]),
+            envelope = grid_points(((cc.min(),rr.min()),(cc.max()+1,rr.min()),
+                (cc.max()+1,rr.max()+1),(cc.min(),rr.max()+1)), self.fixed.grid,
+                target_reference,grid,source_reference)
+            low = np.maximum(0,np.floor(envelope.min(axis=0)).astype(int))
+            high = np.minimum((occupancy.shape[1],occupancy.shape[0]),
                               np.ceil(envelope.max(axis=0)).astype(int))
-            rows, cols = np.mgrid[low[1]:high[1], low[0]:high[0]]
+            rows,cols = np.mgrid[low[1]:high[1],low[0]:high[0]]
             candidates = np.column_stack((rows.ravel(),cols.ravel()))
             candidates = candidates[(occupancy[candidates[:,0],candidates[:,1]]<0)
                                     & inside[candidates[:,0],candidates[:,1]]]
-            polygons = grid_points(squares(candidates).reshape(-1,2), grid,
-                self.current_reference, self.fixed.grid, self.reference).reshape(-1,4,2)
-            owners, cells, covered = batch_intersections(polygons, retained.shape)
-            counts = np.bincount(owners,minlength=len(candidates))
-            forbidden = np.bincount(owners,weights=~retained[cells[:,0],cells[:,1]],
-                                    minlength=len(candidates))
-            valid = covered & (counts>0) & (forbidden==0)
-            candidates = candidates[valid]
-            projected[candidates[:,0],candidates[:,1]] = True
+            polygons = grid_points(squares(candidates).reshape(-1,2),grid,
+                source_reference,self.fixed.grid,target_reference).reshape(-1,4,2)
+            for (row,col), polygon in zip(candidates,polygons):
+                # Same 1e-9 pixel-area numerical edge threshold as the exact
+                # clipper; no dilation/buffer or extra spatial safety margin.
+                projected[row,col] = Polygon(polygon).difference(region).area <= 1e-9
         self.unknown = projected
+        self._previous_grid = copy.deepcopy(grid)
+        self._previous_occupancy = occupancy.copy()
         self.generation += 1
         self._projection_key = (*key[:-1], retained.tobytes())
 

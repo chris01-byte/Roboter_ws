@@ -137,7 +137,8 @@
   "python_requirements": [
     "Jinja2==3.1.6",
     "MarkupSafe==2.1.5",
-    "typeguard==2.13.3"
+    "typeguard==2.13.3",
+    "Shapely==2.0.7"
   ],
   "slam_patch": "patches/slam_toolbox_humble_pure_rotation.patch",
   "slam_grid_patch": "patches/slam_toolbox_humble_stable_grid.patch"

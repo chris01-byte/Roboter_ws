@@ -19,7 +19,7 @@ setup(
         (os.path.join('share', package_name, 'behavior_trees'),
          glob('behavior_trees/*.xml')),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'Shapely>=1.8,<3'],
     tests_require=['pytest'],
     zip_safe=True,
     maintainer='QTG0900',

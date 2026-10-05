@@ -34,6 +34,7 @@ from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from tf2_ros import TransformBroadcaster
 from scipy.spatial import cKDTree
 
+from ament_index_python.packages import get_package_prefix
 from explore.explore_node import ExploreNode
 from explore.metric_frontier import MetricCandidate, MetricTaskPolicy, known_safe_mask, rpp_trajectory, route_departure_point
 from explore.exploration_scope import AuthorizedExplorationScope
@@ -191,7 +192,7 @@ def run(case,args):
     try:
         for package,executable in [('nav2_planner','planner_server'),('nav2_controller','controller_server')]:
             stream=(out/(executable+'.log')).open('w');streams.append(stream)
-            processes.append(subprocess.Popen(['ros2','run',package,executable,'--ros-args','--params-file',str(params)],stdout=stream,stderr=subprocess.STDOUT,start_new_session=True))
+            processes.append(subprocess.Popen([str(Path(get_package_prefix(package))/'lib'/package/executable),'--ros-args','--params-file',str(params)],stdout=stream,stderr=subprocess.STDOUT,start_new_session=True))
         for name in ('planner_server','controller_server'):
             client=world.create_client(ChangeState,'/'+name+'/change_state');assert client.wait_for_service(timeout_sec=20),name
             for state in (1,3):
@@ -203,6 +204,7 @@ def run(case,args):
         assert n._metric_controller_contract(lambda:False),'actual controller parameter contract'
         result['controller_parameter_contract']=True
         if case=='rotation_narrow':target=(0.,0.);yaw=math.pi/2
+        if case=='door68_stop':target=(0.,0.)
         if case in ('bootstrap','blind_start'):
             decision,candidates=n._metric_start_decision(inputs,MetricTaskPolicy(.6,30.,2),.3,True)
             result['bootstrap_decision']=decision;result['candidate_count']=len(candidates)
@@ -298,10 +300,14 @@ def run(case,args):
         if case=='bootstrap':assert result['observed_area_gain_m2']>0
         result['passed']=True;return result
     finally:
-        for process in processes:os.killpg(process.pid,signal.SIGTERM)
         for process in processes:
-            try:process.wait(timeout=5)
-            except subprocess.TimeoutExpired:os.killpg(process.pid,signal.SIGKILL);process.wait()
+            if process.poll() is None:
+                process.send_signal(signal.SIGINT)
+                try:process.wait(timeout=4)
+                except subprocess.TimeoutExpired:
+                    process.terminate()
+                    try:process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:process.kill();process.wait()
         for stream in streams:stream.close()
         executor.shutdown();world.destroy_node();rclpy.shutdown();thread.join(timeout=2)
         (out/'result.json').write_text(json.dumps(result,indent=2,allow_nan=False))
@@ -310,7 +316,7 @@ def run(case,args):
 def main():
     assert os.environ.get('ROS_LOCALHOST_ONLY')=='1'
     assert 200<=int(os.environ.get('ROS_DOMAIN_ID','0'))<=230
-    parser=argparse.ArgumentParser();parser.add_argument('--repo',type=Path,default=Path('/repo'));parser.add_argument('--output',type=Path,required=True);parser.add_argument('--case',choices=['door68','door80','detour','door56','rotation_narrow','unknown_outer','bootstrap','blind_start'])
+    parser=argparse.ArgumentParser();parser.add_argument('--repo',type=Path,default=Path('/repo'));parser.add_argument('--output',type=Path,required=True);parser.add_argument('--case',choices=['door68','door80','door68_stop','detour','door56','rotation_narrow','unknown_outer','bootstrap','blind_start'])
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
     if args.case:
         print(json.dumps(run(args.case,args)),flush=True)
@@ -318,7 +324,7 @@ def main():
     # Separate ROS contexts/processes/domains prevent a removed lifecycle
     # service's DDS discovery cache from answering the next case's readiness
     # test before its new server has appeared. Never retry a failed case.
-    for index,case in enumerate(['door68','door80','detour','door56','rotation_narrow','unknown_outer','bootstrap','blind_start']):
+    for index,case in enumerate(['door68','door80','door68_stop','detour','door56','rotation_narrow','unknown_outer','bootstrap','blind_start']):
         env=dict(os.environ,ROS_DOMAIN_ID=str(210+index))
         subprocess.run([sys.executable,__file__,'--repo',str(args.repo),'--output',str(args.output),'--case',case],env=env,check=True)
 
