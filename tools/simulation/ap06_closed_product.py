@@ -153,12 +153,12 @@ class MemoryHWT:
 
 
 class Sensors(Node):
-    def __init__(self, world, bus, out, masked, beams):
+    def __init__(self, world, bus, out, masked, beams, *, record_plant=True):
         super().__init__('ap06_simulated_devices')
         self.world, self.bus, self.masked, self.beams = world, bus, masked, beams
         self.last = time.monotonic()
         self.tick_gaps = []
-        self.trace = (out/'plant.jsonl').open('w', buffering=1)
+        self.trace = (out/'plant.jsonl').open('w', buffering=1) if record_plant else None
         self.scan_pub = self.create_publisher(LaserScan, '/scan', qos_profile_sensor_data)
         self.left = self.create_publisher(PointCloud2, '/near_field/left/points', 10)
         self.right = self.create_publisher(PointCloud2, '/near_field/right/points', 10)
@@ -191,7 +191,8 @@ class Sensors(Node):
             transform.transform.rotation.y, transform.transform.rotation.w = math.sin(pitch/2), math.cos(pitch/2)
             transforms.append(transform)
         self.static_tf.sendTransform(transforms)
-        self.create_timer(.01, self.tick)
+        if record_plant:
+            self.create_timer(.01, self.tick)
         self.create_timer(.1, self.publish)
 
     def tick(self):
@@ -203,7 +204,9 @@ class Sensors(Node):
         self.trace.write(json.dumps([now, *self.world.pose.tolist(), *self.world.velocity.tolist()])+'\n')
 
     def publish(self):
-        stamp = self.get_clock().now().to_msg()
+        stamp = getattr(self, '_sensor_stamp', None)
+        if stamp is None:
+            stamp = self.get_clock().now().to_msg()
         angles, ranges = self.world.laser(mask=self.masked, beams=self.beams)
         scan = LaserScan()
         scan.header.stamp, scan.header.frame_id = stamp, 'laser_frame'
@@ -271,7 +274,64 @@ class DeviceMirror:
         return self.geometry.map_oracle(*args)
 
 
-def device_process(case, out, device_file, masked, beams, fault_value, telemetry, ready, halt, source_cpu=None):
+def finite_sensor_process(case, out, masked, beams, telemetry, ready, halt, sensor_cpu=None):
+    """Finite rays from an actual fresh plant sample, in their own interpreter.
+
+    Source stamps and the 100-Hz plant remain owned by the device process.
+    Expired plant snapshots produce no new sensor frames or healthy heartbeat.
+    This worker never integrates the plant, writes registers, or publishes TF
+    except the existing fixed sensor mounts.
+    """
+    require_isolation()
+    if sensor_cpu is not None:
+        os.sched_setaffinity(0, {sensor_cpu})
+    sys.setswitchinterval(.001)
+    model = World(case['door_m'], case['start'])
+    samples = dict(published=0, withheld_stale_plant=0)
+    rclpy.init()
+    node = executor = None
+    latency = (out/'sensor_executor_latency.jsonl').open('w', buffering=1)
+    try:
+        class FiniteSensors(Sensors):
+            def publish(self):
+                snapshot = telemetry[:]
+                if not 0 <= time.monotonic()-snapshot[10] <= .03:
+                    samples['withheld_stale_plant'] += 1
+                    return
+                model.pose[:] = snapshot[:3]
+                model.velocity[:] = snapshot[3:5]
+                model.collision = bool(snapshot[7])
+                acquisition = rclpy.time.Time(seconds=int(snapshot[11]),
+                    nanoseconds=int(snapshot[12]), clock_type=self.get_clock().clock_type)
+                self._sensor_stamp = acquisition.to_msg()
+                self.vl53.get_clock = lambda: SimpleNamespace(now=lambda: acquisition)
+                samples['published'] += 1
+                super().publish()
+        node = FiniteSensors(model, None, out, masked, beams, record_plant=False)
+        executor = SingleThreadedExecutor(); executor.add_node(node)
+        ready.set()
+        while not halt.is_set():
+            began, cpu = time.monotonic(), time.process_time()
+            executor.spin_once(timeout_sec=.02)
+            ended = time.monotonic()
+            if ended-began > .05:
+                latency.write(json.dumps(dict(begin=began, end=ended,
+                    duration_s=ended-began, process_cpu_s=time.process_time()-cpu))+'\n')
+    finally:
+        if executor is not None:
+            executor.shutdown(timeout_sec=1.)
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+        latency.close()
+        (out/'sensor_result.json').write_text(json.dumps(dict(samples,
+            actual_cpu_affinity=sorted(os.sched_getaffinity(0)),
+            separate_process=True, writes_registers=False, plant_integration=False), indent=2)+'\n')
+
+
+def device_process(case, out, device_file, masked, beams, fault_value, telemetry, ready, halt,
+                   source_cpu=None, sensor_cpu=None, sensor_worker=finite_sensor_process):
     """Own physical plant and original sources in a separate Python process.
 
     ROS graph construction/service serialization in the mission supervisor
@@ -282,6 +342,7 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
     require_isolation()
     if source_cpu is not None:
         os.sched_setaffinity(0, {source_cpu})
+    sys.setswitchinterval(.001)
     model = World(case['door_m'], case['start'])
     fault = FaultWindow(fault_value)
     from base_hardware import base_hardware_node as base_module
@@ -320,15 +381,32 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
         halt.set()
     signal.signal(signal.SIGINT, interrupt)
     signal.signal(signal.SIGTERM, interrupt)
+    context = multiprocessing.get_context('spawn')
+    sensor_ready = context.Event()
+    sensor_device = context.Process(target=sensor_worker, args=(case, out, masked, beams,
+        telemetry, sensor_ready, halt, sensor_cpu), name='ap06-finite-sensors')
     rclpy.init(args=['--ros-args', '--params-file', str(device_file)])
     try:
-        class RecordedSensors(Sensors):
+        class RecordedPlant(Node):
+            def __init__(self):
+                super().__init__('ap06_simulated_plant')
+                self.last = time.monotonic(); self.tick_gaps = []
+                self.trace = (out/'plant.jsonl').open('w', buffering=1)
+                self.create_timer(.01, self.tick)
             def tick(self):
-                super().tick()
-                telemetry[:] = [*model.pose.tolist(), *model.velocity.tolist(), model.travel,
-                                model.minimum_clearance, float(model.collision),
-                                float(model.rear_cleared), float(bus.writes)]
-        sensors = RecordedSensors(model, bus, out, masked, beams)
+                now = time.monotonic(); dt, self.last = now-self.last, now
+                if dt > .03:
+                    self.tick_gaps.append(dt)
+                with bus.lock:
+                    bus.advance()
+                    stamp = self.get_clock().now().to_msg()
+                    state = [*model.pose.tolist(), *model.velocity.tolist(), model.travel,
+                             model.minimum_clearance, float(model.collision),
+                             float(model.rear_cleared), float(bus.writes), time.monotonic(),
+                             float(stamp.sec), float(stamp.nanosec)]
+                telemetry[:] = state
+                self.trace.write(json.dumps([now, *state[:5]])+'\n')
+        sensors = RecordedPlant()
         raw_node = raw_module.Hwt601ImuNode()
         base_node = SimulatedBase()
         nodes = [sensors, raw_node, base_node]
@@ -348,9 +426,13 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
                     traceback.print_exc(); halt.set()
             thread = threading.Thread(target=loop, daemon=True)
             threads.append(thread); thread.start()
+        sensor_device.start()
+        if not sensor_ready.wait(20.):
+            raise RuntimeError('independent finite sensor process readiness')
         ready.set()
         while not halt.wait(.05):
-            pass
+            if not sensor_device.is_alive():
+                raise RuntimeError('independent finite sensor process exited')
     finally:
         if 'base_node' in locals():
             base_node._stop_both_motors(force=True)
@@ -358,6 +440,11 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
             while max(abs(model.velocity)) >= .005 and time.monotonic() < deadline:
                 time.sleep(.01)
         stopped.set()
+        halt.set()
+        if sensor_device.pid is not None:
+            sensor_device.join(3.)
+            if sensor_device.is_alive():
+                sensor_device.terminate(); sensor_device.join(2.)
         for thread in threads:
             thread.join(2.)
         for ex in executors:
@@ -371,6 +458,8 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
             (out/'device_result.json').write_text(json.dumps(dict(
                 plant_tick_gaps=sensors.tick_gaps, simulated_register_writes=bus.writes,
                 source_periods_unchanged=True, separate_source_process=True,
+                separate_finite_sensor_process=True,
+                finite_sensor_process_exitcode=sensor_device.exitcode,
                 actual_cpu_affinity=sorted(os.sched_getaffinity(0))), indent=2)+'\n')
         if rclpy.ok():
             rclpy.shutdown()
@@ -536,8 +625,10 @@ def run(args):
     original_affinity = os.sched_getaffinity(0)
     allowed_cpus = sorted(original_affinity)
     source_cpu = allowed_cpus[-1] if len(allowed_cpus) >= 4 else None
-    graph_cpus = allowed_cpus[:3] if source_cpu is not None else allowed_cpus
-    result['cpu_allocation'] = dict(available=allowed_cpus, graph=graph_cpus, source=source_cpu)
+    sensor_cpu = allowed_cpus[-2] if source_cpu is not None else None
+    graph_cpus = allowed_cpus[:min(3, len(allowed_cpus)-2)] if source_cpu is not None else allowed_cpus
+    result['cpu_allocation'] = dict(available=allowed_cpus, graph=graph_cpus,
+                                  source=source_cpu, sensors=sensor_cpu)
     def start(name, command):
         with (out/'commands.jsonl').open('a') as commands:
             commands.write(json.dumps({'name': name, 'argv': command})+'\n')
@@ -591,13 +682,13 @@ def run(args):
         device_file = out/'device_params.yaml'
         device_file.write_text(yaml.safe_dump(common))
         context = multiprocessing.get_context('spawn')
-        telemetry = context.Array('d', [*case['start'], 0., 0., 0., math.inf, 0., 0., 0.])
+        telemetry = context.Array('d', [*case['start'], 0., 0., 0., math.inf, 0., 0., 0., 0., 0., 0.])
         fault_value = context.Value('d', 0.)
         fault = FaultWindow(fault_value)
         device_ready, device_halt = context.Event(), context.Event()
         devices = context.Process(target=device_process, args=(case, out, device_file,
             not args.ideal_lidar, result['actual_lidar_beams'], fault_value, telemetry,
-            device_ready, device_halt, source_cpu), name='ap06-original-devices')
+            device_ready, device_halt, source_cpu, sensor_cpu), name='ap06-original-devices')
         if source_cpu is not None:
             os.sched_setaffinity(0, graph_cpus)
         devices.start()

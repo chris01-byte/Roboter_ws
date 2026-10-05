@@ -12,11 +12,25 @@ from rclpy.executors import SingleThreadedExecutor
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
 import yaml
+import pytest
 
-from ap06_closed_product import device_process, require_isolation
+from ap06_closed_product import device_process, finite_sensor_process, require_isolation
 
 
-def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, monkeypatch):
+def paused_sensor_worker(*args):
+    """A real sensor interpreter holds its GIL; never change measurement age."""
+    from ap06_closed_product import Sensors
+    original = Sensors.publish
+    library = ctypes.PyDLL(None); library.usleep.argtypes = [ctypes.c_uint]
+    def blocked(node):
+        library.usleep(250_000)
+        original(node)
+    Sensors.publish = blocked
+    finite_sensor_process(*args)
+
+
+@pytest.mark.parametrize('sensor_pause', (False, True))
+def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, monkeypatch, sensor_pause):
     monkeypatch.setenv('AP06_SIMULATION', '1')
     monkeypatch.setenv('ROS_DOMAIN_ID', '186')
     require_isolation()
@@ -30,12 +44,13 @@ def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, mon
     common['hwt601_imu']['ros__parameters'].update(development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
     device_file = tmp_path/'devices.yaml'; device_file.write_text(yaml.safe_dump(common))
     context = multiprocessing.get_context('spawn')
-    telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0.])
+    telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0., 0., 0., 0.])
     ready, halt = context.Event(), context.Event()
     fault_value = context.Value('d', 0.)
     source_cpu = sorted(os.sched_getaffinity(0))[-1]
     source = context.Process(target=device_process, args=(case, tmp_path, device_file, True,
-        2160, fault_value, telemetry, ready, halt, source_cpu))
+        2160, fault_value, telemetry, ready, halt, source_cpu),
+        kwargs={'sensor_worker': paused_sensor_worker} if sensor_pause else {})
     states, stamps = [], []
     rclpy.init(args=[])
     node = Node('ap06_source_isolation_regression'); executor = SingleThreadedExecutor(); executor.add_node(node)
@@ -70,3 +85,58 @@ def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, mon
     assert source.exitcode == 0
     result = json.loads((tmp_path/'device_result.json').read_text())
     assert result['actual_cpu_affinity'] == [source_cpu]
+    assert result['separate_finite_sensor_process']
+    assert result['finite_sensor_process_exitcode'] == 0
+    sensor = json.loads((tmp_path/'sensor_result.json').read_text())
+    assert sensor['published'] > 0 and sensor['separate_process']
+    assert not sensor['plant_integration'] and not sensor['writes_registers']
+
+
+def test_finite_frames_keep_plant_acquisition_stamp_and_withhold_stale_input(tmp_path, monkeypatch):
+    from sensor_msgs.msg import LaserScan
+    from robot_interfaces.msg import NearFieldStatus
+    from rclpy.qos import qos_profile_sensor_data
+    monkeypatch.setenv('AP06_SIMULATION', '1'); monkeypatch.setenv('ROS_DOMAIN_ID', '185')
+    require_isolation()
+    case = dict(door_m=.8, start=[-1.6, 0., 0.])
+    context = multiprocessing.get_context('spawn')
+    telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0., 0., 0., 0.])
+    ready, halt = context.Event(), context.Event()
+    worker = context.Process(target=finite_sensor_process,
+        args=(case, tmp_path, True, 2160, telemetry, ready, halt))
+    rclpy.init(); node = Node('ap06_sensor_acquisition_regression')
+    executor = SingleThreadedExecutor(); executor.add_node(node)
+    received, supplied = [], set()
+    def sample(message):
+        received.append(message.header.stamp.sec*10**9+message.header.stamp.nanosec)
+    node.create_subscription(LaserScan, '/scan', sample, qos_profile_sensor_data)
+    node.create_subscription(NearFieldStatus, '/near_field/status', sample, 10)
+    def feed():
+        stamp = node.get_clock().now().to_msg()
+        supplied.add(stamp.sec*10**9+stamp.nanosec)
+        telemetry[:] = [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0.,
+                        time.monotonic(), float(stamp.sec), float(stamp.nanosec)]
+    try:
+        worker.start(); deadline = time.monotonic()+10.
+        while len(received) < 6 and time.monotonic() < deadline:
+            feed(); executor.spin_once(timeout_sec=.01)
+        assert ready.is_set() and len(received) >= 6
+        assert set(received) <= supplied  # original acquisitions, no later restamp
+        frozen_stamp = int(telemetry[11])*10**9+int(telemetry[12])
+        deadline = time.monotonic()+.7
+        while time.monotonic() < deadline:
+            executor.spin_once(timeout_sec=.02)
+        assert set(received) <= supplied and max(received) <= frozen_stamp
+        before = len(received); deadline = time.monotonic()+3.
+        while len(received) < before+4 and time.monotonic() < deadline:
+            feed(); executor.spin_once(timeout_sec=.01)
+        assert len(received) >= before+4 and max(received) > frozen_stamp
+        assert set(received) <= supplied
+    finally:
+        halt.set(); worker.join(3.)
+        if worker.is_alive():
+            worker.terminate(); worker.join(2.)
+        executor.shutdown(timeout_sec=1.); node.destroy_node(); rclpy.shutdown()
+    assert worker.exitcode == 0
+    result = json.loads((tmp_path/'sensor_result.json').read_text())
+    assert result['withheld_stale_plant'] >= 3
