@@ -1457,7 +1457,7 @@ class MetricFrontierRuntime:
         same approach, sensor sight, footprint, scope and route validation.
         """
         selection_started = time.monotonic()
-        grid, correlation, pose, *_ = inputs
+        grid, correlation, pose, _, _, costmap, _ = inputs
         q = grid.info.origin.orientation
         scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
             width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,

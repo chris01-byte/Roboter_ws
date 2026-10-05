@@ -171,8 +171,9 @@ def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
     assert all(node._metric_standard_waypoints_clear(inputs, c.route, c.yaw) for c in second)
 
 
-def test_fixed_body_facts_are_not_counted_as_private_unobserved_egress():
+def test_fixed_body_facts_survive_stationary_mask_withdrawal_but_not_observation():
     from explore.metric_frontier import StartEgressEvidence
+    from explore.metric_egress_reference import ReferencedStartEgress
     node, inputs, _ = fixture()
     raw = np.asarray(inputs[0].data).reshape(inputs[3].shape)
     body = (raw < 0) & inputs[3]
@@ -180,9 +181,17 @@ def test_fixed_body_facts_are_not_counted_as_private_unobserved_egress():
     evidence = StartEgressEvidence.capture(inputs[0], raw, inputs[3],
         np.ones_like(body), inputs[2], node._metric_bounds, node._world_to_grid)
     assert evidence.valid
-    assert not (evidence.unknown & body).any()
-    # Losing an ordinary body fact cannot recreate an escape permission.
+    assert (evidence.unknown & body).any()
+    evidence = ReferencedStartEgress(evidence, (0., 0., 0.))
+    # Withdraw the virtual stationary mask; only the one-shot physical
+    # inventory remains, without altering raw measurement or allowed space.
     allowed = inputs[3].copy(); allowed[body] = False
+    valid, reason = evidence.check_trajectory([inputs[2]], raw, allowed, node._world_to_grid)
+    assert valid, reason
+    observed = raw.copy(); observed[body] = 0
+    evidence.refresh(inputs[0], observed, np.ones_like(body), (0., 0., 0.))
+    evidence.refresh(inputs[0], raw, np.ones_like(body), (0., 0., 0.))
+    assert not (evidence.unknown & body).any()
     valid, reason = evidence.check_trajectory([inputs[2]], raw, allowed, node._world_to_grid)
     assert not valid and reason == 'start_egress_new_unknown_or_obstacle'
 
