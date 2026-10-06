@@ -12,19 +12,27 @@ def test_impossible_view_geometry_consumes_no_visibility_work(monkeypatch):
     node, inputs, _ = fixture('ap06_a52_selection')
     import explore.metric_frontier_runtime as runtime
     original = runtime.visible_boundary_cells
-    checked = {}; visible = []
+    checked_routes = []; checked_stops = set(); visible = []
     route = node._metric_route
+    stop_pose = node._metric_rollout_stop_pose
     def geometry(values, xy, yaw):
         result = route(values, xy, yaw)
-        checked[(*xy, yaw)] = result is not None
+        if result is not None:
+            checked_routes.append(result)
+        return result
+    def actual_stop(values, proved_route, yaw, **kwargs):
+        assert proved_route in checked_routes, ('unproved route', proved_route)
+        result = stop_pose(values, proved_route, yaw, **kwargs)
+        checked_stops.add(tuple(result))
         return result
     def sight(grid, scope, pose, view):
         # A failed route is already conclusive; this expensive work cannot
         # make its pose admissible. All geometry and rays remain real code.
-        assert checked.get(tuple(pose)), ('unproved view', pose)
+        assert tuple(pose) in checked_stops, ('unproved view', pose)
         visible.append(pose)
         return original(grid, scope, pose, view)
     node._metric_route = geometry
+    node._metric_rollout_stop_pose = actual_stop
     monkeypatch.setattr(runtime, 'visible_boundary_cells', sight)
     # Use the same exact evidence-bound memo as the owning selection pass.
     node._metric_selection_cache = threading.local()
