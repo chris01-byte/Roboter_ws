@@ -34,13 +34,14 @@ slam_toolbox:
     throttle_scans: 1
     transform_publish_period: 0.02      # 50 Hz map->odom
     map_update_interval: 1.0            # s zwischen Kartenaktualisierungen
-    # 2 cm je Zelle: Bei schmalen Tueren muss das Raster neben der
-    # gepaddeten Kontur auch Zell-, Positions- und Winkelreserve abbilden.
-    # AP-06 B166: Derselbe endliche aufgezeichnete Scan ergibt mit 3 cm
-    # nur 66 cm, mit 2 cm 68 cm Abstand der naechsten Tuerpfosten-Zellen.
-    # Keine Freigabe aus idealer Tuerbreite: reale Belegung und komplette
-    # Pfadkontur werden weiterhin geprueft. STL-27L: ca. 9 mm bei 3 m.
-    resolution: 0.02
+    # 1 cm je Zelle: ausreichende Konturreserve an schmalen Tueren und
+    # gleiche Zellweite wie die feine native Scan-Matcher-Translation.
+    # AP-06: derselbe endliche B159-Scan ergibt 66 cm Pfosten-Zellabstand
+    # bei 3 cm, 68 cm bei 2/1 cm. 2 cm scheitert im B172-Startledger an
+    # einer halbzelligen 1-cm-Korrektur; keine neue Unknown-Flaeche zulassen.
+    # B176: 1-cm-Native-Komponente behaelt den unveraenderten Startbeweis.
+    # Das ist keine Gesamtmission. Padding/Tracking/Heading bleiben geprueft.
+    resolution: 0.01
 
     # Der STL-27L kann 25 m. Im Testraum (3,8 x 4,9 m) waeren das fast nur
     # Reflexionen ueber Tuerkanten hinweg; 10 m deckt auch angrenzende Raeume ab
