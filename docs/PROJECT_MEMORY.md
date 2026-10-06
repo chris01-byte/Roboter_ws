@@ -272,3 +272,63 @@ Nutzer beauftragt gezielt Referenzreparatur und unveränderte Szenarien. `e54c95
 Software-/Regressionsprüfung grün, drei unveränderte Gesamtmissionen weiter negativ. Ursprünglicher Referenzablauf verschwunden, subzellige Deckungsverluste und echte Explorer-Verbrauchsfrischefehler bleiben sichtbar; keine vollständige autonome Erkundung/Realabnahme daraus ableiten. Einziger aktueller Befund und nächster AP-06-Schritt im [STATUS](wohnungserkundung/STATUS.md).
 
 Nutzer autorisiert nun ausdrücklich Jetson-Shutdown nach Abschluss; diese neuere Anweisung ersetzt den früheren Shutdown-Ausschluss. App-Lokalität und Befehlsbackend bleiben verschieden; fehlender tatsächlicher Jetson-Zugriff verhindert nur abhängige Zielsystemarbeit und Shutdown. Kein Cloud-Rechner-Shutdown, Deployment/Install-/Autostartwechsel, keine ROBOT_TRANSFER-Wirkung. Eigene Testprozesse/Container gestoppt; AP-01–05/Main/fremde Arbeit erhalten.
+
+## 05.10.2026 – laufende Reparatur der drei Gesamtmissionen
+
+Nutzer beauftragt die tatsächliche Behebung von 0/3. Bestehender AP-06-Branch,
+Basis `1b93694`, ursprüngliche Manifestfälle und MASTERPLAN v1.3 erhalten.
+Native Quellen-/DDS-/Geometriegegenproben, unabhängiges Gate-HOLD und
+gleichzeitige Positions-/Winkelprüfung des Goalcheckers reparieren weitere
+gemessene Integrationsfehler. Der gleiche begrenzte Approach-Suchbereich kann
+eine sichere alternative Zielpose liefern; allein der vollständig geprüfte
+wirkliche Native-Pfad erlaubt anschließend Bewegung. Keine Quellenfrist,
+Konturreserve, Unknown-Autorität, Budget- oder Abnahmelockerung.
+
+Neun native Komponentenfälle und mehrere gezielte Rot-/Grün-Regressionen
+bestanden; C32-Diagnose mit fünf Beobachtungsaufgaben/ganzer Passage ist wegen
+Restarbeit weiterhin negativ. Endgültige drei positive Missionen stehen aus.
+Einziger aktueller Arbeitsbefund und nächster Schritt im
+[STATUS](wohnungserkundung/STATUS.md), erhaltene Originalbelege dort verlinkt.
+Keine Hardwarefahrt, Deployment oder neuer AP; Jetson-Shutdown bleibt nur bei
+nachgewiesenem tatsächlichem Zielsystemkanal autorisiert.
+
+Die spätere A53-Auswahl ergänzt kurze öffentliche Beobachtungspositionen im
+bestehenden lokalen Suchraum und ursprünglichen 0,5-s-/5-s-Budget. Nur tatsächlich
+endliche unbekannte Grenzpunkte, ganzer Körper/Eigenweg und anschließende native
+Hin-/Abfahrtsprüfung erlauben den vorhandenen Navigationsbesitzer. Kein
+Startkörperprivileg, keine neue Erledigung, kein Reset erschöpfter Aufgaben.
+A53 selbst bleibt ein negativer Gesamtlauf; Komponentenbelege ersetzen ihn nicht.
+
+Private Start-Egress-Gültigkeit und Ablauf seiner Karten-/Sitzungsidentität
+sind unterschiedliche Zustände. A53–55-Regressionen halten den ungültigen
+privaten Bestand bei weiterhin gültiger Identität fest. Eine vollständig
+öffentliche kurze Beobachtung benötigt ausschließlich ihre aktuelle reguläre
+Geometrie/Sicht/Policy und nachfolgende native Planung, keinen Ablauf einer
+unbenutzten privaten Erlaubnis. Schutzprüfungen und Originalfristen bleiben.
+Nachtest-Fixtures enthalten zusätzlich den echten Kosten-Zentrumsfilter;
+diese Vergleichskorrektur erklärt den Stillstand nicht.
+
+
+Neue Rohkarte vor zugehörigem Status darf keine neue Freiraumautorität erteilen.
+Während eines bestehenden vollständig öffentlichen Nav2-Kinds ist eine
+Fortsetzung auf dem alten exakten Paar innerhalb des originalen Joinfensters
+zulässig, wenn die neue frische Rohkarte nur bisherige Freigaben entzieht.
+Originalstempel/Identität bleiben, ganzer Körper und aktuelle Route werden
+auf der verkleinerten Freifläche erneut geprüft. Private Anfangsbestände,
+neue Ziele und Receipts sind ausgeschlossen. B58-Diagnose zeigte andernfalls
+drei Abbrüche derselben Anfahrt; 190 betroffene Tests beweisen die begrenzte
+Reparatur, keine Gesamt-/Hardwareabnahme.
+
+
+Beobachtungsaufgaben gehören zu endlichen Grenzpunkten, nicht ausschließlich
+zu einem nahen schon besuchten Beobachterstandort. Nur aktuelle Sichtpunkte
+jenseits alter begrenzter Beobachtungsfläche einschließlich Revisit-Marge
+verhindern die Zielnähen-Zuordnung zu einer erledigten anderen Grenze.
+Gleiche Grenzidentität, benachbarte Try-/Fehlerkappen und Cooldown bleiben.
+Voll geprüfte öffentliche Sicht darf bei ausschließlich ausstehendem originalem
+Cooldown warten, statt unbewiesene Alternativen bis zum Auswahlfehler zu
+verarbeiten. Restaufgaben, Missionzeit und anschließende native Pfadprüfung
+bleiben; keine Abschlusserklärung aus Kandidaten oder bloßem Warten.
+## 06.10.2026 – AP-06: private Aufstellzellen sind kein öffentlicher Freiraum
+
+Die originale B60-Auswahl enthält 82 virtuell freigegebene, roh unbekannte Anfangszellen; ein nach der Abfahrt gewähltes Rückziel berührt 44 davon. B62 bestätigt drei reale Fahrtabbrüche nach einer einzigen qualifizierten Ankunft, ohne Passage. Bei gebundener TF-Referenz blieben alte private Anfangszellen entgegen dem Bewegungsvertrag nach gemessener Abfahrt freigegeben. Die Reparatur schneidet das feste erste Zellinventar monoton mit dem aktuellen vollständigen ungepaddeten Körper, erhält Anker/Referenz/Historie und verhindert Wiederfreigabe. Öffentliche Suche/Native-Abfahrt nutzen nur tatsächlich beobachtete Rohzellen. Tatsächliche Roh-Unknown-Berührung der aktuellen reservierten Kontur verlangt den ursprünglichen privaten monotone Egress-Beweis; ein vollständig beobachteter Körper erhält keine erste Abfahrtsausnahme. Fünf neue rote/grüne Regressionen und 235 betroffene grüne Fälle. Gesamtmissionsabnahme weiterhin separat nachweisen; keine Grenz-/Frist-/Historienlockerung, kein Hardwareinstall. Rückfall gezielter Revert ausschließlich eigener Reparatur, der die belegte alte Freigabelücke wiederherstellt.

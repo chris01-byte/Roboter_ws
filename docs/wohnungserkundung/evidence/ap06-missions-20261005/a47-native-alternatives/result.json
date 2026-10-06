@@ -1,0 +1,212 @@
+[
+  {
+    "goal": [
+      1.304999970830977,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.304999970830977,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2749999715015292,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3349999701604247,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2449999721720815,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3649999694898725,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.304999970830977,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2749999715015292,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3349999701604247,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2149999728426337,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3949999688193202,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2449999721720815,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3649999694898725,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.184999973513186,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.424999968148768,
+      0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2149999728426337,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "footprint_sweep_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3949999688193202,
+      0.46499998960644007,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.304999970830977,
+      0.4349999902769923,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.2749999715015292,
+      0.4349999902769923,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.3349999701604247,
+      0.4349999902769923,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  },
+  {
+    "goal": [
+      1.1549999741837382,
+      0.5249999882653356,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "goal_orientation_invalid",
+    "kind": "Actual later A47 rasters and finite native CPP queries; no motion or whole acceptance"
+  }
+]

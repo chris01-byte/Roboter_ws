@@ -1,0 +1,21 @@
+[
+  {
+    "goal": [
+      3.195,
+      -0.765,
+      -0.7853981633974483
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "actual C33 later component rasters and actual native CPP queries, no motion and no whole-mission claim",
+    "proof": {
+      "ready": true,
+      "rejection": null,
+      "seconds": 0.7512677710037678,
+      "plan_range": [
+        1,
+        4
+      ]
+    }
+  }
+]
