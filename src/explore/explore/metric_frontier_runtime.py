@@ -508,6 +508,28 @@ class MetricFrontierRuntime:
         with self._metric_lock:
             return self._metric_inputs_locked(active)
 
+    def _metric_public_withdrawal_mask(self, previous, current):
+        """Project only current FREE onto an old exact grid, without adding cells."""
+        old, new = previous.info, current.info
+        a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
+        if (previous.header.frame_id != current.header.frame_id
+                or old.resolution != new.resolution or a[2:] != b[2:]):
+            raise ValueError('map_status_join_pending')
+        yaw = math.atan2(2*a[6]*a[5], 1-2*a[5]**2)
+        dx, dy = a[0]-b[0], a[1]-b[1]
+        offsets = ((math.cos(yaw)*dx+math.sin(yaw)*dy)/old.resolution,
+                   (-math.sin(yaw)*dx+math.cos(yaw)*dy)/old.resolution)
+        dc, dr = (round(v) for v in offsets)
+        if max(abs(offsets[0]-dc), abs(offsets[1]-dr)) > 1e-9:
+            raise ValueError('map_status_join_pending')
+        permitted = np.zeros((old.height, old.width), dtype=bool)
+        r0, c0 = max(0,-dr), max(0,-dc)
+        r1, c1 = min(old.height,new.height-dr), min(old.width,new.width-dc)
+        if r1 > r0 and c1 > c0:
+            data = np.asarray(current.data).reshape(new.height,new.width)
+            permitted[r0:r1,c0:c1] = data[r0+dr:r1+dr,c0+dc:c1+dc] == 0
+        return permitted
+
     def _metric_inputs_locked(self, active=False):
         with self._metric_lock:
             fault = self._metric_fault
@@ -520,14 +542,24 @@ class MetricFrontierRuntime:
             raise ValueError('map_scope_not_joined')
         if not self._metric_resume_localization_ready():
             raise ValueError('resume_localization_unconfirmed')
+        withdrawal = None
         if not self._metric_matches_status(raw[1]):
             joined = getattr(self, '_metric_joined', None)
             if (not active or pending is None or now-pending > 1.25 or joined is None
-                    or raw[1].fingerprint != joined[0][1].fingerprint
                     or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
                 raise ValueError('map_status_join_pending')
-            # Identical-content observation only: retain the exact old join,
-            # including its timestamps. Never assign an old revision to new cells.
+            if raw[1].fingerprint != joined[0][1].fingerprint:
+                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                        or getattr(self, '_wohnungserkundung_active_child', None) is None
+                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
+                    raise ValueError('map_status_join_pending')
+                latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
+                if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
+                    raise ValueError('raw_map_stamp_stale')
+                withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+            # Retain the exact old join and its ORIGINAL timestamps. During
+            # an existing public child, changed raw data may only withdraw
+            # old free permits. It grants no new cells, goals or receipts.
             raw, c, at = joined
         grid, source, received = raw
         if not 0 <= now-received <= self._map_timeout_s or at is None or not 0 <= now-at <= self._map_timeout_s:
@@ -606,8 +638,15 @@ class MetricFrontierRuntime:
             else:
                 self._metric_body_cells &= self_body_unknown_mask(grid,occupancy,projected_anchor,mount)
                 body = self._metric_body_cells
+        if withdrawal is not None:
+            body = None  # pending changed raw data can grant NO private cells
         known, safe = known_safe_mask(occupancy, scope, correlation, origin, yaw, res,
                                      self._goal_clearance_m, body)
+        if withdrawal is not None:
+            from scipy.ndimage import distance_transform_edt
+            known &= withdrawal
+            distance = distance_transform_edt(np.pad(known,1))[1:-1,1:-1]
+            safe = known & (distance*res >= self._goal_clearance_m+res/2)
         # Costmap values already include Nav2 inflation; also check full chassis
         # against actual occupied/unknown cells rather than treating unknown free.
         cost_known = (costs >= 0) & (costs < 100)
