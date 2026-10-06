@@ -955,13 +955,14 @@ class MetricFrontierRuntime:
         route=tuple(simplified)
         return self._metric_waypoints_clear(inputs, route, target_yaw)
 
-    def _metric_waypoints_clear(self, inputs, route, target_yaw=None):
+    def _metric_waypoints_clear(self, inputs, route, target_yaw=None, *, native_plan=False):
         grid, _, pose, known, _, costmap, cost_known = inputs
         rollout = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
         if getattr(self,'_metric_start_egress_enabled',False):
             self._metric_prepare_egress(inputs)
             if self._metric_egress_expired:
-                result=self._metric_standard_waypoints_clear(self._metric_public_inputs(inputs),route,target_yaw)
+                result=self._metric_standard_waypoints_clear(self._metric_public_inputs(inputs),route,target_yaw,
+                                                           native_plan=native_plan)
                 if result is None:self._metric_last_route_rejection='start_egress_reference_expired'
                 return result
             touched = self._metric_private_start_needed(inputs)
@@ -1016,7 +1017,7 @@ class MetricFrontierRuntime:
                 # ordinary qualified envelope, without an escape exemption.
                 self._metric_last_route_rejection=None
                 return route
-        return self._metric_standard_waypoints_clear(inputs,route,target_yaw)
+        return self._metric_standard_waypoints_clear(inputs,route,target_yaw,native_plan=native_plan)
 
     def _metric_public_prealignment_ready(self, inputs, route):
         """The existing turn owner may align only a wholly public body sweep."""
@@ -1035,7 +1036,7 @@ class MetricFrontierRuntime:
                     self._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
                    for g,allowed in ((public[0],public[3]),(public[5],public[6])))
 
-    def _metric_checked_public_rollout(self, inputs, route):
+    def _metric_checked_public_rollout(self, inputs, route, *, native_plan=True):
         def trajectory(aligned):
             return rpp_trajectory(route, inputs[2],
                 min(inputs[0].info.resolution, inputs[5].info.resolution),
@@ -1048,7 +1049,7 @@ class MetricFrontierRuntime:
         native = trajectory(False)
         if clear(native):
             return native, True, False
-        if not self._metric_public_prealignment_ready(inputs,route):
+        if not native_plan or not self._metric_public_prealignment_ready(inputs,route):
             return native, False, False
         aligned = trajectory(True)
         return aligned, clear(aligned), True
@@ -1056,7 +1057,7 @@ class MetricFrontierRuntime:
     def _metric_public_rollout(self, inputs, route):
         return self._metric_checked_public_rollout(inputs,route)[0]
 
-    def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None):
+    def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None, *, native_plan=False):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
         rollout = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
@@ -1088,7 +1089,10 @@ class MetricFrontierRuntime:
             # 20-mm/0.05-rad tracking band is qualified only for the documented
             # synthetic plant; AP-06 must qualify real hardware separately.
             try:
-                trajectory, trajectory_clear, _ = self._metric_checked_public_rollout(inputs, route)
+                # Guessed candidate chords do not bind the native controller's
+                # carrot. Extra alignment belongs only to its actual path.
+                trajectory, trajectory_clear, _ = self._metric_checked_public_rollout(
+                    inputs, route, native_plan=native_plan)
             except ValueError as error:
                 self._metric_last_route_rejection = str(error)
                 return None
@@ -1251,7 +1255,7 @@ class MetricFrontierRuntime:
             route.append(point)
         checker = (self._metric_standard_waypoints_clear if public_only
                    else self._metric_waypoints_clear)
-        return checker(inputs, tuple(route), target.yaw)
+        return checker(inputs, tuple(route), target.yaw, native_plan=True)
 
     def _metric_controller_contract(self, stop_requested):
         expected = {'FollowPath.use_rotate_to_heading':True,

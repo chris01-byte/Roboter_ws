@@ -28,6 +28,15 @@ def test_corrected_native_cell_center_path_requires_public_alignment_before_moti
     assert [list(inputs[i].data) for i in (0,5)]==before
 
 
+def test_candidate_geometry_cannot_borrow_alignment_from_an_unbound_native_path():
+    n,inputs,record,target=recorded()
+    route=n._metric_validate_nav_plan(inputs,path(record),target,public_only=True)
+    assert route is not None
+    assert n._metric_standard_waypoints_clear(inputs,route,target.yaw) is None
+    assert n._metric_last_route_rejection=='footprint_sweep_invalid'
+    assert n._metric_validate_nav_plan(inputs,path(record),target,public_only=True) is not None
+
+
 def test_checked_public_alignment_uses_actual_carrot_and_existing_turn_owner():
     n,inputs,record,target=recorded()
     route=n._metric_validate_nav_plan(inputs,path(record),target,public_only=True)
