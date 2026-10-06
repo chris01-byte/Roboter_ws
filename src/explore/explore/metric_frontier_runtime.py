@@ -29,7 +29,7 @@ from .portal_source_adapter import raw_map_portal_source_from_values, PortalSour
 from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier_candidates import boundary_samples, lidar_view, visible_boundary_cells
-from .metric_progress import (local_evidence, reachable_remainder, CompletionWindow,
+from .metric_progress import (local_evidence, reachable_remainder, local_small_remainder, CompletionWindow,
                               ObservationBaseline, measured_gain, observation_complete)
 from .exploration_persistence import (ExplorationStateRepository, ExplorationPersistenceError,
                                      binding_from_map_manager_status)
@@ -1726,7 +1726,12 @@ class MetricFrontierRuntime:
                 for g, allowed in ((grid, inputs[3]), (costmap, inputs[6]))):
             return None
         fallback = None
-        for f in sorted(frontiers, key=lambda f: math.dist(pose[:2], (f.cx, f.cy))):
+        def local_priority(frontier):
+            task = policy.identify((frontier.cx,frontier.cy),create=False)
+            retained = (getattr(frontier,'retained_observation',False) and task is not None
+                and policy.attempts[task].partial_observation)
+            return (not retained,math.dist(pose[:2],(frontier.cx,frontier.cy)))
+        for f in sorted(frontiers, key=local_priority):
             bearing = math.atan2(f.cy-pose[1], f.cx-pose[0])
             # A safe observer can be beside a narrow entrance rather than
             # toward it. These positions come only from current pose/sight;
@@ -1735,6 +1740,20 @@ class MetricFrontierRuntime:
                       if getattr(f, 'retained_observation', False) else None)
             tangents = () if normal is None else tuple(
                 math.atan2(normal[1],normal[0])+turn for turn in (0.,math.pi/2,-math.pi/2,math.pi))
+            # A raster corner averages two incident free-space faces into a
+            # diagonal. A tiny retained boundary needs the individual faces
+            # too: its diagonal can point across a narrow entrance. Query only
+            # the existing task, inside this same helper deadline and radius.
+            task = policy.identify((f.cx,f.cy),create=False)
+            if (normal is not None and task is not None
+                    and policy.attempts[task].partial_observation
+                    and self._metric_corner_face_headings(grid,normal)):
+                seed = MetricCandidate('',*pose,(f.cx,f.cy),(),0.,0.,
+                    correlation.fingerprint,correlation.map_revision,True,())
+                proposed = self._metric_refine_native_observation(
+                    inputs,f,policy,scope_mask,seed,task,until)
+                if proposed is not None:
+                    return proposed
             headings = dict.fromkeys((*tangents,bearing,bearing+math.pi/4,bearing-math.pi/4,
                                       pose[2],pose[2]-math.pi/2,pose[2]+math.pi/2))
             distances = dict.fromkeys((self._min_goal_dist_m+self._goal_search_m,
@@ -1828,6 +1847,18 @@ class MetricFrontierRuntime:
                             fallback = candidate
         return fallback
 
+    @staticmethod
+    def _metric_corner_face_headings(grid,normal):
+        q = grid.info.origin.orientation
+        yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+        x = math.cos(yaw)*normal[0]+math.sin(yaw)*normal[1]
+        y = -math.sin(yaw)*normal[0]+math.cos(yaw)*normal[1]
+        if abs(x)<=1e-8 or abs(y)<=1e-8:
+            return ()
+        # Both components come from actual adjacent free/unknown raster
+        # faces. Use their normals and tangents in the raster's world frame.
+        return tuple(yaw+a for a in (0.,math.pi/2,-math.pi/2,math.pi))
+
     def _metric_refine_native_observation(self,inputs,frontier,policy,scope,selected,task_id,until):
         """Query more current retained rays without asserting a guessed path.
 
@@ -1844,7 +1875,8 @@ class MetricFrontierRuntime:
         grid,cor,pose,*_ = inputs
         resolution = grid.info.resolution
         base = math.atan2(normal[1],normal[0])
-        directions = sorted((base+a for a in (0.,math.pi/2,-math.pi/2,math.pi)),
+        directions = sorted(dict.fromkeys((*(base+a for a in (0.,math.pi/2,-math.pi/2,math.pi)),
+            *self._metric_corner_face_headings(grid,normal))),
             key=lambda h:abs(math.atan2(math.sin(h-pose[2]),math.cos(h-pose[2]))))
         for heading in directions:
             error = abs(math.atan2(math.sin(heading-pose[2]),math.cos(heading-pose[2])))
@@ -3048,9 +3080,15 @@ class MetricFrontierRuntime:
                 return finish('canceled', 'user_canceled')
             outcome=('observed' if gained else 'arrival_without_observation') if reached else (
                 'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
-            if gained and not observation_complete(baseline,after[0],after[1],
-                    self._world_to_grid,self._grid_to_world):
-                outcome = 'partially_observed'
+            if gained:
+                ray_complete = observation_complete(baseline,after[0],after[1],
+                    self._world_to_grid,self._grid_to_world)
+                omitted = local_small_remainder(after[0],self._metric_scope_mask(after),
+                    after[2],policy.attempts[pending.task_id].frontier_xy,
+                    self._world_to_grid,self._grid_to_world,min_frontier)
+                self._metric_status['local_omitted_boundary_cells'] = omitted
+                if not ray_complete or omitted:
+                    outcome = 'partially_observed'
             # A current geometry rejection before the first dispatch is a
             # proposal rejection even when stop() prevented the planner call.
             # A task that already moved (including HOLD/revalidation) retains

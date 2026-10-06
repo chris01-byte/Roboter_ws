@@ -48,6 +48,37 @@ def reachable_remainder(grid, inside, pose, to_grid):
     return int(np.count_nonzero(reachable & adjacent))
 
 
+def local_small_remainder(grid, inside, pose, anchor, to_grid, to_world,
+                          min_frontier_m, radius=.8):
+    """Reachable local boundary omitted by the normal component-size filter.
+
+    Resolving one proposed ray does not finish a spatial task when its actual
+    remaining boundary has merely become too small for ordinary sampling.
+    Connectivity is proved on the whole raw-free scope, not a cropped disk;
+    walls and disconnected islands cannot create an unfinished task here.
+    This is work accounting only, never a chassis or motion permission.
+    """
+    data = np.asarray(grid.data).reshape(grid.info.height, grid.info.width)
+    free = (data == 0) & inside
+    c, r = to_grid(*pose[:2], grid.info)
+    if not (0 <= r < data.shape[0] and 0 <= c < data.shape[1] and free[r, c]):
+        raise ValueError('completion_raw_pose_not_observed_free')
+    connected, _ = label(free)
+    unknown = (data < 0) & inside
+    adjacent = np.zeros(data.shape, bool)
+    adjacent[1:] |= unknown[:-1]
+    adjacent[:-1] |= unknown[1:]
+    adjacent[:, 1:] |= unknown[:, :-1]
+    adjacent[:, :-1] |= unknown[:, 1:]
+    components, _ = label(free & adjacent, np.ones((3, 3), int))
+    sizes = np.bincount(components.ravel())
+    minimum = max(1, round(min_frontier_m / grid.info.resolution))
+    omitted = ((components > 0) & (sizes[components] < minimum)
+               & (connected == connected[r, c]))
+    return sum(math.dist(to_world(int(c), int(r), grid.info), anchor) <= radius
+               for r, c in np.argwhere(omitted))
+
+
 @dataclass
 class CompletionWindow:
     duration_s: float = 3.
