@@ -141,5 +141,6 @@
     "Shapely==2.0.7"
   ],
   "slam_patch": "patches/slam_toolbox_humble_pure_rotation.patch",
-  "slam_grid_patch": "patches/slam_toolbox_humble_stable_grid.patch"
+  "slam_grid_patch": "patches/slam_toolbox_humble_stable_grid.patch",
+  "navfn_patch": "patches/nav2_navfn_humble_cell_centers.patch"
 }

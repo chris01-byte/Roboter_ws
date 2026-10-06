@@ -265,7 +265,7 @@ def run(case,args):
             return ('success' if abs(achieved)>=abs(angle) else 'timeout'),achieved
         n._rotate_in_place=rotate;n._robot_pose=lambda:tuple(world.pose);n.get_logger=world.get_logger
         world.moving=True
-        alignment=n._metric_align_nav_departure(route,tuple(world.pose),lambda:False)
+        alignment=n._metric_align_nav_departure(route,tuple(world.pose),lambda:False,inputs=inputs)
         assert alignment[0] in ('success','skipped','controller_owned'),alignment
         result['alignment']=alignment
         if world.trace:np.savetxt(out/'alignment.csv',np.asarray(world.trace),delimiter=',')

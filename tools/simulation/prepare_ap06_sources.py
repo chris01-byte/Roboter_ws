@@ -17,6 +17,7 @@ def prepare(args):
     cache = args.cache.resolve()
     cache.mkdir(parents=True, exist_ok=True)
     packages = []
+    patched_navfn = False
     for source in lock['sources']:
         if args.only and source['name'] not in args.only:
             continue
@@ -48,10 +49,14 @@ def prepare(args):
         if source['name'] == 'slam_toolbox':
             subprocess.run(['git', 'apply', '--unidiff-zero', str(repo/lock['slam_patch']), str(repo/lock['slam_grid_patch'])],
                            cwd=target, check=True)
+        if source['name'] == 'navigation2':
+            subprocess.run(['git', 'apply', str(repo/lock['navfn_patch'])],
+                           cwd=target, check=True)
+            patched_navfn = True
         packages.extend(str(target/relative) for relative in source['packages'])
     if not args.verify_only:
         manifest = {'source_lock': str(Path(__file__).with_name('ap06_dependencies.json')),
-                    'base_paths': packages, 'patched_slam': 'slam_toolbox' in [p.name for p in args.destination.glob('*')]}
+                    'base_paths': packages, 'patched_navfn': patched_navfn, 'patched_slam': 'slam_toolbox' in [p.name for p in args.destination.glob('*')]}
         (args.destination/'prepared.json').write_text(json.dumps(manifest, indent=2)+'\n')
 
 

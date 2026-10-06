@@ -24,6 +24,8 @@ on:
       - 'tools/simulation/test_ap06_lifecycle.py'
       - 'tools/simulation/slam_grid_regression.cpp'
       - 'tools/simulation/goal_checker_regression/**'
+      - 'tools/simulation/navfn_cell_regression/**'
+      - 'patches/nav2_navfn_humble_cell_centers.patch'
       - 'tools/simulation/prepare_ap06_sources.py'
       - 'patches/slam_toolbox_humble*.patch'
       - 'tools/kartierung/build_slam_toolbox_humble_overlay.sh'
@@ -111,6 +113,7 @@ jobs:
             src/explore/test/test_metric_pending_withdrawal.py \
             src/explore/test/test_metric_public_cooldown.py \
             src/explore/test/test_metric_public_body_authority.py \
+            src/explore/test/test_metric_public_alignment.py \
             src/explore/test/test_metric_snapshot_replan.py \
             src/explore/test/test_metric_start_observation.py \
             src/explore/test/test_metric_join_replan.py \
@@ -149,6 +152,19 @@ jobs:
             libboost-filesystem-dev libboost-thread-dev
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
           python3 -m pip install -r src/explore/requirements-geometry.txt
+      - name: Build pinned NavFn cell-coordinate correction and test the real plugin
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          python3 tools/simulation/prepare_ap06_sources.py --only navigation2 \
+            --cache /tmp/ap06-cache --destination /tmp/ap06-navfn-source
+          colcon build --base-paths /tmp/ap06-navfn-source/navigation2/nav2_navfn_planner \
+            --build-base /tmp/ap06-navfn-build --install-base /tmp/ap06-navfn-install \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          source /tmp/ap06-navfn-install/setup.bash
+          cmake -S tools/simulation/navfn_cell_regression -B /tmp/ap06-navfn-regression
+          cmake --build /tmp/ap06-navfn-regression -j2
+          ctest --test-dir /tmp/ap06-navfn-regression --output-on-failure
       - name: Test pinned native SLAM raster growth without changing guard authority
         shell: bash
         run: |
@@ -184,6 +200,7 @@ jobs:
             src/explore src/robot_navigation src/mission_manager src/vl53_near_field \
             src/safety_monitor src/amadeus_lidar_bringup
           source install/setup.bash
+          source /tmp/ap06-navfn-install/setup.bash
           export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=228
           python3 tools/simulation/ap03_nav2_closed_loop.py --repo "$PWD" --output /tmp/ap03-world
           export AP06_SIMULATION=1 ROS_DOMAIN_ID=180

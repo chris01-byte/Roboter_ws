@@ -1018,6 +1018,44 @@ class MetricFrontierRuntime:
                 return route
         return self._metric_standard_waypoints_clear(inputs,route,target_yaw)
 
+    def _metric_public_prealignment_ready(self, inputs, route):
+        """The existing turn owner may align only a wholly public body sweep."""
+        if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
+                or len(route) < 2 or self._metric_private_start_needed(inputs)
+                or getattr(self, '_wohnungserkundung_active_child', None) is not None):
+            return False
+        public = self._metric_public_inputs(inputs)
+        pose = inputs[2]
+        carrot = lookahead_point(pose[:2], route[1:], .4)
+        bearing = math.atan2(carrot[1]-pose[1], carrot[0]-pose[0])
+        turn = math.atan2(math.sin(bearing-pose[2]), math.cos(bearing-pose[2]))
+        count = max(1, math.ceil(abs(turn)/.01))
+        rotations = [(pose[0],pose[1],pose[2]+turn*i/count) for i in range(count+1)]
+        return all(footprint_poses_clear(rotations,g,allowed,self._world_to_grid,
+                    self._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+                   for g,allowed in ((public[0],public[3]),(public[5],public[6])))
+
+    def _metric_checked_public_rollout(self, inputs, route):
+        def trajectory(aligned):
+            return rpp_trajectory(route, inputs[2],
+                min(inputs[0].info.resolution, inputs[5].info.resolution),
+                getattr(self, '_prealign_handoff_tolerance', .17), self._metric_bounds,
+                prealign_to_first_leg=True, external_prealignment=aligned)
+        def clear(poses):
+            return all(footprint_poses_clear(poses,g,allowed,self._world_to_grid,
+                self._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+                for g,allowed in ((inputs[0],inputs[3]),(inputs[5],inputs[6])))
+        native = trajectory(False)
+        if clear(native):
+            return native, True, False
+        if not self._metric_public_prealignment_ready(inputs,route):
+            return native, False, False
+        aligned = trajectory(True)
+        return aligned, clear(aligned), True
+
+    def _metric_public_rollout(self, inputs, route):
+        return self._metric_checked_public_rollout(inputs,route)[0]
+
     def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
@@ -1050,17 +1088,11 @@ class MetricFrontierRuntime:
             # 20-mm/0.05-rad tracking band is qualified only for the documented
             # synthetic plant; AP-06 must qualify real hardware separately.
             try:
-                trajectory = rpp_trajectory(route, pose,
-                    min(grid.info.resolution, costmap.info.resolution),
-                    getattr(self, '_prealign_handoff_tolerance', .17),
-                    self._metric_bounds, prealign_to_first_leg=True,
-                    external_prealignment=False)
+                trajectory, trajectory_clear, _ = self._metric_checked_public_rollout(inputs, route)
             except ValueError as error:
                 self._metric_last_route_rejection = str(error)
                 return None
-            if not all(footprint_poses_clear(trajectory, g, allowed, self._world_to_grid,
-                    self._metric_bounds, heading_half_angle=.05, center_deviation_m=.02)
-                    for g, allowed in ((grid, known), (costmap, cost_known))):
+            if not trajectory_clear:
                 self._metric_last_route_rejection = 'footprint_sweep_invalid'
                 return None
             # The checker can accept before the ideal endpoint. If a final
@@ -1370,9 +1402,7 @@ class MetricFrontierRuntime:
                 center_deviation_m=.02) for grid, mask in grids):
             return True  # existing fixed first-body egress owns this case
         resolution = min(grid.info.resolution for grid, _ in grids)
-        trajectory = rpp_trajectory(route, pose, resolution,
-            getattr(self, '_prealign_handoff_tolerance', .17), self._metric_bounds,
-            prealign_to_first_leg=True, external_prealignment=False)
+        trajectory = self._metric_public_rollout(inputs, route)
         stop_yaw = trajectory[-1][2]
         turn = math.atan2(math.sin(target.yaw-stop_yaw),math.cos(target.yaw-stop_yaw))
         # RPP does not turn to the ideal heading if its real checker already
@@ -1442,9 +1472,7 @@ class MetricFrontierRuntime:
                     route = None if path is None else forecast_route(forecast,path,escape)
                     if route is None:
                         continue
-                    end = rpp_trajectory(route,projected,resolution,
-                        getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                        prealign_to_first_leg=True,external_prealignment=False)[-1]
+                    end = self._metric_public_rollout(forecast, route)[-1]
                     return_target = replace(back,yaw=math.atan2(pose[1]-end[1],pose[0]-end[0]))
                     retreat,error = self._metric_request_nav_plan(return_target,stopped,start_pose=end)
                     if (retreat is not None and not stopped() and
@@ -1858,9 +1886,7 @@ class MetricFrontierRuntime:
                 # pose near a wall need not be a useful forward-only arrival.
                 # Keep the original if this local search cannot prove another;
                 # the native departure query still owns the final decision.
-                trajectory=rpp_trajectory(route,pose,min(grid.info.resolution,costmap.info.resolution),
-                    getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                    prealign_to_first_leg=True,external_prealignment=False)
+                trajectory=self._metric_public_rollout(inputs,route)
                 refuge=(grid,correlation,trajectory[-1],*inputs[3:])
                 dx,dy=goal[0]-f.cx,goal[1]-f.cy
                 offset=math.hypot(dx,dy)
@@ -1873,10 +1899,7 @@ class MetricFrontierRuntime:
                         alternative_route=self._metric_route(inputs,alternative)
                         if alternative_route is None:
                             continue
-                        trajectory=rpp_trajectory(alternative_route,pose,
-                            min(grid.info.resolution,costmap.info.resolution),
-                            getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
-                            prealign_to_first_leg=True,external_prealignment=False)
+                        trajectory=self._metric_public_rollout(inputs,alternative_route)
                         if self._metric_scan_geometry_ready((grid,correlation,trajectory[-1],*inputs[3:])):
                             goal,route=alternative,alternative_route
                             stats['known_turn_refuge_approach']=True
@@ -2135,12 +2158,19 @@ class MetricFrontierRuntime:
         except Exception:
             return False
 
-    def _metric_align_nav_departure(self, route, pose, stop_requested):
+    def _metric_align_nav_departure(self, route, pose, stop_requested, *, inputs=None):
         if getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout':
-            # The fully checked native rollout owns its .35-rad rotate law.
-            # An extra Explorer turn would execute a different trajectory,
-            # especially while abandoning the fixed rear unknown inventory.
-            return ('interrupted' if stop_requested() else 'controller_owned', 0., 0., 0.)
+            if stop_requested():
+                return ('interrupted',0.,0.,0.)
+            if inputs is None or not self._metric_public_prealignment_ready(inputs,route):
+                # The original coupled private departure never gains a turn.
+                return ('controller_owned',0.,0.,0.)
+            _, clear, aligned = self._metric_checked_public_rollout(inputs,route)
+            if not aligned:
+                return ('controller_owned',0.,0.,0.)
+            if not clear:
+                return ('public_alignment_geometry_invalid',0.,0.,0.)
+            pose = inputs[2]
         leg = route_departure_point(route,pose,.02)
         return self._prealign_to_goal(*leg,pose,stop_requested=stop_requested)
 
@@ -2555,7 +2585,8 @@ class MetricFrontierRuntime:
                         else:
                             self._metric_nav_path = planned
                             # Align to the ACTUAL controller carrot on this Nav2 path.
-                            align,*_=self._metric_align_nav_departure(planned_route,inputs[2],stop)
+                            align,*_=self._metric_align_nav_departure(planned_route,inputs[2],stop,
+                                inputs=self._metric_inputs(active=True))
                             status = None if align in ('success','skipped','controller_owned') else 'alignment_failed'
             if status is None and not stop():
                 self._status_phase='metric_navigation'
