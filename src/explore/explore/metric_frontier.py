@@ -9,6 +9,11 @@ import math
 import numpy as np
 from scipy.ndimage import distance_transform_edt
 
+try:
+    from . import _reserved_sweep
+except ImportError:
+    _reserved_sweep = None  # Identical complete NumPy guard remains available.
+
 from .exploration_scope import rasterize_scope
 from .frontier_task_evidence import _geodesic_distances
 
@@ -282,7 +287,7 @@ def footprint_clear(x, y, yaw, grid, allowed, world_to_grid, grid_to_world,
 
 
 
-def footprint_poses_clear(poses, grid, allowed, world_to_grid,
+def _footprint_poses_clear_numpy(poses, grid, allowed, world_to_grid,
         bounds=(-.13,.33,-.25,.25), heading_half_angle=0., center_deviation_m=0.):
     """Batch the identical reserved cell-centre test used by footprint_clear.
 
@@ -334,23 +339,58 @@ def footprint_poses_clear(poses, grid, allowed, world_to_grid,
         owners,dx,dy = owners[near],dx[near],dy[near]
         # Evaluate each pose's SAME angles once, then gather for its cells.
         angles = chunk[:,2,None]+headings
-        pose_cosine,pose_sine = np.cos(angles),np.sin(angles)
-        # The nominal heading is already a member of the complete angle set.
-        # Reject its collisions before allocating forbidden-cell x angle
-        # matrices. A clear nominal heading still requires EVERY other angle.
-        nominal = len(headings)//2
-        cosine,sine = pose_cosine[owners,nominal,None],pose_sine[owners,nominal,None]
-        lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
-        if np.any((left-reserve<=lx)&(lx<=right+reserve)
-                  &(bottom-reserve<=ly)&(ly<=top+reserve)):
-            return False
-        if len(headings)==1:
-            continue
-        cosine,sine = pose_cosine[owners],pose_sine[owners]
+        cosine,sine = np.cos(angles)[owners],np.sin(angles)[owners]
         lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
         touched = ((left-reserve<=lx)&(lx<=right+reserve)
                    &(bottom-reserve<=ly)&(ly<=top+reserve))
         if np.any(touched):
+            return False
+    return True
+
+
+def footprint_poses_clear(poses, grid, allowed, world_to_grid,
+        bounds=(-.13,.33,-.25,.25), heading_half_angle=0., center_deviation_m=0.):
+    """Identical reserved sweep with an optional native arithmetic kernel.
+
+    All poses, forbidden cells (including outside-grid), sampled headings and
+    original reserves remain authoritative. The kernel releases the GIL while
+    reading these buffers; it cannot call ROS or grant movement permission.
+    """
+    if _reserved_sweep is None:
+        return _footprint_poses_clear_numpy(poses,grid,allowed,world_to_grid,bounds,
+                                          heading_half_angle,center_deviation_m)
+    poses = np.asarray(poses,dtype=float)
+    if poses.ndim != 2 or poses.shape[1] != 3 or not np.all(np.isfinite(poses)):
+        return False
+    if not math.isfinite(center_deviation_m) or center_deviation_m < 0:
+        raise ValueError('controller_center_deviation_invalid')
+    left,right,bottom,top = bounds
+    res = grid.info.resolution
+    reserve = res/math.sqrt(2)+.01+center_deviation_m
+    radius = math.hypot(max(abs(left),abs(right))+reserve,
+                        max(abs(bottom),abs(top))+reserve)
+    candidate_radius = radius*(1+64*np.finfo(float).eps)+1e-12
+    n = int(math.ceil(radius/res))+2
+    headings = np.linspace(-heading_half_angle,heading_half_angle,
+                           1 if heading_half_angle==0 else 15)
+    batch = max(1,min(32,262144//(len(headings)*(2*n+1)**2)))
+    q = grid.info.origin.orientation
+    angle = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+    parameters = np.asarray([res,grid.info.origin.position.x,grid.info.origin.position.y,
+        math.cos(angle),math.sin(angle),candidate_radius**2,
+        left-reserve,right+reserve,bottom-reserve,top+reserve,n],dtype=np.float64)
+    for begin in range(0,len(poses),batch):
+        chunk = poses[begin:begin+batch]
+        centers = np.asarray([world_to_grid(x,y,grid.info) for x,y,_ in chunk],dtype=np.int64)
+        angles = chunk[:,2,None]+headings
+        try:
+            clear = _reserved_sweep.clear(chunk,centers,np.cos(angles),np.sin(angles),
+                                         allowed,parameters)
+        except (TypeError,BufferError):
+            # Unsupported buffer layouts/types use the full previous guard.
+            return _footprint_poses_clear_numpy(poses,grid,allowed,world_to_grid,bounds,
+                                              heading_half_angle,center_deviation_m)
+        if not clear:
             return False
     return True
 

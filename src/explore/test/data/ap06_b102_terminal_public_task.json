@@ -1,0 +1,494 @@
+{
+  "kind": "Own terminal B102 public rasters, recorded actual TF/finite scan and original complete saved task history; not a pre-failure live input, health receipt or qualification",
+  "pose": [
+    0.22478059175337478,
+    -0.43447036157343755,
+    -1.949531445513942
+  ],
+  "correlation": {
+    "context": {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a",
+      "frame_id": "map"
+    },
+    "map_revision": 0,
+    "fingerprint": "d7abe8c14ade1a3e66338ed38ca176bf489b91f2a0b70557d580c52f64568f4e",
+    "source_stamp_ns": 1791293813354351641
+  },
+  "scope": {
+    "scope_id": "ap06-two-rooms",
+    "context": {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a",
+      "frame_id": "map"
+    },
+    "vertices": [
+      {
+        "x": -0.6999999999999997,
+        "y": -1.8499999999999999
+      },
+      {
+        "x": 4.9,
+        "y": -1.8499999999999999
+      },
+      {
+        "x": 4.9,
+        "y": 0.95
+      },
+      {
+        "x": -0.6999999999999997,
+        "y": 0.95
+      }
+    ],
+    "max_vertices": 64
+  },
+  "reference": [
+    -0.0023166436646795126,
+    -0.01266498948148465,
+    -0.01047000000000156
+  ],
+  "physical_motion": null,
+  "attributes": {
+    "_metric_start_egress_enabled": true,
+    "_metric_egress_expired": true,
+    "_metric_body_anchor_expired": true,
+    "_prealign_handoff_tolerance": 0.02,
+    "_goal_clearance_m": 0.28,
+    "_frontier_goal_max_cost": 90,
+    "_goal_search_m": 0.3,
+    "_min_goal_dist_m": 0.3,
+    "_approach_dist_m": 0.45,
+    "_metric_bounds": [
+      -0.13,
+      0.33,
+      -0.25,
+      0.25
+    ],
+    "_map_timeout_s": 5.0,
+    "_frontier_forward_cone_half_angle": 0.0,
+    "_potential_scale": 3.0,
+    "_gain_scale": 1.0,
+    "_heading_scale": 0.75,
+    "_metric_start_strategy": "adaptive",
+    "_metric_candidate_source": "boundary_samples",
+    "_metric_path_validation": "rpp_rollout",
+    "_global_frame": "map",
+    "_wohnungserkundung_evidence_max_cells": 262144,
+    "_door_lidar_scan_timeout": 0.5,
+    "_door_lidar_max_range": 4.0
+  },
+  "identity": [
+    {
+      "session_id": "ap06-door68_start_b",
+      "map_id": "map-de2d21aca8ba1997bffab53fe9e6e3b39e564a7ff8124d1ad3b3f31404faca4a",
+      "frame_id": "map"
+    },
+    [
+      [
+        "map",
+        190,
+        96,
+        0.029999999329447746,
+        [
+          -0.7499999832361937,
+          -1.889999957755208,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      [
+        "map",
+        190,
+        96,
+        0.029999999329447746,
+        [
+          -0.7499999832361937,
+          -1.889999957755208,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    ]
+  ],
+  "policy": {
+    "cooldown_s": 30.0,
+    "next_id": 9,
+    "radius": 0.6,
+    "retry_limit": 2,
+    "tasks": {
+      "metric-task-1": {
+        "completed": true,
+        "evidence_key": "72955f94e35c9c5e062fb37d220b8073b3d1fbd4bb9dd68218a126191df9f655",
+        "failures": 0,
+        "fingerprint": "1a166b694162979b009918e0d295e881b381c700c3613a51709c0848d5a21222",
+        "frontier_xy": [
+          1.304999970830977,
+          -1.424999968148768
+        ],
+        "reason": "observed",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          0.9143900750935573,
+          0.003661591937126939
+        ],
+        "tries": 3
+      },
+      "metric-task-2": {
+        "completed": false,
+        "evidence_key": "80d4d841d619707c92d2ef0c9dcbd7f9e52f10551ff8a56668bf4933021f4bb6",
+        "failures": 0,
+        "fingerprint": "d7abe8c14ade1a3e66338ed38ca176bf489b91f2a0b70557d580c52f64568f4e",
+        "frontier_xy": [
+          2.8949999352917075,
+          -0.6449999855831265
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          2.9249999346211553,
+          -0.4049999909475446
+        ],
+        "tries": 3
+      },
+      "metric-task-3": {
+        "completed": false,
+        "evidence_key": "b57a52d37426e67d2e6cd0cd0eae9efaac669bd607fb288cc289a422f7f7908a",
+        "failures": 0,
+        "fingerprint": "d7abe8c14ade1a3e66338ed38ca176bf489b91f2a0b70557d580c52f64568f4e",
+        "frontier_xy": [
+          3.644999918527901,
+          -0.704999984242022
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.147643310712116,
+          -0.38676603460331316
+        ],
+        "tries": 1
+      },
+      "metric-task-4": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          1.5149999661371112,
+          -0.10499999765306711
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          1.5149999661371112,
+          -0.10499999765306711
+        ],
+        "tries": 0
+      },
+      "metric-task-5": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          1.3649999694898725,
+          0.9149999795481563
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          1.3649999694898725,
+          0.9149999795481563
+        ],
+        "tries": 0
+      },
+      "metric-task-6": {
+        "completed": false,
+        "evidence_key": "fa0e2c0beb79e2f232bead395ebe5de2a8afa7592d5ed9cdbe0b2e4a11ac6496",
+        "failures": 0,
+        "fingerprint": "d7abe8c14ade1a3e66338ed38ca176bf489b91f2a0b70557d580c52f64568f4e",
+        "frontier_xy": [
+          3.79499991517514,
+          -1.304999970830977
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.1809883998552517,
+          -0.5505233727910005
+        ],
+        "tries": 1
+      },
+      "metric-task-7": {
+        "completed": false,
+        "evidence_key": "f62bf3587da717c78b184066c868d9cac565ffe4d023b42efb4ea5455167a972",
+        "failures": 0,
+        "fingerprint": "d7abe8c14ade1a3e66338ed38ca176bf489b91f2a0b70557d580c52f64568f4e",
+        "frontier_xy": [
+          4.424999901093543,
+          -1.6049999641254544
+        ],
+        "reason": "proposal_rejected",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          3.0999095717321916,
+          -0.5919950274882831
+        ],
+        "tries": 1
+      },
+      "metric-task-8": {
+        "completed": false,
+        "evidence_key": "",
+        "failures": 0,
+        "fingerprint": "",
+        "frontier_xy": [
+          4.424999901093543,
+          -0.8849999802187085
+        ],
+        "reason": "",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          4.424999901093543,
+          -0.8849999802187085
+        ],
+        "tries": 0
+      },
+      "metric-task-9": {
+        "completed": true,
+        "evidence_key": "9618a84c463bccb2e7759922ffc088565ceb3edfa8f5b3cd9f23eb177a9c0656",
+        "failures": 0,
+        "fingerprint": "e0400ea71cf70facb08f5f8d4d35ac2958a5ddb646af1346173360020bec9f05",
+        "frontier_xy": [
+          -0.4049999909475446,
+          -0.46499998960644007
+        ],
+        "reason": "observed",
+        "retry_remaining_s": 0.0,
+        "target_xy": [
+          0.2241883283277258,
+          -0.4338703128349116
+        ],
+        "tries": 1
+      }
+    }
+  },
+  "mount": [
+    0.245,
+    0.0,
+    1.5707963267948963
+  ],
+  "minimum_range": 0.05000000074505806,
+  "maximum_range": 4.0,
+  "evidence": [],
+  "event_raw_sha256": "ef35640cf2906e8a97181ca566e3856e2e0c566f9c35bee72a116e36c2edfa9e",
+  "native_plans": [
+    {
+      "start_pose": null,
+      "goal": [
+        0.22478059175337467,
+        -1.0344703615734376,
+        0.2386716654990418
+      ],
+      "error": null,
+      "points": [
+        [
+          0.2249999949708581,
+          -0.4349999902769923
+        ],
+        [
+          0.2249999949708581,
+          -0.46499998960644007
+        ],
+        [
+          0.2249999949708581,
+          -0.47999998927116394
+        ],
+        [
+          0.2249999949708581,
+          -0.4949999889358878
+        ],
+        [
+          0.2249999949708581,
+          -0.5099999886006117
+        ],
+        [
+          0.2249999949708581,
+          -0.5249999882653356
+        ],
+        [
+          0.2249999949708581,
+          -0.5399999879300594
+        ],
+        [
+          0.2249999949708581,
+          -0.5549999875947833
+        ],
+        [
+          0.2249999949708581,
+          -0.5699999872595072
+        ],
+        [
+          0.2249999949708581,
+          -0.584999986924231
+        ],
+        [
+          0.2249999949708581,
+          -0.5999999865889549
+        ],
+        [
+          0.2249999949708581,
+          -0.6149999862536788
+        ],
+        [
+          0.2249999949708581,
+          -0.6299999859184027
+        ],
+        [
+          0.2249999949708581,
+          -0.6449999855831265
+        ],
+        [
+          0.2249999949708581,
+          -0.6599999852478504
+        ],
+        [
+          0.2249999949708581,
+          -0.6749999849125743
+        ],
+        [
+          0.2249999949708581,
+          -0.6899999845772982
+        ],
+        [
+          0.2249999949708581,
+          -0.704999984242022
+        ],
+        [
+          0.2249999949708581,
+          -0.7199999839067459
+        ],
+        [
+          0.2249999949708581,
+          -0.7349999835714698
+        ],
+        [
+          0.2249999949708581,
+          -0.7499999832361937
+        ],
+        [
+          0.2249999949708581,
+          -0.7649999829009175
+        ],
+        [
+          0.2249999949708581,
+          -0.7799999825656414
+        ],
+        [
+          0.2249999949708581,
+          -0.7949999822303653
+        ],
+        [
+          0.2249999949708581,
+          -0.8099999818950891
+        ],
+        [
+          0.2249999949708581,
+          -0.824999981559813
+        ],
+        [
+          0.2249999949708581,
+          -0.8399999812245369
+        ],
+        [
+          0.2249999949708581,
+          -0.8549999808892608
+        ],
+        [
+          0.2249999949708581,
+          -0.8699999805539846
+        ],
+        [
+          0.2249999949708581,
+          -0.8849999802187085
+        ],
+        [
+          0.2249999949708581,
+          -0.8999999798834324
+        ],
+        [
+          0.2249999949708581,
+          -0.9149999795481563
+        ],
+        [
+          0.2249999949708581,
+          -0.9299999792128801
+        ],
+        [
+          0.2249999949708581,
+          -0.944999978877604
+        ],
+        [
+          0.2249999949708581,
+          -0.9599999785423279
+        ],
+        [
+          0.2249999949708581,
+          -0.9749999782070518
+        ],
+        [
+          0.2249999949708581,
+          -1.0049999775364995
+        ],
+        [
+          0.22478059175337467,
+          -1.0344703615734376
+        ]
+      ]
+    }
+  ],
+  "expected_candidate": {
+    "task": "metric-task-3",
+    "goal": [
+      0.22478059175337467,
+      -1.0344703615734376,
+      0.2386716654990418
+    ],
+    "frontier": [
+      3.674999917857349,
+      -0.19499999564141035
+    ],
+    "points": [
+      [
+        3.0149999326094985,
+        -0.04499999899417162
+      ],
+      [
+        3.0449999319389462,
+        -0.04499999899417162
+      ],
+      [
+        3.074999931268394,
+        -0.04499999899417162
+      ],
+      [
+        3.52499992121011,
+        0.04499999899417162
+      ],
+      [
+        4.094999908469617,
+        0.1649999963119626
+      ],
+      [
+        4.244999905116856,
+        0.19499999564141035
+      ]
+    ],
+    "cost": 1.904051343062598,
+    "native": false
+  }
+}

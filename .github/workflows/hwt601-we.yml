@@ -51,7 +51,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3-pytest python3-yaml \
-            python3-numpy python3-scipy python3-serial python3-pip \
+            python3-numpy python3-scipy python3-serial python3-pip python3-dev build-essential \
             ros-humble-robot-localization ros-humble-tf2-ros ros-humble-sensor-msgs-py \
             ros-humble-nav2-msgs ros-humble-tf2-geometry-msgs
           python3 -m pip install -r src/base_hardware/requirements-modbus.txt
@@ -90,6 +90,8 @@ jobs:
             src/robot_navigation/test/test_hwt601_gate_pending_wheel.py \
             src/explore/test/test_metric_source_delivery.py \
             src/explore/test/test_metric_sweep_batch.py \
+            src/explore/test/test_metric_native_sweep.py \
+            src/explore/test/test_metric_task_view_group.py \
             src/explore/test/test_metric_route_distances.py \
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \
@@ -149,7 +151,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends python3-numpy python3-scipy \
-            python3-yaml python3-pytest python3-serial python3-pip \
+            python3-yaml python3-pytest python3-serial python3-pip python3-dev build-essential \
             ros-humble-nav2-planner ros-humble-nav2-navfn-planner \
             ros-humble-nav2-controller ros-humble-nav2-regulated-pure-pursuit-controller \
             ros-humble-tf2-geometry-msgs ros-humble-sensor-msgs-py \

@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import Extension, setup
 import os
 from glob import glob
 
@@ -11,6 +11,9 @@ setup(
     name=package_name,
     version='0.1.0',
     packages=[package_name],
+    ext_modules=[Extension('explore._reserved_sweep',
+        sources=['explore/_reserved_sweep.c'],
+        extra_compile_args=['-O3', '-fno-fast-math', '-ffp-contract=off'])],
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml', 'README.md']),
@@ -21,7 +24,7 @@ setup(
     ],
     install_requires=['setuptools', 'Shapely>=1.8,<3'],
     tests_require=['pytest'],
-    zip_safe=True,
+    zip_safe=False,
     maintainer='QTG0900',
     maintainer_email='qtg0900@example.com',
     description='Autonome Frontier-basierte Wohnungs-Erkundung ueber Nav2 (WP-5 Ebene 1).',

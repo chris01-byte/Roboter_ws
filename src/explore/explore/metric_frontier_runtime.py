@@ -1737,6 +1737,24 @@ class MetricFrontierRuntime:
                                                          self._metric_observation_view())
                         points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
                             if math.dist(self._grid_to_world(c, r, grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
+                        observed_frontier = f
+                        if not points:
+                            # Another CURRENT boundary sample of the SAME
+                            # spatial task may be in this already proved view.
+                            # Read-only identity lookup cannot create/reset a
+                            # task. Keep the original per-boundary radius.
+                            for same_task in frontiers:
+                                if time.monotonic() >= until:
+                                    return fallback
+                                if (same_task is f or policy.identify((same_task.cx,same_task.cy),
+                                        create=False) != key):
+                                    continue
+                                points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                                    if math.dist(self._grid_to_world(c,r,grid.info),
+                                        (same_task.cx,same_task.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
+                                if points:
+                                    observed_frontier = same_task
+                                    break
                         if not points:
                             continue
                         # Select a genuinely distinct finite part of this
@@ -1751,7 +1769,7 @@ class MetricFrontierRuntime:
                             for a in served))
                         if not points:
                             continue
-                        key = policy.identify((f.cx,f.cy),observer_xy,observation_points=points)
+                        key = policy.identify((observed_frontier.cx,observed_frontier.cy),observer_xy,observation_points=points)
                         local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                         now = time.monotonic()
                         if not policy.eligible(key,observer_xy,now,correlation.fingerprint,local,
@@ -1767,10 +1785,10 @@ class MetricFrontierRuntime:
                             continue
                         length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
                         cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
-                        candidate = MetricCandidate('', *goal, yaw, (f.cx, f.cy), route, length,
+                        candidate = MetricCandidate('', *goal, yaw, (observed_frontier.cx, observed_frontier.cy), route, length,
                             cost, correlation.fingerprint, correlation.map_revision, False, points)
                         if self._metric_scan_geometry_ready((grid,correlation,stop_pose,*inputs[3:])):
-                            return self._metric_refine_observation(inputs,f,policy,scope_mask,
+                            return self._metric_refine_observation(inputs,observed_frontier,policy,scope_mask,
                                 candidate,key,until)
                         if fallback is None or candidate.cost<fallback.cost:
                             fallback = candidate
