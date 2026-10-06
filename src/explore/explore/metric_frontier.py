@@ -117,13 +117,16 @@ class MetricTaskPolicy:
                 return False
             # A read-only rejected planner pose is not a failed observation
             # at every other pose in its neighbourhood. After the SAME
-            # cooldown, a position outside its .15-m acceptance disk supplies
-            # a distinct bounded geometry query. Real motion failures still
+            # cooldown, a different position supplies a distinct bounded
+            # geometry query. The movement acceptance disk does not make two
+            # read-only paths equivalent (C119: 12.7 cm changes the refuge).
+            # Same-position queries still need new evidence. Real failures still
             # require new local measured evidence; no tries/limits are reset.
             def new_input(a):
                 return (evidence_key != a.evidence_key or
-                    ((a.reason == 'proposal_rejected' or
-                      (a.reason == 'partially_observed' and valid_view)) and
+                    (a.reason == 'proposal_rejected' and
+                     math.dist(a.target_xy, target_xy) > 1e-12) or
+                    (a.reason == 'partially_observed' and valid_view and
                      math.dist(a.target_xy, target_xy) > .15+1e-12))
             return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
                         and now >= a.retry_after and new_input(a)

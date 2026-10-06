@@ -1112,7 +1112,12 @@ class MetricFrontierRuntime:
         # stops 15 cm earlier. Qualified rotation belongs at that real stop.
         endpoint_poses = ([(target[0],target[1],final_yaw)] if rollout else
             [(target[0],target[1],arrival_yaw+delta*k/steps) for k in range(steps+1)])
-        if not all(footprint_poses_clear(endpoint_poses,g,allowed,
+        # Qualified native RPP stops in the existing XY window. Its COMPLETE actual
+        # sweep, reserved stop and final rotation below own the body proof.
+        # The ideal endpoint is not visited; testing its body can reject a
+        # safe stop/turning refuge (original C119 native counterexample).
+        # Conservative, guessed-route and one-pose checks retain endpoint proof.
+        if not (rollout and native_plan and len(route)>1) and not all(footprint_poses_clear(endpoint_poses,g,allowed,
                    self._world_to_grid,self._metric_bounds,
                    heading_half_angle=.05 if rollout else .4,
                    center_deviation_m=.02 if rollout else .15)
@@ -1185,12 +1190,13 @@ class MetricFrontierRuntime:
         self._metric_last_route_rejection=None
         return route
 
-    def _metric_nav2_proposal(self, inputs, target, target_yaw=None):
+    def _metric_nav2_proposal(self, inputs, target, target_yaw=None, *, native_stop=False):
         """Known-space reachability/goal test only, never movement authority.
 
         Nav2 can choose a longer inflated-cost route than our shortest raster
         path. Do not ban its target because that single proposal cannot turn.
-        Unknown exterior and unsafe goal tolerance remain hard exclusions.
+        Guessed candidates retain endpoint proof. An active native query may
+        defer it to its actual returned stopping trajectory, never to motion.
         """
         grid, _, pose, known, _, _, _ = inputs
         sc, sr = self._world_to_grid(*pose[:2], grid.info)
@@ -1204,7 +1210,15 @@ class MetricFrontierRuntime:
         arrival = route_arrival_yaw(route, pose[2], grid.info.resolution)
         # Goal proof without pretending to validate the rejected connection.
         goal_inputs = (grid, inputs[1], (*target, arrival), *inputs[3:])
-        if self._metric_standard_waypoints_clear(goal_inputs, (target,), target_yaw) is None:
+        if native_stop and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout':
+            # Read-only query: keep the goal centre in current raw/scope and
+            # costmap-known space. Only its actual returned native path may
+            # prove the full reserved body/stop before any movement.
+            cc,rr = self._world_to_grid(*target,inputs[5].info)
+            costs = inputs[6]
+            if not (0<=rr<costs.shape[0] and 0<=cc<costs.shape[1] and costs[rr,cc]):
+                return None
+        elif self._metric_standard_waypoints_clear(goal_inputs, (target,), target_yaw) is None:
             return None
         return route
 
@@ -2350,7 +2364,8 @@ class MetricFrontierRuntime:
             # proposal must not prevent Nav2 from finding a safe alternative.
             # Endpoint/known-space connectivity stay current; before movement
             # the actual native path still needs the complete controller proof.
-            return self._metric_nav2_proposal(inputs, (target.x, target.y), target.yaw) is not None
+            return self._metric_nav2_proposal(inputs, (target.x, target.y), target.yaw,
+                                            native_stop=True) is not None
         return self._metric_waypoints_clear(inputs, target.route, target.yaw) is not None
 
     def _execute_metric_frontier(self, goal_handle, overall_timeout, min_frontier):
@@ -2773,6 +2788,12 @@ class MetricFrontierRuntime:
                             # Align to the ACTUAL controller carrot on this Nav2 path.
                             align,*_=self._metric_align_nav_departure(planned_route,inputs[2],stop,
                                 inputs=self._metric_inputs(active=True))
+                            # The existing alignment owner can command a turn
+                            # before a Nav2 child exists. Any such invocation
+                            # retains motion accounting across revalidation;
+                            # only explicit no-motion outcomes remain queries.
+                            if align not in ('skipped', 'controller_owned'):
+                                task_motion_dispatched = True
                             status = None if align in ('success','skipped','controller_owned') else 'alignment_failed'
             if status is None and not stop():
                 self._status_phase='metric_navigation'
@@ -2945,8 +2966,11 @@ class MetricFrontierRuntime:
             if gained and not observation_complete(baseline,after[0],after[1],
                     self._world_to_grid,self._grid_to_world):
                 outcome = 'partially_observed'
-            proposal_rejected = (not task_motion_dispatched and status == 'planning_failed'
-                                 and hard == 'route_invalidated')
+            # A current geometry rejection before the first dispatch is a
+            # proposal rejection even when stop() prevented the planner call.
+            # A task that already moved (including HOLD/revalidation) retains
+            # its movement/observation failure and original counters.
+            proposal_rejected = not task_motion_dispatched and hard == 'route_invalidated'
             if proposal_rejected:
                 outcome = 'proposal_rejected'
             evidence = local_evidence(after[0], policy.attempts[pending.task_id].frontier_xy, self._grid_to_world)
