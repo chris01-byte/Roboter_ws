@@ -296,6 +296,9 @@ def footprint_poses_clear(poses, grid, allowed, world_to_grid,
     reserve = res/math.sqrt(2)+.01+center_deviation_m
     radius = math.hypot(max(abs(left),abs(right))+reserve,
                         max(abs(bottom),abs(top))+reserve)
+    # Every sampled reserved rectangle fits this circumscribed circle.
+    # Round outward: this only removes centres that cannot touch ANY heading.
+    candidate_radius = radius*(1+64*np.finfo(float).eps)+1e-12
     n = int(math.ceil(radius/res))+2
     dr,dc = np.mgrid[-n:n+1,-n:n+1]
     headings = np.linspace(-heading_half_angle,heading_half_angle,
@@ -322,8 +325,13 @@ def footprint_poses_clear(poses, grid, allowed, world_to_grid,
               -math.sin(angle)*local_y-chunk[owners,0])[:,None]
         dy = (grid.info.origin.position.y+math.sin(angle)*local_x
               +math.cos(angle)*local_y-chunk[owners,1])[:,None]
-        angles = chunk[owners,2,None]+headings
-        cosine,sine = np.cos(angles),np.sin(angles)
+        near = dx[:,0]**2+dy[:,0]**2 <= candidate_radius**2
+        if not np.any(near):
+            continue
+        owners,dx,dy = owners[near],dx[near],dy[near]
+        # Evaluate each pose's SAME angles once, then gather for its cells.
+        angles = chunk[:,2,None]+headings
+        cosine,sine = np.cos(angles)[owners],np.sin(angles)[owners]
         lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
         touched = ((left-reserve<=lx)&(lx<=right+reserve)
                    &(bottom-reserve<=ly)&(ly<=top+reserve))

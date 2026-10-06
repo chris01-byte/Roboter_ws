@@ -2,7 +2,7 @@
 import math
 import numpy as np
 import pytest
-from explore.metric_frontier import footprint_clear, footprint_poses_clear
+from explore.metric_frontier import footprint_clear, footprint_cells, footprint_poses_clear
 from test_metric_motion_geometry import door_inputs
 
 
@@ -37,3 +37,26 @@ def test_actual_door_sweep_keeps_rotational_and_new_obstacle_rejection():
     col,row=node._world_to_grid(0.,0.,grid.info);mask[row,col]=False
     assert not footprint_poses_clear(straight,grid,mask,node._world_to_grid,
         node._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+
+
+@pytest.mark.parametrize('origin_yaw',[0.,.17])
+@pytest.mark.parametrize('yaw',[0.,.05,-.05,math.pi/4,math.pi,-math.pi/2])
+def test_single_forbidden_reserved_cell_keeps_scalar_corner_and_heading_authority(origin_yaw,yaw):
+    node,inputs=door_inputs(.68,.02);grid=inputs[0]
+    grid.info.origin.orientation.z=math.sin(origin_yaw/2)
+    grid.info.origin.orientation.w=math.cos(origin_yaw/2)
+    pose=(.2+1e-12,.2-1e-12,yaw)
+    mask=np.ones(inputs[3].shape,bool)
+    rr,cc=footprint_cells(*pose,grid,node._world_to_grid,node._metric_bounds,
+                          heading_half_angle=.05,center_deviation_m=.02)
+    assert footprint_poses_clear([pose],grid,mask,node._world_to_grid,node._metric_bounds,
+                                heading_half_angle=.05,center_deviation_m=.02)
+    # Test isolated forbidden cells, including the sampled rotated corners;
+    # another nearby obstruction must not conceal a wrongly omitted cell.
+    for index in np.unique(np.linspace(0,len(rr)-1,40,dtype=int)):
+        mask[rr[index],cc[index]]=False
+        assert not footprint_clear(*pose,grid,mask,node._world_to_grid,node._grid_to_world,
+            node._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+        assert not footprint_poses_clear([pose],grid,mask,node._world_to_grid,node._metric_bounds,
+            heading_half_angle=.05,center_deviation_m=.02)
+        mask[rr[index],cc[index]]=True
