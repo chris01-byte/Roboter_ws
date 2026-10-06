@@ -334,7 +334,19 @@ def footprint_poses_clear(poses, grid, allowed, world_to_grid,
         owners,dx,dy = owners[near],dx[near],dy[near]
         # Evaluate each pose's SAME angles once, then gather for its cells.
         angles = chunk[:,2,None]+headings
-        cosine,sine = np.cos(angles)[owners],np.sin(angles)[owners]
+        pose_cosine,pose_sine = np.cos(angles),np.sin(angles)
+        # The nominal heading is already a member of the complete angle set.
+        # Reject its collisions before allocating forbidden-cell x angle
+        # matrices. A clear nominal heading still requires EVERY other angle.
+        nominal = len(headings)//2
+        cosine,sine = pose_cosine[owners,nominal,None],pose_sine[owners,nominal,None]
+        lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
+        if np.any((left-reserve<=lx)&(lx<=right+reserve)
+                  &(bottom-reserve<=ly)&(ly<=top+reserve)):
+            return False
+        if len(headings)==1:
+            continue
+        cosine,sine = pose_cosine[owners],pose_sine[owners]
         lx,ly = cosine*dx+sine*dy,-sine*dx+cosine*dy
         touched = ((left-reserve<=lx)&(lx<=right+reserve)
                    &(bottom-reserve<=ly)&(ly<=top+reserve))

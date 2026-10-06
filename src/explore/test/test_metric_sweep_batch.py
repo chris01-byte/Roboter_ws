@@ -40,6 +40,26 @@ def test_actual_door_sweep_keeps_rotational_and_new_obstacle_rejection():
 
 
 @pytest.mark.parametrize('origin_yaw',[0.,.17])
+def test_clear_nominal_heading_still_checks_reserved_heading_extremes(origin_yaw):
+    node,inputs=door_inputs(.68,.02);grid=inputs[0]
+    grid.info.origin.orientation.z=math.sin(origin_yaw/2)
+    grid.info.origin.orientation.w=math.cos(origin_yaw/2)
+    pose=(.2,.2,.23);mask=np.ones(inputs[3].shape,bool)
+    nominal=set(zip(*footprint_cells(*pose,grid,node._world_to_grid,node._metric_bounds,
+        heading_half_angle=0.,center_deviation_m=.02)))
+    swept=set(zip(*footprint_cells(*pose,grid,node._world_to_grid,node._metric_bounds,
+        heading_half_angle=.05,center_deviation_m=.02)))
+    assert swept-nominal
+    for row,col in swept-nominal:
+        mask[row,col]=False
+        assert footprint_clear(*pose,grid,mask,node._world_to_grid,node._grid_to_world,
+            node._metric_bounds,heading_half_angle=0.,center_deviation_m=.02)
+        assert not footprint_poses_clear([pose],grid,mask,node._world_to_grid,
+            node._metric_bounds,heading_half_angle=.05,center_deviation_m=.02)
+        mask[row,col]=True
+
+
+@pytest.mark.parametrize('origin_yaw',[0.,.17])
 @pytest.mark.parametrize('yaw',[0.,.05,-.05,math.pi/4,math.pi,-math.pi/2])
 def test_single_forbidden_reserved_cell_keeps_scalar_corner_and_heading_authority(origin_yaw,yaw):
     node,inputs=door_inputs(.68,.02);grid=inputs[0]
