@@ -57,11 +57,24 @@ class MetricTaskPolicy:
     attempts: dict = field(default_factory=dict)
     next_id: int = 0
 
-    def identify(self, frontier_xy, target_xy=None):
+    def _distinct_observation(self, attempt, points):
+        try:
+            points = tuple(points)
+            return bool(points) and all(len(p)==2 and all(math.isfinite(v) for v in p)
+                and math.dist(p,attempt.frontier_xy) > MAX_LOCAL_OBSERVATION_RADIUS_M+self.radius
+                for p in points)
+        except (TypeError, ValueError):
+            return False
+
+    def identify(self, frontier_xy, target_xy=None, *, observation_points=()):
+        # A finite different boundary may use a nearby observer position.
+        # Identity grants no permission: eligible still enforces all nearby
+        # try/failure caps, measured evidence and the original cooldown.
         matches = [(math.dist(a.frontier_xy, frontier_xy), key)
                    for key, a in self.attempts.items()
                    if math.dist(a.frontier_xy, frontier_xy) < self.radius or
-                   (target_xy is not None and a.tries and math.dist(a.target_xy, target_xy) < self.radius)]
+                   (target_xy is not None and a.tries and math.dist(a.target_xy, target_xy) < self.radius
+                    and not (a.completed and self._distinct_observation(a,observation_points)))]
         if matches:
             return min(matches)[1]
         if len(self.attempts) >= 512:

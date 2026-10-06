@@ -1592,7 +1592,9 @@ class MetricFrontierRuntime:
                     distance = self._min_goal_dist_m+fraction*self._goal_search_m
                     goal = (pose[0]+distance*math.cos(heading),
                             pose[1]+distance*math.sin(heading))
-                    key = policy.identify((f.cx, f.cy), goal)
+                    # Boundary identity first; a nearby served observer pose
+                    # must not preempt proving a distinct finite current view.
+                    key = policy.identify((f.cx, f.cy))
                     attempt = policy.attempts[key]
                     if (attempt.completed or attempt.tries >= policy.retry_limit+1
                             or attempt.failures >= policy.retry_limit):
@@ -1608,9 +1610,21 @@ class MetricFrontierRuntime:
                                                          self._metric_observation_view())
                         points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
                             if math.dist(self._grid_to_world(c, r, grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
-                        local = self._metric_local_evidence(inputs, attempt.frontier_xy)
-                        if not points or not policy.eligible(key, goal, time.monotonic(),
-                                correlation.fingerprint, local, observation_points=points):
+                        if not points:
+                            continue
+                        key = policy.identify((f.cx,f.cy),goal,observation_points=points)
+                        local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                        now = time.monotonic()
+                        if not policy.eligible(key,goal,now,correlation.fingerprint,local,
+                                               observation_points=points):
+                            wake = max((a.retry_after for a in policy.attempts.values()
+                                if a.tries and math.dist(a.target_xy,goal)<policy.radius),default=now)
+                            if wake>now and policy.eligible(key,goal,wake,correlation.fingerprint,local,
+                                                          observation_points=points):
+                                memo,_ = self._metric_selection_memo(inputs)
+                                if memo is not None:
+                                    memo['public_deferred_until'] = min(wake,
+                                        memo.get('public_deferred_until',wake))
                             continue
                         length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
                         cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
@@ -1719,7 +1733,11 @@ class MetricFrontierRuntime:
             if observed is not None:
                 candidates = [observed]
                 stats['bounded_public_observation'] = True
-        for f in (() if candidates else frontiers):
+        public_deferred = not candidates and memo is not None and 'public_deferred_until' in memo
+        if public_deferred:
+            stats['bounded_public_observation_wait_s'] = max(0.,memo['public_deferred_until']-time.monotonic())
+            stats['deferred_or_served'] += 1
+        for f in (() if candidates or public_deferred else frontiers):
             if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
                 raise ValueError('frontier_candidate_processing_budget_exhausted')
             kwargs = {}
@@ -1865,11 +1883,12 @@ class MetricFrontierRuntime:
         # A public known-space start permits asking Nav2 for that alternative;
         # it still grants no movement before its actual full path is proved.
         def eligible_original(candidate):
-            key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y))
+            key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y),
+                                observation_points=candidate.observation_points)
             local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
             return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
                 candidate.fingerprint,local,observation_points=candidate.observation_points)
-        if (policy is not None and live_view
+        if (policy is not None and live_view and not public_deferred
                 and not any(eligible_original(candidate) for candidate in candidates)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                 and all(footprint_clear(*pose,g,allowed,self._world_to_grid,
@@ -1937,7 +1956,7 @@ class MetricFrontierRuntime:
         if (live_view and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                 and not any(not c.requires_nav2_plan for c in candidates)
-                and private_start_available):
+                and private_start_available and not public_deferred):
             forward = []
             steps = int(math.floor(self._goal_search_m/grid.info.resolution))
             for step in range(steps+1):
@@ -1992,7 +2011,8 @@ class MetricFrontierRuntime:
             cache.policy = previous
         selected = []
         for candidate in candidates:
-            key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y))
+            key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y),
+                                  observation_points=candidate.observation_points)
             evidence = local_evidence(inputs[0], policy.attempts[key].frontier_xy, self._grid_to_world)
             if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint, evidence,
                                observation_points=candidate.observation_points):
