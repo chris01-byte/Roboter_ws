@@ -66,7 +66,7 @@ class MetricTaskPolicy:
         except (TypeError, ValueError):
             return False
 
-    def identify(self, frontier_xy, target_xy=None, *, observation_points=()):
+    def identify(self, frontier_xy, target_xy=None, *, observation_points=(), create=True):
         # A finite different boundary may use a nearby observer position.
         # Identity grants no permission: eligible still enforces all nearby
         # try/failure caps, measured evidence and the original cooldown.
@@ -77,6 +77,8 @@ class MetricTaskPolicy:
                     and not (a.completed and self._distinct_observation(a,observation_points)))]
         if matches:
             return min(matches)[1]
+        if not create:
+            return None
         if len(self.attempts) >= 512:
             raise ValueError('metric_task_history_capacity_exhausted')
         self.next_id += 1

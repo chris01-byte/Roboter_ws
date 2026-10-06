@@ -1770,10 +1770,69 @@ class MetricFrontierRuntime:
                         candidate = MetricCandidate('', *goal, yaw, (f.cx, f.cy), route, length,
                             cost, correlation.fingerprint, correlation.map_revision, False, points)
                         if self._metric_scan_geometry_ready((grid,correlation,stop_pose,*inputs[3:])):
-                            return candidate
+                            return self._metric_refine_observation(inputs,f,policy,scope_mask,
+                                candidate,key,until)
                         if fallback is None or candidate.cost<fallback.cost:
                             fallback = candidate
         return fallback
+
+    def _metric_refine_observation(self, inputs, frontier, policy, scope, selected, task_id, until):
+        """Improve an already eligible job within its original helper window.
+
+        Real boundary tangents can offer more first-hit rays and a better
+        turning refuge than the first bearing. No fresh ID, additional helper
+        deadline, observation receipt or motion authority is created.
+        """
+        normal = getattr(frontier,'approach_direction',None)
+        if normal is None:
+            return selected
+        grid,cor,pose,*_=inputs
+        base=math.atan2(normal[1],normal[0])
+        distances=dict.fromkeys((self._min_goal_dist_m+self._goal_search_m,
+            self._min_goal_dist_m+self._goal_search_m/2,self._min_goal_dist_m,
+            self._min_goal_dist_m+min(grid.info.resolution,self._goal_search_m)))
+        for turn in (0.,math.pi/2,-math.pi/2,math.pi):
+            heading=base+turn
+            error=abs(math.atan2(math.sin(heading-pose[2]),math.cos(heading-pose[2])))
+            if self._frontier_forward_cone_half_angle>0 and error>self._frontier_forward_cone_half_angle:
+                continue
+            for distance in distances:
+                goal=(pose[0]+distance*math.cos(heading),pose[1]+distance*math.sin(heading))
+                facing=math.atan2(frontier.cy-goal[1],frontier.cx-goal[0])
+                for yaw in dict.fromkeys((facing,facing+math.pi/2,facing-math.pi/2,heading)):
+                    if time.monotonic()>=until:
+                        return selected
+                    route=self._metric_route(inputs,goal,yaw)
+                    if route is None:
+                        continue
+                    stop=self._metric_rollout_stop_pose(inputs,route,yaw)
+                    if not self._metric_scan_geometry_ready((grid,cor,stop,*inputs[3:])):
+                        continue
+                    view=self._metric_observation_view()
+                    visible=visible_boundary_cells(grid,scope,stop,view)
+                    points=tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(frontier.cx,frontier.cy))
+                            <=MAX_LOCAL_OBSERVATION_RADIUS_M)
+                    served=[a for key,a in policy.attempts.items() if key!=task_id and a.completed
+                        and a.tries and math.dist(a.target_xy,stop[:2])<policy.radius]
+                    points=tuple(p for p in points if all(math.dist(p,a.frontier_xy)
+                        >MAX_LOCAL_OBSERVATION_RADIUS_M+policy.radius for a in served))
+                    if len(points)<=len(selected.observation_points):
+                        continue
+                    if any(policy.identify((frontier.cx,frontier.cy),xy,
+                            observation_points=points,create=False)!=task_id for xy in (stop[:2],goal)):
+                        continue
+                    local=self._metric_local_evidence(inputs,policy.attempts[task_id].frontier_xy)
+                    if not all(policy.eligible(task_id,xy,time.monotonic(),cor.fingerprint,local,
+                            observation_points=points) for xy in (stop[:2],goal)):
+                        continue
+                    length=sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost=self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
+                    if cost>=selected.cost or time.monotonic()>=until:
+                        continue
+                    return MetricCandidate('',*goal,yaw,(frontier.cx,frontier.cy),route,length,cost,
+                        cor.fingerprint,cor.map_revision,False,points)
+        return selected
 
     def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
         cache = getattr(self, '_metric_selection_cache', None)

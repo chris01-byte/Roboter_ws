@@ -102,7 +102,7 @@ jobs:
             src/explore/test/test_metric_planner_abort.py \
             src/explore/test/test_metric_proposal_accounting.py \
             src/explore/test/test_metric_proposal_alternatives.py \
-            src/explore/test/test_metric_retained_observation.py \
+            src/explore/test/test_metric_retained_observation.py src/explore/test/test_metric_boundary_tangent_view.py \
             src/explore/test/test_metric_goalchecker_refuge.py \
             src/explore/test/test_metric_query_selection_budget.py \
             src/explore/test/test_metric_visibility_blocks.py \

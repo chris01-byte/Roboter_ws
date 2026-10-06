@@ -280,3 +280,13 @@ keine Diagnoseoption. Der Vorlauf verlangt mindestens 1184 MiB freien Platz:
 512 MiB Tracebudget, 64 MiB Zusatzlogs, 32 MiB temporäre Karte, den unveränderten
 512-MiB-Kartenspeicher-Mindestplatz und 64 MiB Reserve. Dies ist eine
 Kapazitätsplanung; tatsächliche Ressourcenfehler bleiben negativ.
+
+Eine bereits nach den ursprünglichen Regeln zulässige öffentliche Beobachtung
+kann im Rest ihres unveränderten 0,5-s-Hilfsfensters entlang der gemessenen
+Randnormalen/Tangenten verfeinert werden. Die zusätzliche Position muss mehr
+endliche ursprüngliche First-hit-Punkte, niedrigere ursprüngliche Kosten und
+vollständige öffentliche Drehreserve bieten. Lookup ohne Neuanlage bindet
+vorhergesagten Stopp und Idealziel an dieselbe vorhandene Aufgaben-ID;
+Cooldown/Versuche/Fehler werden erneut geprüft. Der Native-Plan bleibt vor jeder
+Fahrt erforderlich. Der tatsächliche Beobachtungszähler verwendet weiterhin
+nur den unveränderten Messgewinn, keine Prognose.
