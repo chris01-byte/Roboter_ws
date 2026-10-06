@@ -1,0 +1,6 @@
+[INFO] [1791280018.212271193] [bt_orchestrator]: mission_server bereit -> Action '/run_mission' (10.0 Hz).
+[INFO] [1791280040.300633567] [bt_orchestrator]: Node [IsEstopClear] created Subscriber to topic [/safety/estop]
+[INFO] [1791280040.322141375] [bt_orchestrator]: Mission 'explore' gestartet (Objekt 'Tasse', Baum '/evidence/ap06-repo/src/bt_orchestrator/bt_xml/explore.xml'); Sicherheits-Subscriptions erhalten 1.0 s Vorlauf.
+[ERROR] [1791280336.920277699] [bt_orchestrator]: [Explore] Fehler-Code: 3
+[INFO] [1791280336.920466633] [bt_orchestrator]: Mission beendet mit Status: FAILURE
+[INFO] [1791280338.749169019] [rclcpp]: signal_handler(signum=2)

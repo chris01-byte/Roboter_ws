@@ -1,0 +1,20 @@
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+___ test_actual_boundary_tangent_improves_last_view_without_renewing_history ___
+
+    def test_actual_boundary_tangent_improves_last_view_without_renewing_history():
+        n,i,p=frozen(NAME)
+        before=policy_state(p,time.monotonic())
+        candidates=n._metric_select(i,p,.3)
+        assert candidates and not candidates[0].requires_nav2_plan
+        candidate=candidates[0]
+        assert candidate.task_id=='metric-task-9'
+>       assert len(candidate.observation_points)>=7  # old first-safe view has one
+E       AssertionError: assert 1 >= 7
+E        +  where 1 = len(((3.4949999218806624, 0.13499999698251486),))
+E        +    where ((3.4949999218806624, 0.13499999698251486),) = MetricCandidate(task_id='metric-task-9', x=1.114608848890513, y=-0.42380510054035947, yaw=-1.3645327409431407, frontie...9999218806624, 0.13499999698251486),), evidence_key='5582dd8e70bfab2462f410fa27258157bfc7d5670204d58d134ca1de6cc3af51').observation_points
+
+src/explore/test/test_metric_boundary_tangent_view.py:23: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_boundary_tangent_view.py::test_actual_boundary_tangent_improves_last_view_without_renewing_history
+1 failed, 2 passed in 2.53s

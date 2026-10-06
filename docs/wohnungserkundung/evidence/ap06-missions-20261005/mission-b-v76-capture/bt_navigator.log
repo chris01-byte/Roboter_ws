@@ -1,0 +1,30 @@
+[INFO] [1791284640.104796514] [bt_navigator]: 
+	bt_navigator lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791284640.105007923] [bt_navigator]: Creating
+[INFO] [1791284643.092784890] [bt_navigator]: Configuring
+[INFO] [1791284643.215775535] [bt_navigator]: Activating
+[INFO] [1791284643.247409885] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[INFO] [1791284671.271411649] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (1.05, 0.00)
+[WARN] [1791284672.144152312] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791284675.219942924] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791284690.632887148] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791284690.634036350] [bt_navigator]: Goal canceled
+[INFO] [1791284691.851617372] [bt_navigator]: Begin navigating from current location (0.87, 0.00) to (1.05, 0.00)
+[INFO] [1791284701.913035045] [bt_navigator]: Goal succeeded
+[INFO] [1791284846.181028055] [bt_navigator]: Begin navigating from current location (0.90, 0.00) to (1.08, -0.23)
+[WARN] [1791284850.501141394] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791284864.691364995] [bt_navigator]: Goal succeeded
+[INFO] [1791284896.840832802] [bt_navigator]: Begin navigating from current location (1.02, -0.11) to (0.53, -0.47)
+[WARN] [1791284900.129345074] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791284919.014595603] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791284923.551227799] [bt_navigator]: Goal succeeded
+[INFO] [1791285001.106406681] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791285001.106494873] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[INFO] [1791285001.106560953] [bt_navigator]: Deactivating
+[INFO] [1791285001.106584218] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791285001.116779971] [bt_navigator]: Cleaning up
+[INFO] [1791285001.178020875] [bt_navigator]: Completed Cleaning up
+[INFO] [1791285001.178081055] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791285001.189410511] [bt_navigator]: Destroying

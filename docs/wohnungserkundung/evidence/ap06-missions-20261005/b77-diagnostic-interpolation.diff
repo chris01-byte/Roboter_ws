@@ -1,0 +1,17 @@
+--- /workspace/scratch/ap06-missions-20261005/navfn-source/nav2_navfn_planner/src/navfn.cpp	2026-06-03 13:53:10.000000000 +0000
++++ /workspace/scratch/ap06-missions-20261005/b77-navfn-source/nav2_navfn_planner/src/navfn.cpp	2026-10-06 11:16:52.426127921 +0000
+@@ -901,10 +901,10 @@
+       dy += y * ss;
+ 
+       // check for overflow
+-      if (dx > 1.0) {stc++; dx -= 1.0;}
+-      if (dx < -1.0) {stc--; dx += 1.0;}
+-      if (dy > 1.0) {stc += nx; dy -= 1.0;}
+-      if (dy < -1.0) {stc -= nx; dy += 1.0;}
++      if (dx >= 1.0) {stc++; dx -= 1.0;}
++      if (dx < 0.0) {stc--; dx += 1.0;}
++      if (dy >= 1.0) {stc += nx; dy -= 1.0;}
++      if (dy < 0.0) {stc -= nx; dy += 1.0;}
+     }
+ 
+     //      ROS_INFO("[Path] Pot: %0.1f  grad: %0.1f,%0.1f  pos: %0.1f,%0.1f\n",

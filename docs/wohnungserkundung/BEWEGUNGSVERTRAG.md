@@ -180,3 +180,7 @@ Ein vollständig geprüfter nativer RPP-Sweep bleibt zuerst maßgeblich. Nur wen
 ### Beobachtung am Goalchecker-Stopp
 
 Bei RPP ist der prognostizierte tatsächliche Goalchecker-Stopp maßgeblich für Sichtpotential und räumliche Beobachterhistorie. Sicht am Idealziel allein begründet keine nützliche Anfahrt. Nach Bindung des tatsächlichen Native-Pfads muss dessen vollständiger zulässiger Rollout an der prognostizierten Stopppose noch ursprüngliche endliche Kandidatenpunkte auf der unveränderten Auswahlkarte sehen können; sonst Vorschlag vor Bewegung ablehnen. Nur gemessene neue Zellen erzeugen einen Beobachtungsreceipt. Öffentliche seitliche Nahpositionen bleiben im bisherigen Such-/Zeitbudget und benötigen dieselben aktuellen vollständigen Kontur-/Wegprüfungen sowie unveränderte Nachbarhistorie und Cooldown. Keine Freiraumannahme, private Freigabe oder zusätzliche Bewegungshoheit.
+
+### Verfeinerung einer bereits zulässigen Beobachtung
+
+Die optionale Randtangentenverfeinerung darf nur innerhalb der verbleibenden ursprünglichen Hilfsfrist eine schon zulässige Aufgabe verbessern. Tatsächliche modellierte Stopp- und Idealposition müssen lesend dieselbe vorhandene ID erreichen und deren unveränderte Nachbar-/Cooldown-/Try-/Fehlerregeln erfüllen. Vollständige Roh-/Costmap-Drehreserve und eigener Weg bleiben Pflicht. Mehr endliche Potentialpunkte und niedrigere originale Kosten sind Auswahlkriterien, keine beobachteten Fortschritts- oder Abschlussnachweise.

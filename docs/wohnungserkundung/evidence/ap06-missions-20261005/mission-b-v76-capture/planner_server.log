@@ -1,0 +1,47 @@
+[INFO] [1791284640.127171898] [planner_server]: 
+	planner_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791284640.128275842] [planner_server]: Creating
+[INFO] [1791284640.186864118] [global_costmap.global_costmap]: 
+	global_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791284640.189240871] [global_costmap.global_costmap]: Creating Costmap
+[INFO] [1791284641.113090932] [planner_server]: Configuring
+[INFO] [1791284641.113144302] [global_costmap.global_costmap]: Configuring
+[INFO] [1791284641.121640298] [global_costmap.global_costmap]: Using plugin "static_layer"
+[INFO] [1791284641.127612910] [global_costmap.global_costmap]: Subscribing to the map topic (/map) with transient local durability
+[INFO] [1791284641.129450510] [global_costmap.global_costmap]: Initialized plugin "static_layer"
+[INFO] [1791284641.129473855] [global_costmap.global_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791284641.130928738] [global_costmap.global_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791284641.147942612] [global_costmap.global_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791284641.147978896] [global_costmap.global_costmap]: Using plugin "inflation_layer"
+[INFO] [1791284641.148723549] [global_costmap.global_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791284641.160629504] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 189 X 95 at 0.030000 m/pix
+[INFO] [1791284641.161181145] [planner_server]: Created global planner plugin GridBased of type nav2_navfn_planner/NavfnPlanner
+[INFO] [1791284641.161201566] [planner_server]: Configuring plugin GridBased of type NavfnPlanner
+[INFO] [1791284641.161394416] [planner_server]: Planner Server has GridBased  planners available.
+[INFO] [1791284641.214221149] [planner_server]: Activating
+[INFO] [1791284641.214289592] [global_costmap.global_costmap]: Activating
+[INFO] [1791284641.214302131] [global_costmap.global_costmap]: Checking transform
+[INFO] [1791284641.214415612] [global_costmap.global_costmap]: Timed out waiting for transform from base_link to map to become available, tf error: Lookup would require extrapolation into the past.  Requested time 1791284641.181117 but the earliest data is at time 1791284641.247195, when looking up transform from frame [base_link] to frame [map]
+[INFO] [1791284641.714534738] [global_costmap.global_costmap]: start
+[INFO] [1791284642.719275330] [planner_server]: Activating plugin GridBased of type NavfnPlanner
+[INFO] [1791284642.722598198] [planner_server]: Creating bond (planner_server) to lifecycle manager.
+[INFO] [1791284709.716172508] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 190 X 95 at 0.030000 m/pix
+[INFO] [1791284735.716277982] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 190 X 96 at 0.030000 m/pix
+[INFO] [1791284899.716133547] [global_costmap.global_costmap]: StaticLayer: Resizing costmap to 190 X 97 at 0.030000 m/pix
+[INFO] [1791285001.640600106] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791285001.640716812] [planner_server]: Running Nav2 LifecycleNode rcl preshutdown (planner_server)
+[INFO] [1791285001.640795841] [planner_server]: Deactivating
+[INFO] [1791285001.640828901] [global_costmap.global_costmap]: Deactivating
+[INFO] [1791285001.715637534] [planner_server]: Deactivating plugin GridBased of type NavfnPlanner
+[INFO] [1791285001.715689432] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[INFO] [1791285001.725898760] [planner_server]: Cleaning up
+[INFO] [1791285001.736787893] [global_costmap.global_costmap]: Cleaning up
+[INFO] [1791285001.740749864] [planner_server]: Cleaning up plugin GridBased of type NavfnPlanner
+[INFO] [1791285001.740954683] [planner_server]: Destroying plugin GridBased of type NavfnPlanner
+[INFO] [1791285001.753043413] [planner_server]: Destroying bond (planner_server) to lifecycle manager.
+[INFO] [1791285001.757523371] [global_costmap.global_costmap]: Destroying
+[INFO] [1791285001.770962436] [planner_server]: Destroying

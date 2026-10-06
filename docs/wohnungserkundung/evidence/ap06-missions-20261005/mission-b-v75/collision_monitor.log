@@ -1,0 +1,26 @@
+[INFO] [1791283637.251533424] [collision_monitor]: 
+	collision_monitor lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791283639.628341124] [collision_monitor]: Configuring
+[INFO] [1791283639.638403781] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[INFO] [1791283639.641736584] [collision_monitor]: [SlowZone]: Creating Polygon
+[INFO] [1791283639.643459171] [collision_monitor]: [vl53_left]: Creating PointCloud
+[INFO] [1791283639.645661500] [collision_monitor]: [vl53_right]: Creating PointCloud
+[INFO] [1791283639.691514612] [collision_monitor]: Activating
+[INFO] [1791283639.691619981] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[INFO] [1791283676.483669873] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791283690.734027438] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791283695.884504371] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791283710.084508594] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791284579.308772497] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791284579.309997589] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[INFO] [1791284579.310122617] [collision_monitor]: Deactivating
+[INFO] [1791284579.310137059] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791284579.320330062] [collision_monitor]: Cleaning up
+[INFO] [1791284579.320368069] [collision_monitor]: [FootprintApproach]: Destroying Polygon
+[INFO] [1791284579.320403402] [collision_monitor]: [SlowZone]: Destroying Polygon
+[INFO] [1791284579.320410623] [collision_monitor]: [vl53_left]: Destroying PointCloud
+[INFO] [1791284579.320422892] [collision_monitor]: [vl53_right]: Destroying PointCloud
+[INFO] [1791284579.325775750] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791284579.334350659] [collision_monitor]: Destroying
