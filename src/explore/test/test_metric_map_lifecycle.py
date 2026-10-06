@@ -31,7 +31,7 @@ def status(g, *, accepted=1, observed=1, when=100., age=0.):
         counters=dict(accepted_maps=accepted, observed_maps=observed))))
 
 
-def runtime(monkeypatch):
+def runtime(monkeypatch, *, placement_shadow=False, body_reference=None):
     n = body_input_fixture(monkeypatch, 10.)
     del n._metric_matches_status  # exercise the product matcher, not the old fixture override
     n._metric_enabled = True
@@ -46,6 +46,8 @@ def runtime(monkeypatch):
     n._metric_start_egress_enabled = True
     n._metric_egress = n._metric_egress_identity = None
     n._metric_egress_expired = n._metric_body_anchor_expired = False
+    if body_reference is not None:
+        n._metric_body_reference = lambda: body_reference
     n._metric_bounds = (-.13, .33, -.25, .25)
     n._metric_active = n._metric_active_context = None
     n._metric_nav_path = n._metric_nav_path_at = n._metric_plan_after_ns = None
@@ -53,6 +55,12 @@ def runtime(monkeypatch):
     g.info.width = g.info.height = 100
     a = np.zeros((100, 100), dtype=int)
     a[18:23, 8] = -1
+    if placement_shadow:
+        from explore.metric_frontier import self_body_unknown_mask
+        a[:] = 0
+        shadow = self_body_unknown_mask(g, np.full(a.shape,-1), (.05,.05,0.),
+                                        (.245,0.,np.pi/2))
+        a[shadow] = -1
     g.data = a.ravel().tolist()
     n._metric_scope_binding = source(g).fingerprint
     n._on_map(g)

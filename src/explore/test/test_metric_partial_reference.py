@@ -71,7 +71,7 @@ def test_reference_refinement_without_new_measurement_cannot_retire_inventory():
     assert valid,reason
 
 
-def test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement(monkeypatch):
+def test_refinement_preserves_first_placement_but_measured_travel_withdraws_permits(monkeypatch):
     from types import SimpleNamespace
     from dataclasses import replace
     from geometry_msgs.msg import TransformStamped
@@ -91,10 +91,19 @@ def test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement(monkeypat
     runtime._tf_buffer=SimpleNamespace(lookup_transform=lambda *_:transform)
     first=runtime._metric_inputs()[3].copy()
     transform.transform.translation.x=.01
-    runtime._robot_pose_sample=lambda:(tuple(metadata['pose']),0.)
+    # Localization refinement alone does not move the measured body.
     current=runtime._metric_inputs()[3]
     assert np.array_equal(first,current)
     assert footprint_clear(.36,0.,0.,grid,current,node._world_to_grid,node._grid_to_world,
+        node._metric_bounds,heading_half_angle=.4,center_deviation_m=.15)
+    runtime._robot_pose_sample=lambda:(tuple(metadata['pose']),0.)
+    departed=runtime._metric_inputs()[3]
+    observed=np.asarray(grid.data).reshape(departed.shape)==0
+    assert np.array_equal(current&observed,departed&observed)
+    assert not (departed&~current).any()
+    assert (current&~departed).any()
+    # The old wide tolerance reaches cells left by the measured body.
+    assert not footprint_clear(.36,0.,0.,grid,departed,node._world_to_grid,node._grid_to_world,
         node._metric_bounds,heading_half_angle=.4,center_deviation_m=.15)
     # A real obstacle at the same first-body cell remains forbidden.
     row,col=47,43

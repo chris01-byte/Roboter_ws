@@ -546,7 +546,7 @@ def test_sparse_plan_progress_never_invents_a_return_to_old_start_waypoint():
     assert route==((.4,.05),(.75,.05))
 
 
-def test_first_body_space_stays_fixed_in_map_through_travel_and_localization_refinement(monkeypatch):
+def test_first_body_anchor_stays_fixed_but_departed_permits_never_regrow(monkeypatch):
     from geometry_msgs.msg import TransformStamped
     from explore.portal_source_adapter import raw_map_portal_source_from_values
     n=body_input_fixture(monkeypatch,10.01);g=n._metric_raw[0]
@@ -559,17 +559,22 @@ def test_first_body_space_stays_fixed_in_map_through_travel_and_localization_ref
         n._metric_correlation=replace(n._metric_correlation,fingerprint=source.fingerprint)
     g.data[20*80+10]=-1;refresh()
     assert n._metric_inputs()[3][20,10]
-    # Ordinary odometry travel preserves the measured FIRST physical space.
-    # Newly occupied robot space does not become a new private clearing mask.
+    first=n._metric_body_anchor
+    transform.transform.translation.x=.02
+    # Refinement at the same body pose does not re-anchor the initial fact.
+    assert n._metric_inputs()[3][20,10] and n._metric_body_anchor==first
+    # The historical anchor stays fixed, but cells left by the actual body
+    # cease to be permits. Newly occupied space gains no placement privilege.
     n._robot_pose_sample=lambda:((.25,.05,0.),0.)
     g.data[20*80+13]=-1;refresh()
     known=n._metric_inputs()[3]
-    assert known[20,10] and not known[20,13]
-    transform.transform.translation.x=.02
+    assert not known[20,10] and not known[20,13]
+    transform.transform.translation.x=0.
     # map->odom is current localization refinement, not a relocation of the
     # fixed first map-frame chassis. No newly occupied body space is added.
     known=n._metric_inputs()[3]
-    assert known[20,10] and not known[20,13]
+    assert not known[20,10] and not known[20,13]
+    assert n._metric_body_anchor==first
     g.info.origin.position.x += .001
     refresh()
     assert not n._metric_inputs()[3][20,10]  # actual raster geometry still expires

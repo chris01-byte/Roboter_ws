@@ -614,7 +614,6 @@ class MetricFrontierRuntime:
                 self._metric_body_anchor_expired = False
             _, anchor = self._metric_body_anchor
             first_reference = getattr(self, '_metric_body_frame_reference', None)
-            projected_anchor = anchor
             invalid_reference = False
             if first_reference is not None and reference is not None:
                 # map is the fixed global frame of this first chassis fact.
@@ -630,13 +629,13 @@ class MetricFrontierRuntime:
                     or (identity != self._metric_body_grid_identity and not bound_lattice)
                     or not self._metric_rebase_first_body(identity)):
                 self._metric_body_anchor_expired = True
-            # Fixed INITIAL cells only. Reproject/revalidate the first physical
-            # space and intersect monotonically: no moving bubble, no regrowth
-            # after observation/obstacle/reference change, never re-anchor.
+            # Fixed INITIAL cells only, still wholly under the CURRENT body.
+            # Once departed, a placement cell cannot become a return permit.
+            # Intersection only: no moving bubble, regrowth or re-anchoring.
             if self._metric_body_anchor_expired:
                 body = None
             else:
-                self._metric_body_cells &= self_body_unknown_mask(grid,occupancy,projected_anchor,mount)
+                self._metric_body_cells &= body
                 body = self._metric_body_cells
         if withdrawal is not None:
             body = None  # pending changed raw data can grant NO private cells
@@ -839,11 +838,32 @@ class MetricFrontierRuntime:
         if memo is not None:
             memo['prepared'] = self._metric_selection_memo(inputs)[1]
 
+    def _metric_private_start_needed(self, inputs):
+        """Only actual raw unknown under the current envelope needs escape."""
+        memo, key = self._metric_selection_memo(inputs)
+        if memo is not None and memo.get('touched_key') == key:
+            return memo['touched']
+        qualified = getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+        touched = False
+        for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+            rows, cols = footprint_cells(*inputs[2], grid, self._world_to_grid,
+                self._metric_bounds, heading_half_angle=.05 if qualified else math.pi,
+                heading_samples=None if qualified else 127,
+                center_deviation_m=.02 if qualified else 0.)
+            inside = ((rows >= 0) & (rows < allowed.shape[0])
+                & (cols >= 0) & (cols < allowed.shape[1]))
+            raw = np.asarray(grid.data).reshape(allowed.shape)
+            touched |= bool(np.any(raw[rows[inside], cols[inside]] < 0))
+        if memo is not None:
+            memo.update(touched_key=key, touched=touched)
+        return touched
+
     def _metric_seed_mask(self, inputs):
         grid,_,pose,known,safe,costmap,_=inputs
         if (not getattr(self,'_metric_start_egress_enabled',False)
                 or getattr(self,'_metric_egress_expired',True)
-                or not all(e.valid for e in self._metric_egress)):
+                or not all(e.valid for e in self._metric_egress)
+                or not self._metric_private_start_needed(inputs)):
             return safe
         memo, key = self._metric_selection_memo(inputs)
         if memo is not None and memo.get('seed_key') == key:
@@ -941,25 +961,10 @@ class MetricFrontierRuntime:
         if getattr(self,'_metric_start_egress_enabled',False):
             self._metric_prepare_egress(inputs)
             if self._metric_egress_expired:
-                result=self._metric_standard_waypoints_clear(inputs,route,target_yaw)
+                result=self._metric_standard_waypoints_clear(self._metric_public_inputs(inputs),route,target_yaw)
                 if result is None:self._metric_last_route_rejection='start_egress_reference_expired'
                 return result
-            memo, key = self._metric_selection_memo(inputs)
-            touched = memo.get('touched') if memo is not None and memo.get('touched_key') == key else None
-            if touched is None:
-                touched=False
-                for evidence,(g,allowed) in zip(self._metric_egress,((grid,known),(costmap,cost_known))):
-                    # This selects the coupled escape proof, never a scan permit.
-                    qualified = getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'
-                    r,c=footprint_cells(*pose,g,self._world_to_grid,self._metric_bounds,
-                        heading_half_angle=.05 if qualified else math.pi,
-                        heading_samples=None if qualified else 127,
-                        center_deviation_m=.02 if qualified else 0.)
-                    inside=(r>=0)&(r<allowed.shape[0])&(c>=0)&(c<allowed.shape[1])
-                    touched |= bool(np.any(evidence.unknown[r[inside],c[inside]]
-                        & ~allowed[r[inside],c[inside]]))
-                if memo is not None:
-                    memo.update(touched_key=key, touched=touched)
+            touched = self._metric_private_start_needed(inputs)
             if touched:
                 if self._metric_egress_expired:
                     self._metric_last_route_rejection='start_egress_reference_expired'
@@ -1160,6 +1165,8 @@ class MetricFrontierRuntime:
         self._metric_nav_path_at = time.monotonic()
 
     def _metric_validate_nav_plan(self, inputs, path, target, *, public_only=False):
+        if public_only:
+            inputs = self._metric_public_inputs(inputs)
         if not path.poses or path.header.frame_id != self._global_frame:
             self._metric_last_route_rejection = 'nav2_plan_missing_or_wrong_frame'
             return None
@@ -1508,7 +1515,41 @@ class MetricFrontierRuntime:
             raise ValueError('candidate_lidar_stamp_stale')
         return view
 
+    def _metric_public_inputs(self, inputs):
+        """Subtract virtual placement permits; do not alter raw evidence."""
+        grid,cor,pose,known,safe,costmap,cost_known = inputs
+        observed = known & (np.asarray(grid.data).reshape(known.shape) == 0)
+        costs = np.asarray(costmap.data).reshape(cost_known.shape)
+        public_cost = cost_known & (costs >= 0) & (costs < 100)
+        if np.array_equal(observed,known) and np.array_equal(public_cost,cost_known):
+            return inputs
+        from scipy.ndimage import distance_transform_edt
+        distance = distance_transform_edt(np.pad(observed,1))[1:-1,1:-1]
+        safe = safe & observed & (distance*grid.info.resolution >= self._goal_clearance_m+grid.info.resolution/2)
+        return MetricInputs((grid,cor,pose,observed,safe,costmap,public_cost),
+            getattr(inputs,'map_odom_reference',None),getattr(inputs,'physical_motion',None))
+
+    def _metric_public_search(self, inputs, policy, search, *args):
+        public = self._metric_public_inputs(inputs)
+        if public is inputs:
+            return search(inputs,*args)
+        cache = getattr(self,'_metric_selection_cache',None)
+        if cache is None:
+            cache = self._metric_selection_cache = threading.local()
+        previous = getattr(cache,'memo',None)
+        memo = cache.memo = dict(inputs=public,policy=policy)
+        try:
+            return search(public,*args)
+        finally:
+            if previous is not None and 'public_deferred_until' in memo:
+                previous['public_deferred_until'] = memo['public_deferred_until']
+            cache.memo = previous
+
     def _metric_robot_side_observation(self, inputs, frontier, policy, scope_mask, started):
+        return self._metric_public_search(inputs,policy,self._metric_robot_side_observation_in_pass,
+                                          frontier,policy,scope_mask,started)
+
+    def _metric_robot_side_observation_in_pass(self, inputs, frontier, policy, scope_mask, started):
         """Try the existing local approach search on the current robot side.
 
         A boundary-normal target can already lie in a narrow entrance. A
@@ -1565,6 +1606,10 @@ class MetricFrontierRuntime:
         return None
 
     def _metric_public_observation(self, inputs, frontiers, policy, scope_mask, started):
+        return self._metric_public_search(inputs,policy,self._metric_public_observation_in_pass,
+                                          frontiers,policy,scope_mask,started)
+
+    def _metric_public_observation_in_pass(self, inputs, frontiers, policy, scope_mask, started):
         """Observe before a distant approach, using only current public space.
 
         Same local distance budget, real frontier sight and whole route. This
@@ -1676,14 +1721,19 @@ class MetricFrontierRuntime:
         stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
         self._frontier_rank_stats = stats
         self._metric_prepare_egress(inputs)
-        search_mask=self._metric_seed_mask(inputs)
-        initial_evidence = self._metric_selection_memo(inputs)[1]
         memo, _ = self._metric_selection_memo(inputs)
         policy = None if memo is None else memo.get('policy')
         private_start_available = (getattr(self, '_metric_start_egress_enabled', False)
             and not getattr(self, '_metric_egress_expired', True)
             and bool(getattr(self, '_metric_egress', None))
-            and all(e.valid for e in self._metric_egress))
+            and all(e.valid for e in self._metric_egress)
+            and self._metric_private_start_needed(inputs))
+        if not private_start_available:
+            inputs = self._metric_public_inputs(inputs)
+            if memo is not None:
+                memo['inputs'] = inputs
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
         # Before expensive boundary detours, prefer one useful proved forward
         # observation in the existing local search. Start from its far bound:
         # RPP's 15-cm acceptance must not reduce every departure to a tiny hop.

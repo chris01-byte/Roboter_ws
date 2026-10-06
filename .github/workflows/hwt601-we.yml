@@ -110,6 +110,7 @@ jobs:
             src/explore/test/test_metric_arrival_revalidation.py \
             src/explore/test/test_metric_pending_withdrawal.py \
             src/explore/test/test_metric_public_cooldown.py \
+            src/explore/test/test_metric_public_body_authority.py \
             src/explore/test/test_metric_snapshot_replan.py \
             src/explore/test/test_metric_start_observation.py \
             src/explore/test/test_metric_join_replan.py \
