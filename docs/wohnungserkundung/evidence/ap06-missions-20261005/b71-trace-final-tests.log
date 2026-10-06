@@ -1,0 +1,36 @@
+...F                                                                     [100%]
+=================================== FAILURES ===================================
+_______ test_insufficient_space_rejects_run_before_starting_any_runtime ________
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-112/test_insufficient_space_reject0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f14b6806770>
+
+    def test_insufficient_space_rejects_run_before_starting_any_runtime(tmp_path,monkeypatch):
+        from types import SimpleNamespace
+        from pathlib import Path
+        import ap06_trace
+        import ap06_closed_product as product
+        monkeypatch.setattr(ap06_trace.shutil,'disk_usage',lambda _:SimpleNamespace(free=0))
+        monkeypatch.setattr(product.subprocess,'Popen',lambda *_a,**_k:pytest.fail('runtime started without storage'))
+        args=SimpleNamespace(manifest=Path(product.__file__).with_name('ap06_product_scenarios.json'),
+            case='door68_start_b',output=tmp_path/'mission',ideal_lidar=False,
+            profile_selection=False,capture_decisions=False,capture_geometry=False,diagnostic_beams=None)
+>       assert product.run(args)==1
+
+tools/simulation/test_ap06_trace.py:47: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tools/simulation/ap06_closed_product.py:644: in run
+    require_isolation()
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def require_isolation():
+        if (os.environ.get('AP06_SIMULATION') != '1' or not Path('/.dockerenv').exists()
+                or any(Path(p).exists() for p in ('/dev/ttyUSB_BASE', '/dev/ttyUSB_HWT601', '/etc/nv_tegra_release'))
+                or not 100 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 200):
+>           raise RuntimeError('device-free container and dedicated simulation domain required')
+E           RuntimeError: device-free container and dedicated simulation domain required
+
+tools/simulation/ap06_closed_product.py:56: RuntimeError
+=========================== short test summary info ============================
+FAILED tools/simulation/test_ap06_trace.py::test_insufficient_space_rejects_run_before_starting_any_runtime
+1 failed, 3 passed in 0.20s

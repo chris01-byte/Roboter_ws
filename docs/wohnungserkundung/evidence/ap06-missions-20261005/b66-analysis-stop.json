@@ -1,0 +1,6 @@
+{
+  "reason": "Measured native route rejections and an arrival without observation; no continued motion. Ordered actual Mission Manager cancel for repair diagnostics.",
+  "positive_whole_acceptance": false,
+  "source_candidate": "e67fe1a",
+  "when_utc": "2026-10-06T02:31:46.330233+00:00"
+}

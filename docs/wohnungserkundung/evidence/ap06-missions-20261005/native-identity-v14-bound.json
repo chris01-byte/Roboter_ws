@@ -1,0 +1,742 @@
+{
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.35",
+  "python": "3.10.12 (main, Aug 15 2025, 14:32:43) [GCC 11.4.0]",
+  "ros_packages": "ros-humble-rcl\t5.3.10-1jammy.20251008.021348\nros-humble-rclcpp\t16.0.15-1jammy.20251008.022719\nros-humble-rclpy\t3.3.17-1jammy.20251008.022757\n",
+  "source_installed_equal": [
+    {
+      "source": "src/amadeus_map_identity/amadeus_map_identity/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/__init__.py",
+      "sha256": "7192c47502fa71d6cdef32f04dc461f84f1bf9e8865ba1b9d8bedcecd381e9d3"
+    },
+    {
+      "source": "src/amadeus_map_identity/amadeus_map_identity/fingerprint.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    },
+    {
+      "source": "src/base_hardware/base_hardware/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/__init__.py",
+      "sha256": "ac7bdc4a8a2fd7854700fc0029124403a6d3114e27ad0a9148d18a6476fe834c"
+    },
+    {
+      "source": "src/base_hardware/base_hardware/base_hardware_node.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/base_hardware_node.py",
+      "sha256": "f85904676be9765c2a932cf338a258e100c9cf1684958a39eb25c5bb097ac1f3"
+    },
+    {
+      "source": "src/base_hardware/base_hardware/encoder_odometry.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_odometry.py",
+      "sha256": "a49b82dfd937c40259b13bc16b1e42945c0f2a50017a6f7395476b4a972aeb94"
+    },
+    {
+      "source": "src/base_hardware/base_hardware/encoder_shadow_node.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_node.py",
+      "sha256": "b05c21fc74d8f742da40fdd718900810c197265e50c0594843d42a13952c0988"
+    },
+    {
+      "source": "src/base_hardware/base_hardware/encoder_shadow_reader.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages/base_hardware/encoder_shadow_reader.py",
+      "sha256": "282e5652153fb203866220653fdd9efac6dea3d9733555c9f80f73d8bd803a46"
+    },
+    {
+      "source": "src/base_hardware/config/base_hardware_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/config/base_hardware_params.yaml",
+      "sha256": "e91cbff0657789ca5b7b2406ea3320171267f433fee69c051aa632d92d3ade97"
+    },
+    {
+      "source": "src/base_hardware/config/encoder_shadow.yaml",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/config/encoder_shadow.yaml",
+      "sha256": "7229298fb2631561befae755bb6bce10b8c5b1ce8823e0e3bdc89b9a5121145c"
+    },
+    {
+      "source": "src/base_hardware/launch/base_hardware.launch.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/launch/base_hardware.launch.py",
+      "sha256": "f46046afb71800d2777ae16b01752e570c361a2877a89e9c9fce7fceb5d8621f"
+    },
+    {
+      "source": "src/base_hardware/launch/encoder_shadow.launch.py",
+      "installed": "/evidence/ap06-old-product-install/base_hardware/share/base_hardware/launch/encoder_shadow.launch.py",
+      "sha256": "02043d61df51d290b4d6de1eced718fa74b42881fb6aa2d14d68f13c95b5e84c"
+    },
+    {
+      "source": "src/robot_interfaces/msg/NearFieldStatus.msg",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/msg/NearFieldStatus.msg",
+      "sha256": "5ed685910858b624f2535d46dbf007265262ce387171d892de8c69b049b11d9f"
+    },
+    {
+      "source": "src/robot_interfaces/srv/ComputeApproachPose.srv",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/ComputeApproachPose.srv",
+      "sha256": "e1d334bd800d75b615c88b6f4e6dcd6d8630abce2c28eece375d07c491ffc9c5"
+    },
+    {
+      "source": "src/robot_interfaces/srv/ComputeGrasp.srv",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/ComputeGrasp.srv",
+      "sha256": "6ee9555f64cd280d98580a39e223db0b760be813bbcfe49e1e99e198c4a3a1dd"
+    },
+    {
+      "source": "src/robot_interfaces/srv/GetObjectPose.srv",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/GetObjectPose.srv",
+      "sha256": "43dd3bd5e9356db0c5b7ca6d49e17242a19c8ae94b063a45451068da112bc3ba"
+    },
+    {
+      "source": "src/robot_interfaces/srv/RefineObjectPose.srv",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/srv/RefineObjectPose.srv",
+      "sha256": "13cc0d0d49845d6b5771a3914cf83d747f57146b36f0ca522432e61b5d63c479"
+    },
+    {
+      "source": "src/robot_interfaces/action/ExploreArea.action",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/ExploreArea.action",
+      "sha256": "a3e320a4392adf02628be223987407914df35c15365c4de3f4d7e5269f595cd3"
+    },
+    {
+      "source": "src/robot_interfaces/action/MoveArmToNamed.action",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/MoveArmToNamed.action",
+      "sha256": "5735f05b8dae3c6ea56cd071b6dc1b2d97aac10813091000a43277a10adcfa10"
+    },
+    {
+      "source": "src/robot_interfaces/action/MoveArmToPose.action",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/MoveArmToPose.action",
+      "sha256": "aad5400d82f93667396c6639499c06ea7b1f1a5a8ecff1480a16a978f6ccb423"
+    },
+    {
+      "source": "src/robot_interfaces/action/RunMission.action",
+      "installed": "/evidence/ap06-old-product-install/robot_interfaces/share/robot_interfaces/action/RunMission.action",
+      "sha256": "7ea499441bc5afe7f62ccbe9aaf59cb31bec6083c39ad9fb9adaa660fcf5b72b"
+    },
+    {
+      "source": "src/bt_orchestrator/config/bt_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/config/bt_params.yaml",
+      "sha256": "31faf7a4ce3a9302fcba9a62d86289cc0b7aec0eb651994478907f3a24fa8713"
+    },
+    {
+      "source": "src/bt_orchestrator/launch/bt_orchestrator.launch.py",
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/launch/bt_orchestrator.launch.py",
+      "sha256": "f482c08f0fc3b57ac1700e7d7589627eb9a6742cbe6b58a3f9593ce850159b87"
+    },
+    {
+      "source": "src/bt_orchestrator/bt_xml/explore.xml",
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/bt_xml/explore.xml",
+      "sha256": "b2ea025cda8c6483fbf0dfefadcca5b2862d4c8dabc0dff72c1a8791679e0e74"
+    },
+    {
+      "source": "src/bt_orchestrator/bt_xml/pick_and_place.xml",
+      "installed": "/evidence/ap06-old-product-install/bt_orchestrator/share/bt_orchestrator/bt_xml/pick_and_place.xml",
+      "sha256": "50f2b6e42c95dd70905d85cbf2cc455937954ab7a1c4c01861e5cadd1e8f05bd"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/__init__.py",
+      "sha256": "63f3621a9516ea3f549e6c777159d4465feebf02d2701f7307ffb8999a936281"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/action_outcome.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/action_outcome.py",
+      "sha256": "b68f2ed9287a9d1cb02ecec6c8eb74a73151428954641c1d4cac5a5b515889fa"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/command_payload.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/command_payload.py",
+      "sha256": "d5b8f50671508a8f4664f0ce7647e6113b7b60ef453e90232dfd49befa6bd1b5"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/execution_policy.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/execution_policy.py",
+      "sha256": "0a9dfc41a2940f628e1afc679d0572d819bde5b967d48ea971468ca5a4e221ad"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/mission_manager_node.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/mission_manager_node.py",
+      "sha256": "7e002b3d19daeb2706e9267eefb20b85b8386133f46de76a86af4d546ea921ba"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/semantic_catalog.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_catalog.py",
+      "sha256": "e92e13570465a8fb40531e99147e6bcd6dcd89252bd2ba391ce6a8437b3e022e"
+    },
+    {
+      "source": "src/mission_manager/mission_manager/semantic_room_goal.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/lib/python3.10/site-packages/mission_manager/semantic_room_goal.py",
+      "sha256": "89ed6fb6fec48eb8b14377ae37d3be90760bd7aa57cfddd4ed7836fe14b73644"
+    },
+    {
+      "source": "src/mission_manager/config/mission_catalog.yaml",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/config/mission_catalog.yaml",
+      "sha256": "365f54610570d87645436aeb64cdb6cff6e954078e039023087a0a16a2b013f8"
+    },
+    {
+      "source": "src/mission_manager/launch/mission_manager.launch.py",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/launch/mission_manager.launch.py",
+      "sha256": "9714f8534efb095fcc14421fafd11f22241c1c1cd9586a8c3818dc6f368bc40a"
+    },
+    {
+      "source": "src/mission_manager/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "installed": "/evidence/ap06-old-product-install/mission_manager/share/mission_manager/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "sha256": "79e8fb62a1546b7c9aefbb4d7d1314f837f715c2c5096d6185a3614ac9ef90a5"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/__init__.py",
+      "sha256": "3384b6c5dfaecaaa31a57c36a374b1f4f0fa42067f2541803b33df1eaee1e475"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/_hwt601_clock.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/_hwt601_clock.py",
+      "sha256": "876bd95e33185a0c804bfb2ebeada64088974f97e5f158bf3d7fa8768435f772"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_fusion_guard.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_guard.py",
+      "sha256": "31eef320935918fd8ad6dfcd595b0b7212370e01ca063fa8653d9875d228a602"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_fusion_health.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_fusion_health.py",
+      "sha256": "a3476de3cc3a915ccc92480256a2b31ce43ba1bb094718d08a129a50a92542e1"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_imu_node.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_imu_node.py",
+      "sha256": "572443d640ad721067ebad90ed7c06ad68a4886fbad4000b7364d85348266a27"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_mount.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_mount.py",
+      "sha256": "6aa74d6a95346590874574838a73b8f8d44a34298e58af998001218bd7563b0f"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_protocol.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_protocol.py",
+      "sha256": "3f9844483617a0c2be95d0998d5223229a0a16945027bc73965555d8ccd42906"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_shadow_core.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_core.py",
+      "sha256": "907aba5f9e1654e762f5fbbeb611e81fec4097f2ed8f0dfcf87b264b6fc35707"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_shadow_node.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_shadow_node.py",
+      "sha256": "d9d824fd1ca3d7164eb7097d9341e87972ce9d7e956a9f0d9be1c9e0211d5d6a"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/hwt601_transport.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/hwt601_transport.py",
+      "sha256": "237941c43e0141100ed2cfed6e48e334a3c9d0cd3ab24e31b27d493fd464ef52"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/lidar_odometry_node.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/lidar_odometry_node.py",
+      "sha256": "65f462dd097386d6b898c99a102d22b07f6111a9f256c206418a42f1ee3428c3"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/planar_scan_matcher.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/planar_scan_matcher.py",
+      "sha256": "7b4cad2cda67bcd52167642eceaf21e7cf238fce20330d6f8be491e7f112fe46"
+    },
+    {
+      "source": "src/robot_state_estimation/robot_state_estimation/quality_core.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages/robot_state_estimation/quality_core.py",
+      "sha256": "d031f63364d968722b728387f8109c338713d5ae9744db2d32fefd24f49ec1af"
+    },
+    {
+      "source": "src/robot_state_estimation/config/amadeus_hwt601.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/amadeus_hwt601.yaml",
+      "sha256": "744c24347a443c903b775213057190c0ae133a64606eb23bcd4f292ff5e077d7"
+    },
+    {
+      "source": "src/robot_state_estimation/config/ekf_hwt601_mapping.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/ekf_hwt601_mapping.yaml",
+      "sha256": "12ce22e8482fe6487ea488da4a4f164a8d2185545c131d2316b2499703af9b93"
+    },
+    {
+      "source": "src/robot_state_estimation/config/hwt601_metric_development.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_metric_development.yaml",
+      "sha256": "db5275f44fbe75e44c51089959695f711c7772c8402376668f5c009ac7c53997"
+    },
+    {
+      "source": "src/robot_state_estimation/config/hwt601_mount.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_mount.yaml",
+      "sha256": "3879d331c06171decddb9b8f29271d5cab0577e3e4bb4676d44c00c2556348f1"
+    },
+    {
+      "source": "src/robot_state_estimation/config/hwt601_shadow.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/config/hwt601_shadow.yaml",
+      "sha256": "00c4308e1028348277dd4dd43c018290cb628d81929ea3861eb74b0c1f849d9f"
+    },
+    {
+      "source": "src/robot_state_estimation/launch/hwt601_mount.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/launch/hwt601_mount.launch.py",
+      "sha256": "b14a543801ad1504ba7af0beea68e3b6189ffacd9079fbd98164a86bb5bd7ac2"
+    },
+    {
+      "source": "src/robot_state_estimation/launch/hwt601_shadow.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_state_estimation/share/robot_state_estimation/launch/hwt601_shadow.launch.py",
+      "sha256": "6c18eb6295c2d0d541d35fa8e21eb20ba7b3e3bd46d24688658c43f5db89f288"
+    },
+    {
+      "source": "src/explore/explore/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/__init__.py",
+      "sha256": "22d8dce4ae41aedd40c815b0fdf3e622a396bbf86553ae36867d0b4cee02c140"
+    },
+    {
+      "source": "src/explore/explore/child_result_policy.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/child_result_policy.py",
+      "sha256": "8509ebaa241cdd94d64cf60bc7a63f15b6d58c93a5768dd15b271edc4f147733"
+    },
+    {
+      "source": "src/explore/explore/exploration_child_goal.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_child_goal.py",
+      "sha256": "02ff587c82d6e1d105080455cf0f0b2e7495edcc4e42ae96e8b41456881d65e5"
+    },
+    {
+      "source": "src/explore/explore/exploration_completion.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_completion.py",
+      "sha256": "c724103298e5a7eb7854e939f8bc148bbf87015f304ea9b3ba4f4414a4b6f33f"
+    },
+    {
+      "source": "src/explore/explore/exploration_migration.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_migration.py",
+      "sha256": "22fd8f9ceca29ba72dc67ada3faa6d0302c98765cc81c4e52c896e3db96a5a73"
+    },
+    {
+      "source": "src/explore/explore/exploration_nav_runtime.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_nav_runtime.py",
+      "sha256": "306040e03c96c280df91a8ec9b1314baf2dcd57721bf34b8985620fc5268ec2b"
+    },
+    {
+      "source": "src/explore/explore/exploration_persistence.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_persistence.py",
+      "sha256": "62f11a33998766fe5fac65b08f3b624f531198a1314b0df2eb191336fd173adc"
+    },
+    {
+      "source": "src/explore/explore/exploration_policy.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_policy.py",
+      "sha256": "12945ceb5980f4d59c9ef422793425b73b4c99c4847e67f81d8e902467ff48f8"
+    },
+    {
+      "source": "src/explore/explore/exploration_scope.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    {
+      "source": "src/explore/explore/explore_node.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "311dfccaa96bf416d71b577252c202927cb9104d2b6769ea53e8979d1f4803ff"
+    },
+    {
+      "source": "src/explore/explore/frontier_goal_candidate.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_goal_candidate.py",
+      "sha256": "2ded4faadb059f9e3208195780b61ae8856825f44392de10e11fce94e8931d51"
+    },
+    {
+      "source": "src/explore/explore/frontier_task_evidence.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+      "sha256": "0861d7035ad6ce247353c99488a7ca66de8490b33eb909b672254ea296a033a6"
+    },
+    {
+      "source": "src/explore/explore/frontier_task_feed.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_feed.py",
+      "sha256": "a8cf07522b94fea0364076f8ab1f6ae197087649d4208cf025c40cabfe4b6ae9"
+    },
+    {
+      "source": "src/explore/explore/frontier_task_resolution.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_resolution.py",
+      "sha256": "618be60ef7f7604c9b7042e971af152cc6ecdf607217b414d264e00afb065c1c"
+    },
+    {
+      "source": "src/explore/explore/lidar_motion.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/lidar_motion.py",
+      "sha256": "e7507b3d75547b9daed7410eb4bff5b7d1d806b69425440de82671229bf673d6"
+    },
+    {
+      "source": "src/explore/explore/map_status_adapter.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py",
+      "sha256": "0a688ac8587761393e1c233335a585f00ba49a5ec983ac51a318a7a54706d421"
+    },
+    {
+      "source": "src/explore/explore/metric_checkpoint.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py",
+      "sha256": "8e8611c027756aca3e112f744c7dc1b526e494b631b00ab3411a716f7080b8dd"
+    },
+    {
+      "source": "src/explore/explore/metric_egress_reference.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "88231dbc6e02dd5a1b62de0d818e850299855db577e5dde57fd3520246976258"
+    },
+    {
+      "source": "src/explore/explore/metric_frontier.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "614ecf954c306a942ee11239a5b9a98387c1f49cba1668cf9e40bc745fddb5a6"
+    },
+    {
+      "source": "src/explore/explore/metric_frontier_candidates.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+      "sha256": "1e09a8f3abd4dd163244ec93d0116000011004e1a641048ffe52828e5cf5c51c"
+    },
+    {
+      "source": "src/explore/explore/metric_frontier_runtime.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "1cd8c2f0dd4fcadf82c1458d984edd3390e12b5343ea1938fc8bac0d62685367"
+    },
+    {
+      "source": "src/explore/explore/metric_progress.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py",
+      "sha256": "9b3ae4ed53f0dd4f37ebee7d49ef77ce2c1195d4b3e83e86e9d5e7de160bdb2d"
+    },
+    {
+      "source": "src/explore/explore/portal_frozen_scan_runtime.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_frozen_scan_runtime.py",
+      "sha256": "b2ca8cf34fe3ec841c03dcc2954fe153864c802a62a8acac1c3f3ac1e35aa419"
+    },
+    {
+      "source": "src/explore/explore/portal_memory.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_memory.py",
+      "sha256": "d1e2a59848883f675354b07e10c8cce94d2387b5ba1f8193a7b633e7f2787051"
+    },
+    {
+      "source": "src/explore/explore/portal_plan_adapter.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_plan_adapter.py",
+      "sha256": "1bbdf256f681ebe1d15239c29e2ed8b0d79fda5edd31996cd2224830cf2271cf"
+    },
+    {
+      "source": "src/explore/explore/portal_planning.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_planning.py",
+      "sha256": "344eb10a4ca67342f83a1e4bec521779113675ed8810da201ac867f35766ccd6"
+    },
+    {
+      "source": "src/explore/explore/portal_source_adapter.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py",
+      "sha256": "bc6ac8e767d9c05c1b24e3a10e5e99681755e68f14b882e6d1d9017877943475"
+    },
+    {
+      "source": "src/explore/explore/portal_task_evidence.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_task_evidence.py",
+      "sha256": "6f8bdb126eaa9dcfce1aecf8c5c1b22b1ad271688ba0071ef52ef89f01821eaa"
+    },
+    {
+      "source": "src/explore/explore/portal_traversal_evidence.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_traversal_evidence.py",
+      "sha256": "922809756a5fc4200aee605f08d2d7ef72666694ad14709a479a7d9e0e120e99"
+    },
+    {
+      "source": "src/explore/explore/portal_traversal_runtime.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_traversal_runtime.py",
+      "sha256": "f6dec7b4c4defcc92a1989860dd65fb829bd28f0d59012fd2d699769d4b9d0db"
+    },
+    {
+      "source": "src/explore/explore/raw_map_portal_adapter.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/raw_map_portal_adapter.py",
+      "sha256": "2326cb21f60b15cc08faeaa996c74fadc47f8312d677f98145aeab950e4e2fb7"
+    },
+    {
+      "source": "src/explore/explore/region_graph.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph.py",
+      "sha256": "29cc1b50c7382cf9911926f46bf3670e572745c9c75e6b98ecf541fcd42a3a05"
+    },
+    {
+      "source": "src/explore/explore/region_graph_shadow.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow.py",
+      "sha256": "fa8e5b8480eda0a4074b639dbeb49c7478a4d0fcef31538b1aaf08eda8fc17ef"
+    },
+    {
+      "source": "src/explore/explore/region_graph_shadow_lifecycle.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_shadow_lifecycle.py",
+      "sha256": "e67a6ab6715f1fde46662f89b6180bfedb1f9126ada2bcb18f06265c14ae9772"
+    },
+    {
+      "source": "src/explore/explore/region_graph_status.py",
+      "installed": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/region_graph_status.py",
+      "sha256": "6184f8b9e20bf82517ef3aee494eb95c7271d9c97b52931d824adde5155eac32"
+    },
+    {
+      "source": "src/explore/config/door_test_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/door_test_params.yaml",
+      "sha256": "00618957cf7906e800cf8785228f18c98440a589ee01e417c5b8b4bc0931cfc0"
+    },
+    {
+      "source": "src/explore/config/explore_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/explore_params.yaml",
+      "sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c"
+    },
+    {
+      "source": "src/explore/config/hwt601_parity_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/hwt601_parity_params.yaml",
+      "sha256": "6097dae5aaee6bb6964d78b474f13768e70af298915fd986920c20a6cf2e3506"
+    },
+    {
+      "source": "src/explore/config/hwt601_recovery_acceptance_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/hwt601_recovery_acceptance_params.yaml",
+      "sha256": "ee3b42eef682a830892e93f84093baf1547a84f76d6baa3e480a81dc1de393c4"
+    },
+    {
+      "source": "src/explore/config/metric_frontier_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_params.yaml",
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51"
+    },
+    {
+      "source": "src/explore/config/metric_frontier_simulation_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_simulation_params.yaml",
+      "sha256": "0ec8c361f7d2e3b721d3eb53c2ef40464315c02f5c208bb0958140d4dca28d41"
+    },
+    {
+      "source": "src/explore/launch/explore.launch.py",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/launch/explore.launch.py",
+      "sha256": "031a616072a334ce82cc51f151f1aebaafeb8272c07dfbb797b6db5c2cbb0626"
+    },
+    {
+      "source": "src/explore/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/behavior_trees/navigate_to_pose_no_recovery.xml",
+      "sha256": "d194907603cfa332c839985c005e7eb39f13198e857aca32bedc93da410fc3c8"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/cmd_vel_mission_gate.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/cmd_vel_mission_gate.py",
+      "sha256": "9367c46bbd2569964dd6a3068723188de0832bb076315a80101079d942a8310c"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/global_scan_localizer.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_localizer.py",
+      "sha256": "07b120339494f553ac61a65d0a3fed479e3d0d6c755aaea7eae59f83146e69d4"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/global_scan_matcher.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/global_scan_matcher.py",
+      "sha256": "c33c9e758bcf13bdb9b37fce963931b225e0cf15d5ed6bb55ca399efdb91eab0"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/localization_contract.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_contract.py",
+      "sha256": "365299fba55892349dcc99f6ca33c6142e44d1b3ff910ec43e7beb61243f4bb7"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/localization_guard.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/localization_guard.py",
+      "sha256": "50ca1840e86da8b09aca08c73202309bcec66c9dbfe199455b72c2edd9a29cfc"
+    },
+    {
+      "source": "src/robot_navigation/robot_navigation/stage3_motion_diagnostic.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation/stage3_motion_diagnostic.py",
+      "sha256": "9dd3054cb38fe21477f188ae81dbc147a93a624fd338c7cc08ae17a42404ba3a"
+    },
+    {
+      "source": "src/robot_navigation/config/nav2_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/config/nav2_params.yaml",
+      "sha256": "97b9c46f5147e39d6cc1e1842b691501c37d769b3ba3cd75f93072c19848d8d7"
+    },
+    {
+      "source": "src/robot_navigation/config/nav2_params_real.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/config/nav2_params_real.yaml",
+      "sha256": "08c23f9581921e7c9265d335ac408428acf922367a43eebed1bb8772ec947f73"
+    },
+    {
+      "source": "src/robot_navigation/launch/nav_localized.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_localized.launch.py",
+      "sha256": "dbe7ced4c49fba7bae975fb4221ea8a4db0b09e72da01cba7439069dd67466ca"
+    },
+    {
+      "source": "src/robot_navigation/launch/nav_mapping.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_mapping.launch.py",
+      "sha256": "5efa40f90086dfb35778bf8a0c4859c959ffe27f3f39b5afc36eeefd4ccf358d"
+    },
+    {
+      "source": "src/robot_navigation/launch/nav_real.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_real.launch.py",
+      "sha256": "92bf75abb144f940c56cafbab1dc6d11f822a8d71a9b030f97aafa05c46e0be6"
+    },
+    {
+      "source": "src/robot_navigation/launch/nav_test.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch/nav_test.launch.py",
+      "sha256": "eb782a58209c3f4f92eb704b47d3d7c4750103ce39be2f8ed2b90082f58850cd"
+    },
+    {
+      "source": "src/robot_map_manager/robot_map_manager/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/__init__.py",
+      "sha256": "691c4d48c819871aa61e71f59f40702d623b06f247277614edf7080cff5938e4"
+    },
+    {
+      "source": "src/robot_map_manager/robot_map_manager/map_core.py",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/map_core.py",
+      "sha256": "067bb0b974e7b2dad29f6a9b681d7a42ba122fb0269a8298acea50e087cf9404"
+    },
+    {
+      "source": "src/robot_map_manager/robot_map_manager/robot_map_manager_node.py",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/lib/python3.10/site-packages/robot_map_manager/robot_map_manager_node.py",
+      "sha256": "4f8822b8ae1b1b97aa140096bdae67d30fc1704485e73c00ac51a063370d8975"
+    },
+    {
+      "source": "src/robot_map_manager/config/robot_map_manager.yaml",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/config/robot_map_manager.yaml",
+      "sha256": "859bad2f890b338825697db66e7837c5a9c8ca8d46b9142cf53ef10418c8c13d"
+    },
+    {
+      "source": "src/robot_map_manager/launch/map_manager.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/launch/map_manager.launch.py",
+      "sha256": "9c5ae8d21009e6ea77fe07d1e2a0a8c2daa7c4a3955169b132f187418556cef5"
+    },
+    {
+      "source": "src/robot_map_manager/launch/map_manager_smoke.launch.py",
+      "installed": "/evidence/ap06-old-product-install/robot_map_manager/share/robot_map_manager/launch/map_manager_smoke.launch.py",
+      "sha256": "235ac2e32869065e910d52e0d7e76cf5231ebe5b25e991cc4332c0eb97581bc6"
+    },
+    {
+      "source": "src/vl53_near_field/vl53_near_field/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/__init__.py",
+      "sha256": "1abf578bd9056043710823a1741935066d717c13a6a0a03c9a4e2e2cfb7f4e78"
+    },
+    {
+      "source": "src/vl53_near_field/vl53_near_field/measurement_quality.py",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/measurement_quality.py",
+      "sha256": "72aa736c9c3afadbd86f5e83eccfe524155c02ecda08e2727fdb26807f7de9ab"
+    },
+    {
+      "source": "src/vl53_near_field/vl53_near_field/vl53_near_field_node.py",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/vl53_near_field_node.py",
+      "sha256": "06eae30914e48a1402a50f4aadb08e60ed9fe4009627550b2ce7f2890ac11f71"
+    },
+    {
+      "source": "src/vl53_near_field/config/collision_monitor_mapping_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/collision_monitor_mapping_params.yaml",
+      "sha256": "9f44851a0fdcb27dd8e8a6100b25ddea7e88c0f3ff6947b4fae14368a5b5651f"
+    },
+    {
+      "source": "src/vl53_near_field/config/collision_monitor_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/collision_monitor_params.yaml",
+      "sha256": "a4d412f6109cd0bbdbbd354d26f53b6ae707c8940f844a286ec2ddab2d5617aa"
+    },
+    {
+      "source": "src/vl53_near_field/config/costmap_vl53_obstacle_layer.snippet.yaml",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/costmap_vl53_obstacle_layer.snippet.yaml",
+      "sha256": "e9efab08ae1c6709b14df8aab2bc4ac71309b082d3ff966757b0f8f016396397"
+    },
+    {
+      "source": "src/vl53_near_field/config/vl53_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/config/vl53_params.yaml",
+      "sha256": "f7591f32bc11a44325276432a0d44223a329efe4b07a66e3eb19de002eb9133d"
+    },
+    {
+      "source": "src/vl53_near_field/launch/vl53_near_field.launch.py",
+      "installed": "/evidence/ap06-old-product-install/vl53_near_field/share/vl53_near_field/launch/vl53_near_field.launch.py",
+      "sha256": "ae0d210b9ace01ef9b7ed2d86905f383896d924f59286830260a66052f687750"
+    },
+    {
+      "source": "src/safety_monitor/safety_monitor/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages/safety_monitor/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "src/safety_monitor/safety_monitor/safety_monitor_node.py",
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/lib/python3.10/site-packages/safety_monitor/safety_monitor_node.py",
+      "sha256": "48d9a0f0674830f3cb5e67de77337289a7c1aa337553e96a002c2de6923f4994"
+    },
+    {
+      "source": "src/safety_monitor/config/safety_monitor_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/share/safety_monitor/config/safety_monitor_params.yaml",
+      "sha256": "e3f54d6e6770f9e14ef2c326dd8462db9768793ddb2a4ba31adf27d52401d4bd"
+    },
+    {
+      "source": "src/safety_monitor/launch/safety_monitor.launch.py",
+      "installed": "/evidence/ap06-old-product-install/safety_monitor/share/safety_monitor/launch/safety_monitor.launch.py",
+      "sha256": "8a2ea964aa8da278c49821080c52858cdc2935ece853520ac2aba47a31bc9f69"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/amadeus_lidar_bringup/__init__.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/amadeus_lidar_bringup/scan_gitter.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/scan_gitter.py",
+      "sha256": "04a917945c9ab6b96df06275096250b95f5f0159552fd1419ca5816620867ee7"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/amadeus_lidar_bringup/scan_vereinheitlichen.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/lib/python3.10/site-packages/amadeus_lidar_bringup/scan_vereinheitlichen.py",
+      "sha256": "39e651ca29e44317a858b80688328ea80d819127740792c9d2566c65ff840736"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml",
+      "sha256": "d83e2d276957aeb51831f98c4d6cfc41d882fed84623a0d0066fc89a09ec03a1"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/config/stl27l.yaml",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/config/stl27l.yaml",
+      "sha256": "d3b5a914a21b57033a3ef5379ce5788d051630b0818785408fe05bf2ef5cb00b"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/launch/slam_lidar.launch.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/slam_lidar.launch.py",
+      "sha256": "b4eeac51d307fc600f6258ce7c22a779f1916eab0439310e06e02a000328354f"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py",
+      "sha256": "5e52200ffaa033fddf1f1d203a2a23ce748847b075818d6145c9c33be5eb2317"
+    },
+    {
+      "source": "src/amadeus_lidar_bringup/launch/stl27l.launch.py",
+      "installed": "/evidence/ap06-old-product-install/amadeus_lidar_bringup/share/amadeus_lidar_bringup/launch/stl27l.launch.py",
+      "sha256": "f5a74f9aeee35fabb9fc93dfb1f5c7d03269b6fd35f3a74528d876fd3719a6c4"
+    }
+  ],
+  "resolved_modules": {
+    "explore.explore_node": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+    "robot_interfaces.action._explore_area": "/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages/robot_interfaces/action/_explore_area.py",
+    "vl53_near_field.measurement_quality": "/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field/measurement_quality.py",
+    "rclpy": "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/__init__.py"
+  },
+  "native_binaries": [
+    {
+      "package": "bt_orchestrator",
+      "path": "/evidence/ap06-old-product-install/bt_orchestrator/lib/bt_orchestrator/bt_orchestrator",
+      "sha256": "8319fdc9e255228f70f4d9e24e34b97baf5612d7fd23108e0eba8d0452541db0"
+    },
+    {
+      "package": "robot_localization",
+      "path": "/evidence/ap06-support-install/robot_localization/lib/robot_localization/ekf_node",
+      "sha256": "c7c0767ec20477d08d8d9ef9fb36f60a180b692fe881f86cb6845988ff0f18a1"
+    },
+    {
+      "package": "slam_toolbox",
+      "path": "/evidence/ap06-missions-20261005/slam-install/slam_toolbox/lib/slam_toolbox/sync_slam_toolbox_node",
+      "sha256": "5f22db43f19dc69698e6246bc51a5fe634b9d8c42bf83e29e0c93ae6720ed729"
+    },
+    {
+      "package": "nav2_planner",
+      "path": "/evidence/ap03-nav2-install/nav2_planner/lib/nav2_planner/planner_server",
+      "sha256": "767b037f2f504954b9940c3766ce67c867e83e129dd5076b7f5ccb24a395f961"
+    },
+    {
+      "package": "nav2_controller",
+      "path": "/evidence/ap03-nav2-install/nav2_controller/lib/nav2_controller/controller_server",
+      "sha256": "dac1ed7774ebe92878a3e74da27a25f3df5254b1bd42625be80e85af1c6ff338"
+    },
+    {
+      "package": "nav2_bt_navigator",
+      "path": "/evidence/ap06-support-install/nav2_bt_navigator/lib/nav2_bt_navigator/bt_navigator",
+      "sha256": "ffef6d37fd926069b0ac929c49c3f8d1879e4b6916d48d9aa44c9ffe99e908a9"
+    },
+    {
+      "package": "nav2_velocity_smoother",
+      "path": "/evidence/ap06-support-install/nav2_velocity_smoother/lib/nav2_velocity_smoother/velocity_smoother",
+      "sha256": "89c9dbef1a64f0cba22802f6ef40b62a681e35c70bcc859ca8476c287898e558"
+    },
+    {
+      "package": "nav2_collision_monitor",
+      "path": "/evidence/ap06-support-install/nav2_collision_monitor/lib/nav2_collision_monitor/collision_monitor",
+      "sha256": "0c800c6f8bcfa16fd8a1ab63f543e6f5de1df77d24715e390b3dbea4a93f7d39"
+    }
+  ],
+  "native_plugins": [
+    {
+      "path": "/evidence/ap06-missions-20261005/navfn-install/nav2_navfn_planner/lib/libnav2_navfn_planner.so",
+      "sha256": "29254174388353b255571a5c2e609b63a96abfa070fd4e4e6d1a2125dfd93515",
+      "patched_source_sha256": "c9b5dc0ccd14f831a36f2c825ec39aa72b26192a3f1951823f90b596d8d1a087"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "goal": [
+      0.9038441934324746,
+      -0.5962120712304189,
+      0.677018995726425
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Exact B65 selection-entry rasters, pose, retired ledger and unchanged counts with hypothetical elapsed original cooldown, native CPP read-only query; no motion or whole acceptance",
+    "departure_valid": true,
+    "view_valid": true,
+    "view": {
+      "predicted_pose": [
+        0.9426436785852244,
+        -0.4535435964678324,
+        0.2770189957264251
+      ],
+      "original_points": 18,
+      "potential_points": 18
+    },
+    "astar": "true"
+  }
+]

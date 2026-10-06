@@ -1,0 +1,4 @@
+[INFO] [1791256873.334427653] [scan_vereinheitlichen]: Vereinheitliche /scan -> /scan_normiert auf feste 2160 Strahlen.
+[INFO] [1791256903.392009620] [scan_vereinheitlichen]: 301/301 Scans umgesetzt; Eingabe schwankte ueber 1 verschiedene Groessen (2160..2160), Ausgabe fest 2160.
+[INFO] [1791256933.392228068] [scan_vereinheitlichen]: 601/601 Scans umgesetzt; Eingabe schwankte ueber 1 verschiedene Groessen (2160..2160), Ausgabe fest 2160.
+[INFO] [1791256963.489894082] [scan_vereinheitlichen]: 902/902 Scans umgesetzt; Eingabe schwankte ueber 1 verschiedene Groessen (2160..2160), Ausgabe fest 2160.

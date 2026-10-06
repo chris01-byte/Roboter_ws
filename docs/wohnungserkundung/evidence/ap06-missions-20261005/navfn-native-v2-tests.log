@@ -1,0 +1,11 @@
+Starting >>> nav2_navfn_planner
+--- stderr: nav2_navfn_planner
+Errors while running CTest
+Output from these tests are in: /evidence/ap06-missions-20261005/navfn-build/nav2_navfn_planner/Testing/Temporary/LastTest.log
+Use "--rerun-failed --output-on-failure" to re-run the failed cases verbosely.
+---
+Finished <<< nav2_navfn_planner [1.40s]	[ with test failures ]
+
+Summary: 1 package finished [1.60s]
+  1 package had stderr output: nav2_navfn_planner
+  1 package had test failures: nav2_navfn_planner

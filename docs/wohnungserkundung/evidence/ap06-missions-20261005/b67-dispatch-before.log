@@ -1,0 +1,169 @@
+FFF...                                                                   [100%]
+=================================== FAILURES ===================================
+_ test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-raw] _
+
+name = 'raw', preempt_first = True
+
+    @pytest.mark.parametrize('name', ['raw', 'yaw', 'wheel'])
+    @pytest.mark.parametrize('preempt_first', [True, False], ids=['dispatch-preemption', 'real-regression'])
+    def test_native_source_dispatch_order_and_real_stamp_regression(name, preempt_first):
+        context = Context(); rclpy.init(context=context)
+        node = Node('ap06_guard_order', context=context)
+        executor = MultiThreadedExecutor(num_threads=3, context=context)
+        guard = Hwt601FusionGuard(node, True, callback_group=ReentrantCallbackGroup())
+        index = {'raw': 0, 'yaw': 1, 'wheel': 2}[name]
+        subscription = guard.subscriptions[index]
+        pub = node.create_publisher(subscription.msg_type, subscription.topic_name,
+                                    qos_profile_sensor_data)
+        entered = threading.Event(); release = threading.Event()
+        processed = []; sample = guard._sample
+        stamp = node.get_clock().now().nanoseconds
+        first = message(node, name, stamp-20000000)
+        second = message(node, name, stamp-(10000000 if preempt_first else 30000000))
+        def paused(key, msg, delivery=None):
+            if key == name and msg.header.stamp == first.header.stamp:
+                entered.set()
+                if preempt_first:
+                    assert release.wait(3.), 'test callback release missing'
+            sample(key, msg, delivery)
+            if key == name:
+                processed.append(msg.header.stamp.sec*1000000000+msg.header.stamp.nanosec)
+        guard._sample = paused
+        executor.add_node(node)
+        spin = threading.Thread(target=executor.spin, daemon=True); spin.start()
+        try:
+            wait(lambda: pub.get_subscription_count() == 1)
+            pub.publish(first); assert entered.wait(3.)
+            if not preempt_first:
+                wait(lambda: len(processed) == 1)
+            pub.publish(second)
+            if preempt_first:
+                # Older dispatch is paused BEFORE Guard entry, reproducing B67.
+                # A reentrant group lets the newer sample overtake it; a per-source
+                # exclusive group queues it without blocking other sources.
+                time.sleep(.12)
+                release.set()
+            wait(lambda: len(processed) == 2)
+            value = guard.health.samples[name]
+            if preempt_first:
+>               assert processed == [stamp-20000000, stamp-10000000]
+E               assert [179125709413...7094126780855] == [179125709412...7094136780855]
+E                 At index 0 diff: 1791257094136780855 != 1791257094126780855
+E                 Full diff:
+E                 - [1791257094126780855, 1791257094136780855]
+E                 + [1791257094136780855, 1791257094126780855]
+
+src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py:79: AssertionError
+_ test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-yaw] _
+
+name = 'yaw', preempt_first = True
+
+    @pytest.mark.parametrize('name', ['raw', 'yaw', 'wheel'])
+    @pytest.mark.parametrize('preempt_first', [True, False], ids=['dispatch-preemption', 'real-regression'])
+    def test_native_source_dispatch_order_and_real_stamp_regression(name, preempt_first):
+        context = Context(); rclpy.init(context=context)
+        node = Node('ap06_guard_order', context=context)
+        executor = MultiThreadedExecutor(num_threads=3, context=context)
+        guard = Hwt601FusionGuard(node, True, callback_group=ReentrantCallbackGroup())
+        index = {'raw': 0, 'yaw': 1, 'wheel': 2}[name]
+        subscription = guard.subscriptions[index]
+        pub = node.create_publisher(subscription.msg_type, subscription.topic_name,
+                                    qos_profile_sensor_data)
+        entered = threading.Event(); release = threading.Event()
+        processed = []; sample = guard._sample
+        stamp = node.get_clock().now().nanoseconds
+        first = message(node, name, stamp-20000000)
+        second = message(node, name, stamp-(10000000 if preempt_first else 30000000))
+        def paused(key, msg, delivery=None):
+            if key == name and msg.header.stamp == first.header.stamp:
+                entered.set()
+                if preempt_first:
+                    assert release.wait(3.), 'test callback release missing'
+            sample(key, msg, delivery)
+            if key == name:
+                processed.append(msg.header.stamp.sec*1000000000+msg.header.stamp.nanosec)
+        guard._sample = paused
+        executor.add_node(node)
+        spin = threading.Thread(target=executor.spin, daemon=True); spin.start()
+        try:
+            wait(lambda: pub.get_subscription_count() == 1)
+            pub.publish(first); assert entered.wait(3.)
+            if not preempt_first:
+                wait(lambda: len(processed) == 1)
+            pub.publish(second)
+            if preempt_first:
+                # Older dispatch is paused BEFORE Guard entry, reproducing B67.
+                # A reentrant group lets the newer sample overtake it; a per-source
+                # exclusive group queues it without blocking other sources.
+                time.sleep(.12)
+                release.set()
+            wait(lambda: len(processed) == 2)
+            value = guard.health.samples[name]
+            if preempt_first:
+>               assert processed == [stamp-20000000, stamp-10000000]
+E               assert [179125709429...7094289174289] == [179125709428...7094299174289]
+E                 At index 0 diff: 1791257094299174289 != 1791257094289174289
+E                 Full diff:
+E                 - [1791257094289174289, 1791257094299174289]
+E                 + [1791257094299174289, 1791257094289174289]
+
+src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py:79: AssertionError
+_ test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-wheel] _
+
+name = 'wheel', preempt_first = True
+
+    @pytest.mark.parametrize('name', ['raw', 'yaw', 'wheel'])
+    @pytest.mark.parametrize('preempt_first', [True, False], ids=['dispatch-preemption', 'real-regression'])
+    def test_native_source_dispatch_order_and_real_stamp_regression(name, preempt_first):
+        context = Context(); rclpy.init(context=context)
+        node = Node('ap06_guard_order', context=context)
+        executor = MultiThreadedExecutor(num_threads=3, context=context)
+        guard = Hwt601FusionGuard(node, True, callback_group=ReentrantCallbackGroup())
+        index = {'raw': 0, 'yaw': 1, 'wheel': 2}[name]
+        subscription = guard.subscriptions[index]
+        pub = node.create_publisher(subscription.msg_type, subscription.topic_name,
+                                    qos_profile_sensor_data)
+        entered = threading.Event(); release = threading.Event()
+        processed = []; sample = guard._sample
+        stamp = node.get_clock().now().nanoseconds
+        first = message(node, name, stamp-20000000)
+        second = message(node, name, stamp-(10000000 if preempt_first else 30000000))
+        def paused(key, msg, delivery=None):
+            if key == name and msg.header.stamp == first.header.stamp:
+                entered.set()
+                if preempt_first:
+                    assert release.wait(3.), 'test callback release missing'
+            sample(key, msg, delivery)
+            if key == name:
+                processed.append(msg.header.stamp.sec*1000000000+msg.header.stamp.nanosec)
+        guard._sample = paused
+        executor.add_node(node)
+        spin = threading.Thread(target=executor.spin, daemon=True); spin.start()
+        try:
+            wait(lambda: pub.get_subscription_count() == 1)
+            pub.publish(first); assert entered.wait(3.)
+            if not preempt_first:
+                wait(lambda: len(processed) == 1)
+            pub.publish(second)
+            if preempt_first:
+                # Older dispatch is paused BEFORE Guard entry, reproducing B67.
+                # A reentrant group lets the newer sample overtake it; a per-source
+                # exclusive group queues it without blocking other sources.
+                time.sleep(.12)
+                release.set()
+            wait(lambda: len(processed) == 2)
+            value = guard.health.samples[name]
+            if preempt_first:
+>               assert processed == [stamp-20000000, stamp-10000000]
+E               assert [179125709443...7094428497985] == [179125709442...7094438497985]
+E                 At index 0 diff: 1791257094438497985 != 1791257094428497985
+E                 Full diff:
+E                 - [1791257094428497985, 1791257094438497985]
+E                 + [1791257094438497985, 1791257094428497985]
+
+src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py:79: AssertionError
+=========================== short test summary info ============================
+FAILED src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py::test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-raw]
+FAILED src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py::test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-yaw]
+FAILED src/robot_state_estimation/test/test_hwt601_guard_dispatch_order.py::test_native_source_dispatch_order_and_real_stamp_regression[dispatch-preemption-wheel]
+3 failed, 3 passed in 0.60s

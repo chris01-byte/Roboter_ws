@@ -1,0 +1,41 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+__ test_original_b65_endpoint_opportunity_does_not_authorize_its_native_stop ___
+
+    def test_original_b65_endpoint_opportunity_does_not_authorize_its_native_stop():
+        node,inputs,_,_,candidate=recorded()
+        mask=node._metric_scope_mask(inputs)
+        view=node._metric_observation_view()
+        nominal=visible_boundary_cells(inputs[0],mask,(candidate.x,candidate.y,candidate.yaw),view)
+        points={node._grid_to_world(c,r,inputs[0].info) for r,c in nominal}
+        assert len(points.intersection(candidate.observation_points))==24
+        original=[list(inputs[i].data) for i in (0,5)]
+>       assert not node._metric_native_observation_ready(
+            inputs,candidate.route,candidate,inputs,candidate.observation_points)
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_native_observation_ready'
+
+evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py:41: AttributeError
+___ test_public_selection_keeps_a_real_stop_view_and_original_served_history ___
+
+    def test_public_selection_keeps_a_real_stop_view_and_original_served_history():
+        node,inputs,_,policy,bad=recorded()
+        before={k:(a.tries,a.failures,a.completed) for k,a in policy.attempts.items()}
+        selected=node._metric_select(inputs,policy,.3)
+>       assert selected,node._frontier_rank_stats
+E       AssertionError: {'accepted': 0, 'bounded_public_observation_wait_s': 29.225183199014282, 'deferred_or_served': 1, 'raw': 14, ...}
+E       assert []
+
+evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py:51: AssertionError
+_ test_native_stop_can_authorize_a_distinct_finite_unknown_view_without_a_receipt _
+
+    def test_native_stop_can_authorize_a_distinct_finite_unknown_view_without_a_receipt():
+        node,inputs,_,_,candidate=recorded()
+>       stop=node._metric_rollout_stop_pose(inputs,candidate.route,candidate.yaw,native_plan=True)
+E       AttributeError: 'ExploreNode' object has no attribute '_metric_rollout_stop_pose'
+
+evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py:66: AttributeError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py::test_original_b65_endpoint_opportunity_does_not_authorize_its_native_stop
+FAILED evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py::test_public_selection_keeps_a_real_stop_view_and_original_served_history
+FAILED evidence/ap06-repo/src/explore/test/test_metric_stop_observation.py::test_native_stop_can_authorize_a_distinct_finite_unknown_view_without_a_receipt
+3 failed in 2.43s

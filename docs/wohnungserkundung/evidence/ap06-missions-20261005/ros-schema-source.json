@@ -1,0 +1,11 @@
+{
+  "upstream_mirror_url": "https://raw.githubusercontent.com/ros-infrastructure/rep/master/xsd/package_format3.xsd",
+  "canonical_url": "http://download.ros.org/schema/package_format3.xsd",
+  "sha256": "f096a197ed6d7878984bb2501a55f7f1bd4895d254399fb7857e154bfb644f41",
+  "bytes": 5148,
+  "included_schema": {
+    "upstream_mirror_url": "https://raw.githubusercontent.com/ros-infrastructure/rep/master/xsd/package_common.xsd",
+    "sha256": "941ea8645344f3c4b7b9d7e68799898309d65a18225fa9cbef4169d95d1a3211",
+    "bytes": 3007
+  }
+}

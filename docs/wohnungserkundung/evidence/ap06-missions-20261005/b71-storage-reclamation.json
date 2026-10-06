@@ -1,0 +1,11 @@
+{
+  "kind": "Own unused downloaded Docker base cache, no source/log/map removal",
+  "removed_image": "ros:humble-ros-base",
+  "id": "sha256:63b6841678ad1277ea7bb2a65942cad7999da6acd29587a8da210ed5b0928d0a",
+  "qualification_container": "ap03-nav2",
+  "qualification_image": "ap03-nav2-humble-flat:latest",
+  "minimum_map_save_reserve_bytes": 536870912,
+  "advertised_image_bytes": 765096774,
+  "actual_reclaimed_image_bytes": 0,
+  "operation": "Removed unused tag only; image layers shared, no image-layer capacity reclaimed"
+}

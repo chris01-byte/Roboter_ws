@@ -2934,3 +2934,11 @@ beim gestoppten Neustart deaktivieren; `active_drive=false`,
 `enable_auto_explore=false`. Kein Merge/Force-Push/private Vorfahren.
 Stufe 3 offen, konkrete Quellenzeit-/Trajektoriegrenzen siehe STATUS §4.
 **ROS beendet; Rechner laut Nutzerklärung eingeschaltet lassen.**
+
+## 06.10.2026 – AP-06 Gesamtmissionsreparatur nur im isolierten Softwareprüfstand
+
+Aktueller Reparaturstand `d9ade6e` mit Testkorrektur `b51fb0a` verändert Kandidaten-/Stoppsichtprüfung und begrenzte öffentliche Beobachtungswahl. Vorgängerkorrektur `2074efa` umfasst zusätzlich gepinnte NavFn-Zellmittenabbildung als separates Planner-Overlay; Explorer und tatsächliches Plugin müssen bei späterer Zielprüfung gemeinsam zum qualifizierten Quellstand passen. Native Controllerparameter/Kontur-/Fristreserven unverändert. Keine neue Software auf dem Jetson installiert, keine Hardwarefahrt oder Autostartänderung. Vollständige Abnahmestufe und nächster Schritt ausschließlich in Wohnungserkundung/STATUS. Autorisierter Jetson-Shutdown wartet auf Arbeitsabschluss und tatsächlichen technisch verifizierten Jetson-Befehlszugang; Cloud-Host bleibt unangetastet. Rückfall: eigene Reparaturcommits gezielt zurücknehmen bzw. separates temporäres NavFn-Overlay weglassen; keine pauschale Rückkehr alter Checkouts.
+
+Zusatzstand `7a2b09e`/`b8189a9`: HWT-Sampledispatch bei tatsächlich reentranten Verbrauchern je Quelle serialisiert, bestehende serielle Fahrtor-/Statusbesitzer erhalten. Keine Timestamp-/Frist-/QoS-/Hardwareänderung; geordnete Native-DDS-Gegenproben und alte Gate-/HOLD-Fälle softwareseitig geprüft. Weiterhin ausschließlich isolierter Prüfstand, keine neue Jetson-Installation.
+
+Zusatzstand `17fba88`: nachweislich partielle Frontierbeobachtung bleibt als begrenzte Restarbeit erhalten; ursprüngliche Sicherheits-, Zeit-, Try- und Quellenregeln gelten weiter. Verlustfreie Ereigniskompression betrifft ausschließlich den Softwareprüfstand. Noch keine Zielsysteminstallation oder physische Wirkung ausgeführt. Vor einer späteren Zielprüfung qualifizierten vollständigen Explorer-/NavFn-Stand gemeinsam übertragen; maßgebliche Gesamtqualifikation ausschließlich STATUS.

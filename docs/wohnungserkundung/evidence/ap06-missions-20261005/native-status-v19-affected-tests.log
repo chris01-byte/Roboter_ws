@@ -1,0 +1,55 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [ 10%]
+........................................................................ [ 13%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 37%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+........................................................................ [ 57%]
+.......................F................................................ [ 61%]
+........................................................................ [ 64%]
+........................................................................ [ 68%]
+........................................................................ [ 71%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........................................................................ [ 88%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+........................................................................ [ 98%]
+.........................                                                [100%]
+=================================== FAILURES ===================================
+_____ test_rejected_query_can_try_distinct_pose_without_new_scan_or_reset ______
+
+    def test_rejected_query_can_try_distinct_pose_without_new_scan_or_reset():
+        policy = MetricTaskPolicy(.6, 30., 2)
+        key = policy.identify((1.5, 0.))
+        first = replace(candidate(key), evidence_key='same-real-local-raster')
+        policy.record(first, 'proposal_rejected', 10., first.fingerprint,
+                      count_failure=False)
+        second = replace(first, y=-.18)
+        assert policy.identify(second.frontier_xy, (second.x, second.y)) == key
+        assert not policy.eligible(key, (second.x, second.y), 39., first.fingerprint, first.evidence_key)
+        assert not policy.eligible(key, (first.x, first.y), 41., first.fingerprint, first.evidence_key)
+        assert not policy.eligible(key, (first.x, -.15), 41., first.fingerprint, first.evidence_key)
+>       assert policy.eligible(key, (second.x, second.y), 41., first.fingerprint, first.evidence_key)
+E       AssertionError: assert False
+E        +  where False = <bound method MetricTaskPolicy.eligible of MetricTaskPolicy(radius=0.6, cooldown_s=30.0, retry_limit=2, attempts={'met...aaaaaaaaaa', completed=False, reason='proposal_rejected', tries=1, evidence_key='same-real-local-raster')}, next_id=1)>('metric-task-1', (1.0, -0.18), 41.0, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'same-real-local-raster')
+E        +    where <bound method MetricTaskPolicy.eligible of MetricTaskPolicy(radius=0.6, cooldown_s=30.0, retry_limit=2, attempts={'met...aaaaaaaaaa', completed=False, reason='proposal_rejected', tries=1, evidence_key='same-real-local-raster')}, next_id=1)> = MetricTaskPolicy(radius=0.6, cooldown_s=30.0, retry_limit=2, attempts={'metric-task-1': MetricAttempt(frontier_xy=(1.5...aaaaaaaaaaa', completed=False, reason='proposal_rejected', tries=1, evidence_key='same-real-local-raster')}, next_id=1).eligible
+E        +    and   'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' = MetricCandidate(task_id='metric-task-1', x=1.0, y=0.0, yaw=0.0, frontier_xy=(1.5, 0.0), route=((0.0, 0.0), (1.0, 0.0))...aaaaaaaaaaaaaaaaa', revision=1, requires_nav2_plan=False, observation_points=(), evidence_key='same-real-local-raster').fingerprint
+E        +    and   'same-real-local-raster' = MetricCandidate(task_id='metric-task-1', x=1.0, y=0.0, yaw=0.0, frontier_xy=(1.5, 0.0), route=((0.0, 0.0), (1.0, 0.0))...aaaaaaaaaaaaaaaaa', revision=1, requires_nav2_plan=False, observation_points=(), evidence_key='same-real-local-raster').evidence_key
+
+src/explore/test/test_metric_proposal_alternatives.py:19: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_proposal_alternatives.py::test_rejected_query_can_try_distinct_pose_without_new_scan_or_reset
+1 failed, 2112 passed in 129.98s (0:02:09)

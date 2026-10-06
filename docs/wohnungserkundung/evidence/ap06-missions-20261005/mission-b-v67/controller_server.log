@@ -1,0 +1,57 @@
+[INFO] [1791256874.469553991] [controller_server]: 
+	controller_server lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791256874.477074287] [controller_server]: Creating controller server
+[INFO] [1791256874.517148109] [local_costmap.local_costmap]: 
+	local_costmap lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791256874.519531620] [local_costmap.local_costmap]: Creating Costmap
+[INFO] [1791256876.132886958] [controller_server]: Configuring controller interface
+[INFO] [1791256876.133224447] [controller_server]: getting goal checker plugins..
+[INFO] [1791256876.133647892] [controller_server]: Controller frequency set to 20.0000Hz
+[INFO] [1791256876.133689083] [local_costmap.local_costmap]: Configuring
+[INFO] [1791256876.144593747] [local_costmap.local_costmap]: Using plugin "obstacle_layer"
+[INFO] [1791256876.149055286] [local_costmap.local_costmap]: Subscribed to Topics: vl53_left vl53_right vl53_left_mark vl53_right_mark oak
+[INFO] [1791256876.166085016] [local_costmap.local_costmap]: Initialized plugin "obstacle_layer"
+[INFO] [1791256876.166138655] [local_costmap.local_costmap]: Using plugin "inflation_layer"
+[INFO] [1791256876.166494321] [local_costmap.local_costmap]: Initialized plugin "inflation_layer"
+[INFO] [1791256876.179163210] [controller_server]: Created progress_checker : progress_checker of type nav2_controller::PoseProgressChecker
+[INFO] [1791256876.180771165] [controller_server]: Created goal checker : general_goal_checker of type nav2_controller::SimpleGoalChecker
+[INFO] [1791256876.181833283] [controller_server]: Controller Server has general_goal_checker  goal checkers available.
+[INFO] [1791256876.183642796] [controller_server]: Created controller : FollowPath of type nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791256876.187202733] [controller_server]: Controller Server has FollowPath  controllers available.
+[INFO] [1791256876.236081689] [controller_server]: Activating
+[INFO] [1791256876.236142259] [local_costmap.local_costmap]: Activating
+[INFO] [1791256876.236154807] [local_costmap.local_costmap]: Checking transform
+[INFO] [1791256876.236307923] [local_costmap.local_costmap]: start
+[INFO] [1791256876.442027626] [controller_server]: Activating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791256876.442090258] [controller_server]: Creating bond (controller_server) to lifecycle manager.
+[INFO] [1791256878.690697710] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256878.691698639] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256878.692470238] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_left_link' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256878.692504399] [local_costmap.local_costmap]: Message Filter dropping message: frame 'vl53_right_link' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256878.696181259] [local_costmap.local_costmap]: Message Filter dropping message: frame 'ap06_camera_frame' at time 1791256878.386 for reason 'the timestamp on the message is earlier than all the data in the transform cache'
+[INFO] [1791256903.998501288] [controller_server]: Received a goal, begin computing control effort.
+[WARN] [1791256903.998871084] [controller_server]: No goal checker was specified in parameter 'current_goal_checker'. Server will use only plugin loaded general_goal_checker . This warning will appear once.
+[INFO] [1791256907.149037641] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791256907.149107444] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256911.589794074] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791256913.390164019] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791256913.390220602] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256945.780129145] [controller_server]: Received a goal, begin computing control effort.
+[INFO] [1791256959.930624936] [controller_server]: Goal was canceled. Stopping the robot.
+[INFO] [1791256959.930693968] [controller_server]: [follow_path] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791256962.583530917] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791256962.583641085] [controller_server]: Running Nav2 LifecycleNode rcl preshutdown (controller_server)
+[INFO] [1791256962.583724658] [controller_server]: Deactivating
+[INFO] [1791256962.583741754] [controller_server]: Deactivating controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791256962.583760511] [local_costmap.local_costmap]: Deactivating
+[INFO] [1791256962.636606311] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791256962.646841189] [controller_server]: Cleaning up
+[INFO] [1791256962.646878544] [controller_server]: Cleaning up controller: FollowPath of type regulated_pure_pursuit_controller::RegulatedPurePursuitController
+[INFO] [1791256962.646928548] [local_costmap.local_costmap]: Cleaning up
+[INFO] [1791256962.669314035] [controller_server]: Destroying bond (controller_server) to lifecycle manager.
+[INFO] [1791256962.681406712] [local_costmap.local_costmap]: Destroying
+[INFO] [1791256962.700899775] [controller_server]: Destroying
