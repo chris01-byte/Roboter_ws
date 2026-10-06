@@ -1,0 +1,136 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+........................................................................ [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 52%]
+........................................................................ [ 55%]
+........................................................................ [ 59%]
+........................................................................ [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........................................................................ [ 89%]
+.............F.......................................................... [ 93%]
+........................................................................ [ 96%]
+............................................................             [100%]
+=================================== FAILURES ===================================
+_______ test_passive_wheel_continues_during_busy_callback[default-False] _______
+
+stop_wheel = False, busy_group = 'default'
+
+    @pytest.mark.parametrize('stop_wheel', [False, True])
+    @pytest.mark.parametrize('busy_group', ['default', 'imu_status'])
+    def test_passive_wheel_continues_during_busy_callback(stop_wheel, busy_group):
+        assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
+        assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
+        rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true'])
+        gate = CmdVelMissionGate()
+        probe = Node('gate_source_callback_test_inputs')
+        executor = MultiThreadedExecutor(num_threads=3)
+        executor.add_node(gate)
+        thread = threading.Thread(target=executor.spin, daemon=True)
+        entered, exited = threading.Event(), threading.Event()
+        release = threading.Event()
+        def busy(_msg):
+            entered.set()
+            # Explicit barrier keeps the intended callback busy while the probe
+            # evaluates source freshness. Scheduling delay before acquiring the
+            # health lock must not accidentally end the simulated blocking work.
+            release.wait(timeout=2.)
+            exited.set()
+        gate.create_subscription(String, '/test/gate_busy_callback', busy, 10,
+                                 callback_group=(gate._hwt_source_cb
+                                                 if busy_group == 'imu_status' else None))
+        trigger = probe.create_publisher(String, '/test/gate_busy_callback', 10)
+        raw = probe.create_publisher(Imu, '/shadow/hwt601/imu/data_raw', 10)
+        yaw = probe.create_publisher(Imu, '/shadow/hwt601/imu/yaw_rate', 10)
+        wheel = probe.create_publisher(Odometry, '/fusion/hwt601/wheel_odom_raw', 10)
+        template = ready_health(False, now=time.monotonic())
+        statuses = {
+            key: probe.create_publisher(String, topic, 10)
+            for key, topic in [('raw', '/shadow/hwt601/raw_status_json'),
+                               ('yaw', '/shadow/hwt601/status_json'),
+                               ('wheel', '/shadow/hwt601/wheel_status_json')]}
+        def publish(include_wheel=True):
+            stamp = probe.get_clock().now().to_msg()
+            for pub, frame in [(raw, 'hwt601_link'), (yaw, 'base_link')]:
+                m = Imu(); m.header.stamp = stamp; m.header.frame_id = frame
+                m.angular_velocity_covariance[8] = .01; pub.publish(m)
+            if include_wheel:
+                m = Odometry(); m.header.stamp = stamp; m.header.frame_id = 'odom'
+                m.child_frame_id = 'base_link'; m.twist.covariance[0] = .01
+                wheel.publish(m)
+            for key, pub in statuses.items():
+                pub.publish(String(data=json.dumps(template.statuses[key][0])))
+            time.sleep(.01)
+        try:
+            thread.start()
+            end = time.monotonic()+3
+            while time.monotonic()<end:
+                publish()
+                with gate._hwt_guard.health.lock:
+                    if gate._hwt_guard.health.was_ready:
+                        break
+            assert gate._hwt_guard.health.was_ready
+            trigger.publish(String(data='block ordinary callback'))
+            end = time.monotonic()+2
+            while not entered.is_set() and time.monotonic()<end:
+                publish()
+            assert entered.is_set()
+            with gate._hwt_guard.health.lock:
+                before = gate._hwt_guard.health.samples['wheel'][0]
+            # At .25 s the ordinary callback is still blocked. Actual source
+            # callbacks must have progressed independently, without restamping.
+            end = time.monotonic()+.25
+            while time.monotonic()<end:
+                publish(not stop_wheel)
+            assert not exited.is_set()
+            with gate._hwt_guard.health.lock:
+                after = gate._hwt_guard.health.samples['wheel'][0]
+                if not stop_wheel:
+                    assert after > before
+>                   assert time.monotonic()-gate._hwt_guard.health.samples['wheel'][2] < .18
+E                   assert (191329.127523056 - 191328.79136521602) < 0.18
+E                    +  where 191329.127523056 = <built-in function monotonic>()
+E                    +    where <built-in function monotonic> = time.monotonic
+
+src/robot_navigation/test/test_hwt601_gate_source_callbacks.py:95: AssertionError
+----------------------------- Captured stderr call -----------------------------
+[WARN] [1791225377.823792293] [cmd_vel_mission_gate]: Nav2-Fahrtor aktiv: Befehle nur bei explizit freigegebener Mission und belastbarer Lokalisierung.
+=============================== warnings summary ===============================
+src/robot_navigation/test/test_hwt601_gate_source_callbacks.py::test_passive_wheel_continues_during_busy_callback[default-False]
+  Warning: Exception in thread Thread-15 (spin)
+  
+  Traceback (most recent call last):
+    File "/usr/lib/python3.10/threading.py", line 1016, in _bootstrap_inner
+      self.run()
+    File "/usr/lib/python3.10/threading.py", line 953, in run
+      self._target(*self._args, **self._kwargs)
+    File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 294, in spin
+      self.spin_once()
+    File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 806, in spin_once
+      self._spin_once_impl(timeout_sec)
+    File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 787, in _spin_once_impl
+      handler, entity, node = self.wait_for_ready_callbacks(
+    File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 723, in wait_for_ready_callbacks
+      return next(self._cb_iter)
+    File "/opt/ros/humble/local/lib/python3.10/dist-packages/rclpy/executors.py", line 582, in _wait_for_ready_callbacks
+      context_stack.enter_context(gc.handle)
+  AttributeError: 'NoneType' object has no attribute 'handle'
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+=========================== short test summary info ============================
+FAILED src/robot_navigation/test/test_hwt601_gate_source_callbacks.py::test_passive_wheel_continues_during_busy_callback[default-False]
+1 failed, 1931 passed, 1 warning in 53.30s

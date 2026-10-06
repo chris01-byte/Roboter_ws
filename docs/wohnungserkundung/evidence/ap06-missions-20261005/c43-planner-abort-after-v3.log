@@ -1,0 +1,114 @@
+....FF...................                                                [100%]
+=================================== FAILURES ===================================
+_ test_abort_without_motion_keeps_alternatives_and_original_attempt_cap[True] __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1a6177ee30>
+alternate = True
+
+    @pytest.mark.parametrize('alternate', [True, False])
+    def test_abort_without_motion_keeps_alternatives_and_original_attempt_cap(monkeypatch, alternate):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        # Two genuinely disconnected frontier clusters, not a second UUID for
+        # the same rejected neighbourhood in the unchanged 30-second cooldown.
+        for row in range(18, 23):
+            for col in range(25, grid.info.width):
+                grid.data[row*grid.info.width+col] = 0
+        grid.header.stamp.nanosec = 20_000_000
+        node._on_map(grid)
+        node._on_metric_map_status(status(grid, accepted=3, observed=3, when=100.02))
+        node._max_frontier_goals = 2
+        node._max_failed_goals = 1
+        node._prealign_to_goal = lambda *_args, **_kwargs: ('skipped',)
+        requests, dispatched = [], []
+        def planner(target, stopped):
+            requests.append(target)
+            assert not stopped()
+            if len(requests) == 1 or not alternate:
+                return None, 'nav2_plan_aborted'
+            path = Path(); path.header.frame_id = 'map'
+            for x, y in target.route:
+                pose = PoseStamped(); pose.pose.position.x = x; pose.pose.position.y = y
+                pose.pose.orientation.z = math.sin(target.yaw/2)
+                pose.pose.orientation.w = math.cos(target.yaw/2)
+                path.poses.append(pose)
+            return path, None
+        node._metric_request_nav_plan = planner
+        def navigate(*_args, **_kwargs):
+            target = requests[-1]; dispatched.append(target); clock[0] += .1
+            newer = copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col, row = node._world_to_grid(*xy, newer.info)
+                newer.data[row*newer.info.width+col] = 0
+            newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+            node._on_map(newer)
+            node._on_metric_map_status(status(newer, accepted=3, observed=3, when=100+clock[0]-10))
+            node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
+            return 'success'
+        node._navigate_to = navigate
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal == ['abort']  # original cap, no false completion
+        assert len(requests) == node._metric_status['attempts'] == 2, node._metric_status
+>       assert requests[0].task_id != requests[1].task_id
+E       AssertionError: assert 'metric-task-1' != 'metric-task-1'
+E        +  where 'metric-task-1' = MetricCandidate(task_id='metric-task-1', x=0.8239009663000588, y=-0.26304951684997, yaw=-0.38438696014455104, frontier...500000000000003, 0.9500000000000002)), evidence_key='f9958dadc2933ffbccd4f8a369fdc8b3b8759ca9f49f807ffbad82c09ae9fb6c').task_id
+E        +  and   'metric-task-1' = MetricCandidate(task_id='metric-task-1', x=0.8239009663000592, y=0.3630495168499711, yaw=0.38438696014455215, frontier...500000000000003, 0.5500000000000003)), evidence_key='f9958dadc2933ffbccd4f8a369fdc8b3b8759ca9f49f807ffbad82c09ae9fb6c').task_id
+
+src/explore/test/test_metric_planner_abort.py:85: AssertionError
+_ test_abort_without_motion_keeps_alternatives_and_original_attempt_cap[False] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1a6177f2b0>
+alternate = False
+
+    @pytest.mark.parametrize('alternate', [True, False])
+    def test_abort_without_motion_keeps_alternatives_and_original_attempt_cap(monkeypatch, alternate):
+        node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        # Two genuinely disconnected frontier clusters, not a second UUID for
+        # the same rejected neighbourhood in the unchanged 30-second cooldown.
+        for row in range(18, 23):
+            for col in range(25, grid.info.width):
+                grid.data[row*grid.info.width+col] = 0
+        grid.header.stamp.nanosec = 20_000_000
+        node._on_map(grid)
+        node._on_metric_map_status(status(grid, accepted=3, observed=3, when=100.02))
+        node._max_frontier_goals = 2
+        node._max_failed_goals = 1
+        node._prealign_to_goal = lambda *_args, **_kwargs: ('skipped',)
+        requests, dispatched = [], []
+        def planner(target, stopped):
+            requests.append(target)
+            assert not stopped()
+            if len(requests) == 1 or not alternate:
+                return None, 'nav2_plan_aborted'
+            path = Path(); path.header.frame_id = 'map'
+            for x, y in target.route:
+                pose = PoseStamped(); pose.pose.position.x = x; pose.pose.position.y = y
+                pose.pose.orientation.z = math.sin(target.yaw/2)
+                pose.pose.orientation.w = math.cos(target.yaw/2)
+                path.poses.append(pose)
+            return path, None
+        node._metric_request_nav_plan = planner
+        def navigate(*_args, **_kwargs):
+            target = requests[-1]; dispatched.append(target); clock[0] += .1
+            newer = copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col, row = node._world_to_grid(*xy, newer.info)
+                newer.data[row*newer.info.width+col] = 0
+            newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+            node._on_map(newer)
+            node._on_metric_map_status(status(newer, accepted=3, observed=3, when=100+clock[0]-10))
+            node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
+            return 'success'
+        node._navigate_to = navigate
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal == ['abort']  # original cap, no false completion
+        assert len(requests) == node._metric_status['attempts'] == 2, node._metric_status
+>       assert requests[0].task_id != requests[1].task_id
+E       AssertionError: assert 'metric-task-1' != 'metric-task-1'
+E        +  where 'metric-task-1' = MetricCandidate(task_id='metric-task-1', x=0.8239009663000588, y=-0.26304951684997, yaw=-0.38438696014455104, frontier...500000000000003, 0.9500000000000002)), evidence_key='f9958dadc2933ffbccd4f8a369fdc8b3b8759ca9f49f807ffbad82c09ae9fb6c').task_id
+E        +  and   'metric-task-1' = MetricCandidate(task_id='metric-task-1', x=0.8239009663000592, y=0.3630495168499711, yaw=0.38438696014455215, frontier...500000000000003, 0.5500000000000003)), evidence_key='f9958dadc2933ffbccd4f8a369fdc8b3b8759ca9f49f807ffbad82c09ae9fb6c').task_id
+
+src/explore/test/test_metric_planner_abort.py:85: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_planner_abort.py::test_abort_without_motion_keeps_alternatives_and_original_attempt_cap[True]
+FAILED src/explore/test/test_metric_planner_abort.py::test_abort_without_motion_keeps_alternatives_and_original_attempt_cap[False]
+2 failed, 23 passed in 8.82s

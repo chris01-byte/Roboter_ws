@@ -1,0 +1,27 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_actual_b60_current_view_waits_before_unproved_distant_work ________
+
+    def test_actual_b60_current_view_waits_before_unproved_distant_work():
+        from explore.metric_progress import reachable_remainder
+        n,inputs,p=frozen()
+        assert not n._metric_egress_expired and all(not e.valid for e in n._metric_egress)
+        before={k:(a.tries,a.failures,a.completed,a.retry_after) for k,a in p.attempts.items()}
+        def distant(*_,**__):pytest.fail('Proved public view with only cooldown remaining must wait before distant work')
+        n._frontier_approach_goal=distant
+>       assert n._metric_select(inputs,p,.3)==[]
+E       AssertionError: assert [MetricCandid...b913ce9138f')] == []
+E         Left contains one more item: MetricCandidate(task_id='metric-task-2', x=1.1336161377731726, y=-0.5598775924465696, yaw=-1.7105545091183536, frontie...24999941326678, -0.1649999963119626)), evidence_key='616963db186128b56bc01e7db1751ac09a5a61109cc1d6a453067b913ce9138f')
+E         Full diff:
+E           [
+E         -  ,
+E         +  MetricCandidate(task_id='metric-task-2',
+E         +                  x=1.1336161377731726,
+E         +                  y=-0.5598775924465696,...
+E         
+E         ...Full output truncated (75 lines hidden), use '-vv' to show
+
+evidence/ap06-repo/src/explore/test/test_metric_public_cooldown.py:107: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_public_cooldown.py::test_actual_b60_current_view_waits_before_unproved_distant_work
+1 failed, 9 deselected in 0.67s

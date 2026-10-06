@@ -1,0 +1,37 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______ test_actual_a54_short_view_precedes_unproved_distant_approach_work ______
+
+    def test_actual_a54_short_view_precedes_unproved_distant_approach_work():
+        node, inputs, metadata = fixture('ap06_a54_selection')
+        state = metadata['checkpoint']
+        policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        def unavailable(*_, **__):
+            pytest.fail('Bounded proved public view must precede distant unproved approach work')
+        node._frontier_approach_goal = unavailable
+>       candidates = node._metric_select(inputs, policy, .3)
+
+test/test_metric_public_observation.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+explore/metric_frontier_runtime.py:1944: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+explore/metric_frontier_runtime.py:1587: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+explore/metric_frontier_runtime.py:1675: in _metric_candidates_in_pass
+    goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+_ = (<explore.explore_node.Frontier object at 0x7f951339fbe0>, (0.08576338304633724, 0.7082247811511543), nav_msgs.msg.Occ..., -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]))
+__ = {'approach_direction': (0.7071067811865475, 0.7071067811865475), 'search_mask': array([[False, False, False, ..., Fals...lse],
+       [False, False, False, ..., False, False, False],
+       [False, False, False, ..., False, False, False]])}
+
+    def unavailable(*_, **__):
+>       pytest.fail('Bounded proved public view must precede distant unproved approach work')
+E       Failed: Bounded proved public view must precede distant unproved approach work
+
+test/test_metric_public_observation.py:70: Failed
+=========================== short test summary info ============================
+FAILED test/test_metric_public_observation.py::test_actual_a54_short_view_precedes_unproved_distant_approach_work
+1 failed, 6 deselected in 0.40s

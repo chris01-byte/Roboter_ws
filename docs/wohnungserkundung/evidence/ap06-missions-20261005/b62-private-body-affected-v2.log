@@ -1,0 +1,40 @@
+........................................................................ [ 30%]
+........................................................................ [ 61%]
+..................................................F..................... [ 92%]
+..................                                                       [100%]
+=================================== FAILURES ===================================
+______ test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement ______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fc50b3a6140>
+
+    def test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement(monkeypatch):
+        from types import SimpleNamespace
+        from dataclasses import replace
+        from geometry_msgs.msg import TransformStamped
+        from explore.portal_source_adapter import raw_map_portal_source_from_values
+        from explore.metric_frontier import footprint_clear
+        from test_metric_frontier import body_input_fixture
+        node,evidence,grid,arrays,metadata,inside=snapshot()
+        runtime=body_input_fixture(monkeypatch,10.01)
+        runtime._robot_pose_sample=lambda:((0.,0.,0.),0.)
+        grid.header.stamp.sec=100
+        source=raw_map_portal_source_from_values(**runtime._metric_grid_values(grid))
+        runtime._metric_raw=(grid,source,10.)
+        runtime._metric_correlation=replace(runtime._metric_correlation,fingerprint=source.fingerprint)
+        runtime._global_costmap=grid
+        transform=TransformStamped();transform.header.stamp.sec=100
+        transform.transform.rotation.w=1.
+        runtime._tf_buffer=SimpleNamespace(lookup_transform=lambda *_:transform)
+        first=runtime._metric_inputs()[3].copy()
+        transform.transform.translation.x=.01
+        runtime._robot_pose_sample=lambda:(tuple(metadata['pose']),0.)
+        current=runtime._metric_inputs()[3]
+>       assert np.array_equal(first,current)
+E       assert False
+E        +  where False = <function array_equal at 0x7fc510f55c60>(array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]), array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]))
+E        +    where <function array_equal at 0x7fc510f55c60> = np.array_equal
+
+src/explore/test/test_metric_partial_reference.py:96: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_partial_reference.py::test_measured_goal_retains_fixed_first_body_proof_on_tf_refinement
+1 failed, 233 passed in 31.82s

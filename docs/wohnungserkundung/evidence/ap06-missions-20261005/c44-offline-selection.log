@@ -1,0 +1,45 @@
+ERROR ValueError('frontier_candidate_processing_budget_exhausted')
+SECONDS 5.0144925610220525 RANKING {'raw': 2, 'unsafe': 2, 'deferred_or_served': 0, 'accepted': 0, 'route_rejections': {'no_visible_frontier': 2}}
+         6661148 function calls (6659268 primitive calls) in 5.013 seconds
+
+   Ordered by: cumulative time
+   List reduced from 310 to 35 due to restriction <35>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    5.013    5.013 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1778(_metric_select)
+        1    0.000    0.000    5.013    5.013 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1456(_metric_candidates)
+        1    0.082    0.082    5.013    5.013 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1467(_metric_candidates_in_pass)
+      121    2.354    0.019    2.672    0.022 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py:107(visible_boundary_cells)
+       65    0.223    0.003    1.614    0.025 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py:10(local_evidence)
+   230006    0.854    0.000    1.219    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3768(_grid_to_world)
+      193    0.006    0.000    0.402    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1054(_metric_nav2_proposal)
+4005/2125    0.007    0.000    0.278    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+      199    0.002    0.000    0.264    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:962(_metric_standard_waypoints_clear)
+      877    0.001    0.000    0.216    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+      242    0.001    0.000    0.208    0.001 <__array_function__ internals>:2(clip)
+      242    0.001    0.000    0.207    0.001 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:2046(clip)
+      242    0.000    0.000    0.206    0.001 {method 'clip' of 'numpy.ndarray' objects}
+      242    0.001    0.000    0.206    0.001 /usr/lib/python3/dist-packages/numpy/core/_methods.py:125(_clip)
+      242    0.199    0.001    0.199    0.001 /usr/lib/python3/dist-packages/numpy/core/_methods.py:106(_clip_dep_invoke_with_casting)
+      270    0.000    0.000    0.178    0.001 {built-in method builtins.all}
+      330    0.110    0.000    0.175    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:253(footprint_poses_clear)
+        6    0.002    0.000    0.174    0.029 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:817(_metric_route)
+      199    0.126    0.001    0.155    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:122(route_cells)
+        6    0.000    0.000    0.142    0.024 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:884(_metric_waypoints_clear)
+      524    0.001    0.000    0.124    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:978(<genexpr>)
+   290291    0.114    0.000    0.114    0.000 {built-in method builtins.round}
+    17757    0.010    0.000    0.105    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1069(<genexpr>)
+       65    0.085    0.001    0.085    0.001 {built-in method builtins.repr}
+        5    0.052    0.010    0.085    0.017 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:570(rpp_trajectory)
+      705    0.070    0.000    0.070    0.000 {method 'astype' of 'numpy.ndarray' objects}
+        3    0.001    0.000    0.061    0.020 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3794(_frontier_approach_goal)
+       10    0.000    0.000    0.053    0.005 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1002(<genexpr>)
+        5    0.049    0.010    0.052    0.010 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:240(connected_mask)
+   700837    0.050    0.000    0.050    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_quaternion.py:191(z)
+   700837    0.050    0.000    0.050    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_quaternion.py:176(y)
+   700913    0.048    0.000    0.048    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/nav_msgs/msg/_map_meta_data.py:208(origin)
+   468360    0.035    0.000    0.035    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_pose.py:129(position)
+   468371    0.034    0.000    0.034    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/nav_msgs/msg/_map_meta_data.py:163(resolution)
+   257536    0.027    0.000    0.027    0.000 {built-in method math.dist}
+
+

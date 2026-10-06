@@ -1,0 +1,5 @@
+subscriptions 0 last_state []
+Traceback (most recent call last):
+  File "/evidence/ap06-missions-20261005/cancel_a54_confirmed.py", line 12, in <module>
+    if not p.get_subscription_count():raise RuntimeError('cancel publisher has no discovered subscriber')
+RuntimeError: cancel publisher has no discovered subscriber

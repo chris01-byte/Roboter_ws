@@ -1,0 +1,213 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 14%]
+........................................................................ [ 18%]
+........................................................................ [ 22%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 33%]
+........................................................................ [ 37%]
+........................................................................ [ 40%]
+........................................................................ [ 44%]
+........................................................................ [ 48%]
+........................................................................ [ 52%]
+........................................................................ [ 55%]
+........................................................................ [ 59%]
+................................................FF...................... [ 63%]
+........................................................................ [ 67%]
+........................................................................ [ 70%]
+........................................................................ [ 74%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 85%]
+........................................................................ [ 89%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+............................................................             [100%]
+=================================== FAILURES ===================================
+____ test_live_task_selection_proves_one_goal_and_looks_past_served_history ____
+
+    def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
+        from explore.metric_frontier import MetricTaskPolicy
+        node, inputs, _ = ordinary_departure_fixture()
+        policy = MetricTaskPolicy(.6, 30., 2)
+        first = node._metric_select(inputs, policy, .3)
+        assert first and not first[0].requires_nav2_plan
+        assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
+                or node._frontier_rank_stats.get('bounded_start_observation'))
+        assert node._metric_standard_waypoints_clear(inputs, first[0].route, first[0].yaw)
+        policy.record(first[0], 'observed', time.monotonic(), first[0].fingerprint)
+>       second = node._metric_select(inputs, policy, .3)
+
+src/explore/test/test_metric_start_observation.py:168: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+src/explore/explore/metric_frontier_runtime.py:1766: in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+src/explore/explore/metric_frontier_runtime.py:1449: in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <explore.explore_node.ExploreNode object at 0x7fb651fb2380>
+inputs = [nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...]
+min_frontier = 0.3
+
+    def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
+        """Stateless candidate/adapter level; mission history is applied separately.
+    
+        Explicit frontiers/view allow the AP-04 comparison to use exactly the
+        same approach, sensor sight, footprint, scope and route validation.
+        """
+        selection_started = time.monotonic()
+        grid, correlation, pose, *_ = inputs
+        q = grid.info.origin.orientation
+        scope_mask = None if not hasattr(self, '_metric_scope') else rasterize_scope(self._metric_scope, context=correlation.context,
+            width=grid.info.width, height=grid.info.height, resolution_m=grid.info.resolution,
+            origin_x_m=grid.info.origin.position.x, origin_y_m=grid.info.origin.position.y,
+            origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
+            maximum_cells=self._wohnungserkundung_evidence_max_cells)
+        live_view = False
+        if frontiers is None:
+            if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
+                # Import here to avoid an ExploreNode module cycle.
+                from .explore_node import Frontier
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                frontiers = []
+                for sample in samples:
+                    frontier = Frontier(sample.xy, sample.size)
+                    frontier.approach_direction = sample.inward
+                    frontiers.append(frontier)
+                view = self._metric_observation_view()
+                live_view = True
+            else:
+                frontiers = self._detect_frontiers(grid, min_frontier)
+        candidates = []
+        stats = dict(raw=len(frontiers), unsafe=0, deferred_or_served=0, accepted=0,route_rejections={})
+        self._frontier_rank_stats = stats
+        self._metric_prepare_egress(inputs)
+        search_mask=self._metric_seed_mask(inputs)
+        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, _ = self._metric_selection_memo(inputs)
+        policy = None if memo is None else memo.get('policy')
+        # Before expensive boundary detours, prefer one useful proved forward
+        # observation in the existing local search. Start from its far bound:
+        # RPP's 15-cm acceptance must not reduce every departure to a tiny hop.
+        # All positions derive from current pose, full contour and real sight.
+        if (policy is not None and live_view
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and not self._metric_egress_expired):
+            minimum = max(self._min_goal_dist_m,
+                policy.radius+.15+grid.info.resolution)
+            steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
+            for step in range(steps, -1, -1):
+                if time.monotonic()-selection_started > self._map_timeout_s:
+                    raise ValueError('frontier_candidate_processing_budget_exhausted')
+                distance = minimum+min(step*grid.info.resolution,self._goal_search_m)
+                goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                route = self._metric_route(inputs, goal, pose[2])
+                if route is None:
+                    continue
+                view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
+                for f in frontiers:
+                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= .8)
+                    if not points:
+                        continue
+                    key = policy.identify((f.cx,f.cy), goal)
+                    local = local_evidence(grid, policy.attempts[key].frontier_xy, self._grid_to_world)
+                    if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
+                        continue
+                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
+                    candidates.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
+                        correlation.fingerprint,correlation.map_revision,False,points))
+                if candidates:
+                    candidates = [min(candidates,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
+                    stats['bounded_start_observation'] = True
+                    break
+        for f in (() if candidates else frontiers):
+            if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+                raise ValueError('frontier_candidate_processing_budget_exhausted')
+            kwargs = {}
+            if getattr(self, '_metric_start_egress_enabled', False):
+                kwargs['search_mask'] = search_mask
+            direction = getattr(f, 'approach_direction', None)
+            if direction is not None:
+                kwargs['approach_direction'] = direction
+            goal = self._frontier_approach_goal(f, pose[:2], grid, **kwargs)
+            if (goal is not None and policy is not None and live_view
+                    and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
+                key = policy.identify((f.cx,f.cy),goal)
+                local = local_evidence(grid,policy.attempts[key].frontier_xy,self._grid_to_world)
+                if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
+                    stats['deferred_or_served'] += 1
+                    continue
+            route = None if goal is None else self._metric_route(inputs, goal)
+            proposal = False
+            if goal is not None and route is None:
+                # The historic circular clearance may admit the base centre
+                # while the rotated asymmetric front touches unknown. Search
+                # back from that real approach, within the existing local
+                # search radius; each alternative needs the entire route proof.
+                dx,dy = goal[0]-f.cx,goal[1]-f.cy
+                length = math.hypot(dx,dy)
+                if length > 1e-9:
+                    steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
+                    for step in range(1,steps+1):
+                        distance = min(step*grid.info.resolution,self._goal_search_m)
+                        alternative = (goal[0]+distance*dx/length,goal[1]+distance*dy/length)
+                        alternative_route = self._metric_route(inputs,alternative)
+                        if (alternative_route is None
+                                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                            alternative_route = self._metric_nav2_proposal(inputs, alternative)
+                            proposal = alternative_route is not None
+                        if alternative_route is not None:
+                            goal,route = alternative,alternative_route
+                            break
+            if (goal is not None and route is None
+                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
+                route = self._metric_nav2_proposal(inputs, goal)
+                proposal = route is not None
+            if route is None or math.dist(goal, pose[:2]) < self._min_goal_dist_m:
+                stats['unsafe'] += 1
+                reason=('approach_unavailable' if goal is None else
+                        self._metric_last_route_rejection if route is None else 'goal_too_near')
+                counts=stats['route_rejections'];counts[reason]=counts.get(reason,0)+1
+                continue
+            if (policy is not None and live_view and not proposal
+                    and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
+                # Prefer a publicly known turning pocket inside the SAME
+                # original .3-m approach backoff. An admissible observation
+                # pose near a wall need not be a useful forward-only arrival.
+                # Keep the original if this local search cannot prove another;
+                # the native departure query still owns the final decision.
+>               trajectory=rpp_trajectory(route,pose,min(grid.info.resolution,costmap.info.resolution),
+                    getattr(self,'_prealign_handoff_tolerance',.17),self._metric_bounds,
+                    prealign_to_first_leg=True,external_prealignment=False)
+E               NameError: name 'costmap' is not defined
+
+src/explore/explore/metric_frontier_runtime.py:1584: NameError
+______ test_fixed_body_facts_are_not_counted_as_private_unobserved_egress ______
+
+    def test_fixed_body_facts_are_not_counted_as_private_unobserved_egress():
+        from explore.metric_frontier import StartEgressEvidence
+        node, inputs, _ = fixture()
+        raw = np.asarray(inputs[0].data).reshape(inputs[3].shape)
+        body = (raw < 0) & inputs[3]
+        assert body.any()
+        evidence = StartEgressEvidence.capture(inputs[0], raw, inputs[3],
+            np.ones_like(body), inputs[2], node._metric_bounds, node._world_to_grid)
+        assert evidence.valid
+>       assert not (evidence.unknown & body).any()
+E       assert not True
+E        +  where True = <built-in method any of numpy.ndarray object at 0x7fb65363b6f0>()
+E        +    where <built-in method any of numpy.ndarray object at 0x7fb65363b6f0> = (array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]) & array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]])).any
+E        +      where array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]) = StartEgressEvidence(grid=nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=1...rue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]])).unknown
+
+src/explore/test/test_metric_start_observation.py:183: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_start_observation.py::test_live_task_selection_proves_one_goal_and_looks_past_served_history
+FAILED src/explore/test/test_metric_start_observation.py::test_fixed_body_facts_are_not_counted_as_private_unobserved_egress
+2 failed, 1930 passed in 53.72s

@@ -1,0 +1,158 @@
+FF.                                                                      [100%]
+=================================== FAILURES ===================================
+__ test_stopped_observation_never_credits_an_unmatched_triplet[delayed_right] __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f173edaab90>
+fault = 'delayed_right'
+
+    @pytest.mark.parametrize('fault', ['delayed_right', 'never_matches', 'encoder_invalid'])
+    def test_stopped_observation_never_credits_an_unmatched_triplet(monkeypatch, fault):
+        n, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        n._max_frontier_goals = 1
+        n._metric_operating_snapshot = MethodType(MetricFrontierRuntime._metric_operating_snapshot, n)
+        n._metric_resume_localization_ready = lambda: True
+        n._wohnungserkundung_active_safety_failure = lambda: False
+        n._wohnungserkundung_hwt_standstill_confirmed = lambda: True
+        n._hwt601_decision = lambda: (None, 'HEALTHY')
+        n._wohnungserkundung_vl53_received_at = {}
+        n._wohnungserkundung_vl53_observed_at = {}
+        n._wohnungserkundung_vl53_measurement_valid = {}
+        n._wohnungserkundung_vl53_point_count = {}
+        n._wohnungserkundung_vl53_cloud_stamp_ns = {}
+        n._metric_wheel = dict(dry_run=False, allow_rs485=True, rs485_ready=True,
+            odometry_source='encoder_position', encoder_feedback_ok=True,
+            encoder_stale=False, encoder_config_fault_latched=False, encoder_feedback_age_s=0.)
+        n._metric_wheel_at = clock[0]
+        def cloud(stamp):
+            msg = PointCloud2(); msg.header.frame_id='base_link'; msg.header.stamp=stamp
+            msg.height=msg.width=1; msg.point_step=msg.row_step=12
+            msg.fields=[PointField(name=name,offset=i*4,datatype=7,count=1) for i,name in enumerate(('x','y','z'))]
+            msg.data=struct.pack('<fff', 1., .1, .1)
+            return msg
+        def matched(stamp):
+            msg=NearFieldStatus();msg.header.frame_id='base_link';msg.header.stamp=stamp
+            msg.left_frame_healthy=msg.right_frame_healthy=True
+            n._on_wohnungserkundung_vl53_status(msg)
+            for side in ('left','right'):n._on_wohnungserkundung_vl53(side, cloud(stamp))
+        matched(Time(sec=100, nanosec=20_000_000))
+        chosen=[]; completed=[]
+        def plan(target,*_):
+            chosen.append(target);path=Path();path.header.frame_id='map';path.header.stamp.sec=100
+            for x,y in target.route:
+                msg=PoseStamped();msg.pose.position.x=x;msg.pose.position.y=y;msg.pose.orientation.w=1.
+                path.poses.append(msg)
+            return path,None
+        n._metric_request_nav_plan=plan
+        n._prealign_to_goal=lambda *_,**__:('skipped',)
+        def navigate(*_,**__):
+            target=chosen[-1];clock[0]+=.1
+            n._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            newer=copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col,row=n._world_to_grid(*xy,newer.info);newer.data[row*newer.info.width+col]=0
+            newer.header.stamp.nanosec=100_000_000
+            n._on_map(newer);n._on_metric_map_status(status(newer,accepted=3,observed=3,when=100.1))
+            msg=NearFieldStatus();msg.header.frame_id='base_link';msg.header.stamp=Time(sec=100,nanosec=100_000_000)
+            msg.left_frame_healthy=msg.right_frame_healthy=True
+            n._on_wohnungserkundung_vl53_status(msg)
+            n._on_wohnungserkundung_vl53('left',cloud(msg.header.stamp))
+            if fault=='encoder_invalid':n._metric_wheel['encoder_feedback_ok']=False
+            return 'success'
+        n._navigate_to=navigate
+        import explore.metric_frontier_runtime as module
+        def tick(delay):
+            clock[0]+=max(.02,delay)
+            n._metric_wheel_at=clock[0]
+            if chosen and not completed and fault=='delayed_right':
+                completed.append(clock[0])
+                n._on_wohnungserkundung_vl53('right',cloud(Time(sec=100,nanosec=100_000_000)))
+        monkeypatch.setattr(module.time,'sleep',tick)
+        n._execute_metric_frontier(parent,10.,.3)
+        assert terminal==['abort'] and len(chosen)==1
+        if fault=='delayed_right':
+>           assert completed and n._metric_status['observations']==1
+E           assert ([])
+
+src/explore/test/test_metric_observation_sources.py:81: AssertionError
+__ test_stopped_observation_never_credits_an_unmatched_triplet[never_matches] __
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f173edab340>
+fault = 'never_matches'
+
+    @pytest.mark.parametrize('fault', ['delayed_right', 'never_matches', 'encoder_invalid'])
+    def test_stopped_observation_never_credits_an_unmatched_triplet(monkeypatch, fault):
+        n, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+        n._max_frontier_goals = 1
+        n._metric_operating_snapshot = MethodType(MetricFrontierRuntime._metric_operating_snapshot, n)
+        n._metric_resume_localization_ready = lambda: True
+        n._wohnungserkundung_active_safety_failure = lambda: False
+        n._wohnungserkundung_hwt_standstill_confirmed = lambda: True
+        n._hwt601_decision = lambda: (None, 'HEALTHY')
+        n._wohnungserkundung_vl53_received_at = {}
+        n._wohnungserkundung_vl53_observed_at = {}
+        n._wohnungserkundung_vl53_measurement_valid = {}
+        n._wohnungserkundung_vl53_point_count = {}
+        n._wohnungserkundung_vl53_cloud_stamp_ns = {}
+        n._metric_wheel = dict(dry_run=False, allow_rs485=True, rs485_ready=True,
+            odometry_source='encoder_position', encoder_feedback_ok=True,
+            encoder_stale=False, encoder_config_fault_latched=False, encoder_feedback_age_s=0.)
+        n._metric_wheel_at = clock[0]
+        def cloud(stamp):
+            msg = PointCloud2(); msg.header.frame_id='base_link'; msg.header.stamp=stamp
+            msg.height=msg.width=1; msg.point_step=msg.row_step=12
+            msg.fields=[PointField(name=name,offset=i*4,datatype=7,count=1) for i,name in enumerate(('x','y','z'))]
+            msg.data=struct.pack('<fff', 1., .1, .1)
+            return msg
+        def matched(stamp):
+            msg=NearFieldStatus();msg.header.frame_id='base_link';msg.header.stamp=stamp
+            msg.left_frame_healthy=msg.right_frame_healthy=True
+            n._on_wohnungserkundung_vl53_status(msg)
+            for side in ('left','right'):n._on_wohnungserkundung_vl53(side, cloud(stamp))
+        matched(Time(sec=100, nanosec=20_000_000))
+        chosen=[]; completed=[]
+        def plan(target,*_):
+            chosen.append(target);path=Path();path.header.frame_id='map';path.header.stamp.sec=100
+            for x,y in target.route:
+                msg=PoseStamped();msg.pose.position.x=x;msg.pose.position.y=y;msg.pose.orientation.w=1.
+                path.poses.append(msg)
+            return path,None
+        n._metric_request_nav_plan=plan
+        n._prealign_to_goal=lambda *_,**__:('skipped',)
+        def navigate(*_,**__):
+            target=chosen[-1];clock[0]+=.1
+            n._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
+            newer=copy.deepcopy(grid)
+            for xy in target.observation_points:
+                col,row=n._world_to_grid(*xy,newer.info);newer.data[row*newer.info.width+col]=0
+            newer.header.stamp.nanosec=100_000_000
+            n._on_map(newer);n._on_metric_map_status(status(newer,accepted=3,observed=3,when=100.1))
+            msg=NearFieldStatus();msg.header.frame_id='base_link';msg.header.stamp=Time(sec=100,nanosec=100_000_000)
+            msg.left_frame_healthy=msg.right_frame_healthy=True
+            n._on_wohnungserkundung_vl53_status(msg)
+            n._on_wohnungserkundung_vl53('left',cloud(msg.header.stamp))
+            if fault=='encoder_invalid':n._metric_wheel['encoder_feedback_ok']=False
+            return 'success'
+        n._navigate_to=navigate
+        import explore.metric_frontier_runtime as module
+        def tick(delay):
+            clock[0]+=max(.02,delay)
+            n._metric_wheel_at=clock[0]
+            if chosen and not completed and fault=='delayed_right':
+                completed.append(clock[0])
+                n._on_wohnungserkundung_vl53('right',cloud(Time(sec=100,nanosec=100_000_000)))
+        monkeypatch.setattr(module.time,'sleep',tick)
+        n._execute_metric_frontier(parent,10.,.3)
+        assert terminal==['abort'] and len(chosen)==1
+        if fault=='delayed_right':
+            assert completed and n._metric_status['observations']==1
+            assert n._metric_status['chain'][0]['decision']=='observed'
+        elif fault=='never_matches':
+            assert n._metric_status['observations']==0
+>           assert n._metric_status['chain'][0]['decision']=='arrival_without_observation'
+E           IndexError: list index out of range
+
+src/explore/test/test_metric_observation_sources.py:85: IndexError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_observation_sources.py::test_stopped_observation_never_credits_an_unmatched_triplet[delayed_right]
+FAILED src/explore/test/test_metric_observation_sources.py::test_stopped_observation_never_credits_an_unmatched_triplet[never_matches]
+2 failed, 1 passed in 1.20s

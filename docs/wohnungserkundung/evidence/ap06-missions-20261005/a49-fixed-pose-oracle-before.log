@@ -1,0 +1,40 @@
+...F.......                                                              [100%]
+=================================== FAILURES ===================================
+__ test_fixed_pose_with_nonzero_denormal_tail_does_not_repeat_collision_work ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f95c3382d10>
+
+    def test_fixed_pose_with_nonzero_denormal_tail_does_not_repeat_collision_work(monkeypatch):
+        world = module.World(.68, [-1.519861, -.861076, -2.142694])
+        world.integrate([0., 0.], .01)
+        before = (world.pose.copy(), world.motor_positions.copy(), world.minimum_clearance,
+                  world.travel, world.collision, world.rear_cleared)
+        world.velocity[:] = 1e-323
+        calls = []
+        actual = module.chassis_clearance
+        def measured(*args):
+            calls.append(1)
+            return actual(*args)
+        monkeypatch.setattr(module, 'chassis_clearance', measured)
+        for _ in range(100):
+            world.integrate([0., 0.], .01)
+        assert np.array_equal(world.pose, before[0])
+        assert np.array_equal(world.motor_positions, before[1])
+        assert (world.minimum_clearance, world.travel, world.collision, world.rear_cleared) == before[2:]
+        assert np.all(world.velocity > 0)  # no artificial rounding/zero velocity
+>       assert calls == []
+E       AssertionError: assert [1, 1, 1, 1, 1, 1, ...] == []
+E         Left contains 100 more items, first extra item: 1
+E         Full diff:
+E           [
+E         -  ,
+E         +  1,
+E         ?  +
+E         +  1,...
+E         
+E         ...Full output truncated (100 lines hidden), use '-vv' to show
+
+evidence/ap06-repo/tools/simulation/test_ap06_world.py:59: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/tools/simulation/test_ap06_world.py::test_fixed_pose_with_nonzero_denormal_tail_does_not_repeat_collision_work
+1 failed, 10 passed in 0.15s

@@ -1,0 +1,41 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c40_native_detour-0-True] _
+
+name = 'ap06_c40_native_detour', index = 0, expected = True
+
+    @pytest.mark.parametrize('name,index,expected', (
+        ('ap06_dead_end', 0, False), ('ap06_dead_end', 2, False),
+        ('ap06_dead_end', 4, True),
+        ('ap06_c38_departure', 0, False),
+        ('ap06_c40_native_detour', 0, True),
+        ('ap06_corridor_departure', 0, True)))
+    def test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal(name,index,expected):
+        node, inputs, meta = fixture(name)
+        records = meta['plans']; first = records[index]
+        target = MetricCandidate('actual-component', *first['goal'], tuple(first['goal'][:2]),
+            (), 1., 0., inputs[1].fingerprint, 1)
+        route = node._metric_validate_nav_plan(inputs, path(first), target, public_only=True)
+        assert route is not None
+        if name == 'ap06_corridor_departure':
+            node._metric_status['ranking'] = dict(bounded_start_observation=True)
+        before = [bytes(np.asarray(inputs[i].data, dtype=np.int8)) for i in (0, 5)]
+        active = node._metric_active; original_path = node._metric_nav_path; calls = []
+        def planner(candidate, stopped, *, start_pose):
+            assert node._metric_active is None
+            assert not stopped()
+            calls.append((candidate, start_pose))
+            record = records[index+len(calls)]
+            assert np.allclose(start_pose, record['start_pose'], atol=1e-8)
+            assert np.allclose((candidate.x,candidate.y,candidate.yaw),record['goal'],atol=1e-8)
+            return path(record), record['error']
+        node._metric_request_nav_plan = planner
+>       assert node._metric_departure_plan_ready(inputs, route, target, lambda: False) is expected
+E       AssertionError: assert False is True
+E        +  where False = <bound method MetricFrontierRuntime._metric_departure_plan_ready of <explore.explore_node.ExploreNode object at 0x7fa04ab94190>>([nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id..., -1, -1, -1, -1, -1, 99, 99, 99, 99, 99, 99, 99, 99, 99, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]), ...], ((2.5580400236174152, 0.0662765231381252), (2.5569183541033027, 0.04306926631027608), (2.5677565954381976, 0.032699431...717, 0.021404456613858258), (2.584745578212761, 0.008201408202914706), (2.591602877864176, -0.005139541511098855), ...), MetricCandidate(task_id='actual-component', x=3.194999928586185, y=-0.7649999829009175, yaw=-0.7853981633974483, front...f85382ff6bb7b567c4cbbb75bf07fd06d71b993', revision=1, requires_nav2_plan=False, observation_points=(), evidence_key=''), <function test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal.<locals>.<lambda> at 0x7fa044882050>)
+E        +    where <bound method MetricFrontierRuntime._metric_departure_plan_ready of <explore.explore_node.ExploreNode object at 0x7fa04ab94190>> = <explore.explore_node.ExploreNode object at 0x7fa04ab94190>._metric_departure_plan_ready
+
+evidence/ap06-repo/src/explore/test/test_metric_departure.py:88: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_departure.py::test_known_forward_departure_keeps_throughway_and_rejects_stranded_goal[ap06_c40_native_detour-0-True]
+1 failed, 6 deselected in 1.59s

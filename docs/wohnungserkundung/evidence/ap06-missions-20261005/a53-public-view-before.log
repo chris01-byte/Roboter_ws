@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____ test_actual_exhausted_history_keeps_a_different_proved_current_view ______
+
+    def test_actual_exhausted_history_keeps_a_different_proved_current_view():
+        node, inputs, policy = recorded()
+        before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+        node._global_costmap_received_at = time.monotonic()
+        candidates = node._metric_select(inputs, policy, .3)
+>       assert candidates and not candidates[0].requires_nav2_plan, node._frontier_rank_stats
+E       AssertionError: {'accepted': 1, 'deferred_or_served': 6, 'proposal_search_stopped_on_eligible_task': True, 'raw': 16, ...}
+E       assert ([MetricCandidate(task_id='metric-task-11', x=4.274999904446304, y=-0.13499999698251486, yaw=0.0, frontier_xy=(4.274999...4999895058572, 0.19499999564141035)), evidence_key='148d50b213c76e89c266e07c10fa67131a05d8e4aee16005dfae176aaec2c6b2')] and not True)
+E        +  where True = MetricCandidate(task_id='metric-task-11', x=4.274999904446304, y=-0.13499999698251486, yaw=0.0, frontier_xy=(4.2749999...94999895058572, 0.19499999564141035)), evidence_key='148d50b213c76e89c266e07c10fa67131a05d8e4aee16005dfae176aaec2c6b2').requires_nav2_plan
+
+evidence/ap06-repo/src/explore/test/test_metric_public_observation.py:28: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_public_observation.py::test_actual_exhausted_history_keeps_a_different_proved_current_view
+1 failed, 5 deselected in 1.63s

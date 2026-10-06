@@ -1,0 +1,101 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_ test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth[0.12] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fad15a898a0>
+distance = 0.12
+
+    @pytest.mark.parametrize('distance',[.12,.7])
+    def test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth(monkeypatch,distance):
+        n,g=runtime(monkeypatch,placement_shadow=True,body_reference=(0.,0.,0.))
+        first=n._metric_inputs()
+        unknown=np.asarray(g.data).reshape(first[3].shape)<0
+        initial=first[3]&unknown
+        assert initial.any()
+        source=first[1];captured=[e.fixed.unknown.copy() for e in n._metric_egress]
+        n._robot_pose_sample=lambda:((.05+distance,.05,0.),0.)
+        departed=n._metric_inputs()
+        remaining=departed[3]&unknown
+>       assert np.count_nonzero(remaining)<np.count_nonzero(initial)
+E       assert 9 < 9
+E        +  where 9 = <function count_nonzero at 0x7fad1b68fc70>(array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]))
+E        +    where <function count_nonzero at 0x7fad1b68fc70> = np.count_nonzero
+E        +  and   9 = <function count_nonzero at 0x7fad1b68fc70>(array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]))
+E        +    where <function count_nonzero at 0x7fad1b68fc70> = np.count_nonzero
+
+src/explore/test/test_metric_public_body_authority.py:18: AssertionError
+_ test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth[0.7] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fad15b0bc70>
+distance = 0.7
+
+    @pytest.mark.parametrize('distance',[.12,.7])
+    def test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth(monkeypatch,distance):
+        n,g=runtime(monkeypatch,placement_shadow=True,body_reference=(0.,0.,0.))
+        first=n._metric_inputs()
+        unknown=np.asarray(g.data).reshape(first[3].shape)<0
+        initial=first[3]&unknown
+        assert initial.any()
+        source=first[1];captured=[e.fixed.unknown.copy() for e in n._metric_egress]
+        n._robot_pose_sample=lambda:((.05+distance,.05,0.),0.)
+        departed=n._metric_inputs()
+        remaining=departed[3]&unknown
+>       assert np.count_nonzero(remaining)<np.count_nonzero(initial)
+E       assert 9 < 9
+E        +  where 9 = <function count_nonzero at 0x7fad1b68fc70>(array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]))
+E        +    where <function count_nonzero at 0x7fad1b68fc70> = np.count_nonzero
+E        +  and   9 = <function count_nonzero at 0x7fad1b68fc70>(array([[False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False],\n      ...alse],\n       [False, False, False, ..., False, False, False],\n       [False, False, False, ..., False, False, False]]))
+E        +    where <function count_nonzero at 0x7fad1b68fc70> = np.count_nonzero
+
+src/explore/test/test_metric_public_body_authority.py:18: AssertionError
+________ test_virtual_current_body_needs_real_private_egress_for_a_turn ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fad15a8b970>
+
+    def test_virtual_current_body_needs_real_private_egress_for_a_turn(monkeypatch):
+        n,g=runtime(monkeypatch,placement_shadow=True,body_reference=(0.,0.,0.))
+        n._metric_path_validation='rpp_rollout';inputs=n._metric_inputs()
+        assert (inputs[3]&(np.asarray(g.data).reshape(inputs[3].shape)<0)).any()
+        assert n._metric_waypoints_clear(inputs,((.05,.05),(.75,.05)),0.) is not None
+        # Formerly every raw unknown was whitelisted, so the ordinary checker
+        # silently authorized rotation without the private monotone proof.
+>       assert n._metric_waypoints_clear(inputs,((.05,.05),(.05,.75)),np.pi/2) is None
+E       assert ((0.05, 0.05), (0.05, 0.75)) is None
+E        +  where ((0.05, 0.05), (0.05, 0.75)) = <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fad15a8b460>>((nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id...rue],\n       [ True,  True,  True, ...,  True,  True,  True],\n       [ True,  True,  True, ...,  True,  True,  True]])), ((0.05, 0.05), (0.05, 0.75)), (3.141592653589793 / 2))
+E        +    where <bound method MetricFrontierRuntime._metric_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fad15a8b460>> = <explore.explore_node.ExploreNode object at 0x7fad15a8b460>._metric_waypoints_clear
+E        +    and   3.141592653589793 = np.pi
+
+src/explore/test/test_metric_public_body_authority.py:35: AssertionError
+__ test_recorded_b60_public_selection_never_uses_82_old_private_raw_unknowns ___
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fad15b09780>
+
+    def test_recorded_b60_public_selection_never_uses_82_old_private_raw_unknowns(monkeypatch):
+        import time
+        import explore.metric_frontier_runtime as module
+        from test_metric_public_cooldown import frozen
+        n,inputs,p=frozen();now=time.monotonic()
+        original=np.asarray(inputs[0].data).reshape(inputs[3].shape)
+        private=inputs[3]&(original<0)
+        assert np.count_nonzero(private)==82
+        monkeypatch.setattr(module.time,'monotonic',lambda:now+31.)
+        n._global_costmap_received_at=now+31.
+        choices=n._metric_select(inputs,p,.3)
+        assert choices
+        public=(inputs[0],inputs[1],inputs[2],inputs[3]&(original==0),*inputs[4:])
+        for c in choices:
+            assert c.observation_points
+>           assert n._metric_standard_waypoints_clear(public,c.route,c.yaw) is not None
+E           AssertionError: assert None is not None
+E            +  where None = <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fad15b08730>>((nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=1791246481, nanosec=48617... -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]), ...), ((0.9046433565248011, -0.005286332645817432), (0.3049356780799234, 0.013440664290559998)), 4.681172249035239)
+E            +    where <bound method MetricFrontierRuntime._metric_standard_waypoints_clear of <explore.explore_node.ExploreNode object at 0x7fad15b08730>> = <explore.explore_node.ExploreNode object at 0x7fad15b08730>._metric_standard_waypoints_clear
+E            +    and   ((0.9046433565248011, -0.005286332645817432), (0.3049356780799234, 0.013440664290559998)) = MetricCandidate(task_id='metric-task-5', x=0.3049356780799234, y=0.013440664290559998, yaw=4.681172249035239, frontier...999963119626, -0.014999999664723873)), evidence_key='17abf98ee3eaffc01e4bf18ecd22f091e681083d3b2a09ddda026bcb4231d369').route
+E            +    and   4.681172249035239 = MetricCandidate(task_id='metric-task-5', x=0.3049356780799234, y=0.013440664290559998, yaw=4.681172249035239, frontier...999963119626, -0.014999999664723873)), evidence_key='17abf98ee3eaffc01e4bf18ecd22f091e681083d3b2a09ddda026bcb4231d369').yaw
+
+src/explore/test/test_metric_public_body_authority.py:53: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_public_body_authority.py::test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth[0.12]
+FAILED src/explore/test/test_metric_public_body_authority.py::test_actual_bound_callbacks_retire_departed_placement_cells_without_regrowth[0.7]
+FAILED src/explore/test/test_metric_public_body_authority.py::test_virtual_current_body_needs_real_private_egress_for_a_turn
+FAILED src/explore/test/test_metric_public_body_authority.py::test_recorded_b60_public_selection_never_uses_82_old_private_raw_unknowns
+4 failed in 0.65s

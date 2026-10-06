@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "<stdin>", line 11, in <module>
+  File "/evidence/ap06-repo/src/explore/test/test_metric_query_selection_budget.py", line 50, in test_live_selection_returns_first_eligible_query_within_original_deadline
+    candidates = node._metric_select(inputs, MetricTaskPolicy(.6, 30., 2), .3)
+  File "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py", line 1786, in _metric_select
+    candidates = self._metric_candidates(inputs, min_frontier)
+  File "/evidence/ap06-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py", line 1464, in _metric_candidates
+    return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
+  File "<string>", line 1748, in _metric_candidates_in_pass
+ValueError: frontier_candidate_processing_budget_exhausted

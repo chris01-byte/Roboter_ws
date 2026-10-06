@@ -1,0 +1,2 @@
+ACTUAL implicit-start native plan [[2.5499999430030584, 0.05999999865889549], [2.5569183541033027, 0.04306926631027608], [2.5677565954381976, 0.032699431642157606]] expected (2.5580400236174152, 0.0662765231381252, 0.27378451438177875)
+{'goal': [3.194999928586185, -0.7649999829009175, -0.7853981633974483], 'arrival_plan_valid': True, 'arrival_rejection': None, 'kind': 'actual C40 later component rasters and actual native CPP queries, no motion and no whole-mission claim'}

@@ -1,0 +1,35 @@
+F....................................................................... [ 54%]
+............................................................             [100%]
+=================================== FAILURES ===================================
+__________ test_impossible_view_geometry_consumes_no_visibility_work ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fb3d3e69480>
+
+    def test_impossible_view_geometry_consumes_no_visibility_work(monkeypatch):
+        node, inputs, _ = fixture('ap06_a52_selection')
+        import explore.metric_frontier_runtime as runtime
+        original = runtime.visible_boundary_cells
+        checked = {}; visible = []
+        route = node._metric_route
+        def geometry(values, xy, yaw):
+            result = route(values, xy, yaw)
+            checked[(*xy, yaw)] = result is not None
+            return result
+        def sight(grid, scope, pose, view):
+            # A failed route is already conclusive; this expensive work cannot
+            # make its pose admissible. All geometry and rays remain real code.
+            assert checked.get(tuple(pose)), ('unproved view', pose)
+            visible.append(pose)
+            return original(grid, scope, pose, view)
+        node._metric_route = geometry
+        monkeypatch.setattr(runtime, 'visible_boundary_cells', sight)
+        frontier = Frontier((1.304999970830977, .13499999698251486), 1)
+        candidate = node._metric_robot_side_observation(inputs, frontier,
+            MetricTaskPolicy(.6, 30., 2), node._metric_scope_mask(inputs), time.monotonic())
+>       assert candidate is not None and candidate.observation_points
+E       assert (None is not None)
+
+src/explore/test/test_metric_side_work_budget.py:30: AssertionError
+=========================== short test summary info ============================
+FAILED src/explore/test/test_metric_side_work_budget.py::test_impossible_view_geometry_consumes_no_visibility_work
+1 failed, 131 passed in 28.13s

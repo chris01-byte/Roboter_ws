@@ -1,0 +1,58 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________ test_impossible_view_geometry_consumes_no_visibility_work ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f367869c3d0>
+
+    def test_impossible_view_geometry_consumes_no_visibility_work(monkeypatch):
+        node, inputs, _ = fixture('ap06_a52_selection')
+        import explore.metric_frontier_runtime as runtime
+        original = runtime.visible_boundary_cells
+        checked = {}; visible = []
+        route = node._metric_route
+        def geometry(values, xy, yaw):
+            result = route(values, xy, yaw)
+            checked[(*xy, yaw)] = result is not None
+            return result
+        def sight(grid, scope, pose, view):
+            # A failed route is already conclusive; this expensive work cannot
+            # make its pose admissible. All geometry and rays remain real code.
+            assert checked.get(tuple(pose)), ('unproved view', pose)
+            visible.append(pose)
+            return original(grid, scope, pose, view)
+        node._metric_route = geometry
+        monkeypatch.setattr(runtime, 'visible_boundary_cells', sight)
+        frontier = Frontier((1.304999970830977, .13499999698251486), 1)
+>       candidate = node._metric_robot_side_observation(inputs, frontier,
+            MetricTaskPolicy(.6, 30., 2), node._metric_scope_mask(inputs), time.monotonic())
+
+evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:1508: in _metric_robot_side_observation
+    visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw), view)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+grid = nav_msgs.msg.OccupancyGrid(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=100, nanosec=0), frame_id=...1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1])
+scope = array([[False, False, False, ..., False, False, False],
+       [False,  True,  True, ...,  True,  True, False],
+      ...alse],
+       [False, False, False, ..., False, False, False],
+       [False, False, False, ..., False, False, False]])
+pose = (0.9149999795481563, 0.014999999664723873, 0.2984989315861793)
+view = LidarView(mount=(0.245, 0.0, 1.5707963267948966), angles=array([0.00000000e+00, 2.90888199e-03, 5.81776397e-03, ...,
+       6.27445844e+00, 6.27736733e+00, 6.28027621e+00]), range_m=4.0, minimum_range_m=0.05)
+
+    def sight(grid, scope, pose, view):
+        # A failed route is already conclusive; this expensive work cannot
+        # make its pose admissible. All geometry and rays remain real code.
+>       assert checked.get(tuple(pose)), ('unproved view', pose)
+E       AssertionError: ('unproved view', (0.9149999795481563, 0.014999999664723873, 0.2984989315861793))
+E       assert None
+E        +  where None = <built-in method get of dict object at 0x7f36786bcb00>((0.9149999795481563, 0.014999999664723873, 0.2984989315861793))
+E        +    where <built-in method get of dict object at 0x7f36786bcb00> = {}.get
+E        +    and   (0.9149999795481563, 0.014999999664723873, 0.2984989315861793) = tuple((0.9149999795481563, 0.014999999664723873, 0.2984989315861793))
+
+evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py:22: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-repo/src/explore/test/test_metric_side_work_budget.py::test_impossible_view_geometry_consumes_no_visibility_work
+1 failed in 0.39s
