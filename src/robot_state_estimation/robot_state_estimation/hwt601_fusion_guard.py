@@ -6,6 +6,7 @@ import time
 
 from nav_msgs.msg import Odometry
 from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
@@ -26,7 +27,6 @@ class Hwt601FusionGuard:
         self.wheel_subscription = None
         self.prefer_latest_wheel = bool(prefer_latest_wheel)
         if self.prefer_latest_wheel and wheel_callback_group is None:
-            from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
             wheel_callback_group = MutuallyExclusiveCallbackGroup()
         # Passive readiness needs the newest actual measurement, not a queue
         # of old sensor frames. No restamping or extra freshness is permitted.
@@ -36,15 +36,22 @@ class Hwt601FusionGuard:
                 ('raw', '/shadow/hwt601/imu/data_raw', Imu),
                 ('yaw', '/shadow/hwt601/imu/yaw_rate', Imu),
                 ('wheel', '/fusion/hwt601/wheel_odom_raw', Odometry)):
+            # A reentrant executor can pause an already taken old frame before
+            # _sample() enters, then process a newer frame first. Callback-entry
+            # times cannot distinguish that dispatch reversal from a genuine
+            # sensor timestamp regression. Serialize each source's dispatch;
+            # separate groups keep raw/yaw/wheel independent and preserve the
+            # original timestamps, age checks and real regression rejection.
+            sample_group = (wheel_callback_group if name == 'wheel'
+                            and wheel_callback_group is not None
+                            else MutuallyExclusiveCallbackGroup())
             self.subscriptions.append(node.create_subscription(
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
                 (QoSProfile(depth=1,reliability=ReliabilityPolicy.BEST_EFFORT)
                  if active_drive and name == 'wheel' and self.prefer_latest_wheel else
                  qos_profile_sensor_data if active_drive else
                  latest_wheel if name == 'wheel' else latest_sensor),
-                callback_group=(wheel_callback_group if name == 'wheel'
-                                and wheel_callback_group is not None
-                                else callback_group)))
+                callback_group=sample_group))
         self.wheel_subscription = self.subscriptions[2]
         for name, topic in (
                 ('raw', '/shadow/hwt601/raw_status_json'),
