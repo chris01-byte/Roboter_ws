@@ -91,6 +91,7 @@ jobs:
             src/explore/test/test_metric_source_delivery.py \
             src/explore/test/test_metric_sweep_batch.py \
             src/explore/test/test_metric_native_sweep.py \
+            src/explore/test/test_action_client_registration.py \
             src/explore/test/test_metric_task_view_group.py \
             src/explore/test/test_metric_route_distances.py \
             src/explore/test/test_metric_selection_pass.py \

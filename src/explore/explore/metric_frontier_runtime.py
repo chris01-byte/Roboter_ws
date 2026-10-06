@@ -14,7 +14,7 @@ import numpy as np
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from nav2_msgs.action import ComputePathToPose
-from rclpy.action import ActionClient
+from .action_client import SerializedActionClient as ActionClient
 import rclpy
 from .exploration_scope import rasterize_scope
 from rcl_interfaces.msg import ParameterDescriptor

@@ -53,7 +53,8 @@ import rclpy
 from rclpy.signals import SignalHandlerOptions
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from .action_client import SerializedActionClient as ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.qos import (

@@ -27,7 +27,7 @@ from lifecycle_msgs.srv import ChangeState
 from rcl_interfaces.srv import GetParameters
 from nav_msgs.msg import OccupancyGrid, Odometry
 from nav2_msgs.action import ComputePathToPose, FollowPath
-from rclpy.action import ActionClient
+from explore.action_client import SerializedActionClient as ActionClient
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
