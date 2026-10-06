@@ -806,14 +806,27 @@ class MetricFrontierRuntime:
                 evidence.valid = False
                 evidence.reason = 'start_egress_reference_expired'
             return  # before combining arrays with a different spatial identity
+        # Cache only the immutable scope projection within this one call.
+        # Raw/cost occupancy and every source/pose/ledger proof remain fresh.
+        # A callback replacing the scope or raster geometry gets its own key.
+        inside_cache = {}
+        def current_inside(g):
+            scope = self._metric_scope
+            geometry = self._metric_grid_geometry(g)
+            key = (scope, correlation.context, geometry,
+                   self._wohnungserkundung_evidence_max_cells)
+            if key not in inside_cache:
+                o = geometry[4]
+                inside_cache[key] = rasterize_scope(scope, context=correlation.context,
+                    width=geometry[1], height=geometry[2], resolution_m=geometry[3],
+                    origin_x_m=o[0], origin_y_m=o[1],
+                    origin_yaw_rad=math.atan2(2*o[6]*o[5], 1-2*o[5]**2),
+                    maximum_cells=self._wohnungserkundung_evidence_max_cells)
+            return inside_cache[key]
         if getattr(self, '_metric_egress', None) is None:
             evidence = []
             for g, mask in grids:
-                values=self._metric_grid_values(g);o=values['origin']
-                inside=rasterize_scope(self._metric_scope,context=correlation.context,
-                    width=g.info.width,height=g.info.height,resolution_m=g.info.resolution,
-                    origin_x_m=o[0],origin_y_m=o[1],origin_yaw_rad=math.atan2(
-                        2*o[6]*o[5],1-2*o[5]**2),maximum_cells=self._wohnungserkundung_evidence_max_cells)
+                inside = current_inside(g)
                 captured = StartEgressEvidence.capture(g,
                     np.asarray(g.data).reshape(mask.shape),mask,inside,pose,
                     self._metric_bounds,self._world_to_grid)
@@ -825,12 +838,7 @@ class MetricFrontierRuntime:
             occupancy=np.asarray(g.data).reshape(mask.shape)
             # Observed cells never regain their original unknown exemption.
             if isinstance(evidence, ReferencedStartEgress):
-                o=g.info.origin; q=o.orientation
-                inside=rasterize_scope(self._metric_scope,context=correlation.context,
-                    width=g.info.width,height=g.info.height,resolution_m=g.info.resolution,
-                    origin_x_m=o.position.x,origin_y_m=o.position.y,
-                    origin_yaw_rad=math.atan2(2*q.w*q.z,1-2*q.z*q.z),
-                    maximum_cells=self._wohnungserkundung_evidence_max_cells)
+                inside = current_inside(g)
                 evidence.refresh(g, occupancy, inside, reference)
             else:
                 evidence.unknown &= occupancy < 0

@@ -93,7 +93,7 @@ jobs:
             src/explore/test/test_metric_native_sweep.py \
             src/explore/test/test_action_client_registration.py \
             src/explore/test/test_metric_task_view_group.py \
-            src/explore/test/test_metric_actual_stop.py src/explore/test/test_metric_native_continuation.py src/explore/test/test_metric_local_remainder.py src/explore/test/test_metric_recorded_raster.py src/explore/test/test_metric_start_raster.py \
+            src/explore/test/test_metric_actual_stop.py src/explore/test/test_metric_native_continuation.py src/explore/test/test_metric_local_remainder.py src/explore/test/test_metric_recorded_raster.py src/explore/test/test_metric_start_raster.py src/explore/test/test_metric_egress_region.py \
             src/explore/test/test_metric_route_distances.py \
             src/explore/test/test_metric_selection_pass.py \
             src/explore/test/test_metric_rpp_egress_goal.py \

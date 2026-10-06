@@ -92,6 +92,19 @@ def square(row, col):
     return ((col, row), (col+1, row), (col+1, row+1), (col, row+1))
 
 
+def cell_region(mask):
+    """Exact union of true unit cells, merging only contiguous row runs.
+
+    No bounding box of a component, dilation, resampling or added cells.
+    Fewer GEOS inputs keep first-ledger construction within source freshness.
+    """
+    edges = np.diff(np.pad(mask.astype(np.int8), ((0, 0), (1, 1))), axis=1)
+    rows, starts = np.nonzero(edges == 1)
+    _, ends = np.nonzero(edges == -1)
+    return unary_union([box(start, row, end, row+1)
+                        for row, start, end in zip(rows, starts, ends)])
+
+
 class ReferencedStartEgress:
     """Current raster view of a fixed first inventory and its monotone history."""
     def __init__(self, evidence, reference):
@@ -104,8 +117,7 @@ class ReferencedStartEgress:
         self.scope_mask = evidence.scope_mask.copy()
         self.generation = 0
         self._projection_key = None
-        self.retained_region = unary_union([box(col,row,col+1,row+1)
-            for row,col in zip(*np.nonzero(self.fixed.unknown))])
+        self.retained_region = cell_region(self.fixed.unknown)
         self._whole_cells = True
         self._previous_grid = copy.deepcopy(evidence.grid)
         self._previous_occupancy = np.asarray(evidence.grid.data).reshape(evidence.unknown.shape).copy()
@@ -209,8 +221,7 @@ class ReferencedStartEgress:
                 projected[target] = remaining[source] & inside[target]
             removed = retained & ~remaining
             if np.any(removed):
-                self.retained_region = self.retained_region.difference(unary_union([
-                    box(col,row,col+1,row+1) for row,col in zip(*np.nonzero(removed))]))
+                self.retained_region = self.retained_region.difference(cell_region(removed))
             self.fixed.unknown = remaining
             self.unknown = projected
             self._previous_grid = copy.deepcopy(grid)
