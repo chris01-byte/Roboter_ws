@@ -7,7 +7,7 @@ from .metric_frontier import MetricAttempt, MetricTaskPolicy
 
 
 def validate_checkpoint(state):
-    if (type(state.get('schema_version')) is not int or state.get('schema_version') != 1 or state.get('strategy') != 'metric_frontier'
+    if (type(state.get('schema_version')) is not int or state.get('schema_version') not in (1,2) or state.get('strategy') != 'metric_frontier'
             or state.get('resume_authorizes_motion') is not False or state.get('outcome') not in
             ('in_progress','metric_complete','usable_partial','blocked_help_required','error','user_canceled')):
         raise ValueError('metric_checkpoint_schema_unsupported')
@@ -51,9 +51,17 @@ def validate_checkpoint(state):
     if type(policy['next_id']) is not int or policy['next_id'] < len(policy['tasks']):
         raise ValueError('metric_checkpoint_task_ids_invalid')
     for key, task in policy['tasks'].items():
-        if set(task) != {'frontier_xy','target_xy','failures','retry_remaining_s','fingerprint',
-                         'completed','reason','tries','evidence_key'}:
+        required = {'frontier_xy','target_xy','failures','retry_remaining_s','fingerprint',
+                    'completed','reason','tries','evidence_key'}
+        if state['schema_version'] == 2:
+            required.add('partial_observation')
+        if set(task) != required:
             raise ValueError('metric_checkpoint_task_schema_invalid')
+        if (state['schema_version'] == 2 and
+                (type(task['partial_observation']) is not bool or
+                 (task['partial_observation'] and (task['completed'] or not task['tries'])) or
+                 (task['reason'] == 'partially_observed' and not task['partial_observation']))):
+            raise ValueError('metric_checkpoint_partial_state_invalid')
         if not re.fullmatch(r'metric-task-[1-9][0-9]*', key) or int(key.split('-')[-1]) > policy['next_id']:
             raise ValueError('metric_checkpoint_task_ids_invalid')
         for name in ('frontier_xy', 'target_xy'):

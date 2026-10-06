@@ -51,6 +51,12 @@ class MetricAttempt:
     reason: str = ''
     tries: int = 0
     evidence_key: str = ''
+    partial_observation: bool = False
+
+    def __post_init__(self):
+        # Older checkpoints carry the known partial state in their reason.
+        if self.reason == 'partially_observed':
+            self.partial_observation = True
 
 
 @dataclass
@@ -95,6 +101,13 @@ class MetricTaskPolicy:
         attempt = self.attempts[task_id]
         neighbours = [a for a in self.attempts.values()
                       if math.dist(a.target_xy, target_xy) < self.radius and a.tries]
+        # Unfinished observations/real failures retain their own cooldown
+        # and evidence requirement outside the last goal neighbourhood too.
+        # Independent unvisited planner alternatives retain the old policy.
+        if (attempt.tries and not attempt.completed
+                and (attempt.partial_observation or attempt.failures)
+                and all(a is not attempt for a in neighbours)):
+            neighbours.append(attempt)
         try:
             points = tuple(observation_points)
             valid_view = bool(evidence_key) and bool(points) and all(len(p) == 2 and all(math.isfinite(v) for v in p) for p in points)
@@ -155,6 +168,7 @@ class MetricTaskPolicy:
         attempt.completed = outcome == 'observed'
         if outcome in ('observed','partially_observed'):
             attempt.completed = outcome == 'observed'
+            attempt.partial_observation = outcome == 'partially_observed'
         elif outcome != 'pending' and count_failure:
             attempt.failures += 1
 

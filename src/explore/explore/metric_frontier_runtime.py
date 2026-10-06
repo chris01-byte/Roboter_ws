@@ -378,7 +378,7 @@ class MetricFrontierRuntime:
         if getattr(self, '_metric_resume_saved', False) and not getattr(self, '_metric_resume_validated', False):
             return  # rejected resume must never erase the saved history/budget
         c = inputs[1]
-        state = dict(schema_version=1, strategy='metric_frontier', resume_authorizes_motion=False,
+        state = dict(schema_version=2, strategy='metric_frontier', resume_authorizes_motion=False,
             context=dict(session_id=c.context.session_id, map_id=c.context.map_id, frame_id=c.context.frame_id),
             saved_map_id='map-'+c.fingerprint, fingerprint=c.fingerprint,
             scope=dict(scope_id=self._metric_scope.scope_id,
@@ -1445,6 +1445,7 @@ class MetricFrontierRuntime:
         if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
             return True
         self._metric_status.pop('departure_plan_rejection', None)
+        self._metric_status.pop('departure_observation_forecast', None)
         if stop_requested():
             return False
         if self._metric_status.get('ranking',{}).get('bounded_start_observation'):
@@ -1517,7 +1518,9 @@ class MetricFrontierRuntime:
                         observation_points=(),requires_nav2_plan=True)
                     chord = (projected[:2],xy)
                     if self._metric_standard_waypoints_clear(forecast,chord,escape.yaw) is None:
-                        continue
+                        if (not target.observation_points or
+                                self._metric_nav2_proposal(forecast,xy,escape.yaw,native_stop=True) is None):
+                            continue
                     # A direct return chord can cross an observed obstacle
                     # even when NavFn has a safe detour. Only the actual
                     # forward and return paths below prove this refuge.
@@ -1533,6 +1536,22 @@ class MetricFrontierRuntime:
                                            retreat,return_target) is not None):
                         self._metric_status.pop('departure_plan_rejection',None)
                         return True
+                    # A forward-only observation leg may continue along a
+                    # wholly proved known native path to a finite CURRENT
+                    # first-hit unknown view. It need not return through the
+                    # narrow corridor before those new measurements exist.
+                    # No gain, next-task permission, TF or free cells are
+                    # manufactured; the actual next leg is freshly checked.
+                    if target.observation_points and not stopped():
+                        observer = self._metric_rollout_stop_pose(forecast,route,escape.yaw,native_plan=True)
+                        visible = visible_boundary_cells(inputs[0],self._metric_scope_mask(inputs),observer,
+                                                         self._metric_observation_view())
+                        if visible and not stopped():
+                            self._metric_status['departure_observation_forecast'] = dict(
+                                kind='known_native_forward_view',predicted_pose=list(observer),
+                                potential_points=len(visible),actual_observation=False)
+                            self._metric_status.pop('departure_plan_rejection',None)
+                            return True
             return False
         finally:
             self._metric_active = old_active
@@ -1788,8 +1807,9 @@ class MetricFrontierRuntime:
                         now = time.monotonic()
                         if not policy.eligible(key,observer_xy,now,correlation.fingerprint,local,
                                                observation_points=points):
-                            wake = max((a.retry_after for a in policy.attempts.values()
-                                if a.tries and math.dist(a.target_xy,observer_xy)<policy.radius),default=now)
+                            wake = max(policy.attempts[key].retry_after,
+                                max((a.retry_after for a in policy.attempts.values()
+                                    if a.tries and math.dist(a.target_xy,observer_xy)<policy.radius),default=now))
                             if wake>now and policy.eligible(key,observer_xy,wake,correlation.fingerprint,local,
                                                           observation_points=points):
                                 memo,_ = self._metric_selection_memo(inputs)
@@ -1808,6 +1828,67 @@ class MetricFrontierRuntime:
                             fallback = candidate
         return fallback
 
+    def _metric_refine_native_observation(self,inputs,frontier,policy,scope,selected,task_id,until):
+        """Query more current retained rays without asserting a guessed path.
+
+        The original four directions/local radius and helper deadline bound
+        this search. Adjacent raster centres avoid aliasing every native goal
+        to one unsuitable centre. Every result remains a read-only proposal;
+        actual Nav2 arrival, stop, finite sight and departure proofs still run.
+        No try, cooldown, baseline or observation receipt is changed here.
+        """
+        normal = getattr(frontier,'approach_direction',None)
+        if (normal is None or not getattr(frontier,'retained_observation',False)
+                or not policy.attempts[task_id].partial_observation):
+            return None
+        grid,cor,pose,*_ = inputs
+        resolution = grid.info.resolution
+        base = math.atan2(normal[1],normal[0])
+        directions = sorted((base+a for a in (0.,math.pi/2,-math.pi/2,math.pi)),
+            key=lambda h:abs(math.atan2(math.sin(h-pose[2]),math.cos(h-pose[2]))))
+        for heading in directions:
+            error = abs(math.atan2(math.sin(heading-pose[2]),math.cos(heading-pose[2])))
+            if self._frontier_forward_cone_half_angle>0 and error>self._frontier_forward_cone_half_angle:
+                continue
+            for distance in (self._min_goal_dist_m+self._goal_search_m,
+                    self._min_goal_dist_m+self._goal_search_m/2,self._min_goal_dist_m):
+                ideal = (pose[0]+distance*math.cos(heading),pose[1]+distance*math.sin(heading))
+                col,row = self._world_to_grid(*ideal,grid.info)
+                for dc,dr in ((0,0),(0,1),(0,-1),(1,0),(-1,0)):
+                    if time.monotonic()>=until:
+                        return None
+                    goal = self._grid_to_world(col+dc,row+dr,grid.info)
+                    if not self._min_goal_dist_m<=math.dist(goal,pose[:2])<=self._min_goal_dist_m+self._goal_search_m:
+                        continue
+                    if self._metric_route(inputs,goal,heading) is not None:
+                        continue  # existing fully proved refinement remains below
+                    route = self._metric_nav2_proposal(inputs,goal,heading,native_stop=True)
+                    if route is None:
+                        continue
+                    visible = visible_boundary_cells(grid,scope,(*goal,heading),self._metric_observation_view())
+                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(frontier.cx,frontier.cy))
+                            <=MAX_LOCAL_OBSERVATION_RADIUS_M)
+                    served = [a for key,a in policy.attempts.items() if key!=task_id and a.completed
+                        and a.tries and math.dist(a.target_xy,goal)<policy.radius]
+                    points = tuple(p for p in points if all(math.dist(p,a.frontier_xy)
+                        >MAX_LOCAL_OBSERVATION_RADIUS_M+policy.radius for a in served))
+                    if len(points)<=len(selected.observation_points):
+                        continue
+                    if policy.identify((frontier.cx,frontier.cy),goal,
+                            observation_points=points,create=False)!=task_id:
+                        continue
+                    local = self._metric_local_evidence(inputs,policy.attempts[task_id].frontier_xy)
+                    if not policy.eligible(task_id,goal,time.monotonic(),cor.fingerprint,local,
+                            observation_points=points):
+                        continue
+                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost = self._potential_scale*length-self._gain_scale*len(points)*resolution+self._heading_scale*error
+                    if time.monotonic()<until:
+                        return MetricCandidate('',*goal,heading,(frontier.cx,frontier.cy),route,length,cost,
+                            cor.fingerprint,cor.map_revision,True,points)
+        return None
+
     def _metric_refine_observation(self, inputs, frontier, policy, scope, selected, task_id, until):
         """Improve an already eligible job within its original helper window.
 
@@ -1815,6 +1896,9 @@ class MetricFrontierRuntime:
         turning refuge than the first bearing. No fresh ID, additional helper
         deadline, observation receipt or motion authority is created.
         """
+        proposed = self._metric_refine_native_observation(inputs,frontier,policy,scope,selected,task_id,until)
+        if proposed is not None:
+            return proposed
         normal = getattr(frontier,'approach_direction',None)
         if normal is None:
             return selected
@@ -1904,7 +1988,7 @@ class MetricFrontierRuntime:
                 task_policy = getattr(selection_cache, 'policy', None)
                 retained = () if task_policy is None else tuple(a.frontier_xy
                     for a in task_policy.attempts.values()
-                    if not a.completed and a.reason == 'partially_observed'
+                    if not a.completed and a.partial_observation
                     and a.tries < task_policy.retry_limit+1 and a.failures < task_policy.retry_limit)
                 kwargs = (dict(retained_anchors=retained,
                     retained_radius_m=MAX_LOCAL_OBSERVATION_RADIUS_M) if retained else {})
@@ -2614,8 +2698,8 @@ class MetricFrontierRuntime:
                     except ValueError as error:
                         return finish('blocked', str(error))
                     unresolved=any(a.tries and not a.completed and
-                        (a.reason != 'proposal_rejected' or a.failures)
-                        and not (a.reason == 'partially_observed' and scope_inside and not remainder)
+                        (a.partial_observation or a.reason != 'proposal_rejected' or a.failures)
+                        and not (a.partial_observation and scope_inside and not remainder)
                         for a in policy.attempts.values())
                     self._metric_status.update(unknown_cells_in_scope=unknown,
                         deferred_tasks=sum(a.failures>0 and not a.completed for a in policy.attempts.values()))
@@ -2659,9 +2743,10 @@ class MetricFrontierRuntime:
                                 # scope proof/window closes it; no extra gain,
                                 # retry, failure or observation is invented.
                                 for attempt in policy.attempts.values():
-                                    if attempt.reason == 'partially_observed':
+                                    if attempt.partial_observation:
                                         attempt.completed = True
                                         attempt.reason = 'observed_scope_resolved'
+                                        attempt.partial_observation = False
                                 last_inputs = final
                                 return finish('success','reachable_metric_scope_observed')
                         completion_window.observe(now=time.monotonic(),scan_stamp=0,context=c.context,clear=False)

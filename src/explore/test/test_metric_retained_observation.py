@@ -39,6 +39,7 @@ def partial_data(elapsed_s=0.):
     # Counters, targets, local digests and all other recorded tasks stay intact.
     p.attempts['metric-task-4'].reason='partially_observed'
     p.attempts['metric-task-4'].completed=False
+    p.attempts['metric-task-4'].partial_observation=True
     return n,i,p,m,b
 
 
@@ -74,10 +75,16 @@ def test_b70_partial_followup_uses_unmodified_counter_history():
     n,i,p,_,_=partial_data(elapsed_s=31.)
     before=policy_state(p,time.monotonic())
     selected=n._metric_select(i,p,.3)
-    assert selected and not selected[0].requires_nav2_plan,n._frontier_rank_stats
+    assert selected,n._frontier_rank_stats
     c=selected[0];assert c.task_id=='metric-task-4' and c.observation_points
-    assert n._metric_waypoints_clear(i,c.route,c.yaw) is not None
-    stop=n._metric_rollout_stop_pose(i,c.route,c.yaw)
+    if c.requires_nav2_plan:
+        # A higher-utility retained proposal has no movement authority.
+        # Existing separate real native B70 arrival/departure proof remains.
+        assert n._metric_nav2_proposal(i,(c.x,c.y),c.yaw,native_stop=True) is not None
+        stop=(c.x,c.y,c.yaw)
+    else:
+        assert n._metric_waypoints_clear(i,c.route,c.yaw) is not None
+        stop=n._metric_rollout_stop_pose(i,c.route,c.yaw)
     visible=visible_boundary_cells(i[0],n._metric_scope_mask(i),stop,n._metric_observation_view())
     assert set(c.observation_points)<={n._grid_to_world(col,row,i[0].info) for row,col in visible}
     after=policy_state(p,time.monotonic())

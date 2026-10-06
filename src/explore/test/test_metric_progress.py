@@ -188,7 +188,7 @@ def test_actual_parent_negative_endings_never_success(monkeypatch,fault):
 def checkpoint_document():
     p=MetricTaskPolicy(.6,30.,2);k=p.identify((1.5,0.));c=replace(candidate(k),evidence_key='c'*64)
     p.record(c,'arrival_without_observation',10.,'a'*64)
-    return dict(schema_version=1,strategy='metric_frontier',resume_authorizes_motion=False,
+    return dict(schema_version=2,strategy='metric_frontier',resume_authorizes_motion=False,
         context=dict(session_id='metric',map_id='map-'+('a'*64),frame_id='map'),
         saved_map_id='map-'+('b'*64),fingerprint='b'*64,
         scope=dict(scope_id='scope',vertices=[[0.,0.],[3.,0.],[3.,3.],[0.,3.]]),
@@ -223,7 +223,7 @@ def test_atomic_checkpoint_keeps_last_valid_on_unsupported_or_interrupted_save(t
     binding=MapVersionBinding('test-map','version1','b'*64,80,40,.1,'map')
     repository=ExplorationStateRepository(tmp_path);valid=json.loads(json.dumps(checkpoint_document()))
     first=repository.save(binding,valid)
-    bad=copy.deepcopy(valid);bad['schema_version']=2
+    bad=copy.deepcopy(valid);bad['schema_version']=99
     repository.save(binding,bad)
     assert repository.load(binding,validate_state=validate_checkpoint).path==first
     import explore.exploration_persistence as storage
