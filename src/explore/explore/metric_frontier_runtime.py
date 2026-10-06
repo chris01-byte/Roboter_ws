@@ -419,6 +419,24 @@ class MetricFrontierRuntime:
             origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
             maximum_cells=self._wohnungserkundung_evidence_max_cells)
 
+    def _metric_native_observation_ready(self, inputs, route, candidate, baseline_inputs, points):
+        """Keep the original finite task view at the actual planned stop.
+
+        Use the original unknown raster for opportunity, without refreshing
+        its observation baseline or granting an actual observation receipt.
+        """
+        if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+            return True
+        stop = self._metric_rollout_stop_pose(inputs,route,candidate.yaw,native_plan=True)
+        grid = baseline_inputs[0]
+        visible = visible_boundary_cells(grid,self._metric_scope_mask(baseline_inputs),stop,
+                                          self._metric_observation_view())
+        expected = set(points)
+        matches = sum(self._grid_to_world(c,r,grid.info) in expected for r,c in visible)
+        self._metric_status['native_stop_observation'] = dict(
+            predicted_pose=list(stop),original_points=len(expected),potential_points=matches)
+        return bool(matches)
+
     def _metric_scope_is_covered(self, grid):
         return all(0 <= self._world_to_grid(v.x,v.y,grid.info)[0] < grid.info.width and
                    0 <= self._world_to_grid(v.x,v.y,grid.info)[1] < grid.info.height
@@ -1057,6 +1075,27 @@ class MetricFrontierRuntime:
     def _metric_public_rollout(self, inputs, route):
         return self._metric_checked_public_rollout(inputs,route)[0]
 
+    def _metric_rollout_stop_pose(self, inputs, route, goal_yaw, *, native_plan=False):
+        """Predict the existing checker's stop, including its heading window.
+
+        Opportunity at an ideal endpoint can disappear 15 cm before it or
+        when RPP accepts a heading 0.4 rad before the requested orientation.
+        This is a candidate prediction, never an observed-gain receipt.
+        """
+        if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+            return (*route[-1], goal_yaw)
+        if native_plan:
+            trajectory = self._metric_public_rollout(inputs, route)
+        else:
+            trajectory = rpp_trajectory(route, inputs[2],
+                min(inputs[0].info.resolution, inputs[5].info.resolution),
+                getattr(self, '_prealign_handoff_tolerance', .17), self._metric_bounds,
+                prealign_to_first_leg=True, external_prealignment=False)
+        stop = trajectory[-1]
+        turn = math.atan2(math.sin(goal_yaw-stop[2]), math.cos(goal_yaw-stop[2]))
+        yaw = stop[2]+math.copysign(max(0.,abs(turn)-.4),turn)
+        return (*stop[:2], yaw)
+
     def _metric_standard_waypoints_clear(self, inputs, route, target_yaw=None, *, native_plan=False):
         grid, _, pose, known, _, costmap, cost_known = inputs
         target = route[-1]
@@ -1406,14 +1445,10 @@ class MetricFrontierRuntime:
                 center_deviation_m=.02) for grid, mask in grids):
             return True  # existing fixed first-body egress owns this case
         resolution = min(grid.info.resolution for grid, _ in grids)
-        trajectory = self._metric_public_rollout(inputs, route)
-        stop_yaw = trajectory[-1][2]
-        turn = math.atan2(math.sin(target.yaw-stop_yaw),math.cos(target.yaw-stop_yaw))
         # RPP does not turn to the ideal heading if its real checker already
         # accepts the rollout heading. Otherwise it stops upon entering the
         # unchanged .4-rad window, rather than magically reaching target yaw.
-        terminal_yaw = stop_yaw+math.copysign(max(0.,abs(turn)-.4),turn)
-        projected = (*trajectory[-1][:2], terminal_yaw)
+        projected = self._metric_rollout_stop_pose(inputs,route,target.yaw,native_plan=True)
         forecast = (inputs[0], inputs[1], projected, *inputs[3:])
         if self._metric_scan_geometry_ready(forecast):
             return not stop_requested()
@@ -1623,7 +1658,8 @@ class MetricFrontierRuntime:
                 if route is None:
                     continue
                 view = self._metric_observation_view()
-                visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw), view)
+                visible = visible_boundary_cells(grid, scope_mask,
+                    self._metric_rollout_stop_pose(inputs,route,yaw), view)
                 points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
                     if math.dist(self._grid_to_world(c, r, grid.info), (frontier.cx, frontier.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                 if not points:
@@ -1656,17 +1692,24 @@ class MetricFrontierRuntime:
                 heading_half_angle=.05, center_deviation_m=.02)
                 for g, allowed in ((grid, inputs[3]), (costmap, inputs[6]))):
             return None
+        fallback = None
         for f in sorted(frontiers, key=lambda f: math.dist(pose[:2], (f.cx, f.cy))):
             bearing = math.atan2(f.cy-pose[1], f.cx-pose[0])
-            for offset in (0., math.pi/4, -math.pi/4):
-                heading = bearing+offset
+            # A safe observer can be beside a narrow entrance rather than
+            # toward it. These positions come only from current pose/sight;
+            # the actual native plan still owns every subsequent movement.
+            headings = dict.fromkeys((bearing,bearing+math.pi/4,bearing-math.pi/4,
+                                      pose[2],pose[2]-math.pi/2,pose[2]+math.pi/2))
+            distances = dict.fromkeys((self._min_goal_dist_m+self._goal_search_m,
+                self._min_goal_dist_m+self._goal_search_m/2,self._min_goal_dist_m,
+                self._min_goal_dist_m+min(grid.info.resolution,self._goal_search_m)))
+            for heading in headings:
                 error = abs(math.atan2(math.sin(heading-pose[2]), math.cos(heading-pose[2])))
                 if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
                     continue
-                for fraction in (1., .5, 0.):
+                for distance in distances:
                     if time.monotonic() >= until:
-                        return None
-                    distance = self._min_goal_dist_m+fraction*self._goal_search_m
+                        return fallback
                     goal = (pose[0]+distance*math.cos(heading),
                             pose[1]+distance*math.sin(heading))
                     # Boundary identity first; a nearby served observer pose
@@ -1677,26 +1720,41 @@ class MetricFrontierRuntime:
                             or attempt.failures >= policy.retry_limit):
                         continue
                     facing = math.atan2(f.cy-goal[1], f.cx-goal[0])
-                    for yaw in (facing, facing+math.pi/2, facing-math.pi/2):
+                    for yaw in dict.fromkeys((facing,facing+math.pi/2,facing-math.pi/2,heading)):
                         if time.monotonic() >= until:
-                            return None
+                            return fallback
                         route = self._metric_route(inputs, goal, yaw)
                         if route is None:
                             continue
-                        visible = visible_boundary_cells(grid, scope_mask, (*goal, yaw),
+                        stop_pose = self._metric_rollout_stop_pose(inputs,route,yaw)
+                        observer_xy = stop_pose[:2]
+                        visible = visible_boundary_cells(grid, scope_mask,
+                                                         stop_pose,
                                                          self._metric_observation_view())
                         points = tuple(self._grid_to_world(c, r, grid.info) for r, c in sorted(visible)
                             if math.dist(self._grid_to_world(c, r, grid.info), (f.cx, f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
                         if not points:
                             continue
-                        key = policy.identify((f.cx,f.cy),goal,observation_points=points)
+                        # Select a genuinely distinct finite part of this
+                        # current view; old-area rays need not erase its new
+                        # boundary rays. The unchanged policy still enforces
+                        # ALL neighbouring try/failure/cooldown limits.
+                        served = [a for a in policy.attempts.values()
+                            if a is not attempt and a.completed and a.tries
+                            and math.dist(a.target_xy,observer_xy)<policy.radius]
+                        points = tuple(p for p in points if all(
+                            math.dist(p,a.frontier_xy)>MAX_LOCAL_OBSERVATION_RADIUS_M+policy.radius
+                            for a in served))
+                        if not points:
+                            continue
+                        key = policy.identify((f.cx,f.cy),observer_xy,observation_points=points)
                         local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
                         now = time.monotonic()
-                        if not policy.eligible(key,goal,now,correlation.fingerprint,local,
+                        if not policy.eligible(key,observer_xy,now,correlation.fingerprint,local,
                                                observation_points=points):
                             wake = max((a.retry_after for a in policy.attempts.values()
-                                if a.tries and math.dist(a.target_xy,goal)<policy.radius),default=now)
-                            if wake>now and policy.eligible(key,goal,wake,correlation.fingerprint,local,
+                                if a.tries and math.dist(a.target_xy,observer_xy)<policy.radius),default=now)
+                            if wake>now and policy.eligible(key,observer_xy,wake,correlation.fingerprint,local,
                                                           observation_points=points):
                                 memo,_ = self._metric_selection_memo(inputs)
                                 if memo is not None:
@@ -1705,9 +1763,13 @@ class MetricFrontierRuntime:
                             continue
                         length = sum(math.dist(a, b) for a, b in zip(route, route[1:]))
                         cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution+self._heading_scale*error
-                        return MetricCandidate('', *goal, yaw, (f.cx, f.cy), route, length,
+                        candidate = MetricCandidate('', *goal, yaw, (f.cx, f.cy), route, length,
                             cost, correlation.fingerprint, correlation.map_revision, False, points)
-        return None
+                        if self._metric_scan_geometry_ready((grid,correlation,stop_pose,*inputs[3:])):
+                            return candidate
+                        if fallback is None or candidate.cost<fallback.cost:
+                            fallback = candidate
+        return fallback
 
     def _metric_candidates(self, inputs, min_frontier, *, frontiers=None, view=None):
         cache = getattr(self, '_metric_selection_cache', None)
@@ -1786,7 +1848,8 @@ class MetricFrontierRuntime:
                 if route is None:
                     continue
                 view = self._metric_observation_view()
-                visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
+                visible = visible_boundary_cells(grid, scope_mask,
+                    self._metric_rollout_stop_pose(inputs,route,pose[2]), view)
                 for f in frontiers:
                     points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
                         if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
@@ -1920,7 +1983,9 @@ class MetricFrontierRuntime:
             if view is not None:
                 if live_view:
                     view = self._metric_observation_view()
-                visible = visible_boundary_cells(grid, scope_mask, (*goal, target_yaw), view)
+                view_pose = ((*goal, target_yaw) if proposal else
+                    self._metric_rollout_stop_pose(inputs,route,target_yaw))
+                visible = visible_boundary_cells(grid, scope_mask, view_pose, view)
                 # This anchor must have a visible nearby boundary; unrelated
                 # unknown cells on the other side of a wall grant no utility.
                 local_hits = [cell for cell in visible if math.dist(
@@ -2045,7 +2110,8 @@ class MetricFrontierRuntime:
                 if route is None:
                     continue
                 view = self._metric_observation_view()
-                visible = visible_boundary_cells(grid, scope_mask, (*goal, pose[2]), view)
+                visible = visible_boundary_cells(grid, scope_mask,
+                    self._metric_rollout_stop_pose(inputs,route,pose[2]), view)
                 for f in frontiers:
                     points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
                         if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
@@ -2216,6 +2282,7 @@ class MetricFrontierRuntime:
         observed_area = 0.
         last_inputs = None
         baseline = None
+        baseline_inputs = None
         resume_checked = False
         self._metric_resume_validated = False
         def checkpoint(outcome='in_progress'):
@@ -2496,6 +2563,7 @@ class MetricFrontierRuntime:
                 completion_window.observe(now=time.monotonic(), scan_stamp=0,
                     context=inputs[1].context, clear=False)
                 baseline = self._metric_observation_baseline(inputs, pending)
+                baseline_inputs = inputs  # original unknown raster, unchanged across retry/HOLD
                 # Bind to the context actually used to select the candidate,
                 # even if a callback arrives immediately after that calculation.
                 self._metric_active_context = (getattr(self, '_metric_context_generation', 0), inputs[1].context,
@@ -2580,12 +2648,22 @@ class MetricFrontierRuntime:
                         # Read-only lookahead shares all original source, HOLD,
                         # task/mission and context limits. Its forecast cannot
                         # invoke the private first-body motion ledger.
-                        departure_ready = self._metric_departure_plan_ready(
+                        view_error = None
+                        try:
+                            view_ready = self._metric_native_observation_ready(
+                                inputs,planned_route,pending,baseline_inputs,baseline.points)
+                        except Exception as error:
+                            view_ready = False
+                            view_error = str(error)
+                            stop_reason[0] = stop_reason[0] or view_error
+                        departure_ready = view_ready and self._metric_departure_plan_ready(
                             inputs, planned_route, pending, lambda: stop(check_route=False))
                         if not departure_ready:
                             status = 'planning_failed'
                             stop_reason[0] = stop_reason[0] or 'route_invalidated'
-                            self._metric_status['nav2_plan_rejection'] = 'known_space_departure_unavailable'
+                            self._metric_status['nav2_plan_rejection'] = (
+                                view_error or ('known_space_departure_unavailable' if view_ready else
+                                               'native_stop_has_no_candidate_view'))
                         else:
                             self._metric_nav_path = planned
                             # Align to the ACTUAL controller carrot on this Nav2 path.

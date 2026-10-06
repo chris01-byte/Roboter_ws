@@ -43,7 +43,7 @@ def test_finite_new_view_cannot_renew_a_capped_neighbour_or_the_same_boundary():
     assert policy.attempts[old].tries==3 and policy.attempts[old].completed
 
 
-def frozen():
+def frozen(name='ap06_b60_selection', *, elapsed_s=0.):
     import json,time
     from pathlib import Path
     import numpy as np
@@ -58,7 +58,7 @@ def frozen():
     from explore.portal_source_adapter import PortalSourceCorrelation
     from explore.exploration_scope import AuthorizedExplorationScope
     from test_metric_frontier import adaptive_fixture
-    path=Path(__file__).parent/'data'/'ap06_b60_selection'
+    path=Path(__file__).parent/'data'/name
     meta=json.loads(path.with_suffix('.json').read_text())
     arrays=np.load(path.with_suffix('.npz'))
     def grid(key):return deserialize_message(arrays[key].tobytes(),OccupancyGrid)
@@ -83,7 +83,9 @@ def frozen():
         evidence.append(e)
     n._metric_egress=tuple(evidence)
     inputs=MetricInputs((grid('raw_cdr'),cor,tuple(meta['pose']),arrays['known'].copy(),
-        arrays['safe'].copy(),grid('cost_cdr'),arrays['cost_known'].copy()),ref)
+        arrays['safe'].copy(),grid('cost_cdr'),arrays['cost_known'].copy()),ref,
+        tuple(tuple(v) if isinstance(v,list) else v for v in meta['physical_motion'])
+        if meta.get('physical_motion') is not None else None)
     n._global_costmap=inputs[5];n._metric_nav_path=None;n._metric_status={}
     # Frozen finite view is component geometry, never a new live scan/health receipt.
     view=LidarView(tuple(meta['mount']),arrays['angles'],meta['maximum_range'],meta['minimum_range'])
@@ -91,7 +93,7 @@ def frozen():
     data=meta['policy'];p=MetricTaskPolicy(data['radius'],data['cooldown_s'],data['retry_limit'])
     p.next_id=data['next_id'];now=time.monotonic()
     for key,stored in data['tasks'].items():
-        d=dict(stored);d['retry_after']=now+d.pop('retry_remaining_s')
+        d=dict(stored);d['retry_after']=now+d.pop('retry_remaining_s')-elapsed_s
         d['target_xy']=tuple(d['target_xy']);d['frontier_xy']=tuple(d['frontier_xy'])
         p.attempts[key]=MetricAttempt(**d)
     return n,inputs,p
