@@ -129,21 +129,18 @@ def ordinary_departure_fixture():
     return node, inputs, scan
 
 
-def test_retired_private_history_does_not_block_fully_ordinary_forward_observation():
+def test_retired_private_history_cannot_authorize_40_current_raw_unknown_cells():
+    from explore.metric_frontier import footprint_cells
     node, inputs, _ = ordinary_departure_fixture()
-    # Exhaustive stateless geometry regression, without live task selection.
-    # The separate live-selection test and product retain their 5-s deadline.
-    node._map_timeout_s = 30.
     before = [copy.deepcopy(inputs[i].data) for i in (0, 5)]
-    candidates = node._metric_candidates(inputs, .3)
-    proved = [c for c in candidates if not c.requires_nav2_plan]
-    assert proved, node._frontier_rank_stats
-    assert all(c.route_length_m >= node._min_goal_dist_m for c in proved)
-    for c in proved:
-        assert c.observation_points
-        assert node._metric_standard_waypoints_clear(inputs, c.route, c.yaw) is not None
-    assert [inputs[i].data for i in (0, 5)] == before
+    rows, cols = footprint_cells(*inputs[2], inputs[0], node._world_to_grid,
+        node._metric_bounds, heading_half_angle=.05, center_deviation_m=.02)
+    raw = np.asarray(inputs[0].data).reshape(inputs[3].shape)
+    assert np.count_nonzero(raw[rows,cols] < 0) == 40
     assert all(not e.valid and not e.unknown.any() for e in node._metric_egress)
+    candidates = node._metric_candidates(inputs, .3)
+    assert not any(not c.requires_nav2_plan for c in candidates)
+    assert [inputs[i].data for i in (0, 5)] == before
 
 
 def test_retired_private_history_grants_no_obstacle_bypass_to_forward_fallback():
@@ -155,21 +152,26 @@ def test_retired_private_history_grants_no_obstacle_bypass_to_forward_fallback()
     assert not any(not c.requires_nav2_plan for c in candidates)
 
 
-def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
-    from explore.metric_frontier import MetricTaskPolicy
-    node, inputs, _ = ordinary_departure_fixture()
-    policy = MetricTaskPolicy(.6, 30., 2)
+def test_live_public_task_selection_proves_goals_past_served_history(monkeypatch):
+    import explore.metric_frontier_runtime as module
+    from test_metric_public_cooldown import frozen
+    node, inputs, policy = frozen()
+    clock = [time.monotonic()+31.]
+    monkeypatch.setattr(module.time, 'monotonic', lambda:clock[0])
+    node._global_costmap_received_at = clock[0]
     first = node._metric_select(inputs, policy, .3)
     assert first and not first[0].requires_nav2_plan
-    assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
-            or node._frontier_rank_stats.get('bounded_start_observation')
-            or node._frontier_rank_stats.get('bounded_public_observation'))
-    assert node._metric_standard_waypoints_clear(inputs, first[0].route, first[0].yaw)
-    policy.record(first[0], 'observed', time.monotonic(), first[0].fingerprint)
+    public = node._metric_public_inputs(inputs)
+    assert node._metric_standard_waypoints_clear(public,first[0].route,first[0].yaw)
+    policy.record(first[0], 'observed', clock[0], first[0].fingerprint)
+    clock[0] += 31.  # original 30-s pause, component clock only
+    node._global_costmap_received_at = clock[0]
     second = node._metric_select(inputs, policy, .3)
     assert second, node._frontier_rank_stats
     assert all(c.task_id != first[0].task_id for c in second)
-    assert all(node._metric_standard_waypoints_clear(inputs, c.route, c.yaw) for c in second)
+    assert all(node._metric_standard_waypoints_clear(public,c.route,c.yaw) for c in second)
+    assert policy.attempts[first[0].task_id].tries == 1
+    assert policy.attempts['metric-task-1'].tries == 1
 
 
 def test_fixed_body_facts_survive_stationary_mask_withdrawal_but_not_observation():
