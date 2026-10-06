@@ -1,0 +1,41 @@
+[
+  {
+    "goal": [
+      1.9049999574199319,
+      -0.4949999889358878,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "nav2_plan_aborted",
+    "kind": "Original B73 after-fourth-observation selection14 raw/cost rasters, recorded map pose, native CPP read-only query; no motion or whole acceptance",
+    "planner": "hybrid",
+    "footprint": "false",
+    "astar": "true"
+  },
+  {
+    "goal": [
+      1.9049999574199319,
+      -0.4349999902769923,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "nav2_plan_aborted",
+    "kind": "Original B73 after-fourth-observation selection14 raw/cost rasters, recorded map pose, native CPP read-only query; no motion or whole acceptance",
+    "planner": "hybrid",
+    "footprint": "false",
+    "astar": "true"
+  },
+  {
+    "goal": [
+      2.59499994199723,
+      -0.4349999902769923,
+      0.0
+    ],
+    "arrival_plan_valid": false,
+    "arrival_rejection": "nav2_plan_aborted",
+    "kind": "Original B73 after-fourth-observation selection14 raw/cost rasters, recorded map pose, native CPP read-only query; no motion or whole acceptance",
+    "planner": "hybrid",
+    "footprint": "false",
+    "astar": "true"
+  }
+]

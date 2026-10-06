@@ -1,0 +1,445 @@
+[
+  {
+    "goal": [
+      0.5901704021853186,
+      -0.5347267998891077,
+      0.19687857139643994
+    ],
+    "arrival_plan_valid": true,
+    "arrival_rejection": null,
+    "kind": "Original B76 coherent selection32; first and subsequent readonly native C++ plans at predicted stops, no motion or whole acceptance",
+    "projected_stop": [
+      0.7128447585653696,
+      -0.4507391870718884,
+      -0.20312142860356008
+    ],
+    "path_endpoint": [
+      0.5901704021853186,
+      -0.5347267998891077
+    ],
+    "stop_goal_distance": 0.14867049747678548,
+    "scan_ready": true,
+    "departure_valid": true,
+    "following": [
+      {
+        "goal": [
+          1.905,
+          -0.48,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.7578828865288414,
+          -0.4532964607123123,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.48,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_stop_rotation_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.7610841929723235,
+          -0.4590352466849573,
+          -2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.495,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.761046223824109,
+          -0.4590536404078596,
+          0.02499999999999991
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.51,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.51,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          1.905,
+          -0.525,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.48,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9372168483385876,
+          -0.45484470311258096,
+          5.551115123125783e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.48,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.938629443302858,
+          -0.45402798069293887,
+          0.02499999999999991
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9405537243784503,
+          -0.4604762685890492,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.495,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          1.9405537243784503,
+          -0.4604762685890492,
+          0.02499999999999994
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.51,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.51,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.085,
+          -0.525,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.48,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.0587156708796264,
+          -0.45410444047543197,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.48,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.059297975688682,
+          -0.45462895944877146,
+          0.024999999999999994
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.0611687234608964,
+          -0.46107862005812966,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.495,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.0611687234608964,
+          -0.46107862005812966,
+          0.02499999999999994
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.51,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.51,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.205,
+          -0.525,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.48,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.149837684636327,
+          -0.45330409464142757,
+          2.7755575615628914e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.48,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_stop_rotation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.495,
+          0.4
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.149478689676354,
+          -0.4605710367187431,
+          5.551115123125783e-17
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.495,
+          0.425
+        ],
+        "native_error": null,
+        "valid": true,
+        "rejection": null,
+        "stop": [
+          2.1499493860605536,
+          -0.46135753942035723,
+          0.02499999999999994
+        ],
+        "departure_valid": false,
+        "departure_rejection": "footprint_sweep_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.51,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.51,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.525,
+          0.4
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      },
+      {
+        "goal": [
+          2.295,
+          -0.525,
+          0.425
+        ],
+        "native_error": null,
+        "valid": false,
+        "rejection": "goal_orientation_invalid"
+      }
+    ],
+    "astar": "true"
+  }
+]

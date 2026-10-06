@@ -2944,3 +2944,8 @@ Zusatzstand `7a2b09e`/`b8189a9`: HWT-Sampledispatch bei tatsächlich reentranten
 Zusatzstand `17fba88`: nachweislich partielle Frontierbeobachtung bleibt als begrenzte Restarbeit erhalten; ursprüngliche Sicherheits-, Zeit-, Try- und Quellenregeln gelten weiter. Verlustfreie Ereigniskompression betrifft ausschließlich den Softwareprüfstand. Noch keine Zielsysteminstallation oder physische Wirkung ausgeführt. Vor einer späteren Zielprüfung qualifizierten vollständigen Explorer-/NavFn-Stand gemeinsam übertragen; maßgebliche Gesamtqualifikation ausschließlich STATUS.
 
 Zusatzstand `ea63493`: bessere endliche Sichtpunkte einer schon zulässigen Aufgabe unter derselben bestehenden ID und ursprünglichen Budgets; keine Sicherheits-/Controllerparameter geändert. Nur isolierter x86-Softwareprüfstand gebaut und geprüft, keine Installation auf dem Jetson oder Hardwarefahrt. Vollständige Missionsqualifikation bleibt gesondert im STATUS.
+
+
+## 06.10.2026 – AP-06 Tangentenreihenfolge, keine Zielsystemübertragung
+
+Neue isolierte AP-06-Korrektur sortiert vorhandene Nahzielrichtungen nach originalen Lenkkosten; tatsächliche Native-An-/Abfahrt und alle Quellen-/Kontur-/Haltprüfungen bleiben Pflicht. Ubuntu/Humble/x86-Modelltests sind kein Jetson-Nachweis. Kein dauerhafter Install-/Profil-/Autostartwechsel und keine Hardwarefahrt. Rückfall ausschließlich der eigene Reihenfolge-Commit. Bestehende Shutdown-Autorisierung gilt weiter nur für den tatsächlich verifizierten Jetson; mangels ausführbarem Jetson-Kanal nicht ausgeführt. Aktuelles Software-/Gesamtresultat ausschließlich im STATUS.

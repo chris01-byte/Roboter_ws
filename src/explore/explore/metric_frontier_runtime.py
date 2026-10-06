@@ -1791,8 +1791,12 @@ class MetricFrontierRuntime:
         distances=dict.fromkeys((self._min_goal_dist_m+self._goal_search_m,
             self._min_goal_dist_m+self._goal_search_m/2,self._min_goal_dist_m,
             self._min_goal_dist_m+min(grid.info.resolution,self._goal_search_m)))
-        for turn in (0.,math.pi/2,-math.pi/2,math.pi):
-            heading=base+turn
+        # The helper has one fixed window, so examine small steering costs
+        # first. Starting with the inward normal can spend the whole window
+        # on a backward approach before a useful boundary tangent is tried.
+        headings=sorted((base+turn for turn in (0.,math.pi/2,-math.pi/2,math.pi)),
+            key=lambda a:abs(math.atan2(math.sin(a-pose[2]),math.cos(a-pose[2]))))
+        for heading in headings:
             error=abs(math.atan2(math.sin(heading-pose[2]),math.cos(heading-pose[2])))
             if self._frontier_forward_cone_half_angle>0 and error>self._frontier_forward_cone_half_angle:
                 continue

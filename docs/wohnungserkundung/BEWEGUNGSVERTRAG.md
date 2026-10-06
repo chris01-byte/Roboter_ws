@@ -184,3 +184,5 @@ Bei RPP ist der prognostizierte tatsächliche Goalchecker-Stopp maßgeblich für
 ### Verfeinerung einer bereits zulässigen Beobachtung
 
 Die optionale Randtangentenverfeinerung darf nur innerhalb der verbleibenden ursprünglichen Hilfsfrist eine schon zulässige Aufgabe verbessern. Tatsächliche modellierte Stopp- und Idealposition müssen lesend dieselbe vorhandene ID erreichen und deren unveränderte Nachbar-/Cooldown-/Try-/Fehlerregeln erfüllen. Vollständige Roh-/Costmap-Drehreserve und eigener Weg bleiben Pflicht. Mehr endliche Potentialpunkte und niedrigere originale Kosten sind Auswahlkriterien, keine beobachteten Fortschritts- oder Abschlussnachweise.
+
+Die vier vorhandenen Grenznormalen-/Tangentenrichtungen werden innerhalb der unveränderten Restfrist nach dem bereits im Originalpreis verwendeten absoluten Lenkwinkel zur aktuellen Pose geprüft. Niedrige Steuerkosten dürfen nicht allein wegen der vorherigen Reihenfolge unerreichbar werden. Radius, Punkt-/Kostenkriterien, derselbe lesende ID-/Nachbar-/Try-Nachweis, öffentliche Drehreserve und abschließende native Hin-/Abfahrt bleiben unverändert.
