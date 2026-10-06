@@ -6,7 +6,7 @@ import time
 
 from nav_msgs.msg import Odometry
 from rcl_interfaces.msg import ParameterDescriptor
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import Imu
 from std_msgs.msg import String
@@ -42,9 +42,14 @@ class Hwt601FusionGuard:
             # sensor timestamp regression. Serialize each source's dispatch;
             # separate groups keep raw/yaw/wheel independent and preserve the
             # original timestamps, age checks and real regression rejection.
-            sample_group = (wheel_callback_group if name == 'wheel'
-                            and wheel_callback_group is not None
-                            else MutuallyExclusiveCallbackGroup())
+            if name == 'wheel' and wheel_callback_group is not None:
+                sample_group = wheel_callback_group
+            elif isinstance(callback_group, ReentrantCallbackGroup):
+                sample_group = MutuallyExclusiveCallbackGroup()
+            else:
+                # Already serial owners retain their existing source/status
+                # coupling, including the passive gate's loss/HOLD checks.
+                sample_group = callback_group
             self.subscriptions.append(node.create_subscription(
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
                 (QoSProfile(depth=1,reliability=ReliabilityPolicy.BEST_EFFORT)
