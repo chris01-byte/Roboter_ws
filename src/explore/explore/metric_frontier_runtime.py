@@ -1627,6 +1627,10 @@ class MetricFrontierRuntime:
         initial_evidence = self._metric_selection_memo(inputs)[1]
         memo, _ = self._metric_selection_memo(inputs)
         policy = None if memo is None else memo.get('policy')
+        private_start_available = (getattr(self, '_metric_start_egress_enabled', False)
+            and not getattr(self, '_metric_egress_expired', True)
+            and bool(getattr(self, '_metric_egress', None))
+            and all(e.valid for e in self._metric_egress))
         # Before expensive boundary detours, prefer one useful proved forward
         # observation in the existing local search. Start from its far bound:
         # RPP's 15-cm acceptance must not reduce every departure to a tiny hop.
@@ -1634,7 +1638,7 @@ class MetricFrontierRuntime:
         if (policy is not None and live_view
                 and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
-                and not self._metric_egress_expired):
+                and private_start_available):
             minimum = max(self._min_goal_dist_m,
                 policy.radius+.15+grid.info.resolution)
             steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
@@ -1894,7 +1898,7 @@ class MetricFrontierRuntime:
         if (live_view and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                 and not any(not c.requires_nav2_plan for c in candidates)
-                and not self._metric_egress_expired):
+                and private_start_available):
             forward = []
             steps = int(math.floor(self._goal_search_m/grid.info.resolution))
             for step in range(steps+1):

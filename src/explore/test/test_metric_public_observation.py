@@ -103,7 +103,16 @@ def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
     node._metric_egress_identity = (inputs[1].context,
         tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
     before = {k: (a.tries, a.failures, a.completed) for k, a in policy.attempts.items()}
+    original_route = node._metric_route
+    queried = []
+    def route(current, target, yaw=None):
+        queried.append(math.dist(current[2][:2], target))
+        assert queried[-1] <= node._min_goal_dist_m+node._goal_search_m+1e-12, (
+            'Invalid private evidence must not start the longer first-egress search')
+        return original_route(current, target, yaw)
+    node._metric_route = route
     candidates = node._metric_select(inputs, policy, .3)
+    assert queried
     assert node._frontier_rank_stats.get('bounded_public_observation')
     assert candidates and not candidates[0].requires_nav2_plan
     assert candidates[0].observation_points

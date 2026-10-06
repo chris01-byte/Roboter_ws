@@ -162,7 +162,8 @@ def test_live_task_selection_proves_one_goal_and_looks_past_served_history():
     first = node._metric_select(inputs, policy, .3)
     assert first and not first[0].requires_nav2_plan
     assert (node._frontier_rank_stats.get('proof_search_stopped_on_eligible_task')
-            or node._frontier_rank_stats.get('bounded_start_observation'))
+            or node._frontier_rank_stats.get('bounded_start_observation')
+            or node._frontier_rank_stats.get('bounded_public_observation'))
     assert node._metric_standard_waypoints_clear(inputs, first[0].route, first[0].yaw)
     policy.record(first[0], 'observed', time.monotonic(), first[0].fingerprint)
     second = node._metric_select(inputs, policy, .3)
