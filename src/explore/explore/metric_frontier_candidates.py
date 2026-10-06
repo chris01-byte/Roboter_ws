@@ -18,7 +18,7 @@ class BoundarySample:
 
 
 def boundary_samples(grid, scope_mask, to_world, min_frontier_m,
-                     spacing_m=.8, limit=128):
+                     spacing_m=.8, limit=128, *, retained_anchors=(), retained_radius_m=.8):
     data = np.asarray(grid.data).reshape(grid.info.height, grid.info.width)
     unknown = data < 0
     adjacent = np.zeros(data.shape, bool)
@@ -35,7 +35,14 @@ def boundary_samples(grid, scope_mask, to_world, min_frontier_m,
         cells = np.argwhere(components[bounds] == component)
         cells += (bounds[0].start, bounds[1].start)
         if len(cells) < minimum:
-            continue
+            # A previously admitted, actually partially observed task does
+            # not vanish when its remaining measured boundary becomes small.
+            # These remain real current free/unknown boundary cells in scope;
+            # the normal threshold still applies to every unrelated component.
+            if not any(any(math.dist(to_world(int(c), int(r), grid.info), anchor)
+                           <= retained_radius_m for r, c in cells)
+                       for anchor in retained_anchors):
+                continue
         groups = {}
         for row, col in cells:
             tile = (int(row * grid.info.resolution / spacing_m),

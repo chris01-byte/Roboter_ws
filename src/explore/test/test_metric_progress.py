@@ -277,12 +277,14 @@ def test_actual_map_repository_and_sidecar_keep_last_pair_after_interrupted_new_
     assert (first.path/'occupancy.bin').exists()
 
 
-@pytest.mark.parametrize('gain',['new_visible_cells','arrival_only','cancel_wait','late_cancel','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'])
+@pytest.mark.parametrize('gain',['new_visible_cells','partial_visible_cells','partial_scope_later','partial_scope_wall','arrival_only','cancel_wait','late_cancel','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'])
 def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypatch,gain):
     from geometry_msgs.msg import PoseStamped
     from nav_msgs.msg import Path
     n,g,clock,parent,terminal=parent_fixture(monkeypatch,'open')
     n._max_frontier_goals=1
+    if gain.startswith('partial_scope_'):
+        n._max_frontier_goals=20
     chosen=[]
     def planner(target,*_):
         chosen.append(target)
@@ -296,9 +298,13 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
     def navigate(*_,**__):
         target=chosen[-1];clock[0]+=.1
         n._robot_pose_sample=lambda:((target.x,target.y,target.yaw),0.)
-        if gain in ('new_visible_cells','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'):
+        if gain in ('new_visible_cells','partial_visible_cells','partial_scope_later','partial_scope_wall','gain_after_deadline','hwt_wait','join_lag','join_cancel','join_timeout','join_source_loss'):
             newer=copy.deepcopy(g)
-            for xy in target.observation_points:
+            points=target.observation_points
+            if gain=='partial_visible_cells' or gain.startswith('partial_scope_'):
+                assert len(points)>1
+                points=(min(points,key=lambda xy:math.dist(xy,(target.x,target.y))),)
+            for xy in points:
                 col,row=n._world_to_grid(*xy,newer.info);newer.data[row*newer.info.width+col]=0
             newer.header.stamp.nanosec=100_000_000
             n._on_map(newer)
@@ -307,6 +313,22 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
         if gain=='late_cancel':parent.is_cancel_requested=True
         return 'success'
     n._navigate_to=navigate
+    if gain.startswith('partial_scope_'):
+        import explore.metric_frontier_runtime as module
+        updated=[]
+        def later_scope_observation(delay):
+            clock[0]+=max(.05,delay)
+            chain=n._metric_status.get('chain',[])
+            if not updated and chain and chain[0]['decision']=='partially_observed':
+                updated.append(True)
+                newer=copy.deepcopy(g);a=np.zeros((100,100),int)
+                if gain=='partial_scope_wall':
+                    a[10:19,20:29]=100;a[11:18,21:28]=-1
+                newer.data=a.ravel().tolist()
+                newer.header.stamp.nanosec=int((clock[0]-10)*1e9)
+                n._on_map(newer)
+                n._on_metric_map_status(status(newer,accepted=4,observed=4,when=100+clock[0]-10))
+        monkeypatch.setattr(module.time,'sleep',later_scope_observation)
     waits=[]
     if gain=='hwt_wait':
         held=[]
@@ -350,7 +372,14 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
         monkeypatch.setattr(module.time,'sleep',tick)
     result=n._execute_metric_frontier(parent,10.,.3)
     assert chosen and chosen[0].observation_points
-    if 'cancel' in gain:
+    if gain.startswith('partial_scope_'):
+        assert terminal==['success'] and result.success
+        assert n._metric_status['arrivals']==n._metric_status['observations']==1
+        assert clock[0]>=13. and n._metric_checkpoint['attempts']==1
+        task=n._metric_checkpoint['policy']['tasks'][chosen[0].task_id]
+        assert task['completed'] and task['reason']=='observed_scope_resolved'
+        assert task['tries']==1 and task['failures']==0
+    elif 'cancel' in gain:
         assert terminal==['cancel'] and n._metric_status['outcome']=='user_canceled'
         assert n._metric_status['observations']==0
     elif gain in ('join_timeout','join_source_loss'):
@@ -360,9 +389,13 @@ def test_real_candidate_parent_separates_arrival_observation_and_cancel(monkeypa
     else:
         assert terminal==['abort'] and not result.success
         assert n._metric_status['arrivals']==1
-        if gain in ('new_visible_cells','hwt_wait','join_lag'):
+        if gain in ('new_visible_cells','partial_visible_cells','hwt_wait','join_lag'):
             assert n._metric_status['observations']==1 and n._metric_status['observed_area_m2']>0
-            assert n._metric_status['chain'][0]['decision']=='observed'
+            assert n._metric_status['chain'][0]['decision']==('partially_observed' if gain=='partial_visible_cells' else 'observed')
+            if gain=='partial_visible_cells':
+                task=n._metric_checkpoint['policy']['tasks'][chosen[0].task_id]
+                assert not task['completed'] and task['reason']=='partially_observed'
+                assert task['tries']==1 and task['failures']==0
             if gain=='hwt_wait':
                 assert waits==[False] and len(chosen)==1
                 assert n._metric_checkpoint['attempts']==1

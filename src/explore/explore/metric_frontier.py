@@ -115,7 +115,8 @@ class MetricTaskPolicy:
             # require new local measured evidence; no tries/limits are reset.
             def new_input(a):
                 return (evidence_key != a.evidence_key or
-                    (a.reason == 'proposal_rejected' and
+                    ((a.reason == 'proposal_rejected' or
+                      (a.reason == 'partially_observed' and valid_view)) and
                      math.dist(a.target_xy, target_xy) > .15+1e-12))
             return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
                         and now >= a.retry_after and new_input(a)
@@ -130,7 +131,7 @@ class MetricTaskPolicy:
                count_try=True, arrival_xy=None, count_failure=True):
         attempt = self.attempts[candidate.task_id]
         visited = (candidate.x, candidate.y)
-        if outcome == 'observed' and arrival_xy is not None:
+        if outcome in ('observed','partially_observed') and arrival_xy is not None:
             if (len(arrival_xy) != 2 or not all(math.isfinite(v) for v in arrival_xy)
                     or math.dist(arrival_xy, visited) > .15+1e-12):
                 raise ValueError('metric_observed_arrival_invalid')
@@ -142,8 +143,8 @@ class MetricTaskPolicy:
         attempt.evidence_key = candidate.evidence_key if evidence_key is None else evidence_key
         attempt.retry_after = now + self.cooldown_s
         attempt.completed = outcome == 'observed'
-        if outcome == 'observed':
-            attempt.completed = True
+        if outcome in ('observed','partially_observed'):
+            attempt.completed = outcome == 'observed'
         elif outcome != 'pending' and count_failure:
             attempt.failures += 1
 

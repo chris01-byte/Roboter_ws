@@ -30,7 +30,7 @@ from .frontier_task_evidence import _validated_snapshot
 from .exploration_scope import AuthorizedExplorationScope
 from .metric_frontier_candidates import boundary_samples, lidar_view, visible_boundary_cells
 from .metric_progress import (local_evidence, reachable_remainder, CompletionWindow,
-                              ObservationBaseline, measured_gain)
+                              ObservationBaseline, measured_gain, observation_complete)
 from .exploration_persistence import (ExplorationStateRepository, ExplorationPersistenceError,
                                      binding_from_map_manager_status)
 from pathlib import Path as FilePath
@@ -1698,7 +1698,11 @@ class MetricFrontierRuntime:
             # A safe observer can be beside a narrow entrance rather than
             # toward it. These positions come only from current pose/sight;
             # the actual native plan still owns every subsequent movement.
-            headings = dict.fromkeys((bearing,bearing+math.pi/4,bearing-math.pi/4,
+            normal = (getattr(f, 'approach_direction', None)
+                      if getattr(f, 'retained_observation', False) else None)
+            tangents = () if normal is None else tuple(
+                math.atan2(normal[1],normal[0])+turn for turn in (0.,math.pi/2,-math.pi/2,math.pi))
+            headings = dict.fromkeys((*tangents,bearing,bearing+math.pi/4,bearing-math.pi/4,
                                       pose[2],pose[2]-math.pi/2,pose[2]+math.pi/2))
             distances = dict.fromkeys((self._min_goal_dist_m+self._goal_search_m,
                 self._min_goal_dist_m+self._goal_search_m/2,self._min_goal_dist_m,
@@ -1801,11 +1805,21 @@ class MetricFrontierRuntime:
             if getattr(self, '_metric_candidate_source', 'legacy_centroid') == 'boundary_samples':
                 # Import here to avoid an ExploreNode module cycle.
                 from .explore_node import Frontier
-                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier)
+                selection_cache = getattr(self, '_metric_selection_cache', None)
+                task_policy = getattr(selection_cache, 'policy', None)
+                retained = () if task_policy is None else tuple(a.frontier_xy
+                    for a in task_policy.attempts.values()
+                    if not a.completed and a.reason == 'partially_observed'
+                    and a.tries < task_policy.retry_limit+1 and a.failures < task_policy.retry_limit)
+                kwargs = (dict(retained_anchors=retained,
+                    retained_radius_m=MAX_LOCAL_OBSERVATION_RADIUS_M) if retained else {})
+                samples = boundary_samples(grid, scope_mask, self._grid_to_world, min_frontier, **kwargs)
                 frontiers = []
                 for sample in samples:
                     frontier = Frontier(sample.xy, sample.size)
                     frontier.approach_direction = sample.inward
+                    frontier.retained_observation = any(math.dist(sample.xy, anchor)
+                        <= MAX_LOCAL_OBSERVATION_RADIUS_M for anchor in retained)
                     frontiers.append(frontier)
                 view = self._metric_observation_view()
                 live_view = True
@@ -2505,6 +2519,7 @@ class MetricFrontierRuntime:
                         return finish('blocked', str(error))
                     unresolved=any(a.tries and not a.completed and
                         (a.reason != 'proposal_rejected' or a.failures)
+                        and not (a.reason == 'partially_observed' and scope_inside and not remainder)
                         for a in policy.attempts.values())
                     self._metric_status.update(unknown_cells_in_scope=unknown,
                         deferred_tasks=sum(a.failures>0 and not a.completed for a in policy.attempts.values()))
@@ -2543,6 +2558,14 @@ class MetricFrontierRuntime:
                                 current.source_stamp_ns == final[1].source_stamp_ns and
                                 self._metric_matches_status(raw[1]))
                             if final_clear and current_snapshot:
+                                # A later observation can resolve earlier
+                                # partial work. Only the full, freshly bound
+                                # scope proof/window closes it; no extra gain,
+                                # retry, failure or observation is invented.
+                                for attempt in policy.attempts.values():
+                                    if attempt.reason == 'partially_observed':
+                                        attempt.completed = True
+                                        attempt.reason = 'observed_scope_resolved'
                                 last_inputs = final
                                 return finish('success','reachable_metric_scope_observed')
                         completion_window.observe(now=time.monotonic(),scan_stamp=0,context=c.context,clear=False)
@@ -2838,6 +2861,9 @@ class MetricFrontierRuntime:
                 return finish('canceled', 'user_canceled')
             outcome=('observed' if gained else 'arrival_without_observation') if reached else (
                 'route_invalidated' if hard=='route_invalidated' else 'task_unreached_cause_unproven')
+            if gained and not observation_complete(baseline,after[0],after[1],
+                    self._world_to_grid,self._grid_to_world):
+                outcome = 'partially_observed'
             proposal_rejected = (not task_motion_dispatched and status == 'planning_failed'
                                  and hard == 'route_invalidated')
             if proposal_rejected:

@@ -85,6 +85,29 @@ class ObservationBaseline:
     points: tuple
 
 
+def observation_complete(baseline, grid, correlation, to_grid, to_world):
+    """All original finite points resolved, never a new-gain receipt.
+
+    A few genuine new cells are progress without necessarily finishing the
+    selected view. Unknown, cropped or fractionally regridded points remain
+    unresolved; a newer occupied cell is resolved evidence too.
+    """
+    q = grid.info.origin.orientation
+    yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
+    if (not baseline.points or correlation.context != baseline.context or
+            correlation.source_stamp_ns <= baseline.source_stamp or
+            grid.info.resolution != baseline.resolution or
+            abs(math.atan2(math.sin(yaw-baseline.grid_yaw),math.cos(yaw-baseline.grid_yaw)))>1e-8):
+        return False
+    data = np.asarray(grid.data).reshape(grid.info.height,grid.info.width)
+    for xy in baseline.points:
+        col,row = to_grid(*xy,grid.info)
+        if (not (0<=row<data.shape[0] and 0<=col<data.shape[1]) or
+                data[row,col]<0 or math.dist(xy,to_world(col,row,grid.info))>1e-7):
+            return False
+    return True
+
+
 def measured_gain(baseline, grid, correlation, pose, scan, mount, to_grid, to_world, maximum_range_m=4.):
     """Unknown-to-observed change, seen by a newer finite actual LiDAR ray.
 

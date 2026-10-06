@@ -77,7 +77,7 @@ python3 tools/simulation/prepare_ap06_sources.py \
 ```
 
 Für Offlineprüfung vorhandener Archive zusätzlich `--offline --verify-only`.
-Der Quellbaum erhält den bestehenden Pure-Rotation-Patch und den deklarierten festen Karto-Rasterpatch; es wird kein Git-HEAD
+Der Quellbaum erhält den bestehenden Pure-Rotation-Patch, den deklarierten festen Karto-Rasterpatch und die gebundene NavFn-Zellmittenkorrektur; es wird kein Git-HEAD
 für extrahierte Archive erfunden. Lizenzen bleiben in den Quellarchiven erhalten.
 
 Die zugehörigen System-/ROS-Entwicklungsabhängigkeiten vor dem Build mit
@@ -157,7 +157,7 @@ python3 tools/simulation/ap06_nearfield_costmap_probe.py --repo "$PWD" \
 
 ## Nachweise und Grenzen
 
-`commands.jsonl`, `events.jsonl`, Prozesslogs, `plant.jsonl`, Manifestkopie und
+`commands.jsonl`, verlustfrei komprimierte `events.jsonl.gz`, Prozesslogs, `plant.jsonl`, Manifestkopie und
 `result.json` bewahren Eingang, tatsächlich aufgelöste Präfixe, Quellenzustände
 und Ergebnis. Die echte SLAM-Karte wird samt Geometrie separat gespeichert.
 Unabhängige Referenzprüfung misst die ganze gepaddete Kontur, Heckfreigabe,
@@ -244,3 +244,39 @@ die aktuell vorhandene originale Wheel-DDS-Probe ohne neuen Stempel. Der
 gesonderte HOLD-Test verwendet auch getrennte Gesundheitsobjekte: ein nur vom
 Tor beobachteter Ausfall muss das Kind beenden und den bestehenden validierten
 HOLD-/RESUME-Ablauf auslösen. Die Gesamtmission erhält keinen gesunden Ersatz.
+
+## NavFn-Zellmitten und öffentliche Vorausrichtung
+
+Die AP-06-Vorbereitung wendet `patches/nav2_navfn_humble_cell_centers.patch` auf den unveränderten Nav2-Pin an. Der reale Kostenrasterindex wird in die Zellmitte übersetzt; Weltpunkte verwenden die tatsächlich enthaltende Zelle. Originalradius, Kontur und alle Fristen bleiben erhalten. Direkter Test gegen das tatsächlich gelinkte Plugin ohne Node-/Aktorstart:
+
+```bash
+source /tmp/ap06/native-install/setup.bash
+cmake -S tools/simulation/navfn_cell_regression -B /tmp/ap06/navfn-cell-regression
+cmake --build /tmp/ap06/navfn-cell-regression -j2
+ctest --test-dir /tmp/ap06/navfn-cell-regression --output-on-failure
+```
+
+Der Explorer nutzt vor einer Fahrt die bestehende öffentliche Vorausrichtung nur als vollständig geprüfte Abhilfe für einen sonst unzulässigen nativen Sweep. Die erste private Abfahrt und die Liveprüfung eines aktiven Kindes bleiben native; keine fiktive erneute Drehung. Native Komponentenwerkzeuge übergeben dafür ihre tatsächlichen Eingaben an denselben vorhandenen Alignmentpfad. Alle Resultate bleiben Software-/Komponentenbelege, keine Hardwarequalifikation.
+
+## Teilbeobachtung und verlustfreie Nachweise, 06.10.2026
+
+Ein tatsächlicher Kartenfortschritt schließt eine Aufgabe erst ab, wenn ihre
+ursprünglichen Beobachtungszellen alle auf der neueren, geometrisch passenden
+Karte bekannt sind. Teilbeobachtete Aufgaben behalten ihren bisherigen
+Versuchszähler und Cooldown. Ihre noch wirklich vorhandenen kleinen Frontier-
+Komponenten bleiben innerhalb des bestehenden lokalen Radius sichtbar;
+zusätzliche Tangentialblicke werden durch dieselben Sicht-, Kontur-, Pfad-
+und Zeitprüfungen geprüft. Vollständig bewiesener Scope-Abschluss kann solche
+Teilaufgaben innerhalb des bisherigen Abschlussfensters auflösen; daraus
+entstehen keine zusätzlichen Beobachtungs- oder Ankunftszähler.
+
+Der passive Beobachter schreibt alle ursprünglichen Ereignisbytes in einen
+Gzip-Stream. `events.jsonl.gz.meta.json` hält die unkomprimierte Länge und SHA256;
+`ap06_trace.verify_trace` prüft den abgeschlossenen Stream anschließend offline.
+`progress.json` ist eine alle fünf Sekunden aktualisierte lesende Statuskopie.
+Die Diagnoseoption `--capture-decisions` zeichnet tatsächliche Auswahleingaben
+auf und setzt ebenfalls `manifest_compatible=false`; reguläre Abnahmen nutzen
+keine Diagnoseoption. Der Vorlauf verlangt mindestens 1184 MiB freien Platz:
+512 MiB Tracebudget, 64 MiB Zusatzlogs, 32 MiB temporäre Karte, den unveränderten
+512-MiB-Kartenspeicher-Mindestplatz und 64 MiB Reserve. Dies ist eine
+Kapazitätsplanung; tatsächliche Ressourcenfehler bleiben negativ.

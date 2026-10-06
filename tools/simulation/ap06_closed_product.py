@@ -23,6 +23,7 @@ import threading
 import time
 import traceback
 from types import SimpleNamespace
+from ap06_trace import EventTrace, storage_budget
 
 import numpy as np
 import yaml
@@ -485,7 +486,9 @@ class Observer(Node):
         self.last_scan = None
         self.create_subscription(LaserScan, '/scan_normiert',
             lambda msg: setattr(self, 'last_scan', msg), qos_profile_sensor_data)
-        # Full payloads remain in events.jsonl. Acceptance only needs latest
+        # Full payloads remain byte-for-byte in the lossless JSONL journal.
+        # Streaming avoids exhausting map-save reserve with temporary raw logs.
+        # Acceptance only needs latest
         # status views; retaining every diagnostic object grows through 900 s.
         self.phases, self.manager, self.fusion = (deque(maxlen=8) for _ in range(3))
         self.fusion_at = []
@@ -495,7 +498,7 @@ class Observer(Node):
         self.tf_recorded_at = {}
         self.out = out
         self.command = self.create_publisher(String, '/mission_manager/command_json', 10)
-        self.events = (out/'events.jsonl').open('w')
+        self.events = EventTrace(out/'events.jsonl')
         qos = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.create_subscription(OccupancyGrid, '/map', lambda msg: setattr(self, 'map', msg), qos)
         self.create_subscription(OccupancyGrid, '/global_costmap/costmap',
@@ -649,11 +652,18 @@ def run(args):
     out.mkdir(parents=True, exist_ok=False)
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
     result = {'case': case, 'passed': False, 'hardware_qualified': False,
-              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_geometry or args.diagnostic_beams),
+              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams),
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
               'sensor_profile': 'native_mast_mask' if not args.ideal_lidar else 'ideal_full_360',
               'reference_geometry_provided_to_product': False, 'truth_map_publisher': False,
               'truth_tf_publisher': False, 'manual_navigation_goals': 0}
+    storage = storage_budget(out)
+    (out/'storage_preflight.json').write_text(json.dumps(storage, indent=2)+'\n')
+    if not storage['ready']:
+        result['error'] = 'insufficient mission evidence/map-save storage: '+json.dumps(storage)
+        (out/'result.json').write_text(json.dumps(result, indent=2)+'\n')
+        print(json.dumps(result), flush=True)
+        return 1
     processes, streams, nodes, executors, threads = [], [], [], [], []
     stop = threading.Event()
     original_affinity = os.sched_getaffinity(0)
@@ -792,16 +802,18 @@ def run(args):
             '-p', f'behavior_tree:={args.repo}/src/explore/behavior_trees/navigate_to_pose_no_recovery.xml',
             '-p', f'wohnungserkundung_persistence_directory:={out}/checkpoints']+shared[1:]
         explorer_command = py('explore.explore_node')
-        if args.profile_selection:
+        if args.profile_selection or args.capture_decisions:
             # Diagnostic wrapper only; original decisions and deadline stay.
             code = (
                 'import cProfile,json,numpy as np,pickle,time; from explore.metric_frontier_runtime import MetricFrontierRuntime as R; '
                 'from explore.metric_checkpoint import policy_state; '
-                'original=R._metric_candidates; counter=[0]\n'
+                'original=R._metric_select; counter=[0]\n'
+                f'profile_enabled={not args.capture_decisions!r}\n'
                 'def profiled(self,*a,**kw):\n'
-                ' p=cProfile.Profile(); counter[0]+=1\n'
+                ' p=cProfile.Profile() if profile_enabled else None; counter[0]+=1\n'
+                ' if counter[0]>32: return original(self,*a,**kw)\n'
                 ' inputs=a[0]\n'
-                ' policy=getattr(getattr(self,"_metric_selection_cache",None),"policy",None)\n'
+                ' policy=a[1]\n'
                 ' scan=self._door_lidar_scan_snapshot()\n'
                 ' attributes={k:getattr(self,k,None) for k in ('
                 '"_metric_start_egress_enabled","_metric_egress_expired","_metric_body_anchor_expired",'
@@ -825,9 +837,9 @@ def run(args):
                 ' geometry=[{"resolution":g.info.resolution,"origin":[g.info.origin.position.x,g.info.origin.position.y],'
                 '"width":g.info.width,"height":g.info.height} for g in (inputs[0],inputs[5])]\n'
                 f' open({str(out)!r}+"/selection-geometry.json","w").write(json.dumps(geometry))\n'
-                ' try: return p.runcall(original,self,*a,**kw)\n'
+                ' try: return p.runcall(original,self,*a,**kw) if p is not None else original(self,*a,**kw)\n'
                 ' finally:\n'
-                f'  p.dump_stats({str(out)!r}+"/selection-"+str(counter[0])+".prof")\n'
+                f'  if p is not None: p.dump_stats({str(out)!r}+"/selection-"+str(counter[0])+".prof")\n'
                 '  inputs=a[0]\n'
                 '  state={"body_anchor_expired":getattr(self,"_metric_body_anchor_expired",None),'
                 '"egress_expired":getattr(self,"_metric_egress_expired",None),'
@@ -837,7 +849,25 @@ def run(args):
                 '"first_egress_grid":getattr(self,"_metric_egress_identity",None),'
                 '"current_grids":[self._metric_grid_geometry(g) for g in (inputs[0],inputs[5])]}\n'
                 f'  open({str(out)!r}+"/selection-state.json","w").write(json.dumps(state,default=str,indent=2))\n'
-                'R._metric_candidates=profiled\nfrom explore.explore_node import main; main()')
+                'R._metric_select=profiled\n'
+                'departure=R._metric_departure_plan_ready; departure_count=[0]\n'
+                'def recorded_departure(self,inputs,route,target,stopped):\n'
+                ' departure_count[0]+=1; index=departure_count[0]\n'
+                ' if index>16: return departure(self,inputs,route,target,stopped)\n'
+                ' record=dict(kind="Own synthetic diagnostic bound native departure inputs; no health or acceptance",'
+                'inputs=list(inputs),reference=getattr(inputs,"map_odom_reference",None),'
+                'physical_motion=getattr(inputs,"physical_motion",None),route=route,target=target,'
+                'scope=self._metric_scope,body_bounds=self._metric_bounds,'
+                'controller_contract=dict(self._metric_status.get("controller_geometry_contract",{})),'
+                'ranking=dict(self._metric_status.get("ranking",{})))\n'
+                f' with open({str(out)!r}+"/departure-input-"+str(index)+".pickle","wb") as f: pickle.dump(record,f)\n'
+                ' result=departure(self,inputs,route,target,stopped)\n'
+                ' state=dict(result=result,rejection=self._metric_status.get("departure_plan_rejection"),'
+                'native_sight=self._metric_status.get("native_stop_observation"))\n'
+                f' open({str(out)!r}+"/departure-result-"+str(index)+".json","w").write(json.dumps(state,default=str,indent=2))\n'
+                ' return result\n'
+                'R._metric_departure_plan_ready=recorded_departure\n'
+                'from explore.explore_node import main; main()')
             explorer_command = [sys.executable, '-c', code]
         if args.capture_geometry:
             # Passive diagnostic snapshots; never a manifest acceptance run.
@@ -881,8 +911,17 @@ def run(args):
         initial_cells = np.array(observer.map.data)
         observer.command.publish(String(data='{"type":"explore"}'))
         begun = time.monotonic(); injected = False; injection_at = None
+        next_progress = begun
         until = begun+manifest['budgets']['mission_s']+15.
         while time.monotonic() < until:
+            if time.monotonic() >= next_progress:
+                progress = dict(at=time.monotonic(), metric=observer.metric(),
+                    manager=observer.manager[-1] if observer.manager else {},
+                    travel_m=model.travel, rear_cleared=model.rear_cleared)
+                temporary = out/'progress.tmp.json'
+                temporary.write_text(json.dumps(progress)+'\n')
+                temporary.replace(out/'progress.json')
+                next_progress = time.monotonic()+5.
             if model.collision:
                 raise RuntimeError('independent padded chassis collision')
             if stop.is_set() or not devices.is_alive():
@@ -1055,6 +1094,7 @@ if __name__ == '__main__':
                         default=Path(__file__).with_name('ap06_product_scenarios.json'))
     parser.add_argument('--capture-geometry',action='store_true',help='diagnostic actual proof snapshots; no manifest acceptance')
     parser.add_argument('--profile-selection', action='store_true', help='diagnostic overhead; not a qualification run')
+    parser.add_argument('--capture-decisions', action='store_true', help='bounded input snapshots without call profiling; not a qualification run')
     parser.add_argument('--ideal-lidar', action='store_true', help='separate ideal sensor diagnostic, not native-mask qualification')
     parser.add_argument('--diagnostic-beams', type=int, choices=(720, 2160),
                         help='explicit density diagnostic; never qualifies the declared manifest')
