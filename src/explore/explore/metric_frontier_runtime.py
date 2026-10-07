@@ -2129,6 +2129,53 @@ class MetricFrontierRuntime:
                     candidates = [min(candidates,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
                     stats['bounded_start_observation'] = True
                     break
+        # Finish the existing short private departure search BEFORE distant
+        # approaches can consume its selection deadline. Positions derive from
+        # CURRENT pose/map/sight. A retired escape proof does not prohibit a
+        # wholly ordinary safe route; it grants no private authority to it. They are
+        # not waypoints: full own geometry AND the later actual Nav2 plan are
+        # mandatory, and only real nearby frontier sight grants utility.
+        if (live_view and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and not any(not c.requires_nav2_plan for c in candidates)
+                and private_start_available):
+            forward = []
+            steps = int(math.floor(self._goal_search_m/grid.info.resolution))
+            for step in range(steps+1):
+                if time.monotonic()-selection_started > self._map_timeout_s:
+                    raise ValueError('frontier_candidate_processing_budget_exhausted')
+                distance = self._min_goal_dist_m+step*grid.info.resolution
+                goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                route = self._metric_route(inputs, goal, pose[2])
+                if route is None:
+                    continue
+                view = self._metric_observation_view()
+                visible = visible_boundary_cells(grid, scope_mask,
+                    self._metric_rollout_stop_pose(inputs,route,pose[2]), view)
+                for f in frontiers:
+                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
+                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
+                    if not points:
+                        continue
+                    if policy is not None:
+                        key = policy.identify((f.cx,f.cy), goal, observation_points=points)
+                        local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                        if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint,
+                                               local, observation_points=points):
+                            continue
+                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
+                    cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
+                    forward.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
+                        correlation.fingerprint,correlation.map_revision,False,points))
+                if forward:
+                    # A proved useful departure suffices. Do not spend the
+                    # fixed candidate deadline searching farther positions.
+                    break
+            if forward:
+                # Prefer a completely proved start departure over a proposal
+                # whose route is still absent; ordinary detour policy is intact.
+                candidates = [min(forward,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
+                stats['bounded_start_observation'] = True
         # A fully public short view must not wait behind expensive unproved
         # distant approaches. Its same 0.5-s search shares the original 5 s.
         if (policy is not None and live_view
@@ -2351,47 +2398,6 @@ class MetricFrontierRuntime:
                         break
                 if candidates:
                     break
-        # A boundary approach can be far beyond the first safe observation
-        # pocket. Also consider bounded forward observation positions from
-        # CURRENT pose/map/sight. A retired escape proof does not prohibit a
-        # wholly ordinary safe route; it grants no private authority to it. They are
-        # not waypoints: full own geometry AND the later actual Nav2 plan are
-        # mandatory, and only real nearby frontier sight grants utility.
-        if (live_view and getattr(self, '_metric_start_egress_enabled', False)
-                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
-                and not any(not c.requires_nav2_plan for c in candidates)
-                and private_start_available and not public_deferred):
-            forward = []
-            steps = int(math.floor(self._goal_search_m/grid.info.resolution))
-            for step in range(steps+1):
-                if time.monotonic()-selection_started > self._map_timeout_s:
-                    raise ValueError('frontier_candidate_processing_budget_exhausted')
-                distance = self._min_goal_dist_m+step*grid.info.resolution
-                goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
-                route = self._metric_route(inputs, goal, pose[2])
-                if route is None:
-                    continue
-                view = self._metric_observation_view()
-                visible = visible_boundary_cells(grid, scope_mask,
-                    self._metric_rollout_stop_pose(inputs,route,pose[2]), view)
-                for f in frontiers:
-                    points = tuple(self._grid_to_world(c,r,grid.info) for r,c in sorted(visible)
-                        if math.dist(self._grid_to_world(c,r,grid.info),(f.cx,f.cy)) <= MAX_LOCAL_OBSERVATION_RADIUS_M)
-                    if not points:
-                        continue
-                    length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
-                    cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
-                    forward.append(MetricCandidate('',*goal,pose[2],(f.cx,f.cy),route,length,cost,
-                        correlation.fingerprint,correlation.map_revision,False,points))
-                if forward:
-                    # A proved useful departure suffices. Do not spend the
-                    # fixed candidate deadline searching farther positions.
-                    break
-            if forward:
-                # Prefer a completely proved start departure over a proposal
-                # whose route is still absent; ordinary detour policy is intact.
-                candidates = [min(forward,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
-                stats['bounded_start_observation'] = True
         if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
             raise ValueError('frontier_candidate_processing_budget_exhausted')
         if self._metric_selection_memo(inputs)[1] != initial_evidence:
