@@ -1697,10 +1697,9 @@ class MetricFrontierRuntime:
             if math.dist(goal, pose[:2]) < self._min_goal_dist_m:
                 continue
             key = policy.identify((frontier.cx, frontier.cy), goal)
+            if not policy.within_limits(key, goal, time.monotonic()):
+                continue  # no possible view can reopen these original bounds
             local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
-            if (policy.attempts[key].tries >= policy.retry_limit+1
-                    or policy.attempts[key].failures >= policy.retry_limit):
-                continue
             bearing = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
             error = abs(math.atan2(math.sin(bearing-pose[2]), math.cos(bearing-pose[2])))
             if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:

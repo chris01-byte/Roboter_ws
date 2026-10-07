@@ -245,21 +245,11 @@ def connected_mask(mask: np.ndarray, seed: Tuple[int, int]) -> np.ndarray:
     result = np.zeros_like(mask, dtype=bool)
     if not (0 <= row < height and 0 <= col < width and mask[row, col]):
         return result
-    queue = deque([(row, col)])
-    result[row, col] = True
-    while queue:
-        current_row, current_col = queue.popleft()
-        for drow, dcol in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            next_row = current_row + drow
-            next_col = current_col + dcol
-            if (
-                    0 <= next_row < height
-                    and 0 <= next_col < width
-                    and mask[next_row, next_col]
-                    and not result[next_row, next_col]):
-                result[next_row, next_col] = True
-                queue.append((next_row, next_col))
-    return result
+    # scipy uses the same four-neighbour cross by default. Labels replace
+    # Python queue traversal only; diagonal contact still cannot connect cells.
+    from scipy.ndimage import label
+    components, _ = label(mask)
+    return components == components[row, col]
 
 
 def nearest_mask_cell(
@@ -3813,11 +3803,12 @@ class ExploreNode(MetricFrontierRuntime, Node):
         search_cells = int(math.ceil(self._goal_search_m / info.resolution))
         clearance_cells = int(math.ceil(
             self._goal_clearance_m / info.resolution))
-        safe_goal_cells = circular_clearance_mask(data, clearance_cells)
         if search_mask is not None:
             if search_mask.shape != data.shape or search_mask.dtype != bool:
                 raise ValueError('frontier_search_mask_invalid')
             safe_goal_cells = search_mask
+        else:
+            safe_goal_cells = circular_clearance_mask(data, clearance_cells)
         robot_col, robot_row = self._world_to_grid(
             robot_xy[0], robot_xy[1], info)
         seed_radius = max(1, int(math.ceil(
@@ -3841,15 +3832,15 @@ class ExploreNode(MetricFrontierRuntime, Node):
         safe_seed = (
             int(seed_rows[seed_index]), int(seed_cols[seed_index]))
         reachable_goal_cells = connected_mask(safe_goal_cells, safe_seed)
-        choices = []
-        for row in range(center_row - search_cells, center_row + search_cells + 1):
-            for col in range(center_col - search_cells, center_col + search_cells + 1):
-                if not (0 <= row < info.height and 0 <= col < info.width):
-                    continue
-                if not reachable_goal_cells[row, col]:
-                    continue
-                wx, wy = self._grid_to_world(col, row, info)
-                choices.append((math.hypot(wx - desired_x, wy - desired_y), wx, wy))
+        r0, r1 = max(0, center_row-search_cells), min(info.height, center_row+search_cells+1)
+        c0, c1 = max(0, center_col-search_cells), min(info.width, center_col+search_cells+1)
+        # Keep the original row-major search and scalar hypot/tie ordering;
+        # the invariant transform is evaluated once for all selected cells.
+        rows, cols = (np.nonzero(reachable_goal_cells[r0:r1, c0:c1])
+                      if r0 < r1 and c0 < c1 else (np.array([], int), np.array([], int)))
+        wx, wy = self._grid_to_world(cols+c0, rows+r0, info)
+        choices = [(math.hypot(x-desired_x, y-desired_y), x, y)
+                   for x, y in zip(wx.tolist(), wy.tolist())]
         if return_choices and not choices:
             return ()  # alternative pose search retains the original local bound
         frontier.goal_projected = not bool(choices)
@@ -3862,10 +3853,9 @@ class ExploreNode(MetricFrontierRuntime, Node):
             rows, cols = np.nonzero(reachable_goal_cells)
             if rows.size == 0:
                 return None
-            for row, col in zip(rows.tolist(), cols.tolist()):
-                wx, wy = self._grid_to_world(col, row, info)
-                choices.append((
-                    math.hypot(wx - desired_x, wy - desired_y), wx, wy))
+            wx, wy = self._grid_to_world(cols, rows, info)
+            choices = [(math.hypot(x-desired_x, y-desired_y), x, y)
+                       for x, y in zip(wx.tolist(), wy.tolist())]
         if return_choices:
             # Same connected cells and original local search, for metric pose
             # alternatives. Each still needs actual costmap/whole-body proof.

@@ -97,7 +97,7 @@ class MetricTaskPolicy:
         self.attempts[key] = MetricAttempt(frontier_xy, frontier_xy)
         return key
 
-    def eligible(self, task_id, target_xy, now, fingerprint, evidence_key='', *, observation_points=()):
+    def _limit_neighbours(self, task_id, target_xy):
         attempt = self.attempts[task_id]
         neighbours = [a for a in self.attempts.values()
                       if math.dist(a.target_xy, target_xy) < self.radius and a.tries]
@@ -108,6 +108,19 @@ class MetricTaskPolicy:
                 and (attempt.partial_observation or attempt.failures)
                 and all(a is not attempt for a in neighbours)):
             neighbours.append(attempt)
+        return neighbours
+
+    def within_limits(self, task_id, target_xy, now):
+        """Necessary time/attempt bounds only; never a view or motion grant."""
+        attempt = self.attempts[task_id]
+        return (attempt.tries < self.retry_limit+1 and attempt.failures < self.retry_limit
+                and all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
+                        and now >= a.retry_after
+                        for a in self._limit_neighbours(task_id, target_xy)))
+
+    def eligible(self, task_id, target_xy, now, fingerprint, evidence_key='', *, observation_points=()):
+        attempt = self.attempts[task_id]
+        neighbours = self._limit_neighbours(task_id, target_xy)
         try:
             points = tuple(observation_points)
             valid_view = bool(evidence_key) and bool(points) and all(len(p) == 2 and all(math.isfinite(v) for v in p) for p in points)
@@ -141,10 +154,8 @@ class MetricTaskPolicy:
                      math.dist(a.target_xy, target_xy) > 1e-12) or
                     (a.reason == 'partially_observed' and valid_view and
                      math.dist(a.target_xy, target_xy) > .15+1e-12))
-            return (all(a.tries < self.retry_limit+1 and a.failures < self.retry_limit
-                        and now >= a.retry_after and new_input(a)
-                        for a in neighbours)
-                    and attempt.tries < self.retry_limit+1 and attempt.failures < self.retry_limit)
+            return (self.within_limits(task_id, target_xy, now)
+                    and all(new_input(a) for a in neighbours))
         return (not attempt.completed and attempt.failures < self.retry_limit
                 and (attempt.failures == 0 or
                      (now >= attempt.retry_after and
