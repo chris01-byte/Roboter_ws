@@ -500,6 +500,28 @@ def _polygon_distance(a,b):
 
 
 def _cell_intersections(polygon, cells):
+    if (np.asarray(polygon).dtype == np.float64 and _reserved_sweep is not None
+            and hasattr(_reserved_sweep, 'cell_intersections')):
+        try:
+            n = len(cells)
+            polygons = np.array(np.broadcast_to(polygon, (n, 4, 2)),
+                                dtype=np.float64, order='C', copy=True)
+            indices = np.array(cells, order='C', copy=True)
+            vertex_buffer, count_buffer = _reserved_sweep.cell_intersections(polygons, indices)
+            vertices = np.frombuffer(vertex_buffer, dtype=np.float64).reshape(n, 12, 2)
+            counts = np.frombuffer(count_buffer, dtype=np.int64)
+            j = np.arange(12)[None, :]
+            valid = j < counts[:, None]
+            following = vertices[np.arange(n)[:, None], np.where(j+1 < counts[:, None], j+1, 0)]
+            area = np.abs(np.sum(np.where(valid, vertices[:, :, 0]*following[:, :, 1]
+                -vertices[:, :, 1]*following[:, :, 0], 0), axis=1))/2
+            return area, vertices, valid
+        except (TypeError, ValueError, BufferError):
+            pass
+    return _cell_intersections_numpy(polygon, cells)
+
+
+def _cell_intersections_numpy(polygon, cells):
     """Discard strictly disjoint boxes before the unchanged exact clipping.
 
     Touching boxes still use the full clip: zero-area contact vertices also

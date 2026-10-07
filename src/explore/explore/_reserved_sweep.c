@@ -143,6 +143,74 @@ static PyObject *cell_distances(PyObject *self, PyObject *args) {
     if(c.obj)PyBuffer_Release(&c);
     PyBuffer_Release(&p);return result;
 }
-static PyMethodDef methods[]={{"clear",clear,METH_VARARGS,"Reserved cell-centre sweep; no motion authority."},{"cell_distances",cell_distances,METH_VARARGS,"Exact rectangle/cell boundary distances; no evidence authority."},{NULL,NULL,0,NULL}};
+/* Sutherland-Hodgman clipping in the identical four-plane/vertex order.
+ * Areas remain calculated by the original NumPy reduction, including its
+ * floating-point summation order. Zero-area contacts retain their vertices. */
+static PyObject *cell_intersections(PyObject *self, PyObject *args) {
+    PyObject *polygon,*cells,*vertices=NULL,*counts=NULL,*result=NULL;
+    Py_buffer p={0},c={0};int overflow=0;
+    if(!PyArg_ParseTuple(args,"OO",&polygon,&cells))return NULL;
+    if(PyObject_GetBuffer(polygon,&p,PyBUF_FORMAT|PyBUF_STRIDES)<0)return NULL;
+    if(PyObject_GetBuffer(cells,&c,PyBUF_FORMAT|PyBUF_STRIDES)<0)goto done;
+    if(!p.format||!c.format||p.suboffsets||c.suboffsets||
+       !PyBuffer_IsContiguous(&p,'C')||!PyBuffer_IsContiguous(&c,'C')||
+       p.ndim!=3||p.shape[1]!=4||p.shape[2]!=2||p.itemsize!=8||strcmp(p.format,"d")||
+       c.ndim!=2||c.shape[0]!=p.shape[0]||c.shape[1]!=2||c.itemsize!=8||
+       (strcmp(c.format,"q")&&strcmp(c.format,"l"))||p.shape[0]>PY_SSIZE_T_MAX/192) {
+        PyErr_SetString(PyExc_TypeError,"cell_clip_buffer_contract");goto done;
+    }
+    Py_ssize_t n=p.shape[0];
+    for(Py_ssize_t i=0;i<n;i++) {
+        double v[8];memcpy(v,(char *)p.buf+i*64,64);
+        for(int k=0;k<8;k++)if(!isfinite(v[k])||fabs(v[k])>4503599627370496.) {
+            PyErr_SetString(PyExc_ValueError,"cell_clip_coordinate_range");goto done;
+        }
+        for(int k=0;k<2;k++)if(center(&c,i,k)<-4503599627370496LL||center(&c,i,k)>4503599627370496LL) {
+            PyErr_SetString(PyExc_ValueError,"cell_clip_coordinate_range");goto done;
+        }
+    }
+    vertices=PyBytes_FromStringAndSize(NULL,n*192);
+    counts=PyBytes_FromStringAndSize(NULL,n*8);
+    if(!vertices||!counts)goto done;
+    char *out=PyBytes_AS_STRING(vertices),*sizes=PyBytes_AS_STRING(counts);
+    memset(out,0,n*192);
+    Py_BEGIN_ALLOW_THREADS
+    for(Py_ssize_t i=0;i<n&&!overflow;i++) {
+        double current[12][2],next[12][2];int count=4;
+        memcpy(current,(char *)p.buf+i*64,64);
+        for(int plane=0;plane<4&&count;plane++) {
+            int axis=plane/2,sign=plane%2?-1:1,kept=0;
+            double bound=(double)(center(&c,i,1-axis)+plane%2);
+            for(int j=0;j<count;j++) {
+                const double *v=current[j],*prev=current[j?j-1:count-1];
+                int inside=sign*(v[axis]-bound)>=0,before=sign*(prev[axis]-bound)>=0;
+                if(inside!=before) {
+                    if(kept>=12){overflow=1;break;}
+                    double f=(bound-prev[axis])/(v[axis]-prev[axis]);
+                    for(int k=0;k<2;k++)next[kept][k]=prev[k]+f*(v[k]-prev[k]);
+                    kept++;
+                }
+                if(inside) {
+                    if(kept>=12){overflow=1;break;}
+                    memcpy(next[kept++],v,16);
+                }
+            }
+            if(overflow)break;
+            count=kept;memcpy(current,next,count*16);
+        }
+        if(!overflow) {
+            memcpy(out+i*192,current,count*16);
+            int64_t length=count;memcpy(sizes+i*8,&length,8);
+        }
+    }
+    Py_END_ALLOW_THREADS
+    if(overflow) {PyErr_SetString(PyExc_ValueError,"cell_clip_vertex_capacity");goto done;}
+    result=PyTuple_Pack(2,vertices,counts);
+ done:
+    Py_XDECREF(vertices);Py_XDECREF(counts);
+    if(c.obj)PyBuffer_Release(&c);
+    PyBuffer_Release(&p);return result;
+}
+static PyMethodDef methods[]={{"clear",clear,METH_VARARGS,"Reserved cell-centre sweep; no motion authority."},{"cell_distances",cell_distances,METH_VARARGS,"Exact rectangle/cell boundary distances; no evidence authority."},{"cell_intersections",cell_intersections,METH_VARARGS,"Exact cell clipping; no evidence authority."},{NULL,NULL,0,NULL}};
 static struct PyModuleDef module={PyModuleDef_HEAD_INIT,"_reserved_sweep",NULL,-1,methods};
 PyMODINIT_FUNC PyInit__reserved_sweep(void) {return PyModule_Create(&module);}
