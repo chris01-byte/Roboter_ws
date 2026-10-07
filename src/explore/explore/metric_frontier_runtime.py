@@ -1602,8 +1602,6 @@ class MetricFrontierRuntime:
                 np.count_nonzero(~mask[rr[inside], cc[inside]]))
         contour_clear = not any(missing.values())
         sweep_clear = contour_clear and self._metric_scan_geometry_ready(inputs)
-        candidates = self._metric_select(inputs, policy, min_frontier) if (
-            contour_clear or getattr(self,'_metric_start_egress_enabled',False)) else []
         # Utility is the existing frontier observation gain, not a fixed move.
         q=grid.info.origin.orientation
         inside=rasterize_scope(self._metric_scope,context=inputs[1].context,
@@ -1612,9 +1610,23 @@ class MetricFrontierRuntime:
             origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
             maximum_cells=self._wohnungserkundung_evidence_max_cells)
         unknown_in_scope=int(np.count_nonzero((np.asarray(grid.data).reshape(known.shape)<0)&inside&~known))
-        useful = bool(unknown_in_scope and getattr(self, '_frontiers_remaining', 0))
-        scan = bool(scan_pending and sweep_clear and useful
-                    and (not candidates or all(c.requires_nav2_plan for c in candidates)))
+        # After a measured start departure, finish the still-pending one-shot
+        # observation once its FULL PUBLIC sweep is proved. Searching another
+        # goal first can starve this ready perception behind helper deadlines.
+        # This does not refresh a source, restart a scan or alter any deadline;
+        # the parent still revalidates every actual rotation and owns its stop.
+        scan_priority = False
+        if (scan_pending and sweep_clear and unknown_in_scope
+                and getattr(self, '_metric_start_egress_enabled', False)
+                and getattr(self, '_metric_status', {}).get('observations', 0) > 0):
+            public = self._metric_public_inputs(inputs)
+            scan_priority = (self._metric_scan_geometry_ready(public)
+                and reachable_remainder(grid, inside, pose, self._world_to_grid) > 0)
+        candidates = [] if scan_priority else (self._metric_select(inputs, policy, min_frontier)
+            if contour_clear or getattr(self,'_metric_start_egress_enabled',False) else [])
+        useful = scan_priority or bool(unknown_in_scope and getattr(self, '_frontiers_remaining', 0))
+        scan = bool(scan_priority or (scan_pending and sweep_clear and useful
+                    and (not candidates or all(c.requires_nav2_plan for c in candidates))))
         decision = dict(strategy=self._metric_start_strategy,
             selected_motion='full_scan' if scan else 'observation_goal' if candidates else 'wait',
             scan_admissible=bool(sweep_clear), scan_useful=useful,
@@ -1626,6 +1638,8 @@ class MetricFrontierRuntime:
                 'initial_contour_unknown_or_occupied' if not contour_clear else
                 'no_eligible_observation_route' if not candidates and not scan else None),
             scan_rejection=None if sweep_clear else 'initial_scan_footprint_invalid')
+        if scan_priority:
+            decision['scan_priority'] = 'public_after_observed_departure'
         return decision, candidates
 
     def _metric_observation_view(self):
