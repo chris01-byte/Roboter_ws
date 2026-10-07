@@ -548,6 +548,20 @@ def _cell_intersections_full(polygon, cells):
 
 
 def _cell_distances(polygon,cells):
+    if (np.asarray(polygon).dtype == np.float64 and _reserved_sweep is not None
+            and hasattr(_reserved_sweep, 'cell_distances')):
+        try:
+            rectangles = np.array(np.broadcast_to(polygon, (len(cells), 4, 2)),
+                                  dtype=np.float64, order='C', copy=True)
+            indices = np.array(cells, order='C', copy=True)
+            return np.frombuffer(_reserved_sweep.cell_distances(rectangles, indices),
+                                 dtype=np.float64)
+        except (TypeError, ValueError, BufferError):
+            pass
+    return _cell_distances_numpy(polygon,cells)
+
+
+def _cell_distances_numpy(polygon,cells):
     square=np.stack((np.stack((cells[:,1],cells[:,0]),axis=1),
         np.stack((cells[:,1]+1,cells[:,0]),axis=1),
         np.stack((cells[:,1]+1,cells[:,0]+1),axis=1),

@@ -6,6 +6,7 @@ from explore.explore_node import ExploreNode
 from explore.metric_frontier import _cell_intersections, _cell_intersections_full
 from explore.metric_progress import local_evidence
 from test_metric_progress import grid
+from test_metric_native_sweep import native
 
 
 @pytest.mark.parametrize('angle', [0., 1e-15, .17, -1.4, math.pi/2])
@@ -43,7 +44,7 @@ def test_batched_projection_preserves_original_local_digest(angle, resolution):
 
 
 @pytest.mark.parametrize('variant', ['original', 'occupied', 'reentry'])
-def test_actual_b201_private_trajectory_preserves_original_history_proof(monkeypatch, variant):
+def test_actual_b201_private_trajectory_preserves_original_history_proof(monkeypatch, native, variant):
     import copy
     import json
     from pathlib import Path
@@ -67,8 +68,10 @@ def test_actual_b201_private_trajectory_preserves_original_history_proof(monkeyp
             if variant=='occupied':
                 r,c=np.argwhere(evidence.unknown)[0];occupancy[r,c]=100;allowed[r,c]=False
             results=[]
-            for clip in (_cell_intersections_full,_cell_intersections):
+            for clip, distance in ((_cell_intersections_full,module._cell_distances_numpy),
+                                   (_cell_intersections,module._cell_distances)):
                 monkeypatch.setattr(module,'_cell_intersections',clip)
+                monkeypatch.setattr(module,'_cell_distances',distance)
                 current=copy.deepcopy(evidence)
                 result=current.check_trajectory(poses,occupancy,allowed,
                     ExploreNode._world_to_grid,commit=True)
