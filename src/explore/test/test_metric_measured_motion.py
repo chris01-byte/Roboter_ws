@@ -20,12 +20,22 @@ def test_motion_binding_requires_original_fresh_valid_wheel_and_tf_agreement(mon
     health.sample('wheel',100.,9.9 if fault!='stale' else 9.7,9.9,fault!='invalid',details=details)
     node=ExploreNode.__new__(ExploreNode);node._hwt_guard=SimpleNamespace(health=health)
     node._metric_path_validation='rpp_rollout';node._metric_start_egress_enabled=True
+    node._metric_status={}
     if fault=='none':
         motion=node._metric_measured_motion((.05,0.,0.),(.01,0.,0.))
         assert motion==((.04,0.,0.),9.9,9.9,100.)
     else:
         with pytest.raises(ValueError,match='start_motion_wheel_'):
             node._metric_measured_motion((.05,0.,0.),(.01,0.,0.))
+        if fault in ('position_disagreement','yaw_disagreement'):
+            rejected=node._metric_status['motion_binding_rejection']
+            assert rejected['wheel_source_key']==100. and rejected['wheel_times']==[9.9,9.9]
+            assert rejected['selected_map_pose']==[.05,0.,0.]
+            assert rejected['selected_reference']==[.01,0.,0.]
+            assert rejected['selected_localized_pose']==pytest.approx([.04,0.,0.])
+            assert rejected['measured_wheel_pose'][:2]==details['position'][:2]
+            assert rejected['position_error_m']>.02 if fault=='position_disagreement' else rejected['heading_error_rad']>.05
+            assert health.samples['wheel'][1:3]==(9.9,9.9)
 
 
 def test_only_private_escape_geometry_needs_bound_encoder_history(monkeypatch):

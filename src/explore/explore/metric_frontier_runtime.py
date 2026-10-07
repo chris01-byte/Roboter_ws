@@ -499,8 +499,18 @@ class MetricFrontierRuntime:
             raise ValueError('start_motion_wheel_pose_invalid')
         measured = (position[0],position[1],math.atan2(2*q[3]*q[2],1-2*q[2]*q[2]))
         localized = transform_poses([pose],reference,(0.,0.,0.))[0]
-        if (math.dist(measured[:2],localized[:2]) > .02 or
-                abs(math.atan2(math.sin(measured[2]-localized[2]),math.cos(measured[2]-localized[2]))) > .05):
+        position_error = math.dist(measured[:2],localized[:2])
+        heading_error = abs(math.atan2(math.sin(measured[2]-localized[2]),
+                                      math.cos(measured[2]-localized[2])))
+        if position_error > .02 or heading_error > .05:
+            # Record the ACTUAL rejected pair, not a later observer snapshot.
+            # This never authorizes motion or pretends a TF source timestamp.
+            if hasattr(self, '_metric_status'):
+                self._metric_status['motion_binding_rejection'] = dict(
+                    measured_wheel_pose=list(measured), selected_localized_pose=list(localized),
+                    selected_map_pose=list(pose), selected_reference=list(reference),
+                    wheel_source_key=sample[0], wheel_times=list(sample[1:3]),
+                    checked_at=now, position_error_m=position_error, heading_error_rad=heading_error)
             raise ValueError('start_motion_wheel_tf_disagreement')
         return (measured,sample[1],sample[2],sample[0])
 
@@ -2623,7 +2633,8 @@ class MetricFrontierRuntime:
                 reason = str(error)
                 if (pending is None and reason in ('map_scope_not_joined','map_status_join_pending')
                         or (pending is not None and reason in (
-                            'map_status_join_pending','start_motion_wheel_stale_after_processing')
+                            'map_status_join_pending','start_motion_wheel_stale_after_processing',
+                            'start_motion_wheel_tf_disagreement')
                             and time.monotonic()-task_started < self._goal_timeout_s
                             and self._metric_operating_snapshot(require_stop=True)['safe'])):
                     self._status_phase='metric_waiting_sources'
@@ -2997,7 +3008,8 @@ class MetricFrontierRuntime:
                     break
                 except Exception as error:
                     if str(error) not in ('map_status_join_pending',
-                            'start_motion_wheel_stale_after_processing') or time.monotonic() >= until:
+                            'start_motion_wheel_stale_after_processing',
+                            'start_motion_wheel_tf_disagreement') or time.monotonic() >= until:
                         return finish('failed',str(error))
                     if goal_handle.is_cancel_requested:
                         return finish('canceled','user_canceled')
@@ -3014,7 +3026,8 @@ class MetricFrontierRuntime:
             hard = stop_reason[0]
             if not self._metric_work_is_current(self._metric_active_context):
                 return finish('failed','map_work_context_changed')
-            if hard in ('map_status_join_pending','start_motion_wheel_stale_after_processing'):
+            if hard in ('map_status_join_pending','start_motion_wheel_stale_after_processing',
+                            'start_motion_wheel_tf_disagreement'):
                 if status == 'success':
                     hard = None  # real terminal success, exact current pair now revalidated
                 else:

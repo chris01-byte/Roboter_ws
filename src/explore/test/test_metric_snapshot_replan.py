@@ -12,8 +12,10 @@ from test_metric_map_lifecycle import status
 from test_metric_progress import parent_fixture
 
 
+@pytest.mark.parametrize('reason', ['start_motion_wheel_stale_after_processing',
+                                    'start_motion_wheel_tf_disagreement'])
 @pytest.mark.parametrize('fault', ['fresh', 'source_gap', 'persistent', 'retry_budget', 'cancel', 'deadline'])
-def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkeypatch, fault):
+def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkeypatch, fault, reason):
     node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
     node._max_frontier_goals = 2 if fault != 'retry_budget' else 5
     if fault == 'retry_budget':
@@ -25,7 +27,7 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
         if pending_error[0]:
             if fault != 'persistent':
                 pending_error[0] = False
-            raise ValueError('start_motion_wheel_stale_after_processing')
+            raise ValueError(reason)
         if fault == 'source_gap' and navigation:
             raise ValueError('start_motion_wheel_missing_stale_or_invalid')
         return actual_inputs(*args, **kwargs)
@@ -86,7 +88,7 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
     else:
         assert len(planned) == len(navigation) == 1
         if fault == 'persistent':
-            assert node._metric_status['reason'] == 'start_motion_wheel_stale_after_processing'
+            assert node._metric_status['reason'] == reason
             assert clock[0] >= navigation[0]+2.
         elif fault == 'source_gap':
             assert node._metric_status['reason'] == 'start_motion_wheel_missing_stale_or_invalid'
