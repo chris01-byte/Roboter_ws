@@ -782,14 +782,14 @@ class MetricFrontierRuntime:
         """Reuse content digests only in the exact current geometry pass."""
         memo, key = self._metric_selection_memo(inputs)
         if memo is None:
-            return local_evidence(inputs[0], anchor, self._grid_to_world)
+            return local_evidence(inputs[0], anchor, self._grid_to_world, batch_projection=True)
         entry = memo.get('local_evidence')
         if entry is None or entry[0] != key:
             entry = (key, {})
             memo['local_evidence'] = entry
         anchor = tuple(anchor)
         if anchor not in entry[1]:
-            entry[1][anchor] = local_evidence(inputs[0], anchor, self._grid_to_world)
+            entry[1][anchor] = local_evidence(inputs[0], anchor, self._grid_to_world, batch_projection=True)
         return entry[1][anchor]
 
     def _metric_prepare_egress(self, inputs):
@@ -2405,7 +2405,7 @@ class MetricFrontierRuntime:
         for candidate in candidates:
             key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y),
                                   observation_points=candidate.observation_points)
-            evidence = local_evidence(inputs[0], policy.attempts[key].frontier_xy, self._grid_to_world)
+            evidence = local_evidence(inputs[0], policy.attempts[key].frontier_xy, self._grid_to_world, batch_projection=True)
             if policy.eligible(key, (candidate.x, candidate.y), time.monotonic(), candidate.fingerprint, evidence,
                                observation_points=candidate.observation_points):
                 selected.append(replace(candidate, task_id=key, evidence_key=evidence))
@@ -3120,7 +3120,7 @@ class MetricFrontierRuntime:
             proposal_rejected = not task_motion_dispatched and hard == 'route_invalidated'
             if proposal_rejected:
                 outcome = 'proposal_rejected'
-            evidence = local_evidence(after[0], policy.attempts[pending.task_id].frontier_xy, self._grid_to_world)
+            evidence = local_evidence(after[0], policy.attempts[pending.task_id].frontier_xy, self._grid_to_world, batch_projection=True)
             policy.record(pending,outcome,time.monotonic(),after[1].fingerprint,evidence,
                           count_try=False,arrival_xy=arrival_xy,count_failure=not proposal_rejected)
             last_inputs = after

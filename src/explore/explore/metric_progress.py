@@ -7,7 +7,7 @@ import numpy as np
 from scipy.ndimage import label
 
 
-def local_evidence(grid, anchor, to_world, radius=.8):
+def local_evidence(grid, anchor, to_world, radius=.8, *, batch_projection=False):
     """Local world-cell content; stamps, UUIDs and distant edits grant no retry."""
     data = np.asarray(grid.data).reshape(grid.info.height, grid.info.width)
     # Bounded local projection also survives integer-cell map expansion.
@@ -18,6 +18,18 @@ def local_evidence(grid, anchor, to_world, radius=.8):
     row = (-math.sin(yaw)*dx+math.cos(yaw)*dy)/grid.info.resolution
     span = math.ceil(radius/grid.info.resolution)+1
     cells = []
+    if batch_projection:
+        # Same projection arithmetic and Python distance/round/hash semantics;
+        # only compute the invariant grid transform once for the whole window.
+        rows, cols = np.meshgrid(
+            np.arange(max(0, int(row)-span), min(grid.info.height, int(row)+span+1)),
+            np.arange(max(0, int(col)-span), min(grid.info.width, int(col)+span+1)),
+            indexing='ij')
+        x, y = to_world(cols, rows, grid.info)
+        cells = [(round(float(wx), 8), round(float(wy), 8), int(value))
+                 for wx, wy, value in zip(x.ravel(), y.ravel(), data[rows, cols].ravel())
+                 if math.dist((float(wx), float(wy)), anchor) <= radius]
+        return hashlib.sha256(repr(sorted(cells)).encode('ascii')).hexdigest()
     for r in range(max(0, int(row)-span), min(grid.info.height, int(row)+span+1)):
         for c in range(max(0, int(col)-span), min(grid.info.width, int(col)+span+1)):
             xy = to_world(c, r, grid.info)

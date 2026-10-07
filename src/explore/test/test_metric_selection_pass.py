@@ -14,9 +14,9 @@ def test_local_policy_evidence_reuse_requires_unchanged_current_selection(monkey
     node._metric_selection_cache.memo = {'inputs': inputs}
     anchor = inputs[2][:2]
     reads = []
-    def measured(*args):
+    def measured(*args, **kwargs):
         reads.append(True)
-        return local_evidence(*args)
+        return local_evidence(*args, **kwargs)
     monkeypatch.setattr('explore.metric_frontier_runtime.local_evidence', measured)
     original = node._metric_local_evidence(inputs, anchor)
     assert original == node._metric_local_evidence(inputs, anchor)

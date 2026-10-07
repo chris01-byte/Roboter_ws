@@ -489,6 +489,27 @@ def _polygon_distance(a,b):
 
 
 def _cell_intersections(polygon, cells):
+    """Discard strictly disjoint boxes before the unchanged exact clipping.
+
+    Touching boxes still use the full clip: zero-area contact vertices also
+    participate in the original subset proof. Never round a coordinate.
+    """
+    polygons = np.asarray(polygon)
+    lower, upper = polygons.min(axis=-2), polygons.max(axis=-2)
+    active = ((upper[..., 0] >= cells[:, 1]) & (lower[..., 0] <= cells[:, 1]+1)
+              & (upper[..., 1] >= cells[:, 0]) & (lower[..., 1] <= cells[:, 0]+1))
+    if np.all(active):
+        return _cell_intersections_full(polygon, cells)
+    areas = np.zeros(len(cells))
+    vertices = np.zeros((len(cells), 12, 2))
+    valid = np.zeros((len(cells), 12), bool)
+    if np.any(active):
+        areas[active], vertices[active], valid[active] = _cell_intersections_full(
+            polygons if polygons.ndim == 2 else polygons[active], cells[active])
+    return areas, vertices, valid
+
+
+def _cell_intersections_full(polygon, cells):
     """Batch exact convex clipping; bounded eight-vertex intersections."""
     n=len(cells);vertices=np.zeros((n,12,2));vertices[:,:4]=polygon
     counts=np.full(n,4,dtype=int);j=np.arange(12)[None,:]
