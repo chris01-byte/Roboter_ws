@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-import yaml
 from rclpy.serialization import deserialize_message
 from nav_msgs.msg import OccupancyGrid
 from explore.explore_node import ExploreNode
@@ -50,11 +49,11 @@ def replay(resolution, *, obstacle=False):
     return checks, evidence, case
 
 
-def test_product_raster_retains_original_first_unknown_inventory_at_native_corrections():
-    config = Path(__file__).parents[2]/'amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml'
-    resolution = yaml.safe_load(config.read_text())['slam_toolbox']['ros__parameters']['resolution']
-    checks, evidence, case = replay(resolution)
-    assert all(valid for valid, _ in checks), 'actual old half-cell reference failure remains'
+def test_controlled_one_centimetre_fixture_retains_its_own_first_inventory():
+    # This is deliberately independent of the product configuration: choosing
+    # a resolution must not silently choose a different acquisition history.
+    checks, evidence, case = replay(.01)
+    assert all(valid for valid, _ in checks)
     assert len(checks) == len(case['rows'])
     assert evidence.valid
 

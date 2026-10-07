@@ -7,10 +7,14 @@ physical area exactly, so resampling cannot resurrect an exemption.
 import copy
 import math
 import numpy as np
+import shapely
 from shapely.geometry import Polygon, box
 from shapely.ops import unary_union
+from shapely.prepared import prep
 
 from .metric_frontier import StartEgressEvidence, _cell_intersections
+
+_BATCHED_GEOS = hasattr(shapely, 'box') and hasattr(shapely, 'polygons')
 
 
 def transform_poses(poses, source, target):
@@ -103,6 +107,47 @@ def cell_region(mask):
     _, ends = np.nonzero(edges == -1)
     return unary_union([box(start, row, end, row+1)
                         for row, start, end in zip(rows, starts, ends)])
+
+
+def positive_cell_intersections(region, cells):
+    """Same positive-area test, batching GEOS work where available.
+
+    A covered unit square has positive area without constructing its Boolean
+    intersection. Boundary cells still use the original exact area threshold.
+    Shapely 1.x retains the same predicate through prepared geometry.
+    """
+    if not len(cells):
+        return np.empty(0, dtype=bool)
+    if _BATCHED_GEOS:
+        shapely.prepare(region)
+        rows, cols = cells.T
+        polygons = shapely.box(cols, rows, cols+1, rows+1)
+        result = shapely.covers(region, polygons)
+        boundary = ~result
+        result[boundary] = shapely.area(shapely.intersection(
+            region, polygons[boundary])) > 1e-9
+        return result
+    prepared = prep(region)
+    return np.asarray([prepared.covers(p) or region.intersection(p).area > 1e-9
+                       for row, col in cells
+                       for p in (box(col, row, col+1, row+1),)], dtype=bool)
+
+
+def fully_covered_polygons(region, corners):
+    """Exact full-cell coverage; no reference rounding or extra allowance."""
+    if not len(corners):
+        return np.empty(0, dtype=bool)
+    if _BATCHED_GEOS:
+        shapely.prepare(region)
+        polygons = shapely.polygons(corners)
+        result = shapely.covers(region, polygons)
+        boundary = ~result
+        result[boundary] = shapely.area(shapely.difference(
+            polygons[boundary], region)) <= 1e-9
+        return result
+    prepared = prep(region)
+    return np.asarray([prepared.covers(p) or p.difference(region).area <= 1e-9
+                       for corners_ in corners for p in (Polygon(corners_),)], dtype=bool)
 
 
 class ReferencedStartEgress:
@@ -256,8 +301,9 @@ class ReferencedStartEgress:
         # Original cell keys and departure histories stay fixed. A cell with
         # any retained part remains subject to the original stricter monotone
         # proof; its observed part can never become an unknown exception again.
-        for row,col in original_cells:
-            retained[row,col] = region.intersection(box(col,row,col+1,row+1)).area > 1e-9
+        if len(original_cells):
+            retained[original_cells[:,0],original_cells[:,1]] = positive_cell_intersections(
+                region, original_cells)
         self._whole_cells = abs(region.area-int(retained.sum())) <= 1e-9
         projected = np.zeros(occupancy.shape,dtype=bool)
         rr,cc = np.nonzero(retained)
@@ -274,10 +320,9 @@ class ReferencedStartEgress:
                                     & inside[candidates[:,0],candidates[:,1]]]
             polygons = grid_points(squares(candidates).reshape(-1,2),grid,
                 source_reference,self.fixed.grid,target_reference).reshape(-1,4,2)
-            for (row,col), polygon in zip(candidates,polygons):
-                # Same 1e-9 pixel-area numerical edge threshold as the exact
-                # clipper; no dilation/buffer or extra spatial safety margin.
-                projected[row,col] = Polygon(polygon).difference(region).area <= 1e-9
+            if len(candidates):
+                projected[candidates[:,0],candidates[:,1]] = fully_covered_polygons(
+                    region, polygons)
         self.unknown = projected
         self._previous_grid = copy.deepcopy(grid)
         self._previous_occupancy = occupancy.copy()
