@@ -134,12 +134,15 @@ def test_corner_directions_follow_rotated_raster_and_cardinal_face_is_unchanged(
     assert n._metric_corner_face_headings(g,normal) == pytest.approx(tuple(angle+a for a in (0.,math.pi/2,-math.pi/2,math.pi)))
 
 
-def test_actual_parent_keeps_tiny_local_work_after_resolving_every_original_ray(monkeypatch):
+@pytest.mark.parametrize('raw_center_known', [True, False])
+def test_actual_parent_keeps_tiny_local_work_after_resolving_every_original_ray(monkeypatch, raw_center_known):
     from test_metric_progress import parent_fixture
     from test_metric_map_lifecycle import status
     from explore.metric_progress import observation_complete
     n,g,clock,parent,terminal = parent_fixture(monkeypatch,'open')
     n._max_frontier_goals = 1
+    if not raw_center_known:
+        n._door_lidar_mount = lambda _: (.245, 0., 0.)
     chosen = []; baselines = []
     baseline = n._metric_observation_baseline
     def captured_baseline(*args):
@@ -163,6 +166,9 @@ def test_actual_parent_keeps_tiny_local_work_after_resolving_every_original_ray(
         col,row = n._world_to_grid(*xy,newer.info)
         assert newer.data[row*newer.info.width+col] == 0
         newer.data[row*newer.info.width+col] = -1
+        if not raw_center_known:
+            col,row = n._world_to_grid(target.x,target.y,newer.info)
+            newer.data[row*newer.info.width+col] = -1
         newer.header.stamp.nanosec = 100_000_000
         n._on_map(newer); n._on_metric_map_status(status(newer,accepted=3,observed=3,when=100.1))
         assert observation_complete(baselines[-1],newer,n._metric_inputs(active=True)[1],
@@ -173,7 +179,30 @@ def test_actual_parent_keeps_tiny_local_work_after_resolving_every_original_ray(
     assert terminal == ['abort'] and not result.success
     assert n._metric_status['arrivals'] == n._metric_status['observations'] == 1
     assert n._metric_status['chain'][0]['decision'] == 'partially_observed'
-    assert n._metric_status['local_omitted_boundary_cells'] > 0
+    if raw_center_known:
+        assert n._metric_status['local_omitted_boundary_cells'] > 0
+    else:
+        assert n._metric_status['local_omitted_boundary_cells'] is None
     task = n._metric_checkpoint['policy']['tasks'][chosen[0].task_id]
     assert task['tries'] == 1 and task['failures'] == 0
     assert task['partial_observation'] and not task['completed']
+
+
+@pytest.mark.parametrize('center', [-1, 100, 'outside'])
+def test_unproved_connectivity_retains_work_and_still_prohibits_completion(center):
+    from test_metric_progress import grid
+    from explore.explore_node import ExploreNode
+    from explore.metric_progress import reachable_remainder
+    g = grid()
+    data = np.zeros((g.info.height, g.info.width), dtype=int)
+    pose = (*ExploreNode._grid_to_world(5, 5, g.info), 0.)
+    if center == 'outside':
+        pose = (-100., -100., 0.)
+    else:
+        data[5, 5] = center
+    g.data = data.ravel().tolist()
+    inside = np.ones(data.shape, bool)
+    assert local_small_remainder(g, inside, pose, pose[:2],
+        ExploreNode._world_to_grid, ExploreNode._grid_to_world, .3) is None
+    with pytest.raises(ValueError, match='completion_raw_pose_not_observed_free'):
+        reachable_remainder(g, inside, pose, ExploreNode._world_to_grid)

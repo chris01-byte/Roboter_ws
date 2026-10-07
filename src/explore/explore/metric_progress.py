@@ -57,12 +57,14 @@ def local_small_remainder(grid, inside, pose, anchor, to_grid, to_world,
     Connectivity is proved on the whole raw-free scope, not a cropped disk;
     walls and disconnected islands cannot create an unfinished task here.
     This is work accounting only, never a chassis or motion permission.
+    Return None if raw-free connectivity cannot yet be established (including
+    private start egress). The caller must retain the task as unfinished.
     """
     data = np.asarray(grid.data).reshape(grid.info.height, grid.info.width)
     free = (data == 0) & inside
     c, r = to_grid(*pose[:2], grid.info)
     if not (0 <= r < data.shape[0] and 0 <= c < data.shape[1] and free[r, c]):
-        raise ValueError('completion_raw_pose_not_observed_free')
+        return None
     connected, _ = label(free)
     unknown = (data < 0) & inside
     adjacent = np.zeros(data.shape, bool)

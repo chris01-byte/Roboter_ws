@@ -684,6 +684,22 @@ class MetricFrontierRuntime:
         inputs = MetricInputs(values, self._metric_input_reference,
             self._metric_motion_binding_for_geometry(values,self._metric_input_reference))
         self._metric_prepare_egress(inputs)
+        # Expensive geometry may outlive the selected wheel sample while a
+        # genuinely newer measurement arrives independently. Bind that actual
+        # sample once and recheck the whole private trajectory/history proof.
+        # Never change a stamp, reset the inventory, poll, or extend a budget.
+        selected = inputs.physical_motion
+        processed_at = time.monotonic()
+        if selected is not None and not all(
+                0 <= processed_at-at <= .18 for at in selected[1:3]):
+            try:
+                newer = self._metric_measured_motion(pose, inputs.map_odom_reference)
+            except ValueError:
+                newer = None  # the unchanged final freshness guard rejects it
+            if (newer is not None and newer[3] > selected[3]
+                    and all(new >= old for new, old in zip(newer[1:3], selected[1:3]))):
+                inputs = MetricInputs(values, inputs.map_odom_reference, newer)
+                self._metric_prepare_egress(inputs)
         # Processing/DDS delay consumes the original freshness window too.
         completed_ros = self.get_clock().now().nanoseconds
         completed = time.monotonic()
@@ -3095,7 +3111,7 @@ class MetricFrontierRuntime:
                     after[2],policy.attempts[pending.task_id].frontier_xy,
                     self._world_to_grid,self._grid_to_world,min_frontier)
                 self._metric_status['local_omitted_boundary_cells'] = omitted
-                if not ray_complete or omitted:
+                if not ray_complete or omitted != 0:
                     outcome = 'partially_observed'
             # A current geometry rejection before the first dispatch is a
             # proposal rejection even when stop() prevented the planner call.
