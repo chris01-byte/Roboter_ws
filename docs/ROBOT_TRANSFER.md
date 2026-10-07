@@ -2949,3 +2949,30 @@ Zusatzstand `ea63493`: bessere endliche Sichtpunkte einer schon zulässigen Aufg
 ## 06.10.2026 – AP-06 Tangentenreihenfolge, keine Zielsystemübertragung
 
 Neue isolierte AP-06-Korrektur sortiert vorhandene Nahzielrichtungen nach originalen Lenkkosten; tatsächliche Native-An-/Abfahrt und alle Quellen-/Kontur-/Haltprüfungen bleiben Pflicht. Ubuntu/Humble/x86-Modelltests sind kein Jetson-Nachweis. Kein dauerhafter Install-/Profil-/Autostartwechsel und keine Hardwarefahrt. Rückfall ausschließlich der eigene Reihenfolge-Commit. Bestehende Shutdown-Autorisierung gilt weiter nur für den tatsächlich verifizierten Jetson; mangels ausführbarem Jetson-Kanal nicht ausgeführt. Aktuelles Software-/Gesamtresultat ausschließlich im STATUS.
+
+## 07.10.2026 – AP-06 reine Softwarekorrekturen, kein Deployment
+
+7fabf80/4497d0c/8e6cbbe/972ef6c/60e23a8 korrigieren Quellenbindung,
+Restarbeits-/Beobachtungsreihenfolge und äquivalente Auswahlrechnung.
+a2180ed/3c66cbe ergänzen reine native Zellabstände/Clipping mit vollständigem
+NumPy-Rückfall. Compilerflags bleiben ohne Fast-Math/FMA. Eigenen Kern beim
+späteren Zielsystembuild neu kompilieren; x86-Artefakt niemals auf Jetson kopieren.
+Keine Hardware bewegt, nichts deployed. Jetson-Last und reale Sensorlatenz
+bleiben separat unqualifiziert. Rückfall nur der genannten neuen eigenen
+Diffs zu 7934a28, unter Erhalt vorheriger AP-Korrekturen und sämtlicher Evidenz;
+kein pauschaler Branch-/Karten-/Checkpointreset. Aktueller Softwarebeweis im STATUS.
+
+5612878 priorisiert die vorhandene vollständig geprüfte private Nahbeobachtung
+vor Fernabfragen. Rückfall nur dieses Diffs stellt frühere Reihenfolge wieder
+her. V45 grün, aber keine Gesamt-/Hardwarefreigabe: A/B-Startfläche und C-
+Quellen-/TF-Kette bleiben offen. Das vorbereitete Abdeckungspaket beschreibt
+nur Anforderungen und Abnahme, keine freigegebene Sensormontage. Alle gestarteten
+Softwarefälle terminal mit vier Nullbefehlsketten; kein Jetson-Kanal genutzt.
+
+2e5e1fd ergänzt begrenzte gestoppte Neuprüfung einer vorübergehenden Encoder-/TF-
+Abweichung und genaue Ablehnungsdiagnostik. 2 cm/.05 rad, 180 ms, Task-/Try-/
+Zeitbudgets bleiben unverändert. V46-Test-/Nativeprüfung grün; C248 endet trotzdem
+negativ an unveränderter 900-s-Grenze, Cancel249/Gyro250 bestehen. Keine Gesamt-/
+Hardwarefreigabe. Rückfall ausschließlich dieses Diffs zu 5612878. Alle Fälle
+beendet; kein tatsächlicher Jetson-Kanal verfügbar, daher weder Deployment noch
+der früher gewünschte Jetson-Shutdown ausgeführt.

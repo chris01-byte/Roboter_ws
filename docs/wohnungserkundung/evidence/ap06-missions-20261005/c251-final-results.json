@@ -1,0 +1,280 @@
+{
+  "mission-c-v248": {
+    "passed": false,
+    "reason": "budget_exhausted",
+    "arrivals": 0,
+    "observations": 0,
+    "attempts": 9,
+    "failures": 1,
+    "travel_m": 0.2987808982689803,
+    "motion_binding_rejection": {
+      "measured_wheel_pose": [
+        0.2634316965043292,
+        0.000554051260538606,
+        0.002039379782408351
+      ],
+      "selected_localized_pose": [
+        0.23641716626845174,
+        0.0004937589077945124,
+        0.0017590447593609513
+      ],
+      "selected_map_pose": [
+        0.23975049960178518,
+        -0.0028395744255388282,
+        0.0017590447593610115
+      ],
+      "selected_reference": [
+        0.003333333333333438,
+        -0.003333333333333355,
+        6.028164079019405e-17
+      ],
+      "wheel_source_key": 1791402927.3588283,
+      "wheel_times": [
+        132579.340799571,
+        132579.332455398
+      ],
+      "checked_at": 132579.391258299,
+      "position_error_m": 0.027014597517507746,
+      "heading_error_rad": 0.0002803350230473995
+    },
+    "chain": [
+      {
+        "task": "metric-task-5",
+        "result": "canceled",
+        "decision": "geometry_snapshot_revalidate",
+        "terminal_child": true,
+        "stop_reason": "start_motion_wheel_tf_disagreement",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-5",
+        "target": [
+          0.8499999977648258,
+          0.0
+        ],
+        "result": "planning_failed",
+        "decision": "route_invalidated",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-1",
+        "target": [
+          -0.25792892642297366,
+          -0.8920710478725233
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-4",
+        "target": [
+          0.30207106106005094,
+          -0.5120710563661852
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-6",
+        "target": [
+          -0.3896446522314358,
+          1.0403553158055734
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-14",
+        "target": [
+          2.766113654003648,
+          -0.16438220370747347
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-7",
+        "target": [
+          -0.19499999564141035,
+          0.7749999826774001
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-14",
+        "target": [
+          2.7285203255792583,
+          -0.18497577254106842
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      },
+      {
+        "task": "metric-task-14",
+        "target": [
+          2.766113654003648,
+          -0.16438220370747347
+        ],
+        "result": "planning_failed",
+        "decision": "proposal_rejected",
+        "terminal_child": true,
+        "stop_reason": "route_invalidated",
+        "child_dispatched": false,
+        "planning_rejection": "nav2_plan_timeout_or_stop",
+        "arrived": false,
+        "observed_cells": 0
+      }
+    ],
+    "cpu_allocation": {
+      "available": [
+        0,
+        1,
+        3,
+        4
+      ],
+      "graph": [
+        0,
+        1
+      ],
+      "source": 4,
+      "sensors": 3
+    },
+    "trace": {
+      "schema": 1,
+      "path": "events.jsonl.gz",
+      "compression": "gzip-level-1",
+      "uncompressed_bytes": 931987524,
+      "sha256": "53353b9b8548ff7634f5a649affedb9c3d6062b7bc45617cc65e36953979817d",
+      "compressed_bytes": 107648311,
+      "verified_decompression": true
+    },
+    "terminal_actions_empty": true,
+    "four_zero_command_chains": true
+  },
+  "mission-cancel-v249": {
+    "passed": true,
+    "reason": "user_canceled",
+    "arrivals": 0,
+    "observations": 0,
+    "attempts": 1,
+    "failures": 0,
+    "travel_m": 0.03101674417015994,
+    "motion_binding_rejection": null,
+    "chain": [],
+    "cpu_allocation": {
+      "available": [
+        0,
+        1,
+        3,
+        4
+      ],
+      "graph": [
+        0,
+        1
+      ],
+      "source": 4,
+      "sensors": 3
+    },
+    "trace": {
+      "schema": 1,
+      "path": "events.jsonl.gz",
+      "compression": "gzip-level-1",
+      "uncompressed_bytes": 12042067,
+      "sha256": "e217eade9735ef77cd60b1c9dfd8fb1785547a9240057c700f36509598ceb2e2",
+      "compressed_bytes": 1190631,
+      "verified_decompression": true
+    },
+    "terminal_actions_empty": true,
+    "four_zero_command_chains": true
+  },
+  "mission-gyro-v250": {
+    "passed": true,
+    "reason": "hwt_terminal",
+    "arrivals": 0,
+    "observations": 0,
+    "attempts": 1,
+    "failures": 0,
+    "travel_m": 0.04729965909761573,
+    "motion_binding_rejection": null,
+    "chain": [
+      {
+        "task": "metric-task-7",
+        "result": "hwt_hold",
+        "terminal_child": true
+      }
+    ],
+    "cpu_allocation": {
+      "available": [
+        0,
+        1,
+        3,
+        4
+      ],
+      "graph": [
+        0,
+        1
+      ],
+      "source": 4,
+      "sensors": 3
+    },
+    "trace": {
+      "schema": 1,
+      "path": "events.jsonl.gz",
+      "compression": "gzip-level-1",
+      "uncompressed_bytes": 22465993,
+      "sha256": "2179bc6d9ab6046f3daa0ee9057a37ae5af9aa7d342cc0858d163b5d658186df",
+      "compressed_bytes": 2744795,
+      "verified_decompression": true
+    },
+    "terminal_actions_empty": true,
+    "four_zero_command_chains": true
+  },
+  "cpu_accounting": {
+    "nr_throttled": 0,
+    "throttled_usec": 0,
+    "usage_usec": 1953902936
+  }
+}

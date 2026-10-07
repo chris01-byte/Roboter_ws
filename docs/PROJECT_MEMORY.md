@@ -369,3 +369,38 @@ Nutzer beauftragt Umsetzung bis zu gemeinsamer 3/3-Abnahme. Kandidat `17fba88` b
 ## 06.10.2026 – AP-06: kostengerechte Reihenfolge innerhalb der ursprünglichen Nahzielhilfe
 
 Die B76-Auswahl 32 zeigt eine bisher nicht im ursprünglichen 0,5-s-Fenster erreichte seitliche Beobachtung mit 9 statt 4 endlichen Punkten und niedrigeren Originalkosten. Native C++-Anfahrt, reservierter Goalchecker-Stopp und ursprüngliche vollständige Abfahrt bestehen. Nur die vier bereits vorhandenen Randrichtungen werden nach dem absoluten Lenkwinkel zur tatsächlichen Pose sortiert. Kein neuer Kandidatenradius, Deadline, Taskbudget, Geometrie-/Quellenprivileg oder Plannerwechsel. Original-Gegenprobe rot und 46 gezielte Regressionen grün; Gesamtmissionen weiterhin offen, tatsächlicher vollständiger Nachweis ausschließlich im STATUS. B79/B86-Smac-Vergleiche negativ für vollständige Abfahrt und nicht übernommen. Rückfall: ausschließlich diesen eigenen Reihenfolge-Commit revertieren; frühere AP-06-Korrekturen erhalten. Hardwarewirkung wäre nur eine andere Wahl ohnehin vollständig geprüfter Beobachtungsziele; kein Install/Deployment am Roboter durchgeführt.
+
+## 07.10.2026 – AP-06 Quellenbindung und exakte Arithmetik
+
+Die aktuelle Korrektur bewahrt echte alte/neue Messungen getrennt: eine durch
+Verarbeitung veraltete Wheelbindung darf genau einmal durch eine bereits
+vorliegende neuere, zur TF-Pose passende Messung mit erneutem vollständigem
+Geometriebeweis ersetzt werden. Ein tatsächlicher Encoderkontinuitätsverlust
+bleibt gesperrt (B221: 197 ms, Gyro225: 330 ms bei unverändert 180 ms Grenze).
+
+Unbeweisbare lokale Restarbeit bleibt offen. Tatsächlich beobachteter Fortschritt
+kann einen bereits vollständig öffentlich belegten ausstehenden Rundblick vor
+weiteren Zielabfragen priorisieren. Keine Beobachtungen/Zähler erfunden.
+
+Native Mathematik ist ausschließlich optionaler Rechenkern mit separatem NumPy-
+Oracle, kein Motion-/Frischebesitzer: Fläche und Kontaktvertices exakt erhalten,
+Originalinventare und Historie bleiben bindend. A227-Eingang vorher >5 s,
+mit Distanz- und Clippingkorrektur 4,195 s und geprüftes Startziel. Dies ersetzt
+keine ganze Mission; verbindlicher aktueller Abschlussstand steht im STATUS.
+
+Die neu vorgezogene private Nahsuche (`5612878`) repariert den tatsächlichen
+A227-Auswahlgegenfall auf 0,964 s statt >5 s; alle V45-Tests/native Fälle grün.
+Whole-Matrix bleibt 0/3: robuste Startfläche und reale Quellen-/Posekette sind
+separate ungelöste Grenzen. A244 lokalisiert 138 fehlende äußere Rohzellen des
+ursprünglichen Trackingbands. MASTERPLAN AP-03 verlangt dafür konstruktive
+Abdeckungsvorbereitung statt identischer Fehlstartserien; separates Paket
+`wohnungserkundung/AP06_STARTBEOBACHTUNG_BLOCKER.md` erstellt. Keine gefälschten
+Freiraum-/Frischewerte oder nachträgliche Abnahmesenkung.
+
+2e5e1fd: Encoder-/TF-Abweichung nimmt nach terminalem Child und bestätigtem
+Stillstand am vorhandenen begrenzten Neuprüfpfad teil. Grenzwerte und Historie
+unverändert; Originalgegenfälle 3 rot/9 grün, V46 2371 direkte/2353 registrierte
+Tests und 9/9 native Fälle grün. C248 nutzt den Pfad tatsächlich, scheitert danach
+an Geometrie und endet regulär nach 900 s. Cancel249/Gyro250 bestehen. Keine
+Gesamtabnahme. Tatsächlich abgelehntes Paar wird statt späterer Beobachterwerte
+gesichert. Bericht: wohnungserkundung/REPARATUREN_AP06_20261007.md.

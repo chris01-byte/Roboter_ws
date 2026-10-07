@@ -1,0 +1,58 @@
+{
+  "kind": "Actual B201 live selection ENTRY and complete ORIGINAL history before distant proposal attempts; diagnostic only, not qualification",
+  "arrivals": 1,
+  "observations": 1,
+  "elapsed_s": 5.553216593005345,
+  "ranking": {
+    "raw": 15,
+    "unsafe": 0,
+    "deferred_or_served": 0,
+    "accepted": 0,
+    "route_rejections": {},
+    "bounded_start_observation": true
+  },
+  "policy": {
+    "radius": 0.6,
+    "cooldown_s": 30.0,
+    "retry_limit": 2,
+    "next_id": 2,
+    "tasks": {
+      "metric-task-1": {
+        "frontier_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "target_xy": [
+          -0.2849999936297536,
+          -1.4549999674782157
+        ],
+        "failures": 0,
+        "fingerprint": "",
+        "completed": false,
+        "reason": "",
+        "tries": 0,
+        "evidence_key": "",
+        "partial_observation": false,
+        "retry_remaining_s": 0.0
+      },
+      "metric-task-2": {
+        "frontier_xy": [
+          0.634999985806644,
+          -0.6849999846890569
+        ],
+        "target_xy": [
+          0.16504362378711068,
+          -3.3599057298850496e-06
+        ],
+        "failures": 0,
+        "fingerprint": "73b2adf821c80a67aeb88b643ca42cd5baa8e6fa3e497e161096c76bafd62768",
+        "completed": false,
+        "reason": "partially_observed",
+        "tries": 1,
+        "evidence_key": "4afd66939abab7a899a407013e4e8692c0c0edbe721ebe20080519ca39d21f0a",
+        "partial_observation": true,
+        "retry_remaining_s": 29.64146892199642
+      }
+    }
+  }
+}
