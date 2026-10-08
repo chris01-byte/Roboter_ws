@@ -1,0 +1,2842 @@
+{
+  "kind": "Static finite sensor visibility diagnostic only; no runtime or physical qualification",
+  "created_at_utc": "2026-10-08T05:20:20.502267+00:00",
+  "python": "3.12.14",
+  "numpy": "2.3.5",
+  "source_sha256": {
+    "a227_geometry": {
+      "path": "/workspace/Roboter_ws-ap06/src/explore/test/data/ap06_a227_start_selection.json",
+      "sha256": "72ce0e9b4a412fc3918c5e134b58bff6b82a1e6adbc2f1f40809d35c048bb49d"
+    },
+    "a227_cdr_and_masks": {
+      "path": "/workspace/Roboter_ws-ap06/src/explore/test/data/ap06_a227_start_selection.npz",
+      "sha256": "8a73592998e106aacc85e88e32d7f808370cd9e88ffc6e41eb946ae3dcbcc114"
+    },
+    "a244_missing_cells": {
+      "path": "/workspace/Roboter_ws-ap06/docs/wohnungserkundung/evidence/ap06-missions-20261005/a244-start-coverage.json",
+      "sha256": "0ac8c096ccb3289cd012030115c9e60ef2545a0316bb105bf533f9a1b57823a6"
+    },
+    "finite_world": {
+      "path": "/workspace/Roboter_ws-ap06/tools/simulation/ap06_world.py",
+      "sha256": "09c43dced4d5e1269214e4232ecc9bacd7c6a89c493c0dcec11519bc519241a5"
+    },
+    "product_manifest": {
+      "path": "/workspace/Roboter_ws-ap06/tools/simulation/ap06_product_scenarios.json",
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+    },
+    "diagnostic_script": {
+      "path": "/workspace/scratch/ap06-concept-20261008/visibility_geometry_check.py",
+      "sha256": "c867eb52ada304ab9cc37f7d4291b7b0185ad25d21fb2aad65fe40a26a38d8c8"
+    }
+  },
+  "derivation": {
+    "start": {
+      "id": "door68_start_a",
+      "door_m": 0.68,
+      "start": [
+        -1.9,
+        -0.45,
+        0.0
+      ]
+    },
+    "beam_count": 2160,
+    "sensor_mount_local_m": [
+      0.245,
+      0.0
+    ],
+    "sensor_yaw_rad": 1.5707963267948966,
+    "scan_range_min_m": 0.05,
+    "grid_resolution_m_derived_from_original_polygon": 0.009999999776482586,
+    "grid_origin_local_m_derived_from_original_polygon": [
+      -0.9099999796599153,
+      -0.9599999785423281
+    ],
+    "missing_cell_bbox_matches_a244_with_absolute_tolerance_m": 1e-12,
+    "algorithm": "Nearest actual discrete beam; finite first-return segment intersects complete square cell using slab intervals"
+  },
+  "summary": {
+    "missing_raw_cells": 138,
+    "full360_segments_intersect": 138,
+    "full360_misses": 0,
+    "selected_native_beams_masked": 136,
+    "center_sensor_distance_minmax_m": [
+      0.40003124531374656,
+      0.5020209092593592
+    ],
+    "center_laser_angle_minmax_deg": [
+      55.19598860594365,
+      123.85100994953417
+    ],
+    "minimum_finite_return_beyond_cell_m": 0.7300494223025435
+  },
+  "limits": [
+    "No ROS or SLAM invocation; segment/cell intersection does not prove occupancy publication or qualified observation.",
+    "World contains static floor-to-ceiling obstacle rectangles and no 3-D robot self-occlusion beyond the optional angular mast mask.",
+    "Full360 variant intentionally removes that mask; it is not a validated real sensor installation.",
+    "Some cells are close to the mask edge: one unmasked beam crossing a cell does not imply current SLAM marked the full cell free.",
+    "Original A227 start geometry and A244 list are component evidence, not the initial map from the new live concept mission.",
+    "Actual unchanged guard results, finite-source freshness, observed map, full mission completion, and physical tests remain separate."
+  ],
+  "cells": [
+    {
+      "cell": [
+        68,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.27499999385327095
+      ],
+      "center_sensor_distance_m": 0.5020209092593589,
+      "center_laser_angle_deg": 123.21525115137231,
+      "actual_beam_index": 739,
+      "actual_beam_angle_deg": 123.16666666666667,
+      "actual_finite_return_m": 1.3678456827712009,
+      "segment_enters_cell_m": 0.4957693913995759,
+      "segment_leaves_cell_m": 0.5077156416371084,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8601300411340925
+    },
+    {
+      "cell": [
+        68,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.27499999385327095
+      ],
+      "center_sensor_distance_m": 0.49368511583306707,
+      "center_laser_angle_deg": 123.85100994953417,
+      "actual_beam_index": 743,
+      "actual_beam_angle_deg": 123.83333333333333,
+      "actual_finite_return_m": 1.378420834369318,
+      "segment_enters_cell_m": 0.4875636969344607,
+      "segment_leaves_cell_m": 0.49960230657253246,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8788185277967856
+    },
+    {
+      "cell": [
+        69,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.26499999407678837
+      ],
+      "center_sensor_distance_m": 0.4966135253645356,
+      "center_laser_angle_deg": 122.24997382704467,
+      "actual_beam_index": 733,
+      "actual_beam_angle_deg": 122.16666666666666,
+      "actual_finite_return_m": 1.3526236161332799,
+      "segment_enters_cell_m": 0.49025222319267936,
+      "segment_leaves_cell_m": 0.5020655296197517,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8505580865135282
+    },
+    {
+      "cell": [
+        69,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.26499999407678837
+      ],
+      "center_sensor_distance_m": 0.4881854092826901,
+      "center_laser_angle_deg": 122.8762614033303,
+      "actual_beam_index": 737,
+      "actual_beam_angle_deg": 122.83333333333334,
+      "actual_finite_return_m": 1.362687554097978,
+      "segment_enters_cell_m": 0.48199865025007105,
+      "segment_leaves_cell_m": 0.49389985132989234,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8687877027680856
+    },
+    {
+      "cell": [
+        69,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.26499999407678837
+      ],
+      "center_sensor_distance_m": 0.4798176675457901,
+      "center_laser_angle_deg": 123.52447288742201,
+      "actual_beam_index": 741,
+      "actual_beam_angle_deg": 123.5,
+      "actual_finite_return_m": 1.373089660118687,
+      "segment_enters_cell_m": 0.4736859485967164,
+      "segment_leaves_cell_m": 0.48567799776202425,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8874116623566628
+    },
+    {
+      "cell": [
+        70,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.2549999943003058
+      ],
+      "center_sensor_distance_m": 0.4913501743232116,
+      "center_laser_angle_deg": 121.26373136297315,
+      "actual_beam_index": 728,
+      "actual_beam_angle_deg": 121.33333333333333,
+      "actual_finite_return_m": 1.3405038518251988,
+      "segment_enters_cell_m": 0.4858594702304078,
+      "segment_leaves_cell_m": 0.4975669271899065,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8429369246352922
+    },
+    {
+      "cell": [
+        70,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.2549999943003058
+      ],
+      "center_sensor_distance_m": 0.48283019175375286,
+      "center_laser_angle_deg": 121.87959650381939,
+      "actual_beam_index": 731,
+      "actual_beam_angle_deg": 121.83333333333333,
+      "actual_finite_return_m": 1.3477152738849598,
+      "segment_enters_cell_m": 0.47670277825642277,
+      "segment_leaves_cell_m": 0.48847321706656405,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8592420568183958
+    },
+    {
+      "cell": [
+        70,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.2549999943003058
+      ],
+      "center_sensor_distance_m": 0.47436799462183415,
+      "center_laser_angle_deg": 122.51751025948826,
+      "actual_beam_index": 735,
+      "actual_beam_angle_deg": 122.49999999999999,
+      "actual_finite_return_m": 1.3576139593121137,
+      "segment_enters_cell_m": 0.46834716976116175,
+      "segment_leaves_cell_m": 0.4802040599704812,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8774098993416325
+    },
+    {
+      "cell": [
+        71,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.2449999945238232
+      ],
+      "center_sensor_distance_m": 0.4862355334927383,
+      "center_laser_angle_deg": 120.25643683838744,
+      "actual_beam_index": 722,
+      "actual_beam_angle_deg": 120.33333333333331,
+      "actual_finite_return_m": 1.3266104773562952,
+      "segment_enters_cell_m": 0.4808238804035056,
+      "segment_leaves_cell_m": 0.4924099978507042,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8342004795055911
+    },
+    {
+      "cell": [
+        71,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.2449999945238232
+      ],
+      "center_sensor_distance_m": 0.4776243233886683,
+      "center_laser_angle_deg": 120.86089135137786,
+      "actual_beam_index": 725,
+      "actual_beam_angle_deg": 120.83333333333331,
+      "actual_finite_return_m": 1.3334702019250935,
+      "segment_enters_cell_m": 0.47166412839371397,
+      "segment_leaves_cell_m": 0.48331015609781625,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8501600458272772
+    },
+    {
+      "cell": [
+        71,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.2449999945238232
+      ],
+      "center_sensor_distance_m": 0.4690682195001681,
+      "center_laser_angle_deg": 121.48746901483707,
+      "actual_beam_index": 729,
+      "actual_beam_angle_deg": 121.5,
+      "actual_finite_return_m": 1.34288771262304,
+      "segment_enters_cell_m": 0.4632669362303229,
+      "segment_leaves_cell_m": 0.4749952129343155,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8678924996887245
+    },
+    {
+      "cell": [
+        72,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.23499999474734062
+      ],
+      "center_sensor_distance_m": 0.48127434405497305,
+      "center_laser_angle_deg": 119.22805162481148,
+      "actual_beam_index": 715,
+      "actual_beam_angle_deg": 119.16666666666667,
+      "actual_finite_return_m": 1.311260254232647,
+      "segment_enters_cell_m": 0.4752602624663997,
+      "segment_leaves_cell_m": 0.4867123168325455,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8245479374001015
+    },
+    {
+      "cell": [
+        72,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.23499999474734062
+      ],
+      "center_sensor_distance_m": 0.47257273991107435,
+      "center_laser_angle_deg": 119.820072235309,
+      "actual_beam_index": 719,
+      "actual_beam_angle_deg": 119.83333333333336,
+      "actual_finite_return_m": 1.319920970720445,
+      "segment_enters_cell_m": 0.4668716056081883,
+      "segment_leaves_cell_m": 0.47839929941795173,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8415216713024931
+    },
+    {
+      "cell": [
+        72,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.23499999474734062
+      ],
+      "center_sensor_distance_m": 0.46392347942266793,
+      "center_laser_angle_deg": 120.43423541085292,
+      "actual_beam_index": 723,
+      "actual_beam_angle_deg": 120.50000000000001,
+      "actual_finite_return_m": 1.3288779588347106,
+      "segment_enters_cell_m": 0.45843387710419287,
+      "segment_leaves_cell_m": 0.47003979788263806,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8588381609520725
+    },
+    {
+      "cell": [
+        73,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.22499999497085804
+      ],
+      "center_sensor_distance_m": 0.4764713994052325,
+      "center_laser_angle_deg": 118.17858979899597,
+      "actual_beam_index": 709,
+      "actual_beam_angle_deg": 118.16666666666667,
+      "actual_finite_return_m": 1.2988070391162478,
+      "segment_enters_cell_m": 0.47074665178868264,
+      "segment_leaves_cell_m": 0.48208994445318615,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8167170946630617
+    },
+    {
+      "cell": [
+        73,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.22499999497085804
+      ],
+      "center_sensor_distance_m": 0.4676804408062154,
+      "center_laser_angle_deg": 118.75712057453902,
+      "actual_beam_index": 713,
+      "actual_beam_angle_deg": 118.83333333333334,
+      "actual_finite_return_m": 1.307038445998073,
+      "segment_enters_cell_m": 0.4623149047640931,
+      "segment_leaves_cell_m": 0.4737300874434249,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8333083585546481
+    },
+    {
+      "cell": [
+        73,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.22499999497085804
+      ],
+      "center_sensor_distance_m": 0.4589389882819617,
+      "center_laser_angle_deg": 119.35775320761536,
+      "actual_beam_index": 716,
+      "actual_beam_angle_deg": 119.33333333333333,
+      "actual_finite_return_m": 1.313398108535434,
+      "segment_enters_cell_m": 0.453093666784268,
+      "segment_leaves_cell_m": 0.4645643923666147,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8488337161688193
+    },
+    {
+      "cell": [
+        74,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.21499999519437546
+      ],
+      "center_sensor_distance_m": 0.47183153206189593,
+      "center_laser_angle_deg": 117.10812256778635,
+      "actual_beam_index": 703,
+      "actual_beam_angle_deg": 117.16666666666666,
+      "actual_finite_return_m": 1.286976475813591,
+      "segment_enters_cell_m": 0.46645871840383657,
+      "segment_leaves_cell_m": 0.47769868737368304,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.809277788439908
+    },
+    {
+      "cell": [
+        74,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.21499999519437546
+      ],
+      "center_sensor_distance_m": 0.4629524758648465,
+      "center_laser_angle_deg": 117.67207790800877,
+      "actual_beam_index": 706,
+      "actual_beam_angle_deg": 117.66666666666666,
+      "actual_finite_return_m": 1.2928154653443042,
+      "segment_enters_cell_m": 0.45728406885674716,
+      "segment_leaves_cell_m": 0.4685750333672068,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8242404319770975
+    },
+    {
+      "cell": [
+        74,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.21499999519437546
+      ],
+      "center_sensor_distance_m": 0.45412002285955855,
+      "center_laser_angle_deg": 118.2580292875943,
+      "actual_beam_index": 710,
+      "actual_beam_angle_deg": 118.33333333333331,
+      "actual_finite_return_m": 1.3008386620076409,
+      "segment_enters_cell_m": 0.4487609319926789,
+      "segment_leaves_cell_m": 0.46012196808815164,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8407166939194892
+    },
+    {
+      "cell": [
+        75,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.20499999541789288
+      ],
+      "center_sensor_distance_m": 0.4673595990622537,
+      "center_laser_angle_deg": 116.0167826462966,
+      "actual_beam_index": 696,
+      "actual_beam_angle_deg": 115.99999999999999,
+      "actual_finite_return_m": 1.2739292218440912,
+      "segment_enters_cell_m": 0.4617298010695434,
+      "segment_leaves_cell_m": 0.4728558202256094,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8010734016184817
+    },
+    {
+      "cell": [
+        75,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.20499999541789288
+      ],
+      "center_sensor_distance_m": 0.45839393003959583,
+      "center_laser_angle_deg": 116.56505087096885,
+      "actual_beam_index": 699,
+      "actual_beam_angle_deg": 116.5,
+      "actual_finite_return_m": 1.2794234405642124,
+      "segment_enters_cell_m": 0.4525471518366218,
+      "segment_leaves_cell_m": 0.46372115543458575,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8157022851296267
+    },
+    {
+      "cell": [
+        75,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.20499999541789288
+      ],
+      "center_sensor_distance_m": 0.4494719071863341,
+      "center_laser_angle_deg": 117.13513930369461,
+      "actual_beam_index": 703,
+      "actual_beam_angle_deg": 117.16666666666666,
+      "actual_finite_return_m": 1.286976475813591,
+      "segment_enters_cell_m": 0.4439787804641435,
+      "segment_leaves_cell_m": 0.45521874943399004,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.831757726379601
+    },
+    {
+      "cell": [
+        76,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.1949999956414103
+      ],
+      "center_sensor_distance_m": 0.46306046582972776,
+      "center_laser_angle_deg": 114.9047685227574,
+      "actual_beam_index": 689,
+      "actual_beam_angle_deg": 114.83333333333333,
+      "actual_finite_return_m": 1.2616616966430618,
+      "segment_enters_cell_m": 0.45728349284961933,
+      "segment_leaves_cell_m": 0.4683023720499925,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7933593245930693
+    },
+    {
+      "cell": [
+        76,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.1949999956414103
+      ],
+      "center_sensor_distance_m": 0.4540099065835016,
+      "center_laser_angle_deg": 115.43621608358991,
+      "actual_beam_index": 693,
+      "actual_beam_angle_deg": 115.49999999999999,
+      "actual_finite_return_m": 1.2685781829744238,
+      "segment_enters_cell_m": 0.4487110563911382,
+      "segment_leaves_cell_m": 0.4597903415843215,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8087878413901023
+    },
+    {
+      "cell": [
+        76,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.1949999956414103
+      ],
+      "center_sensor_distance_m": 0.44499999497588144,
+      "center_laser_angle_deg": 115.9892332748641,
+      "actual_beam_index": 696,
+      "actual_beam_angle_deg": 115.99999999999999,
+      "actual_finite_return_m": 1.2739292218440912,
+      "segment_enters_cell_m": 0.43947776275741146,
+      "segment_leaves_cell_m": 0.45060378191347744,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8233254399306138
+    },
+    {
+      "cell": [
+        77,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.1849999958649277
+      ],
+      "center_sensor_distance_m": 0.4589389885206068,
+      "center_laser_angle_deg": 113.77234853577565,
+      "actual_beam_index": 683,
+      "actual_beam_angle_deg": 113.83333333333334,
+      "actual_finite_return_m": 1.2517426828782832,
+      "segment_enters_cell_m": 0.45368839182368664,
+      "segment_leaves_cell_m": 0.46462064208481896,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7871220407934643
+    },
+    {
+      "cell": [
+        77,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.1849999958649277
+      ],
+      "center_sensor_distance_m": 0.44980550846541784,
+      "center_laser_angle_deg": 114.28582486875669,
+      "actual_beam_index": 686,
+      "actual_beam_angle_deg": 114.33333333333334,
+      "actual_finite_return_m": 1.2566347667129634,
+      "segment_enters_cell_m": 0.4444865292791919,
+      "segment_leaves_cell_m": 0.4554615051623796,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8011732615505838
+    },
+    {
+      "cell": [
+        77,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.1849999958649277
+      ],
+      "center_sensor_distance_m": 0.44070965010810437,
+      "center_laser_angle_deg": 114.82054103662978,
+      "actual_beam_index": 689,
+      "actual_beam_angle_deg": 114.83333333333333,
+      "actual_finite_return_m": 1.2616616966430618,
+      "segment_enters_cell_m": 0.43524573444887305,
+      "segment_leaves_cell_m": 0.4462646136492462,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8153970829938156
+    },
+    {
+      "cell": [
+        78,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.17499999608844513
+      ],
+      "center_sensor_distance_m": 0.45499999488489035,
+      "center_laser_angle_deg": 112.61986468281485,
+      "actual_beam_index": 676,
+      "actual_beam_angle_deg": 112.66666666666667,
+      "actual_finite_return_m": 1.2408394023878946,
+      "segment_enters_cell_m": 0.4497365478393364,
+      "segment_leaves_cell_m": 0.4605735729454759,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7802658294424187
+    },
+    {
+      "cell": [
+        78,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.17499999608844513
+      ],
+      "center_sensor_distance_m": 0.44578581808618095,
+      "center_laser_angle_deg": 113.11420770702378,
+      "actual_beam_index": 679,
+      "actual_beam_angle_deg": 113.16666666666667,
+      "actual_finite_return_m": 1.2454256849642877,
+      "segment_enters_cell_m": 0.4405217449402165,
+      "segment_leaves_cell_m": 0.4513988249151235,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7940268600491642
+    },
+    {
+      "cell": [
+        78,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.17499999608844513
+      ],
+      "center_sensor_distance_m": 0.4366062251724548,
+      "center_laser_angle_deg": 113.62937744261318,
+      "actual_beam_index": 682,
+      "actual_beam_angle_deg": 113.66666666666666,
+      "actual_finite_return_m": 1.250141552457297,
+      "segment_enters_cell_m": 0.4312715362700496,
+      "segment_leaves_cell_m": 0.4421898028596955,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8079517495976014
+    },
+    {
+      "cell": [
+        79,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.16499999631196255
+      ],
+      "center_sensor_distance_m": 0.4512482637055151,
+      "center_laser_angle_deg": 111.44773607285998,
+      "actual_beam_index": 669,
+      "actual_beam_angle_deg": 111.5,
+      "actual_finite_return_m": 1.2306302453890476,
+      "segment_enters_cell_m": 0.44603628572952964,
+      "segment_leaves_cell_m": 0.4567841478944407,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7738460974946069
+    },
+    {
+      "cell": [
+        79,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.16499999631196255
+      ],
+      "center_sensor_distance_m": 0.4419558753526843,
+      "center_laser_angle_deg": 111.92177832891008,
+      "actual_beam_index": 672,
+      "actual_beam_angle_deg": 112.0,
+      "actual_finite_return_m": 1.234922280365833,
+      "segment_enters_cell_m": 0.43680656692728104,
+      "segment_leaves_cell_m": 0.4475919141129856,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7873303662528475
+    },
+    {
+      "cell": [
+        79,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.16499999631196255
+      ],
+      "center_sensor_distance_m": 0.4326950381173005,
+      "center_laser_angle_deg": 112.41614720282767,
+      "actual_beam_index": 674,
+      "actual_beam_angle_deg": 112.33333333333333,
+      "actual_finite_return_m": 1.237852821640474,
+      "segment_enters_cell_m": 0.4270321924871292,
+      "segment_leaves_cell_m": 0.43784313391920177,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8000096877212723
+    },
+    {
+      "cell": [
+        80,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        -0.15499999653547997
+      ],
+      "center_sensor_distance_m": 0.44768850291278783,
+      "center_laser_angle_deg": 110.2564619318733,
+      "actual_beam_index": 662,
+      "actual_beam_angle_deg": 110.33333333333333,
+      "actual_finite_return_m": 1.2210898487701425,
+      "segment_enters_cell_m": 0.44257841275084486,
+      "segment_leaves_cell_m": 0.4532429526764052,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7678468960937372
+    },
+    {
+      "cell": [
+        80,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.15499999653547997
+      ],
+      "center_sensor_distance_m": 0.4383206542039841,
+      "center_laser_angle_deg": 110.70903733851648,
+      "actual_beam_index": 664,
+      "actual_beam_angle_deg": 110.66666666666667,
+      "actual_finite_return_m": 1.2237488296807641,
+      "segment_enters_cell_m": 0.4328543857154963,
+      "segment_leaves_cell_m": 0.44354214818124166,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7802066814995225
+    },
+    {
+      "cell": [
+        80,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.15499999653547997
+      ],
+      "center_sensor_distance_m": 0.42898134709376734,
+      "center_laser_angle_deg": 111.18134923599189,
+      "actual_beam_index": 667,
+      "actual_beam_angle_deg": 111.16666666666666,
+      "actual_finite_return_m": 1.227837232243264,
+      "segment_enters_cell_m": 0.4235770328554104,
+      "segment_leaves_cell_m": 0.4343005018929559,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7935367303503081
+    },
+    {
+      "cell": [
+        81,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.14499999675899727
+      ],
+      "center_sensor_distance_m": 0.4348850377236713,
+      "center_laser_angle_deg": 109.4765752583743,
+      "actual_beam_index": 657,
+      "actual_beam_angle_deg": 109.50000000000001,
+      "actual_finite_return_m": 1.2146717610248217,
+      "segment_enters_cell_m": 0.42964371953803376,
+      "segment_leaves_cell_m": 0.4402522062967656,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7744195547280561
+    },
+    {
+      "cell": [
+        81,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.14499999675899727
+      ],
+      "center_sensor_distance_m": 0.42547032362844495,
+      "center_laser_angle_deg": 109.92558040686282,
+      "actual_beam_index": 660,
+      "actual_beam_angle_deg": 109.99999999999999,
+      "actual_finite_return_m": 1.2184835494849193,
+      "segment_enters_cell_m": 0.4203502165600518,
+      "segment_leaves_cell_m": 0.43099199404694866,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7874915554379707
+    },
+    {
+      "cell": [
+        82,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.1349999969825147
+      ],
+      "center_sensor_distance_m": 0.4316537920151852,
+      "center_laser_angle_deg": 108.22507488402128,
+      "actual_beam_index": 649,
+      "actual_beam_angle_deg": 108.16666666666667,
+      "actual_finite_return_m": 1.205068317579747,
+      "segment_enters_cell_m": 0.42624686839313364,
+      "segment_leaves_cell_m": 0.4367714822852242,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7682968352945228
+    },
+    {
+      "cell": [
+        82,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.1349999969825147
+      ],
+      "center_sensor_distance_m": 0.4221670243087011,
+      "center_laser_angle_deg": 108.64953851638637,
+      "actual_beam_index": 652,
+      "actual_beam_angle_deg": 108.66666666666666,
+      "actual_finite_return_m": 1.2085751084796374,
+      "segment_enters_cell_m": 0.4169320207837499,
+      "segment_leaves_cell_m": 0.4274872616699148,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7810878468097227
+    },
+    {
+      "cell": [
+        83,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.12499999720603211
+      ],
+      "center_sensor_distance_m": 0.4286315390604357,
+      "center_laser_angle_deg": 106.95531283855269,
+      "actual_beam_index": 642,
+      "actual_beam_angle_deg": 107.0,
+      "actual_finite_return_m": 1.1973170611777846,
+      "segment_enters_cell_m": 0.4235051576376104,
+      "segment_leaves_cell_m": 0.43396207496875155,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.763354986209033
+    },
+    {
+      "cell": [
+        83,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.12499999720603211
+      ],
+      "center_sensor_distance_m": 0.4190763612158201,
+      "center_laser_angle_deg": 107.35402441294325,
+      "actual_beam_index": 644,
+      "actual_beam_angle_deg": 107.33333333333333,
+      "actual_finite_return_m": 1.1994708095095588,
+      "segment_enters_cell_m": 0.41379123644955207,
+      "segment_leaves_cell_m": 0.42426696380937123,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7752038457001875
+    },
+    {
+      "cell": [
+        84,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.11499999742954953
+      ],
+      "center_sensor_distance_m": 0.4258227288257476,
+      "center_laser_angle_deg": 105.6681602227583,
+      "actual_beam_index": 634,
+      "actual_beam_angle_deg": 105.66666666666667,
+      "actual_finite_return_m": 1.18917918093686,
+      "segment_enters_cell_m": 0.42062669347300674,
+      "segment_leaves_cell_m": 0.43101253761585945,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7581666433210005
+    },
+    {
+      "cell": [
+        84,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.11499999742954953
+      ],
+      "center_sensor_distance_m": 0.41620307139325735,
+      "center_laser_angle_deg": 106.03994309775052,
+      "actual_beam_index": 636,
+      "actual_beam_angle_deg": 106.0,
+      "actual_finite_return_m": 1.1911428540615343,
+      "segment_enters_cell_m": 0.41091827367745776,
+      "segment_leaves_cell_m": 0.4213212678035487,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7698215862579856
+    },
+    {
+      "cell": [
+        85,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.10499999765306695
+      ],
+      "center_sensor_distance_m": 0.4232316109211998,
+      "center_laser_angle_deg": 104.36458226577537,
+      "actual_beam_index": 626,
+      "actual_beam_angle_deg": 104.33333333333333,
+      "actual_finite_return_m": 1.1817868145091468,
+      "segment_enters_cell_m": 0.41801192633170836,
+      "segment_leaves_cell_m": 0.42833320832379707,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7534536061853497
+    },
+    {
+      "cell": [
+        85,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.10499999765306695
+      ],
+      "center_sensor_distance_m": 0.4135516856881719,
+      "center_laser_angle_deg": 104.7083037070501,
+      "actual_beam_index": 628,
+      "actual_beam_angle_deg": 104.66666666666667,
+      "actual_finite_return_m": 1.1835662463897725,
+      "segment_enters_cell_m": 0.40830450948100067,
+      "segment_leaves_cell_m": 0.4186413323625291,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7649249140272434
+    },
+    {
+      "cell": [
+        86,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.09499999787658436
+      ],
+      "center_sensor_distance_m": 0.4208622061582161,
+      "center_laser_angle_deg": 103.04563689466418,
+      "actual_beam_index": 618,
+      "actual_beam_angle_deg": 103.0,
+      "actual_finite_return_m": 1.1751182034234333,
+      "segment_enters_cell_m": 0.41565315998597463,
+      "segment_leaves_cell_m": 0.4259162008345117,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7492020025889217
+    },
+    {
+      "cell": [
+        86,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.09499999787658436
+      ],
+      "center_sensor_distance_m": 0.41112649735201395,
+      "center_laser_angle_deg": 103.36021826841554,
+      "actual_beam_index": 620,
+      "actual_beam_angle_deg": 103.33333333333333,
+      "actual_finite_return_m": 1.1767186022138019,
+      "segment_enters_cell_m": 0.40594222177222344,
+      "segment_leaves_cell_m": 0.41621923990246,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7604993623113419
+    },
+    {
+      "cell": [
+        87,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.08499999810010178
+      ],
+      "center_sensor_distance_m": 0.41871827838395964,
+      "center_laser_angle_deg": 101.7124721589714,
+      "actual_beam_index": 610,
+      "actual_beam_angle_deg": 101.66666666666667,
+      "actual_finite_return_m": 1.1691539945885205,
+      "segment_enters_cell_m": 0.4135435490193284,
+      "segment_leaves_cell_m": 0.4237545007088995,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7453994938796211
+    },
+    {
+      "cell": [
+        87,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.08499999810010178
+      ],
+      "center_sensor_distance_m": 0.4089315308280859,
+      "center_laser_angle_deg": 101.99689914843928,
+      "actual_beam_index": 612,
+      "actual_beam_angle_deg": 102.0,
+      "actual_finite_return_m": 1.1705799811204587,
+      "segment_enters_cell_m": 0.4038245315440232,
+      "segment_leaves_cell_m": 0.41404793726416256,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7565320438562961
+    },
+    {
+      "cell": [
+        88,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.0749999983236192
+      ],
+      "center_sensor_distance_m": 0.41680330699786045,
+      "center_laser_angle_deg": 100.36632246799422,
+      "actual_beam_index": 602,
+      "actual_beam_angle_deg": 100.33333333333333,
+      "actual_finite_return_m": 1.163877098969308,
+      "segment_enters_cell_m": 0.4116770488386214,
+      "segment_leaves_cell_m": 0.4218419141046007,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7420351848647072
+    },
+    {
+      "cell": [
+        88,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.0749999983236192
+      ],
+      "center_sensor_distance_m": 0.40697051118837513,
+      "center_laser_angle_deg": 100.61965513407426,
+      "actual_beam_index": 604,
+      "actual_beam_angle_deg": 100.66666666666666,
+      "actual_finite_return_m": 1.165132740252752,
+      "segment_enters_cell_m": 0.40194535239600504,
+      "segment_leaves_cell_m": 0.41212118396115793,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7530115562915941
+    },
+    {
+      "cell": [
+        89,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.06499999854713662
+      ],
+      "center_sensor_distance_m": 0.41512046057372015,
+      "center_laser_angle_deg": 99.00850362367595,
+      "actual_beam_index": 594,
+      "actual_beam_angle_deg": 99.0,
+      "actual_finite_return_m": 1.1592725690272634,
+      "segment_enters_cell_m": 0.4100483723232843,
+      "segment_leaves_cell_m": 0.42017302335486073,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7390995456724027
+    },
+    {
+      "cell": [
+        89,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.06499999854713662
+      ],
+      "center_sensor_distance_m": 0.40524683470634565,
+      "center_laser_angle_deg": 99.22988611954122,
+      "actual_beam_index": 595,
+      "actual_beam_angle_deg": 99.16666666666667,
+      "actual_finite_return_m": 1.1598118256302559,
+      "segment_enters_cell_m": 0.4001097530439996,
+      "segment_leaves_cell_m": 0.4102391137401257,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7495727118901301
+    },
+    {
+      "cell": [
+        90,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.054999998770654035
+      ],
+      "center_sensor_distance_m": 0.4136725720187184,
+      "center_laser_angle_deg": 97.64040666018286,
+      "actual_beam_index": 586,
+      "actual_beam_angle_deg": 97.66666666666666,
+      "actual_finite_return_m": 1.1553274932495041,
+      "segment_enters_cell_m": 0.408652952519019,
+      "segment_leaves_cell_m": 0.41874314874107943,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7365843445084247
+    },
+    {
+      "cell": [
+        90,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.054999998770654035
+      ],
+      "center_sensor_distance_m": 0.40376354106476287,
+      "center_laser_angle_deg": 97.82907640420522,
+      "actual_beam_index": 587,
+      "actual_beam_angle_deg": 97.83333333333333,
+      "actual_finite_return_m": 1.1557849568777665,
+      "segment_enters_cell_m": 0.39872057125908067,
+      "segment_leaves_cell_m": 0.4088147627965825,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7469701940811839
+    },
+    {
+      "cell": [
+        91,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.04499999899417145
+      ],
+      "center_sensor_distance_m": 0.41246211569704827,
+      "center_laser_angle_deg": 96.26349053134095,
+      "actual_beam_index": 578,
+      "actual_beam_angle_deg": 96.33333333333334,
+      "actual_finite_return_m": 1.1520309063536052,
+      "segment_enters_cell_m": 0.40748691087618094,
+      "segment_leaves_cell_m": 0.4175483159469557,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7344825904066494
+    },
+    {
+      "cell": [
+        91,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.04499999899417145
+      ],
+      "center_sensor_distance_m": 0.40252328769632684,
+      "center_laser_angle_deg": 96.41878664309614,
+      "actual_beam_index": 579,
+      "actual_beam_angle_deg": 96.5,
+      "actual_finite_return_m": 1.1524078439402807,
+      "segment_enters_cell_m": 0.3975555410416272,
+      "segment_leaves_cell_m": 0.40762023814365306,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7447876057966276
+    },
+    {
+      "cell": [
+        92,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.03499999921768887
+      ],
+      "center_sensor_distance_m": 0.4114911869299852,
+      "center_laser_angle_deg": 94.87927371815118,
+      "actual_beam_index": 569,
+      "actual_beam_angle_deg": 94.83333333333333,
+      "actual_finite_return_m": 1.149086140181878,
+      "segment_enters_cell_m": 0.4064453123704881,
+      "segment_leaves_cell_m": 0.4164809989599886,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7326051412218894
+    },
+    {
+      "cell": [
+        92,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.03499999921768887
+      ],
+      "center_sensor_distance_m": 0.4015283267387529,
+      "center_laser_angle_deg": 95.00064452944449,
+      "actual_beam_index": 570,
+      "actual_beam_angle_deg": 95.0,
+      "actual_finite_return_m": 1.1493737139871327,
+      "segment_enters_cell_m": 0.3965088324640545,
+      "segment_leaves_cell_m": 0.40654703061511677,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.742826683372016
+    },
+    {
+      "cell": [
+        93,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.02499999944120629
+      ],
+      "center_sensor_distance_m": 0.410761484255608,
+      "center_laser_angle_deg": 93.48932485930625,
+      "actual_beam_index": 561,
+      "actual_beam_angle_deg": 93.5,
+      "actual_finite_return_m": 1.147139646679325,
+      "segment_enters_cell_m": 0.40575681467479147,
+      "segment_leaves_cell_m": 0.41577550132141816,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.731364145357907
+    },
+    {
+      "cell": [
+        93,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.02499999944120629
+      ],
+      "center_sensor_distance_m": 0.4007804850544058,
+      "center_laser_angle_deg": 93.57633432616277,
+      "actual_beam_index": 561,
+      "actual_beam_angle_deg": 93.5,
+      "actual_finite_return_m": 1.147139646679325,
+      "segment_enters_cell_m": 0.3957381280281648,
+      "segment_leaves_cell_m": 0.40575681467479147,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7413828320045337
+    },
+    {
+      "cell": [
+        94,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.014999999664723707
+      ],
+      "center_sensor_distance_m": 0.4102742947903896,
+      "center_laser_angle_deg": 92.09525253666347,
+      "actual_beam_index": 553,
+      "actual_beam_angle_deg": 92.16666666666667,
+      "actual_finite_return_m": 1.1458191685538752,
+      "segment_enters_cell_m": 0.4052897459969881,
+      "segment_leaves_cell_m": 0.41529690008382497,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7305222684700503
+    },
+    {
+      "cell": [
+        94,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.014999999664723707
+      ],
+      "center_sensor_distance_m": 0.40028114771785867,
+      "center_laser_angle_deg": 92.14758539892462,
+      "actual_beam_index": 553,
+      "actual_beam_angle_deg": 92.16666666666667,
+      "actual_finite_return_m": 1.1458191685538752,
+      "segment_enters_cell_m": 0.39528259191015125,
+      "segment_leaves_cell_m": 0.4052897459969881,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7405294225568871
+    },
+    {
+      "cell": [
+        95,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        -0.0049999998882411245
+      ],
+      "center_sensor_distance_m": 0.41003048298229267,
+      "center_laser_angle_deg": 90.6986943736522,
+      "actual_beam_index": 544,
+      "actual_beam_angle_deg": 90.66666666666667,
+      "actual_finite_return_m": 1.1450775125826738,
+      "segment_enters_cell_m": 0.40502741353787525,
+      "segment_leaves_cell_m": 0.41502809028013027,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7300494223025435
+    },
+    {
+      "cell": [
+        95,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        -0.0049999998882411245
+      ],
+      "center_sensor_distance_m": 0.40003124531374656,
+      "center_laser_angle_deg": 90.71615993566684,
+      "actual_beam_index": 544,
+      "actual_beam_angle_deg": 90.66666666666667,
+      "actual_finite_return_m": 1.1450775125826738,
+      "segment_enters_cell_m": 0.3950267367956203,
+      "segment_leaves_cell_m": 0.40502741353787525,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7400500990447985
+    },
+    {
+      "cell": [
+        96,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.004999999888241458
+      ],
+      "center_sensor_distance_m": 0.41003048298229267,
+      "center_laser_angle_deg": 89.30130562634771,
+      "actual_beam_index": 536,
+      "actual_beam_angle_deg": 89.33333333333333,
+      "actual_finite_return_m": 1.1450775125826738,
+      "segment_enters_cell_m": 0.40502741353787525,
+      "segment_leaves_cell_m": 0.41502809028013027,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7300494223025435
+    },
+    {
+      "cell": [
+        96,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.004999999888241458
+      ],
+      "center_sensor_distance_m": 0.40003124531374656,
+      "center_laser_angle_deg": 89.28384006433309,
+      "actual_beam_index": 536,
+      "actual_beam_angle_deg": 89.33333333333333,
+      "actual_finite_return_m": 1.1450775125826738,
+      "segment_enters_cell_m": 0.3950267367956203,
+      "segment_leaves_cell_m": 0.40502741353787525,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7400500990447985
+    },
+    {
+      "cell": [
+        97,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.01499999966472404
+      ],
+      "center_sensor_distance_m": 0.4102742947903896,
+      "center_laser_angle_deg": 87.9047474633365,
+      "actual_beam_index": 527,
+      "actual_beam_angle_deg": 87.83333333333333,
+      "actual_finite_return_m": 1.1458191685538752,
+      "segment_enters_cell_m": 0.4052897459969881,
+      "segment_leaves_cell_m": 0.41529690008382497,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7305222684700503
+    },
+    {
+      "cell": [
+        97,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.01499999966472404
+      ],
+      "center_sensor_distance_m": 0.40028114771785867,
+      "center_laser_angle_deg": 87.85241460107535,
+      "actual_beam_index": 527,
+      "actual_beam_angle_deg": 87.83333333333333,
+      "actual_finite_return_m": 1.1458191685538752,
+      "segment_enters_cell_m": 0.39528259191015125,
+      "segment_leaves_cell_m": 0.4052897459969881,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7405294225568871
+    },
+    {
+      "cell": [
+        98,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.024999999441206622
+      ],
+      "center_sensor_distance_m": 0.41076148425560804,
+      "center_laser_angle_deg": 86.51067514069373,
+      "actual_beam_index": 519,
+      "actual_beam_angle_deg": 86.5,
+      "actual_finite_return_m": 1.147139646679325,
+      "segment_enters_cell_m": 0.40575681467479147,
+      "segment_leaves_cell_m": 0.41577550132141816,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.731364145357907
+    },
+    {
+      "cell": [
+        98,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.024999999441206622
+      ],
+      "center_sensor_distance_m": 0.40078048505440583,
+      "center_laser_angle_deg": 86.42366567383715,
+      "actual_beam_index": 519,
+      "actual_beam_angle_deg": 86.5,
+      "actual_finite_return_m": 1.147139646679325,
+      "segment_enters_cell_m": 0.3957381280281648,
+      "segment_leaves_cell_m": 0.40575681467479147,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7413828320045337
+    },
+    {
+      "cell": [
+        99,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.034999999217689204
+      ],
+      "center_sensor_distance_m": 0.4114911869299852,
+      "center_laser_angle_deg": 85.12072628184879,
+      "actual_beam_index": 511,
+      "actual_beam_angle_deg": 85.16666666666666,
+      "actual_finite_return_m": 1.149086140181878,
+      "segment_enters_cell_m": 0.4064453123704881,
+      "segment_leaves_cell_m": 0.4164809989599886,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7326051412218894
+    },
+    {
+      "cell": [
+        99,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.034999999217689204
+      ],
+      "center_sensor_distance_m": 0.40152832673875294,
+      "center_laser_angle_deg": 84.99935547055546,
+      "actual_beam_index": 510,
+      "actual_beam_angle_deg": 85.0,
+      "actual_finite_return_m": 1.1493737139871327,
+      "segment_enters_cell_m": 0.3965088324640545,
+      "segment_leaves_cell_m": 0.40654703061511677,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.742826683372016
+    },
+    {
+      "cell": [
+        100,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.044999998994171786
+      ],
+      "center_sensor_distance_m": 0.4124621156970483,
+      "center_laser_angle_deg": 83.73650946865902,
+      "actual_beam_index": 502,
+      "actual_beam_angle_deg": 83.66666666666667,
+      "actual_finite_return_m": 1.1520309063536052,
+      "segment_enters_cell_m": 0.40748691087618094,
+      "segment_leaves_cell_m": 0.4175483159469557,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7344825904066494
+    },
+    {
+      "cell": [
+        100,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.044999998994171786
+      ],
+      "center_sensor_distance_m": 0.4025232876963269,
+      "center_laser_angle_deg": 83.58121335690382,
+      "actual_beam_index": 501,
+      "actual_beam_angle_deg": 83.5,
+      "actual_finite_return_m": 1.1524078439402807,
+      "segment_enters_cell_m": 0.3975555410416272,
+      "segment_leaves_cell_m": 0.40762023814365306,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7447876057966276
+    },
+    {
+      "cell": [
+        101,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.05499999877065448
+      ],
+      "center_sensor_distance_m": 0.41367257201871843,
+      "center_laser_angle_deg": 82.35959333981707,
+      "actual_beam_index": 494,
+      "actual_beam_angle_deg": 82.33333333333333,
+      "actual_finite_return_m": 1.1553274932495043,
+      "segment_enters_cell_m": 0.408652952519019,
+      "segment_leaves_cell_m": 0.4187431487410795,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7365843445084248
+    },
+    {
+      "cell": [
+        101,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.05499999877065448
+      ],
+      "center_sensor_distance_m": 0.4037635410647629,
+      "center_laser_angle_deg": 82.1709235957947,
+      "actual_beam_index": 493,
+      "actual_beam_angle_deg": 82.16666666666667,
+      "actual_finite_return_m": 1.1557849568777667,
+      "segment_enters_cell_m": 0.3987205712590807,
+      "segment_leaves_cell_m": 0.4088147627965826,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7469701940811841
+    },
+    {
+      "cell": [
+        102,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.06499999854713706
+      ],
+      "center_sensor_distance_m": 0.4151204605737202,
+      "center_laser_angle_deg": 80.99149637632398,
+      "actual_beam_index": 486,
+      "actual_beam_angle_deg": 81.0,
+      "actual_finite_return_m": 1.1592725690272634,
+      "segment_enters_cell_m": 0.41004837232328434,
+      "segment_leaves_cell_m": 0.4201730233548608,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7390995456724025
+    },
+    {
+      "cell": [
+        102,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.06499999854713706
+      ],
+      "center_sensor_distance_m": 0.4052468347063457,
+      "center_laser_angle_deg": 80.77011388045871,
+      "actual_beam_index": 485,
+      "actual_beam_angle_deg": 80.83333333333333,
+      "actual_finite_return_m": 1.1598118256302559,
+      "segment_enters_cell_m": 0.4001097530439996,
+      "segment_leaves_cell_m": 0.4102391137401257,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7495727118901301
+    },
+    {
+      "cell": [
+        103,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.07499999832361964
+      ],
+      "center_sensor_distance_m": 0.4168033069978605,
+      "center_laser_angle_deg": 79.63367753200572,
+      "actual_beam_index": 478,
+      "actual_beam_angle_deg": 79.66666666666666,
+      "actual_finite_return_m": 1.1638770989693081,
+      "segment_enters_cell_m": 0.41167704883862144,
+      "segment_leaves_cell_m": 0.4218419141046007,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7420351848647074
+    },
+    {
+      "cell": [
+        103,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.07499999832361964
+      ],
+      "center_sensor_distance_m": 0.4069705111883752,
+      "center_laser_angle_deg": 79.38034486592566,
+      "actual_beam_index": 476,
+      "actual_beam_angle_deg": 79.33333333333333,
+      "actual_finite_return_m": 1.1651327402527523,
+      "segment_enters_cell_m": 0.4019453523960051,
+      "segment_leaves_cell_m": 0.412121183961158,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7530115562915942
+    },
+    {
+      "cell": [
+        104,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.08499999810010223
+      ],
+      "center_sensor_distance_m": 0.4187182783839597,
+      "center_laser_angle_deg": 78.28752784102856,
+      "actual_beam_index": 470,
+      "actual_beam_angle_deg": 78.33333333333334,
+      "actual_finite_return_m": 1.1691539945885205,
+      "segment_enters_cell_m": 0.4135435490193284,
+      "segment_leaves_cell_m": 0.4237545007088995,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7453994938796211
+    },
+    {
+      "cell": [
+        104,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.08499999810010223
+      ],
+      "center_sensor_distance_m": 0.408931530828086,
+      "center_laser_angle_deg": 78.00310085156067,
+      "actual_beam_index": 468,
+      "actual_beam_angle_deg": 78.0,
+      "actual_finite_return_m": 1.1705799811204587,
+      "segment_enters_cell_m": 0.4038245315440232,
+      "segment_leaves_cell_m": 0.41404793726416256,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7565320438562961
+    },
+    {
+      "cell": [
+        105,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.09499999787658481
+      ],
+      "center_sensor_distance_m": 0.42086220615821623,
+      "center_laser_angle_deg": 76.95436310533577,
+      "actual_beam_index": 462,
+      "actual_beam_angle_deg": 77.0,
+      "actual_finite_return_m": 1.1751182034234335,
+      "segment_enters_cell_m": 0.4156531599859747,
+      "segment_leaves_cell_m": 0.42591620083451176,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7492020025889218
+    },
+    {
+      "cell": [
+        105,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.09499999787658481
+      ],
+      "center_sensor_distance_m": 0.411126497352014,
+      "center_laser_angle_deg": 76.6397817315844,
+      "actual_beam_index": 460,
+      "actual_beam_angle_deg": 76.66666666666667,
+      "actual_finite_return_m": 1.1767186022138019,
+      "segment_enters_cell_m": 0.40594222177222344,
+      "segment_leaves_cell_m": 0.41621923990246,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7604993623113419
+    },
+    {
+      "cell": [
+        106,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.10499999765306739
+      ],
+      "center_sensor_distance_m": 0.42323161092119993,
+      "center_laser_angle_deg": 75.63541773422459,
+      "actual_beam_index": 454,
+      "actual_beam_angle_deg": 75.66666666666666,
+      "actual_finite_return_m": 1.181786814509147,
+      "segment_enters_cell_m": 0.4180119263317084,
+      "segment_leaves_cell_m": 0.4283332083237971,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7534536061853498
+    },
+    {
+      "cell": [
+        106,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.10499999765306739
+      ],
+      "center_sensor_distance_m": 0.4135516856881721,
+      "center_laser_angle_deg": 75.29169629294984,
+      "actual_beam_index": 452,
+      "actual_beam_angle_deg": 75.33333333333333,
+      "actual_finite_return_m": 1.1835662463897725,
+      "segment_enters_cell_m": 0.40830450948100067,
+      "segment_leaves_cell_m": 0.4186413323625291,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7649249140272434
+    },
+    {
+      "cell": [
+        107,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.11499999742954997
+      ],
+      "center_sensor_distance_m": 0.42582272882574773,
+      "center_laser_angle_deg": 74.33183977724161,
+      "actual_beam_index": 446,
+      "actual_beam_angle_deg": 74.33333333333333,
+      "actual_finite_return_m": 1.18917918093686,
+      "segment_enters_cell_m": 0.42062669347300674,
+      "segment_leaves_cell_m": 0.43101253761585945,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7581666433210005
+    },
+    {
+      "cell": [
+        107,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.11499999742954997
+      ],
+      "center_sensor_distance_m": 0.4162030713932575,
+      "center_laser_angle_deg": 73.96005690224942,
+      "actual_beam_index": 444,
+      "actual_beam_angle_deg": 74.0,
+      "actual_finite_return_m": 1.1911428540615343,
+      "segment_enters_cell_m": 0.41091827367745776,
+      "segment_leaves_cell_m": 0.4213212678035487,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7698215862579856
+    },
+    {
+      "cell": [
+        108,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.12499999720603255
+      ],
+      "center_sensor_distance_m": 0.42863153906043583,
+      "center_laser_angle_deg": 73.04468716144724,
+      "actual_beam_index": 438,
+      "actual_beam_angle_deg": 73.0,
+      "actual_finite_return_m": 1.1973170611777846,
+      "segment_enters_cell_m": 0.4235051576376104,
+      "segment_leaves_cell_m": 0.43396207496875155,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.763354986209033
+    },
+    {
+      "cell": [
+        108,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.12499999720603255
+      ],
+      "center_sensor_distance_m": 0.4190763612158202,
+      "center_laser_angle_deg": 72.64597558705668,
+      "actual_beam_index": 436,
+      "actual_beam_angle_deg": 72.66666666666666,
+      "actual_finite_return_m": 1.1994708095095588,
+      "segment_enters_cell_m": 0.41379123644955207,
+      "segment_leaves_cell_m": 0.42426696380937123,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7752038457001875
+    },
+    {
+      "cell": [
+        109,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.13499999698251514
+      ],
+      "center_sensor_distance_m": 0.43165379201518533,
+      "center_laser_angle_deg": 71.77492511597868,
+      "actual_beam_index": 431,
+      "actual_beam_angle_deg": 71.83333333333333,
+      "actual_finite_return_m": 1.2050683175797472,
+      "segment_enters_cell_m": 0.4262468683931337,
+      "segment_leaves_cell_m": 0.4367714822852243,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.768296835294523
+    },
+    {
+      "cell": [
+        109,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.13499999698251514
+      ],
+      "center_sensor_distance_m": 0.4221670243087013,
+      "center_laser_angle_deg": 71.3504614836136,
+      "actual_beam_index": 428,
+      "actual_beam_angle_deg": 71.33333333333333,
+      "actual_finite_return_m": 1.2085751084796377,
+      "segment_enters_cell_m": 0.41693202078374997,
+      "segment_leaves_cell_m": 0.42748726166991485,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7810878468097229
+    },
+    {
+      "cell": [
+        110,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.14499999675899772
+      ],
+      "center_sensor_distance_m": 0.43488503772367143,
+      "center_laser_angle_deg": 70.52342474162565,
+      "actual_beam_index": 423,
+      "actual_beam_angle_deg": 70.49999999999999,
+      "actual_finite_return_m": 1.2146717610248217,
+      "segment_enters_cell_m": 0.4296437195380338,
+      "segment_leaves_cell_m": 0.44025220629676565,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.774419554728056
+    },
+    {
+      "cell": [
+        110,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.14499999675899772
+      ],
+      "center_sensor_distance_m": 0.4254703236284451,
+      "center_laser_angle_deg": 70.0744195931371,
+      "actual_beam_index": 420,
+      "actual_beam_angle_deg": 70.00000000000001,
+      "actual_finite_return_m": 1.2184835494849193,
+      "segment_enters_cell_m": 0.42035021656005184,
+      "segment_leaves_cell_m": 0.4309919940469487,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7874915554379707
+    },
+    {
+      "cell": [
+        111,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.1549999965354803
+      ],
+      "center_sensor_distance_m": 0.44768850291278794,
+      "center_laser_angle_deg": 69.74353806812665,
+      "actual_beam_index": 418,
+      "actual_beam_angle_deg": 69.66666666666667,
+      "actual_finite_return_m": 1.2210898487701427,
+      "segment_enters_cell_m": 0.44257841275084486,
+      "segment_leaves_cell_m": 0.45324295267640524,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7678468960937375
+    },
+    {
+      "cell": [
+        111,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.1549999965354803
+      ],
+      "center_sensor_distance_m": 0.4383206542039842,
+      "center_laser_angle_deg": 69.29096266148348,
+      "actual_beam_index": 416,
+      "actual_beam_angle_deg": 69.33333333333334,
+      "actual_finite_return_m": 1.2237488296807641,
+      "segment_enters_cell_m": 0.4328543857154963,
+      "segment_leaves_cell_m": 0.44354214818124166,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7802066814995225
+    },
+    {
+      "cell": [
+        111,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.1549999965354803
+      ],
+      "center_sensor_distance_m": 0.42898134709376745,
+      "center_laser_angle_deg": 68.81865076400808,
+      "actual_beam_index": 413,
+      "actual_beam_angle_deg": 68.83333333333333,
+      "actual_finite_return_m": 1.2278372322432642,
+      "segment_enters_cell_m": 0.42357703285541043,
+      "segment_leaves_cell_m": 0.43430050189295594,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7935367303503083
+    },
+    {
+      "cell": [
+        112,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.16499999631196288
+      ],
+      "center_sensor_distance_m": 0.4512482637055152,
+      "center_laser_angle_deg": 68.55226392713996,
+      "actual_beam_index": 411,
+      "actual_beam_angle_deg": 68.5,
+      "actual_finite_return_m": 1.2306302453890479,
+      "segment_enters_cell_m": 0.4460362857295297,
+      "segment_leaves_cell_m": 0.4567841478944408,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7738460974946071
+    },
+    {
+      "cell": [
+        112,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.16499999631196288
+      ],
+      "center_sensor_distance_m": 0.44195587535268444,
+      "center_laser_angle_deg": 68.07822167108986,
+      "actual_beam_index": 408,
+      "actual_beam_angle_deg": 68.0,
+      "actual_finite_return_m": 1.234922280365833,
+      "segment_enters_cell_m": 0.4368065669272811,
+      "segment_leaves_cell_m": 0.44759191411298566,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7873303662528475
+    },
+    {
+      "cell": [
+        112,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.16499999631196288
+      ],
+      "center_sensor_distance_m": 0.43269503811730065,
+      "center_laser_angle_deg": 67.5838527971723,
+      "actual_beam_index": 406,
+      "actual_beam_angle_deg": 67.66666666666667,
+      "actual_finite_return_m": 1.2378528216404743,
+      "segment_enters_cell_m": 0.42703219248712926,
+      "segment_leaves_cell_m": 0.4378431339192018,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8000096877212725
+    },
+    {
+      "cell": [
+        113,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.17499999608844546
+      ],
+      "center_sensor_distance_m": 0.4549999948848905,
+      "center_laser_angle_deg": 67.38013531718512,
+      "actual_beam_index": 404,
+      "actual_beam_angle_deg": 67.33333333333333,
+      "actual_finite_return_m": 1.2408394023878948,
+      "segment_enters_cell_m": 0.4497365478393365,
+      "segment_leaves_cell_m": 0.46057357294547596,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7802658294424188
+    },
+    {
+      "cell": [
+        113,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.17499999608844546
+      ],
+      "center_sensor_distance_m": 0.44578581808618106,
+      "center_laser_angle_deg": 66.88579229297619,
+      "actual_beam_index": 401,
+      "actual_beam_angle_deg": 66.83333333333333,
+      "actual_finite_return_m": 1.245425684964288,
+      "segment_enters_cell_m": 0.44052174494021656,
+      "segment_leaves_cell_m": 0.45139882491512356,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7940268600491645
+    },
+    {
+      "cell": [
+        113,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.17499999608844546
+      ],
+      "center_sensor_distance_m": 0.43660622517245495,
+      "center_laser_angle_deg": 66.37062255738682,
+      "actual_beam_index": 398,
+      "actual_beam_angle_deg": 66.33333333333333,
+      "actual_finite_return_m": 1.250141552457297,
+      "segment_enters_cell_m": 0.43127153627004966,
+      "segment_leaves_cell_m": 0.44218980285969556,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8079517495976014
+    },
+    {
+      "cell": [
+        114,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.18499999586492805
+      ],
+      "center_sensor_distance_m": 0.458938988520607,
+      "center_laser_angle_deg": 66.22765146422432,
+      "actual_beam_index": 397,
+      "actual_beam_angle_deg": 66.16666666666667,
+      "actual_finite_return_m": 1.2517426828782832,
+      "segment_enters_cell_m": 0.45368839182368664,
+      "segment_leaves_cell_m": 0.46462064208481896,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7871220407934643
+    },
+    {
+      "cell": [
+        114,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.18499999586492805
+      ],
+      "center_sensor_distance_m": 0.44980550846541795,
+      "center_laser_angle_deg": 65.71417513124325,
+      "actual_beam_index": 394,
+      "actual_beam_angle_deg": 65.66666666666666,
+      "actual_finite_return_m": 1.2566347667129634,
+      "segment_enters_cell_m": 0.4444865292791919,
+      "segment_leaves_cell_m": 0.4554615051623796,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8011732615505838
+    },
+    {
+      "cell": [
+        114,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.18499999586492805
+      ],
+      "center_sensor_distance_m": 0.4407096501081045,
+      "center_laser_angle_deg": 65.17945896337018,
+      "actual_beam_index": 391,
+      "actual_beam_angle_deg": 65.16666666666667,
+      "actual_finite_return_m": 1.2616616966430618,
+      "segment_enters_cell_m": 0.43524573444887305,
+      "segment_leaves_cell_m": 0.4462646136492462,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8153970829938156
+    },
+    {
+      "cell": [
+        115,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.19499999564141063
+      ],
+      "center_sensor_distance_m": 0.4630604658297279,
+      "center_laser_angle_deg": 65.0952314772426,
+      "actual_beam_index": 391,
+      "actual_beam_angle_deg": 65.16666666666667,
+      "actual_finite_return_m": 1.2616616966430618,
+      "segment_enters_cell_m": 0.45728349284961933,
+      "segment_leaves_cell_m": 0.4683023720499925,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.7933593245930693
+    },
+    {
+      "cell": [
+        115,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.19499999564141063
+      ],
+      "center_sensor_distance_m": 0.4540099065835017,
+      "center_laser_angle_deg": 64.56378391641009,
+      "actual_beam_index": 387,
+      "actual_beam_angle_deg": 64.50000000000001,
+      "actual_finite_return_m": 1.268578182974424,
+      "segment_enters_cell_m": 0.44871105639113823,
+      "segment_leaves_cell_m": 0.4597903415843216,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8087878413901024
+    },
+    {
+      "cell": [
+        115,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.19499999564141063
+      ],
+      "center_sensor_distance_m": 0.4449999949758816,
+      "center_laser_angle_deg": 64.01076672513585,
+      "actual_beam_index": 384,
+      "actual_beam_angle_deg": 64.0,
+      "actual_finite_return_m": 1.2739292218440916,
+      "segment_enters_cell_m": 0.4394777627574116,
+      "segment_leaves_cell_m": 0.4506037819134776,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.823325439930614
+    },
+    {
+      "cell": [
+        116,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.2049999954178932
+      ],
+      "center_sensor_distance_m": 0.4673595990622538,
+      "center_laser_angle_deg": 63.98321735370337,
+      "actual_beam_index": 384,
+      "actual_beam_angle_deg": 64.0,
+      "actual_finite_return_m": 1.2739292218440916,
+      "segment_enters_cell_m": 0.4617298010695436,
+      "segment_leaves_cell_m": 0.47285582022560957,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8010734016184821
+    },
+    {
+      "cell": [
+        116,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.2049999954178932
+      ],
+      "center_sensor_distance_m": 0.458393930039596,
+      "center_laser_angle_deg": 63.43494912903111,
+      "actual_beam_index": 381,
+      "actual_beam_angle_deg": 63.49999999999999,
+      "actual_finite_return_m": 1.2794234405642126,
+      "segment_enters_cell_m": 0.45254715183662186,
+      "segment_leaves_cell_m": 0.4637211554345858,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8157022851296268
+    },
+    {
+      "cell": [
+        116,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.2049999954178932
+      ],
+      "center_sensor_distance_m": 0.4494719071863343,
+      "center_laser_angle_deg": 62.864860696305364,
+      "actual_beam_index": 377,
+      "actual_beam_angle_deg": 62.833333333333336,
+      "actual_finite_return_m": 1.2869764758135913,
+      "segment_enters_cell_m": 0.4439787804641436,
+      "segment_leaves_cell_m": 0.4552187494339901,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8317577263796012
+    },
+    {
+      "cell": [
+        117,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.2149999951943758
+      ],
+      "center_sensor_distance_m": 0.47183153206189604,
+      "center_laser_angle_deg": 62.89187743221356,
+      "actual_beam_index": 377,
+      "actual_beam_angle_deg": 62.833333333333336,
+      "actual_finite_return_m": 1.2869764758135913,
+      "segment_enters_cell_m": 0.4664587184038366,
+      "segment_leaves_cell_m": 0.4776986873736831,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8092777884399083
+    },
+    {
+      "cell": [
+        117,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.2149999951943758
+      ],
+      "center_sensor_distance_m": 0.46295247586484667,
+      "center_laser_angle_deg": 62.327922091991226,
+      "actual_beam_index": 374,
+      "actual_beam_angle_deg": 62.33333333333334,
+      "actual_finite_return_m": 1.2928154653443045,
+      "segment_enters_cell_m": 0.4572840688567472,
+      "segment_leaves_cell_m": 0.46857503336720685,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8242404319770976
+    },
+    {
+      "cell": [
+        117,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.2149999951943758
+      ],
+      "center_sensor_distance_m": 0.45412002285955866,
+      "center_laser_angle_deg": 61.7419707124057,
+      "actual_beam_index": 370,
+      "actual_beam_angle_deg": 61.66666666666666,
+      "actual_finite_return_m": 1.3008386620076413,
+      "segment_enters_cell_m": 0.4487609319926791,
+      "segment_leaves_cell_m": 0.4601219680881518,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8407166939194894
+    },
+    {
+      "cell": [
+        118,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.22499999497085837
+      ],
+      "center_sensor_distance_m": 0.47647139940523264,
+      "center_laser_angle_deg": 61.821410201003985,
+      "actual_beam_index": 371,
+      "actual_beam_angle_deg": 61.833333333333336,
+      "actual_finite_return_m": 1.298807039116248,
+      "segment_enters_cell_m": 0.4707466517886827,
+      "segment_leaves_cell_m": 0.4820899444531862,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8167170946630619
+    },
+    {
+      "cell": [
+        118,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.22499999497085837
+      ],
+      "center_sensor_distance_m": 0.46768044080621557,
+      "center_laser_angle_deg": 61.242879425460934,
+      "actual_beam_index": 367,
+      "actual_beam_angle_deg": 61.16666666666667,
+      "actual_finite_return_m": 1.3070384459980733,
+      "segment_enters_cell_m": 0.46231490476409315,
+      "segment_leaves_cell_m": 0.47373008744342493,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8333083585546484
+    },
+    {
+      "cell": [
+        118,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.22499999497085837
+      ],
+      "center_sensor_distance_m": 0.45893898828196195,
+      "center_laser_angle_deg": 60.64224679238456,
+      "actual_beam_index": 364,
+      "actual_beam_angle_deg": 60.666666666666664,
+      "actual_finite_return_m": 1.313398108535434,
+      "segment_enters_cell_m": 0.45309366678426805,
+      "segment_leaves_cell_m": 0.46456439236661473,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8488337161688193
+    },
+    {
+      "cell": [
+        119,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.23499999474734096
+      ],
+      "center_sensor_distance_m": 0.48127434405497316,
+      "center_laser_angle_deg": 60.771948375188515,
+      "actual_beam_index": 365,
+      "actual_beam_angle_deg": 60.83333333333333,
+      "actual_finite_return_m": 1.3112602542326472,
+      "segment_enters_cell_m": 0.47526026246639974,
+      "segment_leaves_cell_m": 0.48671231683254557,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8245479374001017
+    },
+    {
+      "cell": [
+        119,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.23499999474734096
+      ],
+      "center_sensor_distance_m": 0.4725727399110745,
+      "center_laser_angle_deg": 60.17992776469093,
+      "actual_beam_index": 361,
+      "actual_beam_angle_deg": 60.16666666666666,
+      "actual_finite_return_m": 1.3199209707204447,
+      "segment_enters_cell_m": 0.46687160560818824,
+      "segment_leaves_cell_m": 0.4783992994179517,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.841521671302493
+    },
+    {
+      "cell": [
+        119,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.23499999474734096
+      ],
+      "center_sensor_distance_m": 0.4639234794226681,
+      "center_laser_angle_deg": 59.565764589147044,
+      "actual_beam_index": 357,
+      "actual_beam_angle_deg": 59.5,
+      "actual_finite_return_m": 1.3288779588347104,
+      "segment_enters_cell_m": 0.4584338771041928,
+      "segment_leaves_cell_m": 0.470039797882638,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8588381609520723
+    },
+    {
+      "cell": [
+        120,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.24499999452382354
+      ],
+      "center_sensor_distance_m": 0.48623553349273846,
+      "center_laser_angle_deg": 59.74356316161252,
+      "actual_beam_index": 358,
+      "actual_beam_angle_deg": 59.666666666666664,
+      "actual_finite_return_m": 1.326610477356296,
+      "segment_enters_cell_m": 0.4808238804035058,
+      "segment_leaves_cell_m": 0.49240999785070444,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8342004795055915
+    },
+    {
+      "cell": [
+        120,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.24499999452382354
+      ],
+      "center_sensor_distance_m": 0.4776243233886685,
+      "center_laser_angle_deg": 59.13910864862211,
+      "actual_beam_index": 355,
+      "actual_beam_angle_deg": 59.16666666666666,
+      "actual_finite_return_m": 1.3334702019250941,
+      "segment_enters_cell_m": 0.4716641283937142,
+      "segment_leaves_cell_m": 0.4833101560978165,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8501600458272776
+    },
+    {
+      "cell": [
+        120,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.24499999452382354
+      ],
+      "center_sensor_distance_m": 0.4690682195001683,
+      "center_laser_angle_deg": 58.5125309851629,
+      "actual_beam_index": 351,
+      "actual_beam_angle_deg": 58.5,
+      "actual_finite_return_m": 1.3428877126230403,
+      "segment_enters_cell_m": 0.46326693623032295,
+      "segment_leaves_cell_m": 0.4749952129343156,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8678924996887247
+    },
+    {
+      "cell": [
+        121,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.2549999943003061
+      ],
+      "center_sensor_distance_m": 0.49135017432321176,
+      "center_laser_angle_deg": 58.7362686370268,
+      "actual_beam_index": 352,
+      "actual_beam_angle_deg": 58.666666666666664,
+      "actual_finite_return_m": 1.340503851825199,
+      "segment_enters_cell_m": 0.4858594702304079,
+      "segment_leaves_cell_m": 0.4975669271899066,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8429369246352925
+    },
+    {
+      "cell": [
+        121,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.2549999943003061
+      ],
+      "center_sensor_distance_m": 0.4828301917537531,
+      "center_laser_angle_deg": 58.120403496180536,
+      "actual_beam_index": 349,
+      "actual_beam_angle_deg": 58.16666666666667,
+      "actual_finite_return_m": 1.3477152738849603,
+      "segment_enters_cell_m": 0.4767027782564229,
+      "segment_leaves_cell_m": 0.48847321706656416,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.859242056818396
+    },
+    {
+      "cell": [
+        121,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.2549999943003061
+      ],
+      "center_sensor_distance_m": 0.4743679946218343,
+      "center_laser_angle_deg": 57.48248974051171,
+      "actual_beam_index": 345,
+      "actual_beam_angle_deg": 57.5,
+      "actual_finite_return_m": 1.3576139593121144,
+      "segment_enters_cell_m": 0.4683471697611619,
+      "segment_leaves_cell_m": 0.4802040599704814,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.877409899341633
+    },
+    {
+      "cell": [
+        122,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.2649999940767887
+      ],
+      "center_sensor_distance_m": 0.49661352536453585,
+      "center_laser_angle_deg": 57.7500261729553,
+      "actual_beam_index": 347,
+      "actual_beam_angle_deg": 57.83333333333334,
+      "actual_finite_return_m": 1.3526236161332799,
+      "segment_enters_cell_m": 0.49025222319267947,
+      "segment_leaves_cell_m": 0.5020655296197518,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.850558086513528
+    },
+    {
+      "cell": [
+        122,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.2649999940767887
+      ],
+      "center_sensor_distance_m": 0.48818540928269033,
+      "center_laser_angle_deg": 57.12373859666965,
+      "actual_beam_index": 343,
+      "actual_beam_angle_deg": 57.16666666666667,
+      "actual_finite_return_m": 1.3626875540979781,
+      "segment_enters_cell_m": 0.4819986502500711,
+      "segment_leaves_cell_m": 0.4938998513298924,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8687877027680857
+    },
+    {
+      "cell": [
+        122,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.2649999940767887
+      ],
+      "center_sensor_distance_m": 0.4798176675457903,
+      "center_laser_angle_deg": 56.47552711257794,
+      "actual_beam_index": 339,
+      "actual_beam_angle_deg": 56.5,
+      "actual_finite_return_m": 1.3730896601186873,
+      "segment_enters_cell_m": 0.47368594859671653,
+      "segment_leaves_cell_m": 0.4856779977620243,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.887411662356663
+    },
+    {
+      "cell": [
+        123,
+        73
+      ],
+      "center_local_m": [
+        -0.17499999608844563,
+        0.2749999938532713
+      ],
+      "center_sensor_distance_m": 0.5020209092593592,
+      "center_laser_angle_deg": 56.784748848627665,
+      "actual_beam_index": 341,
+      "actual_beam_angle_deg": 56.83333333333333,
+      "actual_finite_return_m": 1.3678456827712009,
+      "segment_enters_cell_m": 0.49576939139957593,
+      "segment_leaves_cell_m": 0.5077156416371084,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8601300411340925
+    },
+    {
+      "cell": [
+        123,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.2749999938532713
+      ],
+      "center_sensor_distance_m": 0.4936851158330673,
+      "center_laser_angle_deg": 56.148990050465834,
+      "actual_beam_index": 337,
+      "actual_beam_angle_deg": 56.166666666666664,
+      "actual_finite_return_m": 1.3784208343693183,
+      "segment_enters_cell_m": 0.4875636969344608,
+      "segment_leaves_cell_m": 0.4996023065725325,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": true,
+      "return_beyond_cell_m": 0.8788185277967857
+    },
+    {
+      "cell": [
+        123,
+        75
+      ],
+      "center_local_m": [
+        -0.15499999653548047,
+        0.2749999938532713
+      ],
+      "center_sensor_distance_m": 0.48541218963648175,
+      "center_laser_angle_deg": 55.49147737852577,
+      "actual_beam_index": 333,
+      "actual_beam_angle_deg": 55.49999999999999,
+      "actual_finite_return_m": 1.389350339557226,
+      "segment_enters_cell_m": 0.47929552791872926,
+      "segment_leaves_cell_m": 0.4914295917484483,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": false,
+      "return_beyond_cell_m": 0.8979207478087776
+    },
+    {
+      "cell": [
+        124,
+        74
+      ],
+      "center_local_m": [
+        -0.16499999631196305,
+        0.28499999362975387
+      ],
+      "center_sensor_distance_m": 0.49932453709463304,
+      "center_laser_angle_deg": 55.19598860594365,
+      "actual_beam_index": 331,
+      "actual_beam_angle_deg": 55.166666666666664,
+      "actual_finite_return_m": 1.3949515430653,
+      "segment_enters_cell_m": 0.49341080345215,
+      "segment_leaves_cell_m": 0.5055937860887063,
+      "full360_segment_crosses_cell": true,
+      "native_beam_masked": false,
+      "return_beyond_cell_m": 0.8893577569765936
+    }
+  ]
+}

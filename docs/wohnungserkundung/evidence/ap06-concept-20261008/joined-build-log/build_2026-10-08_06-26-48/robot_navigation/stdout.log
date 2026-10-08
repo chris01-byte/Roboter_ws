@@ -1,0 +1,23 @@
+running egg_info
+writing ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/PKG-INFO
+writing dependency_links to ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/dependency_links.txt
+writing entry points to ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/entry_points.txt
+writing requirements to ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/requires.txt
+writing top-level names to ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/top_level.txt
+reading manifest file '../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/SOURCES.txt'
+writing manifest file '../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info/SOURCES.txt'
+running build
+running build_py
+running install
+running install_lib
+running install_data
+copying launch/nav_mapping.launch.py -> /evidence/ap06-old-product-install/robot_navigation/share/robot_navigation/launch
+running install_egg_info
+removing '/evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation-0.1.0-py3.10.egg-info' (and everything under it)
+Copying ../../../ap06-old-product-build/robot_navigation/robot_navigation.egg-info to /evidence/ap06-old-product-install/robot_navigation/lib/python3.10/site-packages/robot_navigation-0.1.0-py3.10.egg-info
+running install_scripts
+Installing cmd_vel_mission_gate script to /evidence/ap06-old-product-install/robot_navigation/lib/robot_navigation
+Installing global_scan_localizer script to /evidence/ap06-old-product-install/robot_navigation/lib/robot_navigation
+Installing localization_guard script to /evidence/ap06-old-product-install/robot_navigation/lib/robot_navigation
+Installing stage3_motion_diagnostic script to /evidence/ap06-old-product-install/robot_navigation/lib/robot_navigation
+writing list of installed files to '/evidence/ap06-old-product-build/robot_navigation/install.log'

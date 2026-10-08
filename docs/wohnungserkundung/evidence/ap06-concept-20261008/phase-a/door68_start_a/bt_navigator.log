@@ -1,0 +1,56 @@
+[INFO] [1791439496.184005115] [bt_navigator]: 
+	bt_navigator lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791439496.184406931] [bt_navigator]: Creating
+[INFO] [1791439498.132197219] [bt_navigator]: Configuring
+[INFO] [1791439498.321788937] [bt_navigator]: Activating
+[INFO] [1791439498.352038632] [bt_navigator]: Creating bond (bt_navigator) to lifecycle manager.
+[INFO] [1791439524.880499824] [bt_navigator]: Begin navigating from current location (0.00, 0.00) to (0.45, 0.00)
+[WARN] [1791439525.909027934] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439526.030654024] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439526.815281691] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439533.961715450] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439535.303193311] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439536.002925279] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439539.532729164] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439540.531451805] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439543.142934870] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791439543.781125213] [bt_navigator]: Goal succeeded
+[INFO] [1791439648.816555749] [bt_navigator]: Begin navigating from current location (0.32, -0.00) to (0.92, 0.07)
+[WARN] [1791439652.087514880] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439652.190363684] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439659.529058921] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439662.781506018] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439669.998640030] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439671.768321668] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439674.733753178] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439674.929130217] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439676.061501820] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439676.227632599] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439676.770528722] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439677.070537784] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439681.102290994] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791439683.339958383] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791439683.341311743] [bt_navigator]: Goal canceled
+[INFO] [1791439685.876668491] [bt_navigator]: Begin navigating from current location (0.78, 0.08) to (0.92, 0.07)
+[INFO] [1791439698.987004185] [bt_navigator]: Goal succeeded
+[INFO] [1791439734.192246657] [bt_navigator]: Begin navigating from current location (0.78, 0.07) to (0.78, 0.67)
+[WARN] [1791439734.802629605] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439735.153306631] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439736.567413503] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439739.763266668] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439740.322656797] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439740.752588590] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439746.456878528] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[WARN] [1791439746.903735508] [BehaviorTreeEngine]: Behavior Tree tick rate 100.00 was exceeded!
+[INFO] [1791439749.353729244] [bt_navigator]: [navigate_to_pose] [ActionServer] Client requested to cancel the goal. Cancelling.
+[INFO] [1791439749.354126575] [bt_navigator]: Goal canceled
+[INFO] [1791439753.407609348] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791439753.407697922] [bt_navigator]: Running Nav2 LifecycleNode rcl preshutdown (bt_navigator)
+[INFO] [1791439753.407762459] [bt_navigator]: Deactivating
+[INFO] [1791439753.407788738] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791439753.417988808] [bt_navigator]: Cleaning up
+[INFO] [1791439753.505940572] [bt_navigator]: Completed Cleaning up
+[INFO] [1791439753.506015395] [bt_navigator]: Destroying bond (bt_navigator) to lifecycle manager.
+[INFO] [1791439753.524171874] [bt_navigator]: Destroying

@@ -1,0 +1,90 @@
+[
+  {
+    "compressed_bytes": 19651318,
+    "compressed_sha256": "f8a3c77f574a80a2346c5f4a1ff857d65ea74123791509bbdd63d0e6bdf6ba1f",
+    "container_path": "/evidence/ap06-concept-20261008/selection-capture-a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 148814512,
+    "uncompressed_sha256": "8f4c788e816fb42cb6458741379e95f4b09769f7754f445600e094082c7aa251"
+  },
+  {
+    "compressed_bytes": 41079303,
+    "compressed_sha256": "b60e1883e7a1995e3861bacc4e31d96b95e23587ee17c0ddd8a9f448a2740cb3",
+    "container_path": "/evidence/ap06-concept-20261008/visibility-a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/visibility-a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/visibility-a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 313158698,
+    "uncompressed_sha256": "1f04971d4ebb83bbf9d868980e14ebe700f9d8bd4316590b44eeb720ac3ff69b"
+  },
+  {
+    "compressed_bytes": 31677466,
+    "compressed_sha256": "549bd3549ac6b2df1d3caad6663d6fc67903a40e3f48bf69a450b763ef5cef84",
+    "container_path": "/evidence/ap06-concept-20261008/deferred-a/door68_start_a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/deferred-a/door68_start_a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 249345880,
+    "uncompressed_sha256": "a736090815de7a17fa71855cb06170427e7d38ce94b62147a0028e47b8bbce54"
+  },
+  {
+    "compressed_bytes": 19264015,
+    "compressed_sha256": "d282e4980ddbd05fa64ebc637f0e8f8700530de0a19a196d6c8ebcd15ccad622",
+    "container_path": "/evidence/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/phase-a/door68_start_a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 148814652,
+    "uncompressed_sha256": "60e9fb0db12f0042f204acdbbb551b6e35f3665660ce535680e26e71b7d9211e"
+  },
+  {
+    "compressed_bytes": 17946277,
+    "compressed_sha256": "692e217c112ceb30dfba0910cce43fe857f337b71e0e6bcd030721a8bb27899e",
+    "container_path": "/evidence/ap06-concept-20261008/joined-a/door68_start_a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/joined-a/door68_start_a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/joined-a/door68_start_a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 134820785,
+    "uncompressed_sha256": "b2aba0e561ab8ddaab758e47fa35e7e41666dcb7683310f5e44aa5bb7ef15106"
+  },
+  {
+    "compressed_bytes": 24903794,
+    "compressed_sha256": "c969b5bab1c1c9bf9d32a68329b304c51df5849d0a87c6be5f9cbe0a7c44d099",
+    "container_path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 180245639,
+    "uncompressed_sha256": "80afe6e09401ddd4a3300527d6fbbf64bb17f446d0aff8c4cdc09050870dd0ce"
+  },
+  {
+    "compressed_bytes": 2080565,
+    "compressed_sha256": "b91e8ec89d5b679a28a7bf0b9e40793eb1d0d75ec103b57af7c68c91d5f6c3f7",
+    "container_path": "/evidence/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 22120671,
+    "uncompressed_sha256": "fb1e4458fa144b800cf128719ab7a85469102b6c87d43e74eb3307c540081fbf"
+  },
+  {
+    "compressed_bytes": 2573586,
+    "compressed_sha256": "2a1a4a1a34f1607b986279d0edc85108224c436ee2c3fc825675def1c872049f",
+    "container_path": "/evidence/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz",
+    "independently_verified": true,
+    "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz.meta.json",
+    "path": "/workspace/scratch/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz",
+    "stored_in_git": false,
+    "uncompressed_bytes": 21412640,
+    "uncompressed_sha256": "cb81fe2ee844156d3820bc951343f60d2a13eb938456c22aabd2f6870f31b7dc"
+  }
+]

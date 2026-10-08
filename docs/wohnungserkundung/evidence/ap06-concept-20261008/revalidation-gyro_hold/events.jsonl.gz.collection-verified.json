@@ -1,0 +1,11 @@
+{
+  "compressed_bytes": 2573586,
+  "compressed_sha256": "2a1a4a1a34f1607b986279d0edc85108224c436ee2c3fc825675def1c872049f",
+  "container_path": "/evidence/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz",
+  "independently_verified": true,
+  "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz.meta.json",
+  "path": "/workspace/scratch/ap06-concept-20261008/revalidation-gyro_hold/events.jsonl.gz",
+  "stored_in_git": false,
+  "uncompressed_bytes": 21412640,
+  "uncompressed_sha256": "cb81fe2ee844156d3820bc951343f60d2a13eb938456c22aabd2f6870f31b7dc"
+}

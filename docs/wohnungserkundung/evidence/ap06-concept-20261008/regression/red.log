@@ -1,0 +1,467 @@
+FFFF.FFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+_ test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[None] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a530a5fc0>
+rotation_cell = None
+
+    @pytest.mark.parametrize('rotation_cell', [None, 100, -1])
+    def test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation(monkeypatch, rotation_cell):
+        node, _, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        phase, calls, stopped = ['planning'], [], []
+        original = node._metric_navigation_geometry_ready
+        def geometry(inputs, target):
+            calls.append(phase[0])
+            return original(inputs, target)
+        node._metric_navigation_geometry_ready = geometry
+        def alignment(route, pose, stop_requested, *, inputs):
+            target = planned[-1]
+            assert node._wohnungserkundung_active_child is None
+            # A real newly occupied distant endpoint invalidates translation;
+            # it does not overlap the complete current rotation envelope.
+            assert math.dist(pose[:2], (target.x, target.y)) > .6
+            cells = [(target.x, target.y, 100)]
+            if rotation_cell is not None:
+                cells.append((*pose[:2], rotation_cell))
+            update_cells(cells)
+            current = node._metric_inputs(active=True)
+            assert node._metric_scan_geometry_ready(node._metric_public_inputs(current)) is (rotation_cell is None)
+            assert not original(current, target)  # actual native path is now blocked
+            phase[0] = 'alignment'
+            stopped.append(stop_requested())
+            phase[0] = 'before_nav_dispatch'
+            return ('interrupted' if stopped[-1] else 'success', .08, .3, .22)
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and not result.success and terminal == ['abort']
+>       assert stopped == [rotation_cell is not None]
+E       assert [True] == [False]
+E         At index 0 diff: True != False
+E         Full diff:
+E         - [False]
+E         + [True]
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:164: AssertionError
+_ test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[100] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a53d03fa0>
+rotation_cell = 100
+
+    @pytest.mark.parametrize('rotation_cell', [None, 100, -1])
+    def test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation(monkeypatch, rotation_cell):
+        node, _, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        phase, calls, stopped = ['planning'], [], []
+        original = node._metric_navigation_geometry_ready
+        def geometry(inputs, target):
+            calls.append(phase[0])
+            return original(inputs, target)
+        node._metric_navigation_geometry_ready = geometry
+        def alignment(route, pose, stop_requested, *, inputs):
+            target = planned[-1]
+            assert node._wohnungserkundung_active_child is None
+            # A real newly occupied distant endpoint invalidates translation;
+            # it does not overlap the complete current rotation envelope.
+            assert math.dist(pose[:2], (target.x, target.y)) > .6
+            cells = [(target.x, target.y, 100)]
+            if rotation_cell is not None:
+                cells.append((*pose[:2], rotation_cell))
+            update_cells(cells)
+            current = node._metric_inputs(active=True)
+            assert node._metric_scan_geometry_ready(node._metric_public_inputs(current)) is (rotation_cell is None)
+            assert not original(current, target)  # actual native path is now blocked
+            phase[0] = 'alignment'
+            stopped.append(stop_requested())
+            phase[0] = 'before_nav_dispatch'
+            return ('interrupted' if stopped[-1] else 'success', .08, .3, .22)
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and not result.success and terminal == ['abort']
+        assert stopped == [rotation_cell is not None]
+        if rotation_cell is None:
+            assert 'alignment' not in calls  # no repeated whole-future-path proof during public spin
+            assert 'before_nav_dispatch' in calls  # original full route still owns actual translation
+        else:
+            assert 'alignment' in calls  # unsafe public spin falls back to the original full route
+        assert node._metric_status['attempts'] == node._metric_status['failures'] == 1
+        record = node._metric_status['chain'][0]
+        assert record['decision'] == 'route_invalidated' and not record['child_dispatched']
+>       assert record['alignment'] == node._metric_status['departure_alignment']
+E       KeyError: 'alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:173: KeyError
+_ test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[-1] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a530a65c0>
+rotation_cell = -1
+
+    @pytest.mark.parametrize('rotation_cell', [None, 100, -1])
+    def test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation(monkeypatch, rotation_cell):
+        node, _, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        phase, calls, stopped = ['planning'], [], []
+        original = node._metric_navigation_geometry_ready
+        def geometry(inputs, target):
+            calls.append(phase[0])
+            return original(inputs, target)
+        node._metric_navigation_geometry_ready = geometry
+        def alignment(route, pose, stop_requested, *, inputs):
+            target = planned[-1]
+            assert node._wohnungserkundung_active_child is None
+            # A real newly occupied distant endpoint invalidates translation;
+            # it does not overlap the complete current rotation envelope.
+            assert math.dist(pose[:2], (target.x, target.y)) > .6
+            cells = [(target.x, target.y, 100)]
+            if rotation_cell is not None:
+                cells.append((*pose[:2], rotation_cell))
+            update_cells(cells)
+            current = node._metric_inputs(active=True)
+            assert node._metric_scan_geometry_ready(node._metric_public_inputs(current)) is (rotation_cell is None)
+            assert not original(current, target)  # actual native path is now blocked
+            phase[0] = 'alignment'
+            stopped.append(stop_requested())
+            phase[0] = 'before_nav_dispatch'
+            return ('interrupted' if stopped[-1] else 'success', .08, .3, .22)
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and not result.success and terminal == ['abort']
+        assert stopped == [rotation_cell is not None]
+        if rotation_cell is None:
+            assert 'alignment' not in calls  # no repeated whole-future-path proof during public spin
+            assert 'before_nav_dispatch' in calls  # original full route still owns actual translation
+        else:
+            assert 'alignment' in calls  # unsafe public spin falls back to the original full route
+        assert node._metric_status['attempts'] == node._metric_status['failures'] == 1
+        record = node._metric_status['chain'][0]
+        assert record['decision'] == 'route_invalidated' and not record['child_dispatched']
+>       assert record['alignment'] == node._metric_status['departure_alignment']
+E       KeyError: 'alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:173: KeyError
+___ test_full_spin_unavailable_retains_original_valid_narrow_route_fallback ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a53b94b20>
+
+    def test_full_spin_unavailable_retains_original_valid_narrow_route_fallback(monkeypatch):
+        node, _, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        original = node._metric_navigation_geometry_ready
+        called, checked = [], []
+        node._metric_navigation_geometry_ready = lambda *args: (called.append(True) or original(*args))
+        def alignment(route, pose, stop_requested, *, inputs):
+            # An unseen patch behind the robot invalidates a complete spin but
+            # lies outside its current forward-only native trajectory.
+            update_cells([(pose[0]-.45, pose[1], -1)])
+            current = node._metric_inputs(active=True)
+            assert not node._metric_scan_geometry_ready(node._metric_public_inputs(current))
+            assert original(current, planned[-1])
+            before = len(called)
+            checked.append(stop_requested())
+            assert len(called) == before+1
+            return 'insufficient_rotation', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert not result.success and terminal == ['abort'] and checked == [False]
+        record = node._metric_status['chain'][0]
+        assert record['result'] == 'alignment_failed'
+>       assert record['alignment']['result'] == ['insufficient_rotation', .06, .4, .34]
+E       KeyError: 'alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:203: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[cancel-user_canceled] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a5315a260>
+fault = 'cancel', expected = 'user_canceled'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+        assert node._metric_status['reason'] == expected
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+>       assert node._metric_status['departure_alignment']['result'] == ['interrupted', .06, .4, .34]
+E       KeyError: 'departure_alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:260: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[source-encoder_feedback_stale] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a539f57e0>
+fault = 'source', expected = 'encoder_feedback_stale'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+        assert node._metric_status['reason'] == expected
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+>       assert node._metric_status['departure_alignment']['result'] == ['interrupted', .06, .4, .34]
+E       KeyError: 'departure_alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:260: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[pose-pose_missing_stale_or_invalid] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a53d3e7d0>
+fault = 'pose', expected = 'pose_missing_stale_or_invalid'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+        assert node._metric_status['reason'] == expected
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+>       assert node._metric_status['departure_alignment']['result'] == ['interrupted', .06, .4, .34]
+E       KeyError: 'departure_alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:260: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[context-map_work_context_changed] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a537841f0>
+fault = 'context', expected = 'map_work_context_changed'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+        assert node._metric_status['reason'] == expected
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+>       assert node._metric_status['departure_alignment']['result'] == ['interrupted', .06, .4, .34]
+E       KeyError: 'departure_alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:260: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[discontinuity-pose_discontinuity] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a53023940>
+fault = 'discontinuity', expected = 'pose_discontinuity'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+>       assert node._metric_status['reason'] == expected
+E       AssertionError: assert 'failure_budget_exhausted' == 'pose_discontinuity'
+E         - pose_discontinuity
+E         + failure_budget_exhausted
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:258: AssertionError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[mission_budget-budget_exhausted] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a539f76d0>
+fault = 'mission_budget', expected = 'budget_exhausted'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+        assert node._metric_status['reason'] == expected
+        assert node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+>       assert node._metric_status['departure_alignment']['result'] == ['interrupted', .06, .4, .34]
+E       KeyError: 'departure_alignment'
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:260: KeyError
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[task_budget-failure_budget_exhausted] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f3a5308d5d0>
+fault = 'task_budget', expected = 'failure_budget_exhausted'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+>       assert node._metric_status['reason'] == expected
+E       AssertionError: assert 'map_status_M...sprechen sich' == 'failure_budget_exhausted'
+E         - failure_budget_exhausted
+E         + map_status_MapStatusAdapterError:Fingerprint- und accepted_maps-Verlauf widersprechen sich
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:258: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[None]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[100]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[-1]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_full_spin_unavailable_retains_original_valid_narrow_route_fallback
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[cancel-user_canceled]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[source-encoder_feedback_stale]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[pose-pose_missing_stale_or_invalid]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[context-map_work_context_changed]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[discontinuity-pose_discontinuity]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[mission_budget-budget_exhausted]
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[task_budget-failure_budget_exhausted]
+11 failed, 1 passed, 4 deselected in 1.26s

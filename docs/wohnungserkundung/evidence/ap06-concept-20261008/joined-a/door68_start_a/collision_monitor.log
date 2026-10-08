@@ -1,0 +1,24 @@
+[INFO] [1791442250.305886569] [collision_monitor]: 
+	collision_monitor lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791442253.109429390] [collision_monitor]: Configuring
+[INFO] [1791442253.125546084] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[INFO] [1791442253.131709415] [collision_monitor]: [SlowZone]: Creating Polygon
+[INFO] [1791442253.135149160] [collision_monitor]: [vl53_left]: Creating PointCloud
+[INFO] [1791442253.138468473] [collision_monitor]: [vl53_right]: Creating PointCloud
+[INFO] [1791442253.171585814] [collision_monitor]: Activating
+[INFO] [1791442253.171687838] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[INFO] [1791442414.573724248] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791442444.073302347] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791442489.434212826] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791442489.434682499] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[INFO] [1791442489.434822851] [collision_monitor]: Deactivating
+[INFO] [1791442489.434862771] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791442489.445060254] [collision_monitor]: Cleaning up
+[INFO] [1791442489.445105062] [collision_monitor]: [FootprintApproach]: Destroying Polygon
+[INFO] [1791442489.445124762] [collision_monitor]: [SlowZone]: Destroying Polygon
+[INFO] [1791442489.445151051] [collision_monitor]: [vl53_left]: Destroying PointCloud
+[INFO] [1791442489.445164251] [collision_monitor]: [vl53_right]: Destroying PointCloud
+[INFO] [1791442489.456474062] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791442489.476357082] [collision_monitor]: Destroying

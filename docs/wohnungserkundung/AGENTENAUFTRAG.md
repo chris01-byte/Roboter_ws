@@ -64,3 +64,15 @@ keine fortlaufende Serie unveränderter Fehlstarts. Der Produktcode bleibt
 zunächst unverändert, bis der Versuch eine konkrete Änderung begründet.
 Rückfall: Versuchsaufruf weglassen; eigene Werkzeugänderungen gezielt
 revertieren. Keine dauerhafte Zielsysteminstallation, kein Push/Merge.
+
+Ergebnis dieser Konzeptfortsetzung: Produktkorrekturen bis `c5d2a9c`,
+1.808 registrierte Explorer-Tests am letzten Stand bestanden, native
+Komponenten und lokales Vorbereitungswerkzeug geprüft. Geschlossene Versuche
+zeigen Teilfortschritt und einmal erfolgreich angewendete Frische-Wiederprüfung,
+aber keinen Gesamtpositivlauf. Konkrete Zeit-/Auswahlfehler bleiben offen;
+ursprüngliche Qualifikation weiterhin 0/3. Der Nutzer erhält den nachprüfbaren
+Entwicklungsstand mit [lokaler Anleitung](JETSON_KONZEPTTEST_AP06.md) und
+[Originalbelegen](evidence/ap06-concept-20261008/README.md). Die verlangte
+Kundenlösung ist noch nicht abgeschlossen. Nächster Schritt gemäß aktuellem
+STATUS: separater lokaler Build und passiver Quellen-/Sichtnachweis auf dem
+Jetson; kein automatischer Beginn weiterer AP.

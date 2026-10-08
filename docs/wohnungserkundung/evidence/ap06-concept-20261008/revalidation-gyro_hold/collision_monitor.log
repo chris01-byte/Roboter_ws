@@ -1,0 +1,22 @@
+[INFO] [1791444631.744360692] [collision_monitor]: 
+	collision_monitor lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791444633.717056534] [collision_monitor]: Configuring
+[INFO] [1791444633.726528774] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[INFO] [1791444633.732217605] [collision_monitor]: [SlowZone]: Creating Polygon
+[INFO] [1791444633.743577926] [collision_monitor]: [vl53_left]: Creating PointCloud
+[INFO] [1791444633.749897624] [collision_monitor]: [vl53_right]: Creating PointCloud
+[INFO] [1791444633.782504872] [collision_monitor]: Activating
+[INFO] [1791444633.782626215] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[INFO] [1791444668.260820077] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791444668.260972106] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[INFO] [1791444668.261044165] [collision_monitor]: Deactivating
+[INFO] [1791444668.261059108] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791444668.272650904] [collision_monitor]: Cleaning up
+[INFO] [1791444668.272697745] [collision_monitor]: [FootprintApproach]: Destroying Polygon
+[INFO] [1791444668.272719608] [collision_monitor]: [SlowZone]: Destroying Polygon
+[INFO] [1791444668.272726819] [collision_monitor]: [vl53_left]: Destroying PointCloud
+[INFO] [1791444668.272737294] [collision_monitor]: [vl53_right]: Destroying PointCloud
+[INFO] [1791444668.287345027] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791444668.298950995] [collision_monitor]: Destroying

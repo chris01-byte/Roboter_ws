@@ -1,0 +1,2 @@
+[INFO] [1791444326.157390040] [bt_orchestrator]: mission_server bereit -> Action '/run_mission' (10.0 Hz).
+[INFO] [1791444386.953567039] [rclcpp]: signal_handler(signum=2)

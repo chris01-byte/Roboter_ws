@@ -1,5 +1,42 @@
 # Wohnungserkundung – aktueller Status
 
+## 08.10.2026 – Konzeptvergleich und überprüfbare Jetson-Übergabe
+
+**Aktuell: ursprüngliche AP-06-Abnahme 0/3; keine Kundenfreigabe.**
+Geprüfter Produktkandidat `c5d2a9c00d146851799a907ba725ef0d0f30c815`,
+gleicher AP-06-Branch. Folgende datierte Einträge bleiben als Historie erhalten.
+
+Umgesetzt sind ein abgegrenzter Konzeptprüfstand, phasenbezogene Drehprüfung,
+öffentliche Kartenfortsetzung bei vollständig leerem privaten Startbestand,
+begrenzte Wiederprüfung während der Verarbeitung abgelaufener Scan-/Posedaten
+und ein passiver Start mit aktueller Scope-/Quellenbindung. Quellengrenzen,
+Stopbedingungen und ursprüngliche Aufgaben-/Missionsbudgets bleiben bestehen.
+
+Letzter Explorer-Build und **1.808 registrierte Explorer-Tests bestanden**,
+0 Fehler/0 Skips. Übrige 13 Produktpakete unverändert seit geprüftem
+14-Paketbuild; native Szenarien zuletzt 9/9 am unveränderten nativen Stand.
+Diese Prüfungen ersetzen keine Gesamtmissionen und werden nicht addiert.
+
+Sechs abgeschlossene Konzeptläufe bleiben negativ. Letzter regulärer
+Konzeptlauf: drei Ankünfte/drei Beobachtungen, dann 5-s-Auswahlbudget erschöpft.
+Zusätzlicher Diagnoselauf: zwei Ankünfte/zwei Beobachtungen; eine tatsächliche
+Frische-Wiederprüfung führt zur Folgeankunft, später verbraucht ein erneuter
+Poseablauf das vorhandene Aufgabenversuchslimit. Ganze Passage fehlt.
+23 aufgezeichnete Auswahlaufrufe reproduzieren den älteren Auswahlabbruch
+nicht. Originaler Gyro-HOLD-Stoppfall bestanden; der erneute Cancel-Versuch
+scheitert bereits vor Fahrt an einer Encoder-Zeitlücke und zählt nicht als
+Cancelnachweis. Exakte Resultate, Zeiten und Gegenfälle im
+[Belegbericht](evidence/ap06-concept-20261008/README.md).
+
+**Nächster Schritt:** Nutzer übernimmt den separaten lokalen Build und
+passiven dreiminütigen Quellen-/Sichtnachweis nach
+[JETSON_KONZEPTTEST_AP06](JETSON_KONZEPTTEST_AP06.md). Das Paket enthält
+prüfbare Quellen und Belege; ARM-Build und echte Sensorlatenzen wurden hier
+nicht gemessen. Deren Auswertung muss die verbleibenden Zeit-/Sichtprobleme
+klären. Vor Kundenfreigabe sind weiterhin drei vollständige Originalmissionen
+auf demselben Kandidaten und die realen Abnahmen erforderlich. Keine weitere
+Zugangsfrage, kein Deployment oder automatischer Übergang zu einem anderen AP.
+
 ## 07.10.2026 – AP-06 Reviewkorrekturen in Umsetzung
 
 Nutzer beauftragt ausdrücklich die Behebung der festgestellten Probleme. Basis `7934a28` im bestehenden AP-06-Branch, MASTERPLAN v1.3 und ursprüngliche A/B/C-/Cancel-/Gyro-HOLD-Abnahme unverändert. Ziel bleibt 3/3 am gleichen finalen Softwarestand. Kein Hardwarezugriff, Deployment, Push/Merge oder nächstes AP. Frühere Reparaturen und Negativnachweise bleiben erhalten; Rückfall nur der neuen eigenen Änderungen.

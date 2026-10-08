@@ -1,0 +1,2 @@
+[INFO] [1791444634.803081865] [explore_node]: explore_node bereit. Map='/map', Nav='navigate_to_pose'. Erkundung starten via Action /explore_area.
+The following exception was never retrieved: cannot use Destroyable because destruction was requested

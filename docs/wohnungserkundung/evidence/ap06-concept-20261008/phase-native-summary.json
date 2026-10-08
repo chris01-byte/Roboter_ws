@@ -1,0 +1,258 @@
+{
+  "passed": 9,
+  "total": 9,
+  "hardware_qualified": false,
+  "cases": {
+    "blind_start": {
+      "case": "blind_start",
+      "ros_domain_id": 218,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "bootstrap_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "wait",
+        "scan_admissible": false,
+        "scan_useful": false,
+        "unobserved_cells_in_scope": 34664,
+        "initial_contour_missing_cells": {
+          "raw": 168,
+          "costmap": 168
+        },
+        "start_egress_enabled": false,
+        "first_rejecting_predicate": "initial_contour_unknown_or_occupied",
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidate_count": 0,
+      "passed": true
+    },
+    "bootstrap": {
+      "case": "bootstrap",
+      "ros_domain_id": 217,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "bootstrap_decision": {
+        "strategy": "adaptive",
+        "selected_motion": "observation_goal",
+        "scan_admissible": false,
+        "scan_useful": true,
+        "unobserved_cells_in_scope": 31864,
+        "initial_contour_missing_cells": {
+          "raw": 0,
+          "costmap": 0
+        },
+        "start_egress_enabled": false,
+        "first_rejecting_predicate": null,
+        "scan_rejection": "initial_scan_footprint_invalid"
+      },
+      "candidate_count": 2,
+      "selected_goal": [
+        -0.470002777199208,
+        -0.010333287046679875
+      ],
+      "own_route_accepted": false,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "path_length_m": 0.4286175155302411,
+      "geometry_rejection": null,
+      "alignment": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controller_status": 4,
+      "tracking_position_max_m": 0.001903397394058904,
+      "tracking_heading_max_rad": 0.0003039472926253395,
+      "padded_footprint_clearance_min_m": 0.5352729066765024,
+      "reverse_samples": 0,
+      "final_pose": [
+        -0.6157726645407009,
+        -0.003928208166014739,
+        -0.03359930991558956
+      ],
+      "observed_area_gain_m2": 0.4556,
+      "passed": true
+    },
+    "detour": {
+      "case": "detour",
+      "ros_domain_id": 213,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": false,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "path_length_m": 3.6681978323604993,
+      "geometry_rejection": null,
+      "alignment": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controller_status": 4,
+      "tracking_position_max_m": 0.0025289246401095124,
+      "tracking_heading_max_rad": 0.004649913769155356,
+      "padded_footprint_clearance_min_m": 0.2032544141683944,
+      "reverse_samples": 0,
+      "final_pose": [
+        0.8373064887387929,
+        -0.1334874535960653,
+        0.38981785715356354
+      ],
+      "observed_area_gain_m2": 0.0,
+      "passed": true
+    },
+    "door56": {
+      "case": "door56",
+      "ros_domain_id": 214,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": false,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "geometry_rejection": "footprint_sweep_invalid",
+      "nonzero_commands": 0,
+      "follow_path_sent": false,
+      "passed": true
+    },
+    "door68": {
+      "case": "door68",
+      "ros_domain_id": 210,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": true,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "path_length_m": 1.821598323024561,
+      "geometry_rejection": null,
+      "narrow_rotation_rejected": true,
+      "alignment": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controller_status": 4,
+      "tracking_position_max_m": 0.001987468058615459,
+      "tracking_heading_max_rad": 0.00033756560286195096,
+      "padded_footprint_clearance_min_m": 0.08823561430416549,
+      "reverse_samples": 0,
+      "final_pose": [
+        0.7528457343126247,
+        0.0037656367414485178,
+        -0.01697229368609912
+      ],
+      "observed_area_gain_m2": 0.0,
+      "passed": true
+    },
+    "door68_stop": {
+      "case": "door68_stop",
+      "ros_domain_id": 212,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": true,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "path_length_m": 0.897619847918269,
+      "geometry_rejection": null,
+      "alignment": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controller_status": 4,
+      "tracking_position_max_m": 0.001968301467596121,
+      "tracking_heading_max_rad": 0.0006801999230421161,
+      "padded_footprint_clearance_min_m": 0.0880252820481871,
+      "reverse_samples": 0,
+      "final_pose": [
+        -0.14599387788050985,
+        9.460902717985243e-05,
+        0.0018507566265323506
+      ],
+      "observed_area_gain_m2": 0.0,
+      "passed": true
+    },
+    "door80": {
+      "case": "door80",
+      "ros_domain_id": 211,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": true,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "path_length_m": 1.8219426620066559,
+      "geometry_rejection": null,
+      "alignment": [
+        "controller_owned",
+        0.0,
+        0.0,
+        0.0
+      ],
+      "controller_status": 4,
+      "tracking_position_max_m": 0.001995706144153691,
+      "tracking_heading_max_rad": 0.00034184905151156517,
+      "padded_footprint_clearance_min_m": 0.14830981455383452,
+      "reverse_samples": 0,
+      "final_pose": [
+        0.7544112281684279,
+        0.004229303573977541,
+        -0.01982413931803844
+      ],
+      "observed_area_gain_m2": 0.0,
+      "passed": true
+    },
+    "rotation_narrow": {
+      "case": "rotation_narrow",
+      "ros_domain_id": 215,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": false,
+      "previous_envelope_accepted": false,
+      "planner_status": 4,
+      "geometry_rejection": "goal_orientation_invalid",
+      "nonzero_commands": 0,
+      "follow_path_sent": false,
+      "passed": true
+    },
+    "unknown_outer": {
+      "case": "unknown_outer",
+      "ros_domain_id": 216,
+      "model": "wall-clock unicycle + 50ms first-order response",
+      "hardware_qualified": false,
+      "planner": "nav2_navfn_planner/NavfnPlanner",
+      "controller": "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController",
+      "controller_parameter_contract": true,
+      "own_route_accepted": false,
+      "previous_envelope_accepted": false,
+      "planner_status": 6,
+      "nonzero_commands": 0,
+      "passed": true
+    }
+  }
+}

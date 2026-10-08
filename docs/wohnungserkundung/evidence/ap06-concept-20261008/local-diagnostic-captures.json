@@ -1,0 +1,352 @@
+[
+  {
+    "bytes": 802927,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/departure-input-1.pickle",
+    "relative": "selection-capture-a/departure-input-1.pickle",
+    "sha256": "efcc4dc60b360949df5f803dd8133bd82a97177a3a5c28eadb1cc69791ba4843",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 803051,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/departure-input-2.pickle",
+    "relative": "selection-capture-a/departure-input-2.pickle",
+    "sha256": "d2e19b6047c01db83fe63b4511c2b145f4145f86a2e20c2f9ecbfb0d3ca63e8f",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 802153,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/departure-input-3.pickle",
+    "relative": "selection-capture-a/departure-input-3.pickle",
+    "sha256": "3673756fe7473a8bf4536d281ac5f24200de4169f7c92f47595d5e9683f43f50",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 801953,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/departure-input-4.pickle",
+    "relative": "selection-capture-a/departure-input-4.pickle",
+    "sha256": "d86207f35f97b7ba3defe1eac1d521c6dcdf7934eee053455aee29647a47bcbe",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 26863,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-1.npz",
+    "relative": "selection-capture-a/selection-input-1.npz",
+    "sha256": "76ffca1e3cfce363d17b951a54b3acefdae703e7961af2399a8ea0bed867aaae",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-10.npz",
+    "relative": "selection-capture-a/selection-input-10.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-11.npz",
+    "relative": "selection-capture-a/selection-input-11.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-12.npz",
+    "relative": "selection-capture-a/selection-input-12.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-13.npz",
+    "relative": "selection-capture-a/selection-input-13.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-14.npz",
+    "relative": "selection-capture-a/selection-input-14.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-15.npz",
+    "relative": "selection-capture-a/selection-input-15.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-16.npz",
+    "relative": "selection-capture-a/selection-input-16.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-17.npz",
+    "relative": "selection-capture-a/selection-input-17.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-18.npz",
+    "relative": "selection-capture-a/selection-input-18.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-19.npz",
+    "relative": "selection-capture-a/selection-input-19.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 13626,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-2.npz",
+    "relative": "selection-capture-a/selection-input-2.npz",
+    "sha256": "839777b67e6daf101b414723b25afd7382a0ee56e7ac40dab88dc93379021b09",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-20.npz",
+    "relative": "selection-capture-a/selection-input-20.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-21.npz",
+    "relative": "selection-capture-a/selection-input-21.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-22.npz",
+    "relative": "selection-capture-a/selection-input-22.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-23.npz",
+    "relative": "selection-capture-a/selection-input-23.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12691,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-3.npz",
+    "relative": "selection-capture-a/selection-input-3.npz",
+    "sha256": "331db403a24884e80f9080ba1c1d4c7b960cf17c7f04bde40ce11b18abc42f92",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-4.npz",
+    "relative": "selection-capture-a/selection-input-4.npz",
+    "sha256": "ea4563abe4349b94bed995165f6f9878f048fd15fbb6c6678cdb57ac4ad1c890",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-5.npz",
+    "relative": "selection-capture-a/selection-input-5.npz",
+    "sha256": "d0f1a34698afd01ab73628a0fc066335eb60dc7b81c11b77fbbe6c7ba1897b44",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-6.npz",
+    "relative": "selection-capture-a/selection-input-6.npz",
+    "sha256": "aaafaea1e6e85b1d50a5171d4d8b400e5d8379939c68c0dccc71fb4a8bf6ece7",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-7.npz",
+    "relative": "selection-capture-a/selection-input-7.npz",
+    "sha256": "ed5e3fb72ec9c66c60ef3c5169e59f44cfdf26e16385e82073e018c5b983548b",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-8.npz",
+    "relative": "selection-capture-a/selection-input-8.npz",
+    "sha256": "05f2c99c7d0b64a0eee5ac1fed855c2bb02bd53bc1607f64d3bc4bbf931bc399",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 12672,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-input-9.npz",
+    "relative": "selection-capture-a/selection-input-9.npz",
+    "sha256": "7fcf44d53456ab6e96b230f6b8b303d4a7a39fa001f7e9c20c874794bcf80138",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4006632,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-1.pickle",
+    "relative": "selection-capture-a/selection-object-1.pickle",
+    "sha256": "4f665352fd4c6df91c3b0a341de65d9ae20f3078f21b20e07d69c3897ae354cf",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-10.pickle",
+    "relative": "selection-capture-a/selection-object-10.pickle",
+    "sha256": "a278f1e06e4eda661b4df757e8a57e06e482f695c48822f9bb1e8ef23064dcd6",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-11.pickle",
+    "relative": "selection-capture-a/selection-object-11.pickle",
+    "sha256": "b9e3f9f1475398c8735b7140ed770895d9bbd0b01c533dae27db60de59df8eb7",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-12.pickle",
+    "relative": "selection-capture-a/selection-object-12.pickle",
+    "sha256": "1334ca786cd02bd06ac362b032044c613d3dc560b0a7c26065326d637ffc0df2",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-13.pickle",
+    "relative": "selection-capture-a/selection-object-13.pickle",
+    "sha256": "fbf586bdd30756abe9e33b1b266396c11e6bc31f889b74f7420b171a501102f1",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-14.pickle",
+    "relative": "selection-capture-a/selection-object-14.pickle",
+    "sha256": "33933249b2b287b20407bab9ffe3706bed1832eb6d8ef984ff84ed8b8db679ac",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-15.pickle",
+    "relative": "selection-capture-a/selection-object-15.pickle",
+    "sha256": "db1caea7e05f8429e9a66406cafd649e322d7fe0e214f1a64e5086363bb917eb",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-16.pickle",
+    "relative": "selection-capture-a/selection-object-16.pickle",
+    "sha256": "69dbe75d4fc7dfbadaad2e8b604b3f2bf1fed0f8673746a5c69797744853e8a5",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-17.pickle",
+    "relative": "selection-capture-a/selection-object-17.pickle",
+    "sha256": "1c17ab4ec6e55152f392f28c45aeed428540e8a88b367a767f80b48bdd17fb56",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-18.pickle",
+    "relative": "selection-capture-a/selection-object-18.pickle",
+    "sha256": "9a2a71752280b236e9aeea54d73f2c2926de8b38a329ecc7273ff5fdb98b0f91",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-19.pickle",
+    "relative": "selection-capture-a/selection-object-19.pickle",
+    "sha256": "29660cf3418ac622e633a835e3dcee1d2631e2e54c2718ca7a474584aee851b1",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4007038,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-2.pickle",
+    "relative": "selection-capture-a/selection-object-2.pickle",
+    "sha256": "8ccb19dcd0fa5b452fc1d03adfee956126496a3856317d46920403d829ab5c63",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-20.pickle",
+    "relative": "selection-capture-a/selection-object-20.pickle",
+    "sha256": "e977d4caafbdfd9c1d2eed87a0caec17c67233fba2c3d6756670c41f4024f2d6",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-21.pickle",
+    "relative": "selection-capture-a/selection-object-21.pickle",
+    "sha256": "8b04da39d11406da30861981c836aad2c3c7bd5ae0c3374ed843d4802fdc46ab",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-22.pickle",
+    "relative": "selection-capture-a/selection-object-22.pickle",
+    "sha256": "e422c9024b937d3c0fadc804165d416af44da4894c83a54fbf9ef4e6970228ae",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012171,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-23.pickle",
+    "relative": "selection-capture-a/selection-object-23.pickle",
+    "sha256": "f39c8a8e68f0c2cb8872232c9328c0c9a4d35b1b4412e2a9f65a9d1d8280a21c",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012154,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-3.pickle",
+    "relative": "selection-capture-a/selection-object-3.pickle",
+    "sha256": "1a52b6cd3de31308ef2b9bdf297439224425b54863c8c5f1ca31318aa2d831b9",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012158,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-4.pickle",
+    "relative": "selection-capture-a/selection-object-4.pickle",
+    "sha256": "1a989c8e2024780b67e6bdbcfb721c49cf5d16305a30bb5bf7d5d5288f82d3d2",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012195,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-5.pickle",
+    "relative": "selection-capture-a/selection-object-5.pickle",
+    "sha256": "9214b8e41da989f5ca0c119d71302140f7ed8bdc68bccd96b41199d758d7a878",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012195,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-6.pickle",
+    "relative": "selection-capture-a/selection-object-6.pickle",
+    "sha256": "60120f222c83879a5db3c11fdd88decbe8a19c07ef58adcccd842cdb845f03d3",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012195,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-7.pickle",
+    "relative": "selection-capture-a/selection-object-7.pickle",
+    "sha256": "2509b036bd257dbcb3bb67e066b3d6b1f88f9227597210fc7b432994dc3a8a96",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012124,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-8.pickle",
+    "relative": "selection-capture-a/selection-object-8.pickle",
+    "sha256": "37d5091dd84b2a830fb0d8edae90b98d045e55ccc0b7f6c7dc0b39094d46cf2a",
+    "stored_in_git": false
+  },
+  {
+    "bytes": 4012124,
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/selection-object-9.pickle",
+    "relative": "selection-capture-a/selection-object-9.pickle",
+    "sha256": "d3ede056a71f31df4d5c3ee8e7a6f90ece9584610a6412bd4dd27918afa11fc7",
+    "stored_in_git": false
+  }
+]

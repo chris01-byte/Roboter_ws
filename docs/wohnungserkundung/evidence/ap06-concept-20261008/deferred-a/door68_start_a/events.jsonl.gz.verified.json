@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "path": "events.jsonl.gz",
+  "compression": "gzip-level-1",
+  "uncompressed_bytes": 249345880,
+  "sha256": "a736090815de7a17fa71855cb06170427e7d38ce94b62147a0028e47b8bbce54",
+  "compressed_bytes": 31677466,
+  "verified_decompression": true
+}

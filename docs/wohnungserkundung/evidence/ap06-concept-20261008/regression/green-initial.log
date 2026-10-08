@@ -1,0 +1,46 @@
+...........F                                                             [100%]
+=================================== FAILURES ===================================
+_ test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[task_budget-failure_budget_exhausted] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fccbdaad060>
+fault = 'task_budget', expected = 'failure_budget_exhausted'
+
+    @pytest.mark.parametrize('fault, expected', [
+        ('cancel', 'user_canceled'), ('source', 'encoder_feedback_stale'),
+        ('pose', 'pose_missing_stale_or_invalid'), ('context', 'map_work_context_changed'),
+        ('discontinuity', 'pose_discontinuity'), ('mission_budget', 'budget_exhausted'),
+        ('task_budget', 'failure_budget_exhausted')])
+    def test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards(monkeypatch, fault, expected):
+        node, clock, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        checked = []
+        def alignment(route, pose, stop_requested, *, inputs):
+            if fault == 'cancel':
+                parent.is_cancel_requested = True
+            elif fault == 'source':
+                node._metric_operating_snapshot = lambda **_: dict(safe=False, first_rejecting_predicate=expected)
+            elif fault == 'pose':
+                node._robot_pose_sample = lambda: (None, None)
+            elif fault == 'context':
+                node._metric_work_is_current = lambda _: False
+            elif fault == 'discontinuity':
+                node._robot_pose_sample = lambda: ((pose[0]+.8, pose[1], pose[2]), 0.)
+            elif fault == 'mission_budget':
+                clock[0] += 11.
+            elif fault == 'task_budget':
+                clock[0] += node._goal_timeout_s
+                update_cells()  # actual newer map/cost samples; the task deadline stays expired
+            checked.append(stop_requested())
+            return 'interrupted', .06, .4, .34
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and checked == [True] and not result.success
+        assert terminal == (['cancel'] if fault == 'cancel' else ['abort'])
+>       assert node._metric_status['reason'] == expected
+E       AssertionError: assert 'map_status_M...sprechen sich' == 'failure_budget_exhausted'
+E         - failure_budget_exhausted
+E         + map_status_MapStatusAdapterError:Fingerprint- und accepted_maps-Verlauf widersprechen sich
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:258: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_alignment_phase_keeps_actual_parent_cancel_source_pose_and_budget_guards[task_budget-failure_budget_exhausted]
+1 failed, 11 passed, 4 deselected in 0.97s

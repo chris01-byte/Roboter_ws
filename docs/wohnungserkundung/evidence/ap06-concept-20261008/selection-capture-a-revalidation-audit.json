@@ -1,0 +1,422 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "original_mission_qualified": false,
+  "trace_verified": true,
+  "uncompressed_bytes": 148814512,
+  "uncompressed_sha256": "8f4c788e816fb42cb6458741379e95f4b09769f7754f445600e094082c7aa251",
+  "result_sha256": "fe5c2b2a81bcf77b74bb868fc893624a6b84b4d6c243c0826fe6d33e5982ed12",
+  "script_sha256": "7a1d28013af5269bbee79a6f757fbc2ebcd05890a6eb23ae63662cdfc2285b7c",
+  "topics": {
+    "/base_hardware/state_json": 12758,
+    "/tf": 500,
+    "/fusion/hwt601/status_json": 1098,
+    "/mission_manager/status_json": 3605,
+    "/explore/status_json": 246,
+    "/explore_area/_action/status": 2,
+    "/plan": 8,
+    "/navigate_to_pose/_action/status": 9,
+    "/received_global_plan": 1435
+  },
+  "receipts": {
+    "departure_alignment": [
+      {
+        "task": "metric-task-1",
+        "attempt": 1,
+        "checked_at": 203776.722173472,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 3,
+        "checked_at": 203900.65406931,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 4,
+        "checked_at": 203928.972884324,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 5,
+        "checked_at": 203988.008742495,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      }
+    ],
+    "map_join_rejection": [
+      {
+        "branch": "no_active_child",
+        "checked_at": 203851.578803522,
+        "pending_age_s": 0.00023590997443534434,
+        "active": true,
+        "active_child": false,
+        "private_permit": false,
+        "raw": {
+          "fingerprint": "6755853a8fa5d76275cdfa87c0f62e7e646ca38b6d7fecc8823eefdd8a630568",
+          "source_stamp_ns": 1791474199531357605,
+          "frame_id": "map"
+        },
+        "status": {
+          "fingerprint": "aaf71d8a1d0833df24da76670ec1213cc5b01808153711e57d67d1de56c7a07d",
+          "source_stamp_ns": 1791474198431821444,
+          "frame_id": "map"
+        },
+        "joined_raw": {
+          "fingerprint": "aaf71d8a1d0833df24da76670ec1213cc5b01808153711e57d67d1de56c7a07d",
+          "source_stamp_ns": 1791474198431821444,
+          "frame_id": "map"
+        },
+        "joined_status": {
+          "fingerprint": "aaf71d8a1d0833df24da76670ec1213cc5b01808153711e57d67d1de56c7a07d",
+          "source_stamp_ns": 1791474198431821444,
+          "frame_id": "map"
+        },
+        "context_matches_joined": true,
+        "egress": [
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          },
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          }
+        ]
+      },
+      {
+        "branch": "no_active_child",
+        "checked_at": 203995.065555084,
+        "pending_age_s": 0.007735163992037997,
+        "active": true,
+        "active_child": false,
+        "private_permit": false,
+        "raw": {
+          "fingerprint": "48ef6ec0887680baabc15aefd0700af389cfff6f9580c4c01ad4e78fa871c700",
+          "source_stamp_ns": 1791474342931672831,
+          "frame_id": "map"
+        },
+        "status": {
+          "fingerprint": "1d6eec3376a3d1f719fcb5d5e7c5ca4589811f3d522be88c317ea5903fdfbfa0",
+          "source_stamp_ns": 1791474341832143159,
+          "frame_id": "map"
+        },
+        "joined_raw": {
+          "fingerprint": "1d6eec3376a3d1f719fcb5d5e7c5ca4589811f3d522be88c317ea5903fdfbfa0",
+          "source_stamp_ns": 1791474341832143159,
+          "frame_id": "map"
+        },
+        "joined_status": {
+          "fingerprint": "1d6eec3376a3d1f719fcb5d5e7c5ca4589811f3d522be88c317ea5903fdfbfa0",
+          "source_stamp_ns": 1791474341832143159,
+          "frame_id": "map"
+        },
+        "context_matches_joined": true,
+        "egress": [
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          },
+          {
+            "kind": "ReferencedStartEgress",
+            "valid": true,
+            "projected_cells": 0,
+            "retained_cells": 0,
+            "retained_area_m2": 0.0
+          }
+        ]
+      }
+    ],
+    "map_join_stop": [],
+    "geometry_snapshot_rejection": [
+      {
+        "reason": "self_body_scan_stale_after_processing",
+        "checked_at": 203926.249097611,
+        "selection_started_at": 203925.773112954,
+        "selected_age_s": 0.026656550995539874,
+        "processing_elapsed_s": 0.47598465700866655,
+        "final_age_s": 0.5026412080042064,
+        "limit_s": 0.5,
+        "phase": "metric_navigation",
+        "active": true,
+        "active_child": true,
+        "age_basis": "scan_callback_receipt",
+        "received_at": 203925.746456403,
+        "scan_key": [
+          1791474273,
+          731945936,
+          2160
+        ]
+      },
+      {
+        "reason": "pose_stale_after_processing",
+        "checked_at": 203994.024324436,
+        "selection_started_at": 203993.772806951,
+        "selected_age_s": 0.578967945,
+        "processing_elapsed_s": 0.2515174850123003,
+        "final_age_s": 0.830485430022236,
+        "limit_s": 0.8,
+        "phase": "metric_navigation",
+        "active": true,
+        "active_child": true,
+        "age_basis": "tf_source_age_plus_processing"
+      }
+    ],
+    "geometry_snapshot_stop": [
+      {
+        "task": "metric-task-2",
+        "attempt": 3,
+        "rejection": {
+          "reason": "self_body_scan_stale_after_processing",
+          "checked_at": 203926.249097611,
+          "selection_started_at": 203925.773112954,
+          "selected_age_s": 0.026656550995539874,
+          "processing_elapsed_s": 0.47598465700866655,
+          "final_age_s": 0.5026412080042064,
+          "limit_s": 0.5,
+          "phase": "metric_navigation",
+          "active": true,
+          "active_child": true,
+          "age_basis": "scan_callback_receipt",
+          "received_at": 203925.746456403,
+          "scan_key": [
+            1791474273,
+            731945936,
+            2160
+          ]
+        }
+      },
+      {
+        "task": "metric-task-2",
+        "attempt": 5,
+        "rejection": {
+          "reason": "pose_stale_after_processing",
+          "checked_at": 203994.024324436,
+          "selection_started_at": 203993.772806951,
+          "selected_age_s": 0.578967945,
+          "processing_elapsed_s": 0.2515174850123003,
+          "final_age_s": 0.830485430022236,
+          "limit_s": 0.8,
+          "phase": "metric_navigation",
+          "active": true,
+          "active_child": true,
+          "age_basis": "tf_source_age_plus_processing"
+        }
+      }
+    ]
+  },
+  "chain": [
+    {
+      "task": "metric-task-1",
+      "target": [
+        0.44999999999999996,
+        0.0
+      ],
+      "result": "success",
+      "decision": "observed",
+      "stop_reason": null,
+      "terminal_child": true,
+      "arrived": true,
+      "observed_cells": 82
+    },
+    {
+      "task": "metric-task-2",
+      "result": "canceled",
+      "decision": "geometry_snapshot_revalidate",
+      "stop_reason": "self_body_scan_stale_after_processing",
+      "terminal_child": true,
+      "arrived": false,
+      "observed_cells": 0,
+      "geometry_snapshot_rejection": {
+        "reason": "self_body_scan_stale_after_processing",
+        "checked_at": 203926.249097611,
+        "selection_started_at": 203925.773112954,
+        "selected_age_s": 0.026656550995539874,
+        "processing_elapsed_s": 0.47598465700866655,
+        "final_age_s": 0.5026412080042064,
+        "limit_s": 0.5,
+        "phase": "metric_navigation",
+        "active": true,
+        "active_child": true,
+        "age_basis": "scan_callback_receipt",
+        "received_at": 203925.746456403,
+        "scan_key": [
+          1791474273,
+          731945936,
+          2160
+        ]
+      },
+      "map_join_rejection": null
+    },
+    {
+      "task": "metric-task-2",
+      "target": [
+        0.9148046637164305,
+        0.06745401285394398
+      ],
+      "result": "success",
+      "decision": "partially_observed",
+      "stop_reason": null,
+      "terminal_child": true,
+      "arrived": true,
+      "observed_cells": 16
+    },
+    {
+      "task": "metric-task-2",
+      "result": "canceled",
+      "decision": "geometry_snapshot_retry_budget_exhausted",
+      "stop_reason": "pose_stale_after_processing",
+      "terminal_child": true,
+      "arrived": false,
+      "observed_cells": 0,
+      "geometry_snapshot_rejection": {
+        "reason": "pose_stale_after_processing",
+        "checked_at": 203994.024324436,
+        "selection_started_at": 203993.772806951,
+        "selected_age_s": 0.578967945,
+        "processing_elapsed_s": 0.2515174850123003,
+        "final_age_s": 0.830485430022236,
+        "limit_s": 0.8,
+        "phase": "metric_navigation",
+        "active": true,
+        "active_child": true,
+        "age_basis": "tf_source_age_plus_processing"
+      },
+      "map_join_rejection": null
+    }
+  ],
+  "recovery_followups": [
+    {
+      "trigger": {
+        "task": "metric-task-2",
+        "result": "canceled",
+        "decision": "geometry_snapshot_revalidate",
+        "stop_reason": "self_body_scan_stale_after_processing",
+        "terminal_child": true,
+        "arrived": false,
+        "observed_cells": 0,
+        "geometry_snapshot_rejection": {
+          "reason": "self_body_scan_stale_after_processing",
+          "checked_at": 203926.249097611,
+          "selection_started_at": 203925.773112954,
+          "selected_age_s": 0.026656550995539874,
+          "processing_elapsed_s": 0.47598465700866655,
+          "final_age_s": 0.5026412080042064,
+          "limit_s": 0.5,
+          "phase": "metric_navigation",
+          "active": true,
+          "active_child": true,
+          "age_basis": "scan_callback_receipt",
+          "received_at": 203925.746456403,
+          "scan_key": [
+            1791474273,
+            731945936,
+            2160
+          ]
+        },
+        "map_join_rejection": null
+      },
+      "next_same_task_entry": {
+        "task": "metric-task-2",
+        "target": [
+          0.9148046637164305,
+          0.06745401285394398
+        ],
+        "result": "success",
+        "decision": "partially_observed",
+        "stop_reason": null,
+        "terminal_child": true,
+        "arrived": true,
+        "observed_cells": 16
+      },
+      "subsequent_arrival": true
+    }
+  ],
+  "terminal": {
+    "state": "blocked",
+    "reason": "geometry_snapshot_retry_budget_exhausted",
+    "arrivals": 2,
+    "observations": 2,
+    "attempts": 5,
+    "failures": 0
+  },
+  "terminal_actions": {
+    "/explore_area/_action/status": [],
+    "/navigate_to_pose/_action/status": []
+  },
+  "terminal_commands": {
+    "/cmd_vel_nav": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_smoothed": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel": [
+      0.0,
+      0.0
+    ],
+    "/cmd_vel_nav_raw": [
+      0.0,
+      0.0
+    ]
+  },
+  "checkpoint": {
+    "state": "unavailable",
+    "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+    "motion_authorized": false
+  },
+  "limits": [
+    "No hardware or original masked-sensor mission acceptance.",
+    "A later arrival proves one successful recovery, not whole-mission completion.",
+    "Elapsed processing includes scheduling/waiting; no exact CPU hot function is inferred.",
+    "The failures counter excludes these revalidation cancellations."
+  ]
+}

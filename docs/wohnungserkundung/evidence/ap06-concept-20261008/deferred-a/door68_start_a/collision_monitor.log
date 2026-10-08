@@ -1,0 +1,84 @@
+[INFO] [1791437573.975977186] [collision_monitor]: 
+	collision_monitor lifecycle node launched. 
+	Waiting on external lifecycle transitions to activate
+	See https://design.ros2.org/articles/node_lifecycle.html for more information.
+[INFO] [1791437576.854766274] [collision_monitor]: Configuring
+[INFO] [1791437576.874519287] [collision_monitor]: [FootprintApproach]: Creating Polygon
+[INFO] [1791437576.875711033] [collision_monitor]: [SlowZone]: Creating Polygon
+[INFO] [1791437576.876072969] [collision_monitor]: [vl53_left]: Creating PointCloud
+[INFO] [1791437576.877487692] [collision_monitor]: [vl53_right]: Creating PointCloud
+[INFO] [1791437576.919762279] [collision_monitor]: Activating
+[INFO] [1791437576.919988400] [collision_monitor]: Creating bond (collision_monitor) to lifecycle manager.
+[INFO] [1791437739.318053934] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437740.324706649] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437743.619270972] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437771.718885831] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437820.520362089] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437847.520756590] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437849.524446819] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437851.271383229] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437865.122970298] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437865.471324206] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437866.123394153] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437866.470798969] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437867.070881278] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437867.420802888] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437867.871316759] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437868.220793205] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437868.770868934] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437869.120877815] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437869.620955436] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437869.974157573] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437870.970912601] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437871.321687726] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437872.021106841] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437872.370946672] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437872.870960512] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437873.221161833] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437874.271007701] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437874.623883504] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437875.671049456] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437876.023408572] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437876.624007969] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437876.971203520] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437877.771080940] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437878.124534181] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437879.071122287] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437879.421248090] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437879.872763908] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437880.221112184] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437924.923950000] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437925.272785289] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437925.922886948] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437926.273330921] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437926.823692683] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437927.172303578] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437928.172372260] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437928.522973904] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437929.272282062] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437929.622279669] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437930.172298507] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437930.522322624] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437931.222528018] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437931.574288932] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437932.323819639] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437932.673049043] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437933.280075925] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437933.622356255] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437934.375552938] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437934.726586042] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437935.372543536] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437935.722405691] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437936.423798423] [collision_monitor]: Robot to slowdown for 30.000000 percents due to SlowZone polygon
+[INFO] [1791437936.772506128] [collision_monitor]: Robot to continue normal operation
+[INFO] [1791437960.668221168] [rclcpp]: signal_handler(signum=2)
+[INFO] [1791437960.668342831] [collision_monitor]: Running Nav2 LifecycleNode rcl preshutdown (collision_monitor)
+[INFO] [1791437960.668432086] [collision_monitor]: Deactivating
+[INFO] [1791437960.668448481] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791437960.679544744] [collision_monitor]: Cleaning up
+[INFO] [1791437960.679588981] [collision_monitor]: [FootprintApproach]: Destroying Polygon
+[INFO] [1791437960.679609241] [collision_monitor]: [SlowZone]: Destroying Polygon
+[INFO] [1791437960.679617433] [collision_monitor]: [vl53_left]: Destroying PointCloud
+[INFO] [1791437960.679629121] [collision_monitor]: [vl53_right]: Destroying PointCloud
+[INFO] [1791437960.708588974] [collision_monitor]: Destroying bond (collision_monitor) to lifecycle manager.
+[INFO] [1791437960.727401548] [collision_monitor]: Destroying

@@ -1,0 +1,21 @@
+[0.436s] Invoking command in '/evidence/ap06-repo/src/vl53_near_field': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/vl53_near_field/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/vl53_near_field build --build-base /evidence/ap06-old-product-build/vl53_near_field/build install --record /evidence/ap06-old-product-build/vl53_near_field/install.log --single-version-externally-managed install_data
+[0.580s] running egg_info
+[0.581s] writing ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/PKG-INFO
+[0.581s] writing dependency_links to ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/dependency_links.txt
+[0.581s] writing entry points to ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/entry_points.txt
+[0.581s] writing requirements to ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/requires.txt
+[0.581s] writing top-level names to ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/top_level.txt
+[0.583s] reading manifest file '../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/SOURCES.txt'
+[0.583s] writing manifest file '../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info/SOURCES.txt'
+[0.583s] running build
+[0.583s] running build_py
+[0.584s] running install
+[0.584s] running install_lib
+[0.585s] running install_data
+[0.585s] running install_egg_info
+[0.587s] removing '/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field-0.1.0-py3.10.egg-info' (and everything under it)
+[0.587s] Copying ../../../ap06-old-product-build/vl53_near_field/vl53_near_field.egg-info to /evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages/vl53_near_field-0.1.0-py3.10.egg-info
+[0.587s] running install_scripts
+[0.605s] Installing vl53_near_field script to /evidence/ap06-old-product-install/vl53_near_field/lib/vl53_near_field
+[0.605s] writing list of installed files to '/evidence/ap06-old-product-build/vl53_near_field/install.log'
+[0.628s] Invoked command in '/evidence/ap06-repo/src/vl53_near_field' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/vl53_near_field/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/vl53_near_field/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/vl53_near_field build --build-base /evidence/ap06-old-product-build/vl53_near_field/build install --record /evidence/ap06-old-product-build/vl53_near_field/install.log --single-version-externally-managed install_data

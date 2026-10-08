@@ -1,0 +1,120 @@
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+........................................................................ [ 19%]
+........................................................................ [ 23%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 34%]
+........................................................................ [ 38%]
+........................................................................ [ 42%]
+........................................................................ [ 46%]
+........................................................................ [ 50%]
+........................................................................ [ 54%]
+........................................................................ [ 57%]
+........................................................................ [ 61%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+........................................................................ [ 73%]
+........................................................................ [ 77%]
+........................................................................ [ 81%]
+........................................................................ [ 84%]
+........................................................................ [ 88%]
+........................................................................ [ 92%]
+........................................................................ [ 96%]
+....................................FFFFF........................        [100%]
+=================================== FAILURES ===================================
+________________ test_mapping_default_still_starts_one_explorer ________________
+
+    def test_mapping_default_still_starts_one_explorer():
+        for relative in ('src/robot_bringup/launch/app_mapping.launch.py',
+                         'src/robot_navigation/launch/nav_mapping.launch.py'):
+            entities, ctx = declared_launch(relative)
+            assert ctx.launch_configurations['start_explorer'] == 'true'
+            if relative.startswith('src/robot_navigation/'):
+                owners = enabled_launch_owners(entities, ctx)
+>               assert sum(path.endswith('/explore.launch.py') for _, path in owners) == 1
+E               assert 0 == 1
+E                +  where 0 = sum(<generator object test_mapping_default_still_starts_one_explorer.<locals>.<genexpr> at 0x7f65742e1d90>)
+
+src/robot_state_estimation/test/test_hwt601_we_launch.py:127: AssertionError
+_ test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[false-false] _
+
+active = 'false', auto = 'false'
+
+    @pytest.mark.parametrize('active', ['false', 'true'])
+    @pytest.mark.parametrize('auto', ['false', 'true'])
+    def test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins(active, auto):
+        runs = {}
+        for start_explorer in ('false', 'true'):
+            outer, ctx = declared_launch('src/robot_bringup/launch/app_mapping.launch.py',
+                start_explorer=start_explorer, active_drive=active,
+                enable_auto_explore=auto, use_hwt601_odometry='true')
+            includes = [entity for entity in outer if isinstance(entity, IncludeLaunchDescription)]
+>           navigation = next(entity for entity in includes
+                if resolved(entity.launch_description_source.location, ctx).endswith('/nav_mapping.launch.py'))
+E           StopIteration
+
+src/robot_state_estimation/test/test_hwt601_we_launch.py:139: StopIteration
+_ test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[false-true] _
+
+active = 'true', auto = 'false'
+
+    @pytest.mark.parametrize('active', ['false', 'true'])
+    @pytest.mark.parametrize('auto', ['false', 'true'])
+    def test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins(active, auto):
+        runs = {}
+        for start_explorer in ('false', 'true'):
+            outer, ctx = declared_launch('src/robot_bringup/launch/app_mapping.launch.py',
+                start_explorer=start_explorer, active_drive=active,
+                enable_auto_explore=auto, use_hwt601_odometry='true')
+            includes = [entity for entity in outer if isinstance(entity, IncludeLaunchDescription)]
+>           navigation = next(entity for entity in includes
+                if resolved(entity.launch_description_source.location, ctx).endswith('/nav_mapping.launch.py'))
+E           StopIteration
+
+src/robot_state_estimation/test/test_hwt601_we_launch.py:139: StopIteration
+_ test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[true-false] _
+
+active = 'false', auto = 'true'
+
+    @pytest.mark.parametrize('active', ['false', 'true'])
+    @pytest.mark.parametrize('auto', ['false', 'true'])
+    def test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins(active, auto):
+        runs = {}
+        for start_explorer in ('false', 'true'):
+            outer, ctx = declared_launch('src/robot_bringup/launch/app_mapping.launch.py',
+                start_explorer=start_explorer, active_drive=active,
+                enable_auto_explore=auto, use_hwt601_odometry='true')
+            includes = [entity for entity in outer if isinstance(entity, IncludeLaunchDescription)]
+>           navigation = next(entity for entity in includes
+                if resolved(entity.launch_description_source.location, ctx).endswith('/nav_mapping.launch.py'))
+E           StopIteration
+
+src/robot_state_estimation/test/test_hwt601_we_launch.py:139: StopIteration
+_ test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[true-true] _
+
+active = 'true', auto = 'true'
+
+    @pytest.mark.parametrize('active', ['false', 'true'])
+    @pytest.mark.parametrize('auto', ['false', 'true'])
+    def test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins(active, auto):
+        runs = {}
+        for start_explorer in ('false', 'true'):
+            outer, ctx = declared_launch('src/robot_bringup/launch/app_mapping.launch.py',
+                start_explorer=start_explorer, active_drive=active,
+                enable_auto_explore=auto, use_hwt601_odometry='true')
+            includes = [entity for entity in outer if isinstance(entity, IncludeLaunchDescription)]
+>           navigation = next(entity for entity in includes
+                if resolved(entity.launch_description_source.location, ctx).endswith('/nav_mapping.launch.py'))
+E           StopIteration
+
+src/robot_state_estimation/test/test_hwt601_we_launch.py:139: StopIteration
+=========================== short test summary info ============================
+FAILED src/robot_state_estimation/test/test_hwt601_we_launch.py::test_mapping_default_still_starts_one_explorer
+FAILED src/robot_state_estimation/test/test_hwt601_we_launch.py::test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[false-false]
+FAILED src/robot_state_estimation/test/test_hwt601_we_launch.py::test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[false-true]
+FAILED src/robot_state_estimation/test/test_hwt601_we_launch.py::test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[true-false]
+FAILED src/robot_state_estimation/test/test_hwt601_we_launch.py::test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins[true-true]
+5 failed, 1860 passed in 136.56s (0:02:16)

@@ -1,0 +1,47 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_ test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[None] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcaa8c5ee90>
+rotation_cell = None
+
+    @pytest.mark.parametrize('rotation_cell', [None, 100, -1])
+    def test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation(monkeypatch, rotation_cell):
+        node, _, parent, terminal, planned, update_cells = _alignment_parent(monkeypatch)
+        phase, calls, stopped = ['planning'], [], []
+        original = node._metric_navigation_geometry_ready
+        def geometry(inputs, target):
+            calls.append(phase[0])
+            return original(inputs, target)
+        node._metric_navigation_geometry_ready = geometry
+        def alignment(route, pose, stop_requested, *, inputs):
+            target = planned[-1]
+            assert node._wohnungserkundung_active_child is None
+            # A real newly occupied distant endpoint invalidates translation;
+            # it does not overlap the complete current rotation envelope.
+            assert math.dist(pose[:2], (target.x, target.y)) > .6
+            cells = [(target.x, target.y, 100)]
+            if rotation_cell is not None:
+                cells.append((*pose[:2], rotation_cell))
+            update_cells(cells)
+            current = node._metric_inputs(active=True)
+            assert node._metric_scan_geometry_ready(node._metric_public_inputs(current)) is (rotation_cell is None)
+            assert not original(current, target)  # actual native path is now blocked
+            phase[0] = 'alignment'
+            stopped.append(stop_requested())
+            phase[0] = 'before_nav_dispatch'
+            return ('interrupted' if stopped[-1] else 'success', .08, .3, .22)
+        node._metric_align_nav_departure = alignment
+        result = node._execute_metric_frontier(parent, 10., .3)
+        assert planned and not result.success and terminal == ['abort']
+>       assert stopped == [rotation_cell is not None]
+E       assert [True] == [False]
+E         At index 0 diff: True != False
+E         Full diff:
+E         - [False]
+E         + [True]
+
+evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py:164: AssertionError
+=========================== short test summary info ============================
+FAILED evidence/ap06-phase-tests/explore/test/test_metric_proposal_accounting.py::test_parent_alignment_uses_public_current_spin_but_dispatch_rechecks_actual_translation[None]
+1 failed, 17 deselected in 0.37s

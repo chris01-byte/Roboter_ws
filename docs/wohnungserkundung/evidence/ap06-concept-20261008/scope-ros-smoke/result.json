@@ -1,0 +1,66 @@
+{
+  "all_synthetic_nodes_destroyed": true,
+  "cases": [
+    {
+      "all_observed_children_reaped": true,
+      "command": [
+        "/usr/bin/python3",
+        "/evidence/ap06-repo/tools/kartierung/metric_scope_vorbereiten.py",
+        "--scope",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke/explicit-synthetic-scope.json",
+        "--output",
+        "/evidence/ap06-concept-20261008/scope-ros-smoke/positive-private.yaml",
+        "--tf-probe",
+        "/evidence/ap06-tf-probe-build/tf_ownership_probe",
+        "--install-root",
+        "/evidence/ap06-old-product-install",
+        "--timeout",
+        "12"
+      ],
+      "duration_s": 0.3994009930174798,
+      "exit_code": 1,
+      "observed_owned_children": [],
+      "owned_cli_pid": 116755,
+      "stderr": "/evidence/ap06-concept-20261008/scope-ros-smoke/positive.stderr.log",
+      "stdout": "/evidence/ap06-concept-20261008/scope-ros-smoke/positive.stdout.log"
+    }
+  ],
+  "created_utc": "2026-10-08T06:38:37.551285+00:00",
+  "error": "AssertionError: Positive real CLI failed; inspect its stdout/stderr",
+  "hardware_qualified": false,
+  "installed_modules": {
+    "amadeus_map_identity.fingerprint": {
+      "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    },
+    "explore.exploration_scope": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    "explore.map_status_adapter": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/map_status_adapter.py",
+      "sha256": "0a688ac8587761393e1c233335a585f00ba49a5ec983ac51a318a7a54706d421"
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "aa5f18db87891793a749d59e2940542d4336e12b3864727e0059d238332ba8ca"
+    },
+    "explore.portal_source_adapter": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py",
+      "sha256": "bc6ac8e767d9c05c1b24e3a10e5e99681755e68f14b882e6d1d9017877943475"
+    },
+    "robot_interfaces.action._explore_area": {
+      "path": "/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages/robot_interfaces/action/_explore_area.py",
+      "sha256": "088cbb84588a4b8d2df7b3cef53d56381be0b036882ca5744c87e24fcdc7148c"
+    }
+  },
+  "non_actuating": true,
+  "passed": false,
+  "ros_domain_id": 193,
+  "schema": 1,
+  "smoke_script_sha256": "0e2246cc7a34fba784b1a502919ae508ee3e316f1d1a8fdd6955801c71957acf",
+  "synthetic": true,
+  "tf_probe_sha256": "09e644a193cc63d31b3593a603382143294309d050117bb0c71929a1b0cf7b02",
+  "tool_sha256": "a1b78efbdb4ca584127a2aaaac724a04ad99b2ab83aed1e9e2bb85b0ca67bf08",
+  "traceback": "Traceback (most recent call last):\n  File \"/evidence/ap06-concept-20261008/smoke_metric_scope_ros.py\", line 246, in main\n    require(case['exit_code'] == 0, 'Positive real CLI failed; inspect its stdout/stderr')\n  File \"/evidence/ap06-concept-20261008/smoke_metric_scope_ros.py\", line 26, in require\n    raise AssertionError(message)\nAssertionError: Positive real CLI failed; inspect its stdout/stderr\n"
+}

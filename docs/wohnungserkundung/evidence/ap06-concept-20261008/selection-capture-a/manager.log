@@ -1,0 +1,5 @@
+[INFO] [1791474099.573871384] [mission_manager]: mission_manager bereit (echte Typen: ['explore', 'pick_and_place'], Action '/run_mission').
+[WARN] [1791474099.575022319] [mission_manager]: REALE AUTOMATISCHE ERKUNDUNG AKTIV: Explore-Auftraege werden an den Behavior-Tree weitergegeben.
+[INFO] [1791474120.103888231] [mission_manager]: Auftrag empfangen: {'type': 'explore'}
+[INFO] [1791474344.447900220] [mission_manager]: Auftrag empfangen: {'type': 'cancel'}
+[WARN] [1791474344.452100794] [mission_manager]: Auftrag abgelehnt: Keine laufende Mission

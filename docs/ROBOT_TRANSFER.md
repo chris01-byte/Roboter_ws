@@ -1,5 +1,21 @@
 # Übertragung auf den realen Roboter
 
+## 08.10.2026 – vorbereitete AP-06-Übergabe, noch keine Roboterinstallation
+
+Der Nutzer führt den Kandidaten später selbst auf dem Jetson aus. Geprüfter
+Produktstand `c5d2a9c`; Transport als Git-Bundle mit separatem Rohbelegarchiv,
+Prüfsummen und Verifikation aus einem frischen Clone. Die
+[Jetson-Anleitung](wohnungserkundung/JETSON_KONZEPTTEST_AP06.md) beschreibt
+separaten ARM-Build, tatsächliche Präfixe und den passiven lokalen Vorlauf
+mit zurückgestelltem Explorer sowie aktueller Scope-/Quellenbindung.
+
+Dies ist ein Entwicklungsstand: **ursprüngliche Gesamtmissionen 0/3**, kein
+Kundenrelease. Die Komponentenprüfungen sind dokumentiert, aktuelle Gesamt-
+und Zeitfehler im [Belegbericht](wohnungserkundung/evidence/ap06-concept-20261008/README.md).
+Keine Zielsystemdateien geändert, keine Hardware gefahren, kein ARM-Build
+oder Shutdown hier behauptet. Reale Karten/Bags/Manifeste bleiben außerhalb
+Git; bereits vorhandene Installationen werden durch die Übergabe nicht ersetzt.
+
 ## 30.09.2026 – metrischer Realnachweis: lesender Vorlauf blockiert
 
 Exakter Softwarekandidat `deb075e3f1a51a46bc00c2235a3068cfbe45d769`,

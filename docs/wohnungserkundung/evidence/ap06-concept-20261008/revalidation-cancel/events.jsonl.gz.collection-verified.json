@@ -1,0 +1,11 @@
+{
+  "compressed_bytes": 2080565,
+  "compressed_sha256": "b91e8ec89d5b679a28a7bf0b9e40793eb1d0d75ec103b57af7c68c91d5f6c3f7",
+  "container_path": "/evidence/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz",
+  "independently_verified": true,
+  "metadata_path": "/workspace/scratch/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz.meta.json",
+  "path": "/workspace/scratch/ap06-concept-20261008/revalidation-cancel/events.jsonl.gz",
+  "stored_in_git": false,
+  "uncompressed_bytes": 22120671,
+  "uncompressed_sha256": "fb1e4458fa144b800cf128719ab7a85469102b6c87d43e74eb3307c540081fbf"
+}

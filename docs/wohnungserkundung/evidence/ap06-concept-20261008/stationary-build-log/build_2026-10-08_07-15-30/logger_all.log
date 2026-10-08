@@ -1,0 +1,228 @@
+[0.141s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', '--log-base', '/evidence/ap06-concept-20261008/stationary-build-log', 'build', '--executor', 'sequential', '--build-base', '/evidence/ap06-old-product-build', '--install-base', '/evidence/ap06-old-product-install', '--base-paths', 'src/amadeus_map_identity', 'src/base_hardware', 'src/robot_interfaces', 'src/bt_orchestrator', 'src/mission_manager', 'src/robot_state_estimation', 'src/explore', 'src/robot_navigation', 'src/robot_map_manager', 'src/vl53_near_field', 'src/safety_monitor', 'src/amadeus_lidar_bringup', 'src/robot_bringup', 'src/semantic_map_manager', '--packages-select', 'explore']
+[0.142s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base='/evidence/ap06-concept-20261008/stationary-build-log', log_level=None, verb_name='build', build_base='/evidence/ap06-old-product-build', install_base='/evidence/ap06-old-product-install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='sequential', parallel_workers=5, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['src/amadeus_map_identity', 'src/base_hardware', 'src/robot_interfaces', 'src/bt_orchestrator', 'src/mission_manager', 'src/robot_state_estimation', 'src/explore', 'src/robot_navigation', 'src/robot_map_manager', 'src/vl53_near_field', 'src/safety_monitor', 'src/amadeus_lidar_bringup', 'src/robot_bringup', 'src/semantic_map_manager'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_select_cache_key=None, packages_select_cache_modified=False, packages_select_cache_unmodified=False, packages_select_cache_invalid=False, packages_skip_cache_valid=False, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['explore'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x7f8446aaf3d0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x7f8446a661a0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x7f8446a661a0>>, mixin_verb=('build',))
+[0.227s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.227s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/Gazebo.meta'
+[0.228s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/fastdds.meta'
+[0.228s] INFO:colcon.colcon_metadata.package_discovery.colcon_meta:Using configuration from '/root/.colcon/metadata/default/fastrtps.meta'
+[0.228s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.228s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.228s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.228s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.228s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/evidence/ap06-repo/src/amadeus_map_identity', '/evidence/ap06-repo/src/base_hardware', '/evidence/ap06-repo/src/robot_interfaces', '/evidence/ap06-repo/src/bt_orchestrator', '/evidence/ap06-repo/src/mission_manager', '/evidence/ap06-repo/src/robot_state_estimation', '/evidence/ap06-repo/src/explore', '/evidence/ap06-repo/src/robot_navigation', '/evidence/ap06-repo/src/robot_map_manager', '/evidence/ap06-repo/src/vl53_near_field', '/evidence/ap06-repo/src/safety_monitor', '/evidence/ap06-repo/src/amadeus_lidar_bringup', '/evidence/ap06-repo/src/robot_bringup', '/evidence/ap06-repo/src/semantic_map_manager'
+[0.228s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extensions ['ignore', 'ignore_ament_install']
+[0.228s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extension 'ignore'
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extension 'ignore_ament_install'
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extensions ['colcon_pkg']
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extension 'colcon_pkg'
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extensions ['colcon_meta']
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extension 'colcon_meta'
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extensions ['ros']
+[0.229s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_map_identity) by extension 'ros'
+[0.238s] DEBUG:colcon.colcon_core.package_identification:Package 'src/amadeus_map_identity' with type 'ros.ament_python' and name 'amadeus_map_identity'
+[0.238s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extensions ['ignore', 'ignore_ament_install']
+[0.238s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extension 'ignore'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extension 'ignore_ament_install'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extensions ['colcon_pkg']
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extension 'colcon_pkg'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extensions ['colcon_meta']
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extension 'colcon_meta'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extensions ['ros']
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/base_hardware) by extension 'ros'
+[0.239s] DEBUG:colcon.colcon_core.package_identification:Package 'src/base_hardware' with type 'ros.ament_python' and name 'base_hardware'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extensions ['ignore', 'ignore_ament_install']
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extension 'ignore'
+[0.239s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extension 'ignore_ament_install'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extensions ['colcon_pkg']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extension 'colcon_pkg'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extensions ['colcon_meta']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extension 'colcon_meta'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extensions ['ros']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_interfaces) by extension 'ros'
+[0.240s] DEBUG:colcon.colcon_core.package_identification:Package 'src/robot_interfaces' with type 'ros.ament_cmake' and name 'robot_interfaces'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extensions ['ignore', 'ignore_ament_install']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extension 'ignore'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extension 'ignore_ament_install'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extensions ['colcon_pkg']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extension 'colcon_pkg'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extensions ['colcon_meta']
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extension 'colcon_meta'
+[0.240s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extensions ['ros']
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/bt_orchestrator) by extension 'ros'
+[0.241s] DEBUG:colcon.colcon_core.package_identification:Package 'src/bt_orchestrator' with type 'ros.ament_cmake' and name 'bt_orchestrator'
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extensions ['ignore', 'ignore_ament_install']
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extension 'ignore'
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extension 'ignore_ament_install'
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extensions ['colcon_pkg']
+[0.241s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extension 'colcon_pkg'
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extensions ['colcon_meta']
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extension 'colcon_meta'
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extensions ['ros']
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/mission_manager) by extension 'ros'
+[0.242s] DEBUG:colcon.colcon_core.package_identification:Package 'src/mission_manager' with type 'ros.ament_python' and name 'mission_manager'
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extensions ['ignore', 'ignore_ament_install']
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extension 'ignore'
+[0.242s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extension 'ignore_ament_install'
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extensions ['colcon_pkg']
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extension 'colcon_pkg'
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extensions ['colcon_meta']
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extension 'colcon_meta'
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extensions ['ros']
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_state_estimation) by extension 'ros'
+[0.243s] DEBUG:colcon.colcon_core.package_identification:Package 'src/robot_state_estimation' with type 'ros.ament_python' and name 'robot_state_estimation'
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extensions ['ignore', 'ignore_ament_install']
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extension 'ignore'
+[0.243s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extension 'ignore_ament_install'
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extensions ['colcon_pkg']
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extension 'colcon_pkg'
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extensions ['colcon_meta']
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extension 'colcon_meta'
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extensions ['ros']
+[0.244s] Level 1:colcon.colcon_core.package_identification:_identify(src/explore) by extension 'ros'
+[0.244s] DEBUG:colcon.colcon_core.package_identification:Package 'src/explore' with type 'ros.ament_python' and name 'explore'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extensions ['ignore', 'ignore_ament_install']
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extension 'ignore'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extension 'ignore_ament_install'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extensions ['colcon_pkg']
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extension 'colcon_pkg'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extensions ['colcon_meta']
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extension 'colcon_meta'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extensions ['ros']
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_navigation) by extension 'ros'
+[0.245s] DEBUG:colcon.colcon_core.package_identification:Package 'src/robot_navigation' with type 'ros.ament_python' and name 'robot_navigation'
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extensions ['ignore', 'ignore_ament_install']
+[0.245s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extension 'ignore'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extension 'ignore_ament_install'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extensions ['colcon_pkg']
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extension 'colcon_pkg'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extensions ['colcon_meta']
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extension 'colcon_meta'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extensions ['ros']
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_map_manager) by extension 'ros'
+[0.246s] DEBUG:colcon.colcon_core.package_identification:Package 'src/robot_map_manager' with type 'ros.ament_python' and name 'robot_map_manager'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extensions ['ignore', 'ignore_ament_install']
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extension 'ignore'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extension 'ignore_ament_install'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extensions ['colcon_pkg']
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extension 'colcon_pkg'
+[0.246s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extensions ['colcon_meta']
+[0.247s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extension 'colcon_meta'
+[0.247s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extensions ['ros']
+[0.247s] Level 1:colcon.colcon_core.package_identification:_identify(src/vl53_near_field) by extension 'ros'
+[0.247s] DEBUG:colcon.colcon_core.package_identification:Package 'src/vl53_near_field' with type 'ros.ament_python' and name 'vl53_near_field'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extensions ['ignore', 'ignore_ament_install']
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extension 'ignore'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extension 'ignore_ament_install'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extensions ['colcon_pkg']
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extension 'colcon_pkg'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extensions ['colcon_meta']
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extension 'colcon_meta'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extensions ['ros']
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/safety_monitor) by extension 'ros'
+[0.248s] DEBUG:colcon.colcon_core.package_identification:Package 'src/safety_monitor' with type 'ros.ament_python' and name 'safety_monitor'
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.248s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extension 'ignore'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extension 'ignore_ament_install'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extensions ['colcon_pkg']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extension 'colcon_pkg'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extensions ['colcon_meta']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extension 'colcon_meta'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extensions ['ros']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/amadeus_lidar_bringup) by extension 'ros'
+[0.249s] DEBUG:colcon.colcon_core.package_identification:Package 'src/amadeus_lidar_bringup' with type 'ros.ament_python' and name 'amadeus_lidar_bringup'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extensions ['ignore', 'ignore_ament_install']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extension 'ignore'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extension 'ignore_ament_install'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extensions ['colcon_pkg']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extension 'colcon_pkg'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extensions ['colcon_meta']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extension 'colcon_meta'
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extensions ['ros']
+[0.249s] Level 1:colcon.colcon_core.package_identification:_identify(src/robot_bringup) by extension 'ros'
+[0.250s] DEBUG:colcon.colcon_core.package_identification:Package 'src/robot_bringup' with type 'ros.ament_python' and name 'robot_bringup'
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extensions ['ignore', 'ignore_ament_install']
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extension 'ignore'
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extension 'ignore_ament_install'
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extensions ['colcon_pkg']
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extension 'colcon_pkg'
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extensions ['colcon_meta']
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extension 'colcon_meta'
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extensions ['ros']
+[0.250s] Level 1:colcon.colcon_core.package_identification:_identify(src/semantic_map_manager) by extension 'ros'
+[0.251s] DEBUG:colcon.colcon_core.package_identification:Package 'src/semantic_map_manager' with type 'ros.ament_python' and name 'semantic_map_manager'
+[0.251s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'amadeus_map_identity' in 'src/amadeus_map_identity'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'base_hardware' in 'src/base_hardware'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'robot_interfaces' in 'src/robot_interfaces'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'semantic_map_manager' in 'src/semantic_map_manager'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'bt_orchestrator' in 'src/bt_orchestrator'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'mission_manager' in 'src/mission_manager'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'robot_state_estimation' in 'src/robot_state_estimation'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'safety_monitor' in 'src/safety_monitor'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'vl53_near_field' in 'src/vl53_near_field'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'amadeus_lidar_bringup' in 'src/amadeus_lidar_bringup'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'robot_navigation' in 'src/robot_navigation'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'robot_map_manager' in 'src/robot_map_manager'
+[0.314s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'robot_bringup' in 'src/robot_bringup'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_args' from command line to 'None'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_target' from command line to 'None'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_clean_cache' from command line to 'False'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_clean_first' from command line to 'False'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'cmake_force_configure' from command line to 'False'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'ament_cmake_args' from command line to 'None'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'catkin_cmake_args' from command line to 'None'
+[0.314s] Level 5:colcon.colcon_core.verb:set package 'explore' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.314s] DEBUG:colcon.colcon_core.verb:Building package 'explore' with the following arguments: {'ament_cmake_args': None, 'build_base': '/evidence/ap06-old-product-build/explore', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/evidence/ap06-old-product-install/explore', 'merge_install': False, 'path': '/evidence/ap06-repo/src/explore', 'symlink_install': False, 'test_result_base': None}
+[0.314s] INFO:colcon.colcon_core.executor:Executing jobs using 'sequential' executor
+[0.315s] DEBUG:colcon.colcon_core.executor.sequential:run_until_complete 'explore'
+[0.315s] INFO:colcon.colcon_ros.task.ament_python.build:Building ROS package in '/evidence/ap06-repo/src/explore' with build type 'ament_python'
+[0.316s] Level 1:colcon.colcon_core.shell:create_environment_hook('explore', 'ament_prefix_path')
+[0.318s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.318s] INFO:colcon.colcon_core.shell:Creating environment hook '/evidence/ap06-old-product-install/explore/share/explore/hook/ament_prefix_path.ps1'
+[0.318s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/evidence/ap06-old-product-install/explore/share/explore/hook/ament_prefix_path.dsv'
+[0.319s] INFO:colcon.colcon_core.shell:Creating environment hook '/evidence/ap06-old-product-install/explore/share/explore/hook/ament_prefix_path.sh'
+[0.320s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.320s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.503s] INFO:colcon.colcon_core.task.python.build:Building Python package in '/evidence/ap06-repo/src/explore'
+[0.503s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.503s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.770s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/evidence/ap06-repo/src/explore': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/explore build --build-base /evidence/ap06-old-product-build/explore/build install --record /evidence/ap06-old-product-build/explore/install.log --single-version-externally-managed install_data
+[0.995s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/evidence/ap06-repo/src/explore' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/explore build --build-base /evidence/ap06-old-product-build/explore/build install --record /evidence/ap06-old-product-build/explore/install.log --single-version-externally-managed install_data
+[0.997s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore' for CMake module files
+[0.997s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore' for CMake config files
+[0.998s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore/lib'
+[0.998s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore/bin'
+[0.998s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore/lib/pkgconfig/explore.pc'
+[0.998s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages'
+[0.998s] Level 1:colcon.colcon_core.shell:create_environment_hook('explore', 'pythonpath')
+[0.998s] INFO:colcon.colcon_core.shell:Creating environment hook '/evidence/ap06-old-product-install/explore/share/explore/hook/pythonpath.ps1'
+[0.999s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/evidence/ap06-old-product-install/explore/share/explore/hook/pythonpath.dsv'
+[0.999s] INFO:colcon.colcon_core.shell:Creating environment hook '/evidence/ap06-old-product-install/explore/share/explore/hook/pythonpath.sh'
+[1.000s] Level 1:colcon.colcon_core.environment:checking '/evidence/ap06-old-product-install/explore/bin'
+[1.000s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(explore)
+[1.000s] INFO:colcon.colcon_core.shell:Creating package script '/evidence/ap06-old-product-install/explore/share/explore/package.ps1'
+[1.000s] INFO:colcon.colcon_core.shell:Creating package descriptor '/evidence/ap06-old-product-install/explore/share/explore/package.dsv'
+[1.001s] INFO:colcon.colcon_core.shell:Creating package script '/evidence/ap06-old-product-install/explore/share/explore/package.sh'
+[1.001s] INFO:colcon.colcon_core.shell:Creating package script '/evidence/ap06-old-product-install/explore/share/explore/package.bash'
+[1.002s] INFO:colcon.colcon_core.shell:Creating package script '/evidence/ap06-old-product-install/explore/share/explore/package.zsh'
+[1.002s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/evidence/ap06-old-product-install/explore/share/colcon-core/packages/explore)
+[1.003s] DEBUG:colcon.colcon_core.executor.sequential:run_until_complete 'explore' finished with '0'
+[1.003s] DEBUG:colcon.colcon_core.executor.sequential:closing loop
+[1.004s] DEBUG:colcon.colcon_core.executor.sequential:loop closed
+[1.004s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[1.009s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.notify_send': Could not find 'notify-send'
+[1.009s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[1.009s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[1.009s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[1.009s] DEBUG:colcon.colcon_notification.desktop_notification.notify2:Failed to initialize notify2: org.freedesktop.DBus.Error.NotSupported: Unable to autolaunch a dbus-daemon without a $DISPLAY for X11
+[1.009s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[1.009s] INFO:colcon.colcon_core.shell:Creating prefix script '/evidence/ap06-old-product-install/local_setup.ps1'
+[1.010s] INFO:colcon.colcon_core.shell:Creating prefix util module '/evidence/ap06-old-product-install/_local_setup_util_ps1.py'
+[1.012s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/evidence/ap06-old-product-install/setup.ps1'
+[1.013s] INFO:colcon.colcon_core.shell:Creating prefix script '/evidence/ap06-old-product-install/local_setup.sh'
+[1.014s] INFO:colcon.colcon_core.shell:Creating prefix util module '/evidence/ap06-old-product-install/_local_setup_util_sh.py'
+[1.014s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/evidence/ap06-old-product-install/setup.sh'
+[1.016s] INFO:colcon.colcon_core.shell:Creating prefix script '/evidence/ap06-old-product-install/local_setup.bash'
+[1.016s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/evidence/ap06-old-product-install/setup.bash'
+[1.017s] INFO:colcon.colcon_core.shell:Creating prefix script '/evidence/ap06-old-product-install/local_setup.zsh'
+[1.017s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/evidence/ap06-old-product-install/setup.zsh'

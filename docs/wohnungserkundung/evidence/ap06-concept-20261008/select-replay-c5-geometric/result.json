@@ -1,0 +1,1759 @@
+{
+  "schema": 1,
+  "diagnostic_only": true,
+  "mission_qualified": false,
+  "hardware_qualified": false,
+  "original_deadline_s": 5.0,
+  "source_commit": "c5d2a9c00d146851799a907ba725ef0d0f30c815",
+  "installed_modules": {
+    "explore.explore_node": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+      "sha256": "07e27f603cb857a77b6e6ff0da9c6f1f715735a1f428594c510f6c20f94676cb"
+    },
+    "explore.metric_frontier_runtime": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+      "sha256": "723b7a03ba3cb6e0fce830db9e6476f929c94225f7f296cde23d0ab4366f7cea"
+    },
+    "explore.metric_frontier": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+      "sha256": "47d770a122116390415a598642d016830d0cb0b3947edd6f4d4ac9471537592b"
+    },
+    "explore.metric_frontier_candidates": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+      "sha256": "f852901d67655d4fa8f9dda372ae51b40f5b34e658af2a82c0f1a0b96e9ee951"
+    },
+    "explore.metric_egress_reference": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py",
+      "sha256": "4786b1623247bff4d2c3896c87dfe7bd6939beed4c0c79f987ba11e14feae605"
+    },
+    "explore.metric_checkpoint": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_checkpoint.py",
+      "sha256": "e750cd7a6b1faf49d95395d3289e2c43902db3212ac03984a8b72d50a2ef852b"
+    },
+    "explore.frontier_task_evidence": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+      "sha256": "0861d7035ad6ce247353c99488a7ca66de8490b33eb909b672254ea296a033a6"
+    },
+    "explore.exploration_scope": {
+      "path": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+      "sha256": "74d1031a5b5a0145bfceea80c34a556ce21f9b6543782cc09891783f7b8d143e"
+    },
+    "amadeus_map_identity.fingerprint": {
+      "path": "/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py",
+      "sha256": "61c2ee882e3e25dbc8d6b1b25573152d3c271b817b4d81f074333c99a1ed0759"
+    }
+  },
+  "configs": {
+    "explore_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/explore_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/explore_params.yaml",
+      "sha256": "83ba002c74421513ee849a1a5728b13f79acdbb1cba298650a5d277ee409109c"
+    },
+    "metric_frontier_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/metric_frontier_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_params.yaml",
+      "sha256": "8a88ca2117983b09b1234f9e8c2a38159223fafc997d4bc28b89dd338d7ffe51"
+    },
+    "metric_frontier_simulation_params.yaml": {
+      "source": "/evidence/ap06-repo/src/explore/config/metric_frontier_simulation_params.yaml",
+      "installed": "/evidence/ap06-old-product-install/explore/share/explore/config/metric_frontier_simulation_params.yaml",
+      "sha256": "0ec8c361f7d2e3b721d3eb53c2ef40464315c02f5c208bb0958140d4dca28d41"
+    }
+  },
+  "checkpoint": {
+    "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/checkpoints/amadeus/20261008T072325540920Z-305405243e93/state-00000001.json",
+    "sha256": "d509c295ba808003e791f3b294668d07e93532bd41347c8194a8ad1988615470"
+  },
+  "script": {
+    "path": "/evidence/ap06-concept-20261008/replay_metric_select_c5.py",
+    "sha256": "03a9ba25739a9f9551197506886f0efeba8773d7eb730ace166942f270816af2"
+  },
+  "original_inputs": {
+    "result.json": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/result.json",
+      "sha256": "f1efeceecfc8dcac175d6088e8dc99df25ff509997e9d566c7158601f73da11a"
+    },
+    "final_raw_map.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_raw_map.cdr",
+      "sha256": "300272a6188259ab2fd8d65ac69ee0210c4a9ff21a951bec6985d586698bfc12"
+    },
+    "final_costmap.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_costmap.cdr",
+      "sha256": "3fd42e2d1e375733c9b502d9ffb58a1be1672efdf0690dfd08d2a1d48fde0508"
+    },
+    "final_scan.cdr": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/final_scan.cdr",
+      "sha256": "4edd702072a2d8aad11e0062f073d642527347abee86fdb64d2c884d90c79a47"
+    },
+    "events.jsonl.gz": {
+      "path": "/evidence/ap06-concept-20261008/revalidation-a/door68_start_a/events.jsonl.gz",
+      "sha256": "c969b5bab1c1c9bf9d32a68329b304c51df5849d0a87c6be5f9cbe0a7c44d099"
+    }
+  },
+  "limitations": [
+    "Component reconstruction, not exact failed selector entry or a mission.",
+    "Saved final policy is after failed pass; newly identified task IDs may already exist.",
+    "Saved cooldown remaining retained independently in each call; entry-pass cooldowns unavailable.",
+    "Saved final common-time TF pose and final CDR may differ from discarded failing input object.",
+    "Empty private inventory is reconstructed and asserted from final status; original ledger was not saved.",
+    "Frozen recorded finite lidar view is geometric component data, never a new sensor freshness receipt.",
+    "The final LaserScan predates final TF and fails the original observation stamp guard; only the finite geometry adapter is used offline.",
+    "Monotonic selection clock is real, original 5 s budget unchanged. Source receipt refreshed for offline component only.",
+    "No competing mission/DDS load; cProfile adds overhead and can change which budget check throws.",
+    "Map revision label reconstructed as 1; fingerprint/context/source stamp exactly bound to checkpoint."
+  ],
+  "affinity": [
+    0,
+    1
+  ],
+  "ros_time_ns": 1791444209874899026,
+  "stamps_ns": {
+    "raw": 1791444205173833434,
+    "cost": 1791444205823035428,
+    "scan": 1791444205974051293,
+    "tf": 1791444209873899026
+  },
+  "shape": {
+    "raw": [
+      284,
+      564
+    ],
+    "cost": [
+      284,
+      564
+    ]
+  },
+  "runs": [
+    {
+      "index": 1,
+      "profiled": false,
+      "selected": [
+        {
+          "task_id": "metric-task-5",
+          "goal": [
+            1.71914209719791,
+            0.5308578525106712,
+            -0.006745881442615022
+          ],
+          "route_length": 2,
+          "requires_nav2_plan": false,
+          "observation_points": 11
+        }
+      ],
+      "outcome": "returned",
+      "elapsed_s": 1.9599632810277399,
+      "rank_stats": {
+        "raw": 15,
+        "unsafe": 0,
+        "deferred_or_served": 9,
+        "accepted": 1,
+        "route_rejections": {},
+        "proof_search_stopped_on_eligible_task": true
+      },
+      "policy_before": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 11.799497619998874
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 24.332919836015208
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      },
+      "policy_after": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 9.83936310998979
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 22.372785326006124
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      }
+    },
+    {
+      "index": 2,
+      "profiled": false,
+      "selected": [
+        {
+          "task_id": "metric-task-5",
+          "goal": [
+            1.71914209719791,
+            0.5308578525106712,
+            -0.006745881442615022
+          ],
+          "route_length": 2,
+          "requires_nav2_plan": false,
+          "observation_points": 11
+        }
+      ],
+      "outcome": "returned",
+      "elapsed_s": 1.9296255100052804,
+      "rank_stats": {
+        "raw": 15,
+        "unsafe": 0,
+        "deferred_or_served": 9,
+        "accepted": 1,
+        "route_rejections": {},
+        "proof_search_stopped_on_eligible_task": true
+      },
+      "policy_before": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 11.799836480990052
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 24.333258697006386
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      },
+      "policy_after": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 9.870123608998256
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 22.40354582501459
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      }
+    },
+    {
+      "index": 3,
+      "profiled": true,
+      "selected": [
+        {
+          "task_id": "metric-task-5",
+          "goal": [
+            1.71914209719791,
+            0.5308578525106712,
+            -0.006745881442615022
+          ],
+          "route_length": 2,
+          "requires_nav2_plan": false,
+          "observation_points": 11
+        }
+      ],
+      "outcome": "returned",
+      "elapsed_s": 2.3064424879848957,
+      "rank_stats": {
+        "raw": 15,
+        "unsafe": 0,
+        "deferred_or_served": 9,
+        "accepted": 1,
+        "route_rejections": {},
+        "proof_search_stopped_on_eligible_task": true
+      },
+      "policy_before": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 11.799832554010209
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 24.333254770026542
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      },
+      "policy_after": {
+        "radius": 0.6,
+        "cooldown_s": 30.0,
+        "retry_limit": 2,
+        "next_id": 5,
+        "tasks": {
+          "metric-task-1": {
+            "frontier_xy": [
+              -0.5049999887123704,
+              0.24499999452382326
+            ],
+            "target_xy": [
+              0.3160618409096771,
+              -0.000495936959353092
+            ],
+            "failures": 0,
+            "fingerprint": "844ea79772b9ec77c1dfc74b75e860c38fdb1ca74c134b1c48ea0514c540a8d4",
+            "completed": true,
+            "reason": "observed",
+            "tries": 1,
+            "evidence_key": "3fa24a6bff1773591bc59422ca894da7fa3b8c42c4a3bd9bd02a06bed001d2b9",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-2": {
+            "frontier_xy": [
+              1.3549999697133899,
+              0.1149999974295497
+            ],
+            "target_xy": [
+              0.7943517919007966,
+              0.5370964426606141
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "partially_observed",
+            "tries": 2,
+            "evidence_key": "4f4a48865f41351b00134e167d92753ec65575b92c85210bd4e34eb668821bdc",
+            "partial_observation": true,
+            "retry_remaining_s": 9.493294832995161
+          },
+          "metric-task-3": {
+            "frontier_xy": [
+              3.604999919421971,
+              -0.2849999936297536
+            ],
+            "target_xy": [
+              3.0524087624411465,
+              0.30443057381645905
+            ],
+            "failures": 0,
+            "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+            "completed": false,
+            "reason": "proposal_rejected",
+            "tries": 1,
+            "evidence_key": "e262f01e82cd042adea1633ff18e5f14f3f9173a2b125d2a46c45e1ff5da741d",
+            "partial_observation": false,
+            "retry_remaining_s": 22.026717049011495
+          },
+          "metric-task-4": {
+            "frontier_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "target_xy": [
+              2.644999940879643,
+              0.08499999810010195
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          },
+          "metric-task-5": {
+            "frontier_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "target_xy": [
+              1.3849999690428376,
+              0.8649999806657434
+            ],
+            "failures": 0,
+            "fingerprint": "",
+            "completed": false,
+            "reason": "",
+            "tries": 0,
+            "evidence_key": "",
+            "partial_observation": false,
+            "retry_remaining_s": 0.0
+          }
+        }
+      },
+      "profile_total_s": 2.3062695749999986,
+      "profile_functions": [
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 2485,
+          "function": "_metric_select",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 0.00045529500000000004,
+          "cumulative_s": 2.306415387
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 2098,
+          "function": "_metric_candidates",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 0.00010822400000000001,
+          "cumulative_s": 2.2602102470000003
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 2109,
+          "function": "_metric_candidates_in_pass",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 0.008406028000000001,
+          "cumulative_s": 2.260101092
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1005,
+          "function": "_metric_route",
+          "calls": 119,
+          "primitive_calls": 119,
+          "own_s": 0.00638104,
+          "cumulative_s": 1.087022968
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1742,
+          "function": "_metric_public_search",
+          "calls": 10,
+          "primitive_calls": 10,
+          "own_s": 0.00034097800000000003,
+          "cumulative_s": 1.07447929
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1153,
+          "function": "_metric_checked_public_rollout",
+          "calls": 83,
+          "primitive_calls": 83,
+          "own_s": 0.000235397,
+          "cumulative_s": 0.9701886350000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1072,
+          "function": "_metric_waypoints_clear",
+          "calls": 208,
+          "primitive_calls": 208,
+          "own_s": 0.002689706,
+          "cumulative_s": 0.82112257
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.all>",
+          "calls": 4823,
+          "primitive_calls": 4676,
+          "own_s": 0.0011793810000000002,
+          "cumulative_s": 0.787936104
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1195,
+          "function": "_metric_standard_waypoints_clear",
+          "calls": 209,
+          "primitive_calls": 209,
+          "own_s": 0.001976321,
+          "cumulative_s": 0.751810225
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 379,
+          "function": "footprint_poses_clear",
+          "calls": 413,
+          "primitive_calls": 413,
+          "own_s": 0.08952894800000001,
+          "cumulative_s": 0.6996686830000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1159,
+          "function": "clear",
+          "calls": 83,
+          "primitive_calls": 83,
+          "own_s": 0.000312249,
+          "cumulative_s": 0.6536352000000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1160,
+          "function": "<genexpr>",
+          "calls": 191,
+          "primitive_calls": 191,
+          "own_s": 0.000605835,
+          "cumulative_s": 0.653233049
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1758,
+          "function": "_metric_robot_side_observation",
+          "calls": 9,
+          "primitive_calls": 9,
+          "own_s": 2.2433e-05,
+          "cumulative_s": 0.5677267180000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1762,
+          "function": "_metric_robot_side_observation_in_pass",
+          "calls": 9,
+          "primitive_calls": 9,
+          "own_s": 0.005779462,
+          "cumulative_s": 0.5637541850000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1818,
+          "function": "_metric_public_observation",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 3.705e-06,
+          "cumulative_s": 0.5067787100000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1822,
+          "function": "_metric_public_observation_in_pass",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 4.4378e-05,
+          "cumulative_s": 0.506399909
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1971,
+          "function": "_metric_refine_native_observation",
+          "calls": 1,
+          "primitive_calls": 1,
+          "own_s": 0.000987493,
+          "cumulative_s": 0.504831573
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_candidates.py",
+          "line": 114,
+          "function": "visible_boundary_cells",
+          "calls": 21,
+          "primitive_calls": 21,
+          "own_s": 0.30195618900000004,
+          "cumulative_s": 0.367480919
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method explore._reserved_sweep.clear>",
+          "calls": 21302,
+          "primitive_calls": 21302,
+          "own_s": 0.34261229600000004,
+          "cumulative_s": 0.34261229600000004
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 747,
+          "function": "rpp_trajectory",
+          "calls": 84,
+          "primitive_calls": 84,
+          "own_s": 0.19526765000000001,
+          "cumulative_s": 0.318336426
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1154,
+          "function": "trajectory",
+          "calls": 83,
+          "primitive_calls": 83,
+          "own_s": 0.000479116,
+          "cumulative_s": 0.316318038
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1171,
+          "function": "_metric_public_rollout",
+          "calls": 11,
+          "primitive_calls": 11,
+          "own_s": 3.9541e-05,
+          "cumulative_s": 0.26998341600000003
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py",
+          "line": 10,
+          "function": "local_evidence",
+          "calls": 5,
+          "primitive_calls": 5,
+          "own_s": 0.001070858,
+          "cumulative_s": 0.227826949
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 412,
+          "function": "<listcomp>",
+          "calls": 21302,
+          "primitive_calls": 21302,
+          "own_s": 0.043546680000000004,
+          "cumulative_s": 0.197859995
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 853,
+          "function": "_metric_local_evidence",
+          "calls": 46,
+          "primitive_calls": 46,
+          "own_s": 0.0071431920000000005,
+          "cumulative_s": 0.19738275100000002
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 3772,
+          "function": "_world_to_grid",
+          "calls": 22067,
+          "primitive_calls": 22067,
+          "own_s": 0.11092101900000001,
+          "cumulative_s": 0.158483955
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_progress.py",
+          "line": 29,
+          "function": "<listcomp>",
+          "calls": 5,
+          "primitive_calls": 5,
+          "own_s": 0.075213974,
+          "cumulative_s": 0.156301297
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 187,
+          "function": "route_cells",
+          "calls": 128,
+          "primitive_calls": 128,
+          "own_s": 0.08328405900000001,
+          "cumulative_s": 0.156164141
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 3785,
+          "function": "_frontier_approach_goal",
+          "calls": 19,
+          "primitive_calls": 19,
+          "own_s": 0.005275952,
+          "cumulative_s": 0.127136342
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method numpy.core._multiarray_umath.implement_array_function>",
+          "calls": 6325,
+          "primitive_calls": 2796,
+          "own_s": 0.008630719,
+          "cumulative_s": 0.10591810900000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 823,
+          "function": "_metric_selection_memo",
+          "calls": 836,
+          "primitive_calls": 836,
+          "own_s": 0.007836773,
+          "cumulative_s": 0.09748911
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 308,
+          "function": "footprint_clear",
+          "calls": 31,
+          "primitive_calls": 31,
+          "own_s": 0.001597331,
+          "cumulative_s": 0.08410732800000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 277,
+          "function": "footprint_cells",
+          "calls": 33,
+          "primitive_calls": 33,
+          "own_s": 0.076100315,
+          "cumulative_s": 0.08350442500000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 867,
+          "function": "_metric_prepare_egress",
+          "calls": 328,
+          "primitive_calls": 328,
+          "own_s": 0.020936712,
+          "cumulative_s": 0.07392773100000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 3759,
+          "function": "_grid_to_world",
+          "calls": 12660,
+          "primitive_calls": 12660,
+          "own_s": 0.051328231,
+          "cumulative_s": 0.072495687
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1051,
+          "function": "<genexpr>",
+          "calls": 11546,
+          "primitive_calls": 11546,
+          "own_s": 0.005811244,
+          "cumulative_s": 0.06970319800000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.round>",
+          "calls": 199543,
+          "primitive_calls": 199543,
+          "own_s": 0.068323274,
+          "cumulative_s": 0.068323274
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1657,
+          "function": "_metric_scan_geometry_ready",
+          "calls": 11,
+          "primitive_calls": 11,
+          "own_s": 9.266000000000001e-05,
+          "cumulative_s": 0.068010029
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1661,
+          "function": "<genexpr>",
+          "calls": 22,
+          "primitive_calls": 22,
+          "own_s": 0.00012677900000000001,
+          "cumulative_s": 0.067868915
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 3857,
+          "function": "<listcomp>",
+          "calls": 6,
+          "primitive_calls": 6,
+          "own_s": 0.044773335000000004,
+          "cumulative_s": 0.064228213
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.repr>",
+          "calls": 5,
+          "primitive_calls": 5,
+          "own_s": 0.057073823,
+          "cumulative_s": 0.057073823
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1289,
+          "function": "_metric_nav2_proposal",
+          "calls": 21,
+          "primitive_calls": 21,
+          "own_s": 0.000450232,
+          "cumulative_s": 0.052953424000000006
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py",
+          "line": 238,
+          "function": "_geodesic_distances",
+          "calls": 2,
+          "primitive_calls": 2,
+          "own_s": 0.0015141330000000002,
+          "cumulative_s": 0.05254750800000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 955,
+          "function": "_metric_private_start_needed",
+          "calls": 329,
+          "primitive_calls": 329,
+          "own_s": 0.020517651,
+          "cumulative_s": 0.051562589000000006
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 426,
+          "function": "lookahead_point",
+          "calls": 35254,
+          "primitive_calls": 35254,
+          "own_s": 0.038414474000000004,
+          "cumulative_s": 0.047987562000000004
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<scipy.sparse.csgraph._shortest_path.dijkstra>",
+          "calls": 2,
+          "primitive_calls": 2,
+          "own_s": 0.04068117,
+          "cumulative_s": 0.043056172000000004
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'tobytes' of 'numpy.ndarray' objects>",
+          "calls": 5968,
+          "primitive_calls": 5968,
+          "own_s": 0.042386805,
+          "cumulative_s": 0.042386805
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 1216,
+          "function": "<genexpr>",
+          "calls": 490,
+          "primitive_calls": 490,
+          "own_s": 0.000622941,
+          "cumulative_s": 0.041810980000000005
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method numpy.asarray>",
+          "calls": 24228,
+          "primitive_calls": 24228,
+          "own_s": 0.041345891,
+          "cumulative_s": 0.041345891
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py",
+          "line": 51,
+          "function": "_wrapfunc",
+          "calls": 1301,
+          "primitive_calls": 1301,
+          "own_s": 0.000977865,
+          "cumulative_s": 0.039306014
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 840,
+          "function": "<genexpr>",
+          "calls": 2508,
+          "primitive_calls": 2508,
+          "own_s": 0.007144157000000001,
+          "cumulative_s": 0.034334307
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method math.dist>",
+          "calls": 302612,
+          "primitive_calls": 302612,
+          "own_s": 0.030592356,
+          "cumulative_s": 0.030592356
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method math.hypot>",
+          "calls": 287815,
+          "primitive_calls": 287815,
+          "own_s": 0.025346928,
+          "cumulative_s": 0.025346928
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.min>",
+          "calls": 123521,
+          "primitive_calls": 123521,
+          "own_s": 0.024839313000000002,
+          "cumulative_s": 0.025024917
+        },
+        {
+          "file": "<__array_function__ internals>",
+          "line": 2,
+          "function": "linspace",
+          "calls": 446,
+          "primitive_calls": 446,
+          "own_s": 0.00044120600000000003,
+          "cumulative_s": 0.023773167
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 248,
+          "function": "_metric_grid_geometry",
+          "calls": 1676,
+          "primitive_calls": 1676,
+          "own_s": 0.004696831,
+          "cumulative_s": 0.023723134
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 241,
+          "function": "connected_mask",
+          "calls": 29,
+          "primitive_calls": 29,
+          "own_s": 0.0009168760000000001,
+          "cumulative_s": 0.022853429
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/function_base.py",
+          "line": 23,
+          "function": "linspace",
+          "calls": 446,
+          "primitive_calls": 446,
+          "own_s": 0.009165493,
+          "cumulative_s": 0.022805833
+        },
+        {
+          "file": "<__array_function__ internals>",
+          "line": 2,
+          "function": "clip",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.000396285,
+          "cumulative_s": 0.022415926000000003
+        },
+        {
+          "file": "/usr/local/lib/python3.10/dist-packages/scipy/ndimage/_measurements.py",
+          "line": 44,
+          "function": "label",
+          "calls": 30,
+          "primitive_calls": 30,
+          "own_s": 0.000345422,
+          "cumulative_s": 0.021569918
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py",
+          "line": 2046,
+          "function": "clip",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.000500195,
+          "cumulative_s": 0.021469357
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 975,
+          "function": "_metric_seed_mask",
+          "calls": 120,
+          "primitive_calls": 120,
+          "own_s": 0.0005432550000000001,
+          "cumulative_s": 0.021176049000000002
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'clip' of 'numpy.ndarray' objects>",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.000525614,
+          "cumulative_s": 0.020448208000000002
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/_methods.py",
+          "line": 125,
+          "function": "_clip",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.001143921,
+          "cumulative_s": 0.019922594000000002
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method scipy.ndimage._ni_label._label>",
+          "calls": 30,
+          "primitive_calls": 30,
+          "own_s": 0.019472517,
+          "cumulative_s": 0.019810249000000002
+        },
+        {
+          "file": "<__array_function__ internals>",
+          "line": 2,
+          "function": "pad",
+          "calls": 299,
+          "primitive_calls": 299,
+          "own_s": 0.00026586000000000003,
+          "cumulative_s": 0.019551886
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/lib/arraypad.py",
+          "line": 529,
+          "function": "pad",
+          "calls": 299,
+          "primitive_calls": 299,
+          "own_s": 0.002569095,
+          "cumulative_s": 0.018869704
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py",
+          "line": 69,
+          "function": "_wrapreduction",
+          "calls": 1336,
+          "primitive_calls": 1336,
+          "own_s": 0.002905047,
+          "cumulative_s": 0.017821823
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 203,
+          "function": "_metric_grid_values",
+          "calls": 1676,
+          "primitive_calls": 1676,
+          "own_s": 0.012941782,
+          "cumulative_s": 0.017523767000000003
+        },
+        {
+          "file": "<__array_function__ internals>",
+          "line": 2,
+          "function": "any",
+          "calls": 856,
+          "primitive_calls": 856,
+          "own_s": 0.0008048220000000001,
+          "cumulative_s": 0.017003331
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'reduce' of 'numpy.ufunc' objects>",
+          "calls": 1715,
+          "primitive_calls": 1715,
+          "own_s": 0.015928576,
+          "cumulative_s": 0.015928576
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 3873,
+          "function": "_costmap_reachable_goal",
+          "calls": 10,
+          "primitive_calls": 10,
+          "own_s": 0.000814941,
+          "cumulative_s": 0.015841783
+        },
+        {
+          "file": "<__array_function__ internals>",
+          "line": 2,
+          "function": "nonzero",
+          "calls": 69,
+          "primitive_calls": 69,
+          "own_s": 0.000103077,
+          "cumulative_s": 0.015736106
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py",
+          "line": 1829,
+          "function": "nonzero",
+          "calls": 69,
+          "primitive_calls": 69,
+          "own_s": 6.8217e-05,
+          "cumulative_s": 0.015445156000000002
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'nonzero' of 'numpy.ndarray' objects>",
+          "calls": 69,
+          "primitive_calls": 69,
+          "own_s": 0.015252146000000001,
+          "cumulative_s": 0.015252146000000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 2311,
+          "function": "<genexpr>",
+          "calls": 27,
+          "primitive_calls": 27,
+          "own_s": 8.8696e-05,
+          "cumulative_s": 0.015049910000000001
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/fromnumeric.py",
+          "line": 2268,
+          "function": "any",
+          "calls": 856,
+          "primitive_calls": 856,
+          "own_s": 0.0009459640000000001,
+          "cumulative_s": 0.014630471
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method math.atan2>",
+          "calls": 141438,
+          "primitive_calls": 141438,
+          "own_s": 0.014154926000000002,
+          "cumulative_s": 0.014154926000000002
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method math.sin>",
+          "calls": 175740,
+          "primitive_calls": 175740,
+          "own_s": 0.013754886000000001,
+          "cumulative_s": 0.013754886000000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method math.cos>",
+          "calls": 175656,
+          "primitive_calls": 175656,
+          "own_s": 0.013630282,
+          "cumulative_s": 0.013630282
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 113,
+          "function": "within_limits",
+          "calls": 3190,
+          "primitive_calls": 3190,
+          "own_s": 0.0029015250000000003,
+          "cumulative_s": 0.012421187
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/core/_methods.py",
+          "line": 106,
+          "function": "_clip_dep_invoke_with_casting",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.011981686,
+          "cumulative_s": 0.011981686
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'tobytes' of 'memoryview' objects>",
+          "calls": 1672,
+          "primitive_calls": 1672,
+          "own_s": 0.011784636000000001,
+          "cumulative_s": 0.011784636000000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.sorted>",
+          "calls": 3384,
+          "primitive_calls": 3384,
+          "own_s": 0.01165798,
+          "cumulative_s": 0.011737075000000001
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 80,
+          "function": "identify",
+          "calls": 3206,
+          "primitive_calls": 3206,
+          "own_s": 0.0021839010000000002,
+          "cumulative_s": 0.011476245000000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'astype' of 'numpy.ndarray' objects>",
+          "calls": 1353,
+          "primitive_calls": 1353,
+          "own_s": 0.010669441,
+          "cumulative_s": 0.010669441
+        },
+        {
+          "file": "/opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_quaternion.py",
+          "line": 191,
+          "function": "z",
+          "calls": 107341,
+          "primitive_calls": 107341,
+          "own_s": 0.009623683000000001,
+          "cumulative_s": 0.009623683000000001
+        },
+        {
+          "file": "/usr/lib/python3/dist-packages/numpy/lib/arraypad.py",
+          "line": 454,
+          "function": "_as_pairs",
+          "calls": 598,
+          "primitive_calls": 598,
+          "own_s": 0.0016525110000000002,
+          "cumulative_s": 0.009525099
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py",
+          "line": 133,
+          "function": "rasterize_scope",
+          "calls": 2,
+          "primitive_calls": 2,
+          "own_s": 0.008839324,
+          "cumulative_s": 0.009361320000000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.max>",
+          "calls": 66143,
+          "primitive_calls": 66143,
+          "own_s": 0.009223662,
+          "cumulative_s": 0.009223662
+        },
+        {
+          "file": "/opt/ros/humble/local/lib/python3.10/dist-packages/nav_msgs/msg/_map_meta_data.py",
+          "line": 163,
+          "function": "resolution",
+          "calls": 75808,
+          "primitive_calls": 75808,
+          "own_s": 0.009078067,
+          "cumulative_s": 0.009078067
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 84,
+          "function": "<listcomp>",
+          "calls": 3206,
+          "primitive_calls": 3206,
+          "own_s": 0.006105197000000001,
+          "cumulative_s": 0.008678386
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'append' of 'list' objects>",
+          "calls": 128815,
+          "primitive_calls": 128815,
+          "own_s": 0.008598288,
+          "cumulative_s": 0.008598288
+        },
+        {
+          "file": "/opt/ros/humble/local/lib/python3.10/dist-packages/nav_msgs/msg/_map_meta_data.py",
+          "line": 208,
+          "function": "origin",
+          "calls": 107303,
+          "primitive_calls": 107303,
+          "own_s": 0.008330738,
+          "cumulative_s": 0.008330738
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<method 'get' of 'dict' objects>",
+          "calls": 1531,
+          "primitive_calls": 1531,
+          "own_s": 0.008239329,
+          "cumulative_s": 0.008239329
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "line": 100,
+          "function": "_limit_neighbours",
+          "calls": 3215,
+          "primitive_calls": 3215,
+          "own_s": 0.0028400490000000003,
+          "cumulative_s": 0.008136597
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "line": 999,
+          "function": "_metric_grid_line_clear",
+          "calls": 293,
+          "primitive_calls": 293,
+          "own_s": 0.001402828,
+          "cumulative_s": 0.00800148
+        },
+        {
+          "file": "/opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_quaternion.py",
+          "line": 176,
+          "function": "y",
+          "calls": 107327,
+          "primitive_calls": 107327,
+          "own_s": 0.007630095000000001,
+          "cumulative_s": 0.007630095000000001
+        },
+        {
+          "file": "~",
+          "line": 0,
+          "function": "<built-in method builtins.abs>",
+          "calls": 108239,
+          "primitive_calls": 108239,
+          "own_s": 0.006622636,
+          "cumulative_s": 0.006622636
+        },
+        {
+          "file": "/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py",
+          "line": 255,
+          "function": "nearest_mask_cell",
+          "calls": 10,
+          "primitive_calls": 10,
+          "own_s": 0.001976963,
+          "cumulative_s": 0.006468598000000001
+        }
+      ]
+    }
+  ],
+  "pose": [
+    0.7943517271273505,
+    0.537096473340192,
+    -0.4405029269231248
+  ],
+  "reference": [
+    0.008898518855184164,
+    -0.005162834094393961,
+    0.006979999999999125
+  ],
+  "scope_vertices": [
+    [
+      -0.8999999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      -0.95
+    ],
+    [
+      4.699999999999999,
+      1.8499999999999999
+    ],
+    [
+      -0.8999999999999999,
+      1.8499999999999999
+    ]
+  ],
+  "fingerprint": "305405243e935abaedaabc7e8c245573ed49826e8e1bbdc98cebf56447311c66",
+  "mask_cells": {
+    "known": 94722,
+    "safe": 39771,
+    "cost_known": 113983
+  },
+  "attributes": {
+    "_metric_start_strategy": "adaptive",
+    "_metric_candidate_source": "boundary_samples",
+    "_metric_path_validation": "rpp_rollout",
+    "_metric_start_egress_enabled": true,
+    "_goal_clearance_m": 0.28,
+    "_frontier_goal_max_cost": 90,
+    "_goal_search_m": 0.3,
+    "_approach_dist_m": 0.45,
+    "_min_goal_dist_m": 0.3,
+    "_frontier_forward_cone_half_angle": 0.0,
+    "_potential_scale": 3.0,
+    "_gain_scale": 1.0,
+    "_heading_scale": 0.75,
+    "_map_timeout_s": 5.0,
+    "_wohnungserkundung_evidence_max_cells": 262144,
+    "_door_lidar_max_range": 4.0,
+    "_prealign_handoff_tolerance": 0.02
+  },
+  "finite_lidar_angles": 2160,
+  "call_count": {
+    "unprofiled": 2,
+    "profiled": 1,
+    "total": 3
+  }
+}

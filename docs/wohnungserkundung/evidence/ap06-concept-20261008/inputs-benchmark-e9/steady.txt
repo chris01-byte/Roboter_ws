@@ -1,0 +1,58 @@
+         12676 function calls (12488 primitive calls) in 0.098 seconds
+
+   Ordered by: cumulative time
+   List reduced from 286 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        4    0.004    0.001    0.098    0.024 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:561(_metric_inputs_locked)
+        4    0.001    0.000    0.038    0.010 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:259(known_safe_mask)
+        8    0.034    0.004    0.035    0.004 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/exploration_scope.py:133(rasterize_scope)
+        4    0.000    0.000    0.035    0.009 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:846(_metric_prepare_egress)
+        4    0.001    0.000    0.020    0.005 /usr/local/lib/python3.10/dist-packages/scipy/ndimage/_morphology.py:2133(distance_transform_edt)
+        8    0.000    0.000    0.019    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:880(current_inside)
+        4    0.017    0.004    0.017    0.004 {built-in method scipy.ndimage._nd_image.euclidean_feature_transform}
+        8    0.001    0.000    0.012    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:333(check_trajectory)
+  344/256    0.002    0.000    0.010    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+       16    0.002    0.000    0.009    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:662(check_trajectory)
+        4    0.005    0.001    0.006    0.002 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:222(self_body_unknown_mask)
+       36    0.000    0.000    0.005    0.000 <__array_function__ internals>:2(nonzero)
+       36    0.000    0.000    0.005    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:1829(nonzero)
+       40    0.000    0.000    0.005    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:51(_wrapfunc)
+      144    0.000    0.000    0.005    0.000 {built-in method builtins.all}
+       36    0.005    0.000    0.005    0.000 {method 'nonzero' of 'numpy.ndarray' objects}
+        4    0.000    0.000    0.005    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:517(_metric_motion_binding_for_geometry)
+       12    0.000    0.000    0.005    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:526(<genexpr>)
+        8    0.000    0.000    0.005    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:308(footprint_clear)
+        8    0.003    0.000    0.005    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:277(footprint_cells)
+        8    0.001    0.000    0.004    0.001 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/frontier_task_evidence.py:135(_validated_snapshot)
+       12    0.000    0.000    0.003    0.000 /evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py:113(map_snapshot_fingerprint)
+      220    0.003    0.000    0.003    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+       24    0.002    0.000    0.002    0.000 {method 'translate' of 'bytes' objects}
+       16    0.000    0.000    0.002    0.000 {method 'sum' of 'numpy.ndarray' objects}
+       16    0.000    0.000    0.002    0.000 /usr/lib/python3/dist-packages/numpy/core/_methods.py:46(_sum)
+       16    0.000    0.000    0.002    0.000 /opt/ros/humble/lib/python3.10/site-packages/tf2_ros/buffer.py:119(lookup_transform)
+       24    0.002    0.000    0.002    0.000 /usr/lib/python3/dist-packages/numpy/core/numeric.py:1679(indices)
+       12    0.000    0.000    0.002    0.000 <__array_function__ internals>:2(where)
+       16    0.000    0.000    0.001    0.000 {method 'lookup_transform_core' of '_tf2.BufferCore' objects}
+       60    0.001    0.000    0.001    0.000 {method 'update' of '_hashlib.HASH' objects}
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/portal_source_adapter.py:331(raw_map_portal_source_from_values)
+       12    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages/amadeus_map_identity/fingerprint.py:18(compact_occupancy_cells)
+       16    0.000    0.000    0.001    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_transform_stamped.py:83(__init__)
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:926(<listcomp>)
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/explore_node.py:3392(_robot_pose_sample)
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:467(_metric_pose_and_reference)
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:923(<listcomp>)
+       32    0.001    0.000    0.001    0.000 {method 'astype' of 'numpy.ndarray' objects}
+      104    0.000    0.000    0.001    0.000 <__array_function__ internals>:2(any)
+        8    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_egress_reference.py:206(refresh)
+       16    0.001    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier.py:680(contains)
+      136    0.000    0.000    0.001    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:69(_wrapreduction)
+        4    0.000    0.000    0.001    0.000 <__array_function__ internals>:2(pad)
+        4    0.000    0.000    0.001    0.000 /usr/lib/python3/dist-packages/numpy/lib/arraypad.py:529(pad)
+       16    0.000    0.000    0.001    0.000 /opt/ros/humble/local/lib/python3.10/dist-packages/geometry_msgs/msg/_transform.py:80(__init__)
+      104    0.000    0.000    0.001    0.000 /usr/lib/python3/dist-packages/numpy/core/fromnumeric.py:2268(any)
+        8    0.000    0.000    0.001    0.000 <__array_function__ internals>:2(linspace)
+        8    0.000    0.000    0.001    0.000 /usr/lib/python3/dist-packages/numpy/core/function_base.py:23(linspace)
+        4    0.000    0.000    0.001    0.000 /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py:445(_metric_body_reference)
+
+

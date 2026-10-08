@@ -85,6 +85,43 @@ und Schutzstatus. Sie beantwortet, ob die im Modell fehlenden Bereiche am
 Roboter wirklich unsichtbar sind und wie groß der tatsächliche Zeitversatz ist.
 Reale Karten und Aufnahmen bleiben lokal außerhalb Git.
 
+Für die spätere Erfassung an einem bereits geprüften, passiv laufenden
+Produktstack kann derselbe Datensatz wie im Simulator aufgezeichnet werden.
+Die folgenden Befehle starten nur den Recorder, keinen Sensor-/Motorstack und
+keine Mission. In der Shell müssen vorher Humble und der tatsächlich geprüfte
+lokale Produktinstall geladen sein. Der vorhandene
+`tools/kartierung/start_app_erkundung.sh` lädt fest `~/roboter_ws/install`;
+er ist deshalb kein Nachweis, dass ein separater neuer Kandidat verwendet wird.
+
+```bash
+AP06_CAPTURE="${XDG_DATA_HOME:-$HOME/.local/share}/amadeus/diagnostics/ap06-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir -p "$AP06_CAPTURE"
+git rev-parse HEAD > "$AP06_CAPTURE/source-commit.txt"
+git status --short > "$AP06_CAPTURE/source-status.txt"
+ros2 node list > "$AP06_CAPTURE/nodes.txt"
+ros2 topic list -t > "$AP06_CAPTURE/topics.txt"
+timeout --signal=INT 180s ros2 bag record --include-hidden-topics \
+  --storage-preset-profile resilient -o "$AP06_CAPTURE/bag" \
+  /map /global_costmap/costmap /scan /scan_normiert /tf /tf_static /odom \
+  /robot_map_manager/status_json /explore/status_json /mission_manager/status_json \
+  /base_hardware/state_json /fusion/hwt601/wheel_odom_raw \
+  /shadow/hwt601/wheel_status_json /shadow/hwt601/raw_status_json \
+  /shadow/hwt601/status_json /fusion/hwt601/status_json /near_field/status \
+  /plan /received_global_plan /explore_area/_action/status \
+  /navigate_to_pose/_action/status /safety/estop \
+  /cmd_vel_nav_raw /cmd_vel_nav /cmd_vel_smoothed /cmd_vel \
+  > "$AP06_CAPTURE/recorder.log" 2>&1
+ros2 bag info "$AP06_CAPTURE/bag" > "$AP06_CAPTURE/bag-info.txt"
+```
+
+`timeout` liefert bei Ablauf normalerweise Code 124; die abgeschlossene
+Bag-Metadatei und tatsächlichen Topic-Zähler entscheiden über die Aufnahme.
+Fehlende Topics sind fehlende Messungen. Ein reiner Recorderlauf prüft weder
+den Quellenvertrag noch die Anhaltewirkung. Eine laufende Bag-Datenbank wird
+nicht parallel ausgewertet. Zusätzlich hält das vorhandene
+`hwt_diagnose_manifest.py` mit dem tatsächlich verwendeten Profil und den
+geladenen Setup-Dateien die Installpräfixe und Artefakte fest.
+
 Danach folgt im bestehenden LAB-1-Rahmen ein begrenzter aktiver Versuch über
 die vorhandene Mission-/Nav2-/Schutzkette: erster selbst gewählter
 Beobachtungspunkt, mehrere Folgeaufgaben, ganze Passage, Weiterarbeit und
@@ -105,3 +142,75 @@ nicht in den Produktlaunch installiert. Weglassen des Versuchsaufrufs erhält
 den bisherigen Produktpfad. Die Zukunftsnachweis-Variante gilt ausschließlich
 für den expliziten isolierten Versuchsprozess; kein dauerhaftes Ändern der
 Produktkonfiguration und kein Zurücksetzen fremder Arbeit.
+
+## Aus den Versuchen abgeleitete Integrationskorrektur
+
+Im abgeschlossenen zweiten Lauf scheiterten zwei Ausrichtungen trotz zuvor
+positivem originalem Zukunftsnachweis. Jeweils etwa 19,6 s ergaben nur
+0,061 beziehungsweise 0,083 rad tatsächliche Encoderrotation. Bei gültigen
+Encodern waren über 73 % der Basiskommandos null; die Drehimpulse kamen mit
+medianen Abständen von 0,98 beziehungsweise 1,07 s an. Der genaue
+untergeordnete Ausrichtungsfehler wurde bisher nicht gespeichert.
+
+Die Drehschleife ruft synchron vor jedem Kommando einen Stopprüfer auf, der
+auch die gesamte spätere native Fahrt neu berechnet. Die abgeleitete
+Produktkorrektur trennt deshalb die aktuell ausgeführte Drehung von der erst
+anschließend ausgeführten Translation. Während externer Vorausrichtung darf
+ein frischer vollständiger öffentlicher 360°-Drehraum mit unveränderten
+Kontur-/Trackingreserven die spätere Streckenprüfung ersetzen. Fehlt dieser
+Nachweis, bleibt der bisherige vollständige Streckenprüfer zuständig.
+Unmittelbar vor dem Nav2-Kind und während der Fahrt wird weiterhin die ganze
+tatsächliche Strecke geprüft. Quellen-, Pose-, Frist- und Stopprüfungen bleiben
+in jeder Phase erhalten. Zusätzlich wird das konkrete Ausrichtungsergebnis
+gespeichert, bevor es zum allgemeinen Missionsfehler verdichtet wird.
+
+Die gemessenen Impulse belegen das Ablaufproblem. Die Zuordnung der gesamten
+Verzögerung zu einer bestimmten Funktion benötigt den neuen Vergleichslauf;
+aus dem Code allein wird keine erreichte Befehlsfrequenz behauptet.
+
+
+## Befund der geschlossenen Vergleiche vom 08.10.2026
+
+Die endliche Sicht ohne Mastmaske ermöglicht im Modell erste Ankünfte, aber
+keine Gesamtmission. Das zusätzliche Überbrücken des Zukunftsnachweises wurde
+nur einmal tatsächlich gebraucht; die anschließende Fahrt stoppte nach etwa
+6 cm an der weiter wirksamen aktuellen Konturprüfung. Daraus ergibt sich
+kein Beleg, diesen Nachweis dauerhaft zu entfernen.
+
+Die Produktkorrektur trennt die aktuelle externe Drehung von der späteren
+Fahrt. Eine weitere reproduzierte Korrektur erlaubt die vorhandene öffentliche
+Kartenfortsetzung auch bei gültigem, vollständig leerem privatem Startbestand.
+Neue Rohdaten dürfen während dieser kurzen vorhandenen Übergangsphase nur
+Freiraum entziehen. Im anschließenden `joined-a` trat kein Kartenbindungsstopp
+auf; nach zwei Ankünften endete jedoch eine Eingangsprüfung mit
+`self_body_scan_stale_after_processing`. Alle Ausrichtungen dieses Laufs waren
+reglergeführt; der externe Drehpfad ist dadurch noch nicht praktisch belegt.
+
+Der überprüfbare lokale Einstieg steht in
+[JETSON_KONZEPTTEST_AP06](JETSON_KONZEPTTEST_AP06.md). Dazu gehören der echte
+Stack mit zurückgestelltem Explorer und ein passives Werkzeug zur aktuellen
+Scope-/Quellenbindung. Alle geschlossenen Resultate, auch negative Versuche,
+stehen im [Belegbericht](evidence/ap06-concept-20261008/README.md).
+Keine der veränderten Sensorvarianten zählt zur ursprünglichen AP-06-Abnahme;
+Hardwaremessungen bleiben erforderlich. Die Originalqualifikation ist 0/3.
+
+Der abschließend geprüfte Produktkandidat `c5d2a9c` ergänzt eine begrenzte
+Wiederprüfung nach während der Berechnung abgelaufenen Scan-/Posedaten.
+Der alte Datensatz bleibt verworfen; Wiederholung verlangt bestätigten Halt,
+neue gültige Eingänge und denselben unveränderten Aufgaben-/Missionsrahmen.
+Vor Auswahl und bei Beobachtung gilt dieselbe begrenzte Behandlung.
+1.808 registrierte Explorer-Tests bestanden nach dem abschließenden Build.
+
+`revalidation-a` erreicht drei Ankünfte mit Beobachtung, endet aber nach dem
+5-s-Auswahlbudget ohne ganze Passage. `selection-capture-a` belegt erstmals
+eine erfolgreiche Wiederprüfung nach Scanablauf und anschließende Ankunft;
+später erschöpft ein Poseablauf das bestehende Aufgabenversuchslimit. Wieder
+keine Gesamtmission. Die 23 zusätzlich protokollierten Auswahlaufrufe
+überschreiten das Budget nicht; eine Offline-Rekonstruktion der finalen Daten
+reproduziert den früheren Auswahlfehler ebenfalls nicht. Sie ersetzt keine
+Live-Frischeprüfung. Die genauen Zeiten, Quellbindungen, Grenzen und alle
+negativen Resultate stehen im Belegbericht.
+
+Die lokale Übergabe ist damit ein überprüfbarer Entwicklungsstand für den
+passiven Jetson-Vorlauf. Die verlangte funktionierende Kundenlösung und
+drei erfolgreiche Gesamtmissionen sind noch nicht erreicht.

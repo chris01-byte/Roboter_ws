@@ -1,0 +1,358 @@
+{
+  "schema": 1,
+  "kind": "Independent closed-run alignment and whole-mission audit",
+  "created_at_utc": "2026-10-08T15:52:53.686572+00:00",
+  "script": {
+    "path": "/workspace/scratch/ap06-concept-20261008/audit_alignment_run.py",
+    "sha256": "56a6314734fda9e18105eb65343908e2287cca8f8d4d0e858d707fe7aaa0a7ee"
+  },
+  "sources": {
+    "result.json": {
+      "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/result.json",
+      "sha256": "fe5c2b2a81bcf77b74bb868fc893624a6b84b4d6c243c0826fe6d33e5982ed12"
+    },
+    "manifest.json": {
+      "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/manifest.json",
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+    },
+    "events.jsonl.gz.meta.json": {
+      "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/events.jsonl.gz.meta.json",
+      "sha256": "c50a829ba5a1bd5358cbf3535ce05f651be05dfad27f085909922aae7b0fe5f8"
+    }
+  },
+  "trace": {
+    "path": "/workspace/scratch/ap06-concept-20261008/selection-capture-a/events.jsonl.gz",
+    "uncompressed_bytes": 148814512,
+    "uncompressed_sha256": "8f4c788e816fb42cb6458741379e95f4b09769f7754f445600e094082c7aa251",
+    "compressed_bytes": 19651318,
+    "verified": true
+  },
+  "mission": {
+    "harness_passed": false,
+    "manifest_compatible": false,
+    "sensor_profile": "ideal_full_360",
+    "concept_deferred_departure": false,
+    "original_qualification": false,
+    "hardware_qualified": false,
+    "terminal": {
+      "state": "blocked",
+      "reason": "geometry_snapshot_retry_budget_exhausted",
+      "outcome": "blocked_help_required",
+      "arrivals": 2,
+      "observations": 2,
+      "attempts": 5,
+      "failures": 0,
+      "route_rejection": null,
+      "planning_route_rejection": null,
+      "planning_stop_reason": null,
+      "completion_blocker": "accessible_or_unresolved_work"
+    },
+    "travel_m": 1.1417450047392108,
+    "rear_cleared": false,
+    "minimum_padded_clearance_m": 0.07354516273148137,
+    "map_oracle": {
+      "reference_free_cells": 128256,
+      "reference_observed_cells": 92198,
+      "reference_observed_fraction": 0.7188591566866267,
+      "maximum_occupied_wall_error_m": 0.015811396429514117
+    },
+    "map_save": {
+      "success": true,
+      "message": "Karte 'amadeus' als Version 20261008T154543605196Z-48ef6ec08876 gespeichert."
+    },
+    "checkpoint_after_save": {
+      "state": "unavailable",
+      "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+      "motion_authorized": false
+    },
+    "criteria": {
+      "explorer_success": false,
+      "manager_success": false,
+      "three_arrivals": false,
+      "three_observations": false,
+      "rear_cleared_both_doors": false,
+      "map_growth": true,
+      "observed_fraction_sufficient": false,
+      "wall_error_acceptable": true,
+      "positive_independent_padded_clearance": true,
+      "terminal_actions_empty": true,
+      "terminal_four_command_chains_zero": true
+    }
+  },
+  "alignment_windows": [
+    {
+      "chain_index": 0,
+      "task_id": "metric-task-1",
+      "target": [
+        0.44999999999999996,
+        0.0
+      ],
+      "alignment_receipt": {
+        "task": "metric-task-1",
+        "attempt": 1,
+        "checked_at": 203776.722173472,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      "original_future_prediction": null,
+      "future_prediction_deferred": null,
+      "prediction_sequence": null,
+      "start_monotonic": 203775.748141953,
+      "end_monotonic": 203776.722173472,
+      "observed_prealignment_phase_begin": 203775.748141953,
+      "window_definition": "First observed metric_prealign status for the exact task/attempt through exact alignment receipt; includes planning/preparation and stop confirmation, and may omit time before the first status publication",
+      "entry_result": "success",
+      "entry_decision": "observed",
+      "actual_stop_reason": null,
+      "child_dispatched": true,
+      "planning_rejection": null,
+      "planning_rejection_warning": null,
+      "base_command_measurements": {
+        "samples": 49,
+        "first_sample_monotonic": 203775.755076268,
+        "last_sample_monotonic": 203776.711571593,
+        "observed_interval_s": 0.9564953250228427,
+        "all_encoder_samples_valid": true,
+        "zero_command_sample_fraction": 1.0,
+        "watchdog_timed_out_samples": 49,
+        "active_span_zero_command_sample_fraction": null,
+        "max_abs_arriving_base_command_radps": 0.0,
+        "encoder_yaw_delta_rad": 0.0,
+        "mean_encoder_yaw_rate_radps": 0.0,
+        "pulse_count": 0,
+        "pulse_start_intervals_min_median_max_s": null,
+        "pulses": []
+      }
+    },
+    {
+      "chain_index": 2,
+      "task_id": "metric-task-2",
+      "target": [
+        0.9148046637164305,
+        0.06745401285394398
+      ],
+      "alignment_receipt": {
+        "task": "metric-task-2",
+        "attempt": 4,
+        "checked_at": 203928.972884324,
+        "status": "controller_owned",
+        "result": [
+          "controller_owned",
+          0.0,
+          0.0,
+          0.0
+        ],
+        "achieved_angle_rad": 0.0,
+        "initial_error_rad": 0.0,
+        "residual_error_rad": 0.0
+      },
+      "original_future_prediction": null,
+      "future_prediction_deferred": null,
+      "prediction_sequence": null,
+      "start_monotonic": 203927.749869408,
+      "end_monotonic": 203928.972884324,
+      "observed_prealignment_phase_begin": 203927.749869408,
+      "window_definition": "First observed metric_prealign status for the exact task/attempt through exact alignment receipt; includes planning/preparation and stop confirmation, and may omit time before the first status publication",
+      "entry_result": "success",
+      "entry_decision": "partially_observed",
+      "actual_stop_reason": null,
+      "child_dispatched": true,
+      "planning_rejection": null,
+      "planning_rejection_warning": null,
+      "base_command_measurements": {
+        "samples": 62,
+        "first_sample_monotonic": 203927.776452563,
+        "last_sample_monotonic": 203928.972062034,
+        "observed_interval_s": 1.1956094710039906,
+        "all_encoder_samples_valid": true,
+        "zero_command_sample_fraction": 1.0,
+        "watchdog_timed_out_samples": 14,
+        "active_span_zero_command_sample_fraction": null,
+        "max_abs_arriving_base_command_radps": 0.0,
+        "encoder_yaw_delta_rad": 0.0,
+        "mean_encoder_yaw_rate_radps": 0.0,
+        "pulse_count": 0,
+        "pulse_start_intervals_min_median_max_s": null,
+        "pulses": []
+      }
+    }
+  ],
+  "prediction_counts": null,
+  "prediction_journal_available": false,
+  "primary_whole_run_comparison": {
+    "result_path": "/workspace/scratch/ap06-concept-20261008/visibility-a/result.json",
+    "result_sha256": "01e7a773c19b28083b638c1c69a221c23de2eea343f5f9716256f6786bddd104",
+    "manifest_sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+    "mission": {
+      "harness_passed": false,
+      "manifest_compatible": false,
+      "sensor_profile": "ideal_full_360",
+      "concept_deferred_departure": false,
+      "original_qualification": false,
+      "hardware_qualified": false,
+      "terminal": {
+        "state": "failed",
+        "reason": "pose_stale_after_processing",
+        "outcome": "error",
+        "arrivals": 3,
+        "observations": 3,
+        "attempts": 12,
+        "failures": 2,
+        "route_rejection": null,
+        "planning_route_rejection": null,
+        "planning_stop_reason": null,
+        "completion_blocker": "accessible_or_unresolved_work"
+      },
+      "travel_m": 1.8357640412866538,
+      "rear_cleared": false,
+      "minimum_padded_clearance_m": 0.07342677582597279,
+      "map_oracle": {
+        "reference_free_cells": 128256,
+        "reference_observed_cells": 94068,
+        "reference_observed_fraction": 0.733439371257485,
+        "maximum_occupied_wall_error_m": 0.02549506714621604
+      },
+      "map_save": {
+        "success": true,
+        "message": "Karte 'amadeus' als Version 20261008T052526037800Z-a4455bc3ce19 gespeichert."
+      },
+      "checkpoint_after_save": {
+        "state": "unavailable",
+        "reason": "metric_checkpoint_exact_saved_snapshot_unavailable",
+        "motion_authorized": false
+      },
+      "criteria": {
+        "explorer_success": false,
+        "manager_success": false,
+        "three_arrivals": true,
+        "three_observations": true,
+        "rear_cleared_both_doors": false,
+        "map_growth": true,
+        "observed_fraction_sufficient": false,
+        "wall_error_acceptable": true,
+        "positive_independent_padded_clearance": true,
+        "terminal_actions_empty": true,
+        "terminal_four_command_chains_zero": true
+      }
+    },
+    "interpretation": "Primary whole-run comparison; the original future-departure proof was retained. Different trajectories and timing mean this is not an identical-input benchmark."
+  },
+  "earlier_pulse_reference": {
+    "path": "/workspace/scratch/ap06-concept-20261008/deferred-a-independent-audit.json",
+    "sha256": "76b45899221f16c0b735e70151230b29ed00213031f96cad6d4cea6ac90def61",
+    "mission": {
+      "passed": false,
+      "manifest_compatible": false,
+      "concept_deferred_departure": true,
+      "travel_m": 1.3165107930993978,
+      "minimum_padded_clearance_m": 0.0768869026052248,
+      "rear_cleared": false,
+      "map_oracle": {
+        "reference_free_cells": 128256,
+        "reference_observed_cells": 94867,
+        "reference_observed_fraction": 0.7396690993013972,
+        "maximum_occupied_wall_error_m": 0.01500002089887853
+      },
+      "action_active_at_terminal": {
+        "/explore_area/_action/status": [],
+        "/navigate_to_pose/_action/status": []
+      },
+      "command_values_at_terminal": {
+        "/cmd_vel_nav": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_smoothed": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel": [
+          0.0,
+          0.0
+        ],
+        "/cmd_vel_nav_raw": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "terminal": {
+      "state": "blocked",
+      "reason": "failure_budget_exhausted",
+      "outcome": "blocked_help_required",
+      "arrivals": 3,
+      "observations": 3,
+      "attempts": 10,
+      "failures": 3,
+      "route_rejection": "footprint_sweep_invalid",
+      "planning_route_rejection": "footprint_sweep_invalid",
+      "planning_stop_reason": "route_invalidated",
+      "nav2_plan_rejection": "nav2_plan_timeout_or_stop",
+      "departure_plan_rejection": "footprint_sweep_invalid"
+    },
+    "alignment_windows": [
+      {
+        "task_id": "metric-task-4",
+        "journal_sequence": 6,
+        "original_future_proof": true,
+        "start_after_prediction": 167514.427904316,
+        "end_decision_snapshot": 167534.021812078,
+        "base_samples": 980,
+        "all_encoder_samples_valid": true,
+        "base_command_zero_fraction": 0.7295918367346939,
+        "base_watchdog_timed_out_samples": 134,
+        "max_abs_arriving_base_command_radps": 0.0225,
+        "observed_interval_s": 19.57904988102382,
+        "encoder_yaw_delta_rad": 0.060875486504888277,
+        "mean_encoder_yaw_rate_radps": 0.0031092155582017954,
+        "pulse_start_intervals_min_median_max_s": [
+          0.8003766510228161,
+          0.9833493494952563,
+          1.4000975739909336
+        ],
+        "pulse_count": 15,
+        "window_definition": "Older run: post-prediction return through later decision snapshot; exact internal alignment return was not recorded"
+      },
+      {
+        "task_id": "metric-task-5",
+        "journal_sequence": 7,
+        "original_future_proof": true,
+        "start_after_prediction": 167574.049333016,
+        "end_decision_snapshot": 167593.66342975,
+        "base_samples": 981,
+        "all_encoder_samples_valid": true,
+        "base_command_zero_fraction": 0.7349643221202854,
+        "base_watchdog_timed_out_samples": 143,
+        "max_abs_arriving_base_command_radps": 0.075,
+        "observed_interval_s": 19.59871674599708,
+        "encoder_yaw_delta_rad": 0.0834106331005004,
+        "mean_encoder_yaw_rate_radps": 0.00425592319035564,
+        "pulse_start_intervals_min_median_max_s": [
+          0.8997503190184943,
+          1.0706552560004639,
+          1.3395922810013872
+        ],
+        "pulse_count": 15,
+        "window_definition": "Older run: post-prediction return through later decision snapshot; exact internal alignment return was not recorded"
+      }
+    ]
+  },
+  "limits": [
+    "This audit does not turn a concept profile into original AP-06 qualification or hardware acceptance.",
+    "Base command pulse intervals are observed at the base, not publisher callback execution times.",
+    "Alignment preparation/stop time is included; old and new window endpoints differ as documented.",
+    "Without a predictor journal, an observed metric_prealign phase also contains plan queries; its first publication is not the exact turn-start timestamp.",
+    "The earlier pulse reference used the deferred-departure profile. Its two alignment intervals had original positive predictions, but task identity is not asserted across whole runs.",
+    "Compare actual receipt status, sustained pulses and achieved angle; different targets/maps are not an identical-input benchmark.",
+    "An old planning-rejection status must not be substituted for an actual alignment receipt or final child stop reason.",
+    "No callback hot stack or proof of a specific first violating contour cell is inferred."
+  ]
+}

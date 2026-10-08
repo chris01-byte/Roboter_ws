@@ -1,0 +1,3 @@
+[INFO] [1791442248.833308639] [safety_monitor]: /safety/estop = False (frei).
+[INFO] [1791442248.833658957] [safety_monitor]: safety_monitor bereit -> '/safety/estop' (Start: frei). Anforderung an '/safety/estop_request'.
+[WARN] [1791442248.834013201] [safety_monitor]: Kein Hardware-Not-Aus angebunden (use_gpio_estop=false). Das Ruhestromprinzip (Drahtbruch -> ausgeloest) ist damit NICHT erfuellt - die hardwired Sicherheitskette bleibt Pflicht.

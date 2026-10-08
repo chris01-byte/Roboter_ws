@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/evidence/ap06-concept-20261008/smoke_metric_scope_ros.py", line 340, in <module>
+    raise SystemExit(main())
+  File "/evidence/ap06-concept-20261008/smoke_metric_scope_ros.py", line 246, in main
+    require(case['exit_code'] == 0, 'Positive real CLI failed; inspect its stdout/stderr')
+  File "/evidence/ap06-concept-20261008/smoke_metric_scope_ros.py", line 26, in require
+    raise AssertionError(message)
+AssertionError: Positive real CLI failed; inspect its stdout/stderr

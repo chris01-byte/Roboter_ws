@@ -1,0 +1,25 @@
+[0.454s] Invoking command in '/evidence/ap06-repo/src/explore': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/explore build --build-base /evidence/ap06-old-product-build/explore/build install --record /evidence/ap06-old-product-build/explore/install.log --single-version-externally-managed install_data
+[0.601s] running egg_info
+[0.602s] writing ../../../ap06-old-product-build/explore/explore.egg-info/PKG-INFO
+[0.603s] writing dependency_links to ../../../ap06-old-product-build/explore/explore.egg-info/dependency_links.txt
+[0.604s] writing entry points to ../../../ap06-old-product-build/explore/explore.egg-info/entry_points.txt
+[0.604s] writing requirements to ../../../ap06-old-product-build/explore/explore.egg-info/requires.txt
+[0.604s] writing top-level names to ../../../ap06-old-product-build/explore/explore.egg-info/top_level.txt
+[0.605s] reading manifest file '../../../ap06-old-product-build/explore/explore.egg-info/SOURCES.txt'
+[0.607s] writing manifest file '../../../ap06-old-product-build/explore/explore.egg-info/SOURCES.txt'
+[0.607s] running build
+[0.607s] running build_py
+[0.607s] copying explore/metric_frontier_runtime.py -> /evidence/ap06-old-product-build/explore/build/lib.linux-x86_64-3.10/explore
+[0.609s] running build_ext
+[0.609s] running install
+[0.610s] running install_lib
+[0.610s] copying /evidence/ap06-old-product-build/explore/build/lib.linux-x86_64-3.10/explore/metric_frontier_runtime.py -> /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore
+[0.611s] byte-compiling /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py to metric_frontier_runtime.cpython-310.pyc
+[0.639s] running install_data
+[0.639s] running install_egg_info
+[0.641s] removing '/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info' (and everything under it)
+[0.641s] Copying ../../../ap06-old-product-build/explore/explore.egg-info to /evidence/ap06-old-product-install/explore/lib/python3.10/site-packages/explore-0.1.0-py3.10.egg-info
+[0.641s] running install_scripts
+[0.657s] Installing explore script to /evidence/ap06-old-product-install/explore/lib/explore
+[0.658s] writing list of installed files to '/evidence/ap06-old-product-build/explore/install.log'
+[0.679s] Invoked command in '/evidence/ap06-repo/src/explore' returned '0': AMENT_PREFIX_PATH=/evidence/ap06-old-product-install/robot_state_estimation:/evidence/ap06-old-product-install/robot_interfaces:/evidence/ap06-old-product-install/base_hardware:/evidence/ap06-old-product-install/amadeus_map_identity:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/evidence/ap06-old-product-install/robot_interfaces:${CMAKE_PREFIX_PATH} LD_LIBRARY_PATH=/evidence/ap06-old-product-install/robot_interfaces/lib:${LD_LIBRARY_PATH} PYTHONPATH=/evidence/ap06-old-product-build/explore/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/evidence/ap06-old-product-install/explore/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_state_estimation/lib/python3.10/site-packages:/evidence/ap06-old-product-install/robot_interfaces/local/lib/python3.10/dist-packages:/evidence/ap06-old-product-install/base_hardware/lib/python3.10/site-packages:/evidence/ap06-old-product-install/amadeus_map_identity/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../../ap06-old-product-build/explore build --build-base /evidence/ap06-old-product-build/explore/build install --record /evidence/ap06-old-product-build/explore/install.log --single-version-externally-managed install_data

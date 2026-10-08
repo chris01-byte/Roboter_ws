@@ -1,5 +1,24 @@
 # Projektgedächtnis
 
+## 08.10.2026 – AP-06-Konzeptstand, lokale Ausführung durch den Nutzer
+
+Der Nutzer übernimmt den lokalen Jetson-Lauf; keine erneute Zugangs- oder
+pauschale Freigabefrage. Produktkandidat `c5d2a9c` korrigiert belegte Dreh-,
+Kartenfortsetzungs- und Frische-Wiederprüfungsabläufe und ergänzt die passive
+Scopevorbereitung. 1.808 registrierte Explorer-Tests am letzten Stand grün.
+Geschlossene Konzeptläufe bleiben negativ; eine erfolgreiche Wiederprüfung
+mit anschließender Beobachtung ist belegt, drei Gesamtmissionen sind es nicht.
+Originalqualifikation **0/3**, Kundenlösung offen. Nicht durch längere Fristen,
+frisch gestempelte alte Daten oder gelockerte Abnahmekriterien umdeuten.
+
+Aktueller Befund und genau ein nächster Schritt in
+[STATUS](wohnungserkundung/STATUS.md); überprüfbare lokale Übergabe in
+[JETSON_KONZEPTTEST_AP06](wohnungserkundung/JETSON_KONZEPTTEST_AP06.md).
+Erst separater Build und passiver Quellen-/Sichtnachweis, anschließend dessen
+Auswertung. Softwarepaket und negative synthetische Belege werden gehasht
+übergeben; keine Hardwarefahrt, dauerhafte Installation oder Shutdown des
+Cloud-Hosts ausgeführt.
+
 ## Historie und aktueller Einstieg
 
 Die vollständige bisherige Datei bis zum veröffentlichten Commit `99d21c012dfe4c28d8263f7cd5e16505b07736d6` ist [hier bytegleich erhalten](wohnungserkundung/archive/20260930-v1.1/PROJECT_MEMORY.md). Sie enthält auch alle anderen Projektbereiche; nichts daraus ist gelöscht. Für ältere Entscheidungen gezielt dort lesen. Relative Links beziehen sich auf den ursprünglichen Pfad docs/PROJECT_MEMORY.md; [Archivzuordnung](wohnungserkundung/archive/20260930-v1.1/README.md).
