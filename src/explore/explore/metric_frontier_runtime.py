@@ -2875,7 +2875,7 @@ class MetricFrontierRuntime:
                 cost=pending.cost,revision=pending.revision),attempt=attempts)
             stop_reason = [None]
             last_pose = [inputs[2],time.monotonic()]
-            def stop(check_route=True):
+            def stop(check_route=True, *, alignment=False):
                 if goal_handle.is_cancel_requested:
                     stop_reason[0]='user_canceled'
                 elif expired():
@@ -2898,13 +2898,24 @@ class MetricFrontierRuntime:
                             if math.dist(current[2][:2],last_pose[0][:2]) > .35+.2*(now-last_pose[1]):
                                 stop_reason[0]='pose_discontinuity'
                             last_pose[:] = [current[2],now]
-                            if check_route and not self._metric_navigation_geometry_ready(current, pending):
-                                self._metric_status['route_rejection']=self._metric_last_route_rejection
-                                stop_reason[0]='route_invalidated'
+                            if check_route:
+                                # External alignment moves only the current body. A
+                                # full public turn proof covers every intermediate yaw;
+                                # the actual translation is proved again before Nav2.
+                                # Narrow turns retain the original whole-route fallback.
+                                public_turn = (alignment
+                                    and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                                    and self._wohnungserkundung_active_child is None
+                                    and self._metric_scan_geometry_ready(self._metric_public_inputs(current)))
+                                if not public_turn and not self._metric_navigation_geometry_ready(current, pending):
+                                    self._metric_status['route_rejection']=self._metric_last_route_rejection
+                                    stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)
                 return stop_reason[0] is not None
             self._status_phase='metric_prealign'
+            alignment_receipt = None
+            self._metric_status.pop('departure_alignment', None)
             child_dispatched = False
             if stop():
                 status='canceled'
@@ -2957,8 +2968,16 @@ class MetricFrontierRuntime:
                         else:
                             self._metric_nav_path = planned
                             # Align to the ACTUAL controller carrot on this Nav2 path.
-                            align,*_=self._metric_align_nav_departure(planned_route,inputs[2],stop,
+                            alignment_result = self._metric_align_nav_departure(
+                                planned_route,inputs[2],lambda: stop(alignment=True),
                                 inputs=self._metric_inputs(active=True))
+                            align = alignment_result[0]
+                            alignment_receipt = dict(task=pending.task_id,attempt=attempts,
+                                checked_at=time.monotonic(),status=align,result=list(alignment_result),
+                                achieved_angle_rad=alignment_result[1] if len(alignment_result)>1 else None,
+                                initial_error_rad=alignment_result[2] if len(alignment_result)>2 else None,
+                                residual_error_rad=alignment_result[3] if len(alignment_result)>3 else None)
+                            self._metric_status['departure_alignment'] = alignment_receipt
                             # The existing alignment owner can command a turn
                             # before a Nav2 child exists. Any such invocation
                             # retains motion accounting across revalidation;
@@ -3161,7 +3180,7 @@ class MetricFrontierRuntime:
                 observed_area += len(gained)*after[0].info.resolution**2
             chain.append(dict(task=pending.task_id,target=[pending.x,pending.y],result=status,
                               decision=outcome,terminal_child=True,stop_reason=hard,
-                              child_dispatched=child_dispatched,
+                              child_dispatched=child_dispatched,alignment=alignment_receipt,
                               planning_rejection=(self._metric_status.get('nav2_plan_rejection')
                                                   if not child_dispatched else None),
                               snapshot=self._metric_status['decision_snapshot'],
