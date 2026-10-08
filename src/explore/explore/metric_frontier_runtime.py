@@ -43,6 +43,12 @@ from .metric_frontier import (
     route_departure_point, MAX_LOCAL_OBSERVATION_RADIUS_M)
 
 
+_REVALIDATABLE_INPUT_ERRORS = (
+    'map_status_join_pending', 'start_motion_wheel_stale_after_processing',
+    'start_motion_wheel_tf_disagreement', 'pose_stale_after_processing',
+    'self_body_scan_stale_after_processing')
+
+
 class MetricInputs(tuple):
     """Seven existing inputs plus their immutable common-time TF relation."""
     def __new__(cls, values, map_odom_reference, physical_motion=None):
@@ -764,13 +770,28 @@ class MetricFrontierRuntime:
         if inputs.physical_motion is not None and not all(
                 0 <= completed-at <= .18 for at in inputs.physical_motion[1:3]):
             raise ValueError('start_motion_wheel_stale_after_processing')
+        def reject_processing_age(reason, selected_age, selected_at, limit, **source):
+            # One bounded receipt of the exact rejected selection, not a later
+            # observer snapshot. Scan age is CALLBACK receipt age, not header age.
+            if hasattr(self, '_metric_status'):
+                self._metric_status['geometry_snapshot_rejection'] = dict(
+                    reason=reason, checked_at=completed, selection_started_at=selected_at,
+                    selected_age_s=selected_age, processing_elapsed_s=completed-selected_at,
+                    final_age_s=selected_age+completed-selected_at, limit_s=limit,
+                    phase=getattr(self, '_status_phase', None), active=bool(active),
+                    active_child=getattr(self, '_wohnungserkundung_active_child', None) is not None,
+                    **source)
+            raise ValueError(reason)
         if not 0 <= age + completed-pose_checked <= self._door_pose_timeout:
-            raise ValueError('pose_stale_after_processing')
+            reject_processing_age('pose_stale_after_processing', age,
+                pose_checked, self._door_pose_timeout, age_basis='tf_source_age_plus_processing')
         if not self._metric_resume_localization_ready():
             raise ValueError('resume_localization_unconfirmed_after_processing')
         if (self._metric_self_body_enabled
                 and not 0 <= completed-scan['received_at'] <= self._door_lidar_scan_timeout):
-            raise ValueError('self_body_scan_stale_after_processing')
+            reject_processing_age('self_body_scan_stale_after_processing', scan_now-scan['received_at'],
+                scan_now, self._door_lidar_scan_timeout, age_basis='scan_callback_receipt',
+                received_at=scan['received_at'], scan_key=scan.get('key'))
         return inputs
 
     def _metric_rebase_first_body(self, identity):
@@ -2673,9 +2694,7 @@ class MetricFrontierRuntime:
             except Exception as error:
                 reason = str(error)
                 if (pending is None and reason in ('map_scope_not_joined','map_status_join_pending')
-                        or (pending is not None and reason in (
-                            'map_status_join_pending','start_motion_wheel_stale_after_processing',
-                            'start_motion_wheel_tf_disagreement')
+                        or (pending is not None and reason in _REVALIDATABLE_INPUT_ERRORS
                             and time.monotonic()-task_started < self._goal_timeout_s
                             and self._metric_operating_snapshot(require_stop=True)['safe'])):
                     self._status_phase='metric_waiting_sources'
@@ -2916,6 +2935,7 @@ class MetricFrontierRuntime:
                 cost=pending.cost,revision=pending.revision),attempt=attempts)
             stop_reason = [None]
             map_join_rejection = [None]
+            geometry_snapshot_rejection = [None]
             last_pose = [inputs[2],time.monotonic()]
             def stop(check_route=True, *, alignment=False):
                 if goal_handle.is_cancel_requested:
@@ -2954,6 +2974,12 @@ class MetricFrontierRuntime:
                                     stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)
+                            if str(error) in ('pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+                                receipt = self._metric_status.get('geometry_snapshot_rejection', {})
+                                if receipt.get('reason') == str(error):
+                                    geometry_snapshot_rejection[0] = dict(receipt)
+                                self._metric_status['geometry_snapshot_stop'] = dict(task=pending.task_id,
+                                    attempt=attempts, rejection=geometry_snapshot_rejection[0])
                             if str(error) == 'map_status_join_pending':
                                 map_join_rejection[0] = dict(self._metric_status.get('map_join_rejection', {}))
                                 self._metric_status['map_join_stop'] = dict(task=pending.task_id,
@@ -3072,9 +3098,7 @@ class MetricFrontierRuntime:
                     after=self._metric_inputs(active=True)
                     break
                 except Exception as error:
-                    if str(error) not in ('map_status_join_pending',
-                            'start_motion_wheel_stale_after_processing',
-                            'start_motion_wheel_tf_disagreement') or time.monotonic() >= until:
+                    if str(error) not in _REVALIDATABLE_INPUT_ERRORS or time.monotonic() >= until:
                         return finish('failed',str(error))
                     if goal_handle.is_cancel_requested:
                         return finish('canceled','user_canceled')
@@ -3091,8 +3115,7 @@ class MetricFrontierRuntime:
             hard = stop_reason[0]
             if not self._metric_work_is_current(self._metric_active_context):
                 return finish('failed','map_work_context_changed')
-            if hard in ('map_status_join_pending','start_motion_wheel_stale_after_processing',
-                            'start_motion_wheel_tf_disagreement'):
+            if hard in _REVALIDATABLE_INPUT_ERRORS:
                 if status == 'success':
                     hard = None  # real terminal success, exact current pair now revalidated
                 else:
@@ -3105,7 +3128,8 @@ class MetricFrontierRuntime:
                             if hard=='map_status_join_pending' else 'geometry_snapshot_retry_budget_exhausted')
                     chain.append(dict(task=pending.task_id,result=status, decision=decision,
                         terminal_child=True, stop_reason=hard,arrived=False,observed_cells=0,
-                        map_join_rejection=map_join_rejection[0]))
+                        map_join_rejection=map_join_rejection[0],
+                        geometry_snapshot_rejection=geometry_snapshot_rejection[0]))
                     if retry_exhausted:
                         return finish('blocked',decision)
                     last_inputs = after

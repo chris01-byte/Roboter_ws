@@ -13,8 +13,10 @@ from test_metric_progress import parent_fixture
 
 
 @pytest.mark.parametrize('reason', ['start_motion_wheel_stale_after_processing',
-                                    'start_motion_wheel_tf_disagreement'])
-@pytest.mark.parametrize('fault', ['fresh', 'source_gap', 'persistent', 'retry_budget', 'cancel', 'deadline'])
+                                    'start_motion_wheel_tf_disagreement',
+                                    'pose_stale_after_processing', 'self_body_scan_stale_after_processing'])
+@pytest.mark.parametrize('fault', ['fresh', 'source_gap', 'persistent', 'retry_budget', 'cancel', 'deadline',
+                                   'context', 'unsafe_stop', 'cancel_failed'])
 def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkeypatch, fault, reason):
     node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
     node._max_frontier_goals = 2 if fault != 'retry_budget' else 5
@@ -23,13 +25,22 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
     planned, navigation, confirmed = [], [], []
     actual_inputs = node._metric_inputs
     pending_error = [False]
+    post_stop_error = [False]
+    source_gap = {'pose_stale_after_processing': 'pose_missing_stale_or_invalid',
+                  'self_body_scan_stale_after_processing': 'self_body_scan_stale'}.get(
+                      reason, 'start_motion_wheel_missing_stale_or_invalid')
     def inputs(*args, **kwargs):
+        if post_stop_error[0]:
+            post_stop_error[0] = False
+            node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='post_child')
+            raise ValueError(reason)
         if pending_error[0]:
             if fault != 'persistent':
                 pending_error[0] = False
+            node._metric_status['geometry_snapshot_rejection'] = dict(reason=reason, selection='during_child')
             raise ValueError(reason)
         if fault == 'source_gap' and navigation:
-            raise ValueError('start_motion_wheel_missing_stale_or_invalid')
+            raise ValueError(source_gap)
         return actual_inputs(*args, **kwargs)
     node._metric_inputs = inputs
     def planner(target, *_):
@@ -46,7 +57,10 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
     def confirm(*_):
         assert node._wohnungserkundung_active_child is None
         confirmed.append(len(navigation))
-        return True
+        if fault == 'fresh' and len(navigation) == 1 and reason in (
+                'pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+            post_stop_error[0] = True
+        return not (fault == 'unsafe_stop' and navigation)
     node._metric_confirm_stop = confirm
     def navigate(*_, stop_requested, **__):
         assert node._wohnungserkundung_active_child is not None
@@ -58,6 +72,10 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
                 parent.is_cancel_requested = True
             if fault == 'deadline':
                 clock[0] += 10.
+            if fault == 'context':
+                node._metric_fault = 'map_epoch_changed'
+            if fault == 'cancel_failed':
+                return 'cancel_failed'
             return 'canceled'  # terminal action peer; production parent now owns stop
         assert confirmed[-1] == 1
         assert not stop_requested()
@@ -82,6 +100,10 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
         assert node._metric_status['chain'][0]['decision'] == 'geometry_snapshot_revalidate'
         if fault == 'fresh':
             assert node._metric_status['arrivals'] == node._metric_status['observations'] == 1
+            if reason in ('pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+                receipt = node._metric_status['chain'][0]['geometry_snapshot_rejection']
+                assert receipt == dict(reason=reason, selection='during_child')
+                assert node._metric_status['geometry_snapshot_rejection']['selection'] == 'post_child'
         else:
             assert node._metric_status['reason'] == 'geometry_snapshot_retry_budget_exhausted'
             assert node._metric_status['arrivals'] == 0
@@ -91,9 +113,15 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
             assert node._metric_status['reason'] == reason
             assert clock[0] >= navigation[0]+2.
         elif fault == 'source_gap':
-            assert node._metric_status['reason'] == 'start_motion_wheel_missing_stale_or_invalid'
+            assert node._metric_status['reason'] == source_gap
         elif fault == 'cancel':
             assert terminal == ['cancel']
+        elif fault == 'context':
+            assert node._metric_status['reason'] == 'map_epoch_changed'
+        elif fault == 'unsafe_stop':
+            assert node._metric_status['reason'] == 'post_child_state_or_standstill_unconfirmed'
+        elif fault == 'cancel_failed':
+            assert node._metric_status['reason'] == 'child_cancel_failed'
         else:
             assert node._metric_status['reason'] == 'budget_exhausted'
     assert node._wohnungserkundung_active_child is None

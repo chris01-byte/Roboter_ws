@@ -310,23 +310,43 @@ def test_map_processing_time_consumes_freshness_window(monkeypatch):
         n._metric_inputs()
 
 
-@pytest.mark.parametrize('lost', ['pose', 'scan'])
-def test_final_mask_work_cannot_extend_pose_or_scan_freshness(monkeypatch, lost):
+@pytest.mark.parametrize('lost,selected_age,processing', [('pose', 0., .81),
+    ('scan', 0., .51), ('scan', .49, .02)])
+def test_final_mask_work_cannot_extend_pose_or_scan_freshness(monkeypatch, lost, selected_age, processing):
     n, _ = runtime(monkeypatch)
     import explore.metric_frontier_runtime as module
     clock = [10.02]
     monkeypatch.setattr(module.time, 'monotonic', lambda: clock[0])
-    n._door_lidar_scan_snapshot = lambda: dict(received_at=10.02, frame_id='laser_frame')
+    scan = dict(received_at=10.02-selected_age, frame_id='laser_frame', key=(100, 20000000, 720))
+    n._door_lidar_scan_snapshot = lambda: scan
+    n._metric_status = {}
+    n._status_phase = 'metric_navigation'
+    n._wohnungserkundung_active_child = object()
+    raw_stamp = n._metric_raw[1].source_stamp_ns
     if lost == 'pose':
         n._metric_self_body_enabled = False
     original = module.known_safe_mask
     def delayed_mask(*args, **kwargs):
         result = original(*args, **kwargs)
-        clock[0] += .81 if lost == 'pose' else .51
+        clock[0] += processing
         return result
     monkeypatch.setattr(module, 'known_safe_mask', delayed_mask)
     with pytest.raises(ValueError, match=lost + '_stale_after_processing'):
-        n._metric_inputs()
+        n._metric_inputs(active=True)
+    receipt = n._metric_status['geometry_snapshot_rejection']
+    assert receipt['reason'] == ('pose' if lost == 'pose' else 'self_body_scan') + '_stale_after_processing'
+    assert receipt['selected_age_s'] == pytest.approx(selected_age)
+    assert receipt['processing_elapsed_s'] == pytest.approx(processing)
+    assert receipt['final_age_s'] == pytest.approx(selected_age+processing)
+    assert receipt['limit_s'] == (.8 if lost == 'pose' else .5)
+    assert receipt['checked_at'] == pytest.approx(clock[0])
+    assert receipt['phase'] == 'metric_navigation' and receipt['active'] and receipt['active_child']
+    assert n._metric_raw[1].source_stamp_ns == raw_stamp
+    assert scan['received_at'] == pytest.approx(10.02-selected_age)
+    if lost == 'scan':
+        assert receipt['age_basis'] == 'scan_callback_receipt'
+        assert receipt['scan_key'] == scan['key']
+        assert receipt['received_at'] == scan['received_at']
 
 
 def test_stamp_age_expires_during_processing_despite_recent_dds_receipt(monkeypatch):
