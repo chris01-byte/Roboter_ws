@@ -43,10 +43,10 @@ from .metric_frontier import (
     route_departure_point, MAX_LOCAL_OBSERVATION_RADIUS_M)
 
 
+_PROCESSING_AGE_ERRORS = ('pose_stale_after_processing', 'self_body_scan_stale_after_processing')
 _REVALIDATABLE_INPUT_ERRORS = (
     'map_status_join_pending', 'start_motion_wheel_stale_after_processing',
-    'start_motion_wheel_tf_disagreement', 'pose_stale_after_processing',
-    'self_body_scan_stale_after_processing')
+    'start_motion_wheel_tf_disagreement') + _PROCESSING_AGE_ERRORS
 
 
 class MetricInputs(tuple):
@@ -2617,6 +2617,7 @@ class MetricFrontierRuntime:
         scan_progress = 0.
         scan_resume_pending = False
         initial_stop_confirmed = False
+        unassigned_input_deadline = None
         chain = []
         completion_window = CompletionWindow(getattr(self, '_metric_completion_window_s', 3.))
         arrivals = observations = 0
@@ -2693,6 +2694,18 @@ class MetricFrontierRuntime:
                 inputs = self._metric_inputs(active=pending is not None)
             except Exception as error:
                 reason = str(error)
+                if pending is None and reason in _PROCESSING_AGE_ERRORS:
+                    now = time.monotonic()
+                    if unassigned_input_deadline is None:
+                        unassigned_input_deadline = min(
+                            now+getattr(self, '_metric_observation_wait_s', 2.), started+overall_timeout)
+                    if (now < unassigned_input_deadline
+                            and self._metric_operating_snapshot(require_stop=True)['safe']):
+                        self._status_phase = 'metric_waiting_sources'
+                        self._status_message = reason
+                        time.sleep(.05)
+                        continue  # same window until a complete fresh input is usable
+                    return finish('failed', reason)
                 if (pending is None and reason in ('map_scope_not_joined','map_status_join_pending')
                         or (pending is not None and reason in _REVALIDATABLE_INPUT_ERRORS
                             and time.monotonic()-task_started < self._goal_timeout_s
@@ -2702,6 +2715,7 @@ class MetricFrontierRuntime:
                     time.sleep(.05)
                     continue
                 return finish('failed',reason)
+            unassigned_input_deadline = None
             last_inputs = inputs
             if not resume_checked:
                 resume_checked = True
@@ -2974,7 +2988,7 @@ class MetricFrontierRuntime:
                                     stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)
-                            if str(error) in ('pose_stale_after_processing', 'self_body_scan_stale_after_processing'):
+                            if str(error) in _PROCESSING_AGE_ERRORS:
                                 receipt = self._metric_status.get('geometry_snapshot_rejection', {})
                                 if receipt.get('reason') == str(error):
                                     geometry_snapshot_rejection[0] = dict(receipt)
@@ -3217,7 +3231,7 @@ class MetricFrontierRuntime:
                             gained = frozenset()
                         after = final
                     except Exception as error:
-                        if str(error) != 'map_status_join_pending':
+                        if str(error) not in ('map_status_join_pending',) + _PROCESSING_AGE_ERRORS:
                             return finish('failed', str(error))
                         gained = frozenset()
                         time.sleep(.05)

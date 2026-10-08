@@ -125,3 +125,139 @@ def test_expired_motion_snapshot_replans_only_after_stop_with_same_limits(monkey
         else:
             assert node._metric_status['reason'] == 'budget_exhausted'
     assert node._wohnungserkundung_active_child is None
+
+
+@pytest.mark.parametrize('reason', ['pose_stale_after_processing', 'self_body_scan_stale_after_processing'])
+@pytest.mark.parametrize('fault', ['fresh', 'persistent', 'unsafe_stop', 'source_gap', 'context', 'cancel', 'deadline'])
+def test_before_task_selection_waits_only_at_stop_in_one_source_window(monkeypatch, reason, fault):
+    import explore.metric_frontier_runtime as module
+    node, _, clock, parent, terminal = parent_fixture(monkeypatch, 'known')
+    started = clock[0]
+    actual_inputs, actual_select = node._metric_inputs, node._metric_select
+    calls, selections = [], []
+    def inputs(*args, **kwargs):
+        calls.append(clock[0])
+        if fault == 'fresh' and len(calls) > 1 or fault == 'context' and len(calls) > 1:
+            return actual_inputs(*args, **kwargs)
+        if fault == 'source_gap':
+            raise ValueError('self_body_scan_stale')
+        # Alternating the two transient reasons cannot restart the same wait.
+        raise ValueError(reason if len(calls) % 2 else (
+            'pose_stale_after_processing' if reason.startswith('self_body') else 'self_body_scan_stale_after_processing'))
+    node._metric_inputs = inputs
+    def select(*args):
+        selections.append(clock[0])
+        return actual_select(*args)
+    node._metric_select = select
+    node._navigate_to = lambda *_, **__: pytest.fail('source waiting must not dispatch motion')
+    node._metric_request_nav_plan = lambda *_, **__: pytest.fail('source waiting must not request a path')
+    if fault == 'unsafe_stop':
+        node._metric_operating_snapshot = lambda require_stop=False: dict(
+            safe=not require_stop, first_rejecting_predicate='stable_standstill_not_confirmed' if require_stop else None)
+    def tick(delay):
+        clock[0] += max(.05, delay)
+        if fault == 'cancel':
+            parent.is_cancel_requested = True
+        if fault == 'context':
+            node._metric_fault = 'map_epoch_changed'
+    monkeypatch.setattr(module.time, 'sleep', tick)
+    result = node._execute_metric_frontier(parent, .1 if fault == 'deadline' else 10., .3)
+    assert node._metric_status['attempts'] == node._metric_status['arrivals'] == node._metric_status['observations'] == 0
+    assert node._wohnungserkundung_active_child is None
+    if fault == 'fresh':
+        assert result.success and selections and selections[0] >= started+.05
+    else:
+        assert not result.success and not selections
+        if fault == 'persistent':
+            assert 2. <= clock[0]-started < 2.051
+            assert node._metric_status['reason'] in module._PROCESSING_AGE_ERRORS
+        elif fault == 'cancel':
+            assert terminal == ['cancel'] and clock[0]-started <= .051
+        elif fault == 'deadline':
+            assert node._metric_status['reason'] == 'budget_exhausted'
+            assert clock[0]-started < .151
+        elif fault == 'context':
+            assert node._metric_status['reason'] == 'map_epoch_changed'
+        else:
+            assert len(calls) == 1 and clock[0] == started
+            assert node._metric_status['reason'] == ('self_body_scan_stale' if fault == 'source_gap' else reason)
+
+
+@pytest.mark.parametrize('reason', ['pose_stale_after_processing', 'self_body_scan_stale_after_processing'])
+@pytest.mark.parametrize('fault', ['fresh', 'persistent', 'source_gap', 'unsafe_stop', 'cancel', 'task_deadline'])
+def test_stationary_observation_discards_expired_gain_without_restarting_deadline(monkeypatch, reason, fault):
+    import explore.metric_frontier_runtime as module
+    node, grid, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+    node._max_frontier_goals = 1
+    if fault == 'task_deadline':
+        node._goal_timeout_s = .25
+    chosen, navigation, gains, failures = [], [], [], []
+    actual_inputs, actual_gain = node._metric_inputs, module.measured_gain
+    reject_final = [False]
+    def planner(target, *_):
+        chosen.append(target)
+        path = Path(); path.header.frame_id = 'map'
+        for x, y in target.route:
+            pose = PoseStamped(); pose.pose.position.x = x; pose.pose.position.y = y
+            pose.pose.orientation.z = math.sin(target.yaw/2)
+            pose.pose.orientation.w = math.cos(target.yaw/2)
+            path.poses.append(pose)
+        return path, None
+    node._metric_request_nav_plan = planner
+    node._prealign_to_goal = lambda *_, **__: ('skipped',)
+    def navigate(*_, **__):
+        navigation.append(clock[0]); clock[0] += .1
+        target = chosen[-1]
+        newer = copy.deepcopy(grid)
+        for xy in target.observation_points:
+            col, row = node._world_to_grid(*xy, newer.info)
+            newer.data[row*newer.info.width+col] = 0
+        newer.header.stamp.nanosec = int((clock[0]-10)*1e9)
+        node._on_map(newer)
+        node._on_metric_map_status(status(newer, accepted=3, observed=3, when=100+clock[0]-10))
+        node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
+        return 'success'
+    node._navigate_to = navigate
+    def measured_gain(*args):
+        gain = actual_gain(*args)
+        assert gain  # real new visible cells, invalidated by the later failed proof
+        gains.append(clock[0])
+        reject_final[0] = fault != 'fresh' or len(gains) == 1
+        return gain
+    monkeypatch.setattr(module, 'measured_gain', measured_gain)
+    def inputs(*args, **kwargs):
+        if reject_final[0]:
+            reject_final[0] = False
+            failures.append(clock[0])
+            assert node._wohnungserkundung_active_child is None
+            raise ValueError('self_body_scan_stale' if fault == 'source_gap' else reason)
+        return actual_inputs(*args, **kwargs)
+    node._metric_inputs = inputs
+    if fault == 'unsafe_stop':
+        node._metric_operating_snapshot = lambda require_stop=False: dict(
+            safe=not failures, first_rejecting_predicate='stable_standstill_not_confirmed' if failures else None)
+    def tick(delay):
+        clock[0] += max(.05, delay)
+        if fault == 'cancel' and failures:
+            parent.is_cancel_requested = True
+    monkeypatch.setattr(module.time, 'sleep', tick)
+    result = node._execute_metric_frontier(parent, 10., .3)
+    assert not result.success and len(chosen) == len(navigation) == 1
+    assert node._metric_status['attempts'] == 1 and node._metric_status['arrivals'] == 1
+    assert node._wohnungserkundung_active_child is None and failures
+    if fault == 'fresh':
+        assert len(gains) == 2 and node._metric_status['observations'] == 1
+        assert node._metric_status['chain'][0]['observed_cells'] > 0
+        assert clock[0]-failures[0] < .5
+    else:
+        assert node._metric_status['observations'] == 0
+        if fault in ('persistent', 'task_deadline'):
+            assert node._metric_status['chain'][0]['observed_cells'] == 0
+            assert node._metric_status['chain'][0]['decision'] == 'arrival_without_observation'
+            window = 2. if fault == 'persistent' else .15
+            assert window <= clock[0]-failures[0] < window+.31  # existing post-task .25 s pause
+        elif fault == 'cancel':
+            assert terminal == ['cancel']
+        else:
+            assert node._metric_status['reason'] == (
+                'self_body_scan_stale' if fault == 'source_gap' else 'observation_sources_or_stop_invalid')
