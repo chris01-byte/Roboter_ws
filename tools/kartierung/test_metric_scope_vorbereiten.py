@@ -7,6 +7,7 @@ from pathlib import Path
 import stat
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 import yaml
@@ -216,6 +217,41 @@ class LiveBindingTests(unittest.TestCase):
         for name, gid in [('slam_toolbox', [1]*24), ('/slam_toolbox', [0]*24), ('/slam_toolbox', [1])]:
             with self.subTest(name=name, gid=gid), self.assertRaises(ValueError):
                 tool.owner(name, gid)
+
+    def test_actual_humble_discovery_placeholder_waits_then_resolves_same_gid(self):
+        # Recorded device-free ROS smoke: the fresh CLI knows the /map DDS GID
+        # before its ROS node metadata, while the producer graph already knows it.
+        gid = [1, 15, 127, 1, 74, 200, 124, 46, 0, 0, 0, 0, 0, 0, 45, 3, 0, 0, 0, 0, 0, 0, 0, 0]
+        row = SimpleNamespace(node_name='_NODE_NAME_UNKNOWN_',
+            node_namespace='_NODE_NAMESPACE_UNKNOWN_', endpoint_gid=gid)
+        binding = tool.ScopeBinding(document())
+        with self.assertRaisesRegex(tool.BindingPending, 'name discovery pending'):
+            tool.graph_owners([row], '/map', require_single=True)
+        self.assertEqual(binding.owners, {})
+        self.assertIsNone(binding.raw)
+        row.node_name, row.node_namespace = 'slam_toolbox', '/'
+        values = tool.graph_owners([row], '/map', require_single=True)
+        binding.accept_map(grid(), 10., tool.single_owner(values, '/map'))
+        self.assertEqual(binding.owners['map'], dict(node='/slam_toolbox', gid=gid))
+        self.assertEqual(binding.raw[0].fingerprint, document()['map_fingerprint'])
+
+    def test_unresolved_names_do_not_hide_multiple_endpoints(self):
+        unknown = SimpleNamespace(node_name='_NODE_NAME_UNKNOWN_',
+            node_namespace='_NODE_NAMESPACE_UNKNOWN_', endpoint_gid=MAP_OWNER['gid'])
+        known = SimpleNamespace(node_name='slam_toolbox', node_namespace='/', endpoint_gid=MAP_OWNER['gid'])
+        for topic in ('/map', '/robot_map_manager/status_json'):
+            with self.subTest(topic=topic), self.assertRaisesRegex(ValueError, 'ambiguous') as error:
+                tool.graph_owners([unknown, known], topic, require_single=True)
+            self.assertNotIsInstance(error.exception, tool.BindingPending)
+
+    def test_other_bad_names_and_known_foreign_owners_are_hard_errors(self):
+        for name, namespace in [('slam_toolbox', 'bad_namespace'), ('bad-name', '/'),
+                                ('/slam_toolbox', '/'), ('unknown', '/'), ('slam_toolbox', '/foreign')]:
+            row = SimpleNamespace(node_name=name, node_namespace=namespace, endpoint_gid=MAP_OWNER['gid'])
+            with self.subTest(name=name, namespace=namespace), self.assertRaises(ValueError) as error:
+                actual = tool.single_owner(tool.graph_owners([row], '/map', require_single=True), '/map')
+                ready().check_owner('map', actual)
+            self.assertNotIsInstance(error.exception, tool.BindingPending)
 
     def test_existing_explorer_even_namespaced_or_renamed_is_rejected(self):
         for nodes, services, topics in [([('explore_node', '/robot')], [], []),

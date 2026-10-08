@@ -67,7 +67,7 @@ def scope_document(text):
 
 def owner(node, gid):
     require(isinstance(node, str) and re.fullmatch(r'/(?:[A-Za-z_][A-Za-z_0-9]*/)*[A-Za-z_][A-Za-z_0-9]*', node),
-            'publisher name must be fully qualified')
+            f'publisher name must be fully qualified: node={node!r}, gid={list(gid)!r}')
     values = tuple(gid)
     require(len(values) == 24 and all(type(v) is int and 0 <= v <= 255 for v in values) and any(values),
             'publisher GID missing or invalid')
@@ -92,6 +92,24 @@ def single_owner(values, topic):
         raise BindingPending('publisher discovery pending: '+topic)
     require(len(values) == 1, 'ambiguous publishers: '+topic)
     return values[0]
+
+
+def graph_owners(records, topic, *, require_single=False):
+    """Discovery may know a DDS endpoint before its ROS name is resolved."""
+    if require_single:
+        single_owner(records, topic)  # Count all endpoints, including unresolved ones.
+    result = []
+    for record in records:
+        name, namespace = record.node_name, record.node_namespace
+        gid = [int(value) for value in record.endpoint_gid]
+        # Humble RMW exposes these explicit placeholders during discovery.
+        # Never filter the endpoint out or accept its identity on that basis.
+        if name == '_NODE_NAME_UNKNOWN_' or namespace == '_NODE_NAMESPACE_UNKNOWN_':
+            raise BindingPending(f'publisher name discovery pending: topic={topic!r}, '
+                f'namespace={namespace!r}, name={name!r}, gid={gid!r}')
+        require(isinstance(name, str) and isinstance(namespace, str), 'publisher graph name metadata invalid')
+        result.append(owner(namespace.rstrip('/')+'/'+name, gid))
+    return result
 
 
 def tf_pair_owners(provenance, endpoints, frame):
@@ -278,11 +296,10 @@ def collect(args, binding, metric_profile, repository):
     tf_buffer = Buffer(); listener = TransformListener(tf_buffer, node, spin_thread=False)
     fault = [None]
     provenance = {}
-    def endpoints(topic):
-        return [owner((e.node_namespace.rstrip('/')+'/'+e.node_name), [int(v) for v in e.endpoint_gid])
-                for e in node.get_publishers_info_by_topic(topic)]
+    def endpoints(topic, *, require_single=False):
+        return graph_owners(node.get_publishers_info_by_topic(topic), topic, require_single=require_single)
     def single(topic):
-        return single_owner(endpoints(topic), topic)
+        return single_owner(endpoints(topic, require_single=True), topic)
     def observed(callback, topic, convert):
         def receive(message):
             try:
