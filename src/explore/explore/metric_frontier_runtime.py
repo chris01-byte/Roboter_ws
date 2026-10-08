@@ -573,18 +573,59 @@ class MetricFrontierRuntime:
         withdrawal = None
         if not self._metric_matches_status(raw[1]):
             joined = getattr(self, '_metric_joined', None)
-            if (not active or pending is None or now-pending > 1.25 or joined is None
-                    or c.fingerprint != joined[1].fingerprint or c.context != joined[1].context):
+            evidence = getattr(self, '_metric_egress', None) or ()
+            # Validity is not private authority: a referenced capture can be
+            # valid and empty from the first fully observed body onward. Only
+            # its completely empty fixed, retained and projected permits can
+            # join the existing public-only withdrawal path. Legacy evidence
+            # and even temporarily unprojectable private remnants still wait.
+            private = any(e.valid and not (isinstance(e, ReferencedStartEgress)
+                and not e.fixed.unknown.any() and e.retained_region.is_empty
+                and not e.unknown.any()) for e in evidence)
+            def reject_join(branch):
+                def identity(source):
+                    return dict(fingerprint=source.fingerprint,
+                        source_stamp_ns=source.source_stamp_ns,
+                        frame_id=getattr(source, 'frame_id', getattr(getattr(source, 'context', None), 'frame_id', None)))
+                receipt = dict(
+                    branch=branch, checked_at=now,
+                    pending_age_s=None if pending is None else now-pending,
+                    active=bool(active), active_child=getattr(self,
+                        '_wohnungserkundung_active_child', None) is not None,
+                    private_permit=bool(private), raw=identity(raw[1]), status=identity(c),
+                    joined_raw=None if joined is None else identity(joined[0][1]),
+                    joined_status=None if joined is None else identity(joined[1]),
+                    context_matches_joined=None if joined is None else c.context == joined[1].context,
+                    egress=[dict(kind=type(e).__name__, valid=bool(e.valid),
+                        projected_cells=int(np.count_nonzero(getattr(e, 'unknown', ()))),
+                        retained_cells=int(e.fixed.unknown.sum()) if isinstance(e, ReferencedStartEgress) else None,
+                        retained_area_m2=float(e.retained_region.area*e.fixed.grid.info.resolution**2)
+                            if isinstance(e, ReferencedStartEgress) else None) for e in evidence])
+                if hasattr(self, '_metric_status'):
+                    self._metric_status['map_join_rejection'] = receipt
                 raise ValueError('map_status_join_pending')
+            if not active:
+                reject_join('not_active')
+            if pending is None or now-pending > 1.25:
+                reject_join('pending_missing_or_expired')
+            if joined is None:
+                reject_join('joined_missing')
+            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+                reject_join('status_binding_changed')
             if raw[1].fingerprint != joined[0][1].fingerprint:
-                if (getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout'
-                        or getattr(self, '_wohnungserkundung_active_child', None) is None
-                        or any(e.valid for e in (getattr(self, '_metric_egress', None) or ()))):
-                    raise ValueError('map_status_join_pending')
+                if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
+                    reject_join('controller_not_qualified')
+                if getattr(self, '_wohnungserkundung_active_child', None) is None:
+                    reject_join('no_active_child')
+                if private:
+                    reject_join('private_permit_remaining')
                 latest_age = (self.get_clock().now().nanoseconds-raw[1].source_stamp_ns)/1e9
                 if not 0 <= now-raw[2] <= self._map_timeout_s or not 0 <= latest_age <= self._map_timeout_s:
                     raise ValueError('raw_map_stamp_stale')
-                withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+                try:
+                    withdrawal = self._metric_public_withdrawal_mask(joined[0][0],raw[0])
+                except ValueError:
+                    reject_join('withdrawal_lattice_incompatible')
             # Retain the exact old join and its ORIGINAL timestamps. During
             # an existing public child, changed raw data may only withdraw
             # old free permits. It grants no new cells, goals or receipts.
@@ -2874,6 +2915,7 @@ class MetricFrontierRuntime:
                 task_id=pending.task_id,x=pending.x,y=pending.y,route_length_m=pending.route_length_m,
                 cost=pending.cost,revision=pending.revision),attempt=attempts)
             stop_reason = [None]
+            map_join_rejection = [None]
             last_pose = [inputs[2],time.monotonic()]
             def stop(check_route=True, *, alignment=False):
                 if goal_handle.is_cancel_requested:
@@ -2912,6 +2954,10 @@ class MetricFrontierRuntime:
                                     stop_reason[0]='route_invalidated'
                         except Exception as error:
                             stop_reason[0]=str(error)
+                            if str(error) == 'map_status_join_pending':
+                                map_join_rejection[0] = dict(self._metric_status.get('map_join_rejection', {}))
+                                self._metric_status['map_join_stop'] = dict(task=pending.task_id,
+                                    attempt=attempts, rejection=map_join_rejection[0])
                 return stop_reason[0] is not None
             self._status_phase='metric_prealign'
             alignment_receipt = None
@@ -3051,13 +3097,17 @@ class MetricFrontierRuntime:
                     hard = None  # real terminal success, exact current pair now revalidated
                 else:
                     attempt = policy.attempts[pending.task_id]
-                    if attempt.tries >= policy.retry_limit+1:
-                        return finish('blocked',('map_status_join_retry_budget_exhausted'
-                            if hard=='map_status_join_pending' else 'geometry_snapshot_retry_budget_exhausted'))
-                    chain.append(dict(task=pending.task_id,result=status,
-                        decision=('map_join_revalidate' if hard=='map_status_join_pending'
-                                  else 'geometry_snapshot_revalidate'),terminal_child=True,
-                        stop_reason=hard,arrived=False,observed_cells=0))
+                    retry_exhausted = attempt.tries >= policy.retry_limit+1
+                    decision = ('map_join_revalidate' if hard=='map_status_join_pending'
+                                else 'geometry_snapshot_revalidate')
+                    if retry_exhausted:
+                        decision = ('map_status_join_retry_budget_exhausted'
+                            if hard=='map_status_join_pending' else 'geometry_snapshot_retry_budget_exhausted')
+                    chain.append(dict(task=pending.task_id,result=status, decision=decision,
+                        terminal_child=True, stop_reason=hard,arrived=False,observed_cells=0,
+                        map_join_rejection=map_join_rejection[0]))
+                    if retry_exhausted:
+                        return finish('blocked',decision)
                     last_inputs = after
                     inputs = after
                     self._metric_nav_path = None
