@@ -33,6 +33,8 @@ on:
       - 'tools/simulation/prepare_ap06_sources.py'
       - 'patches/slam_toolbox_humble*.patch'
       - 'tools/kartierung/build_slam_toolbox_humble_overlay.sh'
+      - 'tools/kartierung/metric_scope_vorbereiten.py'
+      - 'tools/kartierung/test_metric_scope_vorbereiten.py'
       - 'tools/analysis/frontier_comparison/**'
       - '.github/workflows/hwt601-we.yml'
   push:
@@ -81,6 +83,8 @@ jobs:
           source /opt/ros/humble/setup.bash
           source install/setup.bash
           export ROS_LOCALHOST_ONLY=1 ROS_DOMAIN_ID=227
+          # Separate CLI process resolves the freshly built installed pure modules.
+          python3 tools/kartierung/metric_scope_vorbereiten.py --help
           python3 -m pytest -q src/explore/test/test_metric_map_lifecycle.py \
             src/explore/test/test_metric_frontier.py src/explore/test/test_metric_motion_geometry.py \
             src/explore/test/test_metric_frontier_candidates.py \
@@ -132,6 +136,7 @@ jobs:
             tools/simulation/test_ap06_device_isolation.py tools/simulation/test_ap06_lifecycle.py tools/simulation/test_ap06_trace.py \
             tools/simulation/test_ap06_concept_experiment.py \
             tools/simulation/test_ap06_departure_probe.py \
+            tools/kartierung/test_metric_scope_vorbereiten.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \

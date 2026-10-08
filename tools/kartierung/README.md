@@ -3,6 +3,76 @@
 Am 27.07.2026 auf dem echten Roboter benutzt und dort verifiziert. Die Skripte
 setzen voraus, dass `~/roboter_ws/install/setup.bash` existiert.
 
+## Aktuellen metrischen LAB-Scope lesend vorbereiten
+
+`metric_scope_vorbereiten.py` bindet ein ausdrücklich lokal geprüftes Polygon
+an die Rohkarte des **bereits laufenden** passiven Stacks. Es erzeugt außerhalb
+jedes Git-Checkouts eine neue Datei mit Modus `0600` für den vorhandenen
+ExploreNode. Es startet weder Explorer noch Mission oder Aktoren. Es nutzt
+die vorhandenen Scope-, Fingerprint- und MapManager-Korrelationsfunktionen;
+fehlende Kartenwerte werden nicht ergänzt. Der einzige eigene Kindprozess
+ist der vorhandene rein lesende native TF-Herkunftsbeobachter.
+
+In der geprüften Releaseumgebung den bestehenden `app_mapping`-Start um
+`start_explorer:=false` ergänzen; `active_drive:=false` und
+`enable_auto_explore:=false` beibehalten. Erst nach aktuellen MapManager-
+Daten das private Scope-JSON erstellen. Es muss genau diese Felder enthalten:
+`schema_version` (1), `session_id`, `scope_id`, `frame_id`,
+`map_fingerprint` (aktueller Wert aus `/robot_map_manager/status_json`),
+`accessible_scope_verified` (bool `true`) und `vertices` (das tatsächlich
+geprüfte lokale Polygon als `[[x,y], ...]` im angegebenen Frame). Sichtbare
+Kartenränder sind keine automatische Scopefreigabe. Reale Koordinaten und
+Karten bleiben außerhalb Git.
+
+Der vorhandene native TF-Beobachter muss einmal im gleichen Release gebaut
+sein; er verknüpft den tatsächlichen DDS-Sender jeder TF-Kante mit dem
+aktuellen ROS-Graphen:
+
+```bash
+cmake -S "$AP06_SOURCE/tools/simulation/tf_ownership_probe" \
+  -B "$AP06_RELEASE/tf-probe-build"
+cmake --build "$AP06_RELEASE/tf-probe-build" -j2
+python3 "$AP06_SOURCE/tools/kartierung/metric_scope_vorbereiten.py" \
+  --scope "$AP06_PRIVATE/lab-scope.json" \
+  --output "$AP06_PRIVATE/metric-current.yaml" \
+  --install-root "$AP06_RELEASE/product-install" \
+  --tf-probe "$AP06_RELEASE/tf-probe-build/tf_ownership_probe"
+```
+
+`AP06_SOURCE`, `AP06_RELEASE` und das vorhandene private Verzeichnis
+`AP06_PRIVATE` bezeichnen die konkret geprüften lokalen Pfade. `--install-root`
+verhindert still gemischte Python-Overlays: tatsächlich aufgelöste Module,
+Runtime und beide installierten Profile müssen aus dieser Installation
+stammen. Ihre Pfade/SHA-256 stehen im privaten Bindungsnachweis, ebenso
+Scope/Probe-SHA, Quellenbesitzer, Karte und Pose. Änderungen während der
+Beobachtung verwerfen die Bindung. Scope und vorhandene Ausgabe werden nie
+überschrieben. Alternative Knotennamen müssen ausdrücklich über
+`--map-owner`, `--manager-owner`, `--odom-owner` angegeben werden.
+
+**Fallen:** Das Ergebnis ist eine aktuelle Momentaufnahme, keine zukünftige
+Startgarantie. Der erste Kartenempfang des anschließend gestarteten Explorers
+muss noch denselben Fingerprint haben; nach Karten-/Stackwechsel neu binden.
+Ein bereits vorhandener Explorer oder ExploreArea-Endpunkt verhindert die
+Ausgabe. Rohkarte/Status brauchen exakten Fingerprint, Frame und Quellstempel;
+zwei Statusbeobachtungen prüfen auch den Verlauf. Nutzdatenalter, Transport-
+und Empfangsalter sowie die gemeinsame reale TF-Zeit werden separat geprüft.
+Humble-Python liefert für Map-/Statuscallbacks keinen DDS-Sender-GID: dort
+ist der Nachweis ein einzelner aktueller Graphbesitzer mit festgehaltenem
+GID plus korreliertem Verlauf, keine Herkunftsbestätigung jeder einzelnen
+Nachricht. TF nutzt deshalb den vorhandenen nativen Beobachter.
+
+Das ausgegebene Startkommando startet ausschließlich den vorhandenen
+Explorer mit `hwt601_active_drive:=false` und konservativer Pfadprüfung.
+Es erteilt keine Bewegung und keinen Modell-RPP-Vertrag; die im Modell
+angenommenen 20 mm/0,05 rad werden nicht auf Hardware übertragen. Der
+passive Stack läuft dabei weiter. Das Werkzeug selbst führt das angezeigte
+Kommando nicht aus.
+
+Offline-Verhaltensprüfung (synthetische Fixtures, keine ROS-Prozesse):
+`python3 -m unittest -v tools/kartierung/test_metric_scope_vorbereiten.py`.
+Der CI-Lauf prüft zusätzlich den separaten CLI-Import mit `--help` gegen die
+frisch gebaute Installation. Dies ersetzt keinen lesenden Jetson-Probelauf.
+
 ## Gerätefreie WE-M2-Lastprüfer
 
 `passive_kette_lasttest.py` prüft die vollständige passive Softwarekette aus

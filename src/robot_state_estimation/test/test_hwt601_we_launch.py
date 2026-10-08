@@ -1,12 +1,13 @@
 """Resolve launch entities without executing nodes or opening devices."""
 import importlib.util
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 import yaml
-from launch import LaunchContext
-from launch.actions import IncludeLaunchDescription, OpaqueFunction, TimerAction
-from launch.utilities import perform_substitutions
+from launch import LaunchContext, LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, TimerAction
+from launch.utilities import normalize_to_list_of_substitutions, perform_substitutions
 from launch_ros.actions import Node
 
 
@@ -88,3 +89,77 @@ def test_outer_chain_passes_explicit_mode_and_both_consumers_require_inputs():
     assert 'condition=IfCondition(use_hwt601_odometry)' in nav
     assert nav.count("'require_hwt601_fusion'") == 2
     assert "'require_hwt601_fusion': ParameterValue(" in explorer
+
+
+def resolved(value, ctx):
+    return perform_substitutions(ctx, normalize_to_list_of_substitutions(value))
+
+
+def include_location(entity, ctx):
+    source = entity.launch_description_source
+    # Humble exposes substitution reprs in location until this public method
+    # resolves the path. Suppress recursive file loading, never execute nodes.
+    with patch.object(source, '_get_launch_description', return_value=LaunchDescription()):
+        source.get_launch_description(ctx)
+    return source.location
+
+
+def declared_launch(relative, **overrides):
+    entities = load_launch(relative).generate_launch_description().entities
+    ctx = context(**overrides)
+    for entity in entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.execute(ctx)  # Configuration only; no node/process execution.
+    return entities, ctx
+
+
+def enabled_launch_owners(entities, ctx):
+    owners = []
+    for entity in entities:
+        if entity.condition is not None and not entity.condition.evaluate(ctx):
+            continue
+        if isinstance(entity, IncludeLaunchDescription):
+            owners.append(('include', include_location(entity, ctx)))
+        elif isinstance(entity, Node):
+            owners.append(('node', resolved(entity.node_executable, ctx)))
+        elif isinstance(entity, TimerAction):
+            owners.extend(enabled_launch_owners(entity.actions, ctx))
+    return owners
+
+
+def test_mapping_default_still_starts_one_explorer():
+    for relative in ('src/robot_bringup/launch/app_mapping.launch.py',
+                     'src/robot_navigation/launch/nav_mapping.launch.py'):
+        entities, ctx = declared_launch(relative)
+        assert ctx.launch_configurations['start_explorer'] == 'true'
+        if relative.startswith('src/robot_navigation/'):
+            owners = enabled_launch_owners(entities, ctx)
+            assert sum(path.endswith('/explore.launch.py') for _, path in owners) == 1
+
+
+@pytest.mark.parametrize('active', ['false', 'true'])
+@pytest.mark.parametrize('auto', ['false', 'true'])
+def test_app_staging_removes_only_explorer_and_preserves_drive_opt_ins(active, auto):
+    runs = {}
+    for start_explorer in ('false', 'true'):
+        outer, ctx = declared_launch('src/robot_bringup/launch/app_mapping.launch.py',
+            start_explorer=start_explorer, active_drive=active,
+            enable_auto_explore=auto, use_hwt601_odometry='true')
+        includes = [entity for entity in outer if isinstance(entity, IncludeLaunchDescription)]
+        navigation = next(entity for entity in includes
+            if include_location(entity, ctx).endswith('/nav_mapping.launch.py'))
+        arguments = {name: resolved(value, ctx) for name, value in navigation.launch_arguments}
+        assert arguments['start_explorer'] == start_explorer
+        assert arguments['active_drive'] == active
+        assert arguments['enable_auto_explore'] == auto
+        assert arguments['use_hwt601_odometry'] == 'true'
+        inner, inner_ctx = declared_launch('src/robot_navigation/launch/nav_mapping.launch.py', **arguments)
+        runs[start_explorer] = (enabled_launch_owners(outer, ctx),
+                                enabled_launch_owners(inner, inner_ctx))
+    assert runs['false'][0] == runs['true'][0]
+    explorer = [owner for owner in runs['true'][1] if owner[1].endswith('/explore.launch.py')]
+    assert len(explorer) == 1
+    assert runs['false'][1] == [owner for owner in runs['true'][1] if owner not in explorer]
+    assert sum(path.endswith('/slam_lidar_hwt601.launch.py') for _, path in runs['false'][1]) == 1
+    assert sum(path.endswith('/bt_orchestrator.launch.py') for _, path in runs['false'][1]) == 1
+    assert sum(path.endswith('/mission_manager.launch.py') for _, path in runs['false'][1]) == 1

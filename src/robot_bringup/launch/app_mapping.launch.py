@@ -23,6 +23,7 @@ def generate_launch_description():
     hwt_development_contract = LaunchConfiguration('hwt_development_contract')
     operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
+    start_explorer = LaunchConfiguration('start_explorer')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
     lab_external_hardware_halt_attested = LaunchConfiguration(
@@ -46,6 +47,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
             description='Zweites Opt-in fuer App-Erkundung und Fahrtor.'),
+        DeclareLaunchArgument(
+            'start_explorer', default_value='true',
+            description='false fuer Karten-/Scopebindung vor getrenntem Explorerstart; '
+                        'aendert keine Fahrfreigabe.'),
         DeclareLaunchArgument(
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusaetzlicher Opt-in fuer den festen HWT601-'
@@ -79,6 +84,7 @@ def generate_launch_description():
                 'hwt_development_contract': hwt_development_contract,
                 'operator_stationary_confirmed': operator_stationary_confirmed,
                 'enable_auto_explore': enable_auto_explore,
+                'start_explorer': start_explorer,
                 'enable_stage3_motion_diagnostic':
                     enable_stage3_motion_diagnostic,
                 'lab_external_hardware_halt_attested':

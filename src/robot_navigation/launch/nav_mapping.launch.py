@@ -34,6 +34,7 @@ def generate_launch_description():
     hwt_development_contract = LaunchConfiguration('hwt_development_contract')
     operator_stationary_confirmed = LaunchConfiguration('operator_stationary_confirmed')
     enable_auto_explore = LaunchConfiguration('enable_auto_explore')
+    start_explorer = LaunchConfiguration('start_explorer')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
     lab_external_hardware_halt_attested = LaunchConfiguration(
@@ -134,6 +135,10 @@ def generate_launch_description():
             description='Explizites zweites Opt-in fuer echte Explore-Missionen '
                         'und das cmd_vel-Fahrtor.'),
         DeclareLaunchArgument(
+            'start_explorer', default_value='true',
+            description='false laesst den einzigen Explorer fuer aktuelle '
+                        'Karten-/Scopebindung noch ungestartet.'),
+        DeclareLaunchArgument(
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusatzopt-in fuer genau einen festen 0,25-m-/15-Grad-'
                         'HWT601-Diagnoselauf; Start ueber /stage3_motion_test/start.'),
@@ -195,6 +200,7 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(_launch_file(
                 'explore', 'explore.launch.py')),
+            condition=IfCondition(start_explorer),
             launch_arguments={
                 'explore_params_overlay': explore_params_overlay,
                 'require_hwt601_fusion': use_hwt601_odometry,
