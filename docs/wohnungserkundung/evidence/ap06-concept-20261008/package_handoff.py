@@ -19,6 +19,15 @@ def sha(path):
 def git(*args):
     return subprocess.check_output(['git','-C',str(REPO),*args],text=True).strip()
 
+def runtime_sha(remote):
+    assert remote.startswith('/evidence/')
+    try:
+        return sha(Path('/workspace/scratch')/remote.removeprefix('/evidence/'))
+    except PermissionError:
+        # Read only the already bound synthetic install artifact; do not chmod.
+        return subprocess.check_output(['docker','exec','ap03-nav2',
+            'sha256sum','--',remote],text=True).split()[0]
+
 assert not git('status','--porcelain','--untracked-files=all','--','src','tools','.github/workflows/hwt601-we.yml'), 'Product tree is dirty'
 assert not git('diff',CANDIDATE,'HEAD','--','src','tools','.github/workflows/hwt601-we.yml'), 'Product changed after tested candidate'
 head=git('rev-parse','HEAD')
@@ -42,8 +51,7 @@ runtime_entries=(native['source_installed_equal']+native['native_binaries']+
     identity['native_plugins']+[identity['additional_native_arithmetic']])
 for entry in runtime_entries:
     remote=entry.get('installed',entry.get('path'))
-    assert remote.startswith('/evidence/')
-    assert sha(Path('/workspace/scratch')/remote.removeprefix('/evidence/'))==entry['sha256'], remote
+    assert runtime_sha(remote)==entry['sha256'], remote
 # The raw evidence archive remains outside Git. It includes the small reports
 # too, so a reviewer can extract all closed runs to a separate local directory.
 archive=OUTPUT/'ap06-synthetische-belege.tar'

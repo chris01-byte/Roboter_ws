@@ -1,0 +1,9 @@
+{
+  "stage": "final packaging, read-only installed-file hash check",
+  "outcome": "PermissionError before completed handoff manifest",
+  "path": "/workspace/scratch/ap06-old-product-install/base_hardware/share/base_hardware/config/base_hardware_params.yaml",
+  "correction": "Read only the already bound synthetic artifact hash inside ap03-nav2 when host read is denied. No chmod, source or product mutation.",
+  "partial_artifacts_preserved": "/workspace/artifacts/ap06-konzept-20261008-attempt-1",
+  "partial_clone_preserved": "/workspace/scratch/ap06-bundle-transfer-check-attempt-1",
+  "qualified_transfer": false
+}

@@ -29,6 +29,7 @@ ROOT_FILES = (
     'selection-reconstruction-report.json',
     'selection-capture-a-independent-audit.json',
     'selection-capture-a-revalidation-audit.json', 'selection-capture-a.png',
+    'package-first-attempt.json',
 
     'experiment-a-intent.json', 'product-identity.json', 'visibility-a.summary.json',
     'visibility_geometry_check.py', 'visibility_geometry_report.json',
