@@ -35,3 +35,32 @@ Nutzer hat zusätzlich ausdrücklich das Herunterfahren des Jetson nach Arbeitsa
 ## Fortsetzung 05.10.2026 – drei Gesamtmissionen
 
 Nutzer beauftragt: „behebe die Probleme die 0/3 Gesamtmissionen verursachen, so das alle drei Missionen erfolgreich abgenommen werden können.“ Saubere Basis `1b93694`, gleicher isolierter Branch/Worktree, MASTERPLAN v1.3 und WE-M0/M3/M4/M5/M6. Vorheriger Auftrag bytegleich archiviert. Verbraucher-/Geometriezeiten zuerst messen, belegte Ursachen im vorhandenen Ausführungspfad beheben, Regressionen gegen Produktfunktionen und echte Builds/Tests liefern. Unveränderte fünf Manifestfälle A/B/C/Cancel/Gyro-HOLD erneut; Ziel drei vollständige positive autonome Erkundungsmissionen mit Beobachtungsfolge, ganzer Passage, Weiterarbeit und ehrlichem Abschluss. Alle bisherigen Negativnachweise, Schutzgrenzen, Quelle-/Kontur-/Scopebindung, ursprüngliche Budgets und eindeutige Besitzer bleiben erhalten. Keine Freiraumannahme, versteckte Ziele, gelockerten Abnahmen, Hardwarefahrt, Deployment oder nächstes AP aus dieser Reparatur ableiten. Alle unabhängigen Schritte bei technischen Blockern fortführen. Jetson-Shutdown weiterhin autorisiert, nur bei nachgewiesenem tatsächlichem Zielsystemkanal und geordnetem sicheren Stillstand; Cloud-Host nicht herunterfahren. Rückfall: eigene neue Reparaturcommits gezielt revertieren bzw. temporäres Overlay abwählen.
+
+
+## Fortsetzung 08.10.2026 – Konzept experimentell prüfen
+
+Der Nutzer verlangt eine funktionierende Gesamtlösung und eine praktische
+Bewertung, welche bisherigen Blocker erforderlich sind und welche den Ablauf
+unnötig behindern. Er übernimmt die spätere lokale Ausführung auf dem Jetson,
+sobald die Software dafür bereitsteht. Keine weitere Zugangs-/Standardfreigabe
+anfordern. Der aktuelle Chat führt weiterhin ausschließlich Softwareversuche
+in der gerätefreien Cloud aus.
+
+Basis: Produkt `2e5e1fd`, dokumentierter Gesamtstand `05cfcf3`, gleicher Branch
+und Worktree. MASTERPLAN v1.3 und ursprüngliche Negativnachweise erhalten.
+Kontrollierte Entwicklungsvarianten werden vor dem jeweiligen Lauf im
+[Konzeptversuch](KONZEPTVERSUCH_AP06.md) und im ausgeführten Versuchsmanifest
+benannt: zunächst endliche Modellsicht ohne Mastabschattung, danach gezielt
+zurückgestellter zusätzlicher Zukunfts-Abfahrtsnachweis. Tatsächliche Anfahrt,
+Kontur-/Stopprüfung, Quellen, Controllervertrag, Cancel und HOLD bleiben aktiv.
+Die Varianten sind keine ursprüngliche 3/3-Abnahme und kein Hardwareprofil.
+
+Lieferung: ausführbare getrennte Versuchssteuerung, nachvollziehbare
+Originalentscheidungen und tatsächlich überbrückte Zusatzprüfungen,
+Regressionen, geschlossene Gesamtläufe sowie daraus begründete nächste
+Integrationsentscheidung und lokale Praxisübergabe. Kein blindes Abschalten
+aller Prüfungen, keine erfundene freie Karte, keine versteckten Fahrziele,
+keine fortlaufende Serie unveränderter Fehlstarts. Der Produktcode bleibt
+zunächst unverändert, bis der Versuch eine konkrete Änderung begründet.
+Rückfall: Versuchsaufruf weglassen; eigene Werkzeugänderungen gezielt
+revertieren. Keine dauerhafte Zielsysteminstallation, kein Push/Merge.

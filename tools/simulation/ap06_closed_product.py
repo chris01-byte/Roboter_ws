@@ -642,6 +642,10 @@ def params(repo, out):
 
 def run(args):
     require_isolation()
+    concept_deferred_departure = getattr(args, 'concept_defer_departure', False)
+    if concept_deferred_departure:
+        from ap06_departure_probe import validate_experiment_options
+        validate_experiment_options(args)
     # Heavy geometry belongs to the supervisor, not spawned device sources.
     from explore.metric_frontier_runtime import MetricFrontierRuntime
     manifest_path = args.manifest
@@ -652,7 +656,8 @@ def run(args):
     out.mkdir(parents=True, exist_ok=False)
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
     result = {'case': case, 'passed': False, 'hardware_qualified': False,
-              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams),
+              'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams or concept_deferred_departure),
+              'concept_deferred_departure': concept_deferred_departure,
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
               'sensor_profile': 'native_mast_mask' if not args.ideal_lidar else 'ideal_full_360',
               'reference_geometry_provided_to_product': False, 'truth_map_publisher': False,
@@ -802,6 +807,13 @@ def run(args):
             '-p', f'behavior_tree:={args.repo}/src/explore/behavior_trees/navigate_to_pose_no_recovery.xml',
             '-p', f'wohnungserkundung_persistence_directory:={out}/checkpoints']+shared[1:]
         explorer_command = py('explore.explore_node')
+        if concept_deferred_departure:
+            code = ('import sys; '
+                f'sys.path.insert(0, {str(args.repo/"tools/simulation")!r}); '
+                'from ap06_departure_probe import install_departure_probe; '
+                f'install_departure_probe({str(out/"departure_assessments.jsonl")!r}); '
+                'from explore.explore_node import main; main()')
+            explorer_command = [sys.executable, '-c', code]
         if args.profile_selection or args.capture_decisions:
             # Diagnostic wrapper only; original decisions and deadline stay.
             code = (
@@ -1096,6 +1108,8 @@ if __name__ == '__main__':
     parser.add_argument('--profile-selection', action='store_true', help='diagnostic overhead; not a qualification run')
     parser.add_argument('--capture-decisions', action='store_true', help='bounded input snapshots without call profiling; not a qualification run')
     parser.add_argument('--ideal-lidar', action='store_true', help='separate ideal sensor diagnostic, not native-mask qualification')
+    parser.add_argument('--concept-defer-departure', action='store_true',
+                        help='simulation-only logged future-departure ablation; requires --ideal-lidar, never qualification')
     parser.add_argument('--diagnostic-beams', type=int, choices=(720, 2160),
                         help='explicit density diagnostic; never qualifies the declared manifest')
     parser.add_argument('--save-partial', action='store_true', help='save actual synthetic SLAM map after terminal result')

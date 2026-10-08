@@ -24,6 +24,8 @@ on:
       - 'tools/simulation/test_ap06_lifecycle.py'
       - 'tools/simulation/ap06_trace.py'
       - 'tools/simulation/test_ap06_trace.py'
+      - 'tools/simulation/test_ap06_concept_experiment.py'
+      - 'tools/simulation/test_ap06_departure_probe.py'
       - 'tools/simulation/slam_grid_regression.cpp'
       - 'tools/simulation/goal_checker_regression/**'
       - 'tools/simulation/navfn_cell_regression/**'
@@ -128,6 +130,8 @@ jobs:
             src/explore/test/test_metric_join_replan.py \
             tools/simulation/test_ap06_world.py \
             tools/simulation/test_ap06_device_isolation.py tools/simulation/test_ap06_lifecycle.py tools/simulation/test_ap06_trace.py \
+            tools/simulation/test_ap06_concept_experiment.py \
+            tools/simulation/test_ap06_departure_probe.py \
             src/explore/test/test_metric_progress.py src/explore/test/test_metric_result_action.py \
             src/mission_manager/test/test_metric_exploration_result.py \
             src/explore/test/test_map_status_adapter.py \
