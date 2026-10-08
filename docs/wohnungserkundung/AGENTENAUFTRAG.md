@@ -76,3 +76,18 @@ Entwicklungsstand mit [lokaler Anleitung](JETSON_KONZEPTTEST_AP06.md) und
 Kundenlösung ist noch nicht abgeschlossen. Nächster Schritt gemäß aktuellem
 STATUS: separater lokaler Build und passiver Quellen-/Sichtnachweis auf dem
 Jetson; kein automatischer Beginn weiterer AP.
+
+## Neuere Nutzeranweisung: Software auf GitHub bereitstellen
+
+Der Nutzer beauftragt ausdrücklich, den vorbereiteten Softwarestand in
+`chris01-byte/Roboter_ws` bereitzustellen, damit der Agent auf dem Jetson ihn
+abrufen kann. Diese Anweisung ersetzt die frühere Push-Sperre für den
+AP-06-Entwicklungsbranch `feature/ap06-closed-product-validation`.
+Quellen, Dokumentation und synthetische Belege werden veröffentlicht; große
+synthetische Rohtraces bleiben im separat bereitgestellten Archiv. Der lokale
+Agent übernimmt einen neuen Checkout nach
+[JETSON_KONZEPTTEST_AP06](JETSON_KONZEPTTEST_AP06.md), prüft den konkreten
+Commit und beginnt mit dem separaten Build und passiven technischen Vorlauf.
+Die Veröffentlichung ist keine Gesamtmissions- oder Kundenabnahme;
+Originalqualifikation bleibt 0/3. Main/Merge und tatsächliche Jetson-Installation
+sind dadurch nicht als bereits ausgeführt behauptet.

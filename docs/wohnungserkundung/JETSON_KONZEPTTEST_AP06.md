@@ -16,17 +16,18 @@ keine bereits erteilte technische Kundenfreigabe.
 
 ## Separater Quellen- und Installstand
 
-Das mitgelieferte Git-Bundle enthält den geprüften Softwarestand und seine
-Dokumentation. In ein neues Verzeichnis klonen, niemals `~/roboter_ws/install`
-überschreiben. Bundle-Prüfsumme und vollständige Commit-ID stehen in der
-beigefügten Übergabedatei. Anschließend `AP06_SOURCE` auf diesen Checkout,
+Der Softwarestand mit Dokumentation und synthetischen Prüfberichten ist nach
+ausdrücklichem Nutzerauftrag auf GitHub veröffentlicht:
+`chris01-byte/Roboter_ws`, Branch `feature/ap06-closed-product-validation`.
+In ein neues Verzeichnis klonen, niemals `~/roboter_ws/install` überschreiben.
+Die vollständige veröffentlichte Commit-ID aus der Übergabemeldung prüfen.
+Anschließend `AP06_SOURCE` auf diesen Checkout,
 `AP06_RELEASE` auf ein neues Verzeichnis unter
 `~/.local/share/amadeus/releases/` und `AP06_PRIVATE` auf ein privates
 Diagnoseverzeichnis außerhalb jedes Git-Checkouts setzen.
 
 Eine saubere Shell verwenden: keine alten ROS-/Python-/LiDAR-/SLAM-Overlays aus
-`.bashrc` übernehmen. Beispiel mit lokal heruntergeladenem Bundle; Pfade vor
-Ausführung an den tatsächlichen Speicherort anpassen:
+`.bashrc` übernehmen. Der direkte Abruf vom Repository lautet:
 
 ```bash
 env -i HOME="$HOME" USER="$USER" PATH=/usr/bin:/bin LANG=C.UTF-8 bash --noprofile --norc
@@ -34,15 +35,22 @@ export AP06_SOURCE="$HOME/amadeus-ap06-konzept"
 export AP06_RELEASE="$HOME/.local/share/amadeus/releases/ap06-$(date -u +%Y%m%dT%H%M%SZ)"
 export AP06_PRIVATE="$HOME/.local/share/amadeus/diagnostics/ap06-$(date -u +%Y%m%dT%H%M%SZ)"
 git clone --branch feature/ap06-closed-product-validation \
-  "$HOME/Downloads/roboter-ap06-konzept.bundle" "$AP06_SOURCE"
+  https://github.com/chris01-byte/Roboter_ws.git "$AP06_SOURCE"
 git -C "$AP06_SOURCE" rev-parse HEAD
 ```
 
-Die letzte Ausgabe mit der Bundle-Übergabedatei vergleichen. Der alte `start_app_erkundung.sh` lädt fest
+Die letzte Ausgabe mit der vollständigen veröffentlichten Commit-ID vergleichen.
+Der geprüfte Produktstand ist `c5d2a9c00d146851799a907ba725ef0d0f30c815`;
+die nachfolgenden Übergabecommits ändern ausschließlich Dokumentation/Belege.
+Der alte `start_app_erkundung.sh` lädt fest
 `~/roboter_ws/install` und eignet sich deshalb nicht als Nachweis dieser
 separaten Installation.
 
-Das Übergabeverzeichnis enthält `uebergabe.json`, `SHA256SUMS`, das Git-Bundle
+Alternativ kann beim Clone statt der GitHub-URL das heruntergeladene
+`$HOME/Downloads/roboter-ap06-konzept.bundle` verwendet werden. Dessen eigener
+Commit ist in `uebergabe.json` gebunden; die spätere Ergänzung zum GitHub-Abruf
+ist darin noch nicht enthalten. Das Übergabeverzeichnis enthält
+`uebergabe.json`, `SHA256SUMS`, das Git-Bundle
 und ein separates Archiv synthetischer Rohbelege. Nach vollständigem Download
 in diesem Verzeichnis `sha256sum -c SHA256SUMS` ausführen. Für den Build genügt
 der Bundle-Checkout; das Rohbelegarchiv dient der unabhängigen Auswertung.
