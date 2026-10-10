@@ -8,6 +8,55 @@ from nav_msgs.msg import Odometry
 from robot_state_estimation.hwt601_fusion_guard import Hwt601FusionGuard
 
 
+@pytest.mark.parametrize('active', [False, True])
+def test_metric_status_uses_latest_actual_dds_message_and_missing_status_ages(monkeypatch, active):
+    import json
+    from std_msgs.msg import String
+    monkeypatch.setenv('ROS_LOCALHOST_ONLY', '1')
+    monkeypatch.setenv('ROS_DOMAIN_ID', '224')
+    rclpy.init(args=[])
+    consumer, producer = Node('metric_status_consumer'), Node('metric_status_producer')
+    guard = Hwt601FusionGuard(consumer, active, prefer_latest_wheel=True)
+    pubs = [producer.create_publisher(String, sub.topic_name, 10)
+            for sub in guard.subscriptions[3:6]]
+    halt = threading.Event()
+    def publish():
+        while not halt.is_set():
+            payload = json.dumps({'actual_publication_ns': time.time_ns(), 'ready': True})
+            for pub in pubs:
+                pub.publish(String(data=payload))
+            halt.wait(.05)
+    worker = threading.Thread(target=publish, daemon=True)
+    try:
+        deadline = time.monotonic()+3.
+        while not all(p.get_subscription_count() for p in pubs) and time.monotonic()<deadline:
+            time.sleep(.01)
+        assert all(p.get_subscription_count() for p in pubs)
+        assert all(s.qos_profile.depth == 1 for s in guard.subscriptions[3:6])
+        assert all(s.callback_group is not consumer.default_callback_group
+                   for s in guard.subscriptions[3:6])
+        worker.start()
+        time.sleep(1.2)  # actual producer continues during withheld executor
+        guard.refresh_current_imu()
+        for name in ('raw', 'yaw', 'wheel'):
+            payload, received = guard.health.statuses[name]
+            assert 0 <= (time.time_ns()-payload['actual_publication_ns'])/1e9 < .3
+            assert 0 <= time.monotonic()-received < .3
+        halt.set(); worker.join(1.)
+        guard.refresh_current_status()
+        original = dict(guard.health.statuses)
+        time.sleep(1.1); guard.refresh_current_status()
+        assert guard.health.statuses == original
+        assert all(time.monotonic()-entry[1] > 1. for entry in original.values())
+        pubs[0].publish(String(data='invalid JSON'))
+        time.sleep(.1); guard.refresh_current_status()
+        assert guard.health.statuses['raw'][0] == {}
+    finally:
+        halt.set()
+        if worker.ident is not None: worker.join(1.)
+        producer.destroy_node(); consumer.destroy_node(); rclpy.shutdown()
+
+
 def test_metric_predecision_reads_original_current_wheel_and_preserves_missing_age(monkeypatch):
     monkeypatch.setenv('ROS_LOCALHOST_ONLY','1');monkeypatch.setenv('ROS_DOMAIN_ID','220')
     rclpy.init(args=[])

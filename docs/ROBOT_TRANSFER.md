@@ -1,5 +1,22 @@
 # Übertragung auf den realen Roboter
 
+## 10.10.2026 – Folge 1–4: Encoderstart und Quellstatus, separate Komponentenprobe
+
+Bestandsinstall und Autostart bleiben erhalten. Neue private Overlays
+`ap06-serializer-startup-20261010` (Base) und `ap06-current-status-20261010`
+(Zustandsschätzung) initialisieren echte ROS-Serialisierer vor Baseline und
+empfangen tatsächlichen jüngsten Status vor metrischer Entscheidung. 128
+Source-Basefälle und 18 gezielte DDS-/Tor-Fälle bestanden. Lesender 180-s-
+Vorlauf ohne Encoderverwerfung, danach passive/aktive Stillstandsprüfungen.
+Erster aktiver Anlaufversuch blieb vor Bewegung wegen Status-Warteschlange
+negativ erhalten. Korrigierter begrenzter Drehversuch real abgeschlossen:
+−17,755° einschließlich Ausrollen, gültige Encoder und gemessener Stop.
+Explizite LAB-Rampeneinstellung 100, Bremsregister 400 unverändert; Defaults
+bleiben 2000. Private Prozessaufteilung seriell CPU5, DDS-Ausgabe CPU2,
+HWT CPU4, Tor CPU3; keine dauerhafte OS-Änderung. Reale Bags/Geometrie bleiben
+außerhalb Git. Rückfall: eigene Launch-PIDs direkt geordnet stoppen, private
+Runtime weglassen und erhaltene Bestandsinstallation verwenden.
+
 ## 10.10.2026 – Separates Geometrieoverlay, ausschließlich passiv geprüft
 
 `ap06-geometry-20261010` baut Explore mit begrenztem Cache unveränderlicher

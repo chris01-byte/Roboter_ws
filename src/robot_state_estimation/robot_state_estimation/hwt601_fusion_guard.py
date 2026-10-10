@@ -67,7 +67,10 @@ class Hwt601FusionGuard:
                  '/shadow/hwt601/wheel_status_json')):
             self.subscriptions.append(node.create_subscription(
                 String, topic, lambda msg, key=name: self._status(key, msg),
-                10, callback_group=callback_group))
+                QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
+                if self.prefer_latest_wheel else 10,
+                callback_group=(MutuallyExclusiveCallbackGroup()
+                                if self.prefer_latest_wheel else callback_group)))
 
     def refresh_passive_wheel(self):
         """Nonblocking receive from the same depth-one DDS subscription.
@@ -94,6 +97,35 @@ class Hwt601FusionGuard:
         if not self.active_drive or getattr(self, 'prefer_latest_wheel', False):
             for name, sub in zip(('raw', 'yaw'), self.subscriptions[:2]):
                 self._receive_current_source(name, sub, 'imu_predecision_dds_take')
+        self.refresh_current_status()
+
+    def refresh_current_status(self):
+        """Receive the actual latest status before the same source decision.
+
+        Status callbacks can lag while their measurement callbacks keep up.
+        The metric path uses one independent exclusive group per status and
+        depth one; taking a waiting message cannot compete with its callback.
+        No message leaves the existing receive time untouched, so a missing
+        publisher still ages out under the unchanged one-second contract.
+        """
+        if not getattr(self, 'prefer_latest_wheel', False):
+            return
+        for name, sub in zip(('raw', 'yaw', 'wheel'), self.subscriptions[3:6]):
+            group = sub.callback_group
+            if not group.beginning_execution(sub):
+                continue
+            try:
+                with sub.handle:
+                    info = sub.handle.take_message(sub.msg_type, sub.raw)
+                if info is not None:
+                    self._status(name, info[0])
+            except Exception as exc:
+                # A failed take must never retain eligibility from an older
+                # healthy status. This is explicitly invalid, not a sample.
+                self.health.status(name, {'receive_exception': type(exc).__name__},
+                                   time.monotonic())
+            finally:
+                group.ending_execution(sub)
 
     def _receive_current_wheel(self, delivery_path):
         self._receive_current_source('wheel', self.wheel_subscription, delivery_path)

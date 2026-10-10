@@ -1,5 +1,23 @@
 # Projektgedächtnis
 
+## 10.10.2026 – aktuelle Quellstatusmeldungen vor der Fahrentscheidung empfangen
+
+Bei gültigen aktuellen IMU-/Radmessungen verriegelte das Tor wegen 1,196 s
+alter raw/yaw-Status-Callbacks. Status und Entscheidungs-Timer teilten eine
+Callbackgruppe. Der explizite metrische Empfangspfad verwendet jetzt auch
+für jede der drei tatsächlichen Statussubscriptions eine eigene exklusive
+Gruppe und zuverlässige Tiefe eins. Vor derselben Entscheidung übernimmt er
+die wirklich eingegangene jüngste Nachricht; ohne Nachricht bleibt das
+ursprüngliche Empfangsalter bestehen. Fehler beim Take liefern ausdrücklich
+ungültigen Status. Keine Gesundheitswerte erfunden, keine Ein-Sekunden-
+Frist geändert, keine neue Subscription/Quelle. Der übrige Altpfad bleibt
+unverändert. 18 gezielte Tests einschließlich echter DDS-Verarbeitungspause,
+fehlendem Sender und ungültigem JSON bestanden, separater Build ebenfalls.
+Neue passive Hardwareprobe und aktive Nullprobe jeweils über drei Sekunden
+bestanden; anschließende begrenzte negative Drehung mit Register 100 beendet:
+−17,755° einschließlich Ausrollen, gültige Encoder, frischer Null-RPM-Stop.
+Dies ist eine Komponentenprobe, keine autonome Gesamtqualifikation.
+
 ## 10.10.2026 – Encoder-Serialisierung vor die erste Baseline legen
 
 Beim expliziten Vergleich im separaten Checkout brauchte die erste tatsächliche
