@@ -1,13 +1,15 @@
 # AP-06 – separater Jetson-Build und passiver Vorlauf, 10.10.2026
 
-**Letzter Stand, erste reale Fahrt vorbereitet:** Neue ausdrückliche Laborfreigabe
+Dieses Protokoll bewahrt die zeitlichen Zwischenstände und Originalgegenbelege. Maßgeblicher aktueller Auftrag und Iststand: [STATUS](STATUS.md); die späteren realen Komponentenfahrten sind unten dokumentiert.
+
+**Historischer Zwischenstand vor R17:** Neue ausdrückliche Laborfreigabe
 erhalten; aktive Basis zweimal im Stillstand geprüft. Kein Bewegungsauftrag
 gesendet, alle gemessenen Encoderpositionen/RPM und aufgezeichneten Kommandos
 null. Bereichswerkzeug und Startreihenfolge separat verbessert, 181 Tests grün.
 Aktive Encoderkontinuität bleibt verletzt; keine positive Fahrabnahme. Details
 im letzten Nachtrag dieses Berichts.
 
-**Aktueller Nachtrag:** Historischer VL53-Health-Vertrag bestätigt; gezielter
+**Früherer Nachtrag zur Encoder-/VL53-Analyse:** Historischer VL53-Health-Vertrag bestätigt; gezielter
 Encoder-Publikationspatch separat gebaut und zweimal drei Minuten passiv
 gemessen. Zweiter Lauf ohne Leserfehler, Endzustand Quellen bereit; erster
 Patchlauf mit realem Paarzeitverstoß. Recorder-Zustellspitzen bleiben offen.

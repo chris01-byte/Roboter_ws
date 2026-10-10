@@ -2267,7 +2267,11 @@ class MetricFrontierRuntime:
                 and private_start_available):
             forward = []
             steps = int(math.floor(self._goal_search_m/grid.info.resolution))
-            for step in range(steps+1):
+            # The far search above can be unavailable while a farther SHORT
+            # view is already fully proved. Keep the same local range but try
+            # its far end first: the native 15-cm arrival disk otherwise turns
+            # every first 30-cm goal into a roughly 15-cm private departure.
+            for step in range(steps, -1, -1):
                 if time.monotonic()-selection_started > self._map_timeout_s:
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = self._min_goal_dist_m+step*grid.info.resolution

@@ -1,7 +1,23 @@
 """Actual A227: a proved first observation precedes unproved distant work."""
 import copy
+import math
 import pytest
 from test_metric_public_cooldown import frozen
+
+
+def test_first_useful_departure_retains_progress_after_native_arrival_tolerance():
+    node, inputs, policy = frozen('ap06_a227_start_selection')
+    maps = [list(inputs[i].data) for i in (0, 5)]
+    chosen = node._metric_select(inputs, policy, .3)[0]
+    stop = node._metric_rollout_stop_pose(inputs, chosen.route, chosen.yaw)
+    # The original 15-cm native arrival disk swallowed half the short goal.
+    # This scene admits a useful, fully proved farther view in the SAME search.
+    assert math.dist(stop[:2], inputs[2][:2]) >= .25
+    assert math.dist((chosen.x, chosen.y), inputs[2][:2]) <= node._min_goal_dist_m+node._goal_search_m
+    assert chosen.observation_points and not chosen.requires_nav2_plan
+    assert node._metric_waypoints_clear(inputs, chosen.route, chosen.yaw) is not None
+    assert maps == [list(inputs[i].data) for i in (0, 5)]
+    assert not any(a.tries or a.failures for a in policy.attempts.values())
 
 
 def test_actual_initial_private_departure_is_not_starved_by_distant_queries():

@@ -1,5 +1,14 @@
 # Aktueller Agentenauftrag: AP-06
 
+## Aktiver lokaler Auftrag vom 10./11.10.2026
+
+Nutzer beauftragt die Folge 1–4 und erteilt erneut die vollständige Laborfreigabe. Tatsächlicher Ausführungskanal ist jetzt der lokale ARM64-Jetson, getrenntes Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`, ursprüngliche Basis e14ca312. Die untenstehenden Cloud-Zugangs- und Shutdownangaben sind historische Befunde, kein aktueller Gerätezugangsbefund und kein neuer Shutdownauftrag. Bestandsmain/-install bleiben erhalten.
+
+Punkt 1 begrenzt real positiv beendet. Punkt 2: einheitlicher privater Produktbuild v5, 2.714 eindeutige Fälle nach reiner Wrapperreparatur bestanden, ursprüngliche Gesamtmissionen weiter 0/3. Neue kurze Auswahlpriorität am tatsächlichen synthetischen Anfangsfall begründet; 30 gezielte Fälle bestanden. Verbindlicher aktueller Iststand und Einzelbelege im [STATUS](STATUS.md).
+
+Genau nächster Schritt: neue Auswahlkorrektur in einem vollständigen separaten Kandidaten bauen und ursprüngliche A/B/C abnehmen; danach regulären autonomen Realstart und erweiterte reale Folge fortsetzen. Alle Originalbudgets, Quellen, Kontur, Einzelkind, Frische, Cancel/HOLD und Stillstand erhalten. Bekannte reale LAB-Kontur nach gemessenem Fahrversatz neu binden. Keine erneute allgemeine Freigabe, keine erfundene weitere Passage/Drei-Bereich-Geometrie oder native Apple-Laufzeit. Keine dauerhafte Installation, kein Autostart-/OS-Wechsel, Push oder Merge.
+
+
 Am 03.10.2026 durch Nutzer „gut dann mache ap-6 fertig“ ausdrücklich beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M0/M3/M4/M5/M6/M7. [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md).
 
 ## Basis und Lieferung

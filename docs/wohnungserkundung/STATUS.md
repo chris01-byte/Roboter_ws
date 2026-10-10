@@ -1,5 +1,67 @@
 # Wohnungserkundung – aktueller Status
 
+## 11.10.2026 – Folge 1–4: Komponenten positiv, Gesamtmission weiter offen
+
+Punkt 1 bleibt als begrenzte reale Anfahr-/Bremsqualifikation beendet, mit
+Positionsencodern, tatsächlichen FC03/FC06-Belegen und unabhängigem LiDAR-Vergleich.
+Keine autonome Produktabnahme daraus. Der ursprüngliche Rohdatenrecorder verfehlte
+insbesondere die Translation; diese Sichtlücke und die alten negativen Läufe bleiben
+im Protokoll ausdrücklich erhalten. Letzte rein lesende Hardwareprüfung um
+22:56:56 UTC: unveränderte Positionen, beide RPM null, RAM 100/400/5.
+Alle bewegten Vergleichsfälle dieses Abschnitts sind gerätefreie Simulationen.
+
+Punkt 2: Kandidat `ap06-qualified-v5-20261011` baute 14 Produktpakete in
+2 min 50 s, 154 geprüfte Produktdateien Quelle/Install identisch, 755 Installhashes.
+Produktbuild `205c2c4`, Testwrapper-Nachtrag `94ba58e`; unveränderte Produktdateien
+nachgewiesen. Volllauf mit 2.714 Fällen enthielt zunächst zwölf Fehler eines
+Wrappers ohne den neuen optionalen Parameter. Reparierte Datei: 62/62 bestanden;
+alle zwölf negativen Fälle erneut geprüft, alle 2.714 eindeutigen Fälle bestanden.
+Der ursprüngliche negative Volllauf wird nicht ersetzt. Einheitlicher privater
+nativer ARM-Unterbau und tatsächliche SDK-/Pythonauflösung bleiben gebunden;
+Bestandsmain sauber und alle 1.048 geprüften Bestandsinstall-Dateien unverändert.
+
+Drei ursprüngliche Gesamtmissionen v5 weiterhin **0/3**, bei unveränderter Welt,
+Startpose, 2-s-Beobachtungsfenster, 5-s-Auswahl-/Kartenfrist, Sensor- und Gesamtbudgets:
+A 0,164762 m, 1 Ankunft/1 Beobachtung (174 echte neue Zellen); B 1,243869 m,
+2 Ankünfte/2 Beobachtungen; C 0,259991 m, 0 Ankünfte/0 Beobachtungen. Alle endeten
+später am Auswahl-Rechenbudget, kein Fall räumte die Passage samt Heck.
+B-Rundumbeobachtung nur 5,00455 rad bis zum 150-s-Aufgabenbudget, kein voller
+Positivscan. C verwarf während der Fahrt einen nach Verarbeitung veralteten
+Radsnapshot und hielt an; danach eine Geometrieablehnung. Quellenfrische oder
+Ankunftstoleranzen werden daraus nicht gelockert.
+
+Die gebündelte identische Strahlprüfung beseitigt den bisherigen ersten Null-
+Beobachtungsbefund in A. Ein zusätzlicher Diagnoselauf mit Entscheidungsaufzeichnung
+scheiterte dagegen bereits an Radbereitschaft: echter 346-ms-Plant-/Quelle-Aussetzer,
+kein Auswahl-Pickle und kein neuer Missionsbeleg. Eine Explorer-Verteilung auf
+Kerne 3/4 brachte bei 11 bestandenen Isolationstests keinen Gesamterfolg
+(A 0,169440 m, 1/1); Änderung nach Vergleich wieder zurückgenommen.
+
+Neue konkrete Messung an gesicherten ursprünglichen Anfangsdaten: 40-cm-
+Vorwärtsziel mit vollständiger Route und endlicher neuer Sicht zulässig,
+45 cm bereits durch unveränderte Geometrie abgelehnt. Bisherige frühe Auswahl
+30 cm, vorhergesagter echter RPP-Stop 15,25 cm wegen der unveränderten
+15-cm-Ankunftsscheibe. Die kurze Suche bevorzugt nun ihr entferntestes tatsächlich
+vollständig geprüftes Ziel im selben bestehenden lokalen Suchbereich; weder
+Wegpunktvorgabe noch vergrößerter Scope, neue Freizellen oder höheres Budget.
+Gezielte Regression: 30/30 bestanden, einschließlich zuvor negativem tatsächlichem RPP-Stopnachweis und ursprünglichen Route-/Sicht-/Cooldown-/Versuchskappen. Eingefrorene ursprüngliche ARM-Anfangsdaten wählen nun 43 cm / 177 endliche potenzielle Punkte in 1,246 s bei identischem vollständigem lokalen Evidenzhash; keine Livebeobachtung daraus. Neuer vollständiger Kandidatenvergleich erforderlich.
+
+Punkt 3 (regulärer autonomer Realstart) und Punkt 4 (erweiterte reale Abnahmen)
+sind damit weiter offen. Bekannte physische LAB-Kontur wird nach tatsächlichem
+Fahrversatz neu an TF/Karte gebunden, niemals umzentriert. Neue reale Passage/
+Drei-Bereich-Geometrie und verfügbares natives Apple-Ziel sind noch nicht belegt;
+einmalige konkrete Rückfragen dazu sind gestellt. Keine weitere allgemeine
+Freigaberunde: erneute Nutzerfreigabe und LAB-1 gelten weiterhin.
+
+**Genau nächster technischer Schritt:** geänderte kurze Auswahl separat prüfen,
+in einem neuen vollständigen privaten Kandidaten bauen und die ursprünglichen
+A/B/C-Gesamtmissionen abnehmen; danach den bereits beauftragten autonomen LAB-
+Start und die abhängigen realen Abnahmen fortsetzen. Bestehende Installation und
+Autostart bewahren. Rückfall: eigenen Kandidaten geordnet beenden, vorhandenen
+Bestandsinstall nutzen; die Auswahländerung lässt sich gezielt zurücknehmen.
+Private Originalbelege: `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
+
+
 ## 10.10.2026 – beauftragte Folge 1–4 wird ausgeführt
 
 Punkt 1 beendet als begrenzte Komponentenqualifikation: Register 100/400/5
