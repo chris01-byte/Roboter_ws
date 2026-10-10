@@ -674,9 +674,18 @@ def run(args):
     source_cpu = allowed_cpus[-1] if len(allowed_cpus) >= 4 else None
     sensor_cpu = allowed_cpus[-2] if source_cpu is not None else None
     graph_cpus = allowed_cpus[:min(3, len(allowed_cpus)-2)] if source_cpu is not None else allowed_cpus
+    # The six-core ARM host has one CPU outside the original graph/source/
+    # sensor allocation. Keep sources and native graph unchanged and put the
+    # Python Explorer there. Scheduling grants no time or geometry exemption.
+    spare_cpus = [cpu for cpu in allowed_cpus
+                  if cpu not in (*graph_cpus, source_cpu, sensor_cpu)]
+    explorer_cpu = spare_cpus[0] if spare_cpus else None
     result['cpu_allocation'] = dict(available=allowed_cpus, graph=graph_cpus,
-                                  source=source_cpu, sensors=sensor_cpu)
+                                  source=source_cpu, sensors=sensor_cpu,
+                                  explorer=explorer_cpu)
     def start(name, command):
+        if name == 'explorer' and explorer_cpu is not None:
+            command = ['taskset', '-c', str(explorer_cpu), *command]
         with (out/'commands.jsonl').open('a') as commands:
             commands.write(json.dumps({'name': name, 'argv': command})+'\n')
         stream = (out/(name+'.log')).open('w')

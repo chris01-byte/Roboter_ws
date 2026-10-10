@@ -774,3 +774,7 @@ gemessene Motor-RPM, gültiges Feedback und unverändert 180 ms Alter verlangen.
 Zwölf Gegenproben grün. Direkte Launch-PIDs geordnet beendet, FC03-Stillstand
 und unveränderte Bestandsinstallation nachgewiesen. Aktueller vollständiger
 Befund im STATUS/Vorlaufbericht; keine weitere pauschale Freigabe ausstehend.
+
+## 11.10.2026 – AP-06: freien ARM-Kern für Explorer nutzen
+
+Der bisherige Gesamtprüfstand belegte Graph 0–2, Quellen 5 und endliche Sensoren 4; Kern 3 blieb frei. Nur der vorhandene Explorer wird auf diesen freien Kern gelegt, alle originalen Welten, Quellempfangszeiten, fünf Sekunden Auswahl und übrigen Missions-/Schutzbudgets bleiben erhalten. Auf installiertem Kandidat e9e69f9/R24 erreicht A dadurch erstmals ein echtes selbstgewähltes natives Ziel (16,48 cm simulierte Bewegung); die zweite Auswahl scheitert weiterhin. Diagnose mit eingefrorenen echten synthetischen Entscheidungsdaten bestätigt die vorhandene Aufgabenhistorie. Kein vollständiger Missions- oder Hardwareerfolg. Änderungen betreffen ausschließlich die gerätefrei isolierte Startverteilung; Rückfall durch Revert dieses Werkzeugcommits. Private Originale arm-spare-cpu-a und arm-spare-cpu-decisions bleiben erhalten.
