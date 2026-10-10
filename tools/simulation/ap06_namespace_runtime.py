@@ -34,6 +34,10 @@ def command(repo, runtime, underlay, output, case, verify_only=False):
         path = '/etc/'+name
         if Path(path).exists():
             argv += ['--ro-bind', path, path]
+    # Debian BLAS/LAPACK sonames resolve through these library symlinks.
+    # Keep the real alternatives, without exposing the rest of host /etc.
+    if Path('/etc/alternatives').is_dir():
+        argv += ['--ro-bind', '/etc/alternatives', '/etc/alternatives']
     argv += ['--bind', str(output.parent), str(output.parent),
              '--chdir', str(repo), '--setenv', 'HOME', '/tmp/ap06-home',
              '--setenv', 'PATH', '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin',
