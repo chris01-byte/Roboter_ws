@@ -21,8 +21,10 @@ Es gibt keine Registerschreib-, Homing- oder Bewegungsbefehle.
 
 Ergänzte Prüfungen: Konfigurations- und Fehlerfälle, CLI-Sperren, echte
 Modbus-Kommunikation über ein synthetisches Pseudo-Terminal, Paketinstallation
-und isolierter ROS-Humble-Build. Erster CI-Lauf: alle 28 Tests, Installation
-und Humble-Build bestanden ([CI](https://github.com/chris01-byte/Roboter_ws/actions/runs/38070136474)). Serielle Abhängigkeiten sind optional deklariert;
+und isolierter ROS-Humble-Build. Ergebnis auf 9e65e4f: alle 32 Tests,
+Installation und Humble-Build bestanden ([CI](https://github.com/chris01-byte/Roboter_ws/actions/runs/38070478719)),
+einschließlich Dauer-Störverkehr, fehlender Antwort und Verbindungsverlust.
+Serielle Abhängigkeiten sind optional deklariert;
 ihre Anforderungsliste wird mitinstalliert. Hardwareabnahme bleibt offen.
 
 Hardwarewirkung: keine reale Verbindung oder Bewegung durchgeführt.
