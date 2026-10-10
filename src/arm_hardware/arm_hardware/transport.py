@@ -152,6 +152,85 @@ def _device_path(port):
     return resolved
 
 
+def _make_serial_client(**kwargs):
+    """Adapt pinned pymodbus 3.14.0 to one open and one total read budget.
+
+    Upstream sync_get_response loops while foreign/invalid traffic arrives;
+    its timeout is only a receive wait and pyserial writes default to unbounded.
+    Keep RTU receive settling while bounding every operation monotonically.
+    """
+    import time
+    from pymodbus.client import ModbusSerialClient
+
+    class BoundedClient(ModbusSerialClient):
+        def __init__(self):
+            self._attempted_open = False
+            self._deadline = None
+            super().__init__(**kwargs)
+
+        def connect(self):
+            if self.socket is not None:
+                return bool(self.socket.is_open)
+            if self._attempted_open:
+                return False
+            self._attempted_open = True
+            return super().connect()
+
+        def begin_transaction(self, timeout_s):
+            self._deadline = time.monotonic() + timeout_s
+
+        def end_transaction(self):
+            self._deadline = None
+
+        def remaining(self):
+            if self._deadline is None:
+                raise ReadError("no active transaction budget")
+            remaining = self._deadline - time.monotonic()
+            if remaining <= 0:
+                raise ReadError("transaction deadline exceeded")
+            return remaining
+
+        def send(self, request, addr=None):
+            self.remaining()
+            if self.socket is None or not self.socket.is_open:
+                raise ReadError("serial connection lost; reopening is forbidden")
+            if waiting := self.socket.in_waiting:
+                self.socket.timeout = self.remaining()
+                self.socket.read(waiting)
+            self.socket.write_timeout = self.remaining()
+            written = self.socket.write(request)
+            self.remaining()
+            if written != len(request):
+                raise ReadError("incomplete serial write")
+            return written
+
+        def _wait_for_data(self):
+            size, more_data = 0, False
+            while True:
+                self.remaining()
+                available = self.socket.in_waiting
+                if more_data and (not available or available == size):
+                    return size
+                if available and available != size:
+                    more_data, size = True, available
+                time.sleep(min(self._recv_interval, self.remaining()))
+
+        def recv(self, size):
+            self.remaining()
+            if self.socket is None or not self.socket.is_open:
+                raise ReadError("serial connection lost; reopening is forbidden")
+            if size is None:
+                size = self._wait_for_data()
+            if size > self.socket.in_waiting:
+                self._wait_for_data()
+            self.socket.timeout = self.remaining()
+            result = self.socket.read(size)
+            self.remaining()
+            return result
+
+    return BoundedClient()
+
+
 class SerialReadTransport:
     """Explicit Linux serial lifetime; requires an already validated read allowlist."""
 
@@ -179,9 +258,8 @@ class SerialReadTransport:
         from importlib.metadata import version
         if version("pymodbus") != "3.14.0" or version("pyserial") != "3.5":
             raise ReadError("install the pinned arm_hardware/requirements-modbus.txt")
-        from pymodbus.client import ModbusSerialClient
-
-        self._client = ModbusSerialClient(
+        self._timeout_s = timeout_s
+        self._client = _make_serial_client(
             port=resolved, baudrate=baudrate, bytesize=8, parity=parity,
             stopbits=stopbits, timeout=timeout_s, retries=0,
         )
@@ -204,7 +282,15 @@ class SerialReadTransport:
     def read(self, request):
         if not self._connected:
             raise ReadError("transport is not connected")
-        return self._adapter.read(request)
+        self._client.begin_transaction(self._timeout_s)
+        try:
+            return self._adapter.read(request)
+        except BaseException:
+            self._connected = False
+            self._client.close()
+            raise
+        finally:
+            self._client.end_transaction()
 
     def __exit__(self, *_args):
         self._connected = False

@@ -247,7 +247,7 @@ class SerialLifetimeTests(unittest.TestCase):
 
     def test_no_connect_until_context_and_close_on_success_or_exception(self):
         with patch("arm_hardware.transport._device_path", return_value="/dev/ttyARM_TEST"), \
-                patch("pymodbus.client.ModbusSerialClient") as factory:
+                patch("arm_hardware.transport._make_serial_client") as factory:
             client = factory.return_value
             client.connect.return_value = True
             client.socket.exclusive = True
@@ -268,7 +268,7 @@ class SerialLifetimeTests(unittest.TestCase):
 
     def test_connect_failure_or_missing_exclusivity_closes_client(self):
         with patch("arm_hardware.transport._device_path", return_value="/dev/ttyARM_TEST"), \
-                patch("pymodbus.client.ModbusSerialClient") as factory:
+                patch("arm_hardware.transport._make_serial_client") as factory:
             for connected, exclusive in ((False, True), (True, False)):
                 client = factory.return_value
                 client.connect.return_value = connected
@@ -285,7 +285,7 @@ class SerialLifetimeTests(unittest.TestCase):
                                 stopbits=1, timeout_s=0.2,
                                 allowed=(ReadRequest(17, 0, 4),))
         with patch("arm_hardware.transport._device_path", return_value="/dev/ttyARM_TEST"), \
-                patch("pymodbus.client.ModbusSerialClient") as factory:
+                patch("arm_hardware.transport._make_serial_client") as factory:
             for kwargs in (
                 {"timeout_s": float("nan")}, {"baudrate": True},
                 {"allowed": (ReadRequest(17, 0, 11),)},

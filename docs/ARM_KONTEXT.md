@@ -62,11 +62,13 @@ JSON-Diagnose ist kein ROS-ArmStatus und keine Bewegungsfreigabe.
 2. M1A: physische Motor-/Gelenk-/Adresszuordnung, Versorgung und Halteverhalten
    dokumentieren; danach einzelne beaufsichtigte Rohdatenabfrage.
 3. M1B: getrennte Software für begrenzten Einzelachs-Jog, mit geprüften
-   Stopwegen und konkreter Vor-Ort-Freigabe.
+   Stopwegen, lokaler Bewegungsfreigabe, gesperrter/stillstehender Basis
+   und konkreter Vor-Ort-Freigabe. Diese Sperren gelten vor der ersten Bewegung.
 4. M2: Homing, Drehrichtung, Übersetzung, getrennte Command-/Feedback-Counts,
    Nullpunkt, Winkelgrenzen und echte Gelenkrückmeldung.
-5. M3/M4: Bustiming und koordinierte Trajektorien nachweisen; darauf aufbauend
-   ros2_control/MoveIt, Arm-Actions und Basis-Interlocks.
+5. M3/M4: Bustiming und koordinierte Trajektorien bei gesperrter Basis
+   nachweisen; darauf aufbauend ros2_control/MoveIt und Arm-Actions.
+   Plattform-Interlocks müssen vor Freigabe koordinierter Bewegung wirksam sein.
 6. M5/M6: Greifermechanik, Endlagen, ADC/Signalaufbereitung, Kraft-/Kontakt-
    auswertung und Greifen an bekannter Position.
 7. M7/M8: Kamera-Arm-Kalibrierung, Fehlerbudget, danach statisches Vision-Greifen.

@@ -30,6 +30,11 @@ Ein Snapshot ist keine zeitgleiche Aufnahme aller sechs Achsen.
 
 ## Spätere reale M1A-Probe — vor Ort vorbereiten
 
+Vor Livebetrieb die [optionalen seriellen Abhängigkeiten](../arm_hardware/README.md)
+im isolierten Aufbau installieren: pymodbus==3.14.0, pyserial==3.5.
+Die installierte Anforderungsliste liegt unter
+share/arm_hardware/requirements-modbus.txt. Colcon installiert diese nicht selbst.
+
 1. Motorlosen Softwaretest abschließen; Arm mechanisch sichern und
    Hardware-Not-Aus/Versorgung mit der anwesenden Person klären.
 2. Eigenen Arm-Bus bestätigen. Alle anderen Master/Programme beenden;
@@ -59,7 +64,9 @@ ros2 run arm_tools arm_probe \
 
 Kein kopierfertiger Livebefehl mit angenommenen Adressen/Busraten.
 --joint darf wiederholt werden, nachdem jede ausgewählte Identität geprüft ist.
---samples ist auf 1–100 begrenzt; --timeout auf 0,05–2 Sekunden.
+--samples ist auf 1–100 begrenzt; --timeout auf 0,05–2 Sekunden je
+Transaktion einschließlich Senden/Empfangen. Fehlverkehr verlängert dieses
+Budget nicht. Nach Fehler/Verbindungsverlust wird kein Port automatisch neu geöffnet.
 Für die Erstprobe eine einzelne Achse und einen Snapshot verwenden.
 JSON-Ausgabe lokal speichern und anschließend gemeinsam auswerten.
 

@@ -49,6 +49,8 @@ jobs:
           import subprocess
           import sysconfig
           directory = Path(sysconfig.get_path("data")) / "share/arm_bringup/config"
+          requirements = directory.parent.parent / "arm_hardware/requirements-modbus.txt"
+          assert requirements.read_text().splitlines() == ["pymodbus==3.14.0", "pyserial==3.5"]
           for name, mode in (("arm_inventory.json", "validate"), ("synthetic_arm.json", "fake")):
               output = subprocess.check_output(
                   ["arm_probe", "--config", str(directory / name), "--mode", mode], text=True)

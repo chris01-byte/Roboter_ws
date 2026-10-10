@@ -15,16 +15,20 @@ Die reale Probe verwendet ausschließlich zwei dokumentierte FC03-Leseblöcke.
 Sie benötigt explizite Gelenkauswahl, bestätigte Identität, Port, Busparameter
 und zwei Vor-Ort-Bestätigungen. Der unbekannte NEMA23 bleibt gesperrt.
 Antwortfehler brechen den Lauf ab; Portzugriff ist exklusiv und wird geschlossen.
+Eine gemeinsame Zeitgrenze begrenzt auch Störverkehr und blockiertes Schreiben;
+nach Verbindungsverlust erfolgt kein automatisches Wiederöffnen.
 Es gibt keine Registerschreib-, Homing- oder Bewegungsbefehle.
 
 Ergänzte Prüfungen: Konfigurations- und Fehlerfälle, CLI-Sperren, echte
 Modbus-Kommunikation über ein synthetisches Pseudo-Terminal, Paketinstallation
-und isolierter ROS-Humble-Build. Der CI-Testlauf steht bei Erstellung noch aus.
+und isolierter ROS-Humble-Build. Erster CI-Lauf: alle 28 Tests, Installation
+und Humble-Build bestanden ([CI](https://github.com/chris01-byte/Roboter_ws/actions/runs/38070136474)). Serielle Abhängigkeiten sind optional deklariert;
+ihre Anforderungsliste wird mitinstalliert. Hardwareabnahme bleibt offen.
 
 Hardwarewirkung: keine reale Verbindung oder Bewegung durchgeführt.
 Der ausgefallene Entwicklungsrechner wurde durch einen separaten GitHub-Branch
 ersetzt; bestehende Roboterstarts sind unverändert.
 
-Nächster Schritt: CI-Ergebnis prüfen, danach Typ-/Gelenk-/Adresszuordnung und
+Nächster Schritt: Typ-/Gelenk-/Adresszuordnung und
 Busparameter vor Ort erfassen. Erst anschließend eine beaufsichtigte
 M1A-Leseprobe durchführen. Bewegungen folgen in einem getrennten Build.

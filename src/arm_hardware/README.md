@@ -10,6 +10,8 @@ noch kein ros2_control-SystemInterface und kein Bewegungscontroller.
 - Unveränderliche Lesepläne, deterministischer Fake und FC03-Adapter.
 - Separater serieller Kontext mit explizitem Port, endlichem Timeout, null
   Wiederholungen und geprüftem exklusivem pyserial-Lock.
+- Gemeinsames monotones Zeitbudget je Transaktion, auch bei Dauer-Störverkehr
+  und blockiertem Schreiben; kein Wiederöffnen nach Verbindungsverlust.
 - Rohwörter, Konfigurationsfingerprint, UTC-Snapshotzeit und monotone
   Lesedauer. Keine abgeleiteten Gelenkwinkel oder Referenzbehauptungen.
 
@@ -39,6 +41,16 @@ Reset und EEPROM sind nicht im Profil. Modellcodes werden roh ausgegeben;
 ein Tabellen-Default ist kein Identitätsbeweis. Wortfolge, Einheiten und
 Encoder-Nullpunkt werden nicht geraten. Die Leseprofilbestätigung vor Ort muss
 Handbuch, Typenschild und vorhandenen Firmwarestand berücksichtigen.
+
+## Optionale serielle Abhängigkeiten
+
+Prüfmodus und Fake benötigen nur die Python-Standardbibliothek. Für die
+reale Probe oder den Pseudo-Terminal-Test sind pymodbus==3.14.0 und
+pyserial==3.5 erforderlich. Als optionales Python-Extra serial deklariert;
+requirements-modbus.txt wird zusätzlich nach share/arm_hardware installiert.
+Ein Colcon-Build allein installiert diese optionalen Python-Abhängigkeiten
+nicht. Im isolierten Testaufbau mit dem dort verwendeten Python installieren,
+keine globale Laufzeit am aktiven Roboter ändern.
 
 ## Tests ohne reale Hardware
 
