@@ -489,6 +489,13 @@ class MetricFrontierRuntime:
         if (guard is None or not getattr(self,'_metric_start_egress_enabled',False)
                 or getattr(self,'_metric_path_validation','conservative') != 'rpp_rollout'):
             return None
+        # Geometry can finish before queued wheel callbacks are dispatched.
+        # Receive one actual current frame through the existing subscription;
+        # no frame leaves the old age untouched. Original stamp, validity,
+        # .18-s freshness and wheel/TF agreement are checked below as before.
+        refresh = getattr(guard, 'refresh_current_wheel', None)
+        if refresh is not None:
+            refresh()
         with guard.health.lock:
             sample = guard.health.samples.get('wheel')
             details = dict(guard.health.sample_details.get('wheel',{}))

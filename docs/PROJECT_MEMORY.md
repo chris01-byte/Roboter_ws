@@ -1,5 +1,24 @@
 # Projektgedächtnis
 
+## 10.10.2026 – echten aktuellen Radframe an die Geometrieentscheidung binden
+
+Der Original-ARM-Lauf blieb bei gültigem Encoderproduzenten nach Geometrie
+am alten Health-Callback hängen. Neuer echter DDS-Gegenfall hält den
+Consumerexecutor 280 ms zurück, während ein tatsächlicher Publisher weiter
+sendet: alter Code lehnt ab. Die vorhandene metrische Messbindung übernimmt
+nun einmal über dieselbe bereits existente Subscription deren tatsächlich
+wartenden jüngsten Radframe, bevor sie ihn bewertet. Unveränderte Original-
+Quellstempel, 180-ms-Frist, Validität, Frames und 20-mm-/0,05-rad-TF-Abgleich
+bleiben verbindlich. Kein Polling, Publisher oder nachträgliches Datumssetzen.
+Senderausfall läuft weiter ab und ändert auch beim erneuten Aufruf keine
+Messzeiten. 18 gezielte Fälle bestanden einschließlich des echten Rot/Grün-
+Nachweises, fehlendem Sender, ungültigen/duplizierten/alten Daten und
+ursprünglicher voller Egress-Neuprüfung. Gemeinsamer Folge-Build und
+Originalgesamtfälle ausstehend. Hardwarewirkung: vorhandene echte aktuelle
+Daten werden vor Geometrieentscheidung empfangen; ungültige Quellen sperren
+weiter. Rückfall: privaten Kandidaten stoppen, Originalinstallation oder
+vorherigen privaten Stand verwenden; keine Autostartumstellung.
+
 ## 10.10.2026 – unabhängigen Simulationssensor vor der Encoder-Baseline starten
 
 ARM-Negativlauf: Sensor-Spawn nach Start der drei Quellenexecutor-Threads
