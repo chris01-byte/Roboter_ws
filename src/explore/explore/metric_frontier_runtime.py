@@ -871,6 +871,21 @@ class MetricFrontierRuntime:
             entry[1][anchor] = local_evidence(inputs[0], anchor, self._grid_to_world, batch_projection=True)
         return entry[1][anchor]
 
+    def _metric_policy_evidence(self, inputs, policy, task_id):
+        """Avoid an unused digest only for history-free preselection queries.
+
+        With no tries, failures or completed/partial tasks, policy has no old
+        evidence to compare. Its optional empty-evidence branch has the same
+        result there. This grants no route or motion authority; _metric_select
+        always binds the full actual digest to every selected candidate.
+        """
+        memo = getattr(getattr(self, '_metric_selection_cache', None), 'memo', None)
+        if (memo is not None and memo['inputs'] is inputs and memo.get('policy') is policy
+                and not any(a.tries or a.failures or a.completed or a.partial_observation
+                            for a in policy.attempts.values())):
+            return ''
+        return self._metric_local_evidence(inputs, policy.attempts[task_id].frontier_xy)
+
     def _metric_prepare_egress(self, inputs):
         if not getattr(self, '_metric_start_egress_enabled', False):
             return
@@ -1804,7 +1819,7 @@ class MetricFrontierRuntime:
             key = policy.identify((frontier.cx, frontier.cy), goal)
             if not policy.within_limits(key, goal, time.monotonic()):
                 continue  # no possible view can reopen these original bounds
-            local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+            local = self._metric_policy_evidence(inputs, policy, key)
             bearing = math.atan2(goal[1]-pose[1], goal[0]-pose[0])
             error = abs(math.atan2(math.sin(bearing-pose[2]), math.cos(bearing-pose[2])))
             if self._frontier_forward_cone_half_angle > 0 and error > self._frontier_forward_cone_half_angle:
@@ -1955,7 +1970,7 @@ class MetricFrontierRuntime:
                         if not points:
                             continue
                         key = policy.identify((observed_frontier.cx,observed_frontier.cy),observer_xy,observation_points=points)
-                        local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                        local = self._metric_policy_evidence(inputs, policy, key)
                         now = time.monotonic()
                         if not policy.eligible(key,observer_xy,now,correlation.fingerprint,local,
                                                observation_points=points):
@@ -2043,7 +2058,7 @@ class MetricFrontierRuntime:
                     if policy.identify((frontier.cx,frontier.cy),goal,
                             observation_points=points,create=False)!=task_id:
                         continue
-                    local = self._metric_local_evidence(inputs,policy.attempts[task_id].frontier_xy)
+                    local = self._metric_policy_evidence(inputs, policy, task_id)
                     if not policy.eligible(task_id,goal,time.monotonic(),cor.fingerprint,local,
                             observation_points=points):
                         continue
@@ -2107,7 +2122,7 @@ class MetricFrontierRuntime:
                     if any(policy.identify((frontier.cx,frontier.cy),xy,
                             observation_points=points,create=False)!=task_id for xy in (stop[:2],goal)):
                         continue
-                    local=self._metric_local_evidence(inputs,policy.attempts[task_id].frontier_xy)
+                    local=self._metric_policy_evidence(inputs, policy, task_id)
                     if not all(policy.eligible(task_id,xy,time.monotonic(),cor.fingerprint,local,
                             observation_points=points) for xy in (stop[:2],goal)):
                         continue
@@ -2229,7 +2244,7 @@ class MetricFrontierRuntime:
                     if not points:
                         continue
                     key = policy.identify((f.cx,f.cy), goal)
-                    local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                    local = self._metric_policy_evidence(inputs, policy, key)
                     if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local):
                         continue
                     length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
@@ -2272,7 +2287,7 @@ class MetricFrontierRuntime:
                         continue
                     if policy is not None:
                         key = policy.identify((f.cx,f.cy), goal, observation_points=points)
-                        local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                        local = self._metric_policy_evidence(inputs, policy, key)
                         if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint,
                                                local, observation_points=points):
                             continue
@@ -2318,7 +2333,7 @@ class MetricFrontierRuntime:
             if (goal is not None and policy is not None and live_view
                     and getattr(self,'_metric_path_validation','conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy),goal)
-                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                local = self._metric_policy_evidence(inputs, policy, key)
                 if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
                     normal_deferred = True
             route = None if goal is None or normal_deferred else self._metric_route(inputs, goal)
@@ -2432,7 +2447,7 @@ class MetricFrontierRuntime:
                     and getattr(self, '_metric_start_egress_enabled', False)
                     and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'):
                 key = policy.identify((f.cx,f.cy), goal)
-                local = self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                local = self._metric_policy_evidence(inputs, policy, key)
                 if policy.eligible(key, goal, time.monotonic(), correlation.fingerprint, local,
                                    observation_points=candidates[-1].observation_points):
                     if proposal:
@@ -2449,7 +2464,7 @@ class MetricFrontierRuntime:
         def eligible_original(candidate):
             key=policy.identify(candidate.frontier_xy,(candidate.x,candidate.y),
                                 observation_points=candidate.observation_points)
-            local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+            local=self._metric_policy_evidence(inputs, policy, key)
             return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
                 candidate.fingerprint,local,observation_points=candidate.observation_points)
         if (policy is not None and live_view and not public_deferred
@@ -2472,7 +2487,7 @@ class MetricFrontierRuntime:
                     if math.dist(goal,pose[:2]) < self._min_goal_dist_m:
                         continue
                     key=policy.identify((f.cx,f.cy),goal)
-                    local=self._metric_local_evidence(inputs, policy.attempts[key].frontier_xy)
+                    local=self._metric_policy_evidence(inputs, policy, key)
                     if not policy.eligible(key,goal,time.monotonic(),correlation.fingerprint,local):
                         continue
                     bearing=math.atan2(goal[1]-pose[1],goal[0]-pose[0])
