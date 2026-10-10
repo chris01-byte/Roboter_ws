@@ -74,6 +74,22 @@ def snapshot(binding, **changes):
 
 
 class ScopeDocumentTests(unittest.TestCase):
+    def test_capacity_is_explicit_bounded_and_preserves_actual_grid(self):
+        values = grid(width=8, height=8, cells=[-1]*63+[100])
+        doc = document()
+        doc['map_fingerprint'] = tool.raw_map_portal_source_from_values(**values).fingerprint
+        with self.assertRaisesRegex(ValueError, 'evidence limit'):
+            tool.ScopeBinding(doc, maximum_cells=16).accept_map(values, 10., MAP_OWNER)
+        binding = tool.ScopeBinding(doc, maximum_cells=64)
+        binding.accept_map(values, 10., MAP_OWNER)
+        params = binding.parameters({'explore_node': {'ros__parameters': {}}})['explore_node']['ros__parameters']
+        self.assertEqual(params['wohnungserkundung_evidence_max_cells'], 64)
+        self.assertEqual(params['metric_scope_map_fingerprint'], doc['map_fingerprint'])
+        self.assertEqual(values['cells'], [-1]*63+[100])
+        for invalid in (True, 0, -1, 4_000_001, 64.):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                tool.ScopeBinding(doc, maximum_cells=invalid)
+
     def test_exact_existing_scope_and_context_contract(self):
         value, scope = tool.scope_document(json.dumps(document()))
         self.assertEqual(scope.context.session_id, value['session_id'])

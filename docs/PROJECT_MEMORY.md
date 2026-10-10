@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 10.10.2026 – Kartenverarbeitungskapazität ausdrücklich mit dem Scope binden
+
+Eine stationäre reale 1-cm-Karte hatte 648×423 = 274.104 Zellen; das feste
+262.144-Zellen-Verarbeitungslimit lehnte sie ab. Dies ist eine Speicher-/
+Arbeitsgrenze, kein Hindernis oder belegte Sensorstörung. Das vorhandene
+Bindungswerkzeug akzeptiert jetzt optional eine explizite Kapazität, prüft
+weiter die gemeinsame harte Obergrenze von vier Millionen Zellen und
+übernimmt exakt dieselbe Kapazität in Nachweis und Explorerprofil. Default
+bleibt unverändert. Für die begrenzte reale Folgeprobe werden 524.288 gewählt.
+Keine Rastervergröberung, freie Zellen, Scopeerweiterung oder neue Sensorzeiten.
+27 Werkzeug-/TF-Fälle bestanden; synthetischer Gegenfall bewahrt die echte
+Unknown-/Occupied-Belegung und den unveränderten Fingerprint. Laufzeitkosten
+und Frischewirkung sind weiterhin tatsächlich zu prüfen.
+
 ## 10.10.2026 – aktuelle Quellstatusmeldungen vor der Fahrentscheidung empfangen
 
 Bei gültigen aktuellen IMU-/Radmessungen verriegelte das Tor wegen 1,196 s

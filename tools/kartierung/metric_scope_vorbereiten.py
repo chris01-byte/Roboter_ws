@@ -26,6 +26,7 @@ from explore.map_status_adapter import MapManagerStatusCorrelator, decode_map_ma
 from explore.portal_memory import Point2D, PortalMapContext
 from explore.portal_source_adapter import (raw_map_portal_source_from_values,
     correlate_raw_map_portal_source)
+from amadeus_map_identity import MAXIMUM_OCCUPANCY_CELL_COUNT
 
 
 class BindingPending(ValueError):
@@ -177,7 +178,8 @@ class ScopeBinding:
         self.correlator = MapManagerStatusCorrelator(document['session_id'], document['frame_id'])
         require(all(type(value) in (float, int) and math.isfinite(value) and value > 0
                     for value in (map_timeout, pose_timeout)), 'freshness limits must be finite and positive')
-        require(type(maximum_cells) is int and maximum_cells > 0, 'maximum_cells must be positive')
+        require(type(maximum_cells) is int and 0 < maximum_cells <= MAXIMUM_OCCUPANCY_CELL_COUNT,
+                'maximum_cells must be within the shared bounded map capacity')
         for expected in self.expected.values():
             owner(expected, [1]+[0]*23)
         self.map_timeout, self.pose_timeout, self.maximum_cells = map_timeout, pose_timeout, maximum_cells
@@ -250,6 +252,7 @@ class ScopeBinding:
             x_m=pose['translation'][0], y_m=pose['translation'][1], clearance_m=1e-9),
             'actual robot centre lies outside the explicitly reviewed LAB scope')
         return dict(schema_version=1, session_id=self.document['session_id'],
+            processing_capacity_cells=self.maximum_cells,
             map_fingerprint=source.fingerprint, source_stamp_ns=source.source_stamp_ns,
             scope_fingerprint=self.scope.fingerprint, observed_maps=sample.observed_maps,
             bound_ros_ns=ros_now_ns, owners=copy.deepcopy(self.owners), pose=pose, map_odom=reference,
@@ -258,6 +261,7 @@ class ScopeBinding:
     def parameters(self, metric_profile):
         parameters = copy.deepcopy(metric_profile['explore_node']['ros__parameters'])
         parameters.update(metric_session_id=self.document['session_id'],
+            wohnungserkundung_evidence_max_cells=self.maximum_cells,
             metric_scope_map_fingerprint=self.document['map_fingerprint'],
             wohnungserkundung_accessible_scope_verified=True,
             wohnungserkundung_scope_id=self.document['scope_id'],
@@ -438,6 +442,8 @@ def main(argv=None):
     parser.add_argument('--tf-probe', type=Path, required=True, help='built existing tools/simulation/tf_ownership_probe binary')
     parser.add_argument('--install-root', type=Path, required=True, help='explicit product-install root; reject mixed/old Python overlays')
     parser.add_argument('--timeout', type=float, default=15.)
+    parser.add_argument('--maximum-cells', type=int, default=None,
+        help='Explicit processing capacity copied into the bound profile; no resampling or geometry changes')
     parser.add_argument('--map-owner', default='/slam_toolbox')
     parser.add_argument('--manager-owner', default='/robot_map_manager')
     parser.add_argument('--odom-owner', default='/hwt601_mapping_ekf')
@@ -464,7 +470,8 @@ def main(argv=None):
     binding = ScopeBinding(document, map_owner=args.map_owner, manager_owner=args.manager_owner,
         odom_owner=args.odom_owner, map_timeout=base.get('map_timeout_s', 5.),
         pose_timeout=base.get('door_localization_timeout_s', .8),
-        maximum_cells=base.get('wohnungserkundung_evidence_max_cells', 262144))
+        maximum_cells=(args.maximum_cells if args.maximum_cells is not None else
+                       base.get('wohnungserkundung_evidence_max_cells', 262144)))
     output = collect(args, binding, metric_profile, repository)
     print('Privates konservatives Profil gebunden: '+str(output))
     print('Nur anzeigen; keine Mission oder Bewegung gestartet. Bestehenden passiven Stack weiterlaufen lassen:')
