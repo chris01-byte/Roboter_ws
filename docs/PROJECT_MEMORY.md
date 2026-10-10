@@ -17,6 +17,32 @@ Rückfallweg:
 
 ---
 
+## 2026-10-10 — Arm-Build A: Rohdaten vor Bewegungssoftware
+
+**Entscheidung:** Drei getrennte Pakete für Daten/Transport, CLI und Inventar.
+Fünf ESS17-RS07 und ein noch nicht genau bestimmter NEMA23; keine geratenen
+Gelenkzuordnungen, Adressen oder Messwerte. Reale Probe nur nach expliziter
+Zuordnung und mit zwei dokumentierten ESS17-RO-Blöcken.
+
+**Grund / Evidenz:** Nutzer bestätigt gemischte Motoren, keine Bremsen,
+noch ungebauten XL330-Spindelgreifer und zuerst reine Arm-Inbetriebnahme.
+Hersteller-Handbuch V1.0 dokumentiert FC03 und die RO-Bereiche
+0x0000–0x0003 sowie 0x0006–0x000C. Firmware darf für die Erstinventur offen sein.
+
+**Betroffen:** arm_hardware, arm_tools, arm_bringup, Arm-CI und Kontextdatei.
+Keine vorhandenen Roboterstarts verändert; keine reale Hardware angesprochen.
+
+**Teststatus:** Automatisierte Offline-, Pseudo-Terminal- und Humble-Prüfungen
+ergänzt. Ergebnis und Fortschritt im [Build-Protokoll](ARM_BUILDPROTOKOLL.md).
+
+**Offen:** Echte Modell-/Adresszuordnung, Bustiming, Stopwege, Halteverhalten,
+Homing, Skalen, Winkelgrenzen und komplette Bewegungssoftware.
+
+**Rückfallweg:** Neue Pakete nicht starten bzw. isoliertes Overlay nicht sourcen.
+Die bestehende Fahrbasis und Sensorpipeline bleiben unabhängig.
+
+---
+
 ## 2026-08-26 — OAK-RGB-D-Dauerstream entkoppelt und selbstheilend
 
 **Entscheidung:** Die OAK-D-S2 liefert im Semantik-/SLAM-Profil real

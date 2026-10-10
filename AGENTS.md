@@ -116,6 +116,14 @@ gemessene Evidenz mit Zahlen.
 
 ---
 
+## Arm-Inbetriebnahme
+
+Bei Arbeiten an Arm, Greifer oder OAK-Arm-Integration zuerst
+[`docs/ARM_KONTEXT.md`](docs/ARM_KONTEXT.md) und
+[`docs/ARM_BUILDPROTOKOLL.md`](docs/ARM_BUILDPROTOKOLL.md) lesen.
+Neue Build-/Integrationseinträge dort auf höchstens 200 Wörter begrenzen.
+Fake-Daten und reale Messungen niemals gleichsetzen.
+
 ## 6. Was zuerst zu tun ist
 
 1. `docs/INVENTORY.md` lesen — Komponenten, Startbefehle, Reifegrad.

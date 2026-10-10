@@ -1,5 +1,12 @@
 # Integrationsplan: ESS17-RS Roboterarm in die Roboterplattform
 
+> **Aktualisierung 10.10.2026:** Aktuelle Fakten und Build-Einstieg stehen in
+> [ARM_KONTEXT.md](ARM_KONTEXT.md). Der Arm hat fünf ESS17-RS07 und einen
+> noch nicht genau bestimmten NEMA23; es gibt laut Nutzer keinen externen
+> Armcode. Die folgenden historischen Angaben zu sechs ESS17, Foxy-Code,
+> IDs und Beispielwinkeln sind keine bestätigten Hardwaredaten. Build A
+> implementiert zunächst Konfigurationsprüfung, Fake und reine ESS17-Rohdiagnose.
+
 **Status:** Plan, noch keine Arm-Hardwarebewegung durch diese Integration
 
 **Zielsystem:** ROS 2 Humble auf Jetson / Ubuntu 22.04

@@ -25,6 +25,8 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 | App-Livepose | [`APP_LIVE_ROBOTERPOSE_INTEGRATION.md`](APP_LIVE_ROBOTERPOSE_INTEGRATION.md) | Read-only Pose-/Lokalisierungsintegration fuer die App. |
 | LiDAR-Hardware | [`hardware/STL27L_INTEGRATION.md`](hardware/STL27L_INTEGRATION.md) | STL-27L-spezifische Treiber- und Frameinformation. |
 | Arm/OAK-Kalibrierung | [`../KONZEPT_KALIBRIERUNG_OAK_ARM.md`](../KONZEPT_KALIBRIERUNG_OAK_ARM.md) | Hand-Auge-Kalibrierung; erst nach echter Arm-/Encoderabnahme ausfuehren. |
+| Arm-Kontext | [`ARM_KONTEXT.md`](ARM_KONTEXT.md) | Aktuelle Nutzerangaben, Softwarepfade, offene Messungen und Stufen. |
+| Arm-Builds | [`ARM_BUILDPROTOKOLL.md`](ARM_BUILDPROTOKOLL.md) | Kurzes Änderungsprotokoll, maximal 200 Wörter je Build. |
 | Arm-Software | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | ESS17-Commissioning, ros2_control, MoveIt 2, Interlocks und Meilensteine. |
 | Diagnostik und Selbstbefreiung | [`INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Health-Zustaende, Ereignisprotokoll, sichere Selbstbefreiung und Supervision. |
 
