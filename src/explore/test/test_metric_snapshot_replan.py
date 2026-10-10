@@ -218,8 +218,9 @@ def test_stationary_observation_discards_expired_gain_without_restarting_deadlin
         node._robot_pose_sample = lambda: ((target.x, target.y, target.yaw), 0.)
         return 'success'
     node._navigate_to = navigate
-    def measured_gain(*args):
-        gain = actual_gain(*args)
+    def measured_gain(*args, **kwargs):
+        assert kwargs['batch_projection'] is True
+        gain = actual_gain(*args, **kwargs)
         assert gain  # real new visible cells, invalidated by the later failed proof
         gains.append(clock[0])
         reject_final[0] = fault != 'fresh' or len(gains) == 1
