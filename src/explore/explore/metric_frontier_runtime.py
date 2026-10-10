@@ -995,10 +995,22 @@ class MetricFrontierRuntime:
         search=seed & (distance_transform_edt(np.pad(seed,1))[1:-1,1:-1]
             *grid.info.resolution >= self._goal_clearance_m+grid.info.resolution/2)
         costs=np.asarray(costmap.data).reshape(costmap.info.height,costmap.info.width)
-        for r,c in zip(*np.nonzero(search)):
-            x,y=self._grid_to_world(c,r,grid.info);cc,rr=self._world_to_grid(x,y,costmap.info)
-            if not (0<=rr<costs.shape[0] and 0<=cc<costs.shape[1]
-                    and 0<=costs[rr,cc]<=self._frontier_goal_max_cost):search[r,c]=False
+        rows, cols = np.nonzero(search)
+        x, y = self._grid_to_world(cols, rows, grid.info)
+        # Identical cell-centre transform and floor semantics to the scalar
+        # _world_to_grid, with its invariant costmap transform computed once.
+        q = costmap.info.origin.orientation
+        yaw = math.atan2(2.*(q.w*q.z+q.x*q.y), 1.-2.*(q.y*q.y+q.z*q.z))
+        cosine, sine = math.cos(yaw), math.sin(yaw)
+        dx, dy = x-costmap.info.origin.position.x, y-costmap.info.origin.position.y
+        cc = np.floor((cosine*dx+sine*dy)/costmap.info.resolution).astype(np.int64)
+        rr = np.floor((-sine*dx+cosine*dy)/costmap.info.resolution).astype(np.int64)
+        inside = ((rr >= 0) & (rr < costs.shape[0])
+                  & (cc >= 0) & (cc < costs.shape[1]))
+        admitted = np.zeros(len(rows), dtype=bool)
+        current = costs[rr[inside], cc[inside]]
+        admitted[inside] = (current >= 0) & (current <= self._frontier_goal_max_cost)
+        search[rows[~admitted], cols[~admitted]] = False
         if memo is not None:
             memo.update(seed_key=key, seed=search)
         return search

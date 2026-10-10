@@ -3204,3 +3204,7 @@ Vorherige R12-/R13-/R16-/R16b-Abbruchbelege bleiben unverändert erhalten.
 R17 schloss die feste 25-cm-/±15°-Sequenz und drei Stillstände vollständig ab,
 mit 0,275685 m Encoderweg einschließlich Ausrollen/Drehanteilen, ohne Modbus-
 Lesefehler oder Encoderverriegelung. Kein autonomer AP-06-Gesamtpositivlauf.
+
+## 11.10.2026 – AP-06: ARM-Auswahlpfad vor neuem Gesamtlauf
+
+Gerätefreie Werkzeuge nutzen freien Kern 3 ausschließlich für Explorer; Graph 0–2, Quellen 5 und Sensoren 4 bleiben unverändert. Produktänderung bündelt exakt die bisherige Zellprojektion der Suchmaske, ohne Frische-/Kontinuitäts-/Geometriegrenzen anzuheben. 79 gezielte Tests bestanden. Keine Änderung am Bestandsinstall, Autostart oder ROS-SDK. Wirkungsprüfung am einheitlich separat neu gebauten Kandidaten noch erforderlich; Offline-Timing ist kein neuer Realbeleg. Rückfall durch gezielten Revert bzw. erhaltenen Bestandsinstall.

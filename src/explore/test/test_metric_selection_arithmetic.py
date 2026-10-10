@@ -9,6 +9,37 @@ from test_metric_progress import grid
 from test_metric_native_sweep import native
 
 
+@pytest.mark.parametrize('raw_angle', [0., .17, -math.pi/2])
+@pytest.mark.parametrize('cost_angle', [0., -.23, math.pi/2])
+@pytest.mark.parametrize('offset', [0., 1e-15, -.035])
+def test_batched_seed_projection_matches_scalar_cost_admission(monkeypatch, raw_angle, cost_angle, offset):
+    """All cells, including rotated edge contacts and rejected inflated costs."""
+    from scipy.ndimage import distance_transform_edt
+    from test_metric_frontier import egress_fixture
+    node, inputs = egress_fixture()
+    raw, _, _, known, _, cost, _ = inputs
+    raw.info.origin.orientation.z = math.sin(raw_angle/2)
+    raw.info.origin.orientation.w = math.cos(raw_angle/2)
+    cost.info.origin.orientation.z = math.sin(cost_angle/2)
+    cost.info.origin.orientation.w = math.cos(cost_angle/2)
+    cost.info.origin.position.x += offset
+    cost.info.origin.position.y -= offset
+    cost.data = np.random.default_rng(731).choice([-1, 0, 90, 91, 100], size=len(cost.data)).tolist()
+    # This arithmetic-only comparison grants no runtime source/route authority.
+    monkeypatch.setattr(node, '_metric_private_start_needed', lambda _: True)
+    seed = known | node._metric_egress[0].unknown
+    expected = seed & (distance_transform_edt(np.pad(seed, 1))[1:-1, 1:-1]
+        *raw.info.resolution >= node._goal_clearance_m+raw.info.resolution/2)
+    costs = np.asarray(cost.data).reshape(cost.info.height, cost.info.width)
+    for r, c in zip(*np.nonzero(expected)):
+        x, y = node._grid_to_world(c, r, raw.info)
+        cc, rr = node._world_to_grid(x, y, cost.info)
+        if not (0 <= rr < costs.shape[0] and 0 <= cc < costs.shape[1]
+                and 0 <= costs[rr, cc] <= node._frontier_goal_max_cost):
+            expected[r, c] = False
+    assert np.array_equal(node._metric_seed_mask(inputs), expected)
+
+
 @pytest.mark.parametrize('angle', [0., 1e-15, .17, -1.4, math.pi/2])
 @pytest.mark.parametrize('batched', [False, True])
 def test_disjoint_clipping_preserves_areas_and_every_contact_vertex(angle, batched):
