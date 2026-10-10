@@ -1,5 +1,29 @@
 # Projektgedächtnis
 
+## 10.10.2026 – Encoder-Serialisierung vor die erste Baseline legen
+
+Beim expliziten Vergleich im separaten Checkout brauchte die erste tatsächliche
+Humble-Serialisierung von Odometry 195,9 ms, Folgeaufrufe etwa 0,2 ms; String
+anfangs 79,6 ms. Der isolierte DDS-Ausgabeprozess beseitigte zwar blockierende
+Publikation, doch die erste Serialisierung im seriellen Elternprozess lud
+Nachrichtenbibliotheken weiterhin nach der Baseline. Ein lesender Nachcheck
+verlor direkt nach seiner ersten Odometrieausgabe 199 ms Kontinuität. Identitäts-
+prüfungen waren im gemessenen Lauf höchstens 3,52 ms; bloße CPU-Trennung löste
+den Startfehler nicht. EncoderPublication initialisiert deshalb alle tatsächlich
+verwendeten Nachrichtenserialisierer im Konstruktor vor Timer/Baseline. Die
+Bytes werden lokal verworfen; keine Aufwärmmessung oder neue Zeitstempel
+publizieren. Fristen, echte Kontinuität, Ausgabeverlust-Halt und Originaldaten
+bleiben unverändert. 128 explizit gegen die Source aufgelöste Base-Fälle grün.
+Lesender Vorlauf 180,009 s: 3.230 aufgezeichnete gültige Radproben, keine
+verworfen, längstes tatsächlich gemessenes Paar 31,386 ms, größte Headerlücke
+63,896 ms; beide Antriebe danach weiterhin 0 RPM und unveränderte Positionen.
+Recorder- und Anlaufverzögerungen bleiben gesondert im privaten Nachweis.
+
+Ein anderer Nachcheck überschritt mit 130 ms das 120-ms-Paarfenster; auch dieser
+Gegenbeleg bleibt erhalten. Die Folge 1–4 ist noch in Punkt 1. Keine Gesamt-
+oder Kundenabnahme daraus ableiten. Detailnachweis und aktuelle Folge im
+Wohnungserkundungs-STATUS, reale Messdateien nur im privaten Diagnosebereich.
+
 ## 10.10.2026 – LAB-Diagnose: echte Kartenepoche, Quellenempfang und Recovery
 
 Eine wachsende Karte erhält neue Inhaltsfingerprints; der Region-Shadow behält

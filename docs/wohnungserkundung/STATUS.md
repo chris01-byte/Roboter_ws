@@ -2,6 +2,35 @@
 
 ## 10.10.2026 – beauftragte Folge 1–4 wird ausgeführt
 
+Punkt 1 läuft. Unabhängige Auswertung der Original-LiDAR-Scans ohne Rad-/EKF-
+Prior bestätigt R17: 26,84 cm, +16,69° / −16,37°, lokale Fitresiduen etwa
+3–4 mm. Neuer R18-Vergleich startete real und durchlief Vorwärts- und beide
+Drehphasen; beim Schlussstop kontrollierter Monitorabbruch bei 0,60957 rad
+Phasenwinkelspanne gegen 0,6 rad Budget. Kein vollständiger Positivlauf daraus.
+Encoder gültig, keine Modbus-Lesefehler, frischer Stillstand bestätigt.
+90 reale FC06-Transaktionen alle bestätigt, genau sechs Startimpulse; ein
+periodisches Neustarten der Rampe ist damit widerlegt. Register 2000/400/5
+zurückgelesen. Positionsdaten zeigen etwa 1,48 Motor-RPM/s Beschleunigung.
+Expliziter Vergleich mit Register 100 und getrennten begrenzten Komponenten-
+proben vorbereitet; bisher noch keine Fahrt mit dieser Rampeneinstellung.
+
+Zusätzliche lesende Nachprüfungen: einmal 130-ms-Paar gegen 120-ms-Grenze,
+anschließend bei CPU-Trennung eine 199-ms-Lücke direkt nach der ersten
+Odometrieausgabe. Beide negative Befunde bleiben erhalten. Kaltmessung der
+ersten ROS-Serialisierung: String 79,6 ms, Odometry 195,9 ms; danach jeweils
+unter 0,3 ms. Ausgabehelper lädt nun die tatsächlichen Serialisierer vor
+Baseline/Timer, verwirft Initialisierungsbytes lokal und publiziert keine
+Aufwärmprobe. 128 Tests mit expliziter Sourceauflösung bestanden; erste
+versehentlich alte Overlayauflösung ist als negativer Testnachweis erhalten.
+Separater Base-Build erfolgreich. Lesender Dreiminutenlauf 180,009 s beendet:
+3.230 aufgezeichnete gültige Radproben, keine Paarverwerfung, längstes Paar
+31,386 ms, größte Radheaderlücke 63,896 ms; 608/608 Nahstatusproben gesund.
+HWT-Anlauf nicht als durchgehend fertige Fusion ausweisen. Aktiver Folgestart
+noch ohne Bewegung: Tor verwendete bei frischen IMU-Messungen 1,196 s alte
+Status-Callbacks und verriegelte; Start nicht gesendet, Weg/Kommandos null.
+Originalbefund bleibt erhalten; Status-Empfangspfad wird separat korrigiert.
+Keine Frische-, Kontinuitäts- oder Bremsgrenze angehoben.
+
 Nutzerauftrag: Anfahr-/Bremsmessung, ein reproduzierbarer Kandidat samt drei
 ursprünglichen AP-06-Gesamtfällen, regulärer autonomer LAB-Start, danach die
 weiteren Gesamtprüfungen gemäß MASTERPLAN v1.3 / WE-M4–M7. LAB-1-Freigabe

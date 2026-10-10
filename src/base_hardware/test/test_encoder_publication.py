@@ -1,11 +1,51 @@
 """Blocking publication must not block acquisition or restamp a sample."""
 import multiprocessing
+import pytest
 import time
 from types import SimpleNamespace
 
 from nav_msgs.msg import Odometry
 from rclpy.serialization import deserialize_message
 from base_hardware.encoder_publication import _Publisher
+
+
+def test_parent_serializers_are_primed_before_worker_without_publishing(monkeypatch):
+    from base_hardware.encoder_publication import EncoderPublication
+    events = []
+    monkeypatch.setattr('rosidl_runtime_py.utilities.get_message',
+        lambda kind: events.append(('load', kind)) or (lambda: kind))
+    monkeypatch.setattr('rclpy.serialization.serialize_message',
+        lambda message: events.append(('serialize', message)) or b'unpublished')
+    class Slot:
+        def put_nowait(self, value):
+            raise AssertionError('warmup must not publish')
+    class Event:
+        def wait(self, seconds):
+            return True
+    class Process:
+        def start(self):
+            events.append(('spawn', None))
+    ctx = SimpleNamespace(Event=Event, Queue=lambda **kw: Slot(),
+                          Process=lambda **kw: Process())
+    monkeypatch.setattr('multiprocessing.get_context', lambda method: ctx)
+    EncoderPublication([('/unit/odom', 'nav_msgs/msg/Odometry'),
+                        ('/unit/status', 'std_msgs/msg/String'),
+                        ('/unit/detail', 'std_msgs/msg/String')], .18)
+    assert events == [('load', 'nav_msgs/msg/Odometry'),
+                      ('serialize', 'nav_msgs/msg/Odometry'),
+                      ('load', 'std_msgs/msg/String'),
+                      ('serialize', 'std_msgs/msg/String'), ('spawn', None)]
+
+
+def test_serializer_failure_prevents_worker_creation(monkeypatch):
+    from base_hardware.encoder_publication import EncoderPublication
+    def broken(_):
+        raise RuntimeError('missing native message support')
+    monkeypatch.setattr('rclpy.serialization.serialize_message', broken)
+    monkeypatch.setattr('multiprocessing.get_context',
+        lambda _: (_ for _ in ()).throw(AssertionError('worker created after warmup failure')))
+    with pytest.raises(RuntimeError, match='native message'):
+        EncoderPublication([('/unit/odom', 'nav_msgs/msg/Odometry')], .18)
 
 
 def _blocked_receiver(slot, entered, release, result):
