@@ -2,7 +2,27 @@
 
 ## 10.10.2026 – beauftragte Folge 1–4 wird ausgeführt
 
-Punkt 1 läuft. Unabhängige Auswertung der Original-LiDAR-Scans ohne Rad-/EKF-
+Punkt 1 beendet als begrenzte Komponentenqualifikation: Register 100/400/5
+tatsächlich zurückgelesen, RPM-Skalierung 1 beibehalten. Negative Drehung und
+25-cm-Translation mit gemessenem Stop positiv. Translation einschließlich
+Ausrollen 29,850 cm Encoder / 30,066 cm unabhängiger LiDAR; lokale ICP-Residuen
+3,85 mm. Gerade Phase 4,185 s, gesamter Lauf 6,109 s, nach letztem Vor-Stop-
+Sample 4,411 cm Ausrollen; bestehende 12,8-cm-Stopphülle genügt für diese Probe.
+Steady-State tatsächlich etwa 0,079 m/s bei 0,08 m/s Soll, FC03 122 RPM;
+kein belegter Faktor-zwei-Encoder-/RPM-Fehler. 46/46 FC06 bestätigt, genau zwei
+Startimpulse. Danach je Motor 1.970 tatsächliche FC03-Proben mit identischer
+Position und Null-RPM. Beide feste Komponenten sind keine selbstgewählten
+Explorer-Ziele. Keine autonome Produkt-/Kundenabnahme daraus ableiten.
+
+Sichtlücke im Rohdatenbeleg ausdrücklich: zweiter 90-s-Recorder endete knapp
+vor Translationsbeginn. Originale Diagnose-/Tor-/Base-Ereignisse und tatsächliche
+RAM-Bustransaktionen erfassen den Lauf; unabhängiger LiDAR-Wegvergleich nutzt
+Originalscans vor Fahrt und zusätzliche späte Stillstandsaufzeichnung. Keine
+vollständige bewegte Raw-Bag-Sensorabdeckung behaupten. Private Originale
+bleiben erhalten, eigene Prozesse geordnet direkt beendet. Punkt 2 folgt:
+einheitlicher Produktkandidat und ursprüngliche AP-06-Fälle A/B/C.
+
+Unabhängige Auswertung der Original-LiDAR-Scans ohne Rad-/EKF-
 Prior bestätigt R17: 26,84 cm, +16,69° / −16,37°, lokale Fitresiduen etwa
 3–4 mm. Neuer R18-Vergleich startete real und durchlief Vorwärts- und beide
 Drehphasen; beim Schlussstop kontrollierter Monitorabbruch bei 0,60957 rad

@@ -1,5 +1,24 @@
 # Projektgedächtnis
 
+## 10.10.2026 – Anlaufprofil durch reale Register-/Encoder-/LiDAR-Messung auswählen
+
+Register 2000 zeigte im tatsächlichen Antrieb etwa 1,48 Motor-RPM/s und über
+21 s bis 25 cm. Genau ein Startimpuls je Motor und Phase ist bestätigt;
+periodische Rampenneustarts als Ursache widerlegt. Expliziter Vergleich mit
+100 bei unverändertem Bremswert 400 und Startwert 5: 25 cm in 4,185 s bis
+Stopphase, 6,109 s bis bestätigt ruhend; Steady-State etwa 0,079 m/s bei
+0,08 m/s Soll. RPM-Skalierung 1 stimmt dazu und bleibt bestehen. Tatsächlicher
+Encoder-Endweg 29,850 cm, unabhängige LiDAR-Registrierung ohne Radprior
+30,066 cm; 3,85-mm-Fitresiduum. Ausrollen nach letztem Vor-Stop-Sample 4,411 cm
+unter vorhandener 12,8-cm-Hülle. 46 Registerschreibungen alle bestätigt,
+zwei Startimpulse; je Motor 1.970 nachfolgende FC03-Proben unverändert/null.
+Komponentenprüfung positiv, neue LAB-Laufzeit verwendet explizit 100;
+Default 2000 bleibt bis Gesamtqualifikation erhalten. Keine Firmwareformel
+aus der nominellen Millisekundenbeschriftung ableiten. Raw-Bag-Lücke während
+Translation bleibt offen ausgewiesen; späterer Stillstands-LiDAR-Vergleich
+ersetzt keinen vollständigen bewegten Sensorbeleg. Originalinstallation bleibt
+Rückfall, keine Autostartumstellung.
+
 ## 10.10.2026 – Kartenverarbeitungskapazität ausdrücklich mit dem Scope binden
 
 Eine stationäre reale 1-cm-Karte hatte 648×423 = 274.104 Zellen; das feste
