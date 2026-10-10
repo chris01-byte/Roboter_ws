@@ -674,18 +674,19 @@ def run(args):
     source_cpu = allowed_cpus[-1] if len(allowed_cpus) >= 4 else None
     sensor_cpu = allowed_cpus[-2] if source_cpu is not None else None
     graph_cpus = allowed_cpus[:min(3, len(allowed_cpus)-2)] if source_cpu is not None else allowed_cpus
-    # The six-core ARM host has one CPU outside the original graph/source/
-    # sensor allocation. Keep sources and native graph unchanged and put the
-    # Python Explorer there. Scheduling grants no time or geometry exemption.
+    # Keep the native graph and source allocation unchanged. The Explorer's
+    # native geometry releases the GIL; a second CPU lets its source callbacks
+    # run alongside it. The finite sensor CPU had spare capacity in the measured
+    # ARM run. Neither allocation grants a time or geometry exemption.
     spare_cpus = [cpu for cpu in allowed_cpus
                   if cpu not in (*graph_cpus, source_cpu, sensor_cpu)]
-    explorer_cpu = spare_cpus[0] if spare_cpus else None
+    explorer_cpus = sorted(set(spare_cpus + ([sensor_cpu] if spare_cpus else [])))
     result['cpu_allocation'] = dict(available=allowed_cpus, graph=graph_cpus,
                                   source=source_cpu, sensors=sensor_cpu,
-                                  explorer=explorer_cpu)
+                                  explorer=explorer_cpus or None)
     def start(name, command):
-        if name == 'explorer' and explorer_cpu is not None:
-            command = ['taskset', '-c', str(explorer_cpu), *command]
+        if name == 'explorer' and explorer_cpus:
+            command = ['taskset', '-c', ','.join(map(str, explorer_cpus)), *command]
         with (out/'commands.jsonl').open('a') as commands:
             commands.write(json.dumps({'name': name, 'argv': command})+'\n')
         stream = (out/(name+'.log')).open('w')
