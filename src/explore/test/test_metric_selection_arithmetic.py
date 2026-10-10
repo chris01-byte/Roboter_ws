@@ -112,3 +112,39 @@ def test_actual_b201_private_trajectory_preserves_original_history_proof(monkeyp
                     assert not result[0]
                 results.append((result,current.remaining_area,current.departed_distance,current.valid))
             assert results[0]==results[1]
+
+
+@pytest.mark.parametrize('angle', [0., 1e-15, .17, -1.4, math.pi/2])
+@pytest.mark.parametrize('variant', ['clear', 'occupied', 'unknown', 'outside', 'masked'])
+def test_batched_measured_rays_preserve_original_supercover_and_gain(angle, variant):
+    from explore.metric_progress import ObservationBaseline, measured_gain
+    from explore.portal_memory import PortalMapContext
+    from explore.portal_source_adapter import PortalSourceCorrelation
+    from test_metric_progress import scan
+    g = grid()
+    g.info.origin.orientation.z = math.sin(angle/2)
+    g.info.origin.orientation.w = math.cos(angle/2)
+    values = np.zeros((g.info.height, g.info.width), dtype=int)
+    if variant == 'occupied':
+        values[18:22, 11] = 100
+    elif variant == 'unknown':
+        values[18:22, 11] = -1
+    g.data = values.ravel().tolist()
+    to_world, to_grid = ExploreNode._grid_to_world, ExploreNode._world_to_grid
+    origin = to_world(-1 if variant == 'outside' else 10, 20, g.info)
+    points = tuple(to_world(col, row, g.info) for row, col in
+        ((20, 25), (16, 25), (24, 25), (10, 30), (30, 30), (0, 0), (39, 79)))
+    context = PortalMapContext('metric', 'map-'+('a'*64), 'map')
+    baseline = ObservationBaseline(context, 100_000_000_000, 100_000_000_000,
+        g.info.resolution, angle, points)
+    correlation = PortalSourceCorrelation(context, 2, 'b'*64, 101_000_000_000)
+    actual_scan = scan()
+    if variant == 'masked':
+        actual_scan['ranges'][:] = np.nan
+    args = (baseline, g, correlation, (*origin, angle), actual_scan, (0., 0., 0.), to_grid, to_world)
+    original = measured_gain(*args)
+    assert measured_gain(*args, batch_projection=True) == original
+    if variant == 'clear':
+        assert original
+    if variant in ('outside', 'masked'):
+        assert not original

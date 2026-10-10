@@ -3208,3 +3208,7 @@ Lesefehler oder Encoderverriegelung. Kein autonomer AP-06-Gesamtpositivlauf.
 ## 11.10.2026 – AP-06: ARM-Auswahlpfad vor neuem Gesamtlauf
 
 Gerätefreie Werkzeuge nutzen freien Kern 3 ausschließlich für Explorer; Graph 0–2, Quellen 5 und Sensoren 4 bleiben unverändert. Produktänderung bündelt exakt die bisherige Zellprojektion der Suchmaske, ohne Frische-/Kontinuitäts-/Geometriegrenzen anzuheben. 79 gezielte Tests bestanden. Keine Änderung am Bestandsinstall, Autostart oder ROS-SDK. Wirkungsprüfung am einheitlich separat neu gebauten Kandidaten noch erforderlich; Offline-Timing ist kein neuer Realbeleg. Rückfall durch gezielten Revert bzw. erhaltenen Bestandsinstall.
+
+## 11.10.2026 – AP-06: Auswahl- und Beobachtungsrechnung vor neuem Kandidat
+
+Erstbesuchs-Policy spart unbenutzte Hashes nur ohne jegliche echte Historie; endgültige Kandidaten binden immer vollständige gemessene Hashes. Tatsächlich identische endliche LiDAR-Strahlen werden gebündelt ausgewertet. Zweites Beobachtungsfenster bleibt 2 s, Quellen-/Anhaltefristen unverändert; unknown und diagonale Hindernisse nicht gelockert. 175 gezielte plus 24 Quellen-/Verdeckungsfälle bestanden. Wirkung betrifft Explorer-Arbeit und Messauswertung, keine neue Aktoransteuerung oder Originalinstallation. Gesamt-/Hardwarequalifikation nicht vorwegnehmen. Aktueller Stand/Rückfall im STATUS; eigene Prozesse direkt stoppen und privaten Kandidaten abwählen.

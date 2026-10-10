@@ -3275,7 +3275,7 @@ class MetricFrontierRuntime:
                         scan = self._door_lidar_scan_snapshot()
                         gained = measured_gain(baseline, after[0], after[1], after[2], scan,
                             self._door_lidar_mount(scan['frame_id']), self._world_to_grid, self._grid_to_world,
-                            self._door_lidar_max_range)
+                            self._door_lidar_max_range, batch_projection=True)
                         final = self._metric_inputs(active=True)
                         stamp_ns = scan['key'][0]*10**9+scan['key'][1]
                         if (final[1].fingerprint != after[1].fingerprint or

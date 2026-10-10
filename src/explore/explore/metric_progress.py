@@ -153,7 +153,31 @@ def observation_complete(baseline, grid, correlation, to_grid, to_world):
     return True
 
 
-def measured_gain(baseline, grid, correlation, pose, scan, mount, to_grid, to_world, maximum_range_m=4.):
+def _batched_ray_clear(grid, data, origin, endpoint, target_cell, distance):
+    """The production grid transform and identical sampled supercover cells."""
+    t = np.linspace(0, 1, max(2, math.ceil(distance/(grid.info.resolution/2))+1))
+    x = origin[0]+t*(endpoint[0]-origin[0])
+    y = origin[1]+t*(endpoint[1]-origin[1])
+    q = grid.info.origin.orientation
+    yaw = math.atan2(2.*(q.w*q.z+q.x*q.y), 1.-2.*(q.y*q.y+q.z*q.z))
+    cosine, sine = math.cos(yaw), math.sin(yaw)
+    dx, dy = x-grid.info.origin.position.x, y-grid.info.origin.position.y
+    cols = np.floor((cosine*dx+sine*dy)/grid.info.resolution).astype(np.int64)
+    rows = np.floor((-sine*dx+cosine*dy)/grid.info.resolution).astype(np.int64)
+    def clear(rr, cc):
+        if not np.all((rr >= 0) & (rr < data.shape[0]) & (cc >= 0) & (cc < data.shape[1])):
+            return False
+        return bool(np.all((data[rr, cc] == 0)
+            | ((rr == target_cell[0]) & (cc == target_cell[1]))))
+    if not clear(rows, cols):
+        return False
+    diagonal = (rows[1:] != rows[:-1]) & (cols[1:] != cols[:-1])
+    return (clear(rows[:-1][diagonal], cols[1:][diagonal])
+            and clear(rows[1:][diagonal], cols[:-1][diagonal]))
+
+
+def measured_gain(baseline, grid, correlation, pose, scan, mount, to_grid, to_world,
+                  maximum_range_m=4., *, batch_projection=False):
     """Unknown-to-observed change, seen by a newer finite actual LiDAR ray.
 
     Counts only aligned world cells and unobstructed, in-range current rays.
@@ -196,6 +220,10 @@ def measured_gain(baseline, grid, correlation, pose, scan, mount, to_grid, to_wo
                    for i in bins):
             continue
         # Supercover: endpoints and both side cells at every diagonal crossing.
+        if batch_projection:
+            if _batched_ray_clear(grid, data, origin, xy, (row, col), distance):
+                gain.add(xy)
+            continue
         previous = None
         clear = True
         for t in np.linspace(0, 1, max(2, math.ceil(distance/(grid.info.resolution/2))+1)):

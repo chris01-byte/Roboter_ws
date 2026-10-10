@@ -46,9 +46,10 @@ def test_newer_actual_local_scan_and_map_prove_gain_not_arrival():
                          ExploreNode._world_to_grid,ExploreNode._grid_to_world)==frozenset([xy])
 
 
+@pytest.mark.parametrize('batch_projection', [False, True])
 @pytest.mark.parametrize('fault',['old_scan','old_map','foreign','still_unknown','wall','nan','short_range','masked',
                                   'resolution','fractional_origin','occupied_sensor','diagonal_wall'])
-def test_global_growth_or_unusable_view_never_proves_local_observation(fault):
+def test_global_growth_or_unusable_view_never_proves_local_observation(fault, batch_projection):
     g=grid();xy=ExploreNode._grid_to_world(25,20,g.info)
     context=PortalMapContext('metric','map-'+('a'*64),'map')
     baseline=ObservationBaseline(context,100_000_000_000,100_000_000_000,.1,0.,(xy,))
@@ -68,7 +69,7 @@ def test_global_growth_or_unusable_view_never_proves_local_observation(fault):
     if fault=='diagonal_wall':
         pose=(.05,-.45,0.);a[16,11]=100
     g.data=a.ravel().tolist()
-    assert not measured_gain(baseline,g,c,pose,s,(0.,0.,0.),ExploreNode._world_to_grid,ExploreNode._grid_to_world)
+    assert not measured_gain(baseline,g,c,pose,s,(0.,0.,0.),ExploreNode._world_to_grid,ExploreNode._grid_to_world,batch_projection=batch_projection)
 
 
 def test_aligned_growth_preserves_world_receipt_and_distant_edit_does_not_open_retry():
