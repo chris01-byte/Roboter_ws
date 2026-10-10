@@ -63,7 +63,7 @@ def generate_launch_description():
             'crop', default_value='true'),
         DeclareLaunchArgument(
             'encoder_shadow_start_delay_s', default_value='15.0',
-            description='Passive FC03 starts after the measured import/start burst; no data is restamped.'),
+            description='Legacy argument name: the selected encoder owner starts after the import/start burst; no data is restamped.'),
 
         OpaqueFunction(function=_require_stationary_confirmation),
 
@@ -82,7 +82,11 @@ def generate_launch_description():
 
         # Einzige Verbindung zum Antrieb. Im HWT-Modus darf die Basis weder
         # /odom noch TF besitzen, sondern gibt nur ihre gemessenen Encoder aus.
-        Node(
+        # The active owner also exceeded the pair window during startup
+        # (239 ms after eight valid publications). Establish its first baseline
+        # after the same startup staging; do not extend freshness or rebase.
+        TimerAction(period=LaunchConfiguration('encoder_shadow_start_delay_s'),
+                    condition=IfCondition(active_drive), actions=[Node(
             package='base_hardware', executable='base_hardware',
             name='base_hardware', output='screen',
             condition=IfCondition(active_drive),
@@ -92,9 +96,14 @@ def generate_launch_description():
                 'dry_run': dry_run,
                 'allow_rs485': allow_rs485,
                 'encoder_timing_recovery_enabled': True,
+                # Only this explicit HWT path: DDS must not delay the sole
+                # serial/motor owner. Child publishes original bytes/stamps,
+                # owns no bus, and its loss permanently stops the parent.
+                'isolate_feedback_output': True,
+                'feedback_output_cpu_affinity': [-1],
                 'encoder_stale_timeout_s': .18,
                 'encoder_max_recovery_gap_s': .18,
-            }]),
+            }])]),
 
         # Motorlos: echte FC03-Encoder statt synthetischer Dry-run-Odometrie.
         # Exklusiver Ersatz, nie zweiter Leser neben base_hardware. Kein
@@ -102,7 +111,7 @@ def generate_launch_description():
         # Measured full-stack startup produced a 197.7ms poll-start gap
         # before the third pair. Start the passive reader after that import
         # burst, rather than establishing then silently rebasing a baseline.
-        # Fusion remains unready until real pairs arrive. Active owner unchanged.
+        # Fusion remains unready until real pairs arrive.
         TimerAction(period=LaunchConfiguration('encoder_shadow_start_delay_s'),
                     condition=UnlessCondition(active_drive), actions=[Node(
             package='base_hardware', executable='encoder_shadow_reader',

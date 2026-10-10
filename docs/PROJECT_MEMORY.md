@@ -1,5 +1,200 @@
 # Projektgedächtnis
 
+## 10.10.2026 – LAB-Diagnose: echte Kartenepoche, Quellenempfang und Recovery
+
+Eine wachsende Karte erhält neue Inhaltsfingerprints; der Region-Shadow behält
+die ursprüngliche Session-/Kartenepoche. Die feste LAB-Diagnose verglich beide
+im Idle fälschlich auf Gleichheit und verweigerte einen zweiten Start nach
+bereits gemessener Bewegung. Bei unveränderlichem, ursprünglich gemessenem
+Rad-/Scopeanker verlangt sie jetzt dieselbe verifizierte Ausgangsepoche,
+Session und Map-Frame sowie frische, revisionsgleiche tatsächliche Kartenquelle.
+Der aktuelle Inhaltsfingerprint bleibt im Nachweis erhalten. Der physische
+Scope wird nach Bewegung nicht neu relativ zum Roboter erzeugt. Fehlende,
+hier unbenutzte Portalbestände werden nicht als fehlende Karte ausgelegt und
+auch nicht künstlich ergänzt. Der ungebundene Altpfad bleibt streng gebunden.
+
+Fahrtor und Diagnose empfangen vor TF-Entscheidungen die tatsächlich bereits
+eingegangenen TF-CDRs über den vorhandenen Listener; Stempel und TF-Besitzer
+bleiben unverändert. Ein frischer Idle-Missionsstatus darf einen bereits durch
+alle Schutzprüfungen freigegebenen Diagnosebefehl nicht periodisch auf Null
+unterbrechen. Abbruch/Stop einer noch unbenutzten Diagnose publiziert keine
+scheinbare Aktivierung. Reale Aktivierung bleibt dagegen dauerhaft in der
+Historie. Nach erfolgreich behobenem HOLD quittiert der explizite Diagnose-
+Recovery-Trigger ausschließlich die Fortsetzungssperre bei frischen Quellen,
+gemessenem Stillstand und gesundem Recoveryzustand; er bewegt nichts und setzt
+weder Fehlerbudgets noch Journal zurück. Beim einzelnen Austausch des Tores
+wurden diese Historie und Zähler übernommen, aber keine Quellenproben,
+Status-Gesundheitswerte oder Fahrbefehle wiederhergestellt.
+
+Die Anhalteprüfung betrachtet auch vorzeichenbehaftete tatsächlich gemessene
+Restgeschwindigkeit bei Drehungen; deren vollständige Hülle muss im Scope
+bleiben. Diagnosekommandos bleiben vorwärts bis 0,08 m/s und |w| bis 0,10 rad/s.
+86 erste Regressionen einschließlich echter DDS-TF-Frische bestanden.
+Der private Testmonitor bewahrt die rohe Winkelvariation, begrenzt aber die
+Summe der Winkelspannen der getrennt überwachten Phasen: häufige kleine
+Encoderquantisierung bei nahezu gerader Fahrt ist keine kumulierte Drehung.
+Vier Gegenproben einschließlich echter Abbruchwiedergabe bestanden. Hardware-
+Tracking und autonome Gesamtmissionen werden dadurch nicht als bestanden erklärt.
+
+Ein nachfolgender Realversuch zeigte 1,3–1,4 s gemeinsame Verarbeitungslücke
+in Diagnose und Monitor. Im unabhängigen Bag liefen die realen Quellen weiter:
+Wheel-Headerlücke höchstens 72,502 ms, IMU 54,589 ms, Nahstatus 306,612 ms im
+betroffenen Zeitfenster. Die Diagnose verarbeitet deshalb vor ihrer Entscheidung
+je Quelle die jüngste tatsächlich queued Originalnachricht über ihren bestehenden
+Callback, in einer eigenen Callbackgruppe. Maximal zehn Nachrichten je Quelle,
+kein blockierendes Warten, keine Nachricht bedeutet keine Altersauffrischung.
+TF-Kanten werden weiterhin vollständig über den separaten Listener verarbeitet.
+Der private Monitor verwendet denselben Originalempfang. 87 verschiedene
+gezielte Fälle bestanden; der neue echte DDS-Fall überschreitet eine Sekunde
+Callbackpause und belegt danach auch unveränderte Stempel und Ausfallalter.
+Ein Testsender-Typfehler wurde vor Aktivierung behoben und nachgeprüft.
+
+R17 absolvierte anschließend die gesamte reale feste Sequenz mit drei
+gemessenen Stillständen: 0,275685 m Encoderweg einschließlich Ausrollen und
+kleiner Drehanteile, keine Modbus-Lesefehler oder Encoderverriegelung. Keine
+Frist oder physische Schutzgrenze wurde für dieses Ergebnis angehoben.
+
+## 10.10.2026 – Leeren Missionsstatus und unbenutzten Diagnose-Start unterscheiden
+
+Der reale Mission Manager meldet im Stillstand `active_command: {}`. Das Tor
+wertete dies bisher als begonnene Mission; nach einer erfolgreich behobenen
+Startlücke wartete es dadurch auf eine Explorer-Fortsetzung ohne vorausgegangene
+Mission. Leeres Objekt und `None` gelten jetzt ausschließlich bei `state=idle`
+als fehlender Auftrag. Eine tatsächlich begonnene Mission bleibt in der Historie.
+Der explizite, noch unbenutzte LAB-Diagnosemodus kann die vorhandene automatische
+Start-Erholung nutzen, aber nur mit aktuellen gemessenen Null-RPM, gültigem
+Encoder-Twist, unaktivierter Diagnose und frischem Idle-Explorer. Aktivierung der
+Diagnose markiert den Beginn dauerhaft; spätere HOLDs werden nicht so quittiert.
+Frischegrenzen, Fehlerbudgets und Not-Halt bleiben bestehen.
+
+Im Diagnosemodus war außerdem der vorhandene Empfang der neuesten tatsächlichen
+Wheel-/IMU-Probe nur bei freigegebener Explorer-Mission aktiv. Das Tor sah deshalb
+335 ms alte Wheel-Daten bei einer 15 ms alten tatsächlichen Probe. Die ausdrückliche
+Diagnose nutzt jetzt denselben geprüften Empfang, mit ursprünglichen Stempeln.
+DDS-Abfragen liegen vor dem Health-Mutex; die Bewertung samt Statusaufnahme
+bleibt eine gemeinsame atomare Entscheidung. Das verhindert die gegenseitige
+Behinderung eines bereits gestarteten Quellen-Callbacks und der Entscheidung.
+
+## 10.10.2026 – Aktive Encoder-Erfassung von DDS-Ausgabe trennen
+
+Nach dem unabhängigen Jetson-Neustart lag zwischen aktiven Abfragen eine Lücke
+von 319,610 ms; das zugehörige FC03-Paar benötigte nur 17,386 ms. Null Modbus-
+Lesefehler, beide Motor-RPM und Positionen null. Es handelt sich nicht um einen
+belegten Encoder-Hardwaredefekt. Der HWT-Opt-in gibt daher Base-Odometrie und
+Status über einen separaten, per `spawn` gestarteten DDS-Prozess aus. Nur die
+Basis besitzt den Bus und schreibt Motorregister. Queue je Topic auf eins
+begrenzt, kein Warten im Motorprozess, ursprüngliche Messbytes und Stempel;
+ältere Queue-Einträge werden verworfen, nicht verjüngt. Ausgabeprozessverlust
+fordert sofort Halt an und sperrt weitere Bewegung dauerhaft. Allgemeine Base-
+Defaults bleiben unverändert. Die aktive Frischegrenze bleibt 180 ms.
+
+Der erste isolierte aktive Vorlauf erreichte frische Fahrbereitschaft mit maximal
+27,349 ms Paarzeit. Während der anschließenden Vorbereitung sah das Tor dennoch
+211,452 ms alte Daten und beendete seine reale Erholung mit einem gelatchten
+Fehler. Kein Start-Trigger und kein Fahrbefehl wurden gesendet. Dieser Gegenbeleg
+bleibt erhalten; die zusätzliche Sperrreihenfolge-Korrektur, Prozessaffinität im
+privaten Laufprofil und Ausgabe-Zeitmessung werden separat real geprüft.
+177 gezielte Tests bestanden; vier bereits separat getestete passive DDS-Fälle
+waren in diesem Lauf abgewählt. AP-06-Kundenqualifikation wird daraus nicht abgeleitet.
+
+
+## 10.10.2026 – Startreserve unabhängig von Rasterrundung prüfen
+
+Unabhängiger Polygonschnitt des gespeicherten realen Starts zeigt: physischer
+und gepaddeter Körper im Polygon, aber bereits zusätzliche 10-mm-Reserve ohne
+Zellhalbdiagonale teilweise außerhalb und über unbekannter Rohfläche. Kein
+belegter Rundungsfehler; Reserve nicht allein für einen grünen Start entfernen.
+Vier Ausfahr-/Schutzregressionen grün, keine Fahrt. LAB-Freigabe liegt vor;
+fehlende Startabdeckung ist ein technischer Befund. Quelle: letzter AP-06-
+Vorlaufnachtrag und private exact-start-reserve-Nachweise.
+
+## 10.10.2026 – Unveränderliche Scope-Projektion, reale Bereichsgrenze getrennt
+
+Im separaten AP-06-Checkout entfielen offline rund 60 % der Geometriezeit auf
+wiederholte identische Scope-Rasterisierung. Vier Einträge für unveränderliche
+Polygon-/Rastergeometrie, Validierung vor Lookup und Kopie pro Aufrufer verkürzen
+die Arbeit ohne Belegungs-/Frischecache. 240 gezielte Tests grün; sechs passive
+reale Eingangsprüfungen ohne Frischefehler. Kein Nachweis einer Fahrt.
+Die bestätigte hintere Grenze am unaufgepolsterten Roboter ist zu knapp für
+den reservierten Footprint: 108 Zellen außerhalb. Keine Scopeerweiterung erfinden. Nutzerpräzisierung im selben Gespräch:
+die pauschale 50-cm-Nachfrage zurückgezogen; keine weitere Freigaberunde.
+Startabdeckung technisch nachweisen (105 der 108 Randzellen unbekannt).
+Quelle und Grenzen: letzter Nachtrag in wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md.
+
+## 10.10.2026 – jüngster Hardwarebefund: Source-Empfänger repariert, Geometrie sperrt Fahrt
+
+Die bestehende Latest-Wheel-DDS-Übernahme auf HWT roh/yaw übertragen: eigene
+exklusive Gruppen, Puffer eins, nichtblockierendes Take vor Entscheidung;
+Originalstempel, echte Verluste und alle Fristen bleiben wirksam. 351 Tests,
+separates Overlay. Prozesslokale CPU-Aufteilung plus Encoder-GC-Vorlauf liefert
+im letzten 180-s-passiven und 300-s-aktiven Bag gesunde Encoder (max. 50,396 /
+40,041 ms). Nicht als allgemeine Echtzeitgarantie interpretieren.
+
+Privater Stillstandswächter darf kontinuierliche `/cmd_vel`-Nullnachrichten
+nicht voraussetzen: Collision Monitor schweigt nach Halt. Frische reale
+Basis-/Encoder-Rückmeldung und Null-Sollwerte prüfen, frischen Nichtnullbefehl
+weiter abweisen (6 Fälle). Erster echter Explore-Auftrag endet vor Bewegung
+wegen zu alter Scan-Geometrie (677 ms Verarbeitung, 771 ms Gesamtalter > 500 ms),
+zusätzlich Startreferenz Hindernis/Scope ungültig. Das ist kein Encoderfehler;
+Fahrt bleibt 0 m. Nächster Schritt und Belege im aktuellen
+[STATUS](wohnungserkundung/STATUS.md) und [Bericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – Vorbereitung erster Realfahrt: gültige Quellen vor Bewegung
+
+Nutzer autorisiert ausdrücklich den ersten realen Labortest; keine neue
+allgemeine Freigabe fehlt. Neue Stillstandsprüfung zeigt zwei getrennte
+Softwarebefunde: Bereichscollector empfängt TF zu langsam neben Karten-/Graph-
+arbeit; aktive Basis legt ihre Encoderbaseline im Startburst an. Lesenden
+TF-Empfang entkoppelt und vorhandenen 15-s-Startversatz auf den jeweils
+gewählten Encoderbesitzer angewandt. Quellen-/Stoppfristen unverändert.
+181 betroffene Tests und isolierter Build bestanden. Aktiver Folgelauf
+zunächst gesund, später 181,212-ms-Kontinuitätsverstoß; kein Fahrkommando.
+Freigabe, Hardwareantwort und tatsächliche Softwarebereitschaft bleiben
+unterschiedliche Nachweise. Keine reale Fahrabnahme behaupten. Ein eigener
+Explorer-Startfehler bei fehlendem Profil ist im Bericht erhalten und der
+vorbereitete Start entsprechend abgesichert. Bestandsinstallation unverändert.
+Aktueller Befund/ein nächster Schritt im [STATUS](wohnungserkundung/STATUS.md).
+
+## 10.10.2026 – historische VL53-Regel korrigiert Diagnose, Encoder-DDS entkoppelt
+
+Auf ausdrücklichen Folgeauftrag ältere WE-Erkenntnisse geprüft. Der finale
+VL53-Vertrag vom 25.09. ist bereits im Code: gesunde/frische gepaarte
+PARTIAL-Frames dürfen leere Nahwolken haben; keine 64/64-Forderung und kein
+automatischer Freiraumbeleg. Frühere Einordnung als Hardwareblocker korrigiert.
+615 heutige Tripel offline mit unveränderten Gate-Callbacks bestätigt.
+
+Encoder-Grenzen/Identitätscache/Anlauf/Recovery waren ebenfalls schon umgesetzt.
+Neu gemessene Ursache: DDS-Ausgabe blockiert den Lese-Callback. Ausgaben im
+separaten Kandidaten per begrenztem Prozesskanal entkoppelt; Thread-/ASYNCHRONOUS-
+Gegenversuche negativ und verworfen. 170 Tests bestanden. Zwei passive 180-s-
+Aufnahmen: zunächst Paarzeitfehler 169,8 ms, danach 3.200 Publikationen ohne
+Readerfehler und Quellen am Ende bereit. Recorderlatenz bis 329,1 ms bleibt;
+keine vollständige Fehlerbehebung behaupten. Bestandsinstall unverändert.
+Aktueller Befund/ein nächster Schritt im [STATUS](wohnungserkundung/STATUS.md),
+vollständige Belege im [Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – AP-06 erstmals separat auf diesem Jetson gebaut und passiv gemessen
+
+Übergabecommit `e14ca31276b26be2d88397b310301dad3c4e9600` wurde in einem
+unabhängigen Checkout und Release gebaut; keine Bestandsinstallation ersetzt.
+Die 1.048 vorhandenen Install-Dateien sind SHA-256-identisch geblieben.
+Explizite Quellenbindung war nötig, weil CMake zunächst einzelne gepinnte
+Bibliotheken aus Humble statt aus dem Release wählte. Lokale Buildanpassungen
+und alle negativen Testresultate bleiben nachvollziehbar dokumentiert.
+
+Zwei passive Dreiminutenaufnahmen belegen keine Quellen-/Sichtabnahme:
+Encoderkontinuität verriegelt, Scope-TF-Zeitprüfung abgebrochen, Nahbereichswolken
+leer. Korrektur nach historischem Abgleich: Gesunde PARTIAL-Frames mit leeren
+Nahwolken erfüllen bei Frische/Paarbindung den finalen Health-Vertrag vom
+25.09.; vollständige Spalten sind keine pauschale Sensor-Health-Bedingung.
+Fortlaufender EKF-/Kartenoutput ersetzt keine frischen echten Radmessungen.
+Im ursprünglichen Vorlauf kein Produktcode
+oder Grenzwert geändert; kein Aktorschreibprozess und keine Mission gestartet.
+
+Aktueller WE-Befund und genau ein nächster Schritt ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md), Messungen und Builddetails im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
 ## 08.10.2026 – AP-06-Konzeptstand, lokale Ausführung durch den Nutzer
 
 Der Nutzer übernimmt den lokalen Jetson-Lauf; keine erneute Zugangs- oder
@@ -423,3 +618,29 @@ Tests und 9/9 native Fälle grün. C248 nutzt den Pfad tatsächlich, scheitert d
 an Geometrie und endet regulär nach 900 s. Cancel249/Gyro250 bestehen. Keine
 Gesamtabnahme. Tatsächlich abgelehntes Paar wird statt späterer Beobachterwerte
 gesichert. Bericht: wohnungserkundung/REPARATUREN_AP06_20261007.md.
+
+
+## 10.10.2026 – kontinuierlicher Startprüfer als lesender Ersatzkandidat
+
+Nutzer beauftragt Ersatz der nicht nutzbaren Startprüfung. Neue reine Geometrie
+prüft vollständigen geraden Vorfahrtkorridor mit analytischer Headinghülle und
+exakten Zellschnitten; keine reine Entfernung von Raster-/Interpolationsreserve.
+Aktive Startprüfung bleibt bis realer Quellen-/Regler-/Historienqualifikation
+unverändert. Neuer Kandidat ist nur in der Offline-Startdiagnose eingebunden.
+47 gezielte Fälle und separater Zweipaketbuild bestanden. Original-Realproben
+bestehen ideal gerade, mit deklarierter Abweichung weiterhin nicht. Dieses
+Ergebnis ist weder Hardwarequalifikation noch erfüllter aktiver Ersatzauftrag.
+Rückfall ausschließlich neues Modul/Test und Diagnoseintegration abwählen;
+vorherige Korrekturen erhalten. Details im aktuellen STATUS/Vorlaufbericht.
+
+
+## 10.10.2026 – begrenzte Fahrt vorbereitet; gemessenen Stillstand verwenden
+
+Private Start-/Bindungs-/Missions-/Stoppskripte für separaten R5-Stand erstellt.
+Neuer passiver 180-s-Vorlauf und aktuelle Quellenbindung bestanden; sechs
+aktuelle Start-Geometrieproben weiterhin negativ. Kein aktiver Versuch.
+Audit korrigiert privaten Monitor: Soll-RPM sind keine Stillstandsbestätigung;
+gemessene Motor-RPM, gültiges Feedback und unverändert 180 ms Alter verlangen.
+Zwölf Gegenproben grün. Direkte Launch-PIDs geordnet beendet, FC03-Stillstand
+und unveränderte Bestandsinstallation nachgewiesen. Aktueller vollständiger
+Befund im STATUS/Vorlaufbericht; keine weitere pauschale Freigabe ausstehend.

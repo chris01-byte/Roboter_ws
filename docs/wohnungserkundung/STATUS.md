@@ -1,5 +1,312 @@
 # Wohnungserkundung – aktueller Status
 
+## 10.10.2026 – beauftragte Folge 1–4 wird ausgeführt
+
+Nutzerauftrag: Anfahr-/Bremsmessung, ein reproduzierbarer Kandidat samt drei
+ursprünglichen AP-06-Gesamtfällen, regulärer autonomer LAB-Start, danach die
+weiteren Gesamtprüfungen gemäß MASTERPLAN v1.3 / WE-M4–M7. LAB-1-Freigabe
+wurde erneut ausdrücklich erteilt. Istbasis: separater Checkout e14ca312 mit
+den dokumentierten eigenen Korrekturen R1–R17; Bestandsmain/-install bleiben
+erhalten. Keine vorweggenommene Kunden- oder Gesamtqualifikation.
+
+Zuerst tatsächliche FC03-/FC06-Transaktionen und Positions-/LiDAR-Referenz
+prüfen. Erster bewegter Vergleich bleibt die feste 25-cm-/±15°-Sequenz,
+90 s / 0,5 m / 0,6 rad, gleiche Schutzkette und physischer LAB-Bereich unter
+Berücksichtigung des bereits gefahrenen Versatzes. Änderungen an Rampen erst
+nach gemessener Ursache, separat testen. Anschließend ein eigener vollständiger
+Produktbuild auf gepinntem nativen Unterbau; ursprüngliche Simulation A/B/C
+bleibt gerätefrei und ohne Zielvorgaben. Reale Folgebudgets vor Ausführung
+festlegen. Unverifizierte Passage, neue Bereiche oder native App-Ergebnisse
+nicht aus dieser lokalen Fläche ableiten. Rückfall: eigene Prozesse geordnet
+stoppen und den erhaltenen Bestandsinstall verwenden; kein Autostartwechsel.
+
+## 10.10.2026 – Bewertung nach der erfolgreichen LAB-Sequenz
+
+R17 bleibt ein vollständiger positiver fester Fahrtest mit gültigen Encodern,
+bestätigten Zwischenstopps und erhaltenem Bestandsinstall. Die normale
+Explorer-/Nav2-Mission wurde dabei noch nicht ausgeführt; ursprüngliche AP-06-
+Gesamtqualifikation weiterhin 0/3. Ein einzelner positiver Lauf belegt noch
+keine Reproduzierbarkeit nach Kaltstart oder unter Kundenlast.
+
+Neue Auswertung der unveränderten Originaldaten: Vorwärtsphase 21,377 s bis
+25 cm Sollfortschritt, während `/cmd_vel` zeitlich etwa 99,7 % ungleich null
+war und nach der Glättung überwiegend 0,08 m/s verlangte. Beide Drehphasen
+dauerten jeweils etwa 10,2/10,3 s. Während der Vorwärtsfahrt stieg die gemessene
+Encoder-Geschwindigkeit langsam von etwa 0,003 auf 0,022 m/s. Zeit-/Kommandosummen
+aus dem unabhängigen vollständigen Bag bestätigen die Auswertung der Diagnose-
+Callbacks. Das beweist eine erhebliche Soll-/Bewegungsabweichung, aber noch
+nicht deren Ursache. Kein belegter Encoderdefekt oder wiederholter Schutzstop.
+Encoderweg etwa 25,1 cm und Kartenpose etwa 24,8 cm sind plausibel zueinander;
+die Kartenpose ist wegen gemeinsamer Quellen keine unabhängige Bodenreferenz.
+
+**Genau nächster begrenzter technischer Auftrag:** Antriebsübertragung,
+Anfahr-/Bremsverhalten und reale Trackingreserve des bestehenden Kandidaten
+qualifizieren: tatsächliche Register-/Starttransaktionen, wirksame Rampen,
+Positionsfeedback und unabhängige Strecke/Winkel gemeinsam messen. Innerhalb
+des bestehenden LAB-Bereichs, mit frischen Quellen und unveränderter Schutzkette;
+keine blinde Fristerhöhung, Counts-/Geometrieänderung oder zusätzliche Fläche.
+Vor einem neuen Stackstart den gefahrenen Versatz bei der Bindung desselben
+physischen Laborbereichs berücksichtigen. Diese Bewertung startet keine Fahrt.
+
+Danach Korrekturen in einem eindeutig versionierten separaten Kandidaten
+zusammenführen und die ursprünglichen geschlossenen Fälle A/B/C nachprüfen;
+dann den regulären autonomen Start mit nützlicher erster Beobachtung abnehmen.
+Weitere Beobachtungsaufgaben, ganze Passage, Rundweg, Hindernis/Halt/Fortsetzung
+und Speichern/Wiederaufnahme folgen gemäß MASTERPLAN/WE-M4–M6. Native App-
+Abnahme bleibt unter WE-M7 getrennt. Kein dauerhafter Installwechsel aus der
+Bewertung. [Messgrundlage und Folgeschritte](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – erste vollständige reale feste LAB-Fahrsequenz bestanden
+
+Die Startablehnungen der ausdrücklich aktivierten Stage-3-Diagnose wurden im
+separaten Checkout korrigiert. R17 startete um 18:42:39 UTC und beendete um
+18:43:25 UTC regulär die feste 25-cm-/+15°-/−15°-Sequenz mit drei gemessenen
+Stillständen. Vorwärtsphase einschließlich Ausrollen etwa 26,5 cm, gesamter
+Encoderweg 27,568 cm; gemessene Drehungen einschließlich Nachlauf etwa +16,45°
+und −16,24°. Abschließend beide Motor-RPM null, Encoderfeedback gültig und
+frisch, keine Modbus-Lesefehler oder Encoder-/Ausgabeprozessverriegelung.
+
+Korrigiert: feste physische LAB-Kontur statt übergroßer Körperscheibe,
+leerer Idle-Missionsstatus, echte Quellenzustellung vor Entscheidungen,
+unbegründete Nullimpulse im erlaubten Diagnosemodus und unveränderliche
+Session-/Scopeepoche trotz wachsender Karte. Tatsächliche HOLD-Historie und
+Recoverybudgets bleiben erhalten; explizite Quittierung nur nach geprüfter
+Erholung und gemessenem Stillstand. Der private Monitor unterscheidet rohe
+Encoder-Winkelvariation von vollständigen Winkelspannen der überwachten
+Phasen. Keine Frist, Haltwirkung oder physische Schutzgrenze angehoben.
+
+87 verschiedene gezielte Software-/DDS-Fälle und vier private Monitorfälle
+bestanden. Separater Navigationsbuild R17 erfolgreich (6,58 s). Ausgeführt:
+Base R10, Fahrtor R15, Diagnose R17 mit derselben tatsächlichen Sensor-/EKF-/
+SLAM-Quelle und dem ursprünglichen physischen Scope-/Radanker. Abgebrochene
+Vorversuche bleiben als solche dokumentiert; keine negative Historie gelöscht.
+Eigene Prozesse geordnet über direkte PIDs beendet, serielle Geräte frei;
+abschließend 20 rein lesende FC03-Proben je Motor: null RPM und stabile
+Positionen. Bestandsinstallation mit 1.048 Dateien und Originalcheckout erhalten.
+
+Dies ist ein vollständiger begrenzter LAB-Komponententest, keine autonome
+Wohnungserkundung oder Kundenabnahme. AP-06 bleibt **0/3** Gesamtmissionen.
+Der nächste fachliche Schritt ist der echte autonome Start-/Trackingnachweis
+mit anschließendem AP-06-Gesamtlauf innerhalb eines passend geprüften Bereichs.
+[Build, Fahr- und Quellenbelege, Sensorzeiten und Sichtlücken](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – realen Fahrablauf vorbereitet, aktueller Startnachweis negativ
+
+Auf Auftrag „alles für die Fahrt vorbereiten“ ausführbare private Abläufe für
+passiven/aktiven Stack, neue Scopebindung, Explorer, begrenzte Mission und
+geordneten Stopp vorbereitet. Keine weitere allgemeine Freigabe erforderlich.
+Abbruchschwellen: 90 s Missionszeit, 0,5 m Encoderweg, 0,6 rad Encoderwinkel;
+Cancel über bestehenden Mission Manager, anschließend frischen Stillstand prüfen.
+
+Neuer passiver Vorlauf 180,070 s, keine Encoderverriegelung, max. Paarzeit
+98,551 ms, 675/675 Nahstatus beidseits gesund. Neue Karten-/TF-/Quellenbindung
+gelungen; erste transient fehlgeschlagene TF-Bindung erhalten. Sechs anschließende
+aktuelle passive Geometrieproben gültiger Eingänge bleiben negativ. Der neue
+Geradenprüfer ist weiterhin nur Diagnose, kein aktiver Ersatz.
+
+Konkreter Vorbereitungsfehler behoben: Stillstandsprüfung im privaten
+Missionsmonitor nutzte Soll-RPM. Neue Version verlangt gemessene Motor-RPM=0
+und frische Encoder-Rückmeldung; zwölf Gegenproben bestanden. Historischer
+Monitor unverändert als Beleg erhalten. Keine Produktgrenze angehoben.
+
+**Ablauf vorbereitet, noch keine Fahrbereitschaft oder Realfahrt.** Alle eigenen
+Prozesse geordnet beendet, abschließend 20 FC03-Proben je Motor mit 0 RPM und
+unveränderten Positionen, Geräte frei und Bestandsinstallation unverändert.
+Private ausführbare Anleitung/Ergebnis unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-preparation-20261010T1308Z`.
+Nächster technischer Schritt bleibt gültige reale Startabdeckung/Tracking und
+anschließende Live-Qualifikation; keine identische Fehlstartserie. AP-06 0/3.
+
+## 10.10.2026 – Ersatzprüfung implementiert, Realfreigabe weiterhin offen
+
+Auf ausdrücklichen Auftrag, einen funktionierenden Ersatz der Startprüfung zu
+entwickeln, kontinuierlichen Geradenprüfer `metric_start_sweep.py` erstellt und
+in das vorhandene **lesende** Startdiagnosewerkzeug eingebunden. Vollständiger
+Vorfahrtkorridor, analytische Winkelhülle, Positionsabweichung und exakte
+Rasterzellpolygone ersetzen dort punktweise/rasterpauschale Näherungen.
+Fester Anfangsbestand bleibt auf seine tatsächliche gepaddete Körperüberdeckung
+begrenzt; belegte Zellen und neue unbekannte Außenfläche bleiben negativ.
+
+Separater Zweipaketbuild erfolgreich, 47 gezielte neue/bestehende Prüfungen
+bestanden. Auf unveränderten gespeicherten Roh-/Kostenrasterproben ist die
+ideale 25-cm-Gerade positiv. Das deklarierte Versuchsband 20 mm/0,05 rad bleibt
+negativ; auf der Rohkarte 0,017601 m² zusätzliche unbekannte Fläche. Das Band
+ist keine qualifizierte reale Reglergarantie. Neue Rechnung ist kein Ersatz
+für aktuelle Quellen-/TF-/Controller- und Stoppnachweise.
+
+**Noch kein funktionierender aktiver Ersatz und keine Realfahrt.** Aktive
+Startprüfung unverändert, keine Schutzprüfung gelöscht, keine Roboterprozesse
+gestartet. Nächster erforderlicher Schritt: nachgewiesene reale Abdeckungs- und
+Trackingbedingungen herstellen, anschließend denselben Geometriekern mit der
+bestehenden festen Live-Referenz-/Historienbindung qualifizieren. Bis dahin
+keine Aktivierung durch ein positives ideales Offline-Ergebnis. AP-06 weiter
+0/3; kein Kundenauslieferungsnachweis. Details und Rückfall im
+[Vorlaufbericht](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – unabhängiger Gegencheck: Startsperre ist kein Raster-Rundungsfehler
+
+Softwarekorrektur erneut untersucht. Kontinuierlicher Polygonschnitt belegt:
+Schon die vorhandene 10-mm-Reserve ohne Rasterhalbdiagonale liegt teilweise
+außerhalb des gespeicherten Startpolygons und über unbekannter Rohfläche.
+Vier gezielte Ausfahr-/Schutztests bestanden, darunter zulässige Vorwärtsausfahrt.
+Keine belegte Korrektur, die diesen Realstart ohne neue Beobachtung oder
+unqualifizierte Reservenreduzierung freigibt. Keine Bewegung, AP-06 weiter 0/3.
+Es fehlt keine Laborfreigabe. Erforderlich bleibt gültige Startabdeckung bzw.
+beobachtbare Ausgangslage; die frühere Vermutung einer reinen Rundungssperre
+ist für diesen Befund widerlegt. Details im letzten Vorlaufnachtrag.
+
+## 10.10.2026 – keine weitere Freigaberunde; technischer Startnachweis bleibt negativ
+
+Nutzer stellt klar: im bestehenden Labormodus nicht auf eine erneute hintere
+Bereichs-/Laborfreigabe warten. Die pauschale 50-cm-Nachfrage ist zurückgezogen;
+sie ist weder eine allgemeine Voraussetzung für Vorfahrt noch ein Ersatz
+für den technischen Geometrienachweis. Keine größere freie Fläche daraus
+als gemessen oder geprüft behauptet.
+
+Zusätzliche lesende Zerlegung der erhaltenen Realproben: Von 108 reservierten
+Startzellen außerhalb des bisherigen Polygons sind 105 in der Rohkarte unbekannt,
+drei beobachtet frei; keine dieser Proben belegt ein Hindernis. Eine ideale
+Vorfahrt um 2 cm verlässt die Polygonkante, rechtfertigt aber nicht rückwirkend
+die ungeprüfte Anfangsstrecke. Die bestehende Startprüfung bleibt negativ.
+Keine neue Mission, keine Bewegung, keine Schutzgrenze geändert. Es wird nicht
+auf eine zusätzliche allgemeine Freigabe gewartet. Nötig ist ein gültiger
+technischer Start-/Abdeckungsnachweis; vorhandenes Abdeckungspaket und neue
+Messdaten verwenden, keine unbekannten Zellen zu Freiraum erklären.
+Details im letzten [Vorlauf-Nachtrag](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – Geometriefrische verbessert; hintere reale Bereichsgrenze muss geklärt werden
+
+Erneuter Fahrstartauftrag bearbeitet, weiterhin **keine reale Bewegung, AP-06 0/3**.
+Gemessene Mehrfachberechnung des unveränderten Scope-Rasters begrenzt gecacht;
+keine Sensor-/Footprint-/Scopegrenzen gelockert. Separater Build und 240 gezielte
+Tests bestanden. Neuer 180,057-s-Vorlauf: 3.450 Encoderpublikationen, längstes
+Paar 34,159 ms, keine Ablehnung; 620/620 Nahstatus beidseits gesund. Sechs reale
+passive Geometrieprüfungen halten die Frischegrenzen ein (169–434 ms).
+
+Startreferenzen bleiben ungültig: 108 reservierte Zellen pro Raster hinter der
+bisher bestätigten 13-cm-Grenze. Konkrete Frage nach tatsächlich geprüftem
+hindernisfreiem Boden bis 50 cm hinten gestellt; Antwort noch ausstehend.
+Allgemeine LAB-1-Freigabe gilt weiter. Ohne Antwort keinen größeren Bereich
+annehmen. Nach Klärung neu binden und begrenzt über die Schutzkette fahren.
+Alle eigenen Prozesse beendet, Stillstand per FC03 bestätigt, Installation
+unverändert. Details und Recorder-Zeitspitzen im letzten
+[Vorlauf-Nachtrag](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – Encoder/HWT im finalen Lauf gesund; Missionsauftrag ohne Fahrt abgebrochen
+
+**Aktuell: reale Explore-Mission gesendet, aber 0 m / 0 rad Bewegung; AP-06 0/3.**
+351 betroffene Tests und getrenntes `robot_state_estimation`-Overlay bestanden.
+HWT-Rohdaten/Drehraten nutzen jetzt wie die vorhandene Radquelle einen aktuellen
+DDS-Take mit Originalstempeln vor der Entscheidung. Prozesslokale CPU-Zuteilung
+und Encoder-GC-Vorlauf stabilisierten die letzten Encoderläufe; keine Grenzwerte
+angehoben. Letzter passiver Bag: 180,089 s, 3.266 Encoderpublikationen, max.
+50,396 ms/Paar, keine Ablehnung. Aktiver Bag: 300,052 s, 4.731 Publikationen,
+max. 40,041 ms/Paar, keine Encoder-/HWT-Verriegelung nach dem Einlauf.
+
+Der Auftrag erreichte den Explorer, scheiterte jedoch **vor** einem Fahrbefehl:
+`self_body_scan_stale_after_processing`, Geometriearbeit 677,016 ms und finales
+Scanalter 770,524 ms gegenüber 500 ms. Vorhandener Neuversuchsrahmen bereits
+benutzt. Zusätzlich `start_egress_obstacle_or_scope` bei beiden Startreferenzen.
+Genau nächster Schritt: die konkrete Geometriearbeit profilieren und die
+Footprint-/Scope-Rasterkante auftrennen; keine Fristerhöhung oder Bereichserfindung.
+
+Roboter abschließend per 20 FC03-Proben je Motor still; Prozesse beendet,
+Ports frei, 1.048 Bestandsinstall-Dateien unverändert. Keine reale Fahrabnahme.
+Details, neue Quellen-/Sensorzeiten und Rückfall im letzten Nachtrag des
+[Vorlaufberichts](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – erste reale Fahrt vorbereitet, aktive Stillstandsprüfung negativ
+
+**Aktuell: ausdrückliche Labor-/Fahrfreigabe des Nutzers liegt vor; technische
+Voraussetzung weiterhin nicht erfüllt. Keine Bewegung ausgeführt, AP-06 0/3.**
+Nach Rechnerneustart aktuelle Sensoren/Scope neu geprüft. TF-Empfang des
+Bereichswerkzeugs von Karten-/Grapharbeit entkoppelt; Originalstempel und
+0,8-s-Grenze erhalten, zwei reale Scopebindungen gelungen. Ein späterer
+TF-Frischefehler bleibt als Gegenbeleg erhalten.
+
+Aktive Basis als alleiniger Busbesitzer zunächst nach acht Ausgaben mit
+239,018-ms-Paar verriegelt. Gezielte Startkorrektur: erste Encoder-Messbasis
+auch aktiv erst nach vorhandenem 15-s-Vorlauf. Danach 2.438 Publikationen,
+Paarzeiten maximal 96,596 ms und zwischenzeitlich gültige Quellen, später aber
+181,212-ms-Samplelücke gegenüber 180 ms. Keine Frische-/Stoppgrenze erhöht.
+181 betroffene Tests bestanden und neues Launch-Overlay separat gebaut;
+kein Software-Gesamtpositivnachweis und kein Bewegungsauftrag daraus abgeleitet.
+
+Ein Explorer-Aufruf ohne vorhandenes Profil wurde im Leerlauf beendet; kein
+Auftrag gesendet. Vorbereiteter Start bricht nun vor Launch ab, wenn das
+explizite gebundene Profil fehlt. Alle realen Kommandos/Encoder/RPM null,
+abschließend je Motor 20 FC03-Proben null, Prozesse beendet/Ports frei und
+1.048 Bestandsinstall-Dateien unverändert.
+
+**Genau nächster Schritt:** Im aktiven Basisprozess den belegten 181,212-ms-
+Kontinuitätsverstoß mit FC03-, Callback- und DDS-Publikationszeiten korrelieren
+und die Ursache beheben; erst danach den vorbereiteten begrenzten Fahrtest
+mit frischen Quellen und neuer Scopebindung starten. Keine pauschale
+Fristerhöhung, keine wiederholten identischen Starts. Vollständige Belege und
+Rückfall im letzten Nachtrag des [Vorlaufberichts](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – historische Sensorverträge angewandt, Encoder teilweise korrigiert
+
+**Aktuell: AP-06 weiterhin 0/3; keine Kunden-/Fahrtfreigabe.** Separater
+Kandidat `fix/ap06-passive-sensor-timing`, Basis `e14ca312`, noch uncommitted.
+Die historische VL53-Diagnose ist geklärt: gesunde, frische PARTIAL-Frames mit
+leeren Nahwolken sind laut finalem Vertrag vom 25.09. kein eigener Sensorfehler.
+615 aktuelle vollständige Tripel erfüllen die vorhandene Offline-Health-Prüfung;
+unbekannte Sichtbereiche und die frühere reale Frischelücke bleiben getrennt.
+
+Encoder-DDS-Publikation blockierte den Lese-Callback nachweislich bis 297,5 ms.
+Gezielter Patch trennt alle drei Ausgaben in einen begrenzten Prozesskanal;
+Originalstempel, exklusive FC03-Quelle und 120/180-ms-Grenzen unverändert.
+170 betroffene Tests bestanden, separates Overlay gebaut. Zwei neue passive
+Dreiminutenaufnahmen: erster Lauf nach 664 Publikationen mit 169,8-ms-Paar
+verriegelt; zweiter Lauf 3.200 Publikationen, keine Ablehnung, maximal 66,3 ms,
+am Ende Quellen bereit. Im Recorder dennoch bis 329,1 ms Rad-Empfangsalter.
+Damit Teilkorrektur und ein positiver Leser-/Endstatusnachweis, keine robuste
+Gesamtfreigabe. Kein Aktorprozess, keine Mission; Installation unverändert.
+
+**Genau nächster Schritt:** Den getrennten Ausgabeweg bei Reader, DDS und
+Gate-Empfang zeitlich korrelieren, um die verbleibende Zustellspitze und ihre
+Wirkung auf Quellenfrische nachzuweisen; den erhaltenen Paarzeit-Gegenfall
+dabei nicht verwerfen. Keine weiteren identischen Fehlstarts oder gelockerten
+Fristen. TF-/Scopebindung, geometrische Sichtgrenzen und acht ursprüngliche
+Regressionstestfehler bleiben offen. Messungen, Quellenbindung, verworfene
+Ansätze und Rückfall im [Vorlaufbericht](JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – Jetson-Build erfolgt, passiver Quellen-/Sichtnachweis negativ
+
+**Aktuell: ursprüngliche AP-06-Abnahme weiterhin 0/3; keine Kundenfreigabe.**
+Exakter Übergabestand `e14ca31276b26be2d88397b310301dad3c4e9600` im neuen
+Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`, separater
+AArch64-Release `ap06-20261010T070231Z`. 31 native und 14 Produktpakete,
+LiDAR-Overlay und TF-Prüfwerkzeug gebaut; Quellen-/CMake-/Runtimepräfixe
+gebunden. Bestehender Checkout und 1.048 Install-Dateien unverändert.
+
+Vollständiger Produktlauf: 2.456 registrierte Tests, 38 fehlgeschlagen.
+Gezielte Wiederprüfung der 38 Fälle mit korrekter isolierter Testumgebung:
+30 bestanden, acht weiterhin negativ (DDS-Registrierung, Auswahlbudget,
+öffentliche Beobachtung). Kein Produktcode/Grenzwert geändert, kein Gesamt-Grün.
+
+Zwei abgeschlossene passive 180-s-Aufnahmen, zweite ausdrücklich zur Erfassung
+des Anlaufs. Encoder in beiden Läufen wegen Kontinuitätslücken verriegelt
+(334/371 ms gegenüber 180 ms). HWT im ersten Lauf terminaler serieller
+Transportfehler, im zweiten Lauf grundsätzlich bereit mit gemessenen Lücken.
+Beide aktuellen Scopevorbereitungen scheitern an TF-Zeitbindung; kein Explorer,
+keine Mission, keine Fahrt. Eindeutige Karten-/TF-Eigentümer ersetzen diese
+fehlende Zeitkonsistenz nicht. Vier Nahbereichswolken durchgehend leer,
+Qualität PARTIAL, keine vollständig beobachteten Spalten; zusätzlicher
+LiDAR-Hecksektor von etwa 68 Grad ausgespart. OAK bleibt aus.
+
+Stacks/Recorder beendet, Ports frei, Abschlussencoder unverändert/0 rpm.
+Reale Bags/Karten/Bindungen nur privat. Vollständige Messdefinitionen,
+Buildabweichungen, Grenzen und Belegpfade im
+[Jetson-Vorlaufbericht](JETSON_VORLAUF_AP06_20261010.md).
+
+**Genau nächster Schritt:** Die im passiven Originalstack gemessene
+Encoder-Kontinuitätslücke mit vorhandenen Reader-/Transport-/Callbackzeiten
+ursächlich isolieren und eine etwaige gezielte Korrektur separat passiv prüfen.
+Offene TF-/Nahbereichs- und Regressionstestbefunde bleiben dabei offen;
+keinen aktiven oder Kundenpositivlauf daraus ableiten.
+
 ## 08.10.2026 – Konzeptvergleich und überprüfbare Jetson-Übergabe
 
 **Aktuell: ursprüngliche AP-06-Abnahme 0/3; keine Kundenfreigabe.**

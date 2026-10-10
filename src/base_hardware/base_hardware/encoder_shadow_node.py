@@ -17,6 +17,7 @@ from rclpy.time import Time
 from std_msgs.msg import String
 
 from .encoder_odometry import EncoderOdometry
+from .encoder_publication import EncoderPublication
 from .encoder_shadow_reader import (
     BASE_ALIAS,
     HWT601_ALIAS,
@@ -198,12 +199,15 @@ class EncoderShadowNode(Node):
         self.last_poll_gap_s = None
         self.last_publish_age_s = None
 
-        self.odom_pub = self.create_publisher(
-            Odometry, self.odom_topic, 10)
-        self.status_pub = self.create_publisher(
-            String, self.status_topic, 10)
-        self.diagnostics_pub = self.create_publisher(
-            String, self.diagnostics_topic, 10)
+        # The effective odometry topic includes the mapping launch remap.
+        self.output = EncoderPublication([
+            (self.resolve_topic_name(self.odom_topic), 'nav_msgs/msg/Odometry'),
+            (self.resolve_topic_name(self.status_topic), 'std_msgs/msg/String'),
+            (self.resolve_topic_name(self.diagnostics_topic), 'std_msgs/msg/String'),
+        ], self.max_sample_gap_s)
+        self.odom_pub = self.output.publisher(self.resolve_topic_name(self.odom_topic))
+        self.status_pub = self.output.publisher(self.resolve_topic_name(self.status_topic))
+        self.diagnostics_pub = self.output.publisher(self.resolve_topic_name(self.diagnostics_topic))
         self.parameter_callback = self.add_on_set_parameters_callback(
             self._reject_runtime_parameter_changes)
         self.timer = self.create_timer(1.0 / self.poll_rate_hz, self._poll)
@@ -301,6 +305,9 @@ class EncoderShadowNode(Node):
         return SetParametersResult(successful=True)
 
     def _poll(self) -> None:
+        if not self.output.alive:
+            self.core.latch_fault('encoder_output_process_lost')
+            self._close_transport()
         if self.core.fault_reason is not None:
             self._publish_status_and_diagnostics(force_diagnostics=True)
             return
@@ -535,7 +542,9 @@ class EncoderShadowNode(Node):
                     f'Encoder-Shadow-Port nicht sauber schliessbar: {exc}')
 
     def destroy_node(self) -> None:
+        self.timer.cancel()
         self._close_transport()
+        self.output.close()
         super().destroy_node()
 
 

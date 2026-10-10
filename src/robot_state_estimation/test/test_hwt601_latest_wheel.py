@@ -1,6 +1,7 @@
 """Actual DDS take returns a fresh frame; missing producer cannot be rejuvenated."""
 import threading
 import time
+import pytest
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
@@ -43,3 +44,55 @@ def test_metric_predecision_reads_original_current_wheel_and_preserves_missing_a
         halt.set()
         if worker.ident is not None:worker.join(1.)
         producer.destroy_node();consumer.destroy_node();rclpy.shutdown()
+
+
+@pytest.mark.parametrize('active', [False, True])
+def test_metric_predecision_takes_latest_imu_without_executor_and_never_restamps(monkeypatch, active):
+    from sensor_msgs.msg import Imu
+    monkeypatch.setenv('ROS_LOCALHOST_ONLY', '1')
+    monkeypatch.setenv('ROS_DOMAIN_ID', '220')
+    rclpy.init(args=[])
+    consumer = Node('metric_latest_imu_consumer')
+    producer = Node('metric_latest_imu_producer')
+    guard = Hwt601FusionGuard(consumer, active, prefer_latest_wheel=True)
+    pubs = [producer.create_publisher(Imu, sub.topic_name, 10)
+            for sub in guard.subscriptions[:2]]
+    halt = threading.Event()
+    def publish():
+        while not halt.is_set():
+            for name, pub in zip(('raw', 'yaw'), pubs):
+                msg = Imu()
+                msg.header.frame_id = 'hwt601_link' if name == 'raw' else 'base_link'
+                msg.header.stamp = producer.get_clock().now().to_msg()
+                msg.angular_velocity_covariance[8] = .01
+                pub.publish(msg)
+            halt.wait(.02)
+    worker = threading.Thread(target=publish, daemon=True)
+    try:
+        deadline = time.monotonic()+3.
+        while not all(p.get_subscription_count() for p in pubs) and time.monotonic()<deadline:
+            time.sleep(.01)
+        assert all(p.get_subscription_count() for p in pubs)
+        assert all(s.qos_profile.depth == 1 for s in guard.subscriptions[:2])
+        assert all(s.callback_group is not consumer.default_callback_group
+                   for s in guard.subscriptions[:2])
+        worker.start()
+        time.sleep(.45)  # producer runs, consumer executor intentionally withheld
+        guard.refresh_current_imu()
+        for name in ('raw', 'yaw'):
+            sample = guard.health.samples[name]
+            assert sample[3] and 0 <= time.monotonic()-sample[2] < .18
+            detail = guard.health.sample_details[name]
+            assert detail['delivery_path'] == 'imu_predecision_dds_take'
+            assert sample[0] == detail['stamp_sec']+detail['stamp_nanosec']/1e9
+        halt.set(); worker.join(1.)
+        guard.refresh_current_imu()
+        original = dict(guard.health.samples)
+        time.sleep(.4)
+        guard.refresh_current_imu()
+        assert guard.health.samples == original
+        assert all(time.monotonic()-original[n][2] > .35 for n in ('raw', 'yaw'))
+    finally:
+        halt.set()
+        if worker.ident is not None: worker.join(1.)
+        producer.destroy_node(); consumer.destroy_node(); rclpy.shutdown()

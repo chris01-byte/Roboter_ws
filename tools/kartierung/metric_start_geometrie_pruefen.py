@@ -22,6 +22,7 @@ from explore.metric_frontier import (self_body_unknown_mask, known_safe_mask,
 from explore.exploration_scope import AuthorizedExplorationScope
 from explore.map_status_adapter import MapManagerStatusCorrelator, decode_map_manager_status_json
 from explore.portal_memory import Point2D
+from explore.metric_start_sweep import check_straight_start
 
 
 def clipped_area(polygon, row, col):
@@ -89,6 +90,29 @@ def classify(grid, occupancy, known, pose):
     return result
 
 
+def continuous_start_candidate(grid, pose, vertices, *, free_max_value=0):
+    """Read-only alternatives on one stored snapshot, never a drive release.
+
+    The nonzero envelope is a declared geometry experiment. Its dimensions
+    are NOT a measured or qualified guarantee of real controller tracking.
+    Both cases retain the same fixed initial padded-body unknown inventory.
+    """
+    values = np.asarray(grid.data).reshape(grid.info.height, grid.info.width)
+    o = grid.info.origin
+    q = o.orientation
+    origin = (o.position.x, o.position.y,
+              math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z)))
+    return {name: dict(check_straight_start(
+        occupancy=values, resolution_m=grid.info.resolution, origin=origin,
+        scope_vertices=vertices, pose=pose, distance_m=.25,
+        position_error_m=position, heading_error_rad=heading,
+        initial_unknown=values < 0, free_max_value=free_max_value).report(),
+        distance_m=.25, position_error_m=position, heading_error_rad=heading,
+        hardware_tracking_qualified=False)
+        for name, position, heading in [('ideal_only', 0., 0.),
+                                       ('declared_deviation_envelope', .02, .05)]}
+
+
 def analyze(directory):
     binding=json.loads((directory/'passive-binding.json').read_text())
     profile=yaml.safe_load((directory/'product-profile.yaml').read_text())['explore_node']['ros__parameters']
@@ -135,6 +159,9 @@ def analyze(directory):
         first_product_rejection=start_decision['first_rejecting_predicate'],
         adaptive_start_decision=start_decision,adaptive_candidates=len(adaptive_candidates),
         raw=raw_trace,costmap=cost_trace,candidates=len(candidates),selection=n._frontier_rank_stats,
+        continuous_start_candidate=dict(
+            raw=continuous_start_candidate(raw,pose,[poly[k:k+2] for k in range(0,len(poly),2)]),
+            costmap=continuous_start_candidate(cost,pose,[poly[k:k+2] for k in range(0,len(poly),2)],free_max_value=90)),
         observation='Offline replay only: fixed initial unknown inventory, shrinking movement-specific overlap, no added unknown area or approach/reentry. Full-spin and goal tolerance checks remain strict; real ComputePath and current sources are separately required. Static NaN rays remain NaN.')
 
 

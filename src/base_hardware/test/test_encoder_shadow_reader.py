@@ -736,6 +736,7 @@ def test_ros_clock_rollback_is_hard_even_in_a_rejected_timing_pair(monkeypatch):
     from base_hardware.encoder_shadow_node import EncoderShadowNode
     import base_hardware.encoder_shadow_node as module
     n=EncoderShadowNode.__new__(EncoderShadowNode);n.core=healthy_core()
+    n.output=SimpleNamespace(alive=True)
     n.configuration_valid=True;n.last_poll_started_s=None;n.last_ros_attempt_ns=None
     n.last_error_detail=None
     n.transport=SimpleNamespace(connected=True)

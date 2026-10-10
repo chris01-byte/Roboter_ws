@@ -189,6 +189,15 @@ class LiveBindingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'outside'):
             snapshot(ready(), pose=pose(translation=[1.5, 0., 0.]))
 
+    def test_old_tf_remains_pending_until_actual_fresh_sample_arrives(self):
+        binding = ready()
+        with self.assertRaises(tool.BindingPending):
+            snapshot(binding, pose=pose(stamp_ns=99_000_000_000),
+                     reference=pose('odom', stamp_ns=99_000_000_000))
+        # Same unchanged limits and owners; no restamping the old sample.
+        proof = snapshot(binding)
+        self.assertEqual(proof['pose']['stamp_ns'], 99_500_000_000)
+
     def test_names_and_same_name_restarted_publishers_both_fail(self):
         for kind, actual in [('map', publisher('/other_slam', 1)), ('map', publisher('/slam_toolbox', 9)),
                             ('manager', publisher('/robot_map_manager', 9))]:

@@ -1,6 +1,7 @@
 """Pure immutable metric scope for bounded apartment exploration goals."""
 
 from dataclasses import dataclass
+from functools import lru_cache
 import hashlib
 import math
 from typing import Tuple
@@ -167,6 +168,18 @@ def rasterize_scope(
         raise ExplorationScopeError(
             "Scope-Projektion braucht endliche Kartengeometrie")
 
+    # Only immutable polygon/geometry data are cached. Validate every call
+    # above, including capacity and context, before looking up a projection.
+    # A caller owns its writable copy; occupancy and source ages never enter
+    # this cache and are still evaluated by the consuming guard each time.
+    return _scope_projection(scope, width, height, float(resolution_m),
+                             float(origin_x_m), float(origin_y_m),
+                             float(origin_yaw_rad)).copy()
+
+
+@lru_cache(maxsize=4)
+def _scope_projection(scope, width, height, resolution_m,
+                      origin_x_m, origin_y_m, origin_yaw_rad):
     rows, columns = np.indices((height, width), dtype=np.float64)
     local_x = (columns + 0.5) * float(resolution_m)
     local_y = (rows + 0.5) * float(resolution_m)
@@ -197,7 +210,9 @@ def rasterize_scope(
             (second.x - first.x) * (world_y - first.y)
             / denominator + first.x)
         inside ^= crossing & (world_x < crossing_x)
-    return inside | boundary
+    result = inside | boundary
+    result.flags.writeable = False
+    return result
 
 
 def point_within_scope_clearance(

@@ -13,6 +13,7 @@ from robot_navigation.cmd_vel_mission_gate import (  # noqa: E402
     CmdVelMissionGate,
 )
 from robot_navigation.stage3_motion_diagnostic import (  # noqa: E402
+    Stage3MotionDiagnostic,
     ANGULAR_RADPS,
     FOOTPRINT_RADIUS_M,
     LAB_MODE,
@@ -36,7 +37,8 @@ def test_stage3_test_is_opt_in_single_sequence_and_not_a_cmd_vel_publisher():
 
     assert "'enable_stage3_motion_diagnostic', default_value='false'" in launch
     assert "'lab_external_hardware_halt_attested', default_value='false'" in launch
-    assert 'IfCondition(enable_stage3_motion_diagnostic)' in launch
+    assert "'start_stage3_motion_diagnostic', default_value='true'" in launch
+    assert 'start_stage3_motion_diagnostic' in launch
     assert "create_service(\n            Trigger, '/stage3_motion_test/start'" in source
     assert "'/cmd_vel_stage3_diagnostic_raw'" in source
     assert "NearFieldStatus, '/near_field/status'" in source
@@ -116,3 +118,97 @@ def test_diagnostic_inputs_are_explicitly_routed_before_gate():
     assert "mode = 'stage3_diagnostic'" in gate
     assert "('cmd_vel_smoothed', 'cmd_vel_smoothed')" in launch
     assert "'cmd_vel_recovery_blocked'" in launch
+
+
+def test_operator_stop_deactivates_existing_diagnostic_without_new_child():
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node._state = 'forward'
+    finished = []
+    node._finish = lambda state, reason: finished.append((state, reason))
+    response = node._stop(None, SimpleNamespace())
+    assert response.success is True
+    assert finished == [('aborted', 'Expliziter Diagnoseabbruch')]
+
+
+def test_next_turn_at_start_boundary_is_stopped_before_publication():
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node.scope_polygon = ((-.13, -.9), (2., -.9), (2., .7), (-.13, .7))
+    node._scope_pose = lambda: (0., 0., 0.)
+    finished = []
+    node._finish = lambda state, reason: finished.append((state, reason))
+    node._publish_command(0., .1)
+    assert finished and finished[0][0] == 'aborted'
+
+
+@pytest.mark.parametrize('measured_rpm,age,expected', [(0., .02, True), (2., .02, False), (0., .19, False)])
+def test_stop_uses_real_base_status_field_names_and_measured_rpm(measured_rpm, age, expected):
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node._latest = dict(base=dict(meas_motor_rpm_left=measured_rpm, meas_motor_rpm_right=0.,
+                                 encoder_feedback_ok=True, encoder_stale=False,
+                                 encoder_feedback_age_s=age), odom=dict(vx=0., wz=0.))
+    for name in ('gate_out', 'smoother_out', 'collision_monitor_out'):
+        node._latest[name] = dict(vx=0., wz=0.)
+    # Collision monitor legitimately stops repeating zero after two seconds.
+    node._fresh = lambda name, timeout: name != 'collision_monitor_out'
+    assert node._stationary() is expected
+
+
+def bound_map_node():
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node._wheel_scope_bound, node.session_id = True, 'actual-lab-session'
+    node._scope_map_epoch_id = 'map-'+'a'*64
+    node._latest = dict(
+        map_status=dict(ok=True, map=dict(age_seconds=.1, summary=dict(
+            frame_id='map', fingerprint='a'*64))),
+        region_status=dict(context=dict(session_id='actual-lab-session',
+            map_id='map-'+'a'*64, frame_id='map'), source=dict(
+            stale=True, stale_sources=['portal_memory', 'region_graph'],
+            map_revision=12, source_map=dict(state='fresh', age_seconds=.5,
+                revision=12, lag_revisions=0))))
+    return node
+
+
+def test_fixed_lab_map_binding_uses_fresh_real_map_without_portal_inventory():
+    node = bound_map_node()
+    assert node._scope_map_binding() == 'a'*64
+    # Legacy mode still requires its original whole-region source contract.
+    node._wheel_scope_bound = False
+    assert node._scope_map_binding() is None
+
+
+def test_immutable_lab_epoch_survives_real_map_growth_without_scope_shift():
+    node = bound_map_node()
+    node._latest['map_status']['map']['summary']['fingerprint'] = 'b'*64
+    assert node._scope_map_binding() == 'b'*64
+    assert node._scope_map_epoch_id == 'map-'+'a'*64
+
+
+@pytest.mark.parametrize('field,value', [('state','stale'), ('age_seconds',2.01),
+    ('age_seconds',float('nan')), ('age_seconds',True), ('revision',11),
+    ('revision',True), ('lag_revisions',1)])
+def test_fixed_lab_still_rejects_bad_or_old_actual_map_source(field, value):
+    node = bound_map_node()
+    node._latest['region_status']['source']['source_map'][field] = value
+    assert node._scope_map_binding() is None
+
+
+@pytest.mark.parametrize('field,value', [('session_id','other-session'),
+    ('map_id','map-'+'b'*64), ('frame_id','odom')])
+def test_fixed_lab_still_rejects_wrong_map_context(field, value):
+    node = bound_map_node()
+    node._latest['region_status']['context'][field] = value
+    assert node._scope_map_binding() is None
+
+
+@pytest.mark.parametrize('state,started,active', [('idle',False,False),
+    ('forward',True,True), ('stop_final',True,True), ('complete',True,False),
+    ('aborted',True,False)])
+def test_zero_publication_never_invents_idle_test_activation(state, started, active):
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node._state, node._test_started_once = state, started
+    flags, commands = [], []
+    node._active_pub = SimpleNamespace(publish=flags.append)
+    node._command_pub = SimpleNamespace(publish=commands.append)
+    node._publish_command()
+    assert [m.data for m in flags] == [active]
+    assert commands[0].linear.x == commands[0].angular.z == 0.

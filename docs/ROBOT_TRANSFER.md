@@ -1,5 +1,104 @@
 # Übertragung auf den realen Roboter
 
+## 10.10.2026 – Separates Geometrieoverlay, ausschließlich passiv geprüft
+
+`ap06-geometry-20261010` baut Explore mit begrenztem Cache unveränderlicher
+Scope-Geometrie und identisches amadeus_map_identity für gebundene Laufzeit.
+Vorherige Overlays/CPU-Aufteilung bleiben erhalten; Bestandsinstallation nicht
+verändert. 240 gezielte Tests; passiver 180-s-Bag, sechs Geometrieprüfungen ohne
+Frischeabbruch. Keine Motion-/Sensorgrenzen gelockert, keine neue Mission.
+Startreferenz wegen hinterer Scopekante ungültig. Spätere Nutzerpräzisierung:
+50-cm-Nachfrage zurückgezogen; technische Startabdeckung bleibt nachzuweisen.
+Eigene Prozesse beendet, FC03-Stillstand bestätigt, 1.048 Bestandsdateien
+identisch. Rückfall durch vorherige Runtime oder gezieltes Rücknehmen des
+Scope-Cache-Diffs. Belege und Sensorzeiten im letzten AP-06-Vorlaufnachtrag.
+
+## 10.10.2026 – separater HWT-Guard-Build, echte Mission ohne Fahrbewegung
+
+Neues privates Overlay `ap06-current-imu-20261010` über R0/R1/R2; Quell-/Installhash
+identisch, 351 Tests und Build erfolgreich. Originalinstallation unverändert.
+HWT-Guard liest vor der Entscheidung auch aktuelle Original-IMU-Samples direkt
+aus DDS; keine Sensor-/Stopp-/Geometriefrist geändert. Laufzeitvariante ausschließlich
+für eigene Prozesse: Basis/Encoder CPU5, HWT CPU4, übrige ROS-Prozesse CPU0–3;
+ein Encoder-GC-Vorlauf. Keine dauerhafte OS-/Autostartänderung.
+
+Frischer 180-s-Vorlauf ohne Aktorprozess positiv. Im anschließenden aktiven
+300-s-Bag Encoder/HWT nach Einlauf gesund. Eine echte Explore-Mission wurde
+angenommen und nach Geometriefehler geordnet beendet; 0 m / 0 rad, kein Nav2-
+Fahrbefehl. Ursache: Scan nach 677 ms Geometriearbeit mit 771 ms zu alt;
+Startreferenz zudem `start_egress_obstacle_or_scope`. Keine Fahrt behaupten.
+Alle eigenen Prozesse beendet, je Motor 20 nachfolgende FC03-Proben null,
+Ports frei, 1.048 Bestandsinstall-Dateien unverändert. Rückfall: private
+Overlay-/Instrumentierungspräfixe weglassen. Details und nächster Schritt im
+[Bericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md) / [STATUS](wohnungserkundung/STATUS.md).
+
+## 10.10.2026 – aktive Basis im Stillstand geprüft, keine Fahrt
+
+Nach ausdrücklichem Fahrtestauftrag und frischem passivem Vorlauf zweimal
+`active_drive=true`, `enable_auto_explore=true`, `start_explorer=false` im
+separaten Release geprüft. Aktive Basis bestätigte Stop/Rampen/Feedback;
+kein paralleler Encoderleser. Kein Explore-/Navigate-Missionsauftrag gesendet.
+Originalstart: 239,018-ms-Paarfehler. Neues Overlay
+`~/.local/share/amadeus/releases/ap06-first-drive-20261010` verzögert auch die
+aktive erste Baseline um vorhandene 15 s; 181 betroffene Tests bestanden.
+Folgelauf 2.438 Ausgaben, später 181,212-ms-Lücke: keine technische Fahrfreigabe.
+
+Bereichswerkzeug empfängt TF separat; zwei frische Bindungen gelangen, spätere
+Frischeablehnung erhalten. Ein Explorer startete nach fehlender Profilerzeugung
+kurz im Leerlauf und wurde beendet; vorbereiteter Start prüft nun das Profil vor
+Launch. Alle aufgezeichneten Befehle/Encoder/RPM null. Abschließend 20 FC03-
+Proben je Motor null, alle Prozesse beendet und Ports frei. 1.048 bestehende
+Install-Dateien unverändert. Rückfall: neue Overlays nicht sourcen; kein
+Autostart-/Bestandswechsel. Vollständige Gegenbelege im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – begrenzte Sensorreparatur im zusätzlichen Overlay
+
+Folgeauftrag anhand historischer WE-Unterlagen: separater Branch
+`fix/ap06-passive-sensor-timing`, Basis `e14ca312`, noch uncommitted; Overlay
+`/home/p/.local/share/amadeus/releases/ap06-sensor-fix-20261010` ergänzt nur
+`base_hardware` über dem vorherigen separaten AP-06-Release. Installierte
+Readermodule per Hash an den Quellkandidaten gebunden. 170 betroffene Tests
+bestanden. DDS-Ausgabe in eigenem Prozess, Lese-/Frischegrenzen unverändert.
+VL53 bleibt unverändert; gesunde leere PARTIAL-Wolken sind vertragskonform.
+
+Zwei weitere passive 180-s-Läufe ohne Aktorprozess oder Explorer: zuerst
+169,8-ms-Paarzeitfehler, dann 3.200 Encoderpublikationen ohne Readerfehler und
+Quellen bereit. Recorderzustellung bis 329,1 ms bleibt ungeklärt. Kein
+Fahrnachweis, kein dauerhafter Installwechsel. Abschließend alles beendet,
+Ports frei, je Motor 20 FC03-Proben mit Position/Delta/RPM null. Erneut alle
+1.048 Bestandsinstall-Dateien unverändert, ursprünglicher Checkout sauber.
+Rückfall: neue Releaseumgebung verlassen, Bestandsinstallation weiter nutzen.
+Messungen/negative Gegenfälle im [Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+
+## 10.10.2026 – separater AP-06-ARM-Build und abgeschlossener passiver Vorlauf
+
+Auf diesem Jetson tatsächlich ausgeführt: Commit
+`e14ca31276b26be2d88397b310301dad3c4e9600`, neuer Clone
+`/home/p/roboter_worktrees/ap06-e14ca312-validation`, Release
+`/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z`.
+31 native/14 Produktpakete, LiDAR und TF-Probe gebaut. Keine Systempakete,
+Shellprofile oder Autostarts geändert. `/home/p/roboter_ws` sauber auf
+`23928d9`; 1.048 Bestandsinstall-Dateien vorher/nachher bytegleich.
+
+Regulärer `app_mapping`-Start zweimal rein lesend: HWT-Odometrie,
+`active_drive=false`, `enable_auto_explore=false`, `start_explorer=false`,
+Entwicklungsvertrag, erklärter Stillstand, Web-GUI aus. Domain 166 nur für
+diese Prozesse. Je 180 Sekunden aufgenommen, anschließend geordnet beendet.
+Kein Aktorschreibprozess, keine Mission/Fahrt. Abschlussprobe: Encoder unverändert,
+0 rpm; Ports frei. Elektrische Motorsperre nicht behauptet.
+
+Negativer Integrationsbefund: Encoderkontinuitätslücken 334/371 ms,
+Scope-TF-Zeitbindung fehlgeschlagen. Leere gesunde PARTIAL-Nahwolken sind
+gemäß finalem Health-Vertrag kein eigener Sensorfehler; die 2,315-s-Lücke
+im ersten Lauf bleibt ein gesonderter Frischebefund. Erster HWT-Lauf
+mit seriellem Transportfehler; acht Regressionstestfälle bleiben negativ.
+Alle Grenzen/Messzeiten im
+[Vorlaufbericht](wohnungserkundung/JETSON_VORLAUF_AP06_20261010.md).
+Private Rohbelege unter `~/.local/share/amadeus/diagnostics/ap06-20261010T070231Z`.
+Rückfall: frische Shell ohne neues Release; bisherige Installation unverändert
+nutzbar. Kein dauerhafter Installwechsel, keine reale Abnahme/Kundenfreigabe.
+
 ## 08.10.2026 – vorbereitete AP-06-Übergabe, noch keine Roboterinstallation
 
 Der Nutzer führt den Kandidaten später selbst auf dem Jetson aus. Geprüfter
@@ -2992,3 +3091,99 @@ negativ an unveränderter 900-s-Grenze, Cancel249/Gyro250 bestehen. Keine Gesamt
 Hardwarefreigabe. Rückfall ausschließlich dieses Diffs zu 5612878. Alle Fälle
 beendet; kein tatsächlicher Jetson-Kanal verfügbar, daher weder Deployment noch
 der früher gewünschte Jetson-Shutdown ausgeführt.
+
+
+## 10.10.2026 – separates Start-Sweep-Overlay, keine Aktoraktivierung
+
+`~/.local/share/amadeus/releases/ap06-start-sweep-20261010` baut `explore` und
+unverändertes `amadeus_map_identity` separat. Neuer kontinuierlicher
+Geradenprüfer wird ausschließlich vom Offline-Diagnosewerkzeug verwendet;
+keine aktive Startprüfung ersetzt, kein Roboterprozess gestartet. 47 gezielte
+Tests grün, gespeicherte Realproben ideal positiv und mit Abweichung negativ.
+Kein Realfahr- oder Kundennachweis daraus. Private Daten/Quellenhashes unter
+`~/.local/share/amadeus/diagnostics/ap06-start-sweep-20261010`.
+Rückfall: dieses temporäre Overlay nicht laden; bisheriges Geometrieoverlay
+und alle vorigen eigenen Fehlerkorrekturen bleiben bestehen. Bestandsinstall
+und Originalcheckout unverändert; keine Autostart-/Remoteänderung.
+
+
+## 10.10.2026 – passiver Vorlauf für vorbereiteten Realversuch
+
+Private Vorbereitung unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-preparation-20261010T1308Z`,
+Runtime R5. Aktive Skripte vorbereitet, nicht ausgeführt. Neuer 180,070-s-
+Vorlauf ohne Encoderverriegelung, 675/675 Nahstatus gesund; aktuelle Scope-
+TF-Bindung und sechs passive Geometrieproben durchgeführt. Startnachweis
+weiter negativ. Neues Monitor-Stillstandsverfahren prüft gemessene RPM; zwölf
+Gegenproben grün. Alle eigenen Prozesse direkt geordnet beendet, abschließend
+20 FC03-Proben/Motor null RPM, keine Gerätebesitzer. 1.048 Bestandsinstall-
+Dateien identisch, Originalcheckout sauber. Rückfall private Abläufe und
+R5-Overlay weglassen; kein dauerhafter Install-/Autostart-/Remotewechsel.
+
+
+## 10.10.2026 – LAB-Diagnose- und aktive Feedback-Overlays (lokal)
+
+Separater Checkout `~/roboter_worktrees/ap06-e14ca312-validation`, Basiscommit
+`e14ca31276b26be2d88397b310301dad3c4e9600`; vorhandene Installation wird nicht
+überschrieben. Ergänzende Release-Verzeichnisse R6–R10 unter
+`~/.local/share/amadeus/releases/ap06-lab-{contour,reception,startup,output,feedback}-20261010`.
+Aktuelles R10 `runtime.bash` sourct die belegte Kette der separaten Vorgänger.
+Kein Autostart, keine globale CPU-/Netzwerk-/Betriebssystemumstellung.
+
+Nur im expliziten HWT-Pfad veröffentlicht `/base_hardware_feedback_output` die
+originalen Base-Messungen auf `/fusion/hwt601/wheel_odom_raw` und
+`/base_hardware/state_json`. `/base_hardware` bleibt einziger Bus-/Motorbesitzer;
+der Ausgabekindprozess erhält per `spawn` keinen offenen seriellen Deskriptor.
+Kein Base-TF; bestehender EKF bleibt `/odom`-/TF-Besitzer. Ausgabeverlust hält
+Motoren an und sperrt Bewegung. Frische 180 ms, Paarfenster 120 ms, Watchdog
+250 ms, Bremsrampe 400 ms unverändert. Freie Queue-Plätze sind kein Sensorbeweis.
+Im privaten Testprofil Basis/Fahrtor CPU 5, HWT-Quellen CPU 4, übrige eigene
+Vorbereitungsprozesse CPU 0–3; zeitlich begrenzt durch diese Prozesse.
+
+Diagnose kann separat nach neuer Scope-/Quellenbindung gestartet werden. Sie
+publiziert nur an den bestehenden Diagnose-Eingang des Tores. Eigener Stop-
+Trigger setzt Null und deaktiviert den Diagnosemodus; kein zweiter Aktorbesitzer.
+Aufräumen durch SIGINT an jeweils belegte direkte Launch-/Node-PIDs, niemals
+an Prozessgruppen. Echtkarten, Bags, Raumprofile und Rohmessungen nur privat.
+Nach dem unabhängigen Rechnerneustart wurden frische Quellenbindungen verwendet.
+
+Rückfall: eigene Diagnose deaktivieren, frischen gemessenen Stillstand prüfen,
+eigene gestartete Prozesse einzeln geordnet beenden und R10-Umgebung verlassen.
+Der unveränderte Original-Checkout/Installationspfad bleibt verfügbar; frühere
+negative Overlays sind nur Belege und werden nicht als Fahrfreigabe genutzt.
+Aktueller realer Endbefund wird im AP-06-Vorlaufprotokoll ergänzt.
+
+## 10.10.2026 – einzelne LAB-Korrekturen R11–R16
+
+Navigation separat gebaut unter `ap06-lab-{map-binding,idle-stop,ack,tf,routing,epoch}-20261010`.
+R14 wurde gebaut, aber nicht aktiviert; dessen TF-Korrektur ist in R15/R16.
+Im letzten zusammenhängenden `active-5`-Stack bleibt Base aus R10, das einzeln
+ersetzte Fahrtor aus R15 und die Diagnose aus R16. Kein zweiter Busbesitzer,
+kein Wechsel des EKF-/SLAM-TF-Besitzers. R16-Navigationsbuild 6,57 s, 86 Tests
+bestanden; installierte relevante Python-Dateien bytegleich mit dem Checkout.
+Private Laufmanifeste binden diese tatsächlichen Pfade und den unveränderten
+ursprünglichen Scope-/Radanker. Die Releasekette überschreibt keinen Bestandsinstall.
+
+Beim Torwechsel bleiben tatsächliche Recoveryzählung, Journal und begonnene
+Diagnosehistorie erhalten. Neue Instanz beginnt ohne Samples/Status und mit
+Fortsetzungssperre; echte neue Sensorproben und der streng geprüfte explizite
+Recovery-Trigger sind notwendig. Quittierung selbst sendet keinen Fahrbefehl.
+Der private Testmonitor zählt zusätzlich zur bewahrten rohen Winkelvariation
+die vollständigen Winkelspannen je Diagnosephase; Weglimit 0,5 m je Versuch,
+Winkelspannenlimit 0,6 rad und Zeitlimit 90 s bleiben bestehen. Der reale LAB-
+Bereich wird zwischen Wiederholungen nicht verschoben oder vergrößert.
+
+Rückfall unverändert: Diagnose stoppen, tatsächlichen Stillstand prüfen,
+eigene direkte Prozesse geordnet beenden, separate Releaseumgebung verlassen.
+Keine ältere negative Zwischenversion als gültige Fahrqualifikation einsetzen.
+Der abschließende Realbefund und die Bestandsprüfung stehen im Vorlaufprotokoll.
+
+R17 `ap06-lab-current-sources-20261010` ergänzt ausschließlich den tatsächlichen
+Quellenempfang vor Diagnoseentscheidungen. Build 6,58 s; 87 verschiedene gezielte
+Regressionen bestanden, neue echte DDS-Probe separat nachgeprüft. Letzte reale
+Kombination: Base R10, Fahrtor R15, Diagnose R17, gleiche laufende HWT-/EKF-/
+SLAM-Quellen und gleicher physischer Scope seit Beginn von `active-5`.
+Vorherige R12-/R13-/R16-/R16b-Abbruchbelege bleiben unverändert erhalten.
+R17 schloss die feste 25-cm-/±15°-Sequenz und drei Stillstände vollständig ab,
+mit 0,275685 m Encoderweg einschließlich Ausrollen/Drehanteilen, ohne Modbus-
+Lesefehler oder Encoderverriegelung. Kein autonomer AP-06-Gesamtpositivlauf.

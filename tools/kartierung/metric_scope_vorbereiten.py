@@ -225,7 +225,9 @@ class ScopeBinding:
             raise BindingPending('latest raw map and manager status are not an exact pair')
         correlate_raw_map_portal_source(source, correlation)
         def fresh(age, limit, label):
-            require(math.isfinite(age) and 0 <= age <= limit, label+' missing/stale/future')
+            require(math.isfinite(age), label+' invalid age')
+            if not 0 <= age <= limit:
+                raise BindingPending(label+' missing/stale/future; age='+str(age))
         fresh(monotonic_now-map_received, self.map_timeout, 'map receipt')
         fresh(monotonic_now-status_received, self.map_timeout, 'status receipt')
         fresh(ros_now_ns/1e9-sample.status_time_seconds, self.map_timeout, 'status time')
@@ -280,6 +282,43 @@ def write_private_profile(output, parameters, proof, repository):
     return output
 
 
+class ScopeTfListener:
+    """Receive original TF independently of map and graph validation work."""
+    def __init__(self, node):
+        from threading import Event, Thread
+        from rclpy.executors import SingleThreadedExecutor
+        from rclpy.node import Node
+        from tf2_ros import Buffer, TransformListener
+        self.node = Node(node.get_name()+'_tf', context=node.context,
+                         namespace=node.get_namespace(), use_global_arguments=False,
+                         enable_rosout=False, start_parameter_services=False)
+        self.buffer = Buffer()
+        self.listener = TransformListener(self.buffer, self.node, spin_thread=False)
+        self.executor = SingleThreadedExecutor(context=node.context)
+        self.executor.add_node(self.node)
+        self.stop = Event()
+        self.fault = None
+        self.thread = Thread(target=self._spin, name='scope_tf_receiver')
+        self.thread.start()
+
+    def _spin(self):
+        try:
+            while not self.stop.is_set() and self.node.context.ok():
+                self.executor.spin_once(timeout_sec=.05)
+        except Exception as error:
+            self.fault = error
+
+    def close(self):
+        # Humble shutdown() destroys guard handles while spin() can still be
+        # constructing its wait set. End the reader before destroying handles.
+        self.stop.set()
+        self.executor.wake()
+        self.thread.join()
+        self.executor.shutdown()
+        self.listener.unregister()
+        self.node.destroy_node()
+
+
 def collect(args, binding, metric_profile, repository):
     # ROS stays a CLI-only dependency: offline tests use actual pure contracts.
     import rclpy
@@ -288,12 +327,13 @@ def collect(args, binding, metric_profile, repository):
     from rclpy.time import Time
     from nav_msgs.msg import OccupancyGrid
     from std_msgs.msg import String
-    from tf2_ros import Buffer, TransformListener, TransformException
+    from tf2_ros import TransformException
 
     require(args.tf_probe.is_file() and os.access(args.tf_probe, os.X_OK), 'built read-only TF ownership probe required')
     rclpy.init(args=[])
     node = Node('metric_scope_prepare_'+str(os.getpid()))
-    tf_buffer = Buffer(); listener = TransformListener(tf_buffer, node, spin_thread=False)
+    tf_source = ScopeTfListener(node)
+    tf_buffer = tf_source.buffer
     fault = [None]
     provenance = {}
     def endpoints(topic, *, require_single=False):
@@ -328,6 +368,8 @@ def collect(args, binding, metric_profile, repository):
         last_pending = 'waiting for live map/status/TF'
         while rclpy.ok() and time.monotonic() < deadline:
             rclpy.spin_once(node, timeout_sec=.05)
+            if tf_source.fault is not None:
+                raise tf_source.fault
             if fault[0] is not None:
                 raise fault[0]
             require(process.poll() is None, 'TF ownership observer exited')
@@ -381,7 +423,7 @@ def collect(args, binding, metric_profile, repository):
                         process.kill(); process.wait(timeout=3.)
         finally:
             selector.close()
-            listener.unregister()
+            tf_source.close()
             node.destroy_node()
             if rclpy.ok():
                 rclpy.shutdown()

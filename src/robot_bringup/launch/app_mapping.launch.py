@@ -26,6 +26,8 @@ def generate_launch_description():
     start_explorer = LaunchConfiguration('start_explorer')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
+    start_stage3_motion_diagnostic = LaunchConfiguration(
+        'start_stage3_motion_diagnostic')
     lab_external_hardware_halt_attested = LaunchConfiguration(
         'lab_external_hardware_halt_attested')
     normalize_scan = LaunchConfiguration('normalize_scan')
@@ -55,6 +57,10 @@ def generate_launch_description():
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusaetzlicher Opt-in fuer den festen HWT601-'
                         'Bewegungsdiagnoselauf.'),
+        DeclareLaunchArgument(
+            'start_stage3_motion_diagnostic', default_value='true',
+            description='false fuer aktuelle Scopebindung vor getrenntem '
+                        'Start des einzelnen Diagnosenodes.'),
         DeclareLaunchArgument(
             'lab_external_hardware_halt_attested', default_value='false',
             description='Manuelle Vor-Ort-Bestaetigung des unabhaengigen '
@@ -87,6 +93,8 @@ def generate_launch_description():
                 'start_explorer': start_explorer,
                 'enable_stage3_motion_diagnostic':
                     enable_stage3_motion_diagnostic,
+                'start_stage3_motion_diagnostic':
+                    start_stage3_motion_diagnostic,
                 'lab_external_hardware_halt_attested':
                     lab_external_hardware_halt_attested,
                 'normalize_scan': normalize_scan,

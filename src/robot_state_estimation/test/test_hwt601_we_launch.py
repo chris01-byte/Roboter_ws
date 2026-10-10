@@ -113,6 +113,23 @@ def declared_launch(relative, **overrides):
     return entities, ctx
 
 
+@pytest.mark.parametrize('active, executable', [('true', 'base_hardware'),
+                                             ('false', 'encoder_shadow_reader')])
+def test_encoder_owner_establishes_baseline_after_stack_startup(active, executable):
+    from launch.utilities import type_utils
+    entities, ctx = declared_launch(
+        'src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py',
+        active_drive=active, operator_stationary_confirmed='true')
+    eligible = [e for e in entities if e.condition is None or e.condition.evaluate(ctx)]
+    assert not any(isinstance(e, Node) and resolved(e.node_executable, ctx) == executable
+                   for e in eligible)
+    delayed = [(e, n) for e in eligible if isinstance(e, TimerAction)
+               for n in e.actions if isinstance(n, Node)
+               and resolved(n.node_executable, ctx) == executable]
+    assert len(delayed) == 1
+    assert type_utils.perform_typed_substitution(ctx, delayed[0][0].period, float) == 15.
+
+
 def enabled_launch_owners(entities, ctx):
     owners = []
     for entity in entities:

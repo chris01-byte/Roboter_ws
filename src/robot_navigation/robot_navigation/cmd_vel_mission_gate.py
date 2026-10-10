@@ -16,6 +16,7 @@ from rclpy.executors import (
     ExternalShutdownException, MultiThreadedExecutor, SingleThreadedExecutor)
 from rclpy.node import Node
 from std_msgs.msg import Bool, String
+from std_srvs.srv import Trigger
 from sensor_msgs.msg import LaserScan, PointCloud2
 from robot_interfaces.msg import NearFieldStatus
 from rclpy.qos import (
@@ -23,10 +24,46 @@ from rclpy.qos import (
     qos_profile_sensor_data,
 )
 from tf2_ros import Buffer, TransformException, TransformListener
+from robot_navigation.tf_reception import receive_current_tf
 
 
 AUTHORIZED_PHASES = {'nav2_ziel_senden', 'fahre_zum_raum'}
 AUTHORIZED_EXPLORE_PHASES = {'Explore'}
+
+
+def idle_without_active_command(status):
+    if not isinstance(status, dict) or status.get('state') != 'idle':
+        return False
+    command = status.get('active_command')
+    return command is None or (isinstance(command, dict) and not command)
+
+
+def diagnostic_startup_at_rest(gate):
+    """Never resume a used diagnostic; validate actual stationary feedback."""
+    if not getattr(gate, '_allow_stage3_diagnostic', False):
+        return True
+    command = getattr(gate, '_stage3_command', None)
+    if getattr(gate, '_stage3_active', True) or command is None:
+        return False
+    if any(v != 0. for v in (command.linear.x, command.linear.y, command.linear.z,
+                            command.angular.x, command.angular.y, command.angular.z)):
+        return False
+    health = gate._hwt_guard.health
+    with health.lock:
+        feedback = health.statuses.get('wheel', ({},))[0]
+        twist = health.sample_details.get('wheel', {}).get('twist')
+        try:
+            values = tuple(float(feedback[k]) for k in (
+                'meas_motor_rpm_left', 'meas_motor_rpm_right',
+                'meas_v_mps', 'meas_w_radps', 'encoder_feedback_age_s'))
+        except (KeyError, TypeError, ValueError):
+            return False
+        return (all(math.isfinite(v) for v in values)
+                and values[0] == values[1] == 0.
+                and abs(values[2]) < .01 and abs(values[3]) < .03
+                and 0 <= values[4] <= .18
+                and isinstance(twist, list) and len(twist) == 6
+                and all(type(v) in (int, float) and math.isfinite(v) and v == 0. for v in twist))
 
 
 def room_motion_authorized(status):
@@ -235,6 +272,7 @@ class CmdVelMissionGate(Node):
         require_hwt = self.declare_parameter('require_hwt601_fusion', False).value
         hwt_drive = self.declare_parameter('hwt601_active_drive', False).value
         mapping = self.declare_parameter('allow_explore_mission', False).value
+        diagnostic = self.declare_parameter('allow_stage3_motion_diagnostic', False).value
         self._hwt_guard = None
         self._hwt_source_cb = None
         self._hwt_wheel_cb = None
@@ -254,7 +292,7 @@ class CmdVelMissionGate(Node):
                 self._hwt_wheel_cb = MutuallyExclusiveCallbackGroup()
             self._hwt_guard = Hwt601FusionGuard(
                 self, hwt_drive, self._hwt_source_cb, self._hwt_wheel_cb,
-                prefer_latest_wheel=bool(mapping))
+                prefer_latest_wheel=bool(mapping or diagnostic))
             self._hwt_status_pub = self.create_publisher(
                 String, '/fusion/hwt601/status_json', 10)
             self._hwt_status_worker = DeferredJsonPublisher(self._hwt_status_pub)
@@ -298,7 +336,6 @@ class CmdVelMissionGate(Node):
         self.declare_parameter('localization_search_odom_topic', '/odom')
         self.declare_parameter('localization_search_odom_timeout_s', 0.5)
         self.declare_parameter('publish_rate_hz', 20.0)
-        self.declare_parameter('allow_stage3_motion_diagnostic', False)
         self.declare_parameter(
             'stage3_diagnostic_command_topic',
             '/cmd_vel_stage3_diagnostic_raw')
@@ -463,6 +500,10 @@ class CmdVelMissionGate(Node):
             self.get_parameter('stage3_diagnostic_active_topic').value,
             self._on_stage3_diagnostic_active,
             10)
+        if self._allow_stage3_diagnostic:
+            self.create_service(Trigger,
+                '/stage3_motion_test/acknowledge_recovered_hold',
+                self._acknowledge_diagnostic_hold)
         self.create_subscription(
             Odometry, search_odom_topic, self._on_odom, 20)
         self.create_subscription(
@@ -561,14 +602,17 @@ class CmdVelMissionGate(Node):
             return
         self._status = status
         self._status_time = time.monotonic()
-        if (isinstance(status, dict)
-                and (status.get('state') != 'idle'
-                     or status.get('active_command') is not None)):
+        if isinstance(status, dict) and not idle_without_active_command(status):
             self._hwt_mission_seen = True
         if not self._mission_authorized(status, time.monotonic()):
             # Nicht erst auf den naechsten Timer-Tick warten.
             if not self._search_authorized(time.monotonic()):
-                self._publisher.publish(Twist())
+                guard = getattr(self, '_hwt_guard', None)
+                hwt_ready = ((guard is None or guard.failure() is None)
+                             and not getattr(self, '_hwt_resume_pending', False))
+                if not CmdVelMissionGate._diagnostic_input_authorized(
+                        self, time.monotonic(), hwt_ready):
+                    self._publisher.publish(Twist())
 
     def _on_explore_status(self, message):
         """Only a new HOLD then RESUME from the existing Explorer opens a hold."""
@@ -604,12 +648,10 @@ class CmdVelMissionGate(Node):
         if (not getattr(self, '_hwt_mission_seen', True)
                 and status.get('state') == 'idle' and phase == 'idle'
                 and sequence == 0 and self._hwt_hold_sequence is None
-                and isinstance(self._status, dict)
-                and self._status.get('state') == 'idle'
-                and self._status.get('active_command') is None
+                and idle_without_active_command(self._status)
                 and 0.0 <= now - self._status_time <= self._status_timeout
                 and not getattr(self, '_allow_localization_search', True)
-                and not getattr(self, '_allow_stage3_diagnostic', True)
+                and diagnostic_startup_at_rest(self)
                 and self._hwt_guard.health.recovery_state == 'HEALTHY'
                 and self._hwt_guard.health.source_failure() is None
                 and all(value == 0.0 for value in (
@@ -690,10 +732,56 @@ class CmdVelMissionGate(Node):
     def _on_stage3_diagnostic_active(self, message):
         self._stage3_active = bool(message.data)
         self._stage3_active_time = time.monotonic()
+        if self._stage3_active:
+            # A used diagnostic has real motion history even without a
+            # MissionManager mission. It must never receive startup recovery.
+            self._hwt_mission_seen = True
         if not self._stage3_active:
             self._stage3_command = Twist()
             self._stage3_command_time = None
             self._publisher.publish(Twist())
+
+    def _acknowledge_diagnostic_hold(self, _request, response):
+        """Explicit LAB acknowledgement after recovery and measured stop.
+
+        Never resume a command, clear a source fault, reset a budget or start
+        a test. A separate, new diagnostic Trigger must still pass its checks.
+        """
+        now = time.monotonic()
+        guard = self._hwt_guard
+        okay = (self._allow_stage3_diagnostic and guard is not None
+                and not self._stage3_active
+                and self._stage3_active_time is not None
+                and 0 <= now-self._stage3_active_time <= .25
+                and idle_without_active_command(self._status)
+                and 0 <= now-self._status_time <= self._status_timeout
+                and estop_motion_authorized(self._estop_clear, self._estop_time,
+                                           now, self._estop_timeout)
+                and not self._allow_localization_search
+                and self._motion_tf_authorized()
+                and self._stage3_diagnostic_health_authorized(now)
+                and all(v == 0. for v in (self._command.linear.x,
+                    self._command.linear.y, self._command.linear.z,
+                    self._command.angular.x, self._command.angular.y,
+                    self._command.angular.z)))
+        if okay:
+            guard.refresh_current_wheel()
+            guard.refresh_current_imu()
+            with guard.health.lock:
+                okay = (guard.health.motion_failure() is None
+                        and guard.health.recovery_state == 'HEALTHY'
+                        and guard.health.latched_fault is None
+                        and diagnostic_startup_at_rest(self))
+        response.success = bool(okay)
+        if okay:
+            self._stage3_command = Twist()
+            self._stage3_command_time = None
+            self._hwt_resume_pending = False
+            self._hwt_resume_at = now
+            response.message = 'Recovered LAB hold acknowledged at measured stop; new test required.'
+        else:
+            response.message = 'LAB acknowledgement rejected: current source/stop/idle/safety checks failed.'
+        return response
 
     def _on_explore_map(self, _message):
         self._explore_map_time = time.monotonic()
@@ -870,6 +958,8 @@ class CmdVelMissionGate(Node):
             self._search_max_distance)
 
     def _motion_tf_authorized(self):
+        if not receive_current_tf(getattr(self, '_tf_listener', None)):
+            return False
         try:
             map_transform = self._tf_buffer.lookup_transform(
                 self._global_frame, self._base_frame, Time())
@@ -890,6 +980,17 @@ class CmdVelMissionGate(Node):
                 self._motion_base_tf_timeout)
         )
 
+    def _diagnostic_input_authorized(self, now, hwt_ready):
+        if not getattr(self, '_allow_stage3_diagnostic', False):
+            return False
+        return stage3_diagnostic_authorized(
+            True, self._stage3_active, self._stage3_active_time,
+            self._stage3_command_time, self._status, self._status_time,
+            now, self._status_timeout, self._stage3_diagnostic_health_authorized(now),
+            estop_motion_authorized(self._estop_clear, self._estop_time,
+                                   now, self._estop_timeout),
+            hwt_ready, self._motion_tf_authorized())
+
     def destroy_node(self):
         worker = getattr(self, '_hwt_status_worker', None)
         if worker is not None:
@@ -903,8 +1004,14 @@ class CmdVelMissionGate(Node):
         health_status = None
         if guard is not None:
             guard.refresh_passive_wheel()
+            # DDS take/callback groups must not be acquired while owning the
+            # health mutex: a dispatched source callback may already own its
+            # group and be waiting for that same mutex. Receive first, then
+            # evaluate and capture one atomic decision under the health lock.
+            guard.refresh_current_wheel()
+            guard.refresh_current_imu()
             with guard.health.lock:
-                hwt_failure = guard.failure()
+                hwt_failure = guard.health.motion_failure()
                 # One source decision supplies both authorization and status.
                 # A second evaluation while formatting could select another
                 # sample and report a different state from the command check.
@@ -963,22 +1070,8 @@ class CmdVelMissionGate(Node):
                 now,
                 self._localization_timeout)
             )
-        diagnostic_active = False
-        if getattr(self, '_allow_stage3_diagnostic', False):
-            diagnostic_active = stage3_diagnostic_authorized(
-                True,
-                self._stage3_active,
-                self._stage3_active_time,
-                self._stage3_command_time,
-                self._status,
-                self._status_time,
-                now,
-                self._status_timeout,
-                self._stage3_diagnostic_health_authorized(now),
-                estop_clear,
-                hwt_motion_ready,
-                self._motion_tf_authorized(),
-            )
+        diagnostic_active = CmdVelMissionGate._diagnostic_input_authorized(
+            self, now, hwt_motion_ready)
         command_fresh = (
             now - self._command_time <= self._command_timeout
             and (getattr(self, '_hwt_resume_at', None) is None

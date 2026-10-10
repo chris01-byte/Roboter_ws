@@ -26,7 +26,9 @@ def gate_with_ready_sources():
     command.linear.x = 0.05
     gate = SimpleNamespace(
         _hwt_guard=SimpleNamespace(health=health, failure=health.motion_failure,
-                                   refresh_passive_wheel=lambda: None),
+                                   refresh_passive_wheel=lambda: None,
+                                   refresh_current_wheel=lambda: None,
+                                   refresh_current_imu=lambda: None),
         _hwt_status_pub=SimpleNamespace(publish=status.append),
         _estop_clear=True, _estop_time=now, _estop_timeout=1.0,
         _motion_tf_authorized=lambda: True,
@@ -41,6 +43,88 @@ def gate_with_ready_sources():
         _hwt_seen_sequence=0, _hwt_resume_at=None, _allow_explore=True,
     )
     return gate, health, output, status
+
+
+def test_source_receive_happens_before_health_lock():
+    gate, health, output, status = gate_with_ready_sources()
+    observed = []
+    def receive():
+        assert not health.lock._is_owned()
+        observed.append(True)
+    gate._hwt_guard.refresh_current_wheel = receive
+    gate._hwt_guard.refresh_current_imu = receive
+    CmdVelMissionGate._publish(gate)
+    assert len(observed) == 2 and output[-1].linear.x == .05
+
+
+def diagnostic_ack_fixture():
+    gate, health, output, status = gate_with_ready_sources()
+    now = time.monotonic()
+    gate._allow_stage3_diagnostic, gate._stage3_active = True, False
+    gate._stage3_active_time = now
+    gate._allow_localization_search = False
+    gate._stage3_diagnostic_health_authorized = lambda _: True
+    gate._stage3_command = Twist()
+    gate._stage3_command_time = now
+    gate._command = Twist()
+    gate._status = dict(state='idle',active_command={})
+    gate._hwt_resume_pending, gate._hwt_mission_seen = True, True
+    health.statuses['wheel'][0].update(meas_motor_rpm_left=0.,
+        meas_motor_rpm_right=0.,meas_v_mps=0.,meas_w_radps=0.,encoder_feedback_age_s=.02)
+    health.sample_details['wheel'] = dict(twist=[0.]*6)
+    return gate, health
+
+
+def test_explicit_lab_ack_preserves_fault_budgets_history_and_cannot_replay():
+    gate, health = diagnostic_ack_fixture()
+    health.recovery_attempts, health.wheel_recovery_attempts = 1, 2
+    journal = health.recovery_events
+    response = CmdVelMissionGate._acknowledge_diagnostic_hold(gate,None,SimpleNamespace())
+    assert response.success and not gate._hwt_resume_pending
+    assert gate._hwt_mission_seen and not gate._stage3_active
+    assert gate._stage3_command_time is None
+    assert (health.recovery_attempts,health.wheel_recovery_attempts) == (1,2)
+    assert health.recovery_events is journal
+
+
+@pytest.mark.parametrize('failure', ['disabled','active','moving','missing_wheel',
+    'terminal','estop','old_idle','bad_near','old_activation'])
+def test_explicit_lab_ack_still_rejects_real_bad_state(failure):
+    gate, health = diagnostic_ack_fixture()
+    if failure=='disabled':gate._allow_stage3_diagnostic=False
+    elif failure=='active':gate._stage3_active=True
+    elif failure=='moving':health.statuses['wheel'][0]['meas_motor_rpm_left']=2.
+    elif failure=='missing_wheel':del health.samples['wheel']
+    elif failure=='terminal':health.latched_fault='real_terminal_fault'
+    elif failure=='estop':gate._estop_clear=False
+    elif failure=='old_idle':gate._status_time-=2.
+    elif failure=='bad_near':gate._stage3_diagnostic_health_authorized=lambda _:False
+    elif failure=='old_activation':gate._stage3_active_time-=1.
+    response=CmdVelMissionGate._acknowledge_diagnostic_hold(gate,None,SimpleNamespace())
+    assert not response.success and gate._hwt_resume_pending
+
+
+@pytest.mark.parametrize('failure', [None,'stale_command','active_false',
+    'near','estop','tf','wheel','hold'])
+def test_idle_manager_does_not_pulse_zero_into_an_authorized_real_diagnostic(failure):
+    gate, health, output, _ = gate_with_ready_sources()
+    now=time.monotonic()
+    gate._allow_stage3_diagnostic=True
+    gate._stage3_active=True
+    gate._stage3_active_time=gate._stage3_command_time=now
+    gate._stage3_diagnostic_health_authorized=lambda _:True
+    gate._mission_authorized=lambda *_:False
+    gate._search_authorized=lambda _:False
+    if failure=='stale_command':gate._stage3_command_time-=2.
+    elif failure=='active_false':gate._stage3_active=False
+    elif failure=='near':gate._stage3_diagnostic_health_authorized=lambda _:False
+    elif failure=='estop':gate._estop_clear=False
+    elif failure=='tf':gate._motion_tf_authorized=lambda:False
+    elif failure=='wheel':del health.samples['wheel']
+    elif failure=='hold':gate._hwt_resume_pending=True
+    CmdVelMissionGate._on_status(gate,String(data=json.dumps(dict(state='idle',active_command={}))))
+    assert bool(output) is (failure is not None)
+    if output:assert output[-1].linear.x==output[-1].angular.z==0.
 
 
 @pytest.mark.parametrize('missing', ['raw', 'yaw', 'wheel'])
@@ -166,6 +250,7 @@ def test_idle_status_cannot_release_a_mission_hold_or_unhealthy_source(counterca
         gate._allow_localization_search = True
     elif countercase == 'diagnostic':
         gate._allow_stage3_diagnostic = True
+        gate._stage3_active = True
     elif countercase == 'hold':
         health.recovery_state = 'HOLD'
     elif countercase == 'hard_fault':
@@ -185,6 +270,36 @@ def test_mission_seen_is_not_forgotten_after_idle():
     CmdVelMissionGate._on_status(gate, String(data=json.dumps({
         'state': 'idle', 'active_command': None})))
     assert gate._hwt_mission_seen is True
+
+
+def test_real_empty_idle_command_does_not_invent_previous_mission():
+    gate, health, output, status = startup_idle_gate()
+    CmdVelMissionGate._on_status(gate, String(data=json.dumps({
+        'state': 'idle', 'active_command': {}})))
+    assert gate._hwt_mission_seen is False
+    CmdVelMissionGate._on_explore_status(gate, String(data=json.dumps({
+        'state': 'idle', 'phase': 'idle', 'hwt_recovery_sequence': 0})))
+    assert gate._hwt_resume_pending is False
+
+
+@pytest.mark.parametrize('countercase', [None, 'moving_rpm', 'old_feedback', 'missing_twist', 'used_test'])
+def test_unused_diagnostic_startup_recovers_only_with_measured_rest(countercase):
+    gate, health, output, status = startup_idle_gate()
+    gate._status['active_command'] = {}
+    gate._allow_stage3_diagnostic = True
+    gate._stage3_active = False
+    gate._stage3_command = Twist()
+    health.statuses['wheel'][0].update(meas_motor_rpm_left=0., meas_motor_rpm_right=0.,
+        meas_v_mps=0., meas_w_radps=0., encoder_feedback_age_s=.01)
+    health.sample_details['wheel'] = dict(twist=[0.]*6)
+    if countercase == 'moving_rpm':health.statuses['wheel'][0]['meas_motor_rpm_left']=1.
+    elif countercase == 'old_feedback':health.statuses['wheel'][0]['encoder_feedback_age_s']=.19
+    elif countercase == 'missing_twist':health.sample_details['wheel']={}
+    elif countercase == 'used_test':gate._hwt_mission_seen=True
+    CmdVelMissionGate._on_explore_status(gate, String(data=json.dumps({
+        'state': 'idle', 'phase': 'idle', 'hwt_recovery_sequence': 0})))
+    assert gate._hwt_resume_pending is (countercase is not None)
+    assert all(m.linear.x == 0. for m in output)
 
 
 def test_blocked_diagnostic_publisher_cannot_delay_stop_decision():

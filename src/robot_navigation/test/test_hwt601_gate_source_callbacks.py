@@ -130,10 +130,22 @@ def _passive_wheel_case(stop_wheel, busy_group):
             if not stop_wheel:
                 assert after > before
                 assert time.monotonic()-gate._hwt_guard.health.samples['wheel'][2] < .18
-                if busy_group == 'default':
-                    assert gate._hwt_guard.health.source_failure() is None
-                else:
-                    assert gate._hwt_guard.health.recovery_state == 'HOLD'
+                # Fresh IMU callbacks now progress independently of a busy
+                # status callback. Its still-fresh status must not cause HOLD.
+                assert gate._hwt_guard.health.source_failure() is None
+        if busy_group == 'imu_status' and not stop_wheel:
+            # A genuinely missing status is still a fault after its existing
+            # deadline, even while original raw/yaw measurements stay fresh.
+            end = time.monotonic()+1.05
+            while time.monotonic()<end:
+                publish()
+            assert not exited.is_set()
+            with gate._hwt_guard.health.lock:
+                assert all(time.monotonic()-gate._hwt_guard.health.samples[n][2] < .18
+                           for n in ('raw', 'yaw', 'wheel'))
+                assert gate._hwt_guard.health.source_failure() is not None
+                assert gate._hwt_guard.health.recovery_state == 'TERMINAL_FAULT'
+                assert gate._hwt_guard.health.latched_fault.endswith('_status_missing_or_stale')
         release.set()
         end = time.monotonic()+1
         while not exited.is_set() and time.monotonic()<end:
@@ -144,6 +156,9 @@ def _passive_wheel_case(stop_wheel, busy_group):
             publish(not stop_wheel)
         if stop_wheel:
             assert gate._hwt_guard.health.latched_fault == 'wheel_missing_stale_or_invalid'
+        elif busy_group == 'imu_status':
+            # A later status must not silently clear a genuine hard loss.
+            assert gate._hwt_guard.health.latched_fault.endswith('_status_missing_or_stale')
         else:
             assert gate._hwt_guard.health.latched_fault is None
             assert gate._hwt_guard.health.source_failure() is None
@@ -172,6 +187,26 @@ def test_active_gate_keeps_its_existing_serial_source_group():
                    for s in gate._hwt_guard.subscriptions)
         wheel = gate._hwt_guard.subscriptions[2]
         assert wheel.qos_profile.depth == 5
+    finally:
+        gate.destroy_node(); rclpy.shutdown()
+
+
+def test_active_diagnostic_selects_current_measurements_without_explore_opt_in():
+    rclpy.init(args=['--ros-args', '-p', 'require_hwt601_fusion:=true',
+                    '-p', 'hwt601_active_drive:=true',
+                    '-p', 'allow_explore_mission:=false',
+                    '-p', 'allow_stage3_motion_diagnostic:=true'])
+    gate = CmdVelMissionGate()
+    try:
+        assert gate._hwt_guard.prefer_latest_wheel is True
+        assert all(s.qos_profile.depth == 1 for s in gate._hwt_guard.subscriptions[:3])
+        assert len({id(s.callback_group) for s in gate._hwt_guard.subscriptions[:3]}) == 3
+        # Selecting current DDS does not invent measurements or readiness.
+        gate._hwt_guard.refresh_current_wheel()
+        gate._hwt_guard.refresh_current_imu()
+        assert gate._hwt_guard.health.was_ready is False
+        assert gate._hwt_guard.health.source_failure() is not None
+        assert gate._mode == 'blocked'
     finally:
         gate.destroy_node(); rclpy.shutdown()
 

@@ -17,6 +17,7 @@ import yaml
 from geometry_msgs.msg import PoseStamped, Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from sensor_msgs.msg import Imu, LaserScan, PointCloud2
 from std_msgs.msg import Bool, String
@@ -24,6 +25,9 @@ from std_srvs.srv import Trigger
 from tf2_msgs.msg import TFMessage
 from robot_interfaces.msg import NearFieldStatus
 from tf2_ros import Buffer, TransformException, TransformListener
+from robot_navigation.lab_motion_geometry import (
+    fixed_sequence_in_scope, stop_sweep_in_scope, wheel_pose_in_bound_scope)
+from robot_navigation.tf_reception import receive_current_tf, receive_latest_sources
 
 
 PHASES = ('forward', 'stop_after_forward', 'turn_positive',
@@ -89,10 +93,21 @@ class Stage3MotionDiagnostic(Node):
         self.declare_parameter(
             'required_scope_id', 'stage3-local-scope-20260925-after-r2')
         self.declare_parameter('lab_external_hardware_halt_attested', False)
+        self.declare_parameter('scope_origin_pose_map', [float('nan')]*3)
+        self.declare_parameter('scope_origin_pose_wheel', [float('nan')]*3)
         if not bool(self.get_parameter('enabled').value):
             raise RuntimeError('Stage-3-Diagnosemodus ist nicht aktiviert')
         self.external_hardware_halt_attested = bool(
             self.get_parameter('lab_external_hardware_halt_attested').value)
+        self._scope_origin_map = tuple(self.get_parameter('scope_origin_pose_map').value)
+        self._scope_origin_wheel = tuple(self.get_parameter('scope_origin_pose_wheel').value)
+        self._wheel_scope_bound = all(
+            len(p) == 3 and all(math.isfinite(v) for v in p)
+            for p in (self._scope_origin_map, self._scope_origin_wheel))
+        if (not self._wheel_scope_bound and not all(
+                len(p) == 3 and all(math.isnan(v) for v in p)
+                for p in (self._scope_origin_map, self._scope_origin_wheel))):
+            raise RuntimeError('Unvollstaendiger fester Scope-/Radbezug')
 
         profile_path = Path(str(
             self.get_parameter('scope_profile_path').value)).expanduser()
@@ -104,6 +119,12 @@ class Stage3MotionDiagnostic(Node):
         self.scope_id = str(params.get('wohnungserkundung_scope_id', '')).strip()
         self.session_id = str(
             params.get('region_graph_shadow_session_id', '')).strip()
+        fingerprint = str(params.get('metric_scope_map_fingerprint', '')).strip()
+        self._scope_map_epoch_id = None
+        if self._wheel_scope_bound:
+            if len(fingerprint) != 64 or any(c not in '0123456789abcdef' for c in fingerprint):
+                raise RuntimeError('Verifizierte urspruengliche Kartenepoche fehlt')
+            self._scope_map_epoch_id = f'map-{fingerprint}'
         values = params.get('wohnungserkundung_scope_polygon_xy', [])
         self.scope_polygon = tuple(
             (float(values[i]), float(values[i + 1]))
@@ -130,6 +151,7 @@ class Stage3MotionDiagnostic(Node):
         self._last_collision_zero_since = None
         self._log_stream = None
         self._test_started_once = False
+        self._idle_status_next = 0.
         self._tf_buffer = Buffer()
         self._tf_listener = TransformListener(self._tf_buffer, self)
 
@@ -141,61 +163,71 @@ class Stage3MotionDiagnostic(Node):
             String, '/stage3_motion_test/status_json', 10)
         self._start_srv = self.create_service(
             Trigger, '/stage3_motion_test/start', self._start)
+        self._stop_srv = self.create_service(
+            Trigger, '/stage3_motion_test/stop', self._stop)
 
+        self._source_group = MutuallyExclusiveCallbackGroup()
+        self._current_source_subscriptions = []
         sensor_qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST, depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT)
-        self.create_subscription(PoseStamped, '/robot_map_manager/robot_pose',
+        self._subscribe_source(PoseStamped, '/robot_map_manager/robot_pose',
                                  self._pose, 10)
-        self.create_subscription(String, '/robot_map_manager/status_json',
+        self._subscribe_source(String, '/robot_map_manager/status_json',
                                  self._map_status, 10)
-        self.create_subscription(String, '/explore/region_graph/status_json',
+        self._subscribe_source(String, '/explore/region_graph/status_json',
                                  self._region_status, 10)
-        self.create_subscription(String, '/fusion/hwt601/status_json',
+        self._subscribe_source(String, '/fusion/hwt601/status_json',
                                  self._json_topic('fusion'), 10)
-        self.create_subscription(String, '/base_hardware/state_json',
+        self._subscribe_source(String, '/base_hardware/state_json',
                                  self._json_topic('base'), 10)
-        self.create_subscription(String, '/shadow/hwt601/raw_status_json',
+        self._subscribe_source(String, '/shadow/hwt601/raw_status_json',
                                  self._json_topic('hwt_raw'), 10)
-        self.create_subscription(String, '/shadow/hwt601/status_json',
+        self._subscribe_source(String, '/shadow/hwt601/status_json',
                                  self._json_topic('hwt_yaw_status'), 10)
-        self.create_subscription(NearFieldStatus, '/near_field/status',
+        self._subscribe_source(NearFieldStatus, '/near_field/status',
                                  self._near_status, 10)
         estop_qos = QoSProfile(depth=1)
         estop_qos.reliability = ReliabilityPolicy.RELIABLE
         from rclpy.qos import DurabilityPolicy
         estop_qos.durability = DurabilityPolicy.TRANSIENT_LOCAL
-        self.create_subscription(Bool, '/safety/estop',
+        self._subscribe_source(Bool, '/safety/estop',
                                  self._bool_topic('estop'), estop_qos)
-        self.create_subscription(LaserScan, '/scan_normiert',
+        self._subscribe_source(LaserScan, '/scan_normiert',
                                  self._scan, sensor_qos)
-        self.create_subscription(Odometry, '/odom',
+        self._subscribe_source(Odometry, '/odom',
                                  self._odom, sensor_qos)
-        self.create_subscription(Odometry, '/fusion/hwt601/wheel_odom_raw',
+        self._subscribe_source(Odometry, '/fusion/hwt601/wheel_odom_raw',
                                  self._odom_topic('wheel_odom'), sensor_qos)
-        self.create_subscription(Odometry, '/fusion/reference_odom',
+        self._subscribe_source(Odometry, '/fusion/reference_odom',
                                  self._odom_topic('lidar_odom'), sensor_qos)
-        self.create_subscription(String, '/sensor_fusion/lidar_odometry_json',
+        self._subscribe_source(String, '/sensor_fusion/lidar_odometry_json',
                                  self._json_topic('lidar_observer_status'), 10)
-        self.create_subscription(Imu, '/shadow/hwt601/imu/yaw_rate',
+        self._subscribe_source(Imu, '/shadow/hwt601/imu/yaw_rate',
                                  self._imu, sensor_qos)
-        self.create_subscription(PointCloud2, '/near_field/left/points',
+        self._subscribe_source(PointCloud2, '/near_field/left/points',
                                  self._cloud('vl53_left'), sensor_qos)
-        self.create_subscription(PointCloud2, '/near_field/right/points',
+        self._subscribe_source(PointCloud2, '/near_field/right/points',
                                  self._cloud('vl53_right'), sensor_qos)
         for topic, name in (
                 ('/cmd_vel_stage3_diagnostic_raw', 'command_in'),
                 ('/cmd_vel_nav', 'gate_out'),
                 ('/cmd_vel_smoothed', 'smoother_out'),
                 ('/cmd_vel', 'collision_monitor_out')):
-            self.create_subscription(Twist, topic, self._twist_topic(name), 10)
-        self.create_subscription(TFMessage, '/tf', self._tf_event, sensor_qos)
+            self._subscribe_source(Twist, topic, self._twist_topic(name), 10)
+        self._subscribe_source(TFMessage, '/tf', self._tf_event, sensor_qos)
         self.create_timer(0.05, self._tick)
         self.get_logger().warning(
             f'LABORMODUS {LAB_MODE} aktiv (explizites Diagnose-Opt-in); '
             f'externer Hardware-Halt manuell bestaetigt='
             f'{self.external_hardware_halt_attested}; Scope {self.scope_id}; '
             'ein einziger Trigger erlaubt nur 0,25 m / +15 Grad / -15 Grad.')
+
+    def _subscribe_source(self, message_type, topic, callback, qos):
+        sub = self.create_subscription(message_type, topic, callback, qos,
+                                       callback_group=self._source_group)
+        self._current_source_subscriptions.append((sub, callback))
+        return sub
 
     def _record(self, topic, payload, stamp_ns=None):
         received = time.monotonic()
@@ -347,18 +379,40 @@ class Stage3MotionDiagnostic(Node):
         fingerprint = summary.get('fingerprint')
         if not isinstance(fingerprint, str) or len(fingerprint) != 64:
             return None
-        if not isinstance(region, dict) or region.get('source', {}).get('stale') is not False:
+        if not isinstance(region, dict):
+            return None
+        source = region.get('source', {})
+        if self._wheel_scope_bound:
+            # A fixed, operator-verified LAB sequence uses the actual map
+            # epoch and immutable physical contour; it never follows portals
+            # or region tasks. Missing portal inventory is not a missing map.
+            # Keep the real map-source revision, age and context checks.
+            current_map = source.get('source_map', {})
+            age = current_map.get('age_seconds')
+            revision = current_map.get('revision')
+            if (current_map.get('state') != 'fresh'
+                    or not isinstance(age, (int, float)) or isinstance(age, bool)
+                    or not math.isfinite(age) or not 0. <= age <= 2.
+                    or not isinstance(revision, int) or isinstance(revision, bool)
+                    or revision < 0 or revision != source.get('map_revision')
+                    or current_map.get('lag_revisions') != 0):
+                return None
+        elif source.get('stale') is not False:
             return None
         context = region.get('context', {})
         if (context.get('session_id') != self.session_id
                 or not str(context.get('map_id', '')).startswith('map-')
                 or context.get('frame_id') != 'map'
-                or (require_exact_map
+                or (self._wheel_scope_bound
+                    and context.get('map_id') != self._scope_map_epoch_id)
+                or (require_exact_map and not self._wheel_scope_bound
                     and context.get('map_id') != f'map-{fingerprint}')):
             return None
         return fingerprint
 
     def _health_failure(self):
+        if not receive_latest_sources(getattr(self, '_current_source_subscriptions', ())):
+            return 'Aktueller Quellenempfang fehlgeschlagen'
         required = ('fusion', 'base', 'hwt_raw', 'hwt_yaw_status',
                     'near_status', 'estop', 'scan', 'odom', 'wheel_odom',
                     'hwt_gyro', 'vl53_left', 'vl53_right',
@@ -404,14 +458,30 @@ class Stage3MotionDiagnostic(Node):
         pose = self._latest.get('map_pose')
         if not isinstance(pose, dict) or pose.get('frame_id') != 'map':
             return 'aktuelle Pose fehlt oder ist nicht im Map-Frame'
-        if not disk_in_polygon(
-                pose['x'], pose['y'], FOOTPRINT_RADIUS_M, self.scope_polygon):
-            return 'gepaddeter Footprint liegt ausserhalb des WE-Scopes'
+        try:
+            scope_pose = self._scope_pose()
+            measured = (float(base['meas_v_mps']), float(base['meas_w_radps']))
+        except (KeyError, TypeError, ValueError):
+            return 'gemessener Kontur-/Radbezug fehlt'
+        if not stop_sweep_in_scope(scope_pose, *measured, self.scope_polygon,
+                                   observed_motion=True):
+            return 'gepaddete Kontur/Anhaltebahn liegt ausserhalb des WE-Scopes'
         if not self._motion_tf_authorized():
             return 'TF map/base_link oder odom/base_link nicht frisch'
         return None
 
+    def _scope_pose(self):
+        if self._wheel_scope_bound:
+            base = self._latest['base']
+            return wheel_pose_in_bound_scope(
+                tuple(float(base[k]) for k in ('x', 'y', 'yaw')),
+                self._scope_origin_wheel, self._scope_origin_map)
+        pose = self._latest['map_pose']
+        return tuple(float(pose[k]) for k in ('x', 'y', 'yaw'))
+
     def _motion_tf_authorized(self):
+        if not self._refresh_current_tf():
+            return False
         try:
             for target, source, max_age in (
                     ('map', 'base_link', TF_TIMEOUT_S),
@@ -424,6 +494,16 @@ class Stage3MotionDiagnostic(Node):
         except TransformException:
             return False
         return True
+
+    def _refresh_current_tf(self):
+        """Receive queued real TF before checking the listener's cache.
+
+        The diagnostic observer can already have logged a fresh transform
+        while the separate listener callback still waits behind other work.
+        Use that listener's existing subscription, original callback/stamps,
+        and a bounded nonblocking take; no extra TF owner or synthesized TF.
+        """
+        return receive_current_tf(getattr(self, '_tf_listener', None))
 
     def _start(self, _request, response):
         if self._test_started_once or self._state != 'idle':
@@ -441,28 +521,24 @@ class Stage3MotionDiagnostic(Node):
             response.success = False
             response.message = failure
             return response
-        pose = self._latest['map_pose']
-        if not disk_in_polygon(
-                pose['x'] + TEST_DISTANCE_M * math.cos(pose['yaw']),
-                pose['y'] + TEST_DISTANCE_M * math.sin(pose['yaw']),
-                FOOTPRINT_RADIUS_M, self.scope_polygon):
+        scope_pose = self._scope_pose()
+        if not fixed_sequence_in_scope(scope_pose, self.scope_polygon):
             response.success = False
-            response.message = '0,25-m-Testsegment verlaesst den verifizierten Scope.'
+            response.message = 'Ganze gepaddete Test-/Anhaltebahn verlaesst den Scope.'
             return response
-        steps = max(1, math.ceil(TEST_DISTANCE_M / 0.025))
-        if any(not disk_in_polygon(
-                pose['x'] + TEST_DISTANCE_M * step / steps * math.cos(pose['yaw']),
-                pose['y'] + TEST_DISTANCE_M * step / steps * math.sin(pose['yaw']),
-                FOOTPRINT_RADIUS_M, self.scope_polygon)
-                for step in range(steps + 1)):
+        base = self._latest['base']
+        if (base.get('meas_motor_rpm_left') != 0
+                or base.get('meas_motor_rpm_right') != 0
+                or abs(float(base.get('meas_v_mps', math.inf))) >= .01
+                or abs(float(base.get('meas_w_radps', math.inf))) >= .02):
             response.success = False
-            response.message = 'Gepaddeter Footprint verlaesst waehrend der Fahrt den Scope.'
+            response.message = 'Gemessener Anfangsstillstand fehlt.'
             return response
         self._bound_fingerprint = self._scope_map_binding()
         self._bound_frame = 'map'
         self._bound_session = self.session_id
-        self._start_pose = (pose['x'], pose['y'])
-        self._start_yaw = pose['yaw']
+        self._start_pose = scope_pose[:2]
+        self._start_yaw = scope_pose[2]
         self._state = PHASES[0]
         self._phase_started = time.monotonic()
         self._test_started_once = True
@@ -477,8 +553,11 @@ class Stage3MotionDiagnostic(Node):
             'session_id': self._bound_session,
             'map_frame': self._bound_frame,
             'map_fingerprint_at_start': self._bound_fingerprint,
-            'start_x': pose['x'], 'start_y': pose['y'],
-            'start_yaw': pose['yaw'],
+            'start_x': scope_pose[0], 'start_y': scope_pose[1],
+            'start_yaw': scope_pose[2],
+            'fixed_wheel_scope_binding': self._wheel_scope_bound,
+            'scope_origin_pose_map': self._scope_origin_map if self._wheel_scope_bound else None,
+            'scope_origin_pose_wheel': self._scope_origin_wheel if self._wheel_scope_bound else None,
             'sequence': list(PHASES),
         })
         response.success = True
@@ -492,11 +571,28 @@ class Stage3MotionDiagnostic(Node):
         self._stop_stable_since = None
         self._record('phase', {'state': state})
 
+    def _stop(self, _request, response):
+        if self._state not in ('idle', 'complete', 'aborted'):
+            self._finish('aborted', 'Expliziter Diagnoseabbruch')
+        else:
+            self._publish_command()
+            self._active_pub.publish(Bool(data=False))
+        response.success = True
+        response.message = 'Diagnose deaktiviert; gemessenen Stillstand separat pruefen.'
+        return response
+
     def _publish_command(self, vx=0.0, wz=0.0):
+        if ((abs(vx)+abs(wz)) > 0
+                and not stop_sweep_in_scope(self._scope_pose(), vx, wz, self.scope_polygon)):
+            self._finish('aborted', 'Anhaltebahn des naechsten Befehls verlaesst Scope')
+            return
         command = Twist()
         command.linear.x = vx
         command.angular.z = wz
-        self._active_pub.publish(Bool(data=True))
+        # An idle stop/cleanup publishes zero but must never announce a test
+        # start. The gate retains real activation history across later HOLDs.
+        running = self._test_started_once and self._state in PHASES
+        self._active_pub.publish(Bool(data=running))
         self._command_pub.publish(command)
         self._last_nonzero_requested = abs(vx) > 1e-6 or abs(wz) > 1e-6
 
@@ -530,11 +626,15 @@ class Stage3MotionDiagnostic(Node):
             'gate_out', 'smoother_out', 'collision_monitor_out')]
         if (not isinstance(base, dict) or not isinstance(odom, dict)
                 or any(not self._fresh(name, 0.5) for name in (
-                    'gate_out', 'smoother_out', 'collision_monitor_out'))):
+                    'gate_out', 'smoother_out'))):
             return False
         rpms = (base.get('meas_motor_rpm_left'), base.get('meas_motor_rpm_right'))
         return (
-            all(value is not None and abs(float(value)) <= 1.0 for value in rpms)
+            all(value is not None and math.isfinite(float(value)) and float(value) == 0. for value in rpms)
+            and base.get('encoder_feedback_ok') is True
+            and base.get('encoder_stale') is False
+            and isinstance(base.get('encoder_feedback_age_s'), (int, float))
+            and 0 <= base['encoder_feedback_age_s'] <= .18
             and abs(float(odom.get('vx', math.inf))) <= 0.01
             and abs(float(odom.get('wz', math.inf))) <= 0.02
             and all(isinstance(item, dict)
@@ -547,6 +647,15 @@ class Stage3MotionDiagnostic(Node):
         now = time.monotonic()
         if self._state in ('idle', 'complete', 'aborted'):
             self._active_pub.publish(Bool(data=False))
+            if self._state == 'idle' and now >= self._idle_status_next:
+                self._idle_status_next = now+.2
+                failure = self._health_failure()
+                if not failure and not fixed_sequence_in_scope(self._scope_pose(), self.scope_polygon):
+                    failure = 'Ganze Test-/Anhaltebahn verlaesst Scope'
+                self._status_pub.publish(String(data=json.dumps(dict(
+                    state='idle', ready_to_start=not failure, reason=failure,
+                    scope_id=self.scope_id, session_id=self.session_id,
+                    fixed_wheel_scope_binding=self._wheel_scope_bound))))
             return
         failure = self._health_failure()
         if failure:
@@ -569,8 +678,7 @@ class Stage3MotionDiagnostic(Node):
         if now - self._phase_started > PHASE_TIMEOUT_S:
             self._finish('aborted', f'Phase {self._state} abgelaufen')
             return
-        pose = self._latest['map_pose']
-        x, y, yaw = pose['x'], pose['y'], pose['yaw']
+        x, y, yaw = self._scope_pose()
         if self._scope_map_binding(require_exact_map=False) is None:
             self._finish('aborted', 'Karte/Scope-Bindung verloren')
             return

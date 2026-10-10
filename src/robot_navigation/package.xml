@@ -33,6 +33,7 @@
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-shapely</exec_depend>
   <exec_depend>base_hardware</exec_depend>
   <exec_depend>robot_state_estimation</exec_depend>
   <exec_depend>amadeus_lidar_bringup</exec_depend>

@@ -44,7 +44,8 @@ class Hwt601FusionGuard:
             # original timestamps, age checks and real regression rejection.
             if name == 'wheel' and wheel_callback_group is not None:
                 sample_group = wheel_callback_group
-            elif isinstance(callback_group, ReentrantCallbackGroup):
+            elif (not active_drive or self.prefer_latest_wheel
+                  or isinstance(callback_group, ReentrantCallbackGroup)):
                 sample_group = MutuallyExclusiveCallbackGroup()
             else:
                 # Already serial owners retain their existing source/status
@@ -54,6 +55,7 @@ class Hwt601FusionGuard:
                 msg_type, topic, lambda msg, key=name: self._sample(key, msg),
                 (QoSProfile(depth=1,reliability=ReliabilityPolicy.BEST_EFFORT)
                  if active_drive and name == 'wheel' and self.prefer_latest_wheel else
+                 latest_sensor if active_drive and self.prefer_latest_wheel else
                  qos_profile_sensor_data if active_drive else
                  latest_wheel if name == 'wheel' else latest_sensor),
                 callback_group=sample_group))
@@ -85,8 +87,18 @@ class Hwt601FusionGuard:
             observer = 'gate' if self.node.get_name() == 'cmd_vel_mission_gate' else 'explorer'
             self._receive_current_wheel(f'{observer}_predecision_dds_take')
 
+    def refresh_current_imu(self):
+        # The active decision timer can run before queued IMU callbacks, just
+        # as for wheel feedback. Keep original measurement times and use each
+        # source's own exclusive group; never wait for a callback in progress.
+        if not self.active_drive or getattr(self, 'prefer_latest_wheel', False):
+            for name, sub in zip(('raw', 'yaw'), self.subscriptions[:2]):
+                self._receive_current_source(name, sub, 'imu_predecision_dds_take')
+
     def _receive_current_wheel(self, delivery_path):
-        sub = self.wheel_subscription
+        self._receive_current_source('wheel', self.wheel_subscription, delivery_path)
+
+    def _receive_current_source(self, name, sub, delivery_path):
         group = sub.callback_group
         if not group.beginning_execution(sub):
             return
@@ -96,22 +108,22 @@ class Hwt601FusionGuard:
                 info = sub.handle.take_message(sub.msg_type, sub.raw)
             after = time.monotonic()
             if info is not None:
-                self._sample('wheel', info[0], delivery={
+                self._sample(name, info[0], delivery={
                     'delivery_path': delivery_path,
                     'take_before_monotonic_s': before,
                     'take_after_monotonic_s': after})
         except Exception as exc:
-            # A receive exception must never keep a previously healthy wheel
+            # A receive exception must never keep a previously healthy source
             # sample eligible. Preserve its original times/message for diagnosis.
             with self.health.lock:
-                previous = self.health.samples.get('wheel')
+                previous = self.health.samples.get(name)
                 if previous is not None:
-                    self.health.samples['wheel'] = (*previous[:3], False)
-                    self.health.sample_validation['wheel'] = {
-                        **self.health.sample_validation.get('wheel', {}),
+                    self.health.samples[name] = (*previous[:3], False)
+                    self.health.sample_validation[name] = {
+                        **self.health.sample_validation.get(name, {}),
                         'content_valid': False, 'receive_exception': type(exc).__name__}
-                self.health.sample_details['wheel'] = {
-                    **self.health.sample_details.get('wheel', {}),
+                self.health.sample_details[name] = {
+                    **self.health.sample_details.get(name, {}),
                     'delivery_path': delivery_path,
                     'receive_exception': type(exc).__name__}
         finally:
@@ -180,6 +192,7 @@ class Hwt601FusionGuard:
     def decision(self):
         """Return one atomic reason/state pair; log outside the sample lock."""
         self.refresh_current_wheel()
+        self.refresh_current_imu()
         with self.health.lock:
             failure = self.health.motion_failure()
             state = self.health.recovery_state

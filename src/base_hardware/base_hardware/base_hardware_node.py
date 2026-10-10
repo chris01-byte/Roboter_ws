@@ -41,6 +41,7 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.msg import ParameterDescriptor
 from geometry_msgs.msg import Twist, TransformStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import String
@@ -58,6 +59,7 @@ from .encoder_odometry import (
     decode_position_words,
     u32_to_i32,
 )
+from .encoder_publication import EncoderPublication
 
 ModbusSerialClient: Any
 try:
@@ -86,6 +88,10 @@ class BaseHardware(Node):
         self.declare_parameter('cmd_vel_topic', '/cmd_vel')
         self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('state_topic', '/base_hardware/state_json')
+        self.declare_parameter('isolate_feedback_output', False,
+                               ParameterDescriptor(read_only=True))
+        self.declare_parameter('feedback_output_cpu_affinity', [-1],
+                               ParameterDescriptor(read_only=True))
 
         # -------------------------------------------------------------------
         # Geometrie / Limits [ANPASSEN]
@@ -201,6 +207,8 @@ class BaseHardware(Node):
         self.cmd_vel_topic = str(gp('cmd_vel_topic').value)
         self.odom_topic = str(gp('odom_topic').value)
         self.state_topic = str(gp('state_topic').value)
+        self.isolate_feedback_output = bool(gp('isolate_feedback_output').value)
+        self.feedback_output_cpu_affinity = list(gp('feedback_output_cpu_affinity').value)
         self.wheel_radius = float(gp('wheel_radius_m').value)
         self.wheel_separation = float(gp('wheel_separation_m').value)
         self.gear_ratio = float(gp('gear_ratio').value)
@@ -338,14 +346,28 @@ class BaseHardware(Node):
         self.encoder_connection_initialized = False
         self.encoder_new_measurement = False
         self.encoder_config_fault_latched = False
+        self.feedback_output = None
+        self.feedback_output_fault_latched = False
 
         # -------------------------------------------------------------------
         # Publisher / Subscriber
         # -------------------------------------------------------------------
         self.cmd_sub = self.create_subscription(
             Twist, self.cmd_vel_topic, self._on_cmd_vel, 1)
-        self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
-        self.state_pub = self.create_publisher(String, self.state_topic, 10)
+        if self.isolate_feedback_output:
+            output_odom_topic = self.resolve_topic_name(self.odom_topic)
+            output_state_topic = self.resolve_topic_name(self.state_topic)
+            self.feedback_output = EncoderPublication([
+                (output_odom_topic, 'nav_msgs/msg/Odometry'),
+                (output_state_topic, 'std_msgs/msg/String')], .18,
+                node_name='base_hardware_feedback_output',
+                cpu_affinity=(() if self.feedback_output_cpu_affinity == [-1]
+                              else self.feedback_output_cpu_affinity))
+            self.odom_pub = self.feedback_output.publisher(output_odom_topic)
+            self.state_pub = self.feedback_output.publisher(output_state_topic)
+        else:
+            self.odom_pub = self.create_publisher(Odometry, self.odom_topic, 10)
+            self.state_pub = self.create_publisher(String, self.state_topic, 10)
         self.tf_broadcaster = TransformBroadcaster(self) if self.publish_tf else None
 
         self._parameter_callback = self.add_on_set_parameters_callback(
@@ -365,6 +387,16 @@ class BaseHardware(Node):
 
     # ======================= Parameter / Sicherheit =====================
     def _validate_parameters(self):
+        if self.isolate_feedback_output:
+            if self.publish_tf or self.odometry_source != 'encoder_position':
+                raise ValueError('Isolated feedback requires encoder_position and no Base TF')
+            affinity = self.feedback_output_cpu_affinity
+            if affinity != [-1]:
+                import os
+                # Online CPUs, not the parent's possibly deliberately restricted mask.
+                if not affinity or any(c < 0 or not os.path.isdir(
+                        f'/sys/devices/system/cpu/cpu{c}') for c in affinity):
+                    raise ValueError('Invalid feedback output CPU affinity')
         positive_finite = {
             'wheel_radius_m': self.wheel_radius,
             'wheel_separation_m': self.wheel_separation,
@@ -482,6 +514,7 @@ class BaseHardware(Node):
 
     # ======================= Hauptupdate ===============================
     def _update(self):
+        self._check_feedback_output()
         # Watchdog zuerst und ausschliesslich gegen monotone Echtzeit. Ein
         # stehender/rueckwaerts springender ROS-Clock darf den Motor-Stopp
         # niemals ueberspringen.
@@ -606,6 +639,10 @@ class BaseHardware(Node):
 
     def _publish_state(self, stamp, timed_out: bool):
         payload = {
+            'feedback_output_isolated': getattr(self, 'isolate_feedback_output', False),
+            'feedback_output_pid': (self.feedback_output.pid
+                                    if getattr(self, 'feedback_output', None) else None),
+            'feedback_output_fault_latched': getattr(self, 'feedback_output_fault_latched', False),
             'dry_run': self.dry_run,
             'allow_rs485': self.allow_rs485,
             'timed_out': timed_out,
@@ -1210,6 +1247,8 @@ class BaseHardware(Node):
         return age is None or age > self.encoder_stale_timeout_s
 
     def _encoder_motion_allowed(self):
+        if getattr(self, 'feedback_output_fault_latched', False):
+            return False
         core = getattr(self, 'encoder_timing_core', None)
         if core is not None and not core.ready:
             return False
@@ -1217,6 +1256,21 @@ class BaseHardware(Node):
                     self.encoder_connection_initialized and
                     not self._encoder_is_stale() and
                     self.encoder_consecutive_failures < self.encoder_failure_stop_count)
+
+    def _check_feedback_output(self):
+        output = getattr(self, 'feedback_output', None)
+        if output is None or output.alive:
+            return
+        first = not self.feedback_output_fault_latched
+        self.feedback_output_fault_latched = True
+        self.active_wheel_cmd = WheelCommand()
+        core = getattr(self, 'encoder_timing_core', None)
+        if core is not None:
+            core.latch_fault('encoder_output_process_lost')
+        if not self.dry_run and self.allow_rs485:
+            self._send_stop_if_needed()
+        if first:
+            self.get_logger().error('Encoder output process lost; motor motion permanently inhibited')
 
     def _encoder_twist(self):
         if self._encoder_is_stale() or not self.encoder_connection_initialized:
@@ -1370,6 +1424,8 @@ class BaseHardware(Node):
                 self.modbus_client.close()
         except Exception:
             pass
+        if getattr(self, 'feedback_output', None) is not None:
+            self.feedback_output.close()
         super().destroy_node()
 
 

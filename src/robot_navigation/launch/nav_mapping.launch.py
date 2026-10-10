@@ -9,7 +9,7 @@ from launch.actions import (
     DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, TimerAction)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -37,6 +37,8 @@ def generate_launch_description():
     start_explorer = LaunchConfiguration('start_explorer')
     enable_stage3_motion_diagnostic = LaunchConfiguration(
         'enable_stage3_motion_diagnostic')
+    start_stage3_motion_diagnostic = LaunchConfiguration(
+        'start_stage3_motion_diagnostic')
     lab_external_hardware_halt_attested = LaunchConfiguration(
         'lab_external_hardware_halt_attested')
     normalize_scan = LaunchConfiguration('normalize_scan')
@@ -86,7 +88,9 @@ def generate_launch_description():
                     'lab_external_hardware_halt_attested': ParameterValue(
                         lab_external_hardware_halt_attested, value_type=bool),
                 }],
-                condition=IfCondition(enable_stage3_motion_diagnostic),
+                condition=IfCondition(PythonExpression([
+                    "'", enable_stage3_motion_diagnostic, "' == 'true' and '",
+                    start_stage3_motion_diagnostic, "' == 'true'"])),
             ),
             Node(
                 package='nav2_controller', executable='controller_server',
@@ -142,6 +146,10 @@ def generate_launch_description():
             'enable_stage3_motion_diagnostic', default_value='false',
             description='Zusatzopt-in fuer genau einen festen 0,25-m-/15-Grad-'
                         'HWT601-Diagnoselauf; Start ueber /stage3_motion_test/start.'),
+        DeclareLaunchArgument(
+            'start_stage3_motion_diagnostic', default_value='true',
+            description='false erlaubt frische Scopebindung vor getrenntem '
+                        'Start desselben einzelnen Diagnosenodes; kein Fahrbefehl.'),
         DeclareLaunchArgument(
             'lab_external_hardware_halt_attested', default_value='false',
             description='Manuelle Vor-Ort-Bestaetigung des unabhaengigen '

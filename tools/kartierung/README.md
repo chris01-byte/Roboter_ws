@@ -1,5 +1,41 @@
 # Werkzeuge für Kartierung und Lokalisierung
 
+## Feste LAB-Diagnose nach einer realen Bewegung
+
+Die bestehende Stage-3-Diagnose nutzt ausschließlich ihren Diagnoseeingang in
+der vorhandenen Fahrtor-/Smoother-/Collision-Monitor-Kette. Fester 25-cm-/±15°-
+Test, frische Quellen, bestätigte Zwischenstillstände und vollständige gepaddete
+Anhaltehülle bleiben erforderlich. Eine erfolgreiche Komponentendiagnose ist
+keine autonome Explorer- oder AP-06-Gesamtabnahme.
+
+Bei einem einmal real gemessenen festen Scope-/Radanker darf Kartenwachstum
+den physischen LAB-Bereich nicht verschieben. Dieselbe Ausgangskartenepoche
+und Session bleiben verbindlich, aktuelle Map-Quelle und Revision müssen frisch
+sein. Nach Bewegung keinen neuen roboterrelativen Scope als Ersatz erzeugen.
+Die Diagnose benötigt keine erfundenen Portale für ihre feste Sequenz.
+
+Nach erfolgreich behobenem HOLD kann ausschließlich im expliziten Diagnose-
+Opt-in `/stage3_motion_test/acknowledge_recovered_hold` die Fortsetzung quittieren.
+Es prüft aktuelle echte Quellen, gesundes Recovery, gemessenen Stillstand,
+inaktive Diagnose, Idle-Mission, TF, Nahfeld und Haltkette. Fehlerbudgets und
+Historie bleiben erhalten; die Quittierung fährt nicht. Der separate Start-
+Trigger bleibt notwendig. Direkte installierte Node-PIDs geordnet stoppen;
+ein `ros2 run`-Wrapper ist kein Nachweis, dass dessen Kind beendet wurde.
+
+## Kontinuierlichen Startkandidaten offline vergleichen
+
+`metric_start_geometrie_pruefen.py` enthält zusätzlich
+`continuous_start_candidate`: ideale 25-cm-Gerade und derselbe Korridor mit
+deklarierter 20-mm-/0,05-rad-Abweichung, getrennt auf gespeichertem Roh- und
+Kostenraster. Der neue `metric_start_sweep` berechnet kontinuierliche
+Überdeckung und exakte Zellpolygone. Ein positives Geometrieergebnis ist
+ausdrücklich keine Reglerqualifikation oder Fahrfreigabe; die aktive Prüfung
+wird dadurch nicht ersetzt. Originalquellen und tatsächliche Messfristen
+bleiben maßgeblich. Ausgabe privater Realgeometrie weiterhin außerhalb Git.
+
+Gezielte gerätefreie Prüfung:
+`python3 -m pytest src/explore/test/test_metric_start_sweep.py`.
+
 Am 27.07.2026 auf dem echten Roboter benutzt und dort verifiziert. Die Skripte
 setzen voraus, dass `~/roboter_ws/install/setup.bash` existiert.
 
