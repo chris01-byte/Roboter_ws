@@ -393,6 +393,13 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
         telemetry, sensor_ready, halt, sensor_cpu), name='ap06-finite-sensors')
     rclpy.init(args=['--ros-args', '--params-file', str(device_file)])
     try:
+        # Spawn independent sources before the first live encoder baseline.
+        # ARM vfork/exec can suspend every parent thread for hundreds of ms;
+        # doing this after starting the acquisition executors created a real,
+        # unbridgeable wheel gap. No clock, sample or limit is rewritten.
+        sensor_device.start()
+        if not sensor_ready.wait(20.):
+            raise RuntimeError('independent finite sensor process readiness')
         class RecordedPlant(Node):
             def __init__(self):
                 super().__init__('ap06_simulated_plant')
@@ -433,9 +440,6 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
                     traceback.print_exc(); halt.set()
             thread = threading.Thread(target=loop, daemon=True)
             threads.append(thread); thread.start()
-        sensor_device.start()
-        if not sensor_ready.wait(20.):
-            raise RuntimeError('independent finite sensor process readiness')
         ready.set()
         while not halt.wait(.05):
             if not sensor_device.is_alive():

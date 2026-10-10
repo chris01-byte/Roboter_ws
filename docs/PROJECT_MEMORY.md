@@ -1,5 +1,23 @@
 # Projektgedächtnis
 
+## 10.10.2026 – unabhängigen Simulationssensor vor der Encoder-Baseline starten
+
+ARM-Negativlauf: Sensor-Spawn nach Start der drei Quellenexecutor-Threads
+suspendierte sie etwa 347–350 ms bei nur 2–5 ms Thread-CPU; echte FC03-Paare
+blieben etwa 2 ms, die reale Baseline-Lücke war 352 ms und wurde korrekt
+gesperrt. Der gerätefreie Prüfstand startet diesen vorhandenen Prozess jetzt
+vor Baseline und Live-Timern. Nachprüfung: 1.818 tatsächliche Basisstatuswerte
+alle encoder-gültig, null verworfene Updates, längstes Paar 1,903 ms; elf
+Geräteisolation-/Namespacefälle bestanden, einschließlich echter blockierender
+Interpreterpause und originaler endlicher Sensorstempel. Originalwelt,
+Taktzeiten und Missions-/Sensorfristen bleiben unverändert. Der anschließende
+Original-A-Lauf ist weiterhin negativ am Radbezug nach Geometrieverarbeitung;
+kein Gesamtpositivnachweis. Produktdateien des gemeinsamen Kandidaten
+936a1d0 unverändert; reine Prüfstand-Startreihenfolge. Keine Hardwarewirkung.
+Rückfall: dieses Prüfstanddelta gezielt revertieren; reale Installation bleibt
+unberührt. Verworfenes Digest-Aufschieben und die nicht qualifizierte CPU-
+Zuordnung bleiben ausschließlich in privaten Diagnosebelegen.
+
 ## 10.10.2026 – gemessene ARM-Auswahlkosten innerhalb der vorhandenen Frist verteilen
 
 Fünf unveränderte Originalfälle scheiterten im gemeinsamen ARM-Kandidaten:
