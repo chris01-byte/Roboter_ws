@@ -81,10 +81,39 @@ def fixed_sequence_in_scope(pose, polygon):
     """
     if len(pose) != 3 or not all(math.isfinite(v) for v in pose):
         return False
+    if (len(polygon) < 3 or any(len(p) != 2 or not all(math.isfinite(v) for v in p)
+                                for p in polygon)):
+        return False
+    scope = Polygon(polygon)
+    if not scope.is_valid or scope.is_empty or scope.area <= 0:
+        return False
     distance = .25
     overrun = .08*STOP_HORIZON_S
     straight = box(-.13, -.25, .33+distance+overrun, .25)
     angle = math.radians(20.)+.10*STOP_HORIZON_S
+    if scope.equals(scope.convex_hull):
+        # A convex polygon is the intersection of its edge half-planes.
+        # Test the exact continuous support of every padded corner, including
+        # all intermediate angular extrema and the full translation overrun.
+        # A single axis-aligned box combines extrema from different headings
+        # and falsely rejects rotated starts. Neither padding nor stop travel
+        # is reduced here. Concave scopes retain the enclosing-union fallback.
+        c, s = math.cos(pose[2]), math.sin(pose[2])
+        vertices = [(c*(x-pose[0])+s*(y-pose[1]),
+                     -s*(x-pose[0])+c*(y-pose[1])) for x, y in scope.exterior.coords]
+        if not scope.exterior.is_ccw:
+            vertices.reverse()
+        if not _covered(_world(straight, pose), polygon):
+            return False
+        for (ax, ay), (bx, by) in zip(vertices, vertices[1:]):
+            dx, dy = bx-ax, by-ay
+            translation = min(-dy*distance, -dy*(distance+overrun))
+            for x in PADDED_BOUNDS[:2]:
+                for y in PADDED_BOUNDS[2:]:
+                    support = _extrema(dx*y-dy*x, dx*x+dy*y, -angle, angle)[0]
+                    if support+translation+dy*ax-dx*ay < -1e-12:
+                        return False
+        return True
     rear, front, right, left = _rotated_bounds(-angle, angle)
     turns = box(distance+rear, right, distance+overrun+front, left)
     return _covered(_world(unary_union((straight, turns)), pose), polygon)

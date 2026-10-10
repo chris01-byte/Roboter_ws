@@ -79,3 +79,30 @@ def test_signed_measured_residual_keeps_padding_and_never_authorizes_reverse_com
     assert not stop_sweep_in_scope((0.,0.,0.), -.01,0.,LAB,observed_motion=True)
     assert not stop_sweep_in_scope((.27,0.,0.), .31,0.,LAB,observed_motion=True)
     assert not stop_sweep_in_scope((.27,0.,0.), 0.,.81,LAB,observed_motion=True)
+
+
+@pytest.mark.parametrize('clockwise', [False, True])
+def test_rotated_start_checks_continuous_contour_instead_of_combined_box(clockwise):
+    # Synthetic convex enclosure: separate x/y rotation extrema describe no
+    # actual chassis heading. The padded body and full stop overrun fit.
+    scope = ((-1., -1.), (2., -1.), (2., .6), (-1., .6))
+    if clockwise:
+        scope = tuple(reversed(scope))
+    assert fixed_sequence_in_scope((0., .0, .36), scope)
+    from shapely.geometry import Point
+    limit = math.radians(20.)+.16
+    for index in range(1001):
+        angle = -limit+2*limit*index/1000
+        for distance in (.25, .378):
+            for x in (-.13, .33):
+                for y in (-.25, .25):
+                    rx, ry = distance+x*math.cos(angle)-y*math.sin(angle), x*math.sin(angle)+y*math.cos(angle)
+                    wx, wy = math.cos(.36)*rx-math.sin(.36)*ry, math.sin(.36)*rx+math.cos(.36)*ry
+                    assert Polygon(scope).covers(Point(wx, wy))
+
+
+def test_convex_support_rejects_intermediate_corner_and_full_brake_overrun():
+    for boundary in (.50, .54):
+        narrow = ((-1., -1.), (2., -1.), (2., boundary), (-1., boundary))
+        assert not fixed_sequence_in_scope((0., 0., .36), narrow)
+    assert not fixed_sequence_in_scope((0., 0., .36), ((0., 0.), (1., 0.), (0., 1.)))
