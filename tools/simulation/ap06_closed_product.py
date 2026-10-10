@@ -47,13 +47,7 @@ from ament_index_python.packages import get_package_prefix
 from ap06_world import World
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from ap06_sensors import vl53_producer, oak_cloud
-
-
-def require_isolation():
-    if (os.environ.get('AP06_SIMULATION') != '1' or not Path('/.dockerenv').exists()
-            or any(Path(p).exists() for p in ('/dev/ttyUSB_BASE', '/dev/ttyUSB_HWT601', '/etc/nv_tegra_release'))
-            or not 100 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 200):
-        raise RuntimeError('device-free container and dedicated simulation domain required')
+from ap06_isolation import require_isolation
 
 
 class MemoryESS:
@@ -641,7 +635,7 @@ def params(repo, out):
 
 
 def run(args):
-    require_isolation()
+    isolation = require_isolation()
     concept_deferred_departure = getattr(args, 'concept_defer_departure', False)
     if concept_deferred_departure:
         from ap06_departure_probe import validate_experiment_options
@@ -655,7 +649,7 @@ def run(args):
     out = args.output
     out.mkdir(parents=True, exist_ok=False)
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
-    result = {'case': case, 'passed': False, 'hardware_qualified': False,
+    result = {'case': case, 'passed': False, 'hardware_qualified': False, 'isolation': isolation,
               'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams or concept_deferred_departure),
               'concept_deferred_departure': concept_deferred_departure,
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],

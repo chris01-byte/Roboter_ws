@@ -64,6 +64,26 @@ den realen OAK-/VL53-Obstacle-Layer unter Hardwarelast.
 
 ## Reproduktion ohne Geräte
 
+Auf einem ARM-Laborhost ohne Docker kann der gleiche Gesamtfall über
+`ap06_namespace_runtime.py` in tatsächlichen separaten User-, Mount-, PID-,
+Netz-, IPC- und UTS-Namespaces laufen. Der Launcher benötigt Bubblewrap;
+er reicht keine Geräte durch, mountet nur ausdrücklich gewählte Quell-/
+Bibliotheks-/Kandidatenpfade lesend und das private Ausgabeverzeichnis schreibend.
+Die Hostinstallation, `/sys` und Host-IPC sind nicht sichtbar. Er vergleicht
+die echten Namespace-IDs mit den zuvor erfassten Host-IDs; kein künstliches
+Docker-Markerfile. Hardwareidentität oder gemeinsame Namespace-Grenze lehnt
+den Lauf weiterhin ab. Plattform und verwendeter Unterbau bleiben im Manifest
+auszuweisen. Welt, Startposen, Sensorprofil, Budgets und Abnahme ändern sich nicht.
+
+```bash
+python3 tools/simulation/ap06_namespace_runtime.py --repo "$AP06_SOURCE" \
+  --runtime "$AP06_CANDIDATE/runtime.bash" --underlay "$AP06_UNDERLAY" \
+  --output "$AP06_OUTPUT/isolation-only" --verify-only
+python3 tools/simulation/ap06_namespace_runtime.py --repo "$AP06_SOURCE" \
+  --runtime "$AP06_CANDIDATE/runtime.bash" --underlay "$AP06_UNDERLAY" \
+  --output "$AP06_OUTPUT/door68_start_a" --case door68_start_a
+```
+
 Ubuntu 22.04/Humble/amd64/Python 3.10 in einem eigenen Docker-Container;
 keine Geräte durchreichen. Build und Auflösung fremder Bibliotheken bleiben in
 diesem Container. `ap06_dependencies.json` enthält zehn öffentliche Archive
