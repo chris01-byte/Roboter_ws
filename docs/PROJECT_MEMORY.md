@@ -17,6 +17,32 @@ Rückfallweg:
 
 ---
 
+## 2026-10-10 — Armkonzept und Messblatt rekonstruiert
+
+**Entscheidung:** Zunächst ausschließlich Arm-Inbetriebnahme; aktuelle
+Planung in ARM_KONTEXT, INTEGRATIONSPLAN_ARM_SOFTWARE und
+ARM_INBETRIEBNAHME_MESSBLATT zusammengeführt. Keine Wiederherstellung des
+ursprünglichen lokalen Wortlauts behauptet.
+
+**Evidenz:** Nutzer bestätigt fünf ESS17, einen noch unbestimmten NEMA23,
+keine Bremsen und ungebauten XL330-Spindelgreifer mit zwei Widerstandssensoren.
+Gesicherter Branch enthält Read-only-Build A, aber kein Messblatt.
+stowed ist im Missionsablauf vorhanden; Gelenkwinkel und durchgängige
+Fahrfreigabe fehlen. TLE-Schnittstelle, Greifer-Endlagen und sensorfreie
+Fahrpose sind als zu prüfende Entwürfe aufgenommen.
+
+**Betroffen:** Nur Dokumentation und Verweise; das Juli-Kalibrierkonzept
+erhält einen Hinweis auf überholte Annahmen.
+
+**Teststatus:** Dokumentstruktur und interne Dateiverweise geprüft.
+Keine neue Hardwareverbindung, kein Bewegungsversuch, keine Codeänderung.
+
+**Offene Risiken:** Montage, NEMA23-Typ, Gelenkzuordnung, Haltevermögen,
+Schaltplan, Skalierung und Grenzen müssen vor Ort erfasst werden.
+
+**Rückfallweg:** Reinen Dokumentationscommit zurücknehmen; Build A und
+bestehende Roboterstarts bleiben unverändert.
+
 ## 2026-10-10 — Arm-Build A: Rohdaten vor Bewegungssoftware
 
 **Entscheidung:** Drei getrennte Pakete für Daten/Transport, CLI und Inventar.

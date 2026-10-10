@@ -107,7 +107,7 @@ gemessene Evidenz mit Zahlen.
 
 | Pfad | Inhalt |
 |---|---|
-| `src/` | 17 ROS-2-Pakete (siehe `docs/INVENTORY.md`) |
+| `src/` | ROS-2-Pakete (Bestandsübersicht: `docs/INVENTORY.md`; neue Armpakete: `docs/ARM_KONTEXT.md`) |
 | `src/robot_bringup/launch/` | Startdateien: `robot`, `slam`, `oak`, `teleop_joy`, `server` |
 | `tools/kartierung/` | Kartierung, Lokalisierungstests, Kartenauswertung — **mit Fallenbeschreibung im README** |
 | `docs/` | Dokumentation, udev-Regeln |
@@ -119,7 +119,9 @@ gemessene Evidenz mit Zahlen.
 ## Arm-Inbetriebnahme
 
 Bei Arbeiten an Arm, Greifer oder OAK-Arm-Integration zuerst
-[`docs/ARM_KONTEXT.md`](docs/ARM_KONTEXT.md) und
+[`docs/ARM_KONTEXT.md`](docs/ARM_KONTEXT.md), den
+[`Integrationsplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md), das
+[`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md) und
 [`docs/ARM_BUILDPROTOKOLL.md`](docs/ARM_BUILDPROTOKOLL.md) lesen.
 Neue Build-/Integrationseinträge dort auf höchstens 200 Wörter begrenzen.
 Fake-Daten und reale Messungen niemals gleichsetzen.

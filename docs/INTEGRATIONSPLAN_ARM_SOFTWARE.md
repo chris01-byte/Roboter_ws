@@ -1,479 +1,592 @@
-# Integrationsplan: ESS17-RS Roboterarm in die Roboterplattform
+# Integrations- und Stufenplan: Amadeus-Arm, Greifer und OAK
 
-> **Aktualisierung 10.10.2026:** Aktuelle Fakten und Build-Einstieg stehen in
-> [ARM_KONTEXT.md](ARM_KONTEXT.md). Der Arm hat fünf ESS17-RS07 und einen
-> noch nicht genau bestimmten NEMA23; es gibt laut Nutzer keinen externen
-> Armcode. Die folgenden historischen Angaben zu sechs ESS17, Foxy-Code,
-> IDs und Beispielwinkeln sind keine bestätigten Hardwaredaten. Build A
-> implementiert zunächst Konfigurationsprüfung, Fake und reine ESS17-Rohdiagnose.
+**Stand: 10.10.2026 — aus dem Gespräch rekonstruiert und mit dem gesicherten
+Repo-Stand abgeglichen.** Dies ist eine inhaltliche Neufassung, keine behauptete
+Wiederherstellung des ursprünglichen Wortlauts. Sie ersetzt die bisherige
+Planfassung mit falschen Angaben zu sechs ESS17 und externem Foxy-Code.
 
-**Status:** Plan, noch keine Arm-Hardwarebewegung durch diese Integration
+Einstieg: [Arm-Kontext](ARM_KONTEXT.md).
+Versuche: [Inbetriebnahme-Messblatt](ARM_INBETRIEBNAHME_MESSBLATT.md).
+Umgesetzte Änderungen: [Build-Protokoll](ARM_BUILDPROTOKOLL.md).
 
-**Zielsystem:** ROS 2 Humble auf Jetson / Ubuntu 22.04
+## 1. Ziel, Arbeitsweise und aktueller Stand
 
-**Gueltigkeit:** Dieser Plan integriert den sechsachsigen ESS17-RS-Arm softwareseitig in `Roboter_ws`. Er baut auf den bestehenden Plattformvertraegen, dem vorhandenen Hand-Auge-Kalibrierpaket und den vorhandenen BT-Actions auf.
+Langfristig erkennt die OAK ein Objekt, beispielsweise eine Colaflasche.
+Der Roboter lokalisiert einen erreichbaren Greifbereich, greift kontrolliert,
+prüft den Griff und kann das Objekt später mit der mobilen Basis transportieren.
 
----
+**Das jetzt vereinbarte erste Ziel ist ausschließlich Arm-Inbetriebnahme.**
+Flaschengröße, Füllung und Tischversuch sind noch nicht als erste Abnahme festgelegt.
 
-## 1. Ziel und Scope
+Der Nutzer übernimmt Aufbau und reale Erprobung; der Softwareagent entwickelt
+Werkzeuge, prüfbare Änderungen und Versuchsanweisungen und wertet Rückmeldungen
+aus. Jeder Versuch hat vorher festgelegte Grenzen, Abbruchbedingungen und ein
+Messprotokoll. Fehlende Daten bleiben offen. Nach einem Fehlschlag wird zuerst
+die Ursache eingegrenzt, nicht gleichzeitig an mehreren Parametern gedreht.
 
-### Ziel
+Kennzeichnungen in diesem Plan:
 
-Der Roboterarm soll als eigenstaendiger, diagnosefaehiger und sicher gekapselter Plattformbaustein arbeiten. Die oeffentliche Schnittstelle fuer Missionen bleibt klein:
+- **Bestätigt:** Nutzerangabe oder ausdrücklich referenzierter Repo-Nachweis.
+- **Implementiert:** Code vorhanden; der Testumfang wird gesondert genannt.
+- **Vorgeschlagen:** Entwurfsentscheidung, vor dem betroffenen Build zu prüfen.
+- **Offen:** Noch zu messen oder zu entscheiden, keine Freigabe.
 
-- `/move_arm_to_named` fuer die benannten Posen `stowed`, `ready` und spaeter weitere freigegebene Posen.
-- `/move_arm_to_pose` fuer kartesische TCP-Ziele.
-- `/gripper_controller/gripper_cmd` fuer den Greifer.
-- `/joint_states`, TF und Armstatus fuer Visualisierung, Kalibrierung und Diagnose.
+### Bestätigte Hardwareangaben
 
-Der vorhandene Behavior Tree verwendet diese Vertrage bereits. Die Integration ersetzt daher keine Missionsschnittstelle, sondern implementiert sie belastbar.
-
-### Im Scope
-
-- Sechs ESS17-RS-Antriebe ueber isoliertes RS485 / Modbus RTU.
-- Encoder- und Drehrichtungs-Inbetriebnahme pro Achse.
-- Homing, Softlimits, Zustandsautomat, Busfehlerbehandlung und zentraler Software-Not-Aus.
-- `ros2_control`, MoveIt 2, Action-Server, URDF/SRDF und BT-Interlocks.
-- Eye-to-Hand-Kalibrierung mit der fest montierten OAK-D-S2.
-- Tests mit Fake-Modbus vor jeder realen Bewegung.
-
-### Nicht im Scope
-
-- Mechanische Konstruktion, Last-/Kippberechnung, Bremsauslegung oder Veraenderung der hardwired Sicherheitskette.
-- Unkontrolliertes Uebernehmen der alten Foxy-Bridge oder des lokalen Prototyp-Controllers.
-- Automatische Mehrachsbewegung vor abgeschlossener Achs-Inbetriebnahme.
-
-Die hardwired Not-Aus-Kette bleibt die primaere Sicherheitsinstanz. Dieser Plan integriert ihren Softwarezustand in die Armsteuerung.
-
----
-
-## 2. Verbindliche Ausgangsfakten
-
-| Bereich | Verbindlicher Stand |
+| Komponente | Stand |
 |---|---|
-| Plattform | ROS 2 Humble, bestehender Workspace `Roboter_ws` |
-| Arm | 6x ESS17-RS, gemeinsame RS485/Modbus-RTU-Leitung, Adressen 1 bis 6 im Prototyp |
-| Bestehende Plattform-Actions | `MoveArmToNamed.action` und `MoveArmToPose.action` im Paket `robot_interfaces` |
-| Bestehender BT | erwartet `stowed` vor Basisfahrt und `ready` vor Manipulation |
-| Software-Not-Aus | `/safety/estop` (`std_msgs/Bool`), `true` bedeutet aktiv / Bewegung verboten |
-| Kamera | aktuell OAK-D-S2, Treiberframe im Betrieb `oak_rgb_camera_optical_frame` |
-| Kalibrierung | Paket `handeye_calibration` mit Recorder und Offline-Loeser vorhanden |
-| Alter Armcode | lokale Foxy-Bruecke, direkte `JointState`-Commands, unvollstaendige/teilweise korrupte Controller-Schicht; nur Referenz, keine Produktionsbasis |
+| Arm | Sechs Achsen, fünf ESS17-RS07 und ein NEMA23; dessen exakter Typ und die Gelenkzuordnung sind offen |
+| Halten | Keine Bremsen; vorgesehene Getriebeselbsthemmung ist unter Last noch nachzuweisen |
+| Referenzgeber | TLE4905L vorgesehen; Stückzahl, Montage und Eingang je Gelenk aufnehmen |
+| Armcode außerhalb des Repos | Laut Nutzer keiner |
+| Greifer | Noch nicht gebaut; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
+| Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
+| Kamera | OAK-D-S2 am Mast; keine bestätigte zusätzliche Greiferkamera |
+| Fahrpose | Sensorfreie neutrale Transportpose erforderlich; keine realen Gelenkwinkel festgelegt |
 
-### ESS17-Regel
+### Softwarebestand nach Build A
 
-Die fuer die Fahrbasis bestaetigte ESS23-Semantik darf nicht ungeprueft auf die ESS17-Achsen uebertragen werden. Vor produktiver Steuerung werden fuer jede Achse Messwerte dokumentiert:
+[arm_hardware](../src/arm_hardware/README.md),
+[arm_tools](../src/arm_tools/README.md) und
+[arm_bringup](../src/arm_bringup/README.md) enthalten Inventarprüfung,
+synthetische Testdaten, Fake-Transport und eine eng begrenzte ESS17-Rohdiagnose.
+32 Tests sowie Paketinstallation und Humble-Build sind auf Commit 9e65e4f
+bestanden; [CI-Nachweis](https://github.com/chris01-byte/Roboter_ws/actions/runs/38070478719).
 
-- korrekte Modbus-Adresse und FC03-Lesbarkeit,
-- Register- und 32-Bit-Wortreihenfolge,
-- signed/unsigned Dekodierung von Position und Geschwindigkeit,
-- Drehrichtung bei kleinem Jog,
-- Referenzfahrtmodus und Homing-Richtung,
-- physische Softlimits und Encoder-Nullpunkt.
+**Nicht abgenommen:** Jetson-Installation dieser Pakete, realer Arm-Bus,
+Homing, Motorbewegung, Gelenkskalierung, Grenzen, Trajektorien und Greifer.
+Noch kein ros2_control-SystemInterface, MoveIt-Armmodell oder realer Arm-Actionserver.
+JSON-Diagnose ist kein implementierter ROS-ArmStatus.
 
----
+## 2. Architektur als Einheit im Roboter
 
-## 3. Zielarchitektur
+~~~text
+ESS-Achsen -- dedizierter RS485-Bus -- ein Bus-Eigentümer
+                                       |
+                              arm_hardware / Armzustand
+                                       |
+                         vermessener Bewegungscontroller
+                                       |
+                           ros2_control / MoveIt (Ziel)
+                                       |
+                            öffentliche Arm-Actions
+                                       |
+                                Missionssteuerung
+                                       |
+                          gemeinsame Basis-/Armsperren
 
-```text
-6x ESS17-RS
-    |
-RS485 / Modbus RTU
-    |
-arm_hardware (ros2_control SystemInterface)
-    |-- atomare Registerreads, Word-Order, signed decoding
-    |-- per-axis limits, watchdog, fault handling
-    |-- /safety/estop subscriber
-    |
-controller_manager
-    |-- joint_state_broadcaster
-    `-- joint_trajectory_controller
-            |
-        arm_action_server
-            |-- /move_arm_to_named
-            `-- /move_arm_to_pose
-                    |
-                 MoveIt 2
-                    |
-URDF/SRDF <--------- calibrated camera transform -------- handeye_calibration
-    |
-robot_state_publisher --> TF: base_link -> tool0 -> gripper_tcp
-```
+XL330 -- eigener TTL-Bus -- Greifercontroller + lokale Sensor-/Endlagen-I/O
+OAK -- vorhandene RGB-D-Pipeline -- Feinpose -- Greifplanung
+~~~
 
-### Paketaufteilung
+Ein Bus wird von genau einem Prozess kontrolliert. Diagnosewerkzeug und
+späterer Treiber dürfen ihn nicht gleichzeitig öffnen. Der Arm erhält einen
+eigenen bestätigten Adapterpfad; der Fahrbasisport wird nicht übernommen.
 
-| Paket | Verantwortung | Nicht verantwortlich fuer |
-|---|---|---|
-| `arm_hardware` | Modbus-Rohzugriff, Encoderwerte, Kommandos, Stop, Diagnose | IK, MoveIt-Planung, BT-Logik |
-| `arm_bringup` | Hardware-/Controller-YAML, Udev, Launch, Lifecycle | direkte Bewegungslogik |
-| `robot_description` | echtes Xacro/URDF, Gelenkachse, Limits, TCP | zweiter Kamera-TF-Publisher |
-| `robot_moveit_config` | SRDF, Planning Group, Collision Matrix, Named Poses | direkte Modbus-Register |
-| `arm_action_server` | Actions, Preflight, MoveIt-Ausfuehrung, Result/Feedback | Bus-Protokolldetails |
-| `arm_tools` | Read-only Probe, Einachs-Commissioning, Kalibrierhilfen | produktive Missionssteuerung |
-| `handeye_calibration` | Messpaare, Loeser, Kalibrierprotokoll | Kamera-TF parallel publizieren |
-
-### Nicht wiederverwenden
-
-Die lokale Foxy-Bruecke veroeffentlicht direkte `JointState`-Kommandos und bindet Host-Code per `sys.path` ein. Sie wird nicht in den Humble-Workspace kopiert. Der lokale `robot_controller.py` ist nicht die Integrationsbasis, da er gemischte/defekte Quellteile enthaelt. Wiederverwendbar sind ausschliesslich verifizierte Fakten aus dessen Konfiguration und klar testbare Einzelalgorithmen.
-
----
-
-## 4. Kanonische Daten und Koordinaten
-
-### 4.1 Eine Konfiguration pro Gelenk
-
-`arm_bringup/config/arm_hardware.yaml` wird die alleinige Quelle fuer hardwareabhaengige Fakten. Pro Gelenk werden mindestens gespeichert:
-
-```yaml
-joints:
-  - name: joint1
-    modbus_address: 1
-    gear_ratio: 50.0
-    encoder_word_order: high_low       # erst nach M1 bestaetigen
-    direction_sign: 1                  # erst nach M1 bestaetigen
-    encoder_zero_pulses: 0             # erst nach Homing setzen
-    soft_limit_lower_rad: -2.61799
-    soft_limit_upper_rad: 2.61799
-    homing_mode: null                  # erst nach M1 bestaetigen
-    homing_direction_sign: null        # erst nach M1 bestaetigen
-```
-
-Keine Konfigurationsdatei darf einen geratenen Wert als gemessen kennzeichnen. Unbestaetigte Felder bleiben `null` oder tragen klar `TODO`.
-
-### 4.2 Vorzeichen symmetrisch behandeln
-
-Fuer jedes Gelenk gilt nach Homing:
-
-```text
-q_ros = direction_sign * (encoder_pulses - encoder_zero_pulses) / pulses_per_rad
-encoder_target_pulses = encoder_zero_pulses + direction_sign * q_ros_target * pulses_per_rad
-joint_velocity_ros = direction_sign * motor_speed / gear_ratio
-```
-
-`direction_sign` wird somit beim Lesen und beim Schreiben angewandt. Eine Invertierung nur auf dem Befehlsweg oder nur in `/joint_states` ist verboten.
-
-### 4.3 Frame-Vertrag
-
-- `base_link -> tool0 -> gripper_tcp` entsteht nur durch URDF plus `/joint_states` und `robot_state_publisher`.
-- Der Greifpfad benutzt Posen in `base_link`, nicht in `map`.
-- Die reale OAK verwendet ihren vom Treiber publizierten optischen Frame. Der Name wird vor M7 verbindlich festgelegt; aktuell ist dies `oak_rgb_camera_optical_frame`.
-- Die kalibrierte Kameramontage darf genau einen TF-Eigentuemer haben. URDF und OAK-Launch lesen dieselbe versionierte Kalibrierdatei oder es wird nur eine der beiden Quellen aktiviert.
-
----
-
-## 5. Gemeinsamer Zustandsautomat
-
-Der Arm publiziert einen strukturierten `ArmStatus`. Vorgeschlagene Zustaende:
-
-```text
-DISCONNECTED -> DISCOVERING -> DISABLED -> UNHOMED -> HOMING -> READY_STOWED
-READY_STOWED -> READY_DEPLOYED -> EXECUTING -> READY_DEPLOYED
-* -> FAULT
-* -> ESTOPPED
-```
-
-### Zulassungsregeln
-
-| Aktion | Vorbedingung | Bei Fehler |
-|---|---|---|
-| Arm aktivieren | Bus erreichbar, kein Alarm, E-Stop frei | `FAULT` oder `ESTOPPED` |
-| Homing | `UNHOMED`, reduzierte Geschwindigkeiten, Bedienfreigabe | `FAULT`; kein automatischer Retry |
-| Named Pose | `READY_STOWED` oder `READY_DEPLOYED`, kein E-Stop | Action fehlgeschlagen, Stop gesendet |
-| TCP Pose | `READY_DEPLOYED`, validierte Planung, Basis still | Action fehlgeschlagen, keine Fahrt |
-| Basisfahrt | Armstatus `READY_STOWED` | Basis-Missionsgate lehnt ab |
-| E-Stop | jederzeit | alle Achsen stoppen, Controller deaktivieren, Rehoming erforderlich |
-
-`ArmStatus` muss mindestens Zustand, `homed`, `estop_active`, `bus_healthy`, je Achse Alarmcode, letzte Fehlerursache und Zeitstempel enthalten.
-
----
-
-## 6. Meilensteine und Anleitung
-
-## M0 - Integrationsvertrag und Testgeruest
-
-**Ziel:** Die Paketgrenzen, Benennungen und Tests existieren, ohne Hardware anzusteuern.
-
-**Arbeitsschritte:**
-
-1. Neue Pakete `arm_hardware`, `arm_bringup`, `arm_action_server` und `arm_tools` anlegen.
-2. `ArmStatus.msg` im Paket `robot_interfaces` definieren.
-3. Benannte Posen und Action-Namen als Vertrage festschreiben.
-4. Fake-Modbus-Transport mit aufzeichnbaren Reads/Writes bereitstellen.
-5. Keine reale Serienport-Defaultverbindung. Hardwarebetrieb verlangt einen expliziten Launch-Parameter.
-
-**Abnahme:**
-
-- `colcon build --packages-select robot_interfaces arm_hardware arm_bringup arm_action_server` funktioniert.
-- Unit-Tests pruefen Actions, Konfigurationsvalidierung und Fake-Modbus.
-- Kein Test oeffnet einen realen `/dev/ttyUSB*`-Port.
-
-**Rueckfall:** Pakete bleiben inaktiv; der bestehende Roboterbetrieb bleibt unveraendert.
-
----
-
-## M1 - ESS17-RS Commissioning je Achse
-
-**Ziel:** Alle Motor-/Encoderannahmen werden gemessen statt geraten.
-
-**Arbeitsschritte:**
-
-1. `ros2 run arm_tools arm_bus_probe --read-only` implementieren.
-2. Busantwort, FC03, Alarm, Bewegungsstatus, Istposition und Geschwindigkeit fuer Adressen 1 bis 6 erfassen.
-3. Register `0x0019` und die tatsaechliche 32-Bit-Wortreihenfolge nur nach ESS17-Handbuch und Beobachtung festlegen.
-4. Mit mechanisch freiem und beobachtetem Arm pro Achse einen kleinen Jog mit reduzierter Geschwindigkeit ausfuehren.
-5. Physische Bewegungsrichtung und Encoder-Vorzeichen protokollieren.
-6. `direction_sign`, Homing-Richtung, Getriebe und sichere Testschritte in die Hardware-YAML eintragen.
-
-**Pflichtprotokoll pro Achse:**
-
-| Feld | Wert |
+| Baustein | Verantwortung und Ausbau |
 |---|---|
-| Joint / Modbus-Adresse | gemessen |
-| FC03-Antwort | ja/nein |
-| Position word order | bestaetigt |
-| aktuelle Geschwindigkeit signed | bestaetigt |
-| positiver Jog bewegt physisch | dokumentiert |
-| `direction_sign` | +1 oder -1 |
-| Homing-Sensor / Mode / Richtung | bestaetigt |
-| sicherer Bereich | gemessen |
+| arm_hardware | Heute Python-Diagnose; später echte Rückmeldung, Referenzzustand, Fehler und begrenzte Befehle |
+| arm_tools | Heute Validierung/Fake/RO-Probe; später getrenntes Einzelachs-Commissioning |
+| arm_bringup | Heute Inventare; später geprüfte Controllerparameter, Betriebsarten und gezieltes Starten |
+| robot_description | Reale Gelenkachsen, Gliedermaße, Kollisionskörper und Werkzeug-TCP |
+| robot_moveit_config, geplant | Planungsgruppe, geprüfte Limits und benannte Posen |
+| arm_action_server, geplant | Vorbedingungen, Ausführung, Abbruch und verifiziertes Ergebnis |
+| Greifercontroller, geplant | XL330, Öffnungsbezug, Kontakt-/Kraftzustand und Fehlerreaktion |
+| handeye_calibration | Vorhandenen Recorder/Löser prüfen und an reale Frames anpassen |
+| semantic_perception | Vorhandene Wahrnehmung um aktuelle, greiftaugliche Feinpose ergänzen |
+| Basis-/Arm-Interlock, geplant | Gegenseitige Bewegungsfreigabe unabhängig vom einzelnen Missionsbaum |
 
-**Abnahme:**
+Die heutigen Python-Bibliotheken sind nicht automatisch ein
+ros2_control-Plugin. Ob dessen Buszugriff später in C++ entsteht oder über
+einen klaren, zeitlich geprüften Backend-Vertrag erfolgt, wird nach M3 entschieden.
+Dabei bleibt der Bus-Eigentümer eindeutig.
 
-- Sechs vollstaendige Achsprotokolle.
-- Positiver ROS-Gelenkwinkel erhoeht nach der Konfigurationsabbildung die `/joint_states`-Position.
-- Kein EEPROM-Schreiben, kein `clear_position` und keine Mehrachsbewegung in diesem Meilenstein.
+Vorhandene Außenverträge beibehalten:
+[MoveArmToNamed](../src/robot_interfaces/action/MoveArmToNamed.action),
+[MoveArmToPose](../src/robot_interfaces/action/MoveArmToPose.action),
+[ComputeGrasp](../src/robot_interfaces/srv/ComputeGrasp.srv) und
+[RefineObjectPose](../src/robot_interfaces/srv/RefineObjectPose.srv).
+Die Greifer-Action heißt im bisherigen Ablauf
+/gripper_controller/gripper_cmd. Schnittstellendefinitionen beweisen keine
+realen Server. map-Kommentare in den Greif-/Feinpose-Services sind vor M7/M8
+mit dem beabsichtigten base_link-Vertrag abzugleichen; nicht still umdeuten.
 
-**Stop-Kriterium:** Unklare Wortreihenfolge, unbestaetigtes Homing oder widerspruechliche Encoderwerte blockieren M2.
+## 3. Datenvertrag: Nullpunkt, Homing und Grenzen
 
----
+Das aktuelle, strikte JSON-Schema liegt in
+[config.py](../src/arm_hardware/arm_hardware/config.py), das ungemessene Inventar in
+[arm_inventory.json](../src/arm_bringup/config/arm_inventory.json).
+Neue Messfelder zuerst im Messblatt aufnehmen; das Schema lehnt unbekannte
+JSON-Schlüssel ab. Eine spätere Erweiterung braucht einen eigenen Code-Build.
 
-## M2 - Deterministischer Modbus-/Encoder-Kern
+Je Achse getrennt bestimmen:
 
-**Ziel:** Der Treiber ist testbar und behandelt ESS17-Varianten explizit.
+- Physischer Motor, Modell, Firmware, Gelenk, bestätigte Adresse und Leseprofil.
+- Getriebeübersetzung, Gelenkachse und positive ROS-Drehrichtung.
+- Feedback-Counts und Befehls-Counts je Motorumdrehung, Wortfolge,
+  Vorzeichen, Überlauf und Verhalten nach Neustart.
+- Lage der Home-Schaltkante, Anfahrrichtung und gemessene Streuung.
+- Abstand von dieser Kante zum geometrischen Nullwinkel: **Home-Offset**.
+- Mechanische Endlagen, daraus abgeleitete engere Softwaregrenzen sowie
+  Geschwindigkeits-/Beschleunigungsgrenzen und Nachlauf.
+- Homing-Suchweg und -Zeit: Diese begrenzen die Referenzfahrt und sind
+  etwas anderes als Home-Offset oder regulärer Arbeitsbereich.
 
-**Arbeitsschritte:**
+Nicht gleichsetzen: Encoder-PPR, Motor-Schritte, Mikrosteps, Befehlszählung,
+Feedbackzählung und Gelenkwinkel. Die am Fahrantrieb gefundenen ESS23-Werte
+sind keine Armkalibrierung.
 
-1. Modbus-Zugriff kapseln: FC03, retries, Zeitbudget, Bus-Lock und Fehlerklassifikation.
-2. 32-Bit Lese-/Schreibfunktionen mit konfigurierbarer Wortreihenfolge implementieren.
-3. Signed-16 und signed-32 Dekodierung zentralisieren.
-4. Positions-, Geschwindigkeits- und Alarm-Read je Achse in konsistente Zustandswerte ueberfuehren.
-5. Kommandofolge fuer Position, Geschwindigkeit, Normalstop und Sofortstop gegen Handbuch und M1-Protokoll implementieren.
-6. Beim Timeout alle neuen Kommandos sperren und den Zustand `FAULT` melden.
+Eindeutige spätere Rechenkonvention, erst nach Messung verwenden:
 
-**Abnahme:**
+~~~text
+q = s * 2*pi * (C_feedback - C_home) / (N_feedback * G) + q_home
+~~~
 
-- Unit-Tests decken high/low, low/high, negative Positionen und negative Geschwindigkeit ab.
-- Fake-Modbus-Test prueft, dass Zielregister vor Startregister geschrieben werden.
-- Busfehler stoppt die Ausfuehrung deterministisch und erzeugt keine Retry-Schleife mit Bewegungsbefehlen.
+Dabei ist G = Motorumdrehungen/Gelenkumdrehung, s das gemessene Vorzeichen,
+C_home die Rückmeldung an der reproduzierten Referenzkante und q_home deren
+Winkel im geometrischen Gelenkkoordinatensystem. Ein Befehlspfad bekommt seine
+eigene gemessene Skalierung und einen passenden Befehlsbezug.
+home_offset_rad ist vor Umsetzung eindeutig auf diese Konvention abzubilden;
+nicht zwei Nullpunktkorrekturen gleichzeitig anwenden.
 
----
+Die Laufzeitaussage „referenziert“ wird nicht aus einer gespeicherten Nullzahl
+oder einer vorhandenen Konfigurationsdatei abgeleitet. Nach unklarer Lage,
+Versorgungsverlust, relevantem Encoderfehler oder mechanischem Umbau ist sie
+ungültig, bis eine definierte Wiederherstellung erfolgt.
 
-## M3 - ros2_control und Hardware-Status
+## 4. Lokale Zustände und Bewegungssperren
 
-**Ziel:** Der Arm ist ein normaler ROS-2-Control-Roboter, nicht ein Topic-gesteuertes Spezialgeraet.
+Vorgeschlagene Laufzeitzustände: OFFLINE, READ_ONLY, UNREFERENCED, HOMING,
+READY, EXECUTING, HOLDING, FAULT und ESTOP. Dazu je Achse Referenzgültigkeit,
+Messwertalter, Fehlerursache und Konfigurations-ID. Sie sind noch nicht implementiert.
 
-**Arbeitsschritte:**
+Vor dem ersten Einzelachs-Jog müssen lokale Versuchssperren wirksam sein.
+Vor koordinierter Bewegung müssen zusätzlich die Plattform-Interlocks geprüft sein:
 
-1. `arm_hardware` als `hardware_interface::SystemInterface` implementieren.
-2. Pro Gelenk State Interfaces `position`, `velocity` sowie Command Interface `position` bereitstellen.
-3. `joint_state_broadcaster` und `joint_trajectory_controller` in `arm_bringup` konfigurieren.
-4. `/safety/estop` abonnieren; `true` unterdrueckt neue Kommandos und loest den definierten Stop-Pfad aus.
-5. `ArmStatus` und Diagnosen mit fester Aktualisierungsrate publizieren.
-6. Erst im Fake-Transport, danach im Hardware-Read-only-Modus starten.
+- Armbewegung nur bei nachgewiesen stillstehender, gegen Fahrt gesperrter Basis.
+  Ein gesendetes cmd_vel=0 allein ist kein Stillstandsnachweis.
+- Basisfahrt nur mit frischer, verifizierter Transportpose und gültiger
+  Referenz, passendem Lastzustand und gültigem Sensor-/Sicherheitszustand.
+- Fehlende, veraltete oder widersprüchliche Rückmeldung sperrt neue Bewegungen.
+- Stop, Action-Cancel, Fehler, Not-Aus und Wiederanlauf haben explizite,
+  getestete Übergänge; kein automatisches Weiterfahren nach Reconnect.
+- Bei einem Fehler laufende Bewegungen über den geprüften Stopweg beenden.
+  „Torque off“ ist bei einem ungebremsten Arm nicht automatisch sicher:
+  Halten, Abstützen und Energieabschaltung müssen mechanisch zusammenpassen.
 
-**Abnahme:**
+Der [safety_monitor](../src/safety_monitor/safety_monitor/safety_monitor_node.py)
+hat eine GPIO-Platzhalteranbindung und initial_estop=false als Code-Default.
+Ein empfangenes false ist daher kein belegter physischer Not-Aus-Zustand.
+Für den Arm werden gültige Herkunft, Frische und tatsächliche Verdrahtung
+gefordert. Die hardwired Kette bleibt unabhängig von ROS.
 
-- Controller laden mit Fake-Hardware.
-- `/joint_states` enthaelt exakt die sechs kanonischen Gelenknamen in rad.
-- E-Stop-Test: Zieltrajektorie wird abgebrochen; anschliessende Ziele werden abgelehnt.
-- Busverlust-Test: Controller meldet `FAULT`, kein stillschweigendes Wiederanfahren.
+## 5. TLE4905L: Wohin gehört das Homing-Signal?
 
----
+**Vorgeschlagen: an einen als Referenzeingang konfigurierten digitalen Eingang
+des zugehörigen ESS-Antriebs.** Der Antrieb erfasst die Schaltkante lokal;
+der Jetson startet später die begrenzte Referenzfahrt und überwacht Status.
+Die präzise Kante soll nicht erst durch ROS-Polling und einen USB-Umweg entstehen.
 
-## M4 - Echtes Armmodell, Homing und TF
+ESS17 besitzt X0–X3 und XCOM. Beispielplanung: X0 als Home-Sensor, weitere
+Eingänge bei Bedarf für positive/negative Endlagen. Das ist eine Belegungsidee,
+keine bereits bestätigte Verdrahtung. „Home-Sensor“ und „Homing starten“
+sind unterschiedliche Eingangsfunktionen. Beim unbekannten NEMA23 ist die
+entsprechende Belegung separat zu klären.
 
-**Ziel:** `base_link -> tool0` ist geometrisch und kinematisch belastbar.
+Der TLE4905L ist ein Hall-Schalter mit Open-Collector-Ausgang Q. Er liefert
+kein fertiges 3,3-V-GPIO-Signal. Empfohlener Aufbau zur Auslegung:
 
-**Arbeitsschritte:**
+~~~text
+TLE: VS -> geregelte Sensorversorgung (z. B. 5 V), GND -> Sensorbezug
+     Q  -> geeignete Signalaufbereitung / NPN-Sink-Ausgang
+                         |
+                         +-> ESS X0 (oder bestätigter anderer Eingang)
 
-1. Dummy-Masse im `robot_description` durch gemessene Gliederlaengen, Achsversetze, Joint-Achsen und Grenzen ersetzen.
-2. Echte ROS-Gelenknamen in URDF, Hardware-YAML, Controller und SRDF vereinheitlichen.
-3. `tool0 -> gripper_tcp` vermessen und im Xacro eintragen.
-4. Referenzfahrt als bedienerbewussten Ablauf implementieren; Home-Offsets versioniert speichern.
-5. Nach Homing den Arm auf langsame benannte Pruefposen fahren.
-6. TF mit RViz und mechanischem Zeigetest pruefen.
+ESS-NPN-Eingangsseite: XCOM -> +24 V I/O
+                      Sink-Ausgang schaltet Xi gegen I/O-0 V
+~~~
 
-**Abnahme:**
+Bei nicht isolierter Signalaufbereitung brauchen Sensor und I/O eine definierte
+gemeinsame Referenz; bei isolierter Kopplung bleibt die Trennung bestehen.
+Versorgung, Pinansicht, Pull-up, Ausgangsspannung und Strom sind vor dem Bau
+anhand der konkreten Schaltung zu prüfen. Kein paralleler direkter Anschluss
+der 24-V-Eingangsleitung an Jetson-/MCU-GPIO.
 
-- Vollstaendige TF-Kette `base_link -> ... -> tool0 -> gripper_tcp`.
-- Zeigetest an mindestens vier Punkten: Abweichung kleiner oder gleich 3 mm.
-- Jede Richtung, jeder Nullpunkt und jedes Softlimit ist durch Test abgenommen.
+Das ESS17-Handbuch nennt mindestens 10 mA Ansteuerung und eine Signaldauer
+über 10 ms. Daher Kopplung und Magnetbreite zur maximalen Suchgeschwindigkeit
+auslegen. Ein direkter Q-Xi-Anschluss kommt nur nach bestätigter elektrischer
+Kompatibilität in Frage; die Pufferstufe ist die vorgeschlagene robuste Variante.
+Handbuch: [ESS17, Abschnitte 4.2/4.3](https://files.omc-stepperonline.com/ESS17-RS0407_Series_Bus_Integrated_Motor_Hardware_Manual.pdf).
+Sensorreferenz: [Infineon TLE49x5L](https://www.infineon.com/assets/row/public/documents/24/49/infineon-tle49x5l-datasheet-en.pdf).
+Der Hersteller-Direktlink war beim aktuellen Abruf nicht erreichbar;
+Originaldatenblatt und konkrete Pinansicht vor Verdrahtung beschaffen.
 
-**Stop-Kriterium:** Ein systematischer Zeigefehler ist ein Modell-/Encoderproblem, keine Aufgabe fuer die Kamerakalibrierung.
+Vor Bewegung: Magnet von Hand an/weg, Signalzustand elektrisch und über
+Eingangsstatus prüfen; danach Kabelbruch, Kurzschluss und Neustart betrachten.
+Eine einfache Open-Collector-Leitung erkennt Drahtbruch nicht automatisch.
+Eingangsfunktion und Polarität nach Power-Cycle erneut prüfen. Die heutige
+RO-Probe schreibt diese Konfiguration ausdrücklich nicht.
 
----
+Home ist nicht automatisch ein Endschalter oder eine sichere Endlagenbegrenzung.
+Mechanische Anschläge, unabhängige Endlagen und begrenzte Suchwege gesondert
+auslegen. Ein fehlendes Home-Signal darf keine endlose Suche auslösen.
 
-## M5 - MoveIt 2 und Arm-Actions
+## 6. Greifer: Konzept vor dem Bau prüfen
 
-**Ziel:** Die bestehenden Plattform-Actions steuern den Arm ueber Planung und kontrollierte Ausfuehrung.
+**Das XL330-Spindelprinzip ist als Entwurf plausibel; die endgültige Auslegung
+ist noch offen.** Vor Fertigung sind Öffnungsweite, Last, Zielkraft,
+Schließzeit, Spindelsteigung und genaue XL330-Variante gemeinsam festzulegen.
 
-**Arbeitsschritte:**
+### Mechanik
 
-1. `robot_moveit_config` mit Planning Group `arm`, TCP `gripper_tcp`, Joint Limits und Self-Collision-Matrix erstellen.
-2. Named Poses mindestens `stowed`, `ready` und `pregrasp` definieren.
-3. `arm_action_server` implementieren:
-   - `MoveArmToNamed`: Pose pruefen, planen/ausfuehren, Fortschritt publizieren.
-   - `MoveArmToPose`: `PoseStamped` zuerst nach `base_link` transformieren, Plausibilitaet und Erreichbarkeit pruefen, planen/ausfuehren.
-4. Cancel, Timeout, E-Stop und Controllerfehler als eindeutige Action-Resultate behandeln.
-5. Den Greifer erst nach einem eigenen Controller-/Schnittstellenvertrag anbinden.
+Vorgeschlagen sind eigenständige Linearführungen für die Backen, abgestützte
+Spindel-Axiallager und eine Kupplung, die den Servo nicht als Schub-/Führungslager
+missbraucht. Austauschbare, nachgiebige Fingerauflagen sollen beide Sensoren
+definiert belasten. Seitliche Lasten dürfen die Sensoren nicht unkontrolliert biegen.
 
-**Abnahme:**
+Symmetrische Backenbewegung hält den Greifmittelpunkt beim Schließen stabil.
+Bei einer festen und einer bewegten Backe wandert er; das ist möglich, muss aber
+im TCP-/Greifmodell berücksichtigt werden. Zwei gegenläufige Gewinde bzw.
+geeignete Koppelmechanik sind erst nach Zeichnung festzulegen.
 
-- `MoveArmToNamed(stowed)` und `MoveArmToNamed(ready)` funktionieren bei Fake- und realem Arm.
-- Unerreichbare Posen, unbekannte Named Poses, E-Stop und Cancel liefern `success=false` mit erklaerender Meldung.
-- Keine kartesische Zielpose wird direkt als Motorpuls an den Treiber gegeben.
+M6-Regelgewinde hat typischerweise 1 mm Steigung; die reale Spindel kann davon
+abweichen. Trapezgewinde nicht allein nach Nenndurchmesser auswählen:
+Steigung/Leitweg, Reibung, Spiel, Verschleiß und Selbsthemmung sind entscheidend.
 
----
+Für einen direkt angetriebenen Entwurf gilt näherungsweise:
 
-## M6 - Basis-Arm-Interlocks
+~~~text
+Öffnungsänderung pro Spindelumdrehung = k * L
+Schließzeit [s] = 60 * Öffnungsänderung [mm] / (k * L [mm/U] * n [U/min])
+~~~
 
-**Ziel:** Mobilitaet und Manipulation koennen sich nicht in einen ungueltigen Betriebszustand bringen.
+k=1 bei einer bewegten Backe, k=2 bei gleich schneller symmetrischer Bewegung.
+n ist die belastete Spindeldrehzahl, nicht die Leerlaufdrehzahl im Datenblatt.
+Kraft aus Drehmoment/Reibung nur abschätzen und anschließend messen.
+Kleine Steigung kann sehr langsam sein und trotzdem hohe Quetschkräfte erzeugen.
 
-**Arbeitsschritte:**
+### Endlagen und Neustart
 
-1. `arm_action_server` akzeptiert Bewegungen nur bei stillstehender Basis; Stillstand aus einer verbindlichen Basisgeschwindigkeit oder einem zentralen Betriebsstatus bestimmen.
-2. Das vorhandene Missions-/Fahrgate akzeptiert Basisfahrt nur bei `READY_STOWED`.
-3. Der BT bleibt wie heute strukturiert: vor Navigation `stowed`, vor Greifen `ready`.
-4. Bei Armfehler waehrend einer Mission wird die laufende Manipulationsaction fehlgeschlagen und der BT kann keinen neuen Fahrbefehl ohne `stowed` ausgeben.
+Vor dem Bau Platz für einen eindeutigen Öffnungs-Referenzsensor und eine zweite
+Endlagenbegrenzung vorsehen; mechanische Anschläge bleiben letzte Begrenzung.
+Endschalter gehören an eine lokale I/O-/MCU-Auswertung, nicht an einen
+angenommenen Homing-Pin des XL330. Der genaue Stop-/Leistungsweg wird mit
+der Greiferelektronik ausgelegt.
 
-**Abnahme:**
+XL330 nutzt TTL-Halbduplex und eine andere Versorgung als die ESS-Achsen.
+Die dokumentierte M288-Variante arbeitet mit 3,7–6 V, empfohlen 5 V.
+Mehrumdrehungszählung kann bei Neustart oder Moduswechsel ihren Bezug verlieren;
+Homing Offset ersetzt keine absolute Öffnungsreferenz. Quellen:
+[XL330-M288](https://emanual.robotis.com/docs/en/dxl/x/xl330-m288/),
+[XL330-M077](https://emanual.robotis.com/docs/en/dxl/x/xl330-m077/).
+Die tatsächliche Variante bleibt offen.
 
-- Negativtest 1: Basisgeschwindigkeit ungleich null -> Armgoal abgelehnt.
-- Negativtest 2: Arm `READY_DEPLOYED` -> Navigationsfreigabe abgelehnt.
-- Negativtest 3: E-Stop mitten in der Action -> BT-Action endet fehlgeschlagen, Status `ESTOPPED`.
+Nach unbekanntem Neustart nicht blind öffnen oder gegen einen Anschlag fahren,
+wenn möglicherweise ein Objekt gehalten wird. Definierter Recovery-Zustand mit
+Abstützen/Ablegen bzw. beaufsichtigter Wiederreferenzierung erforderlich.
+Lokale Grenzen und Kommunikations-Watchdog vorsehen; ein Motorstromwert allein
+ist wegen Spindelreibung keine direkte Griffkraftmessung.
 
----
+### Zwei Widerstandssensoren
 
-## M7 - OAK-Hand-Auge-Kalibrierung
+Vorgeschlagene Kette: je Sensor definierter Spannungsteiler oder andere passende
+Erregerschaltung, geschützter/gefilterter ADC-Eingang und lokale MCU.
+Bauteilwerte erst nach Sensortyp, unbelastetem Widerstand und belastetem Bereich.
+Beide Kanäle einzeln mit eingebauter Fingerauflage kalibrieren.
 
-**Ziel:** Eine Objektpose aus der OAK wird verlässlich als Greifpose in `base_link` nutzbar.
+Zu prüfen: Hysterese, Kriechen, Temperatur, Sättigung, Leitungsbruch/Kurzschluss,
+Offset und asymmetrischer Kontakt. Zunächst relative Kontaktwerte ausgeben;
+Newton erst mit nachvollziehbarer Kalibrierung. Griffbestätigung kombiniert
+beide Kontakte, Öffnung, zeitliche Stabilität, Kraftgrenze und einen kleinen
+beaufsichtigten Hebe-/Halteversuch. Zwei hohe ADC-Werte beweisen allein keinen
+rutschfesten Griff.
 
-**Vorbedingungen:** M1 bis M4 sind abgenommen. Der Arm darf nicht als Messgeraet dienen, solange Encoder, Modell oder TCP unklar sind.
+Beim Spindelantrieb kann Kraft trotz Motorstop bestehen bleiben. Fehlerreaktion
+muss übermäßige Kraft begrenzen, ohne ein gehaltenes Objekt unkontrolliert
+fallen zu lassen. Diese Fälle gehören in die reale Greiferabnahme.
 
-**Arbeitsschritte:**
+## 7. Neutrale Transportpose und freie Sensorsicht
 
-1. Recorderparameter auf den realen OAK-Frame und die realen RGB/CameraInfo-Topics ausrichten.
-2. OAK-Aufloesung und Fokusverhalten fuer Kalibrierung und Betrieb festlegen; die aktuell verbaute OAK-D-S2 ist kein impliziter Fixfokus-Fall.
-3. ChArUco-Board steif an `tool0` oder Greifergrundkoerper befestigen, Feldmass messen.
-4. 15 bis 25 Posen ueber den relevanten Arbeitsraum sammeln; Board mindestens 30 Grad um zwei Achsen variieren.
-5. Fuer jeden Frame die TF zum Bildzeitstempel lesen, nicht nur den neuesten TF.
-6. Loesung, Ausreisser, Residuen, Aufloesung, Fokusmodus und Boardmass als YAML unter `docs/kalibrierung/` archivieren.
-7. Genau eine Kamera-TF-Quelle aktivieren.
+Die vorhandene Action kennt bereits stowed und ready:
+[MoveArmToNamed.action](../src/robot_interfaces/action/MoveArmToNamed.action).
+[pick_and_place.xml](../src/bt_orchestrator/bt_xml/pick_and_place.xml) fordert
+stowed vor GoToObject/GoToPlace. Aber FindTarget kann vorher Explore auslösen;
+[explore.xml](../src/bt_orchestrator/bt_xml/explore.xml) hat selbst keinen
+Arm-Transportcheck. Auch Handsteuerung und Recovery müssen erfasst werden.
+Ein einzelner BT-Schritt ersetzt deshalb keine zentrale Fahrfreigabe.
 
-**Abnahme:**
+Repo-Montagereferenzen, vor Ort gegenprüfen:
 
-- Hand-Auge-Residuen: Translation RMS <= 5 mm und Rotation RMS <= 0.5 Grad.
-- Zeigetest mit freiem Board an fuenf Positionen: Fehler <= 5 mm.
-- `semantic_perception` verarbeitet fuer den Greifpfad eine Zielpose in `base_link`; `map` wird nicht als Feinmanipulationsframe verwendet.
-
----
-
-## M8 - Ende-zu-Ende Pick-and-Place
-
-**Ziel:** Der bestehende Behavior Tree arbeitet gegen reale, abgesicherte Armservices.
-
-**Arbeitsschritte:**
-
-1. BT-Pfad zunaechst mit Actions im Fake-Modus ausfuehren.
-2. Greifercontroller einbinden und `GripperCommand` separat pruefen.
-3. `DetectObjectFine -> ComputeGrasp -> pregrasp -> grasp -> retreat` zunaechst mit einem Referenzobjekt testen.
-4. Vor jeder Basisbewegung `stowed`; vor Greifen `ready` erzwingen.
-5. Fehlerszenarien gezielt pruefen: Objekt weg, IK nicht loesbar, Busfehler, E-Stop, Cancel, ungueltige Kamerapose.
-
-**Abnahme:**
-
-```text
-stowed -> navigate -> ready -> detect fine -> pregrasp -> grasp -> retreat -> stowed
-```
-
-funktioniert reproduzierbar und jedes Fehlerszenario endet ohne neue Bewegungsfreigabe.
-
----
-
-## 7. Testmatrix
-
-| Testklasse | Mindesttests |
-|---|---|
-| Unit | Word-Order, signed decode, direction_sign, limits, state transitions |
-| Fake-Modbus | Registerreihenfolge, Timeout, Alarm, Stop, Busverlust |
-| ros2_control | Controller load, joint states, trajectory cancel, estop gate |
-| TF/URDF | Gelenknamen, Kette, Achsrichtungen, TCP-Transform |
-| MoveIt | Named pose, unreachability, collision, cancel, timeout |
-| Integration | base-still gate, stowed-for-drive gate, BT failure propagation |
-| Calibration | Reprojection, sample diversity, residuals, 5-point pointing test |
-| Hardware | pro Achse einzeln, reduziert, beobachtet und protokolliert |
-
----
-
-## 8. Empfohlene Pull-Request-Schnitte
-
-| PR | Inhalt | Hardwarebewegung erlaubt? |
+| Sensor | Referenz | Bedeutung für den Arm |
 |---|---|---|
-| PR 1 | M0: Paketgeruest, Interfaces, Fake-Modbus, Tests | nein |
-| PR 2 | M1/M2: Commissioning-Tools und Modbus-Kern | nur expliziter Einachs-Test |
-| PR 3 | M3: ros2_control, Armstatus, E-Stop-Gate | erst Fake, dann Read-only |
-| PR 4 | M4: echtes Modell, Homing, TF, Zeigetest | langsame Named-Pruefposen |
-| PR 5 | M5/M6: MoveIt, Actions, Basis-Arm-Interlocks | kontrollierte Armbewegungen |
-| PR 6 | M7: Kalibrierung und kanonische Kamera-TF | Kalibrierposen |
-| PR 7 | M8: realer BT-Pick-and-Place | nach allen Abnahmen |
+| OAK | Bodenhöhe 1,34 m, Neigung 18,94°; [oak.launch.py](../src/robot_bringup/launch/oak.launch.py) | Arm, Finger und gehaltenes Objekt dürfen benötigte RGB-/Tiefensicht nicht verdecken |
+| LiDAR | Sichtscheibenmitte 0,75 m über Boden, z=0,660 m relativ zu base_link; [stl27l.yaml](../src/amadeus_lidar_bringup/config/stl27l.yaml) | Bestehende Mastmaske umfasst 68°; Arm darf keine ungeprüfte zusätzliche Totzone erzeugen |
+| VL53 | Nahbereichsabdeckung; [Konfiguration](../src/vl53_near_field/config/vl53_params.yaml) | Überhang und gehaltenes Objekt dürfen Schutzfelder nicht blind machen |
 
-Jeder PR enthaelt Unit-Tests, eine Aktualisierung der Konfigurationsdokumentation und ein explizites Abnahmekriterium. Kein PR versteckt eine neue reale Motorbewegung hinter einem Default.
+0,75 m ist der dokumentierte Messwert; ältere grobe Kommentare nennen 0,80 m.
+Die Mastmaske macht den Sektor unbekannt, nicht frei. Neue Armreflexionen
+nicht einfach durch eine größere Maske verbergen.
 
----
+Vorgehen: kompakte, tiefe mechanische Pose suchen, dann vermessen und in
+Kollisionsmodell sowie Posenkonfiguration übernehmen. Leerer Greifer und
+definiertes Transportobjekt separat prüfen; gegebenenfalls eigene Pose
+stowed_loaded vorschlagen. Keine Winkel raten. Auch der Weg in die Pose muss
+kollisionsfrei sein, Kabel schonen und mit Last erreichbar sein.
 
-## 9. Betriebsanleitung nach Integration
+Abnahme: Vergleich von RGB, Tiefe und ungefiltertem LiDAR-Scan vor/nach Einbau,
+bekannte Hindernisse in allen weiterhin beanspruchten Sichtbereichen,
+VL53-Abdeckung, Footprint und Überstand prüfen. Rohscan-Vergleich bei stehender
+Basis, nicht als Änderung des laufenden Navigationsschutzes.
+Danach kleine beaufsichtigte Fahrversuche mit Beschleunigen/Bremsen.
 
-### Startreihenfolge
+Fahrfreigabe später nur, wenn Istwinkel innerhalb gemessener Toleranzen liegen,
+Gelenke stillstehen, Daten frisch sind und Last-/Greiferzustand zum freigegebenen
+Transportprofil passen. Ein erfolgreich beantwortetes Mock-Ziel reicht nicht.
 
-1. Hardwired Sicherheitskette und `/safety/estop` pruefen.
-2. RS485-Geraet per Udev als `/dev/arm_rs485` pruefen.
-3. `arm_bringup` im Diagnose-/Read-only-Modus starten.
-4. `ArmStatus` pruefen: Bus gesund, kein Alarm, `UNHOMED`.
-5. Referenzfahrt mit Bedienfreigabe und reduzierter Geschwindigkeit ausfuehren.
-6. `READY_STOWED` pruefen.
-7. Erst danach Controller, MoveIt und `arm_action_server` freigeben.
-8. Vor einer mobilen Mission `stowed` pruefen; vor dem Griff Feinpose in `base_link` anfordern.
+## 8. Kamera, Kalibrierung und Greifplanung
 
-### Pflichtchecks vor dem ersten Betriebstag
+### OAK zuerst, Handkamera nur bei nachgewiesenem Bedarf
 
-```bash
-ros2 topic echo /safety/estop --once
-ros2 topic echo /arm/status --once
-ros2 topic echo /joint_states --once
-ros2 run tf2_ros tf2_echo base_link gripper_tcp
-ros2 action send_goal /move_arm_to_named robot_interfaces/action/MoveArmToNamed "{target_name: stowed}"
-```
+Zuerst OAK-Sicht im realen Arbeitsraum vermessen: Reichweite, Auflösung am Objekt,
+Nähegrenze, Verdeckung durch Arm/Finger, Licht und Tiefenausfälle an transparenten
+oder glänzenden Flaschen. Eine Handkamera ist sinnvoll, wenn die OAK vor dem
+Kontakt regelmäßig die Zielgeometrie verliert oder das gemessene Fehlerbudget
+nicht reicht. Sie erzeugt aber zusätzliche Masse, Kabel, Kalibrierung und
+Nahbereichsanforderungen. Eine kleine RGB-Kamera liefert nicht automatisch Tiefe.
 
-Die konkreten Paket- und Topicnamen werden erst mit M0 im Workspace erzeugt; die Befehle sind daher Teil der geplanten Betriebsdokumentation und nicht als aktuelle Startanweisung zu verstehen.
+Erkennung liefert zunächst eine Klasse und eine Beobachtung, keine sichere
+Greifpose. Objektgröße/-achse, Greifbereich, Tisch, Hindernisse, Erreichbarkeit
+und Werkzeugorientierung müssen separat bestimmt werden.
 
----
+### Transformations- und Messvertrag
 
-## 10. Definition of Done
+Für die feste OAK gilt Eye-to-Hand; eine spätere Handkamera braucht eine
+zusätzliche Eye-in-Hand-Kalibrierung. Basis-/Armgeometrie und TCP zuerst
+vermessen, dann Kameraextrinsik. Kamera-Intrinsik, Fokuszustand,
+Bildauflösung und registrierte Tiefe müssen zum tatsächlichen Stream passen.
 
-Die Armsoftware ist erst integriert, wenn alle folgenden Aussagen wahr sind:
+Notation: A_T_B transformiert Koordinaten aus B nach A. Für ein starr am
+Flansch befestigtes Board muss je Messpaar gelten:
 
-- Alle sechs ESS17-Achsen haben ein bestaetigtes Commissioning-Protokoll.
-- `direction_sign`, Wortreihenfolge, Getriebe, Homing und Softlimits sind versioniert.
-- Der reale Arm publiziert korrekte `/joint_states` und TF.
-- Der Zeigetest fuer `base_link -> gripper_tcp` erfuellt <= 3 mm.
-- E-Stop, Cancel, Alarm und Busverlust stoppen und sperren die Armbewegung deterministisch.
-- Basisfahrt ist nur bei `READY_STOWED`, Armfahrt nur bei stillstehender Basis moeglich.
-- Beide bestehenden Arm-Actions liefern nachvollziehbare Ergebnisse und Feedbacks.
-- Die OAK-Kalibrierung ist versioniert, hat genau eine TF-Quelle und besteht den 5-Punkt-Zeigetest.
-- Der Pick-and-Place-BT besteht Erfolgs- und Fehlertests ohne direkte, ungekapselte Motorbefehle.
+~~~text
+base_T_tool(i) * tool_T_board = base_T_camera * camera_T_board(i)
+~~~
 
----
+Vor echter Verwendung den bestehenden Löser mit synthetischen bekannten
+Transformationen prüfen: Richtung/Inversion, Einheiten, Quaternionen und
+Residuen. Unabhängige Validierungspunkte verwenden. Die feste optische Rotation
+im alten Löser darf nicht ungeprüft auf die OAK-Treiberkette übertragen werden.
+Jeder TF hat genau einen Eigentümer; keine zweite Kamerakette daneben publizieren.
 
-## 11. Erster auszufuehrender Schritt
+Richtwert als Versuchsvorschlag: 15–25 gut verteilte, statische Posen mit
+unterschiedlichen Rotationen und Distanzen, danach separate Prüfpunkte.
+Abnahmetoleranzen vorher aus Greifergeometrie und gemessenem Fehlerbudget
+ableiten. Alte Millimeterwerte im Juli-Konzept sind keine nachgewiesene Genauigkeit.
+Armmodellfehler, Spiel, Durchbiegung, TCP, Kameramontage, Tiefe und Bildzeit
+getrennt betrachten; ein kleiner Fit-Fehler allein reicht nicht.
 
-Der erste Implementierungsschritt ist **M0 plus das Read-only-Teil von M1**: Paketgeruest, Fake-Modbus und ein `arm_bus_probe`, der niemals schreibt. Erst wenn die sechs Achsprotokolle vorliegen, wird entschieden, wie die konkreten ESS17-Register im Produktionsdriver abgebildet werden.
+Grobe Suche darf map nutzen. Für den letzten Griff braucht es eine neue,
+zeitlich passende Pose in base_link, ohne unnötigen Kartenfehler.
+Die vorhandene Semantik-YAML verwendet global_frame=map und ein Objektgedächtnis;
+ein gespeicherter alter Treffer darf nicht als aktuelle Feinpose gelten.
+Fehlender TF, veraltete Bilder, unpassende Tiefe oder verdecktes Ziel sperren
+den Griff. Die bisherige 2-Hz-/2-s-Wahrnehmungskonfiguration ist für schnelle
+visuelle Nachregelung nicht automatisch geeignet.
+
+## 9. Stufenplan mit Software, Realtest und Freigabekriterium
+
+Toleranzen und Lasten vor jedem Versuch im Messblatt festlegen. Unausgefüllte
+Grenzen sind kein bestandenes Gate. Die folgenden Stufen sind Abhängigkeiten,
+keine zugesagten Termine.
+
+### M0 — Bestand und prüfbare Softwaregrundlage
+
+**Software:** Inventarschema, getrennte Fake-Daten, Status/Rohdatenbericht,
+enge Leseprofile und Negativtests. Build A ist hierfür vorhanden.
+
+**Realität:** Motoren zu Gelenken zuordnen, NEMA23-Typ, Getriebe, Lasten,
+Montage, Versorgungen, Adapter, E-Stop und Haltekonzept aufnehmen.
+Eine gesicherte Prüfvorrichtung planen; den ungebremsten Arm nicht fallen lassen.
+
+**Gate:** Reiner Softwarepfad läuft ohne Portöffnung. Daten und Grenzen
+des nächsten ausgewählten Versuchs sind bekannt. Selbsthemmung ist noch
+keine Annahme, sondern vor belasteter Bewegung zu prüfende Eigenschaft.
+
+### M1A — Nur lesen, zuerst eine eindeutig zugeordnete ESS17-Achse
+
+**Software:** Vorhandene CLI nach [Bedienung](../src/arm_tools/README.md).
+FC03 nur 0x0000/4 und 0x0006/7; keine Konfigurations-, Reset- oder Motorbefehle.
+Physische Identität, Busparameter und Auswahl explizit. Fehlende Kinematik
+oder Firmware dürfen eine sichere Rohdaten-Erstinventur nicht unnötig blockieren.
+Unbekannte NEMA23-Variante bleibt gesperrt.
+
+**Realtest:** Einen Snapshot, anschließend begrenzte Wiederholung; Modell-/Firmware-
+Rohwörter, Adresse, Eingänge, Fehler und Position dokumentieren.
+Weitere Achsen erst nach Zuordnung. Doppelte IDs gegebenenfalls bei getrennten
+Antrieben feststellen; niemals durch unkontrolliertes Bus-Umprogrammieren lösen.
+
+**Gate:** Reproduzierbare Antworten mit gemessener Latenz, korrekter
+physischer Zuordnung und nachvollziehbaren Eingängen. Verbindungsfehler beenden
+die Probe ohne erfundene Rückmeldung. Bestanden bedeutet keine Bewegungsfreigabe.
+
+### M1B — Begrenzter Einzelachs-Jog und Stopwege
+
+**Software, noch zu bauen:** Separates Commissioning-Werkzeug mit expliziter
+Achse, begrenztem Weg/Zeit/Geschwindigkeit, Bedienfreigabe und überprüftem
+Stop-/Fehlerpfad. Basis sperren. Keine automatische Referenzfahrt.
+
+**Realtest:** Gesichert und möglichst lastarm kleinste zulässige Bewegungen
+in beide Richtungen. Drehsinn und unabhängigen Winkelweg messen; Befehls-/
+Feedbackskalierung getrennt prüfen. Stop, Cancel, Busverlust und Neustart
+nur mit vorher definierter mechanischer Absicherung erproben.
+Selbsthemmung/Halten unter schrittweise erhöhter bekannter Last untersuchen.
+
+**Gate:** Nachlauf und Stoplatenz innerhalb vorab festgelegter Grenzen,
+keine unerklärte Bewegung, keine automatische Fortsetzung und keine
+unbeherrschte Lageänderung. Bei unzureichendem Halten mechanisch nacharbeiten.
+
+### M2 — Homing, Arbeitsgrenzen und reales Armmodell
+
+**Software:** Verifizierte Eingangszuordnung, Referenzzustand je Gelenk,
+begrenzte Suche, Freifahren und langsames erneutes Anfahren der Kante,
+Home-Offset, Softlimits und echte JointStates. Homingreihenfolge auf
+kollisionsfreie Suchräume abstimmen, auch aus zulässigen Startlagen.
+
+**Realtest:** Wiederholte Referenzierung, Magnet schon aktiv, fehlendes/
+daueraktives Signal, falsche Richtung, Drahtfehler und Restart.
+Mechanische Grenzen ohne gewaltsames Anschlagfahren erfassen; Softlimits
+mit Reserve für Nachlauf, Fehler und elastische Verformung festlegen.
+FK/TCP an unabhängigen Punkten vergleichen.
+
+**Gate:** Dokumentierte Wiederholgenauigkeit, korrekt ungültige Referenz nach
+relevantem Ausfall, plausibles Istmodell und wirksame Grenzen in beiden Richtungen.
+Mehr als ein Achsbezug oder ein großer Home-Offset darf nicht stillschweigend
+als „alle Gelenke null“ gespeichert werden.
+
+### M3 — Koordinierte Bewegung und Busnachweis
+
+**Voraussetzung:** Lokale Stopwege sowie gegenseitige Basis-/Armsperren
+vor Bewegung wirksam; alle benötigten Achsen haben M2 bestanden.
+
+**Software:** Gemeinsamer Trajektorienvertrag, aktuelles Feedback, zeitliche
+Auswertung und Abbruch aller beteiligten Achsen bei Teilfehler.
+RS485-Zykluszeiten, Startversatz und zulässige Reglerfrequenz messen.
+Sechs nacheinander gestartete interne Einzelachs-Trapezprofile garantieren
+keine kartesisch sichere Bahn. Erst danach Controller-/ros2_control-Wahl abschließen.
+
+**Realtest:** Langsame, freie Mehrachswege ohne Objekt; Istbahn, Folgefehler,
+Jitter, Teilausfall und Stop vergleichen. Last und Geschwindigkeit getrennt steigern.
+
+**Gate:** Bahnabweichung, Start-/Stopversatz und Feedbackalter im festgelegten
+Budget. Falls der Bus/Antrieb das nicht erfüllt, Controllerarchitektur anpassen,
+statt MoveIt auf unbewiesene Synchronität aufzusetzen.
+
+### M4 — Plattform-Actions und geprüfte Transportpose
+
+**Software:** Echte Arm-Actions, Planung, Kollisionsmodell, begrenzter
+Ausführungszustand und benannte Posen. Einheitliche Sperren auch in Explore,
+Teleop und Recovery. Kein Erfolg vor bestätigtem Istzustand.
+
+**Realtest:** ready/stowed und Übergangswege, abgebrochene Action, unerreichbares
+Ziel, Restart und veralteter Armstatus. Sensorfreie leere Transportpose nach
+Abschnitt 7 prüfen. Geladene Transportpose spätestens vor M9 separat abnehmen.
+
+**Gate:** Keine Basisfahrt bei unbekannter/ausgefahrener Armhaltung; keine
+Armfahrt bei freigegebener Basisbewegung. Sichtbereiche und tatsächlicher
+Roboterumriss passen zur Fahrtkonfiguration.
+
+### M5 — Greifer als eigene Einheit
+
+**Software:** Lokale ADC-/Endlagen-Auswertung, XL330-Anbindung, Öffnungsreferenz,
+Kontakt-/Kraftstatus, Timeout/Watchdog und später Standard-GripperCommand-Action.
+Öffnungsweite in Metern definieren; Servo-Strom nicht als Newton ausgeben.
+
+**Realtest:** Zunächst Greiferprüfstand ohne Armbewegung; Öffnungsweg, Strom,
+Temperatur, Blockieren, beiden Sensoren einzeln, Halten und Neustart mit/ohne
+Objekt. Verschiedene Auflagen und Lasten messen.
+
+**Gate:** Reproduzierbare Öffnung, kontrollierte Kraftbegrenzung, erkannte
+Sensorausfälle und definierte Recovery ohne ungewolltes Fallenlassen.
+
+### M6 — Greifen an bekannter Position
+
+**Software:** Kollisionsgeprüfte Vorpose, Annäherung, Schließen,
+Kontaktprüfung, kleiner Hub, Halten und kontrolliertes Ablegen.
+
+**Realtest:** Basis steht; stabiles, unkritisches Referenzobjekt an markierter,
+bekannter Position. Objekt und Last erst hier gemeinsam festlegen.
+Zunächst manuell bestätigte Zielpose, keine Vision als zusätzliche Fehlerquelle.
+
+**Gate:** Vorab definierte Wiederholungszahl, Erfolgsquote, Kraft-/Lagegrenzen
+und Fehlerfälle bestanden. Fehlgriff wird erkannt, nicht als Erfolg gemeldet.
+
+### M7 — Kamera-Arm-Kalibrierung
+
+**Software:** Vorhandene Kalibrierwerkzeuge mit überprüfter Mathematik,
+realen Frames, frischen Daten und versioniertem Ergebnis; Abschnitt 8.
+
+**Realtest:** Boardmaße, Kamera-Intrinsik/Tiefe, statische Messpaare,
+unabhängiger Zeigetest im Greifraum; Montage und Lastzustand festhalten.
+
+**Gate:** Vorher begründetes Fehlerbudget an unabhängigen Punkten erfüllt.
+Montage-/TCP-/Fokus-/Auflösungsänderung macht die betroffene Kalibrierung prüfpflichtig.
+
+### M8 — Statisches Vision-Greifen
+
+**Software:** Objektidentität, aktuelle Feinpose in base_link,
+Geometrie-/Griffhypothese, Kollisionsprüfung, Ausführung und Griffverifikation.
+
+**Realtest:** Stillstehende Basis; zuerst feste Beleuchtung und Objektlage,
+dann Position/Orientierung/Material einzeln variieren. Colaflasche einschließlich
+Füllzustand erst jetzt als dokumentierten Referenzfall festlegen.
+
+**Gate:** Erfolgsquote und Fehlerbudget erreicht; kein Griff bei altem Treffer,
+fehlender Tiefe, Verdeckung oder falschem Frame. OAK-Sichtlücken messen und
+erst anhand dieser Daten über eine Handkamera entscheiden.
+
+### M9 — Mobiles Gesamtsystem
+
+**Software:** Suche, stowed, Navigation, verifizierter Stillstand, erneute
+Feindetektion, Griff, abgenommene Transportpose mit Last, Fahrt und Ablage.
+
+**Realtest:** Kurze kontrollierte Strecke, Last-/Kippstabilität,
+Beschleunigen/Bremsen, Sichtfelder, Kabel und durchgehende Statusüberwachung.
+
+**Gate:** Wechsel zwischen Fahrt und Manipulation bleibt bei Abbruch,
+Kommunikationsverlust und Wiederanlauf gesperrt, bis Bedingungen wieder geprüft sind.
+Greifpose wird nach jeder relevanten Basisbewegung neu bestimmt.
+
+### M10 — Robustheit und Betriebsfreigabe
+
+**Software/Tests:** Dauerlauf, Temperatur, Versorgung, USB-/Busabbrüche,
+Prozessneustart, Sensorfehler und sichere Wiederherstellung.
+Versionierte Konfiguration, Diagnose und Rückfallverfahren.
+
+**Gate:** Dokumentierte Betriebsgrenzen für Last, Reichweite, Tempo und
+Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
+
+## 10. Nächste Arbeitspakete und Rückmeldung
+
+| Paket | Ergebnis | Status |
+|---|---|---|
+| A | Inventarprüfung, Fake, reine ESS17-Rohdiagnose und Offline-/Humble-Tests | Implementiert, reale M1A-Abnahme offen |
+| B | Messdaten vervollständigen, M1A-Protokoll; eigenes NEMA23-Profil erst nach Typnachweis | Nächster Schritt |
+| C | Begrenzter Einzelachs-Jog, Stop-/Haltversuche | Noch zu bauen, braucht B und mechanische Versuchssicherung |
+| D | Homing, Skalen, Limits, echtes Armmodell | Nach Einzelachsabnahme |
+| E | Koordination, Plattform-Actions und Transportpose | Nach Timing-/Bahn-/Interlock-Nachweis |
+| F | Greifer, bekannte Griffe, OAK-Kalibrierung und Vision | Später, stufenweise |
+
+Jetzt benötigte Angaben: NEMA23-Typ, Gelenkzuordnung, Getriebe, Montagezustand,
+vorhandene TLE/Magnete/Endlagen, Adapter und Busparameter. Für die spätere
+Greiferauslegung zusätzlich XL330-Variante, gewünschte Öffnung, Backenkinematik,
+Spindel-Leitweg, Sensortyp und Referenzlast.
+
+Jede Rückmeldung enthält Build-/Config-ID, Achse, Versuch, Soll/Ist,
+Zeit-/Winkel-/Lastmessung, Abbruchgrund und lokalen Logpfad. Reale Bilder,
+Raumkarten und Bags bleiben lokal. Pro neuem Build im
+[Build-Protokoll](ARM_BUILDPROTOKOLL.md) höchstens 200 Wörter.
+
+Rückfall aktuell: Diagnose beenden, isoliertes Overlay nicht sourcen.
+Spätere Bewegungsbuilds brauchen zusätzlich einen vorab geprüften mechanischen
+und elektrischen Stop-/Halteweg. Dieser Dokumentationsstand löst keinen
+Hardwarestart und keine Änderung an laufenden Roboterparametern aus.
