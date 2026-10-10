@@ -1,5 +1,23 @@
 # Projektgedächtnis
 
+## 10.10.2026 – gemessene ARM-Auswahlkosten innerhalb der vorhandenen Frist verteilen
+
+Fünf unveränderte Originalfälle scheiterten im gemeinsamen ARM-Kandidaten:
+Cool-/Retry-gesperrte lokale Vorschläge verbrauchten unnötige Sweep-Arbeit;
+der öffentliche Nahbeobachter erschöpfte seine 0,5-s-Teilfrist vor einer
+bereits geometrisch möglichen Sicht und fiel auf einen unbewiesenen Fernvorschlag
+zurück. Profilierter Originalfall: 2,244 s, 175 Routenprüfungen, 1,643 s
+Routenarbeit. Der notwendige History-Vorfilter liest vorhandene IDs und Limits
+ohne neue Aufgabe; volle Eligibility bleibt anschließend erforderlich. Der
+einmalige öffentliche Nahsuchlauf erhält maximal 2 s innerhalb derselben
+5-s-Gesamtfrist mit 0,25-s-Restreserve. Keine neue Karten-/Sensorlebensdauer,
+Scope- oder Historyausnahme. Andere Einzelbeobachter behalten 0,5 s.
+Alle 16 ursprünglichen Nahstart-/Public-Observation-Fälle auf ARM bestanden
+mit Source-Python und unveränderter installierter nativer Erweiterung; dies
+ist ein Diagnosebeleg. Neuer gemeinsamer Build, komplette Regression und
+Original-Gesamtmissionen folgen. Rückfall: separaten Kandidaten stoppen,
+Originalinstallation oder vorherigen privaten Kandidaten verwenden.
+
 ## 10.10.2026 – Anlaufprofil durch reale Register-/Encoder-/LiDAR-Messung auswählen
 
 Register 2000 zeigte im tatsächlichen Antrieb etwa 1,48 Motor-RPM/s und über

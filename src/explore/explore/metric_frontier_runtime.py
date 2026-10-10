@@ -1828,7 +1828,12 @@ class MetricFrontierRuntime:
         """
         grid, correlation, pose, _, _, costmap, _ = inputs
         now = time.monotonic()
-        until = min(now+.5, started+self._map_timeout_s-.25)
+        # This is an allocation WITHIN the original snapshot-processing
+        # deadline, not a new sensor/map lifetime. ARM measurements exhausted
+        # the former 0.5 s before the finite nearby view was examined, then
+        # spent longer on unproved distant proposals. Keep the same hard end
+        # and 0.25 s reserve for the remaining selection/validation work.
+        until = min(now+2., started+self._map_timeout_s-.25)
         if until-now < .25 or not all(footprint_clear(*pose, g, allowed,
                 self._world_to_grid, self._grid_to_world, self._metric_bounds,
                 heading_half_angle=.05, center_deviation_m=.02)
@@ -2162,6 +2167,19 @@ class MetricFrontierRuntime:
                 memo['inputs'] = inputs
         search_mask=self._metric_seed_mask(inputs)
         initial_evidence = self._metric_selection_memo(inputs)[1]
+        def potentially_within_limits(goal):
+            # History limits cannot be repaired by an expensive route/view
+            # calculation. This is only a necessary read-only prefilter;
+            # every candidate still needs the unchanged full eligibility,
+            # measured finite view, complete sweep and actual native plan.
+            if policy is None:
+                return True
+            now = time.monotonic()
+            for f in frontiers:
+                key = policy.identify((f.cx, f.cy), goal, create=False)
+                if key is None or policy.within_limits(key, goal, now):
+                    return True
+            return False
         # Before expensive boundary detours, prefer one useful proved forward
         # observation in the existing local search. Start from its far bound:
         # RPP's 15-cm acceptance must not reduce every departure to a tiny hop.
@@ -2178,6 +2196,8 @@ class MetricFrontierRuntime:
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = minimum+min(step*grid.info.resolution,self._goal_search_m)
                 goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                if not potentially_within_limits(goal):
+                    continue
                 route = self._metric_route(inputs, goal, pose[2])
                 if route is None:
                     continue
@@ -2218,6 +2238,8 @@ class MetricFrontierRuntime:
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = self._min_goal_dist_m+step*grid.info.resolution
                 goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
+                if not potentially_within_limits(goal):
+                    continue
                 route = self._metric_route(inputs, goal, pose[2])
                 if route is None:
                     continue
@@ -2249,7 +2271,7 @@ class MetricFrontierRuntime:
                 candidates = [min(forward,key=lambda c:(c.cost,c.frontier_xy,c.x,c.y))]
                 stats['bounded_start_observation'] = True
         # A fully public short view must not wait behind expensive unproved
-        # distant approaches. Its same 0.5-s search shares the original 5 s.
+        # distant approaches. Its bounded allocation shares the original 5 s.
         if (policy is not None and live_view
                 and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
