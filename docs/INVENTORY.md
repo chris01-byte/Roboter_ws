@@ -27,6 +27,9 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 
 | Paket | Zweck | Reifegrad |
 |---|---|---|
+| `arm_hardware` | ESS17-FC03-Rohdatenprobe, Fake und Konfigurationsprüfung; keine Bewegungssteuerung | Entwicklung, Hardwareabnahme offen |
+| `arm_tools` | Explizite Arm-Diagnose-CLI mit Real-/Fake-Trennung | Entwicklung, Hardwareabnahme offen |
+| `arm_bringup` | Unbestätigtes Sechs-Achsen-Inventar und synthetische Testdaten | Entwurf / Messdaten offen |
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |

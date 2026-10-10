@@ -1,5 +1,16 @@
 # Konzept: Hand-Auge-Kalibrierung Roboterarm <-> zentrale OAK-Kamera
 
+> **Historisches Konzept vom Juli — Standhinweis 10.10.2026:**
+> Maßgeblich sind jetzt Abschnitt 8 und Stufe M7 im
+> [rekonstruierten Integrationsplan](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md).
+> Die folgenden Beispielhöhen (etwa z=0,36 m), Frame-Namen, Aussagen zum
+> Kameratreiber und festen Genauigkeiten sind teilweise überholt oder ungeprüft.
+> Die aktive OAK-Konfiguration nennt 1,34 m Bodenhöhe und
+> oak_rgb_camera_optical_frame. TF-Richtung, optische Rotation und Solver
+> müssen anhand der tatsächlichen Kette geprüft werden. Alte Millimeterziele
+> sind keine gemessene Genauigkeit. Diesen historischen Entwurf nicht direkt
+> als Inbetriebnahmeanweisung ausführen; sein Wortlaut bleibt zur Einordnung erhalten.
+
 **Stand:** 2026-07-04 · **Betrifft:** `robot_description`, `semantic_perception`, später `arm_action_server`/MoveIt 2
 **Variante:** Eye-to-Hand (Kamera fest an der Basis/am Mast, der Arm bewegt sich)
 
