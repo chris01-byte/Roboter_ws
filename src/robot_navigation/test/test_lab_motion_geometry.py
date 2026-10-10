@@ -8,7 +8,8 @@ from shapely.geometry import Polygon
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from robot_navigation.lab_motion_geometry import (
-    fixed_sequence_in_scope, stop_sweep_in_scope, wheel_pose_in_bound_scope)
+    fixed_sequence_in_scope, forward_sequence_in_scope,
+    stop_sweep_in_scope, wheel_pose_in_bound_scope)
 from robot_navigation.stage3_motion_diagnostic import disk_in_polygon
 
 LAB = ((-.13, -.9), (2., -.9), (2., .7), (-.13, .7))
@@ -106,3 +107,11 @@ def test_convex_support_rejects_intermediate_corner_and_full_brake_overrun():
         narrow = ((-1., -1.), (2., -1.), (2., boundary), (-1., boundary))
         assert not fixed_sequence_in_scope((0., 0., .36), narrow)
     assert not fixed_sequence_in_scope((0., 0., .36), ((0., 0.), (1., 0.), (0., 1.)))
+
+
+def test_selected_forward_measurement_needs_no_unexecuted_turn_but_full_stop():
+    scope = ((-1., -1.), (2., -1.), (2., .5), (-1., .5))
+    assert not fixed_sequence_in_scope((0., 0., .36), scope)
+    assert forward_sequence_in_scope((0., 0., .36), scope)
+    short = ((-.13, -.9), (.59, -.9), (.59, .7), (-.13, .7))
+    assert not forward_sequence_in_scope((0., 0., 0.), short)

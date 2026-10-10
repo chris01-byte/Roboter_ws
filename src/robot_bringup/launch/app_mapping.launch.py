@@ -45,6 +45,7 @@ def generate_launch_description():
         DeclareLaunchArgument('use_hwt601_odometry', default_value='false'),
         DeclareLaunchArgument('hwt_development_contract', default_value='false',
             description='Explicit metric LAB-1 contract: .05 s poll/.30 s data, 2 holds/60 s.'),
+        DeclareLaunchArgument('hwt601_accel_ms', default_value='2000'),
         DeclareLaunchArgument('operator_stationary_confirmed', default_value='false'),
         DeclareLaunchArgument(
             'enable_auto_explore', default_value='false',
@@ -88,6 +89,7 @@ def generate_launch_description():
                 'active_drive': active_drive,
                 'use_hwt601_odometry': use_hwt601_odometry,
                 'hwt_development_contract': hwt_development_contract,
+                'hwt601_accel_ms': LaunchConfiguration('hwt601_accel_ms'),
                 'operator_stationary_confirmed': operator_stationary_confirmed,
                 'enable_auto_explore': enable_auto_explore,
                 'start_explorer': start_explorer,

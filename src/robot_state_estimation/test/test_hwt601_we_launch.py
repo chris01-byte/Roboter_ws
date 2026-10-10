@@ -65,6 +65,23 @@ def test_no_default_or_inferred_stillness_opens_hwt_devices():
         module._require_stationary_confirmation(context(operator_stationary_confirmed='false'))
 
 
+@pytest.mark.parametrize('value', ['0', '99', '2001', 'x', '100.5'])
+def test_hwt_ramp_comparison_rejects_invalid_values_before_devices(value):
+    module = load_launch('src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py')
+    with pytest.raises(RuntimeError, match='Anfahrrampe'):
+        module._require_stationary_confirmation(context(operator_stationary_confirmed='true', hwt601_accel_ms=value))
+
+
+@pytest.mark.parametrize('value', ['100', '2000'])
+def test_hwt_ramp_comparison_accepts_explicit_values_and_outer_binding(value):
+    module = load_launch('src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py')
+    assert module._require_stationary_confirmation(context(operator_stationary_confirmed='true', hwt601_accel_ms=value)) == []
+    for relative in ('src/robot_bringup/launch/app_mapping.launch.py', 'src/robot_navigation/launch/nav_mapping.launch.py'):
+        text = (ROOT / relative).read_text()
+        assert "DeclareLaunchArgument('hwt601_accel_ms', default_value='2000')" in text
+        assert "'hwt601_accel_ms': LaunchConfiguration('hwt601_accel_ms')" in text
+
+
 def test_historical_mapping_profile_not_shadow_ekf_and_no_commands_or_encoder_yaw():
     config = yaml.safe_load((ROOT / 'src/robot_state_estimation/config/ekf_hwt601_mapping.yaml').read_text())
     p = config['hwt601_mapping_ekf']['ros__parameters']

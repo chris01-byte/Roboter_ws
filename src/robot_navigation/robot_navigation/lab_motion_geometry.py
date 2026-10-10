@@ -72,14 +72,15 @@ def stop_sweep_in_scope(pose, vx, wz, polygon, *, observed_motion=False):
     return _covered(_world(envelope, pose), polygon)
 
 
-def fixed_sequence_in_scope(pose, polygon):
+def fixed_sequence_in_scope(pose, polygon, *, distance=.25):
     """Whole .25 m forward / +15 / -15 sequence, including stop overruns.
 
     The start contains no hypothetical in-place turn. At the forward endpoint
     the continuous angular enclosure includes the existing 5-degree limit
     and constant-speed stop travel in both directions. No waypoint sampling.
     """
-    if len(pose) != 3 or not all(math.isfinite(v) for v in pose):
+    if (len(pose) != 3 or not all(math.isfinite(v) for v in (*pose, distance))
+            or not 0. <= distance <= .25):
         return False
     if (len(polygon) < 3 or any(len(p) != 2 or not all(math.isfinite(v) for v in p)
                                 for p in polygon)):
@@ -87,7 +88,6 @@ def fixed_sequence_in_scope(pose, polygon):
     scope = Polygon(polygon)
     if not scope.is_valid or scope.is_empty or scope.area <= 0:
         return False
-    distance = .25
     overrun = .08*STOP_HORIZON_S
     straight = box(-.13, -.25, .33+distance+overrun, .25)
     angle = math.radians(20.)+.10*STOP_HORIZON_S
@@ -117,6 +117,14 @@ def fixed_sequence_in_scope(pose, polygon):
     rear, front, right, left = _rotated_bounds(-angle, angle)
     turns = box(distance+rear, right, distance+overrun+front, left)
     return _covered(_world(unary_union((straight, turns)), pose), polygon)
+
+
+def forward_sequence_in_scope(pose, polygon, *, distance=.25):
+    """The separately selected .25-m acceleration/braking measurement only."""
+    if (len(pose) != 3 or not all(math.isfinite(v) for v in (*pose, distance))
+            or not .05 <= distance <= .25):
+        return False
+    return _covered(_world(box(-.13, -.25, .33+distance+.08*STOP_HORIZON_S, .25), pose), polygon)
 
 
 def wheel_pose_in_bound_scope(current, initial_wheel, initial_map):

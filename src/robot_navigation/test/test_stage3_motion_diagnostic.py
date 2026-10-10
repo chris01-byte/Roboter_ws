@@ -212,3 +212,36 @@ def test_zero_publication_never_invents_idle_test_activation(state, started, act
     node._publish_command()
     assert [m.data for m in flags] == [active]
     assert commands[0].linear.x == commands[0].angular.z == 0.
+
+
+def test_explicit_translation_probe_finishes_at_measured_stop_without_turn():
+    import time
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node.forward_stop_only = True
+    node._state = 'stop_after_forward'
+    node._phase_started = time.monotonic()-.8
+    node._stop_stable_since = time.monotonic()-.8
+    node._latest = {}
+    node._last_nonzero_requested = False
+    node._health_failure = lambda: None
+    node._scope_pose = lambda: (.25, 0., 0.)
+    node._scope_map_binding = lambda **kw: 'actual-test-epoch'
+    node._stationary = lambda: True
+    events = []
+    node._publish_command = lambda *args: events.append(('command', args))
+    node._finish = lambda *args: events.append(('finish', args))
+    node._enter = lambda *args: events.append(('enter', args))
+    node._tick()
+    assert events == [('command', ()), ('finish', ('complete', 'Feste Translation und Stillstand bestaetigt'))]
+
+
+def test_probe_selection_reduces_only_the_actual_executed_sweep():
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node.scope_polygon = ((-1., -1.), (2., -1.), (2., .5), (-1., .5))
+    assert not node._sequence_in_scope((0., 0., .36))
+    node.forward_stop_only = True
+    node.measurement_distance_m = .25
+    assert node._sequence_in_scope((0., 0., .36))
+    node.forward_stop_only = False
+    node.negative_turn_only = True
+    assert node._sequence_in_scope((0., 0., .36))

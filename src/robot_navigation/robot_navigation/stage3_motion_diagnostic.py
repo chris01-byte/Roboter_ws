@@ -3,7 +3,11 @@
 The node is only launched by an explicit opt-in. It never publishes to
 ``/cmd_vel`` and exposes no target/velocity arguments: one Trigger request
 can run only 0.25 m forward, +15 degrees, then -15 degrees, with verified
-stops between phases. Commands enter the existing command gate.
+stops between phases. An explicit forward_stop_only opt-in selects just the
+same forward line and measured stop for ramp qualification. Its distance can
+only be reduced to .05.. .25 m. negative_turn_only selects the same -15-degree
+turn and measured stop. These mutually exclusive component probes are never
+autonomous observations. Commands enter the existing gate; velocities remain fixed.
 """
 
 import json
@@ -26,7 +30,8 @@ from tf2_msgs.msg import TFMessage
 from robot_interfaces.msg import NearFieldStatus
 from tf2_ros import Buffer, TransformException, TransformListener
 from robot_navigation.lab_motion_geometry import (
-    fixed_sequence_in_scope, stop_sweep_in_scope, wheel_pose_in_bound_scope)
+    fixed_sequence_in_scope, forward_sequence_in_scope,
+    stop_sweep_in_scope, wheel_pose_in_bound_scope)
 from robot_navigation.tf_reception import receive_current_tf, receive_latest_sources
 
 
@@ -95,6 +100,17 @@ class Stage3MotionDiagnostic(Node):
         self.declare_parameter('lab_external_hardware_halt_attested', False)
         self.declare_parameter('scope_origin_pose_map', [float('nan')]*3)
         self.declare_parameter('scope_origin_pose_wheel', [float('nan')]*3)
+        self.declare_parameter('forward_stop_only', False)
+        self.forward_stop_only = bool(self.get_parameter('forward_stop_only').value)
+        self.declare_parameter('negative_turn_only', False)
+        self.negative_turn_only = bool(self.get_parameter('negative_turn_only').value)
+        self.declare_parameter('measurement_distance_m', TEST_DISTANCE_M)
+        self.measurement_distance_m = float(self.get_parameter('measurement_distance_m').value)
+        if (self.forward_stop_only and self.negative_turn_only
+                or not math.isfinite(self.measurement_distance_m)
+                or not .05 <= self.measurement_distance_m <= TEST_DISTANCE_M
+                or not self.forward_stop_only and self.measurement_distance_m != TEST_DISTANCE_M):
+            raise RuntimeError('Ungueltige begrenzte Komponentensequenz')
         if not bool(self.get_parameter('enabled').value):
             raise RuntimeError('Stage-3-Diagnosemodus ist nicht aktiviert')
         self.external_hardware_halt_attested = bool(
@@ -522,7 +538,7 @@ class Stage3MotionDiagnostic(Node):
             response.message = failure
             return response
         scope_pose = self._scope_pose()
-        if not fixed_sequence_in_scope(scope_pose, self.scope_polygon):
+        if not self._sequence_in_scope(scope_pose):
             response.success = False
             response.message = 'Ganze gepaddete Test-/Anhaltebahn verlaesst den Scope.'
             return response
@@ -539,7 +555,8 @@ class Stage3MotionDiagnostic(Node):
         self._bound_session = self.session_id
         self._start_pose = scope_pose[:2]
         self._start_yaw = scope_pose[2]
-        self._state = PHASES[0]
+        self._state = ('turn_negative' if getattr(self, 'negative_turn_only', False) else PHASES[0])
+        self._turn_negative_origin = scope_pose[2]
         self._phase_started = time.monotonic()
         self._test_started_once = True
         log_dir = Path.home() / '.local' / 'share' / 'amadeus' / 'tests'
@@ -558,12 +575,24 @@ class Stage3MotionDiagnostic(Node):
             'fixed_wheel_scope_binding': self._wheel_scope_bound,
             'scope_origin_pose_map': self._scope_origin_map if self._wheel_scope_bound else None,
             'scope_origin_pose_wheel': self._scope_origin_wheel if self._wheel_scope_bound else None,
-            'sequence': list(PHASES),
+            'sequence': list(('turn_negative', 'stop_final') if getattr(self, 'negative_turn_only', False)
+                             else PHASES[:2] if getattr(self, 'forward_stop_only', False) else PHASES),
+            'forward_stop_only': getattr(self, 'forward_stop_only', False),
+            'negative_turn_only': getattr(self, 'negative_turn_only', False),
+            'measurement_distance_m': getattr(self, 'measurement_distance_m', TEST_DISTANCE_M),
         })
         response.success = True
         response.message = f'Diagnose gestartet; Evidenz: {log_path}'
         self.get_logger().warning(response.message)
         return response
+
+    def _sequence_in_scope(self, pose):
+        if getattr(self, 'negative_turn_only', False):
+            return fixed_sequence_in_scope(pose, self.scope_polygon, distance=0.)
+        if getattr(self, 'forward_stop_only', False):
+            return forward_sequence_in_scope(pose, self.scope_polygon,
+                distance=getattr(self, 'measurement_distance_m', TEST_DISTANCE_M))
+        return fixed_sequence_in_scope(pose, self.scope_polygon)
 
     def _enter(self, state):
         self._state = state
@@ -650,7 +679,7 @@ class Stage3MotionDiagnostic(Node):
             if self._state == 'idle' and now >= self._idle_status_next:
                 self._idle_status_next = now+.2
                 failure = self._health_failure()
-                if not failure and not fixed_sequence_in_scope(self._scope_pose(), self.scope_polygon):
+                if not failure and not self._sequence_in_scope(self._scope_pose()):
                     failure = 'Ganze Test-/Anhaltebahn verlaesst Scope'
                 self._status_pub.publish(String(data=json.dumps(dict(
                     state='idle', ready_to_start=not failure, reason=failure,
@@ -687,7 +716,7 @@ class Stage3MotionDiagnostic(Node):
             dx, dy = x - self._start_pose[0], y - self._start_pose[1]
             progress = dx * math.cos(self._start_yaw) + dy * math.sin(self._start_yaw)
             lateral = -dx * math.sin(self._start_yaw) + dy * math.cos(self._start_yaw)
-            if progress >= TEST_DISTANCE_M:
+            if progress >= getattr(self, 'measurement_distance_m', TEST_DISTANCE_M):
                 self._enter('stop_after_forward')
                 self._publish_command()
             elif progress < -0.02 or abs(lateral) > 0.05:
@@ -700,13 +729,18 @@ class Stage3MotionDiagnostic(Node):
                 self._stop_stable_since = self._stop_stable_since or now
                 if now - self._stop_stable_since >= STOP_CONFIRM_S:
                     if self._state == 'stop_after_forward':
+                        if getattr(self, 'forward_stop_only', False):
+                            self._finish('complete', 'Feste Translation und Stillstand bestaetigt')
+                            return
                         self._turn_origin = yaw
                         self._enter('turn_positive')
                     elif self._state == 'stop_after_positive':
                         self._turn_negative_origin = yaw
                         self._enter('turn_negative')
                     else:
-                        self._finish('complete', 'Feste Sequenz und drei Stillstaende bestaetigt')
+                        self._finish('complete', 'Feste Drehung und Stillstand bestaetigt'
+                            if getattr(self, 'negative_turn_only', False)
+                            else 'Feste Sequenz und drei Stillstaende bestaetigt')
             else:
                 self._stop_stable_since = None
                 if now - self._phase_started > STOP_TIMEOUT_S:

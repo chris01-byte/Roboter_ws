@@ -16,6 +16,12 @@ from launch_ros.parameter_descriptions import ParameterValue
 def _require_stationary_confirmation(context):
     if LaunchConfiguration('operator_stationary_confirmed').perform(context) != 'true':
         raise RuntimeError('HWT-Start braucht aktuell bestaetigten realen Stillstand')
+    try:
+        acceleration = int(LaunchConfiguration('hwt601_accel_ms', default='2000').perform(context))
+    except ValueError as error:
+        raise RuntimeError('HWT-Anfahrrampe braucht einen ganzzahligen Registerwert') from error
+    if not 100 <= acceleration <= 2000:
+        raise RuntimeError('HWT-Anfahrrampe ausserhalb des LAB-Vergleichsbereichs 100..2000')
     return []
 
 
@@ -57,6 +63,8 @@ def generate_launch_description():
             'operator_stationary_confirmed', default_value='false',
             description='Muss fuer die HWT-Startkalibrierung explizit true sein.'),
         DeclareLaunchArgument('hwt_development_contract', default_value='false'),
+        DeclareLaunchArgument('hwt601_accel_ms', default_value='2000',
+            description='Explicit LAB acceleration-register comparison; legacy default retained, braking unchanged.'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true'),
         DeclareLaunchArgument(
@@ -95,6 +103,7 @@ def generate_launch_description():
                 'publish_tf': False,
                 'dry_run': dry_run,
                 'allow_rs485': allow_rs485,
+                'accel_ms': ParameterValue(LaunchConfiguration('hwt601_accel_ms'), value_type=int),
                 'encoder_timing_recovery_enabled': True,
                 # Only this explicit HWT path: DDS must not delay the sole
                 # serial/motor owner. Child publishes original bytes/stamps,
