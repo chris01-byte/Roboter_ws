@@ -364,8 +364,12 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
     Shared memory carries only passive oracle telemetry and fault injection.
     """
     require_isolation()
-    if source_cpu is not None:
-        os.sched_setaffinity(0, {source_cpu})
+    initialization_affinity = sorted(os.sched_getaffinity(0))
+    worker_cpus = set(initialization_affinity)-{source_cpu}
+    if sensor_cpu is not None and sensor_cpu != source_cpu:
+        worker_cpus.add(sensor_cpu)
+    if source_cpu is not None and worker_cpus:
+        os.sched_setaffinity(0, worker_cpus)
     sys.setswitchinterval(.001)
     model = World(case['door_m'], case['start'])
     fault = FaultWindow(fault_value)
@@ -441,6 +445,17 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
         raw_node = raw_module.Hwt601ImuNode()
         base_node = SimulatedBase()
         nodes = [sensors, raw_node, base_node]
+        # Spawned DDS/sensor workers and native DDS threads must inherit the
+        # other available CPUs, not the single acquisition CPU. Pin the owner
+        # and its subsequent acquisition threads before timers run. Early
+        # pinning also placed every writer on that CPU. Remove this measured
+        # coupling; remaining discovery/load gaps must still fail their gates.
+        output_affinities = {
+            'encoder': sorted(os.sched_getaffinity(base_node.feedback_output.pid)),
+            'imu': (sorted(os.sched_getaffinity(raw_node._sensor_output.pid))
+                    if raw_node._sensor_output is not None else None)}
+        if source_cpu is not None:
+            os.sched_setaffinity(0, {source_cpu})
         for node in nodes:
             ex = SingleThreadedExecutor(); ex.add_node(node); executors.append(ex)
             def loop(ex=ex, name=node.get_name()):
@@ -486,6 +501,9 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
             sensors.trace.close()
             (out/'device_result.json').write_text(json.dumps(dict(
                 plant_tick_gaps=sensors.tick_gaps, simulated_register_writes=bus.writes,
+                initialization_cpu_affinity=initialization_affinity,
+                passive_worker_cpu_affinity=sorted(worker_cpus),
+                publication_cpu_affinities=locals().get('output_affinities'),
                 source_periods_unchanged=True, separate_source_process=True,
                 separate_finite_sensor_process=True,
                 finite_sensor_process_exitcode=sensor_device.exitcode,

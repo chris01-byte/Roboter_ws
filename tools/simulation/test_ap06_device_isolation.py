@@ -119,6 +119,7 @@ def test_original_imu_writer_pause_is_isolated_from_encoder_acquisition(tmp_path
             assert any(not s['encoder_feedback_ok'] for s in states)
         assert states[-1]['encoder_position_left_u32'] == states[0]['encoder_position_left_u32']
     finally:
+        (tmp_path/'received_base_states.json').write_text(json.dumps(states))
         halt.set()
         if source.pid is not None:
             source.join(5.)
@@ -164,6 +165,7 @@ def test_configured_source_keeps_encoder_acquisition_during_actual_writer_pause(
         # rewritten measurement stamp or filled-in sample is claimed here.
         assert states[-1]['encoder_position_left_u32'] == states[0]['encoder_position_left_u32']
     finally:
+        (tmp_path/'received_base_states.json').write_text(json.dumps(states))
         halt.set()
         if source.pid is not None:
             source.join(5.)
@@ -227,6 +229,8 @@ def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, mon
         assert states and all(s['encoder_feedback_ok'] for s in states)
         assert all(s['encoder_timing_recovery']['first_timing_rejection'] is None for s in states)
     finally:
+        (tmp_path/'received_base_states.json').write_text(json.dumps(states))
+        (tmp_path/'received_wheel_stamps.json').write_text(json.dumps(stamps))
         halt.set()
         if source.pid is not None:
             source.join(5.)
@@ -235,6 +239,9 @@ def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, mon
     assert source.exitcode == 0
     result = json.loads((tmp_path/'device_result.json').read_text())
     assert result['actual_cpu_affinity'] == [source_cpu]
+    if result['passive_worker_cpu_affinity']:
+        for affinity in result['publication_cpu_affinities'].values():
+            assert affinity is not None and source_cpu not in affinity
     assert result['separate_finite_sensor_process']
     assert result['finite_sensor_process_exitcode'] == 0
     sensor = json.loads((tmp_path/'sensor_result.json').read_text())
