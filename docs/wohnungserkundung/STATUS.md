@@ -1,6 +1,61 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – v7 Originalmissionen 0/3, TF-Empfang separat korrigiert
+## 11.10.2026 – v8 vollständig geprüft, Originalmissionen 0/3; gekoppelte Nachprüfung korrigiert
+
+Punkt 1 bleibt begrenzt real positiv mit ausdrücklich erhaltener Rohdatenlücke
+während Translation. Punkt 2: gemeinsamer privater v8-Build `abeabd4`, 14
+Pakete in 2 min 49 s, 155 Produktdateien Quelle/Install identisch und 756
+Installhashes. Vollständige Regression: 2.735 Fälle, keine Fehler/Skips.
+Original-A/B/C alle manifestkompatibel, ohne manuelle Nav-Ziele, weiterhin
+**0/3**: A 0,153852 m / keine Beobachtung; B 0,364959 m / eine Beobachtung,
+183 neue Zellen; C 0,713880 m / eine Teilbeobachtung, 144 neue Zellen. Alle
+enden am unveränderten Auswahlbudget, keine volle Passage samt Heck. Quellen
+am jeweiligen Stop gültig, Encoder ohne Verwerfung; keine reale Fahrt daraus.
+
+Gemessener verbleibender Kopplungsfehler: die bestehende einmalige Nachprüfung
+nach langem Egress empfängt ein neueres Rad, behält aber die davor ausgewählte
+TF-Pose. A/B/C brechen damit wegen altem Rad-Snapshot ab; der dabei aufgezeichnete
+Vergleich verwirft das neuere Rad gegen die alte Pose mit 21,5–23,4 mm.
+Aktuelle Quellproben sind gültig. Separater neuer Fix wählt bei derselben
+begrenzten Nachprüfung tatsächliche aktuelle TF-Pose/Referenz und Rad zusammen.
+Initialkörperanker bleibt fest, neue Körpermaske schneidet nur alte Bestände;
+verlassene Zellen entziehen auch Clearance, abgelaufene Abdeckung bleibt abgelaufen.
+Danach weiterhin vollständiger Egress-/Historienbeweis und originale finale
+Quell-/Pose-/Scan-/Rasterfristen. Kein Polling, zusätzliche Nachprüfschleife,
+Stempelersatz, Budgetreset oder neue freie Zelle.
+
+29 gezielte Fälle bestanden: echte DDS-Pause mit neuem Paar, Entzug initialer
+Körperzellen, abgelaufene Maske, neue echte TF-Auswahl bei Bewegung und
+Kartenreferenzkorrektur, fehlendes/ungültiges Rad, langsamer Zweitbeweis,
+ungültige alte Historie und paralleler TF-Empfang. Erste eigene Testfassung
+hatte falschen LiDAR-Mount null gewählt; Originalnegative erhalten, korrekte
+vorhandene Kalibrierung im Test verwendet, Produktkalibrierung unverändert.
+Privater Source-Gesamtdiagnoselauf bleibt negativ: A 0,109633 m, keine
+Beobachtung, bisheriger Rad/TF-Vergleichsfehler verschwunden; vollständiger
+Zweitbeweis bleibt an 180-ms-Frische negativ, später Auswahlbudget. Erste
+Prüfstandkopie enthielt nicht definierte Pfadvariable, Fehler erhalten und
+Kopie korrigiert. Zusätzliche aktuelle CPU-/Publikationsdiagnose läuft.
+Dieser neue Kopplungsfix ist noch nicht gemeinsam gebaut oder originalqualifiziert.
+
+Letzte tatsächliche rein lesende FC03 am 11.10. um 01:34:06 UTC: Zähler
+35204/−35676 unverändert, beide RPM null, RAM 100/400/5; Lesezeiten 9,122/4,900 ms.
+Alle 1.048 Bestandsinstallhashes um 01:34:06 UTC erneut gleich, Main sauber.
+Keine neue Hardwarebewegung, kein SDK-/OS-/Autostartwechsel. v8-Realstartskripte
+mit bisheriger CPU-/Auditaufteilung nur vorbereitet, nicht gestartet.
+Punkte 3/4 nicht durchgeführt: zuerst ursprüngliche Softwaregesamtprüfung.
+Bekannten festen LAB-Scope vor realem Start neu binden, nicht umzentrieren;
+weiterer Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit bleiben unbestätigt.
+Keine neue allgemeine Freigaberunde, bestehender LAB-1-Auftrag gilt.
+
+**Genau nächster Schritt:** verbleibende Verzögerung im vollständigen
+Zweitbeweis aktuell messen und begrenzt beheben; dann gemeinsamer Build,
+volle Regression und ursprüngliche A/B/C, danach reale Schritte 3/4.
+Rückfall: eigene private Prozesse direkt geordnet stoppen, bewahrten Install
+verwenden oder nur den Kopplungsfix gezielt zurücknehmen. Reale Daten und
+Originalnegative bleiben privat unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
+
+## Historischer v7-/TF-/Auswahlstand vom 11.10.2026
 
 Punkt 1 bleibt begrenzt real positiv, mit erhaltener Rohdatenlücke während
 Translation. Für Punkt 2 wird die nachgewiesene native IMU-Schreibpause im

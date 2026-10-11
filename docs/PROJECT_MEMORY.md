@@ -1,5 +1,21 @@
 # Projektgedächtnis
 
+## 11.10.2026 – beim begrenzten Nachcheck ein aktuelles vollständiges Bewegungspaar wählen
+
+v8 vollständig gebaut und 2.735 Produktfälle positiv; ursprüngliche A/B/C
+weiter 0/3. Bestehender Nachcheck erhielt neueres echtes Rad, verglich es
+aber mit alter pre-processing-TF-Pose. Aktuelle gekoppelte TF/Referenz/Rad-
+Auswahl korrigiert diesen Fehler; nur Entzug der ursprünglichen Körper- und
+Clearancezellen, festes Ankerobjekt, keine Heilung abgelaufener Maske. Ganze
+Egress-Historie erneut und alle originalen Endfristen prüfen; weiterhin
+genau eine Nachprüfung. 29 gezielte Fälle positiv, eigener falscher Testmount
+korrigiert und negatives Original erhalten. Privater Source-A-Vergleich ohne alten Rad/TF-Fehler bleibt bei 0,109633 m
+an Frische/Zweitbeweis und Auswahlbudget negativ; keine neue Gesamtfreigabe.
+Gemeinsamer Build und ursprüngliche
+Gesamtqualifikation noch ausstehend, keine reale Bewegung. Rückfall: nur diesen
+Kopplungsdiff revertieren oder privaten Kandidaten stoppen und Bestandsinstall
+verwenden. Aktueller WE-Befund ausschließlich im STATUS.
+
 ## 11.10.2026 – identische lokale Connectorprüfung mit geringerem Aufwand
 
 Original-ARM-Profile zeigen unnötige Sortierung stationärer Egress-Ledger

@@ -69,3 +69,26 @@ def test_new_sample_does_not_resurrect_invalid_departure_inventory(monkeypatch):
     node._metric_inputs()
     assert len(proofs)==2
     assert all(not e.valid and e.reason=='start_egress_reentry' for e in node._metric_egress)
+
+
+@pytest.mark.parametrize('correction', [0., .01])
+def test_moving_recheck_binds_new_tf_reference_and_preserves_departure_history(monkeypatch, correction):
+    node, health, proofs = delayed_inputs(monkeypatch, 'disagreement')
+    calls = []
+    def actual_tf_selection():
+        calls.append(True)
+        return ((.05,.05,0.),0.,(0.,0.,0.)) if len(calls)==1 else (
+            (.09+correction,.05,0.),0.,(correction,0.,0.))
+    node._metric_pose_and_reference = actual_tf_selection
+    identity = node._metric_egress
+    initial = [e.fixed.unknown.copy() for e in identity]
+    result = node._metric_inputs()
+    assert len(calls)==2 and len(proofs)==2
+    assert result[2] == (.09+correction,.05,0.)
+    assert result.map_odom_reference == (correction,0.,0.)
+    assert result.physical_motion[0] == (.09,.05,0.)
+    assert result.physical_motion[1:3] == (10.23,10.23)
+    assert result.physical_motion[3] == 100.31
+    assert node._metric_egress is identity
+    assert all(e.valid for e in identity)
+    assert all(np.all(e.fixed.unknown <= old) for e,old in zip(identity,initial))

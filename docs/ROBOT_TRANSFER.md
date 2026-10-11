@@ -1,5 +1,19 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – v8 gebaut und geprüft, gekoppelte Source-Nachprüfung vorbereitet
+
+Separater v8-Build `abeabd4`, 14 Pakete/155 Quelle-Installgleichheiten,
+2.735 Fälle positiv; ursprüngliche A/B/C 0/3, keine reale autonome Folge.
+Zusätzlicher Source-Kopplungsfix im Nachcheck mit 29 gezielten Fällen geprüft;
+noch kein gemeinsamer neuer Install dieses Diffs. Privater A-Vergleich ohne
+bisherigen Rad/TF-Fehler bleibt bei 0,109633 m an Frische und Auswahl negativ. Eigene anfängliche Test-/
+Diagnosepfadfehler erhalten, keine Kalibrierung geändert. Tatsächliche FC03
+01:34:06 UTC unveränderte Zähler 35204/−35676 und Null-RPM, RAM 100/400/5;
+1.048 Bestandsinstallhashes gleich. Reale v8-Startskripte lediglich vorbereitet.
+Keine Hardwarebewegung/Autostart-/OS-/SDK-Umstellung. Rückfall: eigene private
+PIDs direkt geordnet stoppen, bewahrten Install verwenden oder Kopplungsdiff
+gezielt revertieren. Reale Rohdatenlücke aus Punkt 1 weiterhin offen.
+
 ## 11.10.2026 – Auswahlkosten gerätefrei reduziert
 
 Quellkandidat für nächsten separaten v8-Build reduziert ausschließlich

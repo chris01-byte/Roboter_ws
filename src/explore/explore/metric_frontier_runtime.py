@@ -761,12 +761,13 @@ class MetricFrontierRuntime:
         if selected is not None and not all(
                 0 <= processed_at-at <= .18 for at in selected[1:3]):
             try:
-                newer = self._metric_measured_motion(pose, inputs.map_odom_reference)
+                refreshed, checked, refreshed_age = self._metric_rebind_motion_geometry(inputs, occupancy, mount if self._metric_self_body_enabled else None)
             except ValueError:
-                newer = None  # the unchanged final freshness guard rejects it
-            if (newer is not None and newer[3] > selected[3]
-                    and all(new >= old for new, old in zip(newer[1:3], selected[1:3]))):
-                inputs = MetricInputs(values, inputs.map_odom_reference, newer)
+                refreshed = None  # the unchanged final freshness guard rejects it
+            if refreshed is not None:
+                inputs = refreshed
+                pose, pose_checked, age = inputs[2], checked, refreshed_age
+                self._metric_input_reference = inputs.map_odom_reference
                 self._metric_prepare_egress(inputs)
         # Processing/DDS delay consumes the original freshness window too.
         completed_ros = self.get_clock().now().nanoseconds
@@ -804,6 +805,42 @@ class MetricFrontierRuntime:
                 scan_now, self._door_lidar_scan_timeout, age_basis='scan_callback_receipt',
                 received_at=scan['received_at'], scan_key=scan.get('key'))
         return inputs
+
+    def _metric_rebind_motion_geometry(self, inputs, occupancy, mount):
+        """One newer actual pose/reference/wheel bundle; only withdraw cells.
+
+        Receiving a new wheel against the old pre-processing TF pose can
+        reject ordinary motion. A new paired selection also needs current
+        body coverage. It cannot move the initial anchor, regrow its mask or
+        grant any raw/safe cell that the original snapshot did not contain.
+        The caller still checks the entire egress ledger and all final ages.
+        """
+        checked = time.monotonic()
+        pose, age, reference = self._metric_pose_and_reference()
+        if not 0 <= age <= self._door_pose_timeout:
+            raise ValueError('start_motion_wheel_pose_missing_stale_or_invalid')
+        motion = self._metric_measured_motion(pose, reference)
+        old = inputs.physical_motion
+        if (motion is None or old is None or motion[3] <= old[3]
+                or not all(new >= before for new, before in zip(motion[1:3], old[1:3]))):
+            raise ValueError('start_motion_wheel_stale_after_processing')
+        known, safe = inputs[3], inputs[4]
+        if self._metric_self_body_enabled:
+            body = None
+            if not self._metric_body_anchor_expired:
+                body = self_body_unknown_mask(inputs[0], occupancy, pose, mount)
+                self._metric_body_cells &= body
+                body = self._metric_body_cells
+            public = occupancy == 0
+            current = public if body is None else public | body
+            known = known & current
+            if not np.array_equal(known, inputs[3]):
+                from scipy.ndimage import distance_transform_edt
+                res = inputs[0].info.resolution
+                distance = distance_transform_edt(np.pad(known,1))[1:-1,1:-1]
+                safe = safe & known & (distance*res >= self._goal_clearance_m+res/2)
+        values = (inputs[0], inputs[1], pose, known, safe, inputs[5], inputs[6])
+        return MetricInputs(values, reference, motion), checked, age
 
     def _metric_rebase_first_body(self, identity):
         """Translate retained FIRST cell facts only on the same fixed lattice."""
