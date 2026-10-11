@@ -1,5 +1,24 @@
 # Projektgedächtnis
 
+## 11.10.2026 – DDS-Ausgabe im ARM-Prüfstand von der Erfassung trennen
+
+Der vollständige private v6-Build (14 Pakete, 154 Quelle/Install identische
+Produktdateien) und 2.715 Produktfälle bestehen; ursprüngliche Gesamtmissionen
+bleiben 0/3. Native Thread-Diagnose lokalisiert eine 307–314-ms-Pause im
+Status-Publizieren der Basis; IMU und Plant teilen ihren Interpreter und stehen
+mit. Vorhandenen, bereits real qualifizierten `isolate_feedback_output`-Pfad
+auch im gerätefreien Prüfstand verwenden; originale Produktionsknoten,
+Byte-Endpunkte, Stempel und sämtliche Fristen bleiben erhalten. Geerbte
+CPU-Affinität benötigt keine zusätzliche `/sys`-Freigabe in der Isolation.
+Tatsächlicher 350-ms-Schreiberpausegegenfall mit gehaltenem GIL: vorher
+Encoderverwerfung, danach gültige Erfassung ohne Positionsänderung. 28 betroffene
+Prüfstandfälle bestanden. Lieferung kann während einer Pause tatsächlich
+Frames verlieren; keine durchgehende DDS-Lieferung oder volle Mission behaupten.
+Geometrie-/Auswahlfehler sind weiter offen, kein autonomer Realstart daraus.
+Keine Hardware-/Autostartwirkung; Produktinstall des v6-Builds unverändert.
+Rückfall: nur diesen Prüfstandpfad gezielt zurücknehmen, private Prozesse
+geordnet direkt stoppen und bewahrte Bestandsinstallation verwenden.
+
 ## 10.10.2026 – echten aktuellen Radframe an die Geometrieentscheidung binden
 
 Der Original-ARM-Lauf blieb bei gültigem Encoderproduzenten nach Geometrie

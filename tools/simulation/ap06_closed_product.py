@@ -127,6 +127,23 @@ class MemoryESS:
         return ((speeds[0]+speeds[1])/2, (speeds[1]-speeds[0])/.3845)
 
 
+def device_parameters(repo):
+    """Use the production source contracts at the simulated byte endpoints."""
+    common = {
+        'base_hardware': yaml.safe_load((repo/'src/base_hardware/config/base_hardware_params.yaml').read_text())['base_hardware'],
+        'hwt601_imu': yaml.safe_load((repo/'src/robot_state_estimation/config/hwt601_shadow.yaml').read_text())['hwt601_shadow_reader']}
+    common['base_hardware']['ros__parameters'].update(
+        dry_run=False, allow_rs485=True, publish_tf=False,
+        odom_topic='/fusion/hwt601/wheel_odom_raw', encoder_timing_recovery_enabled=True,
+        # The same existing publication mode qualified at the real LAB source.
+        # Native DDS can hold a writer's GIL during discovery/backpressure;
+        # acquisition must not share that pause. No sample is restamped.
+        isolate_feedback_output=True, feedback_output_cpu_affinity=[-1])
+    common['hwt601_imu']['ros__parameters'].update(
+        development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
+    return common
+
+
 class MemoryHWT:
     """FC03 byte endpoint; actual transport/CRC/deadline checks stay in use."""
     def __init__(self, world, bus, fault, **_kwargs):
@@ -727,14 +744,7 @@ def run(args):
         sys.setswitchinterval(.001)
         # Transport injection only: production nodes calculate their own health.
         # Construct supervisor independently of the plant/source interpreter.
-        common = {
-            'base_hardware': yaml.safe_load((args.repo/'src/base_hardware/config/base_hardware_params.yaml').read_text())['base_hardware'],
-            'hwt601_imu': yaml.safe_load((args.repo/'src/robot_state_estimation/config/hwt601_shadow.yaml').read_text())['hwt601_shadow_reader']}
-        b = common['base_hardware']['ros__parameters']
-        b.update(dry_run=False, allow_rs485=True, publish_tf=False,
-                 odom_topic='/fusion/hwt601/wheel_odom_raw', encoder_timing_recovery_enabled=True)
-        common['hwt601_imu']['ros__parameters'].update(
-            development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
+        common = device_parameters(args.repo)
         device_file = out/'device_params.yaml'
         device_file.write_text(yaml.safe_dump(common))
         context = multiprocessing.get_context('spawn')

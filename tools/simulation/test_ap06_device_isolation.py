@@ -14,7 +14,84 @@ from std_msgs.msg import String
 import yaml
 import pytest
 
-from ap06_closed_product import device_process, finite_sensor_process, require_isolation
+from ap06_closed_product import device_parameters, device_process, finite_sensor_process, require_isolation
+
+
+def block_one_state_publication():
+    """An actual native-call pause holds this writer's interpreter lock."""
+    from rclpy.publisher import Publisher
+    original = Publisher.publish
+    library = ctypes.PyDLL(None); library.usleep.argtypes = [ctypes.c_uint]
+    count = [0]
+    def publish(self, message):
+        if self.topic_name == '/base_hardware/state_json':
+            count[0] += 1
+            if count[0] == 12:
+                began = time.monotonic()
+                library.usleep(350_000)
+                ended = time.monotonic()
+                Path(os.environ['AP06_WRITER_PAUSE_EVIDENCE']).write_text(json.dumps(
+                    dict(pid=os.getpid(), begin=began, end=ended, duration_s=ended-began)))
+        return original(self, message)
+    Publisher.publish = publish
+
+
+def paused_output_worker(*args):
+    from base_hardware.encoder_publication import _send
+    block_one_state_publication()
+    _send(*args)
+
+
+def paused_publication_device(*args):
+    from base_hardware import encoder_publication
+    block_one_state_publication()
+    encoder_publication._send = paused_output_worker
+    device_process(*args)
+
+
+def test_configured_source_keeps_encoder_acquisition_during_actual_writer_pause(tmp_path, monkeypatch):
+    monkeypatch.setenv('AP06_SIMULATION', '1')
+    monkeypatch.setenv('ROS_DOMAIN_ID', '186')
+    pause_file = tmp_path/'writer_pause.json'
+    monkeypatch.setenv('AP06_WRITER_PAUSE_EVIDENCE', str(pause_file))
+    require_isolation()
+    root = Path(__file__).resolve().parents[2]
+    case = json.loads((root/'tools/simulation/ap06_product_scenarios.json').read_text())['positive'][2]
+    device_file = tmp_path/'devices.yaml'
+    device_file.write_text(yaml.safe_dump(device_parameters(root)))
+    context = multiprocessing.get_context('spawn')
+    telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0., 0., 0., 0.])
+    ready, halt = context.Event(), context.Event()
+    fault_value = context.Value('d', 0.)
+    source_cpu = sorted(os.sched_getaffinity(0))[-1]
+    source = context.Process(target=paused_publication_device, args=(case, tmp_path,
+        device_file, True, 2160, fault_value, telemetry, ready, halt, source_cpu))
+    states = []
+    rclpy.init(); node = Node('ap06_blocked_writer_regression')
+    executor = SingleThreadedExecutor(); executor.add_node(node)
+    node.create_subscription(String, '/base_hardware/state_json',
+        lambda m: states.append(json.loads(m.data)), 100)
+    try:
+        source.start(); deadline = time.monotonic()+20.
+        while len(states) < 50 and time.monotonic() < deadline:
+            executor.spin_once(timeout_sec=.02)
+        assert ready.is_set() and len(states) >= 50
+        assert all(s['encoder_feedback_ok'] for s in states)
+        assert all(s['encoder_timing_recovery']['first_timing_rejection'] is None for s in states)
+        assert all(s['encoder_sample_dt_s'] is None or s['encoder_sample_dt_s'] <= .18 for s in states)
+        assert states[-1]['feedback_output_isolated'] is True
+        pause = json.loads(pause_file.read_text())
+        assert pause['duration_s'] >= .35 and pause['pid'] != source.pid
+        # Delivery may really lose frames while blocked. No false continuity,
+        # rewritten measurement stamp or filled-in sample is claimed here.
+        assert states[-1]['encoder_position_left_u32'] == states[0]['encoder_position_left_u32']
+    finally:
+        halt.set()
+        if source.pid is not None:
+            source.join(5.)
+            if source.is_alive(): source.terminate(); source.join(2.)
+        executor.shutdown(timeout_sec=1.); node.destroy_node(); rclpy.shutdown()
+    assert source.exitcode == 0
 
 
 def paused_sensor_worker(*args):
@@ -36,12 +113,7 @@ def test_real_encoder_source_survives_supervisor_interpreter_pause(tmp_path, mon
     require_isolation()
     root = Path(__file__).resolve().parents[2]
     case = json.loads((root/'tools/simulation/ap06_product_scenarios.json').read_text())['positive'][2]
-    common = {
-        'base_hardware': yaml.safe_load((root/'src/base_hardware/config/base_hardware_params.yaml').read_text())['base_hardware'],
-        'hwt601_imu': yaml.safe_load((root/'src/robot_state_estimation/config/hwt601_shadow.yaml').read_text())['hwt601_shadow_reader']}
-    common['base_hardware']['ros__parameters'].update(dry_run=False, allow_rs485=True,
-        publish_tf=False, odom_topic='/fusion/hwt601/wheel_odom_raw', encoder_timing_recovery_enabled=True)
-    common['hwt601_imu']['ros__parameters'].update(development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
+    common = device_parameters(root)
     device_file = tmp_path/'devices.yaml'; device_file.write_text(yaml.safe_dump(common))
     context = multiprocessing.get_context('spawn')
     telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0., 0., 0., 0.])

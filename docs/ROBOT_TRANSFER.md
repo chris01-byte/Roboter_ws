@@ -1,5 +1,23 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – kompletter privater v6-Build, keine autonome Folgefahrt
+
+14 Pakete separat gebaut, 154 geprüfte Quelle-/Install-Dateien identisch,
+755 Installhashes, 2.715 vollständige Produktfälle bestanden. Ursprüngliche
+Gesamtmissionen A/B/C weiterhin 0/3; daher keine reale autonome Stufe 3/4
+gestartet. Begrenzte reale Komponentenqualifikation aus Punkt 1 bleibt erhalten,
+einschließlich Raw-Bag-Sichtlücke während der Translation. Rein lesende
+Nachprüfung um 23:33:59 UTC: gleiche Encoderpositionen, null RPM, RAM 100/400/5.
+Alle 1.048 geprüften Bestandsinstall-Dateien unverändert, Main sauber.
+
+Reines Prüfstanddelta nutzt nun die vorhandene real qualifizierte getrennte
+DDS-Ausgabe. Gemessene native Writerpause, tatsächlicher Rot/Grün-Gegenfall
+und 28 betroffene Quellen-/Isolationstests; keine Änderung des realen
+Produktinstallationsstands, des SDKs oder der Sensor-/Stopfristen. Gesamtmission
+und weitere Geometrie-/Auswahlkorrektur bleiben offen. Reale Artefakte bleiben
+privat. Rückfall: eigene private Runtime geordnet beenden, erhaltenen
+Bestandsinstall nutzen; keine dauerhafte Startkonfiguration geändert.
+
 ## 10.10.2026 – Folge 1–4: Encoderstart und Quellstatus, separate Komponentenprobe
 
 Bestandsinstall und Autostart bleiben erhalten. Neue private Overlays

@@ -1,6 +1,59 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Folge 1–4: Komponenten positiv, Gesamtmission weiter offen
+## 11.10.2026 – Folge 1–4: v6 geprüft, DDS-Pause im Prüfstand getrennt
+
+Punkt 1 bleibt als begrenzte reale Anfahr-/Bremsqualifikation positiv beendet;
+kein autonomer Realnachweis daraus. Punkt 2: vollständiger separater Build
+`ap06-qualified-v6-20261011`, Produktquelle `cdf95b6`, 14 Pakete in 2 min 50 s,
+154 geprüfte Produktdateien Quelle/Install identisch und 755 Installhashes.
+Alle 2.715 Fälle der vollständigen Produktprüfung ohne Fehler/Skip bestanden.
+Bestandsmain sauber, alle 1.048 geprüften Bestandsinstall-Dateien unverändert;
+letzte zusätzliche FC03-Prüfung um 23:33:59 UTC ohne Positionsänderung,
+beide RPM null, RAM 100/400/5. Kein Autostart-/OS-/SDK-Wechsel.
+
+Die drei ursprünglichen Gesamtmissionen mit unveränderter Welt, Startpose,
+Sensorprofil und Budgets bleiben **0/3**: A 0,294290 m, eine Ankunft und eine
+echte neue Beobachtung; B scheitert bereits an Scope-/HWT-Bereitschaft;
+C 0,707064 m, eine Ankunft und eine neue Beobachtung. A und C enden später
+an `frontier_candidate_processing_budget_exhausted`; C unterbricht vorher
+zweimal wegen eines nach Verarbeitung veralteten Radsnapshots. Alle Strecken
+dieses Absatzes sind gerätefreie Simulation, keine neue physische Fahrt.
+Kein Fall räumt die Passage samt Heck; keine Gesamt- oder Kundenabnahme.
+
+Zusätzliche, ausdrücklich nicht qualifizierende Diagnose: 307–314 ms lange
+Quellenpause bei nur 24–31 ms Prozess-CPU. Drei aufeinanderfolgende native
+Thread-Aufzeichnungen zeigen die Basis in `rclpy.publisher.publish` beim
+Statusschreiben, gleichzeitig stehen IMU-/Plant-Verarbeitung. Mit dem bereits
+real qualifizierten vorhandenen `isolate_feedback_output`-Pfad verschwindet
+diese lange Erfassungspause und die Missionsphase wird erreicht; separate
+Geometrie-/Auswahlfehler bleiben. Der Prüfstand verwendet diesen vorhandenen
+Produktpfad nun ebenfalls, mit geerbter CPU-Affinität innerhalb seiner
+gerätefreien Namespace-Grenze. Keine neue Transportimplementierung, keine
+Stempel-/Frische-/Kontinuitätsänderung oder erfundene Zwischenprobe.
+
+Gezielter tatsächlicher DDS-Schreibergegenfall: native 350-ms-Pause mit
+gehaltenem Interpreterlock. Alter Prüfstand verwirft Encoderproben; korrigierter
+Pfad erhält gültige Erfassung und unveränderte Positionen. Rot/Grün separat
+erhalten, Grün 1/1; alle 28 betroffenen Quellen-/Isolation-/Welt-/Trace-/
+Lifecycle-Fälle bestanden. Die gefrorenen Produktdateien des v6-Builds bleiben
+unverändert. Ein neuer ursprünglicher Gesamtvergleich nach diesem reinen
+Prüfstanddelta ist noch offen; Diagnosefahrten zählen nicht als Positivfall.
+
+Punkt 3 (regulärer autonomer Realstart) und Punkt 4 (erweiterte reale Abnahmen)
+stehen weiter aus, bis Punkt 2 bestanden ist. Bekannte physische LAB-Kontur
+nach gemessenem Fahrversatz neu binden, niemals umzentrieren. Weitere reale
+Passage-/Drei-Bereich-Geometrie und natives Apple-Ziel sind noch nicht belegt;
+einmalige konkrete Rückfragen stehen aus. LAB-1 und erneute Nutzerfreigabe
+gelten weiterhin, keine neue allgemeine Freigaberunde.
+
+**Genau nächster technischer Schritt:** teure Geometrie-/Folgeauswahl am
+gesicherten tatsächlichen Fehlpfad messen und gezielt korrigieren, dann den
+unveränderten ursprünglichen A/B/C-Vergleich bestehen und die beauftragten
+realen Schritte 3/4 fortsetzen. Rückfall: eigenes privates Overlay geordnet
+beenden; Bestandsinstallation erhalten. Prüfstanddelta gezielt rücknehmbar.
+Private Originale und Rot/Grün: `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
+
+## Historischer v5-Zwischenstand vom 11.10.2026
 
 Punkt 1 bleibt als begrenzte reale Anfahr-/Bremsqualifikation beendet, mit
 Positionsencodern, tatsächlichen FC03/FC06-Belegen und unabhängigem LiDAR-Vergleich.
