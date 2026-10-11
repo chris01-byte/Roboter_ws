@@ -3,6 +3,7 @@ import math
 import time
 import threading
 from dataclasses import replace
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -80,11 +81,20 @@ def test_actual_a54_short_view_precedes_unproved_distant_approach_work():
 
 
 @pytest.mark.parametrize('name', ['ap06_a53_selection', 'ap06_a54_selection', 'ap06_a55_selection'])
-def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
+def test_public_view_does_not_require_private_ledger_epoch_expiry(name, monkeypatch):
+    from explore import metric_frontier_runtime
     from explore.metric_frontier import StartEgressEvidence
     node, inputs, metadata = fixture(name)
+    # This case proves geometry/history, not host scheduling. A55 can consume
+    # the complete two-second optional allocation before reaching its proved
+    # view. Keep decision time fixed only in this component test; the real
+    # deadline and slow-work rejection are exercised separately below.
+    now = time.monotonic()
+    monkeypatch.setattr(metric_frontier_runtime, 'time', SimpleNamespace(
+        monotonic=lambda: now, time=time.time, sleep=time.sleep,
+        thread_time=time.thread_time))
     state = metadata['checkpoint']
-    policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+    policy, _ = restore_policy(state, now, state['saved_wall_time'])
     # Public current body, invalid private ledger with no current exemptions:
     # this is the actual A53-55 state boundary, not a reconstruction of the
     # historical first inventory. Failure of the private monotone permission
@@ -121,3 +131,40 @@ def test_public_view_does_not_require_private_ledger_epoch_expiry(name):
     assert before == {k: (a.tries, a.failures, a.completed)
                       for k, a in policy.attempts.items() if k in before}
     assert node._metric_waypoints_clear(inputs, candidates[0].route, candidates[0].yaw) is not None
+
+
+def test_public_observation_real_processing_preserves_original_deadline():
+    """Actual work/pause consumes the unchanged budget; no clock is controlled."""
+    node, inputs, metadata = fixture('ap06_a55_selection')
+    from explore.metric_frontier import StartEgressEvidence
+    node._metric_egress_expired = node._metric_body_anchor_expired = False
+    evidence = []
+    for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
+        item = StartEgressEvidence.capture(grid,
+            np.asarray(grid.data).reshape(allowed.shape), allowed,
+            np.ones_like(allowed), inputs[2], node._metric_bounds, node._world_to_grid)
+        assert not item.unknown.any()
+        item.valid = False
+        item.reason = 'start_egress_approaches_unknown'
+        evidence.append(item)
+    node._metric_egress = tuple(evidence)
+    node._metric_egress_identity = (inputs[1].context,
+        tuple(node._metric_grid_geometry(g) for g in (inputs[0], inputs[5])))
+    state = metadata['checkpoint']
+    policy, _ = restore_policy(state, time.monotonic(), state['saved_wall_time'])
+    original_route = node._metric_route
+    calls = []
+    def delayed_route(*args, **kwargs):
+        if not calls:
+            time.sleep(2.05)  # a real processing interruption, not a fresh stamp
+        calls.append(time.monotonic())
+        return original_route(*args, **kwargs)
+    node._metric_route = delayed_route
+    began = time.monotonic()
+    candidates = node._metric_select(inputs, policy, .3)
+    elapsed = time.monotonic()-began
+    assert calls and 2.05 <= elapsed <= node._metric_candidate_budget()
+    budget = node._metric_status['candidate_optional_geometry']
+    assert budget['allocation_s'] == 2. and budget['remaining_s'] == 0.
+    assert not node._frontier_rank_stats.get('bounded_public_observation')
+    assert all(candidate.requires_nav2_plan for candidate in candidates)
