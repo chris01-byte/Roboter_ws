@@ -288,11 +288,30 @@ wiederholte reine Inhaltsprüfungen werden gezielt reduziert und auf echte
 Änderungen an Raster/Referenz/Scope/Kontur geprüft. Originale Frischegrenzen,
 CPU-Zuteilungen, 5-s-Auswahlbudget und Missionskriterien unverändert.
 
-**Genau nächster Schritt:** reine Inhaltsarbeit fertig prüfen, Korrekturen
-als gemeinsamen sauberen v17 bauen, volle Regression und ursprüngliche
-A/B/C/Cancel/HOLD ausführen. Volle Wiederaufnahme und reale Folge separat
-belegen. Keine neue reale Sensor-/Bewegungsabnahme und keine Kundenfreigabe.
-Rückfall begrenzte eigene Commits revertieren bzw. privates Overlay abwählen.
+Schritt 3: tatsächliche adaptive Auswahl liest im aufgezeichneten synthetischen
+B-Gegenfall noch 1.828-mal Rasterinhalte für wiederholte Bindung. Derselbe echte
+Aufruf ist vor Korrektur am Arbeitszähler negativ. Jetzt teilen nur die reinen
+Kandidaten desselben Threads/derselben Auswahl die vollständig geprüfte
+Inhaltsbindung; vor Rückgabe vollständiger erneuter Audit ohne Cache. Raster,
+Masken, Referenz, Bewegung, Egressgeneration/-gültigkeit, Kontur/Scope und
+Geometrieparameter geändert: gesamte Auswahl verworfen. Bei Ausnahme Gruppe
+und Memo freigegeben; nächste Auswahl frisch. Kein Gesundheits-, Routen- oder
+Fahrrechtcache. **176 betroffene Prüfungen positiv**, zusätzlich erster
+87-Fall-Vergleich positiv; Mengen überlappen. Drei native Vergleiche unter
+unveränderter künstlicher 320-Hz-DDS-Last: 1.828 → 16 Inhaltsreads, median
+3,908911 → 3,264769 s Wandzeit und 2,396170 → 1,997462 s Auswahl-CPU.
+Ziel/90 Punkte/Evidenzhash gleich. Während Auswahl erzeugte Nachrichten p95
+29,664–40,157 ms davor bzw. 34,209–42,881 ms danach, Maximum danach 104,589 ms.
+Kein daraus abgeleiteter Produktquellen-, Missions- oder Realgesundheitsbeleg.
+Executor, ursprüngliche Budgets und Schutzprüfungen unverändert.
+[Gegenfall, exakte Vergleiche und Rückfall](evidence/ap06-candidate-pass-binding-20261011.json).
+
+**Genau nächster Schritt:** sauberen gemeinsamen v17 aus beiden gezielten
+Korrekturen bauen, volle Regression und ursprüngliche A/B/C/Cancel/HOLD
+unverändert ausführen. Volle Wiederaufnahme und reale Folge separat belegen.
+Aktueller vollständiger Qualifikationsstand bleibt v16 mit 0/3; keine neue
+reale Sensor-/Bewegungsabnahme oder Kundenfreigabe. Rückfall begrenzte eigene
+Commits revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

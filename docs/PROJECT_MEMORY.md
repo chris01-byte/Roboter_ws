@@ -1163,3 +1163,15 @@ positiv. 1-ms-Executor-Yield wegen verzögerter aktueller Nachrichtenzustellung
 verworfen, Null-Yield ohne Gewinn verworfen. Keine Realfahrt oder gemessene
 gemeinsame Fehlerursache. Weitere reine Rechenarbeit wird geprüft; gemeinsamer
 v17 folgt. Rückfall eigener Klassifizierungscommit/privates Overlay abwählen.
+
+## 11.10.2026 – AP-06 reine Inhaltsbindung innerhalb einer Auswahl
+
+Echter aufgezeichneter synthetischer adaptiver Aufruf vor Änderung 1.828
+Rasterinhaltsreads, Gegenfall rot. Reine Auswahl teilt die genaue Bindung,
+vollständiger frischer Audit vor Rückgabe; geänderte Eingaben/Parameter
+verwerfen alle Vorschläge, Ausnahme gibt Memo/Gruppe frei. 176 betroffene
+Tests positiv. Drei native Paare unter gleicher künstlicher DDS-Last: median
+3,909→3,265 s, CPU 2,396→1,997 s, 16 Reads, identische Auswahl/90 Punkte/Hash.
+Keine gespeicherte Gesundheit/Fahrfreigabe oder neue Budgets. Keine zusätzliche
+Executor-Pause. Gemeinsamer v17 folgt, aktuelle vollständige Missionen 0/3.
+Rückfall eigener Performancecommit/Overlay-Abwahl; exakte Belege WE-STATUS.

@@ -3436,3 +3436,13 @@ Alle 1.048 Bestandsinstallhashes gleich, Main 23928d9 sauber. Reiner nativer
 Queryfehler bleibt geometrisch abgelehnt, nun begrenzter Vorschlag; 193 Tests.
 Keine Aktoraktivierung/Install-/Autostart-/SDKänderung oder Shutdown. Privates
 Overlay bleibt Rückfall; neue gemeinsame Prüfung nach Rechenarbeitskorrektur.
+
+## 11.10.2026 – AP-06 v17 für gemeinsame Prüfung vorbereitet
+
+Nur reine Inhaltsbindungsarbeit im Explorer reduziert, auf diesem ARM64-
+Jetson mit echtem unverändertem Nativkern und künstlicher DDS-Last vermessen.
+176 betroffene Fälle positiv; gemeinsame Build-/Originalprüfung noch offen.
+Kein Aktorstart/Bestandsinstall-/Autostart-/SDKwechsel oder Shutdown. Keine
+Produktfrische aus künstlicher Last behauptet; Realsensoren vor der späteren
+qualifizierten Folge frisch binden. Rückfall eigener begrenzter Commit oder
+privates Overlay abwählen. Aktueller gemeinsamer Stand weiterhin v16/0 von 3.

@@ -922,7 +922,7 @@ class MetricFrontierRuntime:
             return None, None
         group = getattr(self._metric_selection_cache, 'route_proof_group', None)
         if group is not None and group[0] is memo:
-            return group  # the owning pure route audits all contents before return
+            return group  # the owning pure geometry pass audits contents before return
         grids = []
         for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
             try:
@@ -2339,6 +2339,8 @@ class MetricFrontierRuntime:
         if cache is None:
             cache = self._metric_selection_cache = threading.local()
         previous = getattr(cache, 'memo', None)
+        previous_group = getattr(cache, 'route_proof_group', None)
+        cache.route_proof_group = None
         owner = cache.memo = {'inputs': inputs, 'policy': getattr(cache, 'policy', None),
                              'optional_geometry_remaining_s': 2.,
                              'optional_geometry_elapsed_s': 0.}
@@ -2349,6 +2351,7 @@ class MetricFrontierRuntime:
                 self._metric_status['candidate_optional_geometry'] = dict(
                     allocation_s=2., elapsed_s=owner['optional_geometry_elapsed_s'],
                     remaining_s=owner['optional_geometry_remaining_s'])
+            cache.route_proof_group = previous_group
             cache.memo = previous
 
     def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):
@@ -2406,7 +2409,12 @@ class MetricFrontierRuntime:
             if memo is not None:
                 memo['inputs'] = inputs
         search_mask=self._metric_seed_mask(inputs)
-        initial_evidence = self._metric_selection_memo(inputs)[1]
+        memo, initial_evidence = self._metric_selection_memo(inputs)
+        if memo is not None:
+            # Pure candidates share the current complete content binding.
+            # No proposal can leave this pass until a fresh full audit below;
+            # health, native plans and motion dispatch are never cached here.
+            self._metric_selection_cache.route_proof_group = (memo, initial_evidence)
         def potentially_within_limits(goal, *, allow_cooldown=False):
             # History limits cannot be repaired by an expensive route/view
             # calculation. This is only a necessary read-only prefilter;
@@ -2760,6 +2768,8 @@ class MetricFrontierRuntime:
                     break
         if time.monotonic()-selection_started > self._metric_candidate_budget():
             raise ValueError('frontier_candidate_processing_budget_exhausted')
+        if memo is not None:
+            self._metric_selection_cache.route_proof_group = None
         if self._metric_selection_memo(inputs)[1] != initial_evidence:
             raise ValueError('frontier_evidence_changed_during_processing')
         candidates.sort(key=lambda candidate:(candidate.cost,candidate.frontier_xy))
