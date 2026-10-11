@@ -1,5 +1,29 @@
 # Aktueller Agentenauftrag: AP-06
 
+## Aktiver Nutzerauftrag 11.10.2026 – LAB-Slots und selbstständige Wiederprüfung
+
+Der Nutzer beauftragt ausdrücklich die besprochene Slot-Strategie: einmaliger
+360°-LAB-Start ohne vorgeschaltete Kartenflächen-/Frontierfreigabe, danach
+bestätigter Halt → konsistente Beobachtung/Planung → ein Nav2-Ziel → Halt.
+Sensoren, SLAM, Positionsmessung und letzte Hindernisreaktion laufen weiter.
+Vorübergehende Kartenjoins, Einzelzielblockaden und Quellenlücken erhalten den
+Auftrag bei angehaltenem Roboter für begrenzte echte Wiederprüfung/Alternativen.
+Keine automatische Rücksetzung von Not-Aus, Nutzerabbruch, Encoder-Faults oder
+HWT-Terminalzuständen. Rücksetzen betrifft ausschließlich verwerfbare Pläne.
+
+Istbasis `8d72876` (Produkt `51f8e862`), eigener Branch
+`feature/ap06-lab-slots`, MASTERPLAN v1.5; WE-M0/M3/M4/M5/M6, getrennt WE-M7.
+Ein Explorer und ein Nav2-Kind; vorhandene Fahrer, Quellen und Kontur erhalten.
+Originale Szenarien/Abnahmen und absolute Missions-/Kindbudgets bleiben gleich.
+Softwareprüfung mit echten Elternabläufen, Build/Installbindung und soweit
+ausführbar ursprünglichen geschlossenen Fällen. Reale Fahrt/Jetson-Installation
+nur als ausgeführt berichten, wenn technisch tatsächlich nachgewiesen.
+Rückfall nach Halt: `execution_mode:=continuous`; bisheriger Kandidat unverändert
+im eigenen Worktree. Kein OS-/Geräteneustart, keine falschen Frischezeiten,
+kein blindes Rückwärtsfahren. Tür-/Raum-IDs bleiben ergänzendes Gedächtnis.
+
+Die folgenden Aufträge und Planstände sind Historie dieses AP-06.
+
 ## Aktuelle Ergänzung vom 11.10.2026 – sensorüberwachter Start
 
 Der neue ausdrückliche Nutzerauftrag verlangt Softwareumsetzung: unbekannte

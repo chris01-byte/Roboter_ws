@@ -63,11 +63,15 @@ def test_one_mapping_policy_matches_explorer_planner_and_final_brake(monkeypatch
 
     explorer_args = next(args for args in includes if 'unknown_space_policy' in args)
     assert value(context, explorer_args['unknown_space_policy']) == policy
+    expected_mode='lab_slots' if policy=='sensor_guarded' else 'continuous'
+    assert value(context, explorer_args['execution_mode']) == expected_mode
     exploration = description(monkeypatch, 'explore', 'explore.launch.py', context)
     node = next(action for action in exploration.entities if isinstance(action, Node))
     files = evaluate_parameters(context, node._Node__parameters)
     motion = yaml.safe_load(files[2].read_text())['explore_node']['ros__parameters']
     assert motion['metric_unknown_space_policy'] == policy
+    slots = yaml.safe_load(files[3].read_text())['explore_node']['ros__parameters']
+    assert slots['metric_execution_mode']==expected_mode
     if policy == 'sensor_guarded':
         assert motion['metric_start_strategy'] == 'sensor_scan_first'
         assert not motion['metric_self_body_enabled'] and not motion['metric_start_egress_enabled']
@@ -81,5 +85,21 @@ def test_app_forwards_motion_policy_without_enabling_drive(monkeypatch):
                 if isinstance(action, IncludeLaunchDescription)
                 and 'unknown_space_policy' in dict(action.launch_arguments))
     assert value(context, args['unknown_space_policy']) == 'sensor_guarded'
+    assert value(context, args['execution_mode']) == 'lab_slots'
     assert value(context, args['active_drive']) == 'false'
     assert value(context, args['enable_auto_explore']) == 'false'
+
+
+def test_explicit_continuous_fallback_is_forwarded_and_keeps_sensor_brakes(monkeypatch):
+    context=LaunchContext()
+    context.launch_configurations.update(unknown_space_policy='sensor_guarded',execution_mode='continuous')
+    app=description(monkeypatch,'robot_bringup','app_mapping.launch.py',context)
+    args=next(dict(action.launch_arguments) for action in app.entities
+              if isinstance(action,IncludeLaunchDescription)
+              and 'execution_mode' in dict(action.launch_arguments))
+    assert value(context,args['execution_mode'])=='continuous'
+    exploration=description(monkeypatch,'explore','explore.launch.py',context)
+    node=next(action for action in exploration.entities if isinstance(action,Node))
+    files=evaluate_parameters(context,node._Node__parameters)
+    assert yaml.safe_load(files[2].read_text())['explore_node']['ros__parameters']['metric_unknown_space_policy']=='sensor_guarded'
+    assert yaml.safe_load(files[3].read_text())['explore_node']['ros__parameters']['metric_execution_mode']=='continuous'

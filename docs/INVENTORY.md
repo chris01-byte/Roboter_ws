@@ -1,5 +1,11 @@
 # Inventar
 
+**LAB-Softwareentscheidung 11.10.2026:** MASTERPLAN v1.5 ergänzt AP-06 um
+Beobachtungs-/Fahrslots und begrenzte Wiederprüfung im vorhandenen Explorer.
+[Ablauf](wohnungserkundung/LAB_SLOTS.md); ausgeführter Build, Präfixe und reale
+Abnahme ausschließlich im [aktuellen WE-Status](wohnungserkundung/STATUS.md).
+Diese Entscheidung verändert weder Hardwareinventar noch Installstand rückwirkend.
+
 **Hardwarestand:** 17.08.2026 · Erfasst auf dem Jetson (`~/roboter_ws`)
 **Softwaredelta:** 27.09.2026 · `feature/parity-reset` enthält den real
 bewährten Mehrraum-Scan-/Portalpfad und kanalgetrennte VL53-Recovery; ein

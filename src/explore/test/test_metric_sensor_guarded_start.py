@@ -167,6 +167,7 @@ def test_actual_ros_node_loads_new_policy_and_keeps_it_readonly():
     from test_metric_frontier import require_isolated_ros
     require_isolated_ros()
     values = dict(exploration_strategy='metric_frontier',
+        metric_execution_mode='lab_slots',
         metric_unknown_space_policy='sensor_guarded', metric_start_strategy='sensor_scan_first',
         metric_self_body_enabled=False, metric_start_egress_enabled=False,
         wohnungserkundung_accessible_scope_verified=True, wohnungserkundung_scope_id='scope-test',
@@ -182,6 +183,8 @@ def test_actual_ros_node_loads_new_policy_and_keeps_it_readonly():
         assert node._metric_sensor_guarded()
         result = node.set_parameters([Parameter('metric_unknown_space_policy', value='observed_only')])
         assert not result[0].successful and node._metric_sensor_guarded()
+        result = node.set_parameters([Parameter('metric_execution_mode', value='continuous')])
+        assert not result[0].successful and node._metric_execution_mode=='lab_slots'
     finally:
         if node is not None:
             node.destroy_node()

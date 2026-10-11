@@ -89,6 +89,19 @@ class MetricFrontierRuntime:
             ParameterDescriptor(read_only=True)).value
         if self._metric_unknown_space_policy not in ('observed_only', 'sensor_guarded'):
             raise ValueError('Unknown metric_unknown_space_policy')
+        self._metric_execution_mode = self.declare_parameter(
+            'metric_execution_mode', 'continuous', ParameterDescriptor(read_only=True)).value
+        if self._metric_execution_mode not in ('continuous', 'lab_slots'):
+            raise ValueError('Unknown metric_execution_mode')
+        if self._metric_execution_mode == 'lab_slots' and not self._metric_sensor_guarded():
+            raise ValueError('lab_slots requires sensor_guarded and the matched LAB mapping stack')
+        if (self._metric_execution_mode == 'lab_slots' and (not self._initial_scan_enabled
+                or abs(self._initial_scan_angle-2*math.pi)>1e-9)):
+            raise ValueError('lab_slots requires an enabled full 360 degree initial scan')
+        self._metric_slot_recovery_timeout_s = float(self.declare_parameter(
+            'metric_slot_recovery_timeout_s', 30., ParameterDescriptor(read_only=True)).value)
+        if not math.isfinite(self._metric_slot_recovery_timeout_s) or not 0<self._metric_slot_recovery_timeout_s<=60.:
+            raise ValueError('metric slot recovery needs a bounded 0..60 second stop window')
         if self._metric_start_strategy == 'sensor_scan_first' and not self._metric_sensor_guarded():
             raise ValueError('sensor_scan_first requires sensor_guarded planning')
         self._metric_candidate_source = self.declare_parameter(
@@ -1627,6 +1640,7 @@ class MetricFrontierRuntime:
         return checker(inputs, tuple(route), target.yaw, native_plan=True)
 
     def _metric_controller_contract(self, stop_requested):
+        self._metric_controller_contract_reason = 'nav2_controller_geometry_contract_invalid'
         expected = {'FollowPath.use_rotate_to_heading':True,
             'FollowPath.rotate_to_heading_min_angle':.35,'FollowPath.lookahead_dist':.4,
             'FollowPath.use_velocity_scaled_lookahead_dist':False,
@@ -1644,6 +1658,7 @@ class MetricFrontierRuntime:
                 'FollowPath.rotate_to_heading_angular_vel':.2,'FollowPath.max_angular_accel':2.})
         client = self._metric_controller_params
         if not client.wait_for_service(timeout_sec=1.0):
+            self._metric_controller_contract_reason = 'nav2_controller_parameters_unavailable'
             return False
         request = GetParameters.Request()
         request.names = list(expected)
@@ -1654,6 +1669,7 @@ class MetricFrontierRuntime:
                 return False
             time.sleep(.02)
         if not future.done():
+            self._metric_controller_contract_reason = 'nav2_controller_parameters_timeout'
             return False
         try:
             values = future.result().values
@@ -1684,7 +1700,9 @@ class MetricFrontierRuntime:
             return stop_requested() or not self._metric_work_is_current(context)
         # Bind the correction envelope to actual RPP parameters before motion.
         if not self._metric_controller_contract(stopped):
-            return None, 'nav2_controller_geometry_contract_invalid'
+            return None, (self._metric_controller_contract_reason
+                if getattr(self,'_metric_execution_mode','continuous')=='lab_slots'
+                else 'nav2_controller_geometry_contract_invalid')
         # Planner action reads geometry; only existing NavigateToPose owns motion.
         if not self._metric_planner.wait_for_server(timeout_sec=2.0):
             return None, 'nav2_planner_unavailable'
@@ -2755,7 +2773,8 @@ class MetricFrontierRuntime:
                 candidate.fingerprint,local,observation_points=candidate.observation_points)
         if (policy is not None and live_view and not public_deferred and not private_deferred
                 and not any(eligible_original(candidate) for candidate in candidates)
-                and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                and (getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
+                     or getattr(self, '_metric_execution_mode', 'continuous') == 'lab_slots')
                 and all(footprint_clear(*pose,g,allowed,self._world_to_grid,
                     self._grid_to_world,self._metric_bounds,
                     heading_half_angle=.05,center_deviation_m=.02)
@@ -2966,6 +2985,9 @@ class MetricFrontierRuntime:
         del history[:-40]
 
     def _execute_metric_frontier(self, goal_handle, overall_timeout, min_frontier):
+        if getattr(self, '_metric_execution_mode', 'continuous') == 'lab_slots':
+            from .lab_slots_runtime import execute_lab_slots
+            return execute_lab_slots(self, goal_handle, overall_timeout, min_frontier)
         result = ExploreArea.Result()
         overall_timeout = min(overall_timeout,self._overall_timeout_s)
         self._coverage_complete = False

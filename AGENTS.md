@@ -5,7 +5,7 @@ arbeitet. Vor der ersten Änderung lesen: diese Datei, `docs/PROJECT_MEMORY.md`,
 `docs/INVENTORY.md`.
 
 **Für Wohnungserkundung zusätzlich zuerst:**
-[MASTERPLAN v1.4](docs/wohnungserkundung/MASTERPLAN.md),
+[MASTERPLAN v1.5](docs/wohnungserkundung/MASTERPLAN.md),
 [aktueller WE-Status](docs/wohnungserkundung/STATUS.md) und
 [aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Der Masterplan legt den Arbeitsrahmen fest; alte Chat-Prompts und archivierte
@@ -171,14 +171,19 @@ gemessene Evidenz mit Zahlen.
 Bei Arbeiten an Wohnungserkundung, Sensor-/Fahrintegration, Recovery,
 Portal-/Raumgedächtnis oder Erkundungsabschluss vor jeder Änderung lesen:
 
-1. [Masterplan v1.4: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
+1. [Masterplan v1.5: robuste metrische Wohnungserkundung](docs/wohnungserkundung/MASTERPLAN.md)
 2. [Einziger aktueller WE-Iststand](docs/wohnungserkundung/STATUS.md)
 3. [Aktueller Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md)
 4. [Gesamtstrategie](docs/WOHNUNGSERKUNDUNG_STRATEGIE.md) und betroffene
    [Meilensteine/Abnahmen](docs/wohnungserkundung/MEILENSTEINE.md)
 
 Verbindliche Grundentscheidung: **wiederverwenden und gezielt entkoppeln statt
-komplett neu schreiben**. MASTERPLAN v1.4 ordnet AP-01 → AP-06 innerhalb der bestehenden WE-Meilensteine.
+komplett neu schreiben**. MASTERPLAN v1.5 ordnet AP-01 → AP-06 innerhalb der bestehenden WE-Meilensteine.
+Der ausdrückliche LAB-Slotauftrag vom 11.10.2026 ist unter AP-06 eingeordnet:
+360°-Start ohne vorgeschalteten Kartenpixelbeweis, Beobachtung/Planung im Halt,
+ein Nav2-Kind und begrenzte Wiederprüfung. Sensoren/Schutzkette laufen weiter;
+keine Frische-, Budget- oder Fehlerzustände zurücksetzen. Der bisherige Ablauf
+bleibt als ausdrücklich gewählter Rückfall erhalten.
 AP-04 erlaubt den begrenzten Vergleich und die geprüfte Integration eines externen
 Frontier-Kerns als Kandidatenlieferant; ein kompletter Fremdstack bleibt ausgeschlossen.
 AP-06 ist nach ausdrücklichem Nutzerauftrag aktiv: zuerst geschlossene Gesamtsoftwareprüfung,

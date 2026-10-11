@@ -26,6 +26,7 @@ def generate_launch_description():
         get_package_share_directory('vl53_near_field'), 'config',
         'collision_monitor_mapping_params.yaml')
     unknown_space_policy = LaunchConfiguration('unknown_space_policy')
+    execution_mode = LaunchConfiguration('execution_mode')
     motion_params = PythonExpression([
         "'", os.path.join(nav_pkg, 'config', 'nav2_sensor_guarded_mapping_params.yaml'),
         "' if '", unknown_space_policy, "' == 'sensor_guarded' else '", params, "'"])
@@ -140,6 +141,9 @@ def generate_launch_description():
             choices=['observed_only', 'sensor_guarded'],
             description='Unbekannte Zellen erkunden, mit LiDAR/VL53-Bremse; '
                         'observed_only stellt das bisherige Verhalten wieder her.'),
+        DeclareLaunchArgument('execution_mode', default_value=PythonExpression([
+            "'lab_slots' if '", unknown_space_policy, "' == 'sensor_guarded' else 'continuous'"]),
+            choices=['continuous', 'lab_slots'], description='LAB-Slots oder bisheriger Ablauf.'),
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
@@ -227,6 +231,7 @@ def generate_launch_description():
             launch_arguments={
                 'explore_params_overlay': explore_params_overlay,
                 'unknown_space_policy': unknown_space_policy,
+                'execution_mode': execution_mode,
                 'require_hwt601_fusion': use_hwt601_odometry,
                 'hwt601_active_drive': active_drive,
                 'hwt_development_contract': hwt_development_contract,

@@ -444,6 +444,8 @@ def main(argv=None):
     parser.add_argument('--timeout', type=float, default=15.)
     parser.add_argument('--unknown-space-policy', choices=('observed_only', 'sensor_guarded'),
         default='sensor_guarded', help='same policy as the running app_mapping stack; printed launch only')
+    parser.add_argument('--execution-mode', choices=('continuous', 'lab_slots'),
+        help='same workflow as the mapping stack; default follows unknown-space policy')
     parser.add_argument('--maximum-cells', type=int, default=None,
         help='Explicit processing capacity copied into the bound profile; no resampling or geometry changes')
     parser.add_argument('--map-owner', default='/slam_toolbox')
@@ -480,6 +482,7 @@ def main(argv=None):
     print('Snapshotbindung: Explorer muss beim ersten Kartenempfang denselben Fingerprint erhalten; bei Änderung neu binden.')
     print(shlex.join(['ros2', 'launch', 'explore', 'explore.launch.py', 'explore_params_overlay:='+str(output),
         'unknown_space_policy:='+args.unknown_space_policy,
+        'execution_mode:='+(args.execution_mode or ('lab_slots' if args.unknown_space_policy=='sensor_guarded' else 'continuous')),
         'require_hwt601_fusion:=true', 'hwt601_active_drive:=false', 'hwt_development_contract:=true']))
     return 0
 

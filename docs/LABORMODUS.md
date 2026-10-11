@@ -8,6 +8,16 @@ Agenten sollen einen beauftragten Laborumfang selbstständig durcharbeiten,
 statt für unveränderte Bedingungen wiederholt dieselben Freigaben anzufragen.
 Die Regel gilt auch bei Agentenwechsel; sie ist keine neue Roadmap.
 
+**Nutzerpräzisierung 11.10.2026:** Im bereits erklärten LAB-1-Bereich ist die
+anfängliche volle 360°-Beobachtung grundsätzlich erlaubt. Dafür keine freien
+Kartenpixel, Tür-/Raum-IDs, Frontierauswahl oder neue Standardfreigabe verlangen.
+Die [Slot-Strategie](wohnungserkundung/LAB_SLOTS.md) verwendet danach bestätigten
+Stillstand für Beobachtung/Zielwahl und die vorhandene Schutzkette für die Fahrt.
+Sensoren bleiben durchgehend aktiv; normale Planungsfehlschläge und kurze
+Quellenlücken dürfen sich innerhalb der ursprünglichen Budgets neu prüfen.
+Physische Hindernis-/Not-Aus-/Antriebs-/HWT-Fehler und die freigegebene
+Bereichsgrenze bleiben wirksam. Kundenmodus und reale Wirkung getrennt abnehmen.
+
 ## 1. Geltung und bereits erklärte Rahmenbedingungen
 
 Für den jeweils ausdrücklich beauftragten, abgegrenzten Laborumfang gelten

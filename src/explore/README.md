@@ -1,5 +1,21 @@
 # explore – Frontier- und adaptive Flaechenexploration
 
+## Aktueller LAB-Ablauf
+
+`metric_execution_mode:=lab_slots` mit `metric_unknown_space_policy:=sensor_guarded`
+verwendet die [Slot-Strategie](../../docs/wohnungserkundung/LAB_SLOTS.md):
+gemessener 360°-Start ohne Kartenpixel-/Frontierfreigabe, danach Halt → beobachten
+und planen → genau ein Nav2-Kind → bestätigter Halt. Aufwendige Kartenauswertung
+bleibt im Stillstand; aktuelle Sensoren und die bestehende Schutzkette laufen
+auch während der Fahrt weiter. Normale Fehlschläge führen zu geprüften
+Alternativen, kurze Quellenlücken zur begrenzten Wiederprüfung derselben Aufgabe.
+Zeitbudgets, Fehlversuchshistorie und technische Fehler werden nicht zurückgesetzt.
+Launches verwenden `execution_mode`; beim Knoten heißt der Parameter
+`metric_execution_mode`. `continuous` erhält den vorherigen Ablauf.
+
+Die folgende allgemeine Beschreibung umfasst außerdem die historischen
+adaptiven/semantischen Modi; diese sind keine Voraussetzung des LAB-Slotmodus.
+
 Lässt den Roboter die Wohnung **selbstständig und zielgerichtet** erkunden –
 **kein Zufallsgenerator**. Nach einem kontrollierten 360-Grad-Rundblick sucht
 der Node zuerst Grenzen zwischen bekannt-freiem und unbekanntem Raum. Sind

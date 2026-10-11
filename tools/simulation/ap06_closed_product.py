@@ -679,6 +679,9 @@ def run(args):
     manifest_path = args.manifest
     manifest = json.loads(manifest_path.read_text())
     unknown_space_policy = getattr(args, 'unknown_space_policy', 'observed_only')
+    execution_mode = getattr(args, 'execution_mode', 'continuous')
+    if execution_mode == 'lab_slots' and unknown_space_policy != 'sensor_guarded':
+        raise ValueError('lab_slots requires sensor_guarded')
     cases = manifest['positive']+manifest['negative']
     case = next(c for c in cases if c['id'] == args.case)
     out = args.output
@@ -686,6 +689,7 @@ def run(args):
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
     result = {'case': case, 'passed': False, 'hardware_qualified': False, 'isolation': isolation,
               'unknown_space_policy': unknown_space_policy,
+        'execution_mode': execution_mode,
               'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams or concept_deferred_departure),
               'concept_deferred_departure': concept_deferred_departure,
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
@@ -841,6 +845,8 @@ def run(args):
         explorer_command = py('explore.explore_node')
         if unknown_space_policy == 'sensor_guarded':
             explorer += ['--params-file', str(args.repo/'src/explore/config/metric_sensor_guarded_motion_params.yaml')]
+        if execution_mode == 'lab_slots':
+            explorer += ['--params-file', str(args.repo/'src/explore/config/metric_lab_slot_params.yaml')]
         if concept_deferred_departure:
             code = ('import sys; '
                 f'sys.path.insert(0, {str(args.repo/"tools/simulation")!r}); '
@@ -1137,6 +1143,8 @@ if __name__ == '__main__':
     parser.add_argument('--case', required=True)
     parser.add_argument('--unknown-space-policy', choices=('observed_only', 'sensor_guarded'),
                         default='observed_only', help='product motion policy; same worlds/sensors/acceptance')
+    parser.add_argument('--execution-mode', choices=('continuous', 'lab_slots'), default='continuous',
+                        help='existing continuous workflow or explicitly qualified LAB slots')
     parser.add_argument('--tf-probe', type=Path, required=True)
     parser.add_argument('--manifest', type=Path,
                         default=Path(__file__).with_name('ap06_product_scenarios.json'))

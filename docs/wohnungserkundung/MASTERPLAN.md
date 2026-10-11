@@ -1,12 +1,54 @@
 # WE-1 – Integrationsmasterplan für Amadeus
 
-**Version 1.4 · 11.10.2026 · chris01-byte/Roboter_ws**
+**Version 1.5 · 11.10.2026 · chris01-byte/Roboter_ws**
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
-Diese Fassung schreibt MASTERPLAN v1.3 um die ausdrückliche Nutzeränderung vom 11.10.2026 fort. Sie ist die einzige aktuelle Architektur- und Reihenfolgevorgabe. Plan, Softwareprüfung und Realabnahme bleiben getrennt; der neue Auftrag umfasst die gerätefreie Implementierung des sensorüberwachten Starts.
+Diese Fassung schreibt v1.4 um die ausdrücklich beauftragten LAB-Slots und
+begrenzte selbstständige Wiederprüfung fort. Sie ist die einzige aktuelle
+Architektur- und Reihenfolgevorgabe. Plan, Softwareprüfung und Realabnahme bleiben getrennt.
 
-## Nutzeränderung vom 11.10.2026: sensorüberwachte Erkundung
+## Nutzeränderung vom 11.10.2026: LAB-Slots und Wiederprüfung
+
+`lab_slots` ergänzt innerhalb des vorhandenen Explorers den Ablauf: einmaliger
+gemessener 360°-Start → bestätigter Halt/Beobachtung → eine konsistente Planung
+→ ein Nav2-Ziel → bestätigter Halt/Beobachtung. LiDAR, VL53, Odometrie, TF, SLAM,
+Nav2-Hindernisreaktion und letzte Bremse laufen durchgehend. Frontierauswahl,
+vollständiger Raster-/Nav2-Pfadbeweis und Fortschrittsbewertung laufen im Halt;
+die Fahrt prüft aktuell Quellen, Epoche/Pose, LAB-Grenze und die Schutzkette.
+Normales Kartenwachstum oder ein ausstehender Kartenstatusjoin widerruft keinen
+laufenden Fahrauftrag. Ein tatsächlicher Karten-/Frame-/Auflösungswechsel tut es.
+
+Die feste LAB-Startdrehung benötigt keine beobachtet freie Karte, Raster-
+Drehflächenprüfung oder Frontier. Sie nutzt die hinterlegte freie LAB-Drehfläche
+und die vorhandene sensorüberwachte Drehkette. Aktuelle Quellen, erlaubter
+LAB-Bereich, bestätigter Halt, Encoderfortschritt und echte Hindernisstopps bleiben
+wirksam. Das ersetzt im LAB-Slotmodus die unten beschriebene v1.4-Scanvorauswahl.
+Es aktiviert keinen Kundenmodus und macht blindes Rückwärtsfahren nicht zulässig.
+
+Ein normales blockiertes/unerreichtes Ziel ist eine offene Aufgabe. Nach Ende
+des einzigen Kindes und bestätigtem Halt dürfen verwerfbare Pläne neu erstellt
+und alternative Ziele gewählt werden. Kurze Quellen-/Joinlücken erhalten den
+Auftrag in einem begrenzten bewegungslosen Wiederprüffenster. Eine kurze
+gemessene Beobachtungsdrehung kann zusätzliche Sicht gewinnen, höchstens einmal
+am unveränderten Ort/Kartenstand. Kein nächster Ziel-/Drehflächen-Forecast als
+Vorbedingung einer bereits zulässigen nützlichen Fahrt. Fehlversuche bleiben
+gezählt, pro Aufgabe begrenzt und persistent; absolute Missions-/Kindbudgets
+werden nicht zurückgesetzt. Die bisherige globale Zahl gewöhnlicher
+Einzelzielfehler ist im LAB-Modus kein unmittelbarer Missionsabbruch.
+
+Not-Aus, Nutzerabbruch, latched Encoder-/HWT-Faults, unsicher beendete Kinder,
+unerlaubter Kontext-/Bereichswechsel und unbekannte Vertragsfehler bleiben
+terminal. „Reset“ meint ausschließlich verwerfbare Planung, keine Faultflags,
+Gesundheitszustände, Zeitstempel, Geräte-/OS-Neustarts oder Versuchshistorie.
+Restblockaden/Budgetende sind ehrliche Teilstände. Tür-/Raum-IDs ergänzen;
+ihre Nichtverfügbarkeit ist keine Start-/Durchfahrtsvoraussetzung.
+`execution_mode:=continuous` stellt nach Halt den bisherigen Ablauf wieder her.
+
+## Nutzeränderung v1.4 vom 11.10.2026: sensorüberwachte Erkundung
+
+Der folgende Stand beschreibt auch den Rückfall `continuous`. Für `lab_slots`
+ersetzt der Abschnitt oben seine vorgeschaltete Kartenprüfung der Startdrehung.
 
 Der Auftraggeber verlangt ausdrücklich die sofortige Vereinfachung des Starts:
 Unbekannte Rasterzellen dürfen Erkundungsbewegung nicht allein verhindern;

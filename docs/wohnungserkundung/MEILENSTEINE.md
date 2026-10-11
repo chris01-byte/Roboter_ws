@@ -1,6 +1,12 @@
 # Meilensteine – metrischer Kern und ergänzende Raumsemantik
 
-**WE-1 · Präzisierung 03.10.2026 · MASTERPLAN v1.4**
+**WE-1 · LAB-Präzisierung 11.10.2026 · MASTERPLAN v1.5**
+
+AP-06 umfasst jetzt die [LAB-Slotstrategie](LAB_SLOTS.md): gemessener 360°-Start,
+Planung im Halt, ein Nav2-Kind und begrenzte Wiederprüfung. Sie konkretisiert
+WE-M0/M3/M4/M5/M6; WE-M7 bleibt getrennte Semantik. Die ursprünglichen
+Gesamtmissions-, Schutz- und Realabnahmekriterien bleiben bestehen. Slot-Tests
+sind keine ganze Mission oder reale Fahrt; aktuelle Nachweise nur im STATUS.
 
 [Masterplan](MASTERPLAN.md), [Gesamtstrategie](../WOHNUNGSERKUNDUNG_STRATEGIE.md) und [STATUS](STATUS.md) sind maßgeblich. Dies sind Entwicklungs-/Abnahmekriterien, keine bestandenen Ergebnisse. Keine neuen Meilenstein-IDs.
 

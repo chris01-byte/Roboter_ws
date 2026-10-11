@@ -1,5 +1,31 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – neuer LAB-Slotkandidat; Zielsystemtransfer noch offen
+
+`feature/ap06-lab-slots` entsteht getrennt aus `8d72876` (Produkt `51f8e862`).
+Der aktuelle vollständige Prüf-/Buildstand steht nur im
+[STATUS](wohnungserkundung/STATUS.md). In dieser Cloud-Arbeitsumgebung besteht
+kein Jetson-Zugang. Es wurden keine echte Installation, kein Autostart und
+kein Motorprozess des Roboters verändert. Ein x86_64-Build ist kein ARM64-Install.
+
+Später auf dem Jetson einen getrennten Kandidaten mit eigenem Build/Install/Log
+verwenden. Quellen/geladenen Explorer, alle 14 Produktpräfixe sowie weiterhin
+verwendete ROS-/Nav2-/LiDAR-Unterbauten binden. Gemeinsame Mapping- und Explorer-
+Auswahl: `unknown_space_policy:=sensor_guarded execution_mode:=lab_slots`.
+Die aktuelle private Scope-Datei bleibt `explore_params_overlay`; der rein
+lesende Vorlauf mit `active_drive:=false start_explorer:=false` bleibt erhalten.
+Nach der Änderung beginnt der erlaubte LAB-Rundblick ohne Kartenpixel-/Frontier-
+Vorauswahl. Tatsächliche Hindernisse, Quellen, Not-Aus/HWT, Antrieb und LAB-Grenze
+behalten Wirkung. Quellen-/TF-/Recorderempfang vor Bewegung und Aufzeichnung
+bis bestätigtem Halt weiterhin nachweisen.
+
+Rückfall nach bestätigtem Halt/Ende der eigenen Prozesse:
+`execution_mode:=continuous`; bei vollständigem Zulassungsrückfall zusätzlich
+`unknown_space_policy:=observed_only`. Keine Faultflags, Sensordatenstempel oder
+Zeitbudgets löschen. Zwei vordere VL53 rechtfertigen kein blindes Rückwärtsfahren.
+[Ablauf und Gegenfälle](wohnungserkundung/LAB_SLOTS.md). Kein neues allgemeines
+LAB-Freigabeverfahren; tatsächliche Hardwarewirkung ist getrennt zu messen.
+
 ## 11.10.2026 – neuer sensorüberwachter Kandidat nur in der Cloud gebaut
 
 Quellcommit `51f8e862a92836a141b4fdc3a503c331671e6052`, Zweig

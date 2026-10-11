@@ -1,6 +1,14 @@
 # Wohnungserkundung – verbindliche Gesamtstrategie
 
-**WE-1 · Architekturpräzisierung 03.10.2026 · MASTERPLAN v1.4 · Amadeus**
+**WE-1 · LAB-Präzisierung 11.10.2026 · MASTERPLAN v1.5 · Amadeus**
+
+Der aktuelle [LAB-Slotauftrag](wohnungserkundung/LAB_SLOTS.md) behält dieselbe
+Mission/BT/Explorer/Nav2-Kette. Fester 360°-Start ohne vorgeschalteten
+Kartenpixelbeweis; anschließend Beobachtung und Zielwahl im bestätigten Halt,
+ein Fahrziel und erneute Beobachtung nach Kindende/Halt. Aktuelle Sensoren und
+Schutzgates laufen weiter. Normale Blockaden führen zu begrenzter Wiederprüfung
+oder geprüftem Ausweichziel, ohne Fehler, Zähler oder Fristen zurückzusetzen.
+Der sensorüberwachte `continuous`-Ablauf bleibt ausdrücklich als Rückfall erhalten.
 
 Dies ist die vom Nutzer beschlossene Zielausrichtung, kein Implementierungs- oder Fahrnachweis. [Masterplan](wohnungserkundung/MASTERPLAN.md), [STATUS](wohnungserkundung/STATUS.md), [Agentenauftrag](wohnungserkundung/AGENTENAUFTRAG.md) und [Meilensteine](wohnungserkundung/MEILENSTEINE.md) bilden die einzige aktuelle Roadmap.
 

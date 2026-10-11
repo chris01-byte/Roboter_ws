@@ -27,16 +27,23 @@ def generate_launch_description():
     params = os.path.join(pkg, 'config', 'explore_params.yaml')
     params_overlay = LaunchConfiguration('explore_params_overlay')
     unknown_space_policy = LaunchConfiguration('unknown_space_policy')
+    execution_mode = LaunchConfiguration('execution_mode')
     motion_params = PythonExpression([
         "'", os.path.join(pkg, 'config', 'metric_sensor_guarded_motion_params.yaml'),
         "' if '", unknown_space_policy, "' == 'sensor_guarded' else '",
         os.path.join(pkg, 'config', 'metric_observed_only_motion_params.yaml'), "'"])
+    slot_params = PythonExpression([
+        "'", os.path.join(pkg, 'config', 'metric_lab_slot_params.yaml'),
+        "' if '", execution_mode, "' == 'lab_slots' else '",
+        os.path.join(pkg, 'config', 'metric_continuous_params.yaml'), "'"])
     safe_bt = os.path.join(
         pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
         DeclareLaunchArgument('unknown_space_policy', default_value='observed_only',
             choices=['observed_only', 'sensor_guarded']),
+        DeclareLaunchArgument('execution_mode', default_value='continuous',
+            choices=['continuous', 'lab_slots']),
         DeclareLaunchArgument('require_hwt601_fusion', default_value='false'),
         DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
         DeclareLaunchArgument('hwt_development_contract', default_value='false'),
@@ -50,7 +57,7 @@ def generate_launch_description():
             name='explore_node',
             output='screen',
             parameters=[
-                params, params_overlay, motion_params, {
+                params, params_overlay, motion_params, slot_params, {
                     'behavior_tree': safe_bt,
                     'require_hwt601_fusion': ParameterValue(
                         LaunchConfiguration('require_hwt601_fusion'), value_type=bool),

@@ -1,5 +1,26 @@
 # Projektgedächtnis
 
+## 11.10.2026 – LAB-Slots und Wiederprüfung ausdrücklich beauftragt
+
+Der Nutzer verlangt die Umsetzung der besprochenen Slot-Strategie statt einer
+weiteren Planungs-/Freigaberunde. MASTERPLAN v1.5 konkretisiert denselben AP-06:
+grundsätzlich erlaubter gemessener 360°-Start im erklärten LAB, dann bestätigter
+Halt/Beobachtung/Planung, ein Nav2-Ziel, Kindende/Halt und erneute Beobachtung.
+Teure Raster-/Frontierarbeit entfällt im laufenden Fahrabschnitt; Sensoren,
+SLAM, Nav2-Hindernisreaktion und letzte Bremse laufen weiter. Tür-/Raum-IDs
+sind ergänzendes Gedächtnis, keine Fahrvoraussetzung. Kein OOMWOO-Komplettstack.
+
+Normale Einzelzielprobleme dürfen Alternativen suchen; kurze Quellenlücken und
+HOLD behalten dieselbe Arbeit mit ursprünglichen Zählern und Fristen. Globale
+Fehlschläge allein beenden den LAB-Auftrag nicht mehr. Reset verwirft Pläne,
+niemals Not-Aus, gelatchte Fehler, Sensordatenalter oder Zeitbudgets. Kein
+blindes Rückwärtsfahren. Eigener Zweig `feature/ap06-lab-slots` aus `8d72876`
+(Produktbasis `51f8e862`); alter Kandidat bleibt erhalten. Rückfall nach Halt:
+`execution_mode:=continuous`; bei Bedarf zusätzlich `unknown_space_policy:=observed_only`.
+[Ablauf](wohnungserkundung/LAB_SLOTS.md), aktueller Nachweis und nächster Schritt
+ausschließlich im [STATUS](wohnungserkundung/STATUS.md), Jetson-Wirkung im
+[ROBOT_TRANSFER](ROBOT_TRANSFER.md). Plan-/Softwarearbeit ist keine reale Abnahme.
+
 ## 11.10.2026 – Nutzer verlangt sensorüberwachte Erkundung statt unbekannter Startsperre
 
 Explizite Richtungsänderung: nicht kartierte Zellen dürfen zur Erkundung

@@ -1,5 +1,24 @@
 # Werkzeuge für Kartierung und Lokalisierung
 
+## LAB-Slots vom 11.10.2026
+
+Auf `feature/ap06-lab-slots` ist der gemeinsame Mapping-Start
+`unknown_space_policy:=sensor_guarded execution_mode:=lab_slots`.
+[Ablauf und Fehlerbehandlung](../../docs/wohnungserkundung/LAB_SLOTS.md):
+360°-Start ohne vorherige Kartenpixelprüfung; danach beobachten/planen im
+bestätigten Stillstand, ein Nav2-Ziel fahren, Halt bestätigen und wieder beobachten.
+Sensoren und Schutzgates arbeiten durchgehend. Keine laufende Fahrt durch
+fortlaufende neue Zielwahl ersetzen. Not-Aus-/Encoder-/HWT-Fehler nicht löschen.
+
+Private Scopeparameter über `explore_params_overlay` weitergeben. Der rein
+lesende Vorlauf (`active_drive:=false start_explorer:=false`) bleibt erhalten.
+Das Scopewerkzeug gibt diese Moduswahl auch für den getrennten Explorer aus;
+`--execution-mode continuous` wählt ausdrücklich den vorherigen Ablauf.
+Mapping und Explorer müssen dieselbe Auswahl verwenden. Rückfall nach
+bestätigtem Halt/Prozessende: `execution_mode:=continuous`, bei vollständigem
+Rückfall zusätzlich `unknown_space_policy:=observed_only`. Install- und
+Fahrnachweise ausschließlich im aktuellen STATUS und ROBOT_TRANSFER.
+
 ## Neuer sensorüberwachter Kartierungsstart
 
 Der Kandidat auf `feature/ap06-sensor-guarded-start` verwendet in

@@ -8,7 +8,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -35,6 +35,7 @@ def generate_launch_description():
     start_web_gui = LaunchConfiguration('start_web_gui')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
     unknown_space_policy = LaunchConfiguration('unknown_space_policy')
+    execution_mode = LaunchConfiguration('execution_mode')
     default_explore_params = os.path.join(
         get_package_share_directory('explore'), 'config',
         'explore_params.yaml')
@@ -42,6 +43,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('unknown_space_policy', default_value='sensor_guarded',
             choices=['observed_only', 'sensor_guarded']),
+        DeclareLaunchArgument('execution_mode', default_value=PythonExpression([
+            "'lab_slots' if '", unknown_space_policy, "' == 'sensor_guarded' else 'continuous'"]),
+            choices=['continuous', 'lab_slots']),
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
@@ -106,6 +110,7 @@ def generate_launch_description():
                 'crop': crop,
                 'explore_params_overlay': explore_params_overlay,
                 'unknown_space_policy': unknown_space_policy,
+                'execution_mode': execution_mode,
             }.items()),
 
         # Beide Manager sind reine Beobachter/Persistenzschichten. Sie senden

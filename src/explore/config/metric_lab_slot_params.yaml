@@ -1,0 +1,8 @@
+# LAB-1 workflow, loaded AFTER metric_sensor_guarded_motion_params.yaml.
+# Same Explorer, scan driver, NavigateToPose owner and last sensor brakes.
+explore_node:
+  ros__parameters:
+    metric_execution_mode: lab_slots
+    metric_start_strategy: sensor_scan_first
+    initial_scan_enabled: true
+    initial_scan_angle_rad: 6.283185307179586

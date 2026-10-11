@@ -1,5 +1,39 @@
 # Wohnungserkundung – aktueller Status
 
+## 11.10.2026 – LAB-Slots umgesetzt; Gesamtprüfung läuft
+
+Aktiver Kandidat `feature/ap06-lab-slots`, Basis `8d72876` (Produkt `51f8e862`).
+Der ausdrückliche Umsetzungsauftrag steht in MASTERPLAN v1.5 und
+[LAB_SLOTS](LAB_SLOTS.md): fester gemessener 360°-Start ohne Kartenpixel-/Frontier-
+Vorauswahl, danach bestätigter Halt/Beobachtung/Planung, ein Nav2-Ziel und Halt.
+Sensoren und Schutzkette laufen durchgehend. Quellenlücken erhalten dieselbe
+Aufgabe mit ursprünglicher Frist; gewöhnliche Zielprobleme suchen geprüfte
+Alternativen. Fehlerflags, Quellenalter, Fehlversuche und Budgets werden nicht
+zurückgesetzt. Unbestätigte Kinder, Not-Aus und Vertragsfehler bleiben terminal.
+
+Die drei ursprünglichen Blocker sind auf dem alten installierten Produktstand
+reproduziert: kein Start vor Kartenjoin, Abbruch bei normalem Join während der
+Fahrt und Ende am globalen Einzelzielfehlerlimit. Neue tatsächliche Elternabläufe
+beheben diese Gegenfälle. Die gezielten Slot-, Parameter-, Launch- und Encoder-
+Prüfungen bestehen. Vollständige Regression, separater Gesamtbuild und echte
+Nav2-/SLAM-Missionen werden im gerätefreien Humble-x86_64-Prüfstand vervollständigt.
+Ein erster breiter Lauf enthielt fehlende Dateien des unvollständigen Prüfbaums;
+die 59 betroffenen Fälle bestehen nach Ergänzung separat. Noch kein vollständiger
+einheitlicher neuer Prüf-/Buildabschluss und keine neue reale AP-06-Abnahme.
+
+Kein Jetson-Zugang in dieser Arbeitsumgebung, kein Transfer/Autostartwechsel
+und keine reale Aktorbewegung. Ursprüngliche A/B/C-/Cancel/HOLD-Kriterien bleiben
+unverändert. Historische Zahlen unten gelten für ihre damaligen Quellstände.
+
+**Genau nächster Schritt:** den separaten vollständigen Kandidatenbuild und
+die zusammenhängende Regression abschließen; danach die unveränderten ganzen
+Fälle mit `--unknown-space-policy sensor_guarded --execution-mode lab_slots`
+ausführen und tatsächlichen Missionsabschluss, Kartenfortschritt, Kindende und
+ersten Fehlergrund dokumentieren. LAB-1 erlaubt die beauftragte spätere Realprüfung
+ohne neue Standardfreigaberunde; dafür ist tatsächlicher Zielsystemzugang nötig.
+
+## Historischer sensorüberwachter Kandidat vor den LAB-Slots
+
 ## 11.10.2026 – sensorüberwachter Start als neuer Softwarekandidat
 
 **Quellstand `51f8e862a92836a141b4fdc3a503c331671e6052`**, Branch

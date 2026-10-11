@@ -1,0 +1,4 @@
+# Explicit original workflow, including after a LAB slot profile was supplied.
+explore_node:
+  ros__parameters:
+    metric_execution_mode: continuous
