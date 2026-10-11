@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "baseline": "1fbad56",
+  "change": "Original first observed trigger, bounded recovery history and terminal reason retained independently; scan elapsed/angle/rate and first navigation guard recorded. No decisions or budgets altered.",
+  "regression": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/causal-after",
+    "tests": 136,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "prior_two_observation_run": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/private-cooldown-source-a",
+    "travel_m": 0.7293345805,
+    "observations": 2,
+    "scan_angle_rad": 5.6421205388,
+    "scan_reason": "scan_task_budget_exhausted",
+    "next_plan_reason": "nav2_plan_timeout_or_stop",
+    "route_guard": "footprint_sweep_invalid",
+    "terminal": "frontier_candidate_processing_budget_exhausted",
+    "scan_observer_interval_s": 150.9988,
+    "approximately_stopped_s": 18.008,
+    "integrated_absolute_angle_rad": 5.65237,
+    "mean_actual_absolute_rate_radps": 0.037433,
+    "limitations": "Status interval includes latency; sampled commands show .08 and .024 rad/s with configured SlowZone ratio .3 but no full monitor trace. A single cause for all guards is unproved."
+  },
+  "rejected_experiment": {
+    "change": "selection-local exact route reuse",
+    "before_profile_s": 4.5049,
+    "after_profile_s": 4.6022,
+    "retained": false,
+    "reason": "No measured reduction"
+  },
+  "step_4_three_consecutive_observations": false,
+  "original_ABC_last_passed": 0,
+  "common_build": false,
+  "hardware_test": false,
+  "rollback": "Revert causal result fields and hooks; movement behavior unchanged",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/causal-after/results.xml": "3c8e83fe35f96d7ac120cba770a845ca21ab7da3759d5b8c03d798e0e52247aa",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/old-scan-analysis.json": "7cefbaa8db7f36ad8c4b3c3c285916456aaa2290d0fa3d206d63c62769f8dee7",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "7eb6a6e499a9118ea6da465bdd8a009e006c06824aa2e05709465f02a447ffba",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_causal_result.py": "4e45fa12670104ddd55719b03bedbe5d4553f881c07c9d0582ea55cf0ed2e61b"
+  }
+}

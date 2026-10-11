@@ -5,6 +5,7 @@ Map/status identity is shared product code; semantic feeds never enter this
 adapter. The measured footprint is checked on both actual input rasters.
 """
 from dataclasses import replace
+from copy import deepcopy
 import json
 import math
 import threading
@@ -2813,6 +2814,15 @@ class MetricFrontierRuntime:
                                             native_stop=True) is not None
         return self._metric_waypoints_clear(inputs, target.route, target.yaw) is not None
 
+    def _metric_record_transition(self, phase, reason, **details):
+        """Bounded causal receipt; never rewrite a first observed trigger."""
+        event = dict(phase=phase, reason=reason, at=time.monotonic(), **deepcopy(details))
+        if phase != 'terminal' and self._metric_status.get('first_trigger') is None:
+            self._metric_status['first_trigger'] = deepcopy(event)
+        history = self._metric_status.setdefault('reactions', [])
+        history.append(event)
+        del history[:-40]
+
     def _execute_metric_frontier(self, goal_handle, overall_timeout, min_frontier):
         result = ExploreArea.Result()
         overall_timeout = min(overall_timeout,self._overall_timeout_s)
@@ -2887,6 +2897,8 @@ class MetricFrontierRuntime:
                                        attempts=attempts,failures=failures, outcome=outcome,
                                        arrivals=arrivals,observations=observations,observed_area_m2=observed_area,
                                        observation_window_s=completion_window.duration_s)
+            self._metric_status['terminal_reason'] = reason
+            self._metric_record_transition('terminal', reason, state=state)
             self._status_message = reason
             self._status_phase = state
             self._status_state = 'partial' if state == 'blocked' else state
@@ -2903,7 +2915,8 @@ class MetricFrontierRuntime:
             return self._finish_result(result,self._frontiers_visited_status)
         self._metric_status = dict(schema_version=1, state='running', outcome='in_progress',
                                   started_wall_time=time.time(),arrivals=0,observations=0,observed_area_m2=0.,full_apartment_complete=False,
-                                  semantic_complete=False,floor_coverage_verified=False,chain=chain)
+                                  semantic_complete=False,floor_coverage_verified=False,chain=chain,
+                                  first_trigger=None,reactions=[],terminal_reason=None)
         self._status_state = 'running'
         self._blacklist.clear()
         self._visited_frontier_goals.clear()
@@ -2937,6 +2950,8 @@ class MetricFrontierRuntime:
             except Exception as error:
                 reason = str(error)
                 if pending is None and reason in _PROCESSING_AGE_ERRORS:
+                    self._metric_record_transition('input_rejected', reason,
+                        timing=self._metric_status.get('input_timing'))
                     now = time.monotonic()
                     if unassigned_input_deadline is None:
                         unassigned_input_deadline = min(
@@ -3064,9 +3079,16 @@ class MetricFrontierRuntime:
                 scan_progress += achieved
                 scan_resume_pending = False
                 self._metric_status['scan_progress_rad'] = scan_progress
+                self._metric_status['scan_attempt'] = dict(
+                    started_at=scan_task_started, elapsed_s=time.monotonic()-scan_task_started,
+                    target_angle_rad=self._initial_scan_angle, achieved_angle_rad=scan_progress,
+                    commanded_rate_radps=getattr(self, '_initial_scan_speed', None), result=status)
                 if self._hwt_hold_announced:
                     continue
                 if status != 'success':
+                    self._metric_record_transition('scan_interrupted',
+                        self._metric_status.get('first_rejecting_predicate') or status,
+                        scan=dict(self._metric_status['scan_attempt']))
                     if (self._metric_start_strategy != 'adaptive'
                             or goal_handle.is_cancel_requested or expired()):
                         return finish('failed',f'initial_scan_{status}')
@@ -3214,6 +3236,7 @@ class MetricFrontierRuntime:
                 task_id=pending.task_id,x=pending.x,y=pending.y,route_length_m=pending.route_length_m,
                 cost=pending.cost,revision=pending.revision),attempt=attempts)
             stop_reason = [None]
+            first_stop_reason = [None]
             map_join_rejection = [None]
             geometry_snapshot_rejection = [None]
             last_pose = [inputs[2],time.monotonic()]
@@ -3264,6 +3287,12 @@ class MetricFrontierRuntime:
                                 map_join_rejection[0] = dict(self._metric_status.get('map_join_rejection', {}))
                                 self._metric_status['map_join_stop'] = dict(task=pending.task_id,
                                     attempt=attempts, rejection=map_join_rejection[0])
+                if stop_reason[0] is not None and first_stop_reason[0] is None:
+                    first_stop_reason[0] = stop_reason[0]
+                    self._metric_record_transition('navigation_guard', stop_reason[0],
+                        task=pending.task_id, attempt=attempts,
+                        route_reason=self._metric_status.get('route_rejection'),
+                        timing=self._metric_status.get('input_timing'))
                 return stop_reason[0] is not None
             self._status_phase='metric_prealign'
             alignment_receipt = None
@@ -3274,6 +3303,9 @@ class MetricFrontierRuntime:
             else:
                 planned, plan_error = self._metric_request_nav_plan(pending, stop)
                 if planned is None:
+                    self._metric_record_transition('plan_rejected', plan_error,
+                        task=pending.task_id, stop_reason=stop_reason[0],
+                        route_reason=self._metric_last_route_rejection)
                     status = 'planning_failed'
                     self._metric_status.update(nav2_plan_rejection=plan_error,
                         planning_stop_reason=stop_reason[0],
@@ -3291,6 +3323,8 @@ class MetricFrontierRuntime:
                     except Exception as error:
                         planned_route, plan_error = None, str(error)
                     if planned_route is None:
+                        self._metric_record_transition('native_route_rejected', plan_error,
+                            task=pending.task_id, route_reason=self._metric_last_route_rejection)
                         status = 'planning_failed'
                         self._metric_status['nav2_plan_rejection'] = plan_error
                         stop_reason[0] = ('route_invalidated' if plan_error in (
@@ -3312,6 +3346,11 @@ class MetricFrontierRuntime:
                         departure_ready = view_ready and self._metric_departure_plan_ready(
                             inputs, planned_route, pending, lambda: stop(check_route=False))
                         if not departure_ready:
+                            self._metric_record_transition('departure_rejected',
+                                view_error or ('known_space_departure_unavailable' if view_ready else
+                                               'native_stop_has_no_candidate_view'),
+                                task=pending.task_id,
+                                native_sight=self._metric_status.get('native_stop_observation'))
                             status = 'planning_failed'
                             stop_reason[0] = stop_reason[0] or 'route_invalidated'
                             self._metric_status['nav2_plan_rejection'] = (
@@ -3407,7 +3446,7 @@ class MetricFrontierRuntime:
                         decision = ('map_status_join_retry_budget_exhausted'
                             if hard=='map_status_join_pending' else 'geometry_snapshot_retry_budget_exhausted')
                     chain.append(dict(task=pending.task_id,result=status, decision=decision,
-                        terminal_child=True, stop_reason=hard,arrived=False,observed_cells=0,
+                        terminal_child=True, stop_reason=hard,first_stop_reason=first_stop_reason[0],arrived=False,observed_cells=0,
                         map_join_rejection=map_join_rejection[0],
                         geometry_snapshot_rejection=geometry_snapshot_rejection[0]))
                     if retry_exhausted:
@@ -3534,6 +3573,7 @@ class MetricFrontierRuntime:
                 observed_area += len(gained)*after[0].info.resolution**2
             chain.append(dict(task=pending.task_id,target=[pending.x,pending.y],result=status,
                               decision=outcome,terminal_child=True,stop_reason=hard,
+                              first_stop_reason=first_stop_reason[0],
                               child_dispatched=child_dispatched,alignment=alignment_receipt,
                               planning_rejection=(self._metric_status.get('nav2_plan_rejection')
                                                   if not child_dispatched else None),

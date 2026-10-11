@@ -48,14 +48,28 @@ DDS-Gegenfall mit originaler vollständiger Methode zuvor negativ, danach
 positiv; 149 betroffene Fälle sowie drei verstärkte aktuelle Paarfälle positiv.
 [Zeitfolge/Gegenfall](evidence/ap06-late-wheel-binding-20261011.json).
 
-Ursprüngliche A/B/C bleiben zuletzt 0/3; kein neuer gemeinsamer Build oder
+Schritt 4: ursprünglicher Auslöser, begrenzte Folgereaktionen und terminaler
+Grund werden jetzt unabhängig im Ergebnis erhalten; Scanwinkel/-dauer/-Sollrate
+und erster Navigations-Stopgrund bleiben nachvollziehbar. 136 betroffene
+Fälle positiv, einschließlich tatsächlicher Elternfolge mit verworfener nativer
+Route und späterem Budgetende. Keine Entscheidungs- oder Budgetänderung.
+Der ältere Zwei-Beobachtungs-Lauf zeigt 5,6421 rad in ungefähr 151 s,
+etwa 18 s Stillstand und 0,03743 rad/s mittlere tatsächliche Drehung. Gemessene
+Sollwerte 0,08/0,024 passen zum bestehenden SlowZone-Faktor 0,3; ohne volle
+Monitor-Spur ist dessen Gesamtanteil nicht bewiesen. Drei aufeinanderfolgende
+Beobachtungen fehlen weiter. [Kausalbeleg](evidence/ap06-causal-result-20261011.json).
+Eine versuchte exakte Routenwiederverwendung brachte im Profil keine
+Verbesserung (4,505 → 4,602 s) und wurde vollständig verworfen.
+
+Ursprüngliche A/B/C bleiben zuletzt 0/3; noch kein neuer gemeinsamer Build oder
 reale autonome Abnahme. Bestandsmain/-install und Hardware unverändert.
 
-**Genau nächster Schritt:** nachgewiesene wiederholte Geometriearbeit innerhalb
-desselben Auswahlbudgets verringern und Folgeziele/Scanursachen getrennt
-festhalten (Schritte 3/4). Erst danach gemeinsamer Kandidat mit ursprünglicher
-Regression/A/B/C; reale autonome Folge an diese Softwarequalifikation gebunden.
-Rückfall: eigene kleine Diffs revertieren bzw. privates Overlay abwählen.
+**Genau nächster Schritt:** gemeinsamer sauberer Kandidat, relevante vollständige
+Regression und unveränderte A/B/C zur Prüfung der korrigierten Zeitfolge. Bei
+Fehlschlag die konkrete Folgeplanung weiter korrigieren; Schritt 4 bleibt bis
+mindestens drei Beobachtungen offen. Reale autonome Folge an vollständige
+Softwarequalifikation gebunden. Rückfall: eigene kleine Diffs revertieren bzw.
+privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
