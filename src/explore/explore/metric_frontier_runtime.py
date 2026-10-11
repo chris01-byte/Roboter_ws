@@ -1582,9 +1582,13 @@ class MetricFrontierRuntime:
         self._metric_nav_path = path
         self._metric_nav_path_at = time.monotonic()
 
-    def _metric_validate_nav_plan(self, inputs, path, target, *, public_only=False):
-        if public_only:
-            inputs = self._metric_public_inputs(inputs)
+    def _metric_nav_plan_route(self, path, pose, target):
+        """Validate the native path contract and prune passed segments.
+
+        Shared by stopped raster validation and the live LAB scope guard;
+        neither owner may invent a turn back towards an old path prefix.
+        This helper checks no sensor health and grants no motion authority.
+        """
         if not path.poses or path.header.frame_id != self._global_frame:
             self._metric_last_route_rejection = 'nav2_plan_missing_or_wrong_frame'
             return None
@@ -1605,7 +1609,6 @@ class MetricFrontierRuntime:
             self._metric_last_route_rejection = 'nav2_plan_goal_or_values_invalid'
             return None
         # Follow remaining actual Nav2 waypoints, never a guessed forward chord.
-        pose = inputs[2]
         if min(math.dist(pose[:2],point) for point in points) > .4:
             self._metric_last_route_rejection='nav2_plan_controller_carrot_unbounded'
             return None
@@ -1635,9 +1638,17 @@ class MetricFrontierRuntime:
                 if abs(cross) < 1e-10 and dot > 0:
                     route.pop()  # only EXACT collinear same-direction points
             route.append(point)
+        return tuple(route)
+
+    def _metric_validate_nav_plan(self, inputs, path, target, *, public_only=False):
+        if public_only:
+            inputs = self._metric_public_inputs(inputs)
+        route = self._metric_nav_plan_route(path, inputs[2], target)
+        if route is None:
+            return None
         checker = (self._metric_standard_waypoints_clear if public_only
                    else self._metric_waypoints_clear)
-        return checker(inputs, tuple(route), target.yaw, native_plan=True)
+        return checker(inputs, route, target.yaw, native_plan=True)
 
     def _metric_controller_contract(self, stop_requested):
         self._metric_controller_contract_reason = 'nav2_controller_geometry_contract_invalid'

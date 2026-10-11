@@ -8,13 +8,14 @@ reuse a cached movement authorization. Recovery discards plans, never faults.
 import math
 import time
 import hashlib
+from dataclasses import dataclass
 
 import rclpy
 from shapely.geometry import Polygon
 from robot_interfaces.action import ExploreArea
 
 from .metric_checkpoint import restore_policy
-from .metric_frontier import MetricTaskPolicy, rpp_trajectory
+from .metric_frontier import MetricCandidate, MetricTaskPolicy, rpp_trajectory
 from .metric_progress import (CompletionWindow, local_evidence, local_small_remainder, measured_gain,
                               observation_complete, reachable_remainder)
 
@@ -49,6 +50,19 @@ REPLAN_REASONS = frozenset((
 ))
 
 
+@dataclass(frozen=True)
+class _SuspendedTask:
+    """Retain either interrupted motion or a terminal child's observation."""
+    target: MetricCandidate
+    baseline: object
+    deadline: float
+    context: tuple
+    motion_dispatched: bool
+    original_trigger: str | None
+    terminal_result: str | None = None
+    observation_until: float | None = None
+
+
 class LabTaskPolicy(MetricTaskPolicy):
     """Keep history/caps; a failed approach does not blacklist every approach.
 
@@ -68,7 +82,10 @@ def recovery_kind(reason, snapshot=None):
     """An explicit allowlist: unknown/contract/latched faults stay terminal."""
     if reason == 'actuator_or_encoder_state_invalid':
         wheel = (snapshot or {}).get('encoder_state') or {}
-        if wheel.get('encoder_config_fault_latched') is True:
+        timing = wheel.get('encoder_timing_recovery')
+        if (wheel.get('encoder_config_fault_latched') is True
+                or wheel.get('feedback_output_fault_latched') is True
+                or isinstance(timing,dict) and timing.get('fault_latched') is True):
             return 'fatal'
     if reason in WAIT_REASONS or reason.startswith('odometry_missing_stale_or_invalid '):
         return 'wait'
@@ -144,18 +161,27 @@ def live_guard(node, *, context=None, rotation=False):
         if not rotation and path is not None:
             cached = getattr(node, '_lab_scoped_path', None)
             if cached is None or cached[0] is not path or cached[1] != node._metric_scope.fingerprint:
-                if not path.poses or path.header.frame_id != node._global_frame:
-                    return 'nav2_plan_missing_or_wrong_frame'
-                points = [(p.pose.position.x, p.pose.position.y) for p in path.poses]
-                if not all(math.isfinite(v) for p in points for v in p):
-                    return 'nav2_plan_goal_or_values_invalid'
+                target = node._metric_active
+                if target is None:
+                    return 'nav2_plan_without_active_target'
+                route = node._metric_nav_plan_route(path, pose, target)
+                if route is None:
+                    return node._metric_last_route_rejection
                 # Current changed native route: only its controller/body sweep
                 # against the authorized polygon. An enclosing robot circle
                 # would wrongly reject a valid oriented passage near a border.
-                poses=rpp_trajectory(points,pose,
+                poses=rpp_trajectory(route,pose,
                     min(node._metric_raw[0].info.resolution,node._global_costmap.info.resolution),
                     getattr(node,'_prealign_handoff_tolerance',.17),node._metric_bounds,
-                    prealign_to_first_leg=True)
+                    prealign_to_first_leg=True,external_prealignment=False)
+                # The running child owns its native steering and final goal
+                # heading. There is no external prealignment during its leg.
+                # Prove the final turn at RPP's actual stop, as the stopped
+                # native-path validator does, rather than at the ideal goal.
+                stop = poses[-1]
+                turn = math.atan2(math.sin(target.yaw-stop[2]),math.cos(target.yaw-stop[2]))
+                count = max(1,math.ceil(abs(turn)/.01))
+                poses.extend((stop[0],stop[1],stop[2]+turn*k/count) for k in range(1,count+1))
                 if not all(shape.covers(_body_polygon((x,y,yaw+delta),node._metric_bounds,.03))
                            for x,y,yaw in poses for delta in (-.05,0.,.05)):
                     return 'lab_route_outside_scope'
@@ -295,11 +321,14 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
     while rclpy.ok():
         if goal_handle.is_cancel_requested:
             return finish('canceled','user_canceled')
-        if expired() or (attempts>=node._max_frontier_goals and resume_target is None):
+        continuing_scan = scan_started is not None and not scan_done
+        if expired() or (attempts>=node._max_frontier_goals
+                         and resume_target is None and not continuing_scan):
             return finish('partial','budget_exhausted')
         if node._wohnungserkundung_hwt_hold():
             node._metric_record_transition('slot_hwt_hold','hwt_hold')
-            resumed=node._wohnungserkundung_wait_for_hwt_resume(goal_handle,expired,require_target=resume_target is not None)
+            resumed=node._wohnungserkundung_wait_for_hwt_resume(goal_handle,expired,
+                require_target=resume_target is not None and resume_target.terminal_result is None)
             if resumed!='resumed':
                 return finish('canceled' if resumed=='user_canceled' else 'failed',f'hwt_{resumed}')
             if resume_target is None:
@@ -315,8 +344,8 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             if kind=='replan':
                 node._metric_record_transition('slot_maneuver_rejected',reason)
                 if resume_target is not None:
-                    policy.record(resume_target[0],'route_invalidated',time.monotonic(),
-                                  resume_target[0].fingerprint,count_try=False)
+                    policy.record(resume_target.target,'route_invalidated',time.monotonic(),
+                                  resume_target.target.fingerprint,count_try=False)
                     failures+=1
                     resume_target=None
                 scan_done=True
@@ -441,7 +470,7 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
         phase('plan')
         node._metric_status['state']='running'
         try:
-            candidates=[resume_target[0]] if resume_target is not None else node._metric_select(inputs,policy,min_frontier)
+            candidates=[resume_target.target] if resume_target is not None else node._metric_select(inputs,policy,min_frontier)
         except Exception as error:
             reason=str(error)
             if recovery_kind(reason)=='fatal':
@@ -544,10 +573,10 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
 
         target=candidates[0]
         completion.observe(now=time.monotonic(),scan_stamp=0,context=inputs[1].context,clear=False)
-        baseline=resume_target[1] if resume_target is not None else node._metric_observation_baseline(inputs,target)
+        baseline=resume_target.baseline if resume_target is not None else node._metric_observation_baseline(inputs,target)
         context=(getattr(node,'_metric_context_generation',0),inputs[1].context,
             inputs[0].header.frame_id,inputs[0].info.resolution,inputs[5].header.frame_id,inputs[5].info.resolution)
-        if resume_target is not None and context!=resume_target[3]:
+        if resume_target is not None and context!=resume_target.context:
             return finish('failed','map_work_context_changed')
         node._metric_active=target
         node._metric_active_context=context
@@ -557,9 +586,11 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             attempts+=1
             policy.record(target,'pending',time.monotonic(),target.fingerprint)
         checkpoint()
-        deadline=resume_target[2] if resume_target is not None else time.monotonic()+node._goal_timeout_s
-        task_motion_dispatched=resume_target[4] if resume_target is not None else False
-        original_trigger=resume_target[5] if resume_target is not None else None
+        deadline=resume_target.deadline if resume_target is not None else time.monotonic()+node._goal_timeout_s
+        task_motion_dispatched=resume_target.motion_dispatched if resume_target is not None else False
+        original_trigger=resume_target.original_trigger if resume_target is not None else None
+        terminal_result=resume_target.terminal_result if resume_target is not None else None
+        observation_until=resume_target.observation_until if resume_target is not None else None
         resume_target=None
         first=[None]
         def child_stop():
@@ -568,52 +599,54 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
                 first[0]=reason
             return reason is not None
         node._metric_status['active_goal']=dict(task_id=target.task_id,x=target.x,y=target.y)
-        status='planning_failed'
+        status=terminal_result or 'planning_failed'
+        error=None
         dispatched=False
-        try:
-            path,error=node._metric_request_nav_plan(target,child_stop)
-        except Exception as caught:
-            path,error=None,str(caught)
-        if path is not None and not child_stop():
+        if terminal_result is None:
             try:
-                inputs=node._metric_inputs()
-                route=node._metric_validate_nav_plan(inputs,path,target)
-                if route is None:
-                    error=str(node._metric_last_route_rejection)
-                else:
-                    source_wait_at=None
-                    node._metric_nav_path=path
-                    node._lab_scoped_path=(path,node._metric_scope.fingerprint)
-                    # No next-goal/full-turn forecast before this useful leg.
-                    # The actual native path and alignment remain fully proved.
-                    alignment=node._metric_align_nav_departure(route,inputs[2],child_stop,inputs=inputs)
-                    node._metric_status['departure_alignment']=dict(status=alignment[0],result=list(alignment))
-                    if alignment[0] not in ('success','skipped','controller_owned'):
-                        error=str(alignment[0])
-                    elif not child_stop():
-                        current=node._metric_inputs()
-                        if node._metric_validate_nav_plan(current,path,target) is None:
-                            error='route_invalidated'
-                        else:
-                            with node._wohnungserkundung_runtime_lock:
-                                if node._wohnungserkundung_active_child is not None:
-                                    return finish('failed','second_child_forbidden')
-                                node._metric_plan_after_ns=node.get_clock().now().nanoseconds
-                                node._wohnungserkundung_active_child=target
-                            phase('drive')
-                            try:
-                                dispatched=True
-                                task_motion_dispatched=True
-                                status=node._navigate_to(target.x,target.y,max(.001,deadline-time.monotonic()),
-                                    stop_requested=child_stop,goal_yaw=target.yaw)
-                            finally:
-                                with node._wohnungserkundung_runtime_lock:
-                                    node._wohnungserkundung_active_child=None
+                path,error=node._metric_request_nav_plan(target,child_stop)
             except Exception as caught:
-                error=str(caught)
-                if dispatched:
-                    status='error'
-                    node._metric_record_transition('child_exception',error)
+                path,error=None,str(caught)
+            if path is not None and not child_stop():
+                try:
+                    inputs=node._metric_inputs()
+                    route=node._metric_validate_nav_plan(inputs,path,target)
+                    if route is None:
+                        error=str(node._metric_last_route_rejection)
+                    else:
+                        source_wait_at=None
+                        node._metric_nav_path=path
+                        node._lab_scoped_path=(path,node._metric_scope.fingerprint)
+                        # No next-goal/full-turn forecast before this useful leg.
+                        # The actual native path and alignment remain fully proved.
+                        alignment=node._metric_align_nav_departure(route,inputs[2],child_stop,inputs=inputs)
+                        node._metric_status['departure_alignment']=dict(status=alignment[0],result=list(alignment))
+                        if alignment[0] not in ('success','skipped','controller_owned'):
+                            error=str(alignment[0])
+                        elif not child_stop():
+                            current=node._metric_inputs()
+                            if node._metric_validate_nav_plan(current,path,target) is None:
+                                error='route_invalidated'
+                            else:
+                                with node._wohnungserkundung_runtime_lock:
+                                    if node._wohnungserkundung_active_child is not None:
+                                        return finish('failed','second_child_forbidden')
+                                    node._metric_plan_after_ns=node.get_clock().now().nanoseconds
+                                    node._wohnungserkundung_active_child=target
+                                phase('drive')
+                                try:
+                                    dispatched=True
+                                    task_motion_dispatched=True
+                                    status=node._navigate_to(target.x,target.y,max(.001,deadline-time.monotonic()),
+                                        stop_requested=child_stop,goal_yaw=target.yaw)
+                                finally:
+                                    with node._wohnungserkundung_runtime_lock:
+                                        node._wohnungserkundung_active_child=None
+                except Exception as caught:
+                    error=str(caught)
+                    if dispatched:
+                        status='error'
+                        node._metric_record_transition('child_exception',error)
         reason=first[0] or (error if not dispatched else None)
         if status in ('cancel_failed','error'):
             return finish('failed','child_'+status)
@@ -629,7 +662,8 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             record_child(dict(task=target.task_id,result=status,stop_reason='hwt_hold',
                 original_trigger=original_trigger,first_stop_reason=first[0],
                 terminal_child=True,child_dispatched=dispatched,arrived=False,observed_cells=0))
-            resume_target=(target,baseline,deadline,context,task_motion_dispatched,original_trigger)
+            resume_target=_SuspendedTask(target,baseline,deadline,context,task_motion_dispatched,original_trigger,
+                status if terminal_result is not None or status=='success' else None,observation_until)
             continue
         if reason and recovery_kind(reason,node._metric_status.get('decision_snapshot'))=='fatal':
             return finish('failed',reason)
@@ -645,7 +679,7 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             record_child(dict(task=target.task_id,result=status,stop_reason=reason,
                 original_trigger=original_trigger,first_stop_reason=first[0],
                 terminal_child=True,child_dispatched=dispatched,arrived=False,observed_cells=0))
-            resume_target=(target,baseline,deadline,context,task_motion_dispatched,original_trigger)
+            resume_target=_SuspendedTask(target,baseline,deadline,context,task_motion_dispatched,original_trigger)
             node._metric_nav_path=node._metric_plan_after_ns=None
             if not wait_source(reason):
                 return finish('blocked','motion_source_revalidation_timeout:'+reason)
@@ -656,24 +690,29 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             record_child(dict(task=target.task_id,result=status,stop_reason=reason,
                 original_trigger=original_trigger,first_stop_reason=first[0],
                 decision='await_stop_revalidation',terminal_child=True,arrived=False,observed_cells=0))
-            resume_target=(target,baseline,deadline,context,task_motion_dispatched,original_trigger)
+            resume_target=_SuspendedTask(target,baseline,deadline,context,task_motion_dispatched,original_trigger,
+                status,observation_until)
             node._metric_nav_path=node._metric_plan_after_ns=None
             if not wait_source('stable_standstill_not_confirmed'):
                 return finish('blocked','standstill_revalidation_timeout')
             continue
         reached=False
         gained=frozenset()
-        until=min(deadline,time.monotonic()+node._metric_observation_wait_s)
+        until=(min(deadline,time.monotonic()+node._metric_observation_wait_s)
+               if observation_until is None else observation_until)
         after=None
+        observation_interrupted=None
+        node._metric_nav_path=node._metric_plan_after_ns=None
         while time.monotonic()<until:
             reason_now=stop_cause(context=context)
             if reason_now:
                 if reason_now in ('user_canceled','budget_exhausted','hwt_hold'):
+                    observation_interrupted=reason_now
                     break
                 if recovery_kind(reason_now,node._metric_status.get('decision_snapshot'))=='fatal':
                     return finish('failed',reason_now)
-                time.sleep(.05)
-                continue
+                observation_interrupted=reason_now
+                break
             try:
                 after=node._metric_inputs()
                 yaw=math.atan2(math.sin(after[2][2]-target.yaw),math.cos(after[2][2]-target.yaw))
@@ -681,6 +720,7 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
                 if not reached:
                     break
                 view,scan=node._metric_sensor_scan()
+                source_wait_at=None
                 gained=measured_gain(baseline,after[0],after[1],after[2],scan,view.mount,
                     node._world_to_grid,node._grid_to_world,node._door_lidar_max_range,batch_projection=True)
                 if gained:
@@ -698,7 +738,25 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             except Exception as caught:
                 if recovery_kind(str(caught))=='fatal':
                     return finish('failed',str(caught))
+                observation_interrupted=str(caught)
+                break
             time.sleep(.05)
+        if goal_handle.is_cancel_requested or observation_interrupted=='user_canceled':
+            return finish('canceled','user_canceled')
+        if expired() or observation_interrupted=='budget_exhausted':
+            return finish('partial','budget_exhausted')
+        if observation_interrupted:
+            original_trigger=original_trigger or observation_interrupted
+            node._metric_record_transition('slot_observation_interrupted',observation_interrupted,
+                task=target.task_id,child_result=status)
+            record_child(dict(task=target.task_id,result=status,stop_reason=observation_interrupted,
+                original_trigger=original_trigger,decision='await_observation_revalidation',
+                terminal_child=True,child_dispatched=dispatched,arrived=reached,observed_cells=0))
+            resume_target=_SuspendedTask(target,baseline,deadline,context,task_motion_dispatched,original_trigger,
+                status,until)
+            if observation_interrupted!='hwt_hold' and not wait_source(observation_interrupted):
+                return finish('blocked','observation_source_revalidation_timeout:'+observation_interrupted)
+            continue
         outcome=('observed' if gained else 'arrival_without_observation') if reached else 'task_unreached_cause_unproven'
         if not task_motion_dispatched:
             outcome='proposal_rejected'
@@ -727,6 +785,7 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             last_inputs=after
         record_child(dict(task=target.task_id,target=[target.x,target.y],result=status,decision=outcome,
             terminal_child=True,child_dispatched=dispatched,stop_reason=reason,first_stop_reason=first[0],
+            continued_observation=terminal_result is not None,
             task_motion_dispatched=task_motion_dispatched,original_trigger=original_trigger,
             arrived=reached,observed_cells=len(gained)))
         forget_plan()
