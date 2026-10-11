@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "baseline": "874362f (product b58b257)",
+  "cause": "One actual adaptive selection renewed the original 2s optional public allocation with three additional .5s side windows before mandatory tail exceeded the unchanged 5s bound.",
+  "counter": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-before",
+    "failed": 1,
+    "actual_adaptive": true,
+    "successful_selection_stub": false,
+    "measured_optional_s": [
+      2.027817731,
+      0.504579721,
+      0.502894838,
+      0.501907353
+    ]
+  },
+  "after": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-after",
+    "passed": 180
+  },
+  "geometry_profile": {
+    "before_s": 4.504890804,
+    "after_s": 2.963715502,
+    "same_goal": true,
+    "same_102_points": true,
+    "same_evidence_hash": true,
+    "live_health_or_movement_receipt": false
+  },
+  "change": "Share the existing 2s optional geometry allocation across helpers within one selection. Keep original 5s selection, source, mission and task limits; fresh native proof before movement remains required.",
+  "discarded_experiments": [
+    "route result reuse: no gain",
+    "array copy signature reuse: slower",
+    "paired identical raster contour: only negligible full selection gain; not retained"
+  ],
+  "original_ABC_passed": 0,
+  "new_common_build": false,
+  "hardware_test": false,
+  "rollback": "Revert shared optional geometry wrapper/allocation and receipt",
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-before/results.xml": "de7118319949c0ea9de513887cf58b6840b875128af894107662e7e48544d6de",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-after/results.xml": "65e5e2e8380cf53d7dc7dae4384365c080c5be4a672ed8c1f16f0780b06d04ff",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/terminal-selection-profile/result.json": "9ff676d6cf07eb8f00fb9c6bbf4b68f7d53e0ad7772528041c8f4d561c72357e",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/terminal-selection-shared-optional/result.json": "77d8631dc977b2e1eba991c6be2a47c1cf53f25772e68f71b97fbdfec6472e22",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier_runtime.py": "b2cfd5960c3994fe9aac4ee5b8aaf24c71f271091a39a805f65c7e4afe4acbd7",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_optional_work_budget.py": "cfdeb776f2704cf721a221a129a371b2d0badaa7aa08b00cc0384520a69af14d",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-wrapper-after/results.xml": "fb1eeb9247d91e0441fe9a035fc056fb27a05d8eeb7c12c6585b72e629cf73bd"
+  },
+  "wrapper_regression": {
+    "path": "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/optional-wrapper-after",
+    "passed": 3,
+    "includes_two_new_exception_and_standalone_cases": true
+  }
+}

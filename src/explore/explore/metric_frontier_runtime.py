@@ -1896,6 +1896,35 @@ class MetricFrontierRuntime:
             getattr(inputs,'map_odom_reference',None),getattr(inputs,'physical_motion',None))
 
     def _metric_public_search(self, inputs, policy, search, *args):
+        # Optional public/side refinements share the existing two-second
+        # allocation in ONE selection. Measured A spent 2 s plus three renewed
+        # 0.5 s windows before its mandatory tail exceeded the original 5 s.
+        # This only reduces optional pure work; it never extends that hard end
+        # or retains a candidate, source verdict or movement permit.
+        cache = getattr(self, '_metric_selection_cache', None)
+        owner = getattr(cache, 'memo', None)
+        remaining = None if owner is None else owner.get('optional_geometry_remaining_s')
+        if remaining is None:
+            return self._metric_public_search_inputs(inputs, policy, search, *args)
+        if remaining < .25:
+            return None  # same minimum useful helper window, before more pure work
+        previous = getattr(cache, 'optional_geometry_deadline', None)
+        started = time.monotonic()
+        cache.optional_geometry_deadline = started + remaining
+        try:
+            return self._metric_public_search_inputs(inputs, policy, search, *args)
+        finally:
+            elapsed = time.monotonic() - started
+            owner['optional_geometry_remaining_s'] = max(0., remaining-elapsed)
+            owner['optional_geometry_elapsed_s'] += elapsed
+            cache.optional_geometry_deadline = previous
+
+    def _metric_optional_geometry_until(self, until):
+        shared = getattr(getattr(self, '_metric_selection_cache', None),
+                         'optional_geometry_deadline', None)
+        return until if shared is None else min(until, shared)
+
+    def _metric_public_search_inputs(self, inputs, policy, search, *args):
         public = self._metric_public_inputs(inputs)
         if public is inputs:
             return search(inputs,*args)
@@ -1927,7 +1956,8 @@ class MetricFrontierRuntime:
         now = time.monotonic()
         # Optional better geometry must not consume an already eligible
         # native query's remaining original selection deadline.
-        until = min(now+.5, started+self._metric_candidate_budget()-.25)
+        until = self._metric_optional_geometry_until(
+            min(now+.5, started+self._metric_candidate_budget()-.25))
         if until-now < .25:
             return None
         direction = (pose[0]-frontier.cx, pose[1]-frontier.cy)
@@ -1989,7 +2019,8 @@ class MetricFrontierRuntime:
         # the former 0.5 s before the finite nearby view was examined, then
         # spent longer on unproved distant proposals. Keep the same hard end
         # and 0.25 s reserve for the remaining selection/validation work.
-        until = min(now+2., started+self._metric_candidate_budget()-.25)
+        until = self._metric_optional_geometry_until(
+            min(now+2., started+self._metric_candidate_budget()-.25))
         if until-now < .25 or not all(footprint_clear(*pose, g, allowed,
                 self._world_to_grid, self._grid_to_world, self._metric_bounds,
                 heading_half_angle=.05, center_deviation_m=.02)
@@ -2261,10 +2292,16 @@ class MetricFrontierRuntime:
         if cache is None:
             cache = self._metric_selection_cache = threading.local()
         previous = getattr(cache, 'memo', None)
-        cache.memo = {'inputs': inputs, 'policy': getattr(cache, 'policy', None)}
+        owner = cache.memo = {'inputs': inputs, 'policy': getattr(cache, 'policy', None),
+                             'optional_geometry_remaining_s': 2.,
+                             'optional_geometry_elapsed_s': 0.}
         try:
             return self._metric_candidates_in_pass(inputs, min_frontier, frontiers=frontiers, view=view)
         finally:
+            if hasattr(self, '_metric_status'):
+                self._metric_status['candidate_optional_geometry'] = dict(
+                    allocation_s=2., elapsed_s=owner['optional_geometry_elapsed_s'],
+                    remaining_s=owner['optional_geometry_remaining_s'])
             cache.memo = previous
 
     def _metric_candidates_in_pass(self, inputs, min_frontier, *, frontiers=None, view=None):

@@ -76,13 +76,24 @@ Alle Kinder terminal, vier Kommandoströme null. Keine reale autonome Fahrt.
 [Gemeinsamer Build, Regression und Originale](evidence/ap06-correction-v11-20261011.json).
 Alle 1.048 Bestandsinstallhashes gleich, Bestandsmain sauber/unverändert.
 
-**Genau nächster Schritt:** gemessene doppelte Konturarbeit auf geometrisch
-identischen Raw-/Cost-Rastern zellgenau zusammenfassen und gegen die getrennte
-Originalprüfung testen. Ein anderer Kopier-/Signaturversuch brachte keinen
-Gewinn (4,90551 s statt 4,50489 s) und wurde nicht ins Produkt übernommen.
-Anschließend konkrete Folgegeometrie/Scan fortsetzen; drei Beobachtungen und
-3/3 Gesamtmissionen bleiben offen. Realtests folgen erst der Qualifikation.
-Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
+Weitere gemessene Schritt-3-Korrektur: echte adaptive Auswahl erneuerte
+nach 2,0278 s optionaler öffentlicher Arbeit drei zusätzliche Helferfenster
+von 0,5046/0,5029/0,5019 s. Der Gegenfall war vor Korrektur negativ. Die
+bestehende 2-s-Zuteilung wird jetzt pro Auswahl gemeinsam verbraucht; das
+ursprüngliche harte 5-s-Auswahlbudget und alle Frische-/Aufgaben-/Gesamtgrenzen
+bleiben unverändert. Eingefrorene originale Auswahl 4,5049 → 2,9637 s,
+identisches Ziel, 102 Punkte und vollständiger Evidenzhash. 180 betroffene
+Fälle positiv. Kein Routen-/Quellen-/Fahrrecht zwischengespeichert.
+[Budgetgegenfall](evidence/ap06-optional-geometry-budget-20261011.json).
+Kopiervermeidung, Routenreuse und Rasterpaar-Zusammenfassung ohne klaren
+Gesamtgewinn verworfen. Keine neue gemeinsame oder reale Abnahme daraus.
+
+**Genau nächster Schritt:** den gemeinsamen Kandidaten mit dieser gemessenen
+Korrektur neu bauen und ursprüngliche Gesamtfolgen prüfen. Drei aufeinander-
+folgende Beobachtungen/3/3 Missionen bleiben offen; konkrete native Folge-
+geometrie anschließend anhand des neuen Ergebnisses korrigieren. Realtests
+folgen erst der Softwarequalifikation. Rückfall: eigene Diffs revertieren
+bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
