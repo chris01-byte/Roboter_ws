@@ -37,7 +37,12 @@ def receive_current_tf(listener):
     if not group.beginning_execution(sub):
         return True  # existing callback owns delivery; age checks still apply
     try:
-        for _ in range(32):
+        # The real listener keeps 100 TF messages. A fixed 32-message prefix
+        # can contain only stale edges after a delayed decision, even though
+        # fresh originals are already queued. Drain at most its actual finite
+        # queue depth, preserving every edge and stamp through the callback.
+        depth = getattr(getattr(sub, 'qos_profile', None), 'depth', 32)
+        for _ in range(depth if isinstance(depth, int) and depth > 0 else 32):
             with sub.handle:
                 info = sub.handle.take_message(sub.msg_type, sub.raw)
             if info is None:

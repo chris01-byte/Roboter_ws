@@ -22,6 +22,7 @@ def test_current_tf_received_without_executor_and_missing_tf_never_restamped():
     node.get_clock = consumer.get_clock
     pub = producer.create_publisher(TFMessage, '/tf', 100)
     halt = threading.Event()
+    current_published = threading.Event()
     def publish():
         while not halt.is_set():
             transforms = []
@@ -32,6 +33,10 @@ def test_current_tf_received_without_executor_and_missing_tf_never_restamped():
                 t.transform.rotation.w = 1.
                 transforms.append(t)
             pub.publish(TFMessage(transforms=transforms))
+            stamp = transforms[-1].header.stamp
+            if 0 <= (producer.get_clock().now().nanoseconds-
+                     stamp.sec*10**9-stamp.nanosec)/1e9 < .2:
+                current_published.set()
             halt.wait(.02)
     worker = threading.Thread(target=publish,daemon=True)
     try:
@@ -39,6 +44,7 @@ def test_current_tf_received_without_executor_and_missing_tf_never_restamped():
         while not pub.get_subscription_count() and time.monotonic()<deadline:time.sleep(.01)
         assert pub.get_subscription_count()
         worker.start()
+        assert current_published.wait(3.)  # live source is the test precondition
         time.sleep(.35)  # actual publisher runs, listener executor withheld
         assert Stage3MotionDiagnostic._motion_tf_authorized(node)
         original = buffer.lookup_transform('odom','base_link',rclpy.time.Time()).header.stamp
@@ -55,6 +61,55 @@ def test_current_tf_received_without_executor_and_missing_tf_never_restamped():
         listener.unregister()
         consumer.destroy_node();producer.destroy_node()
         if rclpy.ok():rclpy.shutdown()
+
+
+def test_tf_queue_drain_reaches_current_edges_after_delayed_consumer():
+    """A depth-100 listener must not stop at 32 obsolete queued messages."""
+    rclpy.init(args=[])
+    consumer, producer = Node('tf_backlog_consumer'), Node('tf_backlog_producer')
+    buffer = Buffer()
+    listener = TransformListener(buffer, consumer)
+    node = Stage3MotionDiagnostic.__new__(Stage3MotionDiagnostic)
+    node._tf_buffer, node._tf_listener = buffer, listener
+    node.get_clock = consumer.get_clock
+    pub = producer.create_publisher(TFMessage, '/tf', 100)
+    originals = []
+    def publish():
+        transforms = []
+        for parent, child in [('map', 'odom'), ('odom', 'base_link')]:
+            transform = TransformStamped()
+            transform.header.frame_id, transform.child_frame_id = parent, child
+            transform.header.stamp = producer.get_clock().now().to_msg()
+            transform.transform.rotation.w = 1.
+            transforms.append(transform)
+        originals.append(transforms[-1].header.stamp)
+        pub.publish(TFMessage(transforms=transforms))
+    try:
+        deadline = time.monotonic()+3.
+        while not pub.get_subscription_count() and time.monotonic()<deadline:
+            time.sleep(.01)
+        assert pub.get_subscription_count()
+        assert listener.tf_sub.qos_profile.depth == 100
+        for _ in range(40):
+            publish()
+            time.sleep(.001)
+        time.sleep(.3)  # original stamps really age; no consumer executor
+        for _ in range(5):
+            publish()
+            time.sleep(.001)
+        time.sleep(.03)
+        assert node._motion_tf_authorized()
+        latest = buffer.lookup_transform('odom', 'base_link', rclpy.time.Time()).header.stamp
+        assert latest in originals[-5:]
+        time.sleep(.25)
+        assert not node._motion_tf_authorized()
+        assert buffer.lookup_transform('odom', 'base_link', rclpy.time.Time()).header.stamp == latest
+    finally:
+        listener.unregister()
+        consumer.destroy_node()
+        producer.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 def test_latest_actual_source_before_decision_preserves_stamp_and_missing_age():
