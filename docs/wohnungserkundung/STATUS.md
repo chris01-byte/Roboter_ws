@@ -1,6 +1,55 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Folge 1–4: v6 negativ, Quellen-/Dispatcherverzögerung gemessen
+## 11.10.2026 – IMU-Ausgabe gezielt entkoppelt, Gesamtprüfung ausstehend
+
+Punkt 1 bleibt begrenzt real positiv, mit erhaltener Rohdatenlücke während
+Translation. Für Punkt 2 wird die nachgewiesene native IMU-Schreibpause im
+vorhandenen Quellenpfad korrigiert: optionaler schreibgeschützter Startparameter
+`isolate_sensor_output`, Default false. Wiederverwendung des vorhandenen
+Encoder-Ausgabehelpers; Serializer/Spawn vor erster Erfassung, ein begrenzter
+Ausgabeschlitz je bestehendem Topic, unveränderte Messbytes/Stempel und Sensor-
+QoS (IMU best effort / Tiefe 5, Status/Diagnose reliable / Tiefe 10).
+Genau ein DDS-Publisherbesitzer, eigenes Output-Kind ohne Bus oder Aktor.
+Verlorenes Output-Kind verriegelt die passive Erfassung und schließt den
+Transport; kein automatischer Neustart oder geheilter Quellenzustand.
+Der gerätefreie Originalprüfstand wählt diesen vorhandenen Produktpfad explizit.
+Reale Installation/Autostart und die Sensor-/Kontinuitätsfristen bleiben unverändert.
+
+Tatsächlicher 350-ms-Schreibpausenvergleich mit gehaltenem GIL: direkter IMU-
+Schreiber unterbricht Encoderkontinuität, isolierter Schreiber erhält gültige
+Radproben und unveränderte Positionen. Alle 15 gezielten Helper-/IMU-/Quellen-
+Isolationsfälle bestanden. Erste Testfassung enthielt zwei eigene Belegfehler:
+kurzlebiges multiprocessing-Value vor Spawn verloren und native DDS-Graph-
+Tiefenanzeige 0 statt lokaler Publisher-Konfiguration. Originalnegative erhalten;
+Value-Lebensdauer korrigiert, tatsächliche im Kind erzeugten Publisher-QoS
+separat ausgelesen, korrigierter Lauf 15/15. Keine Quellenwerte angepasst.
+Vollständiger neuer Build, Produktregression und ursprüngliche A/B/C ausstehend.
+
+Private Auslagerung von Egress-Geometrie ist nicht übernommen. Mehrkern-
+Parentversuche enden mit nativer Explorer-Absturzaufzeichnung, darunter ein
+Shutdown-Stack, der die ursprüngliche Ursache nicht beweist. Mit ursprünglichem
+Ein-Kern-Explorer meldet die erste Transferfassung fehlende Kartenreferenz beim
+Tuple-Deserialisieren; korrigierter ausdrücklich gebundener Transfer läuft,
+bleibt aber negativ: 0 m, `start_motion_wheel_stale_after_processing`.
+Eigene Rechenzeit 28–81 ms, gesamte gemessene Antwort 131–155 ms plus weitere
+Parentprüfung. Keine Prozessauslagerung oder andere CPU-/Dispatcherdiagnose
+als qualifiziert behaupten. Bestehender Scope-Cache ist bereits vorhanden.
+
+Punkte 3/4 bleiben von bestandener ursprünglicher Softwaregesamtprüfung abhängig;
+keine neue reale autonome Fahrt aus diesem Zwischenstand. Bekannte LAB-Kontur
+nach gemessenem Fahrversatz fest neu binden. Weitere Passage-/Drei-Bereich-
+Geometrie und native Apple-Laufzeit bleiben tatsächlich unbestätigt; bestehende
+konkrete Rückfragen erhalten, keine erneute allgemeine Laborfreigabe.
+
+**Genau nächster Schritt:** diesen gezielt korrigierten gemeinsamen Kandidaten
+sauber separat bauen, vollständige Regression und unveränderte ursprüngliche
+A/B/C ausführen; nach deren Bestehen die beauftragten realen Schritte 3/4.
+Rückfall: eigenes privates Overlay direkt geordnet stoppen, Bestandsinstall
+bewahren; IMU-Ausgabeopt-in zurücknehmen oder eigenen Fix gezielt revertieren.
+Private Belege: `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/`.
+
+## Historischer v6-Quellen-/Dispatcherstand
+
 
 Punkt 1 bleibt als begrenzte reale Anfahr-/Bremsqualifikation positiv beendet;
 kein autonomer Realnachweis daraus. Punkt 2: vollständiger separater Build

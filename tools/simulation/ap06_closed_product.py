@@ -140,7 +140,8 @@ def device_parameters(repo):
         # acquisition must not share that pause. No sample is restamped.
         isolate_feedback_output=True, feedback_output_cpu_affinity=[-1])
     common['hwt601_imu']['ros__parameters'].update(
-        development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30)
+        development_contract=True, response_timeout_s=.05, sensor_timeout_s=.30,
+        isolate_sensor_output=True)
     return common
 
 

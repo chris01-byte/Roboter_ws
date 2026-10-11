@@ -4,21 +4,26 @@ import queue
 import time
 
 
-def _send(context, slots, stop, ready, node_name, cpu_affinity):
+def _send(context, slots, stop, ready, node_name, cpu_affinity, sensor_data_topics=()):
     # Spawn, never fork an initialized DDS participant or serial descriptor.
     import os
     import rclpy
     from rclpy.serialization import deserialize_message
     from rosidl_runtime_py.utilities import get_message
+    from rclpy.qos import qos_profile_sensor_data
     if cpu_affinity:
         os.sched_setaffinity(0, set(cpu_affinity))
     rclpy.init(args=[])
     node = rclpy.create_node(node_name)
-    publishers = [(node.create_publisher(get_message(kind), topic, 10),
+    publishers = [(node.create_publisher(get_message(kind), topic,
+                   qos_profile_sensor_data if topic in sensor_data_topics else 10),
                    get_message(kind), slot) for topic, kind, slot in slots]
     trace_dir = os.environ.get('AP06_OUTPUT_TRACE_DIR')
     timing = {topic: dict(sent=0, discarded=0, max_queue_age_s=0.,
-                         max_publish_duration_s=0.) for topic, _, _ in slots}
+                         max_publish_duration_s=0.,
+                         qos_depth=publisher.qos_profile.depth,
+                         qos_reliability=int(publisher.qos_profile.reliability))
+              for (publisher, _, _), (topic, _, _) in zip(publishers, slots)}
     ready.set()
     try:
         while not stop.is_set() and rclpy.ok():
@@ -78,7 +83,8 @@ class _Publisher:
 class EncoderPublication:
     """Single publisher owner; one pending item per existing encoder topic."""
     def __init__(self, topics, max_age_s,
-                 node_name='hwt601_encoder_shadow_output', cpu_affinity=()):
+                 node_name='hwt601_encoder_shadow_output', cpu_affinity=(),
+                 sensor_data_topics=()):
         # Humble imports native message support lazily at first serialization.
         # On this Jetson the first Odometry took 196 ms, later calls .2 ms:
         # initializing it inside acquisition invalidates the encoder interval.
@@ -88,6 +94,9 @@ class EncoderPublication:
         from rclpy.serialization import serialize_message
         from rosidl_runtime_py.utilities import get_message
         topics = tuple(topics)
+        sensor_data_topics = tuple(sensor_data_topics)
+        if not set(sensor_data_topics).issubset(topic for topic, _ in topics):
+            raise ValueError('Sensor QoS requires an existing output topic')
         for kind in dict.fromkeys(kind for _, kind in topics):
             serialize_message(get_message(kind)())
         ctx = multiprocessing.get_context('spawn')
@@ -97,7 +106,7 @@ class EncoderPublication:
                        for topic, kind in topics]
         self._process = ctx.Process(
             target=_send, args=(max_age_s, self._slots, self._stop, self._ready,
-                               node_name, tuple(cpu_affinity)),
+                               node_name, tuple(cpu_affinity), sensor_data_topics),
             name='encoder_dds_output', daemon=True)
         self._process.start()
         if not self._ready.wait(10.):

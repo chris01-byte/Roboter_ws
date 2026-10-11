@@ -1,5 +1,21 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – IMU-Ausgabe-Kandidat, noch keine zusätzliche Hardwarewirkung
+
+Separater Checkout: neuer optionaler Produktpfad `isolate_sensor_output`
+(Default false) trennt native DDS-Ausgabe von passiver IMU-Erfassung mit dem
+bestehenden Encoderhelper, ohne Sensor-/Aktorbus im Kind. Originalbytes/-zeiten,
+Sensor-QoS und alle Schutzfristen bleiben bestehen; Kindverlust verriegelt.
+350-ms-Schreibpausenvergleich rot/grün und 15 gezielte gerätefreie Fälle bestanden.
+Gesamtbuild/Regression/Original-A/B/C noch ausstehend. Keine neue reale Fahrt,
+kein Install-/Autostart-/SDK-Wechsel; bekannte letzte Null-RPM-/Positionsbelege
+und alle 1.048 bewahrten Bestandsinstall-Dateien bleiben Referenz, keine neue
+physische Beobachtung daraus behaupten. Private Geometrieprozessversuche
+nicht übernommen. Rückfall: nur eigene Kandidatenprozesse direkt geordnet
+stoppen, Opt-in zurücknehmen und bewahrten Install nutzen. Aktueller Stand
+und nächste Reihenfolge ausschließlich im WE-STATUS.
+
+
 ## 11.10.2026 – neuer originaler v6-Vergleich und reine CPU-/DDS-Diagnose
 
 Original-A/B/C mit sauberer Quelle `6c50cf5`, unveränderten Produktdateien des

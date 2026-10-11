@@ -1,5 +1,21 @@
 # Projektgedächtnis
 
+## 11.10.2026 – vorhandenen Ausgabehelper für passive IMU wiederverwenden
+
+Native IMU-Schreibpause kann im gemeinsamen ARM-Prüfstand die echte Encoder-
+Erfassung über 180 ms anhalten. Neuer expliziter, schreibgeschützter Start-
+Opt-in `isolate_sensor_output` verwendet denselben vorhandenen Ausgabehelper,
+ursprüngliche IMU-/Status-QoS und unveränderte Messbytes/Stempel. Spawn und
+Serializer vor Erfassung; Kind ohne Bus/Aktor, keine neue Transportimplementierung.
+Kindverlust verriegelt Erfassung und schließt Transport. Tatsächlicher 350-ms-
+GIL-Gegenfall rot/grün und 15 gezielte Fälle bestanden; vollständiger gemeinsamer
+Build/Regression/Originalmissionen ausstehend. Default und Bestandsinstall
+unverändert, keine neue reale Fahrt. Geometrieprozess-Prototyp verworfen;
+gebundener Transfer bleibt an Frische negativ, kein Sensor-/SDK-Defekt bewiesen.
+Rückfall: privates Overlay geordnet stoppen, Bestandsinstall oder vorherigen
+privaten Stand wählen; neuer Opt-in gezielt zurücknehmbar. Aktueller WE-Stand
+und genau nächster Schritt ausschließlich im STATUS.
+
 ## 11.10.2026 – Quellenpause und GIL-Konkurrenz getrennt nachweisen
 
 Der neue ursprüngliche ARM-A/B/C-Vergleich mit reinem Prüfstandnachtrag

@@ -49,6 +49,84 @@ def paused_publication_device(*args):
     device_process(*args)
 
 
+def block_one_imu_publication():
+    from rclpy.publisher import Publisher
+    original = Publisher.publish
+    library = ctypes.PyDLL(None); library.usleep.argtypes = [ctypes.c_uint]
+    count = [0]
+    def publish(self, message):
+        if self.topic_name == '/shadow/hwt601/imu/data_raw':
+            count[0] += 1
+            if count[0] == 12:
+                began = time.monotonic()
+                library.usleep(350_000)
+                ended = time.monotonic()
+                Path(os.environ['AP06_WRITER_PAUSE_EVIDENCE']).write_text(json.dumps(
+                    dict(pid=os.getpid(), begin=began, end=ended, duration_s=ended-began)))
+        return original(self, message)
+    Publisher.publish = publish
+
+
+def paused_imu_output_worker(*args):
+    from base_hardware.encoder_publication import _send
+    block_one_imu_publication()
+    _send(*args)
+
+
+def paused_imu_device(*args):
+    from base_hardware import encoder_publication
+    block_one_imu_publication()
+    encoder_publication._send = paused_imu_output_worker
+    device_process(*args)
+
+
+@pytest.mark.parametrize('isolated', (False, True))
+def test_original_imu_writer_pause_is_isolated_from_encoder_acquisition(tmp_path, monkeypatch, isolated):
+    monkeypatch.setenv('AP06_SIMULATION', '1')
+    monkeypatch.setenv('ROS_DOMAIN_ID', '186')
+    pause_file = tmp_path/'imu_writer_pause.json'
+    monkeypatch.setenv('AP06_WRITER_PAUSE_EVIDENCE', str(pause_file))
+    require_isolation()
+    root = Path(__file__).resolve().parents[2]
+    case = json.loads((root/'tools/simulation/ap06_product_scenarios.json').read_text())['positive'][2]
+    common = device_parameters(root)
+    common['hwt601_imu']['ros__parameters']['isolate_sensor_output'] = isolated
+    device_file = tmp_path/'devices.yaml'; device_file.write_text(yaml.safe_dump(common))
+    context = multiprocessing.get_context('spawn')
+    telemetry = context.Array('d', [*case['start'], 0., 0., 0., float('inf'), 0., 0., 0., 0., 0., 0.])
+    ready, halt = context.Event(), context.Event()
+    fault_value = context.Value('d', 0.)
+    source = context.Process(target=paused_imu_device, args=(case, tmp_path,
+        device_file, True, 2160, fault_value, telemetry, ready, halt,
+        sorted(os.sched_getaffinity(0))[-1]))
+    states = []
+    rclpy.init(); node = Node('ap06_imu_writer_pause_regression')
+    executor = SingleThreadedExecutor(); executor.add_node(node)
+    node.create_subscription(String, '/base_hardware/state_json',
+        lambda m: states.append(json.loads(m.data)), 100)
+    try:
+        source.start(); deadline = time.monotonic()+20.
+        while (len(states) < 70 or not pause_file.exists()) and time.monotonic() < deadline:
+            executor.spin_once(timeout_sec=.02)
+        assert ready.is_set() and len(states) >= 70
+        pause = json.loads(pause_file.read_text())
+        assert pause['duration_s'] >= .35
+        assert (pause['pid'] != source.pid) == isolated
+        if isolated:
+            assert all(s['encoder_feedback_ok'] for s in states)
+            assert all(s['encoder_sample_dt_s'] is None or s['encoder_sample_dt_s'] <= .18 for s in states)
+        else:
+            assert any(not s['encoder_feedback_ok'] for s in states)
+        assert states[-1]['encoder_position_left_u32'] == states[0]['encoder_position_left_u32']
+    finally:
+        halt.set()
+        if source.pid is not None:
+            source.join(5.)
+            if source.is_alive(): source.terminate(); source.join(2.)
+        executor.shutdown(timeout_sec=1.); node.destroy_node(); rclpy.shutdown()
+    assert source.exitcode == 0
+
+
 def test_configured_source_keeps_encoder_acquisition_during_actual_writer_pause(tmp_path, monkeypatch):
     monkeypatch.setenv('AP06_SIMULATION', '1')
     monkeypatch.setenv('ROS_DOMAIN_ID', '186')

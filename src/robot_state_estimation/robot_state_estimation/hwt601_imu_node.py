@@ -8,6 +8,7 @@ import time
 from typing import Optional
 
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from rcl_interfaces.msg import ParameterDescriptor
 import rclpy
 from rclpy.clock import ClockType, JumpThreshold
 from rclpy.executors import ExternalShutdownException
@@ -41,6 +42,9 @@ class Hwt601ImuNode(Node):
         self.declare_parameter('errors_before_reconnect', 3)
         self.declare_parameter('sensor_timeout_s', 0.20)
         self.declare_parameter('development_contract', False)
+        self.declare_parameter('isolate_sensor_output', False,
+            ParameterDescriptor(read_only=True,
+                description='Separate DDS output from passive sensor acquisition.'))
         self.declare_parameter('frame_id', 'hwt601_link')
         self.declare_parameter('imu_topic', '/hwt601/imu/data_raw')
         self.declare_parameter('status_topic', '/hwt601/status_json')
@@ -77,11 +81,26 @@ class Hwt601ImuNode(Node):
             gp('saturation_margin_counts').value)
         self._validate_parameters()
 
-        self.imu_pub = self.create_publisher(
-            Imu, self.imu_topic, qos_profile_sensor_data)
-        self.status_pub = self.create_publisher(String, self.status_topic, 10)
-        self.diagnostics_pub = self.create_publisher(
-            DiagnosticArray, self.diagnostics_topic, 10)
+        self._sensor_output = None
+        if gp('isolate_sensor_output').value is True:
+            from base_hardware.encoder_publication import EncoderPublication
+            # Warm serializers and spawn before the first poll/timer, never
+            # during acquisition. The child has no transport or actuator.
+            self._sensor_output = EncoderPublication([
+                (self.imu_topic, 'sensor_msgs/msg/Imu'),
+                (self.status_topic, 'std_msgs/msg/String'),
+                (self.diagnostics_topic, 'diagnostic_msgs/msg/DiagnosticArray')],
+                self.sensor_timeout_s, node_name=self.get_name()+'_output',
+                sensor_data_topics=(self.imu_topic,))
+            self.imu_pub = self._sensor_output.publisher(self.imu_topic)
+            self.status_pub = self._sensor_output.publisher(self.status_topic)
+            self.diagnostics_pub = self._sensor_output.publisher(self.diagnostics_topic)
+        else:
+            self.imu_pub = self.create_publisher(
+                Imu, self.imu_topic, qos_profile_sensor_data)
+            self.status_pub = self.create_publisher(String, self.status_topic, 10)
+            self.diagnostics_pub = self.create_publisher(
+                DiagnosticArray, self.diagnostics_topic, 10)
 
         self._transport: Optional[Hwt601SerialTransport] = None
         self._last_connect_attempt = -math.inf
@@ -252,6 +271,8 @@ class Hwt601ImuNode(Node):
                     classification='processing_after_deadline', finished_monotonic_s=finished))
 
     def _poll(self) -> None:
+        if not self._check_sensor_output():
+            return
         if self._terminal_fault is not None:
             return
         try:
@@ -336,7 +357,17 @@ class Hwt601ImuNode(Node):
             return None
         return (len(self._sample_times) - 1) / duration
 
+    def _check_sensor_output(self):
+        output = getattr(self, '_sensor_output', None)
+        if output is not None and not output.alive:
+            self._terminal_fault = 'hwt_sensor_output_process_lost'
+            self._last_error = self._terminal_fault
+            self._disconnect()
+            return False
+        return True
+
     def _publish_status(self) -> None:
+        self._check_sensor_output()
         now = time.monotonic()
         age_s = (
             None if self._last_received_at is None
@@ -366,6 +397,7 @@ class Hwt601ImuNode(Node):
             'reason': reason,
             'actuator_output': False,
             'sensor_write_commands': False,
+            'sensor_output_isolated': getattr(self, '_sensor_output', None) is not None,
             'port': self.port,
             'baud': self.baud,
             'device_address': self.device_address,
@@ -426,6 +458,8 @@ class Hwt601ImuNode(Node):
     def destroy_node(self):
         self._clock_jump_handle.unregister()
         self._disconnect()
+        if self._sensor_output is not None:
+            self._sensor_output.close()
         return super().destroy_node()
 
 
