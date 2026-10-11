@@ -1050,3 +1050,15 @@ Sauberes `b58b257`, separater 14-Paket-ARM64-Build, 157 Quelle-Installgleichheit
 ## 11.10.2026 – AP-06: optionales Geometriefenster gemeinsam verbrauchen
 
 Echter adaptiver Gegenfall: 2,0278 s öffentliche Verfeinerung plus drei erneuerte .5-s-Seitenfenster (insgesamt 3,5372 s) vor notwendiger Schlussarbeit. Bestehende 2-s-Zuteilung jetzt pro Auswahl gemeinsam genutzt; ursprüngliche 5 s und alle Quellen-/Aufgaben-/Gesamtfristen unverändert. Originale eingefrorene Auswahl 4,5049 → 2,9637 s mit identischem Ziel, 102 Punkten und Evidenzhash. 180 betroffene Fälle positiv. Keine Entscheidung durch Erfolgsstub ersetzt; kein Fahrrecht gespeichert. Andere Reuse-/Rasterpaarversuche ohne klaren Gesamtgewinn verworfen. Neu gemeinsamer Build und ursprüngliche Missionen erforderlich; letzte Abnahme bleibt 0/3, reale Folge offen. Rückfall nur diese Zuteilung/Ergebnisfelder revertieren.
+
+## 11.10.2026 – gemeinsamer AP-06-Kandidat v12 bleibt unvollständig
+
+Sauberer Softwarestand f7138cf, separates v12-Install: 2.936 gesammelte
+Produktfälle positiv. Originale A/B/C 0/3. B erreicht drei eigene Beobachtungen
+und 1,272521 m, inklusive vollständigem optionalem Scan im ursprünglichen
+Budget; keine volle Passage/Weitererkundung. A endet nach Egress-Verwerfung
+am 5-s-Auswahlbudget, C nach Verarbeitungsfrischeverletzung und einer
+Beobachtung am gleichen Budget. Die gemeinsame optionale Zuteilung beseitigt
+nicht jede teure Restarbeit. Keine höheren Fristen oder Gesundheitsannahmen
+als Folgerung. Weiter konkrete Quellen-/Geometrieübergänge prüfen.
+Beleg: docs/wohnungserkundung/evidence/ap06-correction-v12-20261011.json.

@@ -88,12 +88,33 @@ Fälle positiv. Kein Routen-/Quellen-/Fahrrecht zwischengespeichert.
 Kopiervermeidung, Routenreuse und Rasterpaar-Zusammenfassung ohne klaren
 Gesamtgewinn verworfen. Keine neue gemeinsame oder reale Abnahme daraus.
 
-**Genau nächster Schritt:** den gemeinsamen Kandidaten mit dieser gemessenen
-Korrektur neu bauen und ursprüngliche Gesamtfolgen prüfen. Drei aufeinander-
-folgende Beobachtungen/3/3 Missionen bleiben offen; konkrete native Folge-
-geometrie anschließend anhand des neuen Ergebnisses korrigieren. Realtests
-folgen erst der Softwarequalifikation. Rückfall: eigene Diffs revertieren
-bzw. privates Overlay abwählen.
+Gemeinsamer Kandidat v12 aus `f7138cf` separat gebaut: 14 Pakete, 157
+Quelle-Installgleichheiten und 756 Installhashes. Vollregression: **2.936 Fälle
+positiv**, keine Fehler/Skip. Ursprüngliche unveränderte A/B/C weiter **0/3**:
+A 0,150076 m ohne Beobachtung; B 1,272521 m mit drei selbst gewählten
+Beobachtungen; C 0,697345 m mit einer Beobachtung. B schloss den optionalen
+Rundblick mit 6,29647 rad in 149,979 s ab, erreichte aber keine volle Passage.
+A: erster Egress-Trigger neue unbekannte Fläche/Belegung, terminal 5,04335 s
+Auswahlarbeit trotz nur 0,01316 s optionaler Helferarbeit. B: zuerst keine
+ursprüngliche Sicht am nativen Haltepunkt, später Auswahlbudget. C: reale
+simulierte Encoderprobe am Ende 172,373/180,795 ms alt, danach begrenzte
+Revalidierung und eine Beobachtung, terminal 5,11247 s Auswahl. Keine harte
+Quellenstörung und kein Gesamtpositivnachweis. Alle Kinder terminal, vier
+Kommandoströme null. [V12-Build und Originale](evidence/ap06-correction-v12-20261011.json).
+Bestandsmain unverändert/sauber, alle 1.048 Bestandsinstallhashes gleich.
+
+**Veröffentlichung:** Implementierung und bisherige Belege wurden ohne Force
+auf `feature/ap06-closed-product-validation` übertragen; Remote-HEAD
+`f7138cfbd38d58462040174203a278d8231bb18e` am 11.10.2026 um 06:09:17 UTC
+mit `ls-remote` bestätigt. 22 geänderte Dateien geprüft, keine Geheimnistreffer;
+nur eigene synthetische binäre Gegenfallraster. Der V12-Nachtrag ist neu.
+
+**Genau nächster Schritt:** reproduzierten Rollenfehler des gemeinsamen
+`/plan`-Topics korrigieren: reine Planner-Abfrage darf keinen aktiven
+Navigationspfad ersetzen; danach tatsächliche teure Restgeometrie und Egress-
+Verwerfung instrumentiert belegen. Drei Beobachtungen sind in B erreicht,
+3/3 volle Missionen bleiben offen. Realtests folgen erst der Softwarequalifikation.
+Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

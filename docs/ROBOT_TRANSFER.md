@@ -3370,3 +3370,14 @@ v5-Produktbuild 205c2c4, reine Testwrapperkorrektur 94ba58e, 14 private Pakete u
 ## 11.10.2026 – AP-06-Korrektur, temporärer Jetson-Kandidat v11
 
 Quellstand `b58b257` im separaten Checkout auf dem ARM64-Jetson separat gebaut: `/home/p/.local/share/amadeus/releases/ap06-correction-v11-20261011/{build,install,log}`. 14 Pakete, tatsächliche Paketpräfixe und Nativ-/Dateihashes im lokalen `candidate-manifest.json`; 157 Quelle-Installgleichheiten. Kein Bestandsinstall-, SDK-, Autostart- oder Geräteprofilwechsel; alle 1.048 Bestandsinstallhashes und sauberer Main `23928d9` unverändert. Vollregression 2.933 positiv, originale gerätefreie A/B/C 0/3; ausdrücklich kein neuer Hardware-/Kundenbeleg. Kein realer Aktorprozess aus dieser Umsetzung. Reale Sensor-, Stillstands-, Scope- und Recorderbindung vor einem später qualifizierten Lauf erneut erforderlich. Rückfall temporäres Overlay nicht sourcen, eigene Änderungen gezielt revertieren.
+
+## 11.10.2026 – AP-06 v12 ausschließlich privat qualifiziert
+
+14-Paketbuild f7138cf unter
+`/home/p/.local/share/amadeus/releases/ap06-correction-v12-20261011`, eigene
+Build-/Install-/Logverzeichnisse; 157 Produktdateien quellgleich, 756 Hashes.
+2.936 Produktprüfungen positiv, ursprüngliche autonome Gesamtfälle 0/3.
+Keine echte Bewegung, kein Install-/Autostartwechsel. Main 23928d9 sauber,
+alle 1.048 ursprünglichen Installhashes weiter identisch. Remote-Featurebranch
+auf f7138cf bestätigt; kein Main-Merge. Realprüfung erst nach vollständiger
+Softwarequalifikation, privates Overlay bleibt abwählbarer Rückfall.
