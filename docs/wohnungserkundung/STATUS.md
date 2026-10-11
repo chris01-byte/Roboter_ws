@@ -61,15 +61,28 @@ Beobachtungen fehlen weiter. [Kausalbeleg](evidence/ap06-causal-result-20261011.
 Eine versuchte exakte Routenwiederverwendung brachte im Profil keine
 Verbesserung (4,505 → 4,602 s) und wurde vollständig verworfen.
 
-Ursprüngliche A/B/C bleiben zuletzt 0/3; noch kein neuer gemeinsamer Build oder
-reale autonome Abnahme. Bestandsmain/-install und Hardware unverändert.
+Gemeinsamer Kandidat v11 aus `b58b257` separat gebaut: 14 Pakete in etwa
+173 s, 157 Quelle-Installgleichheiten, 756 Installhashes; sämtliche Produkt-
+präfixe einschließlich Nativkern im neuen privaten Install. Vollregression:
+**2.933 Fälle positiv**, keine Fehler/Skip. Ursprüngliche unveränderte A/B/C
+weiter **0/3**: A 0,728097 m mit zwei Ankünften/Beobachtungen (176/4 Zellen),
+B 0,311323 m ohne Ankunft/Beobachtung, C 0,712181 m mit einer Ankunft/Beobachtung.
+A: Scan erreichte 6,29505 rad, meldete jedoch am ursprünglichen 150-s-Limit
+unterbrochen; danach native Footprint-Verwerfungen, terminal 5,09361 s
+Auswahlarbeit bei 2,02131 s Thread-CPU. B: erster Auslöser neue unbekannte
+Fläche/Belegung im Egress, C: Scangeometrie nach 0,20730 rad ungültig; beide
+terminal Auswahlbudget. Keine gemeinsame Ursache aller Schutztrigger bewiesen.
+Alle Kinder terminal, vier Kommandoströme null. Keine reale autonome Fahrt.
+[Gemeinsamer Build, Regression und Originale](evidence/ap06-correction-v11-20261011.json).
+Alle 1.048 Bestandsinstallhashes gleich, Bestandsmain sauber/unverändert.
 
-**Genau nächster Schritt:** gemeinsamer sauberer Kandidat, relevante vollständige
-Regression und unveränderte A/B/C zur Prüfung der korrigierten Zeitfolge. Bei
-Fehlschlag die konkrete Folgeplanung weiter korrigieren; Schritt 4 bleibt bis
-mindestens drei Beobachtungen offen. Reale autonome Folge an vollständige
-Softwarequalifikation gebunden. Rückfall: eigene kleine Diffs revertieren bzw.
-privates Overlay abwählen.
+**Genau nächster Schritt:** gemessene doppelte Konturarbeit auf geometrisch
+identischen Raw-/Cost-Rastern zellgenau zusammenfassen und gegen die getrennte
+Originalprüfung testen. Ein anderer Kopier-/Signaturversuch brachte keinen
+Gewinn (4,90551 s statt 4,50489 s) und wurde nicht ins Produkt übernommen.
+Anschließend konkrete Folgegeometrie/Scan fortsetzen; drei Beobachtungen und
+3/3 Gesamtmissionen bleiben offen. Realtests folgen erst der Qualifikation.
+Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
