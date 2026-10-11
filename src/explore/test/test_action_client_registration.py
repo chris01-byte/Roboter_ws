@@ -40,43 +40,74 @@ def sdk_serializes_registration():
     return locks(ActionClient.send_goal_async) and locks(ActionClient.take_data)
 
 
-@pytest.mark.parametrize('mode,stage', [
-    ('original', 'goal'), ('serialized', 'goal'),
-    ('serialized', 'result'), ('serialized', 'cancel'),
+@pytest.mark.parametrize('mode,stage,force_waitset', [
+    ('original', 'goal', False), ('serialized', 'goal', False),
+    ('serialized', 'result', False), ('serialized', 'cancel', False),
+    ('serialized', 'cancel', True),
 ])
-def test_real_dds_response_registration(mode, stage):
+def test_real_dds_response_registration(mode, stage, force_waitset):
     assert os.environ.get('ROS_LOCALHOST_ONLY') == '1'
     assert 200 <= int(os.environ.get('ROS_DOMAIN_ID', '-1')) <= 230
     assert not os.environ.get('CYCLONEDDS_URI')
-    run = subprocess.run([sys.executable, str(Path(__file__).resolve()), mode, stage],
+    run = subprocess.run([sys.executable, str(Path(__file__).resolve()), mode, stage,
+                          'waitset' if force_waitset else 'normal'],
                          text=True, capture_output=True, timeout=20.)
     assert run.returncode == 0, run.stdout + run.stderr
     assert f'PASS {mode} {stage}' in run.stdout
+    if force_waitset and sdk_serializes_registration():
+        assert 'SDK_WAITSET_BLOCKED' in run.stdout
     if mode == 'original' and not sdk_serializes_registration():
         assert 'Ignoring unexpected goal response' in run.stderr
     else:
         assert 'Ignoring unexpected' not in run.stderr
 
 
-def probe(mode, stage):
-    protected = mode == 'serialized' or sdk_serializes_registration()
+def probe(mode, stage, scheduling='normal'):
+    native_protected = sdk_serializes_registration()
+    protected = mode == 'serialized' or native_protected
+    force_waitset = scheduling == 'waitset'
     sent = threading.Event()
     registration_release = threading.Event()
-    take_entered = threading.Event()
+    receive_barrier_entered = threading.Event()
     take_in_progress = threading.Event()
     processed = threading.Event()
     execute_release = threading.Event()
     request_armed = threading.Event()
     server_entered = threading.Event()
+    waitset_prepared = threading.Event()
+    waitset_release = threading.Event()
     goals = []
     failures = []
     handles = []
 
     class Client(SerializedActionClient if mode == 'serialized' else ActionClient):
+        def get_num_entities(self):
+            if force_waitset and request_armed.is_set() and not waitset_prepared.is_set():
+                waitset_prepared.set()
+                assert waitset_release.wait(5.), 'wait-set barrier not released'
+            self._observe_sdk_waitset_lock()
+            return super().get_num_entities()
+
+        def add_to_wait_set(self, wait_set):
+            self._observe_sdk_waitset_lock()
+            return super().add_to_wait_set(wait_set)
+
+        def _observe_sdk_waitset_lock(self):
+            # This installed SDK also serializes wait-set construction on
+            # the request mutex. A response need not reach take_data while
+            # registration is paused. Prove the actual mutex is unavailable
+            # on that executor thread, rather than inventing a take/response.
+            if native_protected and request_armed.is_set() and sent.is_set():
+                if self._lock.acquire(blocking=False):
+                    self._lock.release()
+                else:
+                    print('SDK_WAITSET_BLOCKED', flush=True)
+                    receive_barrier_entered.set()
+
         def take_data(self):
             take_in_progress.set()
             if request_armed.is_set():
-                take_entered.set()
+                receive_barrier_entered.set()
             try:
                 return super().take_data()
             finally:
@@ -179,6 +210,9 @@ def probe(mode, stage):
         actual_handle = client._client_handle
         client._client_handle = PausedRequest(actual_handle)
         request_armed.set()
+        if force_waitset:
+            executor.wake()
+            assert waitset_prepared.wait(3.), 'executor did not build actual wait set'
         futures = []
 
         def send():
@@ -195,14 +229,15 @@ def probe(mode, stage):
         sender = threading.Thread(target=send, daemon=True)
         sender.start()
         assert sent.wait(3.), 'actual middleware request was not sent'
+        waitset_release.set()
         if stage != 'result':
             assert server_entered.wait(3.)
         # The SDK may already be taking a status when the barrier is armed,
         # then block on its request mutex. That is an actual take in progress,
         # not a missing callback; retain the original concurrency assertion.
         if protected and take_in_progress.is_set():
-            take_entered.set()
-        assert take_entered.wait(3.), 'executor did not try to take actual response'
+            receive_barrier_entered.set()
+        assert receive_barrier_entered.wait(3.), 'executor reached neither actual take nor locked wait-set construction'
         if not protected:
             assert processed.wait(3.), 'original must actually discard the early response'
         else:
@@ -231,6 +266,7 @@ def probe(mode, stage):
         print(f'PASS {mode} {stage}', flush=True)
     finally:
         request_armed.clear()
+        waitset_release.set()
         registration_release.set()
         execute_release.set()
         if sender is not None:

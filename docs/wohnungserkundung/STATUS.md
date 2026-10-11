@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – IMU-Ausgabe gezielt entkoppelt, Gesamtprüfung ausstehend
+## 11.10.2026 – v7 gebaut, IMU-Korrektur geprüft, Originalgesamtmissionen ausstehend
 
 Punkt 1 bleibt begrenzt real positiv, mit erhaltener Rohdatenlücke während
 Translation. Für Punkt 2 wird die nachgewiesene native IMU-Schreibpause im
@@ -23,7 +23,21 @@ kurzlebiges multiprocessing-Value vor Spawn verloren und native DDS-Graph-
 Tiefenanzeige 0 statt lokaler Publisher-Konfiguration. Originalnegative erhalten;
 Value-Lebensdauer korrigiert, tatsächliche im Kind erzeugten Publisher-QoS
 separat ausgelesen, korrigierter Lauf 15/15. Keine Quellenwerte angepasst.
-Vollständiger neuer Build, Produktregression und ursprüngliche A/B/C ausstehend.
+Vollständiger privater v7-Build `f8cedc1`: 14 Pakete in 2 min 51 s,
+154 geprüfte Produktdateien Quelle/Install identisch, 755 Installhashes.
+Voller Lauf 2.717 Fälle, ein Fehler im bestehenden DDS-Cancel-Gegenversuch:
+Executor erreicht dessen Take-Barriere nicht. Originalnegativ erhalten;
+unveränderte betroffene Datei erneut 4/4 bestanden. SDK-Befund:
+`get_num_entities`/`add_to_wait_set` blockieren ebenfalls an seinem nativen
+Registrierungslock, bevor `take_data` erreicht wird. Der korrigierte reine
+Testnachtrag prüft tatsächlich nicht erwerbbaren Lock im Executor und hält
+auch die echte spätere Cancel-Antwort / Goal-ID / Terminalität fest. Neuer
+erzwungener Wait-Set-Gegenfall; betroffene Datei 5/5 bestanden. Alle 2.718
+unterschiedlichen Produktfälle damit geprüft und positiv, kein behaupteter
+erster vollständig grüner Volllauf und keine Fristverlängerung. Produktdateien
+des Builds bleiben unverändert. Ursprüngliche A/B/C noch ausstehend.
+Reale FC03 am 11.10. um 01:06:40 UTC: Positionen unverändert, beide RPM null,
+RAM 100/400/5; alle 1.048 Bestandsinstallhashes um 01:06:34 UTC gleich.
 
 Private Auslagerung von Egress-Geometrie ist nicht übernommen. Mehrkern-
 Parentversuche enden mit nativer Explorer-Absturzaufzeichnung, darunter ein
@@ -42,8 +56,8 @@ Geometrie und native Apple-Laufzeit bleiben tatsächlich unbestätigt; bestehend
 konkrete Rückfragen erhalten, keine erneute allgemeine Laborfreigabe.
 
 **Genau nächster Schritt:** diesen gezielt korrigierten gemeinsamen Kandidaten
-sauber separat bauen, vollständige Regression und unveränderte ursprüngliche
-A/B/C ausführen; nach deren Bestehen die beauftragten realen Schritte 3/4.
+bei identischen Produkt-/Installhashes an den sauberen Prüfungsnachtrag binden
+und die unveränderten ursprünglichen A/B/C ausführen; nach deren Bestehen die beauftragten realen Schritte 3/4.
 Rückfall: eigenes privates Overlay direkt geordnet stoppen, Bestandsinstall
 bewahren; IMU-Ausgabeopt-in zurücknehmen oder eigenen Fix gezielt revertieren.
 Private Belege: `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/`.

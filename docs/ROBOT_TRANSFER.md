@@ -7,7 +7,14 @@ Separater Checkout: neuer optionaler Produktpfad `isolate_sensor_output`
 bestehenden Encoderhelper, ohne Sensor-/Aktorbus im Kind. Originalbytes/-zeiten,
 Sensor-QoS und alle Schutzfristen bleiben bestehen; Kindverlust verriegelt.
 350-ms-Schreibpausenvergleich rot/grün und 15 gezielte gerätefreie Fälle bestanden.
-Gesamtbuild/Regression/Original-A/B/C noch ausstehend. Keine neue reale Fahrt,
+Privater v7-Gesamtbuild `f8cedc1` abgeschlossen (14 Pakete, 154 Quelle/Install
+identisch, 755 Installhashes). 2.717 Fälle im Volllauf, eine negative native
+Cancel-Testbarriere; Erstnegativ erhalten, betroffene Datei 4/4 erneut positiv,
+reiner SDK-Wait-Set-Testnachtrag samt zusätzlichem erzwungenem Gegenfall 5/5.
+Alle 2.718 unterschiedlichen Produktfälle positiv nachgeprüft; kein erster
+grüner Volllauf behauptet. Original-A/B/C noch ausstehend. FC03 01:06:40 UTC
+unveränderte Positionen / Null-RPM / RAM 100/400/5, 1.048 Bestandsinstallhashes
+01:06:34 UTC gleich. Keine neue reale Fahrt,
 kein Install-/Autostart-/SDK-Wechsel; bekannte letzte Null-RPM-/Positionsbelege
 und alle 1.048 bewahrten Bestandsinstall-Dateien bleiben Referenz, keine neue
 physische Beobachtung daraus behaupten. Private Geometrieprozessversuche

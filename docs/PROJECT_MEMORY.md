@@ -8,8 +8,14 @@ Opt-in `isolate_sensor_output` verwendet denselben vorhandenen Ausgabehelper,
 ursprüngliche IMU-/Status-QoS und unveränderte Messbytes/Stempel. Spawn und
 Serializer vor Erfassung; Kind ohne Bus/Aktor, keine neue Transportimplementierung.
 Kindverlust verriegelt Erfassung und schließt Transport. Tatsächlicher 350-ms-
-GIL-Gegenfall rot/grün und 15 gezielte Fälle bestanden; vollständiger gemeinsamer
-Build/Regression/Originalmissionen ausstehend. Default und Bestandsinstall
+GIL-Gegenfall rot/grün und 15 gezielte Fälle bestanden. Gemeinsamer v7-Build
+`f8cedc1`, 14 Pakete/154 Quelle-Installgleiche/755 Installhashes. Vollprüfung
+2.717 Fälle mit einer negativen DDS-Cancel-Testbarriere; unveränderte Datei
+4/4 erneut positiv. Tatsächlich ebenfalls gesperrten nativen Wait-Set-Aufbau
+im Prüfversuch berücksichtigt und zusätzlich erzwungen: 5/5, insgesamt
+2.718 unterschiedliche Fälle positiv nachgeprüft, Erstnegativ erhalten.
+Reiner Prüfungsnachtrag, keine SDK-/Produkt-/Friständerung; Originalmissionen
+ausstehend. Default und Bestandsinstall
 unverändert, keine neue reale Fahrt. Geometrieprozess-Prototyp verworfen;
 gebundener Transfer bleibt an Frische negativ, kein Sensor-/SDK-Defekt bewiesen.
 Rückfall: privates Overlay geordnet stoppen, Bestandsinstall oder vorherigen
