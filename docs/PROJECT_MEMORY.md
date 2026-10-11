@@ -1,5 +1,20 @@
 # Projektgedächtnis
 
+## 11.10.2026 – originale TF-Empfänge vor Auswahl der radgebundenen Pose
+
+Original-v7-A/B/C bleiben 0/3; Encoder gültig, Auswahlbudget erschöpft.
+Zusätzlich gemessener Rad-/TF-Versatz 22,4–26,1 mm. Tatsächlicher DDS-
+Pausengegenfall: ältere Bufferpose verwirft aktuelle Radprobe mit 29,9 mm;
+Empfang wartender Original-TF über vorhandene Listener-Subscriptions und
+Callbacks gleicht beide ab. Keine neue Quelle, kein Datumssetzen, unveränderte
+20-mm-/0,05-rad- und Frischegrenzen. Takefehler sperrt, Senderverlust altert
+weiter. 25 gezielte Fälle bestanden einschließlich paralleler tatsächlicher
+Callbacks und zerstörtem Handle. Privater A-Vergleich erreicht eine
+Beobachtung ohne bisherigen TF-Abbruch, bleibt später am Auswahlbudget
+negativ. Gemeinsamer Build/Originalqualifikation dieses Fixes noch ausstehend.
+Rückfall: private Runtime stoppen und erhaltenen Install verwenden oder nur
+diesen TF-Empfangsdiff gezielt zurücknehmen. Kein neuer realer Fahrbeleg.
+
 ## 11.10.2026 – vorhandenen Ausgabehelper für passive IMU wiederverwenden
 
 Native IMU-Schreibpause kann im gemeinsamen ARM-Prüfstand die echte Encoder-

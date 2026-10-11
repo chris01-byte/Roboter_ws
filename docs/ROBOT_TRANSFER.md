@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – v7 negativ beendet, TF-Fix nur gerätefrei geprüft
+
+Ursprüngliche v7-Gesamtmissionen A/B/C alle negativ am Auswahlbudget,
+B/C je eine neue Beobachtung, keine volle Passage. Separater begrenzter
+TF-Empfang über vorhandene originale Listener verbessert privaten A-Vergleich;
+25 gezielte Quellen-/TF-Fälle positiv. Noch kein gemeinsamer neuer Install
+oder Originalgesamtvergleich dieses Diffs. Keine reale Bewegung, keine
+Bestands-/Autostart-/SDK-Änderung. Letzter tatsächlicher FC03-Nachweis
+01:06:40 UTC bleibt unveränderte Positionen / Null-RPM, keine neue physische
+Beobachtung aus den Simulationen. Rückfall: eigene private Prozesse direkt
+geordnet beenden und erhaltenen Install verwenden; TF-Diff gezielt revertierbar.
+
 ## 11.10.2026 – IMU-Ausgabe-Kandidat, noch keine zusätzliche Hardwarewirkung
 
 Separater Checkout: neuer optionaler Produktpfad `isolate_sensor_output`

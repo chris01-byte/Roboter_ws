@@ -472,6 +472,10 @@ class MetricFrontierRuntime:
 
     def _metric_pose_and_reference(self):
         """Pose and map/odom correction at one actual common TF timestamp."""
+        listener = getattr(self, '_tf_listener', None)
+        if listener is not None:
+            from .metric_tf_receipt import receive_pending_tf
+            receive_pending_tf(listener)
         t = self._tf_buffer.lookup_transform(
             self._global_frame, self._robot_base_frame, rclpy.time.Time())
         stamp = rclpy.time.Time.from_msg(t.header.stamp)

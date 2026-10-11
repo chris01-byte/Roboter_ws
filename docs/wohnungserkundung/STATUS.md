@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – v7 gebaut, IMU-Korrektur geprüft, Originalgesamtmissionen ausstehend
+## 11.10.2026 – v7 Originalmissionen 0/3, TF-Empfang separat korrigiert
 
 Punkt 1 bleibt begrenzt real positiv, mit erhaltener Rohdatenlücke während
 Translation. Für Punkt 2 wird die nachgewiesene native IMU-Schreibpause im
@@ -35,7 +35,28 @@ auch die echte spätere Cancel-Antwort / Goal-ID / Terminalität fest. Neuer
 erzwungener Wait-Set-Gegenfall; betroffene Datei 5/5 bestanden. Alle 2.718
 unterschiedlichen Produktfälle damit geprüft und positiv, kein behaupteter
 erster vollständig grüner Volllauf und keine Fristverlängerung. Produktdateien
-des Builds bleiben unverändert. Ursprüngliche A/B/C noch ausstehend.
+des Builds bleiben unverändert. Ursprüngliche A/B/C mit sauberer Quelle
+`192ac68` nun beendet, alle manifestkompatibel und negativ: A 0,089590 m,
+keine Ankunft/Beobachtung; B 0,365139 m, eine Ankunft/Beobachtung und 183 neue
+Zellen; C 0,714527 m, eine Ankunft/Beobachtung und 145 neue Zellen. Alle
+enden an `frontier_candidate_processing_budget_exhausted`, keine volle
+Passage samt Heck. C erreicht zusätzlich nur 4,071 rad des zurückgestellten
+Rundblicks vor `scan_task_budget_exhausted`. Keine neue reale Fahrt daraus.
+
+Separater gemessener Empfangsfehler: trotz gültiger aktueller Encoderproben
+lag die bereits gewählte TF-Pose in A/B/C 22,4–26,1 mm zurück. Tatsächlicher
+DDS-Gegenversuch mit pausiertem Verbraucher: 29,9-mm-Abweisung vor Empfang,
+identische Rad-/TF-Pose nach Übernahme wartender Originalnachrichten. Neuer
+begrenzter Empfang über die bereits bestehenden TF-Subscriptions/Callbacks
+vor gemeinsamer Pose/Referenzauswahl, keine neue Quelle oder Stempel.
+Fehler beim Take sperrt ausdrücklich; fehlender Sender veraltet weiter.
+25 gezielte Fälle bestanden, einschließlich echter DDS-Pause, Handleverlust
+und paralleler Listenercallbacks. Privater nicht qualifizierender A-Vergleich
+erreicht 0,284571 m / eine Beobachtung ohne Rad-TF-Abweisung; Empfang bis
+1,535 ms, später weiterhin Auswahlbudget. Erste Diagnosekopie hatte ihren
+Manifestpfad falsch auf das private Verzeichnis aufgelöst; Originalfehler
+erhalten, expliziter Originalmanifestpfad korrigiert. Der neue TF-Fix ist
+noch nicht gemeinsam gebaut oder als Originalgesamtmission qualifiziert.
 Reale FC03 am 11.10. um 01:06:40 UTC: Positionen unverändert, beide RPM null,
 RAM 100/400/5; alle 1.048 Bestandsinstallhashes um 01:06:34 UTC gleich.
 
@@ -55,9 +76,10 @@ nach gemessenem Fahrversatz fest neu binden. Weitere Passage-/Drei-Bereich-
 Geometrie und native Apple-Laufzeit bleiben tatsächlich unbestätigt; bestehende
 konkrete Rückfragen erhalten, keine erneute allgemeine Laborfreigabe.
 
-**Genau nächster Schritt:** diesen gezielt korrigierten gemeinsamen Kandidaten
-bei identischen Produkt-/Installhashes an den sauberen Prüfungsnachtrag binden
-und die unveränderten ursprünglichen A/B/C ausführen; nach deren Bestehen die beauftragten realen Schritte 3/4.
+**Genau nächster Schritt:** gemessene Auswahlkosten ohne Friständerung
+verringern, gezielt gegen die ursprüngliche Geometrie prüfen und zusammen
+mit dem geprüften TF-Empfang neu bauen; dann ursprüngliche A/B/C und nach
+deren Bestehen die beauftragten realen Schritte 3/4.
 Rückfall: eigenes privates Overlay direkt geordnet stoppen, Bestandsinstall
 bewahren; IMU-Ausgabeopt-in zurücknehmen oder eigenen Fix gezielt revertieren.
 Private Belege: `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/`.
