@@ -1,5 +1,17 @@
 # Projektgedächtnis
 
+## 11.10.2026 – VL53-Veröffentlichungsfenster während Beobachtungspause
+
+Der instrumentierte Ablauf aus 34fbad1 scheiterte nach einer vorherigen
+Verarbeitungsalter-Ablehnung und Routenverwerfung terminal an getrennt
+ankommenden Status-/Cloud-Stempeln während einer bereits stehenden Pause.
+Keine harte Quellenstörung gemeldet. Die Pause wartet bei genau diesem Grund
+nun wie der bestehende äußere Ablauf weiter, ohne Match oder Bewegungsrecht;
+Cancel/HOLD, harte Quellenfehler und ursprüngliche Fristen bleiben geprüft.
+Zwei negative Gegenfälle vor Korrektur, 34 Wartefälle danach positiv. Kein
+Gesamtmissionserfolg oder neue Hardwarewirkung. Evidenz im STATUS; Rückfall
+nur dieser Warteübergang, bestehende Installation unverändert.
+
 ## 11.10.2026 – echte adaptive Auswahl wartet vor erneuter Startentscheidung
 
 Aufgezeichnete synthetische A-Geometrie liefert einen Gegenfall mit echter

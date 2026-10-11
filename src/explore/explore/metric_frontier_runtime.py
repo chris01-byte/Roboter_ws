@@ -2805,6 +2805,16 @@ class MetricFrontierRuntime:
             stopped = self._metric_operating_snapshot(require_stop=True)
             self._metric_status['decision_snapshot'] = stopped
             if not stopped['safe']:
+                if stopped['first_rejecting_predicate'] == 'vl53_triplet_unmatched':
+                    # Status and its two clouds arrive separately. Remain
+                    # stopped during this publication window, just as the
+                    # outer loop does. The next loop rechecks actual source
+                    # ages, HOLD/cancel and the ORIGINAL deadline; no match,
+                    # stop receipt or movement authority is manufactured.
+                    self._status_phase = 'metric_waiting_sources'
+                    self._status_message = 'vl53_triplet_unmatched'
+                    time.sleep(.02)
+                    return None
                 return stopped['first_rejecting_predicate'] or 'task_cooldown_standstill_unconfirmed'
             wait = max(0., deadline-time.monotonic())
             completion_window.observe(now=time.monotonic(), scan_stamp=0,

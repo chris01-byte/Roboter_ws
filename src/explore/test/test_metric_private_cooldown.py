@@ -53,7 +53,7 @@ def test_nontime_rejection_cannot_become_waiting_authority(fault):
 
 
 @pytest.mark.parametrize('fault', ['wake', 'context', 'cancel', 'deadline',
-                                  'source', 'hold', 'standstill'])
+                                  'source', 'hold', 'standstill', 'publication'])
 @pytest.mark.parametrize('strategy', ['adaptive', 'configured_scan'])
 def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch, fault, strategy):
     # Only inject a selection's time-only result. Parent/source joining,
@@ -87,6 +87,13 @@ def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch,
     if fault == 'hold':
         node._wohnungserkundung_hwt_hold = lambda: clock[0] >= began+.5
         node._wohnungserkundung_wait_for_hwt_resume = lambda *_a, **_k: holds.append(clock[0]) or 'stopped'
+    if fault == 'publication':
+        # A healthy status can precede its two same-stamp clouds. Test the
+        # parent transition during that receipt window; the gate stays closed.
+        node._metric_operating_snapshot = lambda require_stop=False: dict(
+            safe=not (require_stop and began+.5 <= clock[0] < began+.8),
+            first_rejecting_predicate='vl53_triplet_unmatched'
+                if require_stop and began+.5 <= clock[0] < began+.8 else None)
     if fault == 'standstill':
         node._metric_operating_snapshot = lambda require_stop=False: dict(
             safe=not (require_stop and clock[0] >= began+.5),
@@ -99,7 +106,7 @@ def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch,
     assert node._metric_status['chain'] == []
     assert node._metric_checkpoint['remaining_s'] < 10.
     assert len(samples) >= (2 if fault == 'hold' else 3)  # HOLD is checked even before inputs
-    if fault in ('wake', 'context'):
+    if fault in ('wake', 'context', 'publication'):
         assert len(selections) == 2
         assert selections[1] >= began+(1. if fault == 'wake' else .5)
         assert node._metric_status['reason'] == 'fresh_reselection'

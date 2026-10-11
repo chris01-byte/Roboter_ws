@@ -24,11 +24,21 @@ reale autonome Fahrt aus dieser Korrektur. Bestandsmain/-install erhalten,
 keine neuen Aktorprozesse oder Gerätekommandos. Die Komponentenuhr und
 eingefrorenen Eingaben sind keine aktuellen Sensor-/Gesundheitsnachweise.
 
-**Genau nächster Schritt:** gleicher instrumentierter geschlossener Source-A-
-Vergleich mit korrigierter Reihenfolge, um Verarbeitungszeit und Folge nach der
-zweiten Beobachtung zu messen (Korrekturplan Schritte 3/4). Keine unveränderte
-Fehlstartserie. Rückfall: nur diesen Reihenfolgediff gezielt revertieren oder
-privaten Kandidaten geordnet abwählen; Bestandsinstall bewahren.
+Der instrumentierte Vergleich aus `34fbad1` endet nach 0,191529 m ohne
+Ankunft/Beobachtung negativ. Getrennte Folge: Verarbeitungsalter der Encoderprobe,
+Routenverwerfung, danach `vl53_triplet_unmatched` im Stillstand während der
+Pause. Die Quellenprüfung meldet keinen harten Fehler. Die Wartephase behandelt
+jetzt diese Veröffentlichungslücke wie der bestehende äußere Ablauf: weiter
+stehen, frische Quellen/Stillstand und dieselben Fristen erneut prüfen. Zwei
+Gegenfälle zuvor negativ, danach 34 Wartefälle positiv. Kein künstlicher
+Triplet-Match, kein Gatewechsel oder Bewegungsrecht.
+[Originalbefund und Gegenfälle](evidence/ap06-publication-wait-20261011.json).
+
+**Genau nächster Schritt:** gemessene Eingangs-/Geometrieverarbeitung verkürzen
+(Korrekturplan Schritt 3), danach die Folge nach Beobachtungen untersuchen.
+Bisher kein neuer gemeinsamer Build oder 3/3-Gesamtbeleg; reale autonome Folge
+offen. Rückfall: eigene Warteänderungen gezielt revertieren oder privaten
+Kandidaten abwählen; Bestandsinstall bleibt erhalten.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
