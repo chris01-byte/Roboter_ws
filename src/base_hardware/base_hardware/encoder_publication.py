@@ -70,14 +70,12 @@ class _Publisher:
         try:
             self._slot.put_nowait(item)
         except queue.Full:
-            try:
-                self._slot.get_nowait()
-            except queue.Empty:
-                pass
-            try:
-                self._slot.put_nowait(item)
-            except queue.Full:
-                pass  # bounded, never wait for a blocked DDS writer
+            # A readable pipe can contain only a message header. Queue's
+            # get_nowait then waits for the rest of that framed payload,
+            # blocking acquisition despite its name. Only the output worker
+            # may receive. Keep the bounded pending original; its unchanged
+            # queue-age check discards it if delivery takes too long.
+            pass
 
 
 class EncoderPublication:
