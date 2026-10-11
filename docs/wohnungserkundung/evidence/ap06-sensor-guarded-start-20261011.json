@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-11",
+  "branch": "feature/ap06-sensor-guarded-start",
+  "source_commit": "51f8e862a92836a141b4fdc3a503c331671e6052",
+  "base_commit": "22a4b76bc4fd23f83227d85b6a5b5b4c303e90f7",
+  "prior_full_product_commit": "60e894cd6638c2d977b0fca6e352fe7b5aedae44",
+  "scope": "Device-free sensor-guarded start candidate; not whole AP-06 acceptance",
+  "software_tests": {
+    "regression": {
+      "tests": 369,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "new_policy_cases": 25,
+    "scope_tests": 26,
+    "total": 395,
+    "ros_domain_id": 211,
+    "ros_localhost_only": true
+  },
+  "build": {
+    "packages": [
+      "explore",
+      "robot_navigation",
+      "robot_bringup",
+      "vl53_near_field"
+    ],
+    "bindings": {
+      "python": "3.10.12 (main, Aug 31 2026, 10:18:17) [GCC 11.4.0]",
+      "machine": "x86_64",
+      "platform": "Linux-6.18.44-x86_64-with-glibc2.35",
+      "package_prefixes": {
+        "explore": "/audit/sensor-work/install/explore",
+        "robot_navigation": "/audit/sensor-work/install/robot_navigation",
+        "robot_bringup": "/audit/sensor-work/install/robot_bringup",
+        "vl53_near_field": "/audit/sensor-work/install/vl53_near_field"
+      },
+      "modules": {
+        "runtime": {
+          "path": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "sha256": "7c1df4f907920b5ec63e5574928ede7fe4afa2aba02d2404f384fdb2f131ac4c"
+        },
+        "sensor_guard": {
+          "path": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/sensor_motion_guard.py",
+          "sha256": "8bac860a461a53ce9b107f69ddf6169ba3de40db06d633c9fcf5ffa108a01fcf"
+        },
+        "geometry": {
+          "path": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "sha256": "e68a2257007ce75a085c5dadd3b448c4e402645df741f21c639cce4bec67e145"
+        },
+        "native": {
+          "path": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/_reserved_sweep.cpython-310-x86_64-linux-gnu.so",
+          "sha256": "b52ff9e8fb1df8050fffb1a236b6ba00805e9b69c3db6c2a20e0bf03892f15fb"
+        }
+      },
+      "source_install_pairs": [
+        {
+          "source": "/audit/sensor-work/src/explore/explore/metric_frontier.py",
+          "install": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/metric_frontier.py",
+          "source_sha256": "e68a2257007ce75a085c5dadd3b448c4e402645df741f21c639cce4bec67e145",
+          "install_sha256": "e68a2257007ce75a085c5dadd3b448c4e402645df741f21c639cce4bec67e145",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/explore/explore/metric_frontier_runtime.py",
+          "install": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/metric_frontier_runtime.py",
+          "source_sha256": "7c1df4f907920b5ec63e5574928ede7fe4afa2aba02d2404f384fdb2f131ac4c",
+          "install_sha256": "7c1df4f907920b5ec63e5574928ede7fe4afa2aba02d2404f384fdb2f131ac4c",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/explore/explore/sensor_motion_guard.py",
+          "install": "/audit/sensor-work/install/explore/lib/python3.10/site-packages/explore/sensor_motion_guard.py",
+          "source_sha256": "8bac860a461a53ce9b107f69ddf6169ba3de40db06d633c9fcf5ffa108a01fcf",
+          "install_sha256": "8bac860a461a53ce9b107f69ddf6169ba3de40db06d633c9fcf5ffa108a01fcf",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/explore/launch/explore.launch.py",
+          "install": "/audit/sensor-work/install/explore/share/explore/launch/explore.launch.py",
+          "source_sha256": "31734fbf35a42e2e7e29fe55baf1e34c4348371ee66d488555067556971f678c",
+          "install_sha256": "31734fbf35a42e2e7e29fe55baf1e34c4348371ee66d488555067556971f678c",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/explore/config/metric_observed_only_motion_params.yaml",
+          "install": "/audit/sensor-work/install/explore/share/explore/config/metric_observed_only_motion_params.yaml",
+          "source_sha256": "d8aaf9596c4e5b9a021801f519b36df48de232c11c121c18888d3bde9be7040d",
+          "install_sha256": "d8aaf9596c4e5b9a021801f519b36df48de232c11c121c18888d3bde9be7040d",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/explore/config/metric_sensor_guarded_motion_params.yaml",
+          "install": "/audit/sensor-work/install/explore/share/explore/config/metric_sensor_guarded_motion_params.yaml",
+          "source_sha256": "c43e1a28d2af93f25da08d678e882948bd86247aca06140ea412e912b94ff8e8",
+          "install_sha256": "c43e1a28d2af93f25da08d678e882948bd86247aca06140ea412e912b94ff8e8",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/robot_navigation/launch/nav_mapping.launch.py",
+          "install": "/audit/sensor-work/install/robot_navigation/share/robot_navigation/launch/nav_mapping.launch.py",
+          "source_sha256": "6adcaf7d06164d27de49ccd77a42c245de21d26abc3458315ded37df65dd34b9",
+          "install_sha256": "6adcaf7d06164d27de49ccd77a42c245de21d26abc3458315ded37df65dd34b9",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/robot_navigation/config/nav2_sensor_guarded_mapping_params.yaml",
+          "install": "/audit/sensor-work/install/robot_navigation/share/robot_navigation/config/nav2_sensor_guarded_mapping_params.yaml",
+          "source_sha256": "b09fc6d37b1a378ab0a309ce33b424b5940dc15536e9bc568f45345b9a9716a2",
+          "install_sha256": "b09fc6d37b1a378ab0a309ce33b424b5940dc15536e9bc568f45345b9a9716a2",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/robot_bringup/launch/app_mapping.launch.py",
+          "install": "/audit/sensor-work/install/robot_bringup/share/robot_bringup/launch/app_mapping.launch.py",
+          "source_sha256": "245a1dea98c650519b67778c570fc95e427fddfd47dd60a26e6fbcb07f89a7f0",
+          "install_sha256": "245a1dea98c650519b67778c570fc95e427fddfd47dd60a26e6fbcb07f89a7f0",
+          "equal": true
+        },
+        {
+          "source": "/audit/sensor-work/src/vl53_near_field/config/collision_monitor_sensor_guarded_mapping_params.yaml",
+          "install": "/audit/sensor-work/install/vl53_near_field/share/vl53_near_field/config/collision_monitor_sensor_guarded_mapping_params.yaml",
+          "source_sha256": "d296086d74954f998c64ae99ca2ce41e1aa03353e8a33a355aa8373dfb151e1c",
+          "install_sha256": "d296086d74954f998c64ae99ca2ce41e1aa03353e8a33a355aa8373dfb151e1c",
+          "equal": true
+        }
+      ]
+    },
+    "full_14_package_build": false,
+    "nav2_and_slam_rebuilt": false
+  },
+  "policy": {
+    "unknown_planning_allowed": true,
+    "raw_map_changed": false,
+    "observed_gain_redefined": false,
+    "private_start_body_or_egress": false,
+    "full_scan_priority": true,
+    "scan_budget": "existing initial_scan_timeout_s; mission bound unchanged",
+    "single_nav2_owner": true,
+    "existing_gate_smoother_brake": true,
+    "nearfield_threshold_m": 0.25,
+    "collision_prediction_s": 2.0,
+    "lidar_layer_separate_from_vl53": true
+  },
+  "native_monitor_review": {
+    "navigation2_commit": "3c3db59d6969d8ecee8e68468693d006397f4a0c",
+    "approach_max_points": 1,
+    "zero_threshold_rejected": "static getPointsInside >= max_points would stop even with no points",
+    "runtime_qualification": false
+  },
+  "unchanged_inputs": [
+    "tools/simulation/ap06_product_scenarios.json",
+    "tools/simulation/ap06_dependencies.json",
+    "src/robot_navigation/config/nav2_params_real.yaml",
+    "src/vl53_near_field/config/vl53_params.yaml"
+  ],
+  "not_proven": [
+    "New-mode A/B/C whole missions",
+    "New-mode whole Cancel/HOLD and stable continuation",
+    "Real LiDAR/VL53 collision coverage and measured braking",
+    "Jetson full candidate build/deployment",
+    "Real full AP-06 acceptance"
+  ],
+  "source_file_sha256": {
+    "src/explore/config/metric_observed_only_motion_params.yaml": "d8aaf9596c4e5b9a021801f519b36df48de232c11c121c18888d3bde9be7040d",
+    "src/explore/config/metric_sensor_guarded_motion_params.yaml": "c43e1a28d2af93f25da08d678e882948bd86247aca06140ea412e912b94ff8e8",
+    "src/explore/explore/metric_frontier.py": "e68a2257007ce75a085c5dadd3b448c4e402645df741f21c639cce4bec67e145",
+    "src/explore/explore/metric_frontier_runtime.py": "7c1df4f907920b5ec63e5574928ede7fe4afa2aba02d2404f384fdb2f131ac4c",
+    "src/explore/explore/sensor_motion_guard.py": "8bac860a461a53ce9b107f69ddf6169ba3de40db06d633c9fcf5ffa108a01fcf",
+    "src/explore/launch/explore.launch.py": "31734fbf35a42e2e7e29fe55baf1e34c4348371ee66d488555067556971f678c",
+    "src/explore/test/test_metric_sensor_guarded_start.py": "1dd80e9148994d2fb0c6c00457b378cbcea1d90a3e5044a8efa80362666ab558",
+    "src/robot_bringup/launch/app_mapping.launch.py": "245a1dea98c650519b67778c570fc95e427fddfd47dd60a26e6fbcb07f89a7f0",
+    "src/robot_navigation/config/nav2_sensor_guarded_mapping_params.yaml": "b09fc6d37b1a378ab0a309ce33b424b5940dc15536e9bc568f45345b9a9716a2",
+    "src/robot_navigation/launch/nav_mapping.launch.py": "6adcaf7d06164d27de49ccd77a42c245de21d26abc3458315ded37df65dd34b9",
+    "src/robot_navigation/test/test_nav_real_contract.py": "90b0a22a29729526dc6ad95110b58cd8b0b588b77a8b78034d751fc3b6745615",
+    "src/robot_navigation/test/test_sensor_guarded_mapping_launch.py": "bb88ead1e01796d86b9a25bb6773d8bd1a77b989a21b5bb5f6dd5404eadd9d67",
+    "src/vl53_near_field/config/collision_monitor_sensor_guarded_mapping_params.yaml": "d296086d74954f998c64ae99ca2ce41e1aa03353e8a33a355aa8373dfb151e1c",
+    "tools/kartierung/README.md": "5fd6a32e2e41d63900c3e4bec90aa0eb320495cf635933f8d50f65424da715b8",
+    "tools/kartierung/metric_scope_vorbereiten.py": "52b56f28a1fe4d2e2304b6a353daf87cbeb8f6a9a6bacca99907666c3031aa4d",
+    "tools/simulation/README_AP06.md": "b70f88372c764f15f26ec40ae999be8ee1efc3035a1fb4c862b9279142e5f383",
+    "tools/simulation/ap06_closed_product.py": "118231002906c435014ef721ad8e795891ce44bc1e120fc4e33b6f8049b84cfb",
+    "tools/simulation/test_ap06_sensor_guarded_params.py": "c17674342fbe614e5dee396802f1add0f4de5b734501d66575ecd0eacc11e855"
+  },
+  "artifacts": {
+    "start-junit.xml": "17daf28d4602cc9373d3f89b59680a97f2dbdcf68b8a800429f739da7fe37adb",
+    "regression.log": "93e31093bac618f25b75246db342a0af947e85b6d9d6e62444af14a12c5caa0c",
+    "regression-junit.xml": "15c851acd88b55107f4bb4659920212173b77b0c4ced9ac7708bed7e211c5e0b",
+    "build-explore-final.log": "ed73fbd64f0419bd47845e11c0e37573761744cee69b05284eb1a4fcc2f2ce5f",
+    "sensor-guarded-start.patch": "0c482d1e009478152c6a2f04d2673db0def765378fb71483008cec2ce671eab4",
+    "build-bindings.json": "d1307cdec28c4f783a0e212b680ab45a9cc64d04b5e3f9e19a9305b2c634214e",
+    "start.log": "4f0ded7ec57ba9f202f17ba5687abcaa3e7938a64c5f4956b93fcb103127109e",
+    "regression-final-junit.xml": "268e0b58ff162c352cfcc94b1cc83385087bdd05db670eacdeedeb7746a687ed",
+    "build.log": "80b413e809e7ae1d0aff0d904b5f61bddf57869b64c8e764ed64d4377cb83d38",
+    "scope.log": "2ec4ccff7fd996a384ff7bc5551cab7c70b3724ecf98f9d9fee173d877eeb9cb",
+    "regression-final.log": "52dd7d97d58cba0b35fc2147721ad133044aff632afb6f7419fd0080fc58b441",
+    "build-final.log": "e8f977111dbc2e3882f77ab4bee0386dce7a4fe598f0842ea4d7b16baa40a403",
+    "scope-help.txt": "8b7afc8d9b60a15b63e258bf9f0d3d323ad5308f2bf1e36a9e756a3906016ddf"
+  },
+  "artifact_directory": "/workspace/sensor-start-results",
+  "rollback": "Restart the same owned mapping/explorer stack with unknown_space_policy:=observed_only; confirm standstill first",
+  "reproduction": {
+    "artifact": "/workspace/sensor-start-results/reproduce.sh",
+    "build_command": "colcon --log-base log build --base-paths src/explore src/robot_navigation src/vl53_near_field src/robot_bringup --build-base build --install-base install --executor sequential",
+    "pytest_argv": [
+      "python3",
+      "-m",
+      "pytest",
+      "src/explore/test/test_metric_sensor_guarded_start.py",
+      "src/explore/test/test_metric_private_cooldown.py",
+      "src/explore/test/test_metric_native_stop_recovery.py",
+      "src/explore/test/test_metric_route_proof_group.py",
+      "src/explore/test/test_metric_source_delivery.py",
+      "src/explore/test/test_metric_causal_result.py",
+      "src/explore/test/test_metric_input_geometry.py",
+      "src/explore/test/test_metric_pending_scan.py",
+      "src/explore/test/test_metric_scan_before_queries.py",
+      "src/explore/test/test_metric_progress.py",
+      "src/explore/test/test_metric_map_lifecycle.py",
+      "src/explore/test/test_metric_motion_geometry.py",
+      "src/explore/test/test_metric_frontier.py",
+      "src/robot_navigation/test/test_sensor_guarded_mapping_launch.py",
+      "src/robot_navigation/test/test_nav_real_contract.py",
+      "tools/simulation/test_ap06_sensor_guarded_params.py",
+      "-q",
+      "--tb=short"
+    ],
+    "scope_argv": [
+      "python3",
+      "-m",
+      "unittest",
+      "-v",
+      "tools/kartierung/test_metric_scope_vorbereiten.py"
+    ],
+    "dependency_context": "Humble desktop image plus /audit/ros-work/install audit dependencies; unmodified robot_map_manager imported from base source"
+  }
+}

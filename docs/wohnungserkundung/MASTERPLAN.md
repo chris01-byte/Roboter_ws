@@ -1,10 +1,41 @@
 # WE-1 – Integrationsmasterplan für Amadeus
 
-**Version 1.3 · 02.10.2026 · chris01-byte/Roboter_ws**
+**Version 1.4 · 11.10.2026 · chris01-byte/Roboter_ws**
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
-Dieses Dokument ist die vom Nutzer angeforderte Fortschreibung des vorhandenen MASTERPLAN v1.2. Es wird bei der Übernahme unter `docs/wohnungserkundung/MASTERPLAN.md` die einzige aktuelle Architektur- und Reihenfolgevorgabe. Seine Erstellung ist keine Softwareimplementierung oder Realabnahme. Der erste Auftrag ist ausschließlich gerätefreie Softwarearbeit.
+Diese Fassung schreibt MASTERPLAN v1.3 um die ausdrückliche Nutzeränderung vom 11.10.2026 fort. Sie ist die einzige aktuelle Architektur- und Reihenfolgevorgabe. Plan, Softwareprüfung und Realabnahme bleiben getrennt; der neue Auftrag umfasst die gerätefreie Implementierung des sensorüberwachten Starts.
+
+## Nutzeränderung vom 11.10.2026: sensorüberwachte Erkundung
+
+Der Auftraggeber verlangt ausdrücklich die sofortige Vereinfachung des Starts:
+Unbekannte Rasterzellen dürfen Erkundungsbewegung nicht allein verhindern;
+VL53 und LiDAR sollen reale Hindernisse absichern. Ein anfänglicher Rundblick
+über 360° erhält Vorrang. Das ändert die bisherige Zulassungsregel aus v1.3,
+nicht die Architektur oder die Abnahme ganzer Missionen.
+
+Die neue Bewegungsregel `sensor_guarded` lässt unbekannte Zellen **zur Planung**
+innerhalb des gebundenen Scopes zu. Rohkarte, Frontierbildung, gemessener
+Beobachtungsgewinn und Abschluss bleiben an tatsächliche Messungen gebunden.
+Besetzte Zellen, Fahrzeugkontur, aktuelle Quellen, Cancel/HOLD und bestätigter
+Halt behalten ihre Wirkung. Die privaten Startkörper-/Egress-Ausnahmen entfallen
+in diesem Modus. Nav2-Zulassung und letzte LiDAR/VL53-Kollisionsbremse werden
+über dieselbe Launch-Auswahl gebunden; kein direkter Motorpfad entsteht.
+
+Die vorhandene segmentierte Rundumdrehung wird vor Zielsuche versucht, wenn
+Scope/Karte und aktuelle LiDAR-Hindernispunkte die vollständige Drehkontur
+zulassen. Bei einem blockierten Rundblick darf der vorhandene Explorer einen
+separat geprüften Beobachtungsweg suchen. Ein Rundblick zählt nicht automatisch
+als Kartengewinn. Für diesen Scan gilt seine bestehende absolute Scanfrist
+(280 s im Standardprofil), weiterhin begrenzt durch die gesamte Missionsfrist;
+Nav2-Kindfristen und Szenario-Abnahmen werden nicht verlängert.
+
+Die beiden vorderen VL53 sind keine Rundum- oder Absturzsensoren. Der gemessene
+LiDAR-Mastsektor bleibt eine Sichtlücke. `sensor_guarded` ist deshalb eine
+sensorabhängige Betriebsregel, kein vollständiger Freiraumnachweis. Die neue
+Kombination muss in den unveränderten Gesamtfällen und anschließend im
+bestehenden LAB-1-Betriebsbereich geprüft werden. Der vorhandene 25-cm-VL53-
+Grenzwert, Geschwindigkeiten und 2-s-Kollisionsvorschau bleiben erhalten.
 
 ## 1. Produktziel und Grenze des Auftrags
 
@@ -60,7 +91,7 @@ Innerhalb des Explorers werden drei Verantwortlichkeiten klar getrennt: Kandidat
 
 MUSS erhalten bleiben: Hardwareanbindung, bewährte Encoder-/EKF-Funktionen, gültige Quellen-/Karten-/Posebindung, eindeutiger Auftragseigner, bestätigte Kindbeendigung, Stop-/HOLD-Verträge und konsistente Kartenverwaltung. Änderungen daran sind getrennt zu begründen und zu prüfen.
 
-DARF NICHT eingeführt werden: zweiter Navigator oder Supervisor, direkte Motorbefehle zur Umgehung von Nav2, automatische Freiraumblasen, blindes Löschen von Costmaps, erfundene gesunde Quellen, versteckte Pflicht-Raumsemantik oder unbegrenzte Wiederholungen. Unbekannte Außenbereiche werden nicht durch Annahmen zu freiem Raum.
+DARF NICHT eingeführt werden: zweiter Navigator oder Supervisor, direkte Motorbefehle zur Umgehung von Nav2, automatische Freiraumblasen, blindes Löschen von Costmaps, erfundene gesunde Quellen, versteckte Pflicht-Raumsemantik oder unbegrenzte Wiederholungen. Unbekannte Außenbereiche werden nicht als gemessen frei ausgegeben. Ihre Planung ist ausschließlich im oben beschriebenen `sensor_guarded`-Modus zulässig.
 
 Zeitstempel dürfen nicht durch Klemmen, Wiederveröffentlichen alter Daten oder Umstempeln auf jetzt gesund erscheinen. Eine verworfene Probe ist keine neue Probe. Tatsächliche Mess-/Empfangszeit, Veröffentlichung und Verbrauch sind unterscheidbar zu halten.
 

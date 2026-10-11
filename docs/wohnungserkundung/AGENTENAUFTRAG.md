@@ -1,10 +1,33 @@
 # Aktueller Agentenauftrag: AP-06
 
+## Aktuelle Ergänzung vom 11.10.2026 – sensorüberwachter Start
+
+Der neue ausdrückliche Nutzerauftrag verlangt Softwareumsetzung: unbekannte
+Kartenfläche zur Erkundung zulassen, Rundblick vor Zielsuche und gemeinsame
+LiDAR/VL53-Hinderniswirkung. Die genaue Änderung der bisherigen Zulassungsregel
+steht im [MASTERPLAN v1.4](MASTERPLAN.md). Der nachstehende Korrekturplan bleibt
+für Quellen, Zuständigkeiten, Wartefolgen, ehrliche Ergebnisse und Gesamtprüfung
+maßgeblich; seine reine Planerstellung ist keine Beschränkung dieses neuen
+Implementierungsauftrags.
+
+Lieferung ist ein separat gebauter Kandidat auf
+`feature/ap06-sensor-guarded-start` mit Gegenfällen am tatsächlichen Elternablauf,
+passender Nav2-/Collision-Konfiguration und Rückfall über
+`unknown_space_policy:=observed_only`. Keine unbekannte Zelle wird in der
+Rohkarte freigestempelt. Vorhandene Karten-/Scopebindung, Stop/HOLD/Cancel,
+VL53-Kalibrierung, Geschwindigkeiten und Sensorfrische bleiben wirksam.
+
+Nach gezielter Softwareprüfung folgt ein Vergleich mit denselben ursprünglichen
+A/B/C- und Cancel/HOLD-Kriterien über `--unknown-space-policy sensor_guarded`.
+Ein erfolgreicher Software-Starttest ersetzt weder die ganze Mission noch reale
+Brems-/Sicht-/Fahrabnahme. Tatsächlicher Stand und nächster Schritt stehen nur
+im [STATUS](STATUS.md).
+
 ## Aktiver Korrekturplan vom 11.10.2026 – Beobachtung und Planung
 
 Der Nutzer verlangt einen strukturierten Plan zur Behebung der Ablaufprobleme
 und Auskunft über die Veröffentlichung. Dieser Plan konkretisiert AP-06 unter
-[MASTERPLAN v1.3](MASTERPLAN.md), WE-M0/M3/M4/M5/M6 und getrennt WE-M7.
+[MASTERPLAN v1.4](MASTERPLAN.md), WE-M0/M3/M4/M5/M6 und getrennt WE-M7.
 Er erhält die bestehende Architektur Mission → BT → Explorer → Nav2 →
 Schutzkette. Er ist keine neue Roadmap und keine bestandene Abnahme.
 Aktueller Iststand und genau nächster Schritt bleiben im [STATUS](STATUS.md).
@@ -185,7 +208,7 @@ Die folgenden Cloud-Zugangs-, früheren Push- und Shutdownangaben sind historisc
 Befunde; der aktuelle Ausführungskanal ist der lokale ARM64-Jetson. Sie sind
 kein neuer Shutdown-/Mergeauftrag und ersetzen nicht den obigen Korrekturplan.
 
-Am 03.10.2026 durch Nutzer „gut dann mache ap-6 fertig“ ausdrücklich beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M0/M3/M4/M5/M6/M7. [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md).
+Am 03.10.2026 durch Nutzer „gut dann mache ap-6 fertig“ ausdrücklich beauftragt. Verbindlich: [MASTERPLAN v1.4](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M0/M3/M4/M5/M6/M7. [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md).
 
 ## Basis und Lieferung
 
@@ -211,7 +234,7 @@ AP-06 bleibt als nächster Auftrag aktiv: Startinventar und tatsächliche SLAM-R
 
 ## Fortsetzung 05.10.2026 – Referenzbindung und gleiche Szenarien
 
-Nutzer beauftragt ausdrücklich: „repariere die Referenzbindung und prüfe mit denselben Szenarien erneut“. Basis `4351b8bb2018aa959aa84d6d6e8aa03621913e41`, gleicher isolierter AP-06-Branch/Worktree; bisheriger Auftrag bytegleich unter `archive/20261005-ap06-reference/AGENTENAUFTRAG.md` erhalten. MASTERPLAN v1.3, WE-M0/M3/M4/M5/M6, unveränderte Manifestfälle A/B/C sowie Cancel/Gyro-HOLD. Feste erste körpergebundene unbekannte Fläche in Odometrie erhalten, gemeinsame TF-Zeit für Pose/Korrektur, frischer vollständiger Raster-/Fahrzeugbeweis statt erneuter Anfangserfassung. Neue unbekannte Außenfläche, Belegung, Wiederbetretung, Kontext-/Auflösungswechsel und Quellen-/Fristfehler bleiben geschützt; keine Budgetresets. Regressionen gegen echte Produktfunktionen, betroffene Tests und Build, originale erneute Gesamtläufe und transparente Restgrenzen liefern. Keine Hardwarefahrt oder Deployment aus diesem Reparaturauftrag ableiten.
+Nutzer beauftragt ausdrücklich: „repariere die Referenzbindung und prüfe mit denselben Szenarien erneut“. Basis `4351b8bb2018aa959aa84d6d6e8aa03621913e41`, gleicher isolierter AP-06-Branch/Worktree; bisheriger Auftrag bytegleich unter `archive/20261005-ap06-reference/AGENTENAUFTRAG.md` erhalten. MASTERPLAN v1.4, WE-M0/M3/M4/M5/M6, unveränderte Manifestfälle A/B/C sowie Cancel/Gyro-HOLD. Feste erste körpergebundene unbekannte Fläche in Odometrie erhalten, gemeinsame TF-Zeit für Pose/Korrektur, frischer vollständiger Raster-/Fahrzeugbeweis statt erneuter Anfangserfassung. Neue unbekannte Außenfläche, Belegung, Wiederbetretung, Kontext-/Auflösungswechsel und Quellen-/Fristfehler bleiben geschützt; keine Budgetresets. Regressionen gegen echte Produktfunktionen, betroffene Tests und Build, originale erneute Gesamtläufe und transparente Restgrenzen liefern. Keine Hardwarefahrt oder Deployment aus diesem Reparaturauftrag ableiten.
 
 Nutzer hat zusätzlich ausdrücklich das Herunterfahren des Jetson nach Arbeitsabschluss beauftragt. Diese neuere Anweisung ersetzt die frühere Shutdown-Sperre ausschließlich für den tatsächlichen Jetson: Zugang/Identität und sicherer geordneter Stillstand müssen technisch nachgewiesen sein. Kein Herunterfahren des x86-Cloud-Befehlsbackends. Fehlender Zielsystemzugang bleibt ein konkreter Ausführungsblocker, keine weitere allgemeine Freigabe fehlt. Rückfall: nur neue eigene Reparaturcommits gezielt revertieren; alte AP-06-Negativnachweise/AP-01–05 und fremde Arbeit bewahren.
 
@@ -219,7 +242,7 @@ Nutzer hat zusätzlich ausdrücklich das Herunterfahren des Jetson nach Arbeitsa
 
 ## Fortsetzung 05.10.2026 – drei Gesamtmissionen
 
-Nutzer beauftragt: „behebe die Probleme die 0/3 Gesamtmissionen verursachen, so das alle drei Missionen erfolgreich abgenommen werden können.“ Saubere Basis `1b93694`, gleicher isolierter Branch/Worktree, MASTERPLAN v1.3 und WE-M0/M3/M4/M5/M6. Vorheriger Auftrag bytegleich archiviert. Verbraucher-/Geometriezeiten zuerst messen, belegte Ursachen im vorhandenen Ausführungspfad beheben, Regressionen gegen Produktfunktionen und echte Builds/Tests liefern. Unveränderte fünf Manifestfälle A/B/C/Cancel/Gyro-HOLD erneut; Ziel drei vollständige positive autonome Erkundungsmissionen mit Beobachtungsfolge, ganzer Passage, Weiterarbeit und ehrlichem Abschluss. Alle bisherigen Negativnachweise, Schutzgrenzen, Quelle-/Kontur-/Scopebindung, ursprüngliche Budgets und eindeutige Besitzer bleiben erhalten. Keine Freiraumannahme, versteckte Ziele, gelockerten Abnahmen, Hardwarefahrt, Deployment oder nächstes AP aus dieser Reparatur ableiten. Alle unabhängigen Schritte bei technischen Blockern fortführen. Jetson-Shutdown weiterhin autorisiert, nur bei nachgewiesenem tatsächlichem Zielsystemkanal und geordnetem sicheren Stillstand; Cloud-Host nicht herunterfahren. Rückfall: eigene neue Reparaturcommits gezielt revertieren bzw. temporäres Overlay abwählen.
+Nutzer beauftragt: „behebe die Probleme die 0/3 Gesamtmissionen verursachen, so das alle drei Missionen erfolgreich abgenommen werden können.“ Saubere Basis `1b93694`, gleicher isolierter Branch/Worktree, MASTERPLAN v1.4 und WE-M0/M3/M4/M5/M6. Vorheriger Auftrag bytegleich archiviert. Verbraucher-/Geometriezeiten zuerst messen, belegte Ursachen im vorhandenen Ausführungspfad beheben, Regressionen gegen Produktfunktionen und echte Builds/Tests liefern. Unveränderte fünf Manifestfälle A/B/C/Cancel/Gyro-HOLD erneut; Ziel drei vollständige positive autonome Erkundungsmissionen mit Beobachtungsfolge, ganzer Passage, Weiterarbeit und ehrlichem Abschluss. Alle bisherigen Negativnachweise, Schutzgrenzen, Quelle-/Kontur-/Scopebindung, ursprüngliche Budgets und eindeutige Besitzer bleiben erhalten. Keine Freiraumannahme, versteckte Ziele, gelockerten Abnahmen, Hardwarefahrt, Deployment oder nächstes AP aus dieser Reparatur ableiten. Alle unabhängigen Schritte bei technischen Blockern fortführen. Jetson-Shutdown weiterhin autorisiert, nur bei nachgewiesenem tatsächlichem Zielsystemkanal und geordnetem sicheren Stillstand; Cloud-Host nicht herunterfahren. Rückfall: eigene neue Reparaturcommits gezielt revertieren bzw. temporäres Overlay abwählen.
 
 
 ## Fortsetzung 08.10.2026 – Konzept experimentell prüfen
@@ -232,7 +255,7 @@ anfordern. Der aktuelle Chat führt weiterhin ausschließlich Softwareversuche
 in der gerätefreien Cloud aus.
 
 Basis: Produkt `2e5e1fd`, dokumentierter Gesamtstand `05cfcf3`, gleicher Branch
-und Worktree. MASTERPLAN v1.3 und ursprüngliche Negativnachweise erhalten.
+und Worktree. MASTERPLAN v1.4 und ursprüngliche Negativnachweise erhalten.
 Kontrollierte Entwicklungsvarianten werden vor dem jeweiligen Lauf im
 [Konzeptversuch](KONZEPTVERSUCH_AP06.md) und im ausgeführten Versuchsmanifest
 benannt: zunächst endliche Modellsicht ohne Mastabschattung, danach gezielt

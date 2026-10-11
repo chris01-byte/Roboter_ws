@@ -1,5 +1,32 @@
 # Projektgedächtnis
 
+## 11.10.2026 – Nutzer verlangt sensorüberwachte Erkundung statt unbekannter Startsperre
+
+Explizite Richtungsänderung: nicht kartierte Zellen dürfen zur Erkundung
+planbar sein; Start-Rundblick vor aufwendiger Frontierauswahl. In MASTERPLAN
+v1.4 übernommen. Softwarecommit `51f8e862a92836a141b4fdc3a503c331671e6052` auf
+`feature/ap06-sensor-guarded-start` aus `22a4b76`; kein OOMWOO-Komplettstack,
+kein neuer Navigator oder Motorpfad. Vorhandene Mission/BT/Explorer/Nav2-Kette
+bleibt. Planungsmaske und tatsächliche Karten-/Beobachtungsevidenz sind getrennt.
+Der neue Modus entfernt private Startkörper-/Egress-Regeln und ergänzt LiDAR
+in einer separaten Hindernisebene sowie der letzten VL53-Bremse. LiDAR-Clearing
+darf die tieferen VL53-Hindernisse nicht löschen.
+
+395 gezielte Prüfungen (369 inklusive 25 neuer Fälle, 26 Scope), separater
+Build vier betroffener Pakete und zehn bytegleiche Quelle/Install-Dateien.
+Der Gegenfall auf identischer Rohkarte geht im alten Modus nicht in den Scan;
+neuer tatsächlicher Elternablauf startet ihn vor jeder Zielsuche. Keine ganze
+A/B/C- oder neue reale Fahrt dadurch belegt. Die ursprünglichen Kriterien,
+25-cm-VL53-Schwelle, Geschwindigkeiten und 2-s-Kollisionsvorschau bleiben.
+Humble-Approach-`max_points` bleibt 1: 0 würde im statischen `>=`-Vergleich
+jede Bewegung sperren; kein ungeprüfter Grenzwertwechsel. Sichtlücken und
+reales Bremsen bleiben Hardwaregrenzen. Aktueller Auftrag/Befund nur im STATUS.
+
+Rückfall: eigenen Kandidaten bis zum bestätigten Halt beenden, dann dieselbe
+Mapping-/Explorer-Kette mit `unknown_space_policy:=observed_only` starten.
+Die vorhandene private Scopevorbereitung gibt dieselbe Moduswahl jetzt im
+getrennten Launch-Befehl mit aus; sie fährt selbst nicht.
+
 ## 11.10.2026 – tatsächliche erneute Encoderbindung nach Maskenentzug
 
 Live Geometriekorrektur verbessert 578 Eingangsprüfungen auf 85/116 ms

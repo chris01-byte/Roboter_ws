@@ -1,5 +1,51 @@
 # Wohnungserkundung – aktueller Status
 
+## 11.10.2026 – sensorüberwachter Start als neuer Softwarekandidat
+
+**Quellstand `51f8e862a92836a141b4fdc3a503c331671e6052`**, Branch
+`feature/ap06-sensor-guarded-start`, Ausgangsbasis `22a4b76`.
+Die ausdrücklich verlangte Nutzeränderung ist in [MASTERPLAN v1.4](MASTERPLAN.md)
+und [Auftrag](AGENTENAUFTRAG.md) aufgenommen. Unbekannte Zellen werden im neuen
+Modus zur Planung zugelassen, ohne die Rohkarte oder Beobachtungsnachweise zu
+ändern. Private Startkörper-/Egress-Ausnahmen entfallen. Rundblick vor Zielsuche;
+bei erkannter Drehblockade normale Beobachtungszielsuche. Gemeinsame Launch-
+Auswahl bindet Explorer, Nav2 und LiDAR/VL53-Bremse. Rückfall über
+`unknown_space_policy:=observed_only` nach bestätigtem Halt/Prozessende.
+
+**395 gezielte Softwareprüfungen bestanden: 369 Regressionen einschließlich
+25 neuer Bewegungs-/Konfigurationsfälle plus 26 Scope-Prüfungen.** Der tatsächliche
+Elternablauf beginnt auf derselben zuvor blockierten unbekannten Startkarte mit
+dem Scan vor jeder Zielsuche. Geprüft sind außerdem der vollständige Körperweg
+aus unbekanntem Start, echte belegte Zellen, aktuelle LiDAR-Hindernispunkte,
+veraltete Empfangs-/Quellzeiten, fehlende TF, ungültige Scans, Stop/Cancel und
+ehrlicher Scanabbruchgrund. Testtransport und synthetische Sensordaten sind
+kein realer Bewegungs- oder SLAM-Gewinnnachweis.
+
+Vier betroffene Pakete separat unter Humble/Python 3.10 auf x86_64 gebaut;
+10 geänderte installierte Dateien bytegleich, tatsächlich geladene Laufzeit,
+Geometrie, Sensorprüfung und Nativkern aus dem neuen privaten Prefix.
+Kein vollständiger neuer 14-Pakete-/Nav2-/SLAM-Build. Nachweis, Hashes und
+zugängliche Rohlog-/JUnit-Pfade im
+[Softwarebeleg](evidence/ap06-sensor-guarded-start-20261011.json).
+
+**Offen:** ganze ursprüngliche A/B/C-Missionen und ganze Cancel/HOLD-Fortsetzung
+mit dem neuen Modus, Jetson-Transfer und reale Schutz-/Fahrtabnahme. Kein realer
+Roboterprozess oder Aktor gestartet; Bestandsinstallation nicht umgestellt.
+Der letzte vollständige gemeinsame v17-Vergleich bleibt 2.976 Regressionen,
+A/B/C 0/3 und Cancel/HOLD-Stopp 2/2. Diese Zahlen sind kein Ergebnis dieses
+neuen Kandidaten. VL53 vorn und LiDAR-Mastmaske ergeben keine lückenlose
+Rundum-/Bodenerfassung; tatsächliche Brems- und Sichtwirkung bleiben zu prüfen.
+
+**Genau nächster Auftrag:** vollständigen Kandidaten separat bauen und die
+unveränderten ursprünglichen A/B/C-/Cancel/HOLD-Fälle über den vorhandenen
+Testdriver mit `--unknown-space-policy sensor_guarded` ausführen. Originale
+Welt-/Sensor-/Abnahmekriterien behalten, tatsächliche Produktpräfixe binden,
+Missionsabschluss/Karte/Kindende und ersten Fehlergrund auswerten. Danach den
+exakt nachgewiesenen Kandidaten im bestehenden LAB-1-Umfang real prüfen;
+Softwaretests allein erklären die Hardwareabnahme nicht für bestanden.
+
+## Historischer vollständiger Vergleichsstand v17
+
 **Neuester vollständig geprüfter gemeinsamer Stand: v17 / `60e894c`,
 11.10.2026.** Separater ARM64-Build: 14 Pakete, 155 eindeutige bytegleiche
 Quelle/Install-Dateien bei 157 Vergleichseinträgen. **2.976 Regressionen
@@ -10,7 +56,7 @@ Wiederaufnahme und reale Gesamtfahrt bleiben offen. Bestandsinstall und Main
 unverändert. [Kritischer Buildreview](AP06_BUILD_REVIEW_20261011.md) und
 [exakter v17-Beleg](evidence/ap06-correction-v17-20261011.json).
 
-**Nächste Ursachenprüfung:** A erste verworfene Rasterzelle samt Rastertyp und
+**Damals vorgesehene Ursachenprüfung zum v17-Stand:** A erste verworfene Rasterzelle samt Rastertyp und
 Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen

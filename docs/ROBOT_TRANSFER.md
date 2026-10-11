@@ -1,5 +1,37 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – neuer sensorüberwachter Kandidat nur in der Cloud gebaut
+
+Quellcommit `51f8e862a92836a141b4fdc3a503c331671e6052`, Zweig
+`feature/ap06-sensor-guarded-start`. Vier geänderte Pakete (`explore`,
+`robot_navigation`, `vl53_near_field`, `robot_bringup`) in separatem Humble-
+x86_64-Prefix gebaut, mit aktuellen Installquellen abgeglichen. Bestehende
+ROS-/Interface-Unterbauten wurden übernommen. Dies ist kein vollständiger
+neuer Jetson-Build und kein erfolgter Transfer, Install- oder Autostartwechsel.
+Keine Verbindung zum realen Roboter, kein Motorbefehl, keine neue reale Karte.
+Softwarebeleg und exakt nächster Auftrag stehen im STATUS.
+
+Bei einem späteren vollständigen Kandidatenstart müssen Mapping- und
+Explorer-Prozesse dieselbe Wahl `unknown_space_policy:=sensor_guarded` erhalten.
+Die vorhandenen App-/Mapping-Launches koppeln dann Nav2-Unknown-Zulassung,
+separate LiDAR-Hindernisebene und LiDAR/VL53-Collision-Parameter. Der verzögerte
+Explorerstart aus `metric_scope_vorbereiten.py` gibt die Wahl ebenfalls aus;
+seine gebundene private Session-/Karten-/Scope-Datei weiterverwenden. Kein
+alleiniger Explorer-Profilwechsel neben einem alten Schutzstack.
+
+Physische Wirkung nach späterer Installation: Rundblick darf vor Zielsuche
+beginnen und unbekannte Kartenfläche darf einen Weg nicht allein sperren.
+Aktuelle erkannte Hindernisse, Quellenfehler, Not-Aus, HOLD/Cancel und
+Scopegrenzen behalten Wirkung. Zwei Front-VL53 und der maskierte LiDAR bieten
+keine vollständige Boden-/Rundumabdeckung. Realen Haltweg/Schutz und Fahrt
+vor einer Gesamtfreigabe nach bestehendem LAB-1-Auftrag messen; der Cloudtest
+ersetzt diese Wirkung nicht. Kalibrierung und Antriebslimits wurden nicht geändert.
+
+Rückfall: nur eigene Kandidatenprozesse geordnet bis zum bestätigten Halt
+stoppen; erhaltene Installation oder denselben gebundenen Launch mit
+`unknown_space_policy:=observed_only` verwenden. Scopevorbereitung im Rückfall
+mit `--unknown-space-policy observed_only`; keine Live-Umschaltung der Mission.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
