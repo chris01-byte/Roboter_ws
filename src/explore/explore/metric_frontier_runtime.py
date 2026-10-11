@@ -1489,7 +1489,12 @@ class MetricFrontierRuntime:
 
     def _on_metric_nav_plan(self, path):
         with self._metric_lock:
-            if not self._metric_work_is_current(self._metric_active_context):
+            # NavFn also publishes /plan for our read-only ComputePath calls.
+            # Their action result is validated explicitly before movement;
+            # topic updates belong only to the existing active native child.
+            if (self._metric_active is None
+                    or getattr(self, '_wohnungserkundung_active_child', None) is not self._metric_active
+                    or not self._metric_work_is_current(self._metric_active_context)):
                 return
             self._accept_metric_nav_plan(path)
 
@@ -3425,6 +3430,10 @@ class MetricFrontierRuntime:
                 with self._wohnungserkundung_runtime_lock:
                     if self._wohnungserkundung_active_child is not None:
                         return finish('failed','second_child_forbidden')
+                    # Keep the fully checked explicit query path until Nav2
+                    # publishes its current one. A queued read-only topic from
+                    # planning/alignment must not replace it after dispatch.
+                    self._metric_plan_after_ns = self.get_clock().now().nanoseconds
                     self._wohnungserkundung_active_child=pending
                 try:
                     child_dispatched = True

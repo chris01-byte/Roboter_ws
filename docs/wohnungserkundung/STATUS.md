@@ -109,12 +109,22 @@ auf `feature/ap06-closed-product-validation` übertragen; Remote-HEAD
 mit `ls-remote` bestätigt. 22 geänderte Dateien geprüft, keine Geheimnistreffer;
 nur eigene synthetische binäre Gegenfallraster. Der V12-Nachtrag ist neu.
 
-**Genau nächster Schritt:** reproduzierten Rollenfehler des gemeinsamen
-`/plan`-Topics korrigieren: reine Planner-Abfrage darf keinen aktiven
-Navigationspfad ersetzen; danach tatsächliche teure Restgeometrie und Egress-
-Verwerfung instrumentiert belegen. Drei Beobachtungen sind in B erreicht,
-3/3 volle Missionen bleiben offen. Realtests folgen erst der Softwarequalifikation.
-Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
+Weitere Schritt-4-Korrektur: das gemeinsame `/plan`-Topic konnte während
+rein lesender ComputePath-Anfragen als aktiver Navigationspfad gebunden werden.
+Drei Gegenfälle vor Korrektur negativ, einschließlich tatsächlicher adaptiver
+Auswahl/Elternfolge. Jetzt nur Topic-Updates des gleichen aktuellen Nav2-Kindes;
+Dispatch-Stempel schließt wartende alte Query-Veröffentlichungen aus. Der
+explizite Query-Rückgabepfad bleibt vollständig geprüft. 174 betroffene Fälle
+positiv, keine Grenzen verändert. Im älteren Original A war der verworfene
+Task-4-Pfad allerdings gleich dem Query-Pfad: keine Behauptung, dieser Rollenfehler
+erkläre jene Verwerfung oder alle Abbrüche.
+[Gegenfall und Quellenbindung](evidence/ap06-plan-publication-owner-20261011.json).
+
+**Genau nächster Schritt:** tatsächliche teure Restgeometrie und Egress-
+Verwerfung im instrumentierten Produktablauf erfassen, auf denselben eingefrorenen
+Eingaben gezielt korrigieren. Drei Beobachtungen sind in B erreicht, 3/3 volle
+Missionen bleiben offen. Neue gemeinsame Regression und Realtests folgen den
+belegten Korrekturen. Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

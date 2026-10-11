@@ -400,6 +400,7 @@ def path_for(target):
 def test_late_plan_callback_cannot_revive_work_in_new_context(monkeypatch, transition):
     n, g = runtime(monkeypatch)
     n._metric_active = candidate()
+    n._wohnungserkundung_active_child = n._metric_active
     n._metric_active_context = n._metric_work_context()
     n._metric_plan_after_ns = 99_000_000_000
     path = path_for(n._metric_active)

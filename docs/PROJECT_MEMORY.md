@@ -1062,3 +1062,15 @@ Beobachtung am gleichen Budget. Die gemeinsame optionale Zuteilung beseitigt
 nicht jede teure Restarbeit. Keine höheren Fristen oder Gesundheitsannahmen
 als Folgerung. Weiter konkrete Quellen-/Geometrieübergänge prüfen.
 Beleg: docs/wohnungserkundung/evidence/ap06-correction-v12-20261011.json.
+
+## 11.10.2026 – AP-06 Planner-Topic gehört zur aktuellen Navigationsphase
+
+NavFn veröffentlicht auch reine ComputePath-Ergebnisse auf /plan. Aktuelles
+Ziel/Kontext und Endpunktdistanz allein bestimmen keinen Navigationsbesitzer.
+Topic-Update nur beim gleichen aktiven Nav2-Kind; neuer Dispatch-Stempel
+schließt vorherige Query-Veröffentlichungen aus. Eigene explizite Queryantwort
+bleibt vor Bewegung voll geprüft. Drei rote Gegenfälle vor Änderung, danach
+174 Fälle grün, einschließlich tatsächlichem adaptivem Elternpfad.
+Kein Grund, jede ursprüngliche Pfadverwerfung hiermit zu erklären: der alte
+A-Task-4-Plan entsprach exakt dem Querypfad. Rückfall nur dieser begrenzte Diff.
+Beleg: docs/wohnungserkundung/evidence/ap06-plan-publication-owner-20261011.json.
