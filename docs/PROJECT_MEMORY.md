@@ -1,5 +1,20 @@
 # Projektgedächtnis
 
+## 11.10.2026 – Ablauf-Audit statt weiterer isolierter Timeout-Korrektur
+
+Codeprüfung des uncommitteten Wartephasenstands zeigt: adaptive Startentscheidung
+ruft Auswahl vor der Warteprüfung auf; neue Eltern-Wartetests laufen mit
+`configured_scan`. Die 196 grünen gezielten Fälle belegen damit nicht den
+adaptiven Produktübergang. Instrumentierter Source-A erreicht zwei Beobachtungen,
+endet aber negativ; eine einzige Ursache aller Abbrüche ist nicht bewiesen.
+Der vom Nutzer verlangte strukturierte Plan steht im bestehenden AP-06-
+AGENTENAUFTRAG unter MASTERPLAN v1.3: zuerst echten adaptiven Gegenfall,
+dann Übergänge/Zeitarbeit/Folgeplanung, gemeinsame Originalabnahme, reale Folge.
+Keine neue Architektur, höhere Fristen oder abgeschaltete Schutzprüfung.
+GitHub-Abgleich: Entwicklungsbranch noch `e14ca312`, lokale Folgesoftware
+nicht veröffentlicht. Analyse/Plan lokal dokumentiert; kein Push-/Merge- oder
+Hardwarevorgang. Aktueller Stand, Auditbeleg und genau nächster Schritt im STATUS.
+
 ## 11.10.2026 – v10 vollständig negativ qualifiziert; originale Pause messen
 
 Gemeinsamer `2d93f2b`: 14 Pakete und 2.867 Produktfälle positiv, ursprüngliche

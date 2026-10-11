@@ -1,6 +1,52 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – v10 vollständig geprüft; Originalmissionen weiterhin 0/3
+## 11.10.2026 – Ablaufanalyse und strukturierter Korrekturplan
+
+Der [aktive Auftrag](AGENTENAUFTRAG.md) enthält die aufeinanderfolgenden
+Maßnahmen: Gegenfälle im tatsächlichen adaptiven Pfad, Warte-/Auswahlreihenfolge,
+gemessene Zeitverarbeitung, Folgeplanung nach Beobachtung/Scan, gemeinsamer
+Softwarekandidat und erst danach reale autonome Abnahme. MASTERPLAN v1.3 und
+LAB-1 unverändert. Dieser Dokumentationsstand implementiert keine Korrektur.
+
+V10 aus `2d93f2b`: 2.867 vollständige Produktfälle positiv, ursprüngliche
+A/B/C weiterhin 0/3. Die danach lokal entwickelte Wartekorrektur ist
+uncommittet und unvollständig. 196 gezielte Fälle positiv; neuester
+instrumentierter Source-A: 0,729335 m, zwei Ankünfte und Beobachtungen, negativ
+am Auswahlbudget, kein Quellenfehler, keine Manifest-/Hardwareabnahme.
+Zuvor optionalen Scan nach 5,6421 rad am Aufgabenbudget beendet und einen
+Plan bei ungültigem Footprint-Sweep verworfen. Dies ist eine Ereignisfolge,
+noch kein Beweis einer einzigen Ursache für alle Abbrüche.
+
+Neuer **Codebefund**: Im adaptiven Pfad ruft `_metric_start_decision` bereits
+die Zielsuche auf, bevor `_execute_metric_frontier` die neue Wartephase prüft.
+Die neuen Eltern-Wartetests verwenden dagegen den Fixture-Default
+`configured_scan`. Die behauptete Unterdrückung erneuter Suche ist somit für
+den tatsächlich verwendeten Aufrufer nicht nachgewiesen. Ein ausführbarer
+adaptiver Gegenfall und dessen Korrektur fehlen noch. **Messbefund**: Eine
+Scanprobe alterte durch 425,467 ms Verarbeitung von 86,022 auf 511,489 ms,
+oberhalb ihrer unveränderten 500-ms-Grenze. Das ist kein Beweis eines defekten
+Sensors. Befunde/Hashes: [Audit](evidence/ap06-ablauf-audit-20261011.json).
+
+**Veröffentlichung geprüft am 11.10.2026, 04:26 UTC:** `git ls-remote`
+meldet `feature/ap06-closed-product-validation` weiterhin bei `e14ca312`.
+Der lokale Ausgangs-HEAD `fc6174f` liegt 32 Commits darüber; sein aktueller
+Fixbranch existiert auf origin nicht. Neuere Software und Analyse sind damit
+nicht hochgeladen. Diese Angabe gilt vor dem neuen lokalen Dokumentationscommit.
+Keine Veröffentlichung oder Merge durch diesen Planauftrag.
+
+Reale Schritte 3/4 weiter offen, keine neue Bewegung oder Installänderung.
+Der begrenzte reale Punkt-1-Nachweis und dessen Rohdatenlücke bleiben bestehen.
+Letzte Hardware-/Bestandsprüfung siehe unten; kein frischer Hardwarezustand
+aus Simulationsresultaten abgeleitet.
+
+**Genau nächster Schritt:** Schritt 1 des Korrekturplans: reproduzierbaren
+Gegenfall mit echter adaptiver Startentscheidung hinzufügen, der vor der
+Korrektur die zu frühe erneute Auswahl während der laufenden Pause zeigt.
+Erst danach den Zustandsübergang korrigieren. Keine weitere Gesamtwiederholung
+ohne gezielten neuen Befund. Rückfall: eigene kleine Diffs bzw. privates Overlay;
+Bestandsinstall erhalten.
+
+## Historischer v10-Prüfstand vor dem Ablauf-Audit
 
 Punkt 1 bleibt begrenzt real positiv; Rohdatenlücke während Translation erhalten.
 Punkt 2: gemeinsamer v10-Build `2d93f2b`, 14 Pakete in 172,54 s, 155

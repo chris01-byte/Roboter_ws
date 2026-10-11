@@ -1,20 +1,186 @@
 # Aktueller Agentenauftrag: AP-06
 
-## Aktiver lokaler Auftrag vom 10./11.10.2026
+## Aktiver Korrekturplan vom 11.10.2026 – Beobachtung und Planung
 
-Nutzer beauftragt die Folge 1–4 und erteilt erneut die vollständige Laborfreigabe. Tatsächlicher Ausführungskanal ist jetzt der lokale ARM64-Jetson, getrenntes Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`, ursprüngliche Basis e14ca312. Die untenstehenden Cloud-Zugangs- und Shutdownangaben sind historische Befunde, kein aktueller Gerätezugangsbefund und kein neuer Shutdownauftrag. Bestandsmain/-install bleiben erhalten.
+Der Nutzer verlangt einen strukturierten Plan zur Behebung der Ablaufprobleme
+und Auskunft über die Veröffentlichung. Dieser Plan konkretisiert AP-06 unter
+[MASTERPLAN v1.3](MASTERPLAN.md), WE-M0/M3/M4/M5/M6 und getrennt WE-M7.
+Er erhält die bestehende Architektur Mission → BT → Explorer → Nav2 →
+Schutzkette. Er ist keine neue Roadmap und keine bestandene Abnahme.
+Aktueller Iststand und genau nächster Schritt bleiben im [STATUS](STATUS.md).
 
-Punkt 1 begrenzt real positiv, Rohdatenlücke erhalten. Punkt 2: gemeinsamer
-v10-Build `2d93f2b` und 2.867 vollständige Produktfälle positiv; ursprüngliche
-A/B/C weiterhin 0/3. Einzelbefund und genau nächster Schritt ausschließlich
-im [STATUS](STATUS.md): gemessene Wartephase begrenzt behandeln, ursprünglichen
-Cooldown/Geometrie/Quellen/Fristen erhalten; gezielte Regression, gleicher
-Gesamtvergleich, danach reale 3/4. Keine alte Bewegungsfreigabe weiterverwenden.
+Der zuvor beauftragte Ablauf 1–4 und LAB-1 gelten weiter: begrenzte reale
+Antriebsqualifikation, vollständige Softwareprüfung, reale autonome LAB-Fahrt,
+erweiterte reale Abnahme. Die folgenden Schritte 1–4 konkretisieren die offene
+Softwarekorrektur; Schritt 5 prüft sie insgesamt, Schritt 6 setzt die reale
+Folge fort. Die Planerstellung selbst startet keine Bewegung oder Veröffentlichung.
 
-Keine neue reale Fahrt, dauerhafte Installation, Autostart-/SDK-Änderung oder
-Push/Merge. Bekannten LAB-Scope nach gemessenem Versatz fest binden;
-Passage-/Drei-Bereich-Geometrie und Apple-Laufzeit nicht erfinden. Bestehende
-Laborfreigabe gilt ohne neue allgemeine Fragerunde.
+### Ausgangsbasis und belegte Grenzen
+
+- Getrennter Jetson-Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`,
+  Branch `fix/ap06-private-observation-cooldown`, Ausgangs-HEAD `fc6174f`.
+  Gemeinsamer v10-Produktbuild aus `2d93f2b`; die uncommittete Wartekorrektur
+  in `metric_frontier_runtime.py` samt neuer Testdatei ist ein unvollständiger
+  Arbeitsstand. Datei-Hashes und Befunde stehen im
+  [Auditbeleg](evidence/ap06-ablauf-audit-20261011.json).
+- V10: 2.867 Produktfälle positiv, ursprüngliche A/B/C 0/3. Neuere gezielte
+  Prüfung: 196 Fälle positiv, aber deren Wartephasentests decken den adaptiven
+  Aufrufer nicht ab. Der instrumentierte Source-A-Lauf erreichte zwei
+  Beobachtungen und 0,729335 m, endete negativ und ist keine Manifestabnahme.
+- Nachgewiesen sind die falsche Reihenfolge von adaptiver Zielsuche und
+  Warteprüfung, die zugehörige Testlücke sowie Verarbeitungszeit, die eine
+  ausgewählte Probe veralten lässt. Noch nicht nachgewiesen ist eine einzige
+  gemeinsame Ursache für Scanabbruch, Routenverwerfung und jeden Budgetabbruch.
+- Reale Antriebs-/Encoder-Teilnachweise bleiben erhalten; die kontinuierliche
+  Rohdatenaufzeichnung während der früheren Translation fehlt. Simulation
+  ersetzt weder aktuelle Sensorzustände noch reale Passage/Weitererkundung.
+
+### 1. Fehler mit dem tatsächlich verwendeten Ablauf reproduzieren
+
+**Maßnahme:** Gegenfälle vor weiterer Produktänderung festhalten. Warteprüfung
+mit `adaptive` und `configured_scan` ausführen; dabei insbesondere die echte
+`_metric_start_decision`, den Elternablauf und die relevante Auswahlentscheidung
+verwenden. Testuhren und Geräteersatz sind zulässig; die fehlerhafte Entscheidung
+darf nicht durch einen erfolgreichen Stub ersetzt werden. Der bisherige
+`parent_fixture`-Default darf die Strategie nicht unbemerkt wechseln.
+
+**Prüfung:** Laufende Pause, Ablauf der ursprünglichen Pause, Kontextwechsel,
+Cancel, HOLD, Quellenverlust und nicht bestätigter Stillstand. Bei gültigem
+Warten keine neue Zielsuche/Navigation; danach frische Auswahl. Die gemessene
+Frischeverletzung und die Folge nach der zweiten Beobachtung getrennt erfassen.
+
+**Abnahme:** Mindestens ein reproduzierbar fehlschlagender Gegenfall für die
+Reihenfolgelücke auf dem unveränderten Arbeitsstand. Pro Befund Quelle,
+Strategie, Ereignisfolge und erster Auslöser; keine Behauptung, damit bereits
+den gesamten Source-A-Abbruch erklärt zu haben.
+
+### 2. Zustandsübergänge im bestehenden Explorer korrigieren
+
+**Maßnahme:** Nach Cancel/HOLD, Gesamtbudget, Quellen- und Stillstandsprüfung
+zuerst den gültigen Wartezustand behandeln. Erst wenn dieser endet oder sein
+Kontext ungültig wird, adaptive Scan-/Zielentscheidung ausführen. Pro
+Entscheidungsdurchlauf einen eindeutigen Besitzer der Zielauswahl verwenden.
+Die Pause hält nur Endezeit und Kontext, keine alte Route oder Fahrfreigabe.
+
+Zeitweiliges Warten, Suche ohne bisherigen Treffer, aktuell unzulässige Route,
+fehlende notwendige Quelle und terminaler Missionsabschluss erhalten eindeutig
+unterschiedene Übergänge. Vorhandene Ergebnis-/App-Verträge kompatibel erhalten;
+kein weiterer Supervisor und keine zweite allgemeine Health-State-Machine.
+
+**Abnahme:** Gegenfälle aus Schritt 1 bestehen in beiden Strategien. Cancel,
+HOLD und tatsächliche Fehler bleiben wirksam. Pause, Aufgaben-/Gesamtfristen
+und Versuchszähler werden nicht zurückgesetzt; keine Bewegung während des
+Wartens, kein zweites aktives Nav2-Kind.
+
+### 3. Rechenarbeit und aktuelle Messprüfung gezielt entkoppeln
+
+**Maßnahme:** Kosten und Datenalter getrennt messen: Erfassung/Empfang,
+Auswahlbeginn/-ende, Karten-/TF-Bindung, Geometrie, Plannerantwort und Dispatch.
+Die ausgewiesene Kartenfrische und das Rechenbudget getrennt benennen; zunächst
+identische wirksame Grenzwerte beibehalten. Keine pauschale Timeout-Erhöhung.
+
+Nur gemessen teure reine Geometriearbeit in begrenzte Schritte zerlegen bzw.
+bei exakt unveränderten Eingaben wiederverwenden. Wiederverwendbare Ergebnisse
+an Karteninhalt, Geometrie, Kontext und die tatsächlich verwendeten weiteren
+Eingaben binden. Änderungen machen betroffene Arbeit ungültig. Verarbeitung
+in Teilschritten verlängert weder das ursprüngliche Auswahlbudget noch die
+Aufgaben-/Gesamtfrist. Das geeignete Verfahren anhand des gemessenen Engpasses
+wählen; ein neuer Workerprozess ist keine vorweggenommene Lösung.
+
+Vor Bewegungsübernahme tatsächliche aktuelle Quellen, Pose/TF, Scope und die
+vollständige erforderliche Geometrie erneut prüfen. Alte Messungen nicht
+umstempeln, keine neue Messung mit unpassender alter Pose verbinden und keine
+veraltete Bewegungszulässigkeit zwischenspeichern.
+
+**Abnahme:** Geometrieentscheidungen auf identischen eingefrorenen Eingaben
+bleiben gleich. In der laufenden Kette erreicht die Prüfung die vorhandenen
+Frischegrenzen. Veraltete/geänderte Eingaben und verspätete Ergebnisse werden
+verworfen; Cancel/HOLD bleiben innerhalb bestehender Verträge wirksam. Bei
+fehlendem Nachweis keine verdeckte Fristverlängerung oder unbegrenzte Wiederholung.
+
+### 4. Folge nach Beobachtung, Scanabbruch und Planverwerfung schließen
+
+**Maßnahme:** Den konkreten Übergang nach der zweiten Beobachtung untersuchen:
+tatsächlich erreichten Scanwinkel, Soll-/Ist-Drehrate, Stop-/Warteanteile,
+Kartenwechsel, Geometrieentscheidung und Zeitverbrauch kausal zuordnen.
+`scan_task_budget_exhausted`, `footprint_sweep_invalid` und
+`nav2_plan_timeout_or_stop` nicht als dieselbe Ursache behandeln.
+
+Eine optionale unvollständige Rundsicht darf nur nach bestätigtem Halt und
+frischem Zulässigkeitsnachweis zu einer anderen nützlichen Beobachtung führen.
+Eine momentan ungültige Route bleibt mit Grund und erneuter Prüfbedingung
+bekannt; keine blinden identischen Wiederholungen. Ankunft, gemessene neue
+Sicht und räumlicher Erkundungsfortschritt getrennt verbuchen. Erster Auslöser,
+Folgereaktionen und terminaler Grund bleiben im Ergebnis nachvollziehbar.
+
+**Abnahme:** Mindestens drei aufeinanderfolgende selbst gewählte Beobachtungen
+im gerätefreien Produktablauf sowie Gegenfälle für Scanabbruch, verworfenen
+Plan, Kartenkorrektur und Ankunft ohne Sichtgewinn. Kein fälschlicher
+Vollabschluss durch leere Kandidaten, Filter oder Budgetende. Reale aktuelle
+Geometriefehler bleiben Ablehnungsgründe; Fortschritt wird nicht erzwungen.
+
+### 5. Einen gemeinsamen Kandidaten vollständig qualifizieren
+
+**Maßnahme:** Nach den gezielten Korrekturen einen sauberen Quellstand mit
+separatem Buildpräfix erstellen. Commit, native Bibliotheken, Parameter,
+Datei-Hashes und tatsächlich geladene Präfixe erfassen. Vollständige relevante
+Produktregression und ursprüngliche geschlossene A/B/C durchführen. Gleiche
+Welt, Startposen, Quellen, Mastmaske, CPU-Zuordnung, Grenzen und Abnahme; der
+zusätzlich instrumentierte Source-A-Lauf zählt nicht als Ersatz.
+
+Cancel-/HOLD-Stopp, gültige Fortsetzung, Quellenverlust, verspätete Antworten,
+Speichern und Wiederaufnahme separat prüfen. Tests müssen vom realen Testlauf
+gesammelt werden; bloße Testdateien oder ein Driver-Exitcode 0 sind kein Beleg.
+
+**Abnahme:** 3/3 ursprüngliche Gesamtmissionen vollständig positiv, einschließlich
+ganzer Passage samt Heck, weiterer Beobachtung und aller Manifestkriterien;
+betroffene Positiv-/Negativtests bestanden. Gleicher Kandidat in Build und
+Lauf. Jeder Fehllauf bleibt erhalten und führt zu einer konkreten Ursachenprüfung,
+nicht zu einer Serie unveränderter Starts. Ohne diese Abnahme bleiben reale
+autonome Folgeschritte offen.
+
+### 6. Exakten Kandidaten unter LAB-1 real prüfen
+
+**Maßnahme:** Bestandsinstall erhalten. Gerätebesitzer, aktuelle echte
+Encoder-/VL53-/HWT-/LiDAR-Zeiten, TF, Stillstand und Schutzkette zunächst
+rein lesend prüfen; dreiminütiger Vorlauf mit dokumentierter Quellenbindung
+und Sichtlücken. Bekannten festen LAB-Scope anhand der aktuellen gemessenen
+Pose binden, nicht auf den versetzten Roboter umzentrieren.
+
+Rohdatenrecorder vor Bewegung nachweislich empfangend starten und bis zum
+bestätigten Halt laufen lassen. Zuerst begrenzte autonome LAB-Fahrt, anschließend
+die bereits beauftragten erweiterten Fälle in tatsächlich passenden Aufbauten:
+mindestens drei Beobachtungsaufgaben, volle Passage/Heck, Weitererkundung,
+Drei-Bereich-Rundweg, Hindernis/Halt/Fortsetzung, Speichern/Wiederaufnahme und
+zwei positive Läufe mit unterschiedlicher zulässiger Startpose. Zusätzliche
+Raumgeometrie nicht aus dem kleinen bekannten LAB-Scope ableiten. Native
+Apple-Laufzeit bleibt eine getrennte WE-M7-Abnahme.
+
+**Abnahme:** Beobachtete reale Ergebnisse und Eingriffe je Kriterium belegt,
+unabhängiger Weg-/Kartenvergleich, lückenlose Bewegungsaufzeichnung sowie
+aktuelle Schutzreaktion. Kein Kunden-Gesamtgrün aus Teilfahrt oder Simulation.
+LAB-1 gilt ohne erneute allgemeine Freigaberunde; konkrete unbekannte physische
+Gegebenheiten werden nur für den davon abhängigen Versuch geklärt.
+
+### Lieferung, Veröffentlichung und Rückfall
+
+Je Korrektur ein begrenzter nachvollziehbarer Diff mit Gegenfall und Ergebnis;
+ein aktiver Kandidat. Der aktuelle Benutzerauftrag fragt nach dem Uploadstand,
+erteilt aber keinen neuen Push-/Mergeauftrag. Remote-Stand zum Prüfzeitpunkt
+und lokale Abweichungen im STATUS festhalten. Plan/Analyse lokal versionieren;
+unvollständige Software ausdrücklich als Arbeitsstand kennzeichnen.
+
+Bestandsmain/-install, Geräteprofile, Autostart und SDK bleiben erhalten.
+Eigene private Prozesse nur über ihre identifizierten PIDs geordnet stoppen;
+keine Prozessgruppen signalisieren. Einzelne eigene Änderungen gezielt
+revertieren bzw. privates Overlay abwählen, keine unbekannte Arbeit überschreiben.
+Reale Karten, Bilder, Bags und Geheimnisse bleiben außerhalb Git.
+
+## Historische Aufträge und abgeschlossene Übergaben
+
+Die folgenden Cloud-Zugangs-, früheren Push- und Shutdownangaben sind historische
+Befunde; der aktuelle Ausführungskanal ist der lokale ARM64-Jetson. Sie sind
+kein neuer Shutdown-/Mergeauftrag und ersetzen nicht den obigen Korrekturplan.
 
 Am 03.10.2026 durch Nutzer „gut dann mache ap-6 fertig“ ausdrücklich beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M0/M3/M4/M5/M6/M7. [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md).
 
