@@ -312,7 +312,13 @@ class ReferencedStartEgress:
         extent = grid_points(((0,0),(grid.info.width,0),
             (grid.info.width,grid.info.height),(0,grid.info.height)), grid,
             source_reference,self.fixed.grid,target_reference)
-        region = self.retained_region.intersection(Polygon(extent))
+        # A localization correction often changes only the current raster
+        # projection. Keep the exact physical region when the new map extent
+        # wholly covers it; reconstructing it discards its prepared geometry.
+        previous_region = self.retained_region
+        extent_polygon = Polygon(extent)
+        region = (previous_region if extent_polygon.covers(previous_region)
+                  else previous_region.intersection(extent_polygon))
         parts = newly_observed_parts(observed)
         if parts:
             region = region.difference(unary_union(parts))
@@ -326,10 +332,11 @@ class ReferencedStartEgress:
         # Original cell keys and departure histories stay fixed. A cell with
         # any retained part remains subject to the original stricter monotone
         # proof; its observed part can never become an unknown exception again.
-        if len(original_cells):
+        if len(original_cells) and region is not previous_region:
             retained[original_cells[:,0],original_cells[:,1]] = positive_cell_intersections(
                 region, original_cells)
-        self._whole_cells = abs(region.area-int(retained.sum())) <= 1e-9
+        if region is not previous_region:
+            self._whole_cells = abs(region.area-int(retained.sum())) <= 1e-9
         projected = np.zeros(occupancy.shape,dtype=bool)
         rr,cc = np.nonzero(retained)
         if len(rr):

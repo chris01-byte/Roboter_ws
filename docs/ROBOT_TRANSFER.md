@@ -1,5 +1,18 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – gemeinsamer v9-Build und reine Regionskorrektur
+
+Privater v9 `9fbf085`: 14 Pakete, 2.776 Fälle ohne Fehler/Skip, ursprüngliche
+A/B/C 0/3. Neue Regionskorrektur nur im separaten Quellcheckout mit gezielten
+Tests und eingefrorener Geometrie geprüft; privater Source-A weiterhin negativ.
+Keine neue reale Bewegung, keine Bestands-/SDK-/Autostartänderung. v9-Skripte
+nur vorbereitet, nie gestartet. Letzte tatsächliche FC03/Installprüfung bleibt
+02:11:47/48 UTC: unveränderte Zähler, Null-RPM, 1.048 Bestandsinstallhashes gleich.
+Simulationen sind kein frischer Hardwarebeleg. Rückfall: nur eigene private PIDs
+direkt geordnet stoppen, erhaltenen Install verwenden oder Regionsdiff revertieren.
+Aktueller vollständiger WE-Befund ausschließlich im STATUS.
+
+
 ## 11.10.2026 – Rasterkorrektur nur im separaten Quellcheckout
 
 Ganzzahliger Egress-Pfad gezielt 76/76 geprüft; privater geschlossener A-Lauf

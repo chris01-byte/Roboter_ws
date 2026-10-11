@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 11.10.2026 – unveränderte physische Egress-Region wiederverwenden
+
+v9 `9fbf085` vollständig gebaut, 2.776 Produktfälle grün; Original A/B/C 0/3,
+C mit weniger Fortschritt als v8. Subzelliger Refresh prüft unveränderte feste
+Zellpolygone bisher erneut. Nur bei vollständiger Extentdeckung ohne tatsächlichen
+Beobachtungs-/Scopeentzug dieselbe Region und feste Zellmaske behalten; aktuelle
+Projektion, volle Historie und Quellenendfristen unverändert. 80 gezielte Fälle
+und vier verstärkte Historien-/Entzugstests bestanden. Eingefrorener ungültiger
+Gegenfall bleibt identisch ungültig, Refresh 55,61 → 38,38 ms. Privater Source-A
+0,282465 m / eine Beobachtung, weiterhin Auswahlbudget. Kein neuer gemeinsamer
+Build oder Realbeleg. Rückfall: nur diesen Regionsdiff revertieren bzw. privaten
+Kandidaten stoppen und Bestandsinstall verwenden. Aktueller Befund im STATUS.
+
+
 ## 11.10.2026 – bestätigte ganzzahlige Egress-Lage direkt projizieren
 
 Gemessene fast null TF-Referenzen erzwingen bisher GEOS: Roh-Refresh etwa

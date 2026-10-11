@@ -1,60 +1,50 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – gekoppelte Quellen und ganzzahliges Egress-Raster korrigiert, Gesamtprüfung offen
+## 11.10.2026 – v9 vollständig gebaut; Originalmissionen weiterhin 0/3
 
 Punkt 1 bleibt begrenzt real positiv; die Rohdatenlücke während Translation
-bleibt ausdrücklich erhalten. Punkt 2: letzter gemeinsam gebauter v8-Stand
-`abeabd4`, 14 Pakete/155 Quelle-Installgleiche/756 Installhashes, 2.735
-vollständige Produktfälle positiv ohne Skip. Ursprüngliche A/B/C weiterhin
-0/3: 0,153852/0,364959/0,713880 m, keine/eine/eine Teilbeobachtung,
-keine volle Passage samt Heck. Keine reale Fahrt daraus.
+bleibt erhalten. Punkt 2: gemeinsam gebauter v9-Stand `9fbf085`, 14 Pakete in
+170,97 s, 155 Quelle-Installgleichheiten und 756 Installhashes. Alle 2.776
+Produktfälle positiv, keine Fehler/Skips. Ursprüngliche, manifestgleiche A/B/C
+weiterhin 0/3: 0,293762/0,353425/0,299632 m. A/B jeweils eine Ankunft und
+Beobachtung (176/183 neue Zellen), danach Auswahlbudget; C ohne Ankunft oder
+Beobachtung am Geometrie-Retrybudget nach veralteter Radprobe. C damit weniger
+Fortschritt als v8, kein Gesamt-Grün und keine volle Passage samt Heck.
 
-Separater Kopplungsfix `86793fd`: beim vorhandenen einmaligen Nachcheck
-aktuelle ursprüngliche TF-Pose/Referenz und Rad gemeinsam auswählen;
-verlassene Initialkörperzellen nur entziehen, dann vollständige Historie
-und ursprüngliche Endfristen prüfen. 29 gezielte Fälle positiv. Neue
-CPU-Diagnose: Dispatcher beansprucht während 5,305 s Auswahl etwa 1,675 s
-CPU; keine native Statuspublikation über 50 ms. 1-ms-Dispatcherpause allein
-bleibt negativ (0,187788 m, keine Beobachtung, Geometrie-Retrybudget),
-nicht ins Produkt übernommen.
+v9 enthält den getrennt geprüften TF-/Rad-Nachcheck und den bestätigten
+Integer-Lattice-Pfad. Keine gerundeten Referenzen, neuen Freizellen, geänderten
+Fristen, Konturen oder Historien. Exakte subzellige/rotierte Projektion bleibt.
+Private Dispatcherpause und Vergleich mit vier Explorer-CPUs beide negativ,
+nicht übernommen. Vier-CPU-A: 0,237771 m, keine Beobachtung, Geometrie-Retrybudget;
+dieser Ressourcenvergleich ist keine Originalqualifikation.
 
-Genauere Messung: wechselnde ursprüngliche TF-Referenz um etwa 10⁻¹⁶ löst
-Polygonprojektion aus. Roh-Egress-Refresh etwa 118–135 ms Wand-/39–44 ms
-Rechenzeit, voller Zweitbeweis 213–218 ms, ursprüngliche 180 ms damit verletzt.
-Ganzzahliger Rasterpfad jetzt auch für geometrisch bestätigte Referenz-
-korrekturen: aktuelles physisches Raster und ursprüngliche aktuelle/vorherige
-Map-Raster getrennt abgleichen. Nur neue tatsächliche Beobachtung und
-Scope-/Extent-Entzug entfernen alte Körperfakten. Ganze Rasterecken zusätzlich
-mit 10⁻¹² Zellgenauigkeit prüfen (strenger als bestehende Polygon-Toleranz),
-sonst unveränderter exakter Polygonpfad. Keine gerundeten TF-Werte, keine
-neuen Freizellen, Frist-/Budget-/Kalibrierungsänderung oder geheilte Historie.
-76 gezielte Fälle positiv, darunter 36 Vergleiche mit dem exakten Polygonpfad
-bei Wachstum, Beobachtung, Scopeentzug, Korrektur und anschließend unbekanntem
-Raster. Alter tatsächlich subzelliger eingefrorener Gegenfall bleibt in
-Geometrie/Ergebnis und etwa 54 ms Aufwand unverändert.
-
-Privater instrumentierter Source-A-Vergleich mit Rasterfix: 0,293160 m,
-eine Ankunft/Beobachtung mit 176 neuen Zellen, 30 Inputs ohne Frischefehler;
-anschließend ungeeignete Folgeroute und Auswahlbudget, also weiterhin negativ.
-Vergleich beider gemessener Ursachen (Rasterfix plus Dispatcherpause) läuft
-privat; er ersetzt keine Originalqualifikation. Diese Quellkorrekturen sind
-noch nicht gemeinsam gebaut oder als ursprüngliche A/B/C geprüft.
+Separater neuer Quellfix: unveränderte physische Egress-Region behalten, wenn
+der tatsächliche aktuelle Extent sie vollständig umfasst und keine reale
+Beobachtung/Scopeänderung Fakten entzieht. Aktuelle Zellprojektion und volle
+Historie weiterhin neu prüfen. 80 gezielte Fälle positiv; vier verstärkte
+Entzugs-/Historienfälle zusätzlich positiv. Tatsächlich eingefrorener subzelliger
+Gegenfall bleibt ungültig mit identischen Masken/Gründen; Refresh von 55,61 auf
+38,38 ms reduziert. Privater Source-A: 0,282465 m / eine Beobachtung, weiterhin
+negatives Auswahlbudget, keine Gesamtqualifikation dieses noch nicht gemeinsam
+gebauten Fixes. Profil eines ursprünglichen v9-A-Folgeinputs: Auswahl 5,17 s;
+615 Rasterwegrückverfolgungen 1,17 s, lokale Evidenz 0,85 s und wiederholte
+inhaltliche Memo-Schlüssel 0,76 s. Diese eingefrorenen Geometriediagnosen
+ersetzen keine aktuellen Quellen oder geschlossene Gesamtmission.
 
 Letzte reale rein lesende FC03 am 11.10. um 02:11:47 UTC: Zähler
 35204/−35676 unverändert, beide RPM null, RAM 100/400/5;
 Lesezeiten 4,836/4,735 ms. Alle 1.048 Bestandsinstallhashes um 02:11:48 UTC
 gleich, Main unverändert. Keine neue Hardwarebewegung, kein SDK-/OS-/Autostart-
-wechsel. v8-Realstartskripte nur vorbereitet. Punkte 3/4 nicht durchgeführt.
+wechsel. v9-Realstartskripte nur vorbereitet. Punkte 3/4 nicht durchgeführt.
 Bekannten festen LAB-Scope vor realem Start neu binden, nicht umzentrieren;
 Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit nicht erfinden.
 Bestehender LAB-1-Auftrag gilt ohne neue allgemeine Freigaberunde.
 
-**Genau nächster Schritt:** laufenden begrenzten Vergleich abschließen,
-befundabhängig gemeinsamen Build/volle Regression/ursprüngliche A/B/C
-abschließen; erst nach deren Bestehen reale Schritte 3/4. Rückfall: eigene
-private Prozesse direkt geordnet stoppen, Bestandsinstall verwenden oder nur
-die neuen Kopplungs-/Rasterdiffs gezielt zurücknehmen. Originalnegative und
-reale Daten bleiben privat unter
+**Genau nächster Schritt:** gemessene Rasterwegrückverfolgung mit identischem
+Oracle beschleunigen; anschließend gemeinsame vollständige Regression und
+ursprüngliche A/B/C. Erst nach deren Bestehen reale Schritte 3/4. Rückfall:
+eigene private Prozesse direkt geordnet stoppen und Bestandsinstall verwenden;
+neue Diffs einzeln revertierbar. Originalnegative und reale Daten privat unter
 `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
 
 ## Historischer v7-/TF-/Auswahlstand vom 11.10.2026

@@ -4,12 +4,18 @@
 
 Nutzer beauftragt die Folge 1–4 und erteilt erneut die vollständige Laborfreigabe. Tatsächlicher Ausführungskanal ist jetzt der lokale ARM64-Jetson, getrenntes Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`, ursprüngliche Basis e14ca312. Die untenstehenden Cloud-Zugangs- und Shutdownangaben sind historische Befunde, kein aktueller Gerätezugangsbefund und kein neuer Shutdownauftrag. Bestandsmain/-install bleiben erhalten.
 
-Punkt 1 begrenzt real positiv. Gemeinsamer privater v8-Build `abeabd4`: 14 Pakete/155 Quelle-Installgleichheiten/756 Installhashes, 2.735 vollständige Produktfälle positiv ohne Skip. Ursprüngliche A/B/C dennoch 0/3: A keine, B/C je eine neue Beobachtung, keine volle Passage; Auswahlbudget. Neuer separat geprüfter Kopplungsfix wählt beim bestehenden einmaligen Nachcheck aktuelle TF-Pose/Referenz und Rad zusammen, entzieht verlassene Initialkörperzellen und prüft volle Historie erneut. 29 gezielte Fälle bestanden; neuer gemeinsamer Build/Originalqualifikation noch offen. Aktueller Einzelbefund im STATUS.
+Punkt 1 begrenzt real positiv, Rohdatenlücke erhalten. Punkt 2: gemeinsamer
+v9-Build `9fbf085` und 2.776 vollständige Produktfälle positiv; ursprüngliche
+A/B/C weiterhin 0/3. Neue Regionskorrektur separat gezielt geprüft, noch kein
+neuer gemeinsamer Build. Einzelbefund und genau nächster Schritt ausschließlich
+im [STATUS](STATUS.md): gemessene Auswahlkosten begrenzt beheben, gleicher
+Oracle, gemeinsamer Build/volle Regression/Originalmissionen, danach reale 3/4.
 
-Privater Source-A-Vergleich beseitigt falschen Rad/TF-Vergleich, bleibt bei 0,109633 m / null Beobachtungen an Frische des vollständigen Zweitbeweises und anschließend Auswahlbudget negativ.
-
-Genau nächster Schritt: gemessene Egress-Raster-/Dispatcher-Konkurrenz begrenzt beheben und vergleichen, dann gemeinsamer Build/volle Regression/ursprüngliche A/B/C und erst nach deren Bestehen reale Schritte 3/4. Originalfristen, Quellen, feste Kontur, Einzelkind, Cancel/HOLD und Stillstand bleiben. Rasterfix 76 gezielte Fälle positiv, privater A-Lauf eine Beobachtung bei 0,293160 m / keine Frischefehler, weiterhin negatives Auswahlbudget; kein Gesamt-Grün. Reale FC03 und 1.048 Bestandsinstallhashes um 02:11:47/48 UTC unverändert; v8-Startskripte nur vorbereitet. Keine neue reale Fahrt, keine dauerhafte Installation oder Autostart-/SDK-Änderung. Bekannten LAB-Scope nach gemessenem Versatz fest binden; Passage-/Drei-Bereich-Geometrie oder Apple-Laufzeit nicht erfinden. Bestehende Laborfreigabe gilt ohne neue allgemeine Fragerunde; kein Push/Merge.
-
+Originalfristen, Quellen, feste Kontur, Einzelkind, Cancel/HOLD und Stillstand
+bleiben. Keine neue reale Fahrt, dauerhafte Installation, Autostart-/SDK-Änderung
+oder Push/Merge. Bekannten LAB-Scope nach gemessenem Versatz fest binden;
+Passage-/Drei-Bereich-Geometrie und Apple-Laufzeit nicht erfinden. Bestehende
+Laborfreigabe gilt ohne neue allgemeine Fragerunde.
 
 Am 03.10.2026 durch Nutzer „gut dann mache ap-6 fertig“ ausdrücklich beauftragt. Verbindlich: [MASTERPLAN v1.3](MASTERPLAN.md), [STATUS](STATUS.md), AGENTS, LAB-1 und WE-M0/M3/M4/M5/M6/M7. [AP-05-Auftrag bytegleich archiviert](archive/20261003-ap05/README.md).
 
