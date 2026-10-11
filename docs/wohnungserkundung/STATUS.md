@@ -1,16 +1,16 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Ablaufanalyse und strukturierter Korrekturplan
+## 11.10.2026 – Entwicklungsstand, Ablaufanalyse und Korrekturplan veröffentlicht
 
 Der [aktive Auftrag](AGENTENAUFTRAG.md) enthält die aufeinanderfolgenden
 Maßnahmen: Gegenfälle im tatsächlichen adaptiven Pfad, Warte-/Auswahlreihenfolge,
 gemessene Zeitverarbeitung, Folgeplanung nach Beobachtung/Scan, gemeinsamer
 Softwarekandidat und erst danach reale autonome Abnahme. MASTERPLAN v1.3 und
-LAB-1 unverändert. Dieser Dokumentationsstand implementiert keine Korrektur.
+LAB-1 unverändert. Die Veröffentlichung behebt keine der offenen Ablaufprobleme.
 
 V10 aus `2d93f2b`: 2.867 vollständige Produktfälle positiv, ursprüngliche
-A/B/C weiterhin 0/3. Die danach lokal entwickelte Wartekorrektur ist
-uncommittet und unvollständig. 196 gezielte Fälle positiv; neuester
+A/B/C weiterhin 0/3. Die danach entwickelte Wartekorrektur ist jetzt als
+`09f866d` versioniert und bleibt unvollständig. 196 gezielte Fälle positiv; neuester
 instrumentierter Source-A: 0,729335 m, zwei Ankünfte und Beobachtungen, negativ
 am Auswahlbudget, kein Quellenfehler, keine Manifest-/Hardwareabnahme.
 Zuvor optionalen Scan nach 5,6421 rad am Aufgabenbudget beendet und einen
@@ -27,12 +27,22 @@ Scanprobe alterte durch 425,467 ms Verarbeitung von 86,022 auf 511,489 ms,
 oberhalb ihrer unveränderten 500-ms-Grenze. Das ist kein Beweis eines defekten
 Sensors. Befunde/Hashes: [Audit](evidence/ap06-ablauf-audit-20261011.json).
 
-**Veröffentlichung geprüft am 11.10.2026, 04:26 UTC:** `git ls-remote`
-meldet `feature/ap06-closed-product-validation` weiterhin bei `e14ca312`.
-Der lokale Ausgangs-HEAD `fc6174f` liegt 32 Commits darüber; sein aktueller
-Fixbranch existiert auf origin nicht. Neuere Software und Analyse sind damit
-nicht hochgeladen. Diese Angabe gilt vor dem neuen lokalen Dokumentationscommit.
-Keine Veröffentlichung oder Merge durch diesen Planauftrag.
+**Veröffentlichung:** Der Nutzer hat nach der Planerstellung ausdrücklich die
+Aktualisierung des Repositories beauftragt. Der vorhandene GitHub-Branch
+`feature/ap06-closed-product-validation` wurde ohne Force-Push von `e14ca312`
+auf `09f866d3a3e9bd7729ac4e052247b88fe43738ec` aktualisiert; `git ls-remote`
+bestätigte den übertragenen Softwarestand. Enthalten sind die lokalen
+Folgearbeiten sowie Plan/Analyse aus `79cd784`. Der vorliegende
+Dokumentationsnachtrag ändert keine Produktdateien. Der ältere Auditbeleg
+hält bewusst den Zustand vor Commit/Upload fest.
+
+Vor Übertragung: 68 geänderte Dateien und 205 neue Blob-/Commitobjekte auf
+gängige Geheimnismuster geprüft, keine Treffer; keine großen Objekte oder
+erkannten privaten Aufzeichnungsdateien im Änderungssatz. Syntax und
+Übereinstimmung der untersuchten Produktdateien mit den vorhandenen
+Testnachweisen geprüft. Kein neuer Vollbuild oder neuer Gesamtmissionslauf
+durch die Veröffentlichung, keine neue CI-Erfolgsbehauptung.
+[Veröffentlichungsbeleg](evidence/ap06-publication-20261011.json).
 
 Reale Schritte 3/4 weiter offen, keine neue Bewegung oder Installänderung.
 Der begrenzte reale Punkt-1-Nachweis und dessen Rohdatenlücke bleiben bestehen.

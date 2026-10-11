@@ -1,5 +1,15 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
+
+AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
+`09f866d` aktualisiert und GitHub-SHA geprüft; Dokumentation der Veröffentlichung
+folgt auf diesem Stand. Das aktualisiert das Repository, nicht die laufende
+oder bestehende Installation. Kein Hardwareprozess gestartet, kein Aktorbefehl,
+keine Autostart-/SDK-Änderung. Aktive Fehlbefunde und Korrekturplan im STATUS.
+Rückfall bei späterer Kandidatenausführung weiterhin: eigenen privaten Prozess
+geordnet stoppen und erhaltenen Install verwenden; Arbeitsstand gezielt revertieren.
+
 ## 11.10.2026 – v10 gebaut und vollständig geprüft, kein realer Folgebeleg
 
 `2d93f2b`, 14 Pakete in 172,54 s, 2.867 Tests ohne Fehler/Skip; Original A/B/C

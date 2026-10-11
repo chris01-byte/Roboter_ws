@@ -19,9 +19,10 @@ Folge fort. Die Planerstellung selbst startet keine Bewegung oder Veröffentlich
 
 - Getrennter Jetson-Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`,
   Branch `fix/ap06-private-observation-cooldown`, Ausgangs-HEAD `fc6174f`.
-  Gemeinsamer v10-Produktbuild aus `2d93f2b`; die uncommittete Wartekorrektur
-  in `metric_frontier_runtime.py` samt neuer Testdatei ist ein unvollständiger
-  Arbeitsstand. Datei-Hashes und Befunde stehen im
+  Gemeinsamer v10-Produktbuild aus `2d93f2b`; die beim Audit uncommittete
+  Wartekorrektur in `metric_frontier_runtime.py` samt neuer Testdatei ist
+  inzwischen als `09f866d` gesichert und bleibt ein unvollständiger Arbeitsstand.
+  Datei-Hashes und Befunde zum Auditzeitpunkt stehen im
   [Auditbeleg](evidence/ap06-ablauf-audit-20261011.json).
 - V10: 2.867 Produktfälle positiv, ursprüngliche A/B/C 0/3. Neuere gezielte
   Prüfung: 196 Fälle positiv, aber deren Wartephasentests decken den adaptiven
@@ -165,10 +166,12 @@ Gegebenheiten werden nur für den davon abhängigen Versuch geklärt.
 ### Lieferung, Veröffentlichung und Rückfall
 
 Je Korrektur ein begrenzter nachvollziehbarer Diff mit Gegenfall und Ergebnis;
-ein aktiver Kandidat. Der aktuelle Benutzerauftrag fragt nach dem Uploadstand,
-erteilt aber keinen neuen Push-/Mergeauftrag. Remote-Stand zum Prüfzeitpunkt
-und lokale Abweichungen im STATUS festhalten. Plan/Analyse lokal versionieren;
-unvollständige Software ausdrücklich als Arbeitsstand kennzeichnen.
+ein aktiver Kandidat. Nach der Planerstellung hat der Nutzer ausdrücklich
+beauftragt, das Repository auf den aktuellen Stand zu bringen. Software,
+Plan und Analyse werden auf dem vorhandenen AP-06-Entwicklungsbranch
+veröffentlicht; dieser Auftrag enthält keinen Main-Merge oder Installwechsel.
+Übertragenen Commit tatsächlich mit dem Remote vergleichen und im STATUS
+belegen. Unvollständige Software bleibt ausdrücklich als Arbeitsstand markiert.
 
 Bestandsmain/-install, Geräteprofile, Autostart und SDK bleiben erhalten.
 Eigene private Prozesse nur über ihre identifizierten PIDs geordnet stoppen;

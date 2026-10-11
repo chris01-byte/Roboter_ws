@@ -1,5 +1,17 @@
 # Projektgedächtnis
 
+## 11.10.2026 – aktuellen AP-06-Entwicklungsstand auf Nutzerauftrag veröffentlicht
+
+Nach Auskunft über den fehlenden Upload beauftragt der Nutzer ausdrücklich die
+Repository-Aktualisierung. Den diagnostizierten Wartephasen-Arbeitsstand samt
+Tests als `09f866d` gesichert; bekannte adaptive Reihenfolgelücke unverändert
+offen. GitHub-Branch `feature/ap06-closed-product-validation` ohne Force-Push
+von `e14ca312` auf `09f866d` übertragen und Remote-SHA überprüft. Plan/Analyse
+aus `79cd784` enthalten. Gängige Geheimnismuster in neuen Datei-/Historienobjekten
+ohne Treffer; reale Aufzeichnungen bleiben lokal. Kein neuer Test-/Fahrerfolg
+aus dem Upload abgeleitet, kein Main-Merge oder Installwechsel. Aktueller
+Status/Veröffentlichungsbeleg und genau nächster Korrekturschritt im STATUS.
+
 ## 11.10.2026 – Ablauf-Audit statt weiterer isolierter Timeout-Korrektur
 
 Codeprüfung des uncommitteten Wartephasenstands zeigt: adaptive Startentscheidung
