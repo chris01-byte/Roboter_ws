@@ -920,6 +920,9 @@ class MetricFrontierRuntime:
         memo = getattr(getattr(self, '_metric_selection_cache', None), 'memo', None)
         if memo is None or memo['inputs'] is not inputs:
             return None, None
+        group = getattr(self._metric_selection_cache, 'route_proof_group', None)
+        if group is not None and group[0] is memo:
+            return group  # the owning pure route audits all contents before return
         grids = []
         for grid, allowed in ((inputs[0], inputs[3]), (inputs[5], inputs[6])):
             try:
@@ -937,7 +940,14 @@ class MetricFrontierRuntime:
                getattr(self, '_metric_body_anchor_expired', False),
                getattr(self, '_metric_egress_expired', False),
                getattr(self, '_metric_egress_identity', None),
-               getattr(inputs,'physical_motion',None))
+               getattr(inputs,'physical_motion',None),
+               (getattr(self, '_metric_scope', None),
+                getattr(self, '_metric_bounds', None),
+                getattr(self, '_metric_path_validation', None),
+                getattr(self, '_metric_start_egress_enabled', False),
+                getattr(self, '_goal_clearance_m', None),
+                getattr(self, '_frontier_goal_max_cost', None),
+                getattr(self, '_prealign_handoff_tolerance', None)))
         return memo, key
 
     def _metric_local_evidence(self, inputs, anchor):
@@ -1146,6 +1156,32 @@ class MetricFrontierRuntime:
         return tuple((float(wx), float(wy)) for wx, wy in zip(x, y))
 
     def _metric_route(self, inputs, target, target_yaw=None):
+        """Audit one pure proposal before returning any of its geometry.
+
+        The same full key formerly copied all raster/evidence contents in
+        every nested helper. One route now shares that read, then compares
+        all contents again. A change discards the whole selection. Neither
+        a route nor health/movement authority survives this call.
+        """
+        memo, key = self._metric_selection_memo(inputs)
+        cache = getattr(self, '_metric_selection_cache', None)
+        if memo is None or getattr(cache, 'route_proof_group', None) is not None:
+            return self._metric_route_geometry(inputs, target, target_yaw)
+        if memo.get('prepared') != key:
+            self._metric_prepare_egress(inputs)
+            memo, key = self._metric_selection_memo(inputs)
+        if memo.get('prepared') == key:
+            memo['prepared'] = key  # canonical exact key, not a new preparation
+        cache.route_proof_group = (memo, key)
+        try:
+            route = self._metric_route_geometry(inputs, target, target_yaw)
+        finally:
+            cache.route_proof_group = None
+        if self._metric_selection_memo(inputs)[1] != key:
+            raise ValueError('frontier_evidence_changed_during_processing')
+        return route
+
+    def _metric_route_geometry(self, inputs, target, target_yaw=None):
         grid, _, pose, known, safe, costmap, cost_known = inputs
         self._metric_prepare_egress(inputs)
         safe=self._metric_seed_mask(inputs)

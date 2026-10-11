@@ -3405,3 +3405,13 @@ Der gemeinsame neue private v14-Build/-Test folgt; keine Hardwareabnahme aus
 diesen Komponenten. Kein Bestandsinstall-/Autostartwechsel oder Aktorstart.
 Rückfall eigenes privates Overlay abwählen/Performancecommit revertieren;
 aktuelle Qualifikation ausschließlich im WE-STATUS.
+
+## 11.10.2026 – AP-06 v14 separat geprüft, v15 vorbereitet
+
+Privater v14-Build a6d5bbd unter releases/ap06-correction-v14-20261011, 14 Pakete,
+157 Quelle-Installgleichheiten/756 Installhashes. 2.954 Regressionen grün,
+Originalmissionen 0/3, Cancel/HOLD 2/2; keine reale autonome Abnahme. Alle
+1.048 ursprünglichen Installhashes unverändert, Main 23928d9 sauber. Neue
+reine Routen-Inhaltsbindung gezielt geprüft/vermessen; gemeinsamer v15-Build
+folgt. Kein Aktorstart, Bestandsinstall-/Autostartwechsel oder Shutdown.
+Rückfall privates Overlay abwählen bzw. eigene begrenzte Änderungen revertieren.

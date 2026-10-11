@@ -190,12 +190,41 @@ aufgezeichneten terminalen B-Aufruf: acht → drei Hashberechnungen, etwa
 Ranking, gleicher v13-Nativkern. Einzelprofil ist keine Gesamtqualifikation.
 [Gegenfall und Messung](evidence/ap06-relevant-history-digest-20261011.json).
 
-**Genau nächster Schritt:** neuer gemeinsamer v14-Kandidat mit dieser belegten
-Produktkorrektur, vollständige Regression und unveränderte ursprüngliche
-A/B/C/Cancel/HOLD. Die 208–215-ms-Quellenprozesspause bleibt getrennt offen.
-3/3 vollständige Missionen und reale autonome Folge sind noch nicht erreicht.
-Rückfall: privates Overlay abwählen bzw. eigenen begrenzten Performancecommit
-revertieren; keine Fristen, Quellen oder Bewegungsprüfungen verändert.
+Gemeinsamer Kandidat **v14 aus `a6d5bbd`** separat gebaut: 14 Pakete in
+171,453 s, 157 Quelle-Installgleichheiten, 756 Installhashes. Vollregression:
+**2.954 Prüfungen positiv**, keine Fehler/Skip. Ursprüngliche A/B/C weiter
+**0/3**: A 0,715282 m/zwei Beobachtungen, B 1,282187 m/**vier** Beobachtungen,
+C 0,714659 m/eine Beobachtung. A zuerst Scan nach 0,660620 rad/28,100 s wegen
+Footprint ungültig; B zuerst `map_status_join_pending`; C zuerst keine Sicht
+am nativen Haltepunkt. Drei getrennte Auslöser, terminal jeweils unverändertes
+5-s-Auswahlbudget: 5,276156/5,000409/5,737415 s bei 1,997423/1,977971/2,230855 s
+Thread-CPU. Kein ursprünglicher vollständiger Missionsabschluss daraus.
+Originale Cancel/HOLD **2/2 positiv**: Halt nach Cancel-Injektion 0,347173 s,
+nach HOLD 0,309861 s. HOLD setzte anschließend mit zwei Beobachtungen fort;
+der unveränderte Fall bewertet ausdrücklich nur HOLD/Stopp und weist
+`hold_resume_qualified=false` aus. Vollständige Wiederaufnahmeabnahme offen.
+Vier Kommandoströme null, Kinder terminal; alle 1.048 Bestandsinstallhashes
+identisch, Bestandsmain sauber. Keine reale autonome Fahrt.
+[V14-Build, gesamte Regression und Originale](evidence/ap06-correction-v14-20261011.json).
+
+Weitere gemessene Schritt-3-Korrektur: der echte eingefrorene Selector las
+4.484 Raster für wiederholte Signaturen; Gegenfall vorher negativ. Eine reine
+Routenberechnung teilt nun eine exakt erfasste Inhaltsbindung und prüft alle
+Inhalte danach erneut, bevor eine Route zurückkommt. Geänderte Raster/Masken,
+Pose-/physische Bewegungsbindung, Egress, Scope und Kontur-/Routenparameter
+verwerfen die gesamte Auswahl. Keine Route, Quellenbewertung oder Bewegungserlaubnis
+im Cache. 164 und elf gezielte Fälle positiv, 166 eindeutig (Überschneidung neun).
+Drei gepaarte Profile mit demselben v14-Nativkern: 3,084/3,013/3,035 →
+2,742/2,656/2,794 s; jeweils identisches Ziel/90 Punkte/Evidenzhash/Ranking.
+Das sind reine eingefrorene Profile, keine aktuelle Quelle oder Mission.
+[Gegenfall und Grenzen](evidence/ap06-route-proof-group-20261011.json).
+
+**Genau nächster Schritt:** diese belegte Korrektur als gemeinsamen v15-Kandidaten
+bauen, vollständige Regression und ursprüngliche A/B/C/Cancel/HOLD unverändert
+prüfen. Die Quellenprozesspause des älteren v13 bleibt getrennt unbewiesen;
+3/3 vollständige Missionen und reale autonome Folge weiter offen. Rückfall:
+privates Overlay abwählen bzw. eigenen begrenzten Routenprüfungscommit revertieren;
+keine Fristen, Sensorperioden oder Bewegungsprüfungen verändert.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

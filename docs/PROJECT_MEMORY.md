@@ -1121,3 +1121,19 @@ Nativkern: acht → drei Digests, Profil 3,594 → 3,032 s, identische Auswahl/
 Abnahme daraus; neuer gemeinsamer v14-Vergleich folgt. Quellenpause getrennt
 offen. Rückfall eigener begrenzter Performancecommit; kein Budgetreset oder
 Quellen-/Bewegungsrechtcache. Beleg im aktuellen WE-STATUS.
+
+## 11.10.2026 – AP-06 v14 negativ, reine Routenbindung reduziert Wiederholungsarbeit
+
+Gemeinsamer a6d5bbd/v14: 14 private Pakete, 2.954 gesammelte Prüfungen positiv,
+ursprüngliche Missionen 0/3. B erreicht vier selbst gewählte Beobachtungen;
+alle drei terminal am ursprünglichen 5-s-Auswahlbudget, vorher verschiedene
+Scan-/Join-/Sichttrigger. Originale Cancel/HOLD 2/2; HOLD fortgesetzt und zwei
+Beobachtungen, aber ursprünglicher Fall ausdrücklich keine Resumequalifikation.
+Neuer tatsächlicher Signaturgegenfall: 4.484 Rasterreads. Exakte Inhaltsbindung
+nur innerhalb einer reinen Route teilen, vollständig vor Rückgabe auditieren;
+Änderungen an Inhalt/Masken/Referenz/Egress/Scope/Konturparametern verwerfen
+Auswahl. 166 eindeutige gezielte Prüfungen, drei identische native Profilpaare
+mit gleichem Ziel/90 Punkten/Hash/Ranking und geringerer Laufzeit. Kein Gesundheits-
+oder Bewegungsrechtcache; Quellen-/Dispatch-/Budgetprüfungen unverändert. Neue
+gemeinsame v15-Qualifikation folgt, reale Folge weiter offen. Rückfall begrenzter
+eigener Performancecommit/private Overlay-Abwahl. Belege im aktuellen STATUS.
