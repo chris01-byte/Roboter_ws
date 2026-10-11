@@ -1,5 +1,46 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – F7/F8-Korrekturquelle; kein Zielsystemtransfer
+
+Produkt `cf010a03c96ad981516b52d96f5c21dda78c4369`, separater Branch
+`fix/ap06-source-startup`, Ausgangsdokumentation/CI `1b3bc98` / Produkt `900ce5d`.
+Der Nutzerauftrag ist ausschließlich gerätefrei. Keine Jetsoninstallation,
+Autostartänderung, ARM64-Prüfung oder reale Aktorbewegung erfolgt.
+Alle vorbestehenden Installationen bleiben erhalten. Test-/Quellen-/Gesamt-
+grenzen im [Korrekturprüfbericht](wohnungserkundung/AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md);
+aktueller Befund/weiterer Auftrag ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md).
+
+15 Produktpakete und echte TF-Sonde separat unter Humble/x86_64 gebaut;
+37 native Pakete wiederverwendet, 15 Präfixe/163 Dateien/18 geladene Module
+gebunden. Lieferung `/workspace/f7-f8-results/`: Quellbundle, Reviewpatch,
+Bericht, finale Logs/JUnit/Rohzustände sowie Quell-/Install-/Konfigurationsbindung.
+Das Binär-/Buildarchiv dient der x86-Prüfung und ist kein Jetson-Install.
+F7/F8 und Gesamtmissionen sind nicht insgesamt abgenommen; ein bestandener
+voller Softwarelauf ersetzt keine stabile Quellen- oder Hardwareabnahme.
+
+Spätere reale Wirkung der Produktkorrekturen: Der TF-Verbraucher erreicht auch
+aktuelle Originale hinter mehr als 32 alten Queueeinträgen. Der Sensorproduzent
+wartet im vorhandenen isolierten Ausgabemodus nicht auf ein unvollständiges
+Pipeelement. **Bei voller Queue wird die
+neue Einreichung verworfen; das vorhandene pending Original bleibt**, mit
+unveränderter Stale-Verwerfung. Kein Restempeln oder Löschen von Faultflags.
+Dies ist keine neue Garantie kontinuierlicher Auslieferung. Reale Sensor-
+zeiten, TF/Frames, Brems-/Sichtwirkung, Recorderempfang vor Bewegung und
+Aufzeichnung bis zum bestätigten Halt bleiben separat zu prüfen.
+
+Die Änderung der CPU-Vererbung liegt nur im Simulationsprüftreiber. Keine
+Simulationsaffinitäten oder `rpp_rollout`-Reserven still auf den realen
+`conservative`-Standard übertragen. Der A55-Testzeitproxy verändert keine
+Produktions-/Sensorzeit; er gehört nicht in einen Roboterstart.
+
+Rückfall ausschließlich im separaten Kandidaten, nach bestätigtem Halt und
+Ende eigener Kandidatenprozesse bei einem späteren Zielsystemwechsel:
+jeweils `4ea2486`, `6233bb5`, `6bbec19` oder `cf010a0` einzeln revertieren und
+betroffene Pakete getrennt neu bauen. Bestandsinstall, F1–F6 und bekannte
+Altfehler erhalten. Gründe/Rückfall stehen in allen vier Commitnachrichten;
+keine Live-Umschaltung und kein pauschaler Rücksprung der Gesamtsoftware.
+
 ## 11.10.2026 – Auditkandidat; vor autonomem Zieltest Quellenpfad klären
 
 Korrigierter Produktcommit `900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53`, eigener

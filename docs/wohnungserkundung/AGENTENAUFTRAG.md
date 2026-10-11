@@ -1,6 +1,37 @@
 # Aktueller Agentenauftrag: AP-06
 
-## Aktiver Nutzerauftrag 11.10.2026 – Gegenprüfung vor der Jetsonqualifikation
+## Aktiver Nutzerauftrag 11.10.2026 – ausschließlich F7/F8 gerätefrei korrigieren
+
+Ausgangsbasis: `fix/ap06-slot-audit`, getestetes Produkt
+`900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53`, Dokumentation/CI
+`1b3bc987913d518776f495fdc5b2e0cbabec383c`. F1–F6 und Slot-Architektur erhalten;
+keine neue Roadmap unter MASTERPLAN v1.5, WE-M0/M3/M4/M5/M6, getrennt WE-M7.
+Eigener Korrekturbranch und getrennte Build-/Install-/Logs, Bestand erhalten.
+
+Nur die fehlende Quellen-/TF-/Kartenbereitschaft und die fünf im
+[Audit](AP06_EXTERNER_AUDIT_20261011.md) benannten zeitabhängigen Regressionen
+ursächlich lokalisieren und minimal korrigieren. Erstgegenfall, tatsächliche
+Quellstempel/Erfassungs-/Publikations-/Empfangszeiten und erster Auslöser sind
+maßgeblich. Reine Entscheidungstests dürfen kontrollierte Zeit erhalten;
+tatsächliche Verarbeitung innerhalb bestehender Fristen daneben prüfen.
+Keine Sensorstempel auffrischen, Faultflags/Versuche/Budgets zurücksetzen oder
+Frische-/Kontinuitätsgrenzen erhöhen. Keine Test-/Welt-/Kriterienabschwächung,
+kein zusätzlicher Navigator/Supervisor und kein OOMWOO-Komplettstack.
+
+Betroffene Fälle, voller bisheriger Regressionsumfang und unveränderte
+A/B/C-/Cancel/HOLD-Gesamtfälle ausführen; Resultatdateien und Kriterien
+auswerten. HOLD-Stopp und vollständige Wiederaufnahme getrennt behandeln.
+Unabhängige neue Fehler gesondert dokumentieren. Fehlende Nachweise mit
+unterscheidender Messung benennen, kein Abschluss aus grüner Wiederholung.
+Korrekturcommits mit Rückfall, vollständige finale Logs/JUnit/Bindungen und
+[Korrekturprüfbericht](AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md) liefern.
+Aktueller Iststand und genau nächster Schritt ausschließlich im [STATUS](STATUS.md).
+
+**Dieser Auftrag umfasst keine Jetsoninstallation, keinen Autostartwechsel
+und keine reale Aktorbewegung.** LAB-1 bleibt als Rahmen erhalten; die folgenden
+früheren Aufträge erweitern den aktuellen gerätefreien Umfang nicht.
+
+## Vorheriger Nutzerauftrag 11.10.2026 – Gegenprüfung vor der Jetsonqualifikation
 
 Der Nutzer verlangt ausdrücklich eine Prüfung in externer Auditorrolle,
 Fehlerbehebungen und Alternativen vor dem Jetson-Test. Unter MASTERPLAN v1.5

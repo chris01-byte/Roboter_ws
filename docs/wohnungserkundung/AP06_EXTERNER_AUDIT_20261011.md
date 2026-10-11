@@ -1,5 +1,11 @@
 # AP-06: technische Gegenprüfung vor dem Jetson-Test
 
+**Fortschreibung ausschließlich F7/F8:**
+[Korrekturprüfung vom 11.10.2026](AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md).
+Der folgende Bericht hält die ursprünglichen Auditbelege und F1–F6 fest;
+neue Ergebniszahlen ersetzen die historischen Läufe nicht. Aktueller
+Iststand und genau nächster Schritt ausschließlich im [STATUS](STATUS.md).
+
 Stand: 11.10.2026. Auftrag: Slot-Strategie prüfen, Fehler reproduzieren,
 Korrekturen und Alternativen beurteilen, bevor der Kandidat auf dem Jetson
 qualifiziert wird. Bezug: MASTERPLAN v1.5, WE-M0/M3/M4/M5/M6; keine WE-M7-Abnahme.

@@ -1,0 +1,1007 @@
+{
+  "schema": 1,
+  "date": "2026-10-11",
+  "scope": [
+    "F7",
+    "F8"
+  ],
+  "masterplan": "v1.5",
+  "qualification": "software_only_incomplete",
+  "baseline": {
+    "branch": "fix/ap06-slot-audit",
+    "product": "900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53",
+    "documentation_ci": "1b3bc987913d518776f495fdc5b2e0cbabec383c",
+    "clean": true,
+    "submodule": "-6c6aa078ee7bc52fec98984bed4964556abf5beb src/behaviortree_ros2"
+  },
+  "candidate": {
+    "branch": "fix/ap06-source-startup",
+    "tested_product": "cf010a03c96ad981516b52d96f5c21dda78c4369",
+    "source_worktree": "/workspace/ap06-audit-results/f7-f8-repo",
+    "documentation": "separate commit after tested product; exact final HEAD in delivery manifest",
+    "build": "/workspace/ap06-audit-results/f7-f8-build",
+    "install": "/workspace/ap06-audit-results/f7-f8-install",
+    "logs": "/workspace/ap06-audit-results/f7-f8-log",
+    "product_packages": 15,
+    "native_reused_packages": 37,
+    "source_install_byte_matches": 163,
+    "loaded_modules": 18,
+    "platform": "Humble/Ubuntu22.04/Python3.10.12/x86_64",
+    "rmw": "rmw_fastrtps_cpp"
+  },
+  "commits": [
+    {
+      "commit": "4ea2486305ef303fb4877068a11a0bd2a65444b1",
+      "reason": "drain actual finite TF queue and synchronize real source precondition",
+      "rollback": "Revert only this commit on the separate correction branch; preserve F1-F6 and original install; rebuild affected candidate, no live robot switch."
+    },
+    {
+      "commit": "6233bb5bcd1eaab7bcd9d8c39ea1e115759e115d",
+      "reason": "separate static A55 geometry/history decision from unchanged real processing deadlines",
+      "rollback": "Revert only this commit on the separate correction branch; preserve F1-F6 and original install; rebuild affected candidate, no live robot switch."
+    },
+    {
+      "commit": "6bbec19fe7506880efb22ba69f48be09c5ccd42e",
+      "reason": "correct measured worker affinity inheritance in simulation, record raw reception",
+      "rollback": "Revert only this commit on the separate correction branch; preserve F1-F6 and original install; rebuild affected candidate, no live robot switch."
+    },
+    {
+      "commit": "cf010a03c96ad981516b52d96f5c21dda78c4369",
+      "reason": "never receive a partial framed queue item in the acquisition-side overflow handler",
+      "rollback": "Revert only this commit on the separate correction branch; preserve F1-F6 and original install; rebuild affected candidate, no live robot switch."
+    }
+  ],
+  "preserved_contracts": {
+    "tools/simulation/ap06_product_scenarios.json": {
+      "unchanged": true,
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da"
+    },
+    "tools/simulation/ap06_world.py": {
+      "unchanged": true,
+      "sha256": "09c43dced4d5e1269214e4232ecc9bacd7c6a89c493c0dcec11519bc519241a5"
+    },
+    "tools/simulation/ap06_dependencies.json": {
+      "unchanged": true,
+      "sha256": "244c6f215025540d842dfa8234029e0144ac629c8cecd2e646a96bcc28d937ce"
+    },
+    "tools/simulation/ap06_isolation.py": {
+      "unchanged": true,
+      "sha256": "624634a4ad174aedd6feb82f376fb854fcd8180723dbb5a98c1a5e5d48f3845a"
+    },
+    ".github/workflows/hwt601-we.yml": {
+      "unchanged": true,
+      "sha256": "3e0065389fb84c55acef53602642959122ac7783099470d5a96f7913b0e5c16f"
+    },
+    "src/explore/explore/metric_frontier_runtime.py": {
+      "unchanged": true,
+      "sha256": "3f6a1fc424fef7167c945dfca883ada32e65b7edff98d88bda756022a4c53698"
+    },
+    "src/explore/explore/lab_slots_runtime.py": {
+      "unchanged": true,
+      "sha256": "21c9571881387d3055a7ab5be9e11c638a42903f0299bed91f88ecd0b7ddbc44"
+    },
+    "src/base_hardware/base_hardware/base_hardware_node.py": {
+      "unchanged": true,
+      "sha256": "95bdc3127d496ec0d8cced372ad421e520602083c695c2899f6b8e832feb2a8e"
+    },
+    "src/robot_state_estimation/robot_state_estimation/hwt601_imu_node.py": {
+      "unchanged": true,
+      "sha256": "78aedb38762db800bc05269c253d9158458b150d094f0421e9c550fca6d2ab09"
+    },
+    "src/robot_navigation/config/nav2_params.yaml": {
+      "unchanged": true,
+      "sha256": "97b9c46f5147e39d6cc1e1842b691501c37d769b3ba3cd75f93072c19848d8d7"
+    }
+  },
+  "F7": {
+    "closed": false,
+    "confirmed_and_corrected": [
+      "acquisition-side get_nowait may block on partial pipe frame",
+      "simulation output/native worker affinity inherited acquisition CPU"
+    ],
+    "partial_pipe_countercase": {
+      "old_elapsed_s": 0.4109987599949818,
+      "candidate_focused": {
+        "elapsed": 5.754500307375565e-05,
+        "payload_bytes": 20033,
+        "partial_header_seen": true
+      },
+      "candidate_full": {
+        "elapsed": 4.901899956166744e-05,
+        "payload_bytes": 20033,
+        "partial_header_seen": true
+      },
+      "overflow_policy": "drop new submission on full queue; leave existing pending original for output owner, preserve age rejection"
+    },
+    "final_zero_commands": true,
+    "final_first_break": "producer before next acquisition, not delivery of last accepted original",
+    "last_valid_source_to_receive_s": 0.014467099960082996,
+    "first_rejection": {
+      "reason": "encoder_luecke_nicht_ueberbrueckbar",
+      "pair_duration_s": 0.0003129420001641847,
+      "sample_gap_s": 0.21276582300197333,
+      "read_end_age_s": 0.21292229399841744
+    },
+    "unobserved_executor_window": {
+      "tid": 47557,
+      "after_last_healthy_update": 45541.138023488,
+      "before_next_update": 45541.318542656
+    },
+    "remaining_cause": "blocking native call, GIL/lock ownership, and scheduling contribution not uniquely distinguished; healthy-source delivery gap also needs negative-run publication/reception correlation",
+    "next_distinguishing_measurement": "At the captured source-TID window, record all native call boundaries/stacks, GIL/lock owner and per-TID scheduling read times together with FC03, original stamp, queue, DDS and receive times until first failure."
+  },
+  "F8": {
+    "closed": false,
+    "cases": [
+      {
+        "id": "src/explore/test/test_metric_public_observation.py::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection]",
+        "subfinding_closed": true,
+        "cause": "real optional 2s budget exhausted in a pure geometry/history decision assertion",
+        "change": "controlled module monotonic only in decision test, separate real 2.05s interruption and unchanged 5s total deadline"
+      },
+      {
+        "id": "src/robot_navigation/test/test_stage3_tf_reception.py::test_current_tf_received_without_executor_and_missing_tf_never_restamped",
+        "subfinding_closed": true,
+        "cause": "first-current-publish setup race plus fixed32 drain below actual100 TF queue depth",
+        "change": "actual live source event before unchanged350ms withheld-executor interval; drain real finite depth, preserve original stamps and200ms age"
+      },
+      {
+        "id": "tools/simulation/test_ap06_device_isolation.py::test_original_imu_writer_pause_is_isolated_from_encoder_acquisition[True]",
+        "subfinding_closed": false,
+        "observed_source_gap_s": 0.30470228549529565,
+        "final_full_passed": true
+      },
+      {
+        "id": "tools/simulation/test_ap06_device_isolation.py::test_real_encoder_source_survives_supervisor_interpreter_pause[False]",
+        "subfinding_closed": false,
+        "final_focused_passed": false,
+        "final_focused_source_gap_s": 0.38360918249964016,
+        "final_focused_before_injection": true,
+        "final_full_passed": true
+      },
+      {
+        "id": "tools/simulation/test_ap06_device_isolation.py::test_real_encoder_source_survives_supervisor_interpreter_pause[True]",
+        "subfinding_closed": false,
+        "earlier_diagnostic_received_gap_s": 0.302590071,
+        "final_focused_passed": true,
+        "final_full_passed": true
+      }
+    ]
+  },
+  "software_runs": {
+    "affected-before-build.xml": {
+      "tests": 15,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 14,
+      "time_s": 62.384,
+      "file": {
+        "path": "affected-before-build.xml",
+        "sha256": "3def7f54262c43230c4ad85f1a943ed546725d924997c3bfb15da384edaec740"
+      },
+      "failed_cases": [
+        "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[True]"
+      ]
+    },
+    "decision-clock-interface-intermediate-decision.xml": {
+      "tests": 12,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 9,
+      "time_s": 35.6,
+      "file": {
+        "path": "decision-clock-interface-intermediate-decision.xml",
+        "sha256": "f33a8b167e68fed26aaaa4cbf8a6da413c5f6a728519a4751cfb7aa4e39f1574"
+      },
+      "failed_cases": [
+        "test.test_metric_public_observation::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a53_selection]",
+        "test.test_metric_public_observation::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a54_selection]",
+        "test.test_metric_public_observation::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection]"
+      ]
+    },
+    "focused-final.xml": {
+      "tests": 99,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 98,
+      "time_s": 79.366,
+      "file": {
+        "path": "focused-final.xml",
+        "sha256": "4574c20174fd5c47406b0ddd76d5f4994a6bce4a9f7b04a51e1dd89a4fa0a7fb"
+      },
+      "failed_cases": [
+        "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[False]"
+      ]
+    },
+    "focused.xml": {
+      "tests": 91,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 89,
+      "time_s": 87.352,
+      "file": {
+        "path": "focused.xml",
+        "sha256": "ba538983becd86431d7a12a00077c0639d0385f33eba415fcbf2a133027cab38"
+      },
+      "failed_cases": [
+        "tools.simulation.test_ap06_device_isolation::test_original_imu_writer_pause_is_isolated_from_encoder_acquisition[True]",
+        "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[False]"
+      ]
+    },
+    "full-regressions-initial-6bbec19.xml": {
+      "tests": 3135,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3134,
+      "time_s": 512.614,
+      "file": {
+        "path": "full-regressions-initial-6bbec19.xml",
+        "sha256": "63e7146cab6eef465094611816b1983ba7d2531cb4622b3f26e7dcad729a03b1"
+      },
+      "failed_cases": [
+        "src.explore.test.test_metric_selection_components::test_recorded_public_selection_keeps_capped_history_and_finds_native_query"
+      ]
+    },
+    "full-regressions.xml": {
+      "tests": 3136,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 3136,
+      "time_s": 409.451,
+      "file": {
+        "path": "full-regressions.xml",
+        "sha256": "070ea22d225e86cd306bc318cb0acdc1a7320df52e72504ebf03b85f37f8138f"
+      },
+      "failed_cases": []
+    },
+    "partial-write-baseline.xml": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0,
+      "time_s": 4.765,
+      "file": {
+        "path": "partial-write-baseline.xml",
+        "sha256": "acc7139c4145deb228a12ec579d9fcc4f616c157f764d120d778aa47aaae6956"
+      },
+      "failed_cases": [
+        "f7-f8-evidence.test_queue_partial_write::test_full_queue_with_partial_framed_write_never_blocks_acquisition"
+      ]
+    },
+    "source-trace.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 1,
+      "time_s": 6.846,
+      "file": {
+        "path": "source-trace.xml",
+        "sha256": "e32e59f8999c44764a13bbbd06cdf8700d8e28a60631ef1844d510e32ab96c40"
+      },
+      "failed_cases": []
+    },
+    "tf-backlog-baseline.xml": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0,
+      "time_s": 1.715,
+      "file": {
+        "path": "tf-backlog-baseline.xml",
+        "sha256": "8bb5d22ed0c9bcf881d0a1e87a16beaa99e1e40b80c278bc6f85f306f9a658ae"
+      },
+      "failed_cases": [
+        "test.test_stage3_tf_reception::test_tf_queue_drain_reaches_current_edges_after_delayed_consumer"
+      ]
+    },
+    "tf-delay-baseline.xml": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 0,
+      "time_s": 0.947,
+      "file": {
+        "path": "tf-delay-baseline.xml",
+        "sha256": "85d3cceb5263bd68fca62d64d8d048d94df2766df00a736123d70a0c50a51b8c"
+      },
+      "failed_cases": [
+        "test.test_stage3_tf_reception::test_current_tf_received_without_executor_and_missing_tf_never_restamped"
+      ]
+    },
+    "tf-delay-candidate.xml": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "passed": 1,
+      "time_s": 1.995,
+      "file": {
+        "path": "tf-delay-candidate.xml",
+        "sha256": "6c61b45ce9100649c3cf89afc056b8549ec2d7eaa84d77f3e800e051aaf52efa"
+      },
+      "failed_cases": []
+    }
+  },
+  "whole_cases": {
+    "cancel": {
+      "case": {
+        "id": "cancel",
+        "door_m": 0.8,
+        "start": [
+          -1.9,
+          -0.45,
+          0.0
+        ],
+        "inject": "cancel_after_first_motion"
+      },
+      "passed": false,
+      "error": "AP06 acceptance not met: hwt_terminal",
+      "mission_started": true,
+      "scan_angle_rad": 0.4585441846933298,
+      "scan_angle_deg": 26.272646503195123,
+      "arrivals": 0,
+      "observations": 0,
+      "travel_m": 4.923677909212776e-05,
+      "map_oracle": {
+        "reference_free_cells": 128448,
+        "reference_observed_cells": 76325,
+        "reference_observed_fraction": 0.5942093298455406,
+        "maximum_occupied_wall_error_m": 0.007071027667411176
+      },
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "driver_hold_resume_field": null,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": false,
+        "map_growth_after_motion": true,
+        "one_map_odom_owner": true,
+        "one_odom_base_owner": true,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": false,
+        "map_wall_error": true,
+        "terminal_command_zero": true,
+        "actions_terminal": true
+      }
+    },
+    "door68_start_a": {
+      "case": {
+        "id": "door68_start_a",
+        "door_m": 0.68,
+        "start": [
+          -1.9,
+          -0.45,
+          0.0
+        ]
+      },
+      "passed": false,
+      "error": "real scope and HWT readiness",
+      "mission_started": false,
+      "scan_angle_rad": null,
+      "scan_angle_deg": null,
+      "arrivals": null,
+      "observations": null,
+      "travel_m": null,
+      "map_oracle": {},
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "driver_hold_resume_field": null,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    },
+    "door68_start_b": {
+      "case": {
+        "id": "door68_start_b",
+        "door_m": 0.68,
+        "start": [
+          -2.1,
+          0.45,
+          0.0
+        ]
+      },
+      "passed": false,
+      "error": "AP06 acceptance not met: hwt_terminal",
+      "mission_started": true,
+      "scan_angle_rad": 2.646683473514457,
+      "scan_angle_deg": 151.64379273940318,
+      "arrivals": 0,
+      "observations": 0,
+      "travel_m": 0.0002125849159101807,
+      "map_oracle": {
+        "reference_free_cells": 128256,
+        "reference_observed_cells": 78903,
+        "reference_observed_fraction": 0.6151992889221557,
+        "maximum_occupied_wall_error_m": 0.015000041015446053
+      },
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "driver_hold_resume_field": null,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": false,
+        "map_growth_after_motion": true,
+        "one_map_odom_owner": true,
+        "one_odom_base_owner": true,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": false,
+        "map_wall_error": true,
+        "terminal_command_zero": true,
+        "actions_terminal": true
+      }
+    },
+    "door80_start_c": {
+      "case": {
+        "id": "door80_start_c",
+        "door_m": 0.8,
+        "start": [
+          -1.6,
+          0.0,
+          0.0
+        ]
+      },
+      "passed": false,
+      "error": "AP06 acceptance not met: hwt_terminal",
+      "mission_started": true,
+      "scan_angle_rad": 0.7695629794276764,
+      "scan_angle_deg": 44.092710790718854,
+      "arrivals": 0,
+      "observations": 0,
+      "travel_m": 1.086571796607272e-05,
+      "map_oracle": {
+        "reference_free_cells": 128448,
+        "reference_observed_cells": 78342,
+        "reference_observed_fraction": 0.609912182361734,
+        "maximum_occupied_wall_error_m": 0.014999968372285455
+      },
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "driver_hold_resume_field": null,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": false,
+        "map_growth_after_motion": true,
+        "one_map_odom_owner": true,
+        "one_odom_base_owner": true,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": false,
+        "map_wall_error": true,
+        "terminal_command_zero": true,
+        "actions_terminal": true
+      }
+    },
+    "gyro_hold": {
+      "case": {
+        "id": "gyro_hold",
+        "door_m": 0.8,
+        "start": [
+          -1.9,
+          -0.45,
+          0.0
+        ],
+        "inject": "gyro_gap_after_first_motion"
+      },
+      "passed": false,
+      "error": "real scope and HWT readiness",
+      "mission_started": false,
+      "scan_angle_rad": null,
+      "scan_angle_deg": null,
+      "arrivals": null,
+      "observations": null,
+      "travel_m": null,
+      "map_oracle": {},
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "driver_hold_resume_field": null,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    }
+  },
+  "whole_positive_qualified": 0,
+  "whole_positive_total": 3,
+  "stop_qualified": 0,
+  "stop_total": 2,
+  "hold_resume_qualified": false,
+  "independent_out_of_scope": {
+    "test": "src/explore/test/test_metric_selection_components.py::test_recorded_public_selection_keeps_capped_history_and_finds_native_query",
+    "initial_full_failed": true,
+    "final_full_passed": true,
+    "runtime_and_test_unchanged": true,
+    "cause_not_proven": true,
+    "no_fix_in_this_scope": true
+  },
+  "evidence_limits": {
+    "first_intermediate_full_device_temp_reused": true,
+    "intermediate_full_stdout_junit_preserved": true,
+    "final_focused_and_full_raw_dirs_separate": true,
+    "early_external_probe_script_versions_not_all_snapshotted": true,
+    "final_zero_probe_product_install_script_hashes_bound": true,
+    "scheduling_monitor_at_covers_iteration_not_individual_read": true
+  },
+  "hardware": {
+    "jetson_install": false,
+    "autostart_changed": false,
+    "real_motion": false,
+    "accepted": false,
+    "arm64_build": false,
+    "simulation_profile_transferred_to_robot": false,
+    "push_or_merge": false
+  },
+  "evidence_root": "/workspace/ap06-audit-results/f7-f8-evidence",
+  "delivery_root": "/workspace/f7-f8-results",
+  "files": {
+    "baseline-source.json": {
+      "sha256": "e8176cd01ba74effd6a763a8e3a0970f6f2bf17461da15832d3999c6a920cc3d",
+      "bytes": 157
+    },
+    "baseline-artifacts.json": {
+      "sha256": "ed7effb482e4078f1639571830463c00056e41fbbfb142f34c05f4646a72d38d",
+      "bytes": 2085
+    },
+    "request-scope.json": {
+      "sha256": "488f2c5367aa352b84b87cd94413a5e8cbbe98cbf441d1305e9feebd8c245936",
+      "bytes": 410
+    },
+    "source-identity.json": {
+      "sha256": "b6ad2838277b46ba8a78e2db11404f0916a9bb0fde9693c7244e548bcf37e5b6",
+      "bytes": 592824
+    },
+    "product-source-binding-final-regressions.json": {
+      "sha256": "a2200c2039161df0075b8c7b63533695546ee81a3bf512c2af07e39dd06a95de",
+      "bytes": 59780
+    },
+    "product-source-binding-whole-cases.json": {
+      "sha256": "c867ed450287855f6f84d15d2cf8c858ac4019aa32e2a4e3888d77fc3202a33b",
+      "bytes": 59780
+    },
+    "product-source-binding-final-diagnostic.json": {
+      "sha256": "e955e8ee7e7b4997875def1ed9997303d897016078c514a86cc71bf8b57072df",
+      "bytes": 59794
+    },
+    "native-prefix-bindings.json": {
+      "sha256": "d71d3400e200f7093a505e2584ab9609aee43ea881fcde5cec6d12d25b13cfab",
+      "bytes": 11270
+    },
+    "installed-files-sha256.json": {
+      "sha256": "bd8e0f719b9a4acd90158ecb8da12bdb53850efe91bc1fe14004d9803f5e7636",
+      "bytes": 1267307
+    },
+    "preserved-contracts.json": {
+      "sha256": "2b0641364c2049f04348b18474f0036e2224002b9bf4105fd50cbdcd6c263f43",
+      "bytes": 1601
+    },
+    "python-packages.json": {
+      "sha256": "b1a0b16e8addedc3bb4946e97ac3b5444e8576e4767c1a2f95033ba891f6665c",
+      "bytes": 15644
+    },
+    "system-packages.tsv": {
+      "sha256": "b2b27c105e8028c41ef3d55f153e0901b89c23116999bf62490651954ffa3167",
+      "bytes": 53012
+    },
+    "container-binding.txt": {
+      "sha256": "79c0e7cf94bdd007f75a10af4d2cd30baf87eca0b7e3c2aec12f0a19375f9075",
+      "bytes": 161
+    },
+    "build.sh": {
+      "sha256": "ecf1dbf61e1ad7006ba83a41b8f3550aaf9338d42925b60cbb874ff9f322557f",
+      "bytes": 1265
+    },
+    "build.log": {
+      "sha256": "068e29bbb19f4d275f8ac82202b97e5f846066fc12e95d3e9beae7c8d37bc29f",
+      "bytes": 3157
+    },
+    "rebuild-base.sh": {
+      "sha256": "3cc7aba99fc4f217e17cc5c587c995e28761f079a8f3358cbf681899ecd2b221",
+      "bytes": 343
+    },
+    "rebuild-base.log": {
+      "sha256": "8089f4db9297b6627f3f3ca2805ac982fc1ad684bae5f86d528aa0e6c3787c1b",
+      "bytes": 99
+    },
+    "full-regressions.sh": {
+      "sha256": "434b7cbd7c40decc0c631a2aa85835350fcfaf943ffa8e63789710a2911a7c9e",
+      "bytes": 918
+    },
+    "full-regressions.log": {
+      "sha256": "d852a4120d591f7ff051cce23bce308bdfdbddc913fb9035ce6fd46897008ec9",
+      "bytes": 3773
+    },
+    "full-regressions.xml": {
+      "sha256": "070ea22d225e86cd306bc318cb0acdc1a7320df52e72504ebf03b85f37f8138f",
+      "bytes": 501164
+    },
+    "focused-final.sh": {
+      "sha256": "3c18dd676e524d413ad6f29df216495b6b79a94e935a53e5f0de9eb11265d6d0",
+      "bytes": 1006
+    },
+    "focused-final.log": {
+      "sha256": "23bb195a24862e11d965fce44f22b60c0032787625824e1c0d52bdf5803c29d7",
+      "bytes": 5522
+    },
+    "focused-final.xml": {
+      "sha256": "4574c20174fd5c47406b0ddd76d5f4994a6bce4a9f7b04a51e1dd89a4fa0a7fb",
+      "bytes": 19369
+    },
+    "focused.log": {
+      "sha256": "bb81e5f8a3593af2170d8c7736a9013401d0d0be35802095fac049bad0aca9a9",
+      "bytes": 9561
+    },
+    "focused.xml": {
+      "sha256": "ba538983becd86431d7a12a00077c0639d0385f33eba415fcbf2a133027cab38",
+      "bytes": 20905
+    },
+    "full-regressions-initial-6bbec19.log": {
+      "sha256": "6ce62cd796750f580a3a00cf37f713b3836c13966db294bfe04ad08331975e14",
+      "bytes": 19393
+    },
+    "full-regressions-initial-6bbec19.xml": {
+      "sha256": "63e7146cab6eef465094611816b1983ba7d2531cb4622b3f26e7dcad729a03b1",
+      "bytes": 516355
+    },
+    "tf-backlog-baseline.log": {
+      "sha256": "d4bd9d5e643f32ed62a219d9be06467322402d6fb719a894db1cd97d4e68b3f6",
+      "bytes": 2906
+    },
+    "tf-backlog-baseline.xml": {
+      "sha256": "8bb5d22ed0c9bcf881d0a1e87a16beaa99e1e40b80c278bc6f85f306f9a658ae",
+      "bytes": 3295
+    },
+    "tf-delay-baseline.xml": {
+      "sha256": "85d3cceb5263bd68fca62d64d8d048d94df2766df00a736123d70a0c50a51b8c",
+      "bytes": 2762
+    },
+    "tf-delay-candidate.xml": {
+      "sha256": "6c61b45ce9100649c3cf89afc056b8549ec2d7eaa84d77f3e800e051aaf52efa",
+      "bytes": 369
+    },
+    "selection-baseline.json": {
+      "sha256": "4f96dd202786793300e3a7c2b85e21ccc9966ea332a8a0b5f7442207c7f5e299",
+      "bytes": 20468
+    },
+    "selection-route-preempted-baseline.json": {
+      "sha256": "05a5219fbba6d591c22e4c5508dd0867e6fe7a4a0a3dfdc17ac99965df666613",
+      "bytes": 3543
+    },
+    "selection-route-preempted-candidate.json": {
+      "sha256": "f9a9a0ed84e1a8585b8a3473ea9665ed4d3c195e66bfc171b1d763f9fec7f322",
+      "bytes": 28602
+    },
+    "partial-write-baseline.log": {
+      "sha256": "f4be208bfce275b91f76ac5286fd99c1a410cdc6c92007103d8d854579e1c69a",
+      "bytes": 2093
+    },
+    "partial-write-baseline.xml": {
+      "sha256": "acc7139c4145deb228a12ec579d9fcc4f616c157f764d120d778aa47aaae6956",
+      "bytes": 2007
+    },
+    "focused-final-device-raw/test_full_queue_with_partial_f0/partial-write.json": {
+      "sha256": "3d5674fd12cff9a56010e915d629423f97035b961db54e244253a7f57bf86f63",
+      "bytes": 87
+    },
+    "full-device-raw/test_full_queue_with_partial_f0/partial-write.json": {
+      "sha256": "de4380c2d6b92492b8ede6e30c6f556c43ab1c098b8b4235d2e99b66e4a1c446",
+      "bytes": 87
+    },
+    "whole-cases.sh": {
+      "sha256": "0c5724e70294ebad541ef10bd7d91262794b15b342ec773250fc49827dbb4838",
+      "bytes": 1861
+    },
+    "whole-cases.log": {
+      "sha256": "3a32deae29b452ed8b0e710c5fd064a18c0b88d12a35a86e6fcb55528ed3cd98",
+      "bytes": 1091
+    },
+    "whole-launcher-setup-failure.log": {
+      "sha256": "c57a226d8a32999c3837226f0a6d38ebdccc957e7db621caf1d50652c0e6cdad",
+      "bytes": 995
+    },
+    "startup-final-probe.sh": {
+      "sha256": "1c2bf089ffbcf1f40228008d4bc97819a4c1411294ca1ac09d25ad97d6a54e53",
+      "bytes": 1536
+    },
+    "startup-final-diagnostic.log": {
+      "sha256": "171b23a128dca146e60849e34dadd9a913bba441f9d41d650a67144c1fc0e0f2",
+      "bytes": 11950
+    },
+    "final-diagnostic-inputs.json": {
+      "sha256": "27440a87e4d6f87b1adfc521fc33282292c14302d70e180135c8674ce608b293",
+      "bytes": 626
+    },
+    "final-time-chain.json": {
+      "sha256": "ae6e921f1f415813226cc9b7e6560a5c2b85bcc834240c9b3ffbc8399407a96e",
+      "bytes": 31835
+    },
+    "final-scheduling.jsonl": {
+      "sha256": "fa66fde5992602827bec2f41b87710bd2f850a93622b69d0fed9a628aec3489b",
+      "bytes": 3532568
+    },
+    "evaluate-evidence.py": {
+      "sha256": "4a45f9fa2d7e4afa24c6d6685b188355dac13a2ece2dee8e38b43f34ce56c6f4",
+      "bytes": 8730
+    },
+    "evaluate-evidence.log": {
+      "sha256": "97256d604f1e38e6dc7be0881bb8ed93a5aa39db6a360deb2cf36a770c00ecea",
+      "bytes": 1506
+    },
+    "evaluated-results.json": {
+      "sha256": "a2d39309eacbe3f805e0fba19508e1756f82a9abf71e01386a45379611753c61",
+      "bytes": 1123885
+    },
+    "processes-after-whole-cases.txt": {
+      "sha256": "69877a93f9fd7b6e952533a97827a787c0994608c7d2edd448ad2015b231c812",
+      "bytes": 3475
+    },
+    "processes-after-final-diagnostic.txt": {
+      "sha256": "66e2d8a91570711380adbbea5e18b10245807c77f8390d0e57ba099214a37f67",
+      "bytes": 3573
+    },
+    "commit-message-lineage.json": {
+      "sha256": "697f5fc813353104e347566a892a947f1071a7eb196c77854f3eddf6cb53d56f",
+      "bytes": 272
+    },
+    "whole/cancel/result.json": {
+      "sha256": "248e5b031eb8e5aaf6f633afd9587c2a9d1c02333197cacb3052b2ffe19bc23e",
+      "bytes": 21082
+    },
+    "whole/cancel/execution-end.json": {
+      "sha256": "6eae01046c28906b2daaa1f85df940928585fac9306d098a09cfc862263870e8",
+      "bytes": 204
+    },
+    "whole/cancel/manifest.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "bytes": 2876
+    },
+    "whole/cancel/native_params.yaml": {
+      "sha256": "18501c7d974c16e609c5eed0733312e758b5bdaa738e215a67331de38dbb598b",
+      "bytes": 15819
+    },
+    "whole/cancel/device_params.yaml": {
+      "sha256": "0e079db4bc559849ed47cbf85fccd71e2ac853184dfb95b83c51dc267f59a06f",
+      "bytes": 2453
+    },
+    "whole/cancel/commands.jsonl": {
+      "sha256": "d251ba45e992c94eae0e88420a8e83a22a4d5c5850c98a757f017a3ef6a25c49",
+      "bytes": 4948
+    },
+    "whole/cancel/events.jsonl.gz": {
+      "sha256": "eb5344ae293eaf4bd26ab144637df6b9c14592b6a36373d99b267c0e2be4add7",
+      "bytes": 1891954
+    },
+    "whole/cancel/events.jsonl.gz.meta.json": {
+      "sha256": "d0f1c7fdb31ea8cdd5289ade963a6115ea26f2be527f2beafd34101e6a9525a2",
+      "bytes": 260
+    },
+    "whole/cancel/device_result.json": {
+      "sha256": "7ca37e444a498862219e16d91ebaa350f7731e572de6932187bd90a1238fede1",
+      "bytes": 936
+    },
+    "whole/door68_start_a/result.json": {
+      "sha256": "f99ee7194eb3c55037b6926b23abccb48e1defe344e214e1e37b969305d963b4",
+      "bytes": 3803
+    },
+    "whole/door68_start_a/execution-end.json": {
+      "sha256": "d6cc1d797fb98636fd4030f2b71bf6ed952e323d3b266e17b11dee0beded91eb",
+      "bytes": 204
+    },
+    "whole/door68_start_a/manifest.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "bytes": 2876
+    },
+    "whole/door68_start_a/native_params.yaml": {
+      "sha256": "18501c7d974c16e609c5eed0733312e758b5bdaa738e215a67331de38dbb598b",
+      "bytes": 15819
+    },
+    "whole/door68_start_a/device_params.yaml": {
+      "sha256": "0e079db4bc559849ed47cbf85fccd71e2ac853184dfb95b83c51dc267f59a06f",
+      "bytes": 2453
+    },
+    "whole/door68_start_a/commands.jsonl": {
+      "sha256": "ba7f63be0204d2617299e8be01f2505c8fbb1f8a1d78592dc0912709c31020c5",
+      "bytes": 5028
+    },
+    "whole/door68_start_a/events.jsonl.gz": {
+      "sha256": "cf2ab3f384d26cf7e22d7f51f76695dd40bc6bdd658b1b8d6615491fb0cf2aa4",
+      "bytes": 5006466
+    },
+    "whole/door68_start_a/events.jsonl.gz.meta.json": {
+      "sha256": "363ef138d698430dce33e549f9d46bd3aa9f2d51b590ef9358b72cfd00136312",
+      "bytes": 260
+    },
+    "whole/door68_start_a/device_result.json": {
+      "sha256": "6a67e4c3c9c3dd9210ca9e90ad42980c4f02d7770877ec06695a1106ac65ac4a",
+      "bytes": 1557
+    },
+    "whole/door68_start_b/result.json": {
+      "sha256": "29c3348a5087c106e839c8dba9ae58f35a0970896cf041d87321f5a8bc62f4ab",
+      "bytes": 20804
+    },
+    "whole/door68_start_b/execution-end.json": {
+      "sha256": "79a15a4cd5f47d91d6dabba8bcd9a06a8cbd7f7c73008cad1a5f9d5b9fb85a9f",
+      "bytes": 212
+    },
+    "whole/door68_start_b/manifest.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "bytes": 2876
+    },
+    "whole/door68_start_b/native_params.yaml": {
+      "sha256": "18501c7d974c16e609c5eed0733312e758b5bdaa738e215a67331de38dbb598b",
+      "bytes": 15819
+    },
+    "whole/door68_start_b/device_params.yaml": {
+      "sha256": "0e079db4bc559849ed47cbf85fccd71e2ac853184dfb95b83c51dc267f59a06f",
+      "bytes": 2453
+    },
+    "whole/door68_start_b/commands.jsonl": {
+      "sha256": "333d78614601d83494914f829417f0afa36261aedc2aa845d2fa817d679b4795",
+      "bytes": 5000
+    },
+    "whole/door68_start_b/events.jsonl.gz": {
+      "sha256": "187a1fe499e5fc9d881dd499d29a796ceaa382002c601df858c3abd8d43a5755",
+      "bytes": 4004620
+    },
+    "whole/door68_start_b/events.jsonl.gz.meta.json": {
+      "sha256": "389d75c992d6821c26cf73dfff6ed5be9bea0c7a38418752d2196f95e8fc758a",
+      "bytes": 260
+    },
+    "whole/door68_start_b/device_result.json": {
+      "sha256": "e6e277a1696d7192ef8490427478bcf957ad0626df564fc4dfd15be011f295bc",
+      "bytes": 938
+    },
+    "whole/door80_start_c/result.json": {
+      "sha256": "f9b99d3236177a81697a5ed33702df6f453dc932d54e37208d9675a736b33cf0",
+      "bytes": 21010
+    },
+    "whole/door80_start_c/execution-end.json": {
+      "sha256": "88537c01b2580589e93c53077901163b3a3a059bcfe76772c4f34f3970fabd1f",
+      "bytes": 213
+    },
+    "whole/door80_start_c/manifest.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "bytes": 2876
+    },
+    "whole/door80_start_c/native_params.yaml": {
+      "sha256": "18501c7d974c16e609c5eed0733312e758b5bdaa738e215a67331de38dbb598b",
+      "bytes": 15819
+    },
+    "whole/door80_start_c/device_params.yaml": {
+      "sha256": "0e079db4bc559849ed47cbf85fccd71e2ac853184dfb95b83c51dc267f59a06f",
+      "bytes": 2453
+    },
+    "whole/door80_start_c/commands.jsonl": {
+      "sha256": "745618dff73557fd937c838d1957c87c6e7b19c8116fd1220bbe71a1459e62ae",
+      "bytes": 4968
+    },
+    "whole/door80_start_c/events.jsonl.gz": {
+      "sha256": "40478c4e0e7082c77744e0635c9a1e886a960396939676341859a8c2a5f883c7",
+      "bytes": 2037875
+    },
+    "whole/door80_start_c/events.jsonl.gz.meta.json": {
+      "sha256": "12082150ac83e76451e666d6f712af607a7434204985a93cfaa1e1abf667627f",
+      "bytes": 260
+    },
+    "whole/door80_start_c/device_result.json": {
+      "sha256": "e3083dca57a30847088ec2206e3cf67fc6a3a958e824a55844658e20eacb4c5e",
+      "bytes": 1035
+    },
+    "whole/gyro_hold/result.json": {
+      "sha256": "44edcb8f9b4a6a055c1737cf10e0e34fe6de1c1b183a963a2c6962dbbfe45658",
+      "bytes": 3842
+    },
+    "whole/gyro_hold/execution-end.json": {
+      "sha256": "f3d06777594629f096aa2d472c97e0d4aaede69b0753f1b494ffd114e18598a7",
+      "bytes": 199
+    },
+    "whole/gyro_hold/manifest.json": {
+      "sha256": "54132aaaca7ccee8412d5a5078410f49cb2f388da08c8f18899e5493ab4021da",
+      "bytes": 2876
+    },
+    "whole/gyro_hold/native_params.yaml": {
+      "sha256": "18501c7d974c16e609c5eed0733312e758b5bdaa738e215a67331de38dbb598b",
+      "bytes": 15819
+    },
+    "whole/gyro_hold/device_params.yaml": {
+      "sha256": "0e079db4bc559849ed47cbf85fccd71e2ac853184dfb95b83c51dc267f59a06f",
+      "bytes": 2453
+    },
+    "whole/gyro_hold/commands.jsonl": {
+      "sha256": "6b79c9a9470b5812cd2d672f67e5b18f33fb96e12b8485719dd79efa7dfc53eb",
+      "bytes": 4978
+    },
+    "whole/gyro_hold/events.jsonl.gz": {
+      "sha256": "d7160f3314719daef1c56bb555fde67f6d988f0fce8439db38f366360e6caa37",
+      "bytes": 3769785
+    },
+    "whole/gyro_hold/events.jsonl.gz.meta.json": {
+      "sha256": "ef421a1c268fd3b5ab856cd8f5e302a40d45f8b2522d1b9d007db85f320802a8",
+      "bytes": 260
+    },
+    "whole/gyro_hold/device_result.json": {
+      "sha256": "7adcd5f8f2c932c610566c87dcf724fac42a3047db37d061b888d8e5288d417a",
+      "bytes": 1281
+    },
+    "startup-final-diagnostic/result.json": {
+      "sha256": "ef85bec74506a4ceb01593a99d2906181fc1fad4a8da2c0fae98e1bf2f07fb79",
+      "bytes": 3800
+    },
+    "startup-final-diagnostic/probe-inputs.json": {
+      "sha256": "bf12b4a33f81a4c5de736eb1da7821bf03e90f390c7a63311e6fba0ddbb94cea",
+      "bytes": 706
+    },
+    "startup-final-diagnostic/events.jsonl.gz": {
+      "sha256": "f0813e654a711e5c6be39f254863389f2e56a14f94317a8d0a76f9551bd261cb",
+      "bytes": 2777744
+    },
+    "startup-final-diagnostic/events.jsonl.gz.meta.json": {
+      "sha256": "ea578d1a52f52d024c61297e33cfe9ce0ad9902cef80e2e91659e0586b9c9ecb",
+      "bytes": 260
+    },
+    "startup-final-diagnostic/device_result.json": {
+      "sha256": "228658a8a706a9e87fed2983e3393a11f70b403688e1cc624d6f94b61da184ca",
+      "bytes": 2150
+    },
+    "startup-final-diagnostic/acquisition-47507.json": {
+      "sha256": "52fd9318b9796445085fcb5982ce5558214f03b9e975919e271256024d2cf361",
+      "bytes": 7828562
+    },
+    "startup-final-diagnostic/output-47531.json": {
+      "sha256": "f9dd0420e20f42f64d2a48115ccfb94cdb311cf369814cf582348c12b5a11c6c",
+      "bytes": 1332918
+    },
+    "startup-final-diagnostic/output-47543.json": {
+      "sha256": "e543a7c4cb35b455a7bd36e0146373c51f203bafc5bdb8c066db6735bce2ffe5",
+      "bytes": 591750
+    },
+    "original-whole-bindings.json": {
+      "sha256": "94a70db32f9ba12581cee5cc67a58c19cbc5864b86ac8f9c427a80b7eebe8e4a",
+      "bytes": 12752
+    }
+  },
+  "original_whole_preserved": {
+    "product": "12de37e89fed2a30d45fa3691919c2cc415560c9",
+    "path": "original-whole-12de37e",
+    "binding_file": "original-whole-bindings.json"
+  }
+}

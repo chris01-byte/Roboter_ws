@@ -1,5 +1,11 @@
 # Inventar
 
+**F7/F8-Korrekturprüfung 11.10.2026:**
+[Gezielte Quellen-/TF-/Regressionsevaluation](wohnungserkundung/AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md)
+ergänzt die vorhandene AP-06-Slotlieferung; Hardwareinventar und Bestandsinstall
+bleiben unverändert. Aktueller Nachweisumfang ausschließlich im
+[WE-Status](wohnungserkundung/STATUS.md).
+
 **LAB-Softwareentscheidung 11.10.2026:** MASTERPLAN v1.5 ergänzt AP-06 um
 Beobachtungs-/Fahrslots und begrenzte Wiederprüfung im vorhandenen Explorer.
 [Ablauf](wohnungserkundung/LAB_SLOTS.md); ausgeführter Build, Präfixe und reale

@@ -1,5 +1,33 @@
 # Projektgedächtnis
 
+## 11.10.2026 – F7/F8 nach Audit gezielt und gerätefrei bearbeiten
+
+Nutzer begrenzt den Folgeauftrag ausdrücklich auf F7/F8, ohne Jetsoninstallation,
+Autostart oder reale Bewegung. Ausgangsstand `1b3bc98` / Produkt `900ce5d`;
+eigener Korrekturbranch `fix/ap06-source-startup`. F1–F6, Slots und ein
+Navigationsbesitzer bleiben; keine erneute Explorerentsperrung.
+
+Gemessene Entscheidungen: TF-Helper bis zur echten endlichen Queuetiefe lesen,
+Originalstempel/Alter unverändert; reine A55-Geometrie-/Historienentscheidung
+mit kontrollierter Modulzeit prüfen, wirkliche Verarbeitung mit ursprünglichen
+2-/5-s-Budgets daneben. `multiprocessing.Queue.get_nowait()` kann nach einem
+lesbaren Teilrahmenkopf blockieren. Nur der bisherige Outputbesitzer darf
+empfangen; bei voller Queue neue Einreichung verwerfen und ursprüngliche
+pending Probe mit unveränderter Altersschranke behandeln. Dies garantiert keine
+immer neueste Probe. Bestehende Simulationsarbeiter vor Pinning der Erfassung
+auf anderen verfügbaren CPUs initialisieren; keine reale CPU-Konfiguration
+aus dieser Diagnose ableiten.
+
+Erste Zeitverletzung entlang der ganzen Quelle-/Empfangskette lokalisieren.
+Auch `first_timing_rejection=null` kann mit einem direkten terminalen
+Encoderlatch einhergehen: Fault-/Reason-/Gap-/Zählerfelder gemeinsam lesen.
+Grüne Gesamtrepetition nach negativem gezieltem Quellenfall belegt keine
+Stabilität. Natürlichen HOLD, injizierten HOLD-Stopp und vollständige
+Wiederaufnahme unterscheiden. Bericht und Grenzen:
+[F7/F8-Korrekturprüfung](wohnungserkundung/AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md).
+Nur [STATUS](wohnungserkundung/STATUS.md) führt aktuellen Iststand und nächsten
+Schritt; keine neue Roadmap oder Hardware-/Gesamtfreigabe.
+
 ## 11.10.2026 – Nutzer verlangt Gegenprüfung vor Jetson-Test
 
 Slotlieferung `d2978d4` / Produkt `12de37e` in eigener Auditorrolle geprüft;

@@ -1,5 +1,74 @@
 # Wohnungserkundung – aktueller Status
 
+## 11.10.2026 – F7/F8 gezielt korrigiert; Quellenstabilität und Gesamtabnahme offen
+
+**Getestetes Produkt `cf010a03c96ad981516b52d96f5c21dda78c4369`**, eigener Branch
+`fix/ap06-source-startup`, aus sauberem Dokumentations-/CI-Stand
+`1b3bc987913d518776f495fdc5b2e0cbabec383c` / Produkt `900ce5d`.
+Der aktuelle Nutzerauftrag umfasst ausschließlich F7/F8 und **gerätefreie**
+Arbeit. F1–F6, MASTERPLAN v1.5, Slot-Strategie, ein Navigationsbesitzer,
+Originalwelten/-kriterien, Sensorgrenzen, Faultflags und Budgets bleiben erhalten.
+[Korrekturprüfbericht](AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md) und
+[maschinenlesbare Quellen-/Ergebnisbindung](evidence/ap06-f7-f8-20261011.json).
+
+**Belegte Korrekturen:** TF-Empfang liest die tatsächliche endliche Queuetiefe;
+der TF-Test beginnt nach echter aktueller Erstpublikation. Der reine A55-
+Geometrie-/Historientest erhält kontrollierte Entscheidungszeit, daneben eine
+echte Verarbeitungspause mit unveränderten 2-/5-s-Budgets. Der Sensorproduzent
+empfängt bei voller Outputqueue keinen möglicherweise unvollständigen Pipe-
+Rahmen mehr: neue Einreichung verwerfen, ursprüngliche pending Probe unverändert
+vom bisherigen Outputbesitzer senden oder bei Alter verwerfen. Reproduzierter
+Aufruf 0,411 s → unter 0,00006 s. Bestehende passive Prüfstandarbeiter erben
+andere CPUs; Quellenzeiten/-raten unverändert. Keine zusätzliche Prozessschicht.
+
+**Build/Software:** Alle 15 Produktpakete und echte TF-Sonde getrennt gebaut,
+gepinnten 37-Pakete-Unterbau wiederverwendet; 15 private Präfixe, 163 bytegleiche
+Quelle-/Install-Dateien, 18 geladene Module gebunden. Finale Regression:
+**3.136 bestanden, 0 Fehler, 0 Skips**. Finaler gezielter Lauf zuvor:
+**98 bestanden, 1 fehlgeschlagen**, Supervisorfall `[False]` bereits vor Pause
+mit Encoderlücke 0,383609 s bei 0,18 s Grenze. Drei Gerätezeitbefunde von F8
+bleiben offen; spätere grüne Einzel-/Gesamtläufe beweisen ihre Ursache nicht.
+Ein anderer B207-Auswahltest überschritt im Zwischenlauf das unveränderte
+5-s-Budget; gesondert dokumentiert, kein weiterer Explorerumbau.
+
+**Originalgesamtfälle auf demselben Produkt: A/B/C 0/3, Cancel/HOLD 0/2.**
+A/HOLD scheitern an `real scope and HWT readiness`. B/C erreichen den Startscan
+(151,64° / 44,09°), enden `hwt_terminal`, null Ankünfte/Beobachtungen.
+Cancel erreicht 26,27° Scan, endet vor der vorgesehenen Cancel-Injektion.
+Kein autonomes Fahrziel/Türdurchfahrt; die Stoppfälle wurden nicht qualifiziert.
+Natürlicher HOLD und abschließend null Kommandos ersetzen keine gezielte
+Cancel-/HOLD-Abnahme. Vollständige Wiederaufnahme und reale Gesamtabnahme offen.
+
+**F7 nicht geschlossen:** Finaler gebundener Nullkommandogegenfall liefert die
+letzte gültige Radprobe in 14,467 ms aus; die nächste entsteht erst nach
+0,212766 s, Paarlesung 0,000313 s. Erster Bruch in der Produktion, nicht beim
+Empfang der vorigen Probe. Der konkrete native/GIL-/Lock-/Scheduler-Verursacher
+im Executorabschnitt ist noch nicht eindeutig belegt. Auch ein früherer
+gesunder Produktionszustand mit 0,302590 s Empfangsstempellücke bleibt ungeklärt.
+Erste verschachtelte Verwerfung und Latch-/Gap-/Zählerfelder gemeinsam lesen;
+`first_timing_rejection=null` beweist in direkten Faultpfaden keine Gesundheit.
+
+Vollständige finale Logs/JUnit/Rohzustände und Quell-/Install-/Konfigurations-
+bindung unter `/workspace/ap06-audit-results/f7-f8-evidence/`, Lieferung
+`/workspace/f7-f8-results/`. Negative Zwischenbelege und fehlende historische
+Messskriptsnapshots werden ausdrücklich ausgewiesen. Vier Korrekturcommits,
+Dokumentation separat dahinter. Kein Push/Merge, Jetsontransfer, ARM64-Test,
+Autostartwechsel oder reale Aktorbewegung. Frühere Installationen erhalten.
+
+**Genau nächster Schritt:** Gerätefrei den verbleibenden Quellenstillstand und
+den gesunden Produktionsfall mit Auslieferungslücke ursächlich unterscheiden:
+im gebundenen Nullkommando-Start alle nativen Aufrufgrenzen/Stacks,
+GIL-/Lockbesitzer und einzeln gestempelte Quellen-TID-Schedulingmessungen mit
+FC03, Originalstempel, Queue, DDS und Empfang bis zum ersten Fehler korrelieren.
+Der erfasste Executorabschnitt TID 47557, 45541,138023–45541,318543, begrenzt die
+Messung; erst daraus eine kleinste verantwortliche Korrektur ableiten.
+
+## Historische Nachweise – keine zusätzlichen aktuellen Folgeaufträge
+
+Die folgenden Stände und damaligen nächsten Schritte bleiben als Historie
+erhalten. Sie erklären den bisherigen Verlauf, sind keine zweite aktuelle
+Auftragsbasis und keine Abnahme des oben gebundenen F7/F8-Kandidaten.
+
 ## 11.10.2026 – Auditkorrekturen geprüft; Regression und Gesamtfahrt noch offen
 
 **Aktiver Produktkandidat `900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53`**, Branch
