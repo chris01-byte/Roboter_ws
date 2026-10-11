@@ -1,5 +1,18 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – Rasterkorrektur nur im separaten Quellcheckout
+
+Ganzzahliger Egress-Pfad gezielt 76/76 geprüft; privater geschlossener A-Lauf
+0,293160 m / eine Beobachtung, weiterhin negatives Auswahlbudget. Gemeinsamer
+neuer Build/Originalqualifikation noch offen. Keine neue reale Bewegung.
+Tatsächliche FC03 am 02:11:47 UTC: 35204/−35676, beide RPM null,
+RAM 100/400/5, 4,836/4,735 ms; Geräteport vor Lesung frei.
+1.048 Dateien der Bestandsinstallation am 02:11:48 UTC unverändert.
+Main/Autostart/SDK unverändert. Rückfall: private Runtime geordnet stoppen
+und vorhandenen Install verwenden; neue Raster-/Kopplungsdiffs einzeln revertierbar.
+Aktueller vollständiger WE-Befund ausschließlich im STATUS.
+
+
 ## 11.10.2026 – v8 gebaut und geprüft, gekoppelte Source-Nachprüfung vorbereitet
 
 Separater v8-Build `abeabd4`, 14 Pakete/155 Quelle-Installgleichheiten,

@@ -249,9 +249,22 @@ class ReferencedStartEgress:
         offset = np.rint(axes[0]).astype(int)
         aligned = (np.max(np.abs(axes[0]-offset)) <= 1e-9
             and np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) <= 1e-9)
-        previous_reference = getattr(self, '_previous_reference', self.reference)
-        if (aligned and self._whole_cells and self.current_reference == self.reference
-                and previous_reference == self.reference):
+        previous_axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid,
+            (0.,0.,0.), self._previous_grid, (0.,0.,0.))
+        previous_offset = np.rint(previous_axes[0]).astype(int)
+        previous_aligned = (np.max(np.abs(previous_axes[0]-previous_offset)) <= 1e-9
+            and np.max(np.abs(previous_axes[1:]-previous_axes[0]-np.eye(2))) <= 1e-9)
+        # Certify the entire raster, not just unit basis vectors: a tiny
+        # rotation must not accumulate into a changed boundary cell. This is
+        # stricter than the existing 1e-9 polygon/cell area tolerance. Actual
+        # references stay untouched; uncertain alignment uses exact polygons.
+        corners = np.asarray(((0.,0.),(grid.info.width,0.),
+            (grid.info.width,grid.info.height),(0.,grid.info.height)))
+        aligned = aligned and np.max(np.abs(grid_points(corners,grid,
+            source_reference,self.fixed.grid,target_reference)-corners-offset)) <= 1e-12
+        previous_aligned = previous_aligned and np.max(np.abs(grid_points(corners,grid,
+            (0.,0.,0.),self._previous_grid,(0.,0.,0.))-corners-previous_offset)) <= 1e-12
+        if aligned and self._whole_cells and previous_aligned:
             # Exact physical lattice: integer index translation, not nearest
             # neighbour resampling. Width/origin growth does not move cells.
             dc, dr = offset
@@ -262,8 +275,20 @@ class ReferencedStartEgress:
             if r1 > r0 and c1 > c0:
                 source = (slice(r0+dr,r1+dr),slice(c0+dc,c1+dc))
                 target = (slice(r0,r1),slice(c0,c1))
-                remaining[source] = retained[source] & (occupancy[target] < 0)
-                projected[target] = remaining[source] & inside[target]
+                # A reference correction is not a new observation. Compare
+                # original map-frame rasters, just like newly_observed_parts,
+                # before retiring the corresponding whole physical cells.
+                # Outside the previous raster there is no observed delta.
+                newly_observed = np.zeros_like(inside)
+                pdc, pdr = previous_offset
+                pr0, pc0 = max(r0,-pdr), max(c0,-pdc)
+                pr1, pc1 = min(r1,previous.shape[0]-pdr), min(c1,previous.shape[1]-pdc)
+                if pr1 > pr0 and pc1 > pc0:
+                    prior = previous[pr0+pdr:pr1+pdr,pc0+pdc:pc1+pdc]
+                    newly_observed[pr0:pr1,pc0:pc1] = (
+                        (occupancy[pr0:pr1,pc0:pc1] >= 0) & (prior < 0))
+                remaining[source] = retained[source] & inside[target] & ~newly_observed[target]
+                projected[target] = remaining[source] & (occupancy[target] < 0)
             removed = retained & ~remaining
             if np.any(removed):
                 self.retained_region = self.retained_region.difference(cell_region(removed))

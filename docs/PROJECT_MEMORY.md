@@ -1,5 +1,20 @@
 # Projektgedächtnis
 
+## 11.10.2026 – bestätigte ganzzahlige Egress-Lage direkt projizieren
+
+Gemessene fast null TF-Referenzen erzwingen bisher GEOS: Roh-Refresh etwa
+120 ms, Zweitbeweis über 180 ms. Direkte Indizes nur bei bestätigter physischer
+und vorheriger Map-Lattice; neue Beobachtung aus Originalrastern bestimmen,
+Referenzkorrektur allein entfernt keine Fakten. Ganzer Rastereckenvergleich
+strenger als bestehende numerische Polygon-Toleranz, sonst exakter bisheriger
+Pfad. Feste Fakten/Historie, Original-TF und alle Fristen bleiben erhalten.
+76 gezielte Fälle bestanden, einschließlich 36 exakten Polygonvergleichen.
+Privater Source-A erreicht eine Beobachtung bei 0,293160 m ohne Frischefehler,
+endet weiterhin am Auswahlbudget. Gemeinsamer Build/Originalabnahme offen.
+Rückfall: nur Rasterdiff revertieren bzw. privaten Kandidaten stoppen und
+Bestandsinstall verwenden; keine reale Bewegung oder Deployment daraus.
+
+
 ## 11.10.2026 – beim begrenzten Nachcheck ein aktuelles vollständiges Bewegungspaar wählen
 
 v8 vollständig gebaut und 2.735 Produktfälle positiv; ursprüngliche A/B/C

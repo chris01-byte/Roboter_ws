@@ -1,58 +1,60 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – v8 vollständig geprüft, Originalmissionen 0/3; gekoppelte Nachprüfung korrigiert
+## 11.10.2026 – gekoppelte Quellen und ganzzahliges Egress-Raster korrigiert, Gesamtprüfung offen
 
-Punkt 1 bleibt begrenzt real positiv mit ausdrücklich erhaltener Rohdatenlücke
-während Translation. Punkt 2: gemeinsamer privater v8-Build `abeabd4`, 14
-Pakete in 2 min 49 s, 155 Produktdateien Quelle/Install identisch und 756
-Installhashes. Vollständige Regression: 2.735 Fälle, keine Fehler/Skips.
-Original-A/B/C alle manifestkompatibel, ohne manuelle Nav-Ziele, weiterhin
-**0/3**: A 0,153852 m / keine Beobachtung; B 0,364959 m / eine Beobachtung,
-183 neue Zellen; C 0,713880 m / eine Teilbeobachtung, 144 neue Zellen. Alle
-enden am unveränderten Auswahlbudget, keine volle Passage samt Heck. Quellen
-am jeweiligen Stop gültig, Encoder ohne Verwerfung; keine reale Fahrt daraus.
+Punkt 1 bleibt begrenzt real positiv; die Rohdatenlücke während Translation
+bleibt ausdrücklich erhalten. Punkt 2: letzter gemeinsam gebauter v8-Stand
+`abeabd4`, 14 Pakete/155 Quelle-Installgleiche/756 Installhashes, 2.735
+vollständige Produktfälle positiv ohne Skip. Ursprüngliche A/B/C weiterhin
+0/3: 0,153852/0,364959/0,713880 m, keine/eine/eine Teilbeobachtung,
+keine volle Passage samt Heck. Keine reale Fahrt daraus.
 
-Gemessener verbleibender Kopplungsfehler: die bestehende einmalige Nachprüfung
-nach langem Egress empfängt ein neueres Rad, behält aber die davor ausgewählte
-TF-Pose. A/B/C brechen damit wegen altem Rad-Snapshot ab; der dabei aufgezeichnete
-Vergleich verwirft das neuere Rad gegen die alte Pose mit 21,5–23,4 mm.
-Aktuelle Quellproben sind gültig. Separater neuer Fix wählt bei derselben
-begrenzten Nachprüfung tatsächliche aktuelle TF-Pose/Referenz und Rad zusammen.
-Initialkörperanker bleibt fest, neue Körpermaske schneidet nur alte Bestände;
-verlassene Zellen entziehen auch Clearance, abgelaufene Abdeckung bleibt abgelaufen.
-Danach weiterhin vollständiger Egress-/Historienbeweis und originale finale
-Quell-/Pose-/Scan-/Rasterfristen. Kein Polling, zusätzliche Nachprüfschleife,
-Stempelersatz, Budgetreset oder neue freie Zelle.
+Separater Kopplungsfix `86793fd`: beim vorhandenen einmaligen Nachcheck
+aktuelle ursprüngliche TF-Pose/Referenz und Rad gemeinsam auswählen;
+verlassene Initialkörperzellen nur entziehen, dann vollständige Historie
+und ursprüngliche Endfristen prüfen. 29 gezielte Fälle positiv. Neue
+CPU-Diagnose: Dispatcher beansprucht während 5,305 s Auswahl etwa 1,675 s
+CPU; keine native Statuspublikation über 50 ms. 1-ms-Dispatcherpause allein
+bleibt negativ (0,187788 m, keine Beobachtung, Geometrie-Retrybudget),
+nicht ins Produkt übernommen.
 
-29 gezielte Fälle bestanden: echte DDS-Pause mit neuem Paar, Entzug initialer
-Körperzellen, abgelaufene Maske, neue echte TF-Auswahl bei Bewegung und
-Kartenreferenzkorrektur, fehlendes/ungültiges Rad, langsamer Zweitbeweis,
-ungültige alte Historie und paralleler TF-Empfang. Erste eigene Testfassung
-hatte falschen LiDAR-Mount null gewählt; Originalnegative erhalten, korrekte
-vorhandene Kalibrierung im Test verwendet, Produktkalibrierung unverändert.
-Privater Source-Gesamtdiagnoselauf bleibt negativ: A 0,109633 m, keine
-Beobachtung, bisheriger Rad/TF-Vergleichsfehler verschwunden; vollständiger
-Zweitbeweis bleibt an 180-ms-Frische negativ, später Auswahlbudget. Erste
-Prüfstandkopie enthielt nicht definierte Pfadvariable, Fehler erhalten und
-Kopie korrigiert. Zusätzliche aktuelle CPU-/Publikationsdiagnose läuft.
-Dieser neue Kopplungsfix ist noch nicht gemeinsam gebaut oder originalqualifiziert.
+Genauere Messung: wechselnde ursprüngliche TF-Referenz um etwa 10⁻¹⁶ löst
+Polygonprojektion aus. Roh-Egress-Refresh etwa 118–135 ms Wand-/39–44 ms
+Rechenzeit, voller Zweitbeweis 213–218 ms, ursprüngliche 180 ms damit verletzt.
+Ganzzahliger Rasterpfad jetzt auch für geometrisch bestätigte Referenz-
+korrekturen: aktuelles physisches Raster und ursprüngliche aktuelle/vorherige
+Map-Raster getrennt abgleichen. Nur neue tatsächliche Beobachtung und
+Scope-/Extent-Entzug entfernen alte Körperfakten. Ganze Rasterecken zusätzlich
+mit 10⁻¹² Zellgenauigkeit prüfen (strenger als bestehende Polygon-Toleranz),
+sonst unveränderter exakter Polygonpfad. Keine gerundeten TF-Werte, keine
+neuen Freizellen, Frist-/Budget-/Kalibrierungsänderung oder geheilte Historie.
+76 gezielte Fälle positiv, darunter 36 Vergleiche mit dem exakten Polygonpfad
+bei Wachstum, Beobachtung, Scopeentzug, Korrektur und anschließend unbekanntem
+Raster. Alter tatsächlich subzelliger eingefrorener Gegenfall bleibt in
+Geometrie/Ergebnis und etwa 54 ms Aufwand unverändert.
 
-Letzte tatsächliche rein lesende FC03 am 11.10. um 01:34:06 UTC: Zähler
-35204/−35676 unverändert, beide RPM null, RAM 100/400/5; Lesezeiten 9,122/4,900 ms.
-Alle 1.048 Bestandsinstallhashes um 01:34:06 UTC erneut gleich, Main sauber.
-Keine neue Hardwarebewegung, kein SDK-/OS-/Autostartwechsel. v8-Realstartskripte
-mit bisheriger CPU-/Auditaufteilung nur vorbereitet, nicht gestartet.
-Punkte 3/4 nicht durchgeführt: zuerst ursprüngliche Softwaregesamtprüfung.
+Privater instrumentierter Source-A-Vergleich mit Rasterfix: 0,293160 m,
+eine Ankunft/Beobachtung mit 176 neuen Zellen, 30 Inputs ohne Frischefehler;
+anschließend ungeeignete Folgeroute und Auswahlbudget, also weiterhin negativ.
+Vergleich beider gemessener Ursachen (Rasterfix plus Dispatcherpause) läuft
+privat; er ersetzt keine Originalqualifikation. Diese Quellkorrekturen sind
+noch nicht gemeinsam gebaut oder als ursprüngliche A/B/C geprüft.
+
+Letzte reale rein lesende FC03 am 11.10. um 02:11:47 UTC: Zähler
+35204/−35676 unverändert, beide RPM null, RAM 100/400/5;
+Lesezeiten 4,836/4,735 ms. Alle 1.048 Bestandsinstallhashes um 02:11:48 UTC
+gleich, Main unverändert. Keine neue Hardwarebewegung, kein SDK-/OS-/Autostart-
+wechsel. v8-Realstartskripte nur vorbereitet. Punkte 3/4 nicht durchgeführt.
 Bekannten festen LAB-Scope vor realem Start neu binden, nicht umzentrieren;
-weiterer Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit bleiben unbestätigt.
-Keine neue allgemeine Freigaberunde, bestehender LAB-1-Auftrag gilt.
+Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit nicht erfinden.
+Bestehender LAB-1-Auftrag gilt ohne neue allgemeine Freigaberunde.
 
-**Genau nächster Schritt:** verbleibende Verzögerung im vollständigen
-Zweitbeweis aktuell messen und begrenzt beheben; dann gemeinsamer Build,
-volle Regression und ursprüngliche A/B/C, danach reale Schritte 3/4.
-Rückfall: eigene private Prozesse direkt geordnet stoppen, bewahrten Install
-verwenden oder nur den Kopplungsfix gezielt zurücknehmen. Reale Daten und
-Originalnegative bleiben privat unter
+**Genau nächster Schritt:** laufenden begrenzten Vergleich abschließen,
+befundabhängig gemeinsamen Build/volle Regression/ursprüngliche A/B/C
+abschließen; erst nach deren Bestehen reale Schritte 3/4. Rückfall: eigene
+private Prozesse direkt geordnet stoppen, Bestandsinstall verwenden oder nur
+die neuen Kopplungs-/Rasterdiffs gezielt zurücknehmen. Originalnegative und
+reale Daten bleiben privat unter
 `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
 
 ## Historischer v7-/TF-/Auswahlstand vom 11.10.2026
