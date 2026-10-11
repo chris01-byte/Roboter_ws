@@ -296,20 +296,26 @@ def self_body_unknown_mask(grid, occupancy, pose, lidar_mount):
     return result
 
 
-def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clearance, self_body=None):
+def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clearance, self_body=None,
+                    *, allow_unknown=False):
+    """Planning admission, separate from the unchanged raw map evidence.
+
+    Sensor-guarded exploration may PLAN through unobserved cells. It does not
+    certify them as measured free, clear an obstacle or enlarge the scope.
+    """
     inside = rasterize_scope(
         scope, context=correlation.context, width=occupancy.shape[1],
         height=occupancy.shape[0], resolution_m=resolution,
         origin_x_m=origin[0], origin_y_m=origin[1], origin_yaw_rad=yaw,
         maximum_cells=1000000)
-    known = (occupancy == 0) & inside
+    known = ((occupancy <= 0) if allow_unknown else (occupancy == 0)) & inside
     if self_body is not None:
         if self_body.shape != known.shape or self_body.dtype != bool:
             raise ValueError('self_body_mask_invalid')
         # A true obstacle can NEVER be exempted, even inside the body.
         known |= self_body & (occupancy < 0) & inside
     distance = distance_transform_edt(np.pad(known, 1))[1:-1, 1:-1]
-    # Include cell-size uncertainty; never seed across an unknown gap.
+    # Include cell-size uncertainty at every inadmissible boundary.
     safe = known & (distance * resolution >= clearance + resolution / 2)
     return known, safe
 

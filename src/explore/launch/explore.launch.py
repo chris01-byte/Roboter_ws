@@ -17,7 +17,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -26,10 +26,17 @@ def generate_launch_description():
     pkg = get_package_share_directory('explore')
     params = os.path.join(pkg, 'config', 'explore_params.yaml')
     params_overlay = LaunchConfiguration('explore_params_overlay')
+    unknown_space_policy = LaunchConfiguration('unknown_space_policy')
+    motion_params = PythonExpression([
+        "'", os.path.join(pkg, 'config', 'metric_sensor_guarded_motion_params.yaml'),
+        "' if '", unknown_space_policy, "' == 'sensor_guarded' else '",
+        os.path.join(pkg, 'config', 'metric_observed_only_motion_params.yaml'), "'"])
     safe_bt = os.path.join(
         pkg, 'behavior_trees', 'navigate_to_pose_no_recovery.xml')
 
     return LaunchDescription([
+        DeclareLaunchArgument('unknown_space_policy', default_value='observed_only',
+            choices=['observed_only', 'sensor_guarded']),
         DeclareLaunchArgument('require_hwt601_fusion', default_value='false'),
         DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
         DeclareLaunchArgument('hwt_development_contract', default_value='false'),
@@ -43,7 +50,7 @@ def generate_launch_description():
             name='explore_node',
             output='screen',
             parameters=[
-                params, params_overlay, {
+                params, params_overlay, motion_params, {
                     'behavior_tree': safe_bt,
                     'require_hwt601_fusion': ParameterValue(
                         LaunchConfiguration('require_hwt601_fusion'), value_type=bool),

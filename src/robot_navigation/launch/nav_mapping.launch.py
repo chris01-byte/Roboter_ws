@@ -25,6 +25,15 @@ def generate_launch_description():
     mapping_collision_params = os.path.join(
         get_package_share_directory('vl53_near_field'), 'config',
         'collision_monitor_mapping_params.yaml')
+    unknown_space_policy = LaunchConfiguration('unknown_space_policy')
+    motion_params = PythonExpression([
+        "'", os.path.join(nav_pkg, 'config', 'nav2_sensor_guarded_mapping_params.yaml'),
+        "' if '", unknown_space_policy, "' == 'sensor_guarded' else '", params, "'"])
+    collision_params = PythonExpression([
+        "'", os.path.join(get_package_share_directory('vl53_near_field'), 'config',
+                          'collision_monitor_sensor_guarded_mapping_params.yaml'),
+        "' if '", unknown_space_policy, "' == 'sensor_guarded' else '",
+        mapping_collision_params, "'"])
     default_explore_params = os.path.join(
         get_package_share_directory('explore'), 'config',
         'explore_params.yaml')
@@ -95,10 +104,10 @@ def generate_launch_description():
             Node(
                 package='nav2_controller', executable='controller_server',
                 name='controller_server', output='screen',
-                parameters=[params], remappings=nav_cmd_remap),
+                parameters=[params, motion_params], remappings=nav_cmd_remap),
             Node(
                 package='nav2_planner', executable='planner_server',
-                name='planner_server', output='screen', parameters=[params]),
+                name='planner_server', output='screen', parameters=[params, motion_params]),
             # Humble laedt beim Aktivieren des BT-Navigators auch seinen
             # Standardbaum und erwartet deshalb die Recovery-Actions. Der
             # Explorer selbst verwendet einen recovery-freien Baum. Falls
@@ -127,6 +136,10 @@ def generate_launch_description():
         ])
 
     return LaunchDescription([
+        DeclareLaunchArgument('unknown_space_policy', default_value='sensor_guarded',
+            choices=['observed_only', 'sensor_guarded'],
+            description='Unbekannte Zellen erkunden, mit LiDAR/VL53-Bremse; '
+                        'observed_only stellt das bisherige Verhalten wieder her.'),
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
@@ -166,7 +179,7 @@ def generate_launch_description():
             description='Optionales begrenzendes Explorer-Profil.'),
 
         LogInfo(msg='Automatische Kartierung: OAK bleibt deaktiviert; '
-                    'Hinderniskette ist dual-VL53 plus collision_monitor.'),
+                    'sensor_guarded bindet LiDAR und dual-VL53 an collision_monitor.'),
 
         # Einziger Besitzer von Basis, LiDAR, /map und map->odom.
         IncludeLaunchDescription(
@@ -197,7 +210,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(_launch_file(
                 'vl53_near_field', 'vl53_near_field.launch.py')),
             launch_arguments={
-                'collision_params_file': mapping_collision_params,
+                'collision_params_file': collision_params,
             }.items()),
 
         # Software-BT-Sicht; der hardwired Not-Aus bleibt primaer.
@@ -213,6 +226,7 @@ def generate_launch_description():
             condition=IfCondition(start_explorer),
             launch_arguments={
                 'explore_params_overlay': explore_params_overlay,
+                'unknown_space_policy': unknown_space_policy,
                 'require_hwt601_fusion': use_hwt601_odometry,
                 'hwt601_active_drive': active_drive,
                 'hwt_development_contract': hwt_development_contract,

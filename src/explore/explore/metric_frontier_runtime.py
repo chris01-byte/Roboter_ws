@@ -81,9 +81,16 @@ class MetricFrontierRuntime:
             raise ValueError('metric_frontier excludes direct bridges, coverage and return execution')
         self._metric_start_strategy = self.declare_parameter(
             'metric_start_strategy', 'adaptive', ParameterDescriptor(read_only=True,
-                description='adaptive or configured_scan; fixed for this process/mission.')).value
-        if self._metric_start_strategy not in ('adaptive', 'configured_scan'):
+                description='adaptive, configured_scan or sensor_scan_first; fixed per process.')).value
+        if self._metric_start_strategy not in ('adaptive', 'configured_scan', 'sensor_scan_first'):
             raise ValueError('Unknown metric_start_strategy')
+        self._metric_unknown_space_policy = self.declare_parameter(
+            'metric_unknown_space_policy', 'observed_only',
+            ParameterDescriptor(read_only=True)).value
+        if self._metric_unknown_space_policy not in ('observed_only', 'sensor_guarded'):
+            raise ValueError('Unknown metric_unknown_space_policy')
+        if self._metric_start_strategy == 'sensor_scan_first' and not self._metric_sensor_guarded():
+            raise ValueError('sensor_scan_first requires sensor_guarded planning')
         self._metric_candidate_source = self.declare_parameter(
             'metric_candidate_source', 'boundary_samples', ParameterDescriptor(read_only=True)).value
         if self._metric_candidate_source not in ('boundary_samples', 'legacy_centroid'):
@@ -146,6 +153,8 @@ class MetricFrontierRuntime:
             ParameterDescriptor(read_only=True)).value
         if self._metric_start_egress_enabled and not self._metric_self_body_enabled:
             raise ValueError('start_egress needs the fixed lidar/body/map-odom anchor')
+        if self._metric_sensor_guarded() and (self._metric_self_body_enabled or self._metric_start_egress_enabled):
+            raise ValueError('sensor_guarded replaces private start-body/egress permits')
         self._metric_egress = None
         self._metric_egress_identity = None
         self._metric_egress_expired = False
@@ -181,6 +190,7 @@ class MetricFrontierRuntime:
         self._metric_active_context = None
         self._metric_context_generation = 0
         self._metric_status = {'schema_version': 1, 'state': 'idle', 'outcome': 'in_progress',
+                               'unknown_space_policy': self._metric_unknown_space_policy,
                                'arrivals': 0, 'observations': 0, 'observed_area_m2': 0.,
                                'full_apartment_complete': False,
                                'semantic_complete': False, 'floor_coverage_verified': False}
@@ -558,7 +568,7 @@ class MetricFrontierRuntime:
             return self._metric_inputs_locked(active)
 
     def _metric_public_withdrawal_mask(self, previous, current):
-        """Project only current FREE onto an old exact grid, without adding cells."""
+        """Withdraw old planning permits, never add cells during a pending join."""
         old, new = previous.info, current.info
         a, b = self._metric_grid_values(previous)['origin'], self._metric_grid_values(current)['origin']
         if (previous.header.frame_id != current.header.frame_id
@@ -576,7 +586,9 @@ class MetricFrontierRuntime:
         r1, c1 = min(old.height,new.height-dr), min(old.width,new.width-dc)
         if r1 > r0 and c1 > c0:
             data = np.asarray(current.data).reshape(new.height,new.width)
-            permitted[r0:r1,c0:c1] = data[r0+dr:r1+dr,c0+dc:c1+dc] == 0
+            current_cells = data[r0+dr:r1+dr,c0+dc:c1+dc]
+            permitted[r0:r1,c0:c1] = ((current_cells <= 0) if self._metric_sensor_guarded()
+                                     else (current_cells == 0))
         return permitted
 
     def _metric_inputs_locked(self, active=False):
@@ -736,9 +748,9 @@ class MetricFrontierRuntime:
             known &= withdrawal
             distance = distance_transform_edt(np.pad(known,1))[1:-1,1:-1]
             safe = known & (distance*res >= self._goal_clearance_m+res/2)
-        # Costmap values already include Nav2 inflation; also check full chassis
-        # against actual occupied/unknown cells rather than treating unknown free.
-        cost_known = (costs >= 0) & (costs < 100)
+        # Unknown may be admitted for planning, never credited as observation.
+        # Actual obstacles and inflation retain the same rejection thresholds.
+        cost_known = (costs < 100) & ((costs >= 0) | self._metric_sensor_guarded())
         rr, cc = np.nonzero(safe)
         lx, ly = (cc+.5)*res, (rr+.5)*res
         wx = origin[0]+math.cos(yaw)*lx-math.sin(yaw)*ly
@@ -750,7 +762,8 @@ class MetricFrontierRuntime:
         cy=np.floor((-math.sin(cyaw)*dx+math.cos(cyaw)*dy)/costmap.info.resolution).astype(int)
         valid=(cy>=0)&(cy<costs.shape[0])&(cx>=0)&(cx<costs.shape[1])
         allowed=np.zeros(valid.shape,dtype=bool)
-        allowed[valid]=(costs[cy[valid],cx[valid]]>=0)&(costs[cy[valid],cx[valid]]<=self._frontier_goal_max_cost)
+        selected_costs = costs[cy[valid],cx[valid]]
+        allowed[valid]=((selected_costs>=0) | self._metric_sensor_guarded()) & (selected_costs<=self._frontier_goal_max_cost)
         safe[rr[~allowed],cc[~allowed]]=False
         values = (grid, correlation, pose, known, safe, costmap, cost_known)
         inputs = MetricInputs(values, self._metric_input_reference,
@@ -820,6 +833,8 @@ class MetricFrontierRuntime:
             reject_processing_age('self_body_scan_stale_after_processing', scan_now-scan['received_at'],
                 scan_now, self._door_lidar_scan_timeout, age_basis='scan_callback_receipt',
                 received_at=scan['received_at'], scan_key=scan.get('key'))
+        if self._metric_sensor_guarded():
+            self._metric_sensor_scan()  # fresh receipt/header/TF even on a geometry cache hit
         return inputs
 
     def _metric_known_geometry(self, occupancy, scope, correlation, origin, yaw, res, body):
@@ -832,11 +847,13 @@ class MetricFrontierRuntime:
         """
         key = (occupancy.shape, occupancy.dtype.str, occupancy.tobytes(), scope,
                correlation.context, tuple(origin), yaw, res, self._goal_clearance_m,
+               self._metric_sensor_guarded(),
                None if body is None else (body.shape, body.dtype.str, body.tobytes()))
         cached = getattr(self, '_metric_known_geometry_cache', None)
         if cached is None or cached[0] != key:
             known, safe = known_safe_mask(occupancy, scope, correlation, origin,
-                                         yaw, res, self._goal_clearance_m, body)
+                                         yaw, res, self._goal_clearance_m, body,
+                                         allow_unknown=self._metric_sensor_guarded())
             known.flags.writeable = safe.flags.writeable = False
             cached = self._metric_known_geometry_cache = (key, known, safe)
         return cached[1].copy(), cached[2].copy()
@@ -1857,14 +1874,27 @@ class MetricFrontierRuntime:
             self._metric_nav_path = None
             self._metric_plan_after_ns = self.get_clock().now().nanoseconds
 
+    def _metric_sensor_guarded(self):
+        return getattr(self, '_metric_unknown_space_policy', 'observed_only') == 'sensor_guarded'
+
     def _metric_scan_geometry_ready(self, inputs):
         """Full scan keeps the same positional tracking reserve as RPP."""
         _, _, pose, _, _, _, _ = inputs
         deviation = .02 if getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout' else 0.
-        return all(footprint_clear(*pose[:2],pose[2]+math.pi,g,mask,
+        map_clear = all(footprint_clear(*pose[:2],pose[2]+math.pi,g,mask,
             self._world_to_grid,self._grid_to_world,self._metric_bounds,
             heading_half_angle=math.pi,heading_samples=127,center_deviation_m=deviation)
             for g,mask in ((inputs[0],inputs[3]),(inputs[5],inputs[6])))
+        if not map_clear or not self._metric_sensor_guarded():
+            return map_clear
+        # Check CURRENT actual LiDAR returns around the whole turning body.
+        # Masked/invalid rays are not converted to free cells. They remain
+        # coverage limitations of the stated sensor-guarded operating domain.
+        from .sensor_motion_guard import scan_sweep_clear
+        # Bind the collision check to the SAME immutable scan as its age/TF
+        # validation, rather than obtaining a newer, unchecked callback.
+        view, scan = self._metric_sensor_scan()
+        return scan_sweep_clear(scan, view.mount, self._metric_bounds, deviation)
 
     def _metric_start_decision(self, inputs, policy, min_frontier, scan_pending):
         grid, _, pose, known, _, costmap, cost_known = inputs
@@ -1884,7 +1914,18 @@ class MetricFrontierRuntime:
             origin_x_m=grid.info.origin.position.x,origin_y_m=grid.info.origin.position.y,
             origin_yaw_rad=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z)),
             maximum_cells=self._wohnungserkundung_evidence_max_cells)
-        unknown_in_scope=int(np.count_nonzero((np.asarray(grid.data).reshape(known.shape)<0)&inside&~known))
+        raw_unknown = (np.asarray(grid.data).reshape(known.shape)<0)&inside
+        unknown_in_scope=int(np.count_nonzero(raw_unknown if self._metric_sensor_guarded() else raw_unknown&~known))
+        if (self._metric_start_strategy == 'sensor_scan_first' and scan_pending
+                and sweep_clear and unknown_in_scope):
+            # The parent's existing segmented 2*pi scan owns commands, HOLD,
+            # source checks and confirmed stop. No frontier search before it.
+            return dict(strategy=self._metric_start_strategy,
+                selected_motion='full_scan', scan_admissible=True, scan_useful=True,
+                unobserved_cells_in_scope=unknown_in_scope,
+                initial_contour_missing_cells=missing, start_egress_enabled=False,
+                first_rejecting_predicate=None, scan_rejection=None,
+                scan_priority='sensor_scan_before_goal_search'), []
         # After a measured start departure, finish the still-pending one-shot
         # observation once its FULL PUBLIC sweep is proved. Searching another
         # goal first can starve this ready perception behind helper deadlines.
@@ -1918,6 +1959,9 @@ class MetricFrontierRuntime:
         return decision, candidates
 
     def _metric_observation_view(self):
+        return self._metric_sensor_scan()[0]
+
+    def _metric_sensor_scan(self):
         scan = self._door_lidar_scan_snapshot()
         mount = None if scan is None else self._door_lidar_mount(scan['frame_id'])
         view = lidar_view(scan, mount, time.monotonic(), self._door_lidar_scan_timeout,
@@ -1926,10 +1970,12 @@ class MetricFrontierRuntime:
         age = (self.get_clock().now().nanoseconds-stamp_ns)/1e9
         if not 0 <= age <= self._door_lidar_scan_timeout:
             raise ValueError('candidate_lidar_stamp_stale')
-        return view
+        return view, scan
 
     def _metric_public_inputs(self, inputs):
         """Subtract virtual placement permits; do not alter raw evidence."""
+        if self._metric_sensor_guarded():
+            return inputs  # no private permits exist in this planning policy
         grid,cor,pose,known,safe,costmap,cost_known = inputs
         observed = known & (np.asarray(grid.data).reshape(known.shape) == 0)
         costs = np.asarray(costmap.data).reshape(cost_known.shape)
@@ -2894,6 +2940,8 @@ class MetricFrontierRuntime:
         return self._prealign_to_goal(*leg,pose,stop_requested=stop_requested)
 
     def _metric_navigation_geometry_ready(self, inputs, target):
+        if self._metric_sensor_guarded():
+            self._metric_sensor_scan()  # current source age and mount, no cached movement permit
         # Once a real path exists, that path is authoritative. Rechecking an
         # unrelated shortest eigenroute would cancel a valid longer detour.
         if self._metric_nav_path is not None:
@@ -2932,6 +2980,8 @@ class MetricFrontierRuntime:
         task_started = None
         scan_pending = self._initial_scan_enabled
         scan_task_started = None
+        scan_task_budget = (self._initial_scan_timeout if self._metric_sensor_guarded()
+                            else self._goal_timeout_s)
         scan_progress = 0.
         scan_resume_pending = False
         initial_stop_confirmed = False
@@ -3008,6 +3058,7 @@ class MetricFrontierRuntime:
             self._metric_active_context = None
             return self._finish_result(result,self._frontiers_visited_status)
         self._metric_status = dict(schema_version=1, state='running', outcome='in_progress',
+                                  unknown_space_policy=getattr(self, '_metric_unknown_space_policy', 'observed_only'),
                                   started_wall_time=time.time(),arrivals=0,observations=0,observed_area_m2=0.,full_apartment_complete=False,
                                   semantic_complete=False,floor_coverage_verified=False,chain=chain,
                                   first_trigger=None,reactions=[],terminal_reason=None)
@@ -3123,7 +3174,7 @@ class MetricFrontierRuntime:
                 self._metric_status.pop('task_cooldown_wait_s', None)
             adaptive_candidates = None
             use_scan = scan_pending and pending is None
-            if (self._metric_start_strategy == 'adaptive' and pending is None
+            if (self._metric_start_strategy in ('adaptive', 'sensor_scan_first') and pending is None
                     and not scan_resume_pending):
                 try:
                     decision, adaptive_candidates = self._metric_start_decision(
@@ -3142,7 +3193,7 @@ class MetricFrontierRuntime:
                 self._status_phase='we_initial_scan'
                 last_scan_check = [0.]
                 def scan_stop():
-                    if time.monotonic()-scan_task_started >= self._goal_timeout_s:
+                    if time.monotonic()-scan_task_started >= scan_task_budget:
                         self._metric_status['first_rejecting_predicate'] = 'scan_task_budget_exhausted'
                         return True
                     if goal_handle.is_cancel_requested or expired() or self._wohnungserkundung_hwt_hold():
@@ -3151,6 +3202,7 @@ class MetricFrontierRuntime:
                     self._metric_status['decision_snapshot'] = snapshot
                     if (not snapshot['safe'] and
                             snapshot['first_rejecting_predicate'] != 'vl53_triplet_unmatched'):
+                        self._metric_status['first_rejecting_predicate'] = snapshot['first_rejecting_predicate']
                         return True  # unmatched publication window remains blocked by the gate
                     if time.monotonic()-last_scan_check[0] < .2:
                         return False
@@ -3183,7 +3235,7 @@ class MetricFrontierRuntime:
                     self._metric_record_transition('scan_interrupted',
                         self._metric_status.get('first_rejecting_predicate') or status,
                         scan=dict(self._metric_status['scan_attempt']))
-                    if (self._metric_start_strategy != 'adaptive'
+                    if (self._metric_start_strategy not in ('adaptive', 'sensor_scan_first')
                             or goal_handle.is_cancel_requested or expired()):
                         return finish('failed',f'initial_scan_{status}')
                     # Optional scan is one bounded observation attempt, never
@@ -3194,7 +3246,7 @@ class MetricFrontierRuntime:
                         return finish('failed','optional_scan_stop_or_sources_unconfirmed')
                     if (self._metric_status.get('first_rejecting_predicate') == 'map_status_join_pending'
                             and scan_progress+1e-9 < self._initial_scan_angle
-                            and time.monotonic()-scan_task_started < self._goal_timeout_s):
+                            and time.monotonic()-scan_task_started < scan_task_budget):
                         # Same observation attempt, measured angle and original
                         # deadline. The next loop requires a genuinely fresh
                         # exact pair and full rotation geometry before motion.

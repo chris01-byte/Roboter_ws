@@ -1,5 +1,21 @@
 # AP-06 Gesamtprüfung
 
+## Sensorüberwachten Start mit denselben Kriterien vergleichen
+
+Der Produktkandidat vom 11.10.2026 wird beim ursprünglichen Testdriver mit
+`--unknown-space-policy sensor_guarded` ausgewählt. Standard bleibt hier
+`observed_only`, damit bisherige Vergleichsläufe identisch konfiguriert bleiben.
+Die Auswahl lädt zusammen die Bewegungsregel im vorhandenen Explorer,
+Nav2-`allow_unknown`, eine separate LiDAR-Hindernisebene und den LiDAR/VL53-
+Collision-Monitor. Session-/Karten-/Scopebindung bleiben die tatsächlichen
+Werte des Laufs. Keine ideale Rundumsicht oder Wahrheitskarte hinzufügen.
+
+Alle ursprünglichen Szenarien, Sensoren, Weltgeometrien, Gesamtbudgets und
+Abnahmekriterien bleiben unverändert. `result.json` benennt die gewählte
+`unknown_space_policy`; Erfolg wird weiterhin anhand des Missions-/Karten-
+Ergebnisses geprüft. Die neuen Parameter-/Starttests sind keine ganzen
+A/B/C-Läufe und kein realer Fahrnachweis.
+
 `ap06_closed_product.py` startet die vorhandene Mission-Manager-/C++-BT-/
 Explorer-Kette, echtes Nav2 NavigateToPose mit NavFn/RPP, Fahrtor, nativen
 Velocity Smoother und Collision Monitor. Ein echter `robot_localization`-EKF

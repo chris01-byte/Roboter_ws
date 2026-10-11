@@ -1,0 +1,4 @@
+# Revert the motion policy without overwriting the caller's bound profile.
+explore_node:
+  ros__parameters:
+    metric_unknown_space_policy: observed_only

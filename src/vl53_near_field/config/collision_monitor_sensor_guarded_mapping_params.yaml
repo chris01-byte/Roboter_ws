@@ -1,0 +1,66 @@
+# Sensor-guarded mapping: same padded chassis, 2-s prediction and 30% slowdown.
+# Keep the existing Humble approach threshold (max_points=1). Zero would
+# stop EVERY command because its static-body check uses points >= max_points.
+# The two original VL53 sources, thresholds and calibration are unchanged.
+# LiDAR masks/invalid rays are not evidence of free space.
+collision_monitor:
+  ros__parameters:
+    base_frame_id: base_link
+    odom_frame_id: odom
+    cmd_vel_in_topic: cmd_vel_smoothed
+    cmd_vel_out_topic: cmd_vel
+    state_topic: collision_monitor_state
+    transform_tolerance: 0.3
+    source_timeout: 3.0
+    base_shift_correction: false
+    stop_pub_timeout: 2.0
+    polygons:
+    - FootprintApproach
+    - SlowZone
+    FootprintApproach:
+      type: polygon
+      footprint_topic: /local_costmap/published_footprint
+      action_type: approach
+      time_before_collision: 2.0
+      simulation_time_step: 0.05
+      max_points: 1
+      visualize: true
+      polygon_pub_topic: collision_mapping_approach
+      enabled: true
+    SlowZone:
+      type: polygon
+      points:
+      - 0.8
+      - 0.25
+      - 0.8
+      - -0.25
+      - 0.3
+      - -0.25
+      - 0.3
+      - 0.25
+      action_type: slowdown
+      max_points: 1
+      slowdown_ratio: 0.3
+      visualize: true
+      polygon_pub_topic: collision_slow_zone
+      enabled: true
+    observation_sources:
+    - vl53_left
+    - vl53_right
+    - lidar
+    vl53_left:
+      type: pointcloud
+      topic: /near_field/left/points
+      min_height: 0.05
+      max_height: 0.5
+      enabled: true
+    vl53_right:
+      type: pointcloud
+      topic: /near_field/right/points
+      min_height: 0.05
+      max_height: 0.5
+      enabled: true
+    lidar:
+      type: scan
+      topic: /scan_normiert
+      enabled: true

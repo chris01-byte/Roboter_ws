@@ -1,5 +1,33 @@
 # Werkzeuge für Kartierung und Lokalisierung
 
+## Neuer sensorüberwachter Kartierungsstart
+
+Der Kandidat auf `feature/ap06-sensor-guarded-start` verwendet in
+`app_mapping.launch.py` und `nav_mapping.launch.py` standardmäßig
+`unknown_space_policy:=sensor_guarded`. Die bereits gebundene private metrische
+Parameterdatei weiterhin über `explore_params_overlay` übergeben; die neue
+Bewegungsdatei überschreibt keine Session, Kartenepoche oder Scope-Geometrie.
+`start_explorer:=false` bleibt für den bestehenden rein lesenden Vorlauf
+verfügbar. Beide Fahr-Opt-ins bleiben standardmäßig aus.
+
+`metric_scope_vorbereiten.py` gibt den getrennten Explorer-Start jetzt ebenfalls
+mit `unknown_space_policy:=sensor_guarded` aus. Beim Rückfall das Tool mit
+`--unknown-space-policy observed_only` verwenden; seine Auswahl muss zur
+Auswahl des weiterlaufenden Mapping-Stacks passen. Es startet selbst keine Fahrt.
+
+In diesem Modus darf unbekannte Karte Planung zulassen; private Startkörper-
+und Egress-Ausnahmen werden nicht verwendet. Die segmentierte 360°-Beobachtung
+hat vor Zielsuche Vorrang, sofern keine erkannten Hindernisse oder Quellenfehler
+sie sperren. Ein gesperrter Rundblick darf zur normalen Beobachtungszielsuche
+führen. LiDAR arbeitet zusätzlich in einer eigenen Nav2-Hindernisebene und
+in der vorhandenen letzten Kollisionsbremse. VL53-Abstände und Antriebslimits
+bleiben unverändert. Keine separate `cmd_vel`- oder Motorsteuerung starten.
+
+Rückfall: denselben eigenen Kandidaten geordnet bis zum bestätigten Halt
+beenden und mit `unknown_space_policy:=observed_only` neu starten. Nicht während
+einer Mission umschalten. Installation und reale Abnahme ausschließlich nach
+aktuellem STATUS/ROBOT_TRANSFER; diese Anleitung ist kein erfolgter Transfer.
+
 ## Feste LAB-Diagnose nach einer realen Bewegung
 
 Die bestehende Stage-3-Diagnose nutzt ausschließlich ihren Diagnoseeingang in

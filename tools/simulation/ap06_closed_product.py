@@ -639,8 +639,18 @@ def transition_lifecycle(change_client, state_client, transition, timeout=30.):
     raise TimeoutError('actual lifecycle transition state not confirmed')
 
 
-def params(repo, out):
+def params(repo, out, unknown_space_policy='observed_only'):
+    if unknown_space_policy not in ('observed_only', 'sensor_guarded'):
+        raise ValueError('Unknown unknown_space_policy')
     p = yaml.safe_load((repo/'src/robot_navigation/config/nav2_params_real.yaml').read_text())
+    if unknown_space_policy == 'sensor_guarded':
+        def merge(target, overlay):
+            for key, value in overlay.items():
+                if isinstance(value, dict):
+                    merge(target.setdefault(key, {}), value)
+                else:
+                    target[key] = value
+        merge(p, yaml.safe_load((repo/'src/robot_navigation/config/nav2_sensor_guarded_mapping_params.yaml').read_text()))
     tree = str(repo/'src/explore/behavior_trees/navigate_to_pose_no_recovery.xml')
     p['bt_navigator']['ros__parameters']['default_nav_to_pose_bt_xml'] = tree
     p['bt_navigator']['ros__parameters']['default_nav_through_poses_bt_xml'] = str(
@@ -650,7 +660,9 @@ def params(repo, out):
     p['hwt601_mapping_ekf'] = yaml.safe_load((repo/'src/robot_state_estimation/config/ekf_hwt601_mapping.yaml').read_text())['hwt601_mapping_ekf']
     p['slam_toolbox'] = yaml.safe_load((repo/'src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml').read_text())['slam_toolbox']
     p['slam_toolbox']['ros__parameters']['scan_topic'] = '/scan_normiert'
-    p.update(yaml.safe_load((repo/'src/vl53_near_field/config/collision_monitor_mapping_params.yaml').read_text()))
+    collision_profile = ('collision_monitor_sensor_guarded_mapping_params.yaml'
+                         if unknown_space_policy == 'sensor_guarded' else 'collision_monitor_mapping_params.yaml')
+    p.update(yaml.safe_load((repo/'src/vl53_near_field/config'/collision_profile).read_text()))
     destination = out/'native_params.yaml'
     destination.write_text(yaml.safe_dump(p))
     return destination
@@ -666,12 +678,14 @@ def run(args):
     from explore.metric_frontier_runtime import MetricFrontierRuntime
     manifest_path = args.manifest
     manifest = json.loads(manifest_path.read_text())
+    unknown_space_policy = getattr(args, 'unknown_space_policy', 'observed_only')
     cases = manifest['positive']+manifest['negative']
     case = next(c for c in cases if c['id'] == args.case)
     out = args.output
     out.mkdir(parents=True, exist_ok=False)
     (out/'manifest.json').write_bytes(manifest_path.read_bytes())
     result = {'case': case, 'passed': False, 'hardware_qualified': False, 'isolation': isolation,
+              'unknown_space_policy': unknown_space_policy,
               'manifest_compatible': not (args.ideal_lidar or args.profile_selection or args.capture_decisions or args.capture_geometry or args.diagnostic_beams or concept_deferred_departure),
               'concept_deferred_departure': concept_deferred_departure,
               'actual_lidar_beams': args.diagnostic_beams or manifest['sensor']['lidar_beams'],
@@ -738,7 +752,7 @@ def run(args):
         return [sys.executable, '-c', f'from {module} import main; main()']
     def executable(package, name):
         return str(Path(get_package_prefix(package))/'lib'/package/name)
-    native = params(args.repo, out)
+    native = params(args.repo, out, unknown_space_policy)
     fault = {'until': 0.}
     model = World(case['door_m'], case['start'])
     try:
@@ -825,6 +839,8 @@ def run(args):
             '-p', f'behavior_tree:={args.repo}/src/explore/behavior_trees/navigate_to_pose_no_recovery.xml',
             '-p', f'wohnungserkundung_persistence_directory:={out}/checkpoints']+shared[1:]
         explorer_command = py('explore.explore_node')
+        if unknown_space_policy == 'sensor_guarded':
+            explorer += ['--params-file', str(args.repo/'src/explore/config/metric_sensor_guarded_motion_params.yaml')]
         if concept_deferred_departure:
             code = ('import sys; '
                 f'sys.path.insert(0, {str(args.repo/"tools/simulation")!r}); '
@@ -1119,6 +1135,8 @@ if __name__ == '__main__':
     parser.add_argument('--repo', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--case', required=True)
+    parser.add_argument('--unknown-space-policy', choices=('observed_only', 'sensor_guarded'),
+                        default='observed_only', help='product motion policy; same worlds/sensors/acceptance')
     parser.add_argument('--tf-probe', type=Path, required=True)
     parser.add_argument('--manifest', type=Path,
                         default=Path(__file__).with_name('ap06_product_scenarios.json'))

@@ -1,0 +1,42 @@
+# Load after nav2_params_real.yaml only for sensor_guarded mapping.
+# The raw SLAM map and track_unknown_space remain unchanged.
+planner_server:
+  ros__parameters:
+    GridBased:
+      allow_unknown: true
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      plugins: [obstacle_layer, lidar_obstacle_layer, inflation_layer]
+      # Separate layer: a LiDAR ray above a low VL53 obstacle must not clear
+      # that obstacle out of the VL53 layer.
+      lidar_obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: lidar
+        lidar:
+          topic: /scan_normiert
+          data_type: LaserScan
+          marking: true
+          clearing: true
+          obstacle_max_range: 4.0
+          raytrace_max_range: 4.0
+          inf_is_valid: false
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      plugins: [static_layer, obstacle_layer, lidar_obstacle_layer, inflation_layer]
+      lidar_obstacle_layer:
+        plugin: nav2_costmap_2d::ObstacleLayer
+        enabled: true
+        observation_sources: lidar
+        lidar:
+          topic: /scan_normiert
+          data_type: LaserScan
+          marking: true
+          clearing: true
+          obstacle_max_range: 4.0
+          raytrace_max_range: 4.0
+          inf_is_valid: false

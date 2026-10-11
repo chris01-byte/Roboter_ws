@@ -34,11 +34,14 @@ def generate_launch_description():
     crop = LaunchConfiguration('crop')
     start_web_gui = LaunchConfiguration('start_web_gui')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
+    unknown_space_policy = LaunchConfiguration('unknown_space_policy')
     default_explore_params = os.path.join(
         get_package_share_directory('explore'), 'config',
         'explore_params.yaml')
 
     return LaunchDescription([
+        DeclareLaunchArgument('unknown_space_policy', default_value='sensor_guarded',
+            choices=['observed_only', 'sensor_guarded']),
         DeclareLaunchArgument(
             'active_drive', default_value='false',
             description='true bestromt die Basis; nur nach Hardwarefreigabe.'),
@@ -102,6 +105,7 @@ def generate_launch_description():
                 'normalize_scan': normalize_scan,
                 'crop': crop,
                 'explore_params_overlay': explore_params_overlay,
+                'unknown_space_policy': unknown_space_policy,
             }.items()),
 
         # Beide Manager sind reine Beobachter/Persistenzschichten. Sie senden

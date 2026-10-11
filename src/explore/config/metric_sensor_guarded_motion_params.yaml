@@ -1,0 +1,18 @@
+# Motion policy only: keep the supplied actual session/map/scope binding.
+# Unknown is plannable, not observed free. Requires the matched mapping launch
+# with LiDAR + VL53 collision monitoring and Nav2 allow_unknown.
+explore_node:
+  ros__parameters:
+    exploration_strategy: metric_frontier
+    metric_unknown_space_policy: sensor_guarded
+    metric_start_strategy: sensor_scan_first
+    metric_self_body_enabled: false
+    metric_start_egress_enabled: false
+    initial_scan_enabled: true
+    initial_scan_angle_rad: 6.283185307179586
+    wohnungserkundung_policy_enabled: false
+    wohnungserkundung_navigation_enabled: false
+    portal_crossing_enabled: false
+    door_traverse_distance_m: 0.0
+    coverage_enabled: false
+    return_to_start: false

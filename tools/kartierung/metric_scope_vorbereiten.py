@@ -442,6 +442,8 @@ def main(argv=None):
     parser.add_argument('--tf-probe', type=Path, required=True, help='built existing tools/simulation/tf_ownership_probe binary')
     parser.add_argument('--install-root', type=Path, required=True, help='explicit product-install root; reject mixed/old Python overlays')
     parser.add_argument('--timeout', type=float, default=15.)
+    parser.add_argument('--unknown-space-policy', choices=('observed_only', 'sensor_guarded'),
+        default='sensor_guarded', help='same policy as the running app_mapping stack; printed launch only')
     parser.add_argument('--maximum-cells', type=int, default=None,
         help='Explicit processing capacity copied into the bound profile; no resampling or geometry changes')
     parser.add_argument('--map-owner', default='/slam_toolbox')
@@ -477,6 +479,7 @@ def main(argv=None):
     print('Nur anzeigen; keine Mission oder Bewegung gestartet. Bestehenden passiven Stack weiterlaufen lassen:')
     print('Snapshotbindung: Explorer muss beim ersten Kartenempfang denselben Fingerprint erhalten; bei Änderung neu binden.')
     print(shlex.join(['ros2', 'launch', 'explore', 'explore.launch.py', 'explore_params_overlay:='+str(output),
+        'unknown_space_policy:='+args.unknown_space_policy,
         'require_hwt601_fusion:=true', 'hwt601_active_drive:=false', 'hwt_development_contract:=true']))
     return 0
 

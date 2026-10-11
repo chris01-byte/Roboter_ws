@@ -52,7 +52,7 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert "'slam_lidar.launch.py'" in source
     assert "'vl53_near_field.launch.py'" in source
     assert "'collision_monitor_mapping_params.yaml'" in source
-    assert "'collision_params_file': mapping_collision_params" in source
+    assert "'collision_params_file': collision_params" in source
     assert "'safety_monitor.launch.py'" in source
     assert "'explore.launch.py'" in source
     assert "'enable_auto_explore', default_value='false'" in source
