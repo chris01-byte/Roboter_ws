@@ -1151,3 +1151,15 @@ betroffene Prüfungen grün; Frame-/Nichtendlichfehler weiter terminal. V16
 gemeinsame Gesamtprüfung folgt. CPU-Stichprobe zeigt zusätzliche Threadarbeit,
 keine bewiesene gemeinsame Timingursache. Grenzen/Budgets unverändert.
 Rückfall eigener Klassifizierungscommit/private Overlay-Abwahl; Belege STATUS.
+
+## 11.10.2026 – AP-06 v16 negativ, privater Queryfehler eingeordnet
+
+Gemeinsamer dc84753/v16, 2.969 Regressionen positiv, Originalmissionen 0/3,
+Cancel/HOLD 2/2; HOLD nur Stopp, keine vollständige Wiederaufnahme. A scheitert
+an einer unzulässigen Anfangsdrehung eines nativen Vorschlags. Tatsächlicher
+adaptiver Gegenfall belegt fehlende begrenzte Verbuchung; Klassifizierung
+ergänzt, Drehguard und alle Schutz-/Budgetgrenzen gleich. 193 gezielte Tests
+positiv. 1-ms-Executor-Yield wegen verzögerter aktueller Nachrichtenzustellung
+verworfen, Null-Yield ohne Gewinn verworfen. Keine Realfahrt oder gemessene
+gemeinsame Fehlerursache. Weitere reine Rechenarbeit wird geprüft; gemeinsamer
+v17 folgt. Rückfall eigener Klassifizierungscommit/privates Overlay abwählen.

@@ -252,12 +252,47 @@ Reale Rotation bleibt abgelehnt. Falsche Frames und nicht endliche Planwerte
 bleiben terminal. Gegenfall zuvor rot, danach grün; **281 betroffene Fälle positiv**.
 [Gegenfall und Rückfall](evidence/ap06-native-stop-recovery-20261011.json).
 
-**Genau nächster Schritt:** sauberen gemeinsamen v16 aus dieser begrenzten
-Korrektur bauen, vollständige Regression und ursprüngliche A/B/C/Cancel/HOLD
-unverändert prüfen. Auswahl-/Quellenzeitprobleme bleiben offen und getrennt
-zu messen; 3/3 vollständige Missionen und reale autonome Folge fehlen.
-Rückfall: eigenen Klassifizierungscommit revertieren bzw. privates Overlay
-abwählen. Keine Geometrie- oder Quellenprüfung/Frist geändert.
+Gemeinsamer **v16 aus `dc84753`**: 14 Pakete separat in 177,291 s gebaut,
+157 Quelle-Installgleichheiten, 756 Installhashes; **2.969 Regressionen positiv**,
+keine Fehler/Skip. Ursprüngliche vollständige A/B/C weiter **0/3**, je eine
+Beobachtung und 0,293228/0,356163/0,713589 m. A zuerst kein Kandidatensichtpunkt
+am nativen Stop, terminal unzulässige private Anfangsdrehung. B zuerst
+Körperscan nach Verarbeitung 518,511 ms alt bei 345,784 ms Eingangsarbeit,
+danach Auswahlbudget 5,239773 s/2,048424 s Thread-CPU. C zuerst Scan nach
+0,070940 rad/2,337272 s geometrisch abgelehnt, danach Auswahlbudget
+5,016257 s/2,016217 s CPU. Ursache aller Stopps weiterhin nicht gemeinsam
+bewiesen. Originale Cancel/HOLD **2/2**, Cancel-Halt 0,401796 s; HOLD-Halt
+0,311322 s nach HOLD, terminal `hwt_terminal`. Der ursprüngliche HOLD-Fall
+qualifiziert ausdrücklich keine vollständige Wiederaufnahme. Alle vier
+Kommandoströme null, Kinder terminal. Erster Testdriverstart scheiterte vor
+Sammlung am bereits angelegten leeren Ergebnisordner; korrekt reparierter
+Start, ursprünglicher Fehler und erfolgreiche Stufen separat erhalten.
+Alle 1.048 Bestandsinstallhashes unverändert, Main sauber.
+[V16-Build und Originalfälle](evidence/ap06-correction-v16-20261011.json).
+
+Schritt 2/4: zweiter tatsächlicher Klassifizierungsgegenfall geschlossen.
+Ein nativer read-only Plan kann eine unzulässige Anfangsdrehung im privaten
+Startbestand enthalten. Die Drehung bleibt durch denselben vollständigen
+Guard abgelehnt. Ihre Ablehnung wird jetzt innerhalb unveränderter Versuchs-
+und Zeitlimits als verworfener Vorschlag verbucht, statt unmittelbar ohne
+Folgeversuch terminal zu enden. Echte adaptive Elternauswahl/echter privater
+Sweep vor Korrektur negativ, danach positiv; **193 betroffene Tests positiv**,
+kein Alignment/Nav2-Kind oder Aktor aus dem Gegenfall. Harte Quellen-/Kontext-
+fehler bleiben terminal. [Gegenfall](evidence/ap06-native-private-recovery-20261011.json).
+
+Zusätzliche Timingdiagnosen sind keine Qualifikation: eine 1-ms-Pause zwischen
+Executor-Dispatches spart CPU, verzögert aber während der Auswahl erzeugte
+Nachrichten bis 243,039 ms; Ansatz verworfen. Null-Warte-Yield ohne Rechenzeit-
+gewinn ebenfalls verworfen. Explorer-Hauptschleife unverändert. Gemessene
+wiederholte reine Inhaltsprüfungen werden gezielt reduziert und auf echte
+Änderungen an Raster/Referenz/Scope/Kontur geprüft. Originale Frischegrenzen,
+CPU-Zuteilungen, 5-s-Auswahlbudget und Missionskriterien unverändert.
+
+**Genau nächster Schritt:** reine Inhaltsarbeit fertig prüfen, Korrekturen
+als gemeinsamen sauberen v17 bauen, volle Regression und ursprüngliche
+A/B/C/Cancel/HOLD ausführen. Volle Wiederaufnahme und reale Folge separat
+belegen. Keine neue reale Sensor-/Bewegungsabnahme und keine Kundenfreigabe.
+Rückfall begrenzte eigene Commits revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

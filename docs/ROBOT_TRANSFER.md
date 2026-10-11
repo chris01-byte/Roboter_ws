@@ -3426,3 +3426,13 @@ Native Drehgeometrie unverändert; read-only Ablehnung im Elternablauf nun
 begrenzter Vorschlag statt harter Terminalgrund, 281 Tests. Gemeinsamer v16
 folgt. Kein Aktorstart/Autostartwechsel/Shutdown. Rückfall eigener Commit
 revertieren/private Overlay-Abwahl. Exakte Belege im aktuellen STATUS.
+
+## 11.10.2026 – AP-06 v16 privat geprüft
+
+dc84753 unter releases/ap06-correction-v16-20261011 separat gebaut, 14 Pakete,
+157 Quellgleichheiten/756 Installhashes. 2.969 Regressionen grün, Originale
+0/3, Cancel/HOLD 2/2; kein vollständiger Wiederaufnahme- oder Realbeleg.
+Alle 1.048 Bestandsinstallhashes gleich, Main 23928d9 sauber. Reiner nativer
+Queryfehler bleibt geometrisch abgelehnt, nun begrenzter Vorschlag; 193 Tests.
+Keine Aktoraktivierung/Install-/Autostart-/SDKänderung oder Shutdown. Privates
+Overlay bleibt Rückfall; neue gemeinsame Prüfung nach Rechenarbeitskorrektur.

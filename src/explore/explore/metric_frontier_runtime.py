@@ -3414,6 +3414,7 @@ class MetricFrontierRuntime:
                         stop_reason[0] = ('route_invalidated' if plan_error in (
                             'nav2_plan_footprint_sweep_invalid','nav2_plan_goal_orientation_invalid',
                             'nav2_plan_goal_stop_rotation_invalid',
+                            'nav2_plan_start_egress_in_place_turn',
                             'nav2_plan_controller_lookahead_sweep_invalid')
                             else plan_error)
                     else:
