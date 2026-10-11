@@ -1,6 +1,26 @@
 # Aktueller Agentenauftrag: AP-06
 
-## Aktiver Nutzerauftrag 11.10.2026 – LAB-Slots und selbstständige Wiederprüfung
+## Aktiver Nutzerauftrag 11.10.2026 – Gegenprüfung vor der Jetsonqualifikation
+
+Der Nutzer verlangt ausdrücklich eine Prüfung in externer Auditorrolle,
+Fehlerbehebungen und Alternativen vor dem Jetson-Test. Unter MASTERPLAN v1.5
+(WE-M0/M3/M4/M5/M6, WE-M7 gesondert) Vorgaben, gelieferten Produktstand,
+tatsächliches Install, Testaussagekraft und reale Abnahme getrennt bewerten.
+Basis dieser Gegenprüfung ist die Slotlieferung `d2978d4` / Produkt `12de37e`.
+Belegte Korrekturen erfolgen im separaten Kandidaten; keine neue Architektur,
+kein weiterer Navigator und keine pauschale Entsperrung von Quellenfehlern.
+
+Erwartet: reproduzierbare Gegenfälle vor/nach Korrektur, Quell-/Buildbindung,
+ehrliche Regression einschließlich Fehlschlägen, prüfbarer Bericht und
+konkrete Alternativen/Abschlussbedingungen. Ergebnis im
+[Auditbericht](AP06_EXTERNER_AUDIT_20261011.md). Nur [STATUS](STATUS.md) führt
+den aktuellen Befund und genau nächsten Schritt. Kein Audit-Grün aus früheren
+Teilabnahmen oder einem erfolgreichen Wiederholungslauf ableiten.
+Rückfall nach Halt/Prozessende über den erhaltenen Kandidaten; bekannte Fehler
+bleiben dabei bekannte Fehler. Keine reale Abnahme oder Veröffentlichung
+allein aus Dokumentation/Softwaretests behaupten. LAB-1 bleibt autorisiert.
+
+## Weiter geltender Umsetzungsauftrag 11.10.2026 – LAB-Slots und Wiederprüfung
 
 Der Nutzer beauftragt ausdrücklich die besprochene Slot-Strategie: einmaliger
 360°-LAB-Start ohne vorgeschaltete Kartenflächen-/Frontierfreigabe, danach

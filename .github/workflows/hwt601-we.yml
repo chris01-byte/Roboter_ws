@@ -137,6 +137,9 @@ jobs:
             src/explore/test/test_metric_snapshot_replan.py \
             src/explore/test/test_metric_start_observation.py \
             src/explore/test/test_metric_join_replan.py \
+            src/explore/test/test_metric_sensor_guarded_start.py \
+            src/explore/test/test_lab_slots.py src/explore/test/test_lab_slot_audit.py \
+            src/robot_navigation/test/test_sensor_guarded_mapping_launch.py \
             tools/simulation/test_ap06_world.py \
             tools/simulation/test_ap06_device_isolation.py tools/simulation/test_ap06_lifecycle.py tools/simulation/test_ap06_trace.py \
             tools/simulation/test_ap06_concept_experiment.py \

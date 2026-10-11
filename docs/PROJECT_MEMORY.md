@@ -1,5 +1,23 @@
 # Projektgedächtnis
 
+## 11.10.2026 – Nutzer verlangt Gegenprüfung vor Jetson-Test
+
+Slotlieferung `d2978d4` / Produkt `12de37e` in eigener Auditorrolle geprüft;
+Korrekturprodukt `900ce5d` im separaten `fix/ap06-slot-audit`. Belegte Fehler
+bei Restweg/Zieldrehung, Beobachtungsfortsetzung nach HOLD/Halt, letztem
+Scanbudget und verschachtelten Quellenlatches korrigiert. CI muss die neuen
+Start-/Slot-/Launchtests tatsächlich auswählen. Architektur und LAB-1 bleiben.
+
+Breite Regression zeigt offene Zeit-/Reihenfolgeprobleme; ein danach grüner
+gezielter Wiederholungslauf ersetzt keinen bestandenen Gesamtlauf. Alte
+Gesamtmissionen scheitern bereits vor Startbereitschaft. Daher vor autonomem
+Jetson-Test den gerätefreien Quellen-/Startpfad anhand vollständiger Zeitketten
+qualifizieren, keine weitere pauschale Explorerentsperrung. Ein OOMWOO-Kern
+ersetzt weder Radkontinuität noch TF. Bericht:
+[AP06_EXTERNER_AUDIT_20261011](wohnungserkundung/AP06_EXTERNER_AUDIT_20261011.md).
+Aktueller Iststand und genau nächster Schritt nur im STATUS; keine neue Roadmap,
+keine neue Standardfreigabe, kein Hardware-/Gesamt-Grün.
+
 ## 11.10.2026 – LAB-Slots und Wiederprüfung ausdrücklich beauftragt
 
 Der Nutzer verlangt die Umsetzung der besprochenen Slot-Strategie statt einer

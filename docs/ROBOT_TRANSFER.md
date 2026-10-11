@@ -1,5 +1,40 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – Auditkandidat; vor autonomem Zieltest Quellenpfad klären
+
+Korrigierter Produktcommit `900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53`, eigener
+Zweig `fix/ap06-slot-audit`. Nutzer verlangt Gegenprüfung vor Jetson-Test.
+[Auditbericht](wohnungserkundung/AP06_EXTERNER_AUDIT_20261011.md) dokumentiert
+fünf korrigierte Fehlergruppen, CI-Auswahl und offene Prüfstandprobleme;
+aktuelles Ergebnis/weiterer Auftrag ausschließlich im
+[STATUS](wohnungserkundung/STATUS.md).
+
+Alle 15 Produktpakete separat für Humble/x86_64 gebaut; bestehender gepinnter
+37-Pakete-Unterbau wiederverwendet. Kein ARM64-Install, keine Übertragung oder
+Änderung des Roboters. Lieferung `/workspace/slot-audit-results/` enthält Bundle
+ab `22a4b76`, kleinen Reviewpatch ab `d2978d4`, Bericht und Rohbelege. Dokumentation
+und CI folgen als eigener Commit hinter dem getesteten Produkt.
+
+Vor autonomem Jetson-Test die gerätefreie Quellen-/Startqualifikation aus STATUS
+abschließen. Ein vorheriger passiver ARM-Build belegt nur Portierbarkeit. Bei
+späterem Zieltest Quellen, Module, alle Präfixe und tatsächlich verwendete
+Unterbauten erneut binden; Bestandsinstall und getrennte Build/Install/Logs
+erhalten. Simulationsprofil `rpp_rollout` nicht unbemerkt auf den realen Standard
+`conservative` übertragen: aktuelle Konfiguration und echte Trackingreserven
+vor Türpassagen belegen. Die Cloudfehler beweisen keinen Hardwaredefekt.
+
+Physische Wirkung der Korrektur nach späterer qualifizierter Installation:
+keine erfundene Rückwendung zu alten Wegpunkten, volle Prüfung neuer Zielwinkel,
+kein erneutes Nav2-Ziel für unterbrochene Beobachtung nach Ankunft, Fortsetzung
+des begonnenen Restwinkels innerhalb derselben Frist. Explizite Quellenlatches
+bleiben terminal; keine automatischen Fehlerlöschungen. Reale Sensorzeiten,
+Frames, Brems-/Sichtwirkung und Recorder bis zum bestätigten Halt weiter prüfen.
+
+Rückfall nach Halt/Ende eigener Kandidatenprozesse: Auditcommit im separaten
+Kandidaten revertieren oder erhaltenen Install verwenden; bekannte Altfehler
+dokumentiert lassen. Kein Live-Moduswechsel, keine neue pauschale Freigaberunde;
+bestehender LAB-1-Auftrag bleibt bestehen.
+
 ## 11.10.2026 – LAB-Slotquellstand bereitgestellt; kein Zielsystemtransfer
 
 Geprüfter Produktquellstand **`12de37e89fed2a30d45fa3691919c2cc415560c9`**,

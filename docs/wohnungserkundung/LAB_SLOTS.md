@@ -31,10 +31,10 @@ entzieht dagegen die alte Arbeitsgrundlage.
 
 | Auslöser | Reaktion | Was erhalten bleibt |
 |---|---|---|
-| Kurze Sensor-/Pose-/Kartenlücke | Bewegung stoppen, Quellen und Halt neu prüfen; denselben Auftrag erneut planen | Ursprüngliches Ziel, Versuchszähler und absolute Aufgabenfrist |
+| Kurze Sensor-/Pose-/Kartenlücke | Bewegung stoppen, Quellen und Halt neu prüfen; unterbrochene Fahrt neu planen, nach terminalem Kind nur Beobachtung fortsetzen | Ursprüngliches Ziel, Versuchszähler und absolute Aufgaben-/Beobachtungsfristen |
 | Nav2 verwirft oder erreicht ein Ziel nicht | Nach bestätigtem Halt anderen geprüften Anfahrpunkt suchen | Räumliche Fehlversuchshistorie und gesamte Missionsfrist |
 | Kein brauchbares Ziel, aber noch unbekannte erreichbare Fläche | Ein kurzer gemessener Beobachtungsschwenk; danach auf neue Beobachtung oder bestehende Abkühlfrist warten | Keine erfundene Durchfahrt, Beobachtung oder erfolgreiche Kartierung |
-| HWT-HOLD | Bestehende Halt-/ACK-Kette verwenden, danach tatsächlichen Weg neu prüfen | HOLD-Ursache, Zähler, Aufgabe und ursprüngliche Fristen |
+| HWT-HOLD | Bestehende Halt-/ACK-Kette verwenden; vor erneuter Fahrt tatsächlichen Weg prüfen, nach terminalem Kind nur Beobachtung fortsetzen | HOLD-Ursache, Kindresultat, Zähler, Aufgabe und ursprüngliche Fristen |
 | Dauerhaft fehlende notwendige Quelle | Nach einem begrenzten ununterbrochenen Prüfzeitraum stehen bleiben und Hilfebedarf melden | Ehrlicher Teilstand und gespeicherte Arbeit; kein Erfolgsabschluss |
 | Not-Aus, gelatchter Antriebsfehler, falsche Drehrichtung, ungültiger Controllervertrag, unbekannter Kindzustand | Sicher beenden und tatsächlichen Grund melden | Fehler und Schutzsperren werden niemals gelöscht |
 
@@ -44,6 +44,15 @@ Normale Fahrfehlschläge erreichen im LAB nicht mehr über den globalen
 `max_failed_goals`-Zähler allein einen Missionsabbruch. Die Grenzen je räumlicher
 Aufgabe, dieselben bereits gescheiterten Ziele, die Gesamtzahl der Aufgaben und
 die ursprünglichen absoluten Fristen bleiben bestehen.
+
+Die Gegenprüfung vom 11.10.2026 präzisiert die Fortsetzung: Ist das Nav2-Kind
+bereits terminal, bleiben sein Ergebnis und das ursprüngliche Beobachtungsende
+erhalten. Nach HOLD oder verzögerter Haltbestätigung nur die ausstehende
+Beobachtung fortsetzen, kein bereits erledigtes Ziel nochmals senden. Ein
+begonnener Scan behält auch am Aufgabenlimit seinen gemessenen Restwinkel und
+seine ursprüngliche Frist. Verschachtelte Encoder- und Ausgabelatches sind echte
+Fehler, keine kurzen Quellenlücken. Softwarebelege und noch offene Zeit-/Gesamt-
+prüfung im [Auditbericht](AP06_EXTERNER_AUDIT_20261011.md); kein realer Fahrbeweis.
 
 Nach einem gewöhnlichen Fehlversuch darf ein anderer Anfahrpunkt ohne neue
 Kartenrevision geprüft werden, wenn die beiden Zielankunftsbereiche mit ihren

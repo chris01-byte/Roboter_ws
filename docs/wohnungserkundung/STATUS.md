@@ -1,5 +1,61 @@
 # Wohnungserkundung – aktueller Status
 
+## 11.10.2026 – Auditkorrekturen geprüft; Regression und Gesamtfahrt noch offen
+
+**Aktiver Produktkandidat `900ce5d8a3f56dd5f59f6b16462d3a9cb1cc8a53`**, Branch
+`fix/ap06-slot-audit`, getrennt aus Dokumentationsstand `d2978d4` / Produkt
+`12de37e`. Die aktuelle Nutzeranweisung verlangt eine Gegenprüfung **vor** der
+Jetsonprüfung. MASTERPLAN v1.5, Slot-Strategie und bestehende LAB-1-Autorisierung
+bleiben erhalten. [Auditbericht](AP06_EXTERNER_AUDIT_20261011.md) und
+[Quell-/Ergebnisbeleg](evidence/ap06-slot-audit-20261011.json).
+
+**Fünf bestätigte Fehlergruppen korrigiert:** vergangene Nav2-Wegpunkte erzeugen
+keine erfundene Rückwendung mehr; neue Livepfade erhalten vollständigen
+Pfadvertrag/Zieldrehungsprüfung; HOLD oder verzögerte Haltbestätigung nach Ankunft
+setzen nur die Beobachtung fort; ein begonnener letzter Scan behält seinen
+Restwinkel; gelatchte Encoder-/Ausgabefehler gelten nicht als kurze Datenlücke.
+Sensorgrenzen, ursprüngliche Fristen, Versuchszähler und Faultflags unverändert.
+CI-Testauswahl um vier bisher fehlende Start-/Slot-/Launchdateien ergänzt.
+
+**Nachweise:** 15 Produktpakete separat unter Humble/x86_64 gebaut, vorhandener
+gepinnt gebauter nativer 37-Pakete-Unterbau wiederverwendet. 15 Produktpräfixe,
+163 Quelle-/Install-Dateien und 15 geladene Module gebunden. Finale Gegenfälle
+auf `12de37e`: 11 negativ, 2 bestehende Kontrollen positiv. Korrigiert:
+46 gezielte Slotfälle bestanden; die vier CI-Dateien umfassen 70 bestandene
+Fälle einschließlich dieser 46. Bewegungs-/Serviceersatz ist kein Fahrnachweis.
+
+**Breite Regression: 3.128 bestanden, fünf fehlgeschlagen, keine Skips.**
+Betroffen: vorhandene kurze Beobachtungsauswahl, TF-Empfang und drei echte
+Quellenzeit-/Isolationsfälle im gerätefreien Prüfstand. Drei Gerätefälle auch
+gegen altes Produkt negativ; alle fünf gegen unveränderten Kandidaten im
+gezielten Folgelauf positiv. Kein zwischenzeitlicher Produktfix erklärt das;
+zeit-/reihenfolgeabhängige Instabilität bleibt offen. Der Gesamtlauf wird nicht
+rückwirkend als 3.133 bestanden ausgegeben. Alle Zwischen-/Rohbelege erhalten.
+
+**Gesamtmissionen des neuen Auditkandidaten noch nicht neu qualifiziert.**
+Alte `12de37e`-Originale weiterhin 0/3 positive Gesamtfälle, 0/2 neue
+Stoppqualifikationen: Abbruch vor Missionsstart/Fehlerauslösung an Karten- oder
+HWT-Bereitschaft. Rohdaten belegen Encoder-/Paarzeitverletzungen; genauer
+Ursprung im Produzenten-/Publikations-/Empfangspfad offen. Kein Nachweis für
+volle Drehung, Türfahrt, ganze HOLD-Fortsetzung oder reale Kartenqualität.
+Simulation nutzt `rpp_rollout`, realer Standard `conservative`; tatsächliches
+Zielprofil/Tracking vor späterer Passagenabnahme binden.
+
+Quellcode/CI/Beleg lokal versioniert und separat lieferbar; kein Push/Merge,
+Jetsontransfer, Bestandsinstallwechsel oder reale Aktorbewegung. Der korrigierte
+Stand ist kein freigegebenes autonomes Fahrprodukt.
+
+**Genau nächster Schritt:** Gerätefreie Quellen- und Startqualifikation des
+Auditkandidaten: die offenen Auswahl-/TF-/Quellenzeitfälle mit vollständigen
+ursprünglichen Quell-, Publikations- und Empfangszeiten reproduzieren, den
+ersten verantwortlichen Übergang gezielt korrigieren und denselben Stand mit
+unveränderten Regressionen sowie ursprünglichen Gesamtkriterien nachweisen.
+Erst daraus die autonome Jetsonprüfung ableiten; ein passiver ARM-Build allein
+wäre lediglich ein Portierbarkeitscheck. Keine pauschale Fehlerentsperrung oder
+weitere Standardfreigaberunde; LAB-1 gilt weiter.
+
+## Historischer LAB-Slotstand vor der Gegenprüfung
+
 ## 11.10.2026 – LAB-Slots implementiert und softwaregeprüft; Gesamtfahrt offen
 
 **Produktquellstand `12de37e89fed2a30d45fa3691919c2cc415560c9`**, Branch
