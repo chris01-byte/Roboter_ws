@@ -256,6 +256,44 @@ def test_interrupted_child_resumes_same_job_with_original_deadline_and_counts(mo
     saved=node._metric_checkpoint['policy']['tasks'][drives[0][3]]
     assert saved['tries']==1 and saved['failures']==0
     assert bool(waits) is (interrupt=='hwt_hold')
+    if interrupt=='hwt_hold':
+        assert node._metric_status['first_trigger']['reason']=='hwt_hold'
+        assert node._metric_status['first_trigger']['child_result']=='canceled'
+
+
+def test_scan_hwt_trigger_survives_later_source_recheck_and_terminal_reason(monkeypatch):
+    node,grid,clock,parent,terminal=lab(monkeypatch)
+    held=[False]
+    outage_until=[0.]
+    calls=[]
+    node._wohnungserkundung_hwt_hold=lambda:held[0]
+    node._metric_operating_snapshot=lambda **_:dict(safe=clock[0]>=outage_until[0],
+        first_rejecting_predicate=None if clock[0]>=outage_until[0] else 'pose_missing_stale_or_invalid')
+    def resume(_parent,_expired,*,require_target):
+        assert not require_target
+        held[0]=node._hwt_hold_announced=False
+        outage_until[0]=clock[0]+.1
+        return 'resumed'
+    node._wohnungserkundung_wait_for_hwt_resume=resume
+    def turn(*,stop_requested,angle_rad):
+        assert not stop_requested()
+        calls.append(angle_rad)
+        if len(calls)==1:
+            held[0]=node._hwt_hold_announced=True
+            assert stop_requested()
+            return 'interrupted',.2
+        parent.is_cancel_requested=True
+        return 'interrupted',.1
+    node._scan_in_place=turn
+    node._execute_metric_frontier(parent,10.,.3)
+    assert terminal==['cancel'] and len(calls)==2
+    assert calls[1]==pytest.approx(2*math.pi-.2)
+    assert node._metric_status['scan_progress_rad']==pytest.approx(.3)
+    assert node._metric_status['first_trigger']['reason']=='hwt_hold'
+    assert node._metric_status['first_trigger']['phase']=='scan_interrupted'
+    assert node._metric_status['first_trigger']['scan_result']=='interrupted'
+    assert any(r['phase']=='slot_revalidation' for r in node._metric_status['reactions'])
+    assert node._metric_status['terminal_reason']=='user_canceled'
 
 
 @pytest.mark.parametrize('fault',['wrong_direction','stop_unconfirmed','nav2_controller_geometry_contract_invalid'])

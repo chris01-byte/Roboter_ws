@@ -298,6 +298,7 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
         if expired() or (attempts>=node._max_frontier_goals and resume_target is None):
             return finish('partial','budget_exhausted')
         if node._wohnungserkundung_hwt_hold():
+            node._metric_record_transition('slot_hwt_hold','hwt_hold')
             resumed=node._wohnungserkundung_wait_for_hwt_resume(goal_handle,expired,require_target=resume_target is not None)
             if resumed!='resumed':
                 return finish('canceled' if resumed=='user_canceled' else 'failed',f'hwt_{resumed}')
@@ -372,6 +373,8 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             if expired():
                 return finish('partial','budget_exhausted')
             if node._hwt_hold_announced or first[0]=='hwt_hold':
+                node._metric_record_transition('scan_interrupted',first[0] or 'hwt_hold',
+                    scan_result=status,achieved_angle_rad=scan_progress)
                 continue
             reason=first[0] or status
             if status!='success':
@@ -621,6 +624,8 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             return finish('canceled','user_canceled')
         if node._hwt_hold_announced or reason=='hwt_hold':
             original_trigger=original_trigger or reason or 'hwt_hold'
+            node._metric_record_transition('slot_motion_interrupted',reason or 'hwt_hold',
+                task=target.task_id,child_result=status)
             record_child(dict(task=target.task_id,result=status,stop_reason='hwt_hold',
                 original_trigger=original_trigger,first_stop_reason=first[0],
                 terminal_child=True,child_dispatched=dispatched,arrived=False,observed_cells=0))
