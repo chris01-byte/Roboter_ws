@@ -3413,6 +3413,7 @@ class MetricFrontierRuntime:
                         self._metric_status['nav2_plan_rejection'] = plan_error
                         stop_reason[0] = ('route_invalidated' if plan_error in (
                             'nav2_plan_footprint_sweep_invalid','nav2_plan_goal_orientation_invalid',
+                            'nav2_plan_goal_stop_rotation_invalid',
                             'nav2_plan_controller_lookahead_sweep_invalid')
                             else plan_error)
                     else:

@@ -3415,3 +3415,14 @@ Originalmissionen 0/3, Cancel/HOLD 2/2; keine reale autonome Abnahme. Alle
 reine Routen-Inhaltsbindung gezielt geprüft/vermessen; gemeinsamer v15-Build
 folgt. Kein Aktorstart, Bestandsinstall-/Autostartwechsel oder Shutdown.
 Rückfall privates Overlay abwählen bzw. eigene begrenzte Änderungen revertieren.
+
+## 11.10.2026 – AP-06 v15 und Stoprotationskorrektur
+
+Privater v15/1d03a1f unter releases/ap06-correction-v15-20261011: 14 Pakete,
+157 Gleichheiten/756 Hashes, 2.965 volle Tests grün, Originalmissionen 0/3,
+Cancel positiv/HOLD vor Einspeisung negativ. Keine Realfahrt oder dauerhafte
+Installation. Alle 1.048 Bestandsinstallhashes unverändert/Main sauber.
+Native Drehgeometrie unverändert; read-only Ablehnung im Elternablauf nun
+begrenzter Vorschlag statt harter Terminalgrund, 281 Tests. Gemeinsamer v16
+folgt. Kein Aktorstart/Autostartwechsel/Shutdown. Rückfall eigener Commit
+revertieren/private Overlay-Abwahl. Exakte Belege im aktuellen STATUS.

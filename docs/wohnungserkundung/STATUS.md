@@ -219,12 +219,45 @@ Drei gepaarte Profile mit demselben v14-Nativkern: 3,084/3,013/3,035 →
 Das sind reine eingefrorene Profile, keine aktuelle Quelle oder Mission.
 [Gegenfall und Grenzen](evidence/ap06-route-proof-group-20261011.json).
 
-**Genau nächster Schritt:** diese belegte Korrektur als gemeinsamen v15-Kandidaten
-bauen, vollständige Regression und ursprüngliche A/B/C/Cancel/HOLD unverändert
-prüfen. Die Quellenprozesspause des älteren v13 bleibt getrennt unbewiesen;
-3/3 vollständige Missionen und reale autonome Folge weiter offen. Rückfall:
-privates Overlay abwählen bzw. eigenen begrenzten Routenprüfungscommit revertieren;
-keine Fristen, Sensorperioden oder Bewegungsprüfungen verändert.
+Gemeinsamer **v15 aus `1d03a1f`**: 14 Pakete separat in 172,076 s gebaut,
+157 Quelle-Installgleichheiten, 756 Installhashes. **2.965 Regressionstests positiv**,
+keine Fehler/Skip. Unveränderte Originalmissionen weiterhin **0/3**: A 0,225799 m/
+keine Beobachtung, B 0,363251 m/eine, C 0,715161 m/eine. A/B terminal Auswahlbudget
+5,251736/5,953357 s bei 2,056967/2,224353 s Thread-CPU. C Auswahl 4,239189 s
+innerhalb 5 s, danach terminal `nav2_plan_goal_stop_rotation_invalid`.
+C zuvor eigener Scan nach 0,032602 rad/1,957792 s geometrisch abgelehnt, später
+bekannte Abfahrt nicht verfügbar und zwei native Sweeps verworfen. Kein
+vollständiger Rundblick oder ganzer Missionsabschluss. Cancel positiv, Halt
+0,381296 s nach Einspeisung (exakter Wert im Beleg); **HOLD negativ**, ohne Bewegung
+oder HOLD-Einspeisung: erster Eingang nach 479,330 ms Arbeit mit alter Körperscan-
+Probe, anschließend Auswahlbudget 5,262765 s überschritten. Kein gemessener
+HOLD-Stopp aus diesem Fall. Kinder terminal/vier Kommandoströme null. Alle
+1.048 Bestandsinstallhashes unverändert, Main sauber. Keine reale autonome Fahrt.
+[V15, exakte Quellen und Ergebnisse](evidence/ap06-correction-v15-20261011.json).
+
+Die passive Prozess-CPU-Stichprobe in C umfasst 5,295 s mit 5,13 s Explorer-
+Prozess-CPU, während die Auswahl selbst 4,239 s Wandzeit/1,675 s Thread-CPU
+benötigt. Das Fenster beginnt 0,804 s davor und endet 0,251 s danach. Weitere
+Threads verbrauchen messbar CPU; Ursache der Verzögerung, GIL-/Scheduleranteil
+und alle anderen Fälle sind damit nicht bewiesen. Keine Sensorperioden oder
+CPU-Zuordnungen verändert.
+
+Schritt 2/4: ein konkreter Klassifizierungsfehler ist belegt. Die echte adaptive
+Auswahl mit alternativem nativen Plan hat einen freien RPP-Translationssweep,
+aber unzulässige Drehung am tatsächlichen Stop. Vor Korrektur terminal, ohne
+Verbuchung als abgelehnter Vorschlag. Jetzt wird dieser geometrische Queryfehler
+wie die vorhandenen Sweepfehler als `proposal_rejected` verbucht; ursprünglicher
+Auslöser bleibt, aktueller Versuch zählt, kein Kind/Alignment oder Bewegung.
+Reale Rotation bleibt abgelehnt. Falsche Frames und nicht endliche Planwerte
+bleiben terminal. Gegenfall zuvor rot, danach grün; **281 betroffene Fälle positiv**.
+[Gegenfall und Rückfall](evidence/ap06-native-stop-recovery-20261011.json).
+
+**Genau nächster Schritt:** sauberen gemeinsamen v16 aus dieser begrenzten
+Korrektur bauen, vollständige Regression und ursprüngliche A/B/C/Cancel/HOLD
+unverändert prüfen. Auswahl-/Quellenzeitprobleme bleiben offen und getrennt
+zu messen; 3/3 vollständige Missionen und reale autonome Folge fehlen.
+Rückfall: eigenen Klassifizierungscommit revertieren bzw. privates Overlay
+abwählen. Keine Geometrie- oder Quellenprüfung/Frist geändert.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

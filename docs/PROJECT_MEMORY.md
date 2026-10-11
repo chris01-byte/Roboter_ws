@@ -1137,3 +1137,17 @@ mit gleichem Ziel/90 Punkten/Hash/Ranking und geringerer Laufzeit. Kein Gesundhe
 oder Bewegungsrechtcache; Quellen-/Dispatch-/Budgetprüfungen unverändert. Neue
 gemeinsame v15-Qualifikation folgt, reale Folge weiter offen. Rückfall begrenzter
 eigener Performancecommit/private Overlay-Abwahl. Belege im aktuellen STATUS.
+
+## 11.10.2026 – AP-06 v15 negativ, native Stoprotation als begrenzter Vorschlag
+
+V15/1d03a1f: 2.965 volle Regressionen positiv, Originalmissionen 0/3, Cancel
+positiv, HOLD ohne Einspeisung schon am Auswahlbudget negativ. C innerhalb
+Auswahlbudget, danach tatsächliche Schlussdrehung unzulässig. Nachgewiesene
+fehlende Zuordnung dieses read-only Geometriefehlers zu Routenverwerfung:
+echte adaptive Auswahl/echter nativer RPP-Sweep als Gegenfall zuvor rot.
+Nur Elternklassifizierung ergänzt; guard lehnt weiterhin ab, Vorgang wird
+mit Originalgrund/Versuchszähler verbucht, keine Aktor-/Kindwirkung. 281
+betroffene Prüfungen grün; Frame-/Nichtendlichfehler weiter terminal. V16
+gemeinsame Gesamtprüfung folgt. CPU-Stichprobe zeigt zusätzliche Threadarbeit,
+keine bewiesene gemeinsame Timingursache. Grenzen/Budgets unverändert.
+Rückfall eigener Klassifizierungscommit/private Overlay-Abwahl; Belege STATUS.
