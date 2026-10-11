@@ -312,7 +312,8 @@ def test_map_processing_time_consumes_freshness_window(monkeypatch):
 
 @pytest.mark.parametrize('lost,selected_age,processing', [('pose', 0., .81),
     ('scan', 0., .51), ('scan', .49, .02)])
-def test_final_mask_work_cannot_extend_pose_or_scan_freshness(monkeypatch, lost, selected_age, processing):
+@pytest.mark.parametrize('cached', [False, True])
+def test_final_mask_work_cannot_extend_pose_or_scan_freshness(monkeypatch, lost, selected_age, processing, cached):
     n, _ = runtime(monkeypatch)
     import explore.metric_frontier_runtime as module
     clock = [10.02]
@@ -325,12 +326,16 @@ def test_final_mask_work_cannot_extend_pose_or_scan_freshness(monkeypatch, lost,
     raw_stamp = n._metric_raw[1].source_stamp_ns
     if lost == 'pose':
         n._metric_self_body_enabled = False
-    original = module.known_safe_mask
+    if not cached:
+        n._metric_known_geometry_cache = None
+    original = n._metric_known_geometry
     def delayed_mask(*args, **kwargs):
         result = original(*args, **kwargs)
         clock[0] += processing
         return result
-    monkeypatch.setattr(module, 'known_safe_mask', delayed_mask)
+    # Delay the current geometry boundary, including a cache hit. Cached
+    # arithmetic never exempts the selected pose/scan from the final ages.
+    n._metric_known_geometry = delayed_mask
     with pytest.raises(ValueError, match=lost + '_stale_after_processing'):
         n._metric_inputs(active=True)
     receipt = n._metric_status['geometry_snapshot_rejection']

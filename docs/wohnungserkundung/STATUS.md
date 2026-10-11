@@ -1,44 +1,47 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – adaptive Wartereihenfolge reproduziert und korrigiert
+## 11.10.2026 – Warten korrigiert, Eingangsgeometrie verkürzt; Gesamtprüfung offen
 
-Korrekturplan Schritte 1/2 umgesetzt im separaten Checkout auf
-`fix/ap06-adaptive-cooldown-order`, Ausgangsbasis `d2c6cfe`. Der neue Gegenfall
-verwendet echte adaptive Startentscheidung, Aufgabenpolicy und vollständige
-Zielauswahl auf aufgezeichneter synthetischer A-Geometrie. Vor Korrektur:
-adaptive Auswahl dreimal während derselben Pause, konfigurierter Pfad einmal;
-erwartet 1 negativer/1 positiver Fall. Originalbeleg erhalten.
+Getrennter Checkout, Fixbranch `fix/ap06-adaptive-cooldown-order`, Ausgangsbasis
+`d2c6cfe`. Schritte 1/2: echte adaptive Auswahl vor Korrektur dreimal statt
+einmal während derselben ursprünglichen Pause; danach 214 gezielte Fälle
+positiv. Zeit-/Kontextpause liegt vor adaptiver Zielsuche, nach aktuellen
+Schutzprüfungen. Neue echte Auswahl nach Pausenende, Cancel/HOLD/Quelle und
+Kontext geprüft. [Gegenfall](evidence/ap06-adaptive-wait-order-20261011.json).
 
-Die bestehende zeit-/kontextgebundene Warteprüfung liegt jetzt nach aktuellen
-Quellen-, Stop-, Cancel-/HOLD- und Budgetprüfungen, aber vor der adaptiven
-Startentscheidung. Keine Route oder Bewegungsautorität wird behalten, keine
-Frist geändert. Echte Auswahl nach Ablauf der originalen Pause erneut belegt.
-Kontextwechsel, Cancel, HOLD, Quellenverlust und Gesamtbudget in beiden
-Strategien geprüft. 214 betroffene Fälle positiv; isolierter Namespace ohne
-Hardwarezugriff, aktuelle Produktquellen und vorhandener v10-Nativkern.
-[Gegenfall und Nachweise](evidence/ap06-adaptive-wait-order-20261011.json).
+Instrumentierter geschlossener Vergleich aus `34fbad1`: negativ nach
+0,191529 m, keine Ankunft/Beobachtung. Ereignisfolge: Encoderprobe nach
+Verarbeitung veraltet, Route verworfen, anschließend getrennte VL53-Stempel
+während Stillstand/Pause terminal behandelt. Kein harter Quellenfehler.
+`9fb28f6` korrigiert das Veröffentlichungsfenster ohne künstlichen Match oder
+Bewegungsrecht; zwei Gegenfälle zuvor negativ, danach 34 Wartefälle positiv.
+[Nachweis](evidence/ap06-publication-wait-20261011.json).
 
-Dies beendet nicht AP-06: der letzte ursprüngliche gemeinsame A/B/C-Beleg
-bleibt 0/3; kein neuer gemeinsamer Build, geschlossener Gesamtpositivlauf oder
-reale autonome Fahrt aus dieser Korrektur. Bestandsmain/-install erhalten,
-keine neuen Aktorprozesse oder Gerätekommandos. Die Komponentenuhr und
-eingefrorenen Eingaben sind keine aktuellen Sensor-/Gesundheitsnachweise.
+Schritt 3: bei 53 live Eingangsprüfungen 135,763 ms Median/383,700 ms Maximum;
+eine nach Verarbeitung erneut gebundene Encoderprobe war am Ende 201,456/
+212,415 ms alt, über der unveränderten 180-ms-Grenze. Gemessene reine Arbeit
+verkürzt: Körperzellen mit identischer Rechnung nur im konservativen lokalen
+Fenster, genau eine inhalt-/geometrie-/Scope-/Kontext-/Körpermasken-gebundene
+Known/Safe-Berechnung wiederverwendbar. Kein Gesundheits-, Routen- oder
+Dispatchnachweis im Cache; tatsächliche Costmap und ganzer Egress weiter
+geprüft. Auf eingefrorenen Eingaben mit tatsächlichem v10-Nativkern etwa
+52,5 → 28 ms. 298 betroffene Fälle positiv; Körpermasken bitgleich, geänderte
+Eingaben invalidieren, ursprüngliche Frischegrenzen auch bei Cachetreffern
+wirksam. Kartenalter und Auswahl-Rechenbudget getrennt benannt mit identischem
+bisherigem Grenzwert; aktuelle Alters-/Rechenzeitbelege im Produktstatus.
+[Messung und Prüfung](evidence/ap06-input-geometry-20261011.json).
 
-Der instrumentierte Vergleich aus `34fbad1` endet nach 0,191529 m ohne
-Ankunft/Beobachtung negativ. Getrennte Folge: Verarbeitungsalter der Encoderprobe,
-Routenverwerfung, danach `vl53_triplet_unmatched` im Stillstand während der
-Pause. Die Quellenprüfung meldet keinen harten Fehler. Die Wartephase behandelt
-jetzt diese Veröffentlichungslücke wie der bestehende äußere Ablauf: weiter
-stehen, frische Quellen/Stillstand und dieselben Fristen erneut prüfen. Zwei
-Gegenfälle zuvor negativ, danach 34 Wartefälle positiv. Kein künstlicher
-Triplet-Match, kein Gatewechsel oder Bewegungsrecht.
-[Originalbefund und Gegenfälle](evidence/ap06-publication-wait-20261011.json).
+Das ist noch kein Laufnachweis dieser Verkürzung unter ROS-Last. Ursprüngliche
+A/B/C bleiben zuletzt 0/3; kein neuer gemeinsamer Build oder reale autonome
+Abnahme. Bestandsmain/-install und Hardware bleiben unverändert. Eingefrorene
+Geometrie-/Komponententests sind keine heutigen Sensornachweise.
 
-**Genau nächster Schritt:** gemessene Eingangs-/Geometrieverarbeitung verkürzen
-(Korrekturplan Schritt 3), danach die Folge nach Beobachtungen untersuchen.
-Bisher kein neuer gemeinsamer Build oder 3/3-Gesamtbeleg; reale autonome Folge
-offen. Rückfall: eigene Warteänderungen gezielt revertieren oder privaten
-Kandidaten abwählen; Bestandsinstall bleibt erhalten.
+**Genau nächster Schritt:** geschlossener instrumentierter A-Vergleich mit
+dieser gezielten Geometriekorrektur, danach Übergang nach zweiter Beobachtung,
+Scanabbruch und Planverwerfung kausal bearbeiten (Schritte 3/4). Erst danach
+gemeinsamer Kandidat samt vollständiger ursprünglicher Regression/A/B/C;
+reale autonome Folge an diese Softwarequalifikation gebunden. Rückfall:
+eigene kleine Diffs revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

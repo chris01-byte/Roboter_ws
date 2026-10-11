@@ -251,10 +251,25 @@ def self_body_unknown_mask(grid, occupancy, pose, lidar_mount):
         raise ValueError('self_body_grid_mismatch')
     if not math.isfinite(grid.info.resolution) or grid.info.resolution <= 0:
         raise ValueError('self_body_resolution_invalid')
-    rows, cols = np.indices(occupancy.shape)
     q=grid.info.origin.orientation
     yaw=math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
     res=grid.info.resolution
+    # The measured body fits wholly within this circumscribed radius.
+    # Evaluate the original cell arithmetic only in that conservative window;
+    # a large unrelated raster cannot consume the current pose's age budget.
+    result = np.zeros(occupancy.shape, dtype=bool)
+    dx0 = pose[0]-grid.info.origin.position.x
+    dy0 = pose[1]-grid.info.origin.position.y
+    cx = (math.cos(yaw)*dx0+math.sin(yaw)*dy0)/res
+    cy = (-math.sin(yaw)*dx0+math.cos(yaw)*dy0)/res
+    if not all(math.isfinite(v) for v in (cx, cy)):
+        return result
+    radius = math.hypot(.31, .23)/res+2.
+    c0, c1 = max(0, math.floor(cx-radius)), min(grid.info.width, math.ceil(cx+radius)+1)
+    r0, r1 = max(0, math.floor(cy-radius)), min(grid.info.height, math.ceil(cy+radius)+1)
+    if c1 <= c0 or r1 <= r0:
+        return result
+    rows, cols = np.mgrid[r0:r1, c0:c1]
     lx,ly=(cols+.5)*res,(rows+.5)*res
     dx=grid.info.origin.position.x+math.cos(yaw)*lx-math.sin(yaw)*ly-pose[0]
     dy=grid.info.origin.position.y+math.sin(yaw)*lx+math.cos(yaw)*ly-pose[1]
@@ -264,8 +279,9 @@ def self_body_unknown_mask(grid, occupancy, pose, lidar_mount):
     # Every corner must still be inside the physical, unpadded chassis.
     relative = yaw-pose[2]
     reserve=res/2*(abs(math.cos(relative))+abs(math.sin(relative)))
-    return ((occupancy < 0) & (-.11+reserve <= x) & (x <= .31-reserve)
-            & (abs(y) <= .23-reserve))
+    result[r0:r1, c0:c1] = ((occupancy[r0:r1, c0:c1] < 0)
+        & (-.11+reserve <= x) & (x <= .31-reserve) & (abs(y) <= .23-reserve))
+    return result
 
 
 def known_safe_mask(occupancy, scope, correlation, origin, yaw, resolution, clearance, self_body=None):

@@ -1,5 +1,21 @@
 # Projektgedächtnis
 
+## 11.10.2026 – reine Eingangsgeometrie innerhalb unveränderter Frischebudgets
+
+Live Prüfung alterte eine erneut gebundene Encoderprobe auf 201/212 ms bei
+180-ms-Vertrag. Profilierung mit tatsächlichem v10-Kern identifiziert ganze
+Körperraster und Known/Safe-Distanzrechnung als vermeidbare reine Arbeit.
+Körperarithmetik jetzt im konservativen Radiusfenster bitgleich; genau eine
+Known/Safe-Berechnung an vollständigen Inhalt, Geometrie, Kontext, Scope,
+Körpermasken und Clearance gebunden. Caller erhält eigene Kopien. Quellen-
+und Endfrische, Egress/Costmap/Route bleiben aktuell und ungecached. Getrennte
+Rechenbudget-Bezeichnung übernimmt bisherigen Wert; keine Frist erhöht.
+Eingefrorene reine Rechnung ~52,5 → 28 ms, 298 Fälle bestanden. Alte Delay-
+Injektionsstelle war bei Cachetreffern wirkungslos: Delay an aktueller Grenze
+prüft nun Treffer/Miss mit unveränderten Ablehnungskriterien. ROS-Lastvergleich
+und Gesamtmission noch offen. Evidenz/Originalfehler im STATUS. Rückfall:
+ur diese Geometrie-/Messänderung, Bestandsinstallation erhalten.
+
 ## 11.10.2026 – VL53-Veröffentlichungsfenster während Beobachtungspause
 
 Der instrumentierte Ablauf aus 34fbad1 scheiterte nach einer vorherigen

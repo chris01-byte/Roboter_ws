@@ -95,6 +95,9 @@ class MetricFrontierRuntime:
                 not self._prealign_enabled or not 0. < self._prealign_handoff_tolerance <= .02):
             raise ValueError('rpp_rollout needs enabled prealignment within 0.02 rad')
         self._metric_lock = threading.RLock()
+        # Source age and computation are distinct contracts. Preserve the
+        # effective existing selection limit when separating their names.
+        self._metric_candidate_budget_s = self._map_timeout_s
         self._metric_selection_cache = threading.local()
         self._metric_hold_lock = threading.RLock()
         self._metric_correlator = MapManagerStatusCorrelator(
@@ -725,8 +728,8 @@ class MetricFrontierRuntime:
                 body = self._metric_body_cells
         if withdrawal is not None:
             body = None  # pending changed raw data can grant NO private cells
-        known, safe = known_safe_mask(occupancy, scope, correlation, origin, yaw, res,
-                                     self._goal_clearance_m, body)
+        known, safe = self._metric_known_geometry(occupancy, scope, correlation,
+                                                origin, yaw, res, body)
         if withdrawal is not None:
             from scipy.ndimage import distance_transform_edt
             known &= withdrawal
@@ -772,6 +775,18 @@ class MetricFrontierRuntime:
         # Processing/DDS delay consumes the original freshness window too.
         completed_ros = self.get_clock().now().nanoseconds
         completed = time.monotonic()
+        if hasattr(self, '_metric_status'):
+            motion = inputs.physical_motion
+            self._metric_status['input_timing'] = dict(
+                started_at=now, completed_at=completed, elapsed_s=completed-now,
+                map_received_age_s=completed-received,
+                map_source_age_s=(completed_ros-source.source_stamp_ns)/1e9,
+                costmap_received_age_s=completed-self._global_costmap_received_at,
+                costmap_source_age_s=(completed_ros-cost_source.source_stamp_ns)/1e9,
+                pose_age_s=age+completed-pose_checked,
+                scan_received_age_s=completed-scan['received_at'] if self._metric_self_body_enabled else None,
+                wheel_ages_s=None if motion is None else [completed-at for at in motion[1:3]],
+                wheel_source_key=None if motion is None else motion[3])
         if (not 0 <= completed-received <= self._map_timeout_s
                 or not 0 <= completed-self._global_costmap_received_at <= self._map_timeout_s
                 or not 0 <= completed-status_at <= self._map_timeout_s):
@@ -805,6 +820,28 @@ class MetricFrontierRuntime:
                 scan_now, self._door_lidar_scan_timeout, age_basis='scan_callback_receipt',
                 received_at=scan['received_at'], scan_key=scan.get('key'))
         return inputs
+
+    def _metric_known_geometry(self, occupancy, scope, correlation, origin, yaw, res, body):
+        """One exact pure raster calculation, never a source/pose receipt.
+
+        Map/status/TF/scan ages are checked anew by the caller, including its
+        final checks. A changed body withdrawal, scope, context, clearance or
+        actual cell content invalidates this entry. Costmap intersection and
+        every current egress/route/dispatch proof remain outside the cache.
+        """
+        key = (occupancy.shape, occupancy.dtype.str, occupancy.tobytes(), scope,
+               correlation.context, tuple(origin), yaw, res, self._goal_clearance_m,
+               None if body is None else (body.shape, body.dtype.str, body.tobytes()))
+        cached = getattr(self, '_metric_known_geometry_cache', None)
+        if cached is None or cached[0] != key:
+            known, safe = known_safe_mask(occupancy, scope, correlation, origin,
+                                         yaw, res, self._goal_clearance_m, body)
+            known.flags.writeable = safe.flags.writeable = False
+            cached = self._metric_known_geometry_cache = (key, known, safe)
+        return cached[1].copy(), cached[2].copy()
+
+    def _metric_candidate_budget(self):
+        return getattr(self, '_metric_candidate_budget_s', getattr(self, '_map_timeout_s', 5.))
 
     def _metric_rebind_motion_geometry(self, inputs, occupancy, mount):
         """One newer actual pose/reference/wheel bundle; only withdraw cells.
@@ -1885,7 +1922,7 @@ class MetricFrontierRuntime:
         now = time.monotonic()
         # Optional better geometry must not consume an already eligible
         # native query's remaining original selection deadline.
-        until = min(now+.5, started+self._map_timeout_s-.25)
+        until = min(now+.5, started+self._metric_candidate_budget()-.25)
         if until-now < .25:
             return None
         direction = (pose[0]-frontier.cx, pose[1]-frontier.cy)
@@ -1947,7 +1984,7 @@ class MetricFrontierRuntime:
         # the former 0.5 s before the finite nearby view was examined, then
         # spent longer on unproved distant proposals. Keep the same hard end
         # and 0.25 s reserve for the remaining selection/validation work.
-        until = min(now+2., started+self._map_timeout_s-.25)
+        until = min(now+2., started+self._metric_candidate_budget()-.25)
         if until-now < .25 or not all(footprint_clear(*pose, g, allowed,
                 self._world_to_grid, self._grid_to_world, self._metric_bounds,
                 heading_half_angle=.05, center_deviation_m=.02)
@@ -2310,7 +2347,7 @@ class MetricFrontierRuntime:
                 policy.radius+.15+grid.info.resolution)
             steps = int(math.ceil(self._goal_search_m/grid.info.resolution))
             for step in range(steps, -1, -1):
-                if time.monotonic()-selection_started > self._map_timeout_s:
+                if time.monotonic()-selection_started > self._metric_candidate_budget():
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = minimum+min(step*grid.info.resolution,self._goal_search_m)
                 goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
@@ -2356,7 +2393,7 @@ class MetricFrontierRuntime:
             # its far end first: the native 15-cm arrival disk otherwise turns
             # every first 30-cm goal into a roughly 15-cm private departure.
             for step in range(steps, -1, -1):
-                if time.monotonic()-selection_started > self._map_timeout_s:
+                if time.monotonic()-selection_started > self._metric_candidate_budget():
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = self._min_goal_dist_m+step*grid.info.resolution
                 goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
@@ -2426,7 +2463,7 @@ class MetricFrontierRuntime:
             stats['bounded_public_observation_wait_s'] = max(0.,memo['public_deferred_until']-time.monotonic())
             stats['deferred_or_served'] += 1
         for f in (() if candidates or public_deferred or private_deferred else frontiers):
-            if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+            if time.monotonic()-selection_started > self._metric_candidate_budget():
                 raise ValueError('frontier_candidate_processing_budget_exhausted')
             kwargs = {}
             if getattr(self, '_metric_start_egress_enabled', False):
@@ -2502,7 +2539,7 @@ class MetricFrontierRuntime:
                 offset=math.hypot(dx,dy)
                 if offset>1e-9 and not self._metric_scan_geometry_ready(refuge):
                     for step in range(1,1+int(self._goal_search_m/grid.info.resolution)):
-                        if time.monotonic()-selection_started > self._map_timeout_s:
+                        if time.monotonic()-selection_started > self._metric_candidate_budget():
                             raise ValueError('frontier_candidate_processing_budget_exhausted')
                         extra=step*grid.info.resolution
                         alternative=(goal[0]+extra*dx/offset,goal[1]+extra*dy/offset)
@@ -2588,7 +2625,7 @@ class MetricFrontierRuntime:
                 alternatives = self._frontier_approach_goal(f,pose[:2],grid,
                     search_mask=search_mask,approach_direction=direction,return_choices=True) or ()
                 for goal in alternatives:
-                    if time.monotonic()-selection_started > self._map_timeout_s:
+                    if time.monotonic()-selection_started > self._metric_candidate_budget():
                         raise ValueError('frontier_candidate_processing_budget_exhausted')
                     if math.dist(goal,pose[:2]) < self._min_goal_dist_m:
                         continue
@@ -2632,7 +2669,7 @@ class MetricFrontierRuntime:
                         break
                 if candidates:
                     break
-        if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
+        if time.monotonic()-selection_started > self._metric_candidate_budget():
             raise ValueError('frontier_candidate_processing_budget_exhausted')
         if self._metric_selection_memo(inputs)[1] != initial_evidence:
             raise ValueError('frontier_evidence_changed_during_processing')
@@ -2650,10 +2687,21 @@ class MetricFrontierRuntime:
             cache = self._metric_selection_cache = threading.local()
         previous = getattr(cache, 'policy', None)
         cache.policy = policy
+        started, cpu_started, error = time.monotonic(), time.thread_time(), None
         try:
             candidates = self._metric_candidates(inputs, min_frontier)
+        except Exception as exc:
+            error = str(exc)
+            raise
         finally:
             cache.policy = previous
+            if hasattr(self, '_metric_status'):
+                self._metric_status['candidate_timing'] = dict(
+                    started_at=started, completed_at=time.monotonic(),
+                    elapsed_s=time.monotonic()-started, cpu_s=time.thread_time()-cpu_started,
+                    budget_s=self._metric_candidate_budget(), error=error,
+                    map_fingerprint=inputs[1].fingerprint,
+                    map_source_stamp_ns=inputs[1].source_stamp_ns)
         selected = []
         for candidate in candidates:
             key = policy.identify(candidate.frontier_xy, (candidate.x, candidate.y),
