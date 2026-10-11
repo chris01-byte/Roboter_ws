@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 11.10.2026 – identische lokale Connectorprüfung mit geringerem Aufwand
+
+Original-ARM-Profile zeigen unnötige Sortierung stationärer Egress-Ledger
+und globale Rasterprojektion für Startconnectoren mit begrenztem Radius.
+Exakte Dictionary-Kopien erhalten inhaltliche Invalidierung; umschließender
+Rasterkasten mit zusätzlichem Rand erhält die ursprüngliche skalare
+Projektion, Reihenfolge, Linien-/Heading-/Distanz- und volle Routenprüfung.
+121 gezielte Fälle, finale Kopie zusätzlich geprüft. Gefrorene Original-
+Geometrie A/C sinkt von 1,731/1,769 auf 1,366/1,199 s bei identischen
+Zielen/Beobachtungspunkten/Ranking/Evidenz. Keine Frist, Quelle oder
+Bewegungshülle geändert; Frozenset-Zwischenfassung verworfen. Neuer gemeinsamer
+Build/Originalmissionen folgen. Rückfall: gezieltes Revert dieses Auswahldiffs,
+privaten Kandidaten stoppen und erhaltene Bestandsinstallation verwenden.
+
 ## 11.10.2026 – originale TF-Empfänge vor Auswahl der radgebundenen Pose
 
 Original-v7-A/B/C bleiben 0/3; Encoder gültig, Auswahlbudget erschöpft.

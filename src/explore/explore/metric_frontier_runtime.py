@@ -851,7 +851,7 @@ class MetricFrontierRuntime:
         evidence = tuple((e.valid, e.reason, e.pose, e.bounds, e.initial_polygon,
                           e.unknown.tobytes(), e.scope_mask.tobytes(),
                           getattr(e, 'current_reference', None), getattr(e, 'generation', 0),
-                          tuple(sorted(e.remaining_area.items())), tuple(sorted(e.departed_distance.items())))
+                          e.remaining_area.copy(), e.departed_distance.copy())
                          for e in (getattr(self, '_metric_egress', None) or ()))
         key = (tuple(inputs[2]), tuple(grids), inputs[4].tobytes(), evidence,
                getattr(inputs, 'map_odom_reference', getattr(self, '_metric_input_reference', None)),
@@ -1061,18 +1061,10 @@ class MetricFrontierRuntime:
         if (0<=sr<safe.shape[0] and 0<=sc<safe.shape[1] and not safe[sr,sc]
                 and getattr(self,'_metric_start_egress_enabled',False)
                 and not self._metric_egress_expired):
-            seed=known | self._metric_egress[0].unknown
             memo, key = self._metric_selection_memo(inputs)
             eligible = memo.get('route_seeds') if memo is not None and memo.get('route_seeds_key') == key else None
             if eligible is None:
-                eligible=[]
-                for r,c in zip(*np.nonzero(safe)):
-                    xy=self._grid_to_world(c,r,grid.info);distance=math.dist(pose[:2],xy)
-                    error=abs(math.atan2(math.sin(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2]),
-                        math.cos(math.atan2(xy[1]-pose[1],xy[0]-pose[0])-pose[2])))
-                    if (distance<=self._goal_clearance_m+.25 and error<=.17
-                            and self._metric_grid_line_clear(seed,(sr,sc),(r,c))):
-                        eligible.append((error,xy,r,c))
+                eligible = self._metric_local_route_seeds(inputs, safe, (sr,sc))
                 if memo is not None:
                     memo.update(route_seeds_key=key, route_seeds=eligible)
             # Connectivity/heading are invariant within this evidence-bound
@@ -1106,6 +1098,33 @@ class MetricFrontierRuntime:
             index=end
         route=tuple(simplified)
         return self._metric_waypoints_clear(inputs, route, target_yaw)
+
+    def _metric_local_route_seeds(self, inputs, safe, start):
+        """Same scalar connector proof, restricted to its existing radius.
+
+        A rotated grid preserves distance. The enclosing lattice box includes
+        two extra cells for the floor/centre offset; it only excludes cells
+        that cannot pass the original radius check. Row/column order, scalar
+        projection, heading, line and subsequent whole-route proofs remain.
+        """
+        grid, _, pose, known, *_ = inputs
+        sr, sc = start
+        radius = self._goal_clearance_m + .25
+        span = int(math.ceil(radius / grid.info.resolution)) + 2
+        r0, c0 = max(0, sr-span), max(0, sc-span)
+        r1, c1 = min(safe.shape[0], sr+span+1), min(safe.shape[1], sc+span+1)
+        seed = known | self._metric_egress[0].unknown
+        eligible = []
+        for r, c in zip(*np.nonzero(safe[r0:r1, c0:c1])):
+            r, c = r+r0, c+c0
+            xy = self._grid_to_world(c, r, grid.info)
+            distance = math.dist(pose[:2], xy)
+            error = abs(math.atan2(math.sin(math.atan2(xy[1]-pose[1], xy[0]-pose[0])-pose[2]),
+                                  math.cos(math.atan2(xy[1]-pose[1], xy[0]-pose[0])-pose[2])))
+            if (distance <= radius and error <= .17
+                    and self._metric_grid_line_clear(seed, (sr,sc), (r,c))):
+                eligible.append((error, xy, r, c))
+        return eligible
 
     def _metric_waypoints_clear(self, inputs, route, target_yaw=None, *, native_plan=False):
         grid, _, pose, known, _, costmap, cost_known = inputs

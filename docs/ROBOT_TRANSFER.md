@@ -1,5 +1,14 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – Auswahlkosten gerätefrei reduziert
+
+Quellkandidat für nächsten separaten v8-Build reduziert ausschließlich
+Rechenarbeit an identischem Egress-/Connectorbeweis. Gefrorene Original-
+Geometrie und 121 gezielte Fälle positiv, finale Kopie zusätzlich geprüft.
+Kein geänderter realer Install oder Autostart, keine neue Bewegung; originaler
+v7-Gesamtvergleich bleibt 0/3. Rückfall: privates Overlay stoppen, erhaltenen
+Install wählen oder Auswahldiff gezielt zurücknehmen.
+
 ## 11.10.2026 – v7 negativ beendet, TF-Fix nur gerätefrei geprüft
 
 Ursprüngliche v7-Gesamtmissionen A/B/C alle negativ am Auswahlbudget,

@@ -60,6 +60,19 @@ noch nicht gemeinsam gebaut oder als Originalgesamtmission qualifiziert.
 Reale FC03 am 11.10. um 01:06:40 UTC: Positionen unverändert, beide RPM null,
 RAM 100/400/5; alle 1.048 Bestandsinstallhashes um 01:06:34 UTC gleich.
 
+Separate Auswahlkorrektur: exakte Kopien der beiden Egress-Ledger statt
+wiederholtem Sortieren; geänderte Inhalte invalidieren weiterhin den Pass.
+Startconnector-Suche auf umschließenden Rasterkasten des bestehenden Radius
+beschränkt, mit zwei zusätzlichen Randzellen; ursprüngliche skalare
+Projektion, Reihenfolge, Distanz-/Heading-/Linien- und volle Routenprüfung
+bleiben. 121 gezielte Fälle positiv; finale Dictionary-Kopie zusätzlich
+mit Pass-/In-place-/TF-Fällen nachgeprüft. Geometrischer Originalvergleich
+A/C: 1,731→1,366 s und 1,769→1,199 s, Ziele/Beobachtungspunkte/Ranking/
+Evidenzschlüssel exakt identisch. Frozenset-Zwischenfassung brachte keine
+Gesamtbeschleunigung und wird nicht übernommen. Vergleiche sind reine
+Geometrie, keine Quelle/Frische/Mission oder neue reale Bewegung.
+Gemeinsamer neuer v8-Build und ursprüngliche A/B/C folgen.
+
 Private Auslagerung von Egress-Geometrie ist nicht übernommen. Mehrkern-
 Parentversuche enden mit nativer Explorer-Absturzaufzeichnung, darunter ein
 Shutdown-Stack, der die ursprüngliche Ursache nicht beweist. Mit ursprünglichem
@@ -76,9 +89,8 @@ nach gemessenem Fahrversatz fest neu binden. Weitere Passage-/Drei-Bereich-
 Geometrie und native Apple-Laufzeit bleiben tatsächlich unbestätigt; bestehende
 konkrete Rückfragen erhalten, keine erneute allgemeine Laborfreigabe.
 
-**Genau nächster Schritt:** gemessene Auswahlkosten ohne Friständerung
-verringern, gezielt gegen die ursprüngliche Geometrie prüfen und zusammen
-mit dem geprüften TF-Empfang neu bauen; dann ursprüngliche A/B/C und nach
+**Genau nächster Schritt:** den separat geprüften gemeinsamen v8-Kandidaten
+bauen, vollständige Regression und ursprüngliche A/B/C ausführen; nach
 deren Bestehen die beauftragten realen Schritte 3/4.
 Rückfall: eigenes privates Overlay direkt geordnet stoppen, Bestandsinstall
 bewahren; IMU-Ausgabeopt-in zurücknehmen oder eigenen Fix gezielt revertieren.
