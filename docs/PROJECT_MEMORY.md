@@ -1,5 +1,18 @@
 # Projektgedächtnis
 
+## 11.10.2026 – tatsächliche erneute Encoderbindung nach Maskenentzug
+
+Live Geometriekorrektur verbessert 578 Eingangsprüfungen auf 85/116 ms
+Median/p95, aber ein Frischeausreißer verbleibt: neue Probe vor 48-ms-
+Maskenentzug gebunden, danach 148-ms-Egressprüfung, am Ende 201/209 ms alt.
+Einmalige neue tatsächliche Radprobe nun nach reiner Maskenarithmetik gegen
+dasselbe gemessene TF-Paar wählen; 20 mm/0,05 rad und finale Alter erhalten.
+Echter DDS-Gegenfall mit vollständiger originaler Methode negativ, aktuelle
+Fassung positiv; 149 betroffene und drei verstärkte Paarfälle bestanden.
+Kein Live-Folgenachweis dieser zweiten Korrektur oder Gesamtmissionserfolg.
+Der vorherige Lauf endet regulär mit 0,526 m/einer Beobachtung am Auswahlbudget;
+Kinder/Kommandos terminal null. Rückfall nur Bindungsreihenfolge. Evidenz STATUS.
+
 ## 11.10.2026 – reine Eingangsgeometrie innerhalb unveränderter Frischebudgets
 
 Live Prüfung alterte eine erneut gebundene Encoderprobe auf 201/212 ms bei

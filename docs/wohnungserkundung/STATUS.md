@@ -31,17 +31,31 @@ wirksam. Kartenalter und Auswahl-Rechenbudget getrennt benannt mit identischem
 bisherigem Grenzwert; aktuelle Alters-/Rechenzeitbelege im Produktstatus.
 [Messung und Prüfung](evidence/ap06-input-geometry-20261011.json).
 
-Das ist noch kein Laufnachweis dieser Verkürzung unter ROS-Last. Ursprüngliche
-A/B/C bleiben zuletzt 0/3; kein neuer gemeinsamer Build oder reale autonome
-Abnahme. Bestandsmain/-install und Hardware bleiben unverändert. Eingefrorene
-Geometrie-/Komponententests sind keine heutigen Sensornachweise.
+Geschlossener instrumentierter Vergleich aus `7c07641` regulär negativ:
+0,526085 m, eine Ankunft/Beobachtung (176 Zellen), keine volle Passage. Bei
+578 Eingangsprüfungen Median 85,357/p95 116,293 ms (zuvor 135,763/276,637),
+aber weiter ein Frischeausreißer: erneute Probe vor 48,487 ms Maskenentzug
+gebunden, anschließend 148,420 ms Egressprüfung; am Ende 200,735/209,135 ms
+alt. Mehrere native Folgeziele ohne ursprüngliche Sicht am Haltepunkt, später
+bewegte Folge wegen Kartenjoin unterbrochen; terminal 5-s-Auswahlbudget
+überschritten. Kinder beendet, vier Kommandoströme null. Kein Stoppsignal
+mehr gesendet: der Prozess war schon regulär beendet. Kein Gesamtpositivbeleg.
 
-**Genau nächster Schritt:** geschlossener instrumentierter A-Vergleich mit
-dieser gezielten Geometriekorrektur, danach Übergang nach zweiter Beobachtung,
-Scanabbruch und Planverwerfung kausal bearbeiten (Schritte 3/4). Erst danach
-gemeinsamer Kandidat samt vollständiger ursprünglicher Regression/A/B/C;
-reale autonome Folge an diese Softwarequalifikation gebunden. Rückfall:
-eigene kleine Diffs revertieren bzw. privates Overlay abwählen.
+Die erneute tatsächliche Encoderbindung liegt jetzt nach reinem Maskenentzug,
+weiter gegen dasselbe tatsächliche TF-Paar und die originalen 20-mm/0,05-rad-
+Grenzen. Kein Stamp geändert, keine Pollschleife oder Frist verlängert. Echter
+DDS-Gegenfall mit originaler vollständiger Methode zuvor negativ, danach
+positiv; 149 betroffene Fälle sowie drei verstärkte aktuelle Paarfälle positiv.
+[Zeitfolge/Gegenfall](evidence/ap06-late-wheel-binding-20261011.json).
+
+Ursprüngliche A/B/C bleiben zuletzt 0/3; kein neuer gemeinsamer Build oder
+reale autonome Abnahme. Bestandsmain/-install und Hardware unverändert.
+
+**Genau nächster Schritt:** nachgewiesene wiederholte Geometriearbeit innerhalb
+desselben Auswahlbudgets verringern und Folgeziele/Scanursachen getrennt
+festhalten (Schritte 3/4). Erst danach gemeinsamer Kandidat mit ursprünglicher
+Regression/A/B/C; reale autonome Folge an diese Softwarequalifikation gebunden.
+Rückfall: eigene kleine Diffs revertieren bzw. privates Overlay abwählen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

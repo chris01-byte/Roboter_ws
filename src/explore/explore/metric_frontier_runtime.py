@@ -856,11 +856,7 @@ class MetricFrontierRuntime:
         pose, age, reference = self._metric_pose_and_reference()
         if not 0 <= age <= self._door_pose_timeout:
             raise ValueError('start_motion_wheel_pose_missing_stale_or_invalid')
-        motion = self._metric_measured_motion(pose, reference)
         old = inputs.physical_motion
-        if (motion is None or old is None or motion[3] <= old[3]
-                or not all(new >= before for new, before in zip(motion[1:3], old[1:3]))):
-            raise ValueError('start_motion_wheel_stale_after_processing')
         known, safe = inputs[3], inputs[4]
         if self._metric_self_body_enabled:
             body = None
@@ -876,6 +872,14 @@ class MetricFrontierRuntime:
                 res = inputs[0].info.resolution
                 distance = distance_transform_edt(np.pad(known,1))[1:-1,1:-1]
                 safe = safe & known & (distance*res >= self._goal_clearance_m+res/2)
+        # Body withdrawal is pure arithmetic but can consume a wheel's .18-s
+        # age. Select the one genuine newer wheel AFTER that work against the
+        # same measured TF pair; the original .02-m/.05-rad agreement and
+        # final TF/source ages still reject an incompatible or expired pair.
+        motion = self._metric_measured_motion(pose, reference)
+        if (motion is None or old is None or motion[3] <= old[3]
+                or not all(new >= before for new, before in zip(motion[1:3], old[1:3]))):
+            raise ValueError('start_motion_wheel_stale_after_processing')
         values = (inputs[0], inputs[1], pose, known, safe, inputs[5], inputs[6])
         return MetricInputs(values, reference, motion), checked, age
 
