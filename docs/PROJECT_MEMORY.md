@@ -1074,3 +1074,19 @@ bleibt vor Bewegung voll geprüft. Drei rote Gegenfälle vor Änderung, danach
 Kein Grund, jede ursprüngliche Pfadverwerfung hiermit zu erklären: der alte
 A-Task-4-Plan entsprach exakt dem Querypfad. Rückfall nur dieser begrenzte Diff.
 Beleg: docs/wohnungserkundung/evidence/ap06-plan-publication-owner-20261011.json.
+
+## 11.10.2026 – AP-06 exakte Query behält ihr Messfenster
+
+Nach erster Beobachtung fünf identische Nav2-Readonlypfade bei unveränderter
+synthetischer Karte; abgelehnte Halteposition ohne ursprüngliche Sicht.
+Näherer unversuchter Frontier verdrängte Historie derselben exakten Query,
+Hashvergleich unterschiedlicher Ortsfenster wirkte wie neue Daten. Zwei rote
+Gegenfälle einschließlich echter adaptiver Auswahl; danach 110/104 betroffene
+Fälle grün. Exakt gleicher versuchter Zielpunkt priorisiert ursprüngliche
+Historie/Messfenster mit bestehender 1e-12-Präzision. Andere Querypositionen,
+neue endliche abgeschlossene Sichten, Cooldown und räumliche Caps unverändert.
+Keine neue Fahrfreigabe. Causaldiagnose bewusst über eigene PID beendet,
+unvollständiger Ergebnis-/Reportingbeleg zählt nicht als Mission. Hashcache
+und größere Nativbatch mangels verlässlichem Gesamtgewinn verworfen. Neuer
+gemeinsamer Kandidat/Originalvergleich nötig. Rückfall nur Identitätsdiff;
+Beleg docs/wohnungserkundung/evidence/ap06-exact-query-identity-20261011.json.

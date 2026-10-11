@@ -78,6 +78,18 @@ class MetricTaskPolicy:
             return False
 
     def identify(self, frontier_xy, target_xy=None, *, observation_points=(), create=True):
+        # An exact previously queried pose keeps its original evidence window.
+        # Otherwise a closer untried frontier ID can make unchanged raster
+        # bytes look like new evidence merely by hashing a different window.
+        # Use the existing same-query precision; distinct poses and genuinely
+        # different completed views retain the normal neighbourhood policy.
+        exact = [(math.dist(a.frontier_xy, frontier_xy), key)
+                 for key, a in self.attempts.items()
+                 if target_xy is not None and a.tries
+                 and math.dist(a.target_xy, target_xy) <= 1e-12
+                 and not (a.completed and self._distinct_observation(a, observation_points))]
+        if exact:
+            return min(exact)[1]
         # A finite different boundary may use a nearby observer position.
         # Identity grants no permission: eligible still enforces all nearby
         # try/failure caps, measured evidence and the original cooldown.

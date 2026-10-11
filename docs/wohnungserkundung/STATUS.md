@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Warten korrigiert, Eingangsgeometrie verkürzt; Gesamtprüfung offen
+## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 
 Getrennter Checkout, Fixbranch `fix/ap06-adaptive-cooldown-order`, Ausgangsbasis
 `d2c6cfe`. Schritte 1/2: echte adaptive Auswahl vor Korrektur dreimal statt
@@ -120,11 +120,26 @@ Task-4-Pfad allerdings gleich dem Query-Pfad: keine Behauptung, dieser Rollenfeh
 erkläre jene Verwerfung oder alle Abbrüche.
 [Gegenfall und Quellenbindung](evidence/ap06-plan-publication-owner-20261011.json).
 
-**Genau nächster Schritt:** tatsächliche teure Restgeometrie und Egress-
-Verwerfung im instrumentierten Produktablauf erfassen, auf denselben eingefrorenen
-Eingaben gezielt korrigieren. Drei Beobachtungen sind in B erreicht, 3/3 volle
-Missionen bleiben offen. Neue gemeinsame Regression und Realtests folgen den
-belegten Korrekturen. Rückfall: eigene Diffs revertieren bzw. privates Overlay abwählen.
+Weitere Schritt-4-Korrektur: fünf identische rein lesende native Pfade bei
+unveränderter Karte im instrumentierten Source-A-Diagnoselauf. Derselbe bereits
+abgelehnte Zielpunkt wurde einem näheren unversuchten Frontier zugeordnet;
+unterschiedliche Ortsfenster-Hashes erschienen fälschlich als neue Messung.
+Zwei tatsächliche Gegenfälle zuvor negativ, einschließlich originaler adaptiver
+Auswahl mit aufgezeichneten synthetischen Eingaben. Jetzt priorisiert ein exakt
+bereits versuchter Zielpunkt seine ursprüngliche Historie/Messfenster; echte
+andere Querypositionen und endliche neue abgeschlossene Sichten bleiben möglich.
+110 und 104 betroffene Fälle positiv (getrennte Suiten mit Überschneidung),
+originale Cooldowns/Zähler/Fristen unverändert. Keine Bewegungsfreigabe daraus.
+Diagnoselauf nach ausreichender Aufzeichnung über seine eigene eindeutige PID
+geordnet abgebrochen: eine Beobachtung/0,296201 m, kein Manifestnachweis;
+unvollständiges Resultat und Reporting-KeyError getrennt erhalten. Zusätzlicher
+Hashcache und größere Nativbatch ohne zuverlässigen Gesamtgewinn verworfen.
+[Gegenfall und Grenzen](evidence/ap06-exact-query-identity-20261011.json).
+
+**Genau nächster Schritt:** beide neuen Ursachenfixes gemeinsam sauber als v13
+bauen, vollständige Regression und die ursprünglichen A/B/C unverändert prüfen.
+Drei Beobachtungen sind in V12-B erreicht; 3/3 vollständige Missionen sowie
+aktuelle reale autonome Folge bleiben offen.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

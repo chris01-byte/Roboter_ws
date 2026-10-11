@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "parent_source": "597e9f4",
+  "kind": "Actual adaptive decision on recorded own synthetic 597e9f4 product inputs, no successful selection stub",
+  "tests": {
+    "exact-query-actual-adaptive-before": {
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exact-query-actual-adaptive-after": {
+      "tests": 110,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "exact-query-protective-complete": {
+      "tests": 104,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "unique_after_tests": 209,
+  "change": "Exact tried target retains original task/evidence anchor before nearest untried frontier identity. Existing 1e-12 same-query precision and genuinely distinct completed view exception retained.",
+  "original_trace": {
+    "identical_readonly_plans": 5,
+    "map_fingerprint": "dcd83627194bcbe5198d00d60a9b9a2c5672b6a3417627207db70509b40bb594",
+    "endpoint": [
+      0.8662174546277224,
+      -0.0002611694362034048
+    ],
+    "reason": "native_stop_has_no_candidate_view",
+    "diagnostic_only": true,
+    "deliberately_interrupted": true,
+    "result_limitation": "Interrupted product result has no complete metric summary; private reporting wrapper KeyError is not a product terminal reason."
+  },
+  "unchanged": [
+    "source and geometry guards",
+    "same-query precision",
+    "cooldown deadline",
+    "attempt and failure caps",
+    "original software scenarios",
+    "existing installation"
+  ],
+  "hardware_test": false,
+  "mission_qualified": false,
+  "rollback": "Revert this task identity diff, retain original installation.",
+  "discarded_processing_experiments": {
+    "native_batch": "2.9388 to 2.8844 s, about 2%; discarded",
+    "pure_digest_cache": "Cold 2.9526 to 2.8321 s, repeated 2.6134 to 2.6553 s; no reliable total gain, discarded. Native-plan proposals do not prove movement safety."
+  },
+  "sha256": {
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/exact-query-actual-adaptive-before/results.xml": "3d83587d1f2aa81d85f3cd4965531f369a002d6dba562b4e1477116d0f4203f8",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/exact-query-actual-adaptive-after/results.xml": "a98e2157c19709a2f9a76b415ea2de12003c6f1334e0f647b95ddb484e2e1bda",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/adaptive-correction/exact-query-protective-complete/results.xml": "7003377640716e296fa4137dd12cd4ecc620c709868d99d44574124f770fead3",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/explore/metric_frontier.py": "6641549d011576ed00c4c34f61f6fe2ba1379c5229f7e2fa8edaf89d21bb0ca5",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/test_metric_exact_query_identity.py": "183ae5bf02c049a49a561feae9771c58444a1622d94f9e3b695381d31d10dbbb",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/data/ap06_a_rejected_query_anchor.json": "1a63ae8ab2754f6a8df66702c7fb2cf811c8b59408cff85a39064706bb04db68",
+    "/home/p/roboter_worktrees/ap06-e14ca312-validation/src/explore/test/data/ap06_a_rejected_query_anchor.npz": "307de1f932026af3a8f0b2f34d20cf6a88fae0028d7caf38d74956a0ad6f8809",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/causal-current-source-a-interrupt.json": "3b42b2bcc7f63a752304f84fe68f9e4abe18113d9c1877192ba6d42944847c29",
+    "/home/p/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/simulation/causal-current-source-a/events.jsonl.gz": "1628c6e591f8077e03a8926f749aad7df7e77bb47cfe8affd682c502528058fc"
+  }
+}
