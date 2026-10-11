@@ -1,5 +1,24 @@
 # Projektgedächtnis
 
+## 11.10.2026 – Quellenpause und GIL-Konkurrenz getrennt nachweisen
+
+Der neue ursprüngliche ARM-A/B/C-Vergleich mit reinem Prüfstandnachtrag
+`6c50cf5` bleibt 0/3; Produktbuild `cdf95b6` und seine 2.715 bestandenen
+Fälle unverändert. Auch die direkte native IMU-Ausgabe pausiert 323–343 ms
+und hält den gemeinsamen Prüfstand-Radinterpreter mit auf. Asynchroner
+nativer DDS-Vergleich allein genügt nicht: Basispause weiterhin 189 ms.
+Private Wiederverwendung des vorhandenen Ausgabehelpers für IMU mit originalem
+QoS erhält 2.058 gültige Basiszustände; noch keine Produktintegration daraus.
+Separater Fehler der zusätzlichen CPU-Aufzeichnung korrigiert und erhalten.
+Auswahlmessung: 5,389 s Wandzeit / 2,053 s eigener Thread-CPU, gleichzeitig
+1,703 s CPU im ROS-Dispatcher. Quellenqualität und rechtzeitige Verarbeitung
+sind verschiedene Prüfungen. CPU-/Empfangs-/Dispatcherdiagnosen nicht als
+Qualifikation oder weitere reale Fahrt zählen; Grenzen nicht lockern.
+Aktueller nächster Schritt und vollständige Nachweise ausschließlich im WE-STATUS.
+Reale FC03 um 00:31:31 UTC: unveränderte Positionen, Null-RPM; alle 1.048
+Bestandsinstallhashes erneut gleich. Keine Hardware-/Autostartwirkung dieser
+Diagnosen. Rückfall bleibt Stoppen des privaten Kandidaten und Bestandsinstall.
+
 ## 11.10.2026 – DDS-Ausgabe im ARM-Prüfstand von der Erfassung trennen
 
 Der vollständige private v6-Build (14 Pakete, 154 Quelle/Install identische

@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Folge 1–4: v6 geprüft, DDS-Pause im Prüfstand getrennt
+## 11.10.2026 – Folge 1–4: v6 negativ, Quellen-/Dispatcherverzögerung gemessen
 
 Punkt 1 bleibt als begrenzte reale Anfahr-/Bremsqualifikation positiv beendet;
 kein autonomer Realnachweis daraus. Punkt 2: vollständiger separater Build
@@ -8,9 +8,10 @@ kein autonomer Realnachweis daraus. Punkt 2: vollständiger separater Build
 154 geprüfte Produktdateien Quelle/Install identisch und 755 Installhashes.
 Alle 2.715 Fälle der vollständigen Produktprüfung ohne Fehler/Skip bestanden.
 Bestandsmain sauber, alle 1.048 geprüften Bestandsinstall-Dateien unverändert;
-letzte zusätzliche FC03-Prüfung um 23:33:59 UTC ohne Positionsänderung,
+letzte zusätzliche FC03-Prüfung am 11.10. um 00:31:31 UTC ohne Positionsänderung,
 beide RPM null, RAM 100/400/5. Kein Autostart-/OS-/SDK-Wechsel.
 
+Der frühere v6-Vergleich vor der Prüfstand-Ausgabekorrektur bleibt erhalten.
 Die drei ursprünglichen Gesamtmissionen mit unveränderter Welt, Startpose,
 Sensorprofil und Budgets bleiben **0/3**: A 0,294290 m, eine Ankunft und eine
 echte neue Beobachtung; B scheitert bereits an Scope-/HWT-Bereitschaft;
@@ -36,8 +37,34 @@ gehaltenem Interpreterlock. Alter Prüfstand verwirft Encoderproben; korrigierte
 Pfad erhält gültige Erfassung und unveränderte Positionen. Rot/Grün separat
 erhalten, Grün 1/1; alle 28 betroffenen Quellen-/Isolation-/Welt-/Trace-/
 Lifecycle-Fälle bestanden. Die gefrorenen Produktdateien des v6-Builds bleiben
-unverändert. Ein neuer ursprünglicher Gesamtvergleich nach diesem reinen
-Prüfstanddelta ist noch offen; Diagnosefahrten zählen nicht als Positivfall.
+unverändert. Neuer ursprünglicher Gesamtvergleich mit sauberer Quelle
+`6c50cf5`, identischen 755 Installhashes / 154 Produktdateien, weiterhin **0/3**:
+A scheitert an Scope-/HWT-Bereitschaft; B 0,354773 m, eine Ankunft / 183 neue
+Zellen; C 0,704869 m, eine Ankunft / 144 neue Zellen. B/C enden später am
+unveränderten Auswahlbudget; ein bzw. zwei vorangehende Geometrie-Neuprüfungen
+wegen veraltetem Radsnapshot. Keine volle Passage samt Heck. Alle drei Läufe
+manifestkompatibel, gerätefrei, ohne manuelle Nav-Ziele. Der Build bleibt
+Produktquelle `cdf95b6`; `6c50cf5` ist der nachgeprüfte Prüfstand-/Test-/
+Dokumentationsnachtrag, kein behaupteter neuer Produktbuild.
+
+Weitere nicht qualifizierende Diagnose lokalisiert echte IMU-/Scan-
+Publikationspausen von 323–343 / 329 ms. Ein ausdrücklicher nativer asynchroner
+DDS-Vergleich verkürzt eine IMU-Pause auf 143 ms, hält den gemeinsam erfassten
+Radpfad jedoch weiterhin 189 ms auf: nicht übernommen. Wiederverwendung des
+vorhandenen Ausgabehelpers für die IMU mit ursprünglichem Sensor-QoS erhält
+in einem privaten Vergleich 2.058 gültige Basiszustände ohne Verwerfung;
+noch keine Produktintegration oder volle Lieferkontinuität daraus. Erster
+CPU-Aufzeichnungsversuch scheitert an seiner eigenen nebenläufigen Deque-
+Iteration; korrigierter Diagnoselauf und Originalnegativbeleg bleiben erhalten.
+
+Korrigierte Messung: Auswahl 5,389 s Wandzeit / 2,053 s eigener Thread-CPU,
+gleichzeitig 1,703 s Thread-CPU im ROS-Dispatcher. Eine gültige reine Radquelle
+ersetzt keine rechtzeitige Geometrieentscheidung. Vier Explorer-Kerne,
+begrenzter Neueste-Nachricht-Empfang, 1-ms-Dispatcherpause und drei statt sechs
+Explorer-Worker ergeben keinen
+vollständigen Positivlauf; keine dieser Diagnosevarianten wurde übernommen.
+Frische, 20-mm-Abgleich, Kontur und Originalbudgets unverändert. Diagnosefahrten
+zählen nicht als Positivfall und sind keine neue reale Fahrt.
 
 Punkt 3 (regulärer autonomer Realstart) und Punkt 4 (erweiterte reale Abnahmen)
 stehen weiter aus, bis Punkt 2 bestanden ist. Bekannte physische LAB-Kontur
@@ -46,8 +73,9 @@ Passage-/Drei-Bereich-Geometrie und natives Apple-Ziel sind noch nicht belegt;
 einmalige konkrete Rückfragen stehen aus. LAB-1 und erneute Nutzerfreigabe
 gelten weiterhin, keine neue allgemeine Freigaberunde.
 
-**Genau nächster technischer Schritt:** teure Geometrie-/Folgeauswahl am
-gesicherten tatsächlichen Fehlpfad messen und gezielt korrigieren, dann den
+**Genau nächster technischer Schritt:** gemessene Quellen-/Dispatcher-Konkurrenz
+gezielt entkoppeln und die ursprüngliche Quellen-/Geometriebinding dabei
+nachweisen, dann den
 unveränderten ursprünglichen A/B/C-Vergleich bestehen und die beauftragten
 realen Schritte 3/4 fortsetzen. Rückfall: eigenes privates Overlay geordnet
 beenden; Bestandsinstallation erhalten. Prüfstanddelta gezielt rücknehmbar.

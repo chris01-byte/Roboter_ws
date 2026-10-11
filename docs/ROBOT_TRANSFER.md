@@ -1,5 +1,21 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – neuer originaler v6-Vergleich und reine CPU-/DDS-Diagnose
+
+Original-A/B/C mit sauberer Quelle `6c50cf5`, unveränderten Produktdateien des
+Builds `cdf95b6`: 0/3. A Bereitschaftsfehler, B/C je eine Ankunft und neue
+Beobachtung, später Auswahlbudget; keine volle Passage samt Heck. Zusätzliche
+private Ausgabe-/Dispatcherdiagnosen sind nicht qualifiziert und nicht in den
+Produktinstall übernommen. Kein neuer autonomer Realstart oder Kundenbeleg.
+Aktueller Gesamtbefund ausschließlich in `docs/wohnungserkundung/STATUS.md`.
+Rein lesende tatsächliche FC03-Nachprüfung am 11.10. um 00:31:31 UTC bestätigt
+identische Positionszähler / Null-RPM, RAM 100/400/5. Bestandsmain sauber;
+alle 1.048 ursprünglichen Installhashes erneut gleich. Kein OS-/SDK-/Autostart-
+Wechsel, kein dauerhafter Install. Private Originale unter
+`~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/` erhalten.
+Rückfall: nur eigene private Prozesse geordnet direkt stoppen und bewahrten
+Bestandsinstall verwenden. Frühere Raw-Bag-Lücke bleibt ausdrücklich offen.
+
 ## 11.10.2026 – kompletter privater v6-Build, keine autonome Folgefahrt
 
 14 Pakete separat gebaut, 154 geprüfte Quelle-/Install-Dateien identisch,
