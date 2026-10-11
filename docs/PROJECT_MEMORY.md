@@ -1107,3 +1107,17 @@ beide ohne Produktdiff verworfen. Keine höheren Budgets, neue Gesundheits-
 annahmen oder Hardwarefahrt. Nächster konkreter Schritt/Beleg im aktuellen
 STATUS und evidence/ap06-correction-v13-20261011.json; Rückfall privates Overlay
 abwählen oder begrenzte eigene Commits revertieren.
+
+## 11.10.2026 – AP-06 unbeteiligte Historie verursacht unnötige Karten-Hashes
+
+Tatsächlicher adaptiver Gegenfall: elf lokale Digests bei nur einem unbesuchten
+Ziel ohne relevante versuchte Nachbarn, vor Änderung negativ. Jetzt entfallen
+nur ungenutzte Preselection-Hashes ohne eigene Historie und ohne Nachbarn an
+allen geprüften Ziel-/Stoppositionen. Eigene/relevante Historie und endgültiger
+Kandidat behalten vollständige aktuelle Evidenz. 151 eindeutige gezielte Fälle
+positiv. Aufgezeichneter synthetischer terminaler B-Aufruf, gleicher v13-
+Nativkern: acht → drei Digests, Profil 3,594 → 3,032 s, identische Auswahl/
+90 Punkte/Evidenzhash/Ranking, ursprüngliche Zähler erhalten. Keine gemeinsame
+Abnahme daraus; neuer gemeinsamer v14-Vergleich folgt. Quellenpause getrennt
+offen. Rückfall eigener begrenzter Performancecommit; kein Budgetreset oder
+Quellen-/Bewegungsrechtcache. Beleg im aktuellen WE-STATUS.

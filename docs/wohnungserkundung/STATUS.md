@@ -177,13 +177,25 @@ Ergebnisnachtrag enthält ausschließlich Dokumentation; gemeinsame Build-/
 Testquelle bleibt `a4b4e35`. Bestandsmain sauber/unverändert, alle 1.048
 Installhashes nach dem separaten Build identisch.
 
-**Genau nächster Schritt:** gemessene obligatorische Signatur-/Hasharbeit auf
-den gesicherten gekappten B-Eingaben bei exakt gleichen Geometrie-/Inhalts-
-entscheidungen verkürzen; bereits langsamere Vollvergleichsversuche nicht
-unverändert wiederholen. Quellenprozesspause getrennt ursächlich erfassen.
-Erst nach belegter Produktkorrektur neuer gemeinsamer Originalvergleich;
-3/3 vollständige Missionen und reale autonome Folge bleiben offen. Rückfall:
-privates Overlay abwählen bzw. eigene begrenzte Korrekturcommits revertieren.
+Weitere gemessene Schritt-3-Korrektur: Der echte adaptive Gegenfall mit
+unbesuchtem Ziel und ausschließlich räumlich unbeteiligter Historie berechnete
+elf lokale Hashes für eine Auswahl. Vor Korrektur negativ, danach nur der
+endgültige ausgewählte Hash. Unbesuchte Preselection ohne versuchten Nachbarn
+an **allen** geprüften Positionen benötigt keinen Historienvergleich; eigene
+oder relevante Nachbarhistorie behält den tatsächlichen Hash. Jeder ausgewählte
+Kandidat bekommt weiter seine vollständige aktuelle Kartenevidenz. 150 und
+acht gezielte Fälle positiv, 151 eindeutige Prüfungen. Auf dem tatsächlich
+aufgezeichneten terminalen B-Aufruf: acht → drei Hashberechnungen, etwa
+3,594 → 3,032 s Profilzeit, identisches Ziel/90 Punkte/Evidenzschlüssel und
+Ranking, gleicher v13-Nativkern. Einzelprofil ist keine Gesamtqualifikation.
+[Gegenfall und Messung](evidence/ap06-relevant-history-digest-20261011.json).
+
+**Genau nächster Schritt:** neuer gemeinsamer v14-Kandidat mit dieser belegten
+Produktkorrektur, vollständige Regression und unveränderte ursprüngliche
+A/B/C/Cancel/HOLD. Die 208–215-ms-Quellenprozesspause bleibt getrennt offen.
+3/3 vollständige Missionen und reale autonome Folge sind noch nicht erreicht.
+Rückfall: privates Overlay abwählen bzw. eigenen begrenzten Performancecommit
+revertieren; keine Fristen, Quellen oder Bewegungsprüfungen verändert.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

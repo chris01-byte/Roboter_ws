@@ -3395,3 +3395,13 @@ Installhashes gleich, Main 23928d9 sauber. Reale autonome Folge samt 180-s-
 Vorlauf erst nach vollständiger Softwarequalifikation; dann aktuelle echte
 Quellen, feste physische Scopebindung und Recorderempfang erneut messen.
 Privates Overlay bleibt abwählbarer Rückfall; aktueller Stand im WE-STATUS.
+
+## 11.10.2026 – AP-06 weitere reine Auswahlkorrektur, v14 vorbereitet
+
+Unbeteiligte Historie erzeugt keine ungenutzten Preselection-Hashes mehr;
+endgültige Kandidaten und relevante Historie erhalten unveränderte Evidenz.
+151 eindeutige gezielte Prüfungen und reine eingefrorene B-Geometrie positiv.
+Der gemeinsame neue private v14-Build/-Test folgt; keine Hardwareabnahme aus
+diesen Komponenten. Kein Bestandsinstall-/Autostartwechsel oder Aktorstart.
+Rückfall eigenes privates Overlay abwählen/Performancecommit revertieren;
+aktuelle Qualifikation ausschließlich im WE-STATUS.
