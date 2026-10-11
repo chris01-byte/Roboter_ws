@@ -1,18 +1,19 @@
 # AP-06: lokaler Konzepttest auf dem Jetson
 
-Stand 08.10.2026. Der Nutzer übernimmt die spätere lokale Ausführung.
-Diese Anleitung überträgt einen nachprüfbaren Softwarekandidaten; sie behauptet
-weder einen hier ausgeführten ARM-Build noch eine Hardwareabnahme. Der aktuelle
-Missionsbefund steht in [STATUS](STATUS.md), die Vergleichsbedingungen in
-[KONZEPTVERSUCH_AP06](KONZEPTVERSUCH_AP06.md). Die vorhandene LAB-1-Freigabe gilt;
-fehlende echte Messungen werden nicht durch eine neue allgemeine Freigabe ersetzt.
+Stand 11.10.2026. Der separate ARM64-Jetson-Build v17 aus
+`60e894cd6638c2d977b0fca6e352fe7b5aedae44` ist ausgeführt: 14 Pakete,
+155 eindeutige bytegleiche Quelle-/Install-Dateien (157 Vergleichseinträge)
+und 2.976 Regressionen positiv. Ursprüngliche
+vollständige Missionen weiterhin **0/3**. Exakte Quellen/Präfixe/Hashes und
+kritische Erkenntnisgrenzen im [Buildreview](AP06_BUILD_REVIEW_20261011.md).
+[STATUS](STATUS.md) bleibt der einzige aktuelle Iststand; der aktuelle
+[Korrekturauftrag](AGENTENAUFTRAG.md) bestimmt die weitere Reihenfolge.
 
-**Aktueller Kandidat `c5d2a9c`: 0/3 ursprüngliche Gesamtmissionen.**
-Komponentenbuild und Regressionen sind geprüft; erneute Zeit-/Auswahlabbrüche
-verhindern die Kundenabnahme. Der unmittelbar ausführbare nächste Schritt ist
-der separate Build mit anschließendem passivem Vorlauf. Die späteren bewegten
-Schritte unten beschreiben den Entwicklungsweg nach Auswertung dieses Vorlaufs,
-keine bereits erteilte technische Kundenfreigabe.
+Die Anleitung beschreibt den separaten Aufbau. Der frühere Kandidat c5d2a9c
+und sein Downloadbundle sind historische Belege. Vor den abhängigen realen
+Schritten verlangt der aktuelle Auftrag vollständige Softwarequalifikation;
+grüner Build/Regression allein erfüllt diese nicht. LAB-1 bleibt gültig,
+aktuelle Quellen/Geometrie werden tatsächlich gemessen. Kein Kundenbeleg.
 
 ## Separater Quellen- und Installstand
 
@@ -40,20 +41,30 @@ git -C "$AP06_SOURCE" rev-parse HEAD
 ```
 
 Die letzte Ausgabe mit der vollständigen veröffentlichten Commit-ID vergleichen.
-Der geprüfte Produktstand ist `c5d2a9c00d146851799a907ba725ef0d0f30c815`;
+Für den exakten v17-Nachbau den Produktcommit explizit auswählen; spätere
+Dokumentationscommits sind kein neu qualifizierter Produktbuild:
+
+```bash
+git -C "$AP06_SOURCE" switch --detach 60e894cd6638c2d977b0fca6e352fe7b5aedae44
+git -C "$AP06_SOURCE" rev-parse HEAD
+git -C "$AP06_SOURCE" status --short
+```
+
+Der aktuell gebaute Produktstand ist `60e894cd6638c2d977b0fca6e352fe7b5aedae44`;
 die nachfolgenden Übergabecommits ändern ausschließlich Dokumentation/Belege.
 Der alte `start_app_erkundung.sh` lädt fest
 `~/roboter_ws/install` und eignet sich deshalb nicht als Nachweis dieser
 separaten Installation.
 
-Alternativ kann beim Clone statt der GitHub-URL das heruntergeladene
+Nur für den historischen Stand kann beim Clone statt der GitHub-URL das heruntergeladene
 `$HOME/Downloads/roboter-ap06-konzept.bundle` verwendet werden. Dessen eigener
 Commit ist in `uebergabe.json` gebunden; die spätere Ergänzung zum GitHub-Abruf
 ist darin noch nicht enthalten. Das Übergabeverzeichnis enthält
 `uebergabe.json`, `SHA256SUMS`, das Git-Bundle
 und ein separates Archiv synthetischer Rohbelege. Nach vollständigem Download
 in diesem Verzeichnis `sha256sum -c SHA256SUMS` ausführen. Für den Build genügt
-der Bundle-Checkout; das Rohbelegarchiv dient der unabhängigen Auswertung.
+der historische Bundle-Checkout; das Rohbelegarchiv dient der unabhängigen
+Auswertung. Dieses alte Bundle enthält v17 nicht; v17 aus Git abrufen.
 
 Im Checkout gelten die gepinnten Quellen und Patches aus
 `tools/simulation/ap06_dependencies.json`. Deren Vorbereitung steht in

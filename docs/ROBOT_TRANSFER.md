@@ -3446,3 +3446,15 @@ Kein Aktorstart/Bestandsinstall-/Autostart-/SDKwechsel oder Shutdown. Keine
 Produktfrische aus künstlicher Last behauptet; Realsensoren vor der späteren
 qualifizierten Folge frisch binden. Rückfall eigener begrenzter Commit oder
 privates Overlay abwählen. Aktueller gemeinsamer Stand weiterhin v16/0 von 3.
+
+## 11.10.2026 – AP-06 v17 Buildreview und Veröffentlichung
+
+ARM64-Quelle 60e894c separat unter releases/ap06-correction-v17-20261011
+gebaut und mit vollständiger Regression geprüft: 2.976 grün, Originalmissionen
+0/3. Paketpräfixe/Quell-, Modul-, Kernel- und Skripthashes gebunden; Unterbauten
+explizit weiterverwendet, kein hermetischer Zweitmaschinenbeleg. Aktuelle
+Bestandsprüfung: Main 23928d9 sauber, 1.048 Installhashes unverändert. Eigene
+simulierte Prozesse terminal/Kommandos null; keine Aktor-/Install-/Autostart-/
+SDKänderung oder Shutdown. Reale Folge, vollständige Wiederaufnahme und
+lückenlose Bewegungsaufzeichnung bleiben offen. Quellen/Geometrie vor später
+qualifizierter Realfahrt neu messen. Rückfall privates Overlay abwählen.

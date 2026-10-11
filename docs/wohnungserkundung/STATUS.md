@@ -1,5 +1,21 @@
 # Wohnungserkundung – aktueller Status
 
+**Neuester vollständig geprüfter gemeinsamer Stand: v17 / `60e894c`,
+11.10.2026.** Separater ARM64-Build: 14 Pakete, 155 eindeutige bytegleiche
+Quelle/Install-Dateien bei 157 Vergleichseinträgen. **2.976 Regressionen
+bestanden; ursprüngliche ganze A/B/C-Missionen weiterhin 0/3.** Originale
+Cancel-/HOLD-Stoppfälle 2/2; im HOLD-Fall nach Halt vier Ankünfte/drei
+Beobachtungen, danach terminaler Kartenstatus-Joinfehler. Vollständige
+Wiederaufnahme und reale Gesamtfahrt bleiben offen. Bestandsinstall und Main
+unverändert. [Kritischer Buildreview](AP06_BUILD_REVIEW_20261011.md) und
+[exakter v17-Beleg](evidence/ap06-correction-v17-20261011.json).
+
+**Nächste Ursachenprüfung:** A erste verworfene Rasterzelle samt Rastertyp und
+Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
+HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
+gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
+Korrekturen und früheren Vergleichsstände.
+
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 
 Getrennter Checkout, Fixbranch `fix/ap06-adaptive-cooldown-order`, Ausgangsbasis
@@ -306,12 +322,46 @@ Kein daraus abgeleiteter Produktquellen-, Missions- oder Realgesundheitsbeleg.
 Executor, ursprüngliche Budgets und Schutzprüfungen unverändert.
 [Gegenfall, exakte Vergleiche und Rückfall](evidence/ap06-candidate-pass-binding-20261011.json).
 
-**Genau nächster Schritt:** sauberen gemeinsamen v17 aus beiden gezielten
-Korrekturen bauen, volle Regression und ursprüngliche A/B/C/Cancel/HOLD
-unverändert ausführen. Volle Wiederaufnahme und reale Folge separat belegen.
-Aktueller vollständiger Qualifikationsstand bleibt v16 mit 0/3; keine neue
-reale Sensor-/Bewegungsabnahme oder Kundenfreigabe. Rückfall begrenzte eigene
-Commits revertieren bzw. privates Overlay abwählen.
+Gemeinsamer **v17 aus `60e894c`** abgeschlossen: 14 Pakete in 174,559 s,
+157 Vergleichseinträge für 155 eindeutige Quelle/Install-Dateien, 756 Installhashes. **2.976 Regressionen positiv**,
+keine Fehler/Skip. Beide Manifeste für 3.717 verfolgte Dateien identisch;
+aktuelle erfasste Produktmodule/hashgebundener ARM64-Kern stimmen. Ursprüngliche
+volle Missionen **0/3**, keine volle Passage/Heck und nur 0/1/1 Beobachtungen:
+
+| Fall | Weg | Erster Auslöser | Terminaler Grund |
+|---|---:|---|---|
+| A | 0,203623 m | Egressroute: neue unbekannte Fläche/Belegung | `completion_raw_pose_not_observed_free` |
+| B | 0,354768 m | Keine ursprüngliche Kandidatensicht am nativen Stop | Auswahlbudget 5,889749 s, CPU 2,257465 s |
+| C | 0,707988 m | Scan-Footprint nach 0,192777 rad/4,083774 s ungültig | Auswahlbudget 5,707443 s, CPU 2,145290 s |
+
+Keine gemeinsame Ursache aller Abbrüche bewiesen. A letzte Auswahl 3,361210 s
+innerhalb Budget; sein Geometrie-/Abschlussfehler bleibt getrennt von B/C.
+Die lokale Beschleunigung behebt die späteren Lastfälle noch nicht. Grenzen
+oder Freiraum nicht erweitert. Cancel positiv, HOLD-Stopp positiv; gemessener Cancel-Halt
+0,338385 s, HOLD-Halt ab HOLD
+0,300974 s. Originaler HOLD-Fall ausdrücklich nur
+Stopp, **keine vollständige Wiederaufnahme**. Nach tatsächlichem HOLD folgen
+vier Ankünfte/drei Beobachtungen und 1,249039 m; terminal anschließend
+`map_status_join_retry_budget_exhausted`. Dieser begrenzte positive Fortsetzungs-
+verlauf ersetzt keine Original-Positivmission. Alle Kinder terminal, vier
+Kommandoströme null. Bestandsmain `23928d9` sauber und alle 1.048 ursprünglichen
+Installhashes unverändert. Kein realer Vorlauf oder autonome Realfahrt aus
+dieser Umsetzung. Matrixdriver-Exit 0 bedeutet Ausführung, keine Missionsabnahme.
+[Exakter v17-Build und Resultate](evidence/ap06-correction-v17-20261011.json).
+
+Kritische Selbstprüfung samt Erkenntnisgrenzen und reparierter veralteter
+Jetson-Kandidatenangabe:
+[Buildreview](AP06_BUILD_REVIEW_20261011.md). Software `60e894c` bereits auf dem
+Featurebranch bestätigt; dieser Audit ergänzt Dokumentation/Belege. Kein
+Main-Merge oder dauerhafte Installation.
+
+**Genau nächster Schritt:** A erste tatsächlich verworfene Rasterzelle samt
+Rastertyp/Referenz messen; B/C tatsächlich späte Auswahlarbeit und Callback-
+Verzögerung gezielt binden. Echte Gegenfälle vor weiterer Produktänderung,
+keine unveränderten Fehlversuche oder pauschalen höheren Budgets. Danach ein
+neuer gemeinsamer Kandidat mit ursprünglicher vollständiger Abnahme. Volle
+Wiederaufnahme und reale Folge gemäß aktuellem Auftrag bleiben offen.
+Rückfall begrenzte eigene Korrekturcommits revertieren/private Overlay-Abwahl.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 

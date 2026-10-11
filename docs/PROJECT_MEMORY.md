@@ -1175,3 +1175,18 @@ Tests positiv. Drei native Paare unter gleicher künstlicher DDS-Last: median
 Keine gespeicherte Gesundheit/Fahrfreigabe oder neue Budgets. Keine zusätzliche
 Executor-Pause. Gemeinsamer v17 folgt, aktuelle vollständige Missionen 0/3.
 Rückfall eigener Performancecommit/Overlay-Abwahl; exakte Belege WE-STATUS.
+
+## 11.10.2026 – AP-06 v17 kritisch ausgewertet
+
+60e894c sauber separat gebaut/auf Feature veröffentlicht; 14 Pakete, 157
+Vergleichseinträge für 155 eindeutige Dateien/756 Hashes, 3.717 Quellmanifestwerte übereinstimmend,
+2.976 Regressionen grün. Ursprüngliche Missionen weiter 0/3; A Egressverwerfung
+und unbewiesene Rohpose am Abschluss, B/C spätere Auswahlbudgets 5,890/5,707 s.
+Der lokale reine Rechenzeitgewinn genügt daher nicht für die Gesamtlast.
+Erste Auslöser bleiben getrennt; keine gemeinsame Ursache bewiesen. Originale
+Cancel/HOLD-Stopps separat im aktuellen STATUS, kein voller Resume-/Realbeleg.
+Falsche Prüfpfade/Ordnerstarts zählen nicht als Produktfehler oder positive
+Tests. Veraltete Jetson-Kandidatenangabe korrigiert; historisches Bundle bleibt
+historisch. Buildreview und exakte Belege veröffentlicht; weitere Ursachen-
+messung vor Änderung, Schutz-/Zeitgrenzen gleich. Rückfall eigene Commits
+gezielt revertieren/private Overlay-Abwahl.
