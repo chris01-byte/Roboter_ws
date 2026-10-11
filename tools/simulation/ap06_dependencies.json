@@ -115,10 +115,10 @@
       "packages": [
         "nav2_common",
         "nav2_msgs",
-        "nav_2d_msgs",
+        "nav2_dwb_controller/nav_2d_msgs",
         "nav2_voxel_grid",
         "nav2_util",
-        "nav_2d_utils",
+        "nav2_dwb_controller/nav_2d_utils",
         "nav2_core",
         "nav2_costmap_2d",
         "nav2_lifecycle_manager",

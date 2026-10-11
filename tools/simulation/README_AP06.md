@@ -123,6 +123,19 @@ Ceres/SuiteSparse, GeographicLib, SQLite, ZeroMQ/Fmt, TF-/Nachrichtenpakete
 und die deklarierten Python-Pins. `rosdep --ignore-src` muss auch alle vorbereiteten
 Quellpakete sehen; kein Fremdprodukt als Navigator verwenden.
 
+Die Nav2-Paketpfade `nav_2d_msgs` und `nav_2d_utils` liegen im gepinnten
+Quellarchiv unter `nav2_dwb_controller/`. Der Quellenlock enthält jetzt diese
+tatsächlichen Pfade; die Vorbereitung lehnt fehlende `package.xml` ab.
+Ein unvollständiger Underlay darf diese Pakete nicht unbemerkt aus einem anderen
+Install ergänzen. Versions-/Archivpins und Szenario-Abnahmekriterien bleiben gleich.
+
+Für den LAB-Slotkandidaten beim bestehenden Testdriver ausdrücklich
+`--unknown-space-policy sensor_guarded --execution-mode lab_slots` angeben.
+Das lädt die vorhandenen sensorüberwachten Profile und danach den Slotablauf.
+`continuous` bleibt der bisherige Ablauf. Ein bestandenes Cancel-/HOLD-Stopp-
+Szenario bedeutet keinen erfolgreichen Kartierungsauftrag und keine vollständige
+Wiederaufnahme. Der aktuelle Umfang steht ausschließlich im WE-STATUS.
+
 ```bash
 source /opt/ros/humble/setup.bash
 python3 -m pip install -r src/explore/requirements-geometry.txt

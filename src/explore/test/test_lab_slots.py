@@ -384,3 +384,49 @@ def test_actual_ros_node_rejects_inconsistent_lab_start_configuration(change,rea
         with pytest.raises(ValueError,match=reason):ExploreNode()
     finally:
         rclpy.shutdown()
+
+
+def test_identical_costmap_publications_do_not_repeat_frontier_work(monkeypatch):
+    import explore.lab_slots_runtime as module
+    node,grid,clock,parent,terminal=lab(monkeypatch,'tiny')
+    node._initial_scan_enabled=False
+    select=node._metric_select
+    calls=[]
+    def choose(*args):
+        calls.append(clock[0])
+        return select(*args)
+    node._metric_select=choose
+    sleep=module.time.sleep
+    def publish(delay):
+        sleep(delay)
+        node._global_costmap=copy.deepcopy(node._global_costmap)
+        node._global_costmap_received_at=clock[0]
+    monkeypatch.setattr(module.time,'sleep',publish)
+    node._execute_metric_frontier(parent,2.,1.)
+    assert len(calls)==1 and node._metric_status['terminal_reason']=='budget_exhausted'
+
+
+def test_separate_short_source_gaps_each_get_a_fresh_bounded_validation_window(monkeypatch):
+    node,grid,clock,parent,terminal=lab(monkeypatch,'tiny')
+    node._initial_scan_enabled=False
+    node._metric_slot_recovery_timeout_s=.4
+    def snapshot(**_kwargs):
+        gap=(10.7<=clock[0]<11.) or (11.8<=clock[0]<12.1)
+        return dict(safe=not gap,first_rejecting_predicate='vl53_cloud_missing_stale_or_invalid' if gap else None)
+    node._metric_operating_snapshot=snapshot
+    node._execute_metric_frontier(parent,3.,1.)
+    assert node._metric_status['terminal_reason']=='budget_exhausted'
+    assert node._metric_status['recoveries']==3  # one view, two separate data gaps
+
+
+def test_exception_after_child_dispatch_is_terminal_and_preserves_cause(monkeypatch):
+    node,grid,clock,parent,terminal=lab(monkeypatch)
+    node._initial_scan_enabled=False
+    def drive(*_args,**_kwargs):
+        node._nav_child_uncertain=True
+        raise RuntimeError('peer_result_transport_lost')
+    node._navigate_to=drive
+    node._execute_metric_frontier(parent,10.,.3)
+    assert terminal==['abort'] and node._metric_status['terminal_reason']=='child_error'
+    assert node._metric_status['first_trigger']['reason']=='peer_result_transport_lost'
+    assert node._nav_child_uncertain

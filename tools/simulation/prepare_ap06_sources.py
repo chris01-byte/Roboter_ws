@@ -53,7 +53,11 @@ def prepare(args):
             subprocess.run(['git', 'apply', str(repo/lock['navfn_patch'])],
                            cwd=target, check=True)
             patched_navfn = True
-        packages.extend(str(target/relative) for relative in source['packages'])
+        for relative in source['packages']:
+            package=target/relative
+            if not (package/'package.xml').is_file():
+                raise RuntimeError('declared native package missing: '+str(package))
+            packages.append(str(package))
     if not args.verify_only:
         manifest = {'source_lock': str(Path(__file__).with_name('ap06_dependencies.json')),
                     'base_paths': packages, 'patched_navfn': patched_navfn, 'patched_slam': 'slam_toolbox' in [p.name for p in args.destination.glob('*')]}

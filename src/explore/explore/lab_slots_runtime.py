@@ -7,6 +7,7 @@ reuse a cached movement authorization. Recovery discards plans, never faults.
 """
 import math
 import time
+import hashlib
 
 import rclpy
 from shapely.geometry import Polygon
@@ -274,12 +275,21 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
         return live_guard(node,context=context,rotation=rotation)
 
     def observation_key():
-        # Metadata only; no hash/raster/geometry work while awaiting new data.
+        # A repeated costmap PUBLICATION is not new geometry. A buffer digest
+        # is cheap; no raster masks, frontier search or route proof run here.
         raw=node._metric_raw
         correlation=node._metric_correlation
         pose,_=node._robot_pose_sample()
+        costmap=node._global_costmap
+        cost_key=None
+        if costmap is not None:
+            origin=costmap.info.origin
+            cost_key=(costmap.header.frame_id,costmap.info.width,costmap.info.height,
+                costmap.info.resolution,origin.position.x,origin.position.y,origin.position.z,
+                origin.orientation.x,origin.orientation.y,origin.orientation.z,origin.orientation.w,
+                hashlib.blake2b(costmap.data,digest_size=16).digest())
         return (None if raw is None else raw[1].fingerprint,
-            None if correlation is None else correlation.context,id(node._global_costmap),
+            None if correlation is None else correlation.context,cost_key,
             None if pose is None else tuple(round(v,2) for v in pose))
 
     while rclpy.ok():
@@ -314,7 +324,8 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
             if not wait_source(reason):
                 return finish('blocked','source_revalidation_timeout:'+reason)
             continue
-        if idle_key is not None and time.monotonic()<idle_until and observation_key()==idle_key:
+        if (source_wait_at is None and idle_key is not None
+                and time.monotonic()<idle_until and observation_key()==idle_key):
             phase('observe')
             node._metric_status['state']='waiting'
             time.sleep(.05)
@@ -597,6 +608,9 @@ def execute_lab_slots(node, goal_handle, overall_timeout, min_frontier):
                                     node._wohnungserkundung_active_child=None
             except Exception as caught:
                 error=str(caught)
+                if dispatched:
+                    status='error'
+                    node._metric_record_transition('child_exception',error)
         reason=first[0] or (error if not dispatched else None)
         if status in ('cancel_failed','error'):
             return finish('failed','child_'+status)
