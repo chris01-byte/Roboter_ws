@@ -7,6 +7,7 @@ import pytest
 from explore.metric_frontier import MetricCandidate, MetricTaskPolicy
 from explore.metric_frontier_runtime import MetricFrontierRuntime
 from test_metric_progress import parent_fixture
+from test_metric_public_cooldown import frozen
 
 
 def waiting_policy():
@@ -53,10 +54,12 @@ def test_nontime_rejection_cannot_become_waiting_authority(fault):
 
 @pytest.mark.parametrize('fault', ['wake', 'context', 'cancel', 'deadline',
                                   'source', 'hold', 'standstill'])
-def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch, fault):
+@pytest.mark.parametrize('strategy', ['adaptive', 'configured_scan'])
+def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch, fault, strategy):
     # Only inject a selection's time-only result. Parent/source joining,
     # checkpoints, absolute budgets and fault transitions are product code.
     node, _, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+    node._metric_start_strategy = strategy
     began = clock[0]
     selections, samples, holds = [], [], []
     actual_inputs = node._metric_inputs
@@ -107,3 +110,84 @@ def test_waiting_parent_checks_live_faults_and_never_retains_a_goal(monkeypatch,
             deadline='budget_exhausted', source='start_motion_wheel_missing_stale_or_invalid',
             hold='hwt_stopped', standstill='standstill_unconfirmed')[fault]
         assert bool(holds) is (fault == 'hold')
+
+
+@pytest.mark.parametrize('strategy', ['adaptive', 'configured_scan'])
+@pytest.mark.parametrize('fault', ['deadline', 'cancel', 'source', 'hold', 'context'])
+def test_actual_selection_runs_once_during_original_private_pause(monkeypatch, strategy, fault):
+    """Actual captured geometry, policy, selection and adaptive decision.
+
+    Only the live input/health boundary and clock are the component fixture.
+    This is an ordering proof, not a live source or complete mission receipt.
+    """
+    import explore.metric_frontier_runtime as module
+    node, _, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+    geometry, inputs, policy = frozen('ap06_a_private_cooldown')
+    node.__dict__.update(geometry.__dict__)
+    node._metric_start_strategy = strategy
+    node._metric_scope_binding = inputs[1].fingerprint
+    began = clock[0]
+    def current_inputs(**_):
+        if clock[0] >= began+.5:
+            if fault == 'cancel': parent.is_cancel_requested = True
+            if fault == 'source': raise ValueError('start_motion_wheel_missing_stale_or_invalid')
+            if fault == 'context': node._metric_context_generation = 1
+        return inputs
+    node._metric_inputs = current_inputs
+    if fault == 'hold':
+        node._wohnungserkundung_hwt_hold = lambda: clock[0] >= began+.5
+        node._wohnungserkundung_wait_for_hwt_resume = lambda *_a, **_k: 'stopped'
+    monkeypatch.setattr(module, 'MetricTaskPolicy', lambda *_: policy)
+    before = {k:(a.tries, a.failures, a.completed, a.retry_after)
+              for k,a in policy.attempts.items()}
+    calls = []
+    select = node._metric_select
+    def counted(*args, **kwargs):
+        calls.append(clock[0])
+        return select(*args, **kwargs)
+    node._metric_select = counted
+    def forbidden(*_args, **_kwargs):
+        pytest.fail('Cooldown must not dispatch a plan or movement')
+    node._navigate_to = node._metric_request_nav_plan = forbidden
+    result = node._execute_metric_frontier(parent, .75, .3)
+    assert terminal == (['cancel'] if fault == 'cancel' else ['abort']) and not result.success
+    assert node._metric_status['reason'] == dict(deadline='budget_exhausted',
+        context='budget_exhausted',cancel='user_canceled',hold='hwt_stopped',
+        source='start_motion_wheel_missing_stale_or_invalid')[fault]
+    assert node._frontier_rank_stats['bounded_private_observation_wait_s'] > .75
+    assert len(calls) == (2 if fault == 'context' else 1), calls
+    if fault == 'context': assert calls[1] >= began+.5
+    assert node._metric_status['attempts'] == node._metric_status['arrivals'] == 0
+    assert before == {k:(a.tries, a.failures, a.completed, a.retry_after)
+                      for k,a in policy.attempts.items() if k in before}
+
+
+def test_adaptive_parent_reproves_actual_route_after_original_pause(monkeypatch):
+    import explore.metric_frontier_runtime as module
+    node, _, clock, parent, terminal = parent_fixture(monkeypatch, 'open')
+    geometry, inputs, policy = frozen('ap06_a_private_cooldown')
+    node.__dict__.update(geometry.__dict__)
+    node._metric_scope_binding = inputs[1].fingerprint
+    node._metric_inputs = lambda **_: inputs
+    node._overall_timeout_s = 40.  # unit episode can include the original 30-s policy
+    monkeypatch.setattr(module, 'MetricTaskPolicy', lambda *_: policy)
+    actual = node._metric_select
+    calls, wake = [], []
+    def selected(*args, **kwargs):
+        choices = actual(*args, **kwargs)
+        calls.append(clock[0])
+        if len(calls) == 1:
+            assert choices == []
+            wake.append(node._frontier_rank_stats['bounded_private_observation_until'])
+            return choices
+        assert clock[0] >= wake[0] and choices
+        assert choices[0].observation_points and not choices[0].requires_nav2_plan
+        # End the component episode after the REAL fresh selection, before
+        # the navigation boundary. This is not a motion/arrival receipt.
+        raise ValueError('actual_selection_reproved_after_original_pause')
+    node._metric_select = selected
+    result = node._execute_metric_frontier(parent, 40., .3)
+    assert not result.success and terminal == ['abort']
+    assert len(calls) == 2 and calls[1] >= wake[0]
+    assert node._metric_status['reason'] == 'actual_selection_reproved_after_original_pause'
+    assert node._metric_status['attempts'] == node._metric_status['observations'] == 0

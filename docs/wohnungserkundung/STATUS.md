@@ -1,6 +1,36 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Entwicklungsstand, Ablaufanalyse und Korrekturplan veröffentlicht
+## 11.10.2026 – adaptive Wartereihenfolge reproduziert und korrigiert
+
+Korrekturplan Schritte 1/2 umgesetzt im separaten Checkout auf
+`fix/ap06-adaptive-cooldown-order`, Ausgangsbasis `d2c6cfe`. Der neue Gegenfall
+verwendet echte adaptive Startentscheidung, Aufgabenpolicy und vollständige
+Zielauswahl auf aufgezeichneter synthetischer A-Geometrie. Vor Korrektur:
+adaptive Auswahl dreimal während derselben Pause, konfigurierter Pfad einmal;
+erwartet 1 negativer/1 positiver Fall. Originalbeleg erhalten.
+
+Die bestehende zeit-/kontextgebundene Warteprüfung liegt jetzt nach aktuellen
+Quellen-, Stop-, Cancel-/HOLD- und Budgetprüfungen, aber vor der adaptiven
+Startentscheidung. Keine Route oder Bewegungsautorität wird behalten, keine
+Frist geändert. Echte Auswahl nach Ablauf der originalen Pause erneut belegt.
+Kontextwechsel, Cancel, HOLD, Quellenverlust und Gesamtbudget in beiden
+Strategien geprüft. 214 betroffene Fälle positiv; isolierter Namespace ohne
+Hardwarezugriff, aktuelle Produktquellen und vorhandener v10-Nativkern.
+[Gegenfall und Nachweise](evidence/ap06-adaptive-wait-order-20261011.json).
+
+Dies beendet nicht AP-06: der letzte ursprüngliche gemeinsame A/B/C-Beleg
+bleibt 0/3; kein neuer gemeinsamer Build, geschlossener Gesamtpositivlauf oder
+reale autonome Fahrt aus dieser Korrektur. Bestandsmain/-install erhalten,
+keine neuen Aktorprozesse oder Gerätekommandos. Die Komponentenuhr und
+eingefrorenen Eingaben sind keine aktuellen Sensor-/Gesundheitsnachweise.
+
+**Genau nächster Schritt:** gleicher instrumentierter geschlossener Source-A-
+Vergleich mit korrigierter Reihenfolge, um Verarbeitungszeit und Folge nach der
+zweiten Beobachtung zu messen (Korrekturplan Schritte 3/4). Keine unveränderte
+Fehlstartserie. Rückfall: nur diesen Reihenfolgediff gezielt revertieren oder
+privaten Kandidaten geordnet abwählen; Bestandsinstall bewahren.
+
+## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
 Der [aktive Auftrag](AGENTENAUFTRAG.md) enthält die aufeinanderfolgenden
 Maßnahmen: Gegenfälle im tatsächlichen adaptiven Pfad, Warte-/Auswahlreihenfolge,

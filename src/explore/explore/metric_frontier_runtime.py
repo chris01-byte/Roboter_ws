@@ -2938,6 +2938,18 @@ class MetricFrontierRuntime:
                     if expired() or attempts >= self._max_frontier_goals or failures >= self._max_failed_goals:
                         return finish('partial', 'budget_exhausted')
             checkpoint()
+            if pending is None:
+                context = (inputs[1].context, getattr(self, '_metric_context_generation', 0),
+                    inputs[0].header.frame_id, inputs[0].info.resolution,
+                    inputs[5].header.frame_id, inputs[5].info.resolution)
+                if private_wait_until is not None:
+                    if context == private_wait_context and time.monotonic() < private_wait_until:
+                        fault = wait_for_observation_pause(inputs, private_wait_until)
+                        if fault is not None:
+                            return finish('failed', fault)
+                        continue
+                    private_wait_until = private_wait_context = None
+                self._metric_status.pop('task_cooldown_wait_s', None)
             adaptive_candidates = None
             use_scan = scan_pending and pending is None
             if (self._metric_start_strategy == 'adaptive' and pending is None
@@ -3017,17 +3029,6 @@ class MetricFrontierRuntime:
                 scan_pending=False  # at most ONE scan attempt; HOLD retains it
                 continue
             if pending is None:
-                context = (inputs[1].context, getattr(self, '_metric_context_generation', 0),
-                    inputs[0].header.frame_id, inputs[0].info.resolution,
-                    inputs[5].header.frame_id, inputs[5].info.resolution)
-                if private_wait_until is not None:
-                    if context == private_wait_context and time.monotonic() < private_wait_until:
-                        fault = wait_for_observation_pause(inputs, private_wait_until)
-                        if fault is not None:
-                            return finish('failed', fault)
-                        continue
-                    private_wait_until = private_wait_context = None
-                self._metric_status.pop('task_cooldown_wait_s', None)
                 try:
                     candidates = (adaptive_candidates if adaptive_candidates is not None else
                                   self._metric_select(inputs,policy,min_frontier))

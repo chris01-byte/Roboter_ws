@@ -1,5 +1,17 @@
 # Projektgedächtnis
 
+## 11.10.2026 – echte adaptive Auswahl wartet vor erneuter Startentscheidung
+
+Aufgezeichnete synthetische A-Geometrie liefert einen Gegenfall mit echter
+Policy/Startentscheidung/Zielsuche: drei adaptive Suchen während einer Pause
+gegen eine im konfigurierten Pfad. Warteprüfung vor adaptive Entscheidung
+verschoben, nach aktuellen Schutz-/Quellen-/Budgetprüfungen. 214 betroffene
+Fälle positiv, einschließlich Originalpausenablauf mit echter neuer Auswahl,
+Kontextwechsel, Cancel, HOLD und Quellenverlust in beiden Strategien.
+Keine Friständerung, keine alte Bewegungsautorität. Kein neuer Gesamt- oder
+Realpositivbeleg; Folgemessung im gleichen instrumentierten A-Aufbau als
+nächster Schritt im STATUS. Rückfall: eigener Reihenfolgecommit bzw. Overlay.
+
 ## 11.10.2026 – aktuellen AP-06-Entwicklungsstand auf Nutzerauftrag veröffentlicht
 
 Nach Auskunft über den fehlenden Upload beauftragt der Nutzer ausdrücklich die
