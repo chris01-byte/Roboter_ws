@@ -1077,6 +1077,14 @@ class MetricFrontierRuntime:
         from .explore_node import grid_line_is_clear
         return grid_line_is_clear(mask,start,end)
 
+    def _metric_cell_route_points(self, grid, cells):
+        """Same cell centres; compute the invariant grid transform once."""
+        if not cells:
+            return ()
+        rows, cols = np.asarray(cells, dtype=np.int64).T
+        x, y = self._grid_to_world(cols, rows, grid.info)
+        return tuple((float(wx), float(wy)) for wx, wy in zip(x, y))
+
     def _metric_route(self, inputs, target, target_yaw=None):
         grid, _, pose, known, safe, costmap, cost_known = inputs
         self._metric_prepare_egress(inputs)
@@ -1115,7 +1123,7 @@ class MetricFrontierRuntime:
         if cells is None:
             self._metric_last_route_rejection='no_known_free_route'
             return None
-        route = (pose[:2],) + tuple(self._grid_to_world(c, r, grid.info) for r, c in cells) + (target,)
+        route = (pose[:2],) + self._metric_cell_route_points(grid, cells) + (target,)
         # Remove coincident points so atan2(0, 0) does not invent a turn.
         route = tuple(p for i, p in enumerate(route) if i == 0 or math.dist(p, route[i-1]) > 1e-6)
         # A raster staircase is a reachability proof, not a command to rotate
@@ -1396,7 +1404,7 @@ class MetricFrontierRuntime:
         cells = route_cells(known, (sr, sc), (tr, tc), distances)
         if cells is None:
             return None
-        route = (pose[:2],) + tuple(self._grid_to_world(c, r, grid.info) for r, c in cells) + (target,)
+        route = (pose[:2],) + self._metric_cell_route_points(grid, cells) + (target,)
         arrival = route_arrival_yaw(route, pose[2], grid.info.resolution)
         # Goal proof without pretending to validate the rejected connection.
         goal_inputs = (grid, inputs[1], (*target, arrival), *inputs[3:])

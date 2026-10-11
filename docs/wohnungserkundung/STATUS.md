@@ -1,6 +1,6 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – v9 vollständig gebaut; Originalmissionen weiterhin 0/3
+## 11.10.2026 – Wegberechnung identisch beschleunigt; Originalabnahme weiterhin 0/3
 
 Punkt 1 bleibt begrenzt real positiv; die Rohdatenlücke während Translation
 bleibt erhalten. Punkt 2: gemeinsam gebauter v9-Stand `9fbf085`, 14 Pakete in
@@ -31,6 +31,18 @@ gebauten Fixes. Profil eines ursprünglichen v9-A-Folgeinputs: Auswahl 5,17 s;
 inhaltliche Memo-Schlüssel 0,76 s. Diese eingefrorenen Geometriediagnosen
 ersetzen keine aktuellen Quellen oder geschlossene Gesamtmission.
 
+Separater Wegfix: native Rückverfolgung desselben Distanzfelds mit identischer
+strikter Abstiegsbedingung, Eckensperre und Tie-Reihenfolge; unveränderte
+Python-Referenz bleibt verfügbar. Zellzentren mit derselben Transformarithmetik
+zusammen projizieren. 279 gezielte Fälle positiv, inklusive vollständiger
+kleiner Raster, zufälliger Sperren, Strides, Grenzties und 45 bitgleichen
+Projektionsvergleichen. Eigene erste Testdomain und zwei ungeeignete
+Int8-Distanztests korrigiert, Originalnegative privat erhalten. Eingefrorener
+Original-A-Folgeinput beendet nun die vollständige Auswahl in 4,69 s innerhalb
+der ursprünglichen 5 s, ohne zulässiges Ziel; reine Geometriediagnose, keine
+Gesamtmission. Fristen, Quellen, Ziele, Ranking und Bewegungshülle unverändert.
+Gemeinsamer v10-Build/volle Regression/Originalmissionen noch ausstehend.
+
 Letzte reale rein lesende FC03 am 11.10. um 02:11:47 UTC: Zähler
 35204/−35676 unverändert, beide RPM null, RAM 100/400/5;
 Lesezeiten 4,836/4,735 ms. Alle 1.048 Bestandsinstallhashes um 02:11:48 UTC
@@ -40,9 +52,9 @@ Bekannten festen LAB-Scope vor realem Start neu binden, nicht umzentrieren;
 Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit nicht erfinden.
 Bestehender LAB-1-Auftrag gilt ohne neue allgemeine Freigaberunde.
 
-**Genau nächster Schritt:** gemessene Rasterwegrückverfolgung mit identischem
-Oracle beschleunigen; anschließend gemeinsame vollständige Regression und
-ursprüngliche A/B/C. Erst nach deren Bestehen reale Schritte 3/4. Rückfall:
+**Genau nächster Schritt:** gemeinsam v10 bauen, vollständige Regression und
+ursprüngliche A/B/C ausführen. Erst nach deren Bestehen reale Schritte 3/4.
+Rückfall:
 eigene private Prozesse direkt geordnet stoppen und Bestandsinstall verwenden;
 neue Diffs einzeln revertierbar. Originalnegative und reale Daten privat unter
 `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.

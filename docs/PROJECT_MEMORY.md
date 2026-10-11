@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 11.10.2026 – gleiche Distanzfelder mit geringerem Aufwand rückverfolgen
+
+Originalprofil: 615 Rückverfolgungen kosten 1,17 s, skalare Zellprojektionen
+weitere 0,64 s. Native reine Geometrie erhält jede Zelle, strikten Abstandstest,
+Eckensperre und (Score, Reihe, Spalte)-Tie. GIL während kurzer Bufferlesung
+behalten; dieselben Gewichte aus Python, keine Quellen-/Bewegungsentscheidung
+im Kernel. Batchprojektion erhält bitgleiche Zentren. 279 gezielte Fälle positiv;
+eigene Testdomain/Int8-Testannahmen korrigiert, Originalnegative erhalten.
+Eingefrorener A-Folgeinput vollständig in 4,69 s statt Budgetabbruch, weiterhin
+kein zulässiges Ziel. Gemeinsamer v10-/Originalbeleg offen. Rückfall: nur Wegdiff
+revertieren oder privaten Kandidaten stoppen und Bestandsinstall verwenden.
+Keine reale Bewegung daraus, aktueller vollständiger Befund im STATUS.
+
+
 ## 11.10.2026 – unveränderte physische Egress-Region wiederverwenden
 
 v9 `9fbf085` vollständig gebaut, 2.776 Produktfälle grün; Original A/B/C 0/3,

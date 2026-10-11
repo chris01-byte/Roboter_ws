@@ -198,6 +198,18 @@ def route_cells(mask, start, target, distance_cache=None):
             distance_cache[key] = distances  # bounded, only this selection pass
     if not np.isfinite(distances[target]):
         return None
+    # Only backtrack the SAME distance field and tie order. This is geometry,
+    # never a cached live verdict or a substitute for the full route proof.
+    if (_reserved_sweep is not None and hasattr(_reserved_sweep, 'descending_route')
+            and mask.dtype == np.bool_ and distances.dtype == np.float64):
+        return _reserved_sweep.descending_route(mask, distances, *start, *target,
+                                                math.hypot(1, 0), math.hypot(1, 1))
+    return _descending_route_python(mask, distances, start, target)
+
+
+def _descending_route_python(mask, distances, start, target):
+    """Original descending route, also the exact native arithmetic oracle."""
+    h, w = mask.shape
     route = [target]
     while route[-1] != start:
         r, c = route[-1]

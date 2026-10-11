@@ -1,5 +1,15 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – identische Weggeometrie nur im separaten Checkout
+
+Native Rückverfolgung und gemeinsame Zellprojektion mit 279 gezielten Fällen
+geprüft; eingefrorene A-Auswahl 4,69 s, weiterhin kein zulässiges Ziel. Noch kein
+neuer gemeinsamer Install oder Originalgesamtpositivlauf. Fristen und tatsächliche
+Hardware unverändert, keine neue reale Bewegung. Rückfall: eigener temporärer
+Kandidat geordnet stoppen, erhaltenen Install verwenden oder Wegdiff revertieren.
+Aktueller Gesamtbefund ausschließlich im STATUS.
+
+
 ## 11.10.2026 – gemeinsamer v9-Build und reine Regionskorrektur
 
 Privater v9 `9fbf085`: 14 Pakete, 2.776 Fälle ohne Fehler/Skip, ursprüngliche

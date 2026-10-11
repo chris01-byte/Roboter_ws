@@ -211,6 +211,64 @@ static PyObject *cell_intersections(PyObject *self, PyObject *args) {
     if(c.obj)PyBuffer_Release(&c);
     PyBuffer_Release(&p);return result;
 }
-static PyMethodDef methods[]={{"clear",clear,METH_VARARGS,"Reserved cell-centre sweep; no motion authority."},{"cell_distances",cell_distances,METH_VARARGS,"Exact rectangle/cell boundary distances; no evidence authority."},{"cell_intersections",cell_intersections,METH_VARARGS,"Exact cell clipping; no evidence authority."},{NULL,NULL,0,NULL}};
+/* Backtrack the original distance field: identical strict descent, blocked
+ * corners and (score,row,column) tie order. Keep the GIL while reading caller
+ * buffers; this short arithmetic helper owns no source or movement decision. */
+static int allowed_cell(const Py_buffer *b, Py_ssize_t r, Py_ssize_t c) {
+    return *((unsigned char *)b->buf+r*b->strides[0]+c*b->strides[1]) != 0;
+}
+static PyObject *descending_route(PyObject *self, PyObject *args) {
+    PyObject *mask,*distances,*route=NULL,*result=NULL;
+    Py_buffer m={0},d={0};Py_ssize_t sr,sc,tr,tc;double axial,diagonal;
+    if(!PyArg_ParseTuple(args,"OOnnnndd",&mask,&distances,&sr,&sc,&tr,&tc,
+                         &axial,&diagonal))return NULL;
+    if(PyObject_GetBuffer(mask,&m,PyBUF_FORMAT|PyBUF_STRIDES)<0)return NULL;
+    if(PyObject_GetBuffer(distances,&d,PyBUF_FORMAT|PyBUF_STRIDES)<0)goto done;
+    if(!m.format||!d.format||m.suboffsets||d.suboffsets||m.ndim!=2||d.ndim!=2||
+       m.itemsize!=1||strcmp(m.format,"?")||d.itemsize!=8||strcmp(d.format,"d")||
+       m.shape[0]!=d.shape[0]||m.shape[1]!=d.shape[1]) {
+        PyErr_SetString(PyExc_TypeError,"descending_route_buffer_contract");goto done;
+    }
+    if(axial!=hypot(1.,0.)||diagonal!=hypot(1.,1.)) {
+        PyErr_SetString(PyExc_ValueError,"descending_route_step_contract");goto done;
+    }
+    Py_ssize_t h=m.shape[0],w=m.shape[1];
+    if(h<=0||w<=0||sr<0||sc<0||tr<0||tc<0||sr>=h||sc>=w||tr>=h||tc>=w||
+       !allowed_cell(&m,sr,sc)||!allowed_cell(&m,tr,tc)||!isfinite(value(&d,tr,tc))) {
+        result=Py_NewRef(Py_None);goto done;
+    }
+    if(h>PY_SSIZE_T_MAX/w) {
+        PyErr_SetString(PyExc_ValueError,"descending_route_size_overflow");goto done;
+    }
+    route=PyList_New(0);if(!route)goto done;
+    Py_ssize_t r=tr,c=tc,steps=0;
+    for(;;) {
+        if(steps++>=h*w) {result=Py_NewRef(Py_None);goto done;}
+        PyObject *cell=Py_BuildValue("(nn)",r,c);if(!cell)goto done;
+        int appended=PyList_Append(route,cell);Py_DECREF(cell);if(appended<0)goto done;
+        if(r==sr&&c==sc)break;
+        int found=0;double best=0.;Py_ssize_t br=0,bc=0;
+        double current=value(&d,r,c);
+        for(int dr=-1;dr<=1;dr++)for(int dc=-1;dc<=1;dc++) {
+            Py_ssize_t nr=r+dr,nc=c+dc;
+            if(!(dr||dc)||nr<0||nc<0||nr>=h||nc>=w||!allowed_cell(&m,nr,nc))continue;
+            if(dr&&dc&&(!allowed_cell(&m,r,nc)||!allowed_cell(&m,nr,c)))continue;
+            double next=value(&d,nr,nc);if(!(next<current-1e-9))continue;
+            double score=next+(dr&&dc?diagonal:axial);
+            if(!found||score<best||(score==best&&(nr<br||(nr==br&&nc<bc)))) {
+                found=1;best=score;br=nr;bc=nc;
+            }
+        }
+        if(!found) {result=Py_NewRef(Py_None);goto done;}
+        r=br;c=bc;
+    }
+    if(PyList_Reverse(route)<0)goto done;
+    result=PyList_AsTuple(route);
+done:
+    Py_XDECREF(route);
+    if(d.obj)PyBuffer_Release(&d);
+    PyBuffer_Release(&m);return result;
+}
+static PyMethodDef methods[]={{"clear",clear,METH_VARARGS,"Reserved cell-centre sweep; no motion authority."},{"cell_distances",cell_distances,METH_VARARGS,"Exact rectangle/cell boundary distances; no evidence authority."},{"cell_intersections",cell_intersections,METH_VARARGS,"Exact cell clipping; no evidence authority."},{"descending_route",descending_route,METH_VARARGS,"Original distance-field descent; no motion authority."},{NULL,NULL,0,NULL}};
 static struct PyModuleDef module={PyModuleDef_HEAD_INIT,"_reserved_sweep",NULL,-1,methods};
 PyMODINIT_FUNC PyInit__reserved_sweep(void) {return PyModule_Create(&module);}
