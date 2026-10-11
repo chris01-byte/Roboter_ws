@@ -927,6 +927,18 @@ class MetricFrontierRuntime:
             return ''
         return self._metric_local_evidence(inputs, policy.attempts[task_id].frontier_xy)
 
+    @staticmethod
+    def _metric_observation_cooldown_until(policy, key, goal, fingerprint,
+                                          evidence, points, now):
+        """Original time bounds only; no stored route or movement authority."""
+        if policy.eligible(key, goal, now, fingerprint, evidence, observation_points=points):
+            return None
+        wake = max([now] + [a.retry_after for a in policy._limit_neighbours(key, goal)])
+        if (wake > now and policy.eligible(key, goal, wake, fingerprint, evidence,
+                                          observation_points=points)):
+            return wake
+        return None
+
     def _metric_prepare_egress(self, inputs):
         if not getattr(self, '_metric_start_egress_enabled', False):
             return
@@ -2269,7 +2281,7 @@ class MetricFrontierRuntime:
                 memo['inputs'] = inputs
         search_mask=self._metric_seed_mask(inputs)
         initial_evidence = self._metric_selection_memo(inputs)[1]
-        def potentially_within_limits(goal):
+        def potentially_within_limits(goal, *, allow_cooldown=False):
             # History limits cannot be repaired by an expensive route/view
             # calculation. This is only a necessary read-only prefilter;
             # every candidate still needs the unchanged full eligibility,
@@ -2281,6 +2293,10 @@ class MetricFrontierRuntime:
                 key = policy.identify((f.cx, f.cy), goal, create=False)
                 if key is None or policy.within_limits(key, goal, now):
                     return True
+                if allow_cooldown:
+                    wake = max([now]+[a.retry_after for a in policy._limit_neighbours(key, goal)])
+                    if wake > now and policy.within_limits(key, goal, wake):
+                        return True  # only a prefilter; route/view/full policy still required
             return False
         # Before expensive boundary detours, prefer one useful proved forward
         # observation in the existing local search. Start from its far bound:
@@ -2344,7 +2360,7 @@ class MetricFrontierRuntime:
                     raise ValueError('frontier_candidate_processing_budget_exhausted')
                 distance = self._min_goal_dist_m+step*grid.info.resolution
                 goal = (pose[0]+distance*math.cos(pose[2]), pose[1]+distance*math.sin(pose[2]))
-                if not potentially_within_limits(goal):
+                if not potentially_within_limits(goal, allow_cooldown=True):
                     continue
                 route = self._metric_route(inputs, goal, pose[2])
                 if route is None:
@@ -2360,8 +2376,18 @@ class MetricFrontierRuntime:
                     if policy is not None:
                         key = policy.identify((f.cx,f.cy), goal, observation_points=points)
                         local = self._metric_policy_evidence(inputs, policy, key)
-                        if not policy.eligible(key, goal, time.monotonic(), correlation.fingerprint,
+                        now = time.monotonic()
+                        if not policy.eligible(key, goal, now, correlation.fingerprint,
                                                local, observation_points=points):
+                            # This SAME full route and finite current view can
+                            # be useful after the original neighbour cooldown.
+                            # Retain only its wake time in this selection pass;
+                            # the next pass must prove everything anew.
+                            wake = self._metric_observation_cooldown_until(
+                                policy, key, goal, correlation.fingerprint, local, points, now)
+                            if wake is not None and memo is not None:
+                                memo['private_deferred_until'] = min(wake,
+                                    memo.get('private_deferred_until', wake))
                             continue
                     length = sum(math.dist(a,b) for a,b in zip(route,route[1:]))
                     cost = self._potential_scale*length-self._gain_scale*len(points)*grid.info.resolution
@@ -2371,6 +2397,8 @@ class MetricFrontierRuntime:
                     # A proved useful departure suffices. Do not spend the
                     # fixed candidate deadline searching farther positions.
                     break
+                if memo is not None and 'private_deferred_until' in memo:
+                    break  # a proved bounded waiting view precedes distant queries
             if forward:
                 # Prefer a completely proved start departure over a proposal
                 # whose route is still absent; ordinary detour policy is intact.
@@ -2378,7 +2406,13 @@ class MetricFrontierRuntime:
                 stats['bounded_start_observation'] = True
         # A fully public short view must not wait behind expensive unproved
         # distant approaches. Its bounded allocation shares the original 5 s.
-        if (policy is not None and live_view
+        private_deferred = not candidates and memo is not None and 'private_deferred_until' in memo
+        if private_deferred:
+            stats['bounded_private_observation_wait_s'] = max(0.,
+                memo['private_deferred_until']-time.monotonic())
+            stats['bounded_private_observation_until'] = memo['private_deferred_until']
+            stats['deferred_or_served'] += 1
+        if (policy is not None and live_view and not private_deferred
                 and getattr(self, '_metric_start_egress_enabled', False)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                 and not any(not c.requires_nav2_plan for c in candidates)):
@@ -2391,7 +2425,7 @@ class MetricFrontierRuntime:
         if public_deferred:
             stats['bounded_public_observation_wait_s'] = max(0.,memo['public_deferred_until']-time.monotonic())
             stats['deferred_or_served'] += 1
-        for f in (() if candidates or public_deferred else frontiers):
+        for f in (() if candidates or public_deferred or private_deferred else frontiers):
             if time.monotonic()-selection_started > getattr(self, '_map_timeout_s', 5.):
                 raise ValueError('frontier_candidate_processing_budget_exhausted')
             kwargs = {}
@@ -2539,7 +2573,7 @@ class MetricFrontierRuntime:
             local=self._metric_policy_evidence(inputs, policy, key)
             return policy.eligible(key,(candidate.x,candidate.y),time.monotonic(),
                 candidate.fingerprint,local,observation_points=candidate.observation_points)
-        if (policy is not None and live_view and not public_deferred
+        if (policy is not None and live_view and not public_deferred and not private_deferred
                 and not any(eligible_original(candidate) for candidate in candidates)
                 and getattr(self, '_metric_path_validation', 'conservative') == 'rpp_rollout'
                 and all(footprint_clear(*pose,g,allowed,self._world_to_grid,
@@ -2746,6 +2780,8 @@ class MetricFrontierRuntime:
         scan_resume_pending = False
         initial_stop_confirmed = False
         unassigned_input_deadline = None
+        private_wait_until = None
+        private_wait_context = None
         chain = []
         completion_window = CompletionWindow(getattr(self, '_metric_completion_window_s', 3.))
         arrivals = observations = 0
@@ -2763,6 +2799,22 @@ class MetricFrontierRuntime:
                     observed_area=observed_area, outcome=outcome)
         def expired():
             return time.monotonic()-started >= overall_timeout
+        def wait_for_observation_pause(inputs, deadline):
+            # Time-only state. All live input/stop/HOLD/cancel/budget checks
+            # remain at the top of the loop, no child is dispatched here.
+            stopped = self._metric_operating_snapshot(require_stop=True)
+            self._metric_status['decision_snapshot'] = stopped
+            if not stopped['safe']:
+                return stopped['first_rejecting_predicate'] or 'task_cooldown_standstill_unconfirmed'
+            wait = max(0., deadline-time.monotonic())
+            completion_window.observe(now=time.monotonic(), scan_stamp=0,
+                context=inputs[1].context, clear=False)
+            self._status_phase = 'metric_waiting_tasks'
+            self._status_message = 'Waiting for the nearby observation pause to end.'
+            self._metric_status.update(state='waiting', active_goal=None,
+                task_cooldown_wait_s=wait, completion_blocker='task_cooldown')
+            time.sleep(min(.25, self._replan_period_s, wait))
+            return None
         def finish(state, reason):
             if goal_handle.is_cancel_requested and not getattr(self, '_nav_child_uncertain', False):
                 state, reason = 'canceled', 'user_canceled'
@@ -2965,6 +3017,17 @@ class MetricFrontierRuntime:
                 scan_pending=False  # at most ONE scan attempt; HOLD retains it
                 continue
             if pending is None:
+                context = (inputs[1].context, getattr(self, '_metric_context_generation', 0),
+                    inputs[0].header.frame_id, inputs[0].info.resolution,
+                    inputs[5].header.frame_id, inputs[5].info.resolution)
+                if private_wait_until is not None:
+                    if context == private_wait_context and time.monotonic() < private_wait_until:
+                        fault = wait_for_observation_pause(inputs, private_wait_until)
+                        if fault is not None:
+                            return finish('failed', fault)
+                        continue
+                    private_wait_until = private_wait_context = None
+                self._metric_status.pop('task_cooldown_wait_s', None)
                 try:
                     candidates = (adaptive_candidates if adaptive_candidates is not None else
                                   self._metric_select(inputs,policy,min_frontier))
@@ -2972,6 +3035,17 @@ class MetricFrontierRuntime:
                     return finish('failed', str(error))
                 self._metric_status.update(candidates=len(candidates),ranking=self._frontier_rank_stats)
                 if not candidates:
+                    wake = self._frontier_rank_stats.get('bounded_private_observation_until', 0.)
+                    if wake > time.monotonic():
+                        # No goal/child/clear verdict survives this wait. The
+                        # top of every next loop checks original sources, HOLD,
+                        # cancel and overall limits, then selects fresh inputs.
+                        # A private body must not enter PUBLIC completion proof.
+                        private_wait_until, private_wait_context = wake, context
+                        fault = wait_for_observation_pause(inputs, wake)
+                        if fault is not None:
+                            return finish('failed', fault)
+                        continue
                     grid,c,_,known,*_=inputs
                     occupancy=np.asarray(grid.data).reshape(known.shape)
                     origin=self._metric_grid_values(grid)['origin']
@@ -3051,6 +3125,7 @@ class MetricFrontierRuntime:
                     time.sleep(min(.25,self._replan_period_s))
                     continue
                 pending = candidates[0]
+                self._metric_status.pop('completion_blocker', None)
                 task_motion_dispatched = False
                 completion_window.observe(now=time.monotonic(), scan_stamp=0,
                     context=inputs[1].context, clear=False)
