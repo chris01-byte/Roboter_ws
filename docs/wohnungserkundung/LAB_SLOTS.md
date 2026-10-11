@@ -95,6 +95,11 @@ Keine zweite Navigation, kein neuer Supervisor und kein anderer Motorpfad.
 die bestehende Kandidatenauswahl mit ersetztem Bewegungs-/Actiontransport aus.
 Das prüft Ablauf, Gegenfälle, Fristen und Zähler; es misst keine reale Drehung.
 Die Launch- und ROS-Parameterprüfungen kontrollieren die gemeinsame Modusbindung.
+Scan-/Kindresultat, erster Auslöser, Folgereaktionen und terminaler Grund werden
+getrennt erhalten, auch wenn nach einem HOLD eine weitere Quellenlücke folgt.
+Der [datierte Prüfbericht](LAB_SLOTS_PRUEFBERICHT_20261011.md) und sein
+Commit-/Hashbeleg trennen diese Softwareprüfung von ganzen Missionen und
+realer Hardwarewirkung. Der aktuelle Iststand bleibt ausschließlich im STATUS.
 
 Für die geschlossene Produktprüfung den bestehenden Testdriver mit
 `--unknown-space-policy sensor_guarded --execution-mode lab_slots` ausführen.

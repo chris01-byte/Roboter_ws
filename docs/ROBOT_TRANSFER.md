@@ -1,30 +1,66 @@
 # Übertragung auf den realen Roboter
 
-## 11.10.2026 – neuer LAB-Slotkandidat; Zielsystemtransfer noch offen
+## 11.10.2026 – LAB-Slotquellstand bereitgestellt; kein Zielsystemtransfer
 
-`feature/ap06-lab-slots` entsteht getrennt aus `8d72876` (Produkt `51f8e862`).
-Der aktuelle vollständige Prüf-/Buildstand steht nur im
-[STATUS](wohnungserkundung/STATUS.md). In dieser Cloud-Arbeitsumgebung besteht
-kein Jetson-Zugang. Es wurden keine echte Installation, kein Autostart und
-kein Motorprozess des Roboters verändert. Ein x86_64-Build ist kein ARM64-Install.
+Geprüfter Produktquellstand **`12de37e89fed2a30d45fa3691919c2cc415560c9`**,
+Branch `feature/ap06-lab-slots`; Dokumentation folgt separat. Der aktuelle
+Nachweisumfang steht ausschließlich im [STATUS](wohnungserkundung/STATUS.md),
+der datierte [Prüfbericht](wohnungserkundung/LAB_SLOTS_PRUEFBERICHT_20261011.md)
+bindet Build-/Test-/Originalergebnisse. Unabhängiger Humble-x86_64-Unterbau
+mit 37 nativen Paketen; alle bisherigen 14 Produktpakete plus `robot_description`
+separat gebaut. Keine reale Installation, kein Autostart-/OS-/SDK-Wechsel und
+keine Aktorbewegung. In dieser Cloudumgebung bestand kein Jetson-Zugang.
+Ein x86_64-Binärinstall ist kein ARM64-Install.
 
-Später auf dem Jetson einen getrennten Kandidaten mit eigenem Build/Install/Log
-verwenden. Quellen/geladenen Explorer, alle 14 Produktpräfixe sowie weiterhin
-verwendete ROS-/Nav2-/LiDAR-Unterbauten binden. Gemeinsame Mapping- und Explorer-
-Auswahl: `unknown_space_policy:=sensor_guarded execution_mode:=lab_slots`.
-Die aktuelle private Scope-Datei bleibt `explore_params_overlay`; der rein
-lesende Vorlauf mit `active_drive:=false start_explorer:=false` bleibt erhalten.
-Nach der Änderung beginnt der erlaubte LAB-Rundblick ohne Kartenpixel-/Frontier-
-Vorauswahl. Tatsächliche Hindernisse, Quellen, Not-Aus/HWT, Antrieb und LAB-Grenze
-behalten Wirkung. Quellen-/TF-/Recorderempfang vor Bewegung und Aufzeichnung
-bis bestätigtem Halt weiterhin nachweisen.
+Lokale Quelllieferung unter `/workspace/lab-slot-results/`:
+`amadeus-lab-slots.bundle` und `amadeus-lab-slots.patch`, Änderungen ab dem
+veröffentlichten `22a4b76`, einschließlich des sensorüberwachten Vorgängers.
+`SHA256SUMS` und `README.md` binden die Artefakte; das komplette lokale
+Rohlog-/JUnit-/Buildarchiv heißt `amadeus-lab-slots-rohbelege.tar`.
+Kein neuer Push/Merge und keine Übertragung dieser Dateien auf den Roboter
+behauptet. Das Bundle kann auf dem Ziel gelesen/geprüft und in einen eigenen
+Worktree übernommen werden; keine unbekannten lokalen Änderungen überschreiben.
 
-Rückfall nach bestätigtem Halt/Ende der eigenen Prozesse:
-`execution_mode:=continuous`; bei vollständigem Zulassungsrückfall zusätzlich
-`unknown_space_policy:=observed_only`. Keine Faultflags, Sensordatenstempel oder
-Zeitbudgets löschen. Zwei vordere VL53 rechtfertigen kein blindes Rückwärtsfahren.
-[Ablauf und Gegenfälle](wohnungserkundung/LAB_SLOTS.md). Kein neues allgemeines
-LAB-Freigabeverfahren; tatsächliche Hardwarewirkung ist getrennt zu messen.
+Auf dem Jetson den Quellkandidaten mit getrenntem Build/Install/Log bauen.
+Die bisherigen 14 Produktpakete und die Beschreibung dürfen nicht unbemerkt
+auf alte Präfixe zurückfallen. Quellen, geladene Module, C-Erweiterung und alle
+Produktpräfixe sowie tatsächlich wiederverwendete ROS-/Nav2-/LiDAR-Unterbauten
+binden. Die Paketpfadkorrektur in `ap06_dependencies.json` verändert keine
+Archiv-/Versionspins; eine Quellenvorbereitung mit fehlender `package.xml`
+muss fehlschlagen. ARM64-Hardwaretreiber und deren Abhängigkeiten tatsächlich
+prüfen; der Cloudbuild qualifiziert weder I2C/USB noch reale Optik.
+
+Gemeinsame Mapping-/Explorer-Auswahl:
+`unknown_space_policy:=sensor_guarded execution_mode:=lab_slots`.
+Die aktuelle private Scope-Datei bleibt `explore_params_overlay`.
+Der vorhandene rein lesende Vorlauf mit `active_drive:=false start_explorer:=false`
+ist zu erhalten; zusätzlich tatsächlich nachweisen, dass kein Aktor-Schreibprozess
+läuft. Keine elektrische Sperrstellung unterstellen. Die Original-Gesamtfälle
+scheiterten im Cloudprüfstand vor Missionsstart an Karten-/Quellenbereitschaft;
+das ist keine neue reale Fahrfreigabe und kein belegter Hardwaredefekt.
+
+Vor Bewegung reale Encoder-/HWT-/LiDAR-/VL53-Zeiten, TF und Recorderempfang
+qualifizieren. Eine vorhandene Lücke mit tatsächlichem Ursprung und Auswirkung
+beheben, keine Faultflags oder Fristen zurücksetzen. Danach den im bestehenden
+LAB-1-Auftrag begrenzten gemessenen Rundblick und anschließend die autonome
+Slotfahrt mit Originalabschluss prüfen; Recorder bis zum bestätigten Halt.
+Keine neue Standardfreigaberunde für unveränderte erklärte Laborbedingungen.
+Die separat getestete asynchrone Cloud-Publikationskonfiguration ist kein
+Bestandteil des Produktstarts und kein vorgeschlagener unqualifizierter Jetsonfix.
+
+Physische Wirkung nach späterer qualifizierter Installation: LAB-Rundblick
+beginnt ohne Kartenpixel-/Frontier-Vorauswahl; anschließend nur im Halt
+beobachten/planen, ein Nav2-Kind fahren lassen und nach seinem terminalen Ende
+erneut Halt bestätigen. Gewöhnliche Zielprobleme prüfen begrenzte Alternativen;
+Sensor-/Not-Aus-/HWT-/Antriebs- und LAB-Grenzschutz bleiben wirksam.
+Zwei vordere VL53 begründen keine blinde Rückwärtsfahrt.
+
+Rückfall nach bestätigtem Halt und Ende der eigenen Kandidatenprozesse:
+`execution_mode:=continuous unknown_space_policy:=sensor_guarded`;
+bei Rückfall auch der Unknown-Zulassung
+`execution_mode:=continuous unknown_space_policy:=observed_only`.
+Keine Live-Modusumschaltung. Erhaltene Installation und alter Worktree bleiben
+bestehen. Fehlerflags, Quellenstempel und Budgets nicht löschen.
 
 ## 11.10.2026 – neuer sensorüberwachter Kandidat nur in der Cloud gebaut
 

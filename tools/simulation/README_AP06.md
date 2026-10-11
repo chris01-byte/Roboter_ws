@@ -117,11 +117,16 @@ Der Quellbaum erhält den bestehenden Pure-Rotation-Patch, den deklarierten fest
 für extrahierte Archive erfunden. Lizenzen bleiben in den Quellarchiven erhalten.
 
 Die zugehörigen System-/ROS-Entwicklungsabhängigkeiten vor dem Build mit
-`rosdep` für genau die in `prepared.json` aufgeführten Paketpfade und die zwölf
+`rosdep` für genau die in `prepared.json` aufgeführten Paketpfade und die fünfzehn
 Produktpakete auflösen. Dazu gehören BehaviorTree.CPP v3 für Nav2, Boost, Qt,
 Ceres/SuiteSparse, GeographicLib, SQLite, ZeroMQ/Fmt, TF-/Nachrichtenpakete
 und die deklarierten Python-Pins. `rosdep --ignore-src` muss auch alle vorbereiteten
-Quellpakete sehen; kein Fremdprodukt als Navigator verwenden.
+Quellpakete sehen; kein Fremdprodukt als Navigator verwenden. Im unabhängigen
+Cloudbuild fehlten `bond`/`bondcpp`/`smclib`, `diagnostic_updater` und
+`behaviortree_cpp_v3` in der Humble-Desktop-Unterlage. Diese wurden aus zusätzlich
+gepinnter öffentlicher Quelle gebaut; `nav2_behaviors` stammt aus demselben
+Nav2-Pin. Die konkreten Revisionen und Archivhashes gehören zum Buildbeleg.
+Ein ROS-Desktop-Image allein ist keine vollständige Entwicklungsunterlage.
 
 Die Nav2-Paketpfade `nav_2d_msgs` und `nav_2d_utils` liegen im gepinnten
 Quellarchiv unter `nav2_dwb_controller/`. Der Quellenlock enthält jetzt diese
@@ -152,7 +157,8 @@ colcon --log-base /tmp/ap06/product-log build --executor sequential \
   --base-paths src/amadeus_map_identity src/base_hardware src/robot_interfaces \
   src/bt_orchestrator src/mission_manager src/robot_state_estimation src/explore \
   src/robot_navigation src/robot_map_manager src/vl53_near_field \
-  src/safety_monitor src/amadeus_lidar_bringup \
+  src/safety_monitor src/amadeus_lidar_bringup src/robot_bringup \
+  src/semantic_map_manager src/robot_description \
   --build-base /tmp/ap06/product-build --install-base /tmp/ap06/product-install \
   --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
 source /tmp/ap06/product-install/setup.bash

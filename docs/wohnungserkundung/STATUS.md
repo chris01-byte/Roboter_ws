@@ -1,36 +1,65 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – LAB-Slots umgesetzt; Gesamtprüfung läuft
+## 11.10.2026 – LAB-Slots implementiert und softwaregeprüft; Gesamtfahrt offen
 
-Aktiver Kandidat `feature/ap06-lab-slots`, Basis `8d72876` (Produkt `51f8e862`).
-Der ausdrückliche Umsetzungsauftrag steht in MASTERPLAN v1.5 und
-[LAB_SLOTS](LAB_SLOTS.md): fester gemessener 360°-Start ohne Kartenpixel-/Frontier-
-Vorauswahl, danach bestätigter Halt/Beobachtung/Planung, ein Nav2-Ziel und Halt.
-Sensoren und Schutzkette laufen durchgehend. Quellenlücken erhalten dieselbe
-Aufgabe mit ursprünglicher Frist; gewöhnliche Zielprobleme suchen geprüfte
-Alternativen. Fehlerflags, Quellenalter, Fehlversuche und Budgets werden nicht
-zurückgesetzt. Unbestätigte Kinder, Not-Aus und Vertragsfehler bleiben terminal.
+**Produktquellstand `12de37e89fed2a30d45fa3691919c2cc415560c9`**, Branch
+`feature/ap06-lab-slots`, Basis `8d72876` (sensorüberwachtes Produkt `51f8e862`).
+Die nachfolgende Dokumentation ist ein eigener Commit. MASTERPLAN v1.5 und
+[LAB_SLOTS](LAB_SLOTS.md) bilden den ausdrücklichen Nutzerauftrag ab: gemessener
+360°-LAB-Start ohne freie Kartenpixel/Frontier-/Tür-ID-Vorauswahl oder Kartenjoin,
+danach bestätigter Halt/Beobachtung/Planung, ein Nav2-Ziel und erneuter Halt.
+Sensoren und Schutzkette bleiben live. Kurze Quellenlücken erhalten dieselbe
+Aufgabe mit ursprünglicher Frist; gewöhnliche Anfahrfehler erlauben geprüfte
+Alternativen statt Missionsende am globalen Einzelzielfehlerlimit. Tatsächlich
+unveränderte Kartenpublikationen lösen keine neue teure Suche während der Pause
+aus. Fehlerflags, Quellenalter, Zähler und Budgets werden nicht zurückgesetzt.
+HWT-Ursache, Scan-/Kindresultat, Wiederprüfung und terminaler Grund bleiben getrennt.
 
-Die drei ursprünglichen Blocker sind auf dem alten installierten Produktstand
-reproduziert: kein Start vor Kartenjoin, Abbruch bei normalem Join während der
-Fahrt und Ende am globalen Einzelzielfehlerlimit. Neue tatsächliche Elternabläufe
-beheben diese Gegenfälle. Die gezielten Slot-, Parameter-, Launch- und Encoder-
-Prüfungen bestehen. Vollständige Regression, separater Gesamtbuild und echte
-Nav2-/SLAM-Missionen werden im gerätefreien Humble-x86_64-Prüfstand vervollständigt.
-Ein erster breiter Lauf enthielt fehlende Dateien des unvollständigen Prüfbaums;
-die 59 betroffenen Fälle bestehen nach Ergänzung separat. Noch kein vollständiger
-einheitlicher neuer Prüf-/Buildabschluss und keine neue reale AP-06-Abnahme.
+**Build/Softwarebeleg:** Unabhängiger Humble-x86_64-Build mit 37 nativen Paketen;
+alle bisherigen 14 Produktpakete plus `robot_description`, insgesamt 15, separat
+gebaut. 15 Kandidatenpräfixe, 163 bytegleiche Quelle/Install-Dateien und 15
+importierte Module einschließlich C-Erweiterung gebunden. **3.120 Regressionen
+bestanden, 0 Fehler/Skips** (3.033 Produktpaketfälle und 87 Werkzeugfälle).
+61 gezielte Abschlussfälle einschließlich 33 LAB-Fällen sind eine überlappende
+Teilmenge. Drei ursprüngliche Blocker auf dem installierten `51f8e862` negativ
+reproduziert; zusätzlich HOLD-Ursachenverlust am Helper `084ac5c` negativ, danach
+positiv. Bewegungs-/Planertransporte der LAB-Elternablauftests sind ersetzt;
+diese Tests sind kein Fahrnachweis. Originale Zwischenfehler/Rohlogs bleiben
+zugänglich. Zwei tatsächlich falsche native Paketpfade korrigiert und alle
+`package.xml` geprüft; Archiv-/Versionspins und Welt/Abnahmekriterien unverändert.
 
-Kein Jetson-Zugang in dieser Arbeitsumgebung, kein Transfer/Autostartwechsel
-und keine reale Aktorbewegung. Ursprüngliche A/B/C-/Cancel/HOLD-Kriterien bleiben
-unverändert. Historische Zahlen unten gelten für ihre damaligen Quellstände.
+**Geschlossene Prüfung desselben finalen Standes: 0/3 positive Fälle qualifiziert.**
+A und C scheitern vor Missionsstart an `SLAM initial actual map`, B an
+`real scope and HWT readiness`. Auch Cancel/HOLD scheitern vor Bewegung/Injektion:
+**0/2 neue Stoppqualifikationen**, kein belegtes Stoppversagen nach Bewegung.
+Damit sind volle Drehung, eigenständige Zielketten, Türpassagen, Kartenabschluss
+und ganze Wiederaufnahme für diesen Kandidaten offen. Die historischen v17-Werte
+2.976 / A–C 0/3 / Stopp 2/2 unten werden nicht auf diesen Quellstand übertragen.
 
-**Genau nächster Schritt:** den separaten vollständigen Kandidatenbuild und
-die zusammenhängende Regression abschließen; danach die unveränderten ganzen
-Fälle mit `--unknown-space-policy sensor_guarded --execution-mode lab_slots`
-ausführen und tatsächlichen Missionsabschluss, Kartenfortschritt, Kindende und
-ersten Fehlergrund dokumentieren. LAB-1 erlaubt die beauftragte spätere Realprüfung
-ohne neue Standardfreigaberunde; dafür ist tatsächlicher Zielsystemzugang nötig.
+Messungen belegen Zeitlücken im Prüfstand: B Encoderlücke 0,8266 s;
+Cancel 0,1857 s; HOLD Paarlesung 0,3271 s, bei unveränderter Radkontinuitätsgrenze
+0,18 s. Geräte-Executoraufrufe teils 0,31–1,36 s. Herkunft aus Produzent,
+Publikationsweg oder Scheduler ist noch nicht bewiesen; daraus keinen realen
+Hardwaredefekt ableiten. Ein älterer Diagnoseversuch begann den Rundblick,
+maß nur 0,005892 rad und endete `hwt_terminal`. Alternative CPU-Verteilung und
+separate asynchrone Publikationsdiagnose liefern keinen Gesamtpositivnachweis;
+keine dieser Diagnosekonfigurationen in den Produktstart übernommen.
+
+[Prüfbericht](LAB_SLOTS_PRUEFBERICHT_20261011.md) und
+[Commit-/Hash-/Ergebnisbeleg](evidence/ap06-lab-slots-20261011.json) benennen
+Originalresultate, vollständige Rohlog-/JUnit-/Buildpfade und überprüfbare Grenzen.
+Kein Jetson-Zugang, Transfer, Autostartwechsel oder reale Aktorbewegung.
+Code und Beleg sind lokal committet und als Quellbundle/Patch bereitgestellt;
+kein neuer Push/Merge. Die AP-06-Gesamt- und Realabnahme bleibt offen.
+
+**Genau nächster Schritt:** Zielsystem-Quellenqualifikation dieses Kandidaten:
+mit tatsächlichem Jetson-Zugang separat bauen, Quellen/alle Produktpräfixe binden
+und zuerst ohne Aktor-Schreibprozess kontinuierliche Encoder-/HWT-/LiDAR-/VL53-
+Zeiten, TF und Recorderempfang messen. Vor dem begrenzten LAB-Rundblick muss der
+reale Quellenpfad die bestehenden Frische-/Kontinuitätsbedingungen nachweisen;
+bei einer Lücke deren tatsächlichen Ursprung bestimmen und gezielt beheben.
+LAB-1 gilt weiter, ohne neue Standardfreigaberunde. Kein weiteres pauschales
+Entsperren von Faultflags oder aus den grünen Softwaretests abgeleitetes Fahr-Grün.
 
 ## Historischer sensorüberwachter Kandidat vor den LAB-Slots
 
