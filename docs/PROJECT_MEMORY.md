@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 11.10.2026 – v10 vollständig negativ qualifiziert; originale Pause messen
+
+Gemeinsamer `2d93f2b`: 14 Pakete und 2.867 Produktfälle positiv, ursprüngliche
+A/B/C weiter 0/3 am Auswahlbudget, je eine Beobachtung; C nur teilweise.
+Aufgezeichneter A-Folgeinput beweist volle Vorwärtsgeometrie und reale mögliche
+neue Sicht, aber vorhandene 30-s-Pause verhindert momentane Eligibility. Nach
+unverändertem Cooldown sind 5/8/9 Ansichten zulässig. Nächste Entscheidung:
+begrenzt bewiesene wartende Privatabfahrt ohne alte Bewegungsautorität behandeln;
+keine Frist-/Budgetänderung, keine Geometrie-/Quellenlockerung. Bisher kein
+Wartephasendiff gebaut oder reale Folge gefahren. Rückfall: private Runtime
+stoppen und Bestandsinstall verwenden; zukünftigen einzelnen Diff revertieren.
+Aktueller vollständiger Befund ausschließlich im STATUS.
+
+
 ## 11.10.2026 – gleiche Distanzfelder mit geringerem Aufwand rückverfolgen
 
 Originalprofil: 615 Rückverfolgungen kosten 1,17 s, skalare Zellprojektionen

@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## 11.10.2026 – v10 gebaut und vollständig geprüft, kein realer Folgebeleg
+
+`2d93f2b`, 14 Pakete in 172,54 s, 2.867 Tests ohne Fehler/Skip; Original A/B/C
+0/3, alle am Auswahlbudget. v10-Skripte nur vorbereitet. Tatsächliche rein
+lesende FC03 um 02:49:47 UTC: unveränderte Zähler 35204/−35676, Null-RPM,
+RAM 100/400/5, Lesungen 4,966/4,464 ms. 1.048 Bestandsinstallhashes um 02:50:02
+UTC gleich, Main sauber. Keine neue reale Bewegung, kein OS-/SDK-/Autostart-
+wechsel. Eingefrorene Pause-/Geometriediagnose ist kein aktueller Sensorbeleg.
+Rückfall: eigene private Prozesse direkt geordnet stoppen, Bestandsinstall
+verwenden oder einzelne Diffs revertieren. Aktueller Gesamtbefund im STATUS.
+
+
 ## 11.10.2026 – identische Weggeometrie nur im separaten Checkout
 
 Native Rückverfolgung und gemeinsame Zellprojektion mit 279 gezielten Fällen

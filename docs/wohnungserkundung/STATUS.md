@@ -1,62 +1,51 @@
 # Wohnungserkundung – aktueller Status
 
-## 11.10.2026 – Wegberechnung identisch beschleunigt; Originalabnahme weiterhin 0/3
+## 11.10.2026 – v10 vollständig geprüft; Originalmissionen weiterhin 0/3
 
-Punkt 1 bleibt begrenzt real positiv; die Rohdatenlücke während Translation
-bleibt erhalten. Punkt 2: gemeinsam gebauter v9-Stand `9fbf085`, 14 Pakete in
-170,97 s, 155 Quelle-Installgleichheiten und 756 Installhashes. Alle 2.776
-Produktfälle positiv, keine Fehler/Skips. Ursprüngliche, manifestgleiche A/B/C
-weiterhin 0/3: 0,293762/0,353425/0,299632 m. A/B jeweils eine Ankunft und
-Beobachtung (176/183 neue Zellen), danach Auswahlbudget; C ohne Ankunft oder
-Beobachtung am Geometrie-Retrybudget nach veralteter Radprobe. C damit weniger
-Fortschritt als v8, kein Gesamt-Grün und keine volle Passage samt Heck.
+Punkt 1 bleibt begrenzt real positiv; Rohdatenlücke während Translation erhalten.
+Punkt 2: gemeinsamer v10-Build `2d93f2b`, 14 Pakete in 172,54 s, 155
+Quelle-Installgleichheiten/756 Installhashes. Vollständige 2.867 Produktfälle
+positiv ohne Fehler/Skip. Ursprüngliche manifestgleiche A/B/C weiterhin 0/3:
+0,293827/0,364219/0,710745 m, je eine Ankunft und Beobachtung (176/183/145
+neue Zellen, C teilweise beobachtet). Alle enden am Auswahlbudget; keine volle
+Passage samt Heck. C wieder mit mehr Fortschritt als v9, kein Gesamt-Grün.
+Reale Schritte 3/4 nicht durchgeführt, kein Kunden-/Hardware-Abnahmebeleg.
 
-v9 enthält den getrennt geprüften TF-/Rad-Nachcheck und den bestätigten
-Integer-Lattice-Pfad. Keine gerundeten Referenzen, neuen Freizellen, geänderten
-Fristen, Konturen oder Historien. Exakte subzellige/rotierte Projektion bleibt.
-Private Dispatcherpause und Vergleich mit vier Explorer-CPUs beide negativ,
-nicht übernommen. Vier-CPU-A: 0,237771 m, keine Beobachtung, Geometrie-Retrybudget;
-dieser Ressourcenvergleich ist keine Originalqualifikation.
+v10 enthält getrennten Regionsfix `4f32555` und Wegfix `2d93f2b`. Unveränderte
+physische Egress-Region bei vollständiger Extentdeckung ohne wirklichen Entzug
+behalten; aktuelle Projektion/Historie weiter voll prüfen. 80 gezielte Fälle
+und vier verstärkte Entzug-/Historienfälle positiv. Ungültiger subzelliger
+Gegenfall bleibt identisch ungültig, Refresh 55,61 → 38,38 ms. Native Rückverfolgung
+desselben Distanzfelds und bitgleiche Zellzentrenprojektion: 279 gezielte Fälle
+positiv. Erste eigene Testdomain/Int8-Testannahmen korrigiert, Originalnegative
+erhalten. Eingefrorene vollständige A-Auswahl 4,69 s, kein zulässiges Ziel;
+Geometriediagnose ersetzt keine aktuelle Quelle oder geschlossene Mission.
 
-Separater neuer Quellfix: unveränderte physische Egress-Region behalten, wenn
-der tatsächliche aktuelle Extent sie vollständig umfasst und keine reale
-Beobachtung/Scopeänderung Fakten entzieht. Aktuelle Zellprojektion und volle
-Historie weiterhin neu prüfen. 80 gezielte Fälle positiv; vier verstärkte
-Entzugs-/Historienfälle zusätzlich positiv. Tatsächlich eingefrorener subzelliger
-Gegenfall bleibt ungültig mit identischen Masken/Gründen; Refresh von 55,61 auf
-38,38 ms reduziert. Privater Source-A: 0,282465 m / eine Beobachtung, weiterhin
-negatives Auswahlbudget, keine Gesamtqualifikation dieses noch nicht gemeinsam
-gebauten Fixes. Profil eines ursprünglichen v9-A-Folgeinputs: Auswahl 5,17 s;
-615 Rasterwegrückverfolgungen 1,17 s, lokale Evidenz 0,85 s und wiederholte
-inhaltliche Memo-Schlüssel 0,76 s. Diese eingefrorenen Geometriediagnosen
-ersetzen keine aktuellen Quellen oder geschlossene Gesamtmission.
+Neue tatsächliche Ursachenprobe am aufgezeichneten A-Folgeinput: Privatabfahrt
+weiter nötig; mehrere vollständige Vorwärtsrouten zwischen 0,30 und 0,55 m
+zulässig. Aktuelle mögliche Sicht enthält 1/3/8 unbekannte Zellen. Bestehende
+30-s-Nachbarschaftspause hält diese neuen Aufgaben noch zurück; nach originalem
+Ablauf sind 5/8/9 Ansichten zulässig. Kein Timer erhöht oder vorgespult im Produkt.
+Ohne korrekt behandelte Wartephase konsumieren ungeeignete Fernalternativen das
+ursprüngliche 5-s-Auswahlbudget. Dies begründet den nächsten getrennten Fix,
+keine aus dem eingefrorenen Input abgeleitete reale Bewegungsfreigabe.
 
-Separater Wegfix: native Rückverfolgung desselben Distanzfelds mit identischer
-strikter Abstiegsbedingung, Eckensperre und Tie-Reihenfolge; unveränderte
-Python-Referenz bleibt verfügbar. Zellzentren mit derselben Transformarithmetik
-zusammen projizieren. 279 gezielte Fälle positiv, inklusive vollständiger
-kleiner Raster, zufälliger Sperren, Strides, Grenzties und 45 bitgleichen
-Projektionsvergleichen. Eigene erste Testdomain und zwei ungeeignete
-Int8-Distanztests korrigiert, Originalnegative privat erhalten. Eingefrorener
-Original-A-Folgeinput beendet nun die vollständige Auswahl in 4,69 s innerhalb
-der ursprünglichen 5 s, ohne zulässiges Ziel; reine Geometriediagnose, keine
-Gesamtmission. Fristen, Quellen, Ziele, Ranking und Bewegungshülle unverändert.
-Gemeinsamer v10-Build/volle Regression/Originalmissionen noch ausstehend.
+Letzte tatsächliche rein lesende FC03 am 02:49:47 UTC: Zähler 35204/−35676
+unverändert, Null-RPM, RAM 100/400/5, Lesungen 4,966/4,464 ms. Alle 1.048
+Bestandsinstallhashes am 02:50:02 UTC gleich; Main sauber/unverändert. Keine
+neue Hardwarebewegung, kein SDK-/OS-/Autostartwechsel. v10-Realstartskripte nur
+vorbereitet. Bekannten festen LAB-Scope vor realem Start neu binden, nicht
+umzentrieren. Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit nicht
+erfinden. Bestehender LAB-1-Auftrag gilt ohne neue allgemeine Freigaberunde.
 
-Letzte reale rein lesende FC03 am 11.10. um 02:11:47 UTC: Zähler
-35204/−35676 unverändert, beide RPM null, RAM 100/400/5;
-Lesezeiten 4,836/4,735 ms. Alle 1.048 Bestandsinstallhashes um 02:11:48 UTC
-gleich, Main unverändert. Keine neue Hardwarebewegung, kein SDK-/OS-/Autostart-
-wechsel. v9-Realstartskripte nur vorbereitet. Punkte 3/4 nicht durchgeführt.
-Bekannten festen LAB-Scope vor realem Start neu binden, nicht umzentrieren;
-Passage-/Drei-Bereich-Aufbau und native Apple-Laufzeit nicht erfinden.
-Bestehender LAB-1-Auftrag gilt ohne neue allgemeine Freigaberunde.
-
-**Genau nächster Schritt:** gemeinsam v10 bauen, vollständige Regression und
-ursprüngliche A/B/C ausführen. Erst nach deren Bestehen reale Schritte 3/4.
-Rückfall:
-eigene private Prozesse direkt geordnet stoppen und Bestandsinstall verwenden;
-neue Diffs einzeln revertierbar. Originalnegative und reale Daten privat unter
+**Genau nächster Schritt:** bewiesene begrenzte Privatabfahrt, die nur auf die
+ursprüngliche Nachbarschaftspause wartet, als wartende Arbeit behandeln statt
+Auswahlbudget verbrauchen. Geometrie, echte Quellen, Cooldown, Versuchs- und
+Gesamtfristen unverändert; keine gespeicherte Bewegungsfreigabe. Gezielt und mit
+gleichen Originalmissionen prüfen, erst nach softwareseitigem Bestehen reale
+3/4. Rückfall: nur eigenen Wartephasendiff revertieren oder eigene private PIDs
+direkt geordnet stoppen und Bestandsinstall verwenden. Originalnegative und
+reale Daten privat unter
 `~/.local/share/amadeus/diagnostics/ap06-drive-qualified-20261010/`.
 
 ## Historischer v7-/TF-/Auswahlstand vom 11.10.2026

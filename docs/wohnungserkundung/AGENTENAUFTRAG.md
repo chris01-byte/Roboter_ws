@@ -5,15 +5,14 @@
 Nutzer beauftragt die Folge 1–4 und erteilt erneut die vollständige Laborfreigabe. Tatsächlicher Ausführungskanal ist jetzt der lokale ARM64-Jetson, getrenntes Checkout `/home/p/roboter_worktrees/ap06-e14ca312-validation`, ursprüngliche Basis e14ca312. Die untenstehenden Cloud-Zugangs- und Shutdownangaben sind historische Befunde, kein aktueller Gerätezugangsbefund und kein neuer Shutdownauftrag. Bestandsmain/-install bleiben erhalten.
 
 Punkt 1 begrenzt real positiv, Rohdatenlücke erhalten. Punkt 2: gemeinsamer
-v9-Build `9fbf085` und 2.776 vollständige Produktfälle positiv; ursprüngliche
-A/B/C weiterhin 0/3. Neue Regionskorrektur separat gezielt geprüft, noch kein
-neuer gemeinsamer Build. Einzelbefund und genau nächster Schritt ausschließlich
-im [STATUS](STATUS.md): gemessene Auswahlkosten begrenzt beheben, gleicher
-Oracle, gemeinsamer Build/volle Regression/Originalmissionen, danach reale 3/4.
+v10-Build `2d93f2b` und 2.867 vollständige Produktfälle positiv; ursprüngliche
+A/B/C weiterhin 0/3. Einzelbefund und genau nächster Schritt ausschließlich
+im [STATUS](STATUS.md): gemessene Wartephase begrenzt behandeln, ursprünglichen
+Cooldown/Geometrie/Quellen/Fristen erhalten; gezielte Regression, gleicher
+Gesamtvergleich, danach reale 3/4. Keine alte Bewegungsfreigabe weiterverwenden.
 
-Originalfristen, Quellen, feste Kontur, Einzelkind, Cancel/HOLD und Stillstand
-bleiben. Keine neue reale Fahrt, dauerhafte Installation, Autostart-/SDK-Änderung
-oder Push/Merge. Bekannten LAB-Scope nach gemessenem Versatz fest binden;
+Keine neue reale Fahrt, dauerhafte Installation, Autostart-/SDK-Änderung oder
+Push/Merge. Bekannten LAB-Scope nach gemessenem Versatz fest binden;
 Passage-/Drei-Bereich-Geometrie und Apple-Laufzeit nicht erfinden. Bestehende
 Laborfreigabe gilt ohne neue allgemeine Fragerunde.
 
