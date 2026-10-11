@@ -1090,3 +1090,20 @@ unvollständiger Ergebnis-/Reportingbeleg zählt nicht als Mission. Hashcache
 und größere Nativbatch mangels verlässlichem Gesamtgewinn verworfen. Neuer
 gemeinsamer Kandidat/Originalvergleich nötig. Rückfall nur Identitätsdiff;
 Beleg docs/wohnungserkundung/evidence/ap06-exact-query-identity-20261011.json.
+
+## 11.10.2026 – AP-06 v13: Schutzfälle bestanden, volle Missionen offen
+
+Gemeinsamer sauberer Produktstand a4b4e35, 14 private Pakete/157 Quellgleichheiten,
+2.946 gesammelte Fälle positiv. Originale A/B/C weiterhin 0/3, zwei/eine/eine
+Beobachtungen; vier Kommandoströme null, sämtliche Kinder terminal. Originale
+Cancel/HOLD 2/2 positiv; HOLD-Stopp ist kein Wiederaufnahmebeleg. A erster
+Sichtverlust, später partieller Scan und zweite Beobachtung, terminal Fahrtor-
+Encoderalter 184,949 ms über 180 ms. Gleichzeitige 208–215-ms-Quellenprozesspause
+belegt, Grund unbewiesen; kein realer Busfehler daraus. B/C getrennte Auswahl-
+budgetenden. Tatsächlicher gekappter B-Aufruf eingefroren: live 5,390469 s/
+2,189939 s CPU, Replay 3,594412 s/reiner 90-Punkt-Vorschlag. Signaturen/Hashes
+0,754/0,704 s gemessen. NumPy-Vollvergleich und nativer Bytevergleich langsamer,
+beide ohne Produktdiff verworfen. Keine höheren Budgets, neue Gesundheits-
+annahmen oder Hardwarefahrt. Nächster konkreter Schritt/Beleg im aktuellen
+STATUS und evidence/ap06-correction-v13-20261011.json; Rückfall privates Overlay
+abwählen oder begrenzte eigene Commits revertieren.

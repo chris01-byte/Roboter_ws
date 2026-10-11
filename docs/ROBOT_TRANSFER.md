@@ -3381,3 +3381,17 @@ Keine echte Bewegung, kein Install-/Autostartwechsel. Main 23928d9 sauber,
 alle 1.048 ursprünglichen Installhashes weiter identisch. Remote-Featurebranch
 auf f7138cf bestätigt; kein Main-Merge. Realprüfung erst nach vollständiger
 Softwarequalifikation, privates Overlay bleibt abwählbarer Rückfall.
+
+## 11.10.2026 – AP-06 v13 privat gebaut, reale Folge noch offen
+
+ARM64-Produktquelle a4b4e35 separat unter
+`/home/p/.local/share/amadeus/releases/ap06-correction-v13-20261011/{build,install,log}`
+gebaut: 14 Pakete/157 Quellgleichheiten/756 Installhashes. Vollregression 2.946
+positiv, gerätefreie ursprüngliche Gesamtfälle 0/3, Cancel/HOLD 2/2. Zusätzliche
+negative Budgetdiagnose und reine eingefrorene Profile greifen ausschließlich
+auf eigene synthetische Eingaben zu. Kein Aktorprozess, Install-/Autostart-/
+SDKwechsel oder Shutdown aus dieser Umsetzung. Nach Build alle 1.048 ursprünglichen
+Installhashes gleich, Main 23928d9 sauber. Reale autonome Folge samt 180-s-
+Vorlauf erst nach vollständiger Softwarequalifikation; dann aktuelle echte
+Quellen, feste physische Scopebindung und Recorderempfang erneut messen.
+Privates Overlay bleibt abwählbarer Rückfall; aktueller Stand im WE-STATUS.

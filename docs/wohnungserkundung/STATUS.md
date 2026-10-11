@@ -136,10 +136,54 @@ unvollständiges Resultat und Reporting-KeyError getrennt erhalten. Zusätzliche
 Hashcache und größere Nativbatch ohne zuverlässigen Gesamtgewinn verworfen.
 [Gegenfall und Grenzen](evidence/ap06-exact-query-identity-20261011.json).
 
-**Genau nächster Schritt:** beide neuen Ursachenfixes gemeinsam sauber als v13
-bauen, vollständige Regression und die ursprünglichen A/B/C unverändert prüfen.
-Drei Beobachtungen sind in V12-B erreicht; 3/3 vollständige Missionen sowie
-aktuelle reale autonome Folge bleiben offen.
+Gemeinsamer Kandidat **v13 aus `a4b4e35`** separat gebaut: 14 Pakete in
+170,906 s, 157 Quelle-Installgleichheiten und 756 Installhashes; ursprüngliche
+Paket-/Nativpräfixe eindeutig im privaten Kandidaten erfasst. Vollregression:
+**2.946 Fälle positiv**, keine Fehler/Skip. Originale unveränderte A/B/C
+weiter **0/3**: A 1,201621 m/zwei Beobachtungen, B 0,353843 m/eine Beobachtung,
+C 0,702971 m/eine Beobachtung. A/B zuerst keine ursprüngliche Sicht am nativen
+Haltepunkt; C dort 108 von 128 Sichtpunkten, jedoch anschließende bekannte
+Route unzulässig. B terminal 5,539640 s Auswahl bei 2,185857 s Thread-CPU,
+C 5,000319 s bei 1,970833 s; kein gemeinsamer universeller Trigger bewiesen.
+A: optionaler Scan nach 6,104092 rad/150,789 s unterbrochen; anschließend
+frische Auswahl innerhalb des Budgets und zweite Beobachtung. Terminal
+`hwt_terminal`: Fahrtor wählte eine 184,949 ms alte Encoderprobe bei 180-ms-
+Grenze; Raw/Gyro am ersten Fehler frisch. Quellenprozess gleichzeitig über
+208–215 ms verzögert, wenig eigene Thread-CPU; Ursache dieser Pause nicht
+bewiesen. Keine Behauptung eines realen Encoder-/Modbusdefekts.
+
+Originale geschlossene **Cancel und Gyro-HOLD 2/2 positiv** mit gleichem v13:
+Cancel → Stillstand 0,354443 s, terminal 0,631966 s; HOLD → Stillstand
+0,259884 s. Der HOLD-Fall qualifiziert ausdrücklich keine Wiederaufnahme;
+betroffene Wiederaufnahme-/Speicher-/Schutzregressionen sind im gesammelten
+2.946er-Lauf enthalten. Sämtliche Kinder terminal, vier Kommandoströme null.
+Keine reale autonome Fahrt, kein dreiminütiger Realvorlauf aus diesem Stand.
+[Gemeinsamer Build, Originale, Schutzfälle und Ursache](evidence/ap06-correction-v13-20261011.json).
+
+Zusätzliche negative Budgetdiagnose ohne Manifestabnahme: tatsächlicher
+gekappter Historienaufruf nach 5,390469 s/2,189939 s Thread-CPU gesichert;
+38,231 ms zusätzliche Diagnosekopie transparent erhalten. Exakter privater
+v13-Replay mit dessen Nativkern findet nach 3,594412 s einen reinen Nav2-
+Vorschlag, 90 Punkte und gebundenen Hash, keine Bewegungsfreigabe. 2.254
+Signaturprüfungen kumulativ etwa 0,754 s und acht Inhalts-Hashes etwa 0,704 s.
+NumPy-Vollvergleich 5,187600 s/Budgetfehler und nativer Bytevergleich
+3,738922 s mit gleichem Kandidaten ohne Gesamtgewinn; beide verworfen.
+Zwei private Wrapperfehler vor Graphstart getrennt dokumentiert. Gesicherte
+Inputs/Profile bleiben lokal; reale Karten/Bilder/Bags werden nicht hochgeladen.
+
+**Veröffentlichung:** Produktfixes bis `a4b4e355d54f17b4195331faf0ad6be413f56a50`
+am 11.10.2026 um 07:04 UTC auf AP-06-Featurebranch bestätigt. Dieser v13-
+Ergebnisnachtrag enthält ausschließlich Dokumentation; gemeinsame Build-/
+Testquelle bleibt `a4b4e35`. Bestandsmain sauber/unverändert, alle 1.048
+Installhashes nach dem separaten Build identisch.
+
+**Genau nächster Schritt:** gemessene obligatorische Signatur-/Hasharbeit auf
+den gesicherten gekappten B-Eingaben bei exakt gleichen Geometrie-/Inhalts-
+entscheidungen verkürzen; bereits langsamere Vollvergleichsversuche nicht
+unverändert wiederholen. Quellenprozesspause getrennt ursächlich erfassen.
+Erst nach belegter Produktkorrektur neuer gemeinsamer Originalvergleich;
+3/3 vollständige Missionen und reale autonome Folge bleiben offen. Rückfall:
+privates Overlay abwählen bzw. eigene begrenzte Korrekturcommits revertieren.
 
 ## Historischer veröffentlichter Stand vor Umsetzung der Ablaufkorrektur
 
