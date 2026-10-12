@@ -226,3 +226,11 @@ Aktueller Iststand und genau ein nächster Schritt stehen ausschließlich im STA
 Maschinenlesbare Zusammenfassung mit Rohbeleg-Hashes:
 [evidence/ap06-source-timing-20261012.json](evidence/ap06-source-timing-20261012.json).
 Reproduzierbare lokale Lieferung: `/workspace/source-timing-results/README.md`.
+
+Diagnoseskript-Grenze: Die nativen Messwrapper wurden im Verlauf um weitere
+Funktionsgrenzen erweitert. `native-methods.json` und `probe-inputs.json`
+belegen je Lauf aktive Methoden/Flags und Produktmodule; nicht für jeden frühen
+Diagnoselauf ist die damalige vollständige Wrapperdatei bytegenau archiviert.
+Der abschließende Wrapperstand ist erhalten. Diese Einschränkung betrifft den
+exakten historischen Diagnose-Replay, nicht die versionierte Testdatei des
+roten/grünen Timergegenfalls oder den vollständig gebundenen Produktstand.

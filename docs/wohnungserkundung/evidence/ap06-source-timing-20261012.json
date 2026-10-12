@@ -280,13 +280,18 @@
     "timeout-candidate.xml": "79014c7ef594af56c3a099e71b72e116e46f945b8b1cf14133f0f32db8fbcae3",
     "evaluated-results.json": "de0544a9df6da7c3dcbce246a74b28ea803830e5ba34d18b0e132c620ef613ab",
     "additional-test-failures.json": "65bd2b043a902d3b0b66558bc29848599661385115051a742102d15b7089cab7",
-    "product-source-binding.json": "3edbc9e7965eb98668f1d60d5ee0d9416b592486b2a651d8dcf119bae05fce6d"
+    "product-source-binding.json": "3edbc9e7965eb98668f1d60d5ee0d9416b592486b2a651d8dcf119bae05fce6d",
+    "native-prefix-bindings.json": "d71d3400e200f7093a505e2584ab9609aee43ea881fcde5cec6d12d25b13cfab",
+    "dependencies-dpkg.txt": "3eaba00d7c29849149c01d99825f08a6b5898500abce61d123cde535eb743b67",
+    "dependencies-pip.json": "2655bd0b8ab4851f1f797971e7001e98c698d24a65c2ce9a00a501a9bd4afd32",
+    "container-binding.txt": "0262784027b922f7a602e1b89bb251d92b5c2d893078ad6f6a80930f42b919d5"
   },
   "limits": [
     "Native sampling/wrappers are diagnostics and may perturb runtime.",
     "Outer cgroup and independent sampler pauses do not prove an exclusive code/OS/GIL cause.",
     "Five green original F8 cases do not close the remaining live-source timing failure.",
     "HOLD case never reached intentional injection; no HOLD stop or resume acceptance.",
-    "CI selection checked locally; remote CI not executed."
+    "CI selection checked locally; remote CI not executed.",
+    "Final diagnostic helper version preserved; not every earlier complete wrapper snapshot is byte-for-byte archived. Per-run method/flag lists are preserved."
   ]
 }
