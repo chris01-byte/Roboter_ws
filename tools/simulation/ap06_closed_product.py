@@ -462,7 +462,15 @@ def device_process(case, out, device_file, masked, beams, fault_value, telemetry
                 try:
                     while not stopped.is_set():
                         began = time.monotonic(); process_began=time.process_time(); thread_began=time.thread_time()
-                        ex.spin_once(timeout_sec=.05)
+                        # Every source already has a periodic ROS timer. A
+                        # positive spin timeout creates another native Timer
+                        # on every wait cycle in Humble, on the acquisition
+                        # thread. Its measured allocation/wait stalls exceeded
+                        # the unchanged encoder continuity limit. Wait on the
+                        # existing timers, as normal rclpy.spin does; they also
+                        # wake this loop for its stop check. No sensor deadline
+                        # or measurement timestamp changes.
+                        ex.spin_once()
                         ended = time.monotonic()
                         if ended-began > .1:
                             latency_log.write(json.dumps(dict(node=name,begin=began,end=ended,
