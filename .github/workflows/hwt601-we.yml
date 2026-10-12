@@ -21,6 +21,7 @@ on:
       - 'tools/simulation/ap06*'
       - 'tools/simulation/test_ap06_world.py'
       - 'tools/simulation/test_ap06_device_isolation.py'
+      - 'tools/simulation/test_ap06_source_executor.py'
       - 'tools/simulation/test_ap06_lifecycle.py'
       - 'tools/simulation/ap06_trace.py'
       - 'tools/simulation/test_ap06_trace.py'
@@ -141,7 +142,9 @@ jobs:
             src/explore/test/test_lab_slots.py src/explore/test/test_lab_slot_audit.py \
             src/robot_navigation/test/test_sensor_guarded_mapping_launch.py \
             tools/simulation/test_ap06_world.py \
-            tools/simulation/test_ap06_device_isolation.py tools/simulation/test_ap06_lifecycle.py tools/simulation/test_ap06_trace.py \
+            tools/simulation/test_ap06_device_isolation.py \
+            tools/simulation/test_ap06_source_executor.py \
+            tools/simulation/test_ap06_lifecycle.py tools/simulation/test_ap06_trace.py \
             tools/simulation/test_ap06_concept_experiment.py \
             tools/simulation/test_ap06_departure_probe.py \
             tools/kartierung/test_metric_scope_vorbereiten.py \
