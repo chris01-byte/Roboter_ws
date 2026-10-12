@@ -1,5 +1,9 @@
 # Inventar
 
+**Gerätefreie Fortsetzung 12.10.2026:** [Quellenzeit-Korrekturprüfung](wohnungserkundung/AP06_QUELLENZEIT_KORREKTUR_20261012.md);
+Hardware und Bestandsinstallationen unverändert. Aktueller Iststand nur im
+[STATUS](wohnungserkundung/STATUS.md).
+
 **F7/F8-Korrekturprüfung 11.10.2026:**
 [Gezielte Quellen-/TF-/Regressionsevaluation](wohnungserkundung/AP06_F7_F8_KORREKTURPRUEFUNG_20261011.md)
 ergänzt die vorhandene AP-06-Slotlieferung; Hardwareinventar und Bestandsinstall

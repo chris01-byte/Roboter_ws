@@ -1,5 +1,19 @@
 # Projektgedächtnis
 
+## 12.10.2026 – Encoderlösung erhalten; Simulator-Timeoutpfad entfernen
+
+Die frühere absolute Encoderzählung ist bereits bytegleich enthalten. Keine
+Rückkehr zu alten HWT-Zeitgrenzen. Der Simulationsquellen-Executor verwendet
+vorhandene periodische Timer statt laufend neu angelegter Timeout-Timer.
+Der gezielt injizierte Allokationsgegenfall belegt diese minimale Änderung;
+weitere negative Quellen-/Gesamtfälle bleiben erhalten. Eine parallele Pause
+der unabhängigen äußeren Messung verbietet eine unbelegte exklusive
+Zuschreibung an den Encoder-Code. CPU-Quoten innerhalb eines Containers
+beweisen nichts über seine Vorfahren; Grenzen und Originalstempel erhalten.
+Details im [Prüfbericht](wohnungserkundung/AP06_QUELLENZEIT_KORREKTUR_20261012.md),
+aktueller Iststand und genau nächster Schritt nur im [STATUS](wohnungserkundung/STATUS.md).
+
+
 ## 11.10.2026 – F7/F8 nach Audit gezielt und gerätefrei bearbeiten
 
 Nutzer begrenzt den Folgeauftrag ausdrücklich auf F7/F8, ohne Jetsoninstallation,

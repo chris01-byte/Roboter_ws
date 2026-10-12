@@ -1,5 +1,19 @@
 # Übertragung auf den realen Roboter
 
+## 12.10.2026 – zusätzliche Quellenkorrektur ausschließlich im Prüfstand
+
+Produkt `0b71d8f` verändert ausschließlich den Simulations-Executoraufruf und
+ergänzt einen realen Quellengegenfall; der folgende CI-Commit wählt diesen Test
+aus. Kein neuer realer CPU-/Sensorparameter. Die echten Base-/HWT-Einstiege
+benutzen bereits normales `rclpy.spin`. Frühere F7/F8-Korrekturen bleiben erhalten.
+Keine Jetsoninstallation, ARM64-Prüfung, Autostartänderung oder reale Bewegung.
+Separater Build/Install, bestehende Installation unverändert. Keine autonome
+Jetson-Abnahme aus dieser Lieferung ableiten: [Bericht](wohnungserkundung/AP06_QUELLENZEIT_KORREKTUR_20261012.md),
+[aktueller Status](wohnungserkundung/STATUS.md), Lieferung `/workspace/source-timing-results/`.
+Rückfall: ausschließlich `0b71d8f` im separaten Kandidaten revertieren; der
+belegte zusätzliche Timer-Allokationspfad wird dadurch wiederhergestellt.
+
+
 ## 11.10.2026 – F7/F8-Korrekturquelle; kein Zielsystemtransfer
 
 Produkt `cf010a03c96ad981516b52d96f5c21dda78c4369`, separater Branch

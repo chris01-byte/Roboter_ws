@@ -1,5 +1,58 @@
 # Wohnungserkundung – aktueller Status
 
+## 12.10.2026 – Timerpfad korrigiert; F7/F8 und Gesamtqualifikation weiterhin offen
+
+Gerätefreie Fortsetzung auf `fix/ap06-source-timing`. Getestetes Produkt
+`0b71d8f3c4e461ac3274ceb7c4df8af55ff0e0b1`, anschließend reine CI-Auswahl
+`664fce972b94b398a0fdb8909466a737a62ee38f`; Ausgangsstand `6e39250` mit Produkt `cf010a0`, ursprüngliche
+Auftragsbasis `1b3bc98` / `900ce5d`. [Prüfbericht](AP06_QUELLENZEIT_KORREKTUR_20261012.md)
+und [Quellen-/Ergebnisbindung](evidence/ap06-source-timing-20261012.json).
+
+Die alte absolute Encoderzählung ist bytegleich erhalten. Ein unnötiger nativer
+Timeout-Timer wurde im Simulations-Erfassungsthread je Schleife neu erzeugt;
+der Kandidat wartet auf die bereits vorhandenen periodischen Timer, wie die
+realen Node-Einstiege. Belegter Gegenfall: 0,304389-s-Quellenlücke vorher, danach
+70 echte Radproben mit höchstens 0,066570 s im Einzeltest. Keine Sensorgrenze,
+Zeitstempel, Faultflags, Budgets, Welt oder Abnahme verändert; F1–F6 und Slots erhalten.
+
+**Gesamtfehler nicht behoben:** derselbe neue Quellenfall scheitert im gezielten
+Lauf ohne injizierte Verzögerung erneut (0,994080-s-Paarlesung). Finale
+Nullkommandodiagnose: letzte gültige Probe in 0,006681 s geliefert, nächste
+Quellenlücke 0,678809 s. Erster Bruch in der Produktion. Eine explizite
+Vier-CPU-Diagnose scheitert ebenfalls: 0,873376-s-Quellenlücke, gleichzeitig
+0,788286-s-Aussetzer der unabhängigen äußeren Messung. Äußere Quota und
+Scheduling sind relevante Einflussgrößen; eine exklusive Ursache ist nicht
+belegt. Keine weitere spekulative Änderung am Encoderkern.
+
+**Nachweise:** 15 Pakete/TF-Sonde getrennt gebaut, 15 private Präfixe,
+163 Quelle-/Install-Dateien und 18 Module gebunden. Gezielt **98 bestanden /
+2 fehlgeschlagen**. Vollständig **3.133 bestanden / 4 fehlgeschlagen /
+0 Skips**, zusätzlich eine Executor-Threadwarnung. Die ursprünglichen fünf
+F8-Fälle bestehen in beiden Läufen, aber die verbleibenden Quellenfehler
+verhindern den Stabilitätsabschluss. Zusätzliche A54-, drei Auswahlbudget-
+und ein Bereitschaftstestbefund separat dokumentiert, nicht abgeschwächt.
+
+**Originalgesamtfälle: A/B/C 0/3, Cancel/HOLD 0/2.** A/B/C/Cancel scheitern
+vor Start an Bereitschaft. HOLD erreicht 95,78° Startscan, endet vor geplanter
+Injektion `hwt_terminal`; null Ankünfte/Beobachtungen/Nav2-Fahrziele.
+Vollständige Wiederaufnahme und reale Abnahme bleiben offen.
+
+Logs/JUnit/Rohmessungen: `/workspace/ap06-audit-results/source-timing-evidence/`;
+Lieferung `/workspace/source-timing-results/`. Kein Push/Merge, Jetsontransfer,
+Autostartwechsel oder reale Aktorbewegung. Vorhandene Installationen erhalten.
+
+**Genau nächster Schritt:** Den gebundenen Nullkommando-Quellenfall auf einem
+zweiten gerätefreien Humble-Testrechner mit nachgewiesen ununterbrochener
+CPU-Zuteilung ausführen und Quellen-TID-Scheduling/Lockwartezeiten mit
+Originalmessungen korrelieren. Das muss den gemeinsamen Rechneraussetzer
+gegen eine verbleibende Verarbeitungssperre unterscheiden; erst daraus eine
+weitere Korrektur ableiten. Ein einzelner grüner Wiederholungslauf reicht nicht.
+
+## Historischer Stand der vorherigen F7/F8-Korrekturrunde
+
+Der folgende Stand einschließlich seines damaligen nächsten Schritts ist
+historisch; ausschließlich der Abschnitt vom 12.10. oben ist aktuell.
+
 ## 11.10.2026 – F7/F8 gezielt korrigiert; Quellenstabilität und Gesamtabnahme offen
 
 **Getestetes Produkt `cf010a03c96ad981516b52d96f5c21dda78c4369`**, eigener Branch

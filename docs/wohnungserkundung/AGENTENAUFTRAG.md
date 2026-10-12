@@ -1,5 +1,10 @@
 # Aktueller Agentenauftrag: AP-06
 
+Fortsetzung nach ausdrücklichem Lösungsauftrag vom 12.10.2026 unter denselben
+F7/F8-Grenzen: frühere Encoderlösung gezielt abgleichen, tatsächliche Quellenpause
+untersuchen und nur nachgewiesene Ursachen korrigieren. [Fortsetzungsbericht](AP06_QUELLENZEIT_KORREKTUR_20261012.md).
+Kein neuer Architektur-/Hardwareauftrag; aktueller Iststand nur im STATUS.
+
 ## Aktiver Nutzerauftrag 11.10.2026 – ausschließlich F7/F8 gerätefrei korrigieren
 
 Ausgangsbasis: `fix/ap06-slot-audit`, getestetes Produkt

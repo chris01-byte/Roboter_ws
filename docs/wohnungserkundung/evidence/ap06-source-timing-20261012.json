@@ -1,0 +1,292 @@
+{
+  "schema": "amadeus.ap06.source-timing.20261012.v1",
+  "tested_product": "0b71d8f3c4e461ac3274ceb7c4df8af55ff0e0b1",
+  "ci_commit": "664fce972b94b398a0fdb8909466a737a62ee38f",
+  "branch": "fix/ap06-source-timing",
+  "original_documentation": "1b3bc987913d518776f495fdc5b2e0cbabec383c",
+  "prior_documentation": "6e392503804682d1870e8dff39e66c5deafb04b3",
+  "f7_closed": false,
+  "f8_closed": false,
+  "hardware_accepted": false,
+  "jetson_installed": false,
+  "actual_robot_movement": false,
+  "correction": {
+    "file": "tools/simulation/ap06_closed_product.py",
+    "change": "Use existing periodic source timers through spin_once(), eliminate repeated native positive-timeout Timer allocation.",
+    "rollback": "Revert 0b71d8f only on the separate candidate; preserve existing installations."
+  },
+  "source_binding": {
+    "product_prefixes": 15,
+    "source_install_matches": 163,
+    "loaded_modules": 18
+  },
+  "junit": {
+    "focused-final.xml": {
+      "tests": 100,
+      "passed": 98,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 119.339,
+      "failed_cases": [
+        "src.explore.test.test_metric_public_observation::test_actual_a54_short_view_precedes_unproved_distant_approach_work",
+        "tools.simulation.test_ap06_source_executor::test_native_timeout_allocation_cannot_interrupt_live_encoder_source"
+      ]
+    },
+    "full-regressions.xml": {
+      "tests": 3137,
+      "passed": 3133,
+      "failures": 4,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 612.186,
+      "failed_cases": [
+        "src.explore.test.test_metric_near_start_priority::test_short_departure_cannot_bypass_route_view_or_original_history[no_route]",
+        "src.explore.test.test_metric_near_start_priority::test_short_departure_cannot_bypass_route_view_or_original_history[no_view]",
+        "src.explore.test.test_metric_near_start_priority::test_short_departure_cannot_bypass_route_view_or_original_history[cooldown]",
+        "src.robot_navigation.test.test_hwt601_gate_pending_wheel::test_decision_takes_real_waiting_wheel_without_executor_callback[False-fresh]"
+      ]
+    },
+    "timeout-baseline.xml": {
+      "tests": 1,
+      "passed": 0,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 22.566,
+      "failed_cases": [
+        "tools.simulation.test_ap06_source_executor::test_native_timeout_allocation_cannot_interrupt_live_encoder_source"
+      ]
+    },
+    "timeout-candidate.xml": {
+      "tests": 1,
+      "passed": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 10.924,
+      "failed_cases": []
+    },
+    "timeout-setup-error.xml": {
+      "tests": 1,
+      "passed": 0,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "time_s": 21.474,
+      "failed_cases": [
+        "tools.simulation.test_ap06_source_executor::test_native_timeout_allocation_cannot_interrupt_live_encoder_source"
+      ]
+    }
+  },
+  "original_f8_cases": {
+    "focused-final.xml": [
+      {
+        "name": "src.explore.test.test_metric_public_observation::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection]",
+        "passed": true,
+        "time_s": 5.194
+      },
+      {
+        "name": "src.robot_navigation.test.test_stage3_tf_reception::test_current_tf_received_without_executor_and_missing_tf_never_restamped",
+        "passed": true,
+        "time_s": 0.659
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_original_imu_writer_pause_is_isolated_from_encoder_acquisition[True]",
+        "passed": true,
+        "time_s": 6.256
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[False]",
+        "passed": true,
+        "time_s": 5.354
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[True]",
+        "passed": true,
+        "time_s": 6.313
+      }
+    ],
+    "full-regressions.xml": [
+      {
+        "name": "src.explore.test.test_metric_public_observation::test_public_view_does_not_require_private_ledger_epoch_expiry[ap06_a55_selection]",
+        "passed": true,
+        "time_s": 4.52
+      },
+      {
+        "name": "src.robot_navigation.test.test_stage3_tf_reception::test_current_tf_received_without_executor_and_missing_tf_never_restamped",
+        "passed": true,
+        "time_s": 0.649
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_original_imu_writer_pause_is_isolated_from_encoder_acquisition[True]",
+        "passed": true,
+        "time_s": 8.309
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[False]",
+        "passed": true,
+        "time_s": 6.346
+      },
+      {
+        "name": "tools.simulation.test_ap06_device_isolation::test_real_encoder_source_survives_supervisor_interpreter_pause[True]",
+        "passed": true,
+        "time_s": 9.469
+      }
+    ]
+  },
+  "whole": {
+    "cancel": {
+      "passed": false,
+      "mission_started": false,
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    },
+    "door68_start_a": {
+      "passed": false,
+      "mission_started": false,
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    },
+    "door68_start_b": {
+      "passed": false,
+      "mission_started": false,
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    },
+    "door80_start_c": {
+      "passed": false,
+      "mission_started": false,
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": null,
+        "map_growth_after_motion": null,
+        "one_map_odom_owner": null,
+        "one_odom_base_owner": null,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": null,
+        "map_wall_error": null,
+        "terminal_command_zero": null,
+        "actions_terminal": null
+      }
+    },
+    "gyro_hold": {
+      "passed": false,
+      "mission_started": true,
+      "injected": false,
+      "cancel_stop_qualified": false,
+      "hold_stop_qualified": false,
+      "hold_resume_qualified": false,
+      "acceptance_checks": {
+        "actual_mission_success": false,
+        "three_autonomous_tasks": false,
+        "rear_cleared_both_doors": false,
+        "map_growth_after_motion": true,
+        "one_map_odom_owner": true,
+        "one_odom_base_owner": true,
+        "one_navigation_child_used": false,
+        "reference_observed_fraction": false,
+        "map_wall_error": true,
+        "terminal_command_zero": true,
+        "actions_terminal": true
+      }
+    }
+  },
+  "new_countercase_after": {
+    "samples": 70,
+    "maximum_source_stamp_gap_s": 0.06657043,
+    "isolated_run_passed": true,
+    "focused_run_passed": false,
+    "full_run_passed": true
+  },
+  "final_zero_case": {
+    "last_valid_delivery_s": 0.006681291997665539,
+    "first_rejected_source_gap_s": 0.678809220000403,
+    "pair_duration_s": 0.027835701999720186
+  },
+  "four_cpu_zero_case": {
+    "first_rejected_source_gap_s": 0.8733758875023341,
+    "pair_duration_s": 0.05103674600832164,
+    "independent_outer_sampler_gap_s": 0.7882861949910875,
+    "exclusive_root_cause_proven": false
+  },
+  "proof_directory": "/workspace/ap06-audit-results/source-timing-evidence",
+  "proofs": {
+    "source-identity.json": "1403a1dcd4001cb60017e3cb6434df537145d983b73febbd6d1ecfcc3d384ba3",
+    "baseline-identity.json": "cefe4cd8725a875f00551db1ba5659fdaab0bea914ae1a8e7ccec6e6bcffe487",
+    "preserved-contracts.json": "479331b2f2d766aaa6d91caf2c99fdd9d52ee10d1a8c392d8e194d284291ca66",
+    "native-comparison.json": "5b75e962e37df610a6564d5c6d751c69397426362d3b03241a3374fdece917a0",
+    "source-cases-comparison.json": "a409fad7f6129352adc3a20c27d0732904e5b425161e43fda7b1cfc564417e83",
+    "final-time-chain.json": "d82d485f065f65d1f0474461a64dba7c6561ed92917f03701a9d634b7fe42454",
+    "final-first-break-analysis.json": "47ad9fcb69b952f4ada347eaf53408d7827f1f290668c65b37631837ce4a112b",
+    "final-first-break-outer-resources.json": "f8b1095cd1611b715ac6471950e55f61e8ee550740cada8b3ebd4a40ab57f8d3",
+    "four-cpu-result-summary.json": "d187a8909178844da7bcee3345dbbbf0d676af5f8941da360135b4f93b4bff43",
+    "four-cpu-first-rejection.json": "9b07ac716e83f0c391e7a99564d61c4b05ad4103ba229d0026a5b84d652c5f22",
+    "four-cpu-host-pause.json": "5380bb0508c646065ebc57076a50c6319b3312944de4a3fe7acdefc88efade10",
+    "ci-selection-check.json": "6e2e691cc890d43e0eda8c7262e71ee8727d460451620ab8edcd80ecf7df34c5",
+    "focused-final.xml": "ac04705746d11b13ebe7de8f3f205cff4f9077dc6d8b89425df9dda6d3e70eff",
+    "full-regressions.xml": "8a0f4aa99bf873b3c2ca662dec9b1db5d3e537efedbd01b21974a968dd76679c",
+    "timeout-baseline.xml": "b7ebe46bfe29f3cdec2ca16082c4e7570c1320a60af78141d63127ddd1e979fc",
+    "timeout-candidate.xml": "79014c7ef594af56c3a099e71b72e116e46f945b8b1cf14133f0f32db8fbcae3",
+    "evaluated-results.json": "de0544a9df6da7c3dcbce246a74b28ea803830e5ba34d18b0e132c620ef613ab",
+    "additional-test-failures.json": "65bd2b043a902d3b0b66558bc29848599661385115051a742102d15b7089cab7",
+    "product-source-binding.json": "3edbc9e7965eb98668f1d60d5ee0d9416b592486b2a651d8dcf119bae05fce6d"
+  },
+  "limits": [
+    "Native sampling/wrappers are diagnostics and may perturb runtime.",
+    "Outer cgroup and independent sampler pauses do not prove an exclusive code/OS/GIL cause.",
+    "Five green original F8 cases do not close the remaining live-source timing failure.",
+    "HOLD case never reached intentional injection; no HOLD stop or resume acceptance.",
+    "CI selection checked locally; remote CI not executed."
+  ]
+}
