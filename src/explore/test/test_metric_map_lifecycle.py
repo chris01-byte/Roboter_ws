@@ -203,10 +203,21 @@ def test_new_content_requires_exact_status_join_then_valid_update_is_processed(m
         status(new, accepted=2, observed=2, when=100.02))]
     if order == 'status_first':
         callbacks.reverse()
+    n._metric_status = {}
     callbacks[0]()
-    for active in (False, True):
+    with pytest.raises(ValueError, match='map_status_join_pending'):
+        n._metric_inputs(active=False)  # new work always waits for the exact pair
+    if order == 'status_first':
+        # Decision 2026-10-15 (v17 HOLD): a status describing a raw map this
+        # process has not received yet leaves active work on the last exact
+        # join, within the unchanged 1.25-s window. Nothing new is granted.
+        held = n._metric_inputs(active=True)
+        assert held[0] is g and held[1].map_revision == 1
+        assert n._metric_status['map_join_status_ahead']['status_stamp_ns'] > \
+            n._metric_status['map_join_status_ahead']['raw_stamp_ns']
+    else:
         with pytest.raises(ValueError, match='map_status_join_pending'):
-            n._metric_inputs(active=active)
+            n._metric_inputs(active=True)
     callbacks[1]()
     inputs = n._metric_inputs(active=True)
     assert inputs[0] is new and inputs[1].map_revision == 2

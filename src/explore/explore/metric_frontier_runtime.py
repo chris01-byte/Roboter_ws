@@ -631,8 +631,22 @@ class MetricFrontierRuntime:
                 reject_join('pending_missing_or_expired')
             if joined is None:
                 reject_join('joined_missing')
-            if c.fingerprint != joined[1].fingerprint or c.context != joined[1].context:
+            # The manager's status may describe a NEWER raw map that this
+            # process has not received yet (v17 HOLD: status +1.0 s, 1.6 ms
+            # pending). The explorer's knowledge is then exactly the last
+            # joined pair; QUELLENVERTRAG allows active work to keep using it
+            # within the unchanged 1.25-s window. No new cells, goals or
+            # receipts; the matching raw map completes the join as usual.
+            status_ahead = (c.context == joined[1].context
+                and raw[1].fingerprint == joined[0][1].fingerprint
+                and raw[1].source_stamp_ns == joined[0][1].source_stamp_ns
+                and c.source_stamp_ns > raw[1].source_stamp_ns)
+            if (c.fingerprint != joined[1].fingerprint or c.context != joined[1].context) and not status_ahead:
                 reject_join('status_binding_changed')
+            if status_ahead and hasattr(self, '_metric_status'):
+                self._metric_status['map_join_status_ahead'] = dict(checked_at=now,
+                    pending_age_s=now-pending, raw_stamp_ns=raw[1].source_stamp_ns,
+                    status_stamp_ns=c.source_stamp_ns)
             if raw[1].fingerprint != joined[0][1].fingerprint:
                 if getattr(self, '_metric_path_validation', 'conservative') != 'rpp_rollout':
                     reject_join('controller_not_qualified')
