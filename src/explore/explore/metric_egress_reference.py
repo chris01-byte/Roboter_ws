@@ -14,6 +14,16 @@ from shapely.prepared import prep
 
 from .metric_frontier import StartEgressEvidence, _cell_intersections
 
+# Whole-cell lattice test tolerance. OccupancyGrid resolution and origins
+# are float32 values (0.01 m -> 0.009999999776; origin -0.92 ->
+# -0.9199999794), while slam_toolbox corrects map->odom in exact float64
+# steps of its 0.01-m search resolution: one correction is 1.0000000224
+# cells (v17 door68_start_a), and float32 origins several metres from zero
+# leave up to ~2e-5 cell. 1e-4 cell is 1 micrometre at 1 cm: physically nil,
+# yet far below any real sub-cell shift or rotation, which keep the exact
+# polygon path. It only absorbs float32 representation residue.
+LATTICE_TOLERANCE_CELLS = 1e-4
+
 _BATCHED_GEOS = hasattr(shapely, 'box') and hasattr(shapely, 'polygons')
 
 
@@ -44,6 +54,28 @@ def grid_points(points, source_grid, source_reference, target_grid, target_refer
     dx, dy = world[:, 0]-o.position.x, world[:, 1]-o.position.y
     return np.column_stack(((math.cos(yaw)*dx + math.sin(yaw)*dy)/target_grid.info.resolution,
         (-math.sin(yaw)*dx + math.cos(yaw)*dy)/target_grid.info.resolution))
+
+
+def lattice_offset(grid, source_reference, target_grid, target_reference):
+    """Integer cell offset if ``grid`` lies on the target lattice, else None.
+
+    Certifies the entire raster, not just unit basis vectors, so a tiny
+    rotation cannot accumulate into a changed boundary cell. Only float32
+    representation residue (``LATTICE_TOLERANCE_CELLS``) is absorbed; any
+    real sub-cell shift or rotation keeps the exact polygon projection.
+    """
+    axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid, source_reference,
+                       target_grid, target_reference)
+    offset = np.rint(axes[0]).astype(int)
+    if (np.max(np.abs(axes[0]-offset)) > LATTICE_TOLERANCE_CELLS
+            or np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) > LATTICE_TOLERANCE_CELLS):
+        return None
+    corners = np.asarray(((0.,0.),(grid.info.width,0.),
+        (grid.info.width,grid.info.height),(0.,grid.info.height)))
+    if np.max(np.abs(grid_points(corners, grid, source_reference, target_grid,
+            target_reference)-corners-offset)) > LATTICE_TOLERANCE_CELLS:
+        return None
+    return offset
 
 
 def intersecting_cells(polygon, shape):
@@ -244,26 +276,9 @@ class ReferencedStartEgress:
                 parts.append(Polygon(mapped))
             return parts
         retained = self.fixed.unknown
-        axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid, source_reference,
-                           self.fixed.grid, target_reference)
-        offset = np.rint(axes[0]).astype(int)
-        aligned = (np.max(np.abs(axes[0]-offset)) <= 1e-9
-            and np.max(np.abs(axes[1:]-axes[0]-np.eye(2))) <= 1e-9)
-        previous_axes = grid_points(((0.,0.),(1.,0.),(0.,1.)), grid,
-            (0.,0.,0.), self._previous_grid, (0.,0.,0.))
-        previous_offset = np.rint(previous_axes[0]).astype(int)
-        previous_aligned = (np.max(np.abs(previous_axes[0]-previous_offset)) <= 1e-9
-            and np.max(np.abs(previous_axes[1:]-previous_axes[0]-np.eye(2))) <= 1e-9)
-        # Certify the entire raster, not just unit basis vectors: a tiny
-        # rotation must not accumulate into a changed boundary cell. This is
-        # stricter than the existing 1e-9 polygon/cell area tolerance. Actual
-        # references stay untouched; uncertain alignment uses exact polygons.
-        corners = np.asarray(((0.,0.),(grid.info.width,0.),
-            (grid.info.width,grid.info.height),(0.,grid.info.height)))
-        aligned = aligned and np.max(np.abs(grid_points(corners,grid,
-            source_reference,self.fixed.grid,target_reference)-corners-offset)) <= 1e-12
-        previous_aligned = previous_aligned and np.max(np.abs(grid_points(corners,grid,
-            (0.,0.,0.),self._previous_grid,(0.,0.,0.))-corners-previous_offset)) <= 1e-12
+        offset = lattice_offset(grid, source_reference, self.fixed.grid, target_reference)
+        previous_offset = lattice_offset(grid, (0.,0.,0.), self._previous_grid, (0.,0.,0.))
+        aligned, previous_aligned = offset is not None, previous_offset is not None
         if aligned and self._whole_cells and previous_aligned:
             # Exact physical lattice: integer index translation, not nearest
             # neighbour resampling. Width/origin growth does not move cells.

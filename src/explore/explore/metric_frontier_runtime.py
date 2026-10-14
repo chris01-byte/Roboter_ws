@@ -36,7 +36,7 @@ from .exploration_persistence import (ExplorationStateRepository, ExplorationPer
                                      binding_from_map_manager_status)
 from pathlib import Path as FilePath
 from .metric_checkpoint import validate_checkpoint, policy_state, restore_policy
-from .metric_egress_reference import ReferencedStartEgress, transform_poses
+from .metric_egress_reference import ReferencedStartEgress, transform_poses, LATTICE_TOLERANCE_CELLS
 from .metric_frontier import (
     MetricCandidate, MetricTaskPolicy, route_cells, known_safe_mask,
     footprint_cells, footprint_clear, footprint_poses_clear, footprint_route_clear, self_body_unknown_mask,
@@ -569,7 +569,7 @@ class MetricFrontierRuntime:
         offsets = ((math.cos(yaw)*dx+math.sin(yaw)*dy)/old.resolution,
                    (-math.sin(yaw)*dx+math.cos(yaw)*dy)/old.resolution)
         dc, dr = (round(v) for v in offsets)
-        if max(abs(offsets[0]-dc), abs(offsets[1]-dr)) > 1e-9:
+        if max(abs(offsets[0]-dc), abs(offsets[1]-dr)) > LATTICE_TOLERANCE_CELLS:
             raise ValueError('map_status_join_pending')
         permitted = np.zeros((old.height, old.width), dtype=bool)
         r0, c0 = max(0,-dr), max(0,-dc)
@@ -898,7 +898,7 @@ class MetricFrontierRuntime:
         offset = np.array([math.cos(yaw)*dx+math.sin(yaw)*dy,
                            -math.sin(yaw)*dx+math.cos(yaw)*dy])/resolution
         rounded = np.rint(offset)
-        if np.max(np.abs(offset-rounded)) > 1e-9:
+        if np.max(np.abs(offset-rounded)) > LATTICE_TOLERANCE_CELLS:
             return False
         cols_shift, rows_shift = rounded.astype(int)
         rows, cols = np.nonzero(self._metric_body_cells)
