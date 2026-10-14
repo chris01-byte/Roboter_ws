@@ -109,6 +109,13 @@ class MetricFrontierRuntime:
             raise ValueError('metric scope needs the observed initial map fingerprint')
         self._metric_retry_s = float(self.declare_parameter('metric_retry_cooldown_s', 30.).value)
         self._metric_retry_limit = int(self.declare_parameter('metric_task_retry_limit', 2).value)
+        # Self-healing (2026-10-15): a selection budget overrun at confirmed
+        # standstill is a transient compute fault, not a mission verdict.
+        # 0 keeps the original AP06 terminal behaviour for manifest runs.
+        self._metric_selection_budget_retries = int(self.declare_parameter(
+            'metric_selection_budget_retries', 0, ParameterDescriptor(read_only=True)).value)
+        if not 0 <= self._metric_selection_budget_retries <= 10:
+            raise ValueError('metric_selection_budget_retries must be within 0..10')
         self._metric_completion_window_s = float(self.declare_parameter(
             'metric_completion_window_s', 3., ParameterDescriptor(read_only=True)).value)
         self._metric_observation_wait_s = float(self.declare_parameter(
@@ -2943,6 +2950,7 @@ class MetricFrontierRuntime:
         pending = None
         task_motion_dispatched = False
         map_join_retry = False
+        selection_retries = 0
         task_started = None
         scan_pending = self._initial_scan_enabled
         scan_task_started = None
@@ -3225,7 +3233,20 @@ class MetricFrontierRuntime:
                     candidates = (adaptive_candidates if adaptive_candidates is not None else
                                   self._metric_select(inputs,policy,min_frontier))
                 except Exception as error:
+                    # No child exists here. A compute overrun only delays the
+                    # decision: confirm standstill, then select again on fresh
+                    # inputs within the unchanged per-selection budget.
+                    if (str(error) == 'frontier_candidate_processing_budget_exhausted'
+                            and selection_retries < getattr(self, '_metric_selection_budget_retries', 0)
+                            and self._metric_confirm_stop(goal_handle, expired)):
+                        selection_retries += 1
+                        self._metric_record_transition('selection_retry', str(error),
+                            retry=selection_retries, timing=self._metric_status.get('candidate_timing'))
+                        self._status_phase = 'metric_waiting_sources'
+                        self._status_message = str(error)
+                        continue
                     return finish('failed', str(error))
+                selection_retries = 0
                 self._metric_status.update(candidates=len(candidates),ranking=self._frontier_rank_stats)
                 if not candidates:
                     wake = self._frontier_rank_stats.get('bounded_private_observation_until', 0.)
