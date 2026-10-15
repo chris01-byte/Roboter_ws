@@ -1245,3 +1245,13 @@ geplant, KONZEPT_SELBSTHEILUNG.md §12). Abnahme: Stufe 1 und 2 ohne Eingriff,
 Stufe 3 höchstens 1× „Weiter“ je Lauf und nur bei echtem physischem Hindernis,
 jeder Eingriff mit Grund protokolliert; langfristiges Ziel null Eingriffe.
 
+
+**Nachtrag 15.10.2026 – Rückfragen und VL53:** Teleop-Tempo bleibt unverändert.
+Es kommen keine Hecksensoren hinzu; Rückwärtsfahrt bleibt deshalb auf die eigene
+Spur begrenzt. Annahme des Projektinhabers: die VL53-8×8-Punktwolke deckt
+niedrige Hindernisse ab. Befund aus der Konfiguration (noch nicht gemessen): der
+Sensor trifft sie, aber alle VL53-Verbraucher verwerfen Punkte unter 0,05 m über
+`base_link` ≈ 0,14 m über Boden. Vor einer Änderung wird gemessen
+(`tools/kartierung/selbstheilung_stillstand_pruefen.py --vl53-s`); eine
+Filteränderung ist eine eigene Sicherheitsänderung (Kostenkarten,
+`collision_monitor`).

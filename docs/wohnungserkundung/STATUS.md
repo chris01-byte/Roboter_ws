@@ -41,11 +41,18 @@ Arbeitspaket, Konzept §12); Abnahme Stufe 1/2 ohne Eingriff, Stufe 3 höchstens
 1× „Weiter“ je Lauf bei echtem physischem Hindernis. Danach folgt das
 Arbeitspaket „Weiter“.
 
+Rückfragen geklärt (15.10.2026, Projektinhaber): Teleop-Tempo bleibt
+unverändert; keine Hecksensoren, Rückwärtsfahrt bleibt auf die eigene Spur
+begrenzt. VL53-Befund (Konfiguration gelesen, nicht gemessen): der Sensor trifft
+niedrige Objekte, Kostenkarten und `collision_monitor` verwerfen aber alle
+Treffer unter etwa 0,14 m über Boden ([Konzept §6](KONZEPT_SELBSTHEILUNG.md)).
+Eine Filteränderung wäre eine eigene Sicherheitsänderung nach Messung.
+
 **Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
-self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,
-Behavior-Server an `cmd_vel_nav_raw`, Glätter-Rückwärtsgrenze −0,05,
-`/controller_server speed_limit_topic` = `speed_limit`, `/speed_limit` wird
-publiziert), danach begrenzte Laborfahrt nach LAB-1.
+self_healing:=true` aus getrenntem Checkout starten und
+`tools/kartierung/selbstheilung_stillstand_pruefen.py` ausführen, einschließlich
+VL53-Messreihe mit niedrigen Testobjekten (Anleitung
+`tools/kartierung/README.md`); danach begrenzte Laborfahrt nach LAB-1.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 

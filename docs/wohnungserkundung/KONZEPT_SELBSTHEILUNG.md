@@ -104,6 +104,13 @@ Entsprechend der Vorgabe und dem vorhandenen Aufbau:
 | Stoppen | `StopZone` 0,30–0,55 m | bleibt als letzte Reaktion; ein Stopp löst **H0 Warten → H1 Neu planen** aus, kein Missionsende |
 | Fahrfreigabe des Explorers | `vl53_triplet_unmatched` u. a. sperren die Planung | Explorer prüft nur Frische/Ausfall (Abschnitt 4), keine Einzelzustände; Plausibilität macht der Monitor |
 | Ausfall | stoppt | stoppt + wartet; erst nach Heilungsfenster Ausnahme |
+| Niedrige Hindernisse | Sensor trifft sie (unterste Zeile bis −30°, Montage 0,305 m, Reichweite 0,50 m), aber Kostenkarten und `collision_monitor` verwerfen alle Punkte unter 0,05 m über `base_link` ≈ **0,14 m über Boden** (`min_obstacle_height`/`min_height`, „Boden ausblenden“) | erst messen (`selbstheilung_stillstand_pruefen.py --vl53-s`); Filter nur danach und als **eigene Sicherheitsänderung** senken, nicht im Selbstheilungs-Branch |
+
+Befund 15.10.2026 (Konfiguration gelesen, noch nicht gemessen): Ein etwa 10 cm
+hohes Objekt bei 0,42 m vor dem Sensor liegt im Messbereich der untersten
+Zeile, sein Treffer (≈ 0,10 m über Boden) wird aber verworfen. Die VL53-Punktwolke
+deckt niedrige Hindernisse damit heute **nicht** ab, obwohl der Sensor sie sieht.
+Ob der Filter ohne Bodenreflexe gesenkt werden kann, zeigt erst die Messreihe.
 
 ## 7. Bessere Alternativen für Teile des Explorers
 
@@ -182,9 +189,15 @@ den recovery-freien Nav2-Baum und den abgetrennten Recovery-Ausgang.
 
 Bekannte Grenzen: Die Rückfahrt sieht hinten keine neuen Hindernisse (Mastschatten,
 VL53 nur vorn); sie ist deshalb auf die eigene, gerade, kurz zuvor befahrene Spur
-begrenzt. Hindernisse unter etwa 12–14 cm sieht keine Sensorkette. Reale Wirkung
-der Heilungsleiter ist unbelegt; die nächste Stufe ist eine motorlose Prüfung der
-Topics/Parameter auf dem Jetson, danach eine begrenzte Laborfahrt.
+begrenzt. Hindernisse unter etwa 14 cm verwerfen die Höhenfilter (Abschnitt 6).
+Reale Wirkung der Heilungsleiter ist unbelegt; die nächste Stufe ist die motorlose
+Prüfung auf dem Jetson mit `tools/kartierung/selbstheilung_stillstand_pruefen.py`
+(Anleitung in `tools/kartierung/README.md`), danach eine begrenzte Laborfahrt.
+
+Prüfskript gerätefrei geprüft: 8 Einzeltests; Rauchtest gegen nachgebildete
+Nav2-/Basis-/VL53-Knoten mit echtem Explorer in drei Varianten: korrekt →
+bestanden (Exit 0), Basis scharf → nicht bestanden (Exit 1), BackUp auf altem
+Ausgang → nicht bestanden (Exit 1); ohne Stack Exit 2.
 
 ## 11. Abnahmeleiter (Entscheidung 6, 15.10.2026)
 
