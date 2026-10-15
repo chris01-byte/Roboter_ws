@@ -17,6 +17,12 @@
 > wird eingefroren: keine Weiterentwicklung, vollständig erhalten und
 > umschaltbar. Bestätigung nach einem realen Kurztest; Kriterien in
 > [KONZEPT_SELBSTHEILUNG.md](KONZEPT_SELBSTHEILUNG.md).
+>
+> **Abnahmeänderung durch den Auftraggeber (15.10.2026):** Für die Hauptlinie
+> gilt die dreistufige Abnahmeleiter Labor → Robustheit (Simulation) → echte
+> Wohnung aus KONZEPT_SELBSTHEILUNG.md §11. Das bisherige AP06-Kriterium
+> (≥ 95 % Referenzfläche, ≤ 0,10 m, beide Türen inklusive Heck in einem Lauf)
+> gilt nur noch für den eingefrorenen AP06-Pfad. Schutzforderungen bleiben.
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 

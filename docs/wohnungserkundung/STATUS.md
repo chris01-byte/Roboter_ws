@@ -33,7 +33,10 @@ Entscheidung 2 (15.10.2026): solange vor dem Roboter nicht kartiert ist,
 0,06 m/s über Nav2 `speed_limit` (gerätefrei geprüft). Entscheidung 3:
 Heilungsbudget wie profiliert. Entscheidung 5: `self_healing` ist Hauptlinie,
 AP06 eingefroren (erhalten, umschaltbar); Bestätigung nach realem Kurztest
-(drei begrenzte Laborfahrten, Kriterien im Konzept). Entscheidung 4 zurückgestellt.
+(drei begrenzte Laborfahrten, Kriterien im Konzept). Entscheidung 6:
+Abnahmeleiter Labor → Robustheit (Simulation, 5 Störfälle) → echte Wohnung
+(alle zugänglichen Räume, Richtwert ≥ 90 % begehbare Fläche, kein Kontakt).
+Entscheidung 4 zurückgestellt.
 
 **Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
 self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,

@@ -1232,3 +1232,10 @@ realen Gefahren; die Schutzkette ist in beiden Wegen identisch; zwei parallel
 gepflegte Fahrlogiken verdoppeln den Aufwand. Bestätigung nach drei begrenzten
 Laborfahrten (Kriterien in KONZEPT_SELBSTHEILUNG.md).
 
+**Nachtrag 15.10.2026 – Abnahme:** Das AP06-Kriterium (≥ 95 % Referenzfläche,
+≤ 0,10 m, beide Türen inklusive Heck in einem Lauf) ist für reale Wohnungen zu
+streng und nur in Simulation messbar. Für die Hauptlinie gilt eine Abnahmeleiter:
+Labor (3/3 saubere Fahrten), Robustheit in Simulation (5/5 Störfälle geheilt),
+echte Wohnung (3 Läufe, alle zugänglichen Räume, Richtwert ≥ 90 % begehbare
+Fläche, kein Kontakt). Details: KONZEPT_SELBSTHEILUNG.md §11.
+
