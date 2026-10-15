@@ -44,6 +44,26 @@ def generate_launch_description():
     normalize_scan = LaunchConfiguration('normalize_scan')
     crop = LaunchConfiguration('crop')
     explore_params_overlay = LaunchConfiguration('explore_params_overlay')
+    self_healing = LaunchConfiguration('self_healing')
+    # Selbstheilender Betrieb (KONZEPT_SELBSTHEILUNG.md, 15.10.2026): nur mit
+    # self_healing:=true. Overlay nach nav2_params_real.yaml; ohne Profil wird
+    # die Basisdatei erneut geladen (wirkungsgleich zum bisherigen Stand).
+    self_healing_nav_overlay = os.path.join(
+        nav_pkg, 'config', 'nav2_params_self_healing.yaml')
+    self_healing_explore_params = os.path.join(
+        get_package_share_directory('explore'), 'config',
+        'self_healing_params.yaml')
+    self_healing_bt = os.path.join(
+        get_package_share_directory('explore'), 'behavior_trees',
+        'navigate_to_pose_self_healing.xml')
+    safe_bt = os.path.join(
+        get_package_share_directory('explore'), 'behavior_trees',
+        'navigate_to_pose_no_recovery.xml')
+    def when_self_healing(enabled_value, default_value):
+        return PythonExpression([
+            "'", enabled_value, "' if '", self_healing, "' == 'true' else '",
+            default_value, "'"])
+    nav_overlay = when_self_healing(self_healing_nav_overlay, params)
 
     nav_cmd_remap = [('cmd_vel', 'cmd_vel_nav_raw')]
     smoother_cmd_remap = [
@@ -98,16 +118,21 @@ def generate_launch_description():
                 parameters=[params], remappings=nav_cmd_remap),
             Node(
                 package='nav2_planner', executable='planner_server',
-                name='planner_server', output='screen', parameters=[params]),
+                name='planner_server', output='screen',
+                parameters=[params, nav_overlay]),
             # Humble laedt beim Aktivieren des BT-Navigators auch seinen
             # Standardbaum und erwartet deshalb die Recovery-Actions. Der
-            # Explorer selbst verwendet einen recovery-freien Baum. Falls
-            # dennoch eine Recovery aufgerufen wird, bleibt deren cmd_vel
-            # absichtlich von der realen Fahrkette getrennt.
+            # Standard-Explorer verwendet einen recovery-freien Baum; dessen
+            # Recovery-cmd_vel bleibt absichtlich von der Fahrkette getrennt.
+            # Nur mit self_healing:=true geht der Behavior-Server (BackUp fuer
+            # die Rueckfahrt entlang der eigenen Spur) ueber dieselbe Kette
+            # wie Nav2: Fahrtor -> velocity_smoother -> collision_monitor.
             Node(
                 package='nav2_behaviors', executable='behavior_server',
-                name='behavior_server', output='screen', parameters=[params],
-                remappings=[('cmd_vel', 'cmd_vel_recovery_blocked')]),
+                name='behavior_server', output='screen',
+                parameters=[params, nav_overlay],
+                remappings=[('cmd_vel', when_self_healing(
+                    'cmd_vel_nav_raw', 'cmd_vel_recovery_blocked'))]),
             Node(
                 package='nav2_bt_navigator', executable='bt_navigator',
                 name='bt_navigator', output='screen', parameters=[params]),
@@ -115,7 +140,7 @@ def generate_launch_description():
                 package='nav2_velocity_smoother',
                 executable='velocity_smoother',
                 name='velocity_smoother', output='screen',
-                parameters=[params], remappings=smoother_cmd_remap),
+                parameters=[params, nav_overlay], remappings=smoother_cmd_remap),
             Node(
                 package='nav2_lifecycle_manager',
                 executable='lifecycle_manager',
@@ -164,6 +189,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'explore_params_overlay', default_value=default_explore_params,
             description='Optionales begrenzendes Explorer-Profil.'),
+        DeclareLaunchArgument(
+            'self_healing', default_value='false',
+            description='true = selbstheilender Erkundungsbetrieb: Explorer-'
+                        'Profil self_healing, Planung durch Unbekanntes, '
+                        'Nav2-Baum mit leichter Recovery und begrenzte '
+                        'Rueckfahrt entlang der eigenen Spur.'),
 
         LogInfo(msg='Automatische Kartierung: OAK bleibt deaktiviert; '
                     'Hinderniskette ist dual-VL53 plus collision_monitor.'),
@@ -212,7 +243,9 @@ def generate_launch_description():
                 'explore', 'explore.launch.py')),
             condition=IfCondition(start_explorer),
             launch_arguments={
-                'explore_params_overlay': explore_params_overlay,
+                'explore_params_overlay': when_self_healing(
+                    self_healing_explore_params, explore_params_overlay),
+                'behavior_tree': when_self_healing(self_healing_bt, safe_bt),
                 'require_hwt601_fusion': use_hwt601_odometry,
                 'hwt601_active_drive': active_drive,
                 'hwt_development_contract': hwt_development_contract,

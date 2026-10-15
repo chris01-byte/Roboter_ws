@@ -58,13 +58,39 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert "'enable_auto_explore', default_value='false'" in source
     assert "'allow_explore_mission'" in source
     assert "'enable_real_explore': enable_auto_explore" in source
-    assert "'explore_params_overlay': explore_params_overlay" in source
+    # Explorer profile: the operator overlay unless self_healing:=true selects
+    # the self-healing profile (default false, see test below).
+    assert ("'explore_params_overlay': when_self_healing(\n"
+            "                    self_healing_explore_params, explore_params_overlay)") in source
     assert "period=4.0" in source
     assert 'nav2_map_server' not in source
     assert 'nav2_amcl' not in source
     assert 'static_transform_publisher' not in source
     assert "package='nav2_behaviors'" in source
-    assert "('cmd_vel', 'cmd_vel_recovery_blocked')" in source
+    # Recovery output stays disconnected from the drive chain by default; only
+    # the explicit self-healing profile routes it through gate/smoother/monitor.
+    assert ("remappings=[('cmd_vel', when_self_healing(\n"
+            "                    'cmd_vel_nav_raw', 'cmd_vel_recovery_blocked'))]") in source
+    assert "'self_healing', default_value='false'" in source
+
+
+def test_self_healing_nav2_overlay_changes_only_the_approved_values():
+    real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
+    overlay = yaml.safe_load(
+        (PACKAGE_ROOT/'config'/'nav2_params_self_healing.yaml').read_text())
+    assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server'}
+    planner = overlay['planner_server']['ros__parameters']
+    assert planner == {'GridBased': {'allow_unknown': True}}
+    smoother = overlay['velocity_smoother']['ros__parameters']
+    real_smoother = real['velocity_smoother']['ros__parameters']
+    # Forward limits unchanged; reverse only for the bounded own-track BackUp.
+    assert smoother['max_velocity'] == real_smoother['max_velocity']
+    assert smoother['min_velocity'][0] == -0.05
+    assert smoother['min_velocity'][1:] == real_smoother['min_velocity'][1:]
+    assert set(smoother) == {'max_velocity', 'min_velocity'}
+    assert overlay['behavior_server']['ros__parameters'] == {'simulate_ahead_time': 2.0}
+    # RPP itself never reverses.
+    assert real['controller_server']['ros__parameters']['FollowPath']['allow_reversing'] is False
 
 
 def test_real_smoother_and_controller_limits_are_conservative():

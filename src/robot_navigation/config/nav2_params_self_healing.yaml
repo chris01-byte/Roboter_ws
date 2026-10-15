@@ -1,0 +1,29 @@
+# =====================================================================
+#  Nav2-Overlay fuer den selbstheilenden Erkundungsbetrieb (15.10.2026)
+#  Wird NACH nav2_params_real.yaml geladen und ueberschreibt nur die
+#  folgenden Werte. Aktiv nur mit nav_mapping.launch.py self_healing:=true.
+#  Konzept: docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md
+# =====================================================================
+
+planner_server:
+  ros__parameters:
+    GridBased:
+      # Unbekannte Zellen sind Vorsicht, kein Verbot: NavFn darf durch
+      # Unbekanntes planen. Gemessene Hindernisse (LiDAR, VL53, OAK) bleiben
+      # in beiden Kostenkarten verbindlich; RPP prueft die volle Kontur gegen
+      # die lokale Kostenkarte, der collision_monitor stoppt vor /cmd_vel.
+      allow_unknown: true
+
+velocity_smoother:
+  ros__parameters:
+    # Einzige Aenderung: begrenzte Rueckwaertsfahrt fuer die Rueckfahrt
+    # entlang der eigenen Spur (BackUp des Behavior-Servers, vom Explorer
+    # nur auf geradem, selbst befahrenem Spurabschnitt ausgeloest, max.
+    # 0,4 m). RPP bleibt allow_reversing: false. Vorwaertsgrenzen unveraendert.
+    max_velocity: [0.12, 0.0, 0.25]
+    min_velocity: [-0.05, 0.0, -0.25]
+
+behavior_server:
+  ros__parameters:
+    # BackUp prueft die Kontur gegen die lokale Kostenkarte ueber diese Zeit.
+    simulate_ahead_time: 2.0
