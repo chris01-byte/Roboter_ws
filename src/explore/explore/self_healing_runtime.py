@@ -20,6 +20,7 @@ import numpy as np
 import rclpy
 from builtin_interfaces.msg import Duration
 from nav2_msgs.action import BackUp
+from nav2_msgs.msg import SpeedLimit
 from rcl_interfaces.msg import ParameterDescriptor
 from robot_interfaces.action import ExploreArea
 
@@ -27,7 +28,7 @@ from .action_client import SerializedActionClient as ActionClient
 from .self_healing import (
     FATAL, WAIT, classify, HealingLadder, RETRY, LOOK_AROUND, TRACK_BACK,
     REQUEST_HELP, TrackRecorder, frontier_goals, frontier_cells_remaining,
-    rotation_clear)
+    rotation_clear, unknown_ahead_fraction)
 
 
 class SelfHealingRuntime:
@@ -64,6 +65,17 @@ class SelfHealingRuntime:
         self._self_healing_track_back_min_m = number('self_healing_track_back_min_m', .1, .02, 1.)
         self._self_healing_track_back_speed = number('self_healing_track_back_speed_mps', .05, .01, .1)
         self._self_healing_track_lateral_m = number('self_healing_track_lateral_tolerance_m', .03, .005, .1)
+        # Entscheidung Projektinhaber 15.10.2026: solange vor dem Roboter noch
+        # nicht kartiert ist, absolut 0,06 m/s (Nav2 speed_limit an RPP).
+        # Obergrenze 0,08 m/s: ein absolutes Limit darf RPP nie beschleunigen.
+        self._self_healing_unknown_speed = number('self_healing_unknown_speed_mps', .06, .02, .08)
+        self._self_healing_unknown_lookahead_m = number('self_healing_unknown_lookahead_m', 1., .3, 3.)
+        self._self_healing_unknown_half_width_m = number('self_healing_unknown_half_width_m', .25, .1, 1.)
+        self._self_healing_unknown_fraction = number('self_healing_unknown_fraction', .02, 0., 1.)
+        speed_topic = str(self.declare_parameter(
+            'self_healing_speed_limit_topic', '/speed_limit', read_only).value).strip()
+        if not speed_topic:
+            raise ValueError('self_healing_speed_limit_topic must not be empty')
         self._self_healing_ladder_config = dict(
             goal_retries=int(number('self_healing_goal_retries', 1, 0, 5)),
             look_around_after=int(number('self_healing_look_around_after', 3, 1, 20)),
@@ -94,6 +106,8 @@ class SelfHealingRuntime:
         self._wohnungserkundung_vl53_status_observed_at = None
         self._self_healing_backup_client = ActionClient(
             self, BackUp, backup_action, callback_group=self._cb)
+        self._self_healing_speed_pub = self.create_publisher(SpeedLimit, speed_topic, 10)
+        self._self_healing_speed_state = None   # (limit, published_at)
         self._self_healing_status = dict(schema_version=1, state='idle', outcome='in_progress')
 
     # ------------------------------------------------------------------
@@ -181,6 +195,58 @@ class SelfHealingRuntime:
             return 'success'
         return 'canceled' if canceled else str(holder['status'])
 
+    def _self_healing_speed_limit(self):
+        """Absolute limit if the corridor ahead is not yet mapped, else 0 (none)."""
+        grid = getattr(self, '_map', None)
+        received = getattr(self, '_map_received_at', None)
+        pose, age = self._robot_pose_sample()
+        if (grid is None or received is None or pose is None or age is None
+                or not 0. <= time.monotonic()-received <= self._self_healing_map_timeout_s
+                or not 0. <= age <= self._self_healing_pose_timeout_s):
+            return self._self_healing_unknown_speed, 1.   # fail-safe slow
+        info = grid.info
+        occupancy = np.asarray(grid.data, dtype=np.int16).reshape(info.height, info.width)
+        q = info.origin.orientation
+        yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
+        c, s = math.cos(yaw), math.sin(yaw)
+        def to_cells(x, y):
+            dx, dy = x-info.origin.position.x, y-info.origin.position.y
+            return (np.floor((c*dx+s*dy)/info.resolution).astype(int),
+                    np.floor((-s*dx+c*dy)/info.resolution).astype(int))
+        fraction = unknown_ahead_fraction(occupancy, to_cells, info.resolution, pose,
+            lookahead_m=self._self_healing_unknown_lookahead_m,
+            half_width_m=self._self_healing_unknown_half_width_m)
+        limited = fraction > self._self_healing_unknown_fraction
+        return (self._self_healing_unknown_speed if limited else 0.), fraction
+
+    def _self_healing_govern_speed(self, *, release=False, force=False):
+        """Publish Nav2 SpeedLimit on change and refresh it once per second."""
+        now = time.monotonic()
+        state = self._self_healing_speed_state
+        if not release and not force and state is not None and now-state[2] < .2:
+            return state[0]
+        if release:
+            limit, fraction = 0., None
+        else:
+            try:
+                limit, fraction = self._self_healing_speed_limit()
+            except Exception:   # never turn a governor fault into speed
+                limit, fraction = self._self_healing_unknown_speed, 1.
+        if force or release or state is None or limit != state[0] or now-state[1] >= 1.:
+            message = SpeedLimit()
+            message.header.frame_id = self._global_frame
+            message.percentage = False
+            message.speed_limit = float(limit)   # 0.0 = nav2 NO_SPEED_LIMIT
+            self._self_healing_speed_pub.publish(message)
+            state = (limit, now, now)
+        else:
+            state = (state[0], state[1], now)
+        self._self_healing_speed_state = state
+        if hasattr(self, '_self_healing_status'):
+            self._self_healing_status['speed_limit_mps'] = limit or None
+            self._self_healing_status['unknown_ahead_fraction'] = fraction
+        return limit
+
     # ------------------------------------------------------------------
     def _execute_self_healing(self, goal_handle, overall_timeout, min_frontier_m):
         result = ExploreArea.Result()
@@ -215,6 +281,7 @@ class SelfHealingRuntime:
             self._status_message = reason
             self._status_phase = state
             self._status_state = 'partial' if state == 'blocked' else state
+            self._self_healing_govern_speed(release=True)
             result.success = state == 'success'
             result.message = f'self_healing:{state}:{reason}'
             if state == 'canceled':
@@ -232,6 +299,7 @@ class SelfHealingRuntime:
 
         def record_track():
             track.add(self._self_healing_odom_pose())
+            self._self_healing_govern_speed()
             return True
 
         def wait_for(reason):
@@ -332,6 +400,7 @@ class SelfHealingRuntime:
                 distance_m=goal.distance_m, size_cells=goal.size_cells, attempt=attempts[key]))
             self._status_phase = 'self_healing_navigation'
             self._status_message = 'Navigating to frontier.'
+            self._self_healing_govern_speed(force=True)   # limit before the child exists
             record_track()
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = goal

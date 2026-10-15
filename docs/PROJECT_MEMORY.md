@@ -1212,3 +1212,9 @@ optionaler Auswahl-Neuversuch) und neue Strategie `self_healing`
 
 **Rückfall:** `self_healing:=false` (Default) = bisheriges Verhalten.
 
+**Nachtrag 15.10.2026 – Tempo im Unbekannten:** Solange der Korridor vor dem
+Roboter (1,0 m × 0,5 m) zu mehr als 2 % nicht kartiert ist, begrenzt der
+Explorer RPP über Nav2 `speed_limit` absolut auf 0,06 m/s (Entscheidung
+Projektinhaber). Ohne Karte/Pose bleibt die Begrenzung aktiv; am Missionsende
+wird sie freigegeben. Parameter `self_healing_unknown_*`, Obergrenze 0,08 m/s.
+

@@ -52,7 +52,7 @@ Grundregeln:
 |---|---|---|
 | Unter dem Roboter am Start (Mastschatten, Eigenkörper) | Muss beobachtet frei sein, sonst `completion_raw_pose_not_observed_free` | Gilt als frei: Der Roboter steht dort. Die feste Startkörpermaske bleibt bis zum ersten Verlassen gültig |
 | Hinter dem Roboter (Mastschatten 146–214°) | Muss für jede Drehung beobachtet frei sein | Drehung erlaubt, wenn der Drehkreis in der **Kostenkarte** nicht belegt ist. Unbekannt im Schatten zählt als „nicht belegt, Vorsicht“: langsame Drehung, Monitor aktiv |
-| Vor dem Roboter im Fahrkorridor | Muss beobachtet frei sein | Darf befahren werden. Die VL53 sehen genau diesen Bereich (0,30–0,80 m) und lassen über die Kostenkarte ausweichen bzw. über den Monitor bremsen. Ein zusätzlicher Geschwindigkeitsdeckel im Unbekannten ist offene Entscheidung 2 |
+| Vor dem Roboter im Fahrkorridor | Muss beobachtet frei sein | Darf befahren werden. Die VL53 sehen genau diesen Bereich (0,30–0,80 m) und lassen über die Kostenkarte ausweichen bzw. über den Monitor bremsen. Solange dieser Korridor nicht kartiert ist, fährt RPP absolut 0,06 m/s (Entscheidung 2) |
 | Am Ziel/Frontier | Ziel muss bekannt frei sein | Ziel am Rand des Bekannten, Annäherung bis in Unbekannt erlaubt (klassisches Frontier-Prinzip) |
 | Teilzell-/Rundungsdifferenzen | führen zu „neue unbekannte Zelle“ | Toleranz an der float32-Genauigkeit (Nachtrag N1) |
 
@@ -139,7 +139,7 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 |---|---|---|
 | 0 | Selbstheilung statt Abbruch als Leitprinzip; Unbekanntes ist kein Blocker; VL53 vorrangig zum Ausweichen | **beschlossen 15.10.2026** |
 | 1 | Begrenzte Rückwärtsfahrt entlang der eigenen Spur (H4) | **beschlossen 15.10.2026** |
-| 2 | Geschwindigkeitsdeckel in unbekanntem Korridor (z. B. 0,05 m/s) | offen; heute gelten unverändert die realen Nav2-Grenzen |
+| 2 | Geschwindigkeit, solange vor dem Roboter noch nicht kartiert ist | **beschlossen 15.10.2026: 0,06 m/s** (Nav2 `speed_limit`, Korridor 1,0 × 0,5 m, > 2 % unbekannt) |
 | 3 | Heilungsbudget der Mission (Heilungen, Zeit ohne Kartengewinn) | offen; Startwerte 30 Heilungen / 600 s im Profil |
 | 4 | „Hilfe benötigt“ mit „Weiter“ per App als zulässiger Missionsverlauf | offen; technisch: neue Explore-Mission setzt auf der aktuellen Karte fort |
 | 5 | Explorer verschlanken oder nur Gates entschärfen | offen; umgesetzt ist beides als Option: neue Strategie `self_healing` und gezielte AP06-Korrekturen |
@@ -158,6 +158,7 @@ kein Jetson-Install, keine Aktorwirkung.
 | Neue Strategie | `exploration_strategy: self_healing` mit Heilungsleiter H0–H5, Spurrückfahrt über Nav2-BackUp | `test_self_healing.py`, `test_self_healing_runtime.py` |
 | Nav2-Profil | `nav_mapping.launch.py self_healing:=true`: Planung durch Unbekanntes, leichte BT-Recovery, BackUp über Fahrtor/Glätter/Kollisionsmonitor, Rückwärts nur −0,05 m/s | `test_nav_real_contract.py` |
 | VL53 | waren bereits Hindernisquellen beider Kostenkarten (lokales Ausweichen); unverändert | – |
+| Tempo im Unbekannten | Explorer publiziert Nav2 `SpeedLimit` absolut 0,06 m/s, solange der Korridor vor dem Roboter (1,0 m, ±0,25 m) zu > 2 % nicht kartiert ist; ohne Karte/Pose fail-safe langsam; Freigabe am Missionsende | `test_self_healing*.py` |
 
 Start im Labor (LAB-1, Not-Aus in Reichweite):
 

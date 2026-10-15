@@ -29,10 +29,14 @@ Auswahlbudget im Stillstand terminal. Korrekturen auf Branch
 robot_navigation 147 Tests grün (ROS 2 Jazzy, Cloud). Keine Realfahrt, kein
 Install, v17-A/B/C nicht neu ausgeführt.
 
+Entscheidung 2 (15.10.2026): solange vor dem Roboter nicht kartiert ist,
+0,06 m/s über Nav2 `speed_limit` (gerätefrei geprüft).
+
 **Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
 self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,
-Behavior-Server an `cmd_vel_nav_raw`, Glätter-Rückwärtsgrenze −0,05), danach
-begrenzte Laborfahrt nach LAB-1.
+Behavior-Server an `cmd_vel_nav_raw`, Glätter-Rückwärtsgrenze −0,05,
+`/controller_server speed_limit_topic` = `speed_limit`, `/speed_limit` wird
+publiziert), danach begrenzte Laborfahrt nach LAB-1.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 

@@ -62,3 +62,13 @@ explore_node:
     self_healing_track_lateral_tolerance_m: 0.03
     self_healing_backup_action: backup
 
+    # Entscheidung Projektinhaber 15.10.2026: solange der Korridor vor dem
+    # Roboter (1,0 m lang, 0,5 m breit) zu mehr als 2 % nicht kartiert ist,
+    # faehrt RPP absolut 0,06 m/s (nav2 speed_limit). Fehlen Karte/Pose,
+    # bleibt die Begrenzung aktiv; am Missionsende wird sie freigegeben.
+    self_healing_unknown_speed_mps: 0.06
+    self_healing_unknown_lookahead_m: 1.0
+    self_healing_unknown_half_width_m: 0.25
+    self_healing_unknown_fraction: 0.02
+    self_healing_speed_limit_topic: /speed_limit
+

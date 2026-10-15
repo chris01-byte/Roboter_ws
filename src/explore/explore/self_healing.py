@@ -307,3 +307,37 @@ def rotation_clear(costs: np.ndarray, world_to_cell: Callable[[float, float], Tu
     rr, cc = np.mgrid[r0:r1, c0:c1]
     inside = np.hypot((rr-row)*resolution, (cc-col)*resolution) <= radius_m
     return not np.any((costs[r0:r1, c0:c1] >= lethal) & inside)
+
+
+def unknown_ahead_fraction(occupancy: np.ndarray,
+                           world_to_cells: Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]],
+                           resolution: float, pose: Sequence[float], *,
+                           start_m: float = 0., lookahead_m: float = 1.,
+                           half_width_m: float = .25) -> float:
+    """Anteil nicht kartierter Zellen im Korridor vor dem Roboter (0..1).
+
+    Der Korridor liegt in Fahrtrichtung von ``start_m`` bis ``lookahead_m``
+    und ist ``2*half_width_m`` breit. Zellen außerhalb der Karte zählen als
+    nicht kartiert. Ohne gültige Eingaben gilt der Korridor als unbekannt
+    (1.0), damit die Geschwindigkeitsbegrenzung fail-safe greift.
+    """
+    occupancy = np.asarray(occupancy)
+    if (occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0 or pose is None
+            or len(pose) < 3 or not all(math.isfinite(v) for v in pose[:3])
+            or not lookahead_m > start_m or not half_width_m > 0):
+        return 1.
+    step = resolution
+    along = np.arange(start_m+step/2, lookahead_m, step)
+    across = np.arange(-half_width_m+step/2, half_width_m, step)
+    if not len(along) or not len(across):
+        return 1.
+    a, c = np.meshgrid(along, across, indexing='ij')
+    cos, sin = math.cos(pose[2]), math.sin(pose[2])
+    wx = pose[0] + cos*a - sin*c
+    wy = pose[1] + sin*a + cos*c
+    cols, rows = world_to_cells(wx.ravel(), wy.ravel())
+    cols, rows = np.asarray(cols, dtype=int), np.asarray(rows, dtype=int)
+    inside = (rows >= 0) & (rows < occupancy.shape[0]) & (cols >= 0) & (cols < occupancy.shape[1])
+    unknown = ~inside
+    unknown[inside] = occupancy[rows[inside], cols[inside]] < 0
+    return float(np.count_nonzero(unknown))/len(unknown)

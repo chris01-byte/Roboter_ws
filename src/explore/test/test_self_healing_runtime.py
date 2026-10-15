@@ -36,6 +36,8 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_track_back_max_m == pytest.approx(.4)
         assert node._self_healing_track_back_speed == pytest.approx(.05)
         assert node._self_healing_ladder_config['help_after'] == 8
+        assert node._self_healing_unknown_speed == pytest.approx(.06)
+        assert node._self_healing_speed_pub.topic_name == '/speed_limit'
         node._status_phase = node._status_message = 'idle'
         published = []
         node._status_pub = SimpleNamespace(publish=lambda m: published.append(m.data))
@@ -49,6 +51,7 @@ def test_profile_starts_real_node_with_self_healing_owner():
 @pytest.mark.parametrize('extra', [
     ['-p', 'coverage_enabled:=true'],
     ['-p', 'self_healing_track_back_speed_mps:=0.5'],
+    ['-p', 'self_healing_unknown_speed_mps:=0.12'],   # an absolute limit must never speed RPP up
     ['-p', 'self_healing_look_around_after:=9', '-p', 'self_healing_track_back_after:=2'],
 ])
 def test_incompatible_or_unsafe_profiles_fail_closed(extra):
@@ -104,6 +107,7 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
         n._map_received_at = clock[0]
     refresh_map()
     state.refresh_map = refresh_map
+    state.limits = None
     for name, value in dict(
             _self_healing_heal_wait_s=2., _self_healing_source_wait_s=30.,
             _self_healing_map_timeout_s=5., _self_healing_pose_timeout_s=1.5,
@@ -117,12 +121,19 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _frontiers_remaining=0, _frontiers_visited_status=0, _status_phase='idle',
             _status_message='', _status_state='idle', _global_costmap=None,
             _wohnungserkundung_estop=False, _wohnungserkundung_last_safety_failure=None,
-            _nav_child_uncertain=False, _self_healing_enabled=True).items():
+            _nav_child_uncertain=False, _self_healing_enabled=True,
+            _self_healing_unknown_speed=.06, _self_healing_unknown_lookahead_m=1.,
+            _self_healing_unknown_half_width_m=.25, _self_healing_unknown_fraction=.02,
+            _self_healing_speed_state=None, _global_frame='map').items():
         setattr(n, name, value)
     n._self_healing_ladder_config = dict(goal_retries=1, look_around_after=3, track_back_after=5,
                                          help_after=8, max_heals=30, no_progress_timeout_s=600.)
     n._wohnungserkundung_runtime_lock = threading.Lock()
     n._wohnungserkundung_hwt_hold = lambda *_: False
+    state_limits = []
+    n._self_healing_speed_pub = SimpleNamespace(publish=lambda m: state_limits.append(
+        (round(m.speed_limit, 3), m.percentage)))
+    state.limits = state_limits
     def safety():
         reason = state.safety[0]
         n._wohnungserkundung_last_safety_failure = reason
@@ -320,3 +331,31 @@ def test_track_back_rejected_or_stopped(monkeypatch):
     assert n._self_healing_track_back(.3, lambda: True) == 'cancel_failed'
     assert canceled == [1]
     assert n._self_healing_track_back(0., lambda: False) == 'unavailable'
+
+
+def test_speed_limited_to_006_while_corridor_ahead_is_unmapped(monkeypatch):
+    n, state, goal, terminal = parent(monkeypatch)
+    # Start inside the known disc but facing the unknown part of the room.
+    state.pose[:] = [1.5, 1.5, 0.]
+    state.occupancy[:, 40:] = -1
+    state.refresh_map()
+    assert n._self_healing_govern_speed(force=True) == pytest.approx(.06)
+    assert state.limits[-1] == (.06, False)          # absolute, not percentage
+    # Facing the mapped area: limit released (0.0 = Nav2 NO_SPEED_LIMIT).
+    state.pose[:] = [1.5, 1.5, math.pi]
+    assert n._self_healing_govern_speed(force=True) == 0.
+    assert state.limits[-1] == (0., False)
+    # Stale map: fail-safe slow.
+    state.clock[0] += 10.
+    assert n._self_healing_govern_speed(force=True) == pytest.approx(.06)
+    # Governor fault never becomes speed.
+    n._robot_pose_sample = lambda: 1/0
+    assert n._self_healing_govern_speed(force=True) == pytest.approx(.06)
+
+
+def test_mission_limits_speed_in_unknown_and_releases_it_at_the_end(monkeypatch):
+    n, state, goal, terminal = parent(monkeypatch)
+    result = n._execute_self_healing(goal, 1200., .3)
+    assert result.success
+    assert (.06, False) in state.limits          # approached unmapped frontiers slowly
+    assert state.limits[-1] == (0., False)       # released for later users

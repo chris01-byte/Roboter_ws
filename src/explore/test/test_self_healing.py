@@ -134,3 +134,19 @@ def test_rotation_blocked_only_by_measured_obstacles_not_unknown():
     assert not rotation_clear(costs, to_cell, .05, (1., 1.), .45)
     costs[20, 26] = 99                                              # inflation only
     assert rotation_clear(costs, to_cell, .05, (1., 1.), .45)
+
+
+def test_unknown_ahead_fraction_looks_only_at_the_corridor_in_front():
+    from explore.self_healing import unknown_ahead_fraction
+    occupancy = np.zeros((100, 100), dtype=int)          # 5 m x 5 m known
+    def to_cell(x, y):
+        return np.floor(np.asarray(x)/.05).astype(int), np.floor(np.asarray(y)/.05).astype(int)
+    pose = (1.0, 2.5, 0.)                                  # facing +x
+    assert unknown_ahead_fraction(occupancy, to_cell, .05, pose) == 0.
+    occupancy[:, 30:40] = -1                               # unknown 1.5..2.0 m
+    assert unknown_ahead_fraction(occupancy, to_cell, .05, pose) == pytest.approx(.5)
+    behind = (1.0, 2.5, math.pi)                           # facing away
+    assert unknown_ahead_fraction(occupancy, to_cell, .05, behind) == 0.
+    edge = (4.8, 2.5, 0.)                                  # corridor leaves the map
+    assert unknown_ahead_fraction(np.zeros((100, 100)), to_cell, .05, edge) > .5
+    assert unknown_ahead_fraction(occupancy, to_cell, .05, None) == 1.
