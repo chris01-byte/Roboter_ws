@@ -1190,3 +1190,25 @@ Tests. Veraltete Jetson-Kandidatenangabe korrigiert; historisches Bundle bleibt
 historisch. Buildreview und exakte Belege veröffentlicht; weitere Ursachen-
 messung vor Änderung, Schutz-/Zeitgrenzen gleich. Rückfall eigene Commits
 gezielt revertieren/private Overlay-Abwahl.
+
+## 15.10.2026 – Selbstheilung statt Abbruch (Projektinhaber)
+
+**Entscheidung:** Ein Kundenroboter muss sich selbst heilen; Missionsende nur bei
+echten Ausnahmen (aktiver Not-Aus, Aktorfehler, dauerhaft fehlende Sicherheits-
+quelle, unsicheres Nav2-Kind, erschöpftes Heilungsbudget = „Hilfe benötigt“).
+Unbekannte Zellen sind Vorsicht, kein Verbot. VL53 dienen vorrangig dem
+Ausweichen. Rückwärtsfahrt nur entlang der eigenen, geraden, zuvor befahrenen
+Spur (max. 0,4 m, 0,05 m/s) ist freigegeben.
+
+**Grund (gemessen, v17-Rohdaten):** A scheiterte an einem float32-Rundungsrest
+von 0,2 nm, HOLD an einem 2-ms-Rennen zwischen Kartenstatus und Rohkarte, B/C an
+einem Rechenbudget im Stillstand. Keiner dieser Gründe war eine reale Gefahr.
+
+**Umsetzung:** gezielte AP06-Korrekturen (Toleranz, Status-vor-Rohkarte,
+optionaler Auswahl-Neuversuch) und neue Strategie `self_healing`
+(`explore/self_healing*.py`, Profil `config/self_healing_params.yaml`,
+`nav_mapping.launch.py self_healing:=true`). Details:
+`docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md`.
+
+**Rückfall:** `self_healing:=false` (Default) = bisheriges Verhalten.
+

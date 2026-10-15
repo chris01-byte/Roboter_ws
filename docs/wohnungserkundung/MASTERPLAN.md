@@ -2,6 +2,16 @@
 
 **Version 1.3 · 02.10.2026 · chris01-byte/Roboter_ws**
 
+> **Nutzerentscheidung 15.10.2026 (Planänderung durch den Auftraggeber):**
+> Ein Kundenroboter muss sich selbst heilen und darf den Gesamtprozess nur in
+> Ausnahmen stoppen. Nicht erfasste Kartenzellen sind kein Blocker; die VL53
+> dienen vorrangig dem Ausweichen. Begrenzte Rückwärtsfahrt entlang der eigenen
+> Spur ist erlaubt. Umsetzung als zusätzliche, umschaltbare Strategie
+> `self_healing` neben dem AP06-Pfad; AP06-Manifestläufe bleiben mit
+> Standardparametern vergleichbar. Verbindlich ausgeführt in
+> [KONZEPT_SELBSTHEILUNG.md](KONZEPT_SELBSTHEILUNG.md); Sicherheitsregeln aus
+> AGENTS.md und LAB-1 gelten unverändert.
+
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
 Dieses Dokument ist die vom Nutzer angeforderte Fortschreibung des vorhandenen MASTERPLAN v1.2. Es wird bei der Übernahme unter `docs/wohnungserkundung/MASTERPLAN.md` die einzige aktuelle Architektur- und Reihenfolgevorgabe. Seine Erstellung ist keine Softwareimplementierung oder Realabnahme. Der erste Auftrag ist ausschließlich gerätefreie Softwarearbeit.

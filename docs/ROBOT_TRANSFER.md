@@ -1,5 +1,17 @@
 # Übertragung auf den realen Roboter
 
+## 15.10.2026 – neue Startoption self_healing, kein Installwechsel
+
+Auf dem Jetson ist nichts installiert oder geändert. Neu im Repository
+(Branch `claude/blissful-pasteur-s1eivj`): Launch-Argument `self_healing`
+(Default `false`) in `nav_mapping.launch.py`. Nur mit `true` wirken:
+Explorer-Profil `self_healing_params.yaml`, Nav2-Baum
+`navigate_to_pose_self_healing.xml`, Nav2-Overlay `nav2_params_self_healing.yaml`
+(`allow_unknown: true`, Glätter `min_velocity` x −0,05 m/s) und
+Behavior-Server-Ausgang `cmd_vel_nav_raw` statt `cmd_vel_recovery_blocked`.
+Ohne das Argument startet der bisherige Stand unverändert. Erst motorlos prüfen,
+dann nach LAB-1 fahren.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

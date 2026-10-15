@@ -16,6 +16,24 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
+## 15.10.2026 – Selbstheilender Betrieb beschlossen und gerätefrei umgesetzt
+
+Auswertung der Original-v17-Rohdaten (Jetson, nur lesend) ergab drei konkrete
+Ursachen: **A** – eine 1-cm-SLAM-Korrektur gegen float32-Auflösung (Rest 2,2e-8
+Zelle) verwarf die Startfreigabe; **HOLD** – der Kartenstatus eilte der Rohkarte
+um 1,0 s voraus (Abbruch nach 1,6–2,7 ms, `status_binding_changed`); **B/C** –
+Auswahlbudget im Stillstand terminal. Korrekturen auf Branch
+`claude/blissful-pasteur-s1eivj`; zusätzlich neue umschaltbare Strategie
+`self_healing` mit Heilungsleiter und Spurrückfahrt
+([Konzept](KONZEPT_SELBSTHEILUNG.md)). Gerätefrei geprüft: Explore 2.231,
+robot_navigation 147 Tests grün (ROS 2 Jazzy, Cloud). Keine Realfahrt, kein
+Install, v17-A/B/C nicht neu ausgeführt.
+
+**Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
+self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,
+Behavior-Server an `cmd_vel_nav_raw`, Glätter-Rückwärtsgrenze −0,05), danach
+begrenzte Laborfahrt nach LAB-1.
+
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 
 Getrennter Checkout, Fixbranch `fix/ap06-adaptive-cooldown-order`, Ausgangsbasis
