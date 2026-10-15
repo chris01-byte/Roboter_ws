@@ -213,6 +213,31 @@ def height_report(points_base_link, sensor_points, min_height, base_link_above_f
     return report
 
 
+# Fenster vor dem Roboter, in dem niedrige Objekte der Messreihe liegen
+# (base_link; Front bei x=0,31 m, VL53-Sicht bis etwa 0,8 m).
+KOSTENKARTE_FENSTER = {'x_min': 0.35, 'x_max': 1.0, 'y_abs': 0.35}
+
+
+def lethal_cells_in_window(data, width, height, resolution, origin_xy,
+                           to_base_link, window=KOSTENKARTE_FENSTER):
+    """Zahl toedlicher Zellen (100) einer OccupancyGrid im Fenster vor base_link.
+
+    ``to_base_link`` bildet Nx3-Punkte des Kartenrahmens nach base_link ab.
+    """
+    grid = np.asarray(data, dtype=np.int16).reshape(height, width)
+    rows, cols = np.nonzero(grid == 100)
+    if rows.size == 0:
+        return 0
+    points = np.column_stack([
+        origin_xy[0] + (cols + 0.5)*resolution,
+        origin_xy[1] + (rows + 0.5)*resolution,
+        np.zeros(rows.size)])
+    base = to_base_link(points)
+    inside = ((base[:, 0] >= window['x_min']) & (base[:, 0] <= window['x_max'])
+              & (np.abs(base[:, 1]) <= window['y_abs']))
+    return int(np.count_nonzero(inside))
+
+
 def row_elevations(fov_deg, rows=8):
     """Zeilenmitten wie im vl53_near_field-Knoten (Konvention z oben +)."""
     return np.radians([(-fov_deg/2.0 + (r + 0.5)/rows*fov_deg) for r in range(rows)])
@@ -482,6 +507,15 @@ def pruefe_vl53(leser, ergebnis, sekunden, base_link_above_floor):
     subs = [leser.node.create_subscription(
                 PointCloud2, f'/near_field/{side}/points', collect(side), qos_profile_sensor_data)
             for side in clouds]
+    # Lokale Kostenkarte: belegen die VL53-Treffer tatsaechlich Zellen vor dem
+    # Roboter? Nav2 publiziert sie zuverlaessig und latched.
+    from nav_msgs.msg import OccupancyGrid
+    from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
+    costmaps = []
+    latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    subs.append(leser.node.create_subscription(
+        OccupancyGrid, '/local_costmap/costmap', costmaps.append, latched))
     leser.spin_for(sekunden)
     for sub in subs:
         leser.node.destroy_subscription(sub)
@@ -508,6 +542,27 @@ def pruefe_vl53(leser, ergebnis, sekunden, base_link_above_floor):
                      f'{report["verworfen"]} unter dem Filter '
                      f'({report["filter_ueber_boden_m"]:.2f} m ueber Boden), '
                      f'Baender {report["baender_ueber_boden"]}')
+
+    if not costmaps:
+        ergebnis.add('E VL53', 'lokale Kostenkarte empfangen', None, 'keine Nachricht')
+        return berichte
+    grid = costmaps[-1]
+    try:
+        tf = tf_buffer.lookup_transform('base_link', grid.header.frame_id, Time())
+        t, q = tf.transform.translation, tf.transform.rotation
+        count = lethal_cells_in_window(
+            grid.data, grid.info.width, grid.info.height, grid.info.resolution,
+            (grid.info.origin.position.x, grid.info.origin.position.y),
+            lambda pts: transform_points(pts, (t.x, t.y, t.z), (q.x, q.y, q.z, q.w)))
+    except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+        ergebnis.add('E VL53', f'TF {grid.header.frame_id} -> base_link', None, str(error))
+        return berichte
+    berichte['kostenkarte'] = {
+        'belegte_zellen_vorn': count, 'fenster_base_link_m': KOSTENKARTE_FENSTER,
+        'aufloesung_m': round(grid.info.resolution, 3), 'nachrichten': len(costmaps)}
+    ergebnis.add('E VL53', f'lokale Kostenkarte: {count} belegte Zellen vor dem Roboter', None,
+                 'x 0,35-1,0 m, |y| <= 0,35 m vor base_link; Markierungen koennen aus '
+                 'frueheren Lagen stammen (ohne Raeumstrahl bleiben sie bestehen)')
     return berichte
 
 

@@ -8,8 +8,8 @@ import yaml
 
 from selbstheilung_stillstand_pruefen import (
     NOT_SET, Ergebnis, compare_params, flatten_ros_params, height_report,
-    near_field_filters, normalize_topic, row_elevations, transform_points,
-    values_match)
+    lethal_cells_in_window, near_field_filters, normalize_topic, row_elevations,
+    transform_points, values_match)
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -91,6 +91,24 @@ def test_height_bands_count_points_by_floor_height():
     lowered = height_report(base, base, -0.02, 0.09)
     assert lowered['baender_ueber_boden'] == report['baender_ueber_boden']
     assert lowered['verworfen'] == 1 and lowered['filter_ueber_boden_m'] == pytest.approx(0.07)
+
+
+def test_lethal_cells_are_counted_only_in_the_window_in_front_of_the_robot():
+    width = height = 60                                   # 3 m x 3 m, 5 cm cells
+    data = np.zeros(width*height, dtype=int)
+    grid = data.reshape(height, width)
+    grid[30, 40] = 100        # odom (2.025, 1.525): 0.525 m ahead of the robot
+    grid[30, 20] = 100        # 0.475 m behind the robot
+    grid[45, 40] = 100        # 0.75 m to the left
+    grid[31, 41] = 99         # inflation only
+    robot = (1.5, 1.5)                                    # base_link in odom, yaw 0
+    to_base = lambda pts: pts - np.array([robot[0], robot[1], 0.0])  # noqa: E731
+    assert lethal_cells_in_window(data, width, height, 0.05, (0.0, 0.0), to_base) == 1
+    # Robot turned by 180 degrees: now the former 'behind' cell is in front.
+    yaw180 = (0.0, 0.0, 1.0, 0.0)
+    turned = lambda pts: transform_points(pts - np.array([robot[0], robot[1], 0.0]),  # noqa: E731
+                                          (0, 0, 0), yaw180)
+    assert lethal_cells_in_window(data, width, height, 0.05, (0.0, 0.0), turned) == 1
 
 
 def test_transform_points_rotates_with_quaternion():
