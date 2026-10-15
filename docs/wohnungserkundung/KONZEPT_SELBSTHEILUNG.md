@@ -143,7 +143,7 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 | 3 | Heilungsbudget der Mission | **beschlossen 15.10.2026:** Hilfe nach 8 Fehlschlägen in Folge ohne Fortschritt, 30 Heilungen je Mission oder 600 s ohne Kartenzuwachs (≥ 0,05 m²); Ziel erreicht oder Kartenzuwachs setzt die Folge zurück |
 | 4 | „Hilfe benötigt“ mit „Weiter“ per App als zulässiger Missionsverlauf | zurückgestellt (wird zuletzt entschieden); technisch heute: neue Explore-Mission setzt auf der aktuellen Karte fort |
 | 5 | Welche Explorer-Linie wird weitergeführt? | **beschlossen 15.10.2026:** `self_healing` ist Hauptlinie; AP06 (`metric_frontier`) wird eingefroren, bleibt vollständig erhalten und per `self_healing:=false` sofort aktivierbar. Bestätigung nach realem Kurztest (siehe unten) |
-| 6 | Abnahmekriterien neu fassen (Robustheit vor 95 %-Referenzanteil) | offen |
+| 6 | Abnahmekriterien | **beschlossen 15.10.2026:** dreistufige Abnahmeleiter (Labor → Robustheit in Simulation → echte Wohnung) statt AP06-Laborideal; siehe Abschnitt 11 |
 
 ### Bestätigungstest für Entscheidung 5
 
@@ -185,3 +185,21 @@ VL53 nur vorn); sie ist deshalb auf die eigene, gerade, kurz zuvor befahrene Spu
 begrenzt. Hindernisse unter etwa 12–14 cm sieht keine Sensorkette. Reale Wirkung
 der Heilungsleiter ist unbelegt; die nächste Stufe ist eine motorlose Prüfung der
 Topics/Parameter auf dem Jetson, danach eine begrenzte Laborfahrt.
+
+## 11. Abnahmeleiter (Entscheidung 6, 15.10.2026)
+
+Ersetzt für die Hauptlinie `self_healing` das AP06-Kriterium (≥ 95 % Referenzfläche,
+≤ 0,10 m Kartenfehler, beide Türen inklusive Heck, alles in einem Lauf). Dieses
+bleibt nur für den eingefrorenen AP06-Pfad dokumentiert. In jeder Stufe gelten
+unverändert: kein Kontakt, sauberer Halt, keine Bewegung bei fehlender
+Sicherheitsquelle.
+
+| Stufe | Wo | Bestanden, wenn … |
+|---|---|---|
+| 1 – Labor | bekannter Laborraum, real (LAB-1) | 3/3 Fahrten: mehrere selbst gewählte Ziele erreicht, kein Kontakt, sauberes Ende mit „vollständig“, „Teilkarte“ oder „Hilfe benötigt“, ohne Absturz und ohne unklaren Nav2-Zustand |
+| 2 – Robustheit | geschlossene Simulation | 5/5 Störfälle enden sauber, der Roboter heilt statt abzubrechen: Sensorlücke, Kartenstatus-Rennen, Rechenzeitüberschreitung, Hindernis im Weg, gesperrte Tür |
+| 3 – Wohnung | echte Wohnung, real | 3 Läufe: alle zugänglichen Räume erreicht (Türen ab 0,68 m), Karte deckt die begehbare Fläche sichtbar vollständig ab (Abgleich mit Grundriss, Richtwert ≥ 90 %), kein Kontakt; erlaubte Hilfeeingriffe folgen aus Entscheidung 4 |
+
+Fahrzeit wird gemessen, ist aber vorerst kein Abbruchkriterium (0,06 m/s in
+unbekanntem Gebiet). Stufe 1 ist zugleich der Bestätigungstest für Entscheidung 5.
+
