@@ -1,0 +1,32 @@
+<!--
+  Nav2-Baum fuer den selbstheilenden Erkundungsbetrieb (exploration_strategy
+  self_healing, Konzept docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md).
+
+  Innerhalb EINES Frontier-Ziels nur leichte, bewegungsfreie Recovery:
+  lokale Kostenkarte leeren (die VL53/OAK markieren echte Hindernisse im
+  naechsten Frame neu) und kurz warten, hoechstens zweimal. Kein Spin und
+  kein BackUp im Baum: Umsehen und Rueckfahrt entlang der eigenen Spur
+  entscheidet die Heilungsleiter des Explorers mit eigenen Vorbedingungen.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="2" name="NavigateSelfHealing">
+      <PipelineSequence name="NavigateWithReplanning">
+        <RateController hz="1.0">
+          <RecoveryNode number_of_retries="1" name="ComputePathToPose">
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"
+                               server_timeout="2000"/>
+            <ClearEntireCostmap name="ClearGlobalCostmap-Context"
+                                service_name="global_costmap/clear_entirely_global_costmap"/>
+          </RecoveryNode>
+        </RateController>
+        <FollowPath path="{path}" controller_id="FollowPath" server_timeout="2000"/>
+      </PipelineSequence>
+      <Sequence name="LightRecovery">
+        <ClearEntireCostmap name="ClearLocalCostmap"
+                            service_name="local_costmap/clear_entirely_local_costmap"/>
+        <Wait wait_duration="2"/>
+      </Sequence>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

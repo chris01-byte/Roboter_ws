@@ -65,7 +65,7 @@ class MetricFrontierRuntime:
             'exploration_strategy', 'existing',
             ParameterDescriptor(read_only=True,
                 description='Select at process start while no mission is active.')).value
-        if self._exploration_strategy not in ('existing', 'metric_frontier'):
+        if self._exploration_strategy not in ('existing', 'metric_frontier', 'self_healing'):
             raise ValueError('Unknown exploration_strategy')
         self._metric_enabled = self._exploration_strategy == 'metric_frontier'
 

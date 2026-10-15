@@ -34,6 +34,10 @@ def generate_launch_description():
         DeclareLaunchArgument('hwt601_active_drive', default_value='false'),
         DeclareLaunchArgument('hwt_development_contract', default_value='false'),
         DeclareLaunchArgument(
+            'behavior_tree', default_value=safe_bt,
+            description='Nav2-Baum fuer Explorer-Kindziele. Standard: '
+                        'recovery-frei; self_healing nutzt leichte Recovery.'),
+        DeclareLaunchArgument(
             'explore_params_overlay', default_value=params,
             description='Optionales zweites Parameterprofil; Standard '
                         'wiederholt die normalen Explorer-Parameter.'),
@@ -44,7 +48,7 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 params, params_overlay, {
-                    'behavior_tree': safe_bt,
+                    'behavior_tree': LaunchConfiguration('behavior_tree'),
                     'require_hwt601_fusion': ParameterValue(
                         LaunchConfiguration('require_hwt601_fusion'), value_type=bool),
                     'hwt601_active_drive': ParameterValue(

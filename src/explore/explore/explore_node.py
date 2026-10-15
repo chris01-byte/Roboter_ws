@@ -154,6 +154,7 @@ from explore.exploration_nav_runtime import (
 )
 from explore.portal_source_adapter import raw_map_portal_source_from_values
 from explore.metric_frontier_runtime import MetricFrontierRuntime
+from explore.self_healing_runtime import SelfHealingRuntime
 from explore.exploration_scope import AuthorizedExplorationScope
 from explore.portal_memory import Point2D as PortalPoint2D
 from explore.portal_task_evidence import (
@@ -654,7 +655,7 @@ class Frontier:
         self.forward_staging = False     # begrenzte direkte Etappe im Tuerprofil
 
 
-class ExploreNode(MetricFrontierRuntime, Node):
+class ExploreNode(MetricFrontierRuntime, SelfHealingRuntime, Node):
     def __init__(self):
         super().__init__('explore_node')
         self._declare_metric_strategy()
@@ -1505,6 +1506,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
         # zusaetzliche ROS-Schnittstellen. Der bestehende Explorerpfad bleibt
         # damit unveraendert.
         self._initialize_metric_strategy()
+        self._initialize_self_healing_strategy()
         self._initialize_region_graph_shadow()
 
         # -------------------------------------------------------------------
@@ -1524,7 +1526,8 @@ class ExploreNode(MetricFrontierRuntime, Node):
         self.create_subscription(
             LaserScan, self._door_lidar_scan_topic, self._on_door_lidar_scan,
             qos_profile_sensor_data, callback_group=self._cb)
-        if self._wohnungserkundung_navigation_enabled or self._metric_enabled:
+        if (self._wohnungserkundung_navigation_enabled or self._metric_enabled
+                or self._self_healing_enabled):
             # Read-only obstruction classification.  These subscriptions do
             # not authorize or publish any movement; the existing gate and
             # collision monitor retain sole motion authority.
@@ -2923,7 +2926,8 @@ class ExploreNode(MetricFrontierRuntime, Node):
             return
         # The gate is an independent source observer. Its HOLD must cancel
         # our child even when our own DDS reader has remained healthy.
-        if (getattr(self, '_metric_enabled', False)
+        if ((getattr(self, '_metric_enabled', False)
+                or getattr(self, '_self_healing_enabled', False))
                 and status.get('active_drive') is True
                 and status.get('recovery_state') in
                 ('HEALTHY', 'HOLD', 'RECOVERY_VALIDATION', 'TERMINAL_FAULT')
@@ -3653,6 +3657,7 @@ class ExploreNode(MetricFrontierRuntime, Node):
             'message': self._status_message,
             'strategy': (
                 'metric_frontier' if getattr(self, '_metric_enabled', False)
+                else 'self_healing' if getattr(self, '_self_healing_enabled', False)
                 else 'frontier_portal_then_adaptive_coverage'),
             'coverage_ratio': self._coverage_ratio,
             'coverage_percent': 100.0 * self._coverage_ratio,
@@ -3683,6 +3688,10 @@ class ExploreNode(MetricFrontierRuntime, Node):
                 self._metric_status.get('state') in ('success', 'partial', 'blocked', 'failed', 'canceled'))
             payload['metric_exploration']['persistence'] = getattr(
                 self, '_metric_persistence_status', {'state': 'disabled'})
+        if getattr(self, '_self_healing_enabled', False):
+            payload['self_healing'] = dict(self._self_healing_status)
+            payload['map_ready_to_save'] = self._self_healing_status.get('state') in (
+                'success', 'partial', 'blocked')
         if getattr(self, '_hwt_guard', None) is not None:
             payload['hwt_recovery_sequence'] = getattr(
                 self, '_hwt_recovery_sequence', 0)
@@ -7143,6 +7152,15 @@ class ExploreNode(MetricFrontierRuntime, Node):
             req.min_frontier_size_m
             if req.min_frontier_size_m > 0 else self._min_frontier_m)
         return_to_start = req.return_to_start or self._return_to_start_p
+
+        if getattr(self, '_self_healing_enabled', False):
+            if return_to_start:
+                result = ExploreArea.Result()
+                result.message = 'self_healing:unsupported_return_request'
+                goal_handle.abort()
+                return result
+            return self._execute_self_healing(
+                goal_handle, overall_timeout, min_frontier_m)
 
         if getattr(self, '_metric_enabled', False):
             if return_to_start:

@@ -1,0 +1,64 @@
+# =====================================================================
+#  Selbstheilender Erkundungsbetrieb (Profil, 15.10.2026)
+#  Konzept: docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md
+#
+#  Start (Laborumfang LAB-1, Not-Aus in Reichweite):
+#    ros2 launch robot_navigation nav_mapping.launch.py self_healing:=true \
+#      active_drive:=true enable_auto_explore:=true
+#
+#  self_healing:=true laedt dieses Profil, den Nav2-Baum mit leichter
+#  Recovery und das Nav2-Overlay (Planung durch Unbekanntes, begrenzte
+#  Rueckfahrt nur ueber den Behavior-Server).
+#  Rueckfallweg: self_healing:=false (Default) = bisheriger Explorer.
+# =====================================================================
+explore_node:
+  ros__parameters:
+    exploration_strategy: self_healing
+    # Ein Fahrbesitzer: keine direkten Tuer-/Portalbruecken, keine
+    # Abdeckungsfahrt, keine Rueckkehr-Ausfuehrung, keine semantische Policy.
+    wohnungserkundung_policy_enabled: false
+    wohnungserkundung_navigation_enabled: false
+    portal_crossing_enabled: false
+    door_traverse_distance_m: 0.0
+    coverage_enabled: false
+    return_to_start: false
+
+    # Warten im Stillstand auf frische Quellen (Not-Aus-Status, VL53, LiDAR,
+    # Odometrie, Lokalisierung, Karte). Danach "Hilfe benoetigt", kein Abbruch
+    # mit Datenverlust. Ein AKTIVER Not-Aus und Aktorfehler enden sofort.
+    self_healing_source_wait_s: 30.0
+    self_healing_map_timeout_s: 5.0
+    self_healing_pose_timeout_s: 1.5
+
+    # Heilungsleiter: H1 erneut -> H2 zurueckstellen -> H3 umsehen ->
+    # H4 Spur zurueck -> H5 Hilfe. Fortschritt setzt sie zurueck.
+    self_healing_heal_wait_s: 2.0
+    self_healing_goal_retries: 1
+    self_healing_look_around_after: 3
+    self_healing_track_back_after: 5
+    self_healing_help_after: 8
+    self_healing_max_heals: 30
+    self_healing_no_progress_timeout_s: 600.0
+    self_healing_min_gain_m2: 0.05
+
+    # Frontier-Auswahl (schnell, ohne Sichtprognose).
+    self_healing_blacklist_radius_m: 0.5
+    self_healing_min_goal_distance_m: 0.3
+    self_healing_gain_scale: 0.5
+    self_healing_completion_checks: 3
+
+    # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
+    # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit
+    # kommen aus initial_scan_speed / initial_scan_timeout.
+    self_healing_look_around_rad: 1.5708
+    self_healing_rotation_radius_m: 0.45
+
+    # H4 Rueckfahrt entlang der eigenen Spur (Freigabe Projektinhaber
+    # 15.10.2026): nur gerader, zuletzt selbst befahrener Abschnitt,
+    # hoechstens 0,4 m, 0,05 m/s, seitliche Abweichung <= 3 cm.
+    self_healing_track_back_max_m: 0.4
+    self_healing_track_back_min_m: 0.1
+    self_healing_track_back_speed_mps: 0.05
+    self_healing_track_lateral_tolerance_m: 0.03
+    self_healing_backup_action: backup
+
