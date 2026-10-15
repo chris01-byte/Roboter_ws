@@ -36,7 +36,10 @@ AP06 eingefroren (erhalten, umschaltbar); Bestätigung nach realem Kurztest
 (drei begrenzte Laborfahrten, Kriterien im Konzept). Entscheidung 6:
 Abnahmeleiter Labor → Robustheit (Simulation, 5 Störfälle) → echte Wohnung
 (alle zugänglichen Räume, Richtwert ≥ 90 % begehbare Fläche, kein Kontakt).
-Entscheidung 4 zurückgestellt.
+Entscheidung 4: „Weiter“ mit Missionsgedächtnis in der App (geplantes
+Arbeitspaket, Konzept §12); Abnahme Stufe 1/2 ohne Eingriff, Stufe 3 höchstens
+1× „Weiter“ je Lauf bei echtem physischem Hindernis. Danach folgt das
+Arbeitspaket „Weiter“.
 
 **Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
 self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,

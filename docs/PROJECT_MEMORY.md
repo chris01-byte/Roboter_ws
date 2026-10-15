@@ -1239,3 +1239,9 @@ Labor (3/3 saubere Fahrten), Robustheit in Simulation (5/5 Störfälle geheilt),
 echte Wohnung (3 Läufe, alle zugänglichen Räume, Richtwert ≥ 90 % begehbare
 Fläche, kein Kontakt). Details: KONZEPT_SELBSTHEILUNG.md §11.
 
+**Nachtrag 15.10.2026 – Hilfe und „Weiter“:** Nach „Hilfe benötigt“ soll ein
+„Weiter“ in der App dieselbe Mission mit Gedächtnis fortsetzen (Arbeitspaket
+geplant, KONZEPT_SELBSTHEILUNG.md §12). Abnahme: Stufe 1 und 2 ohne Eingriff,
+Stufe 3 höchstens 1× „Weiter“ je Lauf und nur bei echtem physischem Hindernis,
+jeder Eingriff mit Grund protokolliert; langfristiges Ziel null Eingriffe.
+
