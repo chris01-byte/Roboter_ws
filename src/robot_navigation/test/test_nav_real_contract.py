@@ -72,13 +72,32 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
     assert ("remappings=[('cmd_vel', when_self_healing(\n"
             "                    'cmd_vel_nav_raw', 'cmd_vel_recovery_blocked'))]") in source
     assert "'self_healing', default_value='false'" in source
+    # The local costmap lives in the controller_server process; without
+    # self_healing nav_overlay is the base file again (no change).
+    assert ("name='controller_server', output='screen',\n"
+            "                parameters=[params, nav_overlay]") in source
+    assert ("'collision_params_overlay': when_self_healing(\n"
+            "                    self_healing_collision_overlay, mapping_collision_params)") in source
 
 
 def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
     overlay = yaml.safe_load(
         (PACKAGE_ROOT/'config'/'nav2_params_self_healing.yaml').read_text())
-    assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server'}
+    assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server',
+                            'local_costmap', 'global_costmap'}
+    # VL53 height limit (decision 16.10.2026): only the marking VL53 sources,
+    # base profile keeps 0.05 for every other mode.
+    for costmap in ('local_costmap', 'global_costmap'):
+        layer = overlay[costmap][costmap]['ros__parameters']
+        assert layer == {'obstacle_layer': {
+            'vl53_left_mark': {'min_obstacle_height': -0.02},
+            'vl53_right_mark': {'min_obstacle_height': -0.02}}}
+        base = real[costmap][costmap]['ros__parameters']['obstacle_layer']
+        for source in ('vl53_left_mark', 'vl53_right_mark', 'vl53_left', 'vl53_right'):
+            assert base[source]['min_obstacle_height'] == 0.05
+        assert base['vl53_left_mark']['marking'] is True
+        assert base['vl53_left']['marking'] is False
     planner = overlay['planner_server']['ros__parameters']
     assert planner == {'GridBased': {'allow_unknown': True}}
     smoother = overlay['velocity_smoother']['ros__parameters']

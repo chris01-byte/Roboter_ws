@@ -27,6 +27,14 @@ def test_profiles_flatten_to_live_parameter_names():
     assert overlay['/planner_server'] == {'GridBased.allow_unknown': True}
     assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.25]
     assert overlay['/behavior_server']['simulate_ahead_time'] == pytest.approx(2.0)
+    assert overlay['/local_costmap/local_costmap'] == {
+        'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
+        'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02}
+    assert set(overlay['/global_costmap/global_costmap']) == set(
+        overlay['/local_costmap/local_costmap'])
+    collision = _params('src/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml')
+    assert collision == {'/collision_monitor': {
+        'vl53_left.min_height': -0.02, 'vl53_right.min_height': -0.02}}
     nested = _params('src/robot_navigation/config/nav2_params_real.yaml')
     assert '/local_costmap/local_costmap' in nested
 
@@ -78,6 +86,11 @@ def test_height_bands_count_points_by_floor_height():
     assert report['verworfen'] == 3 and report['behalten'] == 1
     assert list(report['baender_ueber_boden'].values()) == [1, 1, 1, 1]
     assert report['naechster_behaltener_x_base_link_m'] == pytest.approx(0.4)
+    # Selbstheilungsgrenze (-0,02 m ueber base_link = 0,07 m ueber Boden):
+    # gleiche Baender, nur noch der 3-cm-Punkt faellt unter den Filter.
+    lowered = height_report(base, base, -0.02, 0.09)
+    assert lowered['baender_ueber_boden'] == report['baender_ueber_boden']
+    assert lowered['verworfen'] == 1 and lowered['filter_ueber_boden_m'] == pytest.approx(0.07)
 
 
 def test_transform_points_rotates_with_quaternion():

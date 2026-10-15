@@ -56,6 +56,9 @@ def generate_launch_description():
     self_healing_bt = os.path.join(
         get_package_share_directory('explore'), 'behavior_trees',
         'navigate_to_pose_self_healing.xml')
+    self_healing_collision_overlay = os.path.join(
+        get_package_share_directory('vl53_near_field'), 'config',
+        'collision_monitor_self_healing_overlay.yaml')
     safe_bt = os.path.join(
         get_package_share_directory('explore'), 'behavior_trees',
         'navigate_to_pose_no_recovery.xml')
@@ -112,10 +115,12 @@ def generate_launch_description():
                     "'", enable_stage3_motion_diagnostic, "' == 'true' and '",
                     start_stage3_motion_diagnostic, "' == 'true'"])),
             ),
+            # Die lokale Kostenkarte laeuft im controller_server-Prozess; das
+            # Overlay senkt dort nur die VL53-Hoehengrenze (self_healing).
             Node(
                 package='nav2_controller', executable='controller_server',
                 name='controller_server', output='screen',
-                parameters=[params], remappings=nav_cmd_remap),
+                parameters=[params, nav_overlay], remappings=nav_cmd_remap),
             Node(
                 package='nav2_planner', executable='planner_server',
                 name='planner_server', output='screen',
@@ -229,6 +234,8 @@ def generate_launch_description():
                 'vl53_near_field', 'vl53_near_field.launch.py')),
             launch_arguments={
                 'collision_params_file': mapping_collision_params,
+                'collision_params_overlay': when_self_healing(
+                    self_healing_collision_overlay, mapping_collision_params),
             }.items()),
 
         # Software-BT-Sicht; der hardwired Not-Aus bleibt primaer.

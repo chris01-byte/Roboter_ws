@@ -28,6 +28,9 @@ def generate_launch_description():
     default_collision_params = os.path.join(
         pkg, 'config', 'collision_monitor_params.yaml')
     collision_params = LaunchConfiguration('collision_params_file')
+    # Optionales zweites Profil, das nach dem ersten geladen wird. Default ist
+    # dieselbe Datei erneut, also wirkungsgleich zum bisherigen Stand.
+    collision_overlay = LaunchConfiguration('collision_params_overlay')
 
     # 1) VL53-Node
     vl53_node = Node(
@@ -70,7 +73,7 @@ def generate_launch_description():
     collision_monitor = Node(
         package='nav2_collision_monitor', executable='collision_monitor',
         name='collision_monitor', output='screen',
-        parameters=[collision_params],
+        parameters=[collision_params, collision_overlay],
     )
 
     # 4) Lifecycle-Manager aktiviert den collision_monitor automatisch
@@ -91,4 +94,8 @@ def generate_launch_description():
             description='Parameterdatei fuer den collision_monitor. Ohne '
                         'Angabe bleibt die abgenommene Standardkonfiguration '
                         'aktiv; Mapping darf eine eigene Kontur verwenden.'),
+        DeclareLaunchArgument(
+            'collision_params_overlay', default_value=collision_params,
+            description='Optionales Overlay nach collision_params_file. '
+                        'Default: dieselbe Datei erneut (keine Aenderung).'),
         vl53_node, tf_left, tf_right, collision_monitor, lifecycle_mgr])

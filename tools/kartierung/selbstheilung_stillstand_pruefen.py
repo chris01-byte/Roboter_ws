@@ -17,7 +17,9 @@ den ROS-Graphen, ``/cmd_vel`` und optional die VL53-Punktwolken.
 Geprueft wird:
   A  Explorer-Profil: jeder Wert aus self_healing_params.yaml ist live
      gesetzt, der Explorer verwendet den Baum mit leichter Recovery.
-  B  Nav2-Overlay: jeder Wert aus nav2_params_self_healing.yaml ist live
+  B  Overlays: jeder Wert aus nav2_params_self_healing.yaml (Planer,
+     Glaetter, Behavior-Server, beide Kostenkarten) und aus
+     collision_monitor_self_healing_overlay.yaml ist live
      gesetzt (Planung durch Unbekanntes, -0,05 m/s, simulate_ahead_time).
   C  Verdrahtung: BackUp geht ueber cmd_vel_nav_raw (Fahrtor -> Smoother
      -> collision_monitor), RPP hoert auf das Geschwindigkeitslimit.
@@ -168,19 +170,19 @@ def height_report(points_base_link, sensor_points, min_height, base_link_above_f
     pts = np.asarray(points_base_link, dtype=float).reshape(-1, 3)
     floor = pts[:, 2] + base_link_above_floor
     threshold_floor = min_height + base_link_above_floor
-    label = f'{threshold_floor:.2f}'.replace('.', ',')
     dropped = floor < threshold_floor
     report = {
         'punkte': int(len(pts)),
         'filter_ueber_boden_m': round(threshold_floor, 3),
         'verworfen': int(np.count_nonzero(dropped)),
         'behalten': int(np.count_nonzero(~dropped)),
+        # Feste Baender, unabhaengig vom Filter, damit Messreihen mit
+        # verschiedenen Grenzen vergleichbar bleiben (0,14 m = bisherige Grenze).
         'baender_ueber_boden': {
             '<0,05 m': int(np.count_nonzero(floor < 0.05)),
             '0,05-0,10 m': int(np.count_nonzero((floor >= 0.05) & (floor < 0.10))),
-            f'0,10-{label} m': int(np.count_nonzero(
-                (floor >= 0.10) & (floor < threshold_floor))),
-            f'>={label} m': int(np.count_nonzero(floor >= threshold_floor)),
+            '0,10-0,14 m': int(np.count_nonzero((floor >= 0.10) & (floor < 0.14))),
+            '>=0,14 m': int(np.count_nonzero(floor >= 0.14)),
         },
     }
     if len(pts):
@@ -339,7 +341,7 @@ def _share(package, *parts):
     return os.path.join(get_package_share_directory(package), *parts)
 
 
-def pruefe_profile(leser, ergebnis, explore_profil, nav_overlay):
+def pruefe_profile(leser, ergebnis, explore_profil, overlays):
     explore_expected = flatten_ros_params(_load_yaml(explore_profil)).get('/explore_node', {})
     live = leser.get_params('/explore_node', list(explore_expected) + [
         'behavior_tree', 'self_healing_speed_limit_topic'])
@@ -356,14 +358,16 @@ def pruefe_profile(leser, ergebnis, explore_profil, nav_overlay):
     ergebnis.add('A Explorer', 'Nav2-Baum mit leichter Recovery',
                  isinstance(tree, str) and tree.endswith(SELF_HEALING_BT), repr(tree))
 
-    for node, expected in sorted(flatten_ros_params(_load_yaml(nav_overlay)).items()):
-        values = leser.get_params(node, expected)
-        if values is None:
-            ergebnis.add('B Nav2-Overlay', f'{node} erreichbar', False, 'keine Parameterantwort')
-            continue
-        for name, e, v, ok in compare_params(expected, values):
-            ergebnis.add('B Nav2-Overlay', f'{node} {name}', ok,
-                         f'erwartet {e!r}, live {"nicht deklariert" if v is NOT_SET else repr(v)}')
+    for bereich, overlay in overlays:
+        for node, expected in sorted(flatten_ros_params(_load_yaml(overlay)).items()):
+            values = leser.get_params(node, expected)
+            if values is None:
+                ergebnis.add(bereich, f'{node} erreichbar', False, 'keine Parameterantwort')
+                continue
+            for name, e, v, ok in compare_params(expected, values):
+                ergebnis.add(bereich, f'{node} {name}', ok,
+                             f'erwartet {e!r}, live '
+                             f'{"nicht deklariert" if v is NOT_SET else repr(v)}')
     return live
 
 
@@ -511,6 +515,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--explore-profil', help='Default: installiertes self_healing_params.yaml')
     parser.add_argument('--nav-overlay', help='Default: installiertes nav2_params_self_healing.yaml')
+    parser.add_argument('--collision-overlay',
+                        help='Default: installiertes collision_monitor_self_healing_overlay.yaml')
     parser.add_argument('--timeout-s', type=float, default=3.0)
     parser.add_argument('--entdeckung-s', type=float, default=2.0,
                         help='Wartezeit fuer die DDS-Entdeckung vor den Graphabfragen')
@@ -526,6 +532,9 @@ def main(argv=None):
     explore_profil = args.explore_profil or _share('explore', 'config', 'self_healing_params.yaml')
     nav_overlay = args.nav_overlay or _share(
         'robot_navigation', 'config', 'nav2_params_self_healing.yaml')
+    collision_overlay = args.collision_overlay or _share(
+        'vl53_near_field', 'config', 'collision_monitor_self_healing_overlay.yaml')
+    overlays = (('B Nav2-Overlay', nav_overlay), ('B Kollisionswaechter', collision_overlay))
 
     import rclpy
     rclpy.init()
@@ -534,7 +543,7 @@ def main(argv=None):
     vl53 = {}
     try:
         leser.spin_for(args.entdeckung_s)
-        explore_live = pruefe_profile(leser, ergebnis, explore_profil, nav_overlay)
+        explore_live = pruefe_profile(leser, ergebnis, explore_profil, overlays)
         if explore_live is None:
             ergebnis.drucken()
             return 2
