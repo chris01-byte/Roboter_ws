@@ -30,7 +30,10 @@ robot_navigation 147 Tests grün (ROS 2 Jazzy, Cloud). Keine Realfahrt, kein
 Install, v17-A/B/C nicht neu ausgeführt.
 
 Entscheidung 2 (15.10.2026): solange vor dem Roboter nicht kartiert ist,
-0,06 m/s über Nav2 `speed_limit` (gerätefrei geprüft).
+0,06 m/s über Nav2 `speed_limit` (gerätefrei geprüft). Entscheidung 3:
+Heilungsbudget wie profiliert. Entscheidung 5: `self_healing` ist Hauptlinie,
+AP06 eingefroren (erhalten, umschaltbar); Bestätigung nach realem Kurztest
+(drei begrenzte Laborfahrten, Kriterien im Konzept). Entscheidung 4 zurückgestellt.
 
 **Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
 self_healing:=true` starten und Parameter/Topics/Kette prüfen (Overlay geladen,

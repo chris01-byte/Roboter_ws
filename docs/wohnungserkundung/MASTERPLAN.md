@@ -11,6 +11,12 @@
 > Standardparametern vergleichbar. Verbindlich ausgeführt in
 > [KONZEPT_SELBSTHEILUNG.md](KONZEPT_SELBSTHEILUNG.md); Sicherheitsregeln aus
 > AGENTS.md und LAB-1 gelten unverändert.
+>
+> **Nutzerentscheidung 15.10.2026, Nachtrag:** `self_healing` ist die
+> Hauptlinie der Erkundung. Der AP06-Pfad (`metric_frontier`, AP-01…AP-06)
+> wird eingefroren: keine Weiterentwicklung, vollständig erhalten und
+> umschaltbar. Bestätigung nach einem realen Kurztest; Kriterien in
+> [KONZEPT_SELBSTHEILUNG.md](KONZEPT_SELBSTHEILUNG.md).
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 

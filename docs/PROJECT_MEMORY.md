@@ -1223,3 +1223,12 @@ benötigt“ nach 8 Fehlschlägen in Folge ohne Fortschritt, nach 30 Heilungen j
 Mission oder nach 600 s ohne Kartenzuwachs. Ziel erreicht oder Kartenzuwachs
 setzt die Folge zurück. Die Teilkarte bleibt erhalten.
 
+**Nachtrag 15.10.2026 – Hauptlinie:** `self_healing` wird die Hauptlinie der
+Erkundung; AP06 (`metric_frontier`) wird eingefroren, bleibt aber vollständig
+erhalten und per `self_healing:=false` aktivierbar. Gründe: Der Nav2-basierte
+Ansatz fuhr im August real autonom (Frontier-Ziele, Raumwechsel); AP06 erreichte
+in keiner Version eine vollständige Mission, und seine v17-Abbrüche waren keine
+realen Gefahren; die Schutzkette ist in beiden Wegen identisch; zwei parallel
+gepflegte Fahrlogiken verdoppeln den Aufwand. Bestätigung nach drei begrenzten
+Laborfahrten (Kriterien in KONZEPT_SELBSTHEILUNG.md).
+

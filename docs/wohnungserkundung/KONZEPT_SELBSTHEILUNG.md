@@ -141,9 +141,19 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 | 1 | Begrenzte Rückwärtsfahrt entlang der eigenen Spur (H4) | **beschlossen 15.10.2026** |
 | 2 | Geschwindigkeit, solange vor dem Roboter noch nicht kartiert ist | **beschlossen 15.10.2026: 0,06 m/s** (Nav2 `speed_limit`, Korridor 1,0 × 0,5 m, > 2 % unbekannt) |
 | 3 | Heilungsbudget der Mission | **beschlossen 15.10.2026:** Hilfe nach 8 Fehlschlägen in Folge ohne Fortschritt, 30 Heilungen je Mission oder 600 s ohne Kartenzuwachs (≥ 0,05 m²); Ziel erreicht oder Kartenzuwachs setzt die Folge zurück |
-| 4 | „Hilfe benötigt“ mit „Weiter“ per App als zulässiger Missionsverlauf | offen; technisch: neue Explore-Mission setzt auf der aktuellen Karte fort |
-| 5 | Explorer verschlanken oder nur Gates entschärfen | offen; umgesetzt ist beides als Option: neue Strategie `self_healing` und gezielte AP06-Korrekturen |
+| 4 | „Hilfe benötigt“ mit „Weiter“ per App als zulässiger Missionsverlauf | zurückgestellt (wird zuletzt entschieden); technisch heute: neue Explore-Mission setzt auf der aktuellen Karte fort |
+| 5 | Welche Explorer-Linie wird weitergeführt? | **beschlossen 15.10.2026:** `self_healing` ist Hauptlinie; AP06 (`metric_frontier`) wird eingefroren, bleibt vollständig erhalten und per `self_healing:=false` sofort aktivierbar. Bestätigung nach realem Kurztest (siehe unten) |
 | 6 | Abnahmekriterien neu fassen (Robustheit vor 95 %-Referenzanteil) | offen |
+
+### Bestätigungstest für Entscheidung 5
+
+1. Motorloser Start auf dem Jetson mit `self_healing:=true` (Parameter, Topics, Kette).
+2. Drei begrenzte Laborfahrten im bekannten Laborraum nach LAB-1, Not-Aus in Reichweite.
+3. **Bestanden**, wenn in allen drei Fahrten: mehrere selbst gewählte Ziele erreicht,
+   kein Hinderniskontakt, sauberes Ende mit „vollständig“, „Teilkarte“ oder
+   „Hilfe benötigt“ – ohne Absturz und ohne unklaren Nav2-Zustand.
+4. **Nicht bestanden:** Ursache analysieren, bevor weitergemacht wird. Rückkehr zu AP06
+   nur, wenn `self_healing` an etwas scheitert, das AP06 nachweislich besser kann.
 
 ## 10. Umsetzungsstand 15.10.2026 (Branch `claude/blissful-pasteur-s1eivj`)
 
