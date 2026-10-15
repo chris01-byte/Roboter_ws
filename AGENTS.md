@@ -183,6 +183,9 @@ AP-04 erlaubt den begrenzten Vergleich und die geprüfte Integration eines exter
 Frontier-Kerns als Kandidatenlieferant; ein kompletter Fremdstack bleibt ausgeschlossen.
 AP-06 ist nach ausdrücklichem Nutzerauftrag aktiv: zuerst geschlossene Gesamtsoftwareprüfung,
 anschließend technisch bedingte Zielsystem-/Realabnahme im bestehenden LAB-1-Umfang.
+**Seit 15.10.2026 (Nutzerentscheidung, MASTERPLAN-Nachtrag):** `self_healing` ist die
+Hauptlinie; AP-06 ist eingefroren, erhalten und mit `self_healing:=false` umschaltbar.
+Maßgeblich ist der aktuelle [Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
 Aktueller Zugang, Grenzen und tatsächliche Nachweise stehen ausschließlich im STATUS;
 fehlender Zugang sperrt nur die davon abhängige Arbeit.
 Der Plan erhält einen schlanken metrischen

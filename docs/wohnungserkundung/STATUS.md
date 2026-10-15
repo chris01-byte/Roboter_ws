@@ -48,11 +48,12 @@ niedrige Objekte, Kostenkarten und `collision_monitor` verwerfen aber alle
 Treffer unter etwa 0,14 m über Boden ([Konzept §6](KONZEPT_SELBSTHEILUNG.md)).
 Eine Filteränderung wäre eine eigene Sicherheitsänderung nach Messung.
 
-**Nächster Schritt:** auf dem Jetson motorlos `nav_mapping.launch.py
-self_healing:=true` aus getrenntem Checkout starten und
-`tools/kartierung/selbstheilung_stillstand_pruefen.py` ausführen, einschließlich
-VL53-Messreihe mit niedrigen Testobjekten (Anleitung
-`tools/kartierung/README.md`); danach begrenzte Laborfahrt nach LAB-1.
+**Nächster Schritt:** Auftrag SH-1 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
+den lokalen Agenten auf dem Jetson: motorlos `nav_mapping.launch.py
+self_healing:=true` aus getrenntem Checkout, gezielte Tests,
+`tools/kartierung/selbstheilung_stillstand_pruefen.py` A–D und VL53-Messreihe
+mit niedrigen Testobjekten; Bericht `~/selbstheilung_jetson_bericht.md` zur
+Auswertung. Danach begrenzte Laborfahrt nach LAB-1 als eigener Auftrag.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 
