@@ -1,11 +1,23 @@
-# Aktueller Agentenauftrag: SH-1 v2 – motorlose Jetson-Prüfung `self_healing`
+# Aktueller Agentenauftrag: SH-1 v3 – motorlose Jetson-Prüfung `self_healing`
 
 **Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 15.10.2026 vom
 Projektinhaber („schreibe jetzt in die Datei, was der lokale KI-Agent auf dem
 Jetson genau machen soll und was er reporten soll“). Der bisherige AP-06-Auftrag
 ist [bytegleich archiviert](archive/20261015-ap06-eingefroren/README.md).
 
-**v2 ersetzt SH-1 v1** (Commit `7493d9f`). Der v1-Lauf vom 15.10.2026 22:24–22:26
+**v3 ersetzt SH-1 v2** (Commit `6d96202`). Der v2-Lauf vom 15.10.2026
+23:05–23:07 war sauber: Unterbaukette eindeutig aus dem v17-`runtime.bash`,
+Umgebung ohne `roboter_ws/install`, 4 von 14 Paketen gebaut. `bt_orchestrator`
+scheiterte, weil CMake das System-`behaviortree_cpp` 4.9.1 wählte, dessen Export
+eine nicht vorhandene Nicht-Multiarch-Bibliothek sucht. Diese Jetson-Eigenheit
+ist bekannt (ROBOT_TRANSFER „Buildbesonderheit“). Der v17-Build übergibt deshalb
+`-Dbehaviortree_cpp_DIR=…/native-install/…` und `-DBUILD_TESTING=ON`; v2 hatte
+beides nicht. v3 übernimmt das v17-Buildskript wörtlich, nur Quell- und
+Zielpfade sind getauscht. Quelle des Skripts:
+`docs/wohnungserkundung/evidence/ap06-correction-v17-20261011.json`, Feld
+`build_script`.
+
+**v2 ersetzte SH-1 v1** (Commit `7493d9f`). Der v1-Lauf vom 15.10.2026 22:24–22:26
 stoppte korrekt am Build. Ursachen, alle im Auftrag und nicht beim Agenten:
 
 1. v1 baute auf `~/roboter_ws/install` auf. Das ist der August-Stand `23928d9`
@@ -31,7 +43,7 @@ ebenfalls vom Branch: `AGENTS.md`, `docs/LABORMODUS.md` (LAB-1),
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15.10.2026 (`self_healing` Hauptlinie, AP06 eingefroren, Abnahmeleiter) |
 | WE-Bezug | WE-M0 (Zielsystem-Vorlauf) und WE-M3 (metrischer Erkundungskern); Vorbedingung für Abnahmestufe 1 |
 | Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens Commit `e123902`. Bisher nur in der Cloud geprüft (ROS 2 Jazzy, Python 3.12). Jetson-Bestand: `~/roboter_ws` `main` `23928d9` (August), AP06 v17 als Release `ap06-correction-v17-20261011` |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_v2.md`: Unterbaukette, 14-Paket-Build, 142 gezielte Tests, Prüfskript A–D über den App-Start und die VL53-Messreihe |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_v3.md`: Unterbaukette, 14-Paket-Build, 142 gezielte Tests, Prüfskript A–D über den App-Start und die VL53-Messreihe |
 | Nicht-Ziele | siehe „Verboten“; keine Fahrt, keine Korrektur, keine Filteränderung |
 | Tests | 142 gezielte Tests (in der Cloud grün), Prüfskript `selbstheilung_stillstand_pruefen.py` |
 | Rückfall | Release-Ordner und Klon nicht mehr sourcen; `~/roboter_ws`, dessen Installation und alle bisherigen Releases bleiben unverändert |
@@ -90,25 +102,37 @@ Ist die Kette nicht eindeutig: hier stoppen und die Ausgaben oben berichten,
 nicht raten. Läuft ein Robotik-Stack: nichts beenden und Christopher genau
 einmal fragen, ob er geordnet beendet werden darf.
 
-### Schritt 2 – frischer Klon und Release-Ordner
+### Schritt 2 – Klon aktualisieren und neuer Release-Ordner
+
+Der Klon `~/roboter_worktrees/selbstheilung-v2` aus dem v2-Lauf wird
+weiterverwendet. Er ist ein eigenes Repository ohne die defekte Referenz:
 
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
-test -e ~/roboter_worktrees/selbstheilung-v2 && echo "EXISTIERT"
-git clone --branch claude/blissful-pasteur-s1eivj --single-branch --depth 50 \
-  https://github.com/chris01-byte/Roboter_ws.git ~/roboter_worktrees/selbstheilung-v2
-cd ~/roboter_worktrees/selbstheilung-v2 && git rev-parse HEAD && \
+cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && \
+  git pull --ff-only && git rev-parse HEAD && \
   git merge-base --is-ancestor e123902 HEAD && echo "e123902 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh1-$STAMP/pruefung
 ```
 
-Existiert `selbstheilung-v2` schon: nicht überschreiben, sondern
-`selbstheilung-v2-$STAMP` verwenden und in Schritt 3 eintragen.
+`git status --short` muss leer sein. Fehlt der Klon oder scheitert
+`pull --ff-only`: frisch klonen nach `~/roboter_worktrees/selbstheilung-v3`:
+
+```bash
+git clone --branch claude/blissful-pasteur-s1eivj --single-branch --depth 50 \
+  https://github.com/chris01-byte/Roboter_ws.git ~/roboter_worktrees/selbstheilung-v3
+```
+
+Danach diesen Pfad in Schritt 3 als `SH_SRC` eintragen. Der v2-Release-Ordner
+`selbstheilung-sh1-20261015_2305` bleibt unverändert liegen; neu wird in den
+Ordner mit dem neuen `STAMP` gebaut, damit kein alter CMake-Cache mitwirkt.
 
 ### Schritt 3 – Umgebungsdatei
 
-Mit dem Datei-Werkzeug `~/roboter_worktrees/selbstheilung-v2.env` anlegen.
-`<STAMP>` und die Unterbauzeilen aus Schritt 1 einsetzen:
+Die Datei `~/roboter_worktrees/selbstheilung-v2.env` aus dem v2-Lauf
+weiterverwenden. Mit dem Datei-Werkzeug nur die Zeile `export SH_REL=…` auf den
+neuen `STAMP` ändern, bei einem neuen Klon auch `SH_SRC`. Die Unterbauzeilen
+bleiben wie im v2-Lauf (aus dem v17-`runtime.bash`, Zeilen 2–5). Sollform:
 
 ```bash
 # SH-1 v2: nur diese Kette, kein ~/roboter_ws/install
@@ -135,7 +159,17 @@ Erwartung: `rc=0`, kein Eintrag mit `roboter_ws/install` (Zähler `0`).
 
 ### Schritt 4 – 14-Paket-Build in den Release-Ordner
 
-Dieselbe Paketliste wie v11–v17:
+Vorher das v17-Buildskript auf dem Jetson lesen und mit der Quelle im Repo
+vergleichen:
+
+```bash
+cat -n ~/.local/share/amadeus/releases/ap06-correction-v17-20261011/build.bash
+```
+
+Es muss dieselben `--cmake-args` enthalten wie unten. Weicht es ab, gilt das
+Skript auf dem Jetson: seine `--cmake-args` wörtlich übernehmen und die
+Abweichung berichten. Build wie v17, nur mit eigenen Quell-, Log-, Build- und
+Installpfaden:
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && cd "$SH_SRC" && \
@@ -146,9 +180,21 @@ SECONDS=0 && colcon --log-base "$SH_REL/product-log" build --executor sequential
     src/robot_navigation src/robot_map_manager src/vl53_near_field \
     src/safety_monitor src/amadeus_lidar_bringup src/robot_bringup src/semantic_map_manager \
   --build-base "$SH_REL/product-build" --install-base "$SH_REL/product-install" \
-  --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+  --cmake-args \
+    -Dbehaviortree_cpp_DIR=/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z/native-install/behaviortree_cpp/share/behaviortree_cpp/cmake \
+    -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
   2>&1 | tee "$SH_PR/build.log" | tail -25; echo "rc=${PIPESTATUS[0]} dauer_s=$SECONDS"
 ```
+
+Der explizite `behaviortree_cpp_DIR` gilt nur beim Bauen. Er umgeht den
+bekannten fehlerhaften Systemexport; keine Systembibliothek wird verändert.
+Danach prüfen, welche BT.CPP-Version gefunden wurde:
+
+```bash
+grep -h "Found behaviortree_cpp" "$SH_REL"/product-log/latest_build/bt_orchestrator/stdout*.log
+```
+
+Erwartung: Pfad unter `ap06-20261010T070231Z/native-install`, nicht `/opt/ros/humble`.
 
 Danach (die Umgebungsdatei sourct jetzt das neue `product-install`):
 
@@ -161,17 +207,18 @@ source ~/roboter_worktrees/selbstheilung-v2.env && for p in amadeus_map_identity
 ```
 
 Alle 14 Präfixe müssen unter `$SH_REL/product-install` liegen. Bei Build-Fehler
-oder einem anderen Präfix entfallen die Schritte 5–8; weiter mit Schritt 10.
+oder einem anderen Präfix entfallen die Schritte 5–8; weiter mit dem Bericht.
+Keinen zweiten Build mit selbst erdachten Änderungen versuchen.
 
 ### Schritt 5 – gezielte Tests, isolierte ROS-Domain
 
 Vor dem Stackstart. Die Tests erzeugen synthetische ROS-Daten, deshalb läuft
 der Test in einer anderen Domain als der Roboter (Roboter: 42, Test: 227) und
-nur lokal:
+nur lokal. Die Cyclone-Konfiguration des Roboters bleibt dabei außen vor:
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && cd "$SH_SRC" && \
-ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider \
+env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider \
   src/explore/test/test_self_healing.py \
   src/explore/test/test_self_healing_runtime.py \
   src/explore/test/test_metric_float32_lattice.py \
@@ -189,7 +236,9 @@ Wirkung).
 
 ### Schritt 6 – App-Stack motorlos starten
 
-Normale Roboter-Domain, also **ohne** die Testvariablen aus Schritt 5. Gestartet
+Normale Roboterumgebung aus `~/.bashrc` (Domain 42, CycloneDDS mit
+`CYCLONEDDS_URI`), also **ohne** die Testvariablen aus Schritt 5 und ohne die
+v17-Testzeile `ROS_DOMAIN_ID=166 … rmw_fastrtps_cpp`. Gestartet
 wird der App-Weg, den auch die spätere Laborfahrt nutzt, ohne Web-GUI:
 
 ```bash
@@ -298,7 +347,7 @@ Sofort Schritt 9 und dann Bericht, ohne Wiederholung, bei:
 - ausgelöstem Not-Aus oder einem „Stopp“ von Christopher;
 - einem zweiten Robotik-Stack, der während der Prüfung auftaucht.
 
-## Bericht: `~/selbstheilung_jetson_bericht_v2.md`
+## Bericht: `~/selbstheilung_jetson_bericht_v3.md`
 
 Markdown, Deutsch, Zahlen und Ausgaben wörtlich. Lange Logs auf die relevanten
 Zeilen kürzen und das kenntlich machen. Rohdateien bleiben in `$SH_PR`.
@@ -311,8 +360,10 @@ Zeilen kürzen und das kenntlich machen. Rohdateien bleiben in `$SH_PR`.
 3. **Unterbaukette:** Quelle (Datei und Zeilen im v17-Release), übernommene
    Zeilen wörtlich, Inhalt von `selbstheilung-v2.env`, Ergebnis der Prüfung aus
    Schritt 3 (`rc`, Zähler `roboter_ws/install`).
-4. **Build:** `rc`, Dauer, die letzten 25 Zeilen; `prefixes.txt` vollständig;
-   bei Fehler die letzten 60 Zeilen von `build.log`.
+4. **Build:** Ausgabe von `cat -n …/build.bash` und die tatsächlich
+   verwendeten `--cmake-args`; `rc`, Dauer, die letzten 25 Zeilen; die
+   `Found behaviortree_cpp`-Zeile; `prefixes.txt` vollständig; bei Fehler die
+   letzten 60 Zeilen von `build.log` und das Log des fehlgeschlagenen Pakets.
 5. **Tests:** Zusammenfassungszeile (`N passed, M failed …`), Laufzeit; bei
    Fehlern Testname und vollständige Fehlermeldung.
 6. **Stackstart:** Startbefehl, Zahl der Knoten, `nodes.txt`, `lifecycle.txt`,

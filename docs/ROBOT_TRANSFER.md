@@ -25,6 +25,15 @@ Release-Ordner `~/.local/share/amadeus/releases/selbstheilung-sh1-<Zeit>` mit
 der Unterbaukette von v17. `app_mapping.launch.py` reicht `self_healing` jetzt
 durch (Default `false`). Rückfall: diese Ordner nicht sourcen.
 
+Nachtrag 15.10.2026, SH-1 v2 (23:05–23:07): angelegt wurden der Klon
+`~/roboter_worktrees/selbstheilung-v2`, die Datei
+`~/roboter_worktrees/selbstheilung-v2.env` und der Release-Ordner
+`selbstheilung-sh1-20261015_2305` mit unvollständigem `product-install`
+(4 Pakete). Bestehende Releases, `~/roboter_ws` und dessen Installation blieben
+unverändert; kein Stack, keine Aktorwirkung. SH-1 v3 baut in einen neuen
+Release-Ordner, mit denselben `--cmake-args` wie das v17-`build.bash`
+(`-Dbehaviortree_cpp_DIR` auf native-install, `-DBUILD_TESTING=ON`).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

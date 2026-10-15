@@ -57,12 +57,18 @@ defekten Codex-Referenz; Umgebungsdatei lieferte Exit 1. Zusätzlich gefunden:
 `app_mapping.launch.py` reichte `self_healing` nicht durch (behoben in
 `e123902`, Default unverändert `false`).
 
-**Nächster Schritt:** Auftrag SH-1 v2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
-den lokalen Agenten auf dem Jetson: frischer Klon, 14-Paket-Build in eigenen
-Release-Ordner mit der Unterbaukette von v17, 142 gezielte Tests, motorloser
-App-Start `self_healing:=true`, Prüfskript A–D und VL53-Messreihe; Bericht
-`~/selbstheilung_jetson_bericht_v2.md`. Danach begrenzte Laborfahrt nach LAB-1
-als eigener Auftrag.
+SH-1 v2 auf dem Jetson (15.10.2026 23:05–23:07): Unterbaukette eindeutig aus
+dem v17-`runtime.bash`, Umgebung ohne `roboter_ws/install`; 4 von 14 Paketen
+gebaut, `bt_orchestrator` scheiterte am bekannten fehlerhaften System-Export von
+`behaviortree_cpp` 4.9.1. Der v17-Build übergibt dafür `-Dbehaviortree_cpp_DIR`
+(native-install) und `-DBUILD_TESTING=ON`; im v2-Auftrag fehlte beides. Kein
+Stack, keine Aktorwirkung, `~/roboter_ws` unverändert.
+
+**Nächster Schritt:** Auftrag SH-1 v3 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
+den lokalen Agenten auf dem Jetson: Build exakt nach v17-Buildskript in neuen
+Release-Ordner, 142 gezielte Tests, motorloser App-Start `self_healing:=true`,
+Prüfskript A–D und VL53-Messreihe; Bericht `~/selbstheilung_jetson_bericht_v3.md`.
+Danach begrenzte Laborfahrt nach LAB-1 als eigener Auftrag.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 
