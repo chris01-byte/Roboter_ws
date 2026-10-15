@@ -1,6 +1,11 @@
 # Wohnungserkundung – aktueller Status
 
-**Neuester vollständig geprüfter gemeinsamer Stand: v17 / `60e894c`,
+**Aktueller Stand 16.10.2026:** Hauptlinie `self_healing` (Nutzerentscheidung
+15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden; reale Laborfahrt offen.
+Details und der eine nächste Schritt im Abschnitt 16.10.2026. AP06 ist
+eingefroren; die folgenden zwei Absätze beschreiben seinen letzten Stand.
+
+**AP06, letzter vollständig geprüfter gemeinsamer Stand: v17 / `60e894c`,
 11.10.2026.** Separater ARM64-Build: 14 Pakete, 155 eindeutige bytegleiche
 Quelle/Install-Dateien bei 157 Vergleichseinträgen. **2.976 Regressionen
 bestanden; ursprüngliche ganze A/B/C-Missionen weiterhin 0/3.** Originale
@@ -10,11 +15,54 @@ Wiederaufnahme und reale Gesamtfahrt bleiben offen. Bestandsinstall und Main
 unverändert. [Kritischer Buildreview](AP06_BUILD_REVIEW_20261011.md) und
 [exakter v17-Beleg](evidence/ap06-correction-v17-20261011.json).
 
-**Nächste Ursachenprüfung:** A erste verworfene Rasterzelle samt Rastertyp und
+**AP06-Ursachenprüfung (eingefroren, nicht aktuell):** A erste verworfene Rasterzelle samt Rastertyp und
 Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 16.10.2026 – SH-1 v3: motorlose Jetson-Prüfung bestanden
+
+Lokaler Agent, 15.10.2026 23:26 bis 16.10.2026 00:02, LAB-1 motorlos
+(`active_drive`/`enable_auto_explore` false, `base_hardware` `dry_run=True`).
+Quelle: Klon `~/roboter_worktrees/selbstheilung-v2` @ `f295a85`, Release
+`~/.local/share/amadeus/releases/selbstheilung-sh1-20261015_2326`, Unterbau aus
+dem v17-`runtime.bash` (Zeilen 2–5), Domain 42/CycloneDDS aus `~/.bashrc`.
+
+- Build 14/14 in 167 s; BT.CPP 4.6.2 aus native-install; alle 14 Präfixe im
+  eigenen `product-install`, kein `roboter_ws/install` in der Umgebung.
+- 142 gezielte Tests grün (Humble, Python 3.10).
+- App-Start `app_mapping.launch.py self_healing:=true start_web_gui:=false`:
+  33 Knoten, Nav2 und `collision_monitor` `active`, im Log kein ERROR/FATAL.
+- Prüfskript A–D bestanden: 34 Profilwerte live, Overlay geladen, BackUp über
+  `cmd_vel_nav_raw` zum Fahrtor, `/backup` vorhanden, `controller_server` auf
+  `/speed_limit`, `/cmd_vel` nur vom `collision_monitor`, Basis Dry-Run, kein
+  Fahrbefehl.
+- VL53-Messreihe 0–8 vollständig (Tabelle und Folgerungen in
+  [Konzept §6](KONZEPT_SELBSTHEILUNG.md)): leer 0 Treffer, 3 cm unsichtbar,
+  5,5–10 cm gesehen und vollständig verworfen, 15 cm überwiegend behalten.
+- Geordneter Stopp per SIGINT an die Launch-PID in 6 s; 24/24 Prozesse sauber.
+
+Auffälligkeiten, nicht behoben:
+
+1. `collision_monitor` ignorierte beide VL53-Quellen 7 s lang (23:45:05–23:45:12,
+   Alter 3,0–9,9 s; 278 WARN), während einer Umlegephase. Ursache offen. Bei
+   echter Fahrt sperrt das Fahrtor Explore-/BackUp-Befehle schon nach 0,8 s
+   ohne frische VL53-Wolken und -Status (`explore_sensor_timeout_s`). Der
+   Selbstheilungs-Explorer wartet dann (WAIT), statt abzubrechen.
+2. `vl53_near_field` meldete 4× `IndexError … kein neues Frame`
+   (Frischeüberwachung aktiv).
+3. Auftragsfehler: `source … && nohup … &` schickt die ganze Kette in eine
+   Hintergrund-Subshell, `$SH_PR` war leer und `$!` die Subshell-PID. Der Agent
+   hat die Launch-PID lesend ermittelt. Für künftige Aufträge `source` in einer
+   eigenen Zeile vor dem `nohup`-Start.
+4. Geräuschwarnungen ohne Wirkung: `mission_manager` Semantik-Hinweise
+   (je 3.758×), Hinweis „Kein Hardware-Not-Aus angebunden (GPIO)“ (der
+   hardwired Not-Aus ist davon unabhängig), `slam_toolbox` Mindestreichweite.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers zur VL53-Höhengrenze
+(gemessene Grundlage in Konzept §6); danach Abnahmestufe 1 (drei begrenzte
+Laborfahrten) als eigener Auftrag.
 
 ## 15.10.2026 – Selbstheilender Betrieb beschlossen und gerätefrei umgesetzt
 
@@ -64,11 +112,7 @@ gebaut, `bt_orchestrator` scheiterte am bekannten fehlerhaften System-Export von
 (native-install) und `-DBUILD_TESTING=ON`; im v2-Auftrag fehlte beides. Kein
 Stack, keine Aktorwirkung, `~/roboter_ws` unverändert.
 
-**Nächster Schritt:** Auftrag SH-1 v3 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
-den lokalen Agenten auf dem Jetson: Build exakt nach v17-Buildskript in neuen
-Release-Ordner, 142 gezielte Tests, motorloser App-Start `self_healing:=true`,
-Prüfskript A–D und VL53-Messreihe; Bericht `~/selbstheilung_jetson_bericht_v3.md`.
-Danach begrenzte Laborfahrt nach LAB-1 als eigener Auftrag.
+Damaliger nächster Schritt: Auftrag SH-1 v3; Ergebnis im Abschnitt 16.10.2026.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 

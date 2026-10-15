@@ -106,11 +106,40 @@ Entsprechend der Vorgabe und dem vorhandenen Aufbau:
 | Ausfall | stoppt | stoppt + wartet; erst nach Heilungsfenster Ausnahme |
 | Niedrige Hindernisse | Sensor trifft sie (unterste Zeile bis −30°, Montage 0,305 m, Reichweite 0,50 m), aber Kostenkarten und `collision_monitor` verwerfen alle Punkte unter 0,05 m über `base_link` ≈ **0,14 m über Boden** (`min_obstacle_height`/`min_height`, „Boden ausblenden“) | erst messen (`selbstheilung_stillstand_pruefen.py --vl53-s`); Filter nur danach und als **eigene Sicherheitsänderung** senken, nicht im Selbstheilungs-Branch |
 
-Befund 15.10.2026 (Konfiguration gelesen, noch nicht gemessen): Ein etwa 10 cm
-hohes Objekt bei 0,42 m vor dem Sensor liegt im Messbereich der untersten
-Zeile, sein Treffer (≈ 0,10 m über Boden) wird aber verworfen. Die VL53-Punktwolke
-deckt niedrige Hindernisse damit heute **nicht** ab, obwohl der Sensor sie sieht.
-Ob der Filter ohne Bodenreflexe gesenkt werden kann, zeigt erst die Messreihe.
+**Gemessen 15.10.2026 (SH-1 v3, Jetson, Stillstand, Laborboden):** neun Lagen
+mittig vor dem Roboter, je 10 s, beide Sensoren. Höhen sind Christophers Angaben.
+
+| Objekt | 0,30 m ab Front | 0,38 m ab Front |
+|---|---|---|
+| keins | 0 Treffer (keine Bodenreflexe) | – |
+| 3 cm | 0 Treffer | 0 Treffer |
+| 5,5 / 6,5 cm | 2 Treffer, alle verworfen | 82 Treffer, 81 verworfen |
+| 10 cm | 320 Treffer, alle verworfen | 312 Treffer, alle verworfen |
+| 15 / 15,5 cm | 350 Treffer, 36 verworfen | 486 Treffer, 314 verworfen |
+
+Die meisten Treffer liegen in der untersten Zeile (−26,25°). Der niedrigste
+gemessene Punkt liegt bei 0,084 m über Boden. Das ist genau die geometrische
+Untergrenze: 0,305 m − 0,50 m · sin 26,25° = 0,084 m. Kleinere Höhen kann die
+Wolke wegen der 0,50-m-Reichweite gar nicht enthalten. Der Boden bräuchte in
+Zeile 0 eine Distanz von 0,69 m und erscheint nie (bestätigt durch den leeren
+Lauf). Dafür müsste der Roboter um mehr als 11° nach vorn kippen.
+
+Folgerungen:
+
+1. **Etwa 3 cm und flacher** sieht der VL53 grundsätzlich nicht (Montagehöhe,
+   Sichtwinkel, Reichweite). Das kann kein Filter beheben, nur eine andere
+   Montage oder Neigung (Hardwareentscheidung).
+2. **Etwa 5–13 cm** sieht er im Fenster rund 0,6–0,7 m vor `base_link`. Die
+   Höhengrenze von 0,14 m verwirft diese Treffer aber vollständig: Kostenkarten
+   und `collision_monitor` reagieren heute nicht darauf.
+3. Eine Grenze knapp unter 0,084 m über Boden (`base_link` −0,02 m) ließe jeden
+   gültigen VL53-Treffer zählen, ohne Bodenpunkte zu erzeugen. Das ist eine
+   Sicherheitsänderung (Kostenkarten, `collision_monitor`). Sie braucht die
+   Entscheidung des Projektinhabers und eine eigene Prüfung.
+4. Näher als etwa 0,6 m verschwinden niedrige Objekte unter dem Sichtfeld. Die
+   lokale Kostenkarte hält die Markierung, weil die VL53-Räumstrahlen nur bei
+   vollständig gültiger Spalte räumen und kein LiDAR im lokalen Hindernislayer
+   räumt.
 
 ## 7. Bessere Alternativen für Teile des Explorers
 
@@ -189,10 +218,15 @@ den recovery-freien Nav2-Baum und den abgetrennten Recovery-Ausgang.
 
 Bekannte Grenzen: Die Rückfahrt sieht hinten keine neuen Hindernisse (Mastschatten,
 VL53 nur vorn); sie ist deshalb auf die eigene, gerade, kurz zuvor befahrene Spur
-begrenzt. Hindernisse unter etwa 14 cm verwerfen die Höhenfilter (Abschnitt 6).
-Reale Wirkung der Heilungsleiter ist unbelegt; die nächste Stufe ist die motorlose
-Prüfung auf dem Jetson mit `tools/kartierung/selbstheilung_stillstand_pruefen.py`
-(Anleitung in `tools/kartierung/README.md`), danach eine begrenzte Laborfahrt.
+begrenzt. Objekte von etwa 5–13 cm sieht der VL53, die Höhenfilter verwerfen sie;
+etwa 3 cm und flacher sieht er nicht (gemessen, Abschnitt 6).
+
+Motorlose Jetson-Prüfung **bestanden** (SH-1 v3, 15./16.10.2026): 14-Paket-Build
+in eigenem Release-Ordner, 142 gezielte Tests grün (Humble, Python 3.10),
+App-Start mit `self_healing:=true` und 33 Knoten, Nav2 vollständig aktiv,
+Prüfskript A–D bestanden, VL53-Messreihe vollständig, geordneter Stopp in 6 s.
+Die reale Wirkung der Heilungsleiter ist noch unbelegt; die nächste Stufe ist
+die begrenzte Laborfahrt (Abschnitt 11, Stufe 1).
 
 Prüfskript gerätefrei geprüft: 8 Einzeltests; Rauchtest gegen nachgebildete
 Nav2-/Basis-/VL53-Knoten mit echtem Explorer in drei Varianten: korrekt →

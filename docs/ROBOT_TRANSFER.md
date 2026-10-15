@@ -34,6 +34,15 @@ unverändert; kein Stack, keine Aktorwirkung. SH-1 v3 baut in einen neuen
 Release-Ordner, mit denselben `--cmake-args` wie das v17-`build.bash`
 (`-Dbehaviortree_cpp_DIR` auf native-install, `-DBUILD_TESTING=ON`).
 
+Nachtrag 16.10.2026, SH-1 v3 (15.10. 23:26 bis 16.10. 00:02): Release
+`~/.local/share/amadeus/releases/selbstheilung-sh1-20261015_2326` mit
+vollständigem 14-Paket-`product-install` aus `f295a85`, Unterbau wie v17. Kein
+Install in `~/roboter_ws`, kein Autostart, keine System- oder SDK-Änderung.
+Motorloser App-Stack lief rund 31 min (`dry_run=True`, `allow_rs485=False`,
+kein Fahrbefehl) und endete geordnet. Start nur durch Sourcen von
+`~/roboter_worktrees/selbstheilung-v2.env`. Rückfall: diese Datei nicht sourcen;
+bisherige Releases und `~/roboter_ws` sind unverändert.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

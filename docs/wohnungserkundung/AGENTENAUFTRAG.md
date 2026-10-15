@@ -1,5 +1,10 @@
 # Aktueller Agentenauftrag: SH-1 v3 – motorlose Jetson-Prüfung `self_healing`
 
+> **Erledigt 16.10.2026 00:02 – bestanden.** Bericht des lokalen Agenten
+> ausgewertet; Ergebnisse im [STATUS](STATUS.md) (Abschnitt 16.10.2026). Ein
+> neuer Auftrag (Abnahmestufe 1) folgt nach der Entscheidung zur VL53-Höhengrenze.
+> Bei einer Wiederholung gilt die Korrektur zu Schritt 6 (Start in eigener Zeile).
+
 **Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 15.10.2026 vom
 Projektinhaber („schreibe jetzt in die Datei, was der lokale KI-Agent auf dem
 Jetson genau machen soll und was er reporten soll“). Der bisherige AP-06-Auftrag
@@ -249,12 +254,16 @@ source ~/roboter_worktrees/selbstheilung-v2.env && \
 Nur wenn nichts läuft:
 
 ```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && \
-  nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
+source ~/roboter_worktrees/selbstheilung-v2.env
+nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
   > "$SH_PR/launch.log" 2>&1 < /dev/null &
 echo $! > "$SH_PR/launch.pid"; cat "$SH_PR/launch.pid"
 ```
+
+`source` steht absichtlich in einer eigenen Zeile. Mit `source … && nohup … &`
+liefe die ganze Kette in einer Hintergrund-Subshell: `$SH_PR` bliebe in der
+aufrufenden Shell leer, und `$!` wäre die Subshell-PID (gemessen im v3-Lauf).
 
 `env --default-signal=INT` ist nötig: Ein mit `&` gestarteter Prozess einer
 nicht interaktiven Shell ignoriert sonst SIGINT, und der geordnete Stopp aus

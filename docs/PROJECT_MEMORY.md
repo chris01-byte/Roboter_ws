@@ -1255,3 +1255,13 @@ Sensor trifft sie, aber alle VL53-Verbraucher verwerfen Punkte unter 0,05 m übe
 (`tools/kartierung/selbstheilung_stillstand_pruefen.py --vl53-s`); eine
 Filteränderung ist eine eigene Sicherheitsänderung (Kostenkarten,
 `collision_monitor`).
+
+**Nachtrag 16.10.2026 – VL53 gemessen:** Bei SH-1 v3 (Jetson, Stillstand)
+lieferte ein leerer Bereich 0 Treffer. 3 cm hohe Objekte sieht der VL53 nicht,
+5,5–10 cm sieht er, aber die Höhengrenze verwirft diese Treffer vollständig;
+15 cm wird überwiegend behalten. Der niedrigste mögliche Wolkenpunkt liegt
+geometrisch bei 0,084 m über Boden (0,50 m Reichweite, unterste Zeile −26,25°).
+Bodenpunkte entstehen erst ab mehr als 11° Neigung. Die Annahme „die
+8×8-Wolke deckt niedrige Hindernisse ab“ gilt damit heute nicht. Die Entscheidung
+über eine niedrigere Grenze trifft der Projektinhaber; die Messwerte stehen in
+`docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md` §6.
