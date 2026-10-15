@@ -178,31 +178,21 @@ Das Skript publiziert nichts, sendet keine Aktion und ruft nur
 | D Stillstand | `base_hardware` mit `dry_run=true` und `allow_rs485=false`, auf `/cmd_vel` kein Befehl ungleich null |
 | E VL53 (optional) | Höhe der VL53-Treffer über dem Boden und welche davon die Höhenfilter von Kostenkarten und `collision_monitor` verwerfen |
 
-Getrennter Checkout; die vorhandene Installation bleibt unberührt:
+Bau und Start auf dem Jetson: nicht auf `~/roboter_ws/install` aufbauen. Das
+ist dort der August-Stand ohne `amadeus_map_identity`. Stattdessen wie bei den
+AP06-Kandidaten v11–v17 einen 14-Paket-Build in einem eigenen Release-Ordner
+mit den Unterbauten des v17-Releases anlegen. Die vollständigen Befehle stehen
+im Auftrag SH-1 ([AGENTENAUFTRAG](../../docs/wohnungserkundung/AGENTENAUFTRAG.md)).
 
-```bash
-mkdir -p ~/roboter_worktrees
-cd ~/roboter_ws && git fetch origin claude/blissful-pasteur-s1eivj
-git worktree add --detach ~/roboter_worktrees/selbstheilung \
-  origin/claude/blissful-pasteur-s1eivj
-cd ~/roboter_worktrees/selbstheilung
-source /opt/ros/humble/setup.bash
-source ~/amadeus_slam_toolbox_ws/install/setup.bash
-source ~/amadeus_lidar_ws/install/local_setup.bash
-source ~/roboter_ws/install/local_setup.bash
-colcon build --packages-select explore robot_navigation
-```
-
-Prüfung (beide Terminals mit denselben vier `source`-Zeilen und zusätzlich
-`source ~/roboter_worktrees/selbstheilung/install/local_setup.bash`):
+In einer Shell mit dieser Umgebung:
 
 ```bash
 # Terminal 1: Stack motorlos, active_drive und enable_auto_explore bleiben false
-python3 ~/roboter_ws/tools/kartierung/roboterknoten.py --still
-ros2 launch robot_navigation nav_mapping.launch.py self_healing:=true
+python3 tools/kartierung/roboterknoten.py --still
+ros2 launch robot_bringup app_mapping.launch.py self_healing:=true start_web_gui:=false
 
-# Terminal 2: nach etwa 20 s
-python3 ~/roboter_worktrees/selbstheilung/tools/kartierung/selbstheilung_stillstand_pruefen.py \
+# Terminal 2: nach etwa 30 s
+python3 tools/kartierung/selbstheilung_stillstand_pruefen.py \
   --json ~/.local/share/amadeus/pruefungen/selbstheilung_stillstand.json
 ```
 
@@ -214,13 +204,13 @@ Niedrige Hindernisse (Bereich E): Stack wie oben, Testobjekt mittig vor den
 Roboter legen, Höhe und Abstand ab Fahrzeugfront notieren, dann je Lage
 
 ```bash
-python3 ~/roboter_worktrees/selbstheilung/tools/kartierung/selbstheilung_stillstand_pruefen.py \
+python3 tools/kartierung/selbstheilung_stillstand_pruefen.py \
   --vl53-s 10 --notiz "Klotz 6 cm, 0,35 m" \
   --json ~/.local/share/amadeus/pruefungen/vl53_06cm_035.json
 ```
 
 Messreihe: einmal ohne Objekt (Bodenreflexe?), dann 3, 6, 10 und 15 cm hoch bei
-0,35 m und 0,45 m. `verworfen` zählt Treffer unter dem wirksamen Filter
+0,30 m und 0,38 m ab Fahrzeugfront (Geometrie-Erwartung im Auftrag SH-1). `verworfen` zählt Treffer unter dem wirksamen Filter
 (`min_obstacle_height`/`min_height` 0,05 m über `base_link` = etwa 0,14 m über
 Boden); `zeilen` zeigt, welche Sensorzeile das Objekt trifft. Die JSON-Dateien
 bleiben lokal.

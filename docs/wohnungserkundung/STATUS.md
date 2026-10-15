@@ -48,12 +48,21 @@ niedrige Objekte, Kostenkarten und `collision_monitor` verwerfen aber alle
 Treffer unter etwa 0,14 m über Boden ([Konzept §6](KONZEPT_SELBSTHEILUNG.md)).
 Eine Filteränderung wäre eine eigene Sicherheitsänderung nach Messung.
 
-**Nächster Schritt:** Auftrag SH-1 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
-den lokalen Agenten auf dem Jetson: motorlos `nav_mapping.launch.py
-self_healing:=true` aus getrenntem Checkout, gezielte Tests,
-`tools/kartierung/selbstheilung_stillstand_pruefen.py` A–D und VL53-Messreihe
-mit niedrigen Testobjekten; Bericht `~/selbstheilung_jetson_bericht.md` zur
-Auswertung. Danach begrenzte Laborfahrt nach LAB-1 als eigener Auftrag.
+SH-1 v1 auf dem Jetson (15.10.2026 22:24–22:26, lokaler Agent): Build korrekt
+gestoppt, Schritte 5–8 entfallen, kein Stack, keine Aktorwirkung, `~/roboter_ws`
+unverändert. Ursachen im Auftrag: Unterbau `~/roboter_ws/install` ist der
+August-Stand `23928d9` ohne `amadeus_map_identity` (AP06 v11–v17 liefen aus
+eigenen Release-Ordnern); `git fetch` in `~/roboter_ws` scheitert an einer
+defekten Codex-Referenz; Umgebungsdatei lieferte Exit 1. Zusätzlich gefunden:
+`app_mapping.launch.py` reichte `self_healing` nicht durch (behoben in
+`e123902`, Default unverändert `false`).
+
+**Nächster Schritt:** Auftrag SH-1 v2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) durch
+den lokalen Agenten auf dem Jetson: frischer Klon, 14-Paket-Build in eigenen
+Release-Ordner mit der Unterbaukette von v17, 142 gezielte Tests, motorloser
+App-Start `self_healing:=true`, Prüfskript A–D und VL53-Messreihe; Bericht
+`~/selbstheilung_jetson_bericht_v2.md`. Danach begrenzte Laborfahrt nach LAB-1
+als eigener Auftrag.
 
 ## 11.10.2026 – Wartefolge und wiederholte Zielidentität korrigiert; Gesamtprüfung offen
 

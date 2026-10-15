@@ -12,6 +12,19 @@ Behavior-Server-Ausgang `cmd_vel_nav_raw` statt `cmd_vel_recovery_blocked`.
 Ohne das Argument startet der bisherige Stand unverändert. Erst motorlos prüfen,
 dann nach LAB-1 fahren.
 
+Nachtrag 15.10.2026, SH-1 v1 (lokaler Agent, 22:24–22:26): Auf dem Jetson
+entstanden nur der Worktree `~/roboter_worktrees/selbstheilung` (Commit
+`7493d9f`, unvollständiger Teilbuild von `explore`) und Ergebnisdateien unter
+`~/.local/share/amadeus/pruefungen/sh1_20261015_2225`. Kein Stack, keine
+Aktorwirkung; `~/roboter_ws` (`main` `23928d9`) und seine Installation blieben
+unverändert. Festgestellt: `~/roboter_ws/install` ist der August-Stand und kein
+tauglicher Unterbau; `git fetch` in `~/roboter_ws` scheitert an der defekten
+Referenz `refs/codex/turn-diffs/…` (nicht angefasst). SH-1 v2 baut deshalb aus
+einem frischen Klon `~/roboter_worktrees/selbstheilung-v2` in einen eigenen
+Release-Ordner `~/.local/share/amadeus/releases/selbstheilung-sh1-<Zeit>` mit
+der Unterbaukette von v17. `app_mapping.launch.py` reicht `self_healing` jetzt
+durch (Default `false`). Rückfall: diese Ordner nicht sourcen.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit
