@@ -32,6 +32,7 @@ explore_node:
 
     # Heilungsleiter: H1 erneut -> H2 zurueckstellen -> H3 umsehen ->
     # H4 Spur zurueck -> H5 Hilfe. Fortschritt setzt sie zurueck.
+    # Budget beschlossen vom Projektinhaber am 15.10.2026 (Entscheidung 3).
     self_healing_heal_wait_s: 2.0
     self_healing_goal_retries: 1
     self_healing_look_around_after: 3

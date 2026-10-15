@@ -1218,3 +1218,8 @@ Explorer RPP über Nav2 `speed_limit` absolut auf 0,06 m/s (Entscheidung
 Projektinhaber). Ohne Karte/Pose bleibt die Begrenzung aktiv; am Missionsende
 wird sie freigegeben. Parameter `self_healing_unknown_*`, Obergrenze 0,08 m/s.
 
+**Nachtrag 15.10.2026 – Heilungsbudget:** Übernommen wie profiliert: „Hilfe
+benötigt“ nach 8 Fehlschlägen in Folge ohne Fortschritt, nach 30 Heilungen je
+Mission oder nach 600 s ohne Kartenzuwachs. Ziel erreicht oder Kartenzuwachs
+setzt die Folge zurück. Die Teilkarte bleibt erhalten.
+

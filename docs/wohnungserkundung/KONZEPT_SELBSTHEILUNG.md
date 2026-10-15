@@ -140,7 +140,7 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 | 0 | Selbstheilung statt Abbruch als Leitprinzip; Unbekanntes ist kein Blocker; VL53 vorrangig zum Ausweichen | **beschlossen 15.10.2026** |
 | 1 | Begrenzte Rückwärtsfahrt entlang der eigenen Spur (H4) | **beschlossen 15.10.2026** |
 | 2 | Geschwindigkeit, solange vor dem Roboter noch nicht kartiert ist | **beschlossen 15.10.2026: 0,06 m/s** (Nav2 `speed_limit`, Korridor 1,0 × 0,5 m, > 2 % unbekannt) |
-| 3 | Heilungsbudget der Mission (Heilungen, Zeit ohne Kartengewinn) | offen; Startwerte 30 Heilungen / 600 s im Profil |
+| 3 | Heilungsbudget der Mission | **beschlossen 15.10.2026:** Hilfe nach 8 Fehlschlägen in Folge ohne Fortschritt, 30 Heilungen je Mission oder 600 s ohne Kartenzuwachs (≥ 0,05 m²); Ziel erreicht oder Kartenzuwachs setzt die Folge zurück |
 | 4 | „Hilfe benötigt“ mit „Weiter“ per App als zulässiger Missionsverlauf | offen; technisch: neue Explore-Mission setzt auf der aktuellen Karte fort |
 | 5 | Explorer verschlanken oder nur Gates entschärfen | offen; umgesetzt ist beides als Option: neue Strategie `self_healing` und gezielte AP06-Korrekturen |
 | 6 | Abnahmekriterien neu fassen (Robustheit vor 95 %-Referenzanteil) | offen |
