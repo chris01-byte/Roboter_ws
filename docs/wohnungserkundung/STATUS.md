@@ -60,9 +60,17 @@ Auffälligkeiten, nicht behoben:
    (je 3.758×), Hinweis „Kein Hardware-Not-Aus angebunden (GPIO)“ (der
    hardwired Not-Aus ist davon unabhängig), `slam_toolbox` Mindestreichweite.
 
-**Nächster Schritt:** Entscheidung des Projektinhabers zur VL53-Höhengrenze
-(gemessene Grundlage in Konzept §6); danach Abnahmestufe 1 (drei begrenzte
-Laborfahrten) als eigener Auftrag.
+Entscheidung 7 (Projektinhaber, 16.10.2026): VL53-Höhengrenze nur im
+Selbstheilungsbetrieb auf −0,02 m über `base_link` senken (0,07 m über Boden;
+tiefster möglicher Wolkenpunkt 0,084 m). Umgesetzt als eigener Commit `5c285c0`
+(Overlays für beide Kostenkarten und `collision_monitor`; ohne `self_healing`
+unverändert 0,05). Prüfskript zählt zusätzlich belegte Kostenkartenzellen vor
+dem Roboter (`ae780e7`). Cloud: 147 gezielte und 178 Paket-Tests grün.
+
+**Nächster Schritt:** Auftrag SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)):
+motorlose Nachmessung auf dem Jetson mit neuem Release, gleicher Messreihe und
+Kostenkartenprüfung; danach Abnahmestufe 1 (drei begrenzte Laborfahrten) als
+eigener Auftrag.
 
 ## 15.10.2026 – Selbstheilender Betrieb beschlossen und gerätefrei umgesetzt
 

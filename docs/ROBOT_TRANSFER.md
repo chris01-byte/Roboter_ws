@@ -43,6 +43,13 @@ kein Fahrbefehl) und endete geordnet. Start nur durch Sourcen von
 `~/roboter_worktrees/selbstheilung-v2.env`. Rückfall: diese Datei nicht sourcen;
 bisherige Releases und `~/roboter_ws` sind unverändert.
 
+Nachtrag 16.10.2026, Entscheidung 7: Ab `5c285c0` setzen Overlays im
+Selbstheilungsbetrieb die VL53-Höhengrenze in beiden Kostenkarten und im
+`collision_monitor` auf −0,02 m über `base_link`. Ohne `self_healing` bleibt
+0,05 m. Auf dem Jetson ist das noch nicht gebaut; SH-2 baut es in einen eigenen
+Release-Ordner `selbstheilung-sh2-<Zeit>` und misst motorlos nach. Rückfall:
+SH-1-Release sourcen oder `self_healing:=false`.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

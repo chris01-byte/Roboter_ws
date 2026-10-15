@@ -104,7 +104,7 @@ Entsprechend der Vorgabe und dem vorhandenen Aufbau:
 | Stoppen | `StopZone` 0,30–0,55 m | bleibt als letzte Reaktion; ein Stopp löst **H0 Warten → H1 Neu planen** aus, kein Missionsende |
 | Fahrfreigabe des Explorers | `vl53_triplet_unmatched` u. a. sperren die Planung | Explorer prüft nur Frische/Ausfall (Abschnitt 4), keine Einzelzustände; Plausibilität macht der Monitor |
 | Ausfall | stoppt | stoppt + wartet; erst nach Heilungsfenster Ausnahme |
-| Niedrige Hindernisse | Sensor trifft sie (unterste Zeile bis −30°, Montage 0,305 m, Reichweite 0,50 m), aber Kostenkarten und `collision_monitor` verwerfen alle Punkte unter 0,05 m über `base_link` ≈ **0,14 m über Boden** (`min_obstacle_height`/`min_height`, „Boden ausblenden“) | erst messen (`selbstheilung_stillstand_pruefen.py --vl53-s`); Filter nur danach und als **eigene Sicherheitsänderung** senken, nicht im Selbstheilungs-Branch |
+| Niedrige Hindernisse | Sensor trifft sie (unterste Zeile bis −30°, Montage 0,305 m, Reichweite 0,50 m), aber Kostenkarten und `collision_monitor` verwerfen alle Punkte unter 0,05 m über `base_link` ≈ **0,14 m über Boden** (`min_obstacle_height`/`min_height`, „Boden ausblenden“) | gemessen (SH-1 v3); im Selbstheilungsbetrieb Grenze −0,02 m über `base_link` (Entscheidung 7, eigener Commit), andere Modi unverändert |
 
 **Gemessen 15.10.2026 (SH-1 v3, Jetson, Stillstand, Laborboden):** neun Lagen
 mittig vor dem Roboter, je 10 s, beide Sensoren. Höhen sind Christophers Angaben.
@@ -132,10 +132,10 @@ Folgerungen:
 2. **Etwa 5–13 cm** sieht er im Fenster rund 0,6–0,7 m vor `base_link`. Die
    Höhengrenze von 0,14 m verwirft diese Treffer aber vollständig: Kostenkarten
    und `collision_monitor` reagieren heute nicht darauf.
-3. Eine Grenze knapp unter 0,084 m über Boden (`base_link` −0,02 m) ließe jeden
-   gültigen VL53-Treffer zählen, ohne Bodenpunkte zu erzeugen. Das ist eine
-   Sicherheitsänderung (Kostenkarten, `collision_monitor`). Sie braucht die
-   Entscheidung des Projektinhabers und eine eigene Prüfung.
+3. Eine Grenze knapp unter 0,084 m über Boden (`base_link` −0,02 m) lässt jeden
+   gültigen VL53-Treffer zählen, ohne Bodenpunkte zu erzeugen. **Umgesetzt**
+   nach Entscheidung 7 (16.10.2026) nur für `self_healing:=true`, als eigener
+   Commit `5c285c0`; motorlose Nachmessung SH-2 offen.
 4. Näher als etwa 0,6 m verschwinden niedrige Objekte unter dem Sichtfeld. Die
    lokale Kostenkarte hält die Markierung, weil die VL53-Räumstrahlen nur bei
    vollständig gültiger Spalte räumen und kein LiDAR im lokalen Hindernislayer
@@ -180,6 +180,7 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 | 4 | „Hilfe benötigt“ und „Weiter“ | **beschlossen 15.10.2026:** echtes „Weiter“ in der App mit Missionsgedächtnis (geplant, siehe §12); Abnahme Stufe 1/2 ohne Eingriff, Stufe 3 höchstens 1× „Weiter“ je Lauf nur bei echtem physischem Hindernis, jeder Eingriff mit Grund protokolliert; Ziel langfristig 0 |
 | 5 | Welche Explorer-Linie wird weitergeführt? | **beschlossen 15.10.2026:** `self_healing` ist Hauptlinie; AP06 (`metric_frontier`) wird eingefroren, bleibt vollständig erhalten und per `self_healing:=false` sofort aktivierbar. Bestätigung nach realem Kurztest (siehe unten) |
 | 6 | Abnahmekriterien | **beschlossen 15.10.2026:** dreistufige Abnahmeleiter (Labor → Robustheit in Simulation → echte Wohnung) statt AP06-Laborideal; siehe Abschnitt 11 |
+| 7 | VL53-Höhengrenze | **beschlossen 16.10.2026:** im Selbstheilungsbetrieb −0,02 m über `base_link` (0,07 m über Boden), sodass jeder gültige VL53-Treffer zählt (Kostenkarten und `collision_monitor`); andere Modi unverändert 0,05 m. Grundlage: Messung SH-1 v3 (§6). Motorlose Nachmessung SH-2 vor jeder Fahrt |
 
 ### Bestätigungstest für Entscheidung 5
 

@@ -1265,3 +1265,12 @@ Bodenpunkte entstehen erst ab mehr als 11° Neigung. Die Annahme „die
 8×8-Wolke deckt niedrige Hindernisse ab“ gilt damit heute nicht. Die Entscheidung
 über eine niedrigere Grenze trifft der Projektinhaber; die Messwerte stehen in
 `docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md` §6.
+
+**Nachtrag 16.10.2026 – VL53-Höhengrenze (Entscheidung 7):** Der
+Projektinhaber hat entschieden, die Grenze nur im Selbstheilungsbetrieb auf
+−0,02 m über `base_link` (0,07 m über Boden) zu senken. Damit zählt jeder
+gültige VL53-Treffer in Kostenkarten und `collision_monitor`. Andere Modi und
+der eingefrorene AP06-Pfad behalten 0,05 m. Grund: Messung SH-1 v3 (leerer
+Boden 0 Treffer, 5,5–10 cm vollständig verworfen, tiefster möglicher Punkt
+0,084 m). Eigener Commit `5c285c0`; Rückfall `self_healing:=false` oder Revert.
+Objekte um 3 cm bleiben für den VL53 unsichtbar (Hardwaregrenze).
