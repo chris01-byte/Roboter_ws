@@ -215,6 +215,27 @@ Messreihe: einmal ohne Objekt (Bodenreflexe?), dann 3, 6, 10 und 15 cm hoch bei
 Boden); `zeilen` zeigt, welche Sensorzeile das Objekt trifft. Die JSON-Dateien
 bleiben lokal.
 
+## Fahrtprotokoll für Laborfahrten im Selbstheilungsbetrieb
+
+`selbstheilung_lauf_protokoll.py` wird vor dem Missionsstart gestartet und
+endet von selbst kurz nach dem Missionsende. Es abonniert nur Status- und
+Messtopics und publiziert nichts. Die JSON-Zusammenfassung enthält:
+- Zustandsfolge und Heilungsverlauf;
+- HWT-, Not-Aus- und Tempolimit-Wechsel;
+- maximale Fahrbefehle und die Strecke laut `/odom`;
+- VL53-Lücken;
+- die automatisch prüfbaren Kriterien der Abnahmestufe 1.
+
+```bash
+python3 tools/kartierung/selbstheilung_lauf_protokoll.py \
+  --json ~/.local/share/amadeus/pruefungen/lauf1_protokoll.json
+```
+
+Exit 0 heißt, die automatischen Kriterien sind erfüllt. Kontakt, Eingriffe,
+Nav2-Zustand und Absturzfreiheit bleiben manuell zu bestätigen. Der vollständige
+Ablauf steht im Entwurf
+[SH-3](../../docs/wohnungserkundung/entwurf/SH-3_LABORFAHRTEN.md).
+
 ## Automatische LiDAR-Raumkartierung
 
 Die automatische Kartierung arbeitet bewusst in drei Phasen:

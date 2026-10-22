@@ -181,6 +181,7 @@ Sicherheitsrahmen bleibt unverändert: keine Aktoren ohne Freigabe, erst Stillst
 | 5 | Welche Explorer-Linie wird weitergeführt? | **beschlossen 15.10.2026:** `self_healing` ist Hauptlinie; AP06 (`metric_frontier`) wird eingefroren, bleibt vollständig erhalten und per `self_healing:=false` sofort aktivierbar. Bestätigung nach realem Kurztest (siehe unten) |
 | 6 | Abnahmekriterien | **beschlossen 15.10.2026:** dreistufige Abnahmeleiter (Labor → Robustheit in Simulation → echte Wohnung) statt AP06-Laborideal; siehe Abschnitt 11 |
 | 7 | VL53-Höhengrenze | **beschlossen 16.10.2026:** im Selbstheilungsbetrieb −0,02 m über `base_link` (0,07 m über Boden), sodass jeder gültige VL53-Treffer zählt (Kostenkarten und `collision_monitor`); andere Modi unverändert 0,05 m. Grundlage: Messung SH-1 v3 (§6). Motorlose Nachmessung SH-2 vor jeder Fahrt |
+| 8 | Odometrie für die Laborfahrten | **beschlossen 22.10.2026: HWT601** (`use_hwt601_odometry:=true`, `hwt_development_contract:=true`). Grund: abgenommene Realfahrten auf den Fliesen des Labors (Branch `codex/hwt601-encoder-shadow`): Rundblick 10.09.2026 HWT/LiDAR/Encoder +362,09/+361,75/+358,03° (Encoder −4,06° je Umdrehung), Rumpfversatz 16,6 mm auf den Fliesenfugen bei 0,11 mm Encoderweg; Gerade 11.09.2026 HWT/LiDAR −2,50/−2,75°, Encoder −1,20°. HWT-Aussetzer: HOLD → Warten → Weiterfahrt, sonst „Hilfe benötigt“; nur ein HWT-Endfehler beendet die Mission. Kosten: Stillstandsbestätigung bei jedem Start. Standardweg bleibt umschaltbar |
 
 ### Bestätigungstest für Entscheidung 5
 

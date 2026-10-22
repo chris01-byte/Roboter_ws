@@ -67,10 +67,18 @@ tiefster möglicher Wolkenpunkt 0,084 m). Umgesetzt als eigener Commit `5c285c0`
 unverändert 0,05). Prüfskript zählt zusätzlich belegte Kostenkartenzellen vor
 dem Roboter (`ae780e7`). Cloud: 147 gezielte und 178 Paket-Tests grün.
 
+Entscheidung 8 (Projektinhaber, 22.10.2026): Laborfahrten mit HWT601-Odometrie.
+Grundlage sind die abgenommenen HWT-Realfahrten vom 10./11.09.2026 auf den
+Fliesen des Labors (Encoder −4,06° je Umdrehung gegenüber HWT/LiDAR ±0,34°).
+SH-2 prüft deshalb den HWT-Weg motorlos mit. Prüfskript: `--odometrie` und
+`--aktiv` (`06b8a6c`). Neues rein lesendes Fahrtprotokoll für die Bewertung
+der Stufe 1 (`bd04145`). Entwurf des Fahrtauftrags:
+[SH-3](entwurf/SH-3_LABORFAHRTEN.md), noch nicht aktiv.
+
 **Nächster Schritt:** Auftrag SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)):
-motorlose Nachmessung auf dem Jetson mit neuem Release, gleicher Messreihe und
-Kostenkartenprüfung; danach Abnahmestufe 1 (drei begrenzte Laborfahrten) als
-eigener Auftrag.
+motorlose Nachmessung auf dem Jetson im HWT-Weg mit neuem Release, gleicher
+Messreihe und Kostenkartenprüfung; danach SH-3 (Abnahmestufe 1, drei begrenzte
+Laborfahrten) als aktueller Auftrag.
 
 ## 15.10.2026 – Selbstheilender Betrieb beschlossen und gerätefrei umgesetzt
 

@@ -1274,3 +1274,14 @@ der eingefrorene AP06-Pfad behalten 0,05 m. Grund: Messung SH-1 v3 (leerer
 Boden 0 Treffer, 5,5–10 cm vollständig verworfen, tiefster möglicher Punkt
 0,084 m). Eigener Commit `5c285c0`; Rückfall `self_healing:=false` oder Revert.
 Objekte um 3 cm bleiben für den VL53 unsichtbar (Hardwaregrenze).
+
+**Nachtrag 22.10.2026 – Odometrie der Laborfahrten (Entscheidung 8):** Die
+Laborfahrten der Hauptlinie laufen mit HWT601-Odometrie. Der Projektinhaber
+hatte den HWT601 eingebaut, weil Amadeus auf den Küchenfliesen über die Fugen
+schwankte und ohne ihn keine saubere Karte entstand. Belegt durch die
+abgenommenen Realfahrten auf Branch `codex/hwt601-encoder-shadow`: Rundblick
+10.09.2026, Encoder −4,06° je Umdrehung gegenüber HWT/LiDAR, 16,6 mm
+Rumpfversatz auf den Fugen; Gerade 11.09.2026, Encoder-Gier 1,3° neben
+HWT/LiDAR. Eine erste Empfehlung „Standard“ beruhte auf einer Suche nur im
+Hauptstand und wurde nach dem Hinweis des Projektinhabers korrigiert. Lehre:
+Bei Hardwarefragen auch die Feature-Branches nach Abnahmen durchsuchen.

@@ -1,4 +1,4 @@
-# Aktueller Agentenauftrag: SH-2 – motorlose Nachmessung der VL53-Höhengrenze
+# Aktueller Agentenauftrag: SH-2 – motorlose Nachmessung (VL53-Grenze, HWT601-Weg)
 
 **Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 16.10.2026 nach
 Entscheidung 7 des Projektinhabers: Im Selbstheilungsbetrieb zählt jetzt jeder
@@ -6,6 +6,13 @@ gültige VL53-Treffer. Die Grenze in beiden Kostenkarten und im
 `collision_monitor` liegt bei −0,02 m über `base_link` (0,07 m über Boden)
 statt 0,05 m (0,14 m über Boden). Umgesetzt in Commit `5c285c0`. Das Prüfskript
 zählt seit `ae780e7` zusätzlich belegte Kostenkartenzellen vor dem Roboter.
+
+**Ergänzt am 22.10.2026 (Entscheidung 8):** Die Laborfahrten laufen mit
+HWT601-Odometrie, wie die abgenommenen HWT-Fahrten vom 10./11.09.2026 auf den
+Fliesen des Labors. SH-1 hat nur den Standardweg geprüft. SH-2 startet deshalb
+den **HWT-Weg** (`use_hwt601_odometry:=true`) und prüft ihn motorlos mit
+(`--odometrie hwt601`, seit `06b8a6c`). Der HWT-Start verlangt eine bestätigte
+reale Stillstandsbeobachtung (Schritt 6).
 
 SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
 SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
@@ -20,8 +27,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
 | WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `ae780e7`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 147 gezielte Tests, Prüfskript A–D mit den neuen Overlays, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `06b8a6c`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 149 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
 | Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
 | Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
 | Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
@@ -57,7 +64,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor ae780e7 HEAD && echo "ae780e7 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor 06b8a6c HEAD && echo "06b8a6c enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
 ```
 
@@ -119,40 +126,54 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `147 passed` (Cloud). Fehlschläge berichten, nicht beheben.
+Erwartung: `149 passed` (Cloud). Fehlschläge berichten, nicht beheben.
 
-### Schritt 6 – App-Stack motorlos starten
+### Schritt 6 – App-Stack motorlos im HWT-Weg starten
 
 `source` steht in einer eigenen Zeile (SH-1-Befund):
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
+ls -l /dev/ttyUSB_HWT601 /dev/ttyUSB_BASE
 ```
 
-Nur wenn nichts läuft:
+Beide Geräte müssen vorhanden sein. Fehlt `/dev/ttyUSB_HWT601`: abbrechen und
+berichten; nicht auf den Standardweg ausweichen.
+
+Der HWT misst sich beim Start im Stillstand ein. Deshalb Christopher genau
+einmal fragen: „Steht Amadeus still, und kann er während des Starts (etwa eine
+Minute) unberührt bleiben?“ Nur nach einem „ja“ starten. Die Antwort ist eine
+Beobachtung von Christopher und wird im Bericht so gekennzeichnet.
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
+  use_hwt601_odometry:=true hwt_development_contract:=true operator_stationary_confirmed:=true \
   > "$SH_PR/launch.log" 2>&1 < /dev/null &
 echo $! > "$SH_PR/launch.pid"; cat "$SH_PR/launch.pid"; date -Iseconds > "$SH_PR/launch_start.txt"
 ```
 
+`active_drive` und `enable_auto_explore` bleiben auf ihrem Standard `false`.
 Die PID muss die des `ros2 launch`-Prozesses sein (mit `ps -o pid,cmd -p <PID>`
-kontrollieren). Nach etwa 30 s wie in SH-1 v3 `nodes.txt`, `lifecycle.txt`
-und die `grep`-Zeilen aus `launch.log` erfassen.
+kontrollieren). Nach etwa 60 s (HWT-Einmessung) wie in SH-1 v3 `nodes.txt`,
+`lifecycle.txt` und die `grep`-Zeilen aus `launch.log` erfassen, zusätzlich:
+
+```bash
+grep -niE "hwt|bias|ekf|encoder_shadow" "$SH_PR/launch.log" | head -60
+```
 
 ### Schritt 7 – Prüfskript A–D
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && \
-  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" \
+  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
   --json "$SH_PR/pruefung_AD.json" 2>&1 | tee "$SH_PR/pruefung_AD.txt"; echo "exit=${PIPESTATUS[0]}"
 ```
 
-Erwartung: Exit 0. Neu in Bereich B: vier Zeilen
+Erwartung: Exit 0. Neu in Bereich C: `Explorer erwartet hwt601` und
+`genau ein /odom-Publisher (/hwt601_mapping_ekf)`. Neu in Bereich B: vier Zeilen
 `…costmap obstacle_layer.vl53_*_mark.min_obstacle_height` mit −0.02 und zwei
 Zeilen `B Kollisionswaechter … min_height` mit −0.02. Bei `FEHL` mit
 „erreichbar“ oder „nicht deklariert“ einmal nach 30 s wiederholen.
@@ -180,7 +201,7 @@ Je Messung:
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && \
-  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" \
+  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
   --beobachten-s 1 --vl53-s 10 --notiz "Nr 2: 5,5 cm, 0,30 m" \
   --json "$SH_PR/vl53_02.json" 2>&1 | tee "$SH_PR/vl53_02.txt"
 ```
@@ -212,18 +233,22 @@ Sofort Schritt 9 und dann Bericht bei:
 - Rad- oder Motorbewegung;
 - `FEHL` in „D Stillstand“;
 - Not-Aus oder einem „Stopp“ von Christopher;
-- einem zweiten Robotik-Stack.
+- einem zweiten Robotik-Stack;
+- einem HWT-Endfehler im Log (`TERMINAL_FAULT`) oder fehlendem HWT-Gerät.
+  Nicht auf den Standardweg ausweichen; berichten.
 
 ## Bericht: `~/selbstheilung_jetson_bericht_sh2.md`
 
 Gliederung wie SH-1 v3. Kopf, Bestand, Umgebungsdatei, Build mit
 `prefixes.txt` und den zwei Overlay-Zeilen aus Schritt 4, Tests,
-Stackstart, Prüfung A–D vollständig mit Exitcode. Dann die VL53-Tabelle mit
+Stackstart im HWT-Weg (Geräte, Christophers Stillstandsantwort, Wartezeit,
+HWT-/EKF-Logzeilen), Prüfung A–D vollständig mit Exitcode. Dann die VL53-Tabelle mit
 einer **zusätzlichen Spalte „Kostenkarte belegt vorn“** und dem `vl53`-Teil
 jeder JSON-Datei wörtlich. Danach Beenden, Auffälligkeiten (insbesondere
 `collision_monitor`-Warnungen „Ignoring the source“ mit Zeitraum) und nicht
-Ausgeführtes. Am Ende im Chat nur: Pfad, Ergebnis A–D, Testfehlschläge, ob die
-Reihe vollständig ist und ob die Kostenkarte ab Nr 2 Zellen einträgt.
+Ausgeführtes. Am Ende im Chat nur: Pfad, Ergebnis A–D, Testfehlschläge, ob der
+HWT-Weg lief, ob die Reihe vollständig ist und ob die Kostenkarte ab Nr 2
+Zellen einträgt.
 
 ## Danach
 
