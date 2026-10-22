@@ -80,6 +80,33 @@ def test_mapping_launch_has_single_slam_owner_and_explicit_explore_gate():
             "                    self_healing_collision_overlay, mapping_collision_params)") in source
 
 
+def test_self_healing_slam_overlay_only_tightens_loop_closure_and_only_in_self_healing():
+    """Entscheidung 22.10.2026 (X7): strengere Ringschluss-Schwellen nur mit self_healing."""
+    lidar = PACKAGE_ROOT.parent/'amadeus_lidar_bringup'
+    base = yaml.safe_load((lidar/'config'/'slam_toolbox_amadeus.yaml').read_text())
+    overlay = yaml.safe_load((lidar/'config'/'slam_toolbox_self_healing.yaml').read_text())
+    assert overlay == {'slam_toolbox': {'ros__parameters': {
+        'loop_match_minimum_chain_size': 20,
+        'loop_match_minimum_response_coarse': 0.55,
+        'loop_match_minimum_response_fine': 0.65,
+        'loop_match_maximum_variance_coarse': 2.0}}}
+    basis = base['slam_toolbox']['ros__parameters']
+    streng = overlay['slam_toolbox']['ros__parameters']
+    assert basis['do_loop_closing'] is True                     # Ringschluss bleibt an
+    assert streng['loop_match_minimum_chain_size'] > basis['loop_match_minimum_chain_size']
+    assert streng['loop_match_minimum_response_fine'] > basis['loop_match_minimum_response_fine']
+    assert streng['loop_match_minimum_response_coarse'] > basis['loop_match_minimum_response_coarse']
+    assert streng['loop_match_maximum_variance_coarse'] < basis['loop_match_maximum_variance_coarse']
+    # Beide SLAM-Startwege laden das Overlay nach der Basis; Default ist die Basis selbst.
+    for name in ('slam_lidar.launch.py', 'slam_lidar_hwt601.launch.py'):
+        source = (lidar/'launch'/name).read_text(encoding='utf-8')
+        assert "'slam_params_overlay', default_value=slam_params," in source
+        assert "parameters=[slam_params, slam_params_overlay, {'scan_topic': scan_topic}]" in source
+    mapping = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text(encoding='utf-8')
+    assert mapping.count("'slam_params_overlay': when_self_healing(\n"
+                         "                    self_healing_slam_overlay, slam_base_params),") == 2
+
+
 def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
     overlay = yaml.safe_load(

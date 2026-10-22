@@ -613,6 +613,8 @@ def main(argv=None):
     parser.add_argument('--nav-overlay', help='Default: installiertes nav2_params_self_healing.yaml')
     parser.add_argument('--collision-overlay',
                         help='Default: installiertes collision_monitor_self_healing_overlay.yaml')
+    parser.add_argument('--slam-overlay',
+                        help='Default: installiertes slam_toolbox_self_healing.yaml')
     parser.add_argument('--timeout-s', type=float, default=3.0)
     parser.add_argument('--entdeckung-s', type=float, default=2.0,
                         help='Wartezeit fuer die DDS-Entdeckung vor den Graphabfragen')
@@ -635,7 +637,10 @@ def main(argv=None):
         'robot_navigation', 'config', 'nav2_params_self_healing.yaml')
     collision_overlay = args.collision_overlay or _share(
         'vl53_near_field', 'config', 'collision_monitor_self_healing_overlay.yaml')
-    overlays = (('B Nav2-Overlay', nav_overlay), ('B Kollisionswaechter', collision_overlay))
+    slam_overlay = args.slam_overlay or _share(
+        'amadeus_lidar_bringup', 'config', 'slam_toolbox_self_healing.yaml')
+    overlays = (('B Nav2-Overlay', nav_overlay), ('B Kollisionswaechter', collision_overlay),
+                ('B SLAM-Overlay', slam_overlay))
 
     import rclpy
     rclpy.init()

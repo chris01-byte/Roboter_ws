@@ -1,0 +1,20 @@
+# =====================================================================
+#  slam_toolbox-Overlay nur fuer den Selbstheilungsbetrieb (22.10.2026)
+#  Wird NACH slam_toolbox_amadeus.yaml geladen, nur mit
+#  nav_mapping.launch.py self_healing:=true. Andere Betriebsarten laden
+#  die Basisdatei unveraendert.
+#
+#  Entscheidung Projektinhaber 22.10.2026 nach Robustheitssimulation:
+#  Mit den Standardschwellen schloss slam_toolbox falsche Ringe und verbog
+#  die Karte um 1,6-3,3 m (5 von 6 Laeufen im Abnahmesatz v4, auch in einer
+#  unsymmetrischen Welt). Mit diesen Schwellen (Experiment X7) 0 von 4.
+#  Ein Ringschluss braucht eine laengere Kette und klarere Uebereinstimmung.
+#  Kehrseite: echte Ringe werden seltener geschlossen; reale Wirkung erst in
+#  SH-3 belegt. Rueckfall: self_healing:=false.
+# =====================================================================
+slam_toolbox:
+  ros__parameters:
+    loop_match_minimum_chain_size: 20          # Basis 10
+    loop_match_minimum_response_coarse: 0.55   # Basis 0.35
+    loop_match_minimum_response_fine: 0.65     # Basis 0.45
+    loop_match_maximum_variance_coarse: 2.0    # Basis 3.0

@@ -33,6 +33,9 @@ def test_product_parameters_keep_product_values_and_only_rename_jazzy_classes():
     bt = p['bt_navigator']['ros__parameters']['default_nav_to_pose_bt_xml']
     assert bt.endswith('navigate_to_pose_self_healing.xml')
     assert p['slam_toolbox']['ros__parameters']['scan_topic'] == '/scan_normiert'
+    # Selbstheilungs-Overlay von slam_toolbox (Entscheidung 22.10.2026, X7).
+    assert p['slam_toolbox']['ros__parameters']['loop_match_minimum_chain_size'] == 20
+    assert p['slam_toolbox']['ros__parameters']['do_loop_closing'] is True
 
 
 def test_triggers_require_every_declared_condition():

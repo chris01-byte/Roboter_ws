@@ -59,6 +59,14 @@ def generate_launch_description():
     self_healing_collision_overlay = os.path.join(
         get_package_share_directory('vl53_near_field'), 'config',
         'collision_monitor_self_healing_overlay.yaml')
+    # Strengere Ringschluss-Schwellen nur im Selbstheilungsbetrieb
+    # (Entscheidung 22.10.2026); sonst die Basisdatei erneut = wirkungslos.
+    slam_base_params = os.path.join(
+        get_package_share_directory('amadeus_lidar_bringup'), 'config',
+        'slam_toolbox_amadeus.yaml')
+    self_healing_slam_overlay = os.path.join(
+        get_package_share_directory('amadeus_lidar_bringup'), 'config',
+        'slam_toolbox_self_healing.yaml')
     safe_bt = os.path.join(
         get_package_share_directory('explore'), 'behavior_trees',
         'navigate_to_pose_no_recovery.xml')
@@ -213,6 +221,8 @@ def generate_launch_description():
                 'active_drive': active_drive,
                 'normalize_scan': normalize_scan,
                 'crop': crop,
+                'slam_params_overlay': when_self_healing(
+                    self_healing_slam_overlay, slam_base_params),
             }.items()),
 
         IncludeLaunchDescription(
@@ -226,6 +236,8 @@ def generate_launch_description():
                 'hwt601_accel_ms': LaunchConfiguration('hwt601_accel_ms'),
                 'normalize_scan': normalize_scan,
                 'crop': crop,
+                'slam_params_overlay': when_self_healing(
+                    self_healing_slam_overlay, slam_base_params),
             }.items()),
 
         # Letzte reaktive Instanz vor /cmd_vel und laufende VL53-Daten.

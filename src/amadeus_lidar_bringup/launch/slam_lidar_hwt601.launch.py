@@ -43,6 +43,9 @@ def generate_launch_description():
 
     active_drive = LaunchConfiguration('active_drive')
     normalize_scan = LaunchConfiguration('normalize_scan')
+    # Optionales zweites Parameterfile (Default: Basisdatei erneut = wirkungslos);
+    # nav_mapping setzt es nur mit self_healing:=true.
+    slam_params_overlay = LaunchConfiguration('slam_params_overlay')
     dry_run = ParameterValue(
         PythonExpression(["'", active_drive, "' != 'true'"]),
         value_type=bool)
@@ -65,6 +68,10 @@ def generate_launch_description():
         DeclareLaunchArgument('hwt_development_contract', default_value='false'),
         DeclareLaunchArgument('hwt601_accel_ms', default_value='2000',
             description='Explicit LAB acceleration-register comparison; legacy default retained, braking unchanged.'),
+        DeclareLaunchArgument(
+            'slam_params_overlay', default_value=slam_params,
+            description='Zusaetzliches slam_toolbox-Parameterfile nach der Basis; '
+                        'Default die Basis selbst (keine Aenderung).'),
         DeclareLaunchArgument(
             'normalize_scan', default_value='true'),
         DeclareLaunchArgument(
@@ -172,5 +179,5 @@ def generate_launch_description():
         Node(
             package='slam_toolbox', executable='async_slam_toolbox_node',
             name='slam_toolbox', output='screen',
-            parameters=[slam_params, {'scan_topic': scan_topic}]),
+            parameters=[slam_params, slam_params_overlay, {'scan_topic': scan_topic}]),
     ])

@@ -44,6 +44,11 @@ def test_profiles_flatten_to_live_parameter_names():
         'obstacle_layer.lidar.min_obstacle_height': 0.0,
         'obstacle_layer.lidar.max_obstacle_height': 1.0,
         'obstacle_layer.lidar.obstacle_max_range': 2.5}
+    slam = _params('src/amadeus_lidar_bringup/config/slam_toolbox_self_healing.yaml')
+    assert slam == {'/slam_toolbox': {'loop_match_minimum_chain_size': 20,
+                                      'loop_match_minimum_response_coarse': 0.55,
+                                      'loop_match_minimum_response_fine': 0.65,
+                                      'loop_match_maximum_variance_coarse': 2.0}}
     collision = _params('src/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml')
     assert collision == {'/collision_monitor': {
         'vl53_left.min_height': -0.02, 'vl53_right.min_height': -0.02}}

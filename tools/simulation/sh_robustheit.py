@@ -92,6 +92,8 @@ def produktparameter(repo):
     bt['default_nav_through_poses_bt_xml'] = str(
         repo/'tools/simulation/navigate_through_poses_no_recovery.xml')
     p['slam_toolbox'] = lade('src/amadeus_lidar_bringup/config/slam_toolbox_amadeus.yaml')['slam_toolbox']
+    tief_mischen(p['slam_toolbox'], lade(
+        'src/amadeus_lidar_bringup/config/slam_toolbox_self_healing.yaml')['slam_toolbox'])
     p['slam_toolbox']['ros__parameters']['scan_topic'] = '/scan_normiert'
     kollision = lade('src/vl53_near_field/config/collision_monitor_mapping_params.yaml')
     tief_mischen(kollision, lade(
