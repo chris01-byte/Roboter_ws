@@ -325,8 +325,9 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     Cluster fällt dadurch weg. Hat auch die geräumigste Zelle weniger Abstand
     (Frontier nur an einer Wand entlang), rückt das Ziel auf die nächste
     bekannt freie Zelle mit ``goal_clearance_m`` innerhalb
-    ``goal_shift_max_m``: Der Roboter soll dort stehen können; der LiDAR
-    sieht die Frontier auch von dort.
+    ``goal_shift_max_m``, gibt es keine, auf die geräumigste bekannt freie
+    Zelle dort: Der Roboter soll dort stehen und sich drehen können; der
+    LiDAR sieht die Frontier auch von dort.
     """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
@@ -357,7 +358,7 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     spacious = None
     if clearance is not None and goal_clearance_m > 0:
         clearance = np.asarray(clearance)
-        spacious = free & (clearance >= goal_clearance_m)
+        spacious = free
     goals = []
     for cluster in range(1, count+1):
         if sizes[cluster] < min_size_cells:
@@ -372,8 +373,8 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
         best = members[np.argmin(distance[members])]
         gx, gy = float(wx[best]), float(wy[best])
         if spacious is not None and clearance[rows[best], cols[best]] < goal_clearance_m:
-            shifted = _nearest_spacious(spacious, rows[best], cols[best], resolution,
-                                        goal_shift_max_m, cell_to_world)
+            shifted = _nearest_spacious(spacious, clearance, goal_clearance_m, rows[best],
+                                        cols[best], resolution, goal_shift_max_m, cell_to_world)
             if shifted is not None:
                 gx, gy = shifted
                 if any(math.hypot(gx-bx, gy-by) <= blacklist_radius_m for bx, by in blacklist):
@@ -386,22 +387,30 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     return goals[:max_goals]
 
 
-def _nearest_spacious(spacious: np.ndarray, row: int, col: int, resolution: float,
-                      max_m: float, cell_to_world) -> Optional[Tuple[float, float]]:
-    """Nächste geräumige freie Zelle im Umkreis ``max_m`` (Weltkoordinaten)."""
+def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, row: int,
+                      col: int, resolution: float, max_m: float,
+                      cell_to_world) -> Optional[Tuple[float, float]]:
+    """Freie Zelle im Umkreis ``max_m`` mit ``wanted_m`` Abstand (die nächste),
+    sonst die geräumigste dort (Weltkoordinaten); ``None`` ohne Verbesserung."""
     span = int(math.ceil(max_m/resolution))
     if span <= 0:
         return None
-    r0, r1 = max(0, row-span), min(spacious.shape[0], row+span+1)
-    c0, c1 = max(0, col-span), min(spacious.shape[1], col+span+1)
-    rr, cc = np.nonzero(spacious[r0:r1, c0:c1])
+    r0, r1 = max(0, row-span), min(free.shape[0], row+span+1)
+    c0, c1 = max(0, col-span), min(free.shape[1], col+span+1)
+    rr, cc = np.nonzero(free[r0:r1, c0:c1])
     if not len(rr):
         return None
     d = np.hypot(rr+r0-row, cc+c0-col)*resolution
+    room = clearance[rr+r0, cc+c0]
     inside = d <= max_m
-    if not inside.any():
-        return None
-    i = int(np.argmin(np.where(inside, d, np.inf)))
+    wide = inside & (room >= wanted_m)
+    if wide.any():
+        i = int(np.argmin(np.where(wide, d, np.inf)))
+    else:
+        if not inside.any() or room[inside].max() <= clearance[row, col]:
+            return None
+        best = inside & (room >= room[inside].max())
+        i = int(np.argmin(np.where(best, d, np.inf)))
     x, y = cell_to_world(np.array([rr[i]+r0]), np.array([cc[i]+c0]))
     return float(np.asarray(x)[0]), float(np.asarray(y)[0])
 

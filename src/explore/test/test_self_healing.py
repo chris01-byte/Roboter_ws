@@ -262,3 +262,17 @@ def test_wall_hugging_frontier_goal_moves_to_a_standable_cell():
                            blacklist=[(shifted.x, shifted.y)], blacklist_radius_m=.2)
     assert all(math.dist((g.x, g.y), (shifted.x, shifted.y)) > .2 for g in again)
 
+
+def test_corner_goal_moves_to_the_most_spacious_nearby_cell_if_none_is_wide_enough():
+    """Simulation v3: Ziel blieb an der Pfostenecke, weil im Umkreis keine Zelle 0,45 m hatte."""
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((24, 40), 0, dtype=int)             # schmaler Raum, 1,2 m breit
+    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
+    occupancy[1:3, 30:38] = -1                              # ungesehener Wandfuß unten rechts
+    room = obstacle_clearance(occupancy, .05)
+    goal = frontier_goals(occupancy, .05, to_world, (.5, .6), min_size_cells=3,
+                          clearance=room, goal_clearance_m=.8, goal_shift_max_m=.5)[0]
+    frontier_room = room[2, 30:38].max()
+    assert room[int(goal.y/.05), int(goal.x/.05)] > frontier_room   # geräumiger als am Wandfuß
+    assert goal.y > .25                                       # weg von der Wand
+
