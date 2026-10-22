@@ -401,6 +401,7 @@ def main(argv=None):
         ergebnis['experiment'] = {'datei': args.experiment.name, 'parameter': experiment}
     stoerung = {'ausgeloest_s': None, 'beendet_s': None, 'ziele_bei_ausloesung': None}
     last = []
+    last_verlauf = []          # (s seit Start, 1-min-Last) je Sekunde
     rclpy.init()
     start = time.monotonic()
     protokoll = LaufProtokoll(start)
@@ -467,6 +468,8 @@ def main(argv=None):
         while time.monotonic() < frist:
             time.sleep(.2)
             jetzt = time.monotonic()
+            if int(jetzt - start) != (last_verlauf[-1][0] if last_verlauf else -1):
+                last_verlauf.append((int(jetzt - start), os.getloadavg()[0]))
             for e in protokoll.ereignisse[gemeldet:]:
                 print('EREIGNIS', json.dumps(e, ensure_ascii=False), flush=True)
             gemeldet = len(protokoll.ereignisse)
@@ -560,8 +563,14 @@ def main(argv=None):
     ergebnis['plan_engste_stelle'] = beobachter.plan
     ergebnis['robot_radius_global_m'] = robot_radius
     ergebnis['strecke_welt_m'] = round(float(welt.travel), 2)
+    groesste = sorted(zip(welt.verspaetungen, welt.verspaetungen_zeit), reverse=True)[:5]
     ergebnis['timer_verspaetungen'] = {'anzahl': len(welt.verspaetungen),
-                                      'max_s': max(welt.verspaetungen, default=0.)}
+                                      'max_s': max(welt.verspaetungen, default=0.),
+                                      'groesste': [{'luecke_s': d, 't_s': t} for d, t in groesste]}
+    ergebnis['rechnerlast'] = {'kerne': os.cpu_count(),
+                               'last_1min_max': max((v for _, v in last_verlauf), default=None),
+                               'verlauf_alle_10_s': [(t, round(v, 2)) for t, v in last_verlauf
+                                                     if t % 10 == 0]}
     if 'fehler' in ergebnis:
         ergebnis['kriterien'] = {'ablauf_ohne_harnessfehler': False}
     else:

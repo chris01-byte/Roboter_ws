@@ -29,6 +29,7 @@ class RobustheitsWelt(World):
         self.door_m = door_m
         self.niedrig = []                # (Rechteck, Höhe über Boden)
         self.verspaetungen = []          # Timerlücken > 30 ms
+        self.verspaetungen_zeit = []     # zugehörige Zeit (s seit Start)
         self.geschlossene_tueren = []
         self.engste_stelle = None        # Pose beim kleinsten Abstand
         self.zeit_s = None               # vom Treiber gesetzt (Sekunden seit Start)
@@ -68,6 +69,7 @@ class RobustheitsWelt(World):
             return
         if dt > .03:
             self.verspaetungen.append(round(dt, 4))
+            self.verspaetungen_zeit.append(self.zeit_s)
         schritte = max(1, math.ceil(dt/MAX_SCHRITT_S))
         for _ in range(schritte):
             vorher = self.minimum_clearance
