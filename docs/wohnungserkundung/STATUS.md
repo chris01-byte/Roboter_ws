@@ -77,9 +77,12 @@ Last; kein Prozessabsturz; Nav2 und `collision_monitor` nach jeder Fahrt `active
 A. **Seitenwände fehlen in der lokalen Kostenkarte.** Beim Kartieren ist die
    OAK aus; die lokale Karte kennt nur, was die VL53 nach vorn sehen. RPP prüft
    seine Kontur daher nicht gegen Pfosten und Wände (gemessen: 0 tödliche
-   Zellen über dem Pfosten an der engsten Stelle). In der 0,84-m-Verbindung
-   bringt schon eine Drehung um 24° die Vorderecke (0,41 m vom Drehpunkt) an
-   die Wand. Ursache der zwei Kontakte oben. Gemessene Kandidaten:
+   Zellen über dem Pfosten an der engsten Stelle; die VL53 sehen ±30° bis
+   0,5 m, ein Pfosten 0,40 m seitlich liegt bei mittiger Durchfahrt nie in
+   ihrem Feld). In der 0,84-m-Verbindung hat ein genau mittiger Roboter beim
+   Drehen nur 6 mm Reserve (Eckradius 0,414 m); steht er knapp 6 cm neben der
+   Mitte, bringt schon eine Drehung um 24° die Vorderecke an die Wand. So
+   entstanden die zwei Kontakte oben. Gemessene Kandidaten:
 
    | Kandidat | Läufe | Befund |
    |---|---|---|
@@ -90,16 +93,22 @@ A. **Seitenwände fehlen in der lokalen Kostenkarte.** Beim Kartieren ist die
 
 B. **Niedrige Hindernisse werden „vergessen“.** Näher als etwa 0,41 m liegt
    eine 10-cm-Box unter allen VL53-Zeilen; 2D-Räumen über sie löscht die
-   Markierung (gemessen: 0 tödliche Zellen über der Box an der engsten
-   Stelle; 1 Box-Kontakt in 13 Läufen mit Box). X8 (VL53 räumt erst ab
+   Markierung. Belegt durch Geometrie und Code des VL53-Knotens (je Spalte
+   wird bis zum nächsten Echo, höchstens 0,60 m, geräumt) und 1 Box-Kontakt
+   in 13 Läufen mit Box. Die Messung „0 tödliche Zellen über der Box“ stammt
+   aus einem X1-Lauf, in dem zusätzlich der LiDAR räumte; für den reinen
+   VL53-Fall ist sie nicht direkt gemessen. X8 (VL53 räumt erst ab
    0,45 m): 2 Läufe ohne Box-Kontakt (einer mit Wandkontakt und falschem
    Ringschluss), wegen kleiner Zahl nicht beweisend.
 
 C. **Falscher Ringschluss von `slam_toolbox`** in der spiegelsymmetrischen
    Testwelt: 12 von 43 Läufen, Karte um 1,7–3,3 m verbogen, danach Hilfe.
    Häufiger, seit die Ziele mittiger liegen (7/14 Läufe mit `74afc78`). X6 ohne
-   Ringschluss: 2/2 bestanden (Referenz 12,3 cm, Hindernis 1,5 cm). Die Welt
-   ist laut Manifest fest; ob reale Räume das zeigen, klärt SH-3.
+   Ringschluss: 2/2 bestanden (Referenz 12,3 cm, Hindernis 1,5 cm). Die
+   Ursache ist nicht belegt: Die Pose sprang z. B. um 3,3 m entlang der
+   Raumachse ohne Drehung, das ist keine einfache Spiegelung. Symmetrie bzw.
+   Wiederholung der Testwelt ist nur eine Vermutung. Ob reale Räume das
+   zeigen, klärt SH-3.
 
 D. **Ersatzkriterium „mindestens 2 Ziele“:** Zwei Läufe mit vollständiger
    Karte, sauberem Ende und ohne Kontakt fielen nur daran, weil die Karte
