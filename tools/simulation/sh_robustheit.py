@@ -246,9 +246,15 @@ def main(argv=None):
     params_file = out/'produkt_params.yaml'
     parameter = produktparameter(REPO)
     experiment = None
+    explorer_bt = REPO/'src/explore/behavior_trees/navigate_to_pose_self_healing.xml'
     if args.experiment is not None:
         experiment = yaml.safe_load(args.experiment.read_text(encoding='utf-8'))
+        # Nur für Experimente: anderer Nav2-Baum des Explorers (Pfad relativ zur Datei).
+        treiber = dict(experiment.pop('sh_treiber', None) or {})
+        if treiber.get('explorer_behavior_tree'):
+            explorer_bt = (args.experiment.parent/treiber['explorer_behavior_tree']).resolve()
         jazzy_kompatibel(tief_mischen(parameter, experiment))
+        experiment['sh_treiber'] = treiber
     params_file.write_text(yaml.safe_dump(parameter))
     robot_radius = float(parameter['global_costmap']['global_costmap']['ros__parameters']
                          .get('robot_radius', 0.))
@@ -529,7 +535,7 @@ def main(argv=None):
         starte('explorer', [exe('explore', 'explore'), '--ros-args',
                '--params-file', str(REPO/'src/explore/config/explore_params.yaml'),
                '--params-file', str(REPO/'src/explore/config/self_healing_params.yaml'),
-               '-p', f'behavior_tree:={REPO}/src/explore/behavior_trees/navigate_to_pose_self_healing.xml',
+               '-p', f'behavior_tree:={explorer_bt}',
                '-p', 'require_hwt601_fusion:=false', '-p', 'hwt601_active_drive:=true',
                '-p', 'hwt_development_contract:=false',
                '-p', f'overall_timeout_s:={float(manifest["budgets"]["mission_s"])}'])
