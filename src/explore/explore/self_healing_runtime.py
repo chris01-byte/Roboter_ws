@@ -449,6 +449,14 @@ class SelfHealingRuntime:
                 self._frontiers_visited_status = reached
                 attempts.pop(key, None)
                 ladder.progress(time.monotonic())
+                # Erreicht, aber die Karte wuchs nicht: diese Frontier-Stelle ist von
+                # hier nicht aufzulösen. Nicht erneut anfahren (Simulation 22.10.2026:
+                # 3439 Mal dasselbe Ziel 0,15 m neben dem Roboter, sofort "erreicht").
+                after = getattr(self, '_map', None)
+                if after is not None and int(np.count_nonzero(
+                        np.asarray(after.data, dtype=np.int16) >= 0)) - known < gain_cells:
+                    blacklist.append(goal.frontier_xy)
+                    status['visited_without_gain'] = status.get('visited_without_gain', 0) + 1
                 status.update(goals_reached=reached, ladder=ladder.snapshot())
                 continue
             if nav == 'canceled':

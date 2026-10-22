@@ -250,6 +250,21 @@ def test_open_door_frontier_is_still_handed_to_nav2(monkeypatch):
     assert [c for c in state.calls if c[0] == 'navigate' and c[1] > 1.5]
 
 
+def test_reached_goal_without_map_gain_is_not_driven_again(monkeypatch):
+    """Simulation 22.10.2026: dasselbe Ziel 3439 Mal sofort "erreicht", Karte wuchs nicht."""
+    def nowhere(x, y, stop, record):
+        state.refresh_map()                      # Karte bleibt gleich
+        return 'success'
+    n, state, goal, terminal = parent(monkeypatch, navigate=nowhere)
+    n._execute_self_healing(goal, 1200., .3)
+    calls = [c for c in state.calls if c[0] == 'navigate']
+    assert len(calls) < 20, len(calls)            # endet statt Endlosschleife
+    assert n._self_healing_status['visited_without_gain'] >= 1
+    assert n._self_healing_status['reason'] in ('remaining_frontiers_unreachable',
+                                                'exploration_complete')
+    assert len(set(calls)) == len(calls) or n._self_healing_status['state'] == 'partial'
+
+
 def test_active_estop_is_fatal_without_motion(monkeypatch):
     n, state, goal, terminal = parent(monkeypatch)
     state.safety[0] = 'estop_missing_stale_or_active'
