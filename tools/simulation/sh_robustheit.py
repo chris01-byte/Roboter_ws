@@ -17,6 +17,10 @@ Mission wie aus der App: `{"type":"explore"}` an den Missionsmanager.
 Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien.json`
 ausgelöst. Bewertet wird nach dem dort vorab festgelegten Abnahmeteil.
 
+`--experiment` mischt eine zusätzliche Parameterdatei über das Produktprofil.
+Solche Läufe sind Messungen für eine Entscheidung, keine Abnahme; das Ergebnis
+trägt dann die Qualifikation `experiment_keine_abnahme`.
+
 Grenzen: Cloud, ROS 2 Jazzy statt Humble (nur Plugin-Klassennamen per
 `sh_robustheit_jazzy.yaml` angepasst), ideale Odometrie statt HWT601/EKF,
 keine echten Gerätelatenzen. Ersetzt keine Jetson- oder Realabnahme.
@@ -100,6 +104,21 @@ def produktparameter(repo):
     return p
 
 
+def plan_engstelle(alt, abstaende, punkte, t_s, robot_radius):
+    """Engste Stelle aller globalen Pläne (Abstand der Planmitte zum Hindernis)."""
+    alt = dict(alt or {'abstand_m': None, 'plaene': 0, 'plaene_unter_robot_radius': 0})
+    alt['plaene'] += 1
+    if len(abstaende) == 0:
+        return alt
+    i = int(np.argmin(abstaende))
+    wert = float(abstaende[i])
+    if wert < robot_radius:
+        alt['plaene_unter_robot_radius'] += 1
+    if alt['abstand_m'] is None or wert < alt['abstand_m']:
+        alt.update(abstand_m=round(wert, 4), punkt=[round(float(v), 3) for v in punkte[i]], t_s=t_s)
+    return alt
+
+
 def ausloeser_erfuellt(ausloeser, ziele, pose, geschwindigkeit, seit_start_s):
     if not ausloeser:
         return True
@@ -148,6 +167,8 @@ def main(argv=None):
     parser.add_argument('--ausgabe', type=Path, required=True)
     parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien.json')
     parser.add_argument('--domain', type=int, default=231)
+    parser.add_argument('--experiment', type=Path, default=None,
+                        help='zusätzliche Parameterdatei über dem Produktprofil (keine Abnahme)')
     args = parser.parse_args(argv)
     manifest = json.loads(args.manifest.read_text(encoding='utf-8'))
     szenario = next(s for s in manifest['szenarien'] if s['id'] == args.szenario)
@@ -158,14 +179,21 @@ def main(argv=None):
     os.environ['RMW_IMPLEMENTATION'] = 'rmw_cyclonedds_cpp'   # wie am Roboter
     os.environ.pop('CYCLONEDDS_URI', None)
     params_file = out/'produkt_params.yaml'
-    params_file.write_text(yaml.safe_dump(produktparameter(REPO)))
+    parameter = produktparameter(REPO)
+    experiment = None
+    if args.experiment is not None:
+        experiment = yaml.safe_load(args.experiment.read_text(encoding='utf-8'))
+        jazzy_kompatibel(tief_mischen(parameter, experiment))
+    params_file.write_text(yaml.safe_dump(parameter))
+    robot_radius = float(parameter['global_costmap']['global_costmap']['ros__parameters']
+                         .get('robot_radius', 0.))
     (out/'manifest.json').write_bytes(args.manifest.read_bytes())
 
     import rclpy
     from ament_index_python.packages import get_package_prefix
     from geometry_msgs.msg import TransformStamped, Twist
     from lifecycle_msgs.srv import ChangeState, GetState
-    from nav_msgs.msg import OccupancyGrid, Odometry
+    from nav_msgs.msg import OccupancyGrid, Odometry, Path as NavPath
     from rclpy.executors import MultiThreadedExecutor
     from rclpy.node import Node
     from rclpy.qos import (QoSProfile, DurabilityPolicy, ReliabilityPolicy,
@@ -227,6 +255,7 @@ def main(argv=None):
             jetzt = time.monotonic()
             dt, self.letzt = jetzt - self.letzt, jetzt
             cmd = zustand['cmd'] if jetzt - zustand['cmd_zeit'] <= .25 else (0.0, 0.0)
+            welt.zeit_s = round(jetzt - start, 2)
             welt.integrate(cmd, dt)
             self.zaehler += 1
             if self.zaehler % 2 == 0:
@@ -270,6 +299,7 @@ def main(argv=None):
             self.protokoll = protokoll
             self.karte = None
             self.erste_karte = None
+            self.plan = None
             self.explore = None
             self.mission = None
             self.befehl = self.create_publisher(String, '/mission_manager/command_json', 10)
@@ -287,6 +317,7 @@ def main(argv=None):
                                                               m.pose.pose.position.y), 10)
             self.create_subscription(NearFieldStatus, '/near_field/status',
                                      lambda m: protokoll.vl53(time.monotonic()), 10)
+            self.create_subscription(NavPath, '/plan', self.on_plan, 10)
             self.zustand_clients = {n: self.create_client(GetState, f'/{n}/get_state')
                                     for n in (*NAV2, 'collision_monitor')}
 
@@ -294,6 +325,13 @@ def main(argv=None):
             if self.erste_karte is None:
                 self.erste_karte = msg
             self.karte = msg
+
+        def on_plan(self, msg):
+            # Karte ~ Odometrie ~ Startpose; SLAM-Drift (wenige cm) bleibt als Fehler.
+            punkte = welt.karte_zu_welt([(q.pose.position.x, q.pose.position.y)
+                                         for q in msg.poses]) if msg.poses else np.zeros((0, 2))
+            self.plan = plan_engstelle(self.plan, welt.punkte_abstand(punkte) if len(punkte) else [],
+                                       punkte, round(time.monotonic() - start, 2), robot_radius)
 
         def on_explore(self, msg):
             try:
@@ -358,6 +396,9 @@ def main(argv=None):
 
     ergebnis = {'szenario': szenario, 'bestanden': False, 'qualifikation': manifest['qualifikation'],
                 'wahrheits_tf': False, 'wahrheitskarte': False, 'manuelle_ziele': 0}
+    if experiment is not None:
+        ergebnis['qualifikation'] = 'experiment_keine_abnahme'
+        ergebnis['experiment'] = {'datei': args.experiment.name, 'parameter': experiment}
     stoerung = {'ausgeloest_s': None, 'beendet_s': None, 'ziele_bei_ausloesung': None}
     last = []
     rclpy.init()
@@ -515,6 +556,9 @@ def main(argv=None):
     ergebnis['minimaler_abstand_m'] = (None if not math.isfinite(welt.minimum_clearance)
                                        else round(float(welt.minimum_clearance), 3))
     ergebnis['engste_stelle'] = welt.engste_stelle
+    ergebnis['mitte_engste_stelle'] = welt.mitte_min
+    ergebnis['plan_engste_stelle'] = beobachter.plan
+    ergebnis['robot_radius_global_m'] = robot_radius
     ergebnis['strecke_welt_m'] = round(float(welt.travel), 2)
     ergebnis['timer_verspaetungen'] = {'anzahl': len(welt.verspaetungen),
                                       'max_s': max(welt.verspaetungen, default=0.)}

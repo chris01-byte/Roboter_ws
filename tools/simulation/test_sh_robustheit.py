@@ -93,3 +93,19 @@ def test_harness_publishes_only_sensor_data_and_the_app_command():
     # /map nur für die eine alte Karte im Kartenrennen, kein Wahrheitskartenpublisher.
     assert source.count('karten_pub.publish(') == 1
     assert 'NavigateToPose' not in source and 'send_goal' not in source
+
+
+def test_plan_bottleneck_keeps_the_narrowest_plan_and_counts_tight_plans():
+    import numpy as np
+    stand = sh.plan_engstelle(None, np.array([.5, .3]), np.array([[0., 0.], [1., 1.]]), 3., .28)
+    assert stand['abstand_m'] == .3 and stand['punkt'] == [1., 1.] and stand['t_s'] == 3.
+    stand = sh.plan_engstelle(stand, np.array([.26]), np.array([[2., 0.]]), 4., .28)
+    assert stand['abstand_m'] == .26 and stand['plaene'] == 2
+    assert stand['plaene_unter_robot_radius'] == 1
+    stand = sh.plan_engstelle(stand, [], np.zeros((0, 2)), 5., .28)
+    assert stand['plaene'] == 3 and stand['abstand_m'] == .26
+
+
+def test_experiment_flag_is_never_an_acceptance():
+    source = (HIER/'sh_robustheit.py').read_text(encoding='utf-8')
+    assert "ergebnis['qualifikation'] = 'experiment_keine_abnahme'" in source

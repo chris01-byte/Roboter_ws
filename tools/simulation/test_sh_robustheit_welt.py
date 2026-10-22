@@ -66,3 +66,25 @@ def test_placement_check_rejects_boxes_in_walls_or_under_the_robot():
     w = welt.RobustheitsWelt(.8, [-1.9, -.45, 0.])
     assert not w.frei(welt.rectangle(-2.9, -2.7, 0., .2))      # in der Außenwand
     assert not w.frei(welt.rectangle(-2.0, -1.8, -.5, -.4))    # unter dem Roboter
+
+
+def test_point_distance_and_map_frame_match_the_world_geometry():
+    w = welt.RobustheitsWelt(.8, [-1.9, -.45, 0.])
+    # Mitte der Verbindung: 0,42 m bis zu den Wänden bei y = ±0,42.
+    assert w.punkt_abstand((0., 0.)) == pytest.approx(.42)
+    # Diagonal vor der Ecke des rechten unteren Türpfostens (0,64 / -0,40).
+    assert w.punkt_abstand((.64+.3, -.4+.4)) == pytest.approx(.5)
+    # Karte = Startpose als Ursprung; World.local ist die Umkehrung.
+    punkt = np.array([[1.3, .2]])
+    assert np.allclose(w.local(w.karte_zu_welt(punkt)), punkt)
+    gedreht = welt.RobustheitsWelt(.8, [-1.9, -.45, .7])
+    assert np.allclose(gedreht.local(gedreht.karte_zu_welt(punkt)), punkt)
+
+
+def test_closest_point_records_time_and_centre_distance():
+    w = welt.RobustheitsWelt(.8, [-1.9, -.45, 0.])
+    w.zeit_s = 12.5
+    w.integrate((.1, 0.), .01)
+    assert w.engste_stelle['t_s'] == 12.5
+    assert w.engste_stelle['mitte_abstand_m'] == pytest.approx(w.punkt_abstand(w.pose[:2]), abs=1e-4)
+    assert w.mitte_min['abstand_m'] == w.engste_stelle['mitte_abstand_m']

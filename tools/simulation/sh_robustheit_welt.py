@@ -7,7 +7,9 @@ fünf Störfälle brauchen:
   sieht, die VL53 aber treffen; der Kollisionsprüfer kennt sie trotzdem;
 - Türen, die sich während der Fahrt schließen lassen;
 - Integration auch nach verspäteten Timern (unter Rechenlast) in höchstens
-  10-ms-Schritten, statt abzubrechen. Jede Lücke wird protokolliert.
+  10-ms-Schritten, statt abzubrechen. Jede Lücke wird protokolliert;
+- Abstand eines Punkts (Robotermitte, Planpose) zum nächsten Hindernis, um
+  enge Stellen dem Planer oder dem Regler zuzuordnen.
 
 Die Welt veröffentlicht nichts und liefert dem Produkt keine Karte.
 """
@@ -29,6 +31,8 @@ class RobustheitsWelt(World):
         self.verspaetungen = []          # Timerlücken > 30 ms
         self.geschlossene_tueren = []
         self.engste_stelle = None        # Pose beim kleinsten Abstand
+        self.zeit_s = None               # vom Treiber gesetzt (Sekunden seit Start)
+        self.mitte_min = None            # kleinster Abstand der Robotermitte
 
     # --- Szenarioeingriffe ----------------------------------------------
     def schliesse_tuer(self, seite):
@@ -76,7 +80,30 @@ class RobustheitsWelt(World):
                 self.engste_stelle = dict(
                     pose=[round(float(v), 3) for v in self.pose],
                     geschwindigkeit=[round(float(v), 3) for v in self.velocity],
-                    abstand_m=round(float(self.minimum_clearance), 4))
+                    abstand_m=round(float(self.minimum_clearance), 4),
+                    mitte_abstand_m=round(self.punkt_abstand(self.pose[:2]), 4),
+                    t_s=self.zeit_s)
+        mitte = self.punkt_abstand(self.pose[:2])
+        if self.mitte_min is None or mitte < self.mitte_min['abstand_m']:
+            self.mitte_min = dict(abstand_m=round(mitte, 4),
+                                  pose=[round(float(v), 3) for v in self.pose], t_s=self.zeit_s)
+
+    def punkt_abstand(self, punkt):
+        """Abstand eines Punkts zum nächsten Hindernis (alle achsparallel)."""
+        return float(self.punkte_abstand(np.asarray(punkt, dtype=float)[:2])[0])
+
+    def punkte_abstand(self, punkte):
+        boxen = list(self.obstacles) + [b for b, _ in self.niedrig]
+        lo = np.array([b.min(axis=0) for b in boxen])[None]
+        hi = np.array([b.max(axis=0) for b in boxen])[None]
+        p = np.asarray(punkte, dtype=float).reshape(-1, 2)[:, None]
+        return np.linalg.norm(np.maximum(np.maximum(lo-p, 0.), p-hi), axis=2).min(axis=1)
+
+    def karte_zu_welt(self, punkte):
+        """Karten-/Odometrierahmen (Ursprung = Startpose) in Weltkoordinaten."""
+        p = np.asarray(punkte, dtype=float).reshape(-1, 2)
+        c, s = math.cos(self.start[2]), math.sin(self.start[2])
+        return p@np.array([[c, s], [-s, c]]) + self.start[:2]
 
     # --- Sensoren ---------------------------------------------------------
     def cone_returns(self, mount, directions, maximum=4.):
