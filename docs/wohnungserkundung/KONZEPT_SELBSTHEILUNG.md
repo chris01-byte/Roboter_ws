@@ -264,6 +264,23 @@ Pfostenecken (`74486f8`…`74afc78`). Offen und vom Projektinhaber zu entscheide
 (C) falscher Ringschluss von `slam_toolbox` in der symmetrischen Testwelt,
 (D) Ersatzkriterium „mindestens 2 Ziele“ trifft auch vollständige Karten.
 
+**Entscheidungen 22.10.2026 (Projektinhaber), umgesetzt:** A+B LiDAR markiert
+Seitenwände in der lokalen Kostenkarte, VL53 räumen erst ab 0,45 m
+(`2f46799`); D und Folgeversionen: Abnahme nach Abdeckung der erreichbaren
+Fläche ≥ 95 % und Kartenfehler ≤ 0,10 m in einer Welt mit unsymmetrischen
+Möbeln (Manifest v4); C: strengere `slam_toolbox`-Ringschluss-Schwellen nur im
+Selbstheilungsbetrieb (`7d8ef37`; Simulation 0 von 4 statt 5 von 6 verbogenen
+Karten).
+
+**Bekannte Grenze (Entscheidung 22.10.2026): niedrige Gegenstände.** Von einem
+Gegenstand unter etwa 15 cm sehen die VL53 nur die Vorderkante, näher als
+etwa 0,37–0,42 m gar nichts mehr. Liegt er neben dem Roboter, kann die Flanke
+ihn beim Drehen berühren; auch eine Recovery, die den Nahbereich behält (X10),
+verhinderte das in der Simulation nicht (3 von 3 Läufen mit Box-Kontakt). Der
+Störfall „Hindernis im Weg“ bleibt deshalb rot, bis die Sensorik es kann
+(Kandidat: OAK mit korrigiertem Bodenfilter, eigenes Paket). Für Labor- und
+Wohnungsfahrten flache Gegenstände vom Boden räumen.
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

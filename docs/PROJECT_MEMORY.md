@@ -1326,3 +1326,15 @@ belegt (Drehung in der Verbindung nur mit Versatz kritisch, „0 Zellen über de
 Box“ nur aus einem X1-Lauf, Symmetrie nur Vermutung). Messung und Vermutung im
 Bericht ausdrücklich trennen.
 
+**Nachtrag 22.10.2026 (abends) – SLAM-Schwellen und niedrige Gegenstände:**
+Falsche Ringschlüsse traten auch in einer unsymmetrischen Testwelt auf (5 von
+6 mit dem aktuellen Explorer), mit strengeren Schwellen in 0 von 4. Der
+Projektinhaber hat sie **nur für den Selbstheilungsbetrieb** übernommen
+(`7d8ef37`, Launch-Argument `slam_params_overlay`). Niedrige Gegenstände unter
+etwa 15 cm sind eine **bekannte Sensorgrenze**: Die VL53 sehen nur ihre
+Vorderkante, beim Drehen trifft die Flanke den Rest; das vollständige Leeren
+der Nahbereichskarte in der Nav2-Recovery machte es schlimmer, ein Baum, der
+den Nahbereich behält (X10), verhinderte die Berührung aber auch nicht. Lehre:
+Der Baumkommentar „VL53/OAK markieren im nächsten Frame neu“ war eine
+ungeprüfte Annahme (OAK ist beim Kartieren aus, die VL53 sehen Nahes nicht).
+

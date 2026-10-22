@@ -75,6 +75,15 @@ Verhalten. Auf dem Jetson noch nicht gebaut; SH-2 prüft motorlos (159 Tests,
 neue Zeilen in Prüfung B/C, Kostenkarte vor jeder VL53-Messung leeren).
 Rückfall: `self_healing:=false` oder einen Release vor `2f46799` sourcen.
 
+Nachtrag 22.10.2026, SLAM (`7d8ef37`, nur `self_healing:=true`): `slam_toolbox`
+lädt zusätzlich `slam_toolbox_self_healing.yaml` (Ringschluss erst ab Kette 20,
+Grob 0,55, Fein 0,65, Varianz 2,0). Neues Launch-Argument
+`slam_params_overlay` in `slam_lidar.launch.py` und
+`slam_lidar_hwt601.launch.py`, Standard = Basisdatei (keine Änderung). Ohne
+`self_healing` lädt SLAM wie bisher nur `slam_toolbox_amadeus.yaml`. Folge:
+weniger falsche, aber auch seltener echte Ringschlüsse. SH-2 prüft die Werte
+live (162 Tests). Rückfall: `self_healing:=false` oder Release vor `7d8ef37`.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

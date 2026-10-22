@@ -42,6 +42,12 @@ schließen, sodass Amadeus den Raum nicht verlassen kann.“ Der Selbstheilungs-
 betrieb kennt keinen Software-Fahrbereich; den Raum begrenzen Wände und
 geschlossene Türen. Ohne geschlossenen Raum keine Fahrt.
 
+Außerdem einmal: „Bitte flache Gegenstände unter etwa 15 cm Höhe (Kabel,
+Kartons, Schuhe) vom Boden räumen.“ Bekannte Grenze (Entscheidung
+22.10.2026): Von einem niedrigen Gegenstand sehen die VL53 nur die
+Vorderkante; liegt er neben dem Roboter, kann die Flanke ihn beim Drehen
+berühren (Robustheitssimulation). Höhere Möbel und Wände sieht der LiDAR.
+
 ## Je Fahrt (Nr 1, 2, 3)
 
 Jede Fahrt ist ein Kaltstart mit neuer Karte. `RUN` = 1, 2 oder 3.

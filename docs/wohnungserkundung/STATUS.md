@@ -3,8 +3,8 @@
 **Aktueller Stand 22.10.2026 (abends):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden;
 SH-2 (motorlos) offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
-Simulation, Manifest v4) **nicht bestanden**; Entscheidungen A–D umgesetzt,
-zwei neue Befunde (SLAM-Ringschluss, niedrige Box) warten auf Entscheidungen.
+Simulation, Manifest v4) **nicht bestanden**; Entscheidungen A–D, SLAM-Schwellen
+(nur Selbstheilung) umgesetzt; niedrige Box als bekannte Grenze geführt.
 Details und der eine nächste Schritt im obersten Abschnitt 22.10.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -76,9 +76,19 @@ Gleiche Istbasis wie der folgende Abschnitt; nur Cloud, keine Gerätewirkung.
 4. Kartenfehler ohne Ringschluss lagen bei 2–15 cm; die 0,10-m-Grenze aus v3
    fing zwei X10-Läufe (10,8 und 15,3 cm) zusätzlich ab.
 
-**Nächster Schritt:** unverändert SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)),
-jetzt mindestens `7c5aaa6` und 161 gezielte Tests. Danach Entscheidungen zu
-SLAM-Schwellen und niedriger Box, dann SH-3.
+**Entscheidungen danach (Projektinhaber, 22.10.2026):**
+- SLAM: Schwellen aus X7 **nur im Selbstheilungsbetrieb** übernommen
+  (`7d8ef37`): `slam_toolbox_self_healing.yaml` wird über ein neues
+  Launch-Argument `slam_params_overlay` nur mit `self_healing:=true` in beide
+  SLAM-Startwege geladen; andere Betriebsarten unverändert. Prüfskript prüft
+  die vier Werte live. 203 betroffene Tests grün.
+- Niedrige Box: **bekannte Grenze**, kein weiterer Softwareversuch jetzt (X10
+  nicht übernommen). „Hindernis im Weg“ bleibt rot; SH-3 räumt flache
+  Gegenstände vom Boden. Kandidat für später: OAK mit korrigiertem
+  Bodenfilter als eigenes Paket.
+
+**Nächster Schritt:** SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)), jetzt
+mindestens `7d8ef37` und 162 gezielte Tests. Danach SH-3.
 
 ## 22.10.2026 – Abnahmestufe 2 (Robustheitssimulation): nicht bestanden, Zielwahl korrigiert
 
