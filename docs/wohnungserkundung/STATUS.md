@@ -1,9 +1,12 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 16.10.2026:** Hauptlinie `self_healing` (Nutzerentscheidung
-15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden; reale Laborfahrt offen.
-Details und der eine nächste Schritt im Abschnitt 16.10.2026. AP06 ist
-eingefroren; die folgenden zwei Absätze beschreiben seinen letzten Stand.
+**Aktueller Stand 22.10.2026:** Hauptlinie `self_healing` (Nutzerentscheidung
+15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden; SH-2 (motorlos) offen;
+reale Laborfahrt offen. Abnahmestufe 2 (geschlossene Simulation) **nicht
+bestanden**; zwei Explorer-Fehler behoben, drei Befunde warten auf
+Entscheidungen. Details und der eine nächste Schritt im Abschnitt 22.10.2026.
+AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
+Stand.
 
 **AP06, letzter vollständig geprüfter gemeinsamer Stand: v17 / `60e894c`,
 11.10.2026.** Separater ARM64-Build: 14 Pakete, 155 eindeutige bytegleiche
@@ -20,6 +23,97 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 22.10.2026 – Abnahmestufe 2 (Robustheitssimulation): nicht bestanden, Zielwahl korrigiert
+
+MASTERPLAN v1.3, Hauptlinie `self_healing`, KONZEPT §11 Stufe 2. Istbasis:
+Branch `claude/blissful-pasteur-s1eivj`; Cloud, ROS 2 Jazzy, 4 Kerne. Keine
+Jetson-, Geräte- oder Aktorwirkung. Nicht-Ziel: Realabnahme.
+
+**Werkzeug** (`433990b`…`9c41069`): `tools/simulation/sh_robustheit.py`
+startet den echten Produktpfad (Missionsmanager, `bt_orchestrator`, Explorer,
+Nav2, Fahrtor, `collision_monitor`, `slam_toolbox`) und die Mission wie die
+App. Welt, Budgets, Störungen und Abnahme stehen vorab im Manifest. Diagnose:
+engste Stelle mit Belegung der lokalen Kostenkarte, Mitten- und Planabstand,
+Rechnerlast. `--experiment` misst Parameterkandidaten ohne Abnahmewert.
+Die Weltkontur ist der gepolsterte Footprint; „Kollision“ heißt Berührung der
+Polsterung, das Chassis liegt etwa 2 cm innen. 43 auswertbare Läufe:
+[Beleg](evidence/sh-stufe2-simulation-20261022.json).
+
+**Ergebnis gegen das Manifest, Explorer-Stand `74afc78`:** 0/5 Störfälle
+bestanden, Referenz nicht bestanden.
+
+| Lauf | Ende | Ziele | Heilungen | engster Abstand | verfehlt |
+|---|---|---|---|---|---|
+| Referenz | vollständig | 3 | 1 | 0,0 cm (Wand der Verbindung) | Kontakt |
+| Sensorlücke | vollständig, 98 % Fläche | 1 | 3 | 11,3 cm | mind. 2 Ziele |
+| Kartenrennen | Hilfe | 2 | 12 | 12,3 cm | falscher Ringschluss |
+| Rechenlast | Hilfe | 2 | 12 | 12,0 cm | falscher Ringschluss |
+| Hindernis im Weg | Hilfe | 2 | 24 | 1,3 cm | falscher Ringschluss |
+| Gesperrte Tür | Teilkarte | 2 | 1 | 0,0 cm (Wand der Verbindung) | Kontakt |
+
+**Was in allen Läufen funktioniert:** VL53-Lücke 6 s → warten
+(`vl53_status_missing_stale_or_invalid`), weiterfahren; LiDAR-Lücke 8 s und
+ältere Karte → warten, weiterfahren; 90 s Volllast → kein Abbruch wegen der
+Last; kein Prozessabsturz; Nav2 und `collision_monitor` nach jeder Fahrt `active`.
+
+**Behoben (nur `self_healing`, Rückfall je Parameter = 0):**
+1. Gesperrte Tür endete mit Hilfe: Jede Planabsage für Frontiers hinter der
+   Tür zählte als Fehlschlag, nach 8 kam Hilfe (Konzept §5 H2 verlangt
+   „unerreichbar markieren, kein Missionsende“). `e085cac`: grobe, großzügige
+   Erreichbarkeitsprüfung auf der eigenen Karte. Danach 3/3 Türläufe Teilkarte.
+2. Ziel an der Pfostenecke: Je Frontier wurde die nächste Zelle gewählt; in
+   einer Türöffnung liegt sie am Pfosten. Der Roboter parkte mit der Mitte
+   0,257 m vom Pfosten im 0,28-m-Saum, NavFn plante nicht mehr, 6–14
+   Heilungen. `74486f8`, `cf81aa8`, `74afc78`: Ziel nur mit Drehraum 0,45 m
+   (= `self_healing_rotation_radius_m`), sonst geräumigste Zelle in bis
+   0,5 m. Danach kein Klemmen am Pfosten mehr (Spurrückfahrt nur noch nach
+   falschem Ringschluss); die verbleibenden Kontakte liegen an der Wand der
+   Verbindung (Befund A). Zwischenstand `74486f8` war schlechter (5/6 Kontakte,
+   Ziel am ungesehenen Wandfuß) und ist überholt.
+
+**Offen – Entscheidungen des Projektinhabers nötig:**
+
+A. **Seitenwände fehlen in der lokalen Kostenkarte.** Beim Kartieren ist die
+   OAK aus; die lokale Karte kennt nur, was die VL53 nach vorn sehen. RPP prüft
+   seine Kontur daher nicht gegen Pfosten und Wände (gemessen: 0 tödliche
+   Zellen über dem Pfosten an der engsten Stelle). In der 0,84-m-Verbindung
+   bringt schon eine Drehung um 24° die Vorderecke (0,41 m vom Drehpunkt) an
+   die Wand. Ursache der zwei Kontakte oben. Gemessene Kandidaten:
+
+   | Kandidat | Läufe | Befund |
+   |---|---|---|
+   | X1 LiDAR in lokaler Karte, räumt | 3 | Pfosten erkannt; 2× klemmt der Roboter dort, 1× falscher Ringschluss; 3× Hilfe |
+   | X2 NavFn-Radius 0,30 | 1 | +1 cm, Klemmen bleibt |
+   | X3 Voxelschicht + LiDAR | 3 | 16 Heilungen, 352 s, Kontakt bleibt |
+   | X9 LiDAR markiert (räumt nicht) + VL53 räumt ab 0,45 m | 5 | Wand erkannt (25 tödliche Zellen); 1 bestanden, 1 Kontakt an der Rastergrenze, 1× nur 1 Ziel gezählt, 2× falscher Ringschluss |
+
+B. **Niedrige Hindernisse werden „vergessen“.** Näher als etwa 0,41 m liegt
+   eine 10-cm-Box unter allen VL53-Zeilen; 2D-Räumen über sie löscht die
+   Markierung (gemessen: 0 tödliche Zellen über der Box an der engsten
+   Stelle; 1 Box-Kontakt in 13 Läufen mit Box). X8 (VL53 räumt erst ab
+   0,45 m): 2 Läufe ohne Box-Kontakt (einer mit Wandkontakt und falschem
+   Ringschluss), wegen kleiner Zahl nicht beweisend.
+
+C. **Falscher Ringschluss von `slam_toolbox`** in der spiegelsymmetrischen
+   Testwelt: 12 von 43 Läufen, Karte um 1,7–3,3 m verbogen, danach Hilfe.
+   Häufiger, seit die Ziele mittiger liegen (7/14 Läufe mit `74afc78`). X6 ohne
+   Ringschluss: 2/2 bestanden (Referenz 12,3 cm, Hindernis 1,5 cm). Die Welt
+   ist laut Manifest fest; ob reale Räume das zeigen, klärt SH-3.
+
+D. **Ersatzkriterium „mindestens 2 Ziele“:** Zwei Läufe mit vollständiger
+   Karte, sauberem Ende und ohne Kontakt fielen nur daran, weil die Karte
+   schon unterwegs vollständig wurde. Kriterien werden nicht nachträglich
+   geändert; eine neue Manifestversion bräuchte die Zustimmung vorab.
+
+Weitere Beobachtungen: `map`→`odom` kam unter Cloud-Last zu spät (bis 39
+Zielabbrüche je Lauf „Unable to transform robot pose“), die Leiter fing das
+ab. Wandfehler sonst 2–5 cm. Erst messen hat gewirkt: Rechenlast, zu kleiner
+Planerradius und „LiDAR allein“ waren naheliegend, aber nicht die Ursache.
+
+**Nächster Schritt:** unverändert SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)),
+jetzt mindestens `74afc78` und 158 gezielte Tests. Danach Entscheidungen A–D
+und SH-3.
 
 ## 16.10.2026 – SH-1 v3: motorlose Jetson-Prüfung bestanden
 

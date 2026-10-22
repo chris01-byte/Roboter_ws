@@ -252,6 +252,18 @@ Sicherheitsquelle.
 Fahrzeit wird gemessen, ist aber vorerst kein Abbruchkriterium (0,06 m/s in
 unbekanntem Gebiet). Stufe 1 ist zugleich der Bestätigungstest für Entscheidung 5.
 
+**Stand Stufe 2 (22.10.2026): nicht bestanden.** Werkzeug
+`tools/simulation/sh_robustheit.py`, 43 Läufe, Einzelheiten im
+[STATUS](STATUS.md) (Abschnitt 22.10.2026). Die Heilungsleiter tut, was sie
+soll: Sensor- und Kartenlücken werden abgewartet, Last bricht nichts ab, eine
+gesperrte Tür endet seit `e085cac` als Teilkarte. Behoben wurde außerdem die
+Zielwahl: Ziele brauchen jetzt Drehraum (0,45 m) und liegen nicht mehr an
+Pfostenecken (`74486f8`…`74afc78`). Offen und vom Projektinhaber zu entscheiden:
+(A) Seitenwände fehlen in der lokalen Kostenkarte (OAK beim Kartieren aus),
+(B) niedrige Hindernisse werden unter den VL53-Strahlen weggeräumt,
+(C) falscher Ringschluss von `slam_toolbox` in der symmetrischen Testwelt,
+(D) Ersatzkriterium „mindestens 2 Ziele“ trifft auch vollständige Karten.
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:
