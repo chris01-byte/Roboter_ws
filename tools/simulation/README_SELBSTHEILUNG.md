@@ -85,10 +85,35 @@ python3 tools/simulation/sh_robustheit.py --szenario sensorluecke --ausgabe /pfa
 
 Immer nur ein Lauf gleichzeitig (gemeinsame ROS-Domain). `ergebnis.json` enthält:
 - Kriterien;
-- Fahrtprotokoll mit Ereignissen;
+- Fahrtprotokoll mit Ereignissen und Heilungsverlauf;
 - Störungszeitpunkte;
 - Kollisionsprüfer und minimalen Abstand;
 - Kartenvergleich mit der Welt;
 - Lifecycle-Zustände nach der Fahrt.
 
 Exitcode 0 = bestanden.
+
+### Diagnose (nur lesend, beeinflusst die Bewertung nicht)
+
+| Feld | Bedeutung |
+|---|---|
+| `engste_stelle` | Pose, Geschwindigkeit und Zeit beim kleinsten Konturabstand. Unter 3 cm zusätzlich das Hindernis (Wand oder niedrig) und die Belegung der lokalen Kostenkarte darüber (`toedlich`, `eingeschrieben_oder_mehr`, `unbekannt`): Konnte der Regler es kennen? |
+| `mitte_engste_stelle` | kleinster Abstand der Robotermitte; unter `robot_radius` (0,28 m) plant NavFn von dort nicht mehr |
+| `plan_engste_stelle` | engste Stelle der globalen Pläne, ganz und nur bis 1 m um den Roboter (`nah_…`) |
+| `timer_verspaetungen`, `rechnerlast` | Lücken der Anlage mit Zeitpunkt, 1-min-Last je 10 s |
+
+Kontur der Welt = gepolsterter Nav2-Footprint (x −0,13…0,33 m, y ±0,25 m).
+Das echte Chassis liegt rundum etwa 2 cm innerhalb. „Kollision“ heißt hier
+also Berührung der Polsterung.
+
+### Experimente
+
+```bash
+python3 tools/simulation/sh_robustheit.py --szenario referenz --ausgabe /pfad \
+  --experiment kandidat.yaml [--manifest anderes_manifest.json]
+```
+
+`--experiment` mischt eine Parameterdatei über das Produktprofil (wie ein
+weiteres params-file). Das Ergebnis trägt dann `experiment_keine_abnahme`.
+Experimente dienen Entscheidungen; die Abnahme gilt nur ohne `--experiment`
+mit dem festgelegten Manifest.
