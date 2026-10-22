@@ -13,6 +13,7 @@ import pytest
 from nav_msgs.msg import OccupancyGrid
 
 from explore.explore_node import ExploreNode
+from explore.self_healing import frontier_cells_remaining
 from test_metric_frontier import require_isolated_ros
 
 CONFIG = Path(__file__).resolve().parents[1]/'config'
@@ -115,7 +116,8 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_min_goal_distance_m=.3, _self_healing_gain_scale=.5,
             _self_healing_completion_checks=3, _self_healing_look_around_rad=math.pi/2,
             _self_healing_reach_clearance_m=.2, _self_healing_reach_escape_m=.35,
-            _self_healing_reach_tolerance_m=.3, _self_healing_goal_clearance_m=.35,
+            _self_healing_reach_tolerance_m=.3, _self_healing_goal_clearance_m=.45,
+            _self_healing_goal_shift_max_m=.5,
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
@@ -179,7 +181,9 @@ def test_explores_closed_room_to_completion(monkeypatch):
     assert n._self_healing_status['reason'] == 'exploration_complete'
     assert n._self_healing_status['goals_reached'] >= 1
     assert not any(c[0] in ('look_around', 'track_back') for c in state.calls)
-    assert not np.any(state.occupancy[1:-1, 1:-1] < 0)
+    # Ziele rücken von Ecken weg; übrig bleiben höchstens Reste unter der Frontier-Mindestgröße.
+    assert frontier_cells_remaining(state.occupancy, int(round(.3/RES))) == 0
+    assert np.count_nonzero(state.occupancy[1:-1, 1:-1] < 0) <= 10
 
 
 def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypatch):

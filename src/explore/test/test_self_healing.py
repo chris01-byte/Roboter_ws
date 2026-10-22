@@ -220,7 +220,7 @@ def test_door_frontier_goal_moves_from_the_post_corner_to_the_door_middle():
     plain = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3)
     room = obstacle_clearance(occupancy, .05)
     wide = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
-                          clearance=room, goal_clearance_m=.35)
+                          clearance=room, goal_clearance_m=.45)
     assert len(plain) == len(wide) == 1                 # kein Cluster fällt weg
     pfosten_y = 1.5 - .4
     assert abs(plain[0].y - pfosten_y) < .1             # bisher: direkt an der Pfostenecke
@@ -228,15 +228,37 @@ def test_door_frontier_goal_moves_from_the_post_corner_to_the_door_middle():
     # 0,68-m-Tür: keine Zelle hat 0,35 m, dann die geräumigste (Mitte).
     narrow = _door_frontier(.68)
     goal = frontier_goals(narrow, .05, to_world, robot, min_size_cells=3,
-                          clearance=obstacle_clearance(narrow, .05), goal_clearance_m=.35)[0]
+                          clearance=obstacle_clearance(narrow, .05), goal_clearance_m=.45)[0]
     assert abs(goal.y - 1.5) <= .1
 
 
-def test_obstacle_clearance_on_a_fine_grid_stays_within_one_block():
+def test_obstacle_clearance_never_overestimates_on_a_fine_grid():
     from scipy.ndimage import distance_transform_edt
     fine = np.repeat(np.repeat(_door_frontier(.8), 5, axis=0), 5, axis=1)   # 1-cm-Karte
     grob = obstacle_clearance(fine, .01)
     genau = distance_transform_edt(fine < 65)*.01
     assert grob.shape == fine.shape
-    assert np.max(np.abs(grob - genau)) <= .05*math.sqrt(2) + .01
+    assert np.all(grob <= genau + 1e-9)
+    assert np.max(genau - grob) <= 2*.05*math.sqrt(2) + .01
+
+
+def test_wall_hugging_frontier_goal_moves_to_a_standable_cell():
+    """Frontier nur entlang einer Wand (Simulation: Ziel 6 cm vor der Wand)."""
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((40, 60), 0, dtype=int)
+    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
+    occupancy[1:3, 20:30] = -1                      # ungesehener Wandfuß unten
+    room = obstacle_clearance(occupancy, .05)
+    plain = frontier_goals(occupancy, .05, to_world, (1.0, 1.0), min_size_cells=3,
+                           clearance=room, goal_clearance_m=.45)[0]
+    shifted = frontier_goals(occupancy, .05, to_world, (1.0, 1.0), min_size_cells=3,
+                             clearance=room, goal_clearance_m=.45, goal_shift_max_m=.5)[0]
+    assert plain.y < .25                            # ohne Verschieben dicht an der Wand
+    assert room[int(shifted.y/.05), int(shifted.x/.05)] >= .45
+    assert math.dist((plain.x, plain.y), (shifted.x, shifted.y)) <= .5
+    # Ein zurückgestelltes verschobenes Ziel wird nicht erneut gewählt.
+    again = frontier_goals(occupancy, .05, to_world, (1.0, 1.0), min_size_cells=3,
+                           clearance=room, goal_clearance_m=.45, goal_shift_max_m=.5,
+                           blacklist=[(shifted.x, shifted.y)], blacklist_radius_m=.2)
+    assert all(math.dist((g.x, g.y), (shifted.x, shifted.y)) > .2 for g in again)
 

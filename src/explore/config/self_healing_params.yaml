@@ -55,11 +55,19 @@ explore_node:
     self_healing_reachability_clearance_m: 0.2
     self_healing_reachability_escape_m: 0.35
     self_healing_reachability_goal_tolerance_m: 0.3   # = Nav2 GridBased.tolerance
-    # Zielzelle je Frontier mit mindestens 0,35 m Abstand zu Belegtem (sonst
-    # die geräumigste). Simulation 22.10.2026: die nächste Zelle lag in einer
-    # Türöffnung genau an der Pfostenecke; der Roboter parkte mit der Mitte
-    # im 0,28-m-Sperrsaum, NavFn plante von dort nicht mehr. 0 = aus.
-    self_healing_goal_clearance_m: 0.35
+    # Zielpunkt nur dort, wo sich der Roboter auf der Stelle drehen kann:
+    # mindestens 0,45 m zu Belegtem (= self_healing_rotation_radius_m; die
+    # Vorderecken überstreichen 0,41 m um die Antriebsachse). Gibt es das im
+    # Cluster nicht (Türöffnung, Verbindung), die geräumigste Zelle.
+    # Simulation 22.10.2026: die nächste Zelle lag in einer Türöffnung an der
+    # Pfostenecke, der Roboter parkte im 0,28-m-Sperrsaum. 0 = aus.
+    self_healing_goal_clearance_m: 0.45
+    # Liegt auch die geräumigste Frontier-Zelle zu nah an einer Wand (Frontier
+    # nur entlang der Wand), rückt das Ziel bis 0,5 m auf eine bekannt freie
+    # Zelle mit diesem Abstand. Simulation 22.10.2026: Ziel 6 cm vor der Wand
+    # einer 0,84-m-Verbindung, die Enddrehung brachte die Ecke an die Wand
+    # (4 von 5 Berührungen). 0 = aus.
+    self_healing_goal_shift_max_m: 0.5
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit
