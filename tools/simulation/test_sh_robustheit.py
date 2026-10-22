@@ -109,3 +109,13 @@ def test_plan_bottleneck_keeps_the_narrowest_plan_and_counts_tight_plans():
 def test_experiment_flag_is_never_an_acceptance():
     source = (HIER/'sh_robustheit.py').read_text(encoding='utf-8')
     assert "ergebnis['qualifikation'] = 'experiment_keine_abnahme'" in source
+
+
+def test_plan_bottleneck_near_the_robot_ignores_far_plan_sections():
+    import numpy as np
+    punkte = np.array([[0., 0.], [.5, 0.], [3., 0.]])
+    stand = sh.plan_engstelle(None, np.array([.4, .25, .05]), punkte, 7., .28, roboter=(0., 0., 0.))
+    assert stand['abstand_m'] == .05                     # ganzer Plan: ferner Abschnitt
+    assert stand['nah_abstand_m'] == .25 and stand['nah_punkt'] == [.5, 0.]
+    assert stand['nah_unter_robot_radius'] == [{'t_s': 7., 'abstand_m': .25, 'punkt': [.5, 0.]}]
+

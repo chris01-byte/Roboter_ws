@@ -104,18 +104,37 @@ def produktparameter(repo):
     return p
 
 
-def plan_engstelle(alt, abstaende, punkte, t_s, robot_radius):
-    """Engste Stelle aller globalen Pläne (Abstand der Planmitte zum Hindernis)."""
-    alt = dict(alt or {'abstand_m': None, 'plaene': 0, 'plaene_unter_robot_radius': 0})
+def plan_engstelle(alt, abstaende, punkte, t_s, robot_radius, roboter=None, nah_m=1.):
+    """Engste Stelle der globalen Pläne (Abstand der Planmitte zum Hindernis).
+
+    Gesamtwert über ganze Pläne (frühe Pläne queren Unbekanntes und dürfen
+    nah an noch ungesehene Wände führen) und Nahwert: nur Planpunkte bis
+    ``nah_m`` um den Roboter, also der Abschnitt, den der Regler gerade fährt.
+    """
+    alt = dict(alt or {'abstand_m': None, 'plaene': 0, 'plaene_unter_robot_radius': 0,
+                       'nah_abstand_m': None, 'nah_unter_robot_radius': []})
     alt['plaene'] += 1
     if len(abstaende) == 0:
         return alt
+    abstaende = np.asarray(abstaende, dtype=float)
     i = int(np.argmin(abstaende))
     wert = float(abstaende[i])
     if wert < robot_radius:
         alt['plaene_unter_robot_radius'] += 1
     if alt['abstand_m'] is None or wert < alt['abstand_m']:
         alt.update(abstand_m=round(wert, 4), punkt=[round(float(v), 3) for v in punkte[i]], t_s=t_s)
+    if roboter is not None:
+        nah = np.hypot(*(np.asarray(punkte, dtype=float) - np.asarray(roboter[:2])).T) <= nah_m
+        if nah.any():
+            j = int(np.argmin(np.where(nah, abstaende, np.inf)))
+            wert = float(abstaende[j])
+            if alt['nah_abstand_m'] is None or wert < alt['nah_abstand_m']:
+                alt.update(nah_abstand_m=round(wert, 4),
+                           nah_punkt=[round(float(v), 3) for v in punkte[j]], nah_t_s=t_s)
+            if wert < robot_radius and len(alt['nah_unter_robot_radius']) < 40:
+                alt['nah_unter_robot_radius'].append(
+                    {'t_s': t_s, 'abstand_m': round(wert, 4),
+                     'punkt': [round(float(v), 3) for v in punkte[j]]})
     return alt
 
 
@@ -331,7 +350,8 @@ def main(argv=None):
             punkte = welt.karte_zu_welt([(q.pose.position.x, q.pose.position.y)
                                          for q in msg.poses]) if msg.poses else np.zeros((0, 2))
             self.plan = plan_engstelle(self.plan, welt.punkte_abstand(punkte) if len(punkte) else [],
-                                       punkte, round(time.monotonic() - start, 2), robot_radius)
+                                       punkte, round(time.monotonic() - start, 2), robot_radius,
+                                       roboter=welt.pose.copy())
 
         def on_explore(self, msg):
             try:
