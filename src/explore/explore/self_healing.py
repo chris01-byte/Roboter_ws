@@ -213,16 +213,27 @@ class FrontierGoal:
     size_cells: int
     distance_m: float
     cost: float
+    # Frontier-Zelle, aus der das (ggf. verschobene) Ziel stammt. Zurückgestellt
+    # wird diese Stelle, nicht der Fahrpunkt: Mehrere Frontiers können auf
+    # denselben geräumigen Punkt rücken.
+    frontier_x: Optional[float] = None
+    frontier_y: Optional[float] = None
+
+    @property
+    def frontier_xy(self) -> Tuple[float, float]:
+        return (self.x if self.frontier_x is None else self.frontier_x,
+                self.y if self.frontier_y is None else self.frontier_y)
 
 
 def _coarse_obstacles(occupancy: np.ndarray, resolution: float, occupied_threshold: int,
-                      work_resolution_m: float):
+                      work_resolution_m: float, unknown_blocks: bool = False):
     """Belegung blockweise auf ``work_resolution_m`` und Abstand dazu (Meter)."""
     height, width = occupancy.shape
     k = max(1, int(round(work_resolution_m/resolution)))
     rows, cols = -(-height//k), -(-width//k)
     occupied = np.zeros((rows*k, cols*k), dtype=bool)
-    occupied[:height, :width] = occupancy >= occupied_threshold
+    occupied[:height, :width] = (occupancy >= occupied_threshold) | (
+        (occupancy < 0) if unknown_blocks else False)
     occupied = occupied.reshape(rows, k, cols, k).any(axis=(1, 3))
     distance = distance_transform_edt(~occupied)*k*resolution if occupied.any() \
         else np.full(occupied.shape, np.inf)
@@ -235,7 +246,8 @@ def _fine(coarse: np.ndarray, k: int, shape: Tuple[int, int]) -> np.ndarray:
 
 def obstacle_clearance(occupancy: np.ndarray, resolution: float, *,
                        occupied_threshold: int = 65,
-                       work_resolution_m: float = .05) -> Optional[np.ndarray]:
+                       work_resolution_m: float = .05,
+                       unknown_blocks: bool = False) -> Optional[np.ndarray]:
     """Abstand jeder Zelle zur nächsten belegten Zelle (Meter, nie zu groß).
 
     Gerechnet auf ``work_resolution_m`` von Blockmitte zu Blockmitte; ein
@@ -243,13 +255,16 @@ def obstacle_clearance(occupancy: np.ndarray, resolution: float, *,
     eine Blockdiagonale, damit der Wert den wahren Abstand nie überschätzt
     (Simulation 22.10.2026: ein überschätzter Abstand legte ein Ziel 0,31 m
     neben einen Pfosten, die Drehung dort streifte ihn). Unterschätzung
-    höchstens etwa zwei Blockdiagonalen.
+    höchstens etwa zwei Blockdiagonalen. Mit ``unknown_blocks`` zählt auch
+    Unbekanntes als Hindernis: Ein Zielpunkt soll seinen Drehraum in bekannt
+    freiem Raum haben (Simulation 22.10.2026: ein noch ungesehener Wandfuß
+    galt als frei, das Ziel lag 6 cm vor der Wand).
     """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
         return None
     _, distance, k = _coarse_obstacles(occupancy, resolution, occupied_threshold,
-                                       work_resolution_m)
+                                       work_resolution_m, unknown_blocks)
     return _fine(np.maximum(distance - k*resolution*math.sqrt(2.), 0.), k, occupancy.shape)
 
 
@@ -377,12 +392,11 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
                                         cols[best], resolution, goal_shift_max_m, cell_to_world)
             if shifted is not None:
                 gx, gy = shifted
-                if any(math.hypot(gx-bx, gy-by) <= blacklist_radius_m for bx, by in blacklist):
-                    continue
         reach = math.hypot(gx-robot_xy[0], gy-robot_xy[1])
         size = int(sizes[cluster])
         goals.append(FrontierGoal(gx, gy, size, reach,
-                                  float(distance[best] - gain_scale*size*resolution)))
+                                  float(distance[best] - gain_scale*size*resolution),
+                                  float(wx[best]), float(wy[best])))
     goals.sort(key=lambda g: (g.cost, g.distance_m))
     return goals[:max_goals]
 

@@ -57,7 +57,9 @@ explore_node:
     self_healing_reachability_goal_tolerance_m: 0.3   # = Nav2 GridBased.tolerance
     # Zielpunkt nur dort, wo sich der Roboter auf der Stelle drehen kann:
     # mindestens 0,45 m zu Belegtem (= self_healing_rotation_radius_m; die
-    # Vorderecken überstreichen 0,41 m um die Antriebsachse). Gibt es das im
+    # Vorderecken überstreichen 0,41 m um die Antriebsachse), gemessen zu
+    # Belegtem UND Unbekanntem (ein ungesehener Wandfuß ist kein freier Raum).
+    # Gibt es das im
     # Cluster nicht (Türöffnung, Verbindung), die geräumigste Zelle.
     # Simulation 22.10.2026: die nächste Zelle lag in einer Türöffnung an der
     # Pfostenecke, der Roboter parkte im 0,28-m-Sperrsaum. 0 = aus.

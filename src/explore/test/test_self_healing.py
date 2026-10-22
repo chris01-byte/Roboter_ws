@@ -256,11 +256,12 @@ def test_wall_hugging_frontier_goal_moves_to_a_standable_cell():
     assert plain.y < .25                            # ohne Verschieben dicht an der Wand
     assert room[int(shifted.y/.05), int(shifted.x/.05)] >= .45
     assert math.dist((plain.x, plain.y), (shifted.x, shifted.y)) <= .5
-    # Ein zurückgestelltes verschobenes Ziel wird nicht erneut gewählt.
+    # Zurückgestellt wird die Frontier-Stelle, nicht der verschobene Fahrpunkt.
+    assert math.dist(shifted.frontier_xy, (plain.x, plain.y)) < 1e-9
     again = frontier_goals(occupancy, .05, to_world, (1.0, 1.0), min_size_cells=3,
                            clearance=room, goal_clearance_m=.45, goal_shift_max_m=.5,
-                           blacklist=[(shifted.x, shifted.y)], blacklist_radius_m=.2)
-    assert all(math.dist((g.x, g.y), (shifted.x, shifted.y)) > .2 for g in again)
+                           blacklist=[shifted.frontier_xy], blacklist_radius_m=.2)
+    assert all(math.dist(g.frontier_xy, shifted.frontier_xy) > .2 for g in again)
 
 
 def test_corner_goal_moves_to_the_most_spacious_nearby_cell_if_none_is_wide_enough():
@@ -275,4 +276,20 @@ def test_corner_goal_moves_to_the_most_spacious_nearby_cell_if_none_is_wide_enou
     frontier_room = room[2, 30:38].max()
     assert room[int(goal.y/.05), int(goal.x/.05)] > frontier_room   # geräumiger als am Wandfuß
     assert goal.y > .25                                       # weg von der Wand
+
+
+def test_unseen_wall_base_does_not_count_as_turning_room():
+    """Simulation (X9, v3): Wandfuß der Verbindung noch unbekannt, Ziel 6 cm davor."""
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((40, 60), -1, dtype=int)
+    occupancy[12:29, :] = 0                          # 0,84-m-Verbindung bekannt frei
+    occupancy[29, :] = 100                           # obere Wand gesehen
+    occupancy[11, :] = -1                            # unterer Wandfuß noch unbekannt
+    alt = obstacle_clearance(occupancy, .05)
+    neu = obstacle_clearance(occupancy, .05, unknown_blocks=True)
+    assert alt[12, 30] > .4                          # bisher: am ungesehenen Fuß "geräumig"
+    assert neu[12, 30] == 0.                         # jetzt: kein Drehraum
+    goal = frontier_goals(occupancy, .05, to_world, (.5, 1.0), min_size_cells=3,
+                          clearance=neu, goal_clearance_m=.45, goal_shift_max_m=.5)[0]
+    assert .2 < goal.y - 12*.05                      # mindestens 0,2 m vom unbekannten Fuß
 

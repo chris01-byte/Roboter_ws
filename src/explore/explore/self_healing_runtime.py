@@ -395,7 +395,8 @@ class SelfHealingRuntime:
                 min_distance_m=self._self_healing_min_goal_distance_m,
                 gain_scale=self._self_healing_gain_scale)
             if self._self_healing_goal_clearance_m > 0:
-                selection.update(clearance=obstacle_clearance(occupancy, info.resolution),
+                selection.update(clearance=obstacle_clearance(occupancy, info.resolution,
+                                                              unknown_blocks=True),
                                  goal_clearance_m=self._self_healing_goal_clearance_m,
                                  goal_shift_max_m=self._self_healing_goal_shift_max_m)
             goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
@@ -466,7 +467,7 @@ class SelfHealingRuntime:
             if action == RETRY:
                 time.sleep(self._self_healing_heal_wait_s)
                 continue
-            blacklist.append((goal.x, goal.y))
+            blacklist.append(goal.frontier_xy)
             status['deferred_goals'] = len(blacklist)
             if action == LOOK_AROUND:
                 self._status_phase = 'self_healing_look_around'
