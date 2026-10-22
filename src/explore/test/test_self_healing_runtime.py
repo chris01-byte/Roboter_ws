@@ -115,7 +115,7 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_min_goal_distance_m=.3, _self_healing_gain_scale=.5,
             _self_healing_completion_checks=3, _self_healing_look_around_rad=math.pi/2,
             _self_healing_reach_clearance_m=.2, _self_healing_reach_escape_m=.35,
-            _self_healing_reach_tolerance_m=.3,
+            _self_healing_reach_tolerance_m=.3, _self_healing_goal_clearance_m=.35,
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,

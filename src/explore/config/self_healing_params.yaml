@@ -55,6 +55,11 @@ explore_node:
     self_healing_reachability_clearance_m: 0.2
     self_healing_reachability_escape_m: 0.35
     self_healing_reachability_goal_tolerance_m: 0.3   # = Nav2 GridBased.tolerance
+    # Zielzelle je Frontier mit mindestens 0,35 m Abstand zu Belegtem (sonst
+    # die geräumigste). Simulation 22.10.2026: die nächste Zelle lag in einer
+    # Türöffnung genau an der Pfostenecke; der Roboter parkte mit der Mitte
+    # im 0,28-m-Sperrsaum, NavFn plante von dort nicht mehr. 0 = aus.
+    self_healing_goal_clearance_m: 0.35
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit

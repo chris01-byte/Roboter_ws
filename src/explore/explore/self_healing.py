@@ -215,6 +215,43 @@ class FrontierGoal:
     cost: float
 
 
+def _coarse_obstacles(occupancy: np.ndarray, resolution: float, occupied_threshold: int,
+                      work_resolution_m: float):
+    """Belegung blockweise auf ``work_resolution_m`` und Abstand dazu (Meter)."""
+    height, width = occupancy.shape
+    k = max(1, int(round(work_resolution_m/resolution)))
+    rows, cols = -(-height//k), -(-width//k)
+    occupied = np.zeros((rows*k, cols*k), dtype=bool)
+    occupied[:height, :width] = occupancy >= occupied_threshold
+    occupied = occupied.reshape(rows, k, cols, k).any(axis=(1, 3))
+    distance = distance_transform_edt(~occupied)*k*resolution if occupied.any() \
+        else np.full(occupied.shape, np.inf)
+    return occupied, distance, k
+
+
+def _fine(coarse: np.ndarray, k: int, shape: Tuple[int, int]) -> np.ndarray:
+    return np.repeat(np.repeat(coarse, k, axis=0), k, axis=1)[:shape[0], :shape[1]]
+
+
+def obstacle_clearance(occupancy: np.ndarray, resolution: float, *,
+                       occupied_threshold: int = 65,
+                       work_resolution_m: float = .05) -> Optional[np.ndarray]:
+    """Abstand jeder Zelle zur nächsten belegten Zelle (Meter, grob).
+
+    Gerechnet auf ``work_resolution_m`` von Blockmitte zu Blockmitte; ein
+    Block gilt als belegt, sobald eine Feinzelle belegt ist. Abweichung
+    höchstens etwa eine Blockdiagonale (bei 5 cm rund 7 cm). Genügt für die
+    Wahl der Zielzelle; Sicherheitsabstände prüfen weiter Nav2 und der
+    Kollisionswächter.
+    """
+    occupancy = np.asarray(occupancy)
+    if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
+        return None
+    _, distance, k = _coarse_obstacles(occupancy, resolution, occupied_threshold,
+                                       work_resolution_m)
+    return _fine(distance, k, occupancy.shape)
+
+
 def reachable_goal_mask(occupancy: np.ndarray, resolution: float,
                         robot_cell: Tuple[int, int], *, clearance_m: float = .2,
                         escape_m: float = .35, goal_tolerance_m: float = .3,
@@ -243,14 +280,10 @@ def reachable_goal_mask(occupancy: np.ndarray, resolution: float,
     row, col = (int(v) for v in robot_cell)
     if not (0 <= row < height and 0 <= col < width):
         return None
-    k = max(1, int(round(work_resolution_m/resolution)))
+    occupied, distance, k = _coarse_obstacles(occupancy, resolution, occupied_threshold,
+                                              work_resolution_m)
     coarse_res = k*resolution
-    rows, cols = -(-height//k), -(-width//k)
-    occupied = np.zeros((rows*k, cols*k), dtype=bool)
-    occupied[:height, :width] = occupancy >= occupied_threshold
-    occupied = occupied.reshape(rows, k, cols, k).any(axis=(1, 3))
-    distance = distance_transform_edt(~occupied)*coarse_res if occupied.any() \
-        else np.full(occupied.shape, np.inf)
+    rows, cols = occupied.shape
     r0, c0 = row//k, col//k
     rr, cc = np.mgrid[0:rows, 0:cols]
     escape = np.hypot(rr-r0, cc-c0)*coarse_res <= escape_m
@@ -262,7 +295,7 @@ def reachable_goal_mask(occupancy: np.ndarray, resolution: float,
     if not reachable.any():
         return np.zeros(occupancy.shape, dtype=bool)
     near = distance_transform_edt(~reachable)*coarse_res <= goal_tolerance_m
-    return np.repeat(np.repeat(near, k, axis=0), k, axis=1)[:height, :width]
+    return _fine(near, k, (height, width))
 
 
 def frontier_goals(occupancy: np.ndarray, resolution: float,
@@ -271,7 +304,9 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
                    blacklist: Sequence[Sequence[float]] = (), blacklist_radius_m: float = .5,
                    min_distance_m: float = .3, gain_scale: float = .5,
                    max_goals: int = 20,
-                   allowed: Optional[np.ndarray] = None) -> List[FrontierGoal]:
+                   allowed: Optional[np.ndarray] = None,
+                   clearance: Optional[np.ndarray] = None,
+                   goal_clearance_m: float = 0.) -> List[FrontierGoal]:
     """Schnelle Frontier-Auswahl ohne Sichtprognose (anytime, Millisekunden).
 
     Frontier = freie Zelle mit unbekanntem 4-Nachbarn; Cluster mit
@@ -280,6 +315,12 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     darf dabei Unbekanntes queren; ein nicht erreichtes Ziel wird über die
     Heilungsleiter zurückgestellt. ``allowed`` (siehe
     ``reachable_goal_mask``) schließt nur eindeutig abgeschnittene Zellen aus.
+
+    Mit ``clearance`` (siehe ``obstacle_clearance``) wählt jeder Cluster die
+    nächste Zelle mit mindestens ``goal_clearance_m`` Abstand zu Belegtem,
+    sonst seine Zelle mit dem größten Abstand. Eine Frontier quer über einer
+    Türöffnung zielt damit auf die Türmitte statt auf die Pfostenecke; kein
+    Cluster fällt dadurch weg.
     """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
@@ -314,6 +355,10 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
         members = np.nonzero((ids == cluster) & ~blocked)[0]
         if not len(members):
             continue
+        if clearance is not None and goal_clearance_m > 0:
+            room = np.asarray(clearance)[rows[members], cols[members]]
+            wide = room >= goal_clearance_m
+            members = members[wide] if wide.any() else members[room >= room.max()]
         best = members[np.argmin(distance[members])]
         size = int(sizes[cluster])
         goals.append(FrontierGoal(float(wx[best]), float(wy[best]), size,

@@ -7,7 +7,8 @@ import pytest
 from explore.self_healing import (
     FATAL, HEAL, WAIT, classify,
     HealingLadder, RETRY, DEFER, LOOK_AROUND, TRACK_BACK, REQUEST_HELP,
-    TrackRecorder, frontier_goals, frontier_cells_remaining, reachable_goal_mask, rotation_clear)
+    TrackRecorder, frontier_goals, frontier_cells_remaining, obstacle_clearance,
+    reachable_goal_mask, rotation_clear)
 
 
 @pytest.mark.parametrize('reason,expected', [
@@ -198,4 +199,44 @@ def test_reachability_on_a_fine_slam_grid_matches_the_coarse_result():
     allowed = reachable_goal_mask(fine, .01, (150, 150))
     assert allowed.shape == fine.shape
     assert allowed[150, 100] and not allowed[150, 400]
+
+
+def _door_frontier(door_m, res=.05):
+    """Bekannter Raum links, Tür bei x = 1,5 m, dahinter unbekannt (Frontier quer zur Tür)."""
+    occupancy = np.full((60, 60), -1, dtype=int)
+    occupancy[:, :30] = 0
+    occupancy[0, :30] = occupancy[-1, :30] = occupancy[:, 0] = 100
+    occupancy[:, 30] = 100
+    half = int(round(door_m/2/res))
+    occupancy[30-half:30+half, 30] = 0                  # Türöffnung, Pfosten bei y = 1,5 ± door/2
+    occupancy[30-half:30+half, 31] = 0                  # erste Zelle hinter der Tür gesehen
+    return occupancy
+
+
+def test_door_frontier_goal_moves_from_the_post_corner_to_the_door_middle():
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    robot = (1.2, 1.0)                                  # schräg vor dem unteren Pfosten
+    occupancy = _door_frontier(.8)
+    plain = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3)
+    room = obstacle_clearance(occupancy, .05)
+    wide = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
+                          clearance=room, goal_clearance_m=.35)
+    assert len(plain) == len(wide) == 1                 # kein Cluster fällt weg
+    pfosten_y = 1.5 - .4
+    assert abs(plain[0].y - pfosten_y) < .1             # bisher: direkt an der Pfostenecke
+    assert abs(wide[0].y - 1.5) <= .1                   # jetzt: Türmitte
+    # 0,68-m-Tür: keine Zelle hat 0,35 m, dann die geräumigste (Mitte).
+    narrow = _door_frontier(.68)
+    goal = frontier_goals(narrow, .05, to_world, robot, min_size_cells=3,
+                          clearance=obstacle_clearance(narrow, .05), goal_clearance_m=.35)[0]
+    assert abs(goal.y - 1.5) <= .1
+
+
+def test_obstacle_clearance_on_a_fine_grid_stays_within_one_block():
+    from scipy.ndimage import distance_transform_edt
+    fine = np.repeat(np.repeat(_door_frontier(.8), 5, axis=0), 5, axis=1)   # 1-cm-Karte
+    grob = obstacle_clearance(fine, .01)
+    genau = distance_transform_edt(fine < 65)*.01
+    assert grob.shape == fine.shape
+    assert np.max(np.abs(grob - genau)) <= .05*math.sqrt(2) + .01
 

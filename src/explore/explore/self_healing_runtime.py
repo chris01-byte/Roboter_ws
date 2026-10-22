@@ -28,7 +28,7 @@ from .action_client import SerializedActionClient as ActionClient
 from .self_healing import (
     FATAL, WAIT, classify, HealingLadder, RETRY, LOOK_AROUND, TRACK_BACK,
     REQUEST_HELP, TrackRecorder, frontier_goals, frontier_cells_remaining,
-    reachable_goal_mask, rotation_clear, unknown_ahead_fraction)
+    obstacle_clearance, reachable_goal_mask, rotation_clear, unknown_ahead_fraction)
 
 
 class SelfHealingRuntime:
@@ -64,6 +64,8 @@ class SelfHealingRuntime:
         self._self_healing_reach_clearance_m = number('self_healing_reachability_clearance_m', .2, 0., .5)
         self._self_healing_reach_escape_m = number('self_healing_reachability_escape_m', .35, 0., 1.)
         self._self_healing_reach_tolerance_m = number('self_healing_reachability_goal_tolerance_m', .3, 0., 1.)
+        # Ziel je Frontier nicht in eine Pfostenecke legen (0 = nächste Zelle wie bisher).
+        self._self_healing_goal_clearance_m = number('self_healing_goal_clearance_m', .35, 0., 1.)
         self._self_healing_look_around_rad = number('self_healing_look_around_rad', math.pi/2, .1, 2*math.pi)
         self._self_healing_rotation_radius_m = number('self_healing_rotation_radius_m', .45, .2, 1.)
         self._self_healing_track_back_max_m = number('self_healing_track_back_max_m', .4, 0., 1.)
@@ -391,6 +393,9 @@ class SelfHealingRuntime:
                 blacklist_radius_m=self._self_healing_blacklist_radius_m,
                 min_distance_m=self._self_healing_min_goal_distance_m,
                 gain_scale=self._self_healing_gain_scale)
+            if self._self_healing_goal_clearance_m > 0:
+                selection.update(clearance=obstacle_clearance(occupancy, info.resolution),
+                                 goal_clearance_m=self._self_healing_goal_clearance_m)
             goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
                                    allowed=allowed, **selection)
             if allowed is not None:
