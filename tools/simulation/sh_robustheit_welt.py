@@ -16,6 +16,7 @@ Die Welt veröffentlicht nichts und liefert dem Produkt keine Karte.
 import math
 
 import numpy as np
+from scipy.ndimage import label
 
 from ap06_world import World, chassis_clearance, rectangle
 
@@ -112,6 +113,35 @@ class RobustheitsWelt(World):
         p = np.asarray(punkte, dtype=float).reshape(-1, 2)
         c, s = math.cos(self.start[2]), math.sin(self.start[2])
         return p@np.array([[c, s], [-s, c]]) + self.start[:2]
+
+    # --- Bewertung (Manifest v2) ---------------------------------------------
+    def abdeckung_erreichbar(self, occupancy, resolution, origin):
+        """Anteil der vom Start aus erreichbaren Fläche, den die SLAM-Karte frei kennt.
+
+        Erreichbar heißt: freie Zelle der Welt, über freie Zellen mit dem Start
+        verbunden (Hindernisse einschließlich geschlossener Türen trennen).
+        Fläche hinter einer geschlossenen Tür zählt nicht mit.
+        """
+        a = np.asarray(occupancy)
+        ys, xs = np.mgrid[-1.4:1.4:resolution, -2.8:2.8:resolution]
+        cx, cy = xs+resolution/2, ys+resolution/2
+        frei = (cx < -.6) | (cx > .6) | (np.abs(cy) < .42)
+        for o in list(self.obstacles) + [b for b, _ in self.niedrig]:
+            lo, hi = o.min(axis=0), o.max(axis=0)
+            frei &= ~((cx >= lo[0]) & (cx <= hi[0]) & (cy >= lo[1]) & (cy <= hi[1]))
+        teile, _ = label(frei)
+        r = int(np.clip(round((self.start[1]+1.4)/resolution-.5), 0, frei.shape[0]-1))
+        c = int(np.clip(round((self.start[0]+2.8)/resolution-.5), 0, frei.shape[1]-1))
+        if teile[r, c] == 0:
+            return None
+        erreichbar = teile == teile[r, c]
+        punkte = np.stack((cx[erreichbar], cy[erreichbar]), axis=1)
+        idx = np.floor((self.local(punkte)-np.asarray(origin))/resolution).astype(int)
+        im = (idx[:, 0] >= 0) & (idx[:, 0] < a.shape[1]) & (idx[:, 1] >= 0) & (idx[:, 1] < a.shape[0])
+        gesehen = np.zeros(len(punkte), dtype=bool)
+        gesehen[im] = a[idx[im, 1], idx[im, 0]] == 0
+        return {'erreichbar_zellen': int(len(punkte)), 'erreichbar_beobachtet': int(gesehen.sum()),
+                'erreichbar_anteil': float(gesehen.mean())}
 
     # --- Sensoren ---------------------------------------------------------
     def cone_returns(self, mount, directions, maximum=4.):

@@ -14,8 +14,9 @@ VL53-Knotens (`ap06_sensors.vl53_producer`). Kein Wahrheits-TF, keine
 Wahrheitskarte, kein manuell gesendetes Navigationsziel. Gestartet wird die
 Mission wie aus der App: `{"type":"explore"}` an den Missionsmanager.
 
-Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien.json`
-ausgelöst. Bewertet wird nach dem dort vorab festgelegten Abnahmeteil.
+Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien_v2.json`
+ausgelöst (v1 = gleiche Welt und Störungen, Zielzähler statt Abdeckung).
+Bewertet wird nach dem dort vorab festgelegten Abnahmeteil.
 
 `--experiment` mischt eine zusätzliche Parameterdatei über das Produktprofil.
 Solche Läufe sind Messungen für eine Entscheidung, keine Abnahme; das Ergebnis
@@ -178,22 +179,35 @@ def ausloeser_erfuellt(ausloeser, ziele, pose, geschwindigkeit, seit_start_s):
     return True
 
 
-def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt):
-    """Vorab festgelegte Kriterien; liefert (bestanden, Einzelkriterien)."""
+def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt, abdeckung=None):
+    """Vorab festgelegte Kriterien; liefert (bestanden, Einzelkriterien).
+
+    Manifest v1: Zielzähler. Manifest v2 (``min_abdeckung_erreichbar``,
+    Entscheidung D): Kartenabdeckung der erreichbaren Fläche oder sauberes
+    Teilende statt Zielzähler.
+    """
     ende = (zusammenfassung.get('endzustand') or {})
     ziele = ende.get('goals_reached') or 0
     erwartet = szenario.get('erwartet') or {}
     k = {
         'mission_beendet': zusammenfassung.get('kriterien_automatisch', {}).get('fahrt_beendet', False),
         'sauberes_ende': ende.get('outcome') in abnahme['erlaubte_enden'],
-        'mindestens_ziele': ziele >= abnahme['min_ziele'],
-        'keine_kollision': not kollision,
-        'kein_prozessabsturz': not abgestuerzt,
     }
+    v2 = 'min_abdeckung_erreichbar' in abnahme
+    if v2:
+        anteil = (abdeckung or {}).get('erreichbar_anteil')
+        k['abdeckung_oder_teilende'] = bool(
+            (anteil is not None and anteil >= abnahme['min_abdeckung_erreichbar'])
+            or (abnahme.get('teilende_genuegt') and ende.get('outcome') == 'usable_partial'))
+    else:
+        k['mindestens_ziele'] = ziele >= abnahme['min_ziele']
+    k['keine_kollision'] = not kollision
+    k['kein_prozessabsturz'] = not abgestuerzt
     if szenario.get('stoerung'):
         k['stoerung_ausgeloest'] = stoerung.get('ausgeloest_s') is not None
-        mindest = erwartet.get('min_ziele_nach_stoerung', abnahme['min_ziele_nach_stoerung'])
-        k['ziele_nach_stoerung'] = (ziele - (stoerung.get('ziele_bei_ausloesung') or 0)) >= mindest
+        if not v2:
+            mindest = erwartet.get('min_ziele_nach_stoerung', abnahme['min_ziele_nach_stoerung'])
+            k['ziele_nach_stoerung'] = (ziele - (stoerung.get('ziele_bei_ausloesung') or 0)) >= mindest
         teil = erwartet.get('warten_auf_enthaelt')
         if teil:
             k['heilung_beobachtet'] = any(
@@ -210,7 +224,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--szenario', required=True)
     parser.add_argument('--ausgabe', type=Path, required=True)
-    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien.json')
+    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien_v2.json')
     parser.add_argument('--domain', type=int, default=231)
     parser.add_argument('--experiment', type=Path, default=None,
                         help='zusätzliche Parameterdatei über dem Produktprofil (keine Abnahme)')
@@ -591,6 +605,8 @@ def main(argv=None):
             belegung = np.asarray(k.data, dtype=np.int16).reshape(k.info.height, k.info.width)
             ergebnis['karte'] = welt.map_oracle(
                 belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
+            ergebnis['abdeckung_erreichbar'] = welt.abdeckung_erreichbar(
+                belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
     except Exception as fehler:  # noqa: BLE001 - als Befund festhalten
         ergebnis['fehler'] = f'{type(fehler).__name__}: {fehler}'
         abgestuerzt = [n for n, proc in prozesse if proc.poll() is not None]
@@ -640,7 +656,7 @@ def main(argv=None):
     else:
         ergebnis['bestanden'], ergebnis['kriterien'] = bewerte(
             manifest['abnahme'], szenario, zusammenfassung, stoerung,
-            welt.collision, ergebnis['abgestuerzte_prozesse'])
+            welt.collision, ergebnis['abgestuerzte_prozesse'], ergebnis.get('abdeckung_erreichbar'))
     (out/'ergebnis.json').write_text(json.dumps(ergebnis, ensure_ascii=False, indent=2, default=str))
     kurz = {k: ergebnis.get(k) for k in ('bestanden', 'kriterien', 'stoerung', 'kollision',
                                          'minimaler_abstand_m', 'fehler')}

@@ -132,3 +132,31 @@ def test_local_costmap_snapshot_counts_cells_over_the_obstacle():
     assert sh.kostenkarte_ueber(karte, [(5., 5.), (6., 6.)]) == {'zellen': 0, 'im_fenster': False}
     assert sh.kostenkarte_ueber(None, ecken) is None
 
+
+def test_manifest_v2_replaces_goal_counts_by_reachable_coverage():
+    v1 = json.loads((HIER/'sh_robustheit_szenarien.json').read_text(encoding='utf-8'))
+    v2 = json.loads((HIER/'sh_robustheit_szenarien_v2.json').read_text(encoding='utf-8'))
+    # Welt, Sensoren, Budgets und Störungen unverändert; nur die Abnahme ist neu.
+    for teil in ('welt', 'sensor', 'budgets'):
+        assert v2[teil] == v1[teil]
+    assert [s['stoerung'] for s in v2['szenarien']] == [s['stoerung'] for s in v1['szenarien']]
+    a = v2['abnahme']
+    assert 'min_ziele' not in a and a['min_abdeckung_erreichbar'] == .95
+    luecke = next(s for s in v2['szenarien'] if s['id'] == 'sensorluecke')
+    stoerung = {'ausgeloest_s': 30., 'ziele_bei_ausloesung': 1}
+    # Vollständige Karte mit nur einem gezählten Ziel besteht jetzt.
+    zus = _zusammenfassung('exploration_complete', 1, 'vl53_status_missing_stale_or_invalid')
+    ok, k = sh.bewerte(a, luecke, zus, stoerung, False, [], {'erreichbar_anteil': .98})
+    assert ok and 'mindestens_ziele' not in k and 'ziele_nach_stoerung' not in k
+    ok, k = sh.bewerte(a, luecke, zus, stoerung, False, [], {'erreichbar_anteil': .80})
+    assert not ok and not k['abdeckung_oder_teilende']
+    # Sauberes Teilende genügt (Entscheidung D), Kontakt und Hilfe weiterhin nicht.
+    tuer = next(s for s in v2['szenarien'] if s['id'] == 'gesperrte_tuer')
+    ok, _ = sh.bewerte(a, tuer, _zusammenfassung('usable_partial', 0), stoerung, False, [], None)
+    assert ok
+    ok, k = sh.bewerte(a, tuer, _zusammenfassung('usable_partial', 2), stoerung, True, [], None)
+    assert not ok and not k['keine_kollision']
+    ok, k = sh.bewerte(a, luecke, _zusammenfassung('blocked_help_required', 3, 'vl53_x'),
+                       stoerung, False, [], {'erreichbar_anteil': 1.})
+    assert not ok and not k['sauberes_ende']
+

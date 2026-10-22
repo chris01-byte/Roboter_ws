@@ -88,3 +88,19 @@ def test_closest_point_records_time_and_centre_distance():
     assert w.engste_stelle['t_s'] == 12.5
     assert w.engste_stelle['mitte_abstand_m'] == pytest.approx(w.punkt_abstand(w.pose[:2]), abs=1e-4)
     assert w.mitte_min['abstand_m'] == w.engste_stelle['mitte_abstand_m']
+
+
+def test_reachable_coverage_excludes_the_room_behind_a_closed_door():
+    w = welt.RobustheitsWelt(.8, [-1.9, -.45, 0.])
+    res = .05
+    # Ideale Karte im Kartenrahmen: alles frei, was die Welt frei kennt.
+    # Welt x -2,8..2,8 / y -1,4..1,4 liegt im Kartenrahmen bei x -0,9..4,7 / y -0,95..1,85.
+    ys, xs = np.mgrid[-1.2:2.0:res, -1.0:5.0:res]
+    karte = np.zeros(xs.shape, dtype=int)
+    voll = w.abdeckung_erreichbar(karte, res, (-1.0, -1.2))
+    assert voll['erreichbar_anteil'] == pytest.approx(1.)
+    w.schliesse_tuer('rechts')
+    zu = w.abdeckung_erreichbar(karte, res, (-1.0, -1.2))
+    assert zu['erreichbar_zellen'] < .6*voll['erreichbar_zellen']   # rechter Raum fällt weg
+    karte[:, :] = -1                                                  # nichts gesehen
+    assert w.abdeckung_erreichbar(karte, res, (-1.0, -1.2))['erreichbar_anteil'] == 0.
