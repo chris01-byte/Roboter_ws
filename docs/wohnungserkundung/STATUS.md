@@ -1,10 +1,11 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 22.10.2026:** Hauptlinie `self_healing` (Nutzerentscheidung
-15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden; SH-2 (motorlos) offen;
-reale Laborfahrt offen. Abnahmestufe 2 (geschlossene Simulation) **nicht
-bestanden**; zwei Explorer-Fehler behoben, drei Befunde warten auf
-Entscheidungen. Details und der eine nächste Schritt im Abschnitt 22.10.2026.
+**Aktueller Stand 22.10.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden;
+SH-2 (motorlos) offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
+Simulation, Manifest v4) **nicht bestanden**; Entscheidungen A–D umgesetzt,
+zwei neue Befunde (SLAM-Ringschluss, niedrige Box) warten auf Entscheidungen.
+Details und der eine nächste Schritt im obersten Abschnitt 22.10.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -23,6 +24,61 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 22.10.2026 (abends) – Stufe 2 nach Entscheidungen A–D: SLAM-Schwellen und niedrige Box offen
+
+Gleiche Istbasis wie der folgende Abschnitt; nur Cloud, keine Gerätewirkung.
+[Beleg](evidence/sh-stufe2-simulation-20261022-abends.json).
+
+**Umgesetzt nach Entscheidungen des Projektinhabers:**
+- A+B (`2f46799`, nur `self_healing`): LiDAR markiert Seitenwände in der
+  lokalen Kostenkarte (räumt nicht), VL53 räumen erst ab 0,45 m. Prüfskript
+  prüft das live; SH-2 leert vor jeder VL53-Messung die lokale Karte.
+- D, v3, C: Manifest v2 (Abdeckung statt Zielzähler, `f4ba6d0`), v3 (ohne
+  Teilende-Ausnahme, Kartenfehler ≤ 0,10 m, `9243484`), v4 (v3 in einer Welt
+  mit vier festen, unsymmetrischen Möbeln, `63dbcbd`). v2 ließ einen Lauf mit
+  3,3 m verbogener Karte bestehen; deshalb v3.
+- Explorer v5 (`99866ab`, `7c5aaa6`): Drehraum eines Ziels nur in bekannt
+  freiem Raum; zurückgestellt wird die Frontier-Stelle; erreichtes Ziel ohne
+  Kartengewinn wird nicht erneut angefahren (vorher 3439 Mal dasselbe Ziel).
+  Paket `explore` 2246 Tests grün.
+
+**Ergebnisse (je Lauf; RS = falscher Ringschluss):**
+
+| Satz | bestanden | Befund |
+|---|---|---|
+| v3, symmetrisch, Explorer v4, X9 | 3/6 | 2× RS, 1× Wandkontakt (Ziel am ungesehenen Wandfuß) |
+| Experiment C, unsymmetrisch, Explorer v4 | 1/5 | 0× RS; 3× Kontakt mit frei stehendem Kübel beim Drehen, 1× Endlosschleife |
+| **v4 (Abnahme), Explorer v5, X9** | **1/6** | **5× RS** (Karte 1,6–3,3 m verbogen); 1× Box-Kontakt; keine Wandkontakte |
+| X7 strengere Ringschluss-Schwellen, v4 | 3/4 | **0× RS**; 1× Box-Kontakt |
+| X6 ohne Ringschluss, v4 | 2/3 | 1× Box-Kontakt |
+| X10 Recovery behält 2 × 2 m um den Roboter + X6 | 0/3 | 3× Box-Kontakt |
+
+**Folgerungen:**
+1. Falsche Ringschlüsse sind kein reines Artefakt der symmetrischen Welt:
+   Mit Explorer v5 traten sie auch in der unsymmetrischen Welt in 5 von 6
+   Läufen auf, mit den Schwellen aus X7 in 0 von 4 (`loop_match_minimum_
+   chain_size` 20, `…response_coarse` 0,55, `…response_fine` 0,65,
+   `…variance_coarse` 2,0). Das ist eine SLAM-Änderung; sie wirkt heute in
+   allen Betriebsarten, weil beide SLAM-Startdateien die Parameterdatei fest
+   laden. Entscheidung offen.
+2. Niedrige Box: Der Nav2-Baum leerte die lokale Karte bei jeder leichten
+   Recovery vollständig (15 Mal zwischen Auftauchen und Kontakt); sein
+   Kommentar nahm an, VL53/OAK markierten im nächsten Frame neu. X10 behält
+   den Nahbereich, die Box bleibt bekannt (24–30 Zellen statt 0), berührt
+   wurde sie trotzdem (3/3): Von einer niedrigen Box sehen die VL53 nur die
+   Vorderkante (3–7 belegte Zellen); beim Drehen trifft die Flanke den nie
+   gesehenen Teil. X10 wird nicht übernommen. Die OAK sähe die ganze Box von
+   oben, ist beim Kartieren aber seit 16.08.2026 bewusst aus (ihr Bodenfilter
+   markierte freie Fläche als unpassierbar). Entscheidung offen.
+3. Ohne verbogene Karte hält Explorer v5 die Kontur von Wänden fern; die
+   verbleibenden Kontakte betreffen die niedrige Box.
+4. Kartenfehler ohne Ringschluss lagen bei 2–15 cm; die 0,10-m-Grenze aus v3
+   fing zwei X10-Läufe (10,8 und 15,3 cm) zusätzlich ab.
+
+**Nächster Schritt:** unverändert SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)),
+jetzt mindestens `7c5aaa6` und 161 gezielte Tests. Danach Entscheidungen zu
+SLAM-Schwellen und niedriger Box, dann SH-3.
 
 ## 22.10.2026 – Abnahmestufe 2 (Robustheitssimulation): nicht bestanden, Zielwahl korrigiert
 

@@ -28,7 +28,9 @@ Seitenwände und Türpfosten nicht, und niedrige Gegenstände wurden unter den
 VL53-Strahlen wieder weggeräumt (Robustheitssimulation). SH-2 prüft motorlos,
 dass das live ankommt (Schritt 7). Weil der LiDAR jetzt auch Beine vor dem
 Roboter einträgt und nicht mehr wegräumt, leert Schritt 8 vor jeder Messung
-die lokale Kostenkarte. Erwartet werden 159 gezielte Tests.
+die lokale Kostenkarte. Seit `7c5aaa6` (Explorer: Drehraum nur in bekannt
+freiem Raum, keine Endlosschleife bei Zielen ohne Kartengewinn) werden 161
+gezielte Tests erwartet.
 
 SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
 SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
@@ -43,8 +45,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
 | WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `2f46799`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 159 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `7c5aaa6`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 161 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
 | Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
 | Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
 | Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
@@ -81,7 +83,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor 2f46799 HEAD && echo "2f46799 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor 7c5aaa6 HEAD && echo "7c5aaa6 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
 ```
 
@@ -143,7 +145,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `159 passed` (Cloud, Stand `2f46799`). Fehlschläge berichten, nicht beheben.
+Erwartung: `161 passed` (Cloud, Stand `7c5aaa6`). Fehlschläge berichten, nicht beheben.
 
 ### Schritt 6 – App-Stack motorlos im HWT-Weg starten
 
