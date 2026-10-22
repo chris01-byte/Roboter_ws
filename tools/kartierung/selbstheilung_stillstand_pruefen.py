@@ -23,8 +23,11 @@ Geprueft wird:
      gesetzt (Planung durch Unbekanntes, -0,05 m/s, simulate_ahead_time).
   C  Verdrahtung: BackUp geht ueber cmd_vel_nav_raw (Fahrtor -> Smoother
      -> collision_monitor), RPP hoert auf das Geschwindigkeitslimit.
+  C  Odometrie (mit --odometrie): HWT601-Fusion oder Standard, genau ein
+     /odom-Publisher (EKF bzw. base_hardware).
   D  Stillstand: base_hardware im Dry-Run ohne RS485-Schreibpfad, auf
-     /cmd_vel kein Fahrbefehl ungleich null.
+     /cmd_vel kein Fahrbefehl ungleich null. Mit --aktiv (vor einer
+     beauftragten Laborfahrt): Basis scharf, aber noch kein Fahrbefehl.
   E  (optional, --vl53-s) Niedrige Hindernisse: wie hoch ueber dem Boden
      liegen die VL53-Treffer, und welche davon verwerfen Kostenkarten und
      collision_monitor wegen min_obstacle_height/min_height?
@@ -52,6 +55,13 @@ BASE_LINK_UEBER_BODEN_M = 0.09
 SELF_HEALING_BT = 'navigate_to_pose_self_healing.xml'
 STEUERPFAD_ROH = '/cmd_vel_nav_raw'
 RECOVERY_GESPERRT = '/cmd_vel_recovery_blocked'
+
+# Erwarteter Odometriepfad: HWT601-Gier + Encoder im EKF (slam_lidar_hwt601)
+# oder reine Encoder-Odometrie der Basis (slam_lidar).
+ODOMETRIE = {
+    'hwt601': {'require_hwt601_fusion': True, 'odom_publisher': '/hwt601_mapping_ekf'},
+    'standard': {'require_hwt601_fusion': False, 'odom_publisher': '/base_hardware'},
+}
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +379,7 @@ def _share(package, *parts):
 def pruefe_profile(leser, ergebnis, explore_profil, overlays):
     explore_expected = flatten_ros_params(_load_yaml(explore_profil)).get('/explore_node', {})
     live = leser.get_params('/explore_node', list(explore_expected) + [
-        'behavior_tree', 'self_healing_speed_limit_topic'])
+        'behavior_tree', 'self_healing_speed_limit_topic', 'require_hwt601_fusion'])
     if live is None:
         ergebnis.add('A Explorer', '/explore_node erreichbar', False,
                      'keine Parameterantwort; Stack mit self_healing:=true starten')
@@ -435,10 +445,31 @@ def pruefe_verdrahtung(leser, ergebnis, explore_live):
         ergebnis.add('C Verdrahtung', 'weitere /cmd_vel-Publisher', None, ', '.join(andere))
 
 
-def pruefe_stillstand(leser, ergebnis, beobachten_s):
+def pruefe_odometrie(leser, ergebnis, explore_live, erwartet):
+    fusion = (explore_live or {}).get('require_hwt601_fusion', NOT_SET)
+    publishers = leser.publishers('/odom')
+    detail = f'/odom: {", ".join(sorted(publishers)) or "kein Publisher"}'
+    if erwartet is None:
+        ergebnis.add('C Odometrie', 'Odometriepfad', None,
+                     f'require_hwt601_fusion={fusion!r}, {detail}')
+        return
+    soll = ODOMETRIE[erwartet]
+    ergebnis.add('C Odometrie', f'Explorer erwartet {erwartet}',
+                 fusion is soll['require_hwt601_fusion'],
+                 f'require_hwt601_fusion={fusion!r}')
+    ergebnis.add('C Odometrie', f'genau ein /odom-Publisher ({soll["odom_publisher"]})',
+                 publishers == {soll['odom_publisher']}, detail)
+
+
+def pruefe_stillstand(leser, ergebnis, beobachten_s, aktiv=False):
     base = leser.get_params('/base_hardware', ['dry_run', 'allow_rs485'])
     if base is None:
         ergebnis.add('D Stillstand', '/base_hardware erreichbar', False, 'keine Parameterantwort')
+    elif aktiv:
+        # Vor einer beauftragten Laborfahrt: Basis scharf wie bestellt.
+        ergebnis.add('D Stillstand', 'base_hardware scharf (aktiver Auftrag)',
+                     base.get('dry_run') is False and base.get('allow_rs485') is True,
+                     f'dry_run={base.get("dry_run")!r}, allow_rs485={base.get("allow_rs485")!r}')
     else:
         ergebnis.add('D Stillstand', 'base_hardware im Dry-Run', base.get('dry_run') is True,
                      f'dry_run={base.get("dry_run")!r}')
@@ -582,6 +613,11 @@ def main(argv=None):
     parser.add_argument('--base-link-ueber-boden', type=float, default=BASE_LINK_UEBER_BODEN_M)
     parser.add_argument('--notiz', default='', help='z. B. "Klotz 5 cm, 0,35 m mittig"')
     parser.add_argument('--json', help='Ergebnis zusaetzlich als JSON (lokal, nicht ins Repo)')
+    parser.add_argument('--odometrie', choices=sorted(ODOMETRIE),
+                        help='Erwarteten Odometriepfad pruefen (sonst nur Hinweis)')
+    parser.add_argument('--aktiv', action='store_true',
+                        help='Vor einer beauftragten Laborfahrt: Basis scharf erwartet, '
+                             'aber noch kein Fahrbefehl')
     args = parser.parse_args(argv)
 
     explore_profil = args.explore_profil or _share('explore', 'config', 'self_healing_params.yaml')
@@ -603,7 +639,8 @@ def main(argv=None):
             ergebnis.drucken()
             return 2
         pruefe_verdrahtung(leser, ergebnis, explore_live)
-        pruefe_stillstand(leser, ergebnis, args.beobachten_s)
+        pruefe_odometrie(leser, ergebnis, explore_live, args.odometrie)
+        pruefe_stillstand(leser, ergebnis, args.beobachten_s, aktiv=args.aktiv)
         if args.vl53_s > 0:
             vl53 = pruefe_vl53(leser, ergebnis, args.vl53_s, args.base_link_ueber_boden)
     finally:

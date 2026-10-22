@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 from selbstheilung_stillstand_pruefen import (
-    NOT_SET, Ergebnis, compare_params, flatten_ros_params, height_report,
+    NOT_SET, ODOMETRIE, Ergebnis, compare_params, flatten_ros_params, height_report,
     lethal_cells_in_window, near_field_filters, normalize_topic, row_elevations,
     transform_points, values_match)
 
@@ -125,6 +125,22 @@ def test_result_fails_only_on_false_checks():
     result.add('X', 'kaputt', False)
     assert not result.bestanden
     assert normalize_topic('speed_limit') == '/speed_limit'
+
+
+def test_expected_odometry_owners_match_the_launch_files():
+    hwt = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py').read_text(
+        encoding='utf-8')
+    standard = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar.launch.py').read_text(
+        encoding='utf-8')
+    # HWT601 path: the EKF owns /odom, the base only feeds the fusion input.
+    assert "name='hwt601_mapping_ekf'" in hwt
+    assert "remappings=[('odometry/filtered', '/odom')]" in hwt
+    assert "'odom_topic': '/fusion/hwt601/wheel_odom_raw'" in hwt
+    assert ODOMETRIE['hwt601'] == {'require_hwt601_fusion': True,
+                                   'odom_publisher': '/hwt601_mapping_ekf'}
+    # Standard path: base_hardware publishes /odom itself.
+    assert "name='base_hardware'" in standard and "/fusion/hwt601" not in standard
+    assert ODOMETRIE['standard']['odom_publisher'] == '/base_hardware'
 
 
 def test_checker_stays_read_only():
