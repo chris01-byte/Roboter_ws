@@ -19,7 +19,7 @@ import math
 from typing import Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
-from scipy.ndimage import label
+from scipy.ndimage import distance_transform_edt, label
 
 FATAL = 'fatal'
 HELP = 'help'
@@ -215,19 +215,71 @@ class FrontierGoal:
     cost: float
 
 
+def reachable_goal_mask(occupancy: np.ndarray, resolution: float,
+                        robot_cell: Tuple[int, int], *, clearance_m: float = .2,
+                        escape_m: float = .35, goal_tolerance_m: float = .3,
+                        occupied_threshold: int = 65,
+                        work_resolution_m: float = .05) -> Optional[np.ndarray]:
+    """Zellen, die als Ziel vom Roboter aus erreichbar sein können.
+
+    Grob und bewusst großzügig: Unbekanntes ist passierbar (wie Nav2
+    ``allow_unknown``); gesperrt ist nur, was näher als ``clearance_m`` an
+    einer belegten Zelle liegt. ``clearance_m`` liegt unter dem Nav2-Radius,
+    damit nur eindeutig abgeschnittene Bereiche herausfallen, etwa hinter
+    einer geschlossenen Tür (Lücke unter etwa ``2*clearance_m``).
+
+    Im Umkreis ``escape_m`` um den Roboter zählt nur Belegtes selbst. Eine
+    Startpose dicht an einem Pfosten gilt damit nicht als „alles
+    unerreichbar“; dann heilt weiter die Leiter. Ein Ziel ist zulässig, wenn
+    eine erreichbare Zelle höchstens ``goal_tolerance_m`` entfernt liegt
+    (Nav2-Plantoleranz). Gerechnet wird auf ``work_resolution_m`` (Zelle
+    belegt, wenn eine Feinzelle belegt ist). ``None``: Roboter außerhalb der
+    Karte, keine Aussage möglich.
+    """
+    occupancy = np.asarray(occupancy)
+    if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
+        return None
+    height, width = occupancy.shape
+    row, col = (int(v) for v in robot_cell)
+    if not (0 <= row < height and 0 <= col < width):
+        return None
+    k = max(1, int(round(work_resolution_m/resolution)))
+    coarse_res = k*resolution
+    rows, cols = -(-height//k), -(-width//k)
+    occupied = np.zeros((rows*k, cols*k), dtype=bool)
+    occupied[:height, :width] = occupancy >= occupied_threshold
+    occupied = occupied.reshape(rows, k, cols, k).any(axis=(1, 3))
+    distance = distance_transform_edt(~occupied)*coarse_res if occupied.any() \
+        else np.full(occupied.shape, np.inf)
+    r0, c0 = row//k, col//k
+    rr, cc = np.mgrid[0:rows, 0:cols]
+    escape = np.hypot(rr-r0, cc-c0)*coarse_res <= escape_m
+    passable = ~occupied & ((distance >= clearance_m) | escape)
+    labels, _ = label(passable, structure=np.ones((3, 3), dtype=bool))
+    seeds = np.unique(labels[escape & passable])
+    seeds = seeds[seeds > 0]
+    reachable = np.isin(labels, seeds)
+    if not reachable.any():
+        return np.zeros(occupancy.shape, dtype=bool)
+    near = distance_transform_edt(~reachable)*coarse_res <= goal_tolerance_m
+    return np.repeat(np.repeat(near, k, axis=0), k, axis=1)[:height, :width]
+
+
 def frontier_goals(occupancy: np.ndarray, resolution: float,
                    cell_to_world: Callable[[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]],
                    robot_xy: Sequence[float], *, min_size_cells: int = 5,
                    blacklist: Sequence[Sequence[float]] = (), blacklist_radius_m: float = .5,
                    min_distance_m: float = .3, gain_scale: float = .5,
-                   max_goals: int = 20) -> List[FrontierGoal]:
+                   max_goals: int = 20,
+                   allowed: Optional[np.ndarray] = None) -> List[FrontierGoal]:
     """Schnelle Frontier-Auswahl ohne Sichtprognose (anytime, Millisekunden).
 
     Frontier = freie Zelle mit unbekanntem 4-Nachbarn; Cluster mit
     8-Nachbarschaft. Ziel je Cluster ist seine dem Roboter nächste Zelle.
     Kosten = Entfernung - gain_scale * Clusterlänge. Nav2 plant den Weg und
-    darf dabei Unbekanntes queren; ein unerreichbares Ziel wird über die
-    Heilungsleiter zurückgestellt, nicht durch eine Vorab-Prüfung verboten.
+    darf dabei Unbekanntes queren; ein nicht erreichtes Ziel wird über die
+    Heilungsleiter zurückgestellt. ``allowed`` (siehe
+    ``reachable_goal_mask``) schließt nur eindeutig abgeschnittene Zellen aus.
     """
     occupancy = np.asarray(occupancy)
     if occupancy.ndim != 2 or occupancy.size == 0 or not resolution > 0:
@@ -253,6 +305,8 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     for bx, by in blacklist:
         blocked |= np.hypot(wx-bx, wy-by) <= blacklist_radius_m
     blocked |= distance < min_distance_m
+    if allowed is not None:
+        blocked |= ~np.asarray(allowed, dtype=bool)[rows, cols]
     goals = []
     for cluster in range(1, count+1):
         if sizes[cluster] < min_size_cells:

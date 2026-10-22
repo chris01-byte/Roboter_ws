@@ -47,6 +47,14 @@ explore_node:
     self_healing_min_goal_distance_m: 0.3
     self_healing_gain_scale: 0.5
     self_healing_completion_checks: 3
+    # Frontiers nur vorab ausschließen, wenn sie in der eigenen SLAM-Karte
+    # eindeutig abgeschnitten sind (Lücke unter etwa 2 x 0,20 m, z. B.
+    # geschlossene Tür). 0,20 m liegt unter dem Nav2-Radius 0,28 m; alles
+    # andere entscheidet weiter Nav2 mit der Heilungsleiter (Konzept §5 H2:
+    # unerreichbar markieren ist kein Missionsende). 0 = aus.
+    self_healing_reachability_clearance_m: 0.2
+    self_healing_reachability_escape_m: 0.35
+    self_healing_reachability_goal_tolerance_m: 0.3   # = Nav2 GridBased.tolerance
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit

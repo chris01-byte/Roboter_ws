@@ -114,6 +114,8 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_min_gain_m2=.05, _self_healing_blacklist_radius_m=.5,
             _self_healing_min_goal_distance_m=.3, _self_healing_gain_scale=.5,
             _self_healing_completion_checks=3, _self_healing_look_around_rad=math.pi/2,
+            _self_healing_reach_clearance_m=.2, _self_healing_reach_escape_m=.35,
+            _self_healing_reach_tolerance_m=.3,
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
@@ -208,6 +210,40 @@ def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypat
     assert .1 <= track[1] <= .4
     actions = [h['action'] for h in n._self_healing_status['ladder']['history']]
     assert actions[0] == 'retry' and actions[-1] == 'help'
+
+
+def test_frontiers_behind_a_closed_door_end_with_a_usable_partial_map(monkeypatch):
+    """Simulationsbefund gesperrte_tuer (22.10.2026): früher Hilfe nach 8 Planabsagen."""
+    def nav2(x, y, stop, record):
+        return 'aborted' if x > 1.5 else None   # Nav2 plant nicht durch die Wand
+    n, state, goal, terminal = parent(monkeypatch, navigate=nav2)
+    occupancy = state.occupancy
+    occupancy[1:-1, 1:30] = 0                   # linker Teil vollständig bekannt
+    occupancy[:, 30] = 100                      # geschlossene Tür bei x = 1,5 m
+    occupancy[1:-1, 31:40] = 0                  # rechter Teil nur teilweise gesehen
+    state.pose[:] = [.75, 1.5, 0.]
+    state.refresh_map()
+    result = n._execute_self_healing(goal, 1200., .3)
+    assert not result.success and terminal == ['abort']
+    assert n._self_healing_status['outcome'] == 'usable_partial', n._self_healing_status
+    assert n._self_healing_status['reason'] == 'remaining_frontiers_unreachable'
+    assert not [c for c in state.calls if c[0] == 'navigate' and c[1] > 1.5]
+    assert n._self_healing_status['heals'] == 0
+    assert n._self_healing_status['unreachable_frontiers'] >= 1
+
+
+def test_open_door_frontier_is_still_handed_to_nav2(monkeypatch):
+    n, state, goal, terminal = parent(monkeypatch)
+    occupancy = state.occupancy
+    occupancy[1:-1, 1:30] = 0
+    occupancy[:, 30] = 100
+    occupancy[22:38, 30] = 0                    # 0,8 m offene Tür
+    occupancy[1:-1, 31:40] = 0
+    state.pose[:] = [.75, 1.5, 0.]
+    state.refresh_map()
+    result = n._execute_self_healing(goal, 1200., .3)
+    assert result.success, n._self_healing_status
+    assert [c for c in state.calls if c[0] == 'navigate' and c[1] > 1.5]
 
 
 def test_active_estop_is_fatal_without_motion(monkeypatch):

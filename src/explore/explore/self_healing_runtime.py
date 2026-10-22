@@ -28,7 +28,7 @@ from .action_client import SerializedActionClient as ActionClient
 from .self_healing import (
     FATAL, WAIT, classify, HealingLadder, RETRY, LOOK_AROUND, TRACK_BACK,
     REQUEST_HELP, TrackRecorder, frontier_goals, frontier_cells_remaining,
-    rotation_clear, unknown_ahead_fraction)
+    reachable_goal_mask, rotation_clear, unknown_ahead_fraction)
 
 
 class SelfHealingRuntime:
@@ -59,6 +59,11 @@ class SelfHealingRuntime:
         self._self_healing_min_goal_distance_m = number('self_healing_min_goal_distance_m', .3, 0., 3.)
         self._self_healing_gain_scale = number('self_healing_gain_scale', .5, 0., 10.)
         self._self_healing_completion_checks = int(number('self_healing_completion_checks', 3, 1, 20))
+        # Vorab nur eindeutig Abgeschnittenes ausschließen (z. B. hinter einer
+        # geschlossenen Tür). 0 schaltet die Prüfung ab.
+        self._self_healing_reach_clearance_m = number('self_healing_reachability_clearance_m', .2, 0., .5)
+        self._self_healing_reach_escape_m = number('self_healing_reachability_escape_m', .35, 0., 1.)
+        self._self_healing_reach_tolerance_m = number('self_healing_reachability_goal_tolerance_m', .3, 0., 1.)
         self._self_healing_look_around_rad = number('self_healing_look_around_rad', math.pi/2, .1, 2*math.pi)
         self._self_healing_rotation_radius_m = number('self_healing_rotation_radius_m', .45, .2, 1.)
         self._self_healing_track_back_max_m = number('self_healing_track_back_max_m', .4, 0., 1.)
@@ -369,11 +374,28 @@ class SelfHealingRuntime:
                 lx, ly = (cols+.5)*info.resolution, (rows+.5)*info.resolution
                 c, s = math.cos(yaw), math.sin(yaw)
                 return (info.origin.position.x+c*lx-s*ly, info.origin.position.y+s*lx+c*ly)
-            goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
-                min_size_cells=min_cells, blacklist=blacklist,
+            allowed = None
+            if self._self_healing_reach_clearance_m > 0:
+                q = info.origin.orientation
+                yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
+                dx, dy = pose[0]-info.origin.position.x, pose[1]-info.origin.position.y
+                lx = math.cos(yaw)*dx + math.sin(yaw)*dy
+                ly = -math.sin(yaw)*dx + math.cos(yaw)*dy
+                allowed = reachable_goal_mask(
+                    occupancy, info.resolution,
+                    (math.floor(ly/info.resolution), math.floor(lx/info.resolution)),
+                    clearance_m=self._self_healing_reach_clearance_m,
+                    escape_m=self._self_healing_reach_escape_m,
+                    goal_tolerance_m=self._self_healing_reach_tolerance_m)
+            selection = dict(min_size_cells=min_cells, blacklist=blacklist,
                 blacklist_radius_m=self._self_healing_blacklist_radius_m,
                 min_distance_m=self._self_healing_min_goal_distance_m,
                 gain_scale=self._self_healing_gain_scale)
+            goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
+                                   allowed=allowed, **selection)
+            if allowed is not None:
+                status['unreachable_frontiers'] = len(frontier_goals(
+                    occupancy, info.resolution, cell_to_world, pose[:2], **selection)) - len(goals)
             self._frontiers_remaining = len(goals)
             if not goals:
                 empty_checks += 1

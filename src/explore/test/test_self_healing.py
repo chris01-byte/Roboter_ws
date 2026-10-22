@@ -7,7 +7,7 @@ import pytest
 from explore.self_healing import (
     FATAL, HEAL, WAIT, classify,
     HealingLadder, RETRY, DEFER, LOOK_AROUND, TRACK_BACK, REQUEST_HELP,
-    TrackRecorder, frontier_goals, frontier_cells_remaining, rotation_clear)
+    TrackRecorder, frontier_goals, frontier_cells_remaining, reachable_goal_mask, rotation_clear)
 
 
 @pytest.mark.parametrize('reason,expected', [
@@ -150,3 +150,52 @@ def test_unknown_ahead_fraction_looks_only_at_the_corridor_in_front():
     edge = (4.8, 2.5, 0.)                                  # corridor leaves the map
     assert unknown_ahead_fraction(np.zeros((100, 100)), to_cell, .05, edge) > .5
     assert unknown_ahead_fraction(occupancy, to_cell, .05, None) == 1.
+
+
+def _two_rooms(door_m, res=.05):
+    """Links bekannter Raum, rechts durch die Tür teilweise gesehen (Frontier)."""
+    n = int(round(3./res))
+    occupancy = np.full((n, 2*n), -1, dtype=int)
+    occupancy[:, :n] = 0                                  # linker Raum bekannt frei
+    occupancy[:, n:n+n//2] = 0                            # rechter Raum halb gesehen
+    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = 100
+    occupancy[:, n] = 100                                 # Trennwand bei x = 3 m
+    if door_m:
+        half = int(round(door_m/2/res))
+        occupancy[n//2-half:n//2+half, n] = 0
+    return occupancy
+
+
+def test_closed_door_makes_the_far_frontier_unreachable_but_an_open_door_does_not():
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    robot = (30, 30)                                      # (Zeile, Spalte) = (1,5 m / 1,5 m)
+    for door_m, erreichbar in ((0., False), (.30, False), (.68, True), (.8, True)):
+        occupancy = _two_rooms(door_m)
+        allowed = reachable_goal_mask(occupancy, .05, robot)
+        goals = frontier_goals(occupancy, .05, to_world, (1.5, 1.5), allowed=allowed)
+        assert bool(goals) is erreichbar, door_m
+        assert frontier_goals(occupancy, .05, to_world, (1.5, 1.5))   # ohne Prüfung immer da
+
+
+def test_reachability_tolerates_a_start_next_to_a_post_and_crosses_unknown():
+    occupancy = _two_rooms(.8)
+    n = 60
+    # Roboter 0,15 m neben dem Türpfosten: innerhalb des Sperrsaums, aber frei.
+    robot = (n//2+8+3, n-3)
+    allowed = reachable_goal_mask(occupancy, .05, robot)
+    assert allowed[n//2, n+20]                            # rechter Raum erreichbar
+    # Unbekanntes ist passierbar wie mit Nav2 allow_unknown.
+    unknown = np.full((40, 40), -1, dtype=int)
+    unknown[:, :10] = 0
+    assert reachable_goal_mask(unknown, .05, (20, 5))[20, 35]
+    # Außerhalb der Karte keine Aussage.
+    assert reachable_goal_mask(unknown, .05, (50, 5)) is None
+
+
+def test_reachability_on_a_fine_slam_grid_matches_the_coarse_result():
+    coarse = _two_rooms(0.)
+    fine = np.repeat(np.repeat(coarse, 5, axis=0), 5, axis=1)   # 1-cm-Karte wie am Roboter
+    allowed = reachable_goal_mask(fine, .01, (150, 150))
+    assert allowed.shape == fine.shape
+    assert allowed[150, 100] and not allowed[150, 400]
+
