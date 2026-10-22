@@ -2,7 +2,7 @@
 
 `sh_robustheit.py` prüft die Hauptlinie `self_healing` in einer geschlossenen
 Simulation gegen die vorab festgelegten Störfälle aus
-`sh_robustheit_szenarien_v3.json` (Konzept: `docs/wohnungserkundung/
+`sh_robustheit_szenarien_v4.json` (Konzept: `docs/wohnungserkundung/
 KONZEPT_SELBSTHEILUNG.md` §11, Stufe 2).
 
 **Diese Prüfung ersetzt keine Jetson- oder Realabnahme.** Sie zeigt, ob die
@@ -33,7 +33,7 @@ Hindernisse.
 | `hindernis_im_weg` | 10 cm hohes Hindernis 0,9 m vor dem fahrenden Roboter; nur die VL53 sehen es | ausweichen ohne Kontakt |
 | `gesperrte_tuer` | rechte Tür schließt, sobald der Roboter in die Verbindung fährt | erreichbaren Teil fertig erkunden, sauberes Ende |
 
-Bestanden nach Manifest v3 (Entscheidungen des Projektinhabers, 22.10.2026), wenn:
+Bestanden nach Manifest v4 (Entscheidungen des Projektinhabers, 22.10.2026), wenn:
 - die Mission von selbst endet, sauber mit `exploration_complete` oder
   `usable_partial` („Hilfe benötigt“ zählt in Stufe 2 nicht als Heilung);
 - mindestens 95 % der vom Start aus erreichbaren Fläche frei kartiert sind
@@ -48,11 +48,12 @@ Version bewertet, mit der sie liefen):
   nach der Störung. Traf auch Läufe, deren Karte unterwegs vollständig wurde.
 - v2 `sh_robustheit_szenarien_v2.json`: Abdeckung oder sauberes Teilende. Ließ
   einen Lauf mit verbogener Karte (3,3 m) über das Teilende bestehen.
-- v3 `sh_robustheit_szenarien_v3.json`: wie oben.
-
-`experimente/manifest_asymmetrisch.json` ergänzt vier feste, unsymmetrische
-Möbel (`welt.zusatz_hindernisse`). Es prüft, ob die falschen Ringschlüsse von
-der Symmetrie der Testwelt kommen; keine Abnahme.
+- v3 `sh_robustheit_szenarien_v3.json`: Abnahme wie oben, symmetrische Welt.
+- v4 `sh_robustheit_szenarien_v4.json`: Abnahme wie v3 in der Welt mit vier
+  festen, unsymmetrischen Möbeln (`welt.zusatz_hindernisse`), unverändert aus
+  `experimente/manifest_asymmetrisch.json`. Grund: In der symmetrischen Welt
+  schloss `slam_toolbox` in 12 von 43 Läufen falsche Ringe, in der
+  unsymmetrischen in 0 von 5 (Entscheidung C).
 
 ## Unterschiede zur Jetson-Umgebung (nur Simulation)
 

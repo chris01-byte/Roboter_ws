@@ -14,8 +14,8 @@ VL53-Knotens (`ap06_sensors.vl53_producer`). Kein Wahrheits-TF, keine
 Wahrheitskarte, kein manuell gesendetes Navigationsziel. Gestartet wird die
 Mission wie aus der App: `{"type":"explore"}` an den Missionsmanager.
 
-Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien_v3.json`
-ausgelöst (v1/v2 = gleiche Welt und Störungen, ältere Abnahme).
+Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien_v4.json`
+ausgelöst (v1–v3 = symmetrische Welt, gleiche Störungen, ältere Abnahme).
 Bewertet wird nach dem dort vorab festgelegten Abnahmeteil.
 
 `--experiment` mischt eine zusätzliche Parameterdatei über das Produktprofil.
@@ -230,7 +230,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--szenario', required=True)
     parser.add_argument('--ausgabe', type=Path, required=True)
-    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien_v3.json')
+    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien_v4.json')
     parser.add_argument('--domain', type=int, default=231)
     parser.add_argument('--experiment', type=Path, default=None,
                         help='zusätzliche Parameterdatei über dem Produktprofil (keine Abnahme)')

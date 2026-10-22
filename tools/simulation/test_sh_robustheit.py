@@ -191,3 +191,15 @@ def test_asymmetric_experiment_world_only_adds_furniture():
     assert x['abnahme'] == v3['abnahme'] and x['szenarien'] == v3['szenarien']
     assert len(x['welt']['zusatz_hindernisse']) == 4
 
+
+def test_manifest_v4_is_v3_in_the_unchanged_asymmetric_experiment_world():
+    v3 = json.loads((HIER/'sh_robustheit_szenarien_v3.json').read_text(encoding='utf-8'))
+    v4 = json.loads((HIER/'sh_robustheit_szenarien_v4.json').read_text(encoding='utf-8'))
+    x = json.loads((HIER/'experimente'/'manifest_asymmetrisch.json').read_text(encoding='utf-8'))
+    assert v4['abnahme'] == v3['abnahme'] and v4['szenarien'] == v3['szenarien']
+    assert v4['welt']['zusatz_hindernisse'] == x['welt']['zusatz_hindernisse']
+    assert {k: v for k, v in v4['welt'].items() if k not in ('zusatz_hindernisse', 'quelle')} == \
+        {k: v for k, v in v3['welt'].items() if k != 'quelle'}
+    for teil in ('sensor', 'budgets'):
+        assert v4[teil] == v3[teil]
+
