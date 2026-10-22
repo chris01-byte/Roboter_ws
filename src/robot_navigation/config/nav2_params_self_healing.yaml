@@ -34,10 +34,40 @@ behavior_server:
 # 0,305 m); -0,02 m ueber base_link = 0,07 m ueber Boden. Gemessen SH-1 v3:
 # leerer Boden 0 Treffer, 5,5-10 cm hohe Objekte bisher vollstaendig
 # verworfen. Nur die markierenden *_mark-Quellen; Raeumquellen unveraendert.
+#
+# Seitenwaende und niedrige Hindernisse im Nahbereich (Entscheidung
+# Projektinhaber 22.10.2026, Kandidat X9 der Robustheitssimulation):
+# - Beim Kartieren ist die OAK aus; die lokale Karte kannte nur, was die VL53
+#   nach vorn sehen (+-30 Grad, 0,5 m). RPP pruefte seine Kontur deshalb nicht
+#   gegen Tuerpfosten und Seitenwaende (Simulation: 0 toedliche Zellen ueber dem
+#   Pfosten an der engsten Stelle, Kontakte der Polsterung beim Drehen in einer
+#   0,84-m-Verbindung). Der normierte LiDAR-Scan MARKIERT jetzt zusaetzlich in
+#   der lokalen Karte, raeumt aber nicht: Er liegt 0,66 m hoch und wuerde sonst
+#   niedrige VL53-Markierungen ueberstreichen und loeschen.
+# - Ein 10-cm-Hindernis liegt naeher als ~0,37-0,42 m unter allen VL53-Zeilen;
+#   2D-Raeumen ueber es hinweg loeschte seine Markierung. Die VL53-Raeumquellen
+#   wirken deshalb erst ab 0,45 m vom Sensor.
+# Folge: Bewegte Dinge koennen im Nahbereich als Markierung liegen bleiben
+# (mehr Heilungen, kein Sicherheitsverlust). Ohne /scan_normiert
+# (normalize_scan:=false) kommt vom LiDAR nichts an; dann gilt das bisherige
+# Verhalten. Rueckfall: self_healing:=false.
 local_costmap:
   local_costmap:
     ros__parameters:
       obstacle_layer:
+        observation_sources: vl53_left vl53_right vl53_left_mark vl53_right_mark oak lidar
+        lidar:
+          topic: /scan_normiert
+          data_type: "LaserScan"
+          marking: True
+          clearing: False
+          min_obstacle_height: 0.0
+          max_obstacle_height: 1.0
+          obstacle_max_range: 2.5
+        vl53_left:
+          raytrace_min_range: 0.45
+        vl53_right:
+          raytrace_min_range: 0.45
         vl53_left_mark:
           min_obstacle_height: -0.02
         vl53_right_mark:
@@ -47,6 +77,10 @@ global_costmap:
   global_costmap:
     ros__parameters:
       obstacle_layer:
+        vl53_left:
+          raytrace_min_range: 0.45
+        vl53_right:
+          raytrace_min_range: 0.45
         vl53_left_mark:
           min_obstacle_height: -0.02
         vl53_right_mark:

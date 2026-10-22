@@ -55,6 +55,8 @@ BASE_LINK_UEBER_BODEN_M = 0.09
 SELF_HEALING_BT = 'navigate_to_pose_self_healing.xml'
 STEUERPFAD_ROH = '/cmd_vel_nav_raw'
 RECOVERY_GESPERRT = '/cmd_vel_recovery_blocked'
+LIDAR_NAHBEREICH = '/scan_normiert'
+LOKALE_KOSTENKARTE = '/local_costmap/local_costmap'
 
 # Erwarteter Odometriepfad: HWT601-Gier + Encoder im EKF (slam_lidar_hwt601)
 # oder reine Encoder-Odometrie der Basis (slam_lidar).
@@ -436,6 +438,14 @@ def pruefe_verdrahtung(leser, ergebnis, explore_live):
     ergebnis.add('C Verdrahtung', f'Publisher auf {topic}', None,
                  (', '.join(sorted(pubs)) or 'keine') +
                  ' (der Explorer publiziert erst waehrend einer Mission)')
+    # Entscheidung 22.10.2026 (X9): der normierte LiDAR markiert Seitenwaende in
+    # der lokalen Kostenkarte; ohne Publisher galte nur das alte VL53-Verhalten.
+    scan_subs = leser.subscribers(LIDAR_NAHBEREICH)
+    ergebnis.add('C Verdrahtung', f'lokale Kostenkarte liest {LIDAR_NAHBEREICH}',
+                 LOKALE_KOSTENKARTE in scan_subs, ', '.join(sorted(scan_subs)) or 'keine Leser')
+    scan_pubs = leser.publishers(LIDAR_NAHBEREICH)
+    ergebnis.add('C Verdrahtung', f'Publisher auf {LIDAR_NAHBEREICH}', bool(scan_pubs),
+                 ', '.join(sorted(scan_pubs)) or 'kein Publisher (normalize_scan:=false?)')
     cmd_pubs = leser.publishers('/cmd_vel')
     andere = sorted(cmd_pubs - {'/collision_monitor'})
     ergebnis.add('C Verdrahtung', '/cmd_vel kommt vom collision_monitor',

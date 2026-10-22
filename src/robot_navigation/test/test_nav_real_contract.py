@@ -87,13 +87,31 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server',
                             'local_costmap', 'global_costmap'}
     # VL53 height limit (decision 16.10.2026): only the marking VL53 sources,
-    # base profile keeps 0.05 for every other mode.
-    for costmap in ('local_costmap', 'global_costmap'):
-        layer = overlay[costmap][costmap]['ros__parameters']
-        assert layer == {'obstacle_layer': {
+    # base profile keeps 0.05 for every other mode. VL53 clearing starts at
+    # 0.45 m (decision 22.10.2026, X9): a 10-cm object closer than ~0.42 m lies
+    # under every VL53 row and 2D clearing over it erased its mark.
+    vl53 = {'vl53_left': {'raytrace_min_range': 0.45},
+            'vl53_right': {'raytrace_min_range': 0.45},
             'vl53_left_mark': {'min_obstacle_height': -0.02},
-            'vl53_right_mark': {'min_obstacle_height': -0.02}}}
+            'vl53_right_mark': {'min_obstacle_height': -0.02}}
+    assert overlay['global_costmap']['global_costmap']['ros__parameters'] == {'obstacle_layer': vl53}
+    # Local costmap additionally gets the normalised LiDAR as a MARKING-only
+    # source: RPP now sees side walls and door posts, but the 0.66-m scan never
+    # clears low VL53 marks. Base profile (all other modes) unchanged.
+    local = overlay['local_costmap']['local_costmap']['ros__parameters']['obstacle_layer']
+    assert {k: v for k, v in local.items() if k not in ('observation_sources', 'lidar')} == vl53
+    assert local['observation_sources'].split() == [
+        'vl53_left', 'vl53_right', 'vl53_left_mark', 'vl53_right_mark', 'oak', 'lidar']
+    assert local['lidar'] == {'topic': '/scan_normiert', 'data_type': 'LaserScan',
+                              'marking': True, 'clearing': False, 'min_obstacle_height': 0.0,
+                              'max_obstacle_height': 1.0, 'obstacle_max_range': 2.5}
+    base_local = real['local_costmap']['local_costmap']['ros__parameters']['obstacle_layer']
+    assert 'lidar' not in base_local['observation_sources'].split()
+    assert set(base_local['observation_sources'].split()) | {'lidar'} == \
+        set(local['observation_sources'].split())
+    for costmap in ('local_costmap', 'global_costmap'):
         base = real[costmap][costmap]['ros__parameters']['obstacle_layer']
+        assert 'raytrace_min_range' not in base['vl53_left']
         for source in ('vl53_left_mark', 'vl53_right_mark', 'vl53_left', 'vl53_right'):
             assert base[source]['min_obstacle_height'] == 0.05
         assert base['vl53_left_mark']['marking'] is True

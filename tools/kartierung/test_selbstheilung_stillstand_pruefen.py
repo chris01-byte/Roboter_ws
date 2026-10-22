@@ -27,11 +27,23 @@ def test_profiles_flatten_to_live_parameter_names():
     assert overlay['/planner_server'] == {'GridBased.allow_unknown': True}
     assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.25]
     assert overlay['/behavior_server']['simulate_ahead_time'] == pytest.approx(2.0)
+    vl53 = {'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
+            'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02,
+            'obstacle_layer.vl53_left.raytrace_min_range': 0.45,
+            'obstacle_layer.vl53_right.raytrace_min_range': 0.45}
+    assert overlay['/global_costmap/global_costmap'] == vl53
+    # X9 (22.10.2026): lokale Karte zusaetzlich mit markierendem, nicht raeumendem LiDAR.
     assert overlay['/local_costmap/local_costmap'] == {
-        'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
-        'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02}
-    assert set(overlay['/global_costmap/global_costmap']) == set(
-        overlay['/local_costmap/local_costmap'])
+        **vl53,
+        'obstacle_layer.observation_sources':
+            'vl53_left vl53_right vl53_left_mark vl53_right_mark oak lidar',
+        'obstacle_layer.lidar.topic': '/scan_normiert',
+        'obstacle_layer.lidar.data_type': 'LaserScan',
+        'obstacle_layer.lidar.marking': True,
+        'obstacle_layer.lidar.clearing': False,
+        'obstacle_layer.lidar.min_obstacle_height': 0.0,
+        'obstacle_layer.lidar.max_obstacle_height': 1.0,
+        'obstacle_layer.lidar.obstacle_max_range': 2.5}
     collision = _params('src/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml')
     assert collision == {'/collision_monitor': {
         'vl53_left.min_height': -0.02, 'vl53_right.min_height': -0.02}}
@@ -151,3 +163,43 @@ def test_checker_stays_read_only():
         assert forbidden not in source
     # Einzige Dienstaufrufe: GetParameters und ListParameters.
     assert set(re.findall(r'self\._call\((\w+)', source)) == {'GetParameters', 'ListParameters'}
+
+
+class _Graph:
+    """Nachgebildeter ROS-Graph fuer die Verdrahtungspruefung."""
+    def __init__(self, scan_publisher=True, costmap_liest_scan=True):
+        self.pubs = {'/cmd_vel_nav_raw': {'/controller_server', '/behavior_server'},
+                     '/cmd_vel': {'/collision_monitor'},
+                     '/scan_normiert': {'/scan_vereinheitlichen'} if scan_publisher else set()}
+        self.subs = {'/cmd_vel_nav_raw': {'/cmd_vel_mission_gate'},
+                     '/speed_limit': {'/controller_server'},
+                     '/scan_normiert': ({'/slam_toolbox', '/local_costmap/local_costmap'}
+                                        if costmap_liest_scan else {'/slam_toolbox'})}
+
+    def publishers(self, topic):
+        return set(self.pubs.get(topic, set()))
+
+    def subscribers(self, topic):
+        return set(self.subs.get(topic, set()))
+
+    def action_servers(self, node):
+        return {'/backup'}
+
+    def get_params(self, node, names):
+        return {'speed_limit_topic': '/speed_limit'}
+
+
+def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
+    from selbstheilung_stillstand_pruefen import Ergebnis, pruefe_verdrahtung
+
+    def pruefe(**graph):
+        ergebnis = Ergebnis()
+        pruefe_verdrahtung(_Graph(**graph), ergebnis, {'self_healing_speed_limit_topic': '/speed_limit'})
+        return ergebnis
+
+    assert pruefe().bestanden
+    assert not pruefe(costmap_liest_scan=False).bestanden
+    zeilen = {z['pruefung']: z for z in pruefe(scan_publisher=False).zeilen}
+    assert zeilen['Publisher auf /scan_normiert']['ok'] is False
+    assert 'normalize_scan' in zeilen['Publisher auf /scan_normiert']['detail']
+
