@@ -18,8 +18,17 @@ reale Stillstandsbeobachtung (Schritt 6).
 `e085cac`…`74afc78` korrigierte Zielwahl im Explorer (gesperrte Tür endet als
 Teilkarte; Ziele mit Drehraum statt an Pfostenecken). Das wirkt nur beim
 Fahren mit `self_healing:=true` und ändert an der motorlosen Messung nichts.
-SH-2 baut ihn mit, damit SH-3 denselben Release fahren kann. Erwartet werden
-jetzt 158 statt 149 gezielte Tests.
+SH-2 baut ihn mit, damit SH-3 denselben Release fahren kann.
+
+**Ergänzt am 22.10.2026 (Entscheidung A+B, `2f46799`):** Im
+Selbstheilungsbetrieb markiert der normierte LiDAR (`/scan_normiert`)
+zusätzlich in der lokalen Kostenkarte, räumt dort aber nicht; die VL53 räumen
+in beiden Kostenkarten erst ab 0,45 m vom Sensor. Grund: Der Regler kannte
+Seitenwände und Türpfosten nicht, und niedrige Gegenstände wurden unter den
+VL53-Strahlen wieder weggeräumt (Robustheitssimulation). SH-2 prüft motorlos,
+dass das live ankommt (Schritt 7). Weil der LiDAR jetzt auch Beine vor dem
+Roboter einträgt und nicht mehr wegräumt, leert Schritt 8 vor jeder Messung
+die lokale Kostenkarte. Erwartet werden 159 gezielte Tests.
 
 SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
 SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
@@ -34,8 +43,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
 | WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `74afc78`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 158 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `2f46799`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 159 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
 | Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
 | Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
 | Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
@@ -44,7 +53,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 
 Unverändert aus SH-1:
 - keine Fahrfreigabe, Missionen, Ziele oder `operator_stationary_confirmed`;
-- nur lesende `ros2`-Befehle;
+- nur lesende `ros2`-Befehle; einzige Ausnahme ist das Leeren der lokalen
+  Kostenkarte in Schritt 8 (Softwarezustand, keine Aktorwirkung);
 - nichts in `~/roboter_ws` und an der defekten Codex-Referenz;
 - bestehende Releases und der v1-Ordner bleiben, wie sie sind;
 - keine Code- oder Parameteränderungen, kein Commit oder Push;
@@ -71,7 +81,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor 74afc78 HEAD && echo "74afc78 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor 2f46799 HEAD && echo "2f46799 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
 ```
 
@@ -133,7 +143,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `158 passed` (Cloud, Stand `74afc78`). Fehlschläge berichten, nicht beheben.
+Erwartung: `159 passed` (Cloud, Stand `2f46799`). Fehlschläge berichten, nicht beheben.
 
 ### Schritt 6 – App-Stack motorlos im HWT-Weg starten
 
@@ -182,8 +192,15 @@ source ~/roboter_worktrees/selbstheilung-v2.env && \
 Erwartung: Exit 0. Neu in Bereich C: `Explorer erwartet hwt601` und
 `genau ein /odom-Publisher (/hwt601_mapping_ekf)`. Neu in Bereich B: vier Zeilen
 `…costmap obstacle_layer.vl53_*_mark.min_obstacle_height` mit −0.02 und zwei
-Zeilen `B Kollisionswaechter … min_height` mit −0.02. Bei `FEHL` mit
-„erreichbar“ oder „nicht deklariert“ einmal nach 30 s wiederholen.
+Zeilen `B Kollisionswaechter … min_height` mit −0.02. Neu seit `2f46799`
+(Entscheidung A+B): in Bereich B für `/local_costmap/local_costmap`
+`obstacle_layer.observation_sources` mit `lidar` am Ende und sieben Zeilen
+`obstacle_layer.lidar.*` (`topic` `/scan_normiert`, `marking` True, `clearing`
+False, …), für beide Kostenkarten je zwei Zeilen
+`obstacle_layer.vl53_*.raytrace_min_range` mit 0.45; in Bereich C
+`lokale Kostenkarte liest /scan_normiert` und `Publisher auf /scan_normiert`.
+Bei `FEHL` mit „erreichbar“ oder „nicht deklariert“ einmal nach 30 s
+wiederholen.
 
 ### Schritt 8 – VL53-Messreihe (braucht Christopher)
 
@@ -204,10 +221,14 @@ Fahrzeugfront bis zur Vorderkante.
 | 7 | 10 cm | 0,38 m |
 | 8 | 15,5 cm | 0,38 m |
 
-Je Messung:
+Je Messung, erst wenn Christopher „liegt“ gesagt hat und niemand mehr vor dem
+Roboter steht: lokale Kostenkarte leeren (der LiDAR hat beim Legen die Beine
+eingetragen und räumt sie seit `2f46799` nicht mehr), 3 s warten, dann messen.
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && \
+  ros2 service call /local_costmap/clear_entirely_local_costmap \
+  nav2_msgs/srv/ClearEntireCostmap "{}" && sleep 3 && \
   python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
   --beobachten-s 1 --vl53-s 10 --notiz "Nr 2: 5,5 cm, 0,30 m" \
   --json "$SH_PR/vl53_02.json" 2>&1 | tee "$SH_PR/vl53_02.txt"
@@ -218,9 +239,10 @@ SH-1 v3; `filter_ueber_boden_m` 0,07; `verworfen` 0, weil kein gültiger Punkt
 unter 0,084 m liegen kann; 3 cm weiterhin 0 Treffer.
 
 Die neue Zeile „lokale Kostenkarte: N belegte Zellen vor dem Roboter“ zeigt,
-ob die Treffer als Hindernis eingetragen werden. Ohne Räumstrahl bleiben
-Markierungen früherer Lagen bestehen; die Zahl kann also von Lage zu Lage nur
-wachsen. Entscheidend ist der Sprung von Nr 1 (0 erwartet) zu Nr 2.
+ob die Treffer als Hindernis eingetragen werden. Weil die Karte vor jeder
+Messung geleert wird, gilt die Zahl je Lage. Erwartet: Nr 0 und Nr 1 (3 cm)
+0 Zellen, ab Nr 2 Zellen vor dem Roboter. Steht doch jemand davor, trägt der
+LiDAR auch ihn ein; dann die Messung wiederholen und im Bericht vermerken.
 
 ### Schritt 9 – Stack geordnet beenden
 

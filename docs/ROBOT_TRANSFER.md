@@ -62,6 +62,19 @@ Stand ab `74afc78` mit (158 gezielte Tests); die motorlose Messung ist davon
 unberührt, SH-3 fährt damit. Rückfall: die genannten Parameter auf 0 setzen
 oder einen früheren Release sourcen.
 
+Nachtrag 22.10.2026, Entscheidung A+B (`2f46799`, sicherheitsrelevant, nur
+`self_healing:=true`): Die lokale Kostenkarte bekommt den normierten LiDAR
+(`/scan_normiert`) als nur markierende Quelle; die VL53-Räumquellen beider
+Kostenkarten wirken erst ab 0,45 m vom Sensor. Das ändert die Hinderniskarte
+des Reglers, nicht Geschwindigkeit, `collision_monitor`, Fahrtor oder Basis.
+Folge im Betrieb: Was der LiDAR einmal im Nahbereich sah (auch Beine), bleibt
+eingetragen, bis der Roboter weiterfährt oder die Karte geleert wird; mehr
+Heilungen sind möglich. `/scan_normiert` gibt es im Standard- und im
+HWT601-Weg (`normalize_scan` Standard `true`); ohne ihn gilt das bisherige
+Verhalten. Auf dem Jetson noch nicht gebaut; SH-2 prüft motorlos (159 Tests,
+neue Zeilen in Prüfung B/C, Kostenkarte vor jeder VL53-Messung leeren).
+Rückfall: `self_healing:=false` oder einen Release vor `2f46799` sourcen.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

@@ -1310,3 +1310,19 @@ Planerradius, fehlender LiDAR in der lokalen Karte allein) hat die Messung
 widerlegt oder relativiert; die Zielwahl war die Hauptursache. Einzelheiten
 und Zahlen: `docs/wohnungserkundung/STATUS.md`, Abschnitt 22.10.2026.
 
+**Nachtrag 22.10.2026 – Entscheidungen zur Stufe 2 (Projektinhaber):**
+- A+B: Kandidat X9 übernommen (`2f46799`, nur `self_healing`): LiDAR markiert
+  Seitenwände in der lokalen Kostenkarte, räumt dort nicht; VL53 räumen erst ab
+  0,45 m. Vorab gemessen in 5 Simulationsläufen; real erst in SH-3 belegt.
+- C: Ursache der falschen Ringschlüsse nicht belegt (Posensprung 3,3 m ohne
+  Drehung ist keine Spiegelung). Erst Experiment mit unsymmetrischer Testwelt;
+  bleiben die Fehler, folgt ein Vorschlag für strengere SLAM-Schwellen.
+- D und Manifest v3: Abnahme nach Kartenabdeckung der erreichbaren Fläche
+  (≥ 95 %) und Kartenfehler ≤ 0,10 m statt Zielzähler; keine Ausnahme für
+  Teilenden. v2 hatte einen Lauf mit 3,3 m verbogener Karte bestehen lassen.
+  Ergebnisse bleiben nach der Manifestversion bewertet, mit der sie liefen.
+Lehre: Bei der Nachprüfung waren drei eigene Aussagen stärker formuliert als
+belegt (Drehung in der Verbindung nur mit Versatz kritisch, „0 Zellen über der
+Box“ nur aus einem X1-Lauf, Symmetrie nur Vermutung). Messung und Vermutung im
+Bericht ausdrücklich trennen.
+
