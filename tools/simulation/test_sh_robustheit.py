@@ -119,3 +119,16 @@ def test_plan_bottleneck_near_the_robot_ignores_far_plan_sections():
     assert stand['nah_abstand_m'] == .25 and stand['nah_punkt'] == [.5, 0.]
     assert stand['nah_unter_robot_radius'] == [{'t_s': 7., 'abstand_m': .25, 'punkt': [.5, 0.]}]
 
+
+def test_local_costmap_snapshot_counts_cells_over_the_obstacle():
+    import numpy as np
+    werte = np.zeros((20, 20), dtype=np.int16)
+    werte[5:7, 5:7] = 100                      # zwei mal zwei tödliche Zellen
+    werte[7, 5] = -1
+    karte = (werte, .05, -.5, -.5)             # Ursprung (-0,5 / -0,5)
+    ecken = [(-.24, -.24), (-.14, -.24), (-.14, -.12), (-.24, -.12)]   # Spalten 5-7, Zeilen 5-7
+    stand = sh.kostenkarte_ueber(karte, ecken)
+    assert stand['toedlich'] == 4 and stand['unbekannt'] == 1 and stand['zellen'] == 9
+    assert sh.kostenkarte_ueber(karte, [(5., 5.), (6., 6.)]) == {'zellen': 0, 'im_fenster': False}
+    assert sh.kostenkarte_ueber(None, ecken) is None
+

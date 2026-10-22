@@ -138,6 +138,32 @@ def plan_engstelle(alt, abstaende, punkte, t_s, robot_radius, roboter=None, nah_
     return alt
 
 
+def kostenkarte_ueber(karte, ecken_odom):
+    """Belegung der lokalen Kostenkarte über einem Hindernis (Odometrierahmen).
+
+    ``karte``: (Werte HxW, Auflösung, Ursprung x, Ursprung y) im Nav2-Format
+    der OccupancyGrid-Übersetzung (100 = tödlich, 99 = eingeschrieben,
+    -1 = unbekannt). Liefert, ob der Regler das Hindernis kennen konnte.
+    """
+    if karte is None:
+        return None
+    werte, aufloesung, ox, oy = karte
+    ecken = np.asarray(ecken_odom, dtype=float)
+    lo, hi = ecken.min(axis=0), ecken.max(axis=0)
+    c0, r0 = (int(math.floor((v-o)/aufloesung)) for v, o in zip(lo, (ox, oy)))
+    c1, r1 = (int(math.floor((v-o)/aufloesung)) for v, o in zip(hi, (ox, oy)))
+    r0, c0 = max(r0, 0), max(c0, 0)
+    r1, c1 = min(r1, werte.shape[0]-1), min(c1, werte.shape[1]-1)
+    if r0 > r1 or c0 > c1:
+        return {'zellen': 0, 'im_fenster': False}
+    teil = werte[r0:r1+1, c0:c1+1]
+    return {'zellen': int(teil.size), 'im_fenster': True,
+            'toedlich': int(np.count_nonzero(teil >= 100)),
+            'eingeschrieben_oder_mehr': int(np.count_nonzero(teil >= 99)),
+            'unbekannt': int(np.count_nonzero(teil < 0)),
+            'max': int(teil.max())}
+
+
 def ausloeser_erfuellt(ausloeser, ziele, pose, geschwindigkeit, seit_start_s):
     if not ausloeser:
         return True
@@ -275,7 +301,16 @@ def main(argv=None):
             dt, self.letzt = jetzt - self.letzt, jetzt
             cmd = zustand['cmd'] if jetzt - zustand['cmd_zeit'] <= .25 else (0.0, 0.0)
             welt.zeit_s = round(jetzt - start, 2)
+            vorher = welt.engste_stelle
             welt.integrate(cmd, dt)
+            if welt.engste_stelle is not vorher and welt.minimum_clearance < .03:
+                # Kannte der Regler das Hindernis, an dem es eng wird?
+                box, niedrig = welt.naechstes_hindernis()
+                welt.engste_stelle['hindernis_niedrig'] = niedrig
+                welt.engste_stelle['hindernis'] = [[round(float(v), 3) for v in box.min(axis=0)],
+                                                   [round(float(v), 3) for v in box.max(axis=0)]]
+                welt.engste_stelle['lokale_kostenkarte'] = kostenkarte_ueber(
+                    beobachter.lokal, welt.local(box))
             self.zaehler += 1
             if self.zaehler % 2 == 0:
                 self.odom(jetzt)
@@ -319,6 +354,7 @@ def main(argv=None):
             self.karte = None
             self.erste_karte = None
             self.plan = None
+            self.lokal = None          # (Werte, Auflösung, Ursprung x, y) im odom-Rahmen
             self.explore = None
             self.mission = None
             self.befehl = self.create_publisher(String, '/mission_manager/command_json', 10)
@@ -337,6 +373,9 @@ def main(argv=None):
             self.create_subscription(NearFieldStatus, '/near_field/status',
                                      lambda m: protokoll.vl53(time.monotonic()), 10)
             self.create_subscription(NavPath, '/plan', self.on_plan, 10)
+            self.create_subscription(OccupancyGrid, '/local_costmap/costmap', self.on_lokal,
+                                     QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                                                durability=DurabilityPolicy.VOLATILE))
             self.zustand_clients = {n: self.create_client(GetState, f'/{n}/get_state')
                                     for n in (*NAV2, 'collision_monitor')}
 
@@ -344,6 +383,11 @@ def main(argv=None):
             if self.erste_karte is None:
                 self.erste_karte = msg
             self.karte = msg
+
+        def on_lokal(self, msg):
+            i = msg.info
+            self.lokal = (np.asarray(msg.data, dtype=np.int16).reshape(i.height, i.width),
+                          i.resolution, i.origin.position.x, i.origin.position.y)
 
         def on_plan(self, msg):
             # Karte ~ Odometrie ~ Startpose; SLAM-Drift (wenige cm) bleibt als Fehler.

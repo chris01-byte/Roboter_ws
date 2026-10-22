@@ -90,6 +90,12 @@ class RobustheitsWelt(World):
             self.mitte_min = dict(abstand_m=round(mitte, 4),
                                   pose=[round(float(v), 3) for v in self.pose], t_s=self.zeit_s)
 
+    def naechstes_hindernis(self):
+        """(Rechteck, niedrig?) mit dem kleinsten Abstand zur Kontur."""
+        boxen = [(b, False) for b in self.obstacles] + [(b, True) for b, _ in self.niedrig]
+        abstaende = [chassis_clearance(self.pose, [b]) for b, _ in boxen]
+        return boxen[int(np.argmin(abstaende))]
+
     def punkt_abstand(self, punkt):
         """Abstand eines Punkts zum nächsten Hindernis (alle achsparallel)."""
         return float(self.punkte_abstand(np.asarray(punkt, dtype=float)[:2])[0])
