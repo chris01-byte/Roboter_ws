@@ -1285,3 +1285,28 @@ Rumpfversatz auf den Fugen; Gerade 11.09.2026, Encoder-Gier 1,3° neben
 HWT/LiDAR. Eine erste Empfehlung „Standard“ beruhte auf einer Suche nur im
 Hauptstand und wurde nach dem Hinweis des Projektinhabers korrigiert. Lehre:
 Bei Hardwarefragen auch die Feature-Branches nach Abnahmen durchsuchen.
+
+**Nachtrag 22.10.2026 – Robustheitssimulation Stufe 2:** Die geschlossene
+Simulation (`tools/simulation/sh_robustheit.py`, echter Produktpfad, Mission
+wie aus der App) hat die Heilungsleiter bestätigt: VL53- und LiDAR-Lücken
+werden abgewartet, Volllast bricht nichts ab. Sie hat zugleich vier Dinge
+gezeigt, die vorher niemand gemessen hatte:
+1. Das Frontier-Ziel „nächste Zelle des Clusters“ liegt in Türöffnungen an der
+   Pfostenecke und in Verbindungen am ungesehenen Wandfuß. Der Roboter parkte
+   dort mit der Mitte im 0,28-m-Sperrsaum oder drehte mit der Vorderecke an
+   die Wand. Ziele brauchen Drehraum (0,45 m); umgesetzt im Explorer.
+2. Im Kartierbetrieb ist die OAK aus; die lokale Kostenkarte kennt nur, was
+   die VL53 nach vorn sehen. Der Regler prüft seine Kontur also nicht gegen
+   Seitenwände und Türpfosten (gemessen: 0 tödliche Zellen über dem Pfosten an
+   der engsten Stelle). Offene Entscheidung des Projektinhabers.
+3. Ein 10-cm-Hindernis liegt näher als etwa 0,41 m unter allen VL53-Zeilen;
+   2D-Räumen über es hinweg löscht seine Markierung. Offene Entscheidung.
+4. `slam_toolbox` schloss in der spiegelsymmetrischen Testwelt mehrfach falsche
+   Ringe (Karte um 1,7–3,3 m verbogen). Ohne Ringschluss bestanden die Läufe.
+   Wahrscheinlich durch die künstliche Symmetrie verstärkt; reale Räume prüft
+   SH-3.
+Lehre wie im Juli: Mehrere naheliegende Erklärungen (Rechenlast, zu kleiner
+Planerradius, fehlender LiDAR in der lokalen Karte allein) hat die Messung
+widerlegt oder relativiert; die Zielwahl war die Hauptursache. Einzelheiten
+und Zahlen: `docs/wohnungserkundung/STATUS.md`, Abschnitt 22.10.2026.
+

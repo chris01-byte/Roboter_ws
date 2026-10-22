@@ -50,6 +50,18 @@ Selbstheilungsbetrieb die VL53-Höhengrenze in beiden Kostenkarten und im
 Release-Ordner `selbstheilung-sh2-<Zeit>` und misst motorlos nach. Rückfall:
 SH-1-Release sourcen oder `self_healing:=false`.
 
+Nachtrag 22.10.2026, Robustheitssimulation (nur Cloud): Auf dem Jetson ist
+nichts geändert. Neu im Repository und nur mit `self_healing:=true` wirksam:
+Explorer-Zielwahl mit Erreichbarkeitsprüfung (`e085cac`, Frontiers hinter einer
+geschlossenen Tür enden als Teilkarte) und Zielpunkten mit Drehraum 0,45 m
+(`74486f8`, `cf81aa8`, `74afc78`). Neue Parameter in `self_healing_params.yaml`:
+`self_healing_reachability_*`, `self_healing_goal_clearance_m`,
+`self_healing_goal_shift_max_m`. Keine Änderung an Geschwindigkeit,
+Kostenkarten, `collision_monitor`, Fahrtor, Basis oder SLAM. SH-2 baut den
+Stand ab `74afc78` mit (158 gezielte Tests); die motorlose Messung ist davon
+unberührt, SH-3 fährt damit. Rückfall: die genannten Parameter auf 0 setzen
+oder einen früheren Release sourcen.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

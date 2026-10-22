@@ -14,6 +14,13 @@ den **HWT-Weg** (`use_hwt601_odometry:=true`) und prüft ihn motorlos mit
 (`--odometrie hwt601`, seit `06b8a6c`). Der HWT-Start verlangt eine bestätigte
 reale Stillstandsbeobachtung (Schritt 6).
 
+**Ergänzt am 22.10.2026 (Robustheitssimulation):** Der Stand enthält seit
+`e085cac`…`74afc78` korrigierte Zielwahl im Explorer (gesperrte Tür endet als
+Teilkarte; Ziele mit Drehraum statt an Pfostenecken). Das wirkt nur beim
+Fahren mit `self_healing:=true` und ändert an der motorlosen Messung nichts.
+SH-2 baut ihn mit, damit SH-3 denselben Release fahren kann. Erwartet werden
+jetzt 158 statt 149 gezielte Tests.
+
 SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
 SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
 stehen alle Einzelheiten, die hier nur verkürzt wiederholt werden. Vorher
@@ -27,8 +34,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
 | WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `06b8a6c`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 149 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `74afc78`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 158 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
 | Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
 | Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
 | Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
@@ -64,7 +71,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor 06b8a6c HEAD && echo "06b8a6c enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor 74afc78 HEAD && echo "74afc78 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
 ```
 
@@ -126,7 +133,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `149 passed` (Cloud). Fehlschläge berichten, nicht beheben.
+Erwartung: `158 passed` (Cloud, Stand `74afc78`). Fehlschläge berichten, nicht beheben.
 
 ### Schritt 6 – App-Stack motorlos im HWT-Weg starten
 
