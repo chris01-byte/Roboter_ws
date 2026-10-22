@@ -25,8 +25,11 @@ MAX_SCHRITT_S = 0.01
 
 
 class RobustheitsWelt(World):
-    def __init__(self, door_m, start):
+    def __init__(self, door_m, start, zusatz=()):
         super().__init__(door_m, start)
+        # Zusätzliche feste Möbel (nur Experiment-Manifeste), je [x0, x1, y0, y1].
+        for x0, x1, y0, y1 in zusatz:
+            self.obstacles.append(rectangle(x0, x1, y0, y1))
         self.door_m = door_m
         self.niedrig = []                # (Rechteck, Höhe über Boden)
         self.verspaetungen = []          # Timerlücken > 30 ms

@@ -14,8 +14,8 @@ VL53-Knotens (`ap06_sensors.vl53_producer`). Kein Wahrheits-TF, keine
 Wahrheitskarte, kein manuell gesendetes Navigationsziel. Gestartet wird die
 Mission wie aus der App: `{"type":"explore"}` an den Missionsmanager.
 
-Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien_v2.json`
-ausgelöst (v1 = gleiche Welt und Störungen, Zielzähler statt Abdeckung).
+Je Szenario wird genau eine Störung aus `sh_robustheit_szenarien_v3.json`
+ausgelöst (v1/v2 = gleiche Welt und Störungen, ältere Abnahme).
 Bewertet wird nach dem dort vorab festgelegten Abnahmeteil.
 
 `--experiment` mischt eine zusätzliche Parameterdatei über das Produktprofil.
@@ -179,12 +179,14 @@ def ausloeser_erfuellt(ausloeser, ziele, pose, geschwindigkeit, seit_start_s):
     return True
 
 
-def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt, abdeckung=None):
+def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt, abdeckung=None,
+            karte=None):
     """Vorab festgelegte Kriterien; liefert (bestanden, Einzelkriterien).
 
     Manifest v1: Zielzähler. Manifest v2 (``min_abdeckung_erreichbar``,
     Entscheidung D): Kartenabdeckung der erreichbaren Fläche oder sauberes
-    Teilende statt Zielzähler.
+    Teilende statt Zielzähler. Manifest v3 (``max_kartenfehler_m``): Abdeckung
+    ohne Teilende-Ausnahme und Kartenfehler höchstens ``max_kartenfehler_m``.
     """
     ende = (zusammenfassung.get('endzustand') or {})
     ziele = ende.get('goals_reached') or 0
@@ -194,11 +196,15 @@ def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt
         'sauberes_ende': ende.get('outcome') in abnahme['erlaubte_enden'],
     }
     v2 = 'min_abdeckung_erreichbar' in abnahme
-    if v2:
-        anteil = (abdeckung or {}).get('erreichbar_anteil')
+    anteil = (abdeckung or {}).get('erreichbar_anteil')
+    genug = anteil is not None and anteil >= abnahme.get('min_abdeckung_erreichbar', 2.)
+    if 'max_kartenfehler_m' in abnahme:
+        fehler = (karte or {}).get('maximum_occupied_wall_error_m')
+        k['abdeckung_erreichbar'] = genug
+        k['karte_plausibel'] = fehler is not None and fehler <= abnahme['max_kartenfehler_m']
+    elif v2:
         k['abdeckung_oder_teilende'] = bool(
-            (anteil is not None and anteil >= abnahme['min_abdeckung_erreichbar'])
-            or (abnahme.get('teilende_genuegt') and ende.get('outcome') == 'usable_partial'))
+            genug or (abnahme.get('teilende_genuegt') and ende.get('outcome') == 'usable_partial'))
     else:
         k['mindestens_ziele'] = ziele >= abnahme['min_ziele']
     k['keine_kollision'] = not kollision
@@ -224,7 +230,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--szenario', required=True)
     parser.add_argument('--ausgabe', type=Path, required=True)
-    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien_v2.json')
+    parser.add_argument('--manifest', type=Path, default=HIER/'sh_robustheit_szenarien_v3.json')
     parser.add_argument('--domain', type=int, default=231)
     parser.add_argument('--experiment', type=Path, default=None,
                         help='zusätzliche Parameterdatei über dem Produktprofil (keine Abnahme)')
@@ -266,7 +272,8 @@ def main(argv=None):
     from sh_robustheit_welt import RobustheitsWelt
     from selbstheilung_lauf_protokoll import LaufProtokoll
 
-    welt = RobustheitsWelt(manifest['welt']['door_m'], manifest['welt']['start'])
+    welt = RobustheitsWelt(manifest['welt']['door_m'], manifest['welt']['start'],
+                           zusatz=manifest['welt'].get('zusatz_hindernisse', ()))
     sensor = manifest['sensor']
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -656,7 +663,8 @@ def main(argv=None):
     else:
         ergebnis['bestanden'], ergebnis['kriterien'] = bewerte(
             manifest['abnahme'], szenario, zusammenfassung, stoerung,
-            welt.collision, ergebnis['abgestuerzte_prozesse'], ergebnis.get('abdeckung_erreichbar'))
+            welt.collision, ergebnis['abgestuerzte_prozesse'], ergebnis.get('abdeckung_erreichbar'),
+            ergebnis.get('karte'))
     (out/'ergebnis.json').write_text(json.dumps(ergebnis, ensure_ascii=False, indent=2, default=str))
     kurz = {k: ergebnis.get(k) for k in ('bestanden', 'kriterien', 'stoerung', 'kollision',
                                          'minimaler_abstand_m', 'fehler')}

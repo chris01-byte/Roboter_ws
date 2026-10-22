@@ -160,3 +160,34 @@ def test_manifest_v2_replaces_goal_counts_by_reachable_coverage():
                        stoerung, False, [], {'erreichbar_anteil': 1.})
     assert not ok and not k['sauberes_ende']
 
+
+def test_manifest_v3_requires_coverage_and_a_plausible_map_without_partial_exception():
+    v2 = json.loads((HIER/'sh_robustheit_szenarien_v2.json').read_text(encoding='utf-8'))
+    v3 = json.loads((HIER/'sh_robustheit_szenarien_v3.json').read_text(encoding='utf-8'))
+    for teil in ('welt', 'sensor', 'budgets'):
+        assert v3[teil] == v2[teil]
+    a = v3['abnahme']
+    assert 'teilende_genuegt' not in a and a['max_kartenfehler_m'] == .10
+    luecke = next(s for s in v3['szenarien'] if s['id'] == 'sensorluecke')
+    stoerung = {'ausgeloest_s': 30., 'ziele_bei_ausloesung': 1}
+    zus = _zusammenfassung('usable_partial', 3, 'vl53_status_missing_stale_or_invalid')
+    # Fall aus v2: Teilende mit verbogener Karte (3,3 m) und 74 % Fläche besteht nicht mehr.
+    ok, k = sh.bewerte(a, luecke, zus, stoerung, False, [], {'erreichbar_anteil': .74},
+                       {'maximum_occupied_wall_error_m': 3.31})
+    assert not ok and not k['abdeckung_erreichbar'] and not k['karte_plausibel']
+    ok, k = sh.bewerte(a, luecke, _zusammenfassung('exploration_complete', 1, 'vl53_x'), stoerung,
+                       False, [], {'erreichbar_anteil': .98}, {'maximum_occupied_wall_error_m': .04})
+    assert ok and set(k) >= {'abdeckung_erreichbar', 'karte_plausibel', 'heilung_beobachtet'}
+    ok, _ = sh.bewerte(a, luecke, _zusammenfassung('exploration_complete', 1, 'vl53_x'), stoerung,
+                       False, [], {'erreichbar_anteil': .98}, None)
+    assert not ok                                # ohne Kartenvergleich kein Bestehen
+
+
+def test_asymmetric_experiment_world_only_adds_furniture():
+    v3 = json.loads((HIER/'sh_robustheit_szenarien_v3.json').read_text(encoding='utf-8'))
+    x = json.loads((HIER/'experimente'/'manifest_asymmetrisch.json').read_text(encoding='utf-8'))
+    assert x['qualifikation'].startswith('experiment')
+    assert {k: v for k, v in x['welt'].items() if k != 'zusatz_hindernisse'} == v3['welt']
+    assert x['abnahme'] == v3['abnahme'] and x['szenarien'] == v3['szenarien']
+    assert len(x['welt']['zusatz_hindernisse']) == 4
+

@@ -2,7 +2,7 @@
 
 `sh_robustheit.py` prüft die Hauptlinie `self_healing` in einer geschlossenen
 Simulation gegen die vorab festgelegten Störfälle aus
-`sh_robustheit_szenarien_v2.json` (Konzept: `docs/wohnungserkundung/
+`sh_robustheit_szenarien_v3.json` (Konzept: `docs/wohnungserkundung/
 KONZEPT_SELBSTHEILUNG.md` §11, Stufe 2).
 
 **Diese Prüfung ersetzt keine Jetson- oder Realabnahme.** Sie zeigt, ob die
@@ -33,20 +33,26 @@ Hindernisse.
 | `hindernis_im_weg` | 10 cm hohes Hindernis 0,9 m vor dem fahrenden Roboter; nur die VL53 sehen es | ausweichen ohne Kontakt |
 | `gesperrte_tuer` | rechte Tür schließt, sobald der Roboter in die Verbindung fährt | erreichbaren Teil fertig erkunden, sauberes Ende |
 
-Bestanden nach Manifest v2 (Entscheidung D des Projektinhabers, 22.10.2026), wenn:
+Bestanden nach Manifest v3 (Entscheidungen des Projektinhabers, 22.10.2026), wenn:
 - die Mission von selbst endet, sauber mit `exploration_complete` oder
   `usable_partial` („Hilfe benötigt“ zählt in Stufe 2 nicht als Heilung);
 - mindestens 95 % der vom Start aus erreichbaren Fläche frei kartiert sind
-  (Fläche hinter einer geschlossenen Tür zählt nicht mit) oder die Mission
-  sauber als Teilkarte endet;
+  (Fläche hinter einer geschlossenen Tür zählt nicht mit);
+- keine belegte Kartenzelle weiter als 0,10 m von einer Wand der Welt liegt;
 - die Störung ausgelöst und die erwartete Heilung beobachtet wurde;
 - keine Kollision und kein Prozessabsturz auftraten.
 
-Manifest v1 (`sh_robustheit_szenarien.json`) verlangte statt der Abdeckung
-mindestens zwei erreichte Ziele und mindestens eines nach der Störung. Das traf
-auch Läufe, deren Karte schon unterwegs vollständig wurde. Die 43 Läufe vom
-22.10.2026 bleiben nach v1 bewertet. Welt, Budgets und Störungen sind in
-beiden Versionen gleich.
+Versionen (Welt, Budgets und Störungen gleich; Ergebnisse bleiben nach der
+Version bewertet, mit der sie liefen):
+- v1 `sh_robustheit_szenarien.json`: mindestens zwei erreichte Ziele und eines
+  nach der Störung. Traf auch Läufe, deren Karte unterwegs vollständig wurde.
+- v2 `sh_robustheit_szenarien_v2.json`: Abdeckung oder sauberes Teilende. Ließ
+  einen Lauf mit verbogener Karte (3,3 m) über das Teilende bestehen.
+- v3 `sh_robustheit_szenarien_v3.json`: wie oben.
+
+`experimente/manifest_asymmetrisch.json` ergänzt vier feste, unsymmetrische
+Möbel (`welt.zusatz_hindernisse`). Es prüft, ob die falschen Ringschlüsse von
+der Symmetrie der Testwelt kommen; keine Abnahme.
 
 ## Unterschiede zur Jetson-Umgebung (nur Simulation)
 

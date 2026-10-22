@@ -1,0 +1,144 @@
+{
+  "schema": 3,
+  "zweck": "Abnahmestufe 2 der Hauptlinie self_healing (KONZEPT_SELBSTHEILUNG.md §11): geschlossene Simulation, ohne Eingriff, Störfälle enden sauber, der Roboter heilt statt abzubrechen.",
+  "qualifikation": "experiment_asymmetrische_welt",
+  "festgelegt": "Experiment 22.10.2026 (Entscheidung C): gleiche Welt wie v3 plus vier feste, unsymmetrische Möbel; prüft, ob die falschen Ringschlüsse von der Symmetrie der Testwelt kommen. Keine Abnahme.",
+  "welt": {
+    "quelle": "tools/simulation/ap06_world.py (zwei Räume, Verbindung, Umweginsel, blockierte Alternative)",
+    "door_m": 0.8,
+    "start": [
+      -1.9,
+      -0.45,
+      0.0
+    ],
+    "zusatz_hindernisse": [
+      [
+        -2.8,
+        -2.35,
+        0.95,
+        1.4
+      ],
+      [
+        -1.35,
+        -1.25,
+        -1.4,
+        -1.05
+      ],
+      [
+        -1.1,
+        -0.9,
+        0.85,
+        1.05
+      ],
+      [
+        2.25,
+        2.8,
+        -1.4,
+        -1.05
+      ]
+    ]
+  },
+  "sensor": {
+    "lidar_hz": 10,
+    "lidar_beams": 2160,
+    "mastmaske": true,
+    "vl53_hz": 10,
+    "odometrie": "ideal aus dem Fahrmodell (Standardweg); HWT601 ist hier nicht modelliert"
+  },
+  "budgets": {
+    "start_s": 180,
+    "mission_s": 900,
+    "nachlauf_s": 5,
+    "ueberzug_s": 90
+  },
+  "abnahme": {
+    "erlaubte_enden": [
+      "exploration_complete",
+      "usable_partial"
+    ],
+    "min_abdeckung_erreichbar": 0.95,
+    "max_kartenfehler_m": 0.1,
+    "keine_kollision": true,
+    "kein_prozessabsturz": true,
+    "erlaeuterung": "Bestanden mit sauberem Ende, mindestens 95 % der vom Start aus erreichbaren Fläche frei kartiert (ohne Ausnahme für Teilenden), keine belegte Kartenzelle weiter als 0,10 m von einer Wand der Welt (wie das frühere AP06-Kriterium), kein Kontakt, kein Absturz, Störung ausgelöst und, wo erwartet, Heilung beobachtet. v2 ließ einen Lauf mit verbogener Karte (3,3 m) über die Teilende-Klausel bestehen."
+  },
+  "szenarien": [
+    {
+      "id": "referenz",
+      "beschreibung": "Ohne Störung; Vergleichslauf für Dauer, Ziele und Heilungen.",
+      "stoerung": null,
+      "erwartet": {}
+    },
+    {
+      "id": "sensorluecke",
+      "beschreibung": "Beide VL53 liefern 6 s lang nichts (wie der 7-s-Aussetzer am Jetson). Erwartet: anhalten, warten, weiterfahren.",
+      "stoerung": {
+        "art": "vl53_pause",
+        "dauer_s": 6.0,
+        "ausloeser": {
+          "ziele_erreicht": 1,
+          "faehrt": true
+        }
+      },
+      "erwartet": {
+        "warten_auf_enthaelt": "vl53"
+      }
+    },
+    {
+      "id": "kartenrennen",
+      "beschreibung": "LiDAR 8 s ohne Scan, danach erscheint einmal eine ältere Karte nach einer neueren (Karten-/Statusrennen). Erwartet: warten, weiterfahren, kein Abbruch.",
+      "stoerung": {
+        "art": "lidar_pause_und_alte_karte",
+        "dauer_s": 8.0,
+        "ausloeser": {
+          "ziele_erreicht": 1,
+          "faehrt": true
+        }
+      },
+      "erwartet": {
+        "warten_auf_enthaelt": "lidar"
+      }
+    },
+    {
+      "id": "rechenlast",
+      "beschreibung": "90 s volle Rechenlast auf allen Kernen (Rechenzeitüberschreitung). Erwartet: verzögert, aber kein Abbruch.",
+      "stoerung": {
+        "art": "cpu_last",
+        "dauer_s": 90.0,
+        "ausloeser": {
+          "ziele_erreicht": 1
+        }
+      },
+      "erwartet": {}
+    },
+    {
+      "id": "hindernis_im_weg",
+      "beschreibung": "Ein 10 cm hohes Hindernis (0,25 m) erscheint 0,9 m vor dem fahrenden Roboter; nur die VL53 sehen es, der LiDAR nicht. Erwartet: ausweichen ohne Kontakt.",
+      "stoerung": {
+        "art": "niedriges_hindernis",
+        "hoehe_m": 0.1,
+        "groesse_m": 0.25,
+        "abstand_m": 0.9,
+        "ausloeser": {
+          "ziele_erreicht": 1,
+          "faehrt": true
+        }
+      },
+      "erwartet": {}
+    },
+    {
+      "id": "gesperrte_tuer",
+      "beschreibung": "Die rechte Tür schließt sich, sobald der Roboter in die Verbindung fährt. Erwartet: erreichbaren Teil fertig erkunden und sauber mit Teilkarte oder vollständig enden, nicht mit Hilfe oder Fehler.",
+      "stoerung": {
+        "art": "tuer_schliessen",
+        "seite": "rechts",
+        "ausloeser": {
+          "x_ueber_m": -0.5
+        }
+      },
+      "erwartet": {}
+    }
+  ],
+  "version": 3,
+  "vorgaenger": "sh_robustheit_szenarien_v2.json (v2, 22.10.2026; Ergebnisse dort bleiben unverändert bewertet)"
+}
