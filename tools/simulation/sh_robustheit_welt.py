@@ -118,6 +118,29 @@ class RobustheitsWelt(World):
         return p@np.array([[c, s], [-s, c]]) + self.start[:2]
 
     # --- Bewertung (Manifest v2) ---------------------------------------------
+    def kartenfehler_orte(self, occupancy, resolution, origin, schwelle_m=.1, anzahl=12):
+        """Diagnose zu ``map_oracle``: wo liegen belegte Zellen weiter als ``schwelle_m`` von Wänden?
+
+        Gleiche Rechnung wie das Abnahmekriterium (belegt = Wert >= 65, Abstand zu
+        den Kanten der festen Hindernisse), zusätzlich mit Ort in Weltkoordinaten.
+        """
+        a = np.asarray(occupancy)
+        row, col = np.nonzero(a >= 65)
+        lokal = np.stack((origin[0]+(col+.5)*resolution, origin[1]+(row+.5)*resolution), axis=1)
+        punkte = self.karte_zu_welt(lokal)
+        abstand = np.full(len(punkte), math.inf)
+        for o in self.obstacles:
+            for start, end in zip(o, np.roll(o, -1, axis=0)):
+                v = end-start
+                f = np.clip((punkte-start)@v/(v@v), 0., 1.)
+                abstand = np.minimum(abstand, np.linalg.norm(punkte-start-f[:, None]*v, axis=1))
+        reihenfolge = np.argsort(-abstand)
+        ueber = reihenfolge[abstand[reihenfolge] > schwelle_m]
+        return {'schwelle_m': schwelle_m, 'belegte_zellen': int(len(punkte)),
+                'ueber_schwelle': int(len(ueber)),
+                'orte': [[round(float(punkte[i, 0]), 3), round(float(punkte[i, 1]), 3),
+                          round(float(abstand[i]), 3)] for i in ueber[:anzahl]]}
+
     def abdeckung_erreichbar(self, occupancy, resolution, origin):
         """Anteil der vom Start aus erreichbaren Fläche, den die SLAM-Karte frei kennt.
 

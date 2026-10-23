@@ -622,6 +622,12 @@ def main(argv=None):
                 belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
             ergebnis['abdeckung_erreichbar'] = welt.abdeckung_erreichbar(
                 belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
+            # Diagnose: Ort der Kartenfehler und Endkarte (synthetische Welt, bleibt im Lauf).
+            ergebnis['kartenfehler_orte'] = welt.kartenfehler_orte(
+                belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
+            np.savez_compressed(out/'endkarte.npz', belegung=belegung.astype(np.int8),
+                                aufloesung=k.info.resolution,
+                                ursprung=[k.info.origin.position.x, k.info.origin.position.y])
     except Exception as fehler:  # noqa: BLE001 - als Befund festhalten
         ergebnis['fehler'] = f'{type(fehler).__name__}: {fehler}'
         abgestuerzt = [n for n, proc in prozesse if proc.poll() is not None]

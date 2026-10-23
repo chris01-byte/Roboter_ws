@@ -104,3 +104,20 @@ def test_reachable_coverage_excludes_the_room_behind_a_closed_door():
     assert zu['erreichbar_zellen'] < .6*voll['erreichbar_zellen']   # rechter Raum fällt weg
     karte[:, :] = -1                                                  # nichts gesehen
     assert w.abdeckung_erreichbar(karte, res, (-1.0, -1.2))['erreichbar_anteil'] == 0.
+
+
+def test_map_error_locations_agree_with_the_acceptance_oracle():
+    w = welt.RobustheitsWelt(.8, [-1.9, -.45, 0.])
+    res = .05
+    karte = np.zeros((64, 120), dtype=int)                 # Kartenrahmen x -1,0..5,0 / y -1,2..2,0
+    ursprung = (-1.0, -1.2)
+    # Eine belegte Zelle mitten im linken Raum (Welt etwa -1,5 / -0,5): weit weg von jeder Wand.
+    lokal = w.local(np.array([[-1.5, -.5]]))[0]
+    zeile, spalte = int((lokal[1]-ursprung[1])/res), int((lokal[0]-ursprung[0])/res)
+    karte[zeile, spalte] = 100
+    orakel = w.map_oracle(karte, res, ursprung)
+    orte = w.kartenfehler_orte(karte, res, ursprung)
+    assert orte['ueber_schwelle'] == 1 and orte['belegte_zellen'] == 1
+    x, y, fehler = orte['orte'][0]
+    assert fehler == pytest.approx(orakel['maximum_occupied_wall_error_m'], abs=1e-3)
+    assert math.dist((x, y), (-1.5, -.5)) < res
