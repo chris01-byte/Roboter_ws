@@ -114,6 +114,8 @@ Exitcode 0 = bestanden.
 | `mitte_engste_stelle` | kleinster Abstand der Robotermitte; unter `robot_radius` (0,28 m) plant NavFn von dort nicht mehr |
 | `plan_engste_stelle` | engste Stelle der globalen Pläne, ganz und nur bis 1 m um den Roboter (`nah_…`) |
 | `timer_verspaetungen`, `rechnerlast` | Lücken der Anlage mit Zeitpunkt, 1-min-Last je 10 s |
+| `kartenfehler_orte` | belegte Kartenzellen weiter als 0,10 m von jeder Wand, mit Weltkoordinaten (gleiche Rechnung wie das Kriterium `karte_plausibel`) |
+| `endkarte.npz` | Endkarte der synthetischen Welt (`belegung`, `aufloesung`, `ursprung`) im Laufordner, zum Ansehen |
 
 Kontur der Welt = gepolsterter Nav2-Footprint (x −0,13…0,33 m, y ±0,25 m).
 Das echte Chassis liegt rundum etwa 2 cm innerhalb. „Kollision“ heißt hier
@@ -130,3 +132,10 @@ python3 tools/simulation/sh_robustheit.py --szenario referenz --ausgabe /pfad \
 weiteres params-file). Das Ergebnis trägt dann `experiment_keine_abnahme`.
 Experimente dienen Entscheidungen; die Abnahme gilt nur ohne `--experiment`
 mit dem festgelegten Manifest.
+
+Messexperimente 23.10.2026 zu den Reglerabbrüchen „extrapolation into the
+future“ (`map`→`odom` zu alt), beide **widerlegt** und nicht übernommen:
+`experimente/x11_tf_vorlauf_05.yaml` (`transform_timeout` 0,5 s; `slam_toolbox`
+2.8.5 datiert `map`→`odom` damit nicht vor, Fehlerzahl unverändert) und
+`experimente/x12_slam_raster_5cm.yaml` (SLAM-Karte 5 statt 1 cm; Last anfangs
+niedriger, Spitzen und Fehlerzahl unverändert, Abdeckung schlechter).

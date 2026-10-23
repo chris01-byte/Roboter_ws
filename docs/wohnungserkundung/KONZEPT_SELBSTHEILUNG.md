@@ -281,6 +281,18 @@ Störfall „Hindernis im Weg“ bleibt deshalb rot, bis die Sensorik es kann
 (Kandidat: OAK mit korrigiertem Bodenfilter, eigenes Paket). Für Labor- und
 Wohnungsfahrten flache Gegenstände vom Boden räumen.
 
+**Stand Stufe 2 (23.10.2026): formal nicht bestanden, sonst erfüllt.** Volle
+v4-Abnahme mit den SLAM-Schwellen im Produkt, zwei Durchgänge (Stand
+`bb94311`): Referenz, Sensorlücke, Kartenrennen, Rechenlast und gesperrte Tür
+je 2/2, „Hindernis im Weg“ 0/2 (bekannte Grenze). Kein falscher Ringschluss in
+18 Läufen. Der erste Durchgang (`093be90`) deckte einen Fehler der Stufe
+„Umsehen“ auf: Der Drehkreis wurde an der Pose vor dem Fehlversuch geprüft;
+behoben in `ff05706`. Offen und in der Simulation nicht klärbar: Wie oft der
+Regler am Jetson wegen zu alter `map`→`odom`-Korrektur abbricht (Ursache fast
+aller Heilungen in der Simulation) und wie die SLAM-Last mit der Kartengröße
+wächst; SH-3 misst beides. Einzelheiten im [STATUS](STATUS.md), Abschnitt
+23.10.2026.
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

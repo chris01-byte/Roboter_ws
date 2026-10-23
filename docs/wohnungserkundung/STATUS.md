@@ -1,11 +1,13 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 22.10.2026 (abends):** Hauptlinie `self_healing`
+**Aktueller Stand 23.10.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden;
 SH-2 (motorlos) offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
-Simulation, Manifest v4) **nicht bestanden**; Entscheidungen A–D, SLAM-Schwellen
-(nur Selbstheilung) umgesetzt; niedrige Box als bekannte Grenze geführt.
-Details und der eine nächste Schritt im obersten Abschnitt 22.10.2026.
+Simulation, Manifest v4) mit Stand `bb94311`: **10 von 12 Läufen bestanden**,
+alle fünf übrigen Szenarien je 2/2; formal **nicht bestanden**, weil
+„Hindernis im Weg“ an der bekannten Grenze niedriger Gegenstände scheitert.
+Ein Explorer-Fehler beim Umsehen wurde gefunden und behoben (`ff05706`).
+Details und der eine nächste Schritt im obersten Abschnitt 23.10.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -24,6 +26,83 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 23.10.2026 – Stufe 2: volle v4-Abnahme mit SLAM-Schwellen, kritisch ausgewertet
+
+Auftrag des Projektinhabers: Simulation laufen lassen und danach kritisch
+auswerten. Nur Cloud (ROS 2 Jazzy, 4 Kerne), keine Gerätewirkung.
+[Beleg](evidence/sh-stufe2-simulation-20261023.json) mit allen 26 Läufen.
+
+**Abnahme (Manifest v4, ohne Experiment):**
+
+| Stand | Durchgang | bestanden | durchgefallen |
+|---|---|---|---|
+| `093be90` | 1 | 3/6 | Referenz (Kontakt beim Umsehen, Fehler s. u.), Hindernis im Weg (Box), gesperrte Tür (Kartenfehler 14,2 cm) |
+| `bb94311` (mit `ff05706`) | A | 5/6 | Hindernis im Weg (Box, zusätzlich Kartenfehler 11,0 cm) |
+| `bb94311` | B | 5/6 | Hindernis im Weg (Box, Ende „Hilfe benötigt“) |
+
+Mit `bb94311` je Szenario: Referenz, Sensorlücke, Kartenrennen, Rechenlast,
+gesperrte Tür je **2/2**, Hindernis im Weg **0/2**. Ohne Box: kleinster Abstand
+zur Polsterung 2,6–6,5 cm, Kartenfehler 3,5–8,9 cm, Abdeckung 96,0–98,1 %,
+kein falscher Ringschluss (0 in allen 18 Abnahmeläufen), kein Absturz. Jeder
+Lauf endet als „Teilkarte“ (übrige Frontiers unerreichbar), keiner als
+„vollständig“; das Kriterium (Abdeckung ≥ 95 %) ist trotzdem erfüllt.
+
+**Befunde:**
+1. **Produktfehler gefunden und behoben (`ff05706`).** „Umsehen“ (H3) prüfte
+   den Drehkreis an der Pose vom Beginn der Schleifenrunde, gedreht wurde nach
+   dem Fehlversuch etwa 0,25 m weiter, 0,39 m neben der Insel (Eckenradius
+   0,414 m): Kontakt im Referenzlauf ohne Störung. Jetzt frische Pose nach dem
+   Fehlversuch; zwei neue Tests schlagen auf dem alten Code fehl. Explorer
+   2248 Tests grün (ein zeitabhängiger AP06-Test, `test_metric_tf_receipt`,
+   scheitert auch auf `093be90` in 3 von 12 Wiederholungen).
+2. **Fast alle Heilungen haben eine Ursache:** Der Regler bricht ab, weil
+   `map`→`odom` beim Nachschlagen 20–270 ms zu alt ist („extrapolation into the
+   future“, 16–74 Abbrüche je Lauf, 3–20 Heilungen). Die Leiter fängt das ab,
+   kostet aber Zeit (197–899 s) und erzeugt Neustarts mit Drehungen. Die
+   naheliegende Erklärung war falsch (X11, `transform_timeout` 0,5 s: 28–37
+   statt 36–63 Abbrüche in Referenz und Rechenlast, nicht beseitigt; `slam_toolbox` 2.8.5 datiert damit
+   nicht vor). Ob das am Jetson auch so oft vorkommt, misst SH-3.
+3. **SLAM-Last wächst mit der Karte:** `slam_toolbox` stieg je Lauf von etwa
+   6–27 % auf 36–109 % eines Kerns (Spitze 128 %), in einer Welt mit nur
+   rund 16 m² freier Fläche. Karte und globale Kostenkarte laufen mit 1 cm
+   (AP06-Entscheidung, `b91101c`; 562 × 282 Zellen hier, eine Wohnung hätte
+   über eine Million). X12 (SLAM-Raster 5 cm) hielt die Last in 2 von 3 Läufen
+   unter 40 % und die Abbrüche bei 0, im dritten (zwei Ringschlüsse) nicht; mit
+   0,68-m-Türen rückten die Pläne aber näher an die Wände (engster Plan 9,6
+   statt 23 cm, 18 % statt 14 % der Pläne unter dem Roboterradius). **X12 wird
+   nicht vorgeschlagen.** Die Abdeckung fiel mit 5 cm auf 93–95 %, weil das
+   Kriterium im Kartenraster rechnet (Wandsaum ~10 % statt ~2 % der Fläche);
+   das ist ein Messeffekt.
+4. **Kartenfehler über 10 cm ohne Ringschluss:** 14,2 cm (`093be90`, Tür) und
+   11,0 cm (`bb94311`, Box). Die neue Diagnose zeigt im zweiten Fall eine
+   einzelne um etwa 10 cm verschobene Möbelkante, keine verbogene Karte. Das
+   kam auch ohne die strengeren Schwellen vor (vor `7d8ef37` 1 von 5 Läufen
+   ohne Ringschluss); die 0,10-m-Grenze bleibt, solche Läufe bleiben rot.
+5. **Rest-Risiko Drehen nahe Ecken:** Im X11-Lauf streifte der Roboter die
+   Inselecke beim Drehen auf der Stelle, obwohl sie in der lokalen Kostenkarte
+   stand (26 tödliche Zellen). Vorher fünf VL53-Lücken in 8 s (Cloud-Last),
+   jede mit Abbruch und Neustart samt Ausrichtungsdrehung. Die Drehprüfung des
+   Reglers arbeitet in 5-cm-Zellen; 2 cm Polsterung sichert sie nicht sicher.
+   In den 10 Abnahmeläufen ohne Box kein solcher Kontakt; mit 0,68-m-Türen
+   blieben 0,9 cm.
+
+**Grenzen dieser Aussage:** Die Odometrie der Simulation ist ideal; „0
+Ringschlüsse“ heißt hier auch „0 echte“. Ob die strengen Schwellen bei realer
+Drift nötige Korrekturen unterdrücken, zeigt erst SH-3 (Frage 3 an Christopher:
+doppelte oder verdrehte Wände). Die Cloud ist voll ausgelastet (Last bis ~8 auf
+4 Kernen); VL53-Lücken und ein Teil der Zeitfehler sind davon verstärkt.
+Zwei Durchgänge je Szenario sind wenig: 0 Kontakte in 10 Läufen begrenzen die
+Kontaktrate nur auf unter etwa 26 % je Lauf (95 %).
+
+**Geändert:** `ff05706` (Explorer, s. o.); `bb94311` Simulation speichert
+Endkarte und Ort der Kartenfehler. SH-2 braucht jetzt mindestens `ff05706`
+(164 gezielte Tests); der SH-3-Entwurf misst zusätzlich SLAM-Last und
+Zeitfehler am Jetson (nur lesend). X11/X12 liegen als Experimente in
+`tools/simulation/experimente/`, nicht übernommen.
+
+**Nächster Schritt:** SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)), mindestens
+`ff05706` und 164 gezielte Tests. Danach SH-3.
 
 ## 22.10.2026 (abends) – Stufe 2 nach Entscheidungen A–D: SLAM-Schwellen und niedrige Box offen
 

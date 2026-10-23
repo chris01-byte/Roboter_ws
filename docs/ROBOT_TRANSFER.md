@@ -84,6 +84,18 @@ Grob 0,55, Fein 0,65, Varianz 2,0). Neues Launch-Argument
 weniger falsche, aber auch seltener echte Ringschlüsse. SH-2 prüft die Werte
 live (162 Tests). Rückfall: `self_healing:=false` oder Release vor `7d8ef37`.
 
+Nachtrag 23.10.2026, Explorer-Korrektur (`ff05706`, nur `self_healing:=true`):
+Die Heilungsstufe „Umsehen“ (Drehung auf der Stelle) prüft den freien
+Drehkreis jetzt an der frischen Pose **nach** dem gescheiterten Nav2-Versuch,
+nicht mehr an der Pose vom Beginn der Schleifenrunde; ist die Pose älter als
+`self_healing_pose_timeout_s`, entfällt das Umsehen. In der Simulation hatte
+die alte Prüfung eine Drehung 0,39 m neben einer Wand zugelassen (Kontakt).
+Folge im Betrieb: weniger Drehungen auf der Stelle nahe Hindernissen; keine
+Änderung an Parametern, Kostenkarten, `collision_monitor`, Fahrtor, Basis oder
+SLAM. SH-2 baut den Stand mit (164 gezielte Tests); die motorlose Messung ist
+davon unberührt, SH-3 fährt damit. Rückfall: Release vor `ff05706` sourcen
+oder `self_healing:=false`.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

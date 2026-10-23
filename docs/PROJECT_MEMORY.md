@@ -1338,3 +1338,22 @@ den Nahbereich behält (X10), verhinderte die Berührung aber auch nicht. Lehre:
 Der Baumkommentar „VL53/OAK markieren im nächsten Frame neu“ war eine
 ungeprüfte Annahme (OAK ist beim Kartieren aus, die VL53 sehen Nahes nicht).
 
+**Nachtrag 23.10.2026 – volle v4-Abnahme kritisch ausgewertet:** Mit den
+SLAM-Schwellen im Produkt bestanden 10 von 12 Läufen; beide Fehlschläge sind
+die bekannte Grenze niedriger Gegenstände, kein falscher Ringschluss in 18
+Läufen. Drei Lehren:
+1. Eine Heilungsentscheidung muss den Zustand zum Zeitpunkt der Entscheidung
+   prüfen. „Umsehen“ prüfte den Drehkreis an der Pose vom Beginn der
+   Schleifenrunde; nach dem Fehlversuch stand der Roboter 0,25 m weiter neben
+   einer Wand (Kontakt). Behoben in `ff05706`, Test schlägt auf dem alten Code
+   fehl.
+2. Erst messen, auch bei der eigenen Hypothese: Fast alle Heilungen kamen von
+   Reglerabbrüchen, weil `map`→`odom` zu alt war. Die naheliegende Erklärung
+   „SLAM datiert zu kurz vor“ (X11, `transform_timeout` 0,5 s) war falsch, die
+   Fehlerzahl blieb fast gleich; ein gröberes SLAM-Raster (X12) half nur
+   teilweise. Ursache offen; SH-3 misst Häufigkeit und SLAM-Last am Jetson.
+3. Was die Simulation nicht zeigen kann, ausdrücklich nennen: Ihre Odometrie
+   ist ideal. „0 Ringschlüsse“ heißt dort auch „0 echte Ringschlüsse“; ob die
+   strengen Schwellen bei realer Drift nötige Korrekturen unterdrücken, zeigt
+   erst eine reale Fahrt.
+

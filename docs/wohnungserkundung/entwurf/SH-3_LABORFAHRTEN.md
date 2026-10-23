@@ -101,6 +101,18 @@ nohup env --default-signal=INT python3 "$SH_SRC/tools/kartierung/selbstheilung_l
 echo $! > "$SH_PR/sh3_run$RUN/protokoll.pid"
 ```
 
+Nur lesend, nebenher die Rechenlast von `slam_toolbox` alle 10 s mitschreiben
+(Simulation 23.10.2026: sie stieg mit der Karte von 25 % auf 80 % eines Kerns,
+danach kam `map`→`odom` zu spät). `-x` vergleicht den Prozessnamen exakt und
+trifft daher nicht die eigene Shell:
+
+```bash
+SLAM_PID=$(pgrep -x async_slam_tool | head -1); echo "SLAM_PID=$SLAM_PID"
+echo "$SLAM_PID" > "$SH_PR/sh3_run$RUN/slam.pid"
+nohup top -b -d 10 -p "$SLAM_PID" > "$SH_PR/sh3_run$RUN/slam_cpu.txt" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh3_run$RUN/slam_cpu.pid"
+```
+
 ### 5. Mission starten
 
 Christopher drückt in der App „Erkunden“. Das ist der Produktweg. Steht die App
@@ -128,6 +140,10 @@ for n in controller_server planner_server behavior_server bt_navigator velocity_
   echo "$n: $(ros2 lifecycle get /$n 2>&1)"; done | tee "$SH_PR/sh3_run$RUN/lifecycle_nach.txt"
 grep -c "process has died" "$SH_PR/sh3_run$RUN/launch.log"
 grep -nE "Ignoring the source|TERMINAL_FAULT|ERROR|FATAL" "$SH_PR/sh3_run$RUN/launch.log" | head -40
+for m in "extrapolation into the future" "Unable to transform robot pose" "missed its desired rate" "detected collision ahead"; do \
+  echo "$m: $(grep -c "$m" "$SH_PR/sh3_run$RUN/launch.log")"; done | tee "$SH_PR/sh3_run$RUN/zeitfehler.txt"
+kill -TERM "$(cat "$SH_PR/sh3_run$RUN/slam_cpu.pid")"
+grep -E "^ *$(cat "$SH_PR/sh3_run$RUN/slam.pid") " "$SH_PR/sh3_run$RUN/slam_cpu.txt" | awk '{print $9}' | tr '\n' ' ' | tee "$SH_PR/sh3_run$RUN/slam_cpu_reihe.txt"
 ros2 run nav2_map_server map_saver_cli -f "$SH_PR/sh3_run$RUN/karte"
 ```
 
@@ -180,6 +196,8 @@ Die Fahrzeit wird gemessen, ist aber kein Abbruchkriterium.
    - Fahrtprotokoll ohne `ereignisse`, dazu die Ereignisliste gekürzt auf
      Zustandswechsel, HWT, Not-Aus, VL53-Lücken;
    - Lifecycle danach, „process has died“-Zahl, Warnungen;
+   - `zeitfehler.txt` und die SLAM-Lastreihe (`slam_cpu_reihe.txt`, % eines
+     Kerns alle 10 s) vollständig;
    - Christophers drei Antworten wörtlich.
 3. Tabelle über alle Fahrten: Dauer, Ziele, Heilungen, Umsehen,
    Spurrückfahrten, Endzustand, Strecke, VL53-Lücken, Kontakt, Eingriff.
