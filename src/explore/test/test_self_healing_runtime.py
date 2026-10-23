@@ -328,6 +328,60 @@ def test_look_around_needs_a_fresh_costmap_without_measured_obstacles(monkeypatc
     assert not n._self_healing_look_around_possible(pose)
 
 
+def _look_around_parent(monkeypatch, pose_age=lambda: 0.):
+    """Fehlversuche wechseln zwischen frei (1,5 m) und nahe einer Wand (1,9 m).
+
+    Simulation 23.10.2026 (v4 referenz): Der Drehkreis wurde an der Pose vom
+    Schleifenanfang geprüft, gedreht wurde 0,25 m weiter neben der Insel.
+    """
+    far, near = (1.5, 1.5), (1.9, 1.5)
+    def alternating(x, y, stop, record):
+        start = tuple(state.pose[:2])
+        end = near if math.dist(start, far) < .05 else far
+        for i in range(1, 21):
+            state.pose[:] = [start[0]+(end[0]-start[0])*i/20, start[1], 0.]
+            record()
+        state.moved = True
+        state.refresh_map()
+        return 'aborted'
+    n, state, goal, terminal = parent(monkeypatch, navigate=alternating)
+    state.moved = False
+    costs = np.full(state.occupancy.shape, -1, dtype=np.int16)
+    costs[30, 46] = 100                       # Wand 0,40 m neben "near", 0,80 m neben "far"
+    n._global_costmap = _grid(costs, 0.)
+    checked = []
+    check = n._self_healing_look_around_possible
+    def fresh_check(pose):
+        n._global_costmap_received_at = state.clock[0]
+        checked.append((tuple(pose[:2]), tuple(state.pose[:2])))
+        return check(pose)
+    n._self_healing_look_around_possible = fresh_check
+    def sample():
+        age = pose_age() if state.moved else 0.
+        state.moved = False
+        return tuple(state.pose), age
+    n._robot_pose_sample = sample
+    rotations = []
+    n._rotate_in_place = lambda angle, speed, timeout, stop_requested=None: (
+        rotations.append(tuple(state.pose[:2])) or state.calls.append(('look_around', angle))
+        or ('success', angle))
+    return n, state, goal, checked, rotations
+
+
+def test_look_around_checks_the_turning_circle_where_the_robot_now_stands(monkeypatch):
+    n, state, goal, checked, rotations = _look_around_parent(monkeypatch)
+    n._execute_self_healing(goal, 1200., .3)
+    assert checked and all(math.dist(a, b) < 1e-9 for a, b in checked), checked
+    assert rotations, n._self_healing_status         # dort, wo es frei ist, gedreht
+    assert all(math.dist(r, (2.325, 1.525)) > .45 for r in rotations), rotations
+
+
+def test_look_around_needs_a_fresh_pose_after_the_failed_attempt(monkeypatch):
+    n, state, goal, checked, rotations = _look_around_parent(monkeypatch, pose_age=lambda: 9.)
+    n._execute_self_healing(goal, 1200., .3)
+    assert not rotations and not checked, (rotations, checked)
+
+
 class _Future:
     def __init__(self, value):
         self._value = value

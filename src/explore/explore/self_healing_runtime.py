@@ -466,9 +466,16 @@ class SelfHealingRuntime:
             track_len = track.straight_back_distance(
                 odom, self._self_healing_track_back_max_m,
                 lateral_tolerance_m=self._self_healing_track_lateral_m) if odom else 0.
+            # Drehkreis dort prüfen, wo gedreht würde: Nach dem Fehlversuch steht der
+            # Roboter nicht mehr an der Pose vom Schleifenanfang (Simulation 23.10.2026:
+            # geprüft rund 0,25 m davor, gedreht 0,39 m neben einer Wand, Berührung).
+            here, here_age = self._robot_pose_sample()
+            look_around_ok = (here is not None and here_age is not None
+                              and 0. <= here_age <= self._self_healing_pose_timeout_s
+                              and self._self_healing_look_around_possible(here))
             action = ladder.failure(time.monotonic(), failure, attempts[key],
                 track_back_available=track_len >= self._self_healing_track_back_min_m,
-                look_around_available=self._self_healing_look_around_possible(pose))
+                look_around_available=look_around_ok)
             status.update(heals=ladder.heals, ladder=ladder.snapshot())
             if action == REQUEST_HELP:
                 return finish('blocked', f'help_required:{failure}')
