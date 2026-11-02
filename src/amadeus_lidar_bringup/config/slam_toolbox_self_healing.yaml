@@ -12,9 +12,25 @@
 #  Kehrseite: echte Ringe werden seltener geschlossen; reale Wirkung erst in
 #  SH-3 belegt. Rueckfall: self_healing:=false.
 # =====================================================================
+#
+#  SL-1 (02.11.2026, Auftrag Projektinhaber): Knoten seltener anlegen.
+#  SH-3 am Jetson: slam_toolbox stieg in 20 min auf 85-95 % eines Kerns,
+#  verwarf Scans und lieferte map->odom zu spaet (Reglerabbrueche). Die
+#  Basis legt schon nach 1 cm Fahrt (vorlaeufiger Wert vom 13.08.2026)
+#  bzw. 8,6 Grad Drehung einen Graphknoten an; Kartenneuaufbau und Suche
+#  wachsen mit jedem Knoten. SLAM-Pruefstand (gleiche Aufnahme, nur SLAM):
+#  Last am Ende 82 % -> 11 %, lastbedingt verworfene Scans 51-56 -> 0,
+#  map->odom aelter als 0,25 s 1,7 % -> 0,15 %, Kartenfehler 7,1 -> 2,8 cm.
+#  Drehungen legen weiter Knoten an (ODER-Logik, Humble-Fix #808 und
+#  check_min_dist_and_heading_precisely in der Basis). Folge fuer X7:
+#  20 Knoten Kettenlaenge sind jetzt rund 5 m Weg statt 0,2 m (entspricht
+#  etwa den slam_toolbox-Standards 10 x 0,5 m).
+# =====================================================================
 slam_toolbox:
   ros__parameters:
     loop_match_minimum_chain_size: 20          # Basis 10
     loop_match_minimum_response_coarse: 0.55   # Basis 0.35
     loop_match_minimum_response_fine: 0.65     # Basis 0.45
     loop_match_maximum_variance_coarse: 2.0    # Basis 3.0
+    minimum_travel_distance: 0.25              # Basis 0.01 (SL-1)
+    minimum_travel_heading: 0.35               # Basis 0.15 rad (SL-1)

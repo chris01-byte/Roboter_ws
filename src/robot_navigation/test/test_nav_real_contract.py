@@ -89,7 +89,9 @@ def test_self_healing_slam_overlay_only_tightens_loop_closure_and_only_in_self_h
         'loop_match_minimum_chain_size': 20,
         'loop_match_minimum_response_coarse': 0.55,
         'loop_match_minimum_response_fine': 0.65,
-        'loop_match_maximum_variance_coarse': 2.0}}}
+        'loop_match_maximum_variance_coarse': 2.0,
+        'minimum_travel_distance': 0.25,
+        'minimum_travel_heading': 0.35}}}
     basis = base['slam_toolbox']['ros__parameters']
     streng = overlay['slam_toolbox']['ros__parameters']
     assert basis['do_loop_closing'] is True                     # Ringschluss bleibt an
@@ -97,6 +99,13 @@ def test_self_healing_slam_overlay_only_tightens_loop_closure_and_only_in_self_h
     assert streng['loop_match_minimum_response_fine'] > basis['loop_match_minimum_response_fine']
     assert streng['loop_match_minimum_response_coarse'] > basis['loop_match_minimum_response_coarse']
     assert streng['loop_match_maximum_variance_coarse'] < basis['loop_match_maximum_variance_coarse']
+    # SL-1 (02.11.2026): Knoten seltener, aber Drehungen legen weiter Knoten an
+    # (ODER-Logik der Basis, Humble-Fix #808), unter den slam_toolbox-Standards 0,5 m/0,5 rad.
+    assert basis['check_min_dist_and_heading_precisely'] is True
+    assert basis['minimum_travel_distance'] < streng['minimum_travel_distance'] <= 0.5
+    assert basis['minimum_travel_heading'] < streng['minimum_travel_heading'] <= 0.5
+    # Kartenraster und Aktualisierung bleiben (Nicht-Ziele SL-1: Türkontur, Kartenfrist).
+    assert 'resolution' not in streng and 'map_update_interval' not in streng
     # Beide SLAM-Startwege laden das Overlay nach der Basis; Default ist die Basis selbst.
     for name in ('slam_lidar.launch.py', 'slam_lidar_hwt601.launch.py'):
         source = (lidar/'launch'/name).read_text(encoding='utf-8')
