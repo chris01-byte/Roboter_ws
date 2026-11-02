@@ -31,6 +31,55 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
+## 02.11.2026 (nachts) – Arbeitspaket SL-1: SLAM-Last begrenzen (vor der Messung festgelegt)
+
+Auftrag des Projektinhabers: Punkt 1 aus der SH-3-Auswertung strukturiert
+bearbeiten und abnehmen. Die Kriterien unten stehen **vor der ersten Messung**
+fest und werden nicht nachträglich verschoben; erreicht ein Kandidat sie
+nicht, ist SL-1 nicht abgenommen.
+
+| | |
+|---|---|
+| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 02.11.2026 |
+| WE-Bezug | WE-M3 (metrischer Erkundungskern), Vorbedingung für Abnahmestufe 3 |
+| Istbasis | `cc5eddc` (Produktcode = `3a05e6b`); SH-3: `slam_toolbox` bis 85–95 % eines Kerns nach 20 min, 80–162 verworfene Scans, 48–262 Reglerabbrüche wegen altem `map`→`odom` je Fahrt |
+| Ziel | `slam_toolbox` hält über eine ganze Erkundung Schritt: begrenzte Last, keine verworfenen Scans, frisches `map`→`odom` |
+| Nicht-Ziele | kein gröberes Kartenraster (1 cm bleibt, X12 brachte Pläne näher an Türpfosten), keine Änderung der Ringschluss-Schwellen (X7), kein anderes SLAM, keine Änderung an Explorer, Nav2, Fahrtor, `collision_monitor`, VL53 oder AP06 (`self_healing:=false` unverändert) |
+| Ort der Änderung | nur `slam_toolbox_self_healing.yaml` (lädt nur mit `self_healing:=true`) |
+| Rückfall | Overlay-Einträge entfernen, `self_healing:=false` oder Release vor der Änderung |
+
+**Ausgangsverdacht (noch nicht gemessen):** `minimum_travel_distance` steht
+seit 13.08.2026 vorläufig auf 0,01 m („für ersten A/B-Test beibehalten“).
+Dann entsteht schon nach 1 cm Fahrt ein neuer Graphknoten, bis zu 5 je
+Sekunde; Kartenneuaufbau (jede Sekunde, 1 cm) und Ringschlusssuche werden mit
+jedem Knoten teurer. Drehungen erzeugen Knoten über `minimum_travel_heading`
+(0,15 rad) dank des Humble-Fixes #808 und
+`check_min_dist_and_heading_precisely`.
+
+**Vorgehen:** (1) Prüfstand: eine Simulationsfahrt aufzeichnen und nur
+`slam_toolbox` mit denselben Daten mehrfach abspielen, je Lauf ein Parameter
+geändert. (2) Kandidat auswählen. (3) Geschlossene Simulation als Regression.
+(4) Abnahme am Jetson mit drei Laborfahrten (SH-4).
+
+**Abnahmekriterien:**
+
+| Nr | Stufe | Kriterium |
+|---|---|---|
+| A1 | Prüfstand | `slam_toolbox`-Last im Mittel der letzten 2 min ≤ 50 % des Ausgangswerts derselben Aufnahme |
+| A2 | Prüfstand | 0 verworfene Scans („queue is full“) |
+| A3 | Prüfstand | `map`→`odom` älter als 0,25 s in höchstens 0,5 % der Stichproben (20 Hz) |
+| A4 | Prüfstand | Kartenfehler ≤ 0,10 m und höchstens 2 cm schlechter als der Ausgangswert, Abdeckung der erreichbaren Fläche ≥ 95 % |
+| B1 | Simulation v4, 2 Durchgänge | Referenz, Sensorlücke, Kartenrennen, Rechenlast, gesperrte Tür je 2/2 (Box bleibt bekannte Grenze), kein neuer Kontakt |
+| B2 | Simulation v4 | Reglerabbrüche „extrapolation into the future“ je Lauf im Median ≤ 11 (`bb94311`: Median 44,5) |
+| B3 | Simulation, Tür 0,68 m | besteht; engster Plan ≥ 0,20 m (Produkt heute 0,23 m) |
+| C1 | Jetson SH-4, 3 Laborfahrten | Kriterien der Stufe 1 wieder 3/3 |
+| C2 | Jetson SH-4 | `slam_toolbox` in der letzten Minute jeder Fahrt ≤ 50 % eines Kerns (SH-3: 60–95 %) |
+| C3 | Jetson SH-4 | ≤ 10 verworfene Scans je Fahrt (SH-3: 80–162) |
+| C4 | Jetson SH-4 | ≤ 40 „extrapolation into the future“ je Fahrt (SH-3: 48–262) |
+| C5 | Jetson SH-4 | Karten nach Christophers Ansicht sauber, auch an Stellen, an denen sich Amadeus gedreht hat |
+
+**Nächster Schritt:** Prüfstand bauen und Ausgangswerte messen.
+
 ## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
 
 Lokaler Agent, Fahrten 16:16–17:41, LAB-1 aktiv, Release
