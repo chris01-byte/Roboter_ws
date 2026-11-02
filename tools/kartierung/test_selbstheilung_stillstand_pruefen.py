@@ -208,3 +208,77 @@ def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
     assert zeilen['Publisher auf /scan_normiert']['ok'] is False
     assert 'normalize_scan' in zeilen['Publisher auf /scan_normiert']['detail']
 
+
+
+def test_hwt_launch_starts_exactly_one_encoder_reader():
+    from selbstheilung_stillstand_pruefen import ENCODER_SHADOW
+    hwt = (REPO/'src/amadeus_lidar_bringup/launch/slam_lidar_hwt601.launch.py').read_text(
+        encoding='utf-8')
+    base = hwt[hwt.index("executable='base_hardware'"):]
+    shadow = hwt[hwt.index("executable='encoder_shadow_reader'"):]
+    assert 'condition=IfCondition(active_drive)' in base[:200]
+    assert f"name='{ENCODER_SHADOW.lstrip('/')}'" in shadow[:200]
+    assert 'condition=UnlessCondition(active_drive)' in shadow[:200]
+
+
+def _motorpfad(odometrie, aktiv, knoten, base):
+    from selbstheilung_stillstand_pruefen import motorpfad_zeilen
+    return {name: ok for name, ok, _ in motorpfad_zeilen(odometrie, aktiv, set(knoten), base)}
+
+
+def test_motorless_hwt_path_needs_the_encoder_shadow_instead_of_base_hardware():
+    """SH-2 Lauf 1 (02.11.2026): D scheiterte, weil base_hardware dort nie startet."""
+    shadow, base = '/hwt601_encoder_shadow_reader', '/base_hardware'
+    assert _motorpfad('hwt601', False, {shadow, '/slam_toolbox'}, None) == {
+        'kein Motorschreiber (HWT-Weg ohne active_drive)': True}
+    # Ohne sichtbaren Shadow ist das Fehlen von base_hardware kein Beleg.
+    assert not all(_motorpfad('hwt601', False, {'/slam_toolbox'}, None).values())
+    # base_hardware im Graph, aber ohne Antwort: wie bisher FEHL, keine Abkürzung.
+    assert not all(_motorpfad('hwt601', False, {shadow, base}, None).values())
+    # base_hardware im HWT-Weg läuft: dieselben Dry-Run-Regeln wie im Standardweg.
+    trocken = {'dry_run': True, 'allow_rs485': False}
+    assert all(_motorpfad('hwt601', False, {base}, trocken).values())
+    assert not all(_motorpfad('hwt601', False, {base}, {'dry_run': False, 'allow_rs485': True}).values())
+    assert not all(_motorpfad('hwt601', False, {base, shadow}, trocken).values())
+
+
+def test_standard_path_and_active_order_still_require_base_hardware():
+    shadow, base = '/hwt601_encoder_shadow_reader', '/base_hardware'
+    scharf = {'dry_run': False, 'allow_rs485': True}
+    for odometrie in (None, 'standard'):
+        assert not all(_motorpfad(odometrie, False, {shadow}, None).values())
+        assert all(_motorpfad(odometrie, False, {base}, {'dry_run': True, 'allow_rs485': False}).values())
+    # Vor einer Laborfahrt (SH-3, HWT-Weg mit active_drive): Basis scharf, kein Shadow.
+    assert all(_motorpfad('hwt601', True, {base}, scharf).values())
+    assert not all(_motorpfad('hwt601', True, {shadow}, None).values())
+    assert not all(_motorpfad('hwt601', True, {base, shadow}, scharf).values())
+
+
+def test_standstill_check_passes_the_reported_sh2_graph():
+    from selbstheilung_stillstand_pruefen import pruefe_stillstand
+
+    class Knoten:
+        def create_subscription(self, *args):
+            return object()
+
+        def destroy_subscription(self, sub):
+            pass
+
+    class Leser:
+        node = Knoten()
+
+        def get_params(self, node, names):
+            return None                      # base_hardware läuft nicht
+
+        def knoten(self):
+            return {'/hwt601_encoder_shadow_reader', '/hwt601_mapping_ekf', '/collision_monitor'}
+
+        def spin_for(self, seconds):
+            pass
+
+    ergebnis = Ergebnis()
+    pruefe_stillstand(Leser(), ergebnis, 3.0, odometrie='hwt601')
+    assert ergebnis.bestanden, ergebnis.zeilen
+    ergebnis = Ergebnis()
+    pruefe_stillstand(Leser(), ergebnis, 3.0, odometrie=None)
+    assert not ergebnis.bestanden

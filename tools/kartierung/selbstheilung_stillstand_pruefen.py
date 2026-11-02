@@ -28,6 +28,9 @@ Geprueft wird:
   D  Stillstand: base_hardware im Dry-Run ohne RS485-Schreibpfad, auf
      /cmd_vel kein Fahrbefehl ungleich null. Mit --aktiv (vor einer
      beauftragten Laborfahrt): Basis scharf, aber noch kein Fahrbefehl.
+     Mit --odometrie hwt601 ohne --aktiv startet der Launch base_hardware
+     gar nicht (active_drive=false), sondern den Encoder-Shadow (nur FC03);
+     dann muss genau dieser sichtbar sein und base_hardware fehlen.
   E  (optional, --vl53-s) Niedrige Hindernisse: wie hoch ueber dem Boden
      liegen die VL53-Treffer, und welche davon verwerfen Kostenkarten und
      collision_monitor wegen min_obstacle_height/min_height?
@@ -64,6 +67,11 @@ ODOMETRIE = {
     'hwt601': {'require_hwt601_fusion': True, 'odom_publisher': '/hwt601_mapping_ekf'},
     'standard': {'require_hwt601_fusion': False, 'odom_publisher': '/base_hardware'},
 }
+
+# HWT-Weg ohne active_drive: einziger Encoder-Leser statt base_hardware
+# (slam_lidar_hwt601.launch.py, UnlessCondition(active_drive)).
+BASE = '/base_hardware'
+ENCODER_SHADOW = '/hwt601_encoder_shadow_reader'
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +238,41 @@ def height_report(points_base_link, sensor_points, min_height, base_link_above_f
 KOSTENKARTE_FENSTER = {'x_min': 0.35, 'x_max': 1.0, 'y_abs': 0.35}
 
 
+def motorpfad_zeilen(odometrie, aktiv, knoten, base):
+    """Zeilen ``(pruefung, ok, detail)`` für Bereich D, Motorpfad.
+
+    ``knoten``: sichtbare Knotennamen; ``base``: Parameterantwort von
+    base_hardware (``dry_run``, ``allow_rs485``) oder ``None``.
+    Im HWT-Weg startet der Launch genau einen der beiden Encoder-Leser
+    (base_hardware nur mit active_drive). Fehlt base_hardware, zählt das nur
+    mit dem sichtbaren Encoder-Shadow als Beleg, sonst kann auch ein
+    unvollständiger DDS-Graph dahinterstecken.
+    """
+    shadow = ENCODER_SHADOW in knoten
+    base_da = base is not None or BASE in knoten
+    if odometrie == 'hwt601' and not aktiv and not base_da:
+        return [('kein Motorschreiber (HWT-Weg ohne active_drive)', shadow,
+                 'base_hardware nicht gestartet, Encoder-Shadow sichtbar (nur FC03)' if shadow
+                 else 'weder base_hardware noch Encoder-Shadow sichtbar: '
+                      'Graph unvollständig oder anderer Startweg')]
+    if base is None:
+        zeilen = [(f'{BASE} erreichbar', False, 'keine Parameterantwort')]
+    elif aktiv:
+        # Vor einer beauftragten Laborfahrt: Basis scharf wie bestellt.
+        zeilen = [('base_hardware scharf (aktiver Auftrag)',
+                   base.get('dry_run') is False and base.get('allow_rs485') is True,
+                   f'dry_run={base.get("dry_run")!r}, allow_rs485={base.get("allow_rs485")!r}')]
+    else:
+        zeilen = [('base_hardware im Dry-Run', base.get('dry_run') is True,
+                   f'dry_run={base.get("dry_run")!r}'),
+                  ('kein RS485-Schreibpfad', base.get('allow_rs485') is False,
+                   f'allow_rs485={base.get("allow_rs485")!r}')]
+    if odometrie == 'hwt601' and shadow:
+        zeilen.append(('Encoder-Shadow nicht neben base_hardware', False,
+                       'zwei Encoder-Leser am selben Bus'))
+    return zeilen
+
+
 def lethal_cells_in_window(data, width, height, resolution, origin_xy,
                            to_base_link, window=KOSTENKARTE_FENSTER):
     """Zahl toedlicher Zellen (100) einer OccupancyGrid im Fenster vor base_link.
@@ -357,6 +400,10 @@ class Leser:
         return {full_node_name(i.node_namespace, i.node_name)
                 for i in self.node.get_subscriptions_info_by_topic(topic)}
 
+    def knoten(self):
+        return {full_node_name(ns, name)
+                for name, ns in self.node.get_node_names_and_namespaces()}
+
     def action_servers(self, node_name, namespace='/'):
         from rclpy.action import get_action_server_names_and_types_by_node
         return {name for name, _ in get_action_server_names_and_types_by_node(
@@ -471,20 +518,10 @@ def pruefe_odometrie(leser, ergebnis, explore_live, erwartet):
                  publishers == {soll['odom_publisher']}, detail)
 
 
-def pruefe_stillstand(leser, ergebnis, beobachten_s, aktiv=False):
-    base = leser.get_params('/base_hardware', ['dry_run', 'allow_rs485'])
-    if base is None:
-        ergebnis.add('D Stillstand', '/base_hardware erreichbar', False, 'keine Parameterantwort')
-    elif aktiv:
-        # Vor einer beauftragten Laborfahrt: Basis scharf wie bestellt.
-        ergebnis.add('D Stillstand', 'base_hardware scharf (aktiver Auftrag)',
-                     base.get('dry_run') is False and base.get('allow_rs485') is True,
-                     f'dry_run={base.get("dry_run")!r}, allow_rs485={base.get("allow_rs485")!r}')
-    else:
-        ergebnis.add('D Stillstand', 'base_hardware im Dry-Run', base.get('dry_run') is True,
-                     f'dry_run={base.get("dry_run")!r}')
-        ergebnis.add('D Stillstand', 'kein RS485-Schreibpfad', base.get('allow_rs485') is False,
-                     f'allow_rs485={base.get("allow_rs485")!r}')
+def pruefe_stillstand(leser, ergebnis, beobachten_s, aktiv=False, odometrie=None):
+    base = leser.get_params(BASE, ['dry_run', 'allow_rs485'])
+    for pruefung, ok, detail in motorpfad_zeilen(odometrie, aktiv, leser.knoten(), base):
+        ergebnis.add('D Stillstand', pruefung, ok, detail)
     from geometry_msgs.msg import Twist
     seen = {'n': 0, 'max_lin': 0.0, 'max_ang': 0.0}
 
@@ -655,7 +692,8 @@ def main(argv=None):
             return 2
         pruefe_verdrahtung(leser, ergebnis, explore_live)
         pruefe_odometrie(leser, ergebnis, explore_live, args.odometrie)
-        pruefe_stillstand(leser, ergebnis, args.beobachten_s, aktiv=args.aktiv)
+        pruefe_stillstand(leser, ergebnis, args.beobachten_s, aktiv=args.aktiv,
+                          odometrie=args.odometrie)
         if args.vl53_s > 0:
             vl53 = pruefe_vl53(leser, ergebnis, args.vl53_s, args.base_link_ueber_boden)
     finally:
