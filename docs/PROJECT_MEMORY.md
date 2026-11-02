@@ -1357,3 +1357,15 @@ Läufen. Drei Lehren:
    strengen Schwellen bei realer Drift nötige Korrekturen unterdrücken, zeigt
    erst eine reale Fahrt.
 
+**Nachtrag 02.11.2026 – Abnahmestufe 1 bestanden (SH-3):** Drei autonome
+Laborfahrten der Hauptlinie `self_healing` ohne Kontakt und ohne Eingriff,
+jeder Zwischenfall (VL53-Aussetzer, Lokalisierungslücke, Zielzeitüberschreitung)
+selbst geheilt; Karten nach Sicht sauber, im Laborraum also kein Hinweis, dass
+die strengen SLAM-Schwellen nötige Korrekturen unterdrücken. Lehre: Die
+geschlossene Simulation hat die SLAM-Last richtig vorhergesagt (Verlauf bis
+etwa ein Kern, verspätetes `map`→`odom`), der Jetson zeigte dasselbe Muster.
+Für die Wohnung ist das jetzt das größte gemessene Risiko. Vorher verlief die
+Kette über drei Prüfstufen (SH-1, SH-2, SH-3); zwei Abbrüche gingen auf
+Fehler in Prüfskript und Auftrag zurück, nicht auf den Roboter, und wurden
+von den lokalen Agenten richtig erkannt und regelkonform gemeldet.
+

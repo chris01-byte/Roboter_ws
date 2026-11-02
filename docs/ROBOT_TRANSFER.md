@@ -115,6 +115,17 @@ erlaubten Leerungen der lokalen Kostenkarte (Softwarezustand). `~/roboter_ws`,
 frühere Releases, v1-Ordner und Codex-Referenz unverändert. Dieser Release ist
 die Istbasis von SH-3 (erste aktive Fahrten mit `active_drive:=true`).
 
+Nachtrag 02.11.2026 abends, tatsächliche Jetson-Wirkung SH-3 (bestanden):
+drei aktive Fahrten mit `active_drive:=true enable_auto_explore:=true` im
+Laborraum aus demselben Release (kein Build), Missionsstart je einmal per
+`topic pub` (App nicht verfügbar). Motoren bestromt, höchstens 0,10 m/s und
+0,20 rad/s, zusammen 18,7 m; kein Kontakt, kein Eingriff, kein Not-Aus.
+Je Fahrt Stack geordnet beendet; nach Fahrt 1 dabei einmal `slam_toolbox`
+mit `karto::Exception` abgestürzt (nach Kartensicherung). Lokal neu: Ordner
+`$SH_PR/sh3_run1…3` mit Logs, Protokollen und Karten. `~/roboter_ws`,
+frühere Releases und Codex-Referenz unverändert. Kein Installwechsel, kein
+Autostart. Derzeit kein Jetson-Auftrag.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

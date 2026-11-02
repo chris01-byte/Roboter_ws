@@ -275,6 +275,13 @@ Sicherheitsquelle.
 Fahrzeit wird gemessen, ist aber vorerst kein Abbruchkriterium (0,06 m/s in
 unbekanntem Gebiet). Stufe 1 ist zugleich der Bestätigungstest für Entscheidung 5.
 
+**Stand Stufe 1 (02.11.2026): bestanden.** SH-3 am Jetson, HWT601-Odometrie:
+drei autonome Fahrten im Laborraum, je 5–6 selbst gewählte Ziele, kein
+Kontakt, kein Eingriff, sauberes Ende als Teilkarte, Karten nach Christophers
+Ansicht sauber. Für Stufe 3 offen: SLAM-Last bis rund ein Kern nach 20 min,
+langsamer Fortschritt (zwei Fahrten am 20-min-Budget), VL53-Aussetzer je
+Fahrt; Einzelheiten im [STATUS](STATUS.md), Abschnitt 02.11.2026 abends.
+
 **Stand Stufe 2 (22.10.2026): nicht bestanden.** Werkzeug
 `tools/simulation/sh_robustheit.py`, 43 Läufe, Einzelheiten im
 [STATUS](STATUS.md) (Abschnitt 22.10.2026). Die Heilungsleiter tut, was sie

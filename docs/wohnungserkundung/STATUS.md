@@ -1,10 +1,12 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 02.11.2026 (nachmittags):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfungen SH-1 und SH-2
-bestanden (SH-2 im zweiten Lauf); die VL53 tragen niedrige Objekte ab etwa
-6,5 cm jetzt in die Kostenkarte ein. Auftrag SH-3 (drei Laborfahrten,
-Abnahmestufe 1) ist aktiv, noch nicht ausgeführt. Abnahmestufe 2 (geschlossene
+**Aktueller Stand 02.11.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). **Abnahmestufe 1 bestanden:** drei autonome
+Laborfahrten ohne Kontakt und ohne Eingriff (SH-3). Stufe 2 (Simulation)
+formal offen wegen der bekannten Grenze niedriger Gegenstände, Stufe 3
+(Wohnung) offen. Größtes gemessenes Risiko für Stufe 3: die mit der Karte
+wachsende SLAM-Last. Derzeit kein Jetson-Auftrag; nächster Schritt ist eine
+Entscheidung des Projektinhabers. Abnahmestufe 2 (geschlossene
 Simulation, Manifest v4) mit Stand `bb94311`: **10 von 12 Läufen bestanden**,
 alle fünf übrigen Szenarien je 2/2; formal **nicht bestanden**, weil
 „Hindernis im Weg“ an der bekannten Grenze niedriger Gegenstände scheitert.
@@ -28,6 +30,66 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
+
+Lokaler Agent, Fahrten 16:16–17:41, LAB-1 aktiv, Release
+`selbstheilung-sh2-20261102_1107` ohne neuen Build (Schritt 0: Code in
+`src/`/`tools/` = `3a05e6b`), Klon `ee35eaf`. Bericht lokal beim
+Projektinhaber; Karten nur lokal. Erste autonome Fahrten der Hauptlinie.
+
+| Fahrt | Dauer | Ziele | Heilungen | Ende | Strecke | VL53-Lücke | Kontakt / Eingriff |
+|---|---|---|---|---|---|---|---|
+| 1 | 649 s | 6 | 1 | Teilkarte, übrige Frontiers unerreichbar | 5,2 m | 8,7 s | nein / nein |
+| 2 | 1199 s | 6 | 5 (1× Umsehen) | Teilkarte, 20-min-Budget | 7,0 m | 6,1 s | nein / nein |
+| 3 | 1200 s | 5 | 4 | Teilkarte, 20-min-Budget | 6,5 m | 7,6 s | nein / nein |
+
+Je Fahrt: Vorprüfung `--aktiv` Exit 0 (D: `base_hardware` scharf,
+`/cmd_vel` still), 39 Knoten, `automatisch_erfuellt: true`, Nav2 danach
+aktiv, kein „process has died“ vor dem Stopp, HWT am Ende `HEALTHY` (Fahrt 2:
+zwei HWT-HOLD von ~1 s, selbst erholt), höchstens 0,10 m/s und 0,20 rad/s.
+Christopher: kein Kontakt, kein Eingriff, alle drei Karten „sauber“ (als Bild
+angesehen, nach Fahrt 1 zunächst „nicht angesehen“). Die Aufbau-Bitte (Türen
+zu, flache Gegenstände weg) beantwortete er mit „alles bereit“; einzeln
+bestätigt wurde sie nicht. Missionsstart per Ersatzbefehl, weil die App nicht
+verfügbar war; der App-Weg ist damit noch nicht real geprüft.
+
+**Bewertung: Abnahmestufe 1 bestanden** (alle drei Kriterien in allen drei
+Fahrten). Die Heilungsleiter hat jeden Zwischenfall selbst aufgefangen.
+
+**Kritisch, mit Blick auf Stufe 3:**
+1. **SLAM-Last wie in der Simulation vorhergesagt:** `slam_toolbox` stieg von
+   etwa 4 % auf 60–70 % (11 min) bzw. 85–95 % eines Kerns (20 min), im
+   Laborraum. Dazu „Message Filter dropping message … queue is full“
+   80/162/150× (Scans verworfen), 48/262/186 Reglerabbrüche wegen zu altem
+   `map`→`odom`, 136/438/344× „missed its desired rate“ und 1/9/1×
+   `localization_missing_or_stale` (einmal 1,5 s ohne `map`→`odom`). Die
+   Simulation zeigte denselben Verlauf (25 → 80 % in 8 min). In einer Wohnung
+   mit mehr Fläche und längerer Fahrt ist ein voller Kern zu erwarten; dann
+   verliert SLAM Scans und die Lokalisierung bricht häufiger weg. **Vor Stufe 3
+   zu lösen.**
+2. **Langsamer Fortschritt:** Fahrt 2 und 3 endeten am 20-min-Budget, keine
+   Fahrt „vollständig“. Heilungen vor allem `nav_timeout` (Ziel nach 150 s
+   nicht erreicht, Fahrt 3 viermal im 152-s-Takt); dazu 49/202/407×
+   „detected collision ahead“ (RPP hält vor vermeintlicher Kollision). Für
+   eine Wohnung reicht das Budget in diesem Tempo nicht.
+3. **VL53-Aussetzer in jeder Fahrt** (6–9 s, `collision_monitor` ignoriert
+   beide Quellen, 7/0/5× `IndexError … kein neues Frame`), wie in SH-1/SH-2:
+   in allen vier Jetson-Sitzungen, etwa einmal je 10–20 min. Fahrtor und
+   Explorer reagieren richtig (Halt, Warten, Weiterfahrt), die Ursache ist
+   offen.
+4. **`slam_toolbox` stürzte beim Herunterfahren nach Fahrt 1 ab**
+   (`karto::Exception`, Exit −6), nach der Prüfung und nach dem Kartenspeichern;
+   Fahrt 2 und 3 endeten sauber. Einmalig, beobachten.
+5. **Missionsergebnis „failed“ bei brauchbarer Teilkarte:** Der Explorer
+   beendet die Aktion bei `usable_partial` mit `abort` (`result.success` nur
+   bei vollständig), der Mission-Manager meldet daher `failed`. Für den Nutzer
+   sieht jede dieser Fahrten wie ein Fehler aus. Produktbefund, nicht geändert.
+6. Das Fahrtprotokoll schreibt während der Fahrt nichts (nur Start und Ende).
+
+**Nächster Schritt:** Entscheidung des Projektinhabers, womit es weitergeht;
+bis dahin kein Jetson-Auftrag ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)). SH-3
+[archiviert](archive/20261102-sh3-bestanden/README.md).
 
 ## 02.11.2026 (Lauf 2) – SH-2 bestanden, SH-3 aktiviert
 
