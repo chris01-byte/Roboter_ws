@@ -1,328 +1,286 @@
-# Aktueller Agentenauftrag: SH-2 – motorlose Nachmessung (VL53-Grenze, HWT601-Weg)
+# Aktueller Agentenauftrag: SH-3 – drei begrenzte Laborfahrten (Abnahmestufe 1)
 
-**Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 16.10.2026 nach
-Entscheidung 7 des Projektinhabers: Im Selbstheilungsbetrieb zählt jetzt jeder
-gültige VL53-Treffer. Die Grenze in beiden Kostenkarten und im
-`collision_monitor` liegt bei −0,02 m über `base_link` (0,07 m über Boden)
-statt 0,05 m (0,14 m über Boden). Umgesetzt in Commit `5c285c0`. Das Prüfskript
-zählt seit `ae780e7` zusätzlich belegte Kostenkartenzellen vor dem Roboter.
+**Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 02.11.2026 nach
+bestandenem SH-2 (Lauf 2). Drei echte, autonome Erkundungsfahrten im
+Selbstheilungsbetrieb im Laborraum, bewertet nach Abnahmestufe 1
+(`KONZEPT_SELBSTHEILUNG.md` §11). Odometrie: HWT601 (Entscheidung 8 vom
+22.10.2026, Begründung in §9 des Konzepts).
 
-**Ergänzt am 22.10.2026 (Entscheidung 8):** Die Laborfahrten laufen mit
-HWT601-Odometrie, wie die abgenommenen HWT-Fahrten vom 10./11.09.2026 auf den
-Fliesen des Labors. SH-1 hat nur den Standardweg geprüft. SH-2 startet deshalb
-den **HWT-Weg** (`use_hwt601_odometry:=true`) und prüft ihn motorlos mit
-(`--odometrie hwt601`, seit `06b8a6c`). Der HWT-Start verlangt eine bestätigte
-reale Stillstandsbeobachtung (Schritt 6).
+SH-2 hat motorlos bestätigt: Der HWT-Weg startet sauber, alle
+Selbstheilungs-Overlays sind live, und die VL53 tragen Objekte ab etwa 6,5 cm
+Höhe vor dem Roboter in die lokale Kostenkarte ein. Der vorige Auftrag ist
+[archiviert](archive/20261102-sh2-bestanden/README.md).
 
-**Ergänzt am 22.10.2026 (Robustheitssimulation):** Der Stand enthält seit
-`e085cac`…`74afc78` korrigierte Zielwahl im Explorer (gesperrte Tür endet als
-Teilkarte; Ziele mit Drehraum statt an Pfostenecken). Das wirkt nur beim
-Fahren mit `self_healing:=true` und ändert an der motorlosen Messung nichts.
-SH-2 baut ihn mit, damit SH-3 denselben Release fahren kann.
-
-**Ergänzt am 22.10.2026 (Entscheidung A+B, `2f46799`):** Im
-Selbstheilungsbetrieb markiert der normierte LiDAR (`/scan_normiert`)
-zusätzlich in der lokalen Kostenkarte, räumt dort aber nicht; die VL53 räumen
-in beiden Kostenkarten erst ab 0,45 m vom Sensor. Grund: Der Regler kannte
-Seitenwände und Türpfosten nicht, und niedrige Gegenstände wurden unter den
-VL53-Strahlen wieder weggeräumt (Robustheitssimulation). SH-2 prüft motorlos,
-dass das live ankommt (Schritt 7). Weil der LiDAR jetzt auch Beine vor dem
-Roboter einträgt und nicht mehr wegräumt, leert Schritt 8 vor jeder Messung
-die lokale Kostenkarte. Seit `7c5aaa6` (Explorer: Drehraum nur in bekannt
-freiem Raum, keine Endlosschleife bei Zielen ohne Kartengewinn) werden 161
-gezielte Tests erwartet.
-
-**Ergänzt am 22.10.2026 (Entscheidung SLAM, `7d8ef37`):** Im
-Selbstheilungsbetrieb lädt `slam_toolbox` zusätzlich
-`slam_toolbox_self_healing.yaml` mit strengeren Ringschluss-Schwellen (in der
-Simulation verbog SLAM sonst die Karte um 1,6–3,3 m). Prüfung B zeigt dafür
-vier neue Zeilen. Erwartet werden 162 gezielte Tests.
-
-**Ergänzt am 23.10.2026 (Explorer-Korrektur, `ff05706`):** Die Heilungsstufe
-„Umsehen“ prüft den Drehkreis jetzt an der Pose nach dem Fehlversuch (in der
-Simulation hatte die alte Prüfung eine Drehung neben einer Wand zugelassen).
-Die motorlose Messung ändert sich nicht; der Release muss den Stand aber
-enthalten, weil SH-3 damit fährt. Erwartet werden 164 gezielte Tests.
-
-**Ergänzt am 02.11.2026 (SH-2 Lauf 1, `fe84eec`):** Lauf 1 brach nach der
-Abbruchregel ab, weil „D Stillstand“ immer `/base_hardware` verlangte. Im
-motorlosen HWT-Weg startet der Launch `base_hardware` aber gar nicht, sondern
-nur den Encoder-Shadow (liest nur, FC03). Das Prüfskript erwartet dort jetzt
-genau das. Außerdem: Der Widerspruch zu `operator_stationary_confirmed` unter
-„Verboten“ ist aufgelöst, die Knotenliste wird zweimal erfasst, und die
-Wiederholungsregel für D ist eindeutig. Erwartet werden 168 gezielte Tests.
-Build, Tests und A–C aus Lauf 1 waren in Ordnung; Lauf 2 wiederholt den
-ganzen Auftrag in einem neuen Release-Ordner und schreibt einen eigenen
-Bericht (`…_sh2_lauf2.md`); der Bericht aus Lauf 1 bleibt unverändert.
-
-SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
-SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
-stehen alle Einzelheiten, die hier nur verkürzt wiederholt werden. Vorher
-lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
+Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 `docs/LABORMODUS.md` (LAB-1), `docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md`
-§6 und §9.
+§6, §9 und §11.
 
 ## Rahmen
 
 | | |
 |---|---|
-| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
-| WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `fe84eec`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2_lauf2.md`: Build, 168 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
-| Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
-| Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
-| Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
+| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16./22.10.2026 |
+| WE-Bezug | WE-M3 (metrischer Erkundungskern), Abnahmestufe 1 der Hauptlinie `self_healing` |
+| Istbasis | Release `selbstheilung-sh2-20261102_1107` aus SH-2 Lauf 2 (gebaut aus `3a05e6b`, 168 Tests grün). **Kein neuer Build.** Der Klon darf neuere Dokumentation ziehen; Code in `src/` und `tools/` (ohne `*.md`) muss dem Stand `3a05e6b` entsprechen (Schritt 0) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh3.md`: drei Fahrten mit Fahrtprotokoll, Christophers Beobachtungen, Gesamturteil Stufe 1 |
+| Nicht-Ziele | keine Code- oder Parameteränderung, kein anderer Raum, keine Wohnungsfahrt, kein Arm, keine Fahrt außerhalb des Laborraums |
+| Rückfall | Stack geordnet stoppen; `self_healing:=false` bzw. SH-1-/AP06-Releases bleiben unverändert verfügbar |
+| Laborrahmen | LAB-1: aktive Fahrt im beauftragten Umfang ohne erneute Standardfreigaben. Not-Aus-Erreichbarkeit, freier Fahrbereich und Abwesenheit Unbeteiligter sind als Betreibererklärung hinterlegt und werden **nicht** erneut abgefragt |
 
 ## Verboten
 
-Unverändert aus SH-1:
-- keine Fahrfreigabe (`active_drive`), Missionen oder Ziele;
-- `operator_stationary_confirmed:=true` nur im Startbefehl von Schritt 6 und
-  nur nach Christophers „ja“. Der Parameter wirkt allein auf die
-  HWT601-Einmessung im Stillstand, nicht auf Antrieb oder Fahrfreigabe;
-- nur lesende `ros2`-Befehle; einzige Ausnahme ist das Leeren der lokalen
-  Kostenkarte in Schritt 8 (Softwarezustand, keine Aktorwirkung);
-- nichts in `~/roboter_ws` und an der defekten Codex-Referenz;
-- bestehende Releases und der v1-Ordner bleiben, wie sie sind;
-- keine Code- oder Parameteränderungen, kein Commit oder Push;
+- keine Code- oder Parameteränderung, kein neuer Build, kein Commit oder Push;
+- schreibend nur: der Stackstart in Schritt 2 und, falls die App fehlt,
+  **genau ein** Missionsstart je Fahrt in Schritt 5; kein `param set`,
+  `lifecycle set`, `service call`, kein weiteres `topic pub`, keine Nav2-Ziele;
+- `operator_stationary_confirmed:=true` nur nach Christophers „ja“ in Schritt 1;
+- Not-Aus und Nutzerabbruch nie zurücksetzen (LAB-1 §4);
+- nichts in `~/roboter_ws` und an der defekten Codex-Referenz; bestehende
+  Releases, der v1-Ordner und frühere Berichte bleiben, wie sie sind;
 - keine Prozessgruppen-Signale, kein `pkill -f`, kein `killall`, kein `kill -9`;
 - keine Geheimnisse, IP-Adressen, Karten, Bilder oder Bags im Bericht.
 
-## Ablauf
+## Was Amadeus in diesen Fahrten tut
 
-Jeder ROS-Befehl beginnt mit `source ~/roboter_worktrees/selbstheilung-v2.env`.
+- **Vorwärts:** höchstens 0,12 m/s; 0,06 m/s, solange vor ihm nicht kartiert ist.
+- **Drehen:** höchstens 0,25 rad/s.
+- **Rückwärts:** nur entlang der eigenen Spur, höchstens 0,4 m, 0,05 m/s.
+- Er wählt seine Ziele selbst (Frontiers) und heilt Fehlschläge selbst:
+  1. erneut versuchen;
+  2. Ziel zurückstellen;
+  3. umsehen;
+  4. ein Stück zurück entlang der Spur;
+  5. „Hilfe benötigt“.
+- Eine Fahrt endet von selbst mit „vollständig“, „Teilkarte“ oder „Hilfe
+  benötigt“, spätestens nach 20 Minuten (Explorer-Gesamtbudget).
+- **Kurzes Stehenbleiben ist normal:** Setzen die VL53 einige Sekunden aus
+  (in SH-1 und SH-2 je einmal 6–7 s), sperrt das Fahrtor nach 0,8 s, und der
+  Explorer wartet bis zu 30 s, bevor er Hilfe ruft. Das ist kein Eingriffsgrund.
 
-### Schritt 1 – Bestand
+## Einmal je Sitzung
+
+### Schritt 0 – Stand und Release prüfen
 
 ```bash
 date -Iseconds
-git -C ~/roboter_ws rev-parse HEAD; git -C ~/roboter_ws status --short | head -5
-python3 ~/roboter_ws/tools/kartierung/roboterknoten.py; echo "exit=$?"
-printenv ROS_DOMAIN_ID RMW_IMPLEMENTATION CYCLONEDDS_URI
-```
-
-Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
-
-### Schritt 2 – Klon aktualisieren, neuer Release-Ordner
-
-```bash
-STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor fe84eec HEAD && echo "fe84eec enthalten"
-mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
+  git rev-parse HEAD && git merge-base --is-ancestor 3a05e6b HEAD && \
+  git diff --quiet 3a05e6b HEAD -- src tools ':(exclude)*.md' && echo "src/tools = Release-Stand 3a05e6b"
+grep -n "^export SH_REL" ~/roboter_worktrees/selbstheilung-v2.env
+python3 ~/roboter_ws/tools/kartierung/roboterknoten.py; echo "exit=$?"
 ```
-
-### Schritt 3 – Umgebungsdatei
-
-In `~/roboter_worktrees/selbstheilung-v2.env` mit dem Datei-Werkzeug nur die
-Zeile `export SH_REL=…` auf `$HOME/.local/share/amadeus/releases/selbstheilung-sh2-<STAMP>`
-ändern. Die Unterbauzeilen bleiben wie in SH-1 v3. Prüfen:
-
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env; echo "rc=$?"; echo "$SH_SRC $SH_REL"
-printenv AMENT_PREFIX_PATH | tr ':' '\n' | grep -c "roboter_ws/install"
-```
-
-Erwartung: `rc=0`, Zähler `0`.
-
-### Schritt 4 – Build (wie SH-1 v3)
-
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && cd "$SH_SRC" && \
-export MAKEFLAGS=-j2 CMAKE_BUILD_PARALLEL_LEVEL=2 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && \
-SECONDS=0 && colcon --log-base "$SH_REL/product-log" build --executor sequential \
-  --base-paths src/amadeus_map_identity src/base_hardware src/robot_interfaces \
-    src/bt_orchestrator src/mission_manager src/robot_state_estimation src/explore \
-    src/robot_navigation src/robot_map_manager src/vl53_near_field \
-    src/safety_monitor src/amadeus_lidar_bringup src/robot_bringup src/semantic_map_manager \
-  --build-base "$SH_REL/product-build" --install-base "$SH_REL/product-install" \
-  --cmake-args \
-    -Dbehaviortree_cpp_DIR=/home/p/.local/share/amadeus/releases/ap06-20261010T070231Z/native-install/behaviortree_cpp/share/behaviortree_cpp/cmake \
-    -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON \
-  2>&1 | tee "$SH_PR/build.log" | tail -25; echo "rc=${PIPESTATUS[0]} dauer_s=$SECONDS"
-```
-
-Danach wie in SH-1 v3 prüfen: `Found behaviortree_cpp` unter native-install,
-alle 14 Präfixe unter `$SH_REL/product-install` (`prefixes.txt`). Zusätzlich:
-
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && \
-  ls "$SH_REL/product-install/vl53_near_field/share/vl53_near_field/config/collision_monitor_self_healing_overlay.yaml" && \
-  grep -n "min_obstacle_height" "$SH_REL/product-install/robot_navigation/share/robot_navigation/config/nav2_params_self_healing.yaml"
-```
-
-Bei Build-Fehler oder fehlendem Präfix entfallen die Schritte 5–8.
-
-### Schritt 5 – gezielte Tests
-
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && cd "$SH_SRC" && \
-env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -q -p no:cacheprovider \
-  src/explore/test/test_self_healing.py \
-  src/explore/test/test_self_healing_runtime.py \
-  src/explore/test/test_metric_float32_lattice.py \
-  src/explore/test/test_metric_selection_retry.py \
-  src/explore/test/test_metric_map_lifecycle.py \
-  src/robot_navigation/test/test_nav_real_contract.py \
-  src/robot_bringup/test/test_semantic_map_launch_contract.py \
-  src/vl53_near_field/test/test_mapping_collision_contract.py \
-  tools/kartierung/test_selbstheilung_stillstand_pruefen.py \
-  2>&1 | tee "$SH_PR/tests.log" | tail -40
-```
-
-Erwartung: `168 passed` (Cloud, Stand `fe84eec`). Fehlschläge berichten, nicht beheben.
-
-### Schritt 6 – App-Stack motorlos im HWT-Weg starten
-
-`source` steht in einer eigenen Zeile (SH-1-Befund):
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
+echo "$SH_REL"; ls "$SH_REL/product-install/local_setup.bash"
+```
+
+Erwartet: „src/tools = Release-Stand 3a05e6b“ und `SH_REL` endet auf
+`selbstheilung-sh2-20261102_1107`. Sonst nicht fahren, sondern berichten; kein
+neuer Build. Läuft schon ein Robotik-Stack: nichts beenden, Christopher genau
+einmal fragen.
+
+### Aufbau (Christopher)
+
+Nur diese konkrete Handlung einmal anfordern: „Bitte die Türen des Laborraums
+schließen, sodass Amadeus den Raum nicht verlassen kann.“ Der Selbstheilungs-
+betrieb kennt keinen Software-Fahrbereich; den Raum begrenzen Wände und
+geschlossene Türen. Ohne geschlossenen Raum keine Fahrt.
+
+Außerdem einmal: „Bitte flache Gegenstände unter etwa 15 cm Höhe (Kabel,
+Kartons, Schuhe) vom Boden räumen.“ Grund: Unter etwa 6 cm sehen die VL53
+nichts (SH-2), und von höheren niedrigen Gegenständen nur die Vorderkante;
+liegt so ein Gegenstand neben dem Roboter, kann die Flanke ihn beim Drehen
+berühren (bekannte Grenze, Entscheidung 22.10.2026). Höhere Möbel und Wände
+sieht der LiDAR.
+
+## Je Fahrt (Nr 1, 2, 3)
+
+Jede Fahrt ist ein Kaltstart mit neuer Karte. `RUN` = 1, 2 oder 3; in jedem
+Befehlsblock setzen (`RUN=1 …`), weil die Blöcke nicht zwingend in derselben
+Shell laufen.
+
+### 1. Bereit
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+RUN=1
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 ls -l /dev/ttyUSB_HWT601 /dev/ttyUSB_BASE
+mkdir -p "$SH_PR/sh3_run$RUN"
 ```
 
-Beide Geräte müssen vorhanden sein. Fehlt `/dev/ttyUSB_HWT601`: abbrechen und
-berichten; nicht auf den Standardweg ausweichen.
+Fehlt ein Gerät: nicht fahren, berichten. Christopher einmal fragen: „Steht
+Amadeus an seinem Startplatz still, mit etwa 0,5 m Platz rundherum, und bleibt
+er während des Starts (etwa eine Minute) unberührt?“ Nur nach „ja“ weiter. Der
+Startplatz darf je Fahrt wechseln; ihn im Bericht beschreiben lassen.
 
-Der HWT misst sich beim Start im Stillstand ein. Deshalb Christopher genau
-einmal fragen: „Steht Amadeus still, und kann er während des Starts (etwa eine
-Minute) unberührt bleiben?“ Nur nach einem „ja“ starten. Die Antwort ist eine
-Beobachtung von Christopher und wird im Bericht so gekennzeichnet.
+### 2. Stack scharf starten
+
+`source` steht in einer eigenen Zeile:
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
+RUN=1
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
   use_hwt601_odometry:=true hwt_development_contract:=true operator_stationary_confirmed:=true \
-  > "$SH_PR/launch.log" 2>&1 < /dev/null &
-echo $! > "$SH_PR/launch.pid"; cat "$SH_PR/launch.pid"; date -Iseconds > "$SH_PR/launch_start.txt"
+  active_drive:=true enable_auto_explore:=true \
+  > "$SH_PR/sh3_run$RUN/launch.log" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh3_run$RUN/launch.pid"; cat "$SH_PR/sh3_run$RUN/launch.pid"
+date -Iseconds > "$SH_PR/sh3_run$RUN/launch_start.txt"
 ```
 
-`active_drive` und `enable_auto_explore` bleiben auf ihrem Standard `false`.
-Die PID muss die des `ros2 launch`-Prozesses sein (mit `ps -o pid,cmd -p <PID>`
-kontrollieren). Nach etwa 60 s (HWT-Einmessung) wie in SH-1 v3 `nodes.txt`,
-`lifecycle.txt` und die `grep`-Zeilen aus `launch.log` erfassen. Die
-Knotenliste 10 s später als `nodes_2.txt` noch einmal erfassen und beide
-berichten; die erste kann wegen der DDS-Entdeckung unvollständig sein (Lauf 1:
-23 statt 39 Knoten). Erwartet ist `/hwt601_encoder_shadow_reader`, nicht
-`/base_hardware`. Zusätzlich:
+Die PID muss die des `ros2 launch`-Prozesses sein (`ps -o pid,cmd -p <PID>`).
+Nach etwa 60 s (HWT-Einmessung) wie in SH-2 `nodes.txt`, 10 s später
+`nodes_2.txt` und `lifecycle.txt` erfassen. Erwartet: `/base_hardware`
+vorhanden, `/hwt601_encoder_shadow_reader` **nicht** (mit `active_drive`
+startet der Launch nur den Motortreiber).
+
+### 3. Vorprüfung direkt vor der Fahrt
 
 ```bash
-grep -niE "hwt|bias|ekf|encoder_shadow" "$SH_PR/launch.log" | head -60
+source ~/roboter_worktrees/selbstheilung-v2.env && RUN=1 && \
+  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 --aktiv \
+  --json "$SH_PR/sh3_run$RUN/vorpruefung.json" 2>&1 | tee "$SH_PR/sh3_run$RUN/vorpruefung.txt"; echo "exit=${PIPESTATUS[0]}"
 ```
 
-### Schritt 7 – Prüfskript A–D
+Erwartet: Exit 0, Bereiche A–C wie in SH-2 Lauf 2; in D `base_hardware scharf
+(aktiver Auftrag)` mit `dry_run=False, allow_rs485=True` und `/cmd_vel 3 s
+ohne Fahrbefehl`.
 
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && \
-  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
-  --json "$SH_PR/pruefung_AD.json" 2>&1 | tee "$SH_PR/pruefung_AD.txt"; echo "exit=${PIPESTATUS[0]}"
-```
+Bei `FEHL` mit „erreichbar“, „nicht deklariert“ oder „Graph unvollständig“ das
+Skript einmal nach 30 s wiederholen; erst die Wiederholung zählt. Jeder andere
+`FEHL` und ein `FEHL` nach der Wiederholung: Stack geordnet beenden (wie
+SH-2 Schritt 9: SIGINT nur an die Launch-PID) und berichten; keine Fahrt.
 
-Erwartung: Exit 0. Neu in Bereich C: `Explorer erwartet hwt601` und
-`genau ein /odom-Publisher (/hwt601_mapping_ekf)`. Neu in Bereich B: vier Zeilen
-`…costmap obstacle_layer.vl53_*_mark.min_obstacle_height` mit −0.02 und zwei
-Zeilen `B Kollisionswaechter … min_height` mit −0.02. Neu seit `2f46799`
-(Entscheidung A+B): in Bereich B für `/local_costmap/local_costmap`
-`obstacle_layer.observation_sources` mit `lidar` am Ende und sieben Zeilen
-`obstacle_layer.lidar.*` (`topic` `/scan_normiert`, `marking` True, `clearing`
-False, …), für beide Kostenkarten je zwei Zeilen
-`obstacle_layer.vl53_*.raytrace_min_range` mit 0.45; in Bereich C
-`lokale Kostenkarte liest /scan_normiert` und `Publisher auf /scan_normiert`.
-Neu seit `7d8ef37`: Bereich `B SLAM-Overlay` mit vier Zeilen `/slam_toolbox
-loop_match_*` (Kettenlänge 20, Grob 0.55, Fein 0.65, Varianz 2.0).
-Neu seit `fe84eec` in Bereich D (HWT-Weg ohne `active_drive`): `kein
-Motorschreiber (HWT-Weg ohne active_drive)` mit „base_hardware nicht
-gestartet, Encoder-Shadow sichtbar (nur FC03)“ statt der zwei
-`base_hardware`-Zeilen; dazu wie bisher `/cmd_vel 3 s ohne Fahrbefehl`.
-
-Bei `FEHL` mit „erreichbar“, „nicht deklariert“ oder „Graph unvollständig“
-das Skript einmal nach 30 s wiederholen; erst das Ergebnis der Wiederholung
-zählt für die Abbruchregeln. Jeder andere `FEHL` in D (Dry-Run, RS485,
-Shadow neben `base_hardware`, Fahrbefehl auf `/cmd_vel`) führt sofort zum
-Abbruch.
-
-### Schritt 8 – VL53-Messreihe (braucht Christopher)
-
-**Dieselben Objekte wie in SH-1 v3**, damit die Läufe vergleichbar sind.
-Christopher legt, der Agent sagt je Lage einmal an und wartet auf „liegt“.
-Danach steht niemand vor dem Roboter. Objekte mittig, Abstand von der
-Fahrzeugfront bis zur Vorderkante.
-
-| Nr | Objekt (wie SH-1 v3) | Abstand ab Front |
-|---|---|---|
-| 0 | kein Objekt, mindestens 1 m frei | – |
-| 1 | 3 cm | 0,30 m |
-| 2 | 5,5 cm | 0,30 m |
-| 3 | 10 cm | 0,30 m |
-| 4 | 15 cm | 0,30 m |
-| 5 | 3 cm | 0,38 m |
-| 6 | 6,5 cm | 0,38 m |
-| 7 | 10 cm | 0,38 m |
-| 8 | 15,5 cm | 0,38 m |
-
-Je Messung, erst wenn Christopher „liegt“ gesagt hat und niemand mehr vor dem
-Roboter steht: lokale Kostenkarte leeren (der LiDAR hat beim Legen die Beine
-eingetragen und räumt sie seit `2f46799` nicht mehr), 3 s warten, dann messen.
-
-```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && \
-  ros2 service call /local_costmap/clear_entirely_local_costmap \
-  nav2_msgs/srv/ClearEntireCostmap "{}" && sleep 3 && \
-  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 \
-  --beobachten-s 1 --vl53-s 10 --notiz "Nr 2: 5,5 cm, 0,30 m" \
-  --json "$SH_PR/vl53_02.json" 2>&1 | tee "$SH_PR/vl53_02.txt"
-```
-
-Erwartung (zu prüfen, nicht vorwegnehmen): ähnliche Trefferzahlen wie in
-SH-1 v3; `filter_ueber_boden_m` 0,07; `verworfen` 0, weil kein gültiger Punkt
-unter 0,084 m liegen kann; 3 cm weiterhin 0 Treffer.
-
-Die neue Zeile „lokale Kostenkarte: N belegte Zellen vor dem Roboter“ zeigt,
-ob die Treffer als Hindernis eingetragen werden. Weil die Karte vor jeder
-Messung geleert wird, gilt die Zahl je Lage. Erwartet: Nr 0 und Nr 1 (3 cm)
-0 Zellen, ab Nr 2 Zellen vor dem Roboter. Steht doch jemand davor, trägt der
-LiDAR auch ihn ein; dann die Messung wiederholen und im Bericht vermerken.
-
-### Schritt 9 – Stack geordnet beenden
+### 4. Fahrtprotokoll starten
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-PID=$(cat "$SH_PR/launch.pid"); kill -INT "$PID"; for i in $(seq 1 30); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
-kill -0 "$PID" 2>/dev/null && echo "LAUNCH LAEUFT NOCH" || echo "Launch beendet nach ${i}s"
-python3 ~/roboter_ws/tools/kartierung/roboterknoten.py; echo "exit=$?"
+RUN=1
+nohup env --default-signal=INT python3 "$SH_SRC/tools/kartierung/selbstheilung_lauf_protokoll.py" \
+  --json "$SH_PR/sh3_run$RUN/protokoll.json" \
+  > "$SH_PR/sh3_run$RUN/protokoll.txt" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh3_run$RUN/protokoll.pid"
 ```
 
-SIGINT nur an die Launch-PID. Nach 30 s noch aktiv: einmal `kill -TERM`, 15 s
-warten, übrige eigene Knoten einzeln per PID mit SIGINT beenden und auflisten.
+Nur lesend, nebenher die Rechenlast von `slam_toolbox` alle 10 s mitschreiben
+(Simulation 23.10.2026: sie stieg mit der Karte von 25 % auf 80 % eines Kerns,
+danach kam `map`→`odom` zu spät). `-x` vergleicht den Prozessnamen exakt und
+trifft daher nicht die eigene Shell:
 
-### Abbruchregeln
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+RUN=1
+SLAM_PID=$(pgrep -x async_slam_tool | head -1); echo "SLAM_PID=$SLAM_PID"
+echo "$SLAM_PID" > "$SH_PR/sh3_run$RUN/slam.pid"
+nohup top -b -d 10 -p "$SLAM_PID" > "$SH_PR/sh3_run$RUN/slam_cpu.txt" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh3_run$RUN/slam_cpu.pid"
+```
 
-Sofort Schritt 9 und dann Bericht bei:
-- Rad- oder Motorbewegung;
-- `FEHL` in „D Stillstand“ (nach der einen erlaubten Wiederholung, siehe
-  Schritt 7);
-- Not-Aus oder einem „Stopp“ von Christopher;
-- einem zweiten Robotik-Stack;
-- einem HWT-Endfehler im Log (`TERMINAL_FAULT`) oder fehlendem HWT-Gerät.
-  Nicht auf den Standardweg ausweichen; berichten.
+### 5. Mission starten
 
-## Bericht: `~/selbstheilung_jetson_bericht_sh2_lauf2.md`
+Christopher drückt in der App „Erkunden“. Das ist der Produktweg. Steht die App
+nicht zur Verfügung, sendet der Agent **genau einmal** denselben Befehl wie die
+App:
 
-Gliederung wie SH-1 v3. Kopf, Bestand, Umgebungsdatei, Build mit
-`prefixes.txt` und den zwei Overlay-Zeilen aus Schritt 4, Tests,
-Stackstart im HWT-Weg (Geräte, Christophers Stillstandsantwort, Wartezeit,
-HWT-/EKF-Logzeilen), Prüfung A–D vollständig mit Exitcode. Dann die VL53-Tabelle mit
-einer **zusätzlichen Spalte „Kostenkarte belegt vorn“** und dem `vl53`-Teil
-jeder JSON-Datei wörtlich. Danach Beenden, Auffälligkeiten (insbesondere
-`collision_monitor`-Warnungen „Ignoring the source“ mit Zeitraum) und nicht
-Ausgeführtes. Am Ende im Chat nur: Pfad, Ergebnis A–D, Testfehlschläge, ob der
-HWT-Weg lief, ob die Reihe vollständig ist und ob die Kostenkarte ab Nr 2
-Zellen einträgt.
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
+```
+
+### 6. Während der Fahrt
+
+- Der Agent greift nicht ein und sendet keine weiteren Befehle.
+- Christopher beobachtet und darf jederzeit über die App stoppen oder den
+  Not-Aus drücken. Das gilt dann als **Eingriff**.
+- Kurzes Stehenbleiben ist kein Eingriffsgrund (siehe oben).
+- Die Fahrt endet von selbst; das Protokoll beendet sich wenige Sekunden danach.
+
+### 7. Nach der Fahrt
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+RUN=1
+cat "$SH_PR/sh3_run$RUN/protokoll.txt" | tail -60
+for n in controller_server planner_server behavior_server bt_navigator velocity_smoother collision_monitor; do \
+  echo "$n: $(ros2 lifecycle get /$n 2>&1)"; done | tee "$SH_PR/sh3_run$RUN/lifecycle_nach.txt"
+grep -c "process has died" "$SH_PR/sh3_run$RUN/launch.log"
+grep -nE "Ignoring the source|TERMINAL_FAULT|ERROR|FATAL" "$SH_PR/sh3_run$RUN/launch.log" | head -40
+for m in "extrapolation into the future" "Unable to transform robot pose" "missed its desired rate" "detected collision ahead"; do \
+  echo "$m: $(grep -c "$m" "$SH_PR/sh3_run$RUN/launch.log")"; done | tee "$SH_PR/sh3_run$RUN/zeitfehler.txt"
+kill -TERM "$(cat "$SH_PR/sh3_run$RUN/slam_cpu.pid")"
+grep -E "^ *$(cat "$SH_PR/sh3_run$RUN/slam.pid") " "$SH_PR/sh3_run$RUN/slam_cpu.txt" | awk '{print $9}' | tr '\n' ' ' | tee "$SH_PR/sh3_run$RUN/slam_cpu_reihe.txt"
+ros2 run nav2_map_server map_saver_cli -f "$SH_PR/sh3_run$RUN/karte"
+```
+
+Christopher dann einmal fragen und die Antworten wörtlich festhalten:
+
+1. Hat Amadeus etwas berührt?
+2. Musstest du eingreifen (Stopp, Not-Aus, Umsetzen)?
+3. Sieht die Karte in der App sauber aus, ohne doppelte oder verdrehte Wände?
+
+Danach den Stack geordnet beenden (wie SH-2 Schritt 9: SIGINT nur an die
+Launch-PID, `roboterknoten.py` danach leer). Läuft das Protokoll noch, sein
+Prozess vorher per SIGINT an `protokoll.pid` beenden.
+
+## Abbruch und Wiederholung
+
+- **Sofort stoppen** (Christopher: Not-Aus oder App-Stopp; Agent: Stack
+  geordnet beenden) bei:
+  - Berührung;
+  - Fahrt auf ein Hindernis ohne Abbremsen;
+  - Verlassen des Laborraums;
+  - ungewöhnlichem Geräusch;
+  - Rauch.
+
+  Danach keine weitere Fahrt in dieser Sitzung; nur berichten.
+- **Endet eine Fahrt mit `outcome=error`:** die Serie anhalten und berichten.
+  Keine identischen Fehlversuche aneinanderreihen.
+- **Ungültige Fahrt:** Ist eine Fahrt aus einem äußeren Grund ungültig (zum
+  Beispiel kommt jemand in den Raum), darf sie einmal wiederholt werden.
+  Höchstens vier Starts je Sitzung.
+- Keine Parameter ändern, um eine Fahrt „durchzubringen“.
+
+## Bewertung Abnahmestufe 1
+
+Bestanden, wenn **alle drei** Fahrten erfüllen:
+- `automatisch_erfuellt: true` im Fahrtprotokoll: begonnen, beendet,
+  mindestens zwei selbst gewählte Ziele erreicht, sauberes Ende
+  (`exploration_complete`, `usable_partial` oder `blocked_help_required`),
+  kein Not-Aus während der Fahrt;
+- kein Kontakt und kein Eingriff (Christopher);
+- Nav2 nach der Fahrt in einem klaren Zustand, kein „process has died“.
+
+Die Fahrzeit wird gemessen, ist aber kein Abbruchkriterium.
+
+## Bericht: `~/selbstheilung_jetson_bericht_sh3.md`
+
+1. Kopf: Datum, Release, HEAD, Ergebnis von Schritt 0, Raum und Türen
+   (Christophers Angabe).
+2. Je Fahrt:
+   - Startplatz;
+   - Knotenlisten (Zahl, `/base_hardware` ja/nein, Encoder-Shadow ja/nein);
+   - Vorprüfung (Exit, Bereich C/D);
+   - Fahrtprotokoll ohne `ereignisse`, dazu die Ereignisliste gekürzt auf
+     Zustandswechsel, HWT, Not-Aus, VL53-Lücken;
+   - Lifecycle danach, „process has died“-Zahl, Warnungen;
+   - `zeitfehler.txt` und die SLAM-Lastreihe (`slam_cpu_reihe.txt`, % eines
+     Kerns alle 10 s) vollständig;
+   - Christophers drei Antworten wörtlich.
+3. Tabelle über alle Fahrten: Dauer, Ziele, Heilungen, Umsehen,
+   Spurrückfahrten, Endzustand, Strecke, VL53-Lücken, Kontakt, Eingriff.
+4. Gesamturteil Stufe 1: bestanden / nicht bestanden, mit Grund.
+5. Auffälligkeiten, Abweichungen und nicht Ausgeführtes; Beobachtungen von
+   Christopher getrennt von Messwerten.
+
+Karten, Bags und Bilder bleiben lokal unter `$SH_PR` und kommen weder in den
+Bericht noch ins Repository. Am Ende im Chat nur: Pfad, Zahl der Fahrten,
+Gesamturteil, Kontakte oder Eingriffe, und ob eine Fahrt abgebrochen wurde.
 
 ## Danach
 
-Auswertung in der Cloud-Sitzung. Bei bestandenem SH-2 folgt Abnahmestufe 1
-(drei begrenzte Laborfahrten nach LAB-1) als eigener Auftrag.
+Auswertung in der Cloud-Sitzung. Die Fahrten selbst schalten keine weitere
+Stufe frei: Wohnungsfahrten (Stufe 3) und das Paket „Weiter“ entscheidet der
+Projektinhaber gesondert.

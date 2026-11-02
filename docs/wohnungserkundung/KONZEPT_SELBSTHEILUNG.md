@@ -135,11 +135,34 @@ Folgerungen:
 3. Eine Grenze knapp unter 0,084 m über Boden (`base_link` −0,02 m) lässt jeden
    gültigen VL53-Treffer zählen, ohne Bodenpunkte zu erzeugen. **Umgesetzt**
    nach Entscheidung 7 (16.10.2026) nur für `self_healing:=true`, als eigener
-   Commit `5c285c0`; motorlose Nachmessung SH-2 offen.
+   Commit `5c285c0`; am Roboter bestätigt durch SH-2 (unten).
 4. Näher als etwa 0,6 m verschwinden niedrige Objekte unter dem Sichtfeld. Die
    lokale Kostenkarte hält die Markierung, weil die VL53-Räumstrahlen nur bei
    vollständig gültiger Spalte räumen und kein LiDAR im lokalen Hindernislayer
    räumt.
+
+**Nachgemessen 02.11.2026 (SH-2 Lauf 2, Jetson, Stillstand, HWT-Weg, Grenze
+0,07 m über Boden):** dieselben Objekte und Lagen, vor jeder Lage die lokale
+Kostenkarte geleert. „Zellen“ = belegte Zellen der lokalen Kostenkarte 0,35–1,0 m
+vor `base_link`, |y| ≤ 0,35 m.
+
+| Objekt | 0,30 m ab Front | 0,38 m ab Front |
+|---|---|---|
+| keins | 0 Treffer, 0 Zellen | – |
+| 3 cm | 0 Treffer, 0 Zellen | 0 Treffer, 0 Zellen |
+| 5,5 / 6,5 cm | 0 Treffer, 1 Zelle (Herkunft offen) | 29 Treffer, 0 verworfen, 2 Zellen |
+| 10 cm | 346 Treffer, 0 verworfen, 18 Zellen | 272 Treffer, 0 verworfen, 14 Zellen |
+| 15 / 15,5 cm | 360 Treffer, 0 verworfen, 16 Zellen | 502 Treffer, 0 verworfen, 23 Zellen |
+
+5. **Entscheidung 7 wirkt am Roboter:** kein Treffer mehr verworfen; 10- und
+   15-cm-Objekte stehen jetzt mit 14–23 Zellen in der lokalen Kostenkarte
+   (vorher 0, weil verworfen). Trefferzahlen wie in SH-1.
+6. **5,5–6,5 cm sind Grenzfälle** (0–2 Zellen; Treffer schwanken mit der Lage:
+   SH-1 2 bzw. 82, SH-2 0 bzw. 29). Darunter sieht der VL53 nichts.
+7. Beide Messlagen liegen 0,6–0,7 m vor `base_link`. Den Nahbereich, in dem ein
+   niedriges Objekt unter dem Sichtfeld verschwindet (Folgerung 4 und die
+   bekannte Grenze in §11), prüfen sie nicht; der ist nur geometrisch und in der
+   Simulation belegt.
 
 ## 7. Bessere Alternativen für Teile des Explorers
 

@@ -233,8 +233,8 @@ python3 tools/kartierung/selbstheilung_lauf_protokoll.py \
 
 Exit 0 heißt, die automatischen Kriterien sind erfüllt. Kontakt, Eingriffe,
 Nav2-Zustand und Absturzfreiheit bleiben manuell zu bestätigen. Der vollständige
-Ablauf steht im Entwurf
-[SH-3](../../docs/wohnungserkundung/entwurf/SH-3_LABORFAHRTEN.md).
+Ablauf steht im Auftrag SH-3
+([AGENTENAUFTRAG](../../docs/wohnungserkundung/AGENTENAUFTRAG.md), aktiv seit 02.11.2026).
 
 ## Automatische LiDAR-Raumkartierung
 

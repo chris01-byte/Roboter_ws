@@ -106,6 +106,15 @@ Ordner und Codex-Referenz unverändert. Abbruch durch einen Prüfskriptfehler
 (D), behoben in `fe84eec` (nur Werkzeug, keine Produktwirkung). Rückfall:
 `SH_REL` in der Umgebungsdatei auf den SH-1-Release zurückstellen.
 
+Nachtrag 02.11.2026, tatsächliche Jetson-Wirkung SH-2 Lauf 2 (bestanden):
+neuer Release `~/.local/share/amadeus/releases/selbstheilung-sh2-20261102_1107`
+(14 Pakete, Stand `3a05e6b`, 168 Tests), `SH_REL` zeigt jetzt darauf; der
+Release aus Lauf 1 (`…_1012`) bleibt unverändert liegen. Stack einmal motorlos
+im HWT-Weg gestartet und geordnet beendet; einzige Schreibhandlung die 9
+erlaubten Leerungen der lokalen Kostenkarte (Softwarezustand). `~/roboter_ws`,
+frühere Releases, v1-Ordner und Codex-Referenz unverändert. Dieser Release ist
+die Istbasis von SH-3 (erste aktive Fahrten mit `active_drive:=true`).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

@@ -1,9 +1,10 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 02.11.2026:** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden;
-SH-2 Lauf 1 am Jetson an einem Fehler des Prüfskripts abgebrochen (korrigiert
-in `fe84eec`), VL53-Messreihe noch offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
+**Aktueller Stand 02.11.2026 (nachmittags):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfungen SH-1 und SH-2
+bestanden (SH-2 im zweiten Lauf); die VL53 tragen niedrige Objekte ab etwa
+6,5 cm jetzt in die Kostenkarte ein. Auftrag SH-3 (drei Laborfahrten,
+Abnahmestufe 1) ist aktiv, noch nicht ausgeführt. Abnahmestufe 2 (geschlossene
 Simulation, Manifest v4) mit Stand `bb94311`: **10 von 12 Läufen bestanden**,
 alle fünf übrigen Szenarien je 2/2; formal **nicht bestanden**, weil
 „Hindernis im Weg“ an der bekannten Grenze niedriger Gegenstände scheitert.
@@ -27,6 +28,54 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 02.11.2026 (Lauf 2) – SH-2 bestanden, SH-3 aktiviert
+
+Lokaler Agent, 02.11.2026 11:07–11:45, motorlos nach LAB-1. Klon auf
+`3a05e6b`, neuer Release `selbstheilung-sh2-20261102_1107` (Bericht lokal beim
+Projektinhaber, nicht im Repository; Bericht aus Lauf 1 unverändert).
+
+- Build 14/14 (171 s), `168 passed`.
+- HWT-Weg: HWT601 verbunden, Christophers Stillstandsantwort „ja“, kein
+  `TERMINAL_FAULT`, 39 Knoten in beiden Listen, Nav2 aktiv.
+- Prüfung A–D **Exit 0** im ersten Versuch; D neu „kein Motorschreiber
+  (HWT-Weg ohne active_drive) – base_hardware nicht gestartet,
+  Encoder-Shadow sichtbar“. Die Korrektur `fe84eec` wirkt.
+- VL53-Messreihe Nr 0–8 vollständig, `filter_ueber_boden_m` 0,07, **kein
+  Treffer verworfen**; Kostenkarte vorn: Nr 0/1/5 (leer, 3 cm) 0 Zellen,
+  Nr 2 (5,5 cm, 0,30 m) 1 Zelle bei 0 VL53-Treffern, Nr 6 (6,5 cm) 2,
+  Nr 3/7 (10 cm) 18/14, Nr 4/8 (15/15,5 cm) 16/23. Tabelle und Folgerungen in
+  [Konzept §6](KONZEPT_SELBSTHEILUNG.md).
+- Geordnetes Ende in 6 s, 28/28 Prozesse sauber, einziger Schreibbefehl die
+  erlaubte Kostenkarten-Leerung (9×).
+
+**Bewertung:** SH-2 bestanden. Entscheidung 7 wirkt am Roboter: In SH-1 wurden
+5,5–10-cm-Treffer noch vollständig verworfen, jetzt stehen 10- und 15-cm-
+Objekte mit 14–23 Zellen in der Kostenkarte. Die Erwartung „ab Nr 2 Zellen“
+ist formal erfüllt, aber nicht durch die VL53: Nr 2 hatte 0 Treffer (SH-1: 2),
+die eine Zelle ist ungeklärter Herkunft. 5,5–6,5 cm sind damit Grenzfälle,
+darunter sieht der VL53 nichts. Beide Messlagen liegen 0,6–0,7 m vor
+`base_link`; den Nahbereich prüfen sie nicht.
+
+**Auffällig, nicht behoben:** Während Nr 7 ignorierte `collision_monitor`
+beide VL53 6 s lang (Alter 3,0–9,2 s, 250 WARN, 33 statt 39 Frames), ohne
+Meldung von `vl53_near_field`. Dasselbe Muster wie in SH-1 (7 s). Beim Fahren
+sperrt das Fahrtor dann nach 0,8 s und der Explorer wartet bis 30 s; das
+Fahrtprotokoll in SH-3 zählt solche Lücken. Ursache (USB-I2C-Adapter?)
+offen. 23 TF-Wartemeldungen nur während der HWT-Einmessung.
+
+**SH-3 aktiviert:** Entwurf in den [Agentenauftrag](AGENTENAUFTRAG.md)
+übernommen; SH-2 [archiviert](archive/20261102-sh2-bestanden/README.md). Neu
+gegenüber dem Entwurf: Schritt 0 prüft, dass der Code in `src/` und `tools/`
+(ohne `*.md`) dem Release-Stand `3a05e6b` entspricht (kein neuer Build), Abschnitt „Verboten“,
+erwartete D-Zeilen und Wiederholungsregel wie in SH-2, Knotenliste zweimal,
+Hinweis auf kurzes Stehenbleiben bei VL53-Lücken. Im Code geprüft:
+`active_drive:=true` setzt `dry_run` false und `allow_rs485` true (genau das
+erwartet `--aktiv`); `enable_auto_explore` öffnet Fahrtor und echte Erkundung;
+Gesamtbudget 1200 s. Die Aktivierung ist Dokumentation, keine Fahrt.
+
+**Nächster Schritt:** SH-3 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)) mit dem
+Release `selbstheilung-sh2-20261102_1107`.
 
 ## 02.11.2026 – SH-2 Lauf 1 am Jetson: abgebrochen, Prüfskript korrigiert
 
@@ -367,7 +416,8 @@ Fliesen des Labors (Encoder −4,06° je Umdrehung gegenüber HWT/LiDAR ±0,34°
 SH-2 prüft deshalb den HWT-Weg motorlos mit. Prüfskript: `--odometrie` und
 `--aktiv` (`06b8a6c`). Neues rein lesendes Fahrtprotokoll für die Bewertung
 der Stufe 1 (`bd04145`). Entwurf des Fahrtauftrags:
-[SH-3](entwurf/SH-3_LABORFAHRTEN.md), noch nicht aktiv.
+SH-3, damals noch nicht aktiv (seit 02.11.2026 der aktuelle
+[Auftrag](AGENTENAUFTRAG.md)).
 
 **Nächster Schritt:** Auftrag SH-2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)):
 motorlose Nachmessung auf dem Jetson im HWT-Weg mit neuem Release, gleicher
