@@ -1,8 +1,9 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 23.10.2026:** Hauptlinie `self_healing`
+**Aktueller Stand 02.11.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Motorlose Jetson-Prüfung SH-1 bestanden;
-SH-2 (motorlos) offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
+SH-2 Lauf 1 am Jetson an einem Fehler des Prüfskripts abgebrochen (korrigiert
+in `fe84eec`), VL53-Messreihe noch offen; reale Laborfahrt offen. Abnahmestufe 2 (geschlossene
 Simulation, Manifest v4) mit Stand `bb94311`: **10 von 12 Läufen bestanden**,
 alle fünf übrigen Szenarien je 2/2; formal **nicht bestanden**, weil
 „Hindernis im Weg“ an der bekannten Grenze niedriger Gegenstände scheitert.
@@ -26,6 +27,51 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 02.11.2026 – SH-2 Lauf 1 am Jetson: abgebrochen, Prüfskript korrigiert
+
+Lokaler Agent, 02.11.2026 10:12–10:21, motorlos nach LAB-1. Klon auf
+`0e29125`, neuer Release `selbstheilung-sh2-20261102_1012` (Bericht lokal beim
+Projektinhaber, nicht im Repository).
+
+**In Ordnung:** Build 14/14 (179 s), `164 passed`, HWT-Weg gestartet
+(HWT601 verbunden, Christophers Stillstandsantwort „ja“, kein
+`TERMINAL_FAULT`, Nav2 aktiv, genau ein `/odom`-Publisher
+`/hwt601_mapping_ekf`). Prüfung A, B und C vollständig grün, also auch alle
+Neuerungen live am Jetson: LiDAR in der lokalen Kostenkarte (X9), VL53-Räumen
+ab 0,45 m, VL53-Grenze −0,02 m in beiden Kostenkarten und im
+`collision_monitor`, die vier SLAM-Schwellen aus `7d8ef37`. `/cmd_vel` 3 s
+still, 0 × „Ignoring the source“, keine ERROR-Zeilen, sauberes Ende (28
+Prozesse, alle „finished cleanly“).
+
+**Nicht bestanden:** „D Stillstand“ meldete `/base_hardware erreichbar – keine
+Parameterantwort`. Der Agent brach nach der Abbruchregel ab; die
+VL53-Messreihe entfiel. Ursache (vom Agenten richtig gefunden, im Code
+bestätigt): Im HWT-Weg ohne `active_drive` startet der Launch `base_hardware`
+gar nicht, sondern exklusiv den Encoder-Shadow (`UnlessCondition`, nur FC03,
+kein `cmd_vel`). Das Prüfskript verlangte trotzdem immer `base_hardware`;
+Fehler aus `06b8a6c`. Im Startweg selbst war nichts falsch.
+
+**Korrigiert (`fe84eec`):** D akzeptiert im HWT-Weg ohne `--aktiv` „kein
+Motorschreiber“ nur, wenn `base_hardware` weder im Graph noch per
+Parameterdienst erreichbar **und** der Encoder-Shadow sichtbar ist; das Fehlen
+allein könnte auch ein unvollständiger DDS-Graph sein. Läuft `base_hardware`
+doch, gelten unverändert Dry-Run und kein RS485; Shadow neben
+`base_hardware` ist FEHL. Standardweg und `--aktiv` unverändert. Vier neue
+Tests, darunter der Graph aus dem Bericht; gegen einen echten ROS-Graphen
+geprüft. Gezielter Satz jetzt 168.
+
+**Weitere Befunde des Berichts, im Auftrag geklärt:** „Verboten“ nannte
+`operator_stationary_confirmed`, Schritt 6 setzt es; der Parameter wirkt nur
+auf die HWT601-Einmessung (Code geprüft), die Zeile ist jetzt eindeutig. Die
+erste Knotenliste nach 62 s hatte 23 statt 39 Knoten (DDS-Entdeckung); sie
+wird jetzt zweimal erfasst. Die Wiederholung nach 30 s gilt jetzt ausdrücklich
+vor der Abbruchregel, aber nur für unklare Zustände, nicht für Dry-Run,
+RS485 oder Fahrbefehle. 21 TF-Wartemeldungen der lokalen Kostenkarte in den
+ersten 10 s gehören zur HWT-Einmessung vor dem ersten EKF-`odom`.
+
+**Nächster Schritt:** SH-2 Lauf 2 ([AGENTENAUFTRAG](AGENTENAUFTRAG.md)),
+mindestens `fe84eec`, 168 gezielte Tests, Bericht `…_sh2_lauf2.md`. Danach SH-3.
 
 ## 23.10.2026 – Stufe 2: volle v4-Abnahme mit SLAM-Schwellen, kritisch ausgewertet
 

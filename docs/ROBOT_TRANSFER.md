@@ -96,6 +96,16 @@ SLAM. SH-2 baut den Stand mit (164 gezielte Tests); die motorlose Messung ist
 davon unberührt, SH-3 fährt damit. Rückfall: Release vor `ff05706` sourcen
 oder `self_healing:=false`.
 
+Nachtrag 02.11.2026, tatsächliche Jetson-Wirkung SH-2 Lauf 1: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh2-20261102_1012` (14 Pakete,
+Stand `0e29125`), `selbstheilung-v2.env` zeigt mit `SH_REL` darauf. App-Stack
+einmal motorlos im HWT-Weg gestartet (`active_drive=false`, kein
+`base_hardware`, Encoder-Shadow nur lesend) und geordnet beendet. Keine
+Schreibbefehle, kein Kostenkarten-Leeren. `~/roboter_ws`, SH-1-Release, v1-
+Ordner und Codex-Referenz unverändert. Abbruch durch einen Prüfskriptfehler
+(D), behoben in `fe84eec` (nur Werkzeug, keine Produktwirkung). Rückfall:
+`SH_REL` in der Umgebungsdatei auf den SH-1-Release zurückstellen.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

@@ -44,6 +44,17 @@ Simulation hatte die alte Prüfung eine Drehung neben einer Wand zugelassen).
 Die motorlose Messung ändert sich nicht; der Release muss den Stand aber
 enthalten, weil SH-3 damit fährt. Erwartet werden 164 gezielte Tests.
 
+**Ergänzt am 02.11.2026 (SH-2 Lauf 1, `fe84eec`):** Lauf 1 brach nach der
+Abbruchregel ab, weil „D Stillstand“ immer `/base_hardware` verlangte. Im
+motorlosen HWT-Weg startet der Launch `base_hardware` aber gar nicht, sondern
+nur den Encoder-Shadow (liest nur, FC03). Das Prüfskript erwartet dort jetzt
+genau das. Außerdem: Der Widerspruch zu `operator_stationary_confirmed` unter
+„Verboten“ ist aufgelöst, die Knotenliste wird zweimal erfasst, und die
+Wiederholungsregel für D ist eindeutig. Erwartet werden 168 gezielte Tests.
+Build, Tests und A–C aus Lauf 1 waren in Ordnung; Lauf 2 wiederholt den
+ganzen Auftrag in einem neuen Release-Ordner und schreibt einen eigenen
+Bericht (`…_sh2_lauf2.md`); der Bericht aus Lauf 1 bleibt unverändert.
+
 SH-2 wiederholt den bestandenen Ablauf SH-1 v3 mit dem neuen Stand. Der
 SH-1-Auftrag ist [archiviert](archive/20261016-sh1-bestanden/README.md); dort
 stehen alle Einzelheiten, die hier nur verkürzt wiederholt werden. Vorher
@@ -57,8 +68,8 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen vom 15./16.10.2026 |
 | WE-Bezug | WE-M0 und WE-M3; Vorbedingung für Abnahmestufe 1 |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `ff05706`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2.md`: Build, 164 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `fe84eec`. SH-1 v3 bestanden mit `f295a85` (Release `selbstheilung-sh1-20261015_2326`, Standardweg) |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh2_lauf2.md`: Build, 168 gezielte Tests, App-Stack im HWT-Weg, Prüfskript A–D mit den neuen Overlays und `--odometrie hwt601`, dieselbe VL53-Messreihe wie SH-1 v3 mit Kostenkartenzählung |
 | Nicht-Ziele | wie SH-1: keine Fahrt, keine Korrektur, keine eigene Parameteränderung |
 | Rückfall | neuen Release nicht sourcen; SH-1-Release, `~/roboter_ws` und alle bisherigen Releases bleiben unverändert |
 | Laborrahmen | LAB-1, motorloser Pfad nach §3 (`active_drive=false`); keine Standardfreigabefragen |
@@ -66,7 +77,10 @@ lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 ## Verboten
 
 Unverändert aus SH-1:
-- keine Fahrfreigabe, Missionen, Ziele oder `operator_stationary_confirmed`;
+- keine Fahrfreigabe (`active_drive`), Missionen oder Ziele;
+- `operator_stationary_confirmed:=true` nur im Startbefehl von Schritt 6 und
+  nur nach Christophers „ja“. Der Parameter wirkt allein auf die
+  HWT601-Einmessung im Stillstand, nicht auf Antrieb oder Fahrfreigabe;
 - nur lesende `ros2`-Befehle; einzige Ausnahme ist das Leeren der lokalen
   Kostenkarte in Schritt 8 (Softwarezustand, keine Aktorwirkung);
 - nichts in `~/roboter_ws` und an der defekten Codex-Referenz;
@@ -95,7 +109,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor ff05706 HEAD && echo "ff05706 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor fe84eec HEAD && echo "fe84eec enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh2-$STAMP/pruefung
 ```
 
@@ -157,7 +171,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `164 passed` (Cloud, Stand `bb94311`). Fehlschläge berichten, nicht beheben.
+Erwartung: `168 passed` (Cloud, Stand `fe84eec`). Fehlschläge berichten, nicht beheben.
 
 ### Schritt 6 – App-Stack motorlos im HWT-Weg starten
 
@@ -189,7 +203,11 @@ echo $! > "$SH_PR/launch.pid"; cat "$SH_PR/launch.pid"; date -Iseconds > "$SH_PR
 `active_drive` und `enable_auto_explore` bleiben auf ihrem Standard `false`.
 Die PID muss die des `ros2 launch`-Prozesses sein (mit `ps -o pid,cmd -p <PID>`
 kontrollieren). Nach etwa 60 s (HWT-Einmessung) wie in SH-1 v3 `nodes.txt`,
-`lifecycle.txt` und die `grep`-Zeilen aus `launch.log` erfassen, zusätzlich:
+`lifecycle.txt` und die `grep`-Zeilen aus `launch.log` erfassen. Die
+Knotenliste 10 s später als `nodes_2.txt` noch einmal erfassen und beide
+berichten; die erste kann wegen der DDS-Entdeckung unvollständig sein (Lauf 1:
+23 statt 39 Knoten). Erwartet ist `/hwt601_encoder_shadow_reader`, nicht
+`/base_hardware`. Zusätzlich:
 
 ```bash
 grep -niE "hwt|bias|ekf|encoder_shadow" "$SH_PR/launch.log" | head -60
@@ -215,8 +233,16 @@ False, …), für beide Kostenkarten je zwei Zeilen
 `lokale Kostenkarte liest /scan_normiert` und `Publisher auf /scan_normiert`.
 Neu seit `7d8ef37`: Bereich `B SLAM-Overlay` mit vier Zeilen `/slam_toolbox
 loop_match_*` (Kettenlänge 20, Grob 0.55, Fein 0.65, Varianz 2.0).
-Bei `FEHL` mit „erreichbar“ oder „nicht deklariert“ einmal nach 30 s
-wiederholen.
+Neu seit `fe84eec` in Bereich D (HWT-Weg ohne `active_drive`): `kein
+Motorschreiber (HWT-Weg ohne active_drive)` mit „base_hardware nicht
+gestartet, Encoder-Shadow sichtbar (nur FC03)“ statt der zwei
+`base_hardware`-Zeilen; dazu wie bisher `/cmd_vel 3 s ohne Fahrbefehl`.
+
+Bei `FEHL` mit „erreichbar“, „nicht deklariert“ oder „Graph unvollständig“
+das Skript einmal nach 30 s wiederholen; erst das Ergebnis der Wiederholung
+zählt für die Abbruchregeln. Jeder andere `FEHL` in D (Dry-Run, RS485,
+Shadow neben `base_hardware`, Fahrbefehl auf `/cmd_vel`) führt sofort zum
+Abbruch.
 
 ### Schritt 8 – VL53-Messreihe (braucht Christopher)
 
@@ -276,13 +302,14 @@ warten, übrige eigene Knoten einzeln per PID mit SIGINT beenden und auflisten.
 
 Sofort Schritt 9 und dann Bericht bei:
 - Rad- oder Motorbewegung;
-- `FEHL` in „D Stillstand“;
+- `FEHL` in „D Stillstand“ (nach der einen erlaubten Wiederholung, siehe
+  Schritt 7);
 - Not-Aus oder einem „Stopp“ von Christopher;
 - einem zweiten Robotik-Stack;
 - einem HWT-Endfehler im Log (`TERMINAL_FAULT`) oder fehlendem HWT-Gerät.
   Nicht auf den Standardweg ausweichen; berichten.
 
-## Bericht: `~/selbstheilung_jetson_bericht_sh2.md`
+## Bericht: `~/selbstheilung_jetson_bericht_sh2_lauf2.md`
 
 Gliederung wie SH-1 v3. Kopf, Bestand, Umgebungsdatei, Build mit
 `prefixes.txt` und den zwei Overlay-Zeilen aus Schritt 4, Tests,
