@@ -267,6 +267,7 @@ def main(argv=None):
     from geometry_msgs.msg import TransformStamped, Twist
     from lifecycle_msgs.srv import ChangeState, GetState
     from nav_msgs.msg import OccupancyGrid, Odometry, Path as NavPath
+    from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
     from rclpy.executors import MultiThreadedExecutor
     from rclpy.node import Node
     from rclpy.qos import (QoSProfile, DurabilityPolicy, ReliabilityPolicy,
@@ -318,7 +319,10 @@ def main(argv=None):
             self.static.sendTransform(transforms)
             self.create_subscription(Twist, '/cmd_vel', self.on_cmd, 10)
             self.create_timer(.01, self.tick)
-            self.create_timer(.1, self.sensoren)
+            # Eigene Gruppe: In der gemeinsamen Standardgruppe ließ der fast immer
+            # fällige 100-Hz-Physiktakt den Sensortakt phasenweise >1 s verhungern
+            # (02.11.2026: bis 99 VL53-Lücken je Lauf, ständige Nav2-Neustarts).
+            self.create_timer(.1, self.sensoren, callback_group=MutuallyExclusiveCallbackGroup())
             self.zaehler = 0
 
         def on_cmd(self, msg):

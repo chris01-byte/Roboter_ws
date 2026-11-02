@@ -98,6 +98,13 @@ def test_harness_publishes_only_sensor_data_and_the_app_command():
     assert 'NavigateToPose' not in source and 'send_goal' not in source
 
 
+def test_sensor_timer_has_its_own_callback_group():
+    """02.11.2026: In der Standardgruppe ließ der 100-Hz-Physiktakt den Sensortakt verhungern."""
+    source = (HIER/'sh_robustheit.py').read_text(encoding='utf-8')
+    assert "self.create_timer(.01, self.tick)\n" in source
+    assert "self.create_timer(.1, self.sensoren, callback_group=MutuallyExclusiveCallbackGroup())" in source
+
+
 def test_plan_bottleneck_keeps_the_narrowest_plan_and_counts_tight_plans():
     import numpy as np
     stand = sh.plan_engstelle(None, np.array([.5, .3]), np.array([[0., 0.], [1., 1.]]), 3., .28)

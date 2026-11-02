@@ -80,6 +80,57 @@ geändert. (2) Kandidat auswählen. (3) Geschlossene Simulation als Regression.
 
 **Nächster Schritt:** Prüfstand bauen und Ausgangswerte messen.
 
+### SL-1 Zwischenstand 03.11.2026: Stufe A erfüllt, Stufe B nicht bestanden
+
+**Stufe A (Prüfstand, `c20436a`):** Ursache gemessen. Last am Ende einer
+aufgezeichneten Fahrt (nur SLAM, gleiche Daten): Basis 82/82 % eines Kerns,
+Knoten ab 10 cm 23 %, ab 25 cm 18/19 %, Karte alle 5 s 37 %, Scan-Takt 0,5 s
+70 %, ohne Ringschluss 63 %, **Kandidat 25 cm / 0,35 rad 11 %**. Kandidat:
+A1 erfüllt (11 ≤ 41), A3 erfüllt (0,15 % zu altes `map`→`odom`), A4 erfüllt
+(Kartenfehler 2,8 statt 7,1 cm, Abdeckung 97,9 %). **A2 wörtlich verfehlt:**
+9–10 verworfene Scans bleiben; dieselben 9 Stellen auch bei praktisch
+untätigem SLAM (Leerlaufmessung), also Lücken der Aufnahme, lastbedingt 0
+statt 51–56. Entscheidung über diese Abweichung beim Projektinhaber.
+Eigene Messfehler unterwegs gefunden und behoben: Altersmessung lief 5 s
+über das Abspielende hinaus (täuschte eine zweite Ursache vor), Zuordnung der
+verworfenen Scans. [Beleg](evidence/sl1-pruefstand-20261102.json).
+
+**Stufe B (geschlossene Simulation):** [Beleg](evidence/sl1-simulation-20261102.json).
+B2 klar erfüllt: Reglerabbrüche wegen altem `map`→`odom` 0–13 statt 16–74 je
+Lauf, SLAM-Last 4–17 % statt bis 109 %, vier Szenarien erstmals
+„vollständig“ mit 1–3 statt 7–16 Heilungen und 11–18 m statt 5–6 m Strecke.
+**B1 und B3 verfehlt:** Berührungen an der Insel (mehrfach), in der
+0,84-m-Verbindung und im 0,68-m-Türtest, jeweils beim Drehen auf der Stelle
+mit 0,31–0,36 m Mittenabstand (Eckenradius 0,414 m), das Hindernis stand
+jeweils in der lokalen Kostenkarte.
+
+Ursachen, gemessen:
+1. **Simulatorfehler:** Der 100-Hz-Physiktakt ließ den Sensortakt in derselben
+   Callback-Gruppe phasenweise über 1 s verhungern (bis 99 VL53-Lücken je
+   Lauf); der Explorer brach dann alle 2–3 s ab und startete mit einer
+   Drehung neu. Korrigiert (eigene Gruppe für den Sensortakt): 0 Lücken.
+2. **Bestehende Produktschwäche, nicht SLAM:** Auch ohne Lücken berührte der
+   Kandidat die Insel: Der Regler meldet „collision ahead“, hält an, dreht im
+   nächsten Zyklus ein Stück weiter, die Ecke kriecht ans Hindernis.
+   **Kontrolle mit den alten SLAM-Werten** unter gleichen Bedingungen:
+   ebenfalls Berührung an der Insel (1 von 4 Läufen). Mit alten Werten kommt
+   der Roboter wegen der vielen Abbrüche nur 5 m weit und selten an die
+   Insel; mit SL-1 erkundet er vollständig und erreicht die Insel in 6 von 9
+   Läufen. SL-1 legt die Schwäche also offen, verursacht sie aber nicht.
+3. Der Explorer fährt nach einer Quellenstörung sofort wieder an, ohne
+   Beruhigungszeit; flackernde Quellen erzeugen Neustarts mit Drehung.
+
+**Bewertung:** SL-1 erreicht sein Ziel (SLAM hält Schritt), ist aber nach den
+vorab festgelegten Regeln **nicht abgenommen**, weil B1/B3 verfehlt sind.
+SH-4 (Jetson) wird deshalb **nicht** erteilt: Mit SL-1 würde der Roboter auch
+real länger und in engeren Bereichen fahren, die Drehschwäche ist dort
+ungelöst. Der Kandidat bleibt im Code (nur `self_healing`, noch kein Jetson-
+Build); Rückfall wie oben.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers zur Drehschwäche
+(eigenes Arbeitspaket mit vorab festen Kriterien), danach Stufe B für SL-1
+wiederholen.
+
 ## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
 
 Lokaler Agent, Fahrten 16:16–17:41, LAB-1 aktiv, Release

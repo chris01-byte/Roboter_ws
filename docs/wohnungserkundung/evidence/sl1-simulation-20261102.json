@@ -1,0 +1,783 @@
+{
+ "zweck": "SL-1 Stufe B: geschlossene Simulation (Manifest v4) mit dem Kandidaten, Kontrolle alte gegen neue SLAM-Werte, Prüfung der Simulator-Taktkorrektur",
+ "qualifikation": "nur Software, Cloud, ROS 2 Jazzy; keine Jetson- oder Realabnahme",
+ "stand": "c20436a (Kandidat im Produkt); Kontrolle mit Experiment k_sl1_alt (alte Werte), Kandidatläufe der Kontrolle mit leerem Experiment x0_produkt",
+ "befunde": [
+  "B2 erfüllt: Reglerabbrüche wegen altem map->odom 0-13 statt 16-74 je Lauf (ohne Flackerphasen)",
+  "B1/B3 verfehlt: Berührungen an Insel, Verbindung und 0,68-m-Tür, jeweils beim Drehen auf der Stelle, Hindernis in der lokalen Kostenkarte",
+  "Kontrolle: alte SLAM-Werte berühren unter denselben Bedingungen ebenfalls (1 von 2), Kandidat 1 von 2",
+  "Simulatorfehler: Sensortakt verhungerte phasenweise (bis 99 VL53-Lücken je Lauf); nach Korrektur 0 Lücken, Berührung an der Insel trotzdem"
+ ],
+ "laeufe": [
+  {
+   "lauf": "referenz_201557",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 6,
+   "heilungen": 1,
+   "strecke_m": 11.56,
+   "dauer_s": 424.1,
+   "abstand_cm": 1.9,
+   "engste_stelle": {
+    "pose": [
+     0.305,
+     0.05,
+     0.292
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.0
+    ],
+    "mitte_abstand_m": 0.3703,
+    "hindernis": [
+     [
+      0.56,
+      0.4
+     ],
+     [
+      0.64,
+      1.4
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 42,
+     "im_fenster": true,
+     "toedlich": 2,
+     "eingeschrieben_oder_mehr": 8,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 1,
+   "regler_extrapolation": 1,
+   "verworfene_scans": 4,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.046,
+   "abdeckung": 0.975,
+   "slam_cpu_prozent_kern": {
+    "max": 17,
+    "letzte": 14,
+    "proben": 43
+   }
+  },
+  {
+   "lauf": "sensorluecke_202320",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 6,
+   "heilungen": 1,
+   "strecke_m": 11.91,
+   "dauer_s": 415.7,
+   "abstand_cm": 8.1,
+   "engste_stelle": {
+    "pose": [
+     0.769,
+     -0.035,
+     2.761
+    ],
+    "geschwindigkeit": [
+     0.012,
+     0.016
+    ],
+    "mitte_abstand_m": 0.387,
+    "hindernis": null,
+    "lokale_kostenkarte": null
+   },
+   "vl53_luecken": 1,
+   "regler_extrapolation": 0,
+   "verworfene_scans": 10,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.041,
+   "abdeckung": 0.976,
+   "slam_cpu_prozent_kern": {
+    "max": 20,
+    "letzte": 17,
+    "proben": 42
+   }
+  },
+  {
+   "lauf": "kartenrennen_203037",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 10,
+   "heilungen": 3,
+   "strecke_m": 17.66,
+   "dauer_s": 718.6,
+   "abstand_cm": 2.5,
+   "engste_stelle": {
+    "pose": [
+     0.805,
+     -0.034,
+     -2.82
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.0
+    ],
+    "mitte_abstand_m": 0.4017,
+    "hindernis": [
+     [
+      0.56,
+      -1.4
+     ],
+     [
+      0.64,
+      -0.4
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 42,
+     "im_fenster": true,
+     "toedlich": 2,
+     "eingeschrieben_oder_mehr": 6,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 7,
+   "regler_extrapolation": 13,
+   "verworfene_scans": 19,
+   "ringschluss": 2,
+   "kartenfehler_m": 0.058,
+   "abdeckung": 0.974,
+   "slam_cpu_prozent_kern": {
+    "max": 30,
+    "letzte": 27,
+    "proben": 73
+   }
+  },
+  {
+   "lauf": "rechenlast_204254",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 7,
+   "heilungen": 1,
+   "strecke_m": 11.68,
+   "dauer_s": 417.4,
+   "abstand_cm": 5.1,
+   "engste_stelle": {
+    "pose": [
+     0.318,
+     0.033,
+     0.22
+    ],
+    "geschwindigkeit": [
+     0.04,
+     -0.031
+    ],
+    "mitte_abstand_m": 0.387,
+    "hindernis": null,
+    "lokale_kostenkarte": null
+   },
+   "vl53_luecken": 0,
+   "regler_extrapolation": 0,
+   "verworfene_scans": 5,
+   "ringschluss": 1,
+   "kartenfehler_m": 0.044,
+   "abdeckung": 0.977,
+   "slam_cpu_prozent_kern": {
+    "max": 18,
+    "letzte": 15,
+    "proben": 42
+   }
+  },
+  {
+   "lauf": "hindernis_im_weg_205013",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar",
+    "keine_kollision"
+   ],
+   "ende": "usable_partial",
+   "grund": "overall_budget_exhausted",
+   "ziele": 5,
+   "heilungen": 6,
+   "strecke_m": 3.81,
+   "dauer_s": 899.2,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.257,
+     0.394,
+     0.639
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.003
+    ],
+    "mitte_abstand_m": 0.3074,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 16,
+     "eingeschrieben_oder_mehr": 48,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 99,
+   "regler_extrapolation": 113,
+   "verworfene_scans": 11,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.034,
+   "abdeckung": 0.923,
+   "slam_cpu_prozent_kern": {
+    "max": 9,
+    "letzte": 8,
+    "proben": 90
+   }
+  },
+  {
+   "lauf": "gesperrte_tuer_210531",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "sauberes_ende",
+    "keine_kollision"
+   ],
+   "ende": "blocked_help_required",
+   "grund": "help_required:nav_aborted",
+   "ziele": 1,
+   "heilungen": 8,
+   "strecke_m": 2.31,
+   "dauer_s": 314.5,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     0.088,
+     0.058,
+     0.414
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.003
+    ],
+    "mitte_abstand_m": 0.3615,
+    "hindernis": [
+     [
+      -0.6,
+      0.42
+     ],
+     [
+      0.6,
+      0.47
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 50,
+     "im_fenster": true,
+     "toedlich": 23,
+     "eingeschrieben_oder_mehr": 50,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 39,
+   "regler_extrapolation": 48,
+   "verworfene_scans": 1,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.031,
+   "abdeckung": 0.965,
+   "slam_cpu_prozent_kern": {
+    "max": 7,
+    "letzte": 6,
+    "proben": 32
+   }
+  },
+  {
+   "lauf": "referenz_211103",
+   "gruppe": "A (Kandidat)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.68,
+   "experiment": "x0_produkt.yaml",
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "sauberes_ende",
+    "abdeckung_erreichbar",
+    "keine_kollision"
+   ],
+   "ende": "blocked_help_required",
+   "grund": "help_required:nav_aborted",
+   "ziele": 6,
+   "heilungen": 8,
+   "strecke_m": 3.66,
+   "dauer_s": 598.3,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.235,
+     0.436,
+     0.407
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.004
+    ],
+    "mitte_abstand_m": 0.3435,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 19,
+     "eingeschrieben_oder_mehr": 51,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 47,
+   "regler_extrapolation": 65,
+   "verworfene_scans": 2,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.023,
+   "abdeckung": 0.928,
+   "slam_cpu_prozent_kern": {
+    "max": 9,
+    "letzte": 7,
+    "proben": 60
+   }
+  },
+  {
+   "lauf": "referenz_212134",
+   "gruppe": "B (Kandidat, Schleife danach beendet)",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar",
+    "keine_kollision"
+   ],
+   "ende": "usable_partial",
+   "grund": "overall_budget_exhausted",
+   "ziele": 5,
+   "heilungen": 10,
+   "strecke_m": 3.64,
+   "dauer_s": 899.3,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.232,
+     0.44,
+     0.389
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.021
+    ],
+    "mitte_abstand_m": 0.3473,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 18,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 24,
+   "regler_extrapolation": 39,
+   "verworfene_scans": 3,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.036,
+   "abdeckung": 0.916,
+   "slam_cpu_prozent_kern": {
+    "max": 9,
+    "letzte": 8,
+    "proben": 90
+   }
+  },
+  {
+   "lauf": "referenz_213656",
+   "gruppe": "Kontrolle alt/neu",
+   "slam": "alt (0,01 m / 0,15 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": "k_sl1_alt.yaml",
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "sauberes_ende",
+    "karte_plausibel",
+    "keine_kollision"
+   ],
+   "ende": "blocked_help_required",
+   "grund": "help_required:nav_aborted",
+   "ziele": 3,
+   "heilungen": 20,
+   "strecke_m": 5.31,
+   "dauer_s": 559.7,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.224,
+     -0.555,
+     0.017
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.088
+    ],
+    "mitte_abstand_m": 0.4138,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 32,
+     "eingeschrieben_oder_mehr": 60,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 4,
+   "regler_extrapolation": 52,
+   "verworfene_scans": 70,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.134,
+   "abdeckung": 0.961,
+   "slam_cpu_prozent_kern": {
+    "max": 80,
+    "letzte": 72,
+    "proben": 57
+   }
+  },
+  {
+   "lauf": "referenz_214634",
+   "gruppe": "Kontrolle alt/neu",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": "x0_produkt.yaml",
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 6,
+   "heilungen": 6,
+   "strecke_m": 9.85,
+   "dauer_s": 700.5,
+   "abstand_cm": 1.4,
+   "engste_stelle": {
+    "pose": [
+     1.122,
+     0.254,
+     0.648
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.004
+    ],
+    "mitte_abstand_m": 0.4281,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 27,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 76,
+   "regler_extrapolation": 105,
+   "verworfene_scans": 4,
+   "ringschluss": 1,
+   "kartenfehler_m": 0.031,
+   "abdeckung": 0.976,
+   "slam_cpu_prozent_kern": {
+    "max": 19,
+    "letzte": 15,
+    "proben": 71
+   }
+  },
+  {
+   "lauf": "referenz_215836",
+   "gruppe": "Kontrolle alt/neu",
+   "slam": "alt (0,01 m / 0,15 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": "k_sl1_alt.yaml",
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 5,
+   "heilungen": 11,
+   "strecke_m": 5.16,
+   "dauer_s": 376.0,
+   "abstand_cm": 6.4,
+   "engste_stelle": {
+    "pose": [
+     1.686,
+     -0.778,
+     2.219
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.017
+    ],
+    "mitte_abstand_m": 0.4781,
+    "hindernis": null,
+    "lokale_kostenkarte": null
+   },
+   "vl53_luecken": 0,
+   "regler_extrapolation": 44,
+   "verworfene_scans": 66,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.031,
+   "abdeckung": 0.981,
+   "slam_cpu_prozent_kern": {
+    "max": 76,
+    "letzte": 75,
+    "proben": 38
+   }
+  },
+  {
+   "lauf": "referenz_220517",
+   "gruppe": "Kontrolle alt/neu",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": false,
+   "tuer_m": 0.8,
+   "experiment": "x0_produkt.yaml",
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "keine_kollision"
+   ],
+   "ende": "exploration_complete",
+   "grund": "exploration_complete",
+   "ziele": 3,
+   "heilungen": 7,
+   "strecke_m": 11.26,
+   "dauer_s": 676.0,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.225,
+     0.436,
+     0.391
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.029
+    ],
+    "mitte_abstand_m": 0.3525,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 27,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 44,
+   "regler_extrapolation": 64,
+   "verworfene_scans": 5,
+   "ringschluss": 1,
+   "kartenfehler_m": 0.037,
+   "abdeckung": 0.978,
+   "slam_cpu_prozent_kern": {
+    "max": 18,
+    "letzte": 15,
+    "proben": 68
+   }
+  },
+  {
+   "lauf": "referenz_221726",
+   "gruppe": "Simulator-Taktkorrektur",
+   "slam": "Kandidat (0,25 m / 0,35 rad)",
+   "simulator_taktkorrektur": true,
+   "tuer_m": 0.8,
+   "experiment": null,
+   "bestanden": false,
+   "kriterien_verfehlt": [
+    "abdeckung_erreichbar",
+    "keine_kollision"
+   ],
+   "ende": "usable_partial",
+   "grund": "overall_budget_exhausted",
+   "ziele": 4,
+   "heilungen": 6,
+   "strecke_m": 3.61,
+   "dauer_s": 899.3,
+   "abstand_cm": 0.0,
+   "engste_stelle": {
+    "pose": [
+     1.244,
+     0.399,
+     0.578
+    ],
+    "geschwindigkeit": [
+     0.0,
+     -0.018
+    ],
+    "mitte_abstand_m": 0.3215,
+    "hindernis": [
+     [
+      1.55,
+      -0.3
+     ],
+     [
+      1.8,
+      0.3
+     ]
+    ],
+    "lokale_kostenkarte": {
+     "zellen": 78,
+     "im_fenster": true,
+     "toedlich": 28,
+     "eingeschrieben_oder_mehr": 58,
+     "unbekannt": 0,
+     "max": 100
+    }
+   },
+   "vl53_luecken": 0,
+   "regler_extrapolation": 0,
+   "verworfene_scans": 11,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.054,
+   "abdeckung": 0.908,
+   "slam_cpu_prozent_kern": {
+    "max": 9,
+    "letzte": 7,
+    "proben": 91
+   }
+  },
+  {
+   "lauf": "referenz_223247",
+   "gruppe": "Simulator-Taktkorrektur",
+   "slam": "alt (0,01 m / 0,15 rad)",
+   "simulator_taktkorrektur": true,
+   "tuer_m": 0.8,
+   "experiment": "k_sl1_alt.yaml",
+   "bestanden": true,
+   "kriterien_verfehlt": [],
+   "ende": "usable_partial",
+   "grund": "remaining_frontiers_unreachable",
+   "ziele": 3,
+   "heilungen": 17,
+   "strecke_m": 5.26,
+   "dauer_s": 395.1,
+   "abstand_cm": 4.9,
+   "engste_stelle": {
+    "pose": [
+     1.789,
+     -0.763,
+     2.219
+    ],
+    "geschwindigkeit": [
+     0.0,
+     0.032
+    ],
+    "mitte_abstand_m": 0.4628,
+    "hindernis": null,
+    "lokale_kostenkarte": null
+   },
+   "vl53_luecken": 0,
+   "regler_extrapolation": 73,
+   "verworfene_scans": 71,
+   "ringschluss": 0,
+   "kartenfehler_m": 0.083,
+   "abdeckung": 0.969,
+   "slam_cpu_prozent_kern": {
+    "max": 103,
+    "letzte": 91,
+    "proben": 40
+   }
+  }
+ ]
+}
