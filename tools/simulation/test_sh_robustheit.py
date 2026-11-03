@@ -143,6 +143,37 @@ def test_local_costmap_snapshot_counts_cells_over_the_obstacle():
     assert sh.kostenkarte_ueber(None, ecken) is None
 
 
+def test_footprint_snapshot_separates_outline_from_inside_cells():
+    """DR-1: Konnte der Regler (Umriss gegen tödliche Zellen) das Hindernis sehen?"""
+    import math
+    import numpy as np
+    from ap06_world import chassis_clearance
+    werte = np.zeros((40, 40), dtype=np.int16)
+    karte = (werte, .05, 0., 0.)
+    pose = (1., 1., 0.)                         # Kontur x 0,87..1,33, y 0,75..1,25
+    leer = sh.footprint_ueber(karte, pose)
+    assert leer == {'umriss_max': 0, 'toedlich_innen': 0, 'abstand_toedlich_m': None}
+    werte[20, 27] = 100                         # Zellmitte x 1,375: 4,5 cm vor der Front
+    assert sh.footprint_ueber(karte, pose)['abstand_toedlich_m'] == pytest.approx(.045)
+    assert sh.footprint_ueber(karte, pose)['umriss_max'] == 0
+    werte[20, 27] = 0
+    werte[20, 20] = 100                         # Mitte innen, Umriss weit weg
+    innen = sh.footprint_ueber(karte, pose)
+    assert innen['toedlich_innen'] == 1 and innen['umriss_max'] == 0
+    assert innen['abstand_toedlich_m'] < 0
+    werte[20, 26] = 100                         # Zelle x 1,30..1,35 liegt unter der Front
+    assert sh.footprint_ueber(karte, pose)['umriss_max'] == 100
+    # Gedreht um 90 Grad: die Front zeigt nach +y.
+    werte[:] = 0
+    werte[27, 20] = 100                         # Zellmitte y 1,375
+    gedreht = sh.footprint_ueber(karte, (1., 1., math.pi/2))
+    assert gedreht['abstand_toedlich_m'] == pytest.approx(.045)
+    # Kontur stimmt mit der Simulationskontur überein.
+    assert chassis_clearance(np.array([0., 0., 0.]), [np.array(
+        [(.38, -.1), (.5, -.1), (.5, .1), (.38, .1)])]) == pytest.approx(.05)
+    assert sh.KONTUR_BASIS[1] == (.33, -.25)
+
+
 def test_manifest_v2_replaces_goal_counts_by_reachable_coverage():
     v1 = json.loads((HIER/'sh_robustheit_szenarien.json').read_text(encoding='utf-8'))
     v2 = json.loads((HIER/'sh_robustheit_szenarien_v2.json').read_text(encoding='utf-8'))

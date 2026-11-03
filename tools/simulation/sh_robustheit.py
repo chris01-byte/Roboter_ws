@@ -167,6 +167,48 @@ def kostenkarte_ueber(karte, ecken_odom):
             'max': int(teil.max())}
 
 
+KONTUR_BASIS = ((-.13, -.25), (.33, -.25), (.33, .25), (-.13, .25))   # wie ap06_world
+
+
+def footprint_ueber(karte, pose_odom, ecken=KONTUR_BASIS, schritt_m=.01):
+    """Was sah die lokale Kostenkarte unter der gepolsterten Kontur (DR-1)?
+
+    Der Regler prüft beim Drehen den Footprint-Umriss gegen tödliche Zellen.
+    ``umriss_max``: höchster Wert entlang des Umrisses (alle ``schritt_m``);
+    ``toedlich_innen``: tödliche Zellen, deren Mitte innerhalb der Kontur liegt;
+    ``abstand_toedlich_m``: kleinster Abstand einer tödlichen Zellmitte zur
+    Kontur (negativ = innerhalb). Rahmen: Odometrie, Werte wie ``kostenkarte_ueber``.
+    """
+    if karte is None:
+        return None
+    werte, aufl, ox, oy = karte
+    x, y, yaw = pose_odom
+    c, s = math.cos(yaw), math.sin(yaw)
+    poly = np.array([(x + c*a - s*b, y + s*a + c*b) for a, b in ecken])
+    punkte = []
+    for p0, p1 in zip(poly, np.roll(poly, -1, axis=0)):
+        n = max(2, int(math.ceil(np.linalg.norm(p1 - p0)/schritt_m)) + 1)
+        punkte.append(p0 + np.linspace(0, 1, n)[:, None]*(p1 - p0))
+    punkte = np.vstack(punkte)
+    spalten = np.floor((punkte[:, 0] - ox)/aufl).astype(int)
+    zeilen = np.floor((punkte[:, 1] - oy)/aufl).astype(int)
+    drin = (zeilen >= 0) & (zeilen < werte.shape[0]) & (spalten >= 0) & (spalten < werte.shape[1])
+    umriss_max = int(werte[zeilen[drin], spalten[drin]].max()) if drin.any() else None
+    r, k = np.nonzero(werte >= 100)
+    if not len(r):
+        return {'umriss_max': umriss_max, 'toedlich_innen': 0, 'abstand_toedlich_m': None}
+    mitten = np.stack((ox + (k + .5)*aufl, oy + (r + .5)*aufl), axis=1)
+    # In den Roboterrahmen drehen: Kontur ist dort ein achsparalleles Rechteck.
+    d = mitten - np.array([x, y])
+    lokal = np.stack((c*d[:, 0] + s*d[:, 1], -s*d[:, 0] + c*d[:, 1]), axis=1)
+    lo, hi = np.min(ecken, axis=0), np.max(ecken, axis=0)
+    aussen = np.linalg.norm(np.maximum(np.maximum(lo - lokal, 0.), lokal - hi), axis=1)
+    innen = np.min(np.minimum(lokal - lo, hi - lokal), axis=1)
+    abstand = np.where(aussen > 0, aussen, -innen)
+    return {'umriss_max': umriss_max, 'toedlich_innen': int(np.count_nonzero(abstand < 0)),
+            'abstand_toedlich_m': round(float(abstand.min()), 4)}
+
+
 def ausloeser_erfuellt(ausloeser, ziele, pose, geschwindigkeit, seit_start_s):
     if not ausloeser:
         return True
@@ -287,6 +329,36 @@ def main(argv=None):
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL)
     zustand = dict(vl53_pause_bis=0.0, lidar_pause_bis=0.0, cmd=(0.0, 0.0), cmd_zeit=0.0)
+    # DR-1: Verlauf der letzten Sekunden, beim ersten Kontakt eingefroren.
+    from collections import deque
+    from ap06_world import chassis_clearance
+    verlauf = dict(pose=deque(maxlen=120), roh=deque(maxlen=240), final=deque(maxlen=240),
+                   erster_kontakt=None)
+
+    def erster_kontakt_abzug(jetzt):
+        """DR-1: Verlauf und Kostenkarte unter der Kontur bei der ersten Berührung."""
+        t = round(jetzt - start, 3)
+        posen = list(verlauf['pose'])           # (t, x, y, yaw, v, w, Abstand)
+
+        def odom(eintrag):
+            lokal = welt.local([eintrag[1:3]])[0]
+            return float(lokal[0]), float(lokal[1]), eintrag[3] - welt.start[2]
+        karte = beobachter.lokal
+        kontur = {}
+        for vorher in (0., .5, 1., 2.):
+            kandidaten = [e for e in posen if e[0] <= t - vorher]
+            if kandidaten:
+                e = kandidaten[-1]
+                kontur[f'{vorher:.1f}s_vorher'] = dict(t_s=e[0], abstand_m=e[6], w=e[5],
+                                                      **(footprint_ueber(karte, odom(e)) or {}))
+        box, niedrig = welt.naechstes_hindernis()
+        return dict(t_s=t, pose=[round(float(v), 4) for v in welt.pose], hindernis_niedrig=niedrig,
+                    hindernis=[[round(float(v), 3) for v in box.min(axis=0)],
+                               [round(float(v), 3) for v in box.max(axis=0)]],
+                    kontur_kostenkarte=kontur,
+                    pose_verlauf=[list(e) for e in posen if e[0] >= t - 6],
+                    befehle_roh=[list(e) for e in verlauf['roh'] if e[0] >= t - 6],
+                    befehle_final=[list(e) for e in verlauf['final'] if e[0] >= t - 6])
 
     class Anlage(Node):
         """Fahrmodell und Sensorrohdaten; veröffentlicht keine Karte."""
@@ -347,6 +419,12 @@ def main(argv=None):
             self.zaehler += 1
             if self.zaehler % 2 == 0:
                 self.odom(jetzt)
+            if self.zaehler % 5 == 0 or (welt.collision and verlauf['erster_kontakt'] is None):
+                verlauf['pose'].append((round(jetzt - start, 3), *[round(float(v), 4) for v in welt.pose],
+                                        *[round(float(v), 4) for v in welt.velocity],
+                                        round(float(chassis_clearance(welt.pose, welt.obstacles)), 4)))
+            if welt.collision and verlauf['erster_kontakt'] is None:
+                verlauf['erster_kontakt'] = erster_kontakt_abzug(jetzt)
 
         def odom(self, jetzt):
             lokal = welt.local([welt.pose[:2]])[0]
@@ -398,8 +476,9 @@ def main(argv=None):
             self.create_subscription(Bool, '/safety/estop',
                                      lambda m: protokoll.estop_wert(bool(m.data), time.monotonic()),
                                      latched)
-            self.create_subscription(Twist, '/cmd_vel',
-                                     lambda m: protokoll.cmd_vel(m.linear.x, m.angular.z), 10)
+            self.create_subscription(Twist, '/cmd_vel', self.on_cmd_final, 10)
+            self.create_subscription(Twist, '/cmd_vel_nav_raw', lambda m: verlauf['roh'].append(
+                (round(time.monotonic() - start, 3), round(m.linear.x, 4), round(m.angular.z, 4))), 10)
             self.create_subscription(Odometry, '/odom',
                                      lambda m: protokoll.odom(m.pose.pose.position.x,
                                                               m.pose.pose.position.y), 10)
@@ -416,6 +495,11 @@ def main(argv=None):
             if self.erste_karte is None:
                 self.erste_karte = msg
             self.karte = msg
+
+        def on_cmd_final(self, m):
+            protokoll.cmd_vel(m.linear.x, m.angular.z)
+            verlauf['final'].append((round(time.monotonic() - start, 3), round(m.linear.x, 4),
+                                     round(m.angular.z, 4)))
 
         def on_lokal(self, msg):
             i = msg.info
@@ -664,6 +748,7 @@ def main(argv=None):
     ergebnis['minimaler_abstand_m'] = (None if not math.isfinite(welt.minimum_clearance)
                                        else round(float(welt.minimum_clearance), 3))
     ergebnis['engste_stelle'] = welt.engste_stelle
+    ergebnis['erster_kontakt'] = verlauf['erster_kontakt']
     ergebnis['mitte_engste_stelle'] = welt.mitte_min
     ergebnis['plan_engste_stelle'] = beobachter.plan
     ergebnis['robot_radius_global_m'] = robot_radius
