@@ -369,15 +369,39 @@ def test_frontier_seen_only_from_a_cramped_strip_gets_no_goal_with_a_minimum():
     common = dict(min_size_cells=2, clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)
     old = frontier_goals(occupancy, .05, to_world, (.5, 1.0), **common)
     assert len(old) == 1 and room[int(old[0].y/.05), int(old[0].x/.05)] < .45
-    new = frontier_goals(occupancy, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45, **common)
+    known = obstacle_clearance(occupancy, .05)
+    new = frontier_goals(occupancy, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45,
+                         min_clearance=known, **common)
     assert new == []
     # Mit Drehraum in Sichtweite bleibt das Ziel erhalten.
     wide = occupancy.copy()
     wide[5:35, 20:40] = 0                        # Gang zur Halle geöffnet
     roomy = obstacle_clearance(wide, .05, unknown_blocks=True)
     kept = frontier_goals(wide, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45,
+                          min_clearance=obstacle_clearance(wide, .05),
                           **dict(common, clearance=roomy))
-    assert kept and all(roomy[int(g.y/.05), int(g.x/.05)] >= .45 for g in kept)
+    assert kept and all(obstacle_clearance(wide, .05)[int(g.y/.05), int(g.x/.05)] >= .45
+                        for g in kept)
+
+
+def test_scattered_unseen_cells_do_not_block_every_goal_at_the_start():
+    """Simulation 03.11.2026 (e41507b): Auf der Startkarte liegen zwischen den
+    Strahlen einzelne unbekannte Zellen; als Hindernis gezählt hatte kein Punkt
+    mehr als 0,31 m, 0 Ziele, Mission sofort zu Ende."""
+    to_world = lambda rows, cols: ((cols+.5)*.01, (rows+.5)*.01)
+    occupancy = np.full((300, 300), -1, dtype=int)
+    occupancy[20:280, 20:200] = 0                # gesehener Raum, 1-cm-Raster
+    occupancy[20:280, 20] = occupancy[20, 20:200] = occupancy[279, 20:200] = 100
+    rng = np.random.default_rng(3)
+    holes = rng.random((260, 180)) < .02         # Strahllücken mitten im Raum
+    occupancy[20:280, 20:200][holes & (occupancy[20:280, 20:200] == 0)] = -1
+    unknown = obstacle_clearance(occupancy, .01, unknown_blocks=True)
+    known = obstacle_clearance(occupancy, .01)
+    common = dict(min_size_cells=20, clearance=unknown, goal_clearance_m=.45,
+                  goal_shift_max_m=1.0, goal_min_clearance_m=.45)
+    assert frontier_goals(occupancy, .01, to_world, (1.0, 1.5), **common) == []   # Fehler
+    goals = frontier_goals(occupancy, .01, to_world, (1.0, 1.5), min_clearance=known, **common)
+    assert goals and all(known[int(g.y/.01), int(g.x/.01)] >= .45 for g in goals)
 
 
 def test_shifted_goal_never_jumps_behind_a_wall_it_cannot_see_through():

@@ -197,6 +197,24 @@ def test_explores_closed_room_to_completion(monkeypatch):
     assert np.count_nonzero(state.occupancy[1:-1, 1:-1] < 0) <= 10
 
 
+def test_goal_minimum_still_explores_a_room_with_scattered_unseen_cells(monkeypatch):
+    """DR-1 (03.11.2026): Mindestabstand 0,45 m darf Strahllücken nicht als
+    Wände zählen, sonst endet die Mission ohne ein einziges Ziel."""
+    n, state, goal, terminal = parent(monkeypatch)
+    n._self_healing_goal_min_clearance_m = .45
+    reveal = _reveal
+    rng = np.random.default_rng(5)
+    def speckled(occupancy, xy, radius):
+        reveal(occupancy, xy, radius)
+        inner = occupancy[1:-1, 1:-1]
+        inner[(rng.random(inner.shape) < .03) & (inner == 0)] = -1
+    import test_self_healing_runtime as me
+    monkeypatch.setattr(me, '_reveal', speckled)
+    speckled(state.occupancy, state.pose, 1.0)
+    state.refresh_map()
+    n._execute_self_healing(goal, 1200., .3)
+    assert n._self_healing_status['goals_reached'] >= 1, n._self_healing_status
+
 def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypatch):
     def blocked(x, y, stop, record):
         # Drive 0.3 m straight ahead first so an own track exists.

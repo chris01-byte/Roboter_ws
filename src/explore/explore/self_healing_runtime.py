@@ -434,6 +434,9 @@ class SelfHealingRuntime:
                                  goal_clearance_m=self._self_healing_goal_clearance_m,
                                  goal_shift_max_m=self._self_healing_goal_shift_max_m,
                                  goal_min_clearance_m=self._self_healing_goal_min_clearance_m)
+                if self._self_healing_goal_min_clearance_m > 0:
+                    # Mindestabstand nur gegen Gemessenes (siehe frontier_goals).
+                    selection['min_clearance'] = obstacle_clearance(occupancy, info.resolution)
             goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
                                    allowed=allowed, **selection)
             if allowed is not None:
