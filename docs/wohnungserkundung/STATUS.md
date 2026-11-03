@@ -255,9 +255,43 @@ Insel. Offline auf drei Endkarten: kein Ziel enger als bisher, enge Ziele
 Zwei neue Tests (Lückenmündung; Wand zwischen Frontier und Halle, ohne
 Sichtprüfung rot).
 
-**Abnahme läuft** (E1–E4, Simulation, Produkt `c70f6a0` ohne Experiment,
-Start 05:57 UTC): zwei v4-Durchgänge, zweimal Tür 0,68 m, sechs weitere
-Referenzläufe.
+**Abnahme auf `c70f6a0` (K2+K4), nach 9 von 20 Läufen beendet:** 0
+Berührungen, Mindestabstand 2,9–7,4 cm, engster Plan der 0,68-m-Tür 0,255 m
+(E3-Grenze 0,20). Referenz 2 von 3, Sensorlücke, Kartenrennen, Rechenlast,
+Hindernis im Weg (diesmal ohne Berührung der niedrigen Kiste, Einzelbefund)
+und Tür 0,68 m bestanden, Kartenrennen/Rechenlast aber nur als Teilkarte.
+**Zwei Läufe „Hilfe benötigt“, E2 damit verfehlt:**
+1. *Gesperrte Tür:* Hinter der geschlossenen Tür steht der Roboter mitten in
+   der 0,84-m-Verbindung. Die Wände liegen in der Kostenkarte ab 0,40 m, der
+   Drehradius ist 0,414 m: Drehen ist dort ehrlich nicht möglich (vorher drehte
+   er nur, weil die Hindernisschicht die Wand unter dem Umriss freiräumte).
+   Heraus führen nur rund 0,8 m zurück; H4 erlaubte 0,4 m einmal je
+   Stillstand, und die angesetzte Drehung hatte die Spur schon aus der Flucht
+   gebracht (keine Rückfahrt).
+2. *Referenz:* Nav2 meldete das Ziel 0,14 m vor dem Punkt mit Drehraum als
+   erreicht (Zieltoleranz 0,15 m); Halt 0,40 m neben dem Türpfosten, die
+   übrigen Ziele lagen hinter dem Roboter, die Spur führte zurück in die Tür.
+
+Die Sitzung wurde danach neu gestartet; die laufende Simulation endete
+dabei, die 9 Ergebnisse sind vollständig ausgewertet.
+
+**Entscheidung des Projektinhabers (03.11.2026):** Bei Drehsperre darf die
+Rückfahrt erweitert werden: erst die angesetzte Drehung zurücknehmen, dann auf
+der eigenen Spur zurück, bis zu 2 × 0,4 m je Stillstand statt 1 ×.
+
+**Umgesetzt:**
+- `8bfb0b9` (Entscheidung oben): Drehsperre = im Versuch nicht vom Fleck
+  (< 5 cm) und Drehkreis nicht frei. Dann sofort Zurückdrehen (höchstens
+  0,8 rad, nur über die eben überstrichene Fläche) und Rückfahrt, bis zu 2 ×
+  0,4 m, weiter 0,05 m/s und nur gerader eigener Spurabschnitt; das Ziel wird
+  dabei nicht zurückgestellt. Mit freiem Drehkreis bleibt die Leiter wie
+  bisher. Rückfall `self_healing_blocked_track_backs: 0`.
+- `6cf41b5`: Zieltoleranz im Selbstheilungs-Overlay 0,05 statt 0,15 m, damit
+  der Roboter dort hält, wo die Zielwahl Drehraum zugesichert hat.
+
+175 gezielte Tests grün (SH-4-Auswahl). **Abnahme neu gestartet** auf
+`6cf41b5`, 20 Läufe, fortsetzbar (erledigte Plätze in einer Zustandsdatei),
+zuerst die beiden vorher gescheiterten Fälle.
 
 **Nächster Schritt:** Abnahme auswerten; bei bestandenem DR-1 SH-4 um DR-1
 ergänzen und aktivieren.

@@ -88,7 +88,7 @@ Jeder heilbare Fehler durchläuft eine begrenzte Eskalation. Jede Stufe beginnt 
 | H1 Neu rechnen | Auswahl oder Route mit aktuellen Daten wiederholen, bei Budgetende bestes bisheriges Ergebnis nehmen | Auswahlbudget, `route_invalidated` | 2× je Aufgabe |
 | H2 Ziel zurückstellen | Aufgabe auf „später“ setzen, nächstes Ziel wählen | Ziel ohne Sicht am Stopp, wiederholt unerreichbar | Aufgabe max. 3× zurückgestellt, danach „unerreichbar“ markiert, nicht Missionsende |
 | H3 Lokale Befreiung | langsame Drehung im nicht belegten Drehkreis, um Sicht zu gewinnen; kurze Vorwärtsetappe in bekannt freiem Raum | Start im Mastschatten, eingeengte Lage | 2× je Ort |
-| H4 Spur zurück | langsam rückwärts **entlang der selbst gefahrenen Spur** (diese war nachweislich frei), max. 0,4 m, 0,05 m/s, nur gerader Spurabschnitt (≤ 3 cm seitlich) | Sackgasse, Engstelle ohne Drehraum | 1× je Stillstandsepisode; **freigegeben vom Projektinhaber am 15.10.2026** |
+| H4 Spur zurück | langsam rückwärts **entlang der selbst gefahrenen Spur** (diese war nachweislich frei), max. 0,4 m, 0,05 m/s, nur gerader Spurabschnitt (≤ 3 cm seitlich); bei Drehsperre (nicht vom Fleck, Drehkreis nicht frei) sofort, eine eben angesetzte Drehung vorher zurücknehmen | Sackgasse, Engstelle ohne Drehraum | 1× je Stillstandsepisode, bei Drehsperre bis 2× (zusammen ≤ 0,8 m); **freigegeben vom Projektinhaber am 15.10.2026, erweitert am 03.11.2026** |
 | H5 Hilfe | Stillstand, Teilkarte speichern, App-Meldung mit Grund und Vorschlag, „Weiter“ per App möglich | Budget erschöpft | – |
 
 Nav2 bringt Teile davon fertig mit: Behavior-Tree-Recovery `Wait`, `ClearCostmap`, `Spin`, `BackUp`, Neuplanung. Heute fehlt im BT ein Retry-Knoten (`bt_orchestrator/bt_xml/explore.xml:19-23`).

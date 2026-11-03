@@ -1369,3 +1369,20 @@ Kette über drei Prüfstufen (SH-1, SH-2, SH-3); zwei Abbrüche gingen auf
 Fehler in Prüfskript und Auftrag zurück, nicht auf den Roboter, und wurden
 von den lokalen Agenten richtig erkannt und regelkonform gemeldet.
 
+**Nachtrag 03.11.2026 – DR-1 Drehschwäche, Entscheidungen und Lehre:**
+Entscheidungen des Projektinhabers: (1) erst die Drehschwäche lösen, dann
+SL-1 Stufe B wiederholen und erst danach am Jetson abnehmen; (2) SL-1 A2
+(9 verworfene Scans aus der Aufnahme) als begründete Abweichung; (3) H4 bei
+Drehsperre erweitert: angesetzte Drehung zurücknehmen, dann bis zu 2 × 0,4 m
+auf der eigenen Spur zurück (vorher 1 × 0,4 m).
+Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
+aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
+nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
+Drehschritt), und die Hindernisschicht räumt die Fläche unter dem Footprint
+frei. Mehr Polster (K1) verschob das Problem nur. Wird der Regler ehrlich,
+zeigt sich die eigentliche Grenze: In Engstellen unter etwa 0,9 m kann
+Amadeus nicht drehen. Seine Selbstheilung braucht dort Rückfahrt und
+Zielpunkte mit Drehraum, nicht einen Regler, der es „irgendwie“ schafft.
+Erst messen hat hier zweimal Zeit gespart: Der vermutete Kandidat K1 wäre
+ohne Kontaktaufzeichnung übernommen worden.
+
