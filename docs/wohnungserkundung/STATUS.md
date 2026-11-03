@@ -131,6 +131,51 @@ Build); Rückfall wie oben.
 (eigenes Arbeitspaket mit vorab festen Kriterien), danach Stufe B für SL-1
 wiederholen.
 
+**Entscheidungen des Projektinhabers (03.11.2026):** (1) Erst die
+Drehschwäche lösen, danach SL-1 Stufe B wiederholen und erst dann am Jetson
+abnehmen. (2) A2 gilt als **begründete Abweichung**: Die 9 verbliebenen
+verworfenen Scans stammen nachweislich aus der Aufnahme; maßgeblich für
+verworfene Scans bleibt C3 am Jetson.
+
+## 03.11.2026 – Arbeitspaket DR-1: Drehen nahe Hindernissen absichern (vor der Messung festgelegt)
+
+| | |
+|---|---|
+| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 03.11.2026 |
+| WE-Bezug | WE-M3, Vorbedingung für SL-1 und Stufe 3 |
+| Istbasis | `79f0f38`: mit SL-1 berührt der Roboter in der Simulation beim Drehen auf der Stelle die Insel (5 von 10 Kandidatläufen), die 0,84-m-Verbindung und den Pfosten der 0,68-m-Tür; mit alten SLAM-Werten ebenfalls (1 von 4), nur seltener erreicht. Hindernis jeweils in der lokalen Kostenkarte |
+| Ziel | Drehungen auf der Stelle bringen die gepolsterte Kontur nie an ein bekanntes Hindernis; Neustarts nach Quellenstörungen erzeugen keine Drehkaskaden |
+| Nicht-Ziele | keine Änderung von Chassis-Footprint, Simulationskontur (fest −0,13…0,33 m × ±0,25 m), `collision_monitor`, VL53, Fahrtor oder SLAM; 0,68-m-Türen bleiben befahrbar; AP06 (`self_healing:=false`) unverändert |
+| Ort der Änderung | nach Messung; bevorzugt nur Selbstheilungs-Overlays bzw. Selbstheilungs-Explorer |
+| Rückfall | Overlay-Einträge bzw. Commit zurücknehmen, `self_healing:=false` |
+
+**Arbeitshypothese (noch nicht gemessen):** Die lokale Kostenkarte rechnet in
+5-cm-Zellen, der Regler prüft beim Drehen nur den Umriss des Footprints an
+einer vorausberechneten Stellung (etwa 0,12 rad). Eine Ecke kann so bis zu
+eine Zelle in ein Hindernis schwenken, bevor eine tödliche Zelle auf dem
+Umriss liegt; die Polsterung beträgt nur 2 cm. Dazu: Bei „collision ahead“
+hält der Regler, versucht es im nächsten Zyklus erneut, die Ecke kriecht
+heran.
+
+**Vorgehen:** (1) Simulation zeichnet bei der ersten Berührung den Verlauf
+der Fahrbefehle und die Kostenkarte unter dem Footprint auf. (2) Ursache
+bestätigen oder verwerfen. (3) Kandidat. (4) Abnahme zusammen mit der
+Wiederholung von SL-1 Stufe B.
+
+**Abnahmekriterien** (Simulation mit SL-1-Kandidat und korrigiertem
+Simulatortakt; Kontakt = Berührung der festen Simulationskontur):
+
+| Nr | Kriterium |
+|---|---|
+| E1 | 8 Referenzläufe (Manifest v4): 0 Berührungen (Ausgangslage 5 von 10) |
+| E2 | Manifest v4, 2 Durchgänge: Referenz, Sensorlücke, Kartenrennen, Rechenlast, gesperrte Tür je 2/2, keine Berührung außer der bekannten niedrigen Kiste (= SL-1 B1) |
+| E3 | Tür 0,68 m, 2 Läufe: bestanden, keine Berührung, engster Plan ≥ 0,20 m (= SL-1 B3) |
+| E4 | Erkundung nicht schlechter als mit dem SL-1-Kandidaten: in den Referenzläufen Abdeckung im Median ≥ 0,95, Ziele im Median ≥ 5, Heilungen im Median ≤ 5 |
+| E5 | Jetson SH-4: zusätzlich zu C1–C5 keine Berührung (Christopher) in allen drei Fahrten |
+
+**Nächster Schritt:** Simulation um die Aufzeichnung bei Berührung ergänzen
+und Ursache messen.
+
 ## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
 
 Lokaler Agent, Fahrten 16:16–17:41, LAB-1 aktiv, Release
