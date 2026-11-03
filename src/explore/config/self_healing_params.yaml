@@ -65,11 +65,16 @@ explore_node:
     # Pfostenecke, der Roboter parkte im 0,28-m-Sperrsaum. 0 = aus.
     self_healing_goal_clearance_m: 0.45
     # Liegt auch die geräumigste Frontier-Zelle zu nah an einer Wand (Frontier
-    # nur entlang der Wand), rückt das Ziel bis 0,5 m auf eine bekannt freie
+    # nur entlang der Wand), rückt das Ziel bis 1,0 m auf eine bekannt freie
     # Zelle mit diesem Abstand. Simulation 22.10.2026: Ziel 6 cm vor der Wand
     # einer 0,84-m-Verbindung, die Enddrehung brachte die Ecke an die Wand
     # (4 von 5 Berührungen). 0 = aus.
-    self_healing_goal_shift_max_m: 0.5
+    # DR-1 (Simulation 03.11.2026): 0,5 m reichten an einer zu schmalen Lücke
+    # nicht; das Ziel lag 0,25 m vor einer Blockecke, keine Drehung war dort
+    # frei, nach 8 Fehlschlägen „Hilfe benötigt“. Im Umkreis von 1 m gab es
+    # Stellen mit 0,5 m. Verschoben wird nur auf Zellen mit freier Sicht auf
+    # die Frontier-Zelle (der LiDAR soll sie von dort sehen).
+    self_healing_goal_shift_max_m: 1.0
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit

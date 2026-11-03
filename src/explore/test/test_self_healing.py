@@ -278,6 +278,57 @@ def test_corner_goal_moves_to_the_most_spacious_nearby_cell_if_none_is_wide_enou
     assert goal.y > .25                                       # weg von der Wand
 
 
+def _sees(occupancy, a, b, res=.05):
+    """Prüfhilfe: freie Sicht zwischen zwei Weltpunkten über bekannt freie Zellen."""
+    n = int(math.dist(a, b)/res*4)+2
+    return all(occupancy[int((a[1]+(b[1]-a[1])*t)/res), int((a[0]+(b[0]-a[0])*t)/res)] == 0
+               for t in np.linspace(0, 1, n))
+
+
+def test_goal_at_a_too_narrow_gap_moves_where_the_robot_can_turn_and_still_sees_it():
+    """DR-1 (Simulation 03.11.2026): Ziel in der Mündung einer 0,42-m-Lücke,
+    0,25 m vor der Blockecke; dort war keine Drehung frei, der Roboter blieb
+    stehen bis „Hilfe benötigt“. Im Umkreis von 1 m gab es Stellen mit 0,5 m."""
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((60, 80), 0, dtype=int)
+    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
+    occupancy[1:22, 50:56] = 100                 # Insel bis y = 1,10 m
+    occupancy[30:59, 50:56] = 100                # Block ab y = 1,50 m: Lücke 0,40 m
+    occupancy[22:30, 51:79] = -1                 # in die Lücke noch nicht hineingesehen
+    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
+    robot = (1.0, 1.3)
+    near = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
+                          clearance=room, goal_clearance_m=.45, goal_shift_max_m=.5)[0]
+    far = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
+                         clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)[0]
+    at = lambda g: room[int(g.y/.05), int(g.x/.05)]
+    assert at(near) < .45                        # bisher: eng, keine Drehung möglich
+    assert at(far) >= .45                        # jetzt: Drehraum
+    assert math.dist((far.x, far.y), far.frontier_xy) <= 1.0
+    assert _sees(occupancy, (far.x, far.y), far.frontier_xy)
+
+
+def test_shifted_goal_never_jumps_behind_a_wall_it_cannot_see_through():
+    """Frontier in einem schmalen Streifen; geräumig ist es nur hinter der Wand.
+
+    Ohne Sichtprüfung lag das verschobene Ziel auf der anderen Seite (offline
+    nachgerechnet: 0,78 m hinter der Insel); der Roboter hätte die Frontier
+    von dort nie gesehen.
+    """
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((60, 80), 0, dtype=int)
+    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
+    occupancy[0:41, 30] = 100                    # Wand A, unten offen
+    occupancy[:, 40] = 100                       # Wand B trennt die rechte Halle ganz ab
+    occupancy[5:9, 32:39] = -1                   # ungesehen oben im 0,45-m-Streifen
+    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
+    goal = frontier_goals(occupancy, .05, to_world, (1.0, 2.5), min_size_cells=3,
+                          clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)[0]
+    assert goal.x < 40*.05                       # diesseits von Wand B
+    assert _sees(occupancy, (goal.x, goal.y), goal.frontier_xy)
+    assert room[int(goal.y/.05), int(goal.x/.05)] >= room[int(goal.frontier_y/.05),
+                                                          int(goal.frontier_x/.05)]
+
 def test_unseen_wall_base_does_not_count_as_turning_room():
     """Simulation (X9, v3): Wandfuß der Verbindung noch unbekannt, Ziel 6 cm davor."""
     to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)

@@ -401,11 +401,33 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     return goals[:max_goals]
 
 
+def _sight_lines(free: np.ndarray, rows: np.ndarray, cols: np.ndarray,
+                 row: int, col: int) -> np.ndarray:
+    """Welche Zellen sehen die Zelle (row, col) über bekannt freie Zellen?
+
+    Abgetastet wird je Linie mindestens einmal je Zelle in der längeren
+    Richtung. Unbekanntes gilt als Sichtsperre (dort kann eine Wand stehen).
+    """
+    if not len(rows):
+        return np.zeros(0, dtype=bool)
+    n = int(max(np.abs(rows-row).max(), np.abs(cols-col).max())) + 1
+    t = np.linspace(0., 1., n+1)[None, :]
+    rs = np.rint(rows[:, None] + (row-rows)[:, None]*t).astype(int)
+    cs = np.rint(cols[:, None] + (col-cols)[:, None]*t).astype(int)
+    return free[rs, cs].all(axis=1)
+
+
 def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, row: int,
                       col: int, resolution: float, max_m: float,
-                      cell_to_world) -> Optional[Tuple[float, float]]:
+                      cell_to_world, chunk: int = 256) -> Optional[Tuple[float, float]]:
     """Freie Zelle im Umkreis ``max_m`` mit ``wanted_m`` Abstand (die nächste),
-    sonst die geräumigste dort (Weltkoordinaten); ``None`` ohne Verbesserung."""
+    sonst die geräumigste dort (Weltkoordinaten); ``None`` ohne Verbesserung.
+
+    Nur Zellen mit freier Sicht auf die Frontier-Zelle kommen in Frage: Der
+    Roboter soll die Frontier von dort aus sehen. Ohne diese Bedingung lag ein
+    um 1 m verschobenes Ziel hinter der Insel, die Frontier davor unsichtbar
+    (Simulation 03.11.2026).
+    """
     span = int(math.ceil(max_m/resolution))
     if span <= 0:
         return None
@@ -414,19 +436,24 @@ def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, 
     rr, cc = np.nonzero(free[r0:r1, c0:c1])
     if not len(rr):
         return None
-    d = np.hypot(rr+r0-row, cc+c0-col)*resolution
-    room = clearance[rr+r0, cc+c0]
+    rr, cc = rr+r0, cc+c0
+    d = np.hypot(rr-row, cc-col)*resolution
+    room = clearance[rr, cc]
     inside = d <= max_m
     wide = inside & (room >= wanted_m)
-    if wide.any():
-        i = int(np.argmin(np.where(wide, d, np.inf)))
-    else:
-        if not inside.any() or room[inside].max() <= clearance[row, col]:
-            return None
-        best = inside & (room >= room[inside].max())
-        i = int(np.argmin(np.where(best, d, np.inf)))
-    x, y = cell_to_world(np.array([rr[i]+r0]), np.array([cc[i]+c0]))
-    return float(np.asarray(x)[0]), float(np.asarray(y)[0])
+    # Erst die nächsten weiten Zellen, dann die übrigen nach Geräumigkeit; je
+    # die erste mit Sicht auf die Frontier.
+    first = np.flatnonzero(wide)[np.argsort(d[wide], kind='stable')]
+    rest = np.flatnonzero(inside & ~wide & (room > clearance[row, col]))
+    order = np.concatenate((first, rest[np.lexsort((d[rest], -room[rest]))]))
+    for start in range(0, len(order), chunk):
+        part = order[start:start+chunk]
+        seen = _sight_lines(free, rr[part], cc[part], row, col)
+        if seen.any():
+            i = int(part[int(np.argmax(seen))])
+            x, y = cell_to_world(np.array([rr[i]]), np.array([cc[i]]))
+            return float(np.asarray(x)[0]), float(np.asarray(y)[0])
+    return None
 
 
 def frontier_cells_remaining(occupancy: np.ndarray, min_size_cells: int = 5) -> int:
