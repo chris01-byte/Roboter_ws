@@ -75,13 +75,14 @@ explore_node:
     # Stellen mit 0,5 m. Verschoben wird nur auf Zellen mit freier Sicht auf
     # die Frontier-Zelle (der LiDAR soll sie von dort sehen).
     self_healing_goal_shift_max_m: 1.0
-    # Kein Ziel ohne Drehraum (DR-1, Entscheidung Projektinhaber 03.11.2026):
-    # Findet sich weder an der Frontier noch im Umkreis mit Sicht auf sie ein
-    # Punkt mit diesem Abstand, wird die Frontier nicht angefahren (bleibt
-    # offen, die Karte wird neu bewertet). Simulation: Notziel 0,36 m vor der
-    # Insel im 0,91-m-Streifen hinter der 0,68-m-Tuer, dort keine Drehung
-    # frei, "Hilfe benoetigt". Hoechstens self_healing_goal_clearance_m.
-    self_healing_goal_min_clearance_m: 0.45
+    # Mindestabstand fuer Ziele (gegen gemessene Hindernisse), 0 = aus.
+    # AUS (Entscheidung Projektinhaber 03.11.2026): Mit 0,45 m bekam die
+    # Frontier hinter einer 0,84-m-Verbindung nie ein Ziel, der Roboter
+    # erkundete den zweiten Raum nicht (Simulation: Abdeckung 0,72). Eine
+    # Engstelle zum Durchfahren und eine Falle zum Stehenbleiben sind am
+    # Abstand allein nicht zu unterscheiden (beide 0,27-0,36 m). Engstellen
+    # loest das eigene Arbeitspaket DR-2.
+    self_healing_goal_min_clearance_m: 0.0
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit

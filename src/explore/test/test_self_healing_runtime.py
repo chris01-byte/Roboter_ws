@@ -43,9 +43,9 @@ def test_profile_starts_real_node_with_self_healing_owner():
             'blocked_track_backs'] <= .8 + 1e-9
         assert node._self_healing_turn_back_max_rad == pytest.approx(.8)
         assert node._self_healing_stuck_move_m == pytest.approx(.05)
-        # Entscheidung 03.11.2026: Ziele nur mit Drehraum, Spur bis 6 cm seitlich.
-        assert node._self_healing_goal_min_clearance_m == pytest.approx(.45)
-        assert node._self_healing_goal_min_clearance_m <= node._self_healing_goal_clearance_m
+        # Entscheidung 03.11.2026: Spur bis 6 cm seitlich; Drehraum-Mindestabstand
+        # aus (versperrte Engstellen zum Durchfahren, Abdeckung 0,72).
+        assert node._self_healing_goal_min_clearance_m == 0.
         assert node._self_healing_track_lateral_m == pytest.approx(.06)
         assert node._self_healing_unknown_speed == pytest.approx(.06)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
