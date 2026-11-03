@@ -43,6 +43,10 @@ def test_profile_starts_real_node_with_self_healing_owner():
             'blocked_track_backs'] <= .8 + 1e-9
         assert node._self_healing_turn_back_max_rad == pytest.approx(.8)
         assert node._self_healing_stuck_move_m == pytest.approx(.05)
+        # Entscheidung 03.11.2026: Ziele nur mit Drehraum, Spur bis 6 cm seitlich.
+        assert node._self_healing_goal_min_clearance_m == pytest.approx(.45)
+        assert node._self_healing_goal_min_clearance_m <= node._self_healing_goal_clearance_m
+        assert node._self_healing_track_lateral_m == pytest.approx(.06)
         assert node._self_healing_unknown_speed == pytest.approx(.06)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
         node._status_phase = node._status_message = 'idle'
@@ -123,7 +127,7 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_completion_checks=3, _self_healing_look_around_rad=math.pi/2,
             _self_healing_reach_clearance_m=.2, _self_healing_reach_escape_m=.35,
             _self_healing_reach_tolerance_m=.3, _self_healing_goal_clearance_m=.45,
-            _self_healing_goal_shift_max_m=.5,
+            _self_healing_goal_shift_max_m=.5, _self_healing_goal_min_clearance_m=0.,
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,

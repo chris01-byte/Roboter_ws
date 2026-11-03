@@ -75,6 +75,13 @@ explore_node:
     # Stellen mit 0,5 m. Verschoben wird nur auf Zellen mit freier Sicht auf
     # die Frontier-Zelle (der LiDAR soll sie von dort sehen).
     self_healing_goal_shift_max_m: 1.0
+    # Kein Ziel ohne Drehraum (DR-1, Entscheidung Projektinhaber 03.11.2026):
+    # Findet sich weder an der Frontier noch im Umkreis mit Sicht auf sie ein
+    # Punkt mit diesem Abstand, wird die Frontier nicht angefahren (bleibt
+    # offen, die Karte wird neu bewertet). Simulation: Notziel 0,36 m vor der
+    # Insel im 0,91-m-Streifen hinter der 0,68-m-Tuer, dort keine Drehung
+    # frei, "Hilfe benoetigt". Hoechstens self_healing_goal_clearance_m.
+    self_healing_goal_min_clearance_m: 0.45
 
     # H3 Umsehen: langsame Drehung, nur wenn im Drehkreis keine GEMESSENEN
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit
@@ -88,7 +95,11 @@ explore_node:
     self_healing_track_back_max_m: 0.4
     self_healing_track_back_min_m: 0.1
     self_healing_track_back_speed_mps: 0.05
-    self_healing_track_lateral_tolerance_m: 0.03
+    # Seitliche Abweichung der Spur hinter dem Roboter: 6 cm statt 3 cm
+    # (Entscheidung Projektinhaber 03.11.2026). Simulation: in der
+    # 0,84-m-Verbindung galt die eigene Spur nur auf 0,13 m als gerade, die
+    # Rueckfahrt reichte nicht aus der Sackgasse.
+    self_healing_track_lateral_tolerance_m: 0.06
     # Drehsperre (DR-1, Entscheidung Projektinhaber 03.11.2026): Hat sich der
     # Roboter im Versuch nicht bewegt (< stuck_move_m) und ist sein Drehkreis
     # nicht frei, kommt die Rueckfahrt sofort statt nach fuenf Fehlschlaegen,

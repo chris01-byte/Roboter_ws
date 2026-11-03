@@ -353,6 +353,33 @@ def test_goal_at_a_too_narrow_gap_moves_where_the_robot_can_turn_and_still_sees_
     assert _sees(occupancy, (far.x, far.y), far.frontier_xy)
 
 
+def test_frontier_seen_only_from_a_cramped_strip_gets_no_goal_with_a_minimum():
+    """DR-1 (Simulation 03.11.2026): Notziel 0,36 m vor der Insel im 0,91-m-
+    Streifen hinter der 0,68-m-Tür; dort keine Drehung frei, „Hilfe benötigt“.
+
+    Mit Mindestabstand bekommt eine Frontier, die nur aus einem engen Streifen
+    sichtbar ist, kein Ziel; ohne Mindestabstand bleibt das alte Notziel.
+    """
+    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
+    occupancy = np.full((40, 60), 100, dtype=int)
+    occupancy[5:35, 2:20] = 0                    # Raum links, geräumig
+    occupancy[18:22, 20:40] = 0                  # 0,2 m schmaler Gang nach rechts
+    occupancy[18:22, 40:44] = -1                 # am Gangende ungesehen
+    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
+    common = dict(min_size_cells=2, clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)
+    old = frontier_goals(occupancy, .05, to_world, (.5, 1.0), **common)
+    assert len(old) == 1 and room[int(old[0].y/.05), int(old[0].x/.05)] < .45
+    new = frontier_goals(occupancy, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45, **common)
+    assert new == []
+    # Mit Drehraum in Sichtweite bleibt das Ziel erhalten.
+    wide = occupancy.copy()
+    wide[5:35, 20:40] = 0                        # Gang zur Halle geöffnet
+    roomy = obstacle_clearance(wide, .05, unknown_blocks=True)
+    kept = frontier_goals(wide, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45,
+                          **dict(common, clearance=roomy))
+    assert kept and all(roomy[int(g.y/.05), int(g.x/.05)] >= .45 for g in kept)
+
+
 def test_shifted_goal_never_jumps_behind_a_wall_it_cannot_see_through():
     """Frontier in einem schmalen Streifen; geräumig ist es nur hinter der Wand.
 

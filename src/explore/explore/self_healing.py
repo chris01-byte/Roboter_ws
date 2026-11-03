@@ -368,7 +368,8 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
                    allowed: Optional[np.ndarray] = None,
                    clearance: Optional[np.ndarray] = None,
                    goal_clearance_m: float = 0.,
-                   goal_shift_max_m: float = 0.) -> List[FrontierGoal]:
+                   goal_shift_max_m: float = 0.,
+                   goal_min_clearance_m: float = 0.) -> List[FrontierGoal]:
     """Schnelle Frontier-Auswahl ohne Sichtprognose (anytime, Millisekunden).
 
     Frontier = freie Zelle mit unbekanntem 4-Nachbarn; Cluster mit
@@ -432,11 +433,19 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
             members = members[wide] if wide.any() else members[room >= room.max()]
         best = members[np.argmin(distance[members])]
         gx, gy = float(wx[best]), float(wy[best])
-        if spacious is not None and clearance[rows[best], cols[best]] < goal_clearance_m:
+        goal_room = float(clearance[rows[best], cols[best]]) if spacious is not None else math.inf
+        if spacious is not None and goal_room < goal_clearance_m:
             shifted = _nearest_spacious(spacious, clearance, goal_clearance_m, rows[best],
                                         cols[best], resolution, goal_shift_max_m, cell_to_world)
             if shifted is not None:
-                gx, gy = shifted
+                gx, gy, goal_room = shifted
+        if goal_room < goal_min_clearance_m:
+            # Kein Standpunkt mit Drehraum, von dem aus die Frontier sichtbar ist:
+            # nicht hinschicken (Simulation 03.11.2026: Ziel 0,36 m vor der Insel
+            # im 0,91-m-Streifen hinter einer 0,68-m-Tür, dort keine Drehung frei,
+            # „Hilfe benötigt“). Die Frontier bleibt offen; ändert sich die Karte,
+            # wird sie neu bewertet.
+            continue
         reach = math.hypot(gx-robot_xy[0], gy-robot_xy[1])
         size = int(sizes[cluster])
         goals.append(FrontierGoal(gx, gy, size, reach,
@@ -464,9 +473,10 @@ def _sight_lines(free: np.ndarray, rows: np.ndarray, cols: np.ndarray,
 
 def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, row: int,
                       col: int, resolution: float, max_m: float,
-                      cell_to_world, chunk: int = 256) -> Optional[Tuple[float, float]]:
+                      cell_to_world, chunk: int = 256) -> Optional[Tuple[float, float, float]]:
     """Freie Zelle im Umkreis ``max_m`` mit ``wanted_m`` Abstand (die nächste),
-    sonst die geräumigste dort (Weltkoordinaten); ``None`` ohne Verbesserung.
+    sonst die geräumigste dort: (x, y, Abstand) in Weltkoordinaten; ``None``
+    ohne Verbesserung.
 
     Nur Zellen mit freier Sicht auf die Frontier-Zelle kommen in Frage: Der
     Roboter soll die Frontier von dort aus sehen. Ohne diese Bedingung lag ein
@@ -497,7 +507,7 @@ def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, 
         if seen.any():
             i = int(part[int(np.argmax(seen))])
             x, y = cell_to_world(np.array([rr[i]]), np.array([cc[i]]))
-            return float(np.asarray(x)[0]), float(np.asarray(y)[0])
+            return float(np.asarray(x)[0]), float(np.asarray(y)[0]), float(room[i])
     return None
 
 

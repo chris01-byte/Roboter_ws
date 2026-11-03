@@ -67,6 +67,10 @@ class SelfHealingRuntime:
         # Ziel je Frontier nicht in eine Pfostenecke legen (0 = nächste Zelle wie bisher).
         self._self_healing_goal_clearance_m = number('self_healing_goal_clearance_m', .45, 0., 1.)
         self._self_healing_goal_shift_max_m = number('self_healing_goal_shift_max_m', .5, 0., 2.)
+        # DR-1 (Entscheidung 03.11.2026): kein Ziel ohne Drehraum (0 = aus).
+        self._self_healing_goal_min_clearance_m = number('self_healing_goal_min_clearance_m', 0., 0., 1.)
+        if self._self_healing_goal_min_clearance_m > self._self_healing_goal_clearance_m:
+            raise ValueError('self_healing_goal_min_clearance_m exceeds self_healing_goal_clearance_m')
         self._self_healing_look_around_rad = number('self_healing_look_around_rad', math.pi/2, .1, 2*math.pi)
         self._self_healing_rotation_radius_m = number('self_healing_rotation_radius_m', .45, .2, 1.)
         self._self_healing_track_back_max_m = number('self_healing_track_back_max_m', .4, 0., 1.)
@@ -428,7 +432,8 @@ class SelfHealingRuntime:
                 selection.update(clearance=obstacle_clearance(occupancy, info.resolution,
                                                               unknown_blocks=True),
                                  goal_clearance_m=self._self_healing_goal_clearance_m,
-                                 goal_shift_max_m=self._self_healing_goal_shift_max_m)
+                                 goal_shift_max_m=self._self_healing_goal_shift_max_m,
+                                 goal_min_clearance_m=self._self_healing_goal_min_clearance_m)
             goals = frontier_goals(occupancy, info.resolution, cell_to_world, pose[:2],
                                    allowed=allowed, **selection)
             if allowed is not None:
