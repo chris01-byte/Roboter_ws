@@ -289,9 +289,33 @@ der eigenen Spur zurück, bis zu 2 × 0,4 m je Stillstand statt 1 ×.
 - `6cf41b5`: Zieltoleranz im Selbstheilungs-Overlay 0,05 statt 0,15 m, damit
   der Roboter dort hält, wo die Zielwahl Drehraum zugesichert hat.
 
-175 gezielte Tests grün (SH-4-Auswahl). **Abnahme neu gestartet** auf
-`6cf41b5`, 20 Läufe, fortsetzbar (erledigte Plätze in einer Zustandsdatei),
-zuerst die beiden vorher gescheiterten Fälle.
+175 gezielte Tests grün (SH-4-Auswahl).
+
+**Abnahme auf `6cf41b5`, nach 12 von 20 Plätzen angehalten:** 0
+Berührungen. Gesperrte Tür 1/2 (der erste Lauf kam mit einer sofortigen
+Rückfahrt und 1 Heilung frei), Tür 0,68 m 1/2, Referenz 4/4 (zwei davon
+vollständig mit je 1 Heilung), Sensorlücke, Kartenrennen, Rechenlast
+bestanden; „Hindernis im Weg“ „Hilfe benötigt“ ohne Berührung (nicht Teil von
+E2). E2/E3 damit erneut verfehlt:
+1. *Gesperrte Tür, Lauf 2:* Die eigene Spur in der Verbindung galt nur auf
+   0,13 m als gerade (≤ 3 cm seitlich), die zweite Rückfahrt war nicht
+   möglich.
+2. *Tür 0,68 m, Lauf 2:* Notziel 0,36 m vor der Insel im 0,91-m-Streifen
+   hinter der Tür, dort keine Drehung frei, trotz vier Rückfahrten
+   „Hilfe benötigt“.
+
+**Entscheidung des Projektinhabers (03.11.2026, zweite):** weiter iterieren:
+Rückfahrt bis 6 cm seitliche Abweichung und Ziele nur noch mit Drehraum.
+
+**Umgesetzt (`e41507b`):** `self_healing_goal_min_clearance_m` 0,45: Ohne
+Punkt mit Drehraum an der Frontier oder im Umkreis von 1 m mit Sicht auf sie
+wird die Frontier nicht angefahren; sie bleibt offen. H4 seitlich 6 statt
+3 cm. 176 gezielte Tests grün. Offline fallen auf den Endkarten früherer Läufe
+vor allem die engen Restziele weg, an denen diese Läufe hängen blieben; ob die
+Abdeckung hält, zeigt E4.
+
+**Abnahme neu gestartet** auf `e41507b`, 20 Plätze, fortsetzbar, mit
+Neubau und Installationsprüfung vor dem ersten Lauf.
 
 **Nächster Schritt:** Abnahme auswerten; bei bestandenem DR-1 SH-4 um DR-1
 ergänzen und aktivieren.
