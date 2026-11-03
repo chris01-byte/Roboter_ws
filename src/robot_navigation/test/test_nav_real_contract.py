@@ -168,8 +168,19 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     # DR-1: only the collision horizon of RPP; it must cover one rotation step
     # (contour moves one 5-cm cell) at 0.1 rad/s, so slow in-place turns are
     # checked outside the footprint area the obstacle layer clears.
-    rpp = overlay['controller_server']['ros__parameters']
+    controller = overlay['controller_server']['ros__parameters']
+    rpp = {'FollowPath': controller['FollowPath']}
+    assert set(controller) == {'FollowPath', 'general_goal_checker'}
     assert rpp == {'FollowPath': {'max_allowed_time_to_collision_up_to_carrot': 1.5}}
+    # DR-1: stop where the explorer guaranteed turning room (goal clearance
+    # 0.45 m); only the position tolerance, tighter than the base profile.
+    checker = controller['general_goal_checker']
+    real_checker = real['controller_server']['ros__parameters']['general_goal_checker']
+    assert checker == {'xy_goal_tolerance': 0.05}
+    assert 0 < checker['xy_goal_tolerance'] < real_checker['xy_goal_tolerance']
+    assert checker['xy_goal_tolerance'] <= real['local_costmap']['local_costmap'][
+        'ros__parameters']['resolution'] + 1e-9
+    assert real_checker['stateful'] is False
     real_rpp = real['controller_server']['ros__parameters']['FollowPath']
     assert 'max_allowed_time_to_collision_up_to_carrot' not in real_rpp   # Nav2 default 1.0
     local_real = real['local_costmap']['local_costmap']['ros__parameters']

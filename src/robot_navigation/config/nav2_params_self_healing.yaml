@@ -27,6 +27,14 @@ controller_server:
       # 0,10 statt 0,05 m bei 0,1 m/s. Gleicher Parameter in Humble.
       # Rueckfall: Eintrag entfernen oder self_healing:=false.
       max_allowed_time_to_collision_up_to_carrot: 1.5
+    general_goal_checker:
+      # DR-1 (Simulation 03.11.2026): Erkundungsziele liegen dort, wo der
+      # Roboter drehen kann (0,45 m Abstand). Mit 0,15 m Zieltoleranz blieb er
+      # 0,14 m davor stehen, 0,40 m neben einem Tuerpfosten, und konnte sich
+      # nicht mehr umdrehen ("Hilfe benoetigt"). 0,05 m = eine Kostenkartenzelle;
+      # RPP faehrt vor dem Ziel mit Annaeherungstempo. Gilt nur fuer Nav2-Ziele
+      # dieses Profils. Rueckfall: Eintrag entfernen oder self_healing:=false.
+      xy_goal_tolerance: 0.05
 
 velocity_smoother:
   ros__parameters:
