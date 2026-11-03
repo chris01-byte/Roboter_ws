@@ -173,8 +173,94 @@ Simulatortakt; Kontakt = Berührung der festen Simulationskontur):
 | E4 | Erkundung nicht schlechter als mit dem SL-1-Kandidaten: in den Referenzläufen Abdeckung im Median ≥ 0,95, Ziele im Median ≥ 5, Heilungen im Median ≤ 5 |
 | E5 | Jetson SH-4: zusätzlich zu C1–C5 keine Berührung (Christopher) in allen drei Fahrten |
 
-**Nächster Schritt:** Simulation um die Aufzeichnung bei Berührung ergänzen
-und Ursache messen.
+### DR-1 Messung 03.11.2026: Ursache gefunden, Kandidat K1 verworfen
+
+**Aufzeichnung (`299a3b1`):** Die Simulation friert bei der ersten Berührung
+die letzten 6 s Pose, Roh- und Endbefehle und die lokale Kostenkarte unter
+der Kontur ein. Drei Messläufe mit dem Produktstand: 1 bestanden, 2
+Berührungen, beide an derselben Inselecke (1,55|0,30), beide beim Drehen auf
+der Stelle.
+
+**Befund:** RPP befiehlt −0,10…−0,11 rad/s, nach der 30-%-Bremse des
+`collision_monitor` kommen −0,03 rad/s an. Alle 0,5–1 s wechselt RPP zwischen
+Drehen und „collision ahead“; die Kontur kriecht dabei 1–2 mm je Phase bis
+zur Berührung. In der lokalen Kostenkarte liegt bei der Berührung **keine**
+tödliche Zelle auf oder unter der Kontur (Umriss höchstens 99), die nächste
+tödliche Zellmitte liegt 3,2–3,5 cm außerhalb.
+
+**Mechanismus:**
+1. RPP rechnet Drehungen nur bis `max_allowed_time_to_collision_up_to_carrot`
+   voraus (Nav2-Standard 1,0 s, bei uns nicht gesetzt). Ein Drehschritt dauert
+   2·sin(0,025/0,414)/|w| = 1,2 s bei 0,1 rad/s. RPP projiziert beim langsamen
+   Drehen also **gar nicht voraus** und prüft nur die aktuelle Stellung.
+2. Genau diese Fläche räumt die Hindernisschicht der lokalen Kostenkarte bei
+   jeder Aktualisierung frei (`footprint_clearing_enabled`, Nav2-Standard):
+   Zellen unter dem gepolsterten Footprint gelten als frei. Was die Kontur
+   berührt, sieht RPP deshalb nicht; nur Rasterungsunterschiede lassen die
+   Prüfung zeitweise anschlagen, daher das Wechseln und Kriechen. Punkt 2 ist
+   aus dem Nav2-Verhalten und den Kostenkarten-Befunden abgeleitet, nicht
+   einzeln abgeschaltet und nachgemessen.
+3. Ort: Ziele an engen Stellen. Beispiel aus K1: Ziel in der Mündung der
+   0,42-m-Lücke zwischen Insel und blockierter Alternative, 0,25 m vor der
+   Blockecke; das nächste Ziel verlangt dort eine Drehung um 2,4 rad, die nach
+   keiner Seite frei ist. In der 0,84-m-Verbindung ist der Drehkreis der
+   Kontur (0,414 m) fast so groß wie der halbe Gang (0,42 m).
+
+Die Arbeitshypothese (Ecke schwenkt eine Zelle vor) trifft damit nur am Rand
+zu. Entscheidend sind die fehlende Vorausrechnung und das Freiräumen unter
+dem Footprint.
+
+**Kandidat K1, lokale Polsterung 0,05 statt 0,02 m: verworfen.** Drei
+Referenzläufe: einer bestanden (3,2 cm Abstand, aber 7 Heilungen nach 60 s
+Stillstand), zweimal **Berührung an der Inselecke**, Abdeckung 0,91/0,92,
+6 bzw. 13 Heilungen. Dazu lange Stillstände in der 0,84-m-Verbindung
+(Drehradius mit Polster 0,456 m > halber Gang) und in der Lückenmündung.
+Mehr Polster vergrößert zugleich die freigeräumte Fläche und ändert an
+Punkt 1 nichts. Die übrigen K1-Läufe wurden nicht mehr gestartet.
+
+**Kandidat K2 (`43f74b7`): RPP-Horizont 1,5 s statt 1,0 s, nur
+Selbstheilungs-Overlay.** Bei 0,1 rad/s prüft RPP damit einen Drehschritt
+(0,12 rad) voraus, also außerhalb der freigeräumten Fläche; geradeaus
+0,10 statt 0,05 m. Der Stillstandsprüfer prüft den Wert am Jetson mit.
+
+| Lauf | Ergebnis | Ziele | Heilungen | Mindestabstand | Abdeckung |
+|---|---|---|---|---|---|
+| 1 (Experiment) | vollständig | 9 | 2 | 5,9 cm | 0,978 |
+| 2 (Experiment) | vollständig | 6 | 4 | 4,4 cm | 0,972 |
+| 3 (Experiment) | **Hilfe benötigt** nach 279 s | 3 | 9 | 4,1 cm | 0,904 |
+| 4 (Produkt `43f74b7`) | vollständig | 8 | 7 | 3,1 cm | 0,971 |
+
+**Keine Berührung mehr (0 von 4).** Die Drehschwäche zeigt sich jetzt als
+Stillstand statt als Kriechen an die Ecke. Lauf 3: Das Ziel für die Frontier
+der 0,42-m-Lücke lag 0,27 m vor der Blockecke (exakter Abstand auf der
+Endkarte). Dort war keine Drehung frei, die Rückfahrt auf der Spur reichte nur
+0,14 m (danach 0,44 m Abstand, mit 5-cm-Zellen und Vorausprüfung noch zu eng),
+nach 8 Fehlschlägen „Hilfe benötigt“. Ziele sollen 0,45 m Abstand haben;
+gab es im Umkreis von 0,5 m keine solche Zelle, nahm die Auswahl die
+geräumigste dort, ohne Untergrenze. Im Umkreis von 1 m gab es Stellen mit
+0,5 m. Heilungen im Median 5,5: E4 wäre mit K2 allein verfehlt.
+
+**Kandidat K3 (Explorer: Drehsperre am Ort → sofort zurück auf der Spur):
+vorbereitet, nicht übernommen.** In Lauf 2 löste Zurückstellen eine Drehsperre
+hinter der Tür nach zwei Fehlschlägen; die Rückfahrt hätte den Roboter dort in
+die noch engere 0,84-m-Verbindung gesetzt, und in Lauf 3 war die gerade Spur
+ohnehin zu kurz.
+
+**Kandidat K4 (`c70f6a0`): Ziel bis 1,0 m verschieben, nur mit freier Sicht
+auf die Frontier.** Profilwert `self_healing_goal_shift_max_m` 0,5 → 1,0. Ein
+verschobenes Ziel muss die Frontier-Zelle über bekannt freie Zellen sehen;
+offline lag ein um 1 m verschobenes Ziel ohne diese Bedingung hinter der
+Insel. Offline auf drei Endkarten: kein Ziel enger als bisher, enge Ziele
+0,18–0,23 → 0,33–0,36 m; Auswahl 47–68 statt 12–16 ms auf der 1-cm-Karte.
+Zwei neue Tests (Lückenmündung; Wand zwischen Frontier und Halle, ohne
+Sichtprüfung rot).
+
+**Abnahme läuft** (E1–E4, Simulation, Produkt `c70f6a0` ohne Experiment,
+Start 05:57 UTC): zwei v4-Durchgänge, zweimal Tür 0,68 m, sechs weitere
+Referenzläufe.
+
+**Nächster Schritt:** Abnahme auswerten; bei bestandenem DR-1 SH-4 um DR-1
+ergänzen und aktivieren.
 
 ## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
 
