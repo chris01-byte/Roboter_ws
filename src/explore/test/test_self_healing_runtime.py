@@ -37,6 +37,12 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_track_back_max_m == pytest.approx(.4)
         assert node._self_healing_track_back_speed == pytest.approx(.05)
         assert node._self_healing_ladder_config['help_after'] == 8
+        # Entscheidung 03.11.2026: bei Drehsperre bis zu 2 x 0,4 m zurück.
+        assert node._self_healing_ladder_config['blocked_track_backs'] == 2
+        assert node._self_healing_track_back_max_m*node._self_healing_ladder_config[
+            'blocked_track_backs'] <= .8 + 1e-9
+        assert node._self_healing_turn_back_max_rad == pytest.approx(.8)
+        assert node._self_healing_stuck_move_m == pytest.approx(.05)
         assert node._self_healing_unknown_speed == pytest.approx(.06)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
         node._status_phase = node._status_message = 'idle'
@@ -121,6 +127,7 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
+            _self_healing_turn_back_max_rad=.8, _self_healing_stuck_move_m=.05,
             _cancel_timeout_s=3., _initial_scan_speed=.08, _initial_scan_timeout=60.,
             _frontiers_remaining=0, _frontiers_visited_status=0, _status_phase='idle',
             _status_message='', _status_state='idle', _global_costmap=None,
@@ -381,6 +388,94 @@ def test_look_around_needs_a_fresh_pose_after_the_failed_attempt(monkeypatch):
     n._execute_self_healing(goal, 1200., .3)
     assert not rotations and not checked, (rotations, checked)
 
+
+def test_blocked_turn_is_undone_then_the_robot_backs_out_twice_and_retries_the_goal(monkeypatch):
+    """DR-1 (Simulation 03.11.2026): Sackgasse in einer 0,84-m-Verbindung.
+
+    Der Roboter fährt 0,7 m geradeaus ans Ziel, setzt für das nächste Ziel eine
+    Drehung an (0,3 rad) und bleibt stehen, weil der Drehkreis nicht frei ist.
+    Statt Wiederholen/Zurückstellen sofort: Drehung zurücknehmen, auf der
+    eigenen Spur zurück (0,4 m), dasselbe Ziel erneut. Ist es dort immer noch
+    eng, ein zweites Mal (Entscheidung 03.11.2026: bis zu 2 x 0,4 m), dann die
+    gewohnte Leiter.
+    """
+    targets = []
+    def nav2(x, y, stop, record):
+        targets.append((round(x, 2), round(y, 2)))
+        if len(targets) == 1:                    # Anfahrt: gerade, Spur entsteht
+            for i in range(1, 36):
+                state.pose[:] = [1.5+.02*i, 1.5, 0.]
+                record()
+            return 'success'
+        state.pose[2] += .3                      # Drehung angesetzt, dann Halt
+        state.refresh_map()
+        return 'aborted'
+    n, state, goal, terminal = parent(monkeypatch, navigate=nav2)
+    costs = np.full(state.occupancy.shape, -1, dtype=np.int16)
+    costs[37, 28:47] = 100                       # Wand 0,38 m neben der ganzen Spur
+    n._global_costmap = _grid(costs, 0.)
+    check = n._self_healing_look_around_possible
+    def fresh_check(pose):
+        n._global_costmap_received_at = state.clock[0]
+        return check(pose)
+    n._self_healing_look_around_possible = fresh_check
+    def turn(angle, speed, timeout, stop_requested=None):
+        state.calls.append(('turn', round(angle, 3), round(timeout, 1)))
+        state.pose[2] += angle
+        return 'success', angle
+    n._rotate_in_place = turn
+    def back(distance, stop):
+        state.calls.append(('track_back', round(distance, 3)))
+        state.pose[0] -= distance*math.cos(state.pose[2])
+        state.pose[1] -= distance*math.sin(state.pose[2])
+        return 'success'
+    n._self_healing_track_back = back
+    n._execute_self_healing(goal, 1200., .3)
+    actions = [h['action'] for h in n._self_healing_status['ladder']['history']]
+    assert actions[:2] == ['track_back', 'track_back'], actions
+    assert actions.count('track_back') == 2          # nie mehr als zwei je Stillstand
+    turns = [c for c in state.calls if c[0] == 'turn']
+    backs = [c[1] for c in state.calls if c[0] == 'track_back']
+    assert [t[1] for t in turns[:2]] == [pytest.approx(-.3), pytest.approx(-.3)]
+    assert turns[0][2] <= .3/(.25*.08) + 10.          # Zeitgrenze trotz 30 %-Bremse
+    assert backs[0] == pytest.approx(.4) and .1 <= backs[1] <= .4
+    assert sum(backs) <= .8 + 1e-9
+    kinds = [c[0] for c in state.calls]
+    for i, k in enumerate(kinds):                    # immer erst zurückdrehen, dann zurück
+        if k == 'track_back':
+            assert kinds[i-1] == 'turn'
+    # Das Ziel war nicht das Problem: es wird erneut angefahren, nicht zurückgestellt.
+    # (Von der neuen Stelle aus rückt das Ziel derselben Frontier um wenige cm;
+    # nach der zweiten Rückfahrt darf eine andere Frontier näher liegen.)
+    assert math.dist(targets[1], targets[2]) < .1, targets
+
+
+def test_one_blocked_track_back_when_the_profile_says_so(monkeypatch):
+    from explore.self_healing import HealingLadder
+    ladder = HealingLadder(blocked_track_backs=1)
+    ladder.start(0.)
+    assert ladder.failure(1., 'nav_aborted', 1, True, False, turn_blocked=True) == 'track_back'
+    assert ladder.failure(2., 'nav_aborted', 1, True, False, turn_blocked=True) == 'retry'
+    with pytest.raises(ValueError):
+        HealingLadder(blocked_track_backs=3)
+
+
+def test_free_turning_circle_keeps_the_usual_ladder(monkeypatch):
+    def nav2(x, y, stop, record):
+        state.refresh_map()
+        return 'aborted'                         # nicht vom Fleck, aber Drehkreis frei
+    n, state, goal, terminal = parent(monkeypatch, navigate=nav2)
+    for i in range(1, 16):
+        state.pose[:] = [1.2+.02*i, 1.5, 0.]
+    n._global_costmap = _grid(np.full(state.occupancy.shape, -1, dtype=np.int16), 0.)
+    check = n._self_healing_look_around_possible
+    def fresh_check(pose):
+        n._global_costmap_received_at = state.clock[0]
+        return check(pose)
+    n._self_healing_look_around_possible = fresh_check
+    n._execute_self_healing(goal, 1200., .3)
+    history = n._self_healing_status['ladder']['history']
+    assert history[0]['action'] == 'retry', history
 
 class _Future:
     def __init__(self, value):

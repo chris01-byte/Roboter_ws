@@ -53,6 +53,29 @@ def test_ladder_skips_unavailable_steps_and_respects_global_limits():
         HealingLadder(look_around_after=5, track_back_after=2)
 
 
+def test_blocked_turn_backs_out_at_once_at_most_twice_per_progress():
+    """DR-1 (Simulation 03.11.2026): Drehsperre am Ort, nicht am Ziel."""
+    ladder = HealingLadder(goal_retries=1, look_around_after=3, track_back_after=5, help_after=8)
+    ladder.start(0.)
+    assert ladder.failure(1., 'nav_aborted', 1, True, False, turn_blocked=True) == TRACK_BACK
+    # Entscheidung 03.11.2026: höchstens zwei Rückfahrten je Stillstand.
+    assert ladder.failure(2., 'nav_aborted', 1, True, False, turn_blocked=True) == TRACK_BACK
+    assert ladder.failure(3., 'nav_aborted', 1, True, False, turn_blocked=True) == RETRY
+    assert ladder.snapshot()['track_backs_in_streak'] == 2
+    ladder.progress(4.)
+    assert ladder.track_backs_in_streak == 0
+    assert ladder.failure(5., 'nav_aborted', 2, True, False, turn_blocked=True) == TRACK_BACK
+    # Ohne Rückfahrt oder mit freiem Drehkreis bleibt alles wie bisher.
+    fresh = HealingLadder()
+    fresh.start(0.)
+    assert fresh.failure(1., 'nav_aborted', 1, False, False, turn_blocked=True) == RETRY
+    assert fresh.failure(2., 'nav_aborted', 1, True, True) == RETRY
+    # Globale Grenzen gehen vor.
+    limited = HealingLadder(max_heals=1)
+    limited.start(0.)
+    limited.failure(1., 'x', 2, False, False)
+    assert limited.failure(2., 'x', 1, True, False, turn_blocked=True) == REQUEST_HELP
+
 def _straight_track(recorder, length, yaw=0.):
     for i in range(int(length/0.02)+1):
         d = i*0.02
@@ -78,6 +101,28 @@ def test_track_back_follows_only_the_straight_recent_own_track():
     # No recorded motion -> no reversal authority.
     assert TrackRecorder().straight_back_distance((0., 0., 0.), .4) == 0.
 
+
+def test_turn_on_the_spot_since_the_track_can_be_undone():
+    track = TrackRecorder()
+    _straight_track(track, .6)
+    x, y, yaw = track.points[-1]
+    turned = (x, y, yaw - .4)
+    assert track.straight_back_distance(turned, .4) == 0.
+    turn = track.turn_since_track(turned, .8)
+    assert turn == pytest.approx(-.4)
+    undone = (x, y, turned[2] - turn)
+    assert track.straight_back_distance(undone, .4) == pytest.approx(.4)
+    # Weggefahren, zu weit gedreht oder ohne Spur: keine Aussage.
+    assert track.turn_since_track((x+.05, y, yaw-.4), .8) is None
+    assert track.turn_since_track((x, y, yaw-1.), .8) is None
+    assert track.turn_since_track((x, y, float('nan')), .8) is None
+    assert track.turn_since_track((x, y, yaw), math.pi) is None
+    assert TrackRecorder().turn_since_track((0., 0., 0.), .8) is None
+    # Winkel über die Sprungstelle +-pi hinweg.
+    back = TrackRecorder()
+    _straight_track(back, .3, yaw=math.pi-.1)
+    bx, by, byaw = back.points[-1]
+    assert back.turn_since_track((bx, by, -math.pi+.1), .8) == pytest.approx(.2)
 
 def test_track_back_rejects_track_ahead_and_consumes_used_segment():
     track = TrackRecorder()

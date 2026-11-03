@@ -88,17 +88,21 @@ class HealingLadder:
     help_after: int = 8
     max_heals: int = 30
     no_progress_timeout_s: float = 600.
+    # Rückfahrten je Stillstand bei Drehsperre (Entscheidung Projektinhaber
+    # 03.11.2026: bis zu 2 × 0,4 m statt 1 ×). Obergrenze 2.
+    blocked_track_backs: int = 2
     heals: int = 0
     streak: int = 0
     looked_around: bool = False
     tracked_back: bool = False
+    track_backs_in_streak: int = 0
     last_progress_at: Optional[float] = None
     history: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
         if not (0 <= self.goal_retries and 1 <= self.look_around_after
                 <= self.track_back_after <= self.help_after and self.max_heals >= 1
-                and self.no_progress_timeout_s > 0):
+                and self.no_progress_timeout_s > 0 and 0 <= self.blocked_track_backs <= 2):
             raise ValueError('healing ladder limits are inconsistent')
 
     def start(self, now: float):
@@ -107,6 +111,7 @@ class HealingLadder:
     def progress(self, now: float):
         self.streak = 0
         self.looked_around = self.tracked_back = False
+        self.track_backs_in_streak = 0
         self.last_progress_at = now
 
     def stalled(self, now: float) -> bool:
@@ -114,12 +119,28 @@ class HealingLadder:
                 and now - self.last_progress_at > self.no_progress_timeout_s)
 
     def failure(self, now: float, reason: str, goal_attempts: int,
-                track_back_available: bool, look_around_available: bool) -> str:
-        """Nächste Aktion für einen heilbaren Fehlschlag."""
+                track_back_available: bool, look_around_available: bool,
+                turn_blocked: bool = False) -> str:
+        """Nächste Aktion für einen heilbaren Fehlschlag.
+
+        ``turn_blocked``: Der Roboter hat sich im Versuch nicht vom Fleck bewegt
+        und sein Drehkreis ist nicht frei. Dann liegt das Hindernis an seiner
+        Stelle, nicht am Ziel; erneut versuchen oder ein anderes Ziel wählen
+        verlangt dieselbe Drehung (Simulation 03.11.2026: sechs Fehlschläge in
+        der Mündung einer zu schmalen Lücke, erst die Rückfahrt half; in einer
+        0,84-m-Verbindung hinter einer geschlossenen Tür reichte eine Rückfahrt
+        nicht). Ist die Rückfahrt möglich, kommt sie sofort, bis zu
+        ``blocked_track_backs`` Mal je Fortschritt.
+        """
         self.heals += 1
         self.streak += 1
         if self.heals > self.max_heals or self.stalled(now) or self.streak >= self.help_after:
             action = REQUEST_HELP
+        elif (turn_blocked and track_back_available
+                and self.track_backs_in_streak < self.blocked_track_backs):
+            self.tracked_back = True
+            self.track_backs_in_streak += 1
+            action = TRACK_BACK
         elif goal_attempts <= self.goal_retries:
             action = RETRY
         elif (self.streak >= self.look_around_after and not self.looked_around
@@ -129,6 +150,7 @@ class HealingLadder:
         elif (self.streak >= self.track_back_after and not self.tracked_back
                 and track_back_available):
             self.tracked_back = True
+            self.track_backs_in_streak += 1
             action = TRACK_BACK
         else:
             action = DEFER
@@ -140,6 +162,7 @@ class HealingLadder:
     def snapshot(self) -> dict:
         return dict(heals=self.heals, streak=self.streak, max_heals=self.max_heals,
                     looked_around=self.looked_around, tracked_back=self.tracked_back,
+                    track_backs_in_streak=self.track_backs_in_streak,
                     history=list(self.history))
 
 
@@ -196,6 +219,28 @@ class TrackRecorder:
             if best >= max_distance_m:
                 return max_distance_m
         return min(best, max_distance_m)
+
+    def turn_since_track(self, pose: Sequence[float], max_turn_rad: float,
+                         position_tolerance_m: float = .03) -> Optional[float]:
+        """Drehung auf der Stelle seit dem letzten Spurpunkt (rad, vorzeichenbehaftet).
+
+        ``None``, wenn der Roboter nicht mehr am letzten Spurpunkt steht oder
+        sich um mehr als ``max_turn_rad`` gedreht hat. Zurückdrehen um diesen
+        Winkel überstreicht nur die Fläche, die die Drehung eben überstrichen
+        hat; danach liegt die Spur wieder gerade hinter dem Roboter. Grenze
+        deutlich unter pi: Regler drehen den kürzeren Weg, ein Winkel nahe pi
+        ließe offen, welche Seite überstrichen wurde.
+        """
+        if pose is None or not self.points or not 0. < max_turn_rad < math.pi:
+            return None
+        x, y, yaw = (float(v) for v in pose[:3])
+        if not all(math.isfinite(v) for v in (x, y, yaw)):
+            return None
+        px, py, pyaw = self.points[-1]
+        if math.dist((x, y), (px, py)) > position_tolerance_m:
+            return None
+        turn = math.atan2(math.sin(yaw-pyaw), math.cos(yaw-pyaw))
+        return turn if abs(turn) <= max_turn_rad else None
 
     def consume(self, distance_m: float):
         """Nach erfolgter Rückfahrt den befahrenen Abschnitt nicht erneut nutzen."""

@@ -73,6 +73,11 @@ class SelfHealingRuntime:
         self._self_healing_track_back_min_m = number('self_healing_track_back_min_m', .1, .02, 1.)
         self._self_healing_track_back_speed = number('self_healing_track_back_speed_mps', .05, .01, .1)
         self._self_healing_track_lateral_m = number('self_healing_track_lateral_tolerance_m', .03, .005, .1)
+        # DR-1: Vor der Rückfahrt eine eben gemachte Drehung auf der Stelle
+        # zurücknehmen (nur über die eben überstrichene Fläche); „nicht vom
+        # Fleck“ = weniger als stuck_move_m seit Beginn des Versuchs.
+        self._self_healing_turn_back_max_rad = number('self_healing_turn_back_max_rad', .8, 0., 1.5)
+        self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
         # Entscheidung Projektinhaber 15.10.2026: solange vor dem Roboter noch
         # nicht kartiert ist, absolut 0,06 m/s (Nav2 speed_limit an RPP).
         # Obergrenze 0,08 m/s: ein absolutes Limit darf RPP nie beschleunigen.
@@ -89,6 +94,7 @@ class SelfHealingRuntime:
             look_around_after=int(number('self_healing_look_around_after', 3, 1, 20)),
             track_back_after=int(number('self_healing_track_back_after', 5, 1, 20)),
             help_after=int(number('self_healing_help_after', 8, 1, 50)),
+            blocked_track_backs=int(number('self_healing_blocked_track_backs', 2, 0, 2)),
             max_heals=int(number('self_healing_max_heals', 30, 1, 500)),
             no_progress_timeout_s=number('self_healing_no_progress_timeout_s', 600., 10., 7200.))
         HealingLadder(**self._self_healing_ladder_config)  # validate once at start
@@ -157,6 +163,30 @@ class SelfHealingRuntime:
         finally:
             self._publish_scan_stop()
         return status, achieved
+
+    def _self_healing_turn_back(self, angle_rad, track, stop_requested):
+        """Eben gemachte Drehung auf der Stelle zurücknehmen (DR-1).
+
+        Liefert ``(None, Länge)``, wenn danach die Spur gerade hinter dem Roboter
+        liegt und die Rückfahrt folgen darf, sonst ``(Grund, 0)``. Der
+        Kollisionsmonitor bleibt aktiv; die Zeitgrenze erlaubt dessen
+        Verlangsamung auf 30 %.
+        """
+        speed = self._initial_scan_speed
+        try:
+            status, _achieved = self._rotate_in_place(
+                angle_rad, speed, abs(angle_rad)/(.25*speed) + 10., stop_requested=stop_requested)
+        finally:
+            self._publish_scan_stop()
+        if status != 'success':
+            return f'turn_back_{status}', 0.
+        odom = self._self_healing_odom_pose()
+        length = track.straight_back_distance(
+            odom, self._self_healing_track_back_max_m,
+            lateral_tolerance_m=self._self_healing_track_lateral_m) if odom else 0.
+        if length < self._self_healing_track_back_min_m:
+            return 'turn_back_track_not_straight', 0.
+        return None, length
 
     def _self_healing_track_back(self, distance_m, stop_requested):
         """H4: Nav2 BackUp, only along the straight recent own track."""
@@ -432,6 +462,7 @@ class SelfHealingRuntime:
             self._status_message = 'Navigating to frontier.'
             self._self_healing_govern_speed(force=True)   # limit before the child exists
             record_track()
+            attempt_start = self._self_healing_odom_pose()
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = goal
             try:
@@ -466,6 +497,22 @@ class SelfHealingRuntime:
             track_len = track.straight_back_distance(
                 odom, self._self_healing_track_back_max_m,
                 lateral_tolerance_m=self._self_healing_track_lateral_m) if odom else 0.
+            # DR-1: Hat der Roboter sich am Spurende auf der Stelle gedreht, liegt die
+            # Spur nicht mehr gerade hinter ihm. Erst zurückdrehen (über die eben
+            # überstrichene Fläche), dann auf der Spur zurück.
+            turn_back = None
+            if odom and track_len < self._self_healing_track_back_min_m \
+                    and self._self_healing_turn_back_max_rad > 0:
+                turn = track.turn_since_track(odom, self._self_healing_turn_back_max_rad)
+                if turn is not None:
+                    undone = (odom[0], odom[1], odom[2]-turn)
+                    length = track.straight_back_distance(
+                        undone, self._self_healing_track_back_max_m,
+                        lateral_tolerance_m=self._self_healing_track_lateral_m)
+                    if length >= self._self_healing_track_back_min_m:
+                        track_len, turn_back = length, -turn
+            moved = (math.dist(attempt_start[:2], odom[:2])
+                     if attempt_start is not None and odom is not None else math.inf)
             # Drehkreis dort prüfen, wo gedreht würde: Nach dem Fehlversuch steht der
             # Roboter nicht mehr an der Pose vom Schleifenanfang (Simulation 23.10.2026:
             # geprüft rund 0,25 m davor, gedreht 0,39 m neben einer Wand, Berührung).
@@ -473,16 +520,20 @@ class SelfHealingRuntime:
             look_around_ok = (here is not None and here_age is not None
                               and 0. <= here_age <= self._self_healing_pose_timeout_s
                               and self._self_healing_look_around_possible(here))
+            turn_blocked = moved < self._self_healing_stuck_move_m and not look_around_ok
             action = ladder.failure(time.monotonic(), failure, attempts[key],
                 track_back_available=track_len >= self._self_healing_track_back_min_m,
-                look_around_available=look_around_ok)
+                look_around_available=look_around_ok, turn_blocked=turn_blocked)
             status.update(heals=ladder.heals, ladder=ladder.snapshot())
             if action == REQUEST_HELP:
                 return finish('blocked', f'help_required:{failure}')
             if action == RETRY:
                 time.sleep(self._self_healing_heal_wait_s)
                 continue
-            blacklist.append(goal.frontier_xy)
+            if not (action == TRACK_BACK and turn_blocked):
+                # Drehsperre am Ort: das Ziel war nicht das Problem, nach der
+                # Rückfahrt darf es erneut angefahren werden.
+                blacklist.append(goal.frontier_xy)
             status['deferred_goals'] = len(blacklist)
             if action == LOOK_AROUND:
                 self._status_phase = 'self_healing_look_around'
@@ -490,12 +541,19 @@ class SelfHealingRuntime:
                 status['look_arounds'] += 1
             elif action == TRACK_BACK:
                 self._status_phase = 'self_healing_track_back'
-                outcome = self._self_healing_track_back(track_len, stop_requested)
+                outcome = None
+                if turn_back is not None:
+                    outcome, track_len = self._self_healing_turn_back(
+                        turn_back, track, stop_requested)
+                if outcome is None:
+                    outcome = self._self_healing_track_back(track_len, stop_requested)
                 if outcome == 'cancel_failed':
                     return finish('failed', 'track_back_cancel_failed')
                 if outcome == 'success':
                     track.consume(track_len)
                 status['track_backs'] += 1
-                status['last_track_back'] = dict(distance_m=track_len, result=outcome)
+                status['last_track_back'] = dict(distance_m=track_len, result=outcome,
+                                                 turned_back_rad=turn_back,
+                                                 turn_blocked=turn_blocked)
             time.sleep(self._self_healing_heal_wait_s)
         return finish('failed', 'ros_shutdown')
