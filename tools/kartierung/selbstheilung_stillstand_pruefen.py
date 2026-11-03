@@ -18,9 +18,10 @@ Geprueft wird:
   A  Explorer-Profil: jeder Wert aus self_healing_params.yaml ist live
      gesetzt, der Explorer verwendet den Baum mit leichter Recovery.
   B  Overlays: jeder Wert aus nav2_params_self_healing.yaml (Planer,
-     Glaetter, Behavior-Server, beide Kostenkarten) und aus
+     Regler, Glaetter, Behavior-Server, beide Kostenkarten) und aus
      collision_monitor_self_healing_overlay.yaml ist live
-     gesetzt (Planung durch Unbekanntes, -0,05 m/s, simulate_ahead_time).
+     gesetzt (Planung durch Unbekanntes, RPP-Kollisionshorizont,
+     -0,05 m/s, simulate_ahead_time).
   C  Verdrahtung: BackUp geht ueber cmd_vel_nav_raw (Fahrtor -> Smoother
      -> collision_monitor), RPP hoert auf das Geschwindigkeitslimit.
   C  Odometrie (mit --odometrie): HWT601-Fusion oder Standard, genau ein
