@@ -327,7 +327,7 @@ wächst; SH-3 misst beides. Einzelheiten im [STATUS](STATUS.md), Abschnitt
 (Knoten ab 0,25 m / 0,35 rad, `c20436a`). Berührungen beim Drehen auf der
 Stelle behoben: RPP prüfte langsame Drehungen nur an der aktuellen, von der
 Hindernisschicht freigeräumten Stellung; mit 1,5 s Horizont (`43f74b7`) in
-29 Läufen keine Berührung mehr (vorher 4 in 6). Dazu Zielverschiebung mit
+33 Läufen keine Berührung mehr (vorher 4 in 6). Dazu Zielverschiebung mit
 Sicht, genaueres Anfahren und Rückfahrt bei Drehsperre (2 × 0,4 m, 6 cm).
 Mit Abweichung abgenommen (Entscheidung 03.11.2026): In Engstellen unter
 etwa 0,9 m kann Amadeus nicht drehen und endet dort manchmal mit „Hilfe

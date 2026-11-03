@@ -1,17 +1,15 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 02.11.2026 (abends):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). **Abnahmestufe 1 bestanden:** drei autonome
-Laborfahrten ohne Kontakt und ohne Eingriff (SH-3). Stufe 2 (Simulation)
-formal offen wegen der bekannten Grenze niedriger Gegenstände, Stufe 3
-(Wohnung) offen. Größtes gemessenes Risiko für Stufe 3: die mit der Karte
-wachsende SLAM-Last. Derzeit kein Jetson-Auftrag; nächster Schritt ist eine
-Entscheidung des Projektinhabers. Abnahmestufe 2 (geschlossene
-Simulation, Manifest v4) mit Stand `bb94311`: **10 von 12 Läufen bestanden**,
-alle fünf übrigen Szenarien je 2/2; formal **nicht bestanden**, weil
-„Hindernis im Weg“ an der bekannten Grenze niedriger Gegenstände scheitert.
-Ein Explorer-Fehler beim Umsehen wurde gefunden und behoben (`ff05706`).
-Details und der eine nächste Schritt im obersten Abschnitt 23.10.2026.
+**Aktueller Stand 03.11.2026 (Nachmittag):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3, 02.11.).
+SL-1 (SLAM-Last) und DR-1 (Drehen nahe Hindernissen) sind in der Simulation
+abgeschlossen, DR-1 mit dokumentierter Abweichung (Entscheidung 03.11.2026):
+seit der Reglerkorrektur 33 Läufe ohne Berührung; in Engstellen unter etwa
+0,9 m kann Amadeus nicht drehen und endet dort manchmal mit „Hilfe benötigt“.
+Das wird Arbeitspaket DR-2 vor Stufe 3. **Aktiver Jetson-Auftrag: SH-4**
+(Abnahme SL-1 und DR-1 in drei Laborfahrten, Freigabestand `61e7b66`).
+Stufe 2 bleibt formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen.
+Details im obersten Abschnitt 03.11.2026 (Nachmittag).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -30,6 +28,81 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 03.11.2026 (Nachmittag) – DR-1 mit Abweichung abgenommen, SH-4 aktiviert, DR-2 festgelegt
+
+**Entscheidung des Projektinhabers (03.11.2026, dritte):** DR-1 wird mit
+dokumentierter Abweichung abgenommen. Das Ziel „Drehungen bringen die
+gepolsterte Kontur nie an ein bekanntes Hindernis“ ist erreicht. „Hilfe
+benötigt“ in Engstellen unter etwa 0,9 m ohne Berührung bleibt die offene
+Grenze und wird als eigenes Arbeitspaket DR-2 vor Stufe 3 gelöst. Die
+Drehraum-Regel für Ziele ist wieder aus (`61e7b66`), die 6-cm-Spurtoleranz
+bleibt. SH-4 wird aktiviert.
+
+**Warum die Drehraum-Regel aus ist:** Mit 0,45 m Mindestabstand (`e41507b`)
+endete jede Mission zunächst ohne ein Ziel; einzelne unbekannte Zellen
+zwischen den Laserstrahlen zählten als Hindernis (Startkarte höchstens 0,31 m).
+Gegen Belegtes geprüft (`2f48d00`) fuhr Amadeus los, erkundete aber den
+zweiten Raum nie (Abdeckung 0,72): Ein Gang oder eine Tür hat per Definition
+keinen Drehraum, die Frontier dahinter bekam kein Ziel. Engstelle zum
+Durchfahren und Falle zum Stehenbleiben liegen beide bei 0,27–0,36 m und sind
+am Abstand allein nicht zu unterscheiden.
+
+**DR-1 in Zahlen** ([Beleg](evidence/dr1-simulation-20261103.json)):
+
+| Stand | Läufe | bestanden | Berührungen | „Hilfe benötigt“ |
+|---|---|---|---|---|
+| Ausgangslage `299a3b1` (Messung) | 3 | 1 | 2 | 0 |
+| K1 Polster 0,05 m (verworfen) | 3 | 1 | 2 | 0 |
+| K2 RPP-Horizont 1,5 s | 4 | 3 | 0 | 1 |
+| `c70f6a0` K2+K4 (Abnahme, abgebrochen) | 9 | 7 | 0 | 2 |
+| `6cf41b5` + Rückfahrt 2×0,4 m, Zieltoleranz 0,05 m (Abnahme, angehalten) | 12 | 9 | 0 | 3 |
+| `e41507b`/`2f48d00` Drehraum-Regel (verworfen) | 4 | 0 | 0 | 0 |
+| **`61e7b66` Freigabestand (Regressionscheck)** | 4 | 4 | 0 | 0 |
+
+Seit der Reglerkorrektur `43f74b7`: 33 Läufe (30 mit Fahrt) Läufe, **0 Berührungen**
+(vorher 4 in 6). Verfehlt nach den vorab festgelegten Kriterien: E2 (gesperrte
+Tür 1/2) und E3 (Tür 0,68 m 1/2); E1 (8 Referenzläufe ohne Berührung) ist in
+Summe erfüllt, aber nicht in einer geschlossenen Abnahme auf einem Stand; E4
+(Median Heilungen ≤ 5) am Rand (5). Diese Abweichungen gelten nach der
+Entscheidung oben als begründet; das Arbeitspaket DR-1 ist abgeschlossen,
+SL-1 Stufe B damit ebenfalls (B1/B3 mit derselben Abweichung).
+
+**Regressionscheck des Freigabestands `61e7b66`** (4 Läufe, ein Stand, ohne
+Experiment): Referenz 2/2 (einmal vollständig, 2 bzw. 5 Heilungen), gesperrte
+Tür bestanden (aus der Verbindung mit drei Spur-Rückfahrten selbst heraus,
+danach Teilkarte wie vorgesehen), Tür 0,68 m bestanden (engster Plan 0,27 m),
+Mindestabstand 2,6–6,3 cm, Abdeckung 0,969–0,974. Vier Läufe belegen die
+Engstellen nicht; das bleibt Aufgabe von DR-2.
+
+**Was am Jetson anders ist (alles nur `self_healing:=true`):** RPP-Horizont
+1,5 s, Zieltoleranz 0,05 m, Zielverschiebung bis 1,0 m mit Sicht auf die
+Frontier, Drehsperre → Zurückdrehen und bis 2 × 0,4 m Spur-Rückfahrt (6 cm
+seitlich), dazu SL-1 (SLAM-Knoten ab 0,25 m / 0,35 rad). 178 gezielte Tests.
+
+## 03.11.2026 – Arbeitspaket DR-2: Selbstheilung in Engstellen (vor der Messung festgelegt)
+
+| | |
+|---|---|
+| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 03.11.2026 |
+| WE-Bezug | WE-M3, Vorbedingung für Stufe 3 |
+| Istbasis | `61e7b66`: In Engstellen unter etwa 0,9 m (0,84-m-Verbindung hinter geschlossener Tür, 0,91-m-Streifen hinter der 0,68-m-Tür, Mündung einer 0,42-m-Lücke) kann Amadeus nicht drehen; die gerade Spur-Rückfahrt reicht nicht immer heraus, dann „Hilfe benötigt“ (ohne Berührung) |
+| Ziel | Aus solchen Stellen kommt Amadeus selbst heraus und erkundet weiter, ohne Berührung und ohne blind rückwärts zu fahren |
+| Nicht-Ziele | keine Rückkehr zum alten Regler-Horizont, keine Änderung an `collision_monitor`, VL53, Fahrtor, SLAM, Chassis-Footprint oder Simulationskontur; Rückwärts nur über selbst befahrene oder gemessen freie Fläche; AP06 unverändert |
+| Kandidaten (erst messen) | (a) Rückfahrt entlang der gekrümmten eigenen Spur (Pfadfolge rückwärts statt gerader BackUp-Strecke), (b) geplantes Wendemanöver über bekannt freie Fläche (mehrzügig vor/zurück), (c) Ziele mit Wissen, ob dahinter weitergefahren werden kann |
+| Rückfall | Profilwerte bzw. Commits zurücknehmen, `self_healing:=false` |
+
+**Abnahmekriterien** (Simulation, Manifest v4, ein geschlossener Stand):
+
+| Nr | Kriterium |
+|---|---|
+| F1 | gesperrte Tür 3/3 bestanden (nicht „Hilfe benötigt“) |
+| F2 | Tür 0,68 m 3/3 bestanden, engster Plan ≥ 0,20 m |
+| F3 | 8 Referenzläufe: 0 Berührungen, Abdeckung im Median ≥ 0,95, Heilungen im Median ≤ 5 |
+| F4 | Sensorlücke, Kartenrennen, Rechenlast je 2/2; keine Berührung außer der bekannten niedrigen Kiste |
+
+**Nächster Schritt:** SH-4 am Jetson (Auftrag aktiv). DR-2 beginnt mit der
+Messung, wie oft und wo die Rückfahrt zu kurz ist; bis dahin keine Änderung.
 
 ## 02.11.2026 (nachts) – Arbeitspaket SL-1: SLAM-Last begrenzen (vor der Messung festgelegt)
 
@@ -317,8 +390,7 @@ Abdeckung hält, zeigt E4.
 **Abnahme neu gestartet** auf `e41507b`, 20 Plätze, fortsetzbar, mit
 Neubau und Installationsprüfung vor dem ersten Lauf.
 
-**Nächster Schritt:** Abnahme auswerten; bei bestandenem DR-1 SH-4 um DR-1
-ergänzen und aktivieren.
+**Nächster Schritt:** siehe Abschnitt 03.11.2026 (Nachmittag).
 
 ## 02.11.2026 (abends) – SH-3: Abnahmestufe 1 bestanden
 
