@@ -1375,7 +1375,10 @@ SL-1 Stufe B wiederholen und erst danach am Jetson abnehmen; (2) SL-1 A2
 (9 verworfene Scans aus der Aufnahme) als begründete Abweichung; (3) H4 bei
 Drehsperre erweitert: angesetzte Drehung zurücknehmen, dann bis zu 2 × 0,4 m
 auf der eigenen Spur zurück (vorher 1 × 0,4 m); (4) danach: seitliche
-Spurtoleranz 6 statt 3 cm und Erkundungsziele nur noch an Punkten mit Drehraum.
+Spurtoleranz 6 statt 3 cm und Erkundungsziele nur noch an Punkten mit Drehraum;
+(5) als Letztes: DR-1 mit dokumentierter Abweichung abgenommen, Drehraum-Regel
+wieder aus (sie versperrte Gänge und Türen, Abdeckung 0,72), 6 cm bleiben,
+Engstellen werden Arbeitspaket DR-2, SH-4 am Jetson aktiviert.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
