@@ -1,15 +1,15 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 04.11.2026 (abends):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1
-(SLAM-Last) am Jetson abgenommen und in SH-5 erneut bestätigt. Produkt:
-SH-3-Software plus SL-1 (`037c41a`, Kurswechsel zur Einfachheit). **SH-5:**
-drei Laborfahrten ohne Berührung, zwei bis zum Zeitbudget, eine endete mit
-„Hilfe benötigt“ vor einem 40-cm-Mülleimer trotz Platz, damit nach den festen
-Kriterien nicht bestätigt. **Aktiver Jetson-Auftrag: SH-5N** (nur lesende
-Daten zu dieser Stelle); parallel Nachbau in der Simulation. Stufe 2 bleibt
-formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details im
-obersten Abschnitt 04.11.2026 (abends).
+**Aktueller Stand 04.11.2026 (spät):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1 am
+Jetson abgenommen. Produkt: SH-3-Software plus SL-1 plus neue Regel „kein
+Fortschritt im Anlauf → zuerst auf der eigenen Spur zurück“ (`e8f00f6`,
+Simulation läuft). SH-5 nicht bestätigt (Hilferuf vor zwei Mülleimern an
+der Front, Kollisionsmonitor bremste zu Recht, nichts bewegte Amadeus
+weg). OAK-D nicht zur Hinderniserkennung (Entscheidung 04.11.). Weiter:
+SH-6 (Regel, ein Raum), dann SH-7 (zwei Räume durch eine offene Tür), dann
+Stufe 3. Kein aktiver Jetson-Auftrag bis SH-6 steht. Details im obersten
+Abschnitt 04.11.2026 (spät).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +28,43 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 04.11.2026 (spät) – SH-5N ausgewertet, Regel „kein Fortschritt → zurück“, Weg zu mehreren Räumen
+
+**SH-5N (nur lesend, Jetson):** In den letzten zwei Anläufen vor „Hilfe
+benötigt“ kam an der Basis **kein einziger Fahrbefehl** an. Der Regler
+erzeugte Befehle (jede Sekunde ein neuer Weg, kein „collision ahead“), der
+Kollisionsmonitor setzte sie sofort auf null („approach 2 s“), nach 30 s
+„Failed to make progress“, im 30-s-Takt wieder. Zwei Mülleimer (38 cm hoch,
+29 cm Durchmesser, 10 cm Lücke) standen 0,29–0,35 m von der Robotermitte
+schräg vorn, also praktisch an der Front; alle Ziele lagen dahinter. Die
+SLAM-Karte kennt die Eimer nicht. Nachbau in der Simulation (40-cm-Eimer, den
+nur die VL53 sehen): ohne Regel 0 von 4 Läufen sauber, Pläne führten
+überwiegend dicht am Eimer vorbei oder hindurch; seitlich stehende Eimer
+streift die Simulation beim Drehen (bekannte Grenze, VL53 sehen nur nach vorn).
+
+**Entscheidung des Projektinhabers (04.11.2026): eine allgemeine Regel.**
+Kommt Amadeus in einem Anlauf weniger als 5 cm voran, fährt er sofort ein
+Stück auf seiner eigenen Spur zurück (H4 wie freigegeben: eigene gerade Spur,
+höchstens 0,4 m, 0,05 m/s, einmal je Stillstand) und versucht dasselbe Ziel
+erneut; mit Bewegung bleibt die Leiter wie bisher. Umgesetzt in `e8f00f6`
+(172 gezielte Tests), Simulation läuft.
+
+**Entscheidungen des Projektinhabers (04.11.2026) zum weiteren Weg:**
+1. **Die OAK-D wird nicht zur Hinderniserkennung eingesetzt** (zu ungenau,
+   später teilweise vom Roboterarm vorn verdeckt). Hindernisse im Nahbereich
+   bleiben LiDAR plus VL53.
+2. **Raumwechsel ohne neues Raumkonzept:** Die Erkundung kennt keine Räume;
+   eine offene Tür ist ein unbekannter Bereich wie jeder andere (in der
+   Simulation mit zwei Räumen, 0,84-m-Verbindung und Türen 0,8/0,68 m
+   erprobt; der Nav2-Ansatz fuhr im August real Raumwechsel). Reihenfolge:
+   **SH-6** Regel im bekannten Laborraum bestätigen (eine Änderung), dann
+   **SH-7** Laborraum plus Nachbarraum durch **eine offene Tür ohne
+   Schwelle, lichte Breite ≥ 75 cm**, übrige Türen zu, Zeitbudget 40 min,
+   dann Stufe 3 (Wohnung). Reale Risiken beim Raumwechsel: halb offene
+   Türblätter, Drehen im Türrahmen, längere Fahrten (Budget).
+
+**Nächster Schritt:** Simulation der Regel auswerten, dann Auftrag SH-6.
 
 ## 04.11.2026 (abends) – SH-5: einfache Version nicht bestätigt (G1 in Fahrt 3), Datenprüfung
 
@@ -74,8 +111,7 @@ schreibt Nav2 nicht ins Log. Parallel Nachbau der Stelle in der Simulation
 (niedriges Hindernis 0,4 m, das nur die VL53 sehen), dort werden die Pläne
 aufgezeichnet. SH-5 [archiviert](archive/20261104-sh5-ausgewertet/README.md).
 
-**Nächster Schritt:** SH-5N am Jetson (nur lesend) und Nachbau in der
-Simulation, dann Auswertung.
+**Nächster Schritt:** siehe Abschnitt 04.11.2026 (spät).
 
 ## 04.11.2026 (Kurswechsel) – zurück zur einfachen Version: SH-3 plus SL-1
 

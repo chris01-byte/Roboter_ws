@@ -1401,6 +1401,16 @@ messen, baut Sonderfall um Sonderfall. Der Projektinhaber hat das an zwei
 realen Hilfe-Stellen (Mülleimer, Bücherregal) als ein gemeinsames Problem
 erkannt. Künftig: Eine Verschärfung am Fahrverhalten braucht zuerst einen
 realen Befund, nicht nur einen simulierten.
+
+**Nachtrag 04.11.2026 (spät) – Entscheidungen des Projektinhabers:** (1) Die
+OAK-D wird nicht zur Hinderniserkennung eingesetzt (zu ungenau, später
+teilweise vom Arm verdeckt); Nahbereich bleibt LiDAR plus VL53. (2) Eine
+allgemeine Heilungsregel statt Sonderfällen: kein Fortschritt im Anlauf →
+zuerst die freigegebene Spur-Rückfahrt, dann dasselbe Ziel (`e8f00f6`).
+(3) Raumwechsel ohne neues Raumkonzept, schrittweise real öffnen: SH-6 ein
+Raum, SH-7 zwei Räume durch eine offene Tür (≥ 75 cm, ohne Schwelle),
+dann Wohnung. Lehre aus SH-5N: Der Kollisionsmonitor bremste richtig; was
+fehlte, war ein Schritt, der den Roboter von der Stelle wegbewegt.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
