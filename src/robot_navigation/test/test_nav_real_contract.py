@@ -1,5 +1,4 @@
 from pathlib import Path
-import math
 import sys
 import time
 from types import SimpleNamespace
@@ -121,8 +120,8 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
     overlay = yaml.safe_load(
         (PACKAGE_ROOT/'config'/'nav2_params_self_healing.yaml').read_text())
-    assert set(overlay) == {'planner_server', 'controller_server', 'velocity_smoother',
-                            'behavior_server', 'local_costmap', 'global_costmap'}
+    assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server',
+                            'local_costmap', 'global_costmap'}
     # VL53 height limit (decision 16.10.2026): only the marking VL53 sources,
     # base profile keeps 0.05 for every other mode. VL53 clearing starts at
     # 0.45 m (decision 22.10.2026, X9): a 10-cm object closer than ~0.42 m lies
@@ -165,31 +164,6 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     assert overlay['behavior_server']['ros__parameters'] == {'simulate_ahead_time': 2.0}
     # RPP itself never reverses.
     assert real['controller_server']['ros__parameters']['FollowPath']['allow_reversing'] is False
-    # DR-1: only the collision horizon of RPP; it must cover one rotation step
-    # (contour moves one 5-cm cell) at 0.1 rad/s, so slow in-place turns are
-    # checked outside the footprint area the obstacle layer clears.
-    controller = overlay['controller_server']['ros__parameters']
-    rpp = {'FollowPath': controller['FollowPath']}
-    assert set(controller) == {'FollowPath', 'general_goal_checker'}
-    assert rpp == {'FollowPath': {'max_allowed_time_to_collision_up_to_carrot': 1.5}}
-    # DR-1: stop where the explorer guaranteed turning room (goal clearance
-    # 0.45 m); only the position tolerance, tighter than the base profile.
-    checker = controller['general_goal_checker']
-    real_checker = real['controller_server']['ros__parameters']['general_goal_checker']
-    assert checker == {'xy_goal_tolerance': 0.05}
-    assert 0 < checker['xy_goal_tolerance'] < real_checker['xy_goal_tolerance']
-    assert checker['xy_goal_tolerance'] <= real['local_costmap']['local_costmap'][
-        'ros__parameters']['resolution'] + 1e-9
-    assert real_checker['stateful'] is False
-    real_rpp = real['controller_server']['ros__parameters']['FollowPath']
-    assert 'max_allowed_time_to_collision_up_to_carrot' not in real_rpp   # Nav2 default 1.0
-    local_real = real['local_costmap']['local_costmap']['ros__parameters']
-    footprint = yaml.safe_load(local_real['footprint'])
-    pad = local_real['footprint_padding']
-    corner = math.hypot(max(abs(x) for x, _ in footprint) + pad, max(abs(y) for _, y in footprint) + pad)
-    step_s = 2*math.sin(local_real['resolution']/2/corner)/0.1
-    assert 1.0 < step_s < rpp['FollowPath']['max_allowed_time_to_collision_up_to_carrot'] < 2*step_s
-    assert real_rpp['use_collision_detection'] is True
 
 
 def test_real_smoother_and_controller_limits_are_conservative():

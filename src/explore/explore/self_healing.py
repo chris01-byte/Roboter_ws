@@ -88,21 +88,17 @@ class HealingLadder:
     help_after: int = 8
     max_heals: int = 30
     no_progress_timeout_s: float = 600.
-    # Rückfahrten je Stillstand bei Drehsperre (Entscheidung Projektinhaber
-    # 03.11.2026: bis zu 2 × 0,4 m statt 1 ×). Obergrenze 2.
-    blocked_track_backs: int = 2
     heals: int = 0
     streak: int = 0
     looked_around: bool = False
     tracked_back: bool = False
-    track_backs_in_streak: int = 0
     last_progress_at: Optional[float] = None
     history: List[dict] = field(default_factory=list)
 
     def __post_init__(self):
         if not (0 <= self.goal_retries and 1 <= self.look_around_after
                 <= self.track_back_after <= self.help_after and self.max_heals >= 1
-                and self.no_progress_timeout_s > 0 and 0 <= self.blocked_track_backs <= 2):
+                and self.no_progress_timeout_s > 0):
             raise ValueError('healing ladder limits are inconsistent')
 
     def start(self, now: float):
@@ -111,7 +107,6 @@ class HealingLadder:
     def progress(self, now: float):
         self.streak = 0
         self.looked_around = self.tracked_back = False
-        self.track_backs_in_streak = 0
         self.last_progress_at = now
 
     def stalled(self, now: float) -> bool:
@@ -119,28 +114,12 @@ class HealingLadder:
                 and now - self.last_progress_at > self.no_progress_timeout_s)
 
     def failure(self, now: float, reason: str, goal_attempts: int,
-                track_back_available: bool, look_around_available: bool,
-                turn_blocked: bool = False) -> str:
-        """Nächste Aktion für einen heilbaren Fehlschlag.
-
-        ``turn_blocked``: Der Roboter hat sich im Versuch nicht vom Fleck bewegt
-        und sein Drehkreis ist nicht frei. Dann liegt das Hindernis an seiner
-        Stelle, nicht am Ziel; erneut versuchen oder ein anderes Ziel wählen
-        verlangt dieselbe Drehung (Simulation 03.11.2026: sechs Fehlschläge in
-        der Mündung einer zu schmalen Lücke, erst die Rückfahrt half; in einer
-        0,84-m-Verbindung hinter einer geschlossenen Tür reichte eine Rückfahrt
-        nicht). Ist die Rückfahrt möglich, kommt sie sofort, bis zu
-        ``blocked_track_backs`` Mal je Fortschritt.
-        """
+                track_back_available: bool, look_around_available: bool) -> str:
+        """Nächste Aktion für einen heilbaren Fehlschlag."""
         self.heals += 1
         self.streak += 1
         if self.heals > self.max_heals or self.stalled(now) or self.streak >= self.help_after:
             action = REQUEST_HELP
-        elif (turn_blocked and track_back_available
-                and self.track_backs_in_streak < self.blocked_track_backs):
-            self.tracked_back = True
-            self.track_backs_in_streak += 1
-            action = TRACK_BACK
         elif goal_attempts <= self.goal_retries:
             action = RETRY
         elif (self.streak >= self.look_around_after and not self.looked_around
@@ -150,7 +129,6 @@ class HealingLadder:
         elif (self.streak >= self.track_back_after and not self.tracked_back
                 and track_back_available):
             self.tracked_back = True
-            self.track_backs_in_streak += 1
             action = TRACK_BACK
         else:
             action = DEFER
@@ -162,7 +140,6 @@ class HealingLadder:
     def snapshot(self) -> dict:
         return dict(heals=self.heals, streak=self.streak, max_heals=self.max_heals,
                     looked_around=self.looked_around, tracked_back=self.tracked_back,
-                    track_backs_in_streak=self.track_backs_in_streak,
                     history=list(self.history))
 
 
@@ -219,28 +196,6 @@ class TrackRecorder:
             if best >= max_distance_m:
                 return max_distance_m
         return min(best, max_distance_m)
-
-    def turn_since_track(self, pose: Sequence[float], max_turn_rad: float,
-                         position_tolerance_m: float = .03) -> Optional[float]:
-        """Drehung auf der Stelle seit dem letzten Spurpunkt (rad, vorzeichenbehaftet).
-
-        ``None``, wenn der Roboter nicht mehr am letzten Spurpunkt steht oder
-        sich um mehr als ``max_turn_rad`` gedreht hat. Zurückdrehen um diesen
-        Winkel überstreicht nur die Fläche, die die Drehung eben überstrichen
-        hat; danach liegt die Spur wieder gerade hinter dem Roboter. Grenze
-        deutlich unter pi: Regler drehen den kürzeren Weg, ein Winkel nahe pi
-        ließe offen, welche Seite überstrichen wurde.
-        """
-        if pose is None or not self.points or not 0. < max_turn_rad < math.pi:
-            return None
-        x, y, yaw = (float(v) for v in pose[:3])
-        if not all(math.isfinite(v) for v in (x, y, yaw)):
-            return None
-        px, py, pyaw = self.points[-1]
-        if math.dist((x, y), (px, py)) > position_tolerance_m:
-            return None
-        turn = math.atan2(math.sin(yaw-pyaw), math.cos(yaw-pyaw))
-        return turn if abs(turn) <= max_turn_rad else None
 
     def consume(self, distance_m: float):
         """Nach erfolgter Rückfahrt den befahrenen Abschnitt nicht erneut nutzen."""
@@ -368,9 +323,7 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
                    allowed: Optional[np.ndarray] = None,
                    clearance: Optional[np.ndarray] = None,
                    goal_clearance_m: float = 0.,
-                   goal_shift_max_m: float = 0.,
-                   goal_min_clearance_m: float = 0.,
-                   min_clearance: Optional[np.ndarray] = None) -> List[FrontierGoal]:
+                   goal_shift_max_m: float = 0.) -> List[FrontierGoal]:
     """Schnelle Frontier-Auswahl ohne Sichtprognose (anytime, Millisekunden).
 
     Frontier = freie Zelle mit unbekanntem 4-Nachbarn; Cluster mit
@@ -434,25 +387,11 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
             members = members[wide] if wide.any() else members[room >= room.max()]
         best = members[np.argmin(distance[members])]
         gx, gy = float(wx[best]), float(wy[best])
-        cell = (rows[best], cols[best])
-        if spacious is not None and clearance[cell] < goal_clearance_m:
+        if spacious is not None and clearance[rows[best], cols[best]] < goal_clearance_m:
             shifted = _nearest_spacious(spacious, clearance, goal_clearance_m, rows[best],
                                         cols[best], resolution, goal_shift_max_m, cell_to_world)
             if shifted is not None:
-                gx, gy, cell = shifted
-        # Mindestabstand gegen gemessene Hindernisse (``min_clearance``): Auf der
-        # 1-cm-Karte bleiben zwischen den Strahlen einzelne unbekannte Zellen;
-        # zählten sie mit, hatte am Start kein Punkt mehr als 0,31 m (Simulation
-        # 03.11.2026: 0 Ziele, Mission sofort beendet). Fallen bilden gemessene Wände.
-        floor = clearance if min_clearance is None else min_clearance
-        goal_room = float(floor[cell]) if floor is not None else math.inf
-        if goal_room < goal_min_clearance_m:
-            # Kein Standpunkt mit Drehraum, von dem aus die Frontier sichtbar ist:
-            # nicht hinschicken (Simulation 03.11.2026: Ziel 0,36 m vor der Insel
-            # im 0,91-m-Streifen hinter einer 0,68-m-Tür, dort keine Drehung frei,
-            # „Hilfe benötigt“). Die Frontier bleibt offen; ändert sich die Karte,
-            # wird sie neu bewertet.
-            continue
+                gx, gy = shifted
         reach = math.hypot(gx-robot_xy[0], gy-robot_xy[1])
         size = int(sizes[cluster])
         goals.append(FrontierGoal(gx, gy, size, reach,
@@ -462,35 +401,11 @@ def frontier_goals(occupancy: np.ndarray, resolution: float,
     return goals[:max_goals]
 
 
-def _sight_lines(free: np.ndarray, rows: np.ndarray, cols: np.ndarray,
-                 row: int, col: int) -> np.ndarray:
-    """Welche Zellen sehen die Zelle (row, col) über bekannt freie Zellen?
-
-    Abgetastet wird je Linie mindestens einmal je Zelle in der längeren
-    Richtung. Unbekanntes gilt als Sichtsperre (dort kann eine Wand stehen).
-    """
-    if not len(rows):
-        return np.zeros(0, dtype=bool)
-    n = int(max(np.abs(rows-row).max(), np.abs(cols-col).max())) + 1
-    t = np.linspace(0., 1., n+1)[None, :]
-    rs = np.rint(rows[:, None] + (row-rows)[:, None]*t).astype(int)
-    cs = np.rint(cols[:, None] + (col-cols)[:, None]*t).astype(int)
-    return free[rs, cs].all(axis=1)
-
-
 def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, row: int,
                       col: int, resolution: float, max_m: float,
-                      cell_to_world, chunk: int = 256
-                      ) -> Optional[Tuple[float, float, Tuple[int, int]]]:
+                      cell_to_world) -> Optional[Tuple[float, float]]:
     """Freie Zelle im Umkreis ``max_m`` mit ``wanted_m`` Abstand (die nächste),
-    sonst die geräumigste dort: (x, y) in Weltkoordinaten und (Zeile, Spalte);
-    ``None`` ohne Verbesserung.
-
-    Nur Zellen mit freier Sicht auf die Frontier-Zelle kommen in Frage: Der
-    Roboter soll die Frontier von dort aus sehen. Ohne diese Bedingung lag ein
-    um 1 m verschobenes Ziel hinter der Insel, die Frontier davor unsichtbar
-    (Simulation 03.11.2026).
-    """
+    sonst die geräumigste dort (Weltkoordinaten); ``None`` ohne Verbesserung."""
     span = int(math.ceil(max_m/resolution))
     if span <= 0:
         return None
@@ -499,24 +414,19 @@ def _nearest_spacious(free: np.ndarray, clearance: np.ndarray, wanted_m: float, 
     rr, cc = np.nonzero(free[r0:r1, c0:c1])
     if not len(rr):
         return None
-    rr, cc = rr+r0, cc+c0
-    d = np.hypot(rr-row, cc-col)*resolution
-    room = clearance[rr, cc]
+    d = np.hypot(rr+r0-row, cc+c0-col)*resolution
+    room = clearance[rr+r0, cc+c0]
     inside = d <= max_m
     wide = inside & (room >= wanted_m)
-    # Erst die nächsten weiten Zellen, dann die übrigen nach Geräumigkeit; je
-    # die erste mit Sicht auf die Frontier.
-    first = np.flatnonzero(wide)[np.argsort(d[wide], kind='stable')]
-    rest = np.flatnonzero(inside & ~wide & (room > clearance[row, col]))
-    order = np.concatenate((first, rest[np.lexsort((d[rest], -room[rest]))]))
-    for start in range(0, len(order), chunk):
-        part = order[start:start+chunk]
-        seen = _sight_lines(free, rr[part], cc[part], row, col)
-        if seen.any():
-            i = int(part[int(np.argmax(seen))])
-            x, y = cell_to_world(np.array([rr[i]]), np.array([cc[i]]))
-            return float(np.asarray(x)[0]), float(np.asarray(y)[0]), (int(rr[i]), int(cc[i]))
-    return None
+    if wide.any():
+        i = int(np.argmin(np.where(wide, d, np.inf)))
+    else:
+        if not inside.any() or room[inside].max() <= clearance[row, col]:
+            return None
+        best = inside & (room >= room[inside].max())
+        i = int(np.argmin(np.where(best, d, np.inf)))
+    x, y = cell_to_world(np.array([rr[i]+r0]), np.array([cc[i]+c0]))
+    return float(np.asarray(x)[0]), float(np.asarray(y)[0])
 
 
 def frontier_cells_remaining(occupancy: np.ndarray, min_size_cells: int = 5) -> int:

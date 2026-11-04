@@ -53,29 +53,6 @@ def test_ladder_skips_unavailable_steps_and_respects_global_limits():
         HealingLadder(look_around_after=5, track_back_after=2)
 
 
-def test_blocked_turn_backs_out_at_once_at_most_twice_per_progress():
-    """DR-1 (Simulation 03.11.2026): Drehsperre am Ort, nicht am Ziel."""
-    ladder = HealingLadder(goal_retries=1, look_around_after=3, track_back_after=5, help_after=8)
-    ladder.start(0.)
-    assert ladder.failure(1., 'nav_aborted', 1, True, False, turn_blocked=True) == TRACK_BACK
-    # Entscheidung 03.11.2026: höchstens zwei Rückfahrten je Stillstand.
-    assert ladder.failure(2., 'nav_aborted', 1, True, False, turn_blocked=True) == TRACK_BACK
-    assert ladder.failure(3., 'nav_aborted', 1, True, False, turn_blocked=True) == RETRY
-    assert ladder.snapshot()['track_backs_in_streak'] == 2
-    ladder.progress(4.)
-    assert ladder.track_backs_in_streak == 0
-    assert ladder.failure(5., 'nav_aborted', 2, True, False, turn_blocked=True) == TRACK_BACK
-    # Ohne Rückfahrt oder mit freiem Drehkreis bleibt alles wie bisher.
-    fresh = HealingLadder()
-    fresh.start(0.)
-    assert fresh.failure(1., 'nav_aborted', 1, False, False, turn_blocked=True) == RETRY
-    assert fresh.failure(2., 'nav_aborted', 1, True, True) == RETRY
-    # Globale Grenzen gehen vor.
-    limited = HealingLadder(max_heals=1)
-    limited.start(0.)
-    limited.failure(1., 'x', 2, False, False)
-    assert limited.failure(2., 'x', 1, True, False, turn_blocked=True) == REQUEST_HELP
-
 def _straight_track(recorder, length, yaw=0.):
     for i in range(int(length/0.02)+1):
         d = i*0.02
@@ -101,28 +78,6 @@ def test_track_back_follows_only_the_straight_recent_own_track():
     # No recorded motion -> no reversal authority.
     assert TrackRecorder().straight_back_distance((0., 0., 0.), .4) == 0.
 
-
-def test_turn_on_the_spot_since_the_track_can_be_undone():
-    track = TrackRecorder()
-    _straight_track(track, .6)
-    x, y, yaw = track.points[-1]
-    turned = (x, y, yaw - .4)
-    assert track.straight_back_distance(turned, .4) == 0.
-    turn = track.turn_since_track(turned, .8)
-    assert turn == pytest.approx(-.4)
-    undone = (x, y, turned[2] - turn)
-    assert track.straight_back_distance(undone, .4) == pytest.approx(.4)
-    # Weggefahren, zu weit gedreht oder ohne Spur: keine Aussage.
-    assert track.turn_since_track((x+.05, y, yaw-.4), .8) is None
-    assert track.turn_since_track((x, y, yaw-1.), .8) is None
-    assert track.turn_since_track((x, y, float('nan')), .8) is None
-    assert track.turn_since_track((x, y, yaw), math.pi) is None
-    assert TrackRecorder().turn_since_track((0., 0., 0.), .8) is None
-    # Winkel über die Sprungstelle +-pi hinweg.
-    back = TrackRecorder()
-    _straight_track(back, .3, yaw=math.pi-.1)
-    bx, by, byaw = back.points[-1]
-    assert back.turn_since_track((bx, by, -math.pi+.1), .8) == pytest.approx(.2)
 
 def test_track_back_rejects_track_ahead_and_consumes_used_segment():
     track = TrackRecorder()
@@ -322,108 +277,6 @@ def test_corner_goal_moves_to_the_most_spacious_nearby_cell_if_none_is_wide_enou
     assert room[int(goal.y/.05), int(goal.x/.05)] > frontier_room   # geräumiger als am Wandfuß
     assert goal.y > .25                                       # weg von der Wand
 
-
-def _sees(occupancy, a, b, res=.05):
-    """Prüfhilfe: freie Sicht zwischen zwei Weltpunkten über bekannt freie Zellen."""
-    n = int(math.dist(a, b)/res*4)+2
-    return all(occupancy[int((a[1]+(b[1]-a[1])*t)/res), int((a[0]+(b[0]-a[0])*t)/res)] == 0
-               for t in np.linspace(0, 1, n))
-
-
-def test_goal_at_a_too_narrow_gap_moves_where_the_robot_can_turn_and_still_sees_it():
-    """DR-1 (Simulation 03.11.2026): Ziel in der Mündung einer 0,42-m-Lücke,
-    0,25 m vor der Blockecke; dort war keine Drehung frei, der Roboter blieb
-    stehen bis „Hilfe benötigt“. Im Umkreis von 1 m gab es Stellen mit 0,5 m."""
-    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
-    occupancy = np.full((60, 80), 0, dtype=int)
-    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
-    occupancy[1:22, 50:56] = 100                 # Insel bis y = 1,10 m
-    occupancy[30:59, 50:56] = 100                # Block ab y = 1,50 m: Lücke 0,40 m
-    occupancy[22:30, 51:79] = -1                 # in die Lücke noch nicht hineingesehen
-    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
-    robot = (1.0, 1.3)
-    near = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
-                          clearance=room, goal_clearance_m=.45, goal_shift_max_m=.5)[0]
-    far = frontier_goals(occupancy, .05, to_world, robot, min_size_cells=3,
-                         clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)[0]
-    at = lambda g: room[int(g.y/.05), int(g.x/.05)]
-    assert at(near) < .45                        # bisher: eng, keine Drehung möglich
-    assert at(far) >= .45                        # jetzt: Drehraum
-    assert math.dist((far.x, far.y), far.frontier_xy) <= 1.0
-    assert _sees(occupancy, (far.x, far.y), far.frontier_xy)
-
-
-def test_frontier_seen_only_from_a_cramped_strip_gets_no_goal_with_a_minimum():
-    """DR-1 (Simulation 03.11.2026): Notziel 0,36 m vor der Insel im 0,91-m-
-    Streifen hinter der 0,68-m-Tür; dort keine Drehung frei, „Hilfe benötigt“.
-
-    Mit Mindestabstand bekommt eine Frontier, die nur aus einem engen Streifen
-    sichtbar ist, kein Ziel; ohne Mindestabstand bleibt das alte Notziel.
-    """
-    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
-    occupancy = np.full((40, 60), 100, dtype=int)
-    occupancy[5:35, 2:20] = 0                    # Raum links, geräumig
-    occupancy[18:22, 20:40] = 0                  # 0,2 m schmaler Gang nach rechts
-    occupancy[18:22, 40:44] = -1                 # am Gangende ungesehen
-    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
-    common = dict(min_size_cells=2, clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)
-    old = frontier_goals(occupancy, .05, to_world, (.5, 1.0), **common)
-    assert len(old) == 1 and room[int(old[0].y/.05), int(old[0].x/.05)] < .45
-    known = obstacle_clearance(occupancy, .05)
-    new = frontier_goals(occupancy, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45,
-                         min_clearance=known, **common)
-    assert new == []
-    # Mit Drehraum in Sichtweite bleibt das Ziel erhalten.
-    wide = occupancy.copy()
-    wide[5:35, 20:40] = 0                        # Gang zur Halle geöffnet
-    roomy = obstacle_clearance(wide, .05, unknown_blocks=True)
-    kept = frontier_goals(wide, .05, to_world, (.5, 1.0), goal_min_clearance_m=.45,
-                          min_clearance=obstacle_clearance(wide, .05),
-                          **dict(common, clearance=roomy))
-    assert kept and all(obstacle_clearance(wide, .05)[int(g.y/.05), int(g.x/.05)] >= .45
-                        for g in kept)
-
-
-def test_scattered_unseen_cells_do_not_block_every_goal_at_the_start():
-    """Simulation 03.11.2026 (e41507b): Auf der Startkarte liegen zwischen den
-    Strahlen einzelne unbekannte Zellen; als Hindernis gezählt hatte kein Punkt
-    mehr als 0,31 m, 0 Ziele, Mission sofort zu Ende."""
-    to_world = lambda rows, cols: ((cols+.5)*.01, (rows+.5)*.01)
-    occupancy = np.full((300, 300), -1, dtype=int)
-    occupancy[20:280, 20:200] = 0                # gesehener Raum, 1-cm-Raster
-    occupancy[20:280, 20] = occupancy[20, 20:200] = occupancy[279, 20:200] = 100
-    rng = np.random.default_rng(3)
-    holes = rng.random((260, 180)) < .02         # Strahllücken mitten im Raum
-    occupancy[20:280, 20:200][holes & (occupancy[20:280, 20:200] == 0)] = -1
-    unknown = obstacle_clearance(occupancy, .01, unknown_blocks=True)
-    known = obstacle_clearance(occupancy, .01)
-    common = dict(min_size_cells=20, clearance=unknown, goal_clearance_m=.45,
-                  goal_shift_max_m=1.0, goal_min_clearance_m=.45)
-    assert frontier_goals(occupancy, .01, to_world, (1.0, 1.5), **common) == []   # Fehler
-    goals = frontier_goals(occupancy, .01, to_world, (1.0, 1.5), min_clearance=known, **common)
-    assert goals and all(known[int(g.y/.01), int(g.x/.01)] >= .45 for g in goals)
-
-
-def test_shifted_goal_never_jumps_behind_a_wall_it_cannot_see_through():
-    """Frontier in einem schmalen Streifen; geräumig ist es nur hinter der Wand.
-
-    Ohne Sichtprüfung lag das verschobene Ziel auf der anderen Seite (offline
-    nachgerechnet: 0,78 m hinter der Insel); der Roboter hätte die Frontier
-    von dort nie gesehen.
-    """
-    to_world = lambda rows, cols: ((cols+.5)*.05, (rows+.5)*.05)
-    occupancy = np.full((60, 80), 0, dtype=int)
-    occupancy[0, :] = occupancy[-1, :] = occupancy[:, 0] = occupancy[:, -1] = 100
-    occupancy[0:41, 30] = 100                    # Wand A, unten offen
-    occupancy[:, 40] = 100                       # Wand B trennt die rechte Halle ganz ab
-    occupancy[5:9, 32:39] = -1                   # ungesehen oben im 0,45-m-Streifen
-    room = obstacle_clearance(occupancy, .05, unknown_blocks=True)
-    goal = frontier_goals(occupancy, .05, to_world, (1.0, 2.5), min_size_cells=3,
-                          clearance=room, goal_clearance_m=.45, goal_shift_max_m=1.0)[0]
-    assert goal.x < 40*.05                       # diesseits von Wand B
-    assert _sees(occupancy, (goal.x, goal.y), goal.frontier_xy)
-    assert room[int(goal.y/.05), int(goal.x/.05)] >= room[int(goal.frontier_y/.05),
-                                                          int(goal.frontier_x/.05)]
 
 def test_unseen_wall_base_does_not_count_as_turning_room():
     """Simulation (X9, v3): Wandfuß der Verbindung noch unbekannt, Ziel 6 cm davor."""
