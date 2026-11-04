@@ -139,6 +139,17 @@ Releases und Codex-Referenz unverändert, kein Autostart. Rückfall: `SH_REL`
 auf `…/selbstheilung-sh2-20261102_1107`. Aktiver Auftrag danach: SH-4N (nur
 lesend, ohne Stackstart).
 
+Nachtrag 04.11.2026 abends, tatsächliche Jetson-Wirkung SH-5: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh5-20261104_1627` (14 Pakete,
+HEAD `edb06c2`, `src/` = `c20436a`, 171 Tests), `SH_REL` zeigt jetzt darauf.
+SH-4N wurde nicht ausgeführt. Fünf scharfe Starts mit `active_drive:=true`
+im Laborraum: zwei ohne Mission abgebrochen (Vorprüfung „D Quellen“ FEHL,
+Motor-Stop-Schalter zu spät freigeschaltet), drei gefahren. Höchstens
+0,10 m/s und 0,19 rad/s; kein Kontakt, kein Eingriff, kein Not-Aus. Stack je
+Start geordnet beendet. Lokal neu: `$SH_PR/sh5_run1…3`, `sh5_run1b`,
+`sh5_run2b`. `~/roboter_ws`, frühere Releases und Codex-Referenz unverändert,
+kein Autostart. Aktiver Auftrag danach: SH-5N (nur lesend).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

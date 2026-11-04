@@ -1,14 +1,15 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 04.11.2026 (Kurswechsel):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3, 02.11.).
-**SL-1 (SLAM-Last) am Jetson abgenommen** (SH-4). Die DR-1-Änderungen am
-Drehverhalten sind auf Entscheidung des Projektinhabers **zurückgenommen**:
-Sie machten Amadeus berührungsfrei, aber so vorsichtig, dass er neben
-Möbeln Hilfe rief. Produkt jetzt: SH-3-Software plus SL-1 (`037c41a`).
-**Aktiver Jetson-Auftrag: SH-5** (drei Laborfahrten zur Bestätigung). Stufe 2
-bleibt formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details
-im obersten Abschnitt 04.11.2026 (Kurswechsel).
+**Aktueller Stand 04.11.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1
+(SLAM-Last) am Jetson abgenommen und in SH-5 erneut bestätigt. Produkt:
+SH-3-Software plus SL-1 (`037c41a`, Kurswechsel zur Einfachheit). **SH-5:**
+drei Laborfahrten ohne Berührung, zwei bis zum Zeitbudget, eine endete mit
+„Hilfe benötigt“ vor einem 40-cm-Mülleimer trotz Platz, damit nach den festen
+Kriterien nicht bestätigt. **Aktiver Jetson-Auftrag: SH-5N** (nur lesende
+Daten zu dieser Stelle); parallel Nachbau in der Simulation. Stufe 2 bleibt
+formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details im
+obersten Abschnitt 04.11.2026 (abends).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -27,6 +28,54 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 04.11.2026 (abends) – SH-5: einfache Version nicht bestätigt (G1 in Fahrt 3), Datenprüfung
+
+Lokaler Agent, Fahrten 16:45–18:46, LAB-1 aktiv, Release
+`selbstheilung-sh5-20261104_1627` (Build 170 s, 14/14 Präfixe, 171 Tests grün,
+HEAD `edb06c2`, `src/` bytegleich `c20436a`). Vorprüfung je Fahrt Exit 0, 47×
+OK; die neue Prüfung „D Quellen“ fing vor Fahrt 1 und 2 je einen Start mit
+nicht bereiten Fahrquellen ab (Motor-Stop-Schalter zu spät freigeschaltet,
+Bedienfehler laut Christopher, aus der Wertung genommen). Damit 5 statt
+höchstens 4 Starts, Fahrt 3 auf Christophers ausdrückliche Entscheidung
+nachgeholt.
+
+| Fahrt | Dauer | Ziele | Heilungen | Ende | SLAM letzte min | verworfene Scans | „collision ahead“ | Kontakt / Eingriff |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1199 s | 4 | 5 | Teilkarte, 20-min-Budget | 15 % | 10 | 253 | nein / nein |
+| 2 | 1200 s | 6 | 4 | Teilkarte, 20-min-Budget | 14 % | 7 | 307 | nein / nein |
+| 3 | 976 s | 4 | 5 | **Hilfe benötigt** vor 40-cm-Mülleimer | 7 % | 7 | 43 | nein / nein |
+
+„extrapolation into the future“ 0. Christopher: nichts berührt, kein
+Eingriff, Karten und Drehstellen sauber. **Ergebnis nach den vorab
+festgelegten Kriterien: nicht bestätigt** (Fahrt 3 verfehlt G1: „er steht vor
+einem 40cm hohem Mülleimer und hätte genug Platz nach links und nach hinten
+auszuweichen“). Im Vergleich zu SH-4 (DR-1): 1 statt 2 Hilferufe trotz Platz,
+gleich berührungsfrei; SL-1 bestätigt sich erneut.
+
+**Fahrt 3, was belegt ist:** Die Ziele lagen jenseits des Mülleimers. Die VL53
+haben ihn gesehen (lokale Kostenkarte ab 0,29 m in Zielrichtung belegt), der
+Kollisionsmonitor hat 31× „approach“ und 14× Langsam-Zone ausgelöst, Nav2
+meldete 18× „Failed to make progress“ (weniger als 10 cm in 30 s). Sechs
+Anläufe zu je etwa 1,5 min, dann griff nach 10 min ohne Fortschritt das
+Hilfe-Limit, bevor die Leiter bis zur Spur-Rückfahrt kam (nur retry/defer).
+Die SLAM-Karte (LiDAR, 0,66 m hoch) kennt den Eimer nicht.
+
+**Offen:** Warum Amadeus keinen Weg um den Eimer fand. Arbeitshypothese (noch
+nicht gemessen): Der Planer kennt den Eimer erst ab 0,55 m und nur als schmale
+Vorderkante (VL53), plant knapp daran vorbei, und der Kollisionsmonitor bremst
+dort bis zum Kriechen, sodass die Fortschrittsprüfung abbricht.
+
+**Entscheidung des Projektinhabers (04.11.2026):** erst Daten prüfen, dann
+entscheiden (Tiefenkamera oder allgemeine Einstellung). Auftrag
+[SH-5N](AGENTENAUFTRAG.md): nur lesende Auszüge aus `sh5_run3` (Ziele,
+Kostenkarten im Roboterrahmen, Bremsablauf je Anlauf); die geplanten Wege
+schreibt Nav2 nicht ins Log. Parallel Nachbau der Stelle in der Simulation
+(niedriges Hindernis 0,4 m, das nur die VL53 sehen), dort werden die Pläne
+aufgezeichnet. SH-5 [archiviert](archive/20261104-sh5-ausgewertet/README.md).
+
+**Nächster Schritt:** SH-5N am Jetson (nur lesend) und Nachbau in der
+Simulation, dann Auswertung.
 
 ## 04.11.2026 (Kurswechsel) – zurück zur einfachen Version: SH-3 plus SL-1
 
@@ -69,7 +118,7 @@ in SH-4 und **G1:** kein Ende mit „Hilfe benötigt“ an einer Stelle, an der
 Christopher Platz zum Ausweichen sieht. Bestätigt, wenn alle drei Fahrten
 C1–C5 und G1 erfüllen. Auftrag: [SH-5](AGENTENAUFTRAG.md).
 
-**Nächster Schritt:** SH-5 am Jetson.
+**Nächster Schritt:** siehe Abschnitt 04.11.2026 (abends).
 
 ## 04.11.2026 – SH-4 ausgewertet: SL-1 am Jetson abgenommen, DR-1 offen
 
