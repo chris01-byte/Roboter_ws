@@ -341,6 +341,13 @@ Am Jetson prüft SH-4 SLAM-Last und Berührungsfreiheit.
 noch keinen Ausweg außer einer geraden Spur-Rückfahrt. DR-1 bleibt deshalb
 offen, DR-2 umfasst jetzt auch diesen Fall (Kriterien F5/F6 im STATUS).
 
+**Kurswechsel 04.11.2026 (Projektinhaber):** zurück zur einfachen Version.
+Die DR-1-Änderungen am Drehverhalten sind zurückgenommen, Produkt ist wieder
+SH-3 plus SL-1; DR-2 ist zurückgestellt. Grundsatz: keine Sonderlösung für
+jede Raumsituation. Zeigt sich real ein Streifen beim Drehen, kommt die
+Absicherung an eine Stelle (Kollisionsmonitor), nicht in die Erkundung.
+Bestätigung mit SH-5.
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

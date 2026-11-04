@@ -1,16 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 04.11.2026:** Hauptlinie `self_healing`
+**Aktueller Stand 04.11.2026 (Kurswechsel):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3, 02.11.).
-**SL-1 (SLAM-Last) am Jetson abgenommen** (SH-4: 6–12 % statt 61–81 % eines
-Kerns, keine verspäteten `map`→`odom` mehr). **DR-1 berührungsfrei, aber
-offen:** In SH-4 endeten zwei von drei Fahrten mit „Hilfe benötigt“ neben
-Gegenständen unterhalb der LiDAR-Höhe, weil Amadeus dort ehrlicherweise nicht
-drehen kann und noch keinen Ausweg findet. Das löst Arbeitspaket DR-2 (jetzt
-auch für Gegenstände neben dem Roboter). **Aktiver Jetson-Auftrag: SH-4N**
-(nur lesende Nachlieferung der Rohdaten). Stufe 2 bleibt formal offen
-(niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details im obersten
-Abschnitt 04.11.2026.
+**SL-1 (SLAM-Last) am Jetson abgenommen** (SH-4). Die DR-1-Änderungen am
+Drehverhalten sind auf Entscheidung des Projektinhabers **zurückgenommen**:
+Sie machten Amadeus berührungsfrei, aber so vorsichtig, dass er neben
+Möbeln Hilfe rief. Produkt jetzt: SH-3-Software plus SL-1 (`037c41a`).
+**Aktiver Jetson-Auftrag: SH-5** (drei Laborfahrten zur Bestätigung). Stufe 2
+bleibt formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details
+im obersten Abschnitt 04.11.2026 (Kurswechsel).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -29,6 +27,49 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 04.11.2026 (Kurswechsel) – zurück zur einfachen Version: SH-3 plus SL-1
+
+**Entscheidung des Projektinhabers (04.11.2026):** keine Detaillösung für jede
+Raumsituation, sondern zurück zur einfachen, real bewährten Software. In SH-4
+stand Amadeus einmal vor Mülleimern, einmal vor einem hohen Bücherregal: Die
+Ursache war jedes Mal dieselbe, nicht der Gegenstand. Die erste Software (SH-3)
+fuhr dreimal ohne Kontakt und ohne Hilferuf.
+
+**Bewertung, die dazu geführt hat:**
+- Die DR-1-Änderungen machten das Drehen ehrlich, aber unbeholfen: Amadeus
+  verweigerte jede Drehung, sobald irgendetwas näher als etwa 45 cm war
+  (Eckenradius 0,414 m plus Kostenkartenraster). Sackgasse, Türstreifen,
+  Mülleimer und Regal waren derselbe Fall; jede Korrektur deckte nur den
+  nächsten auf.
+- Die „Berührungen“ der Simulation, die DR-1 auslösten, zählen schon eine
+  Annäherung auf 2 cm (Simulationskontur = Footprint + 2 cm Rand). In sieben
+  realen Fahrten (SH-3, SH-4) gab es keinen Kontakt. Wir haben gegen ein
+  strengeres Maß optimiert als die Wirklichkeit verlangt und dabei
+  Selbstheilung verloren.
+
+**Umgesetzt (`037c41a`):** `src/` bytegleich auf `c20436a` (SH-3-Stand plus
+SL-1). Zurückgenommen: RPP-Horizont 1,5 s, Zielverschiebung 1,0 m mit Sicht,
+Rückfahrt bei Drehsperre, Zieltoleranz 0,05 m, Drehraum-Regel und
+6-cm-Spurtoleranz. Behalten: SL-1 (am Jetson abgenommen) und die Vorprüfung
+der Fahrquellen (`9096db5`, nur Werkzeug). 171 gezielte Tests grün.
+Arbeitspaket **DR-1 damit zurückgenommen, DR-2 zurückgestellt**; SH-4N wurde
+nicht ausgeführt und ist [archiviert](archive/20261104-sh4n-zurueckgezogen/README.md).
+
+**Restrisiko (bewusst angenommen):** In sehr engen Stellen kann sich Amadeus
+beim Drehen wieder bis auf wenige Zentimeter an ein Hindernis herandrehen;
+die VL53 sehen nur nach vorn, die Seiten deckt beim Drehen nichts ab. Falls
+sich das real zeigt, gehört die Lösung an eine Stelle (etwa ein Halt im
+Kollisionsmonitor, wenn der LiDAR etwas am Umriss sieht), nicht in viele
+Sonderfälle; das wäre eine eigene, sicherheitsrelevante Entscheidung.
+
+**Bestätigung SH-5 (vor der Fahrt festgelegt):** drei Laborfahrten im selben
+Raum wie SH-4, Mülleimer und Bücherregal bleiben stehen. Je Fahrt C1–C5 wie
+in SH-4 und **G1:** kein Ende mit „Hilfe benötigt“ an einer Stelle, an der
+Christopher Platz zum Ausweichen sieht. Bestätigt, wenn alle drei Fahrten
+C1–C5 und G1 erfüllen. Auftrag: [SH-5](AGENTENAUFTRAG.md).
+
+**Nächster Schritt:** SH-5 am Jetson.
 
 ## 04.11.2026 – SH-4 ausgewertet: SL-1 am Jetson abgenommen, DR-1 offen
 
@@ -95,7 +136,7 @@ Auftrag [SH-4N](AGENTENAUFTRAG.md): nur lesende Nachlieferung der Rohdaten an
 den zwei „Hilfe benötigt“-Stellen; danach Nachbau in der Simulation und ein
 Lösungskandidat (Kandidaten wie in DR-2).
 
-**Nächster Schritt:** SH-4N am Jetson (nur lesend), dann Auswertung.
+**Nächster Schritt:** überholt, siehe Abschnitt 04.11.2026 (Kurswechsel).
 
 ## 03.11.2026 (Nachmittag) – DR-1 mit Abweichung abgenommen, SH-4 aktiviert, DR-2 festgelegt
 

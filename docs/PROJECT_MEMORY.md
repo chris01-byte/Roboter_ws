@@ -1391,6 +1391,16 @@ muss im selben Zug prüfen, ob der Roboter dann noch einen Ausweg hat; die
 Simulation hatte keine Gegenstände unterhalb der LiDAR-Ebene neben dem Weg
 und konnte das nicht zeigen. Zweite Lehre: Die Vorprüfung prüfte die
 Motorfreigabe, nicht die Bereitschaft der Fahrquellen (jetzt ergänzt).
+
+**Nachtrag 04.11.2026 – Kurswechsel zur Einfachheit (Projektinhaber):**
+Produkt zurück auf SH-3 plus SL-1 (`037c41a`), DR-1-Fahränderungen
+zurückgenommen, DR-2 zurückgestellt, SH-4N zurückgezogen, Bestätigung mit
+SH-5. Lehre: Ein Simulationsmaß (Annäherung auf 2 cm zählt als Berührung)
+ist nicht die Wirklichkeit. Wer dagegen optimiert, ohne die realen Folgen zu
+messen, baut Sonderfall um Sonderfall. Der Projektinhaber hat das an zwei
+realen Hilfe-Stellen (Mülleimer, Bücherregal) als ein gemeinsames Problem
+erkannt. Künftig: Eine Verschärfung am Fahrverhalten braucht zuerst einen
+realen Befund, nicht nur einen simulierten.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
