@@ -28,7 +28,9 @@ Geprueft wird:
      /odom-Publisher (EKF bzw. base_hardware).
   D  Stillstand: base_hardware im Dry-Run ohne RS485-Schreibpfad, auf
      /cmd_vel kein Fahrbefehl ungleich null. Mit --aktiv (vor einer
-     beauftragten Laborfahrt): Basis scharf, aber noch kein Fahrbefehl.
+     beauftragten Laborfahrt): Basis scharf, aber noch kein Fahrbefehl,
+     und die Fahrquellen sind bereit (Encoder frisch, Encoder-Zeitwache
+     „ready“, im HWT-Weg Fusion ``sources_ready`` ohne verriegelten Fehler).
      Mit --odometrie hwt601 ohne --aktiv startet der Launch base_hardware
      gar nicht (active_drive=false), sondern den Encoder-Shadow (nur FC03);
      dann muss genau dieser sichtbar sein und base_hardware fehlen.
@@ -271,6 +273,52 @@ def motorpfad_zeilen(odometrie, aktiv, knoten, base):
     if odometrie == 'hwt601' and shadow:
         zeilen.append(('Encoder-Shadow nicht neben base_hardware', False,
                        'zwei Encoder-Leser am selben Bus'))
+    return zeilen
+
+
+def quellen_zeilen(aktiv, odometrie, base_state, fusion):
+    """Zeilen ``(pruefung, ok, detail)``: Sind die Fahrquellen vor der Fahrt bereit?
+
+    Nur vor einer beauftragten Fahrt (``aktiv``). ``base_state``: letzte
+    Nachricht von ``/base_hardware/state_json``, ``fusion``: von
+    ``/fusion/hwt601/status_json`` (je ``dict`` oder ``None``). SH-4 Fahrt 3,
+    erster Versuch: Encoder-Zeitwache ``fault_latched``, Fusion
+    ``sources_ready: false``; die Vorprüfung meldete trotzdem „bestanden“, der
+    Roboter bekam nie einen Fahrbefehl durch. ``STARTUP`` der Fusion vor dem
+    Missionsstart ist normal und kein Fehler.
+    """
+    if not aktiv:
+        return []
+    zeilen = []
+    if not isinstance(base_state, dict):
+        zeilen.append(('base_hardware meldet Zustand', False,
+                       'keine Nachricht auf /base_hardware/state_json'))
+    else:
+        frisch = (base_state.get('encoder_feedback_ok') is True
+                  and base_state.get('encoder_stale') is False)
+        zeilen.append(('Encoder liefern frisch', frisch,
+                       f'encoder_feedback_ok={base_state.get("encoder_feedback_ok")!r}, '
+                       f'encoder_stale={base_state.get("encoder_stale")!r}, '
+                       f'Alter={base_state.get("encoder_feedback_age_s")!r} s, '
+                       f'Grund={base_state.get("encoder_last_reason")!r}'))
+        wache = base_state.get('encoder_timing_recovery')
+        if isinstance(wache, dict):
+            zeilen.append(('Encoder-Zeitwache bereit',
+                           wache.get('state') == 'ready' and wache.get('ready') is True,
+                           f'state={wache.get("state")!r}, Grund={wache.get("current_reason")!r}'))
+    if odometrie == 'hwt601':
+        if not isinstance(fusion, dict):
+            zeilen.append(('HWT-Fusion meldet Zustand', False,
+                           'keine Nachricht auf /fusion/hwt601/status_json'))
+        else:
+            bereit = (fusion.get('sources_ready') is True and fusion.get('latched_fault') is None
+                      and fusion.get('recovery_state') != 'TERMINAL_FAULT')
+            letzter = fusion.get('last_fault')
+            grund = letzter.get('aggregate_reason') if isinstance(letzter, dict) else letzter
+            zeilen.append(('HWT-Fusion Quellen bereit', bereit,
+                           f'sources_ready={fusion.get("sources_ready")!r}, '
+                           f'latched_fault={fusion.get("latched_fault")!r}, '
+                           f'recovery_state={fusion.get("recovery_state")!r}, letzter Fehler={grund!r}'))
     return zeilen
 
 
@@ -524,16 +572,35 @@ def pruefe_stillstand(leser, ergebnis, beobachten_s, aktiv=False, odometrie=None
     for pruefung, ok, detail in motorpfad_zeilen(odometrie, aktiv, leser.knoten(), base):
         ergebnis.add('D Stillstand', pruefung, ok, detail)
     from geometry_msgs.msg import Twist
+    from std_msgs.msg import String
     seen = {'n': 0, 'max_lin': 0.0, 'max_ang': 0.0}
+    status = {'base': None, 'fusion': None}
 
     def on_twist(msg):
         seen['n'] += 1
         seen['max_lin'] = max(seen['max_lin'], abs(msg.linear.x), abs(msg.linear.y))
         seen['max_ang'] = max(seen['max_ang'], abs(msg.angular.z))
 
-    sub = leser.node.create_subscription(Twist, '/cmd_vel', on_twist, 10)
+    def merke(schluessel):
+        def callback(msg):
+            try:
+                status[schluessel] = json.loads(msg.data)
+            except (TypeError, ValueError):
+                status[schluessel] = None
+        return callback
+
+    subs = [leser.node.create_subscription(Twist, '/cmd_vel', on_twist, 10)]
+    if aktiv:   # nur lesend mithören, wie /cmd_vel
+        subs.append(leser.node.create_subscription(
+            String, '/base_hardware/state_json', merke('base'), 10))
+        if odometrie == 'hwt601':
+            subs.append(leser.node.create_subscription(
+                String, '/fusion/hwt601/status_json', merke('fusion'), 10))
     leser.spin_for(beobachten_s)
-    leser.node.destroy_subscription(sub)
+    for sub in subs:
+        leser.node.destroy_subscription(sub)
+    for pruefung, ok, detail in quellen_zeilen(aktiv, odometrie, status['base'], status['fusion']):
+        ergebnis.add('D Quellen', pruefung, ok, detail)
     ergebnis.add('D Stillstand', f'/cmd_vel {beobachten_s:.0f} s ohne Fahrbefehl',
                  seen['max_lin'] == 0.0 and seen['max_ang'] == 0.0,
                  f'{seen["n"]} Nachrichten, max |v|={seen["max_lin"]:.3f} m/s, '

@@ -284,3 +284,48 @@ def test_standstill_check_passes_the_reported_sh2_graph():
     ergebnis = Ergebnis()
     pruefe_stillstand(Leser(), ergebnis, 3.0, odometrie=None)
     assert not ergebnis.bestanden
+
+
+def _quellen(aktiv, odometrie, base_state, fusion):
+    from selbstheilung_stillstand_pruefen import quellen_zeilen
+    return {name: ok for name, ok, _ in quellen_zeilen(aktiv, odometrie, base_state, fusion)}
+
+
+BEREIT_BASE = {'encoder_feedback_ok': True, 'encoder_stale': False, 'encoder_feedback_age_s': .03,
+               'encoder_last_reason': 'ok', 'encoder_timing_recovery': {'state': 'ready', 'ready': True,
+                                                                        'current_reason': 'ok'}}
+BEREIT_FUSION = {'sources_ready': True, 'latched_fault': None, 'recovery_state': 'STARTUP',
+                 'last_fault': {'aggregate_reason': 'yaw_uncalibrated_or_faulted'}}
+
+
+def test_ready_sources_pass_before_an_active_run():
+    zeilen = _quellen(True, 'hwt601', BEREIT_BASE, BEREIT_FUSION)
+    assert zeilen and all(zeilen.values()), zeilen        # STARTUP vor der Mission ist normal
+
+
+def test_sh4_run3_encoder_fault_is_caught_before_the_mission():
+    """SH-4 Fahrt 3, erster Versuch: Vorprüfung „bestanden“, Roboter fuhr nie."""
+    base = {'encoder_feedback_ok': False, 'encoder_stale': True, 'encoder_feedback_age_s': 868.8,
+            'encoder_last_reason': 'encoderpaar_zeitfenster_ueberschritten',
+            'encoder_timing_recovery': {'state': 'fault_latched', 'ready': False,
+                                        'current_reason': 'encoderpaar_zeitfenster_ueberschritten'}}
+    fusion = {'sources_ready': False, 'latched_fault': None, 'recovery_state': 'STARTUP',
+              'last_fault': {'aggregate_reason': 'wheel_missing_stale_or_invalid'}}
+    zeilen = _quellen(True, 'hwt601', base, fusion)
+    assert zeilen['Encoder liefern frisch'] is False
+    assert zeilen['Encoder-Zeitwache bereit'] is False
+    assert zeilen['HWT-Fusion Quellen bereit'] is False
+
+
+def test_missing_status_or_latched_fusion_fault_fails_and_motorless_checks_skip_sources():
+    assert _quellen(True, 'hwt601', None, None) == {
+        'base_hardware meldet Zustand': False, 'HWT-Fusion meldet Zustand': False}
+    verriegelt = dict(BEREIT_FUSION, latched_fault='hwt_terminal')
+    assert _quellen(True, 'hwt601', BEREIT_BASE, verriegelt)['HWT-Fusion Quellen bereit'] is False
+    terminal = dict(BEREIT_FUSION, recovery_state='TERMINAL_FAULT')
+    assert _quellen(True, 'hwt601', BEREIT_BASE, terminal)['HWT-Fusion Quellen bereit'] is False
+    # Standard-Odometrie: keine Fusionszeile; ohne Zeitwache keine Wachenzeile.
+    ohne_wache = {k: v for k, v in BEREIT_BASE.items() if k != 'encoder_timing_recovery'}
+    assert _quellen(True, 'standard', ohne_wache, None) == {'Encoder liefern frisch': True}
+    # Motorlose Prüfungen (ohne --aktiv) verlangen keine Fahrquellen.
+    assert _quellen(False, 'hwt601', None, None) == {}
