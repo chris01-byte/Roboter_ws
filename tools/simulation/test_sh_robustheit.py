@@ -244,3 +244,19 @@ def test_manifest_v4_is_v3_in_the_unchanged_asymmetric_experiment_world():
     for teil in ('sensor', 'budgets'):
         assert v4[teil] == v3[teil]
 
+
+
+def test_static_low_furniture_from_the_manifest_is_invisible_to_the_lidar():
+    """SH-5 Fahrt 3: 40-cm-Mülleimer, den nur die VL53 sehen."""
+    import math
+    import numpy as np
+    from sh_robustheit_welt import RobustheitsWelt
+    welt = RobustheitsWelt(.8, (-1.9, -.45, 0.), niedrig=[[-1.25, -.45, .35, .4]])
+    assert len(welt.niedrig) == 1 and welt.niedrig[0][1] == .4
+    assert welt.abstand_niedrig([(-1.25, -.45)]) == 0.
+    assert welt.abstand_niedrig([(-1.25, .3)]) == pytest.approx(.75 - .175)
+    assert RobustheitsWelt(.8, (-1.9, -.45, 0.)).abstand_niedrig([(0., 0.)]) == math.inf
+    # Der LiDAR (0,66 m) sieht durch den Eimer hindurch bis zur Wand dahinter.
+    winkel, ranges = welt.laser(beams=720, mask=False)
+    vorn = ranges[np.argmin(np.abs(winkel - 3*math.pi/2))]   # Laserrahmen: +90° montiert
+    assert vorn > 1.0

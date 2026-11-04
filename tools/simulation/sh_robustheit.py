@@ -324,7 +324,9 @@ def main(argv=None):
     from selbstheilung_lauf_protokoll import LaufProtokoll
 
     welt = RobustheitsWelt(manifest['welt']['door_m'], manifest['welt']['start'],
-                           zusatz=manifest['welt'].get('zusatz_hindernisse', ()))
+                           zusatz=manifest['welt'].get('zusatz_hindernisse', ()),
+                           niedrig=manifest['welt'].get('niedrige_hindernisse', ()))
+    niedrig_plaene = dict(verlauf=[], nah=[])   # Diagnose: Pläne um niedrige Möbel
     sensor = manifest['sensor']
     latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
                          durability=DurabilityPolicy.TRANSIENT_LOCAL)
@@ -513,6 +515,15 @@ def main(argv=None):
             self.plan = plan_engstelle(self.plan, welt.punkte_abstand(punkte) if len(punkte) else [],
                                        punkte, round(time.monotonic() - start, 2), robot_radius,
                                        roboter=welt.pose.copy())
+            if welt.niedrig and len(punkte):
+                # Wie nah führt der Plan an niedrige Möbel, wo steht der Roboter?
+                roboter = welt.abstand_niedrig(welt.pose[:2])
+                eintrag = (round(time.monotonic() - start, 2), *[round(float(v), 3) for v in welt.pose],
+                           round(welt.abstand_niedrig(punkte), 3), round(roboter, 3))
+                if len(niedrig_plaene['verlauf']) < 5000:
+                    niedrig_plaene['verlauf'].append(eintrag)
+                if roboter < 1.0 and len(niedrig_plaene['nah']) < 400:
+                    niedrig_plaene['nah'].append((eintrag, np.asarray(punkte, dtype=float)))
 
         def on_explore(self, msg):
             try:
@@ -713,6 +724,11 @@ def main(argv=None):
             # Diagnose: Ort der Kartenfehler und Endkarte (synthetische Welt, bleibt im Lauf).
             ergebnis['kartenfehler_orte'] = welt.kartenfehler_orte(
                 belegung, k.info.resolution, (k.info.origin.position.x, k.info.origin.position.y))
+            if niedrig_plaene['nah']:
+                np.savez_compressed(
+                    out/'niedrig_plaene.npz',
+                    eintraege=np.array([e for e, _ in niedrig_plaene['nah']], dtype=float),
+                    **{f'plan_{i:03d}': p for i, (_, p) in enumerate(niedrig_plaene['nah'])})
             np.savez_compressed(out/'endkarte.npz', belegung=belegung.astype(np.int8),
                                 aufloesung=k.info.resolution,
                                 ursprung=[k.info.origin.position.x, k.info.origin.position.y])
@@ -749,6 +765,15 @@ def main(argv=None):
                                        else round(float(welt.minimum_clearance), 3))
     ergebnis['engste_stelle'] = welt.engste_stelle
     ergebnis['erster_kontakt'] = verlauf['erster_kontakt']
+    if welt.niedrig:
+        v = niedrig_plaene['verlauf']
+        ergebnis['niedrig'] = dict(
+            hindernisse=[[[round(float(x), 3) for x in b.min(axis=0)],
+                          [round(float(x), 3) for x in b.max(axis=0)], h] for b, h in welt.niedrig],
+            plaene=len(v), plaene_nah=len(niedrig_plaene['nah']),
+            plan_min_abstand_m=min((e[4] for e in v), default=None),
+            plaene_unter_robot_radius=sum(1 for e in v if e[4] < robot_radius),
+            verlauf_kurz=v[-200:])
     ergebnis['mitte_engste_stelle'] = welt.mitte_min
     ergebnis['plan_engste_stelle'] = beobachter.plan
     ergebnis['robot_radius_global_m'] = robot_radius

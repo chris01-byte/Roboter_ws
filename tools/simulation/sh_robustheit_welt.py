@@ -25,13 +25,18 @@ MAX_SCHRITT_S = 0.01
 
 
 class RobustheitsWelt(World):
-    def __init__(self, door_m, start, zusatz=()):
+    def __init__(self, door_m, start, zusatz=(), niedrig=()):
         super().__init__(door_m, start)
         # Zusätzliche feste Möbel (nur Experiment-Manifeste), je [x0, x1, y0, y1].
         for x0, x1, y0, y1 in zusatz:
             self.obstacles.append(rectangle(x0, x1, y0, y1))
         self.door_m = door_m
         self.niedrig = []                # (Rechteck, Höhe über Boden)
+        # Feste niedrige Möbel ab Start (nur Experiment-Manifeste), je
+        # [Mitte x, Mitte y, Kantenlänge, Höhe]: z. B. ein 40-cm-Mülleimer, den der
+        # LiDAR in 0,66 m Höhe nicht sieht, die VL53 aber schon (SH-5 Fahrt 3).
+        for cx, cy, groesse, hoehe in niedrig:
+            self.setze_niedriges_hindernis((cx, cy), groesse, hoehe)
         self.verspaetungen = []          # Timerlücken > 30 ms
         self.verspaetungen_zeit = []     # zugehörige Zeit (s seit Start)
         self.geschlossene_tueren = []
@@ -110,6 +115,17 @@ class RobustheitsWelt(World):
         hi = np.array([b.max(axis=0) for b in boxen])[None]
         p = np.asarray(punkte, dtype=float).reshape(-1, 2)[:, None]
         return np.linalg.norm(np.maximum(np.maximum(lo-p, 0.), p-hi), axis=2).min(axis=1)
+
+    def abstand_niedrig(self, punkte):
+        """Kleinster Abstand der Punkte zu den niedrigen Hindernissen (inf ohne)."""
+        if not self.niedrig:
+            return math.inf
+        lo = np.array([b.min(axis=0) for b, _ in self.niedrig])[None]
+        hi = np.array([b.max(axis=0) for b, _ in self.niedrig])[None]
+        p = np.asarray(punkte, dtype=float).reshape(-1, 2)[:, None]
+        if not len(p):
+            return math.inf
+        return float(np.linalg.norm(np.maximum(np.maximum(lo-p, 0.), p-hi), axis=2).min())
 
     def karte_zu_welt(self, punkte):
         """Karten-/Odometrierahmen (Ursprung = Startpose) in Weltkoordinaten."""
