@@ -53,6 +53,26 @@ def test_ladder_skips_unavailable_steps_and_respects_global_limits():
         HealingLadder(look_around_after=5, track_back_after=2)
 
 
+def test_stuck_attempt_backs_off_first_once_per_standstill():
+    """Entscheidung 04.11.2026: kein Fortschritt im Anlauf -> zuerst zurück."""
+    ladder = HealingLadder(goal_retries=1, look_around_after=3, track_back_after=5, help_after=8)
+    ladder.start(0.)
+    assert ladder.failure(1., 'nav_aborted', 1, True, True, stuck=True) == TRACK_BACK
+    # Höchstens einmal je Stillstand; danach die gewohnte Leiter.
+    assert ladder.failure(2., 'nav_aborted', 1, True, True, stuck=True) == RETRY
+    ladder.progress(3.)
+    assert ladder.failure(4., 'nav_aborted', 2, True, True, stuck=True) == TRACK_BACK
+    # Ohne Spur oder mit Bewegung bleibt alles wie bisher.
+    fresh = HealingLadder()
+    fresh.start(0.)
+    assert fresh.failure(1., 'nav_aborted', 1, False, True, stuck=True) == RETRY
+    assert fresh.failure(2., 'nav_aborted', 1, True, True) == RETRY
+    # Globale Grenzen gehen vor.
+    limited = HealingLadder(max_heals=1)
+    limited.start(0.)
+    limited.failure(1., 'x', 2, False, False)
+    assert limited.failure(2., 'x', 1, True, True, stuck=True) == REQUEST_HELP
+
 def _straight_track(recorder, length, yaw=0.):
     for i in range(int(length/0.02)+1):
         d = i*0.02

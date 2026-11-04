@@ -73,6 +73,9 @@ class SelfHealingRuntime:
         self._self_healing_track_back_min_m = number('self_healing_track_back_min_m', .1, .02, 1.)
         self._self_healing_track_back_speed = number('self_healing_track_back_speed_mps', .05, .01, .1)
         self._self_healing_track_lateral_m = number('self_healing_track_lateral_tolerance_m', .03, .005, .1)
+        # „Nicht vom Fleck gekommen“: weniger als stuck_move_m seit Beginn des
+        # Versuchs; dann kommt die Spur-Rückfahrt sofort (Entscheidung 04.11.2026).
+        self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
         # Entscheidung Projektinhaber 15.10.2026: solange vor dem Roboter noch
         # nicht kartiert ist, absolut 0,06 m/s (Nav2 speed_limit an RPP).
         # Obergrenze 0,08 m/s: ein absolutes Limit darf RPP nie beschleunigen.
@@ -432,6 +435,7 @@ class SelfHealingRuntime:
             self._status_message = 'Navigating to frontier.'
             self._self_healing_govern_speed(force=True)   # limit before the child exists
             record_track()
+            attempt_start = self._self_healing_odom_pose()
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = goal
             try:
@@ -473,16 +477,22 @@ class SelfHealingRuntime:
             look_around_ok = (here is not None and here_age is not None
                               and 0. <= here_age <= self._self_healing_pose_timeout_s
                               and self._self_healing_look_around_possible(here))
+            moved = (math.dist(attempt_start[:2], odom[:2])
+                     if attempt_start is not None and odom is not None else math.inf)
+            stuck = moved < self._self_healing_stuck_move_m
             action = ladder.failure(time.monotonic(), failure, attempts[key],
                 track_back_available=track_len >= self._self_healing_track_back_min_m,
-                look_around_available=look_around_ok)
+                look_around_available=look_around_ok, stuck=stuck)
             status.update(heals=ladder.heals, ladder=ladder.snapshot())
             if action == REQUEST_HELP:
                 return finish('blocked', f'help_required:{failure}')
             if action == RETRY:
                 time.sleep(self._self_healing_heal_wait_s)
                 continue
-            blacklist.append(goal.frontier_xy)
+            if not (action == TRACK_BACK and stuck):
+                # Nicht vom Fleck: Das Hindernis lag am Standort, nicht am Ziel;
+                # nach der Rückfahrt darf dasselbe Ziel erneut angefahren werden.
+                blacklist.append(goal.frontier_xy)
             status['deferred_goals'] = len(blacklist)
             if action == LOOK_AROUND:
                 self._status_phase = 'self_healing_look_around'
@@ -496,6 +506,7 @@ class SelfHealingRuntime:
                 if outcome == 'success':
                     track.consume(track_len)
                 status['track_backs'] += 1
-                status['last_track_back'] = dict(distance_m=track_len, result=outcome)
+                status['last_track_back'] = dict(distance_m=track_len, result=outcome,
+                                                 stuck=stuck)
             time.sleep(self._self_healing_heal_wait_s)
         return finish('failed', 'ros_shutdown')

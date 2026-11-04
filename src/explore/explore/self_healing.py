@@ -114,12 +114,25 @@ class HealingLadder:
                 and now - self.last_progress_at > self.no_progress_timeout_s)
 
     def failure(self, now: float, reason: str, goal_attempts: int,
-                track_back_available: bool, look_around_available: bool) -> str:
-        """Nächste Aktion für einen heilbaren Fehlschlag."""
+                track_back_available: bool, look_around_available: bool,
+                stuck: bool = False) -> str:
+        """Nächste Aktion für einen heilbaren Fehlschlag.
+
+        ``stuck``: Der Roboter ist im Versuch nicht vom Fleck gekommen. Dann
+        zuerst ein Stück auf der eigenen Spur zurück (H4, sofort statt nach
+        ``track_back_after`` Fehlschlägen, weiter höchstens einmal je
+        Stillstand) und erneut versuchen. SH-5 Fahrt 3: Vor zwei Mülleimern an
+        der Front setzte der Kollisionsmonitor jeden Befehl zu Recht auf null;
+        „erneut“ und „anderes Ziel“ liefen 10 Minuten ins Leere, weil alle Ziele
+        dahinter lagen, die Rückfahrt kam nie an die Reihe.
+        """
         self.heals += 1
         self.streak += 1
         if self.heals > self.max_heals or self.stalled(now) or self.streak >= self.help_after:
             action = REQUEST_HELP
+        elif stuck and track_back_available and not self.tracked_back:
+            self.tracked_back = True
+            action = TRACK_BACK
         elif goal_attempts <= self.goal_retries:
             action = RETRY
         elif (self.streak >= self.look_around_after and not self.looked_around

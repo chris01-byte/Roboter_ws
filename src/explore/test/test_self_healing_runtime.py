@@ -37,6 +37,8 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_track_back_max_m == pytest.approx(.4)
         assert node._self_healing_track_back_speed == pytest.approx(.05)
         assert node._self_healing_ladder_config['help_after'] == 8
+        # Entscheidung 04.11.2026: kein Fortschritt im Anlauf -> sofort zurück.
+        assert node._self_healing_stuck_move_m == pytest.approx(.05)
         assert node._self_healing_unknown_speed == pytest.approx(.06)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
         node._status_phase = node._status_message = 'idle'
@@ -121,6 +123,7 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
+            _self_healing_stuck_move_m=.05,
             _cancel_timeout_s=3., _initial_scan_speed=.08, _initial_scan_timeout=60.,
             _frontiers_remaining=0, _frontiers_visited_status=0, _status_phase='idle',
             _status_message='', _status_state='idle', _global_costmap=None,
@@ -209,11 +212,19 @@ def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypat
     assert n._self_healing_status['reason'] == 'help_required:nav_aborted'
     kinds = [c[0] for c in state.calls]
     assert 'look_around' in kinds and 'track_back' in kinds
-    assert kinds.index('look_around') < kinds.index('track_back')
+    # Entscheidung 04.11.2026: Der erste Versuch fuhr 0,3 m (kein Stillstand,
+    # also „erneut“); ab dem zweiten kommt der Roboter nicht vom Fleck, deshalb
+    # sofort die Spur-Rückfahrt (einmal), danach die gewohnte Leiter.
+    assert kinds.index('track_back') < kinds.index('look_around')
+    assert kinds.count('track_back') == 1
     track = [c for c in state.calls if c[0] == 'track_back'][0]
     assert .1 <= track[1] <= .4
     actions = [h['action'] for h in n._self_healing_status['ladder']['history']]
-    assert actions[0] == 'retry' and actions[-1] == 'help'
+    assert actions[:2] == ['retry', 'track_back'] and actions[-1] == 'help'
+    # Nach der Rückfahrt wird dasselbe Ziel erneut angefahren (nicht zurückgestellt).
+    ziele = [c[1:] for c in state.calls if c[0] == 'navigate']
+    vor = kinds[:kinds.index('track_back')].count('navigate')
+    assert ziele[vor] == ziele[vor-1]
 
 
 def test_frontiers_behind_a_closed_door_end_with_a_usable_partial_map(monkeypatch):
