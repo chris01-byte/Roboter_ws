@@ -126,6 +126,19 @@ mit `karto::Exception` abgestürzt (nach Kartensicherung). Lokal neu: Ordner
 frühere Releases und Codex-Referenz unverändert. Kein Installwechsel, kein
 Autostart. Derzeit kein Jetson-Auftrag.
 
+Nachtrag 04.11.2026, tatsächliche Jetson-Wirkung SH-4: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh4-20261103_1738` (14 Pakete,
+HEAD `61745d5`, 178 Tests), `SH_REL` in `selbstheilung-v2.env` zeigt jetzt
+darauf; frühere Releases unverändert. Vier aktive Starts mit `active_drive:=true`
+im Laborraum (drei gefahren, einer ohne Fahrbefehl wegen Encoder-Startfehler),
+Missionsstart je einmal per `topic pub` (App ohne Verbindung). Höchstens
+0,10 m/s und 0,25 rad/s; kein Kontakt, kein Eingriff, kein Not-Aus. Stack je
+Start geordnet beendet (28/28 sauber). Lokal neu: `$SH_PR/sh4_run1…4` und
+dauerhafte Hilfswerkzeuge unter `$SH_PR/werkzeug/`. `~/roboter_ws`, frühere
+Releases und Codex-Referenz unverändert, kein Autostart. Rückfall: `SH_REL`
+auf `…/selbstheilung-sh2-20261102_1107`. Aktiver Auftrag danach: SH-4N (nur
+lesend, ohne Stackstart).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

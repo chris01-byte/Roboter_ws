@@ -1,15 +1,16 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 03.11.2026 (Nachmittag):** Hauptlinie `self_healing`
+**Aktueller Stand 04.11.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3, 02.11.).
-SL-1 (SLAM-Last) und DR-1 (Drehen nahe Hindernissen) sind in der Simulation
-abgeschlossen, DR-1 mit dokumentierter Abweichung (Entscheidung 03.11.2026):
-seit der Reglerkorrektur 33 Läufe ohne Berührung; in Engstellen unter etwa
-0,9 m kann Amadeus nicht drehen und endet dort manchmal mit „Hilfe benötigt“.
-Das wird Arbeitspaket DR-2 vor Stufe 3. **Aktiver Jetson-Auftrag: SH-4**
-(Abnahme SL-1 und DR-1 in drei Laborfahrten, Freigabestand `61e7b66`).
-Stufe 2 bleibt formal offen (niedrige Gegenstände), Stufe 3 (Wohnung) offen.
-Details im obersten Abschnitt 03.11.2026 (Nachmittag).
+**SL-1 (SLAM-Last) am Jetson abgenommen** (SH-4: 6–12 % statt 61–81 % eines
+Kerns, keine verspäteten `map`→`odom` mehr). **DR-1 berührungsfrei, aber
+offen:** In SH-4 endeten zwei von drei Fahrten mit „Hilfe benötigt“ neben
+Gegenständen unterhalb der LiDAR-Höhe, weil Amadeus dort ehrlicherweise nicht
+drehen kann und noch keinen Ausweg findet. Das löst Arbeitspaket DR-2 (jetzt
+auch für Gegenstände neben dem Roboter). **Aktiver Jetson-Auftrag: SH-4N**
+(nur lesende Nachlieferung der Rohdaten). Stufe 2 bleibt formal offen
+(niedrige Gegenstände), Stufe 3 (Wohnung) offen. Details im obersten
+Abschnitt 04.11.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +29,73 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 04.11.2026 – SH-4 ausgewertet: SL-1 am Jetson abgenommen, DR-1 offen
+
+Lokaler Agent, Fahrten 03.11.2026 18:56–21:07, LAB-1 aktiv, Release
+`selbstheilung-sh4-20261103_1738` (Build 174 s, 14/14 Präfixe, 178 Tests grün,
+HEAD `61745d5`). Vorprüfung je Start Exit 0, alle Overlay-Werte live wie
+erwartet. Missionsstart per Ersatzbefehl (App ohne Verbindung, für später
+vorgemerkt). Bericht lokal beim Projektinhaber; Karten nur lokal.
+
+| Start | Dauer | Ziele | Heilungen | Rückfahrten | Ende | SLAM letzte min | verworfene Scans | Kontakt / Eingriff |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1020 s | 5 | 4 | 0 | Teilkarte | 12 % | 7 | nein / nein |
+| 2 | 485 s | 4 | 8 | 1 | **Hilfe benötigt** (vor zwei 50-cm-Mülleimern) | 7 % | 7 | nein / nein |
+| 3, erster Versuch | 690 s | 0 | 7 | 0 | Hilfe benötigt, **nie gefahren** (Encoder-Startfehler) | 4 % | 10 | nein / nein |
+| 3, Wiederholung | 521 s | 4 | 11 | 1 | **Hilfe benötigt** (neben Gegenstand) | 6 % | 9 | nein / nein |
+
+„extrapolation into the future“ in allen Starts 0 (SH-3: 48–262), SLAM-Last
+am Ende 6–12 % eines Kerns (SH-3: 61–81 %). Christopher: nichts berührt, kein
+Eingriff, Karten und Drehstellen sauber (außer im ersten Versuch von Fahrt 3,
+der nicht fuhr).
+
+**Wertung des Projektinhabers (04.11.2026):** **SL-1 am Jetson abgenommen**
+(C2–C4 in allen drei fahrenden Starts klar erfüllt; der Encoder-Startfehler
+berührt SLAM nicht). **DR-1 bleibt offen:** berührungsfrei (E5 erfüllt), aber
+die Selbstheilung ist schlechter als in SH-3 (dort alle drei Fahrten ohne
+„Hilfe benötigt“). DR-1 wird zusammen mit DR-2 erneut am Jetson abgenommen.
+Die Wiederholung von Fahrt 3 nach einem inneren Fehler war laut Auftrag nicht
+vorgesehen; sie ist damit für SL-1 unerheblich.
+
+**Befund 1 – Drehsperre neben Gegenständen unterhalb der LiDAR-Höhe:**
+Die Mülleimer (etwa 50 cm) liegen unter der LiDAR-Ebene (0,66 m); die
+SLAM-Karte kennt sie nicht (nächstes Hindernis 0,75 m), nur die VL53 haben sie
+in die lokale Kostenkarte eingetragen (belegte Zellen ab 0,29 m neben der
+Robotermitte; Wiederholung: 0,36 m). Der Eckenradius beim Drehen ist 0,414 m:
+Die mit DR-1 ehrliche Drehprüfung verweigert jede Drehung, die diesen Kreis
+schneidet. Vor DR-1 übersah RPP solche Stellen und drehte trotzdem. Die
+Heilungsleiter fand keinen Ausweg: eine Spurrückfahrt (0,23 bzw. 0,40 m,
+`turn_blocked: true`), keine zweite, kein Umsehen, danach sieben Ziele in
+verschiedenen Richtungen, die alle eine Drehung verlangten. „detected collision
+ahead“ 772 bzw. 1055 (SH-3: 202–407). Das Problem betrifft also nicht nur
+Engstellen, sondern jede Stelle mit einem niedrigen Gegenstand dicht neben
+Amadeus – in einer Wohnung alltäglich.
+
+**Befund 2 – Vorprüfung erkannte nicht bereite Fahrquellen nicht:** Im ersten
+Versuch von Fahrt 3 war die Encoder-Zeitwache `fault_latched`, die Fusion
+meldete `sources_ready: false`; die Vorprüfung zeigte trotzdem „bestanden“,
+der Roboter bekam nie einen Fahrbefehl durch. **Behoben** im Prüfskript:
+Mit `--aktiv` prüft Bereich „D Quellen“ jetzt Encoder frisch, Zeitwache
+„ready“ und im HWT-Weg Fusion `sources_ready` ohne verriegelten Fehler (nur
+lesend mitgehört; „STARTUP“ vor der Mission gilt als normal). Tests mit den
+Werten aus dem Bericht.
+
+**DR-2 erweitert (vor der Messung festgelegt):** Ziel jetzt auch „aus einer
+Drehsperre neben einem Gegenstand unterhalb der LiDAR-Höhe selbst
+herauskommen“. Zusätzliche Kriterien zu F1–F4:
+
+| Nr | Kriterium |
+|---|---|
+| F5 | Simulation: ein 0,5 m hoher Gegenstand, den nur die VL53 sehen, steht dicht neben dem Weg; 3/3 Läufe ohne „Hilfe benötigt“ und ohne Berührung |
+| F6 | Jetson (SH-5, drei Laborfahrten mit Gegenständen wie in SH-4): keine Berührung, kein Ende mit „Hilfe benötigt“ an Stellen, an denen Christopher Platz zum Ausweichen sieht; dann gilt auch DR-1 als abgenommen |
+
+**Entscheidung des Projektinhabers (04.11.2026):** erst Daten, dann Lösung.
+Auftrag [SH-4N](AGENTENAUFTRAG.md): nur lesende Nachlieferung der Rohdaten an
+den zwei „Hilfe benötigt“-Stellen; danach Nachbau in der Simulation und ein
+Lösungskandidat (Kandidaten wie in DR-2).
+
+**Nächster Schritt:** SH-4N am Jetson (nur lesend), dann Auswertung.
 
 ## 03.11.2026 (Nachmittag) – DR-1 mit Abweichung abgenommen, SH-4 aktiviert, DR-2 festgelegt
 
@@ -101,8 +169,7 @@ seitlich), dazu SL-1 (SLAM-Knoten ab 0,25 m / 0,35 rad). 178 gezielte Tests.
 | F3 | 8 Referenzläufe: 0 Berührungen, Abdeckung im Median ≥ 0,95, Heilungen im Median ≤ 5 |
 | F4 | Sensorlücke, Kartenrennen, Rechenlast je 2/2; keine Berührung außer der bekannten niedrigen Kiste |
 
-**Nächster Schritt:** SH-4 am Jetson (Auftrag aktiv). DR-2 beginnt mit der
-Messung, wie oft und wo die Rückfahrt zu kurz ist; bis dahin keine Änderung.
+**Nächster Schritt:** siehe Abschnitt 04.11.2026.
 
 ## 02.11.2026 (nachts) – Arbeitspaket SL-1: SLAM-Last begrenzen (vor der Messung festgelegt)
 

@@ -1379,6 +1379,18 @@ Spurtoleranz 6 statt 3 cm und Erkundungsziele nur noch an Punkten mit Drehraum;
 (5) als Letztes: DR-1 mit dokumentierter Abweichung abgenommen, Drehraum-Regel
 wieder aus (sie versperrte Gänge und Türen, Abdeckung 0,72), 6 cm bleiben,
 Engstellen werden Arbeitspaket DR-2, SH-4 am Jetson aktiviert.
+
+**Nachtrag 04.11.2026 – SH-4 ausgewertet:** Entscheidung des Projektinhabers:
+SL-1 am Jetson abgenommen, DR-1 offen (berührungsfrei, aber zwei von drei
+Fahrten „Hilfe benötigt“ neben Gegenständen unterhalb der LiDAR-Höhe); erst
+Rohdaten (SH-4N, nur lesend), dann Lösung in DR-2. Lehre: Eine ehrliche
+Sicherheitsprüfung macht eine bisher verdeckte Lücke der Selbstheilung
+sichtbar. Vorher „funktionierte“ das Drehen neben niedrigen Gegenständen nur,
+weil der Regler sie beim langsamen Drehen übersah. Wer eine Prüfung schärft,
+muss im selben Zug prüfen, ob der Roboter dann noch einen Ausweg hat; die
+Simulation hatte keine Gegenstände unterhalb der LiDAR-Ebene neben dem Weg
+und konnte das nicht zeigen. Zweite Lehre: Die Vorprüfung prüfte die
+Motorfreigabe, nicht die Bereitschaft der Fahrquellen (jetzt ergänzt).
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

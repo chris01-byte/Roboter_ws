@@ -334,6 +334,13 @@ etwa 0,9 m kann Amadeus nicht drehen und endet dort manchmal mit „Hilfe
 benötigt“, ohne Berührung. Das löst das Arbeitspaket DR-2 vor Stufe 3.
 Am Jetson prüft SH-4 SLAM-Last und Berührungsfreiheit.
 
+**Stand 04.11.2026 – SH-4 am Jetson:** SL-1 abgenommen (SLAM-Last 6–12 % statt
+61–81 % eines Kerns). Keine Berührung. Aber zwei von drei Fahrten endeten mit
+„Hilfe benötigt“ neben Gegenständen unterhalb der LiDAR-Höhe (Mülleimer
+50 cm): Dort kann Amadeus ehrlicherweise nicht drehen, und die Leiter hat
+noch keinen Ausweg außer einer geraden Spur-Rückfahrt. DR-1 bleibt deshalb
+offen, DR-2 umfasst jetzt auch diesen Fall (Kriterien F5/F6 im STATUS).
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:
