@@ -1,15 +1,15 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 04.11.2026 (spät):** Hauptlinie `self_healing`
+**Aktueller Stand 04.11.2026 (Nacht):** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1 am
-Jetson abgenommen. Produkt: SH-3-Software plus SL-1 plus neue Regel „kein
-Fortschritt im Anlauf → zuerst auf der eigenen Spur zurück“ (`e8f00f6`,
-Simulation läuft). SH-5 nicht bestätigt (Hilferuf vor zwei Mülleimern an
-der Front, Kollisionsmonitor bremste zu Recht, nichts bewegte Amadeus
-weg). OAK-D nicht zur Hinderniserkennung (Entscheidung 04.11.). Weiter:
-SH-6 (Regel, ein Raum), dann SH-7 (zwei Räume durch eine offene Tür), dann
-Stufe 3. Kein aktiver Jetson-Auftrag bis SH-6 steht. Details im obersten
-Abschnitt 04.11.2026 (spät).
+Jetson abgenommen. Produkt: SH-3-Software plus SL-1 plus Regel „kein
+Fortschritt im Anlauf → zuerst auf der eigenen Spur zurück“ (`e8f00f6`).
+Simulation der Regel: unauffällig in der Regression, den Mülleimer-Fall
+bildet sie nicht nach (Grenzen im obersten Abschnitt). OAK-D nicht zur
+Hinderniserkennung (Entscheidung 04.11.). **Aktiver Jetson-Auftrag: SH-6**
+(Regel im selben Laborraum wie SH-5, drei Fahrten). Danach SH-7 (zwei Räume
+durch eine offene Tür), dann Stufe 3. Details im obersten Abschnitt
+04.11.2026 (Nacht).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +28,38 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 04.11.2026 (Nacht) – Regel in der Simulation, SH-6 aktiviert
+
+**Simulation der Regel `e8f00f6`** (Werkzeug `c71ecd3`, Eimer 40 cm hoch,
+nur für die VL53 sichtbar, zwei Startlagen):
+
+- **Eimer-Nachbau:** ohne Regel 0 von 4 Läufen sauber, mit Regel ebenfalls
+  0 von 4. In allen vier Läufen mit Regel streifte die Flanke den seitlich
+  stehenden Eimer beim Drehen, **bevor** Amadeus festsaß (nach 65 s bzw.
+  125–130 s); die Simulation friert den Roboter nach einer Berührung ein.
+  Die Rückfahrt löste in zwei Läufen aus, beide Male erst nach der Berührung.
+  Der Laborfall (Eimer **vorn**, Kollisionsmonitor hält, keine Berührung)
+  entsteht so nicht; die Simulation kann die Regel dort weder bestätigen
+  noch widerlegen.
+- **Regression (Referenzwohnung, gesperrte Tür, Tür 0,68 m):** keine
+  einzige Rückfahrt ausgelöst; Ergebnisse wie bei der einfachen Version
+  (Referenz einmal vollständig und einmal Teilkarte mit Abdeckung 0,908,
+  gesperrte Tür Teilkarte, Tür 0,68 m Teilkarte mit 0,906). Kontakte nur
+  die bekannten 2-cm-Annäherungen (Simulationskontur = Grundriss + 2 cm),
+  die mit dem Kurswechsel hingenommen sind.
+
+Bewertung: Die Regel stört dort nicht, wo Amadeus vorankommt. Ob sie ihn
+vor Hindernissen an der Front befreit, zeigt nur die echte Fahrt.
+
+**SH-6 aktiviert** ([Auftrag](AGENTENAUFTRAG.md)): Release
+`selbstheilung-sh6-<STAMP>` ab `e8f00f6`, 172 gezielte Tests, drei Fahrten
+im selben Laborraum mit denselben Gegenständen wie SH-5, Kriterien C1–C5
+und G1 unverändert. Zusätzlich je Fahrt: Zahl, Zeitpunkt und Weite der
+Spur-Rückfahrten und ob Amadeus danach weiterkam. Rückfall: `SH_REL` auf
+`selbstheilung-sh5-20261104_1627`.
+
+**Nächster Schritt:** SH-6-Bericht auswerten; mit bestätigter Regel SH-7.
 
 ## 04.11.2026 (spät) – SH-5N ausgewertet, Regel „kein Fortschritt → zurück“, Weg zu mehreren Räumen
 
@@ -64,7 +96,7 @@ erneut; mit Bewegung bleibt die Leiter wie bisher. Umgesetzt in `e8f00f6`
    dann Stufe 3 (Wohnung). Reale Risiken beim Raumwechsel: halb offene
    Türblätter, Drehen im Türrahmen, längere Fahrten (Budget).
 
-**Nächster Schritt:** Simulation der Regel auswerten, dann Auftrag SH-6.
+**Nächster Schritt (erledigt 04.11. Nacht):** Simulation der Regel auswerten, dann Auftrag SH-6.
 
 ## 04.11.2026 (abends) – SH-5: einfache Version nicht bestätigt (G1 in Fahrt 3), Datenprüfung
 
