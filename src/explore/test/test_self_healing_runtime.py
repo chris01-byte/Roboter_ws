@@ -41,7 +41,9 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_stuck_move_m == pytest.approx(.05)
         # Entscheidung 04.11.2026 (SH-7, zwei Räume): 40 min Gesamtbudget.
         assert node._overall_timeout_s == pytest.approx(2400.)
-        assert node._self_healing_unknown_speed == pytest.approx(.06)
+        # Tempo +35 % (05.11.2026) bis an die Obergrenze des Parameters.
+        assert node._self_healing_unknown_speed == pytest.approx(.08)
+        assert node._initial_scan_speed == pytest.approx(.10)
         assert node._self_healing_speed_pub.topic_name == '/speed_limit'
         node._status_phase = node._status_message = 'idle'
         published = []

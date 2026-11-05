@@ -120,8 +120,8 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
     overlay = yaml.safe_load(
         (PACKAGE_ROOT/'config'/'nav2_params_self_healing.yaml').read_text())
-    assert set(overlay) == {'planner_server', 'velocity_smoother', 'behavior_server',
-                            'local_costmap', 'global_costmap'}
+    assert set(overlay) == {'planner_server', 'controller_server', 'velocity_smoother',
+                            'behavior_server', 'local_costmap', 'global_costmap'}
     # VL53 height limit (decision 16.10.2026): only the marking VL53 sources,
     # base profile keeps 0.05 for every other mode. VL53 clearing starts at
     # 0.45 m (decision 22.10.2026, X9): a 10-cm object closer than ~0.42 m lies
@@ -156,11 +156,28 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     assert planner == {'GridBased': {'allow_unknown': True}}
     smoother = overlay['velocity_smoother']['ros__parameters']
     real_smoother = real['velocity_smoother']['ros__parameters']
-    # Forward limits unchanged; reverse only for the bounded own-track BackUp.
-    assert smoother['max_velocity'] == real_smoother['max_velocity']
-    assert smoother['min_velocity'][0] == -0.05
-    assert smoother['min_velocity'][1:] == real_smoother['min_velocity'][1:]
+    # Tempo (decision 05.11.2026): forward +35 %, turning +25 % over the real
+    # profile, only RPP speed and the smoother caps; reverse only for the
+    # bounded own-track BackUp.
+    controller = overlay['controller_server']['ros__parameters']
+    real_follow = real['controller_server']['ros__parameters']['FollowPath']
+    assert controller == {'FollowPath': {'desired_linear_vel': 0.135,
+                                         'rotate_to_heading_angular_vel': 0.25}}
+    assert controller['FollowPath']['desired_linear_vel'] == pytest.approx(
+        real_follow['desired_linear_vel']*1.35)
+    assert controller['FollowPath']['rotate_to_heading_angular_vel'] == pytest.approx(
+        real_follow['rotate_to_heading_angular_vel']*1.25)
+    assert smoother['max_velocity'][0] == pytest.approx(real_smoother['max_velocity'][0]*1.35)
+    assert smoother['max_velocity'][2] == pytest.approx(real_smoother['max_velocity'][2]*1.25)
+    assert smoother['max_velocity'][1] == 0.0
+    assert smoother['min_velocity'] == [-0.05, 0.0, -smoother['max_velocity'][2]]
     assert set(smoother) == {'max_velocity', 'min_velocity'}
+    # Far below the drive's own limits (base_hardware 0.30 m/s, 0.80 rad/s).
+    base = yaml.safe_load((PACKAGE_ROOT.parent/'base_hardware'/'config'/
+                           'base_hardware_params.yaml').read_text())
+    base = next(iter(base.values()))['ros__parameters']
+    assert smoother['max_velocity'][0] <= base['max_linear_speed_mps']/1.8
+    assert smoother['max_velocity'][2] <= base['max_angular_speed_radps']/2.5
     assert overlay['behavior_server']['ros__parameters'] == {'simulate_ahead_time': 2.0}
     # RPP itself never reverses.
     assert real['controller_server']['ros__parameters']['FollowPath']['allow_reversing'] is False

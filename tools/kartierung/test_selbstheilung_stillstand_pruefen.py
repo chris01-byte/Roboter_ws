@@ -22,10 +22,15 @@ def _params(relative):
 def test_profiles_flatten_to_live_parameter_names():
     explore = _params('src/explore/config/self_healing_params.yaml')['/explore_node']
     assert explore['exploration_strategy'] == 'self_healing'
-    assert explore['self_healing_unknown_speed_mps'] == pytest.approx(0.06)
+    # Tempo +35 % / +25 % (Entscheidung 05.11.2026).
+    assert explore['self_healing_unknown_speed_mps'] == pytest.approx(0.08)
+    assert explore['initial_scan_angular_speed_radps'] == pytest.approx(0.10)
     overlay = _params('src/robot_navigation/config/nav2_params_self_healing.yaml')
     assert overlay['/planner_server'] == {'GridBased.allow_unknown': True}
-    assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.25]
+    assert overlay['/controller_server'] == {'FollowPath.desired_linear_vel': 0.135,
+                                             'FollowPath.rotate_to_heading_angular_vel': 0.25}
+    assert overlay['/velocity_smoother']['max_velocity'] == [0.162, 0.0, 0.3125]
+    assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.3125]
     assert overlay['/behavior_server']['simulate_ahead_time'] == pytest.approx(2.0)
     vl53 = {'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
             'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02,

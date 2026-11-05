@@ -81,6 +81,9 @@ explore_node:
     # Hindernisse liegen (Unbekanntes blockiert nicht). Drehrate und Zeit
     # kommen aus initial_scan_speed / initial_scan_timeout.
     self_healing_look_around_rad: 1.5708
+    # Drehrate des Umsehens (Basis 0.08 rad/s): +25 % mit dem Tempo
+    # (Entscheidung Projektinhaber 05.11.2026).
+    initial_scan_angular_speed_radps: 0.10
     self_healing_rotation_radius_m: 0.45
 
     # H4 Rueckfahrt entlang der eigenen Spur (Freigabe Projektinhaber
@@ -99,9 +102,10 @@ explore_node:
 
     # Entscheidung Projektinhaber 15.10.2026: solange der Korridor vor dem
     # Roboter (1,0 m lang, 0,5 m breit) zu mehr als 2 % nicht kartiert ist,
-    # faehrt RPP absolut 0,06 m/s (nav2 speed_limit). Fehlen Karte/Pose,
+    # faehrt RPP absolut langsamer (nav2 speed_limit; 0,06 m/s bis 05.11.2026,
+    # seitdem 0,08 m/s mit dem hoeheren Tempo). Fehlen Karte/Pose,
     # bleibt die Begrenzung aktiv; am Missionsende wird sie freigegeben.
-    self_healing_unknown_speed_mps: 0.06
+    self_healing_unknown_speed_mps: 0.08   # 0.06 bis 05.11.2026; +33 %, Obergrenze des Parameters
     self_healing_unknown_lookahead_m: 1.0
     self_healing_unknown_half_width_m: 0.25
     self_healing_unknown_fraction: 0.02
