@@ -1,14 +1,15 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 05.11.2026:** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1 am
-Jetson abgenommen, **SH-6 bestätigt** (Regel „kein Fortschritt → zurück“
-`e8f00f6`: drei Laborfahrten ohne Hilferuf und ohne Berührung, 8–10 Ziele je
-Fahrt; direkter Nutzen der Regel nicht belegt). OAK-D nicht zur
-Hinderniserkennung (Entscheidung 04.11.). **Aktiver Jetson-Auftrag: SH-7**
-(Laborraum plus Nachbarraum durch eine offene Tür ≥ 75 cm ohne Schwelle,
-Gesamtbudget 40 min, `c444bca`). Danach Stufe 3 (Wohnung). Details im
-obersten Abschnitt 05.11.2026.
+**Aktueller Stand 05.11.2026 (mittags):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). SH-6 bestätigt; dieser Stand ist als
+**Prototyp 1 eingefroren** (`src/` `e8f00f6`, Release
+`selbstheilung-sh6-20261104_2140`). Darauf nur Einstellungen: Budget 40 min
+(`c444bca`) und Tempo vorwärts +35 %, Drehen +25 % (`adbb39f`, Simulation
+3/3 ohne neue Berührung, schneller und mit mehr Abdeckung). Räume und Türen
+bekommen in der Erkundung keine IDs; Räume zeichnet der Projektinhaber nach
+der Erkundung in der App. **Aktiver Jetson-Auftrag: SH-7** (Laborraum plus
+Nachbarraum durch eine offene Tür ≥ 75 cm ohne Schwelle). Danach Stufe 3
+(Wohnung). Details im obersten Abschnitt 05.11.2026 (mittags).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -27,6 +28,63 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 05.11.2026 (mittags) – Prototyp 1 eingefroren, Tempo erhöht, SH-7 angepasst
+
+**Entscheidungen des Projektinhabers (05.11.2026)** nach eigener Beobachtung
+von SH-6 (eigens aufgestellte Papierkörbe umfahren, Raum gut abgescannt):
+1. **Prototyp 1 eingefroren:** `src/`-Stand `e8f00f6`, am Jetson Release
+   `selbstheilung-sh6-20261104_2140`, unverändert als Referenz und Rückfall.
+   Die holprigen Rückfahrten (SH-6, Punkt 2) bleiben bewusst so.
+2. **Tempo:** vorwärts +35 %, Drehen +25 %, weil die Fahrten am Zeitbudget
+   endeten. Umgesetzt in `adbb39f`, nur im Selbstheilungsprofil: Regler
+   0,10 → 0,135 m/s und 0,20 → 0,25 rad/s, Obergrenzen 0,12 → 0,162 m/s und
+   0,25 → 0,3125 rad/s, vor Unbekanntem 0,06 → 0,08 m/s (+33 %, Obergrenze des
+   Parameters), Umsehen 0,08 → 0,10 rad/s. Unverändert: Kollisionsmonitor
+   (Approach 2 s, Langsam-Zone 30 %), Motorrampen (Bremsen 400 ms),
+   base_hardware-Grenzen 0,30 m/s / 0,80 rad/s, Rückfahrt 0,05 m/s.
+   Abschätzung: Bremsweg aus 0,162 m/s etwa 3 cm; vor Hindernissen, die die
+   VL53 bis etwa 0,5 m sehen, drosselt die Langsam-Zone ohnehin auf 30 %
+   (≈ 0,05 m/s); der Approach-Horizont reicht bei voller Fahrt 0,32 m weit.
+   Fällt ein VL53 aus, sperrt das Fahrtor nach 0,8 s; bis dahin fährt er
+   höchstens etwa 0,13 m (bisher 0,10 m).
+3. **Fokus Nachbarraum** (SH-7), danach Wohnung.
+4. **Räume und Türen bekommen in der Erkundung keine IDs.** Nach der
+   Erkundung grenzt der Projektinhaber Räume in der App ab und benennt sie
+   (vorhanden: `semantic_map_manager`, an die gespeicherte Karte gebunden,
+   App-Raumeditor); Raumziele später über `go_to_room` (real nur per Opt-in,
+   mit Lokalisierung auf der gespeicherten Karte). Die automatische
+   Tür-/Regionserkennung aus AP-06 bleibt eingefroren. Ob die Kette
+   Erkundungskarte → Speichern → Räume zeichnen → Raumziel mit Karten aus dem
+   Selbstheilungsbetrieb durchgängig funktioniert, ist nicht geprüft; eigener
+   Schritt nach SH-7.
+
+**Simulation des Tempos** (Werkzeug wie bisher, Referenzwohnung mit zwei
+Räumen, 15-min-Budget der Simulation; Vergleich mit der Regel-Regression vom
+04.11. ohne Tempoänderung):
+
+| Lauf | Tempo | Ende | Dauer | Ziele | Abdeckung | Kartenfehler | engster Abstand |
+|---|---|---|---|---|---|---|---|
+| Referenz | alt | vollständig | 492 s | 5 | 0,974 | 0,039 m | 0 (2-cm-Annäherung an der Insel beim Drehen) |
+| Tür 0,68 m | alt | Teilkarte, Budget | 899 s | 5 | 0,906 | 0,063 m | 0 |
+| Referenz | alt | Teilkarte, Budget | 899 s | 5 | 0,908 | 0,027 m | 0 |
+| Referenz | **neu** | vollständig | 464 s | 5 | 0,967 | 0,061 m | 0 (dieselbe Stelle, Drehung mit 0,02 rad/s) |
+| Tür 0,68 m | **neu** | Teilkarte, Rest unerreichbar | 456 s | 11 | 0,969 | 0,066 m | 1,4 cm |
+| Referenz | **neu** | vollständig | 359 s | 7 | 0,978 | 0,046 m | 0,7 cm |
+
+Neu: zwei von drei Läufen bestehen alle Simulationskriterien (alt: keiner),
+alle drei durch die Tür in den zweiten Raum, kürzer und mit mehr Abdeckung.
+Die eine 2-cm-Annäherung liegt an derselben Stelle wie vorher und beim
+langsamen Drehen, nicht beim schnelleren Fahren. Grenzen: drei Läufe, die
+Simulation kennt weder Motorrampe noch reale Bremswege noch VL53-Aussetzer;
+den Nachweis liefert SH-7.
+
+**SH-7 angepasst** ([Auftrag](AGENTENAUFTRAG.md)): Istbasis `adbb39f`, Build-
+und Vorprüfzeilen für die Tempowerte, Frage 8 zum Tempo (Beobachtung, kein
+Kriterium; „zu spät gebremst“ bleibt Abbruchgrund). Kriterien unverändert.
+Rückfall: `SH_REL` auf `selbstheilung-sh6-20261104_2140` (Prototyp 1).
+
+**Nächster Schritt:** SH-7-Bericht auswerten.
 
 ## 05.11.2026 – SH-6: Regel bestätigt, SH-7 aktiviert
 
