@@ -23,6 +23,12 @@ explore_node:
     coverage_enabled: false
     return_to_start: false
 
+    # Gesamtbudget je Mission (Basis 1200 s). Entscheidung Projektinhaber
+    # 04.11.2026 fuer SH-7 (Laborraum plus Nachbarraum durch eine offene Tuer):
+    # 40 min. In SH-3/SH-5/SH-6 endeten 7 von 9 Fahrten im EINEN Laborraum am
+    # 20-min-Budget. Rueckfall: Zeile entfernen (dann wieder 1200 s).
+    overall_timeout_s: 2400.0
+
     # Warten im Stillstand auf frische Quellen (Not-Aus-Status, VL53, LiDAR,
     # Odometrie, Lokalisierung, Karte). Danach "Hilfe benoetigt", kein Abbruch
     # mit Datenverlust. Ein AKTIVER Not-Aus und Aktorfehler enden sofort.
