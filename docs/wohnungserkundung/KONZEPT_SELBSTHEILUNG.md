@@ -358,6 +358,12 @@ direkter Nutzen ist aber nicht belegt (dreimal ausgelöst, danach scheiterte
 dasselbe Ziel jedes Mal erneut). Nächster Schritt ohne neues Raumkonzept:
 SH-7 mit zwei Räumen und einer offenen Tür, Gesamtbudget 40 min (`c444bca`).
 
+**Prototyp 1 eingefroren (05.11.2026, Projektinhaber):** `src/`-Stand
+`e8f00f6`, Release `selbstheilung-sh6-20261104_2140`. Darauf nur
+Einstellungen: Budget 40 min und Tempo vorwärts +35 %, Drehen +25 %
+(`adbb39f`). Räume und Türen erhält die Erkundung keine IDs; Räume werden nach
+der Erkundung in der App gezeichnet und benannt (`semantic_map_manager`).
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

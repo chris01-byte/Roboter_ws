@@ -1420,6 +1420,24 @@ nicht, welche Änderung gewirkt hat; die Wirkung einer Regel steht in den
 Ereignissen danach, nicht in der Endbilanz. Für zwei Räume (SH-7) gilt im
 Selbstheilungsprofil ein Gesamtbudget von 40 min (`c444bca`, Entscheidung
 des Projektinhabers 04.11.2026).
+
+**Nachtrag 05.11.2026 (mittags) – Entscheidungen des Projektinhabers nach
+eigener Beobachtung von SH-6:** (1) Das Verhalten passt (Ausweichen vor
+eigens aufgestellten Papierkörben, Raum gut abgescannt): **Prototyp 1 ist
+eingefroren** = `src/`-Stand `e8f00f6` (SH-3 plus SL-1 plus Regel), am Jetson
+Release `selbstheilung-sh6-20261104_2140`, unverändert als Referenz und
+Rückfall. (2) Tempo: vorwärts +35 %, Drehen +25 % (`adbb39f`, nur
+Selbstheilungsprofil; Kollisionsmonitor, Rampen und Antriebsgrenzen
+unverändert), weil die Fahrten am Zeitbudget endeten. (3) Fokus jetzt auf dem
+Nachbarraum (SH-7), danach Wohnung. (4) **Räume und Türen bekommen in der
+Erkundung keine IDs.** Nach der Erkundung grenzt der Projektinhaber Räume in
+der App ab und benennt sie (vorhanden: `semantic_map_manager`, an die
+gespeicherte Karte gebunden); Raumziele fährt der Roboter später über
+`go_to_room` an (real nur per Opt-in und mit Lokalisierung auf der
+gespeicherten Karte). Die automatische Tür-/Regionserkennung aus AP-06
+bleibt eingefroren. Ob die Kette Erkundungskarte → Speichern → Räume zeichnen
+→ Raumziel mit Karten aus dem Selbstheilungsbetrieb durchgängig funktioniert,
+ist noch nicht geprüft; eigener Schritt nach SH-7.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

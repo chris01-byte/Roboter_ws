@@ -2,12 +2,20 @@
 
 **Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 05.11.2026.
 Grundlage ist der in SH-6 bestätigte Stand (SH-3-Software, SLAM-Korrektur
-SL-1, Regel „kein Fortschritt → zurück“ `e8f00f6`). Neu ist genau eine
-Software-Änderung, nur im Selbstheilungsbetrieb:
+SL-1, Regel „kein Fortschritt → zurück“ `e8f00f6`); dieser Stand ist als
+**Prototyp 1 eingefroren** (Release `selbstheilung-sh6-20261104_2140`, bleibt
+unverändert). Neu sind zwei Einstellungen, nur im Selbstheilungsbetrieb:
 
 - **`c444bca`, Entscheidung des Projektinhabers 04.11.2026:** Gesamtbudget je
-  Mission **40 statt 20 Minuten**. Geschwindigkeiten, Heilungsleiter und
-  Hilfe-Grenzen bleiben unverändert.
+  Mission **40 statt 20 Minuten**.
+- **`adbb39f`, Entscheidung des Projektinhabers 05.11.2026:** **vorwärts
+  35 % schneller, Drehen 25 % schneller** (Regler 0,10 → 0,135 m/s und
+  0,20 → 0,25 rad/s, Obergrenzen 0,12 → 0,162 m/s und 0,25 → 0,3125 rad/s,
+  vor Unbekanntem 0,06 → 0,08 m/s, Umsehen 0,08 → 0,10 rad/s).
+  Kollisionsmonitor, Motorrampen, Antriebsgrenzen und Rückfahrt (0,05 m/s)
+  bleiben unverändert.
+
+Heilungsleiter und Hilfe-Grenzen bleiben unverändert.
 
 Neu ist vor allem der **Aufbau**: Laborraum und ein Nachbarraum, verbunden
 durch **genau eine offene Tür ohne Schwelle, lichte Breite mindestens
@@ -32,7 +40,7 @@ Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 04.11.2026 |
 | WE-Bezug | WE-M3, metrischer Kern im Zwei-Raum-Umfang; Vorstufe zu WE-M4 (Drei-Bereich-Rundweg), keine Abnahme von WE-M4; Vorbedingung Stufe 3 (Wohnung) |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `c444bca`; neuer Release `selbstheilung-sh7-<STAMP>`. SH-6 lief mit `selbstheilung-sh6-20261104_2140` |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `adbb39f`; neuer Release `selbstheilung-sh7-<STAMP>`. SH-6 lief mit `selbstheilung-sh6-20261104_2140` |
 | Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh7.md`: Build, 172 gezielte Tests, drei Fahrten durch zwei Räume, Kriterien C1–C5, G1, R1 und R2 |
 | Nicht-Ziele | keine eigene Code- oder Parameteränderung, kein dritter Raum, keine Wohnungsfahrt, keine Tür mit Schwelle, kein Arm |
 | Rückfall | in der Umgebungsdatei `SH_REL` auf `…/selbstheilung-sh6-20261104_2140` zurückstellen; alle Releases bleiben |
@@ -56,9 +64,10 @@ Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 
 - **Er kennt keine Räume.** Er wählt jeweils die günstigste Lücke in der Karte
   (nah und groß); die offene Tür ist eine davon.
-- **Vorwärts:** höchstens 0,12 m/s; 0,06 m/s, solange vor ihm nicht kartiert ist
-  (also auch beim ersten Durchfahren der Tür).
-- **Drehen:** höchstens 0,25 rad/s.
+- **Vorwärts (neu):** Regler 0,135 m/s, höchstens 0,162 m/s; 0,08 m/s,
+  solange vor ihm nicht kartiert ist (also auch beim ersten Durchfahren der
+  Tür).
+- **Drehen (neu):** Regler 0,25 rad/s, höchstens 0,3125 rad/s.
 - **Rückwärts:** nur entlang der eigenen Spur, höchstens 0,4 m, 0,05 m/s.
 - Er wählt seine Ziele selbst (Frontiers) und heilt Fehlschläge selbst:
   1. erneut versuchen;
@@ -93,7 +102,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor c444bca HEAD && echo "c444bca enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor adbb39f HEAD && echo "adbb39f enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh7-$STAMP/pruefung
 ```
 
@@ -141,10 +150,15 @@ Dass die DR-1-Änderungen wirklich zurückgenommen sind:
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env && \
   grep -cE "max_allowed_time_to_collision_up_to_carrot|xy_goal_tolerance" "$SH_REL/product-install/robot_navigation/share/robot_navigation/config/nav2_params_self_healing.yaml"; \
-  grep -nE "self_healing_goal_shift_max_m|self_healing_track_lateral_tolerance_m|self_healing_blocked_track_backs|self_healing_stuck_move_m|overall_timeout_s" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"
+  grep -nE "desired_linear_vel|rotate_to_heading_angular_vel|max_velocity|min_velocity" "$SH_REL/product-install/robot_navigation/share/robot_navigation/config/nav2_params_self_healing.yaml"; \
+  grep -nE "self_healing_goal_shift_max_m|self_healing_track_lateral_tolerance_m|self_healing_blocked_track_backs|self_healing_stuck_move_m|overall_timeout_s|self_healing_unknown_speed_mps|initial_scan_angular_speed_radps" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"
 ```
 
-Erwartet: Zähler `0`; `self_healing_goal_shift_max_m: 0.5`,
+Erwartet: Zähler `0`; Tempo `desired_linear_vel: 0.135`,
+`rotate_to_heading_angular_vel: 0.25`, `max_velocity: [0.162, 0.0, 0.3125]`,
+`min_velocity: [-0.05, 0.0, -0.3125]`; im Explorer-Profil
+`self_healing_unknown_speed_mps: 0.08`, `initial_scan_angular_speed_radps: 0.10`,
+`self_healing_goal_shift_max_m: 0.5`,
 `self_healing_track_lateral_tolerance_m: 0.03`,
 `self_healing_stuck_move_m: 0.05` und **neu** `overall_timeout_s: 2400.0`;
 **keine** Zeile `self_healing_blocked_track_backs`.
@@ -167,7 +181,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `172 passed` (Cloud, Stand `c444bca`). Bei Fehlschlägen nicht fahren,
+Erwartung: `172 passed` (Cloud, Stand `adbb39f`). Bei Fehlschlägen nicht fahren,
 berichten.
 
 ### Aufbau (Christopher)
@@ -260,8 +274,12 @@ source ~/roboter_worktrees/selbstheilung-v2.env && RUN=1 && \
 
 Erwartet: Exit 0, Bereiche A–C wie in SH-3, aber `B SLAM-Overlay` mit
 **sechs** Zeilen: zusätzlich `minimum_travel_distance` 0.25 und
-`minimum_travel_heading` 0.35. **Keine** `B Nav2-Overlay`-Zeile zu
-`/controller_server` (die DR-1-Werte sind zurückgenommen). In D
+`minimum_travel_heading` 0.35. **Neu** genau zwei `B Nav2-Overlay`-Zeilen zu
+`/controller_server`: `FollowPath.desired_linear_vel` 0.135 und
+`FollowPath.rotate_to_heading_angular_vel` 0.25; zu `/velocity_smoother`
+`max_velocity` [0.162, 0.0, 0.3125] und `min_velocity` [-0.05, 0.0, -0.3125];
+in A `self_healing_unknown_speed_mps` 0.08 und
+`initial_scan_angular_speed_radps` 0.10. In D
 `base_hardware scharf (aktiver Auftrag)` mit `dry_run=False, allow_rs485=True`
 und `/cmd_vel 3 s ohne Fahrbefehl`. **Neu, Bereich „D Quellen“:** `Encoder
 liefern frisch`, `Encoder-Zeitwache bereit` und `HWT-Fusion Quellen bereit`
@@ -353,6 +371,8 @@ Christopher dann einmal fragen und die Antworten wörtlich festhalten:
 7. Nur wenn die Fahrt mit „Hilfe benötigt“ endete: Wo stand er (welcher
    Raum, in der Tür?), was stand daneben, und hätte er nach deiner
    Einschätzung ausweichen können, wohin?
+8. Zum neuen Tempo: Hat er vor Hindernissen rechtzeitig und ruhig
+   gebremst, und wirkte das Tempo passend (zu langsam, passend, zu schnell)?
 
 Ist die App nicht verfügbar, die gespeicherte Karte (`karte.pgm`) als Bild
 zeigen, wie in SH-3.
@@ -399,6 +419,10 @@ bisher). Neu sind R1 und R2. Je Fahrt:
 | G1 | kein Ende mit „Hilfe benötigt“ an einer Stelle, an der Christopher Platz zum Ausweichen sieht | Christophers Antwort 7 |
 | R1 | Amadeus fährt selbstständig durch die offene Tür in den Nachbarraum | Christophers Antwort 5 |
 | R2 | Der Nachbarraum ist in der Karte ganz oder größtenteils zu erkennen | Christophers Antwort 6 |
+
+Christophers Antwort 8 zum Tempo ist eine Beobachtung, kein Kriterium; ein
+„zu spät gebremst“ ist dagegen ein Abbruchgrund (Fahrt auf ein Hindernis
+ohne Abbremsen).
 
 Der Raumwechsel ist bestätigt, wenn alle drei Fahrten C1–C5, G1, R1 und R2
 erfüllen. Fahrzeit, Ende („vollständig“ oder „Teilkarte“) und Zahl der
