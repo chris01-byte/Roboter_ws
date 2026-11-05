@@ -1411,6 +1411,15 @@ zuerst die freigegebene Spur-Rückfahrt, dann dasselbe Ziel (`e8f00f6`).
 Raum, SH-7 zwei Räume durch eine offene Tür (≥ 75 cm, ohne Schwelle),
 dann Wohnung. Lehre aus SH-5N: Der Kollisionsmonitor bremste richtig; was
 fehlte, war ein Schritt, der den Roboter von der Stelle wegbewegt.
+
+**Nachtrag 05.11.2026 – SH-6 bestätigt, SH-7:** Drei Laborfahrten mit der
+Regel ohne Hilferuf und ohne Berührung, 8–10 Ziele je Fahrt (bisher bestes
+Ergebnis). Die Regel löste dreimal aus, half demselben Ziel aber nie; Amadeus
+kam über andere Ziele weiter. Lehre: Ein Kriterium „bestanden“ belegt noch
+nicht, welche Änderung gewirkt hat; die Wirkung einer Regel steht in den
+Ereignissen danach, nicht in der Endbilanz. Für zwei Räume (SH-7) gilt im
+Selbstheilungsprofil ein Gesamtbudget von 40 min (`c444bca`, Entscheidung
+des Projektinhabers 04.11.2026).
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

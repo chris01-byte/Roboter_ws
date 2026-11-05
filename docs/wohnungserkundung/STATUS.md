@@ -1,15 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 04.11.2026 (Nacht):** Hauptlinie `self_healing`
+**Aktueller Stand 05.11.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Abnahmestufe 1 bestanden (SH-3), SL-1 am
-Jetson abgenommen. Produkt: SH-3-Software plus SL-1 plus Regel „kein
-Fortschritt im Anlauf → zuerst auf der eigenen Spur zurück“ (`e8f00f6`).
-Simulation der Regel: unauffällig in der Regression, den Mülleimer-Fall
-bildet sie nicht nach (Grenzen im obersten Abschnitt). OAK-D nicht zur
-Hinderniserkennung (Entscheidung 04.11.). **Aktiver Jetson-Auftrag: SH-6**
-(Regel im selben Laborraum wie SH-5, drei Fahrten). Danach SH-7 (zwei Räume
-durch eine offene Tür), dann Stufe 3. Details im obersten Abschnitt
-04.11.2026 (Nacht).
+Jetson abgenommen, **SH-6 bestätigt** (Regel „kein Fortschritt → zurück“
+`e8f00f6`: drei Laborfahrten ohne Hilferuf und ohne Berührung, 8–10 Ziele je
+Fahrt; direkter Nutzen der Regel nicht belegt). OAK-D nicht zur
+Hinderniserkennung (Entscheidung 04.11.). **Aktiver Jetson-Auftrag: SH-7**
+(Laborraum plus Nachbarraum durch eine offene Tür ≥ 75 cm ohne Schwelle,
+Gesamtbudget 40 min, `c444bca`). Danach Stufe 3 (Wohnung). Details im
+obersten Abschnitt 05.11.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +27,72 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 05.11.2026 – SH-6: Regel bestätigt, SH-7 aktiviert
+
+Lokaler Agent, Fahrt 1 am 04.11. 21:48–22:08, Fahrt 2 und 3 am 05.11.
+09:36–10:21 (dazwischen Akku leer), LAB-1 aktiv, Release
+`selbstheilung-sh6-20261104_2140` (Build 167 s, 14/14 Präfixe, 172 Tests
+grün, HEAD `7aa7444`). Vorprüfung je Fahrt Exit 0, 47× OK; „D Quellen“ fing
+den ersten Start am Morgen ab (Encoder 87 s alt, Zeitwache `fault_latched`,
+HWT-Fusion nicht bereit; keine Mission, keine Bewegung), nach geordnetem
+Neustart alles OK. Ursache nicht geprüft, Bild wie in SH-5
+(Motor-Stop-Schalter). Missionsstart per Ersatzbefehl (App nicht verfügbar).
+
+| Fahrt | Dauer | Ziele | Heilungen | Spur-Rückfahrten | Ende | Strecke | SLAM letzte min | verworfene Scans | Kontakt / Eingriff |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1199 s | 8 | 5 | 1 | Teilkarte, 20-min-Budget | 8,0 m | 14,6 % | 10 | nein / nein |
+| 2 | 1199 s | 10 | 5 | 0 | Teilkarte, 20-min-Budget | 6,8 m | 11,5 % | 7 | nein / nein |
+| 3 | 1200 s | 10 | 9 (1× Umsehen) | 2 | Teilkarte, 20-min-Budget | 6,4 m | 10,4 % | 8 | nein / nein |
+
+„extrapolation into the future“ 0. Christopher: nichts berührt, kein
+Eingriff, Karten und Drehstellen „sauber“. **Ergebnis nach den vorab
+festgelegten Kriterien: bestätigt** (C1–C5 und G1 in allen drei Fahrten;
+C3 in Fahrt 1 genau auf der Grenze von 10). Bisher bestes Ergebnis im
+Laborraum: 28 Ziele in drei Fahrten (SH-5: 14, SH-3: 17), kein Hilferuf.
+
+**Kritisch, was die Daten über die Regel sagen:**
+1. **Ausgelöst 3× (1/0/2), jedes Mal nach einem Anlauf von 6–7 s**, den Nav2
+   mit „Goal failed“ beendete (`nav_aborted`, weniger als 5 cm bewegt). Danach
+   scheiterte **dasselbe Ziel in allen drei Fällen erneut** nach etwa 7 s und
+   wurde zurückgestellt; Amadeus kam über andere Ziele weiter (Fahrt 3:
+   danach 4 bzw. 2 weitere Ziele), so wie die Leiter es auch vorher getan
+   hätte. Christopher sah die Rückfahrt in Fahrt 1 und „keine
+   Grund/Hindernis“. Ob Amadeus in die SH-5-Lage vor den Mülleimern kam, ist
+   nicht belegt. Die Regel schadet nicht; dass sie die Ursache für das Fehlen
+   von Hilferufen ist, ist nicht gezeigt.
+2. **Zwei der drei Rückfahrten liefen in die Zeitgrenze:** Der
+   Kollisionsmonitor drosselte sie in seiner Langsam-Zone auf 30 %
+   (0,007–0,015 m/s an der Basis); der Explorer gibt `Strecke / 0,05 m/s +
+   10 s` (0,24 m → 14 s), das reicht bei 30 % für etwa 0,2 m. Bewusst nicht
+   geändert: In Fahrt 1 lief die Rückfahrt vollständig und half demselben
+   Ziel ebenso wenig; eine Änderung zur Zeit.
+3. Alle drei Fahrten endeten am 20-min-Budget (wie 4 von 6 in SH-3/SH-5).
+   Für zwei Räume ist das zu knapp, siehe SH-7.
+4. Mission-Manager meldet am Ende `failed`, obwohl der Explorer
+   `usable_partial` liefert (wie in SH-5). Für die App (WE-M7) offen, für
+   SH-7 ohne Wirkung.
+5. VL53-Aussetzer bis 11,7 s (bekannt, Ursache offen); der Explorer machte
+   jedes Mal selbst weiter.
+6. `ros2 topic echo --once` kürzt lange Zeichenketten; der Agent sicherte den
+   Status zusätzlich mit `--full-length`. In SH-7 gleich so.
+
+**SH-7 aktiviert** ([Auftrag](AGENTENAUFTRAG.md), Entscheidungen des
+Projektinhabers 04.11.2026): Laborraum plus Nachbarraum durch **genau eine
+offene Tür ohne Schwelle, lichte Breite ≥ 75 cm**, Türblatt gesichert, alle
+übrigen Türen beider Räume zu; Start im Laborraum mindestens 1 m von der Tür.
+Einzige Software-Änderung: Gesamtbudget 40 min im Selbstheilungsprofil
+(`c444bca`, 172 Tests). Drei Fahrten, Laden dazwischen erlaubt. Vorab
+festgelegte Kriterien je Fahrt: C1–C5 und G1 wie SH-6 (C1 einschließlich
+Türrahmen und Türblatt, C5 einschließlich Passung beider Räume an der Tür,
+C3 ≤ 20 und C4 ≤ 80 für die doppelte Zeit), neu **R1** selbstständige
+Durchfahrt in den Nachbarraum und **R2** Nachbarraum in der Karte ganz oder
+größtenteils erkennbar. Bestätigt, wenn alle drei Fahrten alle Kriterien
+erfüllen. Rückfall: `SH_REL` auf `selbstheilung-sh6-20261104_2140`. SH-6
+[archiviert](archive/20261105-sh6-ausgewertet/README.md).
+
+**Nächster Schritt:** SH-7-Bericht auswerten; mit bestätigtem Raumwechsel
+Stufe 3 (Wohnung), Umfang und Kriterien legt der Projektinhaber vorher fest.
 
 ## 04.11.2026 (Nacht) – Regel in der Simulation, SH-6 aktiviert
 
@@ -59,7 +124,7 @@ und G1 unverändert. Zusätzlich je Fahrt: Zahl, Zeitpunkt und Weite der
 Spur-Rückfahrten und ob Amadeus danach weiterkam. Rückfall: `SH_REL` auf
 `selbstheilung-sh5-20261104_1627`.
 
-**Nächster Schritt:** SH-6-Bericht auswerten; mit bestätigter Regel SH-7.
+**Nächster Schritt (erledigt 05.11.):** SH-6-Bericht auswerten; mit bestätigter Regel SH-7.
 
 ## 04.11.2026 (spät) – SH-5N ausgewertet, Regel „kein Fortschritt → zurück“, Weg zu mehreren Räumen
 

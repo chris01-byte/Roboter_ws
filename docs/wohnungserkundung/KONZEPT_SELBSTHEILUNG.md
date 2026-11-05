@@ -348,6 +348,16 @@ jede Raumsituation. Zeigt sich real ein Streifen beim Drehen, kommt die
 Absicherung an eine Stelle (Kollisionsmonitor), nicht in die Erkundung.
 Bestätigung mit SH-5.
 
+**Stand 05.11.2026 – SH-5, Regel, SH-6:** SH-5 endete einmal mit „Hilfe
+benötigt“ vor zwei Mülleimern an der Front; der Kollisionsmonitor bremste
+richtig, nichts bewegte Amadeus weg. Daraufhin eine allgemeine Regel
+(`e8f00f6`): kein Fortschritt im Anlauf (< 5 cm) → sofort die freigegebene
+Spur-Rückfahrt, dann dasselbe Ziel. SH-6 hat sie nach den Kriterien
+bestätigt (kein Hilferuf, keine Berührung, 8–10 Ziele je Fahrt); ihr
+direkter Nutzen ist aber nicht belegt (dreimal ausgelöst, danach scheiterte
+dasselbe Ziel jedes Mal erneut). Nächster Schritt ohne neues Raumkonzept:
+SH-7 mit zwei Räumen und einer offenen Tür, Gesamtbudget 40 min (`c444bca`).
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:
