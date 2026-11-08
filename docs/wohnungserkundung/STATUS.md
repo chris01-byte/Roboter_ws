@@ -6,8 +6,9 @@ Release `selbstheilung-sh6-20261104_2140`), darauf Budget 40 min und Tempo
 +35 %/+25 %. **SH-7 nicht bestätigt:** Durch die Tür kam Amadeus in zwei von
 drei Fahrten, ohne Berührung; aber alle drei Fahrten endeten mit „Hilfe
 benötigt“ an Stellen mit Ausweg (Flur vor einer Garderobe, ohne erkennbaren
-Grund, Ecke), und im Flur fehlte zweimal eine Wand in der Karte. Kein aktiver
-Jetson-Auftrag; nächster Schritt nach Entscheidung des Projektinhabers.
+Grund, Ecke), und im Flur fehlte zweimal eine Wand in der Karte (laut
+Christopher eine Tür oder ein Durchgang). **Aktiver Jetson-Auftrag: SH-7N**
+(nur lesend, Daten zu den Hilfe-Stellen; Entscheidung „erst Daten“).
 Details im obersten Abschnitt 08.11.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
@@ -98,7 +99,27 @@ Ahead“, Kartenbild), oder direkt einen Befreiungsschritt für Engstellen
 einbauen. SH-7 [archiviert](archive/20261108-sh7-ausgewertet/README.md); kein
 aktiver Jetson-Auftrag. Rohdaten `$SH_PR/sh7_run1…3` bleiben lokal erhalten.
 
-**Nächster Schritt:** Entscheidung des Projektinhabers zum weiteren Vorgehen.
+**Entscheidung des Projektinhabers (08.11.2026): erst Daten prüfen**, dann
+ein gezielter Befreiungsschritt. Zur fehlenden Flurwand: Dort ist laut
+Christopher eine Tür oder ein Durchgang (Einzelheiten fragt SH-7N).
+
+**Arbeitshypothese für SH-7N (aus den Endposen im SH-7-Bericht gerechnet,
+noch nicht geprüft):** Die Odometrie wich am Ende der Fahrten um 0,35 / 0,33 /
+0,29 m und −2,1 / −6,4 / −5,7° von der SLAM-Karte ab (`map→odom`). Die lokale
+Kostenkarte liegt im `odom`-Rahmen; dort markiert der LiDAR, räumt aber nie
+(X9, in der Simulation mit idealer Odometrie entschieden), räumen können nur
+die VL53 vorn zwischen 0,45 und 0,7 m. Eine Drehabweichung von 6° verschiebt
+eine Wand in 3 m Abstand um etwa 0,3 m. Wände aus früheren Fahrminuten
+könnten so verschoben liegen bleiben, Durchgänge und Türen in der lokalen
+Karte schmaler machen und Regler („collision ahead“) und Rückfahrt
+(„Collision Ahead“) blockieren, während die globale Planung frei sieht. Das
+passt zu den belegten Zellen an der Kontur in Fahrt 1 und zu den
+Abbrüchen vor der Tür in Fahrt 3, ist aber nicht belegt. SH-7N vergleicht
+deshalb die belegten Zellen der lokalen Karte an jeder Hilfe-Stelle mit der
+SLAM-Karte und liest die Abbruchgründe aus.
+
+**Nächster Schritt:** SH-7N ausführen ([Auftrag](AGENTENAUFTRAG.md)), dann
+Auswertung und gezielter Befreiungsschritt.
 
 ## 05.11.2026 (mittags) – Prototyp 1 eingefroren, Tempo erhöht, SH-7 angepasst
 
