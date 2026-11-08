@@ -1,15 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 08.11.2026:** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Prototyp 1 eingefroren (`src/` `e8f00f6`,
-Release `selbstheilung-sh6-20261104_2140`), darauf Budget 40 min und Tempo
-+35 %/+25 %. **SH-7 nicht bestätigt:** Durch die Tür kam Amadeus in zwei von
-drei Fahrten, ohne Berührung; aber alle drei Fahrten endeten mit „Hilfe
-benötigt“ an Stellen mit Ausweg (Flur vor einer Garderobe, ohne erkennbaren
-Grund, Ecke), und im Flur fehlte zweimal eine Wand in der Karte (laut
-Christopher eine Tür oder ein Durchgang). **Aktiver Jetson-Auftrag: SH-7N**
-(nur lesend, Daten zu den Hilfe-Stellen; Entscheidung „erst Daten“).
-Details im obersten Abschnitt 08.11.2026.
+**Aktueller Stand 08.11.2026 (abends):** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Prototyp 1 eingefroren (`src/` `e8f00f6`),
+darauf Budget 40 min und Tempo +35 %/+25 %. SH-7 (zwei Räume) nicht
+bestätigt; SH-7N hat den Grund gefunden: Amadeus fährt bis auf wenige
+Zentimeter an echte Hindernisse heran, und von dort verweigert Nav2 jede
+Bewegung, auch rückwärts in freien Raum. Verschobene LiDAR-Reste in der
+lokalen Karte gibt es zusätzlich. Kein aktiver Jetson-Auftrag; nächster
+Schritt nach Entscheidung des Projektinhabers. Details im obersten Abschnitt
+08.11.2026 (SH-7N).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +27,67 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 08.11.2026 (abends) – SH-7N ausgewertet: Warum Amadeus an engen Stellen festsitzt
+
+Lokaler Agent, nur lesend aus `sh7_run1…3` (Bericht beim Projektinhaber).
+Christopher: Die fehlende Flurwand ist eine **geschlossene Holztür**; an der
+Garderobe waren neben den Jacken noch 80 cm frei; an den Hilfe-Stellen von
+Fahrt 2 und 3 lag nichts Niedriges.
+
+**1. Odometrie-Abweichung bestätigt:** `map→odom` am Ende −0,38/+0,16 m und
+−2,1° (Fahrt 1), −0,24/−0,02 m und −6,4° (Fahrt 2), −0,16/−0,02 m und −5,3°
+(Fahrt 3).
+
+**2. Verschobene LiDAR-Reste in der lokalen Karte bestätigt:** Von den
+tödlichen Zellen (Wert 100) im Umkreis von 1,5 m lagen in Fahrt 1 113 von 357
+und in Fahrt 3 178 von 325 dort, wo die SLAM-Karte frei ist, mehr als 0,10 m
+von jeder SLAM-Wand, typischerweise 0,24–0,28 m daneben, passend zur
+Abweichung. Fahrt 2: 0 von 72, aber die Karte stammt von einer anderen Stelle
+als die Abbrüche.
+
+**3. Festgesessen hat er aber an echten Hindernissen:**
+- Nav2 leert bei jedem Reglerfehler die lokale Karte (leichte Recovery im
+  Baum); die Abbrüche blieben trotzdem. Was ihn blockierte, wurde also jedes
+  Mal frisch und richtig wieder eingetragen.
+- An den Hilfe-Stellen lag die gepolsterte Kontur 1–5 cm an tödlichen Zellen,
+  die die SLAM-Karte bestätigt: Fahrt 1 vorn (x 0,35–0,45 m) und links
+  (y 0,27–0,30 m), Garderobe und Wand; Fahrt 3 vorn links (Ecke). Hinter dem
+  Roboter (0,11–0,6 m) lag in Fahrt 1 und 3 **keine** tödliche Zelle.
+- **Mechanismus:** Der Regler (RPP) und die Rückfahrt (BackUp) prüfen zuerst
+  die aktuelle Pose. Liegt die Kontur dort schon an einer belegten 5-cm-Zelle
+  an, verweigern beide jede Bewegung: RPP „detected collision ahead“
+  93× in 8,7 s, dreimal „Controller patience exceeded“; BackUp
+  „Collision Ahead“ 1 ms nach dem Start, obwohl hinten frei war. Die Leiter
+  hat dann nur noch Ziele, die alle nach 9 s scheitern, und nach 8
+  Fehlschlägen kommt die Hilfe.
+- Hinein kommt er, weil RPP so lange weiterfährt (bei 30 % Tempo kriechend),
+  bis die vorausberechnete Kontur anliegt, und weil die Wege dicht an
+  Hindernissen entlangführen.
+
+**4. Tür in Fahrt 3:** Alle Anläufe durch die Tür scheiterten am globalen
+Planer („failed to create plan“, auch nach dem Leeren der globalen Karte),
+nicht am Regler. In der Karte dieser Fahrt war die 80-cm-Tür für den Planer
+(Roboterradius 0,28 m) zu schmal; in Fahrt 1 und 2 ging es. Warum, ist nicht
+gemessen.
+
+**5. Geschlossene Holztür nicht gesehen:** Die SLAM-Karte ist bis zur Tür
+frei und dahinter unbekannt; an der Tür selbst steht keine Wand. Das ergibt
+eine falsche Lücke. In Fahrt 1 lagen die Ziele genau dort, und Amadeus
+zwängte sich neben die Jacken. Warum der LiDAR die Tür nicht einträgt, ist
+offen (der Scan wird nicht nach Intensität gefiltert).
+
+**Einordnung:** Die Ursache ist allgemein, nicht an einen Raum gebunden:
+dicht an Hindernissen entlangfahren, und aus einer anliegenden Lage gibt es
+mit Nav2 keinen Weg zurück. Die Spur-Rückfahrt auf gerader eigener Spur hilft
+dort nicht (Fahrt 3 hatte keine, in Fahrt 1 und 2 verweigerte Nav2 sie).
+
+**Offen zur Entscheidung des Projektinhabers:** wie Amadeus Abstand hält und
+aus einer anliegenden Lage wegkommt (Vorschläge im Chat vom 08.11.2026).
+SH-7N [archiviert](archive/20261108-sh7n-ausgewertet/README.md); kein aktiver
+Jetson-Auftrag.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers.
 
 ## 08.11.2026 – SH-7: Raumwechsel nicht bestätigt (Hilferufe an engen Stellen)
 
@@ -118,7 +178,7 @@ Abbrüchen vor der Tür in Fahrt 3, ist aber nicht belegt. SH-7N vergleicht
 deshalb die belegten Zellen der lokalen Karte an jeder Hilfe-Stelle mit der
 SLAM-Karte und liest die Abbruchgründe aus.
 
-**Nächster Schritt:** SH-7N ausführen ([Auftrag](AGENTENAUFTRAG.md)), dann
+**Nächster Schritt (erledigt 08.11. abends):** SH-7N ausführen, dann
 Auswertung und gezielter Befreiungsschritt.
 
 ## 05.11.2026 (mittags) – Prototyp 1 eingefroren, Tempo erhöht, SH-7 angepasst
