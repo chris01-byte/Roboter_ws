@@ -1,15 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 05.11.2026 (mittags):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). SH-6 bestätigt; dieser Stand ist als
-**Prototyp 1 eingefroren** (`src/` `e8f00f6`, Release
-`selbstheilung-sh6-20261104_2140`). Darauf nur Einstellungen: Budget 40 min
-(`c444bca`) und Tempo vorwärts +35 %, Drehen +25 % (`adbb39f`, Simulation
-3/3 ohne neue Berührung, schneller und mit mehr Abdeckung). Räume und Türen
-bekommen in der Erkundung keine IDs; Räume zeichnet der Projektinhaber nach
-der Erkundung in der App. **Aktiver Jetson-Auftrag: SH-7** (Laborraum plus
-Nachbarraum durch eine offene Tür ≥ 75 cm ohne Schwelle). Danach Stufe 3
-(Wohnung). Details im obersten Abschnitt 05.11.2026 (mittags).
+**Aktueller Stand 08.11.2026:** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Prototyp 1 eingefroren (`src/` `e8f00f6`,
+Release `selbstheilung-sh6-20261104_2140`), darauf Budget 40 min und Tempo
++35 %/+25 %. **SH-7 nicht bestätigt:** Durch die Tür kam Amadeus in zwei von
+drei Fahrten, ohne Berührung; aber alle drei Fahrten endeten mit „Hilfe
+benötigt“ an Stellen mit Ausweg (Flur vor einer Garderobe, ohne erkennbaren
+Grund, Ecke), und im Flur fehlte zweimal eine Wand in der Karte. Kein aktiver
+Jetson-Auftrag; nächster Schritt nach Entscheidung des Projektinhabers.
+Details im obersten Abschnitt 08.11.2026.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,6 +27,78 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## 08.11.2026 – SH-7: Raumwechsel nicht bestätigt (Hilferufe an engen Stellen)
+
+Lokaler Agent, Fahrten 16:37–19:46, LAB-1 aktiv, Release
+`selbstheilung-sh7-20261108_1617` (Build 174 s, 14/14 Präfixe, 172 Tests
+grün, HEAD `4c25fb3`). Vorprüfung je Fahrt Exit 0, 49× OK, Tempowerte live
+bestätigt; kein Start von „D Quellen“ abgefangen. Aufbau laut Christopher:
+Tür 80 cm ohne Schwelle, gesichert; Nachbarraum ein Flur von etwa 4 × 1,5 m
+mit einer Garderobe an der Wand; übrige Türen zu.
+
+| Fahrt | Dauer | Ziele | Heilungen | Rückfahrten | Tür | Ende | Strecke | SLAM letzte min | verworfene Scans |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 1523 s | 5 | 7 | 1 | einmal hinein | **Hilfe** im Flur vor der Garderobe | 5,3 m | 9,2 % | 7 |
+| 2 | 1849 s | 12 | 19 | 4 | hinein und zurück | **Hilfe** im Laborraum nahe der Tür | 14,2 m | 15,9 % | 12 |
+| 3 | 1915 s | 7 | 26 | 1 | nein | **Hilfe** in einer Ecke des Laborraums | 14,8 m | 20,4 % | **34** |
+
+Christopher: nichts berührt, kein Eingriff, beide Räume passen an der Tür
+aneinander; Fahrt 1 und 2 „im Flur fehlt deutlich eine Außenwand“, Fahrt 3
+Karte sauber, Flur „nur teilweise“. Tempo: rechtzeitig gebremst; „zu
+langsam“, „zu langsam“, „passend“. „extrapolation into the future“ 0/1/0.
+
+**Ergebnis nach den vorab festgelegten Kriterien: nicht bestätigt.** C1, C2,
+C4 in allen Fahrten erfüllt; C3 in Fahrt 3 nicht (34 > 20); C5 in Fahrt 1 und
+2 nicht (fehlende Flurwand); **G1 in keiner Fahrt**; R1 und R2 in Fahrt 1 und
+2 erfüllt, in Fahrt 3 nicht.
+
+**Was die Daten zeigen (belegt):**
+1. **Der Raumwechsel selbst funktioniert:** zwei von drei Fahrten durch die
+   80-cm-Tür, Fahrt 2 auch zurück, ohne Berührung, Karte an der Tür passend.
+2. **Alle drei Hilferufe kamen an Stellen, an denen die Leiter keinen Zug mehr
+   hatte, der Amadeus bewegt:**
+   - Fahrt 3 (Ecke): Die Spur-Rückfahrt gibt es nur auf gerader eigener Spur
+     (≤ 3 cm seitlich); nach dem Einfahren in die Ecke war keine da. Umsehen
+     braucht freien Drehkreis, auch der fehlte. Übrig blieben „erneut“ und
+     „zurückstellen“; 8 Anläufe scheiterten nach je 9 s, nach rund 2 min war
+     die Grenze „8 Fehlschläge in Folge“ erreicht. Christopher: Befreiung nur
+     rückwärts oder mit 180°-Drehung.
+   - Fahrt 2: 7 Anläufe zu vier Zielen scheiterten nach je 7–9 s, dann ein
+     150-s-Anlauf, dann Grenze 8 erreicht. Rundherum ≥ 0,71 m frei, Grund der
+     schnellen Abbrüche offen.
+   - Fahrt 1 (Flur): 15 min am selben Fleck; an der Basis kamen nur v = 0 und
+     |w| ≤ 0,04 rad/s an. Die lokale Kostenkarte war links ab 0,22 m, rechts
+     ab 0,25 m und vorn-links ab 0,26 m belegt, also an oder in der
+     Roboterkontur (halbe Breite 0,25 m plus 0,02 m Polster). Hilfe nach
+     600 s ohne Kartenzuwachs (abgeleitet). Ob das echte Hindernisse
+     (Garderobe, Mäntel) oder liegengebliebene Markierungen waren, ist offen
+     (der LiDAR markiert lokal, räumt aber nicht; Entscheidung X9).
+   - Die Grenze „8 Fehlschläge“ war für Anläufe von bis zu 150 s gedacht; bei
+     Abbrüchen nach 7–9 s ist sie in ein bis zwei Minuten erreicht.
+3. **Keine der 6 Rückfahrten lief vollständig:** 4 an der Zeitgrenze (wie in
+   SH-6, Langsam-Zone 30 %), 2 sofort mit „Collision Ahead“ des
+   Behavior-Servers, obwohl nach hinten laut Kostenkarte etwa 0,9 m frei
+   waren (Grund offen; Kandidat: Markierungen an der Kontur).
+4. **Fehlende Flurwand (Fahrt 1 und 2):** Ursache offen. Möglich: nie gesehen,
+   weil Amadeus im Flur festsaß; Glas/Spiegel; verdeckt durch die Garderobe.
+5. Tempo: kein zu spätes Bremsen. „detected collision ahead“ 946/762/917
+   (SH-6: 311/709/248); ob das am Tempo, am Flur oder an den Engstellen
+   liegt, ist nicht getrennt.
+
+**Einordnung:** Das ist die schon in DR-1 gemessene Grenze („In Engstellen
+unter etwa 0,9 m kann Amadeus nicht drehen; seine Selbstheilung braucht dort
+Rückfahrt“, DR-2 damals zurückgestellt), jetzt real im Flur und in einer
+Ecke. Eine Wohnung hat viele solche Stellen.
+
+**Offen zur Entscheidung des Projektinhabers:** zuerst nur lesend die drei
+Hilfe-Stellen und die fehlende Wand aus den vorhandenen Daten klären
+(Abbruchgründe von Nav2, Kostenkarten an der Kontur, Grund für „Collision
+Ahead“, Kartenbild), oder direkt einen Befreiungsschritt für Engstellen
+einbauen. SH-7 [archiviert](archive/20261108-sh7-ausgewertet/README.md); kein
+aktiver Jetson-Auftrag. Rohdaten `$SH_PR/sh7_run1…3` bleiben lokal erhalten.
+
+**Nächster Schritt:** Entscheidung des Projektinhabers zum weiteren Vorgehen.
 
 ## 05.11.2026 (mittags) – Prototyp 1 eingefroren, Tempo erhöht, SH-7 angepasst
 
@@ -84,7 +155,7 @@ und Vorprüfzeilen für die Tempowerte, Frage 8 zum Tempo (Beobachtung, kein
 Kriterium; „zu spät gebremst“ bleibt Abbruchgrund). Kriterien unverändert.
 Rückfall: `SH_REL` auf `selbstheilung-sh6-20261104_2140` (Prototyp 1).
 
-**Nächster Schritt:** SH-7-Bericht auswerten.
+**Nächster Schritt (erledigt 08.11.):** SH-7-Bericht auswerten.
 
 ## 05.11.2026 – SH-6: Regel bestätigt, SH-7 aktiviert
 

@@ -161,6 +161,17 @@ kein Kontakt, kein Eingriff, kein Not-Aus. Stack je Start geordnet beendet
 `$SH_PR/werkzeug/sh6_rueckfahrten.py`. `~/roboter_ws`, frühere Releases und
 Codex-Referenz unverändert, kein Autostart. Aktiver Auftrag danach: SH-7.
 
+Nachtrag 08.11.2026, tatsächliche Jetson-Wirkung SH-7: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh7-20261108_1617` (14 Pakete,
+HEAD `4c25fb3`, 172 Tests), `SH_REL` zeigt jetzt darauf; Prototyp 1
+`selbstheilung-sh6-20261104_2140` unverändert. Drei scharfe Starts mit
+`active_drive:=true` und Mission, Laborraum plus Flur durch eine offene Tür.
+Höchstens 0,135 m/s und 0,215 rad/s, Rückfahrten höchstens 0,05 m/s; kein
+Kontakt, kein Eingriff, kein Not-Aus. Stack je Start geordnet beendet (28/28
+sauber). Lokal neu: `$SH_PR/sh7_run1…3` (inklusive voller lokaler
+Kostenkarte an jeder Hilfe-Stelle). `~/roboter_ws`, frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

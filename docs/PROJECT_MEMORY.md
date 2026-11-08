@@ -1438,6 +1438,16 @@ gespeicherten Karte). Die automatische Tür-/Regionserkennung aus AP-06
 bleibt eingefroren. Ob die Kette Erkundungskarte → Speichern → Räume zeichnen
 → Raumziel mit Karten aus dem Selbstheilungsbetrieb durchgängig funktioniert,
 ist noch nicht geprüft; eigener Schritt nach SH-7.
+
+**Nachtrag 08.11.2026 – SH-7 (zwei Räume) nicht bestätigt:** Der Raumwechsel
+selbst gelang in zwei von drei Fahrten ohne Berührung und ohne neues
+Raumkonzept. Gescheitert ist jede Fahrt an derselben Grenze wie in DR-1
+gemessen: In engen Stellen (Flur mit Garderobe, Ecke) hat die Heilungsleiter
+keinen Zug, der Amadeus wegbewegt (Rückfahrt nur auf gerader eigener Spur,
+Umsehen nur mit freiem Drehkreis), und die Grenze „8 Fehlschläge in Folge“
+ist bei schnellen Abbrüchen in ein bis zwei Minuten erreicht. Lehre: Ein
+Raum allein zeigt diese Grenze kaum; eine Wohnung besteht zu einem guten Teil
+daraus.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
