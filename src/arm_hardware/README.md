@@ -3,8 +3,10 @@
 Stand: 10.10.2026. ROS 2 Humble / Python 3.10. Reine Python-Bibliothek,
 noch kein ros2_control-SystemInterface und kein Bewegungscontroller.
 
-- Striktes, teilweise ausfüllbares Inventar mit sechs Gelenken, getrennten
+- Striktes, teilweise ausfüllbares Inventar mit sechs Winkelachsen, getrennten
   Command-/Feedback-Counts, Übersetzung, Homing-Offset und späteren Limits.
+  Die lineare Hubachse (Nutzerangabe 08.11.2026) bildet das Schema noch
+  nicht ab; die Erweiterung folgt in einem eigenen Build.
 - Fehlende Messungen bleiben null. Unbekannte Felder, doppelte Adressen,
   Broadcast, ungültige Zahlen und doppelte JSON-Schlüssel werden abgewiesen.
 - Unveränderliche Lesepläne, deterministischer Fake und FC03-Adapter.
@@ -23,7 +25,8 @@ sichere mechanische Stillsetzung.
 ## Freigegebenes Leseprofil im Code
 
 Profil-ID: ess17-rs07-fc03-v1. Ausschließlich für physisch zugeordnete
-ESS17-RS07; keine Übernahme für den noch unbekannten NEMA23.
+ESS17-RS07; keine Übernahme für den NEMA23 in J1, dessen genauer Typ noch
+offen ist.
 
 Quelle: STEPPERONLINE, [Modbus Series Bus Product Function Manual V1.0,
 05.03.2025](https://files.omc-stepperonline.com/Modbus-Series-Bus-Product-Function-Manual-V1.0_1.pdf),

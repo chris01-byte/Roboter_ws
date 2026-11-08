@@ -1,7 +1,10 @@
 # Arm-Inbetriebnahme: Messblatt und Versuchsprotokoll
 
-**Stand: 10.10.2026 — rekonstruiertes, noch nicht ausgefülltes Arbeitsblatt.**
-Keine Tabellenzeile ist eine reale Messung oder bestandene Abnahme.
+**Stand: 08.11.2026 — rekonstruiertes Arbeitsblatt mit ersten Nutzerangaben.**
+Keine Tabellenzeile ist eine reale Messung oder bestandene Abnahme. Einträge
+mit dem Vermerk „Nutzerangabe 08.11.“ stammen aus der Konstruktion
+(Fusion-360-Modell) und Aussagen des Entwicklers; sie ersetzen keine Messung
+am Gerät.
 Entwicklungsreihenfolge und Kriterien:
 [Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md).
 Quellen und Bestand: [Arm-Kontext](ARM_KONTEXT.md).
@@ -35,20 +38,27 @@ Geschwindigkeit, Beschleunigung, Zeit, Last, Strom-/Kraftgrenzen soweit
 messbar, Stopweg, Verantwortlichkeit und Verhalten bei Stromausfall.
 Ohne begründete Werte keine Bewegung. Build A besitzt keine Bewegungsfunktion.
 
-## 2. Bestandsaufnahme aller sechs Achsen
+## 2. Bestandsaufnahme: Hubachse und sechs Drehgelenke
 
-Bestätigter Gesamtbestand: **5 × ESS17-RS07 und 1 × NEMA23 unbekannten Typs**.
-Die folgende Zuordnung ist vollständig offen. J1–J6 sind zunächst
-Aufnahmekennungen, keine bestätigten URDF-Namen.
+Gesamtbestand laut Angabe vom 10.10.2026: **5 × ESS17-RS07 und 1 × NEMA23**.
+Nutzerangabe 08.11.: Alle Schrittmotoren sind ESS-RS, der NEMA23 sitzt in J1.
+Welche ESS17 Hubachse, J2–J5 und das neue J6 antreiben, ist offen. J1–J6
+folgen der Nutzerzuordnung vom 08.11.2026; die späteren URDF-Namen sind noch
+nicht festgelegt. Farben beziehen sich auf das Fusion-360-Modell.
 
-| Achse | Physische Funktion / Lage | Exakter Motor / Typenschild | Firmware | Getriebe / Übersetzung | Bus-ID |
+| Achse | Physische Funktion / Lage (Nutzerangabe 08.11.) | Exakter Motor / Typenschild | Firmware | Getriebe / Übersetzung | Bus-ID |
 |---|---|---|---|---|---|
-| J1 | offen | offen | offen | offen | offen |
-| J2 | offen | offen | offen | offen | offen |
-| J3 | offen | offen | offen | offen | offen |
-| J4 | offen | offen | offen | offen | offen |
-| J5 | offen | offen | offen | offen | offen |
-| J6 | offen | offen | offen | offen | offen |
+| Hub | hebt und senkt den ganzen Arm, 400 mm, vertikale Linearführung mit Spindel | offen | offen | Spindeltyp und Steigung offen | offen |
+| J1 | Schulter heben, großes blaues Gelenk am Mast | NEMA23 der ESS-RS-Reihe; Typenschild offen | offen | 55,25:1 (Nutzerangabe 08.11.) | offen |
+| J2 | Schulter seitlich schwenken, erstes silbernes Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J3 | Ellenbogen, zweites blaues Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J4 | Unterarm drehen, grünes Gelenk hinter dem Ellenbogen | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J5 | Handgelenk kippen, letztes silbernes Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J6 | Greifer drehen, neues Drehgelenk direkt vor dem Greifer | offen | offen | noch nicht realisiert | offen |
+
+Weitere Nutzerangaben 08.11.: Schulter in oberster Hubstellung 1106 mm über
+Boden; Reichweite gestreckt ab Mast etwa 746 mm ohne Greifer, Greifer bis
+etwa 150 mm; Nutzlast höchstens 1 kg; Arm in Einzelteilen, noch nicht gewogen.
 
 Pro Achse ausfüllen:
 
@@ -76,18 +86,18 @@ Keine Stromabschaltung eines ungesicherten belasteten Gelenks zum
 |---|---|
 | Armversorgung, Nennspannung, gemessene Spannung unter Last | offen |
 | Absicherung / Leitungsquerschnitt / Verpolschutz | offen |
-| Wirkung des Not-Aus auf Arm, Basis, Greifer und Controller | offen |
-| Halten beim Not-Aus / bei Netzteilausfall | offen |
-| Dedizierter Arm-RS485-Adapter / stabiler Gerätepfad | offen |
+| Wirkung des Not-Aus auf Arm, Basis, Greifer und Controller | Nutzerangabe 08.11.: trennt die komplette Stromversorgung des Roboters; ob auch der Jetson getrennt wird, offen |
+| Halten beim Not-Aus / bei Netzteilausfall | offen; alle Achsen werden stromlos, Halten nur über Selbsthemmung |
+| Dedizierter Arm-RS485-Adapter / stabiler Gerätepfad | Nutzerangabe 08.11.: eigener Adapter verbaut; Chip, Gerätepfad und udev-Alias offen |
 | Elektrische Isolation / Masse- und Schirmkonzept | offen |
 | Baudrate / Parität / Stopbits | offen |
 | Terminierung an Busenden / Leitungstopologie | offen |
 | Adressliste eindeutig; keine Doppeladresse | offen |
 | Einziger Bus-Eigentümer / andere Dienste beendet | offen |
-| Verbindung zur Fahrbasis ausgeschlossen | offen |
+| Verbindung zur Fahrbasis ausgeschlossen | offen; die Fahrbasis nutzt `/dev/ttyUSB_BASE` mit den IDs 1 und 2 |
 | Herstellerhandbuch-Version pro Motortyp | offen |
 
-Unbekannten NEMA23 erst nach Typbestimmung und eigener Registerprüfung
+Den NEMA23 in J1 erst nach Typbestimmung und eigener Registerprüfung
 zulassen. Fahrbasis-Register oder ESS17-Leseprofile nicht kopieren.
 
 ## 4. TLE4905L: Verdrahtung und Referenzsignal
@@ -234,7 +244,7 @@ eigene Validierung; runtime-Referenzgültigkeit folgt nicht aus einer Datei.
 | Sockel → Arm, Flansch → Werkzeug-TCP | offen |
 | Kollisionskörper inkl. Leitungen und Greifer | offen |
 | FK-Prüfpunkte: gemessene vs. berechnete TCP-Pose | offen |
-| Rückmeldelatenz / Buszyklus / Jitter über sechs Achsen | offen |
+| Rückmeldelatenz / Buszyklus / Jitter über alle Arm-Achsen | offen |
 | Bahnabweichung / Gelenknachlauf unter definierter Last | offen |
 | Gemeinsamer Start / Ende / Zwischenbahn geprüft | offen |
 | Koordinierter Stop / Abbruch / veraltete Rückmeldung | offen |
@@ -247,6 +257,7 @@ und Integrationsfreigabe dokumentieren.
 
 | Achse | Winkel leer [rad] | Winkel mit Last [rad] | Toleranz | Gültiger Referenzzustand |
 |---|---|---|---|---|
+| Hub [m statt rad] | offen | offen | offen | offen |
 | J1 | offen | offen | offen | offen |
 | J2 | offen | offen | offen | offen |
 | J3 | offen | offen | offen | offen |
@@ -256,11 +267,13 @@ und Integrationsfreigabe dokumentieren.
 
 | Prüfung | Ausgangsmessung / Pose / Ergebnis |
 |---|---|
-| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | offen |
-| OAK-Sichtbereich mit/ohne Arm und Last | offen |
+| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | Nutzerangabe 08.11.: laut CAD liegt die Transportpose über der LiDAR-Ebene; Messung offen |
+| OAK-Sichtbereich mit/ohne Arm und Last | offen; wird praktisch ermittelt (Nutzerangabe 08.11.) |
 | VL53-Sicht / Nahbereichsschutz | offen |
-| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | offen |
-| Lastmasse / Schwerpunkt / zulässige Basisbeschleunigung | offen |
+| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Nutzerangabe 08.11.: mindestens 130 mm Überstand vor die Chassisfront; Höhe und seitlicher Überstand offen |
+| Zulässige Hubhöhe in Transportpose | offen |
+| Mechanische Abstützung der Transportpose | offen |
+| Lastmasse / Schwerpunkt / zulässige Basisbeschleunigung | Nutzlast höchstens 1 kg (Nutzerangabe 08.11.); Massen noch nicht gewogen |
 | Kollisionsfreier Übergang ready ↔ stowed, leer und beladen | offen |
 | Frische reale Gelenkwerte / Stillstand vor Basisfreigabe | offen |
 | Erkundung, Navigation, Rückfahrt und Abbruchpfade abgesichert | offen |
@@ -334,6 +347,9 @@ zulässige Verformung dann gemeinsam festlegen.
 | Genau eine nächste Änderung / nächster Versuch | offen |
 | Rückfallstand / Bedingungen für erneute Freigabe | offen |
 
-Die drei zuerst benötigten Rückmeldungen sind: **(1)** genaue Typen und
-Gelenkzuordnung, **(2)** eigener Bus samt Versorgung und Haltekonzept,
-**(3)** TLE-Montage und geplante Eingangsbeschaltung.
+Die Gelenkzuordnung, der eigene RS485-Adapter und die Not-Aus-Wirkung sind
+seit dem 08.11.2026 als Nutzerangabe bekannt. Zuerst benötigt werden jetzt:
+**(1)** Antrieb und Spindel der Hubachse sowie Antrieb von J6,
+**(2)** Typenschilder, Busadressen und Haltekonzept bei stromlosem Not-Aus,
+**(3)** Gewichte von Arm, Greifer und Basis,
+**(4)** TLE-Montage und geplante Eingangsbeschaltung.

@@ -26,7 +26,7 @@ Validierung/Abfrage, 1 einen Diagnosefehler, 2 fehlerhafte Konfiguration oder
 Verbindung, 130 Abbruch. Syntax-/Hilfemeldungen stammen von argparse.
 Ein Diagnosefehler stoppt den gesamten Lauf; bereits gelesene Rohwerte im
 Bericht bleiben als einzelne erfolgreiche Transaktionen erkennbar.
-Ein Snapshot ist keine zeitgleiche Aufnahme aller sechs Achsen.
+Ein Snapshot ist keine zeitgleiche Aufnahme aller ausgewählten Achsen.
 
 ## Spätere reale M1A-Probe — vor Ort vorbereiten
 

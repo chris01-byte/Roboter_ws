@@ -9,10 +9,16 @@ Launchdatei und keinen automatischen Hardwarestart.
 - [synthetic_arm.json](config/synthetic_arm.json): ausdrücklich erfundene
   Testgeräte und Adressen, nur für --mode fake. Keine Hardwarekonfiguration.
 
-Bekannt sind fünf ESS17-RS07 und ein NEMA23 mit noch offenem genauem Modell.
-Welche Gelenke welche Motoren und Busadressen haben, ist noch nicht bestätigt.
-Daher wird selbst dem ersten Gelenk kein NEMA23 und keinem Gelenk eine reale
-Adresse voreingestellt.
+Bekannt sind fünf ESS17-RS07 und ein NEMA23 der ESS-RS-Reihe. Laut
+Nutzerangabe vom 08.11.2026 hat der Arm eine Hubachse und sechs Drehgelenke;
+der NEMA23 sitzt im Schultergelenk J1. Typenschilder, Busadressen und die
+Zuordnung der ESS17 zu Hubachse und übrigen Gelenken sind noch nicht
+bestätigt. Daher wird keinem Eintrag ein Motortyp oder eine reale Adresse
+voreingestellt.
+
+Das Schema kennt genau sechs Winkelachsen. Die lineare Hubachse ist damit
+noch nicht abbildbar; die Erweiterung folgt in einem eigenen Build
+([Arm-Kontext](../../docs/ARM_KONTEXT.md)).
 
 JSON wurde gewählt, damit Konfigurationsprüfung/Fake ohne zusätzliche YAML-
 oder ROS-Abhängigkeiten laufen. Das strikte Schema steht in

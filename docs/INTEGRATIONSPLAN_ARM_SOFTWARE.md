@@ -1,9 +1,11 @@
 # Integrations- und Stufenplan: Amadeus-Arm, Greifer und OAK
 
 **Stand: 10.10.2026 — aus dem Gespräch rekonstruiert und mit dem gesicherten
-Repo-Stand abgeglichen.** Dies ist eine inhaltliche Neufassung, keine behauptete
-Wiederherstellung des ursprünglichen Wortlauts. Sie ersetzt die bisherige
-Planfassung mit falschen Angaben zu sechs ESS17 und externem Foxy-Code.
+Repo-Stand abgeglichen; ergänzt am 08.11.2026 um Nutzerangaben zu Aufbau,
+Maßen, Not-Aus und Rolle der OAK.** Dies ist eine inhaltliche Neufassung,
+keine behauptete Wiederherstellung des ursprünglichen Wortlauts. Sie ersetzt
+die bisherige Planfassung mit falschen Angaben zu sechs ESS17 und externem
+Foxy-Code.
 
 Einstieg: [Arm-Kontext](ARM_KONTEXT.md).
 Versuche: [Inbetriebnahme-Messblatt](ARM_INBETRIEBNAHME_MESSBLATT.md).
@@ -35,14 +37,19 @@ Kennzeichnungen in diesem Plan:
 
 | Komponente | Stand |
 |---|---|
-| Arm | Sechs Achsen, fünf ESS17-RS07 und ein NEMA23; dessen exakter Typ und die Gelenkzuordnung sind offen |
-| Halten | Keine Bremsen; vorgesehene Getriebeselbsthemmung ist unter Last noch nachzuweisen |
+| Arm | Vorn am Kameramast: vertikale Hubachse (400 mm) plus sechs Drehgelenke J1–J6; Zuordnung in [ARM_KONTEXT](ARM_KONTEXT.md) |
+| Antriebe | Alle Schrittmotoren ESS-RS; J1 NEMA23 mit 55,25:1, J2–J5 mit 72:1; Antrieb von Hubachse und J6 offen |
+| Maße | Schulter in oberster Hubstellung 1106 mm über Boden; Reichweite gestreckt ca. 746 mm ab Mast plus Greifer bis ca. 150 mm; Nutzlast höchstens 1 kg |
+| Montage | Arm in Einzelteilen; maßstäbliches Fusion-360-Modell vorhanden |
+| Halten | Keine Bremsen; Selbsthemmung von Gelenken und Hubspindel ist unter Last praktisch nachzuweisen |
+| Not-Aus | Trennt die komplette Stromversorgung des Roboters |
+| Bus | Eigener RS485-Adapter für den Arm verbaut |
 | Referenzgeber | TLE4905L vorgesehen; Stückzahl, Montage und Eingang je Gelenk aufnehmen |
 | Armcode außerhalb des Repos | Laut Nutzer keiner |
-| Greifer | Noch nicht gebaut; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
+| Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
-| Kamera | OAK-D-S2 am Mast; keine bestätigte zusätzliche Greiferkamera |
-| Fahrpose | Sensorfreie neutrale Transportpose erforderlich; keine realen Gelenkwinkel festgelegt |
+| Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Nahbereichssensor für den Griff offen |
+| Fahrpose | Transportpose laut CAD über der LiDAR-Ebene, mindestens 130 mm Überstand vor die Chassisfront; Gelenkwinkel nicht vermessen |
 
 ### Softwarebestand nach Build A
 
@@ -180,6 +187,26 @@ Ein empfangenes false ist daher kein belegter physischer Not-Aus-Zustand.
 Für den Arm werden gültige Herkunft, Frische und tatsächliche Verdrahtung
 gefordert. Die hardwired Kette bleibt unabhängig von ROS.
 
+### Not-Aus trennt die gesamte Versorgung (Nutzerangabe 08.11.2026)
+
+Damit werden alle Armachsen, die Hubachse und der Greifer gleichzeitig
+stromlos. Ohne Bremsen hält dann nur Selbsthemmung. Daraus folgen
+Prüfpflichten vor dem ersten belasteten oder angehobenen Betrieb:
+
+- Haltevermögen je Gelenk und der Hubspindel stromlos unter definierter
+  Last messen. Nicht jede Spindelsteigung ist selbsthemmend; fällt die
+  Hubachse durch, sinkt der Arm um bis zu 400 mm.
+- Nach jedem Not-Aus gilt die Referenz als verloren, bis gemessen ist, ob
+  die ESS-Antriebe ihren Positionszähler über einen Stromausfall halten.
+  Die Wiederherstellung muss aus jeder zulässigen Stellung kollisionsfrei
+  referenzieren, auch mit Objekt im Greifer.
+- Ein stromlos selbsthemmender Arm hält auch eine eingeklemmte Hand fest.
+  Eine manuelle Entlastung gehört in die Konstruktion.
+- Offen ist, ob der Not-Aus auch den Jetson abschaltet; davon hängen
+  Neustartablauf und Datensicherheit laufender Dienste ab.
+- Vorgeschlagen: Transportpose mechanisch abstützen, damit Fahrt und
+  Not-Aus nicht vom Haltemoment der Antriebe abhängen.
+
 ## 5. TLE4905L: Wohin gehört das Homing-Signal?
 
 **Vorgeschlagen: an einen als Referenzeingang konfigurierten digitalen Eingang
@@ -190,8 +217,8 @@ Die präzise Kante soll nicht erst durch ROS-Polling und einen USB-Umweg entsteh
 ESS17 besitzt X0–X3 und XCOM. Beispielplanung: X0 als Home-Sensor, weitere
 Eingänge bei Bedarf für positive/negative Endlagen. Das ist eine Belegungsidee,
 keine bereits bestätigte Verdrahtung. „Home-Sensor“ und „Homing starten“
-sind unterschiedliche Eingangsfunktionen. Beim unbekannten NEMA23 ist die
-entsprechende Belegung separat zu klären.
+sind unterschiedliche Eingangsfunktionen. Beim NEMA23 in J1 (ESS-RS-Reihe,
+genauer Typ offen) ist die entsprechende Belegung separat zu klären.
 
 Der TLE4905L ist ein Hall-Schalter mit Open-Collector-Ausgang Q. Er liefert
 kein fertiges 3,3-V-GPIO-Signal. Empfohlener Aufbau zur Auslegung:
@@ -230,6 +257,11 @@ RO-Probe schreibt diese Konfiguration ausdrücklich nicht.
 Home ist nicht automatisch ein Endschalter oder eine sichere Endlagenbegrenzung.
 Mechanische Anschläge, unabhängige Endlagen und begrenzte Suchwege gesondert
 auslegen. Ein fehlendes Home-Signal darf keine endlose Suche auslösen.
+
+Die Hubachse ist linear und braucht neben der Referenz Endlagen an beiden
+Hubenden. Ihr Weg wird in Metern geführt, die Spindelsteigung ersetzt die
+Getriebeübersetzung. Das heutige Inventarschema kennt nur Winkelachsen und
+muss dafür erweitert werden.
 
 ## 6. Greifer: Konzept vor dem Bau prüfen
 
@@ -305,6 +337,14 @@ Beim Spindelantrieb kann Kraft trotz Motorstop bestehen bleiben. Fehlerreaktion
 muss übermäßige Kraft begrenzen, ohne ein gehaltenes Objekt unkontrolliert
 fallen zu lassen. Diese Fälle gehören in die reale Greiferabnahme.
 
+### Bauraum für einen Nahbereichssensor
+
+Der Greifer ist noch nicht konstruiert und wird voraussichtlich bis etwa
+150 mm lang. Weil die OAK den Greifraum kaum einsieht (Abschnitt 8), jetzt
+Bauraum, Masse und Kabelweg für eine Kamera am Greifer oder Handgelenk mit
+einplanen, auch wenn die Entscheidung noch offen ist. Alle Greiferleitungen
+laufen durch J4 und J6; deren Drehbereich wird dadurch begrenzt.
+
 ## 7. Neutrale Transportpose und freie Sensorsicht
 
 Die vorhandene Action kennt bereits stowed und ready:
@@ -327,6 +367,21 @@ Repo-Montagereferenzen, vor Ort gegenprüfen:
 Die Mastmaske macht den Sektor unbekannt, nicht frei. Neue Armreflexionen
 nicht einfach durch eine größere Maske verbergen.
 
+**Stand 08.11.2026 laut CAD:** Die Transportpose liegt über der LiDAR-Ebene
+und ragt mindestens 130 mm vor die Chassisfront, also bis mindestens
+x = 0,40 m statt 0,27 m vor der Antriebsachse. In dieser Höhe erfasst vorn
+kein Hindernissensor etwas: Die VL53 decken direkt vor dem Roboter nur etwa
+0,4 m Höhe ab, und die OAK ist seit dem 04.11.2026 nicht zur
+Hinderniserkennung vorgesehen. Überhänge wie Arbeitsplatten, Fensterbänke
+oder Regalböden träfen zuerst den Arm. Der lokale Nav2-Footprint reicht bis
+x = +0,31 m plus 0,02 m Polster und kennt den Überstand noch nicht; auch der
+Drehkreis wächst. Footprint und Kollisionsmonitor sind sicherheitsrelevant
+und werden in einem eigenen, mit der Erkundungslinie abgestimmten Schritt
+angepasst. Mit gegriffenem Objekt ist die Pose neu zu prüfen. Weil die
+Schulter mit dem Hub bis etwa 0,71 m herunterkommt, kann der Arm in tiefen
+Hubstellungen die LiDAR-Ebene erreichen; die Transportpose braucht daher
+auch eine zulässige Hubhöhe.
+
 Vorgehen: kompakte, tiefe mechanische Pose suchen, dann vermessen und in
 Kollisionsmodell sowie Posenkonfiguration übernehmen. Leerer Greifer und
 definiertes Transportobjekt separat prüfen; gegebenenfalls eigene Pose
@@ -345,14 +400,36 @@ Transportprofil passen. Ein erfolgreich beantwortetes Mock-Ziel reicht nicht.
 
 ## 8. Kamera, Kalibrierung und Greifplanung
 
-### OAK zuerst, Handkamera nur bei nachgewiesenem Bedarf
+### OAK für Erkennung und Anfahrt, Nahbereichssensor für den Griff
 
-Zuerst OAK-Sicht im realen Arbeitsraum vermessen: Reichweite, Auflösung am Objekt,
-Nähegrenze, Verdeckung durch Arm/Finger, Licht und Tiefenausfälle an transparenten
-oder glänzenden Flaschen. Eine Handkamera ist sinnvoll, wenn die OAK vor dem
-Kontakt regelmäßig die Zielgeometrie verliert oder das gemessene Fehlerbudget
-nicht reicht. Sie erzeugt aber zusätzliche Masse, Kabel, Kalibrierung und
-Nahbereichsanforderungen. Eine kleine RGB-Kamera liefert nicht automatisch Tiefe.
+**Nutzerentscheidung 08.11.2026:** Die OAK dient beim Greifen nur der
+Objekterkennung und der Entfernung, damit die Basis weiß, wie weit sie zum
+Zielobjekt fahren muss.
+
+Überschlag mit Repo-Werten (1,34 m Höhe, 18,94° Neigung, etwa 42° vertikal
+laut `oak_params.yaml`, passend zur gemessenen Boden-Totzone von etwa 1,5 m):
+Eine waagerechte Fläche ist erst ab dieser Entfernung vor der Chassisfront
+im Bild.
+
+| Fläche | im Bild ab ca. |
+|---|---|
+| Arbeitsplatte, 0,90 m | 0,41 m |
+| Tischplatte, 0,75 m | 0,58 m |
+| Couchtisch, 0,45 m | 0,94 m |
+| Boden | 1,5 m |
+
+Der gestreckte Arm reicht mit dem Mast bei etwa x = 0,15 m grob 0,63 m ohne
+und 0,78 m mit Greifer über die Chassisfront. Auf Tischhöhe sieht die OAK
+damit nur den äußersten, gestreckten Rand des Arbeitsraums. Genauer folgt
+die Grenze aus CAD und Messung; Verdeckung durch Arm und Objekt kommt hinzu.
+
+**Vorgeschlagen, Entscheidung beim Nutzer:** ein Nahbereichssensor am Greifer
+oder Handgelenk für die Feinlokalisierung (Eye-in-Hand). Er misst relativ zum
+Greifer, sodass Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und
+J2 im letzten Anfahrschritt kaum noch wirken. Er bringt Masse, Kabel durch J4
+und J6, Kalibrierung und Zeitstempelfragen mit. Eine kleine RGB-Kamera liefert
+nicht automatisch Tiefe; Nähegrenze, Tiefenausfälle an transparenten oder
+glänzenden Flaschen und Licht sind bei der Auswahl zu prüfen.
 
 Erkennung liefert zunächst eine Klasse und eine Beobachtung, keine sichere
 Greifpose. Objektgröße/-achse, Greifbereich, Tisch, Hindernisse, Erreichbarkeit
@@ -360,10 +437,16 @@ und Werkzeugorientierung müssen separat bestimmt werden.
 
 ### Transformations- und Messvertrag
 
-Für die feste OAK gilt Eye-to-Hand; eine spätere Handkamera braucht eine
-zusätzliche Eye-in-Hand-Kalibrierung. Basis-/Armgeometrie und TCP zuerst
+Für die feste OAK gilt Eye-to-Hand; eine Handkamera braucht eine
+Eye-in-Hand-Kalibrierung (Kamera relativ zum Flansch, Board fest im Raum).
+Für die OAK genügt bei der neuen Rollenverteilung eine Montagegenauigkeit im
+Zentimeterbereich für die Anfahrt; die Millimeterkette trägt die Handkamera.
+Die vorhandenen Werkzeuge sind für Eye-to-Hand gebaut; der Löser braucht für
+die Handkamera einen eigenen Modus. Basis-/Armgeometrie und TCP zuerst
 vermessen, dann Kameraextrinsik. Kamera-Intrinsik, Fokuszustand,
 Bildauflösung und registrierte Tiefe müssen zum tatsächlichen Stream passen.
+Die verbaute OAK-D-S2 hat Autofokus; die aktuelle OAK-Konfiguration legt keinen
+festen Fokus fest.
 
 Notation: A_T_B transformiert Koordinaten aus B nach A. Für ein starr am
 Flansch befestigtes Board muss je Messpaar gelten:
@@ -402,10 +485,14 @@ keine zugesagten Termine.
 ### M0 — Bestand und prüfbare Softwaregrundlage
 
 **Software:** Inventarschema, getrennte Fake-Daten, Status/Rohdatenbericht,
-enge Leseprofile und Negativtests. Build A ist hierfür vorhanden.
+enge Leseprofile und Negativtests. Build A ist hierfür vorhanden. Offen ist
+die Erweiterung des Schemas um die lineare Hubachse als siebte Achse.
 
 **Realität:** Motoren zu Gelenken zuordnen, NEMA23-Typ, Getriebe, Lasten,
 Montage, Versorgungen, Adapter, E-Stop und Haltekonzept aufnehmen.
+Gewichte von Arm, Greifer und Basis wiegen und daraus Gelenkmomente,
+Kippsicherheit und Mastbelastung rechnen. Kinematik aus dem Fusion-360-Modell
+übernehmen, am besten als URDF-Export mit Gelenkachsen, Ursprüngen und Netzen.
 Eine gesicherte Prüfvorrichtung planen; den ungebremsten Arm nicht fallen lassen.
 
 **Gate:** Reiner Softwarepfad läuft ohne Portöffnung. Daten und Grenzen
@@ -456,7 +543,9 @@ kollisionsfreie Suchräume abstimmen, auch aus zulässigen Startlagen.
 daueraktives Signal, falsche Richtung, Drahtfehler und Restart.
 Mechanische Grenzen ohne gewaltsames Anschlagfahren erfassen; Softlimits
 mit Reserve für Nachlauf, Fehler und elastische Verformung festlegen.
-FK/TCP an unabhängigen Punkten vergleichen.
+FK/TCP an unabhängigen Punkten vergleichen. Die Hubachse mit Referenz und
+beiden Endlagen gehört dazu. Weil der Not-Aus alle Achsen stromlos macht,
+auch die Wiederherstellung nach Not-Aus aus ausgefahrener Stellung prüfen.
 
 **Gate:** Dokumentierte Wiederholgenauigkeit, korrekt ungültige Referenz nach
 relevantem Ausfall, plausibles Istmodell und wirksame Grenzen in beiden Richtungen.
@@ -471,8 +560,12 @@ vor Bewegung wirksam; alle benötigten Achsen haben M2 bestanden.
 **Software:** Gemeinsamer Trajektorienvertrag, aktuelles Feedback, zeitliche
 Auswertung und Abbruch aller beteiligten Achsen bei Teilfehler.
 RS485-Zykluszeiten, Startversatz und zulässige Reglerfrequenz messen.
-Sechs nacheinander gestartete interne Einzelachs-Trapezprofile garantieren
+Nacheinander gestartete interne Einzelachs-Trapezprofile garantieren
 keine kartesisch sichere Bahn. Erst danach Controller-/ros2_control-Wahl abschließen.
+Vorgeschlagen: Die Hubachse zunächst als Einstellachse behandeln, die vor
+einer Armbewegung angefahren wird und währenddessen steht. Das hält die
+Planung bei sechs Drehgelenken; die Redundanz der siebten Achse kann später
+dazukommen.
 
 **Realtest:** Langsame, freie Mehrachswege ohne Objekt; Istbahn, Folgefehler,
 Jitter, Teilausfall und Stop vergleichen. Last und Geschwindigkeit getrennt steigern.
@@ -524,6 +617,8 @@ und Fehlerfälle bestanden. Fehlgriff wird erkannt, nicht als Erfolg gemeldet.
 
 **Software:** Vorhandene Kalibrierwerkzeuge mit überprüfter Mathematik,
 realen Frames, frischen Daten und versioniertem Ergebnis; Abschnitt 8.
+Für die OAK reicht die Genauigkeit der Anfahrt; ein Nahbereichssensor am
+Greifer braucht einen Eye-in-Hand-Modus im Löser.
 
 **Realtest:** Boardmaße, Kamera-Intrinsik/Tiefe, statische Messpaare,
 unabhängiger Zeigetest im Greifraum; Montage und Lastzustand festhalten.
@@ -541,8 +636,9 @@ dann Position/Orientierung/Material einzeln variieren. Colaflasche einschließli
 Füllzustand erst jetzt als dokumentierten Referenzfall festlegen.
 
 **Gate:** Erfolgsquote und Fehlerbudget erreicht; kein Griff bei altem Treffer,
-fehlender Tiefe, Verdeckung oder falschem Frame. OAK-Sichtlücken messen und
-erst anhand dieser Daten über eine Handkamera entscheiden.
+fehlender Tiefe, Verdeckung oder falschem Frame. Über den Nahbereichssensor
+wird vor der Greiferkonstruktion entschieden (Abschnitt 8); M8 weist nach,
+dass der Griff mit frischer Nahbeobachtung gelingt.
 
 ### M9 — Mobiles Gesamtsystem
 
@@ -570,16 +666,23 @@ Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
 | Paket | Ergebnis | Status |
 |---|---|---|
 | A | Inventarprüfung, Fake, reine ESS17-Rohdiagnose und Offline-/Humble-Tests | Implementiert, reale M1A-Abnahme offen |
-| B | Messdaten vervollständigen, M1A-Protokoll; eigenes NEMA23-Profil erst nach Typnachweis | Nächster Schritt |
+| B | Inventarschema um die Hubachse erweitern, Kinematik aus dem CAD übernehmen, Messdaten vervollständigen, M1A-Protokoll; eigenes NEMA23-Profil erst nach Typnachweis | Nächster Schritt |
 | C | Begrenzter Einzelachs-Jog, Stop-/Haltversuche | Noch zu bauen, braucht B und mechanische Versuchssicherung |
 | D | Homing, Skalen, Limits, echtes Armmodell | Nach Einzelachsabnahme |
 | E | Koordination, Plattform-Actions und Transportpose | Nach Timing-/Bahn-/Interlock-Nachweis |
-| F | Greifer, bekannte Griffe, OAK-Kalibrierung und Vision | Später, stufenweise |
+| F | Greifer mit Bauraum für einen Nahbereichssensor, bekannte Griffe, Kalibrierung und Vision | Später, stufenweise; Sensorentscheidung vor der Greiferkonstruktion |
 
-Jetzt benötigte Angaben: NEMA23-Typ, Gelenkzuordnung, Getriebe, Montagezustand,
-vorhandene TLE/Magnete/Endlagen, Adapter und Busparameter. Für die spätere
-Greiferauslegung zusätzlich XL330-Variante, gewünschte Öffnung, Backenkinematik,
-Spindel-Leitweg, Sensortyp und Referenzlast.
+Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
+NEMA23 in J1, Hub, Schulterhöhe, Reichweite, Transportpose, Nutzlast,
+Not-Aus-Wirkung und eigener RS485-Adapter (siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
+
+Jetzt benötigte Angaben: Antrieb und Spindel der Hubachse, Antrieb und
+Untersetzung von J6, Typenschilder und Busadressen, Gewichte, Bezugspunkt der
+746 mm, Wirkung des Not-Aus auf den Jetson, Montagezustand der Hubachse,
+vorhandene TLE/Magnete/Endlagen und Busparameter; die Kinematik am besten als
+URDF-Export aus Fusion 360. Für die spätere Greiferauslegung zusätzlich
+XL330-Variante, gewünschte Öffnung, Backenkinematik, Spindel-Leitweg,
+Sensortyp, Referenzlast und die Entscheidung zum Nahbereichssensor.
 
 Jede Rückmeldung enthält Build-/Config-ID, Achse, Versuch, Soll/Ist,
 Zeit-/Winkel-/Lastmessung, Abbruchgrund und lokalen Logpfad. Reale Bilder,

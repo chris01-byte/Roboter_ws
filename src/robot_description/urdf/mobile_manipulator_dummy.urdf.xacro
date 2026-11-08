@@ -84,8 +84,13 @@
   <xacro:property name="vl53_inward_yaw" value="0.000"/>  <!-- geradeaus, nicht eingedreht -->
 
   <!-- ================================================================
-       ARM-MONTAGE / DUMMY-LINKLAENGEN [ANPASSEN]
+       ARM-MONTAGE / DUMMY-LINKLAENGEN [ANPASSEN] [UEBERHOLT 08.11.2026]
        Nur fuer TF/RViz. Keine echte Dynamik-/Kollisionsauslegung.
+       Der reale Arm sitzt NICHT hinten auf der Plattform, sondern vorn am
+       Kameramast auf einer Hubachse (400 mm Hub) und hat eine andere
+       Gelenkfolge. Diese Werte nicht fuer Planung, Kollision, Kalibrierung
+       oder Fahrpose verwenden. Echtes Modell aus dem Fusion-360-CAD
+       ableiten; Stand siehe docs/ARM_KONTEXT.md.
        ================================================================ -->
   <xacro:property name="arm_base_x" value="-0.080"/>
   <xacro:property name="arm_base_y" value="0.000"/>
@@ -214,9 +219,13 @@
   </joint>
 
   <!-- ================================================================
-       6-ACHS-ARM (Dummy-Kinematik)
+       6-ACHS-ARM (Dummy-Kinematik) [UEBERHOLT 08.11.2026]
        Achsen: J1 yaw, J2 shoulder pitch, J3 elbow pitch, J4 roll,
               J5 wrist pitch, J6 tool roll.
+       Realer Arm laut Nutzer: Hubachse, J1 Schulter heben,
+       J2 Schulter seitlich schwenken, J3 Ellenbogen, J4 Unterarm drehen,
+       J5 Handgelenk kippen, J6 Greifer drehen. Gelenknamen und Achsen
+       hier entsprechen dem NICHT.
        ================================================================ -->
   <xacro:cylinder_link name="arm_base_link" radius="0.055" length="0.040" color="mat_arm"/>
   <joint name="base_to_arm_base" type="fixed">

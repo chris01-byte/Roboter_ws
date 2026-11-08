@@ -24,11 +24,11 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 | Semantische Karte | [`SEMANTIC_MAP_INTEGRATION.md`](SEMANTIC_MAP_INTEGRATION.md) | Manuelle Raumdaten, Persistenz und Schnittstellen. |
 | App-Livepose | [`APP_LIVE_ROBOTERPOSE_INTEGRATION.md`](APP_LIVE_ROBOTERPOSE_INTEGRATION.md) | Read-only Pose-/Lokalisierungsintegration fuer die App. |
 | LiDAR-Hardware | [`hardware/STL27L_INTEGRATION.md`](hardware/STL27L_INTEGRATION.md) | STL-27L-spezifische Treiber- und Frameinformation. |
-| Arm/OAK-Kalibrierung | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Aktueller Kalibriervertrag; das Juli-Konzept im Root ist historische Grundlage. |
+| Arm/OAK-Kalibrierung | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Aktueller Kalibriervertrag; OAK nur für Erkennung und Anfahrt. Das Juli-Konzept im Root ist überholt und nur noch historische Grundlage. |
 | Arm-Kontext | [`ARM_KONTEXT.md`](ARM_KONTEXT.md) | Aktuelle Nutzerangaben, Softwarepfade, offene Messungen und Stufen. |
 | Arm-Builds | [`ARM_BUILDPROTOKOLL.md`](ARM_BUILDPROTOKOLL.md) | Kurzes Änderungsprotokoll, maximal 200 Wörter je Build. |
 | Arm-Software | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Gemischter ESS-Arm: Diagnose, Homing, Bewegung, Greifer, Transportpose und später Vision. |
-| Arm-Messungen | [`ARM_INBETRIEBNAHME_MESSBLATT.md`](ARM_INBETRIEBNAHME_MESSBLATT.md) | Unausgefüllte Aufnahme aller sechs Achsen, Versuche und Abnahmekriterien. |
+| Arm-Messungen | [`ARM_INBETRIEBNAHME_MESSBLATT.md`](ARM_INBETRIEBNAHME_MESSBLATT.md) | Aufnahme von Hubachse und sechs Drehgelenken mit ersten Nutzerangaben, Versuche und Abnahmekriterien; noch keine Messung. |
 | Diagnostik und Selbstbefreiung | [`INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Health-Zustaende, Ereignisprotokoll, sichere Selbstbefreiung und Supervision. |
 
 ## Dokumentklassen

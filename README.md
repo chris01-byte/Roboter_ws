@@ -14,7 +14,7 @@ Der Repository-Root ist bewusst knapp gehalten. Der aktuelle Arbeitsstand und di
 | [`docs/ROBOT_TRANSFER.md`](docs/ROBOT_TRANSFER.md) | Jetson-/Hardwareuebergabe und Betriebswissen. |
 | [`docs/ARM_KONTEXT.md`](docs/ARM_KONTEXT.md) | Einstieg für Agenten: Hardware, vorhandene Software, Quellen und offene Punkte. |
 | [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Stufenplan: zunächst Arm-Inbetriebnahme, später Greifer und OAK-Integration. |
-| [`docs/ARM_INBETRIEBNAHME_MESSBLATT.md`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md) | Aufnahme und reale Versuchsprotokolle aller sechs Achsen. |
+| [`docs/ARM_INBETRIEBNAHME_MESSBLATT.md`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md) | Aufnahme und reale Versuchsprotokolle für Hubachse und sechs Drehgelenke. |
 | [`docs/ARM_BUILDPROTOKOLL.md`](docs/ARM_BUILDPROTOKOLL.md) | Umgesetzte Änderungen, maximal 200 Wörter je Eintrag. |
 | [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Diagnostik, Selbstbefreiung, Ereignisprotokoll und Supervision. |
 
@@ -28,9 +28,9 @@ Navigation:      STL-27L -> scan normalization -> SLAM/Nav2 -> exploration
 Nahbereich:      VL53L7CX -> collision monitor
 Missionen:       mission_manager -> Behavior Tree -> robot interfaces
 Bedienung:       smartphone GUI / iOS app -> rosbridge
-Wahrnehmung:     OAK-D-S2 -> semantic perception; frische Greifpose noch zu integrieren
+Wahrnehmung:     OAK-D-S2 -> semantic perception; Erkennung und Anfahrdistanz
 Arm (Build A):   Inventar -> Validierung / Fake / reine ESS17-RS07-Leseprobe
-Arm (geplant):   5 ESS17 + 1 NEMA23 -> Controller -> MoveIt 2 -> Arm-Actions
+Arm (geplant):   Hubachse + 6 Drehgelenke (ESS-RS) -> Controller -> MoveIt 2 -> Arm-Actions
 ```
 
 ## Sicherer Betrieb
@@ -39,7 +39,7 @@ Arm (geplant):   5 ESS17 + 1 NEMA23 -> Controller -> MoveIt 2 -> Arm-Actions
 - Die hardwired Sicherheitskette ist primaer. Software ersetzt keinen Hardware-Not-Aus.
 - Echte Fahrbewegung bleibt ein expliziter, beaufsichtigter Schritt mit der passenden Hardwareabnahme.
 - Feinmanipulation soll frische Greifziele in `base_link` verwenden; vorhandene map-Verträge sind vor Integration abzugleichen.
-- Registersemantik und Skalierung werden pro Motortyp und Achse bestätigt; der genaue NEMA23-Typ im Arm ist noch offen.
+- Registersemantik und Skalierung werden pro Motortyp und Achse bestätigt; der genaue Typ des NEMA23 in J1 ist noch offen.
 
 ## Bauen und Pruefen
 

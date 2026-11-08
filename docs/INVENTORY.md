@@ -29,7 +29,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 |---|---|---|
 | `arm_hardware` | ESS17-FC03-Rohdatenprobe, Fake und Konfigurationsprüfung; keine Bewegungssteuerung | Entwicklung, Hardwareabnahme offen |
 | `arm_tools` | Explizite Arm-Diagnose-CLI mit Real-/Fake-Trennung | Entwicklung, Hardwareabnahme offen |
-| `arm_bringup` | Unbestätigtes Sechs-Achsen-Inventar und synthetische Testdaten | Entwurf / Messdaten offen |
+| `arm_bringup` | Unbestätigtes Sechs-Einträge-Inventar und synthetische Testdaten; Hubachse als siebte Achse noch nicht abgebildet | Entwurf / Messdaten offen |
 | `base_hardware` | Antrieb über RS485/Modbus; Encoderpositions-Odometrie H0–H4 real bestanden, H5 offen | **erprobt (Encoder)** |
 | `vl53_near_field` | 2× VL53L7CX über CH341A (Treiber gepinnt in `vendor_ch34x_mphsi.repos`, per DKMS kernelupdate-fest), Nahbereichsschutz, `collision_monitor` | **produktiv** (15.08.2026 in realer Nav2-Kette mit frischen Daten überwacht) |
 | `robot_bringup` | Startdateien für Roboter, SLAM, Kamera, Handsteuerung und einzelner App-Kartierungsstack; OAK-Entzerrer ohne Exact-Sync | **produktiv** (App-Erkundungsstack real; OAK-Entzerrer motorlos dauergetestet) |
@@ -108,6 +108,7 @@ und kontrollieren, ob das Wörterbuch geschrieben wurde.
 | VL53L7CX (2×) | I²C über CH341A | Busnummer **wechselt**, Node sucht sie selbst |
 | OAK-D-S2 | USB, 03e7:2485 | udev-Regel `80-movidius.rules` |
 | Controller | `/dev/input/js0` | DualShock über Bluetooth |
+| Arm-RS485 | eigener Adapter verbaut (Nutzerangabe 08.11.2026); Pfad und udev-Alias offen | Arm noch in Einzelteilen; nie den Fahrbasis-Port verwenden |
 
 **Motorregister** (ESS23-RS, über Modbus FC03 lesen / FC06 schreiben; auf FC04
 antwortet der Antrieb **nicht**):

@@ -17,6 +17,8 @@ ros2 launch robot_description display_dummy.launch.py use_rviz:=true
 ```
 
 ## Wichtig
-Alle Masse im Xacro sind Platzhalter und mit `[ANPASSEN]` markiert. Bitte spaeter durch echte Messwerte ersetzen.
+Basis, OAK und VL53 tragen inzwischen gemessene Werte (`[GEMESSEN ...]`). Alle mit `[ANPASSEN]` markierten Werte sind weiterhin Platzhalter.
+
+Der Arm-Teil ist seit dem 08.11.2026 als `[UEBERHOLT]` markiert: Der reale Arm sitzt vorn am Kameramast auf einer Hubachse und hat eine andere Gelenkfolge als dieses Dummy. Fuer Planung, Kollision, Kalibrierung und Fahrpose nicht verwenden; Stand siehe [`docs/ARM_KONTEXT.md`](../../docs/ARM_KONTEXT.md).
 
 Die Dummy-URDF ist nicht als fertige mechanische Konstruktion gedacht. Sie ist ein technischer TF-/RViz-Prototyp.

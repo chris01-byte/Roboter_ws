@@ -10,6 +10,12 @@
 > müssen anhand der tatsächlichen Kette geprüft werden. Alte Millimeterziele
 > sind keine gemessene Genauigkeit. Diesen historischen Entwurf nicht direkt
 > als Inbetriebnahmeanweisung ausführen; sein Wortlaut bleibt zur Einordnung erhalten.
+>
+> **Nachtrag 08.11.2026:** Der Arm sitzt nicht hinten auf der Plattform,
+> sondern vorn am Kameramast auf einer Hubachse. Die OAK dient beim Greifen
+> nur der Objekterkennung und Anfahrdistanz; die Millimeterkette für den
+> Griff soll ein Nahbereichssensor am Greifer tragen (Entscheidung offen).
+> Aktueller Stand: [Arm-Kontext](docs/ARM_KONTEXT.md).
 
 **Stand:** 2026-07-04 · **Betrifft:** `robot_description`, `semantic_perception`, später `arm_action_server`/MoveIt 2
 **Variante:** Eye-to-Hand (Kamera fest an der Basis/am Mast, der Arm bewegt sich)

@@ -4,6 +4,28 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-08 — Dokumentation: Armaufbau eingetragen, Repo bereinigt
+
+Nutzerangaben vom 08.11.2026 eingearbeitet: Hubachse mit 400 mm Hub plus
+sechs Drehgelenke, J4 hinter dem Ellenbogen, neues Greifer-Drehgelenk J6,
+J1 mit NEMA23 der ESS-RS-Reihe und 55,25:1, J2–J5 mit 72:1, Schulterhöhe
+1106 mm, Reichweite etwa 746 mm plus Greifer bis 150 mm, mindestens 130 mm
+Überstand in Transportpose, Nutzlast 1 kg, Not-Aus trennt die gesamte
+Versorgung, eigener RS485-Adapter verbaut, Arm in Einzelteilen. Die OAK
+dient beim Greifen nur Erkennung und Anfahrdistanz.
+
+Überholte Aussagen gekennzeichnet: iCL-Stepper, sechs ESS17, Arm hinten auf
+der Plattform, Ablagehöhen im Missionskatalog, Feinlokalisierung allein mit
+der OAK.
+
+Prüfung: Arm-Offline-Tests unverändert grün, interne Verweise und
+Wortgrenze geprüft. Nur Dokumentation und Kommentare; keine Werte, kein
+Code, keine Hardwarewirkung.
+
+Nächster Schritt: Hubachse, J6-Antrieb, Gewichte und CAD-Export klären;
+danach Inventarschema um die Hubachse erweitern (eigener Build), M0, M1A.
+Rückfallweg: Commit zurücknehmen.
+
 ## 2026-10-10 — Dokumentation: Armplanung rekonstruiert
 
 ARM_KONTEXT, Integrationsplan und das bislang im gesicherten Branch fehlende

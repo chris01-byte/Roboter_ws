@@ -1,10 +1,22 @@
 # Projektstatus: Roboter_ws
 
-**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-10-10.
+**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-08.
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
+
+## Arm-Ergänzung vom 08.11.2026
+
+Der Arm liegt in Einzelteilen vor und ist maßstäblich in Fusion 360
+konstruiert. Aufbau laut Nutzer: Hubachse mit 400 mm Hub vorn am Kameramast
+plus sechs Drehgelenke J1–J6; J1 mit NEMA23 der ESS-RS-Reihe (55,25:1),
+J2–J5 mit 72:1, J6 und Hubantrieb noch offen. Not-Aus trennt die gesamte
+Versorgung, ein eigener RS485-Adapter ist verbaut. Die OAK dient beim Greifen
+nur Erkennung und Anfahrdistanz; für den Griff ist ein Nahbereichssensor am
+Greifer zu entscheiden. Details: [Arm-Kontext](docs/ARM_KONTEXT.md).
+Nächste Schritte: Hubachse, J6, Gewichte und CAD-Export klären, Inventarschema
+um die Hubachse erweitern, danach M0 und M1A.
 
 ## Arm-Ergänzung vom 10.10.2026
 
@@ -60,8 +72,8 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 |---|---|---|
 | Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
 | Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
-| Arm-Integration | Read-only Build A auf PR #106; Montagezustand offen. Bewegungsansteuerung, Homing und echtes Modell fehlen. | M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
-| OAK-Hand-Auge-Kalibrierung | Recorder und Loeser existieren; reale Arm-/TF-Voraussetzungen fehlen noch. | Erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen; danach kalibrieren. |
+| Arm-Integration | Read-only Build A auf PR #106; Arm in Einzelteilen, Aufbau aus Hubachse und sechs Drehgelenken bekannt. Bewegungsansteuerung, Homing und echtes Modell fehlen. | Hubachse, J6 und Gewichte klären, Inventarschema erweitern, dann M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
+| Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Recorder und Löser für Eye-to-Hand existieren. | Entscheidung zum Nahbereichssensor am Greifer vor der Greiferkonstruktion; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
 | App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 
 ## Sicherheitsrahmen

@@ -17,6 +17,49 @@ Rückfallweg:
 
 ---
 
+## 2026-11-08 — Armaufbau festgelegt, OAK auf Erkennung und Anfahrt begrenzt
+
+**Entscheidung:** Der Arm sitzt vorn am Kameramast auf einer Hubachse mit
+400 mm Hub und hat sechs Drehgelenke: J1 Schulter heben, J2 Schulter seitlich
+schwenken, J3 Ellenbogen, J4 Unterarm drehen (hinter den Ellenbogen
+verlegt), J5 Handgelenk kippen, J6 Greifer drehen (neu). Die OAK-D-S2 dient
+beim Greifen nur der Objekterkennung und der Anfahrdistanz. Ältere Angaben
+(sechs ESS17, iCL-Stepper, Arm hinten auf der Plattform, externer Foxy-Code)
+gelten als überholt; die Armdokumentation baut auf PR #106 auf.
+
+**Grund / beobachtete Evidenz:** Nutzerangaben vom 08.11.2026 aus dem
+maßstäblichen Fusion-360-Modell: Schulter in oberster Hubstellung 1106 mm
+über Boden, Reichweite gestreckt etwa 746 mm ab Mast plus Greifer bis etwa
+150 mm, Transportpose über der LiDAR-Ebene mit mindestens 130 mm Überstand
+vor die Chassisfront, J1 mit NEMA23 der ESS-RS-Reihe und 55,25:1, J2–J5 mit
+72:1, Nutzlast höchstens 1 kg. Der Not-Aus trennt die komplette
+Stromversorgung, ein eigener RS485-Adapter ist verbaut, der Arm liegt in
+Einzelteilen vor. Ein Überschlag mit den gemessenen OAK-Werten (1,34 m,
+18,94°, etwa 42° vertikal) zeigt eine 0,75-m-Tischfläche erst ab etwa 0,58 m
+vor der Chassisfront im Bild; der gestreckte Arm reicht grob 0,63 bis 0,78 m
+weit. Das stützt die Einschätzung des Nutzers, dass die OAK den Greifraum
+nicht abdeckt.
+
+**Betroffene Dateien und Hardware:** ARM_KONTEXT, Integrationsplan,
+Messblatt, Build-Protokoll, PROJEKT_STATUS, README, docs/README, INVENTORY;
+Hinweise im Kalibrierkonzept, in der Dummy-URDF, im Missionskatalog und in
+den READMEs der Armpakete. Nur Dokumentation und Kommentare, keine Hardware.
+
+**Teststatus:** Arm-Offline-Tests unverändert grün; interne Verweise und
+Wortgrenze des Build-Protokolls geprüft. Keine Messung am Gerät.
+
+**Offene Risiken:** Selbsthemmung von Gelenken und Hubspindel ist ungeprüft,
+obwohl der Not-Aus alle Achsen stromlos macht. Nach einem Not-Aus ist die
+Referenz vermutlich verloren. Der Armüberstand liegt in einer Höhe, die kein
+Hindernissensor erfasst, und der Nav2-Footprint kennt ihn nicht. Massen,
+Kippsicherheit und Mastbiegung sind unbekannt. Das Inventarschema bildet die
+Hubachse noch nicht ab.
+
+**Rückfallweg:** Reiner Dokumentationscommit; Zurücknehmen ändert keine
+Laufzeit und keine Parameter.
+
+---
+
 ## 2026-10-10 — Armkonzept und Messblatt rekonstruiert
 
 **Entscheidung:** Zunächst ausschließlich Arm-Inbetriebnahme; aktuelle
