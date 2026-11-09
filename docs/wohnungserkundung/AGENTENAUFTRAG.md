@@ -19,6 +19,16 @@ Projektinhabers 08.11.2026), nur im Selbstheilungsbetrieb:
 4. **Rückfahrt auch ohne gerade eigene Spur:** 0,3 m gerade zurück, wenn
    hinten laut Karte frei ist; weiterhin höchstens 0,4 m, 0,05 m/s, einmal je
    Stillstand. Zeitgrenze für 30 % Tempo gerechnet.
+5. **Nach einer Rückfahrt ein anderes Ziel** (AW-1b, `d0d1431`, Entscheidung
+   des Projektinhabers 09.11.2026): Das Ziel wird zurückgestellt statt erneut
+   angefahren. Dasselbe Ziel führte real (SH-6) und in der Simulation zurück
+   an dieselbe enge Stelle.
+
+Offen und nur **gemessen**, nicht geändert: Liegt ein Hindernis vorn schon
+innerhalb der gepolsterten Kontur (etwa 2 cm), setzt der Kollisionsmonitor
+jede Bewegung auf null, auch rückwärts (Simulation 09.11.2026). Ob das real
+vorkommt, zeigt dieser Test; eine Änderung am Kollisionsmonitor wäre
+sicherheitsrelevant und ein eigenes Paket.
 
 Tempo, Budget (40 min), Heilungsleiter und Hilfe-Grenzen bleiben wie in SH-7.
 Prototyp 1 (`selbstheilung-sh6-20261104_2140`) und der SH-7-Release bleiben
@@ -37,7 +47,7 @@ Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 |---|---|
 | Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 09.11.2026; **Fahrplan §9, Schritt 1** |
 | WE-Bezug | WE-M3, metrischer Kern im Zwei-Raum-Umfang; Vorstufe zu WE-M4 (Drei-Bereich-Rundweg), keine Abnahme von WE-M4; Vorbedingung Stufe 3 (Wohnung) |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `609d389`; neuer Release `selbstheilung-sh8-<STAMP>`. SH-7 lief mit `selbstheilung-sh7-20261108_1617` |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `d0d1431`; neuer Release `selbstheilung-sh8-<STAMP>`. SH-7 lief mit `selbstheilung-sh7-20261108_1617` |
 | Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh8.md`: Build, 176 gezielte Tests, drei Fahrten durch zwei Räume, Kriterien C1–C5, G1, R1 und R2, je Hilfe-Stelle die Daten wie in SH-7N |
 | Nicht-Ziele | keine eigene Code- oder Parameteränderung, kein dritter Raum, keine Wohnungsfahrt, keine Tür mit Schwelle, kein Arm |
 | Rückfall | in der Umgebungsdatei `SH_REL` auf `…/selbstheilung-sh7-20261108_1617` (SH-7-Stand) oder `…/selbstheilung-sh6-20261104_2140` (Prototyp 1) zurückstellen; alle Releases bleiben |
@@ -102,7 +112,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor 19c8cb9 HEAD && echo "19c8cb9 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor d0d1431 HEAD && echo "d0d1431 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh8-$STAMP/pruefung
 ```
 
@@ -198,7 +208,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `176 passed` (Stand `609d389`) bzw. `182 passed`, wenn der Klon `454a937` oder neuer enthält (EK-1-Code mit sechs Tests, aber ausgeschaltet, siehe Schritt 3). Bei Fehlschlägen nicht fahren,
+Erwartung: `182 passed` (Cloud, Stand `d0d1431`; darin sechs Tests für den ausgeschalteten EK-1-Code, siehe Schritt 3). Bei Fehlschlägen nicht fahren,
 berichten.
 
 ### Aufbau (Christopher)
@@ -371,6 +381,7 @@ cat "$SH_PR/sh8_run$RUN/protokoll.txt" | tail -60
 timeout 10 ros2 topic echo --once --full-length /explore/status_json > "$SH_PR/sh8_run$RUN/explore_status_ende.txt" 2>&1
 grep -o 'last_track_back[^}]*}' "$SH_PR/sh8_run$RUN/explore_status_ende.txt"
 grep -cE "Collision Ahead|backup completed successfully|backup failed|Exceeded time allowance" "$SH_PR/sh8_run$RUN/launch.log"
+grep -nE "Running backup|backup completed successfully|backup failed|Collision Ahead|Exceeded time allowance|\[collision_monitor\].*Robot to" "$SH_PR/sh8_run$RUN/launch.log" > "$SH_PR/sh8_run$RUN/rueckfahrten_kollisionsmonitor.txt"
 for n in controller_server planner_server behavior_server bt_navigator velocity_smoother collision_monitor; do \
   echo "$n: $(ros2 lifecycle get /$n 2>&1)"; done | tee "$SH_PR/sh8_run$RUN/lifecycle_nach.txt"
 grep -c "process has died" "$SH_PR/sh8_run$RUN/launch.log"
@@ -494,8 +505,12 @@ Durchfahrten werden gemessen, sind aber keine Kriterien.
    Zahl der Durchfahrten. Ziele, die in der Tür oder direkt davor
    scheiterten, mit Heilungsaktion und Navigatorzeilen aus `launch.log`.
    Je Fahrt alle Rückfahrten: wann, Art (`mode`: `spur` oder `frei`),
-   Ergebnis (`behavior_server`: erfolgreich, Zeitgrenze, „Collision Ahead“)
-   und ob Amadeus danach weiterkam; zusätzlich wie in SH-6: wann, wie weit
+   Ergebnis (`behavior_server`: erfolgreich, Zeitgrenze, „Collision Ahead“),
+   **Zustand des Kollisionsmonitors** während der Rückfahrt (aus
+   `rueckfahrten_kollisionsmonitor.txt`: letzte Zeile „Robot to …“ vor
+   „Running backup“ und alle bis zu ihrem Ende; besonders, ob „approach“
+   dabei war), welches Ziel danach kam (sollte ein anderes sein) und ob
+   Amadeus danach weiterkam; zusätzlich wie in SH-6: wann, wie weit
    (Zeitpunkte aus den `selbstheilung`-Ereignissen und dem `heilungsverlauf`
    im Protokoll, Weite der letzten aus `explore_status_ende.txt`,
    `last_track_back`), und ob Amadeus danach weiterkam; Christophers Beobachtung dazu, falls er eine

@@ -33,9 +33,14 @@ Korrekturen und früheren Vergleichsstände.
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md):
-Paket AW-1 auf dem Roboter, Aufbau und Kriterien wie SH-7 (Laborraum plus
-Flur, Tür 80 cm), Abdeckungskurve läuft nur mitlesend mit (`609d389`).
+**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md),
+**kurz zurückgehalten** (Entscheidung des Projektinhabers 09.11.2026): Die
+Simulation zeigte zwei Lücken in AW-1. (1) Nach der Rückfahrt dasselbe Ziel
+erneut, dann wieder fest: behoben als AW-1b (`d0d1431`), Simulation läuft.
+(2) Kollisionsmonitor sperrt auch rückwärts, wenn vorn ein Hindernis schon
+in der gepolsterten Kontur liegt: wird in SH-8 nur gemessen (Zustand des
+Monitors bei jeder Rückfahrt); eine Änderung wäre sicherheitsrelevant und ein
+eigenes Paket. SH-8 startet nach der AW-1b-Simulation mit neuem Prompt.
 
 **In Simulation:** **EK-1 „Erkundung zielgerichtet, Teil 1“**: A Rundblick
 am Start, C „gut genug“-Ende, D kürzere Fehlversuche.
