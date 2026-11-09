@@ -109,6 +109,21 @@ Strengerwerden ohne Ausweg; den Ausweg gibt es jetzt. Offen für den Roboter:
 ob LiDAR oder VL53 Teile des Roboters selbst erfassen (die würden dann nicht
 mehr gelöscht) – das wäre vorher im Stand zu messen.
 
+**KM-1 Variante B, erste drei Läufe (gleiche Welten wie oben):**
+
+| Lauf | Ende | Dauer | Abdeckung | engster Abstand Prüfkontur / Gehäuse | Rückfahrten | „approach“ |
+|---|---|---|---|---|---|---|
+| Referenz | vollständig, bestanden | 329 s | 0,979 | 8,8 cm / nie unter 3 cm | 0 | nie |
+| Tür 0,68 m | Rest unerreichbar (nur Kartenkriterium offen) | 394 s | 0,967 | 3,9 cm / nie unter 3 cm | 1 erfolgreich | nie |
+| Drift | vollständig, bestanden | 535 s | 0,971 | 0,6 cm / 3,3 cm | 3 erfolgreich | nie |
+
+Gegenüber dem Produktstand (zwei Gehäuseberührungen, zwei Teilkarten nach
+„approach“-Festhalten) keine Berührung, kein Festhalten, alle Rückfahrten
+erfolgreich. Drei Läufe sind wenig; Absicherung mit weiteren Läufen läuft,
+dabei auch EK-1 auf Variante B. Variante B ändert nicht den
+Kollisionsmonitor, sondern nur, dass die lokale Karte unter der Kontur nichts
+löscht; Name bleibt KM-1 B wegen des Zusammenhangs.
+
 ## 09.11.2026 (abends) – AW-1b in der Simulation: Lücke (1) behoben, Lücke (2) dominiert die Simulation
 
 AW-1b (`d0d1431`): Nach einer Rückfahrt wird das Ziel zurückgestellt. Vier
