@@ -34,16 +34,17 @@ Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
 **Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md),
-**kurz zurückgehalten** (Entscheidung des Projektinhabers 09.11.2026): Die
-Simulation zeigte zwei Lücken in AW-1. (1) Nach der Rückfahrt dasselbe Ziel
-erneut, dann wieder fest: behoben als AW-1b (`d0d1431`), Simulation läuft.
-(2) Kollisionsmonitor sperrt auch rückwärts, wenn vorn ein Hindernis schon
-in der gepolsterten Kontur liegt: wird in SH-8 nur gemessen (Zustand des
-Monitors bei jeder Rückfahrt); eine Änderung wäre sicherheitsrelevant und ein
-eigenes Paket. SH-8 startet nach der AW-1b-Simulation mit neuem Prompt.
+**freigegeben** (Entscheidung des Projektinhabers 09.11.2026, abends): AW-1
+plus AW-1b (`d0d1431`). Lücke (2) (Kollisionsmonitor hält auch rückwärts fest)
+wird nur gemessen. Die Simulation besteht nicht, weil dort Lücke (2)
+dominiert; real war sie in SH-7 nicht aufgetreten. SH-8 entscheidet mit
+Realdaten.
 
-**In Simulation:** **EK-1 „Erkundung zielgerichtet, Teil 1“**: A Rundblick
-am Start, C „gut genug“-Ende, D kürzere Fehlversuche.
+**In Simulation:** **KM-1 Entwurf** (Lücke 2: Kollisionsmonitor darf
+das Wegfahren aus anliegender Lage nicht sperren; sicherheitsrelevant, eigenes
+Paket nach AGENTS §2.7, erst nach den SH-8-Daten auf den Roboter) und
+**EK-1 „Erkundung zielgerichtet, Teil 1“** (A Rundblick am Start, C „gut
+genug“-Ende, D kürzere Fehlversuche; Simulationslauf wiederholen).
 
 **Fahrplan danach:** Schritt 2 SH-9 mit EK-1 (ein Raum, dann zwei) →
 Schritt 3 EK-2 (Ziele nach Nutzen, Idee B) nur bei Bedarf → Schritt 4
@@ -97,8 +98,9 @@ Belegt:
 
 **Bewertung:** AW-1b tut, was es soll; die Simulation besteht trotzdem nicht,
 weil Lücke (2) sie dominiert. Ob (2) real vorkommt, misst SH-8 (Zustand des
-Kollisionsmonitors je Rückfahrt). Entscheidung des Projektinhabers zum
-Start von SH-8 steht aus.
+Kollisionsmonitors je Rückfahrt). **Entscheidung des Projektinhabers
+(09.11.2026, abends): SH-8 jetzt fahren**; parallel Entwurf KM-1 für (2) in
+der Simulation.
 
 ## 09.11.2026 (nachmittags) – EK-1 „Erkundung zielgerichtet, Teil 1“: Kriterien vorab, Bau in der Simulation
 
