@@ -529,6 +529,8 @@ def main(argv=None):
             if self.erste_karte is None:
                 self.erste_karte = msg
             self.karte = msg
+            # Abdeckungskurve wie am Roboter (Fahrplan §9, 09.11.2026).
+            protokoll.karte(msg.data, msg.info.resolution, time.monotonic())
 
         def on_cmd_final(self, m):
             protokoll.cmd_vel(m.linear.x, m.angular.z)

@@ -80,4 +80,26 @@ def test_protocol_tool_stays_read_only():
     source = Path(__file__).with_name('selbstheilung_lauf_protokoll.py').read_text(encoding='utf-8')
     for forbidden in ('create_publisher', 'create_client', 'ActionClient', 'send_goal'):
         assert forbidden not in source
-    assert len(re.findall(r'create_subscription\(', source)) == 7
+    # 8 seit 09.11.2026: /map für die Abdeckungskurve (nur lesend).
+    assert len(re.findall(r'create_subscription\(', source)) == 8
+
+
+def test_coverage_curve_samples_every_30_s_only_while_driving():
+    """Fahrplan §9 (09.11.2026): wann sind 85/90/95 % der Endfläche erreicht?"""
+    from selbstheilung_lauf_protokoll import LaufProtokoll, flaechen
+    assert flaechen([0, 0, 100, -1], 0.5) == {'frei_m2': 0.5, 'belegt_m2': 0.25, 'bekannt_m2': 0.75}
+    p = LaufProtokoll(0.0)
+    p.karte([0]*10, 1.0, 1.0)                     # vor der Fahrt: nichts
+    assert p.abdeckung == []
+    p.gestartet_um = 10.0
+    for t, frei in ((10, 2), (20, 99), (40, 8), (70, 9), (100, 10), (101, 99)):
+        p.karte([0]*frei + [-1]*(20-frei), 1.0, float(t))
+    assert [s['fahrt_s'] for s in p.abdeckung] == [0.0, 30.0, 60.0, 90.0]
+    assert [s['frei_m2'] for s in p.abdeckung] == [2.0, 8.0, 9.0, 10.0]
+    zeiten = p.abdeckung_zeiten()
+    assert zeiten == {'frei_ende_m2': 10.0, '85_prozent_s': 60.0,
+                      '90_prozent_s': 60.0, '95_prozent_s': 90.0}
+    p.beendet_um = 120.0
+    p.karte([0]*20, 1.0, 200.0)                   # nach der Fahrt: nichts mehr
+    assert len(p.abdeckung) == 4
+    assert p.zusammenfassung()['abdeckung'] == zeiten

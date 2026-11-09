@@ -13,6 +13,9 @@ schreibt eine JSON-Zusammenfassung:
   - HWT-Erholungszustände, Not-Aus-Wechsel, Tempolimit-Wechsel,
   - Fahrbefehle auf /cmd_vel (Maximum), gefahrene Strecke laut /odom,
   - Lücken im VL53-Status (länger als 0,8 s),
+  - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
+    während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
+    erreicht waren (Fahrplan MASTERPLAN §9, 09.11.2026),
   - die automatisch prüfbaren Kriterien der Abnahmestufe 1.
 
 Kontaktfreiheit, Eingriffe und der Nav2-Zustand nach der Fahrt sind
@@ -30,6 +33,8 @@ import time
 TERMINAL = ('success', 'partial', 'blocked', 'failed', 'canceled')
 SAUBERES_ENDE = ('exploration_complete', 'usable_partial', 'blocked_help_required')
 VL53_LUECKE_S = 0.8
+ABDECKUNG_TAKT_S = 30.0
+ABDECKUNG_ANTEILE = (0.85, 0.90, 0.95)
 MANUELL = (
     'kein Kontakt mit Hindernissen oder Wänden (Beobachtung Christopher)',
     'kein Eingriff: kein Stopp, kein Not-Aus, kein Umsetzen (Beobachtung Christopher)',
@@ -61,6 +66,8 @@ class LaufProtokoll:
         self.vl53_luecken = 0
         self.vl53_max_luecke_s = 0.0
         self.hwt_zustand = None
+        self.abdeckung = []
+        self._abdeckung_letzte = None
 
     def _t(self, t):
         return round(t - self.start, 2)
@@ -141,6 +148,29 @@ class LaufProtokoll:
                 self._ereignis(t, 'vl53_luecke', dauer_s=round(luecke, 3))
         self.vl53_letzte = t
 
+    def karte(self, werte, aufloesung, t):
+        """Abdeckungskurve: höchstens alle 30 s und nur während der Fahrt."""
+        if not self.faehrt() or not aufloesung > 0:
+            return
+        if self._abdeckung_letzte is not None and t - self._abdeckung_letzte < ABDECKUNG_TAKT_S:
+            return
+        self._abdeckung_letzte = t
+        self.abdeckung.append(dict(t_s=self._t(t),
+                                   fahrt_s=round(t - self.gestartet_um, 1),
+                                   **flaechen(werte, aufloesung)))
+
+    def abdeckung_zeiten(self):
+        """Fahrzeit bis zu 85/90/95 % der freien Fläche am Ende (Endfläche = 100 %)."""
+        if not self.abdeckung:
+            return None
+        ende = self.abdeckung[-1]['frei_m2']
+        zeiten = {}
+        for anteil in ABDECKUNG_ANTEILE:
+            treffer = [p['fahrt_s'] for p in self.abdeckung
+                       if ende > 0 and p['frei_m2'] >= anteil*ende]
+            zeiten[f'{int(anteil*100)}_prozent_s'] = treffer[0] if treffer else None
+        return dict(frei_ende_m2=ende, **zeiten)
+
     # --- Ergebnis -------------------------------------------------------
     def kriterien(self):
         sh = self.self_healing or {}
@@ -172,11 +202,25 @@ class LaufProtokoll:
             'strecke_odom_m': round(self.strecke_m, 2),
             'vl53_luecken': {'anzahl': self.vl53_luecken,
                              'max_s': round(self.vl53_max_luecke_s, 3)},
+            'abdeckung': self.abdeckung_zeiten(),
+            'abdeckungskurve': self.abdeckung,
             'kriterien_automatisch': kriterien,
             'automatisch_erfuellt': all(kriterien.values()),
             'kriterien_manuell': list(MANUELL),
             'ereignisse': self.ereignisse,
         }
+
+
+def flaechen(werte, aufloesung):
+    """Freie, belegte und bekannte Fläche einer OccupancyGrid-Wertefolge in m²."""
+    import numpy as np
+    zellen = np.asarray(werte, dtype=np.int16)
+    zelle_m2 = float(aufloesung)**2
+    frei = int(np.count_nonzero((zellen >= 0) & (zellen < 25)))
+    belegt = int(np.count_nonzero(zellen >= 65))
+    bekannt = int(np.count_nonzero(zellen >= 0))
+    return dict(frei_m2=round(frei*zelle_m2, 2), belegt_m2=round(belegt*zelle_m2, 2),
+                bekannt_m2=round(bekannt*zelle_m2, 2))
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +247,7 @@ def main(argv=None):
     import rclpy
     from geometry_msgs.msg import Twist
     from nav2_msgs.msg import SpeedLimit
-    from nav_msgs.msg import Odometry
+    from nav_msgs.msg import OccupancyGrid, Odometry
     from rclpy.qos import (QoSProfile, DurabilityPolicy, ReliabilityPolicy,
                            qos_profile_sensor_data)
     from robot_interfaces.msg import NearFieldStatus
@@ -241,6 +285,9 @@ def main(argv=None):
                              qos_profile_sensor_data)
     node.create_subscription(NearFieldStatus, '/near_field/status',
                              lambda m: protokoll.vl53(jetzt()), qos_profile_sensor_data)
+    node.create_subscription(OccupancyGrid, '/map',
+                             lambda m: protokoll.karte(m.data, m.info.resolution, jetzt()),
+                             latched)
 
     print('Fahrtprotokoll läuft; wartet auf den Missionsstart.', flush=True)
     ende = jetzt() + args.max_s
@@ -262,7 +309,8 @@ def main(argv=None):
     os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
     with open(args.json, 'w', encoding='utf-8') as handle:
         json.dump(ergebnis, handle, ensure_ascii=False, indent=2)
-    ausgabe = {k: v for k, v in ergebnis.items() if k not in ('ereignisse', 'heilungsverlauf')}
+    ausgabe = {k: v for k, v in ergebnis.items()
+               if k not in ('ereignisse', 'heilungsverlauf', 'abdeckungskurve')}
     print(json.dumps(ausgabe, ensure_ascii=False, indent=2))
     return 0 if ergebnis['automatisch_erfuellt'] else 1
 
