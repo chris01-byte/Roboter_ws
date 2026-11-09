@@ -132,6 +132,10 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
             _self_healing_stuck_move_m=.05, _self_healing_free_back_m=0.,
             _self_healing_track_back_slow_factor=1.,
+            _self_healing_scan_rad=0., _self_healing_scan_spacing_m=0.,
+            _self_healing_saturation_window_s=0., _self_healing_saturation_growth=.02,
+            _self_healing_saturation_big_frontier_m=.6,
+            _self_healing_attempt_stall_s=0., _self_healing_attempt_stall_m=.25,
             _cancel_timeout_s=3., _initial_scan_speed=.08, _initial_scan_timeout=60.,
             _frontiers_remaining=0, _frontiers_visited_status=0, _status_phase='idle',
             _status_message='', _status_state='idle', _global_costmap=None,
@@ -519,3 +523,87 @@ def test_mission_limits_speed_in_unknown_and_releases_it_at_the_end(monkeypatch)
     assert result.success
     assert (.06, False) in state.limits          # approached unmapped frontiers slowly
     assert state.limits[-1] == (0., False)       # released for later users
+
+
+# --- EK-1 „Erkundung zielgerichtet, Teil 1“ (Fahrplan MASTERPLAN §9) ---------
+
+def test_ek1_rundblick_at_start_and_again_in_a_new_area(monkeypatch):
+    n, state, goal, terminal = parent(monkeypatch)
+    n._self_healing_scan_rad, n._self_healing_scan_spacing_m = 2*math.pi, 1.0
+    n._self_healing_look_around_possible = lambda pose: True
+    result = n._execute_self_healing(goal, 1200., .3)
+    assert result.success, n._self_healing_status
+    kinds = [c[0] for c in state.calls]
+    assert kinds[0] == 'look_around' and state.calls[0][1] == pytest.approx(2*math.pi, abs=1e-3)
+    scans = n._self_healing_status['scans']
+    assert scans == kinds.count('look_around') >= 2
+    # Jeder weitere Rundblick folgt auf ein erreichtes Ziel in einem neuen Bereich.
+    assert all(kinds[i-1] == 'navigate' for i, k in enumerate(kinds) if k == 'look_around' and i)
+
+
+def test_ek1_rundblick_skipped_without_free_turning_circle(monkeypatch):
+    n, state, goal, terminal = parent(monkeypatch)
+    n._self_healing_scan_rad = 2*math.pi
+    n._self_healing_look_around_possible = lambda pose: False
+    n._execute_self_healing(goal, 1200., .3)
+    assert not any(c[0] == 'look_around' for c in state.calls)
+    assert n._self_healing_status['scans'] == 0
+
+
+def _fixed_goals(monkeypatch, sizes):
+    import explore.self_healing_runtime as module
+    from explore.self_healing import FrontierGoal
+    goals = [FrontierGoal(1.5+.3*i, 1.0, size, 1., 0., 1.5+.3*i, 1.0) for i, size in enumerate(sizes)]
+    monkeypatch.setattr(module, 'frontier_goals', lambda *a, **k: list(goals))
+
+
+def test_ek1_saturation_ends_when_only_small_gaps_remain(monkeypatch):
+    def no_gain(x, y, stop, record):
+        state.refresh_map()          # Ziel erreicht, aber die Karte wächst nicht
+        return 'success'
+    n, state, goal, terminal = parent(monkeypatch, navigate=no_gain)
+    _fixed_goals(monkeypatch, [8, 10])          # 0,40 und 0,50 m: kleine Lücken
+    n._self_healing_saturation_window_s = 30.
+    result = n._execute_self_healing(goal, 1200., .3)
+    assert result.success and terminal == ['success']
+    assert n._self_healing_status['reason'] == 'coverage_saturated'
+    assert n._self_healing_status['saturation']['largest_frontier_m'] == pytest.approx(.5)
+    assert state.clock[0]-100. < 120.           # kein Herumfahren bis zum Budget
+
+
+def test_ek1_saturation_keeps_going_while_a_door_sized_gap_remains(monkeypatch):
+    def no_gain(x, y, stop, record):
+        state.refresh_map()
+        return 'success'
+    n, state, goal, terminal = parent(monkeypatch, navigate=no_gain)
+    _fixed_goals(monkeypatch, [8, 16])          # 0,80 m: Türbreite
+    n._self_healing_saturation_window_s = 30.
+    n._execute_self_healing(goal, 300., .3)
+    assert n._self_healing_status['reason'] == 'overall_budget_exhausted'
+
+
+def test_ek1_stalled_attempt_is_cut_after_stall_time(monkeypatch):
+    starts = []
+    def stalled(x, y, stop, record):
+        starts.append(state.clock[0])
+        for _ in range(150):                    # bis zu 150 s ohne Weggewinn
+            state.clock[0] += 1.
+            record()
+            if stop():
+                return 'canceled'
+        return 'timeout'
+    n, state, goal, terminal = parent(monkeypatch, navigate=stalled)
+    n._self_healing_attempt_stall_s = 45.
+    n._execute_self_healing(goal, 1200., .3)
+    history = n._self_healing_status['ladder']['history']
+    assert history and all(h['reason'] == 'nav_no_progress' for h in history)
+    # Jeder Anlauf endet nach rund 45 s statt nach 150 s.
+    assert all(b-a < 60. for a, b in zip(starts, starts[1:3]))
+
+
+def test_ek1_parts_are_off_by_default(monkeypatch):
+    import explore.self_healing_runtime as module
+    source = open(module.__file__, encoding='utf-8').read()
+    for name in ("'self_healing_scan_rad', 0.", "'self_healing_scan_spacing_m', 0.",
+                 "'self_healing_saturation_window_s', 0.", "'self_healing_attempt_stall_s', 0."):
+        assert name in source

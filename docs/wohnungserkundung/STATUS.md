@@ -63,6 +63,34 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
 Abdeckungskurve im Fahrtprotokoll (09.11.).
 
+## 09.11.2026 (nachmittags) – EK-1 „Erkundung zielgerichtet, Teil 1“: Kriterien vorab, Bau in der Simulation
+
+Fahrplan MASTERPLAN §9, Schritt 1 parallel zu SH-8. **Nicht auf dem
+Roboter:** Die EK-1-Commits werden erst nach dem SH-8-Build gepusht, damit
+SH-8 nur AW-1 prüft (Regel 1). Alle drei Teile sind im Code standardmäßig aus
+(Parameter 0) und im Produktprofil noch nicht gesetzt.
+
+**Umfang:** A Rundblick (360° auf der Stelle) am Start und nach einem
+erreichten Ziel, das mindestens 2,5 m von früheren Rundblicken entfernt
+liegt, nur bei nachweislich freiem Drehkreis; C „gut genug“-Ende, wenn die
+freie Fläche in 150 s um weniger als 2 % wuchs, darin mindestens zwei
+Anläufe lagen und keine Lücke von 0,6 m oder mehr übrig ist (offene Tür
+bleibt Ziel); D Anlauf abbrechen, wenn sich der Roboter 45 s lang nicht
+0,25 m von der letzten Prüfstelle entfernt hat (zählt als Fehlversuch).
+
+**Simulationskriterien, vor dem ersten Lauf festgelegt** (Basis = Produkt
+ohne EK-1, gleiche Welt; Referenzwohnung mit Möbeln, Tür 0,68 m, Mülleimer):
+- **E1** Abdeckung (erreichbar) mindestens 0,90 in jedem EK-1-Lauf, der nicht
+  durch die bekannte Insel-Annäherung eingefroren wurde (beide Räume erfasst).
+- **E2** Keine neue Fehlerart: Unterschreitungen nur die bekannte an der Insel
+  beim Drehen; keine während eines Rundblicks.
+- **E3** Leerlauf halbiert: Median der Zeit von 95 % der freien Endfläche bis
+  Fahrtende höchstens 50 % des Basis-Medians.
+- **E4** Zeit bis 90 % der freien Endfläche: Median höchstens 60 s länger als
+  die Basis (ein Rundblick kostet etwa 65 s).
+Realkriterium für SH-9 (Fahrplan §9 Schritt 2) wird nach den
+SH-8-Abdeckungskurven endgültig festgelegt.
+
 ## 09.11.2026 – AW-1 „Abstand halten und wegkommen“: gebaut, Simulation, SH-8 aktiviert
 
 **Umgesetzt** (`19c8cb9`, Entscheidung des Projektinhabers 08.11.2026, nur

@@ -15,6 +15,7 @@ Not-Aus und Aktorfehler beenden die Mission sofort (AGENTS.md §2.3).
 import math
 import threading
 import time
+from collections import deque
 
 import numpy as np
 import rclpy
@@ -84,6 +85,26 @@ class SelfHealingRuntime:
         # SH-7) an der Zeitgrenze. 1 = ungedrosselt gerechnet wie bis 08.11.2026.
         self._self_healing_track_back_slow_factor = number(
             'self_healing_track_back_slow_factor', 1., .1, 1.)
+        # EK-1 „Erkundung zielgerichtet, Teil 1“ (Fahrplan MASTERPLAN §9,
+        # 09.11.2026). Jeder Teil einzeln abschaltbar; 0 = aus (wie bisher).
+        # A Rundblick: am Start und nach einem erreichten Ziel, das mindestens
+        # scan_spacing_m von allen früheren Rundblicken entfernt liegt. Der Mast
+        # verdeckt einen Teil des LiDAR; ohne Drehung bleibt dort eine Lücke.
+        self._self_healing_scan_rad = number('self_healing_scan_rad', 0., 0., 2*math.pi)
+        self._self_healing_scan_spacing_m = number('self_healing_scan_spacing_m', 0., 0., 20.)
+        # C „gut genug“: Ende, wenn die freie Fläche im Fenster um weniger als
+        # growth (Anteil) wuchs, dort mindestens zwei Anläufe lagen und keine
+        # Lücke von big_frontier_m oder mehr übrig ist (offene Tür, Durchgang).
+        self._self_healing_saturation_window_s = number(
+            'self_healing_saturation_window_s', 0., 0., 3600.)
+        self._self_healing_saturation_growth = number('self_healing_saturation_growth', .02, 0., .5)
+        self._self_healing_saturation_big_frontier_m = number(
+            'self_healing_saturation_big_frontier_m', .6, .1, 5.)
+        # D kürzere Fehlversuche: Abbruch eines Anlaufs, wenn sich der Roboter in
+        # stall_s nicht mindestens stall_m von der letzten Prüfstelle entfernt
+        # hat (SH-6/SH-7: 13-69 % der Fahrzeit in 150-s-Anläufen ohne Ziel).
+        self._self_healing_attempt_stall_s = number('self_healing_attempt_stall_s', 0., 0., 600.)
+        self._self_healing_attempt_stall_m = number('self_healing_attempt_stall_m', .25, .05, 2.)
         # „Nicht vom Fleck gekommen“: weniger als stuck_move_m seit Beginn des
         # Versuchs; dann kommt die Spur-Rückfahrt sofort (Entscheidung 04.11.2026).
         self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
@@ -171,6 +192,28 @@ class SelfHealingRuntime:
         try:
             status, achieved = self._rotate_in_place(
                 self._self_healing_look_around_rad, self._initial_scan_speed,
+                self._initial_scan_timeout, stop_requested=stop_requested)
+        finally:
+            self._publish_scan_stop()
+        return status, achieved
+
+    def _self_healing_saturated(self, now, free_history, attempt_times, goals, resolution):
+        """EK-1 C: Fläche im Fenster kaum gewachsen, genug Anläufe, nur kleine Lücken."""
+        if len(free_history) < 2 or now-free_history[0][0] < self._self_healing_saturation_window_s:
+            return False
+        if len(attempt_times) < 2:
+            return False
+        frei = free_history[-1][1]
+        if frei <= 0 or frei-free_history[0][1] >= self._self_healing_saturation_growth*frei:
+            return False
+        return all(goal.size_cells*resolution < self._self_healing_saturation_big_frontier_m
+                   for goal in goals)
+
+    def _self_healing_rundblick(self, stop_requested):
+        """EK-1 A: Rundblick auf der Stelle; Kollisionsmonitor bleibt aktiv."""
+        try:
+            status, achieved = self._rotate_in_place(
+                self._self_healing_scan_rad, self._initial_scan_speed,
                 self._initial_scan_timeout, stop_requested=stop_requested)
         finally:
             self._publish_scan_stop()
@@ -288,10 +331,15 @@ class SelfHealingRuntime:
         known_cells = None
         source_wait_since = None
         second_chance_used = False
+        # EK-1: Rundblick-Orte, Verlauf der freien Fläche, Anlaufzeiten.
+        scan_spots = []
+        scan_pending = self._self_healing_scan_rad > 0.
+        free_history = deque()
+        attempt_times = deque()
         status = self._self_healing_status = dict(
             schema_version=1, state='running', outcome='in_progress', reason=None,
             goals_reached=0, heals=0, deferred_goals=0, track_backs=0, look_arounds=0,
-            waiting_for=None, active_goal=None, ladder=ladder.snapshot())
+            scans=0, waiting_for=None, active_goal=None, ladder=ladder.snapshot())
         self._status_state = 'running'
 
         def expired():
@@ -379,6 +427,16 @@ class SelfHealingRuntime:
                 continue
             source_wait_since = None
             status['waiting_for'] = None
+            if scan_pending:
+                # EK-1 A: Rundblick, wenn der Drehkreis nachweislich frei ist.
+                scan_pending = False
+                if self._self_healing_look_around_possible(pose):
+                    self._status_phase = 'self_healing_scan'
+                    self._status_message = 'Looking around (360 deg).'
+                    self._self_healing_rundblick(stop_requested)
+                    scan_spots.append((float(pose[0]), float(pose[1])))
+                    status['scans'] += 1
+                    continue                    # mit der Karte nach dem Rundblick weiter
             info = grid.info
             occupancy = np.asarray(grid.data, dtype=np.int16).reshape(info.height, info.width)
             known = int(np.count_nonzero(occupancy >= 0))
@@ -390,6 +448,14 @@ class SelfHealingRuntime:
                 ladder.progress(now)
                 known_cells = known
             min_cells = max(1, int(round(min_frontier_m/info.resolution)))
+            window = self._self_healing_saturation_window_s
+            if window > 0:
+                free_m2 = float(np.count_nonzero(occupancy == 0))*info.resolution**2
+                free_history.append((now, free_m2))
+                while len(free_history) > 1 and now-free_history[1][0] >= window:
+                    free_history.popleft()      # [0] bleibt der letzte Wert vor dem Fenster
+                while attempt_times and now-attempt_times[0] > window:
+                    attempt_times.popleft()
             def cell_to_world(rows, cols, info=info):
                 q = info.origin.orientation
                 yaw = math.atan2(2*(q.w*q.z+q.x*q.y), 1-2*(q.y*q.y+q.z*q.z))
@@ -442,6 +508,14 @@ class SelfHealingRuntime:
                     continue
                 return finish('partial', 'remaining_frontiers_unreachable')
             empty_checks = 0
+            if window > 0 and self._self_healing_saturated(
+                    now, free_history, attempt_times, goals, info.resolution):
+                # EK-1 C: Fläche wächst kaum noch, und es bleiben nur kleine Lücken.
+                status['saturation'] = dict(window_s=window, free_m2=round(free_history[-1][1], 2),
+                                            growth_m2=round(free_history[-1][1]-free_history[0][1], 2),
+                                            largest_frontier_m=round(max(
+                                                g.size_cells for g in goals)*info.resolution, 2))
+                return finish('success', 'coverage_saturated')
             goal = goals[0]
             key = (round(goal.x/.25), round(goal.y/.25))
             attempts[key] = attempts.get(key, 0)+1
@@ -452,11 +526,30 @@ class SelfHealingRuntime:
             self._self_healing_govern_speed(force=True)   # limit before the child exists
             record_track()
             attempt_start = self._self_healing_odom_pose()
+            attempt_times.append(time.monotonic())
+            stall = dict(xy=None, at=time.monotonic(), stalled=False)
+            def attempt_stop():
+                # EK-1 D: kein Weggewinn seit stall_s -> Anlauf abbrechen.
+                if stop_requested():
+                    return True
+                if self._self_healing_attempt_stall_s <= 0:
+                    return False
+                here = self._self_healing_odom_pose()
+                t = time.monotonic()
+                if here is None:
+                    return False
+                if stall['xy'] is None or math.dist(stall['xy'], here[:2]) >= \
+                        self._self_healing_attempt_stall_m:
+                    stall['xy'], stall['at'] = (here[0], here[1]), t
+                elif t-stall['at'] >= self._self_healing_attempt_stall_s:
+                    stall['stalled'] = True
+                    return True
+                return False
             with self._wohnungserkundung_runtime_lock:
                 self._wohnungserkundung_active_child = goal
             try:
                 nav = self._navigate_to(goal.x, goal.y, self._goal_timeout_s,
-                                        stop_requested=stop_requested,
+                                        stop_requested=attempt_stop,
                                         progress_observer=record_track)
             finally:
                 with self._wohnungserkundung_runtime_lock:
@@ -464,6 +557,8 @@ class SelfHealingRuntime:
             if nav in ('error', 'cancel_failed'):
                 # Nav2 child state is uncertain: never command anything else.
                 return finish('failed', f'child_{nav}')
+            if nav == 'canceled' and stall['stalled'] and not stop_requested():
+                nav = 'no_progress'     # wie ein Fehlversuch behandeln, nicht wie ein Stopp
             if nav == 'success':
                 reached += 1
                 self._frontiers_visited_status = reached
@@ -478,6 +573,12 @@ class SelfHealingRuntime:
                     blacklist.append(goal.frontier_xy)
                     status['visited_without_gain'] = status.get('visited_without_gain', 0) + 1
                 status.update(goals_reached=reached, ladder=ladder.snapshot())
+                if self._self_healing_scan_rad > 0 and self._self_healing_scan_spacing_m > 0:
+                    here, _ = self._robot_pose_sample()
+                    if here is not None and all(
+                            math.dist(here[:2], spot) >= self._self_healing_scan_spacing_m
+                            for spot in scan_spots):
+                        scan_pending = True     # EK-1 A: neuer Bereich, dort umsehen
                 continue
             if nav == 'canceled':
                 continue   # safety/HOLD/cancel/budget: the loop head decides
