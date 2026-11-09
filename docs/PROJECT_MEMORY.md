@@ -1448,6 +1448,18 @@ Umsehen nur mit freiem Drehkreis), und die Grenze „8 Fehlschläge in Folge“
 ist bei schnellen Abbrüchen in ein bis zwei Minuten erreicht. Lehre: Ein
 Raum allein zeigt diese Grenze kaum; eine Wohnung besteht zu einem guten Teil
 daraus.
+
+**Nachtrag 09.11.2026 – Fahrplan als roter Faden (Entscheidung des
+Projektinhabers):** Für die Selbstheilungslinie gilt MASTERPLAN §9: je
+Realtest genau eine Verhaltensänderung, die nächste Verbesserung parallel in
+der Simulation, Kriterien und Rückfall vorab, nach einem Fehlschlag zuerst
+Daten, Bestandenes wird eingefroren. Reihenfolge: SH-8 (AW-1) → SH-9 (EK-1:
+Rundblick, „gut genug“-Ende, kürzere Fehlversuche) → EK-2 bei Bedarf →
+Wohnung → Raumziele. Anlass: Der Projektinhaber beobachtete, dass Amadeus
+20–30 min im selben Raum umherfährt, obwohl ein Rundblick und wenige Fahrten
+den Großteil erfassen; gezählt verbrachte er 13–69 % der Fahrzeit in
+150-s-Anläufen, die das Ziel nicht erreichten. Die STATUS-Arbeitsliste führt
+den aktuellen Stand.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

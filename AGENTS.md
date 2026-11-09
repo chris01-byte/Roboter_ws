@@ -186,6 +186,9 @@ anschließend technisch bedingte Zielsystem-/Realabnahme im bestehenden LAB-1-Um
 **Seit 15.10.2026 (Nutzerentscheidung, MASTERPLAN-Nachtrag):** `self_healing` ist die
 Hauptlinie; AP-06 ist eingefroren, erhalten und mit `self_healing:=false` umschaltbar.
 Maßgeblich ist der aktuelle [Agentenauftrag](docs/wohnungserkundung/AGENTENAUFTRAG.md).
+**Seit 09.11.2026 (Nutzerentscheidung):** Für die Hauptlinie gilt der Fahrplan in
+MASTERPLAN §9 als roter Faden: je Realtest genau eine Verhaltensänderung, die nächste
+Verbesserung parallel in der Simulation, eine Arbeitsliste oben im STATUS.
 Aktueller Zugang, Grenzen und tatsächliche Nachweise stehen ausschließlich im STATUS;
 fehlender Zugang sperrt nur die davon abhängige Arbeit.
 Der Plan erhält einen schlanken metrischen

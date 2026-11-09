@@ -1,14 +1,13 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 08.11.2026 (abends):** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Prototyp 1 eingefroren (`src/` `e8f00f6`),
-darauf Budget 40 min und Tempo +35 %/+25 %. SH-7 (zwei Räume) nicht
-bestätigt; SH-7N hat den Grund gefunden: Amadeus fährt bis auf wenige
-Zentimeter an echte Hindernisse heran, und von dort verweigert Nav2 jede
-Bewegung, auch rückwärts in freien Raum. Verschobene LiDAR-Reste in der
-lokalen Karte gibt es zusätzlich. Kein aktiver Jetson-Auftrag; nächster
-Schritt nach Entscheidung des Projektinhabers. Details im obersten Abschnitt
-08.11.2026 (SH-7N).
+**Aktueller Stand 09.11.2026:** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
+(Nutzerentscheidung 09.11.2026): je Realtest genau eine Verhaltensänderung,
+die nächste Verbesserung parallel in der Simulation. Wo wir stehen, zeigt die
+**Arbeitsliste direkt unter diesem Absatz**; sie wird bei jedem Schritt
+fortgeschrieben. Prototyp 1 eingefroren (`src/` `e8f00f6`). Paket AW-1
+„Abstand halten und wegkommen“ (`19c8cb9`) ist gebaut und in der Simulation;
+danach SH-8 auf dem Roboter.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -27,6 +26,42 @@ Referenz; B/C tatsächlich späte Auswahl- und Callback-Arbeit; Joinfehler nach
 HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
+
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 09.11.2026
+
+Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
+kommen unter „Geparkt“, nicht sofort in den Code.
+
+**Aktiv (Roboter):** keiner. Als Nächstes **SH-8** (Fahrplan Schritt 1):
+Paket AW-1 auf dem Roboter, Aufbau und Kriterien wie SH-7 (Laborraum plus
+Flur, Tür 80 cm), Abdeckungskurve läuft nur mitlesend mit. Freigabe, sobald
+die Simulation von AW-1 abgeschlossen ist.
+
+**In Simulation:** AW-1 (Vorher/Nachher mit nachgebildeter Odometrie-Drift,
+Regression ohne Drift); danach **EK-1 „Erkundung zielgerichtet, Teil 1“**:
+A Rundblick am Start, C „gut genug“-Ende, D kürzere Fehlversuche.
+
+**Fahrplan danach:** Schritt 2 SH-9 mit EK-1 (ein Raum, dann zwei) →
+Schritt 3 EK-2 (Ziele nach Nutzen, Idee B) nur bei Bedarf → Schritt 4
+Stufe 3 Wohnung → Schritt 5 Raumziele (Karte speichern, Räume in der App,
+`go_to_room`).
+
+**Geparkt (mit Grund):**
+
+| Punkt | Grund für Parken | Wieder aufnehmen, wenn |
+|---|---|---|
+| E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | die Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
+| F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach EK-1, falls die Fahrzeit noch zu lang ist |
+| Geschlossene Holztür im Flur vom LiDAR nicht eingetragen | erzeugt eine falsche Lücke; Ursache offen | vor Stufe 3 (Prüfung im Stand vor der Tür) |
+| Tür in SH-7 Fahrt 3 für den Planer zu schmal | einmalig, Ursache in der Karte nicht gemessen | tritt in SH-8 erneut auf |
+| Mission-Manager meldet am Ende `failed` bei Teilkarte | betrifft nur die Anzeige (App, WE-M7) | vor Schritt 5 |
+| VL53-Aussetzer bis etwa 12 s | Ursache offen; der Explorer wartet und fährt weiter | werden sie häufiger oder länger |
+
+**Erledigt (Selbstheilungslinie, Auszug):** SH-3 Abnahmestufe 1 (02.11.) ·
+SL-1 SLAM-Last (04.11.) · SH-6 Regel „kein Fortschritt → zurück“, Prototyp 1
+eingefroren (05.11.) · Budget 40 min, Tempo +35 %/+25 % (05.11.) · SH-7
+Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
+(08.11.) · AW-1 gebaut (09.11.).
 
 ## 08.11.2026 (abends) – SH-7N ausgewertet: Warum Amadeus an engen Stellen festsitzt
 

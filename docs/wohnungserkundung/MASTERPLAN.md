@@ -23,6 +23,14 @@
 > Wohnung aus KONZEPT_SELBSTHEILUNG.md §11. Das bisherige AP06-Kriterium
 > (≥ 95 % Referenzfläche, ≤ 0,10 m, beide Türen inklusive Heck in einem Lauf)
 > gilt nur noch für den eingefrorenen AP06-Pfad. Schutzforderungen bleiben.
+>
+> **Nutzerentscheidung 09.11.2026, Nachtrag – Fahrplan (roter Faden):** Für
+> die Selbstheilungslinie gelten ab jetzt die Arbeitsregeln und die
+> Schrittfolge in **§9 Fahrplan der Selbstheilungslinie**. Kern: auf dem
+> Roboter je Realtest genau eine Verhaltensänderung, die nächste Verbesserung
+> entsteht parallel in der Simulation, und der STATUS führt oben genau eine
+> Arbeitsliste (aktiv, in Simulation, geparkt, erledigt). Jeder Auftrag
+> bezieht sich auf einen Schritt dieses Fahrplans.
 
 **Verbindliche Zielrichtung:** Hardwareanbindung und bewährte ROS-Basis erhalten; die metrische Erkundung vereinfachen; geeignete Open-Source-Komponenten gezielt integrieren. Fortschritt wird durch bestandene Abnahmen belegt. Zusätzliche Sonderfälle ohne nachgewiesenen Nutzen sind keine Integrationsstrategie.
 
@@ -187,6 +195,72 @@ Rückfall bedeutet Rücknahme des eigenen kleinen Diffs auf die dokumentierte Au
 
 Ein Paketabschluss nennt Planversion/AP/WE-Bezug, Ausgangs- und Ergebnisstand, geänderte Komponenten, ausgeführte Befehle, Ergebnis je Akzeptanzkriterium, Plattform, Evidenzpfade, bekannte Grenzen, Rückfall und genau einen nächsten Schritt. Statusstufen bleiben getrennt: dokumentiert, in_arbeit, software_geprüft, zielsystem_geprüft, physisch_abgenommen sowie offen/blockiert. Eine neue Planversion setzt historische Teilerfolge nicht zurück und färbt offene Realabnahmen nicht grün.
 
-**Aktueller Einstieg: AP-01.** MASTERPLAN v1.3 kanonisch übernehmen und den HWT-Zeitfehler gerätefrei reparieren. AP-02 wird nach dessen Softwareabschluss als nächster konkreter Auftrag vorbereitet. Kein automatischer Übergang zur weiteren Implementierung oder zu einem Laborlauf innerhalb des ersten Auftrags.
+**Aktueller Einstieg für die Hauptlinie `self_healing`:** der aktive Schritt
+des Fahrplans in §9 (Arbeitsliste im STATUS). Der folgende Absatz beschreibt
+den Einstieg des eingefrorenen AP06-Pfads vom 02.10.2026.
+
+**Historischer Einstieg AP06: AP-01.** MASTERPLAN v1.3 kanonisch übernehmen und den HWT-Zeitfehler gerätefrei reparieren. AP-02 wird nach dessen Softwareabschluss als nächster konkreter Auftrag vorbereitet. Kein automatischer Übergang zur weiteren Implementierung oder zu einem Laborlauf innerhalb des ersten Auftrags.
 
 **Änderungsprotokoll:** 02.10.2026, v1.3: unabhängige Gegenprüfung eingearbeitet; gemeinsame Basis und Bewegungsmodell vor produktiver Explorerübernahme; gepinnter externer Frontier-Kern als zulässige Komponente; sechs begrenzte Arbeitspakete innerhalb unveränderter WE-Meilensteine; konkreter erster Zeitkorrekturauftrag.
+09.11.2026, Nachtrag zu v1.3 (Nutzerentscheidung): §9 Fahrplan der
+Selbstheilungslinie mit Arbeitsregeln, Schritten und Paketen.
+
+## 9. Fahrplan der Selbstheilungslinie (Nutzerentscheidung 09.11.2026)
+
+Dieser Abschnitt ist der rote Faden für die Hauptlinie `self_healing`. Er
+legt fest, **in welcher Reihenfolge** gearbeitet wird und **wie** ein
+Abschnitt als bestanden gilt. Den jeweils aktuellen Stand führt nur die
+**Arbeitsliste oben im STATUS**; dieser Abschnitt ändert sich nur durch eine
+neue Entscheidung des Projektinhabers.
+
+### 9.1 Arbeitsregeln
+
+1. **Eine Verhaltensänderung je Realtest.** Auf dem Roboter wird in einem
+   Test genau ein Paket neu geprüft. Messwerkzeuge, die nur mitlesen und das
+   Fahren nicht beeinflussen, dürfen hinzukommen. So bleibt jedes Ergebnis
+   eindeutig einer Änderung zuzuordnen.
+2. **Kriterien und Rückfall vorab.** Jedes Paket hat eine Kennung, ein Ziel,
+   vor dem Test festgelegte Kriterien und einen Rückfallweg. Es geht erst auf
+   den Roboter, wenn es in der Simulation besteht, soweit die Simulation den
+   Fall abbilden kann; was sie nicht kann, steht im Paket.
+3. **Eine Arbeitsliste.** Der STATUS führt oben genau eine Liste: ein
+   Realtest **aktiv**, ein Paket **in Simulation**, alles andere **geparkt**
+   mit kurzem Grund, dazu **erledigt**. Neue Ideen werden geparkt, nicht
+   sofort gebaut.
+4. **Scheitern führt zuerst zu Daten.** Besteht ein Realtest nicht, folgt ein
+   nur lesender Auswerteauftrag (wie SH-7N), dann eine gezielte Korrektur
+   desselben Pakets. Das nächste Paket bleibt so lange in der Simulation;
+   nichts wird vermischt.
+5. **Bestanden heißt eingefroren.** Ein bestandener Stand wird als Prototyp
+   eingefroren; sein Release bleibt unverändert als Rückfall erhalten.
+
+### 9.2 Schritte
+
+| Schritt | Auf dem Roboter | Parallel in der Simulation | Bestanden, wenn |
+|---|---|---|---|
+| 1 | **SH-8:** Paket AW-1 „Abstand halten und wegkommen“; Aufbau und Kriterien wie SH-7 (Laborraum plus Flur); die Abdeckungskurve läuft nur mitlesend mit | Paket EK-1 bauen und prüfen | C1–C5, G1, R1 und R2 in allen drei Fahrten; dann Prototyp 2 |
+| 2 | **SH-9:** Paket EK-1 „Erkundung zielgerichtet, Teil 1“, zuerst ein Raum, dann zwei | Paket EK-2 nur bei Bedarf | ein Raum zu mindestens 90 % in höchstens 10 min (Schwelle wird nach den SH-8-Kurven endgültig festgelegt), keine Verschlechterung bei C1–C5, G1, R1, R2 |
+| 3 | Paket EK-2, nur wenn die Kurven noch viel Leerlauf zeigen | – | wie Schritt 2 |
+| 4 | **Stufe 3:** Wohnung | – | Umfang und Kriterien legt der Projektinhaber vorher fest |
+| 5 | Raumziele: Erkundungskarte speichern, Räume in der App zeichnen und benennen, Raum per `go_to_room` anfahren | – | wird vor dem Schritt festgelegt |
+
+### 9.3 Pakete
+
+- **AW-1 „Abstand halten und wegkommen“** (`19c8cb9`, Entscheidung
+  08.11.2026 nach SH-7N): Wege mit mehr Abstand (globale Inflation), eigene
+  räumende LiDAR-Ebene in der lokalen Karte, Rückfahrkontur für BackUp,
+  Rückfahrt auch ohne gerade eigene Spur (0,3 m, höchstens 0,4 m,
+  0,05 m/s, einmal je Stillstand), Zeitgrenze für 30 % Tempo.
+- **EK-1 „Erkundung zielgerichtet, Teil 1“** (Ideen A, C, D vom
+  09.11.2026): A Rundblick am Start (360° in Segmenten, wegen des Masts
+  nötig) und nach dem Betreten eines neuen Bereichs; C „gut genug“-Ende,
+  wenn die bekannte Fläche über einige Minuten oder Ziele kaum noch wächst;
+  D kürzere Fehlversuche (Abbruch ohne Annäherung nach etwa 45 s statt
+  150 s, schwer erreichbare Lücken nur einmal).
+- **EK-2 „Erkundung zielgerichtet, Teil 2“** (Idee B): Ziele nach erwartetem
+  Nutzen (unbekannte Fläche, die von dort sichtbar würde) statt nach Nähe;
+  kleine eingeschlossene Lücken ignorieren.
+
+Geparkte Ideen und offene Nebenpunkte stehen mit Grund in der Arbeitsliste
+des STATUS (unter anderem E gröberes Raster für die Lückensuche, F Tempo vor
+Unbekanntem).
