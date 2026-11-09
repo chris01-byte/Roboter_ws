@@ -36,6 +36,13 @@ def test_product_parameters_keep_product_values_and_only_rename_jazzy_classes():
     # Selbstheilungs-Overlay von slam_toolbox (Entscheidung 22.10.2026, X7).
     assert p['slam_toolbox']['ros__parameters']['loop_match_minimum_chain_size'] == 20
     assert p['slam_toolbox']['ros__parameters']['do_loop_closing'] is True
+    # Rückfahrkontur (08.11.2026): Jazzy-Name des Humble-Parameters footprint_topic.
+    beh = p['behavior_server']['ros__parameters']
+    assert beh['footprint_topic'] == beh['local_footprint_topic'] == 'rueckfahr_kontur'
+    # Eigene, räumende LiDAR-Ebene in der lokalen Karte (08.11.2026).
+    lokal = p['local_costmap']['local_costmap']['ros__parameters']
+    assert lokal['plugins'] == ['obstacle_layer', 'lidar_layer', 'inflation_layer']
+    assert lokal['lidar_layer']['lidar']['clearing'] is True
 
 
 def test_triggers_require_every_declared_condition():
@@ -260,3 +267,19 @@ def test_static_low_furniture_from_the_manifest_is_invisible_to_the_lidar():
     winkel, ranges = welt.laser(beams=720, mask=False)
     vorn = ranges[np.argmin(np.abs(winkel - 3*math.pi/2))]   # Laserrahmen: +90° montiert
     assert vorn > 1.0
+
+
+def test_optional_odometry_drift_scales_turns_and_distance():
+    """SH-7N: real driftete odom 0,2-0,4 m und 2-6 Grad; ideal bleibt der Normalfall."""
+    assert sh.odometrie_drift(None) is None and sh.odometrie_drift({}) is None
+    gier, laenge = sh.odometrie_drift({'gier_skala': .003, 'laenge_skala': .02})
+    pose = [0.0, 0.0, 0.0]
+    for _ in range(1000):                       # 10 s geradeaus mit 0,1 m/s
+        pose = sh.odom_schritt(pose, (.1, 0.), .01, gier, laenge)
+    assert pose[0] == pytest.approx(1.02) and pose[1] == pytest.approx(0.0)
+    pose = [0.0, 0.0, 0.0]
+    for _ in range(1000):                       # 10 s drehen mit 0,25 rad/s
+        pose = sh.odom_schritt(pose, (0., .25), .01, gier, laenge)
+    assert pose[2] == pytest.approx(2.5*1.003)
+    with pytest.raises(ValueError):
+        sh.odometrie_drift({'gier_skala': .5})

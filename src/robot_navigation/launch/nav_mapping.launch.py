@@ -140,6 +140,13 @@ def generate_launch_description():
             # Nur mit self_healing:=true geht der Behavior-Server (BackUp fuer
             # die Rueckfahrt entlang der eigenen Spur) ueber dieselbe Kette
             # wie Nav2: Fahrtor -> velocity_smoother -> collision_monitor.
+            # Rueckfahrkontur fuer BackUp (Entscheidung 08.11.2026 nach SH-7N),
+            # nur mit self_healing:=true; das Overlay verweist den
+            # Behavior-Server darauf. Publiziert nur Geometrie.
+            Node(
+                package='robot_navigation', executable='rueckfahr_kontur',
+                name='rueckfahr_kontur', output='screen',
+                condition=IfCondition(self_healing)),
             Node(
                 package='nav2_behaviors', executable='behavior_server',
                 name='behavior_server', output='screen',

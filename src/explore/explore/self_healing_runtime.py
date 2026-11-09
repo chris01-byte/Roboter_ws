@@ -73,6 +73,17 @@ class SelfHealingRuntime:
         self._self_healing_track_back_min_m = number('self_healing_track_back_min_m', .1, .02, 1.)
         self._self_healing_track_back_speed = number('self_healing_track_back_speed_mps', .05, .01, .1)
         self._self_healing_track_lateral_m = number('self_healing_track_lateral_tolerance_m', .03, .005, .1)
+        # Rückfahrt ohne gerade eigene Spur (Entscheidung Projektinhaber 08.11.2026
+        # nach SH-7N): In Ecken gab es keine gerade Spur, die Leiter hatte dort
+        # keinen Zug mehr. Dann gerade rückwärts um diese Länge; ob hinten frei
+        # ist, prüft der Behavior-Server (BackUp) laufend gegen die lokale Karte.
+        # 0 = aus (nur gerade eigene Spur wie bis 08.11.2026).
+        self._self_healing_free_back_m = number('self_healing_free_back_m', 0., 0., 1.)
+        # Zeitgrenze der Rückfahrt: Der Kollisionsmonitor drosselt vor Hindernissen
+        # auf 30 %; mit Strecke/Tempo + 10 s endeten 4 von 6 Rückfahrten (SH-6,
+        # SH-7) an der Zeitgrenze. 1 = ungedrosselt gerechnet wie bis 08.11.2026.
+        self._self_healing_track_back_slow_factor = number(
+            'self_healing_track_back_slow_factor', 1., .1, 1.)
         # „Nicht vom Fleck gekommen“: weniger als stuck_move_m seit Beginn des
         # Versuchs; dann kommt die Spur-Rückfahrt sofort (Entscheidung 04.11.2026).
         self._self_healing_stuck_move_m = number('self_healing_stuck_move_m', .05, .01, .3)
@@ -101,6 +112,10 @@ class SelfHealingRuntime:
             raise ValueError('self_healing_backup_action must not be empty')
         if self._self_healing_track_back_min_m > self._self_healing_track_back_max_m > 0:
             raise ValueError('self_healing_track_back_min_m exceeds the maximum')
+        if self._self_healing_free_back_m > 0 and not (
+                self._self_healing_track_back_min_m <= self._self_healing_free_back_m
+                <= self._self_healing_track_back_max_m):
+            raise ValueError('self_healing_free_back_m must lie between track_back_min_m and max_m')
         # Shared source observers and single-child lock (same contract as the
         # metric path); subscriptions are created by the node constructor.
         self._wohnungserkundung_runtime_lock = threading.Lock()
@@ -162,14 +177,15 @@ class SelfHealingRuntime:
         return status, achieved
 
     def _self_healing_track_back(self, distance_m, stop_requested):
-        """H4: Nav2 BackUp, only along the straight recent own track."""
+        """H4: Nav2 BackUp, straight back along the own track or, if set, a short free back-off."""
         client = self._self_healing_backup_client
         if distance_m <= 0 or not client.wait_for_server(timeout_sec=2.0):
             return 'unavailable'
         goal = BackUp.Goal()
         goal.target.x = float(distance_m)
         goal.speed = float(self._self_healing_track_back_speed)
-        allowance = distance_m/self._self_healing_track_back_speed + 10.
+        allowance = distance_m/(self._self_healing_track_back_speed
+                                *self._self_healing_track_back_slow_factor) + 10.
         goal.time_allowance = Duration(sec=int(allowance), nanosec=0)
         done = threading.Event()
         holder = {'handle': None, 'status': None}
@@ -470,6 +486,11 @@ class SelfHealingRuntime:
             track_len = track.straight_back_distance(
                 odom, self._self_healing_track_back_max_m,
                 lateral_tolerance_m=self._self_healing_track_lateral_m) if odom else 0.
+            back_mode = 'spur'
+            if track_len < self._self_healing_track_back_min_m and self._self_healing_free_back_m > 0:
+                # Keine gerade eigene Spur (Ecke, nach Drehungen): kurz gerade
+                # zurück; der Behavior-Server bricht ab, wenn hinten belegt ist.
+                track_len, back_mode = self._self_healing_free_back_m, 'frei'
             # Drehkreis dort prüfen, wo gedreht würde: Nach dem Fehlversuch steht der
             # Roboter nicht mehr an der Pose vom Schleifenanfang (Simulation 23.10.2026:
             # geprüft rund 0,25 m davor, gedreht 0,39 m neben einer Wand, Berührung).
@@ -503,10 +524,12 @@ class SelfHealingRuntime:
                 outcome = self._self_healing_track_back(track_len, stop_requested)
                 if outcome == 'cancel_failed':
                     return finish('failed', 'track_back_cancel_failed')
-                if outcome == 'success':
+                if back_mode == 'frei':
+                    track.clear()   # nicht entlang der Spur gefahren: alte Spur gilt nicht mehr
+                elif outcome == 'success':
                     track.consume(track_len)
                 status['track_backs'] += 1
                 status['last_track_back'] = dict(distance_m=track_len, result=outcome,
-                                                 stuck=stuck)
+                                                 stuck=stuck, mode=back_mode)
             time.sleep(self._self_healing_heal_wait_s)
         return finish('failed', 'ros_shutdown')

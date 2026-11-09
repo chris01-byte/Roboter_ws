@@ -270,6 +270,24 @@ def bewerte(abnahme, szenario, zusammenfassung, stoerung, kollision, abgestuerzt
 #  ROS-Teil
 # ---------------------------------------------------------------------------
 
+
+def odometrie_drift(konfig):
+    """(gier_skala, laenge_skala) aus dem Manifest oder None (ideale Odometrie)."""
+    if not konfig:
+        return None
+    gier, laenge = float(konfig.get('gier_skala', 0.0)), float(konfig.get('laenge_skala', 0.0))
+    if not (math.isfinite(gier) and math.isfinite(laenge) and abs(gier) < .2 and abs(laenge) < .2):
+        raise ValueError('odometrie_drift: Skalen endlich und unter 20 % angeben')
+    return gier, laenge
+
+
+def odom_schritt(pose, geschwindigkeit, dt, gier_skala, laenge_skala):
+    """Integriert die wahre Bewegung mit Skalenfehlern (Drehung, Weg) zur Odometrie."""
+    v, w = float(geschwindigkeit[0]), float(geschwindigkeit[1])
+    yaw = pose[2] + w*(1.0 + gier_skala)*dt
+    weg = v*(1.0 + laenge_skala)*dt
+    return [pose[0] + weg*math.cos(yaw), pose[1] + weg*math.sin(yaw), yaw]
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--szenario', required=True)
@@ -291,12 +309,16 @@ def main(argv=None):
     parameter = produktparameter(REPO)
     experiment = None
     explorer_bt = REPO/'src/explore/behavior_trees/navigate_to_pose_self_healing.xml'
+    explorer_extra = []
     if args.experiment is not None:
         experiment = yaml.safe_load(args.experiment.read_text(encoding='utf-8'))
         # Nur für Experimente: anderer Nav2-Baum des Explorers (Pfad relativ zur Datei).
         treiber = dict(experiment.pop('sh_treiber', None) or {})
         if treiber.get('explorer_behavior_tree'):
             explorer_bt = (args.experiment.parent/treiber['explorer_behavior_tree']).resolve()
+        # Nur für Experimente: einzelne Explorer-Parameter (z. B. Vorher-Stand).
+        for name, wert in (treiber.get('explorer_parameter') or {}).items():
+            explorer_extra += ['-p', f'{name}:={wert}']
         jazzy_kompatibel(tief_mischen(parameter, experiment))
         experiment['sh_treiber'] = treiber
     params_file.write_text(yaml.safe_dump(parameter))
@@ -392,6 +414,11 @@ def main(argv=None):
                 transforms.append(t)
             self.static.sendTransform(transforms)
             self.create_subscription(Twist, '/cmd_vel', self.on_cmd, 10)
+            # Optionale Odometrie-Drift (SH-7N, 08.11.2026): real wich odom je Fahrt
+            # 0,2-0,4 m und 2-6 Grad von der SLAM-Karte ab; ohne Drift bleiben
+            # verschobene Kostenkarten-Reste in der Simulation unsichtbar.
+            self.drift = odometrie_drift(manifest['welt'].get('odometrie_drift'))
+            self.odom_pose, self.odom_letzt = [0.0, 0.0, 0.0], None
             self.create_timer(.01, self.tick)
             # Eigene Gruppe: In der gemeinsamen Standardgruppe ließ der fast immer
             # fällige 100-Hz-Physiktakt den Sensortakt phasenweise >1 s verhungern
@@ -431,6 +458,11 @@ def main(argv=None):
         def odom(self, jetzt):
             lokal = welt.local([welt.pose[:2]])[0]
             yaw = welt.pose[2] - welt.start[2]
+            if self.drift is not None:
+                dt = 0.0 if self.odom_letzt is None else jetzt - self.odom_letzt
+                self.odom_letzt = jetzt
+                self.odom_pose = odom_schritt(self.odom_pose, welt.velocity, dt, *self.drift)
+                lokal, yaw = self.odom_pose[:2], self.odom_pose[2]
             stamp = self.get_clock().now().to_msg()
             t = TransformStamped()
             t.header.stamp, t.header.frame_id, t.child_frame_id = stamp, 'odom', 'base_link'
@@ -619,6 +651,8 @@ def main(argv=None):
                 '-p', 'allow_localization_search:=false', '-p', 'allow_explore_mission:=true',
                 '-p', 'allow_stage3_motion_diagnostic:=false']
         starte('fahrtor', [exe('robot_navigation', 'cmd_vel_mission_gate'), *gate])
+        # Rückfahrkontur für BackUp (08.11.2026), wie nav_mapping mit self_healing:=true.
+        starte('rueckfahr_kontur', [exe('robot_navigation', 'rueckfahr_kontur')])
         for paket, name, remap in (
                 ('nav2_planner', 'planner_server', []),
                 ('nav2_controller', 'controller_server', ['-r', 'cmd_vel:=cmd_vel_nav_raw']),
@@ -639,7 +673,8 @@ def main(argv=None):
                '-p', f'behavior_tree:={explorer_bt}',
                '-p', 'require_hwt601_fusion:=false', '-p', 'hwt601_active_drive:=true',
                '-p', 'hwt_development_contract:=false',
-               '-p', f'overall_timeout_s:={float(manifest["budgets"]["mission_s"])}'])
+               '-p', f'overall_timeout_s:={float(manifest["budgets"]["mission_s"])}',
+               *explorer_extra])
         starte('bt_orchestrator', [exe('bt_orchestrator', 'bt_orchestrator'), '--ros-args',
                '--params-file', str(REPO/'src/bt_orchestrator/config/bt_params.yaml'),
                '-p', f'explore_xml:={REPO}/src/bt_orchestrator/bt_xml/explore.xml'])

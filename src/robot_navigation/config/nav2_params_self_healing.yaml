@@ -41,6 +41,16 @@ behavior_server:
   ros__parameters:
     # BackUp prueft die Kontur gegen die lokale Kostenkarte ueber diese Zeit.
     simulate_ahead_time: 2.0
+    # Rueckfahrkontur statt voller gepolsterter Kontur (Entscheidung
+    # Projektinhaber 08.11.2026 nach SH-7N): BackUp prueft zuerst die aktuelle
+    # Pose; lag die volle Kontur schon an einer belegten Zelle an (Garderobe,
+    # Ecke), brach die Rueckfahrt nach 1 ms ab, obwohl hinten frei war. Die
+    # Rueckfahrkontur deckt das Heck mit Polster und die Breite (1 cm unter der
+    # halben Breite) ab, also genau die Flaeche, in die eine gerade
+    # Rueckwaertsfahrt hineinfaehrt (Knoten robot_navigation/rueckfahr_kontur).
+    # Humble-Name; Jazzy heisst er local_footprint_topic.
+    # Rueckfall: Zeile entfernen (wieder local_costmap/published_footprint).
+    footprint_topic: rueckfahr_kontur
 
 # VL53 als Ausweichsensor (Entscheidung Projektinhaber 16.10.2026): jeder
 # gueltige VL53-Treffer markiert. Die Wolke liegt geometrisch nie unter
@@ -52,32 +62,29 @@ behavior_server:
 # Seitenwaende und niedrige Hindernisse im Nahbereich (Entscheidung
 # Projektinhaber 22.10.2026, Kandidat X9 der Robustheitssimulation):
 # - Beim Kartieren ist die OAK aus; die lokale Karte kannte nur, was die VL53
-#   nach vorn sehen (+-30 Grad, 0,5 m). RPP pruefte seine Kontur deshalb nicht
-#   gegen Tuerpfosten und Seitenwaende (Simulation: 0 toedliche Zellen ueber dem
-#   Pfosten an der engsten Stelle, Kontakte der Polsterung beim Drehen in einer
-#   0,84-m-Verbindung). Der normierte LiDAR-Scan MARKIERT jetzt zusaetzlich in
-#   der lokalen Karte, raeumt aber nicht: Er liegt 0,66 m hoch und wuerde sonst
-#   niedrige VL53-Markierungen ueberstreichen und loeschen.
+#   nach vorn sehen (+-30 Grad, 0,5 m). Der normierte LiDAR-Scan markiert
+#   deshalb zusaetzlich in der lokalen Karte.
 # - Ein 10-cm-Hindernis liegt naeher als ~0,37-0,42 m unter allen VL53-Zeilen;
 #   2D-Raeumen ueber es hinweg loeschte seine Markierung. Die VL53-Raeumquellen
 #   wirken deshalb erst ab 0,45 m vom Sensor.
-# Folge: Bewegte Dinge koennen im Nahbereich als Markierung liegen bleiben
-# (mehr Heilungen, kein Sicherheitsverlust). Ohne /scan_normiert
-# (normalize_scan:=false) kommt vom LiDAR nichts an; dann gilt das bisherige
-# Verhalten. Rueckfall: self_healing:=false.
+#
+# Eigene LiDAR-Ebene mit Raeumen (Entscheidung Projektinhaber 08.11.2026 nach
+# SH-7N): Bis dahin markierte der LiDAR in der VL53-Ebene, raeumte aber nie.
+# Real driftet die Odometrie je Fahrt 0,2-0,4 m und 2-6 Grad gegen die
+# SLAM-Karte (in der Simulation ideal, deshalb dort unsichtbar); alte
+# Wandeintraege blieben verschoben liegen (SH-7N: 113 bzw. 178 toedliche
+# Zellen auf SLAM-freien Flaechen, meist 0,24-0,28 m neben den Waenden). Der
+# LiDAR hat jetzt eine eigene Ebene und raeumt dort, was er durchsieht. Seine
+# Strahlen beruehren die VL53-Ebene nicht; niedrige VL53-Markierungen bleiben
+# wie nach X9 erhalten. Ohne /scan_normiert (normalize_scan:=false) kommt vom
+# LiDAR nichts an; dann gilt das bisherige Verhalten. Rueckfall: plugins-Zeile
+# und lidar_layer entfernen und lidar wieder als Quelle der obstacle_layer
+# (Stand 7685a70), oder self_healing:=false.
 local_costmap:
   local_costmap:
     ros__parameters:
+      plugins: ["obstacle_layer", "lidar_layer", "inflation_layer"]
       obstacle_layer:
-        observation_sources: vl53_left vl53_right vl53_left_mark vl53_right_mark oak lidar
-        lidar:
-          topic: /scan_normiert
-          data_type: "LaserScan"
-          marking: True
-          clearing: False
-          min_obstacle_height: 0.0
-          max_obstacle_height: 1.0
-          obstacle_max_range: 2.5
         vl53_left:
           raytrace_min_range: 0.45
         vl53_right:
@@ -86,7 +93,26 @@ local_costmap:
           min_obstacle_height: -0.02
         vl53_right_mark:
           min_obstacle_height: -0.02
+      lidar_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: lidar
+        lidar:
+          topic: /scan_normiert
+          data_type: "LaserScan"
+          marking: True
+          clearing: True
+          min_obstacle_height: 0.0
+          max_obstacle_height: 1.0
+          obstacle_max_range: 2.5
+          raytrace_max_range: 3.0
 
+# Wege mit mehr Abstand (Entscheidung Projektinhaber 08.11.2026 nach SH-7N):
+# Die Kosten neben Hindernissen fallen flacher ab und reichen weiter (Basis
+# 0,45 m / 3,0). Der Planer legt Wege so eher mittig durch Tueren und Flure
+# statt dicht an Moebeln entlang. Unpassierbar wird dadurch nichts: Die
+# Grenze bleibt der Roboterradius 0,28 m. Rueckfall: inflation_layer-Block
+# entfernen.
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -99,3 +125,6 @@ global_costmap:
           min_obstacle_height: -0.02
         vl53_right_mark:
           min_obstacle_height: -0.02
+      inflation_layer:
+        inflation_radius: 0.60
+        cost_scaling_factor: 2.5

@@ -36,6 +36,9 @@ def test_profile_starts_real_node_with_self_healing_owner():
         assert node._self_healing_enabled and not node._metric_enabled
         assert node._self_healing_track_back_max_m == pytest.approx(.4)
         assert node._self_healing_track_back_speed == pytest.approx(.05)
+        # Entscheidung 08.11.2026 (SH-7N): Rückfahrt auch ohne gerade Spur, Zeit für 30 %.
+        assert node._self_healing_free_back_m == pytest.approx(.3)
+        assert node._self_healing_track_back_slow_factor == pytest.approx(.3)
         assert node._self_healing_ladder_config['help_after'] == 8
         # Entscheidung 04.11.2026: kein Fortschritt im Anlauf -> sofort zurück.
         assert node._self_healing_stuck_move_m == pytest.approx(.05)
@@ -127,7 +130,8 @@ def parent(monkeypatch, *, reveal_radius=1.2, navigate=None):
             _self_healing_rotation_radius_m=.45, _self_healing_track_back_max_m=.4,
             _self_healing_track_back_min_m=.1, _self_healing_track_back_speed=.05,
             _self_healing_track_lateral_m=.03, _goal_timeout_s=150., _replan_period_s=.25,
-            _self_healing_stuck_move_m=.05,
+            _self_healing_stuck_move_m=.05, _self_healing_free_back_m=0.,
+            _self_healing_track_back_slow_factor=1.,
             _cancel_timeout_s=3., _initial_scan_speed=.08, _initial_scan_timeout=60.,
             _frontiers_remaining=0, _frontiers_visited_status=0, _status_phase='idle',
             _status_message='', _status_state='idle', _global_costmap=None,
@@ -229,6 +233,36 @@ def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypat
     ziele = [c[1:] for c in state.calls if c[0] == 'navigate']
     vor = kinds[:kinds.index('track_back')].count('navigate')
     assert ziele[vor] == ziele[vor-1]
+
+
+def test_stuck_without_straight_track_backs_off_freely_once(monkeypatch):
+    """SH-7N (08.11.2026): in der Ecke keine gerade Spur, die Leiter hatte keinen Zug."""
+    def cornered(x, y, stop, record):
+        state.pose[2] += .7          # nur gedreht, keine gerade Spur
+        record()
+        state.refresh_map()
+        return 'aborted'
+    n, state, goal, terminal = parent(monkeypatch, navigate=cornered)
+    n._self_healing_free_back_m = .3
+    n._execute_self_healing(goal, 1200., .3)
+    backs = [c for c in state.calls if c[0] == 'track_back']
+    assert backs and backs[0][1] == pytest.approx(.3)
+    kinds = [c[0] for c in state.calls]
+    assert kinds[:2] == ['navigate', 'track_back']   # sofort, kein Fortschritt im Anlauf
+    assert n._self_healing_status['last_track_back']['mode'] == 'frei'
+    # Höchstens einmal je Stillstand.
+    assert len(backs) == 1
+
+
+def test_free_back_off_off_keeps_the_straight_track_rule(monkeypatch):
+    def cornered(x, y, stop, record):
+        state.pose[2] += .7
+        record()
+        state.refresh_map()
+        return 'aborted'
+    n, state, goal, terminal = parent(monkeypatch, navigate=cornered)
+    n._execute_self_healing(goal, 1200., .3)
+    assert not any(c[0] == 'track_back' for c in state.calls)
 
 
 def test_frontiers_behind_a_closed_door_end_with_a_usable_partial_map(monkeypatch):
@@ -413,6 +447,7 @@ def _backup_node(monkeypatch, *, accept=True, status=4, finish=True):
     monkeypatch.setattr(module.rclpy, 'ok', lambda: True)
     n = ExploreNode.__new__(ExploreNode)
     n._self_healing_track_back_speed = .05
+    n._self_healing_track_back_slow_factor = .3
     n._cancel_timeout_s = 3.
     sent, canceled = [], []
     class Handle:
@@ -444,7 +479,8 @@ def test_track_back_sends_bounded_backup_goal(monkeypatch):
     assert n._self_healing_track_back(.3, lambda: False) == 'success'
     goal = sent[0]
     assert goal.target.x == pytest.approx(.3) and goal.speed == pytest.approx(.05)
-    assert goal.time_allowance.sec == int(.3/.05+10.)
+    # Zeitgrenze mit 30 % Tempo (Langsam-Zone des Kollisionsmonitors): 0,3 m -> 30 s.
+    assert goal.time_allowance.sec == int(.3/(.05*.3)+10.) == 30
     assert canceled == []
 
 

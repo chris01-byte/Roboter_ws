@@ -31,24 +31,33 @@ def test_profiles_flatten_to_live_parameter_names():
                                              'FollowPath.rotate_to_heading_angular_vel': 0.25}
     assert overlay['/velocity_smoother']['max_velocity'] == [0.162, 0.0, 0.3125]
     assert overlay['/velocity_smoother']['min_velocity'] == [-0.05, 0.0, -0.3125]
-    assert overlay['/behavior_server']['simulate_ahead_time'] == pytest.approx(2.0)
+    assert overlay['/behavior_server'] == {'simulate_ahead_time': 2.0,
+                                           'footprint_topic': 'rueckfahr_kontur'}
+    assert explore['self_healing_free_back_m'] == pytest.approx(0.3)
+    assert explore['self_healing_track_back_slow_factor'] == pytest.approx(0.3)
     vl53 = {'obstacle_layer.vl53_left_mark.min_obstacle_height': -0.02,
             'obstacle_layer.vl53_right_mark.min_obstacle_height': -0.02,
             'obstacle_layer.vl53_left.raytrace_min_range': 0.45,
             'obstacle_layer.vl53_right.raytrace_min_range': 0.45}
-    assert overlay['/global_costmap/global_costmap'] == vl53
-    # X9 (22.10.2026): lokale Karte zusaetzlich mit markierendem, nicht raeumendem LiDAR.
+    # Wege mit mehr Abstand (Entscheidung 08.11.2026 nach SH-7N).
+    assert overlay['/global_costmap/global_costmap'] == {
+        **vl53, 'inflation_layer.inflation_radius': 0.60,
+        'inflation_layer.cost_scaling_factor': 2.5}
+    # Eigene LiDAR-Ebene, die raeumt (08.11.2026); VL53-Ebene wie nach X9.
     assert overlay['/local_costmap/local_costmap'] == {
         **vl53,
-        'obstacle_layer.observation_sources':
-            'vl53_left vl53_right vl53_left_mark vl53_right_mark oak lidar',
-        'obstacle_layer.lidar.topic': '/scan_normiert',
-        'obstacle_layer.lidar.data_type': 'LaserScan',
-        'obstacle_layer.lidar.marking': True,
-        'obstacle_layer.lidar.clearing': False,
-        'obstacle_layer.lidar.min_obstacle_height': 0.0,
-        'obstacle_layer.lidar.max_obstacle_height': 1.0,
-        'obstacle_layer.lidar.obstacle_max_range': 2.5}
+        'plugins': ['obstacle_layer', 'lidar_layer', 'inflation_layer'],
+        'lidar_layer.plugin': 'nav2_costmap_2d::ObstacleLayer',
+        'lidar_layer.enabled': True,
+        'lidar_layer.observation_sources': 'lidar',
+        'lidar_layer.lidar.topic': '/scan_normiert',
+        'lidar_layer.lidar.data_type': 'LaserScan',
+        'lidar_layer.lidar.marking': True,
+        'lidar_layer.lidar.clearing': True,
+        'lidar_layer.lidar.min_obstacle_height': 0.0,
+        'lidar_layer.lidar.max_obstacle_height': 1.0,
+        'lidar_layer.lidar.obstacle_max_range': 2.5,
+        'lidar_layer.lidar.raytrace_max_range': 3.0}
     slam = _params('src/amadeus_lidar_bringup/config/slam_toolbox_self_healing.yaml')
     assert slam == {'/slam_toolbox': {'loop_match_minimum_chain_size': 20,
                                       'loop_match_minimum_response_coarse': 0.55,
@@ -179,11 +188,15 @@ def test_checker_stays_read_only():
 
 class _Graph:
     """Nachgebildeter ROS-Graph fuer die Verdrahtungspruefung."""
-    def __init__(self, scan_publisher=True, costmap_liest_scan=True):
+    def __init__(self, scan_publisher=True, costmap_liest_scan=True, kontur=True,
+                 footprint_topic='rueckfahr_kontur'):
+        self.footprint_topic = footprint_topic
         self.pubs = {'/cmd_vel_nav_raw': {'/controller_server', '/behavior_server'},
                      '/cmd_vel': {'/collision_monitor'},
-                     '/scan_normiert': {'/scan_vereinheitlichen'} if scan_publisher else set()}
+                     '/scan_normiert': {'/scan_vereinheitlichen'} if scan_publisher else set(),
+                     '/rueckfahr_kontur': {'/rueckfahr_kontur'} if kontur else set()}
         self.subs = {'/cmd_vel_nav_raw': {'/cmd_vel_mission_gate'},
+                     '/rueckfahr_kontur': {'/behavior_server'},
                      '/speed_limit': {'/controller_server'},
                      '/scan_normiert': ({'/slam_toolbox', '/local_costmap/local_costmap'}
                                         if costmap_liest_scan else {'/slam_toolbox'})}
@@ -198,7 +211,7 @@ class _Graph:
         return {'/backup'}
 
     def get_params(self, node, names):
-        return {'speed_limit_topic': '/speed_limit'}
+        return {'speed_limit_topic': '/speed_limit', 'footprint_topic': self.footprint_topic}
 
 
 def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
@@ -214,6 +227,9 @@ def test_wiring_requires_the_lidar_in_the_local_costmap_since_x9():
     zeilen = {z['pruefung']: z for z in pruefe(scan_publisher=False).zeilen}
     assert zeilen['Publisher auf /scan_normiert']['ok'] is False
     assert 'normalize_scan' in zeilen['Publisher auf /scan_normiert']['detail']
+    # Entscheidung 08.11.2026 (SH-7N): Rueckfahrkontur muss am Behavior-Server anliegen.
+    assert not pruefe(kontur=False).bestanden
+    assert not pruefe(footprint_topic='local_costmap/published_footprint').bestanden
 
 
 

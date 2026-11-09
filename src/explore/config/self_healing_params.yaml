@@ -93,6 +93,17 @@ explore_node:
     self_healing_track_back_min_m: 0.1
     self_healing_track_back_speed_mps: 0.05
     self_healing_track_lateral_tolerance_m: 0.03
+    # Erweiterung (Entscheidung Projektinhaber 08.11.2026 nach SH-7N): Gibt es
+    # keine gerade eigene Spur (Ecke, nach Drehungen), faehrt Amadeus 0,3 m
+    # gerade rueckwaerts, sofern der Behavior-Server hinten frei sieht (er prueft
+    # laufend gegen die lokale Karte, Rueckfahrkontur siehe nav2-Overlay).
+    # Weiterhin hoechstens 0,4 m, 0,05 m/s, einmal je Stillstand.
+    # Rueckfall: 0.0 (nur gerade eigene Spur).
+    self_healing_free_back_m: 0.3
+    # Zeitgrenze der Rueckfahrt mit 30 % Tempo rechnen: Der Kollisionsmonitor
+    # drosselt in seiner Langsam-Zone darauf (SH-6/SH-7: 4 von 6 Rueckfahrten
+    # endeten an der zu knappen Grenze). Rueckfall: 1.0.
+    self_healing_track_back_slow_factor: 0.3
     # Kein Fortschritt im Anlauf (weniger als stuck_move_m bewegt): zuerst die
     # Spur-Rueckfahrt (H4, einmal je Stillstand, hoechstens 0,4 m), dann erneut
     # (Entscheidung Projektinhaber 04.11.2026). SH-5 Fahrt 3: vor zwei

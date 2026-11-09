@@ -130,21 +130,32 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
             'vl53_right': {'raytrace_min_range': 0.45},
             'vl53_left_mark': {'min_obstacle_height': -0.02},
             'vl53_right_mark': {'min_obstacle_height': -0.02}}
-    assert overlay['global_costmap']['global_costmap']['ros__parameters'] == {'obstacle_layer': vl53}
-    # Local costmap additionally gets the normalised LiDAR as a MARKING-only
-    # source: RPP now sees side walls and door posts, but the 0.66-m scan never
-    # clears low VL53 marks. Base profile (all other modes) unchanged.
-    local = overlay['local_costmap']['local_costmap']['ros__parameters']['obstacle_layer']
-    assert {k: v for k, v in local.items() if k not in ('observation_sources', 'lidar')} == vl53
-    assert local['observation_sources'].split() == [
-        'vl53_left', 'vl53_right', 'vl53_left_mark', 'vl53_right_mark', 'oak', 'lidar']
-    assert local['lidar'] == {'topic': '/scan_normiert', 'data_type': 'LaserScan',
-                              'marking': True, 'clearing': False, 'min_obstacle_height': 0.0,
-                              'max_obstacle_height': 1.0, 'obstacle_max_range': 2.5}
-    base_local = real['local_costmap']['local_costmap']['ros__parameters']['obstacle_layer']
-    assert 'lidar' not in base_local['observation_sources'].split()
-    assert set(base_local['observation_sources'].split()) | {'lidar'} == \
-        set(local['observation_sources'].split())
+    assert overlay['global_costmap']['global_costmap']['ros__parameters']['obstacle_layer'] == vl53
+    # Local costmap: VL53 sources stay in obstacle_layer exactly as before; the
+    # normalised LiDAR has its OWN layer that marks and clears (decision
+    # 08.11.2026 after SH-7N: odometry drift left old wall marks displaced).
+    # Its rays never touch the VL53 layer, so low VL53 marks survive (X9).
+    local = overlay['local_costmap']['local_costmap']['ros__parameters']
+    assert local['plugins'] == ['obstacle_layer', 'lidar_layer', 'inflation_layer']
+    assert local['obstacle_layer'] == vl53
+    assert local['lidar_layer'] == {
+        'plugin': 'nav2_costmap_2d::ObstacleLayer', 'enabled': True,
+        'observation_sources': 'lidar',
+        'lidar': {'topic': '/scan_normiert', 'data_type': 'LaserScan',
+                  'marking': True, 'clearing': True, 'min_obstacle_height': 0.0,
+                  'max_obstacle_height': 1.0, 'obstacle_max_range': 2.5,
+                  'raytrace_max_range': 3.0}}
+    base_local = real['local_costmap']['local_costmap']['ros__parameters']
+    assert base_local['plugins'] == ['obstacle_layer', 'inflation_layer']
+    assert 'lidar' not in base_local['obstacle_layer']['observation_sources'].split()
+    # Global costmap: paths keep more distance (flatter, wider inflation); the
+    # passability limit stays the robot radius.
+    global_overlay = overlay['global_costmap']['global_costmap']['ros__parameters']
+    assert global_overlay['inflation_layer'] == {'inflation_radius': 0.60,
+                                                 'cost_scaling_factor': 2.5}
+    base_global = real['global_costmap']['global_costmap']['ros__parameters']
+    assert global_overlay['inflation_layer']['inflation_radius'] > \
+        base_global['inflation_layer']['inflation_radius'] > base_global['robot_radius']
     for costmap in ('local_costmap', 'global_costmap'):
         base = real[costmap][costmap]['ros__parameters']['obstacle_layer']
         assert 'raytrace_min_range' not in base['vl53_left']
@@ -178,7 +189,11 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     base = next(iter(base.values()))['ros__parameters']
     assert smoother['max_velocity'][0] <= base['max_linear_speed_mps']/1.8
     assert smoother['max_velocity'][2] <= base['max_angular_speed_radps']/2.5
-    assert overlay['behavior_server']['ros__parameters'] == {'simulate_ahead_time': 2.0}
+    # BackUp checks against the back-off contour (decision 08.11.2026, SH-7N).
+    assert overlay['behavior_server']['ros__parameters'] == {
+        'simulate_ahead_time': 2.0, 'footprint_topic': 'rueckfahr_kontur'}
+    assert real['behavior_server']['ros__parameters']['footprint_topic'] == \
+        'local_costmap/published_footprint'
     # RPP itself never reverses.
     assert real['controller_server']['ros__parameters']['FollowPath']['allow_reversing'] is False
 
@@ -577,3 +592,36 @@ def test_mission_gate_tolerates_shutdown_context_race():
     assert 'except RCLError:' in source
     assert 'except RuntimeError:' in source
     assert 'if rclpy.ok():\n            raise' in source
+
+
+def test_back_off_contour_covers_exactly_what_a_straight_back_off_enters():
+    """SH-7N: BackUp refused to move away when the full padded outline touched."""
+    from robot_navigation.rueckfahr_kontur import STANDARD_PUNKTE, kontur_punkte
+    real = yaml.safe_load((PACKAGE_ROOT/'config'/'nav2_params_real.yaml').read_text())
+    local = real['local_costmap']['local_costmap']['ros__parameters']
+    footprint = yaml.safe_load(local['footprint'])
+    padding = local['footprint_padding']
+    front = max(x for x, _ in footprint)
+    rear = min(x for x, _ in footprint)
+    half = max(abs(y) for _, y in footprint)
+    points = kontur_punkte(STANDARD_PUNKTE)
+    xs, ys = [x for x, _ in points], [y for _, y in points]
+    # Rear edge with the full padding of the local costmap (direction of travel).
+    assert min(xs) == pytest.approx(rear - padding)
+    # Width just under the real half width: a wall along the flank (cell
+    # centres from 0.27 m in SH-7N) must not block the check at standstill.
+    assert max(abs(y) for y in ys) == pytest.approx(half - 0.01)
+    # The front ends well inside the robot: what touches the front never counts.
+    assert max(xs) < front - 0.2
+    for bad in ([0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 1.0, 0.0, 2.0, 0.0], [0.0, float('nan'), 1.0, 0.0, 0.0, 1.0]):
+        with pytest.raises(ValueError):
+            kontur_punkte(bad)
+
+
+def test_back_off_contour_node_starts_only_with_self_healing():
+    source = (PACKAGE_ROOT/'launch'/'nav_mapping.launch.py').read_text()
+    assert ("package='robot_navigation', executable='rueckfahr_kontur',\n"
+            "                name='rueckfahr_kontur', output='screen',\n"
+            "                condition=IfCondition(self_healing)),") in source
+    setup = (PACKAGE_ROOT/'setup.py').read_text()
+    assert "'rueckfahr_kontur = '" in setup

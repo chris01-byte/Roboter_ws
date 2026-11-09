@@ -62,6 +62,8 @@ STEUERPFAD_ROH = '/cmd_vel_nav_raw'
 RECOVERY_GESPERRT = '/cmd_vel_recovery_blocked'
 LIDAR_NAHBEREICH = '/scan_normiert'
 LOKALE_KOSTENKARTE = '/local_costmap/local_costmap'
+RUECKFAHRKONTUR = '/rueckfahr_kontur'
+RUECKFAHRKONTUR_KNOTEN = '/rueckfahr_kontur'
 
 # Erwarteter Odometriepfad: HWT601-Gier + Encoder im EKF (slam_lidar_hwt601)
 # oder reine Encoder-Odometrie der Basis (slam_lidar).
@@ -517,6 +519,21 @@ def pruefe_verdrahtung(leser, ergebnis, explore_live):
     actions = leser.action_servers('behavior_server')
     ergebnis.add('C Verdrahtung', 'BackUp-Aktion /backup angeboten', '/backup' in actions,
                  ', '.join(sorted(actions)) or 'keine Aktionsserver')
+    # Entscheidung 08.11.2026 (SH-7N): BackUp prueft gegen die Rueckfahrkontur,
+    # sonst verweigert er die Rueckfahrt, sobald die volle Kontur anliegt.
+    behavior = leser.get_params('/behavior_server', ['footprint_topic'])
+    konfiguriert = None if behavior is None else behavior.get('footprint_topic')
+    kontur = (normalize_topic(konfiguriert)
+              if konfiguriert is not None and konfiguriert is not NOT_SET else None)
+    kontur_pubs = leser.publishers(kontur) if kontur else set()
+    kontur_subs = leser.subscribers(kontur) if kontur else set()
+    ergebnis.add('C Verdrahtung', 'Rueckfahrkontur liegt am Behavior-Server an',
+                 kontur == RUECKFAHRKONTUR and RUECKFAHRKONTUR_KNOTEN in kontur_pubs
+                 and '/behavior_server' in kontur_subs,
+                 f'footprint_topic '
+                 f'{"nicht deklariert" if konfiguriert is NOT_SET else repr(konfiguriert)}, '
+                 f'Publisher {", ".join(sorted(kontur_pubs)) or "keine"}, '
+                 f'Leser {", ".join(sorted(kontur_subs)) or "keine"}')
 
     topic = normalize_topic((explore_live or {}).get('self_healing_speed_limit_topic', '/speed_limit'))
     controller = leser.get_params('/controller_server', ['speed_limit_topic'])
