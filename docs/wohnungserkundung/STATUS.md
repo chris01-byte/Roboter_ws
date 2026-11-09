@@ -68,6 +68,38 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
 Abdeckungskurve im Fahrtprotokoll (09.11.).
 
+## 09.11.2026 (abends) – AW-1b in der Simulation: Lücke (1) behoben, Lücke (2) dominiert die Simulation
+
+AW-1b (`d0d1431`): Nach einer Rückfahrt wird das Ziel zurückgestellt. Vier
+Läufe (zwei mit Drift, Tür 0,68 m, Referenz), **keiner bestanden**:
+
+| Lauf | Ende | Dauer | Abdeckung | Kollisionsmonitor | Was geschah |
+|---|---|---|---|---|---|
+| Drift 1 | Hilfe benötigt | 209 s | 0,916 | nie „approach“ | Regler verweigerte jede Bewegung; Rückfahrt gelang (0,3 m), danach verweigerte er weiter, acht Fehlschläge |
+| Tür 0,68 m | Teilkarte, Budget | 899 s | 0,924 | 21× „approach“ | ab etwa 3 min festgehalten, Rückfahrten liefen in die Zeitgrenze |
+| Drift 2 | Teilkarte, Budget | 899 s | 0,911 | 21× „approach“ | wie oben |
+| Referenz | Teilkarte, Budget | 899 s | 0,908 | „approach“ ab 187 s | wie oben |
+
+Belegt:
+- Lücke (1) ist behoben: Nach jeder Rückfahrt kam ein anderes Ziel.
+- **In der Simulation dominiert Lücke (2):** In drei von vier Läufen hielt
+  der Kollisionsmonitor im Modus „approach“ den Roboter an der Insel fest
+  (VL53-Punkte innerhalb der gepolsterten Kontur), auch rückwärts. Danach
+  nahm die Fläche 13 min lang nicht mehr zu (Abdeckungskurve: 90 % nach
+  90 s, dann Stillstand).
+- Real war das in SH-7 nicht der Fall: An allen drei Hilfe-Stellen meldete
+  der Monitor nur „slowdown“ oder „continue“ (SH-7N, Punkt 3); dort
+  verweigerten Regler und BackUp, was AW-1/AW-1b adressieren. Simulation und
+  Wirklichkeit unterscheiden sich in diesem Punkt; die Insel-Annäherung beim
+  Drehen ist ein bekannter Simulationsbefund.
+- Ein Lauf (Drift 1) zeigt zusätzlich: 0,3 m zurück reichten dort nicht; der
+  Regler verweigerte auch danach jede Richtung.
+
+**Bewertung:** AW-1b tut, was es soll; die Simulation besteht trotzdem nicht,
+weil Lücke (2) sie dominiert. Ob (2) real vorkommt, misst SH-8 (Zustand des
+Kollisionsmonitors je Rückfahrt). Entscheidung des Projektinhabers zum
+Start von SH-8 steht aus.
+
 ## 09.11.2026 (nachmittags) – EK-1 „Erkundung zielgerichtet, Teil 1“: Kriterien vorab, Bau in der Simulation
 
 Fahrplan MASTERPLAN §9, Schritt 1 parallel zu SH-8. **Nicht Teil von
