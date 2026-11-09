@@ -131,15 +131,24 @@ Bewertung, ehrlich:
   (v = 0, w = −0,01…−0,04 rad/s), im Vorher-Stand ebenso. Keine geschah beim
   Rückwärtsfahren.
 - **Rückfahrten:** Alle vier vor einer Annäherung ausgelösten Rückfahrten
-  liefen vollständig; keine wurde mit „Collision Ahead“ verweigert. Die zwei
-  gescheiterten kamen, nachdem die Simulation den Roboter nach der
-  Annäherung eingefroren hatte.
-- **Grenze der Simulation:** Sie friert den Roboter ein, sobald er sich auf
-  2 cm nähert, also genau in der Lage, aus der AW-1 ihn befreien soll. Den
-  Hilferuf in „Drift 2 neu“ und die Teilkarte mit Tür 0,68 m verursachte
-  dieses Einfrieren, nicht AW-1. Auch der Nutzen gegen die Drift zeigt sich
-  in 6–8 min Simulationsfahrt kaum (real 25–30 min). **Den Nachweis kann nur
-  SH-8 liefern.** Nach Fahrplan §9 Regel 2 ist das im Paket festgehalten.
+  liefen vollständig; keine wurde mit „Collision Ahead“ verweigert.
+- **Korrektur 09.11.2026 (nachmittags), meine frühere Aussage war falsch:**
+  Die Simulation friert den Roboter nach einer 2-cm-Annäherung **nicht** ein;
+  sie zeichnet sie nur auf, er fährt weiter. Die Zeitleisten der beiden
+  schlechten Läufe zeigen zwei echte Lücken von AW-1:
+  1. **Drift 2 neu:** Nach der Annäherung an die Insel verweigerte der Regler
+     jede Bewegung („Controller patience exceeded“, 1078× „collision ahead“).
+     Die freie Rückfahrt gelang (+95 s, vollständig). Danach fuhr Amadeus
+     **dasselbe Ziel erneut** an, stand wieder an derselben Stelle fest, und
+     eine zweite Rückfahrt ist je Stillstand nicht erlaubt: acht Fehlschläge,
+     „Hilfe benötigt“. Wie in SH-6 (dreimal dasselbe Ziel danach erneut
+     gescheitert).
+  2. **Tür 0,68 m:** Beide Rückfahrten nach der Annäherung liefen in die
+     Zeitgrenze, weil der **Kollisionsmonitor** im Modus „approach“ jede
+     Bewegung auf null setzte: Liegen VL53-Punkte schon innerhalb der
+     gepolsterten Kontur, ist die Kollisionszeit null, auch rückwärts. Das ist
+     dieselbe Falle wie beim BackUp, eine Ebene weiter (Kollisionsmonitor,
+     sicherheitsrelevant, nach AGENTS §2.7 nur getrennt zu ändern).
 - Abdeckung und Zeit wie bisher (ohne Drift 457 s, 0,974; Tür 0,68 m 0,914
   gegenüber 0,906/0,908).
 
