@@ -121,3 +121,19 @@ def test_map_error_locations_agree_with_the_acceptance_oracle():
     x, y, fehler = orte['orte'][0]
     assert fehler == pytest.approx(orakel['maximum_occupied_wall_error_m'], abs=1e-3)
     assert math.dist((x, y), (-1.5, -.5)) < res
+
+
+def test_real_body_clearance_is_two_cm_more_than_the_padded_test_contour():
+    """KM-1 (09.11.2026): Kontakt der Simulation = 2 cm vor dem echten Gehäuse."""
+    import math
+    import numpy as np
+    from ap06_world import chassis_clearance, rectangle
+    from sh_robustheit_welt import koerper_abstand
+    wand = rectangle(0.36, 0.5, -1., 1.)        # 3 cm vor der Prüfkontur (vorn 0,33)
+    pose = (0.0, 0.0, 0.0)
+    assert chassis_clearance(pose, [wand]) == pytest.approx(0.03)
+    assert koerper_abstand(pose, [wand]) == pytest.approx(0.05)
+    nah = rectangle(0.32, 0.5, -1., 1.)         # in der Prüfkontur, 1 cm vor dem Gehäuse
+    assert chassis_clearance(pose, [nah]) == 0.0
+    assert koerper_abstand(pose, [nah]) == pytest.approx(0.01)
+    assert koerper_abstand(pose, []) == math.inf

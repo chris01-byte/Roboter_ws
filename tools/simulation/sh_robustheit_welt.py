@@ -22,6 +22,23 @@ from ap06_world import World, chassis_clearance, rectangle
 
 BODEN_Z = -0.09          # Boden im base_link-Rahmen (base_link 0,09 m über Boden)
 MAX_SCHRITT_S = 0.01
+# Echtes Gehäuse ohne das 2-cm-Polster der Kostenkarte (nav2_params_real.yaml).
+# Die Prüfkontur der Simulation (ap06_world.chassis) ist die gepolsterte Kontur;
+# „Kontakt“ heißt dort: näher als 2 cm am echten Gehäuse (KM-1, 09.11.2026).
+KOERPER = ((-.11, -.23), (.31, -.23), (.31, .23), (-.11, .23))
+
+
+def koerper(pose):
+    x, y, yaw = pose
+    c, s = math.cos(yaw), math.sin(yaw)
+    return np.array([(x+c*a-s*b, y+s*a+c*b) for a, b in KOERPER])
+
+
+def koerper_abstand(pose, obstacles):
+    """Abstand des echten Gehäuses zum nächsten Hindernis (0 = Berührung)."""
+    from ap06_world import polygon_distance
+    body = koerper(pose)
+    return min((polygon_distance(body, np.asarray(o)) for o in obstacles), default=math.inf)
 
 
 class RobustheitsWelt(World):
@@ -43,6 +60,7 @@ class RobustheitsWelt(World):
         self.engste_stelle = None        # Pose beim kleinsten Abstand
         self.zeit_s = None               # vom Treiber gesetzt (Sekunden seit Start)
         self.mitte_min = None            # kleinster Abstand der Robotermitte
+        self.minimum_koerper = math.inf  # kleinster Abstand des echten Gehäuses
 
     # --- Szenarioeingriffe ----------------------------------------------
     def schliesse_tuer(self, seite):
@@ -71,6 +89,13 @@ class RobustheitsWelt(World):
             if (lo < ohi + abstand).all() and (olo - abstand < hi).all():
                 return False
         return True
+
+    def pruefe_koerper(self):
+        """Nur nahe an einem Hindernis rechnen (Prüfkontur unter 3 cm)."""
+        if self.minimum_clearance >= .03:
+            return
+        alle = list(self.obstacles) + [b for b, _ in self.niedrig]
+        self.minimum_koerper = min(self.minimum_koerper, koerper_abstand(self.pose, alle))
 
     # --- Physik -----------------------------------------------------------
     def integrate(self, command, dt, tau=.05):

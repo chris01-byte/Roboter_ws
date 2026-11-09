@@ -310,6 +310,7 @@ def main(argv=None):
     experiment = None
     explorer_bt = REPO/'src/explore/behavior_trees/navigate_to_pose_self_healing.xml'
     explorer_extra = []
+    zusatz_knoten = []
     if args.experiment is not None:
         experiment = yaml.safe_load(args.experiment.read_text(encoding='utf-8'))
         # Nur für Experimente: anderer Nav2-Baum des Explorers (Pfad relativ zur Datei).
@@ -319,6 +320,8 @@ def main(argv=None):
         # Nur für Experimente: einzelne Explorer-Parameter (z. B. Vorher-Stand).
         for name, wert in (treiber.get('explorer_parameter') or {}).items():
             explorer_extra += ['-p', f'{name}:={wert}']
+        # Nur für Experimente: zusätzliche Knoten (z. B. eine zweite Kontur).
+        zusatz_knoten = list(treiber.get('zusatz_knoten') or [])
         jazzy_kompatibel(tief_mischen(parameter, experiment))
         experiment['sh_treiber'] = treiber
     params_file.write_text(yaml.safe_dump(parameter))
@@ -448,6 +451,8 @@ def main(argv=None):
             self.zaehler += 1
             if self.zaehler % 2 == 0:
                 self.odom(jetzt)
+            if self.zaehler % 5 == 0:
+                welt.pruefe_koerper()
             if self.zaehler % 5 == 0 or (welt.collision and verlauf['erster_kontakt'] is None):
                 verlauf['pose'].append((round(jetzt - start, 3), *[round(float(v), 4) for v in welt.pose],
                                         *[round(float(v), 4) for v in welt.velocity],
@@ -655,6 +660,9 @@ def main(argv=None):
         starte('fahrtor', [exe('robot_navigation', 'cmd_vel_mission_gate'), *gate])
         # Rückfahrkontur für BackUp (08.11.2026), wie nav_mapping mit self_healing:=true.
         starte('rueckfahr_kontur', [exe('robot_navigation', 'rueckfahr_kontur')])
+        for knoten in zusatz_knoten:
+            starte(knoten['name'], [exe(knoten['paket'], knoten['programm']),
+                                    *[str(a) for a in knoten.get('argumente', [])]])
         for paket, name, remap in (
                 ('nav2_planner', 'planner_server', []),
                 ('nav2_controller', 'controller_server', ['-r', 'cmd_vel:=cmd_vel_nav_raw']),
@@ -800,6 +808,9 @@ def main(argv=None):
     ergebnis['kollision'] = bool(welt.collision)
     ergebnis['minimaler_abstand_m'] = (None if not math.isfinite(welt.minimum_clearance)
                                        else round(float(welt.minimum_clearance), 3))
+    # Echtes Gehäuse ohne Polster (KM-1): None = nie näher als 3 cm an der Prüfkontur.
+    ergebnis['minimaler_abstand_koerper_m'] = (None if not math.isfinite(welt.minimum_koerper)
+                                               else round(float(welt.minimum_koerper), 3))
     ergebnis['engste_stelle'] = welt.engste_stelle
     ergebnis['erster_kontakt'] = verlauf['erster_kontakt']
     if welt.niedrig:
