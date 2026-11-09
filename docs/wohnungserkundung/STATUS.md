@@ -65,10 +65,11 @@ Abdeckungskurve im Fahrtprotokoll (09.11.).
 
 ## 09.11.2026 (nachmittags) – EK-1 „Erkundung zielgerichtet, Teil 1“: Kriterien vorab, Bau in der Simulation
 
-Fahrplan MASTERPLAN §9, Schritt 1 parallel zu SH-8. **Nicht auf dem
-Roboter:** Die EK-1-Commits werden erst nach dem SH-8-Build gepusht, damit
-SH-8 nur AW-1 prüft (Regel 1). Alle drei Teile sind im Code standardmäßig aus
-(Parameter 0) und im Produktprofil noch nicht gesetzt.
+Fahrplan MASTERPLAN §9, Schritt 1 parallel zu SH-8. **Nicht Teil von
+SH-8:** Der Code (`454a937`) liegt auf dem Branch, alle drei Teile sind im
+Code standardmäßig aus (Parameter 0) und im Produktprofil nicht gesetzt.
+Der SH-8-Auftrag prüft deshalb, dass im installierten Profil keine EK-1-Zeile
+steht, und akzeptiert 182 statt 176 Tests (Regel 1: SH-8 prüft nur AW-1).
 
 **Umfang:** A Rundblick (360° auf der Stelle) am Start und nach einem
 erreichten Ziel, das mindestens 2,5 m von früheren Rundblicken entfernt

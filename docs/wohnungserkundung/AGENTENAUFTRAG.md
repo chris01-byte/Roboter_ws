@@ -169,6 +169,16 @@ Explorer-Profil **neu** `self_healing_free_back_m: 0.3` und
 `self_healing_track_lateral_tolerance_m: 0.03`,
 `self_healing_stuck_move_m: 0.05` und `overall_timeout_s: 2400.0`;
 **keine** Zeile `self_healing_blocked_track_backs`.
+**EK-1 muss aus sein:** Ab `454a937` enthält der Code das nächste Paket
+„Erkundung zielgerichtet“ (Fahrplan Schritt 2). Es ist nur über
+Profilparameter einschaltbar und in SH-8 **nicht** Teil des Tests:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env && \
+  grep -cE "self_healing_scan_rad|self_healing_scan_spacing_m|self_healing_saturation_|self_healing_attempt_stall_" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"
+```
+
+Erwartet: `0`. Jede andere Zahl: nicht fahren, berichten.
 Bei Build-Fehler oder fehlendem Präfix: nicht fahren, berichten.
 
 ### Schritt 4 – gezielte Tests
@@ -188,7 +198,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `176 passed` (Cloud, Stand `609d389`). Bei Fehlschlägen nicht fahren,
+Erwartung: `176 passed` (Stand `609d389`) bzw. `182 passed`, wenn der Klon `454a937` oder neuer enthält (EK-1-Code mit sechs Tests, aber ausgeschaltet, siehe Schritt 3). Bei Fehlschlägen nicht fahren,
 berichten.
 
 ### Aufbau (Christopher)
