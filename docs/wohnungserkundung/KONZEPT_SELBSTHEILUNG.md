@@ -364,6 +364,13 @@ Einstellungen: Budget 40 min und Tempo vorwärts +35 %, Drehen +25 %
 (`adbb39f`). Räume und Türen erhält die Erkundung keine IDs; Räume werden nach
 der Erkundung in der App gezeichnet und benannt (`semantic_map_manager`).
 
+**AW-1 (09.11.2026, nach SH-7/SH-7N):** Aus anliegender Lage verweigerten
+Regler und BackUp jede Bewegung. Seitdem prüft BackUp gegen eine
+Rückfahrkontur (nur die Fläche hinter dem Heck), die Rückfahrt ist auch ohne
+gerade Spur erlaubt (0,3 m, wenn hinten frei), der LiDAR räumt in einer
+eigenen Ebene der lokalen Karte, und Wege halten mehr Abstand. Realtest SH-8;
+Reihenfolge danach nach MASTERPLAN §9.
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

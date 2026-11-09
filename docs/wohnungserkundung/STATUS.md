@@ -6,8 +6,9 @@
 die nächste Verbesserung parallel in der Simulation. Wo wir stehen, zeigt die
 **Arbeitsliste direkt unter diesem Absatz**; sie wird bei jedem Schritt
 fortgeschrieben. Prototyp 1 eingefroren (`src/` `e8f00f6`). Paket AW-1
-„Abstand halten und wegkommen“ (`19c8cb9`) ist gebaut und in der Simulation;
-danach SH-8 auf dem Roboter.
+„Abstand halten und wegkommen“ (`19c8cb9`) ist gebaut und in der Simulation
+geprüft (keine neue Fehlerart; das Befreien selbst kann die Simulation nicht
+abbilden). **Aktiver Jetson-Auftrag: SH-8** (Fahrplan Schritt 1).
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -27,19 +28,17 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 09.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 09.11.2026 (mittags)
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Aktiv (Roboter):** keiner. Als Nächstes **SH-8** (Fahrplan Schritt 1):
+**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md):
 Paket AW-1 auf dem Roboter, Aufbau und Kriterien wie SH-7 (Laborraum plus
-Flur, Tür 80 cm), Abdeckungskurve läuft nur mitlesend mit. Freigabe, sobald
-die Simulation von AW-1 abgeschlossen ist.
+Flur, Tür 80 cm), Abdeckungskurve läuft nur mitlesend mit (`609d389`).
 
-**In Simulation:** AW-1 (Vorher/Nachher mit nachgebildeter Odometrie-Drift,
-Regression ohne Drift); danach **EK-1 „Erkundung zielgerichtet, Teil 1“**:
-A Rundblick am Start, C „gut genug“-Ende, D kürzere Fehlversuche.
+**In Simulation:** **EK-1 „Erkundung zielgerichtet, Teil 1“**: A Rundblick
+am Start, C „gut genug“-Ende, D kürzere Fehlversuche.
 
 **Fahrplan danach:** Schritt 2 SH-9 mit EK-1 (ein Raum, dann zwei) →
 Schritt 3 EK-2 (Ziele nach Nutzen, Idee B) nur bei Bedarf → Schritt 4
@@ -61,7 +60,66 @@ Stufe 3 Wohnung → Schritt 5 Raumziele (Karte speichern, Räume in der App,
 SL-1 SLAM-Last (04.11.) · SH-6 Regel „kein Fortschritt → zurück“, Prototyp 1
 eingefroren (05.11.) · Budget 40 min, Tempo +35 %/+25 % (05.11.) · SH-7
 Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
-(08.11.) · AW-1 gebaut (09.11.).
+(08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
+Abdeckungskurve im Fahrtprotokoll (09.11.).
+
+## 09.11.2026 – AW-1 „Abstand halten und wegkommen“: gebaut, Simulation, SH-8 aktiviert
+
+**Umgesetzt** (`19c8cb9`, Entscheidung des Projektinhabers 08.11.2026, nur
+im Selbstheilungsbetrieb):
+1. Wege mit mehr Abstand: globale Inflation 0,60 m / 2,5 (Basis 0,45 / 3,0).
+2. Eigene LiDAR-Ebene in der lokalen Karte, die markiert und räumt; die
+   VL53-Ebene bleibt wie nach X9.
+3. BackUp prüft gegen die Rückfahrkontur (neuer Knoten `rueckfahr_kontur`:
+   Heck mit Polster, Breite 1 cm unter der halben Breite, vorn innerhalb des
+   Roboters); Regler und Kollisionsmonitor unverändert mit voller Kontur.
+4. Rückfahrt ohne gerade eigene Spur: 0,3 m gerade zurück, wenn der
+   Behavior-Server hinten frei sieht; höchstens 0,4 m, 0,05 m/s, einmal je
+   Stillstand; Zeitgrenze für 30 % Tempo.
+
+**Abweichung vom Vorschlag:** Das Fahrpolster bleibt 0,02 m statt 0,05 m. Die
+Hindernisschicht räumt die Fläche unter der gepolsterten Kontur (DR-1); ein
+größeres Polster hätte seitliche Wände im Nahbereich ausgeblendet. Punkt 3
+erreicht das Ziel „wegkommen“ ohne diesen Nachteil. Vorprüfung neu:
+„Rueckfahrkontur liegt am Behavior-Server an“. Tests 176 gezielt, 167
+Navigation/Simulation.
+
+**Simulation** (Referenzwohnung, 15-min-Budget; Odometrie-Drift neu im
+Werkzeug, 0,3 % Drehung und 2 % Weg, real gemessen 0,2–0,4 m und 2–6°):
+
+| Lauf | Stand | Ende | Dauer | Ziele | Rückfahrten | engster Abstand | Simulationskriterien |
+|---|---|---|---|---|---|---|---|
+| Drift 1 | neu | vollständig | 412 s | 6 | 1 (erfolgreich) | 1,2 cm | bestanden |
+| Drift 1 | vorher | vollständig | 457 s | 4 | 0 | 0 (Insel) | nicht bestanden |
+| Drift 2 | neu | Hilfe benötigt | 330 s | 4 | 1 (erfolgreich) | 0 (Insel) | nicht bestanden |
+| Drift 2 | vorher | vollständig | 342 s | 7 | 0 | 1,3 cm | bestanden |
+| ohne Drift | neu | vollständig | 457 s | 10 | 0 | 0,2 cm | bestanden |
+| Tür 0,68 m | neu | Teilkarte (Budget) | 899 s | 7 | 3 (1 erfolgreich, 2 nach Einfrieren) | 0 (Insel) | nicht bestanden |
+
+Bewertung, ehrlich:
+- **Keine neue Fehlerart.** Alle drei Unterschreitungen sind die bekannte
+  2-cm-Annäherung an **dieselbe Insel beim langsamen Drehen auf der Stelle**
+  (v = 0, w = −0,01…−0,04 rad/s), im Vorher-Stand ebenso. Keine geschah beim
+  Rückwärtsfahren.
+- **Rückfahrten:** Alle vier vor einer Annäherung ausgelösten Rückfahrten
+  liefen vollständig; keine wurde mit „Collision Ahead“ verweigert. Die zwei
+  gescheiterten kamen, nachdem die Simulation den Roboter nach der
+  Annäherung eingefroren hatte.
+- **Grenze der Simulation:** Sie friert den Roboter ein, sobald er sich auf
+  2 cm nähert, also genau in der Lage, aus der AW-1 ihn befreien soll. Den
+  Hilferuf in „Drift 2 neu“ und die Teilkarte mit Tür 0,68 m verursachte
+  dieses Einfrieren, nicht AW-1. Auch der Nutzen gegen die Drift zeigt sich
+  in 6–8 min Simulationsfahrt kaum (real 25–30 min). **Den Nachweis kann nur
+  SH-8 liefern.** Nach Fahrplan §9 Regel 2 ist das im Paket festgehalten.
+- Abdeckung und Zeit wie bisher (ohne Drift 457 s, 0,974; Tür 0,68 m 0,914
+  gegenüber 0,906/0,908).
+
+**SH-8 aktiviert** ([Auftrag](AGENTENAUFTRAG.md), Fahrplan Schritt 1): Release
+ab `609d389`, gleicher Aufbau und gleiche Kriterien wie SH-7, Abdeckungskurve
+mitgelesen, bei „Hilfe benötigt“ Daten wie in SH-7N. Rückfall: `SH_REL` auf
+`selbstheilung-sh7-20261108_1617` oder Prototyp 1.
+
+**Nächster Schritt:** SH-8-Bericht auswerten (parallel EK-1 in der Simulation).
 
 ## 08.11.2026 (abends) – SH-7N ausgewertet: Warum Amadeus an engen Stellen festsitzt
 
@@ -122,7 +180,7 @@ aus einer anliegenden Lage wegkommt (Vorschläge im Chat vom 08.11.2026).
 SH-7N [archiviert](archive/20261108-sh7n-ausgewertet/README.md); kein aktiver
 Jetson-Auftrag.
 
-**Nächster Schritt:** Entscheidung des Projektinhabers.
+**Nächster Schritt (erledigt 08./09.11.):** Entscheidung des Projektinhabers.
 
 ## 08.11.2026 – SH-7: Raumwechsel nicht bestätigt (Hilferufe an engen Stellen)
 
