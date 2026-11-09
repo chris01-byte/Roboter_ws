@@ -123,7 +123,7 @@ Werkzeug, 0,3 % Drehung und 2 % Weg, real gemessen 0,2–0,4 m und 2–6°):
 | Drift 2 | neu | Hilfe benötigt | 330 s | 4 | 1 (erfolgreich) | 0 (Insel) | nicht bestanden |
 | Drift 2 | vorher | vollständig | 342 s | 7 | 0 | 1,3 cm | bestanden |
 | ohne Drift | neu | vollständig | 457 s | 10 | 0 | 0,2 cm | bestanden |
-| Tür 0,68 m | neu | Teilkarte (Budget) | 899 s | 7 | 3 (1 erfolgreich, 2 nach Einfrieren) | 0 (Insel) | nicht bestanden |
+| Tür 0,68 m | neu | Teilkarte (Budget) | 899 s | 7 | 3 (1 erfolgreich, 2 vom Kollisionsmonitor blockiert) | 0 (Insel) | nicht bestanden |
 
 Bewertung, ehrlich:
 - **Keine neue Fehlerart.** Alle drei Unterschreitungen sind die bekannte
@@ -443,7 +443,10 @@ nur für die VL53 sichtbar, zwei Startlagen):
 - **Eimer-Nachbau:** ohne Regel 0 von 4 Läufen sauber, mit Regel ebenfalls
   0 von 4. In allen vier Läufen mit Regel streifte die Flanke den seitlich
   stehenden Eimer beim Drehen, **bevor** Amadeus festsaß (nach 65 s bzw.
-  125–130 s); die Simulation friert den Roboter nach einer Berührung ein.
+  125–130 s). [Korrektur 09.11.2026: Hier stand, die Simulation friere den
+  Roboter nach einer Berührung ein. Das ist falsch; sie friert nur die
+  Aufzeichnung der letzten Sekunden ein (DR-1-Werkzeug), der Roboter fährt
+  weiter.]
   Die Rückfahrt löste in zwei Läufen aus, beide Male erst nach der Berührung.
   Der Laborfall (Eimer **vorn**, Kollisionsmonitor hält, keine Berührung)
   entsteht so nicht; die Simulation kann die Regel dort weder bestätigen
