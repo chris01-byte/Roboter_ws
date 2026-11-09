@@ -40,9 +40,9 @@ wird nur gemessen. Die Simulation besteht nicht, weil dort Lücke (2)
 dominiert; real war sie in SH-7 nicht aufgetreten. SH-8 entscheidet mit
 Realdaten.
 
-**In Simulation:** **KM-1 Entwurf** (Lücke 2: Kollisionsmonitor darf
-das Wegfahren aus anliegender Lage nicht sperren; sicherheitsrelevant, eigenes
-Paket nach AGENTS §2.7, erst nach den SH-8-Daten auf den Roboter) und
+**In Simulation:** **KM-1 Entwurf** (Lücke 2; Variante A verworfen,
+Variante B „nichts unter der Kontur löschen“ läuft; sicherheitsrelevant,
+eigenes Paket nach AGENTS §2.7, erst nach den SH-8-Daten auf den Roboter) und
 **EK-1 „Erkundung zielgerichtet, Teil 1“** (A Rundblick am Start, C „gut
 genug“-Ende, D kürzere Fehlversuche; Simulationslauf wiederholen).
 
@@ -68,6 +68,46 @@ eingefroren (05.11.) · Budget 40 min, Tempo +35 %/+25 % (05.11.) · SH-7
 Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
 Abdeckungskurve im Fahrtprotokoll (09.11.).
+
+## 09.11.2026 (spätabends) – KM-1 Variante A verworfen; Gehäuse berührt in der Simulation beim langsamen Drehen
+
+**Neue Messgröße (`a77053a`):** Die Prüfkontur der Simulation ist die
+gepolsterte Kontur; „Kontakt“ hieß dort 2 cm vor dem echten Gehäuse. Neu wird
+der Abstand des echten Gehäuses gemessen (`minimaler_abstand_koerper_m`).
+
+**KM-1 Variante A** (Kollisionsmonitor prüft „approach“ gegen das Gehäuse ohne
+Polster), drei Läufe: **verworfen.** In allen drei berührte das echte Gehäuse
+ein Hindernis (0,0 m), festgehalten wurde der Roboter trotzdem (Hilfe
+benötigt 2×, Teilkarte 1×).
+
+**Befund zum aktuellen Produktstand (AW-1b, gleiche Messgröße):**
+
+| Lauf | Ende | Abdeckung | Gehäuse min. | Bewegung bei der Annäherung | Kollisionsmonitor |
+|---|---|---|---|---|---|
+| Referenz | vollständig, 416 s | 0,979 | 2,1 cm | Fahrt | nie „approach“ |
+| Tür 0,68 m | Teilkarte, Budget | 0,925 | **0,0** | Drehen auf der Stelle (w −0,04) | 21× „approach“ |
+| Drift | Teilkarte, Budget | 0,909 | **0,0** | Drehen auf der Stelle (w −0,01) | 21× „approach“ |
+
+- **Korrektur einer früheren Annahme:** Die „bekannten 2-cm-Annäherungen an
+  der Insel beim Drehen“ habe ich bisher als harmlos eingestuft, weil nur die
+  Prüfkontur gemessen wurde. In 2 von 3 Läufen berührte in der Simulation das
+  **echte Gehäuse** die Insel, jedes Mal beim langsamen Drehen.
+- Wahrscheinlicher Mechanismus (DR-1, 03.11.): Die Hindernisebenen löschen
+  alles unter der gepolsterten Kontur. Liegt ein Hindernis im Polsterband,
+  verschwindet es aus der Karte, der Regler dreht weiter, der
+  Kollisionsmonitor (VL53, nur vorn) sieht die Flanke nicht; danach hält er
+  im Modus „approach“ alles fest.
+- **Real** gab es in neun Laborfahrten (SH-6, SH-7) keine Berührung. Die
+  Abbruchregel für SH-8 (jede Berührung: sofort stoppen) bleibt; Christopher
+  achtet besonders auf langsame Drehungen dicht an Möbeln.
+
+**In Simulation: KM-1 Variante B** – die Hindernisebenen der lokalen Karte
+löschen nichts mehr unter der Kontur (`footprint_clearing_enabled: False`);
+Hindernisse im Polsterband bleiben eingetragen, der Regler dreht nicht
+hinein, wegkommen über die Rückfahrkontur (AW-1). DR-1 scheiterte am
+Strengerwerden ohne Ausweg; den Ausweg gibt es jetzt. Offen für den Roboter:
+ob LiDAR oder VL53 Teile des Roboters selbst erfassen (die würden dann nicht
+mehr gelöscht) – das wäre vorher im Stand zu messen.
 
 ## 09.11.2026 (abends) – AW-1b in der Simulation: Lücke (1) behoben, Lücke (2) dominiert die Simulation
 
