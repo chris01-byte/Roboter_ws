@@ -233,10 +233,13 @@ def test_persistent_blockage_climbs_the_full_ladder_then_requests_help(monkeypat
     assert .1 <= track[1] <= .4
     actions = [h['action'] for h in n._self_healing_status['ladder']['history']]
     assert actions[:2] == ['retry', 'track_back'] and actions[-1] == 'help'
-    # Nach der Rückfahrt wird dasselbe Ziel erneut angefahren (nicht zurückgestellt).
+    # AW-1b (09.11.2026): Nach der Rückfahrt wird das Ziel zurückgestellt; der
+    # nächste Anlauf gilt einem anderen Ziel (vorher dasselbe, real 3 von 3
+    # wieder gescheitert).
     ziele = [c[1:] for c in state.calls if c[0] == 'navigate']
     vor = kinds[:kinds.index('track_back')].count('navigate')
-    assert ziele[vor] == ziele[vor-1]
+    assert ziele[vor] != ziele[vor-1]
+    assert n._self_healing_status['deferred_goals'] >= 1
 
 
 def test_stuck_without_straight_track_backs_off_freely_once(monkeypatch):

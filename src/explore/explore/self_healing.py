@@ -121,7 +121,8 @@ class HealingLadder:
         ``stuck``: Der Roboter ist im Versuch nicht vom Fleck gekommen. Dann
         zuerst ein Stück auf der eigenen Spur zurück (H4, sofort statt nach
         ``track_back_after`` Fehlschlägen, weiter höchstens einmal je
-        Stillstand) und erneut versuchen. SH-5 Fahrt 3: Vor zwei Mülleimern an
+        Stillstand), danach ein anderes Ziel (das Ziel wird zurückgestellt,
+        AW-1b vom 09.11.2026). SH-5 Fahrt 3: Vor zwei Mülleimern an
         der Front setzte der Kollisionsmonitor jeden Befehl zu Recht auf null;
         „erneut“ und „anderes Ziel“ liefen 10 Minuten ins Leere, weil alle Ziele
         dahinter lagen, die Rückfahrt kam nie an die Reihe.

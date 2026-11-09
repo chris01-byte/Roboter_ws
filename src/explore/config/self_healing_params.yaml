@@ -105,8 +105,10 @@ explore_node:
     # endeten an der zu knappen Grenze). Rueckfall: 1.0.
     self_healing_track_back_slow_factor: 0.3
     # Kein Fortschritt im Anlauf (weniger als stuck_move_m bewegt): zuerst die
-    # Spur-Rueckfahrt (H4, einmal je Stillstand, hoechstens 0,4 m), dann erneut
-    # (Entscheidung Projektinhaber 04.11.2026). SH-5 Fahrt 3: vor zwei
+    # Spur-Rueckfahrt (H4, einmal je Stillstand, hoechstens 0,4 m), dann ein
+    # anderes Ziel (Entscheidung Projektinhaber 04.11.2026; seit 09.11.2026
+    # AW-1b wird das Ziel nach der Rueckfahrt zurueckgestellt, weil dasselbe
+    # Ziel wieder an dieselbe enge Stelle fuehrte). SH-5 Fahrt 3: vor zwei
     # Muelleimern an der Front 10 Minuten "erneut"/"anderes Ziel", nie zurueck.
     self_healing_stuck_move_m: 0.05
     self_healing_backup_action: backup

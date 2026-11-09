@@ -611,10 +611,14 @@ class SelfHealingRuntime:
             if action == RETRY:
                 time.sleep(self._self_healing_heal_wait_s)
                 continue
-            if not (action == TRACK_BACK and stuck):
-                # Nicht vom Fleck: Das Hindernis lag am Standort, nicht am Ziel;
-                # nach der Rückfahrt darf dasselbe Ziel erneut angefahren werden.
-                blacklist.append(goal.frontier_xy)
+            # Ziel zurückstellen, auch nach einer Rückfahrt (Entscheidung
+            # Projektinhaber 09.11.2026, AW-1b): Bis dahin wurde nach der Rückfahrt
+            # dasselbe Ziel erneut angefahren. Real (SH-6, 3 von 3) und in der
+            # Simulation (AW-1, Drift 2) führte das zurück an dieselbe enge Stelle;
+            # eine zweite Rückfahrt ist je Stillstand nicht erlaubt, dann kam nach
+            # acht Fehlschlägen „Hilfe benötigt“. Das Ziel bekommt seine zweite
+            # Chance, wenn keine anderen Ziele mehr übrig sind.
+            blacklist.append(goal.frontier_xy)
             status['deferred_goals'] = len(blacklist)
             if action == LOOK_AROUND:
                 self._status_phase = 'self_healing_look_around'
