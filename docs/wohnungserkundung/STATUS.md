@@ -69,6 +69,37 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
 Abdeckungskurve im Fahrtprotokoll (09.11.).
 
+## 10.11.2026 – Simulation KM-1 B und EK-1 abgeschlossen; Standortbestimmung offen
+
+Der Projektinhaber fragt vor SH-8, ob die Arbeit noch auf dem Zielweg ist.
+Fakten aus der Simulation vom 09.11. abends (alles Experimente, nichts davon
+im Produktprofil):
+
+| Stand | Läufe | bestanden | Dauer (ohne Eimerwelt) | Bemerkung |
+|---|---|---|---|---|
+| Produkt AW-1b (`d0d1431`, Stand von SH-8) | 7 | **0** | 209–899 s | 2× Gehäuseberührung, 5× festgehalten oder Hilfe |
+| KM-1 B (lokale Karte löscht nichts unter der Kontur) | 5 | 3, dazu 1 nur mit offenem Kartenkriterium | 329–535 s | Eimerwelt: Hilfe und Gehäuseberührung (seitlicher Eimer, bekannte Sensorgrenze) |
+| KM-1 B plus EK-1 | 5 | 4 | 584–695 s | Eimerwelt: Annäherung auf 0,8 cm, vollständig |
+
+- **KM-1 B** ist die erste Änderung, mit der die Simulation überhaupt
+  besteht; nie „approach“, 14 von 16 Rückfahrten erfolgreich. Sie setzt am
+  DR-1-Befund vom 03.11. an. **Nicht roboterreif:** Der Mast liegt im
+  LiDAR-Sichtfeld; Eigenechos unter der Kontur würden nicht mehr gelöscht.
+- **EK-1 verfehlt E3** (Leerlauf halbieren): Median der Zeit nach 95 % der
+  Endfläche 427 s gegenüber 244 s ohne EK-1; E1 und E4 erfüllt (Abdeckung
+  0,973–0,981; 90 % im Median 29 s später). Die Rundblicke kosten je etwa
+  65 s, das „gut genug“-Ende löste nie aus, weil stets eine Lücke ab 0,6 m
+  übrig war. In den kahlen Simulationsräumen ist die Basis schon schnell;
+  das reale Problem (20–30 min in einem Raum) bildet sie nicht ab.
+- **Die Abdeckungskurven bestätigen die Beobachtung des Projektinhabers:**
+  95 % der freien Endfläche nach etwa 3 min, die restlichen 3–8 min bringen
+  4–5 %.
+
+**Offen:** Entscheidung des Projektinhabers zur Standortbestimmung
+(Vorschlag im Chat vom 10.11.2026: SH-8 nicht als drei 40-min-Fahrten,
+sondern zuerst als kurze gezielte Befreiungsprobe an den drei bekannten
+Stellen; EK-1 parken, bis das Festsitzen real gelöst ist).
+
 ## 09.11.2026 (spätabends) – KM-1 Variante A verworfen; Gehäuse berührt in der Simulation beim langsamen Drehen
 
 **Neue Messgröße (`a77053a`):** Die Prüfkontur der Simulation ist die
