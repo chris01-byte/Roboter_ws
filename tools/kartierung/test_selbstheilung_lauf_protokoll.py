@@ -103,3 +103,49 @@ def test_coverage_curve_samples_every_30_s_only_while_driving():
     p.karte([0]*20, 1.0, 200.0)                   # nach der Fahrt: nichts mehr
     assert len(p.abdeckung) == 4
     assert p.zusammenfassung()['abdeckung'] == zeiten
+
+
+def _stellprobe(heals_folge, weg_bei=None):
+    """Hilfsfahrt: je Sekunde ein Odometriewert; heals_folge[t] = Heilungen zu der Zeit."""
+    from selbstheilung_lauf_protokoll import LaufProtokoll
+    p = LaufProtokoll(0.0)
+    p.explore({'self_healing': {'state': 'running', 'heals': 0, 'track_backs': 0,
+                                'goals_reached': 0}}, 10.0)
+    for i, heals in enumerate(heals_folge):
+        t = 11.0 + i
+        p.explore({'self_healing': {'state': 'running', 'heals': heals,
+                                    'track_backs': min(heals, 1), 'goals_reached': 0}}, t)
+        x = 5.0 if weg_bei is None or i < weg_bei else 5.0 + 0.1*(i - weg_bei + 1)
+        p.stellprobe(x, 2.0, t, 0.5)
+    return p
+
+
+def test_stellprobe_freed_after_a_heal_counts_as_befreit():
+    """MASTERPLAN §9 Regel 6 (10.11.2026): gezielte Probe statt langer Zufallsfahrt."""
+    p = _stellprobe([0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], weg_bei=4)
+    urteil = p.stellprobe_ergebnis(0.5)
+    assert urteil['urteil'] == 'befreit'
+    assert urteil['weg']['heilungen_bis_dahin'] == 1 and urteil['weg']['rueckfahrten_bis_dahin'] == 1
+    assert urteil['weg']['entfernung_m'] >= 0.5 and urteil['weg']['nach_s'] == pytest.approx(9.0)
+    assert p.stellprobe_weg_um == pytest.approx(19.0)
+
+
+def test_stellprobe_without_blockage_or_without_leaving_is_not_a_pass():
+    weg_ohne_heilung = _stellprobe([0]*10, weg_bei=2)
+    assert weg_ohne_heilung.stellprobe_ergebnis(0.5)['urteil'] == 'nicht_blockiert'
+    steht = _stellprobe([0, 1, 2, 3, 4])
+    urteil = steht.stellprobe_ergebnis(0.5)
+    assert urteil['urteil'] == 'nicht_befreit' and urteil['weg'] is None
+    assert urteil['max_entfernung_m'] == 0.0
+    # Ohne Stellprobe (Schwelle 0) oder ohne Fahrt gibt es kein Urteil.
+    assert steht.stellprobe_ergebnis(0.0) is None
+    from selbstheilung_lauf_protokoll import LaufProtokoll
+    assert LaufProtokoll(0.0).stellprobe_ergebnis(0.5) is None
+
+
+def test_stellprobe_ignores_motion_before_the_mission_starts():
+    from selbstheilung_lauf_protokoll import LaufProtokoll
+    p = LaufProtokoll(0.0)
+    p.stellprobe(0.0, 0.0, 1.0, 0.5)
+    p.stellprobe(3.0, 0.0, 2.0, 0.5)             # vor dem Start (z. B. Hinstellen)
+    assert p.stellprobe_start is None and p.stellprobe_weg is None

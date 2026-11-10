@@ -16,7 +16,10 @@ schreibt eine JSON-Zusammenfassung:
   - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
     während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
     erreicht waren (Fahrplan MASTERPLAN §9, 09.11.2026),
-  - die automatisch prüfbaren Kriterien der Abnahmestufe 1.
+  - die automatisch prüfbaren Kriterien der Abnahmestufe 1,
+  - mit --stellprobe-m: Stellprobe (MASTERPLAN §9, Regel 6). Gemessen wird
+    die Entfernung vom Standort beim Missionsstart; das Protokoll endet,
+    sobald sie erreicht ist (plus Nachlauf) oder das Fenster abgelaufen ist.
 
 Kontaktfreiheit, Eingriffe und der Nav2-Zustand nach der Fahrt sind
 Beobachtungen bzw. eigene Prüfungen und stehen als „manuell“ im Ergebnis.
@@ -68,6 +71,11 @@ class LaufProtokoll:
         self.hwt_zustand = None
         self.abdeckung = []
         self._abdeckung_letzte = None
+        # Stellprobe: Entfernung vom Standort beim Missionsstart.
+        self.stellprobe_start = None
+        self.stellprobe_max_m = 0.0
+        self.stellprobe_weg = None       # dict beim ersten Erreichen der Schwelle
+        self.stellprobe_weg_um = None
 
     def _t(self, t):
         return round(t - self.start, 2)
@@ -138,6 +146,36 @@ class LaufProtokoll:
             if schritt < 0.5:          # Sprünge (Neustart, Reset) nicht addieren
                 self.strecke_m += schritt
         self.odom_letzte = (x, y)
+
+    def stellprobe(self, x, y, t, schwelle_m):
+        """Entfernung vom Standort beim Missionsstart; merkt das erste Erreichen."""
+        if not self.faehrt() or not (math.isfinite(x) and math.isfinite(y)):
+            return
+        if self.stellprobe_start is None:
+            self.stellprobe_start = (x, y)
+        entfernung = math.dist(self.stellprobe_start, (x, y))
+        self.stellprobe_max_m = max(self.stellprobe_max_m, entfernung)
+        if schwelle_m > 0 and entfernung >= schwelle_m and self.stellprobe_weg is None:
+            sh = self.self_healing or {}
+            self.stellprobe_weg_um = t
+            self.stellprobe_weg = dict(
+                nach_s=round(t - self.gestartet_um, 1), entfernung_m=round(entfernung, 3),
+                heilungen_bis_dahin=sh.get('heals'), rueckfahrten_bis_dahin=sh.get('track_backs'),
+                ziele_bis_dahin=sh.get('goals_reached'))
+
+    def stellprobe_ergebnis(self, schwelle_m):
+        """befreit / nicht_blockiert / nicht_befreit; None ohne Stellprobe oder Fahrt."""
+        if schwelle_m <= 0 or self.gestartet_um is None:
+            return None
+        weg = self.stellprobe_weg
+        if weg is None:
+            urteil = 'nicht_befreit'
+        elif not weg['heilungen_bis_dahin']:
+            urteil = 'nicht_blockiert'     # ohne Heilung weggefahren: Stelle sagt nichts aus
+        else:
+            urteil = 'befreit'
+        return dict(schwelle_m=schwelle_m, urteil=urteil, weg=weg,
+                    max_entfernung_m=round(self.stellprobe_max_m, 3))
 
     def vl53(self, t):
         if self.vl53_letzte is not None and self.faehrt():
@@ -242,6 +280,11 @@ def main(argv=None):
                         help='Sicherheitsende des Protokolls (Standard 30 min)')
     parser.add_argument('--nachlauf-s', type=float, default=5.0,
                         help='So lange nach dem Missionsende weiter mitschreiben')
+    parser.add_argument('--stellprobe-m', type=float, default=0.0,
+                        help='Stellprobe: Ende, sobald der Roboter so weit vom Standort beim '
+                             'Missionsstart entfernt ist (0 = aus)')
+    parser.add_argument('--stellprobe-fenster-s', type=float, default=300.0,
+                        help='Stellprobe: Ende spätestens so lange nach dem Missionsstart')
     args = parser.parse_args(argv)
 
     import rclpy
@@ -279,10 +322,12 @@ def main(argv=None):
     node.create_subscription(Twist, '/cmd_vel',
                              lambda m: protokoll.cmd_vel(m.linear.x, m.angular.z),
                              qos_profile_sensor_data)
-    node.create_subscription(Odometry, '/odom',
-                             lambda m: protokoll.odom(m.pose.pose.position.x,
-                                                      m.pose.pose.position.y),
-                             qos_profile_sensor_data)
+    def on_odom(m):
+        x, y = m.pose.pose.position.x, m.pose.pose.position.y
+        protokoll.odom(x, y)
+        protokoll.stellprobe(x, y, jetzt(), args.stellprobe_m)
+
+    node.create_subscription(Odometry, '/odom', on_odom, qos_profile_sensor_data)
     node.create_subscription(NearFieldStatus, '/near_field/status',
                              lambda m: protokoll.vl53(jetzt()), qos_profile_sensor_data)
     node.create_subscription(OccupancyGrid, '/map',
@@ -291,12 +336,21 @@ def main(argv=None):
 
     print('Fahrtprotokoll läuft; wartet auf den Missionsstart.', flush=True)
     ende = jetzt() + args.max_s
+    ende_grund = None
     try:
         while rclpy.ok() and jetzt() < ende:
             rclpy.spin_once(node, timeout_sec=0.1)
             if (protokoll.beendet_um is not None
                     and jetzt() - protokoll.beendet_um >= args.nachlauf_s):
                 break
+            if args.stellprobe_m > 0 and protokoll.gestartet_um is not None:
+                if (protokoll.stellprobe_weg_um is not None
+                        and jetzt() - protokoll.stellprobe_weg_um >= args.nachlauf_s):
+                    ende_grund = 'stellprobe_weg'
+                    break
+                if jetzt() - protokoll.gestartet_um >= args.stellprobe_fenster_s:
+                    ende_grund = 'stellprobe_fenster'
+                    break
     except KeyboardInterrupt:
         pass
     finally:
@@ -305,13 +359,16 @@ def main(argv=None):
 
     ergebnis = protokoll.zusammenfassung()
     ergebnis['protokoll_ende'] = ('missionsende' if protokoll.beendet_um is not None
-                                  else 'zeitlimit_oder_abbruch')
+                                  else ende_grund or 'zeitlimit_oder_abbruch')
+    ergebnis['stellprobe'] = protokoll.stellprobe_ergebnis(args.stellprobe_m)
     os.makedirs(os.path.dirname(os.path.abspath(args.json)), exist_ok=True)
     with open(args.json, 'w', encoding='utf-8') as handle:
         json.dump(ergebnis, handle, ensure_ascii=False, indent=2)
     ausgabe = {k: v for k, v in ergebnis.items()
                if k not in ('ereignisse', 'heilungsverlauf', 'abdeckungskurve')}
     print(json.dumps(ausgabe, ensure_ascii=False, indent=2))
+    if args.stellprobe_m > 0:
+        return 0        # Urteil der Stellprobe steht im Ergebnis, nicht im Exit-Code
     return 0 if ergebnis['automatisch_erfuellt'] else 1
 
 
