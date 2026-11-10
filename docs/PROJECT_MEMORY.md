@@ -1460,6 +1460,20 @@ Wohnung → Raumziele. Anlass: Der Projektinhaber beobachtete, dass Amadeus
 den Großteil erfassen; gezählt verbrachte er 13–69 % der Fahrzeit in
 150-s-Anläufen, die das Ziel nicht erreichten. Die STATUS-Arbeitsliste führt
 den aktuellen Stand.
+
+**Nachtrag 10.11.2026 – Standortbestimmung (Entscheidung des
+Projektinhabers):** Die Richtung stimmt, aber seit dem 04.11. hing die Arbeit
+an einem Problem (Festsitzen dicht an Hindernissen): vier Korrekturen, fünf
+Testtage, kein realer Beleg. Entschieden: (1) ein Problem zur Zeit, alles
+andere geparkt; (2) Stellprobe statt langer Zufallsfahrten: Amadeus wird
+gezielt in die Lage gestellt, gemessen wird wenige Minuten (MASTERPLAN §9
+Regeln 6 und 7). Lehren: Ein seltenes Ereignis prüft man nicht mit langen
+Fahrten, in denen es zufällig eintritt. Die Simulation habe ich zweimal
+falsch gedeutet (kein „Einfrieren“; die 2-cm-Annäherungen waren mit dem
+echten Gehäuse gemessen Berührungen); ihre Urteile gelten nur mit der
+Messgröße, die das echte Gehäuse erfasst, und sie ersetzt keine Realprobe.
+Mehrere Pakete an einem Tag verstoßen gegen den Geist des Fahrplans, auch
+wenn nur eines auf den Roboter geht.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

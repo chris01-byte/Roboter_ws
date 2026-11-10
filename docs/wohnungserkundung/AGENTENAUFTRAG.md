@@ -1,43 +1,50 @@
-# Aktueller Agentenauftrag: SH-8 – Raumwechsel erneut, mit „Abstand halten und wegkommen“ (drei Fahrten)
+# Aktueller Agentenauftrag: SH-8 – Stellprobe „Abstand halten und wegkommen“, bei Erfolg eine volle Zwei-Raum-Fahrt
 
-**Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 09.11.2026.
-Gleicher Aufbau wie SH-7 (Laborraum plus Flur durch eine offene 80-cm-Tür),
-gleiche Kriterien. SH-7 scheiterte an engen Stellen; SH-7N fand den Grund:
-Amadeus fuhr bis auf wenige Zentimeter an echte Hindernisse heran, und von
-dort verweigerten Regler und Rückfahrt jede Bewegung, auch rückwärts in
-freien Raum. Neu ist das Paket **AW-1** (`19c8cb9`, Entscheidung des
-Projektinhabers 08.11.2026), nur im Selbstheilungsbetrieb:
+**Für den lokalen KI-Agenten auf dem Jetson.** Erteilt am 10.11.2026
+(ersetzt die Fassung mit drei 40-Minuten-Fahrten, die
+[zurückgezogen](archive/20261110-sh8-langfahrten-zurueckgezogen/README.md)
+wurde, bevor sie ausgeführt wurde).
 
-1. **Wege mit mehr Abstand:** Der Planer legt Wege eher mittig durch Türen
-   und Flure (globale Kosten neben Hindernissen reichen 0,60 statt 0,45 m).
-2. **LiDAR räumt seine eigenen alten Einträge:** eigene Ebene in der lokalen
-   Karte; verschobene Wandreste aus der Odometrie-Drift verschwinden. Die
-   niedrigen VL53-Hindernisse bleiben wie bisher.
-3. **Rückfahrt aus anliegender Lage:** Die Rückfahrt prüft nur den Bereich
-   hinter dem Heck (Rückfahrkontur, neuer Knoten `rueckfahr_kontur`), nicht
-   mehr, was vorn oder seitlich anliegt.
-4. **Rückfahrt auch ohne gerade eigene Spur:** 0,3 m gerade zurück, wenn
-   hinten laut Karte frei ist; weiterhin höchstens 0,4 m, 0,05 m/s, einmal je
-   Stillstand. Zeitgrenze für 30 % Tempo gerechnet.
-5. **Nach einer Rückfahrt ein anderes Ziel** (AW-1b, `d0d1431`, Entscheidung
-   des Projektinhabers 09.11.2026): Das Ziel wird zurückgestellt statt erneut
-   angefahren. Dasselbe Ziel führte real (SH-6) und in der Simulation zurück
-   an dieselbe enge Stelle.
+**Warum eine Stellprobe** (Entscheidung des Projektinhabers 10.11.2026,
+MASTERPLAN §9 Regel 6): Seit dem 04.11. scheitert es an einer Sache: Amadeus
+sitzt dicht an Hindernissen fest (Mülleimer, Garderobe, Ecke). Geprüft wurde
+das bisher mit langen Fahrten; ob er dabei in die Lage kommt, war Zufall.
+Jetzt wird er **gezielt an drei bekannte Stellen gestellt**, die Erkundung
+startet, und gemessen wird, ob er sich ohne Berührung befreit und
+weiterfährt. Erst wenn das gelingt, folgt eine volle Fahrt durch zwei Räume.
+
+Prüfling ist das Paket **AW-1 plus AW-1b** (`19c8cb9`, `d0d1431`), nur im
+Selbstheilungsbetrieb:
+
+1. Wege mit mehr Abstand (globale Kosten neben Hindernissen reichen weiter).
+2. Der LiDAR räumt seine eigenen alten Einträge in der lokalen Karte.
+3. Die Rückfahrt prüft nur den Bereich hinter dem Heck (Rückfahrkontur,
+   Knoten `rueckfahr_kontur`), nicht, was vorn oder seitlich anliegt.
+4. Rückfahrt auch ohne gerade eigene Spur: 0,3 m gerade zurück, wenn hinten
+   frei ist; höchstens 0,4 m, 0,05 m/s, einmal je Stillstand.
+5. Nach einer Rückfahrt ein anderes Ziel statt desselben.
+
+**Erwartetes Verhalten an jeder Stelle:** Der erste Anlauf scheitert (er kann
+nicht drehen oder nicht vorwärts), dann setzt Amadeus etwa 0,3 m gerade
+zurück, wählt ein anderes Ziel und fährt weg. Das kann zwischen etwa 30 s und
+3 min dauern.
 
 Offen und nur **gemessen**, nicht geändert: Liegt ein Hindernis vorn schon
 innerhalb der gepolsterten Kontur (etwa 2 cm), setzt der Kollisionsmonitor
-jede Bewegung auf null, auch rückwärts (Simulation 09.11.2026). Ob das real
-vorkommt, zeigt dieser Test; eine Änderung am Kollisionsmonitor wäre
-sicherheitsrelevant und ein eigenes Paket.
+jede Bewegung auf null, auch rückwärts (Simulation 09.11.2026). In der
+Simulation berührte außerdem das Gehäuse beim langsamen Drehen dicht an einem
+Hindernis; real gab es in 15 Laborfahrten keine Berührung. **Deshalb gilt:
+jede Berührung beendet den ganzen Auftrag.**
 
-Tempo, Budget (40 min), Heilungsleiter und Hilfe-Grenzen bleiben wie in SH-7.
+Tempo, Budget (40 min), Heilungsleiter und Hilfe-Grenzen wie in SH-7.
 Prototyp 1 (`selbstheilung-sh6-20261104_2140`) und der SH-7-Release bleiben
 unverändert.
 
 Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
-`docs/LABORMODUS.md` (LAB-1), `docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md`
-§5, §9 und §11, im STATUS die Abschnitte 09.11.2026 (AW-1), 08.11.2026
-(SH-7N) und 08.11.2026 (SH-7). Frühere Aufträge sind archiviert
+`docs/LABORMODUS.md` (LAB-1), `docs/wohnungserkundung/MASTERPLAN.md` §9,
+`docs/wohnungserkundung/KONZEPT_SELBSTHEILUNG.md` §5, §9 und §11, im STATUS
+die Arbeitsliste und die Abschnitte 10.11.2026, 09.11.2026 (AW-1, AW-1b),
+08.11.2026 (SH-7N, SH-7). Frühere Aufträge sind archiviert
 ([SH-7N](archive/20261108-sh7n-ausgewertet/README.md),
 [SH-7](archive/20261108-sh7-ausgewertet/README.md)).
 
@@ -45,21 +52,23 @@ Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
 
 | | |
 |---|---|
-| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 09.11.2026; **Fahrplan §9, Schritt 1** |
-| WE-Bezug | WE-M3, metrischer Kern im Zwei-Raum-Umfang; Vorstufe zu WE-M4 (Drei-Bereich-Rundweg), keine Abnahme von WE-M4; Vorbedingung Stufe 3 (Wohnung) |
-| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `d0d1431`; neuer Release `selbstheilung-sh8-<STAMP>`. SH-7 lief mit `selbstheilung-sh7-20261108_1617` |
-| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh8.md`: Build, 176 gezielte Tests, drei Fahrten durch zwei Räume, Kriterien C1–C5, G1, R1 und R2, je Hilfe-Stelle die Daten wie in SH-7N |
-| Nicht-Ziele | keine eigene Code- oder Parameteränderung, kein dritter Raum, keine Wohnungsfahrt, keine Tür mit Schwelle, kein Arm |
+| Planversion | MASTERPLAN v1.3 mit Nutzerentscheidungen bis 10.11.2026; **Fahrplan §9, Schritt 1, Regel 6** |
+| WE-Bezug | WE-M3, metrischer Kern im Zwei-Raum-Umfang; Vorstufe zu WE-M4, keine Abnahme von WE-M4; Vorbedingung Stufe 3 (Wohnung) |
+| Istbasis | Branch `claude/blissful-pasteur-s1eivj`, mindestens `2409529`; neuer Release `selbstheilung-sh8-<STAMP>`. SH-7 lief mit `selbstheilung-sh7-20261108_1617` |
+| Erwartetes Ergebnis | Bericht `~/selbstheilung_jetson_bericht_sh8.md`: Build, 182 gezielte Tests, **Teil A** Stellprobe an drei Stellen (je zweimal) mit Urteil je Probe, **Teil B** nur bei bestandener Stellprobe eine volle Zwei-Raum-Fahrt mit C1–C5, G1, R1, R2 |
+| Nicht-Ziele | keine eigene Code- oder Parameteränderung, kein dritter Raum, keine Wohnungsfahrt, keine Tür mit Schwelle, kein Arm, kein Vergleich mit älteren Releases |
 | Rückfall | in der Umgebungsdatei `SH_REL` auf `…/selbstheilung-sh7-20261108_1617` (SH-7-Stand) oder `…/selbstheilung-sh6-20261104_2140` (Prototyp 1) zurückstellen; alle Releases bleiben |
-| Laborrahmen | LAB-1: aktive Fahrt im beauftragten Umfang ohne erneute Standardfreigaben. Not-Aus-Erreichbarkeit, freier Fahrbereich und Abwesenheit Unbeteiligter sind als Betreibererklärung hinterlegt und werden **nicht** erneut abgefragt |
+| Laborrahmen | LAB-1: aktive Fahrt im beauftragten Umfang ohne erneute Standardfreigaben. Not-Aus-Erreichbarkeit und Abwesenheit Unbeteiligter sind als Betreibererklärung hinterlegt und werden **nicht** erneut abgefragt. **Neu und ausdrücklich so entschieden (10.11.2026):** In Teil A steht Amadeus beim Start absichtlich 5 cm vor einem Hindernis |
 
 ## Verboten
 
 - keine eigene Code- oder Parameteränderung, kein Commit oder Push; gebaut
   wird nur in Schritt 3;
-- schreibend nur: der Stackstart je Fahrt und, falls die App fehlt, **genau
-  ein** Missionsstart je Fahrt; kein `param set`, `lifecycle set`,
-  `service call`, kein weiteres `topic pub`, keine Nav2-Ziele;
+- schreibend nur: der Stackstart je Probe oder Fahrt, falls die App fehlt
+  **genau ein** Missionsstart je Probe oder Fahrt, und in Teil A **genau ein**
+  Missionsstopp je Probe (derselbe Befehl wie der Stopp der App, siehe A6);
+  kein `param set`, `lifecycle set`, `service call`, kein weiteres
+  `topic pub`, keine Nav2-Ziele;
 - `operator_stationary_confirmed:=true` nur nach Christophers „ja“;
 - Not-Aus und Nutzerabbruch nie zurücksetzen (LAB-1 §4);
 - nichts in `~/roboter_ws` und an der defekten Codex-Referenz; bestehende
@@ -83,8 +92,8 @@ Vorher lesen (Branch `claude/blissful-pasteur-s1eivj`): `AGENTS.md`,
   1. erneut versuchen;
   2. Ziel zurückstellen;
   3. umsehen;
-  4. ein Stück zurück (seit SH-6: kommt er in einem Anlauf nicht vom Fleck,
-     sofort, dann dasselbe Ziel erneut; seit SH-8 auch ohne gerade Spur);
+  4. ein Stück zurück (kommt er in einem Anlauf nicht vom Fleck, sofort;
+     seit SH-8 auch ohne gerade Spur, danach ein anderes Ziel);
   5. „Hilfe benötigt“.
 - Eine Fahrt endet von selbst mit „vollständig“, „Teilkarte“ oder „Hilfe
   benötigt“, spätestens nach **40 Minuten** (Explorer-Gesamtbudget, neu).
@@ -112,7 +121,7 @@ Läuft ein Robotik-Stack: nichts beenden, Christopher genau einmal fragen.
 ```bash
 STAMP=$(date +%Y%m%d_%H%M); echo "STAMP=$STAMP"
 cd ~/roboter_worktrees/selbstheilung-v2 && git status --short && git pull --ff-only && \
-  git rev-parse HEAD && git merge-base --is-ancestor d0d1431 HEAD && echo "d0d1431 enthalten"
+  git rev-parse HEAD && git merge-base --is-ancestor 2409529 HEAD && echo "2409529 enthalten"
 mkdir -p ~/.local/share/amadeus/releases/selbstheilung-sh8-$STAMP/pruefung
 ```
 
@@ -208,7 +217,7 @@ env -u CYCLONEDDS_URI ROS_DOMAIN_ID=227 ROS_LOCALHOST_ONLY=1 python3 -m pytest -
   2>&1 | tee "$SH_PR/tests.log" | tail -40
 ```
 
-Erwartung: `182 passed` (Cloud, Stand `d0d1431`; darin sechs Tests für den ausgeschalteten EK-1-Code, siehe Schritt 3). Bei Fehlschlägen nicht fahren,
+Erwartung: `182 passed` (Cloud, Stand `2409529`; darin sechs Tests für den ausgeschalteten EK-1-Code, siehe Schritt 3). Bei Fehlschlägen nicht fahren,
 berichten.
 
 ### Aufbau (Christopher)
@@ -216,44 +225,205 @@ berichten.
 Nur diese konkrete Handlung einmal anfordern und die Antworten wörtlich
 festhalten:
 
-„Bitte für SH-8 genau wie in SH-7 aufbauen (dieselbe Tür, Garderobe bleibt):
-1. Genau **eine** Tür zwischen dem Laborraum und einem Nachbarraum ganz
-   öffnen: Türblatt bis zum Anschlag und gegen Zufallen gesichert (zum
-   Beispiel Türstopper), **keine Schwelle**. Bitte die lichte Breite messen
-   und nennen (mindestens 75 cm).
-2. Alle anderen Türen **beider** Räume schließen, sodass Amadeus nur diese
-   zwei Räume erreichen kann.
-3. In **beiden** Räumen flache Gegenstände unter etwa 15 cm Höhe (Kabel,
-   Kartons, Schuhe) vom Boden räumen, auch im Türbereich. Mülleimer und
-   Bücherregal im Laborraum dürfen stehen bleiben.
-4. Kurz sagen, was der Nachbarraum ist (zum Beispiel Flur, Küche) und wie
-   groß er ungefähr ist.“
-
-Grund: Der Selbstheilungsbetrieb kennt keinen Software-Fahrbereich; den
-Bereich begrenzen Wände und geschlossene Türen. Unter etwa 6 cm sehen die
-VL53 nichts (SH-2), von höheren niedrigen Gegenständen nur die Vorderkante;
-liegt so ein Gegenstand neben dem Roboter, kann die Flanke ihn beim Drehen
-berühren (bekannte Grenze, Entscheidung 22.10.2026). Ein halb offenes
-Türblatt ist für den LiDAR eine schmale Kante und für die Flanke ein Risiko.
-
-Ist die offene Tür schmaler als 75 cm, hat sie eine Schwelle oder lässt sie
-sich nicht feststellen: keine Fahrt, berichten. Ohne geschlossene übrige
-Türen keine Fahrt.
+„Bitte für SH-8 aufbauen wie in SH-7:
+1. Dieselbe Tür zwischen Laborraum und Flur ganz öffnen, Türblatt gesichert
+   (80 cm, keine Schwelle).
+2. Alle anderen Türen beider Räume schließen.
+3. In beiden Räumen flache Gegenstände unter etwa 15 cm Höhe vom Boden
+   räumen, auch im Türbereich. Die Garderobe im Flur bleibt, wie sie ist.
+4. Zwei Mülleimer (wie in SH-5, etwa 38 cm hoch) und einen Abstandshalter
+   von 5 cm bereitlegen (zum Beispiel ein Klötzchen oder den Zollstock).“
 
 Geht die Serie an einem anderen Tag weiter, den Aufbau dann einmal erneut
-bestätigen lassen (Punkte 1–3, „unverändert“ genügt).
+bestätigen lassen („unverändert“ genügt). Ohne geschlossene übrige Türen
+keine Probe und keine Fahrt.
 
-## Je Fahrt (Nr 1, 2, 3)
+## Teil A – Stellprobe (sechs kurze Proben)
 
-Jede Fahrt ist ein Kaltstart mit neuer Karte. `RUN` = 1, 2 oder 3; in jedem
-Befehlsblock setzen (`RUN=1 …`), weil die Blöcke nicht zwingend in derselben
-Shell laufen.
+Reihenfolge und Kennung `P`: **s3a, s3b** (Mülleimer), **s2a, s2b** (Ecke),
+**s1a, s1b** (Garderobe). Jede Probe ist ein Kaltstart mit neuer Karte und
+dauert einschließlich Start etwa 6 bis 10 Minuten. `P` in jedem Befehlsblock
+setzen, weil die Blöcke nicht zwingend in derselben Shell laufen.
+
+| Stelle | Wo | Wie Amadeus hingestellt wird |
+|---|---|---|
+| S3 Mülleimer | Laborraum, freie Fläche | zwei Mülleimer nebeneinander, etwa 10 cm Lücke, quer vor Amadeus; seine Front mittig davor, **5 cm** Abstand; hinter ihm mindestens 1 m frei, seitlich je mindestens 0,5 m |
+| S2 Ecke | Laborraum, freie Raumecke | gerade in die Ecke hinein: Front **5 cm** vor der Wand, linke Seite **5 cm** neben der Seitenwand; hinter ihm mindestens 1 m frei, rechts mindestens 0,5 m |
+| S1 Garderobe | Flur | Front gerade auf die Jacken zu, **5 cm** davor; hinter ihm mindestens 0,5 m frei |
+
+Abstände mit dem Abstandshalter einstellen (±2 cm), danach den Abstandshalter
+wegnehmen.
+
+### A1. Hinstellen und bereit
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
+ls -l /dev/ttyUSB_HWT601 /dev/ttyUSB_BASE
+mkdir -p "$SH_PR/sh8_$P"
+```
+
+Fehlt ein Gerät: nicht fahren, berichten. Christopher einmal je Probe bitten
+und die Antwort wörtlich festhalten: „Bitte stelle Amadeus für Probe <P> an
+die Stelle <Stelle> wie in der Tabelle. Welche Abstände hast du eingestellt?
+Steht er still und bleibt er während des Starts (etwa eine Minute)
+unberührt? Ist der Motor-Stop-Schalter freigegeben, reicht der Akku?“ Nur
+nach „ja“ weiter.
+
+### A2. Stack scharf starten
+
+`source` steht in einer eigenen Zeile:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
+  self_healing:=true start_web_gui:=false \
+  use_hwt601_odometry:=true hwt_development_contract:=true operator_stationary_confirmed:=true \
+  active_drive:=true enable_auto_explore:=true \
+  > "$SH_PR/sh8_$P/launch.log" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh8_$P/launch.pid"; cat "$SH_PR/sh8_$P/launch.pid"
+date -Iseconds > "$SH_PR/sh8_$P/launch_start.txt"
+```
+
+Die PID muss die des `ros2 launch`-Prozesses sein (`ps -o pid,cmd -p <PID>`).
+Nach etwa 60 s (HWT-Einmessung) `nodes.txt` und `lifecycle.txt` erfassen wie
+in SH-7. Erwartet: `/base_hardware` und `/rueckfahr_kontur` vorhanden,
+`/hwt601_encoder_shadow_reader` nicht.
+
+### A3. Vorprüfung
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env && P=s3a && \
+  python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 --aktiv \
+  --json "$SH_PR/sh8_$P/vorpruefung.json" 2>&1 | tee "$SH_PR/sh8_$P/vorpruefung.txt"; echo "exit=${PIPESTATUS[0]}"
+```
+
+Erwartet: Exit 0 mit denselben Zeilen wie in Teil B Schritt 3 beschrieben
+(Tempowerte, AW-1-Werte, „Rueckfahrkontur liegt am Behavior-Server an“, „D
+Quellen“ OK, `/cmd_vel 3 s ohne Fahrbefehl`). Bei `FEHL` in „D Quellen“:
+nicht fahren, Stack geordnet beenden, einmal neu starten. Jeder andere `FEHL`
+(nach einer Wiederholung nach 30 s bei „erreichbar“, „nicht deklariert“ oder
+„Graph unvollständig“): Stack geordnet beenden und berichten.
+
+### A4. Protokoll mit Stellprobe starten
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+nohup env --default-signal=INT python3 "$SH_SRC/tools/kartierung/selbstheilung_lauf_protokoll.py" \
+  --json "$SH_PR/sh8_$P/protokoll.json" \
+  --stellprobe-m 0.5 --stellprobe-fenster-s 360 --nachlauf-s 20 --max-s 900 \
+  > "$SH_PR/sh8_$P/protokoll.txt" 2>&1 < /dev/null &
+echo $! > "$SH_PR/sh8_$P/protokoll.pid"
+```
+
+Das Protokoll liest nur mit. Es merkt sich den Standort beim Missionsstart
+und **beendet sich selbst**: 20 s nachdem Amadeus 0,5 m davon entfernt ist,
+spätestens 6 min nach dem Missionsstart, oder wenn die Mission von selbst
+endet. Das Urteil steht danach in `protokoll.json` unter `stellprobe`.
+
+### A5. Mission starten und warten
+
+Christopher drückt in der App „Erkunden“. Steht die App nicht zur Verfügung,
+sendet der Agent **genau einmal**:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"explore\"}'}"
+```
+
+Danach nur warten, bis der Protokollprozess endet (lesend prüfen, zum
+Beispiel alle 10 s `kill -0 "$(cat "$SH_PR/sh8_$P/protokoll.pid")"`), höchstens
+8 min. Der Agent greift nicht ein. Christopher beobachtet aus der Nähe mit
+der Hand am Not-Aus; nähert sich eine Ecke von Amadeus sichtbar einem
+Hindernis, drückt er (das zählt als Eingriff und beendet den Auftrag).
+
+### A6. Probe beenden und sichern
+
+Zuerst das Ergebnis lesen:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+tail -40 "$SH_PR/sh8_$P/protokoll.txt"
+python3 -c "import json,sys; r=json.load(open(sys.argv[1])); print(r['protokoll_ende'], json.dumps(r['stellprobe'], ensure_ascii=False))" "$SH_PR/sh8_$P/protokoll.json"
+```
+
+Läuft die Mission noch (Protokoll-Ende `stellprobe_weg` oder
+`stellprobe_fenster`), sendet der Agent **genau einmal** den Stopp, den auch
+die App sendet, und wartet 5 s. Hat die Mission von selbst geendet
+(`missionsende`), entfällt der Stopp:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: '{\"type\":\"cancel\"}'}"
+```
+
+Danach, weiterhin nur lesend:
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+timeout 10 ros2 topic echo --once --full-length /explore/status_json > "$SH_PR/sh8_$P/explore_status_ende.txt" 2>&1
+grep -o 'last_track_back[^}]*}' "$SH_PR/sh8_$P/explore_status_ende.txt"
+grep -nE "Begin navigating|Goal succeeded|Goal failed|Goal canceled|Controller patience exceeded|Failed to make progress|Running backup|backup completed successfully|backup failed|Collision Ahead|Exceeded time allowance|\[collision_monitor\].*Robot to" \
+  "$SH_PR/sh8_$P/launch.log" > "$SH_PR/sh8_$P/ablauf.txt"; wc -l "$SH_PR/sh8_$P/ablauf.txt"
+grep -c "detected collision ahead" "$SH_PR/sh8_$P/launch.log"
+grep -c "process has died" "$SH_PR/sh8_$P/launch.log"
+```
+
+**Nur bei Urteil `nicht_befreit` oder „Hilfe benötigt“** zusätzlich wie in
+SH-7N sichern (Amadeus steht):
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+P=s3a
+timeout 8 ros2 run tf2_ros tf2_echo map base_link > "$SH_PR/sh8_$P/tf_map_base_link.txt" 2>&1
+timeout 8 ros2 run tf2_ros tf2_echo odom base_link > "$SH_PR/sh8_$P/tf_odom_base_link.txt" 2>&1
+timeout 15 ros2 topic echo --once --full-length /local_costmap/costmap > "$SH_PR/sh8_$P/lokale_kostenkarte_ende_voll.txt" 2>&1
+```
+
+Christopher einmal fragen und wörtlich festhalten:
+
+1. Hat Amadeus etwas berührt?
+2. Musstest du eingreifen (Stopp, Not-Aus, Umsetzen)?
+3. Was hast du gesehen: zurückgesetzt, gedreht, gestanden? In welcher
+   Reihenfolge, und wie nah kam er dem Hindernis dabei?
+
+Danach den Stack geordnet beenden (SIGINT nur an die Launch-PID,
+`roboterknoten.py` danach leer). Läuft das Protokoll noch, es vorher per
+SIGINT an `protokoll.pid` beenden.
+
+### A7. Urteil je Probe und wie es weitergeht
+
+| Urteil | Bedeutung | Weiter |
+|---|---|---|
+| `befreit` | mindestens eine Heilung, danach 0,5 m vom Standort weg, innerhalb von 6 min | nächste Probe |
+| `nicht_blockiert` | ohne Heilung weggefahren: Die Stelle hat ihn nicht blockiert, die Probe sagt nichts aus | **einmal** wiederholen mit **3 cm** statt 5 cm (Kennung mit Zusatz `_nah`, zum Beispiel `s3a_nah`); bleibt es dabei, als „Stelle blockiert nicht“ berichten und weiter |
+| `nicht_befreit` | nach 6 min nicht 0,5 m weg, oder „Hilfe benötigt“ | die zweite Probe **derselben** Stelle entfällt (kein identischer Fehlversuch); mit der nächsten Stelle weiter |
+| Berührung, Eingriff, `outcome=error`, „process has died“ | | **Auftrag beenden**, nur berichten |
+
+Höchstens zehn Starts mit Mission in Teil A, höchstens zwölf Starts
+insgesamt (Starts, die „D Quellen“ vor der Mission abfängt, zählen nur zur
+Gesamtzahl). Laden zwischen den Proben ist erlaubt.
+
+**Stellprobe bestanden**, wenn keine Probe mit `nicht_befreit`, Berührung
+oder Eingriff endete und jede der drei Stellen mindestens einmal `befreit`
+ergab. **Nur dann folgt Teil B.** Sonst: Auftrag hier beenden und berichten.
+
+## Teil B – eine volle Zwei-Raum-Fahrt (nur nach bestandener Stellprobe)
+
+Eine Fahrt wie in SH-7, Kaltstart mit neuer Karte, bis zu 40 Minuten. Die
+Mülleimer stehen dabei im Laborraum wie in SH-5, die Garderobe bleibt. In
+jedem Befehlsblock `RUN=voll` setzen.
 
 ### 1. Bereit
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 python3 "$SH_SRC/tools/kartierung/roboterknoten.py" --still || echo "STACK LAEUFT SCHON - abbrechen"
 ls -l /dev/ttyUSB_HWT601 /dev/ttyUSB_BASE
 mkdir -p "$SH_PR/sh8_run$RUN"
@@ -275,7 +445,7 @@ anderen Tag fallen.
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 nohup env --default-signal=INT ros2 launch robot_bringup app_mapping.launch.py \
   self_healing:=true start_web_gui:=false \
   use_hwt601_odometry:=true hwt_development_contract:=true operator_stationary_confirmed:=true \
@@ -295,7 +465,7 @@ vorhanden (ein Knoten mehr als in SH-7, dort 39).
 ### 3. Vorprüfung direkt vor der Fahrt
 
 ```bash
-source ~/roboter_worktrees/selbstheilung-v2.env && RUN=1 && \
+source ~/roboter_worktrees/selbstheilung-v2.env && RUN=voll && \
   python3 "$SH_SRC/tools/kartierung/selbstheilung_stillstand_pruefen.py" --odometrie hwt601 --aktiv \
   --json "$SH_PR/sh8_run$RUN/vorpruefung.json" 2>&1 | tee "$SH_PR/sh8_run$RUN/vorpruefung.txt"; echo "exit=${PIPESTATUS[0]}"
 ```
@@ -330,7 +500,7 @@ SH-2 Schritt 9: SIGINT nur an die Launch-PID) und berichten; keine Fahrt.
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 nohup env --default-signal=INT python3 "$SH_SRC/tools/kartierung/selbstheilung_lauf_protokoll.py" \
   --json "$SH_PR/sh8_run$RUN/protokoll.json" --max-s 3600 \
   > "$SH_PR/sh8_run$RUN/protokoll.txt" 2>&1 < /dev/null &
@@ -346,7 +516,7 @@ trifft daher nicht die eigene Shell:
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 SLAM_PID=$(pgrep -x async_slam_tool | head -1); echo "SLAM_PID=$SLAM_PID"
 echo "$SLAM_PID" > "$SH_PR/sh8_run$RUN/slam.pid"
 nohup top -b -d 10 -p "$SLAM_PID" > "$SH_PR/sh8_run$RUN/slam_cpu.txt" 2>&1 < /dev/null &
@@ -376,7 +546,7 @@ ros2 topic pub --once /mission_manager/command_json std_msgs/msg/String "{data: 
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 cat "$SH_PR/sh8_run$RUN/protokoll.txt" | tail -60
 timeout 10 ros2 topic echo --once --full-length /explore/status_json > "$SH_PR/sh8_run$RUN/explore_status_ende.txt" 2>&1
 grep -o 'last_track_back[^}]*}' "$SH_PR/sh8_run$RUN/explore_status_ende.txt"
@@ -398,7 +568,7 @@ wie in SH-7 sichern (Amadeus steht dann still):
 
 ```bash
 source ~/roboter_worktrees/selbstheilung-v2.env
-RUN=1
+RUN=voll
 timeout 8 ros2 run tf2_ros tf2_echo map base_link > "$SH_PR/sh8_run$RUN/tf_map_base_link.txt" 2>&1
 timeout 8 ros2 run tf2_ros tf2_echo odom base_link > "$SH_PR/sh8_run$RUN/tf_odom_base_link.txt" 2>&1
 timeout 15 ros2 topic echo --once --full-length /local_costmap/costmap > "$SH_PR/sh8_run$RUN/lokale_kostenkarte_ende_voll.txt" 2>&1
@@ -439,29 +609,38 @@ Prozess vorher per SIGINT an `protokoll.pid` beenden.
 
 - **Sofort stoppen** (Christopher: Not-Aus oder App-Stopp; Agent: Stack
   geordnet beenden) bei:
-  - Berührung;
-  - Fahrt auf ein Hindernis ohne Abbremsen;
+  - Berührung, auch leicht, auch an Mülleimer, Jacke, Türrahmen oder Türblatt;
+  - Fahrt oder Drehung auf ein Hindernis ohne rechtzeitiges Abbremsen;
   - Fahrt in einen dritten Raum oder durch eine Tür, die zu sein sollte;
   - Türblatt bewegt sich oder Tür fällt zu, während Amadeus in der Nähe ist
-    (Fahrt ungültig, darf nach erneutem Sichern einmal wiederholt werden);
+    (Probe oder Fahrt ungültig, darf nach erneutem Sichern einmal wiederholt
+    werden);
   - ungewöhnlichem Geräusch;
   - Rauch.
 
-  Danach keine weitere Fahrt in dieser Sitzung; nur berichten.
-- **Endet eine Fahrt mit `outcome=error`:** die Serie anhalten und berichten.
-  Keine identischen Fehlversuche aneinanderreihen.
-- **Ungültige Fahrt:** Ist eine Fahrt aus einem äußeren Grund ungültig (zum
-  Beispiel kommt jemand in den Raum), darf sie einmal wiederholt werden.
-  Höchstens vier Starts mit Mission je Sitzung. Ein Start, den die
-  Vorprüfung in „D Quellen“ vor der Mission abfängt (keine Bewegung), zählt
-  nicht mit; höchstens sechs Starts insgesamt.
-- Keine Parameter ändern, um eine Fahrt „durchzubringen“.
+  Danach keine weitere Probe und keine Fahrt in dieser Sitzung; nur berichten.
+- **Endet eine Probe oder Fahrt mit `outcome=error`:** anhalten und berichten.
+- **Ungültige Probe oder Fahrt** aus einem äußeren Grund (zum Beispiel kommt
+  jemand in den Raum): darf einmal wiederholt werden.
+- Keine Parameter ändern, um eine Probe oder Fahrt „durchzubringen“.
 
-## Bewertung (Raumwechsel)
+## Bewertung
 
-Die Kriterien stehen vor der ersten Fahrt fest; sie sind die von SH-7. C1–C5 und G1 wie in SH-6;
-C3 und C4 sind für die doppelte Fahrzeit verdoppelt (gleiche Rate wie
-bisher). Neu sind R1 und R2. Je Fahrt:
+Die Kriterien stehen vor der ersten Probe fest.
+
+**Teil A, je Probe:**
+
+| Nr | Kriterium | Quelle |
+|---|---|---|
+| P1 | Urteil `befreit` | `protokoll.json`, Block `stellprobe` |
+| P2 | keine Berührung, kein Eingriff | Christophers Antworten 1 und 2 |
+| P3 | kein „Hilfe benötigt“, kein `outcome=error`, kein „process has died“ | Protokoll, `launch.log` |
+
+Stellprobe bestanden: siehe A7. Gemessen, aber kein Kriterium: Zeit bis
+0,5 m weg, Zahl und Art der Rückfahrten, Zustand des Kollisionsmonitors
+während jeder Rückfahrt.
+
+**Teil B, die volle Fahrt** (Kriterien wie in SH-7, damit der Vergleich gilt):
 
 | Nr | Kriterium | Quelle |
 |---|---|---|
@@ -471,68 +650,54 @@ bisher). Neu sind R1 und R2. Je Fahrt:
 | C4 | höchstens 80× „extrapolation into the future“ | `zeitfehler.txt` |
 | C5 | Karte sauber, auch an Drehstellen und an der Tür (beide Räume passen aneinander) | Christophers Antworten 3 und 4 |
 | G1 | kein Ende mit „Hilfe benötigt“ an einer Stelle, an der Christopher Platz zum Ausweichen sieht | Christophers Antwort 7 |
-| R1 | Amadeus fährt selbstständig durch die offene Tür in den Nachbarraum | Christophers Antwort 5 |
-| R2 | Der Nachbarraum ist in der Karte ganz oder größtenteils zu erkennen | Christophers Antwort 6 |
+| R1 | Amadeus fährt selbstständig durch die offene Tür in den Flur | Christophers Antwort 5 |
+| R2 | Der Flur ist in der Karte ganz oder größtenteils zu erkennen | Christophers Antwort 6 |
 
-Christophers Antworten 8 und 9 sind Beobachtungen, keine Kriterien. Ein
-„zu spät gebremst“ bleibt Abbruchgrund (Fahrt auf ein Hindernis ohne
-Abbremsen).
-
-Die Kriterien sind dieselben wie in SH-7, damit der Vergleich gilt. Der
-Raumwechsel ist bestätigt, wenn alle drei Fahrten C1–C5, G1, R1 und R2
-erfüllen. Fahrzeit, Ende („vollständig“ oder „Teilkarte“) und Zahl der
-Durchfahrten werden gemessen, sind aber keine Kriterien.
+Eine einzelne Fahrt bestätigt den Raumwechsel noch nicht; nach MASTERPLAN §9
+braucht es drei. Erfüllt diese Fahrt alle Kriterien, folgen die zwei
+weiteren als eigener kurzer Auftrag.
 
 ## Bericht: `~/selbstheilung_jetson_bericht_sh8.md`
 
 1. Kopf: Datum, Release, HEAD, Ergebnis der Schritte 0–4 (Build-Dauer,
-   Präfixe, Overlay-Zeilen, Testergebnis), Aufbau mit Christophers
-   Antworten wörtlich: lichte Breite der offenen Tür, Art und ungefähre
-   Größe des Nachbarraums, übrige Türen zu.
-2. Je Fahrt wie in SH-3: Startplatz, Knotenlisten, Vorprüfung (Exit, B
-   SLAM-Overlay, C/D), Fahrtprotokoll ohne `ereignisse` und die gekürzte
-   Ereignisliste, Heilungsverlauf, Lifecycle danach, „process has died“, Warnungen,
-   `zeitfehler.txt` und `slam_cpu_reihe.txt` vollständig, Christophers
-   Antworten wörtlich.
-3. Tabelle über alle Fahrten wie in SH-6, zusätzlich je Fahrt C1–C5, G1,
-   R1 und R2 mit Wert und erfüllt/nicht erfüllt, daneben die Werte aus SH-7
-   zum Vergleich.
-4. Gesamturteil: Raumwechsel bestätigt / nicht bestätigt, mit Grund.
-   Bei „Hilfe benötigt“: Ort, was danebenstand, wohin Christopher ausweichen
-   würde, und die letzten Heilungsaktionen.
-   Je Fahrt: erste Durchfahrt (Christophers Zeitangabe) und Zahl der
-   erreichten Ziele davor und danach (aus den `selbstheilung`-Ereignissen),
-   Zahl der Durchfahrten. Ziele, die in der Tür oder direkt davor
-   scheiterten, mit Heilungsaktion und Navigatorzeilen aus `launch.log`.
-   Je Fahrt alle Rückfahrten: wann, Art (`mode`: `spur` oder `frei`),
-   Ergebnis (`behavior_server`: erfolgreich, Zeitgrenze, „Collision Ahead“),
-   **Zustand des Kollisionsmonitors** während der Rückfahrt (aus
-   `rueckfahrten_kollisionsmonitor.txt`: letzte Zeile „Robot to …“ vor
-   „Running backup“ und alle bis zu ihrem Ende; besonders, ob „approach“
-   dabei war), welches Ziel danach kam (sollte ein anderes sein) und ob
-   Amadeus danach weiterkam; zusätzlich wie in SH-6: wann, wie weit
-   (Zeitpunkte aus den `selbstheilung`-Ereignissen und dem `heilungsverlauf`
-   im Protokoll, Weite der letzten aus `explore_status_ende.txt`,
-   `last_track_back`), und ob Amadeus danach weiterkam; Christophers Beobachtung dazu, falls er eine
-   Rückfahrt gesehen hat.
-5. Je „Hilfe benötigt“ die Daten wie in SH-7N (Odometrie-Abweichung
-   `map→odom`, Zellen ≥ 99 und = 100 im Umkreis von 1,5 m gegen die
-   SLAM-Karte, Zellen an der Kontur, Abbruchgründe der letzten 8 Anläufe).
-6. **Abdeckungskurve** je Fahrt (neu, nur mitgelesen, Fahrplan
-   MASTERPLAN §9): aus `protokoll.json` den Block `abdeckung` (freie
-   Endfläche, Fahrzeit bis 85/90/95 %) wörtlich und die `abdeckungskurve`
-   als Tabelle (Fahrzeit, frei, belegt, bekannt in m²). Das liefert die
-   Zahlen für das nächste Paket „Erkundung zielgerichtet“.
-7. Auffälligkeiten, Abweichungen und nicht Ausgeführtes; Beobachtungen von
+   Präfixe, Overlay-Zeilen, Testergebnis), Aufbau mit Christophers Antworten
+   wörtlich.
+2. **Teil A, Tabelle über alle Proben:** Kennung, Stelle, eingestellte
+   Abstände (Christopher), Urteil, Zeit bis 0,5 m weg, Heilungen und
+   Rückfahrten bis dahin, größte Entfernung, Christophers drei Antworten
+   wörtlich.
+3. **Teil A, je Probe der Ablauf** aus `ablauf.txt` (wörtlich, gleiche
+   aufeinanderfolgende Zeilen zusammenfassen), dazu: Vorprüfung (Exit, Zahl
+   OK/FEHL), `heilungsverlauf`, `last_track_back`, Zahl „detected collision
+   ahead“, und **für jede Rückfahrt**: Art (`mode`: `spur` oder `frei`),
+   Ergebnis des `behavior_server` (erfolgreich, Zeitgrenze, „Collision
+   Ahead“), Zustand des Kollisionsmonitors davor und währenddessen (letzte
+   Zeile „Robot to …“ vor „Running backup“ und alle bis zu ihrem Ende;
+   besonders, ob „approach“ dabei war), welches Ziel danach kam.
+4. **Urteil Teil A:** Stellprobe bestanden / nicht bestanden, mit Grund. Für
+   jede Probe `nicht_befreit` die Daten wie in SH-7N (`map→odom`, Zellen
+   ≥ 99 und = 100 im Umkreis von 1,5 m, Zellen an der Kontur; Werkzeug
+   `…/selbstheilung-sh7-20261108_1617/pruefung/werkzeug/sh7n_auswertung.py`
+   nach `$SH_PR/werkzeug/` kopieren und Pfade anpassen).
+5. **Teil B**, falls gefahren: wie in SH-7 (Startplatz, Knotenlisten,
+   Vorprüfung, Fahrtprotokoll, Ereignisse, Heilungsverlauf, Lifecycle danach,
+   Warnungen, `zeitfehler.txt`, `slam_cpu_reihe.txt`, Christophers neun
+   Antworten wörtlich), Tabelle C1–C5, G1, R1, R2 mit Wert und erfüllt/nicht
+   erfüllt neben den SH-7-Werten, erste Durchfahrt, alle Rückfahrten wie in
+   Punkt 3, und die **Abdeckungskurve** (Block `abdeckung` wörtlich,
+   `abdeckungskurve` als Tabelle). Bei „Hilfe benötigt“ die Daten wie in
+   SH-7N.
+6. Auffälligkeiten, Abweichungen und nicht Ausgeführtes; Beobachtungen von
    Christopher getrennt von Messwerten.
 
 Karten, Bags und Bilder bleiben lokal unter `$SH_PR` und kommen weder in den
-Bericht noch ins Repository. Am Ende im Chat nur: Pfad, Zahl der Fahrten,
-C1–C5, G1, R1 und R2 je Fahrt, Rückfahrten je Fahrt (Zahl, davon
-erfolgreich), Fahrzeit bis 90 % der freien Endfläche je Fahrt,
-Gesamturteil, Kontakte oder Eingriffe.
+Bericht noch ins Repository. Am Ende im Chat nur: Pfad; je Probe Kennung,
+Urteil und Zeit bis 0,5 m weg; Stellprobe bestanden oder nicht; falls
+gefahren C1–C5, G1, R1, R2 der vollen Fahrt und die Fahrzeit bis 90 % der
+freien Endfläche; Kontakte oder Eingriffe.
 
 ## Danach
 
-Auswertung in der Cloud-Sitzung. Mit bestätigtem Raumwechsel folgt Stufe 3
-(Wohnung); Umfang und Kriterien legt der Projektinhaber vorher fest.
+Auswertung in der Cloud-Sitzung. Besteht die Stellprobe nicht, folgt nach
+MASTERPLAN §9 Regel 4 eine gezielte Korrektur (Kandidat: lokale Karte löscht
+nichts unter der Kontur, KM-1 B) und dieselbe Stellprobe erneut.

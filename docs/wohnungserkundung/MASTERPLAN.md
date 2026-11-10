@@ -204,6 +204,9 @@ den Einstieg des eingefrorenen AP06-Pfads vom 02.10.2026.
 **Änderungsprotokoll:** 02.10.2026, v1.3: unabhängige Gegenprüfung eingearbeitet; gemeinsame Basis und Bewegungsmodell vor produktiver Explorerübernahme; gepinnter externer Frontier-Kern als zulässige Komponente; sechs begrenzte Arbeitspakete innerhalb unveränderter WE-Meilensteine; konkreter erster Zeitkorrekturauftrag.
 09.11.2026, Nachtrag zu v1.3 (Nutzerentscheidung): §9 Fahrplan der
 Selbstheilungslinie mit Arbeitsregeln, Schritten und Paketen.
+10.11.2026, Nachtrag (Nutzerentscheidung nach Standortbestimmung): §9 Regeln
+6 (gezielte Probe vor langer Fahrt) und 7 (ein Problem zur Zeit), Schritt 1
+mit Stellprobe.
 
 ## 9. Fahrplan der Selbstheilungslinie (Nutzerentscheidung 09.11.2026)
 
@@ -233,12 +236,24 @@ neue Entscheidung des Projektinhabers.
    nichts wird vermischt.
 5. **Bestanden heißt eingefroren.** Ein bestandener Stand wird als Prototyp
    eingefroren; sein Release bleibt unverändert als Rückfall erhalten.
+6. **Gezielte Probe vor langer Fahrt** (Nutzerentscheidung 10.11.2026). Ein
+   Verhalten, das nur in bestimmten Lagen gebraucht wird (zum Beispiel sich
+   an einem Hindernis befreien), wird zuerst mit einer **Stellprobe**
+   geprüft: Amadeus wird gezielt in die Lage gestellt, die Mission startet,
+   und gemessen wird wenige Minuten lang. Lange Fahrten folgen erst danach
+   und prüfen das Ganze. Grund: Fünf Testtage mit langen Fahrten haben
+   dasselbe Problem nicht entschieden, weil die Lage darin nur zufällig
+   eintritt.
+7. **Ein Problem zur Zeit.** Solange das aktive Problem real nicht gelöst
+   ist, wird in der Simulation nur dafür gearbeitet; weitere Pakete bleiben
+   geparkt (Nutzerentscheidung 10.11.2026, ersetzt für diese Zeit die
+   Parallelarbeit aus Regel 1 bis 3).
 
 ### 9.2 Schritte
 
 | Schritt | Auf dem Roboter | Parallel in der Simulation | Bestanden, wenn |
 |---|---|---|---|
-| 1 | **SH-8:** Paket AW-1 „Abstand halten und wegkommen“; Aufbau und Kriterien wie SH-7 (Laborraum plus Flur); die Abdeckungskurve läuft nur mitlesend mit | Paket EK-1 bauen und prüfen | C1–C5, G1, R1 und R2 in allen drei Fahrten; dann Prototyp 2 |
+| 1 | **SH-8:** Paket AW-1 plus AW-1b „Abstand halten und wegkommen“. Zuerst Stellprobe an drei bekannten Stellen (Mülleimer, Ecke, Garderobe; je zweimal), bei Erfolg volle Zwei-Raum-Fahrten wie SH-7; die Abdeckungskurve läuft nur mitlesend mit | nur Korrekturen für dieses Problem (Kandidat KM-1 B) | Stellprobe bestanden und C1–C5, G1, R1 und R2 in drei vollen Fahrten; dann Prototyp 2 |
 | 2 | **SH-9:** Paket EK-1 „Erkundung zielgerichtet, Teil 1“, zuerst ein Raum, dann zwei | Paket EK-2 nur bei Bedarf | ein Raum zu mindestens 90 % in höchstens 10 min (Schwelle wird nach den SH-8-Kurven endgültig festgelegt), keine Verschlechterung bei C1–C5, G1, R1, R2 |
 | 3 | Paket EK-2, nur wenn die Kurven noch viel Leerlauf zeigen | – | wie Schritt 2 |
 | 4 | **Stufe 3:** Wohnung | – | Umfang und Kriterien legt der Projektinhaber vorher fest |
@@ -251,6 +266,11 @@ neue Entscheidung des Projektinhabers.
   räumende LiDAR-Ebene in der lokalen Karte, Rückfahrkontur für BackUp,
   Rückfahrt auch ohne gerade eigene Spur (0,3 m, höchstens 0,4 m,
   0,05 m/s, einmal je Stillstand), Zeitgrenze für 30 % Tempo.
+- **KM-1 B** (Kandidat, nur Simulation, 09.11.2026): Die lokale Karte löscht
+  nichts mehr unter der Roboterkontur; Hindernisse im 2-cm-Polster bleiben
+  eingetragen, der Regler dreht nicht hinein, wegkommen über die
+  Rückfahrkontur. Vor einem Einsatz am Roboter im Stand zu messen: Eigenechos
+  (Mast im LiDAR-Sichtfeld).
 - **EK-1 „Erkundung zielgerichtet, Teil 1“** (Ideen A, C, D vom
   09.11.2026): A Rundblick am Start (360° in Segmenten, wegen des Masts
   nötig) und nach dem Betreten eines neuen Bereichs; C „gut genug“-Ende,

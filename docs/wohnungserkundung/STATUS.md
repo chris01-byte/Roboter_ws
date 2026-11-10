@@ -1,14 +1,14 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 09.11.2026:** Hauptlinie `self_healing`
-(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**
-(Nutzerentscheidung 09.11.2026): je Realtest genau eine Verhaltensänderung,
-die nächste Verbesserung parallel in der Simulation. Wo wir stehen, zeigt die
-**Arbeitsliste direkt unter diesem Absatz**; sie wird bei jedem Schritt
-fortgeschrieben. Prototyp 1 eingefroren (`src/` `e8f00f6`). Paket AW-1
-„Abstand halten und wegkommen“ (`19c8cb9`) ist gebaut und in der Simulation
-geprüft (keine neue Fehlerart; das Befreien selbst kann die Simulation nicht
-abbilden). **Aktiver Jetson-Auftrag: SH-8** (Fahrplan Schritt 1).
+**Aktueller Stand 10.11.2026:** Hauptlinie `self_healing`
+(Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
+Standortbestimmung am 10.11.: Richtung stimmt (ein Raum sicher, 15
+Laborfahrten ohne Berührung; Tür zum Nachbarraum 2 von 3), der einzige
+Blocker ist seit dem 04.11. das Festsitzen dicht an Hindernissen. Deshalb
+**ein Problem zur Zeit** und **Stellprobe statt langer Zufallsfahrten**
+(§9 Regeln 6 und 7). **Aktiver Jetson-Auftrag: SH-8** in neuer Form:
+Stellprobe an drei Stellen, bei Erfolg eine volle Zwei-Raum-Fahrt. Wo wir
+stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,37 +28,40 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 09.11.2026 (mittags)
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 10.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md),
-**freigegeben** (Entscheidung des Projektinhabers 09.11.2026, abends): AW-1
-plus AW-1b (`d0d1431`). Lücke (2) (Kollisionsmonitor hält auch rückwärts fest)
-wird nur gemessen. Die Simulation besteht nicht, weil dort Lücke (2)
-dominiert; real war sie in SH-7 nicht aufgetreten. SH-8 entscheidet mit
-Realdaten.
+**Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest
+(Mülleimer SH-5, Garderobe und Ecke SH-7).
 
-**In Simulation:** **KM-1 Entwurf** (Lücke 2; Variante A verworfen,
-Variante B „nichts unter der Kontur löschen“ läuft; sicherheitsrelevant,
-eigenes Paket nach AGENTS §2.7, erst nach den SH-8-Daten auf den Roboter) und
-**EK-1 „Erkundung zielgerichtet, Teil 1“** (A Rundblick am Start, C „gut
-genug“-Ende, D kürzere Fehlversuche; Simulationslauf wiederholen).
+**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md):
+Paket AW-1 plus AW-1b (`d0d1431`). **Teil A Stellprobe:** Amadeus wird je
+zweimal 5 cm vor zwei Mülleimer, in eine Ecke und vor die Garderobe gestellt;
+bestanden, wenn er sich jedes Mal ohne Berührung befreit und 0,5 m wegfährt
+(Messung im Fahrtprotokoll, `2409529`). **Teil B** nur bei Erfolg: eine volle
+Zwei-Raum-Fahrt wie SH-7.
 
-**Fahrplan danach:** Schritt 2 SH-9 mit EK-1 (ein Raum, dann zwei) →
-Schritt 3 EK-2 (Ziele nach Nutzen, Idee B) nur bei Bedarf → Schritt 4
-Stufe 3 Wohnung → Schritt 5 Raumziele (Karte speichern, Räume in der App,
-`go_to_room`).
+**In Simulation:** nichts Neues. Bereit liegt der Kandidat **KM-1 B** (lokale
+Karte löscht nichts unter der Kontur; Simulation 3 von 5 bestanden, Produkt
+0 von 7), falls die Stellprobe nicht besteht; vor einem Einsatz ist im Stand
+zu messen, ob LiDAR oder VL53 den Roboter selbst erfassen (Mast).
+
+**Fahrplan danach:** zwei weitere volle Fahrten (dann Prototyp 2) → Schritt 2
+Erkundungstempo → Schritt 4 Stufe 3 Wohnung → Schritt 5 Raumziele (Karte
+speichern, Räume in der App, `go_to_room`).
 
 **Geparkt (mit Grund):**
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | die Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
-| F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach EK-1, falls die Fahrzeit noch zu lang ist |
+| EK-1 Erkundung zielgerichtet (Rundblick, „gut genug“, kürzere Fehlversuche; Code vorhanden, ausgeschaltet) | ein Problem zur Zeit; in der Simulation Kriterium E3 verfehlt (langsamer statt schneller), die Simulation bildet das reale Problem nicht ab | das Festsitzen ist real gelöst und reale Abdeckungskurven liegen vor |
+| KM-1 (Kollisionsmonitor sperrt auch rückwärts, wenn vorn etwas im Polster liegt) | sicherheitsrelevant; real noch nicht beobachtet; Variante A verworfen | SH-8 zeigt „approach“ während einer Rückfahrt |
+| E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | reale Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
+| F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach dem Erkundungspaket, falls die Fahrzeit noch zu lang ist |
 | Geschlossene Holztür im Flur vom LiDAR nicht eingetragen | erzeugt eine falsche Lücke; Ursache offen | vor Stufe 3 (Prüfung im Stand vor der Tür) |
-| Tür in SH-7 Fahrt 3 für den Planer zu schmal | einmalig, Ursache in der Karte nicht gemessen | tritt in SH-8 erneut auf |
+| Tür in SH-7 Fahrt 3 für den Planer zu schmal | einmalig, Ursache in der Karte nicht gemessen | tritt in einer vollen Fahrt erneut auf |
 | Mission-Manager meldet am Ende `failed` bei Teilkarte | betrifft nur die Anzeige (App, WE-M7) | vor Schritt 5 |
 | VL53-Aussetzer bis etwa 12 s | Ursache offen; der Explorer wartet und fährt weiter | werden sie häufiger oder länger |
 
@@ -66,8 +69,43 @@ Stufe 3 Wohnung → Schritt 5 Raumziele (Karte speichern, Räume in der App,
 SL-1 SLAM-Last (04.11.) · SH-6 Regel „kein Fortschritt → zurück“, Prototyp 1
 eingefroren (05.11.) · Budget 40 min, Tempo +35 %/+25 % (05.11.) · SH-7
 Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
-(08.11.) · AW-1 gebaut und in der Simulation geprüft (09.11.) ·
-Abdeckungskurve im Fahrtprotokoll (09.11.).
+(08.11.) · AW-1 und AW-1b gebaut (09.11.) · Abdeckungskurve im
+Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
+· Standortbestimmung, Stellprobe als Testform (10.11.).
+
+## 10.11.2026 (Entscheidung) – Standortbestimmung: ein Problem zur Zeit, SH-8 als Stellprobe
+
+**Frage des Projektinhabers:** Sind wir noch auf dem Zielweg, oder haben wir
+uns in Details verheddert?
+
+**Bewertung:** Die Richtung stimmt (einfache Erkundung, Selbstheilung, kein
+Raumkonzept, Räume später in der App). Erreicht und real belegt: ein Raum
+selbstständig und sicher (15 Laborfahrten ohne Berührung), SLAM-Last gelöst,
+Tür zum Nachbarraum grundsätzlich (SH-7: 2 von 3). Offen: zuverlässig ohne
+Hilferuf, zügig erkunden, Wohnung, Raumziele. **Verheddert an einem
+Problem:** Seit dem 04.11. scheitert es am Festsitzen dicht an Hindernissen;
+vier Korrekturen (DR-1 zurückgenommen, Regel, AW-1, AW-1b), fünf Testtage,
+kein realer Beleg. Dazu am 09.11. drei Pakete gleichzeitig, zwei
+Fehldeutungen der Simulation, und eine ungeeignete Testform (seltenes
+Ereignis mit langen Zufallsfahrten).
+
+**Entscheidungen des Projektinhabers (10.11.2026):**
+1. **Ein Problem zur Zeit:** nur noch das Festsitzen an Hindernissen; EK-1
+   und alles andere geparkt (MASTERPLAN §9 Regel 7).
+2. **Stellprobe statt langer Fahrten** (§9 Regel 6): Amadeus wird gezielt an
+   die drei bekannten Stellen gestellt (zwei Mülleimer, Ecke, Garderobe; je
+   5 cm, je zweimal), die Erkundung startet, gemessen wird bis zu 6 min.
+   Urteil je Probe aus dem Fahrtprotokoll (`2409529`): `befreit` (mindestens
+   eine Heilung, dann 0,5 m weg), `nicht_blockiert` (einmal mit 3 cm
+   wiederholen), `nicht_befreit`. Jede Berührung beendet den Auftrag.
+3. **SH-8 umgebaut** ([Auftrag](AGENTENAUFTRAG.md)): Teil A Stellprobe,
+   Teil B nur bei Erfolg eine volle Zwei-Raum-Fahrt (C1–C5, G1, R1, R2 wie
+   SH-7). Die Fassung mit drei 40-Minuten-Fahrten ist
+   [zurückgezogen](archive/20261110-sh8-langfahrten-zurueckgezogen/README.md)
+   (nicht ausgeführt). Prüfling bleibt AW-1 plus AW-1b; besteht die
+   Stellprobe nicht, folgt der Kandidat KM-1 B und dieselbe Stellprobe.
+
+**Nächster Schritt:** SH-8-Bericht auswerten.
 
 ## 10.11.2026 – Simulation KM-1 B und EK-1 abgeschlossen; Standortbestimmung offen
 
@@ -95,10 +133,8 @@ im Produktprofil):
   95 % der freien Endfläche nach etwa 3 min, die restlichen 3–8 min bringen
   4–5 %.
 
-**Offen:** Entscheidung des Projektinhabers zur Standortbestimmung
-(Vorschlag im Chat vom 10.11.2026: SH-8 nicht als drei 40-min-Fahrten,
-sondern zuerst als kurze gezielte Befreiungsprobe an den drei bekannten
-Stellen; EK-1 parken, bis das Festsitzen real gelöst ist).
+**Entschieden am 10.11.2026:** siehe Abschnitt darüber (Stellprobe, ein
+Problem zur Zeit).
 
 ## 09.11.2026 (spätabends) – KM-1 Variante A verworfen; Gehäuse berührt in der Simulation beim langsamen Drehen
 
