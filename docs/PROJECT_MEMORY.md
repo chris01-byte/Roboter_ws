@@ -17,6 +17,43 @@ Rückfallweg:
 
 ---
 
+## 2026-11-10 — Korrigiertes Arm-CAD ausgewertet, Sensorhöhen nachgemessen
+
+**Entscheidung:** Die Armdokumentation folgt dem korrigierten STEP-Export vom
+09.11.2026 und den Messungen des Nutzers vom 10.11.2026. J2 ist das Gelenk
+an der Ecke vorn oben; das rote Verbindungsstück zwischen J1 und J2 ist
+fest. Offen und beim Nutzer: Achsrichtung von J2 sowie Neigung und Montage
+der OAK.
+
+**Grund / beobachtete Evidenz:** Im ersten Export war die Basis 105 mm zu
+niedrig; der Arm ist in beiden Fassungen identisch. Gemessen hat der Nutzer
+LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm und Schlittenunterkante
+1140 mm (CAD 1150 mm). Aus dem CAD: gestreckt rund 753 mm ab
+Schlittenvorderfläche, passend zu den angegebenen 746 mm; tiefste Armstelle
+in Transportpose real rund 746 mm, also rund 4 cm über der LiDAR-Ebene und
+nur bei Hub ganz oben. J1, J2 und J3 drehen laut Lagerbohrungen um parallele
+Querachsen; der Handgelenkpunkt bleibt damit in einer senkrechten Ebene,
+seitliches Erreichen geht nur über das Handgelenk oder die Basis. Eine
+Simulation des OAK-Bildes ergibt in Transportpose rund 20 % Verdeckung bei
+18,94° Neigung, armfrei bis etwa 4°, mit 50 mm höherer Kamera bis etwa 13°.
+
+**Betroffene Dateien und Hardware:** ARM_KONTEXT, Integrationsplan,
+Messblatt, Build-Protokoll, PROJEKT_STATUS. Keine Hardware, keine
+Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Auswertung per OpenCascade aus dem STEP;
+die Höhen hat der Nutzer gemessen, nicht der Agent.
+
+**Offene Risiken:** `stl27l.yaml` rechnet mit 750 mm LiDAR-Höhe,
+`oak.launch.py` mit 1340 mm Kamerahöhe. Beide sind Sensor-Frames und werden
+in einem eigenen, getesteten Schritt nachgemessen und korrigiert. Ohne
+Querachsen-Alternative für J2 hängt seitliches Greifen an der Drehgenauigkeit
+der Basis: 1° entspricht bei 0,75 m Reichweite etwa 13 mm.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-08 — Armaufbau festgelegt, OAK auf Erkennung und Anfahrt begrenzt
 
 **Entscheidung:** Der Arm sitzt vorn am Kameramast auf einer Hubachse mit

@@ -4,6 +4,28 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-10 — Dokumentation: korrigiertes CAD und Messwerte
+
+Der korrigierte STEP-Export vom 09.11.2026 wurde mit OpenCascade ausgewertet:
+Die Basis war im ersten Export 105 mm zu niedrig, der Arm ist unverändert.
+Eingetragen sind Achslagen und Abstände J1–J6, J2 an der Ecke vorn oben mit
+Querachse parallel zu J1 und J3, gestreckt rund 753 mm ab Schlitten (Nutzer:
+746 mm), 136 mm Überstand und rund 4 cm Abstand zur LiDAR-Ebene nur bei Hub
+ganz oben.
+
+Messungen des Nutzers: LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm,
+Schlittenunterkante 1140 mm. LiDAR- und OAK-Höhe weichen von der laufenden
+Konfiguration ab; Korrektur als eigener Sensor-Frame-Schritt.
+
+Simulation der OAK in Transportpose: bei 18,94° rund 20 % verdeckt, armfrei
+bis etwa 4°, mit 50 mm höherer Kamera bis etwa 13°.
+
+Prüfung: nur Dokumentation; Verweise und Wortgrenze geprüft. Keine Messung
+durch Agenten, keine Hardwarewirkung.
+
+Nächster Schritt: Entscheidungen zu J2 und OAK-Neigung. Rückfallweg: Commit
+zurücknehmen.
+
 ## 2026-11-08 — Dokumentation: Armaufbau eingetragen, Repo bereinigt
 
 Nutzerangaben vom 08.11.2026 eingearbeitet: Hubachse mit 400 mm Hub plus

@@ -39,7 +39,7 @@ Kennzeichnungen in diesem Plan:
 |---|---|
 | Arm | Vorn am Kameramast: vertikale Hubachse (400 mm) plus sechs Drehgelenke J1–J6; Zuordnung in [ARM_KONTEXT](ARM_KONTEXT.md) |
 | Antriebe | Alle Schrittmotoren ESS-RS; J1 NEMA23 mit 55,25:1, J2–J5 mit 72:1; Antrieb von Hubachse und J6 offen |
-| Maße | Schulter in oberster Hubstellung 1106 mm über Boden; Reichweite gestreckt ca. 746 mm ab Mast plus Greifer bis ca. 150 mm; Nutzlast höchstens 1 kg |
+| Maße | Gemessen 10.11.2026: LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm, Hubschlitten-Unterkante 1140 mm (CAD 1150 mm). Reichweite gestreckt ca. 746 mm ab Schlittenvorderfläche ohne Greifer, Greifer bis ca. 150 mm; Nutzlast höchstens 1 kg. Kinematik aus dem korrigierten CAD in [ARM_KONTEXT](ARM_KONTEXT.md) |
 | Montage | Arm in Einzelteilen; maßstäbliches Fusion-360-Modell vorhanden |
 | Halten | Keine Bremsen; Selbsthemmung von Gelenken und Hubspindel ist unter Last praktisch nachzuweisen |
 | Not-Aus | Trennt die komplette Stromversorgung des Roboters |
@@ -49,7 +49,8 @@ Kennzeichnungen in diesem Plan:
 | Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
 | Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Nahbereichssensor für den Griff offen |
-| Fahrpose | Transportpose laut CAD über der LiDAR-Ebene, mindestens 130 mm Überstand vor die Chassisfront; Gelenkwinkel nicht vermessen |
+| Fahrpose | Transportpose laut CAD rund 4 cm über der gemessenen LiDAR-Ebene, nur bei Hub ganz oben; 136 mm Überstand vor die Chassisfront; Gelenkwinkel nicht vermessen |
+| Achsrichtung J2 | Laut CAD Querachse, parallel zu J1 und J3; seitliches Erreichen damit nur über das Handgelenk oder die Basis. Entscheidung offen |
 
 ### Softwarebestand nach Build A
 
@@ -359,17 +360,21 @@ Repo-Montagereferenzen, vor Ort gegenprüfen:
 
 | Sensor | Referenz | Bedeutung für den Arm |
 |---|---|---|
-| OAK | Bodenhöhe 1,34 m, Neigung 18,94°; [oak.launch.py](../src/robot_bringup/launch/oak.launch.py) | Arm, Finger und gehaltenes Objekt dürfen benötigte RGB-/Tiefensicht nicht verdecken |
-| LiDAR | Sichtscheibenmitte 0,75 m über Boden, z=0,660 m relativ zu base_link; [stl27l.yaml](../src/amadeus_lidar_bringup/config/stl27l.yaml) | Bestehende Mastmaske umfasst 68°; Arm darf keine ungeprüfte zusätzliche Totzone erzeugen |
+| OAK | Konfiguration 1,34 m, gemessen 10.11.2026 1,35 m; Neigung 18,94°; [oak.launch.py](../src/robot_bringup/launch/oak.launch.py) | Arm, Finger und gehaltenes Objekt dürfen benötigte RGB-/Tiefensicht nicht verdecken |
+| LiDAR | Konfiguration 0,75 m Sichtscheibenmitte (z=0,660 m relativ zu base_link), gemessen 10.11.2026 0,705 m; [stl27l.yaml](../src/amadeus_lidar_bringup/config/stl27l.yaml) | Bestehende Mastmaske umfasst 68°; Arm darf keine ungeprüfte zusätzliche Totzone erzeugen |
 | VL53 | Nahbereichsabdeckung; [Konfiguration](../src/vl53_near_field/config/vl53_params.yaml) | Überhang und gehaltenes Objekt dürfen Schutzfelder nicht blind machen |
 
-0,75 m ist der dokumentierte Messwert; ältere grobe Kommentare nennen 0,80 m.
-Die Mastmaske macht den Sektor unbekannt, nicht frei. Neue Armreflexionen
-nicht einfach durch eine größere Maske verbergen.
+Die Höhen von LiDAR und OAK in der laufenden Konfiguration weichen von der
+Messung vom 10.11.2026 ab. Das ist ein eigener, getesteter Sensor-Frame-
+Schritt außerhalb der Arm-Integration. Die Mastmaske macht den Sektor
+unbekannt, nicht frei. Neue Armreflexionen nicht einfach durch eine größere
+Maske verbergen.
 
-**Stand 08.11.2026 laut CAD:** Die Transportpose liegt über der LiDAR-Ebene
-und ragt mindestens 130 mm vor die Chassisfront, also bis mindestens
-x = 0,40 m statt 0,27 m vor der Antriebsachse. In dieser Höhe erfasst vorn
+**Stand 10.11.2026 laut korrigiertem CAD und Messung:** Die tiefste Stelle
+des Arms liegt in Transportpose real bei rund 746 mm, die gemessene
+LiDAR-Scheibenmitte bei 705 mm; es bleiben rund 4 cm. Der Arm ragt 136 mm
+vor die Chassisfront, also bis x ≈ 0,41 m statt 0,27 m vor der
+Antriebsachse. In dieser Höhe erfasst vorn
 kein Hindernissensor etwas: Die VL53 decken direkt vor dem Roboter nur etwa
 0,4 m Höhe ab, und die OAK ist seit dem 04.11.2026 nicht zur
 Hinderniserkennung vorgesehen. Überhänge wie Arbeitsplatten, Fensterbänke
@@ -377,10 +382,10 @@ oder Regalböden träfen zuerst den Arm. Der lokale Nav2-Footprint reicht bis
 x = +0,31 m plus 0,02 m Polster und kennt den Überstand noch nicht; auch der
 Drehkreis wächst. Footprint und Kollisionsmonitor sind sicherheitsrelevant
 und werden in einem eigenen, mit der Erkundungslinie abgestimmten Schritt
-angepasst. Mit gegriffenem Objekt ist die Pose neu zu prüfen. Weil die
-Schulter mit dem Hub bis etwa 0,71 m herunterkommt, kann der Arm in tiefen
-Hubstellungen die LiDAR-Ebene erreichen; die Transportpose braucht daher
-auch eine zulässige Hubhöhe.
+angepasst. Mit Greifer und gegriffenem Objekt ist die Pose neu zu prüfen.
+Der Abstand zur LiDAR-Ebene gilt nur mit dem Hub ganz oben: Rund 4 cm
+tiefer erreicht die Unterkante bereits die Scheibenmitte. Die Transportpose
+braucht daher eine feste Hubhöhe, und die Fahrfreigabe muss sie prüfen.
 
 Vorgehen: kompakte, tiefe mechanische Pose suchen, dann vermessen und in
 Kollisionsmodell sowie Posenkonfiguration übernehmen. Leerer Greifer und
@@ -406,22 +411,28 @@ Transportprofil passen. Ein erfolgreich beantwortetes Mock-Ziel reicht nicht.
 Objekterkennung und der Entfernung, damit die Basis weiß, wie weit sie zum
 Zielobjekt fahren muss.
 
-Überschlag mit Repo-Werten (1,34 m Höhe, 18,94° Neigung, etwa 42° vertikal
-laut `oak_params.yaml`, passend zur gemessenen Boden-Totzone von etwa 1,5 m):
-Eine waagerechte Fläche ist erst ab dieser Entfernung vor der Chassisfront
-im Bild.
+Überschlag für die heutige Ausrichtung (gemessen 1,35 m, 18,94° Neigung,
+etwa 42° vertikal laut `oak_params.yaml`, passend zur gemessenen
+Boden-Totzone von etwa 1,5 m): Eine waagerechte Fläche ist erst ab dieser
+Entfernung vor der Chassisfront im Bild.
 
 | Fläche | im Bild ab ca. |
 |---|---|
 | Arbeitsplatte, 0,90 m | 0,41 m |
-| Tischplatte, 0,75 m | 0,58 m |
-| Couchtisch, 0,45 m | 0,94 m |
-| Boden | 1,5 m |
+| Tischplatte, 0,75 m | 0,59 m |
+| Couchtisch, 0,45 m | 0,95 m |
+| Boden | 1,48 m |
 
-Der gestreckte Arm reicht mit dem Mast bei etwa x = 0,15 m grob 0,63 m ohne
-und 0,78 m mit Greifer über die Chassisfront. Auf Tischhöhe sieht die OAK
-damit nur den äußersten, gestreckten Rand des Arbeitsraums. Genauer folgt
-die Grenze aus CAD und Messung; Verdeckung durch Arm und Objekt kommt hinzu.
+Laut korrigiertem CAD reicht der gestreckte Arm rund 0,65 m ohne und 0,80 m
+mit Greifer über die Chassisfront. Auf Tischhöhe sieht die OAK damit nur den
+äußersten, gestreckten Rand des Arbeitsraums; Verdeckung durch Arm und
+Objekt kommt hinzu.
+
+In Transportpose verdeckt der Arm bei der heutigen Neigung rund 20 % des
+OAK-Bildes. Bis etwa 4° Neigung bleibt das Bild armfrei, mit einer um 50 mm
+höheren Kamera bis etwa 13°, mit 100 mm bis etwa 20°. Tabelle, Varianten und
+Vorschlag stehen in [ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung liegt
+beim Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
 
 **Vorgeschlagen, Entscheidung beim Nutzer:** ein Nahbereichssensor am Greifer
 oder Handgelenk für die Feinlokalisierung (Eye-in-Hand). Er misst relativ zum
@@ -673,16 +684,19 @@ Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
 | F | Greifer mit Bauraum für einen Nahbereichssensor, bekannte Griffe, Kalibrierung und Vision | Später, stufenweise; Sensorentscheidung vor der Greiferkonstruktion |
 
 Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
-NEMA23 in J1, Hub, Schulterhöhe, Reichweite, Transportpose, Nutzlast,
-Not-Aus-Wirkung und eigener RS485-Adapter (siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
+NEMA23 in J1, Hub, Reichweite, Transportpose, Nutzlast, Not-Aus-Wirkung und
+eigener RS485-Adapter. Seit 10.11.2026: Achslagen und Abstände aus dem
+korrigierten CAD sowie gemessene Höhen von LiDAR, OAK und Hubschlitten
+(siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
 
-Jetzt benötigte Angaben: Antrieb und Spindel der Hubachse, Antrieb und
-Untersetzung von J6, Typenschilder und Busadressen, Gewichte, Bezugspunkt der
-746 mm, Wirkung des Not-Aus auf den Jetson, Montagezustand der Hubachse,
-vorhandene TLE/Magnete/Endlagen und Busparameter; die Kinematik am besten als
-URDF-Export aus Fusion 360. Für die spätere Greiferauslegung zusätzlich
-XL330-Variante, gewünschte Öffnung, Backenkinematik, Spindel-Leitweg,
-Sensortyp, Referenzlast und die Entscheidung zum Nahbereichssensor.
+Jetzt benötigte Entscheidungen und Angaben: Achsrichtung von J2, Neigung und
+Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
+von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
+Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und
+Busparameter, Grenzwinkel je Gelenk. Für die spätere Greiferauslegung
+zusätzlich XL330-Variante, gewünschte Öffnung, Backenkinematik,
+Spindel-Leitweg, Sensortyp, Referenzlast und die Entscheidung zum
+Nahbereichssensor.
 
 Jede Rückmeldung enthält Build-/Config-ID, Achse, Versuch, Soll/Ist,
 Zeit-/Winkel-/Lastmessung, Abbruchgrund und lokalen Logpfad. Reale Bilder,

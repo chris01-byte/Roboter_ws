@@ -1,10 +1,19 @@
 # Projektstatus: Roboter_ws
 
-**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-08.
+**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-10.
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
+
+## Arm-Ergänzung vom 10.11.2026
+
+Das korrigierte Arm-CAD ist ausgewertet: Achslagen und Abstände J1–J6 sowie
+die Transportpose stehen im [Arm-Kontext](docs/ARM_KONTEXT.md). Gemessen sind
+LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm und Schlittenunterkante
+1140 mm; LiDAR- und OAK-Höhe weichen von der laufenden Konfiguration ab und
+werden separat korrigiert. Offen beim Nutzer: Achsrichtung von J2 und die
+künftige Neigung der OAK.
 
 ## Arm-Ergänzung vom 08.11.2026
 
