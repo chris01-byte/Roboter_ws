@@ -124,6 +124,9 @@ Die genaue Verdrahtung wird erst aus der tatsächlichen Hardware freigegeben.
 | Sensortyp, Stückzahl, Pinansicht aus Originaldatenblatt | offen |
 | Versorgung VS und gemessene Spannung | offen |
 | Magnettyp, Polung, Abstand und mechanische Befestigung | offen |
+| Magnetsektor: Radius, Länge, lückenloses Schalten über die ganze Spur | offen |
+| Sensorzustand in der Parkpose (Konzept 11.11.2026: aktiv) | offen |
+| Lage der Referenzkante: Seite und Abstand zur Parkpose | offen; freie Seite je Achse laut CAD in [ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026) |
 | Sensorausgang inaktiv / aktiv, jeweiliger Spannungspegel | offen |
 | Ausgangsstrom / zulässige Belastung / Temperaturbereich | offen |
 | Anpassschaltung, Schaltplanrevision, Pull-up bzw. Eingangslast | offen |
@@ -218,6 +221,8 @@ gesicherte mechanische Ausgangslage.
 | Reserve für Stopweg, Fehler, Spiel und Kabel | offen |
 | Abgenommene maximale Geschwindigkeit / Beschleunigung | offen |
 | Referenz gültig nach Neustart? Begründeter Nachweis | offen |
+| Positionszähler vor/nach Aus- und Einschalten bei unbewegtem Arm | offen |
+| Schaltet der Sensor bei jeder Überfahrt an der gespeicherten Kante? | offen |
 
 Home ist nicht automatisch der geometrische Nullwinkel. Alle Winkel mit
 Messbezug angeben; Gradwerte ausdrücklich kennzeichnen und vor Übernahme
@@ -278,14 +283,18 @@ und Integrationsfreigabe dokumentieren.
 | J5 | offen | offen | offen | offen |
 | J6 | offen | offen | offen | offen |
 
+CAD-Vorgabe für die Park-/Homing-Pose (STEP 11.11.2026, Modellkonvention mit
+gestreckter Nullpose, keine Messung): Hub oben, J1 −180°, J2 −40°, J3 −90°,
+J4 0°, J5 +20°, J6 0°. Erst nach Referenzierung gemessen eintragen.
+
 | Prüfung | Ausgangsmessung / Pose / Ergebnis |
 |---|---|
-| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | LiDAR-Scheibenmitte gemessen 705 mm; Abstand für die neue Homing-Position offen (Geometrie fehlt); Rohscan-Messung offen |
-| OAK-Sichtbereich mit/ohne Arm und Last | Simulation aus CAD 11.11., Arm gestreckt, 18,94° Neigung: 24 % verdeckt bei Hub oben, 4 % bei Hub unten; Homing-Position und praktische Prüfung offen |
+| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | LiDAR-Scheibenmitte gemessen 705 mm; Parkpose laut CAD: tiefster Armpunkt real 698 mm, vom LiDAR aus bei 172°–186° im maskierten Mastsektor; Rohscan-Messung offen |
+| OAK-Sichtbereich mit/ohne Arm und Last | Simulation aus CAD 11.11.: Arm gestreckt, 18,94° Neigung, 24 % verdeckt bei Hub oben, 4 % bei Hub unten; Parkpose 0 % bei 16:9 bis etwa 19°; praktische Prüfung offen |
 | VL53-Sicht / Nahbereichsschutz | offen |
-| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Für die neue Homing-Position offen; J2-Gehäuse ragt bei waagerechtem Arm rund 160 mm vor die Chassisfront; Kabel offen |
-| Zulässige Hubhöhe in Transportpose | offen |
-| Mechanische Abstützung der Transportpose | offen |
+| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Parkpose laut CAD: vorn 23 mm und hinten 22 mm über das Chassis, seitlich innerhalb; engste Abstände 7–23 mm; freie Richtung je Achse in ARM_KONTEXT; J2-Gehäuse ragt bei waagerechtem Arm rund 160 mm vor die Chassisfront; Kabel offen |
+| Zulässige Hubhöhe in Transportpose | Parkpose im CAD mit Hub oben; nach unten rechnerisch rund 164 mm frei ohne Greifer, rund 73 mm mit 150-mm-Greifer; Messung offen |
+| Mechanische Abstützung der Transportpose | Vorschlag: Anschlag oder Auflage für J1 auf der Parkseite (Schwerkraft zieht dorthin); offen |
 | Lastmasse / Schwerpunkt / zulässige Basisbeschleunigung | Nutzlast höchstens 1 kg (Nutzerangabe 08.11.); Massen noch nicht gewogen |
 | Kollisionsfreier Übergang ready ↔ stowed, leer und beladen | offen |
 | Frische reale Gelenkwerte / Stillstand vor Basisfreigabe | offen |

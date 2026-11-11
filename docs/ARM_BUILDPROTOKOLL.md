@@ -4,6 +4,30 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-11 — Dokumentation: Parkpose ausgewertet, Homing-Konzept
+
+Ausgewertet wurde der zweite STEP-Export des Nutzers, eine mögliche
+Homing-/Parkposition: Hub oben, J1 −180°, J2 −40°, J3 −90°, J4 0°, J5 +20°,
+J6 0° gegenüber der gestreckten Nullpose. Das Gelenkmodell gibt den Export
+auf 0,4 mm genau wieder.
+
+Rechnerisch hängt der Arm hinter dem Mast: tiefster Punkt real 698 mm, aber
+im maskierten LiDAR-Sektor; OAK-Verdeckung 0 % bis etwa 19° Neigung;
+Überstand vorn 23 mm, hinten 22 mm. Aus der Parkpose ist für jede Achse die
+Richtung nach hinten-oben frei. Die Gegenrichtung ist mit
+150-mm-Greifermittellinie nach 8° (J1) bis 44° (J4) blockiert.
+
+Eingetragen als Vorschlag: TLE4905L am Gelenkausgang, Magnetsektor aktiv in
+der Parkpose, Referenzkante wenige Grad auf der freien Seite, Einzelachsfolge
+mit begrenztem Suchweg; automatisch nur, wenn alle Sensoren aktiv sind.
+
+Prüfung: nur Dokumentation; Kollisionsrechnung aus CAD ohne Kabel und
+Greiferform; Verweise und Wortgrenze geprüft. Keine Hardwarewirkung.
+
+Nächster Schritt: Konzept bestätigen, Kantenlage und J1-Parkanschlag
+konstruieren, ESS-Homingfunktion im Handbuch prüfen. Rückfallweg: Commit
+zurücknehmen.
+
 ## 2026-11-11 — Dokumentation: Arm neu konstruiert, Kinematik neu
 
 Der Nutzer hat den Arm neu konstruiert, weil J2 im alten CAD um 90° falsch

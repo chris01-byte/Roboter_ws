@@ -3,9 +3,10 @@
 **Stand: 11.11.2026.** Grundlage sind die am 10.10.2026 aus Gespräch und
 Repository rekonstruierten Angaben, die Nutzerangaben vom 08.11.2026
 (Gelenkzuordnung, Not-Aus, Rolle der OAK), die Messungen des Nutzers vom
-10.11.2026 und die Auswertung des neu konstruierten Arms (STEP-Export vom
-11.11.2026, gestreckte Pose). Die Kinematik aus den Exporten vom 09.11.2026
-ist überholt: Dort war J2 falsch zusammengebaut.
+10.11.2026 und die Auswertung des neu konstruierten Arms (zwei STEP-Exporte
+vom 11.11.2026: gestreckte Pose und mögliche Homing-/Parkposition). Die
+Kinematik aus den Exporten vom 09.11.2026 ist überholt: Dort war J2 falsch
+zusammengebaut.
 Der ursprüngliche lokale Wortlaut vom Oktober ist nicht zugänglich. Werte aus
 dem CAD sind als solche gekennzeichnet; als „gemessen“ gelten nur ausdrücklich
 so bezeichnete Angaben.
@@ -68,8 +69,9 @@ fehlerhaften ersten STEP-Export und ist überholt.
 
 **CAD:** maßstäbliches Fusion-360-Modell. Maßgeblich ist der STEP-Export
 „Roboter+Arm in komplett gestreckter Position“ vom 11.11.2026; er wurde im
-Gespräch übergeben und ist noch nicht im Repository. Ein zweiter Export in
-einer möglichen Homing-Position liegt bisher nur als Bild vor. Die Dateien
+Gespräch übergeben und ist noch nicht im Repository. Ein zweiter Export vom
+selben Tag zeigt eine mögliche Homing-/Parkposition; auch er liegt nur
+außerhalb des Repositorys vor (Auswertung unten). Die Dateien
 unter `CAD_usdz Datei/` (09.11.2026) zeigen den alten, falsch
 zusammengebauten Arm und eine um 105 mm zu niedrige Basis; sie sind
 überholt. Armmotoren, Hubspindel, Hubmotor und Greifer sind nicht
@@ -126,6 +128,63 @@ Hub unten rechnerisch erreichbar; der Arm hängt dann dicht vor der
 Chassisfront und im Sichtbereich von LiDAR und VL53. Grenzwinkel,
 Kollisionen mit Mast, Basis und Kamera sowie Kabelwege sind nicht geprüft.
 
+## Park- und Homing-Pose aus dem CAD vom 11.11.2026
+
+Ausgewertet wurde der zweite STEP-Export des Nutzers („mögliche Homing
+Position“). Gegenüber der gestreckten Nullpose: Hub ganz oben, J1 −180°,
+J2 −40°, J3 −90°, J4 0°, J5 +20°, J6 0°. Die Vorzeichen gelten
+rechtshändig um die Achsrichtungen der Kinematiktabelle. Sie sind
+Modellkonvention, keine Drehrichtung der Antriebe. Die Fusion-Gelenkwerte
+aus den Bildern des Nutzers passen dazu (gleiche Beträge, Vorzeichen in
+Fusion teils andersherum). Das Gelenkmodell
+gibt den Export auf 0,4 mm genau wieder und ist damit auch abseits der
+Nullpose geprüft.
+
+Der Arm klappt über J1 nach hinten, läuft links am Mast vorbei und hängt
+hinter dem Mast senkrecht nach unten. Das Handgelenk endet knapp über dem
+hinteren Deck. Alle Werte sind aus dem CAD gerechnet, real liegt der Arm
+rund 10 mm tiefer; Kabel und Greiferform sind nicht modelliert.
+
+| Prüfgröße | Ergebnis |
+|---|---|
+| Tiefster Armpunkt | real 698 mm, 7 mm unter der LiDAR-Scheibenmitte; vom LiDAR aus bei 172°–186° hinter dem Mast, also im bereits maskierten Sektor |
+| OAK-Bild | 0 % verdeckt bei 16:9 bis etwa 19° Neigung; ab 20° erscheint das J1-Gehäuse am unteren Bildrand, bei 4:3 schon bei 18,94° (rund 8 %) |
+| Überstand | vorn 23 mm (J1-Gehäuse); hinten 22 mm über die Chassishinterkante in 0,8–1,2 m Höhe; seitlich innerhalb des Chassis; größter Radius um die Antriebsachsmitte 341 mm, innerhalb des Chassis-Drehkreises |
+| Engste Abstände | J1-Gehäuse 7 mm vor dem Hubschlitten (bauartbedingt, in jeder Pose), J2-Gehäuse 23 mm neben dem Mast, Handgelenk 9 mm neben dem Unterarm und 69 mm hinter dem Mast |
+| Greifer, 150 mm, nur Mittellinie | hängt fast senkrecht; Spitze real rund 73 mm über dem hinteren Deck |
+| Hub nach unten | ohne Greifer rund 164 mm frei, mit 150-mm-Greifer rund 73 mm (real) |
+
+**Freie Richtungen aus der Parkpose.** Jedes Gelenk einzeln gedreht, die
+übrigen in Parkpose. Geprüft wurden die CAD-Flächen des Arms und die
+Mittellinie eines 150 mm langen Greifers gegen Basis, Mast und die nicht
+mitbewegten Armglieder:
+
+| Achse | frei | gesperrt: Arm / Greifermittellinie berührt nach |
+|---|---|---|
+| Hub | nach unten, siehe oben | oben Hubende |
+| J1 | Arm nach hinten-oben, 77° bis zur ersten Berührung | 8° / 8°, Deckschräge hinter dem Mast |
+| J2 | vom Mast weg nach links-hinten, über 90° | 33° am Mast / 27° Deckschräge |
+| J3 | Unterarm nach hinten-oben, über 90° | über 90° / 13° Deckschräge |
+| J4 | über 90° | über 90° / 44° Deckschräge |
+| J5 | Greifer nach hinten-oben, über 90° | über 90° / 23° Deckschräge |
+| J6 | dreht nur um die Greiferachse | erst mit Greiferform prüfbar |
+
+Für jede Achse bewegt die freie Richtung Handgelenk und Greifer nach hinten
+oder oben, weg von Mast und Deck. Dabei wächst der Überstand nach hinten:
+J1 allein um 5° ergibt 51 mm, um 10° 86 mm über die Chassishinterkante;
+J3 um 10° 56 mm. Fahren J1–J5 nacheinander je 10° aus, ohne
+zurückzukehren, sind es 239 mm.
+
+**Schwerkraft in der Parkpose:** Alle Armglieder hinter J1 liegen hinter
+und unter der J1-Achse. Ohne Selbsthemmung dreht J1 den Arm stromlos in die
+gesperrte Richtung, Handgelenk und Greifer also zur Deckschräge. J2 steht
+senkrecht und trägt kein Schwerkraftmoment; Unterarm und Handgelenk hängen
+fast senkrecht. Mit dem Hub oben liegt der Armschwerpunkt hoch; Kippsicherheit
+in Fahrt erst nach dem Wiegen rechnen.
+
+Das daraus abgeleitete Homing-Konzept steht unter [TLE4905L](#tle4905l) und
+ausführlich im [Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md#sensorlage-und-referenzfahrt-aus-der-parkpose-konzept-11112026).
+
 ## Gesicherte Angaben und offene Punkte
 
 | Thema | Gesichert | Noch offen |
@@ -135,13 +194,13 @@ Kollisionen mit Mast, Basis und Kamera sowie Kabelwege sind nicht geprüft.
 | Halten | Keine Bremsen; Selbsthemmung soll praktisch erprobt werden | Haltevermögen je Gelenk und Hubspindel unter Last, Rücktreiben |
 | Not-Aus | Trennt die komplette Stromversorgung des Roboters | Ob auch der Jetson getrennt wird; Verhalten jeder Achse beim Abschalten |
 | Bus | Eigener RS485-Adapter für den Arm ist verbaut | Chip, Gerätepfad, udev-Alias, Baudrate, Terminierung |
-| Homing | TLE4905L als Referenzgeber vorgesehen | Stückzahl, Magnetlage, Verdrahtung; Referenz und Endlagen der Hubachse |
+| Homing | TLE4905L als Referenzgeber vorgesehen; Konzept mit Magnetsektor und Referenzkante an der Parkpose vorgeschlagen (11.11.2026) | Bestätigung des Konzepts, Stückzahl, Kantenlage je Achse, Verdrahtung; Referenz und Endlagen der Hubachse; ob der ESS die Referenzfahrt selbst ausführt |
 | Montage | Arm in Einzelteilen; maßstäbliches CAD vorhanden; Hubschlitten-Unterkante gemessen 1140 mm | Montagezustand der Hubachse am Roboter |
 | Externer Armcode | Keiner | – |
 | Greifer | Noch nicht konstruiert; XL330 mit M6- oder ähnlicher Trapezspindel | XL330-Variante, Steigung, Hub, Führung, Endlagen, Kamerabauraum |
 | Kraftfeedback | Zwei Sensoren mit ohmschem Widerstandssignal | Typ, Kennlinie, Elektronik, ADC und Auswertung |
 | Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz | Nahbereichssensor für den eigentlichen Griff |
-| Transport | Mögliche Homing-Position vom Nutzer konstruiert, bisher nur als Bild | Gelenkwinkel und Geometrie der Pose, Abstand zur LiDAR-Ebene, Überstand, OAK-Sicht, Footprint, Abstützung, Pose mit Greifer und Last |
+| Transport | Homing-/Parkposition des Nutzers als STEP ausgewertet (11.11.2026): hinter dem Mast, außerhalb des OAK-Bildes, im maskierten LiDAR-Sektor | Abstützung, Pose mit Greifer und Last, Kabel, Footprint hinten, Kippsicherheit, praktische Prüfung |
 | Last | Höchstens 1 kg | Ob inklusive Greifer; Massen und Schwerpunkte |
 
 Die ESS23-Motoren der **Fahrbasis** sind kein Identitätsnachweis für den
@@ -230,6 +289,27 @@ Details und Prüfablauf stehen im Integrationsplan. Für den NEMA23 in J1
 ist die elektrische und funktionale Eignung separat zu prüfen. Die Hubachse
 braucht zusätzlich eine eigene Referenz und Endlagen an beiden Hubenden.
 
+**Konzept vom 11.11.2026 (Vorschlag, Bestätigung durch den Nutzer offen):**
+
+- Die Motorgeber der ESS zählen inkrementell, und der Motor dreht je
+  Gelenkumdrehung 72-mal (J1: 55,25-mal). Nach jedem Einschalten wird daher
+  jede Achse neu referenziert, solange nicht gemessen ist, dass Zähler und
+  Stellung einen Stromausfall überstehen.
+- Sensor am Gelenkausgang, nicht am Motor: fest an dem Teil, das den
+  Antrieb trägt, Magnet auf dem Abtrieb. Am Motor würde er 72-mal je
+  Gelenkumdrehung schalten.
+- Magnetsektor statt Punkt: Der Sensor ist in der Parkpose aktiv. Der Sektor
+  reicht von der gesperrten Seite über die Parkpose bis wenige Grad auf die
+  freie Seite; sein Ende ist die Referenzkante. Der Zustand beim Einschalten
+  zeigt, auf welcher Seite der Kante das Gelenk steht.
+- Referenzfahrt: jede Achse einzeln aus der Parkpose in ihre freie Richtung
+  (siehe Tabelle oben), bis das Signal endet, danach referenziert zurück in
+  die Parkpose. Immer gleiche Anfahrrichtung, langsam, Suchweg begrenzt.
+- Automatisch nur, wenn alle Sensoren aktiv sind. Ist einer inaktiv, steht
+  der Arm nicht in der Parkpose; dann folgt eine beaufsichtigte Rückführung.
+- Hubachse ebenso: Parkpose oben, Kante wenige Millimeter darunter,
+  Referenzfahrt nach unten.
+
 ### Not-Aus ohne Bremsen
 
 Der Not-Aus trennt die komplette Stromversorgung. Damit werden alle Achsen
@@ -246,7 +326,12 @@ gleichzeitig momentlos. Bis Messungen etwas anderes zeigen, gilt:
   Eine manuelle Entlastung gehört in die Konstruktion.
 - Die Greiferspindel hält ein gegriffenes Objekt nach dem Abschalten fest.
 - Vorschlag: Transportpose mechanisch abstützen, damit Fahrt und Not-Aus
-  nicht vom Haltemoment der Antriebe abhängen.
+  nicht vom Haltemoment der Antriebe abhängen. In der Parkpose vom
+  11.11.2026 trägt nur J1 ein nennenswertes Schwerkraftmoment, und zwar zur
+  gesperrten Seite: Ohne Selbsthemmung setzen Handgelenk oder Greifer nach
+  höchstens 8° auf der Deckschräge auf. Ein Anschlag oder eine Auflage für
+  J1 auf der Parkseite, kurz hinter der Parkpose, würde den Arm stromlos
+  definiert halten; der Magnetsektor von J1 überdeckt diese Stelle.
 
 ### Greifer
 
@@ -275,17 +360,22 @@ Erkundungswege sind nicht durchgehend abgesichert. Ein zentraler Fahrvertrag
 muss später frische reale Gelenkwerte, Referenzstatus und Stillstand prüfen.
 
 Die Zahlen zur alten Transportpose (rund 4 cm über der LiDAR-Ebene, 136 mm
-Überstand) galten für den falsch zusammengebauten Arm und sind überholt. Der
-Nutzer hat am 11.11.2026 eine mögliche Homing-Position konstruiert; sie
-liegt bisher nur als Bild vor und ist noch nicht ausgewertet. Für jede
-Transportpose bleibt zu prüfen:
+Überstand) galten für den falsch zusammengebauten Arm und sind überholt.
+Die vom Nutzer am 11.11.2026 konstruierte Homing-/Parkposition eignet sich
+rechnerisch auch als Transportpose (Werte unter
+[Park- und Homing-Pose](#park--und-homing-pose-aus-dem-cad-vom-11112026)):
+Sie liegt hinter dem Mast, ihr tiefster Punkt im bereits maskierten
+LiDAR-Sektor, außerhalb des OAK-Bildes und vorn wie hinten nur rund 2 cm
+über dem Chassis. Offen bleiben:
 
-- Abstand der tiefsten Armstelle zur LiDAR-Ebene (gemessen 705 mm), mit
-  Greifer und gegriffenem Objekt, samt der dafür nötigen Hubhöhe.
-- Überstand vor und neben dem Chassis. J2 sitzt fest 130 mm vor J1 bei
-  x = 366 mm; solange J1 den Arm waagerecht hält, ragt allein das
-  J2-Gehäuse rund 160 mm vor die Chassisfront (x = 271 mm).
-- Sicht der OAK (siehe Kamerastrategie).
+- Pose mit Greifer und gegriffenem Objekt. Der hängende Greifer reicht unter
+  die LiDAR-Ebene; er und ein gehaltenes Objekt müssen im maskierten Sektor
+  bleiben.
+- Kabel, mechanische Abstützung, Schwerpunkt mit Hub oben und Fahrverhalten.
+- Der Nav2-Footprint kennt hinten keinen Überstand (siehe unten).
+- Arbeitsposen mit waagerechtem Arm: J2 sitzt fest 130 mm vor J1 bei
+  x = 366 mm; dann ragt allein das J2-Gehäuse rund 160 mm vor die
+  Chassisfront (x = 271 mm).
 
 Unverändert gilt für jeden Überstand:
 
@@ -355,10 +445,13 @@ dem CAD vom 11.11.2026 für den gestreckten Arm (keine Messung):
 | 200 mm tiefer | 4 % | 9 % | 14 % |
 | unten (400 mm tiefer) | 0 % | 1 % | 4 % |
 
-Der Arm liegt bei Hub oben nur rund 5 cm unter der Kameramitte und links
-von ihr; je tiefer der Hub, desto freier das Bild. Für die Wahl der
-OAK-Neigung zählt die Verdeckung in der Transport- bzw. Homing-Position;
-sie wird berechnet, sobald deren Geometrie vorliegt. Jede neue Neigung oder
+Der gestreckte Arm liegt bei Hub oben nur rund 5 cm unter der Kameramitte
+und links von ihr; je tiefer der Hub, desto freier das Bild. In der
+Parkpose vom 11.11.2026 liegt der Arm bei 16:9 bis etwa 19° Neigung ganz
+außerhalb des Bildes; erst ab 20° erscheint das J1-Gehäuse am unteren Rand.
+Die Parkpose schränkt die Neigungswahl damit nicht ein. Die Neigung kann nach
+der gewünschten Raumsicht (Tabelle oben) gewählt werden; Verdeckung entsteht
+nur in Arbeitsposen. Jede neue Neigung oder
 Montage muss am Roboter neu gemessen werden (Bodenebene wie am 27.07.2026)
 und gehört als eigener, getesteter Sensor-Frame-Schritt in `oak.launch.py`.
 
@@ -398,19 +491,27 @@ und getestet.
 
 ## Nächster konkreter Schritt
 
-1. Homing-Position als STEP-Export oder mit Gelenkwinkeln übergeben; danach
-   LiDAR-Abstand, Überstand und OAK-Verdeckung dafür rechnen.
-2. Entscheidung zur OAK-Neigung und -Montage anhand dieser Rechnung.
-3. Offene Hardwareangaben klären: Antrieb und Spindel der Hubachse,
+1. Homing-Konzept bestätigen oder ändern und in die Konstruktion übernehmen:
+   Sensor- und Magnetlage je Achse einschließlich Hubachse, Kantenlage auf
+   der freien Seite, Anschlag oder Auflage für J1 auf der Parkseite.
+2. Im Modbus-Funktionshandbuch prüfen, ob der ESS eine Referenzfahrt mit
+   Home-Eingang selbst ausführt (Modus, Richtung, Geschwindigkeiten,
+   Statusmeldung). Der Abruf vom Herstellerserver war am 11.11.2026
+   gesperrt.
+3. Entscheidung zur OAK-Neigung nach der Raumsicht; die Parkpose schränkt
+   sie nicht ein.
+4. Offene Hardwareangaben klären: Antrieb und Spindel der Hubachse,
    Antrieb von J6, Not-Aus-Wirkung auf den Jetson.
-4. Gewichte von Arm, Greifer und Basis wiegen; danach Momente je Gelenk,
+5. Gewichte von Arm, Greifer und Basis wiegen; danach Momente je Gelenk,
    Kippsicherheit und Mastbelastung rechnen.
-5. URDF des Arms aus den CAD-Achsen erstellen; Nullstellung, Drehrichtungen
+6. URDF des Arms aus den CAD-Achsen erstellen; Nullstellung, Drehrichtungen
    und Grenzwinkel bleiben bis zur Messung offen.
-6. Inventarschema in einem eigenen Build um die Hubachse erweitern.
-7. Messblatt M0 ausfüllen, danach beaufsichtigte M1A-Leseprobe mit
-   bestätigten ESS17. Erst aus diesen Daten einen separaten, begrenzten
-   Einzelachs-Bewegungsbuild erstellen.
+7. Inventarschema in einem eigenen Build um die Hubachse erweitern.
+8. Messblatt M0 ausfüllen, danach beaufsichtigte M1A-Leseprobe mit
+   bestätigten ESS17. Dabei ohne Bewegung prüfen: Eingangszustand beim
+   Vorbeiführen des Magneten von Hand und Positionszähler vor und nach
+   einem Aus- und Einschalten. Erst aus diesen Daten einen separaten,
+   begrenzten Einzelachs-Bewegungsbuild erstellen.
 
 Keine unbekannten Parameter mit Beispielwerten auffüllen. Reale Bilder,
 Karten und Bags bleiben außerhalb des Repos; im Repo nur bereinigte

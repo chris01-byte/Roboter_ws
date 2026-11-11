@@ -12,8 +12,13 @@ Der Arm wurde neu konstruiert, weil J2 im alten CAD um 90° falsch eingebaut
 war; J2 schwenkt jetzt seitlich. Achslagen und Abstände J1–J6 aus dem neuen
 STEP-Export (gestreckte Pose) stehen im [Arm-Kontext](docs/ARM_KONTEXT.md).
 Die Auswertungen vom 09. und 10.11.2026 zu Kinematik und Transportpose sind
-überholt. Offen: Geometrie der Homing-Position und die künftige Neigung der
-OAK.
+überholt. Die Homing-/Parkposition aus dem zweiten Export ist ausgewertet:
+Der Arm hängt hinter dem Mast, außerhalb des OAK-Bildes und im bereits
+maskierten LiDAR-Sektor. Für die TLE4905L ist ein Homing-Konzept mit
+Magnetsektor und Referenzkante auf der freien Seite vorgeschlagen
+([Integrationsplan](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md)). Offen:
+Bestätigung des Konzepts, Homing-Funktion des ESS und die künftige Neigung
+der OAK.
 
 ## Arm-Ergänzung vom 10.11.2026
 
@@ -87,7 +92,7 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 |---|---|---|
 | Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
 | Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
-| Arm-Integration | Read-only Build A auf PR #106; Arm in Einzelteilen, Aufbau aus Hubachse und sechs Drehgelenken bekannt. Bewegungsansteuerung, Homing und echtes Modell fehlen. | Hubachse, J6 und Gewichte klären, Inventarschema erweitern, dann M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
+| Arm-Integration | Read-only Build A auf PR #106; Arm in Einzelteilen, Aufbau aus Hubachse und sechs Drehgelenken bekannt; Parkpose ausgewertet, Homing-Konzept vorgeschlagen. Bewegungsansteuerung, Homing und echtes Modell fehlen. | Homing-Konzept bestätigen; Hubachse, J6 und Gewichte klären, Inventarschema erweitern, dann M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
 | Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Recorder und Löser für Eye-to-Hand existieren. | Entscheidung zum Nahbereichssensor am Greifer vor der Greiferkonstruktion; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
 | App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 

@@ -49,7 +49,7 @@ Kennzeichnungen in diesem Plan:
 | Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
 | Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Nahbereichssensor für den Griff offen |
-| Fahrpose | Arm am 11.11.2026 neu konstruiert; mögliche Homing-Position liegt bisher nur als Bild vor, Abstand zur LiDAR-Ebene, Überstand und Gelenkwinkel sind offen |
+| Fahrpose | Arm am 11.11.2026 neu konstruiert; Homing-/Parkposition als STEP ausgewertet: hinter dem Mast, im maskierten LiDAR-Sektor, außerhalb des OAK-Bildes; Abstützung, Kabel und Last offen |
 | Achsrichtung J2 | Seit der Neukonstruktion vom 11.11.2026 senkrecht bei waagerechtem Arm; J2 schwenkt seitlich |
 
 ### Softwarebestand nach Build A
@@ -206,7 +206,9 @@ Prüfpflichten vor dem ersten belasteten oder angehobenen Betrieb:
 - Offen ist, ob der Not-Aus auch den Jetson abschaltet; davon hängen
   Neustartablauf und Datensicherheit laufender Dienste ab.
 - Vorgeschlagen: Transportpose mechanisch abstützen, damit Fahrt und
-  Not-Aus nicht vom Haltemoment der Antriebe abhängen.
+  Not-Aus nicht vom Haltemoment der Antriebe abhängen. In der Parkpose vom
+  11.11.2026 zieht die Schwerkraft J1 zur gesperrten Seite; ein Anschlag
+  oder eine Auflage dort hält den Arm stromlos in definierter Lage.
 
 ## 5. TLE4905L: Wohin gehört das Homing-Signal?
 
@@ -263,6 +265,78 @@ Die Hubachse ist linear und braucht neben der Referenz Endlagen an beiden
 Hubenden. Ihr Weg wird in Metern geführt, die Spindelsteigung ersetzt die
 Getriebeübersetzung. Das heutige Inventarschema kennt nur Winkelachsen und
 muss dafür erweitert werden.
+
+### Sensorlage und Referenzfahrt aus der Parkpose (Konzept 11.11.2026)
+
+**Vorschlag, Bestätigung durch den Nutzer offen.** Grundlage ist die
+Parkpose aus dem CAD vom 11.11.2026 mit ihren freien und gesperrten
+Richtungen ([ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026)).
+
+Warum überhaupt Homing: Die ESS-Motorgeber zählen inkrementell. Der Motor
+dreht je Gelenkumdrehung 72-mal (J1: 55,25-mal); ein Motorwinkel ist also
+kein Gelenkwinkel. Ob der Zähler einen Stromausfall übersteht, ist offen,
+und ohne Bremsen kann sich der Arm stromlos bewegen. Bis zum Gegenbeweis
+sind nach jedem Einschalten alle Achsen UNREFERENCED.
+
+1. **Sensor am Gelenkausgang.** Der TLE4905L sitzt fest an dem Glied, das
+   den Antrieb der Achse trägt; seine Leitung führt dann ohne
+   Gelenkdurchgang zum ESS-Eingang. Die Magnetspur sitzt auf dem Abtrieb,
+   möglichst weit außen: Der Winkelfehler ist die Streuung des Schaltwegs
+   geteilt durch den Radius.
+2. **Sektor statt Punkt.** Die Spur ist so lang, dass der Sensor in der
+   Parkpose sicher aktiv ist, auch mit Spiel, Durchhängen oder an einer
+   Parkauflage. Sie überdeckt die gesperrte Seite und endet wenige Grad
+   neben der Parkpose auf der freien Seite. Dieses Ende ist die
+   Referenzkante. Die Parkpose selbst taugt nicht als Referenzpunkt: Sie
+   streut, und ein Sensor, der genau dort schaltet, wäre beim Einschalten
+   mehrdeutig.
+3. **Aktiv bedeutet Magnet erkannt.** Ein Drahtbruch erscheint dann als
+   „nicht in Parkpose“ und sperrt die automatische Referenzfahrt. Die Spur
+   muss lückenlos schalten; zwischen Einzelmagneten darf das Signal nicht
+   abfallen.
+4. **Referenzfahrt je Achse.** Start nur bei aktivem Sensor. Begrenzte
+   Relativbewegung in die freie Richtung, langsam, bis zur Flanke von aktiv
+   nach inaktiv; bei Bedarf zurück in den Sektor und ein zweites Mal
+   langsamer anfahren. Der Suchweg ist kleiner als der freie Korridor;
+   endet er ohne Flanke, folgt FAULT. Kein Drehzahlbefehl ohne Weggrenze,
+   damit auch ein Busausfall die Achse innerhalb des Korridors stoppt.
+5. **Reihenfolge.** Hubachse, J1, J2, J3, J4, J5, J6; jede Achse einzeln
+   aus der Parkpose und referenziert zurück, bevor die nächste startet. So
+   bleibt der Überstand hinten klein (J1 um 5°: 51 mm über die
+   Chassishinterkante). Fahren J1–J5 ohne Rückkehr je 10° aus, sind es
+   239 mm. Hinter dem Roboter muss für die Referenzfahrt Platz sein.
+6. **Startlogik.** Sind alle Sensoren aktiv und ist die Sichtprüfung
+   bestätigt, ist die automatische Referenzfahrt erlaubt. Ist mindestens ein
+   Sensor inaktiv, steht der Arm nicht in der Parkpose, etwa nach einem
+   Not-Aus mitten in einer Bewegung. Dann gibt es keine automatische
+   Bewegung, sondern eine beaufsichtigte Rückführung im Tippbetrieb mit
+   reduzierter Geschwindigkeit, bis alle Sensoren aktiv sind. Die zuletzt
+   geloggte Gelenkstellung darf dabei als Hinweis dienen, nie als Referenz.
+7. **Laufende Plausibilisierung.** Nach dem Referenzieren muss der Sensor
+   bei jeder Überfahrt an der gespeicherten Kante schalten. Eine Abweichung
+   über der gemessenen Streuung bedeutet Referenzverlust oder Rutschen im
+   Antriebsstrang und führt zu FAULT.
+8. **Ausführung.** Ob der ESS die Referenzfahrt mit Home-Eingang selbst
+   ausführt, ist offen; der Abruf des Modbus-Handbuchs war am 11.11.2026
+   gesperrt. Rückfallweg: Der Jetson fährt die begrenzte Schleichfahrt und
+   liest Eingänge und Position aus dem Block 0x0006, den die Read-only-Probe
+   schon liest. Der zufällige Kantenfehler beträgt dann höchstens
+   Schleichgeschwindigkeit mal Abfrageabstand; die feste Verzögerung des
+   Eingangsfilters geht in den Home-Offset ein. Beides wird in M2 gemessen.
+
+Achsbezogen nach CAD: Die freie Richtung führt für die Hubachse nach unten,
+für J1–J5 bewegt sie Handgelenk und Greifer nach hinten oder oben. J1 ist
+die kritische Achse: In der gesperrten Richtung setzt das Handgelenk nach 8°
+auf der Deckschräge auf, und dorthin zieht auch die Schwerkraft. J4 und J6
+brauchen wegen der Leitungen durch die Gelenke zusätzlich eine mechanische
+Drehbegrenzung; ihr Sektor gibt die Richtung zur Kante an.
+
+**Alternative, Entscheidung beim Nutzer:** Absolutwertgeber am
+Gelenkausgang kennen die Stellung sofort nach dem Einschalten. Dann könnte
+der Arm nach einem Not-Aus aus jeder Stellung selbst einen kollisionsfreien
+Rückweg planen. Das kostet eigene Elektronik, Leitungen durch die Gelenke
+und eine eigene Kalibrierung; entschieden werden muss vor der Konstruktion
+der Gelenkabtriebe.
 
 ## 6. Greifer: Konzept vor dem Bau prüfen
 
@@ -372,8 +446,13 @@ Maske verbergen.
 
 **Stand 11.11.2026:** Der Arm wurde neu konstruiert; die Zahlen zur alten
 Transportpose (rund 4 cm über der LiDAR-Ebene, 136 mm Überstand) sind
-überholt. Eine mögliche Homing-Position liegt bisher nur als Bild vor und
-ist nicht ausgewertet. Die gemessene LiDAR-Scheibenmitte liegt bei 705 mm.
+überholt. Die vom Nutzer konstruierte Homing-/Parkposition ist ausgewertet
+([ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026)):
+Der Arm hängt hinter dem Mast. Sein tiefster Punkt liegt real 7 mm unter
+der gemessenen LiDAR-Scheibenmitte von 705 mm, aber im bereits maskierten
+Sektor. Die OAK sieht ihn bei 16:9 bis etwa 19° Neigung nicht, vorn und
+hinten ragt er rund 2 cm über das Chassis. Rohscan- und Bildvergleich am
+Roboter stehen aus. In Arbeitsposen gilt weiter:
 J2 sitzt fest 130 mm vor J1; solange J1 den Arm waagerecht hält, ragt
 allein das J2-Gehäuse rund 160 mm vor die Chassisfront. In Armhöhe erfasst
 vorn kein Hindernissensor etwas: Die VL53 decken direkt vor dem Roboter nur etwa
@@ -431,8 +510,9 @@ Objekt kommt hinzu.
 Wie viel der Arm vom OAK-Bild verdeckt, hängt von seiner Stellung ab.
 Gestreckt und mit dem Hub ganz oben sind es bei der heutigen Neigung rund
 24 %, mit dem Hub ganz unten rund 4 %. Die Studie vom 10.11.2026 galt für
-die alte Transportpose und ist überholt; für die Homing-Position wird neu
-gerechnet, sobald ihre Geometrie vorliegt. Tabellen stehen in
+die alte Transportpose und ist überholt. In der Parkpose vom 11.11.2026
+verdeckt der Arm bei 16:9 bis etwa 19° Neigung nichts; die Parkpose
+schränkt die Neigungswahl also nicht ein. Tabellen stehen in
 [ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung zur Neigung liegt beim
 Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
 
@@ -551,6 +631,8 @@ unbeherrschte Lageänderung. Bei unzureichendem Halten mechanisch nacharbeiten.
 begrenzte Suche, Freifahren und langsames erneutes Anfahren der Kante,
 Home-Offset, Softlimits und echte JointStates. Homingreihenfolge auf
 kollisionsfreie Suchräume abstimmen, auch aus zulässigen Startlagen.
+Vorgeschlagenes Konzept mit Magnetsektor, Referenzkante auf der freien
+Seite und Einzelachsfolge aus der Parkpose: Abschnitt 5.
 
 **Realtest:** Wiederholte Referenzierung, Magnet schon aktiv, fehlendes/
 daueraktives Signal, falsche Richtung, Drahtfehler und Restart.
@@ -689,10 +771,13 @@ Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
 NEMA23 in J1, Hub, Reichweite, Transportpose, Nutzlast, Not-Aus-Wirkung und
 eigener RS485-Adapter. Seit 10.11.2026: gemessene Höhen von LiDAR, OAK und
 Hubschlitten. Seit 11.11.2026: Achslagen und Abstände des neu konstruierten
-Arms aus dem CAD (siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
+Arms sowie die Park-/Homing-Pose mit freien Richtungen je Achse aus dem CAD
+(siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
 
-Jetzt benötigte Entscheidungen und Angaben: Homing-Position als STEP-Export
-oder mit Gelenkwinkeln, Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
+Jetzt benötigte Entscheidungen und Angaben: Bestätigung des Homing-Konzepts
+aus Abschnitt 5 (Kantenlage je Achse, Anschlag oder Auflage für J1,
+Absolutwertgeber ja oder nein), Homing-Funktion des ESS laut Handbuch,
+Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
 von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
 Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und
 Busparameter, Grenzwinkel je Gelenk. Für die spätere Greiferauslegung

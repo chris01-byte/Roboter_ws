@@ -17,6 +17,50 @@ Rückfallweg:
 
 ---
 
+## 2026-11-11 — Parkpose ausgewertet, Homing-Konzept vorgeschlagen
+
+**Entscheidung:** Die vom Nutzer konstruierte Homing-/Parkposition (zweiter
+STEP-Export vom 11.11.2026) ist die Bezugspose für Referenzierung und
+Transport. Vorgeschlagen, Bestätigung durch den Nutzer offen: je Achse ein
+TLE4905L am Gelenkausgang mit Magnetsektor, der in der Parkpose aktiv ist;
+Referenz ist die Kante wenige Grad neben der Parkpose auf der freien Seite.
+Automatische Referenzfahrt nur, wenn alle Sensoren aktiv sind, einzeln je
+Achse und mit begrenztem Suchweg; sonst beaufsichtigte Rückführung. Die
+Parkpose schränkt die Wahl der OAK-Neigung nicht ein.
+
+**Grund / beobachtete Evidenz:** Gegenüber der gestreckten Nullpose gilt:
+Hub oben, J1 −180°, J2 −40°, J3 −90°, J4 0°, J5 +20°, J6 0°. Das
+Gelenkmodell gibt den Export auf 0,4 mm genau wieder. Der Arm hängt hinter
+dem Mast: tiefster Punkt real 698 mm, vom LiDAR aus bei 172°–186° im
+maskierten Sektor; OAK-Verdeckung 0 % bei 16:9 bis etwa 19°; Überstand vorn
+23 mm, hinten 22 mm. Gelenkweise Kollisionsrechnung mit CAD-Flächen und der
+Mittellinie eines 150-mm-Greifers: In der freien Richtung nach hinten-oben
+hat jede Achse mindestens 77° Platz. Die Gegenrichtung ist nach 8° (J1),
+27° (J2), 13° (J3), 44° (J4) und 23° (J5) blockiert, und die Schwerkraft
+zieht J1 zur gesperrten Seite. Die ESS-Motorgeber zählen inkrementell, der
+Motor dreht 72-mal je Gelenkumdrehung; ein Motorwinkel ist kein
+Gelenkwinkel.
+
+**Betroffene Dateien und Hardware:** ARM_KONTEXT, Integrationsplan,
+Messblatt, Build-Protokoll, PROJEKT_STATUS. Keine Hardware, keine
+Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Auswertung per OpenCascade; Kollisionen
+über abgetastete CAD-Flächen (etwa 2,5 mm Raster), ohne Kabel und ohne
+Greiferform. Keine Messung am Roboter. Ob der ESS selbst referenzieren
+kann, ist ungeprüft; der Abruf des Modbus-Handbuchs vom Herstellerserver
+wurde am 11.11.2026 abgelehnt.
+
+**Offene Risiken:** Ohne Selbsthemmung oder Parkanschlag setzen Handgelenk
+oder Greifer stromlos auf der Deckschräge auf. Die Referenzfahrt bewegt den
+Arm nach hinten; der Nav2-Footprint kennt dort keinen Überstand. Nach einem
+Not-Aus außerhalb der Parkpose ist keine automatische Rückkehr möglich. Ob
+der Positionszähler einen Stromausfall übersteht, ist ungeprüft.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-11 — Arm neu konstruiert: J2 schwenkt seitlich
 
 **Entscheidung:** Maßgeblich ist der neu konstruierte Arm aus dem
