@@ -2,7 +2,7 @@
 
 **Stand: 10.10.2026 — aus dem Gespräch rekonstruiert und mit dem gesicherten
 Repo-Stand abgeglichen; ergänzt am 08.11.2026 um Nutzerangaben zu Aufbau,
-Maßen, Not-Aus und Rolle der OAK.** Dies ist eine inhaltliche Neufassung,
+Maßen, Not-Aus und Rolle der OAK, am 11.11.2026 um den neu konstruierten Arm.** Dies ist eine inhaltliche Neufassung,
 keine behauptete Wiederherstellung des ursprünglichen Wortlauts. Sie ersetzt
 die bisherige Planfassung mit falschen Angaben zu sechs ESS17 und externem
 Foxy-Code.
@@ -49,8 +49,8 @@ Kennzeichnungen in diesem Plan:
 | Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
 | Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Nahbereichssensor für den Griff offen |
-| Fahrpose | Transportpose laut CAD rund 4 cm über der gemessenen LiDAR-Ebene, nur bei Hub ganz oben; 136 mm Überstand vor die Chassisfront; Gelenkwinkel nicht vermessen |
-| Achsrichtung J2 | Laut CAD Querachse, parallel zu J1 und J3; seitliches Erreichen damit nur über das Handgelenk oder die Basis. Entscheidung offen |
+| Fahrpose | Arm am 11.11.2026 neu konstruiert; mögliche Homing-Position liegt bisher nur als Bild vor, Abstand zur LiDAR-Ebene, Überstand und Gelenkwinkel sind offen |
+| Achsrichtung J2 | Seit der Neukonstruktion vom 11.11.2026 senkrecht bei waagerechtem Arm; J2 schwenkt seitlich |
 
 ### Softwarebestand nach Build A
 
@@ -370,22 +370,22 @@ Schritt außerhalb der Arm-Integration. Die Mastmaske macht den Sektor
 unbekannt, nicht frei. Neue Armreflexionen nicht einfach durch eine größere
 Maske verbergen.
 
-**Stand 10.11.2026 laut korrigiertem CAD und Messung:** Die tiefste Stelle
-des Arms liegt in Transportpose real bei rund 746 mm, die gemessene
-LiDAR-Scheibenmitte bei 705 mm; es bleiben rund 4 cm. Der Arm ragt 136 mm
-vor die Chassisfront, also bis x ≈ 0,41 m statt 0,27 m vor der
-Antriebsachse. In dieser Höhe erfasst vorn
-kein Hindernissensor etwas: Die VL53 decken direkt vor dem Roboter nur etwa
+**Stand 11.11.2026:** Der Arm wurde neu konstruiert; die Zahlen zur alten
+Transportpose (rund 4 cm über der LiDAR-Ebene, 136 mm Überstand) sind
+überholt. Eine mögliche Homing-Position liegt bisher nur als Bild vor und
+ist nicht ausgewertet. Die gemessene LiDAR-Scheibenmitte liegt bei 705 mm.
+J2 sitzt fest 130 mm vor J1; solange J1 den Arm waagerecht hält, ragt
+allein das J2-Gehäuse rund 160 mm vor die Chassisfront. In Armhöhe erfasst
+vorn kein Hindernissensor etwas: Die VL53 decken direkt vor dem Roboter nur etwa
 0,4 m Höhe ab, und die OAK ist seit dem 04.11.2026 nicht zur
 Hinderniserkennung vorgesehen. Überhänge wie Arbeitsplatten, Fensterbänke
 oder Regalböden träfen zuerst den Arm. Der lokale Nav2-Footprint reicht bis
-x = +0,31 m plus 0,02 m Polster und kennt den Überstand noch nicht; auch der
+x = +0,31 m plus 0,02 m Polster und kennt keinen Überstand; auch der
 Drehkreis wächst. Footprint und Kollisionsmonitor sind sicherheitsrelevant
 und werden in einem eigenen, mit der Erkundungslinie abgestimmten Schritt
-angepasst. Mit Greifer und gegriffenem Objekt ist die Pose neu zu prüfen.
-Der Abstand zur LiDAR-Ebene gilt nur mit dem Hub ganz oben: Rund 4 cm
-tiefer erreicht die Unterkante bereits die Scheibenmitte. Die Transportpose
-braucht daher eine feste Hubhöhe, und die Fahrfreigabe muss sie prüfen.
+angepasst. Jede Transportpose ist mit Greifer und gegriffenem Objekt zu
+prüfen. Sie braucht eine feste Hubhöhe, und die Fahrfreigabe muss sie
+prüfen.
 
 Vorgehen: kompakte, tiefe mechanische Pose suchen, dann vermessen und in
 Kollisionsmodell sowie Posenkonfiguration übernehmen. Leerer Greifer und
@@ -423,16 +423,18 @@ Entfernung vor der Chassisfront im Bild.
 | Couchtisch, 0,45 m | 0,95 m |
 | Boden | 1,48 m |
 
-Laut korrigiertem CAD reicht der gestreckte Arm rund 0,65 m ohne und 0,80 m
-mit Greifer über die Chassisfront. Auf Tischhöhe sieht die OAK damit nur den
+Laut CAD vom 11.11.2026 reicht der gestreckte Arm rund 0,66 m ohne und
+0,81 m mit Greifer über die Chassisfront. Auf Tischhöhe sieht die OAK damit nur den
 äußersten, gestreckten Rand des Arbeitsraums; Verdeckung durch Arm und
 Objekt kommt hinzu.
 
-In Transportpose verdeckt der Arm bei der heutigen Neigung rund 20 % des
-OAK-Bildes. Bis etwa 4° Neigung bleibt das Bild armfrei, mit einer um 50 mm
-höheren Kamera bis etwa 13°, mit 100 mm bis etwa 20°. Tabelle, Varianten und
-Vorschlag stehen in [ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung liegt
-beim Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
+Wie viel der Arm vom OAK-Bild verdeckt, hängt von seiner Stellung ab.
+Gestreckt und mit dem Hub ganz oben sind es bei der heutigen Neigung rund
+24 %, mit dem Hub ganz unten rund 4 %. Die Studie vom 10.11.2026 galt für
+die alte Transportpose und ist überholt; für die Homing-Position wird neu
+gerechnet, sobald ihre Geometrie vorliegt. Tabellen stehen in
+[ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung zur Neigung liegt beim
+Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
 
 **Vorgeschlagen, Entscheidung beim Nutzer:** ein Nahbereichssensor am Greifer
 oder Handgelenk für die Feinlokalisierung (Eye-in-Hand). Er misst relativ zum
@@ -685,12 +687,12 @@ Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
 
 Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
 NEMA23 in J1, Hub, Reichweite, Transportpose, Nutzlast, Not-Aus-Wirkung und
-eigener RS485-Adapter. Seit 10.11.2026: Achslagen und Abstände aus dem
-korrigierten CAD sowie gemessene Höhen von LiDAR, OAK und Hubschlitten
-(siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
+eigener RS485-Adapter. Seit 10.11.2026: gemessene Höhen von LiDAR, OAK und
+Hubschlitten. Seit 11.11.2026: Achslagen und Abstände des neu konstruierten
+Arms aus dem CAD (siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
 
-Jetzt benötigte Entscheidungen und Angaben: Achsrichtung von J2, Neigung und
-Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
+Jetzt benötigte Entscheidungen und Angaben: Homing-Position als STEP-Export
+oder mit Gelenkwinkeln, Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
 von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
 Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und
 Busparameter, Grenzwinkel je Gelenk. Für die spätere Greiferauslegung

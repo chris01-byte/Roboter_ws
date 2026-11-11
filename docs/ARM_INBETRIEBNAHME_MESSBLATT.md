@@ -1,6 +1,6 @@
 # Arm-Inbetriebnahme: Messblatt und Versuchsprotokoll
 
-**Stand: 10.11.2026 — rekonstruiertes Arbeitsblatt mit ersten Nutzerangaben.**
+**Stand: 11.11.2026 — rekonstruiertes Arbeitsblatt mit ersten Nutzerangaben.**
 Keine Tabellenzeile ist eine bestandene Abnahme. Einträge mit dem Vermerk
 „Nutzerangabe“ oder „aus CAD“ stammen aus der Konstruktion
 (Fusion-360-Modell) und Aussagen des Entwicklers; sie ersetzen keine Messung
@@ -50,12 +50,12 @@ nicht festgelegt. Farben beziehen sich auf das Fusion-360-Modell.
 | Achse | Physische Funktion / Lage (Nutzerangabe 08.11.) | Exakter Motor / Typenschild | Firmware | Getriebe / Übersetzung | Bus-ID |
 |---|---|---|---|---|---|
 | Hub | hebt und senkt den ganzen Arm, 400 mm, vertikale Linearführung mit Spindel | offen | offen | Spindeltyp und Steigung offen | offen |
-| J1 | Schulter heben, großes blaues Gelenk am Mast | NEMA23 der ESS-RS-Reihe; Typenschild offen | offen | 55,25:1 (Nutzerangabe 08.11.) | offen |
-| J2 | Schulter seitlich schwenken, erstes silbernes Gelenk an der Ecke vorn oben (Nutzer 10.11.); laut CAD Querachse parallel zu J1 | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
-| J3 | Ellenbogen, zweites blaues Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J1 | Schulter heben, große blaue Schulter am Hubschlitten | NEMA23 der ESS-RS-Reihe; Typenschild offen | offen | 55,25:1 (Nutzerangabe 08.11.) | offen |
+| J2 | Schulter seitlich schwenken, weiße Schulter 130 mm vor J1; laut CAD vom 11.11. senkrechte Achse bei waagerechtem Arm | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J3 | Ellenbogen, oranges Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
 | J4 | Unterarm drehen, grünes Gelenk hinter dem Ellenbogen | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
-| J5 | Handgelenk kippen, letztes silbernes Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
-| J6 | Greifer drehen, neues Drehgelenk direkt vor dem Greifer | offen | offen | noch nicht realisiert | offen |
+| J5 | Handgelenk kippen, rotes Gelenk | ESS-RS; Typenschild offen | offen | 72:1 (Nutzerangabe 08.11.) | offen |
+| J6 | Greifer drehen, schwarze Anschlussplatte für den Greifer | offen | offen | noch nicht realisiert | offen |
 
 Weitere Nutzerangaben: Reichweite gestreckt etwa 746 mm ohne Greifer, ab der
 vorderen Fläche des Hubschlittens (10.11.); Greifer bis etwa 150 mm;
@@ -66,10 +66,12 @@ Schulterhöhe 1106 mm vom 08.11. stammte aus einem fehlerhaften STEP-Export.
 angegeben): Mitte LiDAR-Sichtscheibe 705 mm, Mitte OAK 1350 mm,
 Unterkante Hubschlitten 1140 mm über Boden (im CAD 1150 mm).
 
-**Aus dem korrigierten CAD (09.11.2026), keine Messung:** J1 bei 1211 mm,
-J2 130 mm vor J1 auf gleicher Höhe, J3 156 mm unter J2, J5 257 mm unter J3,
-Werkzeugende 146 mm hinter J5; gestreckt rund 753 mm ab
-Schlittenvorderfläche. Real liegt der Arm rund 10 mm tiefer.
+**Aus dem CAD vom 11.11.2026 (Arm neu konstruiert, gestreckte Pose), keine
+Messung:** J1 bei 1211 mm Höhe; J2 130 mm vor J1 mit senkrechter Achse;
+Armachse 94 mm über J1; J3 156 mm vor J2; J5 257 mm vor J3; Flanschfläche
+149 mm vor J5; Unterarm 86 mm seitlich versetzt; gestreckt 755 mm ab
+Schlittenvorderfläche. Real liegt der Arm rund 10 mm tiefer. Die Werte aus
+den Exporten vom 09.11.2026 sind überholt.
 
 Pro Achse ausfüllen:
 
@@ -278,11 +280,11 @@ und Integrationsfreigabe dokumentieren.
 
 | Prüfung | Ausgangsmessung / Pose / Ergebnis |
 |---|---|
-| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | Aus CAD und Messung 10.11.: tiefste Armstelle rund 746 mm, LiDAR-Scheibenmitte 705 mm, rund 4 cm Abstand nur bei Hub ganz oben; Rohscan-Messung offen |
-| OAK-Sichtbereich mit/ohne Arm und Last | Simulation aus CAD 10.11.: bei 18,94° Neigung rund 20 % des Bildes verdeckt, armfrei bis etwa 4°; praktische Prüfung offen |
+| LiDAR-Sicht mit/ohne Arm, vorhandene Mastabschattung getrennt | LiDAR-Scheibenmitte gemessen 705 mm; Abstand für die neue Homing-Position offen (Geometrie fehlt); Rohscan-Messung offen |
+| OAK-Sichtbereich mit/ohne Arm und Last | Simulation aus CAD 11.11., Arm gestreckt, 18,94° Neigung: 24 % verdeckt bei Hub oben, 4 % bei Hub unten; Homing-Position und praktische Prüfung offen |
 | VL53-Sicht / Nahbereichsschutz | offen |
-| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Laut CAD 136 mm Überstand vor die Chassisfront, seitlich −108 bis +169 mm; Kabel offen |
-| Zulässige Hubhöhe in Transportpose | Laut CAD ganz oben; rund 4 cm tiefer erreicht der Arm die LiDAR-Scheibenmitte |
+| Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Für die neue Homing-Position offen; J2-Gehäuse ragt bei waagerechtem Arm rund 160 mm vor die Chassisfront; Kabel offen |
+| Zulässige Hubhöhe in Transportpose | offen |
 | Mechanische Abstützung der Transportpose | offen |
 | Lastmasse / Schwerpunkt / zulässige Basisbeschleunigung | Nutzlast höchstens 1 kg (Nutzerangabe 08.11.); Massen noch nicht gewogen |
 | Kollisionsfreier Übergang ready ↔ stowed, leer und beladen | offen |

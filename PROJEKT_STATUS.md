@@ -1,19 +1,25 @@
 # Projektstatus: Roboter_ws
 
-**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-10.
+**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-11.
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
 
+## Arm-Ergänzung vom 11.11.2026
+
+Der Arm wurde neu konstruiert, weil J2 im alten CAD um 90° falsch eingebaut
+war; J2 schwenkt jetzt seitlich. Achslagen und Abstände J1–J6 aus dem neuen
+STEP-Export (gestreckte Pose) stehen im [Arm-Kontext](docs/ARM_KONTEXT.md).
+Die Auswertungen vom 09. und 10.11.2026 zu Kinematik und Transportpose sind
+überholt. Offen: Geometrie der Homing-Position und die künftige Neigung der
+OAK.
+
 ## Arm-Ergänzung vom 10.11.2026
 
-Das korrigierte Arm-CAD ist ausgewertet: Achslagen und Abstände J1–J6 sowie
-die Transportpose stehen im [Arm-Kontext](docs/ARM_KONTEXT.md). Gemessen sind
-LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm und Schlittenunterkante
-1140 mm; LiDAR- und OAK-Höhe weichen von der laufenden Konfiguration ab und
-werden separat korrigiert. Offen beim Nutzer: Achsrichtung von J2 und die
-künftige Neigung der OAK.
+Gemessen sind LiDAR-Scheibenmitte 705 mm, OAK-Mitte 1350 mm und
+Schlittenunterkante 1140 mm; LiDAR- und OAK-Höhe weichen von der laufenden
+Konfiguration ab und werden separat korrigiert.
 
 ## Arm-Ergänzung vom 08.11.2026
 

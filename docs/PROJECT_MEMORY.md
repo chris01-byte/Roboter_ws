@@ -17,6 +17,45 @@ Rückfallweg:
 
 ---
 
+## 2026-11-11 — Arm neu konstruiert: J2 schwenkt seitlich
+
+**Entscheidung:** Maßgeblich ist der neu konstruierte Arm aus dem
+STEP-Export vom 11.11.2026 (gestreckte Pose). Die gestreckte Pose dient als
+Nullpose des Modells. Die Kinematik, die Transportpose und die OAK-Studie
+aus dem Eintrag vom 10.11.2026 sind überholt; die dort gemessenen Höhen
+(LiDAR 705 mm, OAK 1350 mm, Schlitten 1140 mm) gelten weiter.
+
+**Grund / beobachtete Evidenz:** Die Auswertung vom 10.11.2026 hatte
+gezeigt, dass J1, J2 und J3 im alten CAD um parallele Querachsen drehten.
+Der Nutzer bestätigte einen Zusammenbaufehler und konstruierte den Arm neu.
+Aus den Lagerbohrungen des neuen Exports: J1 quer bei x = 236 mm und
+1211 mm Höhe; J2 130 mm davor mit senkrechter Achse bei y = +139 mm;
+Armachse 94 mm über J1; J3 156 mm vor J2; J4 entlang des um 86 mm versetzten
+Unterarms; J5 257 mm vor J3; Flansch 149 mm vor J5. Gestreckt 755 mm ab
+Schlittenvorderfläche (Nutzerangabe 746 mm). Ein daraus gebautes
+Gelenkmodell ergibt für J2 von −90° bis +90° Flanschlagen von y = −422 mm
+bis +700 mm; der Arm sitzt links der Robotermitte. Simulation der OAK bei
+gestrecktem Arm und 18,94° Neigung: 24 % verdeckt mit Hub oben, 4 % mit Hub
+unten.
+
+**Betroffene Dateien und Hardware:** ARM_KONTEXT, Integrationsplan,
+Messblatt, Build-Protokoll, PROJEKT_STATUS. Keine Hardware, keine
+Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Auswertung per OpenCascade; das
+Gelenkmodell wurde an der gestreckten Pose per Bild geprüft. Keine Messung
+am Roboter, keine Kollisionsprüfung.
+
+**Offene Risiken:** Die Homing-Position liegt nur als Bild vor;
+LiDAR-Abstand, Überstand und OAK-Verdeckung dafür sind ungeprüft. Solange J1
+den Arm waagerecht hält, ragt das J2-Gehäuse rund 160 mm vor die
+Chassisfront. Die CAD-Dateien unter `CAD_usdz Datei/` auf `main` zeigen noch
+den alten Arm.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-10 — Korrigiertes Arm-CAD ausgewertet, Sensorhöhen nachgemessen
 
 **Entscheidung:** Die Armdokumentation folgt dem korrigierten STEP-Export vom

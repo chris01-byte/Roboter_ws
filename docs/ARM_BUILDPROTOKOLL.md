@@ -4,6 +4,28 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-11 — Dokumentation: Arm neu konstruiert, Kinematik neu
+
+Der Nutzer hat den Arm neu konstruiert, weil J2 im alten CAD um 90° falsch
+eingebaut war. Ausgewertet wurde der STEP-Export in gestreckter Pose mit
+OpenCascade; die Bauteile tragen jetzt Gelenknamen.
+
+Neu eingetragen: J1 quer am Hubschlitten, J2 130 mm davor mit senkrechter
+Achse, Armachse 94 mm über J1, J3 156 mm vor J2, J5 257 mm vor J3, Flansch
+149 mm vor J5, Unterarm 86 mm seitlich versetzt; gestreckt 755 mm ab
+Schlitten (Nutzer: 746 mm). J2 schwenkt den Flansch rechnerisch von
+y = −422 bis +700 mm.
+
+Überholt und entsprechend markiert: Kinematik, Transportpose, LiDAR-Abstand
+und OAK-Studie vom 09./10.11. Simulation neu für den gestreckten Arm: bei
+18,94° Neigung 24 % verdeckt mit Hub oben, 4 % mit Hub unten.
+
+Prüfung: nur Dokumentation; Verweise und Wortgrenze geprüft. Keine
+Messung, keine Hardwarewirkung.
+
+Nächster Schritt: Homing-Position als STEP auswerten. Rückfallweg: Commit
+zurücknehmen.
+
 ## 2026-11-10 — Dokumentation: korrigiertes CAD und Messwerte
 
 Der korrigierte STEP-Export vom 09.11.2026 wurde mit OpenCascade ausgewertet:

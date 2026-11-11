@@ -1,9 +1,11 @@
 # Arm-Kontext für Agenten: Amadeus
 
-**Stand: 10.11.2026.** Grundlage sind die am 10.10.2026 aus Gespräch und
+**Stand: 11.11.2026.** Grundlage sind die am 10.10.2026 aus Gespräch und
 Repository rekonstruierten Angaben, die Nutzerangaben vom 08.11.2026
-(Gelenkzuordnung, Not-Aus, Rolle der OAK), die Auswertung des korrigierten
-STEP-Exports vom 09.11.2026 und die Messungen des Nutzers vom 10.11.2026.
+(Gelenkzuordnung, Not-Aus, Rolle der OAK), die Messungen des Nutzers vom
+10.11.2026 und die Auswertung des neu konstruierten Arms (STEP-Export vom
+11.11.2026, gestreckte Pose). Die Kinematik aus den Exporten vom 09.11.2026
+ist überholt: Dort war J2 falsch zusammengebaut.
 Der ursprüngliche lokale Wortlaut vom Oktober ist nicht zugänglich. Werte aus
 dem CAD sind als solche gekennzeichnet; als „gemessen“ gelten nur ausdrücklich
 so bezeichnete Angaben.
@@ -26,7 +28,7 @@ Einzelteilen vor (08.11.2026). Der Nutzer erprobt die Hardware; Agenten
 entwickeln Software, Versuchsanweisungen und Auswertungen. Keine reale
 Bewegung aus einer Planungsfreigabe ableiten.
 
-## Aufbau laut Nutzer und CAD (08.11.2026)
+## Aufbau laut Nutzer und CAD (11.11.2026)
 
 Der Arm sitzt vorn am Kameramast auf einer vertikalen Hubachse. Er hat sechs
 Drehgelenke; mit der Hubachse sind es sieben bewegte Achsen, dazu kommt der
@@ -35,16 +37,17 @@ Greifer. Die Farben beziehen sich auf das Fusion-360-Modell.
 | Achse | Bauteil im CAD | Funktion | Antrieb, Untersetzung |
 |---|---|---|---|
 | Hubachse | vorhandene vertikale Linearführung mit Spindel | hebt und senkt den ganzen Arm, Hub 400 mm | Motor, Spindeltyp und Steigung offen |
-| J1 Schulter heben | großes blaues Gelenk am Mast | schwenkt den Arm hoch und runter | NEMA23 der ESS-RS-Reihe, 55,25:1 |
-| J2 Schulter seitlich | erstes silbernes Gelenk an der Ecke vorn oben, wo der Arm nach unten abknickt | gedacht: seitliches Erreichen ohne Plattformbewegung; laut CAD aber Querachse (siehe unten) | ESS-RS, 72:1 |
-| J3 Ellenbogen | zweites blaues Gelenk | beugt und streckt zwischen Ober- und Unterarm | ESS-RS, 72:1 |
-| J4 Unterarm drehen | grünes Gelenk, künftig hinter dem Ellenbogen | Drehung um die Unterarmlängsachse | ESS-RS, 72:1 |
-| J5 Handgelenk kippen | letztes silbernes Gelenk | Querachse zum Unterarm; Greifer in Ausgangsstellung möglichst nach unten | ESS-RS, 72:1 |
-| J6 Greifer drehen | neues Drehgelenk direkt vor dem Greifer | Drehung um die Greiferlängsachse | Antrieb und Untersetzung offen |
+| J1 Schulter heben | große blaue Schulter am Hubschlitten | schwenkt den Arm hoch und runter | NEMA23 der ESS-RS-Reihe, 55,25:1 |
+| J2 Schulter seitlich | weiße Schulter, 130 mm vor J1 | schwenkt den Arm seitlich; Achse senkrecht, wenn der Arm waagerecht steht | ESS-RS, 72:1 |
+| J3 Ellenbogen | oranges Gelenk | beugt und streckt zwischen Ober- und Unterarm | ESS-RS, 72:1 |
+| J4 Unterarm drehen | grünes Gelenk hinter dem Ellenbogen | Drehung um die Unterarmlängsachse | ESS-RS, 72:1 |
+| J5 Handgelenk kippen | rotes Gelenk | Querachse zum Unterarm | ESS-RS, 72:1 |
+| J6 Greifer drehen | schwarze Anschlussplatte für den Greifer | Drehung um die Greiferlängsachse | Antrieb und Untersetzung offen |
 
-J4 liegt hinter dem Ellenbogen, J6 ist neu; der korrigierte STEP-Export vom
-09.11.2026 zeigt diesen Stand. Das rote Verbindungsstück zwischen J1 und J2
-ist fest (Nutzer, 10.11.2026). Laut Angabe vom 10.10.2026 sind fünf
+Der Arm wurde am 11.11.2026 neu konstruiert, weil J2 im alten Modell um 90°
+falsch eingebaut war. Die Bauteile tragen im neuen STEP ihre Gelenknamen.
+Das rote Verbindungsstück zwischen J1 und J2 ist fest. Laut Angabe vom
+10.10.2026 sind fünf
 ESS17-RS07 und ein NEMA23 vorhanden; welche ESS17 Hubachse, J2–J5 und J6
 antreiben, ist offen. Frühere Angaben zu „iCL-Steppern“ sind überholt: Alle
 Schrittmotoren sind ESS-RS (Nutzer, 08.11.2026).
@@ -63,50 +66,71 @@ Hub 400 mm; Nutzlast höchstens 1 kg. Arm, Greifer und Basis sind noch nicht
 gewogen. Die Angabe „Schulter 1106 mm“ vom 08.11.2026 stammte aus dem
 fehlerhaften ersten STEP-Export und ist überholt.
 
-**CAD:** maßstäbliches Fusion-360-Modell. Im Repository liegt seit
-09.11.2026 unter `CAD_usdz Datei/` der erste STEP-Export (10:30 Uhr) mit
-einer um 105 mm zu niedrigen Basis sowie eine USDZ-Datei ohne Gelenke und
-Bauteilnamen. Der korrigierte STEP-Export (09.11.2026, 23:19 Uhr) wurde im
-Gespräch übergeben und ist noch nicht im Repository. In beiden Fassungen
-ist der Arm geometrisch identisch; Armmotoren, Hubspindel, Hubmotor und
-Greifer sind nicht modelliert.
+**CAD:** maßstäbliches Fusion-360-Modell. Maßgeblich ist der STEP-Export
+„Roboter+Arm in komplett gestreckter Position“ vom 11.11.2026; er wurde im
+Gespräch übergeben und ist noch nicht im Repository. Ein zweiter Export in
+einer möglichen Homing-Position liegt bisher nur als Bild vor. Die Dateien
+unter `CAD_usdz Datei/` (09.11.2026) zeigen den alten, falsch
+zusammengebauten Arm und eine um 105 mm zu niedrige Basis; sie sind
+überholt. Armmotoren, Hubspindel, Hubmotor und Greifer sind nicht
+modelliert.
 
-## Kinematik aus dem korrigierten CAD
+## Kinematik aus dem CAD vom 11.11.2026
 
-Abgeleitet aus Lagerbohrungen und Teilefarben, Transportpose mit Hub ganz
-oben. Roboterrahmen: x nach vorn ab Antriebsachse, y nach links, Höhe über
-Boden. CAD-Werte; real sitzt der Arm rund 10 mm tiefer.
+Abgeleitet aus Lagerbohrungen und Bauteilnamen des STEP-Exports in
+gestreckter Pose, Hub ganz oben. Roboterrahmen: x nach vorn ab
+Antriebsachse, y nach links, Höhe über Boden. CAD-Werte; real sitzt der Arm
+rund 10 mm tiefer. Die gestreckte Pose dient als Nullpose des Modells.
 
-| Achse | Lage | Drehachse |
+| Achse | Lage in der gestreckten Pose | Drehachse in der gestreckten Pose |
 |---|---|---|
 | Hubschlitten | Vorderfläche bei x = 172 mm, Unterkante 1152 mm | Führungsschienen senkrecht |
 | J1 | x = 236 mm, 1211 mm hoch | quer (y) |
-| J2 | x = 366 mm, 1211 mm hoch, 130 mm vor J1 | quer (y), parallel zu J1 |
-| J3 | 156 mm unter J2, 1055 mm hoch | quer (y) |
-| J4 | entlang des Unterarms, in Transportpose senkrecht bei y = −59 mm | Unterarmlängsachse |
-| J5 | 257 mm unter J3, 799 mm hoch | quer zum Unterarm |
-| J6 | durch J5 bei y = +28 mm, Werkzeugende 146 mm hinter J5 | Werkzeuglängsachse, in Transportpose 54° nach hinten oben |
+| J2 | x = 366 mm, y = +139 mm; 130 mm vor J1 | senkrecht (z), rechtwinklig zu J1 |
+| J3 | x = 522 mm, 1305 mm hoch; 156 mm vor J2 | quer (y) |
+| J4 | Unterarmachse bei y = +225 mm, 1305 mm hoch | Unterarmlängsachse (x) |
+| J5 | x = 778 mm, 1306 mm hoch; 257 mm vor J3 | quer (y) |
+| J6 | Werkzeugachse bei y = +139 mm, 1307 mm hoch; Flanschfläche bei x = 927 mm, 149 mm vor J5 | Werkzeuglängsachse (x) |
 
-Gestreckt ergibt das ab der Schlittenvorderfläche rund 753 mm bis zum
-Werkzeugende; das passt zu den angegebenen 746 mm. Querversätze: Oberarm zu
-Unterarm 85 mm entlang J3, J4 zu J6 87 mm entlang J5. J3 schneidet J4, J4
-schneidet J5, J5 schneidet J6; das Handgelenk ist wegen des Versatzes nicht
-kugelförmig, die Gelenkwinkel müssen numerisch berechnet werden.
+- Die Armachse liegt in der gestreckten Pose 94 mm über der J1-Achse.
+- Oberarm und Werkzeug liegen bei y ≈ +139 mm, der Unterarm 86 mm weiter
+  links bei y ≈ +225 mm. Der Arm sitzt damit links der Robotermitte; der
+  gestreckte Unterarm ragt rund 45 mm über die linke Chassisseite hinaus.
+- Gestreckt sind es ab der Schlittenvorderfläche 755 mm bis zur
+  Flanschfläche (Nutzerangabe 746 mm) und 656 mm über die Chassisfront
+  hinaus; mit 150 mm Greifer rund 806 mm über die Chassisfront.
+- J1 und J2 schneiden sich nicht (130 mm Abstand). J3 schneidet J4, J4
+  schneidet J5, J5 schneidet J6; J4 und J6 sind 86 mm versetzt. Das
+  Handgelenk ist damit nicht kugelförmig, die Gelenkwinkel müssen numerisch
+  berechnet werden.
 
-**Offene Frage zu J2:** Laut CAD drehen J1, J2 und J3 um parallele
-Querachsen. Der Handgelenkpunkt (J4/J5) bleibt dann für jede Stellung von
-Hub, J1, J2 und J3 in derselben senkrechten Ebene bei y ≈ −59 mm. Seitlich
-erreicht der Arm Ziele nur über J4/J5 mit seitlich gekipptem Werkzeug oder
-durch Drehen der Basis; 1° Drehfehler der Basis entspricht bei 0,75 m
-Reichweite etwa 13 mm seitlich. Das widerspricht der Funktionsbeschreibung
-„seitliches Erreichen ohne Plattformbewegung“. Ob J2 so gewollt ist oder
-seine Achse um 90° gedreht werden soll, entscheidet der Nutzer.
+**J2 schwenkt jetzt seitlich.** Die offene Frage vom 10.11.2026 ist damit
+erledigt. Rechnerisch (Flanschfläche, Hub oben, übrige Gelenke gestreckt):
+
+| J2 | Flansch x | Flansch y |
+|---|---|---|
+| 90° nach rechts | 366 mm | −422 mm |
+| 30° nach rechts | 852 mm | −141 mm |
+| 0° | 927 mm | +139 mm |
+| 30° nach links | 852 mm | +420 mm |
+| 90° nach links | 366 mm | +700 mm |
+
+Die J2-Achse steht nur senkrecht, solange J1 den Arm waagerecht hält. Bei
+anderen J1-Stellungen schwenkt J2 in einer geneigten Ebene.
+
+**Höhenbereich der Flanschfläche (real, rechnerisch, ohne
+Kollisionsprüfung):** gestreckt 1297 mm bei Hub oben und 897 mm bei Hub
+unten; Unterarm senkrecht nach unten (J3) 890 mm bzw. 490 mm; ganzer Arm
+nach unten (J1) 511 mm bzw. 111 mm. Mit 150 mm Greifer ist der Boden bei
+Hub unten rechnerisch erreichbar; der Arm hängt dann dicht vor der
+Chassisfront und im Sichtbereich von LiDAR und VL53. Grenzwinkel,
+Kollisionen mit Mast, Basis und Kamera sowie Kabelwege sind nicht geprüft.
 
 ## Gesicherte Angaben und offene Punkte
 
 | Thema | Gesichert | Noch offen |
 |---|---|---|
-| Achsen | Hubachse und J1–J6 wie oben; J1 mit NEMA23 (ESS-RS); Lage und Abstände aus dem CAD | Antrieb von Hubachse und J6, Typenschilder, Firmware, Busadressen; Achsrichtung J2 |
+| Achsen | Hubachse und J1–J6 wie oben; J1 mit NEMA23 (ESS-RS); Lage und Abstände aus dem CAD vom 11.11.2026 | Antrieb von Hubachse und J6, Typenschilder, Firmware, Busadressen; Grenzwinkel |
 | Getriebe | J1 55,25:1; J2–J5 72:1 | Untersetzung J6, Spindelsteigung, Spiel, Grenzwinkel |
 | Halten | Keine Bremsen; Selbsthemmung soll praktisch erprobt werden | Haltevermögen je Gelenk und Hubspindel unter Last, Rücktreiben |
 | Not-Aus | Trennt die komplette Stromversorgung des Roboters | Ob auch der Jetson getrennt wird; Verhalten jeder Achse beim Abschalten |
@@ -117,7 +141,7 @@ seine Achse um 90° gedreht werden soll, entscheidet der Nutzer.
 | Greifer | Noch nicht konstruiert; XL330 mit M6- oder ähnlicher Trapezspindel | XL330-Variante, Steigung, Hub, Führung, Endlagen, Kamerabauraum |
 | Kraftfeedback | Zwei Sensoren mit ohmschem Widerstandssignal | Typ, Kennlinie, Elektronik, ADC und Auswertung |
 | Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz | Nahbereichssensor für den eigentlichen Griff |
-| Transport | Transportpose laut CAD rund 4 cm über der gemessenen LiDAR-Ebene (nur bei Hub ganz oben), 136 mm Überstand vorn | Gelenkwinkel, Footprint, Abstützung, Pose mit Greifer und Last |
+| Transport | Mögliche Homing-Position vom Nutzer konstruiert, bisher nur als Bild | Gelenkwinkel und Geometrie der Pose, Abstand zur LiDAR-Ebene, Überstand, OAK-Sicht, Footprint, Abstützung, Pose mit Greifer und Last |
 | Last | Höchstens 1 kg | Ob inklusive Greifer; Massen und Schwerpunkte |
 
 Die ESS23-Motoren der **Fahrbasis** sind kein Identitätsnachweis für den
@@ -250,22 +274,28 @@ Die Greifmission fährt diese Pose vor einigen Navigationsschritten an;
 Erkundungswege sind nicht durchgehend abgesichert. Ein zentraler Fahrvertrag
 muss später frische reale Gelenkwerte, Referenzstatus und Stillstand prüfen.
 
-Laut korrigiertem CAD liegt die tiefste Stelle des Arms in Transportpose bei
-758 mm, real also bei rund 746 mm. Die Mitte der LiDAR-Sichtscheibe ist mit
-705 mm gemessen; es bleiben rund 4 cm Abstand. Das gilt nur mit dem Hub ganz
-oben: Rund 4 cm tiefer erreicht die Unterkante bereits die Scheibenmitte.
-Die Transportpose braucht deshalb eine feste Hubhöhe, und der Abstand ist
-mit Greifer und gegriffenem Objekt neu zu prüfen. Der Arm ragt 136 mm vor
-die Chassisfront, also bis x ≈ 0,41 m statt 0,27 m vor der Antriebsachse.
-Folgen:
+Die Zahlen zur alten Transportpose (rund 4 cm über der LiDAR-Ebene, 136 mm
+Überstand) galten für den falsch zusammengebauten Arm und sind überholt. Der
+Nutzer hat am 11.11.2026 eine mögliche Homing-Position konstruiert; sie
+liegt bisher nur als Bild vor und ist noch nicht ausgewertet. Für jede
+Transportpose bleibt zu prüfen:
 
-- In dieser Höhe erfasst vorn kein Hindernissensor etwas. Der LiDAR scannt
+- Abstand der tiefsten Armstelle zur LiDAR-Ebene (gemessen 705 mm), mit
+  Greifer und gegriffenem Objekt, samt der dafür nötigen Hubhöhe.
+- Überstand vor und neben dem Chassis. J2 sitzt fest 130 mm vor J1 bei
+  x = 366 mm; solange J1 den Arm waagerecht hält, ragt allein das
+  J2-Gehäuse rund 160 mm vor die Chassisfront (x = 271 mm).
+- Sicht der OAK (siehe Kamerastrategie).
+
+Unverändert gilt für jeden Überstand:
+
+- In Armhöhe erfasst vorn kein Hindernissensor etwas. Der LiDAR scannt
   auf 0,705 m. Die VL53 sitzen auf 0,305 m, schauen geradeaus und decken
   direkt vor dem Roboter nur etwa 0,4 m Höhe ab. Die OAK ist seit dem
   04.11.2026 nicht zur Hinderniserkennung vorgesehen. Überhänge wie
   Arbeitsplatten, Fensterbänke oder Regalböden träfen zuerst den Arm.
 - Der lokale Nav2-Footprint reicht bisher bis x = +0,31 m plus 0,02 m
-  Polster und kennt den Überstand nicht; auch der Drehkreis wächst.
+  Polster und kennt keinen Überstand; auch der Drehkreis wächst.
   Footprint und Kollisionsmonitor sind sicherheitsrelevant und werden in
   einem eigenen, mit der Erkundungslinie abgestimmten Schritt geändert.
 
@@ -294,41 +324,43 @@ ist erst ab dieser Entfernung vor der Chassisfront im Bild:
 | Couchtisch, 0,45 m | 0,95 m |
 | Boden | 1,48 m |
 
-Laut korrigiertem CAD reicht der gestreckte Arm rund 0,65 m (ohne Greifer)
-bis 0,80 m (mit Greifer) über die Chassisfront. Auf Tischhöhe liegt damit
-nur der äußerste, gestreckte Rand des Arbeitsraums im Bild. Die Rechnung
-bestätigt die Einschätzung des Nutzers.
+Laut CAD vom 11.11.2026 reicht der gestreckte Arm rund 0,66 m (ohne
+Greifer) bis 0,81 m (mit Greifer) über die Chassisfront. Auf Tischhöhe
+liegt damit nur der äußerste, gestreckte Rand des Arbeitsraums im Bild. Die
+Rechnung bestätigt die Einschätzung des Nutzers.
 
-### OAK-Neigung und Verdeckung durch den Arm (Studie 10.11.2026)
+### OAK-Neigung und Verdeckung durch den Arm
 
 **Ziel des Nutzers:** Die OAK soll Raumgegenstände möglichst gut erkennen,
-ohne dass der Arm viel vom Bild verdeckt. Simuliert aus dem korrigierten CAD
-(Lage Kamera zu Arm, Arm in Transportpose, 16:9 mit 640 × 360 Pixeln und
-etwa 42° vertikal). Entfernungen mit der gemessenen Kamerahöhe 1,35 m, ab
-Chassisfront. Keine Messung am Roboter.
+ohne dass der Arm viel vom Bild verdeckt. Was die Kamera vom Raum sieht,
+hängt nur von ihrer Höhe und Neigung ab (16:9 mit etwa 42° vertikal,
+gemessene Kamerahöhe 1,35 m, Entfernungen ab Chassisfront):
 
-| Neigung | vom Arm verdeckt | Tisch 0,75 m ab | Boden ab | Bildoberkante in 3 m |
-|---|---|---|---|---|
-| 0° | 0 % | 1,43 m | 3,37 m | 2,56 m |
-| 4° | 0 % | 1,16 m | 2,76 m | 2,31 m |
-| 6° | 2,5 % | 1,05 m | 2,51 m | 2,19 m |
-| 10° | 8 % | 0,87 m | 2,11 m | 1,96 m |
-| 15° | 15 % | 0,70 m | 1,73 m | 1,69 m |
-| 18,94° (heute) | 20 % | 0,59 m | 1,48 m | 1,47 m |
+| Neigung | Tisch 0,75 m ab | Boden ab | Bildoberkante in 3 m |
+|---|---|---|---|
+| 0° | 1,43 m | 3,37 m | 2,56 m |
+| 4° | 1,16 m | 2,76 m | 2,31 m |
+| 10° | 0,87 m | 2,11 m | 1,96 m |
+| 15° | 0,70 m | 1,73 m | 1,69 m |
+| 18,94° (heute) | 0,59 m | 1,48 m | 1,47 m |
 
-Bis zu welcher Neigung das Bild armfrei bleibt, hängt von der
-Kameraposition ab: heute bis 4°, 50 mm höher bis etwa 13°, 75 mm höher bis
-etwa 17°, 100 mm höher bis etwa 20°, 100 mm weiter vorn bis etwa 15°. Der
-4:3-Modus mit vollem Sensor (vertikal etwa 55°, laut Datenblatt vor einer
-Umstellung prüfen) vergrößert das Bild nach oben und unten, zeigt den Arm
-aber schon bei 0° (2 %).
+Wie viel der Arm verdeckt, hängt von seiner Stellung ab. Die Studie vom
+10.11.2026 galt für die alte Transportpose und ist überholt. Simuliert aus
+dem CAD vom 11.11.2026 für den gestreckten Arm (keine Messung):
 
-**Vorschlag, Entscheidung beim Nutzer:** Ohne Umbau etwa 4° Neigung:
-armfrei, gute Raumübersicht, Boden erst ab etwa 2,8 m. Mit rund 5 cm höherer
-Kamera etwa 12°: armfrei, Tisch ab etwa 0,9 m, Boden ab etwa 2,0 m,
-Bildoberkante in 3 m etwa 1,9 m. Jede neue Neigung oder Montage muss am
-Roboter neu gemessen werden (Bodenebene wie am 27.07.2026) und gehört als
-eigener, getesteter Sensor-Frame-Schritt in `oak.launch.py`.
+| Hub | verdeckt bei 4° | bei 12° | bei 18,94° |
+|---|---|---|---|
+| oben | 16 % | 20 % | 24 % |
+| 100 mm tiefer | 11 % | 16 % | 20 % |
+| 200 mm tiefer | 4 % | 9 % | 14 % |
+| unten (400 mm tiefer) | 0 % | 1 % | 4 % |
+
+Der Arm liegt bei Hub oben nur rund 5 cm unter der Kameramitte und links
+von ihr; je tiefer der Hub, desto freier das Bild. Für die Wahl der
+OAK-Neigung zählt die Verdeckung in der Transport- bzw. Homing-Position;
+sie wird berechnet, sobald deren Geometrie vorliegt. Jede neue Neigung oder
+Montage muss am Roboter neu gemessen werden (Bodenebene wie am 27.07.2026)
+und gehört als eigener, getesteter Sensor-Frame-Schritt in `oak.launch.py`.
 
 Folgerung, Entscheidung beim Nutzer: Für die Feinlokalisierung im Greifraum
 liegt ein Nahbereichssensor am Greifer oder Handgelenk nahe (Eye-in-Hand).
@@ -366,9 +398,9 @@ und getestet.
 
 ## Nächster konkreter Schritt
 
-1. Entscheidung zur Achsrichtung von J2 (quer wie im CAD oder gedreht für
-   seitliches Erreichen), solange der Arm noch in Einzelteilen liegt.
-2. Entscheidung zur OAK-Neigung und -Montage nach der Studie oben.
+1. Homing-Position als STEP-Export oder mit Gelenkwinkeln übergeben; danach
+   LiDAR-Abstand, Überstand und OAK-Verdeckung dafür rechnen.
+2. Entscheidung zur OAK-Neigung und -Montage anhand dieser Rechnung.
 3. Offene Hardwareangaben klären: Antrieb und Spindel der Hubachse,
    Antrieb von J6, Not-Aus-Wirkung auf den Jetson.
 4. Gewichte von Arm, Greifer und Basis wiegen; danach Momente je Gelenk,
