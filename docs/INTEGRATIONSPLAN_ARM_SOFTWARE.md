@@ -207,15 +207,18 @@ Prüfpflichten vor dem ersten belasteten oder angehobenen Betrieb:
   Neustartablauf und Datensicherheit laufender Dienste ab.
 - Vorgeschlagen: Transportpose mechanisch abstützen, damit Fahrt und
   Not-Aus nicht vom Haltemoment der Antriebe abhängen. In der Parkpose vom
-  11.11.2026 zieht die Schwerkraft J1 zur gesperrten Seite; ein Anschlag
-  oder eine Auflage dort hält den Arm stromlos in definierter Lage.
+  11.11.2026 zieht die Schwerkraft J1 zur gesperrten Seite; der Nutzer baut
+  dort einen J1-Anschlag (11.11.2026), der den Arm stromlos in definierter
+  Lage hält.
 
 ## 5. TLE4905L: Wohin gehört das Homing-Signal?
 
 **Vorgeschlagen: an einen als Referenzeingang konfigurierten digitalen Eingang
-des zugehörigen ESS-Antriebs.** Der Antrieb erfasst die Schaltkante lokal;
-der Jetson startet später die begrenzte Referenzfahrt und überwacht Status.
-Die präzise Kante soll nicht erst durch ROS-Polling und einen USB-Umweg entstehen.
+des zugehörigen ESS-Antriebs.** Der Eingangszustand ist zugleich im
+Statusregister 0x0008 lesbar. Wie die Kante bestimmt und wie Überfahren
+verhindert wird, steht im Unterabschnitt zur Parkpose unten; dort weicht
+der Ablauf begründet vom ursprünglichen Gedanken ab, die Kante nur im
+Antrieb zu erfassen.
 
 ESS17 besitzt X0–X3 und XCOM. Beispielplanung: X0 als Home-Sensor, weitere
 Eingänge bei Bedarf für positive/negative Endlagen. Das ist eine Belegungsidee,
@@ -268,9 +271,15 @@ muss dafür erweitert werden.
 
 ### Sensorlage und Referenzfahrt aus der Parkpose (Konzept 11.11.2026)
 
-**Vorschlag, Bestätigung durch den Nutzer offen.** Grundlage ist die
-Parkpose aus dem CAD vom 11.11.2026 mit ihren freien und gesperrten
-Richtungen ([ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026)).
+**Stand nach den Festlegungen des Nutzers vom 11.11.2026:** ein
+Einzelmagnet je Achse, kein Magnetbogen; mechanischer Anschlag an J1;
+Absolutwertgeber sind konstruktiv nicht mehr möglich; die Parkposition steht
+fest ([ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026)).
+Die Antriebsfunktionen stammen aus dem Modbus-Funktionshandbuch V1.0
+(05.03.2025, Seitenzahlen des Drucks) und dem ESS17-Hardware-Handbuch V1.0
+(15.04.2025). Am Gerät sind sie noch nicht bestätigt; für den NEMA23 in J1
+(ESS23-RS) gilt dasselbe Funktionshandbuch, seine Eingänge sind gesondert zu
+prüfen.
 
 Warum überhaupt Homing: Die ESS-Motorgeber zählen inkrementell. Der Motor
 dreht je Gelenkumdrehung 72-mal (J1: 55,25-mal); ein Motorwinkel ist also
@@ -278,65 +287,105 @@ kein Gelenkwinkel. Ob der Zähler einen Stromausfall übersteht, ist offen,
 und ohne Bremsen kann sich der Arm stromlos bewegen. Bis zum Gegenbeweis
 sind nach jedem Einschalten alle Achsen UNREFERENCED.
 
-1. **Sensor am Gelenkausgang.** Der TLE4905L sitzt fest an dem Glied, das
-   den Antrieb der Achse trägt; seine Leitung führt dann ohne
-   Gelenkdurchgang zum ESS-Eingang. Die Magnetspur sitzt auf dem Abtrieb,
-   möglichst weit außen: Der Winkelfehler ist die Streuung des Schaltwegs
-   geteilt durch den Radius.
-2. **Sektor statt Punkt.** Die Spur ist so lang, dass der Sensor in der
-   Parkpose sicher aktiv ist, auch mit Spiel, Durchhängen oder an einer
-   Parkauflage. Sie überdeckt die gesperrte Seite und endet wenige Grad
-   neben der Parkpose auf der freien Seite. Dieses Ende ist die
-   Referenzkante. Die Parkpose selbst taugt nicht als Referenzpunkt: Sie
-   streut, und ein Sensor, der genau dort schaltet, wäre beim Einschalten
-   mehrdeutig.
-3. **Aktiv bedeutet Magnet erkannt.** Ein Drahtbruch erscheint dann als
-   „nicht in Parkpose“ und sperrt die automatische Referenzfahrt. Die Spur
-   muss lückenlos schalten; zwischen Einzelmagneten darf das Signal nicht
-   abfallen.
-4. **Referenzfahrt je Achse.** Start nur bei aktivem Sensor. Begrenzte
-   Relativbewegung in die freie Richtung, langsam, bis zur Flanke von aktiv
-   nach inaktiv; bei Bedarf zurück in den Sektor und ein zweites Mal
-   langsamer anfahren. Der Suchweg ist kleiner als der freie Korridor;
-   endet er ohne Flanke, folgt FAULT. Kein Drehzahlbefehl ohne Weggrenze,
-   damit auch ein Busausfall die Achse innerhalb des Korridors stoppt.
-5. **Reihenfolge.** Hubachse, J1, J2, J3, J4, J5, J6; jede Achse einzeln
-   aus der Parkpose und referenziert zurück, bevor die nächste startet. So
-   bleibt der Überstand hinten klein (J1 um 5°: 51 mm über die
-   Chassishinterkante). Fahren J1–J5 ohne Rückkehr je 10° aus, sind es
-   239 mm. Hinter dem Roboter muss für die Referenzfahrt Platz sein.
-6. **Startlogik.** Sind alle Sensoren aktiv und ist die Sichtprüfung
-   bestätigt, ist die automatische Referenzfahrt erlaubt. Ist mindestens ein
-   Sensor inaktiv, steht der Arm nicht in der Parkpose, etwa nach einem
-   Not-Aus mitten in einer Bewegung. Dann gibt es keine automatische
-   Bewegung, sondern eine beaufsichtigte Rückführung im Tippbetrieb mit
-   reduzierter Geschwindigkeit, bis alle Sensoren aktiv sind. Die zuletzt
-   geloggte Gelenkstellung darf dabei als Hinweis dienen, nie als Referenz.
-7. **Laufende Plausibilisierung.** Nach dem Referenzieren muss der Sensor
-   bei jeder Überfahrt an der gespeicherten Kante schalten. Eine Abweichung
-   über der gemessenen Streuung bedeutet Referenzverlust oder Rutschen im
-   Antriebsstrang und führt zu FAULT.
-8. **Ausführung.** Ob der ESS die Referenzfahrt mit Home-Eingang selbst
-   ausführt, ist offen; der Abruf des Modbus-Handbuchs war am 11.11.2026
-   gesperrt. Rückfallweg: Der Jetson fährt die begrenzte Schleichfahrt und
-   liest Eingänge und Position aus dem Block 0x0006, den die Read-only-Probe
-   schon liest. Der zufällige Kantenfehler beträgt dann höchstens
-   Schleichgeschwindigkeit mal Abfrageabstand; die feste Verzögerung des
-   Eingangsfilters geht in den Home-Offset ein. Beides wird in M2 gemessen.
+**Wo der Sensor sitzt**
+
+1. Am Gelenkausgang: Sensor fest an dem Glied, das den Antrieb trägt, mit
+   Leitung ohne Gelenkdurchgang zum Eingang X0 des zugehörigen ESS. Magnet
+   auf dem Abtrieb, möglichst weit außen; der Winkelfehler ist die Streuung
+   des Schaltwegs geteilt durch den Radius.
+2. In der Parkstellung stehen Magnet und Sensor sich gegenüber, der Sensor
+   ist aktiv. Praktisch: im Fusion-Modell die Pose der Homing-STEP einstellen
+   und je Gelenk beide Teile gegenüber setzen.
+3. Der Magnet wird so versetzt, dass das Ende des Schaltfensters auf der
+   freien Seite wenige Grad hinter der Parkstellung liegt. Dieses Fensterende
+   ist die Referenz. Der Rest des Fensters überdeckt Parkstellung, Spiel und
+   Durchhängen, bei J1 auch den Anschlag. Fensterbreite und Abstand werden
+   vor dem Einbau von Hand gemessen.
+4. Aktiv bedeutet Magnet erkannt. Ein Drahtbruch erscheint dann als „nicht
+   in Parkstellung“ und sperrt die Referenzfahrt.
+
+**Wann referenziert wird**
+
+5. Ein Einzelmagnet zeigt außerhalb seines Fensters nicht, auf welcher Seite
+   das Gelenk steht. Eine Referenzfahrt beginnt deshalb nur, wenn der Jetson
+   unmittelbar vorher den Eingang als aktiv gelesen hat (0x0008, S. 66) und
+   die Sichtprüfung bestätigt ist. Die antriebsinternen Methoden 19–22
+   starten bei inaktivem Eingang mit Suchgeschwindigkeit in eine fest
+   eingestellte Richtung (S. 50–53); in diesem Zustand werden sie nie
+   ausgelöst.
+6. Reihenfolge: Hubachse, J1 … J6, jede einzeln aus der Parkstellung und
+   zurück, bevor die nächste startet. Die übrigen Achsen halten dabei.
+7. Nach einem Not-Aus außerhalb der Parkstellung gibt es keine automatische
+   Bewegung. Jede Achse wird beaufsichtigt im Tippbetrieb, langsam und mit
+   reduziertem Strom zurückgeführt, bis ihr Sensor aktiv ist. Die zuletzt
+   geloggte Stellung zeigt Richtung und ungefähren Weg; sie begrenzt den
+   Tippweg, ersetzt aber keine Referenz.
+8. Nach jedem Einschalten sind die Eingangsfunktionen X0–X3 laut
+   Hardware-Handbuch unbestimmt (S. 7); die Registertabelle nennt dagegen
+   Vorgaben (X0 Ursprung, X1/X2 Endlagen, S. 71–72). Der Jetson setzt oder
+   prüft deshalb 0x0040–0x0044 vor jedem Start. Welche Angabe stimmt, wird
+   am Gerät geklärt.
+
+**Wie Überfahren und Anschlagen verhindert werden**
+
+9. **Begrenzter Suchweg.** Die Suche ist eine relative Positionsfahrt mit
+   festem Ziel gleich dem Höchstweg (0x0024/0x0025, Start über 0x0027
+   Bit 0, S. 11–14), sehr langsam. Der Jetson liest Eingang und Position
+   (0x0008, 0x000A/0x000B) und stoppt an der Flanke (0x0027 Bit 8); danach
+   fährt er zurück ins Fenster und nähert sich langsamer erneut. Bleibt die
+   Flanke aus, endet die Fahrt am Ziel, und es folgt FAULT. Auch bei Bus-
+   oder Jetsonausfall fährt der Antrieb nicht weiter. Der Höchstweg ist
+   kleiner als der Freiraum der Gegenrichtung und viel kleiner als jeder
+   Kabelbereich; so bleibt selbst ein falsches Vorzeichen begrenzt. Der
+   Kantenfehler ist höchstens Gelenkgeschwindigkeit mal Abfrageabstand und
+   wird in M2 gemessen. Damit weicht der Ablauf bewusst vom ursprünglichen
+   Vorschlag ab, die Kante nur im Antrieb zu erfassen: Nur die Positionsfahrt
+   hat einen Höchstweg.
+10. **Übergabe an den Antrieb.** An der Kante wird Referenzmodus 35
+    ausgelöst (aktuelle Position als Ursprung, S. 65), mit 0x0030 = 6
+    (Position ohne Fahrt auf den Offset setzen, S. 70) und dem Gelenkwinkel
+    der Kante in Zählschritten als Offset (0x0035/0x0036). Danach zählt der
+    Antrieb absolut im Gelenkmaß, und seine Soft-Limits werden wirksam. Ob
+    Modus 35 dafür genügt, wird in M2 geprüft. Alternative ist die
+    antriebsinterne Methode 21 bzw. 19: Start im Fenster, langsam bis zur
+    fallenden Flanke (S. 50–53). Sie hat keinen Höchstweg und braucht daher
+    eine Wegüberwachung durch den Jetson mit Not-Halt (0x0027 Bit 9).
+11. **Kraft begrenzen.** Während der Referenzfahrt werden Strom (0x0103) und
+    Schleppfehlergrenze (0x010A) gesenkt, soweit das Halten gegen die
+    Schwerkraft es zulässt (S. 75–76). Ab Werk steht die Grenze auf 4000
+    Zählschritten; bei 4000 Zählschritten je Motorumdrehung (0x0101) ist das
+    eine Motorumdrehung, an einem 72:1-Gelenk also 5°. Läuft das Gelenk auf,
+    meldet der Antrieb Err5 „Out of tolerance“ und muss aus- und
+    eingeschaltet werden (Hardware-Handbuch S. 10). Ob der Motor dabei hält
+    oder frei wird, wird in M1B geprüft.
+12. **Grenzen nach der Referenz.** Soft-Limits im Antrieb (0x0018 = 1,
+    0x0037–0x003A; wirksam erst nach der Referenz, S. 26–27 und 68; der
+    Fließtext nennt dafür 0x0019, das ist laut Tabelle die Wortfolge) und
+    gleiche oder engere Grenzen im Jetson. 0x0017 = 1 stellt beim Überfahren
+    Not-Halt statt Freilauf ein (S. 68); Freilauf ließe ein
+    schwerkraftbelastetes Gelenk fallen. Die Grenzen ergeben sich aus dem
+    Kabelbereich minus Reserve und auf der Parkseite kurz vor dem Roboter.
+13. **Mechanische Grenzen als letzte Schicht.** J1-Anschlag auf der
+    Parkseite, höchstens 1–2° hinter der Parkstellung; laut CAD bleiben der
+    Mittellinie eines 150-mm-Greifers dann real noch 54–67 mm zur
+    Deckschräge. Für Gelenke, deren Kabel beim Überfahren reißen würden,
+    besonders J4 und J6, wo konstruktiv möglich ebenfalls Anschläge vor der
+    Kabelgrenze.
+14. **Laufende Plausibilisierung.** Nach der Referenz muss der Sensor bei
+    jeder Überfahrt an der gespeicherten Kante schalten. Eine Abweichung
+    über der gemessenen Streuung bedeutet Referenzverlust oder Rutschen im
+    Antriebsstrang und führt zu FAULT.
 
 Achsbezogen nach CAD: Die freie Richtung führt für die Hubachse nach unten,
 für J1–J5 bewegt sie Handgelenk und Greifer nach hinten oder oben. J1 ist
-die kritische Achse: In der gesperrten Richtung setzt das Handgelenk nach 8°
-auf der Deckschräge auf, und dorthin zieht auch die Schwerkraft. J4 und J6
-brauchen wegen der Leitungen durch die Gelenke zusätzlich eine mechanische
-Drehbegrenzung; ihr Sektor gibt die Richtung zur Kante an.
+die kritische Achse: In der Gegenrichtung setzt das Handgelenk nach 8° auf
+der Deckschräge auf, und dorthin zieht auch die Schwerkraft; der Anschlag
+begrenzt das.
 
-**Alternative, Entscheidung beim Nutzer:** Absolutwertgeber am
-Gelenkausgang kennen die Stellung sofort nach dem Einschalten. Dann könnte
-der Arm nach einem Not-Aus aus jeder Stellung selbst einen kollisionsfreien
-Rückweg planen. Das kostet eigene Elektronik, Leitungen durch die Gelenke
-und eine eigene Kalibrierung; entschieden werden muss vor der Konstruktion
-der Gelenkabtriebe.
+Nicht empfohlen: Die Anschlag-Referenzfahrt (Modi −1 bis −4 mit
+Kollisionsschwelle und reduziertem Strom, 0x003B/0x003C, S. 70–71) drückt
+gegen einen Anschlag. An 55,25:1 und 72:1 entstehen dabei trotz
+Strombegrenzung große Kräfte am Abtrieb.
 
 ## 6. Greifer: Konzept vor dem Bau prüfen
 
@@ -631,8 +680,9 @@ unbeherrschte Lageänderung. Bei unzureichendem Halten mechanisch nacharbeiten.
 begrenzte Suche, Freifahren und langsames erneutes Anfahren der Kante,
 Home-Offset, Softlimits und echte JointStates. Homingreihenfolge auf
 kollisionsfreie Suchräume abstimmen, auch aus zulässigen Startlagen.
-Vorgeschlagenes Konzept mit Magnetsektor, Referenzkante auf der freien
-Seite und Einzelachsfolge aus der Parkpose: Abschnitt 5.
+Konzept mit Einzelmagnet, Referenzkante auf der freien Seite, begrenzter
+Suchfahrt, Strom- und Schleppfehlerbegrenzung, Soft-Limits und
+Einzelachsfolge aus der Parkstellung: Abschnitt 5.
 
 **Realtest:** Wiederholte Referenzierung, Magnet schon aktiv, fehlendes/
 daueraktives Signal, falsche Richtung, Drahtfehler und Restart.
@@ -774,9 +824,9 @@ Hubschlitten. Seit 11.11.2026: Achslagen und Abstände des neu konstruierten
 Arms sowie die Park-/Homing-Pose mit freien Richtungen je Achse aus dem CAD
 (siehe [ARM_KONTEXT](ARM_KONTEXT.md)).
 
-Jetzt benötigte Entscheidungen und Angaben: Bestätigung des Homing-Konzepts
-aus Abschnitt 5 (Kantenlage je Achse, Anschlag oder Auflage für J1,
-Absolutwertgeber ja oder nein), Homing-Funktion des ESS laut Handbuch,
+Jetzt benötigte Entscheidungen und Angaben: Gelenkbereich je Achse
+(Kabel- und mechanische Grenzen), Fensterbreite und Kantenlage je Achse,
+Winkel des J1-Anschlags,
 Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
 von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
 Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und

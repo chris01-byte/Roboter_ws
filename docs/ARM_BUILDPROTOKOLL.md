@@ -4,6 +4,30 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-11 — Dokumentation: Homing mit Einzelmagnet und Überfahrschutz
+
+Festlegungen des Nutzers: kein Magnetbogen, sondern ein Einzelmagnet je
+Achse; J1 erhält einen mechanischen Anschlag; Absolutwertgeber sind
+konstruktiv nicht mehr möglich; die Parkposition steht fest.
+
+Der Nutzer stellte das Modbus-Funktionshandbuch und das
+ESS17-Hardware-Handbuch bereit. Ausgewertet und mit Seitenangaben
+eingetragen: Eingangsfunktionen und Eingangsstatus, Referenzmodi 19–22 und
+35, Positionssetzen nach der Referenz, Soft-Limits, Verhalten beim
+Überfahren, Schleppfehlergrenze, Strombegrenzung und Alarm Err5.
+
+Konzept: Sensor in der Parkstellung aktiv, Referenz am Fensterende auf der
+freien Seite; Start nur bei aktivem Sensor; Suche als Positionsfahrt mit
+festem Höchstweg; Übergabe per Referenzmodus 35; danach Soft-Limits. Laut
+CAD darf der J1-Anschlag höchstens 1–2° hinter der Parkstellung liegen.
+
+Prüfung: nur Dokumentation, Verweise und Wortgrenze geprüft. Keine
+Registerschreibzugriffe, keine Hardwarewirkung; Antriebsfunktionen am Gerät
+unbestätigt.
+
+Nächster Schritt: Gelenkbereiche je Achse und Fensterbreite messen.
+Rückfallweg: Commit zurücknehmen.
+
 ## 2026-11-11 — Dokumentation: Parkpose ausgewertet, Homing-Konzept
 
 Ausgewertet wurde der zweite STEP-Export des Nutzers, eine mögliche

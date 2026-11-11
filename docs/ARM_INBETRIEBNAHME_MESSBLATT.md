@@ -124,9 +124,10 @@ Die genaue Verdrahtung wird erst aus der tatsächlichen Hardware freigegeben.
 | Sensortyp, Stückzahl, Pinansicht aus Originaldatenblatt | offen |
 | Versorgung VS und gemessene Spannung | offen |
 | Magnettyp, Polung, Abstand und mechanische Befestigung | offen |
-| Magnetsektor: Radius, Länge, lückenloses Schalten über die ganze Spur | offen |
-| Sensorzustand in der Parkpose (Konzept 11.11.2026: aktiv) | offen |
-| Lage der Referenzkante: Seite und Abstand zur Parkpose | offen; freie Seite je Achse laut CAD in [ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026) |
+| Einzelmagnet: Typ, Radius, Abstand; Fensterbreite in Grad, von Hand gemessen | offen |
+| Sensorzustand in der Parkstellung (Festlegung 11.11.2026: aktiv) | offen |
+| Lage der Referenzkante: Fensterende auf der freien Seite, Abstand zur Parkstellung | offen; freie Seite je Achse laut CAD in [ARM_KONTEXT](ARM_KONTEXT.md#park--und-homing-pose-aus-dem-cad-vom-11112026) |
+| Eingangsfunktion und Pegel X0–X3 (0x0040–0x0044) direkt nach dem Einschalten | offen; Hardware-Handbuch: unbestimmt, Registertabelle: X0 Ursprung |
 | Sensorausgang inaktiv / aktiv, jeweiliger Spannungspegel | offen |
 | Ausgangsstrom / zulässige Belastung / Temperaturbereich | offen |
 | Anpassschaltung, Schaltplanrevision, Pull-up bzw. Eingangslast | offen |
@@ -223,6 +224,12 @@ gesicherte mechanische Ausgangslage.
 | Referenz gültig nach Neustart? Begründeter Nachweis | offen |
 | Positionszähler vor/nach Aus- und Einschalten bei unbewegtem Arm | offen |
 | Schaltet der Sensor bei jeder Überfahrt an der gespeicherten Kante? | offen |
+| Höchstweg und Geschwindigkeit der Suchfahrt; Höchstweg kleiner als Freiraum der Gegenrichtung | offen |
+| Strom (0x0103) und Schleppfehlergrenze (0x010A) während der Referenzfahrt | offen |
+| Übergabe per Referenzmodus 35 mit 0x0030 = 6: Positionswert danach, Soft-Limits wirksam? | offen |
+| Verhalten beim Überfahren (0x0017, Soll: Not-Halt) und bei Err5 (hält oder frei?) | offen |
+| J1-Anschlag: Winkel zur Parkstellung (CAD-Vorschlag höchstens 1–2°) | offen |
+| Gelenkbereich je Achse aus Kabel- und mechanischen Grenzen | offen |
 
 Home ist nicht automatisch der geometrische Nullwinkel. Alle Winkel mit
 Messbezug angeben; Gradwerte ausdrücklich kennzeichnen und vor Übernahme
@@ -294,7 +301,7 @@ J4 0°, J5 +20°, J6 0°. Erst nach Referenzierung gemessen eintragen.
 | VL53-Sicht / Nahbereichsschutz | offen |
 | Kabel, Bauhöhe, seitlicher Überstand und Kollisionsfreiheit | Parkpose laut CAD: vorn 23 mm und hinten 22 mm über das Chassis, seitlich innerhalb; engste Abstände 7–23 mm; freie Richtung je Achse in ARM_KONTEXT; J2-Gehäuse ragt bei waagerechtem Arm rund 160 mm vor die Chassisfront; Kabel offen |
 | Zulässige Hubhöhe in Transportpose | Parkpose im CAD mit Hub oben; nach unten rechnerisch rund 164 mm frei ohne Greifer, rund 73 mm mit 150-mm-Greifer; Messung offen |
-| Mechanische Abstützung der Transportpose | Vorschlag: Anschlag oder Auflage für J1 auf der Parkseite (Schwerkraft zieht dorthin); offen |
+| Mechanische Abstützung der Transportpose | J1-Anschlag auf der Parkseite (Nutzer, 11.11.2026; Schwerkraft zieht dorthin), höchstens 1–2° hinter der Parkstellung; Bau und Prüfung offen |
 | Lastmasse / Schwerpunkt / zulässige Basisbeschleunigung | Nutzlast höchstens 1 kg (Nutzerangabe 08.11.); Massen noch nicht gewogen |
 | Kollisionsfreier Übergang ready ↔ stowed, leer und beladen | offen |
 | Frische reale Gelenkwerte / Stillstand vor Basisfreigabe | offen |

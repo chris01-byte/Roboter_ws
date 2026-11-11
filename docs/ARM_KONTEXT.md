@@ -194,7 +194,7 @@ ausführlich im [Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md#sensorlage-u
 | Halten | Keine Bremsen; Selbsthemmung soll praktisch erprobt werden | Haltevermögen je Gelenk und Hubspindel unter Last, Rücktreiben |
 | Not-Aus | Trennt die komplette Stromversorgung des Roboters | Ob auch der Jetson getrennt wird; Verhalten jeder Achse beim Abschalten |
 | Bus | Eigener RS485-Adapter für den Arm ist verbaut | Chip, Gerätepfad, udev-Alias, Baudrate, Terminierung |
-| Homing | TLE4905L als Referenzgeber vorgesehen; Konzept mit Magnetsektor und Referenzkante an der Parkpose vorgeschlagen (11.11.2026) | Bestätigung des Konzepts, Stückzahl, Kantenlage je Achse, Verdrahtung; Referenz und Endlagen der Hubachse; ob der ESS die Referenzfahrt selbst ausführt |
+| Homing | TLE4905L mit Einzelmagnet je Achse, in der Parkstellung aktiv; J1 mit mechanischem Anschlag; keine Absolutwertgeber (Nutzer, 11.11.2026); Referenz- und Grenzfunktionen des ESS aus dem Herstellerhandbuch belegt | Gelenkbereich je Achse (Kabel), Fensterbreite, Kantenlage, J1-Anschlagwinkel, Verdrahtung; Referenz und Endlagen der Hubachse; Antriebsfunktionen am Gerät bestätigen |
 | Montage | Arm in Einzelteilen; maßstäbliches CAD vorhanden; Hubschlitten-Unterkante gemessen 1140 mm | Montagezustand der Hubachse am Roboter |
 | Externer Armcode | Keiner | – |
 | Greifer | Noch nicht konstruiert; XL330 mit M6- oder ähnlicher Trapezspindel | XL330-Variante, Steigung, Hub, Führung, Endlagen, Kamerabauraum |
@@ -289,7 +289,12 @@ Details und Prüfablauf stehen im Integrationsplan. Für den NEMA23 in J1
 ist die elektrische und funktionale Eignung separat zu prüfen. Die Hubachse
 braucht zusätzlich eine eigene Referenz und Endlagen an beiden Hubenden.
 
-**Konzept vom 11.11.2026 (Vorschlag, Bestätigung durch den Nutzer offen):**
+**Festlegungen des Nutzers vom 11.11.2026:** ein Einzelmagnet je Achse,
+kein Magnetbogen; J1 bekommt einen mechanischen Anschlag; Absolutwertgeber
+sind konstruktiv nicht mehr möglich; die Parkposition steht fest.
+
+**Konzept daraus (Einzelheiten und Register im
+[Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md#sensorlage-und-referenzfahrt-aus-der-parkpose-konzept-11112026)):**
 
 - Die Motorgeber der ESS zählen inkrementell, und der Motor dreht je
   Gelenkumdrehung 72-mal (J1: 55,25-mal). Nach jedem Einschalten wird daher
@@ -298,15 +303,21 @@ braucht zusätzlich eine eigene Referenz und Endlagen an beiden Hubenden.
 - Sensor am Gelenkausgang, nicht am Motor: fest an dem Teil, das den
   Antrieb trägt, Magnet auf dem Abtrieb. Am Motor würde er 72-mal je
   Gelenkumdrehung schalten.
-- Magnetsektor statt Punkt: Der Sensor ist in der Parkpose aktiv. Der Sektor
-  reicht von der gesperrten Seite über die Parkpose bis wenige Grad auf die
-  freie Seite; sein Ende ist die Referenzkante. Der Zustand beim Einschalten
-  zeigt, auf welcher Seite der Kante das Gelenk steht.
-- Referenzfahrt: jede Achse einzeln aus der Parkpose in ihre freie Richtung
-  (siehe Tabelle oben), bis das Signal endet, danach referenziert zurück in
-  die Parkpose. Immer gleiche Anfahrrichtung, langsam, Suchweg begrenzt.
-- Automatisch nur, wenn alle Sensoren aktiv sind. Ist einer inaktiv, steht
-  der Arm nicht in der Parkpose; dann folgt eine beaufsichtigte Rückführung.
+- Sensorstellung: In der Parkstellung steht der Magnet dem Sensor
+  gegenüber, der Sensor ist aktiv. Referenz ist das Ende des Schaltfensters
+  auf der freien Seite, wenige Grad hinter der Parkstellung; der Rest des
+  Fensters überdeckt Parkstellung, Spiel, Durchhängen und bei J1 den
+  Anschlag.
+- Ein Einzelmagnet zeigt außerhalb seines Fensters nicht, auf welcher Seite
+  das Gelenk steht. Referenziert wird deshalb nur aus der Parkstellung bei
+  aktivem Sensor; sonst folgt eine beaufsichtigte Rückführung.
+- Überfahrschutz in Schichten: Suchfahrt als Positionsfahrt mit festem
+  Höchstweg, begrenzter Strom und Schleppfehler, nach der Referenz
+  Soft-Limits im Antrieb und im Jetson, zuletzt mechanische Anschläge.
+- J1-Anschlag höchstens 1–2° hinter der Parkstellung (Richtung Deck). Laut
+  CAD hat die Mittellinie eines 150-mm-Greifers dann noch rund 64–77 mm
+  (CAD) bzw. 54–67 mm (real) Abstand zur Deckschräge, bei 4° nur noch rund
+  29 mm (real).
 - Hubachse ebenso: Parkpose oben, Kante wenige Millimeter darunter,
   Referenzfahrt nach unten.
 
@@ -329,9 +340,9 @@ gleichzeitig momentlos. Bis Messungen etwas anderes zeigen, gilt:
   nicht vom Haltemoment der Antriebe abhängen. In der Parkpose vom
   11.11.2026 trägt nur J1 ein nennenswertes Schwerkraftmoment, und zwar zur
   gesperrten Seite: Ohne Selbsthemmung setzen Handgelenk oder Greifer nach
-  höchstens 8° auf der Deckschräge auf. Ein Anschlag oder eine Auflage für
-  J1 auf der Parkseite, kurz hinter der Parkpose, würde den Arm stromlos
-  definiert halten; der Magnetsektor von J1 überdeckt diese Stelle.
+  höchstens 8° auf der Deckschräge auf. Der Nutzer baut dafür einen
+  J1-Anschlag auf der Parkseite (11.11.2026); er hält den Arm stromlos in
+  definierter Lage, das Schaltfenster von J1 überdeckt ihn.
 
 ### Greifer
 
@@ -491,13 +502,13 @@ und getestet.
 
 ## Nächster konkreter Schritt
 
-1. Homing-Konzept bestätigen oder ändern und in die Konstruktion übernehmen:
-   Sensor- und Magnetlage je Achse einschließlich Hubachse, Kantenlage auf
-   der freien Seite, Anschlag oder Auflage für J1 auf der Parkseite.
-2. Im Modbus-Funktionshandbuch prüfen, ob der ESS eine Referenzfahrt mit
-   Home-Eingang selbst ausführt (Modus, Richtung, Geschwindigkeiten,
-   Statusmeldung). Der Abruf vom Herstellerserver war am 11.11.2026
-   gesperrt.
+1. Sensor und Magnet je Achse einschließlich Hubachse so setzen, dass sie
+   sich in der Parkstellung gegenüberstehen (im Fusion-Modell in der Pose der
+   Homing-STEP); Fensterende auf der freien Seite; J1-Anschlag höchstens
+   1–2° hinter der Parkstellung.
+2. Gelenkbereich je Achse angeben (Kabel- und mechanische Grenzen); daraus
+   Soft-Limits und Höchstwege der Suchfahrt ableiten. Antriebsfunktionen aus
+   dem Handbuch (Integrationsplan, Abschnitt 5) am Gerät bestätigen.
 3. Entscheidung zur OAK-Neigung nach der Raumsicht; die Parkpose schränkt
    sie nicht ein.
 4. Offene Hardwareangaben klären: Antrieb und Spindel der Hubachse,
@@ -521,7 +532,12 @@ Messzusammenfassungen und Verweise auf lokale Ablagen.
 
 - [ESS17-RS07 Produkt](https://www.omc-stepperonline.com/de/ess-serie-0-72nm-101-96oz-in-nema-17-integrierter-rs485-closed-loop-stepper-servomotor-24vdc-1000ppr-ess17-rs07)
 - [ESS17 Hardware-Handbuch](https://files.omc-stepperonline.com/ESS17-RS0407_Series_Bus_Integrated_Motor_Hardware_Manual.pdf)
+  (V1.0 vom 15.04.2025)
 - [Modbus-Funktionshandbuch V1.0](https://files.omc-stepperonline.com/Modbus-Series-Bus-Product-Function-Manual-V1.0_1.pdf)
+  (05.03.2025; gilt für ESS17-RSx1 und ESS23-RSx1). Der Herstellerserver
+  lehnte am 11.11.2026 den automatischen Abruf ab; der Nutzer hat beide
+  PDFs bereitgestellt, Seitenangaben im Integrationsplan beziehen sich auf
+  diese Fassungen.
 - [TLE49x5L Datenblatt](https://www.infineon.com/assets/row/public/documents/24/49/infineon-tle49x5l-datasheet-en.pdf):
   Hersteller-Direktlink beim aktuellen Abruf nicht erreichbar; genaue
   Bauteilvariante und aktuelle Originalunterlage vor Verdrahtung beschaffen.

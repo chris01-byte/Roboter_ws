@@ -17,6 +17,47 @@ Rückfallweg:
 
 ---
 
+## 2026-11-11 — Homing mit Einzelmagnet, Überfahrschutz über Antriebsfunktionen
+
+**Entscheidung:** Der Nutzer legt fest: ein Einzelmagnet je Achse statt
+eines Magnetbogens, ein mechanischer Anschlag an J1, keine
+Absolutwertgeber (konstruktiv nicht mehr möglich), Parkposition fest.
+Daraus: Sensor in der Parkstellung aktiv, Referenz am Fensterende auf der
+freien Seite. Referenziert wird nur aus der Parkstellung bei aktivem
+Sensor, die Suche ist eine Positionsfahrt mit festem Höchstweg, die
+Übergabe an den Antrieb erfolgt per Referenzmodus 35 mit Positionssetzen,
+danach gelten Soft-Limits im Antrieb und im Jetson.
+
+**Grund / beobachtete Evidenz:** Modbus-Funktionshandbuch V1.0 und
+ESS17-Hardware-Handbuch V1.0, vom Nutzer bereitgestellt. Die antriebsinternen
+Referenzmodi 19–22 haben keinen Höchstweg und suchen bei inaktivem Eingang
+in fester Richtung. Soft-Limits (0x0018, 0x0037–0x003A) wirken erst nach
+einer Referenz. Referenzmodus 35 übernimmt die aktuelle Position, 0x0030
+setzt dabei den Positionswert. 0x0017 wählt Not-Halt oder Freilauf beim
+Überfahren. Die Schleppfehlergrenze 0x010A steht ab Werk auf 4000
+Zählschritten (eine Motorumdrehung, 5° an einem 72:1-Gelenk). Die
+Eingangsfunktionen sind laut Hardware-Handbuch nach dem Einschalten
+unbestimmt. CAD: Dreht J1 über die Parkstellung zum Deck, bleiben der
+Mittellinie eines 150-mm-Greifers 83/77/64/52/39 mm (CAD) bei 0/1/2/3/4°.
+
+**Betroffene Dateien und Hardware:** ARM_KONTEXT, Integrationsplan,
+Messblatt, Build-Protokoll, PROJEKT_STATUS. Keine Hardware, keine
+Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Keine Registerschreibzugriffe; alle
+Antriebsfunktionen sind am Gerät unbestätigt.
+
+**Offene Risiken:** Fensterbreite und Gelenkbereiche (Kabel) fehlen. Das
+Verhalten bei Err5 (hält oder Freilauf) ist unbekannt. Das Handbuch
+widerspricht sich bei den Eingangsfunktionen nach dem Einschalten und beim
+Register der Soft-Limits (Tabelle 0x0018, Fließtext 0x0019). Für den
+ESS23 in J1 liegt kein eigenes Hardware-Handbuch vor. Nach einem Not-Aus
+außerhalb der Parkstellung ist nur eine beaufsichtigte Rückführung möglich.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-11 — Parkpose ausgewertet, Homing-Konzept vorgeschlagen
 
 **Entscheidung:** Die vom Nutzer konstruierte Homing-/Parkposition (zweiter
