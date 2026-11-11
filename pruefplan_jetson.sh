@@ -292,7 +292,7 @@ stage_B1_rviz() {
   info "(Fenster schliessen oder Strg+C hier im Terminal, wenn fertig geprueft)"
   ( cd "$WS_DIR" && ros2 launch robot_description display_dummy.launch.py use_rviz:=true )
 
-  if ask_jn "RViz zeigte Basis, Raeder, OAK, VL53, 6-Achs-Arm und gripper_tcp korrekt?"; then
+  if ask_jn "RViz zeigte Basis, Raeder, OAK und VL53 korrekt? (6-Achs-Dummy-Arm ist seit 08.11.2026 ueberholt, hier nicht pruefen)"; then
     ok "Bestaetigt."
     record "B1 Dummy-URDF/RViz" "OK" "manuell bestaetigt"
   else
@@ -885,8 +885,9 @@ stage_D1() {
 
 # --------------------------------------------------------------------------
 #  Stufe D2 - handeye_calibration (NEU): Paket-Grundcheck
-#  (volle Kalibrierung erst sinnvoll, wenn der echte Arm dran ist - siehe
-#   KONZEPT_KALIBRIERUNG_OAK_ARM.md, Stufe A)
+#  (volle Kalibrierung erst, wenn der echte Arm mit Modell und /joint_states
+#   laeuft - siehe docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md, Stufe M7; das
+#   Juli-Konzept KONZEPT_KALIBRIERUNG_OAK_ARM.md ist nur noch historisch)
 # --------------------------------------------------------------------------
 stage_D2() {
   banner "D2 [NEU] - handeye_calibration: Paket-Grundcheck"
@@ -911,8 +912,8 @@ stage_D2() {
   fi
 
   warn "Vollstaendiger Kalibrierlauf braucht den ECHTEN Arm (/joint_states) - siehe"
-  warn "KONZEPT_KALIBRIERUNG_OAK_ARM.md Stufe A. Hier nur Grundcheck, kein Datensammeln."
-  record "D2 handeye_calibration" "OK" "Paket vorhanden, Kalibrierlauf folgt nach Arm-Integration (Stufe A)"
+  warn "docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md Stufe M7. Hier nur Grundcheck, kein Datensammeln."
+  record "D2 handeye_calibration" "OK" "Paket vorhanden, Kalibrierlauf folgt nach Arm-Integration (Stufe M7)"
 }
 
 # --------------------------------------------------------------------------

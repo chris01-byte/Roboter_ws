@@ -282,8 +282,10 @@ mit optisch getrennten 24-V-Eingängen; daraus folgt **keine ungeprüfte direkte
 Verbindung**. Pegel, Strom, Polarität, Magnetlage und Eingangsfunktion vor Ort
 prüfen. Eine passende Transistor-/Optokopplerstufe ist ein Entwurfsvorschlag.
 
-Der Controller löst Homing aus und überwacht es; Linux-Polling soll die
-Referenzflanke nicht zeitkritisch bestimmen. Home-Signal, Homing-Start,
+Der Jetson löst die Referenzfahrt aus und überwacht sie. Gesucht wird mit
+sehr langsamer, wegbegrenzter Positionsfahrt; der Kantenfehler ist dann
+höchstens Geschwindigkeit mal Abfrageabstand (Einzelheiten im
+Integrationsplan). Home-Signal, Homing-Start,
 Endlagen und mechanischer Anschlag haben unterschiedliche Aufgaben.
 Details und Prüfablauf stehen im Integrationsplan. Für den NEMA23 in J1
 ist die elektrische und funktionale Eignung separat zu prüfen. Die Hubachse

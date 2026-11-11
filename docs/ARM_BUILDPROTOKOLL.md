@@ -4,6 +4,29 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-11 — Dokumentation: Restfragmente zum Arm bereinigt
+
+Auf Nutzerwunsch wurde das ganze Repository nach armbezogenen Begriffen
+durchsucht, Code, Konfiguration, App und Prüfskripte eingeschlossen.
+
+Bereinigt: Der Jetson-Prüfplan ließ den überholten Dummy-Arm in RViz als
+korrekt bestätigen und verwies für die Kalibrierung auf das historische
+Juli-Konzept; jetzt wird der Dummy-Arm ausgenommen und auf Stufe M7
+verwiesen. Das Kalibrierpaket erhielt einen Stand-Hinweis: historisches
+Konzept, abweichende Kamera-Frames, offenes Flansch-Frame. Ein Satz im
+Arm-Kontext widersprach dem neuen Homing-Ablauf.
+
+Bewusst belassen und gekennzeichnet: Dummy-URDF, Ablageposen im
+Missionskatalog, Greifer-Platzhalterwerte im Behavior-Tree, historisches
+Kalibrierkonzept und Archiv. Der alte CAD-Ordner bleibt bis zur
+Nutzerentscheidung.
+
+Prüfung: Shell-Syntax des Prüfplans, Verweise und Wortgrenze geprüft. Nur
+Texte geändert, keine Hardwarewirkung.
+
+Nächster Schritt: Arbeitsbranch nach main übernehmen. Rückfallweg: Commit
+zurücknehmen.
+
 ## 2026-11-11 — Dokumentation: Homing mit Einzelmagnet und Überfahrschutz
 
 Festlegungen des Nutzers: kein Magnetbogen, sondern ein Einzelmagnet je

@@ -1,5 +1,19 @@
 # handeye_calibration — Hand-Auge-Kalibrierung Arm <-> OAK (Eye-to-Hand)
 
+> **Stand 11.11.2026, zuerst lesen:** Dieses Paket stammt aus dem
+> Juli-Konzept, das inzwischen nur noch historisch ist. Maßgeblich sind
+> [ARM_KONTEXT](../../docs/ARM_KONTEXT.md) und der
+> [Integrationsplan](../../docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) (Stufe M7).
+> Die OAK dient beim Greifen nur der Erkennung und Anfahrdistanz; für eine
+> Kamera am Greifer fehlt ein Eye-in-Hand-Modus. Die Frame-Namen weichen vom
+> laufenden System ab: Das Werkzeug rechnet mit `camera_rgb_optical_frame`
+> aus der Dummy-URDF, der OAK-Treiber liefert `oak_rgb_camera_optical_frame`,
+> und die OAK-Lage kommt heute aus `oak.launch.py`, nicht aus der URDF. Das
+> Armmodell der Dummy-URDF ist überholt, der Flansch-Frame `tool0` noch offen.
+> Die Toleranzen unten sind Zielwerte des alten Konzepts, keine Zusage. Code
+> und Parameter sind unverändert; ihre Anpassung ist ein eigener, getesteter
+> Kalibrierschritt.
+
 Werkzeuge zu den Stufen **D/E/F** aus [`KONZEPT_KALIBRIERUNG_OAK_ARM.md`](../../KONZEPT_KALIBRIERUNG_OAK_ARM.md)
 (Workspace-Root). Erst Konzept lesen — die Stufen A–C (echtes Armmodell,
 Intrinsik-Check, Board am Flansch) sind Voraussetzung.
