@@ -48,7 +48,7 @@ Kennzeichnungen in diesem Plan:
 | Armcode außerhalb des Repos | Laut Nutzer keiner |
 | Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
-| Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Kamera am Handgelenk geplant (12.11.2026), Modell offen |
+| Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Orbbec Gemini 305 auf dem Handgelenkglied zwischen J5 und J6 (Nutzer, 12.11.2026) |
 | Fahrpose | Arm am 11.11.2026 neu konstruiert; Homing-/Parkposition als STEP ausgewertet: hinter dem Mast, im maskierten LiDAR-Sektor, außerhalb des OAK-Bildes; Abstützung, Kabel und Last offen |
 | Achsrichtung J2 | Seit der Neukonstruktion vom 11.11.2026 senkrecht bei waagerechtem Arm; J2 schwenkt seitlich |
 
@@ -476,15 +476,14 @@ fallen zu lassen. Diese Fälle gehören in die reale Greiferabnahme.
 ### Bauraum für die Kamera am Handgelenk
 
 Der Greifer ist noch nicht konstruiert und wird voraussichtlich bis etwa
-150 mm lang. Weil die OAK den Greifraum kaum einsieht (Abschnitt 8), plant
-der Nutzer eine Kamera am Arm (12.11.2026); das Modell ist offen. Für den
-ersten Prototyp ist eine günstige USB-Farbkamera mit festem Fokus empfohlen,
-dazu ein Abstandssensor und eine Lichtschranke im Greifer an dessen lokaler
-I/O-Einheit. Bauraum für 42 × 42 × 23 mm und rund 70 g sowie einen
-USB-3-fähigen Kabelweg vorsehen, damit später eine Tiefenkamera ohne
-Neukonstruktion passt. Alle Greiferleitungen laufen durch J4 und J6; deren
-Drehbereich wird dadurch begrenzt. Sitzt die Kamera zwischen J5 und J6,
-läuft ihr Kabel nicht durch J6.
+150 mm lang. Weil die OAK den Greifraum kaum einsieht (Abschnitt 8),
+kommt eine Orbbec Gemini 305 auf das Handgelenkglied zwischen J5 und J6
+(Nutzer, 12.11.2026): 42 × 42 × 23 mm, 68 g, USB-C mit USB 3. Ihr Kabel
+läuft über J5 und J4, nicht durch J6. Im Greifer bleibt eine Lichtschranke
+an dessen lokaler I/O-Einheit. Alle Greiferleitungen laufen durch J4 und
+J6; deren Drehbereich wird dadurch begrenzt. Montage, Neigung und Folgen
+für die Parkpose:
+[ARM_KONTEXT](ARM_KONTEXT.md#gemini-305-am-handgelenk-12112026).
 
 ## 7. Neutrale Transportpose und freie Sensorsicht
 
@@ -582,15 +581,15 @@ schränkt die Neigungswahl also nicht ein. Tabellen stehen in
 [ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung zur Neigung liegt beim
 Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
 
-**Stand 12.11.2026:** Der Nutzer plant eine Kamera am Arm für die
-Feinlokalisierung (Eye-in-Hand); das Modell ist offen, teure Tiefenkameras
-sind für den Prototyp zu teuer. Sie misst relativ zum Greifer, sodass
+**Stand 12.11.2026:** Für die Feinlokalisierung (Eye-in-Hand) kommt eine
+Orbbec Gemini 305 auf das Handgelenkglied zwischen J5 und J6 (Nutzer). Sie
+misst Farbe und Tiefe relativ zum Greifer, sodass
 Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und J2 im letzten
 Anfahrschritt kaum noch wirken. Sie bringt Masse, Kabel durch J4 und
-gegebenenfalls J6, Kalibrierung und Zeitstempelfragen mit. Eine günstige
-Farbkamera liefert keine Tiefe; den Abstand im letzten Stück misst dann ein
-Sensor im Greifer. Tiefenausfälle an transparenten oder glänzenden Flaschen
-und Licht sind bei jeder Variante zu prüfen. Vergleich und Empfehlung:
+gegebenenfalls J6, Kalibrierung und Zeitstempelfragen mit. Als passive
+Stereokamera braucht sie Textur und Licht; Tiefenausfälle an transparenten
+oder glänzenden Flaschen sind zu prüfen, eine Lichtschranke im Greifer
+bestätigt das Objekt. Montage und Bewertung:
 [ARM_KONTEXT](ARM_KONTEXT.md#greifraum-im-oak-bild-und-sensor-am-handgelenk-12112026).
 
 Erkennung liefert zunächst eine Klasse und eine Beobachtung, keine sichere
@@ -785,9 +784,9 @@ und Fehlerfälle bestanden. Fehlgriff wird erkannt, nicht als Erfolg gemeldet.
 **Software:** Vorhandene Kalibrierwerkzeuge mit überprüfter Mathematik,
 realen Frames, frischen Daten und versioniertem Ergebnis; Abschnitt 8 und
 [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md), Stufen K4–K6. Für die OAK reicht
-die Genauigkeit der Anfahrt (K1); die Kamera am Handgelenk braucht einen
-Eye-in-Hand-Modus im Löser (K5) und, falls sie keine Werkskalibrierung hat,
-eine eigene Intrinsik (K4).
+die Genauigkeit der Anfahrt (K1). Für die Gemini 305 wird die
+Werkskalibrierung geprüft (K4); der Löser braucht einen Eye-in-Hand-Modus
+mit Bezug auf das Handgelenkglied zwischen J5 und J6 (K5).
 
 **Realtest:** Boardmaße, Kamera-Intrinsik/Tiefe, statische Messpaare,
 unabhängiger Zeigetest im Greifraum; Montage und Lastzustand festhalten.
@@ -841,7 +840,7 @@ Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
 | C | Begrenzter Einzelachs-Jog, Stop-/Haltversuche | Noch zu bauen, braucht B und mechanische Versuchssicherung |
 | D | Homing, Skalen, Limits, echtes Armmodell | Nach Einzelachsabnahme |
 | E | Koordination, Plattform-Actions und Transportpose | Nach Timing-/Bahn-/Interlock-Nachweis |
-| F | Greifer mit Bauraum für die Kamera am Handgelenk, bekannte Griffe, Kalibrierung nach dem Kalibrierkonzept und Vision | Später, stufenweise; Kameramodell und Montageort vor der Greiferkonstruktion |
+| F | Greifer passend zur Gemini 305 zwischen J5 und J6, bekannte Griffe, Kalibrierung nach dem Kalibrierkonzept und Vision | Später, stufenweise; Kameraseite, Neigung und Kabelweg vor der Greiferkonstruktion |
 
 Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
 NEMA23 in J1, Hub, Reichweite, Transportpose, Nutzlast, Not-Aus-Wirkung und
@@ -852,7 +851,8 @@ Arms sowie die Park-/Homing-Pose mit freien Richtungen je Achse aus dem CAD
 
 Jetzt benötigte Entscheidungen und Angaben: Gelenkbereich je Achse
 (Kabel- und mechanische Grenzen), Fensterbreite und Kantenlage je Achse,
-Winkel des J1-Anschlags, Modell und Montageort der Kamera am Handgelenk,
+Winkel des J1-Anschlags, Seite und Neigung der Gemini 305 und der
+J5-Winkel der Parkpose,
 Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
 von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
 Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und

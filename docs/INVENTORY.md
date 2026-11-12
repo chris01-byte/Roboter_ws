@@ -46,7 +46,7 @@ aber nicht abschließend abgenommen · **Entwurf** = vorhanden, ungetestet
 | `smartphone_gui` | Weboberfläche | erprobt |
 | `robot_face` | Gesichtsanzeige | erprobt |
 | `explore` | Dreistufige Erkundung: Rundblick, sichere Frontier-Ziele und adaptive Abdeckung aus realer Fahrspur | **produktiv** (88,30 % im beaufsichtigten Akku-Realtest) |
-| `handeye_calibration` | Eye-to-Hand-Werkzeuge aus dem Juli-Konzept; Eye-in-Hand-Modus für die Kamera am Handgelenk fehlt ([Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md)) | Entwurf |
+| `handeye_calibration` | Eye-to-Hand-Werkzeuge aus dem Juli-Konzept; Eye-in-Hand-Modus für die Gemini 305 am Handgelenk fehlt ([Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md)) | Entwurf |
 | `mock_servers` | Testgegenstellen ohne Hardware | erprobt |
 | `behaviortree_ros2` | **Submodul** → github.com/BehaviorTree/BehaviorTree.ROS2 (humble) | extern |
 

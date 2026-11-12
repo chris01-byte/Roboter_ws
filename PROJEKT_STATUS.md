@@ -10,11 +10,11 @@
 
 Die OAK sieht den Greifraum kaum: Bei heutiger Neigung liegt eine
 Tischfläche erst ab 0,59 m vor der Chassisfront im Bild, der Arm reicht mit
-Greifer bis 0,81 m. Der Nutzer plant deshalb eine Kamera am Handgelenk; für
-den Prototyp ist eine günstige USB-Kamera mit Abstandssensor und
-Lichtschranke im Greifer empfohlen. Das Juli-Kalibrierkonzept ist durch das
-[Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md) ersetzt (Eye-in-Hand, OAK
-nur grob). Offen: Kameramodell, Montageort und Kabelweg.
+Greifer bis 0,81 m. Der Nutzer hat deshalb eine Orbbec Gemini 305 für das
+Handgelenkglied zwischen J5 und J6 gewählt. Das Juli-Kalibrierkonzept ist
+durch das [Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md) ersetzt
+(Eye-in-Hand, OAK nur grob). Offen: Kameraseite und Neigung, J5-Winkel der
+Parkpose (mit Kamera oben eng zum Deck), Kabelweg und Treiber.
 
 ## Arm-Ergänzung vom 11.11.2026
 
@@ -105,7 +105,7 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 | Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
 | Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
 | Arm-Integration | Read-only Build A auf PR #106; Arm in Einzelteilen, Aufbau aus Hubachse und sechs Drehgelenken bekannt; Parkpose ausgewertet, Homing-Konzept mit Einzelmagnet festgelegt. Bewegungsansteuerung, Homing und echtes Modell fehlen. | Gelenkbereiche je Achse angeben; Hubachse, J6 und Gewichte klären, Inventarschema erweitern, dann M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
-| Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Kamera am Handgelenk geplant (12.11.2026); neues [Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md); Recorder und Löser für Eye-to-Hand existieren. | Kameramodell und Montageort vor der Greiferkonstruktion festlegen; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
+| Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Orbbec Gemini 305 zwischen J5 und J6 gewählt (12.11.2026); neues [Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md); Recorder und Löser für Eye-to-Hand existieren. | Kameraseite, Neigung und J5-Parkwinkel vor der Greiferkonstruktion festlegen; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
 | App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 
 ## Sicherheitsrahmen

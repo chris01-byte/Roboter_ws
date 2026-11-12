@@ -4,6 +4,29 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-12 — Dokumentation: Orbbec Gemini 305 zwischen J5 und J6
+
+Der Nutzer hat die Orbbec Gemini 305 gewählt und setzt sie auf das
+Handgelenkglied zwischen J5 und J6. Sein Datenblatt V1.0 ist ausgewertet:
+passives Farb-Stereo, ideal 7–50 cm, Mindestabstand 40–180 mm je nach
+Einstellung, USB-C mit USB 3, höchstens 2 W, Gehäuserückseite bis 60 °C.
+
+Im CAD wurde die Kamera als Quader an vier Seiten des Handgelenkglieds
+geprüft. Empfehlung: oben, leicht zur Greiferachse geneigt. Dann liegt sie
+in der heutigen Parkpose nur 34 mm vor der Deckschräge, am J1-Anschlag
+16 mm (CAD). Ein J5-Winkel von +30 bis +40° statt +20° in der Parkpose
+schafft 51–67 mm; Entscheidung beim Nutzer.
+
+Angepasst: Kalibrierkonzept (K4 prüft die Werkskalibrierung, K5 bezieht sich
+auf das Handgelenkglied statt den Flansch), ARM_KONTEXT, Integrationsplan,
+Messblatt, Projektstatus, Inventar, Kalibrierpaket-README.
+
+Prüfung: nur Dokumentation, Verweise und Wortgrenze geprüft. Herstellerangaben
+nicht am Gerät geprüft. Keine Hardwarewirkung.
+
+Nächster Schritt: J5-Parkwinkel und Kameraseite entscheiden, dann
+Hall-Sensor J5 setzen. Rückfallweg: Commit zurücknehmen.
+
 ## 2026-11-12 — Dokumentation: Kalibrierkonzept neu, Kamera am Handgelenk
 
 Der Nutzer plant eine Kamera am Arm; RGB-D-Kameras für kurze Distanz (Orbbec

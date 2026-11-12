@@ -348,16 +348,19 @@ Verfahren und Stufen K1–K7: [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md).
 
 | Kalibrierdatum | Eintrag |
 |---|---|
-| Kamera am Handgelenk: Modell, Montageort, Kabelweg (Nutzer plant sie seit 12.11.2026) | offen |
+| Gemini 305 (Nutzer, 12.11.2026): Seriennummer, Firmware, Seite und Neigung am Handgelenkglied | offen |
+| Gemini 305: Preset, Auflösung, Bildrate, Disparitätsbereich, USB-3-Verbindung bestätigt | offen |
+| Kabelweg Gemini bis Jetson: Länge, Kabeltyp, Schleifen an J5 und J4 | offen |
+| Abstand Gemini zum Deck in der Parkpose und am J1-Anschlag, gemessen | offen; CAD bei J5 +20°: 34 mm, am Anschlag 2° weiter 16 mm |
 | Fangbereich des Greifers: seitlich, axial, Winkel (K3) | offen |
 | Vorposition: Abstand zum Objekt, Bildwinkel, zulässiger Grobfehler (Sichtfeldbedingung) | offen |
-| Intrinsik Handgelenkkamera: Auflösung, Fokus fixiert, camera_info-Datei (K4) | offen |
-| Ergebnis Flansch → Handgelenkkamera, Residuen, Konsistenz der Boardlage (K5) | offen |
-| Abstandssensor und Lichtschranke im Greifer: Lage, Schaltpunkt (K3) | offen |
+| Prüfung der Werkskalibrierung Gemini: Reprojektion, Tiefe gegen Maß, Deckung Tiefe/Farbe (K4) | offen |
+| Ergebnis Handgelenkglied → Gemini, Residuen, Konsistenz der Boardlage (K5) | offen |
+| Lichtschranke im Greifer: Lage, Schaltpunkt (K3) | offen |
 | Prüfmarke für die Schnellprüfung: Ort und Sollwert | offen |
 | Reales Armmodell / TCP-Version / gemeinsame Montage | offen |
 | Kamera-ID / Optik / Auflösung / passende camera_info | offen |
-| Framekette base_link → … → oak_rgb_camera_optical_frame und base_link → … → Flansch → Handgelenkkamera | offen |
+| Framekette base_link → … → oak_rgb_camera_optical_frame und base_link → … → Handgelenkglied → Gemini | offen |
 | Boardtyp / real vermessene Abmessungen / Befestigung | offen |
 | Gelenk- und Bildzeitstempel / Stillstandsprüfung | offen |
 | Anzahl und räumliche Verteilung der Messposen | offen |

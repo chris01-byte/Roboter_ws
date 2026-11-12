@@ -17,6 +17,42 @@ Rückfallweg:
 
 ---
 
+## 2026-11-12 — Orbbec Gemini 305 zwischen J5 und J6
+
+**Entscheidung:** Der Nutzer setzt eine Orbbec Gemini 305 auf das
+Handgelenkglied zwischen J5 und J6, vor dem Drehgelenk des Greifers. Das
+Kalibrierkonzept ist darauf angepasst: Werkskalibrierung prüfen statt selbst
+kalibrieren (K4), Eye-in-Hand mit Bezug auf das Handgelenkglied statt den
+Flansch (K5). Offen und beim Nutzer: Kameraseite, Neigung und der
+J5-Winkel der Parkpose.
+
+**Grund / beobachtete Evidenz:** Datenblatt V1.0 vom 06.01.2026 (vom Nutzer
+bereitgestellt): passives Farb-Stereo mit 18 mm Basis, ideal 7–50 cm,
+Mindestabstand 40–180 mm je nach Disparitätsbereich und Auflösung, Sichtfeld
+Tiefe 88° × 65°, USB-C mit USB 3 (über USB 2 nur bis 848 × 530 bei 15
+Bildern/s), höchstens 2 W, Gehäuserückseite bis 60 °C, 42 × 42 × 23 mm,
+68 g, Befestigung unten 1/4 Zoll und 2 × M3. CAD-Rechnung mit einem Quader
+an vier Seiten des Handgelenkglieds: oben 34 mm Abstand zur Deckschräge in
+der Parkpose und 16 mm am J1-Anschlag 2° weiter; unten 73 mm, links 63 mm,
+rechts 51 mm. Mit J5 +30° bzw. +40° in der Parkpose steigt der Abstand oben
+auf 51 bzw. 67 mm. Der Greifpunkt liegt rund 15 cm vor der Kamera.
+
+**Betroffene Dateien und Hardware:** ARM_KALIBRIERKONZEPT, ARM_KONTEXT,
+Integrationsplan, Messblatt, Build-Protokoll, PROJEKT_STATUS, INVENTORY,
+Kalibrierpaket-README. Keine Hardware, keine Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Herstellerangaben und CAD-Rechnung ohne
+Kabel und Greiferform; nichts am Gerät geprüft.
+
+**Offene Risiken:** Mit der Kamera oben und heutiger Parkpose wird es am
+Deck eng. Das USB-3-Kabel muss über J5, J4, J1 und die Hubachse, empfohlen
+sind höchstens 3 m. Treiberunterstützung auf dem Jetson und das genaue
+Jetson-Modell sind unbestätigt. Durchsichtige Flaschen liefern Tiefenlücken.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-12 — Kamera am Handgelenk geplant, Kalibrierkonzept neu
 
 **Entscheidung:** Der Nutzer plant eine Kamera am Arm. RGB-D-Kameras für

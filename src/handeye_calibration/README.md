@@ -5,8 +5,9 @@
 > [Kalibrierkonzept](../../docs/ARM_KALIBRIERKONZEPT.md) (Stufen K1–K7) mit
 > dem [Integrationsplan](../../docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) (Stufe M7).
 > Die OAK dient beim Greifen nur der Erkennung und Anfahrdistanz; den Griff
-> führt eine geplante Kamera am Handgelenk. Der Recorder ist dafür mit
-> anderen Topics verwendbar, der Löser braucht einen Eye-in-Hand-Modus. Die Frame-Namen weichen vom
+> führt eine Orbbec Gemini 305 zwischen J5 und J6. Der Recorder ist dafür mit
+> anderen Topics und dem Frame des Handgelenkglieds verwendbar, der Löser
+> braucht einen Eye-in-Hand-Modus. Die Frame-Namen weichen vom
 > laufenden System ab: Das Werkzeug rechnet mit `camera_rgb_optical_frame`
 > aus der Dummy-URDF, der OAK-Treiber liefert `oak_rgb_camera_optical_frame`,
 > und die OAK-Lage kommt heute aus `oak.launch.py`, nicht aus der URDF. Das

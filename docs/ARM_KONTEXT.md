@@ -7,7 +7,7 @@ Repository rekonstruierten Angaben, die Nutzerangaben vom 08.11.2026
 vom 11.11.2026: gestreckte Pose und mögliche Homing-/Parkposition). Die
 Kinematik aus den Exporten vom 09.11.2026 ist überholt: Dort war J2 falsch
 zusammengebaut. Am 12.11.2026 kamen die Rechnung zur Sicht der OAK auf den
-Greifraum, die geplante Kamera am Handgelenk und das neue
+Greifraum, die Orbbec Gemini 305 am Handgelenk und das neue
 [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md) hinzu.
 Der ursprüngliche lokale Wortlaut vom Oktober ist nicht zugänglich. Werte aus
 dem CAD sind als solche gekennzeichnet; als „gemessen“ gelten nur ausdrücklich
@@ -203,7 +203,7 @@ ausführlich im [Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md#sensorlage-u
 | Externer Armcode | Keiner | – |
 | Greifer | Noch nicht konstruiert; XL330 mit M6- oder ähnlicher Trapezspindel | XL330-Variante, Steigung, Hub, Führung, Endlagen, Kamerabauraum |
 | Kraftfeedback | Zwei Sensoren mit ohmschem Widerstandssignal | Typ, Kennlinie, Elektronik, ADC und Auswertung |
-| Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz; Kamera am Handgelenk geplant (Nutzer, 12.11.2026) | Kameramodell (teure RGB-D-Kameras für den Prototyp zu teuer), Montageort, Kabelweg; Abstandssensor und Lichtschranke im Greifer |
+| Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz; Orbbec Gemini 305 auf dem Handgelenkglied zwischen J5 und J6 (Nutzer, 12.11.2026) | Kameraseite und Neigung, J5-Winkel der Parkpose, Kabelweg, Treiber auf dem Jetson, Lichtschranke im Greifer |
 | Transport | Homing-/Parkposition des Nutzers als STEP ausgewertet (11.11.2026): hinter dem Mast, außerhalb des OAK-Bildes, im maskierten LiDAR-Sektor | Abstützung, Pose mit Greifer und Last, Kabel, Footprint hinten, Kippsicherheit, praktische Prüfung |
 | Last | Höchstens 1 kg | Ob inklusive Greifer; Massen und Schwerpunkte |
 
@@ -374,8 +374,8 @@ mehrgängigen Spindelweg. Motorstrom allein beweist keine Griffkraft.
 Spindelselbsthemmung kann Druck auch nach einem Motorstopp aufrechterhalten.
 
 Da der Greifer noch nicht konstruiert ist, jetzt Bauraum, Masse und
-Kabelweg für die geplante Kamera am Handgelenk sowie für Abstandssensor und
-Lichtschranke im Greifer einplanen (siehe Kamerastrategie). Alle Leitungen
+Kabelweg für die Gemini 305 zwischen J5 und J6 sowie für die Lichtschranke
+im Greifer einplanen (siehe Kamerastrategie). Alle Leitungen
 zum Greifer laufen durch J4 und J6; deren Drehbereich wird dadurch begrenzt.
 
 ### Transportpose
@@ -486,14 +486,14 @@ Greifer oder Handgelenk nahe (Eye-in-Hand). Er misst das Objekt relativ zum
 Greifer; Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und J2
 wirken dann im letzten Anfahrschritt kaum noch. Er bringt Masse, Kabel durch
 J4 und gegebenenfalls J6, eine eigene Kalibrierung und Zeitstempelfragen
-mit. Der Nutzer plant seit dem 12.11.2026 eine Kamera am Arm (unten).
+mit. Seit dem 12.11.2026 ist das die Orbbec Gemini 305 zwischen J5 und J6
+(unten).
 
 ### Greifraum im OAK-Bild und Sensor am Handgelenk (12.11.2026)
 
 **Frage des Nutzers:** Braucht der Arm eine zusätzliche Kamera am Arm, die
-den Greifer im Blick hat? **Stand:** Der Nutzer plant eine Kamera am Arm;
-RGB-D-Kameras für kurze Distanz sind ihm für den ersten Prototyp zu teuer.
-Kameramodell und Montageort sind offen. Evidenz dazu:
+den Greifer im Blick hat? **Stand:** Ja; der Nutzer hat sich für die Orbbec
+Gemini 305 zwischen J5 und J6 entschieden (unten). Evidenz zur OAK:
 
 Ab welcher Entfernung vor der Chassisfront eine waagerechte Fläche im Bild
 liegt (rechnerisch, 16:9, Kamerahöhe 1,35 m gemessen). Der gestreckte Arm
@@ -525,49 +525,79 @@ reicht laut CAD bis 0,66 m (Flansch) bzw. 0,81 m (150-mm-Greifer):
 - Stereotiefe braucht Textur. Durchsichtige oder glänzende Flaschen liefern
   Lücken; das gilt für die OAK wie für passive Stereokameras am Handgelenk.
 
-**Empfehlung (Agent):** einen Sensor am Handgelenk einplanen, der in
-Greifrichtung schaut und die Fingerspitzen am Bildrand sieht. Eine Kamera,
-die den Greifer nur von außen beobachtet, löst die Punkte oben nicht. Für
-die Armabnahme bis zum Greifen an bekannter Position (M0–M6) wird er nicht
-gebraucht. Bauraum, Masse und Kabelweg müssen aber feststehen, bevor
-Greifer und Gelenkdurchführungen konstruiert werden.
+Verglichen wurden am 12.11.2026 günstige USB-Farbkameras mit Abstandssensor
+sowie die Tiefenkameras RealSense D405, Luxonis OAK-D SR und Orbbec
+Gemini 305. Der Nutzer hat sich für die Gemini 305 entschieden.
 
-| Montageort | Kabel | Abstand zum Greifpunkt | Folge |
-|---|---|---|---|
-| Am Greifer, hinter J6 | durch J4 und J6 | rund 10–15 cm bei 150 mm Greiferlänge | Finger stehen fest im Bild; braucht eine Kamera mit sehr kurzem Mindestabstand |
-| Am Handgelenkglied zwischen J5 und J6 | durch J4, nicht durch J6 | rund 25–30 cm (J5 bis Flansch 149 mm plus Greifer) | Greifer dreht sich im Bild und verdeckt einen Teil; 20 cm Mindestabstand genügen |
+### Gemini 305 am Handgelenk (12.11.2026)
 
-Kandidaten nach Herstellerangaben (abgerufen 12.11.2026, nicht am Gerät
-geprüft; Preise schwanken je Händler):
+**Nutzerentscheidung:** Orbbec Gemini 305 auf dem Handgelenkglied zwischen
+J5 und J6, also vor dem Drehgelenk des Greifers. Sie dreht mit J1–J5, aber
+nicht mit J6. Kameradaten aus dem Datenblatt V1.0 und ihre Folgen für die
+Kalibrierung stehen im [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md),
+Abschnitt 6.
 
-| Kamera | Tiefe | Abstand | Größe, Masse | Anschluss | Preis |
-|---|---|---|---|---|---|
-| Orbbec Gemini 305 | Stereo, 18 mm Basis, ohne Projektor | ideal 7–50 cm, ab 4 cm | 42 × 42 × 23 mm, 68 g | USB (Version nicht geprüft) | 229 US-$ im Herstellershop, bei Händlern rund 340–380 US-$ |
-| Intel RealSense D405 | Stereo | ideal 7–50 cm | 42 × 42 × 23 mm, 60–72 g | USB 3.1 (USB 2 nicht bestätigt) | nicht ermittelt |
-| Luxonis OAK-D SR | Stereo | ab 20 cm, empfohlen 30 cm bis 1 m | 56 × 36 × 25,5 mm, 72 g | USB 2 und 3, bis etwa 5 W | rund 230–330 US-$ |
-| Arducam USB-Kameramodul (UVC), zum Beispiel 1080p mit M12-Objektiv oder 1 MP Global Shutter | keine | Fokus von Hand auf die Arbeitsdistanz | Platine 38 × 38 mm | USB 2, Standardtreiber | rund 40–60 US-$ |
-| VL53L7CX auf Trägerplatine (Pololu) | 8 × 8 Zonen Lichtlaufzeit | bis 350 cm | kleine Platine | I²C | rund 20 US-$ |
+Bewertung des Montageorts (Agent): sinnvoll.
 
-**Empfehlung für den ersten Prototyp (Agent):** günstige USB-Farbkamera mit
-festem Fokus am Handgelenk plus Abstandssensor (zum Beispiel VL53L7CX, den
-das Projekt schon an der Basis nutzt) und Lichtschranke im Greifer, zusammen
-rund 60–80 US-$. Die Kamera zentriert den Greifer auf das Objekt, der
-Abstandssensor misst das letzte Stück, Lichtschranke und Kraftsensoren
-bestätigen den Griff. Für aufrecht stehende Flaschen genügt das; eine
-Tiefenkamera wird erst für unbekannte Objektformen, Schräglagen oder
-Durcheinander nötig. Für einen späteren Wechsel Bauraum für
-42 × 42 × 23 mm und rund 70 g sowie einen Kabelweg für ein USB-3-fähiges
-Kabel vorsehen. Zu prüfen sind in jedem Fall Kabellänge und
-Spannungsabfall bis zum Jetson, die Rechenlast eines zweiten
-Kamerastroms, der Platz in der Parkpose (Handgelenk 9 mm neben dem
-Unterarm, 69 mm hinter dem Mast) und bei Luxonis-Kameras die Unterstützung
-durch den hier eingesetzten Treiberstand. Kalibrierung beider Varianten:
-[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md).
+- Das Kamerakabel läuft nicht durch J6; J6 wird dadurch nicht begrenzt.
+- Die Kamerapose hängt nur von Hubachse und J1–J5 ab. Der Greifpunkt liegt
+  auf der J6-Achse, sein Abstand zur Kamera ändert sich mit J6 nicht.
+- Abstand Kamera–Greifpunkt rund 15 cm, Vorposition 25–40 cm: beides im
+  Idealbereich von 7–50 cm.
+- Nachteile: J6 dreht die Finger im Bild, ein Finger kann bei gedrehtem
+  Greifer die Sicht verdecken. Die Kamera sitzt neben der Greiferachse
+  (Parallaxe, wird in K5 kalibriert). Das USB-Kabel muss über J5 und J4.
 
-Unabhängig von der Kamera: Ob ein Objekt zwischen den Fingern liegt und
-gehalten wird, melden besser eine Lichtschranke oder ein Abstandssensor im
-Greifer und die beiden Kraftsensoren. Sie hängen an der lokalen
-I/O-Einheit, die der Greifer ohnehin braucht.
+Rechnung im CAD mit einem Quader von 42 × 42 × 23 mm, Frontscheibe 22 mm
+hinter der Flanschfläche, 5 mm Abstand zum Handgelenkglied (Stellungen
+relativ zur gestreckten Nullpose; Abstände im CAD, real rund 10 mm weniger
+zum Deck):
+
+| Kameraseite | Parkpose heute (J5 +20°) | J1 zum Deck bis zur Berührung | J5 aus der Parkpose frei | Bemerkung |
+|---|---|---|---|---|
+| oben (zeigt bei gestrecktem Arm nach oben) | 34 mm zur Deckschräge | 5° | über ±135° | übliche Lage über dem Greifer; in der Parkpose eng |
+| unten | 73 mm | 14° | über ±135° | Kamera unter dem Greifer behindert Griffe nahe der Tischfläche |
+| links | 63 mm | 13° | +123° | seitlicher Versatz |
+| rechts | 51 mm | 11° | −57° | schränkt J2, J3 und J5 aus der Parkpose ein |
+
+**Empfehlung (Agent):** Kamera oben, mit der Unterseite auf dem Halter (so
+steht das Bild laut Datenblatt richtig herum), leicht zur Greiferachse
+geneigt. Mit Annahme Greifpunkt 110 mm vor dem Flansch liegt er ohne
+Neigung 24° unter der Bildmitte; etwa 10–15° Neigung legen ihn ins untere
+Bilddrittel und das Objekt in der Vorposition fast in die Bildmitte.
+Endgültig aus dem Greifer-CAD festlegen.
+
+**Folge für die Parkpose:** Mit der Kamera oben liegt sie in der heutigen
+Parkpose 34 mm vor der Deckschräge, am J1-Anschlag 2° weiter nur noch
+16 mm (CAD). Real ist das zu knapp. Abhilfe ist ein größerer J5-Winkel in
+der Parkpose (Entscheidung beim Nutzer, vor dem Setzen des J5-Hall-Sensors):
+
+| J5 in der Parkpose | Kamera zum Deck | am J1-Anschlag 2° weiter | Greifermittellinie zum Deck | Überstand hinten |
+|---|---|---|---|---|
+| +20° (heute) | 34 mm | 16 mm | 84 mm | 22 mm |
+| +30° | 51 mm | 32 mm | 107 mm | 22 mm |
+| +40° | 67 mm | 48 mm | 144 mm | 49 mm |
+
+Weitere Punkte zur Montage:
+
+- Kabel: USB-C mit Schraubverriegelung an der Kameraseite. Laut Hersteller
+  ein USB-IF-zertifiziertes Kabel bis 3 m; den Weg über J5, J4, Ellenbogen,
+  J1 und die Hubachse bis zum Jetson messen, Schleifen für J5 und J4
+  vorsehen. USB 3 verwenden; über USB 2 liefert die Kamera Tiefe und Farbe
+  nur bis 848 × 530 bei 15 Bildern/s.
+- Halter: Die Gehäuserückseite wird bis 60 °C warm; den Halter nicht aus
+  PLA drucken. Befestigung über die beiden M3 an der Unterseite (20 mm
+  Abstand) oder das 1/4-Zoll-Gewinde.
+- Masse: Kamera, Halter und Kabel rund 0,1 kg am Handgelenk; das geht von
+  der Nutzlast von 1 kg ab und belastet J2–J5.
+- Jetson: Der Hersteller nennt Jetson Orin Nano, NX, AGX und Thor mit
+  Ubuntu 22.04 oder 24.04. Ubuntu 22.04 auf dem Jetson spricht für ein
+  Orin-Modul; bestätigen. Zweiter Kamerastrom: Auflösung und Bildrate nur
+  so hoch wie nötig, Strom nur während des Greifens.
+- Treiber: Orbbec SDK und ROS-2-Treiber für Humble; Unterstützung der
+  Gemini 305 prüfen.
+- Lichtschranke im Greifer bleibt: passives Stereo braucht Textur und
+  Licht, durchsichtige Flaschen liefern Tiefenlücken.
 
 Für die OAK genügt damit eine Montagegenauigkeit im Zentimeterbereich für
 die Anfahrt. Verfahren, Reihenfolge und Grenzwertableitung für OAK,
@@ -607,10 +637,10 @@ und getestet.
 2. Gelenkbereich je Achse angeben (Kabel- und mechanische Grenzen); daraus
    Soft-Limits und Höchstwege der Suchfahrt ableiten. Antriebsfunktionen aus
    dem Handbuch (Integrationsplan, Abschnitt 5) am Gerät bestätigen.
-3. Kamera am Handgelenk festlegen: Modell für den Prototyp, Montageort,
-   Kabelweg durch J4 und gegebenenfalls J6 (USB-3-fähig planen),
-   Abstandssensor und Lichtschranke im Greifer. Muss feststehen, bevor
-   Greifer und Gelenkdurchführungen konstruiert werden.
+3. Gemini 305: Kameraseite und Neigung festlegen, J5-Winkel der Parkpose
+   entscheiden (Empfehlung +30 bis +40° bei Kamera oben), bevor der
+   J5-Hall-Sensor gesetzt wird; Kabelweg über J5 und J4 messen;
+   Lichtschranke im Greifer einplanen; Treiber auf dem Jetson prüfen.
 4. Entscheidung zur OAK-Neigung nach der Raumsicht; die Parkpose schränkt
    sie nicht ein. Mit einem Sensor am Handgelenk muss die OAK den Greifraum
    nicht mehr abdecken.
