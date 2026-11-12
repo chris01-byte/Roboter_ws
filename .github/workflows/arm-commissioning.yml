@@ -1,0 +1,92 @@
+name: Arm commissioning
+
+on:
+  pull_request:
+    paths:
+      - "src/arm_hardware/**"
+      - "src/arm_tools/**"
+      - "src/arm_bringup/**"
+      - "docs/ARM_BUILDPROTOKOLL.md"
+      - ".github/workflows/arm-commissioning.yml"
+  push:
+    branches: ["feature/arm-commissioning-foundation"]
+    paths:
+      - "src/arm_hardware/**"
+      - "src/arm_tools/**"
+      - "src/arm_bringup/**"
+      - "docs/ARM_BUILDPROTOKOLL.md"
+      - ".github/workflows/arm-commissioning.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install pinned serial libraries
+        run: python -m pip install -r src/arm_hardware/requirements-modbus.txt
+      - name: Compile and run negative, CLI and pseudo-terminal tests
+        env:
+          PYTHONPATH: src/arm_hardware:src/arm_tools
+        run: |
+          python -m compileall -q src/arm_hardware src/arm_tools src/arm_bringup
+          python -m unittest discover -s src/arm_hardware/test -v
+          python -m unittest discover -s src/arm_tools/test -v
+      - name: Build and install the three packages
+        run: python -m pip install --no-deps ./src/arm_hardware ./src/arm_bringup ./src/arm_tools
+      - name: Check installed CLI outside the checkout
+        run: |
+          cd "$(mktemp -d)"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          import sysconfig
+          directory = Path(sysconfig.get_path("data")) / "share/arm_bringup/config"
+          requirements = directory.parent.parent / "arm_hardware/requirements-modbus.txt"
+          assert requirements.read_text().splitlines() == ["pymodbus==3.14.0", "pyserial==3.5"]
+          for name, mode in (("arm_inventory.json", "validate"), ("synthetic_arm.json", "fake")):
+              output = subprocess.check_output(
+                  ["arm_probe", "--config", str(directory / name), "--mode", mode], text=True)
+              report = json.loads(output)
+              assert report["motion_permitted"] is False
+          print("Installed CLI and package data OK")
+          PY
+      - name: Check build log entry length
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path("docs/ARM_BUILDPROTOKOLL.md").read_text()
+          entries = text.split("\n## ")[1:]
+          assert entries, "No build entry"
+          for entry in entries:
+              assert len(entry.split()) <= 200, entry.splitlines()[0]
+          print("Every build entry <= 200 words")
+          PY
+
+  ros-humble:
+    runs-on: ubuntu-22.04
+    container: ros:humble-ros-base
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and test dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends python3-pip python3-pytest python3-colcon-common-extensions
+          python3 -m pip install -r src/arm_hardware/requirements-modbus.txt
+      - name: Build and test isolated arm packages
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --base-paths src/arm_hardware src/arm_tools src/arm_bringup
+          source install/setup.bash
+          colcon test --packages-select arm_hardware arm_tools arm_bringup --event-handlers console_direct+
+          colcon test-result --verbose
+          ros2 run arm_tools arm_probe --config "$(ros2 pkg prefix arm_bringup)/share/arm_bringup/config/synthetic_arm.json" --mode fake

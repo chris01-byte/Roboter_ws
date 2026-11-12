@@ -1,5 +1,31 @@
 # Übertragung auf den realen Roboter
 
+## Arm-Build A — noch nicht auf den Jetson übertragen (10.10.2026)
+
+Branch: feature/arm-commissioning-foundation. Keine reale Armverbindung,
+keine Bestromung und keine Bewegung durchgeführt.
+
+Zuerst in einem separaten Checkout/Overlay nur arm_hardware, arm_tools und
+arm_bringup bauen; die maßgebliche, möglicherweise veränderte Jetson-Arbeitskopie
+nicht überschreiben. Die [Paket-Anleitung](../src/arm_tools/README.md)
+enthält den motorlosen Prüfpfad und die Voraussetzungen für M1A.
+
+Standardprüfung und Fake benötigen weder Port noch Motorversorgung. Das
+Realinventar ist absichtlich unvollständig. Vor einer späteren M1A-Probe
+ESS17-Typ/Gelenk/Adresse, dedizierten Bus, elektrische Versorgung, mechanische
+Sicherung und Busparameter prüfen. Die RO-Probe kann keinen Motor anhalten
+und bestätigt keine Selbsthemmung.
+
+Keine globale pip-Aktualisierung am laufenden Roboter: den gepinnten
+Modbus-Stand zuerst im isolierten Entwicklungsaufbau prüfen. Bestehende
+Pakete/Parameter der Fahrbasis nicht ersetzen.
+
+Rückfall: CLI beenden, isoliertes Overlay nicht mehr sourcen. Kein Dienst,
+Autostart und bestehender Roboterlaunch wurde verändert. Motorversorgungs-
+und Stopmaßnahmen bleiben Verantwortung der anwesenden Person.
+
+---
+
 ## OAK-RGB-D-Transport dauerstabil und selbstheilend (26.08.2026)
 
 **Branch:** `codex/fix-oak-semantic-stream`

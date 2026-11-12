@@ -12,8 +12,10 @@ Der Repository-Root ist bewusst knapp gehalten. Der aktuelle Arbeitsstand und di
 | [`docs/README.md`](docs/README.md) | Navigation der aktiven und historischen Dokumentation. |
 | [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md) | Entscheidungen mit Evidenz, Teststatus und Rueckfallwegen. |
 | [`docs/ROBOT_TRANSFER.md`](docs/ROBOT_TRANSFER.md) | Jetson-/Hardwareuebergabe und Betriebswissen. |
-| [`KONZEPT_KALIBRIERUNG_OAK_ARM.md`](KONZEPT_KALIBRIERUNG_OAK_ARM.md) | Hand-Auge-Kalibrierung Arm <-> OAK. |
-| [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | ESS17-Armsoftware: Commissioning, ros2_control, MoveIt 2 und Interlocks. |
+| [`docs/ARM_KONTEXT.md`](docs/ARM_KONTEXT.md) | Einstieg für Agenten: Hardware, vorhandene Software, Quellen und offene Punkte. |
+| [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Stufenplan: zunächst Arm-Inbetriebnahme, später Greifer und OAK-Integration. |
+| [`docs/ARM_INBETRIEBNAHME_MESSBLATT.md`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md) | Aufnahme und reale Versuchsprotokolle aller sechs Achsen. |
+| [`docs/ARM_BUILDPROTOKOLL.md`](docs/ARM_BUILDPROTOKOLL.md) | Umgesetzte Änderungen, maximal 200 Wörter je Eintrag. |
 | [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md) | Diagnostik, Selbstbefreiung, Ereignisprotokoll und Supervision. |
 
 Historische Pruefplaene und Ergebnisprotokolle liegen unter [`docs/archive/`](docs/archive/). Sie bewahren Nachweise, sind aber keine aktuelle Freigabe.
@@ -26,8 +28,9 @@ Navigation:      STL-27L -> scan normalization -> SLAM/Nav2 -> exploration
 Nahbereich:      VL53L7CX -> collision monitor
 Missionen:       mission_manager -> Behavior Tree -> robot interfaces
 Bedienung:       smartphone GUI / iOS app -> rosbridge
-Wahrnehmung:     OAK-D-S2 -> semantic perception -> base_link grasp targets
-Arm (geplant):   ESS17-RS -> ros2_control -> MoveIt 2 -> arm action server
+Wahrnehmung:     OAK-D-S2 -> semantic perception; frische Greifpose noch zu integrieren
+Arm (Build A):   Inventar -> Validierung / Fake / reine ESS17-RS07-Leseprobe
+Arm (geplant):   5 ESS17 + 1 NEMA23 -> Controller -> MoveIt 2 -> Arm-Actions
 ```
 
 ## Sicherer Betrieb
@@ -35,8 +38,8 @@ Arm (geplant):   ESS17-RS -> ros2_control -> MoveIt 2 -> arm action server
 - `/safety/estop=true` bedeutet Not-Aus aktiv; softwareseitige Bewegungsfreigaben muessen dann gesperrt bleiben.
 - Die hardwired Sicherheitskette ist primaer. Software ersetzt keinen Hardware-Not-Aus.
 - Echte Fahrbewegung bleibt ein expliziter, beaufsichtigter Schritt mit der passenden Hardwareabnahme.
-- Greifziele werden fuer die Feinmanipulation in `base_link` verarbeitet, nicht in `map`.
-- Die ESS17-Registersemantik wird vor der Arm-Integration pro Achse gemessen; ESS23-Annahmen werden nicht uebertragen.
+- Feinmanipulation soll frische Greifziele in `base_link` verwenden; vorhandene map-Verträge sind vor Integration abzugleichen.
+- Registersemantik und Skalierung werden pro Motortyp und Achse bestätigt; der genaue NEMA23-Typ im Arm ist noch offen.
 
 ## Bauen und Pruefen
 

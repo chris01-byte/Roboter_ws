@@ -1,10 +1,25 @@
 # Projektstatus: Roboter_ws
 
-**Stand:** 2026-08-19
+**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-10-10.
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
+
+## Arm-Ergänzung vom 10.10.2026
+
+Zuerst ausschließlich Arm-Inbetriebnahme. Auf dem Entwicklungsbranch
+`feature/arm-commissioning-foundation` ([PR #106](https://github.com/chris01-byte/Roboter_ws/pull/106),
+noch nicht in main) sind Inventarprüfung, Fake und reine ESS17-Leseprobe
+implementiert. 32 Tests sowie Installation und Humble-Build bestanden auf
+9e65e4f; reale Armabnahme steht aus. Keine Bewegung oder Homing implementiert.
+
+[Kontext](docs/ARM_KONTEXT.md), [Stufenplan](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md)
+und [Messblatt](docs/ARM_INBETRIEBNAHME_MESSBLATT.md) wurden aus Gespräch und
+Repo rekonstruiert. Fünf ESS17-RS07, ein noch unbestimmter NEMA23, TLE4905L,
+XL330-Spindelgreifer und sensorfreie Fahrpose sind berücksichtigt.
+Nächster Schritt: M0 vervollständigen, danach beaufsichtigte M1A-Leseprobe.
+Die übrige Gesamtstatus-Zusammenfassung bleibt auf ihrem bisherigen Datum.
 
 ## Kurzfassung
 
@@ -45,7 +60,7 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 |---|---|---|
 | Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
 | Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
-| Arm-Integration | Physischer Arm vorhanden; Produktionstreiber, Homing, echtes URDF und ROS-2-Control sind noch nicht integriert. | M0 plus read-only M1 aus [`docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md). |
+| Arm-Integration | Read-only Build A auf PR #106; Montagezustand offen. Bewegungsansteuerung, Homing und echtes Modell fehlen. | M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
 | OAK-Hand-Auge-Kalibrierung | Recorder und Loeser existieren; reale Arm-/TF-Voraussetzungen fehlen noch. | Erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen; danach kalibrieren. |
 | App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 
@@ -54,7 +69,7 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 - `/safety/estop=true` bedeutet Not-Aus aktiv und blockiert softwareseitige Bewegungsfreigaben.
 - Die hardwired Sicherheitskette bleibt primaer; die Software ersetzt sie nicht.
 - Reale Basisfahrt und Armfahrt bleiben getrennte, explizit freigegebene Schritte.
-- Greifen und Kamera-Feinpose verwenden `base_link`, nicht `map`.
+- Zielvertrag für Greifen und Kamera-Feinpose ist `base_link`; bestehende map-Verträge müssen vor Umsetzung abgeglichen werden.
 - Keine direkte Bewegungssteuerung ueber historische `JointState`-Command-Topics oder unbestaetigte ESS17-Registerannahmen.
 
 ## Dokumentationsstruktur
