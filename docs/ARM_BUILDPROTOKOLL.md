@@ -4,6 +4,30 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-12 — Dokumentation: Greifsicht der OAK und Sensor am Handgelenk
+
+Frage des Nutzers: Braucht der Arm eine zusätzliche Kamera mit Blick auf den
+Greifer? Die Entscheidung ist offen; eingetragen ist die Evidenz.
+
+Rechnung (Kamerahöhe 1,35 m gemessen, 16:9): Bei der heutigen Neigung von
+18,94° liegt eine Tischfläche erst ab 0,59 m vor der Chassisfront im Bild,
+eine Arbeitsplatte ab 0,41 m. Couchtisch und Boden sind innerhalb der
+Reichweite von 0,81 m nie im Bild. Bei 10° und flacher liegt auch die
+Tischfläche außerhalb der Reichweite. Raumsicht und Greifsicht schließen
+sich bei fest montierter OAK aus.
+
+Empfohlen ist ein in Greifrichtung schauender Sensor am Handgelenk.
+Verglichen sind zwei Montageorte (am Greifer hinter J6, am Handgelenkglied
+vor J6) und zwei Kandidaten nach Herstellerangaben (RealSense D405, Luxonis
+OAK-D SR).
+
+Prüfung: nur Dokumentation; Verweise und Wortgrenze geprüft.
+Herstellerangaben per Websuche, nicht am Gerät geprüft. Keine
+Hardwarewirkung.
+
+Nächster Schritt: Entscheidung des Nutzers zu Sensor, Montageort und
+Kabelweg vor der Greiferkonstruktion. Rückfallweg: Commit zurücknehmen.
+
 ## 2026-11-11 — Dokumentation: Restfragmente zum Arm bereinigt
 
 Auf Nutzerwunsch wurde das ganze Repository nach armbezogenen Begriffen
