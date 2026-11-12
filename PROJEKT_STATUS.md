@@ -1,10 +1,20 @@
 # Projektstatus: Roboter_ws
 
-**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-11.
+**Gesamtstatus:** 2026-08-19. **Arm-Ergänzung:** 2026-11-12.
 
 **Geltung:** `main` ist die aktuelle Entwicklungsbasis. Detaillierte Entscheidungen und Messnachweise stehen in [`docs/PROJECT_MEMORY.md`](docs/PROJECT_MEMORY.md); die Dokumentationsnavigation steht in [`docs/README.md`](docs/README.md).
 
 ---
+
+## Arm-Ergänzung vom 12.11.2026
+
+Die OAK sieht den Greifraum kaum: Bei heutiger Neigung liegt eine
+Tischfläche erst ab 0,59 m vor der Chassisfront im Bild, der Arm reicht mit
+Greifer bis 0,81 m. Der Nutzer plant deshalb eine Kamera am Handgelenk; für
+den Prototyp ist eine günstige USB-Kamera mit Abstandssensor und
+Lichtschranke im Greifer empfohlen. Das Juli-Kalibrierkonzept ist durch das
+[Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md) ersetzt (Eye-in-Hand, OAK
+nur grob). Offen: Kameramodell, Montageort und Kabelweg.
 
 ## Arm-Ergänzung vom 11.11.2026
 
@@ -95,7 +105,7 @@ Diese Punkte sind Betriebs- und Sicherheitsgates, nicht Hindernisse fuer weitere
 | Fahrbasis und Navigation | In `main` konsolidiert. | Jetson-Regression der betroffenen Pakete vor der naechsten realen Fahrfreigabe. |
 | Diagnostik und Selbstbefreiung | Plan in [`docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md`](docs/INTEGRATIONSPLAN_DIAGNOSTIK_UND_SELBSTBEFREIUNG.md). | Separat, read-only und motorlos implementieren. |
 | Arm-Integration | Read-only Build A auf PR #106; Arm in Einzelteilen, Aufbau aus Hubachse und sechs Drehgelenken bekannt; Parkpose ausgewertet, Homing-Konzept mit Einzelmagnet festgelegt. Bewegungsansteuerung, Homing und echtes Modell fehlen. | Gelenkbereiche je Achse angeben; Hubachse, J6 und Gewichte klären, Inventarschema erweitern, dann M0 und M1A gemäß [`Stufenplan`](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md); reale Messungen im [`Messblatt`](docs/ARM_INBETRIEBNAHME_MESSBLATT.md). |
-| Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Recorder und Löser für Eye-to-Hand existieren. | Entscheidung zum Nahbereichssensor am Greifer vor der Greiferkonstruktion; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
+| Kamera und Greifen | OAK nur für Erkennung und Anfahrdistanz (Nutzerentscheidung 08.11.2026); Kamera am Handgelenk geplant (12.11.2026); neues [Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md); Recorder und Löser für Eye-to-Hand existieren. | Kameramodell und Montageort vor der Greiferkonstruktion festlegen; erst Armmodell, `/joint_states`, TCP und Zeigetest abnehmen, danach kalibrieren. |
 | App und semantische Karte | Konsolidiert und dokumentiert. | Gegen den aktuellen `main`-Stand weiterentwickeln und testen. |
 
 ## Sicherheitsrahmen

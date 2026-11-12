@@ -6,8 +6,9 @@ Repository rekonstruierten Angaben, die Nutzerangaben vom 08.11.2026
 10.11.2026 und die Auswertung des neu konstruierten Arms (zwei STEP-Exporte
 vom 11.11.2026: gestreckte Pose und mögliche Homing-/Parkposition). Die
 Kinematik aus den Exporten vom 09.11.2026 ist überholt: Dort war J2 falsch
-zusammengebaut. Am 12.11.2026 kam die Rechnung zur Sicht der OAK auf den
-Greifraum hinzu.
+zusammengebaut. Am 12.11.2026 kamen die Rechnung zur Sicht der OAK auf den
+Greifraum, die geplante Kamera am Handgelenk und das neue
+[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md) hinzu.
 Der ursprüngliche lokale Wortlaut vom Oktober ist nicht zugänglich. Werte aus
 dem CAD sind als solche gekennzeichnet; als „gemessen“ gelten nur ausdrücklich
 so bezeichnete Angaben.
@@ -18,9 +19,11 @@ so bezeichnete Angaben.
    [Inventar](INVENTORY.md): projektweite Regeln und nachgewiesener Bestand.
 2. [Integrations- und Stufenplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md):
    maßgeblicher Armplan einschließlich Homing, Greifer, Fahrpose und Kalibrierung.
-3. [Inbetriebnahme-Messblatt](ARM_INBETRIEBNAHME_MESSBLATT.md):
+3. [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md): Armmodell, Kamera am
+   Handgelenk, OAK und Greifersensoren; ersetzt das Juli-Konzept.
+4. [Inbetriebnahme-Messblatt](ARM_INBETRIEBNAHME_MESSBLATT.md):
    offene Hardwaredaten, Versuche und Abnahmen.
-4. [Build-Protokoll](ARM_BUILDPROTOKOLL.md): tatsächlich umgesetzte Änderungen;
+5. [Build-Protokoll](ARM_BUILDPROTOKOLL.md): tatsächlich umgesetzte Änderungen;
    höchstens 200 Wörter pro neuem Eintrag einschließlich Überschrift.
 
 **Aktuelles Ziel: ausschließlich Arm-Inbetriebnahme.** Kamerageführtes Greifen
@@ -200,7 +203,7 @@ ausführlich im [Integrationsplan](INTEGRATIONSPLAN_ARM_SOFTWARE.md#sensorlage-u
 | Externer Armcode | Keiner | – |
 | Greifer | Noch nicht konstruiert; XL330 mit M6- oder ähnlicher Trapezspindel | XL330-Variante, Steigung, Hub, Führung, Endlagen, Kamerabauraum |
 | Kraftfeedback | Zwei Sensoren mit ohmschem Widerstandssignal | Typ, Kennlinie, Elektronik, ADC und Auswertung |
-| Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz | Sensor am Handgelenk für den eigentlichen Griff: Entscheidung, Montageort und Kabelweg (Evidenz und Empfehlung vom 12.11.2026 unter Kamerastrategie) |
+| Vision | OAK-D-S2 nur für Objekterkennung und Anfahrdistanz; Kamera am Handgelenk geplant (Nutzer, 12.11.2026) | Kameramodell (teure RGB-D-Kameras für den Prototyp zu teuer), Montageort, Kabelweg; Abstandssensor und Lichtschranke im Greifer |
 | Transport | Homing-/Parkposition des Nutzers als STEP ausgewertet (11.11.2026): hinter dem Mast, außerhalb des OAK-Bildes, im maskierten LiDAR-Sektor | Abstützung, Pose mit Greifer und Last, Kabel, Footprint hinten, Kippsicherheit, praktische Prüfung |
 | Last | Höchstens 1 kg | Ob inklusive Greifer; Massen und Schwerpunkte |
 
@@ -362,9 +365,9 @@ mehrgängigen Spindelweg. Motorstrom allein beweist keine Griffkraft.
 Spindelselbsthemmung kann Druck auch nach einem Motorstopp aufrechterhalten.
 
 Da der Greifer noch nicht konstruiert ist, jetzt Bauraum, Masse und
-Kabelweg für einen möglichen Nahbereichssensor mit einplanen (siehe
-Kamerastrategie). Alle Leitungen zum Greifer laufen durch J4 und J6; deren
-Drehbereich wird dadurch begrenzt.
+Kabelweg für die geplante Kamera am Handgelenk sowie für Abstandssensor und
+Lichtschranke im Greifer einplanen (siehe Kamerastrategie). Alle Leitungen
+zum Greifer laufen durch J4 und J6; deren Drehbereich wird dadurch begrenzt.
 
 ### Transportpose
 
@@ -469,17 +472,19 @@ nur in Arbeitsposen. Jede neue Neigung oder
 Montage muss am Roboter neu gemessen werden (Bodenebene wie am 27.07.2026)
 und gehört als eigener, getesteter Sensor-Frame-Schritt in `oak.launch.py`.
 
-Folgerung, Entscheidung beim Nutzer: Für die Feinlokalisierung im Greifraum
-liegt ein Nahbereichssensor am Greifer oder Handgelenk nahe (Eye-in-Hand).
-Er misst das Objekt relativ zum Greifer; Mastbiegung, Kippeln der Basis und
-Spiel in Hubachse, J1 und J2 wirken dann im letzten Anfahrschritt kaum noch.
-Er bringt Masse, Kabel durch J4 und J6, eine eigene Kalibrierung und
-Zeitstempelfragen mit.
+Folgerung: Für die Feinlokalisierung im Greifraum liegt ein Sensor am
+Greifer oder Handgelenk nahe (Eye-in-Hand). Er misst das Objekt relativ zum
+Greifer; Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und J2
+wirken dann im letzten Anfahrschritt kaum noch. Er bringt Masse, Kabel durch
+J4 und gegebenenfalls J6, eine eigene Kalibrierung und Zeitstempelfragen
+mit. Der Nutzer plant seit dem 12.11.2026 eine Kamera am Arm (unten).
 
 ### Greifraum im OAK-Bild und Sensor am Handgelenk (12.11.2026)
 
 **Frage des Nutzers:** Braucht der Arm eine zusätzliche Kamera am Arm, die
-den Greifer im Blick hat? **Die Entscheidung ist offen.** Evidenz dazu:
+den Greifer im Blick hat? **Stand:** Der Nutzer plant eine Kamera am Arm;
+RGB-D-Kameras für kurze Distanz sind ihm für den ersten Prototyp zu teuer.
+Kameramodell und Montageort sind offen. Evidenz dazu:
 
 Ab welcher Entfernung vor der Chassisfront eine waagerechte Fläche im Bild
 liegt (rechnerisch, 16:9, Kamerahöhe 1,35 m gemessen). Der gestreckte Arm
@@ -524,14 +529,31 @@ Greifer und Gelenkdurchführungen konstruiert werden.
 | Am Handgelenkglied zwischen J5 und J6 | durch J4, nicht durch J6 | rund 25–30 cm (J5 bis Flansch 149 mm plus Greifer) | Greifer dreht sich im Bild und verdeckt einen Teil; 20 cm Mindestabstand genügen |
 
 Kandidaten nach Herstellerangaben (abgerufen 12.11.2026, nicht am Gerät
-geprüft): Intel RealSense D405 mit 7–50 cm idealem Bereich, 42 × 42 × 23 mm,
-60–72 g je nach Quelle, USB 3.1 (USB 2 nicht bestätigt). Luxonis OAK-D SR
-mit 20 cm Mindesttiefe, empfohlen 30 cm bis 1 m, 56 × 36 × 25,5 mm, 72 g,
-USB 2 und USB 3, bis etwa 5 W; sie gehört zur selben DepthAI-Gerätefamilie
-wie die vorhandene OAK. Zu prüfen sind die Unterstützung durch den hier
-eingesetzten Treiberstand, Kabellänge und Spannungsabfall bis zum Jetson,
-die Rechenlast eines zweiten Kamerastroms und der Platz in der Parkpose
-(Handgelenk 9 mm neben dem Unterarm, 69 mm hinter dem Mast).
+geprüft; Preise schwanken je Händler):
+
+| Kamera | Tiefe | Abstand | Größe, Masse | Anschluss | Preis |
+|---|---|---|---|---|---|
+| Orbbec Gemini 305 | Stereo, 18 mm Basis, ohne Projektor | ideal 7–50 cm, ab 4 cm | 42 × 42 × 23 mm, 68 g | USB (Version nicht geprüft) | 229 US-$ im Herstellershop, bei Händlern rund 340–380 US-$ |
+| Intel RealSense D405 | Stereo | ideal 7–50 cm | 42 × 42 × 23 mm, 60–72 g | USB 3.1 (USB 2 nicht bestätigt) | nicht ermittelt |
+| Luxonis OAK-D SR | Stereo | ab 20 cm, empfohlen 30 cm bis 1 m | 56 × 36 × 25,5 mm, 72 g | USB 2 und 3, bis etwa 5 W | rund 230–330 US-$ |
+| Arducam USB-Kameramodul (UVC), zum Beispiel 1080p mit M12-Objektiv oder 1 MP Global Shutter | keine | Fokus von Hand auf die Arbeitsdistanz | Platine 38 × 38 mm | USB 2, Standardtreiber | rund 40–60 US-$ |
+| VL53L7CX auf Trägerplatine (Pololu) | 8 × 8 Zonen Lichtlaufzeit | bis 350 cm | kleine Platine | I²C | rund 20 US-$ |
+
+**Empfehlung für den ersten Prototyp (Agent):** günstige USB-Farbkamera mit
+festem Fokus am Handgelenk plus Abstandssensor (zum Beispiel VL53L7CX, den
+das Projekt schon an der Basis nutzt) und Lichtschranke im Greifer, zusammen
+rund 60–80 US-$. Die Kamera zentriert den Greifer auf das Objekt, der
+Abstandssensor misst das letzte Stück, Lichtschranke und Kraftsensoren
+bestätigen den Griff. Für aufrecht stehende Flaschen genügt das; eine
+Tiefenkamera wird erst für unbekannte Objektformen, Schräglagen oder
+Durcheinander nötig. Für einen späteren Wechsel Bauraum für
+42 × 42 × 23 mm und rund 70 g sowie einen Kabelweg für ein USB-3-fähiges
+Kabel vorsehen. Zu prüfen sind in jedem Fall Kabellänge und
+Spannungsabfall bis zum Jetson, die Rechenlast eines zweiten
+Kamerastroms, der Platz in der Parkpose (Handgelenk 9 mm neben dem
+Unterarm, 69 mm hinter dem Mast) und bei Luxonis-Kameras die Unterstützung
+durch den hier eingesetzten Treiberstand. Kalibrierung beider Varianten:
+[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md).
 
 Unabhängig von der Kamera: Ob ein Objekt zwischen den Fingern liegt und
 gehalten wird, melden besser eine Lichtschranke oder ein Abstandssensor im
@@ -539,9 +561,11 @@ Greifer und die beiden Kraftsensoren. Sie hängen an der lokalen
 I/O-Einheit, die der Greifer ohnehin braucht.
 
 Für die OAK genügt damit eine Montagegenauigkeit im Zentimeterbereich für
-die Anfahrt. Die vorhandenen Werkzeuge in
+die Anfahrt. Verfahren, Reihenfolge und Grenzwertableitung für OAK,
+Armmodell und Handgelenkkamera stehen im
+[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md). Die vorhandenen Werkzeuge in
 [handeye_calibration](../src/handeye_calibration/) sind für Eye-to-Hand
-gebaut; für eine Handkamera braucht der Löser einen Eye-in-Hand-Modus.
+gebaut; für die Handgelenkkamera braucht der Löser einen Eye-in-Hand-Modus.
 Aktueller optischer Frame der OAK ist oak_rgb_camera_optical_frame. Alte
 Beispiel-Frames, Kamerahöhen und Genauigkeitszusagen aus dem
 [historischen Kalibrierkonzept](../KONZEPT_KALIBRIERUNG_OAK_ARM.md)
@@ -574,9 +598,10 @@ und getestet.
 2. Gelenkbereich je Achse angeben (Kabel- und mechanische Grenzen); daraus
    Soft-Limits und Höchstwege der Suchfahrt ableiten. Antriebsfunktionen aus
    dem Handbuch (Integrationsplan, Abschnitt 5) am Gerät bestätigen.
-3. Entscheidung zum Sensor am Handgelenk: ja oder nein, Montageort und
-   Kabelweg durch J4 und gegebenenfalls J6. Sie muss fallen, bevor Greifer
-   und Gelenkdurchführungen konstruiert werden.
+3. Kamera am Handgelenk festlegen: Modell für den Prototyp, Montageort,
+   Kabelweg durch J4 und gegebenenfalls J6 (USB-3-fähig planen),
+   Abstandssensor und Lichtschranke im Greifer. Muss feststehen, bevor
+   Greifer und Gelenkdurchführungen konstruiert werden.
 4. Entscheidung zur OAK-Neigung nach der Raumsicht; die Parkpose schränkt
    sie nicht ein. Mit einem Sensor am Handgelenk muss die OAK den Greifraum
    nicht mehr abdecken.
@@ -614,7 +639,10 @@ Messzusammenfassungen und Verweise auf lokale Ablagen.
   [OAK-D S2 Datenblatt](https://cdn.shopify.com/s/files/1/0630/8950/8583/files/OAK-D-S2_Spec_Sheet.pdf),
   [Luxonis: Stereotiefe einstellen](https://docs.luxonis.com/hardware/platform/depth/configuring-stereo-depth),
   [Luxonis OAK-D SR](https://docs.luxonis.com/hardware/products/OAK-D%20SR.md),
-  [RealSense D405 bei Framos](https://framos.com/en/products/intel-realsense-depth-camera-d405-26126).
+  [RealSense D405 bei Framos](https://framos.com/en/products/intel-realsense-depth-camera-d405-26126),
+  [Orbbec Gemini 305](https://store.orbbec.com/products/gemini-305),
+  [Arducam OV9281 USB](https://www.arducam.com/product/arducam-100fps-global-shutter-usb-camera-board-1mp-720p-ov9281-uvc-webcam-module-with-low-distortion-m12-lens-without-microphones-for-computer-laptop-android-device-and-raspberry-pi/),
+  [Pololu VL53L7CX](https://www.pololu.com/product/3418).
 - [XL330-M288](https://emanual.robotis.com/docs/en/dxl/x/xl330-m288/) und
   [XL330-M077](https://emanual.robotis.com/docs/en/dxl/x/xl330-m077/):
   tatsächliche Variante noch aufnehmen.

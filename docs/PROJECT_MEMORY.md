@@ -17,6 +17,44 @@ Rückfallweg:
 
 ---
 
+## 2026-11-12 — Kamera am Handgelenk geplant, Kalibrierkonzept neu
+
+**Entscheidung:** Der Nutzer plant eine Kamera am Arm. RGB-D-Kameras für
+kurze Distanz sind ihm für den ersten Prototyp zu teuer; das Modell ist
+offen. Das Juli-Kalibrierkonzept ist durch
+[ARM_KALIBRIERKONZEPT.md](ARM_KALIBRIERKONZEPT.md) ersetzt: OAK nur grob,
+Griff über die Handgelenkkamera (Eye-in-Hand) mit Nachregeln, Grenzwerte aus
+dem Fangbereich des Greifers. Empfohlen (nicht entschieden): günstige
+USB-Farbkamera mit festem Fokus plus Abstandssensor und Lichtschranke im
+Greifer.
+
+**Grund / beobachtete Evidenz:** Rechnung mit gemessener Kamerahöhe
+1,35 m: Bei 18,94° Neigung liegt eine Tischfläche erst ab 0,59 m vor der
+Chassisfront im Bild, der Arm reicht mit Greifer bis 0,81 m; bei 10° und
+flacher liegt sie außerhalb der Reichweite. Das Juli-Konzept setzte eine
+feste OAK mit Fixfokus als einziges Greifauge, den Arm hinten auf der
+Plattform und den Frame camera_rgb_optical_frame voraus; nichts davon gilt
+noch. Herstellerangaben vom 12.11.2026: Gemini 305 229 US-$ im
+Herstellershop (Händler bis rund 380 US-$), USB-Kameramodule rund
+40–60 US-$, VL53L7CX-Träger rund 20 US-$.
+
+**Betroffene Dateien und Hardware:** ARM_KALIBRIERKONZEPT (neu),
+ARM_KONTEXT, Integrationsplan, Messblatt, Build-Protokoll, docs/README,
+INVENTORY, PROJEKT_STATUS, Kalibrierpaket-README, Kopf des Juli-Konzepts.
+Keine Hardware, keine Konfiguration.
+
+**Teststatus:** Nur Dokumentation. Herstellerangaben per Websuche, nicht am
+Gerät geprüft. Kalibriercode unverändert.
+
+**Offene Risiken:** Kameramodell, Montageort und Kabelweg fehlen noch vor
+der Greiferkonstruktion. Eine Farbkamera ohne Tiefe braucht den
+Abstandssensor; transparente Flaschen stören Stereo und Lichtlaufzeit
+gleichermaßen. Der Löser kann noch kein Eye-in-Hand.
+
+**Rückfallweg:** Dokumentationscommit zurücknehmen; keine Laufzeitwirkung.
+
+---
+
 ## 2026-11-11 — Homing mit Einzelmagnet, Überfahrschutz über Antriebsfunktionen
 
 **Entscheidung:** Der Nutzer legt fest: ein Einzelmagnet je Achse statt

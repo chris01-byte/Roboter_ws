@@ -24,7 +24,7 @@ Dieses Verzeichnis trennt aktuelle Betriebs- und Entwicklungsdokumentation von h
 | Semantische Karte | [`SEMANTIC_MAP_INTEGRATION.md`](SEMANTIC_MAP_INTEGRATION.md) | Manuelle Raumdaten, Persistenz und Schnittstellen. |
 | App-Livepose | [`APP_LIVE_ROBOTERPOSE_INTEGRATION.md`](APP_LIVE_ROBOTERPOSE_INTEGRATION.md) | Read-only Pose-/Lokalisierungsintegration fuer die App. |
 | LiDAR-Hardware | [`hardware/STL27L_INTEGRATION.md`](hardware/STL27L_INTEGRATION.md) | STL-27L-spezifische Treiber- und Frameinformation. |
-| Arm/OAK-Kalibrierung | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Aktueller Kalibriervertrag; OAK nur für Erkennung und Anfahrt. Das Juli-Konzept im Root ist überholt und nur noch historische Grundlage. |
+| Arm/Kamera-Kalibrierung | [`ARM_KALIBRIERKONZEPT.md`](ARM_KALIBRIERKONZEPT.md) | Armmodell, Kamera am Handgelenk (Eye-in-Hand), OAK nur für Erkennung und Anfahrt, Greifersensoren. Ersetzt das Juli-Konzept im Root. |
 | Arm-Kontext | [`ARM_KONTEXT.md`](ARM_KONTEXT.md) | Aktuelle Nutzerangaben, Softwarepfade, offene Messungen und Stufen. |
 | Arm-Builds | [`ARM_BUILDPROTOKOLL.md`](ARM_BUILDPROTOKOLL.md) | Kurzes Änderungsprotokoll, maximal 200 Wörter je Build. |
 | Arm-Software | [`INTEGRATIONSPLAN_ARM_SOFTWARE.md`](INTEGRATIONSPLAN_ARM_SOFTWARE.md) | Gemischter ESS-Arm: Diagnose, Homing, Bewegung, Greifer, Transportpose und später Vision. |

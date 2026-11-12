@@ -4,6 +4,32 @@ Neue Einträge oben ergänzen, jeweils höchstens **200 Wörter einschließlich
 Überschrift**. Jeder Eintrag nennt Änderung, Prüfung, Hardwarewirkung und
 nächsten Schritt. Reale Abnahme und Simulation getrennt angeben.
 
+## 2026-11-12 — Dokumentation: Kalibrierkonzept neu, Kamera am Handgelenk
+
+Der Nutzer plant eine Kamera am Arm; RGB-D-Kameras für kurze Distanz (Orbbec
+Gemini 305, RealSense D405, OAK-D SR) sind ihm für den Prototyp zu teuer.
+Eingetragen ist eine günstige Variante nach Herstellerangaben: USB-Farbkamera
+mit festem Fokus (rund 40–60 US-$) plus Abstandssensor VL53L7CX (rund
+20 US-$) und Lichtschranke im Greifer. Bauraum 42 × 42 × 23 mm und ein
+USB-3-fähiger Kabelweg halten den Wechsel zu einer Tiefenkamera offen.
+
+Neu: docs/ARM_KALIBRIERKONZEPT.md. Es ersetzt das Juli-Konzept, das eine
+feste OAK als einziges Auge für den Griff voraussetzte. Stufen K1–K7: OAK
+grob, Armmodell, Werkzeug und Greifersensoren, Intrinsik und Eye-in-Hand der
+Handgelenkkamera, Gesamtprüfung, laufender Abgleich. Grenzwerte folgen aus
+dem Fangbereich des Greifers und der Sichtfeldbedingung der Vorposition.
+
+Angepasst: ARM_KONTEXT, Integrationsplan (Abschnitte 6, 8, 10, M7, M8),
+Messblatt, Einstiegsseiten, Inventar, Kalibrierpaket-README und der Kopf des
+Juli-Konzepts.
+
+Prüfung: nur Dokumentation, Verweise und Wortgrenze geprüft. Keine
+Hardwarewirkung.
+
+Nächster Schritt: Kameramodell und Montageort festlegen; danach
+Eye-in-Hand-Modus im Löser als eigener, getesteter Build. Rückfallweg: Commit
+zurücknehmen.
+
 ## 2026-11-12 — Dokumentation: Greifsicht der OAK und Sensor am Handgelenk
 
 Frage des Nutzers: Braucht der Arm eine zusätzliche Kamera mit Blick auf den

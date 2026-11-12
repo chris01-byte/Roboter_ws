@@ -1,5 +1,11 @@
 # Konzept: Hand-Auge-Kalibrierung Roboterarm <-> zentrale OAK-Kamera
 
+> **Ersetzt am 12.11.2026:** Maßgeblich ist das neue
+> [Kalibrierkonzept](docs/ARM_KALIBRIERKONZEPT.md) für Armmodell, Kamera am
+> Handgelenk (Eye-in-Hand), OAK und Greifersensoren. Dieses Dokument ging von
+> einer festen OAK als einzigem Auge für den Griff aus und bleibt nur zur
+> Einordnung erhalten.
+>
 > **Historisches Konzept vom Juli — Standhinweis 10.10.2026:**
 > Maßgeblich sind jetzt Abschnitt 8 und Stufe M7 im
 > [rekonstruierten Integrationsplan](docs/INTEGRATIONSPLAN_ARM_SOFTWARE.md).

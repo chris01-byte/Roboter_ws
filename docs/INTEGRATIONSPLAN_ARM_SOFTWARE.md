@@ -48,7 +48,7 @@ Kennzeichnungen in diesem Plan:
 | Armcode außerhalb des Repos | Laut Nutzer keiner |
 | Greifer | Noch nicht konstruiert; Parallelgreifer mit XL330 und M6- oder ähnlich großer Trapezspindel |
 | Griffmessung | Zwei ohmsche Drucksensoren; Typen, Kennlinien und Auswerteelektronik offen |
-| Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Nahbereichssensor für den Griff offen |
+| Kamera | OAK-D-S2 am Mast nur für Objekterkennung und Anfahrdistanz; Kamera am Handgelenk geplant (12.11.2026), Modell offen |
 | Fahrpose | Arm am 11.11.2026 neu konstruiert; Homing-/Parkposition als STEP ausgewertet: hinter dem Mast, im maskierten LiDAR-Sektor, außerhalb des OAK-Bildes; Abstützung, Kabel und Last offen |
 | Achsrichtung J2 | Seit der Neukonstruktion vom 11.11.2026 senkrecht bei waagerechtem Arm; J2 schwenkt seitlich |
 
@@ -461,13 +461,18 @@ Beim Spindelantrieb kann Kraft trotz Motorstop bestehen bleiben. Fehlerreaktion
 muss übermäßige Kraft begrenzen, ohne ein gehaltenes Objekt unkontrolliert
 fallen zu lassen. Diese Fälle gehören in die reale Greiferabnahme.
 
-### Bauraum für einen Nahbereichssensor
+### Bauraum für die Kamera am Handgelenk
 
 Der Greifer ist noch nicht konstruiert und wird voraussichtlich bis etwa
-150 mm lang. Weil die OAK den Greifraum kaum einsieht (Abschnitt 8), jetzt
-Bauraum, Masse und Kabelweg für eine Kamera am Greifer oder Handgelenk mit
-einplanen, auch wenn die Entscheidung noch offen ist. Alle Greiferleitungen
-laufen durch J4 und J6; deren Drehbereich wird dadurch begrenzt.
+150 mm lang. Weil die OAK den Greifraum kaum einsieht (Abschnitt 8), plant
+der Nutzer eine Kamera am Arm (12.11.2026); das Modell ist offen. Für den
+ersten Prototyp ist eine günstige USB-Farbkamera mit festem Fokus empfohlen,
+dazu ein Abstandssensor und eine Lichtschranke im Greifer an dessen lokaler
+I/O-Einheit. Bauraum für 42 × 42 × 23 mm und rund 70 g sowie einen
+USB-3-fähigen Kabelweg vorsehen, damit später eine Tiefenkamera ohne
+Neukonstruktion passt. Alle Greiferleitungen laufen durch J4 und J6; deren
+Drehbereich wird dadurch begrenzt. Sitzt die Kamera zwischen J5 und J6,
+läuft ihr Kabel nicht durch J6.
 
 ## 7. Neutrale Transportpose und freie Sensorsicht
 
@@ -533,7 +538,7 @@ Transportprofil passen. Ein erfolgreich beantwortetes Mock-Ziel reicht nicht.
 
 ## 8. Kamera, Kalibrierung und Greifplanung
 
-### OAK für Erkennung und Anfahrt, Nahbereichssensor für den Griff
+### OAK für Erkennung und Anfahrt, Kamera am Handgelenk für den Griff
 
 **Nutzerentscheidung 08.11.2026:** Die OAK dient beim Greifen nur der
 Objekterkennung und der Entfernung, damit die Basis weiß, wie weit sie zum
@@ -565,13 +570,16 @@ schränkt die Neigungswahl also nicht ein. Tabellen stehen in
 [ARM_KONTEXT](ARM_KONTEXT.md); die Entscheidung zur Neigung liegt beim
 Nutzer, die Umsetzung ist ein eigener Sensor-Frame-Schritt.
 
-**Vorgeschlagen, Entscheidung beim Nutzer:** ein Nahbereichssensor am Greifer
-oder Handgelenk für die Feinlokalisierung (Eye-in-Hand). Er misst relativ zum
-Greifer, sodass Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und
-J2 im letzten Anfahrschritt kaum noch wirken. Er bringt Masse, Kabel durch J4
-und J6, Kalibrierung und Zeitstempelfragen mit. Eine kleine RGB-Kamera liefert
-nicht automatisch Tiefe; Nähegrenze, Tiefenausfälle an transparenten oder
-glänzenden Flaschen und Licht sind bei der Auswahl zu prüfen.
+**Stand 12.11.2026:** Der Nutzer plant eine Kamera am Arm für die
+Feinlokalisierung (Eye-in-Hand); das Modell ist offen, teure Tiefenkameras
+sind für den Prototyp zu teuer. Sie misst relativ zum Greifer, sodass
+Mastbiegung, Kippeln der Basis und Spiel in Hubachse, J1 und J2 im letzten
+Anfahrschritt kaum noch wirken. Sie bringt Masse, Kabel durch J4 und
+gegebenenfalls J6, Kalibrierung und Zeitstempelfragen mit. Eine günstige
+Farbkamera liefert keine Tiefe; den Abstand im letzten Stück misst dann ein
+Sensor im Greifer. Tiefenausfälle an transparenten oder glänzenden Flaschen
+und Licht sind bei jeder Variante zu prüfen. Vergleich und Empfehlung:
+[ARM_KONTEXT](ARM_KONTEXT.md#greifraum-im-oak-bild-und-sensor-am-handgelenk-12112026).
 
 Erkennung liefert zunächst eine Klasse und eine Beobachtung, keine sichere
 Greifpose. Objektgröße/-achse, Greifbereich, Tisch, Hindernisse, Erreichbarkeit
@@ -579,6 +587,8 @@ und Werkzeugorientierung müssen separat bestimmt werden.
 
 ### Transformations- und Messvertrag
 
+Verfahren, Reihenfolge (K1–K7) und Ableitung der Grenzwerte stehen im
+[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md); es ersetzt das Juli-Konzept.
 Für die feste OAK gilt Eye-to-Hand; eine Handkamera braucht eine
 Eye-in-Hand-Kalibrierung (Kamera relativ zum Flansch, Board fest im Raum).
 Für die OAK genügt bei der neuen Rollenverteilung eine Montagegenauigkeit im
@@ -761,12 +771,15 @@ und Fehlerfälle bestanden. Fehlgriff wird erkannt, nicht als Erfolg gemeldet.
 ### M7 — Kamera-Arm-Kalibrierung
 
 **Software:** Vorhandene Kalibrierwerkzeuge mit überprüfter Mathematik,
-realen Frames, frischen Daten und versioniertem Ergebnis; Abschnitt 8.
-Für die OAK reicht die Genauigkeit der Anfahrt; ein Nahbereichssensor am
-Greifer braucht einen Eye-in-Hand-Modus im Löser.
+realen Frames, frischen Daten und versioniertem Ergebnis; Abschnitt 8 und
+[Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md), Stufen K4–K6. Für die OAK reicht
+die Genauigkeit der Anfahrt (K1); die Kamera am Handgelenk braucht einen
+Eye-in-Hand-Modus im Löser (K5) und, falls sie keine Werkskalibrierung hat,
+eine eigene Intrinsik (K4).
 
 **Realtest:** Boardmaße, Kamera-Intrinsik/Tiefe, statische Messpaare,
 unabhängiger Zeigetest im Greifraum; Montage und Lastzustand festhalten.
+Grenzwerte aus dem Fangbereich des Greifers (K3) ableiten.
 
 **Gate:** Vorher begründetes Fehlerbudget an unabhängigen Punkten erfüllt.
 Montage-/TCP-/Fokus-/Auflösungsänderung macht die betroffene Kalibrierung prüfpflichtig.
@@ -781,9 +794,10 @@ dann Position/Orientierung/Material einzeln variieren. Colaflasche einschließli
 Füllzustand erst jetzt als dokumentierten Referenzfall festlegen.
 
 **Gate:** Erfolgsquote und Fehlerbudget erreicht; kein Griff bei altem Treffer,
-fehlender Tiefe, Verdeckung oder falschem Frame. Über den Nahbereichssensor
-wird vor der Greiferkonstruktion entschieden (Abschnitt 8); M8 weist nach,
-dass der Griff mit frischer Nahbeobachtung gelingt.
+fehlender Tiefe, Verdeckung oder falschem Frame. Die Kamera am Handgelenk
+ist geplant (Abschnitt 8); M8 weist nach, dass der Griff mit frischer
+Nahbeobachtung nach dem Ablauf „Sehen, fahren, nachsehen“ des
+Kalibrierkonzepts gelingt.
 
 ### M9 — Mobiles Gesamtsystem
 
@@ -815,7 +829,7 @@ Umgebung; vollständige Abnahme statt nur erfolgreichem Einzelversuch.
 | C | Begrenzter Einzelachs-Jog, Stop-/Haltversuche | Noch zu bauen, braucht B und mechanische Versuchssicherung |
 | D | Homing, Skalen, Limits, echtes Armmodell | Nach Einzelachsabnahme |
 | E | Koordination, Plattform-Actions und Transportpose | Nach Timing-/Bahn-/Interlock-Nachweis |
-| F | Greifer mit Bauraum für einen Nahbereichssensor, bekannte Griffe, Kalibrierung und Vision | Später, stufenweise; Sensorentscheidung vor der Greiferkonstruktion |
+| F | Greifer mit Bauraum für die Kamera am Handgelenk, bekannte Griffe, Kalibrierung nach dem Kalibrierkonzept und Vision | Später, stufenweise; Kameramodell und Montageort vor der Greiferkonstruktion |
 
 Seit 08.11.2026 bekannt: Gelenkzuordnung, Untersetzungen von J1–J5, Lage des
 NEMA23 in J1, Hub, Reichweite, Transportpose, Nutzlast, Not-Aus-Wirkung und
@@ -826,14 +840,14 @@ Arms sowie die Park-/Homing-Pose mit freien Richtungen je Achse aus dem CAD
 
 Jetzt benötigte Entscheidungen und Angaben: Gelenkbereich je Achse
 (Kabel- und mechanische Grenzen), Fensterbreite und Kantenlage je Achse,
-Winkel des J1-Anschlags,
+Winkel des J1-Anschlags, Modell und Montageort der Kamera am Handgelenk,
 Neigung und Montage der OAK, Antrieb und Spindel der Hubachse, Antrieb und Untersetzung
 von J6, Typenschilder und Busadressen, Gewichte, Wirkung des Not-Aus auf den
 Jetson, Montagezustand der Hubachse, vorhandene TLE/Magnete/Endlagen und
 Busparameter, Grenzwinkel je Gelenk. Für die spätere Greiferauslegung
 zusätzlich XL330-Variante, gewünschte Öffnung, Backenkinematik,
-Spindel-Leitweg, Sensortyp, Referenzlast und die Entscheidung zum
-Nahbereichssensor.
+Spindel-Leitweg, Sensortyp, Referenzlast, Abstandssensor und Lichtschranke
+im Greifer.
 
 Jede Rückmeldung enthält Build-/Config-ID, Achse, Versuch, Soll/Ist,
 Zeit-/Winkel-/Lastmessung, Abbruchgrund und lokalen Logpfad. Reale Bilder,

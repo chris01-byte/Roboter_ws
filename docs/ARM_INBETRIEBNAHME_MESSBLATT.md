@@ -344,11 +344,20 @@ automatisch ab. Endlagen und Sensoren müssen lokal rechtzeitig wirken.
 
 ## 11. Spätere Kamera-Arm-Kalibrierung und Greifversuche
 
+Verfahren und Stufen K1–K7: [Kalibrierkonzept](ARM_KALIBRIERKONZEPT.md).
+
 | Kalibrierdatum | Eintrag |
 |---|---|
+| Kamera am Handgelenk: Modell, Montageort, Kabelweg (Nutzer plant sie seit 12.11.2026) | offen |
+| Fangbereich des Greifers: seitlich, axial, Winkel (K3) | offen |
+| Vorposition: Abstand zum Objekt, Bildwinkel, zulässiger Grobfehler (Sichtfeldbedingung) | offen |
+| Intrinsik Handgelenkkamera: Auflösung, Fokus fixiert, camera_info-Datei (K4) | offen |
+| Ergebnis Flansch → Handgelenkkamera, Residuen, Konsistenz der Boardlage (K5) | offen |
+| Abstandssensor und Lichtschranke im Greifer: Lage, Schaltpunkt (K3) | offen |
+| Prüfmarke für die Schnellprüfung: Ort und Sollwert | offen |
 | Reales Armmodell / TCP-Version / gemeinsame Montage | offen |
 | Kamera-ID / Optik / Auflösung / passende camera_info | offen |
-| Framekette base_link → … → oak_rgb_camera_optical_frame | offen |
+| Framekette base_link → … → oak_rgb_camera_optical_frame und base_link → … → Flansch → Handgelenkkamera | offen |
 | Boardtyp / real vermessene Abmessungen / Befestigung | offen |
 | Gelenk- und Bildzeitstempel / Stillstandsprüfung | offen |
 | Anzahl und räumliche Verteilung der Messposen | offen |
@@ -357,7 +366,7 @@ automatisch ab. Endlagen und Sensoren müssen lokal rechtzeitig wirken.
 | Unabhängige Prüfpunkte, nicht zum Fit verwendet | offen |
 | Fehlerbudget und akzeptable Greifabweichung | offen |
 | TF-Verantwortlicher; keine konkurrierenden Publisher | offen |
-| Sichtlücken / begründete Entscheidung zur Handkamera | offen |
+| Sichtlücken der OAK im Greifraum | berechnet 12.11.2026 (ARM_KONTEXT); praktische Prüfung offen |
 
 Zuerst bekannte Zielpositionen bei stillstehender Basis; erst danach
 kamerageführte Griffe. Referenzobjekt, Größe, Füllung, Oberfläche und
