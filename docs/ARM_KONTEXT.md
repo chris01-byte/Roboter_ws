@@ -311,9 +311,10 @@ sind konstruktiv nicht mehr möglich; die Parkposition steht fest.
   Gelenkumdrehung schalten.
 - Sensorstellung: In der Parkstellung steht der Magnet dem Sensor
   gegenüber, der Sensor ist aktiv. Referenz ist das Ende des Schaltfensters
-  auf der freien Seite, wenige Grad hinter der Parkstellung; der Rest des
-  Fensters überdeckt Parkstellung, Spiel, Durchhängen und bei J1 den
-  Anschlag.
+  auf der freien Seite, wenige Grad neben der Parkstellung zur Arbeitsseite
+  hin. Fährt der Arm in die Parkstellung ein, schaltet der Sensor also kurz
+  vorher ein und bleibt bis in die Parkstellung aktiv. Der Rest des Fensters
+  überdeckt Parkstellung, Spiel, Durchhängen und bei J1 den Anschlag.
 - Ein Einzelmagnet zeigt außerhalb seines Fensters nicht, auf welcher Seite
   das Gelenk steht. Referenziert wird deshalb nur aus der Parkstellung bei
   aktivem Sensor; sonst folgt eine beaufsichtigte Rückführung.

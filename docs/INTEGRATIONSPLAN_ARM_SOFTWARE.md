@@ -297,8 +297,10 @@ sind nach jedem Einschalten alle Achsen UNREFERENCED.
    ist aktiv. Praktisch: im Fusion-Modell die Pose der Homing-STEP einstellen
    und je Gelenk beide Teile gegenüber setzen.
 3. Der Magnet wird so versetzt, dass das Ende des Schaltfensters auf der
-   freien Seite wenige Grad hinter der Parkstellung liegt. Dieses Fensterende
-   ist die Referenz. Der Rest des Fensters überdeckt Parkstellung, Spiel und
+   freien Seite wenige Grad neben der Parkstellung liegt, zur Arbeitsseite
+   hin: Beim Einfahren in die Parkstellung schaltet der Sensor kurz vorher
+   ein und bleibt bis in die Parkstellung aktiv. Dieses Fensterende ist die
+   Referenz. Der Rest des Fensters überdeckt Parkstellung, Spiel und
    Durchhängen, bei J1 auch den Anschlag. Fensterbreite und Abstand werden
    vor dem Einbau von Hand gemessen.
 4. Aktiv bedeutet Magnet erkannt. Ein Drahtbruch erscheint dann als „nicht
