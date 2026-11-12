@@ -325,6 +325,14 @@ sind konstruktiv nicht mehr möglich; die Parkposition steht fest.
   CAD hat die Mittellinie eines 150-mm-Greifers dann noch rund 64–77 mm
   (CAD) bzw. 54–67 mm (real) Abstand zur Deckschräge, bei 4° nur noch rund
   29 mm (real).
+- Spätere Änderung der Parkpose: Magnet, Sensor und J1-Anschlag verstellbar
+  befestigen, zum Beispiel Magnetring mit mehreren Taschen oder Klemmring,
+  Sensorhalter mit Langloch, geschraubt statt geklebt, Kabel mit Reserve.
+  An die Sensoren gebunden ist nur die Stellung, in der der Arm stromlos
+  abgestellt wird; die Fahrpose ist ein Zielwinkel in der Software und kann
+  davon abweichen, wenn der Arm vor dem Ausschalten in die Abstellpose
+  fährt. Nach einem Umsetzen Schaltfenster und Kante neu messen, Freiraum
+  aus der neuen Pose im CAD prüfen und Soft-Limits anpassen.
 - Hubachse ebenso: Parkpose oben, Kante wenige Millimeter darunter,
   Referenzfahrt nach unten.
 

@@ -306,6 +306,16 @@ sind nach jedem Einschalten alle Achsen UNREFERENCED.
 4. Aktiv bedeutet Magnet erkannt. Ein Drahtbruch erscheint dann als „nicht
    in Parkstellung“ und sperrt die Referenzfahrt.
 
+Spätere Änderung der Parkpose: Magnet, Sensor und J1-Anschlag werden
+verstellbar befestigt (Magnetring mit mehreren Taschen oder Klemmring,
+Sensorhalter mit Langloch, geschraubt statt geklebt). An die Sensoren
+gebunden ist nur die Abstellpose, in der der Arm stromlos steht. Eine davon
+abweichende Fahrpose ist ein reiner Zielwinkel; vor dem geplanten
+Ausschalten fährt der Arm dann in die Abstellpose. Wird die Abstellpose
+selbst geändert, werden Magnet oder Sensor umgesetzt, Schaltfenster und
+Kante neu gemessen (q_home, M2), der Freiraum aus der neuen Pose im CAD
+geprüft und die Soft-Limits angepasst.
+
 **Wann referenziert wird**
 
 5. Ein Einzelmagnet zeigt außerhalb seines Fensters nicht, auf welcher Seite
