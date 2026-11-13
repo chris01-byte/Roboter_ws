@@ -80,11 +80,28 @@ behavior_server:
 # LiDAR nichts an; dann gilt das bisherige Verhalten. Rueckfall: plugins-Zeile
 # und lidar_layer entfernen und lidar wieder als Quelle der obstacle_layer
 # (Stand 7685a70), oder self_healing:=false.
+#
+# KM-1 B: nichts unter der Kontur loeschen (Entscheidung Projektinhaber
+# 10.11.2026 fuer den Fall, dass die Stellprobe SH-8 nicht besteht; das trat am
+# 13.11.2026 an den Muelleimern ein). Bisher loeschten beide Hindernisebenen
+# alles unter der gepolsterten Kontur. Ein Hindernis im 2-cm-Polsterband
+# verschwand dadurch aus der lokalen Karte; der Regler fuhr oder drehte weiter
+# hinein, bis VL53-Punkte innerhalb der Kontur lagen. Dann setzt der
+# Kollisionsmonitor (approach) jede Bewegung auf null, auch rueckwaerts
+# (SH-8 s3a: beide Rueckfahrten ohne einen Fahrbefehl an der Basis). Jetzt
+# bleibt das Hindernis eingetragen, der Regler haelt vorher an, weg geht es
+# ueber die Rueckfahrkontur (AW-1). Simulation 09.11.2026: 3 von 5 bestanden
+# (Produkt 0 von 7), nie "approach". Voraussetzung: kein Sensor erfasst den
+# Roboter selbst, sonst bliebe das Eigenecho als Hindernis stehen (Pruefung
+# im Stand: selbstheilung_stillstand_pruefen.py --eigenecho-s). Der
+# Kollisionsmonitor und die globale Karte bleiben unveraendert.
+# Rueckfall: beide footprint_clearing_enabled-Zeilen entfernen.
 local_costmap:
   local_costmap:
     ros__parameters:
       plugins: ["obstacle_layer", "lidar_layer", "inflation_layer"]
       obstacle_layer:
+        footprint_clearing_enabled: False
         vl53_left:
           raytrace_min_range: 0.45
         vl53_right:
@@ -96,6 +113,7 @@ local_costmap:
       lidar_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
+        footprint_clearing_enabled: False
         observation_sources: lidar
         lidar:
           topic: /scan_normiert

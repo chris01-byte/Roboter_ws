@@ -137,9 +137,13 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
     # Its rays never touch the VL53 layer, so low VL53 marks survive (X9).
     local = overlay['local_costmap']['local_costmap']['ros__parameters']
     assert local['plugins'] == ['obstacle_layer', 'lidar_layer', 'inflation_layer']
-    assert local['obstacle_layer'] == vl53
+    # KM-1 B (decision 10.11.2026, triggered by SH-8 13.11.2026): neither local
+    # obstacle layer clears under the footprint any more, so an obstacle in the
+    # padding band stays visible to RPP; the global costmap keeps the default.
+    assert local['obstacle_layer'] == dict(vl53, footprint_clearing_enabled=False)
     assert local['lidar_layer'] == {
         'plugin': 'nav2_costmap_2d::ObstacleLayer', 'enabled': True,
+        'footprint_clearing_enabled': False,
         'observation_sources': 'lidar',
         'lidar': {'topic': '/scan_normiert', 'data_type': 'LaserScan',
                   'marking': True, 'clearing': True, 'min_obstacle_height': 0.0,
@@ -147,6 +151,9 @@ def test_self_healing_nav2_overlay_changes_only_the_approved_values():
                   'raytrace_max_range': 3.0}}
     base_local = real['local_costmap']['local_costmap']['ros__parameters']
     assert base_local['plugins'] == ['obstacle_layer', 'inflation_layer']
+    for costmap in ('local_costmap', 'global_costmap'):
+        assert 'footprint_clearing_enabled' not in \
+            real[costmap][costmap]['ros__parameters']['obstacle_layer']
     assert 'lidar' not in base_local['obstacle_layer']['observation_sources'].split()
     # Global costmap: paths keep more distance (flatter, wider inflation); the
     # passability limit stays the robot radius.

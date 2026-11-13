@@ -44,9 +44,12 @@ def test_profiles_flatten_to_live_parameter_names():
         **vl53, 'inflation_layer.inflation_radius': 0.60,
         'inflation_layer.cost_scaling_factor': 2.5}
     # Eigene LiDAR-Ebene, die raeumt (08.11.2026); VL53-Ebene wie nach X9.
+    # KM-1 B (13.11.2026): keine der beiden Ebenen loescht unter der Kontur.
     assert overlay['/local_costmap/local_costmap'] == {
         **vl53,
         'plugins': ['obstacle_layer', 'lidar_layer', 'inflation_layer'],
+        'obstacle_layer.footprint_clearing_enabled': False,
+        'lidar_layer.footprint_clearing_enabled': False,
         'lidar_layer.plugin': 'nav2_costmap_2d::ObstacleLayer',
         'lidar_layer.enabled': True,
         'lidar_layer.observation_sources': 'lidar',
