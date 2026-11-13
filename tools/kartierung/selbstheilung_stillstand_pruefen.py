@@ -36,6 +36,12 @@ Geprueft wird:
   E  (optional, --vl53-s) Niedrige Hindernisse: wie hoch ueber dem Boden
      liegen die VL53-Treffer, und welche davon verwerfen Kostenkarten und
      collision_monitor wegen min_obstacle_height/min_height?
+  F  (optional, --eigenecho-s) Eigenechos fuer KM-1 B (13.11.2026): Seit die
+     lokale Karte unter der Kontur nichts mehr loescht, bliebe ein Messpunkt
+     auf dem Roboter selbst (Mast, Halter) als Hindernis stehen. Im Stand,
+     rundherum mindestens 0,5 m frei, darf kein LiDAR- und kein markierender
+     VL53-Punkt im Gehaeuse liegen und keine toedliche Zelle der lokalen
+     Karte darunter.
 
 Exitcode 0 = alle Pflichtpruefungen erfuellt, 1 = mindestens eine nicht
 erfuellt, 2 = Explorer nicht erreichbar (Stack laeuft nicht).
@@ -341,6 +347,92 @@ def lethal_cells_in_window(data, width, height, resolution, origin_xy,
     inside = ((base[:, 0] >= window['x_min']) & (base[:, 0] <= window['x_max'])
               & (np.abs(base[:, 1]) <= window['y_abs']))
     return int(np.count_nonzero(inside))
+
+
+# Gehaeuse ohne Polster wie footprint in nav2_params_real.yaml (lokale Karte);
+# Ersatz, falls die Kostenkarte nicht antwortet.
+KOERPER_STANDARD = ((0.31, 0.23), (0.31, -0.23), (-0.11, -0.23), (-0.11, 0.23))
+
+
+def parse_footprint(text):
+    """Nav2-Footprint ``"[[x, y], ...]"`` in eine Liste von Punkten."""
+    werte = json.loads(str(text))
+    punkte = [(float(x), float(y)) for x, y in werte]
+    if len(punkte) < 3:
+        raise ValueError('footprint braucht mindestens drei Punkte')
+    return punkte
+
+
+def polster(polygon, abstand):
+    """Wie nav2 ``padFootprint``: jeder Punkt um ``abstand`` nach außen je Achse.
+
+    Mit negativem ``abstand`` schrumpft die Kontur entsprechend.
+    """
+    def vorzeichen(v):
+        return (v > 0) - (v < 0)
+    return [(x + vorzeichen(x)*abstand, y + vorzeichen(y)*abstand) for x, y in polygon]
+
+
+def im_polygon(punkte_xy, polygon):
+    """Bool-Maske: liegt der Punkt (x, y) innerhalb des Polygons (Strahlverfahren)?"""
+    pts = np.asarray(punkte_xy, dtype=float).reshape(-1, 2)
+    x, y = pts[:, 0], pts[:, 1]
+    innen = np.zeros(len(pts), dtype=bool)
+    poly = list(polygon)
+    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
+        kreuzt = (y0 > y) != (y1 > y)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            x_schnitt = x0 + (y - y0)*(x1 - x0)/(y1 - y0)
+        innen ^= kreuzt & (x < x_schnitt)
+    return innen
+
+
+def scan_punkte(ranges, angle_min, angle_increment, range_min, range_max):
+    """Gültige LaserScan-Strahlen als Nx3-Punkte im Sensorrahmen (z = 0).
+
+    NaN (z. B. die Mastmaske), Unendlich und Werte außerhalb
+    ``range_min``..``range_max`` sind keine Messung.
+    """
+    r = np.asarray(ranges, dtype=float)
+    winkel = angle_min + np.arange(len(r))*angle_increment
+    gueltig = np.isfinite(r) & (r >= range_min) & (r <= range_max)
+    return np.column_stack([r[gueltig]*np.cos(winkel[gueltig]),
+                            r[gueltig]*np.sin(winkel[gueltig]),
+                            np.zeros(int(np.count_nonzero(gueltig)))])
+
+
+def eigenecho_zaehlung(punkte_base_link, koerper, padding):
+    """Punkte im Gehäuse und im Polsterband (base_link, nur x/y)."""
+    pts = np.asarray(punkte_base_link, dtype=float).reshape(-1, 3)
+    im_koerper = im_polygon(pts[:, :2], koerper)
+    im_gepolstert = im_polygon(pts[:, :2], polster(koerper, padding))
+    bericht = {'punkte': int(len(pts)),
+               'im_gehaeuse': int(np.count_nonzero(im_koerper)),
+               'im_polsterband': int(np.count_nonzero(im_gepolstert & ~im_koerper))}
+    if bericht['im_gehaeuse']:
+        innen = pts[im_koerper]
+        bericht['beispiele_gehaeuse_xy'] = [
+            [round(float(px), 3), round(float(py), 3)] for px, py in innen[:5, :2]]
+    return bericht
+
+
+def lethal_cells_in_body(data, width, height, resolution, origin_xy, to_base_link, koerper):
+    """Tödliche Zellen (100), deren Mitte tief im Gehäuse liegt.
+
+    Das Gehäuse wird um eine halbe Zelle geschrumpft: Ein echtes Hindernis
+    3–5 cm vor der Front (Stellprobe) kann sonst durch die Rasterung mit seiner
+    Zellmitte knapp hinter der Frontlinie liegen.
+    """
+    grid = np.asarray(data, dtype=np.int16).reshape(height, width)
+    rows, cols = np.nonzero(grid == 100)
+    if rows.size == 0:
+        return 0
+    points = np.column_stack([
+        origin_xy[0] + (cols + 0.5)*resolution,
+        origin_xy[1] + (rows + 0.5)*resolution,
+        np.zeros(rows.size)])
+    base = to_base_link(points)
+    return int(np.count_nonzero(im_polygon(base[:, :2], polster(koerper, -resolution/2.0))))
 
 
 def row_elevations(fov_deg, rows=8):
@@ -728,6 +820,118 @@ def pruefe_vl53(leser, ergebnis, sekunden, base_link_above_floor):
     return berichte
 
 
+def pruefe_eigenechos(leser, ergebnis, sekunden):
+    """F: LiDAR-, VL53- und Kostenkartenpunkte auf dem Roboter selbst (KM-1 B)."""
+    from nav_msgs.msg import OccupancyGrid
+    from rclpy.qos import (DurabilityPolicy, QoSProfile, ReliabilityPolicy,
+                           qos_profile_sensor_data)
+    from rclpy.time import Time
+    from sensor_msgs.msg import LaserScan, PointCloud2
+    from sensor_msgs_py.point_cloud2 import read_points
+    from tf2_ros import Buffer, TransformListener
+
+    bereich = 'F Eigenechos'
+    params = leser.all_params('/local_costmap/local_costmap') or {}
+    koerper, padding = list(KOERPER_STANDARD), 0.02
+    try:
+        if params.get('footprint') not in (None, NOT_SET):
+            koerper = parse_footprint(params['footprint'])
+        if params.get('footprint_padding') not in (None, NOT_SET):
+            padding = float(params['footprint_padding'])
+    except (ValueError, TypeError) as error:
+        ergebnis.add(bereich, 'Kontur der lokalen Karte lesbar', False, str(error))
+    loeschen = {layer: params.get(f'{layer}.footprint_clearing_enabled', NOT_SET)
+                for layer in ('obstacle_layer', 'lidar_layer')}
+    ergebnis.add(bereich, 'Loeschen unter der Kontur (lokale Karte)', None,
+                 ', '.join(f'{k}={"nicht deklariert" if v is NOT_SET else v}'
+                           for k, v in loeschen.items())
+                 + f'; Gehaeuse {koerper}, Polster {padding:.2f} m')
+    marking = {k: v for k, v in near_field_filters(params).items() if v['marking']}
+    z_min = max((v['min'] for v in marking.values() if v['min'] is not None), default=None)
+    z_max = min((v['max'] for v in marking.values() if v['max'] is not None), default=None)
+
+    tf_buffer = Buffer()
+    TransformListener(tf_buffer, leser.node)
+    scans, clouds, costmaps = [], {'left': [], 'right': []}, []
+
+    def on_scan(msg):
+        scans.append((msg.header.frame_id, scan_punkte(
+            msg.ranges, msg.angle_min, msg.angle_increment, msg.range_min, msg.range_max)))
+
+    def collect(side):
+        def callback(msg):
+            pts = [(float(p[0]), float(p[1]), float(p[2]))
+                   for p in read_points(msg, field_names=('x', 'y', 'z'), skip_nans=True)]
+            clouds[side].append((msg.header.frame_id, np.array(pts, dtype=float).reshape(-1, 3)))
+        return callback
+
+    latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                         durability=DurabilityPolicy.TRANSIENT_LOCAL)
+    subs = [leser.node.create_subscription(LaserScan, LIDAR_NAHBEREICH, on_scan,
+                                           qos_profile_sensor_data)]
+    subs += [leser.node.create_subscription(PointCloud2, f'/near_field/{side}/points',
+                                            collect(side), qos_profile_sensor_data)
+             for side in clouds]
+    subs.append(leser.node.create_subscription(
+        OccupancyGrid, '/local_costmap/costmap', costmaps.append, latched))
+    leser.spin_for(sekunden)
+    for sub in subs:
+        leser.node.destroy_subscription(sub)
+
+    def nach_base_link(frame_id, pts):
+        tf = tf_buffer.lookup_transform('base_link', frame_id, Time())
+        t, q = tf.transform.translation, tf.transform.rotation
+        return transform_points(pts, (t.x, t.y, t.z), (q.x, q.y, q.z, q.w))
+
+    berichte = {'gehaeuse': koerper, 'polster_m': padding,
+                'loeschen_unter_kontur': {k: (None if v is NOT_SET else v)
+                                          for k, v in loeschen.items()}}
+    quellen = [('LiDAR', scans)] + [(f'VL53 {side}', frames) for side, frames in clouds.items()]
+    for name, frames in quellen:
+        if not frames:
+            ergebnis.add(bereich, f'{name}: Messungen empfangen', False, 'keine Nachricht')
+            continue
+        try:
+            pts = nach_base_link(frames[0][0], np.vstack([p for _, p in frames]))
+        except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+            ergebnis.add(bereich, f'{name}: TF {frames[0][0]} -> base_link', False, str(error))
+            continue
+        if name.startswith('VL53') and (z_min is not None or z_max is not None):
+            hoehe = np.ones(len(pts), dtype=bool)
+            if z_min is not None:
+                hoehe &= pts[:, 2] >= z_min
+            if z_max is not None:
+                hoehe &= pts[:, 2] <= z_max
+            pts = pts[hoehe]         # nur Punkte, die die lokale Karte markiert
+        zaehlung = eigenecho_zaehlung(pts, koerper, padding)
+        zaehlung['nachrichten'] = len(frames)
+        berichte[name] = zaehlung
+        ergebnis.add(bereich, f'{name}: {len(frames)} Nachrichten, '
+                              f'{zaehlung["im_gehaeuse"]} Punkte im Gehaeuse',
+                     zaehlung['im_gehaeuse'] == 0,
+                     f'{zaehlung["punkte"]} Punkte gesamt, {zaehlung["im_polsterband"]} im '
+                     f'{padding*100:.0f}-cm-Polsterband'
+                     + (f', Beispiele {zaehlung["beispiele_gehaeuse_xy"]}'
+                        if zaehlung['im_gehaeuse'] else ''))
+
+    if not costmaps:
+        ergebnis.add(bereich, 'lokale Kostenkarte empfangen', False, 'keine Nachricht')
+        return berichte
+    grid = costmaps[-1]
+    try:
+        count = lethal_cells_in_body(
+            grid.data, grid.info.width, grid.info.height, grid.info.resolution,
+            (grid.info.origin.position.x, grid.info.origin.position.y),
+            lambda pts: nach_base_link(grid.header.frame_id, pts), koerper)
+    except Exception as error:  # noqa: BLE001 - Diagnose ausgeben
+        ergebnis.add(bereich, f'TF {grid.header.frame_id} -> base_link', False, str(error))
+        return berichte
+    berichte['kostenkarte_toedlich_im_gehaeuse'] = count
+    ergebnis.add(bereich, f'lokale Kostenkarte: {count} toedliche Zellen im Gehaeuse',
+                 count == 0, 'Zellmitte mindestens eine halbe Zelle innerhalb des Gehaeuses')
+    return berichte
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     parser.add_argument('--explore-profil', help='Default: installiertes self_healing_params.yaml')
@@ -743,6 +947,9 @@ def main(argv=None):
                         help='So lange wird /cmd_vel beobachtet')
     parser.add_argument('--vl53-s', type=float, default=0.0,
                         help='> 0: VL53-Hoehenmessung ueber diese Dauer (Testobjekt vor dem Roboter)')
+    parser.add_argument('--eigenecho-s', type=float, default=0.0,
+                        help='> 0: Eigenechos ueber diese Dauer pruefen (KM-1 B; Roboter steht, '
+                             'rundherum mindestens 0,5 m frei)')
     parser.add_argument('--base-link-ueber-boden', type=float, default=BASE_LINK_UEBER_BODEN_M)
     parser.add_argument('--notiz', default='', help='z. B. "Klotz 5 cm, 0,35 m mittig"')
     parser.add_argument('--json', help='Ergebnis zusaetzlich als JSON (lokal, nicht ins Repo)')
@@ -768,6 +975,7 @@ def main(argv=None):
     leser = Leser(args.timeout_s)
     ergebnis = Ergebnis()
     vl53 = {}
+    eigenechos = {}
     try:
         leser.spin_for(args.entdeckung_s)
         explore_live = pruefe_profile(leser, ergebnis, explore_profil, overlays)
@@ -780,6 +988,8 @@ def main(argv=None):
                           odometrie=args.odometrie)
         if args.vl53_s > 0:
             vl53 = pruefe_vl53(leser, ergebnis, args.vl53_s, args.base_link_ueber_boden)
+        if args.eigenecho_s > 0:
+            eigenechos = pruefe_eigenechos(leser, ergebnis, args.eigenecho_s)
     finally:
         leser.close()
         rclpy.try_shutdown()
@@ -787,6 +997,8 @@ def main(argv=None):
     ergebnis.drucken()
     if vl53:
         print(json.dumps({'notiz': args.notiz, 'vl53': vl53}, ensure_ascii=False, indent=2))
+    if eigenechos:
+        print(json.dumps({'eigenechos': eigenechos}, ensure_ascii=False, indent=2, default=str))
     print('ERGEBNIS:', 'bestanden' if ergebnis.bestanden else 'NICHT bestanden')
     if args.json:
         import os
@@ -794,7 +1006,8 @@ def main(argv=None):
         with open(args.json, 'w', encoding='utf-8') as handle:
             json.dump({'zeit': time.strftime('%Y-%m-%dT%H:%M:%S'), 'notiz': args.notiz,
                        'bestanden': ergebnis.bestanden, 'pruefungen': ergebnis.zeilen,
-                       'vl53': vl53}, handle, ensure_ascii=False, indent=2, default=str)
+                       'vl53': vl53, 'eigenechos': eigenechos}, handle,
+                      ensure_ascii=False, indent=2, default=str)
     return 0 if ergebnis.bestanden else 1
 
 

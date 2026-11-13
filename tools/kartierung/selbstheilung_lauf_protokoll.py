@@ -12,6 +12,9 @@ schreibt eine JSON-Zusammenfassung:
     Umsehen, Spurrückfahrt, Endzustand und Grund),
   - HWT-Erholungszustände, Not-Aus-Wechsel, Tempolimit-Wechsel,
   - Fahrbefehle auf /cmd_vel (Maximum), gefahrene Strecke laut /odom,
+  - jede Rückwärtsfahrt (v < 0 auf /cmd_vel; RPP fährt nie rückwärts, also
+    nur BackUp): Beginn, Dauer, kleinste Geschwindigkeit und die dabei laut
+    /odom zurückgelegte Strecke (SH-8: 7 von 8 Rückfahrten an der Zeitgrenze),
   - Lücken im VL53-Status (länger als 0,8 s),
   - Abdeckungskurve: freie, belegte und bekannte Kartenfläche alle 30 s
     während der Fahrt und die Zeit, bis 85/90/95 % der freien Endfläche
@@ -36,6 +39,7 @@ import time
 TERMINAL = ('success', 'partial', 'blocked', 'failed', 'canceled')
 SAUBERES_ENDE = ('exploration_complete', 'usable_partial', 'blocked_help_required')
 VL53_LUECKE_S = 0.8
+RUECKFAHRT_PAUSE_S = 1.0     # so lange ohne v < 0, dann gilt die Rückfahrt als beendet
 ABDECKUNG_TAKT_S = 30.0
 ABDECKUNG_ANTEILE = (0.85, 0.90, 0.95)
 MANUELL = (
@@ -65,6 +69,8 @@ class LaufProtokoll:
         self.cmd = dict(nachrichten=0, ungleich_null=0, max_v=0.0, max_w=0.0)
         self.odom_letzte = None
         self.strecke_m = 0.0
+        self.rueckfahrten = []
+        self._rueckfahrt = None          # offene Rückwärtsfahrt
         self.vl53_letzte = None
         self.vl53_luecken = 0
         self.vl53_max_luecke_s = 0.0
@@ -131,14 +137,41 @@ class LaufProtokoll:
             self._ereignis(t, 'tempolimit', mps=limit)
             self.tempolimit = limit
 
-    def cmd_vel(self, v, w):
+    def cmd_vel(self, v, w, t=None):
         self.cmd['nachrichten'] += 1
         if v != 0.0 or w != 0.0:
             self.cmd['ungleich_null'] += 1
         self.cmd['max_v'] = max(self.cmd['max_v'], abs(v))
         self.cmd['max_w'] = max(self.cmd['max_w'], abs(w))
+        if t is None:
+            return
+        if v < -1e-4:
+            r = self._rueckfahrt
+            if r is None:
+                self._rueckfahrt = dict(start=t, letzte=t, start_xy=self.odom_letzte,
+                                        v_min=v, befehle=1)
+            else:
+                r['letzte'] = t
+                r['v_min'] = min(r['v_min'], v)
+                r['befehle'] += 1
+        else:
+            self._rueckfahrt_pruefen(t)
 
-    def odom(self, x, y):
+    def _rueckfahrt_pruefen(self, t, erzwingen=False):
+        r = self._rueckfahrt
+        if r is None or not (erzwingen or t - r['letzte'] > RUECKFAHRT_PAUSE_S):
+            return
+        self._rueckfahrt = None
+        strecke = (None if r['start_xy'] is None or self.odom_letzte is None
+                   else round(math.dist(r['start_xy'], self.odom_letzte), 3))
+        eintrag = dict(t_s=self._t(r['start']), dauer_s=round(r['letzte'] - r['start'], 1),
+                       v_min=round(r['v_min'], 3), befehle=r['befehle'],
+                       strecke_odom_m=strecke)
+        self.rueckfahrten.append(eintrag)
+        self._ereignis(r['start'], 'rueckfahrt', **{k: v for k, v in eintrag.items()
+                                                    if k != 't_s'})
+
+    def odom(self, x, y, t=None):
         if not (math.isfinite(x) and math.isfinite(y)):
             return
         if self.odom_letzte is not None:
@@ -146,6 +179,8 @@ class LaufProtokoll:
             if schritt < 0.5:          # Sprünge (Neustart, Reset) nicht addieren
                 self.strecke_m += schritt
         self.odom_letzte = (x, y)
+        if t is not None:
+            self._rueckfahrt_pruefen(t)
 
     def stellprobe(self, x, y, t, schwelle_m):
         """Entfernung vom Standort beim Missionsstart; merkt das erste Erreichen."""
@@ -222,6 +257,8 @@ class LaufProtokoll:
         }
 
     def zusammenfassung(self):
+        if self._rueckfahrt is not None:
+            self._rueckfahrt_pruefen(self._rueckfahrt['letzte'], erzwingen=True)
         sh = self.self_healing or {}
         dauer = (None if self.gestartet_um is None or self.beendet_um is None
                  else round(self.beendet_um - self.gestartet_um, 1))
@@ -238,6 +275,7 @@ class LaufProtokoll:
             'fahrbefehle': {k: (round(v, 3) if isinstance(v, float) else v)
                             for k, v in self.cmd.items()},
             'strecke_odom_m': round(self.strecke_m, 2),
+            'rueckfahrten': self.rueckfahrten,
             'vl53_luecken': {'anzahl': self.vl53_luecken,
                              'max_s': round(self.vl53_max_luecke_s, 3)},
             'abdeckung': self.abdeckung_zeiten(),
@@ -320,11 +358,11 @@ def main(argv=None):
     node.create_subscription(SpeedLimit, '/speed_limit',
                              lambda m: protokoll.tempo(m.speed_limit, jetzt()), 10)
     node.create_subscription(Twist, '/cmd_vel',
-                             lambda m: protokoll.cmd_vel(m.linear.x, m.angular.z),
+                             lambda m: protokoll.cmd_vel(m.linear.x, m.angular.z, jetzt()),
                              qos_profile_sensor_data)
     def on_odom(m):
         x, y = m.pose.pose.position.x, m.pose.pose.position.y
-        protokoll.odom(x, y)
+        protokoll.odom(x, y, jetzt())
         protokoll.stellprobe(x, y, jetzt(), args.stellprobe_m)
 
     node.create_subscription(Odometry, '/odom', on_odom, qos_profile_sensor_data)

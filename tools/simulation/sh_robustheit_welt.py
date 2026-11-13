@@ -61,6 +61,8 @@ class RobustheitsWelt(World):
         self.zeit_s = None               # vom Treiber gesetzt (Sekunden seit Start)
         self.mitte_min = None            # kleinster Abstand der Robotermitte
         self.minimum_koerper = math.inf  # kleinster Abstand des echten Gehäuses
+        self.koerper_engste = None       # Pose und Zeit dazu (SH-8b, 13.11.2026)
+        self.koerper_verlauf = []        # jede neue Annäherung: (t_s, Abstand)
 
     # --- Szenarioeingriffe ----------------------------------------------
     def schliesse_tuer(self, seite):
@@ -95,7 +97,17 @@ class RobustheitsWelt(World):
         if self.minimum_clearance >= .03:
             return
         alle = list(self.obstacles) + [b for b, _ in self.niedrig]
-        self.minimum_koerper = min(self.minimum_koerper, koerper_abstand(self.pose, alle))
+        abstand = koerper_abstand(self.pose, alle)
+        if abstand < self.minimum_koerper:
+            niedrig = [b for b, _ in self.niedrig]
+            self.koerper_engste = dict(
+                pose=[round(float(v), 3) for v in self.pose],
+                geschwindigkeit=[round(float(v), 3) for v in self.velocity],
+                abstand_m=round(float(abstand), 4), t_s=self.zeit_s,
+                hindernis_niedrig=bool(niedrig) and
+                koerper_abstand(self.pose, niedrig) <= abstand + 1e-9)
+            self.koerper_verlauf.append((self.zeit_s, round(float(abstand), 4)))
+        self.minimum_koerper = min(self.minimum_koerper, abstand)
 
     # --- Physik -----------------------------------------------------------
     def integrate(self, command, dt, tau=.05):

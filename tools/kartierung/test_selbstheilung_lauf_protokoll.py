@@ -149,3 +149,32 @@ def test_stellprobe_ignores_motion_before_the_mission_starts():
     p.stellprobe(0.0, 0.0, 1.0, 0.5)
     p.stellprobe(3.0, 0.0, 2.0, 0.5)             # vor dem Start (z. B. Hinstellen)
     assert p.stellprobe_start is None and p.stellprobe_weg is None
+
+
+def test_each_reverse_drive_is_recorded_with_its_odometry_distance():
+    """SH-8: 7 von 8 Rückfahrten liefen in die Zeitgrenze; wie weit kam er?"""
+    p = LaufProtokoll(start=0.0)
+    p.odom(0.0, 0.0, 1.0)
+    p.cmd_vel(0.05, 0.0, 1.5)                  # vorwärts zählt nicht
+    for i in range(30):                        # 30 s mit -0,015 m/s
+        t = 2.0 + i
+        p.cmd_vel(-0.015, 0.0, t)
+        p.odom(-0.005*(i + 1), 0.0, t + 0.5)   # real nur 0,005 m/s
+    p.cmd_vel(0.0, 0.0, 31.5)                  # 0,5 s ohne v < 0: noch dieselbe Fahrt
+    p.odom(-0.15, 0.0, 33.5)                   # 2,5 s ohne v < 0: beendet
+    p.cmd_vel(-0.015, 0.0, 40.0)               # zweite, kurze Rückfahrt
+    p.odom(-0.16, 0.0, 40.5)
+    zusammenfassung = p.zusammenfassung()      # offene Fahrt wird abgeschlossen
+    assert zusammenfassung['rueckfahrten'] == [
+        dict(t_s=2.0, dauer_s=29.0, v_min=-0.015, befehle=30, strecke_odom_m=0.15),
+        dict(t_s=40.0, dauer_s=0.0, v_min=-0.015, befehle=1, strecke_odom_m=0.01)]
+    assert [e['art'] for e in zusammenfassung['ereignisse']].count('rueckfahrt') == 2
+
+
+def test_reverse_drive_without_any_command_at_the_base_leaves_no_entry():
+    """SH-8 s3a: unter „approach“ kam kein Befehl ungleich null an."""
+    p = LaufProtokoll(start=0.0)
+    for i in range(30):
+        p.cmd_vel(0.0, 0.0, float(i))
+        p.odom(0.19, -0.19, i + 0.5)
+    assert p.zusammenfassung()['rueckfahrten'] == []

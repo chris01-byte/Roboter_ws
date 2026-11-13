@@ -299,6 +299,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     manifest = json.loads(args.manifest.read_text(encoding='utf-8'))
     szenario = next(s for s in manifest['szenarien'] if s['id'] == args.szenario)
+    stellprobe_m = float(manifest.get('stellprobe_m', 0.0))
     out = args.ausgabe
     out.mkdir(parents=True, exist_ok=False)
     os.environ['ROS_DOMAIN_ID'] = str(args.domain)
@@ -518,9 +519,7 @@ def main(argv=None):
             self.create_subscription(Twist, '/cmd_vel', self.on_cmd_final, 10)
             self.create_subscription(Twist, '/cmd_vel_nav_raw', lambda m: verlauf['roh'].append(
                 (round(time.monotonic() - start, 3), round(m.linear.x, 4), round(m.angular.z, 4))), 10)
-            self.create_subscription(Odometry, '/odom',
-                                     lambda m: protokoll.odom(m.pose.pose.position.x,
-                                                              m.pose.pose.position.y), 10)
+            self.create_subscription(Odometry, '/odom', self.on_odom, 10)
             self.create_subscription(NearFieldStatus, '/near_field/status',
                                      lambda m: protokoll.vl53(time.monotonic()), 10)
             self.create_subscription(NavPath, '/plan', self.on_plan, 10)
@@ -537,8 +536,14 @@ def main(argv=None):
             # Abdeckungskurve wie am Roboter (Fahrplan §9, 09.11.2026).
             protokoll.karte(msg.data, msg.info.resolution, time.monotonic())
 
+        def on_odom(self, m):
+            x, y, t = m.pose.pose.position.x, m.pose.pose.position.y, time.monotonic()
+            protokoll.odom(x, y, t)
+            # Stellprobe wie am Roboter (MASTERPLAN §9 Regel 6), nur mit Manifestwert.
+            protokoll.stellprobe(x, y, t, stellprobe_m)
+
         def on_cmd_final(self, m):
-            protokoll.cmd_vel(m.linear.x, m.angular.z)
+            protokoll.cmd_vel(m.linear.x, m.angular.z, time.monotonic())
             verlauf['final'].append((round(time.monotonic() - start, 3), round(m.linear.x, 4),
                                      round(m.angular.z, 4)))
 
@@ -805,12 +810,16 @@ def main(argv=None):
     zusammenfassung = protokoll.zusammenfassung()
     ergebnis['stoerung'] = stoerung
     ergebnis['fahrtprotokoll'] = zusammenfassung
+    if stellprobe_m > 0:
+        ergebnis['stellprobe'] = protokoll.stellprobe_ergebnis(stellprobe_m)
     ergebnis['kollision'] = bool(welt.collision)
     ergebnis['minimaler_abstand_m'] = (None if not math.isfinite(welt.minimum_clearance)
                                        else round(float(welt.minimum_clearance), 3))
     # Echtes Gehäuse ohne Polster (KM-1): None = nie näher als 3 cm an der Prüfkontur.
     ergebnis['minimaler_abstand_koerper_m'] = (None if not math.isfinite(welt.minimum_koerper)
                                                else round(float(welt.minimum_koerper), 3))
+    ergebnis['koerper_engste_stelle'] = welt.koerper_engste
+    ergebnis['koerper_annaeherungen'] = welt.koerper_verlauf
     ergebnis['engste_stelle'] = welt.engste_stelle
     ergebnis['erster_kontakt'] = verlauf['erster_kontakt']
     if welt.niedrig:

@@ -7,9 +7,10 @@ import pytest
 import yaml
 
 from selbstheilung_stillstand_pruefen import (
-    NOT_SET, ODOMETRIE, Ergebnis, compare_params, flatten_ros_params, height_report,
-    lethal_cells_in_window, near_field_filters, normalize_topic, row_elevations,
-    transform_points, values_match)
+    KOERPER_STANDARD, NOT_SET, ODOMETRIE, Ergebnis, compare_params, eigenecho_zaehlung,
+    flatten_ros_params, height_report, im_polygon, lethal_cells_in_body,
+    lethal_cells_in_window, near_field_filters, normalize_topic, parse_footprint, polster,
+    row_elevations, scan_punkte, transform_points, values_match)
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -353,3 +354,56 @@ def test_missing_status_or_latched_fusion_fault_fails_and_motorless_checks_skip_
     assert _quellen(True, 'standard', ohne_wache, None) == {'Encoder liefern frisch': True}
     # Motorlose Prüfungen (ohne --aktiv) verlangen keine Fahrquellen.
     assert _quellen(False, 'hwt601', None, None) == {}
+
+
+# --- F Eigenechos (KM-1 B, 13.11.2026) -------------------------------------
+
+def test_body_matches_the_local_costmap_footprint_and_nav2_padding():
+    real = yaml.safe_load((REPO/'src/robot_navigation/config/nav2_params_real.yaml')
+                          .read_text(encoding='utf-8'))
+    local = real['local_costmap']['local_costmap']['ros__parameters']
+    assert parse_footprint(local['footprint']) == [tuple(p) for p in KOERPER_STANDARD]
+    # nav2 padFootprint: je Achse nach außen; ergibt x -0,13..0,33, y ±0,25.
+    assert polster(KOERPER_STANDARD, local['footprint_padding']) == pytest.approx(
+        [(0.33, 0.25), (0.33, -0.25), (-0.13, -0.25), (-0.13, 0.25)])
+    with pytest.raises(ValueError):
+        parse_footprint('[[0.1, 0.1], [0.2, 0.2]]')
+
+
+def test_point_in_polygon_inside_outside_and_padding_band():
+    pts = [(0.0, 0.0), (0.30, 0.22), (0.32, 0.0), (0.40, 0.0), (-0.12, 0.0), (0.0, -0.30)]
+    assert im_polygon(pts, KOERPER_STANDARD).tolist() == [True, True, False, False, False, False]
+    zaehlung = eigenecho_zaehlung([(x, y, 0.4) for x, y in pts], KOERPER_STANDARD, 0.02)
+    assert zaehlung['punkte'] == 6
+    assert zaehlung['im_gehaeuse'] == 2
+    assert zaehlung['im_polsterband'] == 2          # 0,32 vorn und -0,12 hinten
+    assert zaehlung['beispiele_gehaeuse_xy'] == [[0.0, 0.0], [0.3, 0.22]]
+
+
+def test_scan_points_skip_the_mast_mask_and_out_of_range_values():
+    # Mastsektor liefert NaN (gemessen 12.08.2026), dazu inf und zu nahe Werte.
+    pts = scan_punkte([1.0, float('nan'), float('inf'), 0.01, 2.0],
+                      angle_min=0.0, angle_increment=math.pi/2, range_min=0.03, range_max=25.0)
+    assert pts.shape == (2, 3)
+    assert pts[0] == pytest.approx([1.0, 0.0, 0.0])
+    assert pts[1] == pytest.approx([2.0*math.cos(2*math.pi), 2.0*math.sin(2*math.pi), 0.0],
+                                   abs=1e-9)
+
+
+def test_lethal_cells_count_only_deep_inside_the_body():
+    # 5-cm-Raster, base_link = Kartenursprung. Zelle (0,0) liegt mitten im
+    # Gehäuse; eine Zelle, deren Mitte 1 cm hinter der Frontlinie liegt
+    # (Hindernis 3–5 cm vor der Front), zählt nicht.
+    res, w, h = 0.05, 40, 40
+    origin = (-1.0, -1.0)
+    data = np.zeros((h, w), dtype=np.int16)
+
+    def setze(x, y, wert=100):
+        data[int((y - origin[1])/res), int((x - origin[0])/res)] = wert
+
+    setze(0.0, 0.0)            # Mitte 0,025 / 0,025: Eigenecho
+    setze(0.30, 0.0)           # Mitte 0,325: vor der geschrumpften Front
+    setze(0.05, 0.10, 99)      # nur „inscribed“, nicht tödlich
+    count = lethal_cells_in_body(data.ravel(), w, h, res, origin, lambda p: p,
+                                 KOERPER_STANDARD)
+    assert count == 1

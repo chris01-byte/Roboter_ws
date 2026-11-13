@@ -137,3 +137,19 @@ def test_real_body_clearance_is_two_cm_more_than_the_padded_test_contour():
     assert chassis_clearance(pose, [nah]) == 0.0
     assert koerper_abstand(pose, [nah]) == pytest.approx(0.01)
     assert koerper_abstand(pose, []) == math.inf
+
+
+def test_closest_real_body_approach_records_pose_time_and_obstacle_kind():
+    """SH-8b (13.11.2026): wo und wann kam das echte Gehäuse am nächsten?"""
+    w = welt.RobustheitsWelt(0.8, (-1.7, -0.3, 0.0), niedrig=[(-1.195, -0.105, 0.29, 0.38)])
+    w.zeit_s = 12.5
+    w.minimum_clearance = 0.02            # Prüfkontur nah: Gehäuse wird gerechnet
+    w.pruefe_koerper()
+    erst = w.koerper_engste
+    assert erst['t_s'] == 12.5 and erst['hindernis_niedrig'] is True
+    assert erst['abstand_m'] == pytest.approx(w.minimum_koerper, abs=1e-4)
+    assert erst['pose'] == [-1.7, -0.3, 0.0]
+    w.pose = np.array([-1.8, -0.3, 0.0]); w.zeit_s = 20.0
+    w.pruefe_koerper()                    # weiter weg: Eintrag bleibt
+    assert w.koerper_engste is erst
+    assert w.koerper_verlauf == [(12.5, erst['abstand_m'])]
