@@ -1525,6 +1525,18 @@ zugeschrieben (14.08., 18.08., Rückfahrten in SH-6 bis SH-8), ohne je
 Sollwert und Ist-Tempo über eine ganze Fahrt nebeneinanderzulegen. Eine
 Erklärung, die fünfmal passt, ist noch keine Messung. Ursache offen;
 Motorsteuerung, getrennt messen.
+
+**Nachtrag 14.11.2026 (nachts) – SH-8b und der Startimpuls:** SH-8b nicht
+bestanden; mit KM-1 B kein „approach“ mehr, aber nach nur 0,151 m Rückfahrt
+verweigert der Regler jede Drehung. Die neue Messung der Rückfahrstrecke
+(dreimal genau 0,151 m, einmal 0,215 m bei 30 s mit −1,5 cm/s) passt exakt
+zu 8 und 11 U/min am Motor, den ersten Stufen der Anfahrrampe. Daraus die
+Arbeitshypothese: Seit der Änderung vom 16.08. (Startimpuls nur noch beim
+Anfahren) übernimmt der Antrieb spätere Sollwerte nicht mehr und fährt mit
+dem ersten kleinen Wert weiter. Lehre: Eine Messgröße, die nur mitliest
+(Strecke je Rückfahrt), hat in einer Probe mehr geklärt als drei Pakete
+Verhaltensänderung. Noch nicht am Antrieb gemessen; nächster Schritt ist
+eine reine Messung, dann eine getrennte Korrektur im Motortreiber.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

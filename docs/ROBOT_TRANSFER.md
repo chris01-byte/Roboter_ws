@@ -186,6 +186,22 @@ geordnet beendet. Lokal neu: `$SH_PR/sh8_*`, `$SH_PR/werkzeug/sh8_stelle.py`.
 `~/roboter_ws`, frühere Releases und Codex-Referenz unverändert, kein
 Autostart. Aktiver Auftrag danach: SH-8b (KM-1 B, dieselbe Stellprobe).
 
+Nachtrag 14.11.2026, tatsächliche Jetson-Wirkung SH-8b und Anhang Z: neuer
+Release `~/.local/share/amadeus/releases/selbstheilung-sh8b-20261114_1643`
+(14 Pakete, HEAD `734f259`, 197 Tests), `SH_REL` zeigt jetzt darauf;
+Prototyp 1, SH-7- und SH-8-Release unverändert. Vier Stackstarts, davon drei
+scharf mit Mission (Stellprobe an Mülleimern, Ecke und Garderobe), einer von
+„D Quellen“ abgefangen, ohne Bewegung. Vorwärts an der Basis höchstens
+wenige cm/s, Rückfahrten 30 s mit −0,015 m/s befohlen und laut Odometrie
+0,151–0,215 m weit; kein Kontakt, kein Eingriff, kein Not-Aus. Je Probe ein
+Missionsstart, bei s3a ein Missionsstopp über
+`/mission_manager/command_json`. Stack je Start geordnet beendet. Anhang Z
+zweimal nur lesend auf vorhandene Logs (Klon danach `bbc5c6a`), kein
+Stackstart. Lokal neu: `$SH_PR/sh8b_*`, `$SH_PR/anlaeufe/`. Während Anhang Z
+lief ein fremder LiDAR-Treiber aus `~/roboter_ws/install` (vom Agenten nicht
+gestartet und nicht angefasst). `~/roboter_ws`, frühere Releases und
+Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

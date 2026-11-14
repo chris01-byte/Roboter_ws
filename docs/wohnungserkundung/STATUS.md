@@ -33,18 +33,18 @@ Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
 **Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
-Stand SH-8: Ecke und Garderobe gelöst (AW-1), **offen sind die Mülleimer**
-(Kollisionsmonitor „approach“ hält auch rückwärts fest). **Dazu aus der
-Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist nach hinten blind;
-in einem Lauf stieß das Heck nach der Türdurchfahrt an den Türpfosten. In
-SH-8b Teil B beobachten, Korrektur nach den Daten.
+Stand SH-8b (14.11.): mit KM-1 B kein „approach“ mehr, aber Stellprobe an
+allen drei Stellen nicht bestanden, weil die Rückfahrt nur 0,15–0,22 m statt
+0,3 m schafft. **Wahrscheinliche gemeinsame Ursache mit dem Kriechtempo:**
+Der Antrieb fährt mit dem ersten kleinen Sollwert nach dem Stillstand
+weiter (Startimpuls im Motortreiber); abgeleitet, noch nicht gemessen.
+**Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
+nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** **SH-8b** (Fahrplan Schritt 1, Regel 4),
-[Auftrag](AGENTENAUFTRAG.md): dieselbe Stellprobe mit genau einer Korrektur,
-**KM-1 B** (lokale Karte löscht nichts unter der Kontur). Neu und nur
-messend: Eigenecho-Prüfung im Stand (Vorprüfung, Bereich F) und die Strecke
-jeder Rückfahrt im Fahrtprotokoll. **Teil B** nur bei Erfolg: eine volle
-Zwei-Raum-Fahrt.
+**Aktiv (Roboter):** kein Auftrag. **Vorgeschlagen und noch nicht
+freigegeben: Antriebsprobe AT-1**, nur Messung (Sollwert gegen
+Encoder-Tempo bei Sprung, Treppe und Rampe). Sie braucht die Freigabe des
+Projektinhabers.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -66,7 +66,8 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| **Antrieb setzt nur 16–23 % des befohlenen Wegs um** (Anhang Z, zweiter Lauf: befohlen 6,4–10,1 cm/s, gefahren 1,3–1,7 cm/s; Ziele über 1,5 m nur 2 von 42 erreicht) | Ursache nicht gemessen; Motorsteuerung, getrennt zu messen und zu ändern | **als Nächstes nach SH-8b:** kurze Fahrprobe zum Messen (Sollwert gegen Encoder-Tempo), braucht die Freigabe des Projektinhabers; entscheidet, was Schritt 2 prüft |
+| KM-1 B (lokale Karte löscht nichts unter der Kontur) | in SH-8b nicht bestätigt: kein „approach“, aber nach der kurzen Rückfahrt verweigert der Regler jede Drehung | der Antrieb ist geklärt; dann dieselbe Stellprobe |
+| Schritt 2 (EK-1 mit Lückenfilter, SH-9) | bei 1,3–1,7 cm/s Ist-Tempo erreicht Amadeus weiter entfernte Ziele nicht (2 von 42 über 1,5 m) | der Antrieb fährt, was befohlen wird |
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
@@ -85,7 +86,81 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 und AW-1b gebaut (09.11.) · Abdeckungskurve im
 Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
 · Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
-Ecke und Garderobe befreit, Mülleimer nicht (13.11.).
+Ecke und Garderobe befreit, Mülleimer nicht (13.11.) · Anhang Z zweimal
+ausgewertet: Befehle 6–10 cm/s, gefahren 1,3–1,7 cm/s (14.11.) · SH-8b
+ausgewertet: nicht bestanden, Rückfahrten 0,151 m (14.11.).
+
+## 14.11.2026 (nachts) – SH-8b ausgewertet: nicht bestanden; die Rückfahrten zeigen die Ursache im Motortreiber
+
+Bericht `~/selbstheilung_jetson_bericht_sh8b.md` (Jetson, Release
+`selbstheilung-sh8b-20261114_1643`, HEAD `734f259`, Build 176 s, 197 Tests
+bestanden, Vorprüfung je Probe 63× OK, Bereich F ohne Befund). Drei Proben
+mit Mission, keine Berührung, kein Eingriff, kein „process has died“.
+
+| Probe | Urteil | größte Entfernung | Ende | Rückfahrten (30,1 s lang −1,5 cm/s befohlen) | SH-8 zum Vergleich |
+|---|---|---|---|---|---|
+| s3a Mülleimer | `nicht_befreit` | 0,483 m | 6-min-Fenster | 0,151 m und 0,215 m | `nicht_befreit` (0,258 m) |
+| s2a Ecke | `nicht_befreit` | 0,206 m | „Hilfe benötigt“ nach etwa 3 min | 0,151 m | `befreit` |
+| s1a Garderobe | `nicht_befreit` | 0,151 m | „Hilfe benötigt“ nach etwa 2 min | 0,151 m | `befreit` (mit 3 cm) |
+
+**Urteil nach A7: nicht bestanden**; s3b, s2b, s1b und Teil B entfielen.
+Christopher sah „Zurück, gedreht, weg“ (Mülleimer), „zurück und dann um 90
+Grad gedreht“ (Ecke), „Zurück, dann gestanden“ (Garderobe). Das Kriterium
+(0,5 m weg) wurde an den Mülleimern um 1,7 cm verfehlt.
+
+**Was belegt ist:**
+
+1. **KM-1 B tut, was es soll:** kein einziges „approach“ mehr (SH-8 s3a: bei
+   jedem Anlauf), kein Eigenecho, keine tödliche Zelle im Gehäuse. An den
+   Mülleimern kam Amadeus fast frei.
+2. **An Ecke und Garderobe schlechter als SH-8:** Nach der einen Rückfahrt
+   stand Amadeus nur 0,151 m weiter hinten. Der Regler verweigerte danach
+   jeden Anlauf nach etwa 11 s („detected collision ahead“ 744×), weil die
+   Hindernisse jetzt in der lokalen Karte stehen bleiben und für eine
+   Drehung noch zu nah waren (Garderobe: tödliche Zellen 4 cm neben der
+   linken Seite). Nach acht Fehlschlägen kam „Hilfe benötigt“. Vor KM-1 B
+   löschte die Karte diese Zellen, und Amadeus drehte sich dicht am
+   Hindernis frei.
+3. **Die Rückfahrt ist der Engpass:** befohlen 0,3 m, an der Basis 30,1 s
+   lang −1,5 cm/s (603 Befehle, das wären 0,45 m), laut Odometrie
+   **dreimal genau 0,151 m und einmal 0,215 m**.
+
+**Die Zahlen aus Punkt 3 passen genau zu einer Ursache im Motortreiber**
+(aus Code und Zahlen abgeleitet, am Antrieb noch nicht gemessen):
+
+- `base_hardware` sendet den Startimpuls (Register `0x0027`) seit dem
+  16.08.2026 nur beim Übergang Stillstand → Fahrt. Spätere Sollwerte
+  schreibt es ohne Startimpuls ins Drehzahlregister.
+- Übernimmt der Antrieb die Drehzahl nur mit dem Startimpuls, dann fährt er
+  bis zum nächsten Halt mit dem **ersten** Sollwert nach dem Stillstand.
+  Unter Nav2 ist das eine kleine Stufe der Anfahrrampe des Glätters
+  (0,12 m/s² bei 20 Hz, also 0,6 cm/s je Schritt, in der Langsam-Zone 30 %
+  davon).
+- Rückfahrt: Die Stufen entsprechen 3, 6, **8**, **11**, 14 … U/min am
+  Motor. 8 U/min ergeben in 30,1 s 0,157 m (gemessen 0,151 m), 11 U/min
+  0,216 m (gemessen 0,215 m).
+- Vorwärts: Die zweite und dritte Stufe ergeben 1,2 und 1,8 cm/s; gemessen
+  wurden in sechs Fahrten 1,3–1,7 cm/s, unabhängig vom Sollwert.
+- Tests mit sofort vollem Sollwert (Streckentest, Steuerkreuz) fuhren
+  richtig; deshalb fiel es bei der Kalibrierung nicht auf.
+
+Trifft das zu, erklärt es das Kriechtempo, die zu kurzen Rückfahrten, die
+150-s-Abbrüche und den unzuverlässigen Raumwechsel gemeinsam, und KM-1 B
+scheiterte an Ecke und Garderobe nur an der halben Rückfahrstrecke.
+
+**Einordnung nach MASTERPLAN §9:** Regel 4 (Scheitern führt zuerst zu
+Daten) ist mit diesem Bericht und Anhang Z erfüllt. KM-1 B ist **nicht
+bestätigt** und bleibt im Code, bis der Antrieb geklärt ist (Rückfall am
+Jetson: `SH_REL` auf den SH-8-Release). Das aktive Problem „sitzt fest“ und
+Schritt 2 hängen jetzt an derselben offenen Frage. SH-8b
+[archiviert](archive/20261114-sh8b-ausgewertet/README.md).
+
+**Nächster Schritt (Vorschlag, braucht die Freigabe des Projektinhabers):**
+Antriebsprobe AT-1, nur Messung, keine Änderung: auf freier Fläche mit
+festen Sollwertfolgen fahren (Sprung, Treppe, Rampe wie Nav2) und Sollwert
+gegen Encoder-Tempo aufzeichnen. Sie entscheidet, ob der Startimpuls die
+Ursache ist. Erst danach folgt eine Korrektur im Motortreiber als eigener
+Schritt (AGENTS §2.7), dann dieselbe Stellprobe.
 
 ## 14.11.2026 (spät) – Anhang Z, zweiter Lauf: Die Fahrbefehle stimmen, der Antrieb setzt nur ein Fünftel um
 
