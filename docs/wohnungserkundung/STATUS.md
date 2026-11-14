@@ -41,10 +41,12 @@ weiter (Startimpuls im Motortreiber); abgeleitet, noch nicht gemessen.
 **Dazu aus der Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist
 nach hinten blind (Heck am Türpfosten in einem Lauf).
 
-**Aktiv (Roboter):** kein Auftrag. **Vorgeschlagen und noch nicht
-freigegeben: Antriebsprobe AT-1**, nur Messung (Sollwert gegen
-Encoder-Tempo bei Sprung, Treppe und Rampe). Sie braucht die Freigabe des
-Projektinhabers.
+**Aktiv (Roboter):** **AT-1 Antriebsprobe**, [Auftrag](AGENTENAUFTRAG.md),
+vom Projektinhaber am 14.11.2026 freigegeben. Reine Messung, keine Änderung:
+sechs feste Sollwertfolgen auf freier Fläche (Sprung, Treppe, Rampe wie
+Nav2, Drehen), gemessen wird Sollwert gegen Encoder-Tempo. Urteil vorab
+festgelegt: Hypothese „Sollwert nur beim Anfahren“ bestätigt, widerlegt oder
+unklar, in zwei Proben.
 
 **In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
 Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
@@ -155,12 +157,16 @@ Jetson: `SH_REL` auf den SH-8-Release). Das aktive Problem „sitzt fest“ und
 Schritt 2 hängen jetzt an derselben offenen Frage. SH-8b
 [archiviert](archive/20261114-sh8b-ausgewertet/README.md).
 
-**Nächster Schritt (Vorschlag, braucht die Freigabe des Projektinhabers):**
-Antriebsprobe AT-1, nur Messung, keine Änderung: auf freier Fläche mit
-festen Sollwertfolgen fahren (Sprung, Treppe, Rampe wie Nav2) und Sollwert
-gegen Encoder-Tempo aufzeichnen. Sie entscheidet, ob der Startimpuls die
-Ursache ist. Erst danach folgt eine Korrektur im Motortreiber als eigener
-Schritt (AGENTS §2.7), dann dieselbe Stellprobe.
+**Entscheidung des Projektinhabers (14.11.2026): Antriebsprobe AT-1.** Nur
+Messung, keine Änderung: auf freier Fläche mit festen Sollwertfolgen fahren
+(Sprung, Treppe, Rampe wie Nav2, Drehen) und Sollwert gegen Encoder-Tempo
+aufzeichnen ([Auftrag](AGENTENAUFTRAG.md), Werkzeug
+`tools/kartierung/antriebsprobe.py`, `fcf95fc`; 8 Tests und ein Trockenlauf
+gegen einen nachgebildeten Antrieb in beiden Fällen). Sie entscheidet, ob
+der Startimpuls die Ursache ist. Erst danach folgt eine Korrektur im
+Motortreiber als eigener Schritt (AGENTS §2.7), dann dieselbe Stellprobe.
+
+**Nächster Schritt:** AT-1-Bericht auswerten.
 
 ## 14.11.2026 (spät) – Anhang Z, zweiter Lauf: Die Fahrbefehle stimmen, der Antrieb setzt nur ein Fünftel um
 
