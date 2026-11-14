@@ -172,6 +172,20 @@ sauber). Lokal neu: `$SH_PR/sh7_run1…3` (inklusive voller lokaler
 Kostenkarte an jeder Hilfe-Stelle). `~/roboter_ws`, frühere Releases und
 Codex-Referenz unverändert, kein Autostart. Kein aktiver Auftrag danach.
 
+Nachtrag 13.11.2026, tatsächliche Jetson-Wirkung SH-8: neuer Release
+`~/.local/share/amadeus/releases/selbstheilung-sh8-20261113_2153` (14 Pakete,
+HEAD `49c013f`, 182 Tests), `SH_REL` zeigt jetzt darauf; Prototyp 1 und der
+SH-7-Release unverändert. Zehn Stackstarts, davon sechs scharf mit Mission
+(Stellprobe, Amadeus absichtlich 3–5 cm vor Mülleimern, Ecke und Garderobe),
+drei Fehlstarts ohne LiDAR-Daten und einer von „D Quellen“ abgefangen, alle
+ohne Bewegung. Höchstens 0,135 m/s vorwärts, Rückfahrten an der Basis
+höchstens 0,015 m/s; kein Kontakt, kein Eingriff, kein Not-Aus. Je Probe
+genau ein Missionsstart und ein Missionsstopp über
+`/mission_manager/command_json` (App nicht verfügbar). Stack je Start
+geordnet beendet. Lokal neu: `$SH_PR/sh8_*`, `$SH_PR/werkzeug/sh8_stelle.py`.
+`~/roboter_ws`, frühere Releases und Codex-Referenz unverändert, kein
+Autostart. Aktiver Auftrag danach: SH-8b (KM-1 B, dieselbe Stellprobe).
+
 ## 11.10.2026 – Repository veröffentlicht, kein Installwechsel
 
 AP-06-Entwicklungsbranch auf ausdrücklichen Nutzerauftrag bis Softwarecommit

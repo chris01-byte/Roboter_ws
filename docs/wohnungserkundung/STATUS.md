@@ -1,14 +1,13 @@
 # Wohnungserkundung – aktueller Status
 
-**Aktueller Stand 10.11.2026:** Hauptlinie `self_healing`
+**Aktueller Stand 13.11.2026:** Hauptlinie `self_healing`
 (Nutzerentscheidung 15.10.2026). Es gilt der **Fahrplan in MASTERPLAN §9**.
-Standortbestimmung am 10.11.: Richtung stimmt (ein Raum sicher, 15
-Laborfahrten ohne Berührung; Tür zum Nachbarraum 2 von 3), der einzige
-Blocker ist seit dem 04.11. das Festsitzen dicht an Hindernissen. Deshalb
-**ein Problem zur Zeit** und **Stellprobe statt langer Zufallsfahrten**
-(§9 Regeln 6 und 7). **Aktiver Jetson-Auftrag: SH-8** in neuer Form:
-Stellprobe an drei Stellen, bei Erfolg eine volle Zwei-Raum-Fahrt. Wo wir
-stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
+Der einzige Blocker ist seit dem 04.11. das Festsitzen dicht an
+Hindernissen; **ein Problem zur Zeit**, geprüft mit der **Stellprobe**
+(§9 Regeln 6 und 7). SH-8 (13.11.): Ecke und Garderobe befreit, an den
+Mülleimern hielt der Kollisionsmonitor Amadeus fest. **Aktiver
+Jetson-Auftrag: SH-8b**, dieselbe Stellprobe mit der einen Korrektur KM-1 B.
+Wo wir stehen, zeigt die **Arbeitsliste direkt unter diesem Absatz**.
 AP06 ist eingefroren; die folgenden zwei Absätze beschreiben seinen letzten
 Stand.
 
@@ -28,25 +27,25 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 10.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 13.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
 
-**Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest
-(Mülleimer SH-5, Garderobe und Ecke SH-7).
+**Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
+Stand SH-8: Ecke und Garderobe gelöst (AW-1), **offen sind die Mülleimer**
+(Kollisionsmonitor „approach“ hält auch rückwärts fest).
 
-**Aktiv (Roboter):** **SH-8** (Fahrplan Schritt 1), [Auftrag](AGENTENAUFTRAG.md):
-Paket AW-1 plus AW-1b (`d0d1431`). **Teil A Stellprobe:** Amadeus wird je
-zweimal 5 cm vor zwei Mülleimer, in eine Ecke und vor die Garderobe gestellt;
-bestanden, wenn er sich jedes Mal ohne Berührung befreit und 0,5 m wegfährt
-(Messung im Fahrtprotokoll, `2409529`). **Teil B** nur bei Erfolg: eine volle
-Zwei-Raum-Fahrt wie SH-7.
+**Aktiv (Roboter):** **SH-8b** (Fahrplan Schritt 1, Regel 4),
+[Auftrag](AGENTENAUFTRAG.md): dieselbe Stellprobe mit genau einer Korrektur,
+**KM-1 B** (lokale Karte löscht nichts unter der Kontur). Neu und nur
+messend: Eigenecho-Prüfung im Stand (Vorprüfung, Bereich F) und die Strecke
+jeder Rückfahrt im Fahrtprotokoll. **Teil B** nur bei Erfolg: eine volle
+Zwei-Raum-Fahrt.
 
-**In Simulation:** nichts Neues. Bereit liegt der Kandidat **KM-1 B** (lokale
-Karte löscht nichts unter der Kontur; Simulation 3 von 5 bestanden, Produkt
-0 von 7), falls die Stellprobe nicht besteht; vor einem Einsatz ist im Stand
-zu messen, ob LiDAR oder VL53 den Roboter selbst erfassen (Mast).
+**In Simulation:** Mülleimer-Stellprobe wie SH-8 s3a nachgebaut: SH-8-Stand
+0 von 3 befreit, KM-1 B 4 von 4 (Abschnitt 13.11.2026, Simulation). Bis zur
+SH-8b-Auswertung nichts Neues.
 
 **Fahrplan danach:** zwei weitere volle Fahrten (dann Prototyp 2) → Schritt 2
 Erkundungstempo → Schritt 4 Stufe 3 Wohnung → Schritt 5 Raumziele (Karte
@@ -57,7 +56,10 @@ speichern, Räume in der App, `go_to_room`).
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
 | EK-1 Erkundung zielgerichtet (Rundblick, „gut genug“, kürzere Fehlversuche; Code vorhanden, ausgeschaltet) | ein Problem zur Zeit; in der Simulation Kriterium E3 verfehlt (langsamer statt schneller), die Simulation bildet das reale Problem nicht ab | das Festsitzen ist real gelöst und reale Abdeckungskurven liegen vor |
-| KM-1 (Kollisionsmonitor sperrt auch rückwärts, wenn vorn etwas im Polster liegt) | sicherheitsrelevant; real noch nicht beobachtet; Variante A verworfen | SH-8 zeigt „approach“ während einer Rückfahrt |
+| Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
+| KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
+| Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
+| LiDAR meldet beim Start „communication is abnormal“ (SH-8: dreimal, nach Neustecken behoben) | Vorprüfung fängt es ab, keine Bewegung | tritt erneut auf (dann Kabel/USB prüfen) |
 | E Lückensuche auf gröberem Raster (5 cm) | Nutzen unbelegt; gröberes SLAM-Raster (X12) brachte Wege näher an Türpfosten | reale Abdeckungskurven zeigen, dass kleine Lücken in der Ferne Zeit kosten |
 | F mehr Tempo vor Unbekanntem (bisher 0,08 m/s) | Sicherheitsfrage, eigene Prüfung nötig | nach dem Erkundungspaket, falls die Fahrzeit noch zu lang ist |
 | Geschlossene Holztür im Flur vom LiDAR nicht eingetragen | erzeugt eine falsche Lücke; Ursache offen | vor Stufe 3 (Prüfung im Stand vor der Tür) |
@@ -71,7 +73,112 @@ eingefroren (05.11.) · Budget 40 min, Tempo +35 %/+25 % (05.11.) · SH-7
 Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 (08.11.) · AW-1 und AW-1b gebaut (09.11.) · Abdeckungskurve im
 Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
-· Standortbestimmung, Stellprobe als Testform (10.11.).
+· Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
+Ecke und Garderobe befreit, Mülleimer nicht (13.11.).
+
+## 13.11.2026 (nachts) – Simulation: Mülleimer-Stellprobe, SH-8-Stand gegen KM-1 B
+
+Nachbau von SH-8 s3a in der Welt v4: Amadeus 5 cm vor zwei 38-cm-Eimern
+(29 cm, 10 cm Lücke), die nur die VL53 sehen; der LiDAR liegt real wie in
+der Simulation 0,75 m über dem Boden. Drei Startlagen: mittig; 4 cm links,
++4°; 4 cm rechts, −4°, mit Odometrie-Skalenfehler. Manifeste
+`tools/simulation/experimente/manifest_stellprobe_muelleimer*.json`,
+Vorher-Stand `vorher_sh8_kontur_loescht.yaml` (`e7d38d0`). Experiment, keine
+Abnahme. Die Messgröße ist das echte Gehäuse.
+
+| Stand | Startlage | Urteil | 0,5 m weg nach | „approach“ | erste Rückfahrt | Gehäuse berührt |
+|---|---|---|---|---|---|---|
+| SH-8 | mittig | `nicht_befreit` (0,275 m) | – | 11× | ohne Bewegung | ja, frontal am Eimer |
+| SH-8 | links | `nicht_befreit` (0,179 m) | – | 11× | ohne Bewegung | ja |
+| SH-8 | rechts, Drift | `nicht_blockiert` | 73 s | 2× | – | ja, nach 9 s bei der Anfangsdrehung |
+| KM-1 B | mittig | `befreit` | 118 s | 0 bis dahin | 0,303 m in 20 s | 55 s nach dem Wegkommen |
+| KM-1 B | links | `befreit` | 80 s | 0 | 0,304 m in 21 s | etwa 25 s danach |
+| KM-1 B | links (Wiederholung) | `befreit` | 80 s | 0 | 0,304 m in 21 s | 25 s danach |
+| KM-1 B | rechts, Drift | `befreit` | 64 s | 0 bis dahin | 0,302 m in 21 s | erst nach 5 min |
+
+1. **Der SH-8-Stand bildet die Wirklichkeit nach:** nicht befreit, höchstens
+   0,18–0,28 m weg (real 0,258 m), „approach“ hält auch die Rückfahrten fest.
+   In der Simulation fuhr er dabei bis ins Gehäuse an den Eimer; real sah
+   Christopher „ohne Lücke“, aber keine Berührung.
+2. **KM-1 B befreit sich in 4 von 4 Läufen** nach 64–118 s. Jedes Mal hielt
+   der Regler vor dem Eimer an, die Rückfahrt lief **vollständig** (0,30 m in
+   etwa 21 s, mit Langsam-Zone), kein „approach“ bis zum Wegkommen. Bis
+   dahin keine Gehäuseberührung; in drei Läufen blieb das Gehäuse mehr als
+   2 cm entfernt, im Drift-Lauf kam es bei der Anfangsdrehung bis auf
+   höchstens 2 cm heran (dort hielt der Kollisionsmonitor die Drehung an).
+3. **Neu sichtbar, unabhängig von KM-1 B:** In allen vier KM-1-B-Läufen
+   berührte das Gehäuse **danach** einen Eimer (25 s bis 5 min nach dem
+   Wegkommen), jedes Mal an einer Eimerseite, die die VL53 nie gesehen
+   hatten, beim Vorbeifahren oder Drehen. Das ist die bekannte Grenze
+   niedriger Gegenstände (VL53 nur nach vorn, LiDAR darüber); der SH-8-Stand
+   berührte schon vorher. Real gab es an den Eimern bisher keine Berührung
+   (SH-5, SH-8).
+
+**Folgerungen für SH-8b:** KM-1 B geht als einzige Änderung auf den Roboter.
+Die Probe wird **sofort** beendet, sobald Amadeus 0,5 m weg ist (Protokoll
+5 s Nachlauf, Stopp ohne Verzögerung), denn danach bringt die Fahrt an den
+Eimern nichts mehr. **Abweichung von SH-8:** In Teil B (volle Fahrt) stehen
+keine Mülleimer im Raum; die Eimer prüft Teil A. Die seitliche Grenze bei
+niedrigen Gegenständen ist als eigener Punkt geparkt.
+
+## 13.11.2026 – SH-8 ausgewertet: Stellprobe nicht bestanden, Ursache an den Mülleimern belegt
+
+Bericht `~/selbstheilung_jetson_bericht_sh8.md` (Jetson, Release
+`selbstheilung-sh8-20261113_2153`, HEAD `49c013f`, Build 186 s, 182 Tests
+bestanden). Aufbau wie beauftragt bestätigt. Sechs Proben mit Mission, keine
+Berührung, kein Eingriff, kein `outcome=error`, kein „process has died“.
+
+| Probe | Stelle | Urteil | Zeit bis 0,5 m weg | Heilungen / Rückfahrten | Rückfahrten: Ergebnis |
+|---|---|---|---|---|---|
+| s3a | Mülleimer, 5 cm | **`nicht_befreit`** (höchstens 0,258 m) | – | 2 / 2 | beide 30 s Zeitgrenze, Kollisionsmonitor „approach“, **kein einziger Fahrbefehl an der Basis** |
+| s2a | Ecke, 5 cm | `befreit` | 205,8 s | 1 / 1 | erfolgreich, 26,2 s |
+| s2b | Ecke, 5 cm | `befreit` | 237,4 s | 3 / 3 | alle drei 30 s Zeitgrenze, je etwa 29 Befehle mit −0,015 m/s |
+| s1a | Garderobe, 5 cm | `nicht_blockiert` | 286,9 s | 0 / 0 | – |
+| s1a_nah | Garderobe, 3 cm | `befreit` | 178,6 s | 1 / 1 | 30 s Zeitgrenze, −0,015 m/s |
+| s1b | Garderobe, 5 cm | `befreit` | 252,6 s | 1 / 1 | 30 s Zeitgrenze, −0,015 m/s |
+| s3b | Mülleimer | entfallen (A7) | | | |
+
+**Urteil nach A7: nicht bestanden** (Mülleimer nie `befreit`). Teil B nicht
+gefahren. Christopher an den Mülleimern: „der roboter ist nach rechts gedreht
+und direkt vor den mülleimer gefahren ohne lücke dazwischen“; an Ecke und
+Garderobe: „Zurück, gedreht, weg“.
+
+**Was belegt ist:**
+
+1. **AW-1 wirkt:** In acht Rückfahrten kein einziges „Collision Ahead“. In
+   SH-7 brach jede Rückfahrt an einer anliegenden Kontur nach 1 ms ab; jetzt
+   setzt Amadeus an Ecke und Garderobe zurück und kommt frei. **AW-1b wirkt:**
+   Nach jeder Rückfahrt kam ein anderes Ziel (s2b: drei verschiedene).
+2. **Mülleimer: Lücke (2) real beobachtet.** Das erste Ziel (0,31 | −0,30)
+   lag rechts vor dem rechten Eimer; Amadeus drehte nach rechts, fuhr hin und
+   meldete es bei (0,19 | −0,19) als erreicht. Ab dem nächsten Anlauf meldete
+   der Kollisionsmonitor bei jedem Versuch „approach“: VL53-Punkte lagen
+   innerhalb der gepolsterten Kontur, damit setzt Nav2 (Humble wie Jazzy)
+   jede Geschwindigkeit auf null, unabhängig von der Richtung. Beide
+   Rückfahrten liefen 30 s ohne einen Befehl an der Basis in die Zeitgrenze.
+   Lokale Karte am Ende: eine tödliche Zelle 1 cm vor der gepolsterten Front
+   (3 cm vor der Frontlinie, ±2,5 cm Raster), davor nur „inscribed“-Zellen.
+   Das passt zum DR-1-Befund vom 03.11.: Die Hindernisebenen löschen alles
+   unter der gepolsterten Kontur. Was vom Eimer ins 2-cm-Polsterband rückt,
+   verschwindet aus der lokalen Karte, und der Regler fährt weiter, bis der
+   Kollisionsmonitor festhält. Das ist genau der in der Arbeitsliste
+   festgelegte Fall, KM-1 wieder aufzunehmen.
+3. **Rückfahrten kommen zu kurz:** Liegt etwas vorn in 0,30–0,80 m, bremst
+   die Langsam-Zone (30 %) auch die Rückwärtsfahrt: 0,05 → 0,015 m/s an der
+   Basis. Die Zeitgrenze (0,3 m / 0,015 m/s + 10 s = 30 s) ist genau darauf
+   gerechnet, trotzdem endeten 7 von 8 an ihr. Nach den Navigatorposen kam
+   Amadeus in s2b je Rückfahrt nur etwa 0,15 m weit, in s2a dagegen 0,3 m in
+   26 s. Woran der Unterschied liegt, ist offen; die Befreiung gelang trotzdem,
+   dauerte aber 3–4 min. Kein Sicherheitsproblem, **geparkt** (ein Problem
+   zur Zeit); ab jetzt misst das Fahrtprotokoll die Strecke jeder Rückfahrt.
+4. **Auffälligkeiten ohne Bewegung:** Drei Fehlstarts vor s3a, weil der
+   LiDAR-Treiber „communication is abnormal“ meldete und sich beendete (nach
+   Neustecken behoben); einmal fing „D Quellen“ einen Start ab (Encoder 79 s
+   alt). Die Vorprüfung hat beides vor jeder Mission erkannt.
+
+**Folge nach MASTERPLAN §9 Regel 4 und der Entscheidung vom 10.11.:**
+gezielte Korrektur KM-1 B (`1f8ecf9`), dann dieselbe Stellprobe (SH-8b).
+Simulation dazu im Abschnitt darüber.
 
 ## 10.11.2026 (Entscheidung) – Standortbestimmung: ein Problem zur Zeit, SH-8 als Stellprobe
 

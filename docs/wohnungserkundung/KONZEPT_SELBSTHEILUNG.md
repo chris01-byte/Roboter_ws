@@ -371,6 +371,15 @@ gerade Spur erlaubt (0,3 m, wenn hinten frei), der LiDAR räumt in einer
 eigenen Ebene der lokalen Karte, und Wege halten mehr Abstand. Realtest SH-8;
 Reihenfolge danach nach MASTERPLAN §9.
 
+**KM-1 B (13.11.2026, nach SH-8):** An den Mülleimern hielt der
+Kollisionsmonitor Amadeus fest, auch rückwärts, weil VL53-Punkte innerhalb
+der gepolsterten Kontur lagen („approach“). Dorthin kam er, weil die
+Hindernisebenen der lokalen Karte alles unter der gepolsterten Kontur
+löschten. Seitdem löschen sie dort nichts mehr; der Regler hält vorher an,
+weg geht es über die Rückfahrkontur. Voraussetzung ist, dass kein Sensor den
+Roboter selbst erfasst (Vorprüfung, Bereich F). Kollisionsmonitor und globale
+Karte bleiben unverändert. Realtest SH-8b (dieselbe Stellprobe).
+
 ## 12. Geplantes Arbeitspaket: „Weiter“ mit Missionsgedächtnis (Entscheidung 4)
 
 Nach „Hilfe benötigt“ setzt „Weiter“ in der App **dieselbe** Mission fort:

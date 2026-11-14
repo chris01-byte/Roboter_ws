@@ -1474,6 +1474,20 @@ echten Gehäuse gemessen Berührungen); ihre Urteile gelten nur mit der
 Messgröße, die das echte Gehäuse erfasst, und sie ersetzt keine Realprobe.
 Mehrere Pakete an einem Tag verstoßen gegen den Geist des Fahrplans, auch
 wenn nur eines auf den Roboter geht.
+
+**Nachtrag 13.11.2026 – SH-8 (erste Stellprobe):** Die neue Testform hat
+in einem Abend geliefert, was fünf Testtage mit langen Fahrten nicht
+lieferten: Ecke und Garderobe sind gelöst (AW-1, kein „Collision Ahead“
+mehr), an den Mülleimern ist die Ursache belegt. Der Kollisionsmonitor setzt
+im Modus „approach“ jede Bewegung auf null, sobald Punkte innerhalb der
+gepolsterten Kontur liegen, auch rückwärts; dorthin kommt Amadeus, weil die
+lokale Karte alles unter der gepolsterten Kontur löscht. Folge nach der
+Entscheidung vom 10.11.: genau eine Korrektur (KM-1 B), dieselbe Stellprobe
+(SH-8b). Lehren: (1) Real und Simulation zeigten denselben Mechanismus; die
+Simulation hatte ihn am 09.11. vorhergesagt, ich hatte ihn als „real nicht
+beobachtet“ geparkt. (2) Die Langsam-Zone bremst auch das Wegfahren nach
+hinten; das kostet Zeit, nicht Sicherheit, und bleibt geparkt, bis es misst,
+dass es stört.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je
