@@ -113,14 +113,17 @@ festhalten:
 „Bitte stelle Amadeus für die Antriebsprobe auf eine freie Fläche:
 1. vor seiner Front mindestens 1,5 m frei, seitlich je mindestens 0,6 m,
    hinter ihm mindestens 0,5 m; auch keine niedrigen Dinge am Boden;
-2. markiere seinen Standort, zum Beispiel mit einem Stück Klebeband an einem
-   Rad, und lege wenn möglich einen Zollstock neben seine Fahrspur;
-3. der Motor-Stop-Schalter ist freigegeben, der Akku reicht für 15 Minuten;
-4. du stehst während der Proben mit der Hand am Not-Aus daneben.
+2. der Motor-Stop-Schalter ist freigegeben, der Akku reicht für 15 Minuten;
+3. du stehst während der Proben mit der Hand am Not-Aus daneben.
 
-Er fährt sechsmal ein kurzes Stück vor und wieder zurück (höchstens 0,9 m)
-und dreht sich zweimal um etwa eine Vierteldrehung und zurück. Bitte merke
-dir grob, wie weit er in jeder der vier Vorwärtsphasen kommt.“
+Er fährt viermal ein kurzes Stück vor und wieder zurück (höchstens 0,9 m)
+und dreht sich zweimal um etwa eine Vierteldrehung und zurück. Du musst
+nichts abmessen; Weg und Tempo misst die Odometrie.“
+
+Die Wegmessung der Odometrie ist seit August kalibriert (Streckentest mit
+LiDAR und Lasermessgerät) und wird hier nicht geprüft, sondern benutzt.
+Gemessen wird nur, **wie schnell** der Antrieb bei verschiedenen Arten der
+Tempovorgabe fährt.
 
 ## Schritt 3 – Stack scharf starten und Vorprüfung
 
@@ -179,15 +182,14 @@ grep -E "CMD: v=|TIMEOUT-STOP" "$SH_PR/at1/launch.log" > "$SH_PR/at1/basis_nach_
 ```
 
 1. Hat Amadeus etwas berührt? Musstest du eingreifen?
-2. Wie weit kam er ungefähr in den vier Vorwärtsphasen (erste, zweite,
-   dritte, vierte)? In welcher fuhr er zügig, in welcher kroch er?
-3. Wie weit drehte er sich in den beiden Drehphasen ungefähr?
-4. Steht er wieder etwa am Ausgangspunkt? Falls nicht: bitte zurückstellen.
+2. Ist dir aufgefallen, in welchen Phasen er zügig fuhr oder drehte und in
+   welchen er kroch? (nur der Eindruck, nichts messen)
+3. Steht er wieder etwa am Ausgangspunkt? Falls nicht: bitte zurückstellen.
 
 ## Schritt 5 – Probe 2 (Wiederholung, gleicher Standort)
 
 Wie Schritt 4, mit `probe2.json`, `probe2.txt` und `basis_nach_probe2.txt`;
-dieselben vier Fragen.
+dieselben drei Fragen.
 
 ## Schritt 6 – Stack beenden
 
