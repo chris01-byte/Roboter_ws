@@ -34,7 +34,10 @@ kommen unter „Geparkt“, nicht sofort in den Code.
 
 **Das eine aktive Problem:** Amadeus sitzt dicht an Hindernissen fest.
 Stand SH-8: Ecke und Garderobe gelöst (AW-1), **offen sind die Mülleimer**
-(Kollisionsmonitor „approach“ hält auch rückwärts fest).
+(Kollisionsmonitor „approach“ hält auch rückwärts fest). **Dazu aus der
+Simulation vom 14.11.:** Die freie Rückfahrt aus AW-1 ist nach hinten blind;
+in einem Lauf stieß das Heck nach der Türdurchfahrt an den Türpfosten. In
+SH-8b Teil B beobachten, Korrektur nach den Daten.
 
 **Aktiv (Roboter):** **SH-8b** (Fahrplan Schritt 1, Regel 4),
 [Auftrag](AGENTENAUFTRAG.md): dieselbe Stellprobe mit genau einer Korrektur,
@@ -134,6 +137,8 @@ geometrisches Ende.
 | mit B | 2 | **vollständig** | 282 s | 5 | 101 s | 174 s | 0,974 | nein |
 | mit B | 3 | **Hilfe benötigt** | 272 s | 12 | – | nie | 0,798 | ja, 145 s |
 | A + B + D | 1 | **vollständig** | 258 s | 3 | 15 s | nie (Flur von der Tür aus zu 85 % kartiert) | 0,946 | nein |
+| A + B + D | 3 | Teilkarte | 156 s | 8 | 66 s | 74 s | 0,968 | **ja, 117 s: Heck am Türpfosten bei einer Rückfahrt** |
+| A + C + D (EK-1 vom 09.11., ohne B) | 1 | **Hilfe benötigt** | 231 s | 12 | – | nie | 0,791 | ja, 89 s (Kiste) |
 
 Lauf 1 und 2: gleicher Startplatz, anderes Messrauschen; Lauf 3: anderer
 Startplatz und andere Blickrichtung.
@@ -154,7 +159,20 @@ Startplatz und andere Blickrichtung.
   die Karte dort für fertig, **ohne in den Flur hineinzufahren**: Von der Tür
   aus sah er 85 % des Flurs, die Reste waren schmaler als 0,5 m. Ob das
   genügt oder ob er jeden Raum betreten soll, ist eine Produktentscheidung.
-- **Grenzen dieser Simulation:** sieben Läufe, eine angenommene Möblierung.
+- **Neu und sicherheitsrelevant (ein Lauf, A + B + D, Lauf 3):** Nach der
+  Türdurchfahrt stand Amadeus quer im Türbereich, ein Anlauf scheiterte, und
+  die freie Rückfahrt aus AW-1 (0,3 m gerade zurück) schob das **Heck an den
+  Türpfosten**. Nach hinten sieht er nichts (Mastschatten des LiDAR, VL53
+  nur vorn); die Rückfahrkontur prüft nur gegen die lokale Karte, und dort
+  fehlte der 5 cm dicke Pfosten (nächste tödliche Zelle 16 cm entfernt). Die
+  Simulationswand ist dünner als eine echte Zarge, der Mechanismus gilt
+  trotzdem. Folge: In SH-8b Teil B achtet Christopher besonders auf
+  Rückwärtsfahrten in Türnähe (Hinweis im Auftrag); eine Korrektur gehört
+  zum aktiven Problem und wird nach den SH-8b-Daten entschieden.
+- **EK-1 in der Fassung vom 09.11. (A, C, D ohne B)** endete mit „Hilfe
+  benötigt“ nach einer Berührung der Kiste; ohne B bleibt die Zahl der
+  Anläufe hoch (12).
+- **Grenzen dieser Simulation:** neun Läufe, eine angenommene Möblierung.
   Je Anlauf ist die Simulation 4- bis 5-mal schneller als der echte Roboter
   (1 m in 16 s gegen 70 s); die Ursache ist nicht gemessen. Übertragbar ist
   deshalb vor allem die **Zahl der Anläufe**, nicht die Sekunden.

@@ -456,7 +456,12 @@ Genau wie Teil B im
 - in Schritt 3 die Vorprüfung **mit** `--eigenecho-s 10`; erwartet wie in A3
   (Amadeus steht am Startplatz mit etwa 0,5 m Platz rundherum);
 - in Schritt 7 zusätzlich `grep -c "Robot to approach"` auf `launch.log` und
-  den Block `rueckfahrten` aus `protokoll.json` sichern.
+  den Block `rueckfahrten` aus `protokoll.json` sichern;
+- **Hinweis vom 14.11.2026 (Simulation):** Nach einer Türdurchfahrt stieß
+  Amadeus dort beim Zurücksetzen mit dem Heck an den Türpfosten; nach hinten
+  sieht er nichts. Christopher vor der Fahrt einmal darauf hinweisen: Setzt
+  Amadeus **in Türnähe oder dicht vor einer Wand hinter ihm zurück**, den
+  Not-Aus drücken, bevor das Heck etwas erreicht (zählt als Eingriff).
 
 **Abweichung von SH-8:** In Teil B stehen **keine** Mülleimer in den beiden
 Räumen (vorher hinausstellen; Christopher bestätigt das in Schritt 1). Die
