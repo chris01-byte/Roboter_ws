@@ -1488,6 +1488,21 @@ Simulation hatte ihn am 09.11. vorhergesagt, ich hatte ihn als „real nicht
 beobachtet“ geparkt. (2) Die Langsam-Zone bremst auch das Wegfahren nach
 hinten; das kostet Zeit, nicht Sicherheit, und bleibt geparkt, bis es misst,
 dass es stört.
+
+**Nachtrag 14.11.2026 – Schritt 2 vorbereitet (Entscheidung des
+Projektinhabers: nächsten Test parallel zu SH-8b bauen):** Zuerst gemessen,
+dann gebaut. Aus den echten SH-8-Daten: die Hälfte der Ziele näher als 0,5 m,
+70 s je erreichtem Ziel. In einer möblierten Simulationswelt mit
+LiDAR-Rauschen ist der Raum nach 20–40 s zu 90 % kartiert; danach fährt
+Amadeus minutenlang schmale Restlücken an. Ein Lückenfilter („nur
+Unbekanntes ab 0,5 m Breite zählt“, EK-1 Teil B) senkte die Anläufe von
+13–14 auf 5 und die Fahrzeit auf ein Drittel bis die Hälfte bei gleicher
+Abdeckung. Lehren: (1) Die kahle Simulation vom 09.11. konnte den Nutzen
+nicht zeigen; erst Möbel und Messrauschen machten den realen Zeitfresser
+sichtbar. (2) Sekunden aus der Simulation übertragen sich nicht (je Anlauf
+4- bis 5-mal schneller als real), die Zahl der Anläufe schon eher. (3)
+Niedrige Möbel sind in der möblierten Welt die häufigste Berührungsursache
+und gehören vor der Wohnungsstufe gelöst.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

@@ -170,7 +170,7 @@ source ~/roboter_worktrees/selbstheilung-v2.env && \
   grep -nE "desired_linear_vel|rotate_to_heading_angular_vel|max_velocity|min_velocity|footprint_topic|plugins|lidar_layer|clearing|inflation_radius|cost_scaling_factor" "$SH_REL/product-install/robot_navigation/share/robot_navigation/config/nav2_params_self_healing.yaml"; \
   ls "$SH_REL/product-install/robot_navigation/lib/robot_navigation/rueckfahr_kontur"; \
   grep -nE "self_healing_goal_shift_max_m|self_healing_track_lateral_tolerance_m|self_healing_blocked_track_backs|self_healing_stuck_move_m|overall_timeout_s|self_healing_unknown_speed_mps|initial_scan_angular_speed_radps|self_healing_free_back_m|self_healing_track_back_slow_factor" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"; \
-  grep -cE "self_healing_scan_rad|self_healing_scan_spacing_m|self_healing_saturation_|self_healing_attempt_stall_" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"
+  grep -cE "self_healing_scan_rad|self_healing_scan_spacing_m|self_healing_saturation_|self_healing_attempt_stall_|self_healing_gap_depth_m" "$SH_REL/product-install/explore/share/explore/config/self_healing_params.yaml"
 ```
 
 Erwartet wie in SH-8: `minimum_travel_distance: 0.25`,
@@ -539,6 +539,41 @@ Bericht noch ins Repository. Am Ende im Chat nur: Pfad; je Probe Kennung,
 Urteil, Zeit bis 0,5 m weg und Zahl „approach“; Eigenecho-Ergebnis; Stellprobe
 bestanden oder nicht; falls gefahren C1–C5, G1, R1, R2 der vollen Fahrt und
 die Fahrzeit bis 90 % der freien Endfläche; Kontakte oder Eingriffe.
+
+## Anhang Z – nur lesende Zusatzauswertung für Fahrplan Schritt 2 (ab 14.11.2026)
+
+Unabhängig von Teil A und Teil B, **ohne Stack, ohne Fahrt, ohne ROS**: Das
+Werkzeug liest nur vorhandene Logdateien. Es dient der Vorbereitung von
+Schritt 2 (Erkundungstempo) und ändert nichts an diesem Auftrag. Ausführen,
+sobald Teil A (und gegebenenfalls Teil B) abgeschlossen ist, oder wenn
+Christopher darum bittet. Das Werkzeug liegt ab `c6da3d4` im Klon;
+vorher einmal `git pull --ff-only` (die Werkzeuge und der Release von SH-8b
+bleiben dabei unverändert).
+
+**Frage:** Wohin ging in den bisherigen vollen Fahrten die Zeit? Je Anlauf
+Entfernung des Ziels, Dauer und Ausgang; dazu die Zeitanteile des
+Kollisionsmonitors.
+
+```bash
+source ~/roboter_worktrees/selbstheilung-v2.env
+cd ~/roboter_worktrees/selbstheilung-v2 && git pull --ff-only && git rev-parse HEAD
+R=~/.local/share/amadeus/releases
+mkdir -p "$SH_PR/anlaeufe"
+for d in "$R"/selbstheilung-sh6-20261104_2140/pruefung/sh6_run[123] \
+         "$R"/selbstheilung-sh7-20261108_1617/pruefung/sh7_run[123] \
+         "$SH_PR"/sh8b_s* "$SH_PR"/sh8b_runvoll; do
+  n=$(basename "$d")
+  [ -f "$d/launch.log" ] || { echo "$n: launch.log fehlt"; continue; }
+  python3 "$SH_SRC/tools/kartierung/selbstheilung_anlaeufe.py" "$d/launch.log" \
+    --json "$SH_PR/anlaeufe/$n.json" > "$SH_PR/anlaeufe/$n.txt" 2>&1
+  echo "== $n"; head -16 "$SH_PR/anlaeufe/$n.txt"
+done
+```
+
+Bericht `~/selbstheilung_anlaeufe_bericht.md`: je Fahrt der Block
+`zusammenfassung` wörtlich und darunter die Liste der Anläufe (die Zeilen
+nach dem JSON-Block aus `<n>.txt`). Fehlt ein Log, das nennen. Keine Karten,
+keine Bilder. Kein Stackstart, kein `topic pub`, kein Build.
 
 ## Danach
 

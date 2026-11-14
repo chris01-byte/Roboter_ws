@@ -248,6 +248,12 @@ neue Entscheidung des Projektinhabers.
    ist, wird in der Simulation nur dafür gearbeitet; weitere Pakete bleiben
    geparkt (Nutzerentscheidung 10.11.2026, ersetzt für diese Zeit die
    Parallelarbeit aus Regel 1 bis 3).
+   **Nachtrag (Nutzerentscheidung 14.11.2026):** Läuft für das aktive Problem
+   ein Realtest und ist in der Simulation nichts mehr dafür offen, wird der
+   **nächste Schritt des Fahrplans** in der Simulation vorbereitet (jetzt
+   Schritt 2, Erkundungstempo und Nachbarraum finden). Auf den Roboter geht
+   weiterhin genau ein Paket je Test, und nichts Neues, solange der laufende
+   Test nicht ausgewertet ist.
 
 ### 9.2 Schritte
 

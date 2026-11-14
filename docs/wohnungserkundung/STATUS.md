@@ -27,7 +27,7 @@ HOLD-Fortsetzung getrennt zuordnen. Keine geänderten Grenzwerte oder neuen
 gleichen Fehlversuche. Die nachstehenden Absätze bewahren die einzelnen
 Korrekturen und früheren Vergleichsstände.
 
-## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 13.11.2026
+## Arbeitsliste (roter Faden nach MASTERPLAN §9) – Stand 14.11.2026
 
 Genau eine Liste. Jeder Auftrag bezieht sich auf eine Zeile. Neue Ideen
 kommen unter „Geparkt“, nicht sofort in den Code.
@@ -43,9 +43,13 @@ messend: Eigenecho-Prüfung im Stand (Vorprüfung, Bereich F) und die Strecke
 jeder Rückfahrt im Fahrtprotokoll. **Teil B** nur bei Erfolg: eine volle
 Zwei-Raum-Fahrt.
 
-**In Simulation:** Mülleimer-Stellprobe wie SH-8 s3a nachgebaut: SH-8-Stand
-0 von 3 befreit, KM-1 B 4 von 4 (Abschnitt 13.11.2026, Simulation). Bis zur
-SH-8b-Auswertung nichts Neues.
+**In Simulation (Nutzerentscheidung 14.11.2026, MASTERPLAN §9 Regel 7
+Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
+für SH-9. Stand im Abschnitt 14.11.2026: möblierte Welt mit Flur, neuer
+Teil B „nur Lücken, in die Amadeus passt“ (Code vorhanden, ausgeschaltet).
+Auf den Roboter geht davon nichts, bevor SH-8b ausgewertet ist. Für das
+aktive Problem ist in der Simulation nichts offen (Mülleimer-Stellprobe:
+SH-8-Stand 0 von 3 befreit, KM-1 B 4 von 4).
 
 **Fahrplan danach:** zwei weitere volle Fahrten (dann Prototyp 2) → Schritt 2
 Erkundungstempo → Schritt 4 Stufe 3 Wohnung → Schritt 5 Raumziele (Karte
@@ -55,7 +59,7 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| EK-1 Erkundung zielgerichtet (Rundblick, „gut genug“, kürzere Fehlversuche; Code vorhanden, ausgeschaltet) | ein Problem zur Zeit; in der Simulation Kriterium E3 verfehlt (langsamer statt schneller), die Simulation bildet das reale Problem nicht ab | das Festsitzen ist real gelöst und reale Abdeckungskurven liegen vor |
+| Zeit je Anlauf: real im Median 70 s je erreichtem Ziel (SH-8), in der Simulation 4- bis 5-mal schneller | Ursache nicht gemessen (Langsam-Zone beim Drehen, Regler, Antrieb?); erst messen | Anhang Z liefert die Anläufe der sechs alten Fahrten; SH-9 misst zusätzlich die Zeitanteile Stehen, Drehen, Fahren |
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
@@ -75,6 +79,96 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
 · Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
 Ecke und Garderobe befreit, Mülleimer nicht (13.11.).
+
+## 14.11.2026 – Schritt 2 in der Simulation vorbereitet: wohin die Zeit geht, EK-1 neu gefasst
+
+**Entscheidung des Projektinhabers (14.11.2026):** Während SH-8b läuft, wird
+der nächste Test nach dem Masterplan vorbereitet (MASTERPLAN §9 Regel 7,
+Nachtrag). Ziel von Schritt 2: die Zeit im Raum deutlich verkürzen und den
+Nachbarraum zuverlässig finden, bevor alle Räume offen sind. Auf den Roboter
+geht davon nichts, bevor SH-8b ausgewertet ist; alles Neue ist im Code
+ausgeschaltet, die 197 gezielten Tests von SH-8b sind unverändert.
+
+**1. Messung aus den echten SH-8-Daten** (26 Anläufe aus sechs Proben, Start
+jeweils dicht an einem Hindernis): Ziel im Median 0,49 m entfernt, 14 von 26
+näher als 0,5 m; ein erreichtes Ziel kostete im Median 70 s (9–112 s),
+effektiv 0,003–0,018 m/s. SH-6 passt dazu: 8–10 Ziele und 6,4–8,0 m in
+20 min, im Raum nie fertig. Die Zeit geht also in **viele kurze Anläufe**,
+von denen jeder lange dauert. Neues Werkzeug (`c6da3d4`, nur lesend):
+`tools/kartierung/selbstheilung_anlaeufe.py` rechnet das aus jedem
+`launch.log`; Anhang Z im Auftrag wendet es auf die sechs vollen Fahrten aus
+SH-6 und SH-7 an (ohne Fahrt).
+
+**2. Simulation ehrlicher gemacht** (`2da300d`): möblierter Laborraum
+4,3 × 4,3 m mit 0,80-m-Tür und Flur 1,5 × 4 m mit Garderobe (Maße nach
+SH-6/SH-7, Möbel angenommen: Regal, Werkbank, Schrank, Stuhl, Stativ,
+niedrig: zwei Mülleimer, Kiste, Hocker, Stuhlsitz), träger Antrieb nach der
+Messung vom 14.08. (1-s-Impuls 0,0439 m, Modell innerhalb 10 %),
+LiDAR-Messrauschen 1 cm, Odometriefehler. Gemessen je Raum: Zeit bis
+85/90/95 %, erstes Betreten des Flurs, alle Anläufe.
+
+**3. Was der heutige Stand in dieser Welt tut** (vier Läufe, einer ohne
+Rauschen): Der Laborraum ist nach **20–40 s zu 90 %** kartiert, allein aus
+dem ersten Blick des LiDAR; das bestätigt die Beobachtung des
+Projektinhabers vom 09.11. Trotzdem dauert die Fahrt 455–742 s und endet als
+Teilkarte, mit 13–14 Anläufen. Die Zeit nach 95 % der Endfläche (Leerlauf)
+beträgt 274–559 s: Amadeus fährt schmale Restlücken an (Schattenkeile,
+Streifen vor Wänden), einmal mit drei 150-s-Anläufen ohne Ziel (75 % der
+Fahrzeit). In **allen vier Läufen berührte das Gehäuse dabei spät (318–559 s)
+ein niedriges Möbel** (Kiste, Hocker), die bekannte Grenze niedriger
+Gegenstände.
+
+**4. Neuer Teil B „nur Lücken, in die Amadeus passt“** (`3b14515`,
+`self_healing_gap_depth_m`, Standard 0 = aus): Eine Frontier zählt nur an
+Unbekanntem, das mindestens 0,5 m breit ist. Schmale Keile, Strahllücken,
+Löcher in Wänden und Streifen vor Wänden werden nicht angefahren und halten
+das Ende nicht auf. Das ersetzt das Zeitfenster-Ende C durch ein
+geometrisches Ende.
+
+| Stand | Lauf | Ende | Dauer | Anläufe | Leerlauf nach 95 % | Flur betreten | Abdeckung | Gehäuse berührt |
+|---|---|---|---|---|---|---|---|---|
+| heute | 1 | Teilkarte | 742 s | 14 | 559 s | 181 s | 0,979 | ja, 559 s |
+| heute | 2 | Teilkarte | 513 s | 13 | 392 s | 119 s | 0,977 | ja, 460 s |
+| heute | 3 | Teilkarte | 455 s | 14 | 274 s | 167 s | 0,977 | ja, 452 s |
+| mit B | 1 | **vollständig** | 245 s | 5 | 94 s | 147 s | 0,979 | nein (2,5 cm) |
+| mit B | 2 | **vollständig** | 282 s | 5 | 101 s | 174 s | 0,974 | nein |
+| mit B | 3 | **Hilfe benötigt** | 272 s | 12 | – | nie | 0,798 | ja, 145 s |
+| A + B + D | 1 | **vollständig** | 258 s | 3 | 15 s | nie (Flur von der Tür aus zu 85 % kartiert) | 0,946 | nein |
+
+Lauf 1 und 2: gleicher Startplatz, anderes Messrauschen; Lauf 3: anderer
+Startplatz und andere Blickrichtung.
+
+- **B halbiert bis drittelt die Fahrzeit bei gleicher Abdeckung** und senkt
+  die Anläufe von 13–14 auf 5; die Kriterien E1, E3 und E4 vom 09.11. sind in
+  den beiden vollständigen Läufen erfüllt (Leerlauf 94–101 s gegen Median
+  392 s). Weil die Fahrt früher endet, gab es dort auch keine Berührung.
+- **Der dritte B-Lauf scheiterte, aber nicht an B:** Amadeus fuhr schräg an
+  die niedrige Kiste heran, die Gehäuseecke berührte sie (VL53 sehen nur nach
+  vorn), danach hielt der Kollisionsmonitor im Modus „approach“ wieder alles
+  fest, und acht Fehlschläge in rund 70 s führten zu „Hilfe benötigt“. Das
+  ist der SH-8-Mechanismus an einem niedrigen Gegenstand; der heutige Stand
+  berührte in allen Läufen. Mit weniger Zielen hat die Heilungsleiter aber
+  weniger Ausweichziele; das gehört im Realtest beobachtet.
+- **A (Schwenk 90° statt Vollkreis) und D (Anlauf nach 45 s ohne Weggewinn
+  abbrechen)** sparten im einen Lauf zwei weitere Anläufe. Amadeus erklärte
+  die Karte dort für fertig, **ohne in den Flur hineinzufahren**: Von der Tür
+  aus sah er 85 % des Flurs, die Reste waren schmaler als 0,5 m. Ob das
+  genügt oder ob er jeden Raum betreten soll, ist eine Produktentscheidung.
+- **Grenzen dieser Simulation:** sieben Läufe, eine angenommene Möblierung.
+  Je Anlauf ist die Simulation 4- bis 5-mal schneller als der echte Roboter
+  (1 m in 16 s gegen 70 s); die Ursache ist nicht gemessen. Übertragbar ist
+  deshalb vor allem die **Zahl der Anläufe**, nicht die Sekunden.
+
+**Vorschlag für SH-9 (Fahrplan Schritt 2), noch nicht aktiv:** EK-1 in der
+Fassung A (Schwenk 90°), **B (Lücken ab 0,5 m)** und D (45 s), ohne C. Zwei
+Räume wie SH-8b Teil B, zwei Fahrten. Vorläufige Kriterien, endgültig nach
+den SH-8b-Daten: Fahrt endet von selbst in höchstens 15 min; höchstens ein
+Drittel der Fahrzeit in nicht erreichten Anläufen; Nachbarraum in der Karte
+ganz oder größtenteils (R2); C1–C5 und G1 wie bisher; dazu die Anläufe und
+neu die Zeitanteile Stehen, Drehen, Fahren als Messung. Der Auftrag wird
+nach der Auswertung von SH-8b geschrieben (ein aktueller Auftrag).
+
+**Nächster Schritt:** SH-8b-Bericht auswerten; danach SH-9 festlegen.
 
 ## 13.11.2026 (nachts) – Simulation: Mülleimer-Stellprobe, SH-8-Stand gegen KM-1 B
 
