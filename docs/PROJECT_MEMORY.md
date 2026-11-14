@@ -1515,6 +1515,16 @@ schon bekannt war, dass sie je Anlauf 4- bis 5-mal schneller ist. Ein
 Simulationsergebnis zählt erst, wenn die Simulation die reale Kenngröße
 trifft, um die es geht; hier hätte die Messung an den alten Logs vor dem Bau
 stehen müssen.
+
+**Nachtrag 14.11.2026 (spät) – Fahrbefehle gegen gefahrenen Weg:** Aus den
+alten Logs, ohne Fahrt: An der Basis kamen 6,4–10,1 cm/s an, gefahren
+wurden 1,3–1,7 cm/s, in sechs Fahrten 16–23 % des befohlenen Wegs. Die
+Tempoerhöhung vom 05.11. hat deshalb fast nichts bewirkt. Lehre: Seit
+August wurde jede zu kurze Strecke einzeln der 2-s-Anfahrrampe
+zugeschrieben (14.08., 18.08., Rückfahrten in SH-6 bis SH-8), ohne je
+Sollwert und Ist-Tempo über eine ganze Fahrt nebeneinanderzulegen. Eine
+Erklärung, die fünfmal passt, ist noch keine Messung. Ursache offen;
+Motorsteuerung, getrennt messen.
 Lehre: Die Berührungen beim Drehen kamen nicht aus zu wenig Polster, sondern
 aus zwei Nav2-Standardwerten im Zusammenspiel. RPP rechnet langsame Drehungen
 nicht voraus (`max_allowed_time_to_collision_up_to_carrot` 1,0 s < 1,2 s je

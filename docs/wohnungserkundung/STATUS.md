@@ -51,9 +51,10 @@ Nachtrag): Schritt 2 „Erkundungstempo und Nachbarraum finden“**, Paket EK-1
 für SH-9. Stand im Abschnitt 14.11.2026: möblierte Welt mit Flur, neuer
 Teil B „nur Lücken, in die Amadeus passt“ (Code vorhanden, ausgeschaltet).
 **Der Vorschlag ruht seit dem Abend:** Anhang Z zeigt, dass Amadeus real nur
-mit etwa 1 cm/s vorankommt und Ziele über 1,5 m fast nie erreicht; zuerst
-wird die Ursache gemessen (Fahrbefehle aus den vorhandenen Logs, ohne
-Fahrt). Auf den Roboter geht nichts, bevor SH-8b ausgewertet ist. Für das
+mit etwa 1 cm/s vorankommt und Ziele über 1,5 m fast nie erreicht. Der
+zweite Lauf zeigt, wo es verloren geht: Die Fahrbefehle stimmen, der Antrieb
+setzt nur etwa ein Fünftel um. Auf den Roboter geht nichts, bevor SH-8b
+ausgewertet ist. Für das
 aktive Problem ist in der Simulation nichts offen (Mülleimer-Stellprobe:
 SH-8-Stand 0 von 3 befreit, KM-1 B 4 von 4).
 
@@ -65,7 +66,7 @@ speichern, Räume in der App, `go_to_room`).
 
 | Punkt | Grund für Parken | Wieder aufnehmen, wenn |
 |---|---|---|
-| Reale Geschwindigkeit: effektiv 0,8–1,1 cm/s statt 10–13,5 cm/s (Anhang Z, sechs Fahrten); Ziele über 1,5 m nur 2 von 42 erreicht | Ursache nicht gemessen; die Langsam-Zone ist es nicht (14–27 % der Zeit) | **als Nächstes:** Anhang Z erneut mit den Fahrbefehlen der Basis (`23317fe`, ohne Fahrt); entscheidet, was Schritt 2 prüft |
+| **Antrieb setzt nur 16–23 % des befohlenen Wegs um** (Anhang Z, zweiter Lauf: befohlen 6,4–10,1 cm/s, gefahren 1,3–1,7 cm/s; Ziele über 1,5 m nur 2 von 42 erreicht) | Ursache nicht gemessen; Motorsteuerung, getrennt zu messen und zu ändern | **als Nächstes nach SH-8b:** kurze Fahrprobe zum Messen (Sollwert gegen Encoder-Tempo), braucht die Freigabe des Projektinhabers; entscheidet, was Schritt 2 prüft |
 | Rückfahrt in der Langsam-Zone zu langsam (0,015 m/s; SH-8: 7 von 8 an der 30-s-Grenze, je etwa 0,15 m statt 0,3 m) | ein Problem zur Zeit; befreit hat er sich trotzdem, nur langsamer (3–4 min) | SH-8b misst die Strecke je Rückfahrt; reicht sie nicht zum Befreien oder kostet sie in vollen Fahrten viel Zeit |
 | KM-1 Variante „Kollisionsmonitor lässt Wegfahren zu“ (approach blockiert auch rückwärts) | sicherheitsrelevant (Kollisionsmonitor); Variante A verworfen; KM-1 B soll die Lage gar nicht erst entstehen lassen | SH-8b zeigt trotz KM-1 B „approach“ während einer Rückfahrt |
 | Niedrige Gegenstände seitlich (unter 0,75 m, nie von den VL53 gesehen): Simulation 13.11. berührte nach dem Befreien in 4 von 4 KM-1-B-Läufen eine Eimerseite | bekannte Sensorgrenze, nicht Teil des aktiven Problems; real bisher keine Berührung | vor Stufe 3 (Wohnung) oder bei der ersten realen Berührung; SH-8b-Teil B ohne Eimer |
@@ -85,6 +86,74 @@ Raumwechsel ausgewertet, nicht bestätigt (08.11.) · SH-7N Ursache gefunden
 Fahrtprotokoll (09.11.) · Simulation KM-1 A/B und EK-1 ausgewertet (09.11.)
 · Standortbestimmung, Stellprobe als Testform (10.11.) · SH-8 ausgewertet:
 Ecke und Garderobe befreit, Mülleimer nicht (13.11.).
+
+## 14.11.2026 (spät) – Anhang Z, zweiter Lauf: Die Fahrbefehle stimmen, der Antrieb setzt nur ein Fünftel um
+
+Bericht `~/selbstheilung_anlaeufe_bericht_2.md` (Jetson 17:58, Klon
+`bbc5c6a`, nur lesend). Neu ausgewertet sind die Fahrbefehle, die an der
+Basis ankamen (`CMD`-Zeilen, etwa einer je Sekunde), jeweils nur innerhalb
+der Anläufe. Die gefahrene Strecke laut Odometrie stammt aus den früheren
+Fahrtprotokollen (Abschnitte SH-6 und SH-7).
+
+| Fahrt | vorwärts befohlen | Median v befohlen | befohlener Weg | gefahren (Odometrie) | umgesetzt | Ist-Tempo beim Vorwärtsfahren | Drehen (Anteil, Median w) | ohne Befehl |
+|---|---|---|---|---|---|---|---|---|
+| SH-6 Fahrt 1 | 565 s | 6,9 cm/s | 38,4 m | 8,0 m | 21 % | 1,4 cm/s | 50 %, 0,120 rad/s | 1 % |
+| SH-6 Fahrt 2 | 518 s | 6,4 cm/s | 31,2 m | 6,8 m | 22 % | 1,3 cm/s | 53 %, 0,091 rad/s | 1 % |
+| SH-6 Fahrt 3 | 439 s | 7,5 cm/s | 31,2 m | 6,4 m | 21 % | 1,5 cm/s | 38 %, 0,043 rad/s | 20 % |
+| SH-7 Fahrt 1 | 317 s | 7,1 cm/s | 23,4 m | 5,3 m | 23 % | 1,7 cm/s | 77 %, 0,035 rad/s | 0 % |
+| SH-7 Fahrt 2 | 950 s | 10,1 cm/s | 91,4 m | 14,2 m | 16 % | 1,5 cm/s | 38 %, 0,095 rad/s | 6 % |
+| SH-7 Fahrt 3 | 903 s | 10,1 cm/s | 88,1 m | 14,8 m | 17 % | 1,6 cm/s | 41 %, 0,043 rad/s | 7 % |
+
+**Was belegt ist:**
+
+1. **Die Befehle sind nicht das Problem.** An der Basis kamen beim
+   Vorwärtsfahren im Median 6,4–10,1 cm/s an. Befehle fehlten nur 0–7 % der
+   Zeit (einmal 20 %, dort wartete der Explorer). Die Vermutung „Regler
+   befiehlt zu wenig“ und die Vermutung „Watchdog, weil Befehle ausbleiben“
+   sind damit für das Vorwärtsfahren widerlegt.
+2. **Gefahren wurde nur 16–23 % des befohlenen Wegs.** Das Ist-Tempo beim
+   Vorwärtsfahren lag in allen sechs Fahrten bei 1,3–1,7 cm/s, fast
+   unabhängig davon, ob 6,4 oder 10,1 cm/s befohlen waren. Das sieht nach
+   einer Obergrenze oder nach ständigem Neuanfahren aus, nicht nach einem
+   festen Faktor. Ein Einzelfall zeigt es rein: 2,36 m geradeaus ohne
+   Drehung, 125 s lang im Mittel 11,5 cm/s befohlen, gefahren 1,9 cm/s
+   (SH-7 Fahrt 2).
+3. **Gedreht wird 38–77 % der Zeit, und nur sehr langsam befohlen:** Median
+   0,035–0,12 rad/s statt 0,20 bzw. 0,25 rad/s. Wahrscheinlicher Mechanismus
+   (aus dem Code, nicht gemessen): Der Regler darf die Drehrate je Takt nur
+   um 0,1 rad/s über die **gemessene** Drehrate heben; dreht der Roboter
+   kaum, bleibt der Befehl bei etwa 0,1 rad/s hängen, in der Langsam-Zone
+   bei 0,03 rad/s. In SH-7 Fahrt 1 bestanden fünf 150-s-Anläufe fast nur aus
+   solchen Drehbefehlen.
+4. Frühere Einzelmessungen passen dazu und wurden jeweils der Anfahrrampe
+   zugeschrieben: 14.08. (1-s-Impuls 0,044 m statt 0,12 m), 18.08. (0,085 m
+   in 20 s in der Langsam-Zone), 15 s Anfahren für 0,19 m, SH-8-Rückfahrten
+   (etwa 0,15 m statt 0,45 m). Eine 2-s-Rampe erklärt das über Minuten nicht.
+
+**Bewertung:** Zwischen `/cmd_vel` und den Rädern geht rund vier Fünftel des
+Tempos verloren. Das ist der größte bekannte Hebel für Schritt 2 (Zeit im
+Raum, Nachbarraum erreichen) und betrifft wahrscheinlich auch das aktive
+Problem (Rückfahrten kommen zu kurz, „Failed to make progress“). **Die
+Ursache ist nicht gemessen.** Kandidaten: eine Drehzahlgrenze oder Einheit
+im Antrieb, häufige Stopps im Motortreiber (jeder Nullbefehl und jede
+gesperrte Encoder-Zeitwache ist ein Stopp, danach neue Anfahrrampe ab
+5 U/min), pulsierende Befehle. Das gehört zur Motorsteuerung und wird
+getrennt gemessen und getrennt geändert (AGENTS §2.7).
+
+**Vorschlag, noch nicht beauftragt:** eine kurze **Fahrprobe** nur zum
+Messen: geradeaus und Drehen auf freier Fläche mit festen Sollwerten, dabei
+Sollwert, Encoder-Tempo und Zustand des Motortreibers mitschreiben. Sie
+braucht die Freigabe des Projektinhabers und wird erst nach der Auswertung
+von SH-8b beauftragt.
+
+**SH-8b in diesen Daten** (der Bericht fehlt hier weiter): Garderobe (s1a):
+in allen acht Anläufen kam **kein einziger Fahrbefehl** an der Basis an
+(99 % ohne Befehl). Ecke (s2a): sieben Anläufe ohne Befehl, im achten 23 s
+vorwärts mit 1,4 cm/s und 38 s Drehen. Mülleimer (s3a): 248 s Drehbefehle
+mit 0,039 rad/s, 37 s vorwärts, kein Ziel erreicht.
+
+**Nächster Schritt:** SH-8b-Bericht auswerten; Entscheidung des
+Projektinhabers zur Fahrprobe.
 
 ## 14.11.2026 (abends) – Anhang Z ausgewertet: Amadeus kommt real nur mit etwa 1 cm/s voran
 
